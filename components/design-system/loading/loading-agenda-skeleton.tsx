@@ -1,8 +1,9 @@
 "use client";
 
 import { memo } from "react";
-import { dsStackPage } from "@/lib/ui/design-system";
-import { SkeletonBlock, SkeletonCard } from "./skeleton-primitives";
+import { SkeletonBlock } from "./skeleton-primitives";
+import { SkeletonShellCard } from "./skeleton-shell-card";
+import { LoadingListPageShell } from "./loading-list-page-shell";
 import { SKELETON_MIN_HEIGHT } from "./skeleton-layout-presets";
 
 export type LoadingAgendaSkeletonProps = {
@@ -16,24 +17,32 @@ export const LoadingAgendaSkeleton = memo(function LoadingAgendaSkeleton({
   className = "",
   embedded = false,
 }: LoadingAgendaSkeletonProps) {
-  return (
-    <div
-      className={`${dsStackPage} ${className}`.trim()}
-      role="status"
-      aria-busy="true"
-      aria-label="Caricamento agenda"
-    >
-      {!embedded ? <SkeletonBlock className={SKELETON_MIN_HEIGHT.pageHeader} /> : null}
-      {!embedded ? <SkeletonCard minHeightClass={SKELETON_MIN_HEIGHT.toolbar} className="p-0" /> : null}
+  const body = (
+    <>
+      {embedded ? null : <SkeletonShellCard bodyMinHeightClass={SKELETON_MIN_HEIGHT.toolbar} />}
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(220px,280px)_1fr_minmax(220px,300px)]">
-        <SkeletonCard minHeightClass={SKELETON_MIN_HEIGHT.agendaCalendar} />
-        <SkeletonCard minHeightClass={SKELETON_MIN_HEIGHT.agendaMain} />
-        <SkeletonCard
-          minHeightClass={SKELETON_MIN_HEIGHT.agendaSidebar}
+        <SkeletonShellCard bodyMinHeightClass={SKELETON_MIN_HEIGHT.agendaCalendar} />
+        <SkeletonShellCard bodyMinHeightClass={SKELETON_MIN_HEIGHT.agendaMain} />
+        <SkeletonShellCard
+          bodyMinHeightClass={SKELETON_MIN_HEIGHT.agendaSidebar}
           className="hidden xl:block"
         />
       </div>
-    </div>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className={className} role="status" aria-busy="true" aria-label="Caricamento agenda">
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <LoadingListPageShell className={className} ariaLabel="Caricamento agenda">
+      {body}
+    </LoadingListPageShell>
   );
 });
 
@@ -44,8 +53,8 @@ export const LoadingAgendaContentSkeleton = memo(function LoadingAgendaContentSk
   className?: string;
 }) {
   return (
-    <SkeletonCard
-      minHeightClass={SKELETON_MIN_HEIGHT.agendaMain}
+    <SkeletonShellCard
+      bodyMinHeightClass={SKELETON_MIN_HEIGHT.agendaMain}
       className={className}
     />
   );

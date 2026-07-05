@@ -53,6 +53,7 @@ assert.doesNotMatch(settingsGate, /SettingsSyncNotice/);
 
 assert.match(authGate, /useGestionaleTopNotice/);
 assert.doesNotMatch(authGate, /GlobalLoadingView/);
+assert.doesNotMatch(authGate, /showAuthBanner.*status === "loading"/);
 assert.doesNotMatch(authGate, /border-b border-\[color:var\(--cab-border\)\]/);
 
 assert.match(topNotice, /createPortal/);

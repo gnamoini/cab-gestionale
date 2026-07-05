@@ -4,24 +4,25 @@ import {
   readCorrelationIdFromRequest,
   traceRuntimeCoordinationServer,
 } from "@/lib/observability/runtime-coordination-tracer.server";
-import type { PermissionKey } from "@/lib/auth/rbac";
-import { verifyServerPermission } from "@/src/lib/auth/server-permission-guards";
+import type { GestionalePageKey } from "@/src/lib/permissions/gestionale-pages";
+import { verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-function permissionForEntity(entityType: string): PermissionKey {
+function pageForEntity(entityType: string): GestionalePageKey {
   switch (entityType) {
     case "lavorazione":
-      return "editWorkOrders";
+      return "lavorazioni";
     case "documento":
-      return "uploadDocuments";
+      return "documenti";
     case "mezzo":
-      return "editVehicles";
+      return "mezzi";
     case "report":
+      return "report";
     case "settings":
     default:
-      return "manageSettings";
+      return "impostazioni";
   }
 }
 
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "entityId mancante" }, { status: 400 });
   }
 
-  if (!(await verifyServerPermission(permissionForEntity(entityType)))) {
+  if (!(await verifyServerPageWrite(pageForEntity(entityType)))) {
     return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
   }
 

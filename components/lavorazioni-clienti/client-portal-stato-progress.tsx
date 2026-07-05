@@ -40,17 +40,31 @@ export function ClientPortalStatoProgress({
 
   const { solidPct, leadPct } = clientPortalStatoProgressFillPcts(currentIndex, steps.length);
   const hasLeadSegment = leadPct > solidPct + 0.5;
+  const filledPct = hasLeadSegment ? leadPct : solidPct;
+  const isComplete = currentIndex >= steps.length - 1;
   const [phasesOpen, setPhasesOpen] = useState(false);
 
   const currentColor = readablePillStyleFromHex(steps[currentIndex]?.color).backgroundColor;
+  const nextColor = steps[currentIndex + 1]
+    ? readablePillStyleFromHex(steps[currentIndex + 1].color).backgroundColor
+    : currentColor;
 
   if (!steps.length) {
     return <p className="text-sm font-semibold text-[color:var(--cab-text)]">{currentLabel}</p>;
   }
 
   const progressStyle = {
-    ["--client-portal-progress-accent" as string]: currentColor ?? "var(--cab-primary)",
+    ["--cpp-accent" as string]: currentColor ?? "var(--cab-primary)",
+    ["--cpp-next" as string]: nextColor ?? currentColor ?? "var(--cab-primary)",
   } as CSSProperties;
+
+  const fillClass = [
+    "client-portal-stato-progress-fill",
+    hasLeadSegment ? "client-portal-stato-progress-fill--tail" : "",
+    isComplete ? "client-portal-stato-progress-fill--complete" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className="min-w-0" role="group" aria-label={`Avanzamento: ${currentLabel}`}>
@@ -59,15 +73,11 @@ export function ClientPortalStatoProgress({
       <div className="mt-3 py-2">
         <div className="relative mx-2.5 min-w-0 sm:mx-3" style={progressStyle}>
         <div className="client-portal-stato-progress-track" aria-hidden>
-          <div
-            className="client-portal-stato-progress-fill motion-safe:transition-[width] motion-safe:duration-700 motion-safe:ease-out"
-            style={{ width: `${solidPct}%` }}
-          />
-          {hasLeadSegment ? (
-            <div
-              className="client-portal-stato-progress-fill-lead motion-safe:transition-[left,width] motion-safe:duration-700 motion-safe:ease-out"
-              style={{ left: `${solidPct}%`, width: `${leadPct - solidPct}%` }}
-            />
+          {filledPct > 0 ? (
+            <div className={fillClass} style={{ width: `${filledPct}%` }}>
+              <div className="client-portal-stato-progress-body" aria-hidden />
+              <div className="client-portal-stato-progress-shine" aria-hidden />
+            </div>
           ) : null}
         </div>
         {steps.map((step, i) => {

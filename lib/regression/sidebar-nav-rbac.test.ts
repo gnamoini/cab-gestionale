@@ -4,9 +4,9 @@ import { resolveGestionaleNav } from "@/components/gestionale/gestionale-nav-con
 import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
 import { createRbacNavAccess } from "@/src/lib/rbac/rbac-snapshot-access";
 
-function visibleHrefs(roleKey: string, clientLavorazioniAllowed = false): string[] {
+function visibleHrefs(roleKey: string): string[] {
   const snap = buildTestSnapshot({ userId: `${roleKey}-1`, roleKey });
-  const nav = createRbacNavAccess(snap, { clientLavorazioniAllowed });
+  const nav = createRbacNavAccess(snap);
   return resolveGestionaleNav({ hideHref: (href) => nav.shouldHideHref(href) })
     .filter((item) => !item.disabled && nav.canAccessHref(item.href))
     .map((item) => item.href);
@@ -33,7 +33,7 @@ const guest = visibleHrefs("guest");
 assert.ok(guest.includes("/dashboard"), "guest: dashboard");
 assert.ok(!guest.includes("/impostazioni"), "guest: no impostazioni");
 
-const cliente = visibleHrefs("cliente", true);
+const cliente = visibleHrefs("cliente");
 assert.deepEqual(
   cliente,
   ["/lavorazioni-clienti"],

@@ -92,7 +92,7 @@ export function ClientLavorazioneIngressoDialog({
             <SchedaIngressoPanoramicaView
               fields={fields}
               showAddettoAccettazione={false}
-              showNoteIntervento={false}
+              showNoteIntervento
               fieldLayout="rows"
               rowLayout="stacked"
               portalIngressoLayout

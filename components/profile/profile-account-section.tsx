@@ -1,5 +1,6 @@
 "use client";
 
+import { TruncatedTextTooltip } from "@/components/design-system";
 import { roleLabel } from "@/lib/auth/rbac";
 import { formatSecurityNullableWhen } from "@/lib/security/format-last-sign-in";
 import type { PublicAuthUser } from "@/src/types/auth-user";
@@ -8,8 +9,12 @@ function ProfileInfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-3 text-xs">
       <dt className="shrink-0 text-[color:var(--cab-text-muted)]">{label}</dt>
-      <dd className="min-w-0 truncate text-right text-[color:var(--cab-text)]" title={value}>
-        {value}
+      <dd className="min-w-0 max-w-[62%] text-right">
+        <TruncatedTextTooltip
+          text={value}
+          side="left"
+          className="truncate text-[color:var(--cab-text)]"
+        />
       </dd>
     </div>
   );

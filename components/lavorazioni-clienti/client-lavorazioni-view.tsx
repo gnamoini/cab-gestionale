@@ -12,7 +12,10 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
 import { lavorazioniAdvancedFiltersActive } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
-import { ClientLavorazioniLoadingSkeleton } from "@/components/lavorazioni-clienti/client-lavorazioni-loading-skeleton";
+import {
+  ClientLavorazioniStackSkeleton,
+  clientPortalPageStack,
+} from "@/components/lavorazioni-clienti/client-lavorazioni-loading-skeleton";
 import {
   IconActionButton,
   LoadingErrorState,
@@ -129,9 +132,6 @@ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
 const SEARCH_DEBOUNCE_MS = 400;
-
-const clientPortalPageStack =
-  "cab-layout-page-stack min-w-0 max-w-full space-y-[length:var(--ds-space-lg)]";
 
 type RowBundle = ClientPortalRowBundle;
 
@@ -509,32 +509,22 @@ function MobileCards({
               matricola={fields.matricola}
               scuderia={fields.nScuderia}
               ingresso={<LavorazioneIngressoDateCellFromIso iso={fields.dataIngressoAt} />}
-              secondaryDate={
-                variant === "archive"
-                  ? {
-                      label: "Completamento",
-                      value: (
-                        <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} />
-                      ),
-                    }
-                  : undefined
-              }
             />
             <div
               className="mt-2 grid grid-cols-1 gap-x-3 gap-y-2 cab-shell-desktop:grid-cols-2"
               role="group"
-              aria-label={variant === "archive" ? "Addetto" : "Stato e addetto"}
+              aria-label={variant === "archive" ? "Completamento e addetto" : "Stato e addetto"}
             >
               {variant === "active" ? (
                 <LavMobileInlineField label="Stato" layout="stack">
                   <StatoReadOnlyPill stato={row.stato} statiOpts={statiOpts} />
                 </LavMobileInlineField>
-              ) : null}
-              <LavMobileInlineField
-                label="Addetto"
-                layout="stack"
-                className={variant === "archive" ? "col-span-2" : undefined}
-              >
+              ) : (
+                <LavMobileInlineField label="Completamento" layout="stack">
+                  <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} />
+                </LavMobileInlineField>
+              )}
+              <LavMobileInlineField label="Addetto" layout="stack">
                 <LavorazioneAddettoReadOnlyPill
                 addetto={fields.addetto}
                 colorKey={fields.addettoNome}
@@ -844,11 +834,9 @@ export function ClientLavorazioniView() {
 
   const listError = contract.l0Status === "error" ? contract.error : null;
 
-  let bodyContent: ReactNode;
-  if (!canRender) {
-    bodyContent = <ClientLavorazioniLoadingSkeleton />;
-  } else if (listError) {
-    bodyContent = (
+  let listBody: ReactNode;
+  if (listError) {
+    listBody = (
       <ShellCard>
         <LoadingErrorState
           title="Impossibile caricare le lavorazioni"
@@ -860,7 +848,7 @@ export function ClientLavorazioniView() {
       </ShellCard>
     );
   } else {
-    bodyContent = (
+    listBody = (
       <>
         {showInCorso ? (
           <ShellCard
@@ -931,54 +919,62 @@ export function ClientLavorazioniView() {
       </div>
 
       <div className={clientPortalPageStack}>
-        <ShellCard>
-          <section aria-label="Azioni e filtri lavorazioni clienti">
-            <PageToolbar
-              primaryAction={
-                <ClientContattaciButton variant="primary" onClick={() => setContattaciOpen(true)} />
-              }
-              search={
-                <GestionaleSearchField
-                  id="client-lavorazioni-search"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      patchFilters({ search: searchInput.trim() });
-                    }
-                  }}
-                  placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-                  aria-label="Cerca lavorazioni clienti"
-                  wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
-                />
-              }
-              filtersExpanded={filtriEspansi}
-              onFiltersToggle={() => setFiltriEspansi((o) => !o)}
-              filtersActive={filtersActive}
-              filtersPanel={
-                <LavorazioniAdvancedFilterPanel
-                  filters={filters}
-                  onChange={patchFilters}
-                  catalog={filterCatalog}
-                  variant="clientPortal"
-                />
-              }
-              onFilterReset={resetFiltri}
-              meta={
-                <PageToolbarResultCount
-                  count={totalResults}
-                  filtersActive={lavorazioniAdvancedFiltersActive(filters)}
-                  searchActive={filters.search.trim().length > 0 || searchInput.trim().length > 0}
-                  onSearchReset={resetRicerca}
+        {!canRender ? (
+          <div className="contents" role="status" aria-busy="true" aria-label="Caricamento lavorazioni">
+            <ClientLavorazioniStackSkeleton />
+          </div>
+        ) : (
+          <>
+            <ShellCard>
+              <section aria-label="Azioni e filtri lavorazioni clienti">
+                <PageToolbar
+                  primaryAction={
+                    <ClientContattaciButton variant="primary" onClick={() => setContattaciOpen(true)} />
+                  }
+                  search={
+                    <GestionaleSearchField
+                      id="client-lavorazioni-search"
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          patchFilters({ search: searchInput.trim() });
+                        }
+                      }}
+                      placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
+                      aria-label="Cerca lavorazioni clienti"
+                      wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
+                    />
+                  }
+                  filtersExpanded={filtriEspansi}
+                  onFiltersToggle={() => setFiltriEspansi((o) => !o)}
+                  filtersActive={filtersActive}
+                  filtersPanel={
+                    <LavorazioniAdvancedFilterPanel
+                      filters={filters}
+                      onChange={patchFilters}
+                      catalog={filterCatalog}
+                      variant="clientPortal"
+                    />
+                  }
                   onFilterReset={resetFiltri}
+                  meta={
+                    <PageToolbarResultCount
+                      count={totalResults}
+                      filtersActive={lavorazioniAdvancedFiltersActive(filters)}
+                      searchActive={filters.search.trim().length > 0 || searchInput.trim().length > 0}
+                      onSearchReset={resetRicerca}
+                      onFilterReset={resetFiltri}
+                    />
+                  }
                 />
-              }
-            />
-          </section>
-        </ShellCard>
+              </section>
+            </ShellCard>
 
-        {bodyContent}
+            {listBody}
+          </>
+        )}
       </div>
 
       {qrRow ? (

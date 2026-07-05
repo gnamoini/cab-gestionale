@@ -171,17 +171,17 @@ export function AuthProvider({
     if (!initialSnapshot?.user?.id) return;
     queryClient.setQueryData(
       [...QK.userPermissions, initialSnapshot.user.id] as const,
-      initialSnapshot.permissions ?? [],
+      initialSnapshot.userPageOverrides ?? [],
     );
     queryClient.setQueryData(
-      [...QK.userPermissions, "role-keys", initialSnapshot.user.id] as const,
-      initialSnapshot.rolePermissionKeys ?? [],
+      [...QK.userPermissions, "role-page-access", initialSnapshot.user.id] as const,
+      initialSnapshot.rolePageAccess ?? {},
     );
     const snap = resolveEffectivePermissions({
       userId: initialSnapshot.user.id,
       roleKey: initialSnapshot.user.roleKey ?? initialSnapshot.user.ruolo,
-      rolePermissionKeys: initialSnapshot.rolePermissionKeys ?? [],
-      permissionRows: initialSnapshot.permissions ?? [],
+      rolePageAccess: initialSnapshot.rolePageAccess ?? {},
+      userPageOverrideRows: initialSnapshot.userPageOverrides ?? [],
       pilotDbEnabled: false,
     });
     if (isRbacSnapshotReady(snap)) {

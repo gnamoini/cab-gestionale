@@ -1,43 +1,35 @@
 import assert from "node:assert/strict";
-import { hasPermissionUnsafe, shouldHideNavHref } from "@/lib/auth/rbac";
-import { rbacSeedPermissionKeysForRole } from "@/lib/rbac-seed";
-import { resolveUserPermissions } from "@/src/lib/rbac/resolve-user-permissions";
-import type { RbacEvaluationContext } from "@/lib/rbac";
+import { shouldHideNavHref } from "@/lib/auth/rbac";
+import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
+import type { RequiredRbacContext } from "@/lib/auth/rbac";
+import { canReadPage } from "@/src/lib/rbac/resolve-page-access";
 
-function ctxFor(roleKey: string): RbacEvaluationContext {
-  return {
-    resolved: resolveUserPermissions({
-      userId: "test-user",
-      roleKey,
-      rolePermissionKeys: rbacSeedPermissionKeysForRole(roleKey),
-      userOverrides: [],
-    }),
-  };
+function ctxFor(roleKey: string): RequiredRbacContext {
+  return buildTestSnapshot({ userId: "test-user", roleKey }).rbacContext as RequiredRbacContext;
 }
 
 const admin = { ruolo: "admin" as const, id: "a1" };
 const cliente = { ruolo: "cliente" as const, id: "c1" };
 const operatore = { ruolo: "operatore" as const, id: "o1" };
-const adminCtx = ctxFor("admin") as Parameters<typeof hasPermissionUnsafe>[2];
+const adminCtx = ctxFor("admin");
 
-assert.equal(hasPermissionUnsafe(admin, "viewClientLavorazioni", adminCtx), true);
-assert.equal(hasPermissionUnsafe(cliente, "viewClientLavorazioni", ctxFor("cliente")), true);
-assert.equal(hasPermissionUnsafe(operatore, "viewClientLavorazioni", ctxFor("operatore")), false);
-assert.equal(hasPermissionUnsafe(admin, "viewClientLavorazioni"), false, "fail-closed senza snapshot risolto");
+assert.equal(canReadPage(adminCtx.resolved, "lavorazioni_clienti"), true);
+assert.equal(canReadPage(ctxFor("cliente").resolved, "lavorazioni_clienti"), true);
+assert.equal(canReadPage(ctxFor("operatore").resolved, "lavorazioni_clienti"), false);
 
 assert.equal(
-  shouldHideNavHref(admin, "/lavorazioni-clienti", { clientLavorazioniAllowed: true }, adminCtx as never),
+  shouldHideNavHref(admin, "/lavorazioni-clienti", undefined, adminCtx),
   false,
   "admin vede Portale Clienti con snapshot",
 );
 
 assert.equal(
-  shouldHideNavHref(cliente, "/lavorazioni-clienti", { clientLavorazioniAllowed: true }, ctxFor("cliente") as never),
+  shouldHideNavHref(cliente, "/lavorazioni-clienti", undefined, ctxFor("cliente")),
   false,
 );
 
 assert.equal(
-  shouldHideNavHref(operatore, "/lavorazioni-clienti", { clientLavorazioniAllowed: false }, ctxFor("operatore") as never),
+  shouldHideNavHref(operatore, "/lavorazioni-clienti", undefined, ctxFor("operatore")),
   true,
 );
 

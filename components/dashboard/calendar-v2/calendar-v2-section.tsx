@@ -33,7 +33,7 @@ function initialMonthKey(): string {
 
 export function CalendarV2Section() {
   const rbac = useRbac();
-  const canReport = rbac.canRead("report");
+  const canReport = rbac.canReadPage("report");
   const canUseAi = canReport;
 
   const [monthKey, setMonthKey] = useState(initialMonthKey);

@@ -16,8 +16,8 @@ import {
 import type { ServerAuthSnapshot } from "@/src/lib/auth/server-auth-types";
 import { readProxyForwardedAuthSnapshot } from "@/src/lib/auth/proxy-auth-snapshot-header";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
-import { loadRolePermissionKeys, loadUserPermissionOverrides } from "@/src/lib/rbac/load-rbac-data";
-import type { UserPermissionRow } from "@/src/types/supabase-tables";
+import { loadRolePageAccess, loadUserPageOverrides } from "@/src/lib/rbac/load-rbac-data";
+import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 
 type CookieLike = { name: string; value: string };
 
@@ -70,28 +70,30 @@ async function fetchServerAuthSnapshotWithClient(
   const expiresAt =
     sessionWrap.session?.expires_at != null ? Math.floor(sessionWrap.session.expires_at) : null;
 
-  const [{ data: prof, error: profErr }, { data: permRows, error: permErr }] = await Promise.all([
+  const [{ data: prof, error: profErr }, { data: overrideRows, error: overrideErr }] = await Promise.all([
     supabase.from("profiles").select("nome, cognome, username, role_key, cliente_ref, created_at").eq("id", authUser.id).maybeSingle(),
-    supabase
-      .from("user_permissions")
-      .select("user_id, permission_id, effect, permissions(key, module, action)")
-      .eq("user_id", authUser.id),
+    supabase.from("user_page_overrides").select("page_key, access_level").eq("user_id", authUser.id),
   ]);
 
   if (profErr) {
     console.warn("[auth] server snapshot profilo non leggibile:", profErr.message);
   }
-  if (permErr) {
-    console.warn("[auth] server snapshot permessi non leggibili:", permErr.message);
+  if (overrideErr) {
+    console.warn("[auth] server snapshot override pagina non leggibili:", overrideErr.message);
   }
 
   const roleKey = typeof prof?.role_key === "string" ? prof.role_key : "guest";
-  let rolePermissionKeys: string[] = [];
+  let rolePageAccess: Record<string, PageAccessLevel> = {};
   try {
-    rolePermissionKeys = await loadRolePermissionKeys(supabase, roleKey);
+    rolePageAccess = await loadRolePageAccess(supabase, roleKey);
   } catch (e) {
-    console.warn("[auth] role permissions load failed:", e);
+    console.warn("[auth] role page access load failed:", e);
   }
+
+  const userPageOverrides = (overrideRows ?? []).map((row) => ({
+    page_key: row.page_key as string,
+    access_level: row.access_level as PageAccessLevel,
+  }));
 
   let publicUser;
   try {
@@ -104,8 +106,8 @@ async function fetchServerAuthSnapshotWithClient(
   const snap: ServerAuthSnapshot = {
     user: publicUser,
     session: { expiresAt },
-    permissions: (permRows ?? []) as unknown as UserPermissionRow[],
-    rolePermissionKeys,
+    rolePageAccess,
+    userPageOverrides,
     configurationError: null,
   };
   writeCachedServerAuthSnapshot(fingerprint, snap);

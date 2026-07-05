@@ -25,10 +25,9 @@ assert.match(layout, /serverTheme === "dark" \? " dark" : ""/);
 assert.match(layout, /id="cab-theme-boot"[\s\S]*strategy="beforeInteractive"/);
 assert.doesNotMatch(layout, /<script\s+id="cab-theme-boot"/);
 
-assert.match(globalError, /from "next\/script"/);
-assert.match(globalError, /cab-theme-critical/);
-assert.match(globalError, /id="cab-theme-boot"[\s\S]*strategy="beforeInteractive"/);
-assert.doesNotMatch(globalError, /<script\s+id="cab-theme-boot"/);
+assert.match(globalError, /CAB_THEME_CRITICAL_INLINE_STYLE/);
+assert.doesNotMatch(globalError, /from "next\/script"/);
+assert.doesNotMatch(globalError, /cab-theme-boot/);
 
 assert.match(themeBoot, /export const CAB_THEME_CRITICAL_INLINE_STYLE/);
 assert.match(themeBoot, /export const CAB_THEME_BOOT_INLINE_SCRIPT/);

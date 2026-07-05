@@ -27,7 +27,7 @@ export function labelForGestionaleNavHref(href: string): string {
 /** Destinazione sicura post-errore / 404 — prima voce menu accessibile (come post-login). */
 export function useSafeGestionaleHomeLink(): SafeGestionaleHomeLink {
   const { user, status } = useAuth();
-  const { navAccess, isNavLoading, isNavReady } = useRbacNavAccess();
+  const { navAccess, snapshot, isNavLoading, isNavReady } = useRbacNavAccess();
 
   const sessionReady = isAuthSessionEstablished(status);
   const ready = sessionReady && (isNavReady || !user?.id);
@@ -49,14 +49,14 @@ export function useSafeGestionaleHomeLink(): SafeGestionaleHomeLink {
       hideHref: (href) => navAccess.shouldHideHref(href),
     }).find((item) => !item.disabled && navAccess.canAccessHref(item.href));
 
-    const href = firstNavItem?.href ?? resolveFirstAccessibleNavHref(navAccess);
+    const href = firstNavItem?.href ?? (snapshot ? resolveFirstAccessibleNavHref(navAccess, snapshot) : "/dashboard");
 
     return {
       href,
       label: labelForGestionaleNavHref(href),
       ready: true,
     };
-  }, [ready, isNavLoading, user, navAccess]);
+  }, [ready, isNavLoading, user, navAccess, snapshot]);
 }
 
 export type AccessibleQuickNavLink = {

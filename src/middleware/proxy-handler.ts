@@ -13,12 +13,9 @@ import {
   CLIENTE_HOME_PATH,
   defaultHomePathForRole,
   isClienteRole,
-  isPathAllowedForCliente,
-  pathnameToSection,
+  pathnameToPage,
 } from "@/lib/auth/rbac";
 import { evaluateGestionaleRouteAccess } from "@/src/lib/auth/evaluate-gestionale-route-access";
-import { createRbacNavAccess, isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
-import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
 import {
   OPERATOR_GLOBAL_SETTINGS_KEY,
   OPERATOR_GLOBAL_SETTINGS_MODULE,
@@ -29,6 +26,11 @@ import { logBootServer } from "@/lib/observability/boot-investigation";
 
 const LOGIN_PATH = "/login";
 const RESET_PASSWORD_PATH = "/login/reset-password";
+const PRIVACY_POLICY_PATH = "/privacy-policy";
+
+function isPublicInfoPath(pathname: string): boolean {
+  return pathname === PRIVACY_POLICY_PATH;
+}
 
 function logEdgeRedirect(from: string, to: string, reason: string): void {
   logBootServer("REDIRECT", "edge", { from, to, reason }, `${from}→${to}`);
@@ -88,7 +90,7 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
   const { supabase, response } = createSupabaseMiddlewareClient(request);
 
   if (!supabase) {
-    if (pathname === LOGIN_PATH || pathname.startsWith(`${LOGIN_PATH}/`)) {
+    if (pathname === LOGIN_PATH || pathname.startsWith(`${LOGIN_PATH}/`) || isPublicInfoPath(pathname)) {
       return forwardProxyResponse(request, response);
     }
     const url = request.nextUrl.clone();
@@ -108,6 +110,10 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
       return redirectWithLog(request, pathname, new URL(home, request.url), "logged_in_on_login");
     }
     return forwardProxyResponse(request, response);
+  }
+
+  if (isPublicInfoPath(pathname)) {
+    return forwardProxyResponse(request, response, auth);
   }
 
   if (!activeUser) {
@@ -137,17 +143,27 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
     return redirect;
   }
 
-  if (isClienteRole(activeUser) && !isPathAllowedForCliente(pathname) && pathname !== ACCESS_DENIED_PATH) {
-    const url = request.nextUrl.clone();
-    url.pathname = ACCESS_DENIED_PATH;
-    url.searchParams.set("from", CLIENTE_HOME_PATH);
-    url.searchParams.set("denied", "cliente_route");
-    return redirectWithLog(request, pathname, url, "cliente_route_denied");
+  if (isClienteRole(activeUser)) {
+    const denied = !evaluateGestionaleRouteAccess({
+      user: activeUser,
+      userId: activeUser.id,
+      pathname,
+      rolePageAccess: auth.rolePageAccess ?? {},
+      userPageOverrideRows: auth.userPageOverrides ?? [],
+      pilotDbEnabled: false,
+    });
+    if (denied && pathname !== ACCESS_DENIED_PATH) {
+      const url = request.nextUrl.clone();
+      url.pathname = ACCESS_DENIED_PATH;
+      url.searchParams.set("from", CLIENTE_HOME_PATH);
+      url.searchParams.set("denied", "cliente_route");
+      return redirectWithLog(request, pathname, url, "cliente_route_denied");
+    }
   }
 
-  const section = pathnameToSection(pathname);
+  const page = pathnameToPage(pathname);
   let pilotDbEnabled = false;
-  if (section === "impostazioni") {
+  if (page?.key === "impostazioni") {
     const { data: pilotRow } = await supabase
       .from("app_settings")
       .select("value")
@@ -157,36 +173,22 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
     pilotDbEnabled = parseOperatorGlobalSettingsDbEnabled(pilotRow?.value);
   }
 
-  const clientLavorazioniAllowed = (() => {
-    if (!activeUser?.id) return false;
-    const snap = resolveEffectivePermissions({
-      userId: activeUser.id,
-      roleKey: activeUser.roleKey ?? activeUser.ruolo,
-      rolePermissionKeys: auth.rolePermissionKeys ?? [],
-      permissionRows: auth.permissions ?? [],
-      pilotDbEnabled,
-    });
-    if (!isRbacSnapshotReady(snap)) return false;
-    return createRbacNavAccess(snap).canAccessHref("/lavorazioni-clienti");
-  })();
-
   if (
-    section &&
+    page &&
     !evaluateGestionaleRouteAccess({
       user: activeUser,
       userId: activeUser.id,
       pathname,
-      permissionRows: auth.permissions ?? [],
-      rolePermissionKeys: auth.rolePermissionKeys ?? [],
+      rolePageAccess: auth.rolePageAccess ?? {},
+      userPageOverrideRows: auth.userPageOverrides ?? [],
       pilotDbEnabled,
-      clientLavorazioniAllowed,
     })
   ) {
     const url = request.nextUrl.clone();
     url.pathname = ACCESS_DENIED_PATH;
     url.searchParams.set("from", defaultHomePathForRole(role));
-    url.searchParams.set("denied", section);
-    return redirectWithLog(request, pathname, url, `rbac_denied_${section}`);
+    url.searchParams.set("denied", page.key);
+    return redirectWithLog(request, pathname, url, `rbac_denied_${page.key}`);
   }
 
   if (bootTiming && pathname === "/dashboard") {

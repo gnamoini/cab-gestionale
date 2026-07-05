@@ -14,8 +14,8 @@ assert.match(cabSyncListener, /handlerRef\.current = handler/);
 assert.doesNotMatch(cabSyncListener, /\[handler,/);
 
 const globalLoading = read("context/global-loading-context.tsx");
-assert.match(globalLoading, /const push = ctx\?\.push/);
-assert.match(globalLoading, /\[push\]/);
+assert.match(globalLoading, /registerClaim = ctx\?\.registerClaim/);
+assert.match(globalLoading, /\[registerClaim, unregisterClaim\]/);
 
 const securityDash = read("components/dashboard/security-dashboard-view.tsx");
 assert.match(securityDash, /usersRefetchRef/);

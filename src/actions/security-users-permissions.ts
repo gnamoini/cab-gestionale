@@ -1,12 +1,7 @@
 "use server";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { PROFILES_COLUMNS, USER_PERMISSIONS_COLUMNS } from "@/lib/db/table-select-columns";
-import {
-  CLIENT_LAVORAZIONI_SETTINGS_KEY,
-  CLIENT_LAVORAZIONI_SETTINGS_MODULE,
-  parseClientPortalAccess,
-} from "@/lib/lavorazioni/client-portal-access";
+import { PROFILES_COLUMNS } from "@/lib/db/table-select-columns";
 import {
   normalizeClienteRef,
   roleHasClientPortalAccess,
@@ -14,23 +9,39 @@ import {
 } from "@/src/lib/auth/cliente-portal-scope";
 import { loadKnownClientiSetFromMezzi } from "@/src/lib/auth/load-known-clienti";
 import { normalizeUsername } from "@/src/lib/auth/username";
-import { hasPermission, resolveRole, ROLE_LABELS, type AppRole } from "@/lib/auth/rbac";
+import { resolveRole, ROLE_LABELS, type AppRole } from "@/lib/auth/rbac";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { createServiceAdminClient } from "@/lib/supabase/create-service-admin-client.server";
 import { assertAdminCaller } from "@/lib/auth/assert-admin-caller.server";
 import { listUsersByAdminAction } from "@/src/actions/admin-users";
 import type { SecurityUserAdminRow } from "@/src/actions/admin-users.types";
 import { isUserBanned } from "@/lib/auth/user-ban-state";
-import { loadAllUserPermissionRows as loadRbacUserPermissionRows, listAllRoles, loadRolePermissionKeys } from "@/src/lib/rbac/load-rbac-data";
+import {
+  loadAllRolePageAccess,
+  loadAllUserPageOverrideRows,
+  listAllRoles,
+  deleteUserPageOverride,
+  upsertUserPageOverride,
+} from "@/src/lib/rbac/load-rbac-data";
 import {
   validateLastAdminTarget,
   validateSecurityUserBatchPatches,
 } from "@/lib/validation/security-actions-validation";
-import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
+import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 import { onUserRoleChangedServer } from "@/src/lib/rbac/on-user-role-changed.server";
 import { clearServerAuthSnapshotCacheForUser } from "@/src/lib/auth/server-session-cache";
-import { hasModulePermissionOverrides } from "@/lib/security/user-module-permissions";
-import type { ProfileRow, RoleRow, UserPermissionRow } from "@/src/types/supabase-tables";
+import {
+  computePagePermissionDraft,
+  hasPagePermissionOverrides,
+  planPagePermissionPersist,
+  type PagePermissionDraftRow,
+} from "@/lib/security/user-page-permissions";
+import { seedPageAccessForRole } from "@/lib/rbac-page-seed";
+import { canReadPage } from "@/src/lib/rbac/resolve-page-access";
+import { resolvePageAccess } from "@/src/lib/rbac/resolve-page-access";
+import type { ProfileRow, RoleRow } from "@/src/types/supabase-tables";
+
+import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 
 export type SecurityUserModulePermissionEntry = {
   module: GestionalePermissionModule;
@@ -38,11 +49,15 @@ export type SecurityUserModulePermissionEntry = {
   canWrite: boolean;
 };
 
+export type SecurityUserPagePermissionEntry = {
+  pageKey: string;
+  accessLevel: PageAccessLevel;
+};
+
 export type SecurityUserPermissionRow = SecurityUserAdminRow & {
   clientLavorazioniAccess: boolean;
-  /** Accesso garantito dal ruolo (toggle non modificabile). */
   clientLavorazioniAccessFromRole: boolean;
-  hasModulePermissionOverrides: boolean;
+  hasPagePermissionOverrides: boolean;
 };
 
 export type SecurityUserBatchPatch = {
@@ -52,6 +67,9 @@ export type SecurityUserBatchPatch = {
   username?: string;
   ruolo?: string;
   clienteRef?: string | null;
+  pagePermissions?: SecurityUserPagePermissionEntry[] | null;
+  clearPagePermissions?: boolean;
+  /** @deprecated module editor UI — convert at save boundary */
   modulePermissions?: SecurityUserModulePermissionEntry[] | null;
   clearModulePermissions?: boolean;
 };
@@ -60,10 +78,15 @@ export type ListSecurityUsersPermissionsResult =
   | {
       ok: true;
       users: SecurityUserPermissionRow[];
-      portalSettingsUpdatedAt: string | null;
-      permissionRows: UserPermissionRow[];
-      rolePermissionKeysByRole: Record<string, string[]>;
+      userPageOverrideRows: { user_id: string; page_key: string; access_level: PageAccessLevel }[];
+      rolePageAccessByRole: Record<string, Record<string, PageAccessLevel>>;
       assignableRoles: Pick<RoleRow, "key" | "name">[];
+      /** @deprecated compat hook */
+      portalSettingsUpdatedAt: null;
+      /** @deprecated compat hook */
+      permissionRows: never[];
+      /** @deprecated compat hook */
+      rolePermissionKeysByRole: Record<string, never[]>;
     }
   | { ok: false; message: string };
 
@@ -71,26 +94,29 @@ export type BatchUpdateSecurityUsersResult =
   | { ok: true; updatedCount: number; roleChangedUserIds: string[] }
   | { ok: false; message: string };
 
-function roleGrantsClientPortal(rolePermissionKeys: string[]): boolean {
-  return rolePermissionKeys.includes("can_access_client_area");
+function roleGrantsClientPortal(rolePageAccess: Record<string, PageAccessLevel>, roleKey: string): boolean {
+  const access = rolePageAccess.lavorazioni_clienti ?? seedPageAccessForRole(roleKey).lavorazioni_clienti ?? "none";
+  return access === "read" || access === "write";
 }
 
 function toPermissionRow(
   user: SecurityUserAdminRow,
-  permissionRows: UserPermissionRow[],
-  rolePermissionKeys: string[],
+  userPageOverrideRows: { user_id: string; page_key: string; access_level: PageAccessLevel }[],
+  rolePageAccessByRole: Map<string, Record<string, PageAccessLevel>>,
 ): SecurityUserPermissionRow {
-  const fromRole = roleGrantsClientPortal(rolePermissionKeys);
+  const roleKey = resolveRole(user.ruolo);
+  const rolePageAccess = rolePageAccessByRole.get(roleKey) ?? seedPageAccessForRole(roleKey);
+  const fromRole = roleGrantsClientPortal(rolePageAccess, roleKey);
   return {
     ...user,
     clientLavorazioniAccessFromRole: fromRole,
     clientLavorazioniAccess: fromRole,
-    hasModulePermissionOverrides: hasModulePermissionOverrides(rolePermissionKeys, user.id, permissionRows),
+    hasPagePermissionOverrides: hasPagePermissionOverrides(user.id, userPageOverrideRows),
   };
 }
 
-async function deleteUserModulePermissions(admin: SupabaseClient, userId: string): Promise<void> {
-  const { error } = await admin.from("user_permissions").delete().eq("user_id", userId);
+async function deleteAllUserPageOverrides(admin: SupabaseClient, userId: string): Promise<void> {
+  const { error } = await admin.from("user_page_overrides").delete().eq("user_id", userId);
   if (error) throw new Error(error.message);
 }
 
@@ -99,63 +125,74 @@ async function applyUserModulePermissions(
   userId: string,
   modulePermissions: SecurityUserModulePermissionEntry[] | null,
   userRole?: AppRole,
-  rolePermissionKeys?: string[],
+  rolePageAccess?: Record<string, PageAccessLevel>,
 ): Promise<boolean> {
-  await deleteUserModulePermissions(admin, userId);
-  if (!modulePermissions?.length) return true;
+  if (!modulePermissions?.length) {
+    await deleteAllUserPageOverrides(admin, userId);
+    return true;
+  }
+  if (userRole === "guest") {
+    throw new Error(`Il ruolo ${ROLE_LABELS.guest} non ammette override permessi.`);
+  }
+  const { GESTIONALE_PAGES, pageAccessFromLevel, modulesForPage } = await import("@/src/lib/permissions/gestionale-pages");
+  const roleKey = userRole ?? "guest";
+  const roleAccess = rolePageAccess ?? seedPageAccessForRole(roleKey);
+  const pagePermissions: SecurityUserPagePermissionEntry[] = [];
+  for (const page of GESTIONALE_PAGES) {
+    const modulesForPageList = modulesForPage(page);
+    const entries = modulePermissions.filter((e) => modulesForPageList.includes(e.module));
+    if (!entries.length) continue;
+    const canRead = entries.some((e) => e.canRead);
+    const canWrite = entries.some((e) => e.canWrite) && canRead;
+    const roleLevel = roleAccess[page.key] ?? "none";
+    const roleAccessObj = pageAccessFromLevel(roleLevel);
+    const effectiveRead = canRead;
+    const effectiveWrite = canWrite;
+    if (effectiveRead === roleAccessObj.canRead && effectiveWrite === roleAccessObj.canWrite) continue;
+    pagePermissions.push({
+      pageKey: page.key,
+      accessLevel: effectiveWrite ? "write" : effectiveRead ? "read" : "none",
+    });
+  }
+  return applyUserPagePermissions(admin, userId, pagePermissions.length ? pagePermissions : null, userRole, roleAccess);
+}
+
+async function applyUserPagePermissions(
+  admin: SupabaseClient,
+  userId: string,
+  pagePermissions: SecurityUserPagePermissionEntry[] | null,
+  userRole?: AppRole,
+  rolePageAccess?: Record<string, PageAccessLevel>,
+): Promise<boolean> {
+  await deleteAllUserPageOverrides(admin, userId);
+  if (!pagePermissions?.length) return true;
 
   if (userRole === "guest") {
-    throw new Error(`Il ruolo ${ROLE_LABELS.guest} non ammette override permessi modulo.`);
+    throw new Error(`Il ruolo ${ROLE_LABELS.guest} non ammette override permessi pagina.`);
   }
 
-  const { data: perms, error: permErr } = await admin.from("permissions").select("id, key");
-  if (permErr) throw new Error(permErr.message);
-  const permByKey = new Map((perms ?? []).map((p) => [p.key as string, p.id as string]));
-
-  const { computeModulePermissionDraft, planModulePermissionPersist } = await import(
-    "@/lib/security/user-module-permissions"
-  );
-  const roleKeys = rolePermissionKeys ?? [];
-  const draft = computeModulePermissionDraft(roleKeys, userId, []).map((row) => {
-    const entry = modulePermissions.find((e) => e.module === row.module);
+  const roleKey = userRole ?? "guest";
+  const roleAccess = rolePageAccess ?? seedPageAccessForRole(roleKey);
+  const draft: PagePermissionDraftRow[] = computePagePermissionDraft(roleKey, roleAccess, userId, []).map((row) => {
+    const entry = pagePermissions.find((e) => e.pageKey === row.pageKey);
     if (!entry) return row;
     return {
       ...row,
-      canRead: entry.canRead,
-      canWrite: entry.canRead ? entry.canWrite : false,
+      overrideLevel: entry.accessLevel,
+      effectiveLevel: entry.accessLevel,
+      canRead: entry.accessLevel === "read" || entry.accessLevel === "write",
+      canWrite: entry.accessLevel === "write",
       isCustomized: true,
-      overrideRead:
-        entry.canRead === row.roleCanRead
-          ? ("inherit" as const)
-          : entry.canRead
-            ? ("allow" as const)
-            : ("deny" as const),
-      overrideWrite:
-        entry.canWrite === row.roleCanWrite
-          ? ("inherit" as const)
-          : entry.canWrite
-            ? ("allow" as const)
-            : ("deny" as const),
     };
   });
 
-  const plan = planModulePermissionPersist(roleKeys, draft);
-
-  if (plan.deleteAll) return true;
-
-  const rows = plan.overrides
-    .map((o: { permissionKey: string; effect: "allow" | "deny" }) => {
-      const permission_id = permByKey.get(o.permissionKey);
-      if (!permission_id) return null;
-      return { user_id: userId, permission_id, effect: o.effect };
-    })
-    .filter(
-      (r): r is { user_id: string; permission_id: string; effect: "allow" | "deny" } => r != null,
-    );
-
-  if (!rows.length) return true;
-  const { error } = await admin.from("user_permissions").upsert(rows, { onConflict: "user_id,permission_id" });
-  if (error) throw new Error(error.message);
+  const plan = planPagePermissionPersist(draft);
+  for (const pageKey of plan.deletes) {
+    await deleteUserPageOverride(admin, userId, pageKey);
+  }
+  for (const upsert of plan.upserts) {
+    await upsertUserPageOverride(admin, userId, upsert.pageKey, upsert.level);
+  }
   return true;
 }
 
@@ -166,27 +203,19 @@ export async function listSecurityUsersPermissionsAction(): Promise<ListSecurity
   const usersRes = await listUsersByAdminAction();
   if (!usersRes.ok) return { ok: false, message: usersRes.message };
 
-  const sb = await createSupabaseServerUserClient();
-  const { data: row } = await sb
-    .from("app_settings")
-    .select("value, updated_at")
-    .eq("module", CLIENT_LAVORAZIONI_SETTINGS_MODULE)
-    .eq("key", CLIENT_LAVORAZIONI_SETTINGS_KEY)
-    .maybeSingle();
-
   const { createClient } = await import("@supabase/supabase-js");
   const serviceAdmin = createClient(admin.url, admin.serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
   const userIds = usersRes.users.map((u) => u.id);
-  let permissionRows: UserPermissionRow[] = [];
+  let userPageOverrideRows: { user_id: string; page_key: string; access_level: PageAccessLevel }[] = [];
   try {
-    permissionRows = await loadRbacUserPermissionRows(serviceAdmin, userIds);
+    userPageOverrideRows = await loadAllUserPageOverrideRows(serviceAdmin, userIds);
   } catch (e) {
     return {
       ok: false,
-      message: e instanceof Error ? e.message : "Errore caricamento permessi modulo.",
+      message: e instanceof Error ? e.message : "Errore caricamento override pagine.",
     };
   }
 
@@ -194,26 +223,28 @@ export async function listSecurityUsersPermissionsAction(): Promise<ListSecurity
     .filter((r) => r.is_active)
     .map((r) => ({ key: r.key, name: r.name }));
 
+  const rolePageAccessMap = await loadAllRolePageAccess(serviceAdmin);
   const uniqueRoles = [
     ...new Set([...usersRes.users.map((u) => resolveRole(u.ruolo)), ...assignableRoles.map((r) => r.key)]),
   ];
-  const roleKeysMap = new Map<string, string[]>();
-  await Promise.all(
-    uniqueRoles.map(async (rk) => {
-      roleKeysMap.set(rk, await loadRolePermissionKeys(serviceAdmin, rk));
-    }),
-  );
+  for (const rk of uniqueRoles) {
+    if (!rolePageAccessMap.has(rk)) {
+      rolePageAccessMap.set(rk, seedPageAccessForRole(rk));
+    }
+  }
 
-  const users = usersRes.users.map((u) =>
-    toPermissionRow(u, permissionRows, roleKeysMap.get(resolveRole(u.ruolo)) ?? []),
-  );
+  const users = usersRes.users.map((u) => toPermissionRow(u, userPageOverrideRows, rolePageAccessMap));
+  const rolePageAccessByRole = Object.fromEntries(rolePageAccessMap);
+
   return {
     ok: true,
     users,
-    portalSettingsUpdatedAt: row?.updated_at ?? null,
-    permissionRows,
-    rolePermissionKeysByRole: Object.fromEntries(roleKeysMap),
+    userPageOverrideRows,
+    rolePageAccessByRole,
     assignableRoles,
+    portalSettingsUpdatedAt: null,
+    permissionRows: [],
+    rolePermissionKeysByRole: Object.fromEntries(uniqueRoles.map((rk) => [rk, []])),
   };
 }
 
@@ -270,6 +301,8 @@ export async function batchUpdateSecurityUsersAction(
       username: p.username,
       ruolo: p.ruolo != null ? resolveRole(p.ruolo) : undefined,
       clienteRef: p.clienteRef,
+      pagePermissions: p.pagePermissions,
+      clearPagePermissions: p.clearPagePermissions,
       modulePermissions: p.modulePermissions,
       clearModulePermissions: p.clearModulePermissions,
     }))
@@ -294,6 +327,8 @@ export async function batchUpdateSecurityUsersAction(
     .in("id", patchUserIds);
   if (profilesLoadErr) return { ok: false, message: profilesLoadErr.message };
   const profileById = new Map(((profilesBefore ?? []) as ProfileRow[]).map((p) => [p.id, p]));
+
+  const rolePageAccessMap = await loadAllRolePageAccess(admin);
 
   for (const patch of normalized) {
     const authLookup = await admin.auth.admin.getUserById(patch.userId);
@@ -415,27 +450,60 @@ export async function batchUpdateSecurityUsersAction(
       updatedCount += 1;
     }
 
-    if (patch.modulePermissions !== undefined) {
+    const rolePageAccess =
+      rolePageAccessMap.get(effectiveRole) ?? seedPageAccessForRole(effectiveRole);
+
+    if (patch.pagePermissions !== undefined) {
       if (effectiveRole === "guest") {
         return {
           ok: false,
-          message: `Il ruolo ${ROLE_LABELS.guest} non ammette override permessi modulo.`,
+          message: `Il ruolo ${ROLE_LABELS.guest} non ammette override permessi pagina.`,
         };
       }
       try {
-        if (await applyUserModulePermissions(admin, patch.userId, patch.modulePermissions, effectiveRole)) {
+        if (
+          await applyUserPagePermissions(
+            admin,
+            patch.userId,
+            patch.pagePermissions.length ? patch.pagePermissions : null,
+            effectiveRole,
+            rolePageAccess,
+          )
+        ) {
           updatedCount += 1;
         }
       } catch (e) {
-        return { ok: false, message: e instanceof Error ? e.message : "Errore salvataggio permessi pagine." };
+        return { ok: false, message: e instanceof Error ? e.message : "Errore salvataggio permessi pagina." };
+      }
+    } else if (patch.clearPagePermissions === true) {
+      try {
+        if (await applyUserPagePermissions(admin, patch.userId, null, effectiveRole)) {
+          updatedCount += 1;
+        }
+      } catch (e) {
+        return { ok: false, message: e instanceof Error ? e.message : "Errore permessi pagina." };
+      }
+    } else if (patch.modulePermissions !== undefined) {
+      if (effectiveRole === "guest") {
+        return {
+          ok: false,
+          message: `Il ruolo ${ROLE_LABELS.guest} non ammette override permessi.`,
+        };
+      }
+      try {
+        if (await applyUserModulePermissions(admin, patch.userId, patch.modulePermissions, effectiveRole, rolePageAccess)) {
+          updatedCount += 1;
+        }
+      } catch (e) {
+        return { ok: false, message: e instanceof Error ? e.message : "Errore salvataggio permessi." };
       }
     } else if (patch.clearModulePermissions === true) {
       try {
-        if (await applyUserModulePermissions(admin, patch.userId, null, effectiveRole)) {
+        if (await applyUserPagePermissions(admin, patch.userId, null, effectiveRole)) {
           updatedCount += 1;
         }
       } catch (e) {
-        return { ok: false, message: e instanceof Error ? e.message : "Errore permessi modulo." };
+        return { ok: false, message: e instanceof Error ? e.message : "Errore permessi pagina." };
       }
     }
   }
@@ -476,79 +544,7 @@ export type ClienteAssociationAuditActionResult =
   | ClienteAssociationAuditResult
   | { ok: false; message: string };
 
-async function cleanupClientPortalAllowlist(
-  sbUser: SupabaseClient,
-  users: SecurityUserAdminRow[],
-  callerId: string,
-): Promise<{ cleaned: Array<{ userId: string; nome: string; ruolo: string }>; issues: ClienteAssociationAuditIssue[] }> {
-  const { data: settingsRow } = await sbUser
-    .from("app_settings")
-    .select("value, updated_at")
-    .eq("module", CLIENT_LAVORAZIONI_SETTINGS_MODULE)
-    .eq("key", CLIENT_LAVORAZIONI_SETTINGS_KEY)
-    .maybeSingle();
-
-  const settings = parseClientPortalAccess(settingsRow?.value);
-  const usersById = new Map(users.map((u) => [u.id, u]));
-  const issues: ClienteAssociationAuditIssue[] = [];
-  const cleaned: Array<{ userId: string; nome: string; ruolo: string }> = [];
-  const nextIds: string[] = [];
-
-  for (const userId of settings.enabledUserIds) {
-    const user = usersById.get(userId);
-    if (!user) {
-      issues.push({
-        userId,
-        nome: "—",
-        email: "",
-        ruolo: "guest",
-        clienteRef: null,
-        category: "allowlist_non_autorizzato",
-        detail: "Utente in allowlist non trovato in elenco profili.",
-      });
-      continue;
-    }
-    if (!roleHasClientPortalAccess(user.ruolo)) {
-      issues.push({
-        userId: user.id,
-        nome: user.nome,
-        email: user.email,
-        ruolo: user.ruolo,
-        clienteRef: user.clienteRef,
-        category: "allowlist_non_autorizzato",
-        detail: "Rimosso dall'allowlist: ruolo senza accesso portale.",
-      });
-      cleaned.push({ userId: user.id, nome: user.nome, ruolo: user.ruolo });
-      continue;
-    }
-    nextIds.push(userId);
-  }
-
-  if (nextIds.length !== settings.enabledUserIds.length) {
-    const value = { enabledUserIds: nextIds };
-    if (!settingsRow) {
-      const { error } = await sbUser.from("app_settings").insert({
-        module: CLIENT_LAVORAZIONI_SETTINGS_MODULE,
-        key: CLIENT_LAVORAZIONI_SETTINGS_KEY,
-        value,
-        updated_by: callerId,
-      });
-      if (error) throw new Error(error.message);
-    } else {
-      const { error } = await sbUser
-        .from("app_settings")
-        .update({ value, updated_by: callerId })
-        .eq("module", CLIENT_LAVORAZIONI_SETTINGS_MODULE)
-        .eq("key", CLIENT_LAVORAZIONI_SETTINGS_KEY)
-        .eq("updated_at", settingsRow.updated_at);
-      if (error) throw new Error("Conflitto aggiornamento allowlist portale. Riprova.");
-    }
-  }
-
-  return { cleaned, issues };
-}
-
-/** Report associazioni cliente + pulizia allowlist portale (no auto-fix su profili). */
+/** Report associazioni cliente (no auto-fix su profili). */
 export async function auditClienteAssociationsAction(): Promise<ClienteAssociationAuditActionResult> {
   const caller = await assertAdminCaller();
   if (!caller.ok) return { ok: false, message: caller.message };
@@ -560,7 +556,6 @@ export async function auditClienteAssociationsAction(): Promise<ClienteAssociati
   const admin = createClient(caller.url, caller.serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const sbUser = await createSupabaseServerUserClient();
 
   let knownClienti: Set<string>;
   try {
@@ -608,20 +603,32 @@ export async function auditClienteAssociationsAction(): Promise<ClienteAssociati
         category: "ref_orfano_staff",
         detail: "Cliente associato valorizzato per utente non Cliente (informativo).",
       });
+    } else if (roleHasClientPortalAccess(user.ruolo)) {
+      const resolved = resolvePageAccess({
+        userId: user.id,
+        roleKey: user.ruolo,
+        rolePageAccess: seedPageAccessForRole(user.ruolo),
+        userPageOverrides: {},
+      });
+      if (!canReadPage(resolved, "lavorazioni_clienti")) {
+        issues.push({
+          userId: user.id,
+          nome: user.nome,
+          email: user.email,
+          ruolo: user.ruolo,
+          clienteRef: ref,
+          category: "allowlist_non_autorizzato",
+          detail: "Ruolo con accesso portale ma pagina lavorazioni_clienti non abilitata.",
+        });
+      }
     }
   }
 
-  try {
-    const allowlist = await cleanupClientPortalAllowlist(sbUser, usersRes.users, caller.callerId);
-    issues.push(...allowlist.issues);
-    return {
-      ok: true,
-      issues,
-      allowlistCleaned: allowlist.cleaned,
-      knownClientiCount: knownClienti.size,
-      scannedAt: new Date().toISOString(),
-    };
-  } catch (e) {
-    return { ok: false, message: e instanceof Error ? e.message : "Errore pulizia allowlist." };
-  }
+  return {
+    ok: true,
+    issues,
+    allowlistCleaned: [],
+    knownClientiCount: knownClienti.size,
+    scannedAt: new Date().toISOString(),
+  };
 }

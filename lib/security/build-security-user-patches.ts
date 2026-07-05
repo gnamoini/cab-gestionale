@@ -1,16 +1,16 @@
 import { resolveRole } from "@/lib/auth/rbac";
 import {
-  buildInitialModuleDraft,
-  modulePermissionsPayloadFromDraft,
-  snapshotModuleDraft,
-  type ModulePermissionDraftRow,
-} from "@/lib/security/user-module-permissions";
+  buildInitialPageDraft,
+  pagePermissionsPayloadFromDraft,
+  snapshotPageDraft,
+  type PagePermissionDraftRow,
+} from "@/lib/security/user-page-permissions";
+import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 import { normalizeUsername } from "@/src/lib/auth/username";
 import type {
   SecurityUserBatchPatch,
   SecurityUserPermissionRow,
 } from "@/src/actions/security-users-permissions";
-import type { UserPermissionRow } from "@/src/types/supabase-tables";
 
 export type EditableSecurityUser = SecurityUserPermissionRow;
 
@@ -31,10 +31,10 @@ export function rowsSnapshot(rows: EditableSecurityUser[]): string {
 export function buildSecurityUserPatches(
   saved: EditableSecurityUser[],
   draft: EditableSecurityUser[],
-  savedModuleSnapshots: Record<string, string>,
-  draftModuleDrafts: Record<string, ModulePermissionDraftRow[]>,
-  permissionRows: UserPermissionRow[],
-  rolePermissionKeysByRole: Record<string, string[]>,
+  savedPageSnapshots: Record<string, string>,
+  draftPageDrafts: Record<string, PagePermissionDraftRow[]>,
+  userPageOverrideRows: { user_id: string; page_key: string; access_level: PageAccessLevel }[],
+  rolePageAccessByRole: Record<string, Record<string, PageAccessLevel>>,
 ): SecurityUserBatchPatch[] {
   const savedById = new Map(saved.map((r) => [r.id, r]));
   const patches: SecurityUserBatchPatch[] = [];
@@ -64,7 +64,7 @@ export function buildSecurityUserPatches(
     const roleChanged = row.ruolo !== orig.ruolo;
     if (roleChanged) {
       patch.ruolo = row.ruolo;
-      patch.clearModulePermissions = true;
+      patch.clearPagePermissions = true;
       dirty = true;
     }
     const clienteRefChanged = (row.clienteRef ?? null) !== (orig.clienteRef ?? null);
@@ -72,17 +72,18 @@ export function buildSecurityUserPatches(
       patch.clienteRef = row.clienteRef ?? null;
       dirty = true;
     }
-    const roleKeys = rolePermissionKeysByRole[resolveRole(orig.ruolo)] ?? [];
-    const savedModSnap =
-      savedModuleSnapshots[row.id] ??
-      snapshotModuleDraft(buildInitialModuleDraft(roleKeys, orig.id, permissionRows));
-    const draftMod = draftModuleDrafts[row.id];
-    const draftModSnap = draftMod ? snapshotModuleDraft(draftMod) : savedModSnap;
-    if (!roleChanged && draftModSnap !== savedModSnap && draftMod) {
-      patch.modulePermissions = modulePermissionsPayloadFromDraft(
-        rolePermissionKeysByRole[resolveRole(row.ruolo)] ?? roleKeys,
-        draftMod,
+
+    const roleKey = resolveRole(orig.ruolo);
+    const rolePageAccess = rolePageAccessByRole[roleKey] ?? {};
+    const savedPageSnap =
+      savedPageSnapshots[row.id] ??
+      snapshotPageDraft(
+        buildInitialPageDraft(roleKey, rolePageAccess, orig.id, userPageOverrideRows),
       );
+    const draftPage = draftPageDrafts[row.id];
+    const draftPageSnap = draftPage ? snapshotPageDraft(draftPage) : savedPageSnap;
+    if (!roleChanged && draftPageSnap !== savedPageSnap && draftPage) {
+      patch.pagePermissions = pagePermissionsPayloadFromDraft(draftPage);
       dirty = true;
     }
 

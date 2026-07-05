@@ -1,14 +1,14 @@
-import { resolveGestionaleNav, type GestionaleNavHref } from "@/components/gestionale/gestionale-nav-config";
+import { buildGestionaleNav, type GestionaleNavHref } from "@/components/gestionale/gestionale-nav-config";
+import { GESTIONALE_PAGES } from "@/src/lib/permissions/gestionale-pages";
 import { isStagingBlockedPathname, isStagingPublicSlice } from "@/lib/env/staging-public";
 import {
   ACCESS_DENIED_PATH,
   CLIENTE_HOME_PATH,
   defaultHomePathForRole,
   isClienteRole,
-  type CanAccessPageOptions,
   type RbacUser,
 } from "@/lib/auth/rbac";
-import type { RbacNavAccess } from "@/src/lib/rbac/rbac-snapshot-access";
+import type { RbacNavAccess, RbacSnapshotBound } from "@/src/lib/rbac/rbac-snapshot-access";
 
 const DASHBOARD_FALLBACK = "/dashboard";
 
@@ -31,9 +31,10 @@ function stagingBlocksRedirect(path: string): boolean {
 /** Prima voce menu accessibile (ordine `GESTIONALE_NAV`), esclusi staging disabilitati. */
 export function resolveFirstAccessibleNavHref(
   navAccess: RbacNavAccess,
+  snapshot: RbacSnapshotBound,
 ): string {
-  const items = resolveGestionaleNav({
-    hideHref: (href: GestionaleNavHref) => navAccess.shouldHideHref(href),
+  const items = buildGestionaleNav(snapshot.resolved, {
+    hidePageKey: (pageKey) => navAccess.shouldHidePageKey(pageKey),
   });
   const first = items.find((item) => !item.disabled && navAccess.canAccessHref(item.href));
   return first?.href ?? DASHBOARD_FALLBACK;
@@ -44,7 +45,7 @@ export type ResolvePostLoginRedirectInput = {
   navAccess: RbacNavAccess | null;
   /** Query `from` o deep link esplicito post-login. */
   requestedPath?: string | null;
-} & CanAccessPageOptions;
+} & { snapshot?: RbacSnapshotBound | null };
 
 /**
  * Destinazione post-login: deep link consentito, altrimenti prima pagina del menu,
@@ -66,7 +67,7 @@ export function resolvePostLoginRedirectPath(input: ResolvePostLoginRedirectInpu
     return CLIENTE_HOME_PATH;
   }
 
-  if (!input.navAccess) {
+  if (!input.navAccess || !input.snapshot) {
     return defaultHomePathForRole(input.user);
   }
 
@@ -79,5 +80,5 @@ export function resolvePostLoginRedirectPath(input: ResolvePostLoginRedirectInpu
     return requested;
   }
 
-  return resolveFirstAccessibleNavHref(input.navAccess);
+  return resolveFirstAccessibleNavHref(input.navAccess, input.snapshot);
 }

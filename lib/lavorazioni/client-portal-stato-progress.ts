@@ -49,6 +49,9 @@ export function clientPortalStatoStepPositionPct(index: number, stepCount: numbe
   return (index / (stepCount - 1)) * 100;
 }
 
+/** Quota del tratto corrente→successivo coperta dalla barra colorata. */
+export const CLIENT_PORTAL_STATO_PROGRESS_LEAD_RATIO = 0.6;
+
 /** Riempimento fino al pallino corrente + avanzamento verso il successivo. */
 export function clientPortalStatoProgressFillPcts(
   currentIndex: number,
@@ -58,7 +61,7 @@ export function clientPortalStatoProgressFillPcts(
   const solidPct = clientPortalStatoStepPositionPct(currentIndex, stepCount);
   if (currentIndex >= stepCount - 1) return { solidPct: 100, leadPct: 100 };
   const nextPct = clientPortalStatoStepPositionPct(currentIndex + 1, stepCount);
-  const leadPct = solidPct + (nextPct - solidPct) * 0.58;
+  const leadPct = solidPct + (nextPct - solidPct) * CLIENT_PORTAL_STATO_PROGRESS_LEAD_RATIO;
   return { solidPct, leadPct };
 }
 

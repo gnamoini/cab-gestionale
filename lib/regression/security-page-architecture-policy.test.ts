@@ -10,7 +10,7 @@ const SECURITY_CLIENT_FILES = [
   "components/dashboard/security/security-users-permissions-panel.tsx",
   "components/dashboard/security/security-users-table.tsx",
   "components/dashboard/security/security-user-detail-drawer.tsx",
-  "components/dashboard/security/security-user-module-permissions-editor.tsx",
+  "components/dashboard/security/security-user-page-permissions-editor.tsx",
   "components/dashboard/security/security-monitoring-section.tsx",
   "components/dashboard/security/security-release-section.tsx",
   "components/dashboard/security/security-edit-name-modal.tsx",

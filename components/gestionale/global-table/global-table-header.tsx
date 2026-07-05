@@ -14,6 +14,7 @@ import {
   globalTableButtonJustify,
   globalTableSortActive,
   globalTableSortButton,
+  globalTableSortControl,
   globalTableSortLabelSingle,
   globalTableSortLabelStack,
   globalTableSortLabelStackLine,
@@ -209,12 +210,16 @@ export function GlobalTableSortTh<K extends string>({
         type="button"
         onClick={() => onSort(columnKey)}
         aria-label={`${sortLabel}: ${sortHint}. Clic per cambiare ordinamento`}
-        className={`${globalTableSortButton} ${stacked ? "items-start gap-1.5 py-0.5" : ""} ${globalTableButtonJustify(resolvedAlign)} ${dsFocus} ${
+        className={`${globalTableSortButton} ${stacked ? "py-0.5" : ""} ${globalTableButtonJustify(resolvedAlign)} ${dsFocus} ${
           showActiveHighlight ? globalTableSortActive : globalTableSortIdle
         }`}
       >
-        {labelNode}
-        <GlobalTableSortIcon active={active} phase={sortPhase} className={stacked ? "self-center" : undefined} />
+        <span
+          className={`${globalTableSortControl} ${stacked ? "items-start gap-1.5" : ""}`.trim()}
+        >
+          {labelNode}
+          <GlobalTableSortIcon active={active} phase={sortPhase} className={stacked ? "self-center" : undefined} />
+        </span>
       </button>
     </th>
   );

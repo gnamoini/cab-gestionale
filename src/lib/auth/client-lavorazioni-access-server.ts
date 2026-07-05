@@ -1,7 +1,7 @@
 import { resolveRole } from "@/lib/auth/rbac";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { resolveServerEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions.server";
-import { hasResolvedCapability } from "@/src/lib/rbac/resolve-user-permissions";
+import { canReadPage } from "@/src/lib/rbac/resolve-page-access";
 
 /** Verifica accesso portale clienti lato server (layout / actions). */
 export async function verifyClientLavorazioniAccessServer(): Promise<boolean> {
@@ -12,7 +12,7 @@ export async function verifyClientLavorazioniAccessServer(): Promise<boolean> {
   if (!user?.id) return false;
 
   const snap = await resolveServerEffectivePermissions();
-  if (snap?.resolved && hasResolvedCapability(snap.resolved, "can_access_client_area")) {
+  if (snap?.resolved && canReadPage(snap.resolved, "lavorazioni_clienti")) {
     return true;
   }
 

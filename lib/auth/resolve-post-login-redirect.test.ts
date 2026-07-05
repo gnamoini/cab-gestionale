@@ -6,18 +6,19 @@ import { resolveFirstAccessibleNavHref, resolvePostLoginRedirectPath } from "@/l
 const adminSnap = buildTestSnapshot({ userId: "a1", roleKey: "admin" });
 const adminNav = createRbacNavAccess(adminSnap);
 const clienteSnap = buildTestSnapshot({ userId: "c1", roleKey: "cliente" });
-const clienteNav = createRbacNavAccess(clienteSnap, { clientLavorazioniAllowed: true });
+const clienteNav = createRbacNavAccess(clienteSnap);
 const guestSnap = buildTestSnapshot({ userId: "g1", roleKey: "guest" });
 const guestNav = createRbacNavAccess(guestSnap);
 
-assert.equal(resolveFirstAccessibleNavHref(adminNav), "/dashboard");
-assert.equal(resolveFirstAccessibleNavHref(clienteNav), "/lavorazioni-clienti");
-assert.equal(resolveFirstAccessibleNavHref(guestNav), "/dashboard");
+assert.equal(resolveFirstAccessibleNavHref(adminNav, adminSnap), "/dashboard");
+assert.equal(resolveFirstAccessibleNavHref(clienteNav, clienteSnap), "/lavorazioni-clienti");
+assert.equal(resolveFirstAccessibleNavHref(guestNav, guestSnap), "/dashboard");
 
 assert.equal(
   resolvePostLoginRedirectPath({
     user: { ruolo: "cliente", id: "c1" },
     navAccess: clienteNav,
+    snapshot: clienteSnap,
   }),
   "/lavorazioni-clienti",
 );
@@ -33,7 +34,8 @@ assert.equal(
 assert.equal(
   resolvePostLoginRedirectPath({
     user: { ruolo: "cliente", id: "c1" },
-    navAccess: createRbacNavAccess(clienteSnap, { clientLavorazioniAllowed: false }),
+    navAccess: clienteNav,
+    snapshot: clienteSnap,
     requestedPath: "/lavorazioni-clienti/abc",
   }),
   "/lavorazioni-clienti/abc",
@@ -43,6 +45,7 @@ assert.equal(
   resolvePostLoginRedirectPath({
     user: { ruolo: "guest", id: "g1" },
     navAccess: guestNav,
+    snapshot: guestSnap,
     requestedPath: "/magazzino",
   }),
   "/magazzino",
@@ -52,6 +55,7 @@ assert.equal(
   resolvePostLoginRedirectPath({
     user: { ruolo: "cliente", id: "c1" },
     navAccess: clienteNav,
+    snapshot: clienteSnap,
     requestedPath: "/dashboard",
   }),
   "/lavorazioni-clienti",

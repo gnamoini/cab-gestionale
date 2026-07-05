@@ -2,19 +2,24 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import { listRolesAction, getRolePermissionMatrixAction, updateRolePermissionsAction } from "@/src/actions/security-roles-permissions";
+import { getPageMatrixAction, listRolesAction, updatePageMatrixAction } from "@/src/actions/security-roles-permissions";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { SecurityRolesList } from "@/components/dashboard/security/security-roles-list";
-import { SecurityRoleMatrixEditor } from "@/components/dashboard/security/security-role-matrix-editor";
+import { SecurityPageMatrixEditor } from "@/components/dashboard/security/security-page-matrix-editor";
 import { SecurityRoleCreateModal } from "@/components/dashboard/security/security-role-create-modal";
 import { SecurityInlineNotice } from "@/components/dashboard/security/security-inline-notice";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { dsBtnPrimary } from "@/lib/ui/design-system";
+import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 import type { RoleRow } from "@/src/types/supabase-tables";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 type Props = { readOnly?: boolean };
+
+function cellKey(roleKey: string, pageKey: string) {
+  return `${roleKey}::${pageKey}`;
+}
 
 export function SecurityRolesPanel({ readOnly = false }: Props) {
   const gestToast = useGestionaleToast();
@@ -22,8 +27,8 @@ export function SecurityRolesPanel({ readOnly = false }: Props) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [draftAllowed, setDraftAllowed] = useState<Set<string>>(new Set());
-  const [savedAllowed, setSavedAllowed] = useState<Set<string>>(new Set());
+  const [draft, setDraft] = useState<Map<string, PageAccessLevel>>(new Map());
+  const [saved, setSaved] = useState<Map<string, PageAccessLevel>>(new Map());
 
   const rolesQ = useQuery({
     queryKey: ["security", "roles"],
@@ -35,10 +40,9 @@ export function SecurityRolesPanel({ readOnly = false }: Props) {
   });
 
   const matrixQ = useQuery({
-    queryKey: ["security", "role-matrix", selectedKey],
-    enabled: !!selectedKey,
+    queryKey: ["security", "page-matrix"],
     queryFn: async () => {
-      const res = await getRolePermissionMatrixAction(selectedKey!);
+      const res = await getPageMatrixAction();
       if (!res.ok) throw new Error(res.message);
       return res.matrix;
     },
@@ -49,34 +53,43 @@ export function SecurityRolesPanel({ readOnly = false }: Props) {
 
   useEffect(() => {
     if (!matrixQ.data) return;
-    const allowed = new Set(matrixQ.data.cells.filter((c) => c.allowed).map((c) => c.permissionId));
-    setDraftAllowed(allowed);
-    setSavedAllowed(new Set(allowed));
+    const initial = new Map<string, PageAccessLevel>();
+    for (const row of matrixQ.data.rows) {
+      for (const cell of row.cells) {
+        initial.set(cellKey(row.role.key, cell.pageKey), cell.level);
+      }
+    }
+    setDraft(initial);
+    setSaved(new Map(initial));
   }, [matrixQ.data]);
 
   const dirty = useMemo(() => {
-    if (draftAllowed.size !== savedAllowed.size) return true;
-    for (const id of draftAllowed) if (!savedAllowed.has(id)) return true;
+    if (draft.size !== saved.size) return true;
+    for (const [k, v] of draft) if (saved.get(k) !== v) return true;
     return false;
-  }, [draftAllowed, savedAllowed]);
+  }, [draft, saved]);
 
   const handleSave = useCallback(async () => {
-    if (!selectedKey || readOnly) return;
+    if (readOnly) return;
     setSaving(true);
-    const res = await updateRolePermissionsAction({
-      roleKey: selectedKey,
-      allowedPermissionIds: [...draftAllowed],
-    });
+    const patches: { roleKey: string; pageKey: string; level: PageAccessLevel }[] = [];
+    for (const [k, level] of draft) {
+      if (saved.get(k) === level) continue;
+      const [roleKey, pageKey] = k.split("::");
+      if (!roleKey || !pageKey) continue;
+      patches.push({ roleKey, pageKey, level });
+    }
+    const res = await updatePageMatrixAction({ patches });
     setSaving(false);
     if (!res.ok) {
       gestToast.error(res.message);
       return;
     }
     gestToast.successDone();
-    setSavedAllowed(new Set(draftAllowed));
-    void queryClient.invalidateQueries({ queryKey: ["security", "role-matrix", selectedKey] });
+    setSaved(new Map(draft));
+    void queryClient.invalidateQueries({ queryKey: ["security", "page-matrix"] });
     void queryClient.invalidateQueries({ queryKey: QK.securityUsersPermissions });
-  }, [selectedKey, readOnly, draftAllowed, gestToast, queryClient]);
+  }, [readOnly, draft, saved, gestToast, queryClient]);
 
   if (rolesQ.isError) {
     return <SecurityInlineNotice variant="danger">{rolesQ.error.message}</SecurityInlineNotice>;
@@ -93,10 +106,15 @@ export function SecurityRolesPanel({ readOnly = false }: Props) {
           readOnly={readOnly}
           loading={rolesQ.isLoading}
         />
+        {selectedRole ? (
+          <p className="mt-3 text-[11px] text-[color:var(--cab-text-muted)]">
+            Ruolo selezionato: <strong>{selectedRole.name}</strong> — modifica la matrice a destra.
+          </p>
+        ) : null}
       </ShellCard>
 
-      <ShellCard title={selectedRole ? `Matrice — ${selectedRole.name}` : "Matrice permessi"}>
-        {selectedRole && !readOnly ? (
+      <ShellCard title="Matrice permessi (ruolo × pagina)">
+        {!readOnly ? (
           <div className="mb-3 flex justify-end">
             <button
               type="button"
@@ -108,25 +126,12 @@ export function SecurityRolesPanel({ readOnly = false }: Props) {
             </button>
           </div>
         ) : null}
-        {!selectedRole ? (
-          <p className="text-sm text-[color:var(--cab-text-muted)]">Seleziona un ruolo per modificare i permessi.</p>
-        ) : matrixQ.isLoading ? (
+        {matrixQ.isLoading ? (
           <p className="text-sm text-[color:var(--cab-text-muted)]">Caricamento matrice…</p>
         ) : matrixQ.isError ? (
           <SecurityInlineNotice variant="danger">{matrixQ.error.message}</SecurityInlineNotice>
         ) : matrixQ.data ? (
-          <SecurityRoleMatrixEditor
-            cells={matrixQ.data.cells}
-            role={selectedRole}
-            draftAllowed={draftAllowed}
-            onDraftChange={setDraftAllowed}
-            readOnly={readOnly}
-          />
-        ) : null}
-        {selectedRole?.is_system ? (
-          <p className="mt-3 text-[11px] text-[color:var(--cab-text-muted)]">
-            Ruolo di sistema: la key non è modificabile; i permessi sono editabili.
-          </p>
+          <SecurityPageMatrixEditor matrix={matrixQ.data} draft={draft} onDraftChange={setDraft} readOnly={readOnly} />
         ) : null}
       </ShellCard>
 
@@ -137,6 +142,7 @@ export function SecurityRolesPanel({ readOnly = false }: Props) {
         onCreated={(key) => {
           setCreateOpen(false);
           void queryClient.invalidateQueries({ queryKey: ["security", "roles"] });
+          void queryClient.invalidateQueries({ queryKey: ["security", "page-matrix"] });
           setSelectedKey(key);
         }}
       />

@@ -31,7 +31,7 @@ for (const label of LEGACY_LABELS) {
   for (const rel of [
     "lib/auth/rbac.ts",
     "lib/rbac.ts",
-    "components/dashboard/security/security-user-module-permissions-editor.tsx",
+    "components/dashboard/security/security-user-page-permissions-editor.tsx",
     "src/actions/security-users-permissions.ts",
   ]) {
     const src = fs.readFileSync(path.join(ROOT, rel), "utf8");

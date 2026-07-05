@@ -49,6 +49,9 @@ const TONE_DOT: Record<GestionaleLogEventTone, string> = {
 export type LogEntryProps = {
   vm: GestionaleLogViewModel;
   onClick?: () => void;
+  /** Navigazione inbox — link nativo (affidabile dal drawer). */
+  href?: string;
+  onAfterNavigate?: () => void;
   title?: string;
   trailing?: ReactNode;
   /** Card inbox notifiche — layout compatto senza dot laterale. */
@@ -151,23 +154,37 @@ function LogEntryBody({
   );
 }
 
-function LogEntryInteractive({
-  onClick,
+function resolveActivate(
+  onClick: (() => void) | undefined,
+  href: string | undefined,
+  onAfterNavigate: (() => void) | undefined,
+): (() => void) | undefined {
+  if (onClick) return onClick;
+  if (!href) return undefined;
+  return () => {
+    onAfterNavigate?.();
+    window.location.assign(href);
+  };
+}
+
+function LogEntryShellInteractive({
+  onActivate,
   title,
-  className = LOG_ENTRY_INTERACTIVE_CLASS,
+  className,
   children,
 }: {
-  onClick: () => void;
+  onActivate: () => void;
   title?: string;
-  className?: string;
+  className: string;
   children: ReactNode;
 }) {
   const interactive = (
     <div
-      role="button"
+      role="link"
       tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => logEntryActivate(onClick, e)}
+      onClick={onActivate}
+      onKeyDown={(e) => logEntryActivate(onActivate, e)}
+      aria-label={title}
       className={className}
     >
       {children}
@@ -185,39 +202,50 @@ function LogEntryInteractive({
 export const LogEntry = memo(function LogEntry({
   vm,
   onClick,
+  href,
+  onAfterNavigate,
   title,
   trailing,
   variant = "default",
 }: LogEntryProps) {
   const inbox = variant === "inbox";
-  const shellClass = resolveShellClass(variant, Boolean(onClick));
+  const activate = resolveActivate(onClick, href, onAfterNavigate);
+  const interactive = Boolean(activate);
+  const shellClass = resolveShellClass(variant, interactive);
 
   if (trailing) {
-    const content = onClick ? (
-      <LogEntryInteractive onClick={onClick} title={title} className={inbox ? `w-full ${erpFocus}` : undefined}>
-        <LogEntryBody vm={vm} variant={variant} />
-      </LogEntryInteractive>
-    ) : (
-      <LogEntryBody vm={vm} variant={variant} />
-    );
+    const body = <LogEntryBody vm={vm} variant={variant} />;
+
+    if (activate) {
+      return (
+        <LogEntryShellInteractive
+          onActivate={activate}
+          title={title}
+          className={`${shellClass} group relative block w-full text-left text-inherit no-underline ${inbox ? erpFocus : ""}`}
+        >
+          <div className={inbox ? "pr-8" : "pr-7"}>{body}</div>
+          <div className={`absolute z-[1] ${inbox ? "right-2 top-2" : "right-1.5 top-1.5"}`}>{trailing}</div>
+        </LogEntryShellInteractive>
+      );
+    }
 
     return (
       <div className={`${shellClass} group relative`}>
-        <div className={inbox ? "pr-8" : "pr-7"}>{content}</div>
+        <div className={inbox ? "pr-8" : "pr-7"}>{body}</div>
         <div className={`absolute z-[1] ${inbox ? "right-2 top-2" : "right-1.5 top-1.5"}`}>{trailing}</div>
       </div>
     );
   }
 
-  if (onClick) {
+  if (activate) {
     return (
-      <LogEntryInteractive
-        onClick={onClick}
+      <LogEntryShellInteractive
+        onActivate={activate}
         title={title}
-        className={`${shellClass} ${inbox ? erpFocus : LOG_ENTRY_INTERACTIVE_CLASS}`}
+        className={`${shellClass} block w-full text-left text-inherit no-underline ${inbox ? erpFocus : LOG_ENTRY_INTERACTIVE_CLASS}`}
       >
         <LogEntryBody vm={vm} variant={variant} />
-      </LogEntryInteractive>
+      </LogEntryShellInteractive>
     );
   }
 

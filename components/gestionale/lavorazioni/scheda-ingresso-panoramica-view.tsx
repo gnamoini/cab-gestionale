@@ -447,6 +447,48 @@ export function SchedaIngressoPanoramicaView({
   const anomaliaInIngressoTop = portalIngressoLayout && !omitPanoramaDuplicates;
   const anomaliaInIntervento = !anomaliaInIngressoTop && !omitPanoramaDuplicates;
 
+  const accettazionePortalContent = omitPanoramaDuplicates ? (
+    <div className="flex min-w-0 flex-col gap-3">
+      <HubModalPanoramicaInlineCell label="Richiedente">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
+          <span className="min-w-0 text-sm text-[color:var(--cab-text)]">
+            {hubPanoramicaDisplayValue(fields.richiedente)}
+          </span>
+          <RichiedenteFirmaDisplay dataUrl={fields.richiedenteFirma} consultable buttonOnly />
+        </div>
+      </HubModalPanoramicaInlineCell>
+      <HubModalPanoramicaInlineCell label="Descrizione anomalia">
+        <div className="text-sm leading-relaxed">{multilineValue(fields.descrizioneAnomalia)}</div>
+      </HubModalPanoramicaInlineCell>
+    </div>
+  ) : null;
+
+  const ingressoPortalModalContent =
+    portalIngressoLayout && !omitPanoramaDuplicates ? (
+      <div className="flex min-w-0 flex-col gap-3">
+        <HubModalPanoramicaInlineCell label="Descrizione anomalia">
+          <div className="text-sm leading-relaxed">{multilineValue(fields.descrizioneAnomalia)}</div>
+        </HubModalPanoramicaInlineCell>
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+          <HubModalPanoramicaInlineCell label="Data ingresso">
+            <span className="text-sm font-medium tabular-nums text-[color:var(--cab-text)]">
+              {hubPanoramicaDisplayValue(fields.dataIngresso)}
+            </span>
+          </HubModalPanoramicaInlineCell>
+          <HubModalPanoramicaInlineCell label="Richiedente">
+            <span className="text-sm text-[color:var(--cab-text)]">
+              {hubPanoramicaDisplayValue(fields.richiedente)}
+            </span>
+          </HubModalPanoramicaInlineCell>
+        </div>
+        {showNoteIntervento ? (
+          <HubModalPanoramicaInlineCell label="Note">
+            <div className="text-sm leading-relaxed">{multilineValue(fields.noteIntervento)}</div>
+          </HubModalPanoramicaInlineCell>
+        ) : null}
+      </div>
+    ) : null;
+
   return (
     <Wrapper {...(fieldLayout === "tiles" ? { className: cardsWrapperClass } : {})}>
       {sections.ingresso ? (
@@ -454,6 +496,7 @@ export function SchedaIngressoPanoramicaView({
           title={omitPanoramaDuplicates ? "Accettazione" : "Ingresso"}
           compact={densePanorama}
         >
+          {accettazionePortalContent ?? ingressoPortalModalContent ?? (
           <PanoramicaFieldsShell
             fieldLayout={fieldLayout}
             rowLayout={rowLayout}
@@ -461,15 +504,13 @@ export function SchedaIngressoPanoramicaView({
             portalIngressoLayout={portalIngressoLayout}
           >
             {anomaliaInIngressoTop ? descrizioneAnomaliaField() : null}
-            {!omitPanoramaDuplicates ? (
-              <PanoramicaStringField
-                label="Data ingresso"
-                value={fields.dataIngresso}
-                strong
-                fieldLayout={fieldLayout}
-                rowLayout={rowLayout}
-              />
-            ) : null}
+            <PanoramicaStringField
+              label="Data ingresso"
+              value={fields.dataIngresso}
+              strong
+              fieldLayout={fieldLayout}
+              rowLayout={rowLayout}
+            />
             {showAddettoAccettazione ? (
               <PanoramicaCustomField
                 label={SCHEDA_INGRESSO_ADDETTO_ACCETTAZIONE_LABEL}
@@ -482,30 +523,13 @@ export function SchedaIngressoPanoramicaView({
                 />
               </PanoramicaCustomField>
             ) : null}
-            {omitPanoramaDuplicates ? (
-              <PanoramicaCustomField
-                label="Richiedente"
-                fieldLayout={fieldLayout}
-                rowLayout={rowLayout}
-                dense={densePanorama}
-                portalIngressoLayout={portalIngressoLayout}
-              >
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span className="min-w-0 text-[color:var(--cab-text)]">
-                    {hubPanoramicaDisplayValue(fields.richiedente)}
-                  </span>
-                  <RichiedenteFirmaDisplay dataUrl={fields.richiedenteFirma} consultable buttonOnly />
-                </div>
-              </PanoramicaCustomField>
-            ) : (
-              <PanoramicaStringField
-                label="Richiedente"
-                value={fields.richiedente}
-                fieldLayout={fieldLayout}
-                rowLayout={rowLayout}
-              />
-            )}
-            {hasSignatureDataUrl(fields.richiedenteFirma ?? "") && !omitPanoramaDuplicates ? (
+            <PanoramicaStringField
+              label="Richiedente"
+              value={fields.richiedente}
+              fieldLayout={fieldLayout}
+              rowLayout={rowLayout}
+            />
+            {hasSignatureDataUrl(fields.richiedenteFirma ?? "") ? (
               <PanoramicaCustomField
                 label="Firma richiedente"
                 fieldLayout={fieldLayout}
@@ -514,8 +538,8 @@ export function SchedaIngressoPanoramicaView({
                 <RichiedenteFirmaDisplay dataUrl={fields.richiedenteFirma} consultable />
               </PanoramicaCustomField>
             ) : null}
-            {omitPanoramaDuplicates ? descrizioneAnomaliaField(false, "sm:col-span-2") : null}
           </PanoramicaFieldsShell>
+          )}
         </GestionaleInfoCard>
       ) : null}
 
@@ -564,7 +588,7 @@ export function SchedaIngressoPanoramicaView({
               rowLayout={rowLayout}
             />
             {!anomaliaInIntervento ? null : descrizioneAnomaliaField()}
-            {showNoteIntervento ? (
+            {showNoteIntervento && !portalIngressoLayout ? (
               <PanoramicaCustomField
                 label="Note intervento"
                 fieldLayout={fieldLayout}

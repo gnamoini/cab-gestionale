@@ -19,7 +19,9 @@ import {
   mergeLazyProfileNamesIntoResolver,
   resolveLavorazioneUltimaModifica,
 } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
+import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
+import { dsHubModalFieldLabel } from "@/lib/ui/design-system";
 import { useAuth } from "@/context/auth-context";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useLavorazioneProfileNamesQuery } from "@/src/hooks/use-lavorazione-profile-names-query";
@@ -89,37 +91,56 @@ export function ClientLavorazioneTimelinePanel({
       }),
     [statiOpts, row.created_at, row.data_ingresso, row.stato, row.updated_at],
   );
+  const noteText = useMemo(() => lavorazioneNoteOperative(row, schedeStore), [row, schedeStore]);
+  const noteDisplay = noteText.trim() && noteText !== "—" ? noteText : "—";
+  const noteEmpty = noteDisplay === "—";
+
+  const panoramicaTileClass =
+    "min-w-0 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] p-3";
 
   return (
     <GestionaleInfoCard title="Panoramica">
-      <HubModalPanoramicaFieldTiles className="sm:grid-cols-2 lg:grid-cols-3">
-        <HubModalPanoramicaFieldTile label="Cliente" value={hubPanoramicaDisplayValue(header.cliente)} largeValue />
-        <HubModalPanoramicaFieldTile label="Cantiere" value={hubPanoramicaDisplayValue(header.cantiere)} />
-        <HubModalPanoramicaFieldTile
-          label="Data ingresso"
-          value={hubPanoramicaDisplayValue(fields.dataIngresso)}
-          largeValue
-        />
+      <div className="flex min-w-0 flex-col gap-2">
+        <HubModalPanoramicaFieldTiles className="sm:grid-cols-2 lg:grid-cols-4">
+          <HubModalPanoramicaFieldTile label="Cliente" value={hubPanoramicaDisplayValue(header.cliente)} largeValue />
+          <HubModalPanoramicaFieldTile
+            label="Utilizzatore"
+            value={hubPanoramicaDisplayValue(fields.utilizzatore)}
+          />
+          <HubModalPanoramicaFieldTile label="Cantiere" value={hubPanoramicaDisplayValue(header.cantiere)} />
+          <HubModalPanoramicaFieldTile
+            label="Data ingresso"
+            value={hubPanoramicaDisplayValue(fields.dataIngresso)}
+            mono
+          />
+        </HubModalPanoramicaFieldTiles>
+
         <ClientPortalStatoProgressTile
-          className="sm:col-span-2"
           statiOpts={statiOpts}
           currentStatoId={statoId}
           currentLabel={statoLabel}
           timelineEvents={timelineEvents}
         />
-        <div className="flex min-w-0 flex-col gap-2 self-start">
+
+        <HubModalPanoramicaFieldTiles className="sm:grid-cols-2">
+          <HubModalPanoramicaFieldTile label="Addetto" value={hubPanoramicaDisplayValue(fields.addetto)} />
           <HubModalPanoramicaFieldTile
-            label="Addetto"
-            value={hubPanoramicaDisplayValue(fields.addetto)}
+            label="Ultima modifica"
+            value={hubPanoramicaDisplayValue(ultimaModificaLabel)}
           />
-          {ultimaModificaLabel !== "—" ? (
-            <HubModalPanoramicaFieldTile
-              label="Ultima modifica"
-              value={hubPanoramicaDisplayValue(ultimaModificaLabel)}
-            />
-          ) : null}
+        </HubModalPanoramicaFieldTiles>
+
+        <div className={panoramicaTileClass} data-testid="client-portal-note-tile">
+          <p className={dsHubModalFieldLabel}>Note</p>
+          <p
+            className={`mt-1 line-clamp-3 text-sm leading-snug ${
+              noteEmpty ? "text-[color:var(--cab-text-muted)]" : "text-[color:var(--cab-text)]"
+            }`}
+          >
+            {noteDisplay}
+          </p>
         </div>
-      </HubModalPanoramicaFieldTiles>
+      </div>
     </GestionaleInfoCard>
   );
 }

@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { CloseButton } from "@/components/design-system";
 import { useAuth } from "@/context/auth-context";
-import { useGlobalLoading } from "@/context/global-loading-context";
-import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { erpFocus } from "@/lib/ui/erp-tokens";
-import { resolveGestionaleNav, type GestionaleNavResolvedItem } from "@/components/gestionale/gestionale-nav-config";
+import { buildGestionaleNav, type GestionaleNavResolvedItem } from "@/components/gestionale/gestionale-nav-config";
 import { CLIENTE_HOME_PATH, isClienteRole } from "@/lib/auth/rbac";
 import { useRbac } from "@/src/hooks/use-rbac";
 import { useRbacNavAccess } from "@/src/hooks/use-rbac-nav-access";
@@ -30,6 +28,7 @@ import {
 import { layoutPageRoot, layoutResponsiveCoreScope } from "@/lib/ui/responsive-layout-core";
 import { gestionaleShellContentGutterClass } from "@/lib/ui/gestionale-shell-layout";
 import { useGestionaleShellLayoutSync } from "@/lib/ui/use-gestionale-shell-layout-sync";
+import { useSwipeToDismiss } from "@/lib/ui/use-swipe-to-dismiss";
 import { GestionaleShellLayoutProvider } from "@/context/gestionale-shell-layout-context";
 import { MobileNavShellProvider } from "@/context/mobile-nav-shell-context";
 import dynamic from "next/dynamic";
@@ -46,8 +45,6 @@ const ReactRenderAuditProfiler = dynamic(
 import {
   isNavTargetCurrent,
   isSidebarNavLinkCurrent,
-  ROUTE_LOADING_FAILSAFE_MS,
-  ROUTE_TRANSITION_CANCEL_EVENT,
   scheduleRouteTransitionBegin,
 } from "@/src/lib/navigation/route-transition";
 import { useGestionaleMainScrollLock } from "@/lib/ui/use-body-scroll-lock";
@@ -58,7 +55,6 @@ import { healBodyScrollLockState } from "@/lib/ui/body-scroll-lock-manager";
 import { cabAppViewportFillClass } from "@/lib/ui/viewport-fill-sync";
 import { useSidebarHoverExpand } from "@/lib/ui/use-sidebar-collapsed";
 import { recordHealthMetric } from "@/lib/observability/runtime-health";
-import { isBootInvestigationEnabled, logBoot, trackRedirect, trackStoreUpdate } from "@/lib/observability/boot-investigation";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { resolveDrawerAsideClasses } from "@/lib/ui/modal-max-width-class";
 
@@ -78,7 +74,7 @@ function NavLink({
 }: {
   href: string;
   label: string;
-  Icon: (p: { className?: string }) => ReactNode;
+  Icon: ComponentType<{ className?: string }>;
   collapsed: boolean;
   disabled?: boolean;
   badge?: string | null;
@@ -196,6 +192,7 @@ function MobileNavDrawer({
 
   useGestionaleMainScrollLock(mounted, "MobileNavDrawer");
   useOverlayBackHandler(mounted && open && !closing, onClose, "MobileNavDrawer");
+  const swipeDismiss = useSwipeToDismiss(onClose, mounted && open && !closing);
 
   useEffect(() => {
     if (isCompactShell) return;
@@ -231,11 +228,17 @@ function MobileNavDrawer({
         onClick={onClose}
       />
       <div
-        className={`cab-nav-drawer-panel cab-sidebar ${resolveDrawerAsideClasses("drawerNav")}`}
+        ref={swipeDismiss.panelRef}
+        className={`cab-nav-drawer-panel cab-sidebar ${resolveDrawerAsideClasses("drawerNav")}${swipeDismiss.panelProps.className ? ` ${swipeDismiss.panelProps.className}` : ""}`}
         data-state={panelState}
         role="dialog"
         aria-modal="true"
         aria-label="Menu principale"
+        style={swipeDismiss.panelProps.style}
+        onTouchStart={swipeDismiss.panelProps.onTouchStart}
+        onTouchMove={swipeDismiss.panelProps.onTouchMove}
+        onTouchEnd={swipeDismiss.panelProps.onTouchEnd}
+        onTouchCancel={swipeDismiss.panelProps.onTouchCancel}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className={`${shellTopBarClass} shrink-0 grid grid-cols-[1fr_auto_1fr] items-center px-4`}>
@@ -259,7 +262,7 @@ function MobileNavDrawer({
                   key={item.href}
                   href={item.href}
                   label={item.label}
-                  Icon={item.Icon}
+                  Icon={item.Icon as ComponentType<{ className?: string }>}
                   collapsed={false}
                   disabled={item.disabled}
                   badge={item.badge}
@@ -304,36 +307,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     onSidebarFocusCapture,
     onSidebarBlurCapture,
   } = useSidebarHoverExpand();
-  const [routeLoading, setRouteLoading] = useState(false);
   const routeTransitionStartRef = useRef<number | null>(null);
   const { user } = useAuth();
   const pathname = usePathname();
   const suppressGlobalScrollEndPad = pathname.startsWith("/impostazioni");
   const rbac = useRbac();
-  const { navAccess, isNavLoading } = useRbacNavAccess();
+  const { navAccess, snapshot, isNavLoading } = useRbacNavAccess();
   const clienteOnly = isClienteRole(user);
   const homePath = clienteOnly ? CLIENTE_HOME_PATH : "/dashboard";
-  useGlobalLoading(routeLoading ? GLOBAL_LOADING_MESSAGES.navigation : null);
-
-  const prevRouteLoadingRef = useRef(false);
-  useEffect(() => {
-    if (!isBootInvestigationEnabled()) return;
-    if (prevRouteLoadingRef.current === routeLoading) return;
-    trackStoreUpdate("routeLoading", prevRouteLoadingRef.current, routeLoading, { pathname });
-    logBoot("RENDER", "AppShell", { routeLoading, pathname }, routeLoading ? "route_loading_on" : "route_loading_off");
-    prevRouteLoadingRef.current = routeLoading;
-  }, [routeLoading, pathname]);
 
   useLayoutEffect(() => {
     healBodyScrollLockState("app-shell-mount");
   }, []);
 
   const navItems = useMemo(() => {
-    if (!navAccess) return [] as GestionaleNavResolvedItem[];
-    return resolveGestionaleNav({
-      hideHref: (href) => navAccess.shouldHideHref(href),
+    if (!navAccess || !snapshot?.resolved) return [] as GestionaleNavResolvedItem[];
+    return buildGestionaleNav(snapshot.resolved, {
+      hidePageKey: (pageKey) => navAccess.shouldHidePageKey(pageKey),
     });
-  }, [navAccess]);
+  }, [navAccess, snapshot?.resolved]);
 
   useEffect(() => {
     if (routeTransitionStartRef.current != null) {
@@ -341,51 +333,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       recordHealthMetric("routeTransitionMs", durationMs);
       routeTransitionStartRef.current = null;
     }
-    setRouteLoading(false);
     setMobileOpen(false);
     collapseSidebar();
   }, [pathname, collapseSidebar]);
 
-  useEffect(() => {
-    if (!routeLoading) return;
-    const timeoutId = window.setTimeout(() => setRouteLoading(false), ROUTE_LOADING_FAILSAFE_MS);
-    return () => window.clearTimeout(timeoutId);
-  }, [routeLoading]);
-
-  useEffect(() => {
-    function onCancelRouteTransition() {
-      setRouteLoading(false);
-    }
-    function onPopState() {
-      setRouteLoading(false);
-    }
-    function onPageShow() {
-      setRouteLoading(false);
-    }
-    function onVisibilityChange() {
-      if (document.visibilityState === "visible") setRouteLoading(false);
-    }
-    window.addEventListener(ROUTE_TRANSITION_CANCEL_EVENT, onCancelRouteTransition);
-    window.addEventListener("popstate", onPopState);
-    window.addEventListener("pageshow", onPageShow);
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => {
-      window.removeEventListener(ROUTE_TRANSITION_CANCEL_EVENT, onCancelRouteTransition);
-      window.removeEventListener("popstate", onPopState);
-      window.removeEventListener("pageshow", onPageShow);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-    };
-  }, []);
-
   const beginRouteTransition = useCallback(
     (href: string) => {
       if (isNavTargetCurrent(pathname, href)) {
-        setRouteLoading(false);
         return;
       }
       collapseSidebar();
       routeTransitionStartRef.current = performance.now();
-      setRouteLoading(true);
     },
     [pathname, collapseSidebar],
   );
@@ -394,7 +352,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     (e: ReactMouseEvent<HTMLAnchorElement>) => {
       if (pathname === homePath) {
         e.preventDefault();
-        setRouteLoading(false);
         collapseSidebar();
         (e.currentTarget as HTMLElement).blur();
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -444,9 +401,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             href={homePath}
             onClick={onHeaderHomeClick}
             aria-label={CAB_APP_PRODUCT_NAME}
-            className={`${erpFocus} flex w-full min-h-10 min-w-0 items-center justify-center overflow-hidden rounded-lg transition-opacity duration-200 hover:opacity-90`}
+            className={`${erpFocus} cab-sidebar-brand-link transition-opacity duration-200 hover:opacity-90`}
           >
-            <CabLogo height={28} className="shrink-0" sizes="112px" priority />
+            <CabLogo className="cab-sidebar-brand-logo" sizes="119px" priority />
           </Link>
         </div>
         {!isCompactShell ? (
@@ -477,7 +434,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   label={item.label}
-                  Icon={item.Icon}
+                  Icon={item.Icon as ComponentType<{ className?: string }>}
                   collapsed={collapsed}
                   disabled={item.disabled}
                   badge={item.badge}

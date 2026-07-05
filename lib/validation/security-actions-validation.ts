@@ -5,6 +5,7 @@ import { APP_ROLES, type AppRole } from "@/lib/auth/rbac";
 import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
 import { normalizeUsername, usernameFieldError } from "@/src/lib/auth/username";
 import { GESTIONALE_PERMISSION_MODULES, type GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
+import { GESTIONALE_PAGES, type PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 
 export type ValidatedModulePermissionEntry = {
   module: GestionalePermissionModule;
@@ -17,6 +18,11 @@ const UUID_RE =
 
 const MAX_BATCH_PATCHES = 100;
 
+export type ValidatedPagePermissionEntry = {
+  pageKey: string;
+  accessLevel: PageAccessLevel;
+};
+
 export type ValidatedSecurityUserBatchPatch = {
   userId: string;
   nome?: string;
@@ -24,9 +30,11 @@ export type ValidatedSecurityUserBatchPatch = {
   username?: string;
   ruolo?: string;
   clienteRef?: string | null;
-  /** null = ripristina permessi da ruolo (delete overrides). */
+  pagePermissions?: ValidatedPagePermissionEntry[];
+  clearPagePermissions?: boolean;
+  /** @deprecated bridge module editor */
   modulePermissions?: ValidatedModulePermissionEntry[] | null;
-  /** Se true con cambio ruolo, elimina override moduli prima del nuovo ruolo. */
+  /** @deprecated */
   clearModulePermissions?: boolean;
 };
 
@@ -63,6 +71,41 @@ function validateModulePermissionsPayload(
       canRead,
       canWrite,
     });
+  }
+
+  return { ok: true, value: out };
+}
+
+const VALID_PAGE_KEYS = new Set<string>(GESTIONALE_PAGES.map((p) => p.key));
+const PAGE_ACCESS_LEVELS = new Set<PageAccessLevel>(["write", "read", "none"]);
+
+function validatePagePermissionsPayload(
+  raw: unknown,
+): { ok: true; value: ValidatedPagePermissionEntry[] } | { ok: false; message: string } {
+  if (!Array.isArray(raw)) return { ok: false, message: "Permessi pagina non validi." };
+  if (raw.length > GESTIONALE_PAGES.length) {
+    return { ok: false, message: "Troppi permessi pagina." };
+  }
+
+  const seen = new Set<string>();
+  const out: ValidatedPagePermissionEntry[] = [];
+
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      return { ok: false, message: "Voce permesso pagina non valida." };
+    }
+    const row = item as Record<string, unknown>;
+    const pageKey = typeof row.pageKey === "string" ? row.pageKey : "";
+    if (!VALID_PAGE_KEYS.has(pageKey)) {
+      return { ok: false, message: "Pagina permesso non valida." };
+    }
+    if (seen.has(pageKey)) return { ok: false, message: "Pagina permesso duplicata." };
+    seen.add(pageKey);
+    const accessLevel = row.accessLevel;
+    if (typeof accessLevel !== "string" || !PAGE_ACCESS_LEVELS.has(accessLevel as PageAccessLevel)) {
+      return { ok: false, message: "Livello accesso pagina non valido." };
+    }
+    out.push({ pageKey, accessLevel: accessLevel as PageAccessLevel });
   }
 
   return { ok: true, value: out };
@@ -178,6 +221,19 @@ export function validateSecurityUserBatchPatches(
       );
       if (clienteRefErr) return { ok: false, message: clienteRefErr };
       patch.clienteRef = normalizeClienteRef(p.clienteRef as string | null | undefined);
+    }
+
+    if (p.pagePermissions !== undefined) {
+      const pageRes = validatePagePermissionsPayload(p.pagePermissions);
+      if (!pageRes.ok) return pageRes;
+      patch.pagePermissions = pageRes.value;
+    }
+
+    if (p.clearPagePermissions !== undefined) {
+      if (typeof p.clearPagePermissions !== "boolean") {
+        return { ok: false, message: "Flag ripristino permessi pagina non valido." };
+      }
+      patch.clearPagePermissions = p.clearPagePermissions;
     }
 
     if (p.modulePermissions !== undefined) {

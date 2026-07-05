@@ -8,7 +8,9 @@ import {
   AuthStandalonePageShell,
   authStandaloneCardClass,
 } from "@/components/gestionale/auth-standalone-page";
-import { GlobalLoadingView } from "@/components/design-system/global-loading";
+import { AUTH_STANDALONE_LOGO_SUBTITLE } from "@/components/gestionale/cab-logo";
+import { AuthStandalonePageFooter } from "@/components/gestionale/auth-standalone-page-footer";
+import { useGlobalLoading } from "@/context/global-loading-context";
 import { pushGestionaleToast } from "@/context/toast-context";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
@@ -33,6 +35,8 @@ export function ResetPasswordForm() {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  useGlobalLoading(phase === "loading" ? GLOBAL_LOADING_MESSAGES.default : null);
 
   useEffect(() => {
     if (!isSupabasePublicEnvConfigured()) {
@@ -105,23 +109,23 @@ export function ResetPasswordForm() {
     }
   }
 
-  if (phase === "loading") {
-    return (
-      <AuthStandalonePageShell>
-        <div className="relative z-10 flex min-h-dvh items-center justify-center px-4 py-12">
-          <GlobalLoadingView message={GLOBAL_LOADING_MESSAGES.default} />
-        </div>
-      </AuthStandalonePageShell>
-    );
-  }
-
   return (
-    <AuthStandalonePageShell>
-      <main className="relative z-10 flex min-h-dvh flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
+    <AuthStandalonePageShell showThemeToggle={false} decorativeBackground="login">
+      <div
+        className="relative z-10 flex min-h-dvh min-w-0 flex-col"
+        aria-hidden={phase === "loading" || undefined}
+        aria-busy={phase === "loading" || undefined}
+      >
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
         <div className={authStandaloneCardClass}>
-          <AuthStandaloneCardHeader srOnlyTitle="Imposta nuova password" />
+          <AuthStandaloneCardHeader
+            srOnlyTitle="Imposta nuova password"
+            productLabel={AUTH_STANDALONE_LOGO_SUBTITLE}
+          />
 
-          {phase === "no_session" ? (
+          {phase === "loading" ? (
+            <div className="min-h-[12rem]" aria-hidden />
+          ) : phase === "no_session" ? (
             <div data-testid="smoke-reset-password-no-session" className="space-y-4 text-center">
               <p className={`${alertErrorClass} text-sm`} role="alert">
                 {error ?? "Link non valido o scaduto. Richiedi un nuovo link di recupero password."}
@@ -214,7 +218,9 @@ export function ResetPasswordForm() {
             </form>
           )}
         </div>
-      </main>
+        </main>
+        <AuthStandalonePageFooter />
+      </div>
     </AuthStandalonePageShell>
   );
 }

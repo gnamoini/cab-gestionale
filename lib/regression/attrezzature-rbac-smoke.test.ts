@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { canRead, canWrite } from "@/lib/auth/rbac";
 import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
-import type { RequiredRbacContext } from "@/lib/rbac";
+import type { RequiredRbacContext } from "@/lib/auth/rbac";
 
 function ctx(roleKey: string): RequiredRbacContext {
   return buildTestSnapshot({ userId: `${roleKey}-1`, roleKey }).rbacContext as RequiredRbacContext;

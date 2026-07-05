@@ -1,12 +1,10 @@
 "use client";
 
 import { memo } from "react";
-import {
-  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
-  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
-} from "@/lib/ui/use-gestionale-list-layout";
-import { dsStackPage } from "@/lib/ui/design-system";
-import { SkeletonBlock, SkeletonCard, SkeletonTable } from "./skeleton-primitives";
+import { GESTIONALE_LIST_MOBILE_ONLY_CLASS } from "@/lib/ui/use-gestionale-list-layout";
+import { SkeletonBlock } from "./skeleton-primitives";
+import { SkeletonShellCard } from "./skeleton-shell-card";
+import { LoadingListPageShell } from "./loading-list-page-shell";
 import { SKELETON_GRID, SKELETON_MIN_HEIGHT } from "./skeleton-layout-presets";
 
 export type LoadingFatturazioneSkeletonProps = {
@@ -14,24 +12,6 @@ export type LoadingFatturazioneSkeletonProps = {
   /** Solo area contenuto (header già visibile). */
   embedded?: boolean;
 };
-
-/** Fatturazione: KPI + toolbar + tabella. */
-export const LoadingFatturazioneSkeleton = memo(function LoadingFatturazioneSkeleton({
-  className = "",
-  embedded = false,
-}: LoadingFatturazioneSkeletonProps) {
-  return (
-    <div
-      className={`${dsStackPage} ${className}`.trim()}
-      role="status"
-      aria-busy="true"
-      aria-label="Caricamento fatturazione"
-    >
-      {!embedded ? <SkeletonBlock className={SKELETON_MIN_HEIGHT.pageHeader} /> : null}
-      <LoadingFatturazioneListSkeleton />
-    </div>
-  );
-});
 
 export const LoadingFatturazioneListSkeleton = memo(function LoadingFatturazioneListSkeleton({
   className = "",
@@ -41,15 +21,31 @@ export const LoadingFatturazioneListSkeleton = memo(function LoadingFatturazione
   withToolbar?: boolean;
 }) {
   return (
-    <div className={`space-y-4 ${className}`.trim()}>
+    <div className={className} role="status" aria-busy="true" aria-label="Caricamento fatturazione">
       <SkeletonBlock className={SKELETON_MIN_HEIGHT.kpiRow} />
-      {withToolbar ? <SkeletonCard minHeightClass={SKELETON_MIN_HEIGHT.toolbar} className="p-0" /> : null}
-      <SkeletonTable visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS} wrapClassName="mt-0" />
+      {withToolbar ? <SkeletonShellCard bodyMinHeightClass={SKELETON_MIN_HEIGHT.toolbar} /> : null}
+      <SkeletonShellCard bodyMinHeightClass="min-h-[33rem]" />
       <div className={`${SKELETON_GRID.lavorazioniMobileStack} ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`} aria-hidden>
         {Array.from({ length: 4 }).map((_, i) => (
-          <SkeletonCard key={i} minHeightClass={SKELETON_MIN_HEIGHT.cardMobile} />
+          <SkeletonShellCard key={i} bodyMinHeightClass={SKELETON_MIN_HEIGHT.cardMobile} />
         ))}
       </div>
     </div>
+  );
+});
+
+/** Fatturazione: KPI + toolbar + tabella. */
+export const LoadingFatturazioneSkeleton = memo(function LoadingFatturazioneSkeleton({
+  className = "",
+  embedded = false,
+}: LoadingFatturazioneSkeletonProps) {
+  if (embedded) {
+    return <LoadingFatturazioneListSkeleton className={className} />;
+  }
+
+  return (
+    <LoadingListPageShell className={className} ariaLabel="Caricamento fatturazione">
+      <LoadingFatturazioneListSkeleton />
+    </LoadingListPageShell>
   );
 });

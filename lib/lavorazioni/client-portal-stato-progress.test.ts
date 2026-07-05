@@ -24,7 +24,7 @@ assert.equal(done.progressPct, 100);
 
 const fillMid = clientPortalStatoProgressFillPcts(1, 3);
 assert.equal(fillMid.solidPct, 50);
-assert.ok(fillMid.leadPct > 50 && fillMid.leadPct < 100);
+assert.equal(fillMid.leadPct, 80);
 
 const enriched = enrichClientPortalStatoProgressWithTimeline(mid, [
   { statoId: "accettazione", at: "2026-05-29T13:04:00.000Z" },

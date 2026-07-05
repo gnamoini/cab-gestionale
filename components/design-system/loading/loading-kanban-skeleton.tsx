@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { SkeletonCard } from "./skeleton-primitives";
+import { SkeletonShellCardPulseBody } from "./skeleton-shell-card";
 
 export const LoadingKanbanSkeleton = memo(function LoadingKanbanSkeleton({
   className = "",
@@ -16,7 +16,10 @@ export const LoadingKanbanSkeleton = memo(function LoadingKanbanSkeleton({
       aria-label="Caricamento kanban"
     >
       {Array.from({ length: 4 }).map((_, i) => (
-        <SkeletonCard key={i} minHeightClass="min-h-[20rem] w-[17.5rem] shrink-0" />
+        <SkeletonShellCardPulseBody
+          key={i}
+          minHeightClass="min-h-[20rem] w-[17.5rem] shrink-0 rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)]"
+        />
       ))}
     </div>
   );

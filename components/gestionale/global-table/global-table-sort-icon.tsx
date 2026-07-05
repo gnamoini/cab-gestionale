@@ -13,8 +13,8 @@ export function GlobalTableSortIcon({
   /** Es. `self-center` su header a due righe (`labelLines`). */
   className?: string;
 }) {
-  const upOpacity = !active ? 0.42 : phase === "asc" ? 1 : 0.26;
-  const downOpacity = !active ? 0.42 : phase === "desc" ? 1 : 0.26;
+  const upOpacity = !active ? 0.78 : phase === "asc" ? 1 : 0.28;
+  const downOpacity = !active ? 0.78 : phase === "desc" ? 1 : 0.28;
 
   return (
     <span className={className ? `${globalTableSortIconWrap} ${className}` : globalTableSortIconWrap} aria-hidden>

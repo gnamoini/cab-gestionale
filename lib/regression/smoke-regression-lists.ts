@@ -224,6 +224,7 @@ export const REGRESSION_EXTENDED: readonly string[] = [
   "lib/regression/loading-design-system.test.ts",
   "lib/regression/loading-page-skeleton-coverage.test.ts",
   "lib/regression/loading-single-representation-policy.test.ts",
+  "lib/regression/loading-manager-policy.test.ts",
   "lib/regression/toolbar-sticky-policy.test.ts",
   "lib/regression/toolbar-structure.test.ts",
   "lib/regression/ui-route-reliability-audit.test.ts",

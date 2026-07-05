@@ -101,6 +101,7 @@ export function GestionaleConfirmDialog({
   const body = children ?? (message ? (
     <p className="text-sm leading-relaxed text-[color:var(--cab-text-muted)]">{message}</p>
   ) : null);
+  const isCompactBody = children == null;
 
   const defaultFooter = (
     <div className={gestionaleConfirmActionsClass}>
@@ -141,7 +142,7 @@ export function GestionaleConfirmDialog({
         className={`flex max-h-[min(92dvh,calc(var(--cab-vv-height,100dvh)-2rem))] w-full ${gestionaleModalWidthConfirmation} flex-col overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-2xl`}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[color:var(--cab-border)] px-4 py-3">
+        <header className="flex shrink-0 items-center justify-between gap-3 px-4 pb-2 pt-3 sm:px-5">
           <div className="min-w-0">
             <h2 id="gestionale-confirm-title" className="truncate text-base font-semibold text-[color:var(--cab-text)]">
               {title}
@@ -150,13 +151,17 @@ export function GestionaleConfirmDialog({
           </div>
           <CloseButton onClick={onCancel} disabled={pending} className={dsModalCloseBtn} label="Chiudi" />
         </header>
-        <div
-          {...{ [CAB_MODAL_SCROLL_ATTR]: "" }}
-          className={`min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-4 sm:px-5 ${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad}`}
-        >
-          {body}
-        </div>
-        <footer className="shrink-0 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)]">
+        {isCompactBody ? (
+          <div className="shrink-0 px-4 pb-3 sm:px-5">{body}</div>
+        ) : (
+          <div
+            {...{ [CAB_MODAL_SCROLL_ATTR]: "" }}
+            className={`px-4 py-4 sm:px-5 ${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad}`}
+          >
+            {body}
+          </div>
+        )}
+        <footer className="shrink-0 bg-[var(--cab-card)]">
           {footer ?? defaultFooter}
         </footer>
       </div>

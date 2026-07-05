@@ -10,11 +10,13 @@ export function TruncatedTextTooltip({
   className,
   side = "top",
   delayMs = 220,
+  multiline = false,
 }: {
   text: string;
   className?: string;
   side?: TooltipSide;
   delayMs?: number;
+  multiline?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [isTruncated, setIsTruncated] = useState(false);
@@ -45,7 +47,7 @@ export function TruncatedTextTooltip({
   }
 
   return (
-    <Tooltip content={text} side={side} showOnFocus={false} delayMs={delayMs}>
+    <Tooltip content={text} side={side} showOnFocus={false} delayMs={delayMs} multiline={multiline}>
       {line}
     </Tooltip>
   );

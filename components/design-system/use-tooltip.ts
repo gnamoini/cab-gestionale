@@ -188,13 +188,14 @@ export function useTooltip({
   useEffect(() => {
     if (!open) return;
     const onReposition = () => updateCoords();
+    const onScrollHide = () => hideImmediate();
     window.addEventListener("resize", onReposition);
-    window.addEventListener("scroll", onReposition, true);
+    window.addEventListener("scroll", onScrollHide, true);
     return () => {
       window.removeEventListener("resize", onReposition);
-      window.removeEventListener("scroll", onReposition, true);
+      window.removeEventListener("scroll", onScrollHide, true);
     };
-  }, [open, updateCoords]);
+  }, [open, updateCoords, hideImmediate]);
 
   useEffect(() => {
     return () => {

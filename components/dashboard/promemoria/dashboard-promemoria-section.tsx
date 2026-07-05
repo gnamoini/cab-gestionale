@@ -41,7 +41,7 @@ export function DashboardPromemoriaSection() {
   const logAutore = authorName.trim() || "Operatore";
   const queryClient = useQueryClient();
   const rbac = useRbac();
-  const readOnly = !rbac.canWrite("dashboard");
+  const readOnly = !rbac.canWritePage("dashboard");
   const { confirm, confirmDialog } = useGestionaleConfirm();
   const { success: toastSuccess, error: toastError, validation: toastValidation } = useGestionaleToast();
 
@@ -102,7 +102,7 @@ export function DashboardPromemoriaSection() {
 
   const performDelete = useCallback(
     async (row: DashboardPromemoriaRow, scope: PromemoriaRecurrenceScope) => {
-      if (!rbac.canWrite("dashboard")) {
+      if (!rbac.canWritePage("dashboard")) {
         toastError(new Error(rbac.isLoading ? "Permessi in caricamento, riprova." : "Non hai i permessi per eseguire questa azione."));
         return;
       }

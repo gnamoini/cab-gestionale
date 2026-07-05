@@ -82,6 +82,18 @@ export {
   type SkeletonDashboardWidgetProps,
   type SkeletonDashboardWidgetVariant,
 } from "./skeleton-primitives";
+export {
+  SkeletonShellCard,
+  SkeletonShellCardPulseBody,
+  skeletonShellCardPulseBodyClass,
+  type SkeletonShellCardProps,
+  type SkeletonShellCardPulseBodyProps,
+} from "./skeleton-shell-card";
+export {
+  LoadingListPageShell,
+  gestionaleListPageStackClass,
+  type LoadingListPageShellProps,
+} from "./loading-list-page-shell";
 export { resolveLoadingPageSkeletonVariant } from "./resolve-loading-page-skeleton-variant";
 export { LoadingPageShellSkeleton, type LoadingPageShellSkeletonProps } from "./loading-page-shell-skeleton";
 

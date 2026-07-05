@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { GlobalErrorView } from "@/components/observability/global-error-view";
 import { DEFAULT_PERSISTED_THEME_MODE } from "@/lib/theme/user-theme-prefs";
 import {
-  CAB_THEME_BOOT_INLINE_SCRIPT,
   CAB_THEME_CRITICAL_INLINE_STYLE,
 } from "@/lib/theme/theme-boot-inline-script";
 import "./globals.css";
@@ -55,11 +53,6 @@ export default function GlobalError({
         <style
           id="cab-theme-critical"
           dangerouslySetInnerHTML={{ __html: CAB_THEME_CRITICAL_INLINE_STYLE }}
-        />
-        <Script
-          id="cab-theme-boot"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: CAB_THEME_BOOT_INLINE_SCRIPT }}
         />
       </head>
       <body

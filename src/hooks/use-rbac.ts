@@ -2,28 +2,17 @@
 
 import { useCallback, useMemo } from "react";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
-import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { denyUnless, assertAllowed } from "@/lib/auth/guard-action";
-import {
-  canAccessPage,
-  canDelete,
-  canRead,
-  canWrite,
-  hasPermission as checkPermission,
-  type CanAccessPageOptions,
-  type PermissionKey,
-  type RbacSection,
-  type Capability,
-} from "@/lib/auth/rbac";
-import type { RequiredRbacContext } from "@/lib/rbac";
-import { hasResolvedCapability } from "@/src/lib/rbac/resolve-user-permissions";
+import { canAccessPage as checkCanAccessPage } from "@/lib/auth/rbac";
+import type { RequiredRbacContext } from "@/lib/auth/rbac";
+import type { GestionalePageKey } from "@/src/lib/permissions/gestionale-pages";
+import { canReadPage, canWritePage } from "@/src/lib/rbac/resolve-page-access";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
 import { readStickyRbacSnapshot } from "@/src/lib/rbac/sticky-rbac-snapshot";
 
 export function useRbac() {
   const { user, status } = useAuth();
-  const clientLav = useClientLavorazioniAccess();
   const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
   const sticky = readStickyRbacSnapshot();
   const effectiveSnap =
@@ -36,70 +25,50 @@ export function useRbac() {
   const isLoading = status === "loading" || (permsLoading && !effectiveSnap);
   const role = effectiveSnap?.role ?? user?.ruolo ?? "guest";
   const rbacCtx = effectiveSnap?.rbacContext as RequiredRbacContext | undefined;
-  const rbacUser = effectiveSnap ? effectiveSnap.role : user;
+  const resolved = effectiveSnap?.resolved;
   const operatorGlobalSettingsPilotActive = effectiveSnap?.pilot.effectiveEnabled ?? false;
-  const clientLavorazioniAllowed = clientLav.allowed;
 
-  const hasPermission = useCallback(
-    (permission: PermissionKey) => {
-      if (!rbacCtx || !rbacUser) return false;
-      return checkPermission(rbacUser, permission, rbacCtx);
+  const canReadPageFn = useCallback(
+    (pageKey: GestionalePageKey) => {
+      if (!resolved) return false;
+      return canReadPage(resolved, pageKey);
     },
-    [rbacUser, rbacCtx],
+    [resolved],
   );
-  const hasCapabilityFn = useCallback(
-    (capability: Capability) =>
-      effectiveSnap?.resolved ? hasResolvedCapability(effectiveSnap.resolved, capability) : false,
-    [effectiveSnap?.resolved],
-  );
-  const canReadFn = useCallback(
-    (section: RbacSection) => {
-      if (!rbacCtx || !rbacUser) return false;
-      return canRead(rbacUser, section, rbacCtx);
+  const canWritePageFn = useCallback(
+    (pageKey: GestionalePageKey) => {
+      if (!resolved) return false;
+      return canWritePage(resolved, pageKey);
     },
-    [rbacUser, rbacCtx],
-  );
-  const canWriteFn = useCallback(
-    (section: RbacSection) => {
-      if (!rbacCtx || !rbacUser) return false;
-      return canWrite(rbacUser, section, rbacCtx);
-    },
-    [rbacUser, rbacCtx],
-  );
-  const canDeleteFn = useCallback(
-    (section: RbacSection) => {
-      if (!rbacCtx || !rbacUser) return false;
-      return canDelete(rbacUser, section, rbacCtx);
-    },
-    [rbacUser, rbacCtx],
+    [resolved],
   );
   const canAccessPageFn = useCallback(
-    (pathname: string, opts?: CanAccessPageOptions) => {
-      if (!rbacCtx || !rbacUser) return false;
-      return canAccessPage(rbacUser, pathname, { clientLavorazioniAllowed, ...opts }, rbacCtx);
+    (pathname: string) => {
+      if (!rbacCtx) return false;
+      return checkCanAccessPage(pathname, rbacCtx);
     },
-    [rbacUser, rbacCtx, clientLavorazioniAllowed],
+    [rbacCtx],
   );
-  const guardWrite = useCallback(
-    (section: RbacSection, onDenied?: (msg: string) => void) => {
-      if (!rbacCtx || !rbacUser) return denyUnless(false, onDenied);
-      return denyUnless(canWrite(rbacUser, section, rbacCtx), onDenied);
+  const guardWritePage = useCallback(
+    (pageKey: GestionalePageKey, onDenied?: (msg: string) => void) => {
+      if (!resolved) return denyUnless(false, onDenied);
+      return denyUnless(canWritePage(resolved, pageKey), onDenied);
     },
-    [rbacUser, rbacCtx],
+    [resolved],
   );
-  const guardRead = useCallback(
-    (section: RbacSection, onDenied?: (msg: string) => void) => {
-      if (!rbacCtx || !rbacUser) return denyUnless(false, onDenied);
-      return denyUnless(canRead(rbacUser, section, rbacCtx), onDenied);
+  const guardReadPage = useCallback(
+    (pageKey: GestionalePageKey, onDenied?: (msg: string) => void) => {
+      if (!resolved) return denyUnless(false, onDenied);
+      return denyUnless(canReadPage(resolved, pageKey), onDenied);
     },
-    [rbacUser, rbacCtx],
+    [resolved],
   );
-  const assertWrite = useCallback(
-    (section: RbacSection) => {
-      if (!rbacCtx || !rbacUser) assertAllowed(false);
-      else assertAllowed(canWrite(rbacUser, section, rbacCtx));
+  const assertWritePage = useCallback(
+    (pageKey: GestionalePageKey) => {
+      if (!resolved) assertAllowed(false);
+      else assertAllowed(canWritePage(resolved, pageKey));
     },
-    [rbacUser, rbacCtx],
+    [resolved],
   );
 
   const isAdmin = role === "admin";
@@ -115,16 +84,12 @@ export function useRbac() {
       role,
       isLoading,
       operatorGlobalSettingsPilotActive,
-      clientLavorazioniLoading: false,
-      hasPermission,
-      hasCapability: hasCapabilityFn,
-      canRead: canReadFn,
-      canWrite: canWriteFn,
-      canDelete: canDeleteFn,
+      canReadPage: canReadPageFn,
+      canWritePage: canWritePageFn,
       canAccessPage: canAccessPageFn,
-      guardWrite,
-      guardRead,
-      assertWrite,
+      guardWritePage,
+      guardReadPage,
+      assertWritePage,
       isAdmin,
       isManager,
       isOperatore,
@@ -139,15 +104,12 @@ export function useRbac() {
       role,
       isLoading,
       operatorGlobalSettingsPilotActive,
-      hasPermission,
-      hasCapabilityFn,
-      canReadFn,
-      canWriteFn,
-      canDeleteFn,
+      canReadPageFn,
+      canWritePageFn,
       canAccessPageFn,
-      guardWrite,
-      guardRead,
-      assertWrite,
+      guardWritePage,
+      guardReadPage,
+      assertWritePage,
       isAdmin,
       isManager,
       isOperatore,
@@ -159,9 +121,8 @@ export function useRbac() {
   );
 }
 
-export type UseRbacReturn = ReturnType<typeof useRbac> & { role: ReturnType<typeof useRbac>["role"] };
+export type UseRbacReturn = ReturnType<typeof useRbac>;
 
-/** Sessione pronta per valutazioni RBAC lato client. */
 export function useRbacReady(): boolean {
   const { status, user } = useAuth();
   return isAuthSessionEstablished(status) && !!user?.id;

@@ -45,6 +45,15 @@ const profileSheet = read("components/profile/profile-sheet.tsx");
 assert.match(profileSheet, /gestionaleLogDrawerFooterClass/);
 assert.match(profileSheet, /ProfileVersionFooter/);
 
+const profileVersionFooter = read("components/profile/profile-version-footer.tsx");
+assert.match(profileVersionFooter, /PrivacyPolicyLink/);
+
+const privacyPolicyLink = read("components/legal/privacy-policy-link.tsx");
+assert.match(privacyPolicyLink, /buildPrivacyPolicyHref/);
+
+const privacyPolicyReturn = read("lib/legal/privacy-policy-return.ts");
+assert.match(privacyPolicyReturn, /sanitizePrivacyPolicyReturnPath/);
+
 const schedeFetch = read("lib/schede/schede-bundles-fetch-authorized.ts");
 assert.match(schedeFetch, /clientPortal/);
 assert.match(schedeFetch, /ensureClientLavorazioniAccess/);

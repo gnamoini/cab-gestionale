@@ -1,4 +1,4 @@
-import { hasResolvedCapability } from "@/src/lib/rbac/resolve-user-permissions";
+import { canReadPage } from "@/src/lib/rbac/resolve-page-access";
 import { isPdfPreviewPostRateLimited } from "@/lib/preventivi/pdf-preview-rate-limit";
 import { PDF_MAGIC, PDF_PREVIEW_MAX_BYTES } from "@/lib/pdf/pdf-preview-config";
 import { verifyServerModuleCan } from "@/src/lib/auth/server-permission-guards";
@@ -45,7 +45,11 @@ async function canUsePdfPreview(): Promise<boolean> {
 
   const snap = await resolveServerEffectivePermissions();
   if (!snap?.resolved) return false;
-  return hasResolvedCapability(snap.resolved, "can_read_operational");
+  return (
+    canReadPage(snap.resolved, "lavorazioni") ||
+    canReadPage(snap.resolved, "dashboard") ||
+    canReadPage(snap.resolved, "dipendenti")
+  );
 }
 
 export type PdfPreviewHandlerOptions = {

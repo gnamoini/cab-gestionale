@@ -2,9 +2,10 @@
  * RBAC v3.2 — matrice ruolo × route (data-driven fixtures).
  */
 import assert from "node:assert/strict";
-import { canAccessPage, canRead, canWrite, hasPermission } from "@/lib/auth/rbac";
+import { canAccessPage, canRead, canWrite } from "@/lib/auth/rbac";
+import { canWritePage } from "@/src/lib/rbac/resolve-page-access";
 import { canAccessRoute } from "@/src/lib/auth/can-access-route";
-import type { RequiredRbacContext } from "@/lib/rbac";
+import type { RequiredRbacContext } from "@/lib/auth/rbac";
 import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
 
 const ROUTES = [
@@ -25,7 +26,7 @@ const ROUTES = [
 type RoleCase = {
   role: string;
   pageExpect: Partial<Record<(typeof ROUTES)[number], boolean>>;
-  userOverrides?: { permissionKey: string; effect: "allow" | "deny" }[];
+  userPageOverrides?: { page_key: string; access_level: "write" | "read" | "none" }[];
 };
 
 const cases: RoleCase[] = [
@@ -101,17 +102,17 @@ for (const c of cases) {
   const snap = buildTestSnapshot({
     userId: `${c.role}-1`,
     roleKey: c.role,
-    userOverrides: c.userOverrides,
+    userPageOverrides: c.userPageOverrides,
   });
   const ctx = snap.rbacContext as RequiredRbacContext;
 
   for (const [path, allowed] of Object.entries(c.pageExpect)) {
-    const actual = canAccessPage(c.role, path, undefined, ctx);
+    const actual = canAccessPage(path, ctx);
     assert.equal(actual, allowed, `${c.role} canAccessPage ${path}`);
   }
 
   for (const [path, allowed] of Object.entries(c.pageExpect)) {
-    const routeActual = canAccessRoute({ user: c.role, pathname: path, snapshot: snap });
+    const routeActual = canAccessRoute({ pathname: path, snapshot: snap });
     assert.equal(routeActual, allowed, `${c.role} canAccessRoute ${path}`);
   }
 }
@@ -119,27 +120,30 @@ for (const c of cases) {
 const operatorePreventiviOverride = buildTestSnapshot({
   userId: "op-prev",
   roleKey: "operatore",
-  userOverrides: [
-    { permissionKey: "preventivi.read", effect: "allow" },
-    { permissionKey: "preventivi.write", effect: "allow" },
-  ],
+  userPageOverrides: [{ page_key: "preventivi", access_level: "write" }],
 });
 assert.equal(
   canAccessRoute({
-    user: "operatore",
     pathname: "/preventivi",
     snapshot: operatorePreventiviOverride,
   }),
   true,
-  "operatore override FULL preventivi",
+  "operatore override preventivi write",
 );
 
 const mgrCtx = buildTestSnapshot({ userId: "m1", roleKey: "manager" }).rbacContext as RequiredRbacContext;
-assert.equal(hasPermission("manager", "manageSettings", mgrCtx), true);
-assert.equal(hasPermission("manager", "manageSecurity", mgrCtx), false);
-assert.equal(hasPermission("operatore", "manageSettings", buildTestSnapshot({ userId: "o1", roleKey: "operatore" }).rbacContext as RequiredRbacContext), false);
+assert.equal(canWrite("manager", "impostazioni", mgrCtx), true);
+assert.equal(canWrite("manager", "security", mgrCtx), false);
+assert.equal(
+  canWrite("operatore", "impostazioni", buildTestSnapshot({ userId: "o1", roleKey: "operatore" }).rbacContext as RequiredRbacContext),
+  false,
+);
 assert.equal(canWrite("guest", "magazzino", buildTestSnapshot({ userId: "g1", roleKey: "guest" }).rbacContext as RequiredRbacContext), false);
 assert.equal(canRead("guest", "dipendenti", buildTestSnapshot({ userId: "g1", roleKey: "guest" }).rbacContext as RequiredRbacContext), true);
 assert.equal(canRead("operatore", "dipendenti", buildTestSnapshot({ userId: "o1", roleKey: "operatore" }).rbacContext as RequiredRbacContext), false);
+
+const mgrSnap = buildTestSnapshot({ userId: "m1", roleKey: "manager" });
+assert.equal(canWritePage(mgrSnap.resolved, "impostazioni"), true);
+assert.equal(canWritePage(mgrSnap.resolved, "sicurezza"), false);
 
 console.log("permissions-role-matrix.test.ts OK");

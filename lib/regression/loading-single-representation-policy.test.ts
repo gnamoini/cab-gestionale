@@ -82,6 +82,18 @@ function findViewDoubleRepresentation(): string[] {
   return violations;
 }
 
+function findAuthFormDoubleRepresentation(): string[] {
+  const violations: string[] = [];
+  const authFiles = ["app/login/login-form.tsx", "app/login/reset-password/reset-password-form.tsx"];
+  for (const rel of authFiles) {
+    const text = fs.readFileSync(path.join(ROOT, rel), "utf8");
+    const hasInlineSpinner = /\bGlobalLoadingView\b/.test(text);
+    const hasGlobalHook = /\buseGlobalLoading\b/.test(text);
+    if (hasInlineSpinner && hasGlobalHook) violations.push(rel);
+  }
+  return violations;
+}
+
 function main(): void {
   const tableImports = findDirectTableSkeletonImports();
   assert.equal(
@@ -97,6 +109,13 @@ function main(): void {
     `LoadingView + skeleton pagina nello stesso file view: ${doubleRep.join(", ")}`,
   );
 
+  const authDoubleRep = findAuthFormDoubleRepresentation();
+  assert.equal(
+    authDoubleRep.length,
+    0,
+    `GlobalLoadingView + useGlobalLoading nello stesso file auth: ${authDoubleRep.join(", ")}`,
+  );
+
   const reportView = fs.readFileSync(
     path.join(ROOT, "components/gestionale/report/report-view.tsx"),
     "utf8",
@@ -107,7 +126,7 @@ function main(): void {
     path.join(ROOT, "components/design-system/loading/loading-suspense-fallback.tsx"),
     "utf8",
   );
-  assert.match(suspense, /LoadingPageShellSkeleton/);
+  assert.match(suspense, /LoadingPageSkeleton|ClientLavorazioniPageSkeleton/);
 
   console.log("loading-single-representation-policy.test: OK");
 }

@@ -1,32 +1,11 @@
 import { CLIENTE_HOME_PATH } from "@/lib/auth/rbac";
 import type { RbacSnapshotBound } from "@/src/lib/rbac/rbac-snapshot-access";
-import { snapshotHasPermission } from "@/src/lib/rbac/rbac-snapshot-access";
+import { snapshotHasPageRead } from "@/src/lib/rbac/rbac-snapshot-access";
 
-/** Etichetta UI: nav laterale, titoli pagina, impostazioni accesso. */
 export const PORTALE_CLIENTI_LABEL = "Portale Clienti";
 
-/** Persistenza in `app_settings` (module lavorazioni, key client_portal_access). */
-export const CLIENT_LAVORAZIONI_SETTINGS_MODULE = "lavorazioni";
-export const CLIENT_LAVORAZIONI_SETTINGS_KEY = "client_portal_access";
-
-export type ClientPortalAccessSettings = {
-  enabledUserIds: string[];
-};
-
-export function parseClientPortalAccess(value: unknown): ClientPortalAccessSettings {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return { enabledUserIds: [] };
-  }
-  const raw = (value as Record<string, unknown>).enabledUserIds;
-  const enabledUserIds = Array.isArray(raw)
-    ? raw.filter((x): x is string => typeof x === "string" && x.trim().length > 0)
-    : [];
-  return { enabledUserIds };
-}
-
-/** Portale clienti: capability da snapshot (SSOT runtime). */
 export function userHasClientLavorazioniAccessFromSnapshot(snap: RbacSnapshotBound): boolean {
-  return snapshotHasPermission(snap, "viewClientLavorazioni");
+  return snapshotHasPageRead(snap, "lavorazioni_clienti");
 }
 
 export function clientLavorazioniListPath(): string {

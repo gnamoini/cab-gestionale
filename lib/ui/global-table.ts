@@ -24,16 +24,19 @@ export const globalTableThCellChipInset = "!pl-4 pr-2.5 text-left";
 export const globalTableThLabel =
   "text-[13px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
 
-/** Etichetta singola riga nel pulsante sort (no troncamento). */
-export const globalTableSortLabelSingle = "whitespace-nowrap leading-none";
+/** Etichetta singola riga nel pulsante sort (titolo intero, una riga). */
+export const globalTableSortLabelSingle = "shrink-0 whitespace-nowrap leading-none";
 
 /** Pulsante ordinamento dentro `<th>`. */
 export const globalTableSortButton =
-  "inline-flex w-full items-center gap-1 text-[13px] font-semibold uppercase leading-none tracking-wide transition-colors duration-200 ease-out";
+  "inline-flex w-full max-w-full min-w-0 flex-nowrap items-center text-[13px] font-semibold uppercase leading-none tracking-wide transition-colors duration-200 ease-out";
 
-/** Contenitore icona sort: stessa altezza cap del testo header (`1em`). */
+/** Label + icona sort — gruppo a larghezza naturale, icona dopo il titolo. */
+export const globalTableSortControl = "inline-flex shrink-0 flex-nowrap items-center gap-1.5";
+
+/** Contenitore icona sort. */
 export const globalTableSortIconWrap =
-  "inline-flex shrink-0 items-center justify-center leading-none h-[1em] w-[0.75em]";
+  "inline-flex h-3 w-3 shrink-0 flex-none items-center justify-center leading-none";
 
 /** Etichetta header su due righe (es. Data / ingresso). */
 export const globalTableSortLabelStack =
@@ -120,7 +123,7 @@ export function globalTableButtonJustify(align: "left" | "center" | "right"): st
   return "justify-center";
 }
 
-/** Titolo colonna data ingresso (riga 1 / riga 2). */
+/** Titolo colonna data ingresso — due righe, «ingresso» per esteso + freccia affiancata. */
 export const globalTableLabelIngressoLines = ["Data", "ingresso"] as const;
 
 /** Titolo colonna identificazione — per esteso su due righe (no troncamento). */

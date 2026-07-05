@@ -305,7 +305,17 @@ html {
 }
 
 .cab-nav-drawer-panel {
+  touch-action: pan-y;
   animation: cab-nav-drawer-in var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) both;
+}
+
+.cab-nav-drawer-panel.cab-nav-drawer-dragging {
+  animation: none;
+}
+
+.cab-nav-drawer-panel.cab-nav-drawer-snap-back {
+  animation: none;
+  transition: transform var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease);
 }
 
 .cab-nav-drawer-panel[data-state="closing"] {
@@ -658,10 +668,50 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
   --cab-shell-content-gutter: 1.25rem;
 }
 
-/** Hamburger / back nel PageHeader — sizing da `dsPageToolbarIconBtn`. */
+/** Hamburger header — sizing da `dsPageToolbarIconBtn`; back — ghost `dsPageHeaderBackBtn`. */
 .cab-mobile-nav-open,
 .cab-mobile-nav-back {
   flex-shrink: 0;
+}
+
+/** Dashboard welcome — testo a sinistra dopo logo; data ancorata a destra. */
+@media (min-width: 768px) {
+  .cab-dashboard-welcome-layout {
+    grid-template-columns: auto minmax(0, max-content) 1fr auto;
+    align-items: center;
+    column-gap: 1rem;
+  }
+
+  .cab-dashboard-welcome-logo {
+    grid-column: 1;
+    grid-row: 1;
+    width: fit-content;
+    max-width: 8.5rem;
+  }
+
+  .cab-dashboard-welcome-copy {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: start;
+    text-align: left;
+  }
+
+  .cab-dashboard-welcome-date {
+    grid-column: 4;
+    grid-row: 1;
+    justify-self: end;
+    width: auto;
+    border-top-width: 0;
+    border-left-width: 2px;
+    border-left-style: solid;
+    border-left-color: color-mix(in srgb, var(--cab-primary) 50%, transparent);
+    padding-top: 0;
+    padding-left: 1rem;
+  }
+}
+
+.cab-dashboard-welcome-copy {
+  text-align: left;
 }
 
 /** Titolo centrato tra hamburger e azioni header. */
@@ -773,6 +823,12 @@ main.gestionale-scroll-y[data-cab-main-scroll-lock] {
 }
 
 /* Sidebar — SSOT layout: lib/ui/sidebar-layout.ts + components/gestionale/sidebar-nav-row.tsx */
+@property --cab-sidebar-logo-scale {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
 .cab-app-shell {
   --cab-sidebar-motion: 150ms;
   --cab-sidebar-rail-width: 4.25rem;
@@ -958,44 +1014,71 @@ main.gestionale-scroll-y[data-cab-main-scroll-lock] {
   box-shadow: none;
 }
 
-/** Allineamento verticale logo sidebar ↔ titolo PageHeader (stesso pt + row h-10). */
+/** Logo sidebar — slot fisso 4rem; logo contenuto nel padding, scala compatto→espanso. */
 .cab-sidebar-brand {
+  --cab-sidebar-logo-scale: 1;
+  --cab-sidebar-brand-h: 4rem;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-  padding-inline: var(--cab-sidebar-nav-inset);
-  padding-top: var(--ds-space-md);
-  padding-bottom: 0.5rem;
-}
-
-.cab-sidebar-brand > a {
-  display: flex;
+  flex-shrink: 0;
   width: 100%;
-  min-width: 0;
-  min-height: 2.5rem;
+  height: var(--cab-sidebar-brand-h);
+  min-height: var(--cab-sidebar-brand-h);
+  max-height: var(--cab-sidebar-brand-h);
+  padding: 0.5rem 0.625rem;
+  box-sizing: border-box;
+  transition: --cab-sidebar-logo-scale var(--cab-sidebar-width-motion) var(--cab-sidebar-ease-out);
+}
+
+.cab-sidebar[data-sidebar-collapsed]:not([data-sidebar-hover-expanded]) .cab-sidebar-brand {
+  --cab-sidebar-logo-scale: 1;
+  padding: 0.375rem 0.25rem;
+}
+
+.cab-sidebar[data-sidebar-collapsed]:not([data-sidebar-hover-expanded]) .cab-sidebar-brand-logo,
+.cab-sidebar[data-sidebar-collapsed]:not([data-sidebar-hover-expanded]) .cab-sidebar-brand > a img {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: 1.25rem !important;
+  transform: none;
+}
+
+.cab-sidebar-brand-link {
+  display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: var(--ds-radius-lg);
+  overflow: hidden;
 }
 
-/** Rail collassata: logo centrato sull'asse icona (stesso anchor di nav + avatar). */
-.cab-sidebar[data-sidebar-collapsed]:not([data-sidebar-hover-expanded]) .cab-sidebar-brand {
-  padding-inline: 0.75rem;
+.cab-sidebar-brand-logo,
+.cab-sidebar-brand > a img {
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: calc(var(--cab-sidebar-brand-h) - 1rem) !important;
+  object-fit: contain;
+  transform: scale(var(--cab-sidebar-logo-scale));
+  transform-origin: center center;
+  will-change: transform;
 }
 
-.cab-sidebar[data-sidebar-collapsed]:not([data-sidebar-hover-expanded]) .cab-sidebar-brand > a {
-  justify-content: flex-start;
-}
-
-.cab-sidebar[data-sidebar-collapsed]:not([data-sidebar-hover-expanded]) .cab-sidebar-brand > a img {
-  margin-inline-start: var(--cab-sidebar-icon-anchor);
-  transform: translateX(calc(var(--cab-sidebar-icon-size) / 2 - 50%));
-}
-
-.cab-sidebar[data-sidebar-collapsed][data-sidebar-hover-expanded] .cab-sidebar-brand > a img {
-  margin-inline-start: 0;
-  transform: none;
+.cab-sidebar-brand > a > span {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .cab-sidebar-session--brand {
@@ -1017,12 +1100,6 @@ main.gestionale-scroll-y[data-cab-main-scroll-lock] {
   padding-top: 0.5rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid color-mix(in srgb, var(--cab-border) 85%, transparent);
-}
-
-@media (min-width: 640px) {
-  .cab-sidebar-brand {
-    padding-top: var(--ds-space-lg);
-  }
 }
 
 /** Padding orizzontale via `p-3` sul nodo (stesso inset delle voci nav). */
@@ -1135,6 +1212,10 @@ main.gestionale-scroll-y[data-cab-main-scroll-lock] {
   .cab-sidebar .cab-sidebar-nav-row__trailing,
   .cab-sidebar .cab-sidebar-nav-icon,
   .cab-sidebar-active-indicator,
+  .cab-sidebar-brand,
+  .cab-sidebar-brand-link,
+  .cab-sidebar-brand-logo,
+  .cab-sidebar-brand img,
   .cab-notification-bell-icon--arrive,
   .cab-notification-bell--arrive .cab-sidebar-notification-badge,
   .cab-notification-bell--arrive .cab-sidebar-notification-trailing-count,

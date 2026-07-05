@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { cabDevWarn } from "@/src/lib/observability/dev-warn";
 import { useAuth } from "@/context/auth-context";
 import { useOperatorGlobalSettings } from "@/src/context/operator-global-settings-context";
-import { useUserPermissionsQuery, useRolePermissionKeysQuery } from "@/src/hooks/use-permissions";
+import { useUserPageOverridesQuery, useRolePageAccessQuery } from "@/src/hooks/use-permissions";
 import { publishClientEffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
 import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
@@ -13,30 +13,30 @@ import { publishStickyRbacSnapshot } from "@/src/lib/rbac/sticky-rbac-snapshot";
 
 const EMPTY_SNAPSHOT: EffectivePermissionsSnapshot | null = null;
 
-/** Hook canonico permessi runtime (auth + user_permissions + pilot). */
+/** Hook canonico permessi runtime (auth + page overrides + pilot). */
 export function useEffectivePermissions(): {
   snapshot: EffectivePermissionsSnapshot | null;
   isLoading: boolean;
 } {
   const { user, status } = useAuth();
   const operatorPilot = useOperatorGlobalSettings();
-  const permsQuery = useUserPermissionsQuery();
-  const roleKeysQuery = useRolePermissionKeysQuery();
+  const overridesQuery = useUserPageOverridesQuery();
+  const roleAccessQuery = useRolePageAccessQuery();
   const lastGoodRef = useRef<EffectivePermissionsSnapshot | null>(null);
 
   const isLoading =
     status === "loading" ||
     (Boolean(user?.id) &&
-      ((permsQuery.isLoading && permsQuery.fetchStatus !== "idle" && !permsQuery.data) ||
-        (roleKeysQuery.isLoading && roleKeysQuery.fetchStatus !== "idle" && !roleKeysQuery.data)));
+      ((overridesQuery.isLoading && overridesQuery.fetchStatus !== "idle" && !overridesQuery.data) ||
+        (roleAccessQuery.isLoading && roleAccessQuery.fetchStatus !== "idle" && !roleAccessQuery.data)));
 
   const snapshot = useMemo(() => {
     if (!user?.id) return EMPTY_SNAPSHOT;
     const snap = resolveEffectivePermissions({
       userId: user.id,
       roleKey: user.roleKey ?? user.ruolo,
-      rolePermissionKeys: roleKeysQuery.data ?? [],
-      permissionRows: permsQuery.data,
+      rolePageAccess: roleAccessQuery.data ?? {},
+      userPageOverrideRows: overridesQuery.data,
       pilotDbEnabled: operatorPilot.dbEnabled,
     });
     publishClientEffectivePermissionsSnapshot(snap);
@@ -45,7 +45,7 @@ export function useEffectivePermissions(): {
       lastGoodRef.current = snap;
     }
     return snap;
-  }, [user?.id, user?.roleKey, user?.ruolo, roleKeysQuery.data, permsQuery.data, operatorPilot.dbEnabled]);
+  }, [user?.id, user?.roleKey, user?.ruolo, roleAccessQuery.data, overridesQuery.data, operatorPilot.dbEnabled]);
 
   const displaySnapshot =
     snapshot && isRbacSnapshotReady(snapshot) ? snapshot : lastGoodRef.current;
@@ -55,8 +55,8 @@ export function useEffectivePermissions(): {
   }, [displaySnapshot]);
 
   useEffect(() => {
-    if (!permsQuery.isError || !permsQuery.dataUpdatedAt) return;
-    const ageMs = Date.now() - permsQuery.dataUpdatedAt;
+    if (!overridesQuery.isError || !overridesQuery.dataUpdatedAt) return;
+    const ageMs = Date.now() - overridesQuery.dataUpdatedAt;
     if (ageMs < 5 * 60_000) return;
     cabDevWarn(
       "rbac.stale_snapshot",
@@ -64,7 +64,7 @@ export function useEffectivePermissions(): {
       { ageMs, userId: user?.id },
       { oncePerSession: true },
     );
-  }, [permsQuery.isError, permsQuery.dataUpdatedAt, user?.id]);
+  }, [overridesQuery.isError, overridesQuery.dataUpdatedAt, user?.id]);
 
   return { snapshot: displaySnapshot, isLoading };
 }

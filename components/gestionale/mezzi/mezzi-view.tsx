@@ -407,13 +407,13 @@ export function MezziView() {
         await logService.markReverted(rollbackUpdateLog.id, {
           undo_log_id: undoLog.success ? undoLog.data?.id : null,
           reverted_by: user?.id ?? null,
-          permission: "editVehicles",
+          pageKey: "mezzi",
         });
       }
       await logService.markReverted(undoableMezziLog.id, {
         undo_log_id: undoLog.success ? undoLog.data?.id : null,
         reverted_by: user?.id ?? null,
-        permission: "editVehicles",
+        pageKey: "mezzi",
       });
       await logQuery.refetch();
       flashRow(undoableMezziLog.entita_id);

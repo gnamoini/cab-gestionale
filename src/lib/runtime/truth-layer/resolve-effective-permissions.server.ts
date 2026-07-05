@@ -5,7 +5,6 @@ import { fetchOperatorGlobalSettingsDbEnabledServer } from "@/lib/permissions/op
 import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
 
-/** Snapshot permessi per request RSC / server actions (sessione + pilot DB). */
 export async function resolveServerEffectivePermissions(): Promise<EffectivePermissionsSnapshot | null> {
   const session = await getServerSession();
   if (!session.user?.id) return null;
@@ -15,8 +14,8 @@ export async function resolveServerEffectivePermissions(): Promise<EffectivePerm
   return resolveEffectivePermissions({
     userId: session.user.id,
     roleKey: session.user.roleKey ?? session.user.ruolo,
-    rolePermissionKeys: session.rolePermissionKeys,
-    permissionRows: session.permissions,
+    rolePageAccess: session.rolePageAccess,
+    userPageOverrideRows: session.userPageOverrides,
     pilotDbEnabled,
   });
 }

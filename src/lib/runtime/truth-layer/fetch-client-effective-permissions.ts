@@ -6,8 +6,7 @@ import { readOperatorGlobalSettingsDbEnabledFromRows } from "@/lib/permissions/o
 import { readClientEffectivePermissionsSnapshotCache, readAuthRoleHint } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
 import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
-import type { UserPermissionRow } from "@/src/types/supabase-tables";
-import { loadRolePermissionKeys } from "@/src/lib/rbac/load-rbac-data";
+import { loadRolePageAccess, loadUserPageOverrides } from "@/src/lib/rbac/load-rbac-data";
 import {
   OPERATOR_GLOBAL_SETTINGS_KEY,
   OPERATOR_GLOBAL_SETTINGS_MODULE,
@@ -20,7 +19,6 @@ function resolveAuthUserId(
   return authUser?.id ?? sessionUser?.id ?? null;
 }
 
-/** Fetch client one-shot per guard async (evita N query pilot sparse). */
 export async function fetchClientEffectivePermissionsSnapshot(): Promise<EffectivePermissionsSnapshot | null> {
   const cached = readClientEffectivePermissionsSnapshotCache();
   if (cached && cached.role !== "guest") return cached;
@@ -45,12 +43,8 @@ export async function fetchClientEffectivePermissionsSnapshot(): Promise<Effecti
   }
 
   try {
-    const [{ data: prof }, { data: permRows }, { data: settingsRow }] = await Promise.all([
+    const [{ data: prof }, { data: settingsRow }] = await Promise.all([
       sb.from("profiles").select("role_key").eq("id", userId).maybeSingle(),
-      sb
-        .from("user_permissions")
-        .select("user_id, permission_id, effect, permissions(key, module, action)")
-        .eq("user_id", userId),
       sb
         .from("app_settings")
         .select("value")
@@ -70,7 +64,10 @@ export async function fetchClientEffectivePermissionsSnapshot(): Promise<Effecti
     }
     if (!roleKey) roleKey = "guest";
 
-    const rolePermissionKeys = await loadRolePermissionKeys(sb, roleKey);
+    const [rolePageAccess, userPageOverridesMap] = await Promise.all([
+      loadRolePageAccess(sb, roleKey),
+      loadUserPageOverrides(sb, userId),
+    ]);
 
     const pilotDbEnabled = readOperatorGlobalSettingsDbEnabledFromRows(
       settingsRow
@@ -81,8 +78,11 @@ export async function fetchClientEffectivePermissionsSnapshot(): Promise<Effecti
     const snap = resolveEffectivePermissions({
       userId,
       roleKey,
-      rolePermissionKeys,
-      permissionRows: (permRows ?? []) as unknown as UserPermissionRow[],
+      rolePageAccess,
+      userPageOverrideRows: Object.entries(userPageOverridesMap).map(([page_key, access_level]) => ({
+        page_key,
+        access_level,
+      })),
       pilotDbEnabled,
     });
     trackRuntimeEvent(RuntimeEvents.rbacResolveSuccess, {

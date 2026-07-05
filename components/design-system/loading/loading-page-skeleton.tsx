@@ -48,16 +48,11 @@ export type LoadingPageSkeletonProps = {
 
 const SHELL_CONTENT_HEIGHT: Partial<Record<LoadingPageSkeletonVariant, string>> = {
   default: SKELETON_MIN_HEIGHT.tableDesktop,
-  lavorazioni: SKELETON_MIN_HEIGHT.tableDesktop,
-  magazzino: SKELETON_MIN_HEIGHT.tableDesktop,
-  mezzi: SKELETON_MIN_HEIGHT.tableCompact,
-  documenti: SKELETON_MIN_HEIGHT.tableDocumenti,
-  preventivi: SKELETON_MIN_HEIGHT.tableDesktop,
-  clienti: SKELETON_MIN_HEIGHT.tableDesktop,
   compact: "min-h-[8rem]",
+  kanban: "min-h-[24rem]",
 };
 
-/** Skeleton pagina — composizioni container; variant `shell` usa solo header+box. */
+/** Skeleton pagina — composizioni ShellCard + pulse allineate al layout reale. */
 export const LoadingPageSkeleton = memo(function LoadingPageSkeleton({
   variant = "default",
   className = "",
@@ -99,13 +94,8 @@ export const LoadingPageSkeleton = memo(function LoadingPageSkeleton({
       </div>
     );
   }
-  if (variant === "lavorazioni" || variant === "clienti") {
-    return (
-      <LoadingPageShellSkeleton
-        className={className}
-        contentMinHeightClass={SHELL_CONTENT_HEIGHT[variant]}
-      />
-    );
+  if (variant === "lavorazioni") {
+    return <LoadingLavorazioniListSkeleton className={className} />;
   }
   if (variant === "magazzino") {
     return <LoadingMagazzinoListSkeleton className={className} />;
@@ -119,19 +109,11 @@ export const LoadingPageSkeleton = memo(function LoadingPageSkeleton({
   if (variant === "preventivi") {
     return <LoadingPreventiviListSkeleton className={className} />;
   }
-  if (variant === "compact") {
-    return (
-      <LoadingPageShellSkeleton
-        className={className}
-        contentMinHeightClass={SHELL_CONTENT_HEIGHT.compact}
-      />
-    );
-  }
 
   return (
     <LoadingPageShellSkeleton
       className={className}
-      contentMinHeightClass={SHELL_CONTENT_HEIGHT.default}
+      contentMinHeightClass={SHELL_CONTENT_HEIGHT[variant] ?? SKELETON_MIN_HEIGHT.tableDesktop}
     />
   );
 });

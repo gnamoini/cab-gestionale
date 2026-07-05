@@ -19,7 +19,7 @@ import { todayDateYmd } from "@/lib/dipendenti/timesheet-month";
 import { dipendentiTimesheetService } from "@/src/services/dipendenti-timesheet.service";
 import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
-import { canReadModule } from "@/src/lib/rbac/resolve-user-permissions";
+import { canReadPage } from "@/src/lib/rbac/resolve-page-access";
 
 const CHECK_INTERVAL_MS = 60_000;
 
@@ -39,7 +39,7 @@ export function AdminDipendentiPresenzeReminderBridge() {
     isStaffInboxEligible(snapshot ? { ruolo: snapshot.role } : user, snapshot?.rbacContext);
 
   const canReadDipendenti =
-    Boolean(snapshot?.resolved) && canReadModule(snapshot!.resolved, "dipendenti");
+    Boolean(snapshot?.resolved) && canReadPage(snapshot!.resolved, "dipendenti");
 
   const runCheck = useCallback(async () => {
     const userId = user?.id;

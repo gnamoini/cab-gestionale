@@ -1,9 +1,5 @@
-/**
- * Larghezze colonne — solo Portale Clienti (11 col).
- * Solo `width` su `<col>` (no min-width: causa overlap in table-fixed).
- * Percentuali più alte di Lavorazioni: qui mancano Note e Priorità.
- */
-export const clientPortalColIngressoClass = "w-[7%]";
+/** Larghezza fissa: «Ingresso» + sort icon su una riga. */
+export const clientPortalColIngressoClass = "w-[6rem]";
 export const clientPortalColClienteClass = "w-[10%]";
 export const clientPortalColCantiereClass = "w-[8%]";
 export const clientPortalColOggettoClass = "w-[14%]";

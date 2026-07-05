@@ -3,9 +3,8 @@
 import { useCallback, useMemo } from "react";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
-import { isRbacSnapshotReady, snapshotHasPermission } from "@/src/lib/rbac/rbac-snapshot-access";
+import { isRbacSnapshotReady, snapshotHasPageRead } from "@/src/lib/rbac/rbac-snapshot-access";
 
-/** Accesso portale clienti via snapshot RBAC (admin/cliente capability). */
 export function useClientLavorazioniAccess() {
   const { user, status } = useAuth();
   const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
@@ -13,7 +12,7 @@ export function useClientLavorazioniAccess() {
 
   const roleGrantsPortal = useMemo(() => {
     if (!isRbacSnapshotReady(snapshot)) return false;
-    return snapshotHasPermission(snapshot, "viewClientLavorazioni");
+    return snapshotHasPageRead(snapshot, "lavorazioni_clienti");
   }, [snapshot]);
 
   const allowed = sessionReady && !!user?.id && roleGrantsPortal;

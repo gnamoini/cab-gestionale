@@ -14,7 +14,7 @@ import {
 export function DesktopNotificationPermissionPrompt() {
   const rbac = useRbac();
   const gestToast = useGestionaleToast();
-  const enabled = rbac.canRead("dashboard") && !rbac.isLoading;
+  const enabled = rbac.canReadPage("dashboard") && !rbac.isLoading;
   const [permissionState, setPermissionState] = useState(() => getDesktopNotificationPermissionState());
   const [dismissed, setDismissed] = useState(() => wasDesktopNotificationPromptDismissed());
   const [hidden, setHidden] = useState(false);

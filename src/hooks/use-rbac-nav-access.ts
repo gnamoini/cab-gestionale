@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import {
   createRbacNavAccess,
@@ -18,10 +17,8 @@ export type UseRbacNavAccessResult = {
   isNavLoading: boolean;
 };
 
-/** Unico entry point UI per navigazione RBAC (sidebar, redirect, quick links). */
 export function useRbacNavAccess(): UseRbacNavAccessResult {
   const { snapshot, isLoading } = useEffectivePermissions();
-  const clientLav = useClientLavorazioniAccess();
 
   const sticky = readStickyRbacSnapshot();
   const effectiveSnap = isRbacSnapshotReady(snapshot)
@@ -32,8 +29,8 @@ export function useRbacNavAccess(): UseRbacNavAccessResult {
 
   const navAccess = useMemo(() => {
     if (!effectiveSnap) return null;
-    return createRbacNavAccess(effectiveSnap, { clientLavorazioniAllowed: clientLav.allowed });
-  }, [effectiveSnap, clientLav.allowed]);
+    return createRbacNavAccess(effectiveSnap);
+  }, [effectiveSnap]);
 
   return {
     navAccess,

@@ -23,10 +23,10 @@ assert.ok(mobileCardsBlock.length > 0, "MobileCards block expected");
 assert.doesNotMatch(mobileCardsBlock, /statusSlot=/);
 assert.match(mobileCardsBlock, /label="Stato"/);
 assert.match(mobileCardsBlock, /StatoReadOnlyPill/);
-assert.match(mobileCardsBlock, /secondaryDate/);
-assert.match(mobileCardsBlock, /label: "Completamento"/);
-assert.match(mobileCardsBlock, /ariaLabel=\{variant === "archive" \? "Addetto" : "Stato e addetto"\}/);
-assert.match(mobileCardsBlock, /className=\{variant === "archive" \? "col-span-2" : undefined\}/);
+assert.match(mobileCardsBlock, /label="Completamento"/);
+assert.match(mobileCardsBlock, /LavorazioneCompletamentoDatePill/);
+assert.match(mobileCardsBlock, /aria-label=\{variant === "archive" \? "Completamento e addetto" : "Stato e addetto"\}/);
+assert.doesNotMatch(mobileCardsBlock, /secondaryDate/);
 
 assert.match(mobileCard, /ariaLabel = "Priorità e addetto"/);
 assert.match(mobileCard, /className = ""/);

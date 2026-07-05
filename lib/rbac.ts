@@ -1,10 +1,10 @@
 /**
  * RBAC static config + seed aliases.
- * Runtime permissions: Postgres SSOT via resolveUserPermissions (src/lib/rbac/resolve-user-permissions.ts).
+ * Runtime permissions: Postgres SSOT via resolvePageAccess (src/lib/rbac/resolve-page-access.ts).
  */
 
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
-import type { ResolvedPermissions } from "@/src/lib/rbac/resolve-user-permissions";
+import type { ResolvedPageAccess } from "@/src/lib/rbac/resolve-page-access";
 import {
   RBAC_SEED_CANONICAL_ROLES,
   RBAC_SEED_CAPABILITIES,
@@ -31,12 +31,12 @@ export type Capability = RbacSeedCapability;
 
 export type RbacEvaluationContext = {
   operatorGlobalSettingsDbEnabled?: boolean;
-  resolved?: ResolvedPermissions;
+  resolved?: ResolvedPageAccess;
 };
 
 /** Runtime auth checks require a resolved snapshot — fail-closed without it. */
 export type RequiredRbacContext = RbacEvaluationContext & {
-  resolved: ResolvedPermissions;
+  resolved: ResolvedPageAccess;
 };
 
 /** @deprecated Seed only — not used at runtime. */

@@ -14,7 +14,7 @@ function readPublicEnv(key: string): string {
 }
 
 export function readAppVersion(): string {
-  return readPublicEnv("NEXT_PUBLIC_APP_VERSION") || "dev";
+  return readPublicEnv("NEXT_PUBLIC_APP_VERSION") || "0.2.0";
 }
 
 export function readAppCommitShort(): string | null {

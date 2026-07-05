@@ -12,8 +12,39 @@ import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const DEFAULT_PAGE_SIZE = 50;
 
+function asNullableString(value: unknown): string | null {
+  if (value == null) return null;
+  const s = String(value).trim();
+  return s || null;
+}
+
 function mapInboxRow(raw: Record<string, unknown>): InboxNotificationRow {
-  return raw as unknown as InboxNotificationRow;
+  const priority = String(raw.priority ?? "medium");
+  const scopeType = String(raw.scope_type ?? "global");
+  return {
+    id: String(raw.id ?? ""),
+    created_at: String(raw.created_at ?? ""),
+    type: String(raw.type ?? "") as InboxNotificationRow["type"],
+    scope_type:
+      scopeType === "user" || scopeType === "role" || scopeType === "global" ? scopeType : "global",
+    scope_value: asNullableString(raw.scope_value),
+    scope_module: asNullableString(raw.scope_module),
+    priority:
+      priority === "low" || priority === "medium" || priority === "high" || priority === "urgent"
+        ? priority
+        : "medium",
+    priority_rank: Number(raw.priority_rank ?? 0),
+    title: String(raw.title ?? ""),
+    body: String(raw.body ?? ""),
+    href: asNullableString(raw.href),
+    entity_type: asNullableString(raw.entity_type),
+    entity_id: asNullableString(raw.entity_id),
+    dedup_key: String(raw.dedup_key ?? ""),
+    created_by: asNullableString(raw.created_by),
+    read_at: asNullableString(raw.read_at),
+    dismissed_at: asNullableString(raw.dismissed_at),
+    is_unread: Boolean(raw.is_unread),
+  };
 }
 
 async function sb() {

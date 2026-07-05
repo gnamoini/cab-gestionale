@@ -13,7 +13,7 @@ const drawerSrc = fs.readFileSync(
   "utf8",
 );
 const editorSrc = fs.readFileSync(
-  path.join(ROOT, "components/dashboard/security/security-user-module-permissions-editor.tsx"),
+  path.join(ROOT, "components/dashboard/security/security-user-page-permissions-editor.tsx"),
   "utf8",
 );
 const actionsSrc = fs.readFileSync(
@@ -43,25 +43,26 @@ assert.match(panelSrc, /SecurityUserDetailDrawer/);
 assert.match(panelSrc, /invalidateRuntimeTruth/);
 assert.match(panelSrc, /roleOrPermissionsChanged/);
 assert.match(panelSrc, /buildSecurityUserPatches/);
-assert.match(panelSrc, /moduleDrafts/);
+assert.match(panelSrc, /pageDrafts/);
 assert.match(panelSrc, /ToolbarGroup/);
 assert.match(panelSrc, /ToolbarGroupMetaRow/);
 assert.match(panelSrc, /GestionaleRefreshToolbarButton/);
 assert.match(panelSrc, /dsPageToolbarCtaCompact/);
 assert.doesNotMatch(panelSrc, /saveBtnClass/);
 
-assert.match(drawerSrc, /SecurityUserModulePermissionsEditor/);
+assert.match(drawerSrc, /SecurityUserPagePermissionsEditor/);
 assert.match(drawerSrc, /Permessi pagine/);
 
 assert.match(editorSrc, /onRestoreFromRole/);
-assert.match(editorSrc, /ROLE_MODULE_READONLY/);
-assert.match(editorSrc, /Completo/);
-assert.match(editorSrc, /Dashboard, Configurazione, Sicurezza e Portale Clienti/);
+assert.match(editorSrc, /ROLE_PAGE_READONLY/);
+assert.match(editorSrc, /Eredita dal ruolo/);
 
-assert.match(batchSrc, /ROLE_LABELS\.guest.*non ammette override permessi modulo/);
+assert.match(batchSrc, /user_page_overrides/);
+assert.match(batchSrc, /pagePermissions/);
+assert.match(batchSrc, /clearPagePermissions/);
 
-assert.match(patchesSrc, /modulePermissions/);
-assert.match(actionsSrc, /hasModulePermissionOverrides/);
+assert.match(patchesSrc, /pagePermissions/);
+assert.match(actionsSrc, /hasPagePermissionOverrides/);
 assert.match(actionsSrc, /clienteRef/);
 assert.match(actionsSrc, /mezzi:clienti/);
 assert.match(patchesSrc, /patch\.username/);
@@ -71,11 +72,8 @@ assert.match(actionsSrc, /SecurityUserMobileCard/);
 assert.match(actionsSrc, /GESTIONALE_LIST_DESKTOP_ONLY_CLASS/);
 assert.match(actionsSrc, /security-users-dense-table/);
 
-assert.match(batchSrc, /user_permissions/);
 assert.match(batchSrc, /username/);
 assert.match(batchSrc, /check_username_available/);
-assert.match(batchSrc, /modulePermissions/);
-assert.match(batchSrc, /clearModulePermissions/);
 assert.match(batchSrc, /cliente_ref/);
 assert.match(batchSrc, /auditClienteAssociationsAction/);
 assert.match(batchSrc, /validateClienteAssociationForRole/);

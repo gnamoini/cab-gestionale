@@ -4,8 +4,8 @@ import { LOG_MODIFICHE_COLUMNS, LOG_MODIFICHE_WITH_PROFILE_SELECT } from "@/lib/
 import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import { buildLogModificaSummary, mergePayloadWithSummary } from "@/lib/gestionale-log/log-summary";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission } from "@/src/lib/auth/permission-guards";
-import type { PermissionKey } from "@/src/lib/auth/permissions";
+import { ensurePageWrite } from "@/src/lib/auth/permission-guards";
+import type { GestionalePageKey } from "@/src/lib/permissions/gestionale-pages";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { LogModificaRow, LogModificaWithProfileRow } from "@/src/types/supabase-tables";
 
@@ -86,9 +86,9 @@ export const logService = {
     }
   },
 
-  async markReverted(id: string, input: { reverted_by?: string | null; undo_log_id?: string | null; permission?: PermissionKey }): Promise<ServiceResult<LogModificaRow>> {
+  async markReverted(id: string, input: { reverted_by?: string | null; undo_log_id?: string | null; pageKey?: GestionalePageKey }): Promise<ServiceResult<LogModificaRow>> {
     try {
-      const allowed = await ensurePermission(input.permission ?? "editWorkOrders");
+      const allowed = await ensurePageWrite(input.pageKey ?? "lavorazioni");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: before, error: e0 } = await c.from("log_modifiche").select(LOG_MODIFICHE_COLUMNS).eq("id", id).maybeSingle();

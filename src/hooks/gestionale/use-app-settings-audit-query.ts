@@ -29,7 +29,7 @@ export function useAppSettingsAuditQuery(
       if (!r.success) throw new Error(r.error ?? "Errore lettura audit impostazioni");
       return r.data ?? [];
     },
-    enabled: !!user?.id && rbac.hasPermission("manageSecurity"),
+    enabled: !!user?.id && rbac.canWritePage("sicurezza"),
     staleTime: 60_000,
     gcTime: 300_000,
   });

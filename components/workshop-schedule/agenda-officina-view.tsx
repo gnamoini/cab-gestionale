@@ -28,7 +28,7 @@ import { defaultScheduleSuggestionEngine } from "@/lib/workshop-schedule/slot-su
 import { useWorkshopScheduleRange, useWorkshopScheduleDayCapacity } from "@/src/hooks/use-workshop-schedule";
 import { useWorkshopScheduleMutations } from "@/src/hooks/use-workshop-schedule-mutations";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
-import { canWrite } from "@/lib/auth/rbac";
+import { canWritePage } from "@/src/lib/rbac/resolve-page-access";
 import {
   dsAccentSoftBanner,
   dsBtnNeutral,
@@ -55,12 +55,8 @@ export function AgendaOfficinaView() {
   const parsed = parseAgendaSearchParams(searchParams);
   const { snapshot } = useEffectivePermissions();
   const canWriteAgenda =
-    Boolean(snapshot?.rbacContext?.resolved) &&
-    canWrite(
-      { ruolo: snapshot?.role },
-      "dashboard",
-      snapshot!.rbacContext as import("@/lib/rbac").RequiredRbacContext,
-    );
+    Boolean(snapshot?.resolved) &&
+    canWritePage(snapshot!.resolved, "agenda");
 
   const [selectedYmd, setSelectedYmd] = useState(() => parseAgendaDateParam(parsed.date) ?? todayYmd());
   const [monthKey, setMonthKey] = useState(() => monthKeyFromYmd(parseAgendaDateParam(parsed.date) ?? todayYmd()));

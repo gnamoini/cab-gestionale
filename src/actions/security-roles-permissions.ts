@@ -3,31 +3,40 @@
 import { createServiceAdminClient } from "@/lib/supabase/create-service-admin-client.server";
 import { assertAdminCaller } from "@/lib/auth/assert-admin-caller.server";
 import {
-  listAllPermissions,
   listAllRoles,
-  loadRolePermissionKeys,
+  loadAllRolePageAccess,
+  loadRolePageAccess,
   ROLES_COLUMNS,
+  upsertRolePageAccess,
 } from "@/src/lib/rbac/load-rbac-data";
-import type { PermissionRow, RoleRow } from "@/src/types/supabase-tables";
+import { GESTIONALE_PAGES, type PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
+import type { RoleRow } from "@/src/types/supabase-tables";
 import { invalidateRbacTruthServer } from "@/src/lib/rbac/invalidate-rbac-truth.server";
+import { seedPageAccessForRole } from "@/lib/rbac-page-seed";
 
-export type RolePermissionMatrixCell = {
-  permissionId: string;
-  permissionKey: string;
-  module: string | null;
-  action: string | null;
+export type PageMatrixCell = {
+  pageKey: string;
   label: string;
-  allowed: boolean;
+  level: PageAccessLevel;
 };
 
-export type RolePermissionMatrix = {
+export type PageMatrixRow = {
   role: RoleRow;
-  cells: RolePermissionMatrixCell[];
+  cells: PageMatrixCell[];
+  locked: boolean;
+};
+
+export type PageAccessMatrix = {
+  pages: { key: string; label: string }[];
+  rows: PageMatrixRow[];
 };
 
 type Ok<T> = { ok: true } & T;
 type VoidOk = { ok: true };
 type Err = { ok: false; message: string };
+
+const VALID_LEVELS = new Set<PageAccessLevel>(["write", "read", "none"]);
+const VALID_PAGE_KEYS = new Set<string>(GESTIONALE_PAGES.map((p) => p.key));
 
 async function adminClientOrErr() {
   const caller = await assertAdminCaller();
@@ -46,48 +55,57 @@ export async function listRolesAction(): Promise<Ok<{ roles: RoleRow[] }> | Err>
   }
 }
 
-export async function listPermissionsAction(): Promise<Ok<{ permissions: PermissionRow[] }> | Err> {
+export async function getPageMatrixAction(): Promise<Ok<{ matrix: PageAccessMatrix }> | Err> {
   try {
     const ctx = await adminClientOrErr();
     if (!ctx.ok) return ctx;
-    const permissions = await listAllPermissions(ctx.admin);
-    return { ok: true, permissions };
+    const roles = await listAllRoles(ctx.admin);
+    const accessByRole = await loadAllRolePageAccess(ctx.admin);
+
+    const pages = GESTIONALE_PAGES.map((p) => ({ key: p.key, label: p.label }));
+    const rows: PageMatrixRow[] = roles.map((role) => {
+      const roleAccess = accessByRole.get(role.key) ?? seedPageAccessForRole(role.key);
+      const locked = role.key === "admin";
+      const cells: PageMatrixCell[] = GESTIONALE_PAGES.map((p) => ({
+        pageKey: p.key,
+        label: p.label,
+        level: locked ? "write" : (roleAccess[p.key] ?? "none"),
+      }));
+      return { role, cells, locked };
+    });
+
+    return { ok: true, matrix: { pages, rows } };
   } catch (e) {
-    return { ok: false, message: e instanceof Error ? e.message : "Errore elenco permessi" };
+    return { ok: false, message: e instanceof Error ? e.message : "Errore matrice pagine" };
   }
 }
 
-export async function getRolePermissionMatrixAction(
-  roleKey: string,
-): Promise<Ok<{ matrix: RolePermissionMatrix }> | Err> {
+export async function updatePageMatrixAction(input: {
+  patches: { roleKey: string; pageKey: string; level: PageAccessLevel }[];
+}): Promise<VoidOk | Err> {
   try {
     const ctx = await adminClientOrErr();
     if (!ctx.ok) return ctx;
-    const { data: role, error: roleErr } = await ctx.admin
-      .from("roles")
-      .select(ROLES_COLUMNS)
-      .eq("key", roleKey)
-      .maybeSingle();
-    if (roleErr || !role) return { ok: false, message: "Ruolo non trovato" };
 
-    const [permissions, allowedKeys] = await Promise.all([
-      listAllPermissions(ctx.admin),
-      loadRolePermissionKeys(ctx.admin, roleKey),
-    ]);
-    const allowedSet = new Set(allowedKeys);
+    for (const patch of input.patches) {
+      if (patch.roleKey === "admin") continue;
+      if (!VALID_PAGE_KEYS.has(patch.pageKey)) {
+        return { ok: false, message: `Pagina non valida: ${patch.pageKey}` };
+      }
+      if (!VALID_LEVELS.has(patch.level)) {
+        return { ok: false, message: `Livello non valido: ${patch.level}` };
+      }
 
-    const cells: RolePermissionMatrixCell[] = permissions.map((p) => ({
-      permissionId: p.id,
-      permissionKey: p.key,
-      module: p.module,
-      action: p.action,
-      label: p.label,
-      allowed: allowedSet.has(p.key),
-    }));
+      const { data: role } = await ctx.admin.from("roles").select("id").eq("key", patch.roleKey).maybeSingle();
+      if (!role?.id) return { ok: false, message: `Ruolo non trovato: ${patch.roleKey}` };
 
-    return { ok: true, matrix: { role: role as RoleRow, cells } };
+      await upsertRolePageAccess(ctx.admin, role.id, patch.pageKey, patch.level);
+    }
+
+    invalidateRbacTruthServer();
+    return { ok: true };
   } catch (e) {
-    return { ok: false, message: e instanceof Error ? e.message : "Errore matrice ruolo" };
+    return { ok: false, message: e instanceof Error ? e.message : "Errore aggiornamento matrice" };
   }
 }
 
@@ -117,9 +135,12 @@ export async function createRoleAction(input: {
       .single();
     if (error) return { ok: false, message: error.message };
 
-    if (input.cloneFromRoleKey) {
-      const dup = await duplicateRolePermissionsAction(key, input.cloneFromRoleKey);
-      if (!dup.ok) return dup;
+    const sourceAccess = input.cloneFromRoleKey
+      ? await loadRolePageAccess(ctx.admin, input.cloneFromRoleKey)
+      : seedPageAccessForRole("guest");
+
+    for (const [pageKey, level] of Object.entries(sourceAccess)) {
+      await upsertRolePageAccess(ctx.admin, role.id as string, pageKey, level);
     }
 
     invalidateRbacTruthServer();
@@ -187,51 +208,5 @@ export async function deactivateRoleAction(roleKey: string): Promise<VoidOk | Er
     return { ok: true };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "Errore disattivazione ruolo" };
-  }
-}
-
-export async function updateRolePermissionsAction(input: {
-  roleKey: string;
-  allowedPermissionIds: string[];
-}): Promise<VoidOk | Err> {
-  try {
-    const ctx = await adminClientOrErr();
-    if (!ctx.ok) return ctx;
-    const { data: role } = await ctx.admin.from("roles").select("id, is_system").eq("key", input.roleKey).maybeSingle();
-    if (!role) return { ok: false, message: "Ruolo non trovato" };
-
-    const { error: delErr } = await ctx.admin.from("role_permissions").delete().eq("role_id", role.id);
-    if (delErr) return { ok: false, message: delErr.message };
-
-    if (input.allowedPermissionIds.length > 0) {
-      const rows = input.allowedPermissionIds.map((permission_id) => ({
-        role_id: role.id,
-        permission_id,
-        effect: "allow" as const,
-      }));
-      const { error: insErr } = await ctx.admin.from("role_permissions").insert(rows);
-      if (insErr) return { ok: false, message: insErr.message };
-    }
-
-    invalidateRbacTruthServer();
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, message: e instanceof Error ? e.message : "Errore aggiornamento permessi ruolo" };
-  }
-}
-
-export async function duplicateRolePermissionsAction(
-  targetRoleKey: string,
-  sourceRoleKey: string,
-): Promise<VoidOk | Err> {
-  try {
-    const ctx = await adminClientOrErr();
-    if (!ctx.ok) return ctx;
-    const sourceKeys = await loadRolePermissionKeys(ctx.admin, sourceRoleKey);
-    const { data: perms } = await ctx.admin.from("permissions").select("id, key").in("key", sourceKeys);
-    const ids = (perms ?? []).map((p) => p.id as string);
-    return updateRolePermissionsAction({ roleKey: targetRoleKey, allowedPermissionIds: ids });
-  } catch (e) {
-    return { ok: false, message: e instanceof Error ? e.message : "Errore duplicazione permessi" };
   }
 }

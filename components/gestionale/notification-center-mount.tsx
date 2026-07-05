@@ -3,6 +3,7 @@
 import { NotificationCenterBell } from "@/components/gestionale/notification-center-bell";
 import { isClientInboxEligible } from "@/lib/notifications/client-inbox-eligible";
 import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
+import { resolveRole } from "@/lib/auth/rbac";
 import { useAuth } from "@/context/auth-context";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
@@ -27,15 +28,23 @@ export function NotificationCenterMount({
   onOpenInbox,
 }: NotificationCenterMountProps) {
   const { user } = useAuth();
-  const { snapshot, isLoading } = useEffectivePermissions();
+  const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
   const { readsDb, isLoading: flagLoading } = useNotificationsV2Mode();
 
-  if (flagLoading || isLoading || !readsDb || !user?.id) return null;
+  if (!user?.id) return null;
 
   const eligibleUser = snapshot?.role ? { ruolo: snapshot.role } : user;
-  const staffEligible = isStaffInboxEligible(eligibleUser, snapshot?.rbacContext);
-  const clientEligible = isClientInboxEligible(eligibleUser, snapshot?.rbacContext);
-  if (!staffEligible && !clientEligible) return null;
+  const rbacCtx = snapshot?.rbacContext;
+  const resolving = permsLoading || flagLoading;
+
+  if (!resolving) {
+    if (!readsDb) return null;
+    const staffEligible = isStaffInboxEligible(eligibleUser, rbacCtx);
+    const clientEligible = isClientInboxEligible(eligibleUser, rbacCtx);
+    if (!staffEligible && !clientEligible) return null;
+  } else if (resolveRole(eligibleUser) === "guest") {
+    return null;
+  }
 
   return (
     <NotificationCenterBell

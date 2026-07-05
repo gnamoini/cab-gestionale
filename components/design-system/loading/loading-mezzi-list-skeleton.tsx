@@ -1,12 +1,12 @@
 "use client";
 
 import { memo } from "react";
-import {
-  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
-  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
-} from "@/lib/ui/use-gestionale-list-layout";
-import { SkeletonCard, SkeletonTable } from "./skeleton-primitives";
+import { GESTIONALE_LIST_DESKTOP_ONLY_CLASS } from "@/lib/ui/use-gestionale-list-layout";
+import { SkeletonShellCard, SkeletonShellCardPulseBody } from "./skeleton-shell-card";
+import { LoadingListPageShell } from "./loading-list-page-shell";
 import { SKELETON_MIN_HEIGHT } from "./skeleton-layout-presets";
+
+const GESTIONALE_COMBINED_LIST_CARD_MIN = "min-h-[33rem]";
 
 export type LoadingMezziListSkeletonProps = {
   withToolbar?: boolean;
@@ -17,15 +17,18 @@ export const LoadingMezziListSkeleton = memo(function LoadingMezziListSkeleton({
   withToolbar = true,
   className = "",
 }: LoadingMezziListSkeletonProps) {
+  if (!withToolbar) {
+    return (
+      <SkeletonShellCardPulseBody
+        minHeightClass={`${SKELETON_MIN_HEIGHT.tableCompact} ${GESTIONALE_LIST_DESKTOP_ONLY_CLASS}`}
+        className={className}
+      />
+    );
+  }
+
   return (
-    <div className={`space-y-4 ${className}`.trim()} role="status" aria-busy="true" aria-label="Caricamento mezzi">
-      {withToolbar ? <SkeletonCard minHeightClass={SKELETON_MIN_HEIGHT.toolbar} className="p-0" /> : null}
-      <SkeletonTable visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS} minHeightClass={SKELETON_MIN_HEIGHT.tableCompact} />
-      <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`} aria-hidden>
-        {Array.from({ length: 4 }).map((_, i) => (
-          <SkeletonCard key={i} minHeightClass={SKELETON_MIN_HEIGHT.cardMobile} className="min-w-0 h-full" />
-        ))}
-      </div>
-    </div>
+    <LoadingListPageShell className={className} ariaLabel="Caricamento mezzi">
+      <SkeletonShellCard sectionLabel="Azioni e filtri mezzi" bodyMinHeightClass={GESTIONALE_COMBINED_LIST_CARD_MIN} />
+    </LoadingListPageShell>
   );
 });

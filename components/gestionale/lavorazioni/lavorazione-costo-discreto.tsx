@@ -68,7 +68,7 @@ export function LavorazioneCostoDiscreto({
   variant?: "footer" | "section";
 }) {
   const rbac = useRbac();
-  const canView = rbac.hasCapability("can_write_operational");
+  const canView = rbac.canWritePage("lavorazioni");
   const [open, setOpen] = useState(variant === "section");
 
   if (!canView || !costo) return null;

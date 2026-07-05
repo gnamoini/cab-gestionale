@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { LoadingSuspenseFallback } from "@/components/design-system";
+import { ClientLavorazioniPageSkeleton } from "@/components/lavorazioni-clienti/client-lavorazioni-loading-skeleton";
 
 export const DashboardViewLazy = dynamic(
   () => import("@/components/dashboard/dashboard-view").then((m) => m.DashboardView),
@@ -57,7 +58,7 @@ export const SistemaImpostazioniPageViewLazy = dynamic(
 export const ClientLavorazioniViewLazy = dynamic(
   () =>
     import("@/components/lavorazioni-clienti/client-lavorazioni-view").then((m) => m.ClientLavorazioniView),
-  { loading: () => <LoadingSuspenseFallback variant="clienti" /> },
+  { loading: () => <ClientLavorazioniPageSkeleton /> },
 );
 
 export const SecurityDashboardViewLazy = dynamic(

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { useTheme } from "@/context/theme-context";
-import { dsFocus, dsPageToolbarBtn } from "@/lib/ui/design-system";
+import { dsBtnGhost, dsFocus, dsPageToolbarBtn } from "@/lib/ui/design-system";
 
 function IconSun({ className }: { className?: string }) {
   return (
@@ -43,7 +43,7 @@ export function ThemeModeIcon({ className = "h-4 w-4 shrink-0" }: { className?: 
 export function ThemeToggle({
   variant = "button",
 }: {
-  variant?: "button" | "switch";
+  variant?: "button" | "switch" | "ghost";
 }) {
   const { resolved, themeReady, themeSaving, toggleLightDark } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -54,11 +54,35 @@ export function ThemeToggle({
   const tip = themeSaving ? "Salvataggio…" : resolved === "dark" ? "Chiaro" : "Scuro";
 
   if (!mounted || !themeReady) {
+    const ghostPlaceholder = variant === "ghost" ? "h-[1.75rem] min-w-[4.5rem] rounded-[var(--ds-radius-lg)]" : "";
     return (
       <span
-        className={`inline-flex min-w-0 shrink-0 items-center justify-center border border-transparent bg-transparent ${variant === "switch" ? "h-6 w-10 rounded-full" : "h-11 min-w-[2.75rem] rounded-lg"}`}
+        className={`inline-flex min-w-0 shrink-0 items-center justify-center border border-transparent bg-transparent ${
+          variant === "switch"
+            ? "h-6 w-10 rounded-full"
+            : variant === "ghost"
+              ? ghostPlaceholder
+              : "h-11 min-w-[2.75rem] rounded-lg"
+        }`}
         aria-hidden
       />
+    );
+  }
+
+  if (variant === "ghost") {
+    const shortLabel = resolved === "dark" ? "Chiaro" : "Scuro";
+    return (
+      <button
+        type="button"
+        onClick={toggleLightDark}
+        disabled={themeSaving}
+        className={`${dsBtnGhost} ${dsFocus} inline-flex min-h-[1.75rem] items-center gap-1.5 px-2 py-1 text-[10px] sm:text-xs disabled:opacity-60`}
+        aria-label={label}
+        aria-busy={themeSaving}
+      >
+        <ThemeModeIcon className="h-3.5 w-3.5" />
+        {themeSaving ? "Salvataggio…" : shortLabel}
+      </button>
     );
   }
 

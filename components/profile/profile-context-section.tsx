@@ -1,6 +1,6 @@
 "use client";
 
-import { LoadingFormSkeleton } from "@/components/design-system";
+import { LoadingFormSkeleton, TruncatedTextTooltip } from "@/components/design-system";
 import { CabLogo } from "@/components/gestionale/cab-logo";
 import { useBranding } from "@/context/branding-context";
 import { formatSedeLine } from "@/lib/clienti/format-sede-line";
@@ -8,12 +8,19 @@ import { OFFICINA_LEGAL_NAME } from "@/lib/officina/officina-identity";
 import { useClientePortalAnagrafica } from "@/src/hooks/gestionale/use-cliente-anagrafica";
 import type { PublicAuthUser } from "@/src/types/auth-user";
 
-function ContextInfoRow({ label, value }: { label: string; value: string }) {
+function ContextInfoRow({ label, value, multilineTooltip = false }: { label: string; value: string; multilineTooltip?: boolean }) {
   if (!value.trim()) return null;
   return (
     <div className="flex justify-between gap-3 text-xs">
       <dt className="shrink-0 text-[color:var(--cab-text-muted)]">{label}</dt>
-      <dd className="min-w-0 text-right text-[color:var(--cab-text)]">{value}</dd>
+      <dd className="min-w-0 max-w-[62%] text-right">
+        <TruncatedTextTooltip
+          text={value}
+          side="left"
+          multiline={multilineTooltip}
+          className="truncate text-[color:var(--cab-text)]"
+        />
+      </dd>
     </div>
   );
 }
@@ -95,7 +102,7 @@ function ClienteContextSection({ clienteRef }: { clienteRef: string }) {
         <ContextInfoRow label="Azienda" value={aziendaNome} />
         <ContextInfoRow label="Ragione sociale" value={ragione} />
         <ContextInfoRow label="Codice" value={codice} />
-        <ContextInfoRow label="Sede principale" value={sede} />
+        <ContextInfoRow label="Sede principale" value={sede} multilineTooltip />
       </dl>
     </section>
   );

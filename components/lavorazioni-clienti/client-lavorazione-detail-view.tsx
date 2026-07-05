@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, type MouseEvent } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { MobileNavBackButton } from "@/components/gestionale/mobile-nav-open-button";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { IconBack, IconQrCode } from "@/components/lavorazioni-clienti/client-lavorazioni-icons";
+import { IconQrCode } from "@/components/lavorazioni-clienti/client-lavorazioni-icons";
 import { ClientLavorazioneInformazioniPanel } from "@/components/lavorazioni-clienti/client-lavorazione-informazioni-panel";
 import { ClientLavorazioneMediaPanel } from "@/components/lavorazioni-clienti/client-lavorazione-media-panel";
 import { ClientLavorazioneQrDialog } from "@/components/lavorazioni-clienti/client-lavorazione-qr-dialog";
@@ -86,15 +87,11 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
   }, [row, schedeStore]);
 
   const backToListButton = (
-    <IconActionButton
-      as="link"
+    <MobileNavBackButton
       href={listPath}
       label={CLIENT_PORTAL_BACK_LABEL}
       onClick={goToClientList}
-      toolbar
-    >
-      <IconBack />
-    </IconActionButton>
+    />
   );
 
   if (!access.allowed) {

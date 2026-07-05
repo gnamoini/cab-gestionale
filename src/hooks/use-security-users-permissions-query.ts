@@ -6,14 +6,13 @@ import {
   type SecurityUserPermissionRow,
 } from "@/src/actions/security-users-permissions";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import type { UserPermissionRow } from "@/src/types/supabase-tables";
+import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 
 /** Dato normalizzato in cache React Query — sempre stessa shape. */
 export type SecurityUsersQueryData = {
   users: SecurityUserPermissionRow[];
-  portalSettingsUpdatedAt: string | null;
-  permissionRows: UserPermissionRow[];
-  rolePermissionKeysByRole: Record<string, string[]>;
+  userPageOverrideRows: { user_id: string; page_key: string; access_level: PageAccessLevel }[];
+  rolePageAccessByRole: Record<string, Record<string, PageAccessLevel>>;
   assignableRoles: { key: string; name: string }[];
 };
 
@@ -22,9 +21,8 @@ export async function fetchSecurityUsersPermissionsQuery(): Promise<SecurityUser
   if (!res.ok) throw new Error(res.message);
   return {
     users: res.users,
-    portalSettingsUpdatedAt: res.portalSettingsUpdatedAt,
-    permissionRows: res.permissionRows,
-    rolePermissionKeysByRole: res.rolePermissionKeysByRole,
+    userPageOverrideRows: res.userPageOverrideRows,
+    rolePageAccessByRole: res.rolePageAccessByRole,
     assignableRoles: res.assignableRoles,
   };
 }
@@ -49,9 +47,8 @@ export function useSecurityUsersPermissionsQuery(enabled = true) {
   return {
     ...query,
     users,
-    portalSettingsUpdatedAt: query.data?.portalSettingsUpdatedAt ?? null,
-    permissionRows: query.data?.permissionRows ?? [],
-    rolePermissionKeysByRole: query.data?.rolePermissionKeysByRole ?? {},
+    userPageOverrideRows: query.data?.userPageOverrideRows ?? [],
+    rolePageAccessByRole: query.data?.rolePageAccessByRole ?? {},
     assignableRoles: query.data?.assignableRoles ?? [],
   };
 }

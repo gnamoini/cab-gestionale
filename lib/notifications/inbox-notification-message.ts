@@ -1,4 +1,13 @@
 import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
+import {
+  buildAdminNotificationDashboardHref,
+  buildAdminNotificationDipendentiHref,
+  buildAdminNotificationFatturazioneHref,
+  buildAdminNotificationLavorazioneHref,
+  buildAdminNotificationMagazzinoHref,
+  buildAdminNotificationPreventivoHref,
+} from "@/lib/lavorazioni/admin-notifications";
+import { buildAgendaHref } from "@/lib/navigation/agenda-links";
 import type { InboxNotificationRow, NotificationType } from "@/lib/notifications/notification-types";
 
 function toBulletModificaRiga(lines: string[]): string {
@@ -39,9 +48,10 @@ export function getInboxNotificationOpenLinkLabel(row: InboxNotificationRow): st
   switch (row.type) {
     case "lavorazione_created":
     case "lavorazione_completata":
+      return "Apri lavorazione";
     case "client_portal_ingresso":
     case "client_portal_completata":
-      return "Apri lavorazione";
+      return "Apri portale cliente";
     case "lavorazioni_ritardo_digest":
       return "Apri lavorazioni";
     case "preventivo_approvato":
@@ -54,6 +64,19 @@ export function getInboxNotificationOpenLinkLabel(row: InboxNotificationRow): st
       return "Apri Dipendenti";
     case "dashboard_promemoria_reminder":
       return "Apri calendario";
+    case "workshop_schedule_created":
+    case "workshop_schedule_updated":
+    case "workshop_schedule_deleted":
+    case "workshop_schedule_conflict":
+    case "workshop_schedule_overdue":
+    case "workshop_schedule_not_started":
+    case "workshop_schedule_reminder_due":
+    case "workshop_schedule_day_saturated":
+    case "workshop_schedule_day_empty":
+      return "Apri agenda";
+    case "asset_compliance_due":
+    case "asset_compliance_overdue":
+      return "Apri sicurezza";
     default:
       return null;
   }
@@ -74,7 +97,59 @@ export function toInboxNotificationLogViewModel(row: InboxNotificationRow): Gest
   };
 }
 
+function normalizeNotificationHref(href: string): string {
+  const trimmed = href.trim();
+  if (!trimmed) return trimmed;
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
+function inboxNotificationHrefFromType(row: InboxNotificationRow): string | null {
+  const entityId = row.entity_id?.trim() || null;
+  const type = String(row.type ?? "").trim();
+
+  switch (type) {
+    case "lavorazione_created":
+    case "lavorazione_completata":
+      return entityId ? buildAdminNotificationLavorazioneHref(entityId) : "/lavorazioni";
+    case "client_portal_ingresso":
+    case "client_portal_completata":
+      return entityId ? `/lavorazioni-clienti/${encodeURIComponent(entityId)}` : null;
+    case "lavorazioni_ritardo_digest":
+      return "/lavorazioni";
+    case "preventivo_approvato":
+      return entityId ? buildAdminNotificationPreventivoHref(entityId) : "/preventivi";
+    case "magazzino_sotto_scorta":
+      return entityId ? buildAdminNotificationMagazzinoHref(entityId) : "/magazzino";
+    case "fatture_scadute_digest":
+      return buildAdminNotificationFatturazioneHref();
+    case "dipendenti_presenze_reminder":
+      return buildAdminNotificationDipendentiHref();
+    case "dashboard_promemoria_reminder":
+      return buildAdminNotificationDashboardHref();
+    case "workshop_schedule_created":
+    case "workshop_schedule_updated":
+    case "workshop_schedule_deleted":
+    case "workshop_schedule_conflict":
+    case "workshop_schedule_overdue":
+    case "workshop_schedule_not_started":
+    case "workshop_schedule_reminder_due":
+      return entityId ? buildAgendaHref({ event: entityId }) : buildAgendaHref();
+    case "workshop_schedule_day_saturated":
+    case "workshop_schedule_day_empty":
+      return buildAgendaHref();
+    case "asset_compliance_due":
+    case "asset_compliance_overdue":
+      return "/sicurezza";
+    case "admin_dashboard_test":
+      return null;
+    default:
+      return null;
+  }
+}
+
 export function inboxNotificationHref(row: InboxNotificationRow): string | null {
-  if (row.href?.trim()) return row.href.trim();
-  return null;
+  const fromType = inboxNotificationHrefFromType(row);
+  if (fromType) return fromType;
+  const stored = row.href?.trim();
+  return stored ? normalizeNotificationHref(stored) : null;
 }

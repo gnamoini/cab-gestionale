@@ -1,44 +1,75 @@
-import {
-  canRead,
-  canWrite,
-  canDelete,
-  hasPermission,
-  resolveRole,
-  type PermissionKey,
-  type RbacSection,
-} from "@/lib/auth/rbac";
-import type { RequiredRbacContext } from "@/lib/rbac";
-import {
-  buildModuleAccessMap,
-  moduleAllows,
-  type ModulePermissionOp,
-} from "@/src/lib/auth/effective-module-access";
+import { resolveRole } from "@/lib/auth/rbac";
+import type { GestionalePageKey } from "@/src/lib/permissions/gestionale-pages";
+import { canReadPage, canWritePage, moduleAllowsFromResolved } from "@/src/lib/rbac/resolve-page-access";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 import { resolveServerEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions.server";
 
-const SECTION_TO_MODULE: Partial<Record<RbacSection, GestionalePermissionModule>> = {
-  magazzino: "magazzino",
-  preventivi: "preventivi",
+const LEGACY_SECTION_TO_PAGE: Record<string, GestionalePageKey> = {
+  dashboard: "dashboard",
   lavorazioni: "lavorazioni",
+  lavorazioni_clienti: "lavorazioni_clienti",
+  preventivi: "preventivi",
+  documenti: "documenti",
+  magazzino: "magazzino",
   mezzi: "mezzi",
   report: "report",
-  documenti: "documenti",
   dipendenti: "dipendenti",
   fatturazione: "fatturazione",
-  ddt: "ddt",
-  ordini_fornitori: "ordini_fornitori",
+  ddt: "preventivi",
+  ordini_fornitori: "preventivi",
+  impostazioni: "impostazioni",
+  security: "sicurezza",
 };
 
 async function requireServerPermissions() {
-  const snap = await resolveServerEffectivePermissions();
-  if (!snap) return null;
-  return snap;
+  return resolveServerEffectivePermissions();
 }
 
-/** Ruolo da snapshot server (`getServerSession`) — unica fonte per request RSC. */
 export async function getServerCallerRole(): Promise<string | null> {
   const snap = await requireServerPermissions();
   return snap?.role ?? null;
+}
+
+export async function verifyServerPageRead(pageKey: GestionalePageKey): Promise<boolean> {
+  const snap = await requireServerPermissions();
+  if (!snap?.resolved) return false;
+  return canReadPage(snap.resolved, pageKey);
+}
+
+export async function verifyServerPageWrite(pageKey: GestionalePageKey): Promise<boolean> {
+  const snap = await requireServerPermissions();
+  if (!snap?.resolved) return false;
+  return canWritePage(snap.resolved, pageKey);
+}
+
+export async function verifyServerModuleCan(
+  module: GestionalePermissionModule,
+  op: "read" | "write",
+): Promise<boolean> {
+  const snap = await requireServerPermissions();
+  if (!snap?.resolved) return false;
+  return moduleAllowsFromResolved(snap.resolved, module, op);
+}
+
+export async function verifyServerSectionRead(section: string): Promise<boolean> {
+  const pageKey = LEGACY_SECTION_TO_PAGE[section];
+  if (!pageKey) return false;
+  return verifyServerPageRead(pageKey);
+}
+
+export async function verifyServerSectionWrite(section: string): Promise<boolean> {
+  const pageKey = LEGACY_SECTION_TO_PAGE[section];
+  if (!pageKey) return false;
+  return verifyServerPageWrite(pageKey);
+}
+
+export async function verifyServerSectionDelete(section: string): Promise<boolean> {
+  return verifyServerSectionWrite(section);
+}
+
+/** Sicurezza / admin UI — write su pagina sicurezza. */
+export async function verifyServerPermission(_permission: string): Promise<boolean> {
+  return verifyServerPageWrite("sicurezza");
 }
 
 export async function verifyServerIsAdmin(): Promise<boolean> {
@@ -47,49 +78,8 @@ export async function verifyServerIsAdmin(): Promise<boolean> {
   return resolveRole(snap.role) === "admin";
 }
 
-/** Permesso modulo allineato a RLS `user_effective_can`. */
-export async function verifyServerModuleCan(
-  module: GestionalePermissionModule,
-  op: ModulePermissionOp,
-): Promise<boolean> {
-  const snap = await requireServerPermissions();
-  if (!snap) return false;
-  return moduleAllows(snap.modules, module, op);
-}
-
-export async function verifyServerPermission(permission: PermissionKey): Promise<boolean> {
-  const snap = await requireServerPermissions();
-  if (!snap) return false;
-  return hasPermission(snap.role, permission, snap.rbacContext as RequiredRbacContext);
-}
-
-export async function verifyServerSectionRead(section: RbacSection): Promise<boolean> {
-  const mod = SECTION_TO_MODULE[section];
-  if (mod) return verifyServerModuleCan(mod, "read");
-  const snap = await requireServerPermissions();
-  if (!snap) return false;
-  return canRead(snap.role, section, snap.rbacContext as RequiredRbacContext);
-}
-
-export async function verifyServerSectionWrite(section: RbacSection): Promise<boolean> {
-  const mod = SECTION_TO_MODULE[section];
-  if (mod) return verifyServerModuleCan(mod, "write");
-  const snap = await requireServerPermissions();
-  if (!snap) return false;
-  return canWrite(snap.role, section, snap.rbacContext as RequiredRbacContext);
-}
-
-export async function verifyServerSectionDelete(section: RbacSection): Promise<boolean> {
-  const mod = SECTION_TO_MODULE[section];
-  if (mod) return verifyServerModuleCan(mod, "write");
-  const snap = await requireServerPermissions();
-  if (!snap) return false;
-  return canDelete(snap.role, section, snap.rbacContext as RequiredRbacContext);
-}
-
-/** @deprecated Usare resolveServerEffectivePermissions().modules */
 export async function loadServerModuleAccessMap() {
   const snap = await requireServerPermissions();
-  if (!snap) return null;
-  return snap.modules;
+  if (!snap?.resolved) return null;
+  return snap.resolved.modules;
 }

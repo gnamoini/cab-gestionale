@@ -1,8 +1,21 @@
 # Audit — Sistema loading e skeleton
 
-Ultimo aggiornamento: standardizzazione skeleton a contenitore unico.
+Ultimo aggiornamento: LoadingManager — mutua esclusione overlay / skeleton / banner.
 
-## SSOT
+## LoadingManager (SSOT coordinamento)
+
+- Provider: [`context/global-loading-context.tsx`](../context/global-loading-context.tsx) (`LoadingManagerProvider`, alias `GlobalLoadingProvider`)
+- Priorità: [`lib/ui/loading-manager.ts`](../lib/ui/loading-manager.ts)
+
+| Surface | Priorità | UI | Uso |
+|---------|----------|-----|-----|
+| `overlay` | 100 | `GlobalLoadingOverlay` | Login, logout, redirect critico, mutation `meta.globalLoading` |
+| `skeleton` | 60 | Skeleton route/view | Gate RBAC, Suspense, primo fetch |
+| `banner` | 40 | `GestionaleTopNotice` | Sessione degraded, sync settings |
+
+**Regola:** una sola surface attiva. Claim via `useLoadingClaim`; render gated con `useIsWinningClaim`.
+
+## SSOT componenti visivi
 
 - Componenti: [`components/design-system/loading/`](../components/design-system/loading/)
 - Token: [`loading-tokens.ts`](../components/design-system/loading/loading-tokens.ts)
@@ -18,7 +31,8 @@ Ultimo aggiornamento: standardizzazione skeleton a contenitore unico.
 | Background refetch | Testo toolbar «Aggiornamento…» | Skeleton full-page |
 | Mutation `meta.globalLoading` | `LoadingOverlay` (spinner) | Skeleton stessa area |
 | Upload | `LoadingProgressBar` (+ spinner sm) | Skeleton lista |
-| Auth / gate | barra sottile o skeleton route | Skeleton pagina ERP |
+| Auth / gate | skeleton route (RBAC) o banner (degraded/settings) | overlay + skeleton + banner |
+| Navigazione sidebar | skeleton Suspense route | overlay fullscreen navigazione |
 
 ## Primitive globali (nuovo standard)
 

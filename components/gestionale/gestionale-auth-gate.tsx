@@ -79,7 +79,7 @@ export function GestionaleAuthGate({ children }: { children: React.ReactNode }) 
     };
   }, [status, configBlocked, refresh]);
 
-  const showAuthBanner = !configBlocked && (status === "loading" || status === "degraded" || status === "anonymous");
+  const showAuthBanner = !configBlocked && (status === "degraded" || status === "anonymous");
   const bannerMessage =
     status === "degraded"
       ? "Verifica sessione in corso…"

@@ -12,8 +12,9 @@ import {
   AuthStandalonePageShell,
   authStandaloneCardClass,
 } from "@/components/gestionale/auth-standalone-page";
+import { AUTH_STANDALONE_LOGO_SUBTITLE } from "@/components/gestionale/cab-logo";
+import { AuthStandalonePageFooter } from "@/components/gestionale/auth-standalone-page-footer";
 import { CloseButton, GlobalLoadingSpinner } from "@/components/design-system";
-import { GlobalLoadingView } from "@/components/design-system/global-loading";
 import { useGlobalLoading } from "@/context/global-loading-context";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { isStagingBlockedPathname, isStagingPublicSlice } from "@/lib/env/staging-public";
@@ -65,16 +66,6 @@ function loginErrorUserMessage(raw: string): string {
     return "Accesso non riuscito. Verifica email o nome utente e password.";
   }
   return "Accesso non riuscito. Riprova.";
-}
-
-function LoginAuthWaitShell({ message }: { message: string }) {
-  return (
-    <AuthStandalonePageShell>
-      <div className="relative z-10 flex min-h-dvh items-center justify-center px-4 py-12">
-        <GlobalLoadingView message={message} />
-      </div>
-    </AuthStandalonePageShell>
-  );
 }
 
 function IconUser({ className = "h-4 w-4" }: { className?: string }) {
@@ -142,14 +133,20 @@ export function LoginForm() {
   const [resetPending, setResetPending] = useState(false);
   const [resetDone, setResetDone] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
 
   const authWaitMessage =
-    status === "loading"
-      ? GLOBAL_LOADING_MESSAGES.default
-      : isAuthFullyAuthenticated(status)
-        ? GLOBAL_LOADING_MESSAGES.redirectWorkspace
-        : null;
+    redirecting
+      ? null
+      : status === "loading"
+        ? GLOBAL_LOADING_MESSAGES.default
+        : isAuthFullyAuthenticated(status)
+          ? GLOBAL_LOADING_MESSAGES.redirectWorkspace
+          : null;
   useGlobalLoading(authWaitMessage);
+
+  const authWaitActive =
+    !redirecting && (status === "loading" || isAuthFullyAuthenticated(status));
 
   const sessionExpiredNotice = searchParams.get("reason") === "session_expired";
 
@@ -163,14 +160,12 @@ export function LoginForm() {
     if (!user?.id) return;
 
     const bootstrap = buildBootstrapRbacSnapshot(user.id, user.roleKey ?? user.ruolo);
-    const navAccess = createRbacNavAccess(bootstrap, {
-      clientLavorazioniAllowed:
-        user.ruolo === "cliente" ? true : clientLavAccess.allowed,
-    });
+    const navAccess = createRbacNavAccess(bootstrap);
 
     const target = resolvePostLoginRedirectPath({
       user: { ruolo: user.ruolo, id: user.id },
       navAccess,
+      snapshot: bootstrap,
       requestedPath: searchParams.get("from"),
     });
 
@@ -179,6 +174,7 @@ export function LoginForm() {
       finalTarget = "/dashboard?staging_unavailable=1";
     }
 
+    setRedirecting(true);
     deferredRouterReplace(router, finalTarget);
     deferredRouterRefresh(router);
   }, [status, user, clientLavAccess.allowed, router, searchParams]);
@@ -231,12 +227,8 @@ export function LoginForm() {
     }
   }
 
-  if (status === "loading") {
-    return <LoginAuthWaitShell message={GLOBAL_LOADING_MESSAGES.default} />;
-  }
-
-  if (isAuthFullyAuthenticated(status)) {
-    return <LoginAuthWaitShell message={GLOBAL_LOADING_MESSAGES.redirectWorkspace} />;
+  if (redirecting) {
+    return null;
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -270,14 +262,22 @@ export function LoginForm() {
     }
   }
 
-  const busy = pending;
+  const busy = pending || authWaitActive;
   const configBlocked = !!configurationError;
 
   return (
-    <AuthStandalonePageShell>
-      <main className="relative z-10 flex min-h-dvh flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
+    <AuthStandalonePageShell showThemeToggle={false} decorativeBackground="login">
+      <div
+        className="relative z-10 flex min-h-dvh min-w-0 flex-col"
+        aria-hidden={authWaitActive || undefined}
+        aria-busy={authWaitActive || undefined}
+      >
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
         <div className={authStandaloneCardClass}>
-          <AuthStandaloneCardHeader srOnlyTitle="Accedi al gestionale" />
+          <AuthStandaloneCardHeader
+            srOnlyTitle="Accedi al gestionale"
+            productLabel={AUTH_STANDALONE_LOGO_SUBTITLE}
+          />
 
           {configBlocked ? (
             <p
@@ -434,7 +434,9 @@ export function LoginForm() {
             <p className={`mt-5 text-center ${dsTypoCaption}`}>Staging · accesso controllato</p>
           ) : null}
         </div>
-      </main>
+        </main>
+        <AuthStandalonePageFooter />
+      </div>
 
       {forgotOpen ? (
         <div className={dsModalBackdrop} role="presentation" onMouseDown={(e) => e.target === e.currentTarget && closeForgot()}>

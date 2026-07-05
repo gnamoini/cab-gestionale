@@ -35,14 +35,13 @@ import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/
 import { SecurityInlineNotice } from "@/components/dashboard/security/security-inline-notice";
 import { APP_ROLES, resolveRole, roleLabel, type AppRole } from "@/lib/auth/rbac";
 import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
-import { isRbacSnapshotReady, snapshotHasPermission } from "@/src/lib/rbac/rbac-snapshot-access";
+import { isRbacSnapshotReady, snapshotHasPageRead } from "@/src/lib/rbac/rbac-snapshot-access";
 import { securityUserDisplayName } from "@/lib/auth/profile-display-name";
 import {
   buildSecurityUserPatches,
   rowsSnapshot,
   type EditableSecurityUser,
 } from "@/lib/security/build-security-user-patches";
-import type { UserPermissionRow } from "@/src/types/supabase-tables";
 import { PORTALE_CLIENTI_LABEL } from "@/lib/lavorazioni/client-portal-access";
 import {
   dsBtnGhost,
@@ -134,7 +133,7 @@ function compareUsers(a: EditableSecurityUser, b: EditableSecurityUser, key: Sec
 function applyRoleToRow(row: EditableSecurityUser, ruolo: AppRole): EditableSecurityUser {
   const snap = buildTestSnapshot({ userId: row.id, roleKey: ruolo });
   const fromRole =
-    isRbacSnapshotReady(snap) && snapshotHasPermission(snap, "viewClientLavorazioni");
+    isRbacSnapshotReady(snap) && snapshotHasPageRead(snap, "lavorazioni_clienti");
   return {
     ...row,
     ruolo,
@@ -178,7 +177,7 @@ function PortalAccessBadge({ row }: { row: EditableSecurityUser }) {
 }
 
 function PermissionsBadge({ row }: { row: EditableSecurityUser }) {
-  if (row.hasModulePermissionOverrides) {
+  if (row.hasPagePermissionOverrides) {
     return (
       <span className="inline-flex max-w-full rounded bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--cab-primary)]">
         Personalizzati
@@ -466,7 +465,6 @@ type Props = {
   rows: EditableSecurityUser[];
   loading: boolean;
   readOnly: boolean;
-  permissionRows: UserPermissionRow[];
   assignableRoles?: { key: string; name: string }[];
   knownClienti?: Set<string>;
   currentUserId?: string | null;
@@ -479,7 +477,6 @@ export function SecurityUsersTable({
   rows,
   loading,
   readOnly,
-  permissionRows,
   assignableRoles,
   knownClienti,
   currentUserId,

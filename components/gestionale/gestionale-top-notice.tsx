@@ -12,6 +12,7 @@ import {
 import { createPortal } from "react-dom";
 import { LoadingSpinner } from "@/components/design-system/loading";
 import { loadingCaptionClass } from "@/components/design-system/loading/loading-tokens";
+import { useIsWinningClaim, useLoadingClaim } from "@/context/global-loading-context";
 import { dsFocus, dsToastItem } from "@/lib/ui/design-system";
 
 export type GestionaleTopNoticeTone = "info" | "warning";
@@ -166,13 +167,17 @@ export function useGestionaleTopNotice(id: string, options: UseGestionaleTopNoti
     return () => window.clearTimeout(timerId);
   }, [visible, showDelayMs]);
 
+  const claimActive = visible && delayedVisible;
+  useLoadingClaim("banner", id, claimActive, { message });
+  const canRender = useIsWinningClaim("banner", id, claimActive);
+
   useEffect(() => {
     if (!ctx) return;
-    if (!delayedVisible) {
+    if (!canRender) {
       ctx.remove(id);
       return;
     }
     ctx.upsert({ id, message, tone, busy, action });
     return () => ctx.remove(id);
-  }, [ctx, id, delayedVisible, message, tone, busy, action]);
+  }, [ctx, id, canRender, message, tone, busy, action]);
 }

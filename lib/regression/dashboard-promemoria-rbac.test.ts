@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { canDelete, canWrite } from "@/lib/auth/rbac";
 import { RBAC_DENIED_MESSAGE } from "@/lib/rbac";
 import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
-import type { RequiredRbacContext } from "@/lib/rbac";
+import type { RequiredRbacContext } from "@/lib/auth/rbac";
 
 function ctx(roleKey: string): RequiredRbacContext {
   return buildTestSnapshot({ userId: `${roleKey}-1`, roleKey }).rbacContext as RequiredRbacContext;

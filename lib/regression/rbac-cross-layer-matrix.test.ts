@@ -3,6 +3,7 @@ import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
 import { createRbacNavAccess } from "@/src/lib/rbac/rbac-snapshot-access";
 import { evaluateGestionaleRouteAccess } from "@/src/lib/auth/evaluate-gestionale-route-access";
 import { assertRouteProtection } from "@/lib/regression/assert-route-protection";
+import { seedPageAccessForRole } from "@/lib/rbac-page-seed";
 
 type MatrixRow = {
   roleKey: string;
@@ -46,9 +47,7 @@ const matrix: MatrixRow[] = [
 
 for (const row of matrix) {
   const snap = buildTestSnapshot({ userId: row.userId, roleKey: row.roleKey });
-  const nav = createRbacNavAccess(snap, {
-    clientLavorazioniAllowed: row.roleKey === "cliente",
-  });
+  const nav = createRbacNavAccess(snap);
 
   const sidebarVisible = !nav.shouldHideHref(row.sidebar.href) && nav.canAccessHref(row.sidebar.href);
   assert.equal(
@@ -57,13 +56,13 @@ for (const row of matrix) {
     `${row.roleKey} sidebar ${row.sidebar.href}`,
   );
 
+  const rolePageAccess = seedPageAccessForRole(row.roleKey);
   const routeAllowed = evaluateGestionaleRouteAccess({
     user: { ruolo: row.roleKey, id: row.userId },
     userId: row.userId,
     pathname: row.route.pathname,
-    rolePermissionKeys: snap.rolePermissionKeys,
-    permissionRows: [],
-    clientLavorazioniAllowed: row.roleKey === "cliente",
+    rolePageAccess,
+    userPageOverrideRows: [],
   });
 
   assert.equal(routeAllowed, row.route.allowed, `${row.roleKey} route ${row.route.pathname}`);

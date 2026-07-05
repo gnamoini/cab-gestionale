@@ -1,28 +1,31 @@
 /**
- * Test fixtures: simulate DB role_permissions from seed (NOT runtime).
+ * Test fixtures: simulate DB role_page_access from seed (NOT runtime).
  */
-import { rbacSeedPermissionKeysForRole } from "@/lib/rbac-seed";
+import { seedPageAccessForRole } from "@/lib/rbac-page-seed";
 import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
-import type { UserPermissionRow } from "@/src/types/supabase-tables";
+import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 
 export function buildTestSnapshot(input: {
   userId: string;
   roleKey: string;
+  userPageOverrides?: { page_key: string; access_level: PageAccessLevel }[];
+  /** @deprecated use userPageOverrides */
   userOverrides?: { permissionKey: string; effect: "allow" | "deny" }[];
 }): EffectivePermissionsSnapshot {
-  const permissionRows: UserPermissionRow[] = (input.userOverrides ?? []).map((o, i) => ({
-    user_id: input.userId,
-    permission_id: `perm-${i}`,
-    effect: o.effect,
-    permissions: { key: o.permissionKey, module: null, action: null },
-  }));
+  const userPageOverrideRows =
+    input.userPageOverrides ??
+    (input.userOverrides ?? []).flatMap((o) => {
+      const [pageKey, op] = o.permissionKey.split(".");
+      if (!pageKey || (op !== "read" && op !== "write")) return [];
+      return [{ page_key: pageKey, access_level: (o.effect === "allow" ? op : "none") as PageAccessLevel }];
+    });
 
   return resolveEffectivePermissions({
     userId: input.userId,
     roleKey: input.roleKey,
-    rolePermissionKeys: rbacSeedPermissionKeysForRole(input.roleKey),
-    permissionRows,
+    rolePageAccess: seedPageAccessForRole(input.roleKey),
+    userPageOverrideRows,
     pilotDbEnabled: false,
   });
 }

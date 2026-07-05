@@ -1,8 +1,8 @@
 "use client";
 
 import { memo } from "react";
-import { dsStackPage } from "@/lib/ui/design-system";
-import { SkeletonBlock, SkeletonCard } from "./skeleton-primitives";
+import { SkeletonShellCard } from "./skeleton-shell-card";
+import { LoadingListPageShell } from "./loading-list-page-shell";
 import { SKELETON_MIN_HEIGHT } from "./skeleton-layout-presets";
 
 export type LoadingProductionReadinessSkeletonProps = {
@@ -16,19 +16,36 @@ export const LoadingProductionReadinessSkeleton = memo(function LoadingProductio
   className = "",
   embedded = false,
 }: LoadingProductionReadinessSkeletonProps) {
-  return (
-    <div
-      className={`${dsStackPage} ${className}`.trim()}
-      role="status"
-      aria-busy="true"
-      aria-label="Caricamento production readiness"
-    >
-      {!embedded ? <SkeletonBlock className={SKELETON_MIN_HEIGHT.pageHeader} /> : null}
-      <SkeletonCard minHeightClass={SKELETON_MIN_HEIGHT.productionReadinessOutcome} />
+  const body = (
+    <>
+      <SkeletonShellCard
+        title="Esito"
+        bodyMinHeightClass={SKELETON_MIN_HEIGHT.productionReadinessOutcome}
+      />
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-        <SkeletonCard minHeightClass={SKELETON_MIN_HEIGHT.productionReadinessCard} />
-        <SkeletonCard minHeightClass={SKELETON_MIN_HEIGHT.productionReadinessCard} />
+        <SkeletonShellCard
+          title="Blockers"
+          bodyMinHeightClass={SKELETON_MIN_HEIGHT.productionReadinessCard}
+        />
+        <SkeletonShellCard
+          title="Warnings"
+          bodyMinHeightClass={SKELETON_MIN_HEIGHT.productionReadinessCard}
+        />
       </div>
-    </div>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className={className} role="status" aria-busy="true" aria-label="Caricamento production readiness">
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <LoadingListPageShell className={className} ariaLabel="Caricamento production readiness">
+      {body}
+    </LoadingListPageShell>
   );
 });

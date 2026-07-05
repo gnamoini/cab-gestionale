@@ -94,6 +94,9 @@ export const dsPageToolbarBtn = `inline-flex min-h-[2.5rem] min-w-0 shrink-0 ite
 /** Solo icona in toolbar header — footprint quadrato 40×40. */
 export const dsPageToolbarIconBtn = `${dsPageToolbarBtn} h-10 w-10 min-h-0 p-0`;
 
+/** Freccia indietro header — affordance hover, non box bottone. */
+export const dsPageHeaderBackBtn = `inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] border border-transparent bg-transparent p-0 text-[color:var(--cab-text-muted)] transition-[color,background-color,transform] duration-150 ease-out hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] active:scale-[0.97] ${dsBtnCursor} ${dsFocus}`;
+
 export const dsBtnSettings = dsPageToolbarBtn;
 
 /** A — Primario */

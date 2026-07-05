@@ -1,8 +1,9 @@
 "use client";
 
 import { memo } from "react";
-import { dsStackPage } from "@/lib/ui/design-system";
-import { SkeletonBlock, SkeletonCard } from "./skeleton-primitives";
+import { SkeletonBlock } from "./skeleton-primitives";
+import { SkeletonShellCard } from "./skeleton-shell-card";
+import { LoadingListPageShell } from "./loading-list-page-shell";
 import { SKELETON_MIN_HEIGHT } from "./skeleton-layout-presets";
 
 export type LoadingSicurezzaSkeletonProps = {
@@ -16,16 +17,24 @@ export const LoadingSicurezzaSkeleton = memo(function LoadingSicurezzaSkeleton({
   className = "",
   embedded = false,
 }: LoadingSicurezzaSkeletonProps) {
-  return (
-    <div
-      className={`${dsStackPage} ${className}`.trim()}
-      role="status"
-      aria-busy="true"
-      aria-label="Caricamento sicurezza"
-    >
-      {!embedded ? <SkeletonBlock className={SKELETON_MIN_HEIGHT.pageHeader} /> : null}
+  const body = (
+    <>
       <SkeletonBlock className={SKELETON_MIN_HEIGHT.tabBar} />
-      <SkeletonCard minHeightClass={SKELETON_MIN_HEIGHT.sicurezzaPanel} />
-    </div>
+      <SkeletonShellCard bodyMinHeightClass={SKELETON_MIN_HEIGHT.sicurezzaPanel} />
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className={className} role="status" aria-busy="true" aria-label="Caricamento sicurezza">
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <LoadingListPageShell className={className} ariaLabel="Caricamento sicurezza">
+      {body}
+    </LoadingListPageShell>
   );
 });

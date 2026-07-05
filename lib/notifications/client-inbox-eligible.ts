@@ -1,6 +1,6 @@
 import { resolveRole, type RbacUser } from "@/lib/auth/rbac";
-import type { RbacEvaluationContext } from "@/lib/rbac";
-import { hasResolvedCapability } from "@/src/lib/rbac/resolve-user-permissions";
+import type { RbacEvaluationContext } from "@/lib/auth/rbac";
+import { canReadPage } from "@/src/lib/rbac/resolve-page-access";
 
 /** Portale clienti: inbox solo ingresso/completata proprie macchine. */
 export function isClientInboxEligible(
@@ -9,5 +9,5 @@ export function isClientInboxEligible(
 ): boolean {
   if (resolveRole(user) !== "cliente") return false;
   if (!ctx?.resolved) return false;
-  return hasResolvedCapability(ctx.resolved, "can_access_client_area");
+  return canReadPage(ctx.resolved, "lavorazioni_clienti");
 }

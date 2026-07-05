@@ -3,13 +3,12 @@
 import { useCallback, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SecurityRoleBadge, SecurityStatusBadge } from "@/components/dashboard/security/security-role-badge";
-import { SecurityUserModulePermissionsEditor } from "@/components/dashboard/security/security-user-module-permissions-editor";
-import type { ModulePermissionDraftRow } from "@/lib/security/user-module-permissions";
+import { SecurityUserPagePermissionsEditor } from "@/components/dashboard/security/security-user-page-permissions-editor";
+import type { PagePermissionDraftRow } from "@/lib/security/user-page-permissions";
 import { Drawer, LoadingFormSkeleton } from "@/components/design-system";
 import type { SecurityUserPermissionRow } from "@/src/actions/security-users-permissions";
 import { useSecurityViewQueryOpts } from "@/lib/view/view-query-opts";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import type { UserPermissionRow } from "@/src/types/supabase-tables";
 import { formatSecurityNullableWhen } from "@/lib/security/format-last-sign-in";
 import { listSecurityUserActivityAction } from "@/src/actions/security-read";
 import { PASSWORD_RESET_ADMIN_GENERIC_MESSAGE } from "@/lib/auth/password-reset";
@@ -41,10 +40,9 @@ type Props = {
   user: SecurityUserPermissionRow | null;
   open: boolean;
   readOnly: boolean;
-  permissionRows: UserPermissionRow[];
-  moduleDraft: ModulePermissionDraftRow[];
-  onModuleDraftChange: (rows: ModulePermissionDraftRow[]) => void;
-  onRestoreModuleFromRole: () => void;
+  pageDraft: PagePermissionDraftRow[];
+  onPageDraftChange: (rows: PagePermissionDraftRow[]) => void;
+  onRestorePageFromRole: () => void;
   onClose: () => void;
 };
 
@@ -52,10 +50,9 @@ export function SecurityUserDetailDrawer({
   user,
   open,
   readOnly,
-  permissionRows,
-  moduleDraft,
-  onModuleDraftChange,
-  onRestoreModuleFromRole,
+  pageDraft,
+  onPageDraftChange,
+  onRestorePageFromRole,
   onClose,
 }: Props) {
   const activityQ = useUserActivity(user?.id ?? null, open && !!user);
@@ -191,14 +188,12 @@ export function SecurityUserDetailDrawer({
             <div className="rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3">
               <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Permessi pagine</h3>
               <div className="mt-2">
-                <SecurityUserModulePermissionsEditor
-                  userId={user.id}
+                <SecurityUserPagePermissionsEditor
                   ruolo={user.ruolo}
                   readOnly={readOnly || !user.accountEnabled}
-                  permissionRows={permissionRows}
-                  draft={moduleDraft}
-                  onDraftChange={onModuleDraftChange}
-                  onRestoreFromRole={onRestoreModuleFromRole}
+                  draft={pageDraft}
+                  onDraftChange={onPageDraftChange}
+                  onRestoreFromRole={onRestorePageFromRole}
                 />
               </div>
             </div>

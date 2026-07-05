@@ -1,8 +1,9 @@
 "use client";
 
 import { memo } from "react";
-import { dsStackPage } from "@/lib/ui/design-system";
-import { SkeletonBlock, SkeletonCard, SkeletonChart } from "./skeleton-primitives";
+import { SkeletonBlock } from "./skeleton-primitives";
+import { SkeletonShellCard } from "./skeleton-shell-card";
+import { LoadingListPageShell } from "./loading-list-page-shell";
 import { SKELETON_MIN_HEIGHT } from "./skeleton-layout-presets";
 
 export const LoadingReportSkeleton = memo(function LoadingReportSkeleton({
@@ -11,21 +12,14 @@ export const LoadingReportSkeleton = memo(function LoadingReportSkeleton({
   className?: string;
 }) {
   return (
-    <div
-      className={`${dsStackPage} ${className}`.trim()}
-      role="status"
-      aria-busy="true"
-      aria-label="Caricamento report"
-    >
-      <SkeletonBlock className="mb-4 min-h-[4rem] w-full" />
-      <SkeletonBlock className="mb-4 min-h-[5.5rem] w-full" />
-      <SkeletonBlock className="mb-4 min-h-9 w-full" />
-      <div className="space-y-4">
-        <SkeletonCard minHeightClass="min-h-[12rem]" />
-        <SkeletonChart wide />
-        <SkeletonChart />
-        <SkeletonCard minHeightClass={SKELETON_MIN_HEIGHT.tableDesktop} />
-      </div>
-    </div>
+    <LoadingListPageShell className={className} ariaLabel="Caricamento report">
+      <SkeletonBlock className="mb-0 min-h-[4rem] w-full" />
+      <SkeletonBlock className="mb-0 min-h-[5.5rem] w-full" />
+      <SkeletonBlock className={SKELETON_MIN_HEIGHT.tabBar} />
+      <SkeletonShellCard bodyMinHeightClass="min-h-[12rem]" />
+      <SkeletonShellCard bodyMinHeightClass={SKELETON_MIN_HEIGHT.chartWide} />
+      <SkeletonShellCard bodyMinHeightClass={SKELETON_MIN_HEIGHT.chart} />
+      <SkeletonShellCard bodyMinHeightClass={SKELETON_MIN_HEIGHT.tableDesktop} />
+    </LoadingListPageShell>
   );
 });

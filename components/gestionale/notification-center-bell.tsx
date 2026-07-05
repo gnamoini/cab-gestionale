@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   Drawer,
   LogEntry,
@@ -20,6 +19,7 @@ import {
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import {
+  getInboxNotificationOpenLinkLabel,
   inboxNotificationHref,
   toInboxNotificationLogViewModel,
 } from "@/lib/notifications/inbox-notification-message";
@@ -181,22 +181,25 @@ function NotificationsPanelFooter({
 
 function InboxNotificationMessageRow({
   row,
-  onNavigate,
+  onClose,
   onDismiss,
 }: {
   row: InboxNotificationRow;
-  onNavigate: () => void;
+  onClose: () => void;
   onDismiss: () => void;
 }) {
   const vm = toInboxNotificationLogViewModel(row);
-  const navigable = Boolean(inboxNotificationHref(row));
+  const href = inboxNotificationHref(row);
+  const openLabel = href ? getInboxNotificationOpenLinkLabel(row) : null;
 
   return (
     <div className="min-w-0">
       <LogEntry
         vm={vm}
         variant="inbox"
-        onClick={navigable ? onNavigate : undefined}
+        href={href ?? undefined}
+        onAfterNavigate={onClose}
+        title={openLabel ?? undefined}
         trailing={<NotificationRowDismiss embedded onDismiss={onDismiss} />}
       />
     </div>
@@ -221,7 +224,6 @@ export function NotificationCenterBell({
   embedded = false,
 }: NotificationCenterBellProps) {
   const gestToast = useGestionaleToast();
-  const router = useRouter();
   const { user } = useAuth();
   const { snapshot } = useEffectivePermissions();
   const staffInbox = isStaffInboxEligible(
@@ -235,7 +237,6 @@ export function NotificationCenterBell({
   const {
     notifications,
     unreadCount,
-    enabled,
     isLoading,
     dismissNotification,
     dismissAllNotifications,
@@ -271,15 +272,6 @@ export function NotificationCenterBell({
     }
   }, [dismissAllNotifications, gestToast]);
 
-  const onNavigate = useCallback(
-    (row: InboxNotificationRow) => {
-      close();
-      const href = inboxNotificationHref(row);
-      if (href) router.push(href);
-    },
-    [close, router],
-  );
-
   const prevUnreadRef = useRef<number | null>(null);
   const [bellArrive, setBellArrive] = useState(false);
 
@@ -296,8 +288,6 @@ export function NotificationCenterBell({
     }
     prevUnreadRef.current = unreadCount;
   }, [unreadCount]);
-
-  if ((isLoading || !enabled) && !open) return null;
 
   const drawerTitle = "Notifiche";
 
@@ -346,6 +336,7 @@ export function NotificationCenterBell({
       aria-expanded={open}
       aria-haspopup="dialog"
       aria-label={ariaLabel}
+      aria-busy={isLoading || undefined}
       data-testid="smoke-notifications"
       {...navPointerIntentProps}
     />
@@ -375,7 +366,9 @@ export function NotificationCenterBell({
       >
         <div className={gestionaleLogDrawerPanelStackClass}>
           <div className={`${gestionaleLogScrollEmbeddedClass} ${gestionaleLogDrawerScrollInsetClass} min-h-0 min-w-0 flex-1`}>
-            {notifications.length === 0 ? (
+            {isLoading ? (
+              <GestionaleLogEmpty message="Caricamento notifiche…" />
+            ) : notifications.length === 0 ? (
               <GestionaleLogEmpty message="Nessuna notifica al momento." />
             ) : (
               <GestionaleLogList>
@@ -383,7 +376,7 @@ export function NotificationCenterBell({
                   <li key={row.id} className="list-none">
                     <InboxNotificationMessageRow
                       row={row}
-                      onNavigate={() => onNavigate(row)}
+                      onClose={close}
                       onDismiss={() => void dismissNotification(row)}
                     />
                   </li>
