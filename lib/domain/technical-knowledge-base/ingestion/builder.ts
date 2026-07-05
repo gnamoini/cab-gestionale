@@ -90,16 +90,45 @@ export async function buildTkbDraft(
   return { ...bundle, buildReport };
 }
 
+const EMPTY_TKB_BUILD_COUNTS: TkbBuildReport["counts"] = {
+  interventi: 0,
+  componenti: 0,
+  sintomi: 0,
+  categorie: 0,
+  procedure: 0,
+  ricambiMap: 0,
+  activities: 0,
+};
+
+/** `tkb_draft.build_stats` legacy/vuoto (`{}`) → null. */
+export function parseTkbBuildReport(raw: unknown): TkbBuildReport | null {
+  if (!raw || typeof raw !== "object") return null;
+  const counts = (raw as { counts?: unknown }).counts;
+  if (!counts || typeof counts !== "object") return null;
+  const c = counts as Partial<TkbBuildReport["counts"]>;
+  if (
+    typeof c.interventi !== "number" ||
+    typeof c.componenti !== "number" ||
+    typeof c.activities !== "number"
+  ) {
+    return null;
+  }
+  return raw as TkbBuildReport;
+}
+
 export function kbStatsFromBuildReport(report: TkbBuildReport) {
+  const counts = report.counts ?? EMPTY_TKB_BUILD_COUNTS;
+  const excluded = report.excluded ?? { deleted: 0, inactive: 0, invalid: 0, rbacDenied: 0 };
+  const adapters = report.adapters ?? {};
   return {
-    interventi: report.counts.interventi,
-    componenti: report.counts.componenti,
-    descrizioni: report.counts.activities,
-    categorie: report.counts.categorie,
-    excludedDeleted: report.excluded.deleted,
+    interventi: counts.interventi,
+    componenti: counts.componenti,
+    descrizioni: counts.activities,
+    categorie: counts.categorie ?? 0,
+    excludedDeleted: excluded.deleted ?? 0,
     sourceCoverage: Object.fromEntries(
-      Object.entries(report.adapters).map(([k, v]) => [k, { included: v.included, fetched: v.fetched }]),
+      Object.entries(adapters).map(([k, v]) => [k, { included: v.included, fetched: v.fetched }]),
     ),
-    warnings: report.warnings,
+    warnings: report.warnings ?? [],
   };
 }

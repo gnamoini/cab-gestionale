@@ -10,7 +10,7 @@ import { useKanbanViewportLayout } from "@/lib/ui/use-kanban-viewport-layout";
 import { LIST_QUERY_LOADING_FAILSAFE_MS, useLoadingFailsafe } from "@/lib/ui/loading-failsafe";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   GestionaleListTableActionsHead,
@@ -147,6 +147,8 @@ import {
 } from "@/src/services/lavorazioni.service";
 import { useLavorazioneProfileNamesQuery } from "@/src/hooks/use-lavorazione-profile-names-query";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
+import { fetchLavorazioniListCountAuthorized } from "@/lib/lavorazioni/lavorazioni-list-fetch";
+import { lavorazioniListCountQueryKey } from "@/lib/lavorazioni/lavorazioni-list-query-keys";
 import { useLavorazioneConcludeMutation, useLavorazioneRemoveMutation, useLavorazioneRestoreMutation, useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useLavorazioneStatoMoveMutation } from "@/src/hooks/gestionale/use-lavorazione-stato-move-mutation";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
@@ -198,10 +200,7 @@ import {
   lavTableColTargaClass,
   lavTableColIngressoClass,
   lavTableColNoteClass,
-  lavTableColPillSpacerClass,
   lavTableColStatoAddettoInset,
-  lavTableTdPillSpacerClass,
-  lavTableThPillSpacerClass,
   lavTablePillColStyleFromLabels,
   lavTableTdPill,
   lavTableTdAzioni,
@@ -856,6 +855,16 @@ export function LavorazioniView() {
   const chiuseQuery = useLavorazioniList(filtersChiuse, {
     ...gestionaleQueryOpts,
     enabled: needsChiuseFetch,
+  });
+  const archivioCountQuery = useQuery({
+    queryKey: lavorazioniListCountQueryKey(filtersChiuse),
+    queryFn: async () => {
+      const res = await fetchLavorazioniListCountAuthorized(filtersChiuse);
+      if (!res.success) throw new Error(res.error ?? "Errore conteggio archivio");
+      return res.data ?? 0;
+    },
+    enabled: !needsChiuseFetch,
+    staleTime: 30_000,
   });
   const serverListPagination = isServerListPaginationEnabled();
 
@@ -1562,7 +1571,13 @@ export function LavorazioniView() {
     [lavModificheLogQuery.data, user?.id, authorName, resolveLavorazioneLogOggetto, statiOpts],
   );
 
-  const totalFilteredCount = attiveRowsFiltered.length + chiuseRowsFiltered.length;
+  const archivioFilteredCount = needsChiuseFetch
+    ? chiuseRowsFiltered.length
+    : archivioCountQuery.isSuccess
+      ? (archivioCountQuery.data ?? 0)
+      : null;
+
+  const totalFilteredCount = attiveRowsFiltered.length + (archivioFilteredCount ?? 0);
 
   const loading = attiveQuery.isLoading || chiuseQuery.isLoading;
   const initialListLoadingRaw = attiveQuery.isPending;
@@ -1574,7 +1589,10 @@ export function LavorazioniView() {
       (needsFullChiuseSchede
         ? chiuseRows.length > 0 && schedeEnsureLoading
         : archivioPagedSchedePending && (schedeEnsureLoading || schedeEnsureFetching)));
-  const archivioCardTitle = `Archivio lavorazioni (${chiuseRowsFiltered.length})`;
+  const archivioCardTitle =
+    archivioFilteredCount === null
+      ? "Archivio lavorazioni (…)"
+      : `Archivio lavorazioni (${archivioFilteredCount})`;
   const loadErrRaw = attiveQuery.isError ? attiveQuery.error : chiuseQuery.isError ? chiuseQuery.error : null;
   const loadErr = loadErrRaw
     ? formatSupabaseError(loadErrRaw, { module: "lavorazioni", action: "read" })
@@ -1783,7 +1801,7 @@ export function LavorazioniView() {
           searchApplied={searchApplied}
           onSearchReset={resetRicercaPagina}
           attiveFilteredCount={attiveRowsFiltered.length}
-          chiuseFilteredCount={chiuseRowsFiltered.length}
+          chiuseFilteredCount={archivioFilteredCount ?? 0}
           onOpenCreate={openCreateModal}
           onPrimeCreate={primeCreateModal}
         />
@@ -1848,7 +1866,6 @@ export function LavorazioniView() {
                 <col className={lavTableColTargaClass} />
                 <col className={lavTableColMatricolaClass} />
                 <col className={lavTableColNoteClass} />
-                <col className={lavTableColPillSpacerClass} />
                 <col style={statoPillColStyle} />
                 <col style={prioritaPillColStyle} />
                 <col style={addettoPillColStyle} />
@@ -1887,7 +1904,7 @@ export function LavorazioniView() {
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
                   <GlobalTableSortTh
-                    label="N. scuderia"
+                    label="scud."
                     columnKey="nScuderia"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
@@ -1921,7 +1938,6 @@ export function LavorazioniView() {
                     thClassName="gestionale-list-table-col-note"
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
-                  <th className={lavTableThPillSpacerClass} scope="col" aria-hidden="true" />
                   <GlobalTableSortTh
                     label="Stato"
                     columnKey="stato"
@@ -1957,7 +1973,7 @@ export function LavorazioniView() {
                 ? "Nessuna lavorazione in corso corrisponde alla ricerca o ai filtri selezionati."
                 : "Nessuna lavorazione in corso."
             }
-            colSpan={13}
+            colSpan={12}
             virtualRows={{
               rowCount: pagedAttive.length,
               renderRow: renderAttiveDesktopRow,
@@ -2055,7 +2071,6 @@ export function LavorazioniView() {
                 <col className={lavTableColTargaClass} />
                 <col className={lavTableColMatricolaClass} />
                 <col className={lavTableColNoteClass} />
-                <col className={lavTableColPillSpacerClass} />
                 <col style={statoPillColStyle} />
                 <col style={prioritaPillColStyle} />
                 <col style={addettoPillColStyle} />
@@ -2097,7 +2112,7 @@ export function LavorazioniView() {
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
                   <GlobalTableSortTh
-                    label="N. scuderia"
+                    label="scud."
                     columnKey="nScuderia"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
@@ -2131,7 +2146,6 @@ export function LavorazioniView() {
                     thClassName="gestionale-list-table-col-note"
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
-                  <th className={lavTableThPillSpacerClass} scope="col" aria-hidden="true" />
                   <GlobalTableSortTh
                     label="Completamento"
                     columnKey="completamento"
@@ -2168,7 +2182,7 @@ export function LavorazioniView() {
                 ? "Nessun record in archivio corrisponde alla ricerca o ai filtri selezionati."
                 : "Nessun record in archivio."
             }
-            colSpan={13}
+            colSpan={12}
             virtualRows={archivioVirtualRows}
           />
           ) : null}

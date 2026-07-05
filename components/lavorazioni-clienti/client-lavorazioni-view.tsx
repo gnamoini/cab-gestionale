@@ -75,14 +75,11 @@ import {
   lavTableActionBtnPrimary,
   lavTableActionBtnSecondary,
   lavTableActionsRow,
-  lavTableColPillSpacerClass,
   lavTableColStatoAddettoInset,
   lavTableTd,
   lavTableTdAzioni,
   lavTableTdPill,
-  lavTableTdPillSpacerClass,
   lavTableTdPillWrap,
-  lavTableThPillSpacerClass,
   LavorazioniClienteUtilStack,
   LavorazioniMezzoIdentCells,
   cycleLavorazioniTableSort,
@@ -236,7 +233,6 @@ function DesktopTable({
         <col className={clientPortalColScuderiaClass} />
         <col className={clientPortalColTargaClass} />
         <col className={clientPortalColMatricolaClass} />
-        <col className={lavTableColPillSpacerClass} />
         <col className={clientPortalColStatoClass} />
         <col style={colStyles.addettoPillColStyle} />
         <col className={clientPortalColAzioniClass} />
@@ -250,7 +246,6 @@ function DesktopTable({
         <col className={clientPortalColScuderiaClass} />
         <col className={clientPortalColTargaClass} />
         <col className={clientPortalColMatricolaClass} />
-        <col className={lavTableColPillSpacerClass} />
         <col className={clientPortalColStatoClass} />
         <col style={colStyles.addettoPillColStyle} />
         <col className={clientPortalColAzioniClass} />
@@ -267,7 +262,6 @@ function DesktopTable({
         <GlobalTableSortTh label="Scuderia" columnKey="nScuderia" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
         <GlobalTableSortTh label="Targa" columnKey="targa" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
         <GlobalTableSortTh label="Matricola" columnKey="matricola" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
-        <th className={lavTableThPillSpacerClass} scope="col" aria-hidden="true" />
         <GlobalTableSortTh label="Stato" columnKey="stato" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={`${lavTableColStatoAddettoInset} ${clientPortalColStatoClass}`} onSort={onSort} />
         <GlobalTableSortTh label="Addetto" columnKey="addetto" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={lavTableColStatoAddettoInset} onSort={onSort} />
         <GestionaleListTableActionsHead />
@@ -281,7 +275,6 @@ function DesktopTable({
         <GlobalTableSortTh label="Scuderia" columnKey="nScuderia" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
         <GlobalTableSortTh label="Targa" columnKey="targa" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
         <GlobalTableSortTh label="Matricola" columnKey="matricola" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
-        <th className={lavTableThPillSpacerClass} scope="col" aria-hidden="true" />
         <GlobalTableSortTh label="Completamento" columnKey="completamento" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={`${lavTableColStatoAddettoInset} ${clientPortalColStatoClass}`} onSort={onSort} />
         <GlobalTableSortTh label="Addetto" columnKey="addetto" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={lavTableColStatoAddettoInset} onSort={onSort} />
         <GestionaleListTableActionsHead />
@@ -296,7 +289,7 @@ function DesktopTable({
       headRow={headRow}
       empty={bundles.length === 0}
       emptyMessage={emptyMessage}
-      colSpan={11}
+      colSpan={10}
     >
       {bundles.map(({ row, fields }) => (
         <tr key={row.id} className={`${dsTableRow} h-14 bg-white dark:bg-zinc-900/40`}>
@@ -315,7 +308,6 @@ function DesktopTable({
             </div>
           </td>
           <LavorazioniMezzoIdentCells targa={fields.targa} matricola={fields.matricola} nScuderia={fields.nScuderia} />
-          <td className={lavTableTdPillSpacerClass} aria-hidden="true" />
           {variant === "active" ? (
             <>
               <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset} ${clientPortalColStatoClass}`}>

@@ -315,6 +315,49 @@ export async function fetchLavorazioniListAuthorized(
   }
 }
 
+/** Conteggio leggero (head) — stessi filtri della lista, senza caricare righe. */
+export async function fetchLavorazioniListCountRows(
+  sb: SupabaseClient,
+  filters?: LavorazioneFilters,
+  options?: { clienteRefScope?: string | null },
+): Promise<ServiceResult<number>> {
+  try {
+    const clienteRefScope = normalizeClienteRef(options?.clienteRefScope);
+    const needsMezziInner = Boolean(clienteRefScope && filters?.includeMezzo);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- evita TS2589 su PostgrestFilterBuilder
+    let q: any = needsMezziInner
+      ? applyLavorazioniNotDeletedFilter(
+          sb.from("lavorazioni").select("id, mezzi!inner(cliente)", { count: "exact", head: true }),
+        )
+      : applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("id", { count: "exact", head: true }));
+    q = applyLavorazioniListFilters(q, filters);
+    if (needsMezziInner) q = q.eq("mezzi.cliente", clienteRefScope);
+    const { count, error } = await q;
+    if (error) return err(error.message);
+    return success(count ?? 0);
+  } catch (e) {
+    return serviceFailFromError(e);
+  }
+}
+
+export async function fetchLavorazioniListCountAuthorized(
+  filters?: LavorazioneFilters,
+  authOptions?: LavorazioniListAuthorizedOptions,
+): Promise<ServiceResult<number>> {
+  try {
+    const portal = await ensureClientLavorazioniAccess();
+    if (!portal.success) {
+      const gestionale = await ensureSectionRead("lavorazioni");
+      if (!gestionale.success) return err(gestionale.error ?? portal.error ?? "Permesso richiesto.");
+    }
+    const sb = getBrowserSupabase();
+    const clienteRefScope = await resolveClienteRefScopeForAuthorizedList(authOptions);
+    return fetchLavorazioniListCountRows(sb, filters, { clienteRefScope });
+  } catch (e) {
+    return serviceFailFromError(e);
+  }
+}
+
 export function completionSortKey(row: LavorazioneListRow): string {
   return row.archived_at?.trim() || row.data_uscita?.trim() || row.updated_at || row.created_at || "";
 }

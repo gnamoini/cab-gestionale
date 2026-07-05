@@ -450,7 +450,10 @@ export function SchedaIngressoPanoramicaView({
   return (
     <Wrapper {...(fieldLayout === "tiles" ? { className: cardsWrapperClass } : {})}>
       {sections.ingresso ? (
-        <GestionaleInfoCard title={omitPanoramaDuplicates ? "Accettazione" : "Ingresso"} compact={densePanorama}>
+        <GestionaleInfoCard
+          title={omitPanoramaDuplicates ? "Accettazione" : "Ingresso"}
+          compact={densePanorama}
+        >
           <PanoramicaFieldsShell
             fieldLayout={fieldLayout}
             rowLayout={rowLayout}
@@ -479,13 +482,30 @@ export function SchedaIngressoPanoramicaView({
                 />
               </PanoramicaCustomField>
             ) : null}
-            <PanoramicaStringField
-              label="Richiedente"
-              value={fields.richiedente}
-              fieldLayout={fieldLayout}
-              rowLayout={rowLayout}
-            />
-            {hasSignatureDataUrl(fields.richiedenteFirma ?? "") ? (
+            {omitPanoramaDuplicates ? (
+              <PanoramicaCustomField
+                label="Richiedente"
+                fieldLayout={fieldLayout}
+                rowLayout={rowLayout}
+                dense={densePanorama}
+                portalIngressoLayout={portalIngressoLayout}
+              >
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="min-w-0 text-[color:var(--cab-text)]">
+                    {hubPanoramicaDisplayValue(fields.richiedente)}
+                  </span>
+                  <RichiedenteFirmaDisplay dataUrl={fields.richiedenteFirma} consultable buttonOnly />
+                </div>
+              </PanoramicaCustomField>
+            ) : (
+              <PanoramicaStringField
+                label="Richiedente"
+                value={fields.richiedente}
+                fieldLayout={fieldLayout}
+                rowLayout={rowLayout}
+              />
+            )}
+            {hasSignatureDataUrl(fields.richiedenteFirma ?? "") && !omitPanoramaDuplicates ? (
               <PanoramicaCustomField
                 label="Firma richiedente"
                 fieldLayout={fieldLayout}

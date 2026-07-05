@@ -21,10 +21,10 @@ import {
 export function SidebarSessionExpandChevron({ active = false }: { active?: boolean }) {
   return (
     <svg
-      className={`cab-sidebar-session-expand-chevron h-3.5 w-3.5 shrink-0 transition-[opacity,transform,color] duration-200 ease-out ${
+      className={`cab-sidebar-session-expand-chevron h-3.5 w-3.5 shrink-0 transition-[opacity,color] duration-200 ease-out ${
         active
-          ? "translate-x-0 text-[color:var(--cab-primary)] opacity-100"
-          : "text-[color:var(--cab-text-muted)] opacity-55 group-hover:translate-x-0.5 group-hover:opacity-90"
+          ? "text-[color:var(--cab-primary)] opacity-100"
+          : "text-[color:var(--cab-text-muted)] opacity-55 group-hover:opacity-90"
       }`}
       viewBox="0 0 16 16"
       fill="none"

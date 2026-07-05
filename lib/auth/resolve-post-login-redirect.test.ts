@@ -24,6 +24,23 @@ assert.equal(
 
 assert.equal(
   resolvePostLoginRedirectPath({
+    user: { ruolo: "cliente", id: "c1" },
+    navAccess: null,
+  }),
+  "/lavorazioni-clienti",
+);
+
+assert.equal(
+  resolvePostLoginRedirectPath({
+    user: { ruolo: "cliente", id: "c1" },
+    navAccess: createRbacNavAccess(clienteSnap, { clientLavorazioniAllowed: false }),
+    requestedPath: "/lavorazioni-clienti/abc",
+  }),
+  "/lavorazioni-clienti/abc",
+);
+
+assert.equal(
+  resolvePostLoginRedirectPath({
     user: { ruolo: "guest", id: "g1" },
     navAccess: guestNav,
     requestedPath: "/magazzino",

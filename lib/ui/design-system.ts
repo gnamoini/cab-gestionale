@@ -62,9 +62,12 @@ export const dsAccentSoftBanner =
 export const dsAccentToggleOn =
   "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_15%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]";
 
+/** Focus ring senza scale — liste full-bleed, azioni tabella, controlli a bordo contenitore. */
+export const dsFocusRing =
+  "outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_42%,transparent)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--cab-bg-app)] dark:focus-visible:ring-offset-[var(--cab-bg-app)]";
+
 /** Focus ring e micro-feedback click — usare su tutti i controlli interattivi. */
-export const dsFocus =
-  "outline-none transition-all duration-150 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_42%,transparent)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--cab-bg-app)] dark:focus-visible:ring-offset-[var(--cab-bg-app)]";
+export const dsFocus = `${dsFocusRing} transition-all duration-150 active:scale-[0.98]`;
 
 export const dsDisabled = "disabled:pointer-events-none disabled:opacity-55 disabled:cursor-not-allowed";
 
@@ -272,7 +275,7 @@ export const dsCardMobileShell =
 export const dsTableActionGlyph = "h-4 w-4 shrink-0 opacity-90";
 
 export const dsTableActionSqBase =
-  `inline-flex ${dsTableActionsRowHeight} w-10 min-w-10 max-w-10 sm:w-9 sm:min-w-9 sm:max-w-9 shrink-0 items-center justify-center rounded-lg border-2 p-0 shadow-[var(--cab-shadow-sm)] outline-none transition-[background-color,border-color,box-shadow,color,opacity] duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed box-border ${dsBtnCursor} ${dsFocus}`;
+  `inline-flex ${dsTableActionsRowHeight} w-10 min-w-10 max-w-10 sm:w-9 sm:min-w-9 sm:max-w-9 shrink-0 items-center justify-center rounded-lg border-2 p-0 shadow-[var(--cab-shadow-sm)] outline-none transition-[background-color,border-color,box-shadow,color,opacity] duration-150 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed box-border ${dsBtnCursor} ${dsFocusRing}`;
 
 /** Campione colore in riga impostazioni — stessa scatola e hover delle azioni secondarie, sfondo colore inline. */
 export const dsTableActionBtnColorSwatch = `${dsTableActionSqBase} relative overflow-hidden border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] after:pointer-events-none after:absolute after:inset-0 after:rounded-lg after:content-[''] after:bg-transparent after:transition-[background-color] after:duration-150 hover:after:bg-[var(--cab-hover)] active:after:bg-[var(--cab-hover)]`;
@@ -288,10 +291,10 @@ export const dsTableActionBadge =
   "pointer-events-none absolute right-0 top-0 rounded-full border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-0.5 text-[8px] font-bold leading-3 text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)]";
 
 /** Azione primaria su riga (es. + scorta, salva rapido). */
-export const dsTableActionBtnPrimary = `${dsTableActionSqBase} border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] text-[color:var(--cab-primary)] hover:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))]`;
+export const dsTableActionBtnPrimary = `${dsTableActionSqBase} border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] text-[color:var(--cab-primary)] hover:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))] active:bg-[color:color-mix(in_srgb,var(--cab-primary)_24%,var(--cab-surface))]`;
 
 /** Azione secondaria / info / link (icona). */
-export const dsTableActionBtnSecondary = `${dsTableActionSqBase} border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} text-[color:var(--cab-text-muted)] hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)]`;
+export const dsTableActionBtnSecondary = `${dsTableActionSqBase} border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} text-[color:var(--cab-text-muted)] hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] active:bg-[color:color-mix(in_srgb,var(--cab-hover)_92%,var(--cab-card))]`;
 
 /** Info / dettagli (stessa scatola neutra della secondaria). */
 export const dsTableActionBtnInfo = dsTableActionBtnSecondary;
@@ -300,7 +303,7 @@ export const dsTableActionBtnInfo = dsTableActionBtnSecondary;
 export const dsTableActionBtnUndo = dsTableActionBtnSecondary;
 
 /** Azione distruttiva (elimina). */
-export const dsTableActionBtnDanger = `${dsTableActionSqBase} border-[color:color-mix(in_srgb,var(--cab-danger)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,var(--cab-surface))]`;
+export const dsTableActionBtnDanger = `${dsTableActionSqBase} border-[color:color-mix(in_srgb,var(--cab-danger)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,var(--cab-surface))] active:bg-[color:color-mix(in_srgb,var(--cab-danger)_24%,var(--cab-surface))]`;
 
 /** Azione testuale su una riga (tabella, toolbar compatta) — `h-9`. */
 export const dsTableActionTextBtn = `inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} px-2.5 text-xs font-semibold ${cabText} shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow] duration-150 hover:bg-[var(--cab-hover)] ${dsBtnCursor} ${dsFocus} disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed`;

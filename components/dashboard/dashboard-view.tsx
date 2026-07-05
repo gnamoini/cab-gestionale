@@ -3,13 +3,11 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { LoadingCardSkeleton } from "@/components/design-system";
 import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
 import { useCalendarV2Enabled } from "@/src/hooks/use-calendar-v2-enabled";
-import { buildAgendaHref } from "@/lib/navigation/agenda-links";
 import { DashboardNotificationsToolbarLeading } from "@/components/dashboard/dashboard-notifications-toolbar-leading";
 import { Drawer } from "@/components/design-system";
 import { gestionaleLogDrawerPanelClass } from "@/components/gestionale/gestionale-log-ui";
@@ -81,17 +79,7 @@ export function DashboardView() {
 
         <DashboardWelcome />
         {!staging ? (
-          <>
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[color:var(--cab-border)] bg-[color:var(--cab-surface)] px-3 py-2">
-              <p className="text-sm text-[color:var(--cab-text-muted)]">
-                Promemoria e pianificazione officina sono in Agenda.
-              </p>
-              <Link href={buildAgendaHref()} className={erpBtnNeutral}>
-                Apri Agenda
-              </Link>
-            </div>
-            {calendarV2Enabled ? <CalendarV2Section /> : null}
-          </>
+          calendarV2Enabled ? <CalendarV2Section /> : null
         ) : null}
         <DashboardControlTowerLayout />
       </div>

@@ -8,7 +8,10 @@ import {
   IconPhone,
   IconWhatsApp,
 } from "@/components/lavorazioni-clienti/client-lavorazioni-icons";
-import { CLIENT_PORTAL_CONTACT } from "@/lib/lavorazioni/client-portal-contact";
+import {
+  CLIENT_PORTAL_CONTACT,
+  openNativeContactHref,
+} from "@/lib/lavorazioni/client-portal-contact";
 import {
   dsBtnNeutral,
   dsBtnPrimary,
@@ -84,6 +87,12 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
             className={`${dsBtnNeutral} min-h-11 w-full touch-manipulation`}
             aria-label={`Invia email a ${email}`}
             data-testid="smoke-contattaci-email"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+              e.preventDefault();
+              openNativeContactHref(mailtoHref);
+            }}
           >
             <IconMail className={CONTATTACI_BTN_ICON} />
             Email

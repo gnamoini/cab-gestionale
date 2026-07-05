@@ -22,8 +22,6 @@ import {
   gestionaleListTableActionsGroupEnd,
   gestionaleListTableActionsRowHeight,
   gestionaleListColAttrezzaturaClass,
-  gestionaleListColAzioniClass,
-  gestionaleListColCantiereClass,
   gestionaleListColClienteClass,
   gestionaleListColCodiceClass,
   gestionaleListColIdentificazioneClass,
@@ -31,10 +29,7 @@ import {
   gestionaleListColScuderiaClass,
   gestionaleListColTargaClass,
   gestionaleListTableTdIdent,
-  gestionaleListColIngressoClass,
   gestionaleListColNoteClass,
-  gestionaleListColPillSpacerClass,
-  gestionaleListTableColPillSpacerClass,
   gestionaleListTableMasterWrapClass,
   gestionaleListTableTd,
   gestionaleListTableTdAzioni,
@@ -94,9 +89,6 @@ export const lavTableColPillMinStyle = lavTableColStatoClass;
 export const lavTableTdPill = gestionaleListTableTdPill;
 export const lavTableTdPillWrap = gestionaleListTableTdPillWrap;
 export const lavTableColStatoAddettoInset = gestionaleListTableColStatoAddettoInsetClass;
-export const lavTableColPillSpacerClass = gestionaleListColPillSpacerClass;
-export const lavTableThPillSpacerClass = gestionaleListTableColPillSpacerClass;
-export const lavTableTdPillSpacerClass = gestionaleListTableColPillSpacerClass;
 
 /** Padding orizzontale celle pill (px-2.5 × 2, allineato a `globalTableThCell`). */
 const LAV_TABLE_PILL_COL_PAD_REM = 1;
@@ -121,10 +113,10 @@ export function lavTablePillColWidthRem(labels: readonly string[]): number {
   return lavTablePillContentWidthRem(labels) + LAV_TABLE_PILL_COL_PAD_REM;
 }
 
-export const lavTableColIngressoClass = gestionaleListColIngressoClass;
+export const lavTableColIngressoClass = "gestionale-lavorazioni-col-ingresso";
 export const lavTableColCodiceClass = gestionaleListColCodiceClass;
 export const lavTableColClienteClass = gestionaleListColClienteClass;
-export const lavTableColCantiereClass = gestionaleListColCantiereClass;
+export const lavTableColCantiereClass = "gestionale-lavorazioni-col-cantiere";
 export const lavTableColAttrezzaturaClass = gestionaleListColAttrezzaturaClass;
 export const lavTableColIdentificazioneClass = gestionaleListColIdentificazioneClass;
 export const lavTableColScuderiaClass = gestionaleListColScuderiaClass;
@@ -132,7 +124,8 @@ export const lavTableColTargaClass = gestionaleListColTargaClass;
 export const lavTableColMatricolaClass = gestionaleListColMatricolaClass;
 export const lavTableTdIdent = gestionaleListTableTdIdent;
 export const lavTableColNoteClass = gestionaleListColNoteClass;
-export const lavTableColAzioniClass = gestionaleListColAzioniClass;
+/** 3 azioni icona (36px) + gap — più stretto del token liste generiche (11.5rem). */
+export const lavTableColAzioniClass = "gestionale-lavorazioni-col-azioni";
 export const lavTableThAzioni = gestionaleListTableThAzioni;
 export const lavTableTdAzioni = gestionaleListTableTdAzioni;
 
@@ -148,7 +141,10 @@ export const lavTableThAzioniAttive = lavTableThAzioni;
 /** @deprecated Alias di `lavTableThAzioni`. */
 export const lavTableThAzioniArchivio = lavTableThAzioni;
 
-/** Testo principale colonne Ingresso / Cliente / Oggetto — stessa dimensione e peso. */
+/** Testo secondario / cantiere / ingresso — corpo tabella senza enfasi. */
+export const lavTableBodyTextClass = "text-sm text-zinc-700 dark:text-zinc-200";
+
+/** Testo principale colonne Cliente / Oggetto — stessa dimensione e peso. */
 export const lavTablePrimaryTextClass =
   "text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-100";
 
@@ -167,7 +163,7 @@ export function LavorazioneIngressoDateCell({
   const permanenza = lavorazionePermanenzaGiorniLabel(row);
   return (
     <div className="flex min-w-0 flex-col gap-0.5 text-left">
-      <span className={`tabular-nums ${lavTablePrimaryTextClass}`}>{date}</span>
+      <span className={`tabular-nums ${lavTableBodyTextClass}`}>{date}</span>
       {permanenza !== "—" ? (
         <span className="text-[11px] font-normal leading-tight text-zinc-500 dark:text-zinc-400">{permanenza}</span>
       ) : null}
@@ -185,7 +181,7 @@ export function LavorazioneIngressoDateCellFromIso({
   const { date } = formatLavorazioneIngressoDisplay(iso);
   return (
     <div
-      className={`min-w-0 text-sm font-medium tabular-nums leading-snug text-zinc-900 dark:text-zinc-100 ${
+      className={`min-w-0 tabular-nums ${lavTableBodyTextClass} ${
         align === "center" ? "text-center" : "text-left"
       }`}
     >

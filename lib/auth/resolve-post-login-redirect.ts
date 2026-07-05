@@ -2,7 +2,9 @@ import { resolveGestionaleNav, type GestionaleNavHref } from "@/components/gesti
 import { isStagingBlockedPathname, isStagingPublicSlice } from "@/lib/env/staging-public";
 import {
   ACCESS_DENIED_PATH,
+  CLIENTE_HOME_PATH,
   defaultHomePathForRole,
+  isClienteRole,
   type CanAccessPageOptions,
   type RbacUser,
 } from "@/lib/auth/rbac";
@@ -50,6 +52,19 @@ export type ResolvePostLoginRedirectInput = {
  */
 export function resolvePostLoginRedirectPath(input: ResolvePostLoginRedirectInput): string {
   if (!input.user) return DASHBOARD_FALLBACK;
+
+  if (isClienteRole(input.user)) {
+    const requested = sanitizePostLoginRequestedPath(input.requestedPath);
+    if (
+      requested &&
+      !stagingBlocksRedirect(requested) &&
+      (requested === CLIENTE_HOME_PATH || requested.startsWith(`${CLIENTE_HOME_PATH}/`)) &&
+      (!input.navAccess || input.navAccess.canAccessRoute(requested))
+    ) {
+      return requested;
+    }
+    return CLIENTE_HOME_PATH;
+  }
 
   if (!input.navAccess) {
     return defaultHomePathForRole(input.user);

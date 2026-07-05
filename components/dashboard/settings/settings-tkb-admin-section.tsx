@@ -102,14 +102,14 @@ export function SettingsTkbAdminSection() {
           Aggiorna bozza
         </button>
       </div>
-      {buildReport ? (
+      {buildReport?.counts ? (
         <div className="rounded-md border border-[color:var(--cab-border-subtle)] p-3 text-xs space-y-1">
           <p className="font-medium">Build report</p>
           <p className="text-[color:var(--cab-text-muted)]">
             {buildReport.counts.interventi} interventi · {buildReport.counts.componenti} componenti ·{" "}
             {buildReport.counts.activities} attività · {buildReport.durationMs}ms
           </p>
-          {buildReport.warnings.length > 0 ? (
+          {(buildReport.warnings?.length ?? 0) > 0 ? (
             <p className="text-[color:var(--cab-warning)]">{buildReport.warnings.slice(0, 3).join("; ")}</p>
           ) : null}
         </div>

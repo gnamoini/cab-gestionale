@@ -6,7 +6,7 @@
   min-width: 70rem;
 }
 
-/* Portale Clienti — 11 colonne. */
+/* Portale Clienti — 10 colonne. */
 .gestionale-client-portal-dense-table {
   min-width: 62rem;
 }
@@ -29,30 +29,68 @@
   padding-right: 0.25rem;
 }
 
-/* Spacer flessibile tra Note e pill — centra il blocco Stato/Priorità/Addetto nello spazio residuo. */
-.gestionale-lavorazioni-dense-table col.gestionale-list-table-col-pill-spacer {
-  width: auto;
+/* Tabella densa Lavorazioni — layout fisso (colgroup) anche sotto xl. */
+.gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) {
+  table-layout: fixed;
 }
 
-.gestionale-lavorazioni-dense-table th.gestionale-list-table-col-pill-spacer,
-.gestionale-lavorazioni-dense-table td.gestionale-list-table-col-pill-spacer {
-  width: auto;
-  padding: 0;
-  border: 0;
+/* Ingresso — più largo + respiro verso Cliente. */
+.gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) col.gestionale-lavorazioni-col-ingresso {
+  width: 7.25%;
+  min-width: 7rem;
 }
 
-/* Portale: senza col Note lo spacer flessibile creava buco enorme — collassa dopo regola Lavorazioni. */
-.gestionale-lavorazioni-dense-table.gestionale-client-portal-dense-table col.gestionale-list-table-col-pill-spacer {
-  width: 0;
-  max-width: 0;
+.gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) thead th:first-child,
+.gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) tbody td:first-child {
+  padding-right: 1rem !important;
 }
 
-.gestionale-lavorazioni-dense-table.gestionale-client-portal-dense-table th.gestionale-list-table-col-pill-spacer,
-.gestionale-lavorazioni-dense-table.gestionale-client-portal-dense-table td.gestionale-list-table-col-pill-spacer {
-  width: 0;
-  max-width: 0;
-  padding: 0;
-  border: 0;
+/* Cantiere — spazio per label + freccia sort. */
+.gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) col.gestionale-lavorazioni-col-cantiere {
+  width: 6.75%;
+  min-width: 6.5rem;
+}
+
+/* Azioni gestionale — larghezza = pulsanti + inset destro (speculare a Ingresso a sinistra). */
+.gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) col.gestionale-lavorazioni-col-azioni,
+.gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) th.gestionale-list-table-actions-head,
+.gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) td.gestionale-list-table-actions-cell {
+  width: calc(7.5rem + 0.5rem + 0.625rem);
+  max-width: calc(7.5rem + 0.5rem + 0.625rem);
+  min-width: calc(7.5rem + 0.5rem + 0.625rem);
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  .gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) col.gestionale-lavorazioni-col-azioni,
+  .gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) th.gestionale-list-table-actions-head,
+  .gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) td.gestionale-list-table-actions-cell {
+    width: calc(7.25rem + 0.75rem + 0.625rem);
+    max-width: calc(7.25rem + 0.75rem + 0.625rem);
+    min-width: calc(7.25rem + 0.75rem + 0.625rem);
+  }
+}
+
+.gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) th.gestionale-list-table-actions-head {
+  padding-left: 0 !important;
+  padding-right: calc(0.5rem + 0.625rem) !important;
+}
+
+@media (min-width: 640px) {
+  .gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) th.gestionale-list-table-actions-head {
+    padding-right: calc(0.75rem + 0.625rem) !important;
+  }
+}
+
+.gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) td.gestionale-list-table-actions-cell {
+  padding-left: 0 !important;
+  padding-right: 1rem !important;
+}
+
+@media (min-width: 640px) {
+  .gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) td.gestionale-list-table-actions-cell {
+    padding-right: 1.25rem !important;
+  }
 }
 
 /* Azioni portale — colonna stretta, padding simmetrico 1rem. */

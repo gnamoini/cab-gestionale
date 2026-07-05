@@ -30,9 +30,13 @@ for (const testId of ["smoke-contattaci-call", "smoke-contattaci-whatsapp", "smo
   assert.match(dialog, new RegExp(`data-testid="${testId}"`));
 }
 
-const actionAnchors = dialog.match(/<a[\s\S]*?data-testid="smoke-contattaci-(call|whatsapp|email)"[\s\S]*?>/g) ?? [];
+const actionAnchors = dialog.match(/<a[\s\S]*?data-testid="smoke-contattaci-(call|whatsapp|email)"[\s\S]*?<\/a>/g) ?? [];
 assert.equal(actionAnchors.length, 3, "expected exactly 3 action anchors in footer");
 for (const block of actionAnchors) {
+  if (block.includes('smoke-contattaci-email')) {
+    assert.match(block, /openNativeContactHref\(mailtoHref\)/, "email must open mailto draft");
+    continue;
+  }
   assert.doesNotMatch(block, /onClick=/, "contact actions must use native href only");
 }
 

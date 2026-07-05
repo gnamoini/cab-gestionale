@@ -120,8 +120,6 @@ export const gestionaleListTableTdPill =
 /** Inset colonne Stato/Addetto — tabella densa Lavorazioni (`lavorazioni-scroll.css`). */
 export const gestionaleListTableColStatoAddettoInsetClass =
   "gestionale-list-table-col-stato-addetto-inset";
-/** Cella/colonna spacer pill — tabella densa Lavorazioni. */
-export const gestionaleListTableColPillSpacerClass = "gestionale-list-table-col-pill-spacer";
 /** Pill a tutta larghezza colonna (larghezza da `<col>` / colgroup). */
 export const gestionaleListTableTdPillWrap = "box-border w-full min-w-0 max-w-full";
 
@@ -175,8 +173,6 @@ export const gestionaleListColMatricolaClass =
   "w-[6.25rem] min-w-[6.25rem] gestionale-list-table-col-ident";
 export const gestionaleListColNoteClass = "w-[7%] gestionale-list-table-col-note";
 export const gestionaleListColAzioniClass = "w-[11.5rem] min-w-[11.5rem]";
-/** Colonna flessibile prima delle pill — assorbe lo spazio residuo (`table-fixed`) e spinge Stato/Addetto a destra. */
-export const gestionaleListColPillSpacerClass = gestionaleListTableColPillSpacerClass;
 
 /** Utility: combina classi riga con stato highlight (navigazione da URL). */
 export function gestionaleListTableRowClassNames(extra?: string): string {

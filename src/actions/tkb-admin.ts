@@ -2,7 +2,7 @@
 
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { verifyServerPermission } from "@/src/lib/auth/server-permission-guards";
-import { buildTkbDraft, kbStatsFromBuildReport } from "@/lib/domain/technical-knowledge-base/ingestion/builder";
+import { buildTkbDraft, kbStatsFromBuildReport, parseTkbBuildReport } from "@/lib/domain/technical-knowledge-base/ingestion/builder";
 import { runQualityGates } from "@/lib/domain/technical-knowledge-base/quality-gates/quality-gates";
 import { publishTkbDraftServer, getLatestKbVersionServer, loadPublishedTkbSnapshotServer } from "@/lib/domain/technical-knowledge-base/tkb-publish.server";
 import { loadTkbDraftStore, saveTkbDraftStore } from "@/lib/domain/technical-knowledge-base/tkb-repository.server";
@@ -34,7 +34,7 @@ export async function getTkbAdminStateAction(): Promise<TkbAdminState | { ok: fa
     kbVersion,
     draftStale: draft?.stale ?? true,
     draftBuiltAt: draft?.built_at ?? null,
-    buildReport: (draft?.build_stats as TkbBuildReport) ?? null,
+    buildReport: parseTkbBuildReport(draft?.build_stats),
   };
 }
 
@@ -120,7 +120,8 @@ export async function runTkbBenchmarkAction(): Promise<RunTkbBenchmarkResult> {
   } catch {
   }
   const draft = await loadTkbDraftStore(supabase);
-  if (draft?.build_stats) kbStats = kbStatsFromBuildReport(draft.build_stats as TkbBuildReport);
+  const parsedBuildReport = parseTkbBuildReport(draft?.build_stats);
+  if (parsedBuildReport) kbStats = kbStatsFromBuildReport(parsedBuildReport);
   return { ok: true, report: runFullBenchmarkComparison(), kbStats };
 }
 

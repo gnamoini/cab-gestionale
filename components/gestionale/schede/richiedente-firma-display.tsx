@@ -9,42 +9,56 @@ export function RichiedenteFirmaDisplay({
   dataUrl,
   consultable = false,
   compact = false,
+  /** Solo pulsante testuale (header card / righe compatte). */
+  buttonOnly = false,
 }: {
   dataUrl?: string | null;
   /** Apre modale ingrandita per consultazione. */
   consultable?: boolean;
   compact?: boolean;
+  buttonOnly?: boolean;
 }) {
   const [viewOpen, setViewOpen] = useState(false);
   const src = dataUrl?.trim() ?? "";
+  const hasFirma = hasSignatureDataUrl(src);
 
-  if (!hasSignatureDataUrl(src)) return null;
+  if (!hasFirma && !buttonOnly) return null;
 
   const thumbClass = compact ? "h-8 max-w-[6rem]" : "h-10 max-w-[8rem]";
+  const buttonClass = buttonOnly ? `${dsBtnNeutral} min-h-9 shrink-0 text-xs` : dsBtnNeutral;
 
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          className={`overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-white p-1 ${
-            consultable ? "cursor-zoom-in transition-shadow hover:shadow-[var(--cab-shadow-md)]" : ""
-          }`}
-          disabled={!consultable}
-          aria-label={consultable ? "Visualizza firma richiedente" : "Firma richiedente"}
-          onClick={() => consultable && setViewOpen(true)}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt="Firma richiedente" className={`object-contain ${thumbClass}`} />
-        </button>
-        {consultable ? (
-          <button type="button" className={dsBtnNeutral} onClick={() => setViewOpen(true)}>
+        {!buttonOnly && hasFirma ? (
+          <button
+            type="button"
+            className={`overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-white p-1 ${
+              consultable ? "cursor-zoom-in transition-shadow hover:shadow-[var(--cab-shadow-md)]" : ""
+            }`}
+            disabled={!consultable}
+            aria-label={consultable ? "Visualizza firma richiedente" : "Firma richiedente"}
+            onClick={() => consultable && setViewOpen(true)}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={src} alt="Firma richiedente" className={`object-contain ${thumbClass}`} />
+          </button>
+        ) : null}
+        {buttonOnly || consultable ? (
+          <button
+            type="button"
+            className={buttonClass}
+            disabled={!hasFirma}
+            aria-label={hasFirma ? "Visualizza firma richiedente" : "Firma non disponibile"}
+            aria-disabled={!hasFirma}
+            onClick={() => hasFirma && setViewOpen(true)}
+          >
             Visualizza firma
           </button>
         ) : null}
       </div>
 
-      {consultable && viewOpen ? (
+      {consultable && hasFirma && viewOpen ? (
         <GestionaleModalShell
           modalSize="formSmall"
           onRequestClose={() => setViewOpen(false)}

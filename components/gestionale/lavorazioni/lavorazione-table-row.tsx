@@ -26,7 +26,6 @@ import {
   lavTableTdPill,
   lavTableTdPillWrap,
   lavTableColStatoAddettoInset,
-  lavTableTdPillSpacerClass,
   LavorazioneOrePermanenzaCell,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import type { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
@@ -193,7 +192,6 @@ function LavorazioneAttivaTableRowInner({
       <td className={`${lavTableTd} gestionale-list-table-col-note min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
         <span className="line-clamp-2">{lavorazioneNoteOperative(row, schedeStore) || "—"}</span>
       </td>
-      <td className={lavTableTdPillSpacerClass} aria-hidden="true" />
       <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
           <InlineSelectField
@@ -352,7 +350,6 @@ function LavorazioneArchivioTableRowInner({
       <td className={`${lavTableTd} gestionale-list-table-col-note min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
         <span className="line-clamp-2">{lavorazioneNoteOperative(row, schedeStore) || "—"}</span>
       </td>
-      <td className={lavTableTdPillSpacerClass} aria-hidden="true" />
       <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
           <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} />

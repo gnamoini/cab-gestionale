@@ -2,19 +2,22 @@
 
 import { useState } from "react";
 import { ThemeModeIcon, ThemeToggle } from "@/components/gestionale/theme-toggle";
+import { GestionaleConfirmDialogLazy } from "@/components/gestionale/gestionale-confirm-dialog-lazy";
 import { requestPasswordResetEmail } from "@/lib/auth/request-password-reset.client";
-import { erpFocus } from "@/lib/ui/erp-tokens";
+import { dsFocusRing } from "@/lib/ui/design-system";
 import { suppressSidebarBlurCollapse } from "@/lib/ui/use-sidebar-collapsed";
 import {
-  accountMenuItemClass,
   accountMenuItemMutedIconClass,
-  accountMenuSessionMenuClass,
 } from "@/lib/ui/global-input";
 import type { PublicAuthUser } from "@/src/types/auth-user";
 
+const profileActionItemClass =
+  "group flex w-full min-h-11 items-center gap-2.5 px-3 py-2.5 text-left text-xs font-medium text-[color:var(--cab-text)] transition-colors duration-150 hover:bg-[var(--cab-hover)] active:bg-[color:color-mix(in_srgb,var(--cab-hover)_92%,var(--cab-card))] sm:min-h-10";
+const profileActionLogoutClass = `${profileActionItemClass} hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-hover))] active:bg-[color:color-mix(in_srgb,var(--cab-danger)_14%,var(--cab-hover))]`;
+
 function SessionMenuIcon({ children }: { children: React.ReactNode }) {
   return (
-    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-zinc-500 dark:bg-zinc-800/80 dark:text-zinc-400">
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,var(--cab-card))] text-[color:var(--cab-text-muted)] transition-colors duration-150 group-hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] group-hover:text-[color:var(--cab-text)]">
       {children}
     </span>
   );
@@ -44,9 +47,18 @@ export function ProfileActionsSection({
   user: PublicAuthUser;
   onLogout: () => void;
 }) {
+  const [passwordConfirmOpen, setPasswordConfirmOpen] = useState(false);
   const [passwordPending, setPasswordPending] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  const emailLabel = user.email?.trim() || "il tuo indirizzo email";
+
+  function openPasswordConfirm() {
+    setPasswordMessage(null);
+    setPasswordError(null);
+    setPasswordConfirmOpen(true);
+  }
 
   async function handlePasswordReset() {
     setPasswordPending(true);
@@ -54,6 +66,7 @@ export function ProfileActionsSection({
     setPasswordError(null);
     const res = await requestPasswordResetEmail(user.email);
     setPasswordPending(false);
+    setPasswordConfirmOpen(false);
     if (!res.ok) {
       setPasswordError(res.message);
       return;
@@ -71,9 +84,9 @@ export function ProfileActionsSection({
         Azioni
       </h3>
       <div className="mt-2 overflow-hidden rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)]">
-        <div className={`${accountMenuSessionMenuClass} p-1`} role="presentation">
+        <div className="flex flex-col divide-y divide-[color:var(--cab-border)]" role="presentation">
           <div
-            className={`${accountMenuItemClass} cursor-default text-[color:var(--cab-text-muted)] hover:bg-transparent`}
+            className={`${profileActionItemClass} cursor-default`}
             onPointerDown={(event) => {
               event.stopPropagation();
               suppressSidebarBlurCollapse();
@@ -87,9 +100,9 @@ export function ProfileActionsSection({
           </div>
           <button
             type="button"
-            className={`${accountMenuItemClass} ${erpFocus}`}
+            className={`${profileActionItemClass} ${dsFocusRing}`}
             disabled={passwordPending}
-            onClick={() => void handlePasswordReset()}
+            onClick={openPasswordConfirm}
           >
             <SessionMenuIcon>
               <PasswordIcon className="h-4 w-4" />
@@ -98,24 +111,18 @@ export function ProfileActionsSection({
               {passwordPending ? "Invio in corso…" : "Cambia password"}
             </span>
           </button>
-        </div>
-        {passwordMessage ? (
-          <p className="border-t border-[color:var(--cab-border)] px-3 py-2 text-xs text-[color:var(--cab-success)]">
-            {passwordMessage}
-          </p>
-        ) : null}
-        {passwordError ? (
-          <p className="border-t border-[color:var(--cab-border)] px-3 py-2 text-xs text-[color:var(--cab-danger)]">
-            {passwordError}
-          </p>
-        ) : null}
-        <div className="border-t border-[color:var(--cab-border)] p-1">
+          {passwordMessage ? (
+            <p className="px-3 py-2 text-xs text-[color:var(--cab-success)]">{passwordMessage}</p>
+          ) : null}
+          {passwordError ? (
+            <p className="px-3 py-2 text-xs text-[color:var(--cab-danger)]">{passwordError}</p>
+          ) : null}
           <button
             type="button"
             role="menuitem"
             data-testid="smoke-logout"
             onClick={onLogout}
-            className={`${accountMenuItemClass} w-full hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_8%,var(--cab-hover))] ${erpFocus}`}
+            className={`${profileActionLogoutClass} ${dsFocusRing}`}
           >
             <SessionMenuIcon>
               <LogoutIcon className="h-4 w-4" />
@@ -124,6 +131,20 @@ export function ProfileActionsSection({
           </button>
         </div>
       </div>
+
+      {passwordConfirmOpen ? (
+        <GestionaleConfirmDialogLazy
+          open={passwordConfirmOpen}
+          title="Inviare link di reimpostazione?"
+          message={`Invieremo un'email a ${emailLabel} con il link per impostare una nuova password.`}
+          confirmLabel="Invia email"
+          cancelLabel="Annulla"
+          pending={passwordPending}
+          layerClassName="z-[120]"
+          onCancel={() => setPasswordConfirmOpen(false)}
+          onConfirm={() => void handlePasswordReset()}
+        />
+      ) : null}
     </section>
   );
 }

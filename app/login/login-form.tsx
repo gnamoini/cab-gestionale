@@ -164,7 +164,8 @@ export function LoginForm() {
 
     const bootstrap = buildBootstrapRbacSnapshot(user.id, user.roleKey ?? user.ruolo);
     const navAccess = createRbacNavAccess(bootstrap, {
-      clientLavorazioniAllowed: clientLavAccess.allowed,
+      clientLavorazioniAllowed:
+        user.ruolo === "cliente" ? true : clientLavAccess.allowed,
     });
 
     const target = resolvePostLoginRedirectPath({
