@@ -4,6 +4,7 @@ import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE, readSupaba
 import {
   shouldClearSessionOnAuthError,
   isTransientNetworkAuthError,
+  isRecoverableAuthError,
 } from "@/src/lib/auth/auth-network-retry";
 import { mapDegradedPublicAuthUser, mapSupabaseUserToPublicAuthUser } from "@/src/lib/auth/map-auth-user";
 import {
@@ -23,12 +24,32 @@ type CookieLike = { name: string; value: string };
 
 async function getUserWithNetworkRetry(supabase: SupabaseClient) {
   const first = await supabase.auth.getUser();
-  if (!first.error) return first;
-  if (shouldClearSessionOnAuthError(first.error) || !isTransientNetworkAuthError(first.error)) {
-    return first;
+  if (!first.error && first.data?.user) return first;
+  if (first.error && shouldClearSessionOnAuthError(first.error)) return first;
+
+  if (first.error && isRecoverableAuthError(first.error)) {
+    await supabase.auth.refreshSession();
+    const afterRefresh = await supabase.auth.getUser();
+    if (!afterRefresh.error && afterRefresh.data?.user) return afterRefresh;
+    if (afterRefresh.error && shouldClearSessionOnAuthError(afterRefresh.error)) return afterRefresh;
+    if (afterRefresh.error && isTransientNetworkAuthError(afterRefresh.error)) {
+      await new Promise((r) => setTimeout(r, 300));
+      return supabase.auth.getUser();
+    }
+    return afterRefresh;
   }
-  await new Promise((r) => setTimeout(r, 300));
-  return supabase.auth.getUser();
+
+  if (first.error && isTransientNetworkAuthError(first.error)) {
+    await new Promise((r) => setTimeout(r, 300));
+    return supabase.auth.getUser();
+  }
+  return first;
+}
+
+function shouldWriteEmptySnapshotToCache(authError: { message: string } | null): boolean {
+  if (!authError) return true;
+  if (shouldClearSessionOnAuthError(authError)) return true;
+  return false;
 }
 
 async function fetchServerAuthSnapshotWithClient(
@@ -51,7 +72,9 @@ async function fetchServerAuthSnapshotWithClient(
   const authUser = authData?.user ?? null;
   if (!authUser) {
     const snap = emptyAuthSnapshot();
-    writeCachedServerAuthSnapshot(fingerprint, snap);
+    if (shouldWriteEmptySnapshotToCache(authError)) {
+      writeCachedServerAuthSnapshot(fingerprint, snap);
+    }
     return snap;
   }
 
@@ -159,7 +182,9 @@ export async function resolveServerAuthWithSupabase(
   const authUser = authData?.user ?? null;
   if (!authUser) {
     const snap = emptyAuthSnapshot();
-    writeCachedServerAuthSnapshot(fingerprint, snap);
+    if (shouldWriteEmptySnapshotToCache(authError)) {
+      writeCachedServerAuthSnapshot(fingerprint, snap);
+    }
     return snap;
   }
 

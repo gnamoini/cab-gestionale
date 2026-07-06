@@ -21,6 +21,18 @@ export function shouldClearSessionOnAuthError(err: AuthError | Error): boolean {
   return isInvalidRefreshAuthMessage(err.message);
 }
 
+/** JWT scaduto / sessione rinnovabile — tentare refreshSession prima di invalidare. */
+export function isRecoverableAuthError(err: AuthError | Error): boolean {
+  if (shouldClearSessionOnAuthError(err)) return false;
+  if (isTransientNetworkAuthError(err)) return false;
+  const m = err.message.toLowerCase();
+  return (
+    m.includes("jwt expired") ||
+    m.includes("token expired") ||
+    m.includes("auth session missing")
+  );
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }

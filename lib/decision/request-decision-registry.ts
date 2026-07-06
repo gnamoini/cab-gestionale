@@ -238,18 +238,6 @@ export function getAuthPrecheckStrategy(ctx: RequestContext): AuthPrecheckDecisi
     return { strategy: "not_applicable", requiresAuth: false };
   }
 
-  const exp = ctx.flags?.jwtExpSeconds;
-  if (ctx.flags?.hasAuthCookie && exp != null) {
-    const nowSec = Math.floor(Date.now() / 1000);
-    if (exp < nowSec) {
-      return { strategy: "reject_expired", requiresAuth: true };
-    }
-  }
-
-  if (ctx.flags?.hasAuthCookie) {
-    return { strategy: "defer_to_auth", requiresAuth: true };
-  }
-
   return { strategy: "defer_to_auth", requiresAuth: true };
 }
 

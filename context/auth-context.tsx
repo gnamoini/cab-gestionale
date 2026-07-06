@@ -12,12 +12,11 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { AuthError, Session, User } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 import { clearGestionaleToasts } from "@/context/toast-context";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
 import { resolveSignInEmail } from "@/src/lib/auth/resolve-sign-in-email";
 import { formatLoginIdentifierInput, isValidLoginIdentifier } from "@/src/lib/auth/username";
-import { isTransientNetworkAuthError, shouldClearSessionOnAuthError } from "@/src/lib/auth/auth-network-retry";
 import { mapDegradedPublicAuthUser, mapSupabaseUserToPublicAuthUser } from "@/src/lib/auth/map-auth-user";
 import type { ServerAuthSnapshot } from "@/src/lib/auth/server-auth-types";
 import { beginUndoSession, resetUndoSession } from "@/lib/gestionale-log/undo-session";
@@ -42,6 +41,12 @@ import { publishStickyRbacSnapshot } from "@/src/lib/rbac/sticky-rbac-snapshot";
 import { isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
 import { QK } from "@/src/lib/react-query/query-keys";
 import { clearInvalidAuthSession } from "@/src/lib/auth/clear-invalid-auth-session";
+import {
+  isReconcileInFlight,
+  reconcileSession,
+  type ReconcileReason,
+  type ReconcileResult,
+} from "@/src/lib/auth/auth-session-coordinator.client";
 import { clearRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 import { clearRicambioStockSnapshotRegistry } from "@/lib/magazzino/ricambio-stock-snapshot-registry";
 import { clearScortaSyncQueues } from "@/lib/magazzino/scorta-adjust-sync";
@@ -60,15 +65,17 @@ type AuthContextValue = {
   authorName: string;
   login: (email: string, password: string, remember: boolean) => Promise<{ ok: true } | { ok: false; message: string }>;
   logout: () => Promise<void>;
-  refresh: () => Promise<void>;
+  refresh: (opts?: { force?: boolean }) => Promise<ReconcileResult["verdict"] | null>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const FALLBACK_AUTHOR = "Utente CAB";
 const AUTH_INIT_FAILSAFE_MS = 7_000;
+/** ponytail: anti refresh-storm — visibility/onAuthChange/gate coalesce */
+export const AUTH_REFRESH_DEBOUNCE_MS = 500;
 
-type AuthInvalidSessionSource = "init" | "refresh" | "token_refreshed" | "login";
+type AuthInvalidSessionSource = ReconcileReason | "login" | "signed_out";
 
 function isServerSnapshotFresh(snapshot: ServerAuthSnapshot | null | undefined): boolean {
   if (!snapshot?.user) return false;
@@ -106,18 +113,6 @@ function deriveInitialAuthState(snapshot: ServerAuthSnapshot | null | undefined)
   return { status: "loading", user: null, configurationError: null };
 }
 
-async function getSessionWithSoftRetry(sb: ReturnType<typeof getBrowserSupabase>): Promise<{
-  data: { session: Session | null };
-  error: AuthError | null;
-}> {
-  const first = await sb.auth.getSession();
-  if (!first.error) return first;
-  if (!isTransientNetworkAuthError(first.error)) return first;
-  console.warn("[auth] getSession errore transitorio, retry una volta:", first.error.message);
-  await new Promise((r) => setTimeout(r, 300));
-  return sb.auth.getSession();
-}
-
 async function loadPublicUserFromSessionUser(sessionUser: User): Promise<PublicAuthUser> {
   const sb = getBrowserSupabase();
   const { data: row, error } = await sb
@@ -145,7 +140,6 @@ export function AuthProvider({
   const queryClient = useQueryClient();
   const userIdRef = useRef<string | null>(null);
   const lastStableUserRef = useRef<PublicAuthUser | null>(null);
-  const clearingSessionRef = useRef(false);
   const skipInitGetSessionRef = useRef(isServerSnapshotFresh(initialSnapshot));
   const initialSnapshotUserIdRef = useRef(initialSnapshot?.user?.id ?? null);
   const authRestoreStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
@@ -153,6 +147,11 @@ export function AuthProvider({
   const authInitFailsafeFiredRef = useRef(false);
   const statusRef = useRef<AuthStatus>(initial.status);
   const prevStatusRef = useRef<AuthStatus>(initial.status);
+  const reconcileSeqRef = useRef(0);
+  const refreshDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshTrailingRef = useRef(false);
+  const lastRefreshAtRef = useRef(0);
+  const hadEstablishedSessionRef = useRef(Boolean(initialSnapshot?.user?.id));
 
   useBootInvestigationMount("AuthProvider", {
     initialStatus: initial.status,
@@ -197,7 +196,10 @@ export function AuthProvider({
   useEffect(() => {
     statusRef.current = status;
     userIdRef.current = user?.id ?? null;
-    if (user && (status === "authenticated" || status === "degraded")) lastStableUserRef.current = user;
+    if (user && (status === "authenticated" || status === "degraded")) {
+      lastStableUserRef.current = user;
+      hadEstablishedSessionRef.current = true;
+    }
     if (authRestoreLoggedRef.current) return;
     if (status === "loading") return;
     authRestoreLoggedRef.current = true;
@@ -216,24 +218,13 @@ export function AuthProvider({
     clearGestionaleToasts();
   }, [queryClient]);
 
-  const transitionToDegraded = useCallback(
-    (fallbackUser: PublicAuthUser) => {
-      setUser(fallbackUser);
-      setStatus("degraded");
-    },
-    [],
-  );
-
   const applyAuthUser = useCallback(
-    async (authUser: User | null) => {
-      if (!authUser) {
-        await transitionToAnonymous();
-        return;
-      }
+    async (authUser: User) => {
       try {
         const u = await loadPublicUserFromSessionUser(authUser);
         setUser(u);
         lastStableUserRef.current = u;
+        hadEstablishedSessionRef.current = true;
         setStatus("authenticated");
       } catch (e) {
         console.warn("[auth] applicazione sessione fallita (stato degraded):", e);
@@ -242,82 +233,104 @@ export function AuthProvider({
         setStatus("degraded");
       }
     },
-    [queryClient, transitionToAnonymous],
+    [],
   );
 
-  const applySession = useCallback(
-    async (session: Session | null) => {
-      await applyAuthUser(session?.user ?? null);
-    },
-    [applyAuthUser],
-  );
-
-  const handleInvalidSession = useCallback(
+  const applyReconcileVerdict = useCallback(
     async (
       sb: ReturnType<typeof getBrowserSupabase>,
-      reason: string,
+      result: ReconcileResult,
       source: AuthInvalidSessionSource,
     ) => {
-      if (clearingSessionRef.current) {
-        await applySession(null);
-        return;
-      }
-      clearingSessionRef.current = true;
-      try {
-        trackRuntimeEvent(RuntimeEvents.authSessionInvalid, {
-          reason: reason.slice(0, 200),
+      if (isBootInvestigationEnabled()) {
+        logBoot("AUTH", "reconcile_verdict", {
+          verdict: result.verdict,
+          debugId: result.debugId,
           source,
         });
-        await clearInvalidAuthSession(sb);
-        await applySession(null);
-      } finally {
-        clearingSessionRef.current = false;
+      }
+
+      switch (result.verdict) {
+        case "valid":
+          await applyAuthUser(result.user);
+          return;
+        case "pending":
+          return;
+        case "invalid":
+          trackRuntimeEvent(RuntimeEvents.authSessionInvalid, {
+            reason: result.reason.slice(0, 200),
+            source,
+          });
+          await clearInvalidAuthSession(sb);
+          await transitionToAnonymous();
+          break;
       }
     },
-    [applySession],
+    [applyAuthUser, transitionToAnonymous],
   );
 
-  const refresh = useCallback(async () => {
-    if (!isSupabasePublicEnvConfigured()) {
-      setConfigurationError(MISSING_SUPABASE_ENV_MESSAGE);
-      await transitionToAnonymous();
-      return;
-    }
-    setConfigurationError(null);
-    try {
-      const sb = getBrowserSupabase();
-      const { data, error } = await getSessionWithSoftRetry(sb);
-      const session = data?.session ?? null;
+  const runReconcile = useCallback(
+    async (reason: ReconcileReason, force?: boolean): Promise<ReconcileResult["verdict"] | null> => {
+      if (!isSupabasePublicEnvConfigured()) {
+        setConfigurationError(MISSING_SUPABASE_ENV_MESSAGE);
+        await transitionToAnonymous();
+        return "invalid";
+      }
+      setConfigurationError(null);
 
-      if (error && shouldClearSessionOnAuthError(error)) {
-        await handleInvalidSession(sb, error.message, "refresh");
-        return;
-      }
-      if (error && isTransientNetworkAuthError(error)) {
-        console.warn("[auth] refresh: errore rete dopo retry, stato degraded:", error.message);
-        if (lastStableUserRef.current) {
-          setUser(lastStableUserRef.current);
-          setStatus("degraded");
+      const mySeq = ++reconcileSeqRef.current;
+      const sb = getBrowserSupabase();
+      const result = await reconcileSession(sb, { reason, force });
+
+      if (mySeq !== reconcileSeqRef.current) {
+        if (isBootInvestigationEnabled()) {
+          logBoot("AUTH", "reconcile_stale", { mySeq, current: reconcileSeqRef.current, debugId: result.debugId });
         }
-        return;
+        return null;
       }
-      if (error) {
-        console.warn("[auth] refresh: getSession:", error.message);
-        if (lastStableUserRef.current) {
-          setUser(lastStableUserRef.current);
-          setStatus("degraded");
+
+      await applyReconcileVerdict(sb, result, reason);
+      return result.verdict;
+    },
+    [applyReconcileVerdict, transitionToAnonymous],
+  );
+
+  const refresh = useCallback(
+    async (opts?: { force?: boolean }): Promise<ReconcileResult["verdict"] | null> => {
+      const force = opts?.force ?? false;
+
+      if (force) {
+        if (refreshDebounceTimerRef.current != null) {
+          clearTimeout(refreshDebounceTimerRef.current);
+          refreshDebounceTimerRef.current = null;
         }
-        return;
+        refreshTrailingRef.current = false;
+        lastRefreshAtRef.current = Date.now();
+        return runReconcile("manual", true);
       }
-      await applySession(session);
-    } catch (e) {
-      console.warn("[auth] refresh eccezione:", e);
-      if (lastStableUserRef.current) {
-        setUser(lastStableUserRef.current);
-        setStatus("degraded");
+
+      const now = Date.now();
+      const sinceLast = now - lastRefreshAtRef.current;
+
+      if (sinceLast < AUTH_REFRESH_DEBOUNCE_MS) {
+        refreshTrailingRef.current = true;
+        if (refreshDebounceTimerRef.current == null) {
+          refreshDebounceTimerRef.current = setTimeout(() => {
+            refreshDebounceTimerRef.current = null;
+            if (!refreshTrailingRef.current) return;
+            refreshTrailingRef.current = false;
+            lastRefreshAtRef.current = Date.now();
+            void runReconcile("manual");
+          }, AUTH_REFRESH_DEBOUNCE_MS - sinceLast);
+        }
+        return null;
       }
-    }
-  }, [applySession, handleInvalidSession, transitionToAnonymous]);
+
+      lastRefreshAtRef.current = now;
+      return runReconcile("manual");
+    },
+    [runReconcile],
+  );
 
   useEffect(() => {
     if (status !== "loading") {
@@ -329,22 +342,12 @@ export function AuthProvider({
     const id = window.setTimeout(() => {
       if (authInitFailsafeFiredRef.current) return;
       authInitFailsafeFiredRef.current = true;
-      console.warn("[auth] init timeout — degradazione o logout");
-      if (initialSnapshot?.user) {
-        setUser(initialSnapshot.user);
-        setStatus("degraded");
-        return;
-      }
-      if (lastStableUserRef.current) {
-        setUser(lastStableUserRef.current);
-        setStatus("degraded");
-        return;
-      }
-      void transitionToAnonymous().then(() => refresh());
+      console.warn("[auth] init timeout — reconcile forzata");
+      void runReconcile("failsafe", true);
     }, AUTH_INIT_FAILSAFE_MS);
 
     return () => window.clearTimeout(id);
-  }, [status, initialSnapshot?.user, refresh, transitionToAnonymous]);
+  }, [status, runReconcile]);
 
   useEffect(() => {
     if (!isSupabasePublicEnvConfigured()) return;
@@ -382,34 +385,35 @@ export function AuthProvider({
           if (isBootInvestigationEnabled()) {
             logBoot("AUTH", "onAuthStateChange", { event, hasSession: Boolean(session?.user?.id) });
           }
-          if (event === "TOKEN_REFRESHED" && !session) {
-            void (async () => {
-              const { data, error } = await getSessionWithSoftRetry(sb);
-              const recovered = data?.session ?? null;
-              if (recovered?.user) {
-                await applySession(recovered);
-                return;
-              }
-              if (error && shouldClearSessionOnAuthError(error)) {
-                await handleInvalidSession(sb, `TOKEN_REFRESHED: ${error.message}`, "token_refreshed");
-                return;
-              }
-              if (!recovered && (lastStableUserRef.current || userIdRef.current)) {
-                await handleInvalidSession(sb, "TOKEN_REFRESHED senza sessione", "token_refreshed");
-              }
-            })();
+
+          if (event === "SIGNED_OUT") {
+            resetUndoSession();
+            notifyUndoSessionChanged();
+            void transitionToAnonymous();
             return;
           }
-          if (event === "TOKEN_REFRESHED" && session?.user?.id && session.user.id === userIdRef.current) {
+
+          if (event === "TOKEN_REFRESHED") {
+            if (session?.user?.id && session.user.id === userIdRef.current) return;
+            if (!session) {
+              void refresh();
+            }
             return;
           }
-          if (
-            event === "INITIAL_SESSION" &&
-            session?.user?.id &&
-            session.user.id === initialSnapshotUserIdRef.current
-          ) {
+
+          if (event === "INITIAL_SESSION") {
+            if (session?.user?.id && session.user.id === initialSnapshotUserIdRef.current) {
+              return;
+            }
+            if (!session?.user) {
+              const trustServer =
+                isServerSnapshotFresh(initialSnapshot) || isReconcileInFlight();
+              if (trustServer) return;
+              void refresh({ force: true });
+            }
             return;
           }
+
           if (event === "SIGNED_IN" && session?.user) {
             const onResetPassword =
               typeof window !== "undefined" && window.location.pathname.startsWith("/login/reset-password");
@@ -418,48 +422,29 @@ export function AuthProvider({
               beginUndoSession();
               notifyUndoSessionChanged();
             }
+            void applyAuthUser(session.user);
+            return;
           }
-          if (event === "SIGNED_OUT") {
-            resetUndoSession();
-            notifyUndoSessionChanged();
+
+          if (event === "USER_UPDATED" && session?.user) {
+            void applyAuthUser(session.user);
           }
-          void applySession(session);
         });
         subscription = sub.subscription;
 
         if (!skipInitGetSessionRef.current) {
-          const { data: init, error: initErr } = await getSessionWithSoftRetry(sb);
-          const session = init?.session ?? null;
-
           if (cancelled) return;
-
-          if (initErr && shouldClearSessionOnAuthError(initErr)) {
-            await handleInvalidSession(sb, initErr.message, "init");
-          } else if (initErr && session?.user && isTransientNetworkAuthError(initErr)) {
-            await applySession(session);
-            setStatus("degraded");
-          } else if (initErr) {
-            console.warn("[auth] init getSession:", initErr.message);
-            if (session?.user) {
-              await applySession(session);
-            } else if (initialSnapshot?.user) {
-              transitionToDegraded(initialSnapshot.user);
-              void refresh();
-            } else if (lastStableUserRef.current) {
-              transitionToDegraded(lastStableUserRef.current);
-              void refresh();
-            } else {
-              await transitionToAnonymous();
-            }
-          } else {
-            await applySession(session);
-          }
+          await runReconcile("init", true);
         }
       } catch (e) {
         if (!cancelled) {
           const msg = e instanceof Error ? e.message : "";
           setConfigurationError(msg === MISSING_SUPABASE_ENV_MESSAGE ? msg : null);
-          await transitionToAnonymous();
+          if (initialSnapshot?.user) {
+            void refresh({ force: true });
+          } else {
+            await transitionToAnonymous();
+          }
         }
       }
     })();
@@ -467,8 +452,18 @@ export function AuthProvider({
     return () => {
       cancelled = true;
       subscription?.unsubscribe();
+      if (refreshDebounceTimerRef.current != null) {
+        clearTimeout(refreshDebounceTimerRef.current);
+        refreshDebounceTimerRef.current = null;
+      }
     };
-  }, [applySession, handleInvalidSession, initialSnapshot?.user, refresh, transitionToAnonymous, transitionToDegraded]);
+  }, [
+    applyAuthUser,
+    initialSnapshot,
+    refresh,
+    runReconcile,
+    transitionToAnonymous,
+  ]);
 
   const login = useCallback(
     async (email: string, password: string, _remember: boolean) => {
@@ -503,29 +498,31 @@ export function AuthProvider({
           trackRuntimeEvent(RuntimeEvents.authLoginFailed, { reason: (error.message || "sign_in").slice(0, 200) });
           return { ok: false as const, message: error.message || "Accesso negato." };
         }
-        const { data: sessWrap, error: sessErr } = await getSessionWithSoftRetry(sb);
-        const session = sessWrap?.session ?? null;
-        if (sessErr && shouldClearSessionOnAuthError(sessErr)) {
-          authLogsService.logLoginFailedFireAndForget(signInEmail);
-          await handleInvalidSession(sb, sessErr.message, "login");
-          return { ok: false as const, message: "Accesso non riuscito. Riprova." };
+
+        const mySeq = ++reconcileSeqRef.current;
+        const result = await reconcileSession(sb, { reason: "manual", force: true });
+        if (mySeq !== reconcileSeqRef.current) {
+          return { ok: false as const, message: "Accesso in corso, riprova." };
         }
-        if (!session?.user) {
+        if (result.verdict !== "valid") {
           authLogsService.logLoginFailedFireAndForget(signInEmail);
-          console.warn("[auth] login: nessuna sessione dopo signInWithPassword", sessErr?.message);
+          if (result.verdict === "invalid") {
+            await applyReconcileVerdict(sb, result, "login");
+          }
           return {
             ok: false as const,
-            message: sessErr?.message || "Sessione non disponibile. Riprova.",
+            message: result.verdict === "pending" ? "Sessione non disponibile. Riprova." : "Accesso non riuscito. Riprova.",
           };
         }
-        await applyAuthUser(session.user);
+
+        await applyAuthUser(result.user);
         beginUndoSession();
         notifyUndoSessionChanged();
         await invalidateRuntimeTruth({
           reason: "sessionEstablished",
           queryClient,
         });
-        trackRuntimeEvent(RuntimeEvents.authLoginSuccess, { userId: session.user.id });
+        trackRuntimeEvent(RuntimeEvents.authLoginSuccess, { userId: result.user.id });
         return { ok: true as const };
       } catch (e) {
         const msg =
@@ -539,7 +536,7 @@ export function AuthProvider({
         return { ok: false as const, message: msg };
       }
     },
-    [applyAuthUser, handleInvalidSession, queryClient],
+    [applyAuthUser, applyReconcileVerdict, queryClient],
   );
 
   const logout = useCallback(async () => {
@@ -552,7 +549,7 @@ export function AuthProvider({
         if (uid) {
           authLogsService.logLogoutFireAndForget(uid, email);
         }
-        await sb.auth.signOut();
+        await sb.auth.signOut({ scope: "local" });
       } catch {
         /* ignore */
       }

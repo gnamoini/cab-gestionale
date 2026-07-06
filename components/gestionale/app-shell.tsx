@@ -180,19 +180,26 @@ function MobileNavDrawer({
     }
   }, [open]);
 
+  useGestionaleMainScrollLock(mounted, "MobileNavDrawer");
+  const swipeDismiss = useSwipeToDismiss(onClose, mounted && open && !closing);
+
   useEffect(() => {
     if (!mounted || open) return;
+    if (swipeDismiss.swipeDismissedRef.current) {
+      swipeDismiss.swipeDismissedRef.current = false;
+      setMounted(false);
+      setClosing(false);
+      return;
+    }
     setClosing(true);
     const id = window.setTimeout(() => {
       setMounted(false);
       setClosing(false);
     }, navDrawerAnimMs());
     return () => window.clearTimeout(id);
-  }, [mounted, open]);
+  }, [mounted, open, swipeDismiss.swipeDismissedRef]);
 
-  useGestionaleMainScrollLock(mounted, "MobileNavDrawer");
   useOverlayBackHandler(mounted && open && !closing, onClose, "MobileNavDrawer");
-  const swipeDismiss = useSwipeToDismiss(onClose, mounted && open && !closing);
 
   useEffect(() => {
     if (isCompactShell) return;
@@ -222,8 +229,9 @@ function MobileNavDrawer({
     <div className={`fixed inset-0 ${dsZModalHigh} overscroll-none`} role="presentation">
       <button
         type="button"
-        className="cab-nav-drawer-backdrop absolute inset-0 touch-none bg-black/50 backdrop-blur-[1px] touch-manipulation"
+        className={`cab-nav-drawer-backdrop absolute inset-0 touch-none bg-black/50 backdrop-blur-[1px] touch-manipulation${swipeDismiss.backdropProps.className ? ` ${swipeDismiss.backdropProps.className}` : ""}`}
         data-state={panelState}
+        style={swipeDismiss.backdropProps.style}
         aria-label="Chiudi menu"
         onClick={onClose}
       />

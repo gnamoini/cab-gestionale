@@ -3,7 +3,7 @@
 import type { MouseEvent } from "react";
 import { IconActionButton } from "@/components/design-system";
 import { useProfileSheet } from "@/components/profile/profile-sheet-context";
-import { dsPageHeaderBackBtn, dsTableActionGlyph } from "@/lib/ui/design-system";
+import { dsPageHeaderBackBtn, dsPageHeaderNavOpenBtn, dsTableActionGlyph } from "@/lib/ui/design-system";
 
 function IconMenu({ className = dsTableActionGlyph }: { className?: string }) {
   return (
@@ -32,14 +32,14 @@ export function MobileNavOpenButton({ onOpen }: { onOpen: () => void }) {
   return (
     <IconActionButton
       label="Apri menu"
-      className={`${dsPageHeaderBackBtn} cab-mobile-nav-open shrink-0`}
+      className={`${dsPageHeaderNavOpenBtn} cab-mobile-nav-open shrink-0`}
       data-testid="smoke-nav-drawer-open"
       onClick={() => {
         closeProfileSheet();
         onOpen();
       }}
     >
-      <IconMenu />
+      <IconMenu className="h-5 w-5 shrink-0 opacity-90" />
     </IconActionButton>
   );
 }

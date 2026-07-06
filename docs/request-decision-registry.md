@@ -31,7 +31,7 @@ Pure functional SSOT for cross-layer decisions (edge, server, client). **No I/O,
 | `getRouteClassification(ctx)` | document_delivery, media_image, upload_policy, non_edge, ... |
 | `getAssetDeliveryStrategy(ctx)` | thumbnail, full_file, download, transcoded_image, none |
 | `shouldBypassCache(ctx)` | true for upload/write/download |
-| `getAuthPrecheckStrategy(ctx)` | reject_expired, defer_to_auth, not_applicable |
+| `getAuthPrecheckStrategy(ctx)` | defer_to_auth, not_applicable |
 
 ## RequestContext
 

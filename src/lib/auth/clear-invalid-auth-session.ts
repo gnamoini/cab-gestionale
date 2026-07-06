@@ -1,9 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** Rimuove cookie e storage locale Supabase senza propagare errori (sessione già invalida). */
+/** Rimuove cookie e storage locale Supabase (solo sessione corrente — non altri dispositivi). */
 export async function clearInvalidAuthSession(sb: SupabaseClient): Promise<void> {
   try {
-    await sb.auth.signOut();
+    await sb.auth.signOut({ scope: "local" });
   } catch {
     /* ignore */
   }

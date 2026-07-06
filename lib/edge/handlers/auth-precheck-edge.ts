@@ -2,8 +2,6 @@ import { buildRequestContextFromUrl, jwtExpFromCookies } from "@/lib/decision/re
 import { getAuthPrecheckStrategy } from "@/lib/decision/request-decision-registry";
 import type { EdgeHandlerResult } from "@/lib/edge/edge-types";
 
-const ESTIMATED_GET_USER_MS = 80;
-
 export function runAuthPrecheckEdgeFromCookies(
   cookies: ReadonlyArray<{ name: string; value: string }>,
   pathname: string,
@@ -17,26 +15,15 @@ export function runAuthPrecheckEdgeFromCookies(
   });
 
   const decision = getAuthPrecheckStrategy(ctx);
-
-  if (decision.strategy === "reject_expired") {
-    return {
-      outcome: "handled",
-      status: 401,
-      contentType: "application/json",
-      body: JSON.stringify({ error: "session_expired" }),
-      latencySavedEstimate: ESTIMATED_GET_USER_MS,
-    };
+  if (decision.strategy === "not_applicable") {
+    return { outcome: "fallback", reason: "not_applicable" };
   }
 
   if (!auth.hasAuthCookie) {
     return { outcome: "fallback", reason: "no_auth_cookie" };
   }
 
-  if (auth.jwtExpSeconds == null) {
-    return { outcome: "fallback", reason: "jwt_decode_failed" };
-  }
-
-  return { outcome: "fallback", reason: "token_not_expired" };
+  return { outcome: "fallback", reason: "defer_to_auth" };
 }
 
 export function runAuthPrecheckEdge(request: Request): EdgeHandlerResult {

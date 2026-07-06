@@ -30,6 +30,7 @@ export const REGRESSION_CORE: readonly string[] = [
   "lib/regression/magazzino-nuovo-ricambio-e2e-audit.test.ts",
   "lib/regression/performance-policy.test.ts",
   "lib/regression/long-session-stability-policy.test.ts",
+  "lib/regression/auth-logout-audit-policy.test.ts",
   "lib/schede/lavorazioni-schede-storage.test.ts",
   "lib/schede/schede-lazy-fetch.test.ts",
   "lib/regression/input-security-policy.test.ts",

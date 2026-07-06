@@ -124,5 +124,7 @@ assert.doesNotMatch(realtimeBridge, /invalidateAllGestionaleOperationalQueries/)
 
 const authCtx = read("context/auth-context.tsx");
 assert.match(authCtx, /registerGestionaleVisibilityHandler/);
+assert.match(authCtx, /reconcileSeqRef/);
+assert.match(authCtx, /AUTH_REFRESH_DEBOUNCE_MS/);
 
 console.log("long-session-stability-policy.test.ts OK");

@@ -29,7 +29,7 @@ function main(): void {
   const authGate = read("components/gestionale/gestionale-auth-gate.tsx");
   assert.match(
     authGate,
-    /showAuthBanner = !configBlocked && \(status === "degraded" \|\| status === "anonymous"\)/,
+    /showAuthBanner =[\s\S]*status === "loading" \|\| status === "anonymous"/,
   );
 
   const appShell = read("components/gestionale/app-shell.tsx");

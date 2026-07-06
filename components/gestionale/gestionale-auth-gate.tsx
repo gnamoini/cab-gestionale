@@ -14,9 +14,11 @@ import { useBootInvestigationMount } from "@/lib/observability/use-boot-investig
 import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
 
 const AUTH_NOTICE_DELAY_MS = 300;
-const DEGRADED_REFRESH_MAX_ATTEMPTS = 3;
-const DEGRADED_REFRESH_BASE_DELAY_MS = 1_000;
-const DEGRADED_REFRESH_MAX_DELAY_MS = 30_000;
+const LOGIN_PATH_PREFIX = "/login";
+
+function isLoginPath(pathname: string): boolean {
+  return pathname === LOGIN_PATH_PREFIX || pathname.startsWith(`${LOGIN_PATH_PREFIX}/`);
+}
 
 /**
  * Dopo il proxy (cookie sessione Supabase), sincronizza con `AuthProvider`
@@ -29,60 +31,61 @@ export function GestionaleAuthGate({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   useBootInvestigationMount("GestionaleAuthGate", { status });
   const configBlocked = !isSupabasePublicEnvConfigured() || !!configurationError;
-  const degradedRefreshAttemptsRef = useRef(0);
-  const degradedRefreshTimerRef = useRef<number | null>(null);
+  const hadEstablishedSessionRef = useRef(false);
+  const loginRedirectInFlightRef = useRef(false);
+  const anonymousReconcileDoneRef = useRef(false);
+
+  useEffect(() => {
+    if (status === "authenticated" || status === "degraded") {
+      hadEstablishedSessionRef.current = true;
+    }
+  }, [status]);
 
   useEffect(() => {
     if (configBlocked) return;
-    if (status !== "anonymous") return;
-    clearGestionaleToasts();
-    const qs = window.location.search;
-    const from = qs ? `${pathname}${qs}` : pathname;
-    const params = new URLSearchParams();
-    params.set("from", from || "/dashboard");
-    params.set("reason", "session_expired");
-    const to = `/login?${params.toString()}`;
-    trackRedirect(pathname, to, "session_expired", "auth_gate");
-    deferredRouterReplace(router, to);
-  }, [status, configBlocked, router, pathname]);
-
-  useEffect(() => {
-    if (configBlocked) return;
-    if (status !== "degraded") {
-      degradedRefreshAttemptsRef.current = 0;
-      if (degradedRefreshTimerRef.current != null) {
-        window.clearTimeout(degradedRefreshTimerRef.current);
-        degradedRefreshTimerRef.current = null;
-      }
+    if (status !== "anonymous") {
+      anonymousReconcileDoneRef.current = false;
       return;
     }
-    if (degradedRefreshAttemptsRef.current >= DEGRADED_REFRESH_MAX_ATTEMPTS) return;
+    if (anonymousReconcileDoneRef.current) return;
 
-    const attempt = degradedRefreshAttemptsRef.current;
-    const delayMs = Math.min(
-      DEGRADED_REFRESH_MAX_DELAY_MS,
-      DEGRADED_REFRESH_BASE_DELAY_MS * 2 ** attempt,
-    );
-    degradedRefreshTimerRef.current = window.setTimeout(() => {
-      degradedRefreshAttemptsRef.current += 1;
-      if (isBootInvestigationEnabled()) {
-        logBoot("AUTH", "degraded_refresh", { attempt: degradedRefreshAttemptsRef.current, delayMs });
+    let cancelled = false;
+    anonymousReconcileDoneRef.current = true;
+
+    void (async () => {
+      const verdict = await refresh({ force: true });
+      if (cancelled) return;
+      if (verdict === "valid" || verdict === "pending" || verdict === null) return;
+      if (isLoginPath(pathname)) return;
+      if (loginRedirectInFlightRef.current) return;
+
+      loginRedirectInFlightRef.current = true;
+      clearGestionaleToasts();
+      const qs = window.location.search;
+      const from = qs ? `${pathname}${qs}` : pathname;
+      const params = new URLSearchParams();
+      params.set("from", from || "/dashboard");
+      if (hadEstablishedSessionRef.current) {
+        params.set("reason", "session_expired");
       }
-      void refresh();
-    }, delayMs);
+      const to = `/login?${params.toString()}`;
+      trackRedirect(pathname, to, hadEstablishedSessionRef.current ? "session_expired" : "anonymous", "auth_gate");
+      if (isBootInvestigationEnabled()) {
+        logBoot("AUTH", "auth_gate_redirect", { to, hadSession: hadEstablishedSessionRef.current });
+      }
+      deferredRouterReplace(router, to);
+    })();
 
     return () => {
-      if (degradedRefreshTimerRef.current != null) {
-        window.clearTimeout(degradedRefreshTimerRef.current);
-        degradedRefreshTimerRef.current = null;
-      }
+      cancelled = true;
     };
-  }, [status, configBlocked, refresh]);
+  }, [status, configBlocked, router, pathname, refresh]);
 
-  const showAuthBanner = !configBlocked && (status === "degraded" || status === "anonymous");
+  const showAuthBanner =
+    !configBlocked && (status === "loading" || status === "anonymous");
   const bannerMessage =
-    status === "degraded"
-      ? "Verifica sessione in corso…"
+    status === "loading"
+      ? GLOBAL_LOADING_MESSAGES.session
       : status === "anonymous"
         ? GLOBAL_LOADING_MESSAGES.redirectLogin
         : GLOBAL_LOADING_MESSAGES.session;

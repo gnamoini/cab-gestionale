@@ -97,6 +97,9 @@ export const dsPageToolbarIconBtn = `${dsPageToolbarBtn} h-10 w-10 min-h-0 p-0`;
 /** Freccia indietro header — affordance hover, non box bottone. */
 export const dsPageHeaderBackBtn = `inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] border border-transparent bg-transparent p-0 text-[color:var(--cab-text-muted)] transition-[color,background-color,transform] duration-150 ease-out hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] active:scale-[0.97] ${dsBtnCursor} ${dsFocus}`;
 
+/** Hamburger menu mobile — leggermente più grande del back (44×44). */
+export const dsPageHeaderNavOpenBtn = dsPageHeaderBackBtn.replace("h-10 w-10", "h-11 w-11");
+
 export const dsBtnSettings = dsPageToolbarBtn;
 
 /** A — Primario */

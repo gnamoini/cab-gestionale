@@ -326,6 +326,11 @@ html {
   animation: cab-nav-backdrop-in var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) both;
 }
 
+.cab-nav-drawer-backdrop.cab-nav-drawer-backdrop-dragging {
+  animation: none;
+  transition: opacity var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease);
+}
+
 .cab-nav-drawer-backdrop[data-state="closing"] {
   animation: cab-nav-backdrop-in var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) reverse both;
 }
