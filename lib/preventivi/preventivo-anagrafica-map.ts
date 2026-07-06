@@ -183,6 +183,7 @@ export function preventivoToSchedaIngressoSlice(p: PreventivoRecord): SchedaIngr
     tipoTelaio: p.tipoTelaio,
     marcaTelaio: p.marcaTelaio,
     modelloTelaio: p.modelloTelaio,
+    vin: "",
     targa: p.targa,
     km: p.km,
     descrizioneAnomalia: "",

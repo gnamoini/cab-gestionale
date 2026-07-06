@@ -56,7 +56,10 @@ export function planEmployeeBootstrap(
 
   for (const rec of addettiRecords) {
     const displayName = addettoDisplayName(rec);
-    const matched = byAddettoId.get(rec.id) ?? byNameNorm.get(normalizeEmployeeName(rec.nome));
+    const matched =
+      byAddettoId.get(rec.id) ??
+      byNameNorm.get(normalizeEmployeeName(rec.nome)) ??
+      byNameNorm.get(normalizeEmployeeName(displayName));
     if (!matched) {
       inserts.push({
         displayName,

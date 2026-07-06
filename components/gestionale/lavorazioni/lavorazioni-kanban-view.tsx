@@ -95,18 +95,8 @@ function cantiereLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeS
   return schedeStore?.[row.id]?.ingresso?.campi.cantiere?.trim() || "—";
 }
 
-function addettoLabel(row: LavorazioneListRow, schedeStore: LavorazioneSchedeStore, fallbackAddetto: string): string {
-  return (
-    schedeStore[row.id]?.ingresso?.campi.addettoAccettazione?.trim() ||
-    schedeStore[row.id]?.lavorazioni?.campi.righe
-      .flatMap((r) => r.addettiAssegnati)
-      .find((a) => a.addetto.trim())
-      ?.addetto.trim() ||
-    fallbackAddetto ||
-    "—"
-  );
-}
-
+import { resolveAddettoDisplayLabel } from "@/lib/lavorazioni/resolve-addetto-display";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 function identValue(raw: string): string {
   const t = raw.trim();
   return t && t !== "—" ? t : "";
@@ -151,7 +141,7 @@ function kanbanCardOpenKey(e: KeyboardEvent, onOpen: () => void) {
 type KanbanCardProps = {
   row: LavorazioneListRow;
   schedeStore: LavorazioneSchedeStore;
-  defaultAddetto: string;
+  addettiRecords: readonly AddettoRecord[];
   prioritaColors: Record<string, string | undefined>;
   addettoColors: Record<string, string | undefined>;
   flash: boolean;
@@ -171,18 +161,18 @@ function kanbanCardPropsEqual(prev: Readonly<KanbanCardProps>, next: Readonly<Ka
     prev.row.updated_at === next.row.updated_at &&
     prev.row.created_at === next.row.created_at &&
     prev.flash === next.flash &&
-    prev.defaultAddetto === next.defaultAddetto &&
     kanbanSchedeBundleRevision(prev.schedeStore, prev.row.id) ===
       kanbanSchedeBundleRevision(next.schedeStore, next.row.id) &&
     prev.prioritaColors === next.prioritaColors &&
-    prev.addettoColors === next.addettoColors
+    prev.addettoColors === next.addettoColors &&
+    prev.addettiRecords === next.addettiRecords
   );
 }
 
 const KanbanCard = memo(function KanbanCard({
   row,
   schedeStore,
-  defaultAddetto,
+  addettiRecords,
   prioritaColors,
   addettoColors,
   flash,
@@ -193,7 +183,7 @@ const KanbanCard = memo(function KanbanCard({
   const cantiere = cantiereLabel(row, schedeStore);
   const utilizzatore = utilizzatoreLabel(row, schedeStore);
   const identLines = mezzoIdentLines(row, schedeStore);
-  const addetto = addettoLabel(row, schedeStore, defaultAddetto);
+  const addetto = resolveAddettoDisplayLabel(row, { schedeStore, addettiRecords });
   const p = row.priorita as PrioritaLavorazione;
   const prioLav = p as PrioritaLav;
   const prioVisual = kanbanCardPriorityVisual(prioLav, prioritaColors as Partial<Record<PrioritaLav, string>>);
@@ -283,7 +273,7 @@ export function LavorazioniKanbanView({
   columns,
   statiOpts,
   schedeStore,
-  defaultAddetto,
+  addettiRecords,
   prioritaColors,
   addettoColors,
   flashRowId,
@@ -301,7 +291,7 @@ export function LavorazioniKanbanView({
   columns: readonly StatoLavorazioneConfig[];
   statiOpts: readonly StatoLavorazioneConfig[];
   schedeStore: LavorazioneSchedeStore;
-  defaultAddetto: string;
+  addettiRecords: readonly AddettoRecord[];
   prioritaColors: Record<string, string | undefined>;
   addettoColors: Record<string, string | undefined>;
   flashRowId: string | null;
@@ -390,9 +380,9 @@ export function LavorazioniKanbanView({
       macchina: (row: LavorazioneListRow) => macchinaLabel(row, schedeStore),
       cliente: (row: LavorazioneListRow) => clienteLabel(row, schedeStore),
       identSummary: (row: LavorazioneListRow) => identSummaryLabel(row, schedeStore),
-      addetto: (row: LavorazioneListRow) => addettoLabel(row, schedeStore, defaultAddetto),
+      addetto: (row: LavorazioneListRow) => resolveAddettoDisplayLabel(row, { schedeStore, addettiRecords }),
     }),
-    [schedeStore, defaultAddetto],
+    [schedeStore, addettiRecords],
   );
 
   const renderKanbanCard = useCallback(
@@ -404,14 +394,14 @@ export function LavorazioniKanbanView({
       <KanbanCard
         row={row}
         schedeStore={schedeStore}
-        defaultAddetto={defaultAddetto}
+        addettiRecords={addettiRecords}
         prioritaColors={prioritaColors}
         addettoColors={addettoColors}
         flash={flash}
         onOpen={() => onOpen(row)}
       />
     ),
-    [schedeStore, defaultAddetto, prioritaColors, addettoColors],
+    [schedeStore, addettiRecords, prioritaColors, addettoColors],
   );
 
   const renderDragOverlay = useCallback(
@@ -609,7 +599,6 @@ export function LavorazioniKanbanView({
           sections={mobileSections}
           statiOpts={statiOpts}
           schedeStore={schedeStore}
-          defaultAddetto={defaultAddetto}
           prioritaColors={prioritaColors}
           addettoColors={addettoColors}
           flashRowId={flashRowId}

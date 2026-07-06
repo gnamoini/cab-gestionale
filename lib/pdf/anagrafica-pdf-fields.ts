@@ -109,6 +109,7 @@ export function buildTelaioAnagraficaPdfFields(source: {
   tipoTelaio?: string;
   marcaTelaio?: string;
   modelloTelaio?: string;
+  vin?: string;
   targa?: string;
   km?: string;
   livelloCarburante?: string;
@@ -118,6 +119,7 @@ export function buildTelaioAnagraficaPdfFields(source: {
     field("Tipo", source.tipoTelaio),
     field("Marca", source.marcaTelaio),
     field("Modello", source.modelloTelaio),
+    field("VIN", source.vin),
     field("Targa", source.targa),
     field("KM", source.km),
     field("Carburante", formatLivelloCarburanteDisplay(source.livelloCarburante) || undefined),

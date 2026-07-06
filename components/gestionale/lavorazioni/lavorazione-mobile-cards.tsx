@@ -58,6 +58,7 @@ import {
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 import { IconActionButton } from "@/components/design-system";
 import { dsTableActionGlyph } from "@/lib/ui/design-system";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow, StatoLavorazione } from "@/src/types/supabase-tables";
@@ -92,7 +93,6 @@ function IconSchede({ className = dsTableActionGlyph }: { className?: string }) 
 export type LavorazioneAttivaMobileCardProps = {
   row: LavorazioneListRow;
   bundle?: LavorazioneSchedeBundle;
-  defaultAddetto: string;
   loading: boolean;
   canEditWorkOrders: boolean;
   mutPendingBlocking: boolean;
@@ -103,6 +103,7 @@ export type LavorazioneAttivaMobileCardProps = {
   statoPillStyle: CSSProperties;
   prioritaPillStyle: CSSProperties;
   addetti: string[];
+  addettiRecords: GlobalOptionsSlice["lavorazioni"]["addettiRecords"];
   addettoColors: GlobalOptionsSlice["lavorazioni"]["addettoColors"];
   ultimaModificaInfo: LavorazioneUltimaModificaInfo;
   concludiDisabled: boolean;
@@ -120,7 +121,6 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
   const {
     row,
     bundle,
-    defaultAddetto,
     loading,
     canEditWorkOrders,
     mutPendingBlocking,
@@ -131,6 +131,7 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
     statoPillStyle,
     prioritaPillStyle,
     addetti,
+    addettiRecords,
     addettoColors,
     ultimaModificaInfo,
     concludiDisabled,
@@ -147,7 +148,7 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const utilizzatore = lavorazioneUtilizzatoreLabel(row, schedeStore);
-  const addetto = lavorazioneAddettoLabel(row, schedeStore, defaultAddetto);
+  const addetto = lavorazioneAddettoLabel(row, schedeStore, undefined, addettiRecords);
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
   return (
@@ -259,6 +260,7 @@ export type LavorazioneArchivioMobileCardProps = {
   mutPendingBlocking: boolean;
   loading: boolean;
   prioritaColors: GlobalOptionsSlice["lavorazioni"]["prioritaColors"];
+  addettiRecords: GlobalOptionsSlice["lavorazioni"]["addettiRecords"];
   addettoColors: GlobalOptionsSlice["lavorazioni"]["addettoColors"];
   ultimaModificaInfo: LavorazioneUltimaModificaInfo;
   onRipristina: (row: LavorazioneListRow) => void;
@@ -274,6 +276,7 @@ function LavorazioneArchivioMobileCardInner({
   mutPendingBlocking,
   loading,
   prioritaColors,
+  addettiRecords,
   addettoColors,
   ultimaModificaInfo,
   onRipristina,
@@ -283,7 +286,7 @@ function LavorazioneArchivioMobileCardInner({
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const utilizzatore = lavorazioneUtilizzatoreLabel(row, schedeStore);
-  const addetto = lavorazioneAddettoLabel(row, schedeStore, "", addettoLogs);
+  const addetto = lavorazioneAddettoLabel(row, schedeStore, addettoLogs, addettiRecords);
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
   return (
@@ -354,6 +357,7 @@ export const LavorazioneArchivioMobileCard = memo(
     prev.mutPendingBlocking === next.mutPendingBlocking &&
     prev.loading === next.loading &&
     prev.prioritaColors === next.prioritaColors &&
+    prev.addettiRecords === next.addettiRecords &&
     prev.addettoColors === next.addettoColors &&
     prev.addettoLogs === next.addettoLogs &&
     prev.ultimaModificaInfo === next.ultimaModificaInfo &&

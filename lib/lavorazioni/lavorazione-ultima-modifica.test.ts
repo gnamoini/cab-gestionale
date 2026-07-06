@@ -47,6 +47,7 @@ function ingressoBundle(overrides: {
         tipoTelaio: "",
         marcaTelaio: "",
         modelloTelaio: "",
+        vin: "",
         targa: "",
         km: "",
         descrizioneAnomalia: "",

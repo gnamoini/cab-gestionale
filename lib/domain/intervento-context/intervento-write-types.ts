@@ -43,7 +43,7 @@ export type InterventoWriteDeps = {
     preferredMezzoId?: string | null;
   }) => Promise<UpsertMezzoFromSchedaResult>;
   createLavorazione?: (input: {
-    mezzo_id: string;
+    mezzo_id: string | null;
     stato: StatoLavorazione;
     priorita: PrioritaLavorazione;
     data_ingresso: string;

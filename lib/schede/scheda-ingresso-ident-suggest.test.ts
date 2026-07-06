@@ -60,6 +60,7 @@ const mezzoB: MezzoGestito = {
     tipoTelaio: "",
     marcaTelaio: "",
     modelloTelaio: "",
+    vin: "",
     targa: "",
     km: "",
     descrizioneAnomalia: "",

@@ -1,5 +1,5 @@
+import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
 import { upsertFromSchedaV2 } from "@/lib/domain/mezzo-attrezzatura/upsert-from-scheda-v2";
-import { resolveTargetTypeFromScheda } from "@/lib/domain/mezzo-attrezzatura/intervento-target";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { attrezzatureService } from "@/src/services/attrezzature.service";
 import type { AttrezzaturaInsert } from "@/src/services/attrezzature.service";
@@ -30,24 +30,27 @@ export type UpsertMezzoFromSchedaParams = {
 };
 
 export type UpsertMezzoFromSchedaResult = {
-  mezzoId: string;
+  mezzoId: string | null;
   created: boolean;
   targetType?: InterventoTargetType;
   attrezzaturaId?: string | null;
+  /** ponytail: nessun mezzo da creare/aggiornare (es. cliente assente e nessun match ident). */
+  skipped?: boolean;
 };
 
-function assertSchedaMezzoRequired(fields: SchedaIngressoFields): void {
-  if (!fields.cliente.trim()) {
-    throw new MezzoSchedaValidationError("Cliente obbligatorio per l'anagrafica mezzo.");
-  }
-  const target = resolveTargetTypeFromScheda({
-    targetType: fields.targetType,
-    marcaAttrezzatura: fields.marcaAttrezzatura,
-    attrezzaturaId: fields.attrezzaturaId,
+/** True se possiamo upsertare o aggiornare un mezzo da scheda (match esistente o cliente per insert DB). */
+export function canUpsertMezzoFromSchedaIngresso(
+  fields: SchedaIngressoFields,
+  mezziCatalog: readonly MezzoGestito[],
+  preferredMezzoId?: string | null,
+): boolean {
+  const resolved = resolveMezzoFromScheda({
+    scheda: fields,
+    existingMezzi: mezziCatalog,
+    preferredMezzoId,
   });
-  if (target === "attrezzatura" && !fields.marcaAttrezzatura.trim()) {
-    throw new MezzoSchedaValidationError("Marca attrezzatura obbligatoria per intervento su attrezzatura.");
-  }
+  if (resolved.mezzoId) return true;
+  return Boolean(fields.cliente.trim());
 }
 
 /**
@@ -57,7 +60,17 @@ export async function upsertMezzoFromSchedaIngresso(
   params: UpsertMezzoFromSchedaParams,
 ): Promise<UpsertMezzoFromSchedaResult> {
   const { fields, mezziCatalog, create, update, preferredMezzoId, attrezzaturaPort } = params;
-  assertSchedaMezzoRequired(fields);
+  if (!canUpsertMezzoFromSchedaIngresso(fields, mezziCatalog, preferredMezzoId)) {
+    const preferred = preferredMezzoId?.trim();
+    const hit = preferred ? mezziCatalog.find((m) => m.id === preferred) ?? null : null;
+    return {
+      mezzoId: hit?.id ?? null,
+      created: false,
+      skipped: true,
+      targetType: "telaio",
+      attrezzaturaId: null,
+    };
+  }
 
   const attPort =
     attrezzaturaPort ??

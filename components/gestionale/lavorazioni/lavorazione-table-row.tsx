@@ -60,6 +60,7 @@ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { StatoLavorazione } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 
 const lavTablePillFillClass = "w-full min-w-0";
@@ -117,7 +118,6 @@ export type LavorazioneAttivaTableRowProps = {
   loading: boolean;
   canEditWorkOrders: boolean;
   mutPendingBlocking: boolean;
-  defaultAddetto: string;
   statiOpts: GlobalOptionsSlice["lavorazioni"]["stati"];
   statiRapidiPillOpts: TablePillOption[];
   prioritaPillOpts: TablePillOption[];
@@ -125,6 +125,7 @@ export type LavorazioneAttivaTableRowProps = {
   statoPillStyle: CSSProperties;
   prioritaPillStyle: CSSProperties;
   addettoColors: GlobalOptionsSlice["lavorazioni"]["addettoColors"];
+  addettiRecords: GlobalOptionsSlice["lavorazioni"]["addettiRecords"];
   addetti: string[];
   onStatoRow: (row: LavorazioneListRow, v: string) => void;
   onPrioritaRow: (row: LavorazioneListRow, v: string) => void;
@@ -144,7 +145,6 @@ function LavorazioneAttivaTableRowInner({
   loading,
   canEditWorkOrders,
   mutPendingBlocking,
-  defaultAddetto,
   statiOpts,
   statiRapidiPillOpts,
   prioritaPillOpts,
@@ -152,6 +152,7 @@ function LavorazioneAttivaTableRowInner({
   statoPillStyle,
   prioritaPillStyle,
   addettoColors,
+  addettiRecords,
   addetti,
   onStatoRow,
   onPrioritaRow,
@@ -163,7 +164,7 @@ function LavorazioneAttivaTableRowInner({
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const telaio = lavorazioneTelaioLabel(row, schedeStore);
-  const addetto = lavorazioneAddettoLabel(row, schedeStore, defaultAddetto);
+  const addetto = lavorazioneAddettoLabel(row, schedeStore, undefined, addettiRecords);
   const awaitingCompletata = row.stato !== "completata" && row.archived !== true;
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
@@ -296,6 +297,7 @@ export type LavorazioneArchivioTableRowProps = {
   loading: boolean;
   addettoLogs?: readonly LogModificaRow[];
   addettoColors: GlobalOptionsSlice["lavorazioni"]["addettoColors"];
+  addettiRecords: GlobalOptionsSlice["lavorazioni"]["addettiRecords"];
   onRipristina: (row: LavorazioneListRow) => void;
   onOpenInfo: (row: LavorazioneListRow) => void;
   onOpenSchede: (row: LavorazioneListRow) => void;
@@ -313,6 +315,7 @@ function LavorazioneArchivioTableRowInner({
   loading,
   addettoLogs,
   addettoColors,
+  addettiRecords,
   onRipristina,
   onOpenInfo,
   onOpenSchede,
@@ -361,7 +364,7 @@ function LavorazioneArchivioTableRowInner({
       <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
           <LavorazioneAddettoReadOnlyPill
-            addetto={lavorazioneAddettoLabel(row, schedeStore, "", addettoLogs)}
+            addetto={lavorazioneAddettoLabel(row, schedeStore, addettoLogs, addettiRecords)}
             addettoColors={addettoColors}
           />
         </div>
@@ -413,6 +416,7 @@ export const LavorazioneArchivioTableRow = memo(
     prev.loading === next.loading &&
     prev.addettoLogs === next.addettoLogs &&
     prev.addettoColors === next.addettoColors &&
+    prev.addettiRecords === next.addettiRecords &&
     prev.onRipristina === next.onRipristina &&
     prev.onOpenInfo === next.onOpenInfo &&
     prev.onOpenSchede === next.onOpenSchede &&

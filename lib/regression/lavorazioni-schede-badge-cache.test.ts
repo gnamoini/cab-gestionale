@@ -45,6 +45,7 @@ const withIngresso: LavorazioneSchedeBundle = {
       tipoTelaio: "",
       marcaTelaio: "",
       modelloTelaio: "",
+      vin: "",
       targa: "",
       km: "",
       descrizioneAnomalia: "",

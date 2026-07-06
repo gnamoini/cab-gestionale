@@ -5,7 +5,8 @@ import { createImportBatch, updateImportBatchProgress } from "@/lib/data-import/
 import { decodeImportFileBase64 } from "@/lib/data-import/core/decode-import-file.server";
 import type { ImportEntityPlugin, ImportRowAction } from "@/lib/data-import/core/import-plugin";
 import { generateImportTemplateXlsx } from "@/lib/data-import/core/template-generator.server";
-import { parseSpreadsheetBuffer } from "@/lib/data-import/core/parse-spreadsheet";
+import { parseSpreadsheetBuffer, cellString } from "@/lib/data-import/core/parse-spreadsheet";
+import { normalizeVin } from "@/lib/mezzi/vin-normalize";
 import type { FieldPatternSet } from "@/lib/data-import/core/column-mapper";
 import type { ImportExecuteResult, ImportFieldDef, ImportMappingConfig, ImportPreviewRowBase } from "@/lib/data-import/core/types";
 import { IMPORT_EXECUTE_CHUNK, IMPORT_MAX_PREVIEW_ROWS } from "@/lib/data-import/core/types";
@@ -26,7 +27,7 @@ export const MEZZI_IMPORT_FIELDS: ImportFieldDef[] = [
   { key: "numero_scuderia", label: "N. scuderia", example: "12" },
   { key: "anno", label: "Anno", example: "2020" },
   { key: "cantiere", label: "Cantiere", example: "Milano Nord" },
-  { key: "telaio", label: "Telaio", example: "TEL123" },
+  { key: "telaio", label: "VIN / Telaio", example: "WVWZZZ1JZ3W386752" },
 ];
 
 export const MEZZI_FIELD_PATTERNS: FieldPatternSet = {
@@ -56,10 +57,29 @@ type MezziImportRow = {
   anno?: number;
   cantiere?: string;
   telaio?: string;
+  dualVinTelaio?: boolean;
 };
+
+function findHeaderColumns(matrix: unknown[][], headerRowIndex: number): string[] {
+  return (matrix[headerRowIndex] ?? []).map((c) => cellString(c));
+}
+
+function findVinTelaioColumnIndexes(headers: string[]): { vin?: number; telaio?: number } {
+  let vin: number | undefined;
+  let telaio: number | undefined;
+  for (let i = 0; i < headers.length; i += 1) {
+    const h = headers[i]?.trim();
+    if (!h) continue;
+    if (/^vin$/i.test(h)) vin = i;
+    else if (/^telaio$/i.test(h)) telaio = i;
+  }
+  return { vin, telaio };
+}
 
 function mapMezziRows(matrix: unknown[][], mapping: ImportMappingConfig): MezziImportRow[] {
   const col = (key: string) => mapping.columns.find((c) => c.targetField === key)?.sourceColumn;
+  const headers = findHeaderColumns(matrix, mapping.headerRowIndex);
+  const vinTelaioCols = findVinTelaioColumnIndexes(headers);
   const out: MezziImportRow[] = [];
   for (let i = mapping.dataStartRowIndex; i < matrix.length; i++) {
     const row = matrix[i];
@@ -72,6 +92,14 @@ function mapMezziRows(matrix: unknown[][], mapping: ImportMappingConfig): MezziI
     };
     const cliente = get("cliente") ?? "";
     if (!cliente) continue;
+    const vinRaw =
+      vinTelaioCols.vin != null ? row[vinTelaioCols.vin] : undefined;
+    const telaioRaw =
+      vinTelaioCols.telaio != null ? row[vinTelaioCols.telaio] : undefined;
+    const vinCell = vinRaw == null || String(vinRaw).trim() === "" ? undefined : String(vinRaw).trim();
+    const telaioCell = telaioRaw == null || String(telaioRaw).trim() === "" ? undefined : String(telaioRaw).trim();
+    const dualVinTelaio = Boolean(vinCell && telaioCell);
+    const telaioValue = dualVinTelaio ? undefined : (vinCell ?? telaioCell ?? get("telaio"));
     const annoRaw = get("anno");
     out.push({
       rowIndex: i + 1,
@@ -85,7 +113,8 @@ function mapMezziRows(matrix: unknown[][], mapping: ImportMappingConfig): MezziI
       numero_scuderia: get("numero_scuderia"),
       anno: annoRaw ? Number(annoRaw) || undefined : undefined,
       cantiere: get("cantiere"),
-      telaio: get("telaio"),
+      telaio: telaioValue,
+      dualVinTelaio,
     });
   }
   return out;
@@ -139,6 +168,13 @@ export const mezziImportPlugin: ImportEntityPlugin = {
       const issues: ImportPreviewRowBase["issues"] = [];
       if (!r.targa && !r.matricola) {
         issues.push({ field: "targa", message: "Specificare targa o matricola", severity: "error" });
+      }
+      if (r.dualVinTelaio) {
+        issues.push({
+          field: "telaio",
+          message: "Non valorizzare contemporaneamente colonne VIN e TELAIO nella stessa riga.",
+          severity: "error",
+        });
       }
       const clienteLookup = await lookupClienteByNameOrPiva(sb, { nome: r.cliente });
       if (!clienteLookup.ok) {
@@ -232,8 +268,8 @@ export const mezziImportPlugin: ImportEntityPlugin = {
 
         const meta: Record<string, unknown> = {};
         if (d.cantiere) meta.cantiere = d.cantiere;
-        if (d.telaio) meta.telaio = d.telaio;
 
+        const telaioNum = d.telaio ? normalizeVin(d.telaio) : null;
         const payload = attachMezzoEntityKey(
           sanitizeMezzoWritePayload(
             {
@@ -246,6 +282,7 @@ export const mezziImportPlugin: ImportEntityPlugin = {
               numero_scuderia: d.numero_scuderia ?? null,
               tipo_attrezzatura: d.tipo_attrezzatura ?? null,
               anno: d.anno ?? null,
+              telaio_num: telaioNum,
               meta,
             },
             { v2Enabled: true, source: "mezziImport.execute" },

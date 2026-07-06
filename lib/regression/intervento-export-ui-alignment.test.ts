@@ -58,6 +58,7 @@ const bundle: LavorazioneSchedeBundle = {
       tipoTelaio: "",
       marcaTelaio: "",
       modelloTelaio: "",
+      vin: "",
       targa: "SCHEDA99",
       km: "",
       descrizioneAnomalia: "Anomalia test",

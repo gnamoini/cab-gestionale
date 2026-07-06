@@ -50,6 +50,7 @@ const SCHEDA_ONLY_KEYS: (keyof SchedaIngressoFields)[] = [
   "tipoTelaio",
   "marcaTelaio",
   "modelloTelaio",
+  "vin",
   "km",
   "richiedente",
 ];

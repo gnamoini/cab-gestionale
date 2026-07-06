@@ -47,27 +47,7 @@ async function runBatchedRowUpdates(
   return updated;
 }
 
-function patchAddettiInContenuto(contenuto: unknown, from: string, to: string): { next: Record<string, unknown>; changed: boolean } {
-  if (!contenuto || typeof contenuto !== "object" || Array.isArray(contenuto)) {
-    return { next: {}, changed: false };
-  }
-  const base = { ...(contenuto as Record<string, unknown>) };
-  const addetti = base.addetti;
-  if (!Array.isArray(addetti)) return { next: base, changed: false };
-  let changed = false;
-  const nextAddetti = addetti.map((entry) => {
-    if (!entry || typeof entry !== "object") return entry;
-    const row = entry as Record<string, unknown>;
-    if (typeof row.nome === "string" && row.nome === from) {
-      changed = true;
-      return { ...row, nome: to };
-    }
-    return entry;
-  });
-  if (!changed) return { next: base, changed: false };
-  return { next: { ...base, addetti: nextAddetti }, changed: true };
-}
-
+import { patchAddettoInSchedaContenuto } from "@/lib/lavorazioni/patch-addetto-in-scheda-contenuto";
 function patchMetaString(meta: unknown, key: string, from: string, to: string): { next: Record<string, unknown>; changed: boolean } {
   const base = meta && typeof meta === "object" && !Array.isArray(meta) ? { ...(meta as Record<string, unknown>) } : {};
   if (typeof base[key] === "string" && base[key] === from) {
@@ -160,13 +140,32 @@ async function propagateSchedaIngressoCampo(
   return runBatchedRowUpdates(c, "scheda_lavorazione", pending);
 }
 
-async function propagateAddettoRename(from: string, to: string): Promise<SettingsRenamePropagationResult> {
+async function propagateAddettoRename(
+  from: string,
+  to: string,
+  fromAliases?: readonly string[],
+): Promise<SettingsRenamePropagationResult> {
+  const fromValues = [...new Set([from, ...(fromAliases ?? [])].map((s) => s.trim()).filter(Boolean))];
   const c = await sb();
-  const { data, error } = await c.from("scheda_lavorazione").select("id, contenuto");
-  if (error) throw new Error(error.message);
+  const [schedeRes, lavRes] = await Promise.all([
+    c.from("scheda_lavorazione").select("id, lavorazione_id, tipo, contenuto"),
+    c.from("lavorazioni").select("id, archived"),
+  ]);
+  if (schedeRes.error) throw new Error(schedeRes.error.message);
+  if (lavRes.error) throw new Error(lavRes.error.message);
+  const archivedLavIds = new Set(
+    (lavRes.data ?? []).filter((l) => l.archived === true).map((l) => l.id as string),
+  );
   const pending: { id: string; payload: Record<string, unknown> }[] = [];
-  for (const row of data ?? []) {
-    const { next, changed } = patchAddettiInContenuto(row.contenuto, from, to);
+  for (const row of schedeRes.data ?? []) {
+    const lavId = row.lavorazione_id as string;
+    if (archivedLavIds.has(lavId)) continue;
+    const { next, changed } = patchAddettoInSchedaContenuto(
+      row.tipo as string,
+      row.contenuto,
+      fromValues,
+      to,
+    );
     if (changed) pending.push({ id: row.id as string, payload: { contenuto: next } });
   }
   const updated = await runBatchedRowUpdates(c, "scheda_lavorazione", pending);
@@ -289,7 +288,7 @@ async function propagateOne(entry: SettingsRenameEntry): Promise<SettingsRenameP
       break;
     }
     case "addetto":
-      out.push(await propagateAddettoRename(from, to));
+      out.push(await propagateAddettoRename(from, to, entry.fromAliases));
       break;
     case "mag_marca":
       out.push(await propagateSimpleColumn(kind, from, to, "magazzino_ricambi", "marca"));

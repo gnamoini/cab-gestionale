@@ -45,6 +45,7 @@ function mockMezzo(over: Partial<MezzoGestito> = {}): MezzoGestito {
     modello: "320",
     marcaTelaio: "",
     modelloTelaio: "",
+    vin: "",
     targa: "",
     matricola: "",
     numeroScuderia: "",

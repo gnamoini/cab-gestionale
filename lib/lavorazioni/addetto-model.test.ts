@@ -3,6 +3,8 @@ import {
   addettiLegacyNomi,
   addettoDisplayName,
   addettoDisplayNameFromNome,
+  addettoStoredNameAliases,
+  findAddettoByStoredName,
   migrateLegacyAddettiStrings,
   parseAddettiRecordsFromPayload,
   syncLavorazioniAddettiFromRecords,
@@ -22,7 +24,22 @@ import {
 {
   const records = [{ id: "v", nome: "Vito", cognome: "Rossi" }];
   assert.equal(addettoDisplayNameFromNome(records, "Vito"), "Vito Rossi");
+  assert.equal(addettoDisplayNameFromNome(records, "Vito Rossi"), "Vito Rossi");
   assert.equal(addettoDisplayNameFromNome(records, "Sconosciuto"), "Sconosciuto");
+}
+
+// findAddettoByStoredName: chiave legacy o nome completo
+{
+  const records = [{ id: "v", nome: "Vito", cognome: "Rossi" }];
+  assert.equal(findAddettoByStoredName(records, "Vito")?.id, "v");
+  assert.equal(findAddettoByStoredName(records, "Vito Rossi")?.id, "v");
+  assert.equal(findAddettoByStoredName(records, "vito rossi")?.id, "v");
+}
+
+// alias per rename propagazione
+{
+  const aliases = addettoStoredNameAliases({ nome: "Marco", cognome: "Rossi" });
+  assert.deepEqual(aliases.sort(), ["Marco", "Marco Rossi"]);
 }
 
 // proiezione legacy nomi

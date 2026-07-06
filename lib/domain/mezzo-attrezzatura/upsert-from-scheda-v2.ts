@@ -1,6 +1,7 @@
 import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
 import { resolveTargetTypeFromScheda } from "@/lib/domain/mezzo-attrezzatura/intervento-target";
 import { trimOrNull } from "@/lib/domain/mezzo-attrezzatura/backfill-rules";
+import { normalizeVin } from "@/lib/mezzi/vin-normalize";
 import { mezzoFormToMeta } from "@/lib/mezzi/mezzi-meta";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { AttrezzaturaInsert, AttrezzaturaUpdate } from "@/src/services/attrezzature.service";
@@ -40,7 +41,7 @@ function schedaToMezzoPayload(fields: SchedaIngressoFields, anno?: number): Mezz
     marca_telaio: trimOrNull(fields.marcaTelaio),
     modello_telaio: trimOrNull(fields.modelloTelaio),
     tipo_telaio: trimOrNull(fields.tipoTelaio),
-    telaio_num: null,
+    telaio_num: normalizeVin(fields.vin),
     km: trimOrNull(fields.km) ? Number(fields.km) : null,
     note: null,
   };
@@ -69,6 +70,8 @@ function mergeMezzoPatch(existing: MezzoRow, incoming: MezzoInsert): MezzoUpdate
   if (incoming.marca_telaio) patch.marca_telaio = incoming.marca_telaio;
   if (incoming.modello_telaio) patch.modello_telaio = incoming.modello_telaio;
   if (incoming.tipo_telaio) patch.tipo_telaio = incoming.tipo_telaio;
+  // ponytail: scheda merge — VIN vuoto/whitespace preserva telaio_num; mai patch.telaio_num = null
+  if (incoming.telaio_num) patch.telaio_num = incoming.telaio_num;
   if (incoming.km != null) patch.km = incoming.km;
   if (incoming.meta) patch.meta = incoming.meta;
   return patch;

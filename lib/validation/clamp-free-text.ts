@@ -25,6 +25,7 @@ function clampIngressoCampi(campi: SchedaIngressoFields): SchedaIngressoFields {
     "tipoTelaio",
     "marcaTelaio",
     "modelloTelaio",
+    "vin",
     "targa",
     "addettoAccettazione",
     "richiedente",

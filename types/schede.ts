@@ -45,6 +45,8 @@ export type SchedaIngressoFields = {
   tipoTelaio: string;
   marcaTelaio: string;
   modelloTelaio: string;
+  /** Alias UI → mezzi.telaio_num (I-VIN-1). */
+  vin: string;
   targa: string;
   km: string;
   descrizioneAnomalia: string;

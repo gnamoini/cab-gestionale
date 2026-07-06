@@ -25,6 +25,7 @@ const INGRESSO_LABELS: Record<keyof SchedaIngressoFields, string> = {
   tipoTelaio: "Tipo telaio",
   marcaTelaio: "Marca telaio",
   modelloTelaio: "Modello telaio",
+  vin: "VIN",
   targa: "Targa",
   km: "KM",
   descrizioneAnomalia: "Descrizione anomalia",

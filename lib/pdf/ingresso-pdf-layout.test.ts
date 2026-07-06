@@ -16,6 +16,7 @@ const fullCampi: SchedaIngressoFields = {
   tipoTelaio: "Gommati",
   marcaTelaio: "CAT",
   modelloTelaio: "320 GC",
+  vin: "WVWZZZ1JZ3W386752",
   targa: "AA111BB",
   km: "12000",
   descrizioneAnomalia: "Perdita olio idraulico",
@@ -30,10 +31,11 @@ const sections = buildIngressoPdfSections(fullCampi);
 assert.equal(sections.data.length, 2);
 assert.equal(sections.cliente.length, 4);
 assert.equal(sections.attrezzatura.length, 6);
-assert.equal(sections.telaio.length, 6);
+assert.equal(sections.telaio.length, 7);
+assert.equal(sections.telaio.find((f) => f.label === "VIN")?.value, "WVWZZZ1JZ3W386752");
 assert.equal(sections.altreInformazioni.length, 2);
 assert.equal(sections.attrezzatura[0]?.label, "Tipo");
-assert.equal(sections.telaio.find((f) => f.label === "Carburante")?.value, "3/4");
+assert.equal(sections.telaio.find((f) => f.label === "Carburante")?.value, "75%");
 
 const sparse = buildIngressoPdfSections({
   ...fullCampi,

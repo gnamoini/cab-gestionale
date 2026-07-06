@@ -345,6 +345,17 @@ function SchedaIngressoAnagraficaFieldsInner({
               />
             </FormField>
           </div>
+          <FormField label="VIN" htmlFor={fieldId("vin")}>
+            <input
+              id={fieldId("vin")}
+              value={value.vin}
+              onChange={(e) => onPatch({ vin: sliceInputValue(e.target.value, TEXT_SHORT) })}
+              disabled={disabled}
+              className={`${inputFieldClass} font-mono uppercase`}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </FormField>
           <SchedaIngressoIdentAutocompleteField
             field="targa"
             label="Targa"

@@ -64,4 +64,18 @@ const addettoLuigi = { id: "addetto-luigi", nome: "Luigi", cognome: null as stri
   assert.equal(plan.settingsUpdates.some((u) => u.id === "1" && u.inSettings === false), true);
 }
 
+// Match legacy employee per display_name completo (non solo nome)
+{
+  const existing = [
+    row({
+      id: "1",
+      display_name: "Marco Rossi",
+      source_addetto_id: null,
+      in_settings: true,
+    }),
+  ];
+  const plan = planEmployeeBootstrap(existing, [addettoMarco]);
+  assert.equal(plan.inserts.length, 0, "match per display_name completo senza duplicare insert");
+}
+
 console.log("timesheet-bootstrap.test.ts OK");

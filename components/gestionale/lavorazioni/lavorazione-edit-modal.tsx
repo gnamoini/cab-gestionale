@@ -57,6 +57,7 @@ function fieldsFromEditForm(input: {
     tipoTelaio: input.row.mezzo?.tipo_telaio?.trim() ?? "",
     marcaTelaio: input.row.mezzo?.marca_telaio?.trim() ?? "",
     modelloTelaio: input.row.mezzo?.modello_telaio?.trim() ?? "",
+    vin: input.row.mezzo?.telaio_num?.trim() ?? "",
     targa: input.targa,
     km: input.row.mezzo?.km != null ? String(input.row.mezzo.km) : "",
     descrizioneAnomalia: "",

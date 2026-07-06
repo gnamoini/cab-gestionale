@@ -912,7 +912,11 @@ export function SchedeLavorazioneModal({
       updatedBy: u,
     };
     const persistRes = await persistBundle({ ...draftRef.current, ingresso: nextDoc });
-    if (!persistRes.ok) return false;
+    if (!persistRes.ok) {
+      gestToast.error(persistRes.error ?? "Salvataggio scheda ingresso non riuscito.", { module: "lavorazioni" });
+      return false;
+    }
+    baselineIngressoJson.current = JSON.stringify(ig);
     await onIngressoCommitted?.(ig);
     return true;
   }

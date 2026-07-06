@@ -141,7 +141,7 @@ async function deliverPdfArtifactInner(
       const pdfRows = mapLavorazioniListRowsToPdfRows(lavRows, {
         stati: settingsPayload.resolved.lavorazioni.stati,
         schedeStore: schedeRes.success ? (schedeRes.data ?? {}) : {},
-        defaultAddetto: settingsPayload.resolved.lavorazioni.addetti[0] ?? "",
+        addettiRecords: settingsPayload.resolved.lavorazioni.addettiRecords,
       });
       dataHash = stableHashPayload({ v: LAVORAZIONI_IN_CORSO_PDF_MAP_VERSION, rows: pdfRows });
       scopeId = "global";

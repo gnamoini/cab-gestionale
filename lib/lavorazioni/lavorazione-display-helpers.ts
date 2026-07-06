@@ -17,21 +17,8 @@ export function utilizzatoreDisplayLabel(raw: string | null | undefined): string
  * Note operative mostrate in colonna Note: solo note intervento / manuali,
  * mai la descrizione anomalia (resta in scheda ingresso).
  */
-/** Addetto assegnato (scheda ingresso o righe lavorazioni), con fallback impostazioni. */
-export function lavorazioneAddettoLabel(
-  row: Pick<LavorazioneListRow, "id">,
-  schedeStore: LavorazioneSchedeStore | undefined,
-  defaultAddetto = "",
-): string {
-  const fromIngresso = schedeStore?.[row.id]?.ingresso?.campi.addettoAccettazione?.trim();
-  const fromRighe =
-    schedeStore?.[row.id]?.lavorazioni?.campi.righe
-      .flatMap((r) => r.addettiAssegnati)
-      .find((a) => a.addetto.trim())
-      ?.addetto.trim() ?? "";
-  const label = fromIngresso || fromRighe || defaultAddetto.trim();
-  return isLavorazioneEmptyDisplay(label) ? "" : label;
-}
+/** Addetto grezzo (no trattino) — per KPI/filtri unassigned. */
+export { resolveAddettoDisplay as lavorazioneAddettoLabel } from "@/lib/lavorazioni/resolve-addetto-display";
 
 export function lavorazioneNoteOperative(
   row: { id: string; note?: string | null },

@@ -25,6 +25,7 @@ import {
   setTraceMode,
   type WriteExecutionTrace,
 } from "@/lib/domain/intervento-context/write-execution-trace";
+import { canUpsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
 import type { LavorazioneUpdate } from "@/src/services/lavorazioni.service";
 import { interventoWriteService } from "@/src/services/intervento-write.service";
@@ -182,9 +183,14 @@ export async function runInterventoWriteSaga(
           fields,
           preferredMezzoId: isCreateMeta(plan.meta) ? plan.meta.mezzoIdHint : null,
         });
-        mezzoId = upsert.mezzoId;
-        attrezzaturaId = upsert.attrezzaturaId ?? null;
-        targetType = upsert.targetType ?? "attrezzatura";
+        mezzoId = upsert.mezzoId?.trim() || null;
+        if (upsert.skipped) {
+          targetType = "telaio";
+          attrezzaturaId = null;
+        } else {
+          attrezzaturaId = upsert.attrezzaturaId ?? null;
+          targetType = upsert.targetType ?? "telaio";
+        }
         auditInterventoContext(null, "write-mezzo", {
           preferredMezzoId: isCreateMeta(plan.meta) ? plan.meta.mezzoIdHint : null,
           resolvedMezzoId: resolved.mezzoId,
@@ -198,24 +204,10 @@ export async function runInterventoWriteSaga(
     }
 
     if (!shouldSkipInterventoWriteStage(idempotencyKey, "prepare-lavorazione", true) && deps.createLavorazione) {
-      if (!mezzoId) {
-        try {
-          const upsert = await deps.upsertMezzo({
-            fields,
-            preferredMezzoId: isCreateMeta(plan.meta) ? plan.meta.mezzoIdHint : null,
-          });
-          mezzoId = upsert.mezzoId;
-          attrezzaturaId = upsert.attrezzaturaId ?? null;
-          targetType = upsert.targetType ?? "attrezzatura";
-        } catch {
-          /* retry path */
-        }
-      }
-      if (!mezzoId) {
-        return finishSagaTrace(trace, { ok: false, stage: "prepare-mezzo", error: "Mezzo non risolto." });
-      }
       try {
         const meta = plan.meta as InterventoWriteCreateMeta;
+        if (!targetType) targetType = "telaio";
+        if (targetType === "attrezzatura" && !attrezzaturaId) targetType = "telaio";
         const row = await deps.createLavorazione({
           mezzo_id: mezzoId,
           stato: meta.statoId,
@@ -227,7 +219,7 @@ export async function runInterventoWriteSaga(
           attrezzatura_id: targetType === "attrezzatura" ? attrezzaturaId : null,
         });
         lavorazioneId = row.id;
-        upsertInterventoWriteLedger(idempotencyKey, { lavorazioneId, mezzoId });
+        upsertInterventoWriteLedger(idempotencyKey, { lavorazioneId, mezzoId: mezzoId ?? "" });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Errore creazione lavorazione.";
         return finishSagaTrace(trace, { ok: false, stage: "prepare-lavorazione", error: message });
@@ -241,7 +233,7 @@ export async function runInterventoWriteSaga(
     const row = editMeta.row;
     lavorazioneId = row.id;
 
-    if (!fields.cliente.trim() || !fields.marcaAttrezzatura.trim()) {
+    if (!canUpsertMezzoFromSchedaIngresso(fields, plan.mezziCatalog, row.mezzo_id)) {
       recordTraceStep(trace, "v1_persist", "skipped");
       runFinalizeStage(idempotencyKey, row.id, row.mezzo_id ?? "");
       return finishSagaTrace(trace, { ok: true, lavorazioneId: row.id, mezzoId: row.mezzo_id ?? "" });
@@ -270,7 +262,7 @@ export async function runInterventoWriteSaga(
         fields,
         preferredMezzoId: row.mezzo_id,
       });
-      mezzoId = upsert.mezzoId;
+      mezzoId = upsert.mezzoId?.trim() || null;
       attrezzaturaId = upsert.attrezzaturaId ?? null;
       targetType = upsert.targetType ?? targetType;
 

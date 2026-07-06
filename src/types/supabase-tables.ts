@@ -86,6 +86,8 @@ export type MezzoRow = {
   modello_telaio?: string | null;
   tipo_telaio?: string | null;
   telaio_num?: string | null;
+  /** Generated STORED — read-only; unicità VIN. Non in payload write. */
+  telaio_num_norm?: string | null;
   km?: number | null;
   note?: string | null;
   created_at: string;

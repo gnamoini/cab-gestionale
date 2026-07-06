@@ -703,17 +703,16 @@ export function ClientLavorazioniView() {
       [...allInCorsoBundles, ...allArchivioBundles],
       schedeStore,
       addettiGlobali,
-      "",
     );
   }, [allInCorsoBundles, allArchivioBundles, schedeStore, addettiGlobali]);
 
   const inCorsoBundles = useMemo(
-    () => filterClientPortalBundles(allInCorsoBundles, filters, schedeStore, "", "in_corso"),
+    () => filterClientPortalBundles(allInCorsoBundles, filters, schedeStore, "in_corso"),
     [allInCorsoBundles, filters, schedeStore],
   );
 
   const archivioBundles = useMemo(
-    () => filterClientPortalBundles(allArchivioBundles, filters, schedeStore, "", "archivio"),
+    () => filterClientPortalBundles(allArchivioBundles, filters, schedeStore, "archivio"),
     [allArchivioBundles, filters, schedeStore],
   );
 

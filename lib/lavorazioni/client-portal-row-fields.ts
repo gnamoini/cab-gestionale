@@ -134,7 +134,7 @@ function clientPortalAddettoNomeKey(
   schedeStore: LavorazioneSchedeStore,
   logs?: readonly LogModificaRow[],
 ): string {
-  return lavorazioneAddettoLabel(row, schedeStore, "", logs);
+  return lavorazioneAddettoLabel(row, schedeStore, logs);
 }
 
 export function clientPortalAddettoLabel(

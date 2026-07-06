@@ -45,6 +45,7 @@ import { resolveInterventoCanonical } from "@/lib/domain/intervento-context/reso
 import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
 import { interventoWriteService } from "@/src/services/intervento-write.service";
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import { canUpsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 import type { UpsertMezzoFromSchedaResult } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 import type { LavorazioneRow } from "@/src/types/supabase-tables";
 import type { LavorazioneUpdate } from "@/src/services/lavorazioni.service";
@@ -73,7 +74,7 @@ export type CreateInterventoTransactionPlan = {
       preferredMezzoId?: string | null;
     }) => Promise<UpsertMezzoFromSchedaResult>;
     createLavorazione: (input: {
-      mezzo_id: string;
+      mezzo_id: string | null;
       stato: StatoLavorazione;
       priorita: PrioritaLavorazione;
       data_ingresso: string;
@@ -167,9 +168,14 @@ export async function createInterventoTransaction(
         fields,
         preferredMezzoId: meta.mezzoIdHint,
       });
-      mezzoId = upsert.mezzoId;
-      targetType = upsert.targetType ?? null;
-      attrezzaturaId = upsert.attrezzaturaId ?? null;
+      mezzoId = upsert.mezzoId?.trim() || null;
+      if (upsert.skipped) {
+        targetType = "telaio";
+        attrezzaturaId = null;
+      } else {
+        targetType = upsert.targetType ?? null;
+        attrezzaturaId = upsert.attrezzaturaId ?? null;
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Errore upsert mezzo.";
       auditInterventoContext(null, "write-mezzo", { stage: "upsert-mezzo", extra: { error: message } });
@@ -182,30 +188,11 @@ export async function createInterventoTransaction(
       !idempotencyKey ||
       !shouldSkipInterventoWriteStage(idempotencyKey, "prepare-lavorazione", true)
     ) {
-      if (!mezzoId) {
-        try {
-          const upsert = await deps.upsertMezzo({
-            fields,
-            preferredMezzoId: meta.mezzoIdHint,
-          });
-          mezzoId = upsert.mezzoId;
-          targetType = upsert.targetType ?? null;
-          attrezzaturaId = upsert.attrezzaturaId ?? null;
-        } catch {
-          recordTraceStep(trace, "v1_create", "failed");
-          return { ok: false, stage: "upsert-mezzo", error: "Mezzo non risolto." };
-        }
-      }
     try {
-      if (!targetType) {
-        return {
-          ok: false,
-          stage: "create-lavorazione",
-          error: "Target intervento non risolto dopo upsert mezzo.",
-        };
-      }
+      if (!targetType) targetType = "telaio";
+      if (targetType === "attrezzatura" && !attrezzaturaId) targetType = "telaio";
       const row = await deps.createLavorazione({
-        mezzo_id: mezzoId!,
+        mezzo_id: mezzoId,
         stato: meta.statoId,
         priorita: meta.priorita,
         data_ingresso: meta.dataIngressoIso,
@@ -216,7 +203,7 @@ export async function createInterventoTransaction(
       });
       lavorazioneId = row.id;
       if (idempotencyKey) {
-        upsertInterventoWriteLedger(idempotencyKey, { lavorazioneId, mezzoId: mezzoId! });
+        upsertInterventoWriteLedger(idempotencyKey, { lavorazioneId, mezzoId: mezzoId ?? "" });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Errore creazione lavorazione.";
@@ -313,7 +300,7 @@ type SyncIngressoAfterSavePlan = {
 /** Interno a write-contract — non esportato; usare executeInterventoWrite. */
 async function syncIngressoAfterSave(plan: SyncIngressoAfterSavePlan): Promise<void> {
   const { row, campi, mezziCatalog, deps } = plan;
-  if (!campi.cliente.trim() || !campi.marcaAttrezzatura.trim()) return;
+  if (!canUpsertMezzoFromSchedaIngresso(campi, mezziCatalog, row.mezzo_id)) return;
 
   const resolved = resolveMezzoFromScheda({
     scheda: campi,

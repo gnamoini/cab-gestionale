@@ -53,7 +53,6 @@ type MobileBoardProps = {
   sections: readonly KanbanMobileSection[];
   statiOpts: readonly StatoLavorazioneConfig[];
   schedeStore: LavorazioneSchedeStore;
-  defaultAddetto: string;
   prioritaColors: Record<string, string | undefined>;
   addettoColors: Record<string, string | undefined>;
   flashRowId: string | null;
@@ -70,7 +69,6 @@ export function LavorazioniKanbanMobileBoard({
   sections,
   statiOpts,
   schedeStore,
-  defaultAddetto,
   prioritaColors,
   addettoColors,
   flashRowId,

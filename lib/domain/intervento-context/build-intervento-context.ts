@@ -48,6 +48,7 @@ function emptySchedaIngressoFields(): SchedaIngressoFields {
     tipoTelaio: "",
     marcaTelaio: "",
     modelloTelaio: "",
+    vin: "",
     targa: "",
     km: "",
     descrizioneAnomalia: "",

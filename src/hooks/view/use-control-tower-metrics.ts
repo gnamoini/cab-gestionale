@@ -221,7 +221,6 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     const composed = composeControlTowerSlices({
       lavRows: dash.lavRows,
       schedeStore,
-      defaultAddetto: dash.globalOpts.lavorazioni.addetti[0] ?? "",
       ricambi: dash.ricambi,
       magMovements: dash.magRecentMovements,
       movimentiLogs: movLogsQ.data ?? [],

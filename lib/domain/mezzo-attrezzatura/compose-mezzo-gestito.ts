@@ -40,6 +40,7 @@ export function composeMezzoGestitoFromRows(
     tipoTelaio: tipoTelaio || undefined,
     marcaTelaio: marcaTelaio || undefined,
     modelloTelaio: modelloTelaio || undefined,
+    vin: mezzo.telaio_num?.trim() || undefined,
     anno: att?.anno ?? mezzo.anno ?? new Date().getFullYear(),
     oreKm: meta.oreLavoro ?? 0,
     km,

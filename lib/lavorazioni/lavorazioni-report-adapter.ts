@@ -1,8 +1,12 @@
 import { meseCompletamentoFromIso } from "@/lib/lavorazioni/duration";
 import { isLavorazioneArchived } from "@/lib/lavorazioni/archived";
+import { lavorazioneAddettoLabel } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import type { LavorazioneArchiviata, LavorazioneAttiva, PrioritaLav } from "@/lib/lavorazioni/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { LavorazioneRow, PrioritaLavorazione } from "@/src/types/supabase-tables";
+import type { LavorazioneSchedeStore } from "@/types/schede";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 
 function str(v: string | null | undefined, fb = "—"): string {
   const t = v?.trim();
@@ -42,8 +46,26 @@ function macchinaClienteUtil(row: LavorazioneListRow): {
   };
 }
 
+export type LavorazioniReportResolveContext = {
+  schedeStore?: LavorazioneSchedeStore;
+  logsByLavorazioneId?: ReadonlyMap<string, readonly LogModificaRow[]>;
+  addettiRecords?: readonly AddettoRecord[];
+};
+
+function resolveReportAddetto(
+  row: LavorazioneListRow,
+  ctx?: LavorazioniReportResolveContext,
+): string {
+  if (!ctx?.schedeStore) return "—";
+  const logs = ctx.logsByLavorazioneId?.get(row.id);
+  return lavorazioneAddettoLabel(row, ctx.schedeStore, logs, ctx.addettiRecords);
+}
+
 /** Riga lista DB → shape legacy `LavorazioneAttiva` (report / classifiche). */
-export function lavorazioneListRowToAttiva(row: LavorazioneListRow): LavorazioneAttiva {
+export function lavorazioneListRowToAttiva(
+  row: LavorazioneListRow,
+  ctx?: LavorazioniReportResolveContext,
+): LavorazioneAttiva {
   const { macchina, cliente, utilizzatore, targa, matricola, nScuderia } = macchinaClienteUtil(row);
   const ing = row.data_ingresso?.trim() ? row.data_ingresso : row.created_at;
   return {
@@ -58,7 +80,7 @@ export function lavorazioneListRowToAttiva(row: LavorazioneListRow): Lavorazione
     cantiere: "",
     statoId: row.stato,
     priorita: prioritaToLav(row.priorita),
-    addetto: "—",
+    addetto: resolveReportAddetto(row, ctx),
     noteInterne: str(row.note, ""),
     dataIngresso: ing,
     dataCompletamento: null,
@@ -66,8 +88,11 @@ export function lavorazioneListRowToAttiva(row: LavorazioneListRow): Lavorazione
 }
 
 /** Riga lista DB → shape legacy `LavorazioneArchiviata`. */
-export function lavorazioneListRowToArchiviata(row: LavorazioneListRow): LavorazioneArchiviata {
-  const a = lavorazioneListRowToAttiva(row);
+export function lavorazioneListRowToArchiviata(
+  row: LavorazioneListRow,
+  ctx?: LavorazioniReportResolveContext,
+): LavorazioneArchiviata {
+  const a = lavorazioneListRowToAttiva(row, ctx);
   const fine = lavorazioneReportClosureIso(row);
   return {
     id: a.id,
@@ -137,7 +162,10 @@ export function filterReportLavorazioniRows(
  * Report: distingue in corso (`archived=false`) vs archiviate (`archived=true`).
  * Esclude righe con `deleted_at` (defense in depth oltre a RLS/query).
  */
-export function splitLavorazioniListRowsForReport(rows: readonly LavorazioneListRow[]): {
+export function splitLavorazioniListRowsForReport(
+  rows: readonly LavorazioneListRow[],
+  ctx?: LavorazioniReportResolveContext,
+): {
   attive: LavorazioneAttiva[];
   storico: LavorazioneArchiviata[];
 } {
@@ -145,8 +173,8 @@ export function splitLavorazioniListRowsForReport(rows: readonly LavorazioneList
   const storico: LavorazioneArchiviata[] = [];
   for (const r of rows) {
     if (r.deleted_at) continue;
-    if (isLavorazioneArchived(r)) storico.push(lavorazioneListRowToArchiviata(r));
-    else attive.push(lavorazioneListRowToAttiva(r));
+    if (isLavorazioneArchived(r)) storico.push(lavorazioneListRowToArchiviata(r, ctx));
+    else attive.push(lavorazioneListRowToAttiva(r, ctx));
   }
   return { attive, storico };
 }

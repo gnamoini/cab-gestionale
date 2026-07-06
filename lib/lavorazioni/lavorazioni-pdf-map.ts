@@ -6,16 +6,17 @@ import { prioritaLabel } from "@/lib/lavorazioni/lavorazioni-pill-styles";
 import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import type { LavorazioniInCorsoPdfRow } from "@/lib/lavorazioni/lavorazioni-list-pdf";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
 /** Bump quando cambia la logica di mapping (invalida cache storage artifact). */
-export const LAVORAZIONI_IN_CORSO_PDF_MAP_VERSION = 2;
+export const LAVORAZIONI_IN_CORSO_PDF_MAP_VERSION = 3;
 
 export type LavorazioniPdfMapContext = {
   stati: readonly StatoLavorazioneConfig[];
   schedeStore: LavorazioneSchedeStore;
-  defaultAddetto: string;
+  addettiRecords?: readonly AddettoRecord[];
 };
 
 function mezzoLabel(row: LavorazioneListRow): string {
@@ -46,7 +47,7 @@ export function mapLavorazioniListRowsToPdfRows(
       stato: displayOrDash(statoLavorazioneLabel(row.stato ?? "", [...ctx.stati])),
       priorita: displayOrDash(prioritaLabel(row.priorita ?? "")),
       prioritaSortKey: row.priorita ?? "",
-      addetto: lavorazioneAddettoLabel(row, ctx.schedeStore, ctx.defaultAddetto),
+      addetto: lavorazioneAddettoLabel(row, ctx.schedeStore, undefined, ctx.addettiRecords),
     };
   });
 }

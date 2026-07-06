@@ -49,7 +49,7 @@ export function employeeDisplayName(
 }
 
 export function pdfEmployeeDisplayName(ctx: DipendentiPdfContext, employee: DipendenteTimesheetEmployeeRow): string {
-  return employeeDisplayNameForPdf(employee, ctx.addettiRecords);
+  return employeeDisplayNameForPdf(employee, ctx.addettiRecords, ctx.entries);
 }
 
 export function registryLabel(inSettings: boolean): string {

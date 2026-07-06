@@ -24,6 +24,7 @@ const ingressoDoc: SchedaIngressoDoc = {
     tipoTelaio: "",
     marcaTelaio: "",
     modelloTelaio: "",
+    vin: "",
     targa: "",
     km: "",
     descrizioneAnomalia: "",

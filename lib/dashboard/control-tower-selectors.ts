@@ -10,7 +10,7 @@ import { Q_FOCUS_LAV_ROW, Q_FOCUS_RICAMBIO } from "@/lib/navigation/dashboard-lo
 import { lavorazioneLogOggettoFromListRow } from "@/lib/lavorazioni/lavorazione-log-oggetto";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { isLavorazioneInCorso } from "@/lib/lavorazioni/archived";
-import { lavorazioneAddettoLabel } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import { isLavorazioneAddettoUnassigned, resolveAddettoDisplayLabel } from "@/lib/lavorazioni/resolve-addetto-display";
 import {
   lavorazioneClienteLabel,
   lavorazioneMacchinaLabel,
@@ -181,7 +181,6 @@ export type ControlTowerBaseInput = {
   anchor?: Date;
   lavRows: readonly LavorazioneListRow[];
   schedeStore?: LavorazioneSchedeStore;
-  defaultAddetto?: string;
   ricambi: readonly RicambioMagazzino[];
   magLog?: readonly MagazzinoChangeLogEntry[];
   magMovements?: readonly DashboardMagMovementRow[];
@@ -240,15 +239,14 @@ function toWipRow(
   row: LavorazioneListRow,
   anchor: Date,
   schedeStore: LavorazioneSchedeStore | undefined,
-  defaultAddetto: string,
 ): ControlTowerWipRow {
-  const addettoRaw = lavorazioneAddettoLabel(row, schedeStore, defaultAddetto);
+  const addettoRaw = resolveAddettoDisplayLabel(row, { schedeStore });
   return {
     id: row.id,
     stato: row.stato,
     macchina: macchinaLabel(row, schedeStore),
     mezzoIdent: mezzoIdent(row, schedeStore),
-    addetto: addettoRaw || null,
+    addetto: addettoRaw === "—" ? null : addettoRaw,
     giorniSenzaUpdate: Math.floor(daysBetween(lavUpdatedAt(row), anchor)),
     giorniDaIngresso: Math.floor(daysBetween(lavIngressIso(row), anchor)),
   };
@@ -434,13 +432,12 @@ function classifyLavorazioneAlertIds(
   activeRows: readonly LavorazioneListRow[],
   anchor: Date,
   schedeStore: LavorazioneSchedeStore | undefined,
-  defaultAddetto: string,
 ): Set<string> {
   const ids = new Set<string>();
   for (const row of activeRows) {
     if (isStale(row, anchor) || isLateIngress(row, anchor)) ids.add(row.id);
     else if (schedeStore && Object.keys(schedeStore).length > 0) {
-      if (!lavorazioneAddettoLabel(row, schedeStore, defaultAddetto)) ids.add(row.id);
+      if (isLavorazioneAddettoUnassigned(row, { schedeStore })) ids.add(row.id);
     }
   }
   return ids;
@@ -560,7 +557,6 @@ export function buildControlTowerAlertsSlice(input: ControlTowerBaseInput): Cont
   const anchor = input.anchor ?? new Date();
   const activeRows = input.lavRows.filter(isActiveLavorazione);
   const schede = input.schedeStore;
-  const defaultAddetto = input.defaultAddetto ?? "";
   const items: ControlTowerAlert[] = [];
 
   const staleRows = activeRows.filter((r) => isStale(r, anchor));
@@ -596,7 +592,7 @@ export function buildControlTowerAlertsSlice(input: ControlTowerBaseInput): Cont
   }
 
   if (schede && Object.keys(schede).length > 0) {
-    const unassigned = activeRows.filter((r) => !lavorazioneAddettoLabel(r, schede, defaultAddetto));
+    const unassigned = activeRows.filter((r) => isLavorazioneAddettoUnassigned(r, { schedeStore: schede }));
     if (unassigned.length > 0) {
       items.push({
         id: "lav-unassigned",
@@ -614,13 +610,12 @@ export function buildControlTowerWipSlice(input: ControlTowerBaseInput): Control
   const anchor = input.anchor ?? new Date();
   const activeRows = input.lavRows.filter(isActiveLavorazione);
   const schede = input.schedeStore;
-  const defaultAddetto = input.defaultAddetto ?? "";
-  const alertLavIds = classifyLavorazioneAlertIds(activeRows, anchor, schede, defaultAddetto);
+  const alertLavIds = classifyLavorazioneAlertIds(activeRows, anchor, schede);
 
   const toWip = (rows: LavorazioneListRow[]) =>
     rows
       .filter((r) => !alertLavIds.has(r.id))
-      .map((r) => toWipRow(r, anchor, schede, defaultAddetto));
+      .map((r) => toWipRow(r, anchor, schede));
 
   const buckets: ControlTowerWipBucket[] = [];
   const aperte = activeRows;

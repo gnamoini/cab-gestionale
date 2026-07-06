@@ -105,18 +105,54 @@ export function findAddettoById(records: readonly AddettoRecord[], id: string): 
   return records.find((r) => r.id === id);
 }
 
-export function findAddettoByNome(records: readonly AddettoRecord[], nome: string): AddettoRecord | undefined {
-  const norm = nome.trim().toLowerCase();
-  return records.find((r) => r.nome.trim().toLowerCase() === norm);
+function normalizeStoredAddettoName(value: string): string {
+  return value.trim().toLowerCase();
 }
 
-/** Etichetta UI da chiave `nome` (scheda/log); fallback al nome grezzo se record assente. */
+/** Valori storici possibili in scheda per un addetto (chiave legacy + nome completo). */
+export function addettoStoredNameAliases(rec: Pick<AddettoRecord, "nome" | "cognome">): string[] {
+  const out = new Set<string>();
+  const nome = rec.nome.trim();
+  if (nome) out.add(nome);
+  const full = addettoDisplayName(rec).trim();
+  if (full) out.add(full);
+  return [...out];
+}
+
+/**
+ * Risolve addetto da stringa salvata in scheda/log:
+ * - chiave legacy `nome`
+ * - `nome cognome` completo
+ * - nome intero in campo `nome` (migrazione legacy)
+ */
+export function findAddettoByStoredName(
+  records: readonly AddettoRecord[],
+  stored: string,
+): AddettoRecord | undefined {
+  const norm = normalizeStoredAddettoName(stored);
+  if (!norm || norm === "—") return undefined;
+
+  for (const rec of records) {
+    if (normalizeStoredAddettoName(rec.nome) === norm) return rec;
+  }
+  for (const rec of records) {
+    if (normalizeStoredAddettoName(addettoDisplayName(rec)) === norm) return rec;
+  }
+  return undefined;
+}
+
+/** @deprecated Usare findAddettoByStoredName */
+export function findAddettoByNome(records: readonly AddettoRecord[], nome: string): AddettoRecord | undefined {
+  return findAddettoByStoredName(records, nome);
+}
+
+/** Etichetta UI da snapshot scheda (nome o nome+cognome); arricchisce da settings se match. */
 export function addettoDisplayNameFromNome(
   records: readonly AddettoRecord[],
-  nome: string,
+  stored: string,
 ): string {
-  const trimmed = nome.trim();
+  const trimmed = stored.trim();
   if (!trimmed || trimmed === "—") return "—";
-  const rec = findAddettoByNome(records, trimmed);
+  const rec = findAddettoByStoredName(records, trimmed);
   return rec ? addettoDisplayName(rec) : trimmed;
 }

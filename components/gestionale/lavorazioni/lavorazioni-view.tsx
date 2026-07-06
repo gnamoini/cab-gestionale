@@ -55,6 +55,7 @@ import {
 } from "@/lib/global-list/build-lavorazioni-pill-options";
 import { gestionaleLavorazioniDenseTableClass } from "@/lib/ui/gestionale-list-table";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { comparePrioritaLavorazione, orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
@@ -290,7 +291,7 @@ function IconSchede({ className = dsTableActionGlyph }: { className?: string }) 
   );
 }
 
-function legacyLavBase(row: LavorazioneListRow, fallbackAddetto: string) {
+function legacyLavBase(row: LavorazioneListRow) {
   const mezzo = row.mezzo;
   return {
     id: row.id,
@@ -302,25 +303,36 @@ function legacyLavBase(row: LavorazioneListRow, fallbackAddetto: string) {
     cliente: mezzo?.cliente?.trim() || "—",
     utilizzatore: mezzo?.utilizzatore?.trim() || "",
     cantiere: "",
-    addetto: fallbackAddetto,
     noteInterne: row.note?.trim() || "",
     dataIngresso: row.data_ingresso ?? row.created_at,
   };
 }
 
-function rowToLegacyAttiva(row: LavorazioneListRow, fallbackAddetto: string): LavorazioneAttiva {
+function rowToLegacyAttiva(
+  row: LavorazioneListRow,
+  schedeStore: LavorazioneSchedeStore,
+  logs?: readonly LogModificaRow[],
+  addettiRecords?: readonly AddettoRecord[],
+): LavorazioneAttiva {
   return {
-    ...legacyLavBase(row, fallbackAddetto),
+    ...legacyLavBase(row),
+    addetto: addettoLabel(row, schedeStore, logs, addettiRecords),
     statoId: row.stato,
     priorita: row.priorita as PrioritaLav,
     dataCompletamento: row.data_uscita ?? null,
   };
 }
 
-function rowToLegacyArchiviata(row: LavorazioneListRow, fallbackAddetto: string): LavorazioneArchiviata {
+function rowToLegacyArchiviata(
+  row: LavorazioneListRow,
+  schedeStore: LavorazioneSchedeStore,
+  logs?: readonly LogModificaRow[],
+  addettiRecords?: readonly AddettoRecord[],
+): LavorazioneArchiviata {
   const completion = row.data_uscita ?? row.updated_at;
   return {
-    ...legacyLavBase(row, fallbackAddetto),
+    ...legacyLavBase(row),
+    addetto: addettoLabel(row, schedeStore, logs, addettiRecords),
     statoFinaleId: row.stato,
     prioritaFinale: row.priorita as PrioritaLav,
     dataCompletamento: completion,
@@ -502,6 +514,10 @@ export function LavorazioniView() {
   const canEditWorkOrders = lavPerm.canWrite;
   const canDeleteRecords = lavPerm.canWrite;
   const globalOpts = useGlobalOptions({ debugTag: "LavorazioniView" });
+  const addettiRecords = useMemo(
+    () => globalOpts.lavorazioni.addettiRecords,
+    [globalOpts.lavorazioni.addettiRecords],
+  );
   const mezziListQ = useMezziListQuery();
   const statiOpts = useMemo(
     () => globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata"),
@@ -906,8 +922,6 @@ export function LavorazioniView() {
     return () => window.removeEventListener(CAB_ADDETTO_DISPLAY_RENAME, handler);
   }, [invalidateSchedeStore]);
 
-  const defaultAddetto = globalOpts.lavorazioni.addetti[0] ?? "";
-
   const logsByLavorazioneId = useMemo(
     () => groupLavorazioniLogsById(lavModificheLogQuery.data ?? []),
     [lavModificheLogQuery.data],
@@ -918,10 +932,10 @@ export function LavorazioniView() {
       buildLavorazioneSchedeSortIndex(
         [...attiveRows, ...chiuseRows],
         schedeStore,
-        defaultAddetto,
         logsByLavorazioneId,
+        addettiRecords,
       ),
-    [attiveRows, chiuseRows, schedeStore, defaultAddetto, logsByLavorazioneId],
+    [attiveRows, chiuseRows, schedeStore, logsByLavorazioneId, addettiRecords],
   );
   const [listRefreshBusy, setListRefreshBusy] = useState(false);
 
@@ -953,17 +967,17 @@ export function LavorazioniView() {
   const attiveRowsFiltered = useMemo(
     () =>
       attiveRows.filter((row) =>
-        lavRowMatchesPageFilters(row, pageFilters, schedeStore, defaultAddetto, "in_corso"),
+        lavRowMatchesPageFilters(row, pageFilters, schedeStore, "in_corso", addettiRecords),
       ),
-    [attiveRows, pageFilters, schedeStore, defaultAddetto],
+    [attiveRows, pageFilters, schedeStore, addettiRecords],
   );
 
   const chiuseRowsFiltered = useMemo(
     () =>
       chiuseRows.filter((row) =>
-        lavRowMatchesPageFilters(row, pageFilters, schedeStore, defaultAddetto, "archivio"),
+        lavRowMatchesPageFilters(row, pageFilters, schedeStore, "archivio", addettiRecords),
       ),
-    [chiuseRows, pageFilters, schedeStore, defaultAddetto],
+    [chiuseRows, pageFilters, schedeStore, addettiRecords],
   );
 
   const filterCatalog = useMemo(
@@ -973,9 +987,9 @@ export function LavorazioniView() {
         schedeStore,
         globalOpts.lavorazioni.addetti,
         mezziCatalog,
-        defaultAddetto,
+        addettiRecords,
       ),
-    [attiveRows, chiuseRows, schedeStore, globalOpts.lavorazioni.addetti, mezziCatalog, defaultAddetto],
+    [attiveRows, chiuseRows, schedeStore, globalOpts.lavorazioni.addetti, mezziCatalog, addettiRecords],
   );
 
   const openDetailById = useCallback(
@@ -992,13 +1006,19 @@ export function LavorazioniView() {
   );
 
   const attiveLegacyRows = useMemo(
-    () => attiveRows.map((row) => rowToLegacyAttiva(row, defaultAddetto)),
-    [attiveRows, defaultAddetto],
+    () =>
+      attiveRows.map((row) =>
+        rowToLegacyAttiva(row, schedeStore, logsByLavorazioneId.get(row.id), addettiRecords),
+      ),
+    [attiveRows, schedeStore, logsByLavorazioneId, addettiRecords],
   );
 
   const storicoLegacyRows = useMemo(
-    () => chiuseRows.map((row) => rowToLegacyArchiviata(row, defaultAddetto)),
-    [chiuseRows, defaultAddetto],
+    () =>
+      chiuseRows.map((row) =>
+        rowToLegacyArchiviata(row, schedeStore, logsByLavorazioneId.get(row.id), addettiRecords),
+      ),
+    [chiuseRows, schedeStore, logsByLavorazioneId, addettiRecords],
   );
 
   const flashRow = useCallback((id: string) => {
@@ -1047,7 +1067,7 @@ export function LavorazioniView() {
       if (!canEditWorkOrders) return;
       const clean = next.trim();
       if (!clean || !globalOpts.lavorazioni.addetti.includes(clean)) return;
-      const beforeAddetto = addettoLabel(row, schedeStore, defaultAddetto);
+      const beforeAddetto = addettoLabel(row, schedeStore, logsByLavorazioneId.get(row.id), addettiRecords);
       {
         const prev = schedeStore;
         const current = getOrCreateBundle(prev, row.id);
@@ -1068,6 +1088,7 @@ export function LavorazioniView() {
             tipoTelaio: "",
             marcaTelaio: "",
             modelloTelaio: "",
+            vin: "",
             targa: row.mezzo?.targa ?? "",
             km: "",
             descrizioneAnomalia: row.note ?? "",
@@ -1115,7 +1136,7 @@ export function LavorazioniView() {
       });
       flashRow(row.id);
     },
-    [authorName, canEditWorkOrders, defaultAddetto, flashRow, globalOpts.lavorazioni.addetti, persistSchedeAndSync, qc, schedeStore, user?.id],
+    [authorName, canEditWorkOrders, flashRow, globalOpts.lavorazioni.addetti, addettiRecords, logsByLavorazioneId, persistSchedeAndSync, qc, schedeStore, user?.id],
   );
 
   function openEliminaConfirm(row: LavorazioneListRow) {
@@ -1632,7 +1653,6 @@ export function LavorazioniView() {
           loading={loading}
           canEditWorkOrders={canEditWorkOrders}
           mutPendingBlocking={mutPendingBlocking}
-          defaultAddetto={defaultAddetto}
           statiOpts={statiOpts}
           statiRapidiPillOpts={statiRapidiPillOpts}
           prioritaPillOpts={prioritaPillOpts}
@@ -1644,6 +1664,7 @@ export function LavorazioniView() {
             prioritaPillStylesById[row.priorita] ?? prioritaPillShellStyle(prioColor(row.priorita))
           }
           addettoColors={globalOpts.lavorazioni.addettoColors}
+          addettiRecords={addettiRecords}
           addetti={globalOpts.lavorazioni.addetti}
           onStatoRow={onStatoRow}
           onPrioritaRow={onPrioritaRow}
@@ -1661,7 +1682,6 @@ export function LavorazioniView() {
       loading,
       canEditWorkOrders,
       mutPendingBlocking,
-      defaultAddetto,
       statiOpts,
       statiRapidiPillOpts,
       prioritaPillOpts,
@@ -1669,6 +1689,7 @@ export function LavorazioniView() {
       statoPillStylesById,
       prioritaPillStylesById,
       globalOpts.lavorazioni.addettoColors,
+      addettiRecords,
       globalOpts.lavorazioni.addetti,
       onStatoRow,
       onPrioritaRow,
@@ -1701,6 +1722,7 @@ export function LavorazioniView() {
           loading={loading}
           addettoLogs={logs.get(row.id)}
           addettoColors={globalOpts.lavorazioni.addettoColors}
+          addettiRecords={addettiRecords}
           onRipristina={onRipristinaArchivioRow}
           onOpenInfo={onOpenArchivioInfo}
           onOpenSchede={onOpenArchivioSchede}
@@ -1715,6 +1737,7 @@ export function LavorazioniView() {
       mutPendingBlocking,
       loading,
       globalOpts.lavorazioni.addettoColors,
+      addettiRecords,
       onRipristinaArchivioRow,
       onOpenArchivioInfo,
       onOpenArchivioSchede,
@@ -1825,7 +1848,7 @@ export function LavorazioniView() {
               columns={statiInCorsoOpts}
               statiOpts={statiOpts}
               schedeStore={schedeStore}
-              defaultAddetto={defaultAddetto}
+              addettiRecords={addettiRecords}
               prioritaColors={globalOpts.lavorazioni.prioritaColors}
               addettoColors={globalOpts.lavorazioni.addettoColors}
               flashRowId={flashRowId}
@@ -1998,7 +2021,6 @@ export function LavorazioniView() {
                   key={row.id}
                   row={row}
                   bundle={schedeStore[row.id]}
-                  defaultAddetto={defaultAddetto}
                   loading={loading}
                   canEditWorkOrders={canEditWorkOrders}
                   mutPendingBlocking={mutPendingBlocking}
@@ -2013,6 +2035,7 @@ export function LavorazioniView() {
                     prioritaPillStylesById[row.priorita] ?? prioritaPillShellStyle(prioColor(row.priorita))
                   }
                   addetti={globalOpts.lavorazioni.addetti}
+                  addettiRecords={addettiRecords}
                   addettoColors={globalOpts.lavorazioni.addettoColors}
                   ultimaModificaInfo={resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
                     resolveUserId: resolveMobileProfile(row),
@@ -2206,6 +2229,7 @@ export function LavorazioniView() {
                 mutPendingBlocking={mutPendingBlocking}
                 loading={loading}
                 prioritaColors={globalOpts.lavorazioni.prioritaColors}
+                addettiRecords={addettiRecords}
                 addettoColors={globalOpts.lavorazioni.addettoColors}
                 ultimaModificaInfo={archivioMobileUltimaModificaMap.get(row.id)!}
                 onRipristina={onRipristinaArchivioRow}
@@ -2278,8 +2302,18 @@ export function LavorazioniView() {
           onClose={() => setSchedeRow(null)}
           lav={
             schedeRow.origine === "storico"
-              ? rowToLegacyArchiviata(schedeRow.row, defaultAddetto)
-              : rowToLegacyAttiva(schedeRow.row, defaultAddetto)
+              ? rowToLegacyArchiviata(
+                  schedeRow.row,
+                  schedeStore,
+                  logsByLavorazioneId.get(schedeRow.row.id),
+                  addettiRecords,
+                )
+              : rowToLegacyAttiva(
+                  schedeRow.row,
+                  schedeStore,
+                  logsByLavorazioneId.get(schedeRow.row.id),
+                  addettiRecords,
+                )
           }
           origine={schedeRow.origine}
           initialTab={schedeRow.initialTab}

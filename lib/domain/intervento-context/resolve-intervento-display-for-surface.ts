@@ -72,6 +72,7 @@ export function schedaIngressoFieldsFromDisplay(
     tipoTelaio: base.tipoTelaio ?? "",
     marcaTelaio: base.marcaTelaio ?? "",
     modelloTelaio: base.modelloTelaio ?? "",
+    vin: base.vin ?? "",
     targa: display.targa.value || base.targa || "",
     km: base.km ?? "",
     descrizioneAnomalia: base.descrizioneAnomalia ?? "",

@@ -11,6 +11,7 @@ import type { MezzoRow } from "@/src/types/supabase-tables";
 import { logAttrezzatureV2WritePath } from "@/lib/observability/attrezzature-v2-telemetry";
 import { attachMezzoEntityKey } from "@/lib/validation/entity-persistence";
 import { sanitizeMezzoWritePayload } from "@/lib/validation/services/mezzi-payload";
+import { normalizeVin } from "@/lib/mezzi/vin-normalize";
 import { humanizeGestionaleError } from "@/src/utils/gestionale-error-messages";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
@@ -34,8 +35,53 @@ export type MezzoFilters = {
   search?: string;
 };
 
-export type MezzoInsert = Omit<MezzoRow, "id" | "created_at" | "updated_at">;
+export type MezzoInsert = Omit<MezzoRow, "id" | "created_at" | "updated_at" | "telaio_num_norm">;
 export type MezzoUpdate = Partial<MezzoInsert>;
+
+const VIN_UNIQUE_INDEX = "idx_mezzi_telaio_num_norm_unique";
+const VIN_DUPLICATE_MSG = "VIN già registrato su un altro mezzo.";
+
+type PostgrestLikeError = {
+  code?: string;
+  message?: string;
+  details?: string;
+  hint?: string;
+};
+
+export function isVinUniqueViolation(error: PostgrestLikeError | null | undefined): boolean {
+  if (!error || error.code !== "23505") return false;
+  const hay = [error.message, error.details, error.hint].filter(Boolean).join(" ");
+  return hay.includes(VIN_UNIQUE_INDEX);
+}
+
+function mapMezziWriteError(error: PostgrestLikeError): string {
+  if (isVinUniqueViolation(error)) return VIN_DUPLICATE_MSG;
+  return error.message ?? "Errore salvataggio mezzo.";
+}
+
+async function assertVinUnique(
+  c: Awaited<ReturnType<typeof sb>>,
+  telaioNum: string | null | undefined,
+  excludeId?: string,
+): Promise<ServiceResult<null>> {
+  const norm = normalizeVin(telaioNum);
+  if (!norm) return success(null);
+  let q = c.from("mezzi").select("id").eq("telaio_num_norm", norm).limit(1);
+  if (excludeId?.trim()) q = q.neq("id", excludeId.trim());
+  const { data, error } = await q.maybeSingle();
+  if (error) return err(error.message);
+  if (data) return err(VIN_DUPLICATE_MSG);
+  return success(null);
+}
+
+function prepareMezzoWritePayload(data: MezzoInsert | MezzoUpdate): MezzoInsert | MezzoUpdate {
+  const sanitized = sanitizeMezzoWritePayload(data, { v2Enabled: true, source: "mezziService" });
+  if ("telaio_num" in sanitized && sanitized.telaio_num !== undefined) {
+    const raw = sanitized.telaio_num;
+    sanitized.telaio_num = raw === null || String(raw).trim() === "" ? null : normalizeVin(String(raw));
+  }
+  return sanitized;
+}
 
 async function sb() {
   return getBrowserSupabase();
@@ -150,12 +196,13 @@ export const mezziService = {
   async create(data: MezzoInsert): Promise<ServiceResult<MezzoRow>> {
     try {
       const c = await sb();
-      const payload = attachMezzoEntityKey(
-        sanitizeMezzoWritePayload(data, { v2Enabled: true, source: "mezziService.create" }),
-      );
+      const prepared = prepareMezzoWritePayload(data) as MezzoInsert;
+      const vinCheck = await assertVinUnique(c, prepared.telaio_num);
+      if (!vinCheck.success) return vinCheck as ServiceResult<MezzoRow>;
+      const payload = attachMezzoEntityKey(prepared);
       logAttrezzatureV2WritePath({ path: "v2", operation: "create" });
       const { data: row, error } = await c.from("mezzi").insert(payload).select(MEZZI_COLUMNS).single();
-      if (error) return err(error.message);
+      if (error) return err(mapMezziWriteError(error));
       const r = row as MezzoRow;
       await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, oggettoMezzo(r)) });
       return success(r);
@@ -167,17 +214,19 @@ export const mezziService = {
   async update(id: string, data: MezzoUpdate): Promise<ServiceResult<MezzoRow>> {
     try {
       const c = await sb();
+      const prepared =
+        Object.keys(data).length > 0 ? (prepareMezzoWritePayload(data) as MezzoUpdate) : data;
+      if (prepared.telaio_num !== undefined) {
+        const vinCheck = await assertVinUnique(c, prepared.telaio_num, id);
+        if (!vinCheck.success) return vinCheck as ServiceResult<MezzoRow>;
+      }
       const payload =
-        Object.keys(data).length > 0
-          ? attachMezzoEntityKey(
-              sanitizeMezzoWritePayload(data, { v2Enabled: true, source: "mezziService.update" }),
-            )
-          : data;
+        Object.keys(prepared).length > 0 ? attachMezzoEntityKey(prepared as MezzoInsert) : prepared;
       logAttrezzatureV2WritePath({ path: "v2", operation: "update" });
       const { data: before, error: e0 } = await c.from("mezzi").select(MEZZI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
       const { data: row, error } = await c.from("mezzi").update(payload).eq("id", id).select(MEZZI_COLUMNS).single();
-      if (error) return err(error.message);
+      if (error) return err(mapMezziWriteError(error));
       const r = row as MezzoRow;
       await writeModificaLog(c, {
         entita: ENTITA,

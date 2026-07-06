@@ -68,6 +68,7 @@ const store: LavorazioneSchedeStore = {
         tipoTelaio: "",
         marcaTelaio: "",
         modelloTelaio: "",
+        vin: "",
         targa: "BB222CC",
         km: "",
         descrizioneAnomalia: "",

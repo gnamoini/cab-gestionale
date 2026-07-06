@@ -89,6 +89,7 @@ export function emptySchedaIngressoFields(addettoDefault = ""): SchedaIngressoFi
     tipoTelaio: "",
     marcaTelaio: "",
     modelloTelaio: "",
+    vin: "",
     targa: "",
     km: "",
     descrizioneAnomalia: "",
@@ -493,8 +494,8 @@ export function SchedaIngressoFormBody({
           lastIngressoMatch={lastIngressoMatch}
           lastIngressoMatchCount={lastIngressoCandidates.length}
           onCopyLastIngresso={readOnly ? undefined : copyLastIngresso}
-          clienteRequired={variant === "create-lavorazione"}
-          marcaAttrezzaturaRequired={variant === "create-lavorazione"}
+          clienteRequired={false}
+          marcaAttrezzaturaRequired={false}
           mezzoLinked={mezzoLinked}
           mezzoId={mezzoId}
         />

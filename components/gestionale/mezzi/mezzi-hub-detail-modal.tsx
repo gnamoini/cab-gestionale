@@ -325,6 +325,7 @@ export function MezziHubDetailModal({
                     [mezzo.marcaTelaio, mezzo.modelloTelaio].filter((v) => v?.trim() && v !== "—").join(" ") || undefined,
                   )}
                 />
+                <HubModalPanoramicaField label="VIN" value={hubPanoramicaDisplayValue(mezzo.vin)} mono />
                 <HubModalPanoramicaField label="Ultima lavorazione" value={ultimaLavorazioneLabel(interventi)} />
               </HubModalPanoramicaFieldGrid>
             </HubModalPanoramicaFieldGroup>

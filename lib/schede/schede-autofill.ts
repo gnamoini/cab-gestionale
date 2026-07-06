@@ -55,6 +55,7 @@ export function buildSchedaIngressoFieldsFromContext(
     tipoTelaio: "",
     marcaTelaio: "",
     modelloTelaio: "",
+    vin: mezzo?.vin ?? "",
     targa: lav.targa ?? mezzo?.targa ?? "",
     km: mezzo != null ? String(mezzo.oreKm ?? "") : "",
     descrizioneAnomalia: lav.noteInterne?.trim() ?? "",

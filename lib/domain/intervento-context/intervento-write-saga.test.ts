@@ -24,6 +24,7 @@ const fields: SchedaIngressoFields = {
   tipoTelaio: "",
   marcaTelaio: "",
   modelloTelaio: "",
+  vin: "",
   targa: "AA001BB",
   km: "",
   descrizioneAnomalia: "",

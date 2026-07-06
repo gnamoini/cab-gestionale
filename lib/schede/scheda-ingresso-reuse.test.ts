@@ -21,6 +21,7 @@ const baseFields = (): SchedaIngressoFields => ({
   tipoTelaio: "",
   marcaTelaio: "",
   modelloTelaio: "",
+  vin: "",
   targa: "AA111BB",
   km: "",
   descrizioneAnomalia: "",

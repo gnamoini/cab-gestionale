@@ -17,6 +17,7 @@ import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-querie
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { EntitySimilarWarning } from "@/components/design-system/entity-similar-warning";
 import { findMezzoBySimilarIdent } from "@/lib/validation/services/mezzi-validation";
+import { canonicalTelaioNumForWrite } from "@/lib/mezzi/vin-normalize";
 import type { MezzoInsert, MezzoUpdate } from "@/lib/domain/mezzi-entry";
 
 export type MezzoFormState = ReturnType<typeof getEmptyMezzoForm>;
@@ -35,6 +36,7 @@ export function getEmptyMezzoForm() {
     tipoTelaio: "",
     marcaTelaio: "",
     modelloTelaio: "",
+    vin: "",
     targa: "",
     km: "",
     anno: "",
@@ -61,6 +63,7 @@ export function gestitoToMezzoForm(m: MezzoGestito): MezzoFormState {
     tipoAttrezzatura: m.tipoAttrezzatura === "—" ? "" : m.tipoAttrezzatura.trim(),
     anno: m.anno != null ? String(m.anno) : "",
     ...metaFields,
+    vin: m.vin?.trim() ?? "",
   };
 }
 
@@ -79,7 +82,7 @@ export function formToMezzoInsert(f: MezzoFormState): MezzoInsert {
     marca_telaio: f.marcaTelaio.trim() || null,
     modello_telaio: f.modelloTelaio.trim() || null,
     tipo_telaio: f.tipoTelaio.trim() || null,
-    telaio_num: null,
+    telaio_num: canonicalTelaioNumForWrite(f.vin, { clearWhenEmpty: true }) ?? null,
     km: Number.isFinite(kmParsed) ? kmParsed : null,
     note: null,
   };
@@ -297,6 +300,17 @@ export function MezzoFormFields({
           </label>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label htmlFor="mezzo-form-vin" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            VIN
+            <input
+              id="mezzo-form-vin"
+              value={form.vin}
+              onChange={(e) => setForm((f) => ({ ...f, vin: e.target.value }))}
+              className={`${dsInput} mt-1 font-mono uppercase`}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </label>
           <label htmlFor="mezzo-form-targa" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Targa
             <input
@@ -306,6 +320,8 @@ export function MezzoFormFields({
               className={`${dsInput} mt-1 font-mono`}
             />
           </label>
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label htmlFor="mezzo-form-km" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             KM
             <input

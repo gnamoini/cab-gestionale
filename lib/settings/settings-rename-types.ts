@@ -21,6 +21,8 @@ export type SettingsRenameEntry = {
   kind: SettingsRenameKind;
   from: string;
   to: string;
+  /** Alias storici in scheda (es. «nome cognome» oltre alla chiave `nome`). */
+  fromAliases?: readonly string[];
   /** Marca parent per rename modello (evita ambiguità). */
   marcaContext?: string;
   tree?: HierarchyTreeKey;

@@ -322,10 +322,6 @@ export function LavorazioneCreateModal({
         gestToast.validation("Seleziona uno stato tra quelli configurati in Configurazione globale.");
         return;
       }
-      if (!currentFields.cliente.trim() || !currentFields.marcaAttrezzatura.trim()) {
-        gestToast.validation("Cliente e marca attrezzatura sono obbligatori.");
-        return;
-      }
       if (!prioritaOpts.includes(metaPriorita)) {
         gestToast.validation("Seleziona una priorità dalla configurazione globale.");
         return;

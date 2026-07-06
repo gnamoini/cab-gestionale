@@ -19,6 +19,8 @@ export type MezzoGestito = {
   tipoTelaio?: string;
   marcaTelaio?: string;
   modelloTelaio?: string;
+  /** Alias UI da mezzi.telaio_num (I-VIN-1). */
+  vin?: string;
   anno: number;
   oreKm: number;
   km?: number;

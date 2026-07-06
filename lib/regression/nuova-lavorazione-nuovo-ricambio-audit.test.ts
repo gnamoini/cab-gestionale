@@ -59,9 +59,11 @@ assert.doesNotMatch(ricambioFields, /GestionaleFormFocusScope/);
 assert.match(ricambioFields, /GestionaleTextarea/);
 assert.match(ricambioFields, /CAB_FOCUS_SCROLL_GROUP_ATTR/);
 
-// Scheda ingresso create variant — required flags + multiline Enter
+// Scheda ingresso create variant — optional anagrafica + multiline Enter
 assert.match(schedaBody, /variant === "create-lavorazione"/);
-assert.match(schedaBody, /clienteRequired=\{variant === "create-lavorazione"\}/);
+assert.match(schedaBody, /clienteRequired=\{false\}/);
+assert.match(schedaBody, /marcaAttrezzaturaRequired=\{false\}/);
+assert.doesNotMatch(lavCreate, /Cliente e marca attrezzatura sono obbligatori/);
 assert.match(schedaBody, /GestionaleTextarea/);
 
 // Lenient placeholder flags — SSOT segnaposto

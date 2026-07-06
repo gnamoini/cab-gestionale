@@ -209,6 +209,7 @@ function SchedaIngressoPortalMezzoSplit({
           <PanoramicaStringField label="Tipo" value={fields.tipoTelaio} fieldLayout={fieldLayout} rowLayout={rowLayout} />
           <PanoramicaStringField label="Marca" value={fields.marcaTelaio} fieldLayout={fieldLayout} rowLayout={rowLayout} />
           <PanoramicaStringField label="Modello" value={fields.modelloTelaio} fieldLayout={fieldLayout} rowLayout={rowLayout} />
+          <PanoramicaStringField label="VIN" value={fields.vin} mono fieldLayout={fieldLayout} rowLayout={rowLayout} />
           <PanoramicaStringField label="Targa" value={fields.targa} mono strong fieldLayout={fieldLayout} rowLayout={rowLayout} />
         </PanoramicaFieldsShell>
       </GestionaleInfoCard>
@@ -282,6 +283,7 @@ export function SchedaIngressoPanoramicaAnagraficaContent({
           <HubModalPanoramicaField label="Tipo" value={hubPanoramicaDisplayValue(fields.tipoTelaio)} />
           <HubModalPanoramicaField label="Marca" value={hubPanoramicaDisplayValue(fields.marcaTelaio)} />
           <HubModalPanoramicaField label="Modello" value={hubPanoramicaDisplayValue(fields.modelloTelaio)} />
+          <HubModalPanoramicaField label="VIN" value={hubPanoramicaDisplayValue(fields.vin)} mono />
         </HubModalPanoramicaSubsection>
       </>
     );
@@ -335,6 +337,7 @@ export function SchedaIngressoPanoramicaAnagraficaContent({
             <PanoramicaStringField label="Tipo" value={fields.tipoTelaio} fieldLayout={fieldLayout} rowLayout={rowLayout} />
             <PanoramicaStringField label="Marca" value={fields.marcaTelaio} fieldLayout={fieldLayout} rowLayout={rowLayout} />
             <PanoramicaStringField label="Modello" value={fields.modelloTelaio} fieldLayout={fieldLayout} rowLayout={rowLayout} />
+            <PanoramicaStringField label="VIN" value={fields.vin} mono fieldLayout={fieldLayout} rowLayout={rowLayout} />
           </div>
         </GestionaleInfoSubgroup>
       </>
@@ -379,6 +382,7 @@ export function SchedaIngressoPanoramicaAnagraficaContent({
         <PanoramicaStringField label="Tipo" value={fields.tipoTelaio} fieldLayout={fieldLayout} rowLayout={rowLayout} />
         <PanoramicaStringField label="Marca" value={fields.marcaTelaio} fieldLayout={fieldLayout} rowLayout={rowLayout} />
         <PanoramicaStringField label="Modello" value={fields.modelloTelaio} fieldLayout={fieldLayout} rowLayout={rowLayout} />
+        <PanoramicaStringField label="VIN" value={fields.vin} mono fieldLayout={fieldLayout} rowLayout={rowLayout} />
       </GestionaleInfoSubgroup>
     </>
   );

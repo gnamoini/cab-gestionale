@@ -83,33 +83,54 @@ export function employeeHasMonthActivity(
 }
 
 /**
- * Dipendenti nel PDF mensile: solo addetti attuali in Impostazioni con attività nel mese.
+ * Dipendenti nel PDF mensile: union(attività nel mese, addetti attuali in settings).
  */
 export function selectTimesheetEmployeesForPdfExport(
   employees: readonly DipendenteTimesheetEmployeeRow[],
   entries: readonly DipendenteTimesheetEntryRow[],
   currentAddettiIds: ReadonlySet<string>,
 ): DipendenteTimesheetEmployeeRow[] {
-  return employees.filter((emp) => {
-    if (!emp.source_addetto_id || !currentAddettiIds.has(emp.source_addetto_id)) return false;
-    return employeeHasMonthActivity(emp.id, entries);
-  });
+  const ids = new Set<string>();
+  for (const emp of employees) {
+    const isCurrent =
+      Boolean(emp.source_addetto_id) && currentAddettiIds.has(emp.source_addetto_id!);
+    const hasActivity = employeeHasMonthActivity(emp.id, entries);
+    if (isCurrent || hasActivity) ids.add(emp.id);
+  }
+  return employees.filter((emp) => ids.has(emp.id));
+}
+
+/** Nome PDF: snapshot entry → registry → settings enrich. */
+export function resolveTimesheetEmployeeDisplayName(
+  employee: DipendenteTimesheetEmployeeRow,
+  addettiRecords: readonly AddettoRecord[],
+  entries?: readonly DipendenteTimesheetEntryRow[],
+): string {
+  const monthEntry = entries?.find((e) => e.dipendente_id === employee.id);
+  const snap = monthEntry?.employee_display_name_snapshot?.trim();
+  if (snap) return snap;
+  const fromRegistry = employee.display_name.trim();
+  if (fromRegistry) {
+    const rec = employee.source_addetto_id
+      ? addettiRecords.find((a) => a.id === employee.source_addetto_id)
+      : undefined;
+    if (rec) {
+      const nome = rec.nome.trim();
+      const cognome = rec.cognome?.trim();
+      if (nome && cognome) return `${nome} ${cognome}`;
+      if (nome) return nome;
+    }
+    return fromRegistry;
+  }
+  return employeeDisplayNameForPdf(employee, addettiRecords);
 }
 
 export function employeeDisplayNameForPdf(
   employee: DipendenteTimesheetEmployeeRow,
   addettiRecords: readonly AddettoRecord[],
+  entries?: readonly DipendenteTimesheetEntryRow[],
 ): string {
-  const rec = employee.source_addetto_id
-    ? addettiRecords.find((a) => a.id === employee.source_addetto_id)
-    : undefined;
-  if (rec) {
-    const nome = rec.nome.trim();
-    const cognome = rec.cognome?.trim();
-    if (nome && cognome) return `${nome} ${cognome}`;
-    if (nome) return nome;
-  }
-  return employee.display_name.trim() || "—";
+  return resolveTimesheetEmployeeDisplayName(employee, addettiRecords, entries);
 }
 
 /** ID dipendenti con almeno una entry nel periodo visualizzato (mese/settimana/giorno). */

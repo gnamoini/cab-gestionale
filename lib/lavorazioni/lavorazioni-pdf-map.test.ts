@@ -39,7 +39,6 @@ function sampleRow(overrides: Partial<LavorazioneListRow> = {}): LavorazioneList
 const emptyCtx = {
   stati,
   schedeStore: {} as LavorazioneSchedeStore,
-  defaultAddetto: "",
 };
 
 {
@@ -76,6 +75,7 @@ const emptyCtx = {
           tipoTelaio: "",
           marcaTelaio: "",
           modelloTelaio: "",
+          vin: "",
           targa: "",
           km: "",
           descrizioneAnomalia: "",
@@ -97,11 +97,56 @@ const emptyCtx = {
 }
 
 {
+  const schedeStoreNomeOnly: LavorazioneSchedeStore = {
+    "lav-001": {
+      lavorazioneId: "lav-001",
+      ingresso: {
+        tipo: "ingresso",
+        sorgente: "generata",
+        createdAt: "",
+        updatedAt: "",
+        createdBy: "",
+        updatedBy: "",
+        fileEsterno: null,
+        campi: {
+          dataIngresso: "",
+          cliente: "",
+          cantiere: "",
+          utilizzatore: "",
+          tipoAttrezzatura: "",
+          marcaAttrezzatura: "",
+          modelloAttrezzatura: "",
+          matricola: "",
+          nScuderia: "",
+          oreLavoro: "",
+          tipoTelaio: "",
+          marcaTelaio: "",
+          modelloTelaio: "",
+          vin: "",
+          targa: "",
+          km: "",
+          descrizioneAnomalia: "",
+          livelloCarburante: "",
+          addettoAccettazione: "Mario",
+          richiedente: "",
+          noteIntervento: "",
+        },
+      },
+      lavorazioni: null,
+      ricambi: null,
+    },
+  };
   const [row] = mapLavorazioniListRowsToPdfRows([sampleRow()], {
     ...emptyCtx,
-    defaultAddetto: "Default Op",
+    schedeStore: schedeStoreNomeOnly,
+    addettiRecords: [{ id: "a1", nome: "Mario", cognome: "Rossi" }],
   });
-  assert.equal(row.addetto, "Default Op");
+  assert.equal(row.addetto, "Mario Rossi", "enrich cognome da settings in PDF");
+}
+
+{
+  const [row] = mapLavorazioniListRowsToPdfRows([sampleRow()], emptyCtx);
+  assert.equal(row.addetto, "—", "no ghost fallback from first active addetto");
 }
 
 console.log("lavorazioni-pdf-map.test.ts OK");

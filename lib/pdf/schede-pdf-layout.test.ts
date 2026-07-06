@@ -48,6 +48,7 @@ const ingresso: SchedaIngressoDoc = {
     tipoTelaio: "",
     marcaTelaio: "",
     modelloTelaio: "",
+    vin: "",
     targa: "AA111BB",
     km: "",
     descrizioneAnomalia: "",

@@ -35,6 +35,7 @@ export function buildSchedaIngressoAuditFixture(token = uniqueAuditToken()): Sch
     tipoTelaio: `TelaioTipo ${token}`,
     marcaTelaio: `MARCA-T-${token}`,
     modelloTelaio: `MOD-T-${token}`,
+    vin: "",
     targa: `ZZ${token.slice(-3).replace(/\D/g, "9")}XX`.slice(0, 7),
     km: "56789",
     descrizioneAnomalia: `Riga1 ${token}\nRiga2 🛠 àèù & < >`,

@@ -25,6 +25,7 @@ export function buildSchedaIngressoFieldsFromMezzo(mezzo: MezzoGestito): SchedaI
     tipoTelaio: blankMezzoField(mezzo.tipoTelaio),
     marcaTelaio: blankMezzoField(mezzo.marcaTelaio),
     modelloTelaio: blankMezzoField(mezzo.modelloTelaio),
+    vin: blankMezzoField(mezzo.vin),
     targa: blankMezzoField(mezzo.targa),
     km: mezzo.km != null ? String(mezzo.km) : mezzo.oreKm != null && mezzo.oreKm > 0 ? String(mezzo.oreKm) : "",
     descrizioneAnomalia: "",

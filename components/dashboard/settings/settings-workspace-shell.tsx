@@ -72,6 +72,7 @@ import { defaultTipiAssenza, type TipoAssenzaConfig } from "@/lib/dipendenti/tip
 import { DEFAULT_ADDETTI_LAVORAZIONI } from "@/lib/lavorazioni/constants";
 import {
   addettiLegacyNomi,
+  addettoStoredNameAliases,
   createAddettoId,
   defaultAddettiRecords,
   findAddettoById,
@@ -935,7 +936,12 @@ export function SistemaImpostazioniWorkspace({
                         prev.map((r) => (r.id === id ? { ...r, nome: t } : r)),
                       );
                       setAddettoColors((prev) => renameAddettoInColorMap(prev, rec.nome, t));
-                      queueRename({ kind: "addetto", from: rec.nome, to: t });
+                      queueRename({
+                        kind: "addetto",
+                        from: rec.nome,
+                        to: t,
+                        fromAliases: addettoStoredNameAliases(rec),
+                      });
                       dispatchAddettoDisplayRename({ previousName: rec.nome, nextName: t });
                     });
                     return;

@@ -1,5 +1,5 @@
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
-import { lavorazioneAddettoLabel } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import { resolveAddettoDisplayLabel } from "@/lib/lavorazioni/resolve-addetto-display";
 import {
   lavorazioneClienteLabel,
   lavorazioneMacchinaLabel,
@@ -30,7 +30,6 @@ export type DashboardLavWidgetRow = {
 
 export type DashboardLavWidgetRowsOptions = {
   schedeStore?: LavorazioneSchedeStore;
-  defaultAddetto?: string;
 };
 
 export type DashboardMagRecentRicambioRow = {
@@ -111,14 +110,14 @@ function toLavWidgetRow(
   row: LavorazioneListRow,
   options?: DashboardLavWidgetRowsOptions,
 ): DashboardLavWidgetRow {
-  const addettoRaw = lavorazioneAddettoLabel(row, options?.schedeStore, options?.defaultAddetto ?? "");
+  const addettoRaw = resolveAddettoDisplayLabel(row, { schedeStore: options?.schedeStore });
   return {
     id: row.id,
     stato: row.stato,
     priorita: row.priorita,
     macchina: macchinaLabelFromLavRow(row, options?.schedeStore),
     mezzoIdent: formatDashboardLavWidgetMezzoIdent(mezzoIdentPartsFromLavRow(row, options?.schedeStore)),
-    addetto: addettoRaw || null,
+    addetto: addettoRaw === "—" ? null : addettoRaw,
     updatedAt: lavUpdatedAt(row),
     isUrgent: row.priorita === "urgente",
   };

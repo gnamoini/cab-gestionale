@@ -81,14 +81,12 @@ export function useDashboardMetrics() {
     { enabled: !staging, ...viewOpts },
   );
 
-  const defaultAddetto = globalOpts.lavorazioni.addetti[0] ?? "";
   const lavRows = useMemo(
     () =>
       computeDashboardLavWidgetRows(lavQuery.data ?? [], undefined, {
         schedeStore,
-        defaultAddetto,
       }),
-    [defaultAddetto, lavQuery.data, schedeStore],
+    [lavQuery.data, schedeStore],
   );
   const lavStats = useMemo(() => computeDashboardLavWidgetStats(lavQuery.data ?? []), [lavQuery.data]);
 

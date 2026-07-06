@@ -4,6 +4,7 @@ import { isoToDateInputValue, normalizeYmdRangeBounds } from "@/lib/lavorazioni/
 import { migrateStatoConfigId } from "@/lib/lavorazioni/stati-dynamic";
 import { lavRowIngressoInRange } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
 import type { LavorazioneSchedeStore } from "@/types/schede";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 
@@ -75,12 +76,12 @@ function dash(v: string | null | undefined): string {
 function rowEntityFields(
   row: LavorazioneListRow,
   schedeStore: LavorazioneSchedeStore | undefined,
-  defaultAddetto: string,
   logs?: readonly LogModificaRow[],
+  addettiRecords?: readonly AddettoRecord[],
 ): RowEntityFields {
   const ing = schedeStore?.[row.id]?.ingresso?.campi;
   const m = row.mezzo;
-  const addetto = lavorazioneAddettoLabel(row, schedeStore ?? {}, defaultAddetto, logs);
+  const addetto = lavorazioneAddettoLabel(row, schedeStore ?? {}, logs, addettiRecords);
 
   let marca = "";
   let modello = "";
@@ -113,7 +114,7 @@ export function buildLavorazioniFilterCatalog(
   schedeStore: LavorazioneSchedeStore | undefined,
   addettiGlobali: readonly string[],
   mezziCatalog: readonly { marca?: string | null; modello?: string | null }[],
-  defaultAddetto: string,
+  addettiRecords?: readonly AddettoRecord[],
 ): LavorazioniFilterCatalog {
   const clienti: string[] = [];
   const cantieri: string[] = [];
@@ -133,7 +134,7 @@ export function buildLavorazioniFilterCatalog(
   }
 
   for (const row of rows) {
-    const f = rowEntityFields(row, schedeStore, defaultAddetto);
+    const f = rowEntityFields(row, schedeStore, undefined, addettiRecords);
     pushUnique(clienti, f.cliente);
     pushUnique(cantieri, f.cantiere);
     pushUnique(utilizzatori, f.utilizzatore);
@@ -222,11 +223,11 @@ export function lavRowMatchesAdvancedFilters(
   row: LavorazioneListRow,
   f: LavorazioniAdvancedFilters,
   schedeStore: LavorazioneSchedeStore | undefined,
-  defaultAddetto: string,
   variant?: LavorazioniListFilterVariant,
   logs?: readonly LogModificaRow[],
+  addettiRecords?: readonly AddettoRecord[],
 ): boolean {
-  const entity = rowEntityFields(row, schedeStore, defaultAddetto, logs);
+  const entity = rowEntityFields(row, schedeStore, logs, addettiRecords);
 
   if (f.cliente.trim() && norm(entity.cliente) !== norm(f.cliente)) return false;
   if (f.cantiere.trim() && norm(entity.cantiere) !== norm(f.cantiere)) return false;

@@ -1,4 +1,5 @@
 import { clampTextOrNull, clampTextTrimmed, TEXT_LONG, TEXT_SHORT } from "@/lib/validation/text-field-limits";
+import { normalizeVin } from "@/lib/mezzi/vin-normalize";
 import {
   logAttrezzatureLegacyWriteAttempt,
 } from "@/lib/observability/attrezzature-v2-telemetry";
@@ -52,7 +53,10 @@ export function sanitizeMezzoWritePayload<T extends MezzoWrite>(
   if (typeof out.tipo_telaio === "string") out.tipo_telaio = clampTextOrNull(out.tipo_telaio, TEXT_SHORT);
   if (typeof out.marca_telaio === "string") out.marca_telaio = clampTextOrNull(out.marca_telaio, TEXT_SHORT);
   if (typeof out.modello_telaio === "string") out.modello_telaio = clampTextOrNull(out.modello_telaio, TEXT_SHORT);
-  if (typeof out.telaio_num === "string") out.telaio_num = clampTextOrNull(out.telaio_num, TEXT_SHORT);
+  if (typeof out.telaio_num === "string") {
+    const norm = normalizeVin(out.telaio_num);
+    out.telaio_num = norm;
+  }
   if (out.meta != null && typeof out.meta === "object") {
     out.meta = clampMetaNote(out.meta as Record<string, unknown>) as MezzoRow["meta"];
   }

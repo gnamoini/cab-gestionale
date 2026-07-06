@@ -10,6 +10,7 @@ import {
   lavorazioneMacchinaLabel,
   lavorazioneMezzoIdentParts,
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
@@ -116,10 +117,10 @@ export function lavRowMatchesPageFilters(
   row: LavorazioneListRow,
   filters: LavPageFilters,
   schedeStore: LavorazioneSchedeStore | undefined,
-  defaultAddetto: string,
   variant: LavorazioniListFilterVariant,
+  addettiRecords?: readonly AddettoRecord[],
 ): boolean {
   if (!lavRowMatchesGlobalSearch(row, filters.search, schedeStore)) return false;
   const { search: _s, ...advanced } = filters;
-  return lavRowMatchesAdvancedFilters(row, advanced, schedeStore, defaultAddetto, variant);
+  return lavRowMatchesAdvancedFilters(row, advanced, schedeStore, variant, undefined, addettiRecords);
 }
