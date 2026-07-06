@@ -198,7 +198,7 @@ export const mezziService = {
       const c = await sb();
       const prepared = prepareMezzoWritePayload(data) as MezzoInsert;
       const vinCheck = await assertVinUnique(c, prepared.telaio_num);
-      if (!vinCheck.success) return vinCheck as ServiceResult<MezzoRow>;
+      if (!vinCheck.success) return err<MezzoRow>(vinCheck.error ?? VIN_DUPLICATE_MSG);
       const payload = attachMezzoEntityKey(prepared);
       logAttrezzatureV2WritePath({ path: "v2", operation: "create" });
       const { data: row, error } = await c.from("mezzi").insert(payload).select(MEZZI_COLUMNS).single();
@@ -218,7 +218,7 @@ export const mezziService = {
         Object.keys(data).length > 0 ? (prepareMezzoWritePayload(data) as MezzoUpdate) : data;
       if (prepared.telaio_num !== undefined) {
         const vinCheck = await assertVinUnique(c, prepared.telaio_num, id);
-        if (!vinCheck.success) return vinCheck as ServiceResult<MezzoRow>;
+        if (!vinCheck.success) return err<MezzoRow>(vinCheck.error ?? VIN_DUPLICATE_MSG);
       }
       const payload =
         Object.keys(prepared).length > 0 ? attachMezzoEntityKey(prepared as MezzoInsert) : prepared;

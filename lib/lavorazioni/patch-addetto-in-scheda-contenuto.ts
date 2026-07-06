@@ -69,7 +69,8 @@ export function patchAddettoInSchedaContenuto(
       const nextAddetti = addettiAssegnati.map((entry) => {
         if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
         const e = entry as Record<string, unknown>;
-        if (typeof e.addetto === "string" && fromValues.some((f) => f.trim() === e.addetto.trim())) {
+        const addetto = e.addetto;
+        if (typeof addetto === "string" && fromValues.some((f) => f.trim() === addetto.trim())) {
           rowChanged = true;
           return { ...e, addetto: to };
         }

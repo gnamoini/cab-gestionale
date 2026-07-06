@@ -376,8 +376,11 @@ export function LavorazioneCreateModal({
                 create: (data) => createMezzo.mutateAsync(data),
                 update: (id, data) => updateMezzo.mutateAsync({ id, data }),
               }),
-            createLavorazione: (input) =>
-              create.mutateAsync({
+            createLavorazione: (input) => {
+              if (!input.mezzo_id) {
+                throw new Error("mezzo_id obbligatorio per la creazione lavorazione.");
+              }
+              return create.mutateAsync({
                 mezzo_id: input.mezzo_id,
                 stato: input.stato,
                 priorita: input.priorita,
@@ -387,7 +390,8 @@ export function LavorazioneCreateModal({
                 created_by: input.created_by,
                 target_type: input.target_type,
                 attrezzatura_id: input.attrezzatura_id,
-              }),
+              });
+            },
             persistScheda: async ({ lavorazioneId, fields, createdBy: by }) => {
               const store = loadLavorazioneSchedeStore();
               store[lavorazioneId] = {

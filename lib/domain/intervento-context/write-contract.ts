@@ -410,7 +410,7 @@ export async function executeInterventoWrite(
         deps: {
           upsertMezzo: async (input) => {
             const res = await deps.upsertMezzo(input);
-            resolvedMezzoId = res.mezzoId;
+            resolvedMezzoId = res.mezzoId ?? resolvedMezzoId;
             return res;
           },
           updateLavorazione: deps.updateLavorazione,
