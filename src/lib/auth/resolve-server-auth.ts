@@ -1,5 +1,5 @@
 import { isUserBanned } from "@/lib/auth/user-ban-state";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { AuthError, SupabaseClient } from "@supabase/supabase-js";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE, readSupabasePublicEnv } from "@/lib/env/supabase-public";
 import {
   shouldClearSessionOnAuthError,
@@ -46,7 +46,7 @@ async function getUserWithNetworkRetry(supabase: SupabaseClient) {
   return first;
 }
 
-function shouldWriteEmptySnapshotToCache(authError: { message: string } | null): boolean {
+function shouldWriteEmptySnapshotToCache(authError: AuthError | Error | null): boolean {
   if (!authError) return true;
   if (shouldClearSessionOnAuthError(authError)) return true;
   return false;
