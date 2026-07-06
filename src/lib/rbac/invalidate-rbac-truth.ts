@@ -8,12 +8,14 @@ import {
 } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { clearStickyRbacSnapshot } from "@/src/lib/rbac/sticky-rbac-snapshot";
 
+export type RefreshAuthFn = (opts?: { force?: boolean }) => Promise<unknown>;
+
 export type InvalidateRbacTruthClientOptions = {
   reason: InvalidateRuntimeTruthReason;
   queryClient: QueryClient;
   affectedUserId?: string;
   currentUserId?: string | null;
-  refreshAuth?: () => Promise<void>;
+  refreshAuth?: RefreshAuthFn;
 };
 
 /** Hub client: invalida tutte le cache RBAC in-memory + React Query. */
