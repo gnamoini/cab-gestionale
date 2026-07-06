@@ -6,15 +6,15 @@ import {
 import { listinoImportExecuteRequestSchema } from "@/lib/magazzino/listino-import/listino-import-schema";
 import { getServerSession } from "@/src/lib/auth/get-server-session";
 import {
-  verifyServerSectionRead,
-  verifyServerSectionWrite,
+  verifyServerPageRead,
+  verifyServerPageWrite,
 } from "@/src/lib/auth/server-permission-guards";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const canWriteMagazzino = await verifyServerSectionWrite("magazzino");
-  const canReadDocumenti = await verifyServerSectionRead("documenti");
+  const canWriteMagazzino = await verifyServerPageWrite("magazzino");
+  const canReadDocumenti = await verifyServerPageRead("documenti");
   if (!canWriteMagazzino || !canReadDocumenti) {
     return NextResponse.json({ error: "Permesso negato" }, { status: 403 });
   }

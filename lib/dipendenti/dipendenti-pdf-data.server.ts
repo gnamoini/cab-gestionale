@@ -9,7 +9,7 @@ import { selectTimesheetEmployeesForPdfExport } from "@/lib/dipendenti/dipendent
 import { monthDateRange } from "@/lib/dipendenti/timesheet-month";
 import type { TimesheetMonthKey } from "@/lib/dipendenti/types";
 import { resolveCabAppSettingsResolvedServer } from "@/lib/app-settings/resolve-settings-for-server";
-import { verifyServerSectionRead } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { DipendenteTimesheetEmployeeRow, DipendenteTimesheetEntryRow } from "@/src/types/supabase-tables";
@@ -17,7 +17,7 @@ import type { DipendenteTimesheetEmployeeRow, DipendenteTimesheetEntryRow } from
 export async function fetchDipendentiPdfContextServer(
   monthKey: TimesheetMonthKey,
 ): Promise<ServiceResult<DipendentiPdfContext>> {
-  const allowed = await verifyServerSectionRead("dipendenti");
+  const allowed = await verifyServerPageRead("dipendenti");
   if (!allowed) return err("Permesso richiesto.");
   const { from, to } = monthDateRange(monthKey);
   const sb = await createSupabaseServerUserClient();

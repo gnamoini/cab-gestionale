@@ -40,7 +40,7 @@ import {
 } from "@/lib/fatturazione/fatturazione-list-ui-filters";
 import type { FatturazioneOrigine, InvoiceDetail } from "@/lib/fatturazione/types";
 import type { InvoiceRow } from "@/src/types/supabase-tables";
-import { invoicesService } from "@/src/services/invoices.service";
+import { invoicesEntry } from "@/lib/domain/invoices-entry";
 import { useInvoicesQuery } from "@/src/hooks/gestionale/use-invoices-query";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
@@ -155,7 +155,7 @@ export function FatturazioneView() {
   );
 
   const openDetail = useCallback(async (id: string) => {
-    const res = await invoicesService.getDetail(id);
+    const res = await invoicesEntry.getDetail(id);
     if (res.success && res.data) {
       setDetail(res.data);
       setDetailOpen(true);

@@ -37,19 +37,19 @@ for (const mod of SERVER_FETCH_MODULES) {
 }
 
 const lavServer = read("lib/lavorazioni/lavorazioni-list-fetch-server.ts");
-assert.match(lavServer, /verifyServerSectionRead/, "lav server fetch must verify section read");
+assert.match(lavServer, /verifyServerPageRead/, "lav server fetch must verify page read");
 
 const mezziServer = read("lib/mezzi/mezzi-list-fetch-server.ts");
-assert.match(mezziServer, /verifyServerSectionRead/, "mezzi server fetch must verify section read");
+assert.match(mezziServer, /verifyServerPageRead/, "mezzi server fetch must verify page read");
 
 const magServer = read("lib/magazzino/magazzino-list-fetch-server.ts");
-assert.match(magServer, /verifyServerSectionRead/, "magazzino server fetch must verify section read");
+assert.match(magServer, /verifyServerPageRead/, "magazzino server fetch must verify page read");
 
 const impostazioniServer = read("lib/app-settings/app-settings-fetch-server.ts");
-assert.match(impostazioniServer, /verifyServerPermission/, "admin settings prefetch must verify manageSettings");
+assert.match(impostazioniServer, /verifyServerPageWrite/, "admin settings prefetch must verify impostazioni write");
 
 const preventiviServer = read("lib/preventivi/preventivi-fetch-server.ts");
-assert.match(preventiviServer, /verifyServerSectionRead/, "preventivi server fetch must verify section read");
+assert.match(preventiviServer, /verifyServerPageRead/, "preventivi server fetch must verify page read");
 
 const prefetch = read("src/lib/react-query/prefetch-gestionale-page.ts");
 assert.match(prefetch, /dehydrate/, "prefetch module must dehydrate query client");

@@ -19,7 +19,7 @@ import {
   type MezzoHubData,
   type MezzoQueriesSnapshot,
 } from "@/src/services/domain/mezzo-domain.service";
-import { verifyServerSectionRead } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type {
@@ -38,7 +38,7 @@ export type MezzoDetailDTO = MezzoHubData;
  * wave 2: documenti (marca) + movimenti (lav ids) in parallelo.
  */
 export async function fetchMezzoDetailDTOServer(mezzoId: string): Promise<ServiceResult<MezzoDetailDTO>> {
-  const allowed = await verifyServerSectionRead("mezzi");
+  const allowed = await verifyServerPageRead("mezzi");
   if (!allowed) return err("Permesso richiesto.");
   const id = mezzoId.trim();
   if (!id) return err("ID mezzo mancante.");

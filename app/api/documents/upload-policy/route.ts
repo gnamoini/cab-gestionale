@@ -13,7 +13,7 @@ import {
   buildLavorazioneDocumentStoragePath,
 } from "@/src/lib/storage/storage-paths";
 import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
-import { verifyServerPermission } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   const { source, fileName, mimeType } = validation.normalized;
 
   if (source === "archive") {
-    if (!(await verifyServerPermission("uploadDocuments"))) {
+    if (!(await verifyServerPageWrite("documenti"))) {
       return NextResponse.json({ error: "Permesso richiesto" }, { status: 403 });
     }
     const semanticClass = classifyDocumentSemantic({
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     });
   }
 
-  if (!(await verifyServerPermission("editWorkOrders"))) {
+  if (!(await verifyServerPageWrite("lavorazioni"))) {
     return NextResponse.json({ error: "Permesso richiesto" }, { status: 403 });
   }
   const lavorazioneId = body.lavorazioneId?.trim() ?? "";

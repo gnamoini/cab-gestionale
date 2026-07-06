@@ -47,14 +47,14 @@ const previewRoute = fs.readFileSync(
   path.join(ROOT, "app/api/magazzino/listino-import/preview/route.ts"),
   "utf8",
 );
-assert.match(previewRoute, /verifyServerSectionWrite\("magazzino"\)/);
-assert.match(previewRoute, /verifyServerSectionRead\("documenti"\)/);
+assert.match(previewRoute, /verifyServerPageWrite\("magazzino"\)/);
+assert.match(previewRoute, /verifyServerPageRead\("documenti"\)/);
 
 const generatedRoute = fs.readFileSync(
   path.join(ROOT, "app/api/magazzino/listino-import/generated/route.ts"),
   "utf8",
 );
-assert.match(generatedRoute, /verifyServerPermission\("deleteRecords"\)/);
+assert.match(generatedRoute, /verifyServerPageWrite\("magazzino"\)/);
 
 const spreadsheet = fs.readFileSync(path.join(ROOT, "lib/magazzino/listino-import/parse-listino-spreadsheet.ts"), "utf8");
 assert.doesNotMatch(

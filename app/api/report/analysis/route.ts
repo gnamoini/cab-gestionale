@@ -4,12 +4,12 @@ import { isReportAnalysisRateLimited } from "@/lib/report/report-analysis/report
 import { AIReportService } from "@/lib/report/report-analysis/report-analysis-service.server";
 import { reportAnalysisRequestSchema } from "@/lib/report/report-analysis/report-analysis-schema";
 import { getServerSession } from "@/src/lib/auth/get-server-session";
-import { verifyServerSectionRead } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const allowed = await verifyServerSectionRead("report");
+  const allowed = await verifyServerPageRead("report");
   if (!allowed) {
     return NextResponse.json({ error: "Permesso negato" }, { status: 403 });
   }

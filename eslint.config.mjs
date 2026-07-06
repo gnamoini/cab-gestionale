@@ -30,7 +30,21 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["components/**/*.{tsx,jsx}", "app/**/*.{tsx,jsx}"],
+    files: ["lib/domain/**/*-entry.ts", "src/services/**/*.service.ts"],
+    plugins: { "cab-rbac": cabLayout },
+    rules: {
+      "cab-rbac/no-auth-in-services": "error",
+      "cab-rbac/no-entrypoint-chaining": "error",
+    },
+  },
+  {
+    files: ["**/*.{ts,tsx}"],
+    plugins: { "cab-rbac": cabLayout },
+    rules: {
+      "cab-rbac/no-ensure-workflow-write": "error",
+    },
+  },
+  {
     plugins: { "cab-layout": cabLayout },
     rules: {
       "cab-layout/no-flex-overflow-risk": "error",

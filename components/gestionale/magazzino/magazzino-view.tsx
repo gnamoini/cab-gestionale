@@ -37,7 +37,7 @@ const MagazzinoDupCodesModal = dynamic(
   { ssr: false },
 );
 import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
-import { magazzinoService } from "@/src/services/magazzino.service";
+import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useQueryClient } from "@tanstack/react-query";
 import { QK, invalidateAfterMagazzinoOrMovimenti } from "@/src/lib/react-query/invalidate-related";
@@ -550,7 +550,7 @@ export function MagazzinoView() {
   const { clearMagazzinoNotifications } = useAdminNotificationStore();
   /** Creazione ricambio: `can_write` o `can_admin` sul modulo (viewer resta escluso). */
   const magCanCreateRicambio = magPerm.canWrite || globalPerm.isAdmin;
-  const magCanDeleteRicambio = globalPerm.canDeleteRecords;
+  const magCanDeleteRicambio = magPerm.canWrite;
   const upsertMagazzinoMaster = useSettingsUpsertMutation();
   const router = useRouter();
   const pathname = usePathname();
@@ -1199,7 +1199,7 @@ export function MagazzinoView() {
       return;
     }
     const touched = touch({ ...row, scorta: parsed.prima });
-    const updated = await magazzinoService.update(id, ricambioUiToMagazzinoUpdate(touched, mezziListePrefs));
+    const updated = await magazzinoEntry.update(id, ricambioUiToMagazzinoUpdate(touched, mezziListePrefs));
     if (!updated.success || !updated.data) {
       toastError(updated.error ?? "Annullamento scorta non riuscito.");
       return;
@@ -1237,7 +1237,7 @@ export function MagazzinoView() {
       (next as unknown as Record<string, unknown>)[key] = parseUndoValue(key, ch.prima, row);
     }
     const touched = touch(next);
-    const updated = await magazzinoService.update(entry.ricambioId, ricambioUiToMagazzinoUpdate(touched, mezziListePrefs));
+    const updated = await magazzinoEntry.update(entry.ricambioId, ricambioUiToMagazzinoUpdate(touched, mezziListePrefs));
     if (!updated.success || !updated.data) {
       toastError(updated.error ?? "Undo non riuscito.");
       return;
@@ -1310,7 +1310,7 @@ export function MagazzinoView() {
   async function executeEliminaRicambio() {
     if (!eliminaRicambioTarget) return;
     const id = eliminaRicambioTarget.id;
-    const removed = await magazzinoService.remove(id);
+    const removed = await magazzinoEntry.remove(id);
     if (!removed.success) {
       toastError(removed.error ?? "Eliminazione non riuscita.", { module: "magazzino", action: "delete" });
       return;

@@ -26,13 +26,13 @@ import {
   type MezziListVariant,
 } from "@/lib/render/query-key-factory";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import { documentiService, type DocumentiFilters } from "@/src/services/documenti.service";
-import { logService, type LogFilters } from "@/src/services/log.service";
-import { magazzinoService, type MagazzinoFilters } from "@/src/services/magazzino.service";
-import { mezziService, type MezzoFilters } from "@/src/services/mezzi.service";
-import { movimentiService, type MovimentiFilters } from "@/src/services/movimenti.service";
-import { preventiviService, type PreventiviFilters } from "@/src/services/preventivi.service";
-import { schedeService, type SchedaFilters } from "@/src/services/schede.service";
+import { documentiEntry, type DocumentiFilters } from "@/lib/domain/documenti-entry";
+import { logEntry, type LogFilters } from "@/lib/domain/log-entry";
+import { magazzinoEntry, type MagazzinoFilters } from "@/lib/domain/magazzino-entry";
+import { mezziEntry, type MezzoFilters } from "@/lib/domain/mezzi-entry";
+import { movimentiEntry, type MovimentiFilters } from "@/lib/domain/movimenti-entry";
+import { preventiviEntry, type PreventiviFilters } from "@/lib/domain/preventivi-entry";
+import { schedeEntry, type SchedaFilters } from "@/lib/domain/schede-entry";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type {
   DocumentoRow,
@@ -54,7 +54,7 @@ export function useMezziListQuery(
   const tierOpts = variant === "report" ? {} : semiDynamicQueryOpts();
   return useServiceQuery(
     mezziListQueryKey(variant, filters ?? null),
-    () => (variant === "report" ? mezziService.getAllForReport(filters) : mezziService.getAll(filters)),
+    () => (variant === "report" ? mezziEntry.getAllForReport(filters) : mezziEntry.getAll(filters)),
     { ...gestOpts, ...tierOpts, ...rqOpts },
   );
 }
@@ -72,7 +72,7 @@ export function useMagazzinoListQuery(
   const tierOpts = variant === "report" ? {} : semiDynamicQueryOpts();
   return useServiceQuery(
     magazzinoListQueryKey(variant, filters ?? null),
-    () => (variant === "report" ? magazzinoService.getAllForReport(filters) : magazzinoService.getAll(filters)),
+    () => (variant === "report" ? magazzinoEntry.getAllForReport(filters) : magazzinoEntry.getAll(filters)),
     {
       ...gestOpts,
       ...tierOpts,
@@ -108,14 +108,14 @@ export function useMagazzinoRicambiUIQuery(
 
 export function useMovimentiListQuery(filters?: MovimentiFilters, options?: RqOpts<MovimentoRicambioRow[]>) {
   const gestOpts = useGestionaleQueryOpts();
-  return useServiceQuery(movimentiListQueryKey(filters ?? null), () => movimentiService.getAll(filters), {
+  return useServiceQuery(movimentiListQueryKey(filters ?? null), () => movimentiEntry.getAll(filters), {
     ...gestOpts,
     ...options,
   });
 }
 
 export function usePreventiviListQuery(filters?: PreventiviFilters, options?: RqOpts<PreventivoRow[]>) {
-  return useServiceQuery([...QK.preventivi, filters ?? null] as const, () => preventiviService.getAll(filters), options);
+  return useServiceQuery([...QK.preventivi, filters ?? null] as const, () => preventiviEntry.getAll(filters), options);
 }
 
 const DOCUMENTI_LIST_STALE_MS = 5 * 60_000;
@@ -123,15 +123,15 @@ const DOCUMENTI_LIST_STALE_MS = 5 * 60_000;
 export function useDocumentiListQuery(filters?: DocumentiFilters, options?: RqOpts<DocumentoRow[]>) {
   return useServiceQuery(
     documentiListQueryKey(filters ?? null),
-    () => documentiService.getAll(filters),
+    () => documentiEntry.getAll(filters),
     { staleTime: DOCUMENTI_LIST_STALE_MS, ...options },
   );
 }
 
 export function useLogListQuery(filters?: LogFilters, options?: RqOpts<LogModificaWithProfileRow[]>) {
-  return useServiceQuery([...QK.log, filters ?? null] as const, () => logService.getAll(filters), options);
+  return useServiceQuery([...QK.log, filters ?? null] as const, () => logEntry.getAll(filters), options);
 }
 
 export function useSchedeListQuery(filters?: SchedaFilters) {
-  return useServiceQuery([...QK.schede, filters ?? null] as const, () => schedeService.getAll(filters));
+  return useServiceQuery([...QK.schede, filters ?? null] as const, () => schedeEntry.getAll(filters));
 }

@@ -21,7 +21,7 @@ import {
 } from "@/lib/sync/recent-local-mutation";
 import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
-import { dashboardPromemoriaService } from "@/src/services/dashboard-promemoria.service";
+import { dashboardPromemoriaEntry } from "@/lib/domain/dashboard-promemoria-entry";
 
 export const DASHBOARD_PROMEMORIA_QUERY_KEY = ["dashboard-promemoria"] as const;
 
@@ -46,7 +46,7 @@ type PromemoriaDeleteOptimisticContext = {
 };
 
 async function fetchPromemoriaMonth(monthKey: DashboardPromemoriaMonthKey): Promise<DashboardPromemoriaRow[]> {
-  const res = await dashboardPromemoriaService.listByMonth(monthKey);
+  const res = await dashboardPromemoriaEntry.listByMonth(monthKey);
   if (!res.success) throw new Error(res.error ?? "Caricamento promemoria fallito");
   return res.data ?? [];
 }
@@ -72,17 +72,17 @@ export function useDashboardPromemoria(monthKey: DashboardPromemoriaMonthKey) {
   const invalidateKeys = [DASHBOARD_PROMEMORIA_QUERY_KEY] as const;
 
   const createMutation = useServiceMutation(
-    (input: Parameters<typeof dashboardPromemoriaService.create>[0]) => dashboardPromemoriaService.create(input),
+    (input: Parameters<typeof dashboardPromemoriaEntry.create>[0]) => dashboardPromemoriaEntry.create(input),
     { invalidateQueryKeys: [invalidateKeys] },
   );
 
   const updateMutation = useServiceMutation(
-    (input: Parameters<typeof dashboardPromemoriaService.update>[0]) => dashboardPromemoriaService.update(input),
+    (input: Parameters<typeof dashboardPromemoriaEntry.update>[0]) => dashboardPromemoriaEntry.update(input),
     { invalidateQueryKeys: [invalidateKeys] },
   );
 
   const deleteMutation = useServiceMutation(
-    (input: DashboardPromemoriaDeleteInput) => dashboardPromemoriaService.softDelete(input),
+    (input: DashboardPromemoriaDeleteInput) => dashboardPromemoriaEntry.softDelete(input),
     {
       onMutate: async (input) => {
         const id = input.id;

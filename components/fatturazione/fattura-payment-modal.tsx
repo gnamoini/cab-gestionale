@@ -11,7 +11,7 @@ import { formatInvoiceMoney } from "@/components/fatturazione/fattura-status-bad
 import type { InvoicePaymentInput } from "@/lib/fatturazione/types";
 import { dsInput } from "@/lib/ui/design-system";
 import type { InvoicePaymentMetodo, InvoiceRow } from "@/src/types/supabase-tables";
-import { invoicesService } from "@/src/services/invoices.service";
+import { invoicesEntry } from "@/lib/domain/invoices-entry";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 const METODI: { value: InvoicePaymentMetodo; label: string }[] = [
@@ -64,7 +64,7 @@ export function FatturaPaymentModal({
         riferimento: riferimento.trim() || null,
         note: note.trim() || null,
       };
-      const res = await invoicesService.registerPayment(payload);
+      const res = await invoicesEntry.registerPayment(payload);
       if (!res.success) throw new Error(res.error ?? "Registrazione non riuscita.");
       toast.successOnce("fatt-pay", "Pagamento registrato.");
       onSaved();

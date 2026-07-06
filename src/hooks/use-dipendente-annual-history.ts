@@ -6,7 +6,7 @@ import { parseMonthKey, yearDateRange } from "@/lib/dipendenti/timesheet-month";
 import type { TimesheetMonthKey } from "@/lib/dipendenti/types";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/query-keys";
-import { dipendentiTimesheetService } from "@/src/services/dipendenti-timesheet.service";
+import { dipendentiTimesheetEntry } from "@/lib/domain/dipendenti-timesheet-entry";
 
 function annualQueryKey(employeeId: string, year: number) {
   return [...QK.dipendentiTimesheetEntries, "annual", employeeId, year] as const;
@@ -18,7 +18,7 @@ export function useDipendenteAnnualHistory(employeeId: string | null, monthKey: 
 
   const query = useServiceQuery(
     employeeId ? annualQueryKey(employeeId, year) : (["dipendenti_timesheet_annual", "none"] as const),
-    () => dipendentiTimesheetService.listEntriesForRange(from, to),
+    () => dipendentiTimesheetEntry.listEntriesForRange(from, to),
     { enabled: Boolean(employeeId) },
   );
 

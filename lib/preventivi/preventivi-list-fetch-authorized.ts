@@ -5,7 +5,7 @@ import {
   type PreventivoRowWithMezzoEmbed,
   type PreventiviRecordsPayload,
 } from "@/lib/preventivi/preventivi-list-fetch";
-import { ensureSectionRead } from "@/src/lib/auth/permission-guards";
+import { ensurePageRead } from "@/src/lib/auth/permission-guards";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import type { PreventiviFilters } from "@/src/services/preventivi.service";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -17,7 +17,7 @@ export async function fetchPreventiviRecordsAuthorized(
   filters?: PreventiviFilters,
 ): Promise<ServiceResult<PreventiviRecordsPayload>> {
   try {
-    const allowed = await ensureSectionRead("preventivi");
+    const allowed = await ensurePageRead("preventivi");
     if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     const sb = await getBrowserSupabase();
     const rowsRes = await fetchPreventiviListRows(sb, filters);
@@ -37,7 +37,7 @@ export async function fetchPreventiviEmbedRowsAuthorized(
   filters?: PreventiviFilters,
 ): Promise<ServiceResult<PreventivoRowWithMezzoEmbed[]>> {
   try {
-    const allowed = await ensureSectionRead("preventivi");
+    const allowed = await ensurePageRead("preventivi");
     if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     const sb = await getBrowserSupabase();
     return fetchPreventiviListRows(sb, filters);

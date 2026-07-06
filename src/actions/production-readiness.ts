@@ -4,7 +4,7 @@ import { fetchProductionReadinessDbSnapshot } from "@/lib/production/fetch-produ
 import { validateProductionReadiness } from "@/lib/production/production-readiness";
 import { scanProductionReadinessCode } from "@/lib/production/production-readiness-scan";
 import type { ProductionReadinessResult } from "@/lib/production/production-readiness-types";
-import { verifyServerPermission } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
 
 export type RunProductionReadinessResult =
   | { ok: true; report: ProductionReadinessResult }
@@ -12,7 +12,7 @@ export type RunProductionReadinessResult =
 
 /** Solo admin / manageSecurity. */
 export async function runProductionReadinessCheckAction(): Promise<RunProductionReadinessResult> {
-  const allowed = await verifyServerPermission("manageSecurity");
+  const allowed = await verifyServerPageWrite("sicurezza");
   if (!allowed) {
     return { ok: false, message: "Accesso riservato agli amministratori." };
   }

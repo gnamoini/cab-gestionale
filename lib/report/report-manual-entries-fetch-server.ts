@@ -2,13 +2,13 @@ import "server-only";
 
 import { cache } from "react";
 import { REPORT_MANUAL_ENTRIES_COLUMNS } from "@/lib/db/table-select-columns";
-import { verifyServerSectionRead } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { ReportManualEntryRow } from "@/src/types/supabase-tables";
 
 async function fetchReportManualEntriesServer(): Promise<ServiceResult<ReportManualEntryRow[]>> {
-  const allowed = await verifyServerSectionRead("report");
+  const allowed = await verifyServerPageRead("report");
   if (!allowed) return err("Permesso richiesto.");
   const sb = await createSupabaseServerUserClient();
   const { data, error } = await sb

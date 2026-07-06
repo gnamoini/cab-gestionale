@@ -37,8 +37,8 @@ import {
 import { Q_FOCUS_MEZZO } from "@/lib/navigation/dashboard-log-links";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
-import type { MezzoFilters, MezzoUpdate } from "@/src/services/mezzi.service";
-import { mezziService, type MezzoDependencies } from "@/src/services/mezzi.service";
+import type { MezzoFilters, MezzoUpdate } from "@/lib/domain/mezzi-entry";
+import { mezziEntry, type MezzoDependencies } from "@/lib/domain/mezzi-entry";
 import {
   useMezziListQuery,
 } from "@/src/hooks/gestionale/use-entity-list-queries";
@@ -51,7 +51,7 @@ import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { usePermissions } from "@/src/hooks/use-permissions";
-import { logService } from "@/src/services/log.service";
+import { logEntry } from "@/lib/domain/log-entry";
 import { auditPayload, pickExistingFields } from "@/lib/gestionale-log/undo";
 import { withUndoSessionPayload } from "@/lib/gestionale-log/undo-session";
 import { useAuth } from "@/context/auth-context";
@@ -298,7 +298,7 @@ export function MezziView() {
     if (!mezzo) return;
     let cancelled = false;
     void (async () => {
-      const res = await mezziService.countDependencies(mezzo.id);
+      const res = await mezziEntry.countDependencies(mezzo.id);
       if (cancelled) return;
       setLoadingEliminaDeps(false);
       if (res.success && res.data) {
@@ -388,11 +388,11 @@ export function MezziView() {
     ]);
     try {
       await updateMut.mutateAsync({ id: undoableMezziLog.entita_id, data });
-      const generatedUpdate = await logService.getByEntita("mezzi", undoableMezziLog.entita_id, 5);
+      const generatedUpdate = await logEntry.getByEntita("mezzi", undoableMezziLog.entita_id, 5);
       const rollbackUpdateLog = generatedUpdate.success
         ? generatedUpdate.data?.find((row) => row.id !== undoableMezziLog.id && row.azione === "UPDATE")
         : null;
-      const undoLog = await logService.create({
+      const undoLog = await logEntry.create({
         entita: "mezzi",
         entita_id: undoableMezziLog.entita_id,
         azione: "UNDO",
@@ -404,13 +404,13 @@ export function MezziView() {
         }),
       });
       if (rollbackUpdateLog) {
-        await logService.markReverted(rollbackUpdateLog.id, {
+        await logEntry.markReverted(rollbackUpdateLog.id, {
           undo_log_id: undoLog.success ? undoLog.data?.id : null,
           reverted_by: user?.id ?? null,
           pageKey: "mezzi",
         });
       }
-      await logService.markReverted(undoableMezziLog.id, {
+      await logEntry.markReverted(undoableMezziLog.id, {
         undo_log_id: undoLog.success ? undoLog.data?.id : null,
         reverted_by: user?.id ?? null,
         pageKey: "mezzi",

@@ -2,7 +2,6 @@
 
 import { SCHEDA_LAVORAZIONE_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { lavorazioneLogOggettoFromSchedaContenuto } from "@/lib/lavorazioni/lavorazione-log-oggetto";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -63,8 +62,6 @@ export const schedeService = {
 
   async create(data: SchedaInsert): Promise<ServiceResult<SchedaLavorazioneRow>> {
     try {
-      const allowed = await ensurePermission("editWorkOrders");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: row, error } = await c.from("scheda_lavorazione").insert(data).select(SCHEDA_LAVORAZIONE_COLUMNS).single();
       if (error) return err(error.message);
@@ -79,8 +76,6 @@ export const schedeService = {
 
   async update(id: string, data: SchedaUpdate): Promise<ServiceResult<SchedaLavorazioneRow>> {
     try {
-      const allowed = await ensurePermission("editWorkOrders");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: before, error: e0 } = await c.from("scheda_lavorazione").select(SCHEDA_LAVORAZIONE_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
@@ -107,8 +102,6 @@ export const schedeService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
-      const allowed = await ensurePermission("deleteRecords");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: existing, error: e0 } = await c.from("scheda_lavorazione").select(SCHEDA_LAVORAZIONE_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);

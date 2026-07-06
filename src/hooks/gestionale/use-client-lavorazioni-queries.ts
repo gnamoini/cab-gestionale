@@ -4,7 +4,7 @@ import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import { clientLavorazioniService } from "@/src/services/client-lavorazioni.service";
+import { clientLavorazioniEntry } from "@/lib/domain/client-lavorazioni-entry";
 
 /** In corso — cache dedicata portale (`clientPortal`) con eventuale filtro `cliente_ref`. */
 export function useClientLavorazioniInCorsoQuery(enabled: boolean) {
@@ -29,7 +29,7 @@ export function useClientLavorazioneDetailQuery(lavorazioneId: string | undefine
   const opts = useViewQueryOpts();
   return useServiceQuery(
     [...QK.clientLavorazioniDetail, id] as const,
-    () => clientLavorazioniService.getDetail(id),
+    () => clientLavorazioniEntry.getDetail(id),
     { enabled: enabled && id.length > 0, ...opts },
   );
 }

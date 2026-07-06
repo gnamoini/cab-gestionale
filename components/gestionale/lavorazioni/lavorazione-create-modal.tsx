@@ -10,7 +10,7 @@ import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gest
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useQueryClient } from "@tanstack/react-query";
 import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
-import { executeInterventoWrite } from "@/lib/domain/intervento-context/write-contract";
+import { executeInterventoWriteEntry } from "@/lib/domain/intervento-entry";
 import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
 import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -355,7 +355,7 @@ export function LavorazioneCreateModal({
           );
         }
 
-        const { result: tx } = await executeInterventoWrite(
+        const { result: tx } = await executeInterventoWriteEntry(
           {
             mode: "create",
             idempotencyKey: idempotencyKeyRef.current,

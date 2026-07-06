@@ -18,7 +18,7 @@ import {
   type LavorazioneHubData,
   type LavorazioneQueriesSnapshot,
 } from "@/src/services/domain/lavorazioni-domain.service";
-import { verifyServerSectionRead } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type {
@@ -54,7 +54,7 @@ async function fetchDocumentiForMezzoMarca(
 export async function fetchLavorazioneDetailDTOServer(
   lavorazioneId: string,
 ): Promise<ServiceResult<LavorazioneDetailDTO>> {
-  const allowed = await verifyServerSectionRead("lavorazioni");
+  const allowed = await verifyServerPageRead("lavorazioni");
   if (!allowed) return err("Permesso richiesto.");
   const id = lavorazioneId.trim();
   if (!id) return err("ID lavorazione mancante.");

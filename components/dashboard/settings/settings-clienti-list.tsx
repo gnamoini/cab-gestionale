@@ -14,7 +14,7 @@ import {
 } from "@/lib/mezzi/cliente-commerciale";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { ClientiImportEntry } from "@/components/dashboard/settings/clienti-import-entry";
-import { clientiAnagraficaService } from "@/src/services/clienti-anagrafica.service";
+import { clientiAnagraficaEntry } from "@/lib/domain/clienti-anagrafica-entry";
 
 const ClienteAnagraficaHubModal = dynamic(
   () =>
@@ -57,7 +57,7 @@ export function SettingsClientiCommercialiList({
         onAdd={onAdd}
         onRemove={(nome) => {
           onRemove(nome);
-          void clientiAnagraficaService.markRemovedFromLista(nome);
+          void clientiAnagraficaEntry.markRemovedFromLista(nome);
         }}
         onRename={(from, to) => {
           setListe((prev) => renameClienteInListe(prev, from, to));

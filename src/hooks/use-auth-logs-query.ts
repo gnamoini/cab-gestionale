@@ -3,7 +3,7 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import { authLogsService } from "@/src/services/auth-logs.service";
+import { authLogsEntry } from "@/lib/domain/auth-logs-entry";
 import type { AuthLogRow, AuthLogWithProfileRow } from "@/src/types/supabase-tables";
 
 export type AuthLogsQueryOpts = {
@@ -51,7 +51,7 @@ export function useAuthLogsQuery(input?: number | AuthLogsQueryOpts): UseQueryRe
     queryKey: [...QK.authLogs, user?.id ?? "anon", p.limit, p.withProfile, p.filterUserId, p.dateFrom, p.dateTo] as const,
     queryFn: async () => {
       if (p.withProfile) {
-        const r = await authLogsService.listRecentWithProfile({
+        const r = await authLogsEntry.listRecentWithProfile({
           limit: p.limit,
           userId: p.filterUserId,
           dateFrom: p.dateFrom,
@@ -60,7 +60,7 @@ export function useAuthLogsQuery(input?: number | AuthLogsQueryOpts): UseQueryRe
         if (r.error) throw new Error(r.error);
         return r.rows;
       }
-      const r = await authLogsService.listRecent(p.limit);
+      const r = await authLogsEntry.listRecent(p.limit);
       if (r.error) throw new Error(r.error);
       return r.rows;
     },

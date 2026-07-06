@@ -57,7 +57,7 @@ export function GestionaleMezzoAutocomplete({
   const mezziUi = useMemo(() => {
     const rows = mezziQ.data ?? [];
     debugSelectOptions("GestionaleMezzoAutocomplete", {
-      source: "mezziService.getAll",
+      source: "mezziEntry.getAll",
       count: rows.length,
       isLoading: mezziQ.isLoading,
     });

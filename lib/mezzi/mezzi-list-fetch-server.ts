@@ -7,7 +7,7 @@ import {
   type MezziListVariant,
 } from "@/lib/mezzi/mezzi-list-fetch";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import { verifyServerSectionRead } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { err, type ServiceResult } from "@/src/services/service-result";
 import type { MezzoFilters } from "@/src/services/mezzi.service";
@@ -17,7 +17,7 @@ export async function fetchMezziListAuthorizedServer(
   filters?: MezzoFilters,
   variant: MezziListVariant = "list",
 ): Promise<ServiceResult<MezzoRow[]>> {
-  const allowed = await verifyServerSectionRead("mezzi");
+  const allowed = await verifyServerPageRead("mezzi");
   if (!allowed) return err("Permesso richiesto.");
   const sb = await createSupabaseServerUserClient();
   return fetchMezziListRows(sb, { filters, variant });
@@ -27,7 +27,7 @@ export async function fetchMezziGestitiAuthorizedServer(
   filters?: MezzoFilters,
   variant: MezziListVariant = "list",
 ): Promise<ServiceResult<MezzoGestito[]>> {
-  const allowed = await verifyServerSectionRead("mezzi");
+  const allowed = await verifyServerPageRead("mezzi");
   if (!allowed) return err("Permesso richiesto.");
   const sb = await createSupabaseServerUserClient();
   return fetchMezziGestitiListRows(sb, { filters, variant });

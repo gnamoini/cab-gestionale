@@ -25,7 +25,7 @@ assert.doesNotMatch(micServer, /select\s*\(\s*["']\*["']\s*\)/);
 
 const apiRoute = read("app/api/cache/invalidate-entity/route.ts");
 assert.match(apiRoute, /runMicServerInvalidations/);
-assert.match(apiRoute, /verifyServerPermission/);
+assert.match(apiRoute, /verifyServerPageWrite/);
 
 const invalidateRelated = read("src/lib/react-query/invalidate-related.ts");
 assert.match(invalidateRelated, /invalidateEntity/);

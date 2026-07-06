@@ -1,7 +1,6 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -41,8 +40,6 @@ function num(v: unknown): number {
 export const magazzinoService = {
   async getAll(filters?: MagazzinoFilters): Promise<ServiceResult<MagazzinoRicambioRow[]>> {
     try {
-      const allowed = await ensureSectionRead("magazzino");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       return fetchMagazzinoListRows(c, { filters, variant: "list" });
     } catch (e) {
@@ -53,8 +50,6 @@ export const magazzinoService = {
   /** Report/dashboard widget — subset KPI senza payload lista densa. */
   async getAllForReport(filters?: MagazzinoFilters): Promise<ServiceResult<MagazzinoRicambioRow[]>> {
     try {
-      const allowed = await ensureSectionRead("magazzino");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       return fetchMagazzinoListRows(c, { filters, variant: "report" });
     } catch (e) {
@@ -64,8 +59,6 @@ export const magazzinoService = {
 
   async getById(id: string): Promise<ServiceResult<MagazzinoRicambioRow>> {
     try {
-      const allowed = await ensureSectionRead("magazzino");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
       if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
@@ -78,8 +71,6 @@ export const magazzinoService = {
 
   async create(data: MagazzinoInsert): Promise<ServiceResult<MagazzinoRicambioRow>> {
     try {
-      const allowed = await ensurePermission("editInventory");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const payload = attachMagazzinoEntityKey(data);
       const { data: row, error } = await c.from("magazzino_ricambi").insert(payload).select(MAGAZZINO_RICAMBI_COLUMNS).single();
@@ -94,8 +85,6 @@ export const magazzinoService = {
 
   async update(id: string, data: MagazzinoUpdate): Promise<ServiceResult<MagazzinoRicambioRow>> {
     try {
-      const allowed = await ensurePermission("editInventory");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const payload = Object.keys(data).length > 0 ? attachMagazzinoEntityKey(data) : data;
       const { data: before, error: e0 } = await c.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
@@ -117,8 +106,6 @@ export const magazzinoService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
-      const allowed = await ensurePermission("deleteRecords");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: existing, error: e0 } = await c.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
@@ -143,8 +130,6 @@ export const magazzinoService = {
     windowMonths = 3,
   ): Promise<ServiceResult<MagazzinoRicambioRow>> {
     try {
-      const allowed = await ensurePermission("editInventory");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const since = new Date();
       since.setMonth(since.getMonth() - Math.max(1, Math.min(windowMonths, 24)));

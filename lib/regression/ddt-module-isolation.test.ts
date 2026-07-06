@@ -28,7 +28,7 @@ const pdfGen = fs.readFileSync(path.join(ROOT, "lib/pdf-artifacts/pdf-artifact-g
 assert.match(pdfGen, /case "ddt"/);
 
 const pdfRbac = fs.readFileSync(path.join(ROOT, "lib/pdf-artifacts/pdf-artifact-rbac.server.ts"), "utf8");
-assert.match(pdfRbac, /verifyServerSectionRead\("preventivi"\)/);
+assert.match(pdfRbac, /verifyServerPageRead\("preventivi"\)/);
 
 const pdfRegistry = fs.readFileSync(path.join(ROOT, "lib/pdf-artifacts/pdf-artifact-registry.ts"), "utf8");
 assert.match(pdfRegistry, /"ddt"/);

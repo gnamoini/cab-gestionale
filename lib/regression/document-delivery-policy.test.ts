@@ -14,7 +14,7 @@ const proxyRoute = read("app/api/documents/[id]/route.ts");
 assert.match(proxyRoute, /deliverDocumentFile/);
 
 const auth = read("lib/documents/document-delivery-auth.server.ts");
-assert.match(auth, /verifyServerSectionRead/);
+assert.match(auth, /verifyServerPageRead/);
 
 const uploadPolicy = read("app/api/documents/upload-policy/route.ts");
 assert.match(uploadPolicy, /uploadDocuments/);

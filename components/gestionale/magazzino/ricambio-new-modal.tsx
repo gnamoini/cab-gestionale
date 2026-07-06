@@ -30,7 +30,7 @@ import { purgeMagazzinoLogEntriesForRicambioId } from "@/lib/magazzino/magazzino
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { ricambioUiToMagazzinoInsert } from "@/lib/magazzino/magazzino-db-ui-adapter";
-import { magazzinoService } from "@/src/services/magazzino.service";
+import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
 import { ricambioUiFromMagazzinoRow } from "@/lib/magazzino/magazzino-list-cache";
 import {
   gateBeginSubmit,
@@ -188,7 +188,7 @@ export function RicambioNewModal({
         if (placeholderFlags.categoriaPlaceholder) {
           incrementHealthCounter("ricambioSavePlaceholderCategoria");
         }
-        const created = await magazzinoService.create(ricambioUiToMagazzinoInsert(r, mezziListePrefs));
+        const created = await magazzinoEntry.create(ricambioUiToMagazzinoInsert(r, mezziListePrefs));
         if (!created.success || !created.data) {
           onSaveError(created.error ?? "Creazione ricambio non riuscita.");
           return;

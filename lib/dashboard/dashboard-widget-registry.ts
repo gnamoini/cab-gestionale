@@ -1,6 +1,5 @@
-import { moduleAllows } from "@/src/lib/auth/effective-module-access";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
-import type { EffectiveModulePermission } from "@/src/lib/permissions/effective-permissions";
+import type { ResolvedPageAccess } from "@/src/lib/rbac/resolve-page-access";
 
 export type DashboardWidgetSection =
   | "kpi-header"
@@ -64,12 +63,12 @@ const LEGACY_WIDGET_IDS: readonly DashboardWidgetId[] = [
 
 function isWidgetVisible(
   def: DashboardWidgetDefinition,
-  modules: Record<GestionalePermissionModule, EffectiveModulePermission>,
+  modules: ResolvedPageAccess["modules"],
   staging: boolean,
 ): boolean {
   if (def.hideInStaging && staging) return false;
   if (!def.requiredModule) return true;
-  return moduleAllows(modules, def.requiredModule, "read");
+  return modules[def.requiredModule].canRead;
 }
 
 export function isKnownDashboardWidgetId(id: string): id is DashboardWidgetId {
@@ -77,7 +76,7 @@ export function isKnownDashboardWidgetId(id: string): id is DashboardWidgetId {
 }
 
 export function resolveVisibleDashboardWidgets(input: {
-  modules: Record<GestionalePermissionModule, EffectiveModulePermission> | null | undefined;
+  modules: ResolvedPageAccess["modules"] | null | undefined;
   staging: boolean;
 }): DashboardWidgetDefinition[] {
   if (!input?.modules) return [];

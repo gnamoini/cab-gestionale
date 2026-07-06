@@ -51,7 +51,7 @@ import { clearRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-setti
 import { clearRicambioStockSnapshotRegistry } from "@/lib/magazzino/ricambio-stock-snapshot-registry";
 import { clearScortaSyncQueues } from "@/lib/magazzino/scorta-adjust-sync";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { authLogsService } from "@/src/services/auth-logs.service";
+import { authLogsEntry } from "@/lib/domain/auth-logs-entry";
 import type { AuthStatus } from "@/src/lib/auth/auth-status";
 import type { PublicAuthUser } from "@/src/types/auth-user";
 
@@ -418,7 +418,7 @@ export function AuthProvider({
             const onResetPassword =
               typeof window !== "undefined" && window.location.pathname.startsWith("/login/reset-password");
             if (!onResetPassword) {
-              authLogsService.logLoginFireAndForget(session.user.id, session.user.email ?? "");
+              authLogsEntry.logLoginFireAndForget(session.user.id, session.user.email ?? "");
               beginUndoSession();
               notifyUndoSessionChanged();
             }
@@ -483,7 +483,7 @@ export function AuthProvider({
         const sb = getBrowserSupabase();
         const signInEmail = await resolveSignInEmail(sb, identifier);
         if (!signInEmail) {
-          authLogsService.logLoginFailedFireAndForget(identifier.includes("@") ? identifier : `${identifier}@login`);
+          authLogsEntry.logLoginFailedFireAndForget(identifier.includes("@") ? identifier : `${identifier}@login`);
           return {
             ok: false as const,
             message: "Accesso non riuscito. Verifica email o nome utente e password.",
@@ -494,7 +494,7 @@ export function AuthProvider({
           password,
         });
         if (error) {
-          authLogsService.logLoginFailedFireAndForget(signInEmail);
+          authLogsEntry.logLoginFailedFireAndForget(signInEmail);
           trackRuntimeEvent(RuntimeEvents.authLoginFailed, { reason: (error.message || "sign_in").slice(0, 200) });
           return { ok: false as const, message: error.message || "Accesso negato." };
         }
@@ -505,7 +505,7 @@ export function AuthProvider({
           return { ok: false as const, message: "Accesso in corso, riprova." };
         }
         if (result.verdict !== "valid") {
-          authLogsService.logLoginFailedFireAndForget(signInEmail);
+          authLogsEntry.logLoginFailedFireAndForget(signInEmail);
           if (result.verdict === "invalid") {
             await applyReconcileVerdict(sb, result, "login");
           }
@@ -531,7 +531,7 @@ export function AuthProvider({
             : e instanceof Error
               ? e.message
               : "Errore di accesso.";
-        authLogsService.logLoginFailedFireAndForget(email.trim().toLowerCase());
+        authLogsEntry.logLoginFailedFireAndForget(email.trim().toLowerCase());
         trackRuntimeEvent(RuntimeEvents.authLoginFailed, { reason: msg.slice(0, 200) });
         return { ok: false as const, message: msg };
       }
@@ -547,7 +547,7 @@ export function AuthProvider({
         const sb = getBrowserSupabase();
         await flushPendingModificaLogs(sb);
         if (uid) {
-          authLogsService.logLogoutFireAndForget(uid, email);
+          authLogsEntry.logLogoutFireAndForget(uid, email);
         }
         await sb.auth.signOut({ scope: "local" });
       } catch {

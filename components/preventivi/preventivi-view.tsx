@@ -75,7 +75,7 @@ import {
 } from "@/lib/preventivi/preventivi-sync-adapter";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
-import { ddtService } from "@/src/services/ddt.service";
+import { ddtEntry } from "@/lib/domain/ddt-entry";
 import { usePreventiviBillingQuery } from "@/src/hooks/gestionale/use-preventivi-billing-query";
 import { useMagazzinoRicambiUIQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
@@ -309,7 +309,7 @@ export function PreventiviView() {
   const canEditWorkOrders = prevPerm.canWrite;
   const canReadPreventivi = prevPerm.canRead;
   const canWritePreventivi = prevPerm.canWrite;
-  const canDeleteRecords = prevPerm.canWrite && globalPerm.canDeleteRecords;
+  const canDeleteRecords = prevPerm.canWrite;
   const router = useRouter();
   const searchParams = useSearchParams();
   const pageTabRaw = searchParams.get(Q_PREVENTIVI_TAB);
@@ -570,7 +570,7 @@ export function PreventiviView() {
 
   const openDdtDrawer = useCallback(
     async (preventivo: PreventivoRecord, ddtId: string) => {
-      const detail = await ddtService.getDetail(ddtId);
+      const detail = await ddtEntry.getDetail(ddtId);
       if (!detail.success || !detail.data) {
         gestToast.errorOnce("ddt-detail", detail.error ?? "Impossibile aprire il DDT.");
         return;
@@ -591,7 +591,7 @@ export function PreventiviView() {
       setDdtBusyId(preventivo.id);
       try {
         const draft = buildDdtDraftFromPreventivoAuto({ preventivo, preventivoId: preventivo.id });
-        const created = await ddtService.createOrReplaceForPreventivo(draft);
+        const created = await ddtEntry.createOrReplaceForPreventivo(draft);
         if (!created.success || !created.data) throw new Error(created.error ?? "Creazione DDT non riuscita.");
         await refetchDdtIndex();
         await openDdtDrawer(preventivo, created.data.id);
@@ -618,7 +618,7 @@ export function PreventiviView() {
     setDdtBusyId(preventivo.id);
     try {
       const draft = buildDdtDraftFromPreventivoAuto({ preventivo, preventivoId: preventivo.id });
-      const created = await ddtService.createOrReplaceForPreventivo(draft);
+      const created = await ddtEntry.createOrReplaceForPreventivo(draft);
       if (!created.success || !created.data) throw new Error(created.error ?? "Rigenerazione non riuscita.");
       await refetchDdtIndex();
       await openDdtDrawer(preventivo, created.data.id);
@@ -633,7 +633,7 @@ export function PreventiviView() {
   const refreshDdtDrawer = useCallback(async () => {
     const detail = ddtDrawer.detail;
     if (!detail) return;
-    const next = await ddtService.getDetail(detail.document.id);
+    const next = await ddtEntry.getDetail(detail.document.id);
     if (next.success && next.data) {
       setDdtDrawer((prev) => ({ ...prev, detail: next.data! }));
     }

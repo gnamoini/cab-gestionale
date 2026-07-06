@@ -1,8 +1,8 @@
 import "server-only";
 
 import {
-  verifyServerSectionRead,
-  verifyServerSectionWrite,
+  verifyServerPageRead,
+  verifyServerPageWrite,
 } from "@/src/lib/auth/server-permission-guards";
 import { BRANDING_LOGO_STORAGE_PREFIX } from "@/src/lib/storage/storage-paths";
 import { isImageStorageScope, type ImageStorageScope } from "@/src/lib/storage/storage-config";
@@ -14,8 +14,8 @@ function sectionForImageScope(scope: ImageStorageScope): "lavorazioni" | "mezzi"
 
 async function verifyImageScopeModuleAccess(scope: ImageStorageScope): Promise<boolean> {
   const [canRead, canWrite] = await Promise.all([
-    verifyServerSectionRead(scope),
-    verifyServerSectionWrite(scope),
+    verifyServerPageRead(scope),
+    verifyServerPageWrite(scope),
   ]);
   return canRead || canWrite;
 }

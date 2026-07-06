@@ -76,7 +76,7 @@ import type { DdtDetail } from "@/lib/ddt/types";
 import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
 import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
 import { usePermissions } from "@/src/hooks/use-permissions";
-import { ddtService } from "@/src/services/ddt.service";
+import { ddtEntry } from "@/lib/domain/ddt-entry";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { dateInputValueToIso, isoToDateInputValue } from "@/lib/lavorazioni/date-day-only";
@@ -297,7 +297,7 @@ export function PreventiviEditorModal({
   });
 
   const openDdtDrawer = useCallback(async (ddtId: string) => {
-    const detail = await ddtService.getDetail(ddtId);
+    const detail = await ddtEntry.getDetail(ddtId);
     if (!detail.success || !detail.data) {
       toast.errorOnce("ddt-detail", detail.error ?? "Impossibile aprire il DDT.");
       return;
@@ -316,7 +316,7 @@ export function PreventiviEditorModal({
     setDdtBusy(true);
     try {
       const payload = buildDdtDraftFromPreventivoAuto({ preventivo: draft, preventivoId });
-      const created = await ddtService.createOrReplaceForPreventivo(payload);
+      const created = await ddtEntry.createOrReplaceForPreventivo(payload);
       if (!created.success || !created.data) throw new Error(created.error ?? "Creazione DDT non riuscita.");
       await refetchDdtIndex();
       await openDdtDrawer(created.data.id);
@@ -362,7 +362,7 @@ export function PreventiviEditorModal({
     setDdtBusy(true);
     try {
       const payload = buildDdtDraftFromPreventivoAuto({ preventivo: draft, preventivoId });
-      const created = await ddtService.createOrReplaceForPreventivo(payload);
+      const created = await ddtEntry.createOrReplaceForPreventivo(payload);
       if (!created.success || !created.data) throw new Error(created.error ?? "Rigenerazione non riuscita.");
       await refetchDdtIndex();
       await openDdtDrawer(created.data.id);
@@ -377,7 +377,7 @@ export function PreventiviEditorModal({
   const refreshDdtDrawer = useCallback(async () => {
     const detail = ddtDrawer.detail;
     if (!detail) return;
-    const next = await ddtService.getDetail(detail.document.id);
+    const next = await ddtEntry.getDetail(detail.document.id);
     if (next.success && next.data) {
       setDdtDrawer((prev) => ({ ...prev, detail: next.data! }));
     }
@@ -390,7 +390,7 @@ export function PreventiviEditorModal({
     try {
       const opened = await openPdfArtifact("ddt", { id: activeDdt.id });
       if (opened) {
-        await ddtService.markStampato(activeDdt.id);
+        await ddtEntry.markStampato(activeDdt.id);
         void refetchDdtIndex();
         if (ddtDrawer.detail?.document.id === activeDdt.id) void refreshDdtDrawer();
       }

@@ -10,7 +10,6 @@ import { validateCellValue } from "@/lib/dipendenti/timesheet-validation";
 import type { TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
 import { resolveTipoById } from "@/lib/dipendenti/tipi-assenza-model";
 import type { TimesheetCellValue } from "@/lib/dipendenti/types";
-import { ensureModuleCan } from "@/src/lib/auth/permission-guards";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -77,8 +76,6 @@ function buildPayload(
 export const dipendentiTimesheetService = {
   async listEmployees(): Promise<ServiceResult<DipendenteTimesheetEmployeeRow[]>> {
     try {
-      const allowed = await ensureModuleCan("dipendenti", "read");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c
         .from("dipendenti_timesheet_employees")
@@ -95,8 +92,6 @@ export const dipendentiTimesheetService = {
     addettiRecords: readonly AddettoRecord[],
   ): Promise<ServiceResult<DipendenteTimesheetEmployeeRow[]>> {
     try {
-      const allowed = await ensureModuleCan("dipendenti", "write");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const listRes = await dipendentiTimesheetService.listEmployees();
       if (!listRes.success) return listRes;
       const existing = listRes.data ?? [];
@@ -168,8 +163,6 @@ export const dipendentiTimesheetService = {
   /** Mesi (YYYY-MM) con almeno una entry salvata — per filtri anno/mese toolbar. */
   async listMonthKeysWithEntries(): Promise<ServiceResult<TimesheetMonthKey[]>> {
     try {
-      const allowed = await ensureModuleCan("dipendenti", "read");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.rpc("list_timesheet_month_keys");
       if (error) return err(error.message);
@@ -186,8 +179,6 @@ export const dipendentiTimesheetService = {
   /** ID dipendenti con almeno una presenza registrata (qualsiasi periodo). */
   async listEmployeeIdsWithEntries(): Promise<ServiceResult<string[]>> {
     try {
-      const allowed = await ensureModuleCan("dipendenti", "read");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.rpc("list_timesheet_employee_ids_with_entries");
       if (error) return err(error.message);
@@ -203,8 +194,6 @@ export const dipendentiTimesheetService = {
 
   async listEntriesForRange(from: string, to: string): Promise<ServiceResult<DipendenteTimesheetEntryRow[]>> {
     try {
-      const allowed = await ensureModuleCan("dipendenti", "read");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c
         .from("dipendenti_timesheet_entries")
@@ -223,8 +212,6 @@ export const dipendentiTimesheetService = {
     tipiAssenza: readonly TipoAssenzaConfig[],
   ): Promise<ServiceResult<DipendenteTimesheetEntryRow | null>> {
     try {
-      const allowed = await ensureModuleCan("dipendenti", "write");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const workDate = parseWorkDate(input.workDate);
       if (!workDate) return err("Data non valida.");
 
@@ -313,8 +300,6 @@ export const dipendentiTimesheetService = {
 
   async deleteEntry(dipendenteId: string, workDate: string): Promise<ServiceResult<null>> {
     try {
-      const allowed = await ensureModuleCan("dipendenti", "write");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const parsed = parseWorkDate(workDate);
       if (!parsed) return err("Data non valida.");
       const c = await sb();

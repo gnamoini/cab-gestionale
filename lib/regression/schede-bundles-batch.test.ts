@@ -23,6 +23,6 @@ assert.doesNotMatch(adapter, /SCHEde_FETCH_CONCURRENCY/, "per-id concurrency loo
 
 const server = read("lib/schede/schede-bundles-fetch-server.ts");
 assert.match(server, /"server-only"/);
-assert.match(server, /verifyServerSectionRead/);
+assert.match(server, /verifyServerPageRead/);
 
 console.log("schede-bundles-batch: ok");

@@ -3,7 +3,6 @@
 import { pickPreventivoWritePayload } from "@/lib/validation/services/preventivi-payload";
 import { PREVENTIVI_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensureSectionDelete, ensureSectionRead, ensureSectionWrite } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { PreventivoRow } from "@/src/types/supabase-tables";
@@ -57,8 +56,6 @@ async function sb() {
 export const preventiviService = {
   async getAll(filters?: PreventiviFilters): Promise<ServiceResult<PreventivoRow[]>> {
     try {
-      const allowed = await ensureSectionRead("preventivi");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       let q = c.from("preventivi").select(PREVENTIVI_COLUMNS).order("created_at", { ascending: false });
       if (filters?.mezzo_id) q = q.eq("mezzo_id", filters.mezzo_id);
@@ -74,8 +71,6 @@ export const preventiviService = {
 
   async getById(id: string): Promise<ServiceResult<PreventivoRow>> {
     try {
-      const allowed = await ensureSectionRead("preventivi");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.from("preventivi").select(PREVENTIVI_COLUMNS).eq("id", id).maybeSingle();
       if (error) return err(error.message);
@@ -88,8 +83,6 @@ export const preventiviService = {
 
   async create(data: PreventivoInsert): Promise<ServiceResult<PreventivoRow>> {
     try {
-      const allowed = await ensureSectionWrite("preventivi");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const picked = pickPreventivoWritePayload(data as Record<string, unknown>);
       const merged = mergePreventivoPayload(picked as PreventivoInsert) as PreventivoInsert;
@@ -105,8 +98,6 @@ export const preventiviService = {
 
   async update(id: string, data: PreventivoUpdate): Promise<ServiceResult<PreventivoRow>> {
     try {
-      const allowed = await ensureSectionWrite("preventivi");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: before, error: e0 } = await c.from("preventivi").select(PREVENTIVI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
@@ -143,8 +134,6 @@ export const preventiviService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
-      const allowed = await ensureSectionDelete("preventivi");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: existing, error: e0 } = await c.from("preventivi").select(PREVENTIVI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);

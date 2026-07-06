@@ -13,25 +13,6 @@ import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 
 const DENIED_MESSAGE = RBAC_DENIED_MESSAGE;
-const CLIENT_DENIED = "Accesso al portale lavorazioni clienti non autorizzato.";
-
-/** Compat: sezioni legacy → page key (ponytail: rimuovere quando call-site migrati). */
-const LEGACY_SECTION_TO_PAGE: Record<string, GestionalePageKey> = {
-  dashboard: "dashboard",
-  lavorazioni: "lavorazioni",
-  lavorazioni_clienti: "lavorazioni_clienti",
-  preventivi: "preventivi",
-  documenti: "documenti",
-  magazzino: "magazzino",
-  mezzi: "mezzi",
-  report: "report",
-  dipendenti: "dipendenti",
-  fatturazione: "fatturazione",
-  ddt: "preventivi",
-  ordini_fornitori: "preventivi",
-  impostazioni: "impostazioni",
-  security: "sicurezza",
-};
 
 async function ensureWithSnapshot(
   check: (ctx: RequiredRbacContext) => boolean,
@@ -74,27 +55,6 @@ export async function ensureModuleCan(
   return ensureWithSnapshot((ctx) => moduleAllowsFromResolved(ctx.resolved, module, op));
 }
 
-export async function ensureSectionRead(section: string): Promise<ServiceResult<true>> {
-  const pageKey = LEGACY_SECTION_TO_PAGE[section];
-  if (pageKey) return ensurePageRead(pageKey);
-  return err(DENIED_MESSAGE);
-}
-
-export async function ensureSectionWrite(section: string): Promise<ServiceResult<true>> {
-  const pageKey = LEGACY_SECTION_TO_PAGE[section];
-  if (pageKey) return ensurePageWrite(pageKey);
-  return err(DENIED_MESSAGE);
-}
-
-export async function ensureSectionDelete(section: string): Promise<ServiceResult<true>> {
-  return ensureSectionWrite(section);
-}
-
-export async function ensureSectionWriteOrError(section: string): Promise<void> {
-  const allowed = await ensureSectionWrite(section);
-  if (!allowed.success) throw new Error(allowed.error ?? DENIED_MESSAGE);
-}
-
 export async function loadCallerClienteRef(): Promise<string | null> {
   const sb = getBrowserSupabase();
   const { data: auth } = await sb.auth.getUser();
@@ -105,16 +65,6 @@ export async function loadCallerClienteRef(): Promise<string | null> {
 
 export async function ensureClientLavorazioniAccess(): Promise<ServiceResult<true>> {
   return ensurePageRead("lavorazioni_clienti");
-}
-
-/** @deprecated Usare ensurePageWrite('sicurezza'). */
-export async function ensurePermission(_permission: string): Promise<ServiceResult<true>> {
-  return err(DENIED_MESSAGE);
-}
-
-/** @deprecated Usare ensurePageWrite su pagina operativa. */
-export async function ensureOperationalWrite(): Promise<ServiceResult<true>> {
-  return ensurePageWrite("dashboard");
 }
 
 export async function ensureIsAdmin(): Promise<ServiceResult<true>> {

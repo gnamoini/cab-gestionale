@@ -6,7 +6,7 @@ import {
 } from "@/lib/db/table-select-columns";
 import { mapOrdineFornitoreRow } from "@/lib/ordini-fornitori/ordine-fornitore-db-mapper";
 import type { OrdineFornitoreDetail, OrdineFornitoreRecord } from "@/lib/ordini-fornitori/types";
-import { verifyServerSectionRead } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import type { OrdineFornitoreRigaRow, OrdineFornitoreRow } from "@/src/types/supabase-tables";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -16,7 +16,7 @@ import {
 } from "@/lib/ordini-fornitori/ordine-fornitore-list-fetch";
 
 export async function fetchOrdineFornitoreDetailServer(id: string): Promise<OrdineFornitoreDetail | null> {
-  if (!(await verifyServerSectionRead("ordini_fornitori"))) return null;
+  if (!(await verifyServerPageRead("preventivi"))) return null;
 
   const sb = await createSupabaseServerUserClient();
   const { data: ordine, error } = await sb
@@ -45,7 +45,7 @@ export async function fetchOrdineFornitoreRecordServer(id: string): Promise<Ordi
 }
 
 export async function fetchOrdiniFornitoriRecordsServer(): Promise<ServiceResult<OrdineFornitoreRecord[]>> {
-  if (!(await verifyServerSectionRead("ordini_fornitori"))) {
+  if (!(await verifyServerPageRead("preventivi"))) {
     return success([]);
   }
   const sb = await createSupabaseServerUserClient();

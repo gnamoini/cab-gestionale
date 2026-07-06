@@ -1,5 +1,5 @@
 import { fetchSchedeBundlesStore, fetchSchedeRowsByLavorazioneIds } from "@/lib/schede/schede-bundles-fetch";
-import { ensureClientLavorazioniAccess, ensureSectionRead } from "@/src/lib/auth/permission-guards";
+import { ensureClientLavorazioniAccess, ensurePageRead } from "@/src/lib/auth/permission-guards";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, type ServiceResult } from "@/src/services/service-result";
 import type { SchedaLavorazioneRow } from "@/src/types/supabase-tables";
@@ -8,7 +8,7 @@ import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 async function ensureSchedeReadAllowed(clientPortal?: boolean): Promise<ServiceResult<true>> {
   if (clientPortal) return ensureClientLavorazioniAccess();
-  return ensureSectionRead("lavorazioni");
+  return ensurePageRead("lavorazioni");
 }
 
 /** Batch schede lato client — stessa query `.in()` del server (sostituisce N× getAll). */

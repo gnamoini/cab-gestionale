@@ -10,7 +10,7 @@ import {
   workshopScheduleQueryKeys,
   workshopScheduleRangeKey,
 } from "@/src/services/domain/workshop-schedule-domain.queries";
-import { workshopScheduleService } from "@/src/services/workshop-schedule.service";
+import { workshopScheduleEntry } from "@/lib/domain/workshop-schedule-entry";
 import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { shouldSuppressRemoteCacheInvalidation } from "@/lib/sync/recent-local-mutation";
 
@@ -24,7 +24,7 @@ export function useWorkshopScheduleRange(
   const query = useQuery({
     queryKey,
     queryFn: async () => {
-      const res = await workshopScheduleService.enrichedView(startIso, endIso, filters);
+      const res = await workshopScheduleEntry.enrichedView(startIso, endIso, filters);
       if (!res.success) throw new Error(res.error ?? "Caricamento agenda fallito");
       return res.data ?? [];
     },
@@ -55,7 +55,7 @@ export function useWorkshopScheduleByWorkOrder(workOrderId: string | undefined, 
     queryKey: workshopScheduleQueryKeys.byWorkOrder(id),
     enabled: enabled && Boolean(id),
     queryFn: async () => {
-      const res = await workshopScheduleService.listByWorkOrder(id);
+      const res = await workshopScheduleEntry.listByWorkOrder(id);
       if (!res.success) throw new Error(res.error ?? "Caricamento pianificazione fallito");
       return res.data ?? [];
     },

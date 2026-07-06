@@ -19,7 +19,7 @@ import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries"
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
-import { workshopScheduleService } from "@/src/services/workshop-schedule.service";
+import { workshopScheduleEntry } from "@/lib/domain/workshop-schedule-entry";
 import { ymdFromDate } from "@/lib/report/date-ranges";
 import { ymdFromIso } from "@/lib/workshop-schedule/datetime";
 import {
@@ -31,7 +31,7 @@ import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/query-keys";
 import { workshopScheduleQueryKeys } from "@/src/services/domain/workshop-schedule-domain.queries";
-import { dipendentiTimesheetService } from "@/src/services/dipendenti-timesheet.service";
+import { dipendentiTimesheetEntry } from "@/lib/domain/dipendenti-timesheet-entry";
 import type { DipendenteTimesheetEntryRow } from "@/lib/dipendenti/types";
 import type { DashboardMagMovementRow } from "@/lib/view/dashboard-widgets-selectors";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -192,13 +192,13 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
   }, []);
   const agendaQ = useServiceQuery(
     [...workshopScheduleQueryKeys.root, "control-tower", agendaRange.start] as const,
-    () => workshopScheduleService.enrichedView(agendaRange.start, agendaRange.end),
+    () => workshopScheduleEntry.enrichedView(agendaRange.start, agendaRange.end),
     { enabled: needAgenda, ...viewOpts },
   );
   const needTimesheet = !staging && headerVisible && canDipendenti;
   const timesheetQ = useServiceQuery(
     [...QK.dipendentiTimesheetEntries, "control-tower", timesheetRange.from, timesheetRange.to] as const,
-    () => dipendentiTimesheetService.listEntriesForRange(timesheetRange.from, timesheetRange.to),
+    () => dipendentiTimesheetEntry.listEntriesForRange(timesheetRange.from, timesheetRange.to),
     { enabled: needTimesheet, ...viewOpts },
   );
 

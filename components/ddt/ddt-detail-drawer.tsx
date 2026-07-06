@@ -9,7 +9,7 @@ import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { dsBtnNeutralForm } from "@/lib/ui/design-system";
 import type { DdtDetail } from "@/lib/ddt/types";
 import { ddtDisplayNumber } from "@/lib/ddt/ddt-list-ui-filters";
-import { ddtService } from "@/src/services/ddt.service";
+import { ddtEntry } from "@/lib/domain/ddt-entry";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
@@ -46,7 +46,7 @@ export function DdtDetailDrawer({
     try {
       const opened = await openPdfArtifact("ddt", { id: doc.id });
       if (opened) {
-        await ddtService.markStampato(doc.id);
+        await ddtEntry.markStampato(doc.id);
         onChanged();
       }
     } catch (e) {
@@ -60,7 +60,7 @@ export function DdtDetailDrawer({
     if (!doc || busy || !canWrite) return;
     setBusy(true);
     try {
-      const res = await ddtService.markConsegnato(doc.id);
+      const res = await ddtEntry.markConsegnato(doc.id);
       if (!res.success) throw new Error(res.error ?? "Operazione non riuscita.");
       toast.successOnce("ddt-delivered", "DDT segnato come consegnato.");
       onChanged();
@@ -82,7 +82,7 @@ export function DdtDetailDrawer({
     if (!ok) return;
     setBusy(true);
     try {
-      const res = await ddtService.cancel(doc.id);
+      const res = await ddtEntry.cancel(doc.id);
       if (!res.success) throw new Error(res.error ?? "Annullamento non riuscito.");
       toast.successOnce("ddt-cancel", "DDT annullato.");
       onChanged();

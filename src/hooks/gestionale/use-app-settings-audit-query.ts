@@ -5,9 +5,9 @@ import { useAuth } from "@/context/auth-context";
 import { useRbac } from "@/src/hooks/use-rbac";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import {
-  appSettingsAuditService,
+  appSettingsAuditEntry,
   type AppSettingsAuditListParams,
-} from "@/src/services/app-settings-audit.service";
+} from "@/lib/domain/app-settings-audit-entry";
 import type { AppSettingsAuditRow } from "@/src/types/supabase-tables";
 
 /**
@@ -25,7 +25,7 @@ export function useAppSettingsAuditQuery(
   return useQuery({
     queryKey: [...QK.settingsAudit, module, key, limit] as const,
     queryFn: async () => {
-      const r = await appSettingsAuditService.list({ ...params, limit });
+      const r = await appSettingsAuditEntry.list({ ...params, limit });
       if (!r.success) throw new Error(r.error ?? "Errore lettura audit impostazioni");
       return r.data ?? [];
     },

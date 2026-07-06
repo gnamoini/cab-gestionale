@@ -23,11 +23,15 @@ checks.push({
   ok: exists("src/lib/rbac/rbac-snapshot-access.ts"),
 });
 
-// 2 RequiredRbacContext on hasPermission
+// 2 Page resolver + RequiredRbacContext (sostituisce hasPermission legacy)
 const rbac = read("lib/auth/rbac.ts");
+const pageResolver = read("src/lib/rbac/resolve-page-access.ts");
 checks.push({
-  id: "hasPermission requires RequiredRbacContext",
-  ok: /hasPermission\(user: RbacUser, permission: PermissionKey, ctx: RequiredRbacContext\)/.test(rbac),
+  id: "page resolver SSOT with RequiredRbacContext",
+  ok:
+    rbac.includes("RequiredRbacContext") &&
+    rbac.includes("canReadPage") &&
+    pageResolver.includes("export function resolvePageAccess"),
 });
 
 // 3 useRbacNavAccess hook
@@ -49,23 +53,27 @@ checks.push({
   ok: exists("src/lib/rbac/invalidate-rbac-truth.ts") && exists("src/lib/rbac/invalidate-rbac-truth.server.ts"),
 });
 
-// 6 proxy uses snapshot
+// 6 proxy uses page-matrix route access (rolePageAccess snapshot)
 const proxy = read("src/middleware/proxy-handler.ts");
 checks.push({
-  id: "proxy-handler snapshot-based client portal",
-  ok: proxy.includes("resolveEffectivePermissions") && proxy.includes("createRbacNavAccess"),
+  id: "proxy-handler page-matrix client portal",
+  ok: proxy.includes("evaluateGestionaleRouteAccess") && proxy.includes("rolePageAccess"),
 });
 
-// 7 auth-context SSR hydration role keys
+// 7 auth-context SSR hydration role page access
 const authCtx = read("context/auth-context.tsx");
 checks.push({
-  id: "auth-context hydrates rolePermissionKeys",
-  ok: authCtx.includes('"role-keys"') && authCtx.includes("publishStickyRbacSnapshot"),
+  id: "auth-context hydrates role page access snapshot",
+  ok: authCtx.includes('"role-page-access"') && authCtx.includes("publishStickyRbacSnapshot"),
 });
 
 // 8 regression hardening tests exist
 const hardeningTests = [
   "lib/regression/rbac-entrypoint-audit.test.ts",
+  "lib/regression/rbac-entrypoint-call-site-audit.test.ts",
+  "lib/regression/rbac-no-entrypoint-chaining.test.ts",
+  "lib/regression/rbac-domain-error-hygiene.test.ts",
+  "lib/regression/rbac-portal-tenant-isolation.test.ts",
   "lib/regression/sidebar-nav-rbac.test.ts",
   "lib/regression/rbac-ssr-client-parity.test.ts",
   "lib/regression/rbac-cross-layer-matrix.test.ts",

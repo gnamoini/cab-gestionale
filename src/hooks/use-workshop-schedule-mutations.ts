@@ -16,10 +16,10 @@ import { markRecentLocalGestionaleMutation } from "@/lib/sync/recent-local-mutat
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 import { workshopScheduleQueryKeys } from "@/src/services/domain/workshop-schedule-domain.queries";
 import {
-  workshopScheduleService,
+  workshopScheduleEntry,
   type WorkshopSchedulePatchTimesInput,
   type WorkshopScheduleUpsertInput,
-} from "@/src/services/workshop-schedule.service";
+} from "@/lib/domain/workshop-schedule-entry";
 
 type OptimisticCtx = {
   snapshots: ReturnType<typeof snapshotWorkshopScheduleQueries>;
@@ -30,7 +30,7 @@ export function useWorkshopScheduleMutations() {
   const invalidateKeys = [workshopScheduleQueryKeys.root] as const;
 
   const upsertMutation = useServiceMutation(
-    (input: WorkshopScheduleUpsertInput) => workshopScheduleService.upsert(input),
+    (input: WorkshopScheduleUpsertInput) => workshopScheduleEntry.upsert(input),
     {
       invalidateQueryKeys: [invalidateKeys],
       onSuccess: (data) => {
@@ -45,7 +45,7 @@ export function useWorkshopScheduleMutations() {
   );
 
   const patchTimesMutation = useServiceMutation(
-    (input: WorkshopSchedulePatchTimesInput) => workshopScheduleService.patchTimes(input),
+    (input: WorkshopSchedulePatchTimesInput) => workshopScheduleEntry.patchTimes(input),
     {
       onMutate: async (input) => {
         await queryClient.cancelQueries({ queryKey: workshopScheduleQueryKeys.root });
@@ -87,7 +87,7 @@ export function useWorkshopScheduleMutations() {
     },
   );
 
-  const deleteMutation = useServiceMutation((id: string) => workshopScheduleService.softDelete(id), {
+  const deleteMutation = useServiceMutation((id: string) => workshopScheduleEntry.softDelete(id), {
     invalidateQueryKeys: [invalidateKeys],
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: workshopScheduleQueryKeys.root });

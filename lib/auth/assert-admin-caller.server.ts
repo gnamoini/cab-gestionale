@@ -1,6 +1,6 @@
 import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { assertSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
-import { verifyServerPermission } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import type { AdminCallerContext } from "@/src/actions/admin-users.types";
 
@@ -16,7 +16,7 @@ export async function assertAdminCaller(): Promise<AdminCallerContext> {
     };
   }
 
-  const allowed = await verifyServerPermission("manageSecurity");
+  const allowed = await verifyServerPageWrite("sicurezza");
   if (!allowed) {
     return { ok: false, message: "Operazione riservata agli amministratori." };
   }

@@ -19,8 +19,8 @@ import { buildReportDerivedBundle } from "@/lib/report/report-derived-cache";
 import { useReportLiveData } from "@/lib/report/use-report-live-data";
 import { isAssetLifecycleSubFlagActive } from "@/lib/officina/asset-lifecycle-v1-flag";
 import { GESTIONALE_REPORT_STALE_MS } from "@/lib/react-query/query-layer-policies";
-import { assetComplianceService } from "@/src/services/asset-compliance.service";
-import { assetTimelineService } from "@/src/services/asset-timeline.service";
+import { assetComplianceEntry } from "@/lib/domain/asset-compliance-entry";
+import { assetTimelineEntry } from "@/lib/domain/asset-timeline-entry";
 import { useAssetLifecycleV1Enabled } from "@/src/hooks/use-asset-lifecycle-v1-enabled";
 import type { CalendarSelection } from "@/components/dashboard/calendar-v2/calendar-v2-types";
 
@@ -77,7 +77,7 @@ export function useCalendarAnalytics(
     queryKey: ["calendar-v2", "lifecycle-timeline", monthKey, live.snapshotFingerprint],
     queryFn: async () => {
       if (!monthRange) return [];
-      const res = await assetTimelineService.listInRange(monthRange);
+      const res = await assetTimelineEntry.listInRange(monthRange);
       return res.success ? res.data : [];
     },
     enabled: timelineEnabled && monthRange != null,
@@ -87,7 +87,7 @@ export function useCalendarAnalytics(
   const complianceRulesQuery = useQuery({
     queryKey: ["calendar-v2", "lifecycle-rules", live.snapshotFingerprint],
     queryFn: async () => {
-      const res = await assetComplianceService.listUpcomingRules(90);
+      const res = await assetComplianceEntry.listUpcomingRules(90);
       return res.success ? res.data : [];
     },
     enabled: timelineEnabled && isAssetLifecycleSubFlagActive(lifecycleFlags, "compliance"),

@@ -12,7 +12,7 @@ import { validateProductionReadiness } from "@/lib/production/production-readine
 import { scanProductionReadinessCode } from "@/lib/production/production-readiness-scan";
 import type { ProductionReadinessCategory, ProductionReadinessResult } from "@/lib/production/production-readiness-types";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
-import { verifyServerPermission } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
 import { invalidateServerRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth.server";
 
 import {
@@ -119,7 +119,7 @@ function ensureSecurityRole(allowed: boolean): { ok: false; message: string } | 
 export async function getPilotControlStatusAction(): Promise<
   { ok: true; status: PilotControlStatus } | { ok: false; message: string }
 > {
-  const allowed = await verifyServerPermission("manageSecurity");
+  const allowed = await verifyServerPageWrite("sicurezza");
   const denied = ensureSecurityRole(allowed);
   if (denied) return denied;
 
@@ -133,7 +133,7 @@ export async function getPilotControlStatusAction(): Promise<
 export async function setPilotDbOverrideAction(
   enabled: boolean,
 ): Promise<{ ok: true; status: PilotControlStatus } | { ok: false; message: string }> {
-  const allowed = await verifyServerPermission("manageSecurity");
+  const allowed = await verifyServerPageWrite("sicurezza");
   const denied = ensureSecurityRole(allowed);
   if (denied) return denied;
 
@@ -160,7 +160,7 @@ export async function setPilotDbOverrideAction(
 export async function runSecurityReleaseControlAction(
   includeBuildChecks = true,
 ): Promise<{ ok: true; payload: SecurityReleaseControlPayload } | { ok: false; message: string }> {
-  const allowed = await verifyServerPermission("manageSecurity");
+  const allowed = await verifyServerPageWrite("sicurezza");
   const denied = ensureSecurityRole(allowed);
   if (denied) return denied;
 

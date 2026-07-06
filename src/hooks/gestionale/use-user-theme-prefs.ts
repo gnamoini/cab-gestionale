@@ -8,9 +8,9 @@ import { themeModeFromSettingsValue, type PersistedThemeMode } from "@/lib/theme
 import { persistSettingsRecord } from "@/lib/sync/persist-settings-record";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import { fetchUserPrefsRow, upsertUserThemePref } from "@/src/services/user-prefs.service";
+import { fetchUserPrefsRow, upsertUserThemePref } from "@/lib/domain/user-prefs-entry";
 import { err } from "@/src/services/service-result";
-import { SETTINGS_CONCURRENCY_CONFLICT } from "@/src/services/settings.service";
+import { SETTINGS_CONCURRENCY_CONFLICT } from "@/lib/domain/settings-entry";
 
 export function userThemePrefsQueryKey(userId: string) {
   return [...QK.settings, "user_prefs", userId] as const;

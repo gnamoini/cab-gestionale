@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
 import { deleteGeneratedListinoRicambi } from "@/lib/magazzino/listino-import/listino-import-delete-generated.server";
 import { getServerSession } from "@/src/lib/auth/get-server-session";
-import {
-  verifyServerPermission,
-  verifyServerSectionRead,
-  verifyServerSectionWrite,
-} from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageRead, verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
 
 export const runtime = "nodejs";
 
 export async function DELETE() {
-  const canDelete = await verifyServerPermission("deleteRecords");
-  const canWriteMagazzino = await verifyServerSectionWrite("magazzino");
-  if (!canDelete || !canWriteMagazzino) {
+  const canDelete = await verifyServerPageWrite("magazzino");
+  if (!canDelete) {
     return NextResponse.json({ error: "Permesso negato" }, { status: 403 });
   }
 
@@ -31,7 +26,7 @@ export async function DELETE() {
 }
 
 export async function GET() {
-  const canRead = await verifyServerSectionRead("magazzino");
+  const canRead = await verifyServerPageRead("magazzino");
   if (!canRead) {
     return NextResponse.json({ error: "Permesso negato" }, { status: 403 });
   }

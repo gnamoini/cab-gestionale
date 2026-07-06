@@ -10,7 +10,6 @@ import {
 import { fetchInvoiceListPayload } from "@/lib/fatturazione/fatturazione-fetch";
 import type { InvoiceCreateInput, InvoiceDetail, InvoicePaymentInput } from "@/lib/fatturazione/types";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensureIsAdmin, ensureModuleCan, ensureSectionRead, ensureSectionWrite } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type {
@@ -69,8 +68,6 @@ function cleanPayload(input: InvoiceCreateInput): Record<string, unknown> {
 export const invoicesService = {
   async getList() {
     try {
-      const allowed = await ensureSectionRead("fatturazione");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       return fetchInvoiceListPayload(c);
     } catch (e) {
@@ -80,8 +77,6 @@ export const invoicesService = {
 
   async getCustomers(): Promise<ServiceResult<BillingCustomerRow[]>> {
     try {
-      const allowed = await ensureSectionRead("fatturazione");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.from("billing_customers").select(BILLING_CUSTOMERS_COLUMNS).order("cliente_label");
       if (error) return err(error.message);
@@ -93,8 +88,6 @@ export const invoicesService = {
 
   async getDetail(id: string): Promise<ServiceResult<InvoiceDetail>> {
     try {
-      const allowed = await ensureSectionRead("fatturazione");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: invoice, error } = await c.from("invoices").select(INVOICES_COLUMNS).eq("id", id).maybeSingle();
       if (error) return err(error.message);
@@ -120,8 +113,6 @@ export const invoicesService = {
 
   async create(input: InvoiceCreateInput): Promise<ServiceResult<InvoiceDetail>> {
     try {
-      const allowed = await ensureSectionWrite("fatturazione");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       if (!input.cliente_label.trim()) return err("Cliente obbligatorio.");
       if (input.rows.length === 0) return err("Aggiungi almeno una riga fattura.");
       const c = await sb();
@@ -151,8 +142,6 @@ export const invoicesService = {
     expectedUpdatedAt?: string,
   ): Promise<ServiceResult<InvoiceRow>> {
     try {
-      const allowed = await ensureSectionWrite("fatturazione");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: before, error: e0 } = await c.from("invoices").select(INVOICES_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
@@ -177,8 +166,6 @@ export const invoicesService = {
 
   async updateDraftWithRows(id: string, input: InvoiceCreateInput): Promise<ServiceResult<InvoiceDetail>> {
     try {
-      const allowed = await ensureSectionWrite("fatturazione");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       if (!input.cliente_label.trim()) return err("Cliente obbligatorio.");
       if (input.rows.length === 0) return err("Aggiungi almeno una riga fattura.");
       const c = await sb();
@@ -207,8 +194,6 @@ export const invoicesService = {
 
   async issue(id: string, status: "emessa" | "inviata" = "emessa"): Promise<ServiceResult<InvoiceRow>> {
     try {
-      const allowed = await ensureSectionWrite("fatturazione");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: before, error: e0 } = await c.from("invoices").select(INVOICES_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
@@ -226,8 +211,6 @@ export const invoicesService = {
 
   async registerPayment(input: InvoicePaymentInput): Promise<ServiceResult<InvoiceDetail>> {
     try {
-      const allowed = await ensureSectionWrite("fatturazione");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const before = await invoicesService.getDetail(input.invoice_id);
       const { data, error } = await c.rpc("register_invoice_payment", { p_payload: input });
@@ -259,8 +242,6 @@ export const invoicesService = {
 
   async cancel(id: string, reason: string): Promise<ServiceResult<InvoiceRow>> {
     try {
-      const allowed = await ensureIsAdmin();
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: before } = await c.from("invoices").select(INVOICES_COLUMNS).eq("id", id).maybeSingle();
       const { error } = await c.rpc("cancel_invoice", { p_invoice_id: id, p_reason: reason });
@@ -278,8 +259,6 @@ export const invoicesService = {
   /** Hard delete bozze — cascade righe/link; irreversibile. */
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
-      const allowed = await ensureSectionWrite("fatturazione");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const detail = await invoicesService.getDetail(id);
       if (!detail.success || !detail.data) return err(detail.error ?? "Fattura non trovata.");

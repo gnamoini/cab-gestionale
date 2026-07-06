@@ -3,7 +3,6 @@
 import { isPastReportMonth, startOfCurrentMonthLocal } from "@/lib/report/report-manual-entries-map";
 import { REPORT_MANUAL_ENTRIES_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensureSectionRead, ensureSectionWrite } from "@/src/lib/auth/permission-guards";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { ReportManualEntryRow } from "@/src/types/supabase-tables";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
@@ -35,8 +34,6 @@ function validatePastMonth(periodMonthYmd: string): ServiceResult<true> {
 export const reportManualEntriesService = {
   async list(): Promise<ServiceResult<ReportManualEntryRow[]>> {
     try {
-      const allowed = await ensureSectionRead("report");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c
         .from("report_manual_entries")
@@ -52,8 +49,6 @@ export const reportManualEntriesService = {
 
   async upsert(input: ReportManualEntryUpsert): Promise<ServiceResult<ReportManualEntryRow>> {
     try {
-      const allowed = await ensureSectionWrite("report");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const periodMonth = normalizePeriodMonth(input.periodMonth);
       if (!periodMonth) return err("Periodo non valido (usa YYYY-MM).");
       const past = validatePastMonth(periodMonth);
@@ -100,8 +95,6 @@ export const reportManualEntriesService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
-      const allowed = await ensureSectionWrite("report");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: row, error: getErr } = await c
         .from("report_manual_entries")

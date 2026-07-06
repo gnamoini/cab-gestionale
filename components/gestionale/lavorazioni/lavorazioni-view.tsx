@@ -58,7 +58,7 @@ import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavor
 import { comparePrioritaLavorazione, orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
-import { executeInterventoWrite } from "@/lib/domain/intervento-context/write-contract";
+import { executeInterventoWriteEntry } from "@/lib/domain/intervento-entry";
 import { logInterventoTelemetry } from "@/lib/domain/intervento-context/intervento-telemetry";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
@@ -128,7 +128,7 @@ import {
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
-import { logService } from "@/src/services/log.service";
+import { logEntry } from "@/lib/domain/log-entry";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 import {
   buildLavorazioneLogOggettoResolver,
@@ -154,7 +154,7 @@ import { useLavorazioneStatoMoveMutation } from "@/src/hooks/gestionale/use-lavo
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { mezziListQueryKey } from "@/lib/render/query-key-factory";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import { mezziService } from "@/src/services/mezzi.service";
+import { mezziEntry } from "@/lib/domain/mezzi-entry";
 import {
   runLavorazioniToolbarRefresh,
 } from "@/src/lib/react-query/refetch-lavorazioni-operational-data";
@@ -500,7 +500,7 @@ export function LavorazioniView() {
   const lavPerm = permModules.lavorazioni;
   const { markAllRead: markAdminNotifRead } = useAdminNotificationStore();
   const canEditWorkOrders = lavPerm.canWrite;
-  const canDeleteRecords = lavPerm.canWrite && globalPerm.canDeleteRecords;
+  const canDeleteRecords = lavPerm.canWrite;
   const globalOpts = useGlobalOptions({ debugTag: "LavorazioniView" });
   const mezziListQ = useMezziListQuery();
   const statiOpts = useMemo(
@@ -594,7 +594,7 @@ export function LavorazioniView() {
     void qc.prefetchQuery({
       queryKey: mezziListQueryKey("list", null),
       queryFn: async () => {
-        const res = await mezziService.getAll(undefined);
+        const res = await mezziEntry.getAll(undefined);
         if (!res.success) throw new Error(res.error ?? "Errore lettura mezzi");
         return res.data ?? [];
       },
@@ -1102,7 +1102,7 @@ export function LavorazioniView() {
         });
       }
       const logContext = lavorazioneLogContextFromListRow(row, schedeStore);
-      void logService.create({
+      void logEntry.create({
         entita: "lavorazioni",
         entita_id: row.id,
         azione: "UPDATE",
@@ -1512,7 +1512,7 @@ export function LavorazioniView() {
       },
     };
 
-    const { result } = await executeInterventoWrite(
+    const { result } = await executeInterventoWriteEntry(
       {
         mode: "edit",
         idempotencyKey: `edit-${freshRow.id}`,

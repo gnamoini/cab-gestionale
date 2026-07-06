@@ -7,7 +7,7 @@ import {
 } from "@/lib/document-capture/company-id.server";
 import {
   verifyServerModuleCan,
-  verifyServerPermission,
+  verifyServerPageWrite,
 } from "@/src/lib/auth/server-permission-guards";
 import { resolveServerEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions.server";
 
@@ -25,7 +25,7 @@ export async function requireDocumentCaptureAuth(
     return NextResponse.json({ error: "Permesso richiesto" }, { status: 403 });
   }
 
-  if (extra?.editWorkOrders && !(await verifyServerPermission("editWorkOrders"))) {
+  if (extra?.editWorkOrders && !(await verifyServerPageWrite("lavorazioni"))) {
     return NextResponse.json({ error: "Permesso lavorazioni richiesto" }, { status: 403 });
   }
 

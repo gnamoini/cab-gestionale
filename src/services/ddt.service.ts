@@ -9,7 +9,6 @@ import {
 import { fetchDdtListPayload } from "@/lib/ddt/ddt-fetch";
 import type { DdtCreateInput, DdtDetail } from "@/lib/ddt/types";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensureIsAdmin, ensureModuleCan, ensureSectionRead, ensureSectionWrite } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { DdtDocumentRow } from "@/src/types/supabase-tables";
@@ -19,18 +18,6 @@ const ENTITA = "ddt_documents";
 
 async function sb() {
   return getBrowserSupabase();
-}
-
-async function ensureDdtOrPreventiviRead(): Promise<ServiceResult<true>> {
-  const ddt = await ensureSectionRead("ddt");
-  if (ddt.success) return ddt;
-  return ensureSectionRead("preventivi");
-}
-
-async function ensureDdtOrPreventiviWrite(): Promise<ServiceResult<true>> {
-  const ddt = await ensureSectionWrite("ddt");
-  if (ddt.success) return ddt;
-  return ensureSectionWrite("preventivi");
 }
 
 function cleanPayload(input: DdtCreateInput): Record<string, unknown> {
@@ -78,8 +65,6 @@ function cleanPayload(input: DdtCreateInput): Record<string, unknown> {
 export const ddtService = {
   async getList() {
     try {
-      const allowed = await ensureSectionRead("ddt");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       return fetchDdtListPayload(await sb());
     } catch (e) {
       return serviceFailFromError(e);
@@ -88,8 +73,6 @@ export const ddtService = {
 
   async fetchIndexByPreventivoIds(preventivoIds: readonly string[]): Promise<ServiceResult<DdtDocumentRow[]>> {
     try {
-      const allowed = await ensureDdtOrPreventiviRead();
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const ids = [...new Set(preventivoIds.filter(Boolean))];
       if (ids.length === 0) return success([]);
       const c = await sb();
@@ -108,8 +91,6 @@ export const ddtService = {
 
   async getActiveByPreventivoId(preventivoId: string): Promise<ServiceResult<DdtDocumentRow | null>> {
     try {
-      const allowed = await ensureDdtOrPreventiviRead();
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c
         .from("ddt_documents")
@@ -128,8 +109,6 @@ export const ddtService = {
 
   async getDetail(id: string): Promise<ServiceResult<DdtDetail>> {
     try {
-      const allowed = await ensureDdtOrPreventiviRead();
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: document, error } = await c.from("ddt_documents").select(DDT_DOCUMENTS_COLUMNS).eq("id", id).maybeSingle();
       if (error) return err(error.message);
@@ -148,8 +127,6 @@ export const ddtService = {
 
   async create(input: DdtCreateInput): Promise<ServiceResult<{ id: string }>> {
     try {
-      const allowed = await ensureSectionWrite("ddt");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.rpc("create_ddt_with_rows", { p_payload: cleanPayload(input) });
       if (error) return err(error.message);
@@ -168,8 +145,6 @@ export const ddtService = {
 
   async createOrReplaceForPreventivo(input: DdtCreateInput): Promise<ServiceResult<{ id: string }>> {
     try {
-      const allowed = await ensureDdtOrPreventiviWrite();
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       if (!input.preventivo_id) return err("preventivo_id obbligatorio.");
       const c = await sb();
       const { data, error } = await c.rpc("replace_ddt_for_preventivo", { p_payload: cleanPayload(input) });
@@ -194,8 +169,6 @@ export const ddtService = {
 
   async confirm(id: string): Promise<ServiceResult<void>> {
     try {
-      const allowed = await ensureSectionWrite("ddt");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const before = await this.getDetail(id);
       const c = await sb();
       const { error } = await c.rpc("confirm_ddt", { p_ddt_id: id });
@@ -216,8 +189,6 @@ export const ddtService = {
 
   async markStampato(id: string): Promise<ServiceResult<void>> {
     try {
-      const allowed = await ensureDdtOrPreventiviRead();
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { error } = await c.rpc("mark_ddt_stampato", { p_ddt_id: id });
       if (error) return err(error.message);
@@ -235,8 +206,6 @@ export const ddtService = {
 
   async markConsegnato(id: string): Promise<ServiceResult<void>> {
     try {
-      const allowed = await ensureDdtOrPreventiviWrite();
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { error } = await c.rpc("mark_ddt_consegnato", { p_ddt_id: id });
       if (error) return err(error.message);
@@ -254,9 +223,6 @@ export const ddtService = {
 
   async cancel(id: string): Promise<ServiceResult<void>> {
     try {
-      const admin = await ensureIsAdmin();
-      const write = admin.success ? admin : await ensureSectionWrite("ddt");
-      if (!write.success) return err(write.error ?? "Permesso richiesto.");
       const c = await sb();
       const { error } = await c.rpc("cancel_ddt", { p_ddt_id: id });
       if (error) return err(error.message);
@@ -274,8 +240,6 @@ export const ddtService = {
 
   async removeDraft(id: string): Promise<ServiceResult<void>> {
     try {
-      const allowed = await ensureIsAdmin();
-      if (!allowed.success) return err(allowed.error ?? "Permesso admin richiesto.");
       const c = await sb();
       const { data: doc } = await c.from("ddt_documents").select("status").eq("id", id).maybeSingle();
       if (!doc || (doc as DdtDocumentRow).status !== "bozza") return err("Solo bozze eliminabili.");

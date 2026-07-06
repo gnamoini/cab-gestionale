@@ -3,16 +3,13 @@ import "server-only";
 import { getServerSession } from "@/src/lib/auth/get-server-session";
 import {
   verifyServerIsAdmin,
-  verifyServerModuleCan,
-  verifyServerPermission,
-  verifyServerSectionWrite,
+  verifyServerPageWrite,
 } from "@/src/lib/auth/server-permission-guards";
-import type { RbacSection } from "@/lib/auth/rbac";
-import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
+import type { GestionalePageKey } from "@/src/lib/permissions/gestionale-pages";
 import type { ImportEntity } from "@/lib/data-import/core/types";
 import { getImportPlugin, getImportPluginBySlug } from "@/lib/data-import/registry";
 
-const MODULE_TO_SECTION: Record<string, RbacSection> = {
+const MODULE_TO_PAGE: Record<string, GestionalePageKey> = {
   magazzino: "magazzino",
   mezzi: "mezzi",
   preventivi: "preventivi",
@@ -25,12 +22,12 @@ const MODULE_TO_SECTION: Record<string, RbacSection> = {
 
 async function checkPluginPermission(plugin: ReturnType<typeof getImportPlugin>): Promise<{ ok: boolean; status: number; error: string }> {
   if (plugin.permission.kind === "manageSettings") {
-    const can = await verifyServerPermission("manageSettings");
+    const can = await verifyServerPageWrite("impostazioni");
     return can ? { ok: true, status: 200, error: "" } : { ok: false, status: 403, error: "Permesso negato" };
   }
-  const section = MODULE_TO_SECTION[plugin.permission.module];
-  if (!section) return { ok: false, status: 403, error: "Permesso negato" };
-  const canWrite = await verifyServerSectionWrite(section);
+  const pageKey = MODULE_TO_PAGE[plugin.permission.module];
+  if (!pageKey) return { ok: false, status: 403, error: "Permesso negato" };
+  const canWrite = await verifyServerPageWrite(pageKey);
   if (!canWrite) return { ok: false, status: 403, error: "Permesso negato" };
   return { ok: true, status: 200, error: "" };
 }
@@ -52,13 +49,13 @@ export async function requireImportAuthBySlug(slug: string) {
 export async function requireImportTemplateAuthBySlug(slug: string) {
   const plugin = getImportPluginBySlug(slug);
   if (plugin.permission.kind === "manageSettings") {
-    const can = await verifyServerPermission("manageSettings");
+    const can = await verifyServerPageWrite("impostazioni");
     if (!can) return { ok: false as const, response: { error: "Permesso negato", status: 403 } };
     return { ok: true as const };
   }
-  const section = MODULE_TO_SECTION[plugin.permission.module];
-  if (!section) return { ok: false as const, response: { error: "Permesso negato", status: 403 } };
-  const canWrite = await verifyServerSectionWrite(section);
+  const pageKey = MODULE_TO_PAGE[plugin.permission.module];
+  if (!pageKey) return { ok: false as const, response: { error: "Permesso negato", status: 403 } };
+  const canWrite = await verifyServerPageWrite(pageKey);
   const canAdmin = plugin.permission.overwriteRequiresAdmin ? await verifyServerIsAdmin() : false;
   if (!canWrite && !canAdmin) return { ok: false as const, response: { error: "Permesso negato", status: 403 } };
   return { ok: true as const };

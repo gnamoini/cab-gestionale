@@ -9,7 +9,7 @@ import type { DipendenteTimesheetEmployeeRow, DipendenteTimesheetEntryRow } from
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/query-keys";
-import { dipendentiTimesheetService } from "@/src/services/dipendenti-timesheet.service";
+import { dipendentiTimesheetEntry } from "@/lib/domain/dipendenti-timesheet-entry";
 
 function entriesQueryKey(from: string, to: string) {
   return [...QK.dipendentiTimesheetEntries, from, to] as const;
@@ -24,16 +24,16 @@ export function useReportTimesheetKpi(filterRange: DateRange) {
   const previousMonthKey = monthKey ? shiftMonthKey(monthKey, -1) : null;
 
   const employeesQuery = useServiceQuery(QK.dipendentiTimesheetEmployees, () =>
-    dipendentiTimesheetService.listEmployees(),
+    dipendentiTimesheetEntry.listEmployees(),
   );
 
   const entriesQuery = useServiceQuery(entriesQueryKey(from, to), () =>
-    dipendentiTimesheetService.listEntriesForRange(from, to),
+    dipendentiTimesheetEntry.listEntriesForRange(from, to),
   );
 
   const previousMonthQuery = useServiceQuery(
     [...QK.dipendentiTimesheetEntries, "prev", previousMonthKey ?? ""] as const,
-    () => dipendentiTimesheetService.listEntriesForMonth(previousMonthKey!),
+    () => dipendentiTimesheetEntry.listEntriesForMonth(previousMonthKey!),
     { enabled: showMonthDelta && previousMonthKey != null },
   );
 

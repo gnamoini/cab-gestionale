@@ -1,7 +1,7 @@
 "use server";
 
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
-import { verifyServerPermission } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
 import { buildTkbDraft, kbStatsFromBuildReport, parseTkbBuildReport } from "@/lib/domain/technical-knowledge-base/ingestion/builder";
 import { runQualityGates } from "@/lib/domain/technical-knowledge-base/quality-gates/quality-gates";
 import { publishTkbDraftServer, getLatestKbVersionServer, loadPublishedTkbSnapshotServer } from "@/lib/domain/technical-knowledge-base/tkb-publish.server";
@@ -25,7 +25,7 @@ export type PublishTkbActionResult =
   | { ok: false; message: string; blockedBy?: string[] };
 
 export async function getTkbAdminStateAction(): Promise<TkbAdminState | { ok: false; message: string }> {
-  const allowed = await verifyServerPermission("manageSecurity");
+  const allowed = await verifyServerPageWrite("sicurezza");
   if (!allowed) return { ok: false, message: "Accesso riservato agli amministratori." };
   const supabase = await createSupabaseServerUserClient();
   const kbVersion = await getLatestKbVersionServer(supabase);
@@ -41,7 +41,7 @@ export async function getTkbAdminStateAction(): Promise<TkbAdminState | { ok: fa
 export async function refreshTkbDraftAction(): Promise<
   { ok: true; buildReport: TkbBuildReport } | { ok: false; message: string }
 > {
-  const allowed = await verifyServerPermission("manageSecurity");
+  const allowed = await verifyServerPageWrite("sicurezza");
   if (!allowed) return { ok: false, message: "Accesso riservato agli amministratori." };
   const supabase = await createSupabaseServerUserClient();
   const bundle = await rebuildTkbDraftFull(supabase);
@@ -49,7 +49,7 @@ export async function refreshTkbDraftAction(): Promise<
 }
 
 export async function publishTkbAction(): Promise<PublishTkbActionResult> {
-  const allowed = await verifyServerPermission("manageSecurity");
+  const allowed = await verifyServerPageWrite("sicurezza");
   if (!allowed) return { ok: false, message: "Accesso riservato agli amministratori." };
   const supabase = await createSupabaseServerUserClient();
   const {
@@ -102,7 +102,7 @@ export type RunTkbBenchmarkResult =
   | { ok: false; message: string };
 
 export async function runTkbBenchmarkAction(): Promise<RunTkbBenchmarkResult> {
-  const allowed = await verifyServerPermission("manageSecurity");
+  const allowed = await verifyServerPageWrite("sicurezza");
   if (!allowed) return { ok: false, message: "Accesso riservato agli amministratori." };
   const supabase = await createSupabaseServerUserClient();
   let kbStats: TkbKbStats | null = null;

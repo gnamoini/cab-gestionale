@@ -6,7 +6,7 @@ import { computeLavorazioneCosto, type LavorazioneCostoBreakdown } from "@/lib/l
 import { LAVORAZIONI_SCHEDE_STORE_CHANGED } from "@/src/hooks/use-lavorazione-schede-store-sync";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
-import { magazzinoService } from "@/src/services/magazzino.service";
+import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
 import { magazzinoListQueryKey } from "@/lib/render/query-key-factory";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
@@ -25,7 +25,7 @@ export function useLavorazioneCosto(
   const cachedMagazzino = queryClient.getQueryData<MagazzinoRicambioRow[]>(MAG_LIST_KEY);
 
   const settingsQ = useCabAppSettingsPayloadQuery({ tier: "static" });
-  const magQ = useServiceQuery(MAG_LIST_KEY, () => magazzinoService.getAll(), {
+  const magQ = useServiceQuery(MAG_LIST_KEY, () => magazzinoEntry.getAll(), {
     enabled: enabled && cachedMagazzino == null,
     staleTime: 30_000,
     dedupTag: "lavorazione-costo",

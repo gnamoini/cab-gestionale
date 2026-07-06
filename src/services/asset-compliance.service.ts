@@ -5,7 +5,6 @@ import {
   ASSET_COMPLIANCE_RULES_COLUMNS,
 } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { AssetComplianceRecordRow, AssetComplianceRuleRow } from "@/src/types/supabase-tables";
@@ -38,8 +37,6 @@ function ruleContext(r: AssetComplianceRuleRow) {
 
 export const assetComplianceService = {
   async listRulesByMezzo(mezzoId: string): Promise<ServiceResult<AssetComplianceRuleRow[]>> {
-    const allowed = await ensureSectionRead("mezzi");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const { data, error } = await client
@@ -55,8 +52,6 @@ export const assetComplianceService = {
   },
 
   async listRulesByAttrezzatura(attrezzaturaId: string): Promise<ServiceResult<AssetComplianceRuleRow[]>> {
-    const allowed = await ensureSectionRead("mezzi");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const { data, error } = await client
@@ -72,8 +67,6 @@ export const assetComplianceService = {
   },
 
   async listUpcomingRules(daysAhead = 30): Promise<ServiceResult<AssetComplianceRuleRow[]>> {
-    const allowed = await ensureSectionRead("mezzi");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const until = new Date();
@@ -94,8 +87,6 @@ export const assetComplianceService = {
   },
 
   async createRule(data: ComplianceRuleInsert): Promise<ServiceResult<AssetComplianceRuleRow>> {
-    const allowed = await ensurePermission("editVehicles");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const { data: user } = await client.auth.getUser();
@@ -120,8 +111,6 @@ export const assetComplianceService = {
   },
 
   async updateRule(id: string, patch: ComplianceRuleUpdate, before: AssetComplianceRuleRow): Promise<ServiceResult<AssetComplianceRuleRow>> {
-    const allowed = await ensurePermission("editVehicles");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const { data: row, error } = await client
@@ -145,8 +134,6 @@ export const assetComplianceService = {
   },
 
   async createRecord(data: ComplianceRecordInsert): Promise<ServiceResult<AssetComplianceRecordRow>> {
-    const allowed = await ensurePermission("editVehicles");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const { data: user } = await client.auth.getUser();
@@ -171,8 +158,6 @@ export const assetComplianceService = {
   },
 
   async listRecordsByMezzo(mezzoId: string): Promise<ServiceResult<AssetComplianceRecordRow[]>> {
-    const allowed = await ensureSectionRead("mezzi");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const { data, error } = await client

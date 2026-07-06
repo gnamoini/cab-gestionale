@@ -1,57 +1,25 @@
-# RBAC matrix — Gestionale CAB
+# RBAC matrice ruolo×pagina (SSOT)
 
-Modello **pagina-based SSOT**: `GESTIONALE_PAGES` + `PageAccessLevel` (`write` | `read` | `none`) + resolver unico `resolve-page-access.ts`.
+## Authorization (solo app entrypoint)
 
-Tabelle runtime:
+- **SSOT:** `role_page_access` → `resolve-page-access` → `none | read | write`
+- **Unica primitive runtime:** `ensurePageWrite(page)` / `verifyServerPageWrite(page)` su boundary entrypoint
+- **Entrypoint allowlist:** `lib/domain/*-entry.ts`, `app/api/**/route.ts`, server actions, layout SSR
+- **`src/services/**`:** authorization-free (business rules + RLS only)
 
-- `role_page_access` — matrice ruolo × pagina (3 livelli)
-- `user_page_overrides` — override per utente (assenza riga = eredita ruolo)
+## Invarianti
 
-Tabelle legacy (`role_permissions`, `user_permissions`) — solo RLS/migrazione, **nessuna scrittura** dall'app.
+| ID | Regola |
+|----|--------|
+| I1 | `cap_*` = data-plane only; ∉ permission snapshot |
+| I2 | 1× `ensurePageWrite` per request graph; no entrypoint chaining |
+| I3 | `WORKFLOW_TO_PAGE` = metadata; `WORKFLOW_REGISTRY` = routing only |
+| I4 | Snapshot solo da matrice pagina |
 
-## Precedenza effettiva (solo nel resolver)
+## Migrazione service → entry
 
-1. **Admin bypass** → tutte le pagine `write`
-2. **Override utente** (`user_page_overrides`)
-3. **Permessi ruolo** (`role_page_access`)
-4. **Default** `none`
-
-Funzioni canoniche:
-
-- TS: `src/lib/rbac/resolve-page-access.ts` → `ResolvedPageAccess`
-- Snapshot: `resolve-effective-permissions.ts` → `EffectivePermissionsSnapshot`
-- SQL: `rbac_user_page_access_level`, `user_effective_can` (bridge moduli RLS)
-
-## Layer difensivi
-
-1. Edge proxy — `pathnameToPageAccess(...).visible`
-2. `RbacPageGuard` — stesso check
-3. Nav — `buildGestionaleNav(resolved)` filtra `showInNav && visible`
-4. Server actions — `ensurePageRead` / `ensurePageWrite`
-5. Supabase RLS — moduli espansi da pagina (`expandPageToModuleKeys`)
-
-## Gestione in UI
-
-- **Sicurezza → Ruoli**: matrice ruolo × pagina (`SecurityPageMatrixEditor`)
-- **Sicurezza → Utenti**: override per pagina (`SecurityUserPagePermissionsEditor`), "Eredita" = DELETE riga override
-
-## Pagine (`GESTIONALE_PAGES`)
-
-Catalogo dinamico in `src/lib/permissions/gestionale-pages.ts` — aggiungere una entry = nuova pagina RBAC + nav.
-
-Espansione moduli RLS (es. `preventivi` → `ddt`, `ordini_fornitori`; `documenti` → `document_capture`).
-
-## Portale clienti
-
-Accesso = `canReadPage(resolved, "lavorazioni_clienti")` — nessuna allowlist `app_settings`.
-
-## Verifica
-
-```bash
-npx tsc --noEmit
-npx tsx lib/regression/page-access-resolver.test.ts
-npx tsx lib/regression/rbac-legacy-audit.test.ts
-npx tsx lib/regression/permissions-role-matrix.test.ts
-npx tsx lib/regression/sidebar-nav-rbac.test.ts
-npx tsx lib/regression/rbac-cross-layer-matrix.test.ts
+```text
+UI/hooks → lib/domain/*-entry.ts [ensurePageWrite] → src/services/** (no guard)
 ```
+
+CI: `rbac-entrypoint-call-site-audit.test.ts` (AST), `rbac-legacy-audit.test.ts`.

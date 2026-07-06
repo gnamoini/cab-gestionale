@@ -18,7 +18,7 @@ import { resolveRole } from "@/lib/auth/rbac";
 import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
 import {
   ensureClientLavorazioniAccess,
-  ensureSectionRead,
+  ensurePageRead,
   getCurrentRoleForPermissionCheck,
   loadCallerClienteRef,
 } from "@/src/lib/auth/permission-guards";
@@ -286,7 +286,7 @@ async function resolveClienteRefScopeForAuthorizedList(
 
 /**
  * Fetch autorizzato per liste condivise (gestionale + portale clienti).
- * Portale: ensureClientLavorazioniAccess; altrimenti ensureSectionRead("lavorazioni").
+ * Portale: ensureClientLavorazioniAccess; altrimenti ensurePageRead("lavorazioni").
  */
 export async function fetchLavorazioniListAuthorized(
   filters?: LavorazioneFilters,
@@ -295,7 +295,7 @@ export async function fetchLavorazioniListAuthorized(
   try {
     const portal = await ensureClientLavorazioniAccess();
     if (!portal.success) {
-      const gestionale = await ensureSectionRead("lavorazioni");
+      const gestionale = await ensurePageRead("lavorazioni");
       if (!gestionale.success) return err(gestionale.error ?? portal.error ?? "Permesso richiesto.");
     }
     const sb = getBrowserSupabase();
@@ -347,7 +347,7 @@ export async function fetchLavorazioniListCountAuthorized(
   try {
     const portal = await ensureClientLavorazioniAccess();
     if (!portal.success) {
-      const gestionale = await ensureSectionRead("lavorazioni");
+      const gestionale = await ensurePageRead("lavorazioni");
       if (!gestionale.success) return err(gestionale.error ?? portal.error ?? "Permesso richiesto.");
     }
     const sb = getBrowserSupabase();

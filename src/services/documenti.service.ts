@@ -2,7 +2,6 @@
 
 import { DOCUMENTI_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { deleteDocumentoFully } from "@/lib/documenti/delete-documento-fully";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -41,8 +40,6 @@ async function sb() {
 export const documentiService = {
   async getAll(filters?: DocumentiFilters): Promise<ServiceResult<DocumentoRow[]>> {
     try {
-      const allowed = await ensureSectionRead("documenti");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       let q = c.from("documenti").select(DOCUMENTI_COLUMNS).order("created_at", { ascending: false });
       if (filters?.mezzo_id) q = q.eq("mezzo_id", filters.mezzo_id);
@@ -58,8 +55,6 @@ export const documentiService = {
 
   async getById(id: string): Promise<ServiceResult<DocumentoRow>> {
     try {
-      const allowed = await ensureSectionRead("documenti");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.from("documenti").select(DOCUMENTI_COLUMNS).eq("id", id).maybeSingle();
       if (error) return err(error.message);
@@ -72,8 +67,6 @@ export const documentiService = {
 
   async create(data: DocumentoInsert): Promise<ServiceResult<DocumentoRow>> {
     try {
-      const allowed = await ensurePermission("uploadDocuments");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const merged = mergeDocumentoMeta(data, { setUploadTimestamp: true }) as DocumentoInsert;
       const { data: row, error } = await c.from("documenti").insert(merged).select(DOCUMENTI_COLUMNS).single();
@@ -88,8 +81,6 @@ export const documentiService = {
 
   async update(id: string, data: DocumentoUpdate): Promise<ServiceResult<DocumentoRow>> {
     try {
-      const allowed = await ensurePermission("uploadDocuments");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: before, error: e0 } = await c.from("documenti").select(DOCUMENTI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
@@ -119,8 +110,6 @@ export const documentiService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
-      const allowed = await ensurePermission("deleteRecords");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       return deleteDocumentoFully(c, id);
     } catch (e) {

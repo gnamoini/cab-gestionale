@@ -15,7 +15,6 @@ import type {
   OrdineFornitoreUpdateInput,
 } from "@/lib/ordini-fornitori/types";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensureSectionDelete, ensureSectionRead, ensureSectionWrite } from "@/src/lib/auth/permission-guards";
 import { auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { OrdineFornitoreRigaRow, OrdineFornitoreRow } from "@/src/types/supabase-tables";
@@ -76,8 +75,6 @@ function cleanUpdatePayload(input: OrdineFornitoreUpdateInput): Record<string, u
 export const ordiniFornitoriService = {
   async getList(): Promise<ServiceResult<OrdineFornitoreRecord[]>> {
     try {
-      const allowed = await ensureSectionRead("ordini_fornitori");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const res = await fetchOrdiniFornitoriListPayload(await sb());
       if (!res.success || !res.data) return err(res.error ?? "Errore caricamento ordini.");
       return success(mapOrdiniFornitoriListToRecords(res.data));
@@ -88,8 +85,6 @@ export const ordiniFornitoriService = {
 
   async getDetail(id: string): Promise<ServiceResult<OrdineFornitoreRecord>> {
     try {
-      const allowed = await ensureSectionRead("ordini_fornitori");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: ordine, error } = await c
         .from("ordini_fornitori")
@@ -112,8 +107,6 @@ export const ordiniFornitoriService = {
 
   async create(input: OrdineFornitoreCreateInput): Promise<ServiceResult<{ id: string }>> {
     try {
-      const allowed = await ensureSectionWrite("ordini_fornitori");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.rpc("create_ordine_fornitore_with_righe", {
         p_payload: cleanCreatePayload(input),
@@ -138,8 +131,6 @@ export const ordiniFornitoriService = {
     expectedUpdatedAt?: string,
   ): Promise<ServiceResult<void>> {
     try {
-      const allowed = await ensureSectionWrite("ordini_fornitori");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { error } = await c.rpc("update_ordine_fornitore_draft", {
         p_id: id,
@@ -161,8 +152,6 @@ export const ordiniFornitoriService = {
 
   async annulla(id: string): Promise<ServiceResult<void>> {
     try {
-      const allowed = await ensureSectionWrite("ordini_fornitori");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { error } = await c.rpc("annulla_ordine_fornitore", { p_id: id });
       if (error) return err(error.message);
@@ -180,8 +169,6 @@ export const ordiniFornitoriService = {
 
   async deleteBozza(id: string): Promise<ServiceResult<void>> {
     try {
-      const allowed = await ensureSectionDelete("ordini_fornitori");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { error } = await c.from("ordini_fornitori").delete().eq("id", id).eq("status", "bozza");
       if (error) return err(error.message);

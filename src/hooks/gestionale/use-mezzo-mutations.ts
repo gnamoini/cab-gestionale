@@ -4,11 +4,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifecycle";
 import { invalidateAfterMezzoMutations } from "@/src/lib/react-query/invalidate-related";
-import { mezziService, type MezzoInsert, type MezzoUpdate } from "@/src/services/mezzi.service";
+import { mezziEntry, type MezzoInsert, type MezzoUpdate } from "@/lib/domain/mezzi-entry";
 
 export function useMezzoCreateMutation() {
   const queryClient = useQueryClient();
-  return useServiceMutation((data: MezzoInsert) => mezziService.create(data), {
+  return useServiceMutation((data: MezzoInsert) => mezziEntry.create(data), {
     onSettled: async (data) => {
       await traceMutationLifecycle(
         { entityType: "mezzo", entityId: data?.id ?? "list", operation: "create" },
@@ -20,7 +20,7 @@ export function useMezzoCreateMutation() {
 
 export function useMezzoUpdateMutation() {
   const queryClient = useQueryClient();
-  return useServiceMutation(({ id, data }: { id: string; data: MezzoUpdate }) => mezziService.update(id, data), {
+  return useServiceMutation(({ id, data }: { id: string; data: MezzoUpdate }) => mezziEntry.update(id, data), {
     onSettled: async (data, _error, variables) => {
       await traceMutationLifecycle(
         { entityType: "mezzo", entityId: variables.id, operation: "update" },

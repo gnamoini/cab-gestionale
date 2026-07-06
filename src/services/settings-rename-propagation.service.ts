@@ -2,7 +2,6 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 import type { SettingsRenameEntry, SettingsRenameKind, SettingsRenamePropagationResult } from "@/lib/settings/settings-rename-types";
@@ -332,8 +331,6 @@ async function propagateOne(entry: SettingsRenameEntry): Promise<SettingsRenameP
 export const settingsRenamePropagationService = {
   async propagateRenames(entries: SettingsRenameEntry[]): Promise<ServiceResult<SettingsRenamePropagationResult[]>> {
     try {
-      const allowed = await ensurePermission("manageSettings");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const deduped = entries.filter((e) => e.from.trim() && e.to.trim() && e.from !== e.to);
       const results: SettingsRenamePropagationResult[] = [];
       for (const entry of deduped) {

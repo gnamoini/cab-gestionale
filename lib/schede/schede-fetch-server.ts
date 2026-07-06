@@ -7,7 +7,7 @@ import {
 } from "@/lib/db/table-select-columns";
 import { schedaRowsToBundle } from "@/lib/schede/schede-db-mapper";
 import { dbTipoToBundleKey } from "@/lib/schede/scheda-tipo-db-mapper";
-import { verifyServerSectionRead } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { LavorazioneSchedeBundle, SchedaIngressoDoc, SchedaLavorazioniDoc, SchedaRicambiDoc } from "@/types/schede";
@@ -33,7 +33,7 @@ export async function fetchSchedaPdfPayloadServer(
   lavorazioneId: string,
   schedaKind: "ingresso" | "lavorazioni" | "ricambi",
 ): Promise<ServiceResult<SchedaPdfServerPayload>> {
-  const allowed = await verifyServerSectionRead("lavorazioni");
+  const allowed = await verifyServerPageRead("lavorazioni");
   if (!allowed) return err("Permesso richiesto.");
   const sb = await createSupabaseServerUserClient();
   const { data: lav, error: lavErr } = await sb

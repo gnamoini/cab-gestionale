@@ -39,7 +39,7 @@ import {
 import { sliceInputValue, TEXT_EXTRA, TEXT_LONG } from "@/lib/validation/text-field-limits";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import { ordiniFornitoriService } from "@/src/services/ordini-fornitori.service";
+import { ordiniFornitoriEntry } from "@/lib/domain/ordini-fornitori-entry";
 import { useSubmitLock } from "@/lib/forms/form-engine";
 
 function newRigaId(): string {
@@ -183,14 +183,14 @@ export function OrdineFornitoreEditorModal({
       });
 
       if (isNew) {
-        const res = await ordiniFornitoriService.create(payload);
+        const res = await ordiniFornitoriEntry.create(payload);
         if (!res.success) throw new Error(res.error ?? "Salvataggio fallito.");
         gestToast.successOnce("ordine-save", "Ordine creato.");
         onSaved();
         return;
       }
 
-      const res = await ordiniFornitoriService.updateDraft(record.id, payload, record.updatedAt);
+      const res = await ordiniFornitoriEntry.updateDraft(record.id, payload, record.updatedAt);
       if (!res.success) throw new Error(res.error ?? "Salvataggio fallito.");
       gestToast.successOnce("ordine-save", "Ordine salvato.");
       onSaved();

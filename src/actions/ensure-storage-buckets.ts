@@ -5,7 +5,7 @@ import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { readSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
 import { STORAGE_BUCKETS, STORAGE_LIMITS, type StorageBucketId } from "@/src/lib/storage/storage-config";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
-import { verifyServerPermission } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
 import { formatSupabaseError } from "@/src/utils/supabaseErrorHandler";
 
 export type EnsureStorageBucketsResult = { ok: true } | { ok: false; message: string };
@@ -76,7 +76,7 @@ export async function ensureStorageBucketsAction(
     return { ok: false, message: "Sessione non valida. Effettua di nuovo l'accesso." };
   }
 
-  const canProvision = await verifyServerPermission("manageSettings");
+  const canProvision = await verifyServerPageWrite("impostazioni");
   if (!canProvision) {
     return { ok: false, message: "Operazione riservata agli amministratori." };
   }

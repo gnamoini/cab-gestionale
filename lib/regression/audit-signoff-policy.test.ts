@@ -37,9 +37,8 @@ for (const doc of livingDocs) {
   assert.ok(exists(doc), `${doc} missing`);
 }
 
-const preventiviService = read("src/services/preventivi.service.ts");
-assert.match(preventiviService, /ensureSectionWrite\("preventivi"\)/);
-assert.match(preventiviService, /ensureSectionDelete\("preventivi"\)/);
+const preventiviEntry = read("lib/domain/preventivi-entry.ts");
+assert.match(preventiviEntry, /ensurePageWrite\("preventivi"\)|withPageWriteGuard\("preventivi"/);
 
 const settingsGate = read("components/gestionale/gestionale-settings-ready-gate.tsx");
 const authGate = read("components/gestionale/gestionale-auth-gate.tsx");

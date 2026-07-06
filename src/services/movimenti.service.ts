@@ -3,7 +3,6 @@
 import { MAGAZZINO_RICAMBI_COLUMNS, MOVIMENTI_RICAMBI_COLUMNS } from "@/lib/db/table-select-columns";
 import { fetchMovimentiListRows } from "@/lib/movimenti/movimenti-list-fetch";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MagazzinoRicambioRow, MovimentoRicambioRow, TipoMovimentoRicambio } from "@/src/types/supabase-tables";
@@ -95,8 +94,6 @@ export const movimentiService = {
 
   async create(data: MovimentoInsert): Promise<ServiceResult<MovimentoRicambioRow>> {
     try {
-      const allowed = await ensurePermission("editInventory");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const stock = await applyStockForMovement(c, data, false);
       if (!stock.success) return err(stock.error ?? "Aggiornamento giacenza fallito");
@@ -121,8 +118,6 @@ export const movimentiService = {
 
   async update(id: string, data: MovimentoUpdate): Promise<ServiceResult<MovimentoRicambioRow>> {
     try {
-      const allowed = await ensurePermission("editInventory");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: oldRow, error: e0 } = await c.from("movimenti_ricambi").select(MOVIMENTI_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
@@ -190,8 +185,6 @@ export const movimentiService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
-      const allowed = await ensurePermission("deleteRecords");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: existing, error: e0 } = await c.from("movimenti_ricambi").select(MOVIMENTI_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));

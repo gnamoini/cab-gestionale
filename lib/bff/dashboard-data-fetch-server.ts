@@ -15,7 +15,7 @@ import { fetchSchedeBundlesStoreServer } from "@/lib/schede/schede-bundles-fetch
 import { LAVORAZIONI_DASHBOARD_STATS_FILTERS } from "@/lib/lavorazioni/lavorazioni-prefetch-filters";
 import { resolveLavorazioniStatiForServer } from "@/lib/app-settings/resolve-settings-for-server";
 import { pickDashboardPriorityLavorazioneIds, DASHBOARD_SCHEde_PREFETCH_LIMIT } from "@/lib/view/dashboard-widgets-selectors";
-import { verifyServerSectionRead } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
 import type { LogFilters } from "@/src/services/log.service";
@@ -55,7 +55,7 @@ function codiciMapFromRows(rows: readonly LavorazioneListRow[]): Record<string, 
 }
 
 async function fetchDashboardLavorazioniAuthorizedServer(): Promise<ServiceResult<LavorazioneListRow[]>> {
-  const allowed = await verifyServerSectionRead("lavorazioni");
+  const allowed = await verifyServerPageRead("lavorazioni");
   if (!allowed) return err("Permesso richiesto.");
   const sb = await createSupabaseServerUserClient();
   const sanitizeStati = await resolveLavorazioniStatiForServer();

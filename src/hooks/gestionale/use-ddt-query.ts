@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { preventivoDdtIndexQueryKey } from "@/lib/render/query-key-factory";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
-import { ddtService } from "@/src/services/ddt.service";
+import { ddtEntry } from "@/lib/domain/ddt-entry";
 import type { DdtDocumentRow } from "@/src/types/supabase-tables";
 
 export function usePreventivoDdtIndex(preventivoIds: readonly string[], enabled = true) {
@@ -15,7 +15,7 @@ export function usePreventivoDdtIndex(preventivoIds: readonly string[], enabled 
   );
   const q = useServiceQuery(
     preventivoDdtIndexQueryKey(stableIds),
-    () => ddtService.fetchIndexByPreventivoIds(stableIds),
+    () => ddtEntry.fetchIndexByPreventivoIds(stableIds),
     {
       enabled: enabled && stableIds.length > 0,
       ...gestOpts,

@@ -5,7 +5,7 @@ import { listStoredImages, type StoredImage } from "@/lib/media/image-storage";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import { lavorazioneDocumentsService } from "@/src/services/lavorazione-documents.service";
+import { lavorazioneDocumentsEntry } from "@/lib/domain/lavorazione-documents-entry";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { LavorazioneDocumentRow } from "@/src/types/supabase-tables";
 
@@ -22,7 +22,7 @@ export function useClientLavorazioneDocumentsQuery(lavorazioneId: string, enable
   >(
     [...QK.clientLavorazioneDocuments, id] as const,
     async (): Promise<ServiceResult<ClientLavorazioneDocumentsPayload>> => {
-      const res = await lavorazioneDocumentsService.listByLavorazione(id);
+      const res = await lavorazioneDocumentsEntry.listByLavorazione(id);
       if (!res.success) return err(res.error ?? "Errore documenti lavorazione.");
       return success({ rows: res.data ?? [] });
     },

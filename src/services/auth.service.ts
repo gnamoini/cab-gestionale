@@ -2,7 +2,6 @@
 
 import { PROFILES_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { ProfileRow } from "@/src/types/supabase-tables";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
@@ -19,8 +18,6 @@ export type ProfileFilters = {
 export const authService = {
   async getAll(filters?: ProfileFilters): Promise<ServiceResult<ProfileRow[]>> {
     try {
-      const allowed = await ensurePermission("manageUsers");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = getBrowserSupabase();
       let q = sb.from("profiles").select(PROFILES_COLUMNS).order("nome", { ascending: true });
       if (filters?.roleKey) q = q.eq("role_key", filters.roleKey);

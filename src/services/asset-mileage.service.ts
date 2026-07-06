@@ -2,7 +2,6 @@
 
 import { ASSET_MILEAGE_READINGS_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { auditContext, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { AssetMileageReadingRow, MileageSource } from "@/src/types/supabase-tables";
@@ -26,8 +25,6 @@ async function sb() {
 
 export const assetMileageService = {
   async listByMezzo(mezzoId: string, limit = 50): Promise<ServiceResult<AssetMileageReadingRow[]>> {
-    const allowed = await ensureSectionRead("mezzi");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const { data, error } = await client
@@ -44,8 +41,6 @@ export const assetMileageService = {
   },
 
   async appendReading(input: MileageReadingInsert): Promise<ServiceResult<AssetMileageReadingRow>> {
-    const allowed = await ensurePermission("editVehicles");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     if (!Number.isFinite(input.km) || input.km < 0) {
       return err("Chilometraggio non valido.");
     }

@@ -16,11 +16,6 @@ import {
 import { normalizePromemoriaEventTime } from "@/lib/dashboard/dashboard-promemoria-reminder";
 import { DASHBOARD_PROMEMORIA_COLUMNS } from "@/lib/db/table-select-columns";
 import { clampTextOrNull, PROMEMORIA_DESCRIPTION_MAX } from "@/lib/validation/text-field-limits";
-import {
-  ensureOperationalWrite,
-  ensureSectionRead,
-  ensureSectionWrite,
-} from "@/src/lib/auth/permission-guards";
 import { errMessageFromSupabase } from "@/src/utils/supabaseErrorHandler";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -77,8 +72,6 @@ function recurrenceDbFields(
 export const dashboardPromemoriaService = {
   async listByMonth(monthKey: DashboardPromemoriaMonthKey): Promise<ServiceResult<DashboardPromemoriaRow[]>> {
     try {
-      const allowed = await ensureSectionRead("dashboard");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const { from, to } = monthDateRange(monthKey);
       const c = await sb();
       const { data, error } = await c
@@ -99,8 +92,6 @@ export const dashboardPromemoriaService = {
 
   async listByDate(eventDate: string): Promise<ServiceResult<DashboardPromemoriaRow[]>> {
     try {
-      const allowed = await ensureSectionRead("dashboard");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const ymd = parseEventDate(eventDate);
       if (!ymd) return err("Data non valida.");
       const c = await sb();
@@ -120,8 +111,6 @@ export const dashboardPromemoriaService = {
 
   async listDueTodayForReminder(): Promise<ServiceResult<DashboardPromemoriaRow[]>> {
     try {
-      const allowed = await ensureSectionRead("dashboard");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const today = new Date();
       const ymd = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
       const c = await sb();
@@ -142,8 +131,6 @@ export const dashboardPromemoriaService = {
 
   async create(input: DashboardPromemoriaInput): Promise<ServiceResult<DashboardPromemoriaRow>> {
     try {
-      const allowed = await ensureSectionWrite("dashboard");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const eventDate = parseEventDate(input.eventDate);
       const title = normalizeTitle(input.title);
       if (!eventDate) return err("Seleziona una data valida.");
@@ -205,8 +192,6 @@ export const dashboardPromemoriaService = {
 
   async update(input: DashboardPromemoriaUpdateInput): Promise<ServiceResult<DashboardPromemoriaRow>> {
     try {
-      const allowed = await ensureSectionWrite("dashboard");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const eventDate = parseEventDate(input.eventDate);
       const title = normalizeTitle(input.title);
       if (!eventDate) return err("Seleziona una data valida.");
@@ -291,8 +276,6 @@ export const dashboardPromemoriaService = {
 
   async softDelete(input: DashboardPromemoriaDeleteInput | string): Promise<ServiceResult<number>> {
     try {
-      const allowed = await ensureOperationalWrite();
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const id = typeof input === "string" ? input : input.id;
       const scope = typeof input === "string" ? "single" : normalizeScope(input.scope);
       const c = await sb();
@@ -314,8 +297,6 @@ export const dashboardPromemoriaService = {
 
   async markNotified(id: string, dateYmd: string): Promise<ServiceResult<true>> {
     try {
-      const allowed = await ensureSectionRead("dashboard");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const ymd = parseEventDate(dateYmd);
       if (!ymd) return err("Data non valida.");
       const c = await sb();

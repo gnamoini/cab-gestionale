@@ -6,7 +6,7 @@ import {
   mezzoDeleteBlockedBy,
   mezzoDeleteBlockedByLavorazioni,
   type MezzoDependencies,
-} from "@/src/services/mezzi.service";
+} from "@/lib/domain/mezzi-entry";
 
 function mezzoLabel(mezzo: MezzoGestito): string {
   const label = `${mezzo.marca} ${mezzo.modello !== "—" ? mezzo.modello : ""}`.trim();

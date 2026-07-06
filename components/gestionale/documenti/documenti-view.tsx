@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } fr
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { documentiService } from "@/src/services/documenti.service";
+import { documentiEntry } from "@/lib/domain/documenti-entry";
 import { useDocumentiListQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { deleteDocumentoStoragePath } from "@/lib/documenti/delete-documento-fully";
@@ -374,7 +374,7 @@ export function DocumentiView() {
   const { global: globalPerm, modules: permModules } = usePermissionsSnapshot();
   const docPerm = permModules.documenti;
   const canUploadDocuments = docPerm.canWrite;
-  const canDeleteRecords = docPerm.canWrite && globalPerm.canDeleteRecords;
+  const canDeleteRecords = docPerm.canWrite;
   const { authorName: author } = useAuth();
   const authorTrim = author.trim() || "Operatore";
   const { data: settingsPayload } = useCabAppSettingsPayloadQuery({ tier: "static" });
@@ -670,7 +670,7 @@ export function DocumentiView() {
             throw new Error("File non disponibile per il salvataggio.");
           }
           const insert = gestionaleToDocumentoInsert(payload, urlFile, uploadIntelligence);
-          const res = await documentiService.create(insert);
+          const res = await documentiEntry.create(insert);
           if (!res.success || !res.data) {
             if (payload.urlBlob?.trim()) {
               await deleteDocumentoStoragePath(urlFile);
@@ -712,7 +712,7 @@ export function DocumentiView() {
       setDocMutating(true);
       try {
         const update = gestionaleToDocumentoUpdate(next);
-        const res = await documentiService.update(next.id, update);
+        const res = await documentiEntry.update(next.id, update);
         if (!res.success || !res.data) {
           gestToast.errorOnce("documenti-update", res.error ?? "Impossibile aggiornare il documento.", {
             module: "documenti",
@@ -747,7 +747,7 @@ export function DocumentiView() {
     async (victim: DocumentoGestionale) => {
       setDocMutating(true);
       try {
-        const res = await documentiService.remove(victim.id);
+        const res = await documentiEntry.remove(victim.id);
         if (!res.success) {
           gestToast.errorOnce("documenti-delete", res.error ?? "Impossibile eliminare il documento.", {
             module: "documenti",

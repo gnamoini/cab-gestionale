@@ -20,7 +20,7 @@ assert.match(artifactRoute, /export const runtime = "nodejs"/);
 assert.match(artifactRoute, /isPdfArtifactType/);
 
 const rbac = read("lib/pdf-artifacts/pdf-artifact-rbac.server.ts");
-assert.match(rbac, /verifyServerSectionRead/);
+assert.match(rbac, /verifyServerPageRead/);
 
 const paths = read("lib/pdf-artifacts/pdf-artifact-paths.ts");
 assert.match(paths, /dataHash/);

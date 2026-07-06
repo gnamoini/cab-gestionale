@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AttrezzaturaGestita } from "@/lib/attrezzature/types";
 import { attrezzatureForMezzo } from "@/lib/mezzi/mezzi-db-ui-adapter";
-import { attrezzatureService } from "@/src/services/attrezzature.service";
+import { attrezzatureEntry } from "@/lib/domain/attrezzature-entry";
 import type { AttrezzaturaRow } from "@/src/types/supabase-tables";
 import { MezziHubList, MezziHubListItem, MezziHubListMeta, MezziHubListTitle, MezziHubTabEmpty } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 import { dsInput } from "@/lib/ui/design-system";
@@ -28,7 +28,7 @@ export function MezziHubAttrezzaturePanel({
   const reload = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const res = await attrezzatureService.listByMezzo(mezzoId);
+    const res = await attrezzatureEntry.listByMezzo(mezzoId);
     if (!res.success) {
       setError(res.error ?? "Errore caricamento attrezzature");
       setRows([]);
@@ -45,7 +45,7 @@ export function MezziHubAttrezzaturePanel({
   async function handleCreate() {
     if (!marca.trim()) return;
     setPending(true);
-    const res = await attrezzatureService.create({
+    const res = await attrezzatureEntry.create({
       mezzo_id: mezzoId,
       marca: marca.trim(),
       modello: modello.trim(),
@@ -68,7 +68,7 @@ export function MezziHubAttrezzaturePanel({
 
   async function handleRemove(id: string) {
     setPending(true);
-    const res = await attrezzatureService.remove(id);
+    const res = await attrezzatureEntry.remove(id);
     setPending(false);
     if (!res.success) {
       setError(res.error ?? "Errore eliminazione attrezzatura");

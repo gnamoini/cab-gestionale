@@ -16,16 +16,16 @@ import {
 import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifecycle";
 import { markRecentLocalGestionaleMutation } from "@/lib/sync/recent-local-mutation";
 import { evictLavorazioneDomainCache } from "@/src/lib/react-query/evict-lavorazione-domain-cache";
-import {
-  lavorazioniService,
-  type LavorazioneInsert,
-  type LavorazioneUpdate,
+import { lavorazioniEntry } from "@/lib/domain/lavorazioni-entry";
+import type {
+  LavorazioneInsert,
+  LavorazioneUpdate,
 } from "@/src/services/lavorazioni.service";
 import type { LavorazioneRow } from "@/src/types/supabase-tables";
 
 export function useLavorazioneCreateMutation() {
   const queryClient = useQueryClient();
-  return useServiceMutation((data: LavorazioneInsert) => lavorazioniService.create(data), {
+  return useServiceMutation((data: LavorazioneInsert) => lavorazioniEntry.create(data), {
     onSettled: async (data, error) => {
       if (error) return;
       const cabSyncEvents =
@@ -45,7 +45,7 @@ export function useLavorazioneUpdateMutation() {
   const { user } = useAuth();
   const optimisticAudit = buildLavorazioneOptimisticAudit(user?.id);
   return useServiceMutation(
-    ({ id, data }: { id: string; data: LavorazioneUpdate }) => lavorazioniService.update(id, data),
+    ({ id, data }: { id: string; data: LavorazioneUpdate }) => lavorazioniEntry.update(id, data),
     {
       onMutate: async (variables) => {
         const context = await snapshotLavorazioneUpdateQueries(queryClient, variables.id);
@@ -72,7 +72,7 @@ export function useLavorazioneUpdateMutation() {
 
 export function useLavorazioneRemoveMutation() {
   const queryClient = useQueryClient();
-  return useServiceMutation((id: string) => lavorazioniService.remove(id), {
+  return useServiceMutation((id: string) => lavorazioniEntry.remove(id), {
     onSuccess: (_data, id) => {
       evictLavorazioneDomainCache(queryClient, id);
     },
@@ -94,7 +94,7 @@ export function useLavorazioneRemoveMutation() {
 export function useLavorazioneRestoreMutation() {
   const queryClient = useQueryClient();
   return useServiceMutation(
-    ({ id, stato }: { id: string; stato: LavorazioneRow["stato"] }) => lavorazioniService.restore(id, stato),
+    ({ id, stato }: { id: string; stato: LavorazioneRow["stato"] }) => lavorazioniEntry.restore(id, stato),
     {
       onSettled: async (_data, error, variables) => {
         if (error) return;
@@ -117,7 +117,7 @@ export function useLavorazioneConcludeMutation() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const optimisticAudit = buildLavorazioneOptimisticAudit(user?.id);
-  return useServiceMutation((id: string) => lavorazioniService.conclude(id), {
+  return useServiceMutation((id: string) => lavorazioniEntry.conclude(id), {
     onMutate: async (id) => {
       const context = await snapshotLavorazioneUpdateQueries(queryClient, id);
       const existing = context.lists

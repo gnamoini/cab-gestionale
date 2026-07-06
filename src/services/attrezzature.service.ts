@@ -4,7 +4,6 @@ import { ATTREZZATURE_COLUMNS } from "@/lib/db/table-select-columns";
 import { resolveAssetLifecycleV1EnabledClient } from "@/lib/officina/resolve-asset-lifecycle-v1-client";
 import { isAssetLifecycleSubFlagActive } from "@/lib/officina/asset-lifecycle-v1-flag";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { AssignmentChangeReason, AttrezzaturaRow } from "@/src/types/supabase-tables";
@@ -48,8 +47,6 @@ async function openAssignmentIfEnabled(
 
 export const attrezzatureService = {
   async listByMezzo(mezzoId: string): Promise<ServiceResult<AttrezzaturaRow[]>> {
-    const allowed = await ensureSectionRead("mezzi");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const { data, error } = await client
@@ -65,8 +62,6 @@ export const attrezzatureService = {
   },
 
   async getById(id: string): Promise<ServiceResult<AttrezzaturaRow | null>> {
-    const allowed = await ensureSectionRead("mezzi");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const { data, error } = await client
@@ -84,8 +79,6 @@ export const attrezzatureService = {
   async findByMatricola(mezzoId: string, matricola: string): Promise<ServiceResult<AttrezzaturaRow | null>> {
     const m = matricola.trim();
     if (!m) return success(null);
-    const allowed = await ensureSectionRead("mezzi");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const { data, error } = await client
@@ -102,8 +95,6 @@ export const attrezzatureService = {
   },
 
   async create(data: AttrezzaturaInsert): Promise<ServiceResult<AttrezzaturaRow>> {
-    const allowed = await ensurePermission("editVehicles");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const { data: user } = await client.auth.getUser();
@@ -125,8 +116,6 @@ export const attrezzatureService = {
   },
 
   async update(id: string, patch: AttrezzaturaUpdate): Promise<ServiceResult<AttrezzaturaRow>> {
-    const allowed = await ensurePermission("editVehicles");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const beforeRes = await this.getById(id);
@@ -182,8 +171,6 @@ export const attrezzatureService = {
   },
 
   async remove(id: string): Promise<ServiceResult<void>> {
-    const allowed = await ensurePermission("editVehicles");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const beforeRes = await this.getById(id);

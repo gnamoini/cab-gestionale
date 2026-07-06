@@ -104,8 +104,8 @@ import { useLavorazioniAddettiInUsoQuery } from "@/src/hooks/gestionale/use-lavo
 import { useLavorazioniStatiInUsoQuery } from "@/src/hooks/gestionale/use-lavorazioni-stati-in-uso";
 import { useCabAppSettingsPayloadQuery, useSettingsBulkMutation } from "@/src/hooks/gestionale/use-settings-queries";
 import { useUndoableConfigurazioneSave } from "@/src/hooks/gestionale/use-undoable-configurazione-save";
-import { mergeAppSettingsUpsertWithVersions } from "@/src/services/settings.service";
-import { settingsRenamePropagationService } from "@/src/services/settings-rename-propagation.service";
+import { mergeAppSettingsUpsertWithVersions } from "@/lib/domain/settings-entry";
+import { settingsRenamePropagationEntry } from "@/lib/domain/settings-rename-propagation-entry";
 import {
   addStatoFromLabel,
   DEFAULT_STATI_LAVORAZIONI_DB,
@@ -487,7 +487,7 @@ export function SistemaImpostazioniWorkspace({
       return;
     }
     setPropagaPending(true);
-    const res = await settingsRenamePropagationService.propagateRenames(renameQueueRef.current);
+    const res = await settingsRenamePropagationEntry.propagateRenames(renameQueueRef.current);
     setPropagaPending(false);
     setPropagaOpen(false);
     if (!res.success) {

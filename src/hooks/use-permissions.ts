@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { permissionsService } from "@/src/services/permissions.service";
+import { permissionsEntry } from "@/lib/domain/permissions-entry";
 import { isRbacPageTableUnavailableError } from "@/src/lib/rbac/load-rbac-data";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import {
@@ -21,7 +21,7 @@ export function useRolePageAccessQuery(): UseQueryResult<Record<string, PageAcce
   return useQuery({
     queryKey: [...QK.userPermissions, "role-page-access", user?.id ?? "anon"] as const,
     queryFn: async () => {
-      const r = await permissionsService.listMyRolePageAccess(user?.id);
+      const r = await permissionsEntry.listMyRolePageAccess(user?.id);
       if (!r.success) {
         if (isRbacPageTableUnavailableError(r.error)) return {};
         throw new Error(r.error ?? "Errore permessi ruolo");
@@ -46,7 +46,7 @@ export function useUserPageOverridesQuery(): UseQueryResult<
   return useQuery({
     queryKey: [...QK.userPermissions, user?.id ?? "anon"] as const,
     queryFn: async () => {
-      const r = await permissionsService.listMyPageOverrides(user?.id);
+      const r = await permissionsEntry.listMyPageOverrides(user?.id);
       if (!r.success) {
         if (isRbacPageTableUnavailableError(r.error)) return [];
         throw new Error(r.error ?? "Errore override pagina");

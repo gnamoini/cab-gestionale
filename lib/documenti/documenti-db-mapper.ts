@@ -1,7 +1,7 @@
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import type { DocumentoInsert, DocumentoUpdate } from "@/src/services/documenti.service";
 import type { CategoriaDocumento, DocumentoRow } from "@/src/types/supabase-tables";
-import { ensurePermission } from "@/src/lib/auth/permission-guards";
+import { ensurePageWrite } from "@/src/lib/auth/permission-guards";
 import { mapStorageError } from "@/src/lib/storage/storage-errors";
 import {
   classifyDocumentoStorageOpenError,
@@ -100,7 +100,7 @@ export async function uploadDocumentoBlob(
 
 export async function uploadDocumentoFile(file: File, categoria?: string): Promise<ServiceResult<DocumentoUploadResult>> {
   try {
-    const allowed = await ensurePermission("uploadDocuments");
+    const allowed = await ensurePageWrite("documenti");
     if (!allowed.success) {
       trackRuntimeEvent(RuntimeEvents.documentiUploadFailed, { reason: "permission_denied" });
       return err(allowed.error ?? "Permesso richiesto.");

@@ -5,7 +5,6 @@ import { fetchMezziGestitiListRows, fetchMezziListRows } from "@/lib/mezzi/mezzi
 import { fetchMezzoGestitoById } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MezzoRow } from "@/src/types/supabase-tables";
@@ -99,8 +98,6 @@ export const mezziService = {
 
   async getAll(filters?: MezzoFilters): Promise<ServiceResult<MezzoGestito[]>> {
     try {
-      const allowed = await ensureSectionRead("mezzi");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       return fetchMezziGestitiListRows(c, { filters, variant: "list" });
     } catch (e) {
@@ -110,8 +107,6 @@ export const mezziService = {
 
   async getAllForReport(filters?: MezzoFilters): Promise<ServiceResult<MezzoGestito[]>> {
     try {
-      const allowed = await ensureSectionRead("mezzi");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       return fetchMezziGestitiListRows(c, { filters, variant: "report" });
     } catch (e) {
@@ -122,8 +117,6 @@ export const mezziService = {
   /** Righe DB grezze (uso interno / import). */
   async getAllRows(filters?: MezzoFilters): Promise<ServiceResult<MezzoRow[]>> {
     try {
-      const allowed = await ensureSectionRead("mezzi");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       return fetchMezziListRows(c, { filters, variant: "list" });
     } catch (e) {
@@ -133,8 +126,6 @@ export const mezziService = {
 
   async getGestitoById(id: string): Promise<ServiceResult<MezzoGestito>> {
     try {
-      const allowed = await ensureSectionRead("mezzi");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const gestito = await fetchMezzoGestitoById(c, id);
       if (!gestito) return err("Mezzo non trovato");
@@ -146,8 +137,6 @@ export const mezziService = {
 
   async getById(id: string): Promise<ServiceResult<MezzoRow>> {
     try {
-      const allowed = await ensureSectionRead("mezzi");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.from("mezzi").select(MEZZI_COLUMNS).eq("id", id).maybeSingle();
       if (error) return err(error.message);
@@ -160,8 +149,6 @@ export const mezziService = {
 
   async create(data: MezzoInsert): Promise<ServiceResult<MezzoRow>> {
     try {
-      const allowed = await ensurePermission("editVehicles");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const payload = attachMezzoEntityKey(
         sanitizeMezzoWritePayload(data, { v2Enabled: true, source: "mezziService.create" }),
@@ -179,8 +166,6 @@ export const mezziService = {
 
   async update(id: string, data: MezzoUpdate): Promise<ServiceResult<MezzoRow>> {
     try {
-      const allowed = await ensurePermission("editVehicles");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const payload =
         Object.keys(data).length > 0
@@ -208,8 +193,6 @@ export const mezziService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
-      const allowed = await ensurePermission("editVehicles");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: existing, error: e0 } = await c.from("mezzi").select(MEZZI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(humanizeGestionaleError(e0.message, { entity: "mezzo", action: "delete" }));

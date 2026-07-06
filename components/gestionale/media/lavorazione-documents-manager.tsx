@@ -31,7 +31,7 @@ import { reconcileGestionaleEntity } from "@/lib/sync/gestionale-reconcile";
 import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-domain.queries";
 import { lavorazioneDocumentDeliveryUrl } from "@/lib/documents/document-delivery-url";
 import { DocumentThumbnail } from "@/components/gestionale/documenti/document-thumbnail";
-import { lavorazioneDocumentsService } from "@/src/services/lavorazione-documents.service";
+import { lavorazioneDocumentsEntry } from "@/lib/domain/lavorazione-documents-entry";
 import type { LavorazioneDocumentRow, LavorazioneDocumentTipo } from "@/src/types/supabase-tables";
 import { useLavorazionePdfsByLavorazione } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
@@ -396,7 +396,7 @@ export function LavorazioneDocumentsManager({
       successToast: "Documento caricato.",
       showErrorToast: true,
       run: async () => {
-        const res = await lavorazioneDocumentsService.upload(lavorazioneId, tipo, file);
+        const res = await lavorazioneDocumentsEntry.upload(lavorazioneId, tipo, file);
         if (!res.success) throw new Error(res.error ?? "Upload non riuscito.");
         return res.data;
       },
@@ -439,7 +439,7 @@ export function LavorazioneDocumentsManager({
     });
     if (!ok) return;
     setUploadingTipo(tipo);
-    const res = await lavorazioneDocumentsService.remove(lavorazioneId, tipo);
+    const res = await lavorazioneDocumentsEntry.remove(lavorazioneId, tipo);
     setUploadingTipo(null);
     if (!res.success) {
       gestToast.errorOnce("lav-doc-delete", res.error ?? "Eliminazione non riuscita.", { module: "lavorazioni" });

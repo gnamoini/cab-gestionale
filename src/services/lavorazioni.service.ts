@@ -3,7 +3,6 @@
 import { LAVORAZIONI_COLUMNS } from "@/lib/db/table-select-columns";
 import { pickLavorazioneCreatePayload, pickLavorazioneWritePayload } from "@/lib/validation/services/lavorazioni-payload";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { formatLavorazioneLogOggettoLabel } from "@/lib/lavorazioni/lavorazione-log-oggetto";
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog, type AuditLogContext } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -110,8 +109,6 @@ export const lavorazioniService = {
 
   async getById(id: string): Promise<ServiceResult<LavorazioneRow>> {
     try {
-      const allowed = await ensureSectionRead("lavorazioni");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       const { data, error } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select(LAVORAZIONI_COLUMNS).eq("id", id)).maybeSingle();
       if (error) return err(error.message);
@@ -124,8 +121,6 @@ export const lavorazioniService = {
 
   async create(data: LavorazioneInsert): Promise<ServiceResult<LavorazioneRow>> {
     try {
-      const allowed = await ensurePermission("editWorkOrders");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       const userId = await authUserId(sb);
       const picked = pickLavorazioneCreatePayload(data as Record<string, unknown>);
@@ -151,8 +146,6 @@ export const lavorazioniService = {
 
   async update(id: string, data: LavorazioneUpdate): Promise<ServiceResult<LavorazioneRow>> {
     try {
-      const allowed = await ensurePermission("editWorkOrders");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       const userId = await authUserId(sb);
       const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select(LAVORAZIONI_COLUMNS).eq("id", id)).maybeSingle();
@@ -181,8 +174,6 @@ export const lavorazioniService = {
   /** Ripristina lavorazione archiviata tra le attive (log dedicato RESTORE). */
   async restore(id: string, stato: StatoLavorazione): Promise<ServiceResult<LavorazioneRow>> {
     try {
-      const allowed = await ensurePermission("editWorkOrders");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       const userId = await authUserId(sb);
       const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select(LAVORAZIONI_COLUMNS).eq("id", id)).maybeSingle();
@@ -213,8 +204,6 @@ export const lavorazioniService = {
   /** Conclude e archivia: stato completata, archived=true, archived_at e data_uscita. Idempotente se già archiviata. */
   async conclude(id: string): Promise<ServiceResult<LavorazioneRow>> {
     try {
-      const allowed = await ensurePermission("editWorkOrders");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       const userId = await authUserId(sb);
       const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select(LAVORAZIONI_COLUMNS).eq("id", id)).maybeSingle();
@@ -266,8 +255,6 @@ export const lavorazioniService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
-      const allowed = await ensurePermission("deleteRecords");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       const { data: existing, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select(LAVORAZIONI_COLUMNS).eq("id", id)).maybeSingle();
       if (e0) return err(e0.message);

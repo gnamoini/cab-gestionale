@@ -5,7 +5,6 @@ import { requestLavorazioneDocumentUploadPolicy } from "@/lib/documenti/document
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 import { removeDocumentoStoragePathsBestEffort } from "@/lib/documenti/delete-documento-fully";
 import { STORAGE_BUCKETS, storageUpload } from "@/src/services/storage.service";
-import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { LavorazioneDocumentRow, LavorazioneDocumentTipo } from "@/src/types/supabase-tables";
@@ -38,9 +37,6 @@ export const lavorazioneDocumentsService = {
     file: File,
   ): Promise<ServiceResult<LavorazioneDocumentRow>> {
     try {
-      const allowed = await ensurePermission("editWorkOrders");
-      if (!allowed.success) return err(allowed.error ?? "Permesso negato.");
-
       const id = lavorazioneId.trim();
       if (!id) return err("Lavorazione non valida.");
 
@@ -112,9 +108,6 @@ export const lavorazioneDocumentsService = {
 
   async remove(lavorazioneId: string, tipo: LavorazioneDocumentTipo): Promise<ServiceResult<null>> {
     try {
-      const allowed = await ensurePermission("editWorkOrders");
-      if (!allowed.success) return err(allowed.error ?? "Permesso negato.");
-
       const id = lavorazioneId.trim();
       if (!id) return err("Lavorazione non valida.");
 

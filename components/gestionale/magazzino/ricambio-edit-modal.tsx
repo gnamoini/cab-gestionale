@@ -25,7 +25,7 @@ import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { dsBtnDanger, dsBtnNeutral } from "@/lib/ui/design-system";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
-import { magazzinoService } from "@/src/services/magazzino.service";
+import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
 import { ricambioUiFromMagazzinoRow } from "@/lib/magazzino/magazzino-list-cache";
 import {
   clearOverlayBackResync,
@@ -185,7 +185,7 @@ export function RicambioEditModal({
       });
       setSaveBusy(true);
       try {
-        const updated = await magazzinoService.update(
+        const updated = await magazzinoEntry.update(
           ricambioId,
           ricambioUiToMagazzinoUpdate(next, mezziListePrefs),
         );

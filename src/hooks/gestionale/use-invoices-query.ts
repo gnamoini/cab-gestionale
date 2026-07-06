@@ -3,11 +3,11 @@
 import { fatturazioneListQueryKey } from "@/lib/render/query-key-factory";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
-import { invoicesService } from "@/src/services/invoices.service";
+import { invoicesEntry } from "@/lib/domain/invoices-entry";
 
 export function useInvoicesQuery(enabled = true) {
   const gestOpts = useGestionaleQueryOpts();
-  const q = useServiceQuery(fatturazioneListQueryKey(), () => invoicesService.getList(), {
+  const q = useServiceQuery(fatturazioneListQueryKey(), () => invoicesEntry.getList(), {
     enabled,
     ...gestOpts,
   });

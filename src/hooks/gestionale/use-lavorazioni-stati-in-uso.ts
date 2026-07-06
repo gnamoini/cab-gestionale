@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { isAuthSessionEstablished, useAuth } from "@/context/auth-context";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import { lavorazioniService } from "@/src/services/lavorazioni.service";
+import { lavorazioniEntry } from "@/lib/domain/lavorazioni-entry";
 
 export function useLavorazioniStatiInUsoQuery(options?: { enabled?: boolean }) {
   const { status } = useAuth();
@@ -12,7 +12,7 @@ export function useLavorazioniStatiInUsoQuery(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: [...QK.lavorazioniQueries, "stati-in-uso"] as const,
     queryFn: async () => {
-      const r = await lavorazioniService.getStatiInUso();
+      const r = await lavorazioniEntry.listStatiInUso();
       if (!r.success) throw new Error(r.error ?? "Errore stati in uso");
       return r.data ?? { attivi: [], storico: [] };
     },

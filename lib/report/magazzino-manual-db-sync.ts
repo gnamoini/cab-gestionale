@@ -1,7 +1,7 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensureSectionRead, ensureSectionWrite } from "@/src/lib/auth/permission-guards";
+import { ensurePageRead, ensurePageWrite } from "@/src/lib/auth/permission-guards";
 import { applyAppSettingsUpsert } from "@/src/services/settings.service";
 import type { MagazzinoManualMonthMap } from "@/lib/report/magazzino-manual-storage";
 
@@ -10,7 +10,7 @@ const SETTINGS_KEY = "magazzino_manual_month_map_v1";
 const MIGRATION_FLAG = "gestionale-report-mag-manual-db-v1";
 
 export async function loadMagazzinoManualFromDb(): Promise<MagazzinoManualMonthMap | null> {
-  const allowed = await ensureSectionRead("report");
+  const allowed = await ensurePageRead("report");
   if (!allowed.success) return null;
   const c = await getBrowserSupabase();
   const { data, error } = await c
@@ -26,7 +26,7 @@ export async function loadMagazzinoManualFromDb(): Promise<MagazzinoManualMonthM
 }
 
 export async function saveMagazzinoManualToDb(map: MagazzinoManualMonthMap): Promise<boolean> {
-  const allowed = await ensureSectionWrite("report");
+  const allowed = await ensurePageWrite("report");
   if (!allowed.success) return false;
   const c = await getBrowserSupabase();
   const res = await applyAppSettingsUpsert(c, {

@@ -14,7 +14,7 @@ import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { dsBtnNeutralForm } from "@/lib/ui/design-system";
 import type { InvoiceDetail } from "@/lib/fatturazione/types";
 import { invoiceDisplayNumber } from "@/lib/fatturazione/fatturazione-list-ui-filters";
-import { invoiceIsDeletable, invoicesService } from "@/src/services/invoices.service";
+import { invoiceIsDeletable, invoicesEntry } from "@/lib/domain/invoices-entry";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
@@ -49,7 +49,7 @@ export function FatturazioneDetailDrawer({
       if (!inv || busy) return;
       setBusy(true);
       try {
-        const res = await invoicesService.issue(inv.id, status);
+        const res = await invoicesEntry.issue(inv.id, status);
         if (!res.success) throw new Error(res.error ?? "Operazione non riuscita.");
         toast.successOnce("fatt-issue", status === "emessa" ? "Fattura emessa." : "Fattura segnata come inviata.");
         onChanged();
@@ -74,7 +74,7 @@ export function FatturazioneDetailDrawer({
     const reason = "";
     setBusy(true);
     try {
-      const res = await invoicesService.cancel(inv.id, reason);
+      const res = await invoicesEntry.cancel(inv.id, reason);
       if (!res.success) throw new Error(res.error ?? "Annullamento non riuscito.");
       toast.successOnce("fatt-cancel", "Fattura annullata.");
       onChanged();
@@ -90,7 +90,7 @@ export function FatturazioneDetailDrawer({
     if (!inv || busy || !canWrite) return;
     setBusy(true);
     try {
-      const res = await invoicesService.remove(inv.id);
+      const res = await invoicesEntry.remove(inv.id);
       if (!res.success) throw new Error(res.error ?? "Eliminazione non riuscita.");
       toast.successOnce("fatt-delete", "Fattura eliminata.");
       setDeleteConfirmOpen(false);

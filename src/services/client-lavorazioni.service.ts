@@ -3,7 +3,7 @@
 import { sanitizeClientLavorazioneRow } from "@/lib/lavorazioni/client-portal-stati";
 import { fetchEnrichedLavorazioneListRow } from "@/lib/lavorazioni/fetch-enriched-lavorazione-row";
 import { lavorazioneMatchesClienteScope } from "@/src/lib/auth/cliente-portal-scope";
-import { ensureClientLavorazioniAccess, loadCallerClienteRef } from "@/src/lib/auth/permission-guards";
+import { loadCallerClienteRef } from "@/src/lib/auth/permission-guards";
 import { fetchClientEffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/fetch-client-effective-permissions";
 import { resolveCabAppSettingsFallback } from "@/src/lib/app-settings/settings-fallback";
 import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
@@ -25,8 +25,6 @@ export type ClientLavorazioneDetail = {
 export const clientLavorazioniService = {
   async getDetail(lavorazioneId: string): Promise<ServiceResult<ClientLavorazioneDetail>> {
     try {
-      const allowed = await ensureClientLavorazioniAccess();
-      if (!allowed.success) return err(allowed.error ?? "Accesso negato.");
       const id = lavorazioneId.trim();
       if (!id) return err("Lavorazione non valida.");
 

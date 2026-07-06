@@ -28,8 +28,8 @@ import { dsBtnNeutralForm, dsInput } from "@/lib/ui/design-system";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import type { BillingCustomerRow, PreventivoBillingStatusRow } from "@/src/types/supabase-tables";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
-import { clientiAnagraficaService } from "@/src/services/clienti-anagrafica.service";
-import { invoicesService } from "@/src/services/invoices.service";
+import { clientiAnagraficaEntry } from "@/lib/domain/clienti-anagrafica-entry";
+import { invoicesEntry } from "@/lib/domain/invoices-entry";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 type StepId = "origine" | "cliente" | "fiscali" | "righe" | "iva" | "conferma";
@@ -158,7 +158,7 @@ export function FatturazioneWizardModal({
     }
     const key = buildClienteEntityKey(trimmed);
     if (!key) return;
-    const anagRes = await clientiAnagraficaService.getByNomeDisplay(trimmed);
+    const anagRes = await clientiAnagraficaEntry.getByNomeDisplay(trimmed);
     if (anagRes.success && anagRes.data) {
       setSnapshot(billingSnapshotFromAnagrafica(anagRes.data));
     } else {
@@ -239,8 +239,8 @@ export function FatturazioneWizardModal({
         links: buildLinks(),
       };
       const res = editingId
-        ? await invoicesService.updateDraftWithRows(editingId, payload)
-        : await invoicesService.create(payload);
+        ? await invoicesEntry.updateDraftWithRows(editingId, payload)
+        : await invoicesEntry.create(payload);
       if (!res.success) throw new Error(res.error ?? "Salvataggio non riuscito.");
       toast.successOnce("fatt-create", editingId ? "Bozza aggiornata." : "Fattura creata.");
       onSaved();

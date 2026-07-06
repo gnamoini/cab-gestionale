@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { PdfArtifactType } from "@/lib/pdf-artifacts/pdf-artifact-registry";
-import { verifyServerSectionRead } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 
 export async function verifyPdfArtifactReadAccess(type: PdfArtifactType): Promise<boolean> {
   switch (type) {
@@ -9,22 +9,22 @@ export async function verifyPdfArtifactReadAccess(type: PdfArtifactType): Promis
     case "scheda-ingresso":
     case "scheda-lavorazioni":
     case "scheda-ricambi":
-      return verifyServerSectionRead("lavorazioni");
+      return verifyServerPageRead("lavorazioni");
     case "report-bundle":
-      return verifyServerSectionRead("report");
+      return verifyServerPageRead("report");
     case "preventivo":
-      return verifyServerSectionRead("preventivi");
+      return verifyServerPageRead("preventivi");
     case "fattura":
-      return verifyServerSectionRead("fatturazione");
+      return verifyServerPageRead("fatturazione");
     case "ddt": {
-      if (await verifyServerSectionRead("ddt")) return true;
-      return verifyServerSectionRead("preventivi");
+      if (await verifyServerPageRead("preventivi")) return true;
+      return verifyServerPageRead("preventivi");
     }
     case "ordine-fornitore":
-      return verifyServerSectionRead("ordini_fornitori");
+      return verifyServerPageRead("preventivi");
     case "dipendenti-aziendale":
     case "dipendenti-dipendente":
-      return verifyServerSectionRead("dipendenti");
+      return verifyServerPageRead("dipendenti");
     default: {
       const _exhaustive: never = type;
       return _exhaustive;

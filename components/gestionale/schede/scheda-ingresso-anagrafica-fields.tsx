@@ -24,7 +24,7 @@ import { useOfficinaProfiloOperativo } from "@/lib/officina/use-officina-profilo
 import { dsBtnNeutral, dsBtnNeutralIconForm, dsInput } from "@/lib/ui/design-system";
 import { sliceInputValue, TEXT_SHORT } from "@/lib/validation/text-field-limits";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import { attrezzatureService } from "@/src/services/attrezzature.service";
+import { attrezzatureEntry } from "@/lib/domain/attrezzature-entry";
 import type { AttrezzaturaRow } from "@/src/types/supabase-tables";
 import type { SchedaIngressoFields } from "@/types/schede";
 
@@ -89,7 +89,7 @@ function SchedaIngressoAnagraficaFieldsInner({
       return;
     }
     let cancelled = false;
-    void attrezzatureService.listByMezzo(mezzoId.trim()).then((res) => {
+    void attrezzatureEntry.listByMezzo(mezzoId.trim()).then((res) => {
       if (cancelled || !res.success) return;
       setAttrezzature(attrezzatureForMezzo((res.data ?? []) as AttrezzaturaRow[], mezzoId.trim()));
     });

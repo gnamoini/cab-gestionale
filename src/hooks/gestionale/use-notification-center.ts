@@ -8,7 +8,7 @@ import { isClientInboxEligible } from "@/lib/notifications/client-inbox-eligible
 import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
 import { RealtimeInboxCoordinator } from "@/lib/notifications/realtime-inbox-coordinator";
 import { notificationsV2ReadsDb } from "@/lib/notifications/notifications-v2-flag";
-import { notificationsService } from "@/src/services/notifications.service";
+import { notificationsEntry } from "@/lib/domain/notifications-entry";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
@@ -43,7 +43,7 @@ export function useNotificationCenter(drawerOpen = false) {
   const inboxQuery = useInfiniteQuery({
     queryKey: [...QK.notificationsInbox, userId] as const,
     queryFn: async ({ pageParam }) => {
-      const res = await notificationsService.listInbox({
+      const res = await notificationsEntry.listInbox({
         limit: PAGE_SIZE,
         cursor: pageParam ?? null,
       });
@@ -63,7 +63,7 @@ export function useNotificationCenter(drawerOpen = false) {
   const unreadQuery = useQuery({
     queryKey: [...QK.notificationsUnread, userId] as const,
     queryFn: async () => {
-      const res = await notificationsService.countUnread();
+      const res = await notificationsEntry.countUnread();
       if (!res.success) throw new Error(res.error ?? "Errore conteggio");
       return res.data ?? 0;
     },
@@ -86,7 +86,7 @@ export function useNotificationCenter(drawerOpen = false) {
     if (!enabled) return;
     let total = 0;
     for (let i = 0; i < 10; i++) {
-      const res = await notificationsService.markAllRead(200);
+      const res = await notificationsEntry.markAllRead(200);
       if (!res.success) break;
       total += res.data ?? 0;
       if ((res.data ?? 0) === 0) break;
@@ -109,7 +109,7 @@ export function useNotificationCenter(drawerOpen = false) {
   const dismissNotification = useCallback(
     async (row: InboxNotificationRow) => {
       if (!enabled) return;
-      await notificationsService.dismiss(row.id);
+      await notificationsEntry.dismiss(row.id);
       await refresh();
     },
     [enabled, refresh],
@@ -123,11 +123,11 @@ export function useNotificationCenter(drawerOpen = false) {
     try {
       let total = 0;
       for (let i = 0; i < 10; i++) {
-        const res = await notificationsService.listInbox({ limit: 200, cursor: null });
+        const res = await notificationsEntry.listInbox({ limit: 200, cursor: null });
         if (!res.success) break;
         const rows = res.data ?? [];
         if (rows.length === 0) break;
-        const results = await Promise.all(rows.map((row) => notificationsService.dismiss(row.id)));
+        const results = await Promise.all(rows.map((row) => notificationsEntry.dismiss(row.id)));
         total += results.filter((r) => r.success).length;
         if (rows.length < 200) break;
       }

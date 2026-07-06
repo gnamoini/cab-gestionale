@@ -14,7 +14,7 @@ import {
   type ImageScope,
   type StoredImage,
 } from "@/lib/media/image-storage";
-import { prefetchStorageBuckets } from "@/src/services/storage.service";
+import { prefetchStorageBuckets } from "@/lib/domain/storage-entry";
 import { LoadingSpinner } from "@/components/design-system/loading";
 import { GestionaleImageCropModal } from "@/components/gestionale/upload/gestionale-image-crop-modal";
 import { GestionaleImageUploadButton } from "@/components/gestionale/upload/gestionale-image-upload-button";
@@ -28,7 +28,7 @@ import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { GestionaleMediaImage } from "@/components/gestionale/media/gestionale-media-image";
-import { logService } from "@/src/services/log.service";
+import { logEntry } from "@/lib/domain/log-entry";
 
 type ImageLogAction = "image_uploaded" | "image_deleted";
 
@@ -129,7 +129,7 @@ export function RecordImageManager({
       const at = new Date().toISOString();
       const supabase = getBrowserSupabase();
       const { data } = await supabase.auth.getUser();
-      const logged = await logService.create({
+      const logged = await logEntry.create({
         entita: logEntitaForScope(scope),
         entita_id: recordId,
         azione: action,

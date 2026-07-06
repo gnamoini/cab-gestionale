@@ -9,7 +9,7 @@ import {
 } from "@/lib/officina/officina-profilo-operativo";
 import { useSharedAppSettingsQuery } from "@/src/context/app-settings-query-context";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import { settingsService } from "@/src/services/settings.service";
+import { settingsEntry } from "@/lib/domain/settings-entry";
 import { dsFocus } from "@/lib/ui/design-system";
 
 const OPTIONS: {
@@ -60,7 +60,7 @@ export function SettingsOfficinaProfiloSection() {
     if (next === value || disabled) return;
     setValue(next);
     setPending(true);
-    const res = await settingsService.upsertSetting({
+    const res = await settingsEntry.upsertSetting({
       module: OFFICINA_PROFILO_MODULE,
       key: OFFICINA_PROFILO_KEY,
       value: next as unknown as Record<string, unknown>,

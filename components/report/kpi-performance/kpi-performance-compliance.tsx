@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { GestionaleInfoCard, GestionaleInfoRow } from "@/components/design-system/gestionale-info-card";
 import { isAssetLifecycleSubFlagActive } from "@/lib/officina/asset-lifecycle-v1-flag";
-import { assetComplianceService } from "@/src/services/asset-compliance.service";
+import { assetComplianceEntry } from "@/lib/domain/asset-compliance-entry";
 import { useAssetLifecycleV1Enabled } from "@/src/hooks/use-asset-lifecycle-v1-enabled";
 import { GESTIONALE_REPORT_STALE_MS } from "@/lib/react-query/query-layer-policies";
 
@@ -14,7 +14,7 @@ export function KpiPerformanceCompliance() {
   const rulesQuery = useQuery({
     queryKey: ["kpi-compliance-upcoming"],
     queryFn: async () => {
-      const res = await assetComplianceService.listUpcomingRules(60);
+      const res = await assetComplianceEntry.listUpcomingRules(60);
       return res.success ? res.data : [];
     },
     enabled: complianceOn,

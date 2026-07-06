@@ -10,13 +10,13 @@ import {
 import type { PreventiviRecordsPayload } from "@/lib/preventivi/preventivi-list-fetch";
 import { preventivoRowToRecord } from "@/lib/preventivi/preventivi-db-mapper";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
-import { verifyServerSectionRead } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
 
 export const fetchPreventiviRecordsServer = cache(async (): Promise<ServiceResult<PreventiviRecordsPayload>> => {
-  const allowed = await verifyServerSectionRead("preventivi");
+  const allowed = await verifyServerPageRead("preventivi");
   if (!allowed) return err("Permesso richiesto.");
   const sb = await createSupabaseServerUserClient();
   const rowsRes = await fetchPreventiviListRows(sb);
@@ -29,7 +29,7 @@ export const fetchPreventiviRecordsServer = cache(async (): Promise<ServiceResul
 });
 
 export async function fetchPreventivoRecordServer(id: string): Promise<ServiceResult<PreventivoRecord>> {
-  const allowed = await verifyServerSectionRead("preventivi");
+  const allowed = await verifyServerPageRead("preventivi");
   if (!allowed) return err("Permesso richiesto.");
   const sb = await createSupabaseServerUserClient();
   const { data, error } = await sb.from("preventivi").select(PREVENTIVI_COLUMNS).eq("id", id).maybeSingle();

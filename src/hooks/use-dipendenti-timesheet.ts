@@ -28,7 +28,7 @@ import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/query-keys";
-import { dipendentiTimesheetService } from "@/src/services/dipendenti-timesheet.service";
+import { dipendentiTimesheetEntry } from "@/lib/domain/dipendenti-timesheet-entry";
 import {
   dispatchTimesheetEmployeesChanged,
   dispatchTimesheetEntryChanged,
@@ -128,31 +128,31 @@ export function useDipendentiTimesheet(
   );
 
   const employeesQuery = useServiceQuery(QK.dipendentiTimesheetEmployees, () =>
-    dipendentiTimesheetService.listEmployees(),
+    dipendentiTimesheetEntry.listEmployees(),
   );
 
   const registryReady = employeesQuery.isSuccess && !employeesQuery.isError;
 
   const entriesQuery = useServiceQuery(
     entriesQueryKey(periodRange.from, periodRange.to),
-    () => dipendentiTimesheetService.listEntriesForRange(periodRange.from, periodRange.to),
+    () => dipendentiTimesheetEntry.listEntriesForRange(periodRange.from, periodRange.to),
     { enabled: registryReady && addettiReady },
   );
 
   const previousMonthQuery = useServiceQuery(
     [...QK.dipendentiTimesheetEntries, "prev", previousMonthKey] as const,
-    () => dipendentiTimesheetService.listEntriesForMonth(previousMonthKey),
+    () => dipendentiTimesheetEntry.listEntriesForMonth(previousMonthKey),
     { enabled: registryReady && addettiReady && periodMode === "month" },
   );
 
   const monthKeysWithDataQuery = useServiceQuery(QK.dipendentiTimesheetMonthKeysWithData, () =>
-    dipendentiTimesheetService.listMonthKeysWithEntries(),
+    dipendentiTimesheetEntry.listMonthKeysWithEntries(),
     { enabled: registryReady },
   );
 
   const syncMutation = useServiceMutation(
     (records: readonly AddettoRecord[]) =>
-      dipendentiTimesheetService.syncFromAddettiRecords(records),
+      dipendentiTimesheetEntry.syncFromAddettiRecords(records),
     {
       onSuccess: (rows) => {
         queryClient.setQueryData(QK.dipendentiTimesheetEmployees, rows);
@@ -214,7 +214,7 @@ export function useDipendentiTimesheet(
 
   const upsertMutation = useServiceMutation(
     (input: TimesheetEntryUpsert) =>
-      dipendentiTimesheetService.upsertEntry(input, tipiOpts.tipi),
+      dipendentiTimesheetEntry.upsertEntry(input, tipiOpts.tipi),
     {
       onMutate: () => {
         setSaveStatus("pending");

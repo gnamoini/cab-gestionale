@@ -10,8 +10,8 @@ function read(rel: string): string {
 
 const auth = read("lib/media/media-image-auth.server.ts");
 assert.match(auth, /verifyImageScopeModuleAccess/, "media auth must centralize scope access");
-assert.match(auth, /verifyServerSectionRead/, "media auth must check read");
-assert.match(auth, /verifyServerSectionWrite/, "media auth must check write");
+assert.match(auth, /verifyServerPageRead/, "media auth must check read");
+assert.match(auth, /verifyServerPageWrite/, "media auth must check write");
 assert.doesNotMatch(
   auth,
   /section === "magazzino"/,

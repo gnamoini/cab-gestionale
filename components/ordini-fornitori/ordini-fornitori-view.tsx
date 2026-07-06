@@ -55,7 +55,7 @@ import {
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { useOrdiniFornitoriQuery } from "@/src/hooks/gestionale/use-ordini-fornitori-query";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
-import { ordiniFornitoriService } from "@/src/services/ordini-fornitori.service";
+import { ordiniFornitoriEntry } from "@/lib/domain/ordini-fornitori-entry";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import {
   CardMobile,
@@ -175,7 +175,7 @@ export function OrdiniFornitoriView() {
 
   async function handleAnnulla(record: OrdineFornitoreRecord) {
     if (!canWrite) return;
-    const res = await ordiniFornitoriService.annulla(record.id);
+    const res = await ordiniFornitoriEntry.annulla(record.id);
     if (!res.success) {
       gestToast.errorOnce("ordine-annulla", res.error ?? "Errore annullamento.");
       return;
@@ -186,7 +186,7 @@ export function OrdiniFornitoriView() {
 
   async function handleDelete(record: OrdineFornitoreRecord) {
     if (!canWrite || record.status !== "bozza") return;
-    const res = await ordiniFornitoriService.deleteBozza(record.id);
+    const res = await ordiniFornitoriEntry.deleteBozza(record.id);
     if (!res.success) {
       gestToast.errorOnce("ordine-delete", res.error ?? "Errore eliminazione.");
       return;

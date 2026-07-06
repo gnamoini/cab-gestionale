@@ -20,7 +20,7 @@ import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-noti
 import { findExactEntityInPool } from "@/lib/validation/global-entity-validation";
 import { appendGlobalListSuccessMessage } from "@/lib/global-list/append-success-message";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import { SETTINGS_CONCURRENCY_CONFLICT } from "@/src/services/settings.service";
+import { SETTINGS_CONCURRENCY_CONFLICT } from "@/lib/domain/settings-entry";
 
 const SETTINGS_PAYLOAD_QK = [...QK.settings, "payload"] as const;
 const APPEND_OCC_MAX_ATTEMPTS = 3;

@@ -22,9 +22,9 @@ import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
 import {
   mergeAppSettingsUpsertWithVersions,
   SETTINGS_CONCURRENCY_CONFLICT,
-  settingsService,
+  settingsEntry,
   type AppSettingsUpsertInput,
-} from "@/src/services/settings.service";
+} from "@/lib/domain/settings-entry";
 import type { AppSettingRow } from "@/src/types/supabase-tables";
 
 export type CabAppSettingsQueryPayload = {
@@ -39,7 +39,7 @@ export async function fetchCabAppSettingsPayload(): Promise<CabAppSettingsQueryP
     SETTINGS_PAYLOAD_QK,
     async () => {
       recordQueryFetch(SETTINGS_PAYLOAD_QK);
-      const r = await settingsService.getAllSettings();
+      const r = await settingsEntry.getAllSettings();
       if (!r.success) throw new Error(r.error ?? "Errore lettura impostazioni");
       const rows: AppSettingRow[] = r.data ?? [];
       return { rows, resolved: resolveCabAppSettingsFromRows(rows, null) };
@@ -131,7 +131,7 @@ export function useSettingsBulkMutation() {
   const qc = useQueryClient();
   const onConflict = useSettingsConflictToast();
   return useServiceMutation(
-    (rows: AppSettingsUpsertInput[]) => persistSettingsRecord(qc, () => settingsService.bulkUpsertSettings(rows)),
+    (rows: AppSettingsUpsertInput[]) => persistSettingsRecord(qc, () => settingsEntry.bulkUpsertSettings(rows)),
     {
       onError: (e) => {
         onConflict(e.message);
@@ -144,7 +144,7 @@ export function useSettingsUpsertMutation() {
   const qc = useQueryClient();
   const onConflict = useSettingsConflictToast();
   return useServiceMutation(
-    (input: AppSettingsUpsertInput) => persistSettingsRecord(qc, () => settingsService.upsertSetting(input)),
+    (input: AppSettingsUpsertInput) => persistSettingsRecord(qc, () => settingsEntry.upsertSetting(input)),
     {
       onError: (e) => {
         onConflict(e.message);

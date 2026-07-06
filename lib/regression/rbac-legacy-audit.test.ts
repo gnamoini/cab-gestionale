@@ -48,7 +48,11 @@ const FORBIDDEN: Array<{ name: string; re: RegExp }> = [
   { name: "role_permissions table in app", re: /role_permissions/ },
   { name: "user_permissions table in app", re: /user_permissions/ },
   { name: "client_portal_access allowlist", re: /client_portal_access/ },
-  { name: 'roleKey === "admin" bypass outside resolver', re: /roleKey\s*===\s*["']admin["']/ },
+  { name: "ensurePermission stub", re: /\bensurePermission\s*\(/ },
+  { name: "verifyServerPermission stub", re: /\bverifyServerPermission\s*\(/ },
+  { name: "ensureWorkflowWrite", re: /\bensureWorkflowWrite\s*\(/ },
+  { name: "ensureSectionRead bridge", re: /\bensureSectionRead\s*\(/ },
+  { name: "verifyServerSectionRead bridge", re: /\bverifyServerSectionRead\s*\(/ },
 ];
 
 function walk(dir: string, out: string[]): void {

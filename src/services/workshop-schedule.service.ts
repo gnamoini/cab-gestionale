@@ -9,7 +9,6 @@ import { enrichedViewFromRows } from "@/lib/workshop-schedule/workshop-schedule-
 import type { WorkshopScheduleDbRow } from "@/lib/workshop-schedule/workshop-schedule-db-mapper";
 import { mapDbRowToSession } from "@/lib/workshop-schedule/workshop-schedule-db-mapper";
 import { enrichSessionView, type LavorazioneProjectionRow } from "@/lib/workshop-schedule/workshop-schedule-projection";
-import { ensureOperationalWrite, ensureSectionRead, ensureSectionWrite } from "@/src/lib/auth/permission-guards";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import { serviceFailFromError, errMessageFromSupabase } from "@/src/utils/supabaseErrorHandler";
@@ -93,8 +92,6 @@ export const workshopScheduleService = {
     filters?: WorkshopScheduleFilters,
   ): Promise<ServiceResult<WorkshopScheduleSessionView[]>> {
     try {
-      const allowed = await ensureSectionRead("dashboard");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.rpc("cab_list_workshop_schedule_events", {
         p_start: startIso,
@@ -121,8 +118,6 @@ export const workshopScheduleService = {
 
   async listByWorkOrder(workOrderId: string): Promise<ServiceResult<WorkshopScheduleSessionView[]>> {
     try {
-      const allowed = await ensureSectionRead("dashboard");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.rpc("cab_list_workshop_schedule_by_work_order", {
         p_work_order_id: workOrderId,
@@ -138,8 +133,6 @@ export const workshopScheduleService = {
 
   async upsert(input: WorkshopScheduleUpsertInput): Promise<ServiceResult<WorkshopScheduleSessionView>> {
     try {
-      const allowed = await ensureSectionWrite("dashboard");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.rpc("cab_upsert_workshop_schedule_event", {
         p_id: input.id ?? null,
@@ -169,8 +162,6 @@ export const workshopScheduleService = {
 
   async patchTimes(input: WorkshopSchedulePatchTimesInput): Promise<ServiceResult<WorkshopScheduleSessionView>> {
     try {
-      const allowed = await ensureOperationalWrite();
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.rpc("cab_patch_workshop_schedule_times", {
         p_id: input.id,
@@ -189,8 +180,6 @@ export const workshopScheduleService = {
 
   async softDelete(id: string): Promise<ServiceResult<true>> {
     try {
-      const allowed = await ensureOperationalWrite();
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { error } = await c.rpc("soft_delete_workshop_schedule_event", { p_id: id });
       if (error) return err(errMessageFromSupabase(error, { action: "delete" }));
@@ -207,8 +196,6 @@ export const workshopScheduleService = {
     excludeId?: string | null,
   ): Promise<ServiceResult<Array<{ event_id: string; conflict_type: string; title: string }>>> {
     try {
-      const allowed = await ensureSectionRead("dashboard");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.rpc("cab_detect_schedule_conflicts", {
         p_start: startAt,
@@ -225,8 +212,6 @@ export const workshopScheduleService = {
 
   async migratePromemoria(): Promise<ServiceResult<number>> {
     try {
-      const allowed = await ensureSectionWrite("dashboard");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.rpc("cab_migrate_dashboard_promemoria_to_schedule");
       if (error) return err(error.message);

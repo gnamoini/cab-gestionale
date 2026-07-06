@@ -1,10 +1,10 @@
 import { isPdfArtifactType } from "@/lib/pdf-artifacts/pdf-artifact-registry";
 import { invalidatePdfArtifactScope } from "@/lib/pdf-artifacts/pdf-artifact-invalidate.server";
-import { verifyServerPermission } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  if (!(await verifyServerPermission("manageSettings"))) {
+  if (!(await verifyServerPageWrite("impostazioni"))) {
     return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
   }
 

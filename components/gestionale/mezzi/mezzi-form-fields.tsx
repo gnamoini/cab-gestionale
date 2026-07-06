@@ -17,7 +17,7 @@ import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-querie
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { EntitySimilarWarning } from "@/components/design-system/entity-similar-warning";
 import { findMezzoBySimilarIdent } from "@/lib/validation/services/mezzi-validation";
-import type { MezzoInsert, MezzoUpdate } from "@/src/services/mezzi.service";
+import type { MezzoInsert, MezzoUpdate } from "@/lib/domain/mezzi-entry";
 
 export type MezzoFormState = ReturnType<typeof getEmptyMezzoForm>;
 

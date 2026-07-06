@@ -2,7 +2,6 @@
 
 import { ASSET_TIMELINE_PROJECTION_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { AssetTimelineProjectionRow } from "@/src/types/supabase-tables";
 import { humanizeGestionaleError } from "@/src/utils/gestionale-error-messages";
@@ -15,8 +14,6 @@ async function sb() {
 
 export const assetTimelineService = {
   async listInRange(range: DateRange): Promise<ServiceResult<AssetTimelineProjectionRow[]>> {
-    const allowed = await ensureSectionRead("mezzi");
-    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
     try {
       const client = await sb();
       const fromIso = startOfLocalDay(range.start).toISOString();
