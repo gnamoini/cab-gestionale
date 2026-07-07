@@ -6,6 +6,7 @@ import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 import { cabSyncEventForEntity, invalidateAfterLavorazioneMutations } from "@/src/lib/react-query/invalidate-related";
 import {
   applyOptimisticLavorazioneUpdate,
+  buildCompletamentoOptimisticPatch,
   buildConcludeOptimisticPatch,
   buildLavorazioneOptimisticAudit,
   buildRestoreOptimisticPatch,
@@ -64,6 +65,43 @@ export function useLavorazioneUpdateMutation() {
       onSuccess: (serverRow, variables) => {
         applyOptimisticLavorazioneUpdate(queryClient, variables.id, variables.data, serverRow);
         markRecentLocalGestionaleMutation(["lavorazioni"], variables.id);
+      },
+      onError: (_err, _variables, context) => {
+        if (context) rollbackLavorazioneUpdateQueries(queryClient, context as LavorazioneUpdateOptimisticContext);
+      },
+      onSettled: async (data, error, variables) => {
+        if (error) return;
+        await traceMutationLifecycle(
+          { entityType: "lavorazione", entityId: variables.id, operation: "update" },
+          () => settleLavorazioneQuickUpdate(queryClient, false, variables.id, data?.updated_at),
+        );
+      },
+    },
+  );
+}
+
+export function useLavorazioneUpdateCompletamentoMutation() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const optimisticAudit = buildLavorazioneOptimisticAudit(user?.id);
+  return useServiceMutation(
+    ({ id, completionYmd }: { id: string; completionYmd: string }) =>
+      lavorazioniEntry.updateArchivioCompletamento(id, completionYmd),
+    {
+      onMutate: async ({ id, completionYmd }) => {
+        const context = await snapshotLavorazioneUpdateQueries(queryClient, id);
+        applyOptimisticLavorazioneUpdate(
+          queryClient,
+          id,
+          buildCompletamentoOptimisticPatch(completionYmd),
+          undefined,
+          optimisticAudit,
+        );
+        return context;
+      },
+      onSuccess: (serverRow, { id }) => {
+        applyOptimisticLavorazioneUpdate(queryClient, id, {}, serverRow);
+        markRecentLocalGestionaleMutation(["lavorazioni"], id);
       },
       onError: (_err, _variables, context) => {
         if (context) rollbackLavorazioneUpdateQueries(queryClient, context as LavorazioneUpdateOptimisticContext);

@@ -268,6 +268,8 @@ export type LavorazioneArchivioMobileCardProps = {
   onRipristina: (row: LavorazioneListRow) => void;
   onOpenInfo: (row: LavorazioneListRow) => void;
   onOpenSchede: (row: LavorazioneListRow) => void;
+  onEditCompletamento?: (row: LavorazioneListRow) => void;
+  completamentoEditDisabled?: boolean;
 };
 
 function LavorazioneArchivioMobileCardInner({
@@ -284,6 +286,8 @@ function LavorazioneArchivioMobileCardInner({
   onRipristina,
   onOpenInfo,
   onOpenSchede,
+  onEditCompletamento,
+  completamentoEditDisabled = false,
 }: LavorazioneArchivioMobileCardProps) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
@@ -300,7 +304,21 @@ function LavorazioneArchivioMobileCardInner({
         ingresso={<LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />}
         statusSlot={
           <LavorazioneMobileStatusSlot>
-            <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} />
+            <LavorazioneCompletamentoDatePill
+              iso={lavorazioneDataCompletamentoIso(row)}
+              fullWidth={false}
+              onClick={
+                canEditWorkOrders && onEditCompletamento
+                  ? () => onEditCompletamento(row)
+                  : undefined
+              }
+              disabled={
+                !canEditWorkOrders ||
+                mutPendingBlocking ||
+                loading ||
+                completamentoEditDisabled
+              }
+            />
           </LavorazioneMobileStatusSlot>
         }
       />
@@ -371,6 +389,8 @@ export const LavorazioneArchivioMobileCard = memo(
     prev.onRipristina === next.onRipristina &&
     prev.onOpenInfo === next.onOpenInfo &&
     prev.onOpenSchede === next.onOpenSchede &&
+    prev.onEditCompletamento === next.onEditCompletamento &&
+    prev.completamentoEditDisabled === next.completamentoEditDisabled &&
     lavorazioneSchedeBundleRevision(prev.bundle) === lavorazioneSchedeBundleRevision(next.bundle),
 );
 

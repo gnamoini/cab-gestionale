@@ -93,3 +93,19 @@ export function localCalendarDayIsoFromIso(iso: string, fallback?: string): stri
   if (r.ok) return r.iso;
   return localCalendarDayIsoFromDate(fallback ? new Date(fallback) : new Date());
 }
+
+export type LavorazioneCompletamentoFields = {
+  data_uscita: string;
+  archived_at: string;
+};
+
+/** SSOT: ymd → campi completamento archivio (service + optimistic). */
+export function lavorazioneCompletamentoFieldsFromYmd(
+  completionYmd: string,
+): { ok: true; fields: LavorazioneCompletamentoFields } | { ok: false } {
+  const ymd = completionYmd.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return { ok: false };
+  const archived = dateInputValueToIso(ymd);
+  if (!archived.ok) return { ok: false };
+  return { ok: true, fields: { data_uscita: ymd, archived_at: archived.iso } };
+}

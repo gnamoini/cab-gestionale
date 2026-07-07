@@ -9,6 +9,10 @@ import { QueryClient } from "@tanstack/react-query";
 import { buildLavorazioniListKey } from "@/lib/react-query/build-list-keys";
 import { normalizeLavorazioniFilters } from "@/lib/domain/normalize-filters";
 import {
+  lavorazioniListCountQueryKey,
+  lavorazioniListQueryKey,
+} from "@/lib/lavorazioni/lavorazioni-list-query-keys";
+import {
   applyOptimisticLavorazioneUpdate,
   assertNoArchivedInActiveLists,
   buildConcludeOptimisticPatch,
@@ -77,6 +81,62 @@ function listKeyV2(mode: "active" | "closed") {
 assert.equal(isLavorazioniListCacheQueryKey(listKeyLegacy(false)), true);
 assert.equal(isLavorazioniListCacheQueryKey(listKeyV2("active")), true);
 assert.equal(isLavorazioniListCacheQueryKey([...QK.lavorazioniQueries, "base", ID]), false);
+
+const filtersAttive = { archived: false as const, includeMezzo: true, fetchMode: "light" as const, includeProfiles: false };
+const countKey = lavorazioniListCountQueryKey(filtersAttive);
+const listFactoryKey = lavorazioniListQueryKey(filtersAttive);
+const listPortalKey = lavorazioniListQueryKey(filtersAttive, true);
+
+assert.equal(isLavorazioniListCacheQueryKey(countKey), false, "count key excluded");
+assert.equal(
+  isLavorazioniListCacheQueryKey([...QK.lavorazioniQueries, "list", "filters", "custom-subquery"]),
+  false,
+  "custom subquery excluded",
+);
+assert.equal(isLavorazioniListCacheQueryKey(listFactoryKey), true, "staff ops list");
+assert.equal(isLavorazioniListCacheQueryKey(listPortalKey), true, "portal list");
+assert.equal(isLavorazioniListCacheQueryKey(listKeyV2("active")), true, "list-v2 active");
+
+// stato optimistic con count cache presente (bug produzione)
+{
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const attive = listFactoryKey;
+  qc.setQueryData(countKey, 5);
+  qc.setQueryData(attive, [seedRow()]);
+  applyOptimisticLavorazioneUpdate(qc, ID, { stato: "diagnosi" });
+  assert.equal(qc.getQueryData<number>(countKey), 5, "count unchanged");
+  assert.equal(qc.getQueryData<LavorazioneListRow[]>(attive)?.[0]?.stato, "diagnosi");
+}
+
+// fail-safe: numero su key lista valida
+{
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const attive = listFactoryKey;
+  qc.setQueryData(attive, 123 as unknown as LavorazioneListRow[]);
+  applyOptimisticLavorazioneUpdate(qc, ID, { stato: "diagnosi" });
+  assert.equal(qc.getQueryData(attive), 123, "scalar list cache skipped");
+}
+
+// snapshot/rollback: count non nel context, count invariato dopo rollback
+async function rollbackPreservesCountCache() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const attive = listFactoryKey;
+  const row = seedRow();
+  qc.setQueryData(countKey, 15);
+  qc.setQueryData(attive, [row]);
+
+  const ctx = await snapshotLavorazioneUpdateQueries(qc, ID);
+  assert.ok(
+    !ctx.lists.some((s) => s.queryKey[s.queryKey.length - 1] === "count"),
+    "snapshot must not include count",
+  );
+
+  applyOptimisticLavorazioneUpdate(qc, ID, { stato: "diagnosi" });
+  rollbackLavorazioneUpdateQueries(qc, ctx);
+
+  assert.equal(qc.getQueryData<number>(countKey), 15);
+  assert.equal(qc.getQueryData<LavorazioneListRow[]>(attive)?.[0]?.stato, "in_lavorazione");
+}
 
 // conclude su list legacy
 {
@@ -179,6 +239,6 @@ async function rollbackAfterConcludeRace() {
   assert.match(src, /isLavorazioniListCacheQueryKey\(q\.queryKey\)/);
 }
 
-void rollbackAfterConcludeRace().then(() => {
+void Promise.all([rollbackAfterConcludeRace(), rollbackPreservesCountCache()]).then(() => {
   console.log("lavorazioni-archive-membership.test.ts OK");
 });

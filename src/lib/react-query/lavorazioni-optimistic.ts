@@ -7,6 +7,7 @@ export type {
 export {
   applyOptimisticLavorazioneUpdate,
   assertNoArchivedInActiveLists,
+  buildCompletamentoOptimisticPatch,
   buildConcludeOptimisticPatch,
   buildRestoreOptimisticPatch,
   buildLavorazioneOptimisticAudit,

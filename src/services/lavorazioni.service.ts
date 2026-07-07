@@ -10,6 +10,8 @@ import type { LavorazioneRow, MezzoRow, PrioritaLavorazione, StatoLavorazione } 
 import { fetchLavorazioniListAuthorized } from "@/lib/lavorazioni/lavorazioni-list-fetch";
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
 import { partitionAddettiInUso } from "@/lib/lavorazioni/addetti-in-uso";
+import { lavorazioneCompletamentoFieldsFromYmd } from "@/lib/lavorazioni/date-day-only";
+import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const ENTITA = "lavorazioni";
@@ -241,6 +243,62 @@ export const lavorazioniService = {
         entita_id: id,
         azione: "UPDATE",
         payload: auditDiff(before, r, ctx),
+      });
+      return success(r);
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
+  /** Aggiorna data completamento su lavorazione archiviata (sincronizza data_uscita + archived_at). */
+  async updateArchivioCompletamento(
+    id: string,
+    completionYmd: string,
+  ): Promise<ServiceResult<LavorazioneRow>> {
+    try {
+      const sb = await c();
+      const userId = await authUserId(sb);
+      const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(
+        sb.from("lavorazioni").select(LAVORAZIONI_COLUMNS).eq("id", id),
+      ).maybeSingle();
+      if (e0) return err(e0.message);
+      if (!before) return err("Lavorazione non trovata");
+      const b = before as LavorazioneRow;
+
+      const fieldsRes = lavorazioneCompletamentoFieldsFromYmd(completionYmd);
+      if (!fieldsRes.ok) return err("Data completamento non valida.");
+
+      const ingressoYmd = b.data_ingresso?.trim().slice(0, 10);
+      if (ingressoYmd && fieldsRes.fields.data_uscita < ingressoYmd) {
+        return err("La data di completamento non può essere precedente alla data di ingresso.");
+      }
+
+      const completamentoPrima = lavorazioneDataCompletamentoIso(b as LavorazioneListRow);
+      const patch = withRowUpdatedBy(fieldsRes.fields, userId);
+      const { data: row, error } = await applyLavorazioniNotDeletedFilter(
+        sb.from("lavorazioni").update(patch).eq("id", id).eq("archived", true),
+      )
+        .select(LAVORAZIONI_COLUMNS)
+        .maybeSingle();
+      if (error) return err(error.message);
+      if (!row) {
+        return err("Lavorazione non più in archivio o modificata da un altro utente.");
+      }
+
+      const r = row as LavorazioneRow;
+      const ctx = await oggettoContextForLavorazione(sb, r);
+      await writeModificaLog(sb, {
+        entita: ENTITA,
+        entita_id: id,
+        azione: "UPDATE",
+        payload: {
+          ...auditDiff(before, r, ctx),
+          completamento: {
+            campo: "data_uscita",
+            prima: completamentoPrima,
+            dopo: fieldsRes.fields.data_uscita,
+          },
+        },
       });
       return success(r);
     } catch (e) {

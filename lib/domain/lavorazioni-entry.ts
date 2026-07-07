@@ -38,6 +38,15 @@ export const lavorazioniEntry = {
     return lavorazioniService.conclude(id);
   },
 
+  async updateArchivioCompletamento(
+    id: string,
+    completionYmd: string,
+  ): Promise<ServiceResult<LavorazioneRow>> {
+    const allowed = await guardWrite();
+    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+    return lavorazioniService.updateArchivioCompletamento(id, completionYmd);
+  },
+
   async remove(id: string): Promise<ServiceResult<null>> {
     const allowed = await guardWrite();
     if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");

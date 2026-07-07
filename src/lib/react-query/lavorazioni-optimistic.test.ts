@@ -7,6 +7,7 @@ import {
   rollbackLavorazioneUpdateQueries,
   snapshotLavorazioneUpdateQueries,
 } from "@/src/lib/react-query/lavorazioni-optimistic-cache";
+import { lavorazioniListQueryKey } from "@/lib/lavorazioni/lavorazioni-list-query-keys";
 import { QK } from "@/src/lib/react-query/query-keys";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneRow } from "@/src/types/supabase-tables";
@@ -36,20 +37,12 @@ function seedRow(overrides: Partial<LavorazioneListRow> = {}): LavorazioneListRo
 }
 
 function listKey(archived: boolean) {
-  const fk = JSON.stringify({
-    m: "",
-    s: "",
-    p: "",
-    i: 1,
-    si: "",
-    q: "",
-    di0: "",
-    di1: "",
-    du0: "",
-    du1: "",
-    ar: archived ? 1 : 0,
+  return lavorazioniListQueryKey({
+    archived: archived ? true : false,
+    includeMezzo: true,
+    fetchMode: "light",
+    includeProfiles: false,
   });
-  return [...QK.lavorazioniQueries, "list", fk] as const;
 }
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

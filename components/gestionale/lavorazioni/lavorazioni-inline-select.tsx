@@ -208,20 +208,43 @@ export function LavorazioneCompletamentoDatePill({
   iso,
   align = "center",
   fullWidth = true,
+  onClick,
+  disabled = false,
 }: {
   iso: string;
   align?: "left" | "center";
   fullWidth?: boolean;
+  onClick?: () => void;
+  disabled?: boolean;
 }) {
   const { date } = formatLavorazioneIngressoDisplay(iso);
-  const pill = (
-    <LavorazioneReadOnlyPill
-      label={date}
-      shellClass={statoPillShellClass()}
-      shellStyle={completamentoDatePillStyle}
-      fullWidth={fullWidth}
-    />
-  );
+  const interactive = Boolean(onClick) && !disabled;
+  const widthClass = fullWidth ? "w-full min-w-0 max-w-full" : "w-fit min-w-0 max-w-full";
+  const contentClass = fullWidth
+    ? `flex ${lavTablePillMinH} w-full items-center justify-center px-2 py-0.5 ${lavTablePillTextClass} whitespace-nowrap`
+    : `px-2 py-1 ${lavTablePillTextClass} whitespace-nowrap`;
+
+  const pill =
+    interactive ? (
+      <button
+        type="button"
+        title="Modifica data completamento"
+        disabled={disabled}
+        onClick={onClick}
+        className={`${statoPillShellClass()} ${widthClass} inline-flex touch-manipulation justify-center overflow-hidden ${contentClass} ${dsFocus} cursor-pointer disabled:cursor-not-allowed disabled:opacity-60`}
+        style={completamentoDatePillStyle}
+      >
+        {date}
+      </button>
+    ) : (
+      <LavorazioneReadOnlyPill
+        label={date}
+        shellClass={statoPillShellClass()}
+        shellStyle={completamentoDatePillStyle}
+        fullWidth={fullWidth}
+      />
+    );
+
   if (fullWidth) return pill;
   return (
     <div className={`flex min-w-0 ${align === "center" ? "justify-center" : "justify-start"}`}>

@@ -2,6 +2,8 @@ import type { InfiniteData, QueryClient } from "@tanstack/react-query";
 import type { Page } from "@/lib/domain/list-types";
 import type { NormalizedLavorazioniFilters } from "@/lib/domain/list-where-spec";
 import { logLavorazioniArchiveMembershipDebug } from "@/lib/lavorazioni/lavorazioni-archive-membership-debug";
+import { isLavorazioniListRowsQueryKey } from "@/lib/lavorazioni/lavorazioni-list-query-keys";
+import { lavorazioneCompletamentoFieldsFromYmd } from "@/lib/lavorazioni/date-day-only";
 import type { LavorazioneListRow, LavorazioneUpdate } from "@/src/services/lavorazioni.service";
 import type { LavorazioneRow } from "@/src/types/supabase-tables";
 import { QK } from "@/src/lib/react-query/query-keys";
@@ -31,10 +33,7 @@ function lavorazioneBaseQueryKey(lavorazioneId: string) {
 
 /** SSOT: chiavi cache lista lavorazioni (legacy `list` + paginated `list-v2`). */
 export function isLavorazioniListCacheQueryKey(queryKey: readonly unknown[]): boolean {
-  return (
-    queryKey[0] === QK.lavorazioniQueries[0] &&
-    (queryKey[1] === "list" || queryKey[1] === "list-v2")
-  );
+  return isLavorazioniListRowsQueryKey(queryKey);
 }
 
 function listKindFromQueryKey(queryKey: readonly unknown[]): "list" | "list-v2" | "unknown" {
@@ -43,16 +42,26 @@ function listKindFromQueryKey(queryKey: readonly unknown[]): "list" | "list-v2" 
   return "unknown";
 }
 
-function isInfiniteListData(data: LavorazioniListCacheData): data is LavorazioniInfiniteListData {
-  return typeof data === "object" && data != null && "pages" in data && Array.isArray(data.pages);
+function isLavorazioniFlatListCacheData(data: unknown): data is LavorazioniFlatListData {
+  return Array.isArray(data);
+}
+
+function isLavorazioniInfiniteCacheData(data: unknown): data is LavorazioniInfiniteListData {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "pages" in data &&
+    Array.isArray((data as LavorazioniInfiniteListData).pages)
+  );
 }
 
 /** Estrae righe da cache lista (flat o infinite). */
 export function lavorazioniListCacheRows(data: LavorazioniListCacheData | undefined): LavorazioneListRow[] {
   if (!data) return [];
-  if (isInfiniteListData(data)) {
-    return data.pages.flatMap((p) => [...p.rows]);
+  if (isLavorazioniInfiniteCacheData(data)) {
+    return data.pages.flatMap((p) => [...(p.rows ?? [])]);
   }
+  if (!isLavorazioniFlatListCacheData(data)) return [];
   return [...data];
 }
 
@@ -193,7 +202,7 @@ function patchInfiniteList(
   const belongs = rowBelongsInArchivedList(merged, listArchived);
   let placed = false;
   const pages = data.pages.map((page) => {
-    const prev = [...page.rows];
+    const prev = [...(page.rows ?? [])];
     const hadRow = prev.some((r) => r.id === lavorazioneId);
     let rows: LavorazioneListRow[];
     if (belongs) {
@@ -204,7 +213,7 @@ function patchInfiniteList(
     }
     return { ...page, rows };
   });
-  if (belongs && !placed && !pages.some((p) => p.rows.some((r) => r.id === lavorazioneId))) {
+  if (belongs && !placed && !pages.some((p) => p.rows?.some((r) => r.id === lavorazioneId) ?? false)) {
     if (pages.length === 0) {
       return {
         ...data,
@@ -217,7 +226,7 @@ function patchInfiniteList(
       };
     }
     const last = pages[pages.length - 1];
-    pages[pages.length - 1] = { ...last, rows: [...last.rows, merged] };
+    pages[pages.length - 1] = { ...last, rows: [...(last.rows ?? []), merged] };
   }
   return { ...data, pages };
 }
@@ -232,10 +241,14 @@ function reconcileRowAcrossLists(qc: QueryClient, lavorazioneId: string, merged:
     const key = queryKey as readonly unknown[];
     const listArchived = parseListFilterArchived(key);
     const prev = old;
+    // ponytail: key match ≠ data shape; skip unexpected cache (count scalar, prefetch errato)
+    if (prev != null && !isLavorazioniInfiniteCacheData(prev) && !isLavorazioniFlatListCacheData(prev)) {
+      continue;
+    }
     let next: LavorazioniListCacheData;
     if (!prev) {
       next = patchFlatList([], lavorazioneId, merged, listArchived);
-    } else if (isInfiniteListData(prev)) {
+    } else if (isLavorazioniInfiniteCacheData(prev)) {
       next = patchInfiniteList(prev, lavorazioneId, merged, listArchived);
     } else {
       next = patchFlatList(prev, lavorazioneId, merged, listArchived);
@@ -385,6 +398,13 @@ export function buildConcludeOptimisticPatch(row: LavorazioneListRow | undefined
     archived_at: now,
     data_uscita: row?.data_uscita?.trim() ? row.data_uscita : now,
   };
+}
+
+/** Patch optimistic allineata a `lavorazioniService.updateArchivioCompletamento`. */
+export function buildCompletamentoOptimisticPatch(completionYmd: string): LavorazioneUpdate {
+  const res = lavorazioneCompletamentoFieldsFromYmd(completionYmd);
+  if (!res.ok) return {};
+  return res.fields;
 }
 
 /** Patch optimistic allineata a `lavorazioniService.restore`. */

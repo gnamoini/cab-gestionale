@@ -303,6 +303,8 @@ export type LavorazioneArchivioTableRowProps = {
   onRipristina: (row: LavorazioneListRow) => void;
   onOpenInfo: (row: LavorazioneListRow) => void;
   onOpenSchede: (row: LavorazioneListRow) => void;
+  onEditCompletamento?: (row: LavorazioneListRow) => void;
+  completamentoEditDisabled?: boolean;
 };
 
 function LavorazioneArchivioTableRowInner({
@@ -321,6 +323,8 @@ function LavorazioneArchivioTableRowInner({
   onRipristina,
   onOpenInfo,
   onOpenSchede,
+  onEditCompletamento,
+  completamentoEditDisabled = false,
 }: LavorazioneArchivioTableRowProps) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
@@ -359,7 +363,20 @@ function LavorazioneArchivioTableRowInner({
       </td>
       <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
-          <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} />
+          <LavorazioneCompletamentoDatePill
+            iso={lavorazioneDataCompletamentoIso(row)}
+            onClick={
+              canEditWorkOrders && onEditCompletamento
+                ? () => onEditCompletamento(row)
+                : undefined
+            }
+            disabled={
+              !canEditWorkOrders ||
+              mutPendingBlocking ||
+              loading ||
+              completamentoEditDisabled
+            }
+          />
         </div>
       </td>
       <td className={lavTableTdCenter}>
@@ -425,5 +442,7 @@ export const LavorazioneArchivioTableRow = memo(
     prev.onRipristina === next.onRipristina &&
     prev.onOpenInfo === next.onOpenInfo &&
     prev.onOpenSchede === next.onOpenSchede &&
+    prev.onEditCompletamento === next.onEditCompletamento &&
+    prev.completamentoEditDisabled === next.completamentoEditDisabled &&
     lavorazioneSchedeBundleRevision(prev.bundle) === lavorazioneSchedeBundleRevision(next.bundle),
 );

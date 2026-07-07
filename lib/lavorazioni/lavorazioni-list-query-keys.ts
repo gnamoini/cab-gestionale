@@ -39,6 +39,45 @@ export function lavorazioniListCountQueryKey(
   return [...lavorazioniListQueryKey(filtersOrStableKey, clientPortal), "count"] as const;
 }
 
+const LIST_SCOPE_SUFFIXES = new Set(["ops", "portal"]);
+
+/** Count archivio — prefisso lavorazioni + segmento finale "count". */
+export function isLavorazioniListCountQueryKey(queryKey: readonly unknown[]): boolean {
+  return (
+    queryKey[0] === QK.lavorazioniQueries[0] &&
+    queryKey[queryKey.length - 1] === "count"
+  );
+}
+
+/** Legacy flat list: [lavorazioniQueries, "list", fk, "ops"|"portal"]. */
+export function isLavorazioniLegacyListRowsQueryKey(queryKey: readonly unknown[]): boolean {
+  return (
+    queryKey.length >= 4 &&
+    queryKey[0] === QK.lavorazioniQueries[0] &&
+    queryKey[1] === "list" &&
+    LIST_SCOPE_SUFFIXES.has(String(queryKey.at(-1)))
+  );
+}
+
+/** Paginated list-v2: [lavorazioniQueries, "list-v2", norm, "ops"|"portal"]. */
+export function isLavorazioniListV2RowsQueryKey(queryKey: readonly unknown[]): boolean {
+  return (
+    queryKey.length >= 4 &&
+    queryKey[0] === QK.lavorazioniQueries[0] &&
+    queryKey[1] === "list-v2" &&
+    LIST_SCOPE_SUFFIXES.has(String(queryKey.at(-1)))
+  );
+}
+
+/** Solo query che contengono righe lista (flat o infinite). */
+export function isLavorazioniListRowsQueryKey(queryKey: readonly unknown[]): boolean {
+  return (
+    isLavorazioniLegacyListRowsQueryKey(queryKey) ||
+    isLavorazioniListV2RowsQueryKey(queryKey)
+  );
+}
+
+/** @deprecated Usare `isLavorazioniLegacyListRowsQueryKey` per sole liste legacy flat. */
 export function isLavorazioniListQueryKey(queryKey: readonly unknown[]): boolean {
-  return queryKey[0] === QK.lavorazioniQueries[0] && queryKey[1] === "list";
+  return isLavorazioniLegacyListRowsQueryKey(queryKey);
 }

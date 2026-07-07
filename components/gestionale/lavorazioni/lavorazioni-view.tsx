@@ -42,6 +42,7 @@ const LavorazioniKanbanView = dynamic(
   { ssr: false, loading: () => <LoadingKanbanSkeleton /> },
 );
 import { LavorazioneConcludiConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog";
+import { LavorazioneCompletamentoEditModal } from "@/components/gestionale/lavorazioni/lavorazione-completamento-edit-modal";
 import { LavorazioneEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-elimina-confirm-dialog";
 import { type TablePillOption } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
@@ -151,7 +152,7 @@ import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.que
 import { fetchLavorazioniListCountAuthorized } from "@/lib/lavorazioni/lavorazioni-list-fetch";
 import { isLavorazioneArchived, isLavorazioneInCorso } from "@/lib/lavorazioni/archived";
 import { lavorazioniListCountQueryKey } from "@/lib/lavorazioni/lavorazioni-list-query-keys";
-import { useLavorazioneConcludeMutation, useLavorazioneRemoveMutation, useLavorazioneRestoreMutation, useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
+import { useLavorazioneConcludeMutation, useLavorazioneRemoveMutation, useLavorazioneRestoreMutation, useLavorazioneUpdateCompletamentoMutation, useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useLavorazioneStatoMoveMutation } from "@/src/hooks/gestionale/use-lavorazione-stato-move-mutation";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { mezziListQueryKey } from "@/lib/render/query-key-factory";
@@ -604,6 +605,7 @@ export function LavorazioniView() {
   const removeLav = useLavorazioneRemoveMutation();
   const restoreLav = useLavorazioneRestoreMutation();
   const concludeLav = useLavorazioneConcludeMutation();
+  const updateCompletamentoLav = useLavorazioneUpdateCompletamentoMutation();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createModalWarm, setCreateModalWarm] = useState(false);
@@ -824,6 +826,7 @@ export function LavorazioniView() {
 
   const [flashRowId, setFlashRowId] = useState<string | null>(null);
   const [concludiConfirmRow, setConcludiConfirmRow] = useState<LavorazioneListRow | null>(null);
+  const [completamentoEditRow, setCompletamentoEditRow] = useState<LavorazioneListRow | null>(null);
   const [eliminaConfirmRow, setEliminaConfirmRow] = useState<LavorazioneListRow | null>(null);
   const flashClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -1079,7 +1082,11 @@ export function LavorazioniView() {
     ? formatSupabaseError(removeLav.error, { module: "lavorazioni", action: "delete" })
     : null;
   // Non bloccare l'UI inline per update ottimistici (stato/priorità).
-  const mutPendingBlocking = removeLav.isPending || restoreLav.isPending || concludeLav.isPending;
+  const mutPendingBlocking =
+    removeLav.isPending ||
+    restoreLav.isPending ||
+    concludeLav.isPending ||
+    updateCompletamentoLav.isPending;
 
   const onStatoRow = useCallback(
     (row: LavorazioneListRow, next: string) => {
@@ -1229,6 +1236,14 @@ export function LavorazioniView() {
   const onOpenArchivioSchede = useCallback((row: LavorazioneListRow) => {
     setSchedeRow({ row, origine: "storico", initialTab: "schede", dialogSize: "hub" });
   }, []);
+
+  const openCompletamentoEdit = useCallback(
+    (row: LavorazioneListRow) => {
+      if (!canEditWorkOrders || row.archived !== true || updateCompletamentoLav.isPending) return;
+      setCompletamentoEditRow(row);
+    },
+    [canEditWorkOrders, updateCompletamentoLav.isPending],
+  );
 
   function concludiActionBtnProps(row: LavorazioneListRow) {
     const awaitingCompletata = row.stato !== "completata" && row.archived !== true;
@@ -1777,6 +1792,8 @@ export function LavorazioniView() {
           onRipristina={onRipristinaArchivioRow}
           onOpenInfo={onOpenArchivioInfo}
           onOpenSchede={onOpenArchivioSchede}
+          onEditCompletamento={openCompletamentoEdit}
+          completamentoEditDisabled={updateCompletamentoLav.isPending}
         />
       );
     },
@@ -1792,6 +1809,8 @@ export function LavorazioniView() {
       onRipristinaArchivioRow,
       onOpenArchivioInfo,
       onOpenArchivioSchede,
+      openCompletamentoEdit,
+      updateCompletamentoLav.isPending,
     ],
   );
 
@@ -2286,6 +2305,8 @@ export function LavorazioniView() {
                 onRipristina={onRipristinaArchivioRow}
                 onOpenInfo={onOpenArchivioInfo}
                 onOpenSchede={onOpenArchivioSchede}
+                onEditCompletamento={openCompletamentoEdit}
+                completamentoEditDisabled={updateCompletamentoLav.isPending}
               />
             ))}
           </LavorazioniMobileListShell>
@@ -2421,6 +2442,19 @@ export function LavorazioniView() {
         }}
         onConfirm={confirmConcludiLavorazione}
       />
+
+      {canEditWorkOrders && completamentoEditRow ? (
+        <LavorazioneCompletamentoEditModal
+          row={completamentoEditRow}
+          onClose={() => {
+            if (!updateCompletamentoLav.isPending) setCompletamentoEditRow(null);
+          }}
+          onSaved={() => {
+            flashRow(completamentoEditRow.id);
+            void lavModificheLogQuery.refetch();
+          }}
+        />
+      ) : null}
 
       <LavorazioneEliminaConfirmDialog
         open={eliminaConfirmRow != null}
