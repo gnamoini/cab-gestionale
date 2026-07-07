@@ -31,6 +31,7 @@ import {
 import type { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
 import {
   lavorazioneAddettoLabel,
+  lavorazioneAddettoNomeKey,
   lavorazioneCantiereLabel,
   lavorazioneMacchinaLabel,
   lavorazioneOggettoLabel,
@@ -164,7 +165,8 @@ function LavorazioneAttivaTableRowInner({
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const telaio = lavorazioneTelaioLabel(row, schedeStore);
-  const addetto = lavorazioneAddettoLabel(row, schedeStore, undefined, addettiRecords);
+  const addettoLabel = lavorazioneAddettoLabel(row, schedeStore, undefined, addettiRecords);
+  const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, undefined, addettiRecords);
   const awaitingCompletata = row.stato !== "completata" && row.archived !== true;
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
@@ -234,14 +236,14 @@ function LavorazioneAttivaTableRowInner({
           <AddettoSelectField
             variant="pill"
             tablePillWidth={lavTablePillFillClass}
-            options={tablePillOptions.addetto(addetto)}
+            options={tablePillOptions.addetto(addettoKey)}
             shellClass={addettoPillShellClass()}
-            shellStyle={addettoPillShellStyleForName(addetto, addettoColors)}
-            value={addetto}
+            shellStyle={addettoPillShellStyleForName(addettoKey, addettoColors)}
+            value={addettoKey}
             onChange={(v) => onAddettoRow(row, v)}
             ariaLabel={`Addetto — ${macchina}`}
             disabled={loading || !canEditWorkOrders || addetti.length === 0}
-            title={addetto}
+            title={addettoLabel}
           />
         </div>
       </td>
@@ -323,6 +325,8 @@ function LavorazioneArchivioTableRowInner({
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
+  const addettoLabel = lavorazioneAddettoLabel(row, schedeStore, addettoLogs, addettiRecords);
+  const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, addettoLogs, addettiRecords);
 
   return (
     <tr
@@ -364,7 +368,8 @@ function LavorazioneArchivioTableRowInner({
       <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
           <LavorazioneAddettoReadOnlyPill
-            addetto={lavorazioneAddettoLabel(row, schedeStore, addettoLogs, addettiRecords)}
+            addetto={addettoLabel}
+            colorKey={addettoKey}
             addettoColors={addettoColors}
           />
         </div>

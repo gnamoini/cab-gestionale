@@ -72,11 +72,17 @@ test("preventivo roundtrip slice → patch", () => {
     km: "1000",
     livelloCarburante: "Pieno",
     richiedente: "Req",
+    targetType: "attrezzatura",
+    attrezzaturaId: "att-1",
   } as PreventivoRecord;
   const slice = preventivoToSchedaIngressoSlice(base);
+  assert.equal(slice.targetType, "attrezzatura");
+  assert.equal(slice.attrezzaturaId, "att-1");
   const patch = schedaIngressoSliceToPreventivoPatch({ ...slice, km: "2000" });
   assert.equal(patch.km, "2000");
   assert.equal(patch.tipoTelaio, "Gomma");
+  assert.equal(patch.targetType, "attrezzatura");
+  assert.equal(patch.attrezzaturaId, "att-1");
 });
 
 test("PDF attrezzatura e telaio completi da record esteso", () => {

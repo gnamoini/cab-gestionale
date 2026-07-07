@@ -4,6 +4,7 @@ import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cli
 import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import { nextPreventivoNumeroForLavorazione } from "@/lib/preventivi/preventivo-numero-lavorazione";
 import { nextPreventivoId } from "@/lib/preventivi/preventivi-records-from-cache";
+import { RICAMBIO_UNITA_MISURA_DEFAULT } from "@/lib/magazzino/ricambio-unita-misura";
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
 import { PREVENTIVO_TIPO_DOCUMENTO_DEFAULT } from "@/lib/preventivi/preventivi-tipo-documento";
 import {
@@ -149,6 +150,7 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
       codiceOE: codiceOE || "—",
       descrizione: desc || "—",
       quantita: q,
+      unitaMisura: mag?.unitaMisura ?? RICAMBIO_UNITA_MISURA_DEFAULT,
       prezzoUnitario: Math.round(prezzo * 100) / 100,
       scontoPercent: 0,
     };

@@ -170,6 +170,8 @@ export function mergeAnagraficaPreventivo(
 
 export function preventivoToSchedaIngressoSlice(p: PreventivoRecord): SchedaIngressoFields {
   return {
+    targetType: p.targetType,
+    attrezzaturaId: p.attrezzaturaId ?? undefined,
     dataIngresso: "",
     cliente: p.cliente,
     cantiere: p.cantiere,
@@ -196,13 +198,19 @@ export function preventivoToSchedaIngressoSlice(p: PreventivoRecord): SchedaIngr
 
 export function schedaIngressoSliceToPreventivoPatch(slice: Partial<SchedaIngressoFields>): Partial<PreventivoRecord> {
   const anag = anagraficaFromSchedaIngresso(slice);
-  return { ...anag };
+  return {
+    ...anag,
+    ...(slice.targetType !== undefined ? { targetType: slice.targetType } : {}),
+    ...(slice.attrezzaturaId !== undefined ? { attrezzaturaId: slice.attrezzaturaId } : {}),
+  };
 }
 
 export function applyAnagraficaPatchToPreventivo(
   record: PreventivoRecord,
-  patch: Partial<PreventivoAnagraficaPatch>,
+  patch: Partial<PreventivoAnagraficaPatch> &
+    Partial<Pick<PreventivoRecord, "targetType" | "attrezzaturaId">>,
 ): PreventivoRecord {
+  const { targetType, attrezzaturaId, ...anagPatch } = patch;
   const merged = mergePatch(
     {
       cliente: record.cliente,
@@ -223,7 +231,12 @@ export function applyAnagraficaPatchToPreventivo(
       livelloCarburante: record.livelloCarburante,
       richiedente: record.richiedente,
     },
-    patch,
+    anagPatch,
   );
-  return { ...record, ...merged };
+  return {
+    ...record,
+    ...merged,
+    ...(targetType !== undefined ? { targetType } : {}),
+    ...(attrezzaturaId !== undefined ? { attrezzaturaId } : {}),
+  };
 }

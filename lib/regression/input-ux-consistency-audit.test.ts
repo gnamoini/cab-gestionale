@@ -24,6 +24,7 @@ const formSection = read("components/gestionale/schede/gestionale-form-section.t
 const fieldLabel = read("lib/ui/gestionale-field-label.ts");
 const filterFields = read("components/gestionale/lavorazioni/lavorazioni-filter-fields.tsx");
 const shellCard = read("components/gestionale/shell-card.tsx");
+const collapsibleHeader = read("components/design-system/gestionale-collapsible-header.tsx");
 const searchField = read("components/gestionale/gestionale-search-field.tsx");
 const inlineSelect = read("components/gestionale/lavorazioni/lavorazioni-inline-select.tsx");
 
@@ -57,9 +58,9 @@ assert.match(formSection, /gestionaleFieldLabelClass/);
 assert.match(fieldLabel, /pointer-events-none/);
 assert.doesNotMatch(formSection, /<label[\s\S]*?<div className="mt-1">\{children\}<\/div>[\s\S]*?<\/label>/);
 assert.match(filterFields, /gestionaleFilterFieldLabelClass/);
-assert.match(shellCard, /aria-expanded=\{expanded\}/);
-assert.match(shellCard, /aria-label=\{toggleLabel\}/);
-assert.doesNotMatch(shellCard, /gestionaleCollapsibleSectionTitleHitboxClass/);
+assert.match(shellCard, /GestionaleCollapsibleHeader/);
+assert.match(collapsibleHeader, /aria-expanded=\{expanded\}/);
+assert.match(collapsibleHeader, /aria-label=\{toggleLabel\}/);
 
 // P1 R-08: required indicator uniforme
 assert.match(formSection, /GestionaleRequiredMark/);

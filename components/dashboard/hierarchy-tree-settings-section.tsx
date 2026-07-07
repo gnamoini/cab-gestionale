@@ -32,10 +32,10 @@ import {
   dsFocus,
   dsPageToolbarCtaCompact,
 } from "@/lib/ui/design-system";
+import { GestionaleCollapsibleChevronIcon } from "@/components/design-system/gestionale-collapsible-chevron";
 import {
   gestionaleCollapsibleChevronBoxClass,
   gestionaleCollapsibleChevronBoxExpandedClass,
-  gestionaleCollapsibleChevronIconClass,
   gestionaleCollapsibleEase,
   gestionaleCollapsibleHeaderTriggerClass,
   gestionaleCollapsiblePanelGridClass,
@@ -86,18 +86,7 @@ function HierarchyMarcaHeaderRow({
             expanded ? ` ${gestionaleCollapsibleChevronBoxExpandedClass}` : ""
           }`}
         >
-          <svg
-            className={`${gestionaleCollapsibleChevronIconClass}${expanded ? " rotate-180" : ""}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M19 9l-7 7-7-7" />
-          </svg>
+          <GestionaleCollapsibleChevronIcon expanded={expanded} />
         </span>
         <span className="min-w-0 truncate text-sm font-semibold text-[color:var(--cab-text)]">{marcaNome}</span>
       </button>

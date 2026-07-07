@@ -36,6 +36,7 @@ import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-
 import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
 import {
   lavorazioneAddettoLabel,
+  lavorazioneAddettoNomeKey,
   lavorazioneCantiereLabel,
   lavorazioneClienteLabel,
   lavorazioneMacchinaLabel,
@@ -148,7 +149,8 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const utilizzatore = lavorazioneUtilizzatoreLabel(row, schedeStore);
-  const addetto = lavorazioneAddettoLabel(row, schedeStore, undefined, addettiRecords);
+  const addettoLabel = lavorazioneAddettoLabel(row, schedeStore, undefined, addettiRecords);
+  const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, undefined, addettiRecords);
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
   return (
@@ -205,14 +207,14 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
           <AddettoSelectField
             variant="pill"
             tablePillWidth={lavTablePillFillClass}
-            options={tablePillOptions.addetto(addetto)}
+            options={tablePillOptions.addetto(addettoKey)}
             shellClass={addettoPillShellClass()}
-            shellStyle={addettoPillShellStyleForName(addetto, addettoColors)}
-            value={addetto}
+            shellStyle={addettoPillShellStyleForName(addettoKey, addettoColors)}
+            value={addettoKey}
             onChange={(v) => onAddettoRow(row, v)}
             ariaLabel={`Addetto — ${macchina}`}
             disabled={loading || !canEditWorkOrders || addetti.length === 0}
-            title={addetto}
+            title={addettoLabel}
           />
         </LavMobileInlineField>
       </LavorazioneMobileControlsPanel>
@@ -286,7 +288,8 @@ function LavorazioneArchivioMobileCardInner({
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const utilizzatore = lavorazioneUtilizzatoreLabel(row, schedeStore);
-  const addetto = lavorazioneAddettoLabel(row, schedeStore, addettoLogs, addettiRecords);
+  const addettoLabel = lavorazioneAddettoLabel(row, schedeStore, addettoLogs, addettiRecords);
+  const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, addettoLogs, addettiRecords);
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
   return (
@@ -314,7 +317,11 @@ function LavorazioneArchivioMobileCardInner({
           <LavorazionePrioritaReadOnlyPill priorita={row.priorita} prioritaColors={prioritaColors} />
         </LavMobileInlineField>
         <LavMobileInlineField label="Addetto" layout="stack">
-          <LavorazioneAddettoReadOnlyPill addetto={addetto} addettoColors={addettoColors} />
+          <LavorazioneAddettoReadOnlyPill
+            addetto={addettoLabel}
+            colorKey={addettoKey}
+            addettoColors={addettoColors}
+          />
         </LavMobileInlineField>
       </LavorazioneMobileControlsPanel>
       <LavorazioneMobileCardFooter meta={<LavorazioneMobileUltimaModifica info={ultimaModificaInfo} />}>

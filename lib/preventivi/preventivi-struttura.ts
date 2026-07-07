@@ -9,6 +9,7 @@ import {
   PREVENTIVO_SANIFICAZIONE_DESCRIZIONE,
 } from "@/lib/preventivi/preventivi-voci-standard";
 import type { PreventivoRecord, PreventivoRigaRicambio, PreventivoRigaRicambioTipo } from "@/lib/preventivi/types";
+import { parseRicambioUnitaMisura } from "@/lib/magazzino/ricambio-unita-misura";
 
 function nextRigaId(): string {
   return `prr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -22,6 +23,10 @@ export function tipoRigaRicambio(r: PreventivoRigaRicambio): PreventivoRigaRicam
   }
   if (isDescrizioneSmaltimento(r.descrizione)) return "standard";
   return "standard";
+}
+
+export function normalizeRigaRicambio(r: PreventivoRigaRicambio): PreventivoRigaRicambio {
+  return { ...r, unitaMisura: parseRicambioUnitaMisura(r.unitaMisura) };
 }
 
 export function partitionRigheRicambi(righe: readonly PreventivoRigaRicambio[]): {
@@ -46,7 +51,7 @@ export function partitionRigheRicambi(righe: readonly PreventivoRigaRicambio[]):
       }
       continue;
     }
-    standard.push({ ...r, tipo: "standard" });
+    standard.push(normalizeRigaRicambio({ ...r, tipo: "standard" }));
   }
   return { standard, materialiConsumo };
 }
@@ -77,6 +82,7 @@ function createRigaMaterialiConsumo(prezzo: number): PreventivoRigaRicambio {
     prezzoUnitario: Math.max(0, Math.round(prezzo * 100) / 100),
     scontoPercent: 0,
     tipo: "materiali_consumo",
+    unitaMisura: "pz",
   };
 }
 
@@ -105,7 +111,7 @@ export function ensurePreventivoStruttura(p: PreventivoRecord): PreventivoRecord
     sanificazionePrezzo,
     collaudoPrezzo,
     descrizioneLavorazioniCliente,
-    righeRicambi: [...standard, materiali],
+    righeRicambi: [...standard, normalizeRigaRicambio(materiali)],
   };
 }
 

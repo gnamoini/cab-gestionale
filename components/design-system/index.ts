@@ -59,6 +59,11 @@ export {
   GestionaleInfoSubgroup,
 } from "./gestionale-info-card";
 export {
+  GestionaleCollapsibleChevronBox,
+  GestionaleCollapsibleChevronIcon,
+} from "./gestionale-collapsible-chevron";
+export { GestionaleCollapsibleHeader } from "./gestionale-collapsible-header";
+export {
   GestionaleCollapsibleSection,
   gestionaleCollapsibleSectionDefaultClass,
   gestionaleCollapsibleSectionFormClass,

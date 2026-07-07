@@ -2,6 +2,7 @@ import { composeInterventoContextFromListRow } from "@/lib/domain/intervento-con
 import { latestAddettoFromLogs } from "@/lib/lavorazioni/client-portal-ui";
 import {
   addettoDisplayNameFromNome,
+  findAddettoByStoredName,
   type AddettoRecord,
 } from "@/lib/lavorazioni/addetto-model";
 import { LAVORAZIONE_EMPTY_DISPLAY } from "@/lib/lavorazioni/lavorazione-display-helpers";
@@ -39,6 +40,20 @@ export function resolveAddettoSnapshotRaw(
     if (fromLogs !== LAVORAZIONE_EMPTY_DISPLAY) return fromLogs;
   }
   return "";
+}
+
+/** Chiave persistita / colori pill: `nome` record se match, altrimenti snapshot grezzo. */
+export function resolveAddettoNomeKey(
+  row: Pick<LavorazioneListRow, "id">,
+  ctx: ResolveAddettoDisplayContext = {},
+): string {
+  const raw = resolveAddettoSnapshotRaw(row, ctx.schedeStore, ctx.logs);
+  if (!raw) return "";
+  if (ctx.addettiRecords?.length) {
+    const rec = findAddettoByStoredName(ctx.addettiRecords, raw);
+    if (rec) return rec.nome.trim();
+  }
+  return raw.trim();
 }
 
 /**

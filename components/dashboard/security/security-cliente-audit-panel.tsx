@@ -17,7 +17,7 @@ import {
   dsSectionTitle,
   dsSkeletonPulse,
 } from "@/lib/ui/design-system";
-import { gestionaleListTableClass, gestionaleListTableTd } from "@/lib/ui/gestionale-list-table";
+import { GestionaleCollapsibleChevronIcon } from "@/components/design-system/gestionale-collapsible-chevron";
 
 const CATEGORY_LABEL: Record<ClienteAssociationAuditIssue["category"], string> = {
   cliente_senza_associazione: "Cliente senza associazione",
@@ -84,12 +84,10 @@ export function SecurityClienteAuditPanel({ readOnly = false }: Props) {
           </p>
         </div>
         <span
-          className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+          className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)]"
           aria-hidden
         >
-          <svg className="h-4 w-4 text-[color:var(--cab-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
-          </svg>
+          <GestionaleCollapsibleChevronIcon expanded={expanded} />
         </span>
       </button>
 

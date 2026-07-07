@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState, type ReactNode } from "react";
+import { GestionaleCollapsibleHeader } from "@/components/design-system/gestionale-collapsible-header";
 import { useCollapsibleAccordionOptional } from "@/lib/ui/collapsible-accordion";
 import {
   dsGestionaleInfoCard,
@@ -16,33 +17,9 @@ import {
   dsGestionaleInfoCardTitle,
 } from "@/lib/ui/design-system";
 import {
-  gestionaleCollapsibleSectionTitleHitboxClass,
-  gestionaleCollapsibleToggleBtnClass,
-  gestionaleCollapsibleToggleBtnExpandedClass,
+  gestionaleCollapsiblePanelGridClass,
+  gestionaleCollapsiblePanelInnerClass,
 } from "@/lib/ui/gestionale-collapsible-toggle";
-
-function GestionaleInfoCardChevron({ expanded }: { expanded: boolean }) {
-  return (
-    <span
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] transition-transform duration-200 ease-out motion-reduce:transition-none ${
-        expanded ? "rotate-180" : ""
-      }`}
-      aria-hidden
-    >
-      <svg
-        className="h-3.5 w-3.5 text-[color:var(--cab-text-muted)]"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M6 9l6 6 6-6" />
-      </svg>
-    </span>
-  );
-}
 
 /** Card info stile magazzino (scheda ricambio): titolo + righe label/valore con separatori. */
 export function GestionaleInfoCard({
@@ -104,34 +81,29 @@ export function GestionaleInfoCard({
 
     return (
       <section className={`${shell}${className ? ` ${className}` : ""}`}>
-        <div className="flex w-full min-w-0 items-center justify-between gap-2 py-0.5">
-          <h3
-            id={titleId}
-            className={`${dsGestionaleInfoCardTitle} mb-0 min-w-0 flex-1 ${gestionaleCollapsibleSectionTitleHitboxClass}`}
-          >
-            {title}
-          </h3>
-          <button
-            type="button"
-            id={`${panelId}-trigger`}
-            aria-expanded={expanded}
-            aria-controls={`${panelId}-body`}
-            aria-label={toggleLabel}
-            className={`${gestionaleCollapsibleToggleBtnClass} ${expanded ? gestionaleCollapsibleToggleBtnExpandedClass : ""}`}
-            onClick={toggleCollapsed}
-          >
-            <GestionaleInfoCardChevron expanded={expanded} />
-          </button>
-        </div>
+        <GestionaleCollapsibleHeader
+          panelId={panelId}
+          titleId={titleId}
+          expanded={expanded}
+          toggleLabel={toggleLabel}
+          onToggle={toggleCollapsed}
+          shellClassName="py-0.5"
+          surfaceClass="bg-transparent"
+          titleNode={
+            <h3 id={titleId} className={`${dsGestionaleInfoCardTitle} mb-0 min-w-0 text-left`}>
+              {title}
+            </h3>
+          }
+        />
         <div
           id={`${panelId}-body`}
           role="region"
           aria-labelledby={titleId}
           aria-hidden={!expanded}
-          className={`grid ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+          className={`${gestionaleCollapsiblePanelGridClass} ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
         >
-          <div className="min-h-0 overflow-hidden">
-            {children ? <div className="min-w-0 pt-3">{children}</div> : null}
+          <div className={gestionaleCollapsiblePanelInnerClass}>
+            <div className="min-w-0 pt-3">{children}</div>
           </div>
         </div>
       </section>

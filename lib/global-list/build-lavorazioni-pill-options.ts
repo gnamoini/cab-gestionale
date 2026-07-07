@@ -9,6 +9,7 @@ import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavor
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
+import { addettoDisplayNameFromNome, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 
 export function buildStatoTablePillOptions(
@@ -36,23 +37,26 @@ export function buildPrioritaTablePillOptions(
 }
 
 export function buildAddettoTablePillOptions(
-  label: string,
+  storedNome: string,
   addetti: string[],
   addettoColors: Record<string, string>,
+  addettiRecords?: readonly AddettoRecord[],
 ): FixedListPillOption[] {
-  const inList = addetti.includes(label);
+  const displayLabel = (nome: string) =>
+    addettiRecords?.length ? addettoDisplayNameFromNome(addettiRecords, nome) : nome;
+  const inList = addetti.includes(storedNome);
   const items: FixedListPillOption[] = [];
-  if (!inList && label !== "—") {
+  if (!inList && storedNome && storedNome !== "—") {
     items.push({
-      value: label,
-      label,
-      pillStyle: addettoPillShellStyleForName(label, addettoColors),
+      value: storedNome,
+      label: displayLabel(storedNome),
+      pillStyle: addettoPillShellStyleForName(storedNome, addettoColors),
     });
   }
   for (const a of addetti) {
     items.push({
       value: a,
-      label: a,
+      label: displayLabel(a),
       pillStyle: addettoPillShellStyleForName(a, addettoColors),
     });
   }
@@ -65,7 +69,12 @@ export function buildLavorazioniPillOptionsFromGlobal(global: GlobalOptionsSlice
       buildStatoTablePillOptions(statiIds, global.lavorazioni.stati),
     priorita: (prioritaList: readonly string[]) =>
       buildPrioritaTablePillOptions(prioritaList, global.lavorazioni.prioritaColors),
-    addetto: (label: string) =>
-      buildAddettoTablePillOptions(label, global.lavorazioni.addetti, global.lavorazioni.addettoColors),
+    addetto: (storedNome: string) =>
+      buildAddettoTablePillOptions(
+        storedNome,
+        global.lavorazioni.addetti,
+        global.lavorazioni.addettoColors,
+        global.lavorazioni.addettiRecords,
+      ),
   };
 }

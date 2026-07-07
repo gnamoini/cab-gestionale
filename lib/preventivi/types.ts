@@ -1,3 +1,5 @@
+import type { RicambioUnitaMisura } from "@/lib/magazzino/ricambio-unita-misura";
+
 export type PreventivoStato = "bozza" | "inviato" | "approvato" | "rifiutato" | "convertito";
 
 export type PreventivoLavorazioneOrigine = "attiva" | "storico";
@@ -12,6 +14,8 @@ export type PreventivoRigaRicambio = {
   codiceOE: string;
   descrizione: string;
   quantita: number;
+  /** Default `pz` in normalizzazione struttura. */
+  unitaMisura?: RicambioUnitaMisura;
   prezzoUnitario: number;
   /** Sconto percentuale sulla riga (0–100). */
   scontoPercent: number;

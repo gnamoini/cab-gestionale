@@ -9,7 +9,11 @@ import type { PreventivoRecord } from "@/lib/preventivi/types";
 import { getScontoRicambiCliente } from "@/lib/mezzi/cliente-commerciale";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
+import { getRuntimeCabAppSettings, getRuntimeCabAppSettingsPayload } from "@/src/lib/app-settings/runtime-settings-cache";
+import {
+  defaultTargetTypeForProfilo,
+  readOfficinaProfiloFromRows,
+} from "@/lib/officina/officina-profilo-operativo";
 
 /** Bozza vuota senza lavorazione collegata (salvataggio alla prima conferma in modale). */
 export function buildEmptyManualPreventivo(
@@ -19,6 +23,8 @@ export function buildEmptyManualPreventivo(
   tipoDocumento: PreventivoRecord["tipoDocumento"] = PREVENTIVO_TIPO_DOCUMENTO_DEFAULT,
 ): PreventivoRecord {
   const mezziListe = migrateMezziListePrefs(getRuntimeCabAppSettings()?.mezziListe ?? createMezziListePrefsDefault());
+  const profilo = readOfficinaProfiloFromRows(getRuntimeCabAppSettingsPayload()?.rows);
+  const targetType = defaultTargetTypeForProfilo(profilo);
   const defaultSconto = getScontoRicambiCliente(mezziListe, cliente);
   const infer = inferEconomiciClientePreventivi(cliente, existingRecords, undefined, defaultSconto);
   const now = new Date().toISOString();
@@ -30,6 +36,8 @@ export function buildEmptyManualPreventivo(
     aggiornatoAt: now,
     stato: "bozza",
     tipoDocumento,
+    targetType,
+    attrezzaturaId: "",
     lavorazioneId: "",
     lavorazioneOrigine: "attiva",
     cliente: "",

@@ -2,7 +2,12 @@
 
 import { DdtStatusBadge, formatDdtDate } from "@/components/ddt/ddt-status-badge";
 import { ddtDisplayNumber } from "@/lib/ddt/ddt-list-ui-filters";
-import { dsBtnNeutralForm, dsHubModalSection, dsHubModalSectionTitle } from "@/lib/ui/design-system";
+import {
+  preventivoEditorActionBtn,
+  preventivoEditorBody,
+  preventivoEditorHint,
+  preventivoEditorPanelClass,
+} from "@/components/preventivi/preventivo-editor-ui";
 import type { DdtDocumentRow } from "@/src/types/supabase-tables";
 import { LoadingButton } from "@/components/design-system";
 
@@ -28,50 +33,48 @@ export function DdtPreventivoPanel({
   const canPrint = activeDdt != null && activeDdt.status !== "bozza" && activeDdt.status !== "annullato";
 
   return (
-    <section className={dsHubModalSection} aria-label="DDT">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className={dsHubModalSectionTitle}>Documento di trasporto (DDT)</h3>
-        <div className="flex flex-wrap gap-2">
-          {activeDdt ? (
-            <>
-              <LoadingButton type="button" className={dsBtnNeutralForm} loading={busy} onClick={onOpenDrawer}>
-                Apri dettaglio
-              </LoadingButton>
-              {canPrint ? (
-                <LoadingButton type="button" className={dsBtnNeutralForm} loading={busy} onClick={onPrintPdf}>
-                  Stampa PDF
-                </LoadingButton>
-              ) : null}
-              {canWrite ? (
-                <LoadingButton type="button" className={dsBtnNeutralForm} loading={busy} onClick={onRegenerate}>
-                  Rigenera DDT
-                </LoadingButton>
-              ) : null}
-            </>
-          ) : canWrite ? (
-            <LoadingButton type="button" className={dsBtnNeutralForm} loading={busy || loading} onClick={onGenerate}>
-              Genera DDT
+    <div className="space-y-2" aria-label="DDT">
+      <div className="flex flex-wrap justify-end gap-2">
+        {activeDdt ? (
+          <>
+            <LoadingButton type="button" className={preventivoEditorActionBtn} loading={busy} onClick={onOpenDrawer}>
+              Apri dettaglio
             </LoadingButton>
-          ) : null}
-        </div>
+            {canPrint ? (
+              <LoadingButton type="button" className={preventivoEditorActionBtn} loading={busy} onClick={onPrintPdf}>
+                Stampa PDF
+              </LoadingButton>
+            ) : null}
+            {canWrite ? (
+              <LoadingButton type="button" className={preventivoEditorActionBtn} loading={busy} onClick={onRegenerate}>
+                Rigenera DDT
+              </LoadingButton>
+            ) : null}
+          </>
+        ) : canWrite ? (
+          <LoadingButton
+            type="button"
+            className={preventivoEditorActionBtn}
+            loading={busy || loading}
+            onClick={onGenerate}
+          >
+            Genera DDT
+          </LoadingButton>
+        ) : null}
       </div>
       {loading ? (
-        <p className="mt-2 text-sm text-[color:var(--cab-text-muted)]">Caricamento DDT…</p>
+        <p className={preventivoEditorHint}>Caricamento DDT…</p>
       ) : activeDdt ? (
-        <div className="mt-2 rounded border border-[color:var(--cab-border)] p-3">
+        <div className={`${preventivoEditorPanelClass} p-3`}>
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-mono text-sm font-semibold">{ddtDisplayNumber(activeDdt)}</p>
+            <p className={`font-mono ${preventivoEditorBody} font-semibold`}>{ddtDisplayNumber(activeDdt)}</p>
             <DdtStatusBadge status={activeDdt.status} />
           </div>
-          <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
-            Data documento: {formatDdtDate(activeDdt.data_documento)}
-          </p>
+          <p className={`mt-1 ${preventivoEditorHint}`}>Data documento: {formatDdtDate(activeDdt.data_documento)}</p>
         </div>
       ) : (
-        <p className="mt-2 text-sm text-[color:var(--cab-text-muted)]">
-          Nessun DDT attivo per questo preventivo.
-        </p>
+        <p className={preventivoEditorHint}>Nessun DDT attivo per questo preventivo.</p>
       )}
-    </section>
+    </div>
   );
 }

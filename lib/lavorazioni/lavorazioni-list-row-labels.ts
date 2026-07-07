@@ -11,6 +11,7 @@ import { mezzoGestitoFromRow } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import {
   resolveAddettoDisplayLabel,
+  resolveAddettoNomeKey,
   type ResolveAddettoDisplayContext,
 } from "@/lib/lavorazioni/resolve-addetto-display";
 import { countSchedePresenti } from "@/lib/schede/schede-ui";
@@ -72,6 +73,17 @@ export function lavorazioneAddettoLabel(
 ): string {
   const ctx: ResolveAddettoDisplayContext = { schedeStore, logs, addettiRecords };
   return resolveAddettoDisplayLabel(row, ctx);
+}
+
+/** Chiave nome per select tabella e lookup colori (non etichetta UI). */
+export function lavorazioneAddettoNomeKey(
+  row: LavorazioneListRow,
+  schedeStore: LavorazioneSchedeStore,
+  logs?: readonly LogModificaRow[],
+  addettiRecords?: readonly AddettoRecord[],
+): string {
+  const ctx: ResolveAddettoDisplayContext = { schedeStore, logs, addettiRecords };
+  return resolveAddettoNomeKey(row, ctx);
 }
 
 export function lavorazioneSchedeCount(bundle: LavorazioneSchedeBundle | undefined): number {

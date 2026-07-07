@@ -152,6 +152,10 @@ export const dsBtnDanger = `inline-flex items-center justify-center gap-1.5 roun
 /** F — Input su sfondo chiaro (form gestionale) */
 export const dsInput = `w-full rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_90%,var(--cab-border))] ${cabSurface} px-3 py-2.5 ${dsIosInputTextSize} ${cabText} shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-[color:var(--cab-text-muted)] hover:border-[color:var(--cab-border-strong)] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] ${dsFocus} touch-manipulation`;
 
+/** Input numerico senza spinner nativi del browser. */
+export const dsInputNoSpinner =
+  "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+
 /** F — Campo ricerca toolbar (icona a sinistra, `min-h-11`; focus inset senza doppio ring). */
 export const dsSearchFieldInput = `w-full min-h-11 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_90%,var(--cab-border))] ${cabSurface} py-0 pl-10 pr-3 ${dsIosInputTextSize} ${cabText} shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-[color:var(--cab-text-muted)] hover:border-[color:var(--cab-border-strong)] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_48%,var(--cab-border))] focus:outline-none focus-visible:border-[color:color-mix(in_srgb,var(--cab-primary)_48%,var(--cab-border))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_22%,transparent)] touch-manipulation`;
 

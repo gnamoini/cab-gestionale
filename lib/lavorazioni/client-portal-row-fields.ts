@@ -1,10 +1,11 @@
 import type { LavorazioneSchedeStore } from "@/types/schede";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import { addettoDisplayNameFromNome, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import { type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { lavorazioneIngressoIso } from "@/lib/lavorazioni/lavorazione-ingresso-display";
 import {
   lavorazioneAddettoLabel,
+  lavorazioneAddettoNomeKey,
   lavorazioneCantiereLabel,
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { resolveLavorazioneContextWithAttrezzatura } from "@/lib/lavorazioni/resolve-lavorazione-context-with-attrezzatura";
@@ -133,8 +134,9 @@ function clientPortalAddettoNomeKey(
   row: LavorazioneListRow,
   schedeStore: LavorazioneSchedeStore,
   logs?: readonly LogModificaRow[],
+  addettiRecords: readonly AddettoRecord[] = [],
 ): string {
-  return lavorazioneAddettoLabel(row, schedeStore, logs);
+  return lavorazioneAddettoNomeKey(row, schedeStore, logs, addettiRecords);
 }
 
 export function clientPortalAddettoLabel(
@@ -144,9 +146,7 @@ export function clientPortalAddettoLabel(
   addettiRecords: readonly AddettoRecord[] = [],
   logs?: readonly LogModificaRow[],
 ): string {
-  const nome = clientPortalAddettoNomeKey(row, schedeStore, logs);
-  if (nome === "—") return "—";
-  return addettoDisplayNameFromNome(addettiRecords, nome);
+  return lavorazioneAddettoLabel(row, schedeStore, logs, addettiRecords);
 }
 
 export function buildClientPortalRowFields(
@@ -163,9 +163,8 @@ export function buildClientPortalRowFields(
     row,
     schedeStore[row.id]?.ingresso?.campi.dataIngresso,
   );
-  const addettoNome = clientPortalAddettoNomeKey(row, schedeStore, logs);
-  const addetto =
-    addettoNome === "—" ? "—" : addettoDisplayNameFromNome(addettiRecords, addettoNome);
+  const addettoNome = clientPortalAddettoNomeKey(row, schedeStore, logs, addettiRecords);
+  const addetto = lavorazioneAddettoLabel(row, schedeStore, logs, addettiRecords);
   return {
     dataIngresso: clientPortalDataIngressoLabel(row, schedeStore),
     dataIngressoAt,

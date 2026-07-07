@@ -13,6 +13,7 @@ import {
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
 import { PREVENTIVI_MAX, PREVENTIVI_STORAGE_KEY } from "@/lib/preventivi/constants";
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
+import { parseRicambioUnitaMisura } from "@/lib/magazzino/ricambio-unita-misura";
 import { normalizePreventivoTipoDocumento } from "@/lib/preventivi/preventivi-tipo-documento";
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
 import type {
@@ -46,6 +47,7 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
       quantita: Math.max(0.01, Number(r.quantita) || 0),
       prezzoUnitario: Math.max(0, Number(r.prezzoUnitario) || 0),
       scontoPercent: Math.min(100, Math.max(0, Number(r.scontoPercent) || 0)),
+      unitaMisura: parseRicambioUnitaMisura(r.unitaMisura),
       tipo:
         r.tipo === "materiali_consumo" || r.tipo === "standard"
           ? (r.tipo as PreventivoRigaRicambioTipo)

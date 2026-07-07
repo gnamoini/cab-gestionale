@@ -6,11 +6,11 @@ import { useMemo, useState, type CSSProperties } from "react";
 import { Tooltip } from "@/components/design-system";
 import { dsHubModalFieldLabel } from "@/lib/ui/design-system";
 import {
-  gestionaleCollapsibleChevronIconClass,
+  GestionaleCollapsibleChevronBox,
+} from "@/components/design-system/gestionale-collapsible-chevron";
+import {
   gestionaleCollapsiblePanelGridClass,
   gestionaleCollapsiblePanelInnerClass,
-  gestionaleCollapsibleToggleBtnClass,
-  gestionaleCollapsibleToggleBtnExpandedClass,
 } from "@/lib/ui/gestionale-collapsible-toggle";
 import {
   buildClientPortalStatoProgress,
@@ -125,22 +125,7 @@ export function ClientPortalStatoProgress({
           aria-expanded={phasesOpen}
           aria-controls="client-portal-stato-phases"
         >
-          <span
-            className={`${gestionaleCollapsibleToggleBtnClass}${phasesOpen ? ` ${gestionaleCollapsibleToggleBtnExpandedClass}` : ""}`}
-            aria-hidden
-          >
-            <svg
-              className={`${gestionaleCollapsibleChevronIconClass}${phasesOpen ? " rotate-180" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </span>
+          <GestionaleCollapsibleChevronBox expanded={phasesOpen} />
           <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
             Dettaglio fasi
           </span>
