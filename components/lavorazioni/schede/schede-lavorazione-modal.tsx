@@ -861,7 +861,10 @@ export function SchedeLavorazioneModal({
 
         await onIngressoCommitted?.(campi);
       } catch {
-        gestToast.errorOnce("schede-note-save", "Salvataggio note non riuscito. Riprova.", { module: "lavorazioni" });
+        gestToast.errorOnce("schede-note-save", "Salvataggio note non riuscito. Riprova.", {
+          module: "lavorazioni",
+          action: "update",
+        });
       } finally {
         setPanoramicaNoteSaving(false);
       }
@@ -913,7 +916,10 @@ export function SchedeLavorazioneModal({
     };
     const persistRes = await persistBundle({ ...draftRef.current, ingresso: nextDoc });
     if (!persistRes.ok) {
-      gestToast.error(persistRes.error ?? "Salvataggio scheda ingresso non riuscito.", { module: "lavorazioni" });
+      gestToast.error(persistRes.error ?? "Salvataggio scheda ingresso non riuscito.", {
+        module: "lavorazioni",
+        action: "update",
+      });
       return false;
     }
     baselineIngressoJson.current = JSON.stringify(ig);

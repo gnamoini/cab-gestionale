@@ -1,11 +1,14 @@
-import type { QueryClient } from "@tanstack/react-query";
+import type { InfiniteData, QueryClient } from "@tanstack/react-query";
+import type { Page } from "@/lib/domain/list-types";
+import type { NormalizedLavorazioniFilters } from "@/lib/domain/list-where-spec";
+import { logLavorazioniArchiveMembershipDebug } from "@/lib/lavorazioni/lavorazioni-archive-membership-debug";
 import type { LavorazioneListRow, LavorazioneUpdate } from "@/src/services/lavorazioni.service";
 import type { LavorazioneRow } from "@/src/types/supabase-tables";
 import { QK } from "@/src/lib/react-query/query-keys";
 
 export type LavorazioniListSnapshot = {
   queryKey: readonly unknown[];
-  data: LavorazioneListRow[] | undefined;
+  data: LavorazioniListCacheData | undefined;
 };
 
 export type LavorazioneBaseSnapshot = {
@@ -18,16 +21,50 @@ export type LavorazioneUpdateOptimisticContext = {
   bases: LavorazioneBaseSnapshot[];
 };
 
+type LavorazioniFlatListData = LavorazioneListRow[];
+type LavorazioniInfiniteListData = InfiniteData<Page<LavorazioneListRow>>;
+export type LavorazioniListCacheData = LavorazioniFlatListData | LavorazioniInfiniteListData;
+
 function lavorazioneBaseQueryKey(lavorazioneId: string) {
   return [...QK.lavorazioniQueries, "base", lavorazioneId] as const;
 }
 
-function isListQueryKey(queryKey: readonly unknown[]): boolean {
-  return queryKey[0] === QK.lavorazioniQueries[0] && queryKey[1] === "list";
+/** SSOT: chiavi cache lista lavorazioni (legacy `list` + paginated `list-v2`). */
+export function isLavorazioniListCacheQueryKey(queryKey: readonly unknown[]): boolean {
+  return (
+    queryKey[0] === QK.lavorazioniQueries[0] &&
+    (queryKey[1] === "list" || queryKey[1] === "list-v2")
+  );
+}
+
+function listKindFromQueryKey(queryKey: readonly unknown[]): "list" | "list-v2" | "unknown" {
+  if (queryKey[1] === "list") return "list";
+  if (queryKey[1] === "list-v2") return "list-v2";
+  return "unknown";
+}
+
+function isInfiniteListData(data: LavorazioniListCacheData): data is LavorazioniInfiniteListData {
+  return typeof data === "object" && data != null && "pages" in data && Array.isArray(data.pages);
+}
+
+/** Estrae righe da cache lista (flat o infinite). */
+export function lavorazioniListCacheRows(data: LavorazioniListCacheData | undefined): LavorazioneListRow[] {
+  if (!data) return [];
+  if (isInfiniteListData(data)) {
+    return data.pages.flatMap((p) => [...p.rows]);
+  }
+  return [...data];
 }
 
 function parseListFilterArchived(queryKey: readonly unknown[]): boolean | null {
-  if (!isListQueryKey(queryKey) || typeof queryKey[2] !== "string") return null;
+  if (!isLavorazioniListCacheQueryKey(queryKey)) return null;
+  if (queryKey[1] === "list-v2") {
+    const norm = queryKey[2] as NormalizedLavorazioniFilters | undefined;
+    if (norm?.mode === "active") return false;
+    if (norm?.mode === "closed") return true;
+    return null;
+  }
+  if (typeof queryKey[2] !== "string") return null;
   try {
     const parsed = JSON.parse(queryKey[2]) as { ar?: number };
     if (parsed.ar === 1) return true;
@@ -42,6 +79,23 @@ function parseListFilterArchived(queryKey: readonly unknown[]): boolean | null {
 function rowBelongsInArchivedList(row: LavorazioneListRow, listArchived: boolean | null): boolean {
   if (listArchived == null) return true;
   return listArchived ? row.archived === true : row.archived !== true;
+}
+
+function parseUpdatedAtMs(value: string | null | undefined): number {
+  if (!value?.trim()) return 0;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+/** Versione più recente vince (updated_at server). */
+export function isLavorazioneRowVersionNewer(
+  candidate: Pick<LavorazioneRow, "updated_at"> | null | undefined,
+  baseline: Pick<LavorazioneRow, "updated_at"> | null | undefined,
+): boolean {
+  const c = parseUpdatedAtMs(candidate?.updated_at);
+  const b = parseUpdatedAtMs(baseline?.updated_at);
+  if (c !== b) return c > b;
+  return false;
 }
 
 export type LavorazioneUpdateOptimisticAudit = {
@@ -78,13 +132,17 @@ function mergeListRow(
   return merged;
 }
 
+function listRowFromBase(base: LavorazioneRow, mezzo: LavorazioneListRow["mezzo"]): LavorazioneListRow {
+  return { ...base, mezzo } as LavorazioneListRow;
+}
+
 function findRowInListCaches(qc: QueryClient, lavorazioneId: string): LavorazioneListRow | undefined {
-  const listEntries = qc.getQueriesData<LavorazioneListRow[]>({
+  const listEntries = qc.getQueriesData<LavorazioniListCacheData>({
     queryKey: QK.lavorazioniQueries,
-    predicate: (q) => isListQueryKey(q.queryKey),
+    predicate: (q) => isLavorazioniListCacheQueryKey(q.queryKey),
   });
   for (const [, old] of listEntries) {
-    const hit = old?.find((r) => r.id === lavorazioneId);
+    const hit = lavorazioniListCacheRows(old).find((r) => r.id === lavorazioneId);
     if (hit) return hit;
   }
   return undefined;
@@ -98,31 +156,140 @@ function resolveMergedRow(
   audit?: LavorazioneUpdateOptimisticAudit,
 ): LavorazioneListRow | undefined {
   const existing = findRowInListCaches(qc, lavorazioneId);
-  if (existing) return mergeListRow(existing, patch, serverRow, audit);
-  if (!serverRow) return undefined;
-  const base = { ...serverRow, mezzo: null } as LavorazioneListRow;
-  return mergeListRow(base, patch, serverRow, audit);
+  const base = qc.getQueryData<LavorazioneRow>(lavorazioneBaseQueryKey(lavorazioneId));
+  if (existing) {
+    const merged = mergeListRow(existing, patch, serverRow, audit);
+    if (base && isLavorazioneRowVersionNewer(base, merged) && !serverRow) {
+      return listRowFromBase(base, existing.mezzo);
+    }
+    return merged;
+  }
+  if (!serverRow && !base) return undefined;
+  const seed = serverRow ?? base!;
+  const mezzo = null;
+  return mergeListRow(listRowFromBase(seed, mezzo), patch, serverRow, audit);
+}
+
+function patchFlatList(
+  prev: LavorazioneListRow[],
+  lavorazioneId: string,
+  merged: LavorazioneListRow,
+  listArchived: boolean | null,
+): LavorazioneListRow[] {
+  const belongs = rowBelongsInArchivedList(merged, listArchived);
+  const hadRow = prev.some((r) => r.id === lavorazioneId);
+  if (belongs) {
+    return hadRow ? prev.map((r) => (r.id === lavorazioneId ? merged : r)) : [...prev, merged];
+  }
+  return prev.filter((r) => r.id !== lavorazioneId);
+}
+
+function patchInfiniteList(
+  data: LavorazioniInfiniteListData,
+  lavorazioneId: string,
+  merged: LavorazioneListRow,
+  listArchived: boolean | null,
+): LavorazioniInfiniteListData {
+  const belongs = rowBelongsInArchivedList(merged, listArchived);
+  let placed = false;
+  const pages = data.pages.map((page) => {
+    const prev = [...page.rows];
+    const hadRow = prev.some((r) => r.id === lavorazioneId);
+    let rows: LavorazioneListRow[];
+    if (belongs) {
+      rows = hadRow ? prev.map((r) => (r.id === lavorazioneId ? merged : r)) : [...prev, merged];
+      if (rows.length > prev.length) placed = true;
+    } else {
+      rows = prev.filter((r) => r.id !== lavorazioneId);
+    }
+    return { ...page, rows };
+  });
+  if (belongs && !placed && !pages.some((p) => p.rows.some((r) => r.id === lavorazioneId))) {
+    if (pages.length === 0) {
+      return {
+        ...data,
+        pages: [
+          {
+            rows: [merged],
+            pageInfo: { hasNextPage: false, nextCursor: null, totalEstimate: 1 },
+          },
+        ],
+      };
+    }
+    const last = pages[pages.length - 1];
+    pages[pages.length - 1] = { ...last, rows: [...last.rows, merged] };
+  }
+  return { ...data, pages };
 }
 
 function reconcileRowAcrossLists(qc: QueryClient, lavorazioneId: string, merged: LavorazioneListRow): void {
-  const listEntries = qc.getQueriesData<LavorazioneListRow[]>({
+  const listEntries = qc.getQueriesData<LavorazioniListCacheData>({
     queryKey: QK.lavorazioniQueries,
-    predicate: (q) => isListQueryKey(q.queryKey),
+    predicate: (q) => isLavorazioniListCacheQueryKey(q.queryKey),
   });
 
   for (const [queryKey, old] of listEntries) {
-    const listArchived = parseListFilterArchived(queryKey as readonly unknown[]);
-    const belongs = rowBelongsInArchivedList(merged, listArchived);
-    const prev = old ?? [];
-    const hadRow = prev.some((r) => r.id === lavorazioneId);
-
-    let next: LavorazioneListRow[];
-    if (belongs) {
-      next = hadRow ? prev.map((r) => (r.id === lavorazioneId ? merged : r)) : [...prev, merged];
+    const key = queryKey as readonly unknown[];
+    const listArchived = parseListFilterArchived(key);
+    const prev = old;
+    let next: LavorazioniListCacheData;
+    if (!prev) {
+      next = patchFlatList([], lavorazioneId, merged, listArchived);
+    } else if (isInfiniteListData(prev)) {
+      next = patchInfiniteList(prev, lavorazioneId, merged, listArchived);
     } else {
-      next = prev.filter((r) => r.id !== lavorazioneId);
+      next = patchFlatList(prev, lavorazioneId, merged, listArchived);
     }
     qc.setQueryData(queryKey, next);
+    logLavorazioniArchiveMembershipDebug({
+      event: "reconcile",
+      lavorazioneId,
+      archived: merged.archived,
+      updatedAt: merged.updated_at,
+      queryKey: key,
+      listKind: listKindFromQueryKey(key),
+      listArchived,
+    });
+  }
+}
+
+function collectLavorazioneIdsFromContext(context: LavorazioneUpdateOptimisticContext): Set<string> {
+  const ids = new Set<string>();
+  for (const { data } of context.lists) {
+    for (const row of lavorazioniListCacheRows(data)) ids.add(row.id);
+  }
+  for (const { queryKey } of context.bases) {
+    const id = queryKey[queryKey.length - 1];
+    if (typeof id === "string" && id) ids.add(id);
+  }
+  return ids;
+}
+
+/** Invariante: nessuna row archived=true nelle liste attive in cache. */
+export function assertNoArchivedInActiveLists(qc: QueryClient): void {
+  const listEntries = qc.getQueriesData<LavorazioniListCacheData>({
+    queryKey: QK.lavorazioniQueries,
+    predicate: (q) => isLavorazioniListCacheQueryKey(q.queryKey),
+  });
+  for (const [queryKey, data] of listEntries) {
+    const listArchived = parseListFilterArchived(queryKey as readonly unknown[]);
+    if (listArchived !== false) continue;
+    for (const row of lavorazioniListCacheRows(data)) {
+      if (row.archived === true) {
+        logLavorazioniArchiveMembershipDebug({
+          event: "invariant_violation",
+          lavorazioneId: row.id,
+          archived: row.archived,
+          updatedAt: row.updated_at,
+          queryKey: queryKey as readonly unknown[],
+          listKind: listKindFromQueryKey(queryKey as readonly unknown[]),
+          listArchived,
+        });
+        throw new Error(
+          `Invariant: archived row ${row.id} in active list cache ${JSON.stringify(queryKey)}`,
+        );
+      }
+    }
   }
 }
 
@@ -133,9 +300,9 @@ export async function snapshotLavorazioneUpdateQueries(
   await qc.cancelQueries({ queryKey: QK.lavorazioniQueries });
 
   const lists = qc
-    .getQueriesData<LavorazioneListRow[]>({
+    .getQueriesData<LavorazioniListCacheData>({
       queryKey: QK.lavorazioniQueries,
-      predicate: (q) => isListQueryKey(q.queryKey),
+      predicate: (q) => isLavorazioniListCacheQueryKey(q.queryKey),
     })
     .map(([queryKey, data]) => ({ queryKey: queryKey as readonly unknown[], data }));
 
@@ -158,6 +325,13 @@ export function applyOptimisticLavorazioneUpdate(
   const merged = resolveMergedRow(qc, lavorazioneId, patch, serverRow, audit);
   if (merged) {
     reconcileRowAcrossLists(qc, lavorazioneId, merged);
+    logLavorazioniArchiveMembershipDebug({
+      event: "optimistic_apply",
+      lavorazioneId,
+      archived: merged.archived,
+      updatedAt: merged.updated_at,
+      note: serverRow ? "with_server_row" : "patch_only",
+    });
   }
 
   if (serverRow) {
@@ -174,11 +348,31 @@ export function rollbackLavorazioneUpdateQueries(
   qc: QueryClient,
   context: LavorazioneUpdateOptimisticContext,
 ): void {
+  for (const { queryKey, data } of context.bases) {
+    const current = qc.getQueryData<LavorazioneRow>(queryKey);
+    if (data && current && isLavorazioneRowVersionNewer(current, data)) {
+      continue;
+    }
+    qc.setQueryData(queryKey, data);
+  }
+
   for (const { queryKey, data } of context.lists) {
     qc.setQueryData(queryKey, data);
   }
-  for (const { queryKey, data } of context.bases) {
-    qc.setQueryData(queryKey, data);
+
+  const ids = collectLavorazioneIdsFromContext(context);
+  for (const id of ids) {
+    const base = qc.getQueryData<LavorazioneRow>(lavorazioneBaseQueryKey(id));
+    if (!base) continue;
+    const mezzo = findRowInListCaches(qc, id)?.mezzo ?? null;
+    reconcileRowAcrossLists(qc, id, listRowFromBase(base, mezzo));
+    logLavorazioniArchiveMembershipDebug({
+      event: "optimistic_rollback",
+      lavorazioneId: id,
+      archived: base.archived,
+      updatedAt: base.updated_at,
+      note: "post_rollback_reconcile_from_base",
+    });
   }
 }
 
@@ -190,6 +384,16 @@ export function buildConcludeOptimisticPatch(row: LavorazioneListRow | undefined
     archived: true,
     archived_at: now,
     data_uscita: row?.data_uscita?.trim() ? row.data_uscita : now,
+  };
+}
+
+/** Patch optimistic allineata a `lavorazioniService.restore`. */
+export function buildRestoreOptimisticPatch(stato: LavorazioneRow["stato"]): LavorazioneUpdate {
+  return {
+    stato,
+    archived: false,
+    archived_at: null,
+    data_uscita: null,
   };
 }
 

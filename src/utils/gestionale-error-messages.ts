@@ -79,6 +79,9 @@ export function humanizeGestionaleError(raw: string, ctx?: GestionaleErrorContex
       if (section) return section;
     }
     const section = sectionDeniedMessage(ctx);
+    if (section && (ctx?.action === "create" || ctx?.action === "update" || ctx?.action === "delete")) {
+      return section;
+    }
     if (section && ctx?.action !== "delete") return section;
     if (ctx?.action === "delete" || ctx?.action === "update" || ctx?.action === "create") {
       return GESTIONALE_RESERVED_ACTION;

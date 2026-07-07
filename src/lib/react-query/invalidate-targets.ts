@@ -5,6 +5,7 @@ import { refreshSchedeBundleSliceForSchedaId } from "@/lib/schede/schede-bundle-
 import { markSchedeEnsureAfterInvalidate } from "@/lib/schede/schede-ensure-options";
 import { markEntityInvalidated } from "@/lib/sync/recent-entity-invalidation";
 import { QK } from "@/src/lib/react-query/query-keys";
+import { isLavorazioniListCacheQueryKey } from "@/src/lib/react-query/lavorazioni-optimistic-cache";
 import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-domain.queries";
 
 type QueryKeyTuple = readonly unknown[];
@@ -118,8 +119,7 @@ export function invalidateGestionaleTablesForEntity(
 
   if (table === "lavorazioni") {
     void qc.invalidateQueries({
-      predicate: (q) =>
-        q.queryKey[0] === QK.lavorazioniQueries[0] && q.queryKey[1] === "list",
+      predicate: (q) => isLavorazioniListCacheQueryKey(q.queryKey),
       refetchType,
     });
     void qc.invalidateQueries({

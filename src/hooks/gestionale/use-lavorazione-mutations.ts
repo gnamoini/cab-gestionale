@@ -8,6 +8,8 @@ import {
   applyOptimisticLavorazioneUpdate,
   buildConcludeOptimisticPatch,
   buildLavorazioneOptimisticAudit,
+  buildRestoreOptimisticPatch,
+  lavorazioniListCacheRows,
   rollbackLavorazioneUpdateQueries,
   settleLavorazioneQuickUpdate,
   snapshotLavorazioneUpdateQueries,
@@ -22,12 +24,19 @@ import type {
   LavorazioneUpdate,
 } from "@/src/services/lavorazioni.service";
 import type { LavorazioneRow } from "@/src/types/supabase-tables";
+import type { UseMutationResult } from "@tanstack/react-query";
 
-export function useLavorazioneCreateMutation() {
+export type UseLavorazioneCreateMutationOptions = {
+  /** Orchestrazione multi-stage (create intervento): invalidazione MIC solo a fine transazione. */
+  deferInvalidation?: boolean;
+};
+
+export function useLavorazioneCreateMutation(options?: UseLavorazioneCreateMutationOptions) {
+  const deferInvalidation = options?.deferInvalidation ?? false;
   const queryClient = useQueryClient();
   return useServiceMutation((data: LavorazioneInsert) => lavorazioniEntry.create(data), {
     onSettled: async (data, error) => {
-      if (error) return;
+      if (error || deferInvalidation) return;
       const cabSyncEvents =
         data?.id != null
           ? [cabSyncEventForEntity("lavorazioni", data.id, "entity_created", "lavorazioni")]
@@ -93,9 +102,29 @@ export function useLavorazioneRemoveMutation() {
 
 export function useLavorazioneRestoreMutation() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const optimisticAudit = buildLavorazioneOptimisticAudit(user?.id);
   return useServiceMutation(
     ({ id, stato }: { id: string; stato: LavorazioneRow["stato"] }) => lavorazioniEntry.restore(id, stato),
     {
+      onMutate: async ({ id, stato }) => {
+        const context = await snapshotLavorazioneUpdateQueries(queryClient, id);
+        applyOptimisticLavorazioneUpdate(
+          queryClient,
+          id,
+          buildRestoreOptimisticPatch(stato),
+          undefined,
+          optimisticAudit,
+        );
+        return context;
+      },
+      onSuccess: (serverRow, { id }) => {
+        applyOptimisticLavorazioneUpdate(queryClient, id, {}, serverRow);
+        markRecentLocalGestionaleMutation(["lavorazioni"], id);
+      },
+      onError: (_err, _variables, context) => {
+        if (context) rollbackLavorazioneUpdateQueries(queryClient, context as LavorazioneUpdateOptimisticContext);
+      },
       onSettled: async (_data, error, variables) => {
         if (error) return;
         await traceMutationLifecycle(
@@ -121,7 +150,7 @@ export function useLavorazioneConcludeMutation() {
     onMutate: async (id) => {
       const context = await snapshotLavorazioneUpdateQueries(queryClient, id);
       const existing = context.lists
-        .flatMap((s) => s.data ?? [])
+        .flatMap((s) => lavorazioniListCacheRows(s.data))
         .find((r) => r.id === id);
       applyOptimisticLavorazioneUpdate(
         queryClient,
@@ -161,6 +190,12 @@ export function useLavorazioneArchiveMutation() {
 }
 
 export type LavorazioneUpdatePayload = { id: string; data: LavorazioneUpdate };
+
+export type LavorazioneUpdateMutation = UseMutationResult<
+  LavorazioneRow,
+  Error,
+  LavorazioneUpdatePayload
+>;
 
 /** Tipo inferito per `onSuccess` UI (creazione). */
 export type LavorazioneCreateResult = LavorazioneRow;

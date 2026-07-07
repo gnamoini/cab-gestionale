@@ -51,6 +51,7 @@ import { clearRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-setti
 import { clearRicambioStockSnapshotRegistry } from "@/lib/magazzino/ricambio-stock-snapshot-registry";
 import { clearScortaSyncQueues } from "@/lib/magazzino/scorta-adjust-sync";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { fetchRbacRoleKeyForUser } from "@/lib/rbac/fetch-rbac-role-key";
 import { authLogsEntry } from "@/lib/domain/auth-logs-entry";
 import type { AuthStatus } from "@/src/lib/auth/auth-status";
 import type { PublicAuthUser } from "@/src/types/auth-user";
@@ -115,15 +116,22 @@ function deriveInitialAuthState(snapshot: ServerAuthSnapshot | null | undefined)
 
 async function loadPublicUserFromSessionUser(sessionUser: User): Promise<PublicAuthUser> {
   const sb = getBrowserSupabase();
-  const { data: row, error } = await sb
-    .from("profiles")
-    .select("nome, cognome, username, role_key, cliente_ref, created_at")
-    .eq("id", sessionUser.id)
-    .maybeSingle();
+  const [{ data: row, error }, roleKey] = await Promise.all([
+    sb
+      .from("profiles")
+      .select("nome, cognome, username, role_key, cliente_ref, created_at")
+      .eq("id", sessionUser.id)
+      .maybeSingle(),
+    fetchRbacRoleKeyForUser(sb, sessionUser.id),
+  ]);
   if (error) {
     console.warn("[auth] profilo non leggibile:", error.message);
   }
-  return mapSupabaseUserToPublicAuthUser(sessionUser, row);
+  const profile =
+    row != null
+      ? { ...row, role_key: roleKey }
+      : ({ role_key: roleKey } as Parameters<typeof mapSupabaseUserToPublicAuthUser>[1]);
+  return mapSupabaseUserToPublicAuthUser(sessionUser, profile);
 }
 
 export function AuthProvider({

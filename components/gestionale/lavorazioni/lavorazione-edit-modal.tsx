@@ -142,7 +142,7 @@ export function LavorazioneEditModal({
           gestToast.successSaved();
           onClose();
         } catch (err) {
-          gestToast.errorOnce("lav-edit", err, { module: "lavorazioni" });
+          gestToast.errorOnce("lav-edit", err, { module: "lavorazioni", action: "update" });
         }
       },
     );

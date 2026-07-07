@@ -11,14 +11,15 @@ const matrix: Array<{
   dashboardWrite: boolean;
   impostazioniWrite: boolean;
   sicurezzaWrite: boolean;
+  lavorazioniWrite: boolean;
   lavorazioniClientiRead: boolean;
 }> = [
-  { role: "admin", dashboardWrite: true, impostazioniWrite: true, sicurezzaWrite: true, lavorazioniClientiRead: true },
-  { role: "manager", dashboardWrite: true, impostazioniWrite: true, sicurezzaWrite: false, lavorazioniClientiRead: false },
-  { role: "operatore", dashboardWrite: true, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniClientiRead: false },
-  { role: "addetto_amministrativo", dashboardWrite: true, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniClientiRead: false },
-  { role: "cliente", dashboardWrite: false, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniClientiRead: true },
-  { role: "guest", dashboardWrite: false, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniClientiRead: false },
+  { role: "admin", dashboardWrite: true, impostazioniWrite: true, sicurezzaWrite: true, lavorazioniWrite: true, lavorazioniClientiRead: true },
+  { role: "manager", dashboardWrite: true, impostazioniWrite: true, sicurezzaWrite: false, lavorazioniWrite: true, lavorazioniClientiRead: false },
+  { role: "operatore", dashboardWrite: true, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: true, lavorazioniClientiRead: false },
+  { role: "addetto_amministrativo", dashboardWrite: true, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: false, lavorazioniClientiRead: false },
+  { role: "cliente", dashboardWrite: false, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: false, lavorazioniClientiRead: true },
+  { role: "guest", dashboardWrite: false, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: false, lavorazioniClientiRead: false },
 ];
 
 for (const row of matrix) {
@@ -27,6 +28,7 @@ for (const row of matrix) {
   assert.equal(canWritePage(r, "dashboard"), row.dashboardWrite, `${row.role} dashboard write`);
   assert.equal(canWritePage(r, "impostazioni"), row.impostazioniWrite, `${row.role} impostazioni write`);
   assert.equal(canWritePage(r, "sicurezza"), row.sicurezzaWrite, `${row.role} sicurezza write`);
+  assert.equal(canWritePage(r, "lavorazioni"), row.lavorazioniWrite, `${row.role} lavorazioni write`);
   assert.equal(canReadPage(r, "lavorazioni_clienti"), row.lavorazioniClientiRead, `${row.role} client portal`);
 }
 

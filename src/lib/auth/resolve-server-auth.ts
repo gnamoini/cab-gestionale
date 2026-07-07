@@ -18,6 +18,7 @@ import type { ServerAuthSnapshot } from "@/src/lib/auth/server-auth-types";
 import { readProxyForwardedAuthSnapshot } from "@/src/lib/auth/proxy-auth-snapshot-header";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { loadRolePageAccess, loadUserPageOverrides } from "@/src/lib/rbac/load-rbac-data";
+import { fetchRbacRoleKeyForUser } from "@/lib/rbac/fetch-rbac-role-key";
 import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 
 type CookieLike = { name: string; value: string };
@@ -103,7 +104,7 @@ async function fetchServerAuthSnapshotWithClient(
     console.warn("[auth] server snapshot profilo non leggibile:", profErr.message);
   }
 
-  const roleKey = typeof prof?.role_key === "string" ? prof.role_key : "guest";
+  const roleKey = await fetchRbacRoleKeyForUser(supabase, authUser.id);
   let rolePageAccess: Record<string, PageAccessLevel> = {};
   let userPageOverridesMap: Record<string, PageAccessLevel> = {};
   try {
@@ -122,7 +123,9 @@ async function fetchServerAuthSnapshotWithClient(
 
   let publicUser;
   try {
-    publicUser = mapSupabaseUserToPublicAuthUser(authUser, prof);
+    const profileForMap =
+      prof != null ? { ...prof, role_key: roleKey } : ({ role_key: roleKey } as typeof prof);
+    publicUser = mapSupabaseUserToPublicAuthUser(authUser, profileForMap);
   } catch (e) {
     console.warn("[auth] server snapshot map user degraded:", e);
     publicUser = mapDegradedPublicAuthUser(authUser);

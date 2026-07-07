@@ -45,4 +45,15 @@ assert.match(versionRegistry, /resolveEntityCacheVersion/);
 const previewUrl = read("lib/documents/document-preview-url.ts");
 assert.match(previewUrl, /resolveEntityCacheVersion/);
 
+const createModal = read("components/gestionale/lavorazioni/lavorazione-create-modal.tsx");
+assert.match(createModal, /useLavorazioneCreateMutation/);
+assert.match(createModal, /commitLavorazioneCreateSuccess/);
+assert.doesNotMatch(createModal, /dispatchGestionaleLocalMutation\(qc,\s*\[["']lavorazioni["']\]/);
+
+const lavView = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
+assert.match(lavView, /await persistSchedeAndSync/);
+
+const statoMove = read("src/hooks/gestionale/use-lavorazione-stato-move-mutation.ts");
+assert.match(statoMove, /updateLav:/);
+
 console.log("minimal-invalidation-contract-policy: OK");

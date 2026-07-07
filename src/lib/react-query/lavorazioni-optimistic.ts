@@ -6,8 +6,13 @@ export type {
 } from "@/src/lib/react-query/lavorazioni-optimistic-cache";
 export {
   applyOptimisticLavorazioneUpdate,
+  assertNoArchivedInActiveLists,
   buildConcludeOptimisticPatch,
+  buildRestoreOptimisticPatch,
   buildLavorazioneOptimisticAudit,
+  isLavorazioniListCacheQueryKey,
+  isLavorazioneRowVersionNewer,
+  lavorazioniListCacheRows,
   rollbackLavorazioneUpdateQueries,
   snapshotLavorazioneUpdateQueries,
 } from "@/src/lib/react-query/lavorazioni-optimistic-cache";

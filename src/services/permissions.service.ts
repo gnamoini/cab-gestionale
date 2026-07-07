@@ -1,6 +1,7 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { fetchRbacRoleKeyForUser } from "@/lib/rbac/fetch-rbac-role-key";
 import {
   loadRolePageAccess,
   loadUserPageOverrides,
@@ -20,8 +21,7 @@ export const permissionsService = {
       }
       if (!uid) return success({});
 
-      const { data: prof } = await c.from("profiles").select("role_key").eq("id", uid).maybeSingle();
-      const roleKey = prof?.role_key ?? "guest";
+      const roleKey = await fetchRbacRoleKeyForUser(c, uid);
       const map = await loadRolePageAccess(c, roleKey);
       return success(map);
     } catch (e) {

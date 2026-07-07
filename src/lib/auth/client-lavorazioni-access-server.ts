@@ -1,4 +1,5 @@
 import { resolveRole } from "@/lib/auth/rbac";
+import { fetchRbacRoleKeyForUser } from "@/lib/rbac/fetch-rbac-role-key";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { resolveServerEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions.server";
 import { canReadPage } from "@/src/lib/rbac/resolve-page-access";
@@ -16,6 +17,6 @@ export async function verifyClientLavorazioniAccessServer(): Promise<boolean> {
     return true;
   }
 
-  const { data: prof } = await sb.from("profiles").select("role_key").eq("id", user.id).maybeSingle();
-  return resolveRole(prof?.role_key) === "cliente";
+  const roleKey = await fetchRbacRoleKeyForUser(sb, user.id);
+  return resolveRole(roleKey) === "cliente";
 }

@@ -68,6 +68,7 @@
     "smoke:playwright:ricambio:cert": "npx playwright test -c e2e/playwright.ricambio-cert.config.ts --project=chromium",
     "ci:supabase:publication": "npx tsx scripts/verify-supabase-publication.ts --mode=sanity",
     "ci:supabase:publication:full": "npx tsx scripts/verify-supabase-publication.ts --mode=full",
+    "ci:supabase:migrations": "npx tsx scripts/verify-supabase-migration-parity.ts",
     "smoke:gate": "npx tsx scripts/smoke-gate.ts",
     "ci:smoke:preflight": "npx tsx scripts/ci-smoke-preflight.ts --tier=pr",
     "ci:smoke:preflight:cert": "npx tsx scripts/ci-smoke-preflight.ts --tier=cert",

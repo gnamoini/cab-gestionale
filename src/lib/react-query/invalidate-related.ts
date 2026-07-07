@@ -77,6 +77,23 @@ export async function invalidateAfterLavorazioneMutations(
   scheduleReportBroadcastRefresh(qc);
 }
 
+/** Post-create lavorazione: MIC entity-scoped + sync scheda (SSOT con useLavorazioneCreateMutation). */
+export async function commitLavorazioneCreateSuccess(
+  qc: QueryClient,
+  lavorazioneId: string,
+  dbVersion?: string,
+): Promise<void> {
+  const id = lavorazioneId.trim();
+  if (!id) return;
+  await invalidateAfterLavorazioneMutations(
+    qc,
+    [cabSyncEventForEntity("lavorazioni", id, "entity_created", "lavorazioni")],
+    id,
+    dbVersion,
+  );
+  dispatchGestionaleAction(qc, ["scheda_lavorazione"], { source: "local_mutation" });
+}
+
 export async function invalidateAfterMagazzinoOrMovimenti(qc: QueryClient, cabSyncEvents?: CabSyncEvent[]) {
   await invalidateOperationalTruth({ queryClient: qc, domain: "magazzino", cabSyncEvents, skipReportBroadcast: true });
   scheduleReportBroadcastRefresh(qc);

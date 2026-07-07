@@ -21,6 +21,21 @@ export function operatorCredentials(): SmokeCredentials | null {
   return { email, password };
 }
 
+/** Alias env: SMOKE_OPERATORE_* (italiano) o SMOKE_OPERATOR_* */
+export function operatoreCredentials(): SmokeCredentials | null {
+  const email = (process.env.SMOKE_OPERATORE_EMAIL ?? process.env.SMOKE_OPERATOR_EMAIL)?.trim();
+  const password = (process.env.SMOKE_OPERATORE_PASSWORD ?? process.env.SMOKE_OPERATOR_PASSWORD)?.trim();
+  if (!email || !password) return null;
+  return { email, password };
+}
+
+export function managerCredentials(): SmokeCredentials | null {
+  const email = process.env.SMOKE_MANAGER_EMAIL?.trim();
+  const password = process.env.SMOKE_MANAGER_PASSWORD?.trim();
+  if (!email || !password) return null;
+  return { email, password };
+}
+
 export function clientCredentials(): SmokeCredentials | null {
   const email = process.env.SMOKE_CLIENT_EMAIL?.trim();
   const password = process.env.SMOKE_CLIENT_PASSWORD?.trim();

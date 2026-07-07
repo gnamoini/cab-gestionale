@@ -145,5 +145,16 @@ assert.equal(canRead("operatore", "dipendenti", buildTestSnapshot({ userId: "o1"
 const mgrSnap = buildTestSnapshot({ userId: "m1", roleKey: "manager" });
 assert.equal(canWritePage(mgrSnap.resolved, "impostazioni"), true);
 assert.equal(canWritePage(mgrSnap.resolved, "sicurezza"), false);
+assert.equal(canWritePage(mgrSnap.resolved, "lavorazioni"), true, "manager lavorazioni write");
+assert.equal(
+  canWritePage(buildTestSnapshot({ userId: "o1", roleKey: "operatore" }).resolved, "lavorazioni"),
+  true,
+  "operatore lavorazioni write",
+);
+assert.equal(
+  canWritePage(buildTestSnapshot({ userId: "aa1", roleKey: "addetto_amministrativo" }).resolved, "lavorazioni"),
+  false,
+  "addetto_amministrativo lavorazioni none",
+);
 
 console.log("permissions-role-matrix.test.ts OK");

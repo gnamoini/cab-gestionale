@@ -26,6 +26,12 @@ const matrix: MatrixRow[] = [
     route: { pathname: "/sicurezza", allowed: false },
   },
   {
+    roleKey: "manager",
+    userId: "x-mgr-lav",
+    sidebar: { href: "/lavorazioni", visible: true },
+    route: { pathname: "/lavorazioni", allowed: true },
+  },
+  {
     roleKey: "operatore",
     userId: "x-op",
     sidebar: { href: "/lavorazioni", visible: true },

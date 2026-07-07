@@ -149,6 +149,7 @@ import {
 import { useLavorazioneProfileNamesQuery } from "@/src/hooks/use-lavorazione-profile-names-query";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { fetchLavorazioniListCountAuthorized } from "@/lib/lavorazioni/lavorazioni-list-fetch";
+import { isLavorazioneArchived, isLavorazioneInCorso } from "@/lib/lavorazioni/archived";
 import { lavorazioniListCountQueryKey } from "@/lib/lavorazioni/lavorazioni-list-query-keys";
 import { useLavorazioneConcludeMutation, useLavorazioneRemoveMutation, useLavorazioneRestoreMutation, useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useLavorazioneStatoMoveMutation } from "@/src/hooks/gestionale/use-lavorazione-stato-move-mutation";
@@ -698,7 +699,10 @@ export function LavorazioniView() {
           if (options?.rollbackSnapshot !== undefined) {
             rollbackSchedeStore(qc, options.rollbackSnapshot);
           }
-          gestToast.errorOnce("schede-save", res.error ?? "Salvataggio schede non riuscito.", { module: "lavorazioni" });
+          gestToast.errorOnce("schede-save", res.error ?? "Salvataggio schede non riuscito.", {
+            module: "lavorazioni",
+            action: "update",
+          });
           return res;
         }
         if (options?.savedBundle) {
@@ -886,8 +890,40 @@ export function LavorazioniView() {
 
   const { logQuery: lavModificheLogQuery } = useUndoableLog("lavorazioni");
 
-  const attiveRows = attiveQuery.data ?? [];
-  const chiuseRows = chiuseQuery.data ?? [];
+  const attiveRowsRaw = attiveQuery.data ?? [];
+  const chiuseRowsRaw = chiuseQuery.data ?? [];
+
+  const attiveRows = useMemo(() => {
+    const filtered = attiveRowsRaw.filter(isLavorazioneInCorso);
+    if (process.env.NODE_ENV === "development") {
+      for (const row of attiveRowsRaw) {
+        if (!isLavorazioneInCorso(row)) {
+          console.warn("[lavorazioni-archive-invariant] archived row in attive query data", {
+            id: row.id,
+            archived: row.archived,
+            updated_at: row.updated_at,
+          });
+        }
+      }
+    }
+    return filtered;
+  }, [attiveRowsRaw]);
+
+  const chiuseRows = useMemo(() => {
+    const filtered = chiuseRowsRaw.filter(isLavorazioneArchived);
+    if (process.env.NODE_ENV === "development") {
+      for (const row of chiuseRowsRaw) {
+        if (!isLavorazioneArchived(row)) {
+          console.warn("[lavorazioni-archive-invariant] non-archived row in archivio query data", {
+            id: row.id,
+            archived: row.archived,
+            updated_at: row.updated_at,
+          });
+        }
+      }
+    }
+    return filtered;
+  }, [chiuseRowsRaw]);
 
   const hasPageClientFilters =
     searchApplied.trim().length > 0 || lavorazioniAdvancedFiltersActive(advancedFilters);
@@ -1031,14 +1067,17 @@ export function LavorazioniView() {
   }, []);
 
   const { moveStato } = useLavorazioneStatoMoveMutation({
+    updateLav,
     statiChiusiIds,
     onSuccess: flashRow,
-    onError: (_id, err) => gestToast.errorOnce(`lav-stato-${_id}`, err, { module: "lavorazioni" }),
+    onError: (_id, err) => gestToast.errorOnce(`lav-stato-${_id}`, err, { module: "lavorazioni", action: "update" }),
   });
 
   const createdBy = user?.id ?? null;
 
-  const mutErr = updateLav.isError ? updateLav.error?.message : removeLav.isError ? removeLav.error?.message : null;
+  const mutErr = removeLav.isError
+    ? formatSupabaseError(removeLav.error, { module: "lavorazioni", action: "delete" })
+    : null;
   // Non bloccare l'UI inline per update ottimistici (stato/priorità).
   const mutPendingBlocking = removeLav.isPending || restoreLav.isPending || concludeLav.isPending;
 
@@ -1056,14 +1095,22 @@ export function LavorazioniView() {
       if (!prioritaOpts.includes(next as PrioritaLavorazione)) return;
       updateLav.mutate(
         { id: row.id, data: { priorita: next as PrioritaLavorazione } },
-        { onSuccess: () => flashRow(row.id) },
+        {
+          onSuccess: () => {
+            flashRow(row.id);
+            updateLav.reset();
+          },
+          onError: (err) => {
+            gestToast.errorOnce(`lav-priorita-${row.id}`, err, { module: "lavorazioni", action: "update" });
+          },
+        },
       );
     },
-    [updateLav, flashRow, canEditWorkOrders, prioritaOpts],
+    [updateLav, flashRow, canEditWorkOrders, prioritaOpts, gestToast],
   );
 
   const onAddettoRow = useCallback(
-    (row: LavorazioneListRow, next: string) => {
+    async (row: LavorazioneListRow, next: string) => {
       if (!canEditWorkOrders) return;
       const clean = next.trim();
       if (!clean || !globalOpts.lavorazioni.addetti.includes(clean)) return;
@@ -1117,10 +1164,11 @@ export function LavorazioniView() {
         };
         const schedeSnapshot = snapshotSchedeStore(qc);
         applyOptimisticSchedeStore(qc, updated);
-        persistSchedeAndSync(persistSchedeStore(updated, row.id), {
+        const persistRes = await persistSchedeAndSync(persistSchedeStore(updated, row.id), {
           syncAfter: false,
           rollbackSnapshot: schedeSnapshot,
         });
+        if (!persistRes.ok) return;
       }
       const logContext = lavorazioneLogContextFromListRow(row, schedeStore);
       void logEntry.create({
@@ -1207,7 +1255,7 @@ export function LavorazioniView() {
         void lavModificheLogQuery.refetch();
       },
       onError: (err) => {
-        gestToast.errorOnce("lav-conclude", err, { module: "lavorazioni" });
+        gestToast.errorOnce("lav-conclude", err, { module: "lavorazioni", action: "update" });
       },
     });
   }
@@ -1235,6 +1283,9 @@ export function LavorazioniView() {
         onSuccess: () => {
           flashRow(row.id);
           void lavModificheLogQuery.refetch();
+        },
+        onError: (err) => {
+          gestToast.errorOnce("lav-restore", err, { module: "lavorazioni", action: "update" });
         },
       },
     );
@@ -2324,10 +2375,8 @@ export function LavorazioniView() {
             if (!schedeRow) return;
             try {
               await syncIngressoToBackend(schedeRow.row, campi);
-            } catch {
-              gestToast.warning(
-                "Scheda ingresso salvata localmente; sincronizzazione anagrafica mezzo non completata.",
-              );
+            } catch (err) {
+              gestToast.error(err, { module: "lavorazioni", action: "update" });
             }
           }}
           attive={attiveLegacyRows}
@@ -2358,7 +2407,7 @@ export function LavorazioniView() {
         storico={storicoLegacyRows}
         onCreated={(id) => {
           invalidateSchedeStore();
-          flashRow(id);
+          focusLavorazioneInTable(id);
           closeCreateModal();
         }}
       />

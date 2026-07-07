@@ -27,7 +27,10 @@ export function useServiceMutation<TData, TVariables = void>(
   return useMutation({
     mutationFn: async (variables: TVariables) => {
       const res = await mutationFn(variables);
-      if (!res.success) throw new Error(res.error ?? "Operazione fallita");
+      if (!res.success) {
+        const detail = res.error?.trim();
+        throw new Error(detail || "Operazione non riuscita. Riprova tra poco.");
+      }
       return res.data as TData;
     },
     ...rest,

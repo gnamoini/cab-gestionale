@@ -5,9 +5,10 @@ import {
   buildLavorazioneStatoUpdatePatch,
   kanbanDndDevLog,
 } from "@/lib/lavorazioni/kanban-stato-move";
-import { useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
+import type { LavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 
 export type UseLavorazioneStatoMoveMutationOptions = {
+  updateLav: LavorazioneUpdateMutation;
   statiChiusiIds: readonly string[];
   onSuccess?: (lavorazioneId: string) => void;
   onError?: (lavorazioneId: string, error: Error) => void;
@@ -15,11 +16,11 @@ export type UseLavorazioneStatoMoveMutationOptions = {
 
 /** Stato-only move: optimistic cache + rollback via `useLavorazioneUpdateMutation` (UI-agnostic). */
 export function useLavorazioneStatoMoveMutation({
+  updateLav,
   statiChiusiIds,
   onSuccess,
   onError,
 }: UseLavorazioneStatoMoveMutationOptions) {
-  const updateLav = useLavorazioneUpdateMutation();
   const pendingRef = useRef(new Set<string>());
 
   const moveStato = useCallback(

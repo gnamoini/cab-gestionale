@@ -9,9 +9,9 @@ import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useQueryClient } from "@tanstack/react-query";
-import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
+import { commitLavorazioneCreateSuccess } from "@/src/lib/react-query/invalidate-related";
 import { executeInterventoWriteEntry } from "@/lib/domain/intervento-entry";
-import { lavorazioniEntry } from "@/lib/domain/lavorazioni-entry";
+import { useLavorazioneCreateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
 import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -95,6 +95,7 @@ export function LavorazioneCreateModal({
   const globalOpts = sharedGlobalOpts ?? hookGlobalOpts;
   const qc = useQueryClient();
   const gestToast = useGestionaleToast();
+  const createLav = useLavorazioneCreateMutation({ deferInvalidation: true });
   const createMezzo = useMezzoCreateMutation();
   const updateMezzo = useMezzoUpdateMutation();
   const mezziQ = useMezziListQuery(undefined, {
@@ -386,7 +387,7 @@ export function LavorazioneCreateModal({
               if (!input.mezzo_id) {
                 throw new Error("mezzo_id obbligatorio per la creazione lavorazione.");
               }
-              const res = await lavorazioniEntry.create({
+              return createLav.mutateAsync({
                 mezzo_id: input.mezzo_id,
                 stato: input.stato,
                 priorita: input.priorita,
@@ -397,10 +398,6 @@ export function LavorazioneCreateModal({
                 target_type: input.target_type,
                 attrezzatura_id: input.attrezzatura_id,
               });
-              if (!res.success || !res.data) {
-                throw new Error(res.error ?? "Errore creazione lavorazione.");
-              }
-              return res.data;
             },
             persistScheda: async ({ lavorazioneId, fields, createdBy: by }) => {
               const store = loadLavorazioneSchedeStore();
@@ -431,15 +428,17 @@ export function LavorazioneCreateModal({
             setSchedaSyncError(schedaMsg);
             gestToast.errorOnce("lav-create-scheda", schedaMsg, {
               module: "lavorazioni",
+              action: "create",
             });
-            dispatchGestionaleLocalMutation(qc, ["lavorazioni"]);
+            if (tx.lavorazioneId) {
+              await commitLavorazioneCreateSuccess(qc, tx.lavorazioneId);
+            }
             return;
           }
           throw new Error(tx.error);
         }
 
-        dispatchGestionaleLocalMutation(qc, ["lavorazioni"]);
-        dispatchGestionaleLocalMutation(qc, ["scheda_lavorazione"]);
+        await commitLavorazioneCreateSuccess(qc, tx.lavorazioneId);
         createdLavorazioneIdRef.current = null;
         partialSuccessRef.current = false;
         idempotencyKeyRef.current =
@@ -451,18 +450,9 @@ export function LavorazioneCreateModal({
         onCreated?.(tx.lavorazioneId);
         onClose();
       } catch (err) {
-        const mutationMsg =
-          (createMezzo.isError && createMezzo.error?.message) ||
-          (updateMezzo.isError && updateMezzo.error?.message) ||
-          null;
-        if (mutationMsg) {
-          setSubmitError(mutationMsg);
-          gestToast.error(mutationMsg, { module: "lavorazioni" });
-          return;
-        }
         const msg = err instanceof Error ? err.message : "Salvataggio fallito.";
         setSubmitError(msg);
-        gestToast.error(msg, { module: "lavorazioni" });
+        gestToast.error(err, { module: "lavorazioni", action: "create" });
       }
     });
     } finally {
@@ -470,10 +460,13 @@ export function LavorazioneCreateModal({
     }
   }
 
-  const pending = submitPending || createMezzo.isPending || updateMezzo.isPending;
+  const pending = submitPending || createLav.isPending || createMezzo.isPending || updateMezzo.isPending;
   const mutationError =
-    createMezzo.isError || updateMezzo.isError
-      ? (createMezzo.error?.message ?? updateMezzo.error?.message ?? "Salvataggio fallito.")
+    createLav.isError || createMezzo.isError || updateMezzo.isError
+      ? (createLav.error?.message ??
+        createMezzo.error?.message ??
+        updateMezzo.error?.message ??
+        "Salvataggio fallito.")
       : null;
   const inlineError = submitError ?? mutationError;
 

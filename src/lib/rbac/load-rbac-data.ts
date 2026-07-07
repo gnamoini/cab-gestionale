@@ -13,7 +13,7 @@ export type PageAccessDbBundle = {
   userPageOverrides: Record<string, PageAccessLevel>;
 };
 
-/** Migrazione `20260907120000_rbac_page_access_ssot` non ancora applicata. */
+/** Env senza tabelle pagina (migration non applicata o schema cache PostgREST stale). */
 export function isRbacPageTableUnavailableError(message: string | null | undefined): boolean {
   if (!message) return false;
   return (

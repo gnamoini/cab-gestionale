@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { attachConsoleGuards } from "../helpers/console";
-import { adminCredentials, loginViaUi } from "../fixtures/auth";
+import { adminCredentials, loginViaUi, managerCredentials, operatoreCredentials } from "../fixtures/auth";
 import { buildSchedaIngressoAuditFixture } from "../fixtures/scheda-ingresso-test-data";
 import {
   attachSchedaPayloadCapture,
@@ -108,4 +108,33 @@ test("create → save → hub panoramica → edit ingresso → scheda lavorazion
 
   const payloadWithCliente = capture.ingressoCampi.find((c) => c.cliente === ingresso.cliente);
   expect(payloadWithCliente).toBeTruthy();
+});
+
+async function smokeCreateLavorazioneForRole(
+  page: import("@playwright/test").Page,
+  creds: { email: string; password: string },
+): Promise<void> {
+  const fixture = buildSchedaIngressoAuditFixture();
+  await loginViaUi(page, creds);
+  await page.goto("/lavorazioni");
+  await clickNuovaLavorazioneCta(page);
+  await fillMinimalCreateAndSaveWithoutClienteBlur(page, fixture.ingresso);
+  await submitCreateLavorazione(page);
+  await searchLavorazioneByToken(page, fixture.token);
+}
+
+test.describe("multi-role write path", () => {
+  test("manager: create lavorazione", async ({ page }) => {
+    const creds = managerCredentials();
+    test.skip(!creds, "SMOKE_MANAGER_EMAIL e SMOKE_MANAGER_PASSWORD richiesti");
+    attachConsoleGuards(page);
+    await smokeCreateLavorazioneForRole(page, creds!);
+  });
+
+  test("operatore: create lavorazione", async ({ page }) => {
+    const creds = operatoreCredentials();
+    test.skip(!creds, "SMOKE_OPERATORE_EMAIL e SMOKE_OPERATORE_PASSWORD richiesti");
+    attachConsoleGuards(page);
+    await smokeCreateLavorazioneForRole(page, creds!);
+  });
 });

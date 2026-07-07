@@ -6,6 +6,7 @@ import { readOperatorGlobalSettingsDbEnabledFromRows } from "@/lib/permissions/o
 import { readClientEffectivePermissionsSnapshotCache, readAuthRoleHint } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
 import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
+import { fetchRbacRoleKeyForUser } from "@/lib/rbac/fetch-rbac-role-key";
 import { loadRolePageAccess, loadUserPageOverrides } from "@/src/lib/rbac/load-rbac-data";
 import {
   OPERATOR_GLOBAL_SETTINGS_KEY,
@@ -43,17 +44,17 @@ export async function fetchClientEffectivePermissionsSnapshot(): Promise<Effecti
   }
 
   try {
-    const [{ data: prof }, { data: settingsRow }] = await Promise.all([
-      sb.from("profiles").select("role_key").eq("id", userId).maybeSingle(),
+    const [{ data: settingsRow }, roleKeyFromDb] = await Promise.all([
       sb
         .from("app_settings")
         .select("value")
         .eq("module", OPERATOR_GLOBAL_SETTINGS_MODULE)
         .eq("key", OPERATOR_GLOBAL_SETTINGS_KEY)
         .maybeSingle(),
+      fetchRbacRoleKeyForUser(sb, userId),
     ]);
 
-    let roleKey = typeof prof?.role_key === "string" ? prof.role_key : null;
+    let roleKey = roleKeyFromDb !== "guest" ? roleKeyFromDb : null;
     const cachedAfterFetch = readClientEffectivePermissionsSnapshotCache();
     if (!roleKey && cachedAfterFetch?.userId === userId && cachedAfterFetch.role !== "guest") {
       roleKey = cachedAfterFetch.roleKey;
