@@ -8,6 +8,7 @@ import {
   getLavorazioniAttiveLightServer,
   getLavorazioniReportLightServer,
 } from "@/lib/lavorazioni/lavorazioni-list-fetch-server";
+import { getPrefetchCachePolicyHint } from "@/lib/decision/prefetch-cache-hint";
 import { lavorazioniInfiniteSeedFromRows } from "@/lib/lavorazioni/lavorazioni-infinite-cache";
 import { isServerListPaginationEnabled } from "@/lib/performance/list-pagination-rollout";
 import { resolveInitialLoad } from "@/lib/render/render-path-orchestrator";
