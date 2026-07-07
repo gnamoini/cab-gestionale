@@ -124,7 +124,9 @@ async function fetchServerAuthSnapshotWithClient(
   let publicUser;
   try {
     const profileForMap =
-      prof != null ? { ...prof, role_key: roleKey } : ({ role_key: roleKey } as typeof prof);
+      prof != null
+        ? { ...prof, role_key: roleKey }
+        : ({ role_key: roleKey } as Parameters<typeof mapSupabaseUserToPublicAuthUser>[1]);
     publicUser = mapSupabaseUserToPublicAuthUser(authUser, profileForMap);
   } catch (e) {
     console.warn("[auth] server snapshot map user degraded:", e);
