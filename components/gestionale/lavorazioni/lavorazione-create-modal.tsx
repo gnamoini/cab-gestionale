@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
+import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import { useGlobalOptions, type GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
-import { useLavorazioneCreateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useQueryClient } from "@tanstack/react-query";
 import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
 import { executeInterventoWriteEntry } from "@/lib/domain/intervento-entry";
+import { lavorazioniEntry } from "@/lib/domain/lavorazioni-entry";
 import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
 import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -25,7 +26,7 @@ import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/sched
 import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import { useFormEngineSections } from "@/lib/forms/form-engine";
 import { LoadingButton } from "@/components/design-system";
-import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   emptySchedaIngressoFields,
   SchedaIngressoFormBody,
@@ -94,7 +95,6 @@ export function LavorazioneCreateModal({
   const globalOpts = sharedGlobalOpts ?? hookGlobalOpts;
   const qc = useQueryClient();
   const gestToast = useGestionaleToast();
-  const create = useLavorazioneCreateMutation();
   const createMezzo = useMezzoCreateMutation();
   const updateMezzo = useMezzoUpdateMutation();
   const mezziQ = useMezziListQuery(undefined, {
@@ -137,6 +137,7 @@ export function LavorazioneCreateModal({
   const baselineRef = useRef<string | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
+  const [partialCloseConfirmOpen, setPartialCloseConfirmOpen] = useState(false);
 
   const syncBaseline = useCallback(() => {
     baselineRef.current = JSON.stringify(getSnapshot());
@@ -243,6 +244,11 @@ export function LavorazioneCreateModal({
       defaultMezzoAppliedRef.current = null;
       baselineRef.current = null;
       setUnsavedExitOpen(false);
+      setPartialCloseConfirmOpen(false);
+      setSubmitError(null);
+      setSchedaSyncError(null);
+      createdLavorazioneIdRef.current = null;
+      partialSuccessRef.current = false;
       return;
     }
     if (formInitRef.current) return;
@@ -376,11 +382,11 @@ export function LavorazioneCreateModal({
                 create: (data) => createMezzo.mutateAsync(data),
                 update: (id, data) => updateMezzo.mutateAsync({ id, data }),
               }),
-            createLavorazione: (input) => {
+            createLavorazione: async (input) => {
               if (!input.mezzo_id) {
                 throw new Error("mezzo_id obbligatorio per la creazione lavorazione.");
               }
-              return create.mutateAsync({
+              const res = await lavorazioniEntry.create({
                 mezzo_id: input.mezzo_id,
                 stato: input.stato,
                 priorita: input.priorita,
@@ -391,6 +397,10 @@ export function LavorazioneCreateModal({
                 target_type: input.target_type,
                 attrezzatura_id: input.attrezzatura_id,
               });
+              if (!res.success || !res.data) {
+                throw new Error(res.error ?? "Errore creazione lavorazione.");
+              }
+              return res.data;
             },
             persistScheda: async ({ lavorazioneId, fields, createdBy: by }) => {
               const store = loadLavorazioneSchedeStore();
@@ -428,6 +438,7 @@ export function LavorazioneCreateModal({
           throw new Error(tx.error);
         }
 
+        dispatchGestionaleLocalMutation(qc, ["lavorazioni"]);
         dispatchGestionaleLocalMutation(qc, ["scheda_lavorazione"]);
         createdLavorazioneIdRef.current = null;
         partialSuccessRef.current = false;
@@ -436,12 +447,19 @@ export function LavorazioneCreateModal({
             ? crypto.randomUUID()
             : `lav-create-${Date.now()}`;
         setUnsavedExitOpen(false);
+        setPartialCloseConfirmOpen(false);
         onCreated?.(tx.lavorazioneId);
         onClose();
       } catch (err) {
         const mutationMsg =
-          create.error?.message ?? createMezzo.error?.message ?? updateMezzo.error?.message ?? null;
-        if (mutationMsg) return;
+          (createMezzo.isError && createMezzo.error?.message) ||
+          (updateMezzo.isError && updateMezzo.error?.message) ||
+          null;
+        if (mutationMsg) {
+          setSubmitError(mutationMsg);
+          gestToast.error(mutationMsg, { module: "lavorazioni" });
+          return;
+        }
         const msg = err instanceof Error ? err.message : "Salvataggio fallito.";
         setSubmitError(msg);
         gestToast.error(msg, { module: "lavorazioni" });
@@ -452,13 +470,12 @@ export function LavorazioneCreateModal({
     }
   }
 
-  const pending =
-    submitPending || create.isPending || createMezzo.isPending || updateMezzo.isPending;
+  const pending = submitPending || createMezzo.isPending || updateMezzo.isPending;
   const mutationError =
-    create.isError || createMezzo.isError || updateMezzo.isError
-      ? (create.error?.message ?? createMezzo.error?.message ?? updateMezzo.error?.message ?? "Salvataggio fallito.")
+    createMezzo.isError || updateMezzo.isError
+      ? (createMezzo.error?.message ?? updateMezzo.error?.message ?? "Salvataggio fallito.")
       : null;
-  const saveError = schedaSyncError ?? submitError ?? mutationError;
+  const inlineError = submitError ?? mutationError;
 
   return (
     <>
@@ -467,16 +484,28 @@ export function LavorazioneCreateModal({
         onRequestClose={requestClose}
         variant="create-lavorazione"
         footer={
-          <LoadingButton
-            type="submit"
-            form="lavorazione-create-form"
-            className={`${erpBtnAccent} min-h-11 w-full sm:ml-auto sm:w-auto sm:min-w-[10rem]`}
-            loading={pending}
-            loadingLabel="Salvataggio…"
-            disabled={!createdBy || stati.length === 0 || globalOpts.isLoading}
-          >
-            Salva lavorazione
-          </LoadingButton>
+          <div className="flex w-full flex-col-reverse gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:justify-end">
+            {schedaSyncError ? (
+              <button
+                type="button"
+                className={`${erpBtnNeutral} min-h-11 w-full sm:w-auto`}
+                disabled={pending}
+                onClick={() => setPartialCloseConfirmOpen(true)}
+              >
+                Chiudi comunque
+              </button>
+            ) : null}
+            <LoadingButton
+              type="submit"
+              form="lavorazione-create-form"
+              className={`${erpBtnAccent} min-h-11 w-full sm:ml-auto sm:w-auto sm:min-w-[10rem]`}
+              loading={pending}
+              loadingLabel="Salvataggio…"
+              disabled={!createdBy || stati.length === 0 || globalOpts.isLoading}
+            >
+              Salva lavorazione
+            </LoadingButton>
+          </div>
         }
       >
         <form
@@ -486,6 +515,14 @@ export function LavorazioneCreateModal({
           onSubmit={onSubmit}
           className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}
         >
+        {schedaSyncError ? (
+          <div
+            role="alert"
+            className="sticky top-0 z-10 shrink-0 border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+          >
+            {schedaSyncError}
+          </div>
+        ) : null}
         <SchedaIngressoFormBody
           variant="create-lavorazione"
           fields={fields}
@@ -501,7 +538,7 @@ export function LavorazioneCreateModal({
           priorita={priorita}
           onPrioritaChange={setPriorita}
           mezzoHint={mezzoHint}
-          errorMessage={saveError}
+          errorMessage={inlineError}
           mezzoPrompt={mezzoPrompt}
           onMezzoDialogAccept={acceptMezzoPrompt}
           onMezzoDialogDismiss={dismissMezzoPrompt}
@@ -512,6 +549,21 @@ export function LavorazioneCreateModal({
         />
         </form>
       </SchedaIngressoFormModalShell>
+
+      <GestionaleConfirmDialog
+        open={partialCloseConfirmOpen}
+        title="Chiudi senza sincronizzare la scheda?"
+        message="La lavorazione è già stata creata. Potrai completare la scheda di ingresso dal dettaglio lavorazione."
+        confirmLabel="Chiudi"
+        onCancel={() => setPartialCloseConfirmOpen(false)}
+        onConfirm={() => {
+          setPartialCloseConfirmOpen(false);
+          setSchedaSyncError(null);
+          partialSuccessRef.current = false;
+          createdLavorazioneIdRef.current = null;
+          onClose();
+        }}
+      />
 
       <GestionaleUnsavedChangesDialog
         open={unsavedExitOpen}

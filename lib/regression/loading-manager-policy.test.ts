@@ -20,7 +20,8 @@ function main(): void {
 
   const rbacGuard = read("components/gestionale/rbac-page-guard.tsx");
   assert.match(rbacGuard, /useLoadingClaim\("skeleton", "rbac-guard"/);
-  assert.match(rbacGuard, /useIsWinningClaim\("skeleton", "rbac-guard"/);
+  assert.match(rbacGuard, /if \(showLoadingGate && !loadingFailsafe\)/);
+  assert.doesNotMatch(rbacGuard, /useIsWinningClaim\("skeleton", "rbac-guard"/);
 
   const topNotice = read("components/gestionale/gestionale-top-notice.tsx");
   assert.match(topNotice, /useLoadingClaim\("banner"/);

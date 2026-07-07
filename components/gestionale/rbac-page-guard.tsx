@@ -13,7 +13,7 @@ import { canAccessRoute } from "@/src/lib/auth/can-access-route";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { LoadingSuspenseFallback } from "@/components/design-system/loading/loading-suspense-fallback";
 import { resolveLoadingPageSkeletonVariant } from "@/components/design-system/loading/resolve-loading-page-skeleton-variant";
-import { useIsWinningClaim, useLoadingClaim } from "@/context/global-loading-context";
+import { useLoadingClaim } from "@/context/global-loading-context";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
 import { isBootInvestigationEnabled, logBoot, trackRedirect } from "@/lib/observability/boot-investigation";
@@ -56,7 +56,6 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
   const showLoadingGate = status === "loading" || checkingPerms;
   const skeletonClaimActive = showLoadingGate && !loadingFailsafe;
   useLoadingClaim("skeleton", "rbac-guard", skeletonClaimActive);
-  const showSkeleton = useIsWinningClaim("skeleton", "rbac-guard", skeletonClaimActive);
 
   useEffect(() => {
     if (!isBootInvestigationEnabled()) return;
@@ -109,7 +108,7 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
     }
   }, [allowed, checkingPerms, pathname, router, sessionReady]);
 
-  if (showSkeleton) {
+  if (showLoadingGate && !loadingFailsafe) {
     const skeletonVariant = resolveLoadingPageSkeletonVariant(pathname);
     return (
       <div className="min-w-0" aria-busy="true" aria-label={GLOBAL_LOADING_MESSAGES.permessi}>

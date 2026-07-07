@@ -9,7 +9,7 @@ import { useGestionaleListLayout, GESTIONALE_LIST_DESKTOP_ONLY_CLASS } from "@/l
 import { useKanbanViewportLayout } from "@/lib/ui/use-kanban-viewport-layout";
 import { LIST_QUERY_LOADING_FAILSAFE_MS, useLoadingFailsafe } from "@/lib/ui/loading-failsafe";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
-import { useCallback, useEffect, useMemo, useRef, useState, startTransition, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -629,7 +629,7 @@ export function LavorazioniView() {
   }, [primeCreateModal]);
 
   const closeCreateModal = useCallback(() => {
-    startTransition(() => setCreateOpen(false));
+    setCreateOpen(false);
   }, []);
 
   useEffect(() => {
@@ -2346,6 +2346,7 @@ export function LavorazioniView() {
 
       {canEditWorkOrders && createModalWarm ? (
       <LavorazioneCreateModal
+        key={createOpen ? "lav-create-open" : "lav-create-closed"}
         open={createOpen}
         onClose={closeCreateModal}
         createdBy={createdBy}
@@ -2358,6 +2359,7 @@ export function LavorazioniView() {
         onCreated={(id) => {
           invalidateSchedeStore();
           flashRow(id);
+          closeCreateModal();
         }}
       />
       ) : null}
