@@ -8,7 +8,8 @@ import {
   getLavorazioniAttiveLightServer,
   getLavorazioniReportLightServer,
 } from "@/lib/lavorazioni/lavorazioni-list-fetch-server";
-import { getPrefetchCachePolicyHint } from "@/lib/decision/prefetch-cache-hint";
+import { lavorazioniInfiniteSeedFromRows } from "@/lib/lavorazioni/lavorazioni-infinite-cache";
+import { isServerListPaginationEnabled } from "@/lib/performance/list-pagination-rollout";
 import { resolveInitialLoad } from "@/lib/render/render-path-orchestrator";
 import { getMagazzinoListServer, getMagazzinoReportLightServer } from "@/lib/magazzino/magazzino-list-fetch-server";
 import { getMezziListLightServer, getMezziReportLightServer } from "@/lib/mezzi/mezzi-list-fetch-server";
@@ -81,7 +82,10 @@ export async function prefetchDashboardPage(): Promise<DehydratedState> {
 
   const dto = await fetchDashboardDataDTOServer();
 
-  qc.setQueryData(lav.queryKey, dto.lavorazioni);
+  qc.setQueryData(
+    lav.queryKey,
+    isServerListPaginationEnabled() ? lavorazioniInfiniteSeedFromRows(dto.lavorazioni) : dto.lavorazioni,
+  );
   qc.setQueryData(magReport.queryKey, dto.magazzinoReport);
   qc.setQueryData(MAGAZZINO_DASHBOARD_KPI_QUERY_KEY, dto.magDashboardKpi);
   qc.setQueryData(settings.queryKey, dto.settings);
@@ -111,7 +115,10 @@ export async function prefetchLavorazioniPage(): Promise<DehydratedState> {
   const lav = resolveInitialLoad({ scopeKey: "lavorazioni.list.attive" });
   const lavRes = await getLavorazioniAttiveLightServer();
   const rows = unwrap(lavRes, []);
-  qc.setQueryData(lav.queryKey, rows);
+  qc.setQueryData(
+    lav.queryKey,
+    isServerListPaginationEnabled() ? lavorazioniInfiniteSeedFromRows(rows) : rows,
+  );
 
   const ids = rows.map((r) => r.id);
   if (ids.length > 0) {

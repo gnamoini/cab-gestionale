@@ -1,7 +1,13 @@
-import type { InfiniteData, QueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import type { Page } from "@/lib/domain/list-types";
 import type { NormalizedLavorazioniFilters } from "@/lib/domain/list-where-spec";
 import { logLavorazioniArchiveMembershipDebug } from "@/lib/lavorazioni/lavorazioni-archive-membership-debug";
+import {
+  emptyLavorazioniInfiniteListData,
+  isLavorazioniInfiniteListCacheData,
+  lavorazioniInfiniteSeedFromRows,
+  type LavorazioniInfiniteListData,
+} from "@/lib/lavorazioni/lavorazioni-infinite-cache";
 import { isLavorazioniListRowsQueryKey } from "@/lib/lavorazioni/lavorazioni-list-query-keys";
 import { lavorazioneCompletamentoFieldsFromYmd } from "@/lib/lavorazioni/date-day-only";
 import type { LavorazioneListRow, LavorazioneUpdate } from "@/src/services/lavorazioni.service";
@@ -24,7 +30,6 @@ export type LavorazioneUpdateOptimisticContext = {
 };
 
 type LavorazioniFlatListData = LavorazioneListRow[];
-type LavorazioniInfiniteListData = InfiniteData<Page<LavorazioneListRow>>;
 export type LavorazioniListCacheData = LavorazioniFlatListData | LavorazioniInfiniteListData;
 
 function lavorazioneBaseQueryKey(lavorazioneId: string) {
@@ -46,19 +51,10 @@ function isLavorazioniFlatListCacheData(data: unknown): data is LavorazioniFlatL
   return Array.isArray(data);
 }
 
-function isLavorazioniInfiniteCacheData(data: unknown): data is LavorazioniInfiniteListData {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    "pages" in data &&
-    Array.isArray((data as LavorazioniInfiniteListData).pages)
-  );
-}
-
 /** Estrae righe da cache lista (flat o infinite). */
 export function lavorazioniListCacheRows(data: LavorazioniListCacheData | undefined): LavorazioneListRow[] {
   if (!data) return [];
-  if (isLavorazioniInfiniteCacheData(data)) {
+  if (isLavorazioniInfiniteListCacheData(data)) {
     return data.pages.flatMap((p) => [...(p.rows ?? [])]);
   }
   if (!isLavorazioniFlatListCacheData(data)) return [];
@@ -242,14 +238,20 @@ function reconcileRowAcrossLists(qc: QueryClient, lavorazioneId: string, merged:
     const listArchived = parseListFilterArchived(key);
     const prev = old;
     // ponytail: key match ≠ data shape; skip unexpected cache (count scalar, prefetch errato)
-    if (prev != null && !isLavorazioniInfiniteCacheData(prev) && !isLavorazioniFlatListCacheData(prev)) {
+    if (prev != null && !isLavorazioniInfiniteListCacheData(prev) && !isLavorazioniFlatListCacheData(prev)) {
       continue;
     }
+    const listKind = listKindFromQueryKey(key);
     let next: LavorazioniListCacheData;
-    if (!prev) {
-      next = patchFlatList([], lavorazioneId, merged, listArchived);
-    } else if (isLavorazioniInfiniteCacheData(prev)) {
+    if (isLavorazioniInfiniteListCacheData(prev)) {
       next = patchInfiniteList(prev, lavorazioneId, merged, listArchived);
+    } else if (listKind === "list-v2") {
+      const seed = isLavorazioniFlatListCacheData(prev)
+        ? lavorazioniInfiniteSeedFromRows(prev)
+        : emptyLavorazioniInfiniteListData();
+      next = patchInfiniteList(seed, lavorazioneId, merged, listArchived);
+    } else if (!prev) {
+      next = patchFlatList([], lavorazioneId, merged, listArchived);
     } else {
       next = patchFlatList(prev, lavorazioneId, merged, listArchived);
     }

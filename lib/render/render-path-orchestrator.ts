@@ -2,6 +2,10 @@ import {
   LAVORAZIONI_ATTIVE_LIGHT_FILTERS,
   LAVORAZIONI_REPORT_FILTERS,
 } from "@/lib/lavorazioni/lavorazioni-prefetch-filters";
+import { normalizeLavorazioniFilters } from "@/lib/domain/normalize-filters";
+import { lavorazioniInfiniteSeedFromRows } from "@/lib/lavorazioni/lavorazioni-infinite-cache";
+import { isServerListPaginationEnabled } from "@/lib/performance/list-pagination-rollout";
+import { buildLavorazioniListKey } from "@/lib/react-query/build-list-keys";
 import {
   documentiListQueryKey,
   lavorazioniListQueryKey,
@@ -41,6 +45,9 @@ function lifecycleFromOwnership(ownership: ReturnType<typeof getQueryOwnership>)
 function queryKeyForScope(scopeKey: QueryScopeKey): readonly unknown[] {
   switch (scopeKey) {
     case "lavorazioni.list.attive":
+      if (isServerListPaginationEnabled()) {
+        return buildLavorazioniListKey(normalizeLavorazioniFilters(LAVORAZIONI_ATTIVE_LIGHT_FILTERS), false);
+      }
       return lavorazioniListQueryKey(LAVORAZIONI_ATTIVE_LIGHT_FILTERS, false);
     case "lavorazioni.list.chiuse":
       return lavorazioniListQueryKey({ archived: true, fetchMode: "light" }, false);

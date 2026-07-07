@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { flattenPages } from "@/lib/domain/list-flatten";
 import type { LavorazioniRpcListCursor } from "@/lib/domain/list-mapper";
 import type { ListQueryResult, Page } from "@/lib/domain/list-types";
@@ -11,6 +11,7 @@ import {
   fetchLavorazioniListPageRpc,
   getNextLavorazioniPageParam,
 } from "@/lib/lavorazioni/lavorazioni-paginated-fetch";
+import { repairLavorazioniInfiniteListCacheEntry } from "@/lib/lavorazioni/lavorazioni-infinite-cache";
 import { buildLavorazioniListKey } from "@/lib/react-query/build-list-keys";
 import type { LavorazioneFilters, LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
@@ -50,9 +51,13 @@ export function useLavorazioniListV2(
   const enabled = options?.enabled !== false;
   const staleTime = options?.staleTime ?? LA_STALE_MS;
   const useRpc = !clientPortal && filters?.includeMezzo !== true && filters?.fetchMode !== "report";
+  const queryKey = useMemo(() => buildLavorazioniListKey(norm, clientPortal), [norm, clientPortal]);
+  const qc = useQueryClient();
+  // ponytail: flat legacy cache su list-v2 fa crashare hasNextPage (data.pages undefined)
+  repairLavorazioniInfiniteListCacheEntry(qc, queryKey);
 
   const query = useInfiniteQuery({
-    queryKey: buildLavorazioniListKey(norm, clientPortal),
+    queryKey,
     queryFn: async ({ pageParam }) => {
       if (useRpc) {
         const res = await fetchLavorazioniListPageRpc(
