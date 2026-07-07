@@ -292,7 +292,7 @@ export const lavorazioniService = {
         entita_id: id,
         azione: "UPDATE",
         payload: {
-          ...auditDiff(before, r, ctx),
+          ...(auditDiff(before, r, ctx) as Record<string, unknown>),
           completamento: {
             campo: "data_uscita",
             prima: completamentoPrima,
