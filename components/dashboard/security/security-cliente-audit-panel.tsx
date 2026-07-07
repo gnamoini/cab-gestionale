@@ -11,6 +11,7 @@ import {
   securitySubsectionShellClass,
 } from "@/components/dashboard/security/security-inline-notice";
 import { GestionaleListTable, GestionaleListTableRow } from "@/components/gestionale/global-table";
+import { gestionaleListTableTd } from "@/lib/ui/gestionale-list-table";
 import {
   dsBtnPrimary,
   dsPageToolbarBtn,
@@ -137,7 +138,6 @@ export function SecurityClienteAuditPanel({ readOnly = false }: Props) {
                 <SecurityInlineNotice variant="info">Nessun problema rilevato.</SecurityInlineNotice>
               ) : (
                 <GestionaleListTable
-                  className={gestionaleListTableClass}
                   colSpan={5}
                   headRow={
                     <>
