@@ -86,13 +86,13 @@ export const dsBtnNeutralIconForm = `${dsBtnNeutral} h-11 w-11 min-h-11 min-w-11
 /**
  * Toolbar header pagina (`PageHeader`):
  * - shell: `dsPageHeaderShell`
- * - solo icona: `dsPageToolbarIconBtn` (40×40)
+ * - solo icona: `dsPageToolbarIconBtn` (44×44, allineato a `dsSearchFieldInput`)
  * - icona + testo: `dsPageToolbarBtn`
  */
-export const dsPageToolbarBtn = `inline-flex min-h-[2.5rem] min-w-0 shrink-0 items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] ${cabSurface} px-3 py-2 text-xs font-semibold ${cabText} shadow-[var(--cab-shadow-sm)] transition-[background-color,box-shadow,ring-color,border-color,color] duration-200 ease-out hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] hover:ring-1 hover:ring-[color:color-mix(in_srgb,var(--cab-border-strong)_70%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
+export const dsPageToolbarBtn = `inline-flex min-h-11 min-w-0 shrink-0 items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] ${cabSurface} px-3 py-2 text-xs font-semibold ${cabText} shadow-[var(--cab-shadow-sm)] transition-[background-color,box-shadow,ring-color,border-color,color] duration-200 ease-out hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] hover:ring-1 hover:ring-[color:color-mix(in_srgb,var(--cab-border-strong)_70%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
-/** Solo icona in toolbar header — footprint quadrato 40×40. */
-export const dsPageToolbarIconBtn = `${dsPageToolbarBtn} h-10 w-10 min-h-0 p-0`;
+/** Solo icona in toolbar header — footprint quadrato 44×44. */
+export const dsPageToolbarIconBtn = `${dsPageToolbarBtn} h-11 w-11 min-h-11 p-0`;
 
 /** Freccia indietro header — affordance hover, non box bottone. */
 export const dsPageHeaderBackBtn = `inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] border border-transparent bg-transparent p-0 text-[color:var(--cab-text-muted)] transition-[color,background-color,transform] duration-150 ease-out hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] active:scale-[0.97] ${dsBtnCursor} ${dsFocus}`;

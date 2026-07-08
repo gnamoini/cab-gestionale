@@ -23,13 +23,14 @@ const fullCampi: SchedaIngressoFields = {
   livelloCarburante: "3/4",
   addettoAccettazione: "Angelo",
   richiedente: "Capo cantiere",
+  richiedenteTelefono: "3331234567",
   noteIntervento: "Verificare anche filtri",
 };
 
 const sections = buildIngressoPdfSections(fullCampi);
 
 assert.equal(sections.data.length, 2);
-assert.equal(sections.cliente.length, 4);
+assert.equal(sections.cliente.length, 5);
 assert.equal(sections.attrezzatura.length, 6);
 assert.equal(sections.telaio.length, 7);
 assert.equal(sections.telaio.find((f) => f.label === "VIN")?.value, "WVWZZZ1JZ3W386752");
@@ -45,7 +46,7 @@ const sparse = buildIngressoPdfSections({
   noteIntervento: "Solo note",
 });
 
-assert.equal(sparse.cliente.length, 2);
+assert.equal(sparse.cliente.length, 3);
 assert.deepEqual(
   sparse.altreInformazioni.map((f) => f.label),
   ["Note intervento"],

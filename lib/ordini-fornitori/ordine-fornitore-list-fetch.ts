@@ -14,6 +14,7 @@ export async function fetchOrdiniFornitoriListPayload(
   const { data: ordiniData, error: ordiniError } = await sb
     .from("ordini_fornitori")
     .select(ORDINI_FORNITORI_COLUMNS)
+    .order("created_at", { ascending: false })
     .order("data_ordine", { ascending: false })
     .order("numero", { ascending: false, nullsFirst: true });
   if (ordiniError) return err(ordiniError.message);

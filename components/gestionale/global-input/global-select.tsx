@@ -72,6 +72,12 @@ import type { CSSProperties } from "react";
 
 export type GlobalSelectOption = ListSelectItem & { pillStyle?: CSSProperties };
 
+export type GlobalSelectAddAction = {
+  id: string;
+  label: (candidate: string) => string;
+  onAdd: (value: string) => void | Promise<string | null | void> | string | null;
+};
+
 type GlobalSelectBaseProps = {
   disabled?: boolean;
   required?: boolean;
@@ -90,6 +96,8 @@ type GlobalSelectBaseProps = {
   canAdd?: boolean;
   addPending?: boolean;
   onAddToList?: (value: string) => void | Promise<string | null | void> | string | null;
+  /** Sostituisce il singolo «Aggiungi» con più azioni (es. originale vs alternativo). */
+  addActions?: readonly GlobalSelectAddAction[];
   coloredOptions?: boolean;
   filterNeutralValues?: readonly string[];
   "aria-label"?: string;
@@ -184,6 +192,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
     canAdd = true,
     addPending = false,
     onAddToList,
+    addActions,
     coloredOptions = false,
     filterNeutralValues,
     showSimilarWarning = true,
@@ -444,10 +453,14 @@ export function GlobalSelect(props: GlobalSelectProps) {
     [addCandidate, mode, options, items],
   );
 
+  const addActionsList = addActions?.length ? addActions : [];
+  const hasMultiAdd = addActionsList.length > 0;
+  const hasSingleAdd = Boolean(onAddToList) && !hasMultiAdd;
+
   const showAddOption = autocompleteShowAddOption({
     allowAdd,
     canAdd,
-    hasOnAdd: Boolean(onAddToList),
+    hasOnAdd: hasMultiAdd || hasSingleAdd,
     open,
     disabled: Boolean(disabled),
     isLoading,
@@ -456,8 +469,19 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const showAddOptionInUi =
     showAddOption && !(sheetActive && sheetUsesSearch && !sheetQuery.trim());
   const addOptionEnabled = autocompleteAddOptionEnabled(addCandidate, addPending);
-  const addOptionIndex = showAddOptionInUi ? suggestions.length : -1;
-  const totalNavigableOptions = suggestions.length + (showAddOptionInUi ? 1 : 0);
+  const addOptionCount =
+    showAddOptionInUi && addOptionEnabled ? (hasMultiAdd ? addActionsList.length : hasSingleAdd ? 1 : 0) : 0;
+  const addOptionIndex = hasSingleAdd && showAddOptionInUi ? suggestions.length : -1;
+  const totalNavigableOptions = suggestions.length + addOptionCount;
+
+  const isAddActiveIndex = useCallback(
+    (idx: number) =>
+      showAddOptionInUi &&
+      addOptionEnabled &&
+      idx >= suggestions.length &&
+      idx < suggestions.length + addOptionCount,
+    [showAddOptionInUi, addOptionEnabled, suggestions.length, addOptionCount],
+  );
 
   const optionDomId = useCallback(
     (idx: number) => `${listboxId}-opt-${idx}`,
@@ -468,8 +492,10 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const activeDescendantId =
     activeIndex >= 0 && activeIndex < suggestions.length
       ? optionDomId(activeIndex)
-      : activeIndex === addOptionIndex
-        ? addOptionDomId
+      : isAddActiveIndex(activeIndex)
+        ? hasMultiAdd
+          ? `${listboxId}-add-${addActionsList[activeIndex - suggestions.length]!.id}`
+          : addOptionDomId
         : undefined;
 
   const isValid = useMemo(() => {
@@ -781,35 +807,55 @@ export function GlobalSelect(props: GlobalSelectProps) {
     [runAtomicSelect],
   );
 
-  const runAdd = useCallback(async () => {
-    if (!onAddToList || !addCandidate || addPending || addInFlightRef.current) return;
-    addInFlightRef.current = true;
-    cancelPendingBlur();
-    try {
-      const result = await onAddToList(addCandidate);
-      const canonical =
-        typeof result === "string" && result.trim() ? result.trim() : addCandidate.trim();
-      if (canonical && normListSelectValue(canonical) !== normListSelectValue(value)) {
-        runAtomicSelect(canonical, true);
-      } else {
-        closeAndReset();
-        setTouched(true);
+  const runAddWithHandler = useCallback(
+    async (handler: (value: string) => void | Promise<string | null | void> | string | null) => {
+      if (!addCandidate || addPending || addInFlightRef.current) return;
+      addInFlightRef.current = true;
+      cancelPendingBlur();
+      try {
+        const result = await handler(addCandidate);
+        const canonical =
+          typeof result === "string" && result.trim() ? result.trim() : addCandidate.trim();
+        if (canonical && normListSelectValue(canonical) !== normListSelectValue(value)) {
+          runAtomicSelect(canonical, true);
+        } else {
+          closeAndReset();
+          setTouched(true);
+        }
+      } catch {
+        /* handler gestisce toast/ritorno null */
+      } finally {
+        addInFlightRef.current = false;
       }
-    } catch {
-      /* onAddToList gestisce toast/ritorno null */
-    } finally {
-      addInFlightRef.current = false;
-    }
-  }, [addCandidate, addPending, onAddToList, cancelPendingBlur, runAtomicSelect, closeAndReset, value]);
+    },
+    [addCandidate, addPending, cancelPendingBlur, runAtomicSelect, closeAndReset, value],
+  );
+
+  const runAdd = useCallback(async () => {
+    if (!onAddToList) return;
+    await runAddWithHandler(onAddToList);
+  }, [onAddToList, runAddWithHandler]);
+
+  const runAddAction = useCallback(
+    async (actionIndex: number) => {
+      const action = addActionsList[actionIndex];
+      if (!action) return;
+      await runAddWithHandler(action.onAdd);
+    },
+    [addActionsList, runAddWithHandler],
+  );
 
   const handleListboxEnter = useCallback(() => {
-    if (
-      showAddOptionInUi &&
-      addOptionEnabled &&
-      (activeIndex === addOptionIndex || (suggestions.length === 0 && addCandidate))
-    ) {
-      void runAdd();
-      return;
+    if (showAddOptionInUi && addOptionEnabled) {
+      if (isAddActiveIndex(activeIndex)) {
+        if (hasMultiAdd) void runAddAction(activeIndex - suggestions.length);
+        else void runAdd();
+        return;
+      }
+      if (suggestions.length === 0 && addCandidate && hasSingleAdd) {
+        void runAdd();
+        return;
+      }
     }
     if (suggestions.length > 0) {
       const idx = activeIndex >= 0 && activeIndex < suggestions.length ? activeIndex : 0;
@@ -825,10 +871,13 @@ export function GlobalSelect(props: GlobalSelectProps) {
     showAddOptionInUi,
     addOptionEnabled,
     activeIndex,
-    addOptionIndex,
+    isAddActiveIndex,
+    hasMultiAdd,
+    hasSingleAdd,
     suggestions,
     addCandidate,
     runAdd,
+    runAddAction,
     itemsMode,
     selectItem,
     selectString,
@@ -957,12 +1006,25 @@ export function GlobalSelect(props: GlobalSelectProps) {
     const id =
       activeIndex < suggestions.length
         ? optionDomId(activeIndex)
-        : activeIndex === addOptionIndex
-          ? addOptionDomId
+        : isAddActiveIndex(activeIndex)
+          ? hasMultiAdd
+            ? `${listboxId}-add-${addActionsList[activeIndex - suggestions.length]!.id}`
+            : addOptionDomId
           : null;
     if (!id) return;
     document.getElementById(id)?.scrollIntoView({ block: "nearest" });
-  }, [activeIndex, portalOpen, sheetOpen, suggestions.length, addOptionIndex, optionDomId, addOptionDomId]);
+  }, [
+    activeIndex,
+    portalOpen,
+    sheetOpen,
+    suggestions.length,
+    isAddActiveIndex,
+    hasMultiAdd,
+    addActionsList,
+    optionDomId,
+    addOptionDomId,
+    listboxId,
+  ]);
 
   const scrollToSuggestionIndex = useCallback((index: number) => {
     scrollToRowRef.current?.(index);
@@ -1000,11 +1062,9 @@ export function GlobalSelect(props: GlobalSelectProps) {
 
   const dropdownPanelClass = `${globalAutocompleteDropdownPortalPanel} p-1 ${placementOriginClass} min-h-0 overflow-y-auto overscroll-y-contain`;
 
-  const addOptionActive = activeIndex === addOptionIndex;
-  const addOptionBtnClass = `${globalAutocompleteAddBtnClass}${
-    addOptionActive ? " ring-2 ring-inset ring-white/25 shadow-sm" : ""
-  }`;
-  const addOptionLabel = addPending
+  const addOptionBtnClass = (active: boolean) =>
+    `${globalAutocompleteAddBtnClass}${active ? " ring-2 ring-inset ring-white/25 shadow-sm" : ""}`;
+  const singleAddOptionLabel = addPending
     ? "Aggiunta in corso…"
     : addOptionEnabled && addCandidate
       ? `Aggiungi «${addCandidate}»`
@@ -1155,38 +1215,80 @@ export function GlobalSelect(props: GlobalSelectProps) {
               {emptyMessage}
             </p>
           ) : null}
-          <button
-            id={addOptionDomId}
-            type="button"
-            role="option"
-            aria-selected={addOptionActive}
-            className={addOptionBtnClass}
-            disabled={!addOptionEnabled}
-            aria-disabled={!addOptionEnabled}
-            title={
-              addOptionEnabled
-                ? undefined
-                : useSheet && sheetUsesSearch
-                  ? "Scrivi nel campo Cerca in alto"
-                  : "Digita un valore da aggiungere"
-            }
-            onMouseDown={(e) => {
-              e.preventDefault();
-              if (blurTimer.current) clearTimeout(blurTimer.current);
-              if (addOptionEnabled) void runAdd();
-            }}
-            onMouseEnter={() => {
-              if (!sheetOpen) setActiveIndex(addOptionIndex);
-            }}
-          >
-            <span
-              className={addOptionEnabled ? "" : "opacity-70"}
-              aria-hidden
-            >
-              +
-            </span>
-            {addOptionLabel}
-          </button>
+          {hasMultiAdd
+            ? addActionsList.map((action, actionIdx) => {
+                const optionIndex = suggestions.length + actionIdx;
+                const optionActive = activeIndex === optionIndex;
+                const optionDom = `${listboxId}-add-${action.id}`;
+                const label = addPending
+                  ? "Aggiunta in corso…"
+                  : addOptionEnabled && addCandidate
+                    ? action.label(addCandidate)
+                    : action.label("");
+                return (
+                  <button
+                    key={action.id}
+                    id={optionDom}
+                    type="button"
+                    role="option"
+                    aria-selected={optionActive}
+                    className={addOptionBtnClass(optionActive)}
+                    disabled={!addOptionEnabled || addPending}
+                    aria-disabled={!addOptionEnabled || addPending}
+                    title={
+                      addOptionEnabled
+                        ? undefined
+                        : useSheet && sheetUsesSearch
+                          ? "Scrivi nel campo Cerca in alto"
+                          : "Digita un valore da aggiungere"
+                    }
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (blurTimer.current) clearTimeout(blurTimer.current);
+                      if (addOptionEnabled && !addPending) void runAddAction(actionIdx);
+                    }}
+                    onMouseEnter={() => {
+                      if (!sheetOpen) setActiveIndex(optionIndex);
+                    }}
+                  >
+                    <span className={addOptionEnabled ? "" : "opacity-70"} aria-hidden>
+                      +
+                    </span>
+                    {label}
+                  </button>
+                );
+              })
+            : (
+              <button
+                id={addOptionDomId}
+                type="button"
+                role="option"
+                aria-selected={isAddActiveIndex(activeIndex)}
+                className={addOptionBtnClass(isAddActiveIndex(activeIndex))}
+                disabled={!addOptionEnabled}
+                aria-disabled={!addOptionEnabled}
+                title={
+                  addOptionEnabled
+                    ? undefined
+                    : useSheet && sheetUsesSearch
+                      ? "Scrivi nel campo Cerca in alto"
+                      : "Digita un valore da aggiungere"
+                }
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  if (blurTimer.current) clearTimeout(blurTimer.current);
+                  if (addOptionEnabled) void runAdd();
+                }}
+                onMouseEnter={() => {
+                  if (!sheetOpen && addOptionIndex >= 0) setActiveIndex(addOptionIndex);
+                }}
+              >
+                <span className={addOptionEnabled ? "" : "opacity-70"} aria-hidden>
+                  +
+                </span>
+                {singleAddOptionLabel}
+              </button>
+            )}
         </div>
       ) : null}
     </>

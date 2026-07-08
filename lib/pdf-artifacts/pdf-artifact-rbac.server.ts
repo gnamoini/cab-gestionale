@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { PdfArtifactType } from "@/lib/pdf-artifacts/pdf-artifact-registry";
-import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
+import { verifyServerModuleCan, verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 
 export async function verifyPdfArtifactReadAccess(type: PdfArtifactType): Promise<boolean> {
   switch (type) {
@@ -21,7 +21,7 @@ export async function verifyPdfArtifactReadAccess(type: PdfArtifactType): Promis
       return verifyServerPageRead("preventivi");
     }
     case "ordine-fornitore":
-      return verifyServerPageRead("preventivi");
+      return verifyServerModuleCan("ordini_fornitori", "read");
     case "dipendenti-aziendale":
     case "dipendenti-dipendente":
       return verifyServerPageRead("dipendenti");

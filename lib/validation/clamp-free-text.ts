@@ -29,6 +29,7 @@ function clampIngressoCampi(campi: SchedaIngressoFields): SchedaIngressoFields {
     "targa",
     "addettoAccettazione",
     "richiedente",
+    "richiedenteTelefono",
   ];
   const out = { ...campi };
   for (const key of shortKeys) {

@@ -1,3 +1,7 @@
+import {
+  removeFornitoreAnagraficaFromMagazzinoMaster,
+  renameFornitoreAnagraficaInMagazzinoMaster,
+} from "@/lib/magazzino/fornitore-anagrafica";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 
 function clampScontoFornitorePercent(n: number): number {
@@ -88,7 +92,11 @@ export function renameFornitoreInMagazzinoMaster(
   } else if (!(newKey in scontoFornitoreByFornitore)) {
     scontoFornitoreByFornitore[newKey] = 0;
   }
-  return { ...mag, fornitori, scontoFornitoreByFornitore };
+  return renameFornitoreAnagraficaInMagazzinoMaster(
+    { ...mag, fornitori, scontoFornitoreByFornitore },
+    from,
+    t,
+  );
 }
 
 export function removeFornitoreFromMagazzinoMaster(
@@ -96,5 +104,8 @@ export function removeFornitoreFromMagazzinoMaster(
   fornitoreNome: string,
 ): MagazzinoMasterPrefs {
   const next = removeScontoFornitoreAlternativo(mag, fornitoreNome);
-  return { ...next, fornitori: next.fornitori.filter((f) => f !== fornitoreNome) };
+  return removeFornitoreAnagraficaFromMagazzinoMaster(
+    { ...next, fornitori: next.fornitori.filter((f) => f !== fornitoreNome) },
+    fornitoreNome,
+  );
 }

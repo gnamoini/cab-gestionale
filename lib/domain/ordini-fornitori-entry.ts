@@ -8,6 +8,7 @@ export const ordiniFornitoriEntry = {
   getDetail: ordiniFornitoriService.getDetail.bind(ordiniFornitoriService),
   create: withPageWriteGuard("preventivi", ordiniFornitoriService.create.bind(ordiniFornitoriService)),
   updateDraft: withPageWriteGuard("preventivi", ordiniFornitoriService.updateDraft.bind(ordiniFornitoriService)),
+  updateStatus: withPageWriteGuard("preventivi", ordiniFornitoriService.updateStatus.bind(ordiniFornitoriService)),
   annulla: withPageWriteGuard("preventivi", ordiniFornitoriService.annulla.bind(ordiniFornitoriService)),
-  deleteBozza: withPageWriteGuard("preventivi", ordiniFornitoriService.deleteBozza.bind(ordiniFornitoriService)),
+  deleteOrdine: withPageWriteGuard("preventivi", ordiniFornitoriService.deleteOrdine.bind(ordiniFornitoriService)),
 };

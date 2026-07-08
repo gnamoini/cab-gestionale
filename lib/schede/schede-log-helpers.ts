@@ -32,6 +32,7 @@ const INGRESSO_LABELS: Record<keyof SchedaIngressoFields, string> = {
   livelloCarburante: "Livello carburante",
   addettoAccettazione: "Addetto accettazione",
   richiedente: "Richiedente",
+  richiedenteTelefono: "Telefono richiedente",
   richiedenteFirma: "Firma richiedente",
   noteIntervento: "Note",
 };

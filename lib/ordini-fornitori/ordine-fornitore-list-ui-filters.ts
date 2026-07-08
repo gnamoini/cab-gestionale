@@ -1,4 +1,28 @@
 import type { OrdineFornitoreRecord, OrdineFornitoreStatus } from "@/lib/ordini-fornitori/types";
+import { parseOrdineFornitoreDestinatarioSnapshot } from "@/lib/ordini-fornitori/destinatario-snapshot";
+import { readOrdineOggetto } from "@/lib/ordini-fornitori/ordine-fornitore-oggetto";
+import type { OrdineFornitoreDestinazioneTipo } from "@/lib/ordini-fornitori/ordine-fornitore-destinazione";
+
+const DESTINAZIONE_TIPO_LIST_LABEL: Record<OrdineFornitoreDestinazioneTipo, string> = {
+  magazzino: "Magazzino",
+  altro: "Altro",
+};
+
+export function ordineFornitoreListOggetto(
+  record: Pick<OrdineFornitoreRecord, "oggettoOrdine" | "meta">,
+): string {
+  return record.oggettoOrdine.trim() || readOrdineOggetto(record.meta).trim();
+}
+
+/** Etichetta lista: Magazzino o Altro (da snapshot tipo, con fallback legacy). */
+export function ordineFornitoreListDestinazioneTipo(
+  record: Pick<OrdineFornitoreRecord, "destinazione" | "destinazioneSnapshot">,
+): string {
+  const parsed = parseOrdineFornitoreDestinatarioSnapshot(record.destinazioneSnapshot, record.destinazione);
+  if (parsed.tipo) return DESTINAZIONE_TIPO_LIST_LABEL[parsed.tipo];
+  if (!record.destinazione.trim() && !parsed.indirizzo.trim()) return DESTINAZIONE_TIPO_LIST_LABEL.magazzino;
+  return DESTINAZIONE_TIPO_LIST_LABEL.altro;
+}
 
 export type OrdiniFornitoriPageFilters = {
   search: string;
@@ -31,7 +55,8 @@ function matchesSearch(o: OrdineFornitoreRecord, q: string): boolean {
   const hay = [
     o.numero,
     o.fornitoreLabel,
-    o.destinazione,
+    ordineFornitoreListOggetto(o),
+    ordineFornitoreListDestinazioneTipo(o),
     o.note,
     ...o.righe.map((r) => `${r.codice} ${r.descrizione}`),
   ]

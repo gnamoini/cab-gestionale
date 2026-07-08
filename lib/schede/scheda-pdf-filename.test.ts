@@ -31,6 +31,7 @@ const ingressoDoc: SchedaIngressoDoc = {
     livelloCarburante: "",
     addettoAccettazione: "",
     richiedente: "",
+    richiedenteTelefono: "",
     noteIntervento: "",
   },
 };

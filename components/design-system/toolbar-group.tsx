@@ -51,7 +51,7 @@ export function ToolbarGroupPrimaryRow({
 }) {
   return (
     <div
-      className={`flex-safe-row min-w-0 w-full flex-row flex-nowrap items-center gap-2 sm:justify-between sm:gap-2 sm:flex-wrap ${className}`.trim()}
+      className={`flex-safe-row min-w-0 w-full flex-row flex-nowrap items-stretch gap-2 sm:justify-between sm:gap-2 sm:flex-wrap ${className}`.trim()}
     >
       {children}
     </div>
@@ -98,7 +98,7 @@ export function ToolbarGroupFiltersToggle({
     <button
       type="button"
       onClick={onToggle}
-      className={`${dsPageToolbarIconBtn} relative sm:h-auto sm:min-h-[2.5rem] sm:w-auto sm:min-w-[8.25rem] sm:gap-2 sm:px-3 sm:py-2 sm:text-sm`}
+      className={`${dsPageToolbarIconBtn} relative sm:h-11 sm:min-h-11 sm:w-auto sm:min-w-[8.25rem] sm:gap-2 sm:px-3 sm:py-0 sm:text-sm`}
       aria-expanded={expanded}
       aria-label="Filtri"
     >

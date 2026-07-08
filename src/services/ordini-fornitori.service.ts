@@ -12,10 +12,11 @@ import { mapOrdineFornitoreRow } from "@/lib/ordini-fornitori/ordine-fornitore-d
 import type {
   OrdineFornitoreCreateInput,
   OrdineFornitoreRecord,
+  OrdineFornitoreStatus,
   OrdineFornitoreUpdateInput,
 } from "@/lib/ordini-fornitori/types";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
+import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { OrdineFornitoreRigaRow, OrdineFornitoreRow } from "@/src/types/supabase-tables";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
@@ -47,12 +48,14 @@ function cleanCreatePayload(input: OrdineFornitoreCreateInput): Record<string, u
     fornitore_snapshot: input.fornitore_snapshot ?? {},
     destinazione: input.destinazione ?? null,
     destinazione_snapshot: input.destinazione_snapshot ?? {},
+    logistica_snapshot: input.logistica_snapshot ?? {},
     note: input.note ?? null,
     trasporto: input.trasporto ?? 0,
     iva_percent: input.iva_percent ?? 22,
     lavorazione_id: input.lavorazione_id ?? null,
     preventivo_id: input.preventivo_id ?? null,
     scheda_lavorazione_id: input.scheda_lavorazione_id ?? null,
+    meta: input.meta ?? {},
     righe: cleanRighe(input.righe),
   };
 }
@@ -65,9 +68,11 @@ function cleanUpdatePayload(input: OrdineFornitoreUpdateInput): Record<string, u
   if (input.fornitore_snapshot !== undefined) payload.fornitore_snapshot = input.fornitore_snapshot;
   if (input.destinazione !== undefined) payload.destinazione = input.destinazione;
   if (input.destinazione_snapshot !== undefined) payload.destinazione_snapshot = input.destinazione_snapshot;
+  if (input.logistica_snapshot !== undefined) payload.logistica_snapshot = input.logistica_snapshot;
   if (input.note !== undefined) payload.note = input.note;
   if (input.trasporto !== undefined) payload.trasporto = input.trasporto;
   if (input.iva_percent !== undefined) payload.iva_percent = input.iva_percent;
+  if (input.meta !== undefined) payload.meta = input.meta;
   if (input.righe !== undefined) payload.righe = cleanRighe(input.righe);
   return payload;
 }
@@ -105,21 +110,28 @@ export const ordiniFornitoriService = {
     }
   },
 
-  async create(input: OrdineFornitoreCreateInput): Promise<ServiceResult<{ id: string }>> {
+  async create(input: OrdineFornitoreCreateInput): Promise<ServiceResult<OrdineFornitoreRecord>> {
     try {
       const c = await sb();
       const { data, error } = await c.rpc("create_ordine_fornitore_with_righe", {
         p_payload: cleanCreatePayload(input),
       });
       if (error) return err(error.message);
-      const id = String(data);
+      const id = typeof data === "string" ? data.trim() : data == null ? "" : String(data).trim();
+      if (!id) return err("Creazione ordine senza id restituito.");
+
+      const detail = await ordiniFornitoriService.getDetail(id);
+      if (!detail.success || !detail.data) {
+        return err(detail.error ?? "Ordine creato ma non recuperabile per l'elenco.");
+      }
+
       await writeModificaLog(c, {
         entita: ENTITA,
         entita_id: id,
         azione: "CREATE",
         payload: auditSnapshot({ fornitore: input.fornitore_label }),
       });
-      return success({ id });
+      return success(detail.data);
     } catch (e) {
       return serviceFailFromError(e);
     }
@@ -167,16 +179,75 @@ export const ordiniFornitoriService = {
     }
   },
 
-  async deleteBozza(id: string): Promise<ServiceResult<void>> {
+  async updateStatus(
+    id: string,
+    status: OrdineFornitoreStatus,
+    expectedUpdatedAt?: string,
+  ): Promise<ServiceResult<void>> {
     try {
       const c = await sb();
-      const { error } = await c.from("ordini_fornitori").delete().eq("id", id).eq("status", "bozza");
+      const { data: beforeRow, error: fetchErr } = await c
+        .from("ordini_fornitori")
+        .select("id, status, numero, fornitore_label, updated_at")
+        .eq("id", id)
+        .maybeSingle();
+      if (fetchErr) return err(fetchErr.message);
+      if (!beforeRow) return err("Ordine non trovato.");
+      if (beforeRow.status === "annullato") return err("Ordine annullato.");
+      if (beforeRow.status === status) return success(undefined);
+
+      let q = c
+        .from("ordini_fornitori")
+        .update({ status })
+        .eq("id", id)
+        .neq("status", "annullato");
+      if (expectedUpdatedAt) q = q.eq("updated_at", expectedUpdatedAt);
+      const { data, error } = await q.select("id").maybeSingle();
       if (error) return err(error.message);
+      if (!data) return err("CONFLICT: record modified");
+
+      const oggetto = [beforeRow.numero, beforeRow.fornitore_label].filter(Boolean).join(" — ") || id;
+      await writeModificaLog(c, {
+        entita: ENTITA,
+        entita_id: id,
+        azione: "UPDATE",
+        payload: auditDiff(
+          { status: beforeRow.status, numero: beforeRow.numero, fornitore_label: beforeRow.fornitore_label },
+          { status, numero: beforeRow.numero, fornitore_label: beforeRow.fornitore_label },
+          auditContext({ oggetto }),
+        ),
+      });
+      return success(undefined);
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
+  async deleteOrdine(id: string): Promise<ServiceResult<void>> {
+    try {
+      const c = await sb();
+      const { data: beforeRow, error: fetchErr } = await c
+        .from("ordini_fornitori")
+        .select("id, numero, fornitore_label, status")
+        .eq("id", id)
+        .maybeSingle();
+      if (fetchErr) return err(fetchErr.message);
+      if (!beforeRow) return err("Ordine non trovato.");
+
+      const { error } = await c.from("ordini_fornitori").delete().eq("id", id);
+      if (error) return err(error.message);
+
+      const oggetto = [beforeRow.numero, beforeRow.fornitore_label].filter(Boolean).join(" — ") || id;
       await writeModificaLog(c, {
         entita: ENTITA,
         entita_id: id,
         azione: "DELETE",
-        payload: auditSnapshot({}),
+        payload: auditSnapshot({
+          numero: beforeRow.numero,
+          fornitore_label: beforeRow.fornitore_label,
+          status: beforeRow.status,
+          oggetto,
+        }),
       });
       return success(undefined);
     } catch (e) {

@@ -21,6 +21,7 @@ export type QueryScopeKey =
   | "report.manualEntries"
   | "documenti.list"
   | "preventivi.list"
+  | "ordini_fornitori.list"
   | "schede.bundles"
   | "dashboard.promemoria"
   | "dashboard.log";
@@ -38,6 +39,7 @@ const OWNERSHIP_BY_SCOPE: Record<QueryScopeKey, QueryOwnership> = {
   "report.manualEntries": "SERVER_OWNER",
   "documenti.list": "HYBRID_OWNER",
   "preventivi.list": "HYBRID_OWNER",
+  "ordini_fornitori.list": "HYBRID_OWNER",
   "schede.bundles": "HYBRID_OWNER",
   "dashboard.promemoria": "CLIENT_OWNER",
   "dashboard.log": "CLIENT_OWNER",
@@ -55,6 +57,7 @@ const PREFETCH_ROUTES_BY_SCOPE: Partial<Record<QueryScopeKey, readonly string[]>
   "report.manualEntries": ["/report"],
   "documenti.list": ["/documenti"],
   "preventivi.list": ["/preventivi"],
+  "ordini_fornitori.list": ["/preventivi"],
   "schede.bundles": ["/dashboard", "/lavorazioni"],
 };
 
@@ -96,6 +99,7 @@ export function scopeKeyFromEntity(scope: EntityQueryScope): QueryScopeKey | nul
   if (scope.entityType === "report" && variant === "manualEntries") return "report.manualEntries";
   if (scope.entityType === "documenti") return "documenti.list";
   if (scope.entityType === "preventivi") return "preventivi.list";
+  if (scope.entityType === "ordini_fornitori") return "ordini_fornitori.list";
   if (scope.entityType === "schede") return "schede.bundles";
   if (scope.entityType === "dashboard" && variant === "promemoria") return "dashboard.promemoria";
   if (scope.entityType === "dashboard" && variant === "log") return "dashboard.log";

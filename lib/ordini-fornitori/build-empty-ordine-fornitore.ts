@@ -1,5 +1,16 @@
-import { buildFornitoreSnapshotFromLabel } from "@/lib/ordini-fornitori/fornitore-snapshot";
+import {
+  buildFornitoreSnapshotFromLabel,
+  ordineFornitoreFornitoreSnapshotToRecord,
+} from "@/lib/ordini-fornitori/fornitore-snapshot";
+import {
+  fornitoreAnagraficaToOrdineSnapshot,
+  type FornitoreAnagraficaSettings,
+} from "@/lib/magazzino/fornitore-anagrafica";
 import { nextOrdineNumeroFromRecords } from "@/lib/ordini-fornitori/ordine-fornitore-numero";
+import {
+  emptyOrdineFornitoreLogistica,
+  ordineFornitoreLogisticaToRecord,
+} from "@/lib/ordini-fornitori/ordine-fornitore-logistica";
 import type { OrdineFornitoreRecord } from "@/lib/ordini-fornitori/types";
 
 function todayIsoDate(): string {
@@ -14,11 +25,13 @@ export function buildEmptyOrdineFornitore(
     id: crypto.randomUUID(),
     numero: nextOrdineNumeroFromRecords(existing),
     status: "bozza",
+    oggettoOrdine: "",
     dataOrdine: todayIsoDate(),
     fornitoreLabel: "",
     fornitoreSnapshot: {},
     destinazione: "",
     destinazioneSnapshot: {},
+    logisticaSnapshot: ordineFornitoreLogisticaToRecord(emptyOrdineFornitoreLogistica()),
     note: "",
     imponibileRighe: 0,
     trasporto: 0,
@@ -30,6 +43,7 @@ export function buildEmptyOrdineFornitore(
     preventivoId: null,
     schedaLavorazioneId: null,
     pdfArtifactHash: null,
+    meta: {},
     createdBy: null,
     updatedBy: null,
     createdAt: now,
@@ -41,11 +55,16 @@ export function buildEmptyOrdineFornitore(
 export function applyFornitoreLabelToRecord(
   record: OrdineFornitoreRecord,
   label: string,
+  anagrafica?: FornitoreAnagraficaSettings | null,
 ): OrdineFornitoreRecord {
   const trimmed = label.trim();
+  if (trimmed === record.fornitoreLabel.trim()) return record;
+  const fornitoreSnapshot = anagrafica
+    ? ordineFornitoreFornitoreSnapshotToRecord(fornitoreAnagraficaToOrdineSnapshot(trimmed, anagrafica))
+    : buildFornitoreSnapshotFromLabel(trimmed);
   return {
     ...record,
     fornitoreLabel: trimmed,
-    fornitoreSnapshot: buildFornitoreSnapshotFromLabel(trimmed, record.fornitoreSnapshot),
+    fornitoreSnapshot,
   };
 }

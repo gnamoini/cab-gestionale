@@ -12,6 +12,7 @@ import {
   magazzinoListQueryKey,
   mezziListQueryKey,
   movimentiListQueryKey,
+  ordiniFornitoriListQueryKey,
   preventiviRecordsQueryKey,
   reportManualEntriesQueryKey,
   settingsPayloadQueryKey,
@@ -71,6 +72,8 @@ function queryKeyForScope(scopeKey: QueryScopeKey): readonly unknown[] {
       return documentiListQueryKey(null);
     case "preventivi.list":
       return preventiviRecordsQueryKey();
+    case "ordini_fornitori.list":
+      return ordiniFornitoriListQueryKey();
     case "schede.bundles":
       return ["schede", "bundles"] as const;
     case "dashboard.promemoria":

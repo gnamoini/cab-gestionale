@@ -16,6 +16,7 @@ import type { ListSelectItem } from "@/lib/ui/list-select-items";
 import type { CSSProperties } from "react";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
+import { mergeFornitoriOrdineOptions } from "@/lib/magazzino/fornitori-ordine-options";
 import type { CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
 import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
 import type { AppSettingsUpsertInput } from "@/src/services/settings.service";
@@ -31,6 +32,7 @@ export type GlobalSettingsFlatListKey =
   | "magazzino:categorie"
   | "magazzino:marche"
   | "magazzino:fornitori"
+  | "magazzino:fornitoriOrdine"
   | "magazzino:produttori"
   | "magazzino:mezziCompatibili";
 
@@ -140,6 +142,8 @@ export function resolveGlobalListOptions(
       return resolved.magazzinoMaster.marche;
     case "magazzino:fornitori":
       return resolved.magazzinoMaster.fornitori;
+    case "magazzino:fornitoriOrdine":
+      return mergeFornitoriOrdineOptions(resolved.magazzinoMaster);
     case "magazzino:produttori":
       return resolved.magazzinoMaster.produttori ?? [];
     case "magazzino:mezziCompatibili":
@@ -254,6 +258,7 @@ export function buildAppendGlobalListUpsert(
     case "magazzino:categorie":
     case "magazzino:marche":
     case "magazzino:fornitori":
+    case "magazzino:fornitoriOrdine":
     case "magazzino:produttori":
     case "magazzino:mezziCompatibili": {
       const field = listKey.split(":")[1] as
@@ -262,6 +267,33 @@ export function buildAppendGlobalListUpsert(
         | "mezziCompatibili"
         | "fornitori"
         | "produttori";
+      if (listKey === "magazzino:fornitoriOrdine") {
+        const merged = mergeFornitoriOrdineOptions(resolved.magazzinoMaster);
+        const hit = merged.find((x) => normKey(x) === normKey(value));
+        if (hit) {
+          return {
+            ok: true,
+            canonicalValue: hit,
+            upsert: {
+              module: CAB_SETTINGS_MODULE.magazzino,
+              key: CAB_SETTINGS_KEY.master,
+              value: { ...resolved.magazzinoMaster },
+            },
+          };
+        }
+        const current = resolved.magazzinoMaster.fornitori ?? [];
+        const { next, canonical } = appendUniqueSorted(current, value);
+        if (!canonical) return { ok: false, reason: "empty" };
+        return {
+          ok: true,
+          canonicalValue: canonical,
+          upsert: {
+            module: CAB_SETTINGS_MODULE.magazzino,
+            key: CAB_SETTINGS_KEY.master,
+            value: { ...resolved.magazzinoMaster, fornitori: next },
+          },
+        };
+      }
       const current = resolved.magazzinoMaster[field] ?? [];
       const { next, canonical } = appendUniqueSorted(current, value);
       if (!canonical) return { ok: false, reason: "empty" };

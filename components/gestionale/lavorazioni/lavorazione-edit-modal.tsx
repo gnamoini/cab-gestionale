@@ -64,6 +64,7 @@ function fieldsFromEditForm(input: {
     livelloCarburante: "",
     addettoAccettazione: "",
     richiedente: "",
+    richiedenteTelefono: "",
     noteIntervento: input.note,
   };
 }

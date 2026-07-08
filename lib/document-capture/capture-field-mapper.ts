@@ -2,11 +2,12 @@ import { emptySchedaIngressoFields } from "@/lib/domain/intervento-context/build
 import { newRigaId, newSchedaMeta } from "@/lib/schede/schede-ui";
 import type {
   LavorazioneSchedeBundle,
+  RigaLavorazioneScheda,
+  RigaRicambioScheda,
   SchedaIngressoFields,
-  SchedaLavorazioniDoc,
   SchedaLavorazioniFields,
-  SchedaRicambiDoc,
   SchedaRicambiFields,
+  SchedaTipo,
 } from "@/types/schede";
 
 const INGRESSO_KEY_MAP: Record<string, keyof SchedaIngressoFields> = {
@@ -19,19 +20,26 @@ const INGRESSO_KEY_MAP: Record<string, keyof SchedaIngressoFields> = {
   tipo_attrezzatura: "tipoAttrezzatura",
   marcaattrezzatura: "marcaAttrezzatura",
   marca_attrezzatura: "marcaAttrezzatura",
+  attrezzatura_marca: "marcaAttrezzatura",
   modelloattrezzatura: "modelloAttrezzatura",
   modello_attrezzatura: "modelloAttrezzatura",
+  attrezzatura_modello: "modelloAttrezzatura",
   matricola: "matricola",
+  attrezzatura_matricola: "matricola",
   nscuderia: "nScuderia",
+  n_scuderia: "nScuderia",
   numero_scuderia: "nScuderia",
   orelavoro: "oreLavoro",
   ore_lavoro: "oreLavoro",
+  ore: "oreLavoro",
   tipotelaio: "tipoTelaio",
   tipo_telaio: "tipoTelaio",
   marcatelaio: "marcaTelaio",
   marca_telaio: "marcaTelaio",
+  telaio_marca: "marcaTelaio",
   modellotelaio: "modelloTelaio",
   modello_telaio: "modelloTelaio",
+  telaio_modello: "modelloTelaio",
   targa: "targa",
   km: "km",
   descrizioneanomalia: "descrizioneAnomalia",
@@ -41,9 +49,18 @@ const INGRESSO_KEY_MAP: Record<string, keyof SchedaIngressoFields> = {
   addettoaccettazione: "addettoAccettazione",
   addetto_accettazione: "addettoAccettazione",
   richiedente: "richiedente",
+  telefono: "richiedenteTelefono",
+  telefono_richiedente: "richiedenteTelefono",
+  richiedentetelefono: "richiedenteTelefono",
   noteintervento: "noteIntervento",
   note_intervento: "noteIntervento",
+  note: "noteIntervento",
 };
+
+const MAX_LAVORAZIONI_RIGHE = 24;
+const MAX_RICAMBI_RIGHE = 34;
+/** ponytail: pattern targa IT semplificato — upgrade se servono formati storici/estero */
+const IT_TARGA_RE = /^[A-Z]{2}\s?\d{3}\s?[A-Z]{2}$/i;
 
 function normKey(key: string): string {
   return key.trim().toLowerCase().replace(/^ingresso\./, "");
@@ -60,6 +77,149 @@ export function resolveCaptureFieldValue(row: CaptureFieldRow): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+export function resolveRawFieldValue(fields: readonly CaptureFieldRow[], ...keys: string[]): string {
+  for (const key of keys) {
+    const hit = fields.find((row) => normKey(row.field_key) === key);
+    if (!hit) continue;
+    const v = resolveCaptureFieldValue(hit);
+    if (v) return v;
+  }
+  return "";
+}
+
+function composeRichiedenteFromCapture(fields: readonly CaptureFieldRow[], current: string): string {
+  if (current.trim()) return current.trim();
+  const nome = resolveRawFieldValue(fields, "nome");
+  const cognome = resolveRawFieldValue(fields, "cognome");
+  return [nome, cognome].filter(Boolean).join(" ").trim();
+}
+
+function applyIngressoSlice(target: SchedaIngressoFields, slice: Partial<SchedaIngressoFields>): void {
+  for (const key of Object.keys(slice) as (keyof SchedaIngressoFields)[]) {
+    const v = slice[key];
+    if (v !== undefined && v !== null && String(v).trim()) {
+      (target as Record<string, string>)[key] = String(v);
+    }
+  }
+}
+
+function parseCaptureOre(value: string): number {
+  const n = parseFloat(value.replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function parseCaptureQuantita(value: string): number {
+  const n = parseFloat(value.replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function composeCaptureRicambioNome(nome: string, descrizione: string): string {
+  const n = nome.trim();
+  const d = descrizione.trim();
+  if (n && d) return `${n} — ${d}`;
+  return n || d;
+}
+
+export function inferCaptureSchedaTipo(fields: readonly CaptureFieldRow[]): SchedaTipo | null {
+  const explicit = resolveRawFieldValue(fields, "schedatipo", "scheda_tipo").toLowerCase();
+  if (explicit === "lavorazioni" || explicit === "ingresso" || explicit === "ricambi") {
+    return explicit;
+  }
+  for (let n = 1; n <= MAX_LAVORAZIONI_RIGHE; n += 1) {
+    if (resolveRawFieldValue(fields, `riga_${n}_lavorazione`, `riga_${n}_ore`)) {
+      return "lavorazioni";
+    }
+  }
+  for (let n = 1; n <= MAX_RICAMBI_RIGHE; n += 1) {
+    if (
+      resolveRawFieldValue(
+        fields,
+        `riga_${n}_codice`,
+        `riga_${n}_descrizione`,
+        `riga_${n}_qt`,
+        `riga_${n}_nome`,
+        `riga_${n}_data`,
+      )
+    ) {
+      return "ricambi";
+    }
+  }
+  return null;
+}
+
+export function mapCaptureHeaderToIngressoSlice(fields: readonly CaptureFieldRow[]): Partial<SchedaIngressoFields> {
+  const cliente = resolveRawFieldValue(fields, "cliente");
+  const targaMatricola = resolveRawFieldValue(fields, "targa_matricola", "targamatricola", "targa/matricola");
+  const patch: Partial<SchedaIngressoFields> = {};
+  if (cliente) patch.cliente = cliente;
+  if (targaMatricola) {
+    const compact = targaMatricola.replace(/\s/g, "");
+    if (IT_TARGA_RE.test(compact)) {
+      patch.targa = targaMatricola;
+    } else {
+      patch.matricola = targaMatricola;
+    }
+  }
+  return patch;
+}
+
+export function parseCaptureLavorazioniRighe(fields: readonly CaptureFieldRow[]): RigaLavorazioneScheda[] {
+  const today = new Date().toLocaleDateString("it-IT");
+  const out: RigaLavorazioneScheda[] = [];
+  for (let n = 1; n <= MAX_LAVORAZIONI_RIGHE; n += 1) {
+    const lavorazione = resolveRawFieldValue(fields, `riga_${n}_lavorazione`);
+    const nome = resolveRawFieldValue(fields, `riga_${n}_nome`);
+    const oreRaw = resolveRawFieldValue(fields, `riga_${n}_ore`);
+    if (!lavorazione && !nome && !oreRaw) continue;
+    out.push({
+      id: newRigaId(),
+      dataLavorazione: today,
+      lavorazioniEffettuate: lavorazione,
+      addettiAssegnati: nome || oreRaw ? [{ addetto: nome, oreImpiegate: parseCaptureOre(oreRaw) }] : [],
+    });
+  }
+  return out;
+}
+
+export function mapCaptureFieldsToLavorazioni(fields: readonly CaptureFieldRow[]): SchedaLavorazioniFields {
+  const targaMatricola = resolveRawFieldValue(fields, "targa_matricola", "targamatricola", "targa/matricola");
+  return {
+    identificazioneMacchina: targaMatricola,
+    righe: parseCaptureLavorazioniRighe(fields),
+  };
+}
+
+export function parseCaptureRicambiRighe(fields: readonly CaptureFieldRow[]): RigaRicambioScheda[] {
+  const today = new Date().toLocaleDateString("it-IT");
+  const out: RigaRicambioScheda[] = [];
+  for (let n = 1; n <= MAX_RICAMBI_RIGHE; n += 1) {
+    const nome = resolveRawFieldValue(fields, `riga_${n}_nome`);
+    const codice = resolveRawFieldValue(fields, `riga_${n}_codice`);
+    const descrizione = resolveRawFieldValue(fields, `riga_${n}_descrizione`);
+    const qtRaw = resolveRawFieldValue(fields, `riga_${n}_qt`);
+    const data = resolveRawFieldValue(fields, `riga_${n}_data`);
+    if (!nome && !codice && !descrizione && !qtRaw && !data) continue;
+    out.push({
+      id: newRigaId(),
+      ricambioId: null,
+      ricambioNome: composeCaptureRicambioNome(nome, descrizione),
+      codice,
+      quantita: parseCaptureQuantita(qtRaw),
+      addetto: "",
+      dataUtilizzo: data || today,
+    });
+  }
+  return out;
+}
+
+export function mapCaptureFieldsToRicambi(fields: readonly CaptureFieldRow[]): SchedaRicambiFields {
+  const targaMatricola = resolveRawFieldValue(fields, "targa_matricola", "targamatricola", "targa/matricola");
+  return {
+    identificazioneMacchina: targaMatricola,
+    righe: parseCaptureRicambiRighe(fields),
+  };
+}
+
 export function mapCaptureFieldsToIngresso(fields: readonly CaptureFieldRow[]): SchedaIngressoFields {
   const out = emptySchedaIngressoFields();
   for (const row of fields) {
@@ -67,6 +227,8 @@ export function mapCaptureFieldsToIngresso(fields: readonly CaptureFieldRow[]): 
     if (!mapped || mapped === "targetType" || mapped === "attrezzaturaId") continue;
     out[mapped] = resolveCaptureFieldValue(row);
   }
+  out.richiedente = composeRichiedenteFromCapture(fields, out.richiedente);
+  applyIngressoSlice(out, mapCaptureHeaderToIngressoSlice(fields));
   if (!out.dataIngresso.trim()) {
     out.dataIngresso = new Date().toLocaleDateString("it-IT");
   }
@@ -81,13 +243,45 @@ function emptyRicambiFields(): SchedaRicambiFields {
   return { identificazioneMacchina: "", righe: [] };
 }
 
+function buildLavorazioniFromIngresso(ingressoFields: SchedaIngressoFields): SchedaLavorazioniFields {
+  return {
+    ...emptyLavorazioniFields(),
+    identificazioneMacchina:
+      [ingressoFields.marcaAttrezzatura, ingressoFields.modelloAttrezzatura, ingressoFields.matricola]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || ingressoFields.targa,
+    righe: [
+      {
+        id: newRigaId(),
+        dataLavorazione: ingressoFields.dataIngresso,
+        lavorazioniEffettuate: ingressoFields.descrizioneAnomalia || ingressoFields.noteIntervento,
+        addettiAssegnati: ingressoFields.addettoAccettazione
+          ? [{ addetto: ingressoFields.addettoAccettazione, oreImpiegate: 0 }]
+          : [],
+      },
+    ],
+  };
+}
+
+function buildRicambiFromIngresso(ingressoFields: SchedaIngressoFields): SchedaRicambiFields {
+  return {
+    ...emptyRicambiFields(),
+    identificazioneMacchina:
+      [ingressoFields.marcaAttrezzatura, ingressoFields.modelloAttrezzatura].filter(Boolean).join(" ").trim() ||
+      ingressoFields.targa,
+  };
+}
+
 export function buildCaptureSchedeBundle(input: {
   lavorazioneId: string;
   fields: readonly CaptureFieldRow[];
   createdBy: string;
   includeLavorazioni?: boolean;
   includeRicambi?: boolean;
+  schedaTipo?: SchedaTipo | null;
 }): LavorazioneSchedeBundle {
+  const schedaTipo = input.schedaTipo ?? inferCaptureSchedaTipo(input.fields);
   const ingressoFields = mapCaptureFieldsToIngresso(input.fields);
   const user = input.createdBy.trim() || "Document Capture";
 
@@ -104,41 +298,26 @@ export function buildCaptureSchedeBundle(input: {
   };
 
   if (input.includeLavorazioni) {
+    const lavCampi =
+      schedaTipo === "lavorazioni"
+        ? mapCaptureFieldsToLavorazioni(input.fields)
+        : buildLavorazioniFromIngresso(ingressoFields);
     bundle.lavorazioni = {
       ...newSchedaMeta("lavorazioni", user),
       tipo: "lavorazioni",
-      campi: {
-        ...emptyLavorazioniFields(),
-        identificazioneMacchina:
-          [ingressoFields.marcaAttrezzatura, ingressoFields.modelloAttrezzatura, ingressoFields.matricola]
-            .filter(Boolean)
-            .join(" ")
-            .trim() || ingressoFields.targa,
-        righe: [
-          {
-            id: newRigaId(),
-            dataLavorazione: ingressoFields.dataIngresso,
-            lavorazioniEffettuate: ingressoFields.descrizioneAnomalia || ingressoFields.noteIntervento,
-            addettiAssegnati: ingressoFields.addettoAccettazione
-              ? [{ addetto: ingressoFields.addettoAccettazione, oreImpiegate: 0 }]
-              : [],
-          },
-        ],
-      },
+      campi: lavCampi,
     };
   }
 
   if (input.includeRicambi) {
+    const ricCampi =
+      schedaTipo === "ricambi"
+        ? mapCaptureFieldsToRicambi(input.fields)
+        : buildRicambiFromIngresso(ingressoFields);
     bundle.ricambi = {
       ...newSchedaMeta("ricambi", user),
       tipo: "ricambi",
-      campi: {
-        ...emptyRicambiFields(),
-        identificazioneMacchina:
-          [ingressoFields.marcaAttrezzatura, ingressoFields.modelloAttrezzatura].filter(Boolean).join(" ").trim() ||
-          ingressoFields.targa,
-        righe: [],
-      },
+      campi: ricCampi,
     };
   }
 

@@ -10,7 +10,7 @@ type IconActionButtonBase = {
   label: string;
   children: ReactNode;
   className?: string;
-  /** Toolbar header pagina — footprint quadrato 40×40 (`dsPageToolbarIconBtn`). */
+  /** Toolbar header pagina — footprint quadrato 44×44 (`dsPageToolbarIconBtn`). */
   toolbar?: boolean;
   tooltipSide?: TooltipSide;
   tooltipDisabled?: boolean;

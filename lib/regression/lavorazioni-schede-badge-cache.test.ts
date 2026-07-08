@@ -52,6 +52,7 @@ const withIngresso: LavorazioneSchedeBundle = {
       livelloCarburante: "",
       addettoAccettazione: "",
       richiedente: "",
+    richiedenteTelefono: "",
       noteIntervento: "",
     },
   },

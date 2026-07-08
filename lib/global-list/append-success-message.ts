@@ -27,6 +27,7 @@ export function appendGlobalListSuccessMessage(
     case "magazzino:marche":
       return "Marca aggiunta e selezionata";
     case "magazzino:fornitori":
+    case "magazzino:fornitoriOrdine":
       return "Fornitore aggiunto e selezionato";
     case "magazzino:produttori":
       return "Produttore aggiunto e selezionato";

@@ -1,16 +1,56 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { IconActionButton } from "@/components/design-system";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
+import { IconActionButton, GestionaleCollapsibleSection } from "@/components/design-system";
+import { HubIconPlus } from "@/components/design-system/hub-table-action-icons";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { GlobalDatePickerYmd, GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input/global-settings-list-select";
+import { OrdineFornitoreDestinazioneFields } from "@/components/ordini-fornitori/ordine-fornitore-destinazione-fields";
+import { OrdineFornitoreFornitoreFields } from "@/components/ordini-fornitori/ordine-fornitore-fornitore-fields";
+import { OrdineFornitoreLogisticaFields } from "@/components/ordini-fornitori/ordine-fornitore-logistica-fields";
+import { OrdineFornitoreStoricoSection } from "@/components/ordini-fornitori/ordine-fornitore-storico-section";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
-import { RicambiMagSearchPortal } from "@/components/lavorazioni/schede/schede-ricambi-portal-fields";
-import { applyFornitoreLabelToRecord } from "@/lib/ordini-fornitori/build-empty-ordine-fornitore";
-import { openOrdineFornitorePdfInNewTab } from "@/lib/ordini-fornitori/ordine-fornitore-pdf";
-import { defaultPrezzoUnitarioOrdineFromRicambio } from "@/lib/ordini-fornitori/ordine-fornitore-ricambio-price";
+import {
+  preventivoEditorAddRowBtn,
+  preventivoEditorFooterBtnNeutral,
+  preventivoEditorFooterBtnPrimary,
+  preventivoEditorMoneyValueSm,
+  preventivoEditorPanelClass,
+  preventivoEditorSubsectionTitle,
+  preventivoEditorTableInput,
+  preventivoEditorTableInputNumber,
+  preventivoEditorTableTdClass,
+  preventivoEditorUmSegmentOff,
+  preventivoEditorUmSegmentOn,
+  preventivoEditorUmSegmentWrap,
+} from "@/components/preventivi/preventivo-editor-ui";
+import {
+  fmtPreventivoEuro,
+  PreventivoEditorRiepilogoRow,
+  PreventivoEditorTotalBar,
+} from "@/components/preventivi/preventivo-editor-totals";
+import { FormField } from "@/components/gestionale/schede/gestionale-form-section";
+import {
+  defaultNewOrdineDestinazione,
+} from "@/lib/ordini-fornitori/ordine-fornitore-destinazione";
+import {
+  ordineFornitoreNeedsCloseConfirm,
+} from "@/lib/ordini-fornitori/ordine-fornitore-editor-dirty";
+import {
+  formatOfficinaSede,
+  isOfficinaSedeConfigured,
+  readOfficinaSedeOperativaFromRows,
+} from "@/lib/officina/officina-sede";
+import {
+  officinaDestinatarioOrdiniToAnagrafica,
+  readOfficinaDestinatarioOrdiniFromRows,
+} from "@/lib/officina/officina-destinatario-ordini";
+import { readOfficinaBancheOrdiniFromRows } from "@/lib/officina/officina-banche-ordini";
+import { openOrdineFornitorePdfPreviewFromRecord } from "@/lib/ordini-fornitori/ordine-fornitore-pdf";
 import {
   calcolaTotaliOrdineFornitore,
   totaleNettoRigaOrdine,
@@ -22,40 +62,129 @@ import type {
   OrdineFornitoreStatus,
 } from "@/lib/ordini-fornitori/types";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
-import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import {
-  dsBtnNeutral,
-  dsBtnPrimary,
+  dsBtnDanger,
+  dsFocus,
   dsInput,
-  dsLabel,
   dsScrollbar,
   dsTable,
   dsTableActionBtnDanger,
   dsTableActionGlyph,
   dsTableRow,
   dsTableWrap,
-  GESTIONALE_SEARCH_PLACEHOLDER,
 } from "@/lib/ui/design-system";
-import { sliceInputValue, TEXT_EXTRA, TEXT_LONG } from "@/lib/validation/text-field-limits";
-import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { sliceInputValue, TEXT_EXTRA } from "@/lib/validation/text-field-limits";
+import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
+import { applyFornitoreLabelToRecord } from "@/lib/ordini-fornitori/build-empty-ordine-fornitore";
+import { getFornitoreAnagraficaSettings } from "@/lib/magazzino/fornitore-anagrafica";
+import { resolveCabAppSettingsFromRows } from "@/src/lib/app-settings/resolve-from-rows";
+import { useSharedAppSettingsQuery } from "@/src/context/app-settings-query-context";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import { ordiniFornitoriEntry } from "@/lib/domain/ordini-fornitori-entry";
-import { useSubmitLock } from "@/lib/forms/form-engine";
+import {
+  ORDINE_FORNITORE_STATUS_EDITOR_ITEMS,
+  ORDINE_FORNITORE_STATUS_PILL_SHELL,
+  ordineFornitoreStatusPillStyle,
+} from "@/lib/ordini-fornitori/ordine-fornitore-status-ui";
+import {
+  buildEmptyOrdineSpesaVariaRiga,
+  mergeOrdineRighe,
+  ORDINE_RIGA_META_SPESA_VARIA,
+  splitOrdineRighe,
+} from "@/lib/ordini-fornitori/ordine-fornitore-spesa-varia";
+import {
+  defaultOrdineRigaMeta,
+  patchRigaMeta,
+} from "@/lib/ordini-fornitori/ordine-fornitore-riga-meta";
+import {
+  formatRicambioUnitaMisuraLabel,
+  parseRicambioUnitaMisura,
+  RICAMBIO_UNITA_MISURA_VALUES,
+  type RicambioUnitaMisura,
+} from "@/lib/magazzino/ricambio-unita-misura";
+import { OrdineFornitoreRigaMagazzinoField } from "@/components/ordini-fornitori/ordine-fornitore-riga-magazzino-field";
+import { finalizeOrdineFornitoreImportDocument } from "@/lib/ordini-fornitori/import/ordine-fornitore-import-client";
+import {
+  buildOrdineImportMeta,
+  ordineRecordMetaWithImport,
+} from "@/lib/ordini-fornitori/import/ordine-fornitore-import-meta";
+import { ordineMetaWithOggetto, ordineRecordWithOggetto } from "@/lib/ordini-fornitori/ordine-fornitore-oggetto";
+import { OrdineFornitoreImportQualityBanner } from "@/components/ordini-fornitori/ordine-fornitore-import-quality-banner";
+import {
+  codiceRicambioPerFornitoreOrdine,
+  ordineRigaPatchFromRicambio,
+  ricambioBelongsToFornitoreOrdine,
+  searchMagazzinoForOrdineFornitore,
+} from "@/lib/ordini-fornitori/ordine-fornitore-magazzino-picker";
+import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import type { OrdineFornitoreEditorImportMeta } from "@/lib/ordini-fornitori/import/ordine-fornitore-import-types";
 
 function newRigaId(): string {
   return crypto.randomUUID();
 }
 
-function recordToCreateInput(record: OrdineFornitoreRecord): OrdineFornitoreCreateInput {
-  return {
+import { useSubmitLock } from "@/lib/forms/form-engine";
+import { ordiniFornitoriEntry } from "@/lib/domain/ordini-fornitori-entry";
+import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+
+const umCellLabel: Record<RicambioUnitaMisura, string> = {
+  pz: "pz",
+  metri: "m",
+  lt: "lt",
+};
+
+const ordineRigheTableMinWidthClass = "min-w-[58rem]";
+const ordineSpeseVarieTableMinWidthClass = "min-w-[32rem]";
+
+function OrdineRigaUnitaMisuraCell({
+  value,
+  rowIndex,
+  disabled,
+  onChange,
+}: {
+  value: RicambioUnitaMisura;
+  rowIndex: number;
+  disabled?: boolean;
+  onChange: (unita: RicambioUnitaMisura) => void;
+}) {
+  return (
+    <div
+      className={preventivoEditorUmSegmentWrap}
+      role="group"
+      aria-label={`Unità di misura riga ${rowIndex + 1}`}
+    >
+      {RICAMBIO_UNITA_MISURA_VALUES.map((unita) => (
+        <button
+          key={unita}
+          type="button"
+          disabled={disabled}
+          className={`${value === unita ? preventivoEditorUmSegmentOn : preventivoEditorUmSegmentOff} ${dsFocus}`}
+          aria-pressed={value === unita}
+          aria-label={formatRicambioUnitaMisuraLabel(unita)}
+          title={formatRicambioUnitaMisuraLabel(unita)}
+          onClick={() => onChange(unita)}
+        >
+          {umCellLabel[unita]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function recordToCreateInput(
+  record: OrdineFornitoreRecord,
+  importMeta?: OrdineFornitoreEditorImportMeta,
+  importedBy?: string,
+): OrdineFornitoreCreateInput {
+  const input: OrdineFornitoreCreateInput = {
     status: record.status,
     data_ordine: record.dataOrdine,
     fornitore_label: record.fornitoreLabel,
     fornitore_snapshot: record.fornitoreSnapshot,
     destinazione: record.destinazione || null,
     destinazione_snapshot: record.destinazioneSnapshot,
+    logistica_snapshot: record.logisticaSnapshot,
     note: record.note || null,
-    trasporto: record.trasporto,
+    trasporto: 0,
     iva_percent: record.ivaPercent,
     righe: record.righe.map((r) => ({
       ricambio_id: r.ricambioId,
@@ -64,407 +193,861 @@ function recordToCreateInput(record: OrdineFornitoreRecord): OrdineFornitoreCrea
       quantita: r.quantita,
       prezzo_unitario: r.prezzoUnitario,
       sconto_percent: r.scontoPercent,
-      meta: r.meta,
+      meta: {
+        ...patchRigaMeta(r.meta, { unitaMisura: r.unitaMisura, ivaPercent: r.ivaPercent }),
+        ...(r.meta[ORDINE_RIGA_META_SPESA_VARIA] === true ? { [ORDINE_RIGA_META_SPESA_VARIA]: true } : {}),
+      },
     })),
   };
+  if (importMeta && importedBy) {
+    input.meta = ordineMetaWithOggetto(
+      ordineRecordMetaWithImport(
+        record.meta,
+        buildOrdineImportMeta({
+          documentId: importMeta.documentoId,
+          contentHash: importMeta.contentHash,
+          semanticKey: importMeta.semanticKey,
+          importedBy,
+          quality: importMeta.quality,
+        }),
+      ),
+      record.oggettoOrdine,
+    );
+  } else {
+    input.meta = ordineMetaWithOggetto(record.meta, record.oggettoOrdine);
+  }
+  if (Object.keys(input.meta).length === 0) delete input.meta;
+  return input;
 }
 
 export function OrdineFornitoreEditorModal({
   record: initialRecord,
   isNew,
+  mode = "edit",
   canWrite,
+  importMeta,
   onClose,
   onSaved,
+  onSwitchToEdit,
+  onDelete,
 }: {
   record: OrdineFornitoreRecord;
   isNew: boolean;
+  mode?: "view" | "edit";
   canWrite: boolean;
+  importMeta?: OrdineFornitoreEditorImportMeta;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (info?: { record?: OrdineFornitoreRecord }) => void | Promise<void>;
+  onSwitchToEdit?: () => void;
+  onDelete?: () => void;
 }) {
   const gestToast = useGestionaleToast();
   const submitLock = useSubmitLock();
-  const magazzinoQ = useMagazzinoRicambiUIQuery();
-  const prodotti = magazzinoQ.data ?? [];
+  const settingsQ = useSharedAppSettingsQuery();
+  const sedeOperativaFields = useMemo(
+    () => readOfficinaSedeOperativaFromRows(settingsQ?.data?.rows),
+    [settingsQ?.data?.rows],
+  );
+  const sedeOperativaLine = useMemo(() => formatOfficinaSede(sedeOperativaFields), [sedeOperativaFields]);
+  const sedeOperativaConfigured = isOfficinaSedeConfigured(sedeOperativaFields);
+  const destinatarioSettings = useMemo(
+    () => readOfficinaDestinatarioOrdiniFromRows(settingsQ?.data?.rows),
+    [settingsQ?.data?.rows],
+  );
+  const destinatarioAnagrafica = useMemo(
+    () => officinaDestinatarioOrdiniToAnagrafica(destinatarioSettings, sedeOperativaLine),
+    [destinatarioSettings, sedeOperativaLine],
+  );
+  const bancheOrdini = useMemo(
+    () => readOfficinaBancheOrdiniFromRows(settingsQ?.data?.rows),
+    [settingsQ?.data?.rows],
+  );
+  const magazzinoMaster = useMemo(
+    () => resolveCabAppSettingsFromRows(settingsQ?.data?.rows ?? []).magazzinoMaster,
+    [settingsQ?.data?.rows],
+  );
 
+  const baselineRef = useRef(initialRecord);
+  const modalRootRef = useRef<HTMLDivElement | null>(null);
+  const importFinalizedRef = useRef(importMeta?.saved ?? false);
   const [record, setRecord] = useState(initialRecord);
-  const [magSearch, setMagSearch] = useState("");
-  const [magSearchOpen, setMagSearchOpen] = useState(false);
-  const readOnly = !canWrite || record.status !== "bozza";
+  const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
+  const viewMode = mode === "view";
+  const fieldsReadOnly = viewMode || !canWrite || (!isNew && initialRecord.status !== "bozza");
+  const canEditStatus = !viewMode && canWrite && initialRecord.status !== "annullato";
+  const statusDirty = !isNew && record.status !== initialRecord.status;
+  const canSave = canWrite && (isNew || !fieldsReadOnly || statusDirty);
 
   useEffect(() => {
+    baselineRef.current = initialRecord;
     setRecord(initialRecord);
+    setUnsavedExitOpen(false);
   }, [initialRecord]);
+
+  useEffect(() => {
+    if (!isNew) return;
+    setRecord((prev) => {
+      const next = defaultNewOrdineDestinazione(prev, sedeOperativaLine, destinatarioAnagrafica);
+      baselineRef.current = next;
+      return next;
+    });
+  }, [isNew, sedeOperativaLine, destinatarioAnagrafica, initialRecord.id]);
+
+  useEffect(() => {
+    importFinalizedRef.current = importMeta?.saved ?? false;
+  }, [importMeta]);
+
+  const finalizeImportUnlink = useCallback(async () => {
+    if (!importMeta || importFinalizedRef.current) return;
+    importFinalizedRef.current = true;
+    try {
+      await finalizeOrdineFornitoreImportDocument({
+        documentoId: importMeta.documentoId,
+        action: "unlink",
+      });
+    } catch {
+      importFinalizedRef.current = false;
+    }
+  }, [importMeta]);
+
+  const closeWithImportCleanup = useCallback(() => {
+    void finalizeImportUnlink().finally(() => onClose());
+  }, [finalizeImportUnlink, onClose]);
+
+  function requestClose() {
+    if (viewMode) {
+      onClose();
+      return;
+    }
+    if (!ordineFornitoreNeedsCloseConfirm(record, baselineRef.current)) {
+      setUnsavedExitOpen(false);
+      closeWithImportCleanup();
+      return;
+    }
+    setUnsavedExitOpen(true);
+  }
+
+  const { oggetti: righeOggetti, speseVarie } = useMemo(() => splitOrdineRighe(record.righe), [record.righe]);
+
+  const magazzinoQ = useMagazzinoRicambiUIQuery();
+  const prodottiMagazzino = magazzinoQ.data ?? [];
+  const [magAcRowId, setMagAcRowId] = useState<string | null>(null);
+  const [magAcField, setMagAcField] = useState<"codice" | "descrizione" | null>(null);
+
+  const magazzinoSuggestionsForRow = useCallback(
+    (riga: OrdineFornitoreRiga, field: "codice" | "descrizione") => {
+      const q = field === "codice" ? riga.codice : riga.descrizione;
+      return searchMagazzinoForOrdineFornitore(prodottiMagazzino, q, record.fornitoreLabel).map((p) => ({
+        id: p.id,
+        descrizione: p.descrizione ?? "",
+        codice: codiceRicambioPerFornitoreOrdine(p, record.fornitoreLabel),
+        marca: p.marca ?? "",
+        fornitoreMatch: ricambioBelongsToFornitoreOrdine(p, record.fornitoreLabel),
+      }));
+    },
+    [prodottiMagazzino, record.fornitoreLabel],
+  );
 
   const totals = useMemo(
     () =>
       calcolaTotaliOrdineFornitore({
         righe: record.righe,
-        trasporto: record.trasporto,
+        trasporto: 0,
         ivaPercent: record.ivaPercent,
       }),
-    [record.righe, record.trasporto, record.ivaPercent],
+    [record.righe, record.ivaPercent],
   );
 
-  const magSearchHits = useMemo(() => {
-    const q = magSearch.trim().toLowerCase();
-    if (q.length < 1) return [];
-    return prodotti
-      .filter((p) => {
-        const d = (p.descrizione ?? "").toLowerCase();
-        const c = [p.codiceFornitoreOriginale, p.codiceFornitoreOriginaleSecondario]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return d.includes(q) || c.includes(q) || q.split(/\s+/).every((w) => w && (d.includes(w) || c.includes(w)));
-      })
-      .slice(0, 16);
-  }, [magSearch, prodotti]);
-
-  const patchRighe = useCallback((righe: OrdineFornitoreRiga[]) => {
-    setRecord((prev) => ({ ...prev, righe }));
+  const patchRigheMerged = useCallback((oggetti: OrdineFornitoreRiga[], spese: OrdineFornitoreRiga[]) => {
+    setRecord((prev) => ({ ...prev, righe: mergeOrdineRighe(oggetti, spese) }));
   }, []);
 
-  function addRicambioFromMag(p: RicambioMagazzino) {
-    const { prezzo, scontoPercent } = defaultPrezzoUnitarioOrdineFromRicambio(p, record.fornitoreLabel);
+  function addEmptyRiga() {
+    const meta = defaultOrdineRigaMeta(record.ivaPercent);
     const riga: OrdineFornitoreRiga = {
       id: newRigaId(),
-      ordine: record.righe.length + 1,
-      ricambioId: p.id,
-      codice: p.codiceFornitoreOriginale ?? "",
-      descrizione: p.descrizione ?? "",
+      ordine: righeOggetti.length + 1,
+      ricambioId: null,
+      codice: "",
+      descrizione: "",
       quantita: 1,
-      prezzoUnitario: prezzo,
-      scontoPercent,
-      totaleRiga: totaleNettoRigaOrdine({ quantita: 1, prezzoUnitario: prezzo, scontoPercent }),
-      meta: { produttore: p.marca },
+      prezzoUnitario: 0,
+      scontoPercent: 0,
+      totaleRiga: 0,
+      unitaMisura: "pz",
+      ivaPercent: record.ivaPercent || 22,
+      meta,
     };
-    patchRighe([...record.righe, riga]);
-    setMagSearch("");
-    setMagSearchOpen(false);
+    riga.totaleRiga = totaleNettoRigaOrdine(riga);
+    patchRigheMerged([...righeOggetti, riga], speseVarie);
   }
 
-  function updateRiga(id: string, patch: Partial<OrdineFornitoreRiga>) {
-    patchRighe(
-      record.righe.map((r) => {
+  function addEmptySpesaVaria() {
+    const riga = buildEmptyOrdineSpesaVariaRiga(record.ivaPercent || 22);
+    patchRigheMerged(righeOggetti, [...speseVarie, riga]);
+  }
+
+  function updateRigaOggetto(id: string, patch: Partial<OrdineFornitoreRiga>) {
+    patchRigheMerged(
+      righeOggetti.map((r) => {
         if (r.id !== id) return r;
         const next = { ...r, ...patch };
+        if (patch.unitaMisura !== undefined || patch.ivaPercent !== undefined) {
+          next.meta = patchRigaMeta(next.meta, {
+            unitaMisura: next.unitaMisura,
+            ivaPercent: next.ivaPercent,
+          });
+        }
+        next.totaleRiga = totaleNettoRigaOrdine(next);
+        return next;
+      }),
+      speseVarie,
+    );
+  }
+
+  function selectRicambioForRow(rowId: string, ricambioId: string) {
+    const ricambio = prodottiMagazzino.find((p) => p.id === ricambioId);
+    if (!ricambio) return;
+    updateRigaOggetto(rowId, ordineRigaPatchFromRicambio(ricambio, record.fornitoreLabel, record.ivaPercent));
+    setMagAcRowId(null);
+    setMagAcField(null);
+  }
+
+  function updateSpesaVaria(id: string, patch: Partial<OrdineFornitoreRiga>) {
+    patchRigheMerged(
+      righeOggetti,
+      speseVarie.map((r) => {
+        if (r.id !== id) return r;
+        const next = { ...r, ...patch, quantita: 1, scontoPercent: 0 };
+        if (patch.ivaPercent !== undefined) {
+          next.meta = patchRigaMeta(next.meta, { ivaPercent: next.ivaPercent });
+          next.meta[ORDINE_RIGA_META_SPESA_VARIA] = true;
+        }
         next.totaleRiga = totaleNettoRigaOrdine(next);
         return next;
       }),
     );
   }
 
-  function removeRiga(id: string) {
-    patchRighe(record.righe.filter((r) => r.id !== id).map((r, i) => ({ ...r, ordine: i + 1 })));
+  function removeRigaOggetto(id: string) {
+    patchRigheMerged(
+      righeOggetti.filter((r) => r.id !== id),
+      speseVarie,
+    );
   }
 
-  async function handleSave() {
-    if (readOnly) return;
-    if (!submitLock.acquire()) return;
+  function removeSpesaVaria(id: string) {
+    patchRigheMerged(
+      righeOggetti,
+      speseVarie.filter((r) => r.id !== id),
+    );
+  }
+
+  async function handleSave(): Promise<boolean> {
+    if (!canSave) return false;
+    if (!submitLock.acquire()) return false;
     if (!record.fornitoreLabel.trim()) {
       submitLock.release();
       gestToast.validation("Seleziona un fornitore.");
-      return;
+      return false;
     }
-    if (record.righe.length === 0) {
+    if (righeOggetti.length === 0) {
       submitLock.release();
-      gestToast.validation("Aggiungi almeno una riga.");
-      return;
+      gestToast.validation("Aggiungi almeno una riga oggetto.");
+      return false;
+    }
+
+    for (const s of speseVarie) {
+      if (s.prezzoUnitario > 0 && !s.descrizione.trim()) {
+        submitLock.release();
+        gestToast.validation("Inserisci la descrizione per ogni spesa con importo.");
+        return false;
+      }
     }
 
     try {
-      const payload = recordToCreateInput({
-        ...record,
-        imponibileRighe: totals.imponibileRighe,
-        imponibile: totals.imponibile,
-        iva: totals.iva,
-        totale: totals.totale,
-      });
+      if (!isNew && initialRecord.status !== "bozza") {
+        if (!statusDirty) return false;
+        const res = await ordiniFornitoriEntry.updateStatus(record.id, record.status, record.updatedAt);
+        if (!res.success) throw new Error(res.error ?? "Salvataggio fallito.");
+        gestToast.successOnce("ordine-save", "Stato ordine aggiornato.");
+        await Promise.resolve(onSaved());
+        return true;
+      }
+
+      const payload = recordToCreateInput(
+        {
+          ...record,
+          righe: mergeOrdineRighe(
+            righeOggetti,
+            speseVarie.filter((s) => s.descrizione.trim() && s.prezzoUnitario > 0),
+          ),
+          imponibileRighe: totals.imponibileRighe,
+          imponibile: totals.imponibile,
+          iva: totals.iva,
+          totale: totals.totale,
+        },
+        isNew ? importMeta : undefined,
+        isNew && importMeta
+          ? (await getBrowserSupabase().auth.getUser()).data.user?.id ?? ""
+          : undefined,
+      );
 
       if (isNew) {
         const res = await ordiniFornitoriEntry.create(payload);
         if (!res.success) throw new Error(res.error ?? "Salvataggio fallito.");
+        if (importMeta && res.data?.id && !importFinalizedRef.current) {
+          importFinalizedRef.current = true;
+          try {
+            await finalizeOrdineFornitoreImportDocument({
+              documentoId: importMeta.documentoId,
+              action: "link",
+              ordineId: res.data.id,
+              contentHash: importMeta.contentHash,
+              semanticKey: importMeta.semanticKey ?? undefined,
+            });
+          } catch (linkErr) {
+            importFinalizedRef.current = false;
+            gestToast.errorOnce("ordine-import-link", linkErr, { module: "ordini_fornitori" });
+          }
+        }
         gestToast.successOnce("ordine-save", "Ordine creato.");
-        onSaved();
-        return;
+        await Promise.resolve(onSaved({ record: res.data }));
+        return true;
       }
 
       const res = await ordiniFornitoriEntry.updateDraft(record.id, payload, record.updatedAt);
       if (!res.success) throw new Error(res.error ?? "Salvataggio fallito.");
       gestToast.successOnce("ordine-save", "Ordine salvato.");
-      onSaved();
+      const detail = await ordiniFornitoriEntry.getDetail(record.id);
+      await Promise.resolve(onSaved(detail.success && detail.data ? { record: detail.data } : undefined));
+      return true;
     } catch (e) {
       gestToast.errorOnce("ordine-save", e, { module: "ordini_fornitori" });
+      return false;
     } finally {
       submitLock.release();
     }
   }
 
+  const modalTitle = isNew
+    ? "Nuovo ordine fornitore"
+    : viewMode
+      ? `Visualizza ordine ${record.numero || ""}`
+      : `Ordine ${record.numero || ""}`;
+
+  const pdfPreviewRecord = {
+    ...record,
+    righe: mergeOrdineRighe(
+      righeOggetti,
+      speseVarie.filter((s) => s.descrizione.trim() && s.prezzoUnitario > 0),
+    ),
+    imponibileRighe: totals.imponibileRighe,
+    imponibile: totals.imponibile,
+    iva: totals.iva,
+    totale: totals.totale,
+  };
+
   return (
     <LavorazioniModalShell
-      onRequestClose={onClose}
-      title={isNew ? "Nuovo ordine fornitore" : `Ordine ${record.numero || ""}`}
-      modalSize="formLarge"
+      modalRootRef={modalRootRef}
+      onRequestClose={requestClose}
+      title={modalTitle}
+      modalSize="analytics"
+      modalHeight="standard"
       footer={
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap gap-2">
-            {!isNew ? (
-              <button type="button" className={dsBtnNeutral} onClick={() => void openOrdineFornitorePdfInNewTab(record)}>
-                PDF
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          <button
+            type="button"
+            className={preventivoEditorFooterBtnNeutral}
+            onClick={() => void openOrdineFornitorePdfPreviewFromRecord(pdfPreviewRecord)}
+          >
+            Anteprima
+          </button>
+          {viewMode ? (
+            <>
+              {!isNew && onDelete ? (
+                <button
+                  type="button"
+                  className={`${dsBtnDanger} min-h-11 w-full sm:w-auto`}
+                  disabled={!canWrite}
+                  title={canWrite ? "Elimina ordine" : READONLY_PERMISSION_HINT}
+                  onClick={onDelete}
+                >
+                  Elimina
+                </button>
+              ) : null}
+              <button type="button" className={preventivoEditorFooterBtnNeutral} onClick={onClose}>
+                Chiudi
               </button>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className={dsBtnNeutral} onClick={onClose}>
-              Chiudi
-            </button>
-            {!readOnly ? (
-              <button type="button" className={dsBtnPrimary} disabled={submitLock.isLocked()} onClick={() => void handleSave()}>
-                {submitLock.isLocked() ? "Salvataggio…" : "Salva ordine"}
+              {initialRecord.status === "bozza" ? (
+                <button
+                  type="button"
+                  className={preventivoEditorFooterBtnPrimary}
+                  disabled={!canWrite}
+                  title={canWrite ? "Modifica ordine" : READONLY_PERMISSION_HINT}
+                  onClick={onSwitchToEdit}
+                >
+                  Modifica
+                </button>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <button type="button" className={preventivoEditorFooterBtnNeutral} onClick={requestClose}>
+                Annulla
               </button>
-            ) : null}
-          </div>
+              <button
+                type="button"
+                className={preventivoEditorFooterBtnPrimary}
+                disabled={!canWrite || !canSave || submitLock.isLocked()}
+                title={canWrite ? undefined : READONLY_PERMISSION_HINT}
+                onClick={() => void handleSave()}
+              >
+                {submitLock.isLocked() ? "Salvataggio…" : "Salva"}
+              </button>
+            </>
+          )}
         </div>
       }
     >
-      <GestionaleModalScrollBody className={`${gestionaleModalBodyFlexClass} ${dsScrollbar}`}>
-        <div className="space-y-4 pb-24">
-          <div className="sticky top-0 z-[2] -mx-4 mb-3 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_94%,transparent)] px-4 py-2 backdrop-blur-sm">
-            <div className="flex flex-wrap items-end justify-between gap-3 text-sm">
-              <div>
-                <span className="text-[color:var(--cab-text-muted)]">Totale ordine</span>
-                <p className="text-lg font-semibold tabular-nums">
-                  {totals.totale.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-                </p>
+      <div className={`relative ${gestionaleModalBodyFlexClass}`}>
+        <GestionaleModalScrollBody className={`py-3 ${dsScrollbar}`}>
+          <div className="space-y-3 pb-4">
+            {importMeta ? (
+              <OrdineFornitoreImportQualityBanner level={importMeta.quality.level} />
+            ) : null}
+            <GestionaleCollapsibleSection title="Dati ordine" defaultCollapsed={false} variant="form">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:items-end">
+                <FormField label="Numero">
+                  <input className={`${dsInput} tabular-nums`} value={record.numero} readOnly aria-readonly />
+                </FormField>
+                <FormField label="Stato">
+                  <GlobalFixedListPillSelect
+                    value={record.status}
+                    onChange={(v) =>
+                      setRecord((p) => ({ ...p, status: v as OrdineFornitoreStatus }))
+                    }
+                    options={ORDINE_FORNITORE_STATUS_EDITOR_ITEMS}
+                    ariaLabel="Stato ordine"
+                    disabled={!canEditStatus}
+                    size="form"
+                    shellClass={ORDINE_FORNITORE_STATUS_PILL_SHELL}
+                    fallbackPillStyle={ordineFornitoreStatusPillStyle("bozza")}
+                  />
+                </FormField>
+                <div className="w-full sm:col-span-2 lg:col-span-1 lg:justify-self-end lg:max-w-xs">
+                  <FormField label="Data ordine" htmlFor="ordine-data">
+                    <GlobalDatePickerYmd
+                      id="ordine-data"
+                      variant="default"
+                      valueYmd={record.dataOrdine}
+                      disabled={fieldsReadOnly}
+                      onChangeYmd={(ymd) => {
+                        if (!ymd.trim()) return;
+                        setRecord((p) => ({ ...p, dataOrdine: ymd }));
+                      }}
+                      aria-label="Data ordine"
+                    />
+                  </FormField>
+                </div>
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <FormField label="Oggetto ordine" htmlFor="ordine-oggetto">
+                    <input
+                      id="ordine-oggetto"
+                      className={dsInput}
+                      value={record.oggettoOrdine}
+                      disabled={fieldsReadOnly}
+                      onChange={(e) => setRecord((p) => ordineRecordWithOggetto(p, e.target.value))}
+                      placeholder="Descrizione sintetica dell'ordine"
+                    />
+                  </FormField>
+                </div>
               </div>
-              <div className="text-right text-xs text-[color:var(--cab-text-muted)]">
-                <p>Imponibile righe: {totals.imponibileRighe.toLocaleString("it-IT", { style: "currency", currency: "EUR" })}</p>
-                <p>IVA: {totals.iva.toLocaleString("it-IT", { style: "currency", currency: "EUR" })}</p>
+            </GestionaleCollapsibleSection>
+
+            <GestionaleCollapsibleSection title="Dati fornitore" defaultCollapsed={false} variant="form">
+              <div className="space-y-3">
+                <FormField label="Fornitore *" htmlFor="ordine-fornitore">
+                  <GlobalSettingsListSelect
+                    id="ordine-fornitore"
+                    listKey="magazzino:fornitoriOrdine"
+                    value={record.fornitoreLabel}
+                    onChange={(v) =>
+                      setRecord((p) =>
+                        applyFornitoreLabelToRecord(p, v, getFornitoreAnagraficaSettings(magazzinoMaster, v)),
+                      )
+                    }
+                    disabled={fieldsReadOnly}
+                    required
+                  />
+                </FormField>
+                <OrdineFornitoreFornitoreFields record={record} readOnly={fieldsReadOnly} onRecordChange={setRecord} />
               </div>
-            </div>
-          </div>
+            </GestionaleCollapsibleSection>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <label className={dsLabel}>Numero</label>
-              <input className={dsInput} value={record.numero} readOnly aria-readonly />
-            </div>
-            <div>
-              <label className={dsLabel} htmlFor="ordine-data">
-                Data ordine
-              </label>
-              <input
-                id="ordine-data"
-                type="date"
-                className={dsInput}
-                value={record.dataOrdine}
-                disabled={readOnly}
-                onChange={(e) => setRecord((p) => ({ ...p, dataOrdine: e.target.value }))}
+            <GestionaleCollapsibleSection title="Dati destinatario" defaultCollapsed={false} variant="form">
+              <OrdineFornitoreDestinazioneFields
+                record={record}
+                sedeOperativaLine={sedeOperativaLine}
+                sedeOperativaConfigured={sedeOperativaConfigured}
+                destinatarioAnagrafica={destinatarioAnagrafica}
+                bancheSalvate={bancheOrdini}
+                readOnly={fieldsReadOnly}
+                onRecordChange={setRecord}
               />
-            </div>
-            <div>
-              <label className={dsLabel} htmlFor="ordine-status">
-                Stato
-              </label>
-              <select
-                id="ordine-status"
-                className={dsInput}
-                value={record.status}
-                disabled={readOnly}
-                onChange={(e) =>
-                  setRecord((p) => ({ ...p, status: e.target.value as OrdineFornitoreStatus }))
-                }
-              >
-                <option value="bozza">Bozza</option>
-                <option value="inviato">Inviato</option>
-                <option value="confermato">Confermato</option>
-              </select>
-            </div>
-            <div>
-              <label className={dsLabel} htmlFor="ordine-fornitore">
-                Fornitore *
-              </label>
-              <GlobalSettingsListSelect
-                id="ordine-fornitore"
-                listKey="magazzino:fornitori"
-                value={record.fornitoreLabel}
-                onChange={(v) => setRecord((p) => applyFornitoreLabelToRecord(p, v))}
-                disabled={readOnly}
-                required
-              />
-            </div>
-          </div>
+            </GestionaleCollapsibleSection>
 
-          <div>
-            <label className={dsLabel} htmlFor="ordine-destinazione">
-              Destinazione merce
-            </label>
-            <GestionaleTextarea
-              id="ordine-destinazione"
-              value={record.destinazione}
-              disabled={readOnly}
-              rows={2}
-              maxLength={TEXT_LONG}
-              onChange={(v) =>
-                setRecord((p) => ({ ...p, destinazione: sliceInputValue(v, TEXT_LONG) }))
-              }
-              placeholder="Indirizzo o sede di consegna"
-            />
-          </div>
-
-          {!readOnly ? (
-            <RicambiMagSearchPortal
-              value={magSearch}
-              onChange={setMagSearch}
-              open={magSearchOpen}
-              onOpenChange={setMagSearchOpen}
-              hits={magSearchHits}
-              onSelect={addRicambioFromMag}
-              placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-              ariaLabel="Cerca ricambio in magazzino"
-            />
-          ) : null}
-
-          <div className={`${dsTableWrap} ${dsScrollbar}`}>
-            <table className={`${dsTable} text-xs`}>
-              <GlobalTableHead>
-                <GlobalTableHeadLabel label="Codice" />
-                <GlobalTableHeadLabel label="Descrizione" thClassName="min-w-[10rem]" />
-                <GlobalTableHeadLabel label="Qtà" />
-                <GlobalTableHeadLabel label="Prezzo" />
-                <GlobalTableHeadLabel label="Sc. %" />
-                <GlobalTableHeadLabel label="Totale" />
-                {!readOnly ? <GlobalTableHeadLabel label="" thClassName="w-12" /> : null}
-              </GlobalTableHead>
-              <tbody>
-                {record.righe.length === 0 ? (
-                  <tr>
-                    <td colSpan={readOnly ? 6 : 7} className="px-2 py-4 text-center text-[color:var(--cab-text-muted)]">
-                      Nessuna riga — cerca un ricambio sopra.
-                    </td>
-                  </tr>
-                ) : (
-                  record.righe.map((r) => (
-                    <tr key={r.id} className={dsTableRow}>
-                      <td className="px-2 py-1">
-                        <input
-                          className={dsInput}
-                          value={r.codice}
-                          disabled={readOnly}
-                          onChange={(e) => updateRiga(r.id, { codice: e.target.value })}
-                        />
-                      </td>
-                      <td className="px-2 py-1">
-                        <input
-                          className={dsInput}
-                          value={r.descrizione}
-                          disabled={readOnly}
-                          onChange={(e) => updateRiga(r.id, { descrizione: e.target.value })}
-                        />
-                      </td>
-                      <td className="px-2 py-1">
-                        <input
-                          type="number"
-                          min={0.001}
-                          step={0.001}
-                          className={`${dsInput} w-20`}
-                          value={r.quantita}
-                          disabled={readOnly}
-                          onChange={(e) => updateRiga(r.id, { quantita: Number(e.target.value) || 0 })}
-                        />
-                      </td>
-                      <td className="px-2 py-1">
-                        <input
-                          type="number"
-                          min={0}
-                          step={0.01}
-                          className={`${dsInput} w-24`}
-                          value={r.prezzoUnitario}
-                          disabled={readOnly}
-                          onChange={(e) => updateRiga(r.id, { prezzoUnitario: Number(e.target.value) || 0 })}
-                        />
-                      </td>
-                      <td className="px-2 py-1">
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step={0.01}
-                          className={`${dsInput} w-16`}
-                          value={r.scontoPercent}
-                          disabled={readOnly}
-                          onChange={(e) => updateRiga(r.id, { scontoPercent: Number(e.target.value) || 0 })}
-                        />
-                      </td>
-                      <td className="px-2 py-1 tabular-nums">
-                        {r.totaleRiga.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      {!readOnly ? (
-                        <td className="px-2 py-1">
-                          <IconActionButton label="Rimuovi riga" className={dsTableActionBtnDanger} onClick={() => removeRiga(r.id)}>
-                            <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </IconActionButton>
+            <GestionaleCollapsibleSection title="Oggetti" defaultCollapsed={false} variant="form">
+              <div className={`${dsTableWrap} ${dsScrollbar}`}>
+                <table className={`${dsTable} ${ordineRigheTableMinWidthClass} text-xs`}>
+                  <GlobalTableHead>
+                    <GlobalTableHeadLabel label="Codice" />
+                    <GlobalTableHeadLabel label="Descrizione" thClassName="min-w-[10rem]" />
+                    <GlobalTableHeadLabel label="Qtà" />
+                    <GlobalTableHeadLabel label="U.M." />
+                    <GlobalTableHeadLabel label="Prezzo" />
+                    <GlobalTableHeadLabel label="Sc. %" />
+                    <GlobalTableHeadLabel label="IVA %" />
+                    <GlobalTableHeadLabel label="Totale" />
+                    {!fieldsReadOnly ? <GlobalTableHeadLabel label="" thClassName="w-12" /> : null}
+                  </GlobalTableHead>
+                  <tbody>
+                    {righeOggetti.length === 0 && fieldsReadOnly ? (
+                      <tr>
+                        <td colSpan={fieldsReadOnly ? 8 : 9} className="px-2 py-4 text-center text-[color:var(--cab-text-muted)]">
+                          Nessuna riga.
                         </td>
-                      ) : null}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                      </tr>
+                    ) : (
+                      righeOggetti.map((r, idx) => (
+                        <tr key={r.id} className={dsTableRow}>
+                          <td className={preventivoEditorTableTdClass}>
+                            {fieldsReadOnly ? (
+                              <input
+                                className={preventivoEditorTableInput}
+                                value={r.codice}
+                                disabled
+                                readOnly
+                                aria-label={`Codice riga ${idx + 1}`}
+                              />
+                            ) : (
+                              <OrdineFornitoreRigaMagazzinoField
+                                value={r.codice}
+                                placeholder="Codice"
+                                ariaLabel={`Codice riga ${idx + 1}`}
+                                open={magAcRowId === r.id && magAcField === "codice"}
+                                onOpenChange={(next) => {
+                                  setMagAcRowId(next ? r.id : null);
+                                  setMagAcField(next ? "codice" : null);
+                                }}
+                                suggestions={magazzinoSuggestionsForRow(r, "codice")}
+                                onChange={(v) => updateRigaOggetto(r.id, { codice: v, ricambioId: null })}
+                                onSelect={(s) => selectRicambioForRow(r.id, s.id)}
+                              />
+                            )}
+                          </td>
+                          <td className={preventivoEditorTableTdClass}>
+                            {fieldsReadOnly ? (
+                              <input
+                                className={preventivoEditorTableInput}
+                                value={r.descrizione}
+                                disabled
+                                readOnly
+                                aria-label={`Descrizione riga ${idx + 1}`}
+                              />
+                            ) : (
+                              <OrdineFornitoreRigaMagazzinoField
+                                value={r.descrizione}
+                                placeholder="Descrizione"
+                                ariaLabel={`Descrizione riga ${idx + 1}`}
+                                open={magAcRowId === r.id && magAcField === "descrizione"}
+                                onOpenChange={(next) => {
+                                  setMagAcRowId(next ? r.id : null);
+                                  setMagAcField(next ? "descrizione" : null);
+                                }}
+                                suggestions={magazzinoSuggestionsForRow(r, "descrizione")}
+                                onChange={(v) => updateRigaOggetto(r.id, { descrizione: v, ricambioId: null })}
+                                onSelect={(s) => selectRicambioForRow(r.id, s.id)}
+                              />
+                            )}
+                          </td>
+                          <td className={preventivoEditorTableTdClass}>
+                            <input
+                              className={preventivoEditorTableInputNumber}
+                              type="number"
+                              min={0.001}
+                              step={0.001}
+                              inputMode="decimal"
+                              value={r.quantita}
+                              disabled={fieldsReadOnly}
+                              onChange={(e) => updateRigaOggetto(r.id, { quantita: Number(e.target.value) || 0 })}
+                              aria-label={`Quantità riga ${idx + 1}`}
+                            />
+                          </td>
+                          <td className={preventivoEditorTableTdClass}>
+                            <OrdineRigaUnitaMisuraCell
+                              value={parseRicambioUnitaMisura(r.unitaMisura)}
+                              rowIndex={idx}
+                              disabled={fieldsReadOnly}
+                              onChange={(unitaMisura) => updateRigaOggetto(r.id, { unitaMisura })}
+                            />
+                          </td>
+                          <td className={preventivoEditorTableTdClass}>
+                            <input
+                              className={preventivoEditorTableInputNumber}
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              inputMode="decimal"
+                              value={r.prezzoUnitario}
+                              disabled={fieldsReadOnly}
+                              onChange={(e) => updateRigaOggetto(r.id, { prezzoUnitario: Number(e.target.value) || 0 })}
+                              aria-label={`Prezzo riga ${idx + 1}`}
+                            />
+                          </td>
+                          <td className={preventivoEditorTableTdClass}>
+                            <input
+                              className={preventivoEditorTableInputNumber}
+                              type="number"
+                              min={0}
+                              max={100}
+                              step={0.01}
+                              inputMode="decimal"
+                              value={r.scontoPercent}
+                              disabled={fieldsReadOnly}
+                              onChange={(e) => updateRigaOggetto(r.id, { scontoPercent: Number(e.target.value) || 0 })}
+                              aria-label={`Sconto riga ${idx + 1}`}
+                            />
+                          </td>
+                          <td className={preventivoEditorTableTdClass}>
+                            <input
+                              className={preventivoEditorTableInputNumber}
+                              type="number"
+                              min={0}
+                              max={100}
+                              step={0.01}
+                              inputMode="decimal"
+                              value={r.ivaPercent}
+                              disabled={fieldsReadOnly}
+                              onChange={(e) => updateRigaOggetto(r.id, { ivaPercent: Number(e.target.value) || 0 })}
+                              aria-label={`IVA riga ${idx + 1}`}
+                            />
+                          </td>
+                          <td className={`${preventivoEditorTableTdClass} text-right ${preventivoEditorMoneyValueSm}`}>
+                            {fmtPreventivoEuro(r.totaleRiga)}
+                          </td>
+                          {!fieldsReadOnly ? (
+                            <td className={preventivoEditorTableTdClass}>
+                              <div className="flex justify-end">
+                                <IconActionButton
+                                  label="Elimina riga"
+                                  className={dsTableActionBtnDanger}
+                                  onClick={() => removeRigaOggetto(r.id)}
+                                >
+                                  <svg
+                                    className={dsTableActionGlyph}
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                    aria-hidden
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                  </svg>
+                                </IconActionButton>
+                              </div>
+                            </td>
+                          ) : null}
+                        </tr>
+                      ))
+                    )}
+                    {!fieldsReadOnly ? (
+                      <tr className={dsTableRow}>
+                        <td colSpan={9} className="px-2 py-1.5">
+                          <button type="button" className={preventivoEditorAddRowBtn} onClick={addEmptyRiga}>
+                            <HubIconPlus className="h-4 w-4 shrink-0" aria-hidden />
+                            Aggiungi riga
+                          </button>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </GestionaleCollapsibleSection>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <label className={dsLabel} htmlFor="ordine-trasporto">
-                Trasporto €
-              </label>
-              <input
-                id="ordine-trasporto"
-                type="number"
-                min={0}
-                step={0.01}
-                className={dsInput}
-                value={record.trasporto}
-                disabled={readOnly}
-                onChange={(e) => setRecord((p) => ({ ...p, trasporto: Number(e.target.value) || 0 }))}
-              />
-            </div>
-            <div>
-              <label className={dsLabel} htmlFor="ordine-iva">
-                IVA %
-              </label>
-              <input
-                id="ordine-iva"
-                type="number"
-                min={0}
-                max={100}
-                step={0.01}
-                className={dsInput}
-                value={record.ivaPercent}
-                disabled={readOnly}
-                onChange={(e) => setRecord((p) => ({ ...p, ivaPercent: Number(e.target.value) || 0 }))}
-              />
-            </div>
-          </div>
+            <GestionaleCollapsibleSection title="Spese varie" defaultCollapsed={false} variant="form">
+              <div className={`${dsTableWrap} ${dsScrollbar}`}>
+                <table className={`${dsTable} ${ordineSpeseVarieTableMinWidthClass} text-xs`}>
+                  <GlobalTableHead>
+                    <GlobalTableHeadLabel label="Descrizione" thClassName="min-w-[12rem]" />
+                    <GlobalTableHeadLabel label="Importo" />
+                    <GlobalTableHeadLabel label="IVA %" />
+                    <GlobalTableHeadLabel label="Totale" />
+                    {!fieldsReadOnly ? <GlobalTableHeadLabel label="" thClassName="w-12" /> : null}
+                  </GlobalTableHead>
+                  <tbody>
+                    {speseVarie.length === 0 && fieldsReadOnly ? (
+                      <tr>
+                        <td colSpan={fieldsReadOnly ? 4 : 5} className="px-2 py-4 text-center text-[color:var(--cab-text-muted)]">
+                          Nessuna spesa.
+                        </td>
+                      </tr>
+                    ) : (
+                      speseVarie.map((r, idx) => (
+                        <tr key={r.id} className={dsTableRow}>
+                          <td className={preventivoEditorTableTdClass}>
+                            <input
+                              className={preventivoEditorTableInput}
+                              value={r.descrizione}
+                              disabled={fieldsReadOnly}
+                              onChange={(e) => updateSpesaVaria(r.id, { descrizione: e.target.value })}
+                              aria-label={`Descrizione spesa ${idx + 1}`}
+                              placeholder="Spese di trasporto, ordine…"
+                            />
+                          </td>
+                          <td className={preventivoEditorTableTdClass}>
+                            <input
+                              className={preventivoEditorTableInputNumber}
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              inputMode="decimal"
+                              value={r.prezzoUnitario}
+                              disabled={fieldsReadOnly}
+                              onChange={(e) => updateSpesaVaria(r.id, { prezzoUnitario: Number(e.target.value) || 0 })}
+                              aria-label={`Importo spesa ${idx + 1}`}
+                            />
+                          </td>
+                          <td className={preventivoEditorTableTdClass}>
+                            <input
+                              className={preventivoEditorTableInputNumber}
+                              type="number"
+                              min={0}
+                              max={100}
+                              step={0.01}
+                              inputMode="decimal"
+                              value={r.ivaPercent}
+                              disabled={fieldsReadOnly}
+                              onChange={(e) => updateSpesaVaria(r.id, { ivaPercent: Number(e.target.value) || 0 })}
+                              aria-label={`IVA spesa ${idx + 1}`}
+                            />
+                          </td>
+                          <td className={`${preventivoEditorTableTdClass} text-right ${preventivoEditorMoneyValueSm}`}>
+                            {fmtPreventivoEuro(r.totaleRiga)}
+                          </td>
+                          {!fieldsReadOnly ? (
+                            <td className={preventivoEditorTableTdClass}>
+                              <div className="flex justify-end">
+                                <IconActionButton
+                                  label="Elimina spesa"
+                                  className={dsTableActionBtnDanger}
+                                  onClick={() => removeSpesaVaria(r.id)}
+                                >
+                                  <svg
+                                    className={dsTableActionGlyph}
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                    aria-hidden
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                  </svg>
+                                </IconActionButton>
+                              </div>
+                            </td>
+                          ) : null}
+                        </tr>
+                      ))
+                    )}
+                    {!fieldsReadOnly ? (
+                      <tr className={dsTableRow}>
+                        <td colSpan={5} className="px-2 py-1.5">
+                          <button type="button" className={preventivoEditorAddRowBtn} onClick={addEmptySpesaVaria}>
+                            <HubIconPlus className="h-4 w-4 shrink-0" aria-hidden />
+                            Aggiungi spesa
+                          </button>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </GestionaleCollapsibleSection>
 
-          <div>
-            <label className={dsLabel} htmlFor="ordine-note">
-              Note
-            </label>
-            <GestionaleTextarea
-              id="ordine-note"
-              value={record.note}
-              disabled={readOnly}
-              rows={3}
-              maxLength={TEXT_EXTRA}
-              onChange={(v) => setRecord((p) => ({ ...p, note: sliceInputValue(v, TEXT_EXTRA) }))}
-            />
+            <GestionaleCollapsibleSection title="Riepilogo" defaultCollapsed={false} variant="form">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h3 className={preventivoEditorSubsectionTitle}>Condizioni consegna</h3>
+                  <OrdineFornitoreLogisticaFields
+                    record={record}
+                    readOnly={fieldsReadOnly}
+                    onRecordChange={setRecord}
+                  />
+                </div>
+                <FormField label="Note" htmlFor="ordine-note">
+                  <GestionaleTextarea
+                    id="ordine-note"
+                    value={record.note}
+                    disabled={fieldsReadOnly}
+                    rows={3}
+                    maxLength={TEXT_EXTRA}
+                    onChange={(v) => setRecord((p) => ({ ...p, note: sliceInputValue(v, TEXT_EXTRA) }))}
+                  />
+                </FormField>
+                <div className="space-y-2">
+                  <h3 className={preventivoEditorSubsectionTitle}>Riepilogo economico</h3>
+                  <div className={preventivoEditorPanelClass}>
+                    <PreventivoEditorRiepilogoRow
+                      label="Imponibile righe"
+                      value={fmtPreventivoEuro(totals.imponibileRighe)}
+                    />
+                    {totals.imponibileSpeseVarie > 0 ? (
+                      <PreventivoEditorRiepilogoRow
+                        label="Spese varie"
+                        value={fmtPreventivoEuro(totals.imponibileSpeseVarie)}
+                      />
+                    ) : null}
+                    <PreventivoEditorRiepilogoRow label="Imponibile" value={fmtPreventivoEuro(totals.imponibile)} tone="subtotal" />
+                    <PreventivoEditorRiepilogoRow label="IVA" value={fmtPreventivoEuro(totals.iva)} />
+                  </div>
+                  <PreventivoEditorTotalBar label="Totale ordine" value={fmtPreventivoEuro(totals.totale)} emphasis="grand" />
+                </div>
+              </div>
+            </GestionaleCollapsibleSection>
+            {!isNew ? <OrdineFornitoreStoricoSection ordineId={record.id} /> : null}
           </div>
-        </div>
-      </GestionaleModalScrollBody>
+        </GestionaleModalScrollBody>
+        <GestionaleUnsavedChangesDialog
+          open={unsavedExitOpen}
+          placement="nested"
+          pending={submitLock.isLocked()}
+          onStay={() => setUnsavedExitOpen(false)}
+          onDiscard={() => {
+            setUnsavedExitOpen(false);
+            closeWithImportCleanup();
+          }}
+          onSaveAndExit={() => {
+            void (async () => {
+              const ok = await handleSave();
+              if (ok) {
+                setUnsavedExitOpen(false);
+                onClose();
+              }
+            })();
+          }}
+        />
+      </div>
     </LavorazioniModalShell>
   );
 }

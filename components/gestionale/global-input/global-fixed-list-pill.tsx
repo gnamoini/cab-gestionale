@@ -16,6 +16,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { dsFocus } from "@/lib/ui/design-system";
+import { dsIosInputTextSize } from "@/lib/ui/ios-mobile-tokens";
 import { globalFixedListPillMenuPanel } from "@/lib/ui/global-input";
 import {
   useDropdownOutsideDismiss,
@@ -44,6 +45,18 @@ export const fixedListPillTextClass = "text-[13px] font-medium leading-tight tra
 
 export const fixedListPillMinH = "min-h-8";
 
+export type FixedListPillSelectSize = "compact" | "form";
+
+const sizeShellClass: Record<FixedListPillSelectSize, string> = {
+  compact: fixedListPillMinH,
+  form: "min-h-10",
+};
+
+const sizeTriggerClass: Record<FixedListPillSelectSize, string> = {
+  compact: "min-h-8 px-2 py-1",
+  form: `min-h-10 px-3 py-2.5 ${dsIosInputTextSize}`,
+};
+
 export function GlobalFixedListPillSelect({
   value,
   onChange,
@@ -57,6 +70,7 @@ export function GlobalFixedListPillSelect({
   fallbackPillStyle,
   mobileSheet = true,
   sheetTitle,
+  size = "compact",
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -70,6 +84,8 @@ export function GlobalFixedListPillSelect({
   mobileSheet?: boolean;
   /** Titolo sheet mobile (default: ariaLabel). */
   sheetTitle?: string;
+  /** `form` = altezza allineata a `dsInput` (campi form modale). */
+  size?: FixedListPillSelectSize;
 }) {
   const listId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -194,12 +210,12 @@ export function GlobalFixedListPillSelect({
     ) : null;
 
   return (
-    <div ref={shellRef} className={`relative flex w-full ${fixedListPillMinH} items-stretch`}>
+    <div ref={shellRef} className={`relative flex w-full ${sizeShellClass[size]} items-stretch`}>
       <button
         ref={triggerRef}
         type="button"
         style={triggerStyle}
-        className={`flex min-h-8 w-full min-w-0 cursor-pointer items-center justify-center gap-1 px-2 py-1 text-center ${fixedListPillTextClass} outline-none transition-[filter,box-shadow,background-color,border-color,color] duration-150 hover:brightness-[1.04] disabled:cursor-not-allowed disabled:opacity-60 ${dsFocus} ${shellClass ?? "rounded-lg border border-black/10 shadow-sm dark:border-white/10"}`}
+        className={`flex w-full min-w-0 cursor-pointer items-center justify-center gap-1 text-center ${size === "form" ? "text-sm font-medium leading-snug" : fixedListPillTextClass} ${sizeTriggerClass[size]} outline-none transition-[filter,box-shadow,background-color,border-color,color] duration-150 hover:brightness-[1.04] disabled:cursor-not-allowed disabled:opacity-60 ${dsFocus} ${shellClass ?? "rounded-lg border border-black/10 shadow-sm dark:border-white/10"}`}
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}

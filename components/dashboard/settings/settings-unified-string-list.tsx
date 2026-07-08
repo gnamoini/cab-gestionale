@@ -28,6 +28,7 @@ export function SettingsUnifiedStringList({
   onAdd,
   onRemove,
   onRename,
+  renderRowBelow,
   renderRowTrailing,
   layout = "flat",
 }: {
@@ -39,6 +40,8 @@ export function SettingsUnifiedStringList({
   onAdd: (trimmed: string) => void;
   onRemove: (v: string) => void;
   onRename?: (from: string, to: string) => void;
+  /** Contenuto opzionale sotto la riga (es. anagrafica fornitore). */
+  renderRowBelow?: (value: string) => ReactNode;
   /** Contenuto opzionale a destra del nome (es. chip sconto %). */
   renderRowTrailing?: (value: string) => ReactNode;
   layout?: SettingsSectionLayout;
@@ -106,6 +109,7 @@ export function SettingsUnifiedStringList({
               onRenameBlur={tryRename}
               onRemove={() => setPendingDelete(m)}
               trailing={renderRowTrailing?.(m)}
+              footer={renderRowBelow?.(m)}
             />
           ))}
         </ul>

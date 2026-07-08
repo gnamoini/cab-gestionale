@@ -55,6 +55,7 @@ const ingresso: SchedaIngressoDoc = {
     livelloCarburante: "",
     addettoAccettazione: "Angelo",
     richiedente: "",
+    richiedenteTelefono: "",
     noteIntervento: "",
   },
 };

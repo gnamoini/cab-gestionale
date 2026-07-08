@@ -79,6 +79,7 @@ export function schedaIngressoFieldsFromDisplay(
     livelloCarburante: base.livelloCarburante ?? "",
     addettoAccettazione: base.addettoAccettazione ?? "",
     richiedente: base.richiedente ?? "",
+    richiedenteTelefono: base.richiedenteTelefono ?? "",
     richiedenteFirma: base.richiedenteFirma,
     noteIntervento: base.noteIntervento ?? "",
   };

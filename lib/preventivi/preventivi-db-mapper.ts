@@ -169,7 +169,5 @@ export function mergePreventivoRecords(
     byId.set(p.id, p);
   }
 
-  return [...byId.values()].sort(
-    (a, b) => new Date(b.dataCreazione).getTime() - new Date(a.dataCreazione).getTime(),
-  );
+  return [...byId.values()].sort((a, b) => b.dataCreazione.localeCompare(a.dataCreazione));
 }

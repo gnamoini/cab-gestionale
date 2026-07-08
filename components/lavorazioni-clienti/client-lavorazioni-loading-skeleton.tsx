@@ -56,7 +56,7 @@ export const ClientLavorazioniPageSkeleton = memo(function ClientLavorazioniPage
           title={PORTALE_CLIENTI_LABEL}
           actions={
             <div className="flex min-w-0 max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
-              <SkeletonBlock className={`${SKELETON_MIN_HEIGHT.pageHeader} !h-10 !w-10 sm:!h-10 sm:!min-h-[2.5rem] sm:!w-[5.5rem]`} />
+              <SkeletonBlock className={`${SKELETON_MIN_HEIGHT.pageHeader} !h-11 !w-11 sm:!h-11 sm:!min-h-11 sm:!w-[5.5rem]`} />
             </div>
           }
         />

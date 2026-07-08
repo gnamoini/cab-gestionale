@@ -646,12 +646,13 @@ export type PreventivoDdtFulfillmentRow = {
 export type OrdineFornitoreRow = {
   id: string;
   numero: string | null;
-  status: "bozza" | "inviato" | "confermato" | "annullato";
+  status: "bozza" | "inviato" | "confermato" | "spedito" | "ricevuto" | "annullato";
   data_ordine: string;
   fornitore_label: string;
   fornitore_snapshot: Record<string, unknown>;
   destinazione: string | null;
   destinazione_snapshot: Record<string, unknown>;
+  logistica_snapshot: Record<string, unknown>;
   note: string | null;
   imponibile_righe: number;
   trasporto: number;
@@ -663,6 +664,7 @@ export type OrdineFornitoreRow = {
   preventivo_id: string | null;
   scheda_lavorazione_id: string | null;
   pdf_artifact_hash: string | null;
+  meta: Record<string, unknown>;
   created_by: string | null;
   updated_by: string | null;
   created_at: string;

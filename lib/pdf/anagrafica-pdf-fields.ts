@@ -15,6 +15,7 @@ export function buildClienteAnagraficaPdfFields(source: {
   cantiere?: string;
   utilizzatore?: string;
   richiedente?: string;
+  richiedenteTelefono?: string;
 }): PdfField[] {
   const field = pdfFieldFromValue;
   return [
@@ -22,6 +23,7 @@ export function buildClienteAnagraficaPdfFields(source: {
     field("Cantiere", source.cantiere),
     field("Utilizzatore", source.utilizzatore),
     field("Richiedente", source.richiedente),
+    field("Telefono richiedente", source.richiedenteTelefono),
   ].filter((f): f is PdfField => f !== null);
 }
 

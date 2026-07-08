@@ -53,6 +53,7 @@ const SCHEDA_ONLY_KEYS: (keyof SchedaIngressoFields)[] = [
   "vin",
   "km",
   "richiedente",
+  "richiedenteTelefono",
 ];
 
 function pickSchedaOnlyFields(

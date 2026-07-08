@@ -2,9 +2,14 @@
 
 import { type Dispatch, type SetStateAction } from "react";
 import { settingsConfigFieldId } from "@/components/dashboard/settings/settings-config-field-id";
+import { SettingsFornitoreAnagraficaFields } from "@/components/dashboard/settings/settings-fornitore-anagrafica-fields";
 import { SettingsUnifiedStringList } from "@/components/dashboard/settings/settings-unified-string-list";
 import { SettingsDiscountField, type SettingsSectionLayout } from "@/components/dashboard/settings-list-ui";
 import { clampScontoRicambiPercent } from "@/lib/mezzi/cliente-commerciale";
+import {
+  getFornitoreAnagraficaSettings,
+  setFornitoreAnagraficaSettings,
+} from "@/lib/magazzino/fornitore-anagrafica";
 import {
   getScontoFornitoreAlternativo,
   registerFornitoreInMagazzinoMaster,
@@ -29,6 +34,7 @@ export function SettingsMagazzinoFornitoriList({
     <SettingsUnifiedStringList
       layout={layout}
       title="Fornitori alternativi"
+      description="Fornitore alternativo: sconto % su acquisti ricambi e anagrafica per ordini fornitori."
       values={mag.fornitori}
       placeholder="Nuovo fornitore"
       onAdd={(t) => {
@@ -56,6 +62,14 @@ export function SettingsMagazzinoFornitoriList({
           />
         );
       }}
+      renderRowBelow={(nome) => (
+        <SettingsFornitoreAnagraficaFields
+          anagrafica={getFornitoreAnagraficaSettings(mag, nome)}
+          onChange={(patch) => {
+            setMag((prev) => setFornitoreAnagraficaSettings(prev, nome, patch));
+          }}
+        />
+      )}
     />
   );
 }

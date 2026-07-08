@@ -18,6 +18,10 @@ import { commitSettingsListDelete } from "@/lib/settings/settings-list-delete";
 import { useSettingsSimilarGate } from "@/components/dashboard/use-settings-similar-gate";
 import { clampScontoRicambiPercent } from "@/lib/mezzi/cliente-commerciale";
 import {
+  getFornitoreAnagraficaSettings,
+  setFornitoreAnagraficaSettings,
+} from "@/lib/magazzino/fornitore-anagrafica";
+import {
   getScontoFornitoreMarca,
   registerMarcaInMagazzinoMaster,
   removeMarcaFromMagazzinoMaster,
@@ -26,11 +30,12 @@ import {
 } from "@/lib/magazzino/marca-fornitore-sconto";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import { filterSettingsStringList } from "@/lib/settings/settings-list-search";
+import { SettingsFornitoreAnagraficaFields } from "@/components/dashboard/settings/settings-fornitore-anagrafica-fields";
 
 const SETTINGS_DRAFT_ROW_KEY = "__settings-draft__";
 
 const CARD_DESCRIPTION =
-  "Sconto % sul prezzo di listino fornitore originale, applicato automaticamente ai ricambi con la stessa marca (acquisti).";
+  "Fornitore originale (marca ricambio): sconto % sul listino OE e anagrafica per ordini fornitori.";
 
 export function SettingsMagazzinoMarcheList({
   mag,
@@ -117,6 +122,14 @@ export function SettingsMagazzinoMarcheList({
                     ariaLabel={`Sconto listino per ${nome}`}
                     onChange={(n) => {
                       setMag((prev) => setScontoFornitoreMarca(prev, nome, clampScontoRicambiPercent(n)));
+                    }}
+                  />
+                }
+                footer={
+                  <SettingsFornitoreAnagraficaFields
+                    anagrafica={getFornitoreAnagraficaSettings(mag, nome)}
+                    onChange={(patch) => {
+                      setMag((prev) => setFornitoreAnagraficaSettings(prev, nome, patch));
                     }}
                   />
                 }

@@ -461,6 +461,11 @@ export function SchedaIngressoPanoramicaView({
           <RichiedenteFirmaDisplay dataUrl={fields.richiedenteFirma} consultable buttonOnly />
         </div>
       </HubModalPanoramicaInlineCell>
+      <HubModalPanoramicaInlineCell label="Telefono richiedente">
+        <span className="text-sm text-[color:var(--cab-text)]">
+          {hubPanoramicaDisplayValue(fields.richiedenteTelefono)}
+        </span>
+      </HubModalPanoramicaInlineCell>
       <HubModalPanoramicaInlineCell label="Descrizione anomalia">
         <div className="text-sm leading-relaxed">{multilineValue(fields.descrizioneAnomalia)}</div>
       </HubModalPanoramicaInlineCell>
@@ -482,6 +487,11 @@ export function SchedaIngressoPanoramicaView({
           <HubModalPanoramicaInlineCell label="Richiedente">
             <span className="text-sm text-[color:var(--cab-text)]">
               {hubPanoramicaDisplayValue(fields.richiedente)}
+            </span>
+          </HubModalPanoramicaInlineCell>
+          <HubModalPanoramicaInlineCell label="Telefono richiedente">
+            <span className="text-sm text-[color:var(--cab-text)]">
+              {hubPanoramicaDisplayValue(fields.richiedenteTelefono)}
             </span>
           </HubModalPanoramicaInlineCell>
         </div>
@@ -530,6 +540,12 @@ export function SchedaIngressoPanoramicaView({
             <PanoramicaStringField
               label="Richiedente"
               value={fields.richiedente}
+              fieldLayout={fieldLayout}
+              rowLayout={rowLayout}
+            />
+            <PanoramicaStringField
+              label="Telefono richiedente"
+              value={fields.richiedenteTelefono}
               fieldLayout={fieldLayout}
               rowLayout={rowLayout}
             />

@@ -42,6 +42,7 @@ export function buildSchedaIngressoAuditFixture(token = uniqueAuditToken()): Sch
     livelloCarburante: "3/4",
     addettoAccettazione: "",
     richiedente: `Richiedente ${token}`,
+    richiedenteTelefono: "",
     noteIntervento: `Nota ${token}\nseconda riga\temoji 🛠`,
   };
 
@@ -92,5 +93,6 @@ export const SCHEDA_INGRESSO_DB_KEYS = [
   "livelloCarburante",
   "addettoAccettazione",
   "richiedente",
+  "richiedenteTelefono",
   "noteIntervento",
 ] as const satisfies readonly (keyof SchedaIngressoFields)[];

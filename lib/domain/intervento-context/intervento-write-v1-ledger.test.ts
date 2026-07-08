@@ -30,6 +30,7 @@ const fields: SchedaIngressoFields = {
   livelloCarburante: "",
   addettoAccettazione: "",
   richiedente: "",
+    richiedenteTelefono: "",
   noteIntervento: "",
 };
 

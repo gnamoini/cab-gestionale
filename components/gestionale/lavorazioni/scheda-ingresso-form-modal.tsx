@@ -96,6 +96,7 @@ export function emptySchedaIngressoFields(addettoDefault = ""): SchedaIngressoFi
     livelloCarburante: "",
     addettoAccettazione: addettoDefault,
     richiedente: "",
+    richiedenteTelefono: "",
     richiedenteFirma: "",
     noteIntervento: "",
   };

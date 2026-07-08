@@ -8,7 +8,6 @@ import {
 } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-dnd";
 import { LoadingKanbanSkeleton } from "@/components/design-system";
 import { KanbanColumnScroll } from "@/components/gestionale/lavorazioni/kanban-column-scroll";
-import { KanbanVirtualColumnScroll } from "@/components/gestionale/lavorazioni/kanban-virtual-column-scroll";
 import { LavorazioniKanbanMobileBoard } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-board";
 import type { KanbanMobileSection } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-types";
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
@@ -126,7 +125,7 @@ const KANBAN_COLUMN_SCROLL_CLASS =
   "lavorazioni-kanban-column-scroll gestionale-scrollbar flex flex-col gap-2 p-2";
 
 const KANBAN_COLUMN_SECTION_CLASS =
-  "lavorazioni-kanban-column flex h-full min-h-0 min-w-[17.5rem] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30 lg:flex-1 lg:min-w-[17.5rem]";
+  "lavorazioni-kanban-column flex min-w-0 flex-1 basis-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30";
 
 const KANBAN_UNMAPPED_COLUMN_CLASS =
   `${KANBAN_COLUMN_SECTION_CLASS} border-amber-300/80 dark:border-amber-700/60`;
@@ -498,7 +497,7 @@ export function LavorazioniKanbanView({
           {renderStatoHeader(col, accItems.length)}
           {wrapColumnDrop(
             col.id,
-            "flex min-h-0 flex-1 flex-col",
+            "flex flex-col",
             <KanbanColumnScroll columnId={col.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
               {accItems.length === 0 ? (
                 <p className="py-3 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
@@ -531,7 +530,7 @@ export function LavorazioniKanbanView({
         {renderStatoHeader(col, items.length)}
         {wrapColumnDrop(
           col.id,
-          "flex min-h-0 flex-1 flex-col",
+          "flex flex-col",
           <KanbanColumnScroll columnId={col.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
             {items.length === 0 ? (
               <p className="py-6 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
@@ -553,20 +552,14 @@ export function LavorazioniKanbanView({
       {renderStatoHeader(completateColumn, completateItems.length)}
       {wrapColumnDrop(
         completateColumn.id,
-        "flex min-h-0 flex-1 flex-col",
-        <KanbanVirtualColumnScroll
-          columnId={completateColumn.id}
-          className={KANBAN_COLUMN_SCROLL_CLASS}
-          items={completateItems}
-        >
-          {(visible) =>
-            completateItems.length === 0 ? (
-              <p className="py-6 text-center text-[11px] text-zinc-400 dark:text-zinc-500">{closedEmptyMessage}</p>
-            ) : (
-              renderKanbanCards(visible as LavorazioneListRow[], openClosedRow)
-            )
-          }
-        </KanbanVirtualColumnScroll>,
+        "flex flex-col",
+        <KanbanColumnScroll columnId={completateColumn.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
+          {completateItems.length === 0 ? (
+            <p className="py-6 text-center text-[11px] text-zinc-400 dark:text-zinc-500">{closedEmptyMessage}</p>
+          ) : (
+            renderKanbanCards(completateItems, openClosedRow)
+          )}
+        </KanbanColumnScroll>,
       )}
     </section>
   );
@@ -582,7 +575,7 @@ export function LavorazioniKanbanView({
         {renderStatoHeader(UNMAPPED_COLUMN_CONFIG, unmapped.length)}
         {wrapColumnDrop(
           UNMAPPED_COLUMN_CONFIG.id,
-          "flex min-h-0 flex-1 flex-col",
+          "flex flex-col",
           <KanbanColumnScroll columnId={UNMAPPED_COLUMN_CONFIG.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
             {renderKanbanCards(unmapped)}
           </KanbanColumnScroll>,
@@ -611,8 +604,8 @@ export function LavorazioniKanbanView({
 
   if (layout === "desktop") {
     const board = (
-      <div className="lavorazioni-kanban-board gestionale-scrollbar min-h-0 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1">
-        <div className="flex h-[var(--lavorazioni-kanban-col-max-h)] min-h-[18rem] w-max min-w-full flex-row flex-nowrap items-stretch gap-3">
+      <div className="lavorazioni-kanban-board pb-1">
+        <div className="flex w-full min-w-0 flex-row flex-nowrap items-start gap-3">
           {kanbanColumns.map((col) => renderColumn(col))}
           {renderUnmappedColumn()}
           {renderCompletateColumn()}

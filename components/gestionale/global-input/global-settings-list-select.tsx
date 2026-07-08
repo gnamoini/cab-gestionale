@@ -5,6 +5,7 @@
 import { memo, useCallback, useMemo } from "react";
 
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
+import type { GlobalSelectAddAction } from "@/components/gestionale/global-input/global-select";
 
 import {
   isStructuredListKey,
@@ -180,10 +181,39 @@ function GlobalSettingsListSelectInner({
   const structured = isStructuredListKey(listKey);
   const canAppendList = listKeyAllowsDynamicAppend(listKey);
   const { append, canAppend, isPending } = useAppendGlobalListValue(listKey, context);
+  const appendMarca = useAppendGlobalListValue("magazzino:marche");
+  const appendFornitoreAlt = useAppendGlobalListValue("magazzino:fornitori");
+  const isFornitoriOrdineList = listKey === "magazzino:fornitoriOrdine";
 
   const listPending = list.isLoading || !list.ready;
   const deferListUi = hydrated && listPending;
   const resolvedEmptyOptionLabel = emptyOptionLabel ?? resolveDefaultEmptyOptionLabel(listKey, variant);
+
+  const makeAppendHandler = useCallback(
+    (appendFn: (raw: string) => Promise<string | null>) =>
+      async (raw: string): Promise<string | null> => {
+        const canonical = await appendFn(raw);
+        if (canonical) onChange(canonical);
+        return canonical ?? null;
+      },
+    [onChange],
+  );
+
+  const fornitoreOrdineAddActions = useMemo((): readonly GlobalSelectAddAction[] | undefined => {
+    if (!isFornitoriOrdineList) return undefined;
+    return [
+      {
+        id: "originale",
+        label: (c) => (c ? `Aggiungi fornitore originale «${c}»` : "Aggiungi fornitore originale"),
+        onAdd: makeAppendHandler(appendMarca.append),
+      },
+      {
+        id: "alternativo",
+        label: (c) => (c ? `Aggiungi fornitore alternativo «${c}»` : "Aggiungi fornitore alternativo"),
+        onAdd: makeAppendHandler(appendFornitoreAlt.append),
+      },
+    ];
+  }, [isFornitoriOrdineList, makeAppendHandler, appendMarca.append, appendFornitoreAlt.append]);
 
   const onAddToList = useCallback(
 
@@ -293,9 +323,11 @@ function GlobalSettingsListSelectInner({
 
     canAdd: canAppend && canAppendList,
 
-    addPending: isPending,
+    addPending: isPending || appendMarca.isPending || appendFornitoreAlt.isPending,
 
-    onAddToList: allowAdd && canAppendList ? onAddToList : undefined,
+    onAddToList: allowAdd && canAppendList && !fornitoreOrdineAddActions ? onAddToList : undefined,
+
+    addActions: allowAdd && canAppendList ? fornitoreOrdineAddActions : undefined,
 
     forceInvalid,
 
@@ -326,7 +358,8 @@ function GlobalSettingsListSelectInner({
     similarStandardizeLegalSuffix:
       listKey === "mezzi:clienti" ||
       listKey === "mezzi:utilizzatori" ||
-      listKey === "magazzino:fornitori",
+      listKey === "magazzino:fornitori" ||
+      listKey === "magazzino:fornitoriOrdine",
 
     exclusiveGroup,
 

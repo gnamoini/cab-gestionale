@@ -269,15 +269,19 @@ function PreventivoRowActions({
   );
 }
 
+function comparePreventivoCreatedDesc(a: PreventivoRecord, b: PreventivoRecord): number {
+  return b.dataCreazione.localeCompare(a.dataCreazione);
+}
+
 function comparePreventivo(a: PreventivoRecord, b: PreventivoRecord, key: PreventivoSortKey, phase: Exclude<PreventivoSortPhase, "natural">): number {
   const dir = phase === "asc" ? 1 : -1;
   switch (key) {
     case "numero":
-      return a.numero.localeCompare(b.numero, "it", { numeric: true }) * dir;
+      return (a.numero.localeCompare(b.numero, "it", { numeric: true }) || comparePreventivoCreatedDesc(a, b)) * dir;
     case "tipoDocumento":
-      return a.tipoDocumento.localeCompare(b.tipoDocumento, "it") * dir;
+      return (a.tipoDocumento.localeCompare(b.tipoDocumento, "it") || comparePreventivoCreatedDesc(a, b)) * dir;
     case "dataCreazione":
-      return (new Date(a.dataCreazione).getTime() - new Date(b.dataCreazione).getTime()) * dir;
+      return (a.dataCreazione.localeCompare(b.dataCreazione) || comparePreventivoCreatedDesc(a, b)) * dir;
     case "cliente":
       return a.cliente.localeCompare(b.cliente, "it") * dir;
     case "cantiere":
@@ -555,13 +559,10 @@ export function PreventiviView() {
   const sortedRows = useMemo(() => {
     const list = [...filteredRows];
     if (sortColumn === null || sortPhase === "natural") {
+      list.sort(comparePreventivoCreatedDesc);
       return list;
     }
-    list.sort((a, b) => {
-      const c = comparePreventivo(a, b, sortColumn, sortPhase);
-      if (c !== 0) return c;
-      return new Date(b.dataCreazione).getTime() - new Date(a.dataCreazione).getTime();
-    });
+    list.sort((a, b) => comparePreventivo(a, b, sortColumn, sortPhase));
     return list;
   }, [filteredRows, sortColumn, sortPhase]);
 
@@ -881,7 +882,7 @@ export function PreventiviView() {
       ) : null}
 
       {pageTab === "ordini" ? (
-        <OrdiniFornitoriView />
+        <OrdiniFornitoriView canRead={canReadPreventivi} canWrite={canWritePreventivi} />
       ) : (
         <>
       {bannerFilter}

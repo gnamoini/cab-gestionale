@@ -67,6 +67,7 @@ const mezzoB: MezzoGestito = {
     livelloCarburante: "",
     addettoAccettazione: "",
     richiedente: "",
+    richiedenteTelefono: "",
     noteIntervento: "",
   };
   const merged = mergeSchedaIngressoFields(current, buildSchedaIngressoFieldsFromMezzo(mezzoA));

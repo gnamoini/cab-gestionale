@@ -196,6 +196,19 @@ function SchedaIngressoAnagraficaFieldsInner({
               </div>
             ) : null}
           </FormField>
+          <FormField label="Telefono richiedente" htmlFor={fieldId("richiedente-telefono")}>
+            <input
+              id={fieldId("richiedente-telefono")}
+              className={inputFieldClass}
+              value={value.richiedenteTelefono}
+              onChange={(e) => onPatch({ richiedenteTelefono: sliceInputValue(e.target.value, TEXT_SHORT) })}
+              disabled={disabled}
+              placeholder="Numero di telefono"
+              maxLength={TEXT_SHORT}
+              autoComplete="tel"
+              aria-label="Telefono richiedente"
+            />
+          </FormField>
           <RichiedenteFirmaCaptureModal
             open={firmaModalOpen}
             initialDataUrl={value.richiedenteFirma ?? ""}

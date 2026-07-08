@@ -32,6 +32,7 @@ export function buildSchedaIngressoFieldsFromMezzo(mezzo: MezzoGestito): SchedaI
     livelloCarburante: "",
     addettoAccettazione: "",
     richiedente: "",
+    richiedenteTelefono: "",
     noteIntervento: blankMezzoField(mezzo.note),
   };
 }

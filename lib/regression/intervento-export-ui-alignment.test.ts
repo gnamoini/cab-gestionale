@@ -65,6 +65,7 @@ const bundle: LavorazioneSchedeBundle = {
       livelloCarburante: "",
       addettoAccettazione: "Mario",
       richiedente: "",
+    richiedenteTelefono: "",
       noteIntervento: "",
     },
   },

@@ -320,6 +320,7 @@ export function GlobalDatePickerYmd({
   "aria-label": ariaLabel,
   variant = "filter",
   yearRange,
+  disabled,
 }: {
   valueYmd: string;
   onChangeYmd: (ymd: string) => void;
@@ -328,6 +329,7 @@ export function GlobalDatePickerYmd({
   "aria-label"?: string;
   variant?: "default" | "filter";
   yearRange?: ItalianDateYearRange;
+  disabled?: boolean;
 }) {
   const [displayDraft, setDisplayDraft] = useState(() => displayFromYmd(valueYmd));
 
@@ -361,6 +363,7 @@ export function GlobalDatePickerYmd({
       placeholder={placeholder}
       aria-label={ariaLabel}
       yearRange={yearRange}
+      disabled={disabled}
       onChange={(next) => {
         setDisplayDraft(next);
         if (!next.trim()) {

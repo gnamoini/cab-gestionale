@@ -73,7 +73,7 @@ export function PageToolbar({
   const hasPrimaryAction = primaryAction != null && primaryAction !== false;
 
   const filterActions = (
-    <div className="flex shrink-0 flex-nowrap items-center gap-2">
+    <div className="flex shrink-0 flex-nowrap items-stretch gap-2">
       <ToolbarGroupFiltersToggle
         expanded={filtersExpanded}
         onToggle={onFiltersToggle}

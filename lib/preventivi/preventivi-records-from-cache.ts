@@ -43,7 +43,7 @@ export function mapPreventiviRowsToRecords(
   const mezziById = new Map(mezziRows.map((m) => [m.id, m]));
   return (remote ?? [])
     .map((row) => preventivoRowToRecord(row, mezziById.get(row.mezzo_id) ?? null))
-    .sort((a, b) => new Date(b.dataCreazione).getTime() - new Date(a.dataCreazione).getTime());
+    .sort((a, b) => b.dataCreazione.localeCompare(a.dataCreazione));
 }
 
 export function getPreventiviRecordsFromCache(qc: QueryClient): PreventivoRecord[] {

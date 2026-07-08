@@ -110,7 +110,7 @@ export const PREVENTIVO_DDT_FULFILLMENT_COLUMNS =
   "preventivo_id, source_ref, qty_preventivo, qty_consegnata, qty_residua" as const;
 
 export const ORDINI_FORNITORI_COLUMNS =
-  "id, numero, status, data_ordine, fornitore_label, fornitore_snapshot, destinazione, destinazione_snapshot, note, imponibile_righe, trasporto, imponibile, iva_percent, iva, totale, lavorazione_id, preventivo_id, scheda_lavorazione_id, pdf_artifact_hash, created_by, updated_by, created_at, updated_at" as const;
+  "id, numero, status, data_ordine, fornitore_label, fornitore_snapshot, destinazione, destinazione_snapshot, logistica_snapshot, note, imponibile_righe, trasporto, imponibile, iva_percent, iva, totale, lavorazione_id, preventivo_id, scheda_lavorazione_id, pdf_artifact_hash, meta, created_by, updated_by, created_at, updated_at" as const;
 
 export const ORDINI_FORNITORI_RIGHE_COLUMNS =
   "id, ordine_id, ordine, ricambio_id, codice, descrizione, quantita, prezzo_unitario, sconto_percent, totale_riga, meta, created_at" as const;

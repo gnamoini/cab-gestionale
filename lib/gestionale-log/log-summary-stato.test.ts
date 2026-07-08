@@ -242,4 +242,19 @@ assert.equal(
   "real field changes must remain when updated_by also changes",
 );
 
+const ordineStatus = buildLogModificaSummary({
+  entita: "ordini_fornitori",
+  entita_id: "ord-1",
+  azione: "UPDATE",
+  payload: {
+    before: { status: "bozza", numero: "OF-001", fornitore_label: "Ricambi SRL" },
+    after: { status: "inviato", numero: "OF-001", fornitore_label: "Ricambi SRL" },
+    context: { oggetto: "OF-001 — Ricambi SRL" },
+  },
+});
+
+assert.equal(ordineStatus.tipoRiga, "AGGIORNAMENTO ORDINE FORNITORE");
+assert.equal(ordineStatus.oggettoRiga, "OF-001 — Ricambi SRL");
+assert.equal(ordineStatus.modifiche[0], "Stato modificato da “Bozza” a “Inviato”");
+
 console.log("log-summary-stato.test.ts OK");

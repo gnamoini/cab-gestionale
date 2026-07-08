@@ -116,7 +116,8 @@ test("PDF attrezzatura e telaio completi da record esteso", () => {
 
 test("mergeAnagraficaPreventivo priorità ingresso su mezzo", () => {
   const merged = mergeAnagraficaPreventivo(
-    { cliente: "Da ingresso", targa: "ING1", matricola: "", cantiere: "", utilizzatore: "", tipoAttrezzatura: "", marcaAttrezzatura: "", modelloAttrezzatura: "", nScuderia: "", oreLavoro: "", tipoTelaio: "", marcaTelaio: "", modelloTelaio: "", km: "", descrizioneAnomalia: "", livelloCarburante: "", addettoAccettazione: "", richiedente: "", noteIntervento: "", dataIngresso: "" },
+    { cliente: "Da ingresso", targa: "ING1", matricola: "", cantiere: "", utilizzatore: "", tipoAttrezzatura: "", marcaAttrezzatura: "", modelloAttrezzatura: "", nScuderia: "", oreLavoro: "", tipoTelaio: "", marcaTelaio: "", modelloTelaio: "", km: "", descrizioneAnomalia: "", livelloCarburante: "", addettoAccettazione: "", richiedente: "",
+    richiedenteTelefono: "", noteIntervento: "", dataIngresso: "" },
     {
       id: "m1",
       cliente: "Da mezzo",

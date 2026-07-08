@@ -62,6 +62,7 @@ export function buildSchedaIngressoFieldsFromContext(
     livelloCarburante: "",
     addettoAccettazione: lav.addetto?.trim() || addettiDefault,
     richiedente: "",
+    richiedenteTelefono: "",
     noteIntervento: "",
   };
 }

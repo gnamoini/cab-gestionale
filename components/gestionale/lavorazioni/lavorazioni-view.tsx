@@ -1149,6 +1149,7 @@ export function LavorazioniView() {
             livelloCarburante: "",
             addettoAccettazione: clean,
             richiedente: "",
+    richiedenteTelefono: "",
             noteIntervento: "",
           },
         };

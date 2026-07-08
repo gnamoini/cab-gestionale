@@ -146,34 +146,28 @@
   }
 }
 
-/* Kanban Lavorazioni — scroll colonne isolato dal main, board orizzontale */
+/* Kanban Lavorazioni — colonne affiancate senza scroll interno; scroll verticale solo sul main */
 
 .lavorazioni-kanban-scope {
-  --lavorazioni-kanban-col-max-h: min(calc(100dvh - 17rem), 48rem);
+  --lavorazioni-kanban-col-max-h: none;
 }
 
 .lavorazioni-kanban-board {
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
-  overscroll-behavior-x: contain;
-  contain: layout paint;
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: visible;
+  overscroll-behavior-x: none;
 }
 
 .lavorazioni-kanban-column {
-  max-height: var(--lavorazioni-kanban-col-max-h);
-  contain: layout paint;
+  height: auto;
 }
 
 .lavorazioni-kanban-column-scroll {
   flex: 1 1 auto;
-  min-height: 0;
-  max-height: 100%;
   overflow-x: hidden;
-  overflow-y: auto;
-  touch-action: pan-y;
-  scrollbar-gutter: stable;
-  overscroll-behavior-y: contain;
-  -webkit-overflow-scrolling: touch;
+  overflow-y: visible;
 }
 
 .lavorazioni-kanban-card-hit {
@@ -265,10 +259,4 @@
 
 .lavorazioni-kanban-mobile-card:active {
   opacity: 0.95;
-}
-
-@media (max-width: 1023px) {
-  .lavorazioni-kanban-scope {
-    --lavorazioni-kanban-col-max-h: none;
-  }
 }

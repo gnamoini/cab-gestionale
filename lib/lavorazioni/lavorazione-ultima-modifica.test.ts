@@ -54,6 +54,7 @@ function ingressoBundle(overrides: {
         livelloCarburante: "",
         addettoAccettazione: overrides.addetto ?? "Angelo",
         richiedente: "",
+    richiedenteTelefono: "",
         noteIntervento: "",
       },
     },

@@ -192,6 +192,7 @@ export function preventivoToSchedaIngressoSlice(p: PreventivoRecord): SchedaIngr
     livelloCarburante: p.livelloCarburante,
     addettoAccettazione: "",
     richiedente: p.richiedente,
+    richiedenteTelefono: "",
     noteIntervento: "",
   };
 }

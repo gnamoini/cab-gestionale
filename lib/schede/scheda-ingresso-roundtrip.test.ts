@@ -39,6 +39,7 @@ function emptySchedaIngressoFields(addettoDefault = ""): SchedaIngressoFields {
     livelloCarburante: "",
     addettoAccettazione: addettoDefault,
     richiedente: "",
+    richiedenteTelefono: "",
     noteIntervento: "",
   };
 }

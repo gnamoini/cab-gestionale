@@ -13,6 +13,11 @@ import {
 } from "@/lib/lavorazioni/lavorazione-log-oggetto";
 import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
+import {
+  ORDINE_FORNITORE_ALL_STATUSES,
+  ordineFornitoreStatusLabel,
+} from "@/lib/ordini-fornitori/ordine-fornitore-status-ui";
+import type { OrdineFornitoreStatus } from "@/lib/ordini-fornitori/types";
 import { compatLineDisplayText } from "@/lib/magazzino/compat/compat-display";
 import { normalizeCompatList } from "@/lib/magazzino/compat/compat-normalize";
 import { parseMagazzinoRicambioMeta } from "@/lib/magazzino/magazzino-meta";
@@ -82,6 +87,7 @@ export function filterAuditMetadataCampoChanges<T extends { campo: string }>(cha
 
 const FIELD_LABELS: Record<string, string> = {
   stato: "Stato",
+  status: "Stato",
   priorita: "Priorità",
   priorita_lavorazione: "Priorità",
   note: "Note",
@@ -220,6 +226,8 @@ export function entityKindLabel(entita: string): string {
       return "PAGAMENTO FATTURA";
     case "billing_customers":
       return "CLIENTE FATTURAZIONE";
+    case "ordini_fornitori":
+      return "ORDINE FORNITORE";
     default:
       return entita.replace(/_/g, " ").toUpperCase();
   }
@@ -323,6 +331,11 @@ function buildOggettoFromRecord(entita: string, raw: Record<string, unknown>): s
       const data = pickStr(raw, ["work_date"]);
       return joinOggetto([nome, data]);
     }
+    case "ordini_fornitori": {
+      const numero = pickStr(raw, ["numero"]);
+      const fornitore = formatTitleCasePhrase(pickStr(raw, ["fornitore_label", "fornitore"]));
+      return joinOggetto([numero, fornitore]);
+    }
     default:
       return joinOggetto([pickStr(raw, ["nome", "codice", "descrizione", "marca"])]);
   }
@@ -335,10 +348,20 @@ function formatStatoForLog(raw: string, stati?: StatoLavorazioneConfig[]): strin
   return formatStatoDisplay(s);
 }
 
+function formatOrdineStatusForLog(raw: string): string {
+  const s = safeStr(raw).trim();
+  if (!s || s === "—") return "—";
+  if ((ORDINE_FORNITORE_ALL_STATUSES as readonly string[]).includes(s)) {
+    return ordineFornitoreStatusLabel(s as OrdineFornitoreStatus);
+  }
+  return formatStatoDisplay(s);
+}
+
 function formatValueForField(key: string, value: unknown, stati?: StatoLavorazioneConfig[]): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "boolean") return value ? "Sì" : "No";
   if (key === "stato") return formatStatoForLog(String(value), stati);
+  if (key === "status") return formatOrdineStatusForLog(String(value));
   if (key === "priorita" || key === "priorita_lavorazione") return formatTitleCasePhrase(String(value));
   if (typeof value === "object") return "aggiornato";
   const s = String(value).trim();
@@ -393,7 +416,7 @@ function humanChangeSentence(
     }
     return `Quantità aggiornata da ${p} a ${d}`;
   }
-  if (key === "stato") return `Stato modificato da “${p}” a “${d}”`;
+  if (key === "stato" || key === "status") return `Stato modificato da “${p}” a “${d}”`;
   if (key === "priorita" || key === "priorita_lavorazione") return `Priorità modificata da “${p}” a “${d}”`;
   if (key === "archived") return after ? "Spostata in archivio" : "Ripristinata tra le attive";
   if (before == null || before === "" || before === "—") return `${label} impostato a “${d}”`;
@@ -417,6 +440,7 @@ const SCHEDA_CAMPO_LABELS: Record<string, string> = {
   noteIntervento: "Note intervento",
   descrizioneAnomalia: "Descrizione anomalia",
   richiedente: "Richiedente",
+  richiedenteTelefono: "Telefono richiedente",
 };
 
 const GENERIC_MODIFICA_LINES = new Set(["Modifica registrata", "Record aggiornato", "Dati aggiornati"]);

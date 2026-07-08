@@ -1,4 +1,8 @@
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
+import {
+  removeFornitoreAnagraficaFromMagazzinoMaster,
+  renameFornitoreAnagraficaInMagazzinoMaster,
+} from "@/lib/magazzino/fornitore-anagrafica";
 
 function clampScontoFornitorePercent(n: number): number {
   if (!Number.isFinite(n)) return 0;
@@ -78,10 +82,17 @@ export function renameMarcaInMagazzinoMaster(mag: MagazzinoMasterPrefs, from: st
   } else if (!(newKey in scontoFornitoreByMarca)) {
     scontoFornitoreByMarca[newKey] = 0;
   }
-  return { ...mag, marche, scontoFornitoreByMarca };
+  return renameFornitoreAnagraficaInMagazzinoMaster(
+    { ...mag, marche, scontoFornitoreByMarca },
+    from,
+    t,
+  );
 }
 
 export function removeMarcaFromMagazzinoMaster(mag: MagazzinoMasterPrefs, marcaNome: string): MagazzinoMasterPrefs {
   const next = removeScontoFornitoreMarca(mag, marcaNome);
-  return { ...next, marche: next.marche.filter((m) => m !== marcaNome) };
+  return removeFornitoreAnagraficaFromMagazzinoMaster(
+    { ...next, marche: next.marche.filter((m) => m !== marcaNome) },
+    marcaNome,
+  );
 }

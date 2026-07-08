@@ -36,7 +36,7 @@ export function mapPreventiviEmbedRowsToRecords(rows: readonly PreventivoRowWith
       const mezzo = embedMezzoDto(row.mezzi);
       return preventivoRowToRecord(row, mezzo);
     })
-    .sort((a, b) => new Date(b.dataCreazione).getTime() - new Date(a.dataCreazione).getTime());
+    .sort((a, b) => b.dataCreazione.localeCompare(a.dataCreazione));
 }
 
 export function mezziRowsFromPreventiviEmbed(rows: readonly PreventivoRowWithMezzoEmbed[]): MezzoRow[] {

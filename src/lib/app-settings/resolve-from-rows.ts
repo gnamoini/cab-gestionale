@@ -17,6 +17,7 @@ import {
 } from "@/lib/magazzino/fornitore-produttore-master";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import { parseScontoFornitoreByFornitore } from "@/lib/magazzino/fornitore-alternativo-sconto";
+import { parseFornitoreAnagraficaByFornitore } from "@/lib/magazzino/fornitore-anagrafica";
 import { parseScontoFornitoreByMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
 import {
@@ -161,6 +162,7 @@ function parseMagazzinoMasterPayload(raw: unknown): MagazzinoMasterPrefs {
       : [],
     fornitori: Array.isArray(o.fornitori) ? o.fornitori.filter((x): x is string => typeof x === "string") : [],
     scontoFornitoreByFornitore: parseScontoFornitoreByFornitore(o.scontoFornitoreByFornitore),
+    fornitoreAnagraficaByFornitore: parseFornitoreAnagraficaByFornitore(o.fornitoreAnagraficaByFornitore),
     produttori: Array.isArray(o.produttori) ? o.produttori.filter((x): x is string => typeof x === "string") : [],
     produttoriByFornitore: parseProduttoriByFornitore(o.produttoriByFornitore),
   };

@@ -665,6 +665,7 @@ export function SettingsEditableStringRow({
   onRenameBlur,
   onRemove,
   trailing,
+  footer,
   draft = false,
   placeholder,
   onDraftCancel,
@@ -674,6 +675,8 @@ export function SettingsEditableStringRow({
   onRenameBlur: (previous: string, next: string) => void;
   onRemove: () => void;
   trailing?: ReactNode;
+  /** Contenuto sotto la riga principale (es. anagrafica fornitore). */
+  footer?: ReactNode;
   /** Riga bozza in cima all'elenco: edit immediato, conferma = creazione. */
   draft?: boolean;
   placeholder?: string;
@@ -716,8 +719,9 @@ export function SettingsEditableStringRow({
   const rowClass = indent ? `${SETTINGS_LIST_ROW} pl-8 sm:pl-10` : SETTINGS_LIST_ROW;
 
   return (
-    <li ref={rowRef} className={rowClass}>
-      <div className="flex min-w-0 flex-1 items-center">
+    <li ref={rowRef} className={footer ? `${rowClass} !block !py-0` : rowClass}>
+      <div className="flex min-h-11 min-w-0 w-full flex-wrap items-center gap-x-2 gap-y-2 sm:flex-nowrap sm:gap-x-3">
+        <div className="flex min-w-0 flex-1 items-center">
         {isEditing ? (
           <input
             ref={inputRef}
@@ -762,6 +766,8 @@ export function SettingsEditableStringRow({
         onCancelEdit={cancelEdit}
         onRemove={draft ? onDraftCancel ?? onRemove : onRemove}
       />
+      </div>
+      {footer ? <div className="px-1 pb-3">{footer}</div> : null}
     </li>
   );
 }

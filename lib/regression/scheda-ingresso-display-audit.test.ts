@@ -26,6 +26,7 @@ const SCHEDA_FIELDS = [
   "cantiere",
   "utilizzatore",
   "richiedente",
+  "richiedenteTelefono",
   "tipoAttrezzatura",
   "marcaAttrezzatura",
   "modelloAttrezzatura",

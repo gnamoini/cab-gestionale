@@ -200,6 +200,7 @@ export async function prefetchReportPage(): Promise<DehydratedState> {
 export async function prefetchPreventiviPage(): Promise<DehydratedState> {
   const qc = createServerQueryClient();
   const preventivi = resolveInitialLoad({ scopeKey: "preventivi.list" });
+  const ordini = resolveInitialLoad({ scopeKey: "ordini_fornitori.list" });
   const [res, ordiniRes] = await Promise.all([
     fetchPreventiviRecordsServer(),
     fetchOrdiniFornitoriRecordsServer(),
@@ -211,6 +212,7 @@ export async function prefetchPreventiviPage(): Promise<DehydratedState> {
     qc.setQueryData(ordiniFornitoriListQueryKey(), ordiniRes.data);
   }
   void preventivi;
+  void ordini;
   return dehydrate(qc);
 }
 

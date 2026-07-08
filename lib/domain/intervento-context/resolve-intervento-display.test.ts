@@ -75,6 +75,7 @@ const store: LavorazioneSchedeStore = {
         livelloCarburante: "",
         addettoAccettazione: "",
         richiedente: "",
+    richiedenteTelefono: "",
         noteIntervento: "",
       },
     },

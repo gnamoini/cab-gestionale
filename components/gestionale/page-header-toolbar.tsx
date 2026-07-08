@@ -41,7 +41,7 @@ export function GestionaleRefreshToolbarButton({
         disabled={busy}
         aria-busy={busy}
         aria-label={label}
-        className={`${dsPageToolbarIconBtn} sm:h-auto sm:min-h-[2.5rem] sm:w-auto sm:gap-2 sm:px-3 sm:py-2 ${
+        className={`${dsPageToolbarIconBtn} sm:h-11 sm:min-h-11 sm:w-auto sm:gap-2 sm:px-3 sm:py-0 ${
           busy
             ? "!cursor-wait !opacity-100 border-[color:color-mix(in_srgb,var(--cab-primary)_38%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] shadow-[var(--cab-shadow-sm)] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_32%,transparent)]"
             : ""
