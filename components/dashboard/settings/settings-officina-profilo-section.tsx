@@ -313,7 +313,7 @@ function SettingsOfficinaBancheOrdiniBlock({
     const res = await settingsEntry.upsertSetting({
       module: OFFICINA_BANCHE_ORDINI_MODULE,
       key: OFFICINA_BANCHE_ORDINI_KEY,
-      value: officinaBancheOrdiniToPayload(next),
+      value: officinaBancheOrdiniToPayload(next) as unknown as Record<string, unknown>,
       expectedUpdatedAt: row?.updated_at,
     });
     setSaving(false);
