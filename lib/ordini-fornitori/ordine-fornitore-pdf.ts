@@ -15,14 +15,13 @@ export async function openOrdineFornitorePdfInNewTab(o: Pick<OrdineFornitoreReco
 export async function openOrdineFornitorePdfPreviewFromRecord(record: OrdineFornitoreRecord): Promise<void> {
   pushGestionaleToast("Generazione PDF in corso…", "info", 5000);
   try {
-    const [{ generateOrdineFornitorePdfBytes, ordineFornitorePdfFileName }, logo] = await Promise.all([
+    const [{ generateOrdineFornitorePdfBytes }, logo] = await Promise.all([
       import("@/lib/ordini-fornitori/ordine-fornitore-pdf-generate"),
       loadBrandingLogoDataUrl(),
     ]);
     const bytes = generateOrdineFornitorePdfBytes(record, logo);
-    const fileName = ordineFornitorePdfFileName(record);
     const blobUrl = URL.createObjectURL(
-      new File([bytes], fileName, { type: "application/pdf" }),
+      new Blob([bytes as BlobPart], { type: "application/pdf" }),
     );
     const opened = openUrlInNewTab(blobUrl, {
       revokeBlobUrlAfterMs: 120_000,
