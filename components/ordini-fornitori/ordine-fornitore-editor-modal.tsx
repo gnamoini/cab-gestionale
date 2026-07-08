@@ -512,7 +512,7 @@ export function OrdineFornitoreEditorModal({
           }
         }
         gestToast.successOnce("ordine-save", "Ordine creato.");
-        await Promise.resolve(onSaved({ record: res.data }));
+        await Promise.resolve(onSaved(res.data ? { record: res.data } : undefined));
         return true;
       }
 
