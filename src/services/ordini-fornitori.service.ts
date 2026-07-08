@@ -214,7 +214,7 @@ export const ordiniFornitoriService = {
         payload: auditDiff(
           { status: beforeRow.status, numero: beforeRow.numero, fornitore_label: beforeRow.fornitore_label },
           { status, numero: beforeRow.numero, fornitore_label: beforeRow.fornitore_label },
-          auditContext({ oggetto }),
+          auditContext(oggetto),
         ),
       });
       return success(undefined);
