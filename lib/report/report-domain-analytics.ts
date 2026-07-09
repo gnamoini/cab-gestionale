@@ -422,13 +422,18 @@ export function buildEconomicAnalytics(input: EconomicAnalyticsBuildInput): Econ
     metrics.push(
       comparedN("eco_valore_medio_intervento", "Valore medio intervento", avg, avgPrev, fmtEur, cmpCtx),
     );
+  } else if (completed == null) {
+    metrics.push(
+      metric("eco_valore_medio_intervento", "Valore medio intervento", {
+        status: "not_loaded",
+        hint: "Apri Lavorazioni per calcolare",
+      }),
+    );
   } else {
     metrics.push(
       metric("eco_valore_medio_intervento", "Valore medio intervento", {
-        status: completed == null ? "not_loaded" : "not_available",
-        ...(completed == null
-          ? { hint: "Apri Lavorazioni per calcolare" }
-          : { reason: "Non disponibile nel periodo selezionato" }),
+        status: "not_available",
+        reason: "Non disponibile nel periodo selezionato",
       }),
     );
   }
@@ -438,13 +443,18 @@ export function buildEconomicAnalytics(input: EconomicAnalyticsBuildInput): Econ
   if (inv.fatturato > 0 && manodopera != null && movement != null) {
     const margine = roundMoney(inv.fatturato - (manodopera + movement));
     metrics.push(availableMetric("eco_margine_operativo_stimato", "Margine operativo stimato", fmtEur(margine)));
+  } else if (manodopera == null || movement == null) {
+    metrics.push(
+      metric("eco_margine_operativo_stimato", "Margine operativo stimato", {
+        status: "not_loaded",
+        hint: "Apri Lavorazioni, Ore e Magazzino per calcolare",
+      }),
+    );
   } else {
     metrics.push(
       metric("eco_margine_operativo_stimato", "Margine operativo stimato", {
-        status: manodopera == null || movement == null ? "not_loaded" : "not_available",
-        ...(manodopera == null || movement == null
-          ? { hint: "Apri Lavorazioni, Ore e Magazzino per calcolare" }
-          : { reason: "Non disponibile nel periodo selezionato" }),
+        status: "not_available",
+        reason: "Non disponibile nel periodo selezionato",
       }),
     );
   }
