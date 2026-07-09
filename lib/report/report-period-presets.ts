@@ -41,30 +41,30 @@ export const REPORT_PRESET_LABELS: Record<ReportPeriodPreset, string> = Object.f
   REPORT_PERIOD_PRESETS.map((p) => [p.id, p.label]),
 ) as Record<ReportPeriodPreset, string>;
 
-export const REPORT_QUICK_PRESET_IDS: readonly ReportPeriodPreset[] = REPORT_PERIOD_PRESETS.filter(
-  (p) => p.quick,
-).map((p) => p.id);
-
 /** Etichette compatte chip toolbar (title = label completa). */
-export const REPORT_QUICK_PRESET_SHORT_LABELS: Record<
-  (typeof REPORT_QUICK_PRESET_IDS)[number],
-  string
-> = {
+export const REPORT_QUICK_PRESET_SHORT_LABELS = {
   today: "Oggi",
   last_7_days: "7 gg",
   last_30_days: "30 gg",
   current_month: "Mese",
   last_3_months: "3 mesi",
   ytd: "YTD",
-};
+} as const;
 
-export function isReportQuickPreset(preset: ReportPeriodPreset): boolean {
-  return (REPORT_QUICK_PRESET_IDS as readonly ReportPeriodPreset[]).includes(preset);
+export type ReportQuickPresetId = keyof typeof REPORT_QUICK_PRESET_SHORT_LABELS;
+
+export const REPORT_QUICK_PRESET_IDS: readonly ReportQuickPresetId[] = REPORT_PERIOD_PRESETS.filter(
+  (p): p is ReportPeriodPresetMeta & { id: ReportQuickPresetId } =>
+    p.quick === true && p.id in REPORT_QUICK_PRESET_SHORT_LABELS,
+).map((p) => p.id);
+
+export function isReportQuickPreset(preset: ReportPeriodPreset): preset is ReportQuickPresetId {
+  return preset in REPORT_QUICK_PRESET_SHORT_LABELS;
 }
 
 export function reportQuickPresetChipLabel(id: ReportPeriodPreset): string {
   if (isReportQuickPreset(id)) {
-    return REPORT_QUICK_PRESET_SHORT_LABELS[id as (typeof REPORT_QUICK_PRESET_IDS)[number]];
+    return REPORT_QUICK_PRESET_SHORT_LABELS[id];
   }
   return REPORT_PRESET_LABELS[id];
 }
