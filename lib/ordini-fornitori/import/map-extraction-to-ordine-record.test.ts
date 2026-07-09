@@ -51,7 +51,7 @@ const result = mapExtractionToOrdineRecord({
   magazzinoItems: [],
   magazzinoMaster: mag,
   existingOrdini: [],
-  documentoId: "00000000-0000-4000-8000-000000000001",
+  source: { type: "import_file", id: "00000000-0000-4000-8000-000000000001" },
   contentHash: "hash-test",
   semanticKey: "semantic-test",
   duplicates: { hashDuplicate: null, semanticDuplicate: null },

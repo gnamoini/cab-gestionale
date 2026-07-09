@@ -13,6 +13,11 @@ export const invoicesEntry = {
   issue: withPageWriteGuard("fatturazione", invoicesService.issue.bind(invoicesService)),
   registerPayment: withPageWriteGuard("fatturazione", invoicesService.registerPayment.bind(invoicesService)),
   cancel: withPageWriteGuard("fatturazione", invoicesService.cancel.bind(invoicesService)),
+  createCreditNote: withPageWriteGuard("fatturazione", invoicesService.createCreditNote.bind(invoicesService)),
+  registerCustomerPaymentMulti: withPageWriteGuard(
+    "fatturazione",
+    invoicesService.registerCustomerPaymentMulti.bind(invoicesService),
+  ),
   remove: withPageWriteGuard("fatturazione", invoicesService.remove.bind(invoicesService)),
 };
 

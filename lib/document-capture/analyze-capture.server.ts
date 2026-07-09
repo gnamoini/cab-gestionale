@@ -1,7 +1,14 @@
 import "server-only";
 
 import { generateObject } from "ai";
-import { getGeminiReportModel, isGeminiConfigured } from "@/lib/ai/gemini-client";
+import {
+  GEMINI_FILE_ANALYSIS_TIMEOUT_MS,
+  GEMINI_NOT_CONFIGURED_MESSAGE,
+  getGeminiReportModel,
+  isGeminiConfigured,
+} from "@/lib/ai/gemini-client";
+import { classifyStorageDownloadError } from "@/lib/storage/storage-download-errors";
+import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
 import {
   captureExtractionSchema,
   type CaptureExtractionResult,
@@ -39,7 +46,7 @@ async function sleep(ms: number): Promise<void> {
 export async function analyzeDocumentCapture(captureId: string): Promise<AnalyzeCaptureResult> {
   const model = getGeminiReportModel();
   if (!model || !isGeminiConfigured()) {
-    return { ok: false, code: "not_configured", message: "Servizio IA non configurato." };
+    return { ok: false, code: "not_configured", message: GEMINI_NOT_CONFIGURED_MESSAGE };
   }
 
   const sb = await createSupabaseServerUserClient();
@@ -62,17 +69,23 @@ export async function analyzeDocumentCapture(captureId: string): Promise<Analyze
   });
 
   const { data: fileData, error: dlError } = await sb.storage
-    .from("document-capture")
+    .from(STORAGE_BUCKETS.documentCapture)
     .download(capture.storage_path);
   if (dlError || !fileData) {
+    const classified = classifyStorageDownloadError(
+      dlError,
+      Boolean(fileData),
+      STORAGE_BUCKETS.documentCapture,
+      "analisi documento",
+    );
     await mutateCaptureWithEvent({
       captureId,
       eventType: "analyze_failed",
       idempotencyKey: `analyze_failed:download:${capture.capture_version}`,
-      payload: { errorCode: "download_failed" },
+      payload: { errorCode: classified.code, isPolicyError: classified.isPolicyError },
       newStatus: "failed",
     });
-    return { ok: false, code: "failed", message: "File non disponibile." };
+    return { ok: false, code: "failed", message: classified.message };
   }
 
   const bytes = new Uint8Array(await fileData.arrayBuffer());
@@ -96,7 +109,7 @@ export async function analyzeDocumentCapture(captureId: string): Promise<Analyze
           },
         ],
         temperature: 0.2,
-        abortSignal: AbortSignal.timeout(90_000),
+        abortSignal: AbortSignal.timeout(GEMINI_FILE_ANALYSIS_TIMEOUT_MS),
       });
 
       const durationMs = Math.round(performance.now() - t0);

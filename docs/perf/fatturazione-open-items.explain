@@ -1,0 +1,7 @@
+# EXPLAIN ANALYZE — open items per cliente
+
+```
+Index Scan using idx_customer_open_items_customer on customer_open_items
+  Index Cond: (customer_id = '...')
+  Filter: (status <> 'closed')
+```

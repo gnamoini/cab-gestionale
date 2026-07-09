@@ -1,7 +1,14 @@
 import "server-only";
 
 import { generateObject } from "ai";
-import { getGeminiReportModel, isGeminiConfigured } from "@/lib/ai/gemini-client";
+import {
+  GEMINI_AUTH_ERROR_HINT,
+  GEMINI_FILE_ANALYSIS_TIMEOUT_MS,
+  GEMINI_NOT_CONFIGURED_MESSAGE,
+  getGeminiReportModel,
+  isGeminiAuthError,
+  isGeminiConfigured,
+} from "@/lib/ai/gemini-client";
 import {
   ordineFornitoreImportExtractionSchema,
   type OrdineFornitoreImportExtraction,
@@ -29,7 +36,7 @@ export async function parsePreventivoFornitoreWithAi(
     return {
       ok: false,
       code: "not_configured",
-      message: "Servizio IA non configurato. Imposta GOOGLE_GENERATIVE_AI_API_KEY o GEMINI_API_KEY.",
+      message: GEMINI_NOT_CONFIGURED_MESSAGE,
     };
   }
 
@@ -53,11 +60,25 @@ export async function parsePreventivoFornitoreWithAi(
         },
       ],
       temperature: 0.2,
-      abortSignal: AbortSignal.timeout(90_000),
+      abortSignal: AbortSignal.timeout(GEMINI_FILE_ANALYSIS_TIMEOUT_MS),
     });
 
     return { ok: true, extraction: object, warnings: object.warnings ?? [] };
   } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      return {
+        ok: false,
+        code: "failed",
+        message: "Analisi documento scaduta per timeout. Riprova più tardi.",
+      };
+    }
+    if (isGeminiAuthError(error)) {
+      return {
+        ok: false,
+        code: "failed",
+        message: GEMINI_AUTH_ERROR_HINT,
+      };
+    }
     return {
       ok: false,
       code: "failed",

@@ -102,7 +102,7 @@ import {
   type RicambioUnitaMisura,
 } from "@/lib/magazzino/ricambio-unita-misura";
 import { OrdineFornitoreRigaMagazzinoField } from "@/components/ordini-fornitori/ordine-fornitore-riga-magazzino-field";
-import { finalizeOrdineFornitoreImportDocument } from "@/lib/ordini-fornitori/import/ordine-fornitore-import-client";
+import { finalizeOrdineFornitoreImportClient } from "@/lib/ordini-fornitori/import/ordine-fornitore-import-client";
 import {
   buildOrdineImportMeta,
   ordineRecordMetaWithImport,
@@ -204,7 +204,7 @@ function recordToCreateInput(
       ordineRecordMetaWithImport(
         record.meta,
         buildOrdineImportMeta({
-          documentId: importMeta.documentoId,
+          importSource: importMeta.source,
           contentHash: importMeta.contentHash,
           semanticKey: importMeta.semanticKey,
           importedBy,
@@ -297,22 +297,21 @@ export function OrdineFornitoreEditorModal({
     importFinalizedRef.current = importMeta?.saved ?? false;
   }, [importMeta]);
 
-  const finalizeImportUnlink = useCallback(async () => {
+  const finalizeImportAbandon = useCallback(async () => {
     if (!importMeta || importFinalizedRef.current) return;
+    if (importMeta.source.type !== "import_file") return;
     importFinalizedRef.current = true;
     try {
-      await finalizeOrdineFornitoreImportDocument({
-        documentoId: importMeta.documentoId,
-        action: "unlink",
-      });
+      const { abandonImportFile } = await import("@/lib/ordini-fornitori/import/ordine-fornitore-import-client");
+      await abandonImportFile(importMeta.source.id);
     } catch {
       importFinalizedRef.current = false;
     }
   }, [importMeta]);
 
   const closeWithImportCleanup = useCallback(() => {
-    void finalizeImportUnlink().finally(() => onClose());
-  }, [finalizeImportUnlink, onClose]);
+    void finalizeImportAbandon().finally(() => onClose());
+  }, [finalizeImportAbandon, onClose]);
 
   function requestClose() {
     if (viewMode) {
@@ -499,9 +498,8 @@ export function OrdineFornitoreEditorModal({
         if (importMeta && res.data?.id && !importFinalizedRef.current) {
           importFinalizedRef.current = true;
           try {
-            await finalizeOrdineFornitoreImportDocument({
-              documentoId: importMeta.documentoId,
-              action: "link",
+            await finalizeOrdineFornitoreImportClient({
+              source: importMeta.source,
               ordineId: res.data.id,
               contentHash: importMeta.contentHash,
               semanticKey: importMeta.semanticKey ?? undefined,

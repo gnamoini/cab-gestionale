@@ -41,6 +41,14 @@ export function fatturazioneListQueryKey() {
   return [...QK.fatturazione, "list"] as const;
 }
 
+export function fatturazioneOpenItemsQueryKey() {
+  return [...QK.fatturazione, "open-items"] as const;
+}
+
+export function fatturazionePaymentsQueryKey() {
+  return [...QK.fatturazione, "customer-payments"] as const;
+}
+
 export function ddtListQueryKey() {
   return [...QK.ddt, "list"] as const;
 }

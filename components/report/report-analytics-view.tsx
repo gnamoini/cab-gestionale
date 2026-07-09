@@ -1,32 +1,28 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { ReportExecutiveOverview } from "@/components/report/layout/report-executive-overview";
-import { ReportOperationalAnalysisZone } from "@/components/report/layout/report-operational-analysis-zone";
-import { ReportPerformanceGate } from "@/components/report/layout/report-performance-gate";
+import {
+  ReportPerformanceGate,
+  useReportPerformanceContext,
+} from "@/components/report/layout/report-performance-gate";
+import { ReportSections } from "@/components/report/layout/report-sections";
 import { ReportToolbar } from "@/components/report/layout/report-toolbar";
-import { LoadingCardSkeleton } from "@/components/design-system";
-
-const ReportTrendsZone = dynamic(
-  () => import("@/components/report/layout/report-trends-zone").then((m) => m.ReportTrendsZone),
-  { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[12rem]" /> },
-);
-const ReportAiAnalysisZone = dynamic(
-  () => import("@/components/report/layout/report-ai-analysis-zone").then((m) => m.ReportAiAnalysisZone),
-  { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[10rem]" /> },
-);
-const ReportMaintenanceZone = dynamic(
-  () => import("@/components/report/layout/report-maintenance-zone").then((m) => m.ReportMaintenanceZone),
-  { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[16rem]" /> },
-);
+import { ReportAnalyticsDerivedProvider } from "@/components/report/report-analytics-derived-context";
 import { ReportIntegrityStatusBadge } from "@/components/report/report-integrity-status-badge";
+import type { DomainReportSectionProps, ReportAiSectionProps } from "@/components/report/report-section-types";
 import { buildReportModel } from "@/lib/report/build-report-model";
-import { endOfLocalDay, startOfLocalDay, type ReportCompareMode, type ReportPeriodPreset } from "@/lib/report/date-ranges";
+import { buildReportRangeKey } from "@/lib/report/report-domain-types";
+import {
+  endOfLocalDay,
+  startOfLocalDay,
+  type ReportCompareMode,
+  type ReportPeriodPreset,
+} from "@/lib/report/date-ranges";
 import type { DateRange } from "@/lib/report/date-ranges";
 import {
   buildTopRicambiPeriodo,
@@ -47,6 +43,9 @@ import { useReportLiveData } from "@/lib/report/use-report-live-data";
 import { LoadingErrorState, LoadingReportSkeleton } from "@/components/design-system";
 import { dsStackPage } from "@/lib/ui/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
+import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
+import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
+import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 
 function fmtYmd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -54,10 +53,6 @@ function fmtYmd(d: Date): string {
 
 function addDaysLocal(d: Date, n: number): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, 12, 0, 0, 0);
-}
-
-function ReportSkeleton() {
-  return <LoadingReportSkeleton />;
 }
 
 function useStableDateRange(range: DateRange | null | undefined): DateRange | null {
@@ -92,12 +87,7 @@ function readInitialPeriodPrefs(searchParams: URLSearchParams | null): {
       compareUrl === "prev_period" || compareUrl === "prev_year" || compareUrl === "none"
         ? (compareUrl as ReportCompareMode)
         : ("prev_period" as ReportCompareMode);
-    return {
-      preset: "custom",
-      compareMode,
-      customFrom: fromUrl,
-      customTo: toUrl,
-    };
+    return { preset: "custom", compareMode, customFrom: fromUrl, customTo: toUrl };
   }
 
   if (presetUrl === "current_week" && /^\d{4}-\d{2}-\d{2}$/.test(fromUrl)) {
@@ -119,12 +109,31 @@ function readInitialPeriodPrefs(searchParams: URLSearchParams | null): {
     nextFrom = "";
     nextTo = "";
   }
-  return {
-    preset: nextPreset,
-    compareMode: saved.compareMode,
-    customFrom: nextFrom,
-    customTo: nextTo,
+  return { preset: nextPreset, compareMode: saved.compareMode, customFrom: nextFrom, customTo: nextTo };
+}
+
+function ReportSectionsWithContext({
+  compareMode,
+  domainBase,
+  aiProps,
+}: {
+  compareMode: ReportCompareMode;
+  domainBase: Omit<DomainReportSectionProps, "analyticsContext" | "sectionId" | "fetchEnabled">;
+  aiProps: ReportAiSectionProps;
+}) {
+  const { perf, perfLoading, partitioned } = useReportPerformanceContext();
+  const domainProps: DomainReportSectionProps = {
+    ...domainBase,
+    sectionId: "lavorazioni",
+    fetchEnabled: false,
+    analyticsContext: { perf, perfLoading, partitioned, compareMode },
   };
+  return (
+    <div className="min-w-0 space-y-4">
+      <ReportExecutiveOverview compareMode={compareMode} />
+      <ReportSections domainProps={domainProps} aiProps={aiProps} />
+    </div>
+  );
 }
 
 export function ReportAnalyticsView() {
@@ -173,6 +182,22 @@ export function ReportAnalyticsView() {
   );
 
   const semanticIndex = derivedBundle.semanticIndex;
+  const schedeLavorazioneIds = useMemo(() => live.lavListRows.map((row) => row.id), [live.lavListRows]);
+  const { store: schedeStore, isLoading: schedeLoading } = useSchedeBundlesQuery(!live.isLoading, {
+    lavorazioneIds: schedeLavorazioneIds,
+  });
+  const settingsQ = useCabAppSettingsPayloadQuery({ tier: "static" });
+  const costoOrario = useMemo(() => {
+    const v = settingsQ.data?.resolved?.preventiviDefaults?.costoOrarioDefault;
+    return typeof v === "number" && Number.isFinite(v) && v > 0 ? v : 48;
+  }, [settingsQ.data]);
+
+  const magazzinoRows = useMemo((): MagazzinoRicambioRow[] => {
+    return live.magazzino.map((p) => ({
+      id: p.id,
+      costo: p.prezzoFornitoreOriginale,
+    })) as MagazzinoRicambioRow[];
+  }, [live.magazzino]);
 
   const integrityBadge = useMemo(
     () => <ReportIntegrityStatusBadge view={live.integrityView} />,
@@ -197,7 +222,6 @@ export function ReportAnalyticsView() {
   }, []);
 
   const model = useMemo(() => {
-    if (!anchor) return null;
     return buildReportModel({
       anchor,
       preset,
@@ -231,10 +255,14 @@ export function ReportAnalyticsView() {
     derivedBundle,
   ]);
 
-  const filterRange = useStableDateRange(model?.range ?? null);
+  const filterRange = useStableDateRange(model.range);
+  const rangeKey = useMemo(
+    () => buildReportRangeKey(filterRange!, model.compareRange),
+    [filterRange, model.compareRange],
+  );
 
   const tops = useMemo(() => {
-    if (!model || !filterRange) return null;
+    if (!filterRange) return null;
     const mezzi = semanticIndex.topMezzi(filterRange);
     const clienti = semanticIndex.topClienti(filterRange);
     const ricambi = buildTopRicambiPeriodo(derivedBundle.magLogSorted, live.magazzino, filterRange);
@@ -245,43 +273,29 @@ export function ReportAnalyticsView() {
       clienti: mergeTopClientiCompare(clienti, semanticIndex.topClienti(r)),
       ricambi: mergeTopRicambiCompare(ricambi, buildTopRicambiPeriodo(derivedBundle.magLogSorted, live.magazzino, r)),
     };
-  }, [model, filterRange, semanticIndex, derivedBundle.magLogSorted, live.magazzino]);
+  }, [model.compareRange, filterRange, semanticIndex, derivedBundle.magLogSorted, live.magazzino]);
 
-  const toolbarProps =
-    filterRange && model
-      ? {
-          titleAddon: integrityBadge,
-          preset,
-          onPreset,
-          customFrom,
-          customTo,
-          onCustomFrom: setCustomFrom,
-          onCustomTo: setCustomTo,
-          compareMode,
-          onCompareMode: setCompareMode,
-          range: filterRange,
-          compareRange: model.compareRange,
-        }
-      : null;
+  const toolbarProps = filterRange
+    ? {
+        titleAddon: integrityBadge,
+        preset,
+        onPreset,
+        customFrom,
+        customTo,
+        onCustomFrom: setCustomFrom,
+        onCustomTo: setCustomTo,
+        compareMode,
+        onCompareMode: setCompareMode,
+        range: filterRange,
+        compareRange: model.compareRange,
+      }
+    : null;
 
-  const renderPhase =
-    live.isLoading || !model || !tops || !filterRange || !toolbarProps
-      ? "skeleton"
-      : live.isError
-        ? "error"
-        : "full";
-
-  if (live.isLoading || !model || !tops || !filterRange || !toolbarProps) {
+  if (live.isLoading || !tops || !filterRange || !toolbarProps) {
     return (
       <div className={`${dsStackPage} ${layoutPageRoot} min-w-0 max-w-full`}>
-        {toolbarProps ? (
-          <ReportToolbar {...toolbarProps} />
-        ) : (
-          <>
-            <PageHeader title="Report" titleAddon={integrityBadge} />
-          </>
-        )}
-        <ReportSkeleton />
+        {toolbarProps ? <ReportToolbar {...toolbarProps} /> : <PageHeader title="Report" titleAddon={integrityBadge} />}
+        <LoadingReportSkeleton />
       </div>
     );
   }
@@ -301,51 +315,61 @@ export function ReportAnalyticsView() {
     );
   }
 
+  const domainBase: Omit<DomainReportSectionProps, "analyticsContext" | "sectionId" | "fetchEnabled"> = {
+    range: filterRange,
+    compareRange: model.compareRange,
+    rangeKey,
+    anchor,
+    compareDetail: model.compareDetail,
+    semanticIndex,
+    derivedBundle,
+    attive: live.attive,
+    storico: live.storico,
+    completate: live.completate,
+    manualEntries: live.manualEntries,
+    prodotti: live.magazzino,
+    histRev,
+    onHistRev,
+    topsMezzi: tops.mezzi,
+    topsClienti: tops.clienti,
+    topsRicambi: tops.ricambi,
+    showCompare: Boolean(model.compareRange),
+    manualByMonth: live.manualByMonth,
+    lavListRows: live.lavListRows,
+    magLog: live.magLog,
+    magazzinoRows,
+    costoOrario,
+    schedeStore,
+    schedeLoaded: !schedeLoading,
+  };
+
+  const aiProps: ReportAiSectionProps = {
+    preset,
+    compareMode,
+    filterRange,
+    compareRange: model.compareRange,
+    model,
+    integrityView: live.integrityView,
+    tops,
+    snapshotFingerprint: live.snapshotFingerprint,
+  };
+
   return (
     <div className={`${dsStackPage} ${layoutPageRoot} min-w-0 max-w-full`}>
       <ReportToolbar {...toolbarProps} />
 
-      <ReportPerformanceGate
-        anchor={anchor}
-        filterRange={filterRange}
-        compareRange={model.compareRange}
-        periodKpis={model.kpis}
-        live={live}
-        semanticIndex={semanticIndex}
-      >
-        <div className="min-w-0 space-y-4">
-          <ReportExecutiveOverview compareMode={compareMode} />
-          <ReportAiAnalysisZone
-            preset={preset}
-            compareMode={compareMode}
-            filterRange={filterRange}
-            compareRange={model.compareRange}
-            model={model}
-            integrityView={live.integrityView}
-            tops={tops}
-            snapshotFingerprint={live.snapshotFingerprint}
-          />
-          <ReportTrendsZone filterRange={filterRange} anchor={anchor} semanticIndex={semanticIndex} />
-          <ReportOperationalAnalysisZone filterRange={filterRange} />
-          <ReportMaintenanceZone
-            attive={live.attive}
-            completate={live.completate}
-            manualEntries={live.manualEntries}
-            anchor={anchor}
-            filterRange={filterRange}
-            compareDetail={model.compareDetail}
-            semanticIndex={semanticIndex}
-            derivedBundle={derivedBundle}
-            prodotti={live.magazzino}
-            histRev={histRev}
-            onHistRev={onHistRev}
-            topsMezzi={tops.mezzi}
-            topsClienti={tops.clienti}
-            topsRicambi={tops.ricambi}
-            showCompare={Boolean(model.compareRange)}
-          />
-        </div>
-      </ReportPerformanceGate>
+      <ReportAnalyticsDerivedProvider rangeKey={rangeKey}>
+        <ReportPerformanceGate
+          anchor={anchor}
+          filterRange={filterRange}
+          compareRange={model.compareRange}
+          periodKpis={model.kpis}
+          live={live}
+          semanticIndex={semanticIndex}
+        >
+          <ReportSectionsWithContext compareMode={compareMode} domainBase={domainBase} aiProps={aiProps} />
+        </ReportPerformanceGate>
+      </ReportAnalyticsDerivedProvider>
     </div>
   );
 }

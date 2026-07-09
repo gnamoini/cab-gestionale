@@ -1,0 +1,6 @@
+# EXPLAIN ANALYZE — scadenziario (remaining negativo = debiti)
+
+```
+Index Scan using idx_customer_open_items_remaining on customer_open_items
+  Filter: (remaining_signed < 0 AND status <> 'closed')
+```

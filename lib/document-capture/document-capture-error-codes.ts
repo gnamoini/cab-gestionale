@@ -1,7 +1,10 @@
-/** Error codes SSOT — Document Capture telemetry/API. */
+﻿/** Error codes SSOT — Document Capture telemetry/API. */
 
 export const DOCUMENT_CAPTURE_ERROR_CODES = [
   "UPLOAD_FAILED",
+  "STORAGE_PERMISSION_DENIED",
+  "STORAGE_NOT_FOUND",
+  "STORAGE_EMPTY",
   "PLAN_STALE",
   "APPLY_FAILED",
   "APPLY_IN_PROGRESS",

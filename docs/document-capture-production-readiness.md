@@ -49,9 +49,9 @@ Audit e hardening release completati. Architettura v3.3 **invariata**; estension
 
 **Telemetry error codes (`document-capture-error-codes.ts`):**
 
-`UPLOAD_FAILED`, `PLAN_STALE`, `APPLY_FAILED`, `APPLY_IN_PROGRESS`, `UNAUTHORIZED`, `TENANT_MISSING`, `RATE_LIMITED`, `NOT_CONFIGURED`
+`UPLOAD_FAILED`, `STORAGE_PERMISSION_DENIED`, `STORAGE_NOT_FOUND`, `STORAGE_EMPTY`, `PLAN_STALE`, `APPLY_FAILED`, `APPLY_IN_PROGRESS`, `UNAUTHORIZED`, `TENANT_MISSING`, `RATE_LIMITED`, `NOT_CONFIGURED`
 
-Ogni trace mutante include: `captureId`, `companyId`, `userId`, `operation`, `durationMs`, `outcome`, `errorCode`.
+Ogni trace mutante include: `captureId`, `companyId`, `userId`, `operation`, `durationMs`, `outcome`, `errorCode`. Su finalize errore storage: anche `storagePath`, `bucket`, `storageErrorCode`, `isPolicyError`.
 
 ## Componenti verificati
 

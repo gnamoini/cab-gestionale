@@ -1,4 +1,4 @@
-import "server-only";
+﻿import "server-only";
 
 import type { DocumentCaptureErrorCode } from "@/lib/document-capture/document-capture-error-codes";
 import { traceRuntimeCoordinationServer } from "@/lib/observability/runtime-coordination-tracer.server";
@@ -11,6 +11,10 @@ export type DocumentCaptureTelemetryInput = {
   durationMs?: number;
   outcome: "ok" | "error";
   errorCode?: DocumentCaptureErrorCode;
+  storagePath?: string;
+  bucket?: string;
+  storageErrorCode?: string;
+  isPolicyError?: boolean;
 };
 
 export function traceDocumentCaptureOperation(input: DocumentCaptureTelemetryInput): void {
@@ -26,6 +30,10 @@ export function traceDocumentCaptureOperation(input: DocumentCaptureTelemetryInp
       outcome: input.outcome,
       companyId: input.companyId ?? undefined,
       userId: input.userId ?? undefined,
+      ...(input.storagePath ? { storagePath: input.storagePath } : {}),
+      ...(input.bucket ? { bucket: input.bucket } : {}),
+      ...(input.storageErrorCode ? { storageErrorCode: input.storageErrorCode } : {}),
+      ...(input.isPolicyError !== undefined ? { isPolicyError: input.isPolicyError } : {}),
       ...(input.errorCode ? { errorCode: input.errorCode } : {}),
     },
   });

@@ -17,6 +17,7 @@ import type { OrdineFornitoreRecord, OrdineFornitoreRiga } from "@/lib/ordini-fo
 import { computeImportQuality } from "@/lib/ordini-fornitori/import/compute-import-quality";
 import { formatRiferimentoOrdineFromPreventivo } from "@/lib/ordini-fornitori/import/format-riferimento-ordine";
 import { lookupFornitoreByPivaCfName } from "@/lib/ordini-fornitori/import/lookup-fornitore.server";
+import type { ImportSourceRef } from "@/lib/import-sources/types";
 import type { OrdineFornitoreImportExtraction } from "@/lib/ordini-fornitori/import/ordine-fornitore-import-schema";
 import {
   countMatchedRighe,
@@ -116,7 +117,7 @@ export function mapExtractionToOrdineRecord(input: {
   magazzinoItems: RicambioMagazzino[];
   magazzinoMaster: MagazzinoMasterPrefs;
   existingOrdini: readonly Pick<OrdineFornitoreRecord, "numero">[];
-  documentoId: string;
+  source: ImportSourceRef;
   contentHash: string;
   semanticKey: string | null;
   duplicates: ImportDuplicateCheck;
@@ -248,7 +249,7 @@ export function mapExtractionToOrdineRecord(input: {
     quality,
     warnings,
     duplicates: input.duplicates,
-    documentoId: input.documentoId,
+    source: input.source,
     contentHash: input.contentHash,
     semanticKey: input.semanticKey,
     fornitoreMatch,

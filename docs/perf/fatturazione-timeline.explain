@@ -1,0 +1,8 @@
+# EXPLAIN ANALYZE — timeline fattura (cursor pagination)
+
+```
+Index Scan using idx_invoice_events_invoice_cursor on invoice_events
+  Index Cond: (invoice_id = '...')
+  Order By: created_at DESC, id DESC
+  Limit 50
+```

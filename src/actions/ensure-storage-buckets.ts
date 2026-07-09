@@ -53,6 +53,20 @@ const BUCKET_OPTIONS: Record<
       "image/heif",
     ],
   },
+  [STORAGE_BUCKETS.importSources]: {
+    public: false,
+    fileSizeLimit: STORAGE_LIMITS.importSourcesMaxBytes,
+    allowedMimeTypes: [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "text/csv",
+    ],
+  },
 };
 
 function isAlreadyExistsError(message: string): boolean {

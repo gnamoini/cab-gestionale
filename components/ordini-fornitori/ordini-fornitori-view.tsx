@@ -676,7 +676,7 @@ export function OrdiniFornitoriView({
               record: result.record,
               isNew: true,
               importMeta: {
-                documentoId: result.documentoId,
+                source: result.source,
                 contentHash: result.contentHash,
                 semanticKey: result.semanticKey,
                 quality: result.quality,

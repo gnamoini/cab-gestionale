@@ -1,3 +1,4 @@
+import type { ImportSourceRef } from "@/lib/import-sources/types";
 import {
   ORDINE_FORNITORE_IMPORT_EXTRACTION_VERSION,
   type ImportQuality,
@@ -5,7 +6,7 @@ import {
 } from "@/lib/ordini-fornitori/import/ordine-fornitore-import-types";
 
 export function buildOrdineImportMeta(input: {
-  documentId: string;
+  importSource: ImportSourceRef;
   contentHash: string;
   semanticKey?: string | null;
   importedBy: string;
@@ -13,7 +14,7 @@ export function buildOrdineImportMeta(input: {
 }): OrdineFornitoreImportMeta {
   return {
     source: "supplier_quote",
-    documentId: input.documentId,
+    importSource: input.importSource,
     contentHash: input.contentHash,
     semanticKey: input.semanticKey ?? undefined,
     importedAt: new Date().toISOString(),

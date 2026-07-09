@@ -83,7 +83,25 @@ export const BILLING_CUSTOMERS_COLUMNS =
   "id, cliente_label, entity_key, ragione_sociale, partita_iva, codice_fiscale, pec, codice_sdi, indirizzo, note, created_at, updated_at" as const;
 
 export const INVOICES_COLUMNS =
-  "id, numero, anno, status, origine, customer_id, cliente_label, customer_snapshot, data_emissione, data_scadenza, imponibile, iva, totale, pagato, residuo, note, admin_notes, meta, created_by, updated_by, annullata_at, created_at, updated_at" as const;
+  "id, numero, anno, status, document_type, document_status, payment_status, sdi_status, accounting_status, origine, customer_id, cliente_label, customer_snapshot, data_emissione, data_scadenza, imponibile, iva, totale, pagato, residuo, note, admin_notes, meta, parent_invoice_id, sent_to_customer_at, approved_at, approved_by, closed_at, version, created_by, updated_by, annullata_at, created_at, updated_at" as const;
+
+export const CUSTOMER_OPEN_ITEMS_COLUMNS =
+  "id, customer_id, source_type, source_id, invoice_id, document_number, currency, amount_signed, remaining_signed, due_date, status, opened_at, closed_at, created_at, updated_at" as const;
+
+export const CUSTOMER_PAYMENTS_COLUMNS =
+  "id, customer_id, data, importo, metodo, riferimento, note, allocation_status, legacy_invoice_payment_id, created_by, created_at, updated_at" as const;
+
+export const PAYMENT_ALLOCATIONS_COLUMNS =
+  "id, payment_id, open_item_id, amount, rounding_delta, note, created_at" as const;
+
+export const INVOICE_EVENTS_COLUMNS =
+  "id, entity_type, entity_id, aggregate_type, aggregate_id, invoice_id, event_category, event_type, correlation_id, causation_id, payload, actor_id, created_at" as const;
+
+export const INVOICE_RELATIONS_COLUMNS =
+  "id, source_invoice_id, target_invoice_id, relation_type, meta, created_at" as const;
+
+export const ACCOUNTING_ENTRIES_COLUMNS =
+  "id, entry_date, description, source_type, source_id, invoice_id, status, created_by, created_at" as const;
 
 export const INVOICE_ROWS_COLUMNS =
   "id, invoice_id, tipo, descrizione, quantita, prezzo_unitario, sconto_percent, iva_percent, imponibile, iva, totale, ricambio_id, lavorazione_id, preventivo_id, meta, created_at" as const;

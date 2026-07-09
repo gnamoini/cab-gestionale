@@ -1,9 +1,12 @@
-import "server-only";
+﻿import "server-only";
 
 import { CompanyNotConfiguredError, getCompanyIdForUserOrNull } from "@/lib/document-capture/company-id.server";
 import { requireDocumentCaptureAuth } from "@/lib/document-capture/document-capture-route-auth.server";
 import { traceDocumentCaptureOperation } from "@/lib/document-capture/document-capture-telemetry.server";
-import { finalizeDocumentCaptureInTransaction } from "@/lib/document-capture/finalize-transaction.server";
+import {
+  finalizeDocumentCaptureInTransaction,
+  finalizeStorageErrorToDocumentCaptureCode,
+} from "@/lib/document-capture/finalize-transaction.server";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { NextResponse } from "next/server";
 
@@ -45,6 +48,26 @@ export async function POST(_request: Request, context: RouteContext) {
       captureId: capture.id,
       storagePath: capture.storage_path,
     });
+
+    if (!result.ok) {
+      const errorCode = finalizeStorageErrorToDocumentCaptureCode(result.code);
+      traceDocumentCaptureOperation({
+        operation: "finalize",
+        captureId: id,
+        userId,
+        companyId,
+        durationMs: Math.round(performance.now() - t0),
+        outcome: "error",
+        errorCode,
+        storagePath: result.storagePath,
+        bucket: result.bucket,
+        storageErrorCode: result.code,
+        isPolicyError: result.isPolicyError,
+      });
+      const status = result.isPolicyError || result.code === "STORAGE_PERMISSION_DENIED" ? 403 : 400;
+      return NextResponse.json({ error: result.message, code: result.code }, { status });
+    }
+
     traceDocumentCaptureOperation({
       operation: "finalize",
       captureId: id,
@@ -52,6 +75,7 @@ export async function POST(_request: Request, context: RouteContext) {
       companyId,
       durationMs: Math.round(performance.now() - t0),
       outcome: "ok",
+      storagePath: capture.storage_path,
     });
     return NextResponse.json(result);
   } catch (e) {
@@ -64,6 +88,7 @@ export async function POST(_request: Request, context: RouteContext) {
       durationMs: Math.round(performance.now() - t0),
       outcome: "error",
       errorCode,
+      storagePath: capture.storage_path,
     });
     if (e instanceof CompanyNotConfiguredError) {
       return NextResponse.json({ error: e.message, code: "TENANT_MISSING" }, { status: 403 });

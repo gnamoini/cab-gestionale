@@ -1,7 +1,7 @@
 import "server-only";
 
 import { generateObject } from "ai";
-import { getGeminiReportModel, isGeminiConfigured } from "@/lib/ai/gemini-client";
+import { GEMINI_NOT_CONFIGURED_MESSAGE, getGeminiReportModel, isGeminiConfigured } from "@/lib/ai/gemini-client";
 import {
   listinoImportAiRowsSchema,
   listinoImportColumnMapSchema,
@@ -32,7 +32,7 @@ export async function parseListinoPdfWithAi(
     return {
       ok: false,
       code: "not_configured",
-      message: "Servizio IA non configurato. Imposta GOOGLE_GENERATIVE_AI_API_KEY o GEMINI_API_KEY.",
+      message: GEMINI_NOT_CONFIGURED_MESSAGE,
     };
   }
 

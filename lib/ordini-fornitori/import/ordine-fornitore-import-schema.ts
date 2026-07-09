@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { extractedFieldSchema } from "@/lib/document-capture/capture-extraction-schema";
+import { importSourceRefSchema } from "@/lib/import-sources/import-source-ref-schema";
 
 export const ordineFornitoreImportRigaSchema = z.object({
   codice: extractedFieldSchema.optional(),
@@ -46,17 +47,22 @@ export const ordineFornitoreImportExtractionSchema = z.object({
   warnings: z.array(z.string()).optional(),
 });
 
-export const ordineFornitoreImportAnalyzeRequestSchema = z.object({
-  documentoId: z.string().uuid(),
-  skipHashDuplicate: z.boolean().optional(),
-  skipSemanticDuplicate: z.boolean().optional(),
-});
+export const ordineFornitoreImportAnalyzeRequestSchema = z
+  .object({
+    source: importSourceRefSchema.optional(),
+    importFileId: z.string().uuid().optional(),
+    documentoId: z.string().uuid().optional(),
+    skipHashDuplicate: z.boolean().optional(),
+    skipSemanticDuplicate: z.boolean().optional(),
+  })
+  .refine((v) => Boolean(v.source || v.importFileId || v.documentoId), {
+    message: "source, importFileId o documentoId richiesto",
+  });
 
 export const ordineFornitoreImportFinalizeRequestSchema = z.object({
-  documentoId: z.string().uuid(),
-  action: z.enum(["link", "unlink"]),
-  ordineId: z.string().uuid().optional(),
-  contentHash: z.string().optional(),
+  source: importSourceRefSchema,
+  ordineId: z.string().uuid(),
+  contentHash: z.string().min(1),
   semanticKey: z.string().optional(),
 });
 

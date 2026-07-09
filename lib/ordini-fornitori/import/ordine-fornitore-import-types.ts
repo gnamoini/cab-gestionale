@@ -1,3 +1,4 @@
+import type { ImportSourceRef } from "@/lib/import-sources/types";
 import type { OrdineFornitoreRecord } from "@/lib/ordini-fornitori/types";
 import type { OrdineFornitoreFornitoreSnapshot } from "@/lib/ordini-fornitori/fornitore-snapshot";
 
@@ -23,7 +24,7 @@ export type FornitoreMatchResult = {
 
 export type OrdineFornitoreImportMeta = {
   source: "supplier_quote";
-  documentId: string;
+  importSource: ImportSourceRef;
   contentHash: string;
   semanticKey?: string;
   importedAt: string;
@@ -48,7 +49,7 @@ export type OrdineFornitoreImportAnalyzeResult = {
   quality: ImportQuality;
   warnings: string[];
   duplicates: ImportDuplicateCheck;
-  documentoId: string;
+  source: ImportSourceRef;
   contentHash: string;
   semanticKey: string | null;
   fornitoreMatch: FornitoreMatchResult;
@@ -57,7 +58,7 @@ export type OrdineFornitoreImportAnalyzeResult = {
 };
 
 export type OrdineFornitoreEditorImportMeta = {
-  documentoId: string;
+  source: ImportSourceRef;
   contentHash: string;
   semanticKey: string | null;
   quality: ImportQuality;

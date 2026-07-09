@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -26,5 +26,14 @@ const rlsSql = fs.readFileSync(
 );
 assert.match(rlsSql, /storage_uploaded/);
 assert.match(rlsSql, /archived/);
+
+const finalizeSelectSql = fs.readFileSync(
+  path.join(ROOT, "supabase/migrations/20260910150900_document_capture_finalize_storage_select.sql"),
+  "utf8",
+);
+assert.match(finalizeSelectSql, /pending_upload/);
+assert.match(finalizeSelectSql, /uploaded_by = v_uid/);
+assert.match(finalizeSelectSql, /deleted_at is null/);
+assert.match(finalizeSelectSql, /finalized_at is null/);
 
 console.log("document-capture-rls-audit.test.ts OK");

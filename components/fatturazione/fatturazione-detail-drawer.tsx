@@ -17,13 +17,13 @@ import { invoiceDisplayNumber } from "@/lib/fatturazione/fatturazione-list-ui-fi
 import { invoiceIsDeletable, invoicesEntry } from "@/lib/domain/invoices-entry";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { InvoiceTimeline } from "@/components/fatturazione/invoice-timeline";
 
 export function FatturazioneDetailDrawer({
   detail,
   open,
   onClose,
   canWrite,
-  isAdmin,
   onChanged,
   onRegisterPayment,
   onEditDraft,
@@ -32,7 +32,6 @@ export function FatturazioneDetailDrawer({
   open: boolean;
   onClose: () => void;
   canWrite: boolean;
-  isAdmin: boolean;
   onChanged: () => void;
   onRegisterPayment: () => void;
   onEditDraft?: () => void;
@@ -62,8 +61,29 @@ export function FatturazioneDetailDrawer({
     [busy, inv, onChanged, toast],
   );
 
+  const createCreditNote = useCallback(async () => {
+    if (!inv || busy || !canWrite) return;
+    const ok = await confirm({
+      title: "Nota di credito",
+      message: "Creare una nota di credito per l'intero importo della fattura?",
+      confirmLabel: "Crea NC",
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const res = await invoicesEntry.createCreditNote(inv.id);
+      if (!res.success) throw new Error(res.error ?? "Creazione NC non riuscita.");
+      toast.successOnce("fatt-nc", "Nota di credito creata.");
+      onChanged();
+    } catch (e) {
+      toast.errorOnce("fatt-nc", e);
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, canWrite, confirm, inv, onChanged, toast]);
+
   const cancel = useCallback(async () => {
-    if (!inv || busy || !isAdmin) return;
+    if (!inv || busy || !canWrite) return;
     const ok = await confirm({
       title: "Annullare fattura",
       message: "Confermi l'annullamento di questa fattura?",
@@ -84,7 +104,7 @@ export function FatturazioneDetailDrawer({
     } finally {
       setBusy(false);
     }
-  }, [busy, confirm, isAdmin, inv, onChanged, onClose, toast]);
+  }, [busy, canWrite, confirm, inv, onChanged, onClose, toast]);
 
   const removeDraft = useCallback(async () => {
     if (!inv || busy || !canWrite) return;
@@ -180,6 +200,10 @@ export function FatturazioneDetailDrawer({
           </ul>
         </div>
       ) : null}
+      <div>
+        <p className="mb-2 text-[10px] font-bold uppercase text-[color:var(--cab-text-muted)]">Timeline</p>
+        <InvoiceTimeline invoiceId={inv.id} />
+      </div>
       <div className="mt-auto flex flex-wrap gap-2 border-t border-[color:var(--cab-border)] pt-3">
         {isDraft && canWrite && onEditDraft ? (
           <button type="button" className={dsBtnNeutralForm} onClick={onEditDraft}>
@@ -208,7 +232,15 @@ export function FatturazioneDetailDrawer({
         >
           Stampa PDF
         </button>
-        {isAdmin && inv.status !== "annullata" && inv.status !== "pagata" ? (
+        {canWrite &&
+        inv.document_type !== "nota_credito" &&
+        !isDraft &&
+        inv.status !== "annullata" ? (
+          <LoadingButton type="button" variant="secondary" loading={busy} onClick={() => void createCreditNote()}>
+            Nota di credito
+          </LoadingButton>
+        ) : null}
+        {canWrite && inv.status !== "annullata" && inv.status !== "pagata" ? (
           <LoadingButton type="button" variant="danger" loading={busy} onClick={() => void cancel()}>
             Annulla
           </LoadingButton>
@@ -219,10 +251,6 @@ export function FatturazioneDetailDrawer({
           </LoadingButton>
         ) : null}
       </div>
-      <section className="rounded border border-dashed border-[color:var(--cab-border)] p-3 opacity-60">
-        <p className="text-[10px] font-bold uppercase text-[color:var(--cab-text-muted)]">Fatturazione elettronica</p>
-        <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">Integrazione SDI / FE — disponibile in una release futura.</p>
-      </section>
     </div>
   );
 

@@ -1,10 +1,16 @@
-import "server-only";
+﻿import "server-only";
 
 import {
   DOCUMENT_CAPTURE_MAX_BYTES,
   isAllowedCaptureMime,
 } from "@/lib/document-capture/mime-allowlist";
+import {
+  classifyFinalizeStorageDownloadError,
+  finalizeStorageErrorToDocumentCaptureCode,
+  type FinalizeStorageErrorCode,
+} from "@/lib/document-capture/finalize-storage-errors";
 import { sha256Hex } from "@/lib/document-capture/sha256.server";
+import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 export type FinalizeCaptureResult = {
@@ -15,18 +21,36 @@ export type FinalizeCaptureResult = {
   finalizedAt?: string | null;
 };
 
+export type FinalizeCaptureStorageFailure = {
+  ok: false;
+  code: FinalizeStorageErrorCode;
+  message: string;
+  isPolicyError: boolean;
+  storagePath: string;
+  bucket: string;
+};
+
 export async function finalizeDocumentCaptureInTransaction(input: {
   captureId: string;
   storagePath: string;
-}): Promise<FinalizeCaptureResult> {
+}): Promise<FinalizeCaptureResult | FinalizeCaptureStorageFailure> {
+  const bucket = STORAGE_BUCKETS.documentCapture;
   const sb = await createSupabaseServerUserClient();
 
   const { data: fileData, error: downloadError } = await sb.storage
-    .from("document-capture")
+    .from(bucket)
     .download(input.storagePath);
 
   if (downloadError || !fileData) {
-    throw new Error("File non trovato nello storage");
+    const classified = classifyFinalizeStorageDownloadError(downloadError, Boolean(fileData), bucket);
+    return {
+      ok: false,
+      code: classified.code,
+      message: classified.message,
+      isPolicyError: classified.isPolicyError,
+      storagePath: input.storagePath,
+      bucket,
+    };
   }
 
   const bytes = new Uint8Array(await fileData.arrayBuffer());
@@ -78,3 +102,5 @@ export async function finalizeDocumentCaptureInTransaction(input: {
     finalizedAt: result.finalizedAt ?? null,
   };
 }
+
+export { finalizeStorageErrorToDocumentCaptureCode };

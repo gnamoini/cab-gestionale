@@ -351,6 +351,41 @@ export type InvoiceStatus =
   | "scaduta"
   | "annullata";
 
+export type InvoiceDocumentStatus = "bozza" | "da_verificare" | "approvata" | "emessa" | "annullata";
+
+export type InvoicePaymentStatus = "non_pagata" | "parzialmente_pagata" | "pagata" | "scaduta";
+
+export type InvoiceSdiStatus =
+  | "non_applicabile"
+  | "da_generare"
+  | "generata"
+  | "inviata"
+  | "consegnata"
+  | "scartata"
+  | "rifiutata";
+
+export type InvoiceAccountingStatus =
+  | "non_rilevante"
+  | "da_registrare"
+  | "registrata"
+  | "da_liquidare"
+  | "liquidata"
+  | "chiusa"
+  | "contestata";
+
+export type InvoiceDocumentType = "fattura" | "nota_credito" | "proforma";
+
+export type InvoiceTransition =
+  | "create_draft"
+  | "submit_for_review"
+  | "approve"
+  | "emit"
+  | "mark_sent_to_customer"
+  | "register_payment_partial"
+  | "register_payment_full"
+  | "mark_overdue"
+  | "cancel";
+
 export type InvoiceRowTipo =
   | "ricambio"
   | "articolo_magazzino"
@@ -359,7 +394,7 @@ export type InvoiceRowTipo =
   | "costo_extra"
   | "libera";
 
-export type InvoiceLinkSourceType = "preventivo" | "lavorazione" | "mezzo" | "attrezzatura" | "ricambio";
+export type InvoiceLinkSourceType = "preventivo" | "lavorazione" | "mezzo" | "attrezzatura" | "ricambio" | "ddt";
 
 export type InvoicePaymentMetodo = "bonifico" | "contanti" | "assegno" | "pos" | "altro";
 
@@ -383,6 +418,11 @@ export type InvoiceRow = {
   numero: number;
   anno: number;
   status: InvoiceStatus;
+  document_type: InvoiceDocumentType | null;
+  document_status: InvoiceDocumentStatus | null;
+  payment_status: InvoicePaymentStatus | null;
+  sdi_status: InvoiceSdiStatus | null;
+  accounting_status: InvoiceAccountingStatus | null;
   origine: string | null;
   customer_id: string | null;
   cliente_label: string;
@@ -397,6 +437,12 @@ export type InvoiceRow = {
   note: string | null;
   admin_notes: string | null;
   meta: Record<string, unknown>;
+  parent_invoice_id: string | null;
+  sent_to_customer_at: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  closed_at: string | null;
+  version: number;
   created_by: string | null;
   updated_by: string | null;
   annullata_at: string | null;
@@ -444,6 +490,96 @@ export type InvoicePaymentRow = {
   riferimento: string | null;
   note: string | null;
   created_by: string | null;
+  created_at: string;
+};
+
+export type CustomerOpenItemRow = {
+  id: string;
+  customer_id: string | null;
+  source_type: "invoice" | "credit_note" | "customer_advance" | "manual_adjustment";
+  source_id: string | null;
+  invoice_id: string | null;
+  document_number: string | null;
+  currency: string;
+  amount_signed: number;
+  remaining_signed: number;
+  due_date: string | null;
+  status: "open" | "partial" | "closed";
+  opened_at: string | null;
+  closed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CustomerPaymentRow = {
+  id: string;
+  customer_id: string | null;
+  data: string;
+  importo: number;
+  metodo: InvoicePaymentMetodo;
+  riferimento: string | null;
+  note: string | null;
+  allocation_status: "unallocated" | "partial" | "allocated";
+  legacy_invoice_payment_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PaymentAllocationRow = {
+  id: string;
+  payment_id: string;
+  open_item_id: string;
+  amount: number;
+  rounding_delta: number;
+  note: string | null;
+  created_at: string;
+};
+
+export type InvoiceEventRow = {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  aggregate_type: string;
+  aggregate_id: string;
+  invoice_id: string | null;
+  event_category: "document" | "payment" | "sdi" | "accounting" | "audit";
+  event_type: string;
+  correlation_id: string;
+  causation_id: string | null;
+  payload: Record<string, unknown>;
+  actor_id: string | null;
+  created_at: string;
+};
+
+export type InvoiceRelationRow = {
+  id: string;
+  source_invoice_id: string;
+  target_invoice_id: string;
+  relation_type: "credit_note" | "correction" | "replacement";
+  meta: Record<string, unknown>;
+  created_at: string;
+};
+
+export type AccountingEntryRow = {
+  id: string;
+  entry_date: string;
+  description: string;
+  source_type: string | null;
+  source_id: string | null;
+  invoice_id: string | null;
+  status: "draft" | "posted" | "reversed";
+  created_by: string | null;
+  created_at: string;
+};
+
+export type AccountingEntryLineRow = {
+  id: string;
+  entry_id: string;
+  account_code: string;
+  description: string | null;
+  debit: number;
+  credit: number;
   created_at: string;
 };
 

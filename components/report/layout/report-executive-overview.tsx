@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { KpiPerformanceAlerts } from "@/components/report/kpi-performance/kpi-performance-alerts";
-import { ReportExecutiveKpiSection } from "@/components/report/layout/report-executive-kpi-section";
 import { ReportExecutiveStrip } from "@/components/report/layout/report-executive-strip";
 import { useReportPerformanceContext } from "@/components/report/layout/report-performance-gate";
 import { reportSubsectionTitleClass, reportZoneShellClass } from "@/components/report/report-ui-tokens";
@@ -12,7 +11,7 @@ import { countClientiSottoSogliaDisponibilita } from "@/lib/report/kpi-performan
 import { LoadingSkeletonBlock } from "@/components/design-system/loading/loading-skeleton";
 
 export function ReportExecutiveOverview({ compareMode }: { compareMode: ReportCompareMode }) {
-  const { perf, perfLoading, partitioned } = useReportPerformanceContext();
+  const { perf, perfLoading } = useReportPerformanceContext();
 
   const summaryLine = useMemo(() => {
     if (!perf) return "Caricamento sintesi…";
@@ -48,8 +47,6 @@ export function ReportExecutiveOverview({ compareMode }: { compareMode: ReportCo
               criticalAlertCount: perf.alerts.filter((a) => a.severity === "critical").length,
             }}
           />
-
-          <ReportExecutiveKpiSection items={partitioned.executive} />
 
           {perf.alerts.length > 0 ? (
             <section className="min-w-0 space-y-3 border-t border-[color:var(--cab-border)] pt-6" aria-labelledby="report-executive-alerts-title">

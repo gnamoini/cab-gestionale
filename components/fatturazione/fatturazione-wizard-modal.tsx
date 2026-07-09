@@ -22,6 +22,10 @@ import {
 } from "@/lib/fatturazione/preventivo-to-invoice-draft";
 import { calculateInvoiceTotals, assertNoPreventivoOverbilling } from "@/lib/fatturazione/invoice-calculations";
 import { formatInvoiceMoney } from "@/components/fatturazione/fattura-status-badge";
+import { ddtDisplayNumber } from "@/lib/ddt/ddt-list-ui-filters";
+import { ddtToInvoiceDraft } from "@/lib/fatturazione/ddt-to-invoice-draft";
+import type { DdtDocumentRow } from "@/src/types/supabase-tables";
+import { ddtEntry } from "@/lib/domain/ddt-entry";
 import type { FatturazioneOrigine, InvoiceCreateInput, InvoiceDetail, InvoiceDraftRowInput } from "@/lib/fatturazione/types";
 import { buildClienteEntityKey } from "@/lib/validation/entity-keys";
 import { dsBtnNeutralForm, dsInput } from "@/lib/ui/design-system";
@@ -61,6 +65,7 @@ export function FatturazioneWizardModal({
   preventiviRecords,
   preventiviBilling,
   billingCustomers,
+  eligibleDdtDocuments = [],
   initialOrigine,
   initialPreventivoIds,
   editDetail,
@@ -70,6 +75,7 @@ export function FatturazioneWizardModal({
   preventiviRecords: readonly PreventivoRecord[];
   preventiviBilling: readonly PreventivoBillingStatusRow[];
   billingCustomers: readonly BillingCustomerRow[];
+  eligibleDdtDocuments?: readonly DdtDocumentRow[];
   initialOrigine?: FatturazioneOrigine;
   initialPreventivoIds?: string[];
   editDetail?: InvoiceDetail | null;
@@ -81,6 +87,7 @@ export function FatturazioneWizardModal({
   const [busy, setBusy] = useState(false);
   const [origine, setOrigine] = useState<FatturazioneOrigine>(initialOrigine ?? "manuale");
   const [selectedPreventivoIds, setSelectedPreventivoIds] = useState<string[]>(initialPreventivoIds ?? []);
+  const [selectedDdtId, setSelectedDdtId] = useState<string | null>(null);
   const [clienteLabel, setClienteLabel] = useState("");
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<BillingCustomerSnapshot>({});
@@ -185,12 +192,27 @@ export function FatturazioneWizardModal({
     if (draftRows.length) setRows(draftRows);
   }, [hydrateCliente, origine, preventiviRecords, selectedPreventivoIds]);
 
+  const importFromDdt = useCallback(async () => {
+    if (!selectedDdtId) return;
+    const detail = await ddtEntry.getDetail(selectedDdtId);
+    if (!detail.success || !detail.data) return;
+    const draft = ddtToInvoiceDraft(detail.data);
+    setClienteLabel(draft.cliente_label);
+    void hydrateCliente(draft.cliente_label);
+    setRows(draft.rows);
+    setDataEmissione(draft.data_emissione);
+    setNote(draft.note ?? "");
+  }, [hydrateCliente, selectedDdtId]);
+
   const buildLinks = useCallback(() => {
+    if (origine === "ddt" && selectedDdtId) {
+      return [{ source_type: "ddt" as const, source_id: selectedDdtId, allocated_totale: totals.totale, allocated_imponibile: totals.imponibile, allocated_iva: totals.iva }];
+    }
     const ids = origine === "preventivo" ? selectedPreventivoIds.slice(0, 1) : selectedPreventivoIds;
     if (!ids.length) return [];
     const perPrev = totals.totale / ids.length;
     return ids.map((id) => buildPreventivoInvoiceLink(id, perPrev, totals.imponibile / ids.length, totals.iva / ids.length));
-  }, [origine, selectedPreventivoIds, totals]);
+  }, [origine, selectedDdtId, selectedPreventivoIds, totals]);
 
   const validatePreventivi = useCallback(() => {
     const ids = origine === "preventivo" ? selectedPreventivoIds.slice(0, 1) : selectedPreventivoIds;
@@ -219,7 +241,11 @@ export function FatturazioneWizardModal({
       toast.validation("Aggiungi almeno una riga con descrizione.");
       return;
     }
-    const prevErr = origine !== "manuale" ? validatePreventivi() : null;
+    const prevErr = origine === "preventivo" || origine === "multi_preventivo" ? validatePreventivi() : null;
+    if (origine === "ddt" && !selectedDdtId) {
+      toast.validation("Seleziona un DDT.");
+      return;
+    }
     if (prevErr) {
       toast.validation(prevErr);
       return;
@@ -227,7 +253,7 @@ export function FatturazioneWizardModal({
     setBusy(true);
     try {
       const payload: InvoiceCreateInput = {
-        origine,
+        origine: origine === "ddt" ? "manuale" : origine,
         status: statusOut,
         customer_id: customerId,
         cliente_label: clienteLabel.trim(),
@@ -254,7 +280,8 @@ export function FatturazioneWizardModal({
 
   const stepIndex = STEPS.findIndex((s) => s.id === step);
   const goNext = () => {
-    if (step === "origine" && origine !== "manuale") importFromPreventivi();
+    if (step === "origine" && origine === "ddt") void importFromDdt();
+    if (step === "origine" && origine !== "manuale" && origine !== "ddt") importFromPreventivi();
     if (step === "cliente" && clienteLabel.trim()) void hydrateCliente(clienteLabel);
     const next = STEPS[stepIndex + 1];
     if (next) setStep(next.id);
@@ -276,6 +303,7 @@ export function FatturazioneWizardModal({
                 ["manuale", "Manuale"],
                 ["preventivo", "Da preventivo"],
                 ["multi_preventivo", "Da più preventivi"],
+                ["ddt", "Da DDT"],
               ] as const
             ).map(([v, label]) => (
               <label key={v} className="flex items-center gap-2 text-sm">
@@ -284,7 +312,25 @@ export function FatturazioneWizardModal({
               </label>
             ))}
           </div>
-          {origine !== "manuale" ? (
+          {origine === "ddt" ? (
+            <ul className="mt-3 max-h-48 space-y-1 overflow-y-auto rounded border border-[color:var(--cab-border)] p-2">
+              {eligibleDdtDocuments.map((d) => (
+                <li key={d.id}>
+                  <label className="flex items-start gap-2 text-sm">
+                    <input
+                      type="radio"
+                      checked={selectedDdtId === d.id}
+                      onChange={() => setSelectedDdtId(d.id)}
+                    />
+                    <span>
+                      {ddtDisplayNumber(d)} — {d.cliente_label} ({d.status})
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {origine !== "manuale" && origine !== "ddt" ? (
             <ul className="mt-3 max-h-48 space-y-1 overflow-y-auto rounded border border-[color:var(--cab-border)] p-2">
               {eligiblePreventivi.map((p) => {
                 const b = billingByPrev.get(p.id);

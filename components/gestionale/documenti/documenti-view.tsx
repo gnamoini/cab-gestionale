@@ -72,7 +72,6 @@ import { buildModificaRigaFromChanges, type CampoChangeLike } from "@/lib/gestio
 import { useAuth } from "@/context/auth-context";
 import {
   canOpenDocumento,
-  countDocsInMarcaNode,
   documentoSenzaMarca,
   documentoSenzaMarcaConAvviso,
   documentoFileUnavailableLabel,
@@ -80,8 +79,8 @@ import {
   openDocumentoFile,
   labelCategoria,
   labelTipoFile,
-  partitionMarcaLevelDocs,
   resolveDocumentoApplicazione,
+  type ArchiveDocMarcaNode,
   type DocumentiSortKey,
   type DocumentiSortPhase,
 } from "@/components/gestionale/documenti/documenti-helpers";
@@ -230,12 +229,8 @@ function DocGlyph({ doc }: { doc: DocumentoGestionale }) {
   );
 }
 
-function MarcaGlyph({ nome }: { nome: string }) {
-  return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] text-[10px] font-bold text-[color:var(--cab-text-muted)] shadow-[var(--cab-shadow-sm)]">
-      {nome.slice(0, 2).toUpperCase()}
-    </span>
-  );
+function flattenMarcaNodeFiles(node: ArchiveDocMarcaNode): DocumentoGestionale[] {
+  return [...node.filesMarca, ...node.modelli.flatMap(({ files }) => files)];
 }
 
 function ArchiveDocRow({
@@ -362,12 +357,6 @@ function ArchiveDocRow({
   );
 }
 
-function SubTreeHeading({ title }: { title: string }) {
-  return (
-    <h3 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">{title}</h3>
-  );
-}
-
 export function DocumentiView() {
   const searchParams = useSearchParams();
   const qc = useQueryClient();
@@ -412,7 +401,6 @@ export function DocumentiView() {
   const [sortPhase, setSortPhase] = useState<DocumentiSortPhase>("natural");
 
   const [expandedMarche, setExpandedMarche] = useState<Set<string>>(() => new Set());
-  const [expandedModelli, setExpandedModelli] = useState<Set<string>>(() => new Set());
   const documentiMarcheInitDone = useRef(false);
   const urlHydratedRef = useRef(false);
 
@@ -492,10 +480,6 @@ export function DocumentiView() {
     });
 
     if (!mar) return;
-    if (modelloNome) {
-      const mac = mar.macchine.find((x) => x.nome.trim().toLowerCase() === modelloNome.toLowerCase());
-      if (mac) setExpandedModelli((p) => new Set(p).add(`${mar.id}::${mac.id}`));
-    }
     setExpandedMarche((p) => new Set(p).add(mar.id));
   }, [searchParams, mezziSnap, catalog]);
 
@@ -559,6 +543,14 @@ export function DocumentiView() {
     [tree, marcaPage, listPageSize],
   );
 
+  const marcaFilesById = useMemo(
+    () =>
+      new Map(
+        pagedTree.map((node) => [node.marca.id, flattenMarcaNodeFiles(node)] as const),
+      ),
+    [pagedTree],
+  );
+
   const docPagerLabel = useMemo(
     () => documentiMarcaPagerLabel(marcaPage, listPageSize, totalMarche),
     [marcaPage, listPageSize, totalMarche],
@@ -590,26 +582,6 @@ export function DocumentiView() {
       setSelectedDocId(null);
     }
   }, [documentiConMarca, documentiCertificazioniSenzaMarca, documentiSenzaMarca, selectedDocId]);
-
-  const didAutoExpandTree = useRef(false);
-  useEffect(() => {
-    if (didAutoExpandTree.current) return;
-    if (tree.length === 0) return;
-    if (readDocumentiTreePref() === "collapsed") {
-      didAutoExpandTree.current = true;
-      return;
-    }
-    const modKeys = new Set<string>();
-    for (const { marca, modelli } of tree) {
-      for (const mod of modelli) {
-        const mk = `${marca.id}::${mod.modello.id}`;
-        if (mod.files.length > 0) modKeys.add(mk);
-      }
-    }
-    if (modKeys.size === 0) return;
-    setExpandedModelli((p) => new Set([...p, ...modKeys]));
-    didAutoExpandTree.current = true;
-  }, [tree]);
 
   const sortSelectValue = useMemo(
     () => documentiSortSelectValue(sortColumn, sortPhase),
@@ -796,49 +768,27 @@ export function DocumentiView() {
     if (!result.ok) gestToast.warning(result.message);
   }
 
-  function toggleMarca(id: string) {
+  function handleMarcaCollapsedChange(id: string, collapsed: boolean) {
     setExpandedMarche((prev) => {
-      if (prev.has(id) && prev.size === 1) return new Set();
-      return new Set([id]);
+      const next = new Set(prev);
+      if (collapsed) next.delete(id);
+      else next.add(id);
+      return next;
     });
-    setExpandedModelli(new Set());
-  }
-
-  function toggleModello(key: string) {
-    setExpandedModelli((prev) => {
-      if (prev.has(key) && prev.size === 1) return new Set();
-      return new Set([key]);
-    });
-    const marcaId = key.split("::")[0];
-    if (marcaId) setExpandedMarche(new Set([marcaId]));
   }
 
   const collapseAllTreeGroups = useCallback(() => {
     setExpandedMarche(new Set());
-    setExpandedModelli(new Set());
     writeDocumentiTreePref("collapsed");
   }, []);
 
   const expandAllTreeGroups = useCallback(() => {
-    const mar = new Set<string>();
-    const mod = new Set<string>();
-    for (const { marca, modelli } of pagedTree) {
-      mar.add(marca.id);
-      for (const { modello } of modelli) {
-        mod.add(`${marca.id}::${modello.id}`);
-      }
-    }
-    setExpandedMarche(mar);
-    setExpandedModelli(mod);
+    setExpandedMarche(new Set(pagedTree.map((n) => n.marca.id)));
     writeDocumentiTreePref("expanded");
   }, [pagedTree]);
 
   function marcaOpen(id: string) {
     return searchActive || expandedMarche.has(id);
-  }
-
-  function modelloOpen(marcaId: string, modelloId: string) {
-    return searchActive || expandedModelli.has(`${marcaId}::${modelloId}`);
   }
 
   const resetRicerca = useCallback(() => {
@@ -969,7 +919,10 @@ export function DocumentiView() {
                 <>
                   <button
                     type="button"
-                    onClick={collapseAllTreeGroups}
+                    onClick={() => {
+                      if (searchActive) resetRicerca();
+                      collapseAllTreeGroups();
+                    }}
                     className={`${dsPageToolbarBtn} h-9 w-full justify-center px-3 text-xs sm:w-auto`}
                     title="Chiudi tutti i gruppi"
                   >
@@ -997,310 +950,169 @@ export function DocumentiView() {
             />
           }
         />
+        </ShellCard>
 
-        <section className="mt-4 min-w-0" aria-label="Albero documenti">
-          <div className="overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]">
-              {documentiInitialLoading ? (
-                <div className="p-4" aria-busy="true" role="status" aria-label="Caricamento documenti">
-                  <LoadingTableSkeleton preset="documenti" rows={6} />
+        {documentiInitialLoading ? (
+          <div aria-busy="true" role="status" aria-label="Caricamento documenti">
+            <ShellCard>
+              <div className="p-4">
+                <LoadingTableSkeleton preset="documenti" rows={6} />
+              </div>
+            </ShellCard>
+          </div>
+        ) : documentiQuery.isError ? (
+          <ShellCard>
+            <LoadingErrorState
+              title="Impossibile caricare i documenti"
+              description="Controlla la connessione e riprova."
+              onRetry={() => void documentiQuery.refetch()}
+            />
+          </ShellCard>
+        ) : !hasDocumentiInLista ? (
+          <ShellCard>
+            <p className="p-8 text-center text-sm text-[color:var(--cab-text-muted)]">
+              Nessun documento corrisponde ai filtri.
+            </p>
+          </ShellCard>
+        ) : (
+          <>
+            {documentiSenzaMarca.length > 0 ? (
+              <div className="overflow-hidden rounded-[var(--ds-radius-xl)] border-2 border-[color:color-mix(in_srgb,var(--cab-warning)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_12%,var(--cab-surface))] p-3 sm:p-4">
+                <div className="mb-2 flex min-w-0 flex-nowrap items-center gap-2 sm:flex-wrap">
+                  <span className="text-base" aria-hidden>
+                    ⚠️
+                  </span>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--cab-text)]">
+                    Senza marca ({documentiSenzaMarca.length})
+                  </p>
                 </div>
-              ) : documentiQuery.isError ? (
-                <LoadingErrorState
-                  title="Impossibile caricare i documenti"
-                  description="Controlla la connessione e riprova."
-                  onRetry={() => void documentiQuery.refetch()}
-                />
-              ) : !hasDocumentiInLista ? (
-                <p className="p-8 text-center text-sm text-[color:var(--cab-text-muted)]">Nessun documento corrisponde ai filtri.</p>
-              ) : (
-                <div className="divide-y divide-[color:var(--cab-border)]">
-                  {documentiSenzaMarca.length > 0 ? (
-                    <div className="rounded-t-[var(--ds-radius-xl)] border-b-2 border-[color:color-mix(in_srgb,var(--cab-warning)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_12%,var(--cab-surface))] p-3 sm:p-4">
-                      <div className="mb-2 flex min-w-0 flex-nowrap items-center gap-2 sm:flex-wrap">
-                        <span className="text-base" aria-hidden>
-                          ⚠️
-                        </span>
-                        <p className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--cab-text)]">
-                          Senza marca ({documentiSenzaMarca.length})
-                        </p>
-                      </div>
-                      <p className="text-xs leading-snug text-[color:var(--cab-text-muted)]">
-                        Questi documenti restano sempre visibili. Apri la scheda e assegna marca (e modello) quando sei pronto.
-                      </p>
-                      <ul
-                        className="mt-2 overflow-hidden rounded-[var(--ds-radius-lg)] bg-[var(--cab-card)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--cab-warning)_40%,var(--cab-border))]"
-                        role="listbox"
-                      >
-                        {documentiSenzaMarca.map((d, i) => (
-                          <ArchiveDocRow
-                            key={d.id}
-                            doc={d}
-                            eagerPreview={i < 3}
-                            selected={selectedDocId === d.id}
-                            onSelect={() => setSelectedDocId(d.id)}
-                            onInfo={() => setInfoDoc(d)}
-                            onFileUnavailable={(msg) => gestToast.warning(msg)}
-                            onApri={() => openDoc(d)}
-                          />
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
+                <p className="text-xs leading-snug text-[color:var(--cab-text-muted)]">
+                  Questi documenti restano sempre visibili. Apri la scheda e assegna marca (e modello) quando sei pronto.
+                </p>
+                <ul
+                  className="mt-2 overflow-hidden rounded-[var(--ds-radius-lg)] bg-[var(--cab-card)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--cab-warning)_40%,var(--cab-border))]"
+                  role="list"
+                >
+                  {documentiSenzaMarca.map((d, i) => (
+                    <ArchiveDocRow
+                      key={d.id}
+                      doc={d}
+                      eagerPreview={i < 3}
+                      selected={selectedDocId === d.id}
+                      onSelect={() => setSelectedDocId(d.id)}
+                      onInfo={() => setInfoDoc(d)}
+                      onFileUnavailable={(msg) => gestToast.warning(msg)}
+                      onApri={() => openDoc(d)}
+                    />
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
-                  {documentiCertificazioniSenzaMarca.length > 0 ? (
-                    <div
-                      className={[
-                        "border-b border-violet-200/90 bg-violet-50/90 p-3 sm:p-4 dark:border-violet-800/50 dark:bg-violet-950/35",
-                        documentiSenzaMarca.length === 0 ? "overflow-hidden rounded-t-[var(--ds-radius-xl)]" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
+            {documentiCertificazioniSenzaMarca.length > 0 ? (
+              <div className="overflow-hidden rounded-[var(--ds-radius-xl)] border border-violet-200/90 bg-violet-50/90 p-3 sm:p-4 dark:border-violet-800/50 dark:bg-violet-950/35">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--cab-text)]">
+                  Certificazioni ({documentiCertificazioniSenzaMarca.length})
+                </p>
+                <p className="mt-1 text-xs leading-snug text-[color:var(--cab-text-muted)]">
+                  Certificazioni non legate a una marca specifica.
+                </p>
+                <ul
+                  className="mt-2 overflow-hidden rounded-[var(--ds-radius-lg)] bg-[var(--cab-card)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--cab-border)_90%,var(--cab-border-strong))]"
+                  role="list"
+                >
+                  {documentiCertificazioniSenzaMarca.map((d) => (
+                    <ArchiveDocRow
+                      key={d.id}
+                      doc={d}
+                      selected={selectedDocId === d.id}
+                      onSelect={() => setSelectedDocId(d.id)}
+                      onInfo={() => setInfoDoc(d)}
+                      onFileUnavailable={(msg) => gestToast.warning(msg)}
+                      onApri={() => openDoc(d)}
+                    />
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {pagedTree.map((node) => {
+              const files = marcaFilesById.get(node.marca.id) ?? [];
+              const isExpanded = marcaOpen(node.marca.id);
+              const docCount = files.length;
+
+              return (
+                <ShellCard
+                  key={node.marca.id}
+                  title={node.marca.nome}
+                  subtitle={`${docCount} document${docCount === 1 ? "o" : "i"}`}
+                  collapsible
+                  collapsed={!isExpanded}
+                  onCollapsedChange={(collapsed) => handleMarcaCollapsedChange(node.marca.id, collapsed)}
+                  compactContent
+                >
+                  {files.length > 0 ? (
+                    <ul
+                      className="overflow-hidden rounded-[var(--ds-radius-lg)] ring-1 ring-inset ring-[color:var(--cab-border)]"
+                      role="list"
                     >
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--cab-text)]">
-                        Certificazioni ({documentiCertificazioniSenzaMarca.length})
-                      </p>
-                      <p className="mt-1 text-xs leading-snug text-[color:var(--cab-text-muted)]">
-                        Certificazioni non legate a una marca specifica.
-                      </p>
-                      <ul
-                        className="mt-2 overflow-hidden rounded-[var(--ds-radius-lg)] bg-[var(--cab-card)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--cab-border)_90%,var(--cab-border-strong))]"
-                        role="listbox"
-                      >
-                        {documentiCertificazioniSenzaMarca.map((d) => (
-                          <ArchiveDocRow
-                            key={d.id}
-                            doc={d}
-                            selected={selectedDocId === d.id}
-                            onSelect={() => setSelectedDocId(d.id)}
-                            onInfo={() => setInfoDoc(d)}
-                            onFileUnavailable={(msg) => gestToast.warning(msg)}
-                            onApri={() => openDoc(d)}
-                          />
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
+                      {files.map((d) => (
+                        <ArchiveDocRow
+                          key={d.id}
+                          doc={d}
+                          selected={selectedDocId === d.id}
+                          onSelect={() => setSelectedDocId(d.id)}
+                          onInfo={() => setInfoDoc(d)}
+                          onFileUnavailable={(msg) => gestToast.warning(msg)}
+                          onApri={() => openDoc(d)}
+                        />
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-[color:var(--cab-text-muted)]">Nessun documento in questa marca.</p>
+                  )}
+                </ShellCard>
+              );
+            })}
 
-                  {pagedTree.map((node, marcaIndex) => {
-                    const { marca, filesMarca, modelli } = node;
-                    const { listini, altriMarca } = partitionMarcaLevelDocs(filesMarca);
-                    const docCountMarca = countDocsInMarcaNode(node);
-                    const isLastMarcaInTree =
-                      marcaIndex === pagedTree.length - 1 &&
-                      documentiSenzaCollocazione.length === 0 &&
-                      !showDocPager;
-                    const isFirstMarcaInTree =
-                      marcaIndex === 0 &&
-                      documentiSenzaMarca.length === 0 &&
-                      documentiCertificazioniSenzaMarca.length === 0 &&
-                      marcaPage === 1;
-                    return (
-                      <div
-                        key={marca.id}
-                        className={[
-                          "bg-[var(--cab-surface)]",
-                          isFirstMarcaInTree ? "overflow-hidden rounded-t-[var(--ds-radius-xl)]" : "",
-                          isLastMarcaInTree && !marcaOpen(marca.id) ? "overflow-hidden rounded-b-[var(--ds-radius-xl)]" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => toggleMarca(marca.id)}
-                          className={`group flex min-w-0 w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-[var(--cab-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_36%,transparent)] focus-visible:ring-inset sm:px-4 ${
-                            marcaOpen(marca.id) ? "border-b border-[color:var(--cab-border)]" : ""
-                          }`}
-                          aria-expanded={marcaOpen(marca.id)}
-                        >
-                          <MarcaGlyph nome={marca.nome} />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-[color:var(--cab-text)]">{marca.nome}</p>
-                            <p className="text-[11px] text-[color:var(--cab-text-muted)]">
-                              <span className="font-medium tabular-nums text-[color:var(--cab-text)]">{docCountMarca}</span>{" "}
-                              document{docCountMarca === 1 ? "o" : "i"}
-                              {modelli.length > 0 ? (
-                                <>
-                                  {" · "}
-                                  {modelli.length} modell{modelli.length === 1 ? "o" : "i"}
-                                </>
-                              ) : null}
-                            </p>
-                          </div>
-                          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] text-[color:var(--cab-text-muted)] transition-colors group-hover:bg-[var(--cab-hover)]">
-                            <svg
-                              className={`h-4 w-4 transition-transform duration-200 ${marcaOpen(marca.id) ? "rotate-180" : ""}`}
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                              aria-hidden
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </span>
-                        </button>
-                        <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${marcaOpen(marca.id) ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-                          <div className="min-h-0 overflow-hidden bg-[color:color-mix(in_srgb,var(--cab-surface-2)_72%,var(--cab-card))]">
-                            <div
-                              className={`space-y-3.5 px-3 pb-3 pt-3 sm:px-4 ${
-                                isLastMarcaInTree ? "rounded-b-[var(--ds-radius-xl)]" : ""
-                              }`}
-                            >
-                              {listini.length > 0 ? (
-                                <div>
-                                  <SubTreeHeading title="Listini" />
-                                  <ul
-                                    className="mt-1 overflow-hidden rounded-[var(--ds-radius-md)] ring-1 ring-inset ring-[color:var(--cab-border)]"
-                                    role="listbox"
-                                  >
-                                    {listini.map((d) => (
-                                      <ArchiveDocRow
-                                        key={d.id}
-                                        doc={d}
-                                        selected={selectedDocId === d.id}
-                                        onSelect={() => setSelectedDocId(d.id)}
-                                        onInfo={() => setInfoDoc(d)}
-                                        onFileUnavailable={(msg) => gestToast.warning(msg)}
-                                        onApri={() => openDoc(d)}
-                                      />
-                                    ))}
-                                  </ul>
-                                </div>
-                              ) : null}
+            {documentiSenzaCollocazione.length > 0 ? (
+              <div className="overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:color-mix(in_srgb,var(--cab-warning)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_8%,var(--cab-surface))] p-3 sm:p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)]">
+                  Senza collocazione
+                </p>
+                <p className="mt-1 text-xs leading-snug text-[color:var(--cab-text-muted)]">
+                  Marca o modello non allineati all&apos;anagrafica. Aggiorna le impostazioni o il documento.
+                </p>
+                <ul
+                  className="mt-2 overflow-hidden rounded-[var(--ds-radius-lg)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--cab-warning)_35%,var(--cab-border)]"
+                  role="list"
+                >
+                  {documentiSenzaCollocazione.map((d) => (
+                    <ArchiveDocRow
+                      key={d.id}
+                      doc={d}
+                      selected={selectedDocId === d.id}
+                      onSelect={() => setSelectedDocId(d.id)}
+                      onInfo={() => setInfoDoc(d)}
+                      onFileUnavailable={(msg) => gestToast.warning(msg)}
+                      onApri={() => openDoc(d)}
+                    />
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
-                              {altriMarca.length > 0 ? (
-                                <div>
-                                  <SubTreeHeading title="Generali (marca)" />
-                                  <ul
-                                    className="mt-1 overflow-hidden rounded-[var(--ds-radius-md)] ring-1 ring-inset ring-[color:var(--cab-border)]"
-                                    role="listbox"
-                                  >
-                                    {altriMarca.map((d) => (
-                                      <ArchiveDocRow
-                                        key={d.id}
-                                        doc={d}
-                                        selected={selectedDocId === d.id}
-                                        onSelect={() => setSelectedDocId(d.id)}
-                                        onInfo={() => setInfoDoc(d)}
-                                        onFileUnavailable={(msg) => gestToast.warning(msg)}
-                                        onApri={() => openDoc(d)}
-                                      />
-                                    ))}
-                                  </ul>
-                                </div>
-                              ) : null}
-
-                              <div>
-                                <SubTreeHeading title="Modelli" />
-                                <div className="mt-1 overflow-hidden rounded-[var(--ds-radius-lg)] ring-1 ring-inset ring-[color:var(--cab-border)]">
-                                  {modelli
-                                    .filter(({ files }) => files.length > 0)
-                                    .map(({ modello, files }, modelloIndex) => {
-                                    const mk = `${marca.id}::${modello.id}`;
-                                    return (
-                                      <div
-                                        key={mk}
-                                        className={
-                                          modelloIndex > 0 ? "border-t border-[color:var(--cab-border)]" : ""
-                                        }
-                                      >
-                                        <button
-                                          type="button"
-                                          onClick={() => toggleModello(mk)}
-                                          className={`flex min-w-0 w-full items-center gap-2 bg-[var(--cab-surface)]/60 px-3 py-2.5 text-left transition-colors hover:bg-[var(--cab-hover)] ${
-                                            modelloOpen(marca.id, modello.id)
-                                              ? "border-b border-[color:var(--cab-border)]"
-                                              : ""
-                                          }`}
-                                          aria-expanded={modelloOpen(marca.id, modello.id)}
-                                        >
-                                          <span className="w-4 shrink-0 text-center text-xs font-medium text-[color:var(--cab-text-muted)]" aria-hidden>
-                                            ·
-                                          </span>
-                                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-[color:var(--cab-text)]">{modello.nome}</span>
-                                          <span className="rounded-full bg-[var(--cab-surface-2)] px-2 py-0.5 text-[10px] font-semibold tabular-nums text-[color:var(--cab-text-muted)]">
-                                            {files.length}
-                                          </span>
-                                          <svg
-                                            className={`h-4 w-4 shrink-0 text-[color:var(--cab-text-muted)] transition-transform ${modelloOpen(marca.id, modello.id) ? "rotate-180" : ""}`}
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            strokeWidth={2}
-                                          >
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                          </svg>
-                                        </button>
-                                        <div
-                                          className={`grid bg-[var(--cab-card)] transition-[grid-template-rows] duration-200 ${modelloOpen(marca.id, modello.id) ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-                                        >
-                                          <div className="min-h-0 overflow-hidden bg-[var(--cab-card)]">
-                                            <ul className="py-0.5" role="listbox">
-                                              {files.map((d) => (
-                                                <ArchiveDocRow
-                                                  key={d.id}
-                                                  doc={d}
-                                                  selected={selectedDocId === d.id}
-                                                  onSelect={() => setSelectedDocId(d.id)}
-                                                  onInfo={() => setInfoDoc(d)}
-                                                  onFileUnavailable={(msg) => gestToast.warning(msg)}
-                                                  onApri={() => openDoc(d)}
-                                                />
-                                              ))}
-                                            </ul>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {documentiSenzaCollocazione.length > 0 ? (
-                    <div className="rounded-b-[var(--ds-radius-xl)] border-t border-[color:color-mix(in_srgb,var(--cab-warning)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_8%,var(--cab-surface))] p-3 sm:p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)]">Senza collocazione</p>
-                      <p className="mt-1 text-xs leading-snug text-[color:var(--cab-text-muted)]">
-                        Marca o modello non allineati all&apos;anagrafica. Aggiorna le impostazioni o il documento.
-                      </p>
-                      <ul
-                        className="mt-2 overflow-hidden rounded-[var(--ds-radius-lg)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--cab-warning)_35%,var(--cab-border)]"
-                        role="listbox"
-                      >
-                        {documentiSenzaCollocazione.map((d) => (
-                          <ArchiveDocRow
-                            key={d.id}
-                            doc={d}
-                            selected={selectedDocId === d.id}
-                            onSelect={() => setSelectedDocId(d.id)}
-                            onInfo={() => setInfoDoc(d)}
-                            onFileUnavailable={(msg) => gestToast.warning(msg)}
-                            onApri={() => openDoc(d)}
-                          />
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </div>
             {showDocPager ? (
               <TablePagination
                 page={marcaPage}
                 pageCount={docPageCount}
                 onPageChange={setMarcaPage}
                 label={docPagerLabel}
-                className="rounded-b-[var(--ds-radius-xl)] border border-t-0 border-[color:var(--cab-border)] bg-[var(--cab-surface-2)]/40"
+                className="rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-surface-2)]/40"
               />
             ) : null}
-          </section>
-        </ShellCard>
+          </>
+        )}
       </div>
 
       {uploadOpen && canUploadDocuments ? (

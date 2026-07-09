@@ -1,14 +1,17 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import { GestionaleUploadDropExpand } from "@/components/gestionale/upload";
 import { LoadingProgressBar } from "@/components/design-system/loading";
-import { analyzeOrdineFornitoreImport, finalizeOrdineFornitoreImportDocument } from "@/lib/ordini-fornitori/import/ordine-fornitore-import-client";
-import { registerImportPreventivoDocumento } from "@/lib/ordini-fornitori/import/register-import-preventivo-documento";
+import { useImportFileUpload } from "@/lib/import-files/use-import-file-upload";
+import {
+  abandonImportFile,
+  analyzeOrdineFornitoreImport,
+} from "@/lib/ordini-fornitori/import/ordine-fornitore-import-client";
 import type { OrdineFornitoreImportAnalyzeResult } from "@/lib/ordini-fornitori/import/ordine-fornitore-import-types";
-import { dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
+import { dsBtnNeutral } from "@/lib/ui/design-system";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 type Phase = "idle" | "upload" | "analyze" | "duplicate" | "error";
@@ -21,9 +24,11 @@ type Props = {
 
 export function OrdineFornitoreImportModal({ open, onClose, onComplete }: Props) {
   const gestToast = useGestionaleToast();
+  const importUpload = useImportFileUpload();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [pendingDocumentoId, setPendingDocumentoId] = useState<string | null>(null);
+  const [pendingImportFileId, setPendingImportFileId] = useState<string | null>(null);
   const [pendingAnalyze, setPendingAnalyze] = useState<{
     result: OrdineFornitoreImportAnalyzeResult;
     duplicateMessage: string;
@@ -33,53 +38,54 @@ export function OrdineFornitoreImportModal({ open, onClose, onComplete }: Props)
     setPhase("idle");
     setError(null);
     setPendingAnalyze(null);
-    setPendingDocumentoId(null);
-  }, []);
+    setPendingImportFileId(null);
+    importUpload.reset();
+  }, [importUpload]);
 
-  const abandonPendingDocument = useCallback(async () => {
-    if (!pendingDocumentoId) return;
+  const abandonPendingImport = useCallback(async () => {
+    if (!pendingImportFileId) return;
     try {
-      await finalizeOrdineFornitoreImportDocument({
-        documentoId: pendingDocumentoId,
-        action: "unlink",
-      });
+      await abandonImportFile(pendingImportFileId);
     } catch {
       /* best-effort cleanup */
     }
-    setPendingDocumentoId(null);
-  }, [pendingDocumentoId]);
+    setPendingImportFileId(null);
+  }, [pendingImportFileId]);
 
   const closeModal = useCallback(() => {
-    void abandonPendingDocument().finally(() => {
+    void abandonPendingImport().finally(() => {
       reset();
       onClose();
     });
-  }, [abandonPendingDocument, onClose, reset]);
+  }, [abandonPendingImport, onClose, reset]);
 
-  const runAnalyze = useCallback(
-    async (documentoId: string) => {
-      setPhase("analyze");
-      setError(null);
-      try {
-        const result = await analyzeOrdineFornitoreImport({ documentoId });
-        return result;
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Analisi non riuscita.");
-        setPhase("error");
-        return null;
-      }
-    },
-    [],
-  );
+  const runAnalyze = useCallback(async (importFileId: string) => {
+    setPhase("analyze");
+    setError(null);
+    try {
+      return await analyzeOrdineFornitoreImport({
+        source: { type: "import_file", id: importFileId },
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Analisi non riuscita.");
+      setPhase("error");
+      return null;
+    }
+  }, []);
 
   const handleFile = useCallback(
     async (file: File) => {
       setPhase("upload");
       setError(null);
       try {
-        const { documentoId } = await registerImportPreventivoDocumento(file);
-        setPendingDocumentoId(documentoId);
-        const preview = await runAnalyze(documentoId);
+        const uploaded = await importUpload.upload({ file, kind: "ordine_fornitore" });
+        if (!uploaded?.fileId) {
+          setError(importUpload.error ?? "Upload non riuscito.");
+          setPhase("error");
+          return;
+        }
+        setPendingImportFileId(uploaded.fileId);
+        const preview = await runAnalyze(uploaded.fileId);
         if (!preview) return;
 
         const dupParts: string[] = [];
@@ -98,7 +104,7 @@ export function OrdineFornitoreImportModal({ open, onClose, onComplete }: Props)
           setPhase("duplicate");
           return;
         }
-        setPendingDocumentoId(null);
+        setPendingImportFileId(null);
         onComplete(preview);
         reset();
         onClose();
@@ -108,12 +114,16 @@ export function OrdineFornitoreImportModal({ open, onClose, onComplete }: Props)
         gestToast.error(e);
       }
     },
-    [gestToast, onClose, onComplete, reset, runAnalyze],
+    [gestToast, importUpload, onClose, onComplete, reset, runAnalyze],
   );
 
   if (!open) return null;
 
-  const busy = phase === "upload" || phase === "analyze";
+  const busy =
+    phase === "upload" ||
+    phase === "analyze" ||
+    importUpload.phase === "uploading" ||
+    importUpload.phase === "finalizing";
 
   return (
     <>
@@ -133,55 +143,65 @@ export function OrdineFornitoreImportModal({ open, onClose, onComplete }: Props)
         }
       >
         <div className="space-y-4">
-          {phase === "idle" || phase === "error" ? (
+          {busy ? (
+            <LoadingProgressBar label={phase === "analyze" ? "Analisi IA in corso…" : "Caricamento file…"} />
+          ) : phase === "error" ? (
+            <p className="text-sm text-destructive">{error ?? importUpload.error}</p>
+          ) : (
             <GestionaleUploadDropExpand
               accept="application/pdf,image/jpeg,image/png,image/webp,image/*"
               disabled={busy}
               dropTitle="Trascina preventivo fornitore"
-              dropHint="PDF, JPG, PNG — anche scansioni e multipagina"
-              onFile={(file) => void handleFile(file)}
+              dropHint="PDF o immagine — il file resta temporaneo e non entra in Documenti"
+              onFile={handleFile}
             >
-              <div className="rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] p-6 text-center text-sm text-[color:var(--cab-muted-fg)]">
-                Trascina il file qui o rilascialo sulla finestra
+              <div className="flex flex-col items-center gap-2 py-6">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png,image/webp,image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handleFile(file);
+                    e.target.value = "";
+                  }}
+                />
+                <button
+                  type="button"
+                  className={dsBtnNeutral}
+                  disabled={busy}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Scegli file
+                </button>
               </div>
             </GestionaleUploadDropExpand>
-          ) : null}
-
-          {phase === "upload" ? (
-            <div className="space-y-2">
-              <p className="text-sm text-[color:var(--cab-text)]">Caricamento documento…</p>
-              <LoadingProgressBar />
-            </div>
-          ) : null}
-
-          {phase === "analyze" ? (
-            <div className="space-y-2">
-              <p className="text-sm text-[color:var(--cab-text)]">Analisi AI e riconoscimento dati…</p>
-              <LoadingProgressBar />
-            </div>
-          ) : null}
-
-          {error ? <p className="text-sm text-[color:var(--cab-danger)]">{error}</p> : null}
+          )}
         </div>
       </GestionaleModalShell>
 
-      <GestionaleConfirmDialog
-        open={phase === "duplicate" && pendingAnalyze !== null}
-        title="Possibile duplicato"
-        message={pendingAnalyze?.duplicateMessage ?? ""}
-        confirmLabel="Procedi comunque"
-        cancelLabel="Annulla"
-        onConfirm={() => {
-          if (!pendingAnalyze) return;
-          setPendingDocumentoId(null);
-          onComplete(pendingAnalyze.result);
-          reset();
-          onClose();
-        }}
-        onCancel={() => {
-          closeModal();
-        }}
-      />
+      {pendingAnalyze ? (
+        <GestionaleConfirmDialog
+          open
+          title="Import duplicato"
+          message={pendingAnalyze.duplicateMessage}
+          confirmLabel="Continua comunque"
+          cancelLabel="Annulla"
+          onConfirm={() => {
+            setPendingImportFileId(null);
+            onComplete(pendingAnalyze.result);
+            reset();
+            onClose();
+          }}
+          onCancel={() => {
+            void abandonPendingImport().finally(() => {
+              reset();
+              onClose();
+            });
+          }}
+        />
+      ) : null}
     </>
   );
 }

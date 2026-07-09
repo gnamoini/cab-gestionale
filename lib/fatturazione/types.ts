@@ -10,7 +10,7 @@ import type {
   PreventivoBillingStatusRow,
 } from "@/src/types/supabase-tables";
 
-export type FatturazioneOrigine = "manuale" | "preventivo" | "multi_preventivo";
+export type FatturazioneOrigine = "manuale" | "preventivo" | "multi_preventivo" | "ddt";
 
 export type InvoiceDraftRowInput = {
   tipo: InvoiceRowTipo;
@@ -55,6 +55,21 @@ export type InvoicePaymentInput = {
   metodo: InvoicePaymentMetodo;
   riferimento?: string | null;
   note?: string | null;
+};
+
+export type CustomerPaymentAllocationInput = {
+  open_item_id: string;
+  amount: number;
+};
+
+export type CustomerPaymentMultiInput = {
+  customer_id: string | null;
+  data: string;
+  importo: number;
+  metodo: InvoicePaymentMetodo;
+  riferimento?: string | null;
+  note?: string | null;
+  allocations: CustomerPaymentAllocationInput[];
 };
 
 export type InvoiceDetail = {

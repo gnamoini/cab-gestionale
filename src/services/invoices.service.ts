@@ -8,7 +8,7 @@ import {
   INVOICES_COLUMNS,
 } from "@/lib/db/table-select-columns";
 import { fetchInvoiceListPayload } from "@/lib/fatturazione/fatturazione-fetch";
-import type { InvoiceCreateInput, InvoiceDetail, InvoicePaymentInput } from "@/lib/fatturazione/types";
+import type { InvoiceCreateInput, InvoiceDetail, InvoicePaymentInput, CustomerPaymentMultiInput } from "@/lib/fatturazione/types";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -19,6 +19,7 @@ import type {
   InvoicePaymentRow,
   InvoiceRow,
 } from "@/src/types/supabase-tables";
+import { invoiceApplyTransition } from "@/lib/fatturazione/invoice-apply-transition";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const ENTITA = "invoices";
@@ -138,7 +139,7 @@ export const invoicesService = {
 
   async updateDraft(
     id: string,
-    patch: Partial<Pick<InvoiceRow, "cliente_label" | "customer_snapshot" | "data_emissione" | "data_scadenza" | "note" | "admin_notes" | "status">>,
+    patch: Partial<Pick<InvoiceRow, "cliente_label" | "customer_snapshot" | "data_emissione" | "data_scadenza" | "note" | "admin_notes">>,
     expectedUpdatedAt?: string,
   ): Promise<ServiceResult<InvoiceRow>> {
     try {
@@ -200,7 +201,10 @@ export const invoicesService = {
       if (!before) return err("Fattura non trovata.");
       const b = before as InvoiceRow;
       if (b.status === "annullata" || b.status === "pagata") return err("Stato fattura non modificabile.");
-      const { data, error } = await c.from("invoices").update({ status }).eq("id", id).select(INVOICES_COLUMNS).single();
+      const transition = status === "inviata" ? "mark_sent_to_customer" : "emit";
+      const applied = await invoiceApplyTransition(id, transition, undefined, b.version);
+      if (!applied.ok) return err(applied.error);
+      const { data, error } = await c.from("invoices").select(INVOICES_COLUMNS).eq("id", id).single();
       if (error) return err(error.message);
       await writeModificaLog(c, { entita: ENTITA, entita_id: id, azione: "UPDATE", payload: auditDiff(before, data) });
       return success(data as InvoiceRow);
@@ -256,7 +260,48 @@ export const invoicesService = {
     }
   },
 
-  /** Hard delete bozze — cascade righe/link; irreversibile. */
+  async createCreditNote(
+    invoiceId: string,
+    amount?: number,
+    reason?: string,
+  ): Promise<ServiceResult<InvoiceDetail>> {
+    try {
+      const c = await sb();
+      const { data, error } = await c.rpc("create_credit_note_from_invoice", {
+        p_invoice_id: invoiceId,
+        p_amount: amount ?? null,
+        p_reason: reason ?? null,
+      });
+      if (error) return err(error.message);
+      const ncId = String(data ?? "");
+      if (!ncId) return err("Creazione nota di credito non riuscita.");
+      return invoicesService.getDetail(ncId);
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
+  async registerCustomerPaymentMulti(input: CustomerPaymentMultiInput): Promise<ServiceResult<string>> {
+    try {
+      const c = await sb();
+      const { data, error } = await c.rpc("register_customer_payment_multi", {
+        p_payload: {
+          customer_id: input.customer_id,
+          data: input.data,
+          importo: input.importo,
+          metodo: input.metodo,
+          riferimento: input.riferimento ?? null,
+          note: input.note ?? null,
+          allocations: input.allocations,
+        },
+      });
+      if (error) return err(error.message);
+      return success(String(data ?? ""));
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
       const c = await sb();
