@@ -25,7 +25,11 @@ import type {
 import type {
   DerivedEntry,
   DerivedKey,
+  EconomicAnalyticsDto,
+  LaborAnalyticsDto,
+  OperationalAnalyticsDto,
   ReportAnalyticsDerivedSnapshot,
+  WarehouseAnalyticsDto,
 } from "@/lib/report/report-domain-types";
 
 type VersionMap = Record<DerivedKey, number>;
@@ -64,10 +68,10 @@ export function ReportAnalyticsDerivedProvider({
 }) {
   const [revision, setRevision] = useState(0);
   const [currentRangeKey, setCurrentRangeKey] = useState(rangeKey);
-  const [operational, setOperational] = useState<DerivedEntry<ReturnType<typeof buildOperationalAnalytics>>>();
-  const [warehouse, setWarehouse] = useState<DerivedEntry<ReturnType<typeof buildWarehouseAnalytics>>>();
-  const [labor, setLabor] = useState<DerivedEntry<ReturnType<typeof buildLaborAnalytics>>>();
-  const [economic, setEconomic] = useState<DerivedEntry<ReturnType<typeof buildEconomicAnalytics>>>();
+  const [operational, setOperational] = useState<DerivedEntry<OperationalAnalyticsDto>>();
+  const [warehouse, setWarehouse] = useState<DerivedEntry<WarehouseAnalyticsDto>>();
+  const [labor, setLabor] = useState<DerivedEntry<LaborAnalyticsDto>>();
+  const [economic, setEconomic] = useState<DerivedEntry<EconomicAnalyticsDto>>();
 
   const versionsRef = useRef<VersionMap>({ ...EMPTY_VERSIONS });
   const lastAcceptedRef = useRef<Record<DerivedKey, number>>({
