@@ -78,8 +78,6 @@ function queryKeyForScope(scopeKey: QueryScopeKey): readonly unknown[] {
       return ["schede", "bundles"] as const;
     case "dashboard.promemoria":
       return ["dashboard-promemoria"] as const;
-    case "dashboard.log":
-      return ["log_modifiche"] as const;
     default: {
       const _exhaustive: never = scopeKey;
       return [_exhaustive];

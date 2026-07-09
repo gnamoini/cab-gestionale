@@ -74,6 +74,7 @@ export function ReportMagazzinoSection({
   compareDetail,
   histRev,
   onHistRev,
+  embed = false,
 }: {
   derivedBundle: ReportDerivedBundle;
   prodotti: RicambioMagazzino[];
@@ -82,6 +83,7 @@ export function ReportMagazzinoSection({
   compareDetail: ReportCompareDetail | null;
   histRev: number;
   onHistRev: () => void;
+  embed?: boolean;
 }) {
   const magLogSorted = derivedBundle.magLogSorted;
   const [manualMap, setManualMap] = useState<MagazzinoManualMonthMap>(() => loadMagazzinoManualMonthMap());
@@ -209,18 +211,14 @@ export function ReportMagazzinoSection({
       </ReportCompareBanner>
     ) : null;
 
-  return (
-    <ShellCard
-      id="report-magazzino"
-      title="Magazzino / ricambi"
-      collapsible
-      defaultCollapsed={false}
-      headerActions={
-        <button type="button" onClick={openModal} className={`${erpBtnNeutral} shrink-0 sm:text-sm`}>
-          Gestisci storico magazzino
-        </button>
-      }
-    >
+  const histBtn = (
+    <button type="button" onClick={openModal} className={`${erpBtnNeutral} shrink-0 sm:text-sm`}>
+      Gestisci storico magazzino
+    </button>
+  );
+
+  const panel = (
+    <>
       {cmpMag}
       {note ? (
         <ReportCompareBanner>
@@ -329,9 +327,12 @@ export function ReportMagazzinoSection({
           )}
         </div>
       </div>
+    </>
+  );
 
-      {open ? (
-        <GestionaleModalShell
+  const modal =
+    open ? (
+      <GestionaleModalShell
           modalSize="analytics"
           modalHeight="tall"
           title="Storico manuale magazzino"
@@ -430,7 +431,30 @@ export function ReportMagazzinoSection({
             </div>
           </div>
         </GestionaleModalShell>
-      ) : null}
-    </ShellCard>
+      ) : null;
+
+  if (embed) {
+    return (
+      <div className="min-w-0">
+        <div className="mb-3 flex justify-end">{histBtn}</div>
+        {panel}
+        {modal}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <ShellCard
+        id="report-magazzino"
+        title="Magazzino / ricambi"
+        collapsible
+        defaultCollapsed={false}
+        headerActions={histBtn}
+      >
+        {panel}
+      </ShellCard>
+      {modal}
+    </>
   );
 }

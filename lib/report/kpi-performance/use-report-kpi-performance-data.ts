@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { buildKpiPerformanceModel } from "@/lib/report/kpi-performance/build-kpi-performance-model";
 import type { KpiPerformanceModel } from "@/lib/report/kpi-performance/kpi-performance-types";
-import type { DateRange } from "@/lib/report/date-ranges";
+import type { DateRange, ReportCompareMode } from "@/lib/report/date-ranges";
 import type { ReportSemanticIndex } from "@/lib/report/report-semantic-index";
 import type { useReportLiveData } from "@/lib/report/use-report-live-data";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
@@ -18,14 +18,18 @@ export function useReportKpiPerformanceData({
   anchor,
   range,
   compareRange,
+  compareMode = "none",
   live,
   semanticIndex,
+  enabled = true,
 }: {
   anchor: Date;
   range: DateRange;
   compareRange: DateRange | null;
+  compareMode?: ReportCompareMode;
   live: LiveSlice;
   semanticIndex: ReportSemanticIndex;
+  enabled?: boolean;
 }): {
   model: KpiPerformanceModel | null;
   isLoading: boolean;
@@ -33,7 +37,7 @@ export function useReportKpiPerformanceData({
 } {
   const lavRows = live.lavListRows;
   const schedeLavorazioneIds = useMemo(() => lavRows.map((row) => row.id), [lavRows]);
-  const { store: schedeStore, isLoading: schedeLoading } = useSchedeBundlesQuery(!live.isLoading, {
+  const { store: schedeStore, isLoading: schedeLoading } = useSchedeBundlesQuery(!live.isLoading && enabled, {
     lavorazioneIds: schedeLavorazioneIds,
   });
   const settingsQ = useCabAppSettingsPayloadQuery({ tier: "static" });
@@ -51,11 +55,12 @@ export function useReportKpiPerformanceData({
   }, [live.magazzino]);
 
   const model = useMemo(() => {
-    if (live.isLoading) return null;
+    if (!enabled || live.isLoading) return null;
     return buildKpiPerformanceModel({
       anchor,
       range,
       compareRange,
+      compareMode,
       attive: live.attive,
       completate: live.completate,
       mezzi: live.mezzi,
@@ -69,6 +74,7 @@ export function useReportKpiPerformanceData({
       costoOrario,
     });
   }, [
+    enabled,
     live.isLoading,
     live.attive,
     live.completate,
@@ -79,6 +85,7 @@ export function useReportKpiPerformanceData({
     anchor,
     range,
     compareRange,
+    compareMode,
     magazzinoRows,
     semanticIndex,
     schedeStore,
@@ -88,7 +95,7 @@ export function useReportKpiPerformanceData({
 
   return {
     model,
-    isLoading: live.isLoading,
-    schedeLoaded: !schedeLoading,
+    isLoading: enabled && live.isLoading,
+    schedeLoaded: !enabled || !schedeLoading,
   };
 }

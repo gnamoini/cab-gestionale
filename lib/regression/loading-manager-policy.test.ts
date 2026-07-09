@@ -16,6 +16,7 @@ function main(): void {
   assert.match(manager, /LoadingManagerProvider/);
   assert.match(manager, /useLoadingClaim/);
   assert.match(manager, /useIsWinningClaim/);
+  assert.doesNotMatch(manager, /useLoadingClaim[\s\S]*\], \[ctx,/);
   assert.match(manager, /resolveWinningSurface/);
 
   const rbacGuard = read("components/gestionale/rbac-page-guard.tsx");

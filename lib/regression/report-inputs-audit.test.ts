@@ -34,12 +34,15 @@ const magazzino = read("components/report/report-magazzino-section.tsx");
 const ricambi = read("components/report/report-ricambi-consumo-section.tsx");
 
 assert.match(controls, /aria-pressed=\{preset === id\}/);
-assert.match(controls, /htmlFor="report-compare"/);
-assert.match(controls, /htmlFor="report-preset-more"/);
-assert.match(controls, /id="report-period-da"/);
+assert.match(controls, /id="report-compare-da"/);
 assert.match(controls, /id="report-period-a"/);
+assert.match(controls, /Periodo analisi/);
+assert.match(controls, /Periodo confronto/);
 assert.match(controls, /GlobalDatePickerYmd/);
 assert.match(controls, /GlobalSelect/);
+assert.match(controls, /reportPeriodPresetSelectItemsForOverflow/);
+assert.match(controls, /reportQuickPresetChipLabel/);
+assert.match(controls, /REPORT_COMPARE_QUICK_IDS/);
 
 assert.match(temporal, /htmlFor=\{yearSelectId\}/);
 assert.match(temporal, /GlobalSelect/);

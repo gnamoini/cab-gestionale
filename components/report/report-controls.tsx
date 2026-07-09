@@ -1,15 +1,28 @@
 "use client";
 
-import type { ReactNode } from "react";
-import type { ReportCompareMode, ReportPeriodPreset } from "@/lib/report/date-ranges";
+import type { DateRange, ReportCompareMode, ReportPeriodPreset } from "@/lib/report/date-ranges";
+import { inclusiveDayCount, ymdFromDate } from "@/lib/report/date-ranges";
 import {
-  REPORT_PERIOD_PRESETS,
-  REPORT_QUICK_PRESET_IDS,
   REPORT_PRESET_LABELS,
+  REPORT_QUICK_PRESET_IDS,
+  reportOverflowSelectValue,
+  reportPeriodPresetSelectItemsForOverflow,
+  reportQuickPresetChipLabel,
 } from "@/lib/report/report-period-presets";
-import { ToolbarGroupMetaRow, ToolbarGroupPrimaryRow } from "@/components/design-system/toolbar-group";
+import {
+  REPORT_COMPARE_OPTIONS,
+  REPORT_COMPARE_QUICK_IDS,
+  reportCompareQuickChipLabel,
+} from "@/lib/report/report-compare-options";
 import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/global-input";
 import { globalInputFieldFilter } from "@/lib/ui/global-input";
+import {
+  reportPeriodPanelClass,
+  reportPeriodPanelCompareClass,
+  reportPeriodPanelHintClass,
+  reportPeriodPanelTitleClass,
+  reportHealthChipClass,
+} from "@/components/report/report-ui-tokens";
 import {
   dsFocus,
   dsSegmentedBtnOff,
@@ -18,12 +31,38 @@ import {
   dsTypoSmall,
 } from "@/lib/ui/design-system";
 
-const PERIOD_SELECT_ITEMS = REPORT_PERIOD_PRESETS.map((p) => ({
-  value: p.id,
-  label: REPORT_PRESET_LABELS[p.id],
-}));
+const OVERFLOW_SELECT_ITEMS = reportPeriodPresetSelectItemsForOverflow();
+const fieldLabelClass = `${dsTypoSmall} text-[color:var(--cab-text-muted)]`;
+const reportDateInputClass = `${globalInputFieldFilter} h-10 w-full min-w-0`;
+/** 7 colonne × 36px + padding — calendario non schiacciato in toolbar stretta. */
+const REPORT_DATE_CALENDAR_PANEL_WIDTH = 300;
 
-const periodFieldLabelClass = `${dsTypoSmall} text-[color:var(--cab-text-muted)]`;
+function DateField({
+  id,
+  label,
+  valueYmd,
+  onChangeYmd,
+}: {
+  id: string;
+  label: string;
+  valueYmd: string;
+  onChangeYmd: (ymd: string) => void;
+}) {
+  return (
+    <label htmlFor={id} className="flex min-w-0 w-full flex-col gap-1">
+      <span className={fieldLabelClass}>{label}</span>
+      <GlobalDatePickerYmd
+        id={id}
+        valueYmd={valueYmd}
+        onChangeYmd={onChangeYmd}
+        inputClassName={reportDateInputClass}
+        calendarPanelWidth={REPORT_DATE_CALENDAR_PANEL_WIDTH}
+      />
+    </label>
+  );
+}
+
+const dateFieldsRowClass = "grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2";
 
 export function ReportControls({
   preset,
@@ -34,7 +73,12 @@ export function ReportControls({
   onCustomTo,
   compareMode,
   onCompareMode,
-  periodMeta,
+  compareCustomFrom,
+  compareCustomTo,
+  onCompareCustomFrom,
+  onCompareCustomTo,
+  range,
+  compareRange,
 }: {
   preset: ReportPeriodPreset;
   onPreset: (p: ReportPeriodPreset) => void;
@@ -44,89 +88,173 @@ export function ReportControls({
   onCustomTo: (s: string) => void;
   compareMode: ReportCompareMode;
   onCompareMode: (m: ReportCompareMode) => void;
-  periodMeta?: ReactNode;
+  compareCustomFrom: string;
+  compareCustomTo: string;
+  onCompareCustomFrom: (s: string) => void;
+  onCompareCustomTo: (s: string) => void;
+  range: DateRange;
+  compareRange: DateRange | null;
 }) {
+  const analysisFrom = preset === "custom" ? customFrom : ymdFromDate(range.start);
+  const analysisTo = preset === "custom" ? customTo : ymdFromDate(range.end);
+  const overflowValue = reportOverflowSelectValue(preset);
+  const analysisDays = inclusiveDayCount(range);
+
+  const compareActive = compareMode !== "none" && compareRange != null;
+  const compareFrom =
+    compareMode === "custom_range"
+      ? compareCustomFrom
+      : compareRange
+        ? ymdFromDate(compareRange.start)
+        : "";
+  const compareTo =
+    compareMode === "custom_range"
+      ? compareCustomTo
+      : compareRange
+        ? ymdFromDate(compareRange.end)
+        : "";
+  const compareDays = compareRange ? inclusiveDayCount(compareRange) : 0;
+
+  const pickAnalysisFrom = (ymd: string) => {
+    const nextTo = preset === "custom" ? customTo : analysisTo;
+    onCustomFrom(ymd);
+    onCustomTo(nextTo);
+    if (preset !== "custom") onPreset("custom");
+  };
+
+  const pickAnalysisTo = (ymd: string) => {
+    const nextFrom = preset === "custom" ? customFrom : analysisFrom;
+    onCustomFrom(nextFrom);
+    onCustomTo(ymd);
+    if (preset !== "custom") onPreset("custom");
+  };
+
+  const pickCompareFrom = (ymd: string) => {
+    const nextTo = compareTo || ymd;
+    onCompareCustomFrom(ymd);
+    onCompareCustomTo(nextTo);
+    onCompareMode("custom_range");
+  };
+
+  const pickCompareTo = (ymd: string) => {
+    const nextFrom = compareFrom || ymd;
+    onCompareCustomFrom(nextFrom);
+    onCompareCustomTo(ymd);
+    onCompareMode("custom_range");
+  };
+
   return (
-    <>
-      <ToolbarGroupPrimaryRow className="items-end gap-2 sm:flex-wrap sm:justify-start sm:gap-3">
-        <div className="flex min-w-0 w-full flex-1 flex-col gap-1 sm:w-auto">
-          <span className={periodFieldLabelClass}>Rapidi</span>
-          <div
-            className={`gestionale-scrollbar ${dsSegmentedWrap} flex h-10 max-w-full items-center overflow-x-auto`}
+    <div className="grid min-w-0 gap-3 lg:grid-cols-2" role="group" aria-label="Filtri periodo report">
+      <section className={reportPeriodPanelClass} aria-labelledby="report-panel-analisi-title">
+        <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h2 id="report-panel-analisi-title" className={reportPeriodPanelTitleClass}>
+              Periodo analisi
+            </h2>
+            <span className={reportHealthChipClass}>{REPORT_PRESET_LABELS[preset]}</span>
+          </div>
+          <span className={reportPeriodPanelHintClass}>{analysisDays} giorni</span>
+        </div>
+
+        <div className={dateFieldsRowClass}>
+          <DateField id="report-period-da" label="Da" valueYmd={analysisFrom} onChangeYmd={pickAnalysisFrom} />
+          <DateField id="report-period-a" label="A" valueYmd={analysisTo} onChangeYmd={pickAnalysisTo} />
+        </div>
+
+        <div
+          className={`${dsSegmentedWrap} mt-3 min-w-0 max-w-full items-center`}
+          role="group"
+          aria-label="Scorciatoie periodo analisi"
+        >
+          {REPORT_QUICK_PRESET_IDS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={preset === id}
+              title={REPORT_PRESET_LABELS[id]}
+              onClick={() => onPreset(id)}
+              className={`h-8 shrink-0 px-2 sm:px-2.5 ${preset === id ? dsSegmentedBtnOn : dsSegmentedBtnOff} ${dsFocus}`}
+            >
+              {reportQuickPresetChipLabel(id)}
+            </button>
+          ))}
+        </div>
+
+        <label htmlFor="report-period-preset" className="mt-3 flex min-w-0 flex-col gap-1">
+          <span className={fieldLabelClass}>Altro periodo</span>
+          <GlobalSelect
+            id="report-period-preset"
+            variant="filter"
+            selectOnly
+            placeholder="—"
+            filterNeutralValues={[""]}
+            inputClassName={`${globalInputFieldFilter} h-10 w-full`}
+            items={OVERFLOW_SELECT_ITEMS}
+            value={overflowValue}
+            onChange={(v) => {
+              if (!v) return;
+              const next = v as ReportPeriodPreset;
+              if (next === "custom" && preset !== "custom") {
+                onCustomFrom(analysisFrom);
+                onCustomTo(analysisTo);
+              }
+              onPreset(next);
+            }}
+            strictFromList
+          />
+        </label>
+      </section>
+
+      <section
+        className={`${reportPeriodPanelCompareClass} ${compareActive ? "" : "opacity-[0.72]"}`}
+        aria-labelledby="report-panel-confronto-title"
+        aria-disabled={!compareActive}
+      >
+        <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2">
+          <h2 id="report-panel-confronto-title" className={reportPeriodPanelTitleClass}>
+            Periodo confronto
+          </h2>
+          <span className={reportPeriodPanelHintClass}>
+            {compareActive ? `${compareDays} giorni` : "Disattivato"}
+          </span>
+        </div>
+
+        <div className={dateFieldsRowClass}>
+          <DateField id="report-compare-da" label="Da" valueYmd={compareFrom} onChangeYmd={pickCompareFrom} />
+          <DateField id="report-compare-a" label="A" valueYmd={compareTo} onChangeYmd={pickCompareTo} />
+        </div>
+
+        <div
+          className={`${dsSegmentedWrap} mt-3 min-w-0 max-w-full flex-wrap items-center`}
+          role="group"
+          aria-label="Scorciatoie periodo confronto"
+        >
+          <button
+            type="button"
+            aria-pressed={compareMode === "none"}
+            title="Nessun confronto"
+            onClick={() => onCompareMode("none")}
+            className={`h-8 shrink-0 px-2.5 sm:px-3 ${compareMode === "none" ? dsSegmentedBtnOn : dsSegmentedBtnOff} ${dsFocus}`}
           >
-            {REPORT_QUICK_PRESET_IDS.map((id) => (
+            Nessuno
+          </button>
+          {REPORT_COMPARE_QUICK_IDS.map((id) => {
+            const fullLabel = REPORT_COMPARE_OPTIONS.find((o) => o.value === id)?.label ?? id;
+            return (
               <button
                 key={id}
                 type="button"
-                aria-pressed={preset === id}
-                onClick={() => onPreset(id)}
-                className={`h-8 shrink-0 ${preset === id ? dsSegmentedBtnOn : dsSegmentedBtnOff} ${dsFocus}`}
+                aria-pressed={compareMode === id}
+                title={fullLabel}
+                onClick={() => onCompareMode(id)}
+                className={`h-8 shrink-0 px-2 sm:px-2.5 ${compareMode === id ? dsSegmentedBtnOn : dsSegmentedBtnOff} ${dsFocus}`}
               >
-                {REPORT_PRESET_LABELS[id]}
+                {reportCompareQuickChipLabel(id)}
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
-        <label
-          htmlFor="report-preset-more"
-          className="flex w-full min-w-0 shrink-0 flex-col gap-1 sm:w-auto sm:min-w-[10.5rem] sm:max-w-[14rem]"
-        >
-          <span className={periodFieldLabelClass}>Periodo</span>
-          <GlobalSelect
-            id="report-preset-more"
-            variant="filter"
-            selectOnly
-            inputClassName={`${globalInputFieldFilter} h-10 w-full`}
-            items={PERIOD_SELECT_ITEMS}
-            value={preset}
-            onChange={(v) => onPreset(v as ReportPeriodPreset)}
-            strictFromList
-          />
-        </label>
-        <label
-          htmlFor="report-compare"
-          className="flex w-full min-w-0 shrink-0 flex-col gap-1 sm:ml-auto sm:w-auto sm:min-w-[11.5rem]"
-        >
-          <span className={periodFieldLabelClass}>Confronto</span>
-          <GlobalSelect
-            id="report-compare"
-            variant="filter"
-            selectOnly
-            inputClassName={`${globalInputFieldFilter} h-10 w-full`}
-            items={[
-              { value: "none", label: "Nessun confronto" },
-              { value: "prev_period", label: "Periodo precedente" },
-              { value: "prev_year", label: "Stesso periodo anno scorso" },
-            ]}
-            value={compareMode}
-            onChange={(v) => onCompareMode(v as ReportCompareMode)}
-            strictFromList
-          />
-        </label>
-      </ToolbarGroupPrimaryRow>
-
-      {preset === "custom" ? (
-        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3">
-          <label
-            htmlFor="report-period-da"
-            className={`block min-w-0 sm:max-w-[11rem] ${dsTypoSmall} text-[color:var(--cab-text)]`}
-          >
-            <span className={`mb-1 block ${periodFieldLabelClass}`}>Da</span>
-            <GlobalDatePickerYmd id="report-period-da" valueYmd={customFrom} onChangeYmd={onCustomFrom} />
-          </label>
-          <label
-            htmlFor="report-period-a"
-            className={`block min-w-0 sm:max-w-[11rem] ${dsTypoSmall} text-[color:var(--cab-text)]`}
-          >
-            <span className={`mb-1 block ${periodFieldLabelClass}`}>A</span>
-            <GlobalDatePickerYmd id="report-period-a" valueYmd={customTo} onChangeYmd={onCustomTo} />
-          </label>
-        </div>
-      ) : null}
-
-      {periodMeta ? (
-        <ToolbarGroupMetaRow className="w-full !flex-wrap !justify-start gap-0">{periodMeta}</ToolbarGroupMetaRow>
-      ) : null}
-    </>
+      </section>
+    </div>
   );
 }

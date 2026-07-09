@@ -4,7 +4,8 @@ import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import {
-  compareRangeFor,
+  compareBaselineValue,
+  resolveReportCompareRange,
   deltaPct,
   resolvePresetRange,
   type DateRange,
@@ -28,6 +29,8 @@ export type ReportLiveInput = {
   customFrom?: string;
   customTo?: string;
   compareMode?: ReportCompareMode;
+  compareCustomFrom?: string;
+  compareCustomTo?: string;
   attive: LavorazioneAttiva[];
   storico: LavorazioneArchiviata[];
   completate: LavorazioneArchiviata[];
@@ -96,7 +99,12 @@ function fmtSignedEur(n: number): string {
 export function buildReportModel(input: ReportLiveInput): ReportModel {
   const compareMode = input.compareMode ?? "none";
   const range = resolvePresetRange(input.anchor, input.preset, input.customFrom, input.customTo);
-  const compareRange = compareMode === "none" ? null : compareRangeFor(range, compareMode);
+  const compareRange = resolveReportCompareRange(
+    range,
+    compareMode,
+    input.compareCustomFrom,
+    input.compareCustomTo,
+  );
   const { attive, storico, completate, magazzino, mezzi, anchor, semanticIndex, derivedBundle } = input;
   const magLogResolved = derivedBundle.magLogSorted;
 
@@ -111,11 +119,23 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
   const magCur = getMagPeriodAgg(derivedBundle, magazzino, range, anchor);
   const magPrev = compareRange ? getMagPeriodAgg(derivedBundle, magazzino, compareRange, anchor) : null;
 
-  const openedP = compareRange ? countOpenedInRange(attive, storico, compareRange) : null;
-  const completedP = compareRange ? semanticIndex.completateTotal(compareRange) : null;
+  const openedPRaw = compareRange ? countOpenedInRange(attive, storico, compareRange) : null;
+  const completedPRaw = compareRange ? semanticIndex.completateTotal(compareRange) : null;
   const tempoP = compareRange ? semanticIndex.tempoMedio(compareRange) : null;
-  const ricambiP = compareRange ? sumMagazzinoUsciteQtyInRange(magLogResolved, compareRange) : null;
-  const clientiP = compareRange ? uniqueClientiNelPeriodo(attive, storico, completate, compareRange) : null;
+  const ricambiPRaw = compareRange ? sumMagazzinoUsciteQtyInRange(magLogResolved, compareRange) : null;
+  const clientiPRaw = compareRange ? uniqueClientiNelPeriodo(attive, storico, completate, compareRange) : null;
+
+  const scale = (raw: number | null): number | null =>
+    compareRange && raw != null ? compareBaselineValue(raw, compareRange, range, compareMode) : null;
+
+  const openedP = scale(openedPRaw);
+  const completedP = scale(completedPRaw);
+  const ricambiP = scale(ricambiPRaw);
+  const clientiP = scale(clientiPRaw);
+  const magDeltaCapPrev =
+    compareRange && magPrev != null
+      ? compareBaselineValue(magPrev.deltaCapitale, compareRange, range, compareMode)
+      : null;
 
   const spark = semanticIndex.sparkSeries(range.end);
 
@@ -143,10 +163,10 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
       ? { abs: fmtSignedInt(clienti - clientiP), pct: deltaPct(clienti, clientiP) }
       : { abs: null, pct: null };
   const dDeltaCap =
-    magPrev != null
+    magDeltaCapPrev != null
       ? {
-          abs: fmtSignedEur(magCur.deltaCapitale - magPrev.deltaCapitale),
-          pct: deltaPct(magCur.deltaCapitale, magPrev.deltaCapitale),
+          abs: fmtSignedEur(magCur.deltaCapitale - magDeltaCapPrev),
+          pct: deltaPct(magCur.deltaCapitale, magDeltaCapPrev),
         }
       : { abs: null, pct: null };
 
@@ -219,7 +239,7 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
         completedCur: completed,
         completedPrev: completedP!,
         magDeltaCapCur: magCur.deltaCapitale,
-        magDeltaCapPrev: magPrev!.deltaCapitale,
+        magDeltaCapPrev: magDeltaCapPrev!,
       }
     : null;
 

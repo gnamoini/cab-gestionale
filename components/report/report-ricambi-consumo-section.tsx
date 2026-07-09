@@ -55,12 +55,14 @@ export function ReportRicambiConsumoSection({
   prodotti,
   filterRange,
   anchor,
+  embed = false,
 }: {
   /** Log magazzino ordinato — stessa fonte di KPI/sezione magazzino (`derivedBundle.magLogSorted`). */
   magLogSorted: MagazzinoChangeLogEntry[];
   prodotti: RicambioMagazzino[];
   filterRange: DateRange;
   anchor: Date;
+  embed?: boolean;
 }) {
   const monthKeys = useMemo(() => rangeToYmKeys(filterRange), [filterRange]);
   const years = useMemo(() => yearsInReportRange(filterRange), [filterRange]);
@@ -127,13 +129,8 @@ export function ReportRicambiConsumoSection({
 
   const hasLog = magLogSorted.length > 0;
 
-  return (
-    <ShellCard
-      id="report-magazzino-consumo"
-      title="Ricambi a maggior consumo"
-      collapsible
-      defaultCollapsed={false}
-    >
+  const panel = (
+    <>
       <div className="flex min-w-0 max-w-full flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Aggregazione</span>
@@ -269,6 +266,14 @@ export function ReportRicambiConsumoSection({
           </div>
         </>
       )}
+    </>
+  );
+
+  if (embed) return <div className="min-w-0">{panel}</div>;
+
+  return (
+    <ShellCard id="report-magazzino-consumo" title="Ricambi a maggior consumo" collapsible defaultCollapsed={false}>
+      {panel}
     </ShellCard>
   );
 }

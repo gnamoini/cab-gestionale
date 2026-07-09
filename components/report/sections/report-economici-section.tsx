@@ -1,15 +1,23 @@
 "use client";
 
 import { useMemo } from "react";
-import type { DdtListPayload } from "@/lib/ddt/types";
-import { ddtEntry } from "@/lib/domain/ddt-entry";
 import {
   useReportAnalyticsDerived,
   useReportAnalyticsDerivedActions,
 } from "@/components/report/report-analytics-derived-context";
-import { ReportDomainMetricsGrid } from "@/components/report/report-domain-metrics-grid";
 import type { DomainReportSectionProps } from "@/components/report/report-section-types";
+import {
+  ReportDataTable,
+  ReportDomainMetricsGrid,
+  ReportLineChart,
+  ReportSection,
+} from "@/components/report/design-system";
 import { usePublishWhenReady } from "@/components/report/sections/use-section-publish";
+import { aggregateInvoicesByMonth } from "@/lib/report/economic-period-aggregate";
+import { buildTopClientiByFatturato } from "@/lib/report/report-classifiche";
+import { countCompletedInRange } from "@/lib/report/lavorazioni-report-selectors";
+import type { DdtListPayload } from "@/lib/ddt/types";
+import { ddtEntry } from "@/lib/domain/ddt-entry";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
 import { useInvoicesQuery } from "@/src/hooks/gestionale/use-invoices-query";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
@@ -43,6 +51,30 @@ export default function ReportEconomiciSectionView(props: DomainReportSectionPro
     void ddtQ.refetch();
   };
 
+  const derivedHints = useMemo(() => {
+    const op = derived.operational?.data;
+    const lab = derived.labor?.data;
+    const wh = derived.warehouse?.data;
+    const completedPrev =
+      props.showCompare && props.compareRange
+        ? countCompletedInRange(props.completate, props.compareRange, props.manualByMonth)
+        : null;
+    return {
+      completedInPeriod: op?.completedInPeriod ?? null,
+      completedInPeriodPrev: completedPrev,
+      manodoperaCost: lab?.manodoperaCost ?? null,
+      movementValue: wh?.movementValue ?? null,
+    };
+  }, [
+    derived.operational,
+    derived.labor,
+    derived.warehouse,
+    props.showCompare,
+    props.compareRange,
+    props.completate,
+    props.manualByMonth,
+  ]);
+
   usePublishWhenReady(
     props.fetchEnabled && !loading,
     [
@@ -51,6 +83,9 @@ export default function ReportEconomiciSectionView(props: DomainReportSectionPro
       invoicesQ.invoices,
       ddtQ.data?.documents,
       isError,
+      derivedHints.completedInPeriod,
+      derivedHints.manodoperaCost,
+      derivedHints.movementValue,
     ],
     (requestId) => {
       if (isError) return;
@@ -58,9 +93,12 @@ export default function ReportEconomiciSectionView(props: DomainReportSectionPro
         rangeKey: props.rangeKey,
         requestId,
         range: props.range,
+        compareRange: props.showCompare ? props.compareRange : null,
+        compareMode: props.analyticsContext.compareMode,
         preventivi: preventiviQ.records,
         invoices: invoicesQ.invoices,
         ddtDocuments: ddtQ.data?.documents ?? [],
+        derivedHints,
       });
     },
   );
@@ -84,11 +122,59 @@ export default function ReportEconomiciSectionView(props: DomainReportSectionPro
       }));
     }
     return derived.economic.data.metrics;
-  }, [derived.economic, isError, loading]);
+  }, [derived.economic, isError, loading, refetchAll]);
+
+  const invoiceSeries = useMemo(
+    () => aggregateInvoicesByMonth(invoicesQ.invoices, props.range),
+    [invoicesQ.invoices, props.range],
+  );
+
+  const topClientiFatturato = useMemo(
+    () => buildTopClientiByFatturato(invoicesQ.invoices, props.range),
+    [invoicesQ.invoices, props.range],
+  );
+
+  const topRows = useMemo(
+    () =>
+      topClientiFatturato.map((r) => ({
+        rank: r.rank,
+        cliente: r.cliente,
+        fatturato: r.fatturato,
+        fatture: r.fatture,
+      })),
+    [topClientiFatturato],
+  );
 
   return (
-    <div className="min-w-0 space-y-6">
-      <ReportDomainMetricsGrid metrics={metrics} />
+    <div className="min-w-0 space-y-4">
+      <ReportSection
+        id="report-eco-kpi"
+        title="Salute economica"
+        subtitle="Preventivi, fatturato, margine stimato e indicatori derivati"
+      >
+        <ReportDomainMetricsGrid metrics={metrics} compareMode={props.analyticsContext.compareMode} />
+      </ReportSection>
+
+      <ReportSection
+        id="report-eco-chart"
+        title="Andamento fatturato"
+        subtitle="Totale fatture emesse per mese nel periodo"
+        defaultCollapsed
+      >
+        <ReportLineChart
+          title="Fatturato mensile"
+          rows={invoiceSeries.map((p) => ({ label: p.label, value: p.value }))}
+        />
+      </ReportSection>
+
+      <ReportSection
+        id="report-eco-top-clienti"
+        title="Top clienti per fatturato"
+        subtitle="Classifica per importo fatturato nel periodo"
+        defaultCollapsed
+      >
+        <ReportDataTable configId="top-clienti" rows={topRows} />
+      </ReportSection>
     </div>
   );
 }

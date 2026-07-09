@@ -20,7 +20,7 @@ test("dashboard and report load without infinite spinner", async ({ page }) => {
   await expect(page.getByText(/caricamento non riuscito/i)).not.toBeVisible();
   await expect(page.getByRole("heading", { name: "ANALISI IA" })).toBeVisible({ timeout: 45_000 });
   await expect(page.getByRole("heading", { name: "LAVORAZIONI" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Panoramica esecutiva" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "PANORAMICA" })).toBeVisible();
 });
 
 test("dashboard passive realtime stability", async ({ page }) => {

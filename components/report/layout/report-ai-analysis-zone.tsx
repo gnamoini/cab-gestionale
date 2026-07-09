@@ -5,8 +5,9 @@ import { Button } from "@/components/design-system/button";
 import { GestionaleAiActionButton } from "@/components/design-system/gestionale-ai-action-button";
 import { LoadingSkeletonBlock } from "@/components/design-system/loading/loading-skeleton";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { useReportPerformanceContext } from "@/components/report/layout/report-performance-gate";
-import { reportSubsectionTitleClass, reportZoneShellClass } from "@/components/report/report-ui-tokens";
+import { useReportPerformanceContext } from "@/components/report/layout/report-performance-context";
+import { ReportSubsection } from "@/components/report/sections/report-subsection";
+import { reportZoneShellClass } from "@/components/report/report-ui-tokens";
 import { formatReportAnalysisPlainText } from "@/lib/report/report-analysis/format-report-analysis-plain-text";
 import { useReportAnalysis } from "@/lib/report/report-analysis/use-report-analysis";
 import type { ReportAnalysisConfidenza, ReportAnalysisGravita } from "@/lib/report/report-analysis/report-analysis-schema";
@@ -73,6 +74,7 @@ export function ReportAiAnalysisZone({
   integrityView,
   tops,
   snapshotFingerprint,
+  embed = false,
 }: {
   preset: ReportPeriodPreset;
   compareMode: ReportCompareMode;
@@ -86,6 +88,7 @@ export function ReportAiAnalysisZone({
     ricambi: TopRicambioReportRow[];
   };
   snapshotFingerprint: string;
+  embed?: boolean;
 }) {
   const { perf, perfLoading } = useReportPerformanceContext();
   const gestToast = useGestionaleToast();
@@ -141,14 +144,8 @@ export function ReportAiAnalysisZone({
       ? "Analisi in corso…"
       : null;
 
-  return (
-    <ShellCard
-      id="report-ai-analysis"
-      title="Analisi AI"
-      subtitle="Report intelligente su KPI, trend e criticità del periodo selezionato"
-      className={reportZoneShellClass}
-      headerActions={headerActions}
-    >
+  const body = (
+    <>
       {statusHint ? (
         <p className="mb-4 text-xs text-[color:var(--cab-text-muted)]" role="status">
           {statusHint}
@@ -195,7 +192,7 @@ export function ReportAiAnalysisZone({
       ) : null}
 
       {showResults && analysis.data ? (
-        <div className="min-w-0 space-y-6">
+        <div className="min-w-0 space-y-4">
           {analysis.isStale ? (
             <div className="flex min-w-0 flex-wrap items-center gap-3 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-warning)_30%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_6%,var(--cab-card))] px-3 py-2.5">
               <p className="min-w-0 flex-1 text-xs text-[color:var(--cab-text)]">
@@ -233,32 +230,23 @@ export function ReportAiAnalysisZone({
             Ultima generazione: {formatGeneratedAt(analysis.data.generatedAt)}
           </p>
 
-          <section className="min-w-0 space-y-2" aria-labelledby="report-ai-exec-summary">
-            <h2 id="report-ai-exec-summary" className={reportSubsectionTitleClass}>
-              Executive Summary
-            </h2>
+          <ReportSubsection id="report-ai-exec-summary" title="Executive summary">
             <p className="text-sm leading-relaxed text-[color:var(--cab-text)]">
               {analysis.data.executiveSummary}
             </p>
-          </section>
+          </ReportSubsection>
 
           {analysis.data.dataQualityNotes && analysis.data.dataQualityNotes.length > 0 ? (
-            <section className="min-w-0 space-y-2" aria-labelledby="report-ai-quality">
-              <h2 id="report-ai-quality" className={reportSubsectionTitleClass}>
-                Qualità dati
-              </h2>
+            <ReportSubsection id="report-ai-quality" title="Qualità dati" defaultCollapsed>
               <ul className="min-w-0 space-y-1 text-xs leading-relaxed text-[color:var(--cab-text-muted)]">
                 {analysis.data.dataQualityNotes.map((note) => (
                   <li key={note}>{note}</li>
                 ))}
               </ul>
-            </section>
+            </ReportSubsection>
           ) : null}
 
-          <section className="min-w-0 space-y-3" aria-labelledby="report-ai-kpi">
-            <h2 id="report-ai-kpi" className={reportSubsectionTitleClass}>
-              KPI Principali
-            </h2>
+          <ReportSubsection id="report-ai-kpi" title="KPI principali" defaultCollapsed>
             <AnalysisItemList
               items={analysis.data.kpiPrincipali.map((k, i) => ({
                 key: `kpi-${i}`,
@@ -274,13 +262,10 @@ export function ReportAiAnalysisZone({
                 ),
               }))}
             />
-          </section>
+          </ReportSubsection>
 
           {analysis.data.anomalieRilevate.length > 0 ? (
-            <section className="min-w-0 space-y-3" aria-labelledby="report-ai-anomalie">
-              <h2 id="report-ai-anomalie" className={reportSubsectionTitleClass}>
-                Anomalie Rilevate
-              </h2>
+            <ReportSubsection id="report-ai-anomalie" title="Anomalie rilevate" defaultCollapsed>
               <AnalysisItemList
                 items={analysis.data.anomalieRilevate.map((a, i) => ({
                   key: `anom-${i}`,
@@ -295,14 +280,11 @@ export function ReportAiAnalysisZone({
                   ),
                 }))}
               />
-            </section>
+            </ReportSubsection>
           ) : null}
 
           {analysis.data.trendPositivi.length > 0 ? (
-            <section className="min-w-0 space-y-3" aria-labelledby="report-ai-trend">
-              <h2 id="report-ai-trend" className={reportSubsectionTitleClass}>
-                Trend Positivi
-              </h2>
+            <ReportSubsection id="report-ai-trend" title="Trend positivi" defaultCollapsed>
               <AnalysisItemList
                 items={analysis.data.trendPositivi.map((t, i) => ({
                   key: `trend-${i}`,
@@ -314,14 +296,11 @@ export function ReportAiAnalysisZone({
                   ),
                 }))}
               />
-            </section>
+            </ReportSubsection>
           ) : null}
 
           {analysis.data.criticita.length > 0 ? (
-            <section className="min-w-0 space-y-3" aria-labelledby="report-ai-criticita">
-              <h2 id="report-ai-criticita" className={reportSubsectionTitleClass}>
-                Criticità
-              </h2>
+            <ReportSubsection id="report-ai-criticita" title="Criticità" defaultCollapsed>
               <AnalysisItemList
                 items={analysis.data.criticita.map((c, i) => ({
                   key: `crit-${i}`,
@@ -336,14 +315,11 @@ export function ReportAiAnalysisZone({
                   ),
                 }))}
               />
-            </section>
+            </ReportSubsection>
           ) : null}
 
           {analysis.data.suggerimentiOperativi.length > 0 ? (
-            <section className="min-w-0 space-y-3" aria-labelledby="report-ai-sugg">
-              <h2 id="report-ai-sugg" className={reportSubsectionTitleClass}>
-                Suggerimenti Operativi
-              </h2>
+            <ReportSubsection id="report-ai-sugg" title="Suggerimenti operativi" defaultCollapsed>
               <AnalysisItemList
                 items={analysis.data.suggerimentiOperativi.map((s, i) => ({
                   key: `sugg-${i}`,
@@ -360,14 +336,11 @@ export function ReportAiAnalysisZone({
                   ),
                 }))}
               />
-            </section>
+            </ReportSubsection>
           ) : null}
 
           {analysis.data.prioritaImmediate.length > 0 ? (
-            <section className="min-w-0 space-y-3" aria-labelledby="report-ai-prio">
-              <h2 id="report-ai-prio" className={reportSubsectionTitleClass}>
-                Priorità Immediate
-              </h2>
+            <ReportSubsection id="report-ai-prio" title="Priorità immediate" defaultCollapsed>
               <AnalysisItemList
                 items={analysis.data.prioritaImmediate.map((p, i) => ({
                   key: `prio-${i}`,
@@ -379,27 +352,45 @@ export function ReportAiAnalysisZone({
                   ),
                 }))}
               />
-            </section>
+            </ReportSubsection>
           ) : null}
 
-          <section className="min-w-0 space-y-2" aria-labelledby="report-ai-valutazione">
-            <h2 id="report-ai-valutazione" className={reportSubsectionTitleClass}>
-              Valutazione Generale
-            </h2>
+          <ReportSubsection id="report-ai-valutazione" title="Valutazione generale" defaultCollapsed>
             <p className="text-sm font-semibold text-[color:var(--cab-text)]">
               Punteggio: {analysis.data.valutazioneGenerale.punteggio}/10
             </p>
-            <p className="text-sm leading-relaxed text-[color:var(--cab-text-muted)]">
+            <p className="mt-1 text-sm leading-relaxed text-[color:var(--cab-text-muted)]">
               {analysis.data.valutazioneGenerale.giudizio}
             </p>
-          </section>
+          </ReportSubsection>
 
-          <p className="border-t border-[color:var(--cab-border)] pt-4 text-[10px] leading-snug text-[color:var(--cab-text-muted)]">
+          <p className="text-[10px] leading-snug text-[color:var(--cab-text-muted)]">
             Analisi generativa basata sui KPI del periodo (Gemini) — verificare sempre i dati operativi prima di
             decisioni operative.
           </p>
         </div>
       ) : null}
+    </>
+  );
+
+  if (embed) {
+    return (
+      <div className="min-w-0 space-y-4">
+        {headerActions ? <div className="flex min-w-0 flex-wrap justify-end gap-2">{headerActions}</div> : null}
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <ShellCard
+      id="report-ai-analysis"
+      title="Analisi AI"
+      subtitle="Report intelligente su KPI, trend e criticità del periodo selezionato"
+      className={reportZoneShellClass}
+      headerActions={headerActions}
+    >
+      {body}
     </ShellCard>
   );
 }

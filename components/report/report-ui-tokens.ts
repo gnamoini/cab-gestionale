@@ -31,6 +31,10 @@ export const reportKpiDescriptionClass = "mt-0.5 text-[10px] leading-snug text-[
 /** ShellCard zona — offset anchor nav (solo app shell). */
 export const reportZoneShellClass = "scroll-mt-28";
 
+/** Sotto-sezione collassabile dentro una sezione report (niente ombra esterna). */
+export const reportSubsectionShellClass =
+  "overflow-hidden !shadow-none border-[color:var(--cab-border)]";
+
 export const reportExecutiveStripClass =
   "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_45%,var(--cab-card))] px-3 py-2.5 text-sm leading-relaxed text-[color:var(--cab-text)] sm:px-4 sm:py-3";
 
@@ -43,6 +47,19 @@ export const reportCommandFiltersShellClass =
 
 /** Corpo controlli filtri report (sotto zone nav). */
 export const reportCommandFiltersBodyClass = "px-3 pb-3 pt-2.5";
+
+/** Pannello filtri periodo analisi / confronto nella toolbar. */
+export const reportPeriodPanelClass =
+  "min-w-0 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_4%,var(--cab-card))] p-3 shadow-[var(--cab-shadow-sm)]";
+
+export const reportPeriodPanelCompareClass =
+  "min-w-0 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-card))] p-3 shadow-[var(--cab-shadow-sm)]";
+
+export const reportPeriodPanelTitleClass =
+  "text-xs font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]";
+
+export const reportPeriodPanelHintClass =
+  "text-[11px] font-medium tabular-nums text-[color:var(--cab-text-muted)]";
 
 /** Meta periodo — footer toolbar filtri (testo compatto, non chip). */
 export const reportPeriodMetaClass =

@@ -4,13 +4,10 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/gestionale/page-header";
-import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { LoadingCardSkeleton } from "@/components/design-system";
 import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
 import { useCalendarV2Enabled } from "@/src/hooks/use-calendar-v2-enabled";
 import { DashboardNotificationsToolbarLeading } from "@/components/dashboard/dashboard-notifications-toolbar-leading";
-import { Drawer } from "@/components/design-system";
-import { gestionaleLogDrawerPanelClass } from "@/components/gestionale/gestionale-log-ui";
 import { erpBtnNeutral } from "@/lib/ui/erp-tokens";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { dsStackPage } from "@/lib/ui/design-system";
@@ -25,18 +22,12 @@ const CalendarV2Section = dynamic(
   () => import("@/components/dashboard/calendar-v2/calendar-v2-section").then((m) => m.CalendarV2Section),
   { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[8rem]" /> },
 );
-const DashboardSistemaLogListEmbedded = dynamic(
-  () =>
-    import("@/components/dashboard/dashboard-sistema-log-section").then((m) => m.DashboardSistemaLogListEmbedded),
-  { ssr: false },
-);
 
 export function DashboardView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const staging = isStagingPublicSlice();
   const calendarV2Enabled = useCalendarV2Enabled();
-  const [logOpen, setLogOpen] = useState(false);
   const [stagingRouteHint, setStagingRouteHint] = useState(false);
 
   useEffect(() => {
@@ -52,17 +43,7 @@ export function DashboardView() {
     <>
       <PageHeader
         title="Dashboard"
-        actions={
-          staging ? null : (
-            <GestionalePageToolbarActions
-              canUndo={false}
-              undoDisabled
-              leading={<DashboardNotificationsToolbarLeading />}
-              onOpenLog={() => setLogOpen(true)}
-              logTitle="Log modifiche dashboard"
-            />
-          )
-        }
+        actions={staging ? null : <DashboardNotificationsToolbarLeading />}
       />
 
       <div className={dsStackPage}>
@@ -83,14 +64,6 @@ export function DashboardView() {
         ) : null}
         <DashboardControlTowerLayout />
       </div>
-
-      {staging ? null : (
-        <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche" ariaLabel="Log modifiche dashboard">
-          <div className={gestionaleLogDrawerPanelClass}>
-            <DashboardSistemaLogListEmbedded dismissible paged />
-          </div>
-        </Drawer>
-      )}
     </>
   );
 }

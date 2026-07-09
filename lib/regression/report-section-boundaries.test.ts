@@ -6,8 +6,10 @@ const ROOT = process.cwd();
 const SECTIONS_DIR = path.join(ROOT, "components/report/sections");
 
 const SECTION_FILES = [
+  "report-panoramica-section.tsx",
   "report-ai-section.tsx",
   "report-lavorazioni-section.tsx",
+  "report-clienti-mezzi-section.tsx",
   "report-magazzino-section.tsx",
   "report-ore-section.tsx",
   "report-economici-section.tsx",
@@ -15,7 +17,9 @@ const SECTION_FILES = [
 ] as const;
 
 const PUBLISH_ALLOWLIST: Record<string, readonly string[]> = {
+  "report-panoramica-section.tsx": [],
   "report-lavorazioni-section.tsx": ["publishOperationalAnalytics"],
+  "report-clienti-mezzi-section.tsx": [],
   "report-magazzino-section.tsx": ["publishWarehouseAnalytics"],
   "report-ore-section.tsx": ["publishLaborAnalytics"],
   "report-economici-section.tsx": ["publishEconomicAnalytics"],
@@ -36,8 +40,17 @@ function readSection(file: string): string {
 
 const violations: string[] = [];
 
+const SUBSECTION_IN_LAYOUT: Partial<Record<(typeof SECTION_FILES)[number], string>> = {
+  "report-panoramica-section.tsx": "components/report/layout/report-executive-overview.tsx",
+  "report-ai-section.tsx": "components/report/layout/report-ai-analysis-zone.tsx",
+};
+
 for (const file of SECTION_FILES) {
   const text = readSection(file);
+  const subsectionSource = SUBSECTION_IN_LAYOUT[file]
+    ? fs.readFileSync(path.join(ROOT, SUBSECTION_IN_LAYOUT[file]!), "utf8")
+    : text;
+  assert.match(subsectionSource, /ReportSubsection/, `${file}: must use ReportSubsection for internal blocks`);
   const allowed = PUBLISH_ALLOWLIST[file] ?? [];
 
   for (const other of SECTION_FILES) {
@@ -55,13 +68,13 @@ for (const file of SECTION_FILES) {
     }
   }
 
-  if (file === "report-ai-section.tsx" || file === "report-cross-section.tsx") {
+  if (file === "report-ai-section.tsx" || file === "report-cross-section.tsx" || file === "report-panoramica-section.tsx") {
     if (text.includes("useReportAnalyticsDerivedActions")) {
       violations.push(`${file}: must not use useReportAnalyticsDerivedActions`);
     }
   }
 
-  if (file === "report-ai-section.tsx") {
+  if (file === "report-ai-section.tsx" || file === "report-panoramica-section.tsx") {
     if (text.includes("useReportAnalyticsDerived")) {
       violations.push(`${file}: must not use useReportAnalyticsDerived`);
     }
@@ -69,4 +82,9 @@ for (const file of SECTION_FILES) {
 }
 
 assert.equal(violations.length, 0, violations.join("\n"));
+
+const aiZone = fs.readFileSync(path.join(ROOT, "components/report/layout/report-ai-analysis-zone.tsx"), "utf8");
+assert.match(aiZone, /report-performance-context/);
+assert.doesNotMatch(aiZone, /from "@\/components\/report\/layout\/report-performance-gate"/);
+
 console.log("report-section-boundaries.test.ts OK");

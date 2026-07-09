@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ComponentType } from "r
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { LoadingErrorState } from "@/components/design-system";
 import { LoadingCardSkeleton } from "@/components/design-system";
+import { useReportSectionVisibility } from "@/components/report/layout/report-section-visibility-context";
 import {
   filterReportSectionsByPermission,
   REPORT_SECTIONS,
@@ -130,6 +131,7 @@ function ReportSectionShell({
   aiProps: ReportAiSectionProps;
 }) {
   const ui = REPORT_SECTION_UI[section.id];
+  const { setOpen } = useReportSectionVisibility();
   const [lazyEnabled, setLazyEnabled] = useState(!section.defaultCollapsed);
   const [mounted, setMounted] = useState(!section.defaultCollapsed);
 
@@ -142,6 +144,7 @@ function ReportSectionShell({
       defaultCollapsed={section.defaultCollapsed}
       className={reportZoneShellClass}
       onCollapsedChange={(collapsed) => {
+        setOpen(section.id, !collapsed);
         if (!collapsed) {
           setLazyEnabled(true);
           setMounted(true);

@@ -29,7 +29,7 @@ export const EXECUTIVE_KPI_IDS = [
 export const EXECUTIVE_PRIMARY_KPI_IDS = [
   "lav-periodo",
   "lav-chiusi",
-  "cost-tot",
+  "lav-saldo-periodo",
   "clienti",
   "lav-media-settimanale",
 ] as const;

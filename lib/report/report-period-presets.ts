@@ -45,6 +45,30 @@ export const REPORT_QUICK_PRESET_IDS: readonly ReportPeriodPreset[] = REPORT_PER
   (p) => p.quick,
 ).map((p) => p.id);
 
+/** Etichette compatte chip toolbar (title = label completa). */
+export const REPORT_QUICK_PRESET_SHORT_LABELS: Record<
+  (typeof REPORT_QUICK_PRESET_IDS)[number],
+  string
+> = {
+  today: "Oggi",
+  last_7_days: "7 gg",
+  last_30_days: "30 gg",
+  current_month: "Mese",
+  last_3_months: "3 mesi",
+  ytd: "YTD",
+};
+
+export function isReportQuickPreset(preset: ReportPeriodPreset): boolean {
+  return (REPORT_QUICK_PRESET_IDS as readonly ReportPeriodPreset[]).includes(preset);
+}
+
+export function reportQuickPresetChipLabel(id: ReportPeriodPreset): string {
+  if (isReportQuickPreset(id)) {
+    return REPORT_QUICK_PRESET_SHORT_LABELS[id as (typeof REPORT_QUICK_PRESET_IDS)[number]];
+  }
+  return REPORT_PRESET_LABELS[id];
+}
+
 const PRESET_ID_SET = new Set<string>(REPORT_PERIOD_PRESETS.map((p) => p.id));
 
 export function isReportPeriodPreset(value: string): value is ReportPeriodPreset {
@@ -61,4 +85,19 @@ export function reportPeriodPresetSelectItems(): { value: ReportPeriodPreset; la
     value: p.id,
     label: reportPresetSelectLabel(p),
   }));
+}
+
+/** Preset non rapidi + personalizzato — select «Altro periodo». */
+export function reportPeriodPresetSelectItemsForOverflow(): { value: ReportPeriodPreset | ""; label: string }[] {
+  return [
+    { value: "", label: "—" },
+    ...REPORT_PERIOD_PRESETS.filter((p) => !p.quick).map((p) => ({
+      value: p.id,
+      label: reportPresetSelectLabel(p),
+    })),
+  ];
+}
+
+export function reportOverflowSelectValue(preset: ReportPeriodPreset): ReportPeriodPreset | "" {
+  return isReportQuickPreset(preset) ? "" : preset;
 }

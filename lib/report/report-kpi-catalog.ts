@@ -1,8 +1,29 @@
+/**
+ * @deprecated Usare REPORT_METRIC_REGISTRY da lib/report/metrics/report-metric-registry
+ */
 import type { DerivedKey } from "@/lib/report/report-domain-types";
+import {
+  REPORT_METRIC_REGISTRY,
+  reportMetricIdsForSection,
+} from "@/lib/report/metrics/report-metric-registry";
+
+export {
+  REPORT_METRIC_REGISTRY,
+  getRegistryEntry,
+  assertRegistryUnique,
+  reportMetricIdsForSection,
+  activeUiMetricIds,
+} from "@/lib/report/metrics/report-metric-registry";
+
+export { getMetricDefinition, tryGetMetricDefinition } from "@/lib/report/metrics/get-metric-definition";
+
+export type { ReportMetricRegistryEntry } from "@/lib/report/metrics/report-metric-types";
 
 export type ReportSectionId =
+  | "panoramica"
   | "analisi_ai"
   | "lavorazioni"
+  | "clienti_mezzi"
   | "magazzino_ricambi"
   | "ore_lavorate"
   | "dati_economici"
@@ -18,32 +39,53 @@ export type ReportKpiCatalogEntry = {
   source: string;
 };
 
-export const REPORT_KPI_CATALOG: readonly ReportKpiCatalogEntry[] = [
-  { id: "lav_open", section: "lavorazioni", label: "Aperte", owner: "operational", source: "kpi-performance-formulas" },
-  { id: "lav_completed", section: "lavorazioni", label: "Completate", owner: "operational", source: "lavorazioni-report-selectors" },
-  { id: "lav_archived", section: "lavorazioni", label: "Archiviate", owner: "operational", source: "lavorazioni-report-adapter" },
-  { id: "lav_cancelled", section: "lavorazioni", label: "Annullate", owner: "operational", source: "lavorazioni-report-selectors" },
-  { id: "lav_backlog", section: "lavorazioni", label: "Backlog", owner: "operational", source: "kpi-performance-formulas" },
-  { id: "lav_avg_close", section: "lavorazioni", label: "Tempo medio chiusura", owner: "operational", source: "lavorazioni-report-selectors" },
-  { id: "lav_late_sla", section: "lavorazioni", label: "Oltre SLA", owner: "operational", source: "kpi-performance-formulas" },
-  { id: "lav_clients", section: "lavorazioni", label: "Clienti serviti", owner: "operational", source: "lavorazioni-report-selectors" },
-  { id: "mag_parts_qty", section: "magazzino_ricambi", label: "Ricambi utilizzati", owner: "warehouse", source: "magazzino-period-aggregate" },
-  { id: "mag_movement_value", section: "magazzino_ricambi", label: "Valore movimentato", owner: "warehouse", source: "kpi-performance-formulas" },
-  { id: "mag_critical", section: "magazzino_ricambi", label: "Sotto scorta", owner: "warehouse", source: "kpi-performance-formulas" },
-  { id: "mag_orders", section: "magazzino_ricambi", label: "Ordini fornitori", owner: "warehouse", source: "ordini-fornitori" },
-  { id: "ore_total", section: "ore_lavorate", label: "Ore totali", owner: "labor", source: "timesheet-totals" },
-  { id: "ore_per_job", section: "ore_lavorate", label: "Media ore/intervento", owner: "labor", source: "report-domain-analytics" },
-  { id: "eco_preventivi", section: "dati_economici", label: "Preventivi", owner: "economic", source: "preventivi-records" },
-  { id: "eco_invoices", section: "dati_economici", label: "Fatturato", owner: "economic", source: "invoice-calculations" },
-  { id: "eco_ddt", section: "dati_economici", label: "DDT", owner: "economic", source: "ddt-calculations" },
-  { id: "cross_efficiency", section: "analisi_incrociate", label: "Efficienza", owner: "cross", source: "report-domain-analytics" },
-  { id: "cross_cost_job", section: "analisi_incrociate", label: "Costo medio lavorazione", owner: "cross", source: "report-domain-analytics" },
-  { id: "cross_value_hour", section: "analisi_incrociate", label: "Valore/ora", owner: "cross", source: "report-domain-analytics" },
-  { id: "cross_parts_job", section: "analisi_incrociate", label: "Ricambi/intervento", owner: "cross", source: "report-domain-analytics" },
-] as const;
+const LEGACY_DOMAIN_IDS = new Set([
+  "lav_open",
+  "lav_completed",
+  "lav_archived",
+  "lav_cancelled",
+  "lav_backlog",
+  "lav_avg_close",
+  "lav_late_sla",
+  "lav_clients",
+  "mag_parts_qty",
+  "mag_movement_value",
+  "mag_critical",
+  "mag_orders",
+  "ore_total",
+  "ore_per_job",
+  "eco_preventivi",
+  "eco_invoices",
+  "eco_ddt",
+  "cross_efficiency",
+  "cross_cost_job",
+  "cross_value_hour",
+  "cross_parts_job",
+]);
+
+function categoryToLegacyOwner(id: string, category: string): ReportKpiOwner {
+  if (id.startsWith("cross_")) return "cross";
+  if (category === "economic") return "economic";
+  if (category === "warehouse") return "warehouse";
+  if (category === "fleet") return "perf";
+  if (category === "operational" || category === "customer") return "operational";
+  return "operational";
+}
+
+/** Legacy catalog derivato dal registry (domain + cross). */
+export const REPORT_KPI_CATALOG: readonly ReportKpiCatalogEntry[] = REPORT_METRIC_REGISTRY.filter((e) =>
+  LEGACY_DOMAIN_IDS.has(e.id),
+).map((e) => ({
+  id: e.id,
+  section: e.owner === "analisi_incrociate" ? "analisi_incrociate" : e.owner,
+  label: e.label,
+  owner: categoryToLegacyOwner(e.id, e.category),
+  source: e.sourceModule,
+}));
 
 export function reportKpiIdsForSection(section: ReportSectionId | "strip"): string[] {
-  return REPORT_KPI_CATALOG.filter((e) => e.section === section).map((e) => e.id);
+  if (section === "strip") return [];
+  return reportMetricIdsForSection(section);
 }
 
 export function assertReportKpiCatalogUnique(): void {

@@ -16,7 +16,14 @@ export type ReportPeriodPreset =
   | "previous_year"
   | "last_3_years"
   | "custom";
-export type ReportCompareMode = "none" | "prev_year" | "prev_period";
+export type ReportCompareMode =
+  | "none"
+  | "prev_year"
+  | "prev_period"
+  | "avg_3_months"
+  | "avg_12_months"
+  | "avg_3_years"
+  | "custom_range";
 
 export type DateRange = { start: Date; end: Date };
 
@@ -210,8 +217,42 @@ export function resolvePresetRange(
   return { start: startOfLocalDay(new Date(end.getFullYear(), end.getMonth(), 1)), end };
 }
 
+export function isReportCompareAverageMode(mode: ReportCompareMode): boolean {
+  return mode === "avg_3_months" || mode === "avg_12_months" || mode === "avg_3_years";
+}
+
+/** Proietta un totale della finestra di riferimento sulla lunghezza del periodo corrente. */
+export function scaleCompareBaseline(totalInWindow: number, window: DateRange, cur: DateRange): number {
+  const wDays = inclusiveDayCount(window);
+  const cDays = inclusiveDayCount(cur);
+  if (wDays <= 0 || cDays <= 0) return 0;
+  return Math.round(((totalInWindow * cDays) / wDays) * 100) / 100;
+}
+
+export function compareBaselineValue(
+  rawInCompareRange: number,
+  compareRange: DateRange,
+  curRange: DateRange,
+  mode: ReportCompareMode,
+): number {
+  if (mode === "none") return rawInCompareRange;
+  if (isReportCompareAverageMode(mode)) {
+    return scaleCompareBaseline(rawInCompareRange, compareRange, curRange);
+  }
+  return rawInCompareRange;
+}
+
+function referenceWindowBefore(cur: DateRange, months: number): DateRange {
+  const endRef = endOfLocalDay(addLocalDays(startOfLocalDay(cur.start), -1));
+  const startRef = startOfLocalDay(new Date(endRef.getFullYear(), endRef.getMonth() - (months - 1), 1));
+  return { start: startRef, end: endRef };
+}
+
 export function compareRangeFor(cur: DateRange, mode: ReportCompareMode): DateRange | null {
-  if (mode === "none") return null;
+  if (mode === "none" || mode === "custom_range") return null;
+  if (mode === "avg_3_months") return referenceWindowBefore(cur, 3);
+  if (mode === "avg_12_months") return referenceWindowBefore(cur, 12);
+  if (mode === "avg_3_years") return referenceWindowBefore(cur, 36);
   const ms = cur.end.getTime() - cur.start.getTime();
   if (mode === "prev_period") {
     const endPrev = new Date(cur.start.getTime() - 1);
@@ -221,6 +262,28 @@ export function compareRangeFor(cur: DateRange, mode: ReportCompareMode): DateRa
   const start = addYearsKeepCalendar(cur.start, -1);
   const end = addYearsKeepCalendar(cur.end, -1);
   return { start: startOfLocalDay(start), end: endOfLocalDay(end) };
+}
+
+function parseCustomYmdRange(customFrom?: string, customTo?: string): DateRange | null {
+  const sf = customFrom ? parseYmd(customFrom) : null;
+  const st = customTo ? parseYmd(customTo) : null;
+  if (!sf || !st) return null;
+  const start = startOfLocalDay(sf);
+  const end = endOfLocalDay(st);
+  if (start.getTime() <= end.getTime()) return { start, end };
+  return { start: startOfLocalDay(st), end: endOfLocalDay(sf) };
+}
+
+/** Intervallo confronto: preset derivato dal periodo analisi o range personalizzato. */
+export function resolveReportCompareRange(
+  cur: DateRange,
+  mode: ReportCompareMode,
+  customFrom?: string,
+  customTo?: string,
+): DateRange | null {
+  if (mode === "none") return null;
+  if (mode === "custom_range") return parseCustomYmdRange(customFrom, customTo);
+  return compareRangeFor(cur, mode);
 }
 
 function addYearsKeepCalendar(d: Date, deltaYears: number): Date {
@@ -251,6 +314,18 @@ export function formatCompareLabel(mode: ReportCompareMode, cur: DateRange, prev
   if (!prev || mode === "none") return "";
   const fmt = (d: Date) =>
     d.toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" });
+  if (mode === "avg_3_months") {
+    return `Confronto vs media ultimi 3 mesi (${fmt(prev.start)} — ${fmt(prev.end)})`;
+  }
+  if (mode === "avg_12_months") {
+    return `Confronto vs media ultimo anno (${fmt(prev.start)} — ${fmt(prev.end)})`;
+  }
+  if (mode === "avg_3_years") {
+    return `Confronto vs media ultimi 3 anni (${fmt(prev.start)} — ${fmt(prev.end)})`;
+  }
+  if (mode === "custom_range") {
+    return `Confronto periodo personalizzato (${fmt(prev.start)} — ${fmt(prev.end)})`;
+  }
   if (mode === "prev_year") {
     return `Confronto: ${fmt(cur.start)} — ${fmt(cur.end)} vs ${fmt(prev.start)} — ${fmt(prev.end)}`;
   }

@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { ReportExecutiveOverview } from "@/components/report/layout/report-executive-overview";
 import {
   ReportPerformanceGate,
   useReportPerformanceContext,
@@ -13,6 +12,11 @@ import {
 import { ReportSections } from "@/components/report/layout/report-sections";
 import { ReportToolbar } from "@/components/report/layout/report-toolbar";
 import { ReportAnalyticsDerivedProvider } from "@/components/report/report-analytics-derived-context";
+import {
+  ReportSectionVisibilityProvider,
+  useReportSectionVisibility,
+} from "@/components/report/layout/report-section-visibility-context";
+import { useReportDerivedPrefetch } from "@/components/report/use-report-derived-prefetch";
 import { ReportIntegrityStatusBadge } from "@/components/report/report-integrity-status-badge";
 import type { DomainReportSectionProps, ReportAiSectionProps } from "@/components/report/report-section-types";
 import { buildReportModel } from "@/lib/report/build-report-model";
@@ -39,6 +43,7 @@ import {
   loadReportPeriodPrefs,
   saveReportPeriodPrefs,
 } from "@/lib/report/report-period-persistence";
+import { isReportCompareMode } from "@/lib/report/report-compare-options";
 import { useReportLiveData } from "@/lib/report/use-report-live-data";
 import { LoadingErrorState, LoadingReportSkeleton } from "@/components/design-system";
 import { dsStackPage } from "@/lib/ui/design-system";
@@ -69,12 +74,16 @@ function readInitialPeriodPrefs(searchParams: URLSearchParams | null): {
   compareMode: ReportCompareMode;
   customFrom: string;
   customTo: string;
+  compareCustomFrom: string;
+  compareCustomTo: string;
 } {
   const defaults = {
     preset: "last_3_months" as ReportPeriodPreset,
     compareMode: "none" as ReportCompareMode,
     customFrom: "",
     customTo: "",
+    compareCustomFrom: "",
+    compareCustomTo: "",
   };
 
   const fromUrl = searchParams?.get("from")?.trim() ?? "";
@@ -83,17 +92,14 @@ function readInitialPeriodPrefs(searchParams: URLSearchParams | null): {
   const compareUrl = searchParams?.get("compare")?.trim() ?? "";
 
   if (/^\d{4}-\d{2}-\d{2}$/.test(fromUrl) && /^\d{4}-\d{2}-\d{2}$/.test(toUrl)) {
-    const compareMode =
-      compareUrl === "prev_period" || compareUrl === "prev_year" || compareUrl === "none"
-        ? (compareUrl as ReportCompareMode)
-        : ("prev_period" as ReportCompareMode);
+    const compareMode = isReportCompareMode(compareUrl) ? compareUrl : ("none" as ReportCompareMode);
     return { preset: "custom", compareMode, customFrom: fromUrl, customTo: toUrl };
   }
 
   if (presetUrl === "current_week" && /^\d{4}-\d{2}-\d{2}$/.test(fromUrl)) {
     return {
       preset: "custom",
-      compareMode: compareUrl === "prev_period" ? "prev_period" : "none",
+      compareMode: isReportCompareMode(compareUrl) ? compareUrl : "none",
       customFrom: fromUrl,
       customTo: toUrl || fromUrl,
     };
@@ -109,7 +115,14 @@ function readInitialPeriodPrefs(searchParams: URLSearchParams | null): {
     nextFrom = "";
     nextTo = "";
   }
-  return { preset: nextPreset, compareMode: saved.compareMode, customFrom: nextFrom, customTo: nextTo };
+  return {
+    preset: nextPreset,
+    compareMode: saved.compareMode,
+    customFrom: nextFrom,
+    customTo: nextTo,
+    compareCustomFrom: saved.compareCustomFrom ?? "",
+    compareCustomTo: saved.compareCustomTo ?? "",
+  };
 }
 
 function ReportSectionsWithContext({
@@ -128,12 +141,15 @@ function ReportSectionsWithContext({
     fetchEnabled: false,
     analyticsContext: { perf, perfLoading, partitioned, compareMode },
   };
-  return (
-    <div className="min-w-0 space-y-4">
-      <ReportExecutiveOverview compareMode={compareMode} />
-      <ReportSections domainProps={domainProps} aiProps={aiProps} />
-    </div>
-  );
+  useReportDerivedPrefetch(domainProps);
+  return <ReportSections domainProps={domainProps} aiProps={aiProps} />;
+}
+
+function ReportPerformanceGateWithVisibility(
+  props: ComponentProps<typeof ReportPerformanceGate> & { children: ReactNode },
+) {
+  const { perfGateEnabled } = useReportSectionVisibility();
+  return <ReportPerformanceGate {...props} enabled={perfGateEnabled} />;
 }
 
 export function ReportAnalyticsView() {
@@ -144,12 +160,29 @@ export function ReportAnalyticsView() {
   const [customFrom, setCustomFrom] = useState(initialPrefs.customFrom);
   const [customTo, setCustomTo] = useState(initialPrefs.customTo);
   const [compareMode, setCompareMode] = useState<ReportCompareMode>(initialPrefs.compareMode);
+  const [compareCustomFrom, setCompareCustomFrom] = useState(initialPrefs.compareCustomFrom);
+  const [compareCustomTo, setCompareCustomTo] = useState(initialPrefs.compareCustomTo);
   const [histRev, setHistRev] = useState(0);
   useUIAutonomyFixEngine("/report", [preset, compareMode, histRev]);
 
   useEffect(() => {
-    saveReportPeriodPrefs({ preset, compareMode, customFrom, customTo });
-  }, [preset, compareMode, customFrom, customTo]);
+    saveReportPeriodPrefs({
+      preset,
+      compareMode,
+      customFrom,
+      customTo,
+      compareCustomFrom,
+      compareCustomTo,
+    });
+  }, [preset, compareMode, customFrom, customTo, compareCustomFrom, compareCustomTo]);
+
+  const onCompareMode = useCallback((m: ReportCompareMode) => {
+    setCompareMode(m);
+    if (m !== "custom_range") {
+      setCompareCustomFrom("");
+      setCompareCustomTo("");
+    }
+  }, []);
 
   const live = useReportLiveData();
 
@@ -207,14 +240,14 @@ export function ReportAnalyticsView() {
   const onPreset = useCallback(
     (p: ReportPeriodPreset) => {
       setPreset(p);
-      if (p === "custom" && anchor) {
+      if (p === "custom" && anchor && !customFrom.trim() && !customTo.trim()) {
         const end = endOfLocalDay(anchor);
         const start = startOfLocalDay(addDaysLocal(end, -30));
         setCustomFrom(fmtYmd(start));
         setCustomTo(fmtYmd(end));
       }
     },
-    [anchor],
+    [anchor, customFrom, customTo],
   );
 
   const onHistRev = useCallback(() => {
@@ -228,6 +261,8 @@ export function ReportAnalyticsView() {
       customFrom: preset === "custom" ? customFrom : undefined,
       customTo: preset === "custom" ? customTo : undefined,
       compareMode,
+      compareCustomFrom: compareMode === "custom_range" ? compareCustomFrom : undefined,
+      compareCustomTo: compareMode === "custom_range" ? compareCustomTo : undefined,
       attive: live.attive,
       storico: live.storico,
       completate: live.completate,
@@ -244,6 +279,8 @@ export function ReportAnalyticsView() {
     customFrom,
     customTo,
     compareMode,
+    compareCustomFrom,
+    compareCustomTo,
     live.attive,
     live.storico,
     live.completate,
@@ -268,12 +305,17 @@ export function ReportAnalyticsView() {
     const ricambi = buildTopRicambiPeriodo(derivedBundle.magLogSorted, live.magazzino, filterRange);
     if (!model.compareRange) return { mezzi, clienti, ricambi };
     const r = model.compareRange;
+    const ctx = { curRange: filterRange, compareRange: r, compareMode };
     return {
-      mezzi: mergeTopMezziCompare(mezzi, semanticIndex.topMezzi(r)),
-      clienti: mergeTopClientiCompare(clienti, semanticIndex.topClienti(r)),
-      ricambi: mergeTopRicambiCompare(ricambi, buildTopRicambiPeriodo(derivedBundle.magLogSorted, live.magazzino, r)),
+      mezzi: mergeTopMezziCompare(mezzi, semanticIndex.topMezzi(r), ctx),
+      clienti: mergeTopClientiCompare(clienti, semanticIndex.topClienti(r), ctx),
+      ricambi: mergeTopRicambiCompare(
+        ricambi,
+        buildTopRicambiPeriodo(derivedBundle.magLogSorted, live.magazzino, r),
+        ctx,
+      ),
     };
-  }, [model.compareRange, filterRange, semanticIndex, derivedBundle.magLogSorted, live.magazzino]);
+  }, [model.compareRange, compareMode, filterRange, semanticIndex, derivedBundle.magLogSorted, live.magazzino]);
 
   const toolbarProps = filterRange
     ? {
@@ -285,7 +327,11 @@ export function ReportAnalyticsView() {
         onCustomFrom: setCustomFrom,
         onCustomTo: setCustomTo,
         compareMode,
-        onCompareMode: setCompareMode,
+        onCompareMode,
+        compareCustomFrom,
+        compareCustomTo,
+        onCompareCustomFrom: setCompareCustomFrom,
+        onCompareCustomTo: setCompareCustomTo,
         range: filterRange,
         compareRange: model.compareRange,
       }
@@ -359,16 +405,19 @@ export function ReportAnalyticsView() {
       <ReportToolbar {...toolbarProps} />
 
       <ReportAnalyticsDerivedProvider rangeKey={rangeKey}>
-        <ReportPerformanceGate
-          anchor={anchor}
-          filterRange={filterRange}
-          compareRange={model.compareRange}
-          periodKpis={model.kpis}
-          live={live}
-          semanticIndex={semanticIndex}
-        >
-          <ReportSectionsWithContext compareMode={compareMode} domainBase={domainBase} aiProps={aiProps} />
-        </ReportPerformanceGate>
+        <ReportSectionVisibilityProvider>
+          <ReportPerformanceGateWithVisibility
+            anchor={anchor}
+            filterRange={filterRange}
+            compareRange={model.compareRange}
+            compareMode={compareMode}
+            periodKpis={model.kpis}
+            live={live}
+            semanticIndex={semanticIndex}
+          >
+            <ReportSectionsWithContext compareMode={compareMode} domainBase={domainBase} aiProps={aiProps} />
+          </ReportPerformanceGateWithVisibility>
+        </ReportSectionVisibilityProvider>
       </ReportAnalyticsDerivedProvider>
     </div>
   );

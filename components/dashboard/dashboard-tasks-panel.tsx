@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/design-system";
-import { useAuth } from "@/context/auth-context";
-import { appendDashboardSistemaLog } from "@/lib/dashboard/dashboard-sistema-log-storage";
 import {
   createDashboardTask,
   DASHBOARD_TASKS_MAX,
@@ -12,7 +10,6 @@ import {
   sortDashboardTasks,
   type DashboardTask,
 } from "@/lib/dashboard/dashboard-tasks-storage";
-import type { GestionaleLogEventTone } from "@/lib/gestionale-log/view-model";
 import {
   handleSettingsAddRowEnter,
   handleSettingsInlineEditKeyDown,
@@ -151,7 +148,6 @@ function DashboardNoteRow({
 }
 
 export function DashboardTasksPanel() {
-  const { authorName } = useAuth();
   const rbac = useRbac();
   const readOnly = rbac.isGuest;
   const { confirm: askConfirm, confirmDialog } = useGestionaleConfirm();
@@ -159,21 +155,9 @@ export function DashboardTasksPanel() {
   const [ready, setReady] = useState(false);
   const [draft, setDraft] = useState("");
 
-  const autore = authorName.trim() || "Operatore";
   const sortedTasks = useMemo(() => sortDashboardTasks(tasks), [tasks]);
   const pendingCount = tasks.filter((t) => !t.done).length;
   const doneCount = tasks.length - pendingCount;
-
-  function logTask(tone: GestionaleLogEventTone, tipoRiga: string, dettaglio: string) {
-    appendDashboardSistemaLog({
-      tone,
-      tipoRiga: tipoRiga.toUpperCase(),
-      oggettoRiga: "Cose da fare",
-      modificaRiga: dettaglio,
-      autore,
-      atIso: new Date().toISOString(),
-    });
-  }
 
   useEffect(() => {
     setTasks(loadDashboardTasks());
@@ -191,28 +175,18 @@ export function DashboardTasksPanel() {
     const t = createDashboardTask(trimmed);
     setTasks((prev) => [t, ...prev].slice(0, DASHBOARD_TASKS_MAX));
     setDraft("");
-    logTask("create", "CREAZIONE", `Nuova nota: ${t.text.slice(0, 200)}`);
   }
 
   function toggleDone(task: DashboardTask) {
     setTasks((prev) =>
       prev.map((x) => {
         if (x.id !== task.id) return x;
-        const nextDone = !x.done;
-        if (nextDone) {
-          logTask("complete", "COMPLETATA", `Spuntata: ${x.text.slice(0, 200)}`);
-        } else {
-          logTask("update", "AGGIORNAMENTO", `Attività rimessa in corso: ${x.text.slice(0, 200)}`);
-        }
-        return { ...x, done: nextDone };
+        return { ...x, done: !x.done };
       }),
     );
   }
 
   function renameTask(task: DashboardTask, next: string) {
-    const a = task.text.length > 100 ? `${task.text.slice(0, 100)}…` : task.text;
-    const b = next.length > 100 ? `${next.slice(0, 100)}…` : next;
-    logTask("update", "AGGIORNAMENTO", `Modifica testo attività: da «${a}» a «${b}»`);
     setTasks((prev) => prev.map((x) => (x.id === task.id ? { ...x, text: next } : x)));
   }
 
@@ -225,7 +199,6 @@ export function DashboardTasksPanel() {
       confirmLabel: "Elimina",
     }).then((ok) => {
       if (!ok) return;
-      logTask("delete", "ELIMINAZIONE", `Eliminata attività: ${task.text.slice(0, 200)}`);
       setTasks((prev) => prev.filter((x) => x.id !== task.id));
     });
   }
@@ -239,7 +212,6 @@ export function DashboardTasksPanel() {
       confirmLabel: "Rimuovi",
     }).then((ok) => {
       if (!ok) return;
-      logTask("delete", "ELIMINAZIONE", `Rimosse ${doneCount} note completate`);
       setTasks((prev) => prev.filter((x) => !x.done));
     });
   }

@@ -10,6 +10,7 @@ import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-siz
 import {
   formatTopMezzoIdentificazione,
   type ReportRowCompare,
+  type TopClienteFatturatoRow,
   type TopClienteReportRow,
   type TopMezzoReportRow,
   type TopRicambioReportRow,
@@ -270,6 +271,53 @@ export function ReportTopMezzi({ rows, showCompare }: { rows: TopMezzoReportRow[
         </tbody>
       </table>
       {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} /> : null}
+    </div>
+  );
+}
+
+
+export function ReportTopClientiFatturato({ rows }: { rows: TopClienteFatturatoRow[] }) {
+  const fmtEur = (n: number) =>
+    new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+
+  return (
+    <div className={wrap}>
+      <table className="w-full min-w-[28rem] border-separate border-spacing-0 text-left text-xs sm:text-sm">
+        <colgroup>
+          <col className="w-6 min-w-[1.5rem] max-w-[1.75rem]" />
+          <col style={{ width: "44%" }} />
+          <col style={{ width: "18%" }} />
+          <col style={{ width: "22%" }} />
+        </colgroup>
+        <GlobalTableHead>
+          <GlobalTableHeadLabel label="#" thClassName="w-6 min-w-[1.5rem] max-w-[1.75rem] px-0.5 text-center" align="center" />
+          <GlobalTableHeadLabel label="Cliente" />
+          <GlobalTableHeadLabel label="N° fatture" align="right" />
+          <GlobalTableHeadLabel label="Fatturato" align="right" />
+        </GlobalTableHead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={4} className={dsTableEmptyCell}>
+                Nessun dato disponibile nel periodo selezionato.
+              </td>
+            </tr>
+          ) : (
+            rows.map((r) => (
+              <tr key={r.cliente} className={tbodyTr}>
+                <td className={`${tdBase} px-1.5 text-left text-xs tabular-nums text-[color:var(--cab-text-muted)]`}>{r.rank}</td>
+                <td className={`${tdBase} min-w-0 font-medium`}>
+                  <span className="line-clamp-2" title={r.cliente}>
+                    {r.cliente}
+                  </span>
+                </td>
+                <td className={`${tdBase} text-right tabular-nums`}>{r.fatture}</td>
+                <td className={`${tdBase} text-right tabular-nums font-semibold`}>{fmtEur(r.fatturato)}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { ThemeModeIcon, ThemeToggle } from "@/components/gestionale/theme-toggle
 import { GestionaleConfirmDialogLazy } from "@/components/gestionale/gestionale-confirm-dialog-lazy";
 import { requestPasswordResetEmail } from "@/lib/auth/request-password-reset.client";
 import { dsFocusRing } from "@/lib/ui/design-system";
+import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 import { suppressSidebarBlurCollapse } from "@/lib/ui/use-sidebar-collapsed";
 import {
   accountMenuItemMutedIconClass,
@@ -140,7 +141,7 @@ export function ProfileActionsSection({
           confirmLabel="Invia email"
           cancelLabel="Annulla"
           pending={passwordPending}
-          layerClassName="z-[120]"
+          layerClassName={cabModalZConfirm}
           onCancel={() => setPasswordConfirmOpen(false)}
           onConfirm={() => void handlePasswordReset()}
         />

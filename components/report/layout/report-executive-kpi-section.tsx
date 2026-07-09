@@ -19,7 +19,15 @@ function pickByOrder(items: readonly UnifiedKpiDisplayItem[], order: readonly st
   return out;
 }
 
-export function ReportExecutiveKpiSection({ items }: { items: readonly UnifiedKpiDisplayItem[] }) {
+import type { ReportCompareMode } from "@/lib/report/date-ranges";
+
+export function ReportExecutiveKpiSection({
+  items,
+  compareMode = "none",
+}: {
+  items: readonly UnifiedKpiDisplayItem[];
+  compareMode?: ReportCompareMode;
+}) {
   const { primary, secondary } = useMemo(() => {
     return {
       primary: pickByOrder(items, EXECUTIVE_PRIMARY_KPI_IDS),
@@ -35,7 +43,7 @@ export function ReportExecutiveKpiSection({ items }: { items: readonly UnifiedKp
           l&apos;affidabilità del dato (esatto, stima, proxy).
         </p>
         <div className="mt-3">
-          <ReportUnifiedKpiGrid items={primary} variant="hero" />
+          <ReportUnifiedKpiGrid items={primary} variant="hero" compareMode={compareMode} />
         </div>
       </div>
 
@@ -44,7 +52,7 @@ export function ReportExecutiveKpiSection({ items }: { items: readonly UnifiedKp
           <h2 id="report-executive-secondary-kpi" className={reportSubsectionTitleClass}>
             Dettaglio operativo
           </h2>
-          <ReportUnifiedKpiGrid items={secondary} variant="compact" />
+          <ReportUnifiedKpiGrid items={secondary} variant="compact" compareMode={compareMode} />
         </section>
       ) : null}
     </div>

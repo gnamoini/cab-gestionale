@@ -2,7 +2,7 @@
 import type { ObservationRegistrySnapshot } from "@/lib/selector-core/selector-observation-types";
 
 export const OBSERVATION_REGISTRY_SNAPSHOT: ObservationRegistrySnapshot = {
-  "builtAt": "2026-07-07T22:34:11.972Z",
+  "builtAt": "2026-07-09T04:41:36.937Z",
   "domains": {
     "runtime": {
       "modules": [

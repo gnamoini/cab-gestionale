@@ -2,7 +2,7 @@ import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import { deltaPct, type DateRange } from "@/lib/report/date-ranges";
+import { compareBaselineValue, deltaPct, type DateRange, type ReportCompareMode } from "@/lib/report/date-ranges";
 import {
   avgDowntimeDaysInPeriod,
   buildAlerts,
@@ -37,6 +37,7 @@ export type KpiPerformanceBuildInput = {
   anchor: Date;
   range: DateRange;
   compareRange: DateRange | null;
+  compareMode?: ReportCompareMode;
   attive: LavorazioneAttiva[];
   completate: LavorazioneArchiviata[];
   mezzi: MezzoGestito[];
@@ -76,6 +77,7 @@ export function buildKpiPerformanceModel(input: KpiPerformanceBuildInput): KpiPe
     anchor,
     range,
     compareRange,
+    compareMode = "none",
     attive,
     completate,
     mezzi,
@@ -90,7 +92,11 @@ export function buildKpiPerformanceModel(input: KpiPerformanceBuildInput): KpiPe
   } = input;
 
   const closedCur = semanticIndex.completateTotal(range);
-  const closedPrev = compareRange ? semanticIndex.completateTotal(compareRange) : null;
+  const closedPrevRaw = compareRange ? semanticIndex.completateTotal(compareRange) : null;
+  const closedPrev =
+    compareRange && closedPrevRaw != null
+      ? compareBaselineValue(closedPrevRaw, compareRange, range, compareMode)
+      : null;
   const openCur = countInterventiAperti(attive);
 
   const disponibilitaPerCliente = disponibilitaFlottaPerCliente(mezzi, lavRows);
@@ -99,19 +105,27 @@ export function buildKpiPerformanceModel(input: KpiPerformanceBuildInput): KpiPe
   const inOfficina = countMezziInOfficinaProxy(mezzi, lavRows);
 
   const ricambiCost = sumRicambiCostFromMagLog(magLog, magazzino, range);
-  const ricambiCostPrev = compareRange ? sumRicambiCostFromMagLog(magLog, magazzino, compareRange) : null;
+  const ricambiCostPrevRaw = compareRange ? sumRicambiCostFromMagLog(magLog, magazzino, compareRange) : null;
+  const ricambiCostPrev =
+    compareRange && ricambiCostPrevRaw != null
+      ? compareBaselineValue(ricambiCostPrevRaw, compareRange, range, compareMode)
+      : null;
 
   const schedeCosts = sumManodoperaCostFromSchede(completate, range, schedeStore, costoOrario, magazzinoRows);
   const manodopera = schedeLoaded && schedeCosts.lavorazioniConScheda > 0 ? schedeCosts.manodopera : null;
   const totalMaint = ricambiCost + (manodopera ?? 0);
 
-  const schedeCostsPrev =
+  const schedeCostsPrevRaw =
     compareRange && schedeStore
       ? sumManodoperaCostFromSchede(completate, compareRange, schedeStore, costoOrario, magazzinoRows)
       : null;
+  const manodoperaPrev =
+    compareRange && schedeCostsPrevRaw != null
+      ? compareBaselineValue(schedeCostsPrevRaw.manodopera, compareRange, range, compareMode)
+      : null;
   const totalMaintPrev =
     compareRange && ricambiCostPrev != null
-      ? ricambiCostPrev + (schedeCostsPrev?.manodopera ?? 0)
+      ? ricambiCostPrev + (manodoperaPrev ?? 0)
       : null;
 
   const sotto = sottoScortaCount(magazzino);

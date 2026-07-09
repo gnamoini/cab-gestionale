@@ -1,12 +1,12 @@
 "use client";
 
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
+import { ReportPerformanceContext } from "@/components/report/layout/report-performance-context";
 import { mergeUnifiedKpiDisplay } from "@/lib/report/kpi-performance/merge-unified-kpi-display";
-import type { KpiPerformanceModel } from "@/lib/report/kpi-performance/kpi-performance-types";
-import { partitionUnifiedKpiDisplay, type PartitionedUnifiedKpis } from "@/lib/report/partition-unified-kpi-display";
 import { useReportKpiPerformanceData } from "@/lib/report/kpi-performance/use-report-kpi-performance-data";
+import { partitionUnifiedKpiDisplay } from "@/lib/report/partition-unified-kpi-display";
 import type { KpiCardModel } from "@/lib/report/build-report-model";
-import type { DateRange } from "@/lib/report/date-ranges";
+import type { DateRange, ReportCompareMode } from "@/lib/report/date-ranges";
 import type { ReportSemanticIndex } from "@/lib/report/report-semantic-index";
 import type { useReportLiveData } from "@/lib/report/use-report-live-data";
 
@@ -15,43 +15,38 @@ type LiveSlice = Pick<
   "lavListRows" | "attive" | "completate" | "mezzi" | "magazzino" | "magLog" | "isLoading"
 >;
 
-type ReportPerformanceContextValue = {
-  perf: KpiPerformanceModel | null;
-  perfLoading: boolean;
-  partitioned: PartitionedUnifiedKpis;
-};
-
-const ReportPerformanceContext = createContext<ReportPerformanceContextValue | null>(null);
-
-export function useReportPerformanceContext(): ReportPerformanceContextValue {
-  const ctx = useContext(ReportPerformanceContext);
-  if (!ctx) throw new Error("useReportPerformanceContext must be used within ReportPerformanceGate");
-  return ctx;
-}
+export { useReportPerformanceContext } from "@/components/report/layout/report-performance-context";
+export type { ReportPerformanceContextValue } from "@/components/report/layout/report-performance-context";
 
 export function ReportPerformanceGate({
   children,
   anchor,
   filterRange,
   compareRange,
+  compareMode = "none",
   periodKpis,
   live,
   semanticIndex,
+  enabled = true,
 }: {
   children: ReactNode;
   anchor: Date;
   filterRange: DateRange;
   compareRange: DateRange | null;
+  compareMode?: ReportCompareMode;
   periodKpis: KpiCardModel[];
   live: LiveSlice;
   semanticIndex: ReportSemanticIndex;
+  enabled?: boolean;
 }) {
   const { model: perf, isLoading: perfLoading } = useReportKpiPerformanceData({
     anchor,
     range: filterRange,
     compareRange,
+    compareMode,
     live,
     semanticIndex,
+    enabled,
   });
 
   const partitioned = useMemo(() => {

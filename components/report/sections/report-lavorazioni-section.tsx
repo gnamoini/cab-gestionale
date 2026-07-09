@@ -1,24 +1,23 @@
 "use client";
 
-import { KpiPerformanceFleet } from "@/components/report/kpi-performance/kpi-performance-fleet";
-import { KpiPerformanceOperational } from "@/components/report/kpi-performance/kpi-performance-operational";
-import { useReportPerformanceContext } from "@/components/report/layout/report-performance-gate";
-import { ReportClassificheOperativePanel } from "@/components/report/report-classifiche-operative-panel";
-import { ReportDomainMetricsGrid } from "@/components/report/report-domain-metrics-grid";
+import { useMemo } from "react";
 import { ReportLavorazioniSection } from "@/components/report/report-lavorazioni-section";
-import { ReportLavorazioniTemporalSection } from "@/components/report/report-lavorazioni-temporal-section";
 import { useReportAnalyticsDerived } from "@/components/report/report-analytics-derived-context";
 import { useReportAnalyticsDerivedActions } from "@/components/report/report-analytics-derived-context";
 import type { DomainReportSectionProps } from "@/components/report/report-section-types";
 import {
-  reportSectionGroupDescClass,
-  reportSubsectionTitleClass,
-} from "@/components/report/report-ui-tokens";
+  ReportBarChart,
+  ReportDataTable,
+  ReportDomainMetricsGrid,
+  ReportMatrix,
+  ReportSection,
+} from "@/components/report/design-system";
 import { usePublishWhenReady } from "@/components/report/sections/use-section-publish";
-import { LoadingSkeletonBlock } from "@/components/design-system/loading/loading-skeleton";
+import { reportComparePublishInput } from "@/lib/report/report-compare-publish";
+
+const MONTHS_SHORT = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"] as const;
 
 export default function ReportLavorazioniSectionView(props: DomainReportSectionProps) {
-  const { perf, perfLoading } = useReportPerformanceContext();
   const derived = useReportAnalyticsDerived();
   const { publishOperationalAnalytics } = useReportAnalyticsDerivedActions();
 
@@ -37,6 +36,7 @@ export default function ReportLavorazioniSectionView(props: DomainReportSectionP
         rangeKey: props.rangeKey,
         requestId,
         range: props.range,
+        ...reportComparePublishInput(props),
         attive: props.attive,
         storico: props.storico,
         completate: props.completate,
@@ -48,70 +48,61 @@ export default function ReportLavorazioniSectionView(props: DomainReportSectionP
 
   const metrics = derived.operational?.data.metrics ?? [];
 
+  const chartPoints = useMemo(() => {
+    const year = props.anchor.getFullYear();
+    const model = props.semanticIndex.buildTemporalModel(year, props.range);
+    return model.months.map((m, i) => ({
+      label: MONTHS_SHORT[i]!,
+      value: m.count,
+      muted: !m.inEffectiveRange,
+    }));
+  }, [props.anchor, props.range, props.semanticIndex]);
+
+  const monthlyRows = useMemo(
+    () =>
+      chartPoints
+        .filter((p) => !p.muted)
+        .map((p) => ({ mese: p.label, count: p.value })),
+    [chartPoints],
+  );
+
   return (
-    <div className="min-w-0 space-y-8">
-      <ReportDomainMetricsGrid metrics={metrics} />
+    <div className="min-w-0 space-y-4">
+      <ReportSection id="report-lav-kpi" title="Indicatori operativi" subtitle="KPI lavorazioni nel periodo">
+        <ReportDomainMetricsGrid metrics={metrics} compareMode={props.analyticsContext.compareMode} />
+      </ReportSection>
 
-      {perfLoading || !perf ? (
-        <LoadingSkeletonBlock className="min-h-[200px]" />
-      ) : (
-        <>
-          <section className="min-w-0 space-y-4" aria-labelledby="report-lav-operational">
-            <div>
-              <h3 id="report-lav-operational" className={reportSubsectionTitleClass}>
-                Andamento interventi
-              </h3>
-              <p className={`mt-1 ${reportSectionGroupDescClass}`}>
-                Chiusure nel periodo e segnali operativi.
-              </p>
-            </div>
-            <KpiPerformanceOperational data={perf.operational} />
-          </section>
+      <ReportSection
+        id="report-lav-temporal"
+        title="Ritmo mensile"
+        subtitle="Trend e andamento temporale"
+        defaultCollapsed
+      >
+        <ReportBarChart points={chartPoints} title="Lavorazioni per mese" />
+        <div className="mt-4">
+          <ReportDataTable configId="lavorazioni-mensile" rows={monthlyRows} />
+        </div>
+      </ReportSection>
 
-          <section className="min-w-0 space-y-4 border-t border-[color:var(--cab-border)] pt-8" aria-labelledby="report-lav-fleet">
-            <div>
-              <h3 id="report-lav-fleet" className={reportSubsectionTitleClass}>
-                Flotta e disponibilità
-              </h3>
-            </div>
-            <KpiPerformanceFleet data={perf.fleet} />
-          </section>
-        </>
-      )}
-
-      <section className="min-w-0 space-y-3 border-t border-[color:var(--cab-border)] pt-8">
-        <h3 className={reportSubsectionTitleClass}>Ritmo mensile</h3>
-        <ReportLavorazioniTemporalSection
-          filterRange={props.range}
-          anchor={props.anchor}
-          semanticIndex={props.semanticIndex}
-          embed
-          showKpiChart
-          showTable={false}
-        />
-      </section>
-
-      <section className="min-w-0 space-y-3 border-t border-[color:var(--cab-border)] pt-8">
-        <h3 className={reportSubsectionTitleClass}>Matrice lavorazioni</h3>
-        <ReportLavorazioniSection
-          attive={props.attive}
-          completate={props.completate}
-          manualEntries={props.manualEntries}
-          anchor={props.anchor}
-          filterRange={props.range}
-          compareDetail={props.compareDetail}
-          semanticIndex={props.semanticIndex}
-        />
-      </section>
-
-      <section className="min-w-0 space-y-3 border-t border-[color:var(--cab-border)] pt-8">
-        <h3 className={reportSubsectionTitleClass}>Classifiche operative</h3>
-        <ReportClassificheOperativePanel
-          mezzi={props.topsMezzi}
-          clienti={props.topsClienti}
-          showCompare={props.showCompare}
-        />
-      </section>
+      <ReportSection
+        id="report-lav-matrix"
+        title="Matrice lavorazioni"
+        subtitle="Matrice annuale, previsione e storico manuale"
+        defaultCollapsed
+      >
+        <ReportMatrix title="Heatmap annuale">
+          <ReportLavorazioniSection
+            attive={props.attive}
+            completate={props.completate}
+            manualEntries={props.manualEntries}
+            anchor={props.anchor}
+            filterRange={props.range}
+            compareDetail={props.compareDetail}
+            semanticIndex={props.semanticIndex}
+            embed
+          />
+        </ReportMatrix>
+      </ReportSection>
     </div>
   );
 }

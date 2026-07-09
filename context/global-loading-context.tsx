@@ -197,12 +197,14 @@ export function useLoadingClaim(
 ): void {
   const ctx = useContext(LoadingManagerContext);
   const message = opts?.message;
+  const registerClaim = ctx?.registerClaim;
+  const unregisterClaim = ctx?.unregisterClaim;
 
   useEffect(() => {
-    if (!ctx || !active) return;
-    ctx.registerClaim(surface, id, message);
-    return () => ctx.unregisterClaim(surface, id);
-  }, [ctx, surface, id, active, message]);
+    if (!registerClaim || !unregisterClaim || !active) return;
+    registerClaim(surface, id, message);
+    return () => unregisterClaim(surface, id);
+  }, [registerClaim, unregisterClaim, surface, id, active, message]);
 }
 
 /** true se la surface vince la competizione globale. */

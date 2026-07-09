@@ -3,8 +3,9 @@ import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-l
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
-import { deltaPct, isoInRange, type DateRange } from "@/lib/report/date-ranges";
+import { compareBaselineValue, deltaPct, isoInRange, type DateRange, type ReportCompareMode } from "@/lib/report/date-ranges";
 import { aggregateMagazzinoQtyByProductInRange } from "@/lib/report/magazzino-period-aggregate";
+import type { InvoiceRow } from "@/src/types/supabase-tables";
 
 export type ReportRowCompare = {
   prior: number;
@@ -61,10 +62,28 @@ export type TopClienteReportRow = {
   compare?: ReportRowCompare;
 };
 
-export function mergeTopRicambiCompare(cur: TopRicambioReportRow[], prev: TopRicambioReportRow[]): TopRicambioReportRow[] {
+export type ReportClassificaCompareCtx = {
+  curRange: DateRange;
+  compareRange: DateRange;
+  compareMode: ReportCompareMode;
+};
+
+function scaledPrior(
+  raw: number,
+  ctx: ReportClassificaCompareCtx | undefined,
+): number {
+  if (!ctx) return raw;
+  return compareBaselineValue(raw, ctx.compareRange, ctx.curRange, ctx.compareMode);
+}
+
+export function mergeTopRicambiCompare(
+  cur: TopRicambioReportRow[],
+  prev: TopRicambioReportRow[],
+  ctx?: ReportClassificaCompareCtx,
+): TopRicambioReportRow[] {
   const pmap = new Map(prev.map((r) => [r.id, r.qtaUscita]));
   return cur.map((r) => {
-    const pv = pmap.get(r.id) ?? 0;
+    const pv = scaledPrior(pmap.get(r.id) ?? 0, ctx);
     return {
       ...r,
       compare: { prior: pv, deltaAbs: Math.round((r.qtaUscita - pv) * 100) / 100, deltaPct: deltaPct(r.qtaUscita, pv) },
@@ -72,10 +91,14 @@ export function mergeTopRicambiCompare(cur: TopRicambioReportRow[], prev: TopRic
   });
 }
 
-export function mergeTopMezziCompare(cur: TopMezzoReportRow[], prev: TopMezzoReportRow[]): TopMezzoReportRow[] {
+export function mergeTopMezziCompare(
+  cur: TopMezzoReportRow[],
+  prev: TopMezzoReportRow[],
+  ctx?: ReportClassificaCompareCtx,
+): TopMezzoReportRow[] {
   const pmap = new Map(prev.map((r) => [r.id, r.interventi]));
   return cur.map((r) => {
-    const pv = pmap.get(r.id) ?? 0;
+    const pv = scaledPrior(pmap.get(r.id) ?? 0, ctx);
     return {
       ...r,
       compare: { prior: pv, deltaAbs: r.interventi - pv, deltaPct: deltaPct(r.interventi, pv) },
@@ -83,10 +106,14 @@ export function mergeTopMezziCompare(cur: TopMezzoReportRow[], prev: TopMezzoRep
   });
 }
 
-export function mergeTopClientiCompare(cur: TopClienteReportRow[], prev: TopClienteReportRow[]): TopClienteReportRow[] {
+export function mergeTopClientiCompare(
+  cur: TopClienteReportRow[],
+  prev: TopClienteReportRow[],
+  ctx?: ReportClassificaCompareCtx,
+): TopClienteReportRow[] {
   const pmap = new Map(prev.map((r) => [r.cliente, r.interventi]));
   return cur.map((r) => {
-    const pv = pmap.get(r.cliente) ?? 0;
+    const pv = scaledPrior(pmap.get(r.cliente) ?? 0, ctx);
     return {
       ...r,
       compare: { prior: pv, deltaAbs: r.interventi - pv, deltaPct: deltaPct(r.interventi, pv) },
@@ -160,6 +187,36 @@ export function buildTopMezziPeriodo(
     };
   });
   rows.sort((a, b) => b.interventi - a.interventi);
+  return rows.map((r, i) => ({ ...r, rank: i + 1 }));
+}
+
+export type TopClienteFatturatoRow = {
+  rank: number;
+  cliente: string;
+  fatturato: number;
+  fatture: number;
+};
+
+/** Clienti per fatturato emesso nel periodo (escl. bozza/annullata). */
+export function buildTopClientiByFatturato(
+  invoices: readonly InvoiceRow[],
+  range: DateRange,
+  limit = 10,
+): TopClienteFatturatoRow[] {
+  const map = new Map<string, { fatturato: number; fatture: number }>();
+  for (const inv of invoices) {
+    if (inv.status === "annullata" || inv.status === "bozza" || inv.status === "da_verificare") continue;
+    if (!isoInRange(inv.data_emissione, range)) continue;
+    const cliente = inv.cliente_label.trim() || "—";
+    const cur = map.get(cliente) ?? { fatturato: 0, fatture: 0 };
+    cur.fatture += 1;
+    cur.fatturato = Math.round((cur.fatturato + inv.totale) * 100) / 100;
+    map.set(cliente, cur);
+  }
+  const rows = [...map.entries()]
+    .map(([cliente, v]) => ({ cliente, fatturato: v.fatturato, fatture: v.fatture }))
+    .sort((a, b) => b.fatturato - a.fatturato)
+    .slice(0, limit);
   return rows.map((r, i) => ({ ...r, rank: i + 1 }));
 }
 

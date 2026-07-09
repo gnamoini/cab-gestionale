@@ -60,6 +60,8 @@ export type GlobalDatePickerProps = {
   onBlur?: () => void;
   /** Range anno per feedback UX (default 1900–2100). */
   yearRange?: ItalianDateYearRange;
+  /** Larghezza fissa popup calendario (evita schiacciamento se l'anchor è stretto). */
+  calendarPanelWidth?: number;
 };
 
 function shellClassForVariant(variant: "default" | "filter"): string {
@@ -94,6 +96,7 @@ export function GlobalDatePicker({
   "aria-label": ariaLabel,
   onBlur: onBlurProp,
   yearRange,
+  calendarPanelWidth,
 }: GlobalDatePickerProps) {
   const autoId = useId();
   const inputId = idProp ?? autoId;
@@ -127,7 +130,8 @@ export function GlobalDatePicker({
     open,
     anchorRef: wrapRef,
     contentRef: panelRef,
-    matchAnchorWidth: true,
+    matchAnchorWidth: calendarPanelWidth == null,
+    panelWidth: calendarPanelWidth,
     maxHeight: 420,
     repositionDeps: [viewYear, viewMonth, selectedYmd],
   });
@@ -321,6 +325,8 @@ export function GlobalDatePickerYmd({
   variant = "filter",
   yearRange,
   disabled,
+  inputClassName,
+  calendarPanelWidth,
 }: {
   valueYmd: string;
   onChangeYmd: (ymd: string) => void;
@@ -330,6 +336,8 @@ export function GlobalDatePickerYmd({
   variant?: "default" | "filter";
   yearRange?: ItalianDateYearRange;
   disabled?: boolean;
+  inputClassName?: string;
+  calendarPanelWidth?: number;
 }) {
   const [displayDraft, setDisplayDraft] = useState(() => displayFromYmd(valueYmd));
 
@@ -359,6 +367,8 @@ export function GlobalDatePickerYmd({
     <GlobalDatePicker
       id={id}
       variant={variant}
+      inputClassName={inputClassName}
+      calendarPanelWidth={calendarPanelWidth}
       value={displayDraft}
       placeholder={placeholder}
       aria-label={ariaLabel}

@@ -24,7 +24,8 @@ export const gestionaleCollapsibleHeaderTriggerClass =
 export const gestionaleCollapsibleShellHeaderShellClass =
   "flex w-full min-w-0 items-stretch";
 
-export const gestionaleCollapsibleShellHeaderSurfaceClass = "bg-[var(--cab-card)]";
+export const gestionaleCollapsibleShellHeaderSurfaceClass =
+  "bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))]";
 
 export const gestionaleCollapsibleShellHeaderFocusClass =
   "outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_42%,transparent)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--cab-bg-app)] dark:focus-visible:ring-offset-[var(--cab-bg-app)]";
@@ -59,6 +60,6 @@ export const gestionaleCollapsibleShellHeaderActionsClass =
 export const gestionaleCollapsibleShellHeaderActionsDividerClass =
   "border-l border-[color:var(--cab-border)]";
 
-/** Separatore header/contenuto (sul trigger, anima con hover). */
+/** Separatore header/contenuto — border solido (no inset shadow: evita flash in dark mode). */
 export const gestionaleCollapsibleShellHeaderDividerClass =
-  "shadow-[inset_0_-1px_0_0_var(--cab-border)]";
+  "border-b border-[color:var(--cab-border)]";

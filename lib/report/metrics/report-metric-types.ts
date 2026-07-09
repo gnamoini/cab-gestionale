@@ -1,0 +1,114 @@
+import type { ReportKpiTrust } from "@/lib/report/kpi-display-clusters";
+
+export type ReportMetricUnit =
+  | "count"
+  | "currency"
+  | "hours"
+  | "days"
+  | "percentage"
+  | "ratio";
+
+export type ReportMetricAggregation =
+  | "sum"
+  | "avg"
+  | "count"
+  | "min"
+  | "max"
+  | "latest"
+  | "derived";
+
+export type ReportMetricCategory =
+  | "operational"
+  | "economic"
+  | "warehouse"
+  | "customer"
+  | "fleet";
+
+export type ReportMetricApplicability =
+  | "period"
+  | "snapshot"
+  | "trend"
+  | "derived";
+
+export type ReportMetricTrendSemantics =
+  | "higher_is_better"
+  | "lower_is_better"
+  | "positive_when_decreasing"
+  | "neutral";
+
+export type ReportMetricKind = "kpi" | "ranking" | "temporal" | "matrix";
+
+export type ReportMetricIcon = "trend" | "currency" | "clock" | "box" | "users" | "fleet";
+
+export type ReportMetricLifecycleStatus = "active" | "deprecated" | "internal";
+
+export type ReportCompareUnavailableReason =
+  | "snapshot"
+  | "no_history"
+  | "period_not_applicable"
+  | "not_loaded";
+
+export type ReportMetricConfidence = "full" | "partial" | "estimated";
+
+export type KpiPayload = { spark?: number[] };
+export type RankingPayload = { rowCount: number };
+export type TemporalPayload = {
+  points: { label: string; value: number; muted?: boolean }[];
+};
+export type MatrixPayload = { year: number };
+
+export type ReportMetricPayload =
+  | { kind: "kpi"; data: KpiPayload }
+  | { kind: "ranking"; data: RankingPayload }
+  | { kind: "temporal"; data: TemporalPayload }
+  | { kind: "matrix"; data: MatrixPayload };
+
+export type ReportMetricSource = {
+  module: string;
+  trace?: string;
+};
+
+export type ReportMetricCompareState =
+  | {
+      status: "available";
+      previousValue: number;
+      deltaAbs: number | null;
+      deltaPercent: number | null;
+    }
+  | {
+      status: "unavailable";
+      reason: ReportCompareUnavailableReason;
+      hint?: string;
+    };
+
+/** Runtime DTO — metadati solo nel registry. */
+export type ReportMetric = {
+  id: string;
+  value: number;
+  compare: ReportMetricCompareState | null;
+  source: ReportMetricSource;
+  payload?: ReportMetricPayload;
+};
+
+import type { ReportValueFormatter } from "@/lib/report/metrics/report-value-formatter";
+
+export type ReportMetricRegistryEntry = {
+  id: string;
+  status: ReportMetricLifecycleStatus;
+  owner: import("@/components/report/report-sections-config").ReportSectionId;
+  category: ReportMetricCategory;
+  label: string;
+  description: string;
+  unit: ReportMetricUnit;
+  aggregation: ReportMetricAggregation;
+  applicability: ReportMetricApplicability;
+  trendSemantics: ReportMetricTrendSemantics;
+  rendererKind: ReportMetricKind;
+  /** Obbligatorio per status active — presentation SSOT. */
+  formatter?: ReportValueFormatter;
+  icon?: ReportMetricIcon;
+  sourceModule: string;
+  formula?: string;
+  trust?: ReportKpiTrust;
+  confidence?: ReportMetricConfidence;
+};

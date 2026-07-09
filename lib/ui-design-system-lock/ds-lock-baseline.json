@@ -32,21 +32,6 @@
       "rule": "flex-no-containment"
     },
     {
-      "file": "components/dashboard/dashboard-sistema-log-section.tsx",
-      "line": 153,
-      "rule": "flex-no-containment"
-    },
-    {
-      "file": "components/dashboard/dashboard-sistema-log-section.tsx",
-      "line": 154,
-      "rule": "flex-no-containment"
-    },
-    {
-      "file": "components/dashboard/dashboard-sistema-log-section.tsx",
-      "line": 160,
-      "rule": "flex-no-containment"
-    },
-    {
       "file": "components/dashboard/dashboard-tasks-panel.tsx",
       "line": 91,
       "rule": "flex-no-containment"

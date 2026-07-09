@@ -3,9 +3,10 @@
 import type { KpiCompareRow } from "@/lib/report/build-report-model";
 import { ReportSparkline } from "@/components/report/report-sparkline";
 import {
-  reportArrowAndTone,
-  reportCompareBadgeClass,
-  reportCompareToneClass,
+  ReportKpiCompareBlock,
+  ReportKpiCompareInline,
+} from "@/components/report/report-metric-compare-ui";
+import {
   reportKpiDescriptionClass,
   reportKpiTrustPillClass,
   reportMetricCardClass,
@@ -13,53 +14,6 @@ import {
   reportMetricCardHeroClass,
 } from "@/components/report/report-ui-tokens";
 import { REPORT_KPI_TRUST_LABELS, type ReportKpiTrust } from "@/lib/report/kpi-display-clusters";
-
-function fmtPct(p: number | null): string | null {
-  if (p == null) return null;
-  const s = p > 0 ? "+" : "";
-  return `${s}${p.toLocaleString("it-IT", { maximumFractionDigits: 1 })}%`;
-}
-
-function CompareInline({ rows }: { rows: KpiCompareRow[] }) {
-  const row = rows[0];
-  if (!row) return null;
-  const pctStr = fmtPct(row.deltaPct);
-  const { arrow, tone } = reportArrowAndTone(row.deltaPct, row.invert);
-  return (
-    <span className={reportCompareBadgeClass(tone)} title={row.label}>
-      <span className="text-xs leading-none">{arrow}</span>
-      {row.deltaAbs != null ? <span>{row.deltaAbs}</span> : null}
-      {pctStr != null ? <span className="font-normal opacity-90">{pctStr}</span> : row.deltaAbs == null ? <span>—</span> : null}
-    </span>
-  );
-}
-
-function CompareBlock({ rows }: { rows: KpiCompareRow[] }) {
-  return (
-    <div className="mt-3 space-y-1.5 border-t border-[color:var(--cab-border)] pt-3">
-      {rows.map((row) => {
-        const pctStr = fmtPct(row.deltaPct);
-        const { arrow, tone } = reportArrowAndTone(row.deltaPct, row.invert);
-        const tc = reportCompareToneClass(tone);
-        return (
-          <div key={row.label} className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 text-xs">
-            <span className="font-medium text-[color:var(--cab-text-muted)]">{row.label}</span>
-            <span className={`inline-flex items-center gap-1.5 font-semibold tabular-nums ${tc}`}>
-              <span className="text-sm leading-none">{arrow}</span>
-              <span>
-                {row.deltaAbs != null ? <span>{row.deltaAbs}</span> : null}
-                {row.deltaAbs != null && pctStr != null ? (
-                  <span className="font-normal text-[color:var(--cab-text-muted)]"> · </span>
-                ) : null}
-                {pctStr != null ? <span>{pctStr}</span> : row.deltaAbs == null ? <span>—</span> : null}
-              </span>
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 /** Spezza sottotitoli KPI lunghi (separatori ·) in elenco leggibile. */
 function KpiSubLines({ sub }: { sub: string }) {
@@ -121,7 +75,7 @@ export function ReportKpiCard({
           {label}
         </p>
         <div className="flex shrink-0 items-center gap-1.5">
-          {showInlineCompare ? <CompareInline rows={compareRows!} /> : null}
+          {showInlineCompare ? <ReportKpiCompareInline rows={compareRows!} /> : null}
           {trust ? (
             <span className={reportKpiTrustPillClass} title={`Fonte: ${REPORT_KPI_TRUST_LABELS[trust]}`}>
               {REPORT_KPI_TRUST_LABELS[trust]}
@@ -134,7 +88,7 @@ export function ReportKpiCard({
         {value}
       </p>
       {sub ? <KpiSubLines sub={sub} /> : null}
-      {hasCmp && !showInlineCompare ? <CompareBlock rows={compareRows!} /> : null}
+      {hasCmp && !showInlineCompare ? <ReportKpiCompareBlock rows={compareRows!} /> : null}
       {spark != null ? (
         <div className="mt-auto flex min-w-0 items-end justify-between gap-2 pt-4">
           <span className="text-[10px] text-[color:var(--cab-text-muted)]">Trend 7gg (solo DB)</span>

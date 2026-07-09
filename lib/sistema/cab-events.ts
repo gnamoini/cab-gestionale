@@ -17,14 +17,6 @@ export function dispatchAddettoDisplayRename(detail: CabAddettoRenameDetail): vo
   window.dispatchEvent(new CustomEvent<CabAddettoRenameDetail>(CAB_ADDETTO_DISPLAY_RENAME, { detail }));
 }
 
-/** Log modifiche dashboard (widget dashboard): aggiorna pannello se aperto. */
-export const CAB_DASHBOARD_SISTEMA_LOG_REFRESH = "cab-dashboard-sistema-log-refresh";
-
-export function dispatchDashboardSistemaLogRefresh(): void {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new Event(CAB_DASHBOARD_SISTEMA_LOG_REFRESH));
-}
-
 /** Log modifiche configurazione globale (/impostazioni). */
 export const CAB_CONFIGURAZIONE_LOG_REFRESH = "cab-configurazione-log-refresh";
 

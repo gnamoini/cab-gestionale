@@ -2,8 +2,6 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/context/auth-context";
-import { appendDashboardSistemaLog } from "@/lib/dashboard/dashboard-sistema-log-storage";
 import { todayDateYmd } from "@/lib/dipendenti/timesheet-month";
 import type { DashboardPromemoriaRow } from "@/lib/dashboard/dashboard-promemoria-types";
 import { monthKeyFromParts } from "@/lib/dashboard/dashboard-promemoria-types";
@@ -37,8 +35,6 @@ import {
 } from "@/lib/ui/design-system";
 
 export function DashboardPromemoriaSection() {
-  const { authorName } = useAuth();
-  const logAutore = authorName.trim() || "Operatore";
   const queryClient = useQueryClient();
   const rbac = useRbac();
   const readOnly = !rbac.canWritePage("dashboard");
@@ -108,30 +104,13 @@ export function DashboardPromemoriaSection() {
       }
       try {
         const count = await deleteMutation.mutateAsync({ id: row.id, scope });
-        const scopeLabel =
-          scope === "series"
-            ? "tutta la serie"
-            : scope === "following"
-              ? "questa e le successive"
-              : "l'occorrenza";
-        appendDashboardSistemaLog({
-          tone: "delete",
-          tipoRiga: "PROMEMORIA",
-          oggettoRiga: row.title,
-          modificaRiga:
-            count > 1
-              ? `• ${logAutore} ha eliminato ${count} promemoria (${scopeLabel})`
-              : `• ${logAutore} ha eliminato il promemoria del ${row.event_date}`,
-          autore: logAutore,
-          atIso: new Date().toISOString(),
-        });
         toastSuccess(count > 1 ? `${count} promemoria eliminati.` : "Promemoria eliminato.");
         setDeleteTarget(null);
       } catch (e) {
         toastError(e, { action: "delete" });
       }
     },
-    [deleteMutation, logAutore, rbac, toastError, toastSuccess],
+    [deleteMutation, rbac, toastError, toastSuccess],
   );
 
   const handleDelete = useCallback(
@@ -184,20 +163,6 @@ export function DashboardPromemoriaSection() {
             description: payload.description,
             scope: payload.scope,
           });
-          const scopeNote =
-            payload.scope === "series"
-              ? " (tutta la serie)"
-              : payload.scope === "following"
-                ? " (questa e le successive)"
-                : "";
-          appendDashboardSistemaLog({
-            tone: "update",
-            tipoRiga: "PROMEMORIA",
-            oggettoRiga: title,
-            modificaRiga: `• ${logAutore} ha aggiornato il promemoria del ${payload.eventDate}${scopeNote}`,
-            autore: logAutore,
-            atIso: new Date().toISOString(),
-          });
           toastSuccess("Promemoria aggiornato.");
         } else {
           const created = await createMutation.mutateAsync({
@@ -216,17 +181,6 @@ export function DashboardPromemoriaSection() {
                 payload.recurrence!.untilYmd!,
               ).length
             : 1;
-          appendDashboardSistemaLog({
-            tone: "create",
-            tipoRiga: "PROMEMORIA",
-            oggettoRiga: title,
-            modificaRiga:
-              occurrenceCount > 1
-                ? `• ${logAutore} ha creato ${occurrenceCount} promemoria ricorrenti a partire dal ${payload.eventDate}`
-                : `• ${logAutore} ha creato un promemoria per il ${payload.eventDate}`,
-            autore: logAutore,
-            atIso: new Date().toISOString(),
-          });
           toastSuccess(occurrenceCount > 1 ? `${occurrenceCount} promemoria creati.` : "Promemoria creato.");
           handleSelectYmd(created.event_date);
         }
@@ -237,7 +191,7 @@ export function DashboardPromemoriaSection() {
         toastError(e instanceof Error ? e.message : "Salvataggio non riuscito.");
       }
     },
-    [createMutation, editing, handleSelectYmd, logAutore, toastError, toastSuccess, toastValidation, updateMutation],
+    [createMutation, editing, handleSelectYmd, toastError, toastSuccess, toastValidation, updateMutation],
   );
 
   const isCurrentMonthView = monthKey === promemoriaMonthKeyFromYmd(todayDateYmd());

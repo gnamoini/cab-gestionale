@@ -11,14 +11,16 @@ import {
   type ReactNode,
 } from "react";
 import {
-  buildEconomicAnalytics,
-  buildLaborAnalytics,
-  buildOperationalAnalytics,
-  buildWarehouseAnalytics,
-  type EconomicAnalyticsBuildInput,
-  type LaborAnalyticsBuildInput,
-  type OperationalAnalyticsBuildInput,
-  type WarehouseAnalyticsBuildInput,
+  computeEconomicDerived,
+  computeLaborDerived,
+  computeOperationalDerived,
+  computeWarehouseDerived,
+} from "@/lib/report/report-derived-engine";
+import type {
+  EconomicAnalyticsBuildInput,
+  LaborAnalyticsBuildInput,
+  OperationalAnalyticsBuildInput,
+  WarehouseAnalyticsBuildInput,
 } from "@/lib/report/report-domain-analytics";
 import type {
   DerivedEntry,
@@ -124,7 +126,7 @@ export function ReportAnalyticsDerivedProvider({
   const publishOperationalAnalytics = useCallback(
     (input: OperationalAnalyticsBuildInput) => {
       if (!acceptPublish("operational", input.rangeKey, input.requestId)) return;
-      const dto = buildOperationalAnalytics(input);
+      const dto = computeOperationalDerived(input);
       const version = versionsRef.current.operational;
       setOperational(makeEntry(dto, input.rangeKey, version));
       setRevision((r) => r + 1);
@@ -135,7 +137,7 @@ export function ReportAnalyticsDerivedProvider({
   const publishWarehouseAnalytics = useCallback(
     (input: WarehouseAnalyticsBuildInput) => {
       if (!acceptPublish("warehouse", input.rangeKey, input.requestId)) return;
-      const dto = buildWarehouseAnalytics(input);
+      const dto = computeWarehouseDerived(input);
       const version = versionsRef.current.warehouse;
       setWarehouse(makeEntry(dto, input.rangeKey, version));
       setRevision((r) => r + 1);
@@ -146,7 +148,7 @@ export function ReportAnalyticsDerivedProvider({
   const publishLaborAnalytics = useCallback(
     (input: LaborAnalyticsBuildInput) => {
       if (!acceptPublish("labor", input.rangeKey, input.requestId)) return;
-      const dto = buildLaborAnalytics(input);
+      const dto = computeLaborDerived(input);
       const version = versionsRef.current.labor;
       setLabor(makeEntry(dto, input.rangeKey, version));
       setRevision((r) => r + 1);
@@ -157,7 +159,7 @@ export function ReportAnalyticsDerivedProvider({
   const publishEconomicAnalytics = useCallback(
     (input: EconomicAnalyticsBuildInput) => {
       if (!acceptPublish("economic", input.rangeKey, input.requestId)) return;
-      const dto = buildEconomicAnalytics(input);
+      const dto = computeEconomicDerived(input);
       const version = versionsRef.current.economic;
       setEconomic(makeEntry(dto, input.rangeKey, version));
       setRevision((r) => r + 1);

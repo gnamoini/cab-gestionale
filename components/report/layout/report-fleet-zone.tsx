@@ -2,7 +2,7 @@
 
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { KpiPerformanceFleet } from "@/components/report/kpi-performance/kpi-performance-fleet";
-import { useReportPerformanceContext } from "@/components/report/layout/report-performance-gate";
+import { useReportPerformanceContext } from "@/components/report/layout/report-performance-context";
 import { ReportUnifiedKpiGrid } from "@/components/report/report-unified-kpi-grid";
 import { reportSectionGroupDescClass, reportZoneShellClass } from "@/components/report/report-ui-tokens";
 import { LoadingSkeletonBlock } from "@/components/design-system/loading/loading-skeleton";

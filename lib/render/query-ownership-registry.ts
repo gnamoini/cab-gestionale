@@ -23,8 +23,7 @@ export type QueryScopeKey =
   | "preventivi.list"
   | "ordini_fornitori.list"
   | "schede.bundles"
-  | "dashboard.promemoria"
-  | "dashboard.log";
+  | "dashboard.promemoria";
 
 const OWNERSHIP_BY_SCOPE: Record<QueryScopeKey, QueryOwnership> = {
   "lavorazioni.list.attive": "SERVER_OWNER",
@@ -42,7 +41,6 @@ const OWNERSHIP_BY_SCOPE: Record<QueryScopeKey, QueryOwnership> = {
   "ordini_fornitori.list": "HYBRID_OWNER",
   "schede.bundles": "HYBRID_OWNER",
   "dashboard.promemoria": "CLIENT_OWNER",
-  "dashboard.log": "CLIENT_OWNER",
 };
 
 const PREFETCH_ROUTES_BY_SCOPE: Partial<Record<QueryScopeKey, readonly string[]>> = {
@@ -102,6 +100,5 @@ export function scopeKeyFromEntity(scope: EntityQueryScope): QueryScopeKey | nul
   if (scope.entityType === "ordini_fornitori") return "ordini_fornitori.list";
   if (scope.entityType === "schede") return "schede.bundles";
   if (scope.entityType === "dashboard" && variant === "promemoria") return "dashboard.promemoria";
-  if (scope.entityType === "dashboard" && variant === "log") return "dashboard.log";
   return null;
 }

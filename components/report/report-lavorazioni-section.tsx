@@ -93,6 +93,7 @@ function ReportLavorazioniSectionInner({
   filterRange,
   compareDetail,
   semanticIndex,
+  embed = false,
 }: {
   attive: LavorazioneAttiva[];
   completate: LavorazioneArchiviata[];
@@ -101,6 +102,7 @@ function ReportLavorazioniSectionInner({
   filterRange: DateRange;
   compareDetail: ReportCompareDetail | null;
   semanticIndex: ReportSemanticIndex;
+  embed?: boolean;
 }) {
   const upsertMutation = useReportManualEntryUpsertMutation();
   const removeMutation = useReportManualEntryRemoveMutation();
@@ -196,18 +198,14 @@ function ReportLavorazioniSectionInner({
       </ReportCompareBanner>
     ) : null;
 
-  return (
-    <ShellCard
-      id="report-lavorazioni"
-      title="Andamento lavorazioni"
-      collapsible
-      defaultCollapsed={false}
-      headerActions={
-        <button type="button" onClick={openModal} className={`${erpBtnNeutral} shrink-0 sm:text-sm`}>
-          Dati storici manuali
-        </button>
-      }
-    >
+  const manualBtn = (
+    <button type="button" onClick={openModal} className={`${erpBtnNeutral} shrink-0 sm:text-sm`}>
+      Dati storici manuali
+    </button>
+  );
+
+  const panel = (
+    <>
       {cmpLine}
 
       {!hasAnyData ? (
@@ -418,9 +416,12 @@ function ReportLavorazioniSectionInner({
           </div>
         </div>
       ) : null}
+    </>
+  );
 
-      {open ? (
-        <GestionaleModalShell
+  const modal =
+    open ? (
+      <GestionaleModalShell
           modalSize="analytics"
           modalHeight="tall"
           title="Dati storici manuali"
@@ -490,8 +491,31 @@ function ReportLavorazioniSectionInner({
             </div>
           </div>
         </GestionaleModalShell>
-      ) : null}
-    </ShellCard>
+      ) : null;
+
+  if (embed) {
+    return (
+      <div className="min-w-0">
+        <div className="mb-3 flex justify-end">{manualBtn}</div>
+        {panel}
+        {modal}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <ShellCard
+        id="report-lavorazioni"
+        title="Andamento lavorazioni"
+        collapsible
+        defaultCollapsed={false}
+        headerActions={manualBtn}
+      >
+        {panel}
+      </ShellCard>
+      {modal}
+    </>
   );
 }
 

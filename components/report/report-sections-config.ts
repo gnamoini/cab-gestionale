@@ -3,8 +3,10 @@ import { moduleAllows } from "@/src/lib/auth/effective-module-access";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 
 export type ReportSectionId =
+  | "panoramica"
   | "analisi_ai"
   | "lavorazioni"
+  | "clienti_mezzi"
   | "magazzino_ricambi"
   | "ore_lavorate"
   | "dati_economici"
@@ -16,6 +18,8 @@ export type ReportSectionConfig = {
   subtitle?: string;
   defaultCollapsed: boolean;
   permission: string | null;
+  /** Se valorizzato, la sezione è visibile con almeno uno dei moduli in lettura. */
+  permissionAny?: readonly string[];
   order: number;
   participatesInDerived: boolean;
   writableDerivedKeys: readonly DerivedKey[];
@@ -23,9 +27,9 @@ export type ReportSectionConfig = {
 
 export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
   {
-    id: "analisi_ai",
-    title: "ANALISI IA",
-    subtitle: "Sintesi assistita sui dati del periodo",
+    id: "panoramica",
+    title: "PANORAMICA",
+    subtitle: "Stato officina e flotta nel periodo selezionato",
     defaultCollapsed: false,
     permission: null,
     order: 1,
@@ -33,14 +37,35 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     writableDerivedKeys: [],
   },
   {
+    id: "analisi_ai",
+    title: "ANALISI IA",
+    subtitle: "Sintesi assistita sui dati del periodo",
+    defaultCollapsed: true,
+    permission: null,
+    order: 2,
+    participatesInDerived: false,
+    writableDerivedKeys: [],
+  },
+  {
     id: "lavorazioni",
     title: "LAVORAZIONI",
-    subtitle: "Interventi, flotta e andamento nel periodo",
+    subtitle: "Interventi e andamento nel periodo",
     defaultCollapsed: false,
     permission: "lavorazioni",
-    order: 2,
+    order: 3,
     participatesInDerived: true,
     writableDerivedKeys: ["operational"],
+  },
+  {
+    id: "clienti_mezzi",
+    title: "CLIENTI E MEZZI",
+    subtitle: "Flotta, disponibilità e classifiche clienti e mezzi",
+    defaultCollapsed: true,
+    permission: null,
+    permissionAny: ["mezzi", "lavorazioni"],
+    order: 4,
+    participatesInDerived: false,
+    writableDerivedKeys: [],
   },
   {
     id: "magazzino_ricambi",
@@ -48,7 +73,7 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     subtitle: "Consumi, stock e ordini fornitori",
     defaultCollapsed: true,
     permission: "magazzino",
-    order: 3,
+    order: 5,
     participatesInDerived: true,
     writableDerivedKeys: ["warehouse"],
   },
@@ -58,7 +83,7 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     subtitle: "Timesheet e produttività del team",
     defaultCollapsed: true,
     permission: "dipendenti",
-    order: 4,
+    order: 6,
     participatesInDerived: true,
     writableDerivedKeys: ["labor"],
   },
@@ -68,7 +93,7 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     subtitle: "Preventivi, fatture e DDT",
     defaultCollapsed: true,
     permission: "fatturazione",
-    order: 5,
+    order: 7,
     participatesInDerived: true,
     writableDerivedKeys: ["economic"],
   },
@@ -78,7 +103,7 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     subtitle: "Indicatori trasversali tra aree",
     defaultCollapsed: true,
     permission: null,
-    order: 6,
+    order: 8,
     participatesInDerived: true,
     writableDerivedKeys: [],
   },
@@ -88,14 +113,24 @@ export function filterReportSectionsByPermission(
   sections: readonly ReportSectionConfig[],
   canModule: (moduleId: string) => boolean,
 ): ReportSectionConfig[] {
-  return sections.filter((s) => !s.permission || canModule(s.permission));
+  return sections.filter((s) => {
+    if (s.permissionAny?.length) {
+      return s.permissionAny.some((perm) => canModule(perm));
+    }
+    return !s.permission || canModule(s.permission);
+  });
 }
 
 export function filterReportSectionsWithModules(
   sections: readonly ReportSectionConfig[],
   modules: Record<GestionalePermissionModule, import("@/src/lib/permissions/effective-permissions").EffectiveModulePermission>,
 ): ReportSectionConfig[] {
-  return sections.filter(
-    (s) => !s.permission || moduleAllows(modules, s.permission as GestionalePermissionModule, "read"),
-  );
+  return sections.filter((s) => {
+    if (s.permissionAny?.length) {
+      return s.permissionAny.some((perm) =>
+        moduleAllows(modules, perm as GestionalePermissionModule, "read"),
+      );
+    }
+    return !s.permission || moduleAllows(modules, s.permission as GestionalePermissionModule, "read");
+  });
 }

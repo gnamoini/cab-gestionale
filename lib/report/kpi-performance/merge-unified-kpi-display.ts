@@ -72,9 +72,23 @@ export function mergeUnifiedKpiDisplay(
         label: "Ingressi lavorazioni",
         sub: lavPeriodo.spark?.length ? "Trend 7gg: solo chiusure DB" : undefined,
       },
-      { label: "Ingressi lavorazioni" },
+      { label: "Carico periodo" },
     );
     if (m) items.push(m);
+  }
+
+  if (perf && lavPeriodo) {
+    const opened = Number.parseInt(lavPeriodo.value, 10) || 0;
+    const closed = perf.operational.closedInPeriod;
+    const saldo = opened - closed;
+    items.push({
+      id: "lav-saldo-periodo",
+      label: "Saldo backlog periodo",
+      value: String(saldo),
+      compareRows: null,
+      description: UNIFIED_KPI_DISPLAY["lav-saldo-periodo"]!.description,
+      hero: true,
+    });
   }
 
   if (semanticIndex && perf) {
@@ -109,7 +123,7 @@ export function mergeUnifiedKpiDisplay(
     const closedExec = execById(exec, "closed");
     items.push({
       id: "lav-chiusi",
-      label: "Chiusure archiviate",
+      label: "Chiusure periodo",
       value: String(perf.operational.closedInPeriod),
       compareRows: execCompareRows(closedExec),
       description: UNIFIED_KPI_DISPLAY["lav-chiusi"]!.description,

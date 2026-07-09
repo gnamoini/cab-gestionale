@@ -1,23 +1,25 @@
 "use client";
 
-import { KpiPerformanceEconomic } from "@/components/report/kpi-performance/kpi-performance-economic";
-import { useReportPerformanceContext } from "@/components/report/layout/report-performance-gate";
 import {
   useReportAnalyticsDerived,
   useReportAnalyticsDerivedActions,
 } from "@/components/report/report-analytics-derived-context";
-import { ReportDomainMetricsGrid } from "@/components/report/report-domain-metrics-grid";
 import { ReportMagazzinoSection } from "@/components/report/report-magazzino-section";
 import { ReportRicambiConsumoSection } from "@/components/report/report-ricambi-consumo-section";
-import { ReportTopRicambi } from "@/components/report/report-tops";
 import type { DomainReportSectionProps } from "@/components/report/report-section-types";
+import {
+  ReportDataTable,
+  ReportDomainMetricsGrid,
+  ReportBarChart,
+  ReportMatrix,
+  ReportSection,
+} from "@/components/report/design-system";
 import { usePublishWhenReady } from "@/components/report/sections/use-section-publish";
-import { reportSubsectionTitleClass } from "@/components/report/report-ui-tokens";
 import { useOrdiniFornitoriQuery } from "@/src/hooks/gestionale/use-ordini-fornitori-query";
-import { LoadingSkeletonBlock } from "@/components/design-system/loading/loading-skeleton";
+import { getMagazzinoMonthlyRowsForRange } from "@/lib/report/report-derived-cache";
+import { useMemo } from "react";
 
 export default function ReportMagazzinoSectionView(props: DomainReportSectionProps) {
-  const { perf, perfLoading } = useReportPerformanceContext();
   const derived = useReportAnalyticsDerived();
   const { publishWarehouseAnalytics } = useReportAnalyticsDerivedActions();
   const ordiniQ = useOrdiniFornitoriQuery(props.fetchEnabled);
@@ -38,6 +40,8 @@ export default function ReportMagazzinoSectionView(props: DomainReportSectionPro
         rangeKey: props.rangeKey,
         requestId,
         range: props.range,
+        compareRange: props.showCompare ? props.compareRange : null,
+        compareMode: props.analyticsContext.compareMode,
         magLog: props.magLog,
         magazzino: props.prodotti,
         magazzinoRows: props.magazzinoRows,
@@ -64,48 +68,89 @@ export default function ReportMagazzinoSectionView(props: DomainReportSectionPro
       return m;
     }) ?? [];
 
-  return (
-    <div className="min-w-0 space-y-8">
-      <ReportDomainMetricsGrid metrics={metrics} />
+  const topRicambiRows = useMemo(
+    () =>
+      props.topsRicambi.map((r) => ({
+        rank: r.rank,
+        codice: r.codice,
+        nome: r.nome,
+        qtaEntrata: r.qtaEntrata,
+        qtaUscita: r.qtaUscita,
+      })),
+    [props.topsRicambi],
+  );
 
-      {perfLoading || !perf ? (
-        <LoadingSkeletonBlock className="min-h-[160px]" />
+  const movementChartPoints = useMemo(() => {
+    const { rows } = getMagazzinoMonthlyRowsForRange(
+      props.derivedBundle,
+      props.prodotti,
+      props.range,
+      props.anchor,
+      {},
+    );
+    return rows.map((r) => ({ label: r.label, value: r.entrate + r.uscite }));
+  }, [props.derivedBundle, props.prodotti, props.range, props.anchor]);
+
+  return (
+    <div className="min-w-0 space-y-4">
+      <ReportSection id="report-mag-kpi" title="Indicatori magazzino" subtitle="KPI stock e movimenti">
+        <ReportDomainMetricsGrid metrics={metrics} compareMode={props.analyticsContext.compareMode} />
+      </ReportSection>
+
+      {movementChartPoints.length > 0 ? (
+        <ReportSection id="report-mag-chart" title="Andamento movimenti" subtitle="Saldo netto mensile" defaultCollapsed>
+          <ReportBarChart points={movementChartPoints} title="Movimenti netti" />
+        </ReportSection>
       ) : (
-        <section className="min-w-0 space-y-4">
-          <h3 className={reportSubsectionTitleClass}>Economia magazzino</h3>
-          <KpiPerformanceEconomic data={perf.economic} />
-        </section>
+        <ReportSection id="report-mag-chart" title="Andamento movimenti" subtitle="Saldo netto mensile" defaultCollapsed>
+          <ReportBarChart points={[]} title="Movimenti netti" />
+        </ReportSection>
       )}
 
-      <section className="min-w-0 space-y-3 border-t border-[color:var(--cab-border)] pt-8">
-        <h3 className={reportSubsectionTitleClass}>Movimenti e stock</h3>
-        <ReportMagazzinoSection
-          derivedBundle={props.derivedBundle}
-          prodotti={props.prodotti}
-          anchor={props.anchor}
-          range={props.range}
-          compareDetail={props.compareDetail}
-          histRev={props.histRev}
-          onHistRev={props.onHistRev}
-        />
-      </section>
+      <ReportSection
+        id="report-mag-movements"
+        title="Movimenti e stock"
+        subtitle="Tabella mensile, grafici entrate/uscite"
+        defaultCollapsed
+      >
+        <ReportMatrix title="Movimenti mensili">
+          <ReportMagazzinoSection
+            derivedBundle={props.derivedBundle}
+            prodotti={props.prodotti}
+            anchor={props.anchor}
+            range={props.range}
+            compareDetail={props.compareDetail}
+            histRev={props.histRev}
+            onHistRev={props.onHistRev}
+            embed
+          />
+        </ReportMatrix>
+      </ReportSection>
 
-      <section className="min-w-0 space-y-3 border-t border-[color:var(--cab-border)] pt-8">
-        <h3 className={reportSubsectionTitleClass}>Consumo ricambi</h3>
+      <ReportSection
+        id="report-mag-consumo"
+        title="Consumo ricambi"
+        subtitle="Ranking consumi per periodo, mese o anno"
+        defaultCollapsed
+      >
         <ReportRicambiConsumoSection
           magLogSorted={props.derivedBundle.magLogSorted}
           prodotti={props.prodotti}
           filterRange={props.range}
           anchor={props.anchor}
+          embed
         />
-      </section>
+      </ReportSection>
 
-      {props.topsRicambi.length > 0 ? (
-        <section className="min-w-0 space-y-3 border-t border-[color:var(--cab-border)] pt-8">
-          <h3 className={reportSubsectionTitleClass}>Top ricambi</h3>
-          <ReportTopRicambi rows={props.topsRicambi} showCompare={props.showCompare} />
-        </section>
-      ) : null}
+      {topRicambiRows.length > 0 ? (
+        <ReportSection id="report-mag-top" title="Top ricambi" subtitle="Maggior movimentazione nel periodo" defaultCollapsed>
+          <ReportDataTable configId="top-ricambi" rows={topRicambiRows} />
+        </ReportSection>
+      ) : (
+        <ReportSection id="report-mag-top" title="Top ricambi" subtitle="Maggior movimentazione nel periodo" defaultCollapsed>
+          <ReportDataTable configId="top-ricambi" rows={[]} />
+        </ReportSection>
+      )}
     </div>
   );
 }

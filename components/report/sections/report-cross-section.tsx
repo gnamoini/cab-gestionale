@@ -2,26 +2,49 @@
 
 import { useMemo } from "react";
 import { useReportAnalyticsDerived } from "@/components/report/report-analytics-derived-context";
-import { ReportDomainMetricsGrid } from "@/components/report/report-domain-metrics-grid";
 import type { DomainReportSectionProps } from "@/components/report/report-section-types";
-import { buildCrossAnalytics } from "@/lib/report/report-domain-analytics";
-import { reportSectionGroupDescClass } from "@/components/report/report-ui-tokens";
+import { ReportDomainMetricsGrid, ReportSection } from "@/components/report/design-system";
+import { computeCrossDerived } from "@/lib/report/report-derived-engine";
+import type { ReportDomainMetric } from "@/lib/report/report-domain-types";
 
-export default function ReportCrossSectionView(_props: DomainReportSectionProps) {
+function pickMetrics(metrics: readonly ReportDomainMetric[], ids: readonly string[]) {
+  const set = new Set(ids);
+  return metrics.filter((m) => set.has(m.id));
+}
+
+export default function ReportCrossSectionView(props: DomainReportSectionProps) {
   const derived = useReportAnalyticsDerived();
 
   const crossDto = useMemo(
-    () => buildCrossAnalytics(derived),
+    () => computeCrossDerived(derived),
     [derived.revision, derived.operational, derived.warehouse, derived.labor, derived.economic],
   );
 
+  const efficiency = pickMetrics(crossDto.metrics, ["cross_efficiency"]);
+  const pressure = pickMetrics(crossDto.metrics, ["cross_parts_job", "cross_cost_job"]);
+  const economy = pickMetrics(crossDto.metrics, ["cross_value_hour"]);
+
   return (
     <div className="min-w-0 space-y-4">
-      <p className={reportSectionGroupDescClass}>
-        Indicatori calcolati dai dati già caricati nelle sezioni di dominio. Apri le sezioni
-        correlate se vedi N/D.
-      </p>
-      <ReportDomainMetricsGrid metrics={crossDto.metrics} />
+      <ReportSection id="report-cross-efficiency" title="Efficienza" subtitle="Produttività officina nel periodo">
+        <ReportDomainMetricsGrid metrics={efficiency} compareMode={props.analyticsContext.compareMode} />
+      </ReportSection>
+      <ReportSection
+        id="report-cross-pressure"
+        title="Pressione operativa"
+        subtitle="Ricambi e costo medio per intervento"
+        defaultCollapsed
+      >
+        <ReportDomainMetricsGrid metrics={pressure} compareMode={props.analyticsContext.compareMode} />
+      </ReportSection>
+      <ReportSection
+        id="report-cross-economy"
+        title="Economia"
+        subtitle="Valore generato per ora lavorata"
+        defaultCollapsed
+      >
+        <ReportDomainMetricsGrid metrics={economy} compareMode={props.analyticsContext.compareMode} />
+      </ReportSection>
     </div>
   );
 }

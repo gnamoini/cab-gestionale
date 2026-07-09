@@ -15,7 +15,7 @@ export const UNIFIED_KPI_DISPLAY: Record<string, UnifiedKpiDisplayMeta> = {
   "lav-periodo": {
     order: 1,
     hero: true,
-    description: "Lavorazioni con data di ingresso nel periodo selezionato.",
+    description: "Lavorazioni con data di ingresso nel periodo selezionato (carico).",
   },
   "lav-media-settimanale": {
     order: 2,
@@ -25,6 +25,10 @@ export const UNIFIED_KPI_DISPLAY: Record<string, UnifiedKpiDisplayMeta> = {
   "lav-chiusi": {
     order: 3,
     description: "Completate archiviate nel periodo (DB + eventuali override mensili manuali).",
+  },
+  "lav-saldo-periodo": {
+    order: 3.5,
+    description: "Ingressi meno chiusure nel periodo (accumulo vs smaltimento).",
   },
   "lav-aperti": {
     order: 4,

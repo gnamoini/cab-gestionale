@@ -3,6 +3,7 @@ import {
   compareRangeFor,
   inclusiveDayCount,
   resolvePresetRange,
+  scaleCompareBaseline,
   type ReportPeriodPreset,
 } from "@/lib/report/date-ranges";
 import { REPORT_PERIOD_PRESETS, isReportPeriodPreset } from "@/lib/report/report-period-presets";
@@ -83,6 +84,25 @@ assert.equal(ymd(prevYear!.start), "2025-05-30");
 assert.equal(ymd(prevYear!.end), "2025-06-05");
 
 assert.equal(compareRangeFor(cur, "none"), null);
+
+// average compare windows end the day before current period start
+const cur3m = resolvePresetRange(ANCHOR, "last_3_months");
+const avg3 = compareRangeFor(cur3m, "avg_3_months");
+assert.ok(avg3);
+assert.equal(ymd(avg3!.end), "2026-03-31");
+assert.equal(ymd(avg3!.start), "2026-01-01");
+
+const avg12 = compareRangeFor(cur3m, "avg_12_months");
+assert.ok(avg12);
+assert.equal(ymd(avg12!.end), "2026-03-31");
+assert.equal(ymd(avg12!.start), "2025-04-01");
+
+const avg3y = compareRangeFor(cur3m, "avg_3_years");
+assert.ok(avg3y);
+assert.equal(ymd(avg3y!.end), "2026-03-31");
+assert.equal(ymd(avg3y!.start), "2023-04-01");
+
+assert.equal(scaleCompareBaseline(90, avg3!, cur3m), Math.round(((90 * inclusiveDayCount(cur3m)) / inclusiveDayCount(avg3!)) * 100) / 100);
 
 // catalog covers every preset id
 for (const p of REPORT_PERIOD_PRESETS) {

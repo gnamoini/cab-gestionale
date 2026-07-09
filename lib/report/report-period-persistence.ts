@@ -1,4 +1,5 @@
 import type { ReportCompareMode, ReportPeriodPreset } from "@/lib/report/date-ranges";
+import { isReportCompareMode } from "@/lib/report/report-compare-options";
 import { isReportPeriodPreset } from "@/lib/report/report-period-presets";
 
 const STORAGE_KEY = "gestionale.report.period.v1";
@@ -8,9 +9,9 @@ export type ReportPeriodPrefs = {
   compareMode: ReportCompareMode;
   customFrom: string;
   customTo: string;
+  compareCustomFrom: string;
+  compareCustomTo: string;
 };
-
-const VALID_COMPARE: ReadonlySet<string> = new Set(["none", "prev_period", "prev_year"]);
 
 function isValidYmd(s: unknown): s is string {
   return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -22,14 +23,18 @@ function parsePrefs(raw: unknown): ReportPeriodPrefs | null {
   const preset = o.preset;
   const compareMode = o.compareMode;
   if (typeof preset !== "string" || !isReportPeriodPreset(preset)) return null;
-  if (typeof compareMode !== "string" || !VALID_COMPARE.has(compareMode)) return null;
+  if (typeof compareMode !== "string" || !isReportCompareMode(compareMode)) return null;
   const customFrom = isValidYmd(o.customFrom) ? o.customFrom : "";
   const customTo = isValidYmd(o.customTo) ? o.customTo : "";
+  const compareCustomFrom = isValidYmd(o.compareCustomFrom) ? o.compareCustomFrom : "";
+  const compareCustomTo = isValidYmd(o.compareCustomTo) ? o.compareCustomTo : "";
   return {
     preset,
     compareMode: compareMode as ReportCompareMode,
     customFrom,
     customTo,
+    compareCustomFrom,
+    compareCustomTo,
   };
 }
 
