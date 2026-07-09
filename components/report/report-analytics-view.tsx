@@ -93,7 +93,14 @@ function readInitialPeriodPrefs(searchParams: URLSearchParams | null): {
 
   if (/^\d{4}-\d{2}-\d{2}$/.test(fromUrl) && /^\d{4}-\d{2}-\d{2}$/.test(toUrl)) {
     const compareMode = isReportCompareMode(compareUrl) ? compareUrl : ("none" as ReportCompareMode);
-    return { preset: "custom", compareMode, customFrom: fromUrl, customTo: toUrl };
+    return {
+      preset: "custom",
+      compareMode,
+      customFrom: fromUrl,
+      customTo: toUrl,
+      compareCustomFrom: "",
+      compareCustomTo: "",
+    };
   }
 
   if (presetUrl === "current_week" && /^\d{4}-\d{2}-\d{2}$/.test(fromUrl)) {
@@ -102,6 +109,8 @@ function readInitialPeriodPrefs(searchParams: URLSearchParams | null): {
       compareMode: isReportCompareMode(compareUrl) ? compareUrl : "none",
       customFrom: fromUrl,
       customTo: toUrl || fromUrl,
+      compareCustomFrom: "",
+      compareCustomTo: "",
     };
   }
 

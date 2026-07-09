@@ -31,6 +31,8 @@ export function CalendarV2Actions({
       compareMode: "prev_period",
       customFrom: deepLink.customFrom,
       customTo: deepLink.customTo,
+      compareCustomFrom: "",
+      compareCustomTo: "",
     });
   }
 
