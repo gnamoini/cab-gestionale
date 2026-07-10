@@ -150,7 +150,7 @@ assert.doesNotMatch(
   /AbortSignal\.timeout\(\d+_?\d*\)/,
 );
 assert.match(listinoAnalysis, /runChunksSequential/);
-assert.match(previewRoute, /maxDuration\s*=\s*600/);
+assert.match(previewRoute, /maxDuration\s*=\s*300/);
 
 const listinoTypes = fs.readFileSync(
   path.join(ROOT, "lib/magazzino/listino-import/listino-import-types.ts"),

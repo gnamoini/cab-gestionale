@@ -18,7 +18,8 @@ import {
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 export const runtime = "nodejs";
-export const maxDuration = 600;
+// ponytail: Vercel Hobby cap 300s — async path preferred for PDF grandi.
+export const maxDuration = 300;
 
 async function resolveCompanyId(userId: string): Promise<string | null> {
   const sb = await createSupabaseServerUserClient();
