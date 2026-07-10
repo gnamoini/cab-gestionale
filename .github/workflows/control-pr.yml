@@ -36,8 +36,8 @@ jobs:
       SMOKE_DOCUMENTI_LAVORAZIONE_ID: ${{ secrets.SMOKE_DOCUMENTI_LAVORAZIONE_ID }}
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
@@ -74,13 +74,17 @@ jobs:
         if: env.CONTROL_SHADOW_STRICT == '1'
         run: npm run control:shadow-policy -- --strict
 
+      - name: Control inventory (strict coverage)
+        if: env.CONTROL_COVERAGE_STRICT == '1'
+        run: npm run control:inventory
+
       - name: Coverage (strict security/data/production)
         if: env.CONTROL_COVERAGE_STRICT == '1'
         run: CONTROL_COVERAGE_STRICT=1 npx tsx lib/control/control-coverage.test.ts
 
       - name: Upload control report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: control-report-pr-${{ github.run_id }}
           path: |
