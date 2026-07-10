@@ -51,6 +51,7 @@ export function createExecutionContext(
 function shouldSkipForLocal(control: ControlDefinition): boolean {
   if (LOCAL_SKIP_IDS.has(control.id)) return true;
   if (control.id === "runtime.e2e.smoke" && smokePlaywrightSkip()) return true;
+  if (control.id === "runtime.smoke.preflight" && process.env.SMOKE_SKIP === "1") return true;
   if (
     (control.id === "data.supabase.connection" || control.id === "data.production.readiness") &&
     !hasSupabaseSecrets()
