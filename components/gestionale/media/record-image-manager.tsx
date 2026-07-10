@@ -1,7 +1,8 @@
 "use client";
 
-import { Tooltip } from "@/components/design-system/tooltip";
+
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
+import { Tooltip } from "@/components/ui";
 import { HubIconAddPhoto, HubIconPhoto } from "@/components/design-system/hub-table-action-icons";
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";

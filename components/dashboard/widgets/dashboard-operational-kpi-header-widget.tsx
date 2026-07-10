@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import type { ReactNode } from "react";
 import type { ControlTowerKpiMetric } from "@/lib/dashboard/control-tower-selectors";
 import type { DashboardWidgetDefinition } from "@/lib/dashboard/dashboard-widget-registry";
@@ -45,18 +46,13 @@ function KpiCompareBadge({
   if (absStr == null && pctStr == null) return null;
 
   return (
-    <span
-      className={reportCompareBadgeClass(tone)}
-      title={`Variazione rispetto alla settimana precedente (${prevLabel})`}
-    >
+    <Tooltip content={`Variazione rispetto alla settimana precedente (${prevLabel})`}><span className={reportCompareBadgeClass(tone)}>
       <span className="text-xs leading-none" aria-hidden>
         {arrow}
       </span>
       {absStr != null ? <span>{absStr}</span> : null}
-      {pctStr != null ? (
-        <span className={absStr != null ? "font-normal opacity-90" : undefined}>{pctStr}</span>
-      ) : null}
-    </span>
+      {pctStr != null ? (<span className={absStr != null ? "font-normal opacity-90" : undefined}>{pctStr}</span>) : null}
+    </span></Tooltip>
   );
 }
 

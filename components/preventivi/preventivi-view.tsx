@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 
 import dynamic from "next/dynamic";
@@ -160,8 +161,7 @@ function fmtDataCreazioneTabella(iso: string): string {
   }
 }
 
-const prevTableTd = gestionaleListTableTd;
-const prevTableTdText = `${gestionaleListTableTd} min-w-0 text-sm text-zinc-800 dark:text-zinc-100`;
+const preventiviTableTdText = `${gestionaleListTableTd} min-w-0 text-sm text-zinc-800 dark:text-zinc-100`;
 
 function IconPreventivoEdit({ className = dsTableActionGlyph }: { className?: string }) {
   return (
@@ -898,23 +898,15 @@ export function PreventiviView() {
         <section aria-label="Azioni e filtri preventivi">
           <PageToolbar
             primaryAction={
-              <button
-                type="button"
-                onClick={() =>
-                  canEditWorkOrders &&
-                  setEditor({
-                    open: true,
-                    record: buildEmptyManualPreventivo(autore.trim() || "Operatore", rows),
-                    isNew: true,
-                    isRollbackDraft: false,
-                  })
-                }
-                className={dsPageToolbarCtaCompact}
-                disabled={!canEditWorkOrders}
-                title={canEditWorkOrders ? "Crea un preventivo senza collegamento a lavorazione" : READONLY_PERMISSION_HINT}
-              >
-                <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo preventivo" />
-              </button>
+              <Tooltip content={canEditWorkOrders ? "Crea un preventivo senza collegamento a lavorazione" : READONLY_PERMISSION_HINT}><button type="button" onClick={() => canEditWorkOrders &&
+        setEditor({
+            open: true,
+            record: buildEmptyManualPreventivo(autore.trim() || "Operatore", rows),
+            isNew: true,
+            isRollbackDraft: false,
+        })} className={dsPageToolbarCtaCompact} disabled={!canEditWorkOrders}>
+                <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo preventivo"/>
+              </button></Tooltip>
             }
             search={
               <GestionaleListSearchField
@@ -1091,42 +1083,42 @@ export function PreventiviView() {
                       focused ? "ring-2 ring-inset ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]" : ""
                     }`}
                   >
-                    <td className={`whitespace-nowrap ${prevTableTd} font-mono text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100`}>
+                    <td className={`whitespace-nowrap ${gestionaleListTableTd} font-mono text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100`}>
                       <span className="inline-flex items-center gap-1.5">
                         {p.numero}
                         <PreventivoBillingBadge status={preventiviBillingById.get(p.id)?.stato_fatturazione} />
                       </span>
                     </td>
                     <td className={`whitespace-nowrap ${gestionaleListTableTdPill}`}>
-                      <span className={preventivoTipoDocumentoBadgeClass(p.tipoDocumento)} title={preventivoTipoDocumentoLabel(p.tipoDocumento)}>
+                      <Tooltip content={preventivoTipoDocumentoLabel(p.tipoDocumento)}><span className={preventivoTipoDocumentoBadgeClass(p.tipoDocumento)}>
                         {preventivoTipoDocumentoLabel(p.tipoDocumento, "short")}
-                      </span>
+                      </span></Tooltip>
                     </td>
-                    <td className={`whitespace-nowrap ${prevTableTd} text-xs tabular-nums text-zinc-600 dark:text-zinc-300`}>
+                    <td className={`whitespace-nowrap ${gestionaleListTableTd} text-xs tabular-nums text-zinc-600 dark:text-zinc-300`}>
                       {fmtDataCreazioneTabella(p.dataCreazione)}
                     </td>
-                    <td className={prevTableTdText}>
+                    <td className={preventiviTableTdText}>
                       <span className="line-clamp-2 break-words leading-snug">{p.cliente || "—"}</span>
                     </td>
-                    <td className={`min-w-0 ${prevTableTd} text-zinc-700 dark:text-zinc-200`}>
+                    <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-200`}>
                       <span className="line-clamp-2 break-words text-xs leading-snug">{p.cantiere || "—"}</span>
                     </td>
-                    <td className={`min-w-0 ${prevTableTd} text-zinc-700 dark:text-zinc-200`}>
+                    <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-200`}>
                       <span className="line-clamp-2 break-words text-xs leading-snug">{p.utilizzatore || "—"}</span>
                     </td>
-                    <td className={`min-w-0 max-w-[1px] ${prevTableTd} text-zinc-700 dark:text-zinc-200`}>
+                    <td className={`min-w-0 max-w-[1px] ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-200`}>
                       <span className="line-clamp-2 break-words text-sm leading-snug">{p.macchinaRiassunto || "—"}</span>
                     </td>
-                    <td className={`whitespace-nowrap ${prevTableTd} font-mono text-[11px] text-zinc-600 dark:text-zinc-300`}>{p.targa || "—"}</td>
-                    <td className={`min-w-0 ${prevTableTd} font-mono text-[11px] text-zinc-600 dark:text-zinc-300`}>
+                    <td className={`whitespace-nowrap ${gestionaleListTableTd} font-mono text-[11px] text-zinc-600 dark:text-zinc-300`}>{p.targa || "—"}</td>
+                    <td className={`min-w-0 ${gestionaleListTableTd} font-mono text-[11px] text-zinc-600 dark:text-zinc-300`}>
                       <span className="line-clamp-1">{p.matricola || "—"}</span>
                     </td>
-                    <td className={`min-w-0 ${prevTableTd} text-[11px] text-zinc-600 dark:text-zinc-300`}>
-                      <span className="line-clamp-1" title={p.nScuderia || undefined}>
+                    <td className={`min-w-0 ${gestionaleListTableTd} text-[11px] text-zinc-600 dark:text-zinc-300`}>
+                      <Tooltip content={p.nScuderia || undefined}><span className="line-clamp-1">
                         {p.nScuderia || "—"}
-                      </span>
+                      </span></Tooltip>
                     </td>
-                    <td className={`whitespace-nowrap ${prevTableTd} text-sm font-medium tabular-nums text-zinc-800 dark:text-zinc-100`}>
+                    <td className={`whitespace-nowrap ${gestionaleListTableTd} text-sm font-medium tabular-nums text-zinc-800 dark:text-zinc-100`}>
                       {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
                     </td>
                     <td className={gestionaleListTableTdAzioni}>

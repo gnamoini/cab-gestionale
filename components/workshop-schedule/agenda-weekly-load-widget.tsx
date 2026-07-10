@@ -1,7 +1,7 @@
 "use client";
 
-import { Tooltip } from "@/components/design-system";
 import type { WeeklyLoadSnapshot } from "@/lib/workshop-schedule/intelligence/weekly-load/types";
+import { Tooltip } from "@/components/ui";
 import { dsBadgeWarn, dsSectionTitle, dsTypoCaption } from "@/lib/ui/design-system";
 
 function barColor(pct: number): string {

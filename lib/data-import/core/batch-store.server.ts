@@ -55,6 +55,46 @@ export async function listImportBatches(entity?: ImportEntity, limit = 50) {
   return data ?? [];
 }
 
+export async function finalizeImportBatchMetadata(
+  batchId: string,
+  patch: {
+    status?: ImportBatchStatus;
+    stats?: Record<string, unknown>;
+    fingerprint_hash?: string;
+    template_version?: string;
+    plugin_version?: string;
+    schema_hash?: string;
+    import_mode?: string;
+    created_entity_ids?: string[];
+    finished_at?: string;
+  },
+): Promise<void> {
+  const sb = await createSupabaseServerUserClient();
+  const { error } = await sb.from("import_batches").update(patch).eq("id", batchId);
+  if (error) throw new Error(error.message);
+}
+
+export async function findSuccessfulFingerprintDuplicate(input: {
+  createdBy: string;
+  entity: string;
+  fingerprintHash: string;
+  importMode: string;
+}): Promise<{ batchId: string; finishedAt: string | null } | null> {
+  const sb = await createSupabaseServerUserClient();
+  const { data, error } = await sb
+    .from("import_batches")
+    .select("id, finished_at")
+    .eq("created_by", input.createdBy)
+    .eq("entity", input.entity)
+    .eq("fingerprint_hash", input.fingerprintHash)
+    .eq("import_mode", input.importMode)
+    .eq("status", "success")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return { batchId: String(data.id), finishedAt: data.finished_at as string | null };
+}
+
 export async function getImportBatch(batchId: string) {
   const sb = await createSupabaseServerUserClient();
   const { data, error } = await sb.from("import_batches").select("*").eq("id", batchId).maybeSingle();

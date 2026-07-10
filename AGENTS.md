@@ -457,6 +457,15 @@ Non introdurre classi tabella locali (`prevTableTd`, thead custom, `text-sm` sul
 - Se HMR crash su `proxy.ts` / `proxy-handler.ts` (`NextSegmentConfig no longer exists`): usare `**npm run dev:webpack`** temporaneamente mentre si lavora sull'edge auth/RBAC — non disabilitare Turbopack in modo permanente senza motivo.
 - `proxy.ts`: `config.matcher` deve restare **string literal** (no `String.raw` / builder dinamici).
 
+## Control Plane (governance layer)
+
+- SSOT governance: [`docs/control-plane/README.md`](docs/control-plane/README.md)
+- ADR: [`docs/adr/ADR-001-control-plane-architecture.md`](docs/adr/ADR-001-control-plane-architecture.md)
+- Implementazione: `lib/control/` (registry, catalog, executor)
+- Tier: `npm run control:{local,pr,staging,cert,production,observe}`
+- Legacy CI: `release-gate` workflow (alias in transizione verso `control:pr`)
+- Nuovo controllo: seguire processo in README — `governance.control.review` deve passare
+
 # Caveman Mode
 
 - minimal output

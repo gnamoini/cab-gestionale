@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import type { ReactNode } from "react";
 import { Button, IconActionButton, LoadingErrorState } from "@/components/design-system";
 import { HubIconPencil, HubIconPlus, HubIconTrash } from "@/components/design-system/hub-table-action-icons";
@@ -37,12 +38,9 @@ function PromemoriaRow({
           <div className="flex min-w-0 items-center gap-1.5">
             <h3 className="min-w-0 text-sm font-semibold leading-snug text-[color:var(--cab-text)]">{row.title}</h3>
             {row.series_id ? (
-              <span
-                className={`${dsTypoCaption} shrink-0 rounded-md border border-[color:var(--cab-border)] px-1.5 py-0.5 font-semibold text-[color:var(--cab-primary)]`}
-                title={seriesSummary ?? "Serie ricorrente"}
-              >
+              <Tooltip content={seriesSummary ?? "Serie ricorrente"}><span className={`${dsTypoCaption} shrink-0 rounded-md border border-[color:var(--cab-border)] px-1.5 py-0.5 font-semibold text-[color:var(--cab-primary)]`}>
                 ↻
-              </span>
+              </span></Tooltip>
             ) : null}
           </div>
           {timeLabel ? (

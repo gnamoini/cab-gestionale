@@ -1,6 +1,7 @@
 "use client";
 
 import { ShellCard } from "@/components/gestionale/shell-card";
+import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import { FatturaStatusBadge, formatInvoiceDate, formatInvoiceMoney } from "@/components/fatturazione/fattura-status-badge";
 import { invoiceDisplayNumber } from "@/lib/fatturazione/fatturazione-list-ui-filters";
 import { invoiceSdiStatus } from "@/lib/fatturazione/invoice-status";
@@ -22,7 +23,7 @@ export function FatturazioneSdiSection({
     <ShellCard>
       <h2 className={dsTypoSectionTitle}>Fatturazione elettronica (SdI)</h2>
       <p className={`${dsTypoSmall} mt-1`}>Stato invio per fatture emesse. Adapter HTTP pluggable via `fe-sdi`.</p>
-      <ul className="mt-4 divide-y divide-[color:var(--cab-border)]">
+      <ul className={`mt-4 ${LIST_DIVIDER_UL}`}>
         {feInvoices.slice(0, 50).map((inv) => (
           <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
             <div>

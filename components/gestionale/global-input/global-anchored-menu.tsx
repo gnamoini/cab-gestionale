@@ -6,13 +6,38 @@ import {
   useDropdownOutsideDismiss,
   useGlobalDropdownPortal,
 } from "@/components/gestionale/global-input/use-global-dropdown-portal";
-import { globalInputDropdownPortalPanel } from "@/lib/ui/global-input";
+import { globalInputDropdownOptionClass, globalInputDropdownPortalPanel } from "@/lib/ui/global-input";
 import type { Placement } from "@floating-ui/react-dom";
 
-/**
- * Menu/listbox ancorato al trigger via portal + Floating UI.
- * Con `listbox` (default) il pannello è `<ul role="listbox">` — voci in `<li role="presentation">`.
- */
+/** API frozen — estensioni richiedono ADR + bump UI_PRIMITIVE_VERSIONS.GlobalAnchoredMenu */
+export type GlobalAnchoredMenuItem = {
+  id: string;
+  label: ReactNode;
+  icon?: ReactNode;
+  disabled?: boolean;
+  destructive?: boolean;
+};
+
+export type GlobalAnchoredMenuProps = {
+  open: boolean;
+  anchorRef: RefObject<HTMLElement | null>;
+  onClose: () => void;
+  children: ReactNode;
+  panelClassName?: string;
+  placement?: Placement;
+  matchAnchorWidth?: boolean;
+  panelWidth?: number;
+  maxHeight?: number;
+  listbox?: boolean;
+  listId?: string;
+  "aria-label"?: string;
+};
+
+export type GlobalAnchoredMenuItemsProps = Omit<GlobalAnchoredMenuProps, "children"> & {
+  items: GlobalAnchoredMenuItem[];
+  onSelect: (item: GlobalAnchoredMenuItem) => void;
+};
+
 export function GlobalAnchoredMenu({
   open,
   anchorRef,
@@ -26,21 +51,7 @@ export function GlobalAnchoredMenu({
   listbox = true,
   listId,
   "aria-label": ariaLabel,
-}: {
-  open: boolean;
-  anchorRef: RefObject<HTMLElement | null>;
-  onClose: () => void;
-  children: ReactNode;
-  panelClassName?: string;
-  placement?: Placement;
-  matchAnchorWidth?: boolean;
-  panelWidth?: number;
-  maxHeight?: number;
-  /** Se true, contenitore `<ul role="listbox">` (pattern dropdown globale). */
-  listbox?: boolean;
-  listId?: string;
-  "aria-label"?: string;
-}) {
+}: GlobalAnchoredMenuProps) {
   const panelRef = useRef<HTMLUListElement | HTMLDivElement>(null);
 
   const { style, scrollInside, placementOriginClass, floatingRef } = useGlobalDropdownPortal({
@@ -77,7 +88,7 @@ export function GlobalAnchoredMenu({
     <div
       ref={floatingRef}
       style={style}
-      role="presentation"
+      role="menu"
       aria-label={ariaLabel}
       className={panelClass}
     >
@@ -86,4 +97,35 @@ export function GlobalAnchoredMenu({
   );
 
   return typeof document !== "undefined" ? createPortal(menu, document.body) : null;
+}
+
+export function GlobalAnchoredMenuItems({
+  items,
+  onSelect,
+  listbox = false,
+  ...rest
+}: GlobalAnchoredMenuItemsProps) {
+  return (
+    <GlobalAnchoredMenu listbox={listbox} {...rest}>
+      {items.map((item) => (
+        <li key={item.id} role="presentation">
+          <button
+            type="button"
+            role={listbox ? "option" : "menuitem"}
+            disabled={item.disabled}
+            className={`${globalInputDropdownOptionClass(false)}${
+              item.destructive ? " text-[color:var(--cab-danger)]" : ""
+            }`}
+            onClick={() => {
+              if (item.disabled) return;
+              onSelect(item);
+            }}
+          >
+            {item.icon ? <span className="mr-2 inline-flex shrink-0">{item.icon}</span> : null}
+            {item.label}
+          </button>
+        </li>
+      ))}
+    </GlobalAnchoredMenu>
+  );
 }

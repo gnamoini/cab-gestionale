@@ -162,6 +162,9 @@ export const DIPENDENTI_TIMESHEET_EMPLOYEES_COLUMNS =
 export const DIPENDENTI_TIMESHEET_ENTRIES_COLUMNS =
   "id, dipendente_id, work_date, ore_ordinarie, ore_straordinarie, assenza, motivo_assenza, ore_assenza, note, tipo_assenza_id, tipo_assenza_label, employee_display_name_snapshot, employee_source_addetto_id_snapshot, updated_by, created_at, updated_at" as const;
 
+export const REPORT_SAVED_KPI_CHARTS_COLUMNS =
+  "id, user_id, name, config, schema_version, created_at, updated_at" as const;
+
 export const REPORT_MANUAL_ENTRIES_COLUMNS =
   "id, period_month, completed_count, note, created_by, created_at, updated_at, deleted_at" as const;
 

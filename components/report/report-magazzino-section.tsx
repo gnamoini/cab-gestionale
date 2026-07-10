@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { ShellCard } from "@/components/gestionale/shell-card";
@@ -289,9 +290,9 @@ export function ReportMagazzinoSection({
           <tbody>
             {sortedRows.map((r) => (
               <tr key={r.key} className={dsTableRow}>
-                <td className={`${dsTableTd} font-medium whitespace-nowrap`} title={r.label}>
+                <Tooltip content={r.label}><td className={`${dsTableTd} font-medium whitespace-nowrap`}>
                   {r.label}
-                </td>
+                </td></Tooltip>
                 <td className={`${dsTableTd} text-right tabular-nums`}>{r.entrate}</td>
                 <td className={`${dsTableTd} text-right tabular-nums`}>{r.uscite}</td>
                 <td className={`${dsTableTd} text-right tabular-nums`}>{r.deltaQty > 0 ? `+${r.deltaQty}` : r.deltaQty}</td>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 import { pageMatrixColumnLabel } from "@/src/lib/permissions/gestionale-pages";
 import type { PageAccessMatrix } from "@/src/actions/security-roles-permissions";
@@ -46,13 +47,9 @@ export function SecurityPageMatrixEditor({ matrix, draft, onDraftChange, readOnl
               Ruolo
             </th>
             {matrix.pages.map((p) => (
-              <th
-                key={p.key}
-                className={`${dsTableHeadCell} w-10 min-w-[2.5rem] max-w-[3.25rem] px-1 text-center normal-case tracking-normal`}
-                title={p.label}
-              >
+              <Tooltip content={p.label}><th key={p.key} className={`${dsTableHeadCell} w-10 min-w-[2.5rem] max-w-[3.25rem] px-1 text-center normal-case tracking-normal`}>
                 <span className="block text-[10px] font-semibold leading-tight">{pageMatrixColumnLabel(p.label)}</span>
-              </th>
+              </th></Tooltip>
             ))}
           </tr>
         </thead>

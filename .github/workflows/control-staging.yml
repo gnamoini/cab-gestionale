@@ -1,0 +1,35 @@
+# Control Plane — staging tier (post-deploy smoke + migration parity).
+name: Control Staging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  control-staging:
+    name: control-staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      CI: "true"
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run control:staging
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: control-report-staging-${{ github.run_id }}
+          path: control-report.json
+          retention-days: 90

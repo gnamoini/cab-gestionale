@@ -7,20 +7,15 @@ function toBulletModificaRiga(lines: string[]): string {
   return filtered.map((l) => `• ${l.replace(/^•\s*/, "")}`).join("\n");
 }
 
-function sottoScortaDeficit(item: RicambioMagazzino): number {
-  return Math.max(0, item.scortaMinima - item.scorta);
-}
-
 /** Converte un ricambio sotto scorta in voce messaggio (stile log modifiche). */
 export function toMagazzinoSottoScortaLogViewModel(item: RicambioMagazzino): GestionaleLogViewModel {
-  const oggetto = item.descrizione?.trim() || "Ricambio sotto scorta";
+  const descrizione = item.descrizione?.trim() || "Ricambio sotto scorta";
+  const marca = item.marca?.trim();
+  const oggetto = marca ? `${marca} ${descrizione}` : descrizione;
   const lines: string[] = [];
-  if (item.marca?.trim()) lines.push(`Marca: ${item.marca.trim()}`);
   const codice = item.codiceFornitoreOriginale?.trim();
   if (codice) lines.push(`Codice: ${codice}`);
   lines.push(`Scorta: ${item.scorta} (min. ${item.scortaMinima})`);
-  const deficit = sottoScortaDeficit(item);
-  if (deficit > 0) lines.push(`Mancano ${deficit} unità`);
 
   return {
     tone: "update",

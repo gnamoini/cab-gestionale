@@ -63,7 +63,10 @@ async function fetchWorkOrderProjections(ids: string[]): Promise<Map<string, Lav
     .select("id, codice, stato, addetto, mezzi(targa, marca, modello, cliente)")
     .in("id", unique)
     .is("deleted_at", null);
-  if (error || !data) return map;
+  if (error || !data) {
+    console.warn("[workshop-schedule] fetchWorkOrderProjections failed:", error?.message ?? "no data");
+    return map;
+  }
   for (const row of data as Array<{
     id: string;
     codice?: string | null;

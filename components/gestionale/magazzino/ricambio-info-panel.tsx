@@ -1,13 +1,14 @@
 "use client";
 
 import type { ReactElement, ReactNode } from "react";
+import { Tooltip } from "@/components/ui";
 import {
   GestionaleInfoCard,
   GestionaleInfoRow,
   GestionaleInfoSubgroup,
 } from "@/components/design-system/gestionale-info-card";
 import { HubModalPanoramicaPanel, hubPanoramicaDisplayValue } from "@/components/design-system/hub-modal-panoramica";
-import { LoadingFormSkeleton, Tooltip } from "@/components/design-system";
+import { LoadingFormSkeleton } from "@/components/design-system";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import { RecordImageManager, type RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import {

@@ -3,9 +3,9 @@
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { WorkshopScheduleFilters } from "@/lib/workshop-schedule/types";
-import { computeDayCapacity } from "@/lib/workshop-schedule/day-capacity";
+import type { WorkshopScheduleSessionView } from "@/lib/workshop-schedule/types";
+import { computeScheduleCapacity } from "@/lib/workshop-schedule/schedule-capacity";
 import { filterSessions, stableFiltersKey } from "@/lib/workshop-schedule/workshop-schedule-filters";
-import { ymdFromIso } from "@/lib/workshop-schedule/datetime";
 import {
   workshopScheduleQueryKeys,
   workshopScheduleRangeKey,
@@ -41,12 +41,11 @@ export function useWorkshopScheduleRange(
   return { ...query, sessions };
 }
 
-export function useWorkshopScheduleDayCapacity(dayYmd: string, startIso: string, endIso: string) {
-  const { sessions } = useWorkshopScheduleRange(startIso, endIso);
-  return useMemo(() => {
-    const daySessions = sessions.filter((s) => ymdFromIso(s.startAt) === dayYmd || ymdFromIso(s.endAt) === dayYmd);
-    return computeDayCapacity(dayYmd, daySessions);
-  }, [dayYmd, sessions]);
+export function useWorkshopScheduleDayCapacity(
+  dayYmd: string,
+  sessions: readonly WorkshopScheduleSessionView[],
+) {
+  return useMemo(() => computeScheduleCapacity({ sessions, dayYmd }), [dayYmd, sessions]);
 }
 
 export function useWorkshopScheduleByWorkOrder(workOrderId: string | undefined, enabled = true) {

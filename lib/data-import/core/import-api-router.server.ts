@@ -5,6 +5,16 @@ import { decodeImportFileBase64, sha256ImportFile } from "@/lib/data-import/core
 import type { ImportStrategy } from "@/lib/data-import/core/import-plugin";
 import type { ImportDuplicateAction } from "@/lib/data-import/core/types";
 import { getImportPluginBySlug } from "@/lib/data-import/registry";
+import { ImportExportRegistry } from "@/lib/data-import/registry/import-export-registry";
+import { executeImportCommand } from "@/lib/data-import/core/command-executor.server";
+import { computeSchemaHash, assessImportCompatibility } from "@/lib/data-import/core/template-compatibility";
+import { isImportExcelActive } from "@/lib/data-import/import-capabilities";
+import {
+  assertBackupImportAllowed,
+  extractWorkbookMeta,
+  ImportValidationError,
+  manifestHashWarnings,
+} from "@/lib/data-import/core/backup-import-guard.server";
 
 export const importParseRequestSchema = z.object({
   fileName: z.string().min(1).max(255),
@@ -36,6 +46,7 @@ export const importPreviewRequestSchema = z.object({
 export const importExecuteRequestSchema = z.object({
   batchId: z.string().uuid(),
   fileName: z.string().min(1),
+  fileBase64: z.string().min(1),
   mapping: importMappingSchema,
   strategy: z.enum(["initial", "incremental", "sync", "merge", "replace"]).optional(),
   rules: z.record(z.string(), z.unknown()).optional(),
@@ -48,14 +59,20 @@ export async function handleImportParse(slug: string, body: unknown) {
   const parsed = importParseRequestSchema.safeParse(body);
   if (!parsed.success) return { ok: false as const, status: 400, error: "Parametri non validi" };
   const plugin = getImportPluginBySlug(slug);
-  if (plugin.status === "stub") {
+  if (!isImportExcelActive(plugin.id)) {
     return { ok: false as const, status: 501, error: `Import ${plugin.label} in preparazione.` };
   }
   try {
+    const bytes = decodeImportFileBase64(parsed.data.fileBase64);
+    const meta = extractWorkbookMeta(bytes, parsed.data.fileName);
+    assertBackupImportAllowed(meta, "parse");
     const result = await plugin.parseFile(parsed.data);
     const { matrix: _m, ...rest } = result;
     return { ok: true as const, data: rest };
   } catch (e) {
+    if (e instanceof ImportValidationError) {
+      return { ok: false as const, status: 400, error: e.message };
+    }
     return { ok: false as const, status: 400, error: e instanceof Error ? e.message : "Analisi file non riuscita." };
   }
 }
@@ -64,12 +81,36 @@ export async function handleImportPreview(slug: string, userId: string, body: un
   const parsed = importPreviewRequestSchema.safeParse(body);
   if (!parsed.success) return { ok: false as const, status: 400, error: "Parametri non validi" };
   const plugin = getImportPluginBySlug(slug);
-  if (plugin.status === "stub") {
+  if (!isImportExcelActive(plugin.id)) {
     return { ok: false as const, status: 501, error: `Import ${plugin.label} in preparazione.` };
   }
   try {
     const bytes = decodeImportFileBase64(parsed.data.fileBase64);
     const fileSha256 = sha256ImportFile(bytes);
+    const wbMeta = extractWorkbookMeta(bytes, parsed.data.fileName);
+    assertBackupImportAllowed(wbMeta, "preview");
+    const def = ImportExportRegistry.getDefinition(plugin.id);
+    const compat = assessImportCompatibility({
+      fileMeta: {
+        entity: plugin.id,
+        templateVersion: wbMeta.templateVersion,
+        schemaHash: wbMeta.schemaHash,
+        exportMode: wbMeta.exportMode,
+      },
+      pluginTemplateVersion: def.templateVersion,
+      pluginEntity: plugin.id,
+      requiredFieldKeys: plugin.fields.filter((f) => f.required).map((f) => f.key),
+      detectedColumnKeys: parsed.data.mapping.columns.map((c) => c.targetField),
+      fileSchemaHash: wbMeta.schemaHash,
+      currentSchemaHash: computeSchemaHash(plugin.fields, "importable"),
+    });
+    if (!compat.ok) {
+      return {
+        ok: false as const,
+        status: 400,
+        error: compat.blockers.map((b) => b.message).join(" "),
+      };
+    }
     const result = await plugin.buildPreview({
       userId,
       fileName: parsed.data.fileName,
@@ -79,8 +120,18 @@ export async function handleImportPreview(slug: string, userId: string, body: un
       duplicateDefaultAction: parsed.data.duplicateDefaultAction as ImportDuplicateAction | undefined,
       strategy: parsed.data.strategy as ImportStrategy | undefined,
     });
-    return { ok: true as const, data: result };
+    const manifestWarnings = manifestHashWarnings(wbMeta);
+    return {
+      ok: true as const,
+      data: {
+        ...result,
+        warnings: [...(result.warnings ?? []), ...compat.warnings.map((w) => w.message), ...manifestWarnings],
+      },
+    };
   } catch (e) {
+    if (e instanceof ImportValidationError) {
+      return { ok: false as const, status: 400, error: e.message };
+    }
     return { ok: false as const, status: 400, error: e instanceof Error ? e.message : "Preview non riuscita." };
   }
 }
@@ -89,7 +140,7 @@ export async function handleImportExecute(slug: string, userId: string, body: un
   const parsed = importExecuteRequestSchema.safeParse(body);
   if (!parsed.success) return { ok: false as const, status: 400, error: "Parametri non validi" };
   const plugin = getImportPluginBySlug(slug);
-  if (plugin.status === "stub") {
+  if (!isImportExcelActive(plugin.id)) {
     return { ok: false as const, status: 501, error: `Import ${plugin.label} in preparazione.` };
   }
   try {
@@ -114,16 +165,46 @@ export async function handleImportExecute(slug: string, userId: string, body: un
     if (!decisions?.length) {
       return { ok: false as const, status: 400, error: "Nessuna decisione di import." };
     }
-    const result = await plugin.execute({
-      batchId: parsed.data.batchId,
-      userId,
-      fileName: parsed.data.fileName,
-      mapping: parsed.data.mapping,
-      strategy: parsed.data.strategy as ImportStrategy | undefined,
-      rules: parsed.data.rules,
-      decisions,
-    });
-    return { ok: true as const, data: result };
+    const bytes = decodeImportFileBase64(parsed.data.fileBase64);
+    const fileSha256 = sha256ImportFile(bytes);
+    const def = ImportExportRegistry.getDefinition(plugin.id);
+    const schemaHash = computeSchemaHash(plugin.fields, "importable");
+    const cmdResult = await executeImportCommand(
+      plugin,
+      {
+        kind: "import.execute",
+        input: {
+          batchId: parsed.data.batchId,
+          userId,
+          fileName: parsed.data.fileName,
+          mapping: parsed.data.mapping,
+          strategy: parsed.data.strategy as ImportStrategy | undefined,
+          rules: parsed.data.rules,
+          decisions,
+        },
+        fileBase64: parsed.data.fileBase64,
+        fileName: parsed.data.fileName,
+      },
+      {
+        entity: plugin.id,
+        userId,
+        batchId: parsed.data.batchId,
+        fileSha256,
+        schemaHash,
+        pluginVersion: def.pluginVersion,
+        templateVersion: def.templateVersion,
+        importMode: parsed.data.strategy ?? "upsert",
+        rowCount: decisions.length,
+      },
+    );
+    if (!cmdResult.ok) {
+      return {
+        ok: false as const,
+        status: cmdResult.duplicateBatchId ? 409 : 400,
+        error: cmdResult.error ?? "Import non riuscito.",
+      };
+    }
+    return { ok: true as const, data: cmdResult.result! };
   } catch (e) {
     return { ok: false as const, status: 400, error: e instanceof Error ? e.message : "Import non riuscito." };
   }

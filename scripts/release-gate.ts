@@ -1,5 +1,6 @@
 /**
  * Orchestratore locale del release gate (advisory / pre-push).
+ * DEPRECATED: preferire `npm run control:local` (Control Plane).
  * NON autorizza deploy production: solo il check GitHub Actions "release-gate"
  * su commit mergiato in main abilita production (branch protection + Vercel Deployment Protection).
  */
@@ -17,6 +18,7 @@ const STEPS: { label: string; cmd: string; args: string[]; env?: NodeJS.ProcessE
     env: { ...process.env, NODE_ENV: "production" },
   },
   { label: "ux:enforce", cmd: "npm", args: ["run", "ux:enforce"] },
+  { label: "audit:ui", cmd: "npm", args: ["run", "audit:ui"] },
   { label: "ux:mobile-gate", cmd: "npm", args: ["run", "ux:mobile-gate"] },
   { label: "ios:check", cmd: "npm", args: ["run", "ios:check"] },
   {

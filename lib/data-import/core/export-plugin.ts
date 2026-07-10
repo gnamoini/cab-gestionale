@@ -2,7 +2,7 @@ import "server-only";
 
 import type { ImportEntityPlugin } from "@/lib/data-import/core/import-plugin";
 
-export type ExportFormat = "xlsx" | "csv" | "json" | "xml";
+export type ExportFormat = "xlsx" | "csv" | "json" | "xml" | "zip";
 
 export interface ExportEntityPlugin {
   entityId: ImportEntityPlugin["id"];

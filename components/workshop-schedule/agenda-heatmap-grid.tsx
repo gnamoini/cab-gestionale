@@ -1,7 +1,7 @@
 "use client";
 
-import { Tooltip } from "@/components/design-system";
 import type { HeatmapCell } from "@/lib/workshop-schedule/intelligence/heatmap/types";
+import { Tooltip } from "@/components/ui";
 import { heatmapSaturationBgClass } from "@/lib/workshop-schedule/intelligence/heatmap/saturation-color";
 import { DEFAULT_DAY_BOUNDS } from "@/lib/workshop-schedule/day-capacity";
 import { dsAccentRowHighlight, dsFocus, dsTypoCaption } from "@/lib/ui/design-system";

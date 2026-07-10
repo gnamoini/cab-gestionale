@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 import { cyclePageAccessLevel, pageAccessLabel, pageAccessShortCode } from "@/src/lib/permissions/gestionale-pages";
 import { dsFocusRing } from "@/lib/ui/design-system";
@@ -35,27 +36,32 @@ export function PageAccessLevelCell({
   const dim = size === "sm" ? "h-7 w-7 text-[11px]" : "h-8 w-8 text-xs";
 
   if (disabled) {
+    const tooltip = locked
+      ? `${pageAccessLabel(effectiveLevel)} (bloccato)`
+      : pageAccessLabel(effectiveLevel);
     return (
-      <span
-        className={`inline-flex ${dim} items-center justify-center rounded-md border ${LEVEL_CLASS[effectiveLevel]}`}
-        title={locked ? `${pageAccessLabel(effectiveLevel)} (bloccato)` : pageAccessLabel(effectiveLevel)}
-        aria-label={ariaLabel}
-      >
-        {pageAccessShortCode(effectiveLevel)}
-      </span>
+      <Tooltip content={tooltip}>
+        <span
+          className={`inline-flex ${dim} items-center justify-center rounded-md border ${LEVEL_CLASS[effectiveLevel]}`}
+          aria-label={ariaLabel}
+        >
+          {pageAccessShortCode(effectiveLevel)}
+        </span>
+      </Tooltip>
     );
   }
 
   return (
-    <button
-      type="button"
-      className={`inline-flex ${dim} items-center justify-center rounded-md border transition-[background-color,border-color,color] duration-150 hover:brightness-[1.03] ${LEVEL_CLASS[effectiveLevel]} ${dsFocusRing}`}
-      title={`${pageAccessLabel(effectiveLevel)} — clic per cambiare`}
-      aria-label={`${ariaLabel}: ${pageAccessLabel(effectiveLevel)}`}
-      onClick={() => onChange?.(cyclePageAccessLevel(level))}
-    >
-      {pageAccessShortCode(effectiveLevel)}
-    </button>
+    <Tooltip content={`${pageAccessLabel(effectiveLevel)} — clic per cambiare`}>
+      <button
+        type="button"
+        className={`inline-flex ${dim} items-center justify-center rounded-md border transition-[background-color,border-color,color] duration-150 hover:brightness-[1.03] ${LEVEL_CLASS[effectiveLevel]} ${dsFocusRing}`}
+        aria-label={`${ariaLabel}: ${pageAccessLabel(effectiveLevel)}`}
+        onClick={() => onChange?.(cyclePageAccessLevel(level))}
+      >
+        {pageAccessShortCode(effectiveLevel)}
+      </button>
+    </Tooltip>
   );
 }
 

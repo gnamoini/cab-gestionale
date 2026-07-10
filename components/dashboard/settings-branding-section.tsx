@@ -1,5 +1,7 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
+import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Button } from "@/components/design-system/button";
 import {
@@ -53,16 +55,7 @@ function BrandingPrimaryColorSwatch({
 
   return (
     <>
-      <button
-        ref={anchorRef}
-        type="button"
-        aria-label="Selettore colore principale"
-        aria-expanded={open}
-        title="Selettore colore principale"
-        className={`${dsTableActionBtnColorSwatch}${open ? ` ${dsTableActionBtnColorSwatchOpen}` : ""}`}
-        style={{ backgroundColor: hex }}
-        onClick={() => setOpen((o) => !o)}
-      />
+      <Tooltip content={"Selettore colore principale"}><button ref={anchorRef} type="button" aria-label="Selettore colore principale" aria-expanded={open} className={`${dsTableActionBtnColorSwatch}${open ? ` ${dsTableActionBtnColorSwatchOpen}` : ""}`} style={{ backgroundColor: hex }} onClick={() => setOpen((o) => !o)}/></Tooltip>
       <SettingsColorPickerPopover
         open={open}
         anchorRef={anchorRef}
@@ -228,7 +221,7 @@ export function SettingsBrandingSection({
       }
     >
       <SettingsListFrame>
-        <div className="divide-y divide-[color:var(--cab-border)]">
+        <div className={`${LIST_DIVIDER_UL}`}>
           <section className={BRANDING_SUBSECTION_CLASS}>
             <h3 className={SETTINGS_SECTION_TITLE}>Colore principale</h3>
             <p className={SETTINGS_SECTION_HINT}>

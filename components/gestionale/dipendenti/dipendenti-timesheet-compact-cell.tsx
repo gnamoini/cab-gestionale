@@ -1,6 +1,6 @@
 "use client";
 
-import { Tooltip } from "@/components/design-system";
+import { Tooltip } from "@/components/ui";
 import {
   buildLayerCellDisplayContent,
   cellDisplayKindForLayer,

@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useEffect, useMemo, useState } from "react";
 import { GlobalSelect } from "@/components/gestionale/global-input";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
@@ -234,13 +235,13 @@ export function ReportRicambiConsumoSection({
                           {r.rank}
                         </td>
                         <td className={`${ricambiTd} whitespace-nowrap font-mono text-xs font-semibold tracking-wide`}>{r.codice}</td>
-                        <td className={`${ricambiTd} max-w-0 truncate text-xs`} title={r.marca}>
+                        <Tooltip content={r.marca}><td className={`${ricambiTd} max-w-0 truncate text-xs`}>
                           {r.marca}
-                        </td>
+                        </td></Tooltip>
                         <td className={`${ricambiTd} min-w-0`}>
-                          <div className="truncate font-medium" title={r.nome}>
+                          <Tooltip content={r.nome}><div className="truncate font-medium">
                             {r.nome}
-                          </div>
+                          </div></Tooltip>
                         </td>
                         <td className={`${ricambiTd} text-right font-semibold tabular-nums`}>
                           {formatAvgMonthlyMagazzinoIt(rollingConsumoMap.get(r.id)?.avgMonthly ?? null)}

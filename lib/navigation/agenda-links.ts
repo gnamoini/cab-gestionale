@@ -36,8 +36,10 @@ export function parseAgendaSearchParams(searchParams: URLSearchParams): {
   workOrderId: string | null;
   hourSlot: number | null;
   panel: AgendaIntelligencePanel | null;
+  legacyInsightView: boolean;
 } {
   const viewRaw = searchParams.get("view");
+  const legacyInsightView = viewRaw === "insight";
   const view: AgendaViewMode =
     viewRaw === "week" || viewRaw === "month" || viewRaw === "gantt" || viewRaw === "insight" ? viewRaw : "day";
   const hourRaw = searchParams.get("hourSlot");
@@ -53,6 +55,7 @@ export function parseAgendaSearchParams(searchParams: URLSearchParams): {
     eventId: searchParams.get("event"),
     workOrderId: searchParams.get("workOrder"),
     hourSlot,
-    panel,
+    panel: legacyInsightView && !panel ? "insights" : panel,
+    legacyInsightView,
   };
 }

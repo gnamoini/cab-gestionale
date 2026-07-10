@@ -15,6 +15,16 @@ export { IconButton, type IconButtonProps } from "./icon-button";
 export { IconActionButton, type IconActionButtonProps } from "./icon-action-button";
 export { Tooltip, type TooltipProps } from "./tooltip";
 export { TruncatedTextTooltip } from "./truncated-text-tooltip";
+export { DisabledElementTooltip, type DisabledElementTooltipProps } from "./disabled-element-tooltip";
+export { OptionalTooltip, type OptionalTooltipProps } from "./optional-tooltip";
+export { TooltipList, type TooltipListProps } from "./tooltip-list";
+export {
+  TooltipStatus,
+  type TooltipStatusProps,
+  type TooltipStatusLine,
+  MAX_TOOLTIP_STATUS_LINES,
+  clampTooltipStatusLines,
+} from "./tooltip-status";
 export { CloseButton, type CloseButtonProps } from "./close-button";
 export { Badge, type BadgeTone } from "./badge";
 export { EntitySimilarWarning, useEntitySimilarWarning } from "./entity-similar-warning";

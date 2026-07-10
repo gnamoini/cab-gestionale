@@ -1,10 +1,10 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { LoadingSpinner } from "@/components/design-system/loading";
 import { PageToolbarCtaLabel } from "@/components/design-system/page-toolbar";
-import { ToolbarGroupOverflowToggle } from "@/components/design-system/toolbar-group";
-import { Tooltip } from "@/components/design-system/tooltip";
+import { ToolbarGroupOverflowToggle } from "@/components/design-system/toolbar-group";
 import { MobileFilterDrawer } from "@/components/gestionale/mobile-filter-drawer";
 import { IconGestionaleLog, IconGestionaleUndo, IconGestionaleRefresh } from "@/components/gestionale/gestionale-log-ui";
 import {
@@ -112,32 +112,15 @@ export function GestionaleDirtySaveActions({
           {statusLabel}
         </span>
       ) : null}
-      <button
-        type="button"
-        className={`${dsPageToolbarBtn} max-sm:w-full`}
-        onClick={onCancel}
-        disabled={disabled}
-        title={cancelTitle}
-      >
-        <PageToolbarCtaLabel short="Annulla" full="Annulla modifiche" />
-      </button>
-      <button
-        type="button"
-        className={`${dsPageToolbarPrimaryBtn} max-sm:w-full`}
-        onClick={onSave}
-        disabled={disabled}
-        title={saveTitle}
-        aria-busy={saving}
-      >
-        {saving ? (
-          <span className="inline-flex items-center gap-2">
-            <LoadingSpinner size="sm" label="Salvataggio in corso" />
+      <Tooltip content={cancelTitle}><button type="button" className={`${dsPageToolbarBtn} max-sm:w-full`} onClick={onCancel} disabled={disabled}>
+        <PageToolbarCtaLabel short="Annulla" full="Annulla modifiche"/>
+      </button></Tooltip>
+      <Tooltip content={saveTitle}><button type="button" className={`${dsPageToolbarPrimaryBtn} max-sm:w-full`} onClick={onSave} disabled={disabled} aria-busy={saving}>
+        {saving ? (<span className="inline-flex items-center gap-2">
+            <LoadingSpinner size="sm" label="Salvataggio in corso"/>
             <span>Salvataggio…</span>
-          </span>
-        ) : (
-          <PageToolbarCtaLabel short="Salva" full={isDirty ? "Salva modifiche" : "Salva"} />
-        )}
-      </button>
+          </span>) : (<PageToolbarCtaLabel short="Salva" full={isDirty ? "Salva modifiche" : "Salva"}/>)}
+      </button></Tooltip>
     </div>
   );
 }

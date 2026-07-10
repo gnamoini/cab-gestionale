@@ -1,0 +1,41 @@
+# Control Plane — observe tier (telemetry; replaces advisory nightly scope over time).
+name: Control Observe
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  control-observe:
+    name: control-observe
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Control Plane observe tier
+        run: npm run control:observe
+        continue-on-error: true
+      - name: Health report
+        if: always()
+        run: npm run control:health
+        continue-on-error: true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: control-observe-${{ github.run_id }}
+          path: |
+            control-report.json
+            control-health/**
+          retention-days: 90
+          if-no-files-found: ignore

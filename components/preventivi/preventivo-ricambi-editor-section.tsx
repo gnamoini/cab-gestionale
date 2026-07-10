@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { IconActionButton } from "@/components/design-system";
 import { HubIconPlus } from "@/components/design-system/hub-table-action-icons";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
@@ -64,17 +65,9 @@ function UnitaMisuraCell({
       aria-label={`Unità di misura riga ${rowIndex + 1}`}
     >
       {RICAMBIO_UNITA_MISURA_VALUES.map((unita) => (
-        <button
-          key={unita}
-          type="button"
-          className={`${value === unita ? preventivoEditorUmSegmentOn : preventivoEditorUmSegmentOff} ${dsFocus}`}
-          aria-pressed={value === unita}
-          aria-label={formatRicambioUnitaMisuraLabel(unita)}
-          title={formatRicambioUnitaMisuraLabel(unita)}
-          onClick={() => onChange(unita)}
-        >
+        <Tooltip content={formatRicambioUnitaMisuraLabel(unita)}><button key={unita} type="button" className={`${value === unita ? preventivoEditorUmSegmentOn : preventivoEditorUmSegmentOff} ${dsFocus}`} aria-pressed={value === unita} aria-label={formatRicambioUnitaMisuraLabel(unita)} onClick={() => onChange(unita)}>
           {umCellLabel[unita]}
-        </button>
+        </button></Tooltip>
       ))}
     </div>
   );

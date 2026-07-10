@@ -3,14 +3,14 @@ import { moduleAllows } from "@/src/lib/auth/effective-module-access";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 
 export type ReportSectionId =
-  | "panoramica"
   | "analisi_ai"
   | "lavorazioni"
   | "clienti_mezzi"
   | "magazzino_ricambi"
   | "ore_lavorate"
   | "dati_economici"
-  | "analisi_incrociate";
+  | "analisi_incrociate"
+  | "grafici_kpi";
 
 export type ReportSectionConfig = {
   id: ReportSectionId;
@@ -27,22 +27,12 @@ export type ReportSectionConfig = {
 
 export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
   {
-    id: "panoramica",
-    title: "PANORAMICA",
-    subtitle: "Stato officina e flotta nel periodo selezionato",
-    defaultCollapsed: false,
-    permission: null,
-    order: 1,
-    participatesInDerived: false,
-    writableDerivedKeys: [],
-  },
-  {
     id: "analisi_ai",
     title: "ANALISI IA",
     subtitle: "Sintesi assistita sui dati del periodo",
     defaultCollapsed: true,
     permission: null,
-    order: 2,
+    order: 1,
     participatesInDerived: false,
     writableDerivedKeys: [],
   },
@@ -52,7 +42,7 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     subtitle: "Interventi e andamento nel periodo",
     defaultCollapsed: false,
     permission: "lavorazioni",
-    order: 3,
+    order: 2,
     participatesInDerived: true,
     writableDerivedKeys: ["operational"],
   },
@@ -63,7 +53,7 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     defaultCollapsed: true,
     permission: null,
     permissionAny: ["mezzi", "lavorazioni"],
-    order: 4,
+    order: 3,
     participatesInDerived: false,
     writableDerivedKeys: [],
   },
@@ -73,7 +63,7 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     subtitle: "Consumi, stock e ordini fornitori",
     defaultCollapsed: true,
     permission: "magazzino",
-    order: 5,
+    order: 4,
     participatesInDerived: true,
     writableDerivedKeys: ["warehouse"],
   },
@@ -83,7 +73,7 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     subtitle: "Timesheet e produttività del team",
     defaultCollapsed: true,
     permission: "dipendenti",
-    order: 6,
+    order: 5,
     participatesInDerived: true,
     writableDerivedKeys: ["labor"],
   },
@@ -93,7 +83,7 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     subtitle: "Preventivi, fatture e DDT",
     defaultCollapsed: true,
     permission: "fatturazione",
-    order: 7,
+    order: 6,
     participatesInDerived: true,
     writableDerivedKeys: ["economic"],
   },
@@ -103,8 +93,18 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     subtitle: "Indicatori trasversali tra aree",
     defaultCollapsed: true,
     permission: null,
-    order: 8,
+    order: 7,
     participatesInDerived: true,
+    writableDerivedKeys: [],
+  },
+  {
+    id: "grafici_kpi",
+    title: "GRAFICI KPI",
+    subtitle: "Confronto trend personalizzato tra indicatori",
+    defaultCollapsed: true,
+    permission: null,
+    order: 8,
+    participatesInDerived: false,
     writableDerivedKeys: [],
   },
 ] as const;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import { DocumentCaptureTimeline } from "@/components/document-capture/document-capture-timeline";
 import { DocumentCaptureWizardLauncher } from "@/components/document-capture/document-capture-wizard-modal";
 import { LoadingSpinner } from "@/components/design-system/loading";
@@ -71,7 +72,7 @@ export function DocumentCaptureHistoryPanel({ lavorazioneId, refreshKey = 0 }: P
   }
 
   return (
-    <ul className="divide-y divide-[color:var(--cab-border)] rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)]">
+    <ul className={`${LIST_DIVIDER_UL} rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)]`}>
       {rows.map((row) => (
         <li key={row.id} className="p-3 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">

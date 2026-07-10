@@ -1,6 +1,7 @@
 "use client";
 
 import "@/components/gestionale/global-table/gestionale-list-table.css";
+import { Tooltip } from "@/components/ui";
 import {
   useCallback,
   useEffect,
@@ -23,7 +24,7 @@ import type {
   TimesheetMonthKey,
   TimesheetMonthTotals,
 } from "@/lib/dipendenti/types";
-import { Tooltip } from "@/components/design-system";
+
 import { DipendentiTimesheetCompactCell } from "@/components/gestionale/dipendenti/dipendenti-timesheet-compact-cell";
 import {
   buildTimesheetCellTooltip,

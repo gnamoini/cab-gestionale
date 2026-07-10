@@ -1,5 +1,16 @@
 import type { WorkshopScheduleFilters, WorkshopScheduleSessionView } from "@/lib/workshop-schedule/types";
 
+export function countActiveFilters(filters: WorkshopScheduleFilters): number {
+  let n = 0;
+  if (filters.eventTypes?.length) n += 1;
+  if (filters.planningStatuses?.length) n += 1;
+  if (filters.priorities?.length) n += 1;
+  if (filters.withWorkOrder != null) n += 1;
+  if (filters.workOrderId) n += 1;
+  if (filters.createdBy) n += 1;
+  return n;
+}
+
 export function stableFiltersKey(filters?: WorkshopScheduleFilters): string {
   if (!filters) return "all";
   const parts: string[] = [];
@@ -21,8 +32,7 @@ export function filterSessions(
   return sessions.filter((s) => {
     if (filters.eventTypes?.length && !filters.eventTypes.includes(s.eventType)) return false;
     if (filters.priorities?.length) {
-      const p = s.priority ?? "media";
-      if (!filters.priorities.includes(p)) return false;
+      if (s.priority == null || !filters.priorities.includes(s.priority)) return false;
     }
     if (filters.planningStatuses?.length && !filters.planningStatuses.includes(s.planningStatus)) return false;
     if (filters.withWorkOrder === true && !s.workOrderId) return false;

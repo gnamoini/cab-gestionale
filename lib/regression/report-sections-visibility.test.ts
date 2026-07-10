@@ -9,7 +9,6 @@ assert.equal(all.length, 8);
 
 const noMagazzino = filterReportSectionsByPermission(all, (m) => m !== "magazzino");
 assert.ok(!noMagazzino.some((s) => s.id === "magazzino_ricambi"));
-assert.ok(noMagazzino.some((s) => s.id === "panoramica"));
 assert.ok(noMagazzino.some((s) => s.id === "analisi_ai"));
 assert.ok(noMagazzino.some((s) => s.id === "lavorazioni"));
 
@@ -25,7 +24,7 @@ assert.ok(onlyLavorazioni.some((s) => s.id === "clienti_mezzi"));
 const onlyAi = filterReportSectionsByPermission(all, () => false);
 assert.deepEqual(
   onlyAi.map((s) => s.id),
-  ["panoramica", "analisi_ai", "analisi_incrociate"],
+  ["analisi_ai", "analisi_incrociate", "grafici_kpi"],
 );
 
 const admin = filterReportSectionsByPermission(all, () => true);

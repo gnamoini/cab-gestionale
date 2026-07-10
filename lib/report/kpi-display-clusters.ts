@@ -13,33 +13,31 @@ export const REPORT_KPI_TRUST_LABELS: Record<ReportKpiTrust, string> = {
   snapshot: "Istantaneo",
 };
 
-/** Ordine fisso KPI in executive overview (max 8). */
-export const EXECUTIVE_KPI_IDS = [
+export const LAVORAZIONI_UNIFIED_KPI_IDS = [
   "lav-periodo",
   "lav-media-settimanale",
   "lav-chiusi",
+  "lav-saldo-periodo",
   "lav-aperti",
   "lav-tempo",
-  "cost-tot",
-  "scorta",
-  "clienti",
 ] as const;
 
-/** KPI hero in panoramica esecutiva (leggibilità 30s). */
-export const EXECUTIVE_PRIMARY_KPI_IDS = [
+/** KPI hero in sezione lavorazioni (leggibilità 30s). */
+export const LAVORAZIONI_UNIFIED_PRIMARY_KPI_IDS = [
   "lav-periodo",
   "lav-chiusi",
   "lav-saldo-periodo",
-  "clienti",
   "lav-media-settimanale",
 ] as const;
 
-/** KPI secondari — stessa sezione, griglia compatta. */
-export const EXECUTIVE_SECONDARY_KPI_IDS = ["lav-aperti", "lav-tempo", "scorta"] as const;
+/** KPI secondari lavorazioni — griglia compatta sotto gli hero. */
+export const LAVORAZIONI_UNIFIED_SECONDARY_KPI_IDS = ["lav-aperti", "lav-tempo"] as const;
 
-export const FLEET_ZONE_KPI_IDS = ["flotta-officina", "mezzi"] as const;
+export const CLIENTI_MEZZI_UNIFIED_KPI_IDS = ["clienti", "flotta-officina", "mezzi"] as const;
 
-export const ECONOMIC_ZONE_KPI_IDS = ["cap", "ric-usati"] as const;
+export const MAGAZZINO_UNIFIED_KPI_IDS = ["scorta"] as const;
+
+export const ECONOMIC_ZONE_KPI_IDS = ["cost-tot", "cap", "ric-usati"] as const;
 
 export const KPI_TRUST_BY_ID: Record<string, ReportKpiTrust> = {
   "lav-periodo": "exact",

@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { reportSubsectionTitleClass } from "@/components/report/report-ui-tokens";
 import { dsTableRow, dsTableTd, dsTableWrap, dsScrollbar } from "@/lib/ui/design-system";
@@ -34,9 +35,9 @@ export function KpiPerformanceEconomic({ data }: { data: KpiPerformanceEconomic 
               ) : (
                 data.topMezziByCost.map((r) => (
                   <tr key={r.mezzoId} className={dsTableRow}>
-                    <td className={`${dsTableTd} max-w-0 truncate`} title={r.label}>
+                    <Tooltip content={r.label}><td className={`${dsTableTd} max-w-0 truncate`}>
                       {r.label}
-                    </td>
+                    </td></Tooltip>
                     <td className={`${dsTableTd} text-right tabular-nums font-medium`}>{fmtEur(r.cost)}</td>
                   </tr>
                 ))
@@ -63,9 +64,9 @@ export function KpiPerformanceEconomic({ data }: { data: KpiPerformanceEconomic 
               ) : (
                 data.topComponents.map((r) => (
                   <tr key={r.id} className={dsTableRow}>
-                    <td className={`${dsTableTd} max-w-0 truncate`} title={r.nome}>
+                    <Tooltip content={r.nome}><td className={`${dsTableTd} max-w-0 truncate`}>
                       {r.nome}
-                    </td>
+                    </td></Tooltip>
                     <td className={`${dsTableTd} text-right tabular-nums`}>{r.totalUscite}</td>
                   </tr>
                 ))

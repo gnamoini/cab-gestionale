@@ -31,11 +31,10 @@ const base: RicambioMagazzino = {
 
 const vm = toMagazzinoSottoScortaLogViewModel(base);
 assert.equal(vm.tipoRiga, "SOTTO SCORTA");
-assert.equal(vm.oggettoRiga, "Filtro olio");
-assert.match(vm.modificaRiga, /Marca: Bosch/);
+assert.equal(vm.oggettoRiga, "Bosch Filtro olio");
+assert.doesNotMatch(vm.modificaRiga, /Marca:/);
 assert.match(vm.modificaRiga, /Codice: ABC123/);
 assert.match(vm.modificaRiga, /Scorta: 1 \(min\. 5\)/);
-assert.match(vm.modificaRiga, /Mancano 4 unità/);
 assert.equal(vm.autore, "Mario Rossi");
 
 console.log("magazzino-sotto-scorta-notification-message.test.ts: OK");

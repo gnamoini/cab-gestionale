@@ -18,6 +18,12 @@ for (const entry of REPORT_METRIC_REGISTRY) {
   assert.ok(entry.applicability);
   assert.ok(entry.trendSemantics);
   assert.ok(entry.rendererKind);
+  assert.ok(entry.valueCapability);
+  if (entry.valueCapability === "series") {
+    assert.ok(entry.series, `series KPI ${entry.id} needs series config`);
+  } else {
+    assert.equal(entry.series, undefined, `scalar KPI ${entry.id} must not have series`);
+  }
   if (entry.aggregation === "derived") {
     assert.ok(entry.formula?.trim(), `derived ${entry.id} needs formula`);
   }
@@ -26,6 +32,6 @@ for (const entry of REPORT_METRIC_REGISTRY) {
 const missing = reportMetricRendererAudit({ kpi: true });
 assert.deepEqual(missing, [], `missing renderer handlers: ${missing.join(", ")}`);
 
-assert.equal(reportMetricIdsForSection("lavorazioni").length, 5);
+assert.equal(reportMetricIdsForSection("lavorazioni").length, 11);
 
 console.log("report-metric-registry.test.ts OK");

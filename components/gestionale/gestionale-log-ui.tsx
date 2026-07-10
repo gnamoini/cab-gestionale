@@ -1,9 +1,10 @@
 "use client";
 
 import type { MouseEvent, ReactNode, SVGProps } from "react";
+import { Tooltip } from "@/components/ui";
 import { memo, useCallback } from "react";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
-import { Tooltip } from "@/components/design-system/tooltip";
+
 import { LogEntry } from "@/components/design-system/log-entry";
 import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 import { filterAuditMetadataCampoChanges } from "@/lib/gestionale-log/log-summary";

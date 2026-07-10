@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SecurityRoleBadge, SecurityStatusBadge } from "@/components/dashboard/security/security-role-badge";
 import { SecurityUserPagePermissionsEditor } from "@/components/dashboard/security/security-user-page-permissions-editor";
@@ -212,7 +213,7 @@ export function SecurityUserDetailDrawer({
                 ) : (activityQ.data ?? []).length === 0 ? (
                   <p className="p-3 text-sm text-[color:var(--cab-text-muted)]">Nessuna attività recente.</p>
                 ) : (
-                  <ul className="divide-y divide-[color:var(--cab-border)]">
+                  <ul className={`${LIST_DIVIDER_UL}`}>
                     {(activityQ.data ?? []).map((row) => (
                       <li key={row.id} className="px-3 py-2 text-xs">
                         <div className="flex flex-wrap items-center justify-between gap-2">

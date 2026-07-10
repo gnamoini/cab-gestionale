@@ -27,17 +27,21 @@ const magLegacy = fs.readFileSync(path.join(ROOT, "app/api/import/magazzino/pars
 assert.match(magLegacy, /legacyImportParseRoute/);
 
 const magView = fs.readFileSync(path.join(ROOT, "components/gestionale/magazzino/magazzino-view.tsx"), "utf8");
-assert.match(magView, /MagazzinoImportMenu/);
+assert.match(magView, /DataImportExportToolbar/);
+assert.match(magView, /extraImportEntities=\{\["listino_ricambi"\]\}/);
 
-const magImportMenu = fs.readFileSync(path.join(ROOT, "components/gestionale/magazzino/magazzino-import-entry.tsx"), "utf8");
-assert.match(magImportMenu, /listino_ricambi/);
-assert.match(magImportMenu, /magazzino_ricambi/);
+const toolbar = fs.readFileSync(path.join(ROOT, "components/data-import/data-import-export-toolbar.tsx"), "utf8");
+assert.match(toolbar, /label="Importa"/);
+assert.match(toolbar, /Esporta/);
+assert.match(toolbar, /useGlobalDropdownPortal/);
+assert.match(toolbar, /globalInputDropdownOptionClass/);
+assert.match(toolbar, /Scarica template/);
 
 const mezziView = fs.readFileSync(path.join(ROOT, "components/gestionale/mezzi/mezzi-view.tsx"), "utf8");
-assert.match(mezziView, /ModuleImportEntry/);
+assert.match(mezziView, /DataImportExportToolbar/);
 
 const preventiviView = fs.readFileSync(path.join(ROOT, "components/preventivi/preventivi-view.tsx"), "utf8");
-assert.match(preventiviView, /ModuleImportEntry/);
+assert.match(preventiviView, /DataImportExportToolbar/);
 
 const settingsShell = fs.readFileSync(path.join(ROOT, "components/dashboard/settings/settings-workspace-shell.tsx"), "utf8");
 assert.match(settingsShell, /SettingsImportEntry/);

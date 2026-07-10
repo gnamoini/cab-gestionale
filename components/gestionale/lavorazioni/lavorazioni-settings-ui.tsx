@@ -1,8 +1,9 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
+import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { SettingsColorPickerPopover } from "@/components/gestionale/settings-color-picker-popover";
-import { Tooltip } from "@/components/design-system";
 import { IconActionButton } from "@/components/design-system/icon-action-button";
 import { normalizeHex } from "@/lib/lavorazioni/color-utils";
 import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
@@ -173,7 +174,7 @@ export function AddettiSettingsSection({
   );
 
   const listContent = (
-    <div className={`${ADDETTI_SETTINGS_TABLE_CLASS} divide-y divide-[color:var(--cab-border)]`}>
+    <div className={`${ADDETTI_SETTINGS_TABLE_CLASS} ${LIST_DIVIDER_UL}`}>
       {draftOpen ? (
         <ul className="contents">
           <AddettiDraftRow
@@ -225,7 +226,7 @@ export function AddettiSettingsSection({
     <div className={`${SETTINGS_PANEL_SHELL} ${ADDETTI_SETTINGS_PANEL_CLASS} p-3 sm:p-4`}>
       {toolbar}
       {showList ? (
-        <div className={`${ADDETTI_SETTINGS_TABLE_CLASS} mt-3 divide-y divide-[color:var(--cab-border)]`}>
+        <div className={`${ADDETTI_SETTINGS_TABLE_CLASS} mt-3 ${LIST_DIVIDER_UL}`}>
           {draftOpen ? (
             <ul className="contents">
               <AddettiDraftRow
@@ -267,7 +268,7 @@ export function AddettiSettingsPanel({
   if (embedded) {
     return (
       <SettingsListFrame>
-        <div className={`${ADDETTI_SETTINGS_TABLE_CLASS} divide-y divide-[color:var(--cab-border)]`}>
+        <div className={`${ADDETTI_SETTINGS_TABLE_CLASS} ${LIST_DIVIDER_UL}`}>
           {children}
         </div>
       </SettingsListFrame>
@@ -275,7 +276,7 @@ export function AddettiSettingsPanel({
   }
   return (
     <div className={`${SETTINGS_PANEL_SHELL} ${ADDETTI_SETTINGS_PANEL_CLASS}`}>
-      <div className={`${ADDETTI_SETTINGS_TABLE_CLASS} divide-y divide-[color:var(--cab-border)]`}>
+      <div className={`${ADDETTI_SETTINGS_TABLE_CLASS} ${LIST_DIVIDER_UL}`}>
         {children}
       </div>
     </div>
@@ -573,19 +574,9 @@ const StatoSettingsRow = memo(function StatoSettingsRow({
         leading={
           !editing ? (
             <>
-              <span
-                title="Anteprima pill in tabella e Kanban"
-                className={SETTINGS_PREVIEW_PILL_LEADING_CLASS}
-              >
-                <LavorazioneReadOnlyPill
-                  label={pillLabel}
-                  shellClass={statoPillShellClass()}
-                  shellStyle={readablePillStyleFromHex(displayHex)}
-                  fullWidth={false}
-                  actionRow
-                  actionRowUniformWidthCh={previewPillWidthCh}
-                />
-              </span>
+              <Tooltip content={"Anteprima pill in tabella e Kanban"}><span className={SETTINGS_PREVIEW_PILL_LEADING_CLASS}>
+                <LavorazioneReadOnlyPill label={pillLabel} shellClass={statoPillShellClass()} shellStyle={readablePillStyleFromHex(displayHex)} fullWidth={false} actionRow actionRowUniformWidthCh={previewPillWidthCh}/>
+              </span></Tooltip>
               <ColorSwatchButton
                 value={displayHex}
                 ariaLabel={`Colore stato ${stato.label || stato.id}`}
@@ -670,7 +661,7 @@ export function StatiSettingsSection({
           </SettingsEmptyState>
         }
       >
-        <div className={`${STATI_SETTINGS_TABLE_CLASS} divide-y divide-[color:var(--cab-border)]`}>
+        <div className={`${STATI_SETTINGS_TABLE_CLASS} ${LIST_DIVIDER_UL}`}>
           {draftOpen ? (
             <ul className="contents">
               <StatoDraftRow
@@ -746,15 +737,9 @@ function PrioritaSettingsRow({
         role="group"
         aria-label={`Azioni per priorità ${label}`}
       >
-        <span className={SETTINGS_PREVIEW_PILL_LEADING_CLASS} title="Anteprima pill in tabella e Kanban">
-          <LavorazionePrioritaReadOnlyPill
-            priorita={priorita}
-            prioritaColors={prioritaColors}
-            fullWidth={false}
-            actionRow
-            actionRowFixedWidth
-          />
-        </span>
+        <Tooltip content={"Anteprima pill in tabella e Kanban"}><span className={SETTINGS_PREVIEW_PILL_LEADING_CLASS}>
+          <LavorazionePrioritaReadOnlyPill priorita={priorita} prioritaColors={prioritaColors} fullWidth={false} actionRow actionRowFixedWidth/>
+        </span></Tooltip>
         <ColorSwatchButton
           value={displayHex}
           ariaLabel={`Colore priorità ${label}`}
@@ -781,7 +766,7 @@ export function PrioritaSettingsSection({
         <p className={`${SETTINGS_SECTION_HINT} mt-1 max-w-2xl`}>{PRIORITA_SECTION_DESCRIPTION}</p>
       ) : null}
       <SettingsListBody layout={layout} showList empty={null}>
-        <div className={`${PRIORITA_SETTINGS_TABLE_CLASS} divide-y divide-[color:var(--cab-border)]`}>
+        <div className={`${PRIORITA_SETTINGS_TABLE_CLASS} ${LIST_DIVIDER_UL}`}>
           <ul className="contents">
             {PRIORITA_LEVELS.map((p) => (
               <PrioritaSettingsRow
@@ -946,18 +931,9 @@ function AddettoSettingsRow({
         leading={
           !editing ? (
             <>
-              <span
-                title="Anteprima come in tabella lavorazioni"
-                className={SETTINGS_PREVIEW_PILL_LEADING_CLASS}
-              >
-                <LavorazioneAddettoReadOnlyPill
-                  addetto={tableAddettoLabel}
-                  addettoColors={addettoColors}
-                  fullWidth={false}
-                  actionRow
-                  actionRowFixedWidth
-                />
-              </span>
+              <Tooltip content={"Anteprima come in tabella lavorazioni"}><span className={SETTINGS_PREVIEW_PILL_LEADING_CLASS}>
+                <LavorazioneAddettoReadOnlyPill addetto={tableAddettoLabel} addettoColors={addettoColors} fullWidth={false} actionRow actionRowFixedWidth/>
+              </span></Tooltip>
               <ColorSwatchButton
                 value={displayHex}
                 ariaLabel={`Colore addetto ${tableAddettoLabel}`}

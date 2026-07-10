@@ -1,0 +1,92 @@
+# Control PR
+
+on:
+  pull_request:
+    branches: [main, master]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+concurrency:
+  group: control-pr-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  control-pr:
+    name: control-pr
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+
+    env:
+      CI: "true"
+      PRODUCTION_CHECK_REQUIRE_DB: "1"
+      SMOKE_SKIP: "1"
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
+      SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+      SMOKE_OPERATOR_EMAIL: ${{ secrets.SMOKE_OPERATOR_EMAIL }}
+      SMOKE_OPERATOR_PASSWORD: ${{ secrets.SMOKE_OPERATOR_PASSWORD }}
+      SMOKE_DOCUMENTI_LAVORAZIONE_ID: ${{ secrets.SMOKE_DOCUMENTI_LAVORAZIONE_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+
+      - name: Validate strict label
+        if: github.event_name == 'pull_request'
+        run: npm run control:validate-strict-label
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Validate strict label (dispatch — advisory)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo '{"approved":false,"strictEnabled":false,"labelPresent":false,"fork":false,"reason":"workflow_dispatch advisory"}' > strict-label-validation.json
+
+      - name: Control mode
+        run: npm run control:print-control-mode
+
+      - name: Control Plane governance review
+        run: npm run control:review
+
+      - name: Regression classification
+        run: npx tsx lib/control/regression-classification.test.ts
+
+      - name: Legacy outcomes probe
+        if: env.CONTROL_SHADOW_STRICT == '1'
+        run: npm run control:shadow-legacy-probe
+
+      - name: Control Plane PR tier
+        run: npm run control:pr
+
+      - name: Shadow policy (strict)
+        if: env.CONTROL_SHADOW_STRICT == '1'
+        run: npm run control:shadow-policy -- --strict
+
+      - name: Coverage (strict security/data/production)
+        if: env.CONTROL_COVERAGE_STRICT == '1'
+        run: CONTROL_COVERAGE_STRICT=1 npx tsx lib/control/control-coverage.test.ts
+
+      - name: Upload control report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-report-pr-${{ github.run_id }}
+          path: |
+            control-report.json
+            shadow-policy-report.json
+            strict-label-validation.json
+            legacy-outcomes.json
+          retention-days: 90
+          if-no-files-found: ignore

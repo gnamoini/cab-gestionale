@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { memo, useCallback, useMemo, type KeyboardEvent, type ReactNode } from "react";
 import {
   KanbanDndBoard,
@@ -209,12 +210,7 @@ const KanbanCard = memo(function KanbanCard({
         .join(" ")}
     >
       <div className="flex items-start gap-2">
-        <span
-          className={prioVisual.dotClassName}
-          style={prioVisual.dotStyle}
-          aria-hidden
-          title={prioritaLabel(p)}
-        />
+        <Tooltip content={prioritaLabel(p)}><span className={prioVisual.dotClassName} style={prioVisual.dotStyle} aria-hidden/></Tooltip>
         <div className="min-w-0 flex-1 space-y-1 leading-tight">
           <p className="text-sm font-semibold leading-snug text-[color:var(--cab-text)]">{macchina}</p>
           <div className="min-w-0 space-y-0.5">

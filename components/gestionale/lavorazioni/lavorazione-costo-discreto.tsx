@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useState } from "react";
 import {
   GestionaleInfoCard,
@@ -88,13 +89,7 @@ export function LavorazioneCostoDiscreto({
       className={`mt-4 border-t border-dashed border-zinc-200/80 pt-3 dark:border-zinc-800/80 ${className}`}
       data-internal-cost
     >
-      <button
-        type="button"
-        className="flex min-w-0 w-full items-center justify-between gap-2 text-left text-[11px] text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300"
-        aria-expanded={open}
-        title="Costo interno lavorazione (solo staff)"
-        onClick={() => setOpen((o) => !o)}
-      >
+      <Tooltip content={"Costo interno lavorazione (solo staff)"}><button type="button" className="flex min-w-0 w-full items-center justify-between gap-2 text-left text-[11px] text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         <span className="inline-flex items-center gap-1.5">
           <span className="opacity-70" aria-hidden>
             💰
@@ -102,7 +97,7 @@ export function LavorazioneCostoDiscreto({
           <span className="font-medium uppercase tracking-wide">Costo totale</span>
         </span>
         <span className="tabular-nums text-zinc-600 dark:text-zinc-400">{formatLavorazioneCostoEuro(costo.costoTotale)}</span>
-      </button>
+      </button></Tooltip>
       {open ? <CostoDettaglioFooter costo={costo} /> : null}
     </div>
   );

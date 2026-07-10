@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -369,18 +370,13 @@ export function OrdiniFornitoriView({
           <PageToolbar
             primaryAction={
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!canWrite) return;
-                    setEditor({ open: true, record: buildEmptyOrdineFornitore(records), isNew: true });
-                  }}
-                  className={dsPageToolbarCtaCompact}
-                  disabled={!canWrite}
-                  title={canWrite ? "Nuovo ordine fornitore" : READONLY_PERMISSION_HINT}
-                >
-                  <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo ordine" />
-                </button>
+                <Tooltip content={canWrite ? "Nuovo ordine fornitore" : READONLY_PERMISSION_HINT}><button type="button" onClick={() => {
+        if (!canWrite)
+            return;
+        setEditor({ open: true, record: buildEmptyOrdineFornitore(records), isNew: true });
+    }} className={dsPageToolbarCtaCompact} disabled={!canWrite}>
+                  <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo ordine"/>
+                </button></Tooltip>
                 <GestionaleAiActionButton
                   type="button"
                   variant="primary"
@@ -592,15 +588,9 @@ export function OrdiniFornitoriView({
                           </svg>
                         </IconActionButton>
                         {o.status !== "annullato" && o.status !== "bozza" ? (
-                          <button
-                            type="button"
-                            className={dsBtnNeutral}
-                            disabled={!canWrite}
-                            title={canWrite ? "Annulla ordine" : READONLY_PERMISSION_HINT}
-                            onClick={() => void handleAnnulla(o)}
-                          >
+                          <Tooltip content={canWrite ? "Annulla ordine" : READONLY_PERMISSION_HINT}><button type="button" className={dsBtnNeutral} disabled={!canWrite} onClick={() => void handleAnnulla(o)}>
                             Annulla
-                          </button>
+                          </button></Tooltip>
                         ) : null}
                       </div>
                     </td>
@@ -642,24 +632,12 @@ export function OrdiniFornitoriView({
                     <button type="button" className={dsTableActionTextBtnPrimary} onClick={() => void openView(o)}>
                       Visualizza
                     </button>
-                    <button
-                      type="button"
-                      className={dsBtnNeutral}
-                      disabled={!canWrite}
-                      title={canWrite ? "Duplica ordine" : READONLY_PERMISSION_HINT}
-                      onClick={() => openDuplicate(o)}
-                    >
+                    <Tooltip content={canWrite ? "Duplica ordine" : READONLY_PERMISSION_HINT}><button type="button" className={dsBtnNeutral} disabled={!canWrite} onClick={() => openDuplicate(o)}>
                       Duplica
-                    </button>
-                    <button
-                      type="button"
-                      className={dsTableActionTextBtnDanger}
-                      disabled={!canWrite}
-                      title={canWrite ? "Elimina ordine" : READONLY_PERMISSION_HINT}
-                      onClick={() => openDeleteConfirm(o)}
-                    >
+                    </button></Tooltip>
+                    <Tooltip content={canWrite ? "Elimina ordine" : READONLY_PERMISSION_HINT}><button type="button" className={dsTableActionTextBtnDanger} disabled={!canWrite} onClick={() => openDeleteConfirm(o)}>
                       Elimina
-                    </button>
+                    </button></Tooltip>
                   </CardMobileActions>
                 </CardMobile>
               ))

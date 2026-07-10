@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { HubIconCamera, HubIconPhoto } from "@/components/design-system/hub-table-action-icons";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
@@ -203,39 +204,21 @@ export function GestionaleImageUploadButton({
   return (
     <>
       <div className={wrapperClassName}>
-        <button
-          type="button"
-          title={title}
-          disabled={inputDisabled}
-          className={`${buttonClassName ?? dsBtnNeutral} ${inputDisabled ? `cursor-wait opacity-60 ${dsDisabled}` : "cursor-pointer"}`}
-          onClick={() => {
-            if (!inputDisabled) setPickerOpen(true);
-          }}
-        >
-          {busy ? (
-            busyIconOnly ? (
-              <>
-                <span
-                  className="h-4 w-4 animate-spin rounded-full border-2 border-[color:color-mix(in_srgb,var(--cab-border)_90%,transparent)] border-t-[var(--cab-primary)]"
-                  aria-hidden
-                />
+        <Tooltip content={title}><button type="button" disabled={inputDisabled} className={`${buttonClassName ?? dsBtnNeutral} ${inputDisabled ? `cursor-wait opacity-60 ${dsDisabled}` : "cursor-pointer"}`} onClick={() => {
+        if (!inputDisabled)
+            setPickerOpen(true);
+    }}>
+          {busy ? (busyIconOnly ? (<>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-[color:color-mix(in_srgb,var(--cab-border)_90%,transparent)] border-t-[var(--cab-primary)]" aria-hidden/>
                 <span className="sr-only">Caricamento…</span>
-              </>
-            ) : (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[color:color-mix(in_srgb,var(--cab-border)_90%,transparent)] border-t-[var(--cab-primary)]" aria-hidden />
+              </>) : (<span className="inline-flex items-center gap-1.5">
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[color:color-mix(in_srgb,var(--cab-border)_90%,transparent)] border-t-[var(--cab-primary)]" aria-hidden/>
                 Caricamento…
-              </span>
-            )
-          ) : (
-            buttonLabel ?? (
-              <>
+              </span>)) : (buttonLabel ?? (<>
                 <HubIconPhoto />
                 Aggiungi foto
-              </>
-            )
-          )}
-        </button>
+              </>))}
+        </button></Tooltip>
         <input
           ref={galleryRef}
           id={galleryInputId}

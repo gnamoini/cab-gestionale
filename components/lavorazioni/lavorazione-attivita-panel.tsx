@@ -1,5 +1,7 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
+import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import { useMemo, useState } from "react";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import { statoPillShellClassDynamic } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -143,19 +145,10 @@ function AttivitaFilterSegmented({
         {FILTER_OPTIONS.map((opt) => {
           const active = filter === opt.id;
           return (
-            <button
-              key={opt.id}
-              type="button"
-              className={`flex min-h-10 min-w-0 flex-1 items-center justify-center px-2 text-center text-xs font-semibold sm:min-h-9 sm:px-3 sm:text-sm ${
-                active ? dsSegmentedBtnOn : dsSegmentedBtnOff
-              } ${dsFocus}`}
-              aria-pressed={active}
-              title={opt.label}
-              onClick={() => onChange(opt.id)}
-            >
+            <Tooltip content={opt.label}><button key={opt.id} type="button" className={`flex min-h-10 min-w-0 flex-1 items-center justify-center px-2 text-center text-xs font-semibold sm:min-h-9 sm:px-3 sm:text-sm ${active ? dsSegmentedBtnOn : dsSegmentedBtnOff} ${dsFocus}`} aria-pressed={active} onClick={() => onChange(opt.id)}>
               <span className="sm:hidden">{opt.shortLabel}</span>
               <span className="hidden sm:inline">{opt.label}</span>
-            </button>
+            </button></Tooltip>
           );
         })}
       </div>
@@ -202,7 +195,7 @@ export function LavorazioneAttivitaPanel({
             </p>
           </div>
         ) : (
-          <ol className="divide-y divide-[color:var(--cab-border)]">
+          <ol className={`${LIST_DIVIDER_UL}`}>
             {events.map((ev, index) => (
               <AttivitaEventRow
                 key={ev.id}

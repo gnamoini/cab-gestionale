@@ -14,8 +14,8 @@ import {
   LoadingButton,
   LoadingFormSkeleton,
   LoadingMagazzinoListSkeleton,
-  Tooltip,
 } from "@/components/design-system";
+import { DisabledElementTooltip, OptionalTooltip, Tooltip } from "@/components/ui";
 import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzino-giacenza-bell";
 import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
 import { MagazzinoListinoAiBadge } from "@/components/gestionale/magazzino/magazzino-listino-ai-badge";
@@ -477,39 +477,6 @@ function magazzinoConsumoMedioTooltip(
   avgM: number | null,
 ): string | undefined {
   return consumoRow?.insufficientReason ?? (avgM != null ? "Da log magazzino (uscite Δ scorta)" : undefined);
-}
-
-function MagazzinoOptionalTooltip({
-  content,
-  children,
-  side = "top",
-}: {
-  content?: string;
-  children: ReactElement;
-  side?: TooltipSide;
-}) {
-  if (!content?.trim()) return children;
-  return (
-    <Tooltip content={content} side={side}>
-      {children}
-    </Tooltip>
-  );
-}
-
-function MagazzinoDisabledButtonTooltip({
-  content,
-  disabled,
-  children,
-}: {
-  content: string;
-  disabled?: boolean;
-  children: ReactElement;
-}) {
-  return (
-    <Tooltip content={content}>
-      {disabled ? <span className="inline-flex w-full min-w-0">{children}</span> : children}
-    </Tooltip>
-  );
 }
 
 function RicambioCodiceCell({ p }: { p: RicambioMagazzino }) {
@@ -1585,11 +1552,11 @@ export function MagazzinoView() {
           </td>
           <td className={`${gestionaleListTableTdCenter} font-medium`}>{eur(p.prezzoVendita)}</td>
           <td className={`${gestionaleListTableTdCenter} text-[13px] text-zinc-700 dark:text-zinc-300`}>
-            <MagazzinoOptionalTooltip content={magazzinoConsumoMedioTooltip(consumoRow, avgM)}>
+            <OptionalTooltip content={magazzinoConsumoMedioTooltip(consumoRow, avgM)}>
               <span className="inline-block max-w-full truncate">
                 {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "—"}
               </span>
-            </MagazzinoOptionalTooltip>
+            </OptionalTooltip>
           </td>
           <td className={gestionaleListTableTdAzioni}>
             <div className={gestionaleListTableActionsGroupEnd}>
@@ -1698,7 +1665,7 @@ export function MagazzinoView() {
         <section aria-label="Azioni e filtri magazzino">
           <PageToolbar
             primaryAction={
-              <MagazzinoDisabledButtonTooltip
+              <DisabledElementTooltip
                 content={magCanCreateRicambio ? "Aggiungi un ricambio" : "Sola lettura"}
                 disabled={!magCanCreateRicambio}
               >
@@ -1710,7 +1677,7 @@ export function MagazzinoView() {
                 >
                   <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo ricambio" />
                 </button>
-              </MagazzinoDisabledButtonTooltip>
+              </DisabledElementTooltip>
             }
             search={
               <GestionaleListSearchField
@@ -1991,11 +1958,11 @@ export function MagazzinoView() {
                   <div>
                     <dt className="text-zinc-500 dark:text-zinc-400">Consumo medio</dt>
                     <dd className="font-medium tabular-nums text-zinc-700 dark:text-zinc-300">
-                      <MagazzinoOptionalTooltip content={magazzinoConsumoMedioTooltip(consumoRow, avgM)}>
+                      <OptionalTooltip content={magazzinoConsumoMedioTooltip(consumoRow, avgM)}>
                         <span className="inline-block max-w-full truncate">
                           {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "—"}
                         </span>
-                      </MagazzinoOptionalTooltip>
+                      </OptionalTooltip>
                     </dd>
                   </div>
                 </dl>

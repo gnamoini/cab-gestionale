@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GestionaleAiActionButton, LoadingButton, LoadingProgressBar } from "@/components/design-system";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
@@ -346,12 +347,9 @@ export function ListinoImportPreviewModal({
                             className="min-w-[7.5rem]"
                           />
                           {row.categoriaSource === "ai" ? (
-                            <span
-                              className="mt-0.5 block text-[10px] text-[color:var(--cab-text-muted)]"
-                              title="Categoria suggerita da IA"
-                            >
+                            <Tooltip content={"Categoria suggerita da IA"}><span className="mt-0.5 block text-[10px] text-[color:var(--cab-text-muted)]">
                               IA
-                            </span>
+                            </span></Tooltip>
                           ) : null}
                         </td>
                         <td className="px-2 py-1.5">

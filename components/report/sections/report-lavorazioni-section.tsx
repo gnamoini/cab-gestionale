@@ -4,6 +4,12 @@ import { useMemo } from "react";
 import { ReportLavorazioniSection } from "@/components/report/report-lavorazioni-section";
 import { useReportAnalyticsDerived } from "@/components/report/report-analytics-derived-context";
 import { useReportAnalyticsDerivedActions } from "@/components/report/report-analytics-derived-context";
+import {
+  ReportExecutiveAlertSections,
+  ReportExecutiveSummaryContent,
+} from "@/components/report/layout/report-executive-overview";
+import { ReportExecutiveKpiSection } from "@/components/report/layout/report-executive-kpi-section";
+import { useReportPerformanceContext } from "@/components/report/layout/report-performance-context";
 import type { DomainReportSectionProps } from "@/components/report/report-section-types";
 import {
   ReportBarChart,
@@ -19,6 +25,7 @@ const MONTHS_SHORT = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "S
 
 export default function ReportLavorazioniSectionView(props: DomainReportSectionProps) {
   const derived = useReportAnalyticsDerived();
+  const { partitioned } = useReportPerformanceContext();
   const { publishOperationalAnalytics } = useReportAnalyticsDerivedActions();
 
   usePublishWhenReady(
@@ -68,6 +75,29 @@ export default function ReportLavorazioniSectionView(props: DomainReportSectionP
 
   return (
     <div className="min-w-0 space-y-4">
+      <ReportSection
+        id="report-lav-summary"
+        title="Sintesi operativa"
+        subtitle="Stato officina e flotta nel periodo selezionato"
+      >
+        <ReportExecutiveSummaryContent compareMode={props.analyticsContext.compareMode} />
+      </ReportSection>
+
+      <ReportExecutiveAlertSections />
+
+      {partitioned.lavorazioni.length > 0 ? (
+        <ReportSection
+          id="report-lav-unified-kpi"
+          title="Indicatori chiave"
+          subtitle="KPI lavorazioni con confronto periodo"
+        >
+          <ReportExecutiveKpiSection
+            items={partitioned.lavorazioni}
+            compareMode={props.analyticsContext.compareMode}
+          />
+        </ReportSection>
+      ) : null}
+
       <ReportSection id="report-lav-kpi" title="Indicatori operativi" subtitle="KPI lavorazioni nel periodo">
         <ReportDomainMetricsGrid metrics={metrics} compareMode={props.analyticsContext.compareMode} />
       </ReportSection>

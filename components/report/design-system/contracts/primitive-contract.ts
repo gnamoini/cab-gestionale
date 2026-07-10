@@ -29,6 +29,7 @@ export const REPORT_COMPOSITION_JSX_TO_PRIMITIVE: Record<string, ReportPrimitive
   ReportDataTable: "data-table",
   ReportLineChart: "chart",
   ReportBarChart: "chart",
+  ReportMultiSeriesLineChart: "chart",
   ReportMatrix: "matrix",
   ReportNarrativeBlock: "narrative",
   StatusBadge: "status-badge",

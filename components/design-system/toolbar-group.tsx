@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import type { ReactNode } from "react";
 import { dsPageToolbar, dsPageToolbarIconBtn } from "@/lib/ui/design-system";
 
@@ -106,11 +107,7 @@ export function ToolbarGroupFiltersToggle({
       <span className="hidden sm:inline">Filtri</span>
       <FiltersChevron expanded={expanded} />
       {filtersActive ? (
-        <span
-          className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[color:var(--cab-primary)] ring-2 ring-[var(--cab-surface)]"
-          title="Filtri attivi"
-          aria-hidden
-        />
+        <Tooltip content={"Filtri attivi"}><span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[color:var(--cab-primary)] ring-2 ring-[var(--cab-surface)]" aria-hidden/></Tooltip>
       ) : null}
     </button>
   );

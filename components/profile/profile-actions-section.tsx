@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import { ThemeModeIcon, ThemeToggle } from "@/components/gestionale/theme-toggle";
 import { GestionaleConfirmDialogLazy } from "@/components/gestionale/gestionale-confirm-dialog-lazy";
 import { requestPasswordResetEmail } from "@/lib/auth/request-password-reset.client";
@@ -85,7 +86,7 @@ export function ProfileActionsSection({
         Azioni
       </h3>
       <div className="mt-2 overflow-hidden rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)]">
-        <div className="flex flex-col divide-y divide-[color:var(--cab-border)]" role="presentation">
+        <div className={`flex flex-col ${LIST_DIVIDER_UL}`} role="presentation">
           <div
             className={`${profileActionItemClass} cursor-default`}
             onPointerDown={(event) => {

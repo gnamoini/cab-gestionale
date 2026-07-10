@@ -4,6 +4,8 @@ Documento di riferimento per la **Fase E**: infrastruttura import generica, cope
 
 Per l'uso operativo del wizard vedi anche [data-import.md](./data-import.md).
 
+**Production Certified v1:** [import-export-operational-guide.md](./import-export-operational-guide.md) · [import-export-production-gate.md](./import-export-production-gate.md)
+
 ---
 
 ## Architettura plug-in

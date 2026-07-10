@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { memo, useCallback, useMemo, useRef, useState, type ChangeEvent } from "react";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { ShellCard } from "@/components/gestionale/shell-card";
@@ -203,14 +204,9 @@ function ReportLavorazioniSectionInner({
                     Anno
                   </th>
                   {monthLabels.map((lab, mi) => (
-                    <th
-                      key={`h-${mi}-${lab}`}
-                      scope="col"
-                      title={lab}
-                      className={`${globalTableThCell} ${globalTableThLabel} min-w-0 border-b border-[color:var(--cab-border)] px-1 text-center`}
-                    >
+                    <Tooltip content={lab}><th key={`h-${mi}-${lab}`} scope="col" className={`${globalTableThCell} ${globalTableThLabel} min-w-0 border-b border-[color:var(--cab-border)] px-1 text-center`}>
                       {lab}
-                    </th>
+                    </th></Tooltip>
                   ))}
                   <th
                     scope="col"
@@ -218,13 +214,9 @@ function ReportLavorazioniSectionInner({
                   >
                     Totale
                   </th>
-                  <th
-                    scope="col"
-                    title="Variazione percentuale rispetto all'anno precedente"
-                    className={`${globalTableThCell} ${globalTableThLabel} min-w-0 border-b border-[color:var(--cab-border)] text-center`}
-                  >
+                  <Tooltip content={"Variazione percentuale rispetto all'anno precedente"}><th scope="col" className={`${globalTableThCell} ${globalTableThLabel} min-w-0 border-b border-[color:var(--cab-border)] text-center`}>
                     Vs prec.
-                  </th>
+                  </th></Tooltip>
                 </tr>
               </GlobalTableHead>
               <tbody>
@@ -236,13 +228,9 @@ function ReportLavorazioniSectionInner({
                       {row.months.map((v, mi) => {
                         const mk = ymKey(row.year, mi);
                         return (
-                          <td
-                            key={`${row.year}-${mi}`}
-                            className="border-r border-[color:var(--cab-border)] px-0.5 py-2 text-center align-middle text-sm tabular-nums leading-tight text-[color:var(--cab-text)]"
-                            title={`${mk}: ${v}`}
-                          >
+                          <Tooltip content={`${mk}: ${v}`}><td key={`${row.year}-${mi}`} className="border-r border-[color:var(--cab-border)] px-0.5 py-2 text-center align-middle text-sm tabular-nums leading-tight text-[color:var(--cab-text)]">
                             {v > 0 ? v : <span className="text-[color:var(--cab-text-muted)]">—</span>}
-                          </td>
+                          </td></Tooltip>
                         );
                       })}
                       <td className="border-l border-[color:var(--cab-border)] px-2 py-2 text-center align-middle text-sm tabular-nums text-[color:var(--cab-text)]">

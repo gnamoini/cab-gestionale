@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useMemo } from "react";
 import {
   SETTINGS_OVERVIEW_TILE,
@@ -29,17 +30,12 @@ export function SettingsOverviewSection({
           <ul className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {group.items.map((item) => (
               <li key={item.id}>
-                <button
-                  type="button"
-                  title={item.label}
-                  onClick={() => onPickSection(item.id)}
-                  className={`${SETTINGS_OVERVIEW_TILE} ${dsFocus}`}
-                >
+                <Tooltip content={item.label}><button type="button" onClick={() => onPickSection(item.id)} className={`${SETTINGS_OVERVIEW_TILE} ${dsFocus}`}>
                   <span className={SETTINGS_OVERVIEW_TILE_ICON} aria-hidden>
-                    <SettingsSectionIcon sectionId={item.id} className="h-4 w-4" />
+                    <SettingsSectionIcon sectionId={item.id} className="h-4 w-4"/>
                   </span>
                   <span className={SETTINGS_OVERVIEW_TILE_LABEL}>{item.label}</span>
-                </button>
+                </button></Tooltip>
               </li>
             ))}
           </ul>

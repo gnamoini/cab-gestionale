@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { ADDETTO_COLOR_POOL } from "@/lib/lavorazioni/addetto-colors-assign";
@@ -38,23 +39,14 @@ function SettingsNativeColorPickerButton({
   const hex = normalizeHex(value) ?? "#52525b";
 
   return (
-    <label
-      className={`${dsTableActionBtnColorSwatch} relative shrink-0 touch-manipulation`}
-      style={{ backgroundColor: hex }}
-      title="Selettore colori di sistema"
-    >
-      <input
-        type="color"
-        value={hex}
-        aria-label={ariaLabel}
-        className="absolute inset-0 z-[1] h-full w-full cursor-pointer opacity-0"
-        onChange={(e) => {
-          const nh = normalizeHex(e.target.value);
-          if (!nh) return;
-          onChange(nh);
-        }}
-      />
-    </label>
+    <Tooltip content={"Selettore colori di sistema"}><label className={`${dsTableActionBtnColorSwatch} relative shrink-0 touch-manipulation`} style={{ backgroundColor: hex }}>
+      <input type="color" value={hex} aria-label={ariaLabel} className="absolute inset-0 z-[1] h-full w-full cursor-pointer opacity-0" onChange={(e) => {
+        const nh = normalizeHex(e.target.value);
+        if (!nh)
+            return;
+        onChange(nh);
+    }}/>
+    </label></Tooltip>
   );
 }
 

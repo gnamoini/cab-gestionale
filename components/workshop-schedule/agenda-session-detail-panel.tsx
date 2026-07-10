@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Tooltip } from "@/components/design-system";
+import { Tooltip } from "@/components/ui";
+
 import type { WorkshopScheduleSessionView } from "@/lib/workshop-schedule/types";
 import { PLANNING_STATUS_LABELS } from "@/lib/workshop-schedule/types";
 import {

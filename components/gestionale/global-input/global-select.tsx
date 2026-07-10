@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState, startTransition } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -1226,68 +1227,47 @@ export function GlobalSelect(props: GlobalSelectProps) {
                     ? action.label(addCandidate)
                     : action.label("");
                 return (
-                  <button
-                    key={action.id}
-                    id={optionDom}
-                    type="button"
-                    role="option"
-                    aria-selected={optionActive}
-                    className={addOptionBtnClass(optionActive)}
-                    disabled={!addOptionEnabled || addPending}
-                    aria-disabled={!addOptionEnabled || addPending}
-                    title={
-                      addOptionEnabled
+                  <Tooltip content={addOptionEnabled
                         ? undefined
                         : useSheet && sheetUsesSearch
                           ? "Scrivi nel campo Cerca in alto"
-                          : "Digita un valore da aggiungere"
-                    }
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      if (blurTimer.current) clearTimeout(blurTimer.current);
-                      if (addOptionEnabled && !addPending) void runAddAction(actionIdx);
-                    }}
-                    onMouseEnter={() => {
-                      if (!sheetOpen) setActiveIndex(optionIndex);
-                    }}
-                  >
+                          : "Digita un valore da aggiungere"}><button key={action.id} id={optionDom} type="button" role="option" aria-selected={optionActive} className={addOptionBtnClass(optionActive)} disabled={!addOptionEnabled || addPending} aria-disabled={!addOptionEnabled || addPending} onMouseDown={(e) => {
+        e.preventDefault();
+        if (blurTimer.current)
+            clearTimeout(blurTimer.current);
+        if (addOptionEnabled && !addPending)
+            void runAddAction(actionIdx);
+    }} onMouseEnter={() => {
+        if (!sheetOpen)
+            setActiveIndex(optionIndex);
+    }}>
                     <span className={addOptionEnabled ? "" : "opacity-70"} aria-hidden>
                       +
                     </span>
                     {label}
-                  </button>
+                  </button></Tooltip>
                 );
               })
             : (
-              <button
-                id={addOptionDomId}
-                type="button"
-                role="option"
-                aria-selected={isAddActiveIndex(activeIndex)}
-                className={addOptionBtnClass(isAddActiveIndex(activeIndex))}
-                disabled={!addOptionEnabled}
-                aria-disabled={!addOptionEnabled}
-                title={
-                  addOptionEnabled
+              <Tooltip content={addOptionEnabled
                     ? undefined
                     : useSheet && sheetUsesSearch
                       ? "Scrivi nel campo Cerca in alto"
-                      : "Digita un valore da aggiungere"
-                }
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  if (blurTimer.current) clearTimeout(blurTimer.current);
-                  if (addOptionEnabled) void runAdd();
-                }}
-                onMouseEnter={() => {
-                  if (!sheetOpen && addOptionIndex >= 0) setActiveIndex(addOptionIndex);
-                }}
-              >
+                      : "Digita un valore da aggiungere"}><button id={addOptionDomId} type="button" role="option" aria-selected={isAddActiveIndex(activeIndex)} className={addOptionBtnClass(isAddActiveIndex(activeIndex))} disabled={!addOptionEnabled} aria-disabled={!addOptionEnabled} onMouseDown={(e) => {
+        e.preventDefault();
+        if (blurTimer.current)
+            clearTimeout(blurTimer.current);
+        if (addOptionEnabled)
+            void runAdd();
+    }} onMouseEnter={() => {
+        if (!sheetOpen && addOptionIndex >= 0)
+            setActiveIndex(addOptionIndex);
+    }}>
                 <span className={addOptionEnabled ? "" : "opacity-70"} aria-hidden>
                   +
                 </span>
                 {singleAddOptionLabel}
-              </button>
+              </button></Tooltip>
             )}
         </div>
       ) : null}

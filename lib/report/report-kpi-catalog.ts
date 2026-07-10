@@ -20,7 +20,6 @@ export { getMetricDefinition, tryGetMetricDefinition } from "@/lib/report/metric
 export type { ReportMetricRegistryEntry } from "@/lib/report/metrics/report-metric-types";
 
 export type ReportSectionId =
-  | "panoramica"
   | "analisi_ai"
   | "lavorazioni"
   | "clienti_mezzi"

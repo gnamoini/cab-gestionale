@@ -9,17 +9,21 @@ const SECTION_PATTERN_EXPECTATIONS: Record<
   string,
   { patterns: readonly ("card" | "table" | "chart" | "matrix")[]; mustInclude: readonly string[] }
 > = {
-  "report-panoramica-section.tsx": {
-    patterns: ["card"],
-    mustInclude: ["ReportExecutiveKpiSection", "ReportNarrativeBlock"],
-  },
   "report-lavorazioni-section.tsx": {
     patterns: ["card", "chart", "matrix", "table"],
-    mustInclude: ["ReportDomainMetricsGrid", "ReportBarChart", "ReportMatrix", "ReportDataTable"],
+    mustInclude: [
+      "ReportDomainMetricsGrid",
+      "ReportBarChart",
+      "ReportMatrix",
+      "ReportDataTable",
+      "ReportExecutiveSummaryContent",
+      "ReportExecutiveAlertSections",
+      "ReportExecutiveKpiSection",
+    ],
   },
   "report-magazzino-section.tsx": {
     patterns: ["card", "table", "chart", "matrix"],
-    mustInclude: ["ReportDomainMetricsGrid", "ReportBarChart", "ReportDataTable", "ReportMatrix"],
+    mustInclude: ["ReportDomainMetricsGrid", "ReportBarChart", "ReportDataTable", "ReportMatrix", "ReportUnifiedKpiGrid"],
   },
   "report-ore-section.tsx": {
     patterns: ["card"],
@@ -27,7 +31,7 @@ const SECTION_PATTERN_EXPECTATIONS: Record<
   },
   "report-economici-section.tsx": {
     patterns: ["card", "chart", "table"],
-    mustInclude: ["ReportDomainMetricsGrid", "ReportLineChart", "ReportDataTable"],
+    mustInclude: ["ReportDomainMetricsGrid", "ReportLineChart", "ReportDataTable", "ReportUnifiedKpiGrid"],
   },
   "report-clienti-mezzi-section.tsx": {
     patterns: ["card", "table"],
@@ -40,6 +44,10 @@ const SECTION_PATTERN_EXPECTATIONS: Record<
   "report-ai-section.tsx": {
     patterns: [],
     mustInclude: ["ReportNarrativeBlock", "ReportEmbeddedModule"],
+  },
+  "report-kpi-charts-section.tsx": {
+    patterns: ["chart"],
+    mustInclude: ["ReportMultiSeriesLineChart", "KpiChartConfigPanel"],
   },
 };
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { LoadingSpinner } from "@/components/design-system/loading";
@@ -531,15 +532,11 @@ export function DashboardPromemoriaCalendar({
                 >
                   {cell.date.getDate()}
                   {hasCount ? (
-                    <span
-                      className={[
-                        "pointer-events-none absolute bottom-0.5 left-1/2 h-1.5 min-w-1.5 -translate-x-1/2 rounded-full px-0.5",
-                        selected ? "bg-white/95" : "bg-[color:var(--cab-text-muted)]",
-                        count > 1 ? "min-w-[0.375rem]" : "",
-                      ].join(" ")}
-                      title={`${count} promemoria`}
-                      aria-hidden
-                    />
+                    <Tooltip content={`${count} promemoria`}><span className={[
+        "pointer-events-none absolute bottom-0.5 left-1/2 h-1.5 min-w-1.5 -translate-x-1/2 rounded-full px-0.5",
+        selected ? "bg-white/95" : "bg-[color:var(--cab-text-muted)]",
+        count > 1 ? "min-w-[0.375rem]" : "",
+    ].join(" ")} aria-hidden/></Tooltip>
                   ) : null}
                 </button>
               );

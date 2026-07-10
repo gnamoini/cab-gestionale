@@ -22,6 +22,7 @@ export type WorkshopIntelligenceInput = {
   heatmapDates: readonly string[];
   bounds?: DayBounds;
   invalidationKey: string;
+  enabled?: boolean;
 };
 
 function addDaysYmd(ymd: string, days: number): string {
@@ -31,26 +32,28 @@ function addDaysYmd(ymd: string, days: number): string {
 }
 
 export function useWorkshopScheduleIntelligence(input: WorkshopIntelligenceInput) {
+  const enabled = input.enabled !== false;
+  const sessions = enabled ? input.sessions : [];
   const bounds = input.bounds ?? DEFAULT_DAY_BOUNDS;
-  const fingerprint = sessionsFingerprint([...input.sessions]);
+  const fingerprint = sessionsFingerprint([...sessions]);
   const memoKey = `${input.invalidationKey}|${fingerprint}`;
 
   const gantt = useMemo(() => {
     const axis = buildGanttTimeAxis(input.rangeStartYmd, input.rangeEndYmd, bounds);
-    const rows = buildGanttRowsByWorkOrder(input.sessions);
+    const rows = buildGanttRowsByWorkOrder(sessions);
     return { axis, rows };
-  }, [input.sessions, input.rangeStartYmd, input.rangeEndYmd, bounds]);
+  }, [sessions, input.rangeStartYmd, input.rangeEndYmd, bounds]);
 
   const heatmap = useMemo(() => {
     const key = heatmapMemoKey(input.heatmapDates, bounds);
     void key;
-    return computeHeatmapCells(input.sessions, input.heatmapDates, bounds);
-  }, [input.sessions, input.heatmapDates, bounds, memoKey]);
+    return computeHeatmapCells(sessions, input.heatmapDates, bounds);
+  }, [sessions, input.heatmapDates, bounds, memoKey]);
 
   const weeklyLoad = useMemo(() => {
     const cacheKey = weeklyLoadMemoKey(input.weekStartYmd, fingerprint);
-    return computeWeeklyLoad(input.sessions, input.weekStartYmd, bounds, cacheKey);
-  }, [input.sessions, input.weekStartYmd, bounds, fingerprint, memoKey]);
+    return computeWeeklyLoad(sessions, input.weekStartYmd, bounds, cacheKey);
+  }, [sessions, input.weekStartYmd, bounds, fingerprint, memoKey]);
 
   const insights = useMemo(() => {
     const dates =
@@ -59,29 +62,30 @@ export function useWorkshopScheduleIntelligence(input: WorkshopIntelligenceInput
         : Array.from({ length: 7 }, (_, i) => addDaysYmd(input.weekStartYmd, i));
     const key = insightsMemoKey(fingerprint, `${bounds.startHour}-${bounds.endHour}`);
     void key;
-    return computePlannerInsights(input.sessions, dates, bounds);
-  }, [input.sessions, input.heatmapDates, input.weekStartYmd, bounds, fingerprint, memoKey]);
+    return computePlannerInsights(sessions, dates, bounds);
+  }, [sessions, input.heatmapDates, input.weekStartYmd, bounds, fingerprint, memoKey]);
 
   const planAutoScheduleFor = useMemo(
     () => (autoInput: Omit<AutoScheduleInput, "existingSessions" | "dayCapacityByYmd">) => {
+      if (!enabled) return null;
       const dayCapacityByYmd = new Map(
         autoInput.searchDaysYmd.map((d) => [
           d,
           computeDayCapacity(
             d,
-            input.sessions.filter((s) => ymdFromIso(s.startAt) === d || ymdFromIso(s.endAt) === d),
+            sessions.filter((s) => ymdFromIso(s.startAt) === d || ymdFromIso(s.endAt) === d),
             bounds,
           ),
         ]),
       );
       return planAutoSchedule({
         ...autoInput,
-        existingSessions: input.sessions,
+        existingSessions: sessions,
         dayCapacityByYmd,
         bounds,
       });
     },
-    [input.sessions, bounds],
+    [sessions, bounds, enabled],
   );
 
   return { gantt, heatmap, weeklyLoad, insights, planAutoScheduleFor };

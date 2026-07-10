@@ -50,6 +50,20 @@ export type ReportCompareUnavailableReason =
 
 export type ReportMetricConfidence = "full" | "partial" | "estimated";
 
+export type KpiSeriesProviderId = "lavorazioni" | "economici" | "magazzino" | "ore";
+
+export type KpiSeriesGranularity = "day" | "week" | "month";
+
+export type KpiChartDisplayMode = "indexed" | "absolute" | "dual-axis";
+
+export type ReportMetricSeriesConfig = {
+  provider: KpiSeriesProviderId;
+  granularities: readonly KpiSeriesGranularity[];
+  supportedModes: readonly KpiChartDisplayMode[];
+};
+
+export type ReportMetricValueCapability = "scalar" | "series";
+
 export type KpiPayload = { spark?: number[] };
 export type RankingPayload = { rowCount: number };
 export type TemporalPayload = {
@@ -111,4 +125,6 @@ export type ReportMetricRegistryEntry = {
   formula?: string;
   trust?: ReportKpiTrust;
   confidence?: ReportMetricConfidence;
+  valueCapability: ReportMetricValueCapability;
+  series?: ReportMetricSeriesConfig;
 };

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 import { useBeforeUnloadWhenDirty } from "@/lib/forms/use-before-unload-when-dirty";
-import { LoadingButton, Tooltip } from "@/components/design-system";
+import { LoadingButton } from "@/components/design-system";
+import { DisabledElementTooltip } from "@/components/ui";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
@@ -35,22 +36,6 @@ import {
 import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 
 const RICAMBIO_EDIT_FORM_ID = "ricambio-edit-form";
-
-function MagazzinoDisabledButtonTooltip({
-  content,
-  disabled,
-  children,
-}: {
-  content: string;
-  disabled?: boolean;
-  children: ReactElement;
-}) {
-  return (
-    <Tooltip content={content}>
-      {disabled ? <span className="inline-flex w-full min-w-0">{children}</span> : children}
-    </Tooltip>
-  );
-}
 
 export function RicambioEditModal({
   ricambioId,
@@ -231,7 +216,7 @@ export function RicambioEditModal({
             </button>
           </div>
           <div className="min-w-0 sm:order-1">
-            <MagazzinoDisabledButtonTooltip
+            <DisabledElementTooltip
               content={magCanDeleteRicambio ? "Elimina ricambio" : READONLY_PERMISSION_HINT}
               disabled={!magCanDeleteRicambio}
             >
@@ -243,7 +228,7 @@ export function RicambioEditModal({
               >
                 Elimina ricambio
               </button>
-            </MagazzinoDisabledButtonTooltip>
+            </DisabledElementTooltip>
           </div>
         </div>
       }

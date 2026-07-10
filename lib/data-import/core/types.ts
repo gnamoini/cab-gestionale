@@ -14,6 +14,7 @@ export type ImportEntity =
   | "settings_hierarchy_attrezzature"
   | "settings_hierarchy_telai"
   | "lavorazioni"
+  | "ordini_fornitori"
   | "fatture_draft"
   | "billing_customers"
   | "documenti_metadata"
@@ -94,6 +95,7 @@ export type ImportExecuteStats = {
   skipped: number;
   errors: number;
   warnings: number;
+  createdEntityIds?: string[];
 };
 
 export type ImportExecuteError = {
@@ -144,6 +146,7 @@ export const IMPORT_ENTITY_LABELS: Record<ImportEntity, string> = {
   settings_hierarchy_attrezzature: "Catalogo attrezzature",
   settings_hierarchy_telai: "Catalogo telai",
   lavorazioni: "Lavorazioni",
+  ordini_fornitori: "Ordini fornitori",
   fatture_draft: "Fatture (bozze)",
   billing_customers: "Clienti fatturazione",
   documenti_metadata: "Documenti (metadati)",

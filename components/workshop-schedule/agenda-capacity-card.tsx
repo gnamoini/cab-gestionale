@@ -1,7 +1,8 @@
 "use client";
 
-import { Tooltip } from "@/components/design-system";
+
 import type { DayCapacitySnapshot } from "@/lib/workshop-schedule/day-capacity";
+import { Tooltip } from "@/components/ui";
 import { dsBadgeDanger, dsBadgeOk, dsBadgeWarn, dsSectionTitle, dsTypoCaption } from "@/lib/ui/design-system";
 
 function saturationBadge(pct: number): string {

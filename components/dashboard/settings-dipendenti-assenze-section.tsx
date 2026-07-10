@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { Tooltip } from "@/components/design-system";
+import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
+import { Tooltip } from "@/components/ui";
+
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
 import {
   SettingsEmptyState,
@@ -355,7 +357,7 @@ export function SettingsDipendentiAssenzeSection({
           </SettingsEmptyState>
         }
       >
-        <div className={`${ASSENZE_SETTINGS_TABLE_CLASS} divide-y divide-[color:var(--cab-border)]`}>
+        <div className={`${ASSENZE_SETTINGS_TABLE_CLASS} ${LIST_DIVIDER_UL}`}>
           {draftOpen ? (
             <ul className="contents">
               <AssenzaDraftRow

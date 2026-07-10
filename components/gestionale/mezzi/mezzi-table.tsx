@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Tooltip } from "@/components/ui";
 import { memo } from "react";
-import { CardMobile, IconActionButton, Tooltip } from "@/components/design-system";
+import { CardMobile, IconActionButton } from "@/components/design-system";
 import {
   LavorazioneMobileCardFooter,
   LavorazioneMobileMetaGrid,

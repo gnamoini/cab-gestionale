@@ -73,6 +73,9 @@ jobs:
       - name: UX enforcement
         run: npm run ux:enforce
 
+      - name: UI design audit
+        run: npm run audit:ui
+
       - name: UX mobile gate
         run: npm run ux:mobile-gate
 
@@ -134,3 +137,64 @@ jobs:
       - name: Cleanup smoke test data
         if: always()
         run: SMOKE_CLEANUP_APPLY=1 npm run smoke:cleanup
+
+  control-pr-shadow:
+    name: control-pr-shadow
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+
+    env:
+      CI: "true"
+      SMOKE_SKIP: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Control Plane governance review
+        run: npm run control:review
+
+      - name: Control Plane registry parity
+        run: npm run control:parity
+
+      - name: Regression classification
+        run: npx tsx lib/control/regression-classification.test.ts
+
+      - name: Control Plane local tier (shadow, no E2E)
+        run: SMOKE_SKIP=1 npm run control:local
+        env:
+          CI: "true"
+
+      - name: Legacy outcomes probe (shadow)
+        run: npm run control:shadow-legacy-probe
+        continue-on-error: true
+
+      - name: Shadow policy (advisory)
+        run: npm run control:shadow-policy
+        continue-on-error: true
+
+      - name: Shadow policy (strict, Fase B)
+        if: env.CONTROL_SHADOW_STRICT == '1'
+        run: npm run control:shadow-policy -- --strict
+
+      - name: Upload control report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-report-shadow-${{ github.run_id }}
+          path: |
+            control-report.json
+            shadow-policy-report.json
+            legacy-outcomes.json
+          retention-days: 30
+          if-no-files-found: ignore

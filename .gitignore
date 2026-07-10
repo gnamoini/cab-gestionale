@@ -58,3 +58,12 @@ next-env.d.ts
 
 # Supabase MCP apply artifacts (not official migrations)
 supabase/migrations/_*
+
+# Control Plane generated inventory (regenerate: npm run control:inventory)
+control-inventory.json
+control-report.json
+strict-label-validation.json
+shadow-cutover-report.json
+control-duration-baseline.json
+control-certification/
+control-health/

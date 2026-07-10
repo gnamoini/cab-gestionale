@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Tooltip } from "@/components/design-system";
+import { Tooltip } from "@/components/ui";
+
 import type { HeatmapCell } from "@/lib/workshop-schedule/intelligence/heatmap/types";
 import type { WeeklyLoadSnapshot } from "@/lib/workshop-schedule/intelligence/weekly-load/types";
 import type { AutoSchedulePlan } from "@/lib/workshop-schedule/intelligence/auto-scheduler/types";

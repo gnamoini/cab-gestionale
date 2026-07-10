@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { gestionalePageToolbarActionsClass } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import {
@@ -106,9 +107,9 @@ export function SecurityReleaseSection({
             </p>
           ) : null}
           <div className="flex flex-wrap gap-2">
-            <button type="button" className={dsPageToolbarBtn} disabled title="L'env non è modificabile dalla UI.">
+            <Tooltip content={"L'env non è modificabile dalla UI."}><button type="button" className={dsPageToolbarBtn} disabled>
               Toggle UI (env): {pilotStatus?.envEnabled ? "ON" : "OFF"}
-            </button>
+            </button></Tooltip>
             <button
               type="button"
               className={dsPageToolbarBtn}

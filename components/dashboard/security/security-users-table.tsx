@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import "./security-users-table.css";
 
 import { useMemo, useState } from "react";
@@ -158,11 +159,11 @@ function UserIdentityCell({ row }: { row: EditableSecurityUser }) {
   const displayName = securityUserDisplayName(row);
   const title = [displayName, row.email, row.username].filter(Boolean).join(" · ");
   return (
-    <div className="flex min-w-0 flex-col gap-0.5" title={title}>
+    <Tooltip content={title}><div className="flex min-w-0 flex-col gap-0.5">
       <span className={identityPrimaryClass}>{displayName}</span>
       <span className={identitySecondaryClass}>{row.email || "—"}</span>
       {row.username ? <span className={identityUsernameClass}>@{row.username}</span> : null}
-    </div>
+    </div></Tooltip>
   );
 }
 
@@ -242,9 +243,9 @@ function SecurityUserClienteField({ row, readOnly, knownClienti, onPatch, densit
 
   if (readOnly) {
     return (
-      <span className="block max-w-full truncate text-xs" title={row.clienteRef ?? undefined}>
+      <Tooltip content={row.clienteRef ?? undefined}><span className="block max-w-full truncate text-xs">
         {row.clienteRef || "—"}
-      </span>
+      </span></Tooltip>
     );
   }
   return (

@@ -1,7 +1,8 @@
 "use client";
 
 import { memo, useEffect, useId, useMemo, useState } from "react";
-import { Tooltip } from "@/components/design-system";
+import { Tooltip } from "@/components/ui";
+
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
 import { InterventoTargetSelect } from "@/components/gestionale/intervento/intervento-target-select";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";

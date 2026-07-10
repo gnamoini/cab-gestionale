@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { formatLastSchedaIngressoHint } from "@/lib/schede/scheda-ingresso-reuse";
 import { dsAccentSoftBanner, dsBtnSoftOrange, dsFocus } from "@/lib/ui/design-system";
 
@@ -81,16 +82,10 @@ export function CopiaUltimaSchedaIngressoBanner({
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          className={`${dsBtnSoftOrange} w-full shrink-0 sm:w-auto ${dsFocus} ${highlight ? "shadow-[var(--cab-shadow-md)]" : ""}`}
-          disabled={disabled}
-          title={disabled ? disabledTitle : "Copia campi dall’ultima scheda ingresso dello stesso mezzo"}
-          onClick={onCopy}
-        >
+        <Tooltip content={disabled ? disabledTitle : "Copia campi dall’ultima scheda ingresso dello stesso mezzo"}><button type="button" className={`${dsBtnSoftOrange} w-full shrink-0 sm:w-auto ${dsFocus} ${highlight ? "shadow-[var(--cab-shadow-md)]" : ""}`} disabled={disabled} onClick={onCopy}>
           <IconCopiaIngressoPrecedente />
           Copia ultima scheda ingresso
-        </button>
+        </button></Tooltip>
       </div>
     </div>
   );

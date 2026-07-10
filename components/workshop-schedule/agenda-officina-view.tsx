@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { Tooltip } from "@/components/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarV2Grid } from "@/components/dashboard/calendar-v2/calendar-v2-grid";
 import type { CalendarSelection } from "@/components/dashboard/calendar-v2/calendar-v2-types";
 import { PageHeader } from "@/components/gestionale/page-header";
-import { LoadingAgendaContentSkeleton, Tooltip } from "@/components/design-system";
+import { LoadingAgendaContentSkeleton } from "@/components/design-system";
 import { AgendaFiltersBar } from "@/components/workshop-schedule/agenda-filters-bar";
 import { AgendaDayTimeline } from "@/components/workshop-schedule/agenda-day-timeline";
 import { AgendaSessionFormModal, type AgendaSessionFormValues } from "@/components/workshop-schedule/agenda-session-form-modal";
@@ -87,7 +88,7 @@ export function AgendaOfficinaView() {
   }, [viewMode, monthKey, selectedYmd]);
 
   const { sessions, isLoading, isError, error } = useWorkshopScheduleRange(rangeStart, rangeEnd, filters);
-  const dayCapacity = useWorkshopScheduleDayCapacity(selectedYmd, rangeStart, rangeEnd);
+  const dayCapacity = useWorkshopScheduleDayCapacity(selectedYmd, sessions);
   const { upsertMutation, patchTimesMutation, deleteMutation } = useWorkshopScheduleMutations();
 
   const rangeStartYmd = useMemo(() => ymdFromIso(rangeStart), [rangeStart]);

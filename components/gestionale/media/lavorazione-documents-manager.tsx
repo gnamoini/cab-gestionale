@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { LoadingFormSkeleton } from "@/components/design-system/loading";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import {
@@ -111,47 +112,34 @@ function DocumentSlotRow({
 
   const actions = doc ? (
     <>
-      <button type="button" className={btnNeutral} onClick={onOpen} title="Apri documento">
+      <Tooltip content={"Apri documento"}><button type="button" className={btnNeutral} onClick={onOpen}>
         <HubIconOpen />
         Apri
-      </button>
-      <button type="button" className={btnNeutral} onClick={onDownload} title="Scarica documento">
+      </button></Tooltip>
+      <Tooltip content={"Scarica documento"}><button type="button" className={btnNeutral} onClick={onDownload}>
         <HubIconDownload />
         <span className="max-sm:sr-only">Scarica</span>
-      </button>
+      </button></Tooltip>
       {canEdit ? (
         <>
-          <label
-            className={`${btnNeutral} ${uploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}
-            title={`Sostituisci ${label}`}
-          >
+          <Tooltip content={`Sostituisci ${label}`}><label className={`${btnNeutral} ${uploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}>
             <HubIconReplace />
             <span className="max-sm:sr-only">Sostituisci</span>
             {uploadInput}
-          </label>
-          <button
-            type="button"
-            className={btnDanger}
-            disabled={uploading}
-            onClick={onRemove}
-            title={`Elimina ${label}`}
-            aria-label={`Elimina ${label}`}
-          >
+          </label></Tooltip>
+          <Tooltip content={`Elimina ${label}`}><button type="button" className={btnDanger} disabled={uploading} onClick={onRemove} aria-label={`Elimina ${label}`}>
             <HubIconTrash />
             <span className="max-md:sr-only">Elimina</span>
-          </button>
+          </button></Tooltip>
         </>
       ) : null}
     </>
   ) : canEdit ? (
-    <label
-      className={`${btnPrimary} ${uploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}
-      title={uploadLabel}
-    >
+    <Tooltip content={uploadLabel}><label className={`${btnPrimary} ${uploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}>
       <HubIconUpload />
       Carica
       {uploadInput}
-    </label>
+    </label></Tooltip>
   ) : null;
 
   const statusBlock = uploading || uploadError ? (
@@ -176,9 +164,9 @@ function DocumentSlotRow({
 
   if (hubCardLayout) {
     const subtitle = doc ? (
-      <span className="block truncate font-medium text-[color:var(--cab-text)]" title={doc.filename}>
+      <Tooltip content={doc.filename}><span className="block truncate font-medium text-[color:var(--cab-text)]">
         {doc.filename}
-      </span>
+      </span></Tooltip>
     ) : (
       "Nessun documento caricato"
     );
@@ -239,24 +227,15 @@ function DocumentSlotRow({
             </button>
             {canEdit ? (
               <>
-                <label
-                  className={`${btnNeutral} ${uploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}
-                  title={`Sostituisci ${label}`}
-                >
+                <Tooltip content={`Sostituisci ${label}`}><label className={`${btnNeutral} ${uploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}>
                   Sostituisci
-                  <input
-                    id={inputId}
-                    type="file"
-                    accept="application/pdf,.pdf"
-                    className="sr-only"
-                    disabled={uploading}
-                    onChange={(e) => {
-                      const file = e.currentTarget.files?.[0];
-                      e.currentTarget.value = "";
-                      if (file) onUpload(file);
-                    }}
-                  />
-                </label>
+                  <input id={inputId} type="file" accept="application/pdf,.pdf" className="sr-only" disabled={uploading} onChange={(e) => {
+        const file = e.currentTarget.files?.[0];
+        e.currentTarget.value = "";
+        if (file)
+            onUpload(file);
+    }}/>
+                </label></Tooltip>
                 <button type="button" className={btnDanger} disabled={uploading} onClick={onRemove}>
                   Elimina
                 </button>
@@ -264,24 +243,15 @@ function DocumentSlotRow({
             ) : null}
           </>
         ) : canEdit ? (
-          <label
-            className={`${btnPrimary} ${uploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}
-            title={uploadLabel}
-          >
+          <Tooltip content={uploadLabel}><label className={`${btnPrimary} ${uploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}>
             {uploadLabel}
-            <input
-              id={inputId}
-              type="file"
-              accept="application/pdf,.pdf"
-              className="sr-only"
-              disabled={uploading}
-              onChange={(e) => {
-                const file = e.currentTarget.files?.[0];
-                e.currentTarget.value = "";
-                if (file) onUpload(file);
-              }}
-            />
-          </label>
+            <input id={inputId} type="file" accept="application/pdf,.pdf" className="sr-only" disabled={uploading} onChange={(e) => {
+        const file = e.currentTarget.files?.[0];
+        e.currentTarget.value = "";
+        if (file)
+            onUpload(file);
+    }}/>
+          </label></Tooltip>
         ) : null}
         </div>
       </div>

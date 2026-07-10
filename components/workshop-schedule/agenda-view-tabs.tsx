@@ -1,7 +1,8 @@
 "use client";
 
 import type { AgendaViewMode } from "@/lib/navigation/agenda-links";
-import { Tooltip } from "@/components/design-system";
+import { Tooltip } from "@/components/ui";
+
 import {
   dsFocus,
   dsSegmentedBtnOff,

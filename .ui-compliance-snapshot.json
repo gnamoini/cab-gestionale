@@ -1,0 +1,19 @@
+{
+  "contractVersion": "1.0.0",
+  "primitiveVersions": {
+    "Tooltip": "2.0.0",
+    "TooltipList": "1.0.0",
+    "TooltipStatus": "1.0.0",
+    "GlobalAnchoredMenu": "1.0.0",
+    "GestionaleListTable": "3.0.0"
+  },
+  "generatedAt": "2026-07-10",
+  "scores": {
+    "Tooltip": 100,
+    "Lists": 100,
+    "Overlay": 100
+  },
+  "overall": 100,
+  "blockers": 0,
+  "warnings": 0
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import { Drawer, LoadingButton } from "@/components/design-system";
 import { FatturaEliminaConfirmDialog } from "@/components/fatturazione/fattura-elimina-confirm-dialog";
 import {
@@ -177,7 +178,7 @@ export function FatturazioneDetailDrawer({
       ) : null}
       <div>
         <p className="mb-2 text-[10px] font-bold uppercase text-[color:var(--cab-text-muted)]">Righe</p>
-        <ul className="divide-y divide-[color:var(--cab-border)] rounded border border-[color:var(--cab-border)]">
+        <ul className={`${LIST_DIVIDER_UL} rounded border border-[color:var(--cab-border)]`}>
           {detail.rows.map((r) => (
             <li key={r.id} className="px-3 py-2 text-sm">
               <p className="font-medium">{r.descrizione}</p>
@@ -191,7 +192,7 @@ export function FatturazioneDetailDrawer({
       {detail.payments.length ? (
         <div>
           <p className="mb-2 text-[10px] font-bold uppercase text-[color:var(--cab-text-muted)]">Pagamenti</p>
-          <ul className="divide-y divide-[color:var(--cab-border)]">
+          <ul className={`${LIST_DIVIDER_UL}`}>
             {detail.payments.map((p) => (
               <li key={p.id} className="py-2 text-sm">
                 {formatInvoiceDate(p.data)} — {formatInvoiceMoney(p.importo)} ({p.metodo})

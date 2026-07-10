@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import type { DateRange, ReportCompareMode, ReportPeriodPreset } from "@/lib/report/date-ranges";
 import { inclusiveDayCount, ymdFromDate } from "@/lib/report/date-ranges";
 import {
@@ -176,16 +177,9 @@ export function ReportControls({
 
         <div className={periodPanelChipRowClass} role="group" aria-label="Scorciatoie periodo analisi">
           {REPORT_QUICK_PRESET_IDS.map((id) => (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={preset === id}
-              title={REPORT_PRESET_LABELS[id]}
-              onClick={() => onPreset(id)}
-              className={periodChipBtnClass(preset === id)}
-            >
+            <Tooltip content={REPORT_PRESET_LABELS[id]}><button key={id} type="button" aria-pressed={preset === id} onClick={() => onPreset(id)} className={periodChipBtnClass(preset === id)}>
               {reportQuickPresetChipLabel(id)}
-            </button>
+            </button></Tooltip>
           ))}
         </div>
 
@@ -239,28 +233,15 @@ export function ReportControls({
         </div>
 
         <div className={periodPanelChipRowClass} role="group" aria-label="Scorciatoie periodo confronto">
-          <button
-            type="button"
-            aria-pressed={compareMode === "none"}
-            title="Nessun confronto"
-            onClick={() => onCompareMode("none")}
-            className={periodChipBtnClass(compareMode === "none")}
-          >
+          <Tooltip content={"Nessun confronto"}><button type="button" aria-pressed={compareMode === "none"} onClick={() => onCompareMode("none")} className={periodChipBtnClass(compareMode === "none")}>
             Nessuno
-          </button>
+          </button></Tooltip>
           {REPORT_COMPARE_QUICK_IDS.map((id) => {
             const fullLabel = REPORT_COMPARE_OPTIONS.find((o) => o.value === id)?.label ?? id;
             return (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={compareMode === id}
-                title={fullLabel}
-                onClick={() => onCompareMode(id)}
-                className={periodChipBtnClass(compareMode === id)}
-              >
+              <Tooltip content={fullLabel}><button key={id} type="button" aria-pressed={compareMode === id} onClick={() => onCompareMode(id)} className={periodChipBtnClass(compareMode === id)}>
                 {reportCompareQuickChipLabel(id)}
-              </button>
+              </button></Tooltip>
             );
           })}
         </div>

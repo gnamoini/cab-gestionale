@@ -7,11 +7,32 @@ import type {
   ReportMetricKind,
   ReportMetricLifecycleStatus,
   ReportMetricRegistryEntry,
+  ReportMetricSeriesConfig,
   ReportMetricTrendSemantics,
   ReportMetricUnit,
   ReportMetricConfidence,
 } from "@/lib/report/metrics/report-metric-types";
 import { unitToReportFormatter } from "@/lib/report/metrics/report-value-formatter";
+
+const CHART_MODES = ["indexed", "absolute", "dual-axis"] as const satisfies ReportMetricSeriesConfig["supportedModes"];
+
+const SERIES_DAY_WEEK_MONTH = (provider: ReportMetricSeriesConfig["provider"]): ReportMetricSeriesConfig => ({
+  provider,
+  granularities: ["day", "week", "month"],
+  supportedModes: CHART_MODES,
+});
+
+const SERIES_WEEK_MONTH = (provider: ReportMetricSeriesConfig["provider"]): ReportMetricSeriesConfig => ({
+  provider,
+  granularities: ["week", "month"],
+  supportedModes: CHART_MODES,
+});
+
+const SERIES_MONTH = (provider: ReportMetricSeriesConfig["provider"]): ReportMetricSeriesConfig => ({
+  provider,
+  granularities: ["month"],
+  supportedModes: CHART_MODES,
+});
 
 function entry(
   e: {
@@ -30,22 +51,26 @@ function entry(
     formula?: string;
     trust?: ReportKpiTrust;
     confidence?: ReportMetricConfidence;
+    series?: ReportMetricSeriesConfig;
   },
 ): ReportMetricRegistryEntry {
   const status = e.status ?? "active";
+  const { series, ...rest } = e;
   return {
     status,
     rendererKind: e.rendererKind ?? "kpi",
     formatter: unitToReportFormatter(e.unit),
-    ...e,
+    valueCapability: series ? "series" : "scalar",
+    series,
+    ...rest,
   };
 }
 
 export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
-  // — Panoramica —
+  // — Lavorazioni (unified KPI) —
   entry({
     id: "lav-periodo",
-    owner: "panoramica",
+    owner: "lavorazioni",
     category: "operational",
     label: "Carico periodo",
     description: "Lavorazioni con data di ingresso nel periodo selezionato.",
@@ -55,10 +80,11 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     trendSemantics: "neutral",
     sourceModule: "build-report-model",
     trust: "exact",
+    series: SERIES_DAY_WEEK_MONTH("lavorazioni"),
   }),
   entry({
     id: "lav-chiusi",
-    owner: "panoramica",
+    owner: "lavorazioni",
     category: "operational",
     label: "Chiusure periodo",
     description: "Completate archiviate nel periodo (DB + override manuali).",
@@ -68,10 +94,11 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     trendSemantics: "higher_is_better",
     sourceModule: "kpi-performance",
     trust: "exact",
+    series: SERIES_DAY_WEEK_MONTH("lavorazioni"),
   }),
   entry({
     id: "lav-saldo-periodo",
-    owner: "panoramica",
+    owner: "lavorazioni",
     category: "operational",
     label: "Saldo backlog periodo",
     description: "Ingressi meno chiusure nel periodo (accumulo vs smaltimento).",
@@ -85,7 +112,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
   }),
   entry({
     id: "lav-media-settimanale",
-    owner: "panoramica",
+    owner: "lavorazioni",
     category: "operational",
     label: "Media chiusure/settimana",
     description: "Media chiusure archiviate per settimana nel filtro periodo.",
@@ -95,10 +122,11 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     trendSemantics: "higher_is_better",
     sourceModule: "report-semantic-index",
     trust: "exact",
+    series: SERIES_WEEK_MONTH("lavorazioni"),
   }),
   entry({
     id: "lav-aperti",
-    owner: "panoramica",
+    owner: "lavorazioni",
     category: "operational",
     label: "Interventi aperti",
     description: "Lavorazioni non archiviate attualmente in gestione.",
@@ -111,7 +139,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
   }),
   entry({
     id: "lav-tempo",
-    owner: "panoramica",
+    owner: "lavorazioni",
     category: "operational",
     label: "Tempo medio chiusura",
     description: "Media giorni tra ingresso e chiusura delle archiviate nel periodo.",
@@ -124,7 +152,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
   }),
   entry({
     id: "clienti",
-    owner: "panoramica",
+    owner: "clienti_mezzi",
     category: "customer",
     label: "Clienti nel periodo",
     description: "Clienti con almeno un ingresso o una chiusura nel periodo.",
@@ -137,7 +165,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
   }),
   entry({
     id: "cost-tot",
-    owner: "panoramica",
+    owner: "dati_economici",
     category: "economic",
     label: "Costi manutenzione",
     description: "Costo ricambi da log + manodopera da schede (se caricate).",
@@ -147,10 +175,11 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     trendSemantics: "lower_is_better",
     sourceModule: "kpi-performance",
     trust: "partial",
+    series: SERIES_MONTH("economici"),
   }),
   entry({
     id: "scorta",
-    owner: "panoramica",
+    owner: "magazzino_ricambi",
     category: "warehouse",
     label: "Ricambi sotto scorta",
     description: "Ricambi con quantità sotto la scorta minima.",
@@ -187,6 +216,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     trendSemantics: "neutral",
     sourceModule: "build-report-model",
     trust: "exact",
+    series: SERIES_WEEK_MONTH("magazzino"),
   }),
   entry({
     id: "flotta-officina",
@@ -234,7 +264,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     owner: "lavorazioni",
     category: "operational",
     label: "Completate",
-    description: "Usare lav-chiusi in panoramica. Mantenuto per adapter domain.",
+    description: "Usare lav-chiusi in lavorazioni. Mantenuto per adapter domain.",
     unit: "count",
     aggregation: "count",
     applicability: "period",
@@ -287,7 +317,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     owner: "lavorazioni",
     category: "operational",
     label: "Tempo medio chiusura",
-    description: "Usare lav-tempo in panoramica.",
+    description: "Usare lav-tempo in lavorazioni.",
     unit: "days",
     aggregation: "avg",
     applicability: "period",
@@ -314,7 +344,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     owner: "lavorazioni",
     category: "customer",
     label: "Clienti serviti",
-    description: "Usare clienti in panoramica.",
+    description: "Usare clienti in clienti e mezzi.",
     unit: "count",
     aggregation: "count",
     applicability: "period",
@@ -388,6 +418,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     trendSemantics: "higher_is_better",
     sourceModule: "timesheet-totals",
     trust: "exact",
+    series: SERIES_MONTH("ore"),
   }),
   entry({
     id: "ore_per_job",
@@ -442,6 +473,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     trendSemantics: "higher_is_better",
     sourceModule: "invoice-calculations",
     trust: "exact",
+    series: SERIES_MONTH("economici"),
   }),
   entry({
     id: "eco_ddt",

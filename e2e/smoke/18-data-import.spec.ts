@@ -15,6 +15,7 @@ for (const viewport of IMPORT_MODAL_VIEWPORTS) {
     await loginViaUi(page, adminCredentials());
     await page.goto("/magazzino");
     await page.getByRole("button", { name: "Importa" }).click();
+    await page.getByRole("menuitem", { name: "Importa magazzino" }).click();
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 60_000 });
 
     const audit = await auditModalHorizontalOverflow(page);
@@ -41,6 +42,16 @@ test("admin sees mezzi import button", async ({ page }) => {
   await loginViaUi(page, adminCredentials());
   await page.goto("/mezzi");
   await expect(page.getByRole("button", { name: "Importa" })).toBeVisible({ timeout: 60_000 });
+});
+
+test("lavorazioni import menu and export button", async ({ page }) => {
+  attachConsoleGuards(page);
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/lavorazioni");
+  await expect(page.getByRole("button", { name: "Importa" })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole("button", { name: "Esporta" })).toBeVisible();
+  await page.getByRole("button", { name: "Importa" }).click();
+  await expect(page.getByRole("menuitem", { name: "Import Excel" })).toBeDisabled();
 });
 
 test("admin sees settings fornitori import", async ({ page }) => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import {
   reportExecutiveStripClass,
   reportHealthChipClass,
@@ -54,39 +55,28 @@ export function ReportExecutiveStrip({
         {health ? (
           <ul className="flex min-w-0 shrink-0 flex-wrap items-center gap-1.5" aria-label="Indicatori salute sistema">
             <li>
-              <span
-                className={`${reportHealthChipClass}${dispLow ? ` ${reportHealthChipWarningClass}` : ""}`}
-                title={dispMinTitle}
-              >
+              <Tooltip content={dispMinTitle}><span className={`${reportHealthChipClass}${dispLow ? ` ${reportHealthChipWarningClass}` : ""}`}>
                 <span className="text-[color:var(--cab-text-muted)]">Disp. min</span>
                 <span>{fmtDisp(health.peggiorDisponibilita?.disponibilitaPct ?? null)}</span>
-              </span>
+              </span></Tooltip>
             </li>
             <li>
-              <span
-                className={`${reportHealthChipClass}${workshopBusy ? ` ${reportHealthChipWarningClass}` : ""}`}
-                title="Mezzi con lavorazione aperta"
-              >
+              <Tooltip content={"Mezzi con lavorazione aperta"}><span className={`${reportHealthChipClass}${workshopBusy ? ` ${reportHealthChipWarningClass}` : ""}`}>
                 <span className="text-[color:var(--cab-text-muted)]">Officina</span>
                 <span>
                   {health.mezziInOfficina}/{health.totalMezzi}
                 </span>
-              </span>
+              </span></Tooltip>
             </li>
             <li>
-              <span
-                className={`${reportHealthChipClass}${
-                  health.criticalAlertCount > 0
-                    ? ` ${reportHealthChipCriticalClass}`
-                    : health.alertCount > 0
-                      ? ` ${reportHealthChipWarningClass}`
-                      : ""
-                }`}
-                title="Alert attivi sui dati"
-              >
+              <Tooltip content={"Alert attivi sui dati"}><span className={`${reportHealthChipClass}${health.criticalAlertCount > 0
+        ? ` ${reportHealthChipCriticalClass}`
+        : health.alertCount > 0
+            ? ` ${reportHealthChipWarningClass}`
+            : ""}`}>
                 <span className="text-[color:var(--cab-text-muted)]">Alert</span>
                 <span>{health.alertCount}</span>
-              </span>
+              </span></Tooltip>
             </li>
           </ul>
         ) : null}

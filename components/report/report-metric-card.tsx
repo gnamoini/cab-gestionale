@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { ReportSparkline } from "@/components/report/report-sparkline";
 import { ReportMetricCompareSection } from "@/components/report/report-metric-compare-section";
 import { formatReportMetricValue } from "@/lib/report/metrics/format-report-metric-value";
@@ -36,9 +37,9 @@ export function ReportMetricCard({
           {definition.label}
         </p>
         {definition.trust ? (
-          <span className={reportKpiTrustPillClass} title={`Fonte: ${REPORT_KPI_TRUST_LABELS[definition.trust]}`}>
+          <Tooltip content={`Fonte: ${REPORT_KPI_TRUST_LABELS[definition.trust]}`}><span className={reportKpiTrustPillClass}>
             {REPORT_KPI_TRUST_LABELS[definition.trust]}
-          </span>
+          </span></Tooltip>
         ) : null}
       </div>
       {definition.description ? <p className={reportKpiDescriptionClass}>{definition.description}</p> : null}

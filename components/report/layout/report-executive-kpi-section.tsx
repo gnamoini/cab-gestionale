@@ -4,8 +4,8 @@ import { useMemo } from "react";
 import { ReportUnifiedKpiGrid } from "@/components/report/report-unified-kpi-grid";
 import { reportSectionGroupDescClass, reportSubsectionTitleClass } from "@/components/report/report-ui-tokens";
 import {
-  EXECUTIVE_PRIMARY_KPI_IDS,
-  EXECUTIVE_SECONDARY_KPI_IDS,
+  LAVORAZIONI_UNIFIED_PRIMARY_KPI_IDS,
+  LAVORAZIONI_UNIFIED_SECONDARY_KPI_IDS,
 } from "@/lib/report/kpi-display-clusters";
 import type { UnifiedKpiDisplayItem } from "@/lib/report/kpi-performance/merge-unified-kpi-display";
 
@@ -30,8 +30,8 @@ export function ReportExecutiveKpiSection({
 }) {
   const { primary, secondary } = useMemo(() => {
     return {
-      primary: pickByOrder(items, EXECUTIVE_PRIMARY_KPI_IDS),
-      secondary: pickByOrder(items, EXECUTIVE_SECONDARY_KPI_IDS),
+      primary: pickByOrder(items, LAVORAZIONI_UNIFIED_PRIMARY_KPI_IDS),
+      secondary: pickByOrder(items, LAVORAZIONI_UNIFIED_SECONDARY_KPI_IDS),
     };
   }, [items]);
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
@@ -139,9 +140,9 @@ export function ReportTopRicambi({ rows, showCompare }: { rows: TopRicambioRepor
                     {r.nome}
                   </Link>
                 </td>
-                <td className={`${tdBase} max-w-0 truncate text-xs`} title={r.marca}>
+                <Tooltip content={r.marca}><td className={`${tdBase} max-w-0 truncate text-xs`}>
                   {r.marca}
-                </td>
+                </td></Tooltip>
                 <td className={`${tdBase} text-right tabular-nums`}>{r.qtaEntrata}</td>
                 <td className={`${tdBase} text-right tabular-nums font-medium`}>{r.qtaUscita}</td>
                 {showCompare ? (
@@ -245,14 +246,14 @@ export function ReportTopMezzi({ rows, showCompare }: { rows: TopMezzoReportRow[
                     </Link>
                   </td>
                   <td className={`${tdBase} min-w-0 max-w-[11rem]`}>
-                    <span className="block truncate font-mono text-[11px] leading-snug text-[color:var(--cab-text-muted)]" title={ident}>
+                    <Tooltip content={ident}><span className="block truncate font-mono text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
                       {ident}
-                    </span>
+                    </span></Tooltip>
                   </td>
                   <td className={`${tdBase} min-w-0 max-w-[10rem]`}>
-                    <span className="block truncate text-[color:var(--cab-text)]" title={r.cliente}>
+                    <Tooltip content={r.cliente}><span className="block truncate text-[color:var(--cab-text)]">
                       {r.cliente}
-                    </span>
+                    </span></Tooltip>
                   </td>
                   <td className={`${tdBase} text-right`}>
                     <ReportRankMetricCell value={r.interventi} max={maxInterventi} />
@@ -307,9 +308,9 @@ export function ReportTopClientiFatturato({ rows }: { rows: TopClienteFatturatoR
               <tr key={r.cliente} className={tbodyTr}>
                 <td className={`${tdBase} px-1.5 text-left text-xs tabular-nums text-[color:var(--cab-text-muted)]`}>{r.rank}</td>
                 <td className={`${tdBase} min-w-0 font-medium`}>
-                  <span className="line-clamp-2" title={r.cliente}>
+                  <Tooltip content={r.cliente}><span className="line-clamp-2">
                     {r.cliente}
-                  </span>
+                  </span></Tooltip>
                 </td>
                 <td className={`${tdBase} text-right tabular-nums`}>{r.fatture}</td>
                 <td className={`${tdBase} text-right tabular-nums font-semibold`}>{fmtEur(r.fatturato)}</td>
@@ -389,9 +390,9 @@ export function ReportTopClienti({ rows, showCompare }: { rows: TopClienteReport
               <tr key={r.cliente} className={tbodyTr}>
                 <td className={`${tdBase} px-1.5 text-left text-xs tabular-nums text-[color:var(--cab-text-muted)]`}>{r.rank}</td>
                 <td className={`${tdBase} min-w-0 font-medium`}>
-                  <span className="line-clamp-2" title={r.cliente}>
+                  <Tooltip content={r.cliente}><span className="line-clamp-2">
                     {r.cliente}
-                  </span>
+                  </span></Tooltip>
                 </td>
                 <td className={`${tdBase} text-right`}>
                   <ReportRankMetricCell value={r.interventi} max={maxInterventi} />

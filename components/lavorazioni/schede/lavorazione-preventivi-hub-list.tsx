@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { CardMobile, CardMobileActions, IconActionButton } from "@/components/design-system";
 import {
   GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
@@ -89,15 +90,9 @@ export function CreaPreventivoButton({
   className?: string;
 }) {
   return (
-    <button
-      type="button"
-      className={`${dsBtnPrimary}${className ? ` ${className}` : ""}`}
-      disabled={disabled}
-      title={disabled ? disabledTitle : "Crea preventivo da schede lavorazione"}
-      onClick={onClick}
-    >
+    <Tooltip content={disabled ? disabledTitle : "Crea preventivo da schede lavorazione"}><button type="button" className={`${dsBtnPrimary}${className ? ` ${className}` : ""}`} disabled={disabled} onClick={onClick}>
       Crea preventivo
-    </button>
+    </button></Tooltip>
   );
 }
 

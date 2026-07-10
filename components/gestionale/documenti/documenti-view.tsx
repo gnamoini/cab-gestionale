@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
@@ -222,9 +223,9 @@ function DocGlyph({ doc }: { doc: DocumentoGestionale }) {
       <span aria-hidden>{doc.tipoFile === "immagine" ? "IMG" : "FILE"}</span>
     );
   return (
-    <div className={`${base} ${byCat}`} title={`${labelCategoria(doc.categoria)} · ${labelTipoFile(doc.tipoFile)}`}>
+    <Tooltip content={`${labelCategoria(doc.categoria)} · ${labelTipoFile(doc.tipoFile)}`}><div className={`${base} ${byCat}`}>
       {icon}
-    </div>
+    </div></Tooltip>
   );
 }
 
@@ -330,34 +331,25 @@ function ArchiveDocRow({
         />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-nowrap items-center gap-2 sm:flex-wrap">
-            <button
-              type="button"
-              className="truncate text-left text-sm font-semibold text-[color:var(--cab-text)] underline-offset-2 hover:underline focus-visible:outline-none"
-              title={doc.nome}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!canOpen) onFileUnavailable?.(unavailableHint);
-                else onApri();
-              }}
-            >
+            <Tooltip content={doc.nome}><button type="button" className="truncate text-left text-sm font-semibold text-[color:var(--cab-text)] underline-offset-2 hover:underline focus-visible:outline-none" onClick={(e) => {
+        e.stopPropagation();
+        if (!canOpen)
+            onFileUnavailable?.(unavailableHint);
+        else
+            onApri();
+    }}>
               {doc.nome}
-            </button>
+            </button></Tooltip>
             {!canOpen && doc.urlDocumento?.trim() ? (
-              <span
-                className="inline-flex shrink-0 items-center rounded-md bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-danger)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-danger)_35%,var(--cab-border))]"
-                title={unavailableHint}
-              >
+              <Tooltip content={unavailableHint}><span className="inline-flex shrink-0 items-center rounded-md bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-danger)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-danger)_35%,var(--cab-border))]">
                 File non collegato
-              </span>
+              </span></Tooltip>
             ) : null}
             {senzaMarcaAvviso ? (
-              <span
-                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-[color:color-mix(in_srgb,var(--cab-warning)_22%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-warning)_50%,var(--cab-border))]"
-                title="Assegna una marca per collocare il documento nell'archivio"
-              >
+              <Tooltip content={"Assegna una marca per collocare il documento nell'archivio"}><span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-[color:color-mix(in_srgb,var(--cab-warning)_22%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-warning)_50%,var(--cab-border))]">
                 <span aria-hidden>⚠️</span>
                 Senza marca
-              </span>
+              </span></Tooltip>
             ) : null}
           </div>
           <p className="mt-0.5 truncate text-[11px] text-[color:var(--cab-text-muted)]">
@@ -912,59 +904,21 @@ export function DocumentiView() {
         <PageToolbar
           className="sm:mx-0"
           primaryAction={
-            <button
-              type="button"
-              onClick={() => setUploadOpen(true)}
-              disabled={docBusy || documentiQuery.isLoading || !canUploadDocuments}
-              title={!canUploadDocuments ? READONLY_PERMISSION_HINT : undefined}
-              className={`${dsPageToolbarCtaCompact} disabled:opacity-60`}
-            >
-              {docBusy ? (
-                <>
-                  <svg
-                    className="h-5 w-5 shrink-0 animate-spin"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden
-                  >
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="9"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      opacity="0.25"
-                    />
-                    <path
-                      d="M21 12a9 9 0 0 0-9-9"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
+            <Tooltip content={!canUploadDocuments ? READONLY_PERMISSION_HINT : undefined}><button type="button" onClick={() => setUploadOpen(true)} disabled={docBusy || documentiQuery.isLoading || !canUploadDocuments} className={`${dsPageToolbarCtaCompact} disabled:opacity-60`}>
+              {docBusy ? (<>
+                  <svg className="h-5 w-5 shrink-0 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" opacity="0.25"/>
+                    <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                   </svg>
                   <span className="sm:hidden">…</span>
                   <span className="hidden sm:inline">Caricamento…</span>
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="h-5 w-5 shrink-0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    aria-hidden
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                    />
+                </>) : (<>
+                  <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
                   </svg>
-                  <PageToolbarCtaLabel short="Carica" full="Carica documento" />
-                </>
-              )}
-            </button>
+                  <PageToolbarCtaLabel short="Carica" full="Carica documento"/>
+                </>)}
+            </button></Tooltip>
           }
           search={
             <GestionaleSearchField
@@ -999,25 +953,16 @@ export function DocumentiView() {
             <>
               {hasDocumentiInLista ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (searchActive) resetRicerca();
-                      collapseAllTreeGroups();
-                    }}
-                    className={`${dsPageToolbarBtn} h-9 w-full justify-center px-3 text-xs sm:w-auto`}
-                    title="Chiudi tutti i gruppi"
-                  >
+                  <Tooltip content={"Chiudi tutti i gruppi"}><button type="button" onClick={() => {
+        if (searchActive)
+            resetRicerca();
+        collapseAllTreeGroups();
+    }} className={`${dsPageToolbarBtn} h-9 w-full justify-center px-3 text-xs sm:w-auto`}>
                     Comprimi tutto
-                  </button>
-                  <button
-                    type="button"
-                    onClick={expandAllTreeGroups}
-                    className={`${dsPageToolbarBtn} h-9 w-full justify-center px-3 text-xs sm:w-auto`}
-                    title="Apri tutti i gruppi della pagina"
-                  >
+                  </button></Tooltip>
+                  <Tooltip content={"Apri tutti i gruppi della pagina"}><button type="button" onClick={expandAllTreeGroups} className={`${dsPageToolbarBtn} h-9 w-full justify-center px-3 text-xs sm:w-auto`}>
                     Espandi tutto
-                  </button>
+                  </button></Tooltip>
                 </>
               ) : null}
             </>

@@ -12,6 +12,7 @@ const MODULE_ENTITIES: Partial<Record<ImportEntity, string>> = {
   listino_ricambi: "magazzino",
   mezzi: "mezzi",
   preventivi: "preventivi",
+  ordini_fornitori: "preventivi",
   lavorazioni: "lavorazioni",
   fatture_draft: "fatturazione",
   billing_customers: "fatturazione",
@@ -32,17 +33,7 @@ const SETTINGS_ENTITIES = new Set<ImportEntity>([
   "settings_hierarchy_telai",
 ]);
 
-const STUB_ENTITIES = new Set<ImportEntity>([
-  "lavorazioni",
-  "fatture_draft",
-  "billing_customers",
-  "documenti_metadata",
-  "dipendenti_timesheet",
-]);
-
-export function isImportEntityStub(entity: ImportEntity): boolean {
-  return STUB_ENTITIES.has(entity);
-}
+export { isImportEntityStub, isImportExcelActive } from "@/lib/data-import/import-capabilities";
 
 export function canImportEntity(ctx: ImportPermissionContext, entity: ImportEntity): boolean {
   if (SETTINGS_ENTITIES.has(entity)) return ctx.manageSettings;

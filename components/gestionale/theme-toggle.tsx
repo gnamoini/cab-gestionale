@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Tooltip } from "@/components/design-system/tooltip";
+import { Tooltip } from "@/components/ui";
 import { useTheme } from "@/context/theme-context";
 import { dsBtnGhost, dsFocus, dsPageToolbarBtn } from "@/lib/ui/design-system";
 

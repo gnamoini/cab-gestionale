@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import type { KpiCompareRow } from "@/lib/report/build-report-model";
 import type { ReportMetricCompare } from "@/lib/report/report-domain-types";
 import {
@@ -27,10 +28,10 @@ export function ReportMetricCompareInline({ compare }: { compare: ReportMetricCo
   const pctStr = fmtPct(row.deltaPct);
   const { arrow, tone } = reportArrowAndTone(row.deltaPct);
   return (
-    <span className={reportCompareBadgeClass(tone)} title={`${compare.label}: ${compare.value}`}>
+    <Tooltip content={`${compare.label}: ${compare.value}`}><span className={reportCompareBadgeClass(tone)}>
       <span className="text-xs leading-none">{arrow}</span>
       {pctStr != null ? <span className="font-normal opacity-90">{pctStr}</span> : <span>—</span>}
-    </span>
+    </span></Tooltip>
   );
 }
 
@@ -66,11 +67,11 @@ export function ReportKpiCompareInline({ rows }: { rows: KpiCompareRow[] }) {
   const pctStr = fmtPct(row.deltaPct);
   const { arrow, tone } = reportArrowAndTone(row.deltaPct, row.invert);
   return (
-    <span className={reportCompareBadgeClass(tone)} title={row.label}>
+    <Tooltip content={row.label}><span className={reportCompareBadgeClass(tone)}>
       <span className="text-xs leading-none">{arrow}</span>
       {row.deltaAbs != null ? <span>{row.deltaAbs}</span> : null}
       {pctStr != null ? <span className="font-normal opacity-90">{pctStr}</span> : row.deltaAbs == null ? <span>—</span> : null}
-    </span>
+    </span></Tooltip>
   );
 }
 

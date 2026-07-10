@@ -18,6 +18,7 @@ const ROUTE_SLUGS: Record<ImportEntity, string> = {
   settings_hierarchy_attrezzature: "settings-attrezzature",
   settings_hierarchy_telai: "settings-telai",
   lavorazioni: "lavorazioni",
+  ordini_fornitori: "ordini-fornitori",
   fatture_draft: "fatture",
   billing_customers: "billing-customers",
   documenti_metadata: "documenti-metadata",
@@ -40,8 +41,6 @@ export type ImportEntityClientMeta = {
 
 export function listImportEntityMeta(): ImportEntityClientMeta[] {
   const STUB_IDS = new Set<ImportEntity>([
-    "lavorazioni",
-    "fatture_draft",
     "billing_customers",
     "documenti_metadata",
     "dipendenti_timesheet",

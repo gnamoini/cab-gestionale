@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { Tooltip } from "@/components/design-system";
+import { DisabledElementTooltip } from "@/components/ui";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { RicambioInfoPanel } from "@/components/gestionale/magazzino/ricambio-info-panel";
@@ -13,22 +13,6 @@ import type { RicambioConsumoDaLog } from "@/lib/magazzino/ricambio-consumo-from
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
-
-function MagazzinoDisabledButtonTooltip({
-  content,
-  disabled,
-  children,
-}: {
-  content: string;
-  disabled?: boolean;
-  children: ReactElement;
-}) {
-  return (
-    <Tooltip content={content}>
-      {disabled ? <span className="inline-flex w-full min-w-0">{children}</span> : children}
-    </Tooltip>
-  );
-}
 
 function ArchiveDupRicambioRow({
   p,
@@ -83,7 +67,7 @@ export function MagazzinoRicambioInfoModal({
       title="Scheda ricambio"
       titleId="detail-ricambio-title"
       footer={
-        <MagazzinoDisabledButtonTooltip
+        <DisabledElementTooltip
           content={magCanCreateRicambio ? "Modifica" : READONLY_PERMISSION_HINT}
           disabled={!magCanCreateRicambio}
         >
@@ -95,7 +79,7 @@ export function MagazzinoRicambioInfoModal({
           >
             Modifica
           </button>
-        </MagazzinoDisabledButtonTooltip>
+        </DisabledElementTooltip>
       }
     >
       <div className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}>

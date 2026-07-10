@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { ReportSparkline } from "@/components/report/report-sparkline";
 import { ReportMetricCompareSection } from "@/components/report/report-metric-compare-section";
 import { useReportDensity } from "@/components/report/design-system/internal/use-report-density";
@@ -46,9 +47,9 @@ export function MetricCard({
       <div className="flex min-w-0 items-start justify-between gap-2">
         <p className={`min-w-0 ${reportTypographyLabelClass}`}>{definition.label}</p>
         {definition.trust ? (
-          <span className={reportKpiTrustPillClass} title={`Fonte: ${REPORT_KPI_TRUST_LABELS[definition.trust]}`}>
+          <Tooltip content={`Fonte: ${REPORT_KPI_TRUST_LABELS[definition.trust]}`}><span className={reportKpiTrustPillClass}>
             {REPORT_KPI_TRUST_LABELS[definition.trust]}
-          </span>
+          </span></Tooltip>
         ) : null}
       </div>
       {definition.description ? <p className={reportTypographyDescriptionClass}>{definition.description}</p> : null}

@@ -33,6 +33,8 @@ export const QK = {
   authLogs: ["auth_logs"] as const,
   /** Dati storici manuali Report lavorazioni. */
   reportManualEntries: ["report_manual_entries"] as const,
+  /** Grafici KPI salvati per utente. */
+  reportSavedKpiCharts: ["report_saved_kpi_charts"] as const,
   /** Diario operativo dashboard (appunti giornalieri). */
   operationalDiary: ["operational_diary_entries"] as const,
   /** Registry dipendenti timesheet. */

@@ -11,6 +11,14 @@ import {
   StatusBadge,
 } from "@/components/report/design-system";
 import { MetricCard } from "@/components/report/design-system/primitives/metric-card/metric-card";
+import {
+  DisabledElementTooltip,
+  OptionalTooltip,
+  Tooltip,
+  TooltipList,
+  TooltipStatus,
+} from "@/components/ui";
+import { LIST_DIVIDER_UL, LIST_EMPTY_STATE } from "@/lib/ui/list-primitives";
 import { getMetricDefinition } from "@/lib/report/metrics/get-metric-definition";
 import type { ReportMetric } from "@/lib/report/metrics/report-metric-types";
 
@@ -46,6 +54,66 @@ export default function ReportDesignSystemPreviewPage() {
           <p className="text-sm text-[color:var(--cab-text-muted)]">Storybook interna — primitive v3.3</p>
           <StatusBadge label="Dev only" tone="info" />
         </header>
+
+        <section className="space-y-3" data-ui-gallery="tooltip">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Tooltip (UI governance)</h2>
+          <div className="flex flex-wrap gap-3">
+            <Tooltip content="Azione">
+              <button type="button" className="rounded-lg border px-3 py-2 text-sm">
+                Tooltip
+              </button>
+            </Tooltip>
+            <DisabledElementTooltip content="Disabilitato" disabled>
+              <button type="button" className="rounded-lg border px-3 py-2 text-sm" disabled>
+                Disabled
+              </button>
+            </DisabledElementTooltip>
+            <OptionalTooltip content="">
+              <button type="button" className="rounded-lg border px-3 py-2 text-sm">
+                Optional vuoto
+              </button>
+            </OptionalTooltip>
+            <TooltipList items={["Riga audit 1", "Riga audit 2"]}>
+              <button type="button" className="rounded-lg border px-3 py-2 text-sm">
+                TooltipList
+              </button>
+            </TooltipList>
+            <TooltipStatus lines={[{ label: "Stato", value: "OK" }]}>
+              <button type="button" className="rounded-lg border px-3 py-2 text-sm">
+                TooltipStatus
+              </button>
+            </TooltipStatus>
+          </div>
+        </section>
+
+        <section className="space-y-3" data-ui-gallery="lists">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Lists</h2>
+          <ul className={`rounded-lg border ${LIST_DIVIDER_UL}`}>
+            <li className="px-3 py-2 text-sm">Riga lista token SSOT</li>
+            <li className="px-3 py-2 text-sm">Seconda riga</li>
+          </ul>
+          <div className={LIST_EMPTY_STATE}>Empty state token</div>
+        </section>
+
+        <section className="space-y-3" data-ui-gallery="overlays">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Overlays</h2>
+          <p className="text-xs text-[color:var(--cab-text-muted)]">Tooltip z-140 · Dropdown z-130 · Modal shell</p>
+        </section>
+
+        <section className="space-y-3" data-ui-gallery="states">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">States</h2>
+          <StatusBadge label="Loading" tone="info" />
+          <StatusBadge label="Error" tone="danger" />
+        </section>
+
+        <section className="space-y-3" data-ui-gallery="accessibility">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Accessibility</h2>
+          <Tooltip content="Focus visibile" showOnFocus>
+            <button type="button" className="rounded-lg border px-3 py-2 text-sm focus-visible:ring-2">
+              Tab focus
+            </button>
+          </Tooltip>
+        </section>
 
         <section className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">MetricCard</h2>

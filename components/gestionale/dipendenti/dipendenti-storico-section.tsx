@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useMemo } from "react";
 import { DipendentiEmptyState, DipendentiQueryErrorBanner } from "@/components/gestionale/dipendenti/dipendenti-empty-state";
 import { formatMonthLabel } from "@/lib/dipendenti/timesheet-month";
@@ -89,15 +90,12 @@ export function DipendentiStoricoSection({
           {months.map((m) => {
             const h = m.totaleLavorato > 0 ? Math.max(8, (m.totaleLavorato / maxLavorato) * 100) : 4;
             return (
-              <div key={m.monthKey} className="flex min-w-0 flex-1 flex-col items-center gap-1" title={`${m.monthLabel}: ${m.totaleLavorato} h`}>
-                <div
-                  className="w-full rounded-t bg-[color:var(--cab-primary)] opacity-80"
-                  style={{ height: `${h}%` }}
-                />
+              <Tooltip content={`${m.monthLabel}: ${m.totaleLavorato} h`}><div key={m.monthKey} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+                <div className="w-full rounded-t bg-[color:var(--cab-primary)] opacity-80" style={{ height: `${h}%` }}/>
                 <span className="text-[9px] tabular-nums text-[color:var(--cab-text-muted)]">
                   {String(m.month).padStart(2, "0")}
                 </span>
-              </div>
+              </div></Tooltip>
             );
           })}
         </div>

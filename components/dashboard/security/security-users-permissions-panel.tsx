@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
@@ -365,15 +366,9 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ }
                 >
                   Annulla modifiche
                 </button>
-                <button
-                  type="button"
-                  className={dsBtnPrimary}
-                  onClick={() => void handleSave()}
-                  disabled={saving || hasClienteAssociationViolations}
-                  title={hasClienteAssociationViolations ? "Correggi le associazioni cliente prima di salvare." : undefined}
-                >
+                <Tooltip content={hasClienteAssociationViolations ? "Correggi le associazioni cliente prima di salvare." : undefined}><button type="button" className={dsBtnPrimary} onClick={() => void handleSave()} disabled={saving || hasClienteAssociationViolations}>
                   {saving ? "Salvataggio…" : "Salva"}
-                </button>
+                </button></Tooltip>
               </div>
             </ToolbarGroupMetaRow>
           ) : null}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import type { ReactNode } from "react";
 import {
   hrefDocumentiPerMezzo,
@@ -70,7 +71,7 @@ export function MezziHubSyntheticBanner() {
   );
 }
 
-const hubListClass = "min-w-0 divide-y divide-[color:var(--cab-border)]";
+const hubListClass = "min-w-0 ${LIST_DIVIDER_UL}";
 const hubListRowClass = "flex min-w-0 items-start justify-between gap-3 py-3 first:pt-0 last:pb-0";
 
 export function MezziHubList({ children }: { children: ReactNode }) {

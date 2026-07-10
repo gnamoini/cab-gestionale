@@ -5,12 +5,14 @@ import {
   useReportAnalyticsDerived,
   useReportAnalyticsDerivedActions,
 } from "@/components/report/report-analytics-derived-context";
+import { useReportPerformanceContext } from "@/components/report/layout/report-performance-context";
 import type { DomainReportSectionProps } from "@/components/report/report-section-types";
 import {
   ReportDataTable,
   ReportDomainMetricsGrid,
   ReportLineChart,
   ReportSection,
+  ReportUnifiedKpiGrid,
 } from "@/components/report/design-system";
 import { usePublishWhenReady } from "@/components/report/sections/use-section-publish";
 import { aggregateInvoicesByMonth } from "@/lib/report/economic-period-aggregate";
@@ -37,6 +39,7 @@ function useReportDdtDocumentsQuery(enabled: boolean, rangeKey: string) {
 
 export default function ReportEconomiciSectionView(props: DomainReportSectionProps) {
   const derived = useReportAnalyticsDerived();
+  const { partitioned } = useReportPerformanceContext();
   const { publishEconomicAnalytics } = useReportAnalyticsDerivedActions();
   const preventiviQ = usePreventiviRecordsQuery(props.fetchEnabled);
   const invoicesQ = useInvoicesQuery(props.fetchEnabled);
@@ -152,6 +155,14 @@ export default function ReportEconomiciSectionView(props: DomainReportSectionPro
         title="Salute economica"
         subtitle="Preventivi, fatturato, margine stimato e indicatori derivati"
       >
+        {partitioned.economic.length > 0 ? (
+          <div className="mb-4">
+            <ReportUnifiedKpiGrid
+              items={partitioned.economic}
+              compareMode={props.analyticsContext.compareMode}
+            />
+          </div>
+        ) : null}
         <ReportDomainMetricsGrid metrics={metrics} compareMode={props.analyticsContext.compareMode} />
       </ReportSection>
 

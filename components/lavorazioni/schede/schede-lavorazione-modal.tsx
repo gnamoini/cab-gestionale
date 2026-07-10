@@ -1,5 +1,7 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
+import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -7,8 +9,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { flushSync } from "react-dom";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { gestionaleTextareaMaxHeightCompact } from "@/lib/ui/design-system";
-import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
-import { Tooltip } from "@/components/design-system/tooltip";
+import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
 import { HubModalTab, HubModalTabBar } from "@/components/design-system/hub-modal-tab-bar";
 import { SchedaIngressoPanoramicaAnagraficaContent } from "@/components/gestionale/lavorazioni/scheda-ingresso-panoramica-view";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
@@ -1259,17 +1260,10 @@ export function SchedeLavorazioneModal({
                 title="Anagrafica intervento"
                 actions={
                   hub.ingresso ? (
-                    <button
-                      type="button"
-                      className={dsTableActionTextBtnPrimary}
-                      disabled={!canEditWorkOrders}
-                      title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : "Modifica scheda ingresso"}
-                      aria-label="Modifica scheda ingresso"
-                      onClick={apriSchedaIngresso}
-                    >
+                    <Tooltip content={!canEditWorkOrders ? READONLY_PERMISSION_HINT : "Modifica scheda ingresso"}><button type="button" className={dsTableActionTextBtnPrimary} disabled={!canEditWorkOrders} aria-label="Modifica scheda ingresso" onClick={apriSchedaIngresso}>
                       <IconBtnEdit />
                       Modifica
-                    </button>
+                    </button></Tooltip>
                   ) : null
                 }
               >
@@ -1282,16 +1276,10 @@ export function SchedeLavorazioneModal({
                   title="Elimina lavorazione"
                   subtitle="Operazione irreversibile: rimuove la lavorazione e i dati collegati."
                   actions={
-                    <button
-                      type="button"
-                      className={dsTableActionTextBtnDanger}
-                      disabled={deleteLavorazionePending}
-                      title="Elimina lavorazione"
-                      onClick={onDeleteLavorazione}
-                    >
+                    <Tooltip content={"Elimina lavorazione"}><button type="button" className={dsTableActionTextBtnDanger} disabled={deleteLavorazionePending} onClick={onDeleteLavorazione}>
                       <HubIconTrash />
                       Elimina
-                    </button>
+                    </button></Tooltip>
                   }
                 />
               ) : null}
@@ -1313,16 +1301,10 @@ export function SchedeLavorazioneModal({
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-                    <button
-                      type="button"
-                      className={dsTableActionTextBtnPrimary}
-                      disabled={!canEditWorkOrders}
-                      title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : "Crea preventivo da schede lavorazione"}
-                      onClick={generaPreventivoDaHub}
-                    >
-                      <IconBtnPreventivo className="h-3.5 w-3.5 shrink-0" />
+                    <Tooltip content={!canEditWorkOrders ? READONLY_PERMISSION_HINT : "Crea preventivo da schede lavorazione"}><button type="button" className={dsTableActionTextBtnPrimary} disabled={!canEditWorkOrders} onClick={generaPreventivoDaHub}>
+                      <IconBtnPreventivo className="h-3.5 w-3.5 shrink-0"/>
                       Crea
-                    </button>
+                    </button></Tooltip>
                     <Link
                       href={buildPreventiviArchivioFilterHref(lav.id, lavOrigine)}
                       className={dsTableActionTextBtn}
@@ -1377,7 +1359,7 @@ export function SchedeLavorazioneModal({
                     </p>
                   </div>
                 ) : (
-                  <ul className="min-w-0 divide-y divide-[color:var(--cab-border)]">
+                  <ul className={`min-w-0 ${LIST_DIVIDER_UL}`}>
                     {documentiHubUi.map((d) => {
                       const canOpen = canOpenDocumento(d);
                       return (
@@ -1390,15 +1372,10 @@ export function SchedeLavorazioneModal({
                             <p className="mt-0.5 truncate text-sm font-medium text-[color:var(--cab-text)]">{d.nome}</p>
                           </div>
                           {canOpen ? (
-                            <button
-                              type="button"
-                              className={dsTableActionTextBtn}
-                              title="Apri documento"
-                              onClick={() => void openDocumentoFile(d)}
-                            >
+                            <Tooltip content={"Apri documento"}><button type="button" className={dsTableActionTextBtn} onClick={() => void openDocumentoFile(d)}>
                               <HubIconOpen />
                               Apri
-                            </button>
+                            </button></Tooltip>
                           ) : null}
                         </li>
                       );
@@ -1611,65 +1588,30 @@ function SchedaSectionHub({
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
           {!doc ? (
-            <button
-              type="button"
-              className={dsTableActionTextBtnPrimary}
-              disabled={!canEdit}
-              title={!canEdit ? READONLY_PERMISSION_HINT : undefined}
-              onClick={onCrea}
-            >
-              <IconBtnPlus className="h-3.5 w-3.5 shrink-0" />
+            <Tooltip content={!canEdit ? READONLY_PERMISSION_HINT : undefined}><button type="button" className={dsTableActionTextBtnPrimary} disabled={!canEdit} onClick={onCrea}>
+              <IconBtnPlus className="h-3.5 w-3.5 shrink-0"/>
               Crea nuova
-            </button>
+            </button></Tooltip>
           ) : (
             <>
               {onElimina ? (
-                <button
-                  type="button"
-                  className={dsTableActionTextBtnDanger}
-                  disabled={!canEdit}
-                  title={!canEdit ? READONLY_PERMISSION_HINT : "Elimina scheda"}
-                  aria-label="Elimina scheda"
-                  onClick={onElimina}
-                >
+                <Tooltip content={!canEdit ? READONLY_PERMISSION_HINT : "Elimina scheda"}><button type="button" className={dsTableActionTextBtnDanger} disabled={!canEdit} aria-label="Elimina scheda" onClick={onElimina}>
                   <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                   </svg>
                   <span className="max-md:sr-only">Elimina</span>
-                </button>
+                </button></Tooltip>
               ) : null}
-              <button
-                type="button"
-                className={dsTableActionTextBtn}
-                disabled={!doc}
-                title="Esporta PDF"
-                aria-label="Esporta PDF scheda"
-                onClick={onPdf}
-              >
+              <Tooltip content={"Esporta PDF"}><button type="button" className={dsTableActionTextBtn} disabled={!doc} aria-label="Esporta PDF scheda" onClick={onPdf}>
                 <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                 </svg>
                 PDF
-              </button>
-              <button
-                type="button"
-                className={dsTableActionTextBtnPrimary}
-                disabled={!canEdit}
-                title={!canEdit ? READONLY_PERMISSION_HINT : "Modifica scheda"}
-                aria-label="Modifica scheda"
-                onClick={onApri}
-              >
+              </button></Tooltip>
+              <Tooltip content={!canEdit ? READONLY_PERMISSION_HINT : "Modifica scheda"}><button type="button" className={dsTableActionTextBtnPrimary} disabled={!canEdit} aria-label="Modifica scheda" onClick={onApri}>
                 <IconBtnEdit />
                 Modifica
-              </button>
+              </button></Tooltip>
             </>
           )}
         </div>

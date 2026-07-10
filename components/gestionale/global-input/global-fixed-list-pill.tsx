@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 /**
  * Select a elenco fisso (senza ricerca): pill colorata + menu a tendina.
  * Standard globale per stato, priorità, addetto in tabella/card Lavorazioni e casi analoghi.
@@ -211,32 +212,21 @@ export function GlobalFixedListPillSelect({
 
   return (
     <div ref={shellRef} className={`relative flex w-full ${sizeShellClass[size]} items-stretch`}>
-      <button
-        ref={triggerRef}
-        type="button"
-        style={triggerStyle}
-        className={`flex w-full min-w-0 cursor-pointer items-center justify-center gap-1 text-center ${size === "form" ? "text-sm font-medium leading-snug" : fixedListPillTextClass} ${sizeTriggerClass[size]} outline-none transition-[filter,box-shadow,background-color,border-color,color] duration-150 hover:brightness-[1.04] disabled:cursor-not-allowed disabled:opacity-60 ${dsFocus} ${shellClass ?? "rounded-lg border border-black/10 shadow-sm dark:border-white/10"}`}
-        aria-label={ariaLabel}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={listId}
-        disabled={disabled}
-        title={title}
-        onClick={() => {
-          if (disabled) return;
-          if (useMobileSheet) {
+      <Tooltip content={title}><button ref={triggerRef} type="button" style={triggerStyle} className={`flex w-full min-w-0 cursor-pointer items-center justify-center gap-1 text-center ${size === "form" ? "text-sm font-medium leading-snug" : fixedListPillTextClass} ${sizeTriggerClass[size]} outline-none transition-[filter,box-shadow,background-color,border-color,color] duration-150 hover:brightness-[1.04] disabled:cursor-not-allowed disabled:opacity-60 ${dsFocus} ${shellClass ?? "rounded-lg border border-black/10 shadow-sm dark:border-white/10"}`} aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} aria-controls={listId} disabled={disabled} onClick={() => {
+        if (disabled)
+            return;
+        if (useMobileSheet) {
             captureFocus();
             setOpen(true);
             setActiveIndex(-1);
             return;
-          }
-          setOpen((o) => !o);
-          setActiveIndex(-1);
-        }}
-      >
+        }
+        setOpen((o) => !o);
+        setActiveIndex(-1);
+    }}>
         <span className="min-w-0 truncate">{selected?.label ?? value}</span>
         {pillChevron}
-      </button>
+      </button></Tooltip>
       {typeof document !== "undefined" && menu ? createPortal(menu, document.body) : null}
       <GestionaleSearchableSheetSelect
         open={open && useMobileSheet}

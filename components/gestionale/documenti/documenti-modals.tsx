@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 
 import { sliceInputValue, TEXT_LONG, TEXT_MEDIUM } from "@/lib/validation/text-field-limits";
@@ -537,24 +538,12 @@ export function DocumentoInfoModal({
       onRequestClose={onRequestClose}
       footer={
         <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          <button
-            type="button"
-            className={`${dsBtnDanger} min-h-11 w-full justify-center sm:w-auto`}
-            onClick={onDelete}
-            disabled={!canDelete}
-            title={canDelete ? "Elimina" : "Sola lettura"}
-          >
+          <Tooltip content={canDelete ? "Elimina" : "Sola lettura"}><button type="button" className={`${dsBtnDanger} min-h-11 w-full justify-center sm:w-auto`} onClick={onDelete} disabled={!canDelete}>
             Elimina
-          </button>
-          <button
-            type="button"
-            className={`${erpBtnAccent} min-h-11 w-full justify-center sm:w-auto`}
-            onClick={onEdit}
-            disabled={!canEdit}
-            title={canEdit ? "Modifica" : "Sola lettura"}
-          >
+          </button></Tooltip>
+          <Tooltip content={canEdit ? "Modifica" : "Sola lettura"}><button type="button" className={`${erpBtnAccent} min-h-11 w-full justify-center sm:w-auto`} onClick={onEdit} disabled={!canEdit}>
             Modifica
-          </button>
+          </button></Tooltip>
         </div>
       }
     >

@@ -1,5 +1,6 @@
 "use client";
 
+import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import {
   CLIENTE_CONTATTO_TIPO_LABELS,
   type ClienteAnagrafica,
@@ -75,7 +76,7 @@ export function ClienteAnagraficaPanoramica({ model }: { model: ClienteAnagrafic
         {grouped.size === 0 ? (
           <p className="text-sm text-[color:var(--cab-text-muted)]">Nessun contatto registrato.</p>
         ) : (
-          <ul className="divide-y divide-[color:var(--cab-border)]">
+          <ul className={`${LIST_DIVIDER_UL}`}>
             {[...grouped.entries()].map(([label, items]) => (
               <li key={label} className="py-2 first:pt-0 last:pb-0">
                 <p className="text-xs font-semibold text-[color:var(--cab-text)]">{label}</p>

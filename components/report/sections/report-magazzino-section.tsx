@@ -4,6 +4,7 @@ import {
   useReportAnalyticsDerived,
   useReportAnalyticsDerivedActions,
 } from "@/components/report/report-analytics-derived-context";
+import { useReportPerformanceContext } from "@/components/report/layout/report-performance-context";
 import { ReportMagazzinoSection } from "@/components/report/report-magazzino-section";
 import { ReportRicambiConsumoSection } from "@/components/report/report-ricambi-consumo-section";
 import type { DomainReportSectionProps } from "@/components/report/report-section-types";
@@ -13,6 +14,7 @@ import {
   ReportBarChart,
   ReportMatrix,
   ReportSection,
+  ReportUnifiedKpiGrid,
 } from "@/components/report/design-system";
 import { usePublishWhenReady } from "@/components/report/sections/use-section-publish";
 import { useOrdiniFornitoriQuery } from "@/src/hooks/gestionale/use-ordini-fornitori-query";
@@ -21,6 +23,7 @@ import { useMemo } from "react";
 
 export default function ReportMagazzinoSectionView(props: DomainReportSectionProps) {
   const derived = useReportAnalyticsDerived();
+  const { partitioned } = useReportPerformanceContext();
   const { publishWarehouseAnalytics } = useReportAnalyticsDerivedActions();
   const ordiniQ = useOrdiniFornitoriQuery(props.fetchEnabled);
 
@@ -94,6 +97,14 @@ export default function ReportMagazzinoSectionView(props: DomainReportSectionPro
   return (
     <div className="min-w-0 space-y-4">
       <ReportSection id="report-mag-kpi" title="Indicatori magazzino" subtitle="KPI stock e movimenti">
+        {partitioned.magazzino.length > 0 ? (
+          <div className="mb-4">
+            <ReportUnifiedKpiGrid
+              items={partitioned.magazzino}
+              compareMode={props.analyticsContext.compareMode}
+            />
+          </div>
+        ) : null}
         <ReportDomainMetricsGrid metrics={metrics} compareMode={props.analyticsContext.compareMode} />
       </ReportSection>
 

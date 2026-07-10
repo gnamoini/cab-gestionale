@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { gestionalePageToolbarActionsClass } from "@/components/gestionale/page-header-toolbar";
@@ -84,9 +85,9 @@ function LogTable({ rows, columns }: { rows: AuthLogWithProfileRow[]; columns: "
               {columns === "login" ? <td className={dsTableTd}>{r.profiles?.nome?.trim() || "—"}</td> : null}
               <td className={dsTableTd}>{r.email}</td>
               {columns === "failed" ? (
-                <td className={`${dsTableTd} max-w-[20rem] truncate`} title={r.user_agent ?? ""}>
+                <Tooltip content={r.user_agent ?? ""}><td className={`${dsTableTd} max-w-[20rem] truncate`}>
                   {truncateUa(r.user_agent)}
-                </td>
+                </td></Tooltip>
               ) : (
                 <td className={dsTableTd}>{r.action}</td>
               )}
@@ -285,9 +286,9 @@ export function SecurityMonitoringSection({
                     <td className={dsTableTd}>{row.entita}</td>
                     <td className={dsTableTd}>{row.action}</td>
                     <td className={dsTableTd}>{row.actor}</td>
-                    <td className={`${dsTableTd} max-w-[24rem] truncate`} title={row.detail}>
+                    <Tooltip content={row.detail}><td className={`${dsTableTd} max-w-[24rem] truncate`}>
                       {row.detail}
-                    </td>
+                    </td></Tooltip>
                   </tr>
                 ))}
               </tbody>

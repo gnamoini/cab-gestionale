@@ -1,7 +1,6 @@
 "use client";
 
-
-
+import { Tooltip } from "@/components/ui";
 import type { ReactNode } from "react";
 
 import { PageHeader } from "@/components/gestionale/page-header";
@@ -116,25 +115,13 @@ export function ReportToolbar({
 
         actions={
 
-          <button
-
-            type="button"
-
-            className={dsPageToolbarBtn}
-
-            onClick={() => void openPdfArtifact("report-bundle")}
-
-            title="Esporta PDF report gestionale"
-
-            aria-label="Esporta PDF report gestionale"
-
-          >
+          <Tooltip content={"Esporta PDF report gestionale"}><button type="button" className={dsPageToolbarBtn} onClick={() => void openPdfArtifact("report-bundle")} aria-label="Esporta PDF report gestionale">
 
             <IconPrint />
 
             Esporta PDF
 
-          </button>
+          </button></Tooltip>
 
         }
 

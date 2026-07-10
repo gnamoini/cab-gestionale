@@ -118,6 +118,26 @@ assert.match(migrationSrc, /client_portal_ingresso/);
 assert.match(migrationSrc, /notification_cliente_inbox_eligible/);
 assert.match(migrationSrc, /jsonb_array_elements_text/);
 
+const visibilityFixMigrationSrc = fs.readFileSync(
+  path.join(ROOT, "supabase/migrations/20260910160000_notification_visibility_user_scope_fix.sql"),
+  "utf8",
+);
+assert.match(
+  visibilityFixMigrationSrc,
+  /p_n\.scope_type = 'user' and p_n\.scope_value = auth\.uid\(\)::text/,
+  "staff must only see own user-scoped notifications",
+);
+assert.doesNotMatch(
+  visibilityFixMigrationSrc,
+  /notification_staff_inbox_eligible\(\)\s+and\s+\(\s*public\.rbac_role\(\) in \('admin', 'manager'\)/,
+  "staff must not blanket-see all notifications as admin/manager",
+);
+assert.match(
+  visibilityFixMigrationSrc,
+  /p_n\.scope_type = 'role'[\s\S]*public\.rbac_role\(\) in \('admin', 'manager'\)/,
+  "admin/manager override must stay role-scoped only",
+);
+
 assert.match(centerBellSrc, /<Drawer[\s\S]*?gestionaleLogPanelAsideClass/);
 assert.match(centerBellSrc, /toInboxNotificationLogViewModel/);
 assert.match(centerBellSrc, /Carica altre/);

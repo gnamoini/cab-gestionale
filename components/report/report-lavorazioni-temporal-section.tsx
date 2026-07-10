@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { Fragment, memo, useCallback, useMemo, useState } from "react";
 import { GlobalSelect } from "@/components/gestionale/global-input";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
@@ -191,12 +192,12 @@ function ReportLavorazioniTemporalSectionInner({
                   {expanded
                     ? m.weeks.map((w) => (
                         <tr key={`${m.monthKey}-w${w.weekIndex}`} className={`${globalTableRow} bg-[color:color-mix(in_srgb,var(--cab-surface-2)_45%,var(--cab-card))]`}>
-                          <td className={`${dsTableTd} pl-8 text-sm text-[color:var(--cab-text-muted)]`} title={`${w.rangeStart} — ${w.rangeEnd}`}>
+                          <Tooltip content={`${w.rangeStart} — ${w.rangeEnd}`}><td className={`${dsTableTd} pl-8 text-sm text-[color:var(--cab-text-muted)]`}>
                             {w.label}
-                          </td>
-                          <td className={`${dsTableTd} tabular-nums text-sm`} title={m.hasManualOverride ? "Conteggio DB; il totale mese include lo storico manuale" : undefined}>
+                          </td></Tooltip>
+                          <Tooltip content={m.hasManualOverride ? "Conteggio DB; il totale mese include lo storico manuale" : undefined}><td className={`${dsTableTd} tabular-nums text-sm`}>
                             {m.hasManualOverride && w.count === 0 ? "—" : w.count}
-                          </td>
+                          </td></Tooltip>
                           <td className={dsTableTd} />
                           <td className={dsTableTd} />
                         </tr>

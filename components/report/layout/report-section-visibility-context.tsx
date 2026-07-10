@@ -11,7 +11,12 @@ type ReportSectionVisibilityContextValue = {
 
 const ReportSectionVisibilityContext = createContext<ReportSectionVisibilityContextValue | null>(null);
 
-const PERF_GATE_SECTIONS: readonly ReportSectionId[] = ["panoramica", "lavorazioni"];
+const PERF_GATE_SECTIONS: readonly ReportSectionId[] = [
+  "lavorazioni",
+  "clienti_mezzi",
+  "magazzino_ricambi",
+  "dati_economici",
+];
 
 export function ReportSectionVisibilityProvider({ children }: { children: ReactNode }) {
   const [openSections, setOpenSections] = useState<Set<ReportSectionId>>(() => new Set());

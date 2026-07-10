@@ -1,15 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { GlobalAnchoredMenuItems, Tooltip } from "@/components/ui";
 import { useCallback, useId, useRef, useState } from "react";
 import { HubIconUpload } from "@/components/design-system/hub-table-action-icons";
-import { Tooltip } from "@/components/design-system/tooltip";
-import { useDropdownOutsideDismiss } from "@/components/gestionale/global-input/use-global-dropdown-portal";
+
 import type { ImportEntity } from "@/lib/data-import/core/types";
 import { canImportEntity, isImportEntityStub } from "@/lib/data-import/core/import-permissions";
 import { labelForImportEntity } from "@/lib/data-import/import-registry-client";
-import { accountMenuItemClass, globalFixedListPillMenuPanel } from "@/lib/ui/global-input";
-import { dsFocus, dsPageToolbarIconBtn } from "@/lib/ui/design-system";
+import { dsPageToolbarIconBtn } from "@/lib/ui/design-system";
 import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
 import { usePermissions } from "@/src/hooks/use-permissions";
 
@@ -31,7 +30,6 @@ export function MagazzinoImportMenu({
 }) {
   const menuId = useId();
   const shellRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLUListElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [wizardEntity, setWizardEntity] = useState<MagazzinoImportEntity | null>(null);
   const perm = usePermissions("magazzino");
@@ -47,7 +45,6 @@ export function MagazzinoImportMenu({
   );
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
-  useDropdownOutsideDismiss(menuOpen, shellRef, menuRef, closeMenu);
   useDropdownFocusRestore(menuOpen);
 
   if (entries.length === 0) return null;
@@ -77,28 +74,20 @@ export function MagazzinoImportMenu({
             <span className="sr-only">Importa</span>
           </button>
         </Tooltip>
-        {menuOpen ? (
-          <ul
-            ref={menuRef}
-            id={menuId}
-            role="menu"
-            aria-label="Opzioni importazione"
-            className={`absolute right-0 top-[calc(100%+0.375rem)] z-[120] min-w-[12.5rem] py-1 ${globalFixedListPillMenuPanel}`}
-          >
-            {entries.map((entity) => (
-              <li key={entity} role="none">
-                <button
-                  type="button"
-                  role="menuitem"
-                  className={`${accountMenuItemClass} ${dsFocus}`}
-                  onClick={() => openWizard(entity)}
-                >
-                  {entity === "listino_ricambi" ? "Importa listino" : "Importa magazzino"}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        <GlobalAnchoredMenuItems
+          open={menuOpen}
+          anchorRef={shellRef}
+          onClose={closeMenu}
+          listId={menuId}
+          aria-label="Opzioni importazione"
+          placement="bottom-end"
+          matchAnchorWidth={false}
+          items={entries.map((entity) => ({
+            id: entity,
+            label: entity === "listino_ricambi" ? "Importa listino" : "Importa magazzino",
+          }))}
+          onSelect={(item) => openWizard(item.id as MagazzinoImportEntity)}
+        />
       </div>
       {wizardEntity ? (
         <DataImportWizardModal

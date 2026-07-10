@@ -1,9 +1,10 @@
 "use client";
 
 import "./client-portal-stato-progress.css";
+import { Tooltip } from "@/components/ui";
 
 import { useMemo, type CSSProperties } from "react";
-import { Tooltip } from "@/components/design-system";
+
 import { useAuthUserId } from "@/context/auth-context";
 import {
   collapsibleExpandedBoolPref,

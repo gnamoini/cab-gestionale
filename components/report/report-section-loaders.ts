@@ -19,10 +19,6 @@ export async function loadReportSection(id: ReportSectionId): Promise<ReportSect
   const promise = (async (): Promise<ReportSectionLoaderResult> => {
     try {
       switch (id) {
-        case "panoramica": {
-          const mod = await import("@/components/report/sections/report-panoramica-section");
-          return { status: "loaded", component: mod.default as AnySectionComponent };
-        }
         case "analisi_ai": {
           const mod = await import("@/components/report/sections/report-ai-section");
           return { status: "loaded", component: mod.default as AnySectionComponent };
@@ -49,6 +45,10 @@ export async function loadReportSection(id: ReportSectionId): Promise<ReportSect
         }
         case "analisi_incrociate": {
           const mod = await import("@/components/report/sections/report-cross-section");
+          return { status: "loaded", component: mod.default as AnySectionComponent };
+        }
+        case "grafici_kpi": {
+          const mod = await import("@/components/report/sections/report-kpi-charts-section");
           return { status: "loaded", component: mod.default as AnySectionComponent };
         }
         default:

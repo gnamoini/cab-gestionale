@@ -1,0 +1,32 @@
+# Control Plane — production tier (post-deploy certification check).
+name: Control Production
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  control-production:
+    name: control-production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      CI: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run control:production
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: control-report-production-${{ github.run_id }}
+          path: control-report.json
+          retention-days: 1825

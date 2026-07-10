@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import type { KpiCompareRow } from "@/lib/report/build-report-model";
 import { ReportSparkline } from "@/components/report/report-sparkline";
 import {
@@ -77,9 +78,9 @@ export function ReportKpiCard({
         <div className="flex shrink-0 items-center gap-1.5">
           {showInlineCompare ? <ReportKpiCompareInline rows={compareRows!} /> : null}
           {trust ? (
-            <span className={reportKpiTrustPillClass} title={`Fonte: ${REPORT_KPI_TRUST_LABELS[trust]}`}>
+            <Tooltip content={`Fonte: ${REPORT_KPI_TRUST_LABELS[trust]}`}><span className={reportKpiTrustPillClass}>
               {REPORT_KPI_TRUST_LABELS[trust]}
-            </span>
+            </span></Tooltip>
           ) : null}
         </div>
       </div>

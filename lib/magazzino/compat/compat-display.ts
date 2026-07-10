@@ -56,6 +56,16 @@ export function compatLineDisplayText(line: string): string {
   return marca || modello || t;
 }
 
+/** Sottotitolo lista magazzino: solo modello (marca già in colonna dedicata). */
+export function compatLineModelDisplayText(line: string): string {
+  const t = line.trim();
+  if (!t) return t;
+  const { marca, modello } = parseCompatMarcaModello(t);
+  if (marca && !modello) return "(universale)";
+  if (modello) return modello;
+  return marca || t;
+}
+
 /** Valore di sort/display per colonna compatibilità. */
 export function compatSortKey(list: readonly string[]): string {
   const lines = dedupeCompatDisplayLines(
@@ -68,4 +78,10 @@ export function compatDisplayLabel(list: readonly string[]): string {
   const compat = dedupeCompatLabels(normalizeCompatList(list));
   if (compat.length === 0) return "Universale (tutte le macchine)";
   return dedupeCompatDisplayLines(compat.map(compatLineDisplayText)).join(", ");
+}
+
+export function compatDisplayModelsLabel(list: readonly string[]): string {
+  const compat = dedupeCompatLabels(normalizeCompatList(list));
+  if (compat.length === 0) return "Universale (tutte le macchine)";
+  return dedupeCompatDisplayLines(compat.map(compatLineModelDisplayText)).join(", ");
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useCallback, useMemo, useState } from "react";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import { TimesheetCellEditor } from "@/components/gestionale/dipendenti/timesheet-cell-editor";
@@ -134,29 +135,17 @@ export function TimesheetCellEditorPopover({
           ) : null}
           <div className="flex flex-col gap-2">
             {!readOnly && employees.length > 1 && onCopyToAll ? (
-              <button
-                type="button"
-                className={`${erpBtnNeutral} min-h-11 w-full touch-manipulation`}
-                onClick={() => setCopyConfirmOpen(true)}
-                disabled={!canCopyToAll}
-                title={!validation.ok ? validation.errors[0] : undefined}
-              >
+              <Tooltip content={!validation.ok ? validation.errors[0] : undefined}><button type="button" className={`${erpBtnNeutral} min-h-11 w-full touch-manipulation`} onClick={() => setCopyConfirmOpen(true)} disabled={!canCopyToAll}>
                 Copia per tutti
-              </button>
+              </button></Tooltip>
             ) : null}
             <div className="flex min-w-0 shrink-0 justify-end gap-2">
               <button type="button" className={erpBtnNeutral} onClick={onClose} disabled={saving || copyPending}>
                 Annulla
               </button>
-              <button
-                type="button"
-                className={erpBtnAccent}
-                onClick={() => void handleSaveNow()}
-                disabled={!canSave}
-                title={!validation.ok ? validation.errors[0] : undefined}
-              >
+              <Tooltip content={!validation.ok ? validation.errors[0] : undefined}><button type="button" className={erpBtnAccent} onClick={() => void handleSaveNow()} disabled={!canSave}>
                 {saving ? "Salvataggio…" : "Salva"}
-              </button>
+              </button></Tooltip>
             </div>
           </div>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
-import { Tooltip } from "@/components/design-system";
 import type { AutoSchedulePlan } from "@/lib/workshop-schedule/intelligence/auto-scheduler/types";
+import { Tooltip } from "@/components/ui";
 import { localDateTimeLabel } from "@/lib/workshop-schedule/datetime";
 import { AgendaListEmpty } from "@/components/workshop-schedule/agenda-session-list";
 import { dsAccentSoftBanner, dsBtnNeutral, dsBtnPrimary, dsSectionTitle, dsTypoCaption } from "@/lib/ui/design-system";

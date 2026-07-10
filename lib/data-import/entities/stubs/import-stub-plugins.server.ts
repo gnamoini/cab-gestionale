@@ -96,6 +96,20 @@ export const documentiMetadataImportPluginStub = createStubPlugin({
   uiEntry: { section: "documenti", placement: "toolbar" },
 });
 
+export const ordiniFornitoriImportPluginStub = createStubPlugin({
+  id: "ordini_fornitori",
+  routeSlug: "ordini-fornitori",
+  label: "Ordini fornitori",
+  fields: [
+    { key: "numero", label: "Numero", required: true },
+    { key: "fornitore_label", label: "Fornitore" },
+    { key: "data_ordine", label: "Data ordine" },
+    { key: "totale", label: "Totale" },
+  ],
+  permission: { kind: "module", module: "ordini_fornitori" },
+  uiEntry: { section: "ordini-fornitori", placement: "toolbar" },
+});
+
 export const dipendentiTimesheetImportPluginStub = createStubPlugin({
   id: "dipendenti_timesheet",
   routeSlug: "dipendenti",

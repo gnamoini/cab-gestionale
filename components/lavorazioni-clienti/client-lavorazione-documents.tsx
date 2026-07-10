@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
@@ -23,9 +24,9 @@ function ClientDocumentSlotCard({
   onDownload: () => void;
 }) {
   const subtitle = doc ? (
-    <span className="block truncate font-medium text-[color:var(--cab-text)]" title={doc.filename}>
+    <Tooltip content={doc.filename}><span className="block truncate font-medium text-[color:var(--cab-text)]">
       {doc.filename}
-    </span>
+    </span></Tooltip>
   ) : (
     "Nessun documento caricato"
   );

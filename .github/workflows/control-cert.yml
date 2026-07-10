@@ -1,0 +1,68 @@
+# Control Plane — cert tier + certification bundle artifact.
+name: Control Cert
+
+on:
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  control-cert:
+    name: control-cert
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    env:
+      CI: "true"
+      PRODUCTION_CHECK_REQUIRE_DB: "1"
+      PUBLICATION_CHECK_STRICT: "1"
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
+      SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+      SMOKE_OPERATOR_EMAIL: ${{ secrets.SMOKE_OPERATOR_EMAIL }}
+      SMOKE_OPERATOR_PASSWORD: ${{ secrets.SMOKE_OPERATOR_PASSWORD }}
+      SMOKE_DOCUMENTI_LAVORAZIONE_ID: ${{ secrets.SMOKE_DOCUMENTI_LAVORAZIONE_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Next.js build (Playwright runtime)
+        run: npm run ci:build
+        env:
+          NODE_ENV: production
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+      - name: Control Plane cert tier
+        run: npm run control:cert
+        env:
+          PORT: "3210"
+          SMOKE_BASE_URL: http://127.0.0.1:3210
+      - name: Certification bundle
+        if: success()
+        run: npm run control:certify
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: control-certification-${{ github.run_id }}
+          path: control-certification/
+          retention-days: 1825
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: control-report-cert-${{ github.run_id }}
+          path: control-report.json
+          retention-days: 365

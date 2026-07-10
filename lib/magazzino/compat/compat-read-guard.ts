@@ -10,6 +10,7 @@
  * Per write persistiti usare writeCompatibilitaRicambio() (compat-write-gate.ts).
  */
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { compatDisplayModelsLabel } from "@/lib/magazzino/compat/compat-display";
 import type { CompatInput } from "@/lib/magazzino/compat/compat-types";
 import { resolveCompatibilitaRicambio } from "@/lib/magazzino/compat/resolve-compatibilita-ricambio";
 
@@ -78,4 +79,21 @@ export function readCompatDisplayForUi(
 ): string {
   guardIfMissingListe(source, liste, "display", ricambio.id);
   return resolveCompatibilitaRicambio(ricambio, liste).display;
+}
+
+/** Sottotitolo lista: solo modelli compatibili (senza marca attrezzatura). */
+export function readCompatModelsDisplayForUi(
+  ricambio: CompatInput & { id?: string },
+  liste: MezziListePrefs | undefined,
+  source: string,
+): string {
+  guardIfMissingListe(source, liste, "display", ricambio.id);
+  const resolved = resolveCompatibilitaRicambio(ricambio, liste);
+  if (resolved.labels.length === 0 && resolved.orphanLabels.length === 0) {
+    return compatDisplayModelsLabel([]);
+  }
+  if (resolved.labels.length > 0) {
+    return compatDisplayModelsLabel(resolved.labels);
+  }
+  return resolved.orphanLabels.join(", ");
 }

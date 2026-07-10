@@ -2,16 +2,17 @@
 
 import { useMemo } from "react";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { KpiPerformanceAlerts } from "@/components/report/kpi-performance/kpi-performance-alerts";
+import { KpiPerformanceAlertCard } from "@/components/report/kpi-performance/kpi-performance-alerts";
 import { ReportExecutiveStrip } from "@/components/report/layout/report-executive-strip";
 import { useReportPerformanceContext } from "@/components/report/layout/report-performance-context";
-import { ReportSubsection } from "@/components/report/sections/report-subsection";
+import { ReportSection } from "@/components/report/design-system";
 import { reportZoneShellClass } from "@/components/report/report-ui-tokens";
 import type { ReportCompareMode } from "@/lib/report/date-ranges";
+import type { KpiPerformanceAlert } from "@/lib/report/kpi-performance/kpi-performance-types";
 import { countClientiSottoSogliaDisponibilita } from "@/lib/report/kpi-performance/kpi-performance-formulas";
 import { LoadingSkeletonBlock } from "@/components/design-system/loading/loading-skeleton";
 
-export function ReportExecutiveOverviewContent({ compareMode }: { compareMode: ReportCompareMode }) {
+export function ReportExecutiveSummaryContent({ compareMode }: { compareMode: ReportCompareMode }) {
   const { perf, perfLoading } = useReportPerformanceContext();
 
   const summaryLine = useMemo(() => {
@@ -22,50 +23,58 @@ export function ReportExecutiveOverviewContent({ compareMode }: { compareMode: R
   }, [perf]);
 
   if (perfLoading || !perf) {
-    return (
-      <div className="min-w-0 space-y-4" aria-busy="true">
-        <LoadingSkeletonBlock className="min-h-[3.5rem]" />
-        <LoadingSkeletonBlock className="min-h-[200px]" />
-      </div>
-    );
+    return <LoadingSkeletonBlock className="min-h-[3.5rem]" aria-busy="true" />;
   }
 
   return (
-    <div className="min-w-0 space-y-4">
-      <ReportSubsection
-        id="report-executive-summary"
-        title="Sintesi operativa"
-        subtitle="Stato officina e flotta nel periodo selezionato"
-      >
-        <ReportExecutiveStrip
-          summaryLine={summaryLine}
-          compareActive={compareMode !== "none"}
-          health={{
-            peggiorDisponibilita: perf.fleet.peggiorDisponibilita,
-            clientiSottoSoglia: countClientiSottoSogliaDisponibilita(perf.fleet.disponibilitaPerCliente),
-            mezziInOfficina: perf.fleet.mezziInOfficina,
-            totalMezzi: perf.fleet.totalMezzi,
-            alertCount: perf.alerts.length,
-            criticalAlertCount: perf.alerts.filter((a) => a.severity === "critical").length,
-          }}
-        />
-      </ReportSubsection>
-
-      {perf.alerts.length > 0 ? (
-        <ReportSubsection
-          id="report-executive-alerts"
-          title="Alert e criticità"
-          subtitle={`${perf.alerts.length} segnalazioni attive`}
-          defaultCollapsed
-        >
-          <KpiPerformanceAlerts alerts={perf.alerts} />
-        </ReportSubsection>
-      ) : null}
-    </div>
+    <ReportExecutiveStrip
+      summaryLine={summaryLine}
+      compareActive={compareMode !== "none"}
+      health={{
+        peggiorDisponibilita: perf.fleet.peggiorDisponibilita,
+        clientiSottoSoglia: countClientiSottoSogliaDisponibilita(perf.fleet.disponibilitaPerCliente),
+        mezziInOfficina: perf.fleet.mezziInOfficina,
+        totalMezzi: perf.fleet.totalMezzi,
+        alertCount: perf.alerts.length,
+        criticalAlertCount: perf.alerts.filter((a) => a.severity === "critical").length,
+      }}
+    />
   );
 }
 
-/** @deprecated Usare sezione REPORT `panoramica` — mantenuto per zone legacy. */
+export function ReportExecutiveAlertSections() {
+  const { perf, perfLoading } = useReportPerformanceContext();
+
+  if (perfLoading || !perf) {
+    return <LoadingSkeletonBlock className="min-h-[4rem]" aria-busy="true" />;
+  }
+
+  if (perf.alerts.length === 0) return null;
+
+  const severitySubtitle: Record<KpiPerformanceAlert["severity"], string> = {
+    critical: "Criticità alta",
+    warning: "Attenzione richiesta",
+    info: "Informativo",
+  };
+
+  return (
+    <>
+      {perf.alerts.map((alert) => (
+        <ReportSection
+          key={alert.id}
+          id={`report-lav-alert-${alert.id}`}
+          title={alert.title}
+          subtitle={severitySubtitle[alert.severity]}
+          defaultCollapsed
+        >
+          <KpiPerformanceAlertCard alert={alert} />
+        </ReportSection>
+      ))}
+    </>
+  );
+}
+
+/** @deprecated Usare sezione REPORT `lavorazioni` — mantenuto per zone legacy. */
 export function ReportExecutiveOverview({ compareMode }: { compareMode: ReportCompareMode }) {
   return (
     <ShellCard
@@ -75,7 +84,8 @@ export function ReportExecutiveOverview({ compareMode }: { compareMode: ReportCo
       collapsible={false}
       className={reportZoneShellClass}
     >
-      <ReportExecutiveOverviewContent compareMode={compareMode} />
+      <ReportExecutiveSummaryContent compareMode={compareMode} />
+      <ReportExecutiveAlertSections />
     </ShellCard>
   );
 }

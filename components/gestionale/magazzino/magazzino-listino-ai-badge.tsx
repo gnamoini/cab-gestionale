@@ -1,6 +1,7 @@
 "use client";
 
-import { GeminiSparkIcon, Tooltip } from "@/components/design-system";
+import { GeminiSparkIcon } from "@/components/design-system";
+import { Tooltip } from "@/components/ui";
 import type { ListinoImportMeta } from "@/lib/magazzino/listino-import/listino-import-meta";
 
 function listinoAiBadgeTooltip(meta: ListinoImportMeta): string {

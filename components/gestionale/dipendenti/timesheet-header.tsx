@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useMemo } from "react";
 import type { DipendenteTimesheetEmployeeRow, TimesheetMonthKey } from "@/lib/dipendenti/types";
 import { buildTimesheetYearSelectOptions } from "@/lib/dipendenti/timesheet-available-periods";
@@ -241,32 +242,18 @@ export function TimesheetHeader({
                       &#8203;
                     </span>
                     <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
-                      <button
-                        type="button"
-                        className={timesheetMonthActionBtnClass}
-                        onClick={onGoToToday}
-                        title="Vai al mese corrente e evidenzia la colonna di oggi"
-                      >
+                      <Tooltip content={"Vai al mese corrente e evidenzia la colonna di oggi"}><button type="button" className={timesheetMonthActionBtnClass} onClick={onGoToToday}>
                         Oggi
-                      </button>
+                      </button></Tooltip>
                       {onFillToday8h ? (
-                        <button
-                          type="button"
-                          className={timesheetMonthActionBtnClass}
-                          onClick={onFillToday8h}
-                          disabled={fillToday8hDisabled || fillToday8hPending}
-                          aria-busy={fillToday8hPending}
-                          title={
-                            fillToday8hDisabled && fillToday8hDisabledReason
+                        <Tooltip content={fillToday8hDisabled && fillToday8hDisabledReason
                               ? fillToday8hDisabledReason
-                              : "Imposta 8 ore ordinarie per oggi su tutte le celle vuote degli addetti visibili"
-                          }
-                        >
+                              : "Imposta 8 ore ordinarie per oggi su tutte le celle vuote degli addetti visibili"}><button type="button" className={timesheetMonthActionBtnClass} onClick={onFillToday8h} disabled={fillToday8hDisabled || fillToday8hPending} aria-busy={fillToday8hPending}>
                           <span className="sm:hidden">{fillToday8hPending ? "…" : "8h oggi"}</span>
                           <span className="hidden min-w-0 truncate sm:inline">
                             {fillToday8hPending ? "Salvataggio…" : "8h per tutti (oggi)"}
                           </span>
-                        </button>
+                        </button></Tooltip>
                       ) : null}
                     </div>
                   </div>

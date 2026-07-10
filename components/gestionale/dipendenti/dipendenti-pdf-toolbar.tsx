@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { PageToolbarCtaLabel } from "@/components/design-system";
 import { gestionalePageToolbarActionsInnerClass } from "@/components/gestionale/page-header-toolbar";
 import { dsPageToolbarBtn } from "@/lib/ui/design-system";
@@ -44,20 +45,10 @@ export function DipendentiPdfToolbar({
         <PdfExportIcon />
         <PageToolbarCtaLabel short="PDF tutti" full="PDF complessivo" />
       </button>
-      <button
-        type="button"
-        className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3 ${needsAddetto && !exporting ? "opacity-55" : ""}`}
-        disabled={exporting}
-        aria-busy={exporting}
-        aria-disabled={needsAddetto || undefined}
-        title={
-          needsAddetto ? "Seleziona un addetto nei filtri per esportare il PDF dipendente" : undefined
-        }
-        onClick={onExportDipendente}
-      >
+      <Tooltip content={needsAddetto ? "Seleziona un addetto nei filtri per esportare il PDF dipendente" : undefined}><button type="button" className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3 ${needsAddetto && !exporting ? "opacity-55" : ""}`} disabled={exporting} aria-busy={exporting} aria-disabled={needsAddetto || undefined} onClick={onExportDipendente}>
         <PdfExportIcon />
-        <PageToolbarCtaLabel short="PDF uno" full="PDF dipendente" />
-      </button>
+        <PageToolbarCtaLabel short="PDF uno" full="PDF dipendente"/>
+      </button></Tooltip>
     </div>
   );
 }

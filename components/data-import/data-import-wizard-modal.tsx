@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useCallback, useMemo, useState } from "react";
 import { LoadingButton } from "@/components/design-system";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
@@ -384,9 +385,9 @@ export function DataImportWizardModal({
                         <tr key={idx} className="border-t border-[color:var(--cab-border)]">
                           <td className="p-2 tabular-nums">{idx}</td>
                           <td className="p-2">{String(row.severity)}</td>
-                          <td className="p-2 max-w-[16rem] truncate" title={label}>
+                          <Tooltip content={label}><td className="p-2 max-w-[16rem] truncate">
                             {label}
-                          </td>
+                          </td></Tooltip>
                           <td className="p-2">
                             <GlobalSelect
                               value={rowActions[idx] ?? "skip"}

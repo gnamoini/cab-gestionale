@@ -49,6 +49,9 @@ const eslintConfig = defineConfig([
     rules: {
       "cab-layout/no-flex-overflow-risk": "error",
       "cab-layout/no-ui-contract-violation": "error",
+      "cab-layout/no-native-title-tooltip": "warn",
+      "cab-layout/no-direct-ds-import": "warn",
+      "cab-layout/no-css-tooltip": "warn",
     },
   },
   {

@@ -318,6 +318,17 @@ export type DipendenteTimesheetEntryRow = {
   updated_at: string;
 };
 
+/** Grafici KPI salvati per utente (`report_saved_kpi_charts`). */
+export type ReportSavedKpiChartRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  config: Record<string, unknown>;
+  schema_version: number;
+  created_at: string;
+  updated_at: string;
+};
+
 /** Dati storici manuali Report lavorazioni (`report_manual_entries`). */
 export type ReportManualEntryRow = {
   id: string;

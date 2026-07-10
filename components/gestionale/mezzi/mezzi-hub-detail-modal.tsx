@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { TablePagination } from "@/components/gestionale/table-pagination";
@@ -236,21 +237,13 @@ export function MezziHubDetailModal({
           onRequestClose={onClose}
           actions={
             <>
-              <button
-                type="button"
-                className={erpBtnSoftOrange}
-                onClick={onEdit}
-                disabled={Boolean(mezzo.hubSynthetic) || !canEdit}
-                title={
-                  !canEdit
+              <Tooltip content={!canEdit
                     ? READONLY_PERMISSION_HINT
                     : mezzo.hubSynthetic
                       ? "Registra il mezzo in anagrafica per abilitare la modifica"
-                      : undefined
-                }
-              >
+                      : undefined}><button type="button" className={erpBtnSoftOrange} onClick={onEdit} disabled={Boolean(mezzo.hubSynthetic) || !canEdit}>
                 Modifica
-              </button>
+              </button></Tooltip>
               {onDelete && !mezzo.hubSynthetic ? (
                 <button type="button" className={dsBtnDanger} onClick={onDelete} disabled={!canEdit}>
                   Elimina

@@ -1,13 +1,15 @@
 import type { UnifiedKpiDisplayItem } from "@/lib/report/kpi-performance/merge-unified-kpi-display";
 import {
+  CLIENTI_MEZZI_UNIFIED_KPI_IDS,
   ECONOMIC_ZONE_KPI_IDS,
-  EXECUTIVE_KPI_IDS,
-  FLEET_ZONE_KPI_IDS,
+  LAVORAZIONI_UNIFIED_KPI_IDS,
+  MAGAZZINO_UNIFIED_KPI_IDS,
 } from "@/lib/report/kpi-display-clusters";
 
 export type PartitionedUnifiedKpis = {
-  executive: UnifiedKpiDisplayItem[];
+  lavorazioni: UnifiedKpiDisplayItem[];
   fleet: UnifiedKpiDisplayItem[];
+  magazzino: UnifiedKpiDisplayItem[];
   economic: UnifiedKpiDisplayItem[];
 };
 
@@ -24,23 +26,29 @@ function pickByOrder(
   return out;
 }
 
-/** Suddivide KPI unificati per zona UI senza ricalcolare valori. Ogni id compare una sola volta. */
+/** Suddivide KPI unificati per sezione report senza ricalcolare valori. Ogni id compare una sola volta. */
 export function partitionUnifiedKpiDisplay(items: readonly UnifiedKpiDisplayItem[]): PartitionedUnifiedKpis {
   const used = new Set<string>();
 
-  const executive = pickByOrder(items, EXECUTIVE_KPI_IDS);
-  for (const i of executive) used.add(i.id);
+  const lavorazioni = pickByOrder(items, LAVORAZIONI_UNIFIED_KPI_IDS);
+  for (const i of lavorazioni) used.add(i.id);
 
   const fleet = pickByOrder(
     items.filter((i) => !used.has(i.id)),
-    FLEET_ZONE_KPI_IDS,
+    CLIENTI_MEZZI_UNIFIED_KPI_IDS,
   );
   for (const i of fleet) used.add(i.id);
+
+  const magazzino = pickByOrder(
+    items.filter((i) => !used.has(i.id)),
+    MAGAZZINO_UNIFIED_KPI_IDS,
+  );
+  for (const i of magazzino) used.add(i.id);
 
   const economic = pickByOrder(
     items.filter((i) => !used.has(i.id)),
     ECONOMIC_ZONE_KPI_IDS,
   );
 
-  return { executive, fleet, economic };
+  return { lavorazioni, fleet, magazzino, economic };
 }

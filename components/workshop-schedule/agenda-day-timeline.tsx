@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useRef } from "react";
+import { Tooltip } from "@/components/ui";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Tooltip } from "@/components/design-system";
+
 import type { WorkshopScheduleSessionView } from "@/lib/workshop-schedule/types";
 import { AgendaSessionBlock } from "@/components/workshop-schedule/agenda-session-block";
 import { ymdFromIso } from "@/lib/workshop-schedule/datetime";

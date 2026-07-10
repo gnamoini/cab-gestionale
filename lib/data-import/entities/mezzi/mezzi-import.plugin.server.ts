@@ -245,7 +245,7 @@ export const mezziImportPlugin: ImportEntityPlugin = {
     const result: ImportExecuteResult = {
       batchId: input.batchId,
       status: "success",
-      stats: { created: 0, updated: 0, skipped: 0, errors: 0, warnings: 0 },
+      stats: { created: 0, updated: 0, skipped: 0, errors: 0, warnings: 0, createdEntityIds: [] },
       errors: [],
       durationMs: 0,
     };
@@ -317,6 +317,7 @@ export const mezziImportPlugin: ImportEntityPlugin = {
               result.errors.push({ rowIndex: d.rowIndex, message: attRes.message });
             } else {
               result.stats.created += 1;
+              result.stats.createdEntityIds?.push(mezzoId);
             }
           }
         }

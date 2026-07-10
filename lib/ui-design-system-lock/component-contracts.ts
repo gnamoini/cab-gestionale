@@ -13,6 +13,85 @@ import { gestionaleListTableTd } from "@/lib/ui/gestionale-list-table";
 
 export const DS_LOCK_MESSAGE_PREFIX = "[design-system-lock]";
 
+/** Bump minor = nuove regole WARN; bump major = nuove regole BLOCKER */
+export const UI_CONTRACT_VERSION = "1.0.0";
+
+/** Versioni per-primitive — bump isolato, non invalida l'intero sistema */
+export const UI_PRIMITIVE_VERSIONS = {
+  Tooltip: "2.0.0",
+  TooltipList: "1.0.0",
+  TooltipStatus: "1.0.0",
+  GlobalAnchoredMenu: "1.0.0",
+  GestionaleListTable: "3.0.0",
+} as const;
+
+export const UI_CONTRACT_META = {
+  ownerTeam: "frontend-platform",
+  ownerCategory: "Design System",
+  reviewerRequired: true,
+  adrRequiredForChange: true,
+  adrPath: "docs/adr/",
+} as const;
+
+export const TOOLTIP_CONTRACT = {
+  ...UI_CONTRACT_META,
+  contractVersion: UI_CONTRACT_VERSION,
+  primitiveVersion: UI_PRIMITIVE_VERSIONS.Tooltip,
+  category: "Tooltip",
+  canonical: [
+    "Tooltip",
+    "TruncatedTextTooltip",
+    "DisabledElementTooltip",
+    "OptionalTooltip",
+    "TooltipList",
+    "TooltipStatus",
+  ],
+  forbiddenImports: ["@radix-ui/react-tooltip", "@/components/design-system/tooltip"],
+  consumerImportPath: "@/components/ui",
+  forbiddenPatterns: {
+    fail: ["createPortal.*dsTooltipContent"],
+    warnThenFail: [
+      "group-hover:.*opacity",
+      "peer-hover:.*opacity",
+      "tooltip-content",
+      "tooltip-wrapper",
+    ],
+  },
+  tokenOnly: ["dsTooltipContent", "dsTooltipContentMultiline", "dsZTooltip"],
+} as const;
+
+export const LIST_CONTRACT = {
+  ...UI_CONTRACT_META,
+  contractVersion: UI_CONTRACT_VERSION,
+  category: "Lists",
+  tableLane: ["GestionaleListTable", "gestionaleListTableTd"],
+  settingsLane: ["SettingsListSection", "LIST_DIVIDER_UL", "LIST_ROW_SHELL"],
+  dropdownLane: ["GlobalSelect", "GlobalAnchoredMenu", "globalInputDropdownOptionClass"],
+  forbiddenInline: ["divide-y divide-[color:var(--cab-border)]"],
+  newCaseRequiresAdr: true,
+} as const;
+
+export const MENU_CONTRACT = {
+  ...UI_CONTRACT_META,
+  contractVersion: UI_CONTRACT_VERSION,
+  primitiveVersion: UI_PRIMITIVE_VERSIONS.GlobalAnchoredMenu,
+  category: "Overlay",
+  canonical: ["GlobalAnchoredMenu", "GlobalSelect"],
+  forbiddenLocalMenus: true,
+  consumerImportPath: "@/components/ui",
+} as const;
+
+/** Path substrings allowed to import design-system tooltip directly */
+export const UI_DS_IMPORT_ALLOWLIST = [
+  "components/ui/",
+  "components/design-system/",
+  "lib/ui/",
+  "lib/regression/",
+  "lib/lint/",
+  "e2e/",
+  "scripts/",
+] as const;
+
 /** Gap Tailwind ammessi su toolbar rows (6px, 8px, 10px). */
 export const TOOLBAR_ALLOWED_GAPS = ["gap-1.5", "gap-2", "gap-2.5", "gap-3"] as const;
 

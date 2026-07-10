@@ -1,7 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Tooltip } from "@/components/design-system";
+import { Tooltip } from "@/components/ui";
+
 import type { WorkshopScheduleFilters } from "@/lib/workshop-schedule/types";
 import {
   WORKSHOP_EVENT_TYPES,

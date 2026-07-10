@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import type { ChangeEvent, ReactNode } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
 import {
@@ -70,22 +71,10 @@ export function LavorazioniPageHeaderToolbar({
           logTitle="Storico modifiche lavorazioni"
           overflowActions={
             <>
-              <button
-                type="button"
-                className={`${dsPageToolbarBtn}${printBusy ? " !cursor-wait !opacity-100" : ""}`}
-                onClick={onPrint}
-                disabled={printBusy}
-                aria-busy={printBusy}
-                title={printBusy ? "Generazione PDF…" : "Stampa PDF lavorazioni in corso"}
-                aria-label={printBusy ? "Generazione PDF in corso" : "Stampa lavorazioni in corso"}
-              >
-                {printBusy ? (
-                  <LoadingSpinner size="sm" label="Generazione PDF…" />
-                ) : (
-                  <IconPrint />
-                )}
+              <Tooltip content={printBusy ? "Generazione PDF…" : "Stampa PDF lavorazioni in corso"}><button type="button" className={`${dsPageToolbarBtn}${printBusy ? " !cursor-wait !opacity-100" : ""}`} onClick={onPrint} disabled={printBusy} aria-busy={printBusy} aria-label={printBusy ? "Generazione PDF in corso" : "Stampa lavorazioni in corso"}>
+                {printBusy ? (<LoadingSpinner size="sm" label="Generazione PDF…"/>) : (<IconPrint />)}
                 {printBusy ? "Generazione PDF…" : "Stampa"}
-              </button>
+              </button></Tooltip>
               <button
                 type="button"
                 className={dsPageToolbarBtn}
@@ -168,22 +157,13 @@ export function LavorazioniListToolbar({
         <PageToolbar
           primaryAction={
             <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-2">
-              <button
-                type="button"
-                onClick={onOpenCreate}
-                onPointerEnter={onPrimeCreate}
-                className={dsPageToolbarCtaCompact}
-                disabled={mutPendingBlocking || !createdBy || !canEditWorkOrders}
-                title={
-                  !canEditWorkOrders
+              <Tooltip content={!canEditWorkOrders
                     ? READONLY_PERMISSION_HINT
                     : !createdBy
                       ? "Accedi per creare una lavorazione."
-                      : undefined
-                }
-              >
-                <PageToolbarCtaLabel short="+ Nuova" full="+ Nuova lavorazione" />
-              </button>
+                      : undefined}><button type="button" onClick={onOpenCreate} onPointerEnter={onPrimeCreate} className={dsPageToolbarCtaCompact} disabled={mutPendingBlocking || !createdBy || !canEditWorkOrders}>
+                <PageToolbarCtaLabel short="+ Nuova" full="+ Nuova lavorazione"/>
+              </button></Tooltip>
               <LavorazioniDigitalCaptureLauncher enabled={canEditWorkOrders} size="md" className="h-11 shrink-0" />
             </div>
           }

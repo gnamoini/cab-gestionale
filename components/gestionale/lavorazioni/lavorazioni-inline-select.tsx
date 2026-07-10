@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { Children, isValidElement, useMemo, type CSSProperties, type ReactNode } from "react";
 import {
   GlobalFixedListPillSelect,
@@ -226,16 +227,9 @@ export function LavorazioneCompletamentoDatePill({
 
   const pill =
     interactive ? (
-      <button
-        type="button"
-        title="Modifica data completamento"
-        disabled={disabled}
-        onClick={onClick}
-        className={`${statoPillShellClass()} ${widthClass} inline-flex touch-manipulation justify-center overflow-hidden ${contentClass} ${dsFocus} cursor-pointer disabled:cursor-not-allowed disabled:opacity-60`}
-        style={completamentoDatePillStyle}
-      >
+      <Tooltip content={"Modifica data completamento"}><button type="button" disabled={disabled} onClick={onClick} className={`${statoPillShellClass()} ${widthClass} inline-flex touch-manipulation justify-center overflow-hidden ${contentClass} ${dsFocus} cursor-pointer disabled:cursor-not-allowed disabled:opacity-60`} style={completamentoDatePillStyle}>
         {date}
-      </button>
+      </button></Tooltip>
     ) : (
       <LavorazioneReadOnlyPill
         label={date}
@@ -272,11 +266,11 @@ export function TablePillReadonly({
     ? `min-w-0 flex-1 whitespace-nowrap ${lavTablePillTextClass} text-inherit`
     : `min-w-0 flex-1 truncate ${lavTablePillTextClass} text-inherit`;
   return (
-    <div className={`${shellClass} overflow-hidden ${widthClass}`} style={shellStyle} title={title}>
+    <Tooltip content={title}><div className={`${shellClass} overflow-hidden ${widthClass}`} style={shellStyle}>
       <div className={`relative flex ${lavTablePillMinH} w-full items-center overflow-hidden rounded-[inherit] px-2 py-0.5`}>
         <span className={textClass}>{children}</span>
       </div>
-    </div>
+    </div></Tooltip>
   );
 }
 
@@ -342,22 +336,9 @@ export function AddettoSelectField({
 
   const widthClass = tablePillWidth ?? "w-full min-w-0";
   return (
-    <div
-      className={`group overflow-visible ${widthClass} ${disabled ? "opacity-60" : ""}`}
-      title={title}
-    >
-      <GlobalFixedListPillSelect
-        value={value}
-        onChange={onChange}
-        options={pillOptions}
-        ariaLabel={ariaLabel}
-        disabled={disabled}
-        title={title}
-        sheetTitle={ariaLabel}
-        shellClass={shellClass}
-        fallbackPillStyle={shellStyle}
-      />
-    </div>
+    <Tooltip content={title}><div className={`group overflow-visible ${widthClass} ${disabled ? "opacity-60" : ""}`}>
+      <GlobalFixedListPillSelect value={value} onChange={onChange} options={pillOptions} ariaLabel={ariaLabel} disabled={disabled} title={title} sheetTitle={ariaLabel} shellClass={shellClass} fallbackPillStyle={shellStyle}/>
+    </div></Tooltip>
   );
 }
 
@@ -412,52 +393,25 @@ export function InlineSelectField({
 
   if (tablePill) {
     return (
-      <div
-        className={`group ${shellOverflow} ${widthClass} ${disabled ? "opacity-60" : ""}`}
-        title={title}
-      >
-        <GlobalFixedListPillSelect
-          value={value}
-          onChange={onChange}
-          options={parsedOptions}
-          ariaLabel={ariaLabel}
-          disabled={disabled}
-          title={title}
-          shellClass={shellClass}
-          fallbackPillStyle={shellStyle}
-        />
-      </div>
+      <Tooltip content={title}><div className={`group ${shellOverflow} ${widthClass} ${disabled ? "opacity-60" : ""}`}>
+        <GlobalFixedListPillSelect value={value} onChange={onChange} options={parsedOptions} ariaLabel={ariaLabel} disabled={disabled} title={title} shellClass={shellClass} fallbackPillStyle={shellStyle}/>
+      </div></Tooltip>
     );
   }
 
   /** @deprecated Usare `tablePill` + GlobalFixedListPillSelect o GlobalFixedListPillSelect diretto. */
   return (
-    <div
-      className={`${shellClass} group overflow-hidden ${widthClass} ${disabled ? "opacity-60" : ""}`}
-      style={shellStyle}
-      title={title}
-    >
+    <Tooltip content={title}><div className={`${shellClass} group overflow-hidden ${widthClass} ${disabled ? "opacity-60" : ""}`} style={shellStyle}>
       <div className={`relative flex ${lavTablePillMinH} w-full items-stretch overflow-hidden rounded-[inherit]`}>
-          <select
-            className={
-              fullWidth || wide
-                ? `${selectPillInner} w-full whitespace-nowrap pr-8`
-                : selectPillInner
-            }
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            aria-label={ariaLabel}
-            disabled={disabled}
-          >
+          <select className={fullWidth || wide
+        ? `${selectPillInner} w-full whitespace-nowrap pr-8`
+        : selectPillInner} value={value} onChange={(e) => onChange(e.target.value)} aria-label={ariaLabel} disabled={disabled}>
             {children}
           </select>
-          <span
-            className="pointer-events-none absolute right-2 top-1/2 z-[1] -translate-y-1/2 text-current opacity-70 transition-opacity group-hover:opacity-100"
-            aria-hidden
-          >
+          <span className="pointer-events-none absolute right-2 top-1/2 z-[1] -translate-y-1/2 text-current opacity-100" aria-hidden>
             {pillChevron}
           </span>
       </div>
-    </div>
+    </div></Tooltip>
   );
 }

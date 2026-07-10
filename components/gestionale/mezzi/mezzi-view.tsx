@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MezziEditModal } from "@/components/gestionale/mezzi/mezzi-edit-modal";
@@ -454,18 +455,13 @@ export function MezziView() {
           <PageToolbar
             className="sm:mx-0"
             primaryAction={
-              <button
-                type="button"
-                onClick={() => {
-                  if (!canEditVehicles) return;
-                  setNuovoOpen(true);
-                }}
-                className={dsPageToolbarCtaCompact}
-                disabled={!canEditVehicles}
-                title={canEditVehicles ? "Registra un nuovo mezzo in anagrafica" : READONLY_PERMISSION_HINT}
-              >
-                <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo mezzo" />
-              </button>
+              <Tooltip content={canEditVehicles ? "Registra un nuovo mezzo in anagrafica" : READONLY_PERMISSION_HINT}><button type="button" onClick={() => {
+        if (!canEditVehicles)
+            return;
+        setNuovoOpen(true);
+    }} className={dsPageToolbarCtaCompact} disabled={!canEditVehicles}>
+                <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo mezzo"/>
+              </button></Tooltip>
             }
             search={
               <MezziSearchBar search={search} onSearch={setSearch} wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]" />

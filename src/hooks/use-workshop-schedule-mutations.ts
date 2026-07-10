@@ -13,6 +13,8 @@ import {
   dispatchGestionaleLocalMutation,
 } from "@/lib/sync/gestionale-sync-dispatch";
 import { markRecentLocalGestionaleMutation } from "@/lib/sync/recent-local-mutation";
+import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifecycle";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 import { workshopScheduleQueryKeys } from "@/src/services/domain/workshop-schedule-domain.queries";
 import {
@@ -25,21 +27,35 @@ type OptimisticCtx = {
   snapshots: ReturnType<typeof snapshotWorkshopScheduleQueries>;
 };
 
+function dispatchAgendaMutation(
+  queryClient: ReturnType<typeof useQueryClient>,
+  entityId: string,
+  eventType: "entity_updated" | "entity_deleted",
+) {
+  markRecentLocalGestionaleMutation(["workshop_schedule_events"], entityId);
+  dispatchGestionaleLocalMutation(queryClient, ["workshop_schedule_events"], [
+    cabSyncEventForEntity("workshop_schedule_events", entityId, eventType, "workshop_schedule_events"),
+  ]);
+}
+
 export function useWorkshopScheduleMutations() {
   const queryClient = useQueryClient();
-  const invalidateKeys = [workshopScheduleQueryKeys.root] as const;
+  const gestToast = useGestionaleToast();
 
   const upsertMutation = useServiceMutation(
     (input: WorkshopScheduleUpsertInput) => workshopScheduleEntry.upsert(input),
     {
-      invalidateQueryKeys: [invalidateKeys],
-      onSuccess: (data) => {
-        if (data?.id) {
-          markRecentLocalGestionaleMutation(["workshop_schedule_events"], data.id);
-          dispatchGestionaleLocalMutation(queryClient, ["workshop_schedule_events"], [
-            cabSyncEventForEntity("workshop_schedule_events", data.id, "entity_updated", "workshop_schedule_events"),
-          ]);
-        }
+      onSuccess: async (data) => {
+        if (!data?.id) return;
+        await traceMutationLifecycle(
+          { entityType: "workshop_schedule_event", entityId: data.id, operation: "upsert" },
+          async () => {
+            dispatchAgendaMutation(queryClient, data.id, "entity_updated");
+          },
+        );
+      },
+      onError: (err) => {
+        gestToast.errorOnce("agenda-upsert", err, { action: "create" });
       },
     },
   );
@@ -70,25 +86,26 @@ export function useWorkshopScheduleMutations() {
         );
         return { snapshots } satisfies OptimisticCtx;
       },
-      onSuccess: (data) => {
-        if (data?.id) {
-          markRecentLocalGestionaleMutation(["workshop_schedule_events"], data.id);
-          dispatchGestionaleLocalMutation(queryClient, ["workshop_schedule_events"], [
-            cabSyncEventForEntity("workshop_schedule_events", data.id, "entity_updated", "workshop_schedule_events"),
-          ]);
-        }
-        void queryClient.invalidateQueries({ queryKey: workshopScheduleQueryKeys.root });
+      onSuccess: async (data) => {
+        if (!data?.id) return;
+        await traceMutationLifecycle(
+          { entityType: "workshop_schedule_event", entityId: data.id, operation: "patchTimes" },
+          async () => {
+            dispatchAgendaMutation(queryClient, data.id, "entity_updated");
+          },
+        );
       },
-      onError: (_e, _input, ctx) => {
+      onError: (err, _input, ctx) => {
         const c = ctx as OptimisticCtx | undefined;
-        if (!c?.snapshots) return;
-        rollbackWorkshopScheduleSnapshots((key, data) => queryClient.setQueryData(key, data), c.snapshots);
+        if (c?.snapshots) {
+          rollbackWorkshopScheduleSnapshots((key, data) => queryClient.setQueryData(key, data), c.snapshots);
+        }
+        gestToast.errorOnce("agenda-patch-times", err, { action: "update" });
       },
     },
   );
 
   const deleteMutation = useServiceMutation((id: string) => workshopScheduleEntry.softDelete(id), {
-    invalidateQueryKeys: [invalidateKeys],
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: workshopScheduleQueryKeys.root });
       const snapshots = snapshotWorkshopScheduleQueries(() =>
@@ -102,16 +119,20 @@ export function useWorkshopScheduleMutations() {
       );
       return { snapshots } satisfies OptimisticCtx;
     },
-    onSuccess: (_data, id) => {
-      markRecentLocalGestionaleMutation(["workshop_schedule_events"], id);
-      dispatchGestionaleLocalMutation(queryClient, ["workshop_schedule_events"], [
-        cabSyncEventForEntity("workshop_schedule_events", id, "entity_deleted", "workshop_schedule_events"),
-      ]);
+    onSuccess: async (_data, id) => {
+      await traceMutationLifecycle(
+        { entityType: "workshop_schedule_event", entityId: id, operation: "delete" },
+        async () => {
+          dispatchAgendaMutation(queryClient, id, "entity_deleted");
+        },
+      );
     },
-    onError: (_e, _id, ctx) => {
+    onError: (err, _id, ctx) => {
       const c = ctx as OptimisticCtx | undefined;
-      if (!c?.snapshots) return;
-      rollbackWorkshopScheduleSnapshots((key, data) => queryClient.setQueryData(key, data), c.snapshots);
+      if (c?.snapshots) {
+        rollbackWorkshopScheduleSnapshots((key, data) => queryClient.setQueryData(key, data), c.snapshots);
+      }
+      gestToast.errorOnce("agenda-delete", err, { action: "delete" });
     },
   });
 

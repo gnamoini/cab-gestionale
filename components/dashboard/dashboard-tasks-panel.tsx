@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/design-system";
 import {
@@ -33,7 +34,7 @@ const noteListInputClass = `${dsInput} min-w-0 flex-1 border-transparent bg-tran
 
 const noteCheckboxClass = `h-4 w-4 shrink-0 cursor-pointer rounded border-[color:var(--cab-border-strong)] text-[color:var(--cab-primary)] focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)] ${dsFocus}`;
 
-const noteActionBtnClass = `inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] text-[color:var(--cab-text-muted)] opacity-80 transition-[opacity,color,background-color] duration-150 hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] group-hover:opacity-100 ${dsFocus}`;
+const noteActionBtnClass = `inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] text-[color:var(--cab-text-muted)] opacity-90 transition-[opacity,color,background-color] duration-150 hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] hover:opacity-100 ${dsFocus}`;
 
 function IconPencil({ className = noteActionGlyph }: { className?: string }) {
   return (
@@ -117,30 +118,21 @@ function DashboardNoteRow({
           onKeyDown={(e) => handleSettingsInlineEditKeyDown(e, initialTextRef.current, () => setEditing(false))}
         />
       ) : (
-        <span
-          className={`min-w-0 flex-1 break-words px-0.5 text-sm leading-snug ${task.done ? "text-[color:var(--cab-text-muted)] line-through" : "text-[color:var(--cab-text)]"}`}
-          title={task.text}
-        >
+        <Tooltip content={task.text}><span className={`min-w-0 flex-1 break-words px-0.5 text-sm leading-snug ${task.done ? "text-[color:var(--cab-text-muted)] line-through" : "text-[color:var(--cab-text)]"}`}>
           {task.text}
-        </span>
+        </span></Tooltip>
       )}
 
       {!readOnly ? (
         <div className="flex shrink-0 items-center gap-0.5" role="group" aria-label="Azioni nota">
           {!editing ? (
-            <button type="button" className={noteActionBtnClass} title="Modifica" aria-label={`Modifica ${task.text}`} onClick={startEdit}>
+            <Tooltip content={"Modifica"}><button type="button" className={noteActionBtnClass} aria-label={`Modifica ${task.text}`} onClick={startEdit}>
               <IconPencil />
-            </button>
+            </button></Tooltip>
           ) : null}
-          <button
-            type="button"
-            className={`${noteActionBtnClass} hover:text-[color:var(--cab-danger)]`}
-            title="Elimina"
-            aria-label={`Elimina ${task.text}`}
-            onClick={() => onRemove(task)}
-          >
+          <Tooltip content={"Elimina"}><button type="button" className={`${noteActionBtnClass} hover:text-[color:var(--cab-danger)]`} aria-label={`Elimina ${task.text}`} onClick={() => onRemove(task)}>
             <IconTrash />
-          </button>
+          </button></Tooltip>
         </div>
       ) : null}
     </li>

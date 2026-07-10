@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/ui";
 import { memo, useCallback, useMemo, useState } from "react";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 import { dsFocus } from "@/lib/ui/design-system";
@@ -113,26 +114,18 @@ export const GlobalMultiSelect = memo(function GlobalMultiSelect({
               const chipTitle = s.title ?? chipLabel;
               return (
                 <span key={s.value} role="listitem" className={globalMultiSelectChipClass}>
-                  <span className="truncate" title={chipTitle}>
+                  <Tooltip content={chipTitle}><span className="truncate">
                     {chipLabel}
-                  </span>
-                  <button
-                    type="button"
-                    title={`Rimuovi ${chipTitle}`}
-                    aria-label={`Rimuovi ${chipTitle}`}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemove(s.value);
-                    }}
-                    className={`${dsFocus} ${globalMultiSelectChipRemoveClass}`}
-                    disabled={disabled}
-                  >
+                  </span></Tooltip>
+                  <Tooltip content={`Rimuovi ${chipTitle}`}><button type="button" aria-label={`Rimuovi ${chipTitle}`} onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    }} onClick={(e) => {
+        e.stopPropagation();
+        onRemove(s.value);
+    }} className={`${dsFocus} ${globalMultiSelectChipRemoveClass}`} disabled={disabled}>
                     <span aria-hidden>×</span>
-                  </button>
+                  </button></Tooltip>
                 </span>
               );
             })}
