@@ -22,6 +22,12 @@ assert.match(sql, /expiration/);
 assert.match(sql, /document-capture/);
 assert.match(sql, /rbac_user_company_id/);
 
+const v41Migration = path.join(ROOT, "supabase/migrations/20260910151000_document_capture_v41_model.sql");
+assert.ok(fs.existsSync(v41Migration));
+const v41Sql = fs.readFileSync(v41Migration, "utf8");
+assert.match(v41Sql, /document_model jsonb/);
+assert.match(v41Sql, /pipeline_state jsonb/);
+
 const permSql = fs.readFileSync(migrationPerm, "utf8");
 assert.match(permSql, /document_capture/);
 

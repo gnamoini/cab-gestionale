@@ -6,6 +6,7 @@ import { HubIconPencil, HubIconPlus, HubIconTrash } from "@/components/design-sy
 import type { DashboardPromemoriaRow } from "@/lib/dashboard/dashboard-promemoria-types";
 import { formatRecurrenceSummary } from "@/lib/dashboard/dashboard-promemoria-recurrence";
 import { formatPromemoriaEventTimeDisplay } from "@/lib/dashboard/dashboard-promemoria-reminder";
+import { formatDayHeading } from "@/lib/dashboard/format-day-heading";
 import {
   dsTableActionBtnDanger,
   dsTableActionBtnSecondary,
@@ -13,17 +14,6 @@ import {
   dsTypoCaption,
   dsTypoSmall,
 } from "@/lib/ui/design-system";
-
-function formatDayHeading(ymd: string): string {
-  const [y, m, d] = ymd.split("-").map(Number);
-  const date = new Date(y, m - 1, d, 12, 0, 0, 0);
-  return date.toLocaleDateString("it-IT", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
 
 function PromemoriaRow({
   row,

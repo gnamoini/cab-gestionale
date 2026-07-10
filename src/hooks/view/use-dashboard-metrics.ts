@@ -23,7 +23,9 @@ import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
+import { isLavorazioneInCorso } from "@/lib/lavorazioni/archived";
 import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
+import type { LogModificaRow } from "@/src/types/supabase-tables";
 import { useRealtimeStatus } from "@/src/context/realtime-status-context";
 import { MAGAZZINO_DASHBOARD_KPI_QUERY_KEY } from "@/lib/magazzino/dashboard-mag-query-keys";
 
@@ -54,14 +56,18 @@ export function useDashboardMetrics() {
 
   const globalOpts = useGlobalOptions({ debugTag: "useDashboardMetrics" });
 
+  // ponytail: report slice (attive + archivio) — KPI brief settimanale; widget filtra in corso lato selector.
   const lavQuery = useLavorazioniReportSlice({
-    archived: false,
     enabled: !staging,
     staleTime: viewOpts.staleTime,
   });
-  const schedeLavorazioneIds = useMemo(
-    () => pickDashboardPriorityLavorazioneIds(lavQuery.data ?? [], DASHBOARD_SCHEde_PREFETCH_LIMIT),
+  const lavActiveRows = useMemo(
+    () => (lavQuery.data ?? []).filter((r) => !r.deleted_at && isLavorazioneInCorso(r)),
     [lavQuery.data],
+  );
+  const schedeLavorazioneIds = useMemo(
+    () => pickDashboardPriorityLavorazioneIds(lavActiveRows, DASHBOARD_SCHEde_PREFETCH_LIMIT),
+    [lavActiveRows],
   );
   const { store: schedeStore } = useSchedeBundlesQuery(!staging, {
     lavorazioneIds: schedeLavorazioneIds,
@@ -83,12 +89,12 @@ export function useDashboardMetrics() {
 
   const lavRows = useMemo(
     () =>
-      computeDashboardLavWidgetRows(lavQuery.data ?? [], undefined, {
+      computeDashboardLavWidgetRows(lavActiveRows, undefined, {
         schedeStore,
       }),
-    [lavQuery.data, schedeStore],
+    [lavActiveRows, schedeStore],
   );
-  const lavStats = useMemo(() => computeDashboardLavWidgetStats(lavQuery.data ?? []), [lavQuery.data]);
+  const lavStats = useMemo(() => computeDashboardLavWidgetStats(lavActiveRows), [lavActiveRows]);
 
   const ricambiById = useMemo(() => {
     const map = new Map<string, (typeof magQuery.data)[number]>();
@@ -141,11 +147,16 @@ export function useDashboardMetrics() {
     trackRuntimeEvent(RuntimeEvents.dashboardLoadDuration, { durationMs });
   }, [staging, isLoading, isError]);
 
+  const magLogs = (magLogsQ.data ?? []) as readonly LogModificaRow[];
+  const movLogs = (movLogsQ.data ?? []) as readonly LogModificaRow[];
+
   return {
     staging,
     globalOpts,
     lavQuery,
     magQuery,
+    magLogs,
+    movLogs,
     lavRows,
     lavStats,
     magStats,

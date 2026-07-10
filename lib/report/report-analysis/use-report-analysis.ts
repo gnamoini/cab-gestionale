@@ -54,6 +54,7 @@ export function useReportAnalysis(input: UseReportAnalysisInput) {
     perf,
     integrityView,
     tops,
+    diaryEntries,
     snapshotFingerprint,
     perfReady,
   } = input;
@@ -81,8 +82,9 @@ export function useReportAnalysis(input: UseReportAnalysisInput) {
       perf,
       integrityView,
       tops,
+      diaryEntries,
     });
-  }, [perfReady, perf, preset, compareMode, filterRange, compareRange, model, integrityView, tops]);
+  }, [perfReady, perf, preset, compareMode, filterRange, compareRange, model, integrityView, tops, diaryEntries]);
 
   const [status, setStatus] = useState<ReportAnalysisStatus>("idle");
   const [data, setData] = useState<ReportAnalysisOutput | null>(null);

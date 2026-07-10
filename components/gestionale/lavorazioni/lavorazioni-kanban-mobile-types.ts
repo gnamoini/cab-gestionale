@@ -1,3 +1,4 @@
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
@@ -18,6 +19,7 @@ export type KanbanMobileSection = {
 export type KanbanCardMobileProps = {
   row: LavorazioneListRow;
   schedeStore: LavorazioneSchedeStore;
+  addettiRecords?: readonly AddettoRecord[];
   prioritaColors: Record<string, string | undefined>;
   addettoColors: Record<string, string | undefined>;
   flash: boolean;

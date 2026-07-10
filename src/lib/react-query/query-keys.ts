@@ -33,6 +33,8 @@ export const QK = {
   authLogs: ["auth_logs"] as const,
   /** Dati storici manuali Report lavorazioni. */
   reportManualEntries: ["report_manual_entries"] as const,
+  /** Diario operativo dashboard (appunti giornalieri). */
+  operationalDiary: ["operational_diary_entries"] as const,
   /** Registry dipendenti timesheet. */
   dipendentiTimesheetEmployees: ["dipendenti_timesheet_employees"] as const,
   /** Dipendente IDs con almeno una entry timesheet (storico). */

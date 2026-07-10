@@ -52,12 +52,12 @@ const emptySchede: LavorazioneSchedeStore = {};
     completamentoA: "2026-12-31",
   };
   assert.equal(
-    lavRowMatchesAdvancedFilters(row, filters, emptySchede, "", "in_corso"),
+    lavRowMatchesAdvancedFilters(row, filters, emptySchede, "in_corso"),
     true,
     "in_corso rows ignore completamento filter",
   );
   assert.equal(
-    lavRowMatchesAdvancedFilters(row, filters, emptySchede, "", "archivio"),
+    lavRowMatchesAdvancedFilters(row, filters, emptySchede, "archivio"),
     false,
     "archivio rows without completion date are excluded",
   );
@@ -88,7 +88,7 @@ const emptySchede: LavorazioneSchedeStore = {};
   const bundle: ClientPortalRowBundle = { row, fields };
   const filters = { ...CLIENT_PORTAL_FILTERS_EMPTY, search: "xyz-unique" };
   assert.equal(
-    clientPortalBundleMatchesFilters(bundle, filters, emptySchede, "", "in_corso"),
+    clientPortalBundleMatchesFilters(bundle, filters, emptySchede, "in_corso"),
     true,
   );
 }
@@ -96,7 +96,7 @@ const emptySchede: LavorazioneSchedeStore = {};
 // Ingresso range: no active date filters passes even with missing ingresso on row
 {
   const row = sampleRow({ data_ingresso: null, created_at: "" });
-  assert.equal(lavRowMatchesPageFilters({ ...row, note: "" }, { ...CLIENT_PORTAL_FILTERS_EMPTY, search: "" }, emptySchede, "", "in_corso"), true);
+  assert.equal(lavRowMatchesPageFilters({ ...row, note: "" }, { ...CLIENT_PORTAL_FILTERS_EMPTY, search: "" }, emptySchede, "in_corso"), true);
 }
 
 // Intervallo invertito: normalizzato al confronto
@@ -108,7 +108,7 @@ const emptySchede: LavorazioneSchedeStore = {};
     ingressoA: "2026-05-01",
   };
   assert.equal(
-    lavRowMatchesAdvancedFilters(row, filters, emptySchede, "", "in_corso"),
+    lavRowMatchesAdvancedFilters(row, filters, emptySchede, "in_corso"),
     true,
     "inverted ingresso range still matches mid-month row",
   );
@@ -124,12 +124,12 @@ const emptySchede: LavorazioneSchedeStore = {};
     completamentoA: "2026-12-31",
   };
   assert.equal(
-    lavRowMatchesPageFilters(row, pageFilters, emptySchede, "", "in_corso"),
+    lavRowMatchesPageFilters(row, pageFilters, emptySchede, "in_corso"),
     true,
     "page filter in_corso ignores completamento",
   );
   assert.equal(
-    lavRowMatchesPageFilters(row, pageFilters, emptySchede, "", "archivio"),
+    lavRowMatchesPageFilters(row, pageFilters, emptySchede, "archivio"),
     false,
     "page filter archivio applies completamento",
   );
@@ -147,7 +147,7 @@ const emptySchede: LavorazioneSchedeStore = {};
   const fields = buildClientPortalRowFields(row, schede, [], []);
   const bundle: ClientPortalRowBundle = { row, fields };
   assert.equal(
-    clientPortalBundleMatchesFilters(bundle, CLIENT_PORTAL_FILTERS_EMPTY, schede, "", "in_corso"),
+    clientPortalBundleMatchesFilters(bundle, CLIENT_PORTAL_FILTERS_EMPTY, schede, "in_corso"),
     true,
     "malformed scheda ingresso date must not drop row when filters empty",
   );

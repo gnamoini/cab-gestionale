@@ -9,6 +9,7 @@ import {
   verifyServerPageRead,
   verifyServerPageWrite,
 } from "@/src/lib/auth/server-permission-guards";
+import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 export const runtime = "nodejs";
 
@@ -37,13 +38,36 @@ export async function POST(request: Request) {
   }
 
   try {
-    const doc = await fetchDocumentoForImport(parsed.data.documentoId);
+    if (parsed.data.importFileId) {
+      const sb = await createSupabaseServerUserClient();
+      const { data: fileRow, error } = await sb
+        .from("import_files")
+        .select("id, file_name, meta")
+        .eq("id", parsed.data.importFileId)
+        .maybeSingle();
+      if (error || !fileRow) throw new Error("File import non trovato");
+      const meta =
+        fileRow.meta && typeof fileRow.meta === "object" && !Array.isArray(fileRow.meta)
+          ? (fileRow.meta as Record<string, unknown>)
+          : {};
+      const marcaDefault = typeof meta.marcaDefault === "string" ? meta.marcaDefault : "";
+      const result = await executeListinoImport({
+        documentoId: parsed.data.importFileId,
+        documentoNome: String(fileRow.file_name),
+        batchId: parsed.data.batchId,
+        marcaDefault,
+        decisions: parsed.data.decisions,
+      });
+      return NextResponse.json(result);
+    }
+
+    const doc = await fetchDocumentoForImport(parsed.data.documentoId!);
     if (doc.id !== parsed.data.documentoId) {
       return NextResponse.json({ error: "Documento non valido" }, { status: 400 });
     }
 
     const result = await executeListinoImport({
-      documentoId: parsed.data.documentoId,
+      documentoId: parsed.data.documentoId!,
       documentoNome: doc.nome,
       batchId: parsed.data.batchId,
       marcaDefault: doc.marca,

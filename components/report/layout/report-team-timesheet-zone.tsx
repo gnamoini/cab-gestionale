@@ -80,6 +80,8 @@ export function ReportTeamTimesheetZone({
       subtitle={`KPI dipendenti — ${kpi.periodLabel}`}
       collapsible
       defaultCollapsed={false}
+      persistScope="report"
+      persistKey="team"
       className={reportZoneShellClass}
     >
       {content}

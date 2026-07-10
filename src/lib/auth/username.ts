@@ -1,10 +1,10 @@
+import { EMAIL_RE } from "@/lib/validation/email";
+
 /** Regole nome utente login (allineate a `profiles_username_format`). */
 export const USERNAME_MIN_LEN = 3;
 export const USERNAME_MAX_LEN = 32;
 
 const USERNAME_RE = /^[a-z0-9][a-z0-9._-]*[a-z0-9]$/;
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export type LoginIdentifierKind = "email" | "username" | "empty" | "invalid";
 

@@ -313,6 +313,10 @@ html {
   animation: none;
 }
 
+.cab-nav-drawer-panel.cab-nav-drawer-edge-opening {
+  animation: none;
+}
+
 .cab-nav-drawer-panel.cab-nav-drawer-snap-back {
   animation: none;
   transition: transform var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease);

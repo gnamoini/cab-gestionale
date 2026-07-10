@@ -46,6 +46,14 @@ assert.equal(filtered.rows.length, 1);
 assert.equal(filtered.rows[0]!.year, 2025);
 assert.equal(filtered.rows[0]!.total, 13);
 assert.equal(filtered.rows[0]!.months[0], 10);
+assert.deepEqual(filtered.manualHistoryYears, []);
+
+const manualKeys = new Set(["2024-01", "2024-06"]);
+const withManual = applyYearMatrixFilterRange(baseRows, q1_2025, manualKeys);
+assert.deepEqual(withManual.rows.map((r) => r.year), [2024, 2025]);
+assert.equal(withManual.rows[0]!.total, 100);
+assert.equal(withManual.rows[1]!.total, 13);
+assert.deepEqual(withManual.manualHistoryYears, [2024]);
 
 const spanYears = {
   start: startOfLocalDay(new Date(2024, 10, 1)),

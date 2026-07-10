@@ -17,6 +17,8 @@ export function ReportFleetZone() {
       subtitle="Disponibilità, fermi e guasti"
       collapsible
       defaultCollapsed={false}
+      persistScope="report"
+      persistKey="fleet"
       className={reportZoneShellClass}
     >
       {perfLoading || !perf ? (

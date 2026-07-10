@@ -15,11 +15,13 @@ import { LavorazioneIngressoDateCell } from "@/components/gestionale/lavorazioni
 import { TablePillReadonly } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import {
   addettoPillShellClassDynamic,
+  addettoPillShellStyleForName,
   prioritaLabel,
   prioritaPillShellClassDynamic,
+  prioritaPillShellStyle,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import { lavorazioneAddettoNomeKey } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import {
   findAccettazioneColumnId,
   isAttesaPreventivoStato,
@@ -183,11 +185,12 @@ const KanbanCard = memo(function KanbanCard({
   const utilizzatore = utilizzatoreLabel(row, schedeStore);
   const identLines = mezzoIdentLines(row, schedeStore);
   const addetto = resolveAddettoDisplayLabel(row, { schedeStore, addettiRecords });
+  const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, undefined, addettiRecords);
   const p = row.priorita as PrioritaLavorazione;
   const prioLav = p as PrioritaLav;
   const prioVisual = kanbanCardPriorityVisual(prioLav, prioritaColors as Partial<Record<PrioritaLav, string>>);
   const prioHex = prioritaDisplayColor(prioLav, prioritaColors);
-  const addettoHex = addettoDisplayColor(addetto, addettoColors as Record<string, string>);
+  const addettoPillStyle = addettoPillShellStyleForName(addettoKey, addettoColors);
   const note = lavorazioneNoteOperative(row, schedeStore);
 
   return (
@@ -241,7 +244,7 @@ const KanbanCard = memo(function KanbanCard({
         <div className="flex shrink-0 flex-col items-end gap-1">
           <TablePillReadonly
             shellClass={prioritaPillShellClassDynamic()}
-            shellStyle={readablePillStyleFromHex(prioHex)}
+            shellStyle={prioritaPillShellStyle(prioHex)}
             title={prioritaLabel(p)}
             fitContent
           >
@@ -249,7 +252,7 @@ const KanbanCard = memo(function KanbanCard({
           </TablePillReadonly>
           <TablePillReadonly
             shellClass={addettoPillShellClassDynamic()}
-            shellStyle={readablePillStyleFromHex(addettoHex)}
+            shellStyle={addettoPillStyle}
             title={addetto}
             fitContent
           >
@@ -592,6 +595,7 @@ export function LavorazioniKanbanView({
           sections={mobileSections}
           statiOpts={statiOpts}
           schedeStore={schedeStore}
+          addettiRecords={addettiRecords}
           prioritaColors={prioritaColors}
           addettoColors={addettoColors}
           flashRowId={flashRowId}

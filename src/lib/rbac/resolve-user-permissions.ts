@@ -2,10 +2,9 @@ import {
   CAPABILITIES,
   type Capability,
   type CanonicalRole,
-  CANONICAL_ROLES,
-  LEGACY_ROLE_MAP,
   ROLE_LABELS,
 } from "@/lib/rbac";
+import { normalizeRoleKey } from "@/src/lib/rbac/normalize-role-key";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
 import type { EffectiveModulePermission } from "@/src/lib/permissions/effective-permissions";
@@ -31,12 +30,6 @@ export type ResolvedPermissions = {
   capabilities: Record<Capability, boolean>;
   modules: Record<GestionalePermissionModule, EffectiveModulePermission>;
 };
-
-function normalizeRoleKey(raw: string | null | undefined): string {
-  if (!raw) return "guest";
-  if ((CANONICAL_ROLES as readonly string[]).includes(raw)) return raw;
-  return LEGACY_ROLE_MAP[raw] ?? "guest";
-}
 
 function roleAllows(rolePermissionKeys: readonly string[], key: string): boolean {
   return rolePermissionKeys.includes(key);

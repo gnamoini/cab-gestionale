@@ -22,7 +22,7 @@ assert.match(mod, /LOOP_SUSPECT/);
 assert.match(mod, /LOOP_CONFIRMED/);
 assert.match(mod, /__cabBootInvestigation/);
 
-assert.match(read("components/app-providers.tsx"), /BootInvestigationMount/);
+assert.match(read("components/app-providers-gestionale.tsx"), /BootInvestigationMount/);
 assert.match(read("src/providers/query-provider.tsx"), /trackQueryEvent/);
 assert.match(read("context/auth-context.tsx"), /trackStoreUpdate\("auth.status"/);
 assert.match(read("src/middleware/proxy-handler.ts"), /logBootServer\("REDIRECT"/);

@@ -111,13 +111,6 @@ const INVENTORY: MigrationExpect[] = [
     migrated: true,
     patterns: [/runButtonSubmit/],
   },
-  // C — legacy (shadow / freeze)
-  {
-    rel: "components/gestionale/lavorazioni/lavorazioni-modals.tsx",
-    category: "C",
-    migrated: false,
-    patterns: [/NewLavorazioneModal/],
-  },
 ];
 
 for (const item of INVENTORY) {

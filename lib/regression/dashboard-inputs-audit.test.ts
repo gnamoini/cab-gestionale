@@ -15,7 +15,7 @@ const securityView = read("components/dashboard/security-dashboard-view.tsx");
 const securityTable = read("components/dashboard/security/security-users-table.tsx");
 const securityCreate = read("components/dashboard/security-create-user-modal.tsx");
 const promemoriaForm = read("components/dashboard/promemoria/dashboard-promemoria-form-modal.tsx");
-const tasksPanel = read("components/dashboard/dashboard-tasks-panel.tsx");
+const tasksPanel = read("components/dashboard/dashboard-diary-panel.tsx");
 
 assert.match(securityView, /GlobalDatePickerYmd/);
 assert.doesNotMatch(securityView, /type="date"/);
@@ -32,7 +32,7 @@ assert.match(promemoriaForm, /GlobalDatePickerYmd/);
 assert.match(promemoriaForm, /htmlFor=\{titleFieldId\}/);
 assert.match(promemoriaForm, /id=\{titleFieldId\}/);
 
-assert.match(tasksPanel, /maxLength=\{500\}/);
-assert.match(tasksPanel, /break-words/);
+assert.match(tasksPanel, /OPERATIONAL_DIARY_BODY_MAX|maxLength/);
+assert.match(tasksPanel, /break-words|whitespace-pre-wrap/);
 
 console.log("dashboard-inputs-audit.test.ts OK");

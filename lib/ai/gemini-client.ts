@@ -1,4 +1,4 @@
-﻿import "server-only";
+import "server-only";
 
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
@@ -68,10 +68,32 @@ export function isGeminiAuthError(error: unknown): boolean {
   );
 }
 
+export function isGeminiQuotaError(error: unknown): boolean {
+  const text = error instanceof Error ? error.message : String(error);
+  const upper = text.toUpperCase();
+  return (
+    upper.includes("429") ||
+    upper.includes("RESOURCE_EXHAUSTED") ||
+    upper.includes("QUOTA") ||
+    upper.includes("RATE LIMIT") ||
+    upper.includes("TOO MANY REQUESTS")
+  );
+}
+
+export const GEMINI_QUOTA_ERROR_HINT =
+  "Limite richieste o quota Gemini raggiunta. Attendi qualche minuto, riduci le pagine del PDF o usa Excel/CSV.";
+
 /** Modello Gemini — null se API key assente. */
 export function getGeminiReportModel() {
   const apiKey = getGeminiApiKey();
   if (!apiKey) return null;
   const google = createGoogleGenerativeAI({ apiKey });
   return google(GEMINI_REPORT_MODEL_ID);
+}
+
+/** Modello Gemini — throw se API key assente (per generateObject / generateText). */
+export function requireGeminiReportModel() {
+  const model = getGeminiReportModel();
+  if (!model) throw new Error(GEMINI_NOT_CONFIGURED_MESSAGE);
+  return model;
 }

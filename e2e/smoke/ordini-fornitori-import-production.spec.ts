@@ -32,6 +32,7 @@ test("ordini fornitori import upload analyze abandon smoke", async ({ page, requ
   const created = await createOrdineImportSmokeImportFile(request);
   if (!created.ok) {
     test.skip(true, `smoke import file setup: ${created.message}`);
+    throw new Error("smoke import file setup failed");
   }
 
   const analyzeRes = await request.post("/api/ordini-fornitori/import/analyze", {

@@ -87,14 +87,13 @@ export default function ReportLavorazioniSectionView(props: DomainReportSectionP
       <ReportSection
         id="report-lav-matrix"
         title="Matrice lavorazioni"
-        subtitle="Matrice annuale, previsione e storico manuale"
+        subtitle="Matrice annuale e previsione"
         defaultCollapsed
       >
         <ReportMatrix title="Heatmap annuale">
           <ReportLavorazioniSection
             attive={props.attive}
             completate={props.completate}
-            manualEntries={props.manualEntries}
             anchor={props.anchor}
             filterRange={props.range}
             compareDetail={props.compareDetail}

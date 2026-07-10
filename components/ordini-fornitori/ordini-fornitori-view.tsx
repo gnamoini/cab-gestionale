@@ -10,7 +10,12 @@ import {
   type GlobalTableSortPhase,
 } from "@/components/gestionale/global-table";
 import { GestionaleAiActionButton } from "@/components/design-system/gestionale-ai-action-button";
+import { useAuthUserId } from "@/context/auth-context";
 import { ShellCard } from "@/components/gestionale/shell-card";
+import {
+  collapsibleExpandedBoolPref,
+  useCollapsiblePreference,
+} from "@/lib/ui/collapsible-prefs";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { GlobalDatePickerYmd, GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
@@ -143,6 +148,7 @@ export function OrdiniFornitoriView({
   canRead: boolean;
   canWrite: boolean;
 }) {
+  const userId = useAuthUserId();
   const qc = useQueryClient();
   const gestToast = useGestionaleToast();
   const { records, isLoading, isError, refetch } = useOrdiniFornitoriQuery(canRead);
@@ -154,7 +160,9 @@ export function OrdiniFornitoriView({
     return () => window.clearTimeout(t);
   }, [searchInput]);
   const [filters, setFilters] = useState<OrdiniFornitoriPageFilters>(ORDINI_FORNITORI_FILTERS_EMPTY);
-  const [filtriEspansi, setFiltriEspansi] = useState(false);
+  const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
+    collapsibleExpandedBoolPref(false, { scope: "ordini-fornitori", key: "filters", userId }),
+  );
   const [sortColumn, setSortColumn] = useState<OrdineFornitoreSortKey | null>(null);
   const [sortPhase, setSortPhase] = useState<GlobalTableSortPhase>("natural");
   const [editor, setEditor] = useState<{

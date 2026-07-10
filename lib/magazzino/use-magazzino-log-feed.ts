@@ -1,5 +1,3 @@
-"use client";
-
 import { useMemo } from "react";
 import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import {
@@ -16,7 +14,6 @@ import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
 import type { LogModificaAutoreSource } from "@/lib/gestionale-log/log-modifiche-view-model";
-import type { LogModificaRow, LogModificaWithProfileRow } from "@/src/types/supabase-tables";
 
 const LOCAL_LOG_ID_PREFIX = "log-";
 
@@ -27,27 +24,30 @@ export function useMagazzinoLogFeed(opts: {
   prodotti: readonly RicambioMagazzino[];
   authorName: string;
   userId: string | null;
+  enabled?: boolean;
 }) {
+  const enabled = opts.enabled ?? true;
   const gestOpts = useGestionaleQueryOpts();
   const prodottiById = useMemo(() => new Map(opts.prodotti.map((p) => [p.id, p])), [opts.prodotti]);
 
   const magLogsQ = useLogListQuery(
     { entita: "magazzino_ricambi", limit: LOG_MODIFICHE_RETENTION_PER_ENTITA },
-    gestOpts,
+    { ...gestOpts, enabled },
   );
   const movLogsQ = useLogListQuery(
     { entita: "movimenti_ricambi", limit: LOG_MODIFICHE_RETENTION_PER_ENTITA },
-    gestOpts,
+    { ...gestOpts, enabled },
   );
 
   // Invalidation via GestionaleRealtimeBridge → dispatchGestionaleAction (log_modifiche / magazzino tables).
 
   const serverRows = useMemo(
-    () => [...(magLogsQ.data ?? []), ...(movLogsQ.data ?? [])],
-    [magLogsQ.data, movLogsQ.data],
+    () => (enabled ? [...(magLogsQ.data ?? []), ...(movLogsQ.data ?? [])] : []),
+    [enabled, magLogsQ.data, movLogsQ.data],
   );
 
   const serverItems = useMemo((): MagazzinoLogFeedItem[] => {
+    if (!enabled) return [];
     const resolveAutore = (row: LogModificaAutoreSource) =>
       logAutoreLabel(row, opts.userId, opts.authorName);
 
@@ -72,14 +72,15 @@ export function useMagazzinoLogFeed(opts: {
       vm: entry.vm,
       atMs: new Date(entry.row.created_at).getTime(),
     }));
-  }, [serverRows, opts.authorName, opts.userId, prodottiById]);
+  }, [enabled, serverRows, opts.authorName, opts.userId, prodottiById]);
 
   const feed = useMemo(
-    () => mergeMagazzinoLogFeed(opts.localEntries, serverItems, serverRows),
-    [opts.localEntries, serverItems, serverRows],
+    () => (enabled ? mergeMagazzinoLogFeed(opts.localEntries, serverItems, serverRows) : []),
+    [enabled, opts.localEntries, serverItems, serverRows],
   );
 
   const timelineByRicambio = useMemo(() => {
+    if (!enabled) return {} as Record<string, MagazzinoLogFeedItem[]>;
     const map: Record<string, MagazzinoLogFeedItem[]> = {};
     for (const item of feed) {
       if (!map[item.ricambioId]) map[item.ricambioId] = [];
@@ -89,9 +90,9 @@ export function useMagazzinoLogFeed(opts: {
       map[k] = map[k]!.sort((a, b) => b.atMs - a.atMs).slice(0, 80);
     }
     return map;
-  }, [feed]);
+  }, [enabled, feed]);
 
-  const isLoading = magLogsQ.isLoading || movLogsQ.isLoading;
+  const isLoading = enabled && (magLogsQ.isLoading || movLogsQ.isLoading);
 
   return {
     feed,

@@ -77,11 +77,6 @@ export function useSchedeBundlesQuery(enabled = true, options?: SchedeBundlesQue
   };
 }
 
-/** @deprecated Usare `useSchedeBundlesQuery`. */
-export function useSchedeStoreQuery(enabled = true) {
-  return useSchedeBundlesQuery(enabled);
-}
-
 /** Slice bundle per singola riga — evita di passare l'intero `store` ai componenti memo. */
 export function useSchedeBundleForRow(lavorazioneId: string | undefined) {
   const { bundle } = useSchedeBundle(lavorazioneId);

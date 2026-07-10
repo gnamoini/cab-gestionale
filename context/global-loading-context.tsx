@@ -11,7 +11,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { GlobalLoadingOverlay } from "@/components/design-system/global-loading";
+import { GlobalLoadingOverlay } from "@/components/design-system/loading";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { isBootInvestigationEnabled, trackStoreUpdate } from "@/lib/observability/boot-investigation";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";

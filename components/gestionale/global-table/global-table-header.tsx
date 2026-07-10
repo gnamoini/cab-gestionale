@@ -34,9 +34,6 @@ export type { GlobalTableSortPhase };
 export const cycleGestionaleSort = cycleGlobalTableSort;
 export type GestionaleSortPhase = GlobalTableSortPhase;
 
-/** @deprecated Usare `globalTableTheadClass`. */
-export const gestionaleTableTheadClass = globalTableTheadClass;
-
 export type GlobalTableHeadLabelProps = {
   label: string;
   align?: "left" | "center" | "right";

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { documentDeliveryResponseHeaders } from "@/lib/documents/document-delivery-response";
+import { ensureFileNameWithMimeExtension, sniffMimeTypeFromBytes } from "@/lib/documents/document-mime";
 import { getCachedDocumentoBytes } from "@/lib/documents/document-delivery-storage.server";
 import type { DocumentDeliveryMode, DocumentDeliverySource } from "@/lib/documents/document-delivery-types";
 import { resolveDocumentFileServer } from "@/lib/documents/document-fetch-server";
@@ -31,9 +32,17 @@ export async function deliverDocumentFile(input: {
   const bytes = await getCachedDocumentoBytes(file.storagePath);
   if (!bytes) return err("File non trovato nello storage.");
 
+  let contentType = file.contentType;
+  let fileName = file.fileName;
+  const sniffed = sniffMimeTypeFromBytes(bytes);
+  if (sniffed && (contentType === "application/octet-stream" || input.mode === "preview")) {
+    contentType = sniffed;
+    fileName = ensureFileNameWithMimeExtension(fileName, sniffed);
+  }
+
   const headers = documentDeliveryResponseHeaders({
-    fileName: file.fileName,
-    contentType: file.contentType,
+    fileName,
+    contentType,
     mode: input.mode,
     source: file.source,
   });

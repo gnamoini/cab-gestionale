@@ -31,9 +31,11 @@ export function buildLavorazioniYearMatrix(
   const manualMonthKeys = new Set(manualByMonth ? [...manualByMonth.keys()] : []);
   const years = new Set<number>();
   for (const k of sys.keys()) years.add(Number(k.slice(0, 4)));
+  if (manualByMonth) {
+    for (const k of manualByMonth.keys()) years.add(Number(k.slice(0, 4)));
+  }
   const yEnd = anchor.getFullYear();
   years.add(yEnd);
-  for (let y = 2023; y <= yEnd; y++) years.add(y);
 
   const sortedYears = [...years].filter((y) => y >= 2000 && y <= yEnd + 1).sort((a, b) => a - b);
 
@@ -44,12 +46,14 @@ export function buildLavorazioniYearMatrix(
   for (const year of sortedYears) {
     const months = Array.from({ length: 12 }, (_, mi) => {
       const key = ym(year, String(mi + 1).padStart(2, "0"));
-      const v = sys.get(key) ?? 0;
+      const manual = manualByMonth?.get(key);
+      const v = manual != null ? manual : (sys.get(key) ?? 0);
       if (v > 0) hasAny = true;
       return v;
     });
     const total = months.reduce((s, v) => s + v, 0);
-    if (total > 0) hasAny = true;
+    if (total <= 0) continue;
+    hasAny = true;
 
     let bestMonthIdx: number | null = null;
     let worstMonthIdx: number | null = null;

@@ -25,36 +25,40 @@ export async function requestArchiveDocumentUploadPolicy(input: {
   contentHash?: string;
   categoria?: string;
 }): Promise<ArchiveUploadPolicyResult> {
-  const res = await fetch("/api/documents/upload-policy", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      source: "archive",
-      fileName: input.fileName,
-      fileSize: input.fileSize,
-      mimeType: input.mimeType,
-      contentHash: input.contentHash,
-      categoria: input.categoria,
-    }),
-  });
-  const data = (await res.json().catch(() => ({}))) as {
-    error?: string;
-    bucket?: string;
-    path?: string;
-    deduplicated?: boolean;
-    contentHash?: string;
-    semanticClass?: string;
-  };
-  if (!res.ok) return { ok: false, message: data.error ?? "Upload non autorizzato." };
-  if (!data.path) return { ok: false, message: "Risposta upload non valida." };
-  return {
-    ok: true,
-    bucket: STORAGE_BUCKETS.documenti,
-    path: data.path,
-    deduplicated: data.deduplicated === true,
-    contentHash: data.contentHash,
-    semanticClass: data.semanticClass,
-  };
+  try {
+    const res = await fetch("/api/documents/upload-policy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "archive",
+        fileName: input.fileName,
+        fileSize: input.fileSize,
+        mimeType: input.mimeType,
+        contentHash: input.contentHash,
+        categoria: input.categoria,
+      }),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      bucket?: string;
+      path?: string;
+      deduplicated?: boolean;
+      contentHash?: string;
+      semanticClass?: string;
+    };
+    if (!res.ok) return { ok: false, message: data.error ?? "Upload non autorizzato." };
+    if (!data.path) return { ok: false, message: "Risposta upload non valida." };
+    return {
+      ok: true,
+      bucket: STORAGE_BUCKETS.documenti,
+      path: data.path,
+      deduplicated: data.deduplicated === true,
+      contentHash: data.contentHash,
+      semanticClass: data.semanticClass,
+    };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Upload non autorizzato." };
+  }
 }
 
 export async function requestLavorazioneDocumentUploadPolicy(input: {

@@ -34,6 +34,7 @@ const base: InvoiceRow = {
   created_by: null,
   updated_by: null,
   annullata_at: null,
+  version: 1,
   created_at: "",
   updated_at: "",
 };

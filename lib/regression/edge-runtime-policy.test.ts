@@ -16,7 +16,7 @@ assert.ok(
 const registry = read("lib/edge/edge-function-registry.ts");
 assert.match(registry, /matchEdgeRoute/);
 assert.match(registry, /matchAuthPrecheckRoute/);
-assert.match(registry, /NON_EDGE_API_PREFIXES/);
+assert.match(registry, /NON_EDGE_PREFIXES/);
 
 const handlers = [
   "lib/edge/handlers/auth-precheck-edge.ts",

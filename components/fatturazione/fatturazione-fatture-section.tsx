@@ -8,7 +8,12 @@ import {
   cycleGlobalTableSort,
   type GlobalTableSortPhase,
 } from "@/components/gestionale/global-table";
+import { useAuthUserId } from "@/context/auth-context";
 import { ShellCard } from "@/components/gestionale/shell-card";
+import {
+  collapsibleExpandedBoolPref,
+  useCollapsiblePreference,
+} from "@/lib/ui/collapsible-prefs";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { FatturazioneAdvancedFilterPanel } from "@/components/fatturazione/fatturazione-advanced-filter-panel";
@@ -81,10 +86,13 @@ export function FatturazioneFattureSection({
   onNewPreventivo,
   externalFilters,
 }: FatturazioneFattureSectionProps) {
+  const userId = useAuthUserId();
   const { layout } = useGestionaleListLayout();
   const pageSize = useResponsiveListPageSize();
   const [filters, setFilters] = useState(FATTURAZIONE_PAGE_FILTERS_EMPTY);
-  const [filtriEspansi, setFiltriEspansi] = useState(false);
+  const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
+    collapsibleExpandedBoolPref(false, { scope: "fatturazione", key: "filters", userId }),
+  );
   const [sortCol, setSortCol] = useState<FatturazioneSortKey | null>("data");
   const [sortPhase, setSortPhase] = useState<GlobalTableSortPhase>("desc");
   const [overflowOpen, setOverflowOpen] = useState(false);

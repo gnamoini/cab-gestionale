@@ -3,12 +3,21 @@ import "server-only";
 import { documentoStoragePathFromStored } from "@/lib/documenti/storage-path-from-stored";
 import { readDocumentIntelligenceMeta } from "@/lib/documents/document-meta";
 import { mimeTypeFromFileName } from "@/lib/documents/document-mime";
+import { resolveArchiveDocumentDisplayFileName } from "@/lib/documenti/documento-tipo-file";
 import type { DocumentDeliverySource, ResolvedDocumentFile } from "@/lib/documents/document-delivery-types";
 import { DOCUMENTI_COLUMNS, LAVORAZIONE_DOCUMENTS_COLUMNS } from "@/lib/db/table-select-columns";
 import { verifyDocumentDeliveryAccess } from "@/lib/documents/document-delivery-auth.server";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { DocumentoRow, LavorazioneDocumentRow, LavorazioneDocumentTipo } from "@/src/types/supabase-tables";
+
+const ARCHIVE_CATEGORIA_LABEL: Record<DocumentoRow["categoria"], "listini" | "manuali" | "cataloghi" | "certificazioni" | "altro"> = {
+  listino: "listini",
+  manuale: "manuali",
+  catalogo: "cataloghi",
+  certificazione: "certificazioni",
+  altro: "altro",
+};
 
 export async function fetchArchiveDocumentFileServer(id: string): Promise<ServiceResult<ResolvedDocumentFile>> {
   const allowed = await verifyDocumentDeliveryAccess("archive");
@@ -21,6 +30,13 @@ export async function fetchArchiveDocumentFileServer(id: string): Promise<Servic
   const meta = row.meta ?? {};
   const nome =
     typeof meta.nome === "string" && meta.nome.trim() ? meta.nome.trim() : row.url_file.split("/").pop() ?? "documento";
+  const categoria = ARCHIVE_CATEGORIA_LABEL[row.categoria] ?? "altro";
+  const fileName = resolveArchiveDocumentDisplayFileName({
+    nome,
+    urlFile: row.url_file,
+    meta,
+    categoria,
+  });
   const path = documentoStoragePathFromStored(row.url_file);
   if (!path) return err("Percorso file non valido o URL legacy non supportato.");
   const intelligence = readDocumentIntelligenceMeta(meta as Record<string, unknown>);
@@ -29,8 +45,8 @@ export async function fetchArchiveDocumentFileServer(id: string): Promise<Servic
   return success({
     source: "archive",
     storagePath: path,
-    fileName: nome,
-    contentType: mimeTypeFromFileName(nome),
+    fileName,
+    contentType: mimeTypeFromFileName(fileName),
     contentVersion,
     contentHash: intelligence.contentHash,
     documentRowId: row.id,

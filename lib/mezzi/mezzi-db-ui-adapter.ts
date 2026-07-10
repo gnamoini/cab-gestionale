@@ -38,19 +38,6 @@ function matricolaUi(v: string | null | undefined): string {
   return t && t.length > 0 ? t : "Non assegnata";
 }
 
-/** @deprecated Usare mezzoGestitoFromRow */
-export function toMezzoUI(row: MezzoRow): MezzoGestito {
-  return mezzoGestitoFromRow(row);
-}
-
-/** @deprecated Usare mezzoGestitoFromRow(row, { attrezzatura }) */
-export function toMezzoUIWithAttrezzatura(
-  row: MezzoRow,
-  primaryAttrezzatura: AttrezzaturaRow | null,
-): MezzoGestito {
-  return mezzoGestitoFromRow(row, { attrezzatura: primaryAttrezzatura });
-}
-
 export { mezzoGestitoFromRow };
 
 const CAT_MAP: Record<DocumentoRow["categoria"], DocumentoGestionale["categoria"]> = {
@@ -80,7 +67,12 @@ export function documentoRowToGestionale(row: DocumentoRow): DocumentoGestionale
     }
   }
   const intelligence = readDocumentIntelligenceMeta(meta as Record<string, unknown>);
-  const tipoFile = resolveDocumentoTipoFile({ urlFile: row.url_file, nome, meta });
+  const tipoFile = resolveDocumentoTipoFile({
+    urlFile: row.url_file,
+    nome,
+    meta,
+    categoria: CAT_MAP[row.categoria] ?? "altro",
+  });
   const previewCapable = tipoFile === "pdf" || tipoFile === "immagine";
   const contentVersion =
     (typeof meta.uploadedAt === "string" && meta.uploadedAt) || row.created_at || undefined;

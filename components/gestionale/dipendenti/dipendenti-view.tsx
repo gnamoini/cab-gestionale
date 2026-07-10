@@ -32,7 +32,7 @@ import {
 } from "@/lib/dipendenti/timesheet-month";
 import type { TimesheetEditorTarget, TimesheetEntryUpsert, TimesheetMonthKey, DipendenteTimesheetEmployeeRow } from "@/lib/dipendenti/types";
 import type { TimesheetPeriodMode } from "@/lib/dipendenti/timesheet-month";
-import { dsFocus, dsPageToolbarIconBtn, dsStackPage } from "@/lib/ui/design-system";
+import { dsPageToolbarIconBtn, dsStackPage } from "@/lib/ui/design-system";
 import {
   CalendarNavChevronLeft,
   CalendarNavChevronRight,
@@ -349,11 +349,11 @@ export function DipendentiView() {
           ) : ts.loadPhase === "ready" ? (
             <ShellCard
               title="Tabella presenze"
-              headerActions={
-                <div className="flex items-center gap-1" role="group" aria-label="Navigazione mese">
+              headerLeadingActions={
+                <div className="flex shrink-0 items-center gap-1" role="group" aria-label="Navigazione mese">
                   <button
                     type="button"
-                    className={`${dsPageToolbarIconBtn} ${dsFocus} shrink-0`}
+                    className={dsPageToolbarIconBtn}
                     aria-label="Mese precedente"
                     onClick={() => handleMonthKey(shiftMonthKey(monthKey, -1))}
                   >
@@ -361,7 +361,7 @@ export function DipendentiView() {
                   </button>
                   <button
                     type="button"
-                    className={`${dsPageToolbarIconBtn} ${dsFocus} shrink-0`}
+                    className={dsPageToolbarIconBtn}
                     aria-label="Mese successivo"
                     onClick={() => handleMonthKey(shiftMonthKey(monthKey, 1))}
                   >

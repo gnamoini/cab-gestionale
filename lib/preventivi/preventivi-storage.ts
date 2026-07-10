@@ -1,4 +1,3 @@
-import { isPreventiviDbPrimary } from "@/lib/preventivi/preventivi-db-primary";
 import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import { isPreventivoUuid } from "@/lib/preventivi/preventivi-db-mapper";
 import { nextPreventivoNumeroManualeFromRecords } from "@/lib/preventivi/preventivo-numero-manuale";
@@ -165,52 +164,24 @@ export function clearPreventiviLocalEntityData(): void {
   }
 }
 
-/** @deprecated DB-first: no-op quando isPreventiviDbPrimary() */
-export function savePreventivi(rows: PreventivoRecord[]): void {
-  if (isPreventiviDbPrimary()) {
-    warnDeprecatedWrite("savePreventivi");
-    return;
-  }
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(PREVENTIVI_STORAGE_KEY, JSON.stringify(rows.slice(0, PREVENTIVI_MAX)));
-    bumpReportDataRefresh();
-  } catch {
-    /* quota */
-  }
+/** @deprecated DB-first: no-op — localStorage non usato in produzione. */
+export function savePreventivi(_rows: PreventivoRecord[]): void {
+  warnDeprecatedWrite("savePreventivi");
 }
 
-/** @deprecated DB-first: no-op quando isPreventiviDbPrimary() */
-export function appendPreventivo(row: PreventivoRecord): void {
-  if (isPreventiviDbPrimary()) {
-    warnDeprecatedWrite("appendPreventivo");
-    return;
-  }
-  const prev = loadPreventivi();
-  const hydrated = hydratePreventivo(row) ?? row;
-  savePreventivi([hydrated, ...prev.filter((x) => x.id !== hydrated.id)]);
+/** @deprecated DB-first: no-op — localStorage non usato in produzione. */
+export function appendPreventivo(_row: PreventivoRecord): void {
+  warnDeprecatedWrite("appendPreventivo");
 }
 
-/** @deprecated DB-first: no-op quando isPreventiviDbPrimary() */
-export function upsertPreventivo(row: PreventivoRecord): void {
-  if (isPreventiviDbPrimary()) {
-    warnDeprecatedWrite("upsertPreventivo");
-    return;
-  }
-  const prev = loadPreventivi();
-  const hydrated = hydratePreventivo(row) ?? row;
-  const i = prev.findIndex((x) => x.id === hydrated.id);
-  const next = i >= 0 ? [...prev.slice(0, i), hydrated, ...prev.slice(i + 1)] : [hydrated, ...prev];
-  savePreventivi(next);
+/** @deprecated DB-first: no-op — localStorage non usato in produzione. */
+export function upsertPreventivo(_row: PreventivoRecord): void {
+  warnDeprecatedWrite("upsertPreventivo");
 }
 
-/** @deprecated DB-first: no-op quando isPreventiviDbPrimary() */
-export function deletePreventivo(id: string): void {
-  if (isPreventiviDbPrimary()) {
-    warnDeprecatedWrite("deletePreventivo");
-    return;
-  }
-  savePreventivi(loadPreventivi().filter((x) => x.id !== id));
+/** @deprecated DB-first: no-op — localStorage non usato in produzione. */
+export function deletePreventivo(_id: string): void {
+  warnDeprecatedWrite("deletePreventivo");
 }
 
 export function duplicatePreventivo(

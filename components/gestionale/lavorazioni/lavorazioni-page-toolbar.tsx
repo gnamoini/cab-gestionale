@@ -14,6 +14,7 @@ import {
   PageToolbarCtaLabel,
   PageToolbarResultCount,
 } from "@/components/design-system";
+import { LoadingSpinner } from "@/components/design-system/loading";
 import {
   dsPageToolbarBtn,
   dsPageToolbarCtaCompact,
@@ -37,6 +38,7 @@ function IconPrint({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
 
 export type LavorazioniPageHeaderToolbarProps = {
   listRefreshBusy: boolean;
+  printBusy?: boolean;
   onRefresh: () => void;
   onOpenLog: () => void;
   onPrint: () => void;
@@ -47,6 +49,7 @@ export type LavorazioniPageHeaderToolbarProps = {
 /** Azioni header pagina Lavorazioni — presentational. */
 export function LavorazioniPageHeaderToolbar({
   listRefreshBusy,
+  printBusy = false,
   onRefresh,
   onOpenLog,
   onPrint,
@@ -69,13 +72,19 @@ export function LavorazioniPageHeaderToolbar({
             <>
               <button
                 type="button"
-                className={dsPageToolbarBtn}
+                className={`${dsPageToolbarBtn}${printBusy ? " !cursor-wait !opacity-100" : ""}`}
                 onClick={onPrint}
-                title="Stampa PDF lavorazioni in corso"
-                aria-label="Stampa lavorazioni in corso"
+                disabled={printBusy}
+                aria-busy={printBusy}
+                title={printBusy ? "Generazione PDF…" : "Stampa PDF lavorazioni in corso"}
+                aria-label={printBusy ? "Generazione PDF in corso" : "Stampa lavorazioni in corso"}
               >
-                <IconPrint />
-                Stampa
+                {printBusy ? (
+                  <LoadingSpinner size="sm" label="Generazione PDF…" />
+                ) : (
+                  <IconPrint />
+                )}
+                {printBusy ? "Generazione PDF…" : "Stampa"}
               </button>
               <button
                 type="button"

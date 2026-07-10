@@ -2,6 +2,7 @@ import { attachConsoleGuards } from "../helpers/console";
 import { adminCredentials, loginViaUi, operatorCredentials } from "../fixtures/auth";
 import { applySmokeTeardown } from "../helpers/smoke-teardown";
 import { test, expect } from "@playwright/test";
+import type { StorageBucketId } from "@/src/lib/storage/storage-config";
 
 const MINIMAL_PDF = Buffer.from(
   "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n",
@@ -99,7 +100,7 @@ test("document capture upload finalize without service role", async ({ page, req
 
   const { uploadDocumentCaptureSmokeBytes } = await import("../helpers/document-capture-upload");
   const uploadResult = await uploadDocumentCaptureSmokeBytes({
-    bucket: policy.bucket,
+    bucket: policy.bucket as StorageBucketId,
     path: policy.path,
     bytes: MINIMAL_PDF,
     contentType: "application/pdf",

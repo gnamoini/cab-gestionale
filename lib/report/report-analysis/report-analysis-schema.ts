@@ -158,6 +158,15 @@ export const reportAnalysisContextSchema = z.object({
       completedPrev: z.number().min(0),
     })
     .optional(),
+  operationalDiary: z
+    .array(
+      z.object({
+        workDate: z.string().max(10),
+        body: z.string().max(400),
+      }),
+    )
+    .max(62)
+    .optional(),
 });
 
 export type ReportAnalysisContext = z.infer<typeof reportAnalysisContextSchema>;

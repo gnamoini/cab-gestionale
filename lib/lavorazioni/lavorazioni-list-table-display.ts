@@ -57,14 +57,6 @@ export function lavorazionePermanenzaGiorniLabel(row: LavorazioneListRow): strin
   return `${rounded} giorni`;
 }
 
-/** @deprecated Usare `lavorazioneOreTotaliSchedaLabel`. */
-export function lavorazioneOreLavoroLabel(
-  row: LavorazioneListRow,
-  schedeStore?: LavorazioneSchedeStore,
-): string {
-  return lavorazioneOreTotaliSchedaLabel(row, schedeStore);
-}
-
 export function lavorazioneOreLavoroSortValue(
   row: LavorazioneListRow,
   schedeStore?: LavorazioneSchedeStore,

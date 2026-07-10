@@ -2,9 +2,12 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { mapListinoColumnsWithAi, parseListinoPdfWithAi } from "@/lib/ai/listino-import-analysis";
+import { resolveCabAppSettingsResolvedServer } from "@/lib/app-settings/resolve-settings-for-server";
 import { getCachedDocumentoBytes } from "@/lib/documents/document-delivery-storage.server";
 import { fetchArchiveDocumentFileServer } from "@/lib/documents/document-fetch-server";
 import { enrichListinoRowsWithDuplicates } from "@/lib/magazzino/listino-import/listino-import-duplicate-resolver";
+import { assignListinoImportCategorie } from "@/lib/magazzino/listino-import/listino-import-categoria.server";
+import { fetchGeneratedListinoRicambi } from "@/lib/magazzino/listino-import/listino-import-delete-generated.server";
 import { readListinoImportFromRicambioMeta } from "@/lib/magazzino/listino-import/listino-import-meta";
 import type {
   ListinoImportParseMethod,
@@ -21,8 +24,104 @@ import { isListinoImportAiRateLimited } from "@/lib/magazzino/listino-import/lis
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import type { DocumentoRow, MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 
-function isListinoImportableFile(fileName: string): boolean {
-  return /\.(xlsx|xls|csv|pdf)$/i.test(fileName);
+function isListinoImportableFile(fileName: string, contentType?: string): boolean {
+  if (/\.(xlsx|xls|csv|pdf)$/i.test(fileName)) return true;
+  const mime = (contentType ?? "").toLowerCase();
+  if (mime === "application/pdf") return true;
+  if (mime.includes("spreadsheet") || mime === "text/csv" || mime === "application/vnd.ms-excel") return true;
+  return false;
+}
+
+function isListinoPdfFile(fileName: string, contentType?: string): boolean {
+  return /\.pdf$/i.test(fileName) || (contentType ?? "").toLowerCase() === "application/pdf";
+}
+
+export async function buildListinoImportPreviewFromBytes(input: {
+  bytes: Uint8Array;
+  fileName: string;
+  contentType?: string | null;
+  marcaDefault: string;
+  documentoNome: string;
+  documentoId?: string;
+  importFileId?: string;
+  userId?: string;
+}): Promise<ListinoImportPreviewResult> {
+  if (!isListinoImportableFile(input.fileName, input.contentType ?? undefined)) {
+    throw new Error("Formato non supportato per import magazzino. Usa Excel, CSV o PDF.");
+  }
+
+  const marcaDefault = input.marcaDefault.trim();
+  const warnings: string[] = [];
+  let parseMethod: ListinoImportParseMethod = "spreadsheet";
+  let rawRows: ListinoImportRawRow[] = [];
+
+  if (isListinoPdfFile(input.fileName, input.contentType ?? undefined)) {
+    if (input.userId && (await isListinoImportAiRateLimited(input.userId))) {
+      throw new Error("Troppe richieste IA. Attendi qualche minuto.");
+    }
+    parseMethod = "ai_pdf";
+    const ai = await parseListinoPdfWithAi(input.bytes, marcaDefault);
+    if (!ai.ok) throw new Error(ai.message);
+    rawRows = ai.rows;
+    warnings.push(...ai.warnings);
+  } else {
+    const parsed = parseListinoSpreadsheetBuffer(input.bytes, input.fileName);
+    warnings.push(...parsed.warnings);
+    if (parsed.needsAiColumnMap) {
+      if (input.userId && (await isListinoImportAiRateLimited(input.userId))) {
+        throw new Error("Troppe richieste IA. Attendi qualche minuto.");
+      }
+      parseMethod = "ai_columns";
+      const matrix = readSpreadsheetMatrix(input.bytes, input.fileName);
+      const ai = await mapListinoColumnsWithAi(matrix, marcaDefault);
+      if (!ai.ok) throw new Error(ai.message);
+      rawRows = ai.rows;
+      warnings.push(...ai.warnings);
+    } else {
+      rawRows = parsed.rows.map((r) => ({ ...r, marca: r.marca || marcaDefault || undefined }));
+    }
+  }
+
+  const totalParsed = rawRows.length;
+  const truncated = totalParsed > LISTINO_IMPORT_MAX_PREVIEW_ROWS;
+  if (truncated) {
+    rawRows = rawRows.slice(0, LISTINO_IMPORT_MAX_PREVIEW_ROWS);
+    warnings.push(`Mostrate le prime ${LISTINO_IMPORT_MAX_PREVIEW_ROWS} righe su ${totalParsed}.`);
+  }
+
+  const settings = await resolveCabAppSettingsResolvedServer();
+  const categorieDisponibili = settings.magazzinoMaster.categorie.length
+    ? settings.magazzinoMaster.categorie
+    : ["Generale"];
+
+  const { rows: rowsWithCategoria, warnings: categoriaWarnings } = await assignListinoImportCategorie(
+    rawRows,
+    categorieDisponibili,
+    { userId: input.userId },
+  );
+  warnings.push(...categoriaWarnings);
+
+  const magazzinoIndex = await loadMagazzinoIndex();
+  const previewRows = enrichListinoRowsWithDuplicates(rowsWithCategoria, magazzinoIndex);
+  const duplicates = previewRows.filter((r) => r.duplicateRicambioId).length;
+
+  return {
+    batchId: randomUUID(),
+    documentoId: input.documentoId,
+    importFileId: input.importFileId,
+    documentoNome: input.documentoNome,
+    marcaDefault,
+    parseMethod,
+    categorieDisponibili,
+    rows: previewRows,
+    stats: {
+      totalParsed,
+      duplicates,
+      invalid: Math.max(0, totalParsed - previewRows.length),
+      truncated,
+    },
+    warnings,
+  };
 }
 
 function documentoDisplayName(row: DocumentoRow): string {
@@ -72,7 +171,7 @@ export async function buildListinoImportPreview(
   }
 
   const file = resolved.data;
-  if (!isListinoImportableFile(file.fileName)) {
+  if (!isListinoImportableFile(file.fileName, file.contentType)) {
     throw new Error("Formato non supportato per import magazzino. Usa Excel, CSV o PDF.");
   }
 
@@ -81,72 +180,20 @@ export async function buildListinoImportPreview(
 
   const marcaDefault = documento.marca?.trim() || "";
   const documentoNome = documentoDisplayName(documento);
-  const warnings: string[] = [];
-  let parseMethod: ListinoImportParseMethod = "spreadsheet";
-  let rawRows: ListinoImportRawRow[] = [];
 
-  if (/\.pdf$/i.test(file.fileName)) {
-    if (userId && (await isListinoImportAiRateLimited(userId))) {
-      throw new Error("Troppe richieste IA. Attendi qualche minuto.");
-    }
-    parseMethod = "ai_pdf";
-    const ai = await parseListinoPdfWithAi(bytes, marcaDefault);
-    if (!ai.ok) throw new Error(ai.message);
-    rawRows = ai.rows;
-    warnings.push(...ai.warnings);
-  } else {
-    const parsed = parseListinoSpreadsheetBuffer(bytes, file.fileName);
-    warnings.push(...parsed.warnings);
-    if (parsed.needsAiColumnMap) {
-      if (userId && (await isListinoImportAiRateLimited(userId))) {
-        throw new Error("Troppe richieste IA. Attendi qualche minuto.");
-      }
-      parseMethod = "ai_columns";
-      const matrix = readSpreadsheetMatrix(bytes, file.fileName);
-      const ai = await mapListinoColumnsWithAi(matrix, marcaDefault);
-      if (!ai.ok) throw new Error(ai.message);
-      rawRows = ai.rows;
-      warnings.push(...ai.warnings);
-    } else {
-      rawRows = parsed.rows.map((r) => ({ ...r, marca: r.marca || marcaDefault || undefined }));
-    }
-  }
-
-  const totalParsed = rawRows.length;
-  const truncated = totalParsed > LISTINO_IMPORT_MAX_PREVIEW_ROWS;
-  if (truncated) {
-    rawRows = rawRows.slice(0, LISTINO_IMPORT_MAX_PREVIEW_ROWS);
-    warnings.push(`Mostrate le prime ${LISTINO_IMPORT_MAX_PREVIEW_ROWS} righe su ${totalParsed}.`);
-  }
-
-  const magazzinoIndex = await loadMagazzinoIndex();
-  const previewRows = enrichListinoRowsWithDuplicates(rawRows, magazzinoIndex);
-  const duplicates = previewRows.filter((r) => r.duplicateRicambioId).length;
-
-  return {
-    batchId: randomUUID(),
-    documentoId,
-    documentoNome,
+  return buildListinoImportPreviewFromBytes({
+    bytes,
+    fileName: file.fileName,
+    contentType: file.contentType,
     marcaDefault,
-    parseMethod,
-    rows: previewRows,
-    stats: {
-      totalParsed,
-      duplicates,
-      invalid: Math.max(0, totalParsed - previewRows.length),
-      truncated,
-    },
-    warnings,
-  };
+    documentoNome,
+    documentoId,
+    userId,
+  });
 }
 
 export async function countGeneratedListinoRicambi(): Promise<number> {
   const sb = await createSupabaseServerUserClient();
-  const { data, error } = await sb.from("magazzino_ricambi").select("id, meta");
-  if (error) throw new Error(error.message);
-  let count = 0;
-  for (const row of data ?? []) {
-    if (readListinoImportFromRicambioMeta((row as { meta?: unknown }).meta)) count += 1;
-  }
-  return count;
+  const rows = await fetchGeneratedListinoRicambi(sb);
+  return rows.length;
 }

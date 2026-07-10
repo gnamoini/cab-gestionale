@@ -15,6 +15,8 @@ const item = (partial: Partial<CustomerOpenItemRow>): CustomerOpenItemRow => ({
   remaining_signed: -500,
   due_date: "2026-01-01",
   status: "partial",
+  opened_at: null,
+  closed_at: null,
   created_at: "",
   updated_at: "",
   ...partial,

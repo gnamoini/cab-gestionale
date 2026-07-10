@@ -63,6 +63,7 @@ export type BuildReportAnalysisContextInput = {
     clienti: TopClienteReportRow[];
     ricambi: TopRicambioReportRow[];
   };
+  diaryEntries?: readonly { workDate: string; body: string }[];
 };
 
 /** Payload KPI ottimizzato per Gemini — nessun dump grezzo, trend troncati, no duplicazioni. */
@@ -162,6 +163,15 @@ export function buildReportAnalysisContext(input: BuildReportAnalysisContextInpu
       }
     : undefined;
 
+  const operationalDiary =
+    input.diaryEntries
+      ?.map((e) => ({
+        workDate: e.workDate,
+        body: clip(e.body, 400),
+      }))
+      .filter((e) => e.body.trim().length > 0)
+      .slice(0, 62) ?? [];
+
   return {
     contextVersion: 1,
     meta: {
@@ -190,6 +200,7 @@ export function buildReportAnalysisContext(input: BuildReportAnalysisContextInpu
       ricambi: topRicambiRows(tops.ricambi),
     },
     ...(compareDetail ? { compareDetail } : {}),
+    ...(operationalDiary.length > 0 ? { operationalDiary } : {}),
   };
 }
 

@@ -19,6 +19,7 @@ import {
 } from "@/lib/ui/design-system";
 import {
   dispatchGestionaleOverlayClosed,
+  dispatchGestionaleOverlayOpened,
   restoreGestionaleDrawerFocus,
 } from "@/lib/ui/use-sidebar-collapsed";
 import { cabIosOverlaySurface, cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
@@ -102,6 +103,7 @@ export function Drawer({
     if (open) {
       setMounted(true);
       setClosing(false);
+      dispatchGestionaleOverlayOpened();
     }
   }, [open]);
 

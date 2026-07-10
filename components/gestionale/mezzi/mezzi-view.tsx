@@ -55,6 +55,10 @@ import { logEntry } from "@/lib/domain/log-entry";
 import { auditPayload, pickExistingFields } from "@/lib/gestionale-log/undo";
 import { withUndoSessionPayload } from "@/lib/gestionale-log/undo-session";
 import { useAuth } from "@/context/auth-context";
+import {
+  collapsibleExpandedBoolPref,
+  useCollapsiblePreference,
+} from "@/lib/ui/collapsible-prefs";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
 function naturalMezziOrder(a: MezzoGestito, b: MezzoGestito) {
@@ -77,7 +81,9 @@ export function MezziView() {
   const [filtroTarga, setFiltroTarga] = useState("");
   const [filtroNumeroScuderia, setFiltroNumeroScuderia] = useState("");
   const [filtroUltimaLav, setFiltroUltimaLav] = useState<UltimaLavorazioneFilter>("");
-  const [filtriEspansi, setFiltriEspansi] = useState(false);
+  const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
+    collapsibleExpandedBoolPref(false, { scope: "mezzi", key: "filters", userId: user?.id ?? null }),
+  );
 
   const serviceFilters = useMemo((): MezzoFilters => {
     return {

@@ -31,9 +31,13 @@ export const reportKpiDescriptionClass = "mt-0.5 text-[10px] leading-snug text-[
 /** ShellCard zona — offset anchor nav (solo app shell). */
 export const reportZoneShellClass = "scroll-mt-28";
 
-/** Sotto-sezione collassabile dentro una sezione report (niente ombra esterna). */
+/** Sotto-sezione collassabile dentro una sezione report (shell surface, corpo inset). */
 export const reportSubsectionShellClass =
-  "overflow-hidden !shadow-none border-[color:var(--cab-border)]";
+  "overflow-hidden !rounded-[var(--ds-radius-lg)] !border !border-[color:var(--cab-border)] !bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))] !shadow-none";
+
+/** Pannello contenuto KPI/grafici dentro una sotto-sezione report. */
+export const reportContentPanelClass =
+  "min-w-0 rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-3 shadow-[var(--cab-shadow-sm)] sm:p-4";
 
 export const reportExecutiveStripClass =
   "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_45%,var(--cab-card))] px-3 py-2.5 text-sm leading-relaxed text-[color:var(--cab-text)] sm:px-4 sm:py-3";
@@ -41,19 +45,18 @@ export const reportExecutiveStripClass =
 /** Command bar report: titolo, periodo, nav e filtri (flusso pagina, non sticky). */
 export const reportCommandBarClass = "min-w-0 space-y-2";
 
-/** Pannello filtri dentro la command bar. */
+/** Pannello filtri dentro la command bar — stesso sfondo toolbar liste. */
 export const reportCommandFiltersShellClass =
-  "rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]";
+  "cab-page-toolbar-surface relative min-w-0 rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] shadow-[var(--cab-shadow-sm)]";
 
 /** Corpo controlli filtri report (sotto zone nav). */
 export const reportCommandFiltersBodyClass = "px-3 pb-3 pt-2.5";
 
-/** Pannello filtri periodo analisi / confronto nella toolbar. */
+/** Pannello filtri periodo analisi / confronto — card sopra sfondo toolbar. */
 export const reportPeriodPanelClass =
-  "min-w-0 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_4%,var(--cab-card))] p-3 shadow-[var(--cab-shadow-sm)]";
+  "min-w-0 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-3 shadow-[var(--cab-shadow-sm)]";
 
-export const reportPeriodPanelCompareClass =
-  "min-w-0 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-card))] p-3 shadow-[var(--cab-shadow-sm)]";
+export const reportPeriodPanelCompareClass = reportPeriodPanelClass;
 
 export const reportPeriodPanelTitleClass =
   "text-xs font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]";

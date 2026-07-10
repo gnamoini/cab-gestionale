@@ -70,6 +70,8 @@ assert.match(dsIndex, /GestionaleCollapsibleSection/);
 assert.match(dsIndex, /GestionaleCollapsibleHeader/);
 
 assert.match(shellCard, /GestionaleCollapsibleHeader/);
+assert.match(shellCard, /persistScope/);
+assert.match(shellCard, /persistKey/);
 assert.doesNotMatch(shellCard, /GestionaleCollapsibleChevronBox/);
 
 assert.match(preventiviModal, /GestionaleCollapsibleSection/);

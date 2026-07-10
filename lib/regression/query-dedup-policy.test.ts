@@ -50,6 +50,8 @@ assert.match(mezzoDomain, /useSharedEntityQuery/);
 
 const settings = read("src/hooks/gestionale/use-settings-queries.ts");
 assert.match(settings, /dedupQuery/);
+assert.match(settings, /persistSettingsUpsertWithOccRetry/);
+assert.match(settings, /APP_SETTINGS_OCC_MAX_ATTEMPTS/);
 
 const costo = read("src/hooks/gestionale/use-lavorazione-costo.ts");
 assert.match(costo, /getQueryData/);

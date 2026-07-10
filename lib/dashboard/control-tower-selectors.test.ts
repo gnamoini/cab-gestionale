@@ -9,6 +9,7 @@ import { CONTROL_TOWER_KPI_WINDOW_LABEL, CONTROL_TOWER_STALE_UPDATE_DAYS } from 
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { DipendenteTimesheetEntryRow } from "@/lib/dipendenti/types";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
+import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 
 const ANCHOR = new Date(2026, 5, 4, 12, 0, 0, 0); // gio 4 giu
 
@@ -77,6 +78,8 @@ const oreMetric = dipCluster!.metrics.find((m) => m.id === "dip-ore");
 assert.equal(oreMetric?.value, 8);
 assert.equal(oreMetric?.prevValue, 4);
 assert.equal(oreMetric?.unit, "hours");
+assert.equal(oreMetric?.deltaAbs, "+4");
+assert.equal(oreMetric?.deltaPct, 100);
 
 const staleLav = lavRow({
   id: "stale-1",
@@ -102,6 +105,15 @@ const logs: LogModificaRow[] = [
     autore_id: null,
   },
   {
+    id: "1b",
+    entita: "lavorazioni",
+    entita_id: "x",
+    azione: "UPDATE",
+    created_at: "2026-06-03T11:00:00.000Z",
+    payload: { before: { priorita: "media" }, after: { priorita: "alta" } },
+    autore_id: null,
+  },
+  {
     id: "2",
     entita: "lavorazioni",
     entita_id: "y",
@@ -117,11 +129,8 @@ const activity = buildControlTowerActivityFeedSlice({
   logLavorazioni: logs,
   anchor: ANCHOR,
 });
-const totalActivity =
-  activity.byDomain.lavorazioni.length +
-  activity.byDomain.ricambi.length +
-  activity.byDomain.amministrazione.length;
-assert.equal(totalActivity, 2, "activity keeps distinct log rows");
+assert.equal(activity.byDomain.lavorazioni.length, 2, "activity groups logs by entity");
+assert.equal(activity.byDomain.lavorazioni[0]?.eventCount, 2, "merged entity keeps event count");
 
 const ricambiLogs = [
   {
@@ -140,6 +149,109 @@ const ricambiActivity = buildControlTowerActivityFeedSlice({
   logMagazzino: ricambiLogs,
   anchor: ANCHOR,
 });
-assert.equal(ricambiActivity.byDomain.ricambi.length, 1, "ricambi activity from magazzino logs");
+assert.equal(ricambiActivity.byDomain.magazzino.length, 1, "magazzino activity from magazzino logs");
+
+const invoiceLogs: LogModificaRow[] = [
+  {
+    id: "inv-1",
+    entita: "invoices",
+    entita_id: "inv-x",
+    azione: "UPDATE",
+    created_at: "2026-06-03T14:00:00.000Z",
+    payload: { before: { status: "bozza" }, after: { status: "emessa" } },
+    autore_id: null,
+  },
+];
+const fatturazioneActivity = buildControlTowerActivityFeedSlice({
+  lavRows: [],
+  ricambi: [],
+  logFatturazione: invoiceLogs,
+  anchor: ANCHOR,
+});
+assert.equal(fatturazioneActivity.byDomain.fatturazione.length, 1, "fatturazione from invoices entita");
+
+const schedaLogs: LogModificaRow[] = [
+  {
+    id: "sch-1",
+    entita: "scheda_lavorazione",
+    entita_id: "scheda-1",
+    azione: "UPDATE",
+    created_at: "2026-06-03T12:00:00.000Z",
+    payload: {
+      before: { lavorazione_id: "lav-1", note: "a" },
+      after: { lavorazione_id: "lav-1", note: "b" },
+    },
+    autore_id: null,
+  },
+];
+const mergedLavActivity = buildControlTowerActivityFeedSlice({
+  lavRows: [lavRow({ id: "lav-1", codice: "L-001" })],
+  ricambi: [],
+  logLavorazioni: [...logs, ...schedaLogs],
+  anchor: ANCHOR,
+});
+assert.equal(mergedLavActivity.byDomain.lavorazioni.length, 3, "lavorazioni + scheda_lavorazione merged");
+
+const oldLog: LogModificaRow = {
+  id: "old-1",
+  entita: "lavorazioni",
+  entita_id: "old-lav",
+  azione: "UPDATE",
+  created_at: "2026-05-01T10:00:00.000Z",
+  payload: { before: { note: "a" }, after: { note: "b" } },
+  autore_id: null,
+};
+const outsideWindowActivity = buildControlTowerActivityFeedSlice({
+  lavRows: [],
+  ricambi: [],
+  logLavorazioni: [oldLog],
+  anchor: ANCHOR,
+});
+assert.equal(outsideWindowActivity.byDomain.lavorazioni.length, 1, "activity not filtered by rolling 7d window");
+
+const magLogEntry: MagazzinoChangeLogEntry = {
+  id: "local-1",
+  tipo: "rimozione",
+  ricambioId: "ric-1",
+  ricambio: "Filtro",
+  autore: "Test",
+  at: "2026-06-03T10:00:00.000Z",
+  riepilogo: "Scarico",
+  changes: [{ campo: "Scorta", prima: "5", dopo: "3" }],
+  annullato: false,
+};
+const movimentiLogs: LogModificaRow[] = [
+  {
+    id: "mov-1",
+    entita: "movimenti_ricambi",
+    entita_id: "m1",
+    azione: "CREATE",
+    created_at: "2026-06-03T11:00:00.000Z",
+    payload: { snapshot: { tipo: "uscita", ricambio_id: "ric-1", quantita: 2 } },
+    autore_id: null,
+  },
+];
+const magHeader = buildControlTowerHeaderKpiSlice({
+  lavRows: [],
+  ricambi: [
+    {
+      id: "ric-1",
+      descrizione: "Filtro",
+      codiceFornitoreOriginale: "F-1",
+      marca: "Test",
+      scorta: 3,
+      scortaMinima: 2,
+      dataUltimaModifica: "2026-06-01T00:00:00.000Z",
+    } as import("@/lib/magazzino/types").RicambioMagazzino,
+  ],
+  anchor: ANCHOR,
+  includeAdmin: false,
+  magLog: [magLogEntry],
+  movimentiLogs,
+});
+const ricCluster = magHeader.clusters.find((c) => c.id === "ricambi");
+assert.ok(ricCluster);
+assert.equal(ricCluster!.metrics.find((m) => m.id === "mag-movimenti")?.value, 1);
+assert.equal(ricCluster!.metrics.find((m) => m.id === "mag-consumi")?.value, 2);
 
 console.log("control-tower-selectors.test: OK");

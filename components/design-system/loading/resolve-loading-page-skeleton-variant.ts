@@ -1,25 +1,34 @@
 import type { LoadingPageSkeletonVariant } from "./loading-page-skeleton";
 
+/** Primo match vince — ordine per specificità (sotto-route prima). */
+const SKELETON_PREFIXES: readonly { prefix: string; variant: LoadingPageSkeletonVariant }[] = [
+  { prefix: "/sicurezza/production-readiness", variant: "production-readiness" },
+  { prefix: "/lavorazioni-clienti/", variant: "client-detail" },
+  { prefix: "/sicurezza", variant: "sicurezza" },
+  { prefix: "/lavorazioni-clienti", variant: "clienti" },
+  { prefix: "/agenda", variant: "agenda" },
+  { prefix: "/dashboard", variant: "dashboard" },
+  { prefix: "/lavorazioni", variant: "lavorazioni" },
+  { prefix: "/magazzino", variant: "magazzino" },
+  { prefix: "/mezzi", variant: "mezzi" },
+  { prefix: "/documenti", variant: "documenti" },
+  { prefix: "/preventivi", variant: "preventivi" },
+  { prefix: "/fatturazione", variant: "fatturazione" },
+  { prefix: "/dipendenti", variant: "dipendenti" },
+  { prefix: "/report", variant: "report" },
+  { prefix: "/impostazioni", variant: "impostazioni" },
+];
+
 /**
  * Variante skeleton coerente con la route — usata dai gate auth/RBAC al posto dello spinner.
  */
 export function resolveLoadingPageSkeletonVariant(pathname: string): LoadingPageSkeletonVariant {
-  if (pathname.startsWith("/sicurezza/production-readiness")) return "production-readiness";
-  if (pathname.startsWith("/sicurezza")) return "sicurezza";
-  if (pathname.startsWith("/lavorazioni-clienti/") && pathname !== "/lavorazioni-clienti") {
-    return "client-detail";
+  for (const { prefix, variant } of SKELETON_PREFIXES) {
+    if (prefix.endsWith("/")) {
+      if (pathname.startsWith(prefix) && pathname !== prefix.slice(0, -1)) return variant;
+      continue;
+    }
+    if (pathname.startsWith(prefix)) return variant;
   }
-  if (pathname.startsWith("/lavorazioni-clienti")) return "clienti";
-  if (pathname.startsWith("/agenda")) return "agenda";
-  if (pathname.startsWith("/dashboard")) return "dashboard";
-  if (pathname.startsWith("/lavorazioni")) return "lavorazioni";
-  if (pathname.startsWith("/magazzino")) return "magazzino";
-  if (pathname.startsWith("/mezzi")) return "mezzi";
-  if (pathname.startsWith("/documenti")) return "documenti";
-  if (pathname.startsWith("/preventivi")) return "preventivi";
-  if (pathname.startsWith("/fatturazione")) return "fatturazione";
-  if (pathname.startsWith("/dipendenti")) return "dipendenti";
-  if (pathname.startsWith("/report")) return "report";
-  if (pathname.startsWith("/impostazioni")) return "impostazioni";
   return "default";
 }

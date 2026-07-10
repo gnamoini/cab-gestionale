@@ -53,6 +53,12 @@ function minHeightPx(size: GestionaleTextareaSize): number {
   return parseFloat(SIZE_MIN_HEIGHT[size]) * 16;
 }
 
+function resolvedMinHeightPx(el: HTMLTextAreaElement, size: GestionaleTextareaSize): number {
+  const computed = parseFloat(getComputedStyle(el).minHeight);
+  if (Number.isFinite(computed) && computed > 0) return computed;
+  return minHeightPx(size);
+}
+
 /** Misura e applica altezza auto-grow (pattern iOS-safe: overflow hidden fino al tetto, poi scroll). */
 function syncTextareaAutoGrowHeight(
   el: HTMLTextAreaElement,
@@ -64,7 +70,7 @@ function syncTextareaAutoGrowHeight(
 
   el.style.overflowY = "hidden";
   el.style.height = "auto";
-  const minPx = minHeightPx(size);
+  const minPx = resolvedMinHeightPx(el, size);
   const contentHeight = el.scrollHeight;
   let next = Math.max(minPx, contentHeight);
 
@@ -162,13 +168,13 @@ function GestionaleTextareaInner(
   const minHeight = SIZE_MIN_HEIGHT[size];
 
   const inlineStyle: CSSProperties = {
-    ...style,
     ...(autoGrow
       ? {
           minHeight,
           maxHeight: resolvedMaxHeight,
         }
       : { minHeight }),
+    ...style,
   };
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {

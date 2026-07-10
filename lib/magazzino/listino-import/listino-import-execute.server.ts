@@ -1,6 +1,8 @@
 import "server-only";
 
+import { resolveCabAppSettingsResolvedServer } from "@/lib/app-settings/resolve-settings-for-server";
 import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
+import { resolveMagazzinoCategoriaFromMaster } from "@/lib/magazzino/magazzino-categoria-infer";
 import { buildListinoImportMeta } from "@/lib/magazzino/listino-import/listino-import-meta";
 import type { ListinoImportDecision } from "@/lib/magazzino/listino-import/listino-import-types";
 import type { ListinoImportExecuteResult } from "@/lib/magazzino/listino-import/listino-import-types";
@@ -31,6 +33,10 @@ export async function executeListinoImport(input: {
   decisions: ListinoImportDecision[];
 }): Promise<ListinoImportExecuteResult> {
   const sb = await createSupabaseServerUserClient();
+  const settings = await resolveCabAppSettingsResolvedServer();
+  const masterCategories = settings.magazzinoMaster.categorie.length
+    ? settings.magazzinoMaster.categorie
+    : ["Generale"];
   const result: ListinoImportExecuteResult = {
     batchId: input.batchId,
     created: 0,
@@ -96,6 +102,7 @@ export async function executeListinoImport(input: {
         batchId: input.batchId,
       });
       const prezzoVendita = prezzoVenditaDaListinoEMarkup(rowData.costo, DEFAULT_MARKUP_PERCENT);
+      const categoria = resolveMagazzinoCategoriaFromMaster(decision.categoria, masterCategories);
       const insertPayload = attachMagazzinoEntityKey({
         codice: rowData.codice,
         nome: rowData.descrizione,
@@ -105,7 +112,7 @@ export async function executeListinoImport(input: {
         prezzo_vendita: prezzoVendita > 0 ? prezzoVendita : null,
         consumo_medio_mensile: null,
         meta: {
-          categoria: "Generale",
+          categoria,
           listinoImport,
         } as Record<string, unknown>,
       });

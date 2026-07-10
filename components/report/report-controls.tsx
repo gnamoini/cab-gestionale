@@ -18,7 +18,6 @@ import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/globa
 import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import {
   reportPeriodPanelClass,
-  reportPeriodPanelCompareClass,
   reportPeriodPanelHintClass,
   reportPeriodPanelTitleClass,
   reportHealthChipClass,
@@ -63,6 +62,17 @@ function DateField({
 }
 
 const dateFieldsRowClass = "grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2";
+/** Righe allineate tra pannello analisi e confronto (header, date, chip, overflow). */
+const periodPanelLayoutClass =
+  "grid h-full min-h-0 grid-rows-[2.75rem_auto_2.75rem_4.25rem] gap-3";
+const periodPanelHeaderClass = "flex min-h-11 min-w-0 items-center justify-between gap-2";
+const periodPanelChipRowClass = `${dsSegmentedWrap} flex min-h-[2.75rem] min-w-0 max-w-full items-center gap-1`;
+
+function periodChipBtnClass(active: boolean): string {
+  return `inline-flex h-8 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] px-2.5 text-xs font-medium !py-0 sm:px-3 sm:text-sm ${
+    active ? dsSegmentedBtnOn : dsSegmentedBtnOff
+  } ${dsFocus}`;
+}
 
 export function ReportControls({
   preset,
@@ -144,9 +154,12 @@ export function ReportControls({
   };
 
   return (
-    <div className="grid min-w-0 gap-3 lg:grid-cols-2" role="group" aria-label="Filtri periodo report">
-      <section className={reportPeriodPanelClass} aria-labelledby="report-panel-analisi-title">
-        <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2">
+    <div className="grid min-w-0 items-stretch gap-3 lg:grid-cols-2" role="group" aria-label="Filtri periodo report">
+      <section
+        className={`${reportPeriodPanelClass} ${periodPanelLayoutClass}`}
+        aria-labelledby="report-panel-analisi-title"
+      >
+        <div className={periodPanelHeaderClass}>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h2 id="report-panel-analisi-title" className={reportPeriodPanelTitleClass}>
               Periodo analisi
@@ -161,11 +174,7 @@ export function ReportControls({
           <DateField id="report-period-a" label="A" valueYmd={analysisTo} onChangeYmd={pickAnalysisTo} />
         </div>
 
-        <div
-          className={`${dsSegmentedWrap} mt-3 min-w-0 max-w-full items-center`}
-          role="group"
-          aria-label="Scorciatoie periodo analisi"
-        >
+        <div className={periodPanelChipRowClass} role="group" aria-label="Scorciatoie periodo analisi">
           {REPORT_QUICK_PRESET_IDS.map((id) => (
             <button
               key={id}
@@ -173,14 +182,14 @@ export function ReportControls({
               aria-pressed={preset === id}
               title={REPORT_PRESET_LABELS[id]}
               onClick={() => onPreset(id)}
-              className={`h-8 shrink-0 px-2 sm:px-2.5 ${preset === id ? dsSegmentedBtnOn : dsSegmentedBtnOff} ${dsFocus}`}
+              className={periodChipBtnClass(preset === id)}
             >
               {reportQuickPresetChipLabel(id)}
             </button>
           ))}
         </div>
 
-        <label htmlFor="report-period-preset" className="mt-3 flex min-w-0 flex-col gap-1">
+        <label htmlFor="report-period-preset" className="flex min-w-0 flex-col gap-1">
           <span className={fieldLabelClass}>Altro periodo</span>
           <GlobalSelect
             id="report-period-preset"
@@ -206,14 +215,19 @@ export function ReportControls({
       </section>
 
       <section
-        className={`${reportPeriodPanelCompareClass} ${compareActive ? "" : "opacity-[0.72]"}`}
+        className={`${reportPeriodPanelClass} ${periodPanelLayoutClass} ${compareActive ? "" : "opacity-[0.72]"}`}
         aria-labelledby="report-panel-confronto-title"
         aria-disabled={!compareActive}
       >
-        <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2">
-          <h2 id="report-panel-confronto-title" className={reportPeriodPanelTitleClass}>
-            Periodo confronto
-          </h2>
+        <div className={periodPanelHeaderClass}>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h2 id="report-panel-confronto-title" className={reportPeriodPanelTitleClass}>
+              Periodo confronto
+            </h2>
+            <span className={`${reportHealthChipClass} invisible pointer-events-none select-none`} aria-hidden>
+              {REPORT_PRESET_LABELS[preset]}
+            </span>
+          </div>
           <span className={reportPeriodPanelHintClass}>
             {compareActive ? `${compareDays} giorni` : "Disattivato"}
           </span>
@@ -224,17 +238,13 @@ export function ReportControls({
           <DateField id="report-compare-a" label="A" valueYmd={compareTo} onChangeYmd={pickCompareTo} />
         </div>
 
-        <div
-          className={`${dsSegmentedWrap} mt-3 min-w-0 max-w-full flex-wrap items-center`}
-          role="group"
-          aria-label="Scorciatoie periodo confronto"
-        >
+        <div className={periodPanelChipRowClass} role="group" aria-label="Scorciatoie periodo confronto">
           <button
             type="button"
             aria-pressed={compareMode === "none"}
             title="Nessun confronto"
             onClick={() => onCompareMode("none")}
-            className={`h-8 shrink-0 px-2.5 sm:px-3 ${compareMode === "none" ? dsSegmentedBtnOn : dsSegmentedBtnOff} ${dsFocus}`}
+            className={periodChipBtnClass(compareMode === "none")}
           >
             Nessuno
           </button>
@@ -247,12 +257,17 @@ export function ReportControls({
                 aria-pressed={compareMode === id}
                 title={fullLabel}
                 onClick={() => onCompareMode(id)}
-                className={`h-8 shrink-0 px-2 sm:px-2.5 ${compareMode === id ? dsSegmentedBtnOn : dsSegmentedBtnOff} ${dsFocus}`}
+                className={periodChipBtnClass(compareMode === id)}
               >
                 {reportCompareQuickChipLabel(id)}
               </button>
             );
           })}
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-1" aria-hidden>
+          <span className={`${fieldLabelClass} invisible`}>Altro periodo</span>
+          <div className="h-10" />
         </div>
       </section>
     </div>

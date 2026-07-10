@@ -1,12 +1,17 @@
 import {
   buildLogModificaSummary,
+  extractPayloadFieldChanges,
   filterAuditMetadataModifiche,
+  isAuditMetadataFieldKey,
   modificheToModificaRiga,
 } from "@/lib/gestionale-log/log-summary";
 import { reconcileLogModificaRows } from "@/lib/gestionale-log/log-event-pipeline";
-import { isLogReverted } from "@/lib/gestionale-log/undo";
+import {
+  buildLogModificheFocusHref,
+  lavorazioneIdFromLogRow,
+} from "@/lib/gestionale-log/log-modifiche-view-model";
+import { auditPayload, isLogReverted } from "@/lib/gestionale-log/undo";
 import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
-import { Q_FOCUS_LAV_ROW, Q_FOCUS_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
 import { lavorazioneLogOggettoFromListRow } from "@/lib/lavorazioni/lavorazione-log-oggetto";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { isLavorazioneInCorso } from "@/lib/lavorazioni/archived";
@@ -24,7 +29,6 @@ import {
 } from "@/lib/report/lavorazioni-report-selectors";
 import { splitLavorazioniListRowsForReport } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import {
-  countInterventiInRitardo,
   sottoScortaCount,
 } from "@/lib/report/kpi-performance/kpi-performance-formulas";
 import { filterEntriesForReportTimesheetKpi } from "@/lib/dipendenti/timesheet-report-kpi-filter";
@@ -36,7 +40,7 @@ import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-l
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { buildRicambiConsumoRanking } from "@/lib/magazzino/ricambio-consumo-from-log";
 import {
-  CONTROL_TOWER_ACTIVITY_MAX,
+  CONTROL_TOWER_ACTIVITY_PER_CARD,
   CONTROL_TOWER_CALENDAR_FORWARD_DAYS,
   CONTROL_TOWER_KPI_WINDOW_LABEL,
   CONTROL_TOWER_LATE_INGRESS_DAYS,
@@ -55,6 +59,7 @@ import {
   type DateRange,
 } from "@/lib/report/date-ranges";
 import {
+  computeDashboardLavWidgetStats,
   computeDashboardMagSottoScortaRicambi,
   formatDashboardLavWidgetMezzoIdent,
   type DashboardMagMovementRow,
@@ -77,6 +82,8 @@ export type ControlTowerKpiMetric = {
   invert?: boolean;
   snapshot?: boolean;
   unit?: "count" | "hours";
+  /** Breve spiegazione sotto il valore (metriche istantanee). */
+  hint?: string;
 };
 
 export type ControlTowerKpiCluster = {
@@ -150,19 +157,24 @@ export type ControlTowerMagazzinoOpsSlice = {
   anomalie: DashboardMagMovementRow[];
 };
 
+export type ControlTowerActivityDomain = "lavorazioni" | "magazzino" | "preventiviDdt" | "fatturazione";
+
 export type ControlTowerActivityItem = {
   id: string;
-  domain: "lavorazioni" | "ricambi" | "amministrazione";
+  domain: ControlTowerActivityDomain;
   at: string;
   vm: GestionaleLogViewModel;
   href: string | null;
+  /** Numero di eventi log aggregati nella riga (stessa entità). */
+  eventCount: number;
 };
 
 export type ControlTowerActivityFeedSlice = {
   byDomain: {
     lavorazioni: ControlTowerActivityItem[];
-    ricambi: ControlTowerActivityItem[];
-    amministrazione: ControlTowerActivityItem[];
+    magazzino: ControlTowerActivityItem[];
+    preventiviDdt: ControlTowerActivityItem[];
+    fatturazione: ControlTowerActivityItem[];
   };
 };
 
@@ -190,7 +202,9 @@ export type ControlTowerBaseInput = {
   logLavorazioni?: readonly LogModificaRow[];
   logMagazzino?: readonly LogModificaRow[];
   logMovimenti?: readonly LogModificaRow[];
-  logAdmin?: readonly LogModificaRow[];
+  logPreventivi?: readonly LogModificaRow[];
+  logDdt?: readonly LogModificaRow[];
+  logFatturazione?: readonly LogModificaRow[];
   promemoria?: readonly DashboardPromemoriaRow[];
   agendaSessions?: readonly WorkshopScheduleSessionView[];
   timesheetEntries?: readonly DipendenteTimesheetEntryRow[];
@@ -270,6 +284,7 @@ function metric(
     snapshot?: boolean;
     unit?: "count" | "hours";
     formatDelta?: (n: number) => string;
+    hint?: string;
   },
 ): ControlTowerKpiMetric {
   const value = opts?.unit === "hours" ? Math.round(cur * 10) / 10 : cur;
@@ -285,7 +300,7 @@ function metric(
     label,
     value,
     prevValue,
-    deltaPct: prevValue != null && !opts?.snapshot ? deltaPct(prevValue, value) : null,
+    deltaPct: prevValue != null && !opts?.snapshot ? deltaPct(value, prevValue) : null,
     deltaAbs:
       opts?.snapshot || delta == null
         ? null
@@ -295,6 +310,7 @@ function metric(
     invert: opts?.invert,
     snapshot: opts?.snapshot,
     unit: opts?.unit,
+    hint: opts?.hint,
   };
 }
 
@@ -470,14 +486,17 @@ export function buildControlTowerHeaderKpiSlice(
     const openedPrev = countOpenedInRange(bundle.attive, bundle.storico, prevRange);
     const completedCur = countCompletedInRange(bundle.completate, range);
     const completedPrev = countCompletedInRange(bundle.completate, prevRange);
-    const lateCount = countInterventiInRitardo(attive, anchor, CONTROL_TOWER_LATE_INGRESS_DAYS);
+    const urgentCount = computeDashboardLavWidgetStats(attive as unknown as LavorazioneListRow[]).urgenti;
     clusters.push({
       id: "lavorazioni",
       label: "Lavorazioni",
       metrics: [
-        metric("lav-aperte", "Aperte settimana", openedCur, openedPrev),
-        metric("lav-completate", "Completate settimana", completedCur, completedPrev),
-        metric("lav-ritardo", "In ritardo", lateCount, null, { snapshot: true }),
+        metric("lav-aperte", "Nuove lavorazioni aperte", openedCur, openedPrev),
+        metric("lav-completate", "Lavorazioni chiuse", completedCur, completedPrev),
+        metric("lav-urgenti", "Lavorazioni urgenti", urgentCount, null, {
+          snapshot: true,
+          hint: "Aperte con priorità urgente",
+        }),
       ],
     });
   }
@@ -489,11 +508,11 @@ export function buildControlTowerHeaderKpiSlice(
       id: "dipendenti",
       label: "Personale",
       metrics: [
-        metric("dip-ore", "Ore lavorate", curTotals.totaleLavorato, prevTotals.totaleLavorato, { unit: "hours" }),
-        metric("dip-straord", "Straordinari", curTotals.oreStraordinarie, prevTotals.oreStraordinarie, {
+        metric("dip-ore", "Ore di lavoro", curTotals.totaleLavorato, prevTotals.totaleLavorato, { unit: "hours" }),
+        metric("dip-straord", "Ore straordinarie", curTotals.oreStraordinarie, prevTotals.oreStraordinarie, {
           unit: "hours",
         }),
-        metric("dip-assenze", "Ore assenza", curTotals.oreAssenza, prevTotals.oreAssenza, {
+        metric("dip-assenze", "Ore di assenza", curTotals.oreAssenza, prevTotals.oreAssenza, {
           unit: "hours",
           invert: true,
         }),
@@ -516,9 +535,12 @@ export function buildControlTowerHeaderKpiSlice(
       id: "ricambi",
       label: "Ricambi",
       metrics: [
-        metric("mag-movimenti", "Movimenti settimana", movCur, movPrev),
-        metric("mag-consumi", "Consumi settimana", consumoSum, consumoSumPrev),
-        metric("mag-sotto-scorta", "Stock critici", sotto, null, { snapshot: true }),
+        metric("mag-movimenti", "Movimenti di magazzino", movCur, movPrev),
+        metric("mag-consumi", "Pezzi usciti a consumo", consumoSum, consumoSumPrev),
+        metric("mag-sotto-scorta", "Articoli sotto scorta", sotto, null, {
+          snapshot: true,
+          hint: "Quantità sotto la scorta minima",
+        }),
       ],
     });
   }
@@ -530,7 +552,7 @@ export function buildControlTowerHeaderKpiSlice(
       metrics: [
         metric(
           "prev-emessi",
-          "Preventivi emessi",
+          "Preventivi creati",
           countPreventiviEmessiInRange(preventivi, range),
           countPreventiviEmessiInRange(preventivi, prevRange),
         ),
@@ -542,7 +564,7 @@ export function buildControlTowerHeaderKpiSlice(
         ),
         metric(
           "fatt-pagate",
-          "Fatture pagate",
+          "Fatture incassate",
           countInvoicesInRange(invoices, range, "pagate"),
           countInvoicesInRange(invoices, prevRange, "pagate"),
         ),
@@ -712,25 +734,6 @@ function briefActivityModificaRiga(modificaRiga: string, maxLines = 2): string {
     .join("\n")}\n• …`;
 }
 
-function activityFocusHref(row: LogModificaRow): string | null {
-  if (row.entita === "lavorazioni" && row.entita_id?.trim()) {
-    const sp = new URLSearchParams();
-    sp.set(Q_FOCUS_LAV_ROW, row.entita_id.trim());
-    return `/lavorazioni?${sp.toString()}`;
-  }
-  if (row.entita === "magazzino_ricambi" && row.entita_id?.trim()) {
-    const sp = new URLSearchParams();
-    sp.set(Q_FOCUS_RICAMBIO, row.entita_id.trim());
-    return `/magazzino?${sp.toString()}`;
-  }
-  if (row.entita === "movimenti_ricambi") return "/magazzino";
-  if (row.entita === "preventivi") return "/preventivi";
-  if (row.entita === "fatturazione") return "/fatturazione";
-  if (row.entita === "mezzi") return "/mezzi";
-  if (row.entita === "documenti") return "/documenti";
-  return null;
-}
-
 function resolveActivityOggetto(
   row: LogModificaRow,
   summaryOggetto: string,
@@ -739,8 +742,9 @@ function resolveActivityOggetto(
 ): string {
   const fromPayload = logOggettoFromPayload(row.payload);
   if (fromPayload && fromPayload !== "—") return fromPayload;
-  if (row.entita === "lavorazioni") {
-    const lav = lavById.get(row.entita_id);
+  const lavId = lavorazioneIdFromLogRow(row);
+  if (lavId) {
+    const lav = lavById.get(lavId);
     if (lav) {
       const label = lavorazioneLogOggettoFromListRow(lav, schedeStore);
       if (label !== "—") return label;
@@ -756,18 +760,69 @@ type ActivityMapContext = {
   schedeStore?: LavorazioneSchedeStore;
 };
 
+function entityActivityKey(row: LogModificaRow): string {
+  return `${row.entita}:${row.entita_id ?? ""}`;
+}
+
+/** Unisce più log sulla stessa entità in un solo evento (stato netto del periodo). */
+function mergeEntityActivityRows(groupAsc: readonly LogModificaRow[]): { row: LogModificaRow; eventCount: number } {
+  if (groupAsc.length === 1) return { row: groupAsc[0]!, eventCount: 1 };
+  const oldest = groupAsc[0]!;
+  const newest = groupAsc[groupAsc.length - 1]!;
+  const beforeObj: Record<string, unknown> = {};
+  const afterObj: Record<string, unknown> = {};
+
+  const oldestBase = auditPayload(oldest);
+  if (oldestBase.before && typeof oldestBase.before === "object" && !Array.isArray(oldestBase.before)) {
+    Object.assign(beforeObj, oldestBase.before);
+  }
+  const newestBase = auditPayload(newest);
+  if (newestBase.after && typeof newestBase.after === "object" && !Array.isArray(newestBase.after)) {
+    Object.assign(afterObj, newestBase.after);
+  }
+
+  for (const row of groupAsc) {
+    for (const ch of extractPayloadFieldChanges(row.payload)) {
+      if (isAuditMetadataFieldKey(ch.key)) continue;
+      if (!(ch.key in beforeObj)) beforeObj[ch.key] = ch.before;
+      afterObj[ch.key] = ch.after;
+    }
+  }
+
+  const mergedRaw = { ...auditPayload(newest), before: beforeObj, after: afterObj };
+  return {
+    row: { ...newest, created_at: newest.created_at, payload: mergedRaw },
+    eventCount: groupAsc.length,
+  };
+}
+
+function groupLogsByEntity(rows: readonly LogModificaRow[]): { row: LogModificaRow; eventCount: number }[] {
+  const buckets = new Map<string, LogModificaRow[]>();
+  for (const row of rows) {
+    const key = entityActivityKey(row);
+    const list = buckets.get(key) ?? [];
+    list.push(row);
+    buckets.set(key, list);
+  }
+  const merged: { row: LogModificaRow; eventCount: number }[] = [];
+  for (const list of buckets.values()) {
+    const asc = [...list].sort((a, b) => a.created_at.localeCompare(b.created_at));
+    merged.push(mergeEntityActivityRows(asc));
+  }
+  return merged.sort((a, b) => b.row.created_at.localeCompare(a.row.created_at));
+}
+
 function mapLogToActivity(
   rows: readonly LogModificaRow[] | undefined,
-  domain: ControlTowerActivityItem["domain"],
-  range: DateRange,
+  domain: ControlTowerActivityDomain,
   ctx: ActivityMapContext,
 ): ControlTowerActivityItem[] {
   if (!rows?.length) return [];
-  const inRange = rows.filter((row) => isoInRange(row.created_at, range));
-  const consolidated = reconcileLogModificaRows(inRange);
+  const reconciled = reconcileLogModificaRows(rows);
+  const byEntity = groupLogsByEntity(reconciled);
   const out: ControlTowerActivityItem[] = [];
 
-  for (const row of consolidated.sort((a, b) => b.created_at.localeCompare(a.created_at))) {
+  for (const { row, eventCount } of byEntity) {
     const reverted = isLogReverted(row);
     const summary = buildLogModificaSummary({
       entita: row.entita,
@@ -778,52 +833,62 @@ function mapLogToActivity(
       statiLavorazione: row.entita === "lavorazioni" ? [...(ctx.statiLavorazione ?? [])] : undefined,
     });
     const oggetto = resolveActivityOggetto(row, summary.oggettoRiga, ctx.lavById, ctx.schedeStore);
+    const modificaBase = briefActivityModificaRiga(modificheToModificaRiga(summary.modifiche));
+    const modificaRiga =
+      eventCount > 1 && modificaBase !== "—"
+        ? `${modificaBase}\n• ${eventCount} aggiornamenti nel periodo`
+        : modificaBase;
     const vm: GestionaleLogViewModel = {
       tone: summary.tone,
       tipoRiga: summary.tipoRiga,
       oggettoRiga: oggetto,
-      modificaRiga: briefActivityModificaRiga(modificheToModificaRiga(summary.modifiche)),
+      modificaRiga,
       autore: activityAutoreLabel(row),
       atIso: row.created_at,
       annullato: reverted,
     };
     out.push({
-      id: `${domain}:${row.id}`,
+      id: `${domain}:${entityActivityKey(row)}`,
       domain,
       at: row.created_at,
       vm,
-      href: activityFocusHref(row),
+      href: buildLogModificheFocusHref(row),
+      eventCount,
     });
   }
   return out;
 }
 
-/** Activity feed — unico dominio dashboard con `last_7_days`. */
+/** Activity feed — ultimi log per entità (limit query server + slice card). */
 export function buildControlTowerActivityFeedSlice(input: ControlTowerBaseInput): ControlTowerActivityFeedSlice {
-  const anchor = input.anchor ?? new Date();
-  const range = resolvePresetRange(anchor, "last_7_days");
   const ctx: ActivityMapContext = {
     statiLavorazione: input.statiLavorazione,
     lavById: new Map(input.lavRows.map((r) => [r.id, r])),
     schedeStore: input.schedeStore,
   };
-  const perDomainMax = Math.max(6, Math.ceil(CONTROL_TOWER_ACTIVITY_MAX / 3));
-  const lavorazioni = mapLogToActivity(input.logLavorazioni, "lavorazioni", range, ctx).slice(0, perDomainMax);
-  const ricambi = [
-    ...mapLogToActivity(input.logMagazzino, "ricambi", range, ctx),
-    ...mapLogToActivity(input.logMovimenti, "ricambi", range, ctx),
+  const limit = CONTROL_TOWER_ACTIVITY_PER_CARD;
+
+  const lavorazioni = mapLogToActivity(input.logLavorazioni, "lavorazioni", ctx).slice(0, limit);
+  const magazzino = [
+    ...mapLogToActivity(input.logMagazzino, "magazzino", ctx),
+    ...mapLogToActivity(input.logMovimenti, "magazzino", ctx),
   ]
     .sort((a, b) => b.at.localeCompare(a.at))
-    .slice(0, perDomainMax);
-  const amministrazione = mapLogToActivity(input.logAdmin, "amministrazione", range, ctx).slice(0, perDomainMax);
-  const all = [...lavorazioni, ...ricambi, ...amministrazione]
+    .slice(0, limit);
+  const preventiviDdt = [
+    ...mapLogToActivity(input.logPreventivi, "preventiviDdt", ctx),
+    ...mapLogToActivity(input.logDdt, "preventiviDdt", ctx),
+  ]
     .sort((a, b) => b.at.localeCompare(a.at))
-    .slice(0, CONTROL_TOWER_ACTIVITY_MAX);
+    .slice(0, limit);
+  const fatturazione = mapLogToActivity(input.logFatturazione, "fatturazione", ctx).slice(0, limit);
+
   return {
     byDomain: {
-      lavorazioni: all.filter((i) => i.domain === "lavorazioni"),
-      ricambi: all.filter((i) => i.domain === "ricambi"),
-      amministrazione: all.filter((i) => i.domain === "amministrazione"),
+      lavorazioni,
+      magazzino,
+      preventiviDdt,
+      fatturazione,
     },
   };
 }

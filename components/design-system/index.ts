@@ -104,7 +104,7 @@ export {
   GlobalLoadingOverlay,
   GlobalLoadingPageFallback,
   type GlobalLoadingSpinnerSize,
-} from "./global-loading";
+} from "./loading";
 export { LoadingSpinner, PageLoadingOverlay } from "./loading-indicator";
 export {
   LoadingSpinner as DsLoadingSpinner,

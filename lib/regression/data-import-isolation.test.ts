@@ -27,8 +27,11 @@ const magLegacy = fs.readFileSync(path.join(ROOT, "app/api/import/magazzino/pars
 assert.match(magLegacy, /legacyImportParseRoute/);
 
 const magView = fs.readFileSync(path.join(ROOT, "components/gestionale/magazzino/magazzino-view.tsx"), "utf8");
-assert.match(magView, /MagazzinoImportEntry/);
-assert.match(magView, /listino_ricambi/);
+assert.match(magView, /MagazzinoImportMenu/);
+
+const magImportMenu = fs.readFileSync(path.join(ROOT, "components/gestionale/magazzino/magazzino-import-entry.tsx"), "utf8");
+assert.match(magImportMenu, /listino_ricambi/);
+assert.match(magImportMenu, /magazzino_ricambi/);
 
 const mezziView = fs.readFileSync(path.join(ROOT, "components/gestionale/mezzi/mezzi-view.tsx"), "utf8");
 assert.match(mezziView, /ModuleImportEntry/);

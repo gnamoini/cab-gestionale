@@ -12,6 +12,8 @@ export function ReportComplianceZone() {
       subtitle="Revisioni, assicurazioni e collaudi"
       collapsible
       defaultCollapsed
+      persistScope="report"
+      persistKey="compliance"
       className={reportZoneShellClass}
     >
       <KpiPerformanceCompliance />

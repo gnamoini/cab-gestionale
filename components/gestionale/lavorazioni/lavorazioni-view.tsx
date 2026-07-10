@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  GestionaleListTable,
   GestionaleListTableActionsHead,
   GlobalTableSortTh,
 } from "@/components/gestionale/global-table";
@@ -163,6 +164,10 @@ import {
 } from "@/src/lib/react-query/refetch-lavorazioni-operational-data";
 import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
 import { useAuth } from "@/context/auth-context";
+import {
+  collapsibleExpandedBoolPref,
+  useCollapsiblePreference,
+} from "@/lib/ui/collapsible-prefs";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
@@ -238,7 +243,6 @@ import {
   LavorazioneAttivaMobileCard,
   LavorazioniMobileListShell,
 } from "@/components/gestionale/lavorazioni/lavorazione-mobile-cards";
-import { LavorazioniDesktopTableShell } from "@/components/gestionale/lavorazioni/lavorazioni-desktop-table-shell";
 import {
   LavorazioniListToolbar,
   LavorazioniPageHeaderToolbar,
@@ -801,7 +805,13 @@ export function LavorazioniView() {
     setSearchApplied(searchInputRef.current.trim());
   }, []);
 
-  const [filtriAttiviEspansi, setFiltriAttiviEspansi] = useState(false);
+  const [filtriAttiviEspansi, setFiltriAttiviEspansi] = useCollapsiblePreference(
+    collapsibleExpandedBoolPref(false, {
+      scope: "lavorazioni",
+      key: "filters",
+      userId: user?.id ?? null,
+    }),
+  );
   const [lavLogOpen, setLavLogOpen] = useState(false);
 
   const [advancedFilters, setAdvancedFilters] = useState<LavorazioniAdvancedFilters>(
@@ -829,6 +839,7 @@ export function LavorazioniView() {
   const [completamentoEditRow, setCompletamentoEditRow] = useState<LavorazioneListRow | null>(null);
   const [eliminaConfirmRow, setEliminaConfirmRow] = useState<LavorazioneListRow | null>(null);
   const flashClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const consumedFocusLavRef = useRef<string | null>(null);
 
   const [navMezzoFilter, setNavMezzoFilter] = useState<MezzoGestito | null>(null);
   const [navBulkFlashIds, setNavBulkFlashIds] = useState<Set<string>>(() => new Set());
@@ -977,6 +988,7 @@ export function LavorazioniView() {
     [attiveRows, chiuseRows, schedeStore, logsByLavorazioneId, addettiRecords],
   );
   const [listRefreshBusy, setListRefreshBusy] = useState(false);
+  const [printBusy, setPrintBusy] = useState(false);
 
   const refreshLavorazioniLists = useCallback(async () => {
     setListRefreshBusy(true);
@@ -1543,15 +1555,25 @@ export function LavorazioniView() {
     [flashRow, listPageSize, setPageA, setPageC, sortedAttive, sortedChiuse],
   );
 
+  const focusLavorazioneInTableRef = useRef(focusLavorazioneInTable);
+  focusLavorazioneInTableRef.current = focusLavorazioneInTable;
+
   useEffect(() => {
     const id = searchParams.get(Q_FOCUS_LAV_ROW)?.trim();
-    if (!id) return;
+    if (!id) {
+      consumedFocusLavRef.current = null;
+      return;
+    }
+    if (consumedFocusLavRef.current === id) return;
+    consumedFocusLavRef.current = id;
+
+    deferredRouterReplace(router, pathname, { scroll: false });
+
     const t = window.setTimeout(() => {
-      focusLavorazioneInTable(id);
-      deferredRouterReplace(router, pathname, { scroll: false });
+      focusLavorazioneInTableRef.current(id);
     }, 80);
     return () => window.clearTimeout(t);
-  }, [searchParams, pathname, router, focusLavorazioneInTable]);
+  }, [searchParams, pathname, router]);
 
   useEffect(() => {
     if (!globalPerm.isAdmin) return;
@@ -1824,9 +1846,15 @@ export function LavorazioniView() {
     [pagedChiuse.length, renderArchivioDesktopRow, archivioPagedBundleRevisionKey],
   );
 
-  const onPrintLavorazioniInCorso = useCallback(() => {
-    void openPdfArtifact("lavorazioni-in-corso");
-  }, []);
+  const onPrintLavorazioniInCorso = useCallback(async () => {
+    if (printBusy) return;
+    setPrintBusy(true);
+    try {
+      await openPdfArtifact("lavorazioni-in-corso");
+    } finally {
+      setPrintBusy(false);
+    }
+  }, [printBusy]);
 
   return (
     <GestionaleSectionGate module="lavorazioni">
@@ -1834,6 +1862,7 @@ export function LavorazioniView() {
     <>
       <LavorazioniPageHeaderToolbar
         listRefreshBusy={listRefreshBusy}
+        printBusy={printBusy}
         onRefresh={() => void refreshLavorazioniLists()}
         onOpenLog={() => setLavLogOpen(true)}
         onPrint={onPrintLavorazioniInCorso}
@@ -1911,6 +1940,8 @@ export function LavorazioniView() {
           title={`Lavorazioni in corso (${attiveRowsFiltered.length})`}
           collapsible
           defaultCollapsed={false}
+          persistScope="lavorazioni"
+          persistKey="attive"
         >
           {listViewMode === "kanban" ? (
             <LavorazioniKanbanView
@@ -1947,7 +1978,7 @@ export function LavorazioniView() {
           ) : (
             <>
           {listLayout === "desktop" ? (
-          <LavorazioniDesktopTableShell
+          <GestionaleListTable
             visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
             className={gestionaleLavorazioniDenseTableClass}
             colgroup={
@@ -2073,7 +2104,9 @@ export function LavorazioniView() {
               renderRow: renderAttiveDesktopRow,
               estimateRowHeight: 72,
             }}
-          />
+          >
+            {null}
+          </GestionaleListTable>
           ) : null}
 
           {listLayout === "mobile" ? (
@@ -2145,6 +2178,9 @@ export function LavorazioniView() {
           title={archivioCardTitle}
           collapsible
           defaultCollapsed
+          persistScope="lavorazioni"
+          persistKey="archivio"
+          persist={false}
           onCollapsedChange={(collapsed) => setArchivioSectionOpen(!collapsed)}
         >
           {!archivioSectionOpen ? null : archivioTableLoading ? (
@@ -2152,7 +2188,7 @@ export function LavorazioniView() {
           ) : (
           <>
           {listLayout === "desktop" ? (
-          <LavorazioniDesktopTableShell
+          <GestionaleListTable
             visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
             className={gestionaleLavorazioniDenseTableClass}
             colgroup={
@@ -2278,7 +2314,9 @@ export function LavorazioniView() {
             }
             colSpan={12}
             virtualRows={archivioVirtualRows}
-          />
+          >
+            {null}
+          </GestionaleListTable>
           ) : null}
 
           {listLayout === "mobile" ? (

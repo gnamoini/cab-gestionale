@@ -18,6 +18,7 @@ import {
 } from "@/components/design-system";
 import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzino-giacenza-bell";
 import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
+import { MagazzinoListinoAiBadge } from "@/components/gestionale/magazzino/magazzino-listino-ai-badge";
 import dynamic from "next/dynamic";
 
 const RicambioNewModal = dynamic(
@@ -55,9 +56,8 @@ import {
   formatMarkupDisplay,
   type RicambioFormState,
 } from "@/lib/magazzino/form";
-import { scheduleCompatBackgroundAudit } from "@/lib/magazzino/compat/compat-runtime-sanitize";
 import { readCompatDisplayForUi, readCompatLabelsForUi } from "@/lib/magazzino/compat/compat-read-guard";
-import { latestUndoableScortaEntryForRicambio, parseScortaChange, entryMatchesMagazzinoUndoScope, type MagazzinoUndoScope } from "@/lib/magazzino/magazzino-scorta-undo";
+import { buildLatestUndoableScortaEntryByRicambioId, latestUndoableScortaEntryForRicambio, parseScortaChange, entryMatchesMagazzinoUndoScope, type MagazzinoUndoScope } from "@/lib/magazzino/magazzino-scorta-undo";
 import { useUndoSessionId } from "@/lib/gestionale-log/use-undo-session-id";
 import { analyzeArchiveDuplicateCodes } from "@/lib/magazzino/duplicates";
 import { ricambioHasFornitoreAlternativo } from "@/lib/magazzino/ricambio-fornitori-alternativi";
@@ -101,6 +101,8 @@ import {
   gestionaleListTableRowClass,
   gestionaleListTableRowSurfaceClass,
   gestionaleListTableRowTone,
+  gestionaleListTableRowToneFlash,
+  gestionaleListTableRowToneLowStock,
   gestionaleListTableTd,
   gestionaleListTableTdAzioni,
   gestionaleListTableTdCenter,
@@ -119,8 +121,7 @@ import {
 } from "@/components/design-system";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { MagazzinoAdvancedFilterPanel } from "@/components/gestionale/magazzino/magazzino-advanced-filter-panel";
-import { MagazzinoImportEntry } from "@/components/gestionale/magazzino/magazzino-import-entry";
-import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
+import { MagazzinoImportMenu } from "@/components/gestionale/magazzino/magazzino-import-entry";
 import type { RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
@@ -163,6 +164,10 @@ import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useMagazzinoLogFeed } from "@/lib/magazzino/use-magazzino-log-feed";
 import { formatCompatMezziArrayForLog } from "@/lib/gestionale-log/log-summary";
 import { useAuth } from "@/context/auth-context";
+import {
+  collapsibleExpandedBoolPref,
+  useCollapsiblePreference,
+} from "@/lib/ui/collapsible-prefs";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import {
   GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
@@ -510,15 +515,18 @@ function MagazzinoDisabledButtonTooltip({
 function RicambioCodiceCell({ p }: { p: RicambioMagazzino }) {
   const secondary = p.codiceFornitoreOriginaleSecondario.trim();
   return (
-    <div className="space-y-0.5">
-      <span className="inline-block max-w-full break-all rounded-md bg-zinc-100 px-2 py-1 font-mono text-xs font-semibold leading-snug tracking-wide dark:bg-zinc-800">
-        {p.codiceFornitoreOriginale}
-      </span>
-      {secondary ? (
-        <div className="break-all pl-0.5 font-mono text-[11px] font-medium leading-snug tracking-wide text-zinc-500 dark:text-zinc-400">
-          {secondary}
-        </div>
-      ) : null}
+    <div className="flex items-start gap-1">
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <span className="inline-block max-w-full break-all rounded-md bg-zinc-100 px-2 py-1 font-mono text-xs font-semibold leading-snug tracking-wide dark:bg-zinc-800">
+          {p.codiceFornitoreOriginale}
+        </span>
+        {secondary ? (
+          <div className="break-all pl-0.5 font-mono text-[11px] font-medium leading-snug tracking-wide text-zinc-500 dark:text-zinc-400">
+            {secondary}
+          </div>
+        ) : null}
+      </div>
+      <MagazzinoListinoAiBadge listinoImport={p.listinoImport} />
     </div>
   );
 }
@@ -582,6 +590,8 @@ export function MagazzinoView() {
   const magazzinoInitialLoading = magazzinoListQ.isLoading && magazzinoListQ.data === undefined;
   const [searchInput, setSearchInput] = useState("");
   const [searchApplied, setSearchApplied] = useState("");
+  const [searchSuggestionsApplied, setSearchSuggestionsApplied] = useState("");
+  const [searchFieldFocused, setSearchFieldFocused] = useState(false);
   const searchInputRef = useRef(searchInput);
   searchInputRef.current = searchInput;
   const [sortColumn, setSortColumn] = useState<SortKeyMagazzino | null>(null);
@@ -591,7 +601,9 @@ export function MagazzinoView() {
   );
   const [soloSottoScorta, setSoloSottoScorta] = useState(false);
   const [nascondiScortaZero, setNascondiScortaZero] = useState(false);
-  const [filtriEspansi, setFiltriEspansi] = useState(false);
+  const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
+    collapsibleExpandedBoolPref(false, { scope: "magazzino", key: "filters", userId: user?.id ?? null }),
+  );
   const [toolbarOverflowOpen, setToolbarOverflowOpen] = useState(false);
 
   const patchAdvancedFilters = useCallback((patch: Partial<MagazzinoAdvancedFilters>) => {
@@ -603,12 +615,18 @@ export function MagazzinoView() {
   }, []);
 
   useEffect(() => {
-    const t = window.setTimeout(() => setSearchApplied(searchInput.trim()), SEARCH_DEBOUNCE_MS);
+    const trimmed = searchInput.trim();
+    const t = window.setTimeout(() => {
+      setSearchApplied(trimmed);
+      setSearchSuggestionsApplied(trimmed);
+    }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(t);
   }, [searchInput]);
 
   const flushPageSearch = useCallback(() => {
-    setSearchApplied(searchInputRef.current.trim());
+    const trimmed = searchInputRef.current.trim();
+    setSearchApplied(trimmed);
+    setSearchSuggestionsApplied(trimmed);
   }, []);
 
   const [masterMarche, setMasterMarche] = useState<string[]>([]);
@@ -636,7 +654,9 @@ export function MagazzinoView() {
   useUIAutonomyFixEngine("/magazzino", [newOpen, detail, dupCheckModalOpen]);
 
   const [flashRowId, setFlashRowId] = useState<string | null>(null);
+  const flashRowRef = useRef<string | null>(null);
   const flashClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prodottiByIdRef = useRef<Map<string, RicambioMagazzino>>(new Map());
   const filteredSortedRef = useRef<RicambioMagazzino[]>([]);
   const listPageSizeRef = useRef(10);
   const setMagazzinoPageRef = useRef<(n: number) => void>(() => {});
@@ -668,6 +688,8 @@ export function MagazzinoView() {
   const listPageSize = useResponsiveListPageSize();
   listPageSizeRef.current = listPageSize;
 
+  const logFeedEnabled = logOpen || detail?.mode === "info";
+
   const {
     feed: magLogFeed,
     timelineByRicambio: magLogTimelineByRicambio,
@@ -678,6 +700,7 @@ export function MagazzinoView() {
     prodotti,
     authorName,
     userId: user?.id ?? null,
+    enabled: logFeedEnabled,
   });
 
   const {
@@ -799,15 +822,46 @@ export function MagazzinoView() {
     );
   }
 
-  const flashRow = useCallback((id: string, opts?: { durationMs?: number }) => {
-    if (flashClearRef.current) clearTimeout(flashClearRef.current);
-    setFlashRowId(id);
-    const ms = opts?.durationMs ?? 820;
-    flashClearRef.current = setTimeout(() => {
-      setFlashRowId(null);
-      flashClearRef.current = null;
-    }, ms);
+  const restoreMagazzinoDesktopRowTone = useCallback((id: string) => {
+    const el = document.getElementById(`magazzino-row-${id}`);
+    if (!el || el.tagName !== "TR") return;
+    const p = prodottiByIdRef.current.get(id);
+    const low = p ? p.scorta < p.scortaMinima : false;
+    if (low) {
+      el.setAttribute("data-gestionale-row-tone", gestionaleListTableRowToneLowStock);
+    } else {
+      el.removeAttribute("data-gestionale-row-tone");
+    }
   }, []);
+
+  const applyMagazzinoDesktopRowFlash = useCallback((id: string) => {
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`magazzino-row-${id}`);
+      if (!el || el.tagName !== "TR") return;
+      const p = prodottiByIdRef.current.get(id);
+      if (p && p.scorta < p.scortaMinima) return;
+      el.setAttribute("data-gestionale-row-tone", gestionaleListTableRowToneFlash);
+    });
+  }, []);
+
+  const flashRow = useCallback(
+    (id: string, opts?: { durationMs?: number }) => {
+      const prev = flashRowRef.current;
+      if (prev && prev !== id) restoreMagazzinoDesktopRowTone(prev);
+      if (flashClearRef.current) clearTimeout(flashClearRef.current);
+      flashRowRef.current = id;
+      setFlashRowId(id);
+      applyMagazzinoDesktopRowFlash(id);
+      const ms = opts?.durationMs ?? 820;
+      flashClearRef.current = setTimeout(() => {
+        flashRowRef.current = null;
+        setFlashRowId(null);
+        restoreMagazzinoDesktopRowTone(id);
+        flashClearRef.current = null;
+      }, ms);
+    },
+    [applyMagazzinoDesktopRowFlash, restoreMagazzinoDesktopRowTone],
+  );
 
   const focusRicambioInTable = useCallback(
     (ricambioId: string, opts?: { applySottoScorta?: boolean; flashMs?: number }) => {
@@ -960,16 +1014,20 @@ export function MagazzinoView() {
             mezziCompatibili: masterMezzi,
             fornitori: masterFornitori,
           },
-          expectedUpdatedAt: masterRow?.updated_at,
         })
         .then(() => {
           lastSyncedMagMasterSigRef.current = sig;
+        })
+        .catch(() => {
+          /* toast OCC già in useSettingsUpsertMutation */
         });
     }, 900);
     return () => {
       if (magMasterSaveTimer.current) clearTimeout(magMasterSaveTimer.current);
     };
   }, [masterPrefsHydrated, magPerm.canWrite, magMasterPayloadSig, masterMarche, masterCategorie, masterMezzi, masterFornitori, upsertMagazzinoMaster]);
+
+  const lastPersistedLogRef = useRef<MagazzinoLogEntry[] | null>(null);
 
   useEffect(() => {
     setLogEntries(loadMagazzinoChangeLog());
@@ -978,6 +1036,8 @@ export function MagazzinoView() {
 
   useEffect(() => {
     if (!logPersistReady) return;
+    if (logEntries === lastPersistedLogRef.current) return;
+    lastPersistedLogRef.current = logEntries;
     saveMagazzinoChangeLog(logEntries);
   }, [logEntries, logPersistReady]);
 
@@ -1055,14 +1115,11 @@ export function MagazzinoView() {
   }, [prodotti, consumoMap]);
 
   const canUndoScortaById = useMemo(() => {
+    const undoableScortaByRicambioId = buildLatestUndoableScortaEntryByRicambioId(logEntries, magUndoScope);
     const m = new Map<string, boolean>();
     for (const p of prodotti) {
-      const e = latestUndoableScortaEntryForRicambio(logEntries, p.id, magUndoScope);
-      if (!e) {
-        m.set(p.id, false);
-        continue;
-      }
-      const parsed = parseScortaChange(e);
+      const e = undoableScortaByRicambioId.get(p.id);
+      const parsed = e ? parseScortaChange(e) : null;
       m.set(p.id, Boolean(parsed && p.scorta === parsed.dopo));
     }
     return m;
@@ -1089,14 +1146,14 @@ export function MagazzinoView() {
   );
 
   useEffect(() => {
-    if (prodotti.length === 0) return;
-    scheduleCompatBackgroundAudit(prodotti, mezziListePrefs, "magazzino-view.load");
-  }, [prodotti, mezziListePrefs]);
+    prodottiByIdRef.current = new Map(prodotti.map((p) => [p.id, p]));
+  }, [prodotti]);
 
-  const searchSuggestionPool = useMemo(
-    () => buildMagazzinoSearchSuggestions(prodotti, searchInput, 8, mezziListePrefs),
-    [prodotti, searchInput, mezziListePrefs],
-  );
+  const searchSuggestionPool = useMemo(() => {
+    if (!searchFieldFocused) return [];
+    if (!searchSuggestionsApplied.trim()) return [];
+    return buildMagazzinoSearchSuggestions(prodotti, searchSuggestionsApplied, 8, mezziListePrefs);
+  }, [searchFieldFocused, searchSuggestionsApplied, prodotti, mezziListePrefs]);
 
   const filteredSorted = useMemo(() => {
     const orderMap = orderMapRef.current!;
@@ -1339,8 +1396,15 @@ export function MagazzinoView() {
         void invalidateAfterMagazzinoOrMovimenti(queryClient, [
           cabSyncEventForEntity("magazzino_ricambi", "listino-import-bulk", "entity_deleted", "magazzino_ricambi"),
         ]);
+      } else if (result.blocked.length > 0) {
+        toastError(
+          `Nessun ricambio eliminato: ${result.blocked.length} hanno movimenti collegati.`,
+          { module: "magazzino", action: "delete" },
+        );
+      } else {
+        toastValidation("Nessun ricambio da listino da eliminare.");
       }
-      if (result.blocked.length) {
+      if (result.deleted > 0 && result.blocked.length) {
         toastError(
           `${result.deleted} eliminati. ${result.blocked.length} non eliminabili (movimenti collegati).`,
           { module: "magazzino", action: "delete" },
@@ -1462,13 +1526,12 @@ export function MagazzinoView() {
       const consumoRow = consumoMap.get(p.id);
       const avgM = consumoRow?.avgMonthly ?? null;
       const low = p.scorta < p.scortaMinima;
-      const flash = flashRowId === p.id;
       const stale = isModificaOlderThanMonths(p.dataUltimaModifica, MAGAZZINO_STALE_MODIFICA_MONTHS);
       return (
         <tr
           id={`magazzino-row-${p.id}`}
           key={p.id}
-          data-gestionale-row-tone={gestionaleListTableRowTone({ flash, lowStock: low })}
+          data-gestionale-row-tone={gestionaleListTableRowTone({ lowStock: low })}
           {...(gestionaleListTableIsLastRow(index, pagedMagazzino.length)
             ? { [gestionaleListTableLastRowAttr]: "true" }
             : {})}
@@ -1568,7 +1631,6 @@ export function MagazzinoView() {
     [
       pagedMagazzino,
       consumoMap,
-      flashRowId,
       compatDisplayFor,
       magCanCreateRicambio,
       canUndoScortaById,
@@ -1586,11 +1648,17 @@ export function MagazzinoView() {
         actions={
           <GestionalePageToolbarActions
             leading={
-              <MagazzinoGiacenzaBell
-                count={sottoScortaTotale}
-                items={sottoScortaList}
-                onSelectRicambio={(id) => focusRicambioInTable(id, { applySottoScorta: true })}
-              />
+              <>
+                <MagazzinoGiacenzaBell
+                  count={sottoScortaTotale}
+                  items={sottoScortaList}
+                  onSelectRicambio={(id) => focusRicambioInTable(id, { applySottoScorta: true })}
+                />
+                <MagazzinoImportMenu
+                  disabled={!magCanCreateRicambio}
+                  onCompleted={() => void magazzinoListQ.refetch()}
+                />
+              </>
             }
             canUndo={Boolean(undoableMagazzinoLog)}
             undoDisabled={!magCanCreateRicambio}
@@ -1656,6 +1724,7 @@ export function MagazzinoView() {
                     flushPageSearch();
                   }
                 }}
+                onFocusChange={setSearchFieldFocused}
                 suggestionPool={searchSuggestionPool}
                 aria-label="Cerca in magazzino"
                 wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
@@ -1676,13 +1745,6 @@ export function MagazzinoView() {
             onOverflowToggle={() => setToolbarOverflowOpen((o) => !o)}
             overflowActions={
               <>
-                <MagazzinoImportEntry disabled={!magCanCreateRicambio} onCompleted={() => void magazzinoListQ.refetch()} />
-                <ModuleImportEntry
-                  entity="listino_ricambi"
-                  module="magazzino"
-                  buttonLabel="Importa listino"
-                  onCompleted={() => void magazzinoListQ.refetch()}
-                />
                 {magCanDeleteRicambio && generatedListinoCount > 0 ? (
                   <GestionaleAiActionButton
                     type="button"
@@ -1877,15 +1939,18 @@ export function MagazzinoView() {
                     <p className="line-clamp-2 text-base font-semibold leading-snug tracking-tight text-[color:var(--cab-text)]">
                       {p.descrizione.trim() || "—"}
                     </p>
-                    <p
-                      className={`break-all font-mono text-sm tabular-nums tracking-wide ${
-                        isMagazzinoMobilePlaceholderValue(p.codiceFornitoreOriginale)
-                          ? "font-normal text-[color:var(--cab-text-muted)]"
-                          : "font-medium text-[color:var(--cab-text)]"
-                      }`}
-                    >
-                      {magazzinoMobileOptionalLabel(p.codiceFornitoreOriginale, "Nessuno codice")}
-                    </p>
+                    <div className="flex items-start gap-1.5">
+                      <p
+                        className={`min-w-0 flex-1 break-all font-mono text-sm tabular-nums tracking-wide ${
+                          isMagazzinoMobilePlaceholderValue(p.codiceFornitoreOriginale)
+                            ? "font-normal text-[color:var(--cab-text-muted)]"
+                            : "font-medium text-[color:var(--cab-text)]"
+                        }`}
+                      >
+                        {magazzinoMobileOptionalLabel(p.codiceFornitoreOriginale, "Nessuno codice")}
+                      </p>
+                      <MagazzinoListinoAiBadge listinoImport={p.listinoImport} variant="mobile" />
+                    </div>
                     {p.codiceFornitoreOriginaleSecondario.trim() ? (
                       <p className="break-all font-mono text-xs font-medium tabular-nums tracking-wide text-zinc-500 dark:text-zinc-400">
                         {p.codiceFornitoreOriginaleSecondario}
@@ -2132,6 +2197,7 @@ export function MagazzinoView() {
       ) : null}
       <SettingsEliminaConfirmDialog
         open={deleteGeneratedOpen}
+        pending={deleteGeneratedLoading}
         itemLabel={`${generatedListinoCount} ricambi generati da listino`}
         detail="Verranno eliminati solo i ricambi creati automaticamente da import listino, esclusi quelli con movimenti collegati."
         onCancel={() => setDeleteGeneratedOpen(false)}

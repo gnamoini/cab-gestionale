@@ -31,6 +31,10 @@ import { PreventiviAdvancedFilterPanel } from "@/components/preventivi/preventiv
 import { PreventivoBillingBadge } from "@/components/fatturazione/preventivo-billing-badge";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { useAuth } from "@/context/auth-context";
+import {
+  collapsibleExpandedBoolPref,
+  useCollapsiblePreference,
+} from "@/lib/ui/collapsible-prefs";
 import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { findMezzoForLavorazione } from "@/lib/schede/schede-autofill";
@@ -328,7 +332,7 @@ export function PreventiviView() {
     },
     [router, searchParams],
   );
-  const { authorName: autore } = useAuth();
+  const { authorName: autore, user } = useAuth();
   const gestToast = useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
   const queryClient = useQueryClient();
@@ -376,7 +380,9 @@ export function PreventiviView() {
   const [searchApplied, setSearchApplied] = useState("");
   const searchInputRef = useRef(searchInput);
   searchInputRef.current = searchInput;
-  const [filtriEspansi, setFiltriEspansi] = useState(false);
+  const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
+    collapsibleExpandedBoolPref(false, { scope: "preventivi", key: "filters", userId: user?.id ?? null }),
+  );
   const [toolbarOverflowOpen, setToolbarOverflowOpen] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<PreventiviAdvancedFilters>(
     () => loadPreventiviAdvancedFiltersPersisted() ?? PREVENTIVI_ADVANCED_FILTERS_EMPTY,

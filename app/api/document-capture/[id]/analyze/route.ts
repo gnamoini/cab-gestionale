@@ -1,16 +1,21 @@
 import { NextResponse } from "next/server";
 import { analyzeDocumentCapture } from "@/lib/document-capture/analyze-capture.server";
+import { isDocumentCaptureV41Enabled } from "@/lib/document-capture/document-capture-v41.server";
+import { analyzeDocumentCaptureV41 } from "@/lib/document-capture/pipeline/analyze-capture-v41.server";
 import { getCompanyIdForUserOrNull } from "@/lib/document-capture/company-id.server";
 import { requireDocumentCaptureAuth } from "@/lib/document-capture/document-capture-route-auth.server";
 import { checkDocumentCaptureRateLimit } from "@/lib/document-capture/document-capture-rate-limit.server";
 import { traceDocumentCaptureOperation } from "@/lib/document-capture/document-capture-telemetry.server";
+import { traceDocumentCapturePipelinePath } from "@/lib/import-core/document-capture-path-telemetry.server";
+import { importCorrelationHeaders, resolveRequestCorrelationId, withImportCorrelation } from "@/lib/import-core/import-http.server";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
+  const correlationId = resolveRequestCorrelationId(request);
   const authError = await requireDocumentCaptureAuth("write");
   if (authError) return authError;
 
@@ -23,14 +28,24 @@ export async function POST(_request: Request, context: RouteContext) {
     const rate = await checkDocumentCaptureRateLimit(userId, "analyze");
     if (!rate.ok) {
       return NextResponse.json(
-        { error: "Troppe analisi, riprova tra poco", code: "RATE_LIMITED" },
-        { status: 429, headers: { "Retry-After": String(rate.retryAfterSec) } },
+        withImportCorrelation(correlationId, { error: "Troppe analisi, riprova tra poco", code: "RATE_LIMITED" }),
+        { status: 429, headers: { ...importCorrelationHeaders(correlationId), "Retry-After": String(rate.retryAfterSec) } },
       );
     }
   }
 
+  traceDocumentCapturePipelinePath({
+    correlationId,
+    captureId: id,
+    operation: "analyze",
+    userId,
+    companyId,
+  });
+
   const t0 = performance.now();
-  const result = await analyzeDocumentCapture(id);
+  const result = isDocumentCaptureV41Enabled()
+    ? await analyzeDocumentCaptureV41(id, userId ?? "system")
+    : await analyzeDocumentCapture(id);
   traceDocumentCaptureOperation({
     operation: "analyze",
     captureId: id,
@@ -47,8 +62,13 @@ export async function POST(_request: Request, context: RouteContext) {
 
   if (!result.ok) {
     const status = result.code === "not_configured" ? 503 : 400;
-    return NextResponse.json({ error: result.message, code: result.code }, { status });
+    return NextResponse.json(
+      withImportCorrelation(correlationId, { error: result.message, code: result.code }),
+      { status, headers: importCorrelationHeaders(correlationId) },
+    );
   }
 
-  return NextResponse.json(result);
+  return NextResponse.json(withImportCorrelation(correlationId, result), {
+    headers: importCorrelationHeaders(correlationId),
+  });
 }

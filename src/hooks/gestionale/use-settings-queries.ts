@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect } from "react";
-import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { recordQueryFetch } from "@/lib/observability/query-fetch-counter";
 import { dedupQuery } from "@/lib/query/dedup-query";
 import { staticQueryOpts } from "@/lib/react-query/data-cache-tiers";
@@ -26,6 +26,7 @@ import {
   type AppSettingsUpsertInput,
 } from "@/lib/domain/settings-entry";
 import type { AppSettingRow } from "@/src/types/supabase-tables";
+import { err, type ServiceResult } from "@/src/services/service-result";
 
 export type CabAppSettingsQueryPayload = {
   rows: AppSettingRow[];
@@ -33,6 +34,47 @@ export type CabAppSettingsQueryPayload = {
 };
 
 const SETTINGS_PAYLOAD_QK = [...QK.settings, "payload"] as const;
+const APP_SETTINGS_OCC_MAX_ATTEMPTS = 3;
+
+async function fetchFreshSettingsRows(qc: QueryClient): Promise<AppSettingRow[]> {
+  const payload = await qc.fetchQuery({
+    queryKey: SETTINGS_PAYLOAD_QK,
+    queryFn: fetchCabAppSettingsPayload,
+    staleTime: 0,
+  });
+  return payload.rows;
+}
+
+async function persistSettingsUpsertWithOccRetry(
+  qc: QueryClient,
+  input: AppSettingsUpsertInput,
+): Promise<ServiceResult<AppSettingRow>> {
+  const { module, key, value } = input;
+  for (let attempt = 0; attempt < APP_SETTINGS_OCC_MAX_ATTEMPTS; attempt += 1) {
+    const rows = await fetchFreshSettingsRows(qc);
+    const resolved = mergeAppSettingsUpsertWithVersions([{ module, key, value }], rows)[0];
+    if (!resolved) return err("Aggiornamento impostazioni fallito.");
+    const result = await persistSettingsRecord(qc, () => settingsEntry.upsertSetting(resolved));
+    if (result.success) return result;
+    if (result.error !== SETTINGS_CONCURRENCY_CONFLICT) return result;
+  }
+  return err(SETTINGS_CONCURRENCY_CONFLICT);
+}
+
+async function persistSettingsBulkWithOccRetry(
+  qc: QueryClient,
+  inputs: AppSettingsUpsertInput[],
+): Promise<ServiceResult<AppSettingRow[]>> {
+  const coreRows = inputs.map(({ module, key, value }) => ({ module, key, value }));
+  for (let attempt = 0; attempt < APP_SETTINGS_OCC_MAX_ATTEMPTS; attempt += 1) {
+    const rows = await fetchFreshSettingsRows(qc);
+    const resolved = mergeAppSettingsUpsertWithVersions(coreRows, rows);
+    const result = await persistSettingsRecord(qc, () => settingsEntry.bulkUpsertSettings(resolved));
+    if (result.success) return result;
+    if (result.error !== SETTINGS_CONCURRENCY_CONFLICT) return result;
+  }
+  return err<AppSettingRow[]>(SETTINGS_CONCURRENCY_CONFLICT);
+}
 
 export async function fetchCabAppSettingsPayload(): Promise<CabAppSettingsQueryPayload> {
   return dedupQuery(
@@ -131,7 +173,7 @@ export function useSettingsBulkMutation() {
   const qc = useQueryClient();
   const onConflict = useSettingsConflictToast();
   return useServiceMutation(
-    (rows: AppSettingsUpsertInput[]) => persistSettingsRecord(qc, () => settingsEntry.bulkUpsertSettings(rows)),
+    (rows: AppSettingsUpsertInput[]) => persistSettingsBulkWithOccRetry(qc, rows),
     {
       onError: (e) => {
         onConflict(e.message);
@@ -144,7 +186,7 @@ export function useSettingsUpsertMutation() {
   const qc = useQueryClient();
   const onConflict = useSettingsConflictToast();
   return useServiceMutation(
-    (input: AppSettingsUpsertInput) => persistSettingsRecord(qc, () => settingsEntry.upsertSetting(input)),
+    (input: AppSettingsUpsertInput) => persistSettingsUpsertWithOccRetry(qc, input),
     {
       onError: (e) => {
         onConflict(e.message);

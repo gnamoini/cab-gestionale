@@ -2,22 +2,13 @@ import {
   GESTIONALE_PERMISSION_MODULES,
   type GestionalePermissionModule,
 } from "@/src/lib/permissions/gestionale-modules";
+import { gestionaleModuleLabel } from "@/src/lib/ux/gestionale-module-labels";
 import type { UserPermissionRow } from "@/src/types/supabase-tables";
 
-/** Etichette pagine ERP allineate al menu (moduli `user_permissions`). */
-export const MODULE_PAGE_LABELS: Record<GestionalePermissionModule, string> = {
-  magazzino: "Magazzino",
-  preventivi: "Preventivi",
-  lavorazioni: "Lavorazioni",
-  mezzi: "Mezzi",
-  report: "Report",
-  documenti: "Documenti",
-  dipendenti: "Dipendenti",
-  fatturazione: "Fatturazione",
-  ddt: "DDT",
-  ordini_fornitori: "Ordini fornitori",
-  document_capture: "Acquisizione documenti",
-};
+/** @deprecated Usare `gestionaleModuleLabel` — alias per editor permessi utente. */
+export function modulePageLabel(module: GestionalePermissionModule): string {
+  return gestionaleModuleLabel(module);
+}
 
 export type ModulePermissionDraftRow = {
   module: GestionalePermissionModule;
@@ -92,7 +83,7 @@ export function computeModulePermissionDraft(
 
     return {
       module,
-      label: MODULE_PAGE_LABELS[module],
+      label: gestionaleModuleLabel(module),
       roleCanRead: roleDef.canRead,
       roleCanWrite: roleDef.canWrite,
       canRead,

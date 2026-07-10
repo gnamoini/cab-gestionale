@@ -227,7 +227,7 @@ async function rollbackAfterConcludeRace() {
     resolve(process.cwd(), "lib/lavorazioni/lavorazioni-list-fetch.ts"),
     "utf8",
   );
-  assert.match(src, /filters\.archived === false.*\.eq\("archived", false\)/s);
+  assert.match(src, /filters\.archived === false[\s\S]*\.eq\("archived", false\)/);
 }
 
 // policy: invalidate-targets entity-aware include list-v2 via shared predicate

@@ -44,42 +44,32 @@ const TYPE_TONE: Partial<Record<NotificationType, GestionaleLogViewModel["tone"]
   admin_dashboard_test: "neutral",
 };
 
+const OPEN_LINK_LABEL: Partial<Record<NotificationType, string>> = {
+  lavorazione_created: "Apri lavorazione",
+  lavorazione_completata: "Apri lavorazione",
+  client_portal_ingresso: "Apri portale cliente",
+  client_portal_completata: "Apri portale cliente",
+  lavorazioni_ritardo_digest: "Apri lavorazioni",
+  preventivo_approvato: "Apri preventivo",
+  magazzino_sotto_scorta: "Apri magazzino",
+  fatture_scadute_digest: "Apri fatturazione",
+  dipendenti_presenze_reminder: "Apri Dipendenti",
+  dashboard_promemoria_reminder: "Apri calendario",
+  workshop_schedule_created: "Apri agenda",
+  workshop_schedule_updated: "Apri agenda",
+  workshop_schedule_deleted: "Apri agenda",
+  workshop_schedule_conflict: "Apri agenda",
+  workshop_schedule_overdue: "Apri agenda",
+  workshop_schedule_not_started: "Apri agenda",
+  workshop_schedule_reminder_due: "Apri agenda",
+  workshop_schedule_day_saturated: "Apri agenda",
+  workshop_schedule_day_empty: "Apri agenda",
+  asset_compliance_due: "Apri sicurezza",
+  asset_compliance_overdue: "Apri sicurezza",
+};
+
 export function getInboxNotificationOpenLinkLabel(row: InboxNotificationRow): string | null {
-  switch (row.type) {
-    case "lavorazione_created":
-    case "lavorazione_completata":
-      return "Apri lavorazione";
-    case "client_portal_ingresso":
-    case "client_portal_completata":
-      return "Apri portale cliente";
-    case "lavorazioni_ritardo_digest":
-      return "Apri lavorazioni";
-    case "preventivo_approvato":
-      return "Apri preventivo";
-    case "magazzino_sotto_scorta":
-      return "Apri magazzino";
-    case "fatture_scadute_digest":
-      return "Apri fatturazione";
-    case "dipendenti_presenze_reminder":
-      return "Apri Dipendenti";
-    case "dashboard_promemoria_reminder":
-      return "Apri calendario";
-    case "workshop_schedule_created":
-    case "workshop_schedule_updated":
-    case "workshop_schedule_deleted":
-    case "workshop_schedule_conflict":
-    case "workshop_schedule_overdue":
-    case "workshop_schedule_not_started":
-    case "workshop_schedule_reminder_due":
-    case "workshop_schedule_day_saturated":
-    case "workshop_schedule_day_empty":
-      return "Apri agenda";
-    case "asset_compliance_due":
-    case "asset_compliance_overdue":
-      return "Apri sicurezza";
-    default:
-      return null;
-  }
+  return OPEN_LINK_LABEL[row.type] ?? null;
 }
 
 export function toInboxNotificationLogViewModel(row: InboxNotificationRow): GestionaleLogViewModel {
@@ -105,46 +95,44 @@ function normalizeNotificationHref(href: string): string {
 
 function inboxNotificationHrefFromType(row: InboxNotificationRow): string | null {
   const entityId = row.entity_id?.trim() || null;
-  const type = String(row.type ?? "").trim();
+  const type = row.type;
 
-  switch (type) {
-    case "lavorazione_created":
-    case "lavorazione_completata":
-      return entityId ? buildAdminNotificationLavorazioneHref(entityId) : "/lavorazioni";
-    case "client_portal_ingresso":
-    case "client_portal_completata":
-      return entityId ? `/lavorazioni-clienti/${encodeURIComponent(entityId)}` : null;
-    case "lavorazioni_ritardo_digest":
-      return "/lavorazioni";
-    case "preventivo_approvato":
-      return entityId ? buildAdminNotificationPreventivoHref(entityId) : "/preventivi";
-    case "magazzino_sotto_scorta":
-      return entityId ? buildAdminNotificationMagazzinoHref(entityId) : "/magazzino";
-    case "fatture_scadute_digest":
-      return buildAdminNotificationFatturazioneHref();
-    case "dipendenti_presenze_reminder":
-      return buildAdminNotificationDipendentiHref();
-    case "dashboard_promemoria_reminder":
-      return buildAdminNotificationDashboardHref();
-    case "workshop_schedule_created":
-    case "workshop_schedule_updated":
-    case "workshop_schedule_deleted":
-    case "workshop_schedule_conflict":
-    case "workshop_schedule_overdue":
-    case "workshop_schedule_not_started":
-    case "workshop_schedule_reminder_due":
-      return entityId ? buildAgendaHref({ event: entityId }) : buildAgendaHref();
-    case "workshop_schedule_day_saturated":
-    case "workshop_schedule_day_empty":
-      return buildAgendaHref();
-    case "asset_compliance_due":
-    case "asset_compliance_overdue":
-      return "/sicurezza";
-    case "admin_dashboard_test":
-      return null;
-    default:
-      return null;
+  if (
+    type === "lavorazione_created" ||
+    type === "lavorazione_completata"
+  ) {
+    return entityId ? buildAdminNotificationLavorazioneHref(entityId) : "/lavorazioni";
   }
+  if (type === "client_portal_ingresso" || type === "client_portal_completata") {
+    return entityId ? `/lavorazioni-clienti/${encodeURIComponent(entityId)}` : null;
+  }
+  if (type === "lavorazioni_ritardo_digest") return "/lavorazioni";
+  if (type === "preventivo_approvato") {
+    return entityId ? buildAdminNotificationPreventivoHref(entityId) : "/preventivi";
+  }
+  if (type === "magazzino_sotto_scorta") {
+    return entityId ? buildAdminNotificationMagazzinoHref(entityId) : "/magazzino";
+  }
+  if (type === "fatture_scadute_digest") return buildAdminNotificationFatturazioneHref();
+  if (type === "dipendenti_presenze_reminder") return buildAdminNotificationDipendentiHref();
+  if (type === "dashboard_promemoria_reminder") return buildAdminNotificationDashboardHref();
+  if (
+    type === "workshop_schedule_created" ||
+    type === "workshop_schedule_updated" ||
+    type === "workshop_schedule_deleted" ||
+    type === "workshop_schedule_conflict" ||
+    type === "workshop_schedule_overdue" ||
+    type === "workshop_schedule_not_started" ||
+    type === "workshop_schedule_reminder_due"
+  ) {
+    return entityId ? buildAgendaHref({ event: entityId }) : buildAgendaHref();
+  }
+  if (type === "workshop_schedule_day_saturated" || type === "workshop_schedule_day_empty") {
+    return buildAgendaHref();
+  }
+  if (type === "asset_compliance_due" || type === "asset_compliance_overdue") return "/sicurezza";
+  if (type === "admin_dashboard_test") return null;
+  return null;
 }
 
 export function inboxNotificationHref(row: InboxNotificationRow): string | null {

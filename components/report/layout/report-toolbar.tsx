@@ -140,7 +140,7 @@ export function ReportToolbar({
 
       />
 
-      <div className={`${reportCommandFiltersShellClass} px-3 py-2 sm:px-4`}>
+      <div className={`min-w-0 ${reportCommandFiltersShellClass} p-3 sm:p-4`}>
 
         <ReportControls
 

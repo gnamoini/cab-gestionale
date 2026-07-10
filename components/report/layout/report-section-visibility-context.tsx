@@ -14,9 +14,7 @@ const ReportSectionVisibilityContext = createContext<ReportSectionVisibilityCont
 const PERF_GATE_SECTIONS: readonly ReportSectionId[] = ["panoramica", "lavorazioni"];
 
 export function ReportSectionVisibilityProvider({ children }: { children: ReactNode }) {
-  const [openSections, setOpenSections] = useState<Set<ReportSectionId>>(
-    () => new Set<ReportSectionId>(["panoramica"]),
-  );
+  const [openSections, setOpenSections] = useState<Set<ReportSectionId>>(() => new Set());
 
   const setOpen = useCallback((id: ReportSectionId, open: boolean) => {
     setOpenSections((prev) => {

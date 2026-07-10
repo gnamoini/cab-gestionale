@@ -8,21 +8,14 @@ import {
   lavorazioneAddettoNomeKey,
   lavorazioneCantiereLabel,
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
+import { formatClientPortalDay } from "@/lib/lavorazioni/format-client-portal-day";
+import { LAVORAZIONE_EMPTY_DISPLAY } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { resolveLavorazioneContextWithAttrezzatura } from "@/lib/lavorazioni/resolve-lavorazione-context-with-attrezzatura";
+
 
 function dash(v: string | null | undefined): string {
   const t = v?.trim();
   return t && t !== "—" ? t : "—";
-}
-
-function fmtDay(iso: string | null | undefined): string {
-  if (!iso?.trim()) return "—";
-  try {
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(iso.trim())) return iso.trim();
-    return new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
-  } catch {
-    return iso;
-  }
 }
 
 export type ClientPortalRowFields = {
@@ -95,8 +88,8 @@ export function clientPortalIngressoIso(row: LavorazioneListRow, schedeStore?: L
 
 export function clientPortalDataIngressoLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
   const fromScheda = schedeStore?.[row.id]?.ingresso?.campi.dataIngresso?.trim();
-  if (fromScheda) return fmtDay(fromScheda);
-  return fmtDay(row.data_ingresso ?? row.created_at);
+  if (fromScheda) return formatClientPortalDay(fromScheda);
+  return formatClientPortalDay(row.data_ingresso ?? row.created_at);
 }
 
 export function clientPortalMarcaModello(
@@ -163,7 +156,8 @@ export function buildClientPortalRowFields(
     row,
     schedeStore[row.id]?.ingresso?.campi.dataIngresso,
   );
-  const addettoNome = clientPortalAddettoNomeKey(row, schedeStore, logs, addettiRecords);
+  const addettoNomeRaw = clientPortalAddettoNomeKey(row, schedeStore, logs, addettiRecords);
+  const addettoNome = addettoNomeRaw.trim() || LAVORAZIONE_EMPTY_DISPLAY;
   const addetto = lavorazioneAddettoLabel(row, schedeStore, logs, addettiRecords);
   return {
     dataIngresso: clientPortalDataIngressoLabel(row, schedeStore),

@@ -3,7 +3,6 @@
  * Runtime permissions: Postgres SSOT via resolvePageAccess (src/lib/rbac/resolve-page-access.ts).
  */
 
-import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 import type { ResolvedPageAccess } from "@/src/lib/rbac/resolve-page-access";
 import {
   RBAC_SEED_CANONICAL_ROLES,
@@ -80,19 +79,5 @@ export const APP_ROLES = CANONICAL_ROLES;
 export type AppRole = CanonicalRole;
 export const resolveRole = resolveCanonicalRole;
 
-/** @deprecated Runtime must use ResolvedPermissions from DB. Fail-closed stub for type compat during migration. */
-export function hasCapability(
-  _user: RbacUserInput,
-  _capability: Capability,
-  _ctx?: RbacEvaluationContext,
-): boolean {
-  return false;
-}
-
-/** @deprecated Runtime must use ResolvedPermissions from DB. */
-export function roleModuleDefault(
-  _role: CanonicalRole,
-  _module: GestionalePermissionModule,
-): { canRead: boolean; canWrite: boolean } {
-  return { canRead: false, canWrite: false };
-}
+/** Pilot operatore impostazioni globali — usato da production-readiness e resolve-pilot-settings. */
+export { isOperatorGlobalSettingsEnabled } from "@/lib/permissions/operator-global-settings";

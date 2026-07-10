@@ -12,6 +12,7 @@ import {
   gestionaleToDocumentoInsert,
   gestionaleToDocumentoUpdate,
   uploadDocumentoBlob,
+  uploadDocumentoFile,
 } from "@/lib/documenti/documenti-db-mapper";
 import { buildDocumentPreviewUrl } from "@/lib/documents/document-preview-url";
 import { DocumentThumbnail } from "@/components/gestionale/documenti/document-thumbnail";
@@ -47,6 +48,7 @@ import {
   dsTableActionsGroupEnd,
   dsTableActionBtnPrimary,
   dsTableActionBtnInfo,
+  dsTableActionBtnSecondary,
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
 import {
@@ -70,6 +72,14 @@ import {
 } from "@/components/gestionale/gestionale-log-ui";
 import { buildModificaRigaFromChanges, type CampoChangeLike } from "@/lib/gestionale-log/view-model";
 import { useAuth } from "@/context/auth-context";
+import {
+  COLLAPSIBLE_LEGACY_EXPAND_ALL_KEY,
+  collapsibleExpandedBoolPref,
+  collapsibleSetPref,
+  read,
+  useCollapsiblePreference,
+  write,
+} from "@/lib/ui/collapsible-prefs";
 import {
   canOpenDocumento,
   documentoSenzaMarca,
@@ -104,25 +114,6 @@ import {
   sliceDocumentiTreePage,
   type DocumentiPageFilters,
 } from "@/lib/documenti/documenti-list-ui-filters";
-const UploadDocumentoModal = dynamic(
-  () => import("@/components/gestionale/documenti/documenti-modals").then((m) => m.UploadDocumentoModal),
-  { ssr: false },
-);
-const DocumentoEditModal = dynamic(
-  () => import("@/components/gestionale/documenti/documenti-modals").then((m) => m.DocumentoEditModal),
-  { ssr: false },
-);
-const DocumentoInfoModal = dynamic(
-  () => import("@/components/gestionale/documenti/documenti-modals").then((m) => m.DocumentoInfoModal),
-  { ssr: false },
-);
-const ListinoImportPreviewModal = dynamic(
-  () =>
-    import("@/components/gestionale/documenti/listino-import-preview-modal").then(
-      (m) => m.ListinoImportPreviewModal,
-    ),
-  { ssr: false },
-);
 import { buildDocumentiCatalogFromImpostazioni } from "@/lib/documenti/documenti-catalog";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
@@ -136,30 +127,38 @@ import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
+import { canImportListinoFromDocumento } from "@/lib/magazzino/listino-import/listino-import-client";
+import { GestionaleUploadDropExpand } from "@/components/gestionale/upload";
+import {
+  DOCUMENTO_UPLOAD_ACCEPT,
+  DOCUMENTO_UPLOAD_MAX_MB,
+  validateDocumentoUploadFile,
+} from "@/components/gestionale/documenti/documento-file-dropzone";
 
-/** Preferenza ultima azione “comprimi / espandi tutto” sull’albero documenti. */
-const DOCUMENTI_TREE_PREF_KEY = "cab-documenti-tree-pref";
+const loadDocumentiModals = () => import("@/components/gestionale/documenti/documenti-modals");
+
+const UploadDocumentoModal = dynamic(
+  () => loadDocumentiModals().then((m) => m.UploadDocumentoModal),
+  { ssr: false },
+);
+const DocumentoEditModal = dynamic(
+  () => loadDocumentiModals().then((m) => m.DocumentoEditModal),
+  { ssr: false },
+);
+const DocumentoInfoModal = dynamic(
+  () => loadDocumentiModals().then((m) => m.DocumentoInfoModal),
+  { ssr: false },
+);
+const ListinoImportPreviewModal = dynamic(
+  () =>
+    import("@/components/gestionale/documenti/listino-import-preview-modal").then(
+      (m) => m.ListinoImportPreviewModal,
+    ),
+  { ssr: false },
+);
+
+/** Preferenza ricerca — debounce applicato. */
 const SEARCH_DEBOUNCE_MS = 320;
-
-function readDocumentiTreePref(): "collapsed" | "expanded" | "default" {
-  if (typeof window === "undefined") return "default";
-  try {
-    const v = window.localStorage.getItem(DOCUMENTI_TREE_PREF_KEY);
-    if (v === "collapsed") return "collapsed";
-    if (v === "expanded") return "expanded";
-  } catch {
-    /* ignore */
-  }
-  return "default";
-}
-
-function writeDocumentiTreePref(v: "collapsed" | "expanded") {
-  try {
-    window.localStorage.setItem(DOCUMENTI_TREE_PREF_KEY, v);
-  } catch {
-    /* ignore */
-  }
-}
 
 function fmtDocVal(v: unknown): string {
   if (v === null || v === undefined) return "—";
@@ -241,6 +240,8 @@ function ArchiveDocRow({
   onInfo,
   onFileUnavailable,
   onApri,
+  showImportListino,
+  onImportListino,
 }: {
   doc: DocumentoGestionale;
   selected: boolean;
@@ -249,6 +250,8 @@ function ArchiveDocRow({
   onInfo: () => void;
   onFileUnavailable?: (message: string) => void;
   onApri: () => void;
+  showImportListino?: boolean;
+  onImportListino?: () => void;
 }) {
   const canOpen = canOpenDocumento(doc);
   const unavailableHint = documentoFileUnavailableLabel(doc) ?? "File non disponibile.";
@@ -279,6 +282,21 @@ function ArchiveDocRow({
           <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
         </svg>
       </IconActionButton>
+      {showImportListino && onImportListino ? (
+        <IconActionButton
+          label="Importa in magazzino"
+          className={dsTableActionBtnSecondary}
+          onClick={onImportListino}
+        >
+          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+            />
+          </svg>
+        </IconActionButton>
+      ) : null}
       <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={onInfo}>
         <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
@@ -362,10 +380,20 @@ export function DocumentiView() {
   const qc = useQueryClient();
   const { global: globalPerm, modules: permModules } = usePermissionsSnapshot();
   const docPerm = permModules.documenti;
+  const magPerm = permModules.magazzino;
   const canUploadDocuments = docPerm.canWrite;
   const canDeleteRecords = docPerm.canWrite;
-  const { authorName: author } = useAuth();
+  const listinoImportPerms = useMemo(
+    () => ({ canReadDocumenti: docPerm.canRead, canWriteMagazzino: magPerm.canWrite }),
+    [docPerm.canRead, magPerm.canWrite],
+  );
+  const showListinoImportForDoc = useCallback(
+    (doc: DocumentoGestionale) => canImportListinoFromDocumento(doc, listinoImportPerms),
+    [listinoImportPerms],
+  );
+  const { authorName: author, user } = useAuth();
   const authorTrim = author.trim() || "Operatore";
+  const userId = user?.id ?? null;
   const { data: settingsPayload } = useCabAppSettingsPayloadQuery({ tier: "static" });
   const appSettings = settingsPayload?.resolved;
   const mezziQuery = useMezziListQuery();
@@ -394,14 +422,18 @@ export function DocumentiView() {
   const [advancedFilters, setAdvancedFilters] = useState<DocumentiAdvancedFilters>(
     () => loadDocumentiAdvancedFiltersPersisted() ?? DOCUMENTI_ADVANCED_FILTERS_EMPTY,
   );
-  const [filtriEspansi, setFiltriEspansi] = useState(false);
+  const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
+    collapsibleExpandedBoolPref(false, { scope: "documenti", key: "filters", userId }),
+  );
   const [toolbarOverflowOpen, setToolbarOverflowOpen] = useState(false);
 
   const [sortColumn, setSortColumn] = useState<DocumentiSortKey | null>(null);
   const [sortPhase, setSortPhase] = useState<DocumentiSortPhase>("natural");
 
-  const [expandedMarche, setExpandedMarche] = useState<Set<string>>(() => new Set());
-  const documentiMarcheInitDone = useRef(false);
+  const [expandedMarche, setExpandedMarche] = useCollapsiblePreference(
+    collapsibleSetPref([], { scope: "documenti", key: "tree", userId }),
+  );
+  const legacyExpandAllDone = useRef(false);
   const urlHydratedRef = useRef(false);
 
   const patchAdvancedFilters = useCallback((patch: Partial<DocumentiAdvancedFilters>) => {
@@ -422,6 +454,8 @@ export function DocumentiView() {
   }, [searchInput]);
 
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadInitialFile, setUploadInitialFile] = useState<File | null>(null);
+  const uploadSourceFileRef = useRef<File | null>(null);
   const [listinoImportDocId, setListinoImportDocId] = useState<string | null>(null);
   const [infoDoc, setInfoDoc] = useState<DocumentoGestionale | null>(null);
   const [editDoc, setEditDoc] = useState<DocumentoGestionale | null>(null);
@@ -484,11 +518,16 @@ export function DocumentiView() {
   }, [searchParams, mezziSnap, catalog]);
 
   useEffect(() => {
-    if (catalog.length === 0 || documentiMarcheInitDone.current) return;
-    documentiMarcheInitDone.current = true;
-    if (readDocumentiTreePref() === "collapsed") return;
-    setExpandedMarche(new Set(catalog.map((m) => m.id)));
-  }, [catalog]);
+    if (!userId || catalog.length === 0 || legacyExpandAllDone.current) return;
+    const blob = read(userId, "documenti");
+    if (blob.sections[COLLAPSIBLE_LEGACY_EXPAND_ALL_KEY] !== true) return;
+    legacyExpandAllDone.current = true;
+    const allIds = new Set(catalog.map((m) => m.id));
+    setExpandedMarche(allIds);
+    const sections: Record<string, boolean | string | number | string[]> = { ...blob.sections, tree: [...allIds] };
+    delete sections[COLLAPSIBLE_LEGACY_EXPAND_ALL_KEY];
+    write(userId, "documenti", sections);
+  }, [userId, catalog, setExpandedMarche]);
 
   const pageFilters = useMemo(
     (): DocumentiPageFilters => ({
@@ -615,17 +654,32 @@ export function DocumentiView() {
   );
 
   const handleUpload = useCallback(
-    async (payload: Omit<DocumentoGestionale, "id">): Promise<DocumentoGestionale | void> => {
+    async (
+      payload: Omit<DocumentoGestionale, "id">,
+      sourceFile?: File | null,
+    ): Promise<DocumentoGestionale | void> => {
       if (!canUploadDocuments) return;
-      const fileName = payload.nome?.trim() || "documento";
+      if (sourceFile) {
+        uploadSourceFileRef.current = sourceFile;
+      }
+      const fileName = payload.nome?.trim() || sourceFile?.name || "documento";
       const result = await runUpload({
         fileName,
         label: `Documento: ${fileName}`,
         successToast: "Documento caricato.",
+        showErrorToast: false,
         run: async () => {
+          const file = uploadSourceFileRef.current;
           let urlFile = payload.urlDocumento?.trim() ?? "";
           let uploadIntelligence;
-          if (payload.urlBlob?.trim()) {
+          if (file) {
+            const up = await uploadDocumentoFile(file, payload.categoria);
+            if (!up.success || !up.data) {
+              throw new Error(up.error ?? "Caricamento file non riuscito.");
+            }
+            urlFile = up.data.path;
+            uploadIntelligence = up.data.intelligence;
+          } else if (payload.urlBlob?.trim()) {
             const up = await uploadDocumentoBlob(payload.urlBlob, payload.nome || "documento", payload.categoria);
             if (!up.success || !up.data) {
               throw new Error(up.error ?? "Caricamento file non riuscito.");
@@ -644,7 +698,7 @@ export function DocumentiView() {
           const insert = gestionaleToDocumentoInsert(payload, urlFile, uploadIntelligence);
           const res = await documentiEntry.create(insert);
           if (!res.success || !res.data) {
-            if (payload.urlBlob?.trim()) {
+            if (urlFile) {
               await deleteDocumentoStoragePath(urlFile);
             }
             throw new Error(res.error ?? "Impossibile salvare il documento.");
@@ -665,6 +719,7 @@ export function DocumentiView() {
               : undefined;
           refreshDocumenti(row.id, uploadedAt || row.caricatoIl);
           warmupDocumentPreview(row.id, { source: "archive" });
+          uploadSourceFileRef.current = null;
           return row;
         },
       });
@@ -779,13 +834,11 @@ export function DocumentiView() {
 
   const collapseAllTreeGroups = useCallback(() => {
     setExpandedMarche(new Set());
-    writeDocumentiTreePref("collapsed");
-  }, []);
+  }, [setExpandedMarche]);
 
   const expandAllTreeGroups = useCallback(() => {
     setExpandedMarche(new Set(pagedTree.map((n) => n.marca.id)));
-    writeDocumentiTreePref("expanded");
-  }, [pagedTree]);
+  }, [pagedTree, setExpandedMarche]);
 
   function marcaOpen(id: string) {
     return searchActive || expandedMarche.has(id);
@@ -809,6 +862,25 @@ export function DocumentiView() {
   const hasAdvancedPanelFilters = documentiAdvancedFiltersActive(advancedFilters);
   const hasPageClientFilters = searchActive || hasAdvancedPanelFilters;
 
+  const uploadDropDisabled =
+    !canUploadDocuments || docBusy || documentiQuery.isLoading || uploadOpen;
+
+  const handlePageUploadDrop = useCallback(
+    (file: File) => {
+      if (uploadDropDisabled) return;
+      uploadSourceFileRef.current = file;
+      setUploadInitialFile(file);
+      setUploadOpen(true);
+    },
+    [uploadDropDisabled],
+  );
+
+  const closeUploadModal = useCallback(() => {
+    setUploadOpen(false);
+    setUploadInitialFile(null);
+    uploadSourceFileRef.current = null;
+  }, []);
+
   return (
     <GestionaleSectionGate module="documenti">
     <div className={layoutPageRoot}>
@@ -817,8 +889,8 @@ export function DocumentiView() {
         title="Documenti"
         actions={
           <GestionalePageToolbarActions
+            showUndo={false}
             canUndo={false}
-            undoDisabled
             onOpenLog={() => setLogOpen(true)}
             logTitle="Storico modifiche documenti (ultime 200)"
           />
@@ -826,6 +898,16 @@ export function DocumentiView() {
       />
 
       <div className={dsStackPage}>
+        <GestionaleUploadDropExpand
+          overlay
+          accept={DOCUMENTO_UPLOAD_ACCEPT}
+          disabled={uploadDropDisabled}
+          validateFile={validateDocumentoUploadFile}
+          onFile={handlePageUploadDrop}
+          dropTitle="Rilascia per caricare documento"
+          dropHint={`PDF, Office, immagini · max ${DOCUMENTO_UPLOAD_MAX_MB} MB`}
+          className="min-w-0"
+        >
         <ShellCard>
         <PageToolbar
           className="sm:mx-0"
@@ -975,7 +1057,7 @@ export function DocumentiView() {
             </p>
           </ShellCard>
         ) : (
-          <>
+          <div className="min-w-0 mt-[length:var(--ds-space-xl)] space-y-4">
             {documentiSenzaMarca.length > 0 ? (
               <div className="overflow-hidden rounded-[var(--ds-radius-xl)] border-2 border-[color:color-mix(in_srgb,var(--cab-warning)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_12%,var(--cab-surface))] p-3 sm:p-4">
                 <div className="mb-2 flex min-w-0 flex-nowrap items-center gap-2 sm:flex-wrap">
@@ -1003,6 +1085,8 @@ export function DocumentiView() {
                       onInfo={() => setInfoDoc(d)}
                       onFileUnavailable={(msg) => gestToast.warning(msg)}
                       onApri={() => openDoc(d)}
+                      showImportListino={showListinoImportForDoc(d)}
+                      onImportListino={() => setListinoImportDocId(d.id)}
                     />
                   ))}
                 </ul>
@@ -1010,15 +1094,16 @@ export function DocumentiView() {
             ) : null}
 
             {documentiCertificazioniSenzaMarca.length > 0 ? (
-              <div className="overflow-hidden rounded-[var(--ds-radius-xl)] border border-violet-200/90 bg-violet-50/90 p-3 sm:p-4 dark:border-violet-800/50 dark:bg-violet-950/35">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--cab-text)]">
-                  Certificazioni ({documentiCertificazioniSenzaMarca.length})
-                </p>
-                <p className="mt-1 text-xs leading-snug text-[color:var(--cab-text-muted)]">
-                  Certificazioni non legate a una marca specifica.
-                </p>
+              <ShellCard
+                title="Certificazioni"
+                subtitle={`${documentiCertificazioniSenzaMarca.length} document${documentiCertificazioniSenzaMarca.length === 1 ? "o" : "i"}`}
+                collapsible
+                compactContent
+                persistScope="documenti"
+                persistKey="certificazioni"
+              >
                 <ul
-                  className="mt-2 overflow-hidden rounded-[var(--ds-radius-lg)] bg-[var(--cab-card)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--cab-border)_90%,var(--cab-border-strong))]"
+                  className="overflow-hidden rounded-[var(--ds-radius-lg)] ring-1 ring-inset ring-[color:var(--cab-border)]"
                   role="list"
                 >
                   {documentiCertificazioniSenzaMarca.map((d) => (
@@ -1030,10 +1115,12 @@ export function DocumentiView() {
                       onInfo={() => setInfoDoc(d)}
                       onFileUnavailable={(msg) => gestToast.warning(msg)}
                       onApri={() => openDoc(d)}
+                      showImportListino={showListinoImportForDoc(d)}
+                      onImportListino={() => setListinoImportDocId(d.id)}
                     />
                   ))}
                 </ul>
-              </div>
+              </ShellCard>
             ) : null}
 
             {pagedTree.map((node) => {
@@ -1065,6 +1152,8 @@ export function DocumentiView() {
                           onInfo={() => setInfoDoc(d)}
                           onFileUnavailable={(msg) => gestToast.warning(msg)}
                           onApri={() => openDoc(d)}
+                          showImportListino={showListinoImportForDoc(d)}
+                          onImportListino={() => setListinoImportDocId(d.id)}
                         />
                       ))}
                     </ul>
@@ -1096,6 +1185,8 @@ export function DocumentiView() {
                       onInfo={() => setInfoDoc(d)}
                       onFileUnavailable={(msg) => gestToast.warning(msg)}
                       onApri={() => openDoc(d)}
+                      showImportListino={showListinoImportForDoc(d)}
+                      onImportListino={() => setListinoImportDocId(d.id)}
                     />
                   ))}
                 </ul>
@@ -1111,14 +1202,16 @@ export function DocumentiView() {
                 className="rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-surface-2)]/40"
               />
             ) : null}
-          </>
+          </div>
         )}
+        </GestionaleUploadDropExpand>
       </div>
 
       {uploadOpen && canUploadDocuments ? (
         <UploadDocumentoModal
           isUploading={docUploadInFlight}
-          onRequestClose={() => setUploadOpen(false)}
+          initialFile={uploadInitialFile}
+          onRequestClose={closeUploadModal}
           onSubmit={handleUpload}
           onImportListino={(doc) => setListinoImportDocId(doc.id)}
         />
@@ -1127,6 +1220,7 @@ export function DocumentiView() {
       {listinoImportDocId ? (
         <ListinoImportPreviewModal
           documentoId={listinoImportDocId}
+          documentoNome={docs.find((d) => d.id === listinoImportDocId)?.nome}
           onRequestClose={() => setListinoImportDocId(null)}
           onCompleted={() => {
             void invalidateAfterMagazzinoOrMovimenti(qc, [

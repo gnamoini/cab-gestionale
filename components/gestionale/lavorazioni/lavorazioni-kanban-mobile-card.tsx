@@ -5,15 +5,16 @@ import { LavorazioneIngressoDateCell } from "@/components/gestionale/lavorazioni
 import { TablePillReadonly } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import {
   addettoPillShellClassDynamic,
+  addettoPillShellStyleForName,
   prioritaLabel,
   prioritaPillShellClassDynamic,
+  prioritaPillShellStyle,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import { lavorazioneAddettoNomeKey } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { kanbanCardPriorityVisual } from "@/lib/lavorazioni/kanban-card-priority-style";
 import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
-import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore } from "@/types/schede";
@@ -29,6 +30,7 @@ function kanbanCardOpenKey(e: KeyboardEvent, onOpen: () => void) {
 export const KanbanCardMobile = memo(function KanbanCardMobile({
   row,
   schedeStore,
+  addettiRecords,
   prioritaColors,
   addettoColors,
   flash,
@@ -42,7 +44,8 @@ export const KanbanCardMobile = memo(function KanbanCardMobile({
   const prioLav = p as PrioritaLav;
   const prioVisual = kanbanCardPriorityVisual(prioLav, prioritaColors as Partial<Record<PrioritaLav, string>>);
   const prioHex = prioritaDisplayColor(prioLav, prioritaColors);
-  const addettoHex = addettoDisplayColor(addetto, addettoColors as Record<string, string>);
+  const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, undefined, addettiRecords);
+  const addettoPillStyle = addettoPillShellStyleForName(addettoKey, addettoColors);
   const note = lavorazioneNoteOperative(row, schedeStore);
 
   return (
@@ -74,7 +77,7 @@ export const KanbanCardMobile = memo(function KanbanCardMobile({
       <div className="mt-2.5 flex min-w-0 max-w-full flex-nowrap items-center gap-2 sm:flex-wrap">
         <TablePillReadonly
           shellClass={prioritaPillShellClassDynamic()}
-          shellStyle={readablePillStyleFromHex(prioHex)}
+          shellStyle={prioritaPillShellStyle(prioHex)}
           title={prioritaLabel(p)}
           fitContent
         >
@@ -82,7 +85,7 @@ export const KanbanCardMobile = memo(function KanbanCardMobile({
         </TablePillReadonly>
         <TablePillReadonly
           shellClass={addettoPillShellClassDynamic()}
-          shellStyle={readablePillStyleFromHex(addettoHex)}
+          shellStyle={addettoPillStyle}
           title={addetto}
           fitContent
         >

@@ -220,6 +220,8 @@ function ReportLavorazioniTemporalSectionInner({
       title="Analisi lavorazioni temporali"
       collapsible
       defaultCollapsed={false}
+      persistScope="report"
+      persistKey="lavorazioni-temporal-standalone"
     >
       {body}
     </ShellCard>

@@ -20,7 +20,6 @@ export {
   globalTableHeadLabelCell,
   normalizeGlobalTableHeadChildren,
   cycleGestionaleSort,
-  gestionaleTableTheadClass,
   GestionaleSortTh,
   GestionaleTableHeadLabel,
   type GlobalTableHeadLabelProps,

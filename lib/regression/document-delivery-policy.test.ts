@@ -17,8 +17,8 @@ const auth = read("lib/documents/document-delivery-auth.server.ts");
 assert.match(auth, /verifyServerPageRead/);
 
 const uploadPolicy = read("app/api/documents/upload-policy/route.ts");
-assert.match(uploadPolicy, /uploadDocuments/);
-assert.match(uploadPolicy, /editWorkOrders/);
+assert.match(uploadPolicy, /verifyServerPageWrite\("documenti"\)/);
+assert.match(uploadPolicy, /verifyServerPageWrite\("lavorazioni"\)/);
 
 const helpers = read("components/gestionale/documenti/documenti-helpers.ts");
 assert.doesNotMatch(helpers, /storageCreateSignedUrl/);

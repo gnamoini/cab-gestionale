@@ -16,6 +16,11 @@ import {
   SettingsListToolbar,
 } from "@/components/dashboard/settings-list-ui";
 import { useSettingsSimilarGate } from "@/components/dashboard/use-settings-similar-gate";
+import { useAuthUserId } from "@/context/auth-context";
+import {
+  collapsibleSetPref,
+  useCollapsiblePreference,
+} from "@/lib/ui/collapsible-prefs";
 import type { HierarchyTreeKey } from "@/lib/mezzi/hierarchy-list-prefs";
 import {
   aggiungiMarcaHierarchy,
@@ -193,12 +198,19 @@ export function HierarchyTreeSettingsSection({
   onRenameMarca?: (from: string, to: string) => void;
   onRenameModello?: (marcaContext: string, from: string, to: string) => void;
 }) {
+  const userId = useAuthUserId();
   const tree = useMemo(() => getHierarchyTree(liste, treeKey), [liste, treeKey]);
   const marcaNames = useMemo(() => tree.map((m) => m.nome), [tree]);
   const { gate, similarDialog } = useSettingsSimilarGate();
   const [marcaDraftOpen, setMarcaDraftOpen] = useState(false);
   const [modelDraftMarcaId, setModelDraftMarcaId] = useState<string | null>(null);
-  const [expandedMarcaIds, setExpandedMarcaIds] = useState<Set<string>>(() => new Set());
+  const [expandedMarcaIds, setExpandedMarcaIds] = useCollapsiblePreference(
+    collapsibleSetPref([], {
+      scope: "settings-hierarchy",
+      key: `tree-${treeKey}`,
+      userId,
+    }),
+  );
   const [q, setQ] = useState("");
   const [pendingDelete, setPendingDelete] = useState<
     | { kind: "marca"; marcaId: string; label: string; modelCount: number }

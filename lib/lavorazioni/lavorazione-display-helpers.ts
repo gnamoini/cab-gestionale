@@ -17,9 +17,6 @@ export function utilizzatoreDisplayLabel(raw: string | null | undefined): string
  * Note operative mostrate in colonna Note: solo note intervento / manuali,
  * mai la descrizione anomalia (resta in scheda ingresso).
  */
-/** Addetto grezzo (no trattino) — per KPI/filtri unassigned. */
-export { resolveAddettoDisplay as lavorazioneAddettoLabel } from "@/lib/lavorazioni/resolve-addetto-display";
-
 export function lavorazioneNoteOperative(
   row: { id: string; note?: string | null },
   schedeStore?: LavorazioneSchedeStore,

@@ -81,17 +81,3 @@ export function refetchActiveClientPortalMedia(qc: QueryClient): Promise<void> {
 export function refetchActiveSchedeBundles(qc: QueryClient): Promise<void> {
   return qc.refetchQueries({ queryKey: QK.schede, type: "active" });
 }
-
-/**
- * @deprecated Usare `runLavorazioniToolbarRefresh` con refetch espliciti della pagina.
- */
-export async function refetchLavorazioniOperationalData(
-  qc: QueryClient,
-  options?: { includeClientPortal?: boolean },
-): Promise<void> {
-  const tasks: Promise<unknown>[] = [refetchActiveSchedeBundles(qc)];
-  if (options?.includeClientPortal) {
-    tasks.push(refetchActiveClientPortalMedia(qc));
-  }
-  await runLavorazioniToolbarRefresh(tasks);
-}

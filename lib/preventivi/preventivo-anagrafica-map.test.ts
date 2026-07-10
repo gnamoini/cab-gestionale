@@ -102,7 +102,7 @@ test("PDF attrezzatura e telaio completi da record esteso", () => {
     km: "45000",
     livelloCarburante: "1/2",
     macchinaRiassunto: "CAT 320",
-  } as PreventivoRecord;
+  } as unknown as PreventivoRecord;
 
   const att = buildPreventivoAttrezzaturaPdfFields(p);
   assert.ok(att.some((f) => f.label === "Tipo" && f.value === "Escavatore"));

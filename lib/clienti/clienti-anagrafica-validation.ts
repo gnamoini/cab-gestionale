@@ -1,4 +1,5 @@
 import type { ClienteAnagrafica, ClienteContatto, ClienteSedeFields } from "@/lib/clienti/clienti-anagrafica-types";
+import { EMAIL_RE } from "@/lib/validation/email";
 
 export type ClienteAnagraficaValidationIssue = {
   field: string;
@@ -9,7 +10,6 @@ const PIVA_RE = /^\d{11}$/;
 const SDI_RE = /^[A-Z0-9]{7}$/i;
 const CAP_IT_RE = /^\d{5}$/;
 const PROVINCIA_RE = /^[A-Z]{2}$/i;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function validatePartitaIva(raw: string): string | null {
   const v = raw.trim();

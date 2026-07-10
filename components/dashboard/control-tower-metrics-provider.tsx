@@ -22,8 +22,10 @@ type ControlTowerContextValue = {
   visibleWidgets: DashboardWidgetDefinition[];
   slices: ControlTowerSlices | null;
   isLoading: boolean;
+  activityFeedLoading: boolean;
   canPreventivi: boolean;
   canFatturazione: boolean;
+  canDdt: boolean;
   canLavorazioni: boolean;
   canMagazzino: boolean;
 };

@@ -3,6 +3,7 @@
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { CaptureDryRunSummary } from "@/components/document-capture/capture-dry-run-summary";
 import { CaptureFieldReviewGrid } from "@/components/document-capture/capture-field-review-grid";
+import { CaptureV41ReviewPanel } from "@/components/document-capture/capture-v41-review-panel";
 import { useGestionaleModal } from "@/components/gestionale/gestionale-modal";
 import { useCallback, useState } from "react";
 import { dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
@@ -11,9 +12,10 @@ type Props = {
   captureId: string;
   open: boolean;
   onClose: () => void;
+  v41?: boolean;
 };
 
-export function DocumentCaptureWizardModal({ captureId, open, onClose }: Props) {
+export function DocumentCaptureWizardModal({ captureId, open, onClose, v41 = false }: Props) {
   const [step, setStep] = useState<"analyze" | "review" | "dryrun">("analyze");
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -79,7 +81,13 @@ export function DocumentCaptureWizardModal({ captureId, open, onClose }: Props) 
     >
       {error ? <p className="text-sm text-[color:var(--cab-danger)]">{error}</p> : null}
       {step === "analyze" ? <p className="text-sm">Avvia estrazione AI del documento finalizzato.</p> : null}
-      {step === "review" ? <CaptureFieldReviewGrid captureId={captureId} /> : null}
+      {step === "review" ? (
+        v41 ? (
+          <CaptureV41ReviewPanel captureId={captureId} />
+        ) : (
+          <CaptureFieldReviewGrid captureId={captureId} />
+        )
+      ) : null}
       {step === "dryrun" ? (
         <CaptureDryRunSummary captureId={captureId} applicationId={applicationId} />
       ) : null}
@@ -89,12 +97,18 @@ export function DocumentCaptureWizardModal({ captureId, open, onClose }: Props) 
 
 export function DocumentCaptureWizardLauncher(props: { captureId: string }) {
   const modal = useGestionaleModal();
+  const v41 = process.env.NEXT_PUBLIC_DOCUMENT_CAPTURE_V41 !== "0";
   return (
     <>
       <button type="button" className={dsBtnNeutral} onClick={modal.onOpen}>
         Wizard AI
       </button>
-      <DocumentCaptureWizardModal captureId={props.captureId} open={modal.open} onClose={modal.onClose} />
+      <DocumentCaptureWizardModal
+        captureId={props.captureId}
+        open={modal.open}
+        onClose={modal.onClose}
+        v41={v41}
+      />
     </>
   );
 }

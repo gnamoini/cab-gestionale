@@ -34,4 +34,15 @@ assert.equal(feb2025?.months[1], 1, "Feb from DB");
 assert.equal(feb2025?.months[0], 10, "Jan from manual override");
 assert.ok(manualMonthKeys.has("2025-01"));
 
+const manualOnly = buildLavorazioniYearMatrix([], anchor, new Map([["2017-04", 23], ["2018-05", 37]]));
+assert.ok(manualOnly.rows.some((r) => r.year === 2017));
+assert.equal(manualOnly.rows.find((r) => r.year === 2017)?.months[3], 23);
+assert.equal(
+  buildLavorazioniYearMatrix([mockArchived("2025-02-10T12:00:00.000Z")], anchor, new Map([["2025-01", 99]])).rows.find(
+    (r) => r.year === 2025,
+  )?.months[0],
+  99,
+  "manual overrides automatic for same month",
+);
+
 console.log("lavorazioni-year-matrix.test.ts OK");

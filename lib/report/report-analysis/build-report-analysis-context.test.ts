@@ -216,6 +216,24 @@ assert.ok(!("disponibilitaPct" in context.executive));
 assert.ok(Array.isArray(context.fleet.disponibilitaPerCliente));
 assert.equal(context.fleet.disponibilitaPerCliente[0]?.disponibilitaPct, 0);
 
+const withDiary = buildReportAnalysisContext({
+  preset: "last_3_months",
+  compareMode: "none",
+  filterRange: range,
+  compareRange: null,
+  model,
+  perf,
+  integrityView,
+  tops: {
+    mezzi: semanticIndex.topMezzi(range),
+    clienti: semanticIndex.topClienti(range),
+    ricambi: [],
+  },
+  diaryEntries: [{ workDate: "2026-06-02", body: "Guasto pressa — produttività ridotta" }],
+});
+assert.equal(withDiary.operationalDiary?.length, 1);
+assert.match(withDiary.operationalDiary?.[0]?.body ?? "", /Guasto pressa/);
+
 const shortFp = "1:0::0:0:0:lavorazioni:1000:1:0";
 const shortParsed = reportAnalysisRequestSchema.safeParse({ context, snapshotFingerprint: shortFp });
 assert.ok(shortParsed.success, JSON.stringify(shortParsed.error?.flatten()));

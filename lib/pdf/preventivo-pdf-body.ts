@@ -135,18 +135,6 @@ export function buildPreventivoPdfNettoFields(economics: PreventivoPdfEconomics)
   return fields;
 }
 
-/** @deprecated Usare buildPreventivoPdfNettoFields + drawPreventivoPdfRiepilogo */
-export function buildPreventivoPdfEconomicsSummary(economics: PreventivoPdfEconomics): PdfField[] {
-  return [
-    ...buildPreventivoPdfNettoFields(economics),
-    {
-      label: `IVA (${economics.ivaPercent}%) + Totale IVA`,
-      value: fmtEuroPdf(economics.importoIva),
-    },
-    { label: "Totale con IVA", value: fmtEuroPdf(economics.totaleConIva) },
-  ];
-}
-
 export function drawPreventivoPdfRiepilogo(
   doc: jsPDF,
   startY: number,

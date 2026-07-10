@@ -1,8 +1,14 @@
 import { z } from "zod";
 
-export const listinoImportPreviewRequestSchema = z.object({
-  documentoId: z.string().uuid(),
-});
+export const listinoImportPreviewRequestSchema = z
+  .object({
+    documentoId: z.string().uuid().optional(),
+    importFileId: z.string().uuid().optional(),
+    async: z.boolean().optional(),
+  })
+  .refine((v) => Boolean(v.documentoId || v.importFileId), {
+    message: "documentoId o importFileId richiesto",
+  });
 
 export const listinoImportDecisionSchema = z.object({
   rowIndex: z.number().int().min(0),
@@ -11,14 +17,20 @@ export const listinoImportDecisionSchema = z.object({
   descrizione: z.string().min(1),
   costo: z.number().nonnegative(),
   marca: z.string().optional(),
+  categoria: z.string().optional(),
   duplicateRicambioId: z.string().uuid().optional(),
 });
 
-export const listinoImportExecuteRequestSchema = z.object({
-  documentoId: z.string().uuid(),
-  batchId: z.string().uuid(),
-  decisions: z.array(listinoImportDecisionSchema).min(1).max(5000),
-});
+export const listinoImportExecuteRequestSchema = z
+  .object({
+    documentoId: z.string().uuid().optional(),
+    importFileId: z.string().uuid().optional(),
+    batchId: z.string().uuid(),
+    decisions: z.array(listinoImportDecisionSchema).min(1).max(5000),
+  })
+  .refine((v) => Boolean(v.documentoId || v.importFileId), {
+    message: "documentoId o importFileId richiesto",
+  });
 
 export const listinoImportAiRowSchema = z.object({
   codice: z.string(),

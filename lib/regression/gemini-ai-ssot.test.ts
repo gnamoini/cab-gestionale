@@ -6,6 +6,7 @@ const ROOT = process.cwd();
 const AI_FILES = [
   "lib/ai/report-analysis.ts",
   "lib/ai/listino-import-analysis.ts",
+  "lib/ai/magazzino-categoria-classify.ts",
   "lib/document-capture/analyze-capture.server.ts",
   "lib/ordini-fornitori/import/ordine-fornitore-import-analysis.ts",
 ];

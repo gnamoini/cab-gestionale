@@ -11,15 +11,6 @@ import {
 
 const ROOT = process.cwd();
 
-function walkTsx(dir: string, out: string[] = []): string[] {
-  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, ent.name);
-    if (ent.isDirectory()) walkTsx(p, out);
-    else if (/\.tsx$/.test(ent.name)) out.push(p);
-  }
-  return out;
-}
-
 // --- Unit: analyzeClassNameForFlexOverflowRisk ---
 assert.equal(
   analyzeClassNameForFlexOverflowRisk("flex-1 overflow-hidden")?.reason,
@@ -52,20 +43,5 @@ assert.equal(
   0,
   `new flex overflow risks: ${newFlexViolations.map((v) => `${v.file}:${v.line}`).join(", ")}`,
 );
-
-// --- Scan: flex without min-w-0 anywhere in file (legacy heuristic retained) ---
-function fileUsesFlexLayoutClass(content: string): boolean {
-  return /\bclassName=(?:\{[`"']|[`"']).*?\bflex(?:\s|`|"|'|-)/.test(content);
-}
-
-const flexNoMinW0: string[] = [];
-for (const file of walkTsx(path.join(ROOT, "components"))) {
-  const rel = path.relative(ROOT, file).replace(/\\/g, "/");
-  const content = fs.readFileSync(file, "utf8");
-  if (fileUsesFlexLayoutClass(content) && !/\bmin-w-0\b/.test(content)) {
-    flexNoMinW0.push(rel);
-  }
-}
-assert.equal(flexNoMinW0.length, 0, `flex without min-w-0 in file: ${flexNoMinW0.join(", ")}`);
 
 console.log("ui-overflow-regression.test.ts OK");

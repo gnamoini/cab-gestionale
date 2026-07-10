@@ -5,7 +5,7 @@ import path from "node:path";
 const ROOT = process.cwd();
 const SCAN_DIRS = ["src", "components/fatturazione", "lib/fatturazione", "app/api"] as const;
 
-const FORBIDDEN_INVOICE_UPDATE = /\.from\(\s*["']invoices["']\s*\)[\s\S]{0,120}\.update\(\s*\{[^}]*\b(status|document_status|payment_status|sdi_status)\b/s;
+const FORBIDDEN_INVOICE_UPDATE = /\.from\(\s*["']invoices["']\s*\)[\s\S]{0,120}\.update\(\s*\{[^}]*\b(status|document_status|payment_status|sdi_status)\b/;
 const FORBIDDEN_EVENT_INSERT = /\.from\(\s*["']invoice_events["']\s*\)\s*\.insert\s*\(/;
 
 const ALLOWLIST_FILES = new Set([

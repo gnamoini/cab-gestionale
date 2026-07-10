@@ -40,6 +40,10 @@ export type GestionaleDataSectionTableLayout = {
   tableWidth?: number;
   marginLeft?: number;
   marginRight?: number;
+  /** Margine superiore pagina per page-break autotable (mm). */
+  marginTop?: number;
+  /** Margine inferiore pagina per page-break autotable (mm). */
+  marginBottom?: number;
   /** Indici colonna (0-based) sab/dom — sfondo grigio chiaro su header righe giorni e body. */
   weekendColumnIndexes?: readonly number[];
   /** Righe header aggiuntive dopo la prima riga colonne (es. weekday sotto il numero giorno). */
@@ -452,6 +456,8 @@ export function drawGestionaleDataSectionTable(
   const tableWidth = layout?.tableWidth ?? pdfContentWidth(pageW);
   const marginLeft = layout?.marginLeft ?? pdfTableDefaults.margin.left;
   const marginRight = layout?.marginRight ?? pdfTableDefaults.margin.right;
+  const marginTop = layout?.marginTop;
+  const marginBottom = layout?.marginBottom;
 
   const mergedColumnStyles: Record<number, object> = {};
   for (let i = 0; i < colCount; i += 1) {
@@ -468,7 +474,12 @@ export function drawGestionaleDataSectionTable(
   autoTable(doc, {
     startY: y,
     tableWidth,
-    margin: { left: marginLeft, right: marginRight },
+    margin: {
+      left: marginLeft,
+      right: marginRight,
+      ...(marginTop != null ? { top: marginTop } : {}),
+      ...(marginBottom != null ? { bottom: marginBottom } : {}),
+    },
     head: [
       [{ content: title.toUpperCase(), colSpan: colCount }],
       headCells,

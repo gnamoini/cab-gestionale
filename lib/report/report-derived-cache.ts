@@ -50,10 +50,12 @@ export function dateRangeKey(r: DateRange): string {
   return `${r.start.getTime()}-${r.end.getTime()}`;
 }
 
-function manualByMonthRevision(m: ReportManualByMonth): number {
-  let sum = 0;
-  for (const v of m.values()) sum += v;
-  return m.size * 1000 + sum;
+function manualByMonthRevision(m: ReportManualByMonth): string {
+  if (m.size === 0) return "0";
+  return [...m.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k}=${v}`)
+    .join(",");
 }
 
 function magLogContentHint(magLog: readonly MagazzinoChangeLogEntry[]): string {
@@ -123,6 +125,11 @@ function getOrBuildMagMonthRows(
 let lastFingerprint: string | null = null;
 let lastBundle: ReportDerivedBundle | null = null;
 
+export function invalidateReportDerivedCache(): void {
+  lastFingerprint = null;
+  lastBundle = null;
+}
+
 export function buildReportDerivedBundle(input: ReportDerivedInput): ReportDerivedBundle {
   const fingerprint = fingerprintReportSnapshot({
     completate: input.completate,
@@ -158,8 +165,7 @@ export function buildReportDerivedBundle(input: ReportDerivedInput): ReportDeriv
 
 /** Reset cache (test). */
 export function resetReportDerivedCacheForTests(): void {
-  lastFingerprint = null;
-  lastBundle = null;
+  invalidateReportDerivedCache();
 }
 
 export function getMagPeriodAgg(

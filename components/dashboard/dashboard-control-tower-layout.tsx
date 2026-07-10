@@ -9,32 +9,20 @@ import {
 import {
   DASHBOARD_SECTION_ORDER,
   groupVisibleWidgetsBySection,
-  type DashboardWidgetSection,
 } from "@/lib/dashboard/dashboard-widget-registry";
 import { dsStackPage } from "@/lib/ui/design-system";
 
 function DashboardControlTowerLayoutInner() {
-  const { visibleWidgets, slices, isLoading, canFatturazione } = useControlTowerContext();
+  const { visibleWidgets, isLoading } = useControlTowerContext();
   const bySection = groupVisibleWidgetsBySection(visibleWidgets);
 
   if (isLoading && visibleWidgets.length === 0) {
     return <LoadingCardSkeleton minHeightClass="min-h-[12rem]" />;
   }
 
-  function shouldRenderSection(section: DashboardWidgetSection): boolean {
-    if (section === "alerts") {
-      return (slices?.alerts.items.length ?? 0) > 0;
-    }
-    if (section === "admin") {
-      return canFatturazione;
-    }
-    return (bySection.get(section)?.length ?? 0) > 0;
-  }
-
   return (
     <div className={`${dsStackPage} min-w-0`}>
       {DASHBOARD_SECTION_ORDER.map((section) => {
-        if (!shouldRenderSection(section)) return null;
         const widgets = bySection.get(section) ?? [];
         if (widgets.length === 0) return null;
         return (

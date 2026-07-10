@@ -595,3 +595,8 @@ export function useAuth(): AuthContextValue {
   if (!ctx) throw new Error("useAuth deve essere usato dentro AuthProvider");
   return ctx;
 }
+
+/** Id utente per prefs UI locali — null se fuori provider o non autenticato. */
+export function useAuthUserId(): string | null {
+  return useContext(AuthContext)?.user?.id ?? null;
+}

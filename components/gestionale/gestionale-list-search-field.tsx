@@ -28,6 +28,7 @@ export type GestionaleListSearchFieldProps = Omit<GestionaleSearchFieldProps, "t
   /** Pool opzionale per suggerimenti live (oltre al testo digitato). */
   suggestionPool?: readonly string[];
   suggestionLimit?: number;
+  onFocusChange?: (focused: boolean) => void;
 };
 
 export function GestionaleListSearchField({
@@ -38,6 +39,7 @@ export function GestionaleListSearchField({
   onKeyDown,
   suggestionPool = [],
   suggestionLimit = 8,
+  onFocusChange,
   ...rest
 }: GestionaleListSearchFieldProps) {
   const autoId = useId();
@@ -166,6 +168,7 @@ export function GestionaleListSearchField({
         onFocus={(e) => {
           rest.onFocus?.(e);
           setFocused(true);
+          onFocusChange?.(true);
           setOpen(true);
         }}
         onBlur={(e) => {
@@ -174,6 +177,7 @@ export function GestionaleListSearchField({
             setOpen(false);
             setActiveIndex(-1);
             setFocused(false);
+            onFocusChange?.(false);
           }, 120);
         }}
         onKeyDown={handleKeyDown}

@@ -11,18 +11,8 @@ import type { ReportDerivedBundle } from "@/lib/report/report-derived-cache";
 import type { CalendarSelection } from "@/components/dashboard/calendar-v2/calendar-v2-types";
 import type { ReportIntegrityBadgeView } from "@/lib/report/report-integrity-badge-model";
 import { getDayInsights } from "@/lib/report/calendar-report-service";
+import { formatDayHeading } from "@/lib/dashboard/format-day-heading";
 import { dsTypoCaption, dsTypoSmall } from "@/lib/ui/design-system";
-
-function formatDayHeading(ymd: string): string {
-  const [y, m, d] = ymd.split("-").map(Number);
-  const date = new Date(y, m - 1, d, 12, 0, 0, 0);
-  return date.toLocaleDateString("it-IT", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
 
 function EventList({ events }: { events: CalendarEventRow[] }) {
   if (events.length === 0) {

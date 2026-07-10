@@ -4,7 +4,6 @@ import {
   semanticColorClass,
   semanticChartColor,
   type ChartSeriesTone,
-  type MetricTrendTone,
   type SemanticColorContext,
   type SemanticTone,
   type StatusTone,
@@ -15,10 +14,6 @@ export function useSemanticColor(context: SemanticColorContext, tone: SemanticTo
     return semanticChartColor("chartSeries", tone as ChartSeriesTone);
   }
   return semanticColorClass(context, tone);
-}
-
-export function useMetricTrendColor(tone: MetricTrendTone): string {
-  return useSemanticColor("metricTrend", tone);
 }
 
 export function useStatusColor(tone: StatusTone): string {

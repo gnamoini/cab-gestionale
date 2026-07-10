@@ -11,7 +11,6 @@ import {
 } from "@/lib/schede/schede-db-mapper";
 export { refreshSchedeBundleSliceForSchedaId } from "@/lib/schede/schede-bundle-cache-patch";
 import { normalizeSchedaTipoDb } from "@/lib/schede/scheda-tipo-db-mapper";
-import { isSchedeDbPrimary } from "@/lib/schede/schede-db-primary";
 import {
   getOrCreateBundle,
   loadLavorazioneSchedeStore,
@@ -202,10 +201,7 @@ export async function ensureSchedeBundlesInCache(
   });
   const merged = { ...prev, ...fetched };
   qc.setQueryData(SCHEde_BUNDLES_QUERY_KEY, merged);
-
-  if (isSchedeDbPrimary()) {
-    cacheStoreLocally(merged, toFetch);
-  }
+  cacheStoreLocally(merged, toFetch);
   return merged;
 }
 
@@ -213,11 +209,8 @@ export { schedeEnsureQueryKey };
 
 /** @deprecated Monolith getAll — usare `ensureSchedeBundlesInCache` per lavorazioneId. */
 export async function fetchSchedeBundlesFromDb(): Promise<LavorazioneSchedeStore> {
-  if (isSchedeDbPrimary()) {
-    console.warn("[schede] fetchSchedeBundlesFromDb monolith deprecato; usare lazy per lavorazioneId.");
-    return {};
-  }
-  return loadLavorazioneSchedeStore();
+  console.warn("[schede] fetchSchedeBundlesFromDb monolith deprecato; usare lazy per lavorazioneId.");
+  return {};
 }
 
 /** @deprecated Usare `fetchSchedeBundlesFromDb`. */
@@ -227,20 +220,11 @@ export async function fetchSchedeStoreMerged(): Promise<LavorazioneSchedeStore> 
 
 export async function persistSchedeBundle(bundle: LavorazioneSchedeBundle): Promise<PersistSchedeResult> {
   const safe = clampSchedeBundle(bundle);
-  if (isSchedeDbPrimary()) {
-    const db = await syncBundleToDb(safe);
-    if (!db.ok) return db;
-    const store = loadLavorazioneSchedeStore();
-    store[safe.lavorazioneId] = safe;
-    cacheStoreLocally(store, [safe.lavorazioneId]);
-    return { ok: true };
-  }
-
+  const db = await syncBundleToDb(safe);
+  if (!db.ok) return db;
   const store = loadLavorazioneSchedeStore();
   store[safe.lavorazioneId] = safe;
   cacheStoreLocally(store, [safe.lavorazioneId]);
-  const db = await syncBundleToDb(safe);
-  if (!db.ok) return db;
   return { ok: true };
 }
 
@@ -258,23 +242,12 @@ export async function persistSchedeStore(
 ): Promise<PersistSchedeResult> {
   const ids = lavorazioneId ? [lavorazioneId] : Object.keys(store);
 
-  if (isSchedeDbPrimary()) {
-    for (const id of ids) {
-      const bundle = store[id];
-      if (!bundle) continue;
-      const db = await syncBundleToDb(bundle);
-      if (!db.ok) return db;
-    }
-    cacheStoreLocally(store, ids);
-    return { ok: true };
-  }
-
-  cacheStoreLocally(store, ids);
   for (const id of ids) {
     const bundle = store[id];
     if (!bundle) continue;
     const db = await syncBundleToDb(bundle);
     if (!db.ok) return db;
   }
+  cacheStoreLocally(store, ids);
   return { ok: true };
 }

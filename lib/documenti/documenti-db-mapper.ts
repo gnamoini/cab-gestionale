@@ -64,6 +64,8 @@ export function gestionaleToDocumentoInsert(
           : undefined,
       fileEstensione: doc.fileEstensione,
       tipoFile: doc.tipoFile,
+      mimeType:
+        typeof doc.mimeType === "string" && doc.mimeType.trim() ? doc.mimeType.trim() : undefined,
       uploadedAt: doc.caricatoIl || new Date().toISOString(),
       ...(intelligence ? mergeDocumentIntelligenceMeta({}, intelligence) : {}),
     },
@@ -123,6 +125,7 @@ export async function uploadDocumentoFile(file: File, categoria?: string): Promi
       await storageUpload(STORAGE_BUCKETS.documenti, path, file, {
         cacheControl: "31536000",
         upsert: false,
+        contentType: file.type || undefined,
       });
     }
 

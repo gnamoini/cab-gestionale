@@ -1,4 +1,5 @@
-import { CANONICAL_ROLES, LEGACY_ROLE_MAP, type CanonicalRole } from "@/lib/rbac";
+import { type CanonicalRole } from "@/lib/rbac";
+import { normalizeRoleKey } from "@/src/lib/rbac/normalize-role-key";
 import {
   allGestionalePageKeys,
   expandPageToModuleKeys,
@@ -33,12 +34,6 @@ export type ResolvePageAccessInput = {
   rolePageAccess: Record<string, PageAccessLevel>;
   userPageOverrides: Record<string, PageAccessLevel>;
 };
-
-function normalizeRoleKey(raw: string | null | undefined): CanonicalRole {
-  if (!raw) return "guest";
-  if ((CANONICAL_ROLES as readonly string[]).includes(raw)) return raw as CanonicalRole;
-  return LEGACY_ROLE_MAP[raw] ?? "guest";
-}
 
 function resolveLevelForPage(
   roleKey: CanonicalRole,

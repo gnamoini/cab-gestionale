@@ -14,7 +14,8 @@ function read(rel: string): string {
 const view = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
 const tableRow = read("components/gestionale/lavorazioni/lavorazione-table-row.tsx");
 const mobileCards = read("components/gestionale/lavorazioni/lavorazione-mobile-cards.tsx");
-const desktopShell = read("components/gestionale/lavorazioni/lavorazioni-desktop-table-shell.tsx");
+const lavorazioniView = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
+assert.match(lavorazioniView, /GestionaleListTable/);
 const listSkeleton = read("components/design-system/loading/loading-lavorazioni-list-skeleton.tsx");
 const scrollCss = read("components/gestionale/global-table/gestionale-list-layout.css");
 const listLayoutHook = read("lib/ui/use-gestionale-list-layout.ts");
@@ -100,8 +101,7 @@ assert.match(view, /GESTIONALE_LIST_DESKTOP_ONLY_CLASS/);
 assert.doesNotMatch(view, /hidden xl:block/);
 assert.match(mobileCards, /GESTIONALE_LIST_MOBILE_ONLY_CLASS/);
 assert.doesNotMatch(mobileCards, /xl:hidden/);
-assert.match(desktopShell, /GESTIONALE_LIST_DESKTOP_ONLY_CLASS/);
-assert.match(listSkeleton, /GESTIONALE_LIST_DESKTOP_ONLY_CLASS/);
-assert.match(listSkeleton, /GESTIONALE_LIST_MOBILE_ONLY_CLASS/);
+assert.match(view, /GestionaleListTable/);
+assert.match(listSkeleton, /SkeletonShellCard/);
 
 console.log("lavorazioni-inputs-audit.test.ts OK");

@@ -5,6 +5,11 @@ import "./security-users-table.css";
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CardMobile, CardMobileActions, IconActionButton, LoadingTableSkeleton } from "@/components/design-system";
+import { useAuthUserId } from "@/context/auth-context";
+import {
+  collapsibleExpandedBoolPref,
+  useCollapsiblePreference,
+} from "@/lib/ui/collapsible-prefs";
 import { HubIconPencil } from "@/components/design-system/hub-table-action-icons";
 import {
   SecurityEditNameModal,
@@ -484,13 +489,16 @@ export function SecurityUsersTable({
   onOpenDetail,
   onRoleChange,
 }: Props) {
+  const userId = useAuthUserId();
   const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "lg" });
   const queryClient = useQueryClient();
   const gestToast = useGestionaleToast();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | AppRole>("all");
   const [accountFilter, setAccountFilter] = useState<"all" | "active" | "disabled">("all");
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useCollapsiblePreference(
+    collapsibleExpandedBoolPref(false, { scope: "security-users", key: "filters", userId }),
+  );
   const [sortColumn, setSortColumn] = useState<SecurityUserSortKey | null>(null);
   const [sortPhase, setSortPhase] = useState<ReportSortPhase>("natural");
   const [editNameUserId, setEditNameUserId] = useState<string | null>(null);

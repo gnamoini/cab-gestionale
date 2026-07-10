@@ -141,11 +141,6 @@ export function findAddettoByStoredName(
   return undefined;
 }
 
-/** @deprecated Usare findAddettoByStoredName */
-export function findAddettoByNome(records: readonly AddettoRecord[], nome: string): AddettoRecord | undefined {
-  return findAddettoByStoredName(records, nome);
-}
-
 /** Etichetta UI da snapshot scheda (nome o nome+cognome); arricchisce da settings se match. */
 export function addettoDisplayNameFromNome(
   records: readonly AddettoRecord[],

@@ -222,11 +222,6 @@ export function useLavorazioneConcludeMutation() {
   });
 }
 
-/** @deprecated Usare `useLavorazioneConcludeMutation`. */
-export function useLavorazioneArchiveMutation() {
-  return useLavorazioneConcludeMutation();
-}
-
 export type LavorazioneUpdatePayload = { id: string; data: LavorazioneUpdate };
 
 export type LavorazioneUpdateMutation = UseMutationResult<

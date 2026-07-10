@@ -1,18 +1,12 @@
 "use client";
 
 import type { QueryClient } from "@tanstack/react-query";
-import { isPreventiviDbPrimary } from "@/lib/preventivi/preventivi-db-primary";
 import {
   isPreventivoUuid,
   preventivoRecordToInsert,
   preventivoRecordToUpdate,
   preventivoRowToRecord,
 } from "@/lib/preventivi/preventivi-db-mapper";
-import {
-  appendPreventivo as appendLocal,
-  deletePreventivo as deleteLocal,
-  upsertPreventivo as upsertLocal,
-} from "@/lib/preventivi/preventivi-storage";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import { lavorazioneListRowToAttiva } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import { lavorazioneMatchesMezzo, normMezzoKey } from "@/lib/mezzi/lavorazioni-sync";
@@ -181,10 +175,6 @@ async function syncRecordToDb(
   return { ok: true, record: synced, legacyId, created: true };
 }
 
-function mirrorLocalLegacy(record: PreventivoRecord): void {
-  upsertLocal(record);
-}
-
 export async function persistPreventivoRecord(
   record: PreventivoRecord,
   mezziGestiti: readonly MezzoGestito[],
@@ -192,27 +182,21 @@ export async function persistPreventivoRecord(
 ): Promise<{ ok: true; record: PreventivoRecord } | { ok: false; error: string }> {
   const hydrated = { ...record, aggiornatoAt: new Date().toISOString() };
 
-  if (!options?.skipDb) {
-    const db = await syncRecordToDb(hydrated, mezziGestiti, options?.expectedUpdatedAt);
-    if (db.ok) {
-      notifyPreventiviMutation(
-        options?.queryClient,
-        db.record.id,
-        db.created ? "entity_created" : "entity_updated",
-        options?.skipDispatch,
-      );
-      return { ok: true, record: db.record };
-    }
-    if (isPreventiviDbPrimary()) return db;
-  }
-
-  if (isPreventiviDbPrimary()) {
+  if (options?.skipDb) {
     return { ok: false, error: "Salvataggio preventivo non riuscito." };
   }
 
-  mirrorLocalLegacy(hydrated);
-  notifyPreventiviMutation(options?.queryClient, hydrated.id, "entity_updated", options?.skipDispatch);
-  return { ok: true, record: hydrated };
+  const db = await syncRecordToDb(hydrated, mezziGestiti, options?.expectedUpdatedAt);
+  if (db.ok) {
+    notifyPreventiviMutation(
+      options?.queryClient,
+      db.record.id,
+      db.created ? "entity_created" : "entity_updated",
+      options?.skipDispatch,
+    );
+    return { ok: true, record: db.record };
+  }
+  return db;
 }
 
 export async function appendPreventivoSynced(
@@ -227,22 +211,13 @@ export async function removePreventivoRecord(
   id: string,
   options?: PreventivoRemoveOptions,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (isPreventivoUuid(id)) {
-    const del = await preventiviService.remove(id);
-    if (!del.success && isPreventiviDbPrimary()) {
-      return { ok: false, error: del.error ?? "Eliminazione fallita." };
-    }
-    if (del.success) {
-      notifyPreventiviMutation(options?.queryClient, id, "entity_deleted", options?.skipDispatch);
-      return { ok: true };
-    }
-  }
-
-  if (isPreventiviDbPrimary()) {
+  if (!isPreventivoUuid(id)) {
     return { ok: false, error: "Eliminazione preventivo non riuscita." };
   }
-
-  deleteLocal(id);
+  const del = await preventiviService.remove(id);
+  if (!del.success) {
+    return { ok: false, error: del.error ?? "Eliminazione fallita." };
+  }
   notifyPreventiviMutation(options?.queryClient, id, "entity_deleted", options?.skipDispatch);
   return { ok: true };
 }

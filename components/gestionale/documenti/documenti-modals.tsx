@@ -44,6 +44,7 @@ import {
   formatDocumentoRigaSintetica,
   openDocumentoFile,
   inferTipoFileFromNome,
+  resolveDocumentoTipoFile,
   labelCategoria,
   labelTipoFile,
   resolveDocumentoApplicazione,
@@ -180,13 +181,18 @@ function marcaOnlyHintForCategoria(categoria: DocumentoGestionale["categoria"]):
 
 export function UploadDocumentoModal({
   isUploading = false,
+  initialFile = null,
   onRequestClose,
   onSubmit,
   onImportListino,
 }: {
   isUploading?: boolean;
+  initialFile?: File | null;
   onRequestClose: () => void;
-  onSubmit: (payload: Omit<DocumentoGestionale, "id">) => void | Promise<DocumentoGestionale | void>;
+  onSubmit: (
+    payload: Omit<DocumentoGestionale, "id">,
+    sourceFile: File,
+  ) => void | Promise<DocumentoGestionale | void>;
   onImportListino?: (doc: DocumentoGestionale) => void;
 }) {
   const { authorName } = useAuth();
@@ -217,6 +223,12 @@ export function UploadDocumentoModal({
   useEffect(() => {
     if (effectiveApp === "marca") setModello("");
   }, [effectiveApp]);
+
+  useEffect(() => {
+    if (initialFile) onFileChange(initialFile);
+    // ponytail: modal remounts on each open; seed file from page drop once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only seed
+  }, []);
 
   function onFileChange(f: File | null) {
     pickedFileRef.current = f;
@@ -256,7 +268,16 @@ export function UploadDocumentoModal({
         const validation = validateDocumentoMarcaModelloFields(snap.effectiveApp, marcaTrim, modelloTrim);
         setMarcaInvalid(validation.marcaInvalid);
         setModelloInvalid(validation.modelloInvalid);
-        if (!n || !file) return;
+        if (!n || !file) {
+          if (n && !file) {
+            gestToast.errorOnce(
+              "documenti-upload-file",
+              "File non più disponibile. Riseleziona il documento.",
+              { module: "documenti" },
+            );
+          }
+          return;
+        }
         if (!validation.valid) {
           gestToast.errorOnce(
             "documenti-form",
@@ -268,9 +289,7 @@ export function UploadDocumentoModal({
 
         const tipo = inferTipoFileFromNome(file.name);
         const today = new Date().toISOString().slice(0, 10);
-        const urlBlob = URL.createObjectURL(file);
         const ext = extractFileExtension(file.name);
-        pickedFileRef.current = null;
 
         const base: Omit<DocumentoGestionale, "id"> = {
           nome: n,
@@ -278,12 +297,12 @@ export function UploadDocumentoModal({
           marca: marcaTrim,
           macchina: snap.effectiveApp === "marca" || !marcaTrim ? "—" : modelloTrim,
           tipoFile: tipo,
+          mimeType: file.type || undefined,
           autoreCaricamento: authorName,
           note: snap.note.trim() || undefined,
           caricatoIl: today,
           ultimaModifica: today,
           dimensioneKb: Math.max(1, Math.round(file.size / 1024)),
-          urlBlob,
           fileEstensione: ext || undefined,
           applicabilita: marcaTrim ? snap.effectiveApp : undefined,
           marcaKey: marcaTrim || undefined,
@@ -294,10 +313,11 @@ export function UploadDocumentoModal({
         const resolved = resolveDocumentoApplicazione(tmp);
         const { id: _drop, ...payload } = resolved;
         try {
-          const saved = await onSubmit(payload as Omit<DocumentoGestionale, "id">);
+          const saved = await onSubmit(payload as Omit<DocumentoGestionale, "id">, file);
           if (saved && importListinoToMagazzino && snap.categoria === "listini") {
             onImportListino?.(saved);
           }
+          pickedFileRef.current = null;
           onRequestClose();
         } catch {
           /* errore upload: modale resta aperta per correzione / retry */
@@ -667,7 +687,16 @@ export function DocumentoEditModal({
         }
 
         const today = new Date().toISOString().slice(0, 10);
-        const inferredTipoFile = inferTipoFileFromNome(snap.nome.trim() || doc.nome);
+        const inferredTipoFile = resolveDocumentoTipoFile({
+          urlFile: doc.urlDocumento ?? "",
+          nome: snap.nome.trim() || doc.nome,
+          meta: {
+            tipoFile: doc.tipoFile,
+            fileEstensione: doc.fileEstensione,
+            mimeType: doc.mimeType,
+          },
+          categoria: snap.categoria,
+        });
         const base: DocumentoGestionale = {
           ...doc,
           nome: snap.nome.trim(),

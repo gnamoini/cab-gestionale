@@ -1,6 +1,7 @@
 "use client";
 
 import type { FornitoreAnagraficaSettings } from "@/lib/magazzino/fornitore-anagrafica";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { dsInput } from "@/lib/ui/design-system";
 import { sliceInputValue, TEXT_LONG, TEXT_SHORT } from "@/lib/validation/text-field-limits";
 
@@ -32,14 +33,16 @@ export function SettingsFornitoreAnagraficaFields({
         <span className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
           Indirizzo
         </span>
-        <textarea
-          className={`${dsInput} min-h-[4.5rem] resize-y py-2`}
+        <GestionaleTextarea
+          size="sm"
+          className="min-h-[4.5rem] resize-y py-2"
           value={anagrafica.indirizzo}
           disabled={disabled}
           maxLength={TEXT_LONG}
           rows={2}
+          autoGrow={false}
           placeholder="Via, CAP, città, provincia"
-          onChange={(e) => onChange({ indirizzo: sliceInputValue(e.target.value, TEXT_LONG) })}
+          onChange={(v) => onChange({ indirizzo: sliceInputValue(v, TEXT_LONG) })}
         />
       </label>
       <label className="block space-y-1">

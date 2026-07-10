@@ -37,7 +37,18 @@ export type YearMatrixFilterMode = "filtered" | "full_history";
 export type YearMatrixFilterResult = {
   rows: LavorazioniYearRow[];
   mode: YearMatrixFilterMode;
+  /** Anni mostrati per intero grazie a dati storici manuali / Excel. */
+  manualHistoryYears: number[];
 };
+
+export function yearsFromManualMonthKeys(manualMonthKeys: ReadonlySet<string>): Set<number> {
+  const years = new Set<number>();
+  for (const mk of manualMonthKeys) {
+    const y = Number(mk.slice(0, 4));
+    if (Number.isFinite(y) && y >= 2000) years.add(y);
+  }
+  return years;
+}
 
 function rowBestWorstInRange(row: LavorazioniYearRow, filterRange: DateRange): {
   bestMonthIdx: number | null;
@@ -67,24 +78,39 @@ function rowBestWorstInRange(row: LavorazioniYearRow, filterRange: DateRange): {
   return { bestMonthIdx, worstMonthIdx };
 }
 
-/** Applica filterRange alla matrice annuale (totali, anni visibili, variazioni). Valori mensili grezzi invariati. */
+/** Applica filterRange alla matrice annuale; gli anni con dati manuali Excel restano visibili per intero. */
 export function applyYearMatrixFilterRange(
   rows: readonly LavorazioniYearRow[],
   filterRange: DateRange,
+  manualMonthKeys?: ReadonlySet<string>,
 ): YearMatrixFilterResult {
   const byYear = new Map(rows.map((r) => [r.year, r]));
-  const years = yearsInReportRange(filterRange);
+  const manualYears = yearsFromManualMonthKeys(manualMonthKeys ?? new Set());
+  const filterYears = yearsInReportRange(filterRange);
+  const yearSet = new Set([...filterYears, ...manualYears]);
+  const years = [...yearSet].sort((a, b) => a - b);
+  const manualHistoryYears = [...manualYears].sort((a, b) => a - b);
   const out: LavorazioniYearRow[] = [];
   let prevFilteredTotal: number | null = null;
 
   for (const year of years) {
     const src = byYear.get(year);
     const months = src?.months ?? Array.from({ length: 12 }, () => 0);
+
+    if (manualYears.has(year) && src) {
+      out.push(src);
+      prevFilteredTotal = src.total;
+      continue;
+    }
+
     const total = months.reduce(
       (sum, v, mi) => (monthInReportRange(year, mi, filterRange) ? sum + v : sum),
       0,
     );
-    const { bestMonthIdx, worstMonthIdx } = rowBestWorstInRange({ year, months, total, growthVsPrevPct: null, bestMonthIdx: null, worstMonthIdx: null }, filterRange);
+    const { bestMonthIdx, worstMonthIdx } = rowBestWorstInRange(
+      { year, months, total, growthVsPrevPct: null, bestMonthIdx: null, worstMonthIdx: null },
+      filterRange,
+    );
     const growthVsPrevPct =
       prevFilteredTotal != null && prevFilteredTotal > 0
         ? Math.round(((total - prevFilteredTotal) / prevFilteredTotal) * 1000) / 10
@@ -101,5 +127,5 @@ export function applyYearMatrixFilterRange(
     });
   }
 
-  return { rows: out, mode: "filtered" };
+  return { rows: out, mode: "filtered", manualHistoryYears };
 }

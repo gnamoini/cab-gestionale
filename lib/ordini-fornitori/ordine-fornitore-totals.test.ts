@@ -9,8 +9,8 @@ assert.equal(totaleNettoRigaOrdine({ quantita: 1, prezzoUnitario: 50, scontoPerc
 
 const totals = calcolaTotaliOrdineFornitore({
   righe: [
-    { quantita: 2, prezzoUnitario: 100, scontoPercent: 0 },
-    { quantita: 1, prezzoUnitario: 40, scontoPercent: 0 },
+    { quantita: 2, prezzoUnitario: 100, scontoPercent: 0, ivaPercent: 22, meta: {} },
+    { quantita: 1, prezzoUnitario: 40, scontoPercent: 0, ivaPercent: 22, meta: {} },
   ],
   trasporto: 10,
   ivaPercent: 22,
@@ -23,8 +23,8 @@ assert.equal(totals.totale, 305);
 
 const mixedIva = calcolaTotaliOrdineFornitore({
   righe: [
-    { quantita: 1, prezzoUnitario: 100, scontoPercent: 0, ivaPercent: 22 },
-    { quantita: 1, prezzoUnitario: 100, scontoPercent: 0, ivaPercent: 10 },
+    { quantita: 1, prezzoUnitario: 100, scontoPercent: 0, ivaPercent: 22, meta: {} },
+    { quantita: 1, prezzoUnitario: 100, scontoPercent: 0, ivaPercent: 10, meta: {} },
   ],
   trasporto: 10,
   ivaPercent: 22,

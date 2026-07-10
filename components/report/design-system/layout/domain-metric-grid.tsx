@@ -8,6 +8,7 @@ import type { ReportCompareMode } from "@/lib/report/date-ranges";
 import { LoadingSkeletonBlock } from "@/components/design-system/loading/loading-skeleton";
 import { Button } from "@/components/design-system/button";
 import { useReportDensity } from "@/components/report/design-system/internal/use-report-density";
+import { reportContentPanelClass } from "@/components/report/report-ui-tokens";
 
 function MetricPlaceholder({ metric }: { metric: ReportDomainMetric }) {
   const { metricCardPadding } = useReportDensity();
@@ -63,7 +64,7 @@ export function ReportDomainMetricsGrid({
   const { metricGridCols } = useReportDensity();
 
   return (
-    <div className="space-y-3">
+    <div className={`${reportContentPanelClass} space-y-3`}>
       <ReportMetricGrid metrics={converted} compact={compact} />
       {pending.length > 0 ? (
         <div className={`grid min-w-0 gap-3 ${metricGridCols}`}>

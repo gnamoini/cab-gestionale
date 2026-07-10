@@ -7,7 +7,6 @@ import { padPdfFieldsToEqualRows } from "@/lib/pdf/gestionale-section-table";
 import {
   buildLavorazioniEffettuatePdfRows,
   buildManodoperaPdfRows,
-  buildPreventivoPdfEconomicsSummary,
   buildPreventivoPdfNettoFields,
   buildRicambiPdfRows,
   computeManodoperaSectionTotal,
@@ -153,16 +152,5 @@ assert.equal(
   economicsSmalt[0]?.label,
   `${PREVENTIVO_SMALTIMENTO_DESCRIZIONE} (${PREVENTIVO_SMALTIMENTO_PERCENT}%)`,
 );
-
-const legacySummary = buildPreventivoPdfEconomicsSummary({
-  totaleRicambi: 100,
-  totaleManodopera: 200,
-  totaleSmaltimento: 0,
-  totaleNetto: 300,
-  importoIva: 66,
-  totaleConIva: 366,
-  ivaPercent: 22,
-});
-assert.ok(legacySummary.some((f) => f.label === "IVA (22%) + Totale IVA"));
 
 console.log("preventivo-pdf-body.test.ts: ok");

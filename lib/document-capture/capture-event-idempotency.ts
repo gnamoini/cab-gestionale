@@ -19,7 +19,12 @@ export type CaptureEventType =
   | "apply_started"
   | "apply_committed"
   | "apply_failed"
-  | "apply_partial";
+  | "apply_partial"
+  | "pipeline_phase_completed"
+  | "field_overridden"
+  | "document_edited"
+  | "validation_reviewed"
+  | "apply_approved";
 
 export function captureEventIdempotencyKey(
   eventType: CaptureEventType,
@@ -58,6 +63,16 @@ export function captureEventIdempotencyKey(
       return `apply_started:${input.applicationId ?? "unknown"}`;
     case "fields_confirmed":
       return `fields_confirmed:${input.captureVersion ?? 0}`;
+    case "field_overridden":
+      return `field_overridden:${input.linkField ?? "field"}:${input.captureVersion ?? 0}`;
+    case "document_edited":
+      return `document_edited:${input.captureVersion ?? 0}`;
+    case "validation_reviewed":
+      return `validation_reviewed:${input.captureVersion ?? 0}`;
+    case "apply_approved":
+      return `apply_approved:${input.applicationId ?? "unknown"}`;
+    case "pipeline_phase_completed":
+      return `pipeline:${input.linkField ?? "phase"}:${input.captureVersion ?? 0}`;
     default:
       return `${eventType}:${input.captureVersion ?? 0}`;
   }

@@ -28,7 +28,10 @@ export function ReportSubsection({
       title={title}
       subtitle={subtitle}
       collapsible
+      collapsibleInset
       defaultCollapsed={defaultCollapsed}
+      persistScope={id ? "report" : undefined}
+      persistKey={id}
       compactHeader
       headerActions={headerActions}
       className={`${reportSubsectionShellClass} ${className}`.trim()}

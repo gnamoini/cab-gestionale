@@ -39,9 +39,18 @@ export type ImportEntityClientMeta = {
 };
 
 export function listImportEntityMeta(): ImportEntityClientMeta[] {
-  return (Object.keys(ROUTE_SLUGS) as ImportEntity[]).map((id) => ({
-    id,
-    routeSlug: ROUTE_SLUGS[id],
-    label: IMPORT_ENTITY_LABELS[id],
-  }));
+  const STUB_IDS = new Set<ImportEntity>([
+    "lavorazioni",
+    "fatture_draft",
+    "billing_customers",
+    "documenti_metadata",
+    "dipendenti_timesheet",
+  ]);
+  return (Object.keys(ROUTE_SLUGS) as ImportEntity[])
+    .filter((id) => !STUB_IDS.has(id))
+    .map((id) => ({
+      id,
+      routeSlug: ROUTE_SLUGS[id],
+      label: IMPORT_ENTITY_LABELS[id],
+    }));
 }

@@ -21,6 +21,11 @@ import type {
 } from "@/lib/report/report-classifiche";
 import type { ReportIntegrityBadgeView } from "@/lib/report/report-integrity-badge-model";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { useOperationalDiaryQuery } from "@/src/hooks/view/use-operational-diary";
+
+function fmtDiaryYmd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 const gravitaToneClass: Record<ReportAnalysisGravita | "warning" | "critical", string> = {
   info: "border-[color:var(--cab-border)] bg-[var(--cab-card)]",
@@ -93,6 +98,14 @@ export function ReportAiAnalysisZone({
   const { perf, perfLoading } = useReportPerformanceContext();
   const gestToast = useGestionaleToast();
 
+  const diaryFromYmd = fmtDiaryYmd(filterRange.start);
+  const diaryToYmd = fmtDiaryYmd(filterRange.end);
+  const { data: diaryRows = [] } = useOperationalDiaryQuery({ fromYmd: diaryFromYmd, toYmd: diaryToYmd });
+  const diaryEntries = useMemo(
+    () => diaryRows.map((e) => ({ workDate: e.work_date, body: e.body })),
+    [diaryRows],
+  );
+
   const analysis = useReportAnalysis({
     preset,
     compareMode,
@@ -102,6 +115,7 @@ export function ReportAiAnalysisZone({
     perf,
     integrityView,
     tops,
+    diaryEntries,
     snapshotFingerprint,
     perfReady: !perfLoading && perf != null,
   });

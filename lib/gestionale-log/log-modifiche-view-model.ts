@@ -127,7 +127,8 @@ export function logModificaOggettoFromPayload(row: LogModificaRow): string | und
   return undefined;
 }
 
-function lavorazioneIdFromLogRow(row: LogModificaRow): string | null {
+/** Risolve `lavorazione_id` da riga log lavorazioni o scheda. */
+export function lavorazioneIdFromLogRow(row: LogModificaRow): string | null {
   if (row.entita === "lavorazioni") return row.entita_id;
   const p = row.payload;
   if (!p || typeof p !== "object" || Array.isArray(p)) return null;
@@ -172,13 +173,16 @@ export function buildLogModificheFocusHref(row: LogModificaRow): string | null {
     sp.set(Q_FOCUS_LAV_ROW, lavId);
     return `/lavorazioni?${sp.toString()}`;
   }
-  if (row.entita === "magazzino_ricambi") {
+  if (row.entita === "magazzino_ricambi" && row.entita_id?.trim()) {
     const sp = new URLSearchParams();
-    sp.set(Q_FOCUS_RICAMBIO, row.entita_id);
+    sp.set(Q_FOCUS_RICAMBIO, row.entita_id.trim());
     return `/magazzino?${sp.toString()}`;
   }
-  if (row.entita === "mezzi") return `/mezzi`;
-  if (row.entita === "preventivi") return `/preventivi`;
-  if (row.entita === "documenti") return `/documenti`;
+  if (row.entita === "movimenti_ricambi") return "/magazzino";
+  if (row.entita === "mezzi") return "/mezzi";
+  if (row.entita === "preventivi") return "/preventivi";
+  if (row.entita === "ddt_documents") return "/preventivi";
+  if (row.entita === "invoices" || row.entita === "invoice_payments") return "/fatturazione";
+  if (row.entita === "documenti") return "/documenti";
   return null;
 }

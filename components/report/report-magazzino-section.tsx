@@ -450,6 +450,8 @@ export function ReportMagazzinoSection({
         title="Magazzino / ricambi"
         collapsible
         defaultCollapsed={false}
+        persistScope="report"
+        persistKey="magazzino-chart"
         headerActions={histBtn}
       >
         {panel}

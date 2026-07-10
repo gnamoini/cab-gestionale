@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { useAuth } from "@/context/auth-context";
+import {
+  collapsibleExpandedBoolPref,
+  useCollapsiblePreference,
+} from "@/lib/ui/collapsible-prefs";
 import { GestionaleRefreshToolbarButton, gestionalePageToolbarActionsInnerClass } from "@/components/gestionale/page-header-toolbar";
 import { ClientContattaciButton } from "@/components/lavorazioni-clienti/client-contattaci-button";
 import { ClientContattaciDialog } from "@/components/lavorazioni-clienti/client-contattaci-dialog";
@@ -679,7 +683,13 @@ export function ClientLavorazioniView() {
   const [qrRow, setQrRow] = useState<LavorazioneListRow | null>(null);
   const [ingressoRow, setIngressoRow] = useState<LavorazioneListRow | null>(null);
   const [contattaciOpen, setContattaciOpen] = useState(false);
-  const [filtriEspansi, setFiltriEspansi] = useState(false);
+  const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
+    collapsibleExpandedBoolPref(false, {
+      scope: "client-lavorazioni",
+      key: "filters",
+      userId: user?.id ?? null,
+    }),
+  );
 
   const [sortInCorsoCol, setSortInCorsoCol] = useState<ClientPortalSortKey | null>(null);
   const [sortInCorsoPhase, setSortInCorsoPhase] = useState<GlobalTableSortPhase>("natural");
@@ -738,6 +748,7 @@ export function ClientLavorazioniView() {
         lazyProfileNames,
         currentUserId: user?.id ?? null,
         currentUserDisplayName: authorName,
+        omitUnresolvedAutore: true,
       }),
     [authorName, lavModificheLogQuery.data, lazyProfileNames, user?.id],
   );
@@ -854,6 +865,8 @@ export function ClientLavorazioniView() {
             title={`Lavorazioni in corso (${sortedInCorsoBundles.length})`}
             collapsible
             defaultCollapsed={false}
+            persistScope="client-lavorazioni"
+            persistKey="attive"
           >
             <LavorazioniSection
               listLayout={listLayout}
@@ -879,6 +892,9 @@ export function ClientLavorazioniView() {
             title={`Lavorazioni completate (${sortedArchivioBundles.length})`}
             collapsible
             defaultCollapsed
+            persistScope="client-lavorazioni"
+            persistKey="archivio"
+            persist={false}
           >
             <LavorazioniSection
               listLayout={listLayout}

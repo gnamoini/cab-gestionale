@@ -9,11 +9,15 @@ export type ListinoImportRawRow = {
   descrizione: string;
   costo: number;
   marca?: string;
+  categoria?: string;
 };
+
+export type ListinoImportCategoriaSource = "heuristic" | "ai" | "fallback";
 
 export type ListinoImportPreviewRow = ListinoImportRawRow & {
   rowIndex: number;
   suggestedAction: ListinoImportAction;
+  categoriaSource?: ListinoImportCategoriaSource;
   duplicateRicambioId?: string;
   duplicateCodice?: string;
   existingCosto?: number;
@@ -22,10 +26,12 @@ export type ListinoImportPreviewRow = ListinoImportRawRow & {
 
 export type ListinoImportPreviewResult = {
   batchId: string;
-  documentoId: string;
+  documentoId?: string;
+  importFileId?: string;
   documentoNome: string;
   marcaDefault: string;
   parseMethod: ListinoImportParseMethod;
+  categorieDisponibili: string[];
   rows: ListinoImportPreviewRow[];
   stats: {
     totalParsed: number;
@@ -43,6 +49,7 @@ export type ListinoImportDecision = {
   descrizione: string;
   costo: number;
   marca?: string;
+  categoria?: string;
   duplicateRicambioId?: string;
 };
 
@@ -71,3 +78,25 @@ export type MagazzinoDuplicateIndexEntry = {
 
 export const LISTINO_IMPORT_MAX_PREVIEW_ROWS = 2000;
 export const LISTINO_IMPORT_EXECUTE_CHUNK = 50;
+/** Max UUID per singola query `.in()` — evita URL troppo lunghi (ponytail: 80 come schede). */
+export const LISTINO_IMPORT_DELETE_IN_CHUNK = 80;
+
+/** PDF listino: pagine per blocco Gemini (listini multipagina). */
+export const LISTINO_PDF_PAGES_PER_CHUNK = 5;
+/** PDF ≤ N pagine: una sola chiamata Gemini. */
+export const LISTINO_PDF_SINGLE_CALL_MAX_PAGES = 8;
+/** Chiamate Gemini parallele max per listino PDF (1 = sequenziale, evita 429). */
+export const LISTINO_PDF_CHUNK_CONCURRENCY = 1;
+/** Pausa tra un blocco e il successivo (ms). */
+export const LISTINO_PDF_CHUNK_DELAY_MS = 2_000;
+/** Limite sicurezza blocchi (oltre → errore esplicito). */
+export const LISTINO_PDF_MAX_CHUNKS = 40;
+/** Blocchi max stimati nel budget route sequenziale (~600s / ~60s per blocco). */
+export const LISTINO_PDF_BUDGET_WAVES = 10;
+
+/** Pagine per blocco in base al totale — meno chiamate su PDF lunghi. */
+export function resolveListinoPdfPagesPerChunk(pageCount: number): number {
+  if (pageCount <= LISTINO_PDF_SINGLE_CALL_MAX_PAGES) return pageCount;
+  const targetChunks = Math.min(LISTINO_PDF_MAX_CHUNKS, LISTINO_PDF_BUDGET_WAVES);
+  return Math.max(LISTINO_PDF_PAGES_PER_CHUNK, Math.ceil(pageCount / targetChunks));
+}

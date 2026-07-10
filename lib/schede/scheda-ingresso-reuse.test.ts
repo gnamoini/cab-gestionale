@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import {
-  findLastSchedaIngressoForIdent,
   hasSchedaIngressoIdentLookup,
   listSchedaIngressoMatchesForIdent,
   mergeSchedaIngressoFields,
@@ -112,16 +111,14 @@ const attive = [
   },
 ] as const;
 
-const hit = findLastSchedaIngressoForIdent("AA111BB", "ABC123", [], store, [...attive], [], {
+const hit = listSchedaIngressoMatchesForIdent("AA111BB", "ABC123", "", [], store, [...attive], [], {
   excludeLavorazioneId: "lav-new",
-});
+})[0];
 
 assert.ok(hit);
 assert.equal(hit.campi.cliente, "Storico Srl");
 
-const byScuderia = findLastSchedaIngressoForIdent("", "", [], store, [...attive], [], {
-  nScuderia: "99",
-});
+const byScuderia = listSchedaIngressoMatchesForIdent("", "", "99", [], store, [...attive], [])[0];
 assert.ok(byScuderia);
 assert.equal(byScuderia.campi.cliente, "Scuderia Srl");
 

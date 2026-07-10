@@ -118,7 +118,7 @@ async function smokeCreateLavorazioneForRole(
   await loginViaUi(page, creds);
   await page.goto("/lavorazioni");
   await clickNuovaLavorazioneCta(page);
-  await fillMinimalCreateAndSaveWithoutClienteBlur(page, fixture.ingresso);
+  await fillMinimalCreateAndSaveWithoutClienteBlur(page, fixture);
   await submitCreateLavorazione(page);
   await searchLavorazioneByToken(page, fixture.token);
 }

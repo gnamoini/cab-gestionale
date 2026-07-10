@@ -15,13 +15,13 @@ import { resolveVisibleDashboardWidgets } from "@/lib/dashboard/dashboard-widget
 import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import { useInvoicesQuery } from "@/src/hooks/gestionale/use-invoices-query";
+import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
-import { workshopScheduleEntry } from "@/lib/domain/workshop-schedule-entry";
-import { ymdFromDate } from "@/lib/report/date-ranges";
-import { ymdFromIso } from "@/lib/workshop-schedule/datetime";
+import { resolveMagazzinoReportLogEntries } from "@/lib/report/resolve-magazzino-report-log";
+import { isLavorazioneInCorso } from "@/lib/lavorazioni/archived";
 import {
   pickDashboardPriorityLavorazioneIds,
   DASHBOARD_SCHEde_PREFETCH_LIMIT,
@@ -30,7 +30,6 @@ import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/query-keys";
-import { workshopScheduleQueryKeys } from "@/src/services/domain/workshop-schedule-domain.queries";
 import { dipendentiTimesheetEntry } from "@/lib/domain/dipendenti-timesheet-entry";
 import type { DipendenteTimesheetEntryRow } from "@/lib/dipendenti/types";
 import type { DashboardMagMovementRow } from "@/lib/view/dashboard-widgets-selectors";
@@ -38,12 +37,16 @@ import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
 import type { DashboardWidgetDefinition } from "@/lib/dashboard/dashboard-widget-registry";
+import type { LogModificaRow, LogModificaWithProfileRow } from "@/src/types/supabase-tables";
+import { ymdFromDate } from "@/lib/report/date-ranges";
 
 export type ControlTowerDashSlice = {
   globalOpts: ReturnType<typeof useGlobalOptions>;
   lavRows: readonly LavorazioneListRow[];
   ricambi: readonly RicambioMagazzino[];
   magRecentMovements: readonly DashboardMagMovementRow[];
+  magLogs: readonly LogModificaRow[];
+  movLogs: readonly LogModificaRow[];
   isLoading: boolean;
 };
 
@@ -55,6 +58,8 @@ export function controlTowerDashSliceFromMetrics(
     lavRows: dash.lavQuery.data ?? [],
     ricambi: dash.magQuery.data ?? [],
     magRecentMovements: dash.magRecentMovements,
+    magLogs: dash.magLogs,
+    movLogs: dash.movLogs,
     isLoading: dash.isLoading,
   };
 }
@@ -68,6 +73,8 @@ export function controlTowerEmptyDashSlice(
     lavRows: [],
     ricambi: [],
     magRecentMovements: [],
+    magLogs: [],
+    movLogs: [],
     isLoading: false,
   };
 }
@@ -82,12 +89,10 @@ export type ControlTowerShell = {
   canMagazzino: boolean;
   canPreventivi: boolean;
   canFatturazione: boolean;
+  canDdt: boolean;
   canDipendenti: boolean;
-  adminBacklogVisible: boolean;
   activityVisible: boolean;
   headerVisible: boolean;
-  alertsVisible: boolean;
-  wipVisible: boolean;
   globalOpts: ReturnType<typeof useGlobalOptions>;
   dipendentiOpts: ReturnType<typeof useGlobalOptions>["dipendenti"];
 };
@@ -115,12 +120,10 @@ export function useControlTowerShell(): ControlTowerShell {
     canMagazzino: modules ? moduleAllows(modules, "magazzino", "read") : false,
     canPreventivi: modules ? moduleAllows(modules, "preventivi", "read") : false,
     canFatturazione: modules ? moduleAllows(modules, "fatturazione", "read") : false,
+    canDdt: modules ? moduleAllows(modules, "ddt", "read") : false,
     canDipendenti: modules ? moduleAllows(modules, "dipendenti", "read") : false,
-    adminBacklogVisible: visibleIds.has("admin-backlog"),
     activityVisible: visibleIds.has("recent-activity"),
     headerVisible: visibleIds.has("operational-kpi-header"),
-    alertsVisible: visibleIds.has("alerts-anomalies"),
-    wipVisible: visibleIds.has("lavorazioni-kpi"),
     globalOpts,
     dipendentiOpts,
   };
@@ -128,6 +131,8 @@ export function useControlTowerShell(): ControlTowerShell {
 
 export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: ControlTowerDashSlice) {
   const viewOpts = useViewQueryOpts();
+  const gestOpts = useGestionaleQueryOpts();
+  const logQueryOpts = { ...gestOpts, ...viewOpts };
   const {
     staging,
     rbacLoading,
@@ -137,43 +142,52 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     canMagazzino,
     canPreventivi,
     canFatturazione,
+    canDdt,
     canDipendenti,
-    adminBacklogVisible,
     activityVisible,
     headerVisible,
-    alertsVisible,
-    wipVisible,
     visibleIds,
     dipendentiOpts,
   } = shell;
 
   const needAdminData =
-    !staging &&
-    ((adminBacklogVisible && canFatturazione) || (headerVisible && (canPreventivi || canFatturazione)));
+    !staging && headerVisible && (canPreventivi || canFatturazione);
   const preventiviQ = usePreventiviRecordsQuery(!staging && headerVisible && canPreventivi);
-  const needInvoices = !staging && (adminBacklogVisible || headerVisible) && canFatturazione;
+  const needInvoices = !staging && headerVisible && canFatturazione;
   const invoicesQ = useInvoicesQuery(needInvoices);
 
   const activityEnabled = !staging && activityVisible;
   const lavLogsQ = useLogListQuery(
     { entita: "lavorazioni", limit: GESTIONALE_LOG_FEED_LIMIT },
-    { enabled: activityEnabled && canLavorazioni, ...viewOpts },
+    { enabled: activityEnabled && canLavorazioni, ...logQueryOpts },
+  );
+  const schedeLogsQ = useLogListQuery(
+    { entita: "scheda_lavorazione", limit: GESTIONALE_LOG_FEED_LIMIT },
+    { enabled: activityEnabled && canLavorazioni, ...logQueryOpts },
   );
   const magLogsQ = useLogListQuery(
     { entita: "magazzino_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT },
-    { enabled: activityEnabled && canMagazzino, ...viewOpts },
+    { enabled: activityEnabled && canMagazzino, ...logQueryOpts },
   );
   const movLogsQ = useLogListQuery(
     { entita: "movimenti_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT },
-    { enabled: activityEnabled && canMagazzino, ...viewOpts },
+    { enabled: activityEnabled && canMagazzino, ...logQueryOpts },
   );
   const preventiviLogsQ = useLogListQuery(
     { entita: "preventivi", limit: GESTIONALE_LOG_FEED_LIMIT },
-    { enabled: activityEnabled && canPreventivi, ...viewOpts },
+    { enabled: activityEnabled && canPreventivi, ...logQueryOpts },
   );
-  const fattureLogsQ = useLogListQuery(
-    { entita: "fatturazione", limit: GESTIONALE_LOG_FEED_LIMIT },
-    { enabled: activityEnabled && canFatturazione, ...viewOpts },
+  const invoicesLogsQ = useLogListQuery(
+    { entita: "invoices", limit: GESTIONALE_LOG_FEED_LIMIT },
+    { enabled: activityEnabled && canFatturazione, ...logQueryOpts },
+  );
+  const invoicePaymentsLogsQ = useLogListQuery(
+    { entita: "invoice_payments", limit: GESTIONALE_LOG_FEED_LIMIT },
+    { enabled: activityEnabled && canFatturazione, ...logQueryOpts },
+  );
+  const ddtLogsQ = useLogListQuery(
+    { entita: "ddt_documents", limit: GESTIONALE_LOG_FEED_LIMIT },
+    { enabled: activityEnabled && canDdt, ...logQueryOpts },
   );
 
   const timesheetRange = useMemo(() => {
@@ -182,19 +196,6 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     return { from: ymdFromDate(prev.start), to: ymdFromDate(cur.end) };
   }, []);
 
-  const needAgenda = !staging && visibleIds.has("operational-calendar");
-  const agendaRange = useMemo(() => {
-    const today = ymdFromIso(new Date().toISOString());
-    return {
-      start: new Date(`${today}T00:00:00`).toISOString(),
-      end: new Date(`${today}T23:59:59`).toISOString(),
-    };
-  }, []);
-  const agendaQ = useServiceQuery(
-    [...workshopScheduleQueryKeys.root, "control-tower", agendaRange.start] as const,
-    () => workshopScheduleEntry.enrichedView(agendaRange.start, agendaRange.end),
-    { enabled: needAgenda, ...viewOpts },
-  );
   const needTimesheet = !staging && headerVisible && canDipendenti;
   const timesheetQ = useServiceQuery(
     [...QK.dipendentiTimesheetEntries, "control-tower", timesheetRange.from, timesheetRange.to] as const,
@@ -202,19 +203,21 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     { enabled: needTimesheet, ...viewOpts },
   );
 
+  const magLog = useMemo(
+    () => resolveMagazzinoReportLogEntries([], dash.magLogs as LogModificaWithProfileRow[]),
+    [dash.magLogs],
+  );
+
   const schedeIds = useMemo(
-    () => pickDashboardPriorityLavorazioneIds(dash.lavRows, DASHBOARD_SCHEde_PREFETCH_LIMIT),
+    () =>
+      pickDashboardPriorityLavorazioneIds(
+        dash.lavRows.filter((r) => !r.deleted_at && isLavorazioneInCorso(r)),
+        DASHBOARD_SCHEde_PREFETCH_LIMIT,
+      ),
     [dash.lavRows],
   );
-  const needSchede = !staging && (alertsVisible || wipVisible || activityVisible) && canLavorazioni;
+  const needSchede = !staging && activityVisible && canLavorazioni;
   const { store: schedeStore } = useSchedeBundlesQuery(needSchede, { lavorazioneIds: schedeIds });
-
-  const adminLogRows = useMemo(() => {
-    const rows = [];
-    if (canPreventivi) rows.push(...(preventiviLogsQ.data ?? []));
-    if (canFatturazione) rows.push(...(fattureLogsQ.data ?? []));
-    return rows;
-  }, [canFatturazione, canPreventivi, fattureLogsQ.data, preventiviLogsQ.data]);
 
   const slices = useMemo(() => {
     if (!modules) return null;
@@ -223,17 +226,20 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
       schedeStore,
       ricambi: dash.ricambi,
       magMovements: dash.magRecentMovements,
-      movimentiLogs: movLogsQ.data ?? [],
+      magLog,
+      movimentiLogs: dash.movLogs,
       preventivi: preventiviQ.records,
       invoices: invoicesQ.invoices,
-      logLavorazioni: lavLogsQ.data ?? [],
+      logLavorazioni: [...(lavLogsQ.data ?? []), ...(schedeLogsQ.data ?? [])],
       logMagazzino: magLogsQ.data ?? [],
       logMovimenti: movLogsQ.data ?? [],
-      logAdmin: adminLogRows,
+      logPreventivi: preventiviLogsQ.data ?? [],
+      logDdt: ddtLogsQ.data ?? [],
+      logFatturazione: [...(invoicesLogsQ.data ?? []), ...(invoicePaymentsLogsQ.data ?? [])],
       timesheetEntries: (timesheetQ.data ?? []) as DipendenteTimesheetEntryRow[],
       tipiAssenza: dipendentiOpts.tipiAssenza,
       statiLavorazione: dash.globalOpts.lavorazioni.stati,
-      agendaSessions: agendaQ.data ?? [],
+      agendaSessions: [],
       includeLavorazioni: canLavorazioni,
       includeMagazzino: canMagazzino,
       includeAdmin: needAdminData,
@@ -254,17 +260,21 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     dash.globalOpts.lavorazioni.addetti,
     dash.ricambi,
     dash.magRecentMovements,
+    magLog,
+    dash.movLogs,
     schedeStore,
-    movLogsQ.data,
     preventiviQ.records,
     invoicesQ.invoices,
     lavLogsQ.data,
+    schedeLogsQ.data,
     magLogsQ.data,
-    adminLogRows,
+    preventiviLogsQ.data,
+    ddtLogsQ.data,
+    invoicesLogsQ.data,
+    invoicePaymentsLogsQ.data,
     timesheetQ.data,
     dipendentiOpts.tipiAssenza,
     dash.globalOpts.lavorazioni.stati,
-    agendaQ.data,
     canLavorazioni,
     canMagazzino,
     needAdminData,
@@ -278,24 +288,41 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     (!staging && headerVisible && canPreventivi && preventiviQ.isLoading) ||
     (needInvoices && invoicesQ.isLoading) ||
     (needTimesheet && timesheetQ.isPending) ||
-    (needAgenda && agendaQ.isPending) ||
-    (activityEnabled && (lavLogsQ.isLoading || magLogsQ.isLoading || movLogsQ.isLoading));
+    (activityEnabled &&
+      ((canLavorazioni && (lavLogsQ.isLoading || schedeLogsQ.isLoading)) ||
+        (canMagazzino && (magLogsQ.isLoading || movLogsQ.isLoading)) ||
+        (canPreventivi && preventiviLogsQ.isLoading) ||
+        (canDdt && ddtLogsQ.isLoading) ||
+        (canFatturazione && (invoicesLogsQ.isLoading || invoicePaymentsLogsQ.isLoading))));
+
+  const activityFeedLoading =
+    rbacLoading ||
+    !modules ||
+    (activityEnabled &&
+      ((canLavorazioni &&
+          (lavLogsQ.isPending ||
+            lavLogsQ.isLoading ||
+            schedeLogsQ.isPending ||
+            schedeLogsQ.isLoading)) ||
+        (canMagazzino && (magLogsQ.isPending || magLogsQ.isLoading || movLogsQ.isPending || movLogsQ.isLoading)) ||
+        (canPreventivi && (preventiviLogsQ.isPending || preventiviLogsQ.isLoading)) ||
+        (canDdt && (ddtLogsQ.isPending || ddtLogsQ.isLoading)) ||
+        (canFatturazione &&
+          (invoicesLogsQ.isPending ||
+            invoicesLogsQ.isLoading ||
+            invoicePaymentsLogsQ.isPending ||
+            invoicePaymentsLogsQ.isLoading))));
 
   return {
     staging,
     visibleWidgets,
     slices,
     isLoading,
+    activityFeedLoading,
     canPreventivi,
     canFatturazione,
+    canDdt,
     canLavorazioni,
     canMagazzino,
   };
-}
-
-/** @deprecated Prefer ControlTowerMetricsProvider conditional mount. */
-export function useControlTowerMetrics() {
-  const shell = useControlTowerShell();
-  const dash = controlTowerDashSliceFromMetrics(useDashboardMetrics());
-  return useControlTowerMetricsValue(shell, dash);
 }

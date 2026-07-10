@@ -57,7 +57,7 @@ assert.equal(reports.reduce((sum, r) => sum + r.issues.newFlexRisks.length, 0), 
 
 const pageHeaderBaseline = getBaselineRisksForRoute("/report").find((r) => r.id === "page-header");
 assert.ok(pageHeaderBaseline);
-assert.equal(pageHeaderBaseline!.baselineEntryCount, 1);
+assert.equal(pageHeaderBaseline!.baselineEntryCount, 0);
 
 const dashboardBaseline = getBaselineRisksForRoute("/dashboard");
 assert.ok(dashboardBaseline.some((r) => r.id === "sistema-impostazioni-modal"));

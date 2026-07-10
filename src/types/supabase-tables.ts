@@ -330,6 +330,17 @@ export type ReportManualEntryRow = {
   deleted_at?: string | null;
 };
 
+/** Diario operativo giornaliero (`operational_diary_entries`). */
+export type OperationalDiaryEntryRow = {
+  id: string;
+  work_date: string;
+  body: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
+};
+
 export type PreventivoRow = {
   id: string;
   mezzo_id: string;

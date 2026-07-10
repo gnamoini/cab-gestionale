@@ -2,6 +2,9 @@
  * @deprecated Import listino da documento PDF — flusso legacy Documenti.
  * Per import tabellare listino ricambi usare il wizard generico (`listino_ricambi` → `/api/import/listino/*`).
  */
+import { getDocumentoFileAccessState } from "@/lib/documenti/documento-file-access";
+import { resolveArchiveDocumentDisplayFileName } from "@/lib/documenti/documento-tipo-file";
+import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import type {
   ListinoImportDecision,
   ListinoImportExecuteResult,
@@ -10,6 +13,28 @@ import type {
 
 export function isListinoImportSupportedFileName(fileName: string): boolean {
   return /\.(xlsx|xls|csv|pdf)$/i.test(fileName.trim());
+}
+
+export function isListinoImportSupportedDocument(
+  doc: Pick<DocumentoGestionale, "nome" | "tipoFile" | "fileEstensione" | "urlDocumento">,
+): boolean {
+  if (isListinoImportSupportedFileName(doc.nome)) return true;
+  const resolved = resolveArchiveDocumentDisplayFileName({
+    nome: doc.nome,
+    urlFile: doc.urlDocumento ?? "",
+    meta: { tipoFile: doc.tipoFile, fileEstensione: doc.fileEstensione },
+  });
+  return isListinoImportSupportedFileName(resolved);
+}
+
+export function canImportListinoFromDocumento(
+  doc: Pick<DocumentoGestionale, "categoria" | "nome" | "urlBlob" | "urlDocumento" | "tipoFile" | "fileEstensione">,
+  perms: { canReadDocumenti: boolean; canWriteMagazzino: boolean },
+): boolean {
+  if (!perms.canReadDocumenti || !perms.canWriteMagazzino) return false;
+  if (doc.categoria !== "listini") return false;
+  if (!getDocumentoFileAccessState(doc).canOpen) return false;
+  return isListinoImportSupportedDocument(doc);
 }
 
 export async function fetchListinoImportPreview(documentoId: string): Promise<ListinoImportPreviewResult> {
@@ -25,7 +50,8 @@ export async function fetchListinoImportPreview(documentoId: string): Promise<Li
 }
 
 export async function executeListinoImportRequest(input: {
-  documentoId: string;
+  documentoId?: string;
+  importFileId?: string;
   batchId: string;
   decisions: ListinoImportDecision[];
 }): Promise<ListinoImportExecuteResult> {

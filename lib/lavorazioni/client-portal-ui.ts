@@ -1,4 +1,5 @@
 import { formatClientPortalAttrezzatura } from "@/lib/lavorazioni/client-portal-attrezzatura-format";
+import { formatClientPortalDay } from "@/lib/lavorazioni/format-client-portal-day";
 import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import {
   buildLatestLogAutoreByEntitaId,
@@ -21,14 +22,6 @@ export type ClientVisibleNote = {
   text: string;
 };
 
-function fmtDay(iso: string | null | undefined): string {
-  if (!iso?.trim()) return "—";
-  try {
-    return new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
-  } catch {
-    return iso;
-  }
-}
 
 function fmtWhen(iso: string): string {
   try {
@@ -72,16 +65,19 @@ export function buildClientPortalLogAutoreByLavorazioneId(
     lazyProfileNames: ReadonlyMap<string, string>;
     currentUserId?: string | null;
     currentUserDisplayName?: string | null;
+    /** Portale clienti: non esporre UUID o fallback tecnico. */
+    omitUnresolvedAutore?: boolean;
   },
 ): ReadonlyMap<string, string> {
-  const { lazyProfileNames, currentUserId, currentUserDisplayName } = opts;
+  const { lazyProfileNames, currentUserId, currentUserDisplayName, omitUnresolvedAutore } = opts;
   return buildLatestLogAutoreByEntitaId(logs, (row) => {
     const id = row.autore_id?.trim();
     if (id) {
       const lazy = lazyProfileNames.get(id);
-      if (lazy) return lazy;
+      if (lazy) return omitUnresolvedAutore ? sanitizeClientPortalAutore(lazy) : lazy;
       if (currentUserId && id === currentUserId && currentUserDisplayName?.trim()) {
-        return currentUserDisplayName.trim();
+        const name = currentUserDisplayName.trim();
+        return omitUnresolvedAutore ? sanitizeClientPortalAutore(name) : name;
       }
     }
     const profileNome = (row as LogModificaWithProfileRow).profiles?.nome?.trim();
@@ -122,7 +118,7 @@ export function buildClientIngressoSummary(row: LavorazioneListRow): ClientIngre
     cliente: m?.cliente?.trim() || "—",
     attrezzatura: attDisplay,
     descrizione: row.note?.trim() || "—",
-    dataIngresso: fmtDay(row.data_ingresso ?? row.created_at),
+    dataIngresso: formatClientPortalDay(row.data_ingresso ?? row.created_at),
   };
 }
 

@@ -16,6 +16,23 @@ export function isUndoableScortaOnlyEntry(e: MagazzinoChangeLogEntry): boolean {
   return e.tipo === "update" && e.changes.length === 1 && e.changes[0]?.campo === "Scorta";
 }
 
+/** Prima voce undoable per ricambio (log newest-first) — O(entries). */
+export function buildLatestUndoableScortaEntryByRicambioId(
+  entries: MagazzinoChangeLogEntry[],
+  scope?: MagazzinoUndoScope | null,
+): Map<string, MagazzinoChangeLogEntry> {
+  const map = new Map<string, MagazzinoChangeLogEntry>();
+  for (const entry of entries) {
+    if (entry.annullato) continue;
+    if (scope && !entryMatchesMagazzinoUndoScope(entry, scope)) continue;
+    if (!isUndoableScortaOnlyEntry(entry)) continue;
+    if (!map.has(entry.ricambioId)) {
+      map.set(entry.ricambioId, entry);
+    }
+  }
+  return map;
+}
+
 /** Prima voce in `entries` (tipicamente la più recente) per ricambio, se annullabile come solo-scorta. */
 export function latestUndoableScortaEntryForRicambio(
   entries: MagazzinoChangeLogEntry[],

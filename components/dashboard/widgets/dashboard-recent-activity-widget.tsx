@@ -1,100 +1,166 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { CONTROL_TOWER_ACTIVITY_WINDOW_LABEL } from "@/lib/dashboard/control-tower-constants";
-import type { ControlTowerActivityFeedSlice } from "@/lib/dashboard/control-tower-selectors";
+import type {
+  ControlTowerActivityDomain,
+  ControlTowerActivityItem,
+} from "@/lib/dashboard/control-tower-selectors";
+import type { DashboardWidgetDefinition } from "@/lib/dashboard/dashboard-widget-registry";
 import { useControlTowerContext } from "@/components/dashboard/control-tower-metrics-provider";
-import {
-  GestionaleLogEmpty,
-  GestionaleLogEntryFourLines,
-  GestionaleLogList,
-} from "@/components/gestionale/gestionale-log-ui";
-import { LoadingFormSkeleton } from "@/components/design-system";
-import { layoutScrollYSafe } from "@/lib/ui/responsive-layout-core";
-import { dsDashboardWidgetTitle, dsSurfaceCard, dsTypoCaption } from "@/lib/ui/design-system";
+import { wrapDashboardWidget } from "@/components/dashboard/dashboard-widget-shell";
+import { parseModificheLines } from "@/lib/gestionale-log/view-model";
+import { reportMetricCardCompactClass } from "@/components/report/report-ui-tokens";
 
-type ActivityDomain = keyof ControlTowerActivityFeedSlice["byDomain"];
+const ACTIVITY_EMPTY_LABEL = "Nessuna attività recente.";
 
-const ACTIVITY_COLUMNS: { id: ActivityDomain; label: string }[] = [
-  { id: "lavorazioni", label: "Lavorazioni" },
-  { id: "ricambi", label: "Ricambi" },
-  { id: "amministrazione", label: "Amministrazione" },
-];
-
-const activityScrollClass = `${layoutScrollYSafe} max-h-[min(420px,52vh)] min-h-0 pr-1`;
-
-const ACTIVITY_EMPTY_MESSAGES: Record<ActivityDomain, string> = {
-  lavorazioni: "Nessuna attività sulle lavorazioni in questo periodo.",
-  ricambi: "Nessuna attività sui ricambi in questo periodo.",
-  amministrazione: "Nessuna attività amministrativa in questo periodo.",
+type ActivityAccess = {
+  canLavorazioni: boolean;
+  canMagazzino: boolean;
+  canPreventivi: boolean;
+  canDdt: boolean;
+  canFatturazione: boolean;
 };
 
-export function DashboardRecentActivityWidget() {
+const ACTIVITY_COLUMNS: { id: ControlTowerActivityDomain; label: string; canAccess: (ctx: ActivityAccess) => boolean }[] =
+  [
+    { id: "lavorazioni", label: "Lavorazioni", canAccess: (c) => c.canLavorazioni },
+    { id: "magazzino", label: "Magazzino", canAccess: (c) => c.canMagazzino },
+    { id: "preventiviDdt", label: "Preventivi e DDT", canAccess: (c) => c.canPreventivi || c.canDdt },
+    { id: "fatturazione", label: "Fatturazione", canAccess: (c) => c.canFatturazione },
+  ];
+
+function ActivityCardShell({
+  label,
+  empty,
+  loading,
+  children,
+}: {
+  label: string;
+  empty?: boolean;
+  loading?: boolean;
+  children?: ReactNode;
+}) {
+  return (
+    <article className={`${reportMetricCardCompactClass} flex min-h-0 min-w-0 flex-col`}>
+      <h3 className="border-b border-[color:var(--cab-border)] pb-2 text-sm font-semibold text-[color:var(--cab-text)]">
+        {label}
+      </h3>
+      {loading ? (
+        <div className="mt-3 space-y-2 px-2 py-4" aria-hidden>
+          <div className="h-3 w-4/5 animate-pulse rounded bg-[color:color-mix(in_srgb,var(--cab-surface-2)_70%,transparent)]" />
+          <div className="h-2.5 w-3/5 animate-pulse rounded bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,transparent)]" />
+          <div className="h-2.5 w-2/5 animate-pulse rounded bg-[color:color-mix(in_srgb,var(--cab-surface-2)_45%,transparent)]" />
+        </div>
+      ) : empty ? (
+        <p className="mt-3 px-2 py-8 text-center text-xs text-[color:var(--cab-text-muted)]">{ACTIVITY_EMPTY_LABEL}</p>
+      ) : (
+        <ul className="mt-2 flex min-w-0 flex-1 flex-col gap-2">{children}</ul>
+      )}
+    </article>
+  );
+}
+
+function formatActivityWhen(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function activitySummaryLine(vm: ControlTowerActivityItem["vm"], eventCount: number): string {
+  const changes = parseModificheLines(vm.modificaRiga).filter(
+    (line) => !/aggiornamenti nel periodo$/i.test(line.trim()),
+  );
+  const detail = changes[0] ?? vm.tipoRiga;
+  const extra = eventCount > 1 ? ` (+${eventCount - 1})` : "";
+  return `${detail}${extra} · ${vm.autore}`;
+}
+
+const ACTIVITY_ROW_SHELL_CLASS =
+  "rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2.5 py-2 shadow-[var(--cab-shadow-sm)]";
+
+function ActivityEntityRow({
+  item,
+  onOpen,
+}: {
+  item: ControlTowerActivityItem;
+  onOpen?: () => void;
+}) {
+  const { vm } = item;
+  const Shell = onOpen ? "button" : "div";
+  const shellProps = onOpen
+    ? ({
+        type: "button" as const,
+        onClick: onOpen,
+        className:
+          `w-full text-left transition-colors hover:bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-card))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_42%,transparent)] ${ACTIVITY_ROW_SHELL_CLASS}`,
+      })
+    : ({
+        className: ACTIVITY_ROW_SHELL_CLASS,
+      });
+
+  return (
+    <li className="list-none">
+      <Shell {...shellProps}>
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <p className="min-w-0 truncate text-sm font-medium text-[color:var(--cab-text)]">{vm.oggettoRiga}</p>
+          <time className="shrink-0 text-[10px] tabular-nums text-[color:var(--cab-text-muted)]" dateTime={vm.atIso}>
+            {formatActivityWhen(vm.atIso)}
+          </time>
+        </div>
+        <p className="mt-1 truncate text-xs text-[color:var(--cab-text-muted)]">
+          {activitySummaryLine(vm, item.eventCount)}
+        </p>
+      </Shell>
+    </li>
+  );
+}
+
+export function DashboardRecentActivityWidget({ def }: { def: DashboardWidgetDefinition }) {
   const router = useRouter();
-  const { slices, isLoading, staging, canLavorazioni, canMagazzino, canPreventivi, canFatturazione } =
-    useControlTowerContext();
+  const {
+    slices,
+    staging,
+    activityFeedLoading,
+    canLavorazioni,
+    canMagazzino,
+    canPreventivi,
+    canDdt,
+    canFatturazione,
+  } = useControlTowerContext();
   if (staging) return null;
 
+  const access: ActivityAccess = {
+    canLavorazioni,
+    canMagazzino,
+    canPreventivi,
+    canDdt,
+    canFatturazione,
+  };
   const feed = slices?.activityFeed;
-  const columns = ACTIVITY_COLUMNS.filter((col) => {
-    if (col.id === "lavorazioni") return canLavorazioni;
-    if (col.id === "ricambi") return canMagazzino;
-    return canPreventivi || canFatturazione;
-  });
-
-  if (isLoading && !feed) {
-    return (
-      <section className={`${dsSurfaceCard} p-4 sm:p-5`}>
-        <LoadingFormSkeleton fields={2} />
-      </section>
-    );
-  }
+  const columns = ACTIVITY_COLUMNS.filter((col) => col.canAccess(access));
 
   if (columns.length === 0) return null;
 
-  const allEmpty = columns.every((col) => (feed?.byDomain[col.id] ?? []).length === 0);
-
-  return (
-    <section className={`${dsSurfaceCard} p-4 sm:p-5`}>
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className={dsDashboardWidgetTitle}>Attività recenti</h2>
-        <p className={dsTypoCaption}>{CONTROL_TOWER_ACTIVITY_WINDOW_LABEL}</p>
-      </div>
-      {allEmpty ? (
-        <div className="mt-4 min-w-0">
-          <GestionaleLogEmpty
-          message={`Nessuna attività registrata (${CONTROL_TOWER_ACTIVITY_WINDOW_LABEL.toLowerCase()}). Le modifiche su lavorazioni, ricambi e amministrazione compaiono qui automaticamente.`}
-          />
-        </div>
-      ) : (
-        <div className="mt-4 grid min-w-0 gap-4 md:grid-cols-3">
-          {columns.map((col) => {
-            const items = feed?.byDomain[col.id] ?? [];
-            return (
-              <div key={col.id} className="flex min-h-0 min-w-0 flex-col">
-                <p className={`${dsTypoCaption} font-semibold uppercase tracking-wide`}>{col.label}</p>
-                <div className={`${activityScrollClass} mt-2 min-w-0 flex-1`}>
-                  {items.length === 0 ? (
-                    <GestionaleLogEmpty message={ACTIVITY_EMPTY_MESSAGES[col.id]} />
-                  ) : (
-                    <GestionaleLogList>
-                      {items.map((item) => (
-                        <li key={item.id} className="list-none min-w-0">
-                          <GestionaleLogEntryFourLines
-                            vm={item.vm}
-                            onClick={item.href ? () => router.push(item.href!) : undefined}
-                            title={item.href ? "Apri dettaglio" : undefined}
-                          />
-                        </li>
-                      ))}
-                    </GestionaleLogList>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </section>
+  const body = (
+    <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      {columns.map((col) => {
+        const items = feed?.byDomain[col.id] ?? [];
+        const empty = !activityFeedLoading && items.length === 0;
+        return (
+          <ActivityCardShell key={col.id} label={col.label} empty={empty} loading={activityFeedLoading}>
+            {items.map((item) => (
+              <ActivityEntityRow
+                key={item.id}
+                item={item}
+                onOpen={item.href ? () => router.push(item.href!) : undefined}
+              />
+            ))}
+          </ActivityCardShell>
+        );
+      })}
+    </div>
   );
+
+  return wrapDashboardWidget(def, body);
 }

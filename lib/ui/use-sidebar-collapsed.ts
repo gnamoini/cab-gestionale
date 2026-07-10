@@ -21,9 +21,18 @@ export const SIDEBAR_HOVER_INTENT = {
   overlayCloseReconcileMs: 260,
 } as const;
 
+export const GESTIONALE_OVERLAY_OPENED_EVENT = "cab:gestionale-overlay-opened";
 export const GESTIONALE_OVERLAY_CLOSED_EVENT = "cab:gestionale-overlay-closed";
 
 let suppressSidebarBlurCollapseUntil = 0;
+let gestionaleOverlayOpenCount = 0;
+
+/** Drawer log/profilo/notifiche aperto — blocca reconcile pointer sulla sidebar. */
+export function isGestionaleOverlayActive(): boolean {
+  if (gestionaleOverlayOpenCount > 0) return true;
+  if (typeof document === "undefined") return false;
+  return document.querySelector('.cab-log-drawer-backdrop[data-state="open"]') != null;
+}
 
 /** Evita collapse sidebar su blur da controlli nel drawer profilo (es. toggle tema). */
 export function suppressSidebarBlurCollapse(
@@ -37,8 +46,15 @@ function isSidebarBlurCollapseSuppressed(): boolean {
   return Date.now() < suppressSidebarBlurCollapseUntil;
 }
 
+export function dispatchGestionaleOverlayOpened(): void {
+  if (typeof window === "undefined") return;
+  gestionaleOverlayOpenCount += 1;
+  window.dispatchEvent(new CustomEvent(GESTIONALE_OVERLAY_OPENED_EVENT));
+}
+
 export function dispatchGestionaleOverlayClosed(): void {
   if (typeof window === "undefined") return;
+  gestionaleOverlayOpenCount = Math.max(0, gestionaleOverlayOpenCount - 1);
   window.dispatchEvent(new CustomEvent(GESTIONALE_OVERLAY_CLOSED_EVENT));
 }
 
@@ -217,6 +233,7 @@ export function useSidebarHoverExpand(): {
   const reconcileSidebarPointer = useCallback(
     (aside: HTMLElement | null) => {
       if (!aside) return;
+      if (isGestionaleOverlayActive()) return;
       if (isSidebarBlurCollapseSuppressed()) return;
       if (
         isSidebarPointerActive(aside, lastPointerRef.current) ||
@@ -232,6 +249,7 @@ export function useSidebarHoverExpand(): {
   const schedulePointerReconcile = useCallback(
     (aside: HTMLElement | null) => {
       if (!aside) return;
+      if (isGestionaleOverlayActive()) return;
       if (pointerReconcileRafRef.current != null) return;
       pointerReconcileRafRef.current = requestAnimationFrame(() => {
         pointerReconcileRafRef.current = null;
@@ -376,19 +394,32 @@ export function useSidebarHoverExpand(): {
     };
   }, [collapseSidebar, schedulePointerReconcile, sidebarExpanded]);
 
+  const applyOverlayFocusSuppress = useCallback(() => {
+    const timings = resolveSidebarHoverTimings();
+    suppressFocusExpandUntilRef.current =
+      Date.now() +
+      Math.max(
+        SIDEBAR_HOVER_INTENT.overlayCloseFocusSuppressMs,
+        SIDEBAR_HOVER_INTENT.overlayCloseReconcileMs + timings.blurCollapseMs,
+      );
+  }, []);
+
+  useEffect(() => {
+    const onOverlayOpened = () => {
+      collapseSidebar();
+      applyOverlayFocusSuppress();
+    };
+    window.addEventListener(GESTIONALE_OVERLAY_OPENED_EVENT, onOverlayOpened);
+    return () => window.removeEventListener(GESTIONALE_OVERLAY_OPENED_EVENT, onOverlayOpened);
+  }, [applyOverlayFocusSuppress, collapseSidebar]);
+
   useEffect(() => {
     const onOverlayClosed = () => {
       collapseSidebar();
-      const timings = resolveSidebarHoverTimings();
-      suppressFocusExpandUntilRef.current =
-        Date.now() +
-        Math.max(
-          SIDEBAR_HOVER_INTENT.overlayCloseFocusSuppressMs,
-          SIDEBAR_HOVER_INTENT.overlayCloseReconcileMs + timings.blurCollapseMs,
-        );
+      applyOverlayFocusSuppress();
 
       window.setTimeout(() => {
-        collapseSidebar();
+        if (isGestionaleOverlayActive()) return;
         const aside = document.querySelector("aside.cab-sidebar");
         if (aside instanceof HTMLElement) {
           reconcileSidebarPointer(aside);
@@ -397,7 +428,7 @@ export function useSidebarHoverExpand(): {
     };
     window.addEventListener(GESTIONALE_OVERLAY_CLOSED_EVENT, onOverlayClosed);
     return () => window.removeEventListener(GESTIONALE_OVERLAY_CLOSED_EVENT, onOverlayClosed);
-  }, [collapseSidebar, reconcileSidebarPointer]);
+  }, [applyOverlayFocusSuppress, collapseSidebar, reconcileSidebarPointer]);
 
   return {
     collapsed,

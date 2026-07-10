@@ -84,6 +84,14 @@ Flag attuali da monitorare:
 | Fuori scope CI | `lint`, `test:permissions`, `ios:check` — eseguire manualmente pre-major |
 | Smoke skip | Documentare env opzionali (operator, documenti) |
 
+### Known failures registrati (tsc test-only)
+
+| Data | Gate | File | Ticket | Owner | Note |
+|------|------|------|--------|-------|------|
+| 2026-07-09 | ci:tsc | — | — | — | Audit cleanup 2026-07: **0 errori** src + test. Nessun waiver. |
+
+REGRESSION_CORE: failure → fix codice, mai known-failure / skip.
+
 ## Cadence consigliata
 
 | Frequenza | Attività |

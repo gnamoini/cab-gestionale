@@ -2,6 +2,7 @@
 
 import { isValidLoginIdentifier } from "@/src/lib/auth/username";
 import { validatePasswordStrength } from "@/lib/validation/password-validation";
+import { EMAIL_RE } from "@/lib/validation/email";
 
 export type AdminUserInputValidation = {
   nome: string;
@@ -10,8 +11,6 @@ export type AdminUserInputValidation = {
   password: string;
   ruolo: string;
 };
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function validateCreateUserInput(input: AdminUserInputValidation): string | null {
   const nome = input.nome.trim();

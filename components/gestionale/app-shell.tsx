@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties, type MouseEvent as ReactMouseEvent, type RefObject } from "react";
 import { CloseButton } from "@/components/design-system";
 import { useAuth } from "@/context/auth-context";
 import { erpFocus } from "@/lib/ui/erp-tokens";
@@ -47,16 +47,20 @@ import {
   isSidebarNavLinkCurrent,
   scheduleRouteTransitionBegin,
 } from "@/src/lib/navigation/route-transition";
-import { useGestionaleMainScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useGestionaleScrollEnd } from "@/lib/ui/use-gestionale-scroll-end";
 import { dsGestionaleScrollEndPadFade } from "@/lib/ui/scroll-system";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { healBodyScrollLockState } from "@/lib/ui/body-scroll-lock-manager";
 import { cabAppViewportFillClass } from "@/lib/ui/viewport-fill-sync";
-import { useSidebarHoverExpand } from "@/lib/ui/use-sidebar-collapsed";
+import { isGestionaleOverlayActive, useSidebarHoverExpand } from "@/lib/ui/use-sidebar-collapsed";
 import { recordHealthMetric } from "@/lib/observability/runtime-health";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { resolveDrawerAsideClasses } from "@/lib/ui/modal-max-width-class";
+import { useSwipeFromEdgeToOpen } from "@/lib/ui/use-swipe-from-edge-to-open";
+import { useDialogFocusTrap } from "@/lib/ui/use-dialog-focus-trap";
+import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
+import { useMobileNavShell } from "@/context/mobile-nav-shell-context";
 
 const shellTopBarClass =
   "flex h-14 shrink-0 items-center border-b border-[color:var(--cab-border)]";
@@ -156,6 +160,10 @@ function navDrawerAnimMs(): number {
 
 function MobileNavDrawer({
   open,
+  edgeOpening,
+  edgePanelProps,
+  edgeBackdropProps,
+  edgePanelRef,
   onClose,
   navItems,
   onNavigate,
@@ -163,43 +171,94 @@ function MobileNavDrawer({
   isNavLoading,
 }: {
   open: boolean;
+  edgeOpening: boolean;
+  edgePanelProps?: { style?: CSSProperties; className?: string };
+  edgeBackdropProps?: { style?: CSSProperties; className?: string };
+  edgePanelRef?: RefObject<HTMLDivElement | null>;
   onClose: () => void;
   navItems: GestionaleNavResolvedItem[];
   onNavigate?: (href: string) => void;
   isCompactShell: boolean;
   isNavLoading: boolean;
 }) {
+  const mobileNav = useMobileNavShell();
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
+  const wasCommittedRef = useRef(false);
   const panelState = closing ? "closing" : "open";
+  const drawerVisible = open || edgeOpening;
+  const committed = open && !edgeOpening;
+  const isActive = mounted && committed && !closing;
+  const panelContainerRef = useRef<HTMLDivElement | null>(null);
+  const { restoreFocus } = useDropdownFocusRestore(isActive);
 
   useEffect(() => {
-    if (open) {
+    if (open) wasCommittedRef.current = true;
+  }, [open]);
+
+  useEffect(() => {
+    if (drawerVisible) {
       setMounted(true);
       setClosing(false);
     }
-  }, [open]);
+  }, [drawerVisible]);
 
-  useGestionaleMainScrollLock(mounted, "MobileNavDrawer");
-  const swipeDismiss = useSwipeToDismiss(onClose, mounted && open && !closing);
+  useBodyScrollLock(mounted, "MobileNavDrawer");
+  const swipeDismiss = useSwipeToDismiss(onClose, isActive);
+  const swipeDismissedRef = swipeDismiss.swipeDismissedRef;
+
+  useDialogFocusTrap(panelContainerRef, isActive);
+
+  useLayoutEffect(() => {
+    const node = panelContainerRef.current;
+    if (edgeOpening && edgePanelRef) {
+      edgePanelRef.current = node;
+      return;
+    }
+    swipeDismiss.panelRef.current = node;
+  }, [edgeOpening, edgePanelRef, mounted, swipeDismiss.panelRef]);
 
   useEffect(() => {
-    if (!mounted || open) return;
-    if (swipeDismiss.swipeDismissedRef.current) {
-      swipeDismiss.swipeDismissedRef.current = false;
+    if (!mounted || drawerVisible) return;
+    if (!wasCommittedRef.current) {
       setMounted(false);
       setClosing(false);
+      return;
+    }
+    wasCommittedRef.current = false;
+    if (swipeDismissedRef.current) {
+      swipeDismissedRef.current = false;
+      setMounted(false);
+      setClosing(false);
+      restoreFocus();
+      const trigger = mobileNav?.getMobileNavTrigger();
+      if (trigger && document.contains(trigger)) {
+        try {
+          trigger.focus({ preventScroll: true });
+        } catch {
+          /* non focusable */
+        }
+      }
       return;
     }
     setClosing(true);
     const id = window.setTimeout(() => {
       setMounted(false);
       setClosing(false);
+      restoreFocus();
+      const trigger = mobileNav?.getMobileNavTrigger();
+      if (trigger && document.contains(trigger)) {
+        try {
+          trigger.focus({ preventScroll: true });
+        } catch {
+          /* non focusable */
+        }
+      }
     }, navDrawerAnimMs());
     return () => window.clearTimeout(id);
-  }, [mounted, open, swipeDismiss.swipeDismissedRef]);
+  }, [drawerVisible, mobileNav, mounted, restoreFocus, swipeDismissedRef]);
 
-  useOverlayBackHandler(mounted && open && !closing, onClose, "MobileNavDrawer");
+  useOverlayBackHandler(isActive, onClose, "MobileNavDrawer");
 
   useEffect(() => {
     if (isCompactShell) return;
@@ -209,7 +268,7 @@ function MobileNavDrawer({
   }, [isCompactShell, onClose]);
 
   useEffect(() => {
-    if (!mounted || closing || !open) return;
+    if (!isActive) return;
     function onKey(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
       const target = e.target;
@@ -221,32 +280,42 @@ function MobileNavDrawer({
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [mounted, closing, open, onClose]);
+  }, [isActive, onClose]);
 
   if (!mounted || !isCompactShell) return null;
+
+  const panelStyle = edgeOpening ? edgePanelProps?.style : swipeDismiss.panelProps.style;
+  const panelClassExtra = edgeOpening
+    ? edgePanelProps?.className
+    : swipeDismiss.panelProps.className;
+  const backdropStyle = edgeOpening ? edgeBackdropProps?.style : swipeDismiss.backdropProps.style;
+  const backdropClassExtra = edgeOpening
+    ? edgeBackdropProps?.className
+    : swipeDismiss.backdropProps.className;
 
   return (
     <div className={`fixed inset-0 ${dsZModalHigh} overscroll-none`} role="presentation">
       <button
         type="button"
-        className={`cab-nav-drawer-backdrop absolute inset-0 touch-none bg-black/50 backdrop-blur-[1px] touch-manipulation${swipeDismiss.backdropProps.className ? ` ${swipeDismiss.backdropProps.className}` : ""}`}
+        className={`cab-nav-drawer-backdrop absolute inset-0 touch-none bg-black/50 backdrop-blur-[1px] touch-manipulation${backdropClassExtra ? ` ${backdropClassExtra}` : ""}`}
         data-state={panelState}
-        style={swipeDismiss.backdropProps.style}
+        style={backdropStyle}
         aria-label="Chiudi menu"
-        onClick={onClose}
+        onClick={committed ? onClose : undefined}
+        tabIndex={committed ? 0 : -1}
       />
       <div
-        ref={swipeDismiss.panelRef}
-        className={`cab-nav-drawer-panel cab-sidebar ${resolveDrawerAsideClasses("drawerNav")}${swipeDismiss.panelProps.className ? ` ${swipeDismiss.panelProps.className}` : ""}`}
+        ref={panelContainerRef}
+        className={`cab-nav-drawer-panel cab-sidebar ${resolveDrawerAsideClasses("drawerNav")}${panelClassExtra ? ` ${panelClassExtra}` : ""}`}
         data-state={panelState}
         role="dialog"
         aria-modal="true"
         aria-label="Menu principale"
-        style={swipeDismiss.panelProps.style}
-        onTouchStart={swipeDismiss.panelProps.onTouchStart}
-        onTouchMove={swipeDismiss.panelProps.onTouchMove}
-        onTouchEnd={swipeDismiss.panelProps.onTouchEnd}
-        onTouchCancel={swipeDismiss.panelProps.onTouchCancel}
+        style={panelStyle}
+        onTouchStart={committed ? swipeDismiss.panelProps.onTouchStart : undefined}
+        onTouchMove={committed ? swipeDismiss.panelProps.onTouchMove : undefined}
+        onTouchEnd={committed ? swipeDismiss.panelProps.onTouchEnd : undefined}
+        onTouchCancel={committed ? swipeDismiss.panelProps.onTouchCancel : undefined}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className={`${shellTopBarClass} shrink-0 grid grid-cols-[1fr_auto_1fr] items-center px-4`}>
@@ -292,6 +361,8 @@ function MobileNavDrawer({
 export function AppShell({ children }: { children: React.ReactNode }) {
   useBootInvestigationMount("AppShell");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [edgeOpening, setEdgeOpening] = useState(false);
+  const [overlayActive, setOverlayActive] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
   const sidebarAsideRef = useRef<HTMLElement>(null);
   const shellColRef = useRef<HTMLDivElement>(null);
@@ -328,6 +399,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     healBodyScrollLockState("app-shell-mount");
   }, []);
 
+  useEffect(() => {
+    const sync = () => setOverlayActive(isGestionaleOverlayActive());
+    sync();
+    window.addEventListener("cab:gestionale-overlay-opened", sync);
+    window.addEventListener("cab:gestionale-overlay-closed", sync);
+    return () => {
+      window.removeEventListener("cab:gestionale-overlay-opened", sync);
+      window.removeEventListener("cab:gestionale-overlay-closed", sync);
+    };
+  }, []);
+
+  const closeMobileNav = useCallback(() => {
+    setMobileOpen(false);
+    setEdgeOpening(false);
+  }, []);
+
+  const edgeSwipe = useSwipeFromEdgeToOpen({
+    enabled: isCompactShell && !mobileOpen && !edgeOpening && !overlayActive,
+    onBegin: () => setEdgeOpening(true),
+    onCommit: () => {
+      setEdgeOpening(false);
+      setMobileOpen(true);
+    },
+    onCancel: () => setEdgeOpening(false),
+  });
+
+  const navDrawerVisible = mobileOpen || edgeOpening;
+
   const navItems = useMemo(() => {
     if (!navAccess || !snapshot?.resolved) return [] as GestionaleNavResolvedItem[];
     return buildGestionaleNav(snapshot.resolved, {
@@ -342,6 +441,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       routeTransitionStartRef.current = null;
     }
     setMobileOpen(false);
+    setEdgeOpening(false);
     collapseSidebar();
   }, [pathname, collapseSidebar]);
 
@@ -420,6 +520,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             placement="brand"
             sidebarCollapsed={collapsed && !sidebarExpanded}
             onSidebarExpandIntent={onSidebarNavIntent}
+            onOpenInbox={collapseSidebar}
           />
         ) : null}
         <nav
@@ -464,7 +565,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <MobileNavDrawer
           open={mobileOpen}
-          onClose={() => setMobileOpen(false)}
+          edgeOpening={edgeOpening}
+          edgePanelProps={edgeSwipe.panelProps}
+          edgeBackdropProps={edgeSwipe.backdropProps}
+          edgePanelRef={edgeSwipe.panelRef}
+          onClose={closeMobileNav}
           navItems={navItems}
           onNavigate={beginRouteTransition}
           isCompactShell={isCompactShell}
@@ -473,7 +578,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {process.env.NODE_ENV === "development" ? <DevAuditMounts /> : null}
 
-        <div className={dsGestionaleContentRail}>
+        <div
+          className={dsGestionaleContentRail}
+          {...(navDrawerVisible ? { inert: true as boolean, "aria-hidden": true } : {})}
+        >
           <main
             ref={mainScrollRef}
             className={`gestionale-scroll-y gestionale-scrollbar w-full ${layoutResponsiveCoreScope} min-h-0 min-w-0 flex-1 pt-0 ${

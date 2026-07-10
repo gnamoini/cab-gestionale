@@ -1,8 +1,9 @@
 "use client";
 
-import type { MouseEvent } from "react";
+import { useEffect, useRef, type MouseEvent } from "react";
 import { IconActionButton } from "@/components/design-system";
 import { useProfileSheet } from "@/components/profile/profile-sheet-context";
+import { useMobileNavShell } from "@/context/mobile-nav-shell-context";
 import { dsPageHeaderBackBtn, dsPageHeaderNavOpenBtn, dsTableActionGlyph } from "@/lib/ui/design-system";
 
 function IconMenu({ className = dsTableActionGlyph }: { className?: string }) {
@@ -29,7 +30,17 @@ function IconBack({ className = "h-5 w-5 shrink-0" }: { className?: string }) {
 
 export function MobileNavOpenButton({ onOpen }: { onOpen: () => void }) {
   const { closeProfileSheet } = useProfileSheet();
+  const mobileNav = useMobileNavShell();
+  const wrapRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const btn = wrapRef.current?.querySelector<HTMLElement>('[data-testid="smoke-nav-drawer-open"]');
+    mobileNav?.registerMobileNavTrigger(btn ?? null);
+    return () => mobileNav?.registerMobileNavTrigger(null);
+  }, [mobileNav]);
+
   return (
+    <span ref={wrapRef} className="contents">
     <IconActionButton
       label="Apri menu"
       className={`${dsPageHeaderNavOpenBtn} cab-mobile-nav-open shrink-0`}
@@ -41,6 +52,7 @@ export function MobileNavOpenButton({ onOpen }: { onOpen: () => void }) {
     >
       <IconMenu className="h-5 w-5 shrink-0 opacity-90" />
     </IconActionButton>
+    </span>
   );
 }
 

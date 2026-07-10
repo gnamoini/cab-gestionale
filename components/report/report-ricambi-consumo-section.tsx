@@ -272,7 +272,14 @@ export function ReportRicambiConsumoSection({
   if (embed) return <div className="min-w-0">{panel}</div>;
 
   return (
-    <ShellCard id="report-magazzino-consumo" title="Ricambi a maggior consumo" collapsible defaultCollapsed={false}>
+    <ShellCard
+      id="report-magazzino-consumo"
+      title="Ricambi a maggior consumo"
+      collapsible
+      defaultCollapsed={false}
+      persistScope="report"
+      persistKey="magazzino-consumo"
+    >
       {panel}
     </ShellCard>
   );

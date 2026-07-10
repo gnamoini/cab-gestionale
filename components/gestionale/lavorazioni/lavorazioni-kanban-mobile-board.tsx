@@ -1,47 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { KanbanCardMobile } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-card";
 import type { KanbanMobileSection } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-types";
+import { GestionaleCollapsibleChevronIcon } from "@/components/design-system/gestionale-collapsible-chevron";
+import { useAuthUserId } from "@/context/auth-context";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
+import {
+  COLLAPSIBLE_KANBAN_OPEN_KEY,
+  collapsibleAccordionPref,
+  useCollapsiblePreference,
+} from "@/lib/ui/collapsible-prefs";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
-
-const OPEN_SECTION_STORAGE_KEY = "lavorazioni-kanban-mobile-open-section";
 
 function pickDefaultOpenSectionId(sections: readonly KanbanMobileSection[]): string {
   const withItems = sections.find((s) => s.items.length > 0 || (s.nested?.some((n) => n.items.length > 0) ?? false));
   return withItems?.id ?? sections[0]?.id ?? "";
-}
-
-function readStoredOpenSectionId(sections: readonly KanbanMobileSection[]): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const stored = sessionStorage.getItem(OPEN_SECTION_STORAGE_KEY);
-    if (stored && sections.some((s) => s.id === stored)) return stored;
-  } catch {
-    /* ignore */
-  }
-  return null;
-}
-
-function ChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      className={`h-5 w-5 shrink-0 text-zinc-500 transition-transform duration-200 dark:text-zinc-400 ${open ? "rotate-180" : ""}`}
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      aria-hidden
-    >
-      <path
-        fillRule="evenodd"
-        d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.24 4.5a.75.75 0 01-1.08 0l-4.24-4.5a.75.75 0 01.02-1.06z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
 }
 
 function sectionTotalCount(section: KanbanMobileSection): number {
@@ -53,6 +31,7 @@ type MobileBoardProps = {
   sections: readonly KanbanMobileSection[];
   statiOpts: readonly StatoLavorazioneConfig[];
   schedeStore: LavorazioneSchedeStore;
+  addettiRecords?: readonly AddettoRecord[];
   prioritaColors: Record<string, string | undefined>;
   addettoColors: Record<string, string | undefined>;
   flashRowId: string | null;
@@ -69,15 +48,23 @@ export function LavorazioniKanbanMobileBoard({
   sections,
   statiOpts,
   schedeStore,
+  addettiRecords,
   prioritaColors,
   addettoColors,
   flashRowId,
   navBulkFlashIds,
   cardLabels,
 }: MobileBoardProps) {
+  const userId = useAuthUserId();
   const sectionIdsKey = useMemo(() => sections.map((s) => s.id).join("|"), [sections]);
-  const [openSectionId, setOpenSectionId] = useState("");
   const lastSyncedSectionIdsKeyRef = useRef<string | null>(null);
+  const [openSectionId, setOpenSectionId] = useCollapsiblePreference(
+    collapsibleAccordionPref("", {
+      scope: "lavorazioni",
+      key: COLLAPSIBLE_KANBAN_OPEN_KEY,
+      userId,
+    }),
+  );
 
   useEffect(() => {
     if (sections.length === 0) {
@@ -90,24 +77,16 @@ export function LavorazioniKanbanMobileBoard({
 
     setOpenSectionId((prev) => {
       if (prev && sections.some((s) => s.id === prev)) return prev;
-      const stored = readStoredOpenSectionId(sections);
-      if (stored) return stored;
       return pickDefaultOpenSectionId(sections);
     });
-  }, [sectionIdsKey, sections]);
+  }, [sectionIdsKey, sections, setOpenSectionId]);
 
-  const toggleSection = useCallback((id: string) => {
-    setOpenSectionId((prev) => {
-      const next = prev === id ? "" : id;
-      try {
-        if (next) sessionStorage.setItem(OPEN_SECTION_STORAGE_KEY, next);
-        else sessionStorage.removeItem(OPEN_SECTION_STORAGE_KEY);
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  }, []);
+  const toggleSection = useCallback(
+    (id: string) => {
+      setOpenSectionId((prev) => (prev === id ? "" : id));
+    },
+    [setOpenSectionId],
+  );
 
   const renderStatoHeaderInner = (statoCol: StatoLavorazioneConfig, count: number, compact?: boolean) => (
     <>
@@ -133,6 +112,7 @@ export function LavorazioniKanbanMobileBoard({
       key={row.id}
       row={row}
       schedeStore={schedeStore}
+      addettiRecords={addettiRecords}
       prioritaColors={prioritaColors}
       addettoColors={addettoColors}
       flash={flashRowId === row.id || navBulkFlashIds.has(row.id)}
@@ -166,7 +146,7 @@ export function LavorazioniKanbanMobileBoard({
               className="flex min-h-11 w-full items-center justify-between gap-3 px-3 py-3 text-left touch-manipulation"
             >
               <div className="flex min-w-0 flex-1 items-center gap-2">{renderStatoHeaderInner(section.col, total)}</div>
-              <ChevronIcon open={open} />
+              <GestionaleCollapsibleChevronIcon expanded={open} className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400" />
             </button>
 
             <div

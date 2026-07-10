@@ -37,6 +37,7 @@ assert.doesNotMatch(globalsSrc, /grid-template-columns var\(--cab-sidebar-width-
 assert.doesNotMatch(globalsSrc, /padding-inline-start var\(--cab-sidebar-width-motion\)/);
 
 assert.match(appShellSrc, /SidebarNavRow/);
+assert.match(appShellSrc, /onOpenInbox=\{collapseSidebar\}/);
 assert.doesNotMatch(appShellSrc, /railCollapsed/);
 assert.doesNotMatch(appShellSrc, /sidebarNavLinkActiveRail/);
 

@@ -11,7 +11,7 @@ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
 /** Bump quando cambia la logica di mapping (invalida cache storage artifact). */
-export const LAVORAZIONI_IN_CORSO_PDF_MAP_VERSION = 3;
+export const LAVORAZIONI_IN_CORSO_PDF_MAP_VERSION = 4;
 
 export type LavorazioniPdfMapContext = {
   stati: readonly StatoLavorazioneConfig[];

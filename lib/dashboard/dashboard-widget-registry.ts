@@ -3,57 +3,67 @@ import type { ResolvedPageAccess } from "@/src/lib/rbac/resolve-page-access";
 
 export type DashboardWidgetSection =
   | "kpi-header"
-  | "alerts"
-  | "wip"
-  | "magazzino"
-  | "admin"
   | "activity"
-  | "calendar"
   | "optional";
 
 export const DASHBOARD_SECTION_ORDER: readonly DashboardWidgetSection[] = [
   "kpi-header",
-  "alerts",
-  "wip",
-  "admin",
-  "magazzino",
   "activity",
-  "calendar",
   "optional",
 ] as const;
 
 export type DashboardWidgetId =
   | "operational-kpi-header"
-  | "alerts-anomalies"
-  | "lavorazioni-kpi"
-  | "admin-backlog"
-  | "magazzino-kpi"
   | "recent-activity"
-  | "operational-calendar"
   | "local-notes"
   | "recent-lavorazioni"
-  | "recent-ricambi";
+  | "recent-ricambi"
+  | "operational-calendar";
 
 export type DashboardWidgetDefinition = {
   id: DashboardWidgetId;
   section: DashboardWidgetSection;
   order: number;
   layout: "half" | "full";
+  title: string;
+  subtitle?: string;
+  defaultCollapsed: boolean;
   requiredModule?: GestionalePermissionModule;
   hideInStaging?: boolean;
 };
 
 // ponytail: visibility = hideInStaging | moduleAllows(read) | always-on (local-notes, kpi-header)
 export const DASHBOARD_WIDGET_REGISTRY: readonly DashboardWidgetDefinition[] = [
-  { id: "operational-kpi-header", section: "kpi-header", order: 5, layout: "full" },
-  { id: "alerts-anomalies", section: "alerts", order: 10, layout: "full" },
-  { id: "lavorazioni-kpi", section: "wip", order: 20, layout: "full", requiredModule: "lavorazioni" },
-  { id: "admin-backlog", section: "admin", order: 30, layout: "half" },
-  { id: "magazzino-kpi", section: "magazzino", order: 40, layout: "half", requiredModule: "magazzino", hideInStaging: true },
-  { id: "recent-activity", section: "activity", order: 50, layout: "full", hideInStaging: true },
-  { id: "local-notes", section: "optional", order: 70, layout: "half" },
-  { id: "operational-calendar", section: "calendar", order: 65, layout: "full" },
+  {
+    id: "operational-kpi-header",
+    section: "kpi-header",
+    order: 5,
+    layout: "full",
+    title: "Brief settimanale",
+    defaultCollapsed: false,
+  },
+  {
+    id: "recent-activity",
+    section: "activity",
+    order: 50,
+    layout: "full",
+    title: "Attività recenti",
+    defaultCollapsed: true,
+    hideInStaging: true,
+  },
+  {
+    id: "local-notes",
+    section: "optional",
+    order: 70,
+    layout: "full",
+    title: "Diario operativo",
+    defaultCollapsed: true,
+  },
 ] as const;
+
+export function getDashboardWidgetDef(id: DashboardWidgetId): DashboardWidgetDefinition | undefined {
+  return DASHBOARD_WIDGET_REGISTRY.find((w) => w.id === id);
+}
 
 const LEGACY_WIDGET_IDS: readonly DashboardWidgetId[] = [
   "recent-lavorazioni",

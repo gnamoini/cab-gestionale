@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { listImportPlugins } from "@/lib/data-import/registry";
+import { listActiveImportPlugins } from "@/lib/data-import/registry";
 import { requireImportSession } from "@/lib/data-import/core/import-api-auth.server";
 
 export const runtime = "nodejs";
@@ -8,7 +8,7 @@ export async function GET() {
   const auth = await requireImportSession();
   if (!auth.ok) return NextResponse.json({ error: auth.response.error }, { status: auth.response.status });
 
-  const plugins = listImportPlugins().map((p) => ({
+  const plugins = listActiveImportPlugins().map((p) => ({
     id: p.id,
     routeSlug: p.routeSlug,
     label: p.label,

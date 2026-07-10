@@ -52,10 +52,9 @@ assert.match(ricambi, /htmlFor="report-ricambi-mese"/);
 assert.match(ricambi, /htmlFor="report-ricambi-anno"/);
 
 assert.match(lavorazioni, /GestionaleModalScrollBody/);
-assert.match(lavorazioni, /htmlFor="report-manual-period"/);
-assert.match(lavorazioni, /id="report-manual-count"/);
-assert.match(lavorazioni, /inputMode="numeric"/);
-assert.match(lavorazioni, /role="alert"/);
+assert.match(lavorazioni, /type="file"/);
+assert.match(lavorazioni, /Importa dati da file Excel/);
+assert.match(lavorazioni, /importReportManualEntriesFromFile/);
 
 assert.match(magazzino, /GestionaleModalScrollBody/);
 assert.match(magazzino, /htmlFor="report-mag-manual-mese"/);

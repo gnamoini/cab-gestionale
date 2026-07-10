@@ -63,13 +63,3 @@ export function ReportPeriodMeta({
     </div>
   );
 }
-
-/** @deprecated Usare `ReportPeriodMeta` nella meta row della toolbar. */
-export function ReportPeriodSummary(props: {
-  preset: ReportPeriodPreset;
-  range: DateRange;
-  compareMode: ReportCompareMode;
-  compareRange: DateRange | null;
-}) {
-  return <ReportPeriodMeta {...props} />;
-}

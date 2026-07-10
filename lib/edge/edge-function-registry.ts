@@ -1,4 +1,5 @@
 import type { EdgeEligibility, EdgeHandlerId, EdgeRouteGroup } from "@/lib/edge/edge-types";
+import { NON_EDGE_PREFIXES } from "@/lib/decision/request-decision-registry";
 
 export type EdgeRouteMatch = {
   handlerId: EdgeHandlerId;
@@ -10,16 +11,8 @@ export type EdgeRouteMatch = {
 
 const DOCUMENT_ID_RE = /^\/api\/documents\/([^/]+)$/;
 
-/** Routes explicitly excluded from edge handlers (documented NON_EDGE). */
-export const NON_EDGE_API_PREFIXES = [
-  "/api/pdf/",
-  "/api/cache/",
-  "/api/preventivi/",
-  "/api/branding/",
-] as const;
-
 export function isNonEdgeApiPath(pathname: string): boolean {
-  return NON_EDGE_API_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  return NON_EDGE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
 export function matchEdgeRoute(pathname: string, method: string): EdgeRouteMatch | null {

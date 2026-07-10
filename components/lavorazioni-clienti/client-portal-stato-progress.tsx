@@ -2,8 +2,13 @@
 
 import "./client-portal-stato-progress.css";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, type CSSProperties } from "react";
 import { Tooltip } from "@/components/design-system";
+import { useAuthUserId } from "@/context/auth-context";
+import {
+  collapsibleExpandedBoolPref,
+  useCollapsiblePreference,
+} from "@/lib/ui/collapsible-prefs";
 import { dsHubModalFieldLabel } from "@/lib/ui/design-system";
 import {
   GestionaleCollapsibleChevronBox,
@@ -33,6 +38,7 @@ export function ClientPortalStatoProgress({
   currentLabel: string;
   timelineEvents?: readonly ClientTimelineEvent[];
 }) {
+  const userId = useAuthUserId();
   const { steps, currentIndex } = useMemo(() => {
     const base = buildClientPortalStatoProgress(statiOpts, currentStatoId);
     return enrichClientPortalStatoProgressWithTimeline(base, timelineEvents);
@@ -42,7 +48,13 @@ export function ClientPortalStatoProgress({
   const hasLeadSegment = leadPct > solidPct + 0.5;
   const filledPct = hasLeadSegment ? leadPct : solidPct;
   const isComplete = currentIndex >= steps.length - 1;
-  const [phasesOpen, setPhasesOpen] = useState(false);
+  const [phasesOpen, setPhasesOpen] = useCollapsiblePreference(
+    collapsibleExpandedBoolPref(false, {
+      scope: "client-lavorazioni",
+      key: "stato-phases",
+      userId,
+    }),
+  );
 
   const currentColor = readablePillStyleFromHex(steps[currentIndex]?.color).backgroundColor;
   const nextColor = steps[currentIndex + 1]

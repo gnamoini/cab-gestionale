@@ -18,7 +18,6 @@ import { buildCompletateDbMaps, mergeManualMonthMap } from "@/lib/report/report-
 import { buildLavorazioniYearMatrix } from "@/lib/report/lavorazioni-year-matrix";
 import type { LavorazioniYearRow } from "@/lib/report/lavorazioni-year-matrix";
 import { pctChange, round1 } from "@/lib/report/pct-utils";
-import { applyYearMatrixFilterRange, type YearMatrixFilterMode } from "@/lib/report/report-temporal-filter";
 import {
   buildTopClientiPeriodo,
   buildTopMezziPeriodo,
@@ -60,7 +59,6 @@ export type ReportSemanticIndex = {
     monthLabels: readonly string[];
     hasAnyData: boolean;
     manualMonthKeys: Set<string>;
-    matrixMode: YearMatrixFilterMode;
     forecastRows: LavorazioniYearRow[];
   };
   buildTemporalModel(selYear: number, filterRange: DateRange): LavorazioniTemporalModel;
@@ -144,16 +142,10 @@ export function buildReportSemanticIndex(source: ReportSemanticSource): ReportSe
       return buildTopClientiPeriodo(completate, range);
     },
 
-    buildYearMatrix(anchor, filterRange) {
+    buildYearMatrix(anchor, _filterRange?) {
       const base = buildLavorazioniYearMatrix(completate, anchor, manualByMonth, completateByMonth);
-      if (!filterRange) {
-        return { ...base, matrixMode: "full_history" as const, forecastRows: base.rows };
-      }
-      const applied = applyYearMatrixFilterRange(base.rows, filterRange);
       return {
         ...base,
-        rows: applied.rows,
-        matrixMode: applied.mode,
         forecastRows: base.rows,
       };
     },

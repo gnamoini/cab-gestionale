@@ -9,6 +9,7 @@ import { useReportAnalysis } from "@/lib/report/report-analysis/use-report-analy
 import { buildKpiPerformanceModel } from "@/lib/report/kpi-performance/build-kpi-performance-model";
 import { buildTopRicambiPeriodo } from "@/lib/report/report-classifiche";
 import { compareRangeFor, dayRangeFromYmd, weekRangeFromYmd, ymdFromDate } from "@/lib/report/date-ranges";
+import { useOperationalDiaryQuery } from "@/src/hooks/view/use-operational-diary";
 import type { CalendarReportServiceInput } from "@/lib/report/calendar-report-service";
 import type { ReportDerivedBundle } from "@/lib/report/report-derived-cache";
 import type { ReportIntegrityBadgeView } from "@/lib/report/report-integrity-badge-model";
@@ -99,6 +100,14 @@ export function CalendarV2InsightsBlock({
     };
   }, [filterRange, derivedBundle, serviceInput.magazzino]);
 
+  const diaryFromYmd = filterRange ? ymdFromDate(filterRange.start) : undefined;
+  const diaryToYmd = filterRange ? ymdFromDate(filterRange.end) : undefined;
+  const { data: diaryRows = [] } = useOperationalDiaryQuery({ fromYmd: diaryFromYmd, toYmd: diaryToYmd });
+  const diaryEntries = useMemo(
+    () => diaryRows.map((e) => ({ workDate: e.work_date, body: e.body })),
+    [diaryRows],
+  );
+
   const analysis = useReportAnalysis({
     preset: "custom",
     compareMode: "prev_period",
@@ -114,6 +123,7 @@ export function CalendarV2InsightsBlock({
     perf,
     integrityView,
     tops,
+    diaryEntries,
     snapshotFingerprint,
     perfReady: aiRequested && Boolean(model && perf && filterRange),
   });

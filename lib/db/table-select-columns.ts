@@ -165,6 +165,9 @@ export const DIPENDENTI_TIMESHEET_ENTRIES_COLUMNS =
 export const REPORT_MANUAL_ENTRIES_COLUMNS =
   "id, period_month, completed_count, note, created_by, created_at, updated_at, deleted_at" as const;
 
+export const OPERATIONAL_DIARY_ENTRIES_COLUMNS =
+  "id, work_date, body, created_by, created_at, updated_at, deleted_at" as const;
+
 export const LAVORAZIONE_DOCUMENTS_COLUMNS =
   "lavorazione_id, tipo, storage_path, filename, uploaded_at, uploaded_by" as const;
 

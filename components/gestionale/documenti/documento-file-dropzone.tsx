@@ -9,8 +9,18 @@ import { fileMatchesAccept } from "@/lib/upload/file-accept";
 import { dsTableActionTextBtnPrimary, dsUploadDropExpand, dsUploadDropExpandActive } from "@/lib/ui/design-system";
 import { STORAGE_LIMITS } from "@/src/lib/storage/storage-config";
 
-const ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg";
-const MAX_MB = Math.round(STORAGE_LIMITS.documentiMaxBytes / (1024 * 1024));
+export const DOCUMENTO_UPLOAD_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg";
+export const DOCUMENTO_UPLOAD_MAX_MB = Math.round(STORAGE_LIMITS.documentiMaxBytes / (1024 * 1024));
+
+export function validateDocumentoUploadFile(file: File): string | null {
+  if (!fileMatchesAccept(file, DOCUMENTO_UPLOAD_ACCEPT)) {
+    return "Tipo file non consentito. Usa PDF, Office o immagini JPG/PNG.";
+  }
+  if (file.size > STORAGE_LIMITS.documentiMaxBytes) {
+    return `Il file supera il limite di ${DOCUMENTO_UPLOAD_MAX_MB} MB.`;
+  }
+  return null;
+}
 
 type DocumentoFileDropzoneProps = {
   pickedName: string;
@@ -40,17 +50,14 @@ export function DocumentoFileDropzone({
   const pick = useCallback(
     (file: File | null) => {
       if (disabled) return;
-      if (file && !fileMatchesAccept(file, ACCEPT)) {
-        setSizeError("Tipo file non consentito. Usa PDF, Office o immagini JPG/PNG.");
-        onFileChange(null);
-        if (fileRef.current) fileRef.current.value = "";
-        return;
-      }
-      if (file && file.size > STORAGE_LIMITS.documentiMaxBytes) {
-        setSizeError(`Il file supera il limite di ${MAX_MB} MB.`);
-        onFileChange(null);
-        if (fileRef.current) fileRef.current.value = "";
-        return;
+      if (file) {
+        const validationError = validateDocumentoUploadFile(file);
+        if (validationError) {
+          setSizeError(validationError);
+          onFileChange(null);
+          if (fileRef.current) fileRef.current.value = "";
+          return;
+        }
       }
       setSizeError(null);
       onFileChange(file);
@@ -114,7 +121,7 @@ export function DocumentoFileDropzone({
           Carica PDF o documento
         </span>
         <p className="text-[11px] text-[color:var(--cab-text-muted)]">
-          PDF, Word, Excel, PNG, JPG · Max {MAX_MB} MB
+          PDF, Word, Excel, PNG, JPG · Max {DOCUMENTO_UPLOAD_MAX_MB} MB
         </p>
       </div>
       <input
@@ -122,7 +129,7 @@ export function DocumentoFileDropzone({
         ref={fileRef}
         type="file"
         className="sr-only"
-        accept={ACCEPT}
+        accept={DOCUMENTO_UPLOAD_ACCEPT}
         disabled={dropzoneBusy}
         onChange={(e) => pick(e.target.files?.[0] ?? null)}
       />

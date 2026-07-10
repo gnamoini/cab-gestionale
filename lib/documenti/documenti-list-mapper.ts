@@ -2,15 +2,16 @@ import { documentoStoragePathFromStored } from "@/lib/documenti/storage-path-fro
 import { resolveDocumentoTipoFile } from "@/lib/documenti/documento-tipo-file";
 import { readDocumentIntelligenceMeta } from "@/lib/documents/document-meta";
 import type { DocumentoListRow } from "@/lib/documents/documento-list-dto";
-import type { DocumentoRow } from "@/src/types/supabase-tables";
+import type { DocumentoGestionale } from "@/lib/types/gestionale";
+import type { CategoriaDocumento, DocumentoRow } from "@/src/types/supabase-tables";
 
-const CAT_LABEL: Record<DocumentoRow["categoria"], string> = {
+const CAT_LABEL = {
   listino: "listini",
   manuale: "manuali",
   catalogo: "cataloghi",
   certificazione: "certificazioni",
   altro: "altro",
-};
+} as const satisfies Record<CategoriaDocumento, DocumentoGestionale["categoria"]>;
 
 function mimeFromTipo(tipo: ReturnType<typeof resolveDocumentoTipoFile>): string {
   switch (tipo) {
@@ -34,7 +35,8 @@ export function documentoRowToListRow(row: DocumentoRow): DocumentoListRow {
   const meta = row.meta ?? {};
   const nome =
     typeof meta.nome === "string" && meta.nome.trim() ? meta.nome.trim() : row.url_file.split("/").pop() ?? "Documento";
-  const tipoFile = resolveDocumentoTipoFile({ urlFile: row.url_file, nome, meta });
+  const categoria = CAT_LABEL[row.categoria] ?? "altro";
+  const tipoFile = resolveDocumentoTipoFile({ urlFile: row.url_file, nome, meta, categoria });
   const storageKey = documentoStoragePathFromStored(row.url_file) ?? row.url_file.trim();
   const metaApp = meta.applicabilita;
   let applicabilita: DocumentoListRow["applicabilita"];

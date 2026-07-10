@@ -51,6 +51,8 @@ export function buildMagazzinoSearchSuggestions(
   listePrefs?: MezziListePrefs,
 ): string[] {
   const q = query.trim().toLowerCase();
+  if (!q) return [];
+
   const labels: string[] = [];
   const seen = new Set<string>();
 

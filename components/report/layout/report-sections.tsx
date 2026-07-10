@@ -142,6 +142,8 @@ function ReportSectionShell({
       subtitle={section.subtitle}
       collapsible
       defaultCollapsed={section.defaultCollapsed}
+      persistScope="report"
+      persistKey={section.id}
       className={reportZoneShellClass}
       onCollapsedChange={(collapsed) => {
         setOpen(section.id, !collapsed);

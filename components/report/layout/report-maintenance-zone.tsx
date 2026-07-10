@@ -62,6 +62,8 @@ export function ReportMaintenanceZone({
       subtitle="Matrici lavorazioni, magazzino, consumi e classifiche granulari"
       collapsible
       defaultCollapsed
+      persistScope="report"
+      persistKey="maintenance"
       className={reportZoneShellClass}
     >
       <p className={reportSectionGroupDescClass}>
@@ -77,7 +79,6 @@ export function ReportMaintenanceZone({
           <ReportLavorazioniSection
             attive={attive}
             completate={completate}
-            manualEntries={manualEntries}
             anchor={anchor}
             filterRange={filterRange}
             compareDetail={compareDetail}
@@ -91,6 +92,8 @@ export function ReportMaintenanceZone({
           subtitle="Espansione settimanale per mese"
           collapsible
           defaultCollapsed
+          persistScope="report"
+          persistKey="lavorazioni-temporal"
         >
           <ReportLavorazioniTemporalSection
             filterRange={filterRange}
@@ -102,7 +105,14 @@ export function ReportMaintenanceZone({
           />
         </ShellCard>
 
-        <ShellCard title="Magazzino e movimenti" collapsible defaultCollapsed>
+        <ShellCard
+          id="report-magazzino-deep"
+          title="Magazzino e movimenti"
+          collapsible
+          defaultCollapsed
+          persistScope="report"
+          persistKey="magazzino-deep"
+        >
           <ReportMagazzinoSection
             derivedBundle={derivedBundle}
             prodotti={prodotti}
@@ -114,7 +124,14 @@ export function ReportMaintenanceZone({
           />
         </ShellCard>
 
-        <ShellCard title="Consumo ricambi" collapsible defaultCollapsed>
+        <ShellCard
+          id="report-consumo-ricambi"
+          title="Consumo ricambi"
+          collapsible
+          defaultCollapsed
+          persistScope="report"
+          persistKey="consumo-ricambi"
+        >
           <ReportRicambiConsumoSection
             magLogSorted={derivedBundle.magLogSorted}
             prodotti={prodotti}
@@ -124,7 +141,14 @@ export function ReportMaintenanceZone({
         </ShellCard>
 
         {topsRicambi.length > 0 ? (
-          <ShellCard title="Top ricambi per movimenti" collapsible defaultCollapsed>
+          <ShellCard
+            id="report-top-ricambi"
+            title="Top ricambi per movimenti"
+            collapsible
+            defaultCollapsed
+            persistScope="report"
+            persistKey="top-ricambi"
+          >
             <ReportTopRicambi rows={topsRicambi} showCompare={showCompare} />
           </ShellCard>
         ) : null}
@@ -135,16 +159,20 @@ export function ReportMaintenanceZone({
           subtitle="Top mezzi e clienti nel periodo"
           collapsible
           defaultCollapsed
+          persistScope="report"
+          persistKey="classifiche"
         >
           <ReportClassificheOperativePanel mezzi={topsMezzi} clienti={topsClienti} showCompare={showCompare} />
         </ShellCard>
 
         <ShellCard
-          id="report-compliance"
+          id="report-compliance-deep"
           title="Scadenze e compliance"
           subtitle="Dati non ancora modellati nel gestionale"
           collapsible
           defaultCollapsed
+          persistScope="report"
+          persistKey="compliance-deep"
         >
           <KpiPerformanceCompliance />
         </ShellCard>

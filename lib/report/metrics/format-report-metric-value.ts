@@ -22,5 +22,3 @@ export function formatReportMetricValue(
       : unitOrFormatter;
   return formatByFormatter(value, formatter, locale);
 }
-
-export { formatReportMetricValue as formatReportValue } from "@/lib/report/metrics/report-value-formatter";

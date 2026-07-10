@@ -31,7 +31,7 @@
 | Storage diagnostics | [`lib/ops/storage-consistency-diagnostics.ts`](../lib/ops/storage-consistency-diagnostics.ts) |
 | Path da URL legacy (server-safe) | [`lib/documenti/storage-path-from-stored.ts`](../lib/documenti/storage-path-from-stored.ts) |
 | Recovery helpers | [`lib/ops/recovery-helpers.ts`](../lib/ops/recovery-helpers.ts) |
-| Sanity assertions | [`lib/ops/sanity-assertions.ts`](../lib/ops/sanity-assertions.ts) |
+| Report integrity audit | [`lib/report/report-integrity-audit.ts`](../lib/report/report-integrity-audit.ts) (`ReportDataIntegrityLayer`) |
 | Runtime health | [`lib/observability/runtime-health.ts`](../lib/observability/runtime-health.ts) |
 | Degradation detector | [`lib/observability/degradation-detector.ts`](../lib/observability/degradation-detector.ts) |
 | Health bridge | [`components/observability/runtime-health-bridge.tsx`](../components/observability/runtime-health-bridge.tsx) |

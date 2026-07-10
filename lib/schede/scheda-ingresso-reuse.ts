@@ -129,35 +129,6 @@ export function listSchedaIngressoMatchesForIdent(
   return collectSchedaIngressoMatches(lavIds, schedeStore);
 }
 
-/**
- * Ultima scheda ingresso compilabile per ident (targa / matricola / scuderia o mezzo collegato).
- * @deprecated Preferire `copyLastSchedaIngresso` da `@/lib/domain/scheda-ingresso/copy-last-scheda`.
- */
-export function findLastSchedaIngressoForIdent(
-  targa: string,
-  matricola: string,
-  mezzi: readonly MezzoGestito[],
-  schedeStore: LavorazioneSchedeStore,
-  attive: readonly LavorazioneAttiva[],
-  storico: readonly LavorazioneArchiviata[],
-  options?: { excludeLavorazioneId?: string; nScuderia?: string },
-): LastSchedaIngressoMatch | null {
-  const nScuderia = options?.nScuderia ?? "";
-  const matches = listSchedaIngressoMatchesForIdent(
-    targa,
-    matricola,
-    nScuderia,
-    mezzi,
-    schedeStore,
-    attive,
-    storico,
-    options?.excludeLavorazioneId
-      ? { excludeLavorazioneId: options.excludeLavorazioneId }
-      : undefined,
-  );
-  return matches[0] ?? null;
-}
-
 /** Precompila solo i campi ancora vuoti; non tocca data ingresso né valori già digitati. */
 export function mergeSchedaIngressoFields(
   current: SchedaIngressoFields,

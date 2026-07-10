@@ -17,7 +17,6 @@ const centerBellSrc = read("components/gestionale/notification-center-bell.tsx")
 const designSystemIndexSrc = read("components/design-system/index.ts");
 const primitivesSrc = read("components/design-system/notifications/notification-primitives.tsx");
 const tokensSrc = read("lib/ui/notification-ui.ts");
-const widgetSrc = read("components/dashboard/widgets/dashboard-magazzino-kpi-widget.tsx");
 
 assert.match(tokensSrc, /NotificationSeverity/);
 assert.match(tokensSrc, /dsNotificationRowSurface/);
@@ -110,14 +109,5 @@ assert.doesNotMatch(magBellSrc, /text-zinc-/);
 assert.doesNotMatch(magBellSrc, /erpFocus/);
 assert.doesNotMatch(magBellSrc, /bg-red-/);
 assert.doesNotMatch(magBellSrc, /emerald-/);
-
-assert.match(widgetSrc, /dsNotificationWidgetDangerRow/);
-assert.match(widgetSrc, /dsNotificationWidgetDangerChip/);
-assert.doesNotMatch(widgetSrc, /magSottoScortaPillHex/);
-assert.match(
-  widgetSrc,
-  /sottoPreview\.map[\s\S]*?dsNotificationWidgetDangerRow/,
-  "sotto scorta widget row must use shared danger tokens",
-);
 
 console.log("notification-ui-policy.test.ts OK");

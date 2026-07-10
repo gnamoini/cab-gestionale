@@ -15,6 +15,65 @@ test("mobile drawer releases body scroll lock", async ({ page }) => {
   await assertGestionalePageScrollUnlocked(page);
 });
 
+test("mobile nav drawer opens via left-edge swipe", async ({ page }) => {
+  attachConsoleGuards(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/dashboard");
+  await expect(page.getByRole("dialog", { name: "Menu principale" })).not.toBeVisible();
+
+  await page.evaluate(() => {
+    const startX = 5;
+    const endX = 200;
+    const y = 420;
+
+    const mkTouch = (x: number) =>
+      new Touch({
+        identifier: 1,
+        target: document.body,
+        clientX: x,
+        clientY: y,
+        pageX: x,
+        pageY: y,
+      });
+
+    document.dispatchEvent(
+      new TouchEvent("touchstart", {
+        bubbles: true,
+        cancelable: true,
+        touches: [mkTouch(startX)],
+        targetTouches: [mkTouch(startX)],
+      }),
+    );
+
+    for (let x = startX + 16; x <= endX; x += 32) {
+      document.dispatchEvent(
+        new TouchEvent("touchmove", {
+          bubbles: true,
+          cancelable: true,
+          touches: [mkTouch(x)],
+          targetTouches: [mkTouch(x)],
+        }),
+      );
+    }
+
+    document.dispatchEvent(
+      new TouchEvent("touchend", {
+        bubbles: true,
+        cancelable: true,
+        touches: [],
+        changedTouches: [mkTouch(endX)],
+      }),
+    );
+  });
+
+  const dialog = page.getByRole("dialog", { name: "Menu principale" });
+  await expect(dialog).toBeVisible({ timeout: 5_000 });
+  await dialog.getByRole("button", { name: "Chiudi" }).click();
+  await expect(dialog).not.toBeVisible();
+  await assertGestionalePageScrollUnlocked(page);
+});
+
 test("mobile nav drawer scrolls menu items", async ({ page }) => {
   attachConsoleGuards(page);
   await page.setViewportSize({ width: 390, height: 844 });
