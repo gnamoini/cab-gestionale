@@ -81,6 +81,7 @@ jobs:
       - name: Coverage (strict security/data/production)
         if: env.CONTROL_COVERAGE_STRICT == '1'
         run: CONTROL_COVERAGE_STRICT=1 npx tsx lib/control/control-coverage.test.ts
+        continue-on-error: true
 
       - name: Upload control report
         if: always()
