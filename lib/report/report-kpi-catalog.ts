@@ -26,8 +26,7 @@ export type ReportSectionId =
   | "magazzino_ricambi"
   | "ore_lavorate"
   | "dati_economici"
-  | "analisi_incrociate"
-  | "grafici_kpi";
+  | "analisi_incrociate";
 
 export type ReportKpiOwner = DerivedKey | "cross" | "perf";
 
@@ -77,7 +76,7 @@ export const REPORT_KPI_CATALOG: readonly ReportKpiCatalogEntry[] = REPORT_METRI
   LEGACY_DOMAIN_IDS.has(e.id),
 ).map((e) => ({
   id: e.id,
-  section: e.owner === "analisi_incrociate" ? "analisi_incrociate" : e.owner,
+  section: (e.owner === "analisi_incrociate" ? "analisi_incrociate" : e.owner) as ReportSectionId,
   label: e.label,
   owner: categoryToLegacyOwner(e.id, e.category),
   source: e.sourceModule,
