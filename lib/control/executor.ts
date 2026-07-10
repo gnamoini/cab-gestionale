@@ -87,18 +87,20 @@ function isTierBlocking(outcome: ControlOutcome, control: ControlDefinition): bo
 }
 
 export function selectControlsForTier(tier: ControlTier): ControlDefinition[] {
+  const filterSkips = (list: ControlDefinition[]) =>
+    list.filter((c) => {
+      if (tier === "local" && shouldSkipForLocal(c)) return false;
+      if (c.id === "runtime.e2e.smoke" && smokePlaywrightSkip()) return false;
+      if (c.id === "runtime.smoke.preflight" && process.env.SMOKE_SKIP === "1") return false;
+      return c.status !== "sunset" && c.status !== "disabled";
+    });
+
   if (tier === "local") {
     return sortControlsByDependencies(
-      CONTROL_REGISTRY.filter(
-        (c) =>
-          c.tier === "pr" &&
-          c.status !== "sunset" &&
-          c.status !== "disabled" &&
-          !shouldSkipForLocal(c),
-      ),
+      filterSkips(CONTROL_REGISTRY.filter((c) => c.tier === "pr")),
     );
   }
-  return sortControlsByDependencies(controlsForTier(tier));
+  return sortControlsByDependencies(filterSkips(controlsForTier(tier)));
 }
 
 export function runTier(
