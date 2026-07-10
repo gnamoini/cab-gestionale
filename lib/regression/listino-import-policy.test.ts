@@ -56,6 +56,8 @@ assert.equal(isRicambioGeneratoDaListino({ listinoImport: meta }), true);
 const listinoDoc = {
   categoria: "listini" as const,
   nome: "LISTINO SCHMIDT 2026.pdf",
+  tipoFile: "pdf" as const,
+  fileEstensione: "pdf",
   urlBlob: "",
   urlDocumento: "documenti/schmidt/listino.pdf",
 };
