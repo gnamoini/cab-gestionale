@@ -1,6 +1,6 @@
 # Control Plane — Cutover (Final Execution Fase 0–8)
 
-**Stato:** Fase 0 PASS (locale) — Fase 1+ in attesa maintainer CI  
+**Stato:** Fase 0 PASS (locale) — Fase 1 strict smoke in corso (2026-07-10)  
 **Doc:** [README](./README.md) · [final-cutover-report.md](./final-cutover-report.md) · [ADR-001](../adr/ADR-001-control-plane-architecture.md)
 
 ---
