@@ -26,6 +26,8 @@ assert.match(pageToolbar, /ToolbarGroupFiltersCollapse/);
 assert.match(pageToolbar, /MobileFilterDrawer/);
 assert.match(pageToolbar, /overflowActions/);
 assert.match(pageToolbar, /PageToolbarCtaLabel/);
+assert.match(pageToolbar, /h-\[1\.125rem\] w-\[1\.125rem\]/);
+assert.match(pageToolbar, /fill="currentColor"/);
 assert.match(pageToolbar, /useSmUp/);
 
 assert.match(toolbarGroup, /export function ToolbarGroup/);
@@ -51,6 +53,8 @@ assert.match(dsIndex, /ToolbarGroupOverflowToggle/);
 assert.match(dsIndex, /PageToolbarCtaLabel/);
 
 assert.match(headerToolbar, /overflowActions/);
+assert.match(headerToolbar, /logInOverflowOnMobile/);
+assert.match(headerToolbar, /renderLogOverflowAction/);
 assert.match(headerToolbar, /MobileFilterDrawer/);
 assert.match(headerToolbar, /closeOnBodyButtonClick/);
 

@@ -12,6 +12,9 @@ import {
 /** Pannello sezione modale ricambio — alias token form collapsible (`--cab-border` via SSOT). */
 export const ricambioModalSectionClass = gestionaleCollapsibleSectionFormClass;
 
+/** Stack form modale ricambio — padding laterale allineato ai bordi sezione collapsible. */
+export const ricambioModalFormScrollClass = "space-y-3 !px-3 sm:!px-4 !pt-3 !pb-4";
+
 /** Titolo sezione modale ricambio — stile unico (Identificazione, Giacenza, Foto, …). */
 export const ricambioSectionTitleClassName = gestionaleCollapsibleSectionTitleClassName;
 
@@ -26,6 +29,7 @@ export function RicambioCollapsibleSection({
   defaultCollapsed = true,
   forceExpanded = false,
   className = "",
+  action,
   children,
 }: {
   title: string;
@@ -33,6 +37,8 @@ export function RicambioCollapsibleSection({
   defaultCollapsed?: boolean;
   forceExpanded?: boolean;
   className?: string;
+  /** Azioni header (es. unità di misura in Giacenza). */
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -43,6 +49,7 @@ export function RicambioCollapsibleSection({
       forceExpanded={forceExpanded}
       variant="form"
       className={className}
+      action={action}
     >
       {children}
     </GestionaleCollapsibleSection>

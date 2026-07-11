@@ -76,6 +76,8 @@ assert.match(centerBellSrc, /Drawer/);
 assert.match(centerBellSrc, /gestionaleLogPanelAsideClass/);
 assert.match(centerBellSrc, /Elimina tutte/);
 assert.match(centerBellSrc, /dismissAllNotifications/);
+assert.match(centerBellSrc, /contentFill/);
+assert.match(centerBellSrc, /gestionaleLogDrawerPanelFillClass/);
 assert.match(centerBellSrc, /gestionaleLogDrawerScrollInsetClass/);
 assert.match(centerBellSrc, /LogEntry/);
 assert.match(centerBellSrc, /toInboxNotificationLogViewModel/);

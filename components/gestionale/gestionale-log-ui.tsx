@@ -90,6 +90,10 @@ export const gestionaleLogDrawerPanelClass =
 export const gestionaleLogDrawerPanelStackClass =
   "flex min-h-0 min-w-0 flex-1 flex-col max-md:flex-none max-md:overflow-visible md:min-h-0 md:min-w-0 md:flex-1 md:overflow-hidden";
 
+/** Con `Drawer contentFill`: lista scrollabile + footer ancorato in basso anche su mobile. */
+export const gestionaleLogDrawerPanelFillClass =
+  "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden";
+
 /** Inset lista scroll dentro `gestionaleLogDrawerPanelStackClass` — allineato a `dsModalHeader` (px-4). */
 export const gestionaleLogDrawerScrollInsetClass = "px-4 pt-3 pb-4";
 

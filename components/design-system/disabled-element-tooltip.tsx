@@ -17,7 +17,7 @@ export function DisabledElementTooltip({
   ...rest
 }: DisabledElementTooltipProps) {
   const wrapped = disabled ? (
-    <span className="inline-flex w-full min-w-0">{children}</span>
+    <span className="flex w-full min-w-0 [&>button]:w-full">{children}</span>
   ) : (
     children
   );

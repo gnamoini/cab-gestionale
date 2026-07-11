@@ -50,7 +50,7 @@ export function GestionaleCollapsibleHeader({
   surfaceClass?: string;
 }) {
   const bodyId = `${panelId}-body`;
-  const showHeaderDivider = form ? expanded : true;
+  const showHeaderDivider = form && formFlat ? expanded : true;
   const dividerClass = showHeaderDivider ? gestionaleCollapsibleShellHeaderDividerClass : "";
   const compactClass = compact ? gestionaleCollapsibleShellHeaderBtnCompactClass : "";
 

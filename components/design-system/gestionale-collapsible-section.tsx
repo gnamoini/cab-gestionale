@@ -9,9 +9,12 @@ import {
   gestionaleCollapsiblePanelInnerClass,
 } from "@/lib/ui/gestionale-collapsible-toggle";
 
+/** Sfondo shell sezione form collapsible — anche sul corpo animato (evita flash in dark). */
+export const gestionaleCollapsibleSectionFormShellBgClass =
+  "bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))]";
+
 /** Shell sezione collapsible form — padding solo sul corpo, header flush. */
-export const gestionaleCollapsibleSectionFormClass =
-  "overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))]";
+export const gestionaleCollapsibleSectionFormClass = `overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] ${gestionaleCollapsibleSectionFormShellBgClass}`;
 
 /** Padding corpo sezione flat (nessuna shell). */
 export const gestionaleCollapsibleSectionFlatBodyPadClass = "pt-2 pb-3";
@@ -31,6 +34,10 @@ export const gestionaleCollapsibleSectionTitleClassName =
 export type GestionaleCollapsibleSectionVariant = "form" | "default" | "flat";
 
 export type GestionaleCollapsibleSectionTitleTone = "primary" | "operational" | "optional";
+
+function sectionBodyBgClass(variant: GestionaleCollapsibleSectionVariant): string {
+  return variant === "flat" ? "" : gestionaleCollapsibleSectionFormShellBgClass;
+}
 
 function sectionShellClass(variant: GestionaleCollapsibleSectionVariant): string {
   if (variant === "flat") return gestionaleCollapsibleSectionFlatClass;
@@ -82,6 +89,8 @@ export function GestionaleCollapsibleSection({
     setCollapsed((c) => !c);
   };
 
+  const bodyBgClass = sectionBodyBgClass(variant);
+
   return (
     <div
       {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
@@ -107,11 +116,11 @@ export function GestionaleCollapsibleSection({
         role="region"
         aria-labelledby={titleId}
         aria-hidden={!expanded}
-        className={`grid bg-transparent transition-[grid-template-rows] duration-300 ${gestionaleCollapsibleEase} motion-reduce:transition-none ${
+        className={`grid ${bodyBgClass} transition-[grid-template-rows] duration-300 ${gestionaleCollapsibleEase} motion-reduce:transition-none ${
           expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
         }`}
       >
-        <div className={gestionaleCollapsiblePanelInnerClass}>
+        <div className={`${gestionaleCollapsiblePanelInnerClass} ${bodyBgClass}`}>
           <div className={`min-w-0 ${sectionBodyPadClass(variant)}`}>{children}</div>
         </div>
       </div>

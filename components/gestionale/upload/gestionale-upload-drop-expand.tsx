@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useId, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { HubIconUpload } from "@/components/design-system/hub-table-action-icons";
 import { useFileDragZone } from "@/hooks/use-file-drag-zone";
 import { fileMatchesAccept } from "@/lib/upload/file-accept";
 import {
+  dsFocus,
   dsUploadDropExpand,
   dsUploadDropExpandActive,
   dsUploadDropOverlay,
@@ -20,6 +21,8 @@ export type GestionaleUploadDropExpandProps = {
   dropHint?: string;
   /** Overlay a tutta card durante il drag (layout hub). */
   overlay?: boolean;
+  /** Apre il selettore file al click sulla zona (default: true). */
+  clickToPick?: boolean;
   className?: string;
   children: ReactNode;
 };
@@ -85,9 +88,12 @@ export function GestionaleUploadDropExpand({
   dropTitle = "Trascina il file qui",
   dropHint,
   overlay = false,
+  clickToPick = true,
   className = "",
   children,
 }: GestionaleUploadDropExpandProps) {
+  const inputId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleDropFile = useCallback(
@@ -116,26 +122,68 @@ export function GestionaleUploadDropExpand({
     onDropFile: handleDropFile,
   });
 
+  const openPicker = useCallback(() => {
+    if (disabled || !clickToPick) return;
+    inputRef.current?.click();
+  }, [clickToPick, disabled]);
+
+  const onInputChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (file) handleDropFile(file);
+    },
+    [handleDropFile],
+  );
+
   const showDrop = dragActive && !disabled;
   const wrapperClass = overlay
     ? `relative min-w-0 overflow-hidden rounded-[var(--ds-radius-lg)]${className ? ` ${className}` : ""}`
     : `relative min-w-0${className ? ` ${className}` : ""}`;
 
+  const pickerInput = (
+    <input
+      ref={inputRef}
+      id={inputId}
+      type="file"
+      accept={accept}
+      className="sr-only"
+      disabled={disabled}
+      onChange={onInputChange}
+    />
+  );
+
   return (
     <div className={wrapperClass} {...dropZoneProps}>
       <div
-        className={
-          showDrop && overlay
-            ? "pointer-events-none rounded-[inherit] opacity-0 transition-opacity duration-150"
-            : undefined
-        }
+        className={`${showDrop && overlay ? "pointer-events-none scale-[0.985] opacity-0" : "scale-100 opacity-100"} transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none`}
         aria-hidden={showDrop && overlay ? true : undefined}
       >
-        {children}
+        {clickToPick ? (
+          <div
+            role="button"
+            tabIndex={disabled ? -1 : 0}
+            aria-controls={inputId}
+            aria-disabled={disabled || undefined}
+            className={`min-w-0 outline-none ${disabled ? "cursor-not-allowed opacity-60" : `cursor-pointer ${dsFocus}`}`}
+            onClick={openPicker}
+            onKeyDown={(e) => {
+              if (disabled) return;
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                openPicker();
+              }
+            }}
+          >
+            {children}
+          </div>
+        ) : (
+          children
+        )}
       </div>
       {showDrop && overlay ? (
         <div
-          className={`${dsUploadDropOverlay} ${dsUploadDropOverlayActive}`}
+          className={`${dsUploadDropOverlay} ${dsUploadDropOverlayActive} opacity-100 transition-opacity duration-200 ease-out`}
           role="region"
           aria-label="Area rilascio file"
           aria-live="polite"
@@ -145,7 +193,7 @@ export function GestionaleUploadDropExpand({
       ) : null}
       {showDrop && !overlay ? (
         <div
-          className={`mt-3 ${dsUploadDropExpand} ${dsUploadDropExpandActive}`}
+          className={`mt-3 ${dsUploadDropExpand} ${dsUploadDropExpandActive} transition-all duration-200 ease-out`}
           role="region"
           aria-label="Area rilascio file"
           aria-live="polite"
@@ -153,6 +201,7 @@ export function GestionaleUploadDropExpand({
           <DropExpandBand dropTitle={dropTitle} dropHint={dropHint} />
         </div>
       ) : null}
+      {pickerInput}
       {localError ? (
         <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
           {localError}

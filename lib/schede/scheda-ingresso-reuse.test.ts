@@ -126,4 +126,27 @@ const duplicates = listSchedaIngressoMatchesForIdent("AA111BB", "ABC123", "99", 
 assert.equal(duplicates.length, 2);
 assert.equal(duplicates[0]!.sourceLavorazioneId, "lav-scuderia");
 
+const fuzzyStore = {
+  ...store,
+  "lav-same-model": {
+    lavorazioneId: "lav-same-model",
+    ingresso: {
+      tipo: "ingresso" as const,
+      sorgente: "generata" as const,
+      createdAt: "2025-03-01T10:00:00.000Z",
+      updatedAt: "2025-08-01T12:00:00.000Z",
+      createdBy: "C",
+      updatedBy: "C",
+      fileEsterno: null,
+      campi: { ...baseFields(), targa: "ZZ999ZZ", matricola: "OTHER", cliente: "Altro" },
+    },
+    lavorazioni: null,
+    ricambi: null,
+  },
+};
+
+const strictOnly = listSchedaIngressoMatchesForIdent("AA111BB", "", "", [], fuzzyStore, [...attive], []);
+assert.equal(strictOnly.length, 1);
+assert.equal(strictOnly[0]!.sourceLavorazioneId, "lav-old");
+
 console.log("scheda-ingresso-reuse.test.ts: ok");

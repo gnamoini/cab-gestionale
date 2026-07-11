@@ -5,7 +5,7 @@ import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { RicambioFormCompatSection } from "@/components/gestionale/magazzino/ricambio-form-compat-section";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import { RicambioFornitoriAlternativiEditor } from "@/components/gestionale/magazzino/ricambio-fornitori-alternativi-editor";
-import { ricambioModalSectionClass, RicambioCollapsibleSection, ricambioSectionTitleClass, ricambioSectionTitleClassName, type RicambioSectionTitleTone } from "@/components/gestionale/magazzino/ricambio-modal-ui";
+import { RicambioCollapsibleSection, ricambioSectionTitleClass, ricambioSectionTitleClassName, type RicambioSectionTitleTone } from "@/components/gestionale/magazzino/ricambio-modal-ui";
 import { ricambioPrezziLineariVisible } from "@/lib/magazzino/ricambio-prezzi-lineari-visible";
 import { RICAMBIO_LENIENT_PLACEHOLDER_CATEGORIA, RICAMBIO_LENIENT_PLACEHOLDER_MARCA, type RicambioFormState } from "@/lib/magazzino/form";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -277,9 +277,8 @@ export function RicambioFormFields({
   );
 
   return (
-    <div className="flex flex-col gap-4">
-      <div {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }} className={ricambioModalSectionClass}>
-        <RicambioSectionTitle>Identificazione</RicambioSectionTitle>
+    <div {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }} className="flex flex-col gap-3">
+      <RicambioCollapsibleSection title="Identificazione" defaultCollapsed={false}>
         <div className="grid gap-3">
       <RicambioField label="Marca" tone="required" required={!fieldsOptional} htmlFor="magazzino-ricambio-marca">
         <GlobalSettingsListSelect
@@ -539,17 +538,11 @@ export function RicambioFormFields({
         </RicambioField>
       </div>
         </div>
-      </div>
+      </RicambioCollapsibleSection>
 
       <RicambioFormCompatSection form={form} setForm={setForm} formResetKey={formResetKey} />
 
-      <div {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }} className={ricambioModalSectionClass}>
-        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-          <RicambioSectionTitle className="mb-0">Giacenza</RicambioSectionTitle>
-          <span className="text-[10px] font-medium text-[color:var(--cab-text-muted)]">
-            in {formatRicambioUnitaMisuraLabel(form.unitaMisura)}
-          </span>
-        </div>
+      <RicambioCollapsibleSection title="Giacenza" defaultCollapsed={false}>
         <div className="grid grid-cols-2 gap-3">
           <RicambioField label="Scorta" tone="operational" htmlFor="magazzino-ricambio-scorta">
             <StockStepper
@@ -584,7 +577,7 @@ export function RicambioFormFields({
             Scorta attuale sotto la soglia minima
           </p>
         ) : null}
-      </div>
+      </RicambioCollapsibleSection>
 
       <RicambioCollapsibleSection
         title="Fornitore originale"

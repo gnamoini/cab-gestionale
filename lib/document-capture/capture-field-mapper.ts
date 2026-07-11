@@ -1,4 +1,7 @@
 import { emptySchedaIngressoFields } from "@/lib/domain/intervento-context/build-intervento-context";
+import { findAddettoByStoredName, addettoDisplayName, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import { findDuplicateByCodici } from "@/lib/magazzino/duplicates";
+import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { newRigaId, newSchedaMeta } from "@/lib/schede/schede-ui";
 import type {
   LavorazioneSchedeBundle,
@@ -41,6 +44,9 @@ const INGRESSO_KEY_MAP: Record<string, keyof SchedaIngressoFields> = {
   modello_telaio: "modelloTelaio",
   telaio_modello: "modelloTelaio",
   targa: "targa",
+  vin: "vin",
+  numero_vin: "vin",
+  telaio_vin: "vin",
   km: "km",
   descrizioneanomalia: "descrizioneAnomalia",
   descrizione_anomalia: "descrizioneAnomalia",
@@ -163,12 +169,17 @@ export function mapCaptureHeaderToIngressoSlice(fields: readonly CaptureFieldRow
   return patch;
 }
 
-export function parseCaptureLavorazioniRighe(fields: readonly CaptureFieldRow[]): RigaLavorazioneScheda[] {
+export function parseCaptureLavorazioniRighe(
+  fields: readonly CaptureFieldRow[],
+  addettiRecords?: readonly AddettoRecord[],
+): RigaLavorazioneScheda[] {
   const today = new Date().toLocaleDateString("it-IT");
   const out: RigaLavorazioneScheda[] = [];
   for (let n = 1; n <= MAX_LAVORAZIONI_RIGHE; n += 1) {
     const lavorazione = resolveRawFieldValue(fields, `riga_${n}_lavorazione`);
-    const nome = resolveRawFieldValue(fields, `riga_${n}_nome`);
+    const nomeRaw = resolveRawFieldValue(fields, `riga_${n}_nome`);
+    const addettoRec = addettiRecords?.length ? findAddettoByStoredName(addettiRecords, nomeRaw) : undefined;
+    const nome = addettoRec ? addettoDisplayName(addettoRec) : nomeRaw;
     const oreRaw = resolveRawFieldValue(fields, `riga_${n}_ore`);
     if (!lavorazione && !nome && !oreRaw) continue;
     out.push({
@@ -181,29 +192,36 @@ export function parseCaptureLavorazioniRighe(fields: readonly CaptureFieldRow[])
   return out;
 }
 
-export function mapCaptureFieldsToLavorazioni(fields: readonly CaptureFieldRow[]): SchedaLavorazioniFields {
+export function mapCaptureFieldsToLavorazioni(
+  fields: readonly CaptureFieldRow[],
+  addettiRecords?: readonly AddettoRecord[],
+): SchedaLavorazioniFields {
   const targaMatricola = resolveRawFieldValue(fields, "targa_matricola", "targamatricola", "targa/matricola");
   return {
     identificazioneMacchina: targaMatricola,
-    righe: parseCaptureLavorazioniRighe(fields),
+    righe: parseCaptureLavorazioniRighe(fields, addettiRecords),
   };
 }
 
-export function parseCaptureRicambiRighe(fields: readonly CaptureFieldRow[]): RigaRicambioScheda[] {
+export function parseCaptureRicambiRighe(
+  fields: readonly CaptureFieldRow[],
+  magazzino?: readonly RicambioMagazzino[],
+): RigaRicambioScheda[] {
   const today = new Date().toLocaleDateString("it-IT");
   const out: RigaRicambioScheda[] = [];
   for (let n = 1; n <= MAX_RICAMBI_RIGHE; n += 1) {
     const nome = resolveRawFieldValue(fields, `riga_${n}_nome`);
     const codice = resolveRawFieldValue(fields, `riga_${n}_codice`);
+    const dup = codice && magazzino?.length ? findDuplicateByCodici([...magazzino], codice) : null;
     const descrizione = resolveRawFieldValue(fields, `riga_${n}_descrizione`);
     const qtRaw = resolveRawFieldValue(fields, `riga_${n}_qt`);
     const data = resolveRawFieldValue(fields, `riga_${n}_data`);
     if (!nome && !codice && !descrizione && !qtRaw && !data) continue;
     out.push({
       id: newRigaId(),
-      ricambioId: null,
+      ricambioId: dup?.id ?? null,
       ricambioNome: composeCaptureRicambioNome(nome, descrizione),
-      codice,
+      codice: dup?.codiceFornitoreOriginale ?? codice,
       quantita: parseCaptureQuantita(qtRaw),
       addetto: "",
       dataUtilizzo: data || today,
@@ -212,15 +230,21 @@ export function parseCaptureRicambiRighe(fields: readonly CaptureFieldRow[]): Ri
   return out;
 }
 
-export function mapCaptureFieldsToRicambi(fields: readonly CaptureFieldRow[]): SchedaRicambiFields {
+export function mapCaptureFieldsToRicambi(
+  fields: readonly CaptureFieldRow[],
+  magazzino?: readonly RicambioMagazzino[],
+): SchedaRicambiFields {
   const targaMatricola = resolveRawFieldValue(fields, "targa_matricola", "targamatricola", "targa/matricola");
   return {
     identificazioneMacchina: targaMatricola,
-    righe: parseCaptureRicambiRighe(fields),
+    righe: parseCaptureRicambiRighe(fields, magazzino),
   };
 }
 
-export function mapCaptureFieldsToIngresso(fields: readonly CaptureFieldRow[]): SchedaIngressoFields {
+export function mapCaptureFieldsToIngresso(
+  fields: readonly CaptureFieldRow[],
+  addettiRecords?: readonly AddettoRecord[],
+): SchedaIngressoFields {
   const out = emptySchedaIngressoFields();
   for (const row of fields) {
     const mapped = INGRESSO_KEY_MAP[normKey(row.field_key)];
@@ -228,6 +252,10 @@ export function mapCaptureFieldsToIngresso(fields: readonly CaptureFieldRow[]): 
     out[mapped] = resolveCaptureFieldValue(row);
   }
   out.richiedente = composeRichiedenteFromCapture(fields, out.richiedente);
+  if (out.addettoAccettazione.trim() && addettiRecords?.length) {
+    const rec = findAddettoByStoredName(addettiRecords, out.addettoAccettazione);
+    if (rec) out.addettoAccettazione = addettoDisplayName(rec);
+  }
   applyIngressoSlice(out, mapCaptureHeaderToIngressoSlice(fields));
   if (!out.dataIngresso.trim()) {
     out.dataIngresso = new Date().toLocaleDateString("it-IT");
@@ -280,9 +308,11 @@ export function buildCaptureSchedeBundle(input: {
   includeLavorazioni?: boolean;
   includeRicambi?: boolean;
   schedaTipo?: SchedaTipo | null;
+  addettiRecords?: readonly AddettoRecord[];
+  magazzino?: readonly RicambioMagazzino[];
 }): LavorazioneSchedeBundle {
   const schedaTipo = input.schedaTipo ?? inferCaptureSchedaTipo(input.fields);
-  const ingressoFields = mapCaptureFieldsToIngresso(input.fields);
+  const ingressoFields = mapCaptureFieldsToIngresso(input.fields, input.addettiRecords);
   const user = input.createdBy.trim() || "Document Capture";
 
   const bundle: LavorazioneSchedeBundle = {
@@ -300,7 +330,7 @@ export function buildCaptureSchedeBundle(input: {
   if (input.includeLavorazioni) {
     const lavCampi =
       schedaTipo === "lavorazioni"
-        ? mapCaptureFieldsToLavorazioni(input.fields)
+        ? mapCaptureFieldsToLavorazioni(input.fields, input.addettiRecords)
         : buildLavorazioniFromIngresso(ingressoFields);
     bundle.lavorazioni = {
       ...newSchedaMeta("lavorazioni", user),
@@ -312,7 +342,7 @@ export function buildCaptureSchedeBundle(input: {
   if (input.includeRicambi) {
     const ricCampi =
       schedaTipo === "ricambi"
-        ? mapCaptureFieldsToRicambi(input.fields)
+        ? mapCaptureFieldsToRicambi(input.fields, input.magazzino)
         : buildRicambiFromIngresso(ingressoFields);
     bundle.ricambi = {
       ...newSchedaMeta("ricambi", user),
@@ -322,4 +352,53 @@ export function buildCaptureSchedeBundle(input: {
   }
 
   return bundle;
+}
+
+export async function fetchCaptureFieldRows(captureId: string): Promise<CaptureFieldRow[]> {
+  const res = await fetch(`/api/document-capture/${captureId}/fields`);
+  if (!res.ok) throw new Error("Impossibile caricare i dati letti");
+  const body = (await res.json()) as {
+    fields?: Array<{ field_key: string; confirmed_value: string | null; normalized_value: string | null }>;
+  };
+  return (body.fields ?? []).map((f) => ({
+    field_key: f.field_key,
+    confirmed_value: f.confirmed_value,
+    normalized_value: f.normalized_value,
+  }));
+}
+
+export async function fetchCaptureIngressoFields(captureId: string): Promise<SchedaIngressoFields> {
+  return mapCaptureFieldsToIngresso(await fetchCaptureFieldRows(captureId));
+}
+
+export function buildCaptureBundleSchedaPatch(input: {
+  lavorazioneId: string;
+  schedaTipo: "lavorazioni" | "ricambi";
+  fields: readonly CaptureFieldRow[];
+  createdBy: string;
+  addettiRecords?: readonly AddettoRecord[];
+  magazzino?: readonly RicambioMagazzino[];
+}): Pick<LavorazioneSchedeBundle, "lavorazioni" | "ricambi"> {
+  const bundle = buildCaptureSchedeBundle({
+    lavorazioneId: input.lavorazioneId,
+    fields: input.fields,
+    createdBy: input.createdBy,
+    includeLavorazioni: input.schedaTipo === "lavorazioni",
+    includeRicambi: input.schedaTipo === "ricambi",
+    schedaTipo: input.schedaTipo,
+    addettiRecords: input.addettiRecords,
+    magazzino: input.magazzino,
+  });
+  return { lavorazioni: bundle.lavorazioni, ricambi: bundle.ricambi };
+}
+
+export function mergeCaptureBundlePatch(
+  base: LavorazioneSchedeBundle,
+  patch: Pick<LavorazioneSchedeBundle, "lavorazioni" | "ricambi">,
+): LavorazioneSchedeBundle {
+  return {
+    ...base,
+    lavorazioni: patch.lavorazioni ?? base.lavorazioni,
+    ricambi: patch.ricambi ?? base.ricambi,
+  };
 }

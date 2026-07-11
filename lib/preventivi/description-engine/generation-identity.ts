@@ -1,5 +1,6 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { canonicalJsonStringify } from "@/lib/domain/technical-knowledge-base/hash";
+import { createRandomUuid } from "@/lib/uuid/create-random-uuid";
 
 export type GenerationContextInput = {
   technicalBlob: string;
@@ -25,7 +26,7 @@ export function buildGenerationContextHash(input: GenerationContextInput): strin
 }
 
 export function newGenerationId(): string {
-  return randomUUID();
+  return createRandomUuid();
 }
 
 const sequenceByContextHash = new Map<string, number>();

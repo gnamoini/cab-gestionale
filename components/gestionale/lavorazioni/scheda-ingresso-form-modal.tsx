@@ -20,8 +20,11 @@ import {
   copyLastSchedaIngresso,
   listCopyLastSchedaIngressoCandidates,
 } from "@/lib/domain/scheda-ingresso/copy-last-scheda";
-import { hasSchedaIngressoIdentLookup } from "@/lib/schede/scheda-ingresso-reuse";
-import type { LastSchedaIngressoMatch } from "@/lib/schede/scheda-ingresso-reuse";
+import {
+  hasSchedaIngressoIdentLookup,
+  isIngressoIdentInMezziAnagrafica,
+  type LastSchedaIngressoMatch,
+} from "@/lib/schede/scheda-ingresso-reuse";
 import { SchedaIngressoCopyPickDialog } from "@/components/gestionale/lavorazioni/scheda-ingresso-copy-pick-dialog";
 import {
   SCHEDA_INGRESSO_ADDETTO_ACCETTAZIONE_LABEL,
@@ -302,6 +305,16 @@ export function SchedaIngressoFormBody({
   ]);
 
   const lastIngressoMatch = lastIngressoCandidates[0] ?? null;
+  const lastIngressoMezzoInAnagrafica = useMemo(
+    () =>
+      isIngressoIdentInMezziAnagrafica(
+        mezziCatalog,
+        identScan.targa,
+        identScan.matricola,
+        identScan.nScuderia,
+      ),
+    [identScan.matricola, identScan.nScuderia, identScan.targa, mezziCatalog],
+  );
   const [copyPickOpen, setCopyPickOpen] = useState(false);
 
   const onMezzoPromptMatch = useCallback(
@@ -494,6 +507,9 @@ export function SchedaIngressoFormBody({
           onExactMezzoMatch={onMezzoPromptMatch}
           lastIngressoMatch={lastIngressoMatch}
           lastIngressoMatchCount={lastIngressoCandidates.length}
+          mezzoInAnagraficaOnly={
+            lastIngressoCandidates.length === 0 && lastIngressoMezzoInAnagrafica
+          }
           onCopyLastIngresso={readOnly ? undefined : copyLastIngresso}
           clienteRequired={false}
           marcaAttrezzaturaRequired={false}

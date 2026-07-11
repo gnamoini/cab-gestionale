@@ -3,6 +3,10 @@ import {
   SCHEDA_OFFICINA_RULE_SET_VERSION,
 } from "@/lib/document-capture/model/versions";
 import type { PromptContract } from "@/lib/document-capture/registry/document-type-registry";
+import {
+  SCHEDA_OFFICINA_EXTRACTION_SYSTEM,
+  SCHEDA_OFFICINA_EXTRACTION_USER,
+} from "@/lib/document-capture/scheda-officina-extraction-prompt";
 
 export const SCHEDA_OFFICINA_PROMPT_CONTRACT_ID = "scheda_officina_bundle_v1";
 
@@ -21,9 +25,8 @@ export const schedaOfficinaPromptContract: PromptContract = {
     backoffMs: [1_000, 3_000],
     retryableErrors: ["timeout", "rate_limit", "analyze_failed"],
   },
-  systemPrompt: `Estrai campi da schede officina meccanica (ingresso, lavorazioni, ricambi).
-Per ogni campo restituisci value, confidence 0-1 e pageIndex (0-based).`,
-  userPromptTemplate: "Estrai campi scheda officina con confidence per campo.",
+  systemPrompt: SCHEDA_OFFICINA_EXTRACTION_SYSTEM,
+  userPromptTemplate: SCHEDA_OFFICINA_EXTRACTION_USER,
   outputSchemaVersion: "1.0.0",
   projectorVersion: PROJECTOR_VERSION,
   active: true,

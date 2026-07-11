@@ -7,6 +7,7 @@ import {
 import { parseScontoFornitoreByFornitore } from "@/lib/magazzino/fornitore-alternativo-sconto";
 import { parseFornitoreAnagraficaByFornitore } from "@/lib/magazzino/fornitore-anagrafica";
 import { parseScontoFornitoreByMarca } from "@/lib/magazzino/marca-fornitore-sconto";
+import { parseColorByMarca } from "@/lib/magazzino/marca-badge-color";
 
 /** @deprecated Persistenza spostata su `public.app_settings` (modulo `magazzino`, chiave `master`). */
 export const MAGAZZINO_MASTER_PREFS_KEY = "gestionale-magazzino-master-prefs-v1";
@@ -15,6 +16,8 @@ export type MagazzinoMasterPrefs = {
   marche: string[];
   /** Sconto % fornitore su listino OE per marca (chiave normalizzata lowercase). */
   scontoFornitoreByMarca?: Record<string, number>;
+  /** Colore badge marca in lista mobile (chiave normalizzata lowercase, hex #rrggbb). */
+  colorByMarca?: Record<string, string>;
   categorie: string[];
   mezziCompatibili: string[];
   fornitori: string[];
@@ -43,6 +46,7 @@ export function loadMagazzinoMasterPrefs(): MagazzinoMasterPrefs | null {
     const partial: MagazzinoMasterPrefs = {
       marche: Array.isArray(o.marche) ? (o.marche as string[]).filter((x) => typeof x === "string") : [],
       scontoFornitoreByMarca: parseScontoFornitoreByMarca(o.scontoFornitoreByMarca),
+      colorByMarca: parseColorByMarca(o.colorByMarca),
       categorie: Array.isArray(o.categorie) ? (o.categorie as string[]).filter((x) => typeof x === "string") : [],
       mezziCompatibili: Array.isArray(o.mezziCompatibili)
         ? (o.mezziCompatibili as string[]).filter((x) => typeof x === "string")

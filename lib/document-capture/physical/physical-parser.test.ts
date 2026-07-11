@@ -20,6 +20,12 @@ async function main(): Promise<void> {
   assert.equal(parsed[1]!.index, 1);
   assert.ok(parsed[0]!.byteSize > 0);
 
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x43, 0x00]);
+  const imagePages = await parsePhysicalPages(jpeg, "image/jpeg");
+  assert.equal(imagePages.length, 1);
+  assert.equal(imagePages[0]!.index, 0);
+  assert.equal(imagePages[0]!.byteSize, jpeg.byteLength);
+
   console.log("physical-parser.test.ts OK");
 }
 

@@ -13,6 +13,7 @@ import { lavorazioneMatchesMezzo, normMezzoKey } from "@/lib/mezzi/lavorazioni-s
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { mezzoGestitoToEmbedRow } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import { findMezzoForLavorazione } from "@/lib/schede/schede-autofill";
+import { findMezzoByIngressoIdent } from "@/lib/mezzi/find-mezzo-by-ident";
 import {
   cabSyncEventForEntity,
   dispatchGestionaleLocalMutation,
@@ -55,6 +56,13 @@ async function resolveMezzoIdForRecord(
 ): Promise<string | null> {
   const stored = (record as unknown as { mezzoId?: string }).mezzoId;
   if (typeof stored === "string" && isPreventivoUuid(stored)) return stored;
+
+  const byRecordIdent = findMezzoByIngressoIdent(mezziGestiti, {
+    targa: record.targa,
+    matricola: record.matricola,
+    nScuderia: record.nScuderia,
+  });
+  if (byRecordIdent?.id && isPreventivoUuid(byRecordIdent.id)) return byRecordIdent.id;
 
   if (isPreventivoUuid(record.lavorazioneId)) {
     const lavRes = await lavorazioniService.getById(record.lavorazioneId);

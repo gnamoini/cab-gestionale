@@ -56,12 +56,12 @@ export function compatLineDisplayText(line: string): string {
   return marca || modello || t;
 }
 
-/** Sottotitolo lista magazzino: solo modello (marca già in colonna dedicata). */
+/** Sottotitolo lista magazzino: modello, oppure «Marca (Universale)» se solo marca. */
 export function compatLineModelDisplayText(line: string): string {
   const t = line.trim();
   if (!t) return t;
   const { marca, modello } = parseCompatMarcaModello(t);
-  if (marca && !modello) return "(universale)";
+  if (marca && !modello) return `${marca} (Universale)`;
   if (modello) return modello;
   return marca || t;
 }
@@ -82,6 +82,6 @@ export function compatDisplayLabel(list: readonly string[]): string {
 
 export function compatDisplayModelsLabel(list: readonly string[]): string {
   const compat = dedupeCompatLabels(normalizeCompatList(list));
-  if (compat.length === 0) return "Universale (tutte le macchine)";
+  if (compat.length === 0) return "Universale (non tutte le macchine)";
   return dedupeCompatDisplayLines(compat.map(compatLineModelDisplayText)).join(", ");
 }

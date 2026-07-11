@@ -39,6 +39,9 @@ type DataImportExportToolbarProps = {
   disabled?: boolean;
   /** Import aggiuntivi nello stesso menu (es. listino su magazzino). */
   extraImportEntities?: ImportEntity[];
+  /** `drawer`: voci etichettate full-width per menu mobile «Altro». */
+  layout?: "inline" | "drawer";
+  className?: string;
 };
 
 type ToolbarMenuItem = {
@@ -216,6 +219,8 @@ export function DataImportExportToolbar({
   showTemplate = true,
   disabled = false,
   extraImportEntities,
+  layout = "inline",
+  className = "",
 }: DataImportExportToolbarProps) {
   const perm = usePermissions(module);
   const toast = useGestionaleToast();
@@ -292,6 +297,54 @@ export function DataImportExportToolbar({
 
   if (!perm.canWrite || !canExport) return null;
   if (!importMenuItems.length && !canExport) return null;
+
+  if (layout === "drawer") {
+    return (
+      <>
+        <div className={`flex w-full flex-col gap-2 ${className}`.trim()}>
+          {importMenuItems.map((item) => (
+            <OptionalTooltip key={item.id} content={item.title}>
+              <button
+                type="button"
+                disabled={item.disabled || disabled}
+                className={`${dsPageToolbarBtn} w-full justify-start ${dsFocus} disabled:cursor-not-allowed disabled:opacity-45`}
+                onClick={() => {
+                  if (item.disabled || disabled) return;
+                  item.onClick();
+                }}
+              >
+                <HubIconDownload className="h-4 w-4 shrink-0" />
+                <span>{item.label}</span>
+              </button>
+            </OptionalTooltip>
+          ))}
+          {canExport ? (
+            <button
+              type="button"
+              className={`${dsPageToolbarBtn} w-full justify-start ${dsFocus}`}
+              disabled={disabled || exporting}
+              aria-label="Esporta"
+              onClick={() => void runExport("importable")}
+            >
+              <HubIconUpload className="h-4 w-4 shrink-0" />
+              <span>{exporting ? "Esportazione…" : "Esporta"}</span>
+            </button>
+          ) : null}
+        </div>
+        {wizardEntity ? (
+          <DataImportWizardModal
+            entity={wizardEntity}
+            title={importWizardModalTitle(wizardEntity)}
+            onRequestClose={() => setWizardEntity(null)}
+            onCompleted={() => {
+              onImportCompleted?.();
+              setWizardEntity(null);
+            }}
+          />
+        ) : null}
+      </>
+    );
+  }
 
   return (
     <>

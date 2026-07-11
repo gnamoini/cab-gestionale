@@ -9,7 +9,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { flushSync } from "react-dom";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { gestionaleTextareaMaxHeightCompact } from "@/lib/ui/design-system";
-import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
+import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
 import { HubModalTab, HubModalTabBar } from "@/components/design-system/hub-modal-tab-bar";
 import { SchedaIngressoPanoramicaAnagraficaContent } from "@/components/gestionale/lavorazioni/scheda-ingresso-panoramica-view";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
@@ -60,7 +60,10 @@ import {
   copyLastSchedaIngresso,
   listCopyLastSchedaIngressoCandidates,
 } from "@/lib/domain/scheda-ingresso/copy-last-scheda";
-import type { LastSchedaIngressoMatch } from "@/lib/schede/scheda-ingresso-reuse";
+import {
+  isIngressoIdentInMezziAnagrafica,
+  type LastSchedaIngressoMatch,
+} from "@/lib/schede/scheda-ingresso-reuse";
 import { SchedaIngressoCopyPickDialog } from "@/components/gestionale/lavorazioni/scheda-ingresso-copy-pick-dialog";
 import {
   diffSchedaIngressoCampi,
@@ -97,8 +100,8 @@ import {
 } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { mergePreventiviPerMacchina, mezzoPerFiltroPreventivi } from "@/lib/preventivi/preventivi-per-macchina";
 import { preventivoRowToRecordStub } from "@/lib/mezzi/mezzi-db-ui-adapter";
-import { Q_PREVENTIVI_NUOVO } from "@/lib/preventivi/preventivi-query";
-import { writePendingPreventivoPayload } from "@/lib/preventivi/preventivi-session-bridge";
+import { writePendingPreventivoPayload, navigateToPendingPreventivoCreate } from "@/lib/preventivi/preventivi-session-bridge";
+import { resolveMezzoForPreventivoHandoff } from "@/lib/preventivi/resolve-mezzo-for-pending-preventivo";
 import type { PreventivoLavorazioneOrigine, PreventivoRecord } from "@/lib/preventivi/types";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import {
@@ -322,6 +325,7 @@ export function SchedeLavorazioneModal({
   origine,
   initialTab: initialTabProp = "schede",
   dialogSize: dialogSizeProp,
+  initialSchedaStage,
   bundle,
   onPersist,
   attive,
@@ -343,6 +347,8 @@ export function SchedeLavorazioneModal({
   initialTab?: HubTabInput;
   /** Fissato all'apertura: `compact` per Informazioni, `hub` per Schede. */
   dialogSize?: SchedeLavorazioneDialogSize;
+  /** Apre direttamente l'editor scheda lavorazioni/ricambi (es. acquisizione AI). */
+  initialSchedaStage?: "lavorazioni" | "ricambi";
   bundle: LavorazioneSchedeBundle;
   onPersist: (
     next: LavorazioneSchedeBundle,
@@ -368,6 +374,7 @@ export function SchedeLavorazioneModal({
   const gestToast = useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
   const { canEditWorkOrders } = usePermissions();
+  const preventiviPerm = usePermissions("preventivi");
   const globalOpts = useGlobalOptions({ debugTag: "SchedeLavorazioneModal" });
   const statiOpts = useMemo(
     () => globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata"),
@@ -440,7 +447,6 @@ export function SchedeLavorazioneModal({
       return;
     }
     const t = window.setTimeout(() => {
-      setStage({ kind: "hub" });
       setHubTab(initialTab);
       setIngressoFormOpen(false);
       setIngressoEditorInitial(null);
@@ -451,10 +457,23 @@ export function SchedeLavorazioneModal({
       }
       setDraft(cloned);
       syncedBundleJsonRef.current = JSON.stringify(cloned);
+      if (initialSchedaStage === "lavorazioni" && cloned.lavorazioni) {
+        setLavDoc(cloned.lavorazioni);
+        baselineLavorazioniJson.current = JSON.stringify(cloned.lavorazioni);
+        setStage({ kind: "lavorazioni" });
+      } else if (initialSchedaStage === "ricambi" && cloned.ricambi) {
+        setRicDoc(cloned.ricambi);
+        baselineRicambiJson.current = JSON.stringify(cloned.ricambi);
+        setStage({ kind: "ricambi" });
+      } else {
+        setLavDoc(null);
+        setRicDoc(null);
+        setStage({ kind: "hub" });
+      }
     }, 0);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- evita reset hub dopo persist (es. «Crea nuova»)
-  }, [open, lav.id, initialTab]);
+  }, [open, lav.id, initialTab, initialSchedaStage]);
 
   useEffect(() => {
     if (!open) return;
@@ -715,10 +734,52 @@ export function SchedeLavorazioneModal({
   }, [hubData?.documenti]);
 
   function generaPreventivoDaHub() {
+    if (!canEditWorkOrders || !preventiviPerm.canWrite) {
+      gestToast.warning(
+        !preventiviPerm.canWrite
+          ? "Non hai permesso di creare preventivi."
+          : READONLY_PERMISSION_HINT,
+      );
+      return;
+    }
     const snap = draftRef.current;
+    const ctxMezzoId =
+      interventoCtx.context?.mezzo?.present
+        ? interventoCtx.context.mezzo.id?.trim() || null
+        : null;
+    const lavMezzoId = interventoCtx.context?.lavorazione?.mezzoId?.trim() || null;
+    const ident =
+      interventoCtx.display && !interventoCtx.isLoading
+        ? {
+            targa: interventoCtx.display.targa.value,
+            matricola: interventoCtx.display.matricola.value,
+            nScuderia: interventoCtx.display.nScuderia.value,
+          }
+        : !interventoCtx.isLoading && interventoCtx.ident
+          ? interventoCtx.ident
+          : { targa: lav.targa, matricola: lav.matricola, nScuderia: lav.nScuderia };
+    const mezzoForPreventivo = resolveMezzoForPreventivoHandoff(mezzi, {
+      lav,
+      mezzoId: mezzo?.id ?? ctxMezzoId ?? lavMezzoId,
+      ident,
+    });
+    if (!mezzoForPreventivo) {
+      gestToast.warning(
+        "Mezzo non trovato in anagrafica: verifica targa o matricola prima di creare il preventivo.",
+      );
+      return;
+    }
+    const identCanon = {
+      targa: mezzoForPreventivo.targa?.trim() || ident.targa?.trim() || "",
+      matricola: mezzoForPreventivo.matricola?.trim() || ident.matricola?.trim() || "",
+      nScuderia: mezzoForPreventivo.numeroScuderia?.trim() || ident.nScuderia?.trim() || "",
+    };
     writePendingPreventivoPayload({
       lav,
       origine: lavOrigine,
+      mezzoId: mezzoForPreventivo.id,
+      mezzo: mezzoForPreventivo,
+      ident: identCanon,
       bundle: {
         ...snap,
         lavorazioneId: lav.id,
@@ -727,8 +788,7 @@ export function SchedeLavorazioneModal({
         ricambi: ricDoc ?? snap.ricambi ?? draft.ricambi ?? null,
       },
     });
-    onClose();
-    router.push(`/preventivi?${Q_PREVENTIVI_NUOVO}=1`);
+    navigateToPendingPreventivoCreate();
   }
 
   const hub = draft;
@@ -806,7 +866,19 @@ export function SchedeLavorazioneModal({
       }),
     [hubCopyLastIdent, lav.id, mezzi, schedeStore, attive, storico],
   );
+  const hubIngressoMezzoInAnagrafica = useMemo(
+    () =>
+      isIngressoIdentInMezziAnagrafica(
+        mezzi,
+        hubCopyLastIdent.targa,
+        hubCopyLastIdent.matricola,
+        hubCopyLastIdent.nScuderia,
+      ),
+    [hubCopyLastIdent, mezzi],
+  );
   const hubLastIngressoMatch = hubLastIngressoCandidates[0] ?? null;
+  const showHubCopiaIngressoBanner =
+    hubLastIngressoCandidates.length > 0 || hubIngressoMezzoInAnagrafica;
 
   const commitPanoramicaNote = useCallback(
     async (noteIntervento: string) => {
@@ -1159,13 +1231,16 @@ export function SchedeLavorazioneModal({
         >
           {stage.kind === "hub" && hubTab === "schede" ? (
             <div className="flex flex-col gap-5">
-              {hubLastIngressoMatch ? (
+              {showHubCopiaIngressoBanner ? (
                 <CopiaUltimaSchedaIngressoBanner
                   visible
                   highlight={false}
-                  updatedAt={hubLastIngressoMatch.updatedAt}
+                  updatedAt={hubLastIngressoMatch?.updatedAt}
                   matchCount={hubLastIngressoCandidates.length}
-                  disabled={!canEditWorkOrders}
+                  mezzoInAnagraficaOnly={
+                    hubLastIngressoCandidates.length === 0 && hubIngressoMezzoInAnagrafica
+                  }
+                  disabled={!canEditWorkOrders || hubLastIngressoCandidates.length === 0}
                   disabledTitle={READONLY_PERMISSION_HINT}
                   onCopy={duplicateIngressoPrev}
                 />
@@ -1230,8 +1305,12 @@ export function SchedeLavorazioneModal({
               />
               <CreaPreventivoDaSchedeCta
                 onClick={generaPreventivoDaHub}
-                disabled={!canEditWorkOrders}
-                disabledTitle={READONLY_PERMISSION_HINT}
+                disabled={!canEditWorkOrders || !preventiviPerm.canWrite}
+                disabledTitle={
+                  !preventiviPerm.canWrite
+                    ? "Non hai permesso di creare preventivi"
+                    : READONLY_PERMISSION_HINT
+                }
               />
             </div>
           ) : null}
@@ -1301,7 +1380,13 @@ export function SchedeLavorazioneModal({
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-                    <Tooltip content={!canEditWorkOrders ? READONLY_PERMISSION_HINT : "Crea preventivo da schede lavorazione"}><button type="button" className={dsTableActionTextBtnPrimary} disabled={!canEditWorkOrders} onClick={generaPreventivoDaHub}>
+                    <Tooltip content={
+                      !preventiviPerm.canWrite
+                        ? "Non hai permesso di creare preventivi"
+                        : !canEditWorkOrders
+                          ? READONLY_PERMISSION_HINT
+                          : "Crea preventivo da schede lavorazione"
+                    }><button type="button" className={dsTableActionTextBtnPrimary} disabled={!canEditWorkOrders || !preventiviPerm.canWrite} onClick={generaPreventivoDaHub}>
                       <IconBtnPreventivo className="h-3.5 w-3.5 shrink-0"/>
                       Crea
                     </button></Tooltip>
@@ -1323,7 +1408,7 @@ export function SchedeLavorazioneModal({
                   rows={preventiviPerMacchina}
                   lavorazioneId={lav.id}
                   onApriNeiPreventivi={apriPreventivoNeiPreventivi}
-                  onCreaPreventivo={canEditWorkOrders ? generaPreventivoDaHub : undefined}
+                  onCreaPreventivo={canEditWorkOrders && preventiviPerm.canWrite ? generaPreventivoDaHub : undefined}
                 />
               </GestionaleInfoCard>
             </div>

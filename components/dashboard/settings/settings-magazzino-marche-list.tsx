@@ -30,12 +30,18 @@ import {
 } from "@/lib/magazzino/marca-fornitore-sconto";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import { filterSettingsStringList } from "@/lib/settings/settings-list-search";
+import { ColorSwatchButton } from "@/components/gestionale/lavorazioni/lavorazioni-settings-ui";
 import { SettingsFornitoreAnagraficaFields } from "@/components/dashboard/settings/settings-fornitore-anagrafica-fields";
+import {
+  getMarcaBadgeColorHex,
+  MAGAZZINO_MARCA_BADGE_GRAY,
+  setMarcaBadgeColor,
+} from "@/lib/magazzino/marca-badge-color";
 
 const SETTINGS_DRAFT_ROW_KEY = "__settings-draft__";
 
 const CARD_DESCRIPTION =
-  "Fornitore originale (marca ricambio): sconto % sul listino OE e anagrafica per ordini fornitori.";
+  "Fornitore originale (marca ricambio): colore badge lista, sconto % sul listino OE e anagrafica ordini.";
 
 export function SettingsMagazzinoMarcheList({
   mag,
@@ -114,16 +120,26 @@ export function SettingsMagazzinoMarcheList({
                 onRenameBlur={tryRename}
                 onRemove={() => setPendingDelete(nome)}
                 trailing={
-                  <SettingsDiscountField
-                    id={settingsConfigFieldId("config-sconto-marca", nome)}
-                    label="Sconto listino %"
-                    value={sconto}
-                    step={0.1}
-                    ariaLabel={`Sconto listino per ${nome}`}
-                    onChange={(n) => {
-                      setMag((prev) => setScontoFornitoreMarca(prev, nome, clampScontoRicambiPercent(n)));
-                    }}
-                  />
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    <ColorSwatchButton
+                      value={getMarcaBadgeColorHex(mag, nome) ?? MAGAZZINO_MARCA_BADGE_GRAY}
+                      onChange={(hex) => {
+                        setMag((prev) => setMarcaBadgeColor(prev, nome, hex));
+                      }}
+                      ariaLabel={`Colore badge marca ${nome}`}
+                      tooltipContent="Colore badge in lista magazzino"
+                    />
+                    <SettingsDiscountField
+                      id={settingsConfigFieldId("config-sconto-marca", nome)}
+                      label="Sconto listino %"
+                      value={sconto}
+                      step={0.1}
+                      ariaLabel={`Sconto listino per ${nome}`}
+                      onChange={(n) => {
+                        setMag((prev) => setScontoFornitoreMarca(prev, nome, clampScontoRicambiPercent(n)));
+                      }}
+                    />
+                  </div>
                 }
                 footer={
                   <SettingsFornitoreAnagraficaFields

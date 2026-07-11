@@ -28,7 +28,7 @@ export function composeMezzoGestitoFromRows(
 
   return {
     id: mezzo.id,
-    cliente: mezzo.cliente,
+    cliente: str(mezzo.cliente, "—"),
     utilizzatore: str(mezzo.utilizzatore, "—"),
     marca: att?.marca ?? "—",
     modello: att?.modello ?? "—",

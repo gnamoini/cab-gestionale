@@ -1,114 +1,139 @@
 "use client";
 
-import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
-import { CaptureDryRunSummary } from "@/components/document-capture/capture-dry-run-summary";
-import { CaptureFieldReviewGrid } from "@/components/document-capture/capture-field-review-grid";
-import { CaptureV41ReviewPanel } from "@/components/document-capture/capture-v41-review-panel";
-import { useGestionaleModal } from "@/components/gestionale/gestionale-modal";
-import { useCallback, useState } from "react";
-import { dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
+import { CaptureDocumentFilePreview } from "@/components/document-capture/capture-document-file-preview";
+import { DocumentCaptureAcquisitionProgress } from "@/components/document-capture/document-capture-acquisition-progress";
+import type { CaptureAcquisitionProgressState } from "@/lib/document-capture/capture-acquisition-progress";
+import type { DocumentCaptureFlowStep } from "@/components/document-capture/document-capture-step-indicator";
+import {
+  CaptureFieldReviewGrid,
+  type CaptureFieldReviewGridHandle,
+} from "@/components/document-capture/capture-field-review-grid";
+import { useCallback, useRef, useState, type Ref } from "react";
 
-type Props = {
-  captureId: string;
-  open: boolean;
-  onClose: () => void;
-  v41?: boolean;
+export type DocumentCaptureWizardStep = Extract<DocumentCaptureFlowStep, "analyze" | "review">;
+
+type WizardApi = {
+  busy: boolean;
+  error: string | null;
+  runAnalyze: (captureIdOverride?: string | null) => Promise<boolean>;
+  reset: () => void;
 };
 
-export function DocumentCaptureWizardModal({ captureId, open, onClose, v41 = false }: Props) {
-  const [step, setStep] = useState<"analyze" | "review" | "dryrun">("analyze");
-  const [applicationId, setApplicationId] = useState<string | null>(null);
+export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const analyzeSeqRef = useRef(0);
 
-  const runAnalyze = useCallback(async () => {
+  const reset = useCallback(() => {
+    analyzeSeqRef.current += 1;
+    setBusy(false);
+    setError(null);
+  }, []);
+
+  const runAnalyze = useCallback(async (captureIdOverride?: string | null) => {
+    const id = captureIdOverride ?? captureId;
+    if (!id) return false;
+    const seq = ++analyzeSeqRef.current;
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/document-capture/${captureId}/analyze`, { method: "POST" });
+      const res = await fetch(`/api/document-capture/${id}/analyze`, { method: "POST" });
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        code?: string;
+        fieldCount?: number;
+      };
+      if (seq !== analyzeSeqRef.current) return false;
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Analisi fallita");
+        if (body.code === "not_configured") {
+          throw new Error(body.error ?? "Servizio AI non configurato.");
+        }
+        if (body.code === "not_finalized") {
+          throw new Error("Documento non disponibile. Torna indietro e carica di nuovo il file.");
+        }
+        if (body.code === "no_fields") {
+          throw new Error(body.error ?? "Nessun dato letto dalla scheda.");
+        }
+        throw new Error(body.error ?? "Lettura documento non riuscita");
       }
-      setStep("review");
+      if ((body.fieldCount ?? 0) === 0) {
+        throw new Error("Nessun dato letto dalla scheda. Verifica che foto o PDF siano nitidi e riprova.");
+      }
+      setError(null);
+      return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Errore");
+      if (seq !== analyzeSeqRef.current) return false;
+      setError(e instanceof Error ? e.message : "Errore durante la lettura");
+      return false;
     } finally {
-      setBusy(false);
+      if (seq === analyzeSeqRef.current) setBusy(false);
     }
   }, [captureId]);
 
-  const runDryRun = useCallback(async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/document-capture/${captureId}/dry-run`, { method: "POST" });
-      if (!res.ok) throw new Error("Dry-run fallito");
-      const body = (await res.json()) as { applicationId?: string };
-      setApplicationId(body.applicationId ?? null);
-      setStep("dryrun");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Errore");
-    } finally {
-      setBusy(false);
-    }
-  }, [captureId]);
+  return { busy, error, runAnalyze, reset };
+}
 
-  if (!open) return null;
+export function DocumentCaptureWizardBody({
+  captureId,
+  step,
+  acquisition,
+  error,
+  onRetryAnalyze,
+  reviewSaveRef,
+  catalogValidation,
+  sharedGlobalOpts,
+  magazzino,
+  mezzi,
+}: {
+  captureId: string | null;
+  step: DocumentCaptureWizardStep;
+  acquisition?: CaptureAcquisitionProgressState | null;
+  error: string | null;
+  onRetryAnalyze?: () => void;
+  reviewSaveRef?: Ref<CaptureFieldReviewGridHandle | null>;
+  catalogValidation?: import("@/lib/document-capture/capture-catalog-validation").CaptureCatalogValidationInput | null;
+  sharedGlobalOpts?: import("@/src/hooks/use-global-options").GlobalOptionsSlice;
+  magazzino?: import("@/lib/magazzino/types").RicambioMagazzino[];
+  mezzi?: import("@/lib/mezzi/types").MezzoGestito[];
+}) {
+  const acquisitionActive = acquisition?.active ?? false;
 
   return (
-    <GestionaleModalShell
-      modalSize="formLarge"
-      title="Acquisizione — revisione"
-      onRequestClose={onClose}
-      footer={
-        <div className="flex justify-end gap-2">
-          <button type="button" className={dsBtnNeutral} onClick={onClose}>
-            Chiudi
-          </button>
-          {step === "analyze" ? (
-            <button type="button" className={dsBtnPrimary} disabled={busy} onClick={() => void runAnalyze()}>
-              Analizza
-            </button>
-          ) : null}
-          {step === "review" ? (
-            <button type="button" className={dsBtnPrimary} disabled={busy} onClick={() => void runDryRun()}>
-              Dry-run
+    <div className="relative min-h-[12rem]">
+      {error && !acquisitionActive && step === "analyze" ? (
+        <div className="mb-3 space-y-2">
+          <p className="text-sm text-[color:var(--cab-danger)]">{error}</p>
+          {onRetryAnalyze ? (
+            <button type="button" className="text-xs underline" onClick={onRetryAnalyze}>
+              Riprova lettura
             </button>
           ) : null}
         </div>
-      }
-    >
-      {error ? <p className="text-sm text-[color:var(--cab-danger)]">{error}</p> : null}
-      {step === "analyze" ? <p className="text-sm">Avvia estrazione AI del documento finalizzato.</p> : null}
-      {step === "review" ? (
-        v41 ? (
-          <CaptureV41ReviewPanel captureId={captureId} />
-        ) : (
-          <CaptureFieldReviewGrid captureId={captureId} />
-        )
       ) : null}
-      {step === "dryrun" ? (
-        <CaptureDryRunSummary captureId={captureId} applicationId={applicationId} />
-      ) : null}
-    </GestionaleModalShell>
-  );
-}
-
-export function DocumentCaptureWizardLauncher(props: { captureId: string }) {
-  const modal = useGestionaleModal();
-  const v41 = process.env.NEXT_PUBLIC_DOCUMENT_CAPTURE_V41 !== "0";
-  return (
-    <>
-      <button type="button" className={dsBtnNeutral} onClick={modal.onOpen}>
-        Wizard AI
-      </button>
-      <DocumentCaptureWizardModal
-        captureId={props.captureId}
-        open={modal.open}
-        onClose={modal.onClose}
-        v41={v41}
-      />
-    </>
+      {acquisitionActive || acquisition?.error ? (
+        <DocumentCaptureAcquisitionProgress state={acquisition!} />
+      ) : (
+        <>
+          {step === "analyze" && captureId && !error ? (
+            <div className="space-y-4">
+              <CaptureDocumentFilePreview captureId={captureId} compact />
+            </div>
+          ) : null}
+          {step === "review" && captureId ? (
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+              <CaptureDocumentFilePreview captureId={captureId} />
+              <CaptureFieldReviewGrid
+                captureId={captureId}
+                saveRef={reviewSaveRef}
+                catalogValidation={catalogValidation}
+                sharedGlobalOpts={sharedGlobalOpts}
+                magazzino={magazzino}
+                mezzi={mezzi}
+              />
+            </div>
+          ) : null}
+        </>
+      )}
+    </div>
   );
 }

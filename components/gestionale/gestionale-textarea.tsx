@@ -115,6 +115,7 @@ function GestionaleTextareaInner(
     style,
     "aria-label": ariaLabel,
     "aria-invalid": ariaInvalid,
+    spellCheck = false,
     ...rest
   }: GestionaleTextareaProps,
   forwardedRef: ForwardedRef<HTMLTextAreaElement>,
@@ -198,6 +199,7 @@ function GestionaleTextareaInner(
       placeholder={placeholder}
       aria-label={ariaLabel}
       aria-invalid={ariaInvalid}
+      spellCheck={spellCheck}
       style={inlineStyle}
     />
   );

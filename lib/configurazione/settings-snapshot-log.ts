@@ -91,6 +91,7 @@ const SECTION_SLICES: SectionSlice[] = [
     pick: (s) => ({
       marche: s.mag.marche,
       scontoFornitoreByMarca: s.mag.scontoFornitoreByMarca,
+      colorByMarca: s.mag.colorByMarca,
       mezziCompatibili: s.mag.mezziCompatibili,
     }),
   },
@@ -158,6 +159,30 @@ function diffNumberRecord(
       lines.push(`${label(key)}: rimosso (era ${bv}${suffix})`);
     } else if (bv !== undefined && av !== undefined) {
       lines.push(`${label(key)}: da ${bv}${suffix} a ${av}${suffix}`);
+    }
+  }
+  return lines;
+}
+
+function diffStringRecord(
+  before: Record<string, string> | undefined,
+  after: Record<string, string> | undefined,
+  label: (key: string) => string,
+): string[] {
+  const b = before ?? {};
+  const a = after ?? {};
+  const keys = new Set([...Object.keys(b), ...Object.keys(a)]);
+  const lines: string[] = [];
+  for (const key of keys) {
+    const bv = b[key];
+    const av = a[key];
+    if (bv === av) continue;
+    if (bv === undefined && av !== undefined) {
+      lines.push(`${label(key)}: impostato a ${av}`);
+    } else if (bv !== undefined && av === undefined) {
+      lines.push(`${label(key)}: rimosso (era ${bv})`);
+    } else if (bv !== undefined && av !== undefined) {
+      lines.push(`${label(key)}: da ${bv} a ${av}`);
     }
   }
   return lines;
@@ -320,6 +345,11 @@ function describeSectionChanges(
           after.mag.scontoFornitoreByMarca,
           (key) => `Sconto fornitore «${formatTitleCasePhrase(key)}»`,
           "%",
+        ),
+        ...diffStringRecord(
+          before.mag.colorByMarca,
+          after.mag.colorByMarca,
+          (key) => `Colore badge «${formatTitleCasePhrase(key)}»`,
         ),
       ];
     case "mag-fornitori":

@@ -20,8 +20,12 @@ export type KpiChartsStorageV1 = {
   configs: SavedKpiChartConfig[];
 };
 
-function storageKey(userId: string): string {
+export function kpiChartsStorageKey(userId: string): string {
   return `${STORAGE_KEY_PREFIX}:${userId}`;
+}
+
+function storageKey(userId: string): string {
+  return kpiChartsStorageKey(userId);
 }
 
 function isValidYmd(s: unknown): s is string {

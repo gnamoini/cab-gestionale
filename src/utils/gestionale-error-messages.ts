@@ -31,7 +31,7 @@ function looksItalianReadable(message: string): boolean {
   if (/^[A-Z_]+:/.test(t)) return false;
   if (FK_PATTERN.test(t) || UNIQUE_PATTERN.test(t) || NOT_FOUND_PATTERN.test(t)) return false;
   if (TECHNICAL_PATTERN.test(t)) return false;
-  return /[àèéìòù]|impossibile|non è|non pu|errore|operazione|collegat|elimin|salvat|permess/i.test(t);
+  return /[àèéìòù]|impossibile|non è|non pu|non trovato|fallito|creazione|errore|operazione|collegat|elimin|salvat|permess/i.test(t);
 }
 
 function sectionDeniedMessage(ctx?: GestionaleErrorContext): string | null {

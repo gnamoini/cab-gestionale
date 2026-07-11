@@ -1,4 +1,4 @@
-import { loadKpiChartConfigs } from "@/lib/report/report-kpi-chart-persistence";
+import { kpiChartsStorageKey, loadKpiChartConfigs } from "@/lib/report/report-kpi-chart-persistence";
 import type { SavedKpiChart } from "@/lib/report/kpi-chart-config/contracts";
 import { savedKpiChartToConfigBody } from "@/lib/report/kpi-chart-config/mapper";
 import type { CreateSavedKpiChartInput } from "@/lib/report/kpi-chart-config/contracts";
@@ -31,7 +31,7 @@ export function markLocalMigrationDone(userId: string): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(migratedFlagKey(userId), "1");
-    window.localStorage.removeItem(localStorageKey(userId));
+    window.localStorage.removeItem(kpiChartsStorageKey(userId));
   } catch {
     /* quota / private mode */
   }

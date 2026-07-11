@@ -19,6 +19,8 @@ export type GestionaleAiActionButtonProps = ButtonHTMLAttributes<HTMLButtonEleme
   size?: GestionaleAiActionButtonSize;
   /** Mostra icona spark Gemini a sinistra del testo. */
   showIcon?: boolean;
+  /** Solo icona su mobile (toolbar compatta): stella centrata, testo da sm+. */
+  iconOnly?: boolean;
   /** Stato generazione / attesa modello. */
   loading?: boolean;
   children: ReactNode;
@@ -48,6 +50,7 @@ export function GestionaleAiActionButton({
   variant = "primary",
   size = "md",
   showIcon = true,
+  iconOnly = false,
   loading = false,
   className = "",
   type = "button",
@@ -56,6 +59,7 @@ export function GestionaleAiActionButton({
   ...rest
 }: GestionaleAiActionButtonProps) {
   const isDisabled = disabled || loading;
+  const labelClass = iconOnly ? "hidden min-w-0 truncate sm:inline" : "min-w-0 truncate";
 
   return (
     <button
@@ -63,9 +67,11 @@ export function GestionaleAiActionButton({
       disabled={isDisabled}
       data-gestionale-ai-action=""
       data-variant={variant}
+      data-icon-only={iconOnly ? "true" : undefined}
       aria-busy={loading || undefined}
       className={[
         variantSizeClass[variant][size],
+        iconOnly ? "gestionale-ai-action-btn-icon-only max-sm:h-11 max-sm:w-11 max-sm:shrink-0 max-sm:gap-0 max-sm:p-0" : "",
         loading ? "gestionale-ai-action-btn-loading" : "",
         dsFocus,
         dsDisabled,
@@ -88,7 +94,7 @@ export function GestionaleAiActionButton({
           <GeminiSparkIcon className={iconSizeClass[size]} />
         </span>
       ) : null}
-      <span className="min-w-0 truncate">{children}</span>
+      <span className={labelClass}>{children}</span>
     </button>
   );
 }

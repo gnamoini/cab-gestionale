@@ -67,6 +67,7 @@ export function LavorazioneCreateModal({
   open,
   onClose,
   defaultMezzoId,
+  initialFields,
   createdBy,
   onCreated,
   mezzi = [],
@@ -79,6 +80,8 @@ export function LavorazioneCreateModal({
   open: boolean;
   onClose: () => void;
   defaultMezzoId?: string | null;
+  /** Precompila scheda ingresso (es. da acquisizione AI). */
+  initialFields?: SchedaIngressoFields | null;
   createdBy: string | null;
   onCreated?: (id: string) => void;
   mezzi?: readonly MezzoGestito[];
@@ -255,8 +258,15 @@ export function LavorazioneCreateModal({
     if (formInitRef.current) return;
     formInitRef.current = true;
     const addetto0 = addettiOpts[0] ?? "";
+    const emptyFields = emptySchedaIngressoFields(addetto0);
+    const fieldsInit = initialFields
+      ? mergeSchedaIngressoFields(emptyFields, initialFields)
+      : emptyFields;
+    if (!fieldsInit.addettoAccettazione.trim()) {
+      fieldsInit.addettoAccettazione = addetto0;
+    }
     resetSections({
-      fields: emptySchedaIngressoFields(addetto0),
+      fields: fieldsInit,
       meta: {
         mezzoId: (defaultMezzoId ?? "").trim(),
         stato: defaultAccettazioneStatoId,
@@ -272,6 +282,7 @@ export function LavorazioneCreateModal({
   }, [
     open,
     defaultMezzoId,
+    initialFields,
     prioritaOpts,
     addettiOpts,
     defaultAccettazioneStatoId,

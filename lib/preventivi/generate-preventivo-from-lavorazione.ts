@@ -262,7 +262,11 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
     lastEditedBy: autore,
   };
   const strutturato = ensurePreventivoStruttura(draft);
-  return { ...strutturato, ...calcolaTotaliPreventivo(strutturato) };
+  const withTotals = { ...strutturato, ...calcolaTotaliPreventivo(strutturato) };
+  if (opts.mezzo?.id) {
+    (withTotals as PreventivoRecord & { mezzoId?: string }).mezzoId = opts.mezzo.id;
+  }
+  return withTotals;
 }
 
 export { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";

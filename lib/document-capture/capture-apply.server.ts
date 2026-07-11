@@ -17,6 +17,7 @@ import {
   createCaptureInterventoWriteDeps,
   fetchCaptureMezziCatalog,
 } from "@/lib/document-capture/capture-intervento-write-deps.server";
+import { discardEphemeralDocumentCapture } from "@/lib/document-capture/discard-ephemeral-capture.server";
 import { mutateCaptureWithEvent } from "@/lib/document-capture/mutate-capture-with-event.server";
 import { resolveFieldsForHash } from "@/lib/document-capture/resolve-fields-for-hash";
 import { CapturePlanStaleError, hashConfirmedCaptureFields } from "@/lib/document-capture/capture-plan-staleness";
@@ -330,6 +331,12 @@ export async function applyDocumentCapturePlan(input: {
     userId,
   });
 
+  try {
+    await discardEphemeralDocumentCapture(input.captureId, "ephemeral_after_apply");
+  } catch {
+    // ponytail: lavorazione creata — discard best-effort
+  }
+
   return { ok: true, lavorazioneId: result.lavorazioneId };
 }
 
@@ -371,6 +378,12 @@ export async function resumeFailedCaptureApply(input: {
     resume: true,
     existingLavorazioneId: partialLavId,
   });
+
+  try {
+    await discardEphemeralDocumentCapture(input.captureId, "ephemeral_after_apply");
+  } catch {
+    // ponytail: best-effort
+  }
 
   return { ok: true, lavorazioneId: result.lavorazioneId };
 }

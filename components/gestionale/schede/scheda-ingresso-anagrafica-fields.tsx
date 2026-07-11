@@ -44,7 +44,8 @@ function SchedaIngressoAnagraficaFieldsInner({
   sections = ALL_SECTIONS,
   onExactMezzoMatch,
   lastIngressoMatch,
-  lastIngressoMatchCount = 1,
+  lastIngressoMatchCount = 0,
+  mezzoInAnagraficaOnly = false,
   onCopyLastIngresso,
   clienteRequired = false,
   marcaAttrezzaturaRequired = false,
@@ -59,6 +60,7 @@ function SchedaIngressoAnagraficaFieldsInner({
   onExactMezzoMatch?: (mezzo: MezzoGestito) => void;
   lastIngressoMatch?: { updatedAt?: string } | null;
   lastIngressoMatchCount?: number;
+  mezzoInAnagraficaOnly?: boolean;
   onCopyLastIngresso?: () => void;
   clienteRequired?: boolean;
   marcaAttrezzaturaRequired?: boolean;
@@ -302,11 +304,12 @@ function SchedaIngressoAnagraficaFieldsInner({
           </div>
           {onCopyLastIngresso ? (
             <CopiaUltimaSchedaIngressoBanner
-              visible={Boolean(lastIngressoMatch)}
+              visible={Boolean(lastIngressoMatch) || mezzoInAnagraficaOnly}
               highlight={false}
               updatedAt={lastIngressoMatch?.updatedAt}
               matchCount={lastIngressoMatchCount}
-              disabled={disabled}
+              mezzoInAnagraficaOnly={mezzoInAnagraficaOnly}
+              disabled={disabled || lastIngressoMatchCount === 0}
               onCopy={onCopyLastIngresso}
             />
           ) : null}

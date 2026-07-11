@@ -318,6 +318,7 @@ export function LavorazioniModalShell({
   subtitle,
   onBack,
   header,
+  actions,
   titleId,
   footer,
   modalRootRef,
@@ -341,6 +342,8 @@ export function LavorazioniModalShell({
   onBack?: () => void;
   /** Header custom (ignora title/subtitle se fornito). */
   header?: React.ReactNode;
+  /** Azioni in header tra titolo e pulsante chiudi. */
+  actions?: React.ReactNode;
   /** Id titolo per `aria-labelledby` (default se `title` è impostato). */
   titleId?: string;
   /** Footer fisso sotto il corpo scrollabile. */
@@ -376,6 +379,7 @@ export function LavorazioniModalShell({
         onRequestClose={onRequestClose}
         onBack={onBack}
         titleId={labelledBy}
+        actions={actions}
       />
     ) : null);
 

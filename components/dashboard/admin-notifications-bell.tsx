@@ -14,10 +14,10 @@ import {
   GestionaleLogEmpty,
   GestionaleLogList,
   gestionaleLogDrawerFooterClass,
-  gestionaleLogDrawerPanelStackClass,
+  gestionaleLogDrawerPanelFillClass,
   gestionaleLogDrawerScrollInsetClass,
   gestionaleLogPanelAsideClass,
-  gestionaleLogScrollEmbeddedClass,
+  gestionaleLogScrollClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import {
   buildAdminNotificationDipendentiHref,
@@ -306,9 +306,10 @@ export function AdminNotificationsBell() {
         title={drawerTitle}
         ariaLabel="Notifiche dashboard"
         asideClassName={gestionaleLogPanelAsideClass}
+        contentFill
       >
-        <div className={gestionaleLogDrawerPanelStackClass}>
-          <div className={`${gestionaleLogScrollEmbeddedClass} ${gestionaleLogDrawerScrollInsetClass} min-h-0 min-w-0 flex-1`}>
+        <div className={gestionaleLogDrawerPanelFillClass}>
+          <div className={`${gestionaleLogScrollClass} ${gestionaleLogDrawerScrollInsetClass} min-h-0 min-w-0 flex-1`}>
             {notifications.length === 0 ? (
               <GestionaleLogEmpty message="Nessuna notifica al momento." />
             ) : (

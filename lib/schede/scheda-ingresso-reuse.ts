@@ -1,6 +1,6 @@
 import { findMezzoByIngressoIdent } from "@/lib/mezzi/find-mezzo-by-ident";
-import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import { schedaIngressoCampiMatchIdent } from "@/lib/schede/scheda-ingresso-ident-match";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioneSchedeStore, SchedaIngressoDoc, SchedaIngressoFields } from "@/types/schede";
 
@@ -29,25 +29,6 @@ export function hasSchedaIngressoIdentLookup(
   return false;
 }
 
-function sameTargaOrMatricola(
-  a: { targa: string; matricola: string },
-  b: { targa: string; matricola: string },
-): boolean {
-  const ta = normIdent(a.targa);
-  const tb = normIdent(b.targa);
-  if (ta && tb && ta !== "—" && ta === tb) return true;
-  const ma = normIdent(a.matricola);
-  const mb = normIdent(b.matricola);
-  if (ma && mb && ma !== "non assegnata" && ma !== "—" && ma === mb) return true;
-  return false;
-}
-
-function sameScuderia(a: { nScuderia?: string }, b: { nScuderia?: string }): boolean {
-  const na = normScuderia(a.nScuderia ?? "");
-  const nb = normScuderia(b.nScuderia ?? "");
-  return Boolean(na && nb && na === nb);
-}
-
 import {
   copySchedaIngressoFieldFromClient,
   isSchedaIngressoFieldEmpty,
@@ -63,41 +44,26 @@ export type LastSchedaIngressoMatch = {
   updatedAt: string;
 };
 
-function collectLavorazioneIdsForIdent(
+function collectSchedaIngressoMatchesInStore(
   targa: string,
   matricola: string,
   nScuderia: string,
-  mezzi: readonly MezzoGestito[],
-  lavorazioni: readonly (LavorazioneAttiva | LavorazioneArchiviata)[],
+  schedeStore: LavorazioneSchedeStore,
   excludeLavorazioneId?: string,
-): string[] {
+): LastSchedaIngressoMatch[] {
   if (!hasSchedaIngressoIdentLookup(targa, matricola, nScuderia)) return [];
 
   const ident = { targa, matricola, nScuderia };
-  const mezzo = findMezzoByIngressoIdent(mezzi, ident);
-  const ids = new Set<string>();
-
-  for (const lav of lavorazioni) {
-    if (excludeLavorazioneId && lav.id === excludeLavorazioneId) continue;
-    if (sameTargaOrMatricola(ident, lav)) ids.add(lav.id);
-    else if (sameScuderia(ident, lav)) ids.add(lav.id);
-    else if (mezzo && lavorazioneMatchesMezzo(mezzo, lav)) ids.add(lav.id);
-  }
-  return [...ids];
-}
-
-function collectSchedaIngressoMatches(
-  lavIds: readonly string[],
-  schedeStore: LavorazioneSchedeStore,
-): LastSchedaIngressoMatch[] {
   const out: LastSchedaIngressoMatch[] = [];
 
-  for (const id of lavIds) {
-    const ing: SchedaIngressoDoc | null | undefined = schedeStore[id]?.ingresso;
+  for (const [lavId, bundle] of Object.entries(schedeStore)) {
+    if (excludeLavorazioneId && lavId === excludeLavorazioneId) continue;
+    const ing: SchedaIngressoDoc | null | undefined = bundle?.ingresso;
     if (!ing || ing.sorgente === "file_esterno") continue;
+    if (!schedaIngressoCampiMatchIdent(ing.campi, ident)) continue;
     out.push({
       campi: { ...ing.campi },
-      sourceLavorazioneId: id,
+      sourceLavorazioneId: lavId,
       updatedAt: ing.updatedAt,
     });
   }
@@ -106,27 +72,35 @@ function collectSchedaIngressoMatches(
   return out;
 }
 
+/** Mezzo presente in anagrafica mezzi per targa / matricola / scuderia. */
+export function isIngressoIdentInMezziAnagrafica(
+  mezzi: readonly MezzoGestito[],
+  targa: string,
+  matricola: string,
+  nScuderia = "",
+): boolean {
+  if (!hasSchedaIngressoIdentLookup(targa, matricola, nScuderia)) return false;
+  return findMezzoByIngressoIdent(mezzi, { targa, matricola, nScuderia }) != null;
+}
+
 /** Tutte le schede ingresso corrispondenti, ordinate dalla più recente. */
 export function listSchedaIngressoMatchesForIdent(
   targa: string,
   matricola: string,
   nScuderia: string,
-  mezzi: readonly MezzoGestito[],
+  _mezzi: readonly MezzoGestito[],
   schedeStore: LavorazioneSchedeStore,
-  attive: readonly LavorazioneAttiva[],
-  storico: readonly LavorazioneArchiviata[],
+  _attive: readonly LavorazioneAttiva[],
+  _storico: readonly LavorazioneArchiviata[],
   options?: { excludeLavorazioneId?: string },
 ): LastSchedaIngressoMatch[] {
-  const lavIds = collectLavorazioneIdsForIdent(
+  return collectSchedaIngressoMatchesInStore(
     targa,
     matricola,
     nScuderia,
-    mezzi,
-    [...attive, ...storico],
+    schedeStore,
     options?.excludeLavorazioneId,
   );
-  if (lavIds.length === 0) return [];
-  return collectSchedaIngressoMatches(lavIds, schedeStore);
 }
 
 /** Precompila solo i campi ancora vuoti; non tocca data ingresso né valori già digitati. */

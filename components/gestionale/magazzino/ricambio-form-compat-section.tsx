@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { CompatHierarchyMultiSelect } from "@/components/gestionale/magazzino/compat-hierarchy-multi-select";
-import { ricambioModalSectionClass, ricambioSectionTitleClass } from "@/components/gestionale/magazzino/ricambio-modal-ui";
+import { RicambioCollapsibleSection } from "@/components/gestionale/magazzino/ricambio-modal-ui";
 import type { RicambioFormState } from "@/lib/magazzino/form";
 import { parseCompatInput } from "@/lib/magazzino/form";
 import {
@@ -24,7 +24,7 @@ import {
 } from "@/lib/mezzi/hierarchy-list-prefs";
 import { compatLineDisplayText } from "@/lib/magazzino/form";
 import { useRicambioFormOptions } from "@/components/gestionale/magazzino/ricambio-form-options-context";
-import { CAB_FIELD_LABEL_ATTR, CAB_FOCUS_SCROLL_GROUP_ATTR } from "@/lib/ui/mobile-modal-behavior";
+import { CAB_FIELD_LABEL_ATTR } from "@/lib/ui/mobile-modal-behavior";
 import { dsLabel, dsTypoSmall } from "@/lib/ui/design-system";
 type SetForm = React.Dispatch<React.SetStateAction<RicambioFormState>>;
 
@@ -348,9 +348,18 @@ function RicambioFormCompatSectionInner({
     prefsTree,
   ]);
 
+  const hasCompatSelection = useMemo(
+    () =>
+      Boolean(
+        form.compatibilitaMezzi.trim() ||
+          form.compatMarcheAttrezzaturaFiltro.trim() ||
+          form.compatMarcheTelaioFiltro.trim(),
+      ),
+    [form.compatibilitaMezzi, form.compatMarcheAttrezzaturaFiltro, form.compatMarcheTelaioFiltro],
+  );
+
   return (
-    <div {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }} className={ricambioModalSectionClass}>
-      <p className={ricambioSectionTitleClass("primary")}>Compatibilità mezzi</p>
+    <RicambioCollapsibleSection title="Compatibilità mezzi" defaultCollapsed={!hasCompatSelection}>
       <div className="grid gap-3">
         {globalOpts.isLoading ? (
           <p className={dsTypoSmall}>Caricamento elenchi attrezzature e telai…</p>
@@ -505,7 +514,7 @@ function RicambioFormCompatSectionInner({
           </p>
         ) : null}
       </div>
-    </div>
+    </RicambioCollapsibleSection>
   );
 }
 

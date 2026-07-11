@@ -38,7 +38,10 @@ import {
 } from "@/lib/ui/collapsible-prefs";
 import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
-import { findMezzoForLavorazione } from "@/lib/schede/schede-autofill";
+import {
+  mezziForPendingPreventivoHandoff,
+  resolveMezzoForPendingPreventivo,
+} from "@/lib/preventivi/resolve-mezzo-for-pending-preventivo";
 import { splitLavorazioniListRowsForReport } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import { mezzoFromLavorazione, preventivoMatchesMezzo } from "@/lib/mezzi/mezzi-hub-merge";
 import { normMezzoKey } from "@/lib/mezzi/lavorazioni-sync";
@@ -66,18 +69,21 @@ import { buildNewPreventivoFromLavorazioneContext } from "@/lib/preventivi/gener
 import { buildPreventiviLavorazioneFocusHref } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
 import { Q_PREVENTIVI_LAV, Q_PREVENTIVI_LAV_ORIG, Q_PREVENTIVI_MEZZO, Q_PREVENTIVI_NUOVO, Q_PREVENTIVI_OPEN, Q_PREVENTIVI_TAB } from "@/lib/preventivi/preventivi-query";
-import { readAndClearPendingPreventivoPayload, markEphemeralPreventivoDraft, clearEphemeralPreventivoDraft, readEphemeralPreventivoDraftId } from "@/lib/preventivi/preventivi-session-bridge";
+import {
+  peekPendingPreventivoPayload,
+  clearPendingPreventivoPayload,
+  dedupePendingPreventivoAppend,
+  markEphemeralPreventivoDraft,
+  clearEphemeralPreventivoDraft,
+  readEphemeralPreventivoDraftId,
+} from "@/lib/preventivi/preventivi-session-bridge";
 import {
   appendPreventiviChangeLog,
   loadPreventiviChangeLog,
   removePreventiviChangeLogEntryById,
   type PreventiviLogStored,
 } from "@/lib/preventivi/preventivi-change-log-storage";
-import {
-  appendPreventivoSynced,
-  persistPreventivoRecord,
-  removePreventivoRecord,
-} from "@/lib/preventivi/preventivi-sync-adapter";
+import { removePreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
 import { ddtEntry } from "@/lib/domain/ddt-entry";
@@ -358,6 +364,16 @@ export function PreventiviView() {
   const mezziSnap = mezziListQ.data ?? [];
   const magazzinoQ = useMagazzinoRicambiUIQuery();
   const magSnap = magazzinoQ.data ?? [];
+  const mezziRef = useRef(mezziSnap);
+  const magRef = useRef(magSnap);
+  const rowsRef = useRef(rows);
+  const autoreRef = useRef(autore);
+  useEffect(() => {
+    mezziRef.current = mezziSnap;
+    magRef.current = magSnap;
+    rowsRef.current = rows;
+    autoreRef.current = autore;
+  }, [mezziSnap, magSnap, rows, autore]);
   const lavorazioniListQ = useLavorazioniReportSlice({ mezziRows: mezziListQ.data ?? [] });
   const lavReport = useMemo(
     () => splitLavorazioniListRowsForReport(lavorazioniListQ.data ?? []),
@@ -404,7 +420,6 @@ export function PreventiviView() {
   const flushPageSearch = useCallback(() => {
     setSearchApplied(searchInputRef.current.trim());
   }, []);
-  const pendingHandledRef = useRef(false);
   const rollbackDraftIdRef = useRef<string | null>(null);
   const draftConfirmedRef = useRef(false);
   const [logOpen, setLogOpen] = useState(false);
@@ -421,12 +436,6 @@ export function PreventiviView() {
     preventivo: PreventivoRecord | null;
   }>({ open: false, detail: null, preventivo: null });
   const [ddtBusyId, setDdtBusyId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (searchParams.get(Q_PREVENTIVI_NUOVO) !== "1") {
-      pendingHandledRef.current = false;
-    }
-  }, [searchParams]);
 
   const reload = useCallback(() => {
     void refetchPreventivi();
@@ -729,42 +738,49 @@ export function PreventiviView() {
     setFiltriEspansi(false);
   }
 
+  const nuovoHandoff = searchParams.get(Q_PREVENTIVI_NUOVO);
+
   useEffect(() => {
-    if (pendingHandledRef.current) return;
-    const nuovo = searchParams.get(Q_PREVENTIVI_NUOVO);
-    if (nuovo !== "1") return;
-    const pending = readAndClearPendingPreventivoPayload();
+    if (nuovoHandoff !== "1") return;
+    const pending = peekPendingPreventivoPayload();
     if (!pending) return;
-    pendingHandledRef.current = true;
-    const mezzo = findMezzoForLavorazione(mezziSnap, pending.lav);
-    const rec = buildNewPreventivoFromLavorazioneContext({
-      lav: pending.lav,
-      origine: pending.origine,
-      bundle: pending.bundle,
-      mezzo,
-      magazzino: magSnap,
-      autore: autore.trim() || "Operatore",
-      existingRecords: rows,
-    });
-    void appendPreventivoSynced(rec, mezziSnap, { queryClient }).then((res) => {
-      if (!res.ok) {
-        pendingHandledRef.current = false;
-        gestToast.errorOnce("preventivi-save", res.error, { module: "preventivi" });
-        return;
-      }
-      const saved = res.record;
-      markEphemeralPreventivoDraft(saved.id);
-      rollbackDraftIdRef.current = saved.id;
-      draftConfirmedRef.current = false;
-      reload();
-      setEditor({ open: true, record: saved, isNew: false, isRollbackDraft: true });
-      const sp = new URLSearchParams(searchParams.toString());
-      sp.delete(Q_PREVENTIVI_NUOVO);
-      sp.set(Q_PREVENTIVI_OPEN, saved.id);
-      const q = sp.toString();
-      router.replace(q ? `/preventivi?${q}` : "/preventivi", { scroll: false });
-    });
-  }, [searchParams, router, mezziSnap, magSnap, autore, rows, queryClient]);
+    const hasMezzoSnapshot = Boolean(pending.mezzo?.id?.trim());
+    if (mezziListQ.isLoading && !hasMezzoSnapshot) return;
+
+    void dedupePendingPreventivoAppend(async () => {
+      const mezzi = mezziForPendingPreventivoHandoff(mezziRef.current, pending);
+      const mag = magRef.current;
+      const existing = rowsRef.current;
+      const aut = autoreRef.current.trim() || "Operatore";
+      const mezzo = resolveMezzoForPendingPreventivo(mezzi, pending);
+      if (!mezzo) throw new Error("Mezzo non trovato per il cliente/lavorazione indicati.");
+      return buildNewPreventivoFromLavorazioneContext({
+        lav: pending.lav,
+        origine: pending.origine,
+        bundle: pending.bundle,
+        mezzo,
+        magazzino: mag,
+        autore: aut,
+        existingRecords: existing,
+      });
+    })
+      .then((draft) => {
+        if (!draft) return;
+        clearPendingPreventivoPayload();
+        setEditor({ open: true, record: draft, isNew: true, isRollbackDraft: false });
+        const sp = new URLSearchParams(window.location.search);
+        sp.delete(Q_PREVENTIVI_NUOVO);
+        const q = sp.toString();
+        router.replace(q ? `/preventivi?${q}` : "/preventivi", { scroll: false });
+      })
+      .catch((err: unknown) => {
+        const msg =
+          err instanceof Error && err.message.trim()
+            ? err.message.trim()
+            : "Impossibile creare il preventivo dalle schede.";
+        gestToast.error(msg, { module: "preventivi", action: "create" });
+      });
+  }, [nuovoHandoff, queryClient, router, reload, gestToast, mezziListQ.isLoading, mezziSnap]);
 
   useEffect(() => {
     if (!focusPreventivoId) return;

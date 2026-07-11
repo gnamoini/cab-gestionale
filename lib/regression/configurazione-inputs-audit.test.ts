@@ -49,7 +49,8 @@ assert.doesNotMatch(configSources, /<datalist\b/);
 
 assert.match(settingsUnifiedList, /addAriaLabel/);
 assert.match(settingsClienti, /addAriaLabel="Nuovo cliente"/);
-assert.match(settingsMarche, /placeholder="Nuova marca"/);
+assert.match(settingsMarche, /ColorSwatchButton/);
+assert.match(settingsMarche, /setMarcaBadgeColor/);
 assert.match(settingsEconomici, /FIELD_ID = "config-costo-orario-default"/);
 assert.match(settingsEconomici, /htmlFor=\{FIELD_ID\}/);
 assert.match(settingsClienti, /settingsConfigFieldId\("config-sconto-cliente"/);

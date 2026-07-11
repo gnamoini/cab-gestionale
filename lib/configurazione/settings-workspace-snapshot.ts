@@ -59,6 +59,7 @@ export function snapshotFromResolved(r: CabAppSettingsResolved): SettingsWorkspa
     mag: {
       marche: [...r.magazzinoMaster.marche],
       scontoFornitoreByMarca: { ...(r.magazzinoMaster.scontoFornitoreByMarca ?? {}) },
+      colorByMarca: { ...(r.magazzinoMaster.colorByMarca ?? {}) },
       categorie: [...r.magazzinoMaster.categorie],
       mezziCompatibili: [...r.magazzinoMaster.mezziCompatibili],
       fornitori: [...(r.magazzinoMaster.fornitori ?? [])],

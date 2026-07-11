@@ -26,7 +26,12 @@ import type {
   LavorazioniFilterCatalog,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
-import { LavorazioniDigitalCaptureLauncher } from "@/components/document-capture/lavorazioni-digital-capture-launcher";
+import { LavorazioniDigitalCaptureLauncher, type CaptureSchedeOpenRequest } from "@/components/document-capture/lavorazioni-digital-capture-launcher";
+import { SchedaBlankPdfMenu } from "@/components/document-capture/scheda-blank-pdf-actions";
+import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
+import type { MezzoGestito } from "@/lib/mezzi/types";
+import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
+import type { LavorazioneSchedeStore } from "@/types/schede";
 
 function IconPrint({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
   return (
@@ -71,6 +76,7 @@ export function LavorazioniPageHeaderToolbar({
           logTitle="Storico modifiche lavorazioni"
           overflowActions={
             <>
+              <SchedaBlankPdfMenu />
               <Tooltip content={printBusy ? "Generazione PDF…" : "Stampa PDF lavorazioni in corso"}><button type="button" className={`${dsPageToolbarBtn}${printBusy ? " !cursor-wait !opacity-100" : ""}`} onClick={onPrint} disabled={printBusy} aria-busy={printBusy} aria-label={printBusy ? "Generazione PDF in corso" : "Stampa lavorazioni in corso"}>
                 {printBusy ? (<LoadingSpinner size="sm" label="Generazione PDF…"/>) : (<IconPrint />)}
                 {printBusy ? "Generazione PDF…" : "Stampa"}
@@ -114,6 +120,14 @@ export type LavorazioniListToolbarProps = {
   chiuseFilteredCount: number;
   onOpenCreate: () => void;
   onPrimeCreate: () => void;
+  onCaptureLavorazioneCreated?: (id: string, opts?: { skipTableFocus?: boolean }) => void;
+  onOpenSchedeFromCapture?: (request: CaptureSchedeOpenRequest) => void | Promise<boolean>;
+  captureMezzi?: readonly MezzoGestito[];
+  captureSchedeStore?: LavorazioneSchedeStore;
+  captureAttive?: readonly LavorazioneAttiva[];
+  captureStorico?: readonly LavorazioneArchiviata[];
+  captureSharedGlobalOpts?: GlobalOptionsSlice;
+  captureSharedMezziCatalog?: readonly MezzoGestito[];
 };
 
 /** Toolbar ricerca/filtri lista Lavorazioni — presentational. */
@@ -140,6 +154,14 @@ export function LavorazioniListToolbar({
   chiuseFilteredCount,
   onOpenCreate,
   onPrimeCreate,
+  onCaptureLavorazioneCreated,
+  onOpenSchedeFromCapture,
+  captureMezzi,
+  captureSchedeStore,
+  captureAttive,
+  captureStorico,
+  captureSharedGlobalOpts,
+  captureSharedMezziCatalog,
 }: LavorazioniListToolbarProps) {
   const filtersActive = hasPageClientFilters || navMezzoFilterActive;
   const searchActive = searchApplied.trim().length > 0 || searchInput.trim().length > 0;
@@ -156,15 +178,29 @@ export function LavorazioniListToolbar({
       <section aria-label="Azioni e filtri lavorazioni (in corso e archivio)">
         <PageToolbar
           primaryAction={
-            <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-2">
+            <div className="flex min-w-0 w-full items-center gap-1.5 overflow-hidden">
               <Tooltip content={!canEditWorkOrders
                     ? READONLY_PERMISSION_HINT
                     : !createdBy
                       ? "Accedi per creare una lavorazione."
-                      : undefined}><button type="button" onClick={onOpenCreate} onPointerEnter={onPrimeCreate} className={dsPageToolbarCtaCompact} disabled={mutPendingBlocking || !createdBy || !canEditWorkOrders}>
+                      : undefined}><button type="button" onClick={onOpenCreate} onPointerEnter={onPrimeCreate} className={`${dsPageToolbarCtaCompact} flex-1`} disabled={mutPendingBlocking || !createdBy || !canEditWorkOrders}>
                 <PageToolbarCtaLabel short="+ Nuova" full="+ Nuova lavorazione"/>
               </button></Tooltip>
-              <LavorazioniDigitalCaptureLauncher enabled={canEditWorkOrders} size="md" className="h-11 shrink-0" />
+              <LavorazioniDigitalCaptureLauncher
+                enabled={canEditWorkOrders}
+                createdBy={createdBy ?? null}
+                size="md"
+                className="shrink-0"
+                mobileIconOnly
+                mezzi={captureMezzi}
+                schedeStore={captureSchedeStore}
+                attive={captureAttive}
+                storico={captureStorico}
+                sharedGlobalOpts={captureSharedGlobalOpts}
+                sharedMezziCatalog={captureSharedMezziCatalog}
+                onLavorazioneCreated={onCaptureLavorazioneCreated}
+                onOpenSchedeFromCapture={onOpenSchedeFromCapture}
+              />
             </div>
           }
           search={

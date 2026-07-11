@@ -50,6 +50,7 @@ assert.match(globals, /\.gestionale-textarea/);
 assert.match(globals, /field-sizing:\s*content/);
 assert.match(globals, /data-cab-auto-grow/);
 assert.match(ssotSrc, /data-cab-textarea-scrollable/);
+assert.match(ssotSrc, /spellCheck = false/);
 assert.match(globals, /data-cab-textarea-scrollable/);
 assert.match(globals, /field-sizing:\s*fixed/);
 assert.match(globals, /scrollbar-gutter:\s*stable/);

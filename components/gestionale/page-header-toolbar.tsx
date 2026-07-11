@@ -4,7 +4,7 @@ import { Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { LoadingSpinner } from "@/components/design-system/loading";
 import { PageToolbarCtaLabel } from "@/components/design-system/page-toolbar";
-import { ToolbarGroupOverflowToggle } from "@/components/design-system/toolbar-group";
+import { ToolbarGroupOverflowToggle } from "@/components/design-system/toolbar-group";
 import { MobileFilterDrawer } from "@/components/gestionale/mobile-filter-drawer";
 import { IconGestionaleLog, IconGestionaleUndo, IconGestionaleRefresh } from "@/components/gestionale/gestionale-log-ui";
 import {
@@ -135,6 +135,8 @@ export function GestionalePageToolbarActions({
   onUndo,
   onOpenLog,
   logTitle = "Storico modifiche",
+  /** Su mobile sposta il log nel drawer «Altro» (es. Magazzino). */
+  logInOverflowOnMobile = false,
   overflowActions,
   overflowOpen: overflowOpenProp,
   onOverflowToggle,
@@ -149,6 +151,7 @@ export function GestionalePageToolbarActions({
   onUndo?: () => void;
   onOpenLog: () => void;
   logTitle?: string;
+  logInOverflowOnMobile?: boolean;
   /** Utility modulo (Stampa, Kanban, …) — drawer «Altro» su mobile, inline da sm+. */
   overflowActions?: ReactNode;
   overflowOpen?: boolean;
@@ -166,11 +169,39 @@ export function GestionalePageToolbarActions({
   const undoInactive = undoDisabled || !canUndo || undoPending;
   void logTitle;
 
+  const hasOverflowMenu = Boolean(overflowActions) || logInOverflowOnMobile;
+
   useEffect(() => {
     if (smUp && overflowOpen) closeOverflow();
   }, [smUp, overflowOpen, closeOverflow]);
 
-  const showOverflowDrawer = !smUp && overflowOpen && Boolean(overflowActions);
+  const showOverflowDrawer = !smUp && overflowOpen && hasOverflowMenu;
+
+  const renderLogButton = (extraClass = "") => (
+    <Tooltip content="Log">
+      <button
+        type="button"
+        onClick={onOpenLog}
+        className={`${dsPageToolbarIconBtn} shrink-0 ${extraClass}`.trim()}
+        aria-label="Log modifiche"
+      >
+        <IconGestionaleLog />
+        <span className="sr-only">Log modifiche</span>
+      </button>
+    </Tooltip>
+  );
+
+  const renderLogOverflowAction = () => (
+    <button
+      type="button"
+      onClick={onOpenLog}
+      className={`${dsPageToolbarBtn} w-full justify-start`}
+      aria-label="Log modifiche"
+    >
+      <IconGestionaleLog />
+      <span>Log modifiche</span>
+    </button>
+  );
 
   return (
     <>
@@ -191,18 +222,8 @@ export function GestionalePageToolbarActions({
             </button>
           </Tooltip>
         ) : null}
-        <Tooltip content="Log">
-          <button
-            type="button"
-            onClick={onOpenLog}
-            className={`${dsPageToolbarIconBtn} shrink-0`}
-            aria-label="Log modifiche"
-          >
-            <IconGestionaleLog />
-            <span className="sr-only">Log modifiche</span>
-          </button>
-        </Tooltip>
-        {overflowActions ? (
+        {logInOverflowOnMobile ? <div className="hidden sm:contents">{renderLogButton()}</div> : renderLogButton()}
+        {hasOverflowMenu ? (
           <>
             <div className="hidden min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 sm:flex sm:flex-wrap">
               {overflowActions}
@@ -221,7 +242,10 @@ export function GestionalePageToolbarActions({
           onApply={closeOverflow}
           closeOnBodyButtonClick
         >
-          <div className="flex flex-col gap-2 [&_button]:w-full [&_button]:justify-center">{overflowActions}</div>
+          <div className="flex flex-col gap-2 [&_button]:w-full">
+            {logInOverflowOnMobile ? renderLogOverflowAction() : null}
+            {overflowActions}
+          </div>
         </MobileFilterDrawer>
       ) : null}
     </>

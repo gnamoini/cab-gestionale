@@ -24,7 +24,8 @@ export type CaptureEventType =
   | "field_overridden"
   | "document_edited"
   | "validation_reviewed"
-  | "apply_approved";
+  | "apply_approved"
+  | "entity_resolution_confirmed";
 
 export function captureEventIdempotencyKey(
   eventType: CaptureEventType,
@@ -63,6 +64,8 @@ export function captureEventIdempotencyKey(
       return `apply_started:${input.applicationId ?? "unknown"}`;
     case "fields_confirmed":
       return `fields_confirmed:${input.captureVersion ?? 0}`;
+    case "entity_resolution_confirmed":
+      return `entity_resolution_confirmed:${input.captureVersion ?? 0}`;
     case "field_overridden":
       return `field_overridden:${input.linkField ?? "field"}:${input.captureVersion ?? 0}`;
     case "document_edited":

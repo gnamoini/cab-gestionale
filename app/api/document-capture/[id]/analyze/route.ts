@@ -61,7 +61,8 @@ export async function POST(request: Request, context: RouteContext) {
   });
 
   if (!result.ok) {
-    const status = result.code === "not_configured" ? 503 : 400;
+    const status =
+      result.code === "not_configured" ? 503 : result.code === "no_fields" ? 422 : 400;
     return NextResponse.json(
       withImportCorrelation(correlationId, { error: result.message, code: result.code }),
       { status, headers: importCorrelationHeaders(correlationId) },

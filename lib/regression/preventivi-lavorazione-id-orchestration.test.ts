@@ -7,10 +7,11 @@ const viewSrc = fs.readFileSync(path.join(ROOT, "components/preventivi/preventiv
 
 assert.match(
   viewSrc,
-  /void appendPreventivoSynced\(rec, mezziSnap[\s\S]*?sp\.set\(Q_PREVENTIVI_OPEN, saved\.id\)[\s\S]*?router\.replace/,
+  /void dedupePendingPreventivoAppend\(async \(\) => \{[\s\S]*?buildNewPreventivoFromLavorazioneContext\([\s\S]*?clearPendingPreventivoPayload\(\)[\s\S]*?isNew: true/,
 );
+assert.doesNotMatch(viewSrc, /appendPreventivoSynced\(rec, mezzi/);
 assert.doesNotMatch(viewSrc, /sp\.set\(Q_PREVENTIVI_OPEN, rec\.id\)/);
-assert.match(viewSrc, /pendingHandledRef\.current = false/);
+assert.match(viewSrc, /peekPendingPreventivoPayload/);
 assert.match(viewSrc, /editor\.open && editor\.isRollbackDraft/);
 
 console.log("preventivi-lavorazione-id-orchestration.test.ts OK");

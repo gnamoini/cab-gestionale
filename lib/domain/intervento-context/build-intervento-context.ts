@@ -60,6 +60,10 @@ function emptySchedaIngressoFields(): SchedaIngressoFields {
   };
 }
 
+function safeMezzoText(v: string | null | undefined): string {
+  return typeof v === "string" ? v.trim() : "";
+}
+
 function mezzoSnapshotFromRow(row: MezzoRow | null | undefined, gestito?: MezzoGestito | null): MezzoSnapshot {
   const g = gestito ?? (row ? mezzoGestitoFromRow(row) : null);
   if (!g) {
@@ -79,15 +83,15 @@ function mezzoSnapshotFromRow(row: MezzoRow | null | undefined, gestito?: MezzoG
   }
   return {
     id: g.id,
-    cliente: g.cliente.trim(),
-    utilizzatore: g.utilizzatore.trim(),
-    marca: g.marca.trim(),
-    modello: g.modello.trim(),
-    targa: g.targa.trim(),
-    matricola: g.matricola.trim(),
-    nScuderia: (g.numeroScuderia ?? "").trim(),
-    tipoAttrezzatura: g.tipoAttrezzatura.trim(),
-    cantiere: (g.cantiere ?? "").trim(),
+    cliente: safeMezzoText(g.cliente),
+    utilizzatore: safeMezzoText(g.utilizzatore),
+    marca: safeMezzoText(g.marca),
+    modello: safeMezzoText(g.modello),
+    targa: safeMezzoText(g.targa),
+    matricola: safeMezzoText(g.matricola),
+    nScuderia: safeMezzoText(g.numeroScuderia),
+    tipoAttrezzatura: safeMezzoText(g.tipoAttrezzatura),
+    cantiere: safeMezzoText(g.cantiere),
     present: true,
   };
 }

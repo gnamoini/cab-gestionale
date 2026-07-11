@@ -5,6 +5,7 @@ import {
   devInvariantCompatReadGuard,
   readCompatDisplayForUi,
   readCompatLabelsForUi,
+  readCompatModelsDisplayForUi,
   readCompatSortKeyForUi,
   resetCompatReadGuardWarningsForTest,
 } from "@/lib/magazzino/compat/compat-read-guard";
@@ -47,6 +48,7 @@ assert.equal(
   readCompatDisplayForUi(input, mezziListe, "test.display"),
   resolveCompatibilitaRicambio(input, mezziListe).display,
 );
+assert.equal(readCompatModelsDisplayForUi(input, mezziListe, "test.models"), "500");
 
 assert.deepEqual(
   readCompatLabelsForUi(input, undefined, "test.labels-no-liste"),

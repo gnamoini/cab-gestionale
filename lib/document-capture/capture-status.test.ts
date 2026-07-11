@@ -10,6 +10,8 @@ assertCaptureStatusTransition("pending_upload", "uploaded");
   assertCaptureStatusTransition("dry_run", "applying");
   assertCaptureStatusTransition("applying", "applied");
   assertCaptureStatusTransition("failed", "applying");
+  assertCaptureStatusTransition("failed", "analyzing");
+  assertCaptureStatusTransition("review", "analyzing");
 
 try {
   assertCaptureStatusTransition("uploaded", "pending_upload");

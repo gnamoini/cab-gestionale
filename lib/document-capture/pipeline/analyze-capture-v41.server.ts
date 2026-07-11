@@ -8,7 +8,8 @@ import {
   isGeminiConfigured,
 } from "@/lib/ai/gemini-client";
 import type { CaptureExtractionResult } from "@/lib/document-capture/capture-extraction-schema";
-import { captureExtractionSchema } from "@/lib/document-capture/capture-extraction-schema";
+import { captureExtractionSchema, listCaptureExtractionFields } from "@/lib/document-capture/capture-extraction-schema";
+import { buildGeminiCaptureDocumentPart } from "@/lib/document-capture/gemini-capture-content";
 import {
   loadPipelineState,
   saveDocumentModelAndPipelineState,
@@ -23,6 +24,11 @@ import {
 } from "@/lib/document-capture/orchestrator/pipeline-execution-store.server";
 import { buildPipelineIdempotencyKey } from "@/lib/document-capture/orchestrator/pipeline-orchestrator";
 import { tracePipelinePhase } from "@/lib/document-capture/observability/pipeline-observability.server";
+import { normalizeCaptureMime } from "@/lib/document-capture/capture-mime";
+import {
+  applyEntityResolutionToCaptureFields,
+  mergeResolutionIntoFieldRows,
+} from "@/lib/entity-resolution/server/apply-capture-resolution.server";
 import { parsePhysicalPages } from "@/lib/document-capture/physical/physical-parser";
 import { projectDocumentModelToFlatFields } from "@/lib/document-capture/projection/document-model-flat-projection";
 import {
@@ -43,16 +49,26 @@ export type AnalyzeCaptureV41Result =
       durationMs: number;
       reused: boolean;
       documentModelVersionHash: string;
+      fieldCount: number;
     }
-  | { ok: false; code: "not_configured" | "not_finalized" | "failed"; message: string };
+  | { ok: false; code: "not_configured" | "not_finalized" | "failed" | "no_fields"; message: string };
+
+async function countCaptureFields(captureId: string): Promise<number> {
+  const sb = await createSupabaseServerUserClient();
+  const { count } = await sb
+    .from("document_capture_fields")
+    .select("id", { count: "exact", head: true })
+    .eq("document_capture_id", captureId);
+  return count ?? 0;
+}
 
 function legacyToExtractionResult(
   attemptId: string,
   legacy: CaptureExtractionResult,
   meta: ExtractionResult["modelMetadata"],
 ): ExtractionResult {
-  const fields = Object.entries(legacy.fields).map(([key, field], idx) => ({
-    key,
+  const fields = listCaptureExtractionFields(legacy.fields).map((field, idx) => ({
+    key: field.key,
     value: field.value,
     confidence: field.confidence,
     pageIndex: Math.min(idx, Math.max(0, (meta.pageCount ?? 1) - 1)),
@@ -93,14 +109,24 @@ export async function analyzeDocumentCaptureV41(
   const idempotencyKey = buildPipelineIdempotencyKey("ai_extract", captureId, `v${capture.capture_version}`);
   const existing = await findPipelineExecution(idempotencyKey);
   if (existing?.status === "completed" && existing.resultRef) {
-    const doc = await sb
-      .from("document_capture")
-      .select("document_model")
-      .eq("id", captureId)
-      .maybeSingle();
-    const hash =
-      (doc.data?.document_model as { metadata?: { contentHash?: string } } | null)?.metadata?.contentHash ?? "";
-    return { ok: true, attemptId: existing.resultRef, durationMs: 0, reused: true, documentModelVersionHash: hash };
+    const fieldCount = await countCaptureFields(captureId);
+    if (fieldCount > 0) {
+      const doc = await sb
+        .from("document_capture")
+        .select("document_model")
+        .eq("id", captureId)
+        .maybeSingle();
+      const hash =
+        (doc.data?.document_model as { metadata?: { contentHash?: string } } | null)?.metadata?.contentHash ?? "";
+      return {
+        ok: true,
+        attemptId: existing.resultRef,
+        durationMs: 0,
+        reused: true,
+        documentModelVersionHash: hash,
+        fieldCount,
+      };
+    }
   }
 
   await mutateCaptureWithEvent({
@@ -132,14 +158,31 @@ export async function analyzeDocumentCaptureV41(
   }
 
   const bytes = new Uint8Array(await fileData.arrayBuffer());
-  const mime = capture.mime ?? fileData.type ?? "application/pdf";
+  const mime = normalizeCaptureMime({
+    mime: capture.mime ?? fileData.type,
+    fileName: capture.storage_path.split("/").pop(),
+    bytes,
+  });
   const plugin = ensureSchedaOfficinaPluginRegistered();
   const t0 = performance.now();
 
   let pipelineState = markUploadUploaded((await loadPipelineState(captureId)) ?? { ...INITIAL_PIPELINE_STATE });
 
-  const pageObjects = await parsePhysicalPages(bytes);
-  tracePipelinePhase({ captureId, phase: "physical_parse", outcome: "ok" });
+  let pageObjects: Awaited<ReturnType<typeof parsePhysicalPages>>;
+  try {
+    pageObjects = await parsePhysicalPages(bytes, mime);
+    tracePipelinePhase({ captureId, phase: "physical_parse", outcome: "ok" });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Parsing file non riuscito";
+    await mutateCaptureWithEvent({
+      captureId,
+      eventType: "analyze_failed",
+      idempotencyKey: `analyze_failed:parse:${capture.capture_version}`,
+      payload: { errorCode: "physical_parse_failed", mime },
+      newStatus: "failed",
+    });
+    return { ok: false, code: "failed", message };
+  }
 
   let lastError: unknown;
   let attemptId = "";
@@ -156,7 +199,7 @@ export async function analyzeDocumentCaptureV41(
             role: "user",
             content: [
               { type: "text", text: schedaOfficinaPromptContract.userPromptTemplate },
-              { type: "file", data: Buffer.from(bytes), mediaType: mime },
+              buildGeminiCaptureDocumentPart(bytes, mime),
             ],
           },
         ],
@@ -226,7 +269,7 @@ export async function analyzeDocumentCaptureV41(
       extractionResult.attemptId = attemptId;
 
       const flatFields = projectDocumentModelToFlatFields(document);
-      const fieldRows = flatFields.map((f) => ({
+      let fieldRows = flatFields.map((f) => ({
         company_id: capture.company_id,
         document_capture_id: captureId,
         attempt_id: attemptId,
@@ -236,7 +279,15 @@ export async function analyzeDocumentCaptureV41(
         confidence: f.confidence,
         value_source: "ai" as const,
       }));
+      let resolutionAudit: Awaited<ReturnType<typeof applyEntityResolutionToCaptureFields>>["audit"] | undefined;
       if (fieldRows.length > 0) {
+        const resolution = await applyEntityResolutionToCaptureFields(sb, {
+          companyId: capture.company_id,
+          captureId,
+          fields: fieldRows.map((f) => ({ field_key: f.field_key, raw_value: f.raw_value })),
+        });
+        resolutionAudit = resolution.audit;
+        fieldRows = mergeResolutionIntoFieldRows(fieldRows, resolution);
         await sb.from("document_capture_fields").upsert(fieldRows, {
           onConflict: "document_capture_id,field_key",
         });
@@ -245,6 +296,21 @@ export async function analyzeDocumentCaptureV41(
       pipelineState = advancePipelineStateForPhase(pipelineState, "ai_extract", true);
       pipelineState = advancePipelineStateForPhase(pipelineState, "validate", validation.status !== "blocked");
       await saveDocumentModelAndPipelineState({ captureId, document, pipelineState });
+
+      if (fieldRows.length === 0) {
+        await mutateCaptureWithEvent({
+          captureId,
+          eventType: "analyze_failed",
+          idempotencyKey: `analyze_failed:empty:${capture.capture_version}`,
+          payload: { errorCode: "no_fields", pipeline: "v4.1" },
+          newStatus: "failed",
+        });
+        return {
+          ok: false,
+          code: "no_fields",
+          message: "Nessun dato letto dalla scheda. Verifica che foto o PDF siano nitidi e riprova.",
+        };
+      }
 
       await savePipelineExecution({
         id: crypto.randomUUID(),
@@ -266,6 +332,7 @@ export async function analyzeDocumentCaptureV41(
           fieldCount: fieldRows.length,
           pipeline: "v4.1",
           documentModelVersionHash: document.metadata.contentHash,
+          entityResolution: resolutionAudit,
         },
         newStatus: "review",
       });
@@ -276,6 +343,7 @@ export async function analyzeDocumentCaptureV41(
         durationMs,
         reused: false,
         documentModelVersionHash: document.metadata.contentHash,
+        fieldCount: fieldRows.length,
       };
     } catch (e) {
       lastError = e;

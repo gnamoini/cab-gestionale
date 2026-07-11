@@ -19,15 +19,30 @@ import {
   type MagazzinoFilterCatalog,
   type MagazzinoTagliandoFilter,
 } from "@/lib/magazzino/magazzino-advanced-filters";
+import { dsPageToolbarBtn } from "@/lib/ui/design-system";
+
+function magazzinoPresetToggleClass(active: boolean) {
+  return active
+    ? `${dsPageToolbarBtn} w-full justify-start sm:w-auto border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]`
+    : `${dsPageToolbarBtn} w-full justify-start sm:w-auto`;
+}
 
 export function MagazzinoAdvancedFilterPanel({
   filters,
   onChange,
   catalog,
+  soloSottoScorta,
+  nascondiScortaZero,
+  onSoloSottoScortaChange,
+  onNascondiScortaZeroChange,
 }: {
   filters: MagazzinoAdvancedFilters;
   onChange: (patch: Partial<MagazzinoAdvancedFilters>) => void;
   catalog: MagazzinoFilterCatalog;
+  soloSottoScorta: boolean;
+  nascondiScortaZero: boolean;
+  onSoloSottoScortaChange: (next: boolean) => void;
+  onNascondiScortaZeroChange: (next: boolean) => void;
 }) {
   void catalog;
   const categoriaList = useGlobalListOptions("magazzino:categorie");
@@ -58,6 +73,43 @@ export function MagazzinoAdvancedFilterPanel({
 
   return (
     <div className="space-y-3" aria-label="Filtri avanzati magazzino">
+      <LavorazioniFilterGroup title="Filtri rapidi">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <button
+            type="button"
+            aria-pressed={soloSottoScorta}
+            onClick={() => onSoloSottoScortaChange(!soloSottoScorta)}
+            className={magazzinoPresetToggleClass(soloSottoScorta)}
+          >
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                soloSottoScorta
+                  ? "bg-[color:var(--cab-primary)]"
+                  : "bg-[color:color-mix(in_srgb,var(--cab-text-muted)_55%,transparent)]"
+              }`}
+              aria-hidden
+            />
+            Sotto scorta minima
+          </button>
+          <button
+            type="button"
+            aria-pressed={nascondiScortaZero}
+            onClick={() => onNascondiScortaZeroChange(!nascondiScortaZero)}
+            className={magazzinoPresetToggleClass(nascondiScortaZero)}
+          >
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                nascondiScortaZero
+                  ? "bg-[color:var(--cab-primary)]"
+                  : "bg-[color:color-mix(in_srgb,var(--cab-text-muted)_55%,transparent)]"
+              }`}
+              aria-hidden
+            />
+            Nascondi scorta 0
+          </button>
+        </div>
+      </LavorazioniFilterGroup>
+
       <LavorazioniFilterGroup title="Anagrafica prodotto">
         <LavorazioniFilterField label="Marca ricambio" htmlFor="mag-filter-marca-ricambio">
           <GlobalSettingsListSelect

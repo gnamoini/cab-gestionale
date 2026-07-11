@@ -33,15 +33,16 @@ assert.match(magView, /extraImportEntities=\{\["listino_ricambi"\]\}/);
 const toolbar = fs.readFileSync(path.join(ROOT, "components/data-import/data-import-export-toolbar.tsx"), "utf8");
 assert.match(toolbar, /label="Importa"/);
 assert.match(toolbar, /Esporta/);
-assert.match(toolbar, /useGlobalDropdownPortal/);
-assert.match(toolbar, /globalInputDropdownOptionClass/);
+assert.match(toolbar, /GlobalAnchoredMenu/);
+assert.match(toolbar, /layout\?: "inline" \| "drawer"/);
 assert.match(toolbar, /Scarica template/);
+assert.match(magView, /layout="drawer"/);
 
 const mezziView = fs.readFileSync(path.join(ROOT, "components/gestionale/mezzi/mezzi-view.tsx"), "utf8");
-assert.match(mezziView, /DataImportExportToolbar/);
+assert.match(mezziView, /ModuleImportEntry/);
 
 const preventiviView = fs.readFileSync(path.join(ROOT, "components/preventivi/preventivi-view.tsx"), "utf8");
-assert.match(preventiviView, /DataImportExportToolbar/);
+assert.match(preventiviView, /ModuleImportEntry|DataImportExportToolbar/);
 
 const settingsShell = fs.readFileSync(path.join(ROOT, "components/dashboard/settings/settings-workspace-shell.tsx"), "utf8");
 assert.match(settingsShell, /SettingsImportEntry/);

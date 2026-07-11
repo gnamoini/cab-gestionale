@@ -94,7 +94,7 @@ export function PageToolbar({
               <div className="flex min-w-0 w-full flex-col items-stretch gap-2 sm:hidden">
                 <ToolbarGroupSearchRow>{search}</ToolbarGroupSearchRow>
                 <ToolbarGroupPrimaryRow>
-                  <div className="min-w-0 flex-1 [&>*]:w-full">{primaryAction}</div>
+                  <div className="min-w-0 flex-1 overflow-hidden max-sm:[&>*]:w-full">{primaryAction}</div>
                   {filterActions}
                 </ToolbarGroupPrimaryRow>
               </div>
@@ -149,7 +149,6 @@ export function PageToolbar({
           onApply={closeOverflowDrawer}
           closeOnBodyButtonClick
         >
-          {meta ? <div className="mb-3 min-w-0 border-b border-[color:var(--cab-border)] pb-3">{meta}</div> : null}
           <div className="flex flex-col gap-2">{overflowActions}</div>
         </MobileFilterDrawer>
       ) : null}
@@ -157,11 +156,37 @@ export function PageToolbar({
   );
 }
 
+/** Icona + CTA toolbar mobile — stessa size dello spark AI (`GestionaleAiActionButton` md). */
+const pageToolbarCtaPlusIconClass = "h-[1.125rem] w-[1.125rem] shrink-0";
+
+function PageToolbarPlusIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={pageToolbarCtaPlusIconClass}
+      aria-hidden
+    >
+      <path d="M10 4h4v7h7v4h-7v7h-4v-7H4v-4h7V4z" />
+    </svg>
+  );
+}
+
+function splitPlusShortLabel(short: string): { hasPlus: boolean; label: string } {
+  if (short.startsWith("+ ")) return { hasPlus: true, label: short.slice(2) };
+  if (short.startsWith("+")) return { hasPlus: true, label: short.slice(1).trimStart() };
+  return { hasPlus: false, label: short };
+}
+
 /** Etichetta CTA toolbar: breve su mobile, completa da sm+. */
 export function PageToolbarCtaLabel({ short, full }: { short: string; full: string }) {
+  const mobile = splitPlusShortLabel(short);
   return (
     <>
-      <span className="sm:hidden">{short}</span>
+      <span className="inline-flex min-w-0 items-center gap-1.5 sm:hidden">
+        {mobile.hasPlus ? <PageToolbarPlusIcon /> : null}
+        <span className="min-w-0 truncate">{mobile.label}</span>
+      </span>
       <span className="hidden sm:inline">{full}</span>
     </>
   );

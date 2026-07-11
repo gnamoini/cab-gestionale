@@ -19,6 +19,7 @@ export function CopiaUltimaSchedaIngressoBanner({
   highlight,
   updatedAt,
   matchCount = 1,
+  mezzoInAnagraficaOnly = false,
   disabled,
   disabledTitle,
   onCopy,
@@ -27,8 +28,10 @@ export function CopiaUltimaSchedaIngressoBanner({
   /** Evidenzia al primo match (bordo/alone). */
   highlight: boolean;
   updatedAt?: string;
-  /** Più di 1 scheda corrispondente — alla copia si chiede quale usare. */
+  /** Schede ingresso precedenti copiabili (match stretto su identificativo). */
   matchCount?: number;
+  /** Identificativo in anagrafica mezzi senza schede ingresso precedenti. */
+  mezzoInAnagraficaOnly?: boolean;
   disabled?: boolean;
   disabledTitle?: string;
   onCopy: () => void;
@@ -68,7 +71,7 @@ export function CopiaUltimaSchedaIngressoBanner({
                   </span>{" "}
                   schede ingresso per questo identificativo. Alla copia potrai scegliere quale usare.
                 </>
-              ) : updatedAt ? (
+              ) : matchCount === 1 && updatedAt ? (
                 <>
                   Ultima scheda ingresso:{" "}
                   <span className="font-semibold tabular-nums text-[color:var(--cab-text)]">
@@ -76,13 +79,29 @@ export function CopiaUltimaSchedaIngressoBanner({
                   </span>
                   . Puoi copiare i dati nell’anagrafica corrente.
                 </>
+              ) : mezzoInAnagraficaOnly ? (
+                "Questo identificativo è già presente in anagrafica mezzi. Non risultano altre schede ingresso da copiare."
               ) : (
                 "È disponibile una scheda ingresso precedente per questo mezzo."
               )}
             </p>
           </div>
         </div>
-        <Tooltip content={disabled ? disabledTitle : "Copia campi dall’ultima scheda ingresso dello stesso mezzo"}><button type="button" className={`${dsBtnSoftOrange} w-full shrink-0 sm:w-auto ${dsFocus} ${highlight ? "shadow-[var(--cab-shadow-md)]" : ""}`} disabled={disabled} onClick={onCopy}>
+        <Tooltip
+          content={
+            disabled
+              ? disabledTitle
+              : mezzoInAnagraficaOnly
+                ? "Nessuna scheda ingresso precedente da copiare"
+                : "Copia campi dall’ultima scheda ingresso dello stesso mezzo"
+          }
+        >
+          <button
+            type="button"
+            className={`${dsBtnSoftOrange} w-full shrink-0 sm:w-auto ${dsFocus} ${highlight ? "shadow-[var(--cab-shadow-md)]" : ""}`}
+            disabled={disabled || mezzoInAnagraficaOnly}
+            onClick={onCopy}
+          >
           <IconCopiaIngressoPrecedente />
           Copia ultima scheda ingresso
         </button></Tooltip>

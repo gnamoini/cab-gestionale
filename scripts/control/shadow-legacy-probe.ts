@@ -16,7 +16,7 @@ function npmScriptFromStep(step: string): string {
 }
 
 function probe(script: string): LegacyOutcome {
-  const env = { ...process.env, CI: process.env.CI ?? "true" };
+  const env: Record<string, string | undefined> = { ...process.env, CI: process.env.CI ?? "true" };
   if (script === "production:check") {
     env.PRODUCTION_CHECK_REQUIRE_DB = env.PRODUCTION_CHECK_REQUIRE_DB ?? "1";
   }
@@ -25,7 +25,7 @@ function probe(script: string): LegacyOutcome {
   }
   const result = spawnSync("npm", ["run", script], {
     cwd: ROOT,
-    env,
+    env: env as NodeJS.ProcessEnv,
     encoding: "utf8",
     shell: true,
     stdio: "pipe",

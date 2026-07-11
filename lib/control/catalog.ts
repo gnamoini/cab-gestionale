@@ -23,7 +23,7 @@ export type CatalogEntry = {
 
 const ROOT = process.cwd();
 
-function spawnNpm(script: string, extraEnv?: NodeJS.ProcessEnv): CatalogRunResult {
+function spawnNpm(script: string, extraEnv?: Record<string, string | undefined>): CatalogRunResult {
   const result = spawnSync("npm", ["run", script], {
     cwd: ROOT,
     env: { ...process.env, ...extraEnv },
@@ -38,7 +38,7 @@ function spawnNpm(script: string, extraEnv?: NodeJS.ProcessEnv): CatalogRunResul
       blockers: [],
       warnings: [],
       unknown: true,
-      unknownReason: out.slice(0, 200) || result.error.message,
+      unknownReason: out.slice(0, 200) || result.error?.message || `npm run ${script} failed`,
     };
   }
   return { ok: false, blockers: [out.slice(-500) || `npm run ${script} failed`], warnings: [] };

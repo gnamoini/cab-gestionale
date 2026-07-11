@@ -1,4 +1,4 @@
-﻿import "server-only";
+import "server-only";
 
 import { CompanyNotConfiguredError, getCompanyIdForUserOrNull } from "@/lib/document-capture/company-id.server";
 import { requireDocumentCaptureAuth } from "@/lib/document-capture/document-capture-route-auth.server";
@@ -7,6 +7,7 @@ import {
   finalizeDocumentCaptureInTransaction,
   finalizeStorageErrorToDocumentCaptureCode,
 } from "@/lib/document-capture/finalize-transaction.server";
+import { mapDocumentCaptureUploadError } from "@/lib/document-capture/upload-error-message";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { NextResponse } from "next/server";
 
@@ -97,7 +98,7 @@ export async function POST(_request: Request, context: RouteContext) {
     if (code === "invalid_status_transition") {
       return NextResponse.json({ error: e instanceof Error ? e.message : "Transizione non valida" }, { status: 409 });
     }
-    const message = e instanceof Error ? e.message : "Finalize non riuscito";
+    const message = mapDocumentCaptureUploadError(e instanceof Error ? e.message : "Finalize non riuscito");
     const status = message.includes("Permesso") ? 403 : 400;
     return NextResponse.json({ error: message }, { status });
   }

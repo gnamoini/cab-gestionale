@@ -19,6 +19,7 @@ import { DisabledElementTooltip, OptionalTooltip, Tooltip } from "@/components/u
 import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzino-giacenza-bell";
 import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
 import { MagazzinoListinoAiBadge } from "@/components/gestionale/magazzino/magazzino-listino-ai-badge";
+import { MagazzinoMarcaMobileBadge } from "@/components/gestionale/magazzino/magazzino-marca-mobile-badge";
 import dynamic from "next/dynamic";
 
 const RicambioNewModal = dynamic(
@@ -56,7 +57,7 @@ import {
   formatMarkupDisplay,
   type RicambioFormState,
 } from "@/lib/magazzino/form";
-import { readCompatDisplayForUi, readCompatLabelsForUi } from "@/lib/magazzino/compat/compat-read-guard";
+import { readCompatDisplayForUi, readCompatLabelsForUi, readCompatModelsDisplayForUi } from "@/lib/magazzino/compat/compat-read-guard";
 import { buildLatestUndoableScortaEntryByRicambioId, latestUndoableScortaEntryForRicambio, parseScortaChange, entryMatchesMagazzinoUndoScope, type MagazzinoUndoScope } from "@/lib/magazzino/magazzino-scorta-undo";
 import { useUndoSessionId } from "@/lib/gestionale-log/use-undo-session-id";
 import { analyzeArchiveDuplicateCodes } from "@/lib/magazzino/duplicates";
@@ -75,7 +76,6 @@ import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-pref
 import type { RicambioMagazzino, SortKeyMagazzino } from "@/lib/magazzino/types";
 import { formatRicambioUnitaMisuraLabel } from "@/lib/magazzino/ricambio-unita-misura";
 import {
-  dsPageToolbarBtn,
   dsPageToolbarCtaCompact,
   dsStackPage,
   GESTIONALE_SEARCH_PLACEHOLDER,
@@ -121,7 +121,7 @@ import {
 } from "@/components/design-system";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { MagazzinoAdvancedFilterPanel } from "@/components/gestionale/magazzino/magazzino-advanced-filter-panel";
-import { MagazzinoImportMenu } from "@/components/gestionale/magazzino/magazzino-import-entry";
+import { DataImportExportToolbar } from "@/components/data-import/data-import-export-toolbar";
 import type { RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
@@ -278,10 +278,6 @@ function formatMagazzinoUltimaModificaMobileAutore(autore: string): string {
 function isMagazzinoMobilePlaceholderValue(value: string): boolean {
   const t = value.trim();
   return !t || t === "—" || t === "-";
-}
-
-function magazzinoMobileOptionalLabel(value: string, fallback: string): string {
-  return isMagazzinoMobilePlaceholderValue(value) ? fallback : value.trim();
 }
 
 function isModificaOlderThanMonths(iso: string, months: number) {
@@ -571,7 +567,7 @@ export function MagazzinoView() {
   const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
     collapsibleExpandedBoolPref(false, { scope: "magazzino", key: "filters", userId: user?.id ?? null }),
   );
-  const [toolbarOverflowOpen, setToolbarOverflowOpen] = useState(false);
+  const [headerToolbarOverflowOpen, setHeaderToolbarOverflowOpen] = useState(false);
 
   const patchAdvancedFilters = useCallback((patch: Partial<MagazzinoAdvancedFilters>) => {
     setAdvancedFilters((prev) => {
@@ -1112,6 +1108,12 @@ export function MagazzinoView() {
     [mezziListePrefs],
   );
 
+  const compatModelsDisplayFor = useCallback(
+    (row: RicambioMagazzino) =>
+      readCompatModelsDisplayForUi(row, mezziListePrefs, "magazzino-view.compatModelsDisplayFor"),
+    [mezziListePrefs],
+  );
+
   useEffect(() => {
     prodottiByIdRef.current = new Map(prodotti.map((p) => [p.id, p]));
   }, [prodotti]);
@@ -1511,7 +1513,7 @@ export function MagazzinoView() {
           <td className={`min-w-0 ${gestionaleListTableTd}`}>
             <div className="break-words font-medium leading-snug">{p.descrizione}</div>
             <div className="mt-0.5 break-words text-xs leading-snug text-zinc-500 dark:text-zinc-400">
-              {compatDisplayFor(p)}
+              {compatModelsDisplayFor(p)}
             </div>
           </td>
           <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-300`}>
@@ -1598,7 +1600,7 @@ export function MagazzinoView() {
     [
       pagedMagazzino,
       consumoMap,
-      compatDisplayFor,
+      compatModelsDisplayFor,
       magCanCreateRicambio,
       canUndoScortaById,
     ],
@@ -1621,10 +1623,15 @@ export function MagazzinoView() {
                   items={sottoScortaList}
                   onSelectRicambio={(id) => focusRicambioInTable(id, { applySottoScorta: true })}
                 />
-                <MagazzinoImportMenu
-                  disabled={!magCanCreateRicambio}
-                  onCompleted={() => void magazzinoListQ.refetch()}
-                />
+                <div className="hidden sm:block">
+                  <DataImportExportToolbar
+                    entity="magazzino_ricambi"
+                    module="magazzino"
+                    extraImportEntities={["listino_ricambi"]}
+                    disabled={!magCanCreateRicambio}
+                    onImportCompleted={() => void magazzinoListQ.refetch()}
+                  />
+                </div>
               </>
             }
             canUndo={Boolean(undoableMagazzinoLog)}
@@ -1632,6 +1639,33 @@ export function MagazzinoView() {
             onUndo={() => void undoUltimoMagazzino()}
             onOpenLog={() => setLogOpen(true)}
             logTitle="Storico modifiche magazzino"
+            logInOverflowOnMobile
+            overflowOpen={headerToolbarOverflowOpen}
+            onOverflowToggle={() => setHeaderToolbarOverflowOpen((o) => !o)}
+            overflowActions={
+              <>
+                <DataImportExportToolbar
+                  layout="drawer"
+                  className="sm:hidden"
+                  entity="magazzino_ricambi"
+                  module="magazzino"
+                  extraImportEntities={["listino_ricambi"]}
+                  disabled={!magCanCreateRicambio}
+                  onImportCompleted={() => void magazzinoListQ.refetch()}
+                />
+                {magCanDeleteRicambio && generatedListinoCount > 0 ? (
+                  <GestionaleAiActionButton
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="w-full justify-start sm:w-auto sm:justify-center"
+                    onClick={() => setDeleteGeneratedOpen(true)}
+                  >
+                    Elimina ricambi da listino ({generatedListinoCount})
+                  </GestionaleAiActionButton>
+                ) : null}
+              </>
+            }
           />
         }
       />
@@ -1705,66 +1739,13 @@ export function MagazzinoView() {
                 filters={advancedFilters}
                 onChange={patchAdvancedFilters}
                 catalog={filterCatalog}
+                soloSottoScorta={soloSottoScorta}
+                nascondiScortaZero={nascondiScortaZero}
+                onSoloSottoScortaChange={setSoloSottoScorta}
+                onNascondiScortaZeroChange={setNascondiScortaZero}
               />
             }
             onFilterReset={resetMagazzinoFilters}
-            overflowOpen={toolbarOverflowOpen}
-            onOverflowToggle={() => setToolbarOverflowOpen((o) => !o)}
-            overflowActions={
-              <>
-                {magCanDeleteRicambio && generatedListinoCount > 0 ? (
-                  <GestionaleAiActionButton
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="w-full justify-center sm:w-auto"
-                    onClick={() => setDeleteGeneratedOpen(true)}
-                  >
-                    Elimina ricambi da listino ({generatedListinoCount})
-                  </GestionaleAiActionButton>
-                ) : null}
-                <button
-                  type="button"
-                  aria-pressed={soloSottoScorta}
-                  onClick={() => setSoloSottoScorta((v) => !v)}
-                  className={
-                    soloSottoScorta
-                      ? `${dsPageToolbarBtn} w-full justify-center sm:w-auto border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]`
-                      : `${dsPageToolbarBtn} w-full justify-center sm:w-auto`
-                  }
-                >
-                  <span
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                      soloSottoScorta
-                        ? "bg-[color:var(--cab-primary)]"
-                        : "bg-[color:color-mix(in_srgb,var(--cab-text-muted)_55%,transparent)]"
-                    }`}
-                    aria-hidden
-                  />
-                  Sotto scorta minima
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={nascondiScortaZero}
-                  onClick={() => setNascondiScortaZero((v) => !v)}
-                  className={
-                    nascondiScortaZero
-                      ? `${dsPageToolbarBtn} w-full justify-center sm:w-auto border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]`
-                      : `${dsPageToolbarBtn} w-full justify-center sm:w-auto`
-                  }
-                >
-                  <span
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                      nascondiScortaZero
-                        ? "bg-[color:var(--cab-primary)]"
-                        : "bg-[color:color-mix(in_srgb,var(--cab-text-muted)_55%,transparent)]"
-                    }`}
-                    aria-hidden
-                  />
-                  Nascondi scorta 0
-                </button>
-              </>
-            }
             meta={
               <PageToolbarResultCount
                 count={filteredSorted.length}
@@ -1903,42 +1884,34 @@ export function MagazzinoView() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1 space-y-0.5">
+                    {!isMagazzinoMobilePlaceholderValue(p.marca) ? (
+                      <MagazzinoMarcaMobileBadge marca={p.marca} magazzinoMaster={appSettings?.magazzinoMaster} />
+                    ) : null}
                     <p className="line-clamp-2 text-base font-semibold leading-snug tracking-tight text-[color:var(--cab-text)]">
                       {p.descrizione.trim() || "—"}
                     </p>
-                    <div className="flex items-start gap-1.5">
-                      <p
-                        className={`min-w-0 flex-1 break-all font-mono text-sm tabular-nums tracking-wide ${
-                          isMagazzinoMobilePlaceholderValue(p.codiceFornitoreOriginale)
-                            ? "font-normal text-[color:var(--cab-text-muted)]"
-                            : "font-medium text-[color:var(--cab-text)]"
-                        }`}
-                      >
-                        {magazzinoMobileOptionalLabel(p.codiceFornitoreOriginale, "Nessuno codice")}
-                      </p>
+                    {!isMagazzinoMobilePlaceholderValue(p.codiceFornitoreOriginale) ? (
+                      <div className="flex items-start gap-1.5">
+                        <p className="min-w-0 flex-1 break-all font-mono text-sm font-medium tabular-nums tracking-wide text-[color:var(--cab-text)]">
+                          {p.codiceFornitoreOriginale.trim()}
+                        </p>
+                        <MagazzinoListinoAiBadge listinoImport={p.listinoImport} variant="mobile" />
+                      </div>
+                    ) : (
                       <MagazzinoListinoAiBadge listinoImport={p.listinoImport} variant="mobile" />
-                    </div>
+                    )}
                     {p.codiceFornitoreOriginaleSecondario.trim() ? (
                       <p className="break-all font-mono text-xs font-medium tabular-nums tracking-wide text-zinc-500 dark:text-zinc-400">
                         {p.codiceFornitoreOriginaleSecondario}
                       </p>
                     ) : null}
-                    <p
-                      className={`truncate text-[0.9375rem] leading-snug ${
-                        isMagazzinoMobilePlaceholderValue(p.marca)
-                          ? "font-normal text-[color:var(--cab-text-muted)]"
-                          : "font-medium text-[color:var(--cab-text)]"
-                      }`}
-                    >
-                      {magazzinoMobileOptionalLabel(p.marca, "Nessuna marca")}
-                    </p>
                   </div>
                   <Tooltip content={low ? "Sotto scorta minima" : "Giacenza"} side="top">
                     <MagazzinoScortaBadge value={p.scorta} low={low} variant="mobile" />
                   </Tooltip>
                 </div>
                 <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
-                  {compatDisplayFor(p)}
+                  {compatModelsDisplayFor(p)}
                 </p>
                 <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1.5 text-[11px]">
                   <div>

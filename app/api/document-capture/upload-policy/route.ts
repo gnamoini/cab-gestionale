@@ -8,6 +8,9 @@ import {
   DOCUMENT_CAPTURE_MAX_BYTES,
   isAllowedCaptureMime,
 } from "@/lib/document-capture/mime-allowlist";
+import { purgeUserEphemeralCaptures } from "@/lib/document-capture/discard-ephemeral-capture.server";
+import { DOCUMENT_CAPTURE_EPHEMERAL_SOURCE } from "@/lib/document-capture/ephemeral-capture";
+import { normalizeCaptureMime } from "@/lib/document-capture/capture-mime";
 import { createDocumentCaptureUploadPolicy } from "@/lib/document-capture/upload-policy.server";
 import { getCompanyIdForUserOrNull } from "@/lib/document-capture/company-id.server";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
@@ -37,7 +40,10 @@ export async function POST(request: Request) {
   }
 
   const fileName = body.fileName?.trim() ?? "";
-  const expectedMime = body.expectedMime?.trim().toLowerCase() ?? "";
+  const expectedMime = normalizeCaptureMime({
+    mime: body.expectedMime?.trim().toLowerCase() ?? "",
+    fileName,
+  });
   const expectedSizeBytes = Number(body.expectedSizeBytes ?? 0);
   const source = body.source?.trim() ?? "lavorazioni_drop";
 
@@ -81,6 +87,10 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (source === DOCUMENT_CAPTURE_EPHEMERAL_SOURCE) {
+      await purgeUserEphemeralCaptures({ userId });
+    }
+
     const policy = await createDocumentCaptureUploadPolicy({
       fileName,
       expectedMime,

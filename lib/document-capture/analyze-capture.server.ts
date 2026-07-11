@@ -11,33 +11,24 @@ import { classifyStorageDownloadError } from "@/lib/storage/storage-download-err
 import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
 import {
   captureExtractionSchema,
+  listCaptureExtractionFields,
   type CaptureExtractionResult,
 } from "@/lib/document-capture/capture-extraction-schema";
+import { buildGeminiCaptureDocumentPart } from "@/lib/document-capture/gemini-capture-content";
+import { SCHEDA_OFFICINA_EXTRACTION_SYSTEM, SCHEDA_OFFICINA_EXTRACTION_USER } from "@/lib/document-capture/scheda-officina-extraction-prompt";
 import { mutateCaptureWithEvent } from "@/lib/document-capture/mutate-capture-with-event.server";
+import { normalizeCaptureMime } from "@/lib/document-capture/capture-mime";
+import {
+  applyEntityResolutionToCaptureFields,
+  mergeResolutionIntoFieldRows,
+} from "@/lib/entity-resolution/server/apply-capture-resolution.server";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
-
-const SYSTEM = `Estrai campi da schede officina meccanica (ingresso, lavorazioni, ricambi).
-Per ogni campo restituisci value e confidence 0-1. Se incerto, confidence bassa.
-
-Scheda ingresso blank v2 — usa queste chiavi quando riconosci il template CAB:
-data_ingresso, cliente, cantiere, utilizzatore,
-attrezzatura_marca, attrezzatura_modello, attrezzatura_matricola, n_scuderia, ore,
-telaio_marca, telaio_modello, targa, km,
-descrizione_anomalia, nome, cognome, telefono, note.
-
-Scheda lavorazioni blank CAB — imposta schedaTipo "lavorazioni" e usa:
-cliente, targa_matricola,
-riga_1_lavorazione, riga_1_nome, riga_1_ore … fino a riga_24_* (una chiave per cella; ometti righe vuote).
-
-Scheda ricambi blank CAB — imposta schedaTipo "ricambi" e usa:
-cliente, targa_matricola (in fondo al foglio),
-riga_1_nome, riga_1_codice, riga_1_descrizione, riga_1_qt, riga_1_data … fino a riga_34_* (ometti righe vuote).`;
 
 const RETRY_BACKOFF_MS = [1_000, 3_000] as const;
 
 export type AnalyzeCaptureResult =
-  | { ok: true; attemptId: string; extraction: CaptureExtractionResult; durationMs: number }
-  | { ok: false; code: "not_configured" | "not_finalized" | "failed"; message: string };
+  | { ok: true; attemptId: string; extraction: CaptureExtractionResult; durationMs: number; fieldCount: number }
+  | { ok: false; code: "not_configured" | "not_finalized" | "failed" | "no_fields"; message: string };
 
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
@@ -89,7 +80,11 @@ export async function analyzeDocumentCapture(captureId: string): Promise<Analyze
   }
 
   const bytes = new Uint8Array(await fileData.arrayBuffer());
-  const mime = capture.mime ?? fileData.type ?? "application/pdf";
+  const mime = normalizeCaptureMime({
+    mime: capture.mime ?? fileData.type,
+    fileName: capture.storage_path.split("/").pop(),
+    bytes,
+  });
   const t0 = performance.now();
   let lastError: unknown;
 
@@ -98,13 +93,13 @@ export async function analyzeDocumentCapture(captureId: string): Promise<Analyze
       const { object, usage, response } = await generateObject({
         model,
         schema: captureExtractionSchema,
-        system: SYSTEM,
+        system: SCHEDA_OFFICINA_EXTRACTION_SYSTEM,
         messages: [
           {
             role: "user",
             content: [
-              { type: "text", text: "Estrai campi scheda officina con confidence per campo." },
-              { type: "file", data: Buffer.from(bytes), mediaType: mime },
+              { type: "text", text: SCHEDA_OFFICINA_EXTRACTION_USER },
+              buildGeminiCaptureDocumentPart(bytes, mime),
             ],
           },
         ],
@@ -148,21 +143,44 @@ export async function analyzeDocumentCapture(captureId: string): Promise<Analyze
         throw new Error(insError?.message ?? "Salvataggio attempt fallito.");
       }
 
-      const fieldRows = Object.entries(object.fields).map(([fieldKey, field]) => ({
+      let fieldRows = listCaptureExtractionFields(object.fields).map((field) => ({
         company_id: capture.company_id,
         document_capture_id: captureId,
         attempt_id: attempt.id,
-        field_key: fieldKey,
+        field_key: field.key,
         raw_value: field.value,
         normalized_value: field.value,
         confidence: field.confidence,
         value_source: "ai" as const,
       }));
 
+      let resolutionAudit: Awaited<ReturnType<typeof applyEntityResolutionToCaptureFields>>["audit"] | undefined;
       if (fieldRows.length > 0) {
+        const resolution = await applyEntityResolutionToCaptureFields(sb, {
+          companyId: capture.company_id,
+          captureId,
+          fields: fieldRows.map((f) => ({ field_key: f.field_key, raw_value: f.raw_value })),
+        });
+        resolutionAudit = resolution.audit;
+        fieldRows = mergeResolutionIntoFieldRows(fieldRows, resolution);
         await sb.from("document_capture_fields").upsert(fieldRows, {
           onConflict: "document_capture_id,field_key",
         });
+      }
+
+      if (fieldRows.length === 0) {
+        await mutateCaptureWithEvent({
+          captureId,
+          eventType: "analyze_failed",
+          idempotencyKey: `analyze_failed:empty:${capture.capture_version}`,
+          payload: { errorCode: "no_fields" },
+          newStatus: "failed",
+        });
+        return {
+          ok: false,
+          code: "no_fields",
+          message: "Nessun dato letto dalla scheda. Verifica che foto o PDF siano nitidi e riprova.",
+        };
       }
 
       await mutateCaptureWithEvent({
@@ -174,11 +192,12 @@ export async function analyzeDocumentCapture(captureId: string): Promise<Analyze
           durationMs,
           fieldCount: fieldRows.length,
           totalTokens: usage?.totalTokens ?? null,
+          entityResolution: resolutionAudit,
         },
         newStatus: "review",
       });
 
-      return { ok: true, attemptId: attempt.id, extraction: object, durationMs };
+      return { ok: true, attemptId: attempt.id, extraction: object, durationMs, fieldCount: fieldRows.length };
     } catch (e) {
       lastError = e;
       if (attempt < RETRY_BACKOFF_MS.length) {

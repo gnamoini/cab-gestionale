@@ -32,8 +32,8 @@ export function mezzoFromLavorazione(lav: LavorazioneAttiva | LavorazioneArchivi
   return {
     id: `hub-lav-${lav.id}`,
     lavorazioneMezzoId: lav.id,
-    cliente: lav.cliente,
-    utilizzatore: lav.utilizzatore,
+    cliente: lav.cliente?.trim() || "—",
+    utilizzatore: lav.utilizzatore?.trim() || "—",
     marca,
     modello,
     targa: lav.targa?.trim() || "—",

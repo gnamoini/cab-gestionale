@@ -26,7 +26,8 @@ export type ReportSectionId =
   | "magazzino_ricambi"
   | "ore_lavorate"
   | "dati_economici"
-  | "analisi_incrociate";
+  | "analisi_incrociate"
+  | "grafici_kpi";
 
 export type ReportKpiOwner = DerivedKey | "cross" | "perf";
 

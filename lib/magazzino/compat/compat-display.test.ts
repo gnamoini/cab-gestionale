@@ -13,6 +13,11 @@ assert.equal(
   compatDisplayModelsLabel([bucher5000, bucher5006]),
   "CityCat 5000, CityCat 5006",
 );
-assert.equal(compatLineModelDisplayText(compatLabelMarcaModello("Farid", "")), "(universale)");
+assert.equal(compatLineModelDisplayText(compatLabelMarcaModello("Farid", "")), "Farid (Universale)");
+assert.equal(compatDisplayModelsLabel([]), "Universale (non tutte le macchine)");
+assert.equal(
+  compatDisplayModelsLabel([compatLabelMarcaModello("Bucher", "")]),
+  "Bucher (Universale)",
+);
 
 console.log("compat-display.test.ts OK");

@@ -122,8 +122,8 @@ export const dsBtnAiSecondary =
 export const dsBtnAiSecondarySm =
   "gestionale-ai-action-btn-secondary inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--cab-primary)_36%,var(--cab-border))] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))_0%,color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-card))_100%)] px-3 py-2 text-xs font-semibold text-[color:var(--cab-primary)] shadow-[var(--cab-shadow-sm)] transition-[transform,box-shadow,background-color,border-color] duration-200 ease-out hover:border-[color:color-mix(in_srgb,var(--cab-primary)_48%,var(--cab-border))] hover:bg-[linear-gradient(135deg,color-mix(in_srgb,var(--cab-primary)_20%,var(--cab-surface))_0%,color-mix(in_srgb,var(--cab-primary)_11%,var(--cab-card))_100%)] active:scale-[0.98]";
 
-/** CTA toolbar liste — compatto su mobile, hero da sm+. */
-export const dsPageToolbarCtaCompact = `${dsBtnCtaHero} h-11 min-w-0 shrink-0 px-2.5 text-xs whitespace-nowrap sm:px-5 sm:py-2.5 sm:text-sm`;
+/** CTA toolbar liste — compatto mobile (full-width nel slot primario), hero da sm+. */
+export const dsPageToolbarCtaCompact = `${dsBtnCtaHero} h-11 min-w-0 w-full max-sm:overflow-hidden shrink px-2.5 text-sm whitespace-nowrap sm:w-auto sm:shrink-0 sm:px-5 sm:py-2.5`;
 
 /** Coppia etichette CTA toolbar: usare con `PageToolbarCtaLabel` da `@/components/design-system`. */
 export function pageToolbarCtaLabels(full: string, short: string): { full: string; short: string } {

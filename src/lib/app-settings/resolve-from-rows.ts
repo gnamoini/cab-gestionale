@@ -19,6 +19,7 @@ import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-pref
 import { parseScontoFornitoreByFornitore } from "@/lib/magazzino/fornitore-alternativo-sconto";
 import { parseFornitoreAnagraficaByFornitore } from "@/lib/magazzino/fornitore-anagrafica";
 import { parseScontoFornitoreByMarca } from "@/lib/magazzino/marca-fornitore-sconto";
+import { parseColorByMarca } from "@/lib/magazzino/marca-badge-color";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
 import {
   defaultTipiAssenza,
@@ -156,6 +157,7 @@ function parseMagazzinoMasterPayload(raw: unknown): MagazzinoMasterPrefs {
   const partial: MagazzinoMasterPrefs = {
     marche: Array.isArray(o.marche) ? o.marche.filter((x): x is string => typeof x === "string") : [],
     scontoFornitoreByMarca: parseScontoFornitoreByMarca(o.scontoFornitoreByMarca),
+    colorByMarca: parseColorByMarca(o.colorByMarca),
     categorie: Array.isArray(o.categorie) ? o.categorie.filter((x): x is string => typeof x === "string") : [],
     mezziCompatibili: Array.isArray(o.mezziCompatibili)
       ? o.mezziCompatibili.filter((x): x is string => typeof x === "string")

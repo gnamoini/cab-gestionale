@@ -1,14 +1,18 @@
-﻿import "server-only";
+import "server-only";
 
 import {
   DOCUMENT_CAPTURE_MAX_BYTES,
   isAllowedCaptureMime,
+  needsCaptureOfficeConversion,
 } from "@/lib/document-capture/mime-allowlist";
 import {
   classifyFinalizeStorageDownloadError,
   finalizeStorageErrorToDocumentCaptureCode,
   type FinalizeStorageErrorCode,
 } from "@/lib/document-capture/finalize-storage-errors";
+import { releaseEphemeralSha256Slot } from "@/lib/document-capture/discard-ephemeral-capture.server";
+import { normalizeCaptureMime } from "@/lib/document-capture/capture-mime";
+import { prepareCaptureBytesForOcr } from "@/lib/document-capture/prepare-capture-bytes-for-ocr.server";
 import { sha256Hex } from "@/lib/document-capture/sha256.server";
 import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
@@ -53,12 +57,17 @@ export async function finalizeDocumentCaptureInTransaction(input: {
     };
   }
 
-  const bytes = new Uint8Array(await fileData.arrayBuffer());
+  let bytes = new Uint8Array(await fileData.arrayBuffer());
   if (bytes.byteLength > DOCUMENT_CAPTURE_MAX_BYTES) {
     throw new Error("File troppo grande");
   }
 
-  const mime = fileData.type || "application/octet-stream";
+  const fileName = input.storagePath.split("/").pop() ?? "document";
+  let mime = normalizeCaptureMime({
+    mime: fileData.type,
+    fileName,
+    bytes,
+  });
   if (!isAllowedCaptureMime(mime)) {
     throw new Error("Tipo file non consentito");
   }
@@ -66,7 +75,33 @@ export async function finalizeDocumentCaptureInTransaction(input: {
     throw new Error("SVG non consentito");
   }
 
+  if (needsCaptureOfficeConversion(mime)) {
+    const prepared = await prepareCaptureBytesForOcr({ bytes, mime, fileName });
+    bytes = prepared.bytes;
+    mime = prepared.mime;
+    if (bytes.byteLength > DOCUMENT_CAPTURE_MAX_BYTES) {
+      throw new Error("File convertito troppo grande");
+    }
+    const { error: reuploadError } = await sb.storage.from(bucket).upload(input.storagePath, bytes, {
+      upsert: true,
+      contentType: mime,
+    });
+    if (reuploadError) {
+      throw new Error(reuploadError.message);
+    }
+  }
+
   const sha256 = sha256Hex(bytes);
+
+  const { data: auth } = await sb.auth.getUser();
+  const userId = auth.user?.id;
+  if (userId) {
+    await releaseEphemeralSha256Slot({
+      userId,
+      sha256,
+      keepCaptureId: input.captureId,
+    });
+  }
 
   const { data, error } = await sb.rpc("document_capture_finalize", {
     p_capture_id: input.captureId,

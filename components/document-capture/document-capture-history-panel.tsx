@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import { DocumentCaptureTimeline } from "@/components/document-capture/document-capture-timeline";
-import { DocumentCaptureWizardLauncher } from "@/components/document-capture/document-capture-wizard-modal";
 import { LoadingSpinner } from "@/components/design-system/loading";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
 
@@ -85,9 +84,6 @@ export function DocumentCaptureHistoryPanel({ lavorazioneId, refreshKey = 0 }: P
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {row.finalized_at && row.status !== "applied" ? (
-                <DocumentCaptureWizardLauncher captureId={row.id} />
-              ) : null}
               {row.finalized_at ? (
                 <a
                   className={dsBtnNeutral}

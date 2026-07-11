@@ -21,12 +21,12 @@ const ALLOWED_TRANSITIONS: Record<CaptureStatus, readonly CaptureStatus[]> = {
   expired_upload: ["archived"],
   uploaded: ["archived", "failed", "analyzing", "review_required"],
   analyzing: ["review", "failed"],
-  review: ["dry_run", "archived", "failed"],
+  review: ["dry_run", "archived", "failed", "analyzing"],
   review_required: ["analyzing", "archived", "failed"],
-  dry_run: ["applying", "applied", "failed", "review"],
+  dry_run: ["applying", "applied", "failed", "review", "analyzing"],
   applying: ["applied", "failed"],
   applied: ["archived"],
-  failed: ["archived", "applying"],
+  failed: ["archived", "applying", "analyzing"],
   archived: [],
 };
 

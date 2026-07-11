@@ -9,7 +9,10 @@ import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-
 import { RecordImageManager } from "@/components/gestionale/media/record-image-manager";
 import { RicambioFormFields } from "@/components/gestionale/magazzino/ricambio-form-fields";
 import { RicambioFormOptionsProvider } from "@/components/gestionale/magazzino/ricambio-form-options-context";
-import { RicambioCollapsibleSection } from "@/components/gestionale/magazzino/ricambio-modal-ui";
+import {
+  RicambioCollapsibleSection,
+  ricambioModalFormScrollClass,
+} from "@/components/gestionale/magazzino/ricambio-modal-ui";
 import { useFormEngine } from "@/lib/forms/form-engine";
 import {
   emptyRicambioForm,
@@ -231,7 +234,7 @@ export function RicambioNewModal({
           onSubmit={handleSubmit}
           className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}
         >
-          <GestionaleModalScrollBody className="space-y-4">
+          <GestionaleModalScrollBody className={ricambioModalFormScrollClass}>
             <RicambioFormFields
               form={newDraft}
               setForm={setNewForm}

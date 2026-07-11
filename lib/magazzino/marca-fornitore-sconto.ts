@@ -3,6 +3,10 @@ import {
   removeFornitoreAnagraficaFromMagazzinoMaster,
   renameFornitoreAnagraficaInMagazzinoMaster,
 } from "@/lib/magazzino/fornitore-anagrafica";
+import {
+  removeMarcaBadgeColor,
+  renameMarcaBadgeColor,
+} from "@/lib/magazzino/marca-badge-color";
 
 function clampScontoFornitorePercent(n: number): number {
   if (!Number.isFinite(n)) return 0;
@@ -83,14 +87,14 @@ export function renameMarcaInMagazzinoMaster(mag: MagazzinoMasterPrefs, from: st
     scontoFornitoreByMarca[newKey] = 0;
   }
   return renameFornitoreAnagraficaInMagazzinoMaster(
-    { ...mag, marche, scontoFornitoreByMarca },
+    renameMarcaBadgeColor({ ...mag, marche, scontoFornitoreByMarca }, from, t),
     from,
     t,
   );
 }
 
 export function removeMarcaFromMagazzinoMaster(mag: MagazzinoMasterPrefs, marcaNome: string): MagazzinoMasterPrefs {
-  const next = removeScontoFornitoreMarca(mag, marcaNome);
+  const next = removeMarcaBadgeColor(removeScontoFornitoreMarca(mag, marcaNome), marcaNome);
   return removeFornitoreAnagraficaFromMagazzinoMaster(
     { ...next, marche: next.marche.filter((m) => m !== marcaNome) },
     marcaNome,

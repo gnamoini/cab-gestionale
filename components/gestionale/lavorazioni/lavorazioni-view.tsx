@@ -79,6 +79,12 @@ import {
   saveGestionaleAdvancedFiltersPersisted,
   type LavorazioniAdvancedFilters,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
+import {
+  buildCaptureBundleSchedaPatch,
+  mergeCaptureBundlePatch,
+} from "@/lib/document-capture/capture-field-mapper";
+import { resolveLavorazioneListRowForSchedeOpen } from "@/lib/document-capture/resolve-lavorazione-list-row-for-schede.client";
+import type { CaptureSchedeOpenRequest } from "@/components/document-capture/lavorazioni-digital-capture-launcher";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
 import { SchedaConcurrencyMergeDialog } from "@/components/lavorazioni/schede/scheda-concurrency-merge-dialog";
 import {
@@ -671,6 +677,8 @@ export function LavorazioniView() {
     origine: "attiva" | "storico";
     initialTab?: "schede" | "panoramica";
     dialogSize?: SchedeLavorazioneDialogSize;
+    initialSchedaStage?: "lavorazioni" | "ricambi";
+    bundleOverride?: LavorazioneSchedeBundle;
   } | null>(null);
 
   type ConcurrencyConflict = Extract<PersistSchedeErrorResult, { kind: "concurrency" }>;
@@ -1241,6 +1249,38 @@ export function LavorazioniView() {
   const onOpenAttivaSchede = useCallback((row: LavorazioneListRow) => {
     setSchedeRow({ row, origine: "attiva", initialTab: "schede", dialogSize: "hub" });
   }, []);
+
+  const onOpenSchedeFromCapture = useCallback(
+    async (req: CaptureSchedeOpenRequest): Promise<boolean> => {
+      const row = await resolveLavorazioneListRowForSchedeOpen(
+        req.lavorazioneId,
+        attiveRows,
+        () => attiveQuery.refetch(),
+      );
+      if (!row) {
+        gestToast.error("Lavorazione in corso non trovata. Aggiorna l'elenco e riprova.");
+        return false;
+      }
+      const base = getOrCreateBundle(schedeStore, row.id, row.codice);
+      const patch = buildCaptureBundleSchedaPatch({
+        lavorazioneId: row.id,
+        schedaTipo: req.schedaTipo,
+        fields: req.fieldRows,
+        createdBy: createdBy ?? authorName ?? "Operatore",
+        addettiRecords: globalOpts.lavorazioni.addettiRecords,
+      });
+      setSchedeRow({
+        row,
+        origine: "attiva",
+        initialTab: "schede",
+        dialogSize: "hub",
+        initialSchedaStage: req.schedaTipo,
+        bundleOverride: mergeCaptureBundlePatch(base, patch),
+      });
+      return true;
+    },
+    [attiveQuery, attiveRows, authorName, createdBy, gestToast, globalOpts.lavorazioni.addettiRecords, schedeStore],
+  );
 
   const onOpenArchivioInfo = useCallback((row: LavorazioneListRow) => {
     setSchedeRow({ row, origine: "storico", initialTab: "panoramica", dialogSize: "compact" });
@@ -1927,6 +1967,19 @@ export function LavorazioniView() {
           chiuseFilteredCount={archivioFilteredCount ?? 0}
           onOpenCreate={openCreateModal}
           onPrimeCreate={primeCreateModal}
+          onCaptureLavorazioneCreated={(id, opts) => {
+            if (!opts?.skipTableFocus) {
+              invalidateSchedeStore();
+              focusLavorazioneInTable(id);
+            }
+          }}
+          onOpenSchedeFromCapture={onOpenSchedeFromCapture}
+          captureMezzi={mezziCatalog}
+          captureSchedeStore={schedeStore}
+          captureAttive={attiveLegacyRows}
+          captureStorico={storicoLegacyRows}
+          captureSharedGlobalOpts={globalOpts}
+          captureSharedMezziCatalog={mezziCatalog}
         />
 
         {initialListLoading ? (
@@ -2429,7 +2482,11 @@ export function LavorazioniView() {
           origine={schedeRow.origine}
           initialTab={schedeRow.initialTab}
           dialogSize={schedeRow.dialogSize}
-          bundle={getOrCreateBundle(schedeStore, schedeRow.row.id, schedeRow.row.codice)}
+          initialSchedaStage={schedeRow.initialSchedaStage}
+          bundle={
+            schedeRow.bundleOverride ??
+            getOrCreateBundle(schedeStore, schedeRow.row.id, schedeRow.row.codice)
+          }
           onPersist={onPersistSchedeBundle}
           onIngressoCommitted={async (campi) => {
             if (!schedeRow) return;

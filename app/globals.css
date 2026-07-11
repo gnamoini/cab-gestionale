@@ -1365,6 +1365,33 @@ body:has(.cab-app-shell) .cab-app-shell {
   );
 }
 
+/** Toolbar mobile — solo spark, centrato; ombra più leggera del pill con testo. */
+@media (max-width: 639px) {
+  .gestionale-ai-action-btn-primary.gestionale-ai-action-btn-icon-only {
+    box-shadow:
+      0 1px 2px color-mix(in srgb, #000 16%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fff 16%, transparent);
+  }
+
+  .gestionale-ai-action-btn-primary.gestionale-ai-action-btn-icon-only:hover:not(:disabled) {
+    box-shadow:
+      0 2px 10px color-mix(in srgb, var(--cab-primary) 28%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent);
+  }
+
+  .dark .gestionale-ai-action-btn-primary.gestionale-ai-action-btn-icon-only {
+    box-shadow:
+      0 1px 3px color-mix(in srgb, #000 42%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--cab-primary) 22%, transparent);
+  }
+
+  .dark .gestionale-ai-action-btn-primary.gestionale-ai-action-btn-icon-only:hover:not(:disabled) {
+    box-shadow:
+      0 2px 12px color-mix(in srgb, var(--cab-primary) 34%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--cab-primary) 24%, transparent);
+  }
+}
+
 @keyframes gestionale-ai-spark-pulse {
   0%,
   100% {
