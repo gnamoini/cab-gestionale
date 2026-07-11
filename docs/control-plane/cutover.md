@@ -88,8 +88,8 @@ Compilare dopo Fase 2 (5 PR interne strict, 0 failure su strict steps).
 
 | PR | SHA | strict | result | duration | control-pr run id |
 |----|-----|--------|--------|----------|-------------------|
-| #2 | `48c6741` | yes | PASS (tier) | 3m13s | 29128286725 |
-| #2 | `ff17a07` | yes | pending | — | 29130212620 |
+| #1 | `00ebbbd` | yes | PASS (contract) | — | 29126194905 |
+| #2 | `f0693d6` | yes | PASS | 5m15s | 29130678992 |
 | pilot/3 | — | — | pending | — | — |
 | pilot/4 | — | — | pending | — | — |
 | pilot/5 | — | — | pending | — | — |
