@@ -1,12 +1,13 @@
 /**
  * governance.rbac.sync-check — advisory TS seed structure (experimental)
  */
-import { GESTIONALE_PAGE_KEYS } from "@/src/lib/permissions/gestionale-pages";
+import { allGestionalePageKeys } from "@/src/lib/permissions/gestionale-pages";
 import { RBAC_PAGE_SEED_MATRIX } from "@/lib/rbac-page-seed";
 
 const blockers: string[] = [];
+const pageKeys = allGestionalePageKeys();
 
-if (!GESTIONALE_PAGE_KEYS.length) blockers.push("GESTIONALE_PAGE_KEYS empty");
+if (!pageKeys.length) blockers.push("GESTIONALE_PAGE_KEYS empty");
 if (!Object.keys(RBAC_PAGE_SEED_MATRIX).length) blockers.push("RBAC_PAGE_SEED_MATRIX empty");
 
 for (const role of Object.keys(RBAC_PAGE_SEED_MATRIX)) {
