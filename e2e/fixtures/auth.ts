@@ -44,14 +44,24 @@ export function clientCredentials(): SmokeCredentials | null {
 }
 
 async function ensureAccountMenuVisible(page: Page): Promise<void> {
-  const accountMenu = page.getByTestId("smoke-account-menu");
-  if (await accountMenu.isVisible().catch(() => false)) return;
-  const drawerOpen = page.getByTestId("smoke-nav-drawer-open");
-  if (await drawerOpen.isVisible().catch(() => false)) {
-    await drawerOpen.click({ timeout: 15_000 });
-    await expect(page.getByRole("dialog", { name: "Menu principale" })).toBeVisible({ timeout: 10_000 });
-  }
-  await expect(accountMenu).toBeVisible({ timeout: 15_000 });
+  await expect(async () => {
+    const shell = page.locator(".cab-app-shell");
+    await expect(shell).toBeVisible({ timeout: 5_000 });
+    const tier = await shell.getAttribute("data-gestionale-shell-tier");
+    if (!tier) throw new Error("shell tier not ready");
+
+    const accountMenu = page.getByTestId("smoke-account-menu");
+    if (await accountMenu.isVisible().catch(() => false)) return;
+
+    if (tier !== "desktop") {
+      const drawerOpen = page.getByTestId("smoke-nav-drawer-open");
+      await expect(drawerOpen).toBeVisible({ timeout: 5_000 });
+      await drawerOpen.click({ timeout: 5_000 });
+      await expect(page.getByRole("dialog", { name: "Menu principale" })).toBeVisible({ timeout: 10_000 });
+    }
+
+    await expect(accountMenu).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 60_000 });
 }
 
 export async function loginViaUi(page: Page, creds: SmokeCredentials): Promise<void> {

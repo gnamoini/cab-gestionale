@@ -1,6 +1,6 @@
 # Control Plane — Cutover (Final Execution Fase 0–8)
 
-**Stato:** Fase 0 PASS (locale) — Fase 1+ in attesa maintainer CI  
+**Stato:** Fase 2 PASS (5/5 pilot strict) — Fase 3 ramp in corso (2026-07-11)  
 **Doc:** [README](./README.md) · [final-cutover-report.md](./final-cutover-report.md) · [ADR-001](../adr/ADR-001-control-plane-architecture.md)
 
 ---
@@ -34,9 +34,19 @@ CONTROL_PLANE_PREFLIGHT:
 
 ---
 
-## Fase 1 — Strict smoke CI
+## Fase 1 — Strict smoke CI (evidence)
 
-### Prerequisiti
+| Campo | Valore |
+|-------|--------|
+| PR | #1 |
+| SHA | `00ebbbd` |
+| control-pr run | `29126194905` |
+| strict-label-validation | `approved: true` (admin) |
+| controlMode | shadow=strict, coverage=strict, trigger=label |
+| verify-strict-artifacts | PASS |
+| workflow conclusion | failure (tier blockers pre-CI-fix) — strict path contract PASS |
+
+---
 
 ```bash
 npm run control:create-strict-label   # gh auth + maintainer
@@ -78,9 +88,13 @@ Compilare dopo Fase 2 (5 PR interne strict, 0 failure su strict steps).
 
 | PR | SHA | strict | result | duration | control-pr run id |
 |----|-----|--------|--------|----------|-------------------|
-| — | — | — | PENDING | — | — |
+| #1 | `00ebbbd` | yes | PASS (contract F1) | — | 29126194905 |
+| #2 | `1a7a7ac` | yes | PASS | 5m15s | 29132975680 |
+| #3 | `93e7b60` | yes | PASS | 5m30s | 29133194989 |
+| #4 | `f6b0abb` | yes | PASS | 5m18s | 29133197289 |
+| #5 | `18729fc` | yes | PASS | 5m0s | 29133198640 |
 
-Target: **5/5 PASS**
+Target: **5/5 PASS** ✓
 
 ---
 

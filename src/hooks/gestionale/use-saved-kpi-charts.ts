@@ -17,7 +17,7 @@ import { isAuthSessionEstablished, type AuthStatus } from "@/src/lib/auth/auth-s
 import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
 import { QK } from "@/src/lib/react-query/query-keys";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
-import { reportSavedKpiChartsService } from "@/src/services/report-saved-kpi-charts.service";
+import { reportSavedKpiChartsEntry } from "@/lib/domain/report-saved-kpi-charts-entry";
 import { err } from "@/src/services/service-result";
 
 export function savedKpiChartsQueryKey(userId: string) {
@@ -25,7 +25,7 @@ export function savedKpiChartsQueryKey(userId: string) {
 }
 
 async function fetchSavedKpiCharts(): Promise<SavedKpiChart[]> {
-  const res = await reportSavedKpiChartsService.list();
+  const res = await reportSavedKpiChartsEntry.list();
   if (!res.success) throw new Error(res.error ?? "Impossibile caricare i grafici salvati");
   return res.data ?? [];
 }
@@ -46,7 +46,7 @@ export function useCreateSavedKpiChartMutation(userId: string | null | undefined
   return useServiceMutation(
     (input: Omit<CreateSavedKpiChartInput, "id"> & { id?: string }) => {
       if (!userId) return Promise.resolve(err("Utente non autenticato."));
-      return reportSavedKpiChartsService.create(userId, input);
+      return reportSavedKpiChartsEntry.create(userId, input);
     },
     {
       onSuccess: (chart) => {
@@ -65,7 +65,7 @@ export function useUpdateSavedKpiChartMutation(userId: string | null | undefined
   const qc = useQueryClient();
   return useServiceMutation(
     (input: { id: string; name?: string; chart: Pick<SavedKpiChart, "metricIds" | "preset" | "customFrom" | "customTo" | "displayMode" | "normalization"> }) =>
-      reportSavedKpiChartsService.update({
+      reportSavedKpiChartsEntry.update({
         id: input.id,
         name: input.name,
         config: savedKpiChartToConfigBody(input.chart),
@@ -83,7 +83,7 @@ export function useUpdateSavedKpiChartMutation(userId: string | null | undefined
 
 export function useDeleteSavedKpiChartMutation(userId: string | null | undefined) {
   const qc = useQueryClient();
-  return useServiceMutation((id: string) => reportSavedKpiChartsService.delete(id), {
+  return useServiceMutation((id: string) => reportSavedKpiChartsEntry.delete(id), {
     onSuccess: (_void, id) => {
       if (!userId) return;
       qc.setQueryData<SavedKpiChart[]>(savedKpiChartsQueryKey(userId), (prev) =>
@@ -122,7 +122,7 @@ export function useMigrateLocalKpiCharts(userId: string | null | undefined, dbCh
         return;
       }
 
-      const res = await reportSavedKpiChartsService.bulkCreate(
+      const res = await reportSavedKpiChartsEntry.bulkCreate(
         userId,
         localChartsToCreateInputs(localCharts),
       );
