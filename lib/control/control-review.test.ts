@@ -60,6 +60,9 @@ for (const ref of catalogRefs) {
   if (!resolveCatalogReference(ref)) fail(`orphan catalog reference in registry: ${ref}`);
 }
 
+// ponytail: intentional cutover rehearsal failure — revert branch after test
+fail("cutover-rehearsal-intentional-control-pr-fail");
+
 if (blockers.length > 0) {
   console.error("governance.control.review — FAIL");
   for (const b of blockers) console.error(`- ${b}`);
