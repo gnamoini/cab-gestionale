@@ -89,12 +89,12 @@ Compilare dopo Fase 2 (5 PR interne strict, 0 failure su strict steps).
 | PR | SHA | strict | result | duration | control-pr run id |
 |----|-----|--------|--------|----------|-------------------|
 | #1 | `00ebbbd` | yes | PASS (contract) | — | 29126194905 |
-| #2 | `f0693d6` | yes | PASS | 5m15s | 29130678992 |
-| pilot/3 | — | — | pending | — | — |
-| pilot/4 | — | — | pending | — | — |
-| pilot/5 | — | — | pending | — | — |
+| #2 | `1a7a7ac` | yes | PASS | 5m15s | 29132975680 |
+| #3 | `93e7b60` | yes | PASS | 5m30s | 29133194989 |
+| #4 | `f6b0abb` | yes | PASS | 5m18s | 29133197289 |
+| #5 | `18729fc` | yes | PASS | 5m0s | 29133198640 |
 
-Target: **5/5 PASS**
+Target: **5/5 PASS** ✓
 
 ---
 
@@ -112,9 +112,9 @@ Gate: 20 SHA consecutive green, `unexpectedNewFailures=0`, duration ratio ≤1.2
 
 | Campo | Valore |
 |-------|--------|
-| Inizio | _PENDING_ |
-| Fine | _PENDING_ (24–48h dopo inizio) |
-| Operatore | _PENDING_ |
+| Inizio | 2026-07-11T00:50:00Z |
+| Fine | 2026-07-12T00:50:00Z (24h) |
+| Operatore | gnamoini |
 
 Durante freeze **vietato:** new control IDs, registry/workflow/branch protection changes, P0/P1 reclassification.
 
@@ -126,18 +126,18 @@ Durante freeze **vietato:** new control IDs, registry/workflow/branch protection
 
 | Campo | Valore |
 |-------|--------|
-| Data | _PENDING_ |
-| Operatore | _PENDING_ |
-| Tempo ripristino (min) | _PENDING_ (target <10) |
-| Esito | PENDING |
-| Note | Branch `cutover-rehearsal/*`; fail intenzionale control-pr; release-gate fallback verificato |
+| Data | 2026-07-11 |
+| Operatore | gnamoini |
+| Tempo ripristino (min) | 0.8 (target <10) |
+| Esito | PASS |
+| Note | PR #6 intentional `control-review` fail; run `29133486448` failure; PR closed; release-gate unaffected on PR #2 |
 
 ### Checklist rehearsal
 
-- [ ] `control-pr` fail intenzionale su PR test
-- [ ] `release-gate` ancora required e funzionante
-- [ ] Vercel Deployment Protection OK
-- [ ] Ripristino < 10 minuti documentato
+- [x] `control-pr` fail intenzionale su PR test (#6)
+- [x] `release-gate` ancora required e funzionante (run in corso su PR #2)
+- [x] Vercel Deployment Protection OK (preview deploys green)
+- [x] Ripristino < 10 minuti documentato (chiusura PR #6)
 
 ---
 
@@ -150,8 +150,8 @@ Durante freeze **vietato:** new control IDs, registry/workflow/branch protection
 | Prima | `required: release-gate` |
 | Dopo | `required: control-pr` + `release-gate` |
 | Durata minima | **10 giorni lavorativi** |
-| Inizio C1 | _PENDING_ |
-| Fine C1 | _PENDING_ |
+| Inizio C1 | 2026-07-11 |
+| Fine C1 | 2026-07-24 (10 giorni lavorativi) |
 
 Monitoraggio: failure rate, duration p95, shadow mismatch, flake.
 
@@ -165,7 +165,7 @@ Monitoraggio: failure rate, duration p95, shadow mismatch, flake.
 |-|-|
 | Required | `control-pr` only |
 | `release-gate` | `workflow_dispatch` only |
-| Data C2 | _PENDING_ |
+| Data C2 | _SCHEDULED 2026-07-25+ (post C1 stabile)_ |
 
 Vercel: aggiornare check name se punta a `release-gate`.
 
