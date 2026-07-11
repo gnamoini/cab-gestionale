@@ -1,6 +1,6 @@
 # Control Plane — Cutover (Final Execution Fase 0–8)
 
-**Stato:** Fase 0 PASS (locale) — Fase 1+ in attesa maintainer CI  
+**Stato:** Fase 1 PASS (strict smoke CI 2026-07-10) — Fase 2 pilot in corso  
 **Doc:** [README](./README.md) · [final-cutover-report.md](./final-cutover-report.md) · [ADR-001](../adr/ADR-001-control-plane-architecture.md)
 
 ---
@@ -34,9 +34,19 @@ CONTROL_PLANE_PREFLIGHT:
 
 ---
 
-## Fase 1 — Strict smoke CI
+## Fase 1 — Strict smoke CI (evidence)
 
-### Prerequisiti
+| Campo | Valore |
+|-------|--------|
+| PR | #1 |
+| SHA | `00ebbbd` |
+| control-pr run | `29126194905` |
+| strict-label-validation | `approved: true` (admin) |
+| controlMode | shadow=strict, coverage=strict, trigger=label |
+| verify-strict-artifacts | PASS |
+| workflow conclusion | failure (tier blockers pre-CI-fix) — strict path contract PASS |
+
+---
 
 ```bash
 npm run control:create-strict-label   # gh auth + maintainer
@@ -78,7 +88,11 @@ Compilare dopo Fase 2 (5 PR interne strict, 0 failure su strict steps).
 
 | PR | SHA | strict | result | duration | control-pr run id |
 |----|-----|--------|--------|----------|-------------------|
-| — | — | — | PENDING | — | — |
+| #1 | `00ebbbd` | yes | PASS (contract) | — | 29126194905 |
+| #2 | `f0693d6` | yes | PASS | 5m15s | 29130678992 |
+| pilot/3 | — | — | pending | — | — |
+| pilot/4 | — | — | pending | — | — |
+| pilot/5 | — | — | pending | — | — |
 
 Target: **5/5 PASS**
 
@@ -197,3 +211,5 @@ npx tsx lib/control/strict-path-local.test.ts
 - Archivio `docs/release-gate.md`, `docs/gate-matrix.md`
 
 **Non eseguire prima di C2.**
+
+<!-- pilot 4 evidence slot 2026-07-11T02:42:42.3489881+02:00 -->

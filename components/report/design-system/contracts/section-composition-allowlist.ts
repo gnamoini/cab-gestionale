@@ -9,6 +9,7 @@ export const REPORT_SECTION_COMPOSITION_ALLOWLIST = [
   "ReportMetricRenderer",
   "ReportDataTable",
   "ReportLineChart",
+  "ReportMultiSeriesLineChart",
   "ReportBarChart",
   "ReportMatrix",
   "ReportNarrativeBlock",

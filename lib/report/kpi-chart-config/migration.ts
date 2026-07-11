@@ -31,7 +31,7 @@ export function markLocalMigrationDone(userId: string): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(migratedFlagKey(userId), "1");
-    window.localStorage.removeItem(localStorageKey(userId));
+    window.localStorage.removeItem(`gestionale.report.kpi-charts.v1:${userId}`);
   } catch {
     /* quota / private mode */
   }

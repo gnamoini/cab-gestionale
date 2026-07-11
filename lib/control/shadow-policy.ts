@@ -206,6 +206,14 @@ export function evaluateShadowPolicy(input: ShadowPolicyInput): ShadowPolicyRepo
 }
 
 export function evaluateShadowPolicyStrict(report: ShadowPolicyReport): ShadowPolicyReport {
+  // ponytail: PR strict = per-run parity; 20-SHA consecutive gate is shadow-cutover-report (--gate)
+  const passed =
+    report.unexpectedNewFailures <= SHADOW_SUCCESS_POLICY.maxUnexpectedNewFailures &&
+    report.blockerMismatchRate <= SHADOW_SUCCESS_POLICY.maxBlockerMismatchRate;
+  return { ...report, advisory: false, passed };
+}
+
+export function evaluateShadowPolicyRampStrict(report: ShadowPolicyReport): ShadowPolicyReport {
   const cutoverReady =
     report.passed &&
     report.consecutiveGreen >= SHADOW_SUCCESS_POLICY.minConsecutiveGreen &&

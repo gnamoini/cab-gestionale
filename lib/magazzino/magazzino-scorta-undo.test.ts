@@ -17,10 +17,11 @@ function scortaEntry(
   return {
     id,
     ricambioId,
-    ricambioLabel: ricambioId,
+    ricambio: ricambioId,
+    riepilogo: "test",
     autore: "test",
     tipo: "update",
-    timestamp: new Date().toISOString(),
+    at: new Date().toISOString(),
     changes: [{ campo: "Scorta", prima, dopo }],
     annullato: false,
     ...extra,
