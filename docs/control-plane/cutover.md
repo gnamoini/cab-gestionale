@@ -211,3 +211,5 @@ npx tsx lib/control/strict-path-local.test.ts
 - Archivio `docs/release-gate.md`, `docs/gate-matrix.md`
 
 **Non eseguire prima di C2.**
+
+<!-- pilot 4 evidence slot 2026-07-11T02:42:42.3489881+02:00 -->
