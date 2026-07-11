@@ -90,7 +90,8 @@ Compilare dopo Fase 2 (5 PR interne strict, 0 failure su strict steps).
 |----|-----|--------|--------|----------|-------------------|
 | #1 | `00ebbbd` | yes | PASS (contract) | — | 29126194905 |
 | #2 | `f0693d6` | yes | PASS | 5m15s | 29130678992 |
-| pilot/3 | — | — | pending | — | — |
+| #2 | `1a7a7ac` | yes | PASS | 5m15s | 29132975680 |
+| pilot/3 | pending | — | — | — | — |
 | pilot/4 | — | — | pending | — | — |
 | pilot/5 | — | — | pending | — | — |
 
@@ -211,3 +212,5 @@ npx tsx lib/control/strict-path-local.test.ts
 - Archivio `docs/release-gate.md`, `docs/gate-matrix.md`
 
 **Non eseguire prima di C2.**
+
+<!-- pilot 3 evidence slot 2026-07-11T02:42:39.0313846+02:00 -->
