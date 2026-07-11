@@ -13,7 +13,7 @@ function sumHoursInRange(ctx: KpiSeriesBuildContext, range: DateRange): number {
   if (!ctx.timesheetEntries) return 0;
   let total = 0;
   for (const e of ctx.timesheetEntries) {
-    if (!isoInRange(e.data, range)) continue;
+    if (!isoInRange(e.work_date, range)) continue;
     const cell = entryToCellValue(e);
     total += cell.oreOrdinarie + cell.oreStraordinarie;
   }
