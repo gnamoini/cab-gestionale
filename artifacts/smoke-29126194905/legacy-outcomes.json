@@ -1,0 +1,18 @@
+{
+  "generatedAt": "2026-07-10T21:57:54.354Z",
+  "outcomes": {
+    "npm run ci:tsc": "fail",
+    "npm run ci:build": "fail",
+    "npm run test:rbac": "pass",
+    "npm run test:rbac:hardening": "fail",
+    "npm run ux:enforce": "pass",
+    "npm run audit:ui": "pass",
+    "npm run ux:mobile-gate": "pass",
+    "npm run ios:check": "pass",
+    "npm run production:check": "pass",
+    "npm run smoke:structural": "pass",
+    "npm run flex:eslint:gate": "fail",
+    "npm run flex:freeze:gate": "fail",
+    "npm run smoke:playwright": "pass"
+  }
+}

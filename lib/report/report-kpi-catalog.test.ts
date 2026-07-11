@@ -17,7 +17,7 @@ for (const entry of REPORT_KPI_CATALOG) {
   assert.notEqual(entry.section, "strip", `KPI ${entry.id} must not live in strip`);
 }
 
-assert.equal(reportKpiIdsForSection("lavorazioni").length, 5);
+assert.equal(reportKpiIdsForSection("lavorazioni").length, 11);
 assert.equal(reportKpiIdsForSection("strip").length, 0);
 
 console.log("report-kpi-catalog.test.ts OK");

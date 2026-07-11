@@ -1,0 +1,124 @@
+{
+  "runId": "29130678992",
+  "timestamp": "2026-07-10T23:37:23.413Z",
+  "advisory": false,
+  "passed": true,
+  "mappedControlCoverage": 0.9230769230769231,
+  "unexpectedNewFailures": 0,
+  "blockerMismatchRate": 0,
+  "warningMismatchRate": 0,
+  "durationRegressionRatio": null,
+  "consecutiveGreen": 1,
+  "violations": [
+    {
+      "code": "consecutive-green",
+      "message": "consecutiveGreen=1 < 20"
+    }
+  ],
+  "comparisons": [
+    {
+      "controlId": "security.typescript.compile",
+      "legacyStep": "npm run ci:tsc",
+      "legacy": "pass",
+      "control": "pass",
+      "unexpectedNewFailure": false,
+      "blockerMismatch": false
+    },
+    {
+      "controlId": "domain.build.production",
+      "legacyStep": "npm run ci:build",
+      "legacy": "pass",
+      "control": "pass",
+      "unexpectedNewFailure": false,
+      "blockerMismatch": false
+    },
+    {
+      "controlId": "security.rbac.matrix",
+      "legacyStep": "npm run test:rbac",
+      "legacy": "pass",
+      "control": "pass",
+      "unexpectedNewFailure": false,
+      "blockerMismatch": false
+    },
+    {
+      "controlId": "security.rbac.hardening",
+      "legacyStep": "npm run test:rbac:hardening",
+      "legacy": "pass",
+      "control": "pass",
+      "unexpectedNewFailure": false,
+      "blockerMismatch": false
+    },
+    {
+      "controlId": "design.ux.enforce",
+      "legacyStep": "npm run ux:enforce",
+      "legacy": "pass",
+      "control": "pass",
+      "unexpectedNewFailure": false,
+      "blockerMismatch": false
+    },
+    {
+      "controlId": "design.ui.consistency",
+      "legacyStep": "npm run audit:ui",
+      "legacy": "pass",
+      "control": "pass",
+      "unexpectedNewFailure": false,
+      "blockerMismatch": false
+    },
+    {
+      "controlId": "design.mobile.gate",
+      "legacyStep": "npm run ux:mobile-gate",
+      "legacy": "pass",
+      "control": "pass",
+      "unexpectedNewFailure": false,
+      "blockerMismatch": false
+    },
+    {
+      "controlId": "design.ios.static",
+      "legacyStep": "npm run ios:check",
+      "legacy": "pass",
+      "control": "pass",
+      "unexpectedNewFailure": false,
+      "blockerMismatch": false
+    },
+    {
+      "controlId": "data.production.readiness",
+      "legacyStep": "npm run production:check",
+      "legacy": "pass",
+      "control": "pass",
+      "unexpectedNewFailure": false,
+      "blockerMismatch": false
+    },
+    {
+      "controlId": "design.structural.smoke",
+      "legacyStep": "npm run smoke:structural",
+      "legacy": "pass",
+      "control": "pass",
+      "unexpectedNewFailure": false,
+      "blockerMismatch": false
+    },
+    {
+      "controlId": "design.flex.eslint",
+      "legacyStep": "npm run flex:eslint:gate",
+      "legacy": "pass",
+      "control": "pass",
+      "unexpectedNewFailure": false,
+      "blockerMismatch": false
+    },
+    {
+      "controlId": "design.flex.freeze",
+      "legacyStep": "npm run flex:freeze:gate",
+      "legacy": "pass",
+      "control": "pass",
+      "unexpectedNewFailure": false,
+      "blockerMismatch": false
+    },
+    {
+      "controlId": "runtime.e2e.smoke",
+      "legacyStep": "npm run smoke:playwright",
+      "legacy": "pass",
+      "control": "unknown",
+      "unexpectedNewFailure": false,
+      "blockerMismatch": false
+    }
+  ]
+}

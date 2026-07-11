@@ -16,7 +16,7 @@ function npmScriptFromStep(step: string): string {
 }
 
 function probe(script: string): LegacyOutcome {
-  const env = { ...process.env, CI: process.env.CI ?? "true" };
+  const env = { ...process.env, CI: process.env.CI ?? "true" } as NodeJS.ProcessEnv;
   if (script === "production:check") {
     env.PRODUCTION_CHECK_REQUIRE_DB = env.PRODUCTION_CHECK_REQUIRE_DB ?? "1";
   }

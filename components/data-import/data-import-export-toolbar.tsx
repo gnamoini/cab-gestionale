@@ -195,7 +195,7 @@ function ToolbarSplitButton({
                 type="button"
                 role="menuitem"
                 disabled={item.disabled}
-                className={`${toolbarMenuOptionClass(false)} ${dsFocus} touch-manipulation disabled:cursor-not-allowed disabled:opacity-45`}
+                className={`${toolbarMenuOptionClass(false)} min-w-0 ${dsFocus} touch-manipulation disabled:cursor-not-allowed disabled:opacity-45`}
                 onClick={() => runItem(item)}
               >
                 {item.label}
