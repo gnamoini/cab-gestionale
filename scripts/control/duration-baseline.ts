@@ -16,8 +16,16 @@ type GhJob = {
 };
 
 function ghApi<T>(endpoint: string): T {
-  const result = spawnSync("gh", ["api", endpoint], { encoding: "utf8", shell: true });
-  if (result.status !== 0) throw new Error(result.stderr?.trim() || `gh api failed`);
+  const result = spawnSync("gh", ["api", endpoint], {
+    encoding: "utf8",
+    shell: false,
+    maxBuffer: 32 * 1024 * 1024,
+    env: process.env,
+  });
+  if (result.error) throw new Error(result.error.message);
+  if (result.status != null && result.status !== 0) {
+    throw new Error(result.stderr?.trim() || `gh api failed`);
+  }
   return JSON.parse(result.stdout) as T;
 }
 
@@ -25,7 +33,8 @@ function repoSlug(): string {
   if (process.env.GITHUB_REPOSITORY) return process.env.GITHUB_REPOSITORY;
   const r = spawnSync("gh", ["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"], {
     encoding: "utf8",
-    shell: true,
+    shell: false,
+    env: process.env,
   });
   if (r.status === 0 && r.stdout.trim()) return r.stdout.trim();
   throw new Error("GITHUB_REPOSITORY or gh repo required");
