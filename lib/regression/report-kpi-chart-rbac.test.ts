@@ -8,7 +8,7 @@ const sql = fs.readFileSync(
   "utf8",
 );
 
-assert.match(sql, /create table.*report_saved_kpi_charts/is);
+assert.match(sql, /create table[\s\S]*report_saved_kpi_charts/i);
 assert.match(sql, /references public\.profiles \(id\) on delete cascade/);
 assert.doesNotMatch(sql, /\bscope\b/);
 assert.match(sql, /enable row level security/);

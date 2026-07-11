@@ -27,12 +27,16 @@ type GhJob = {
   completed_at: string | null;
 };
 
-function ghApi<T>(endpoint: string): T {
-  const result = spawnSync("gh", ["api", endpoint, "--paginate"], {
+function ghApi<T>(endpoint: string, paginate = false): T {
+  const args = paginate ? ["api", endpoint, "--paginate"] : ["api", endpoint];
+  const result = spawnSync("gh", args, {
     encoding: "utf8",
-    shell: true,
+    shell: false,
+    maxBuffer: 32 * 1024 * 1024,
+    env: process.env,
   });
-  if (result.status !== 0) {
+  if (result.error) throw new Error(result.error.message);
+  if (result.status != null && result.status !== 0) {
     throw new Error(result.stderr?.trim() || `gh api failed: ${endpoint}`);
   }
   const raw = result.stdout.trim();
@@ -51,7 +55,8 @@ function repoSlug(): string {
   if (env) return env;
   const r = spawnSync("gh", ["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"], {
     encoding: "utf8",
-    shell: true,
+    shell: false,
+    env: process.env,
   });
   if (r.status === 0 && r.stdout.trim()) return r.stdout.trim();
   throw new Error("Set GITHUB_REPOSITORY or run from a gh-linked repo");
@@ -90,8 +95,8 @@ function buildRecords(slug: string, limit: number): ShadowCutoverRecord[] {
   const legacyWf = workflowId(slug, "release-gate.yml");
   const controlWf = workflowId(slug, "control-pr.yml");
 
-  const legacyRuns = listRuns(slug, legacyWf, 150).filter((r) => r.event === "pull_request");
-  const controlRuns = listRuns(slug, controlWf, 150).filter((r) => r.event === "pull_request");
+  const legacyRuns = listRuns(slug, legacyWf, 60).filter((r) => r.event === "pull_request");
+  const controlRuns = listRuns(slug, controlWf, 60).filter((r) => r.event === "pull_request");
 
   const legacyBySha = new Map<string, GhRun>();
   for (const run of legacyRuns) {
