@@ -859,12 +859,36 @@ export function PreventiviView() {
     </div>
   ) : null;
 
+  const documentSectionTabs = ordiniPerm.canRead ? (
+    <div className={`${dsSegmentedWrap} w-fit`} role="tablist" aria-label="Sezione documenti">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={pageTab === "preventivi"}
+        className={pageTab === "preventivi" ? dsSegmentedBtnOn : dsSegmentedBtnOff}
+        onClick={() => setPageTab("preventivi")}
+      >
+        Preventivi
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={pageTab === "ordini"}
+        className={pageTab === "ordini" ? dsSegmentedBtnOn : dsSegmentedBtnOff}
+        onClick={() => setPageTab("ordini")}
+      >
+        Ordini fornitori
+      </button>
+    </div>
+  ) : null;
+
   return (
     <GestionaleSectionGate module="preventivi">
     <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
       <PageHeader
         title="Preventivi"
+        titleAddon={documentSectionTabs}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ModuleImportEntry entity="preventivi" module="preventivi" />
@@ -879,29 +903,6 @@ export function PreventiviView() {
       />
 
       <div className={dsStackPage}>
-
-      {ordiniPerm.canRead ? (
-        <div className={`${dsSegmentedWrap} w-fit`} role="tablist" aria-label="Sezione documenti">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={pageTab === "preventivi"}
-            className={pageTab === "preventivi" ? dsSegmentedBtnOn : dsSegmentedBtnOff}
-            onClick={() => setPageTab("preventivi")}
-          >
-            Preventivi
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={pageTab === "ordini"}
-            className={pageTab === "ordini" ? dsSegmentedBtnOn : dsSegmentedBtnOff}
-            onClick={() => setPageTab("ordini")}
-          >
-            Ordini fornitori
-          </button>
-        </div>
-      ) : null}
 
       {pageTab === "ordini" ? (
         <OrdiniFornitoriView canRead={canReadPreventivi} canWrite={canWritePreventivi} />

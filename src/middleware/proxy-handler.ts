@@ -27,11 +27,29 @@ import { logBootServer } from "@/lib/observability/boot-investigation";
 const LOGIN_PATH = "/login";
 const RESET_PASSWORD_PATH = "/login/reset-password";
 const PRIVACY_POLICY_PATH = "/privacy-policy";
+const OFFLINE_PATH = "/offline";
 
 function isPublicInfoPath(pathname: string): boolean {
   return pathname === PRIVACY_POLICY_PATH;
 }
 
+function isPwaPublicPath(pathname: string): boolean {
+  return pathname === OFFLINE_PATH || isPublicInfoPath(pathname);
+}
+
+function isStaticAsset(pathname: string): boolean {
+  if (pathname.startsWith("/_next")) return true;
+  if (pathname === "/favicon.ico") return true;
+  if (/\.(?:ico|png|jpg|jpeg|gif|webp|svg|woff2?|ttf|eot)$/.test(pathname)) return true;
+  return false;
+}
+
+function isPwaStaticAsset(pathname: string): boolean {
+  if (pathname === "/sw.js") return true;
+  if (pathname === "/manifest.webmanifest") return true;
+  if (pathname.startsWith("/icons/")) return true;
+  return isStaticAsset(pathname);
+}
 function logEdgeRedirect(from: string, to: string, reason: string): void {
   logBootServer("REDIRECT", "edge", { from, to, reason }, `${from}→${to}`);
 }
@@ -43,13 +61,6 @@ function redirectWithLog(request: NextRequest, pathname: string, to: URL, reason
 
 function requestHadSupabaseAuthCookies(request: NextRequest): boolean {
   return request.cookies.getAll().some((c) => c.name.includes("-auth-token"));
-}
-
-function isStaticAsset(pathname: string): boolean {
-  if (pathname.startsWith("/_next")) return true;
-  if (pathname === "/favicon.ico") return true;
-  if (/\.(?:ico|png|jpg|jpeg|gif|webp|svg|woff2?|ttf|eot)$/.test(pathname)) return true;
-  return false;
 }
 
 /** Inoltra snapshot auth edge→RSC; rimuove header client-forged. */
@@ -77,6 +88,14 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
   const pathname = request.nextUrl.pathname;
   const bootTiming = process.env.NEXT_PUBLIC_BOOT_TIMING === "1";
   const t0 = bootTiming ? Date.now() : 0;
+
+  if (isPwaStaticAsset(pathname)) {
+    return NextResponse.next();
+  }
+
+  if (isPwaPublicPath(pathname)) {
+    return NextResponse.next();
+  }
 
   if (isStaticAsset(pathname)) {
     return NextResponse.next();

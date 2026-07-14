@@ -1,9 +1,13 @@
 import type { CSSProperties } from "react";
 import { dsZTooltip } from "@/lib/ui/design-system";
 
-export const TOOLTIP_PORTAL_Z = 140;
+/** Sopra sticky table / dropdown; sotto toast (200). */
+export const TOOLTIP_PORTAL_Z = 190;
 export const TOOLTIP_GAP = 6;
 export const TOOLTIP_VIEWPORT_PAD = 8;
+
+export const CAB_TOOLTIP_PORTAL_ATTR = "data-cab-tooltip-portal";
+export const CAB_TOOLTIP_ROOT_ID = "cab-tooltip-root";
 
 export type TooltipSide = "top" | "bottom" | "left" | "right";
 
@@ -123,6 +127,59 @@ export function tooltipTransformOrigin(side: TooltipSide): string {
       return "right center";
     case "right":
       return "left center";
+  }
+}
+
+/** Stili inline portal — sfondo opaco + layer compositor dedicato. */
+export function tooltipPortalInlineStyle(side: TooltipSide): CSSProperties {
+  return {
+    position: "fixed",
+    zIndex: TOOLTIP_PORTAL_Z,
+    transformOrigin: tooltipTransformOrigin(side),
+    opacity: 1,
+    backgroundColor: "var(--cab-card)",
+    color: "var(--cab-text)",
+    transform: "translateZ(0)",
+  };
+}
+
+/** Container portal — ultimo figlio di body, sopra sticky/scroll table. */
+export function getTooltipPortalContainer(): HTMLElement {
+  if (typeof document === "undefined") {
+    throw new Error("getTooltipPortalContainer requires document");
+  }
+  let root = document.getElementById(CAB_TOOLTIP_ROOT_ID);
+  if (!root) {
+    root = document.createElement("div");
+    root.id = CAB_TOOLTIP_ROOT_ID;
+    root.setAttribute("data-cab-tooltip-root", "");
+    root.style.cssText = `position:fixed;inset:0;z-index:${TOOLTIP_PORTAL_Z};pointer-events:none;isolation:isolate;`;
+    document.body.appendChild(root);
+  }
+  return root;
+}
+
+type PopoverElement = HTMLElement & { showPopover?: () => void; hidePopover?: () => void };
+
+export function showTooltipPopover(el: HTMLElement | null): void {
+  if (!el) return;
+  const pop = el as PopoverElement;
+  if (typeof pop.showPopover !== "function") return;
+  try {
+    pop.showPopover();
+  } catch {
+    /* già aperto */
+  }
+}
+
+export function hideTooltipPopover(el: HTMLElement | null): void {
+  if (!el) return;
+  const pop = el as PopoverElement;
+  if (typeof pop.hidePopover !== "function") return;
+  try {
+    pop.hidePopover();
+  } catch {
+    /* già chiuso */
   }
 }
 

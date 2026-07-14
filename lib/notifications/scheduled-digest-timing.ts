@@ -1,20 +1,19 @@
-import {
-  isAtOrAfterReminderTime,
-  isWeekendLocal,
-} from "@/lib/dipendenti/dipendenti-presenze-reminder";
-
-export const LAVORAZIONI_RITARDO_DIGEST_HOUR = 8;
-export const LAVORAZIONI_RITARDO_DIGEST_MINUTE = 0;
+import { isWeekendLocal } from "@/lib/dipendenti/dipendenti-presenze-reminder";
 
 export const FATTURE_SCADUTE_DIGEST_HOUR = 9;
 export const FATTURE_SCADUTE_DIGEST_MINUTE = 0;
 
-export function shouldRunLavorazioniRitardoDigestCheck(now: Date = new Date()): boolean {
-  if (isWeekendLocal(now)) return false;
-  return isAtOrAfterReminderTime(now, LAVORAZIONI_RITARDO_DIGEST_HOUR, LAVORAZIONI_RITARDO_DIGEST_MINUTE);
+function isAtOrAfterDigestTime(
+  date: Date,
+  hour: number,
+  minute: number,
+): boolean {
+  if (date.getHours() > hour) return true;
+  if (date.getHours() < hour) return false;
+  return date.getMinutes() >= minute;
 }
 
 export function shouldRunFattureScaduteDigestCheck(now: Date = new Date()): boolean {
   if (isWeekendLocal(now)) return false;
-  return isAtOrAfterReminderTime(now, FATTURE_SCADUTE_DIGEST_HOUR, FATTURE_SCADUTE_DIGEST_MINUTE);
+  return isAtOrAfterDigestTime(now, FATTURE_SCADUTE_DIGEST_HOUR, FATTURE_SCADUTE_DIGEST_MINUTE);
 }

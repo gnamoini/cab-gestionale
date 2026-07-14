@@ -10,6 +10,7 @@ import {
   shouldShowDesktopNotificationPermissionBanner,
   wasDesktopNotificationPromptDismissed,
 } from "@/lib/lavorazioni/desktop-notifications";
+import { shouldShowDesktopNotificationPromptWhenPushEligible } from "@/lib/pwa/push-permission-flow";
 
 export function DesktopNotificationPermissionPrompt() {
   const rbac = useRbac();
@@ -32,6 +33,7 @@ export function DesktopNotificationPermissionPrompt() {
   const visible =
     enabled &&
     !hidden &&
+    shouldShowDesktopNotificationPromptWhenPushEligible() &&
     shouldShowDesktopNotificationPermissionBanner(permissionState, dismissed);
 
   const handleEnable = useCallback(async () => {

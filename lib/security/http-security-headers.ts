@@ -40,6 +40,7 @@ export function buildContentSecurityPolicy(): string {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'self'",
+    "worker-src 'self'",
   ].join("; ");
 }
 

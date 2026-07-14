@@ -412,8 +412,8 @@ export const dsZModal = "z-50";
 export const dsZModalHigh = "z-[100]";
 /** Menu filtri / autocomplete / calendario (portal su body). */
 export const dsZDropdown = "z-[130]";
-/** Tooltip icon-only (sopra dropdown, sotto toast). */
-export const dsZTooltip = "z-[140]";
+/** Tooltip icon-only (sopra sticky table/dropdown, sotto toast). */
+export const dsZTooltip = "z-[190]";
 /** Overlay loading globale (sotto toast, sopra modali standard). */
 export const dsZGlobalLoading = "z-[170]";
 export const dsZToast = "z-[200]";
@@ -435,17 +435,17 @@ export const dsToastMessage =
 export const dsToastDismiss =
   "flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--ds-radius-md)] text-[color:var(--cab-text-muted)] transition-[background-color,color] duration-150 hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)]";
 
-/** Contenuto tooltip portal (icon-only actions). */
+/** Contenuto tooltip portal (azioni / CTA — testo breve o frase su più righe, senza scroll). */
 export const dsTooltipContent =
-  "pointer-events-none max-w-[12rem] whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)] transition-[visibility,transform] duration-150 ease-out";
+  "pointer-events-none max-w-[16rem] overflow-hidden whitespace-normal leading-snug rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)]";
 
 /** Tooltip multilinea (es. celle timesheet). */
 export const dsTooltipContentMultiline =
-  "pointer-events-none max-w-[14rem] whitespace-pre-line text-center leading-snug rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)] transition-[visibility,transform] duration-150 ease-out";
+  "pointer-events-none max-w-[14rem] overflow-hidden whitespace-pre-line text-center leading-snug rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)]";
 
-/** Stato portal tooltip — visibility (non opacity) così lo sfondo resta opaco. */
-export const dsTooltipPortalVisible = "visible scale-100";
-export const dsTooltipPortalHidden = "invisible scale-95";
+/** Stato portal tooltip — solo visibility (no opacity/transform: evita sfondo trasparente). */
+export const dsTooltipPortalVisible = "visible";
+export const dsTooltipPortalHidden = "invisible";
 
 /** Skeleton */
 export const dsSkeletonPulse =

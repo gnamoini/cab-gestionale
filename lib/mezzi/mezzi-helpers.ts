@@ -1,5 +1,6 @@
 import { documentoRelevantePerMezzo, preventivoMatchesMezzo } from "@/lib/mezzi/mezzi-hub-merge";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
+import { mezzoTagliandiEnabled } from "@/lib/mezzi/mezzi-meta";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { Q_LAVORAZIONI_MEZZO_ID } from "@/lib/navigation/dashboard-log-links";
@@ -130,6 +131,9 @@ export function compareMezzi(
       break;
     case "numeroLavorazioni":
       cmp = (numeroLavorazioniSortValue?.(a) ?? 0) - (numeroLavorazioniSortValue?.(b) ?? 0);
+      break;
+    case "tagliandi":
+      cmp = Number(mezzoTagliandiEnabled(a)) - Number(mezzoTagliandiEnabled(b));
       break;
     default:
       cmp = 0;

@@ -5,7 +5,8 @@ function assert(cond: boolean, msg: string): void {
 }
 
 assert(validateCreateUserInput({
-  nome: "Mario Rossi",
+  nome: "Mario",
+  cognome: "Rossi",
   username: "mario.r",
   email: "mario@example.com",
   password: "password123",
@@ -14,11 +15,21 @@ assert(validateCreateUserInput({
 
 assert(validateCreateUserInput({
   nome: "X",
+  cognome: "Rossi",
   username: "mario.r",
   email: "mario@example.com",
   password: "password123",
   ruolo: "operatore",
 }) !== null, "short nome rejected");
+
+assert(validateCreateUserInput({
+  nome: "Mario",
+  cognome: "X",
+  username: "mario.r",
+  email: "mario@example.com",
+  password: "password123",
+  ruolo: "operatore",
+}) !== null, "short cognome rejected");
 
 assert(validateResolveLoginIdentifier("") !== null, "empty identifier rejected");
 assert(validateResolveLoginIdentifier("user@test.com") === null, "email identifier ok");

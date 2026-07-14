@@ -81,27 +81,6 @@ function normalizeItem(raw: unknown): AdminDashboardNotification | null {
     };
   }
 
-  if (obj.kind === "dashboard_promemoria_reminder") {
-    const promemoriaId = typeof obj.promemoriaId === "string" ? obj.promemoriaId.trim() : "";
-    const eventDateYmd = typeof obj.eventDateYmd === "string" ? obj.eventDateYmd.trim() : "";
-    const title = typeof obj.title === "string" ? obj.title.trim() : "";
-    if (!promemoriaId || !eventDateYmd || !title) return null;
-    const id =
-      typeof obj.id === "string" && obj.id.trim()
-        ? obj.id.trim()
-        : `promemoria:${promemoriaId}:${eventDateYmd}`;
-    return {
-      kind: "dashboard_promemoria_reminder",
-      id,
-      promemoriaId,
-      eventDateYmd,
-      title,
-      message: typeof obj.message === "string" ? obj.message : title,
-      description: typeof obj.description === "string" ? obj.description : null,
-      createdAt: typeof obj.createdAt === "string" ? obj.createdAt : new Date().toISOString(),
-    };
-  }
-
   if (obj.kind === "magazzino_sotto_scorta") {
     const ricambioId = typeof obj.ricambioId === "string" ? obj.ricambioId.trim() : "";
     if (!ricambioId) return null;

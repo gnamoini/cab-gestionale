@@ -38,6 +38,7 @@ import { mezziListQueryKey } from "@/lib/render/query-key-factory";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { incrementHealthCounter } from "@/lib/observability/runtime-health";
+import { maybePublishTagliandoDueOnInterventoCreate } from "@/lib/maintenance-plans/tagliando-due-notification.client";
 
 export { SchedaIngressoEditModal } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
 
@@ -443,6 +444,16 @@ export function LavorazioneCreateModal({
             });
             if (tx.lavorazioneId) {
               await commitLavorazioneCreateSuccess(qc, tx.lavorazioneId);
+              if (createdBy) {
+                const partialMezzoId = resolvedMezzo.mezzoId ?? mezzoHint;
+                maybePublishTagliandoDueOnInterventoCreate({
+                  userId: createdBy,
+                  lavorazioneId: tx.lavorazioneId,
+                  mezzoId: partialMezzoId,
+                  fields: currentFields,
+                  mezzo: catalog.find((m) => m.id === partialMezzoId) ?? null,
+                });
+              }
             }
             return;
           }
@@ -450,6 +461,15 @@ export function LavorazioneCreateModal({
         }
 
         await commitLavorazioneCreateSuccess(qc, tx.lavorazioneId);
+        if (createdBy) {
+          maybePublishTagliandoDueOnInterventoCreate({
+            userId: createdBy,
+            lavorazioneId: tx.lavorazioneId,
+            mezzoId: tx.mezzoId,
+            fields: currentFields,
+            mezzo: catalog.find((m) => m.id === tx.mezzoId) ?? null,
+          });
+        }
         createdLavorazioneIdRef.current = null;
         partialSuccessRef.current = false;
         idempotencyKeyRef.current =

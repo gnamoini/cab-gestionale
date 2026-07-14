@@ -16,6 +16,11 @@ html {
   background-color: var(--cab-bg-app);
 }
 
+/* PWA Fase 3 — offset mirati in modalità standalone (no padding globali). */
+html.pwa-standalone [data-pwa-standalone-offset] {
+  /* hook per theme toggle login/offline; posizione via Tailwind sul nodo */
+}
+
 :root {
   --cab-app-width: 100%;
   --cab-app-height: 100dvh;
@@ -112,6 +117,34 @@ html {
   --ds-space-lg: 1rem;
   --ds-space-xl: 1.5rem;
   --ds-space-2xl: 2rem;
+}
+
+/* Portal tooltip — top layer / sticky table: sfondo opaco forzato. */
+[data-cab-tooltip-portal] {
+  opacity: 1 !important;
+  background-color: var(--cab-card) !important;
+  color: var(--cab-text) !important;
+  border-color: var(--cab-border-strong) !important;
+  isolation: isolate;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  overflow: hidden;
+  scrollbar-width: none;
+}
+
+[data-cab-tooltip-portal]::-webkit-scrollbar {
+  display: none;
+}
+
+#cab-tooltip-root {
+  overflow: hidden;
+  scrollbar-width: none;
+}
+
+[data-cab-tooltip-portal]:popover-open {
+  opacity: 1 !important;
+  background-color: var(--cab-card) !important;
 }
 
 @theme inline {

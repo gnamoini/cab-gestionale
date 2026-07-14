@@ -117,7 +117,7 @@ export function AuthStandalonePageShell({
       <div className="pointer-events-none absolute inset-0 bg-[var(--cab-bg-app)]" aria-hidden />
       {showDecor ? (loginDecor ? <AuthStandaloneLoginDecor /> : <AuthStandaloneDefaultDecor />) : null}
       {showThemeToggle ? (
-        <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
+        <div className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-20 sm:right-6" data-pwa-standalone-offset>
           <ThemeToggle />
         </div>
       ) : null}

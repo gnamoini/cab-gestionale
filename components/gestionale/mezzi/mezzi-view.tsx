@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -13,10 +14,9 @@ import { MezziSearchBar, MezziFilterFields, mezziFieldFiltersActive } from "@/co
 import { MezziHubDetailModal } from "@/components/gestionale/mezzi/mezzi-hub-detail-modal";
 import type { MezziHubTabId } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 import { MezzoEliminaConfirmDialog } from "@/components/gestionale/mezzi/mezzo-elimina-confirm-dialog";
-import { MezziTagliandiMatrixModal } from "@/components/gestionale/mezzi/mezzi-tagliandi-matrix-modal";
+import { MezziPageViewToggle, type MezziPageView } from "@/components/gestionale/mezzi/mezzi-page-view-toggle";
 import { MezziTable } from "@/components/gestionale/mezzi/mezzi-table";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { erpBtnAccent, erpBtnNeutral, erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { compareMezzi, mezzoMatchesNumeroLavorazioniFilter, mezzoMatchesUltimaLavFilter, type NumeroLavorazioniFilter, type TagliandiFilter, type UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
 import { mezzoTagliandiEnabled } from "@/lib/mezzi/mezzi-meta";
 import {
@@ -65,6 +65,14 @@ import {
 } from "@/lib/ui/collapsible-prefs";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
+const MezziTagliandiPanel = dynamic(
+  () =>
+    import("@/components/gestionale/mezzi/mezzi-tagliandi-panel").then((m) => ({
+      default: m.MezziTagliandiPanel,
+    })),
+  { ssr: false, loading: () => <LoadingMezziListSkeleton /> },
+);
+
 function naturalMezziOrder(a: MezzoGestito, b: MezzoGestito) {
   return a.id.localeCompare(b.id, "en");
 }
@@ -77,6 +85,9 @@ export function MezziView() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+
+  const [pageView, setPageView] = useState<MezziPageView>("anagrafica");
+  const isAnagrafica = pageView === "anagrafica";
 
   const [search, setSearch] = useState("");
   const [filtroCliente, setFiltroCliente] = useState("");
@@ -95,6 +106,13 @@ export function MezziView() {
   const [filtroTagliandi, setFiltroTagliandi] = useState<TagliandiFilter>("");
   const [filtroNumeroLav, setFiltroNumeroLav] = useState<NumeroLavorazioniFilter>("");
   const [filtroUltimaLav, setFiltroUltimaLav] = useState<UltimaLavorazioneFilter>("");
+  const [logOpen, setLogOpen] = useState(false);
+  const [hubMezzo, setHubMezzo] = useState<MezzoGestito | null>(null);
+  const [hubInitialTab, setHubInitialTab] = useState<MezziHubTabId>("panoramica");
+  const [nuovoOpen, setNuovoOpen] = useState(false);
+  const [editMezzo, setEditMezzo] = useState<MezzoGestito | null>(null);
+  const [eliminaConfirmMezzo, setEliminaConfirmMezzo] = useState<MezzoGestito | null>(null);
+  const needsLavorazioniSlice = isAnagrafica || Boolean(hubMezzo) || Boolean(eliminaConfirmMezzo);
   const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
     collapsibleExpandedBoolPref(false, { scope: "mezzi", key: "filters", userId: user?.id ?? null }),
   );
@@ -180,20 +198,24 @@ export function MezziView() {
     isError: mezziError,
     error: mezziErr,
     refetch: refetchMezzi,
-  } = useMezziListQuery(serviceFilters);
+  } = useMezziListQuery(serviceFilters, { enabled: isAnagrafica });
   const mezzoRows = mezzoRowsRaw ?? [];
-  const mezziInitialLoading = mezziLoading && mezzoRowsRaw === undefined && !mezziError;
+  const mezziInitialLoading = isAnagrafica && mezziLoading && mezzoRowsRaw === undefined && !mezziError;
 
-  const { data: lavRows = [] } = useLavorazioniReportSlice({ mezziRows: mezzoRows });
+  const { data: lavRows = [] } = useLavorazioniReportSlice({
+    mezziRows: mezzoRows,
+    enabled: needsLavorazioniSlice,
+  });
   const mezziUi = mezzoRows;
 
   const interventiByMezzoId = useMemo(() => {
+    if (!isAnagrafica) return new Map<string, MezzoInterventoLavorazione[]>();
     const map = new Map<string, MezzoInterventoLavorazione[]>();
     for (const m of mezziUi) {
       map.set(m.id, interventiMezzoDaLavorazioniDb(m, lavRows));
     }
     return map;
-  }, [mezziUi, lavRows]);
+  }, [isAnagrafica, mezziUi, lavRows]);
 
   const inOfficina = useCallback((m: MezzoGestito) => mezzoHaLavorazioneAttivaDb(m, lavRows), [lavRows]);
 
@@ -221,15 +243,17 @@ export function MezziView() {
   );
 
   const filteredMezzi = useMemo(() => {
+    if (!isAnagrafica) return [];
     return mezziUi.filter((m) => {
       const interventi = interventiByMezzoId.get(m.id) ?? [];
       if (!mezzoMatchesUltimaLavFilter(interventi, filtroUltimaLav)) return false;
       if (!mezzoMatchesNumeroLavorazioniFilter(interventi.length, filtroNumeroLav)) return false;
       return true;
     });
-  }, [mezziUi, interventiByMezzoId, filtroUltimaLav, filtroNumeroLav]);
+  }, [isAnagrafica, mezziUi, interventiByMezzoId, filtroUltimaLav, filtroNumeroLav]);
 
   const sorted = useMemo(() => {
+    if (!isAnagrafica) return [];
     const rows = [...filteredMezzi];
     rows.sort((a, b) =>
       compareMezzi(
@@ -243,7 +267,7 @@ export function MezziView() {
       ),
     );
     return rows;
-  }, [filteredMezzi, interventiByMezzoId, sortColumn, sortPhase]);
+  }, [isAnagrafica, filteredMezzi, interventiByMezzoId, sortColumn, sortPhase]);
 
   const hasMezziFilters = search.trim().length > 0 || mezziFieldFiltersActive(mezziFieldFilterState);
 
@@ -257,19 +281,13 @@ export function MezziView() {
 
   const pagedSorted = useMemo(() => sliceItems(sorted), [sliceItems, sorted, page]);
 
-  const [tagliandiMatrixOpen, setTagliandiMatrixOpen] = useState(false);
-  const [hubMezzo, setHubMezzo] = useState<MezzoGestito | null>(null);
-  const [hubInitialTab, setHubInitialTab] = useState<MezziHubTabId>("panoramica");
-
   const openMezzoHub = useCallback((m: MezzoGestito, tab: MezziHubTabId = "panoramica") => {
     setHubInitialTab(tab);
     setHubMezzo(m);
   }, []);
-  const [nuovoOpen, setNuovoOpen] = useState(false);
-  const [editMezzo, setEditMezzo] = useState<MezzoGestito | null>(null);
-
-  const [logOpen, setLogOpen] = useState(false);
-  const { undoable: undoableMezziLog, logQuery } = useUndoableLog("mezzi");
+  const { undoable: undoableMezziLog, logQuery } = useUndoableLog("mezzi", {
+    enabled: isAnagrafica || logOpen,
+  });
   const logEntriesUi = useMemo(
     () =>
       (logQuery.data ?? []).map((row) =>
@@ -282,6 +300,7 @@ export function MezziView() {
   );
 
   const ultimaModificaInfoByMezzoId = useMemo(() => {
+    if (!isAnagrafica) return new Map<string, MezzoUltimaModificaInfo>();
     const fromLogs = buildUltimaModificaByMezzoIdFromLogs(logQuery.data ?? [], {
       currentUserId: user?.id ?? null,
       currentDisplayName: user?.nome ?? "",
@@ -291,7 +310,7 @@ export function MezziView() {
       map.set(m.id, resolveMezzoUltimaModificaInfo(m, fromLogs));
     }
     return map;
-  }, [mezziUi, logQuery.data, user?.id, user?.nome]);
+  }, [isAnagrafica, mezziUi, logQuery.data, user?.id, user?.nome]);
 
   const {
     page: logPage,
@@ -320,7 +339,6 @@ export function MezziView() {
     useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
 
-  const [eliminaConfirmMezzo, setEliminaConfirmMezzo] = useState<MezzoGestito | null>(null);
   const [eliminaDeps, setEliminaDeps] = useState<MezzoDependencies | null>(null);
   const [loadingEliminaDeps, setLoadingEliminaDeps] = useState(false);
 
@@ -471,7 +489,7 @@ export function MezziView() {
     };
   }, []);
 
-  const scrollLockActive = Boolean(hubMezzo || nuovoOpen || editMezzo || logOpen || tagliandiMatrixOpen);
+  const scrollLockActive = Boolean(hubMezzo || nuovoOpen || editMezzo || logOpen);
   const anyOverlay = scrollLockActive || Boolean(eliminaConfirmMezzo);
   useEffect(() => {
     const id = searchParams.get(Q_FOCUS_MEZZO)?.trim();
@@ -491,7 +509,6 @@ export function MezziView() {
       setNuovoOpen(false);
       setEditMezzo(null);
       setLogOpen(false);
-      setTagliandiMatrixOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -563,22 +580,13 @@ export function MezziView() {
     <>
       <PageHeader
         title="Mezzi"
+        titleAddon={<MezziPageViewToggle value={pageView} onChange={setPageView} />}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className={erpBtnNeutral}
-              onClick={() => {
-                void refetchMezzi();
-                setTagliandiMatrixOpen(true);
-              }}
-            >
-              Matrice tagliandi
-            </button>
             <ModuleImportEntry entity="mezzi" module="mezzi" onCompleted={() => void refetchMezzi()} />
             <GestionalePageToolbarActions
-            canUndo={Boolean(undoableMezziLog)}
-            undoDisabled={!canEditVehicles}
+            canUndo={isAnagrafica && Boolean(undoableMezziLog)}
+            undoDisabled={!canEditVehicles || !isAnagrafica}
             undoPending={updateMut.isPending}
             onUndo={() => void undoUltimoMezzo()}
             onOpenLog={() => setLogOpen(true)}
@@ -590,6 +598,8 @@ export function MezziView() {
 
       <div className={dsStackPage}>
         <ShellCard>
+          {pageView === "anagrafica" ? (
+            <>
           <PageToolbar
             className="sm:mx-0"
             primaryAction={
@@ -689,16 +699,12 @@ export function MezziView() {
           {showPager ? (
             <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} />
           ) : null}
+            </>
+          ) : pageView === "tagliandi" ? (
+            <MezziTagliandiPanel canEdit={canEditVehicles} />
+          ) : null}
         </ShellCard>
       </div>
-
-      {tagliandiMatrixOpen ? (
-        <MezziTagliandiMatrixModal
-          open={tagliandiMatrixOpen}
-          onClose={() => setTagliandiMatrixOpen(false)}
-          canEdit={canEditVehicles}
-        />
-      ) : null}
 
       {hubMezzo ? (
         <MezziHubDetailModal

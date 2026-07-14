@@ -11,7 +11,10 @@
     "dev:webpack": "next dev --webpack",
     "clean:next": "npx tsx scripts/clean-next-dev-cache.ts",
     "clean:next:all": "npx tsx scripts/clean-next-dev-cache.ts --all",
-    "build": "next build",
+    "build": "npm run pwa:build-sw && next build",
+    "pwa:build-sw": "npx tsx scripts/build-pwa-sw.ts",
+    "pwa:icons": "npx tsx scripts/generate-pwa-icons.ts",
+    "test:pwa": "npx tsx lib/regression/pwa-manifest-policy.test.ts && npx tsx lib/regression/pwa-sw-policy.test.ts && npx tsx lib/regression/pwa-sw-security-policy.test.ts && npx tsx lib/regression/pwa-install-ux-policy.test.ts && npx tsx lib/regression/pwa-phase4-policy.test.ts && npx tsx lib/regression/pwa-phase5-policy.test.ts",
     "start": "next start",
     "lint": "eslint",
     "test:permissions": "npx tsx src/lib/permissions/effective-permissions.test.ts",
@@ -155,6 +158,7 @@
     "react-dom": "19.2.4",
     "server-only": "^0.0.1",
     "sharp": "^0.35.1",
+    "web-push": "^3.6.7",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -167,12 +171,21 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
+    "esbuild": "^0.28.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "jsdom": "^29.1.1",
     "pg": "^8.21.0",
     "tailwindcss": "^4",
+    "to-ico": "^1.1.5",
     "tsx": "^4.22.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "workbox-cacheable-response": "^7.4.1",
+    "workbox-core": "^7.4.1",
+    "workbox-expiration": "^7.4.1",
+    "workbox-precaching": "^7.4.1",
+    "workbox-routing": "^7.4.1",
+    "workbox-strategies": "^7.4.1"
   }
 }

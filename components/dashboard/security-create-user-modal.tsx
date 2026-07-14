@@ -112,7 +112,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
         setPending(true);
         const res = await createUserByAdminAction({
           nome: snap.nome.trim(),
-          cognome: snap.cognome.trim() || null,
+          cognome: snap.cognome.trim(),
           username: snap.username.trim(),
           email: snap.email.trim(),
           password: snap.password,
@@ -191,6 +191,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
             value={cognome}
             onChange={(e) => setCognome(e.target.value)}
             autoComplete="family-name"
+            required
             disabled={pending}
           />
         </label>

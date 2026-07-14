@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   Drawer,
   LogEntry,
@@ -45,6 +45,11 @@ import { useNotificationCenter } from "@/src/hooks/gestionale/use-notification-c
 import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
+import { isClientInboxEligible } from "@/lib/notifications/client-inbox-eligible";
+import {
+  getNotificationCenterOpenSnapshot,
+  subscribeNotificationCenterOpen,
+} from "@/lib/pwa/pwa-notification-state";
 
 const notificationFooterBtnClass = `${dsBtnGhost} min-h-[2rem] shrink-0`;
 
@@ -230,7 +235,16 @@ export function NotificationCenterBell({
     snapshot?.role ? { ruolo: snapshot.role } : user,
     snapshot?.rbacContext,
   );
+  const clientInbox = isClientInboxEligible(
+    snapshot?.role ? { ruolo: snapshot.role } : user,
+    snapshot?.rbacContext,
+  );
   const [open, setOpen] = useState(false);
+  const openSignal = useSyncExternalStore(
+    subscribeNotificationCenterOpen,
+    getNotificationCenterOpenSnapshot,
+    () => 0,
+  );
   const [desktopPermissionState, setDesktopPermissionState] = useState(() =>
     getDesktopNotificationPermissionState(),
   );
@@ -257,6 +271,10 @@ export function NotificationCenterBell({
   }, [onOpenInbox]);
 
   useEffect(() => {
+    if (openSignal > 0) setOpen(true);
+  }, [openSignal]);
+
+  useEffect(() => {
     if (!open) return;
     setDesktopPermissionState(getDesktopNotificationPermissionState());
   }, [open]);
@@ -274,6 +292,19 @@ export function NotificationCenterBell({
 
   const prevUnreadRef = useRef<number | null>(null);
   const [bellArrive, setBellArrive] = useState(false);
+  const clientToastSeenRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!clientInbox || isLoading || open) return;
+    for (const row of notifications) {
+      if (!row.is_unread) continue;
+      if (row.type !== "client_portal_ingresso" && row.type !== "client_portal_completata") continue;
+      if (clientToastSeenRef.current.has(row.id)) continue;
+      clientToastSeenRef.current.add(row.id);
+      const message = row.body?.trim() || row.title?.trim() || "Nuova notifica";
+      gestToast.info(message, 6000);
+    }
+  }, [clientInbox, gestToast, isLoading, notifications, open]);
 
   useEffect(() => {
     if (prevUnreadRef.current === null) {
@@ -295,6 +326,8 @@ export function NotificationCenterBell({
 
   const collapsed = embedded && sidebarCollapsed;
 
+  const showUnreadBadge = unreadCount > 0 && !open && !collapsed;
+
   const navPointerIntentProps = collapsed
     ? {
         onPointerEnter: () => onExpandIntent?.(),
@@ -308,19 +341,19 @@ export function NotificationCenterBell({
       } ${bellArrive ? "cab-notification-bell-icon--arrive" : ""}`.trim()}
     >
       <NotificationBellIcon variant="rail" />
-      {unreadCount > 0 && collapsed ? (
-        <NotificationCountBadge count={unreadCount} variant="rail" />
-      ) : null}
     </span>
   );
 
-  const trailingExpanded =
-    !collapsed &&
-    (unreadCount > 0 && !open ? (
-      <NotificationCountBadge count={unreadCount} variant="sidebarTrailing" />
-    ) : (
-      <SidebarSessionExpandChevron active={open} />
-    ));
+  const navLabel = collapsed ? (
+    "Notifiche"
+  ) : (
+    <span className="inline-flex min-w-0 items-center gap-1.5">
+      <span>Notifiche</span>
+      {showUnreadBadge ? <NotificationCountBadge count={unreadCount} variant="sidebarTrailing" /> : null}
+    </span>
+  );
+
+  const trailingExpanded = !collapsed ? <SidebarSessionExpandChevron active={open} /> : undefined;
 
   const triggerButton = (
     <SidebarNavRow
@@ -331,8 +364,8 @@ export function NotificationCenterBell({
       railTooltip={unreadCount > 0 ? `Notifiche (${unreadCount})` : "Notifiche"}
       className={`overflow-visible ${bellArrive ? "cab-notification-bell--arrive" : ""}`.trim()}
       icon={bellIcon}
-      label="Notifiche"
-      trailing={trailingExpanded || undefined}
+      label={navLabel}
+      trailing={trailingExpanded}
       aria-expanded={open}
       aria-haspopup="dialog"
       aria-label={ariaLabel}

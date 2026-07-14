@@ -30,15 +30,13 @@ const BrandingContext = createContext<BrandingContextValue | null>(null);
 
 function updateFavicon(logoUrl: string): void {
   if (typeof document === "undefined") return;
-  for (const rel of ["icon", "apple-touch-icon"]) {
-    let link = document.querySelector(`link[rel="${rel}"]`) as HTMLLinkElement | null;
-    if (!link) {
-      link = document.createElement("link");
-      link.rel = rel;
-      document.head.appendChild(link);
-    }
-    link.href = logoUrl;
+  let link = document.querySelector('link[rel="icon"]') as HTMLLinkElement | null;
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "icon";
+    document.head.appendChild(link);
   }
+  link.href = logoUrl;
 }
 
 export function BrandingProvider({ children }: { children: ReactNode }) {

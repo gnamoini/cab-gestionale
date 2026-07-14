@@ -1,4 +1,3 @@
-import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -17,6 +16,9 @@ import { CAB_CURSOR_AUTOMATION_DOM_SHIELD_INLINE_SCRIPT } from "@/lib/theme/curs
 import { logBootServer } from "@/lib/observability/boot-investigation";
 import "./globals.css";
 
+export { siteMetadata as metadata } from "@/lib/site/site-metadata";
+export { siteViewport as viewport } from "@/lib/site/site-viewport";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -26,23 +28,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
-export const metadata: Metadata = {
-  title: "CAB Gestionale Officina",
-  description:
-    "Gestionale web per officina: magazzino ricambi, lavorazioni, ERP/CRM, report e documentale.",
-  icons: {
-    icon: "/cab-logo.png",
-    apple: "/cab-logo.png",
-  },
-};
-
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  maximumScale: 1,
-};
 
 export default async function RootLayout({
   children,

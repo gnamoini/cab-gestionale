@@ -8,25 +8,6 @@ export type LavorazioneCompletataNotification = NotificationIntent & {
   kind: "lavorazione_completata";
 };
 
-export type LavorazioniRitardoDigestNotification = {
-  kind: "lavorazioni_ritardo_digest";
-  id: string;
-  dateYmd: string;
-  count: number;
-  sogliaGiorni: number;
-  createdAt: string;
-};
-
-export type PreventivoApprovatoNotification = {
-  kind: "preventivo_approvato";
-  id: string;
-  preventivoId: string;
-  numero: string;
-  cliente: string;
-  totale: number;
-  createdAt: string;
-};
-
 export type FattureScaduteDigestNotification = {
   kind: "fatture_scadute_digest";
   id: string;
@@ -64,27 +45,38 @@ export type AdminDashboardTestNotification = {
   createdAt: string;
 };
 
+export type TagliandoDaEseguireNotification = {
+  kind: "tagliando_da_eseguire";
+  id: string;
+  lavorazioneId: string;
+  mezzoId: string;
+  attrezzaturaLabel: string;
+  cliente: string;
+  currentOre: number;
+  earliestOverdueOre: number;
+  overdueCount: number;
+  createdAt: string;
+};
+
 export type DashboardPromemoriaReminderNotification = {
   kind: "dashboard_promemoria_reminder";
   id: string;
   promemoriaId: string;
   eventDateYmd: string;
-  eventTime?: string | null;
+  eventTime: string | null;
   title: string;
   message: string;
-  description?: string | null;
+  description: string | null;
   createdAt: string;
 };
 
 export type AdminDashboardNotification =
   | LavorazioneCreatedNotification
   | LavorazioneCompletataNotification
-  | LavorazioniRitardoDigestNotification
-  | PreventivoApprovatoNotification
   | MagazzinoSottoScortaNotification
   | FattureScaduteDigestNotification
   | DipendentiPresenzeReminderNotification
-  | DashboardPromemoriaReminderNotification
+  | TagliandoDaEseguireNotification
   | AdminDashboardTestNotification;
 
 export function wrapLavorazioneNotification(intent: NotificationIntent): LavorazioneCreatedNotification {
@@ -97,32 +89,12 @@ export function wrapLavorazioneCompletataNotification(
   return { kind: "lavorazione_completata", ...intent };
 }
 
-export function wrapPreventivoApprovatoNotification(input: {
-  preventivoId: string;
-  numero: string;
-  cliente: string;
-  totale: number;
-  createdAt: string;
-}): PreventivoApprovatoNotification {
-  return {
-    kind: "preventivo_approvato",
-    id: `prev:${input.preventivoId}:approved`,
-    preventivoId: input.preventivoId,
-    numero: input.numero,
-    cliente: input.cliente,
-    totale: input.totale,
-    createdAt: input.createdAt,
-  };
-}
-
 export function notificationStoreKey(notification: AdminDashboardNotification): string {
   if (notification.kind === "lavorazione_created") return `lav:${notification.lavorazioneId}`;
   if (notification.kind === "lavorazione_completata") return `lav:${notification.lavorazioneId}:done`;
-  if (notification.kind === "lavorazioni_ritardo_digest") return notification.id;
-  if (notification.kind === "preventivo_approvato") return notification.id;
   if (notification.kind === "fatture_scadute_digest") return notification.id;
   if (notification.kind === "dipendenti_presenze_reminder") return notification.id;
-  if (notification.kind === "dashboard_promemoria_reminder") return notification.id;
+  if (notification.kind === "tagliando_da_eseguire") return notification.id;
   if (notification.kind === "admin_dashboard_test") return notification.id;
   return `mag:${notification.ricambioId}`;
 }
@@ -149,18 +121,6 @@ export function isLavorazioneCompletataNotification(
   return notification.kind === "lavorazione_completata";
 }
 
-export function isLavorazioniRitardoDigestNotification(
-  notification: AdminDashboardNotification,
-): notification is LavorazioniRitardoDigestNotification {
-  return notification.kind === "lavorazioni_ritardo_digest";
-}
-
-export function isPreventivoApprovatoNotification(
-  notification: AdminDashboardNotification,
-): notification is PreventivoApprovatoNotification {
-  return notification.kind === "preventivo_approvato";
-}
-
 export function isFattureScaduteDigestNotification(
   notification: AdminDashboardNotification,
 ): notification is FattureScaduteDigestNotification {
@@ -179,10 +139,35 @@ export function isAdminDashboardTestNotification(
   return notification.kind === "admin_dashboard_test";
 }
 
-export function isDashboardPromemoriaReminderNotification(
+export function isTagliandoDaEseguireNotification(
   notification: AdminDashboardNotification,
-): notification is DashboardPromemoriaReminderNotification {
-  return notification.kind === "dashboard_promemoria_reminder";
+): notification is TagliandoDaEseguireNotification {
+  return notification.kind === "tagliando_da_eseguire";
+}
+
+export function wrapTagliandoDaEseguireNotification(input: {
+  lavorazioneId: string;
+  mezzoId: string;
+  attrezzaturaLabel: string;
+  cliente: string;
+  currentOre: number;
+  earliestOverdueOre: number;
+  overdueCount: number;
+  createdAt?: string;
+}): TagliandoDaEseguireNotification {
+  const createdAt = input.createdAt?.trim() || new Date().toISOString();
+  return {
+    kind: "tagliando_da_eseguire",
+    id: `tagliando-due:${input.lavorazioneId}`,
+    lavorazioneId: input.lavorazioneId,
+    mezzoId: input.mezzoId,
+    attrezzaturaLabel: input.attrezzaturaLabel,
+    cliente: input.cliente,
+    currentOre: input.currentOre,
+    earliestOverdueOre: input.earliestOverdueOre,
+    overdueCount: input.overdueCount,
+    createdAt,
+  };
 }
 
 export function buildAdminDashboardTestNotification(

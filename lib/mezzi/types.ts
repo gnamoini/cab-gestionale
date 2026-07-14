@@ -48,7 +48,8 @@ export type MezziSortKey =
   | "matricola"
   | "numeroScuderia"
   | "ultimaLavorazione"
-  | "numeroLavorazioni";
+  | "numeroLavorazioni"
+  | "tagliandi";
 
 export type MezziSortPhase = "natural" | "asc" | "desc";
 

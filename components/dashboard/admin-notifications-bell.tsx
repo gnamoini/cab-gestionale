@@ -21,23 +21,18 @@ import {
 } from "@/components/gestionale/gestionale-log-ui";
 import {
   buildAdminNotificationDipendentiHref,
-  buildAdminNotificationDashboardHref,
   buildAdminNotificationFatturazioneHref,
   buildAdminNotificationLavorazioneHref,
   buildAdminNotificationMagazzinoHref,
-  buildAdminNotificationPreventivoHref,
 } from "@/lib/lavorazioni/admin-notifications";
 import {
   buildAdminDashboardTestNotification,
   isAdminDashboardTestNotification,
-  isDashboardPromemoriaReminderNotification,
   isDipendentiPresenzeReminderNotification,
   isFattureScaduteDigestNotification,
   isLavorazioneCompletataNotification,
   isLavorazioneDashboardNotification,
-  isLavorazioniRitardoDigestNotification,
   isMagazzinoDashboardNotification,
-  isPreventivoApprovatoNotification,
   notificationStoreKey,
   type AdminDashboardNotification,
 } from "@/lib/notifications/admin-dashboard-notifications";
@@ -237,14 +232,6 @@ export function AdminNotificationsBell() {
         router.push(buildAdminNotificationLavorazioneHref(row.lavorazioneId));
         return;
       }
-      if (isLavorazioniRitardoDigestNotification(row)) {
-        router.push("/lavorazioni");
-        return;
-      }
-      if (isPreventivoApprovatoNotification(row)) {
-        router.push(buildAdminNotificationPreventivoHref(row.preventivoId));
-        return;
-      }
       if (isMagazzinoDashboardNotification(row)) {
         router.push(buildAdminNotificationMagazzinoHref(row.ricambioId));
         return;
@@ -255,10 +242,6 @@ export function AdminNotificationsBell() {
       }
       if (isDipendentiPresenzeReminderNotification(row)) {
         router.push(buildAdminNotificationDipendentiHref());
-        return;
-      }
-      if (isDashboardPromemoriaReminderNotification(row)) {
-        router.push(buildAdminNotificationDashboardHref());
       }
     },
     [close, router],

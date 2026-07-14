@@ -112,7 +112,7 @@ function compareUsers(a: EditableSecurityUser, b: EditableSecurityUser, key: Sec
   const dir = phase === "asc" ? 1 : -1;
   switch (key) {
     case "nome":
-      return dir * a.nome.localeCompare(b.nome, "it");
+      return dir * securityUserDisplayName(a).localeCompare(securityUserDisplayName(b), "it");
     case "username":
       return dir * (a.username ?? "").localeCompare(b.username ?? "", "it");
     case "email":

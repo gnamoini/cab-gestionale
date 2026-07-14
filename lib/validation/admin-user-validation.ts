@@ -6,6 +6,7 @@ import { EMAIL_RE } from "@/lib/validation/email";
 
 export type AdminUserInputValidation = {
   nome: string;
+  cognome: string;
   username: string;
   email: string;
   password: string;
@@ -15,6 +16,9 @@ export type AdminUserInputValidation = {
 export function validateCreateUserInput(input: AdminUserInputValidation): string | null {
   const nome = input.nome.trim();
   if (nome.length < 2 || nome.length > 120) return "Nome non valido (2–120 caratteri).";
+
+  const cognome = input.cognome.trim();
+  if (cognome.length < 2 || cognome.length > 120) return "Cognome non valido (2–120 caratteri).";
 
   const username = input.username.trim();
   if (username.length < 3 || username.length > 32) return "Username non valido (3–32 caratteri).";

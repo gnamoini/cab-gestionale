@@ -82,6 +82,15 @@ export function useNotificationCenter(drawerOpen = false) {
     await Promise.all([inboxQuery.refetch(), unreadQuery.refetch()]);
   }, [inboxQuery, unreadQuery]);
 
+  const markReadById = useCallback(
+    async (id: string) => {
+      if (!enabled || !id.trim()) return;
+      await notificationsEntry.markRead(id);
+      await refresh();
+    },
+    [enabled, refresh],
+  );
+
   const markAllRead = useCallback(async () => {
     if (!enabled) return;
     let total = 0;
@@ -171,6 +180,7 @@ export function useNotificationCenter(drawerOpen = false) {
     isLoading: inboxQuery.isLoading || unreadQuery.isLoading || permsLoading,
     dismissNotification,
     dismissAllNotifications,
+    markReadById,
     isDismissingAll,
     loadMore,
     hasMore: Boolean(inboxQuery.hasNextPage),

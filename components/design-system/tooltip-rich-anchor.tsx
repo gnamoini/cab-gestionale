@@ -15,7 +15,12 @@ import {
 import { createPortal } from "react-dom";
 import { useTooltip } from "./use-tooltip";
 import { dsTooltipPortalHidden, dsTooltipPortalVisible, dsZTooltip } from "@/lib/ui/design-system";
-import { tooltipFixedStyle, tooltipTransformOrigin, type TooltipSide } from "@/lib/ui/tooltip-portal";
+import {
+  CAB_TOOLTIP_PORTAL_ATTR,
+  getTooltipPortalContainer,
+  tooltipPortalInlineStyle,
+  type TooltipSide,
+} from "@/lib/ui/tooltip-portal";
 
 function mergeRefs<T>(...refs: Array<React.Ref<T> | undefined>): (node: T | null) => void {
   return (node) => {
@@ -63,7 +68,7 @@ export function TooltipRichAnchor({
 }) {
   const anchorRef = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const { open, visible, coords, triggerProps, hideImmediate } = useTooltip({
+  const { open, visible, resolvedSide, floatingStyles, setFloatingRef, setReferenceRef, triggerProps, hideImmediate } = useTooltip({
     content: summary,
     disabled,
     delayMs,
@@ -85,7 +90,7 @@ export function TooltipRichAnchor({
   const childRef = childProps.ref as React.Ref<HTMLElement> | undefined;
 
   const trigger = cloneElement(child, {
-    ref: mergeRefs(childRef, anchorRef),
+    ref: mergeRefs(childRef, setReferenceRef),
     title: undefined,
     onMouseEnter: mergeHandler(triggerProps.onMouseEnter, childProps.onMouseEnter as ((e: MouseEvent<HTMLElement>) => void) | undefined),
     onMouseLeave: mergeHandler(triggerProps.onMouseLeave, childProps.onMouseLeave as ((e: MouseEvent<HTMLElement>) => void) | undefined),
@@ -113,19 +118,16 @@ export function TooltipRichAnchor({
     open && summary.trim() && typeof document !== "undefined"
       ? createPortal(
           <div
-            ref={contentRef}
+            ref={setFloatingRef}
             role="tooltip"
+            popover="manual"
+            {...{ [CAB_TOOLTIP_PORTAL_ATTR]: "" }}
             className={`${panelClassName} ${dsZTooltip} pointer-events-none ${visible ? dsTooltipPortalVisible : dsTooltipPortalHidden}`}
-            style={{
-              ...tooltipFixedStyle(coords ?? { top: -9999, left: -9999, side }),
-              transformOrigin: tooltipTransformOrigin(coords?.side ?? side),
-              backgroundColor: "var(--cab-card)",
-              opacity: 1,
-            }}
+            style={{ ...tooltipPortalInlineStyle(resolvedSide), ...floatingStyles }}
           >
             {panel}
           </div>,
-          document.body,
+          getTooltipPortalContainer(),
         )
       : null;
 

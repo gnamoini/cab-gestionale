@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import { useToastContext } from "@/context/toast-context";
 import { useAuth } from "@/context/auth-context";
 import { loadAdminNotificationStore } from "@/lib/lavorazioni/admin-notification-store";
@@ -12,20 +11,11 @@ import {
   fattureScaduteDigestStoreKey,
   formatFattureScaduteDigestBody,
 } from "@/lib/fatturazione/fatture-scadute-digest";
-import {
-  buildLavorazioniRitardoDigestNotification,
-  buildLavorazioniRitardoDigestPayload,
-  formatLavorazioniRitardoDigestBody,
-  lavorazioniRitardoDigestStoreKey,
-} from "@/lib/lavorazioni/lavorazioni-ritardo-digest";
 import { isDashboardNotificationsPath, isFatturazioneNotificationsPath } from "@/lib/lavorazioni/admin-notifications";
 import { canPublishFattureScaduteDigest } from "@/lib/notifications/fatture-scadute-digest-eligible";
 import { publishNotification } from "@/lib/notifications/publish-notification";
 import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
-import {
-  shouldRunFattureScaduteDigestCheck,
-  shouldRunLavorazioniRitardoDigestCheck,
-} from "@/lib/notifications/scheduled-digest-timing";
+import { shouldRunFattureScaduteDigestCheck } from "@/lib/notifications/scheduled-digest-timing";
 import { todayDateYmd } from "@/lib/dipendenti/timesheet-month";
 import { invoicesService } from "@/src/services/invoices.service";
 import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
@@ -33,16 +23,13 @@ import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effec
 
 const CHECK_INTERVAL_MS = 60_000;
 
-/**
- * Bridge: digest giornalieri lavorazioni in ritardo (08:00) e fatture scadute (09:00).
- */
+/** Bridge: digest giornaliero fatture scadute (09:00 feriali). */
 export function AdminScheduledDigestNotificationBridge() {
   const { user } = useAuth();
   const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
   const { mode, writesLegacy } = useNotificationsV2Mode();
   const pathname = usePathname() ?? "";
   const { push } = useToastContext();
-  const queryClient = useQueryClient();
   const checkInFlightRef = useRef(false);
 
   const staffEligible =
@@ -56,21 +43,6 @@ export function AdminScheduledDigestNotificationBridge() {
     const today = todayDateYmd();
     checkInFlightRef.current = true;
     try {
-      if (shouldRunLavorazioniRitardoDigestCheck()) {
-        const lavKey = lavorazioniRitardoDigestStoreKey(today);
-        const skipLav = writesLegacy && Boolean(loadAdminNotificationStore(userId).items[lavKey]);
-        if (!skipLav) {
-          const payload = buildLavorazioniRitardoDigestPayload(queryClient);
-          if (payload) {
-            const notification = buildLavorazioniRitardoDigestNotification(payload);
-            const result = await publishNotification(userId, notification, mode);
-            if (result.added && !isDashboardNotificationsPath(pathname)) {
-              push(formatLavorazioniRitardoDigestBody(payload), "info", 5000);
-            }
-          }
-        }
-      }
-
       if (
         shouldRunFattureScaduteDigestCheck() &&
         canPublishFattureScaduteDigest(snapshot?.role ?? user?.ruolo)
@@ -95,7 +67,7 @@ export function AdminScheduledDigestNotificationBridge() {
     } finally {
       checkInFlightRef.current = false;
     }
-  }, [mode, pathname, push, queryClient, snapshot?.role, staffEligible, user?.id, user?.ruolo, writesLegacy]);
+  }, [mode, pathname, push, snapshot?.role, staffEligible, user?.id, user?.ruolo, writesLegacy]);
 
   useEffect(() => {
     if (!staffEligible || permsLoading || !user?.id) return;

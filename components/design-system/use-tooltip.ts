@@ -1,11 +1,20 @@
 "use client";
 
 import {
+  autoUpdate,
+  flip,
+  offset,
+  shift,
+  useFloating,
+  type Placement,
+} from "@floating-ui/react-dom";
+import {
   useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type FocusEvent,
   type MouseEvent,
   type PointerEvent,
@@ -13,8 +22,10 @@ import {
   type TouchEvent,
 } from "react";
 import {
-  computeTooltipCoords,
-  type TooltipCoords,
+  hideTooltipPopover,
+  showTooltipPopover,
+  TOOLTIP_GAP,
+  TOOLTIP_VIEWPORT_PAD,
   type TooltipSide,
 } from "@/lib/ui/tooltip-portal";
 
@@ -23,6 +34,17 @@ const HIDE_DELAY_MS = 100;
 const TOUCH_HOLD_MS = 400;
 /** Dopo un tap touch, ignora mouseenter sintetici (ghost events). */
 const TOUCH_GHOST_MOUSE_MS = 500;
+
+function sideToPlacement(side: TooltipSide): Placement {
+  return side;
+}
+
+function placementToSide(placement: Placement): TooltipSide {
+  if (placement.startsWith("bottom")) return "bottom";
+  if (placement.startsWith("left")) return "left";
+  if (placement.startsWith("right")) return "right";
+  return "top";
+}
 
 function isCoarsePointerDevice(): boolean {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
@@ -52,7 +74,10 @@ export function useTooltip({
 }): {
   open: boolean;
   visible: boolean;
-  coords: TooltipCoords | null;
+  resolvedSide: TooltipSide;
+  floatingStyles: CSSProperties;
+  setFloatingRef: (node: HTMLElement | null) => void;
+  setReferenceRef: (node: HTMLElement | null) => void;
   hideImmediate: () => void;
   triggerProps: {
     onMouseEnter: (e: MouseEvent<HTMLElement>) => void;
@@ -70,7 +95,6 @@ export function useTooltip({
 } {
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(false);
-  const [coords, setCoords] = useState<TooltipCoords | null>(null);
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -81,6 +105,36 @@ export function useTooltip({
   const coarsePointerRef = useRef(false);
 
   const canShow = Boolean(content?.trim()) && !disabled;
+
+  const { refs, floatingStyles, isPositioned, placement } = useFloating({
+    open,
+    placement: sideToPlacement(side),
+    strategy: "fixed",
+    middleware: [
+      offset(TOOLTIP_GAP),
+      flip({ padding: TOOLTIP_VIEWPORT_PAD }),
+      shift({ padding: TOOLTIP_VIEWPORT_PAD }),
+    ],
+    whileElementsMounted: open ? autoUpdate : undefined,
+  });
+
+  const resolvedSide = placementToSide(placement);
+
+  const setFloatingRef = useCallback(
+    (node: HTMLElement | null) => {
+      refs.setFloating(node);
+      contentRef.current = node;
+    },
+    [contentRef, refs],
+  );
+
+  const setReferenceRef = useCallback(
+    (node: HTMLElement | null) => {
+      refs.setReference(node);
+      anchorRef.current = node;
+    },
+    [anchorRef, refs],
+  );
 
   const clearShowTimer = useCallback(() => {
     if (showTimerRef.current) {
@@ -119,20 +173,12 @@ export function useTooltip({
     }, TOUCH_GHOST_MOUSE_MS);
   }, [clearTouchGhostTimer]);
 
-  const updateCoords = useCallback(() => {
-    const anchor = anchorRef.current;
-    const panel = contentRef.current;
-    if (!anchor || !panel) return;
-    setCoords(computeTooltipCoords(anchor, panel, side));
-  }, [anchorRef, contentRef, side]);
-
   const scheduleHide = useCallback(() => {
     clearHideTimer();
     hideTimerRef.current = setTimeout(() => {
       setVisible(false);
       hideTimerRef.current = setTimeout(() => {
         setOpen(false);
-        setCoords(null);
       }, HIDE_DELAY_MS);
     }, 0);
   }, [clearHideTimer]);
@@ -144,8 +190,8 @@ export function useTooltip({
     clearShowTimer();
     showTimerRef.current = setTimeout(() => {
       if (!activeRef.current) return;
+      setVisible(false);
       setOpen(true);
-      requestAnimationFrame(() => setVisible(true));
     }, delayMs);
   }, [canShow, clearHideTimer, clearShowTimer, delayMs]);
 
@@ -161,10 +207,10 @@ export function useTooltip({
     clearShowTimer();
     clearTouchTimer();
     clearHideTimer();
+    hideTooltipPopover(contentRef.current);
     setVisible(false);
     setOpen(false);
-    setCoords(null);
-  }, [clearShowTimer, clearTouchTimer, clearHideTimer]);
+  }, [clearShowTimer, clearTouchTimer, clearHideTimer, contentRef]);
 
   useEffect(() => {
     coarsePointerRef.current = isCoarsePointerDevice();
@@ -181,21 +227,25 @@ export function useTooltip({
   }, [hideImmediate]);
 
   useLayoutEffect(() => {
-    if (!open) return;
-    updateCoords();
-  }, [open, visible, content, updateCoords]);
+    if (!open) {
+      hideTooltipPopover(contentRef.current);
+      setVisible(false);
+      return;
+    }
+    if (isPositioned && activeRef.current) {
+      setVisible(true);
+      showTooltipPopover(contentRef.current);
+    }
+  }, [open, isPositioned, content, contentRef]);
 
   useEffect(() => {
     if (!open) return;
-    const onReposition = () => updateCoords();
     const onScrollHide = () => hideImmediate();
-    window.addEventListener("resize", onReposition);
     window.addEventListener("scroll", onScrollHide, true);
     return () => {
-      window.removeEventListener("resize", onReposition);
       window.removeEventListener("scroll", onScrollHide, true);
     };
-  }, [open, updateCoords, hideImmediate]);
+  }, [open, hideImmediate]);
 
   useEffect(() => {
     return () => {
@@ -300,7 +350,10 @@ export function useTooltip({
   return {
     open,
     visible,
-    coords,
+    resolvedSide,
+    floatingStyles,
+    setFloatingRef,
+    setReferenceRef,
     hideImmediate,
     triggerProps: {
       onMouseEnter,

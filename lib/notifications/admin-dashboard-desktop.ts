@@ -1,15 +1,12 @@
 "use client";
 
 import {
-  formatDashboardPromemoriaReminderDesktopBody,
-  DASHBOARD_PROMEMORIA_REMINDER_DESKTOP_TITLE,
-} from "@/lib/dashboard/dashboard-promemoria-reminder";
-import {
-  buildAdminNotificationDashboardHref,
   buildAdminNotificationDipendentiHref,
+  buildAdminNotificationFatturazioneHref,
   buildAdminNotificationLavorazioneHref,
   buildAdminNotificationMagazzinoHref,
   formatAdminNotificationDesktopBody,
+  formatLavorazioneCompletataToastMessage,
   formatMagazzinoSottoScortaToastMessage,
 } from "@/lib/lavorazioni/admin-notifications";
 import {
@@ -20,24 +17,16 @@ import {
   formatDipendentiPresenzeReminderDesktopBody,
   formatDipendentiPresenzeReminderTitle,
 } from "@/lib/dipendenti/dipendenti-presenze-reminder";
-import {
-  formatLavorazioneCompletataToastMessage,
-  formatPreventivoApprovatoToastMessage,
-  buildAdminNotificationFatturazioneHref,
-  buildAdminNotificationPreventivoHref,
-} from "@/lib/lavorazioni/admin-notifications";
-import { formatLavorazioniRitardoDigestBody } from "@/lib/lavorazioni/lavorazioni-ritardo-digest";
 import { formatFattureScaduteDigestBody } from "@/lib/fatturazione/fatture-scadute-digest";
+import { formatTagliandoDaEseguireBody } from "@/lib/maintenance-plans/tagliando-due-notification-mapper";
 import {
   isAdminDashboardTestNotification,
-  isDashboardPromemoriaReminderNotification,
   isDipendentiPresenzeReminderNotification,
   isFattureScaduteDigestNotification,
   isLavorazioneCompletataNotification,
   isLavorazioneDashboardNotification,
-  isLavorazioniRitardoDigestNotification,
   isMagazzinoDashboardNotification,
-  isPreventivoApprovatoNotification,
+  isTagliandoDaEseguireNotification,
   notificationStoreKey,
   type AdminDashboardNotification,
 } from "@/lib/notifications/admin-dashboard-notifications";
@@ -69,22 +58,6 @@ export function adminDashboardNotificationDesktopPayload(
       tag: notificationStoreKey(notification),
     };
   }
-  if (isLavorazioniRitardoDigestNotification(notification)) {
-    return {
-      title: "Lavorazioni in ritardo",
-      body: formatLavorazioniRitardoDigestBody(notification),
-      href: "/lavorazioni",
-      tag: notificationStoreKey(notification),
-    };
-  }
-  if (isPreventivoApprovatoNotification(notification)) {
-    return {
-      title: "Preventivo approvato",
-      body: formatPreventivoApprovatoToastMessage(notification),
-      href: buildAdminNotificationPreventivoHref(notification.preventivoId),
-      tag: notificationStoreKey(notification),
-    };
-  }
   if (isFattureScaduteDigestNotification(notification)) {
     return {
       title: "Fatture scadute",
@@ -109,15 +82,11 @@ export function adminDashboardNotificationDesktopPayload(
       tag: notificationStoreKey(notification),
     };
   }
-  if (isDashboardPromemoriaReminderNotification(notification)) {
+  if (isTagliandoDaEseguireNotification(notification)) {
     return {
-      title: DASHBOARD_PROMEMORIA_REMINDER_DESKTOP_TITLE,
-      body: formatDashboardPromemoriaReminderDesktopBody(
-        notification.title,
-        notification.description,
-        notification.eventTime,
-      ),
-      href: buildAdminNotificationDashboardHref(),
+      title: "Tagliando da eseguire",
+      body: formatTagliandoDaEseguireBody(notification),
+      href: "/mezzi",
       tag: notificationStoreKey(notification),
     };
   }

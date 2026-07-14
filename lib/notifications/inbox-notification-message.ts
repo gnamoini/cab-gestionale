@@ -1,13 +1,10 @@
 import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 import {
-  buildAdminNotificationDashboardHref,
   buildAdminNotificationDipendentiHref,
   buildAdminNotificationFatturazioneHref,
   buildAdminNotificationLavorazioneHref,
   buildAdminNotificationMagazzinoHref,
-  buildAdminNotificationPreventivoHref,
 } from "@/lib/lavorazioni/admin-notifications";
-import { buildAgendaHref } from "@/lib/navigation/agenda-links";
 import type { InboxNotificationRow, NotificationType } from "@/lib/notifications/notification-types";
 
 function toBulletModificaRiga(lines: string[]): string {
@@ -19,15 +16,13 @@ function toBulletModificaRiga(lines: string[]): string {
 const TYPE_LABEL: Partial<Record<NotificationType, string>> = {
   lavorazione_created: "NUOVA LAVORAZIONE",
   lavorazione_completata: "COMPLETATA",
-  client_portal_ingresso: "INGRESSO",
+  client_portal_ingresso: "NUOVA LAVORAZIONE",
   client_portal_completata: "COMPLETATA",
-  lavorazioni_ritardo_digest: "IN RITARDO",
-  preventivo_approvato: "PREVENTIVO",
   magazzino_sotto_scorta: "MAGAZZINO",
   fatture_scadute_digest: "FATTURE",
   dipendenti_presenze_reminder: "PRESENZE",
-  dashboard_promemoria_reminder: "PROMEMORIA",
   admin_dashboard_test: "TEST",
+  tagliando_da_eseguire: "TAGLIANDO",
 };
 
 const TYPE_TONE: Partial<Record<NotificationType, GestionaleLogViewModel["tone"]>> = {
@@ -35,13 +30,11 @@ const TYPE_TONE: Partial<Record<NotificationType, GestionaleLogViewModel["tone"]
   lavorazione_completata: "complete",
   client_portal_ingresso: "create",
   client_portal_completata: "complete",
-  lavorazioni_ritardo_digest: "delete",
-  preventivo_approvato: "create",
   magazzino_sotto_scorta: "delete",
   fatture_scadute_digest: "delete",
   dipendenti_presenze_reminder: "reopen",
-  dashboard_promemoria_reminder: "reopen",
   admin_dashboard_test: "neutral",
+  tagliando_da_eseguire: "delete",
 };
 
 const OPEN_LINK_LABEL: Partial<Record<NotificationType, string>> = {
@@ -49,23 +42,10 @@ const OPEN_LINK_LABEL: Partial<Record<NotificationType, string>> = {
   lavorazione_completata: "Apri lavorazione",
   client_portal_ingresso: "Apri portale cliente",
   client_portal_completata: "Apri portale cliente",
-  lavorazioni_ritardo_digest: "Apri lavorazioni",
-  preventivo_approvato: "Apri preventivo",
   magazzino_sotto_scorta: "Apri magazzino",
   fatture_scadute_digest: "Apri fatturazione",
   dipendenti_presenze_reminder: "Apri Dipendenti",
-  dashboard_promemoria_reminder: "Apri calendario",
-  workshop_schedule_created: "Apri agenda",
-  workshop_schedule_updated: "Apri agenda",
-  workshop_schedule_deleted: "Apri agenda",
-  workshop_schedule_conflict: "Apri agenda",
-  workshop_schedule_overdue: "Apri agenda",
-  workshop_schedule_not_started: "Apri agenda",
-  workshop_schedule_reminder_due: "Apri agenda",
-  workshop_schedule_day_saturated: "Apri agenda",
-  workshop_schedule_day_empty: "Apri agenda",
-  asset_compliance_due: "Apri sicurezza",
-  asset_compliance_overdue: "Apri sicurezza",
+  tagliando_da_eseguire: "Apri tagliandi",
 };
 
 export function getInboxNotificationOpenLinkLabel(row: InboxNotificationRow): string | null {
@@ -97,40 +77,18 @@ function inboxNotificationHrefFromType(row: InboxNotificationRow): string | null
   const entityId = row.entity_id?.trim() || null;
   const type = row.type;
 
-  if (
-    type === "lavorazione_created" ||
-    type === "lavorazione_completata"
-  ) {
+  if (type === "lavorazione_created" || type === "lavorazione_completata") {
     return entityId ? buildAdminNotificationLavorazioneHref(entityId) : "/lavorazioni";
   }
   if (type === "client_portal_ingresso" || type === "client_portal_completata") {
     return entityId ? `/lavorazioni-clienti/${encodeURIComponent(entityId)}` : null;
-  }
-  if (type === "lavorazioni_ritardo_digest") return "/lavorazioni";
-  if (type === "preventivo_approvato") {
-    return entityId ? buildAdminNotificationPreventivoHref(entityId) : "/preventivi";
   }
   if (type === "magazzino_sotto_scorta") {
     return entityId ? buildAdminNotificationMagazzinoHref(entityId) : "/magazzino";
   }
   if (type === "fatture_scadute_digest") return buildAdminNotificationFatturazioneHref();
   if (type === "dipendenti_presenze_reminder") return buildAdminNotificationDipendentiHref();
-  if (type === "dashboard_promemoria_reminder") return buildAdminNotificationDashboardHref();
-  if (
-    type === "workshop_schedule_created" ||
-    type === "workshop_schedule_updated" ||
-    type === "workshop_schedule_deleted" ||
-    type === "workshop_schedule_conflict" ||
-    type === "workshop_schedule_overdue" ||
-    type === "workshop_schedule_not_started" ||
-    type === "workshop_schedule_reminder_due"
-  ) {
-    return entityId ? buildAgendaHref({ event: entityId }) : buildAgendaHref();
-  }
-  if (type === "workshop_schedule_day_saturated" || type === "workshop_schedule_day_empty") {
-    return buildAgendaHref();
-  }
-  if (type === "asset_compliance_due" || type === "asset_compliance_overdue") return "/sicurezza";
+  if (type === "tagliando_da_eseguire") return "/mezzi";
   if (type === "admin_dashboard_test") return null;
   return null;
 }

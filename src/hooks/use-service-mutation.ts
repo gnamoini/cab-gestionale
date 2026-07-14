@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient, type UseMutationOptions } from "@tanstack/react-query";
+import { assertOnlineForWrite } from "@/lib/pwa/pwa-connectivity";
 import type { ServiceResult } from "@/src/services/service-result";
 
 export type UseServiceMutationOptions<TData, TVariables = void> = Omit<
@@ -26,6 +27,7 @@ export function useServiceMutation<TData, TVariables = void>(
   const { invalidateQueryKeys, onSettled, ...rest } = options ?? {};
   return useMutation({
     mutationFn: async (variables: TVariables) => {
+      assertOnlineForWrite();
       const res = await mutationFn(variables);
       if (!res.success) {
         const detail = res.error?.trim();

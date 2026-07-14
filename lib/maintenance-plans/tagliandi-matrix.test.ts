@@ -4,6 +4,7 @@ import {
   buildTagliandiMatrixRows,
   findServiceAtMilestone,
   isMilestoneApplicable,
+  mezzoMatrixIdent,
   resolveMatrixTogglePlanId,
   TAGLIANDI_MATRIX_NO_PLAN_ID,
   tagliandiMatrixCellState,
@@ -45,9 +46,12 @@ const cols = buildTagliandiMatrixColumnOres({
   rows: [
     {
       mezzoId: "m1",
-      mezzoLabel: "A",
+      attrezzaturaLabel: "A",
       cliente: "C",
       tipoAttrezzatura: "Tipo",
+      numeroScuderia: null,
+      identKind: "targa",
+      identValue: "AA001",
       planId: "p1",
       planNome: "P",
       intervalOre: 500,
@@ -60,6 +64,29 @@ assert.ok(cols.includes(500));
 assert.ok(cols.includes(2500));
 assert.equal(cols[0], 500);
 assert.equal(cols[1], 1000);
+
+const colsEnsure = buildTagliandiMatrixColumnOres({
+  rows: [
+    {
+      mezzoId: "m1",
+      attrezzaturaLabel: "A",
+      cliente: "C",
+      tipoAttrezzatura: "Tipo",
+      numeroScuderia: null,
+      identKind: "targa",
+      identValue: "AA001",
+      planId: "p1",
+      planNome: "P",
+      intervalOre: 500,
+      currentOre: 1200,
+    },
+  ],
+  services: [],
+  minColumns: 4,
+  ensureOres: [7500, 8000],
+});
+assert.ok(colsEnsure.includes(7500));
+assert.ok(colsEnsure.includes(8000));
 
 const baseMezzo = {
   id: "m1",
@@ -94,6 +121,23 @@ const rowsEnabled = buildTagliandiMatrixRows({
   catalog: [{ id: "tipo-esc", label: "Escavatore" }],
 });
 assert.equal(rowsEnabled.length, 1);
+assert.equal(rowsEnabled[0]!.identKind, "targa");
+assert.equal(rowsEnabled[0]!.identValue, "AA001");
+
+const identScuderia = mezzoMatrixIdent({
+  ...baseMezzo,
+  numeroScuderia: "S-12",
+  targa: "AA001",
+});
+assert.equal(identScuderia?.kind, "targa");
+assert.equal(identScuderia?.value, "AA001");
+
+const rowsWithScuderia = buildTagliandiMatrixRows({
+  mezzi: [{ ...baseMezzo, tagliandi: true, numeroScuderia: "S-12" }],
+  plans: [plan],
+  catalog: [{ id: "tipo-esc", label: "Escavatore" }],
+});
+assert.equal(rowsWithScuderia[0]!.numeroScuderia, "S-12");
 
 const rowsDisabled = buildTagliandiMatrixRows({
   mezzi: [{ ...baseMezzo, tagliandi: false }],

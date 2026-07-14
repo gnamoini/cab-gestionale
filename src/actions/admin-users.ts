@@ -120,9 +120,14 @@ function userRowFrom(
     last_sign_in_at?: string | null;
   },
 ): SecurityUserAdminRow {
-  const givenName = profile?.nome?.trim() || authUser?.email?.split("@")[0]?.trim() || "Utente";
+  const profileUsername = profile?.username?.trim().toLowerCase() ?? "";
+  const rawNome = profile?.nome?.trim() ?? "";
   const cognome =
     typeof profile?.cognome === "string" && profile.cognome.trim() ? profile.cognome.trim() : null;
+  const givenName =
+    profileUsername && rawNome.toLowerCase() === profileUsername
+      ? ""
+      : rawNome || authUser?.email?.split("@")[0]?.trim() || "Utente";
   return {
     id: profile?.id ?? authUser?.id ?? "",
     nome: givenName,
@@ -143,17 +148,22 @@ function userRowFrom(
  */
 export async function createUserByAdminAction(input: CreateUserByAdminInput): Promise<CreateUserByAdminResult> {
   const nome = input.nome?.trim() ?? "";
-  const cognome = input.cognome?.trim() || null;
+  const cognome = input.cognome?.trim() ?? "";
   const username = normalizeUsername(input.username ?? "");
   const email = input.email?.trim().toLowerCase() ?? "";
   const password = input.password ?? "";
   const ruolo = resolveRole(input.ruolo);
   const clienteRef = normalizeClienteRef(input.clienteRef);
 
-  const validationErr = validateCreateUserInput({ nome, username, email, password, ruolo });
+  const validationErr = validateCreateUserInput({
+    nome,
+    cognome: cognome,
+    username,
+    email,
+    password,
+    ruolo,
+  });
   if (validationErr) return { ok: false, message: validationErr };
-
-  if (!nome) return { ok: false, message: "Il nome è obbligatorio." };
   const usernameErr = usernameFieldError(username);
   if (usernameErr) {
     return { ok: false, message: usernameErr };
@@ -218,7 +228,13 @@ export async function createUserByAdminAction(input: CreateUserByAdminInput): Pr
     if (ruolo === "admin") {
       await seedAdminPermissions(admin, userId);
     }
-    await writeSecurityLog(admin, { targetUserId: userId, actorUserId: caller.callerId, nome, role: ruolo, actorName: caller.callerName });
+    await writeSecurityLog(admin, {
+      targetUserId: userId,
+      actorUserId: caller.callerId,
+      nome: profileDisplayName({ nome, cognome }),
+      role: ruolo,
+      actorName: caller.callerName,
+    });
   } catch (e) {
     const detail = e instanceof Error ? e.message : "Errore sconosciuto";
     try {
@@ -245,37 +261,33 @@ export async function createUserByAdminAction(input: CreateUserByAdminInput): Pr
     };
   }
 
+  const profileUpdate: {
+    nome: string;
+    cognome: string;
+    username: string;
+    company_id: string;
+    cliente_ref?: string | null;
+  } = {
+    nome,
+    cognome,
+    username,
+    company_id: callerCompanyId,
+  };
   if (clienteRef != null || ruolo === "cliente") {
-    const { error: clienteErr } = await admin.from("profiles").update({ cliente_ref: clienteRef }).eq("id", userId);
-    if (clienteErr) return { ok: false, message: clienteErr.message };
+    profileUpdate.cliente_ref = clienteRef;
   }
 
-  if (row.username !== username) {
-    const { error: usernameErr } = await admin.from("profiles").update({ username }).eq("id", userId);
-    if (usernameErr) {
-      const msg = usernameErr.message.includes("unique") || usernameErr.message.includes("duplicate")
-        ? "Username già utilizzato."
-        : usernameErr.message;
-      try {
-        await admin.auth.admin.deleteUser(userId);
-      } catch {
-        /* best effort */
-      }
-      return { ok: false, message: msg };
-    }
-  }
-
-  const { error: companyErr } = await admin
-    .from("profiles")
-    .update({ company_id: callerCompanyId })
-    .eq("id", userId);
-  if (companyErr) {
+  const { error: profilePatchErr } = await admin.from("profiles").update(profileUpdate).eq("id", userId);
+  if (profilePatchErr) {
+    const msg = profilePatchErr.message.includes("unique") || profilePatchErr.message.includes("duplicate")
+      ? "Username già utilizzato."
+      : profilePatchErr.message;
     try {
       await admin.auth.admin.deleteUser(userId);
     } catch {
       /* best effort */
     }
-    return { ok: false, message: companyErr.message };
+    return { ok: false, message: msg };
   }
 
   return { ok: true, userId };

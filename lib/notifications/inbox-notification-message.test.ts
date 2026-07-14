@@ -54,10 +54,3 @@ test("inboxNotificationHref resolves lavorazione entity focus", () => {
 test("inboxNotificationHref normalizes stored href without leading slash", () => {
   assert.equal(inboxNotificationHref(row({ type: "dipendenti_presenze_reminder", href: "dipendenti" })), "/dipendenti");
 });
-
-test("inboxNotificationHref resolves workshop schedule event", () => {
-  assert.equal(
-    inboxNotificationHref(row({ type: "workshop_schedule_overdue", entity_id: "evt-9" })),
-    "/agenda?event=evt-9",
-  );
-});

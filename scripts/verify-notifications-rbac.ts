@@ -28,7 +28,6 @@ for (const token of [
   "lavorazione_created",
   "magazzino_sotto_scorta",
   "dipendenti_presenze_reminder",
-  "dashboard_promemoria_reminder",
   "admin_dashboard_test",
 ]) {
   assert.match(migration, new RegExp(token), `migration missing: ${token}`);
@@ -44,25 +43,26 @@ assert.match(flagSrc, /notificationsV2ReadsDb/);
 assert.match(flagSrc, /notificationsV2WritesLegacy/);
 
 const migrationV2 = read("supabase/migrations/20260901150000_notification_events_v2.sql");
+assert.match(migrationV2, /lavorazione_completata/);
+assert.match(migrationV2, /fatture_scadute_digest/);
 
-for (const token of [
-  "lavorazione_completata",
-  "preventivo_approvato",
-  "lavorazioni_ritardo_digest",
-  "fatture_scadute_digest",
-]) {
-  assert.match(migrationV2, new RegExp(token), `migration v2 missing: ${token}`);
-}
-
-assert.match(migrationV2, /allowed_scope_type = 'global'/);
+const scopeMigration = read("supabase/migrations/20260915120700_notification_policy_scope_update.sql");
+assert.match(scopeMigration, /lavorazione_created/);
+assert.match(scopeMigration, /dipendenti_presenze_reminder/);
 
 const catalogSrc = read("lib/notifications/notification-event-catalog.ts");
 assert.match(catalogSrc, /NOTIFICATION_EVENT_CATALOG/);
 assert.match(catalogSrc, /lavorazione_completata/);
+assert.doesNotMatch(catalogSrc, /lavorazioni_ritardo_digest/);
+assert.match(catalogSrc, /client_portal_ingresso/);
+assert.match(catalogSrc, /client_portal_completata/);
+
+const clientPortalMigration = read("supabase/migrations/20260915120800_client_portal_nuova_lavorazione_title.sql");
+assert.match(clientPortalMigration, /Nuova lavorazione/);
 
 const publishSrc = read("lib/notifications/publish-notification.ts");
-assert.match(publishSrc, /preventivoApprovatoDedupKey/);
-assert.match(publishSrc, /lavorazioniRitardoDigestDedupKey/);
+assert.match(publishSrc, /fattureScaduteDigestDedupKey/);
+assert.match(publishSrc, /tagliandoDaEseguireDedupKey/);
 
 const staffSrc = read("lib/notifications/staff-inbox-eligible.ts");
 assert.match(staffSrc, /guest/);

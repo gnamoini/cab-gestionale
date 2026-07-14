@@ -10,7 +10,7 @@ export const CAB_LOGO_INTRINSIC_WIDTH = 790;
 export const CAB_LOGO_INTRINSIC_HEIGHT = 226;
 export const CAB_LOGO_ASPECT = CAB_LOGO_INTRINSIC_WIDTH / CAB_LOGO_INTRINSIC_HEIGHT;
 
-export const CAB_APP_PRODUCT_NAME = "CAB Gestionale Officina";
+export { CAB_APP_PRODUCT_NAME } from "@/lib/branding/cab-product-identity";
 
 /** Sottotitolo sotto il logo (login, privacy): il marchio CAB è già nel logo. */
 export const AUTH_STANDALONE_LOGO_SUBTITLE = "Gestionale officina";

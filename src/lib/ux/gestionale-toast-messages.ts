@@ -8,6 +8,7 @@ export const GESTIONALE_TOAST = {
   successRefreshed: "Lavorazioni aggiornate",
   genericError: "Operazione non riuscita. Riprova tra poco.",
   networkError: "Connessione non disponibile. Riprova tra poco.",
+  offlineWriteBlocked: "Connessione assente. Attiva la connessione per sincronizzare.",
   validationError: "Controlla i dati inseriti e riprova.",
   dipendentiSelectAddettoForPdf:
     "Seleziona un addetto nei filtri per esportare il PDF dipendente.",

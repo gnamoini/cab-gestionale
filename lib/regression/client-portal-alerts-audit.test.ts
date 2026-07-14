@@ -21,6 +21,10 @@ assert.match(lavorazioniBridge, /isStaffInboxEligible/);
 assert.match(lavorazioniBridge, /if \(!staffEligible/);
 assert.doesNotMatch(lavorazioniBridge, /fanoutClientPortalLavorazioneNotification/);
 
+const notificationBellSrc = read("components/gestionale/notification-center-bell.tsx");
+assert.match(notificationBellSrc, /client_portal_ingresso/);
+assert.match(notificationBellSrc, /isClientInboxEligible/);
+
 const triggersMigration = read("supabase/migrations/20260906130000_client_portal_notifications_db_triggers.sql");
 assert.match(triggersMigration, /trg_lavorazioni_client_portal_ingresso/);
 assert.match(triggersMigration, /trg_lavorazioni_client_portal_completata/);

@@ -10,6 +10,15 @@ import { GestionaleClientErrorBoundary } from "@/components/observability/gestio
 import { BodyScrollLockRouteGuard, BodyScrollLockHealGuard } from "@/lib/ui/use-body-scroll-lock";
 import { OverlayBackStackGuard } from "@/lib/ui/overlay-back-stack-guard";
 import { IosInteractionStability } from "@/src/components/ios-interaction-stability";
+import { PwaNetworkNotice } from "@/src/components/pwa-network-notice";
+import { PwaServiceWorkerBridge } from "@/src/components/pwa-service-worker-bridge";
+import { PwaUpdateBanner } from "@/src/components/pwa-update-banner";
+import { PwaDisplayModeBridge } from "@/src/components/pwa-display-mode-bridge";
+import { PwaInstallBridge } from "@/src/components/pwa-install-bridge";
+import { PwaInstallBanner } from "@/src/components/pwa-install-banner";
+import { PwaIosInstallHint } from "@/src/components/pwa-ios-install-hint";
+import { PwaReconnectBridge } from "@/src/components/pwa-reconnect-bridge";
+import { PwaConnectivityGate } from "@/src/components/pwa-connectivity-gate";
 import type { ServerAuthSnapshot } from "@/src/lib/auth/server-auth-types";
 
 /** Provider minimi: login + shell auth (Query, Auth, Theme, loading globale). */
@@ -30,6 +39,15 @@ export function AppProvidersCore({
             <BodyScrollLockHealGuard />
             <OverlayBackStackGuard />
             <IosInteractionStability />
+            <PwaServiceWorkerBridge />
+            <PwaDisplayModeBridge />
+            <PwaInstallBridge />
+            <PwaInstallBanner />
+            <PwaIosInstallHint />
+            <PwaReconnectBridge />
+            <PwaConnectivityGate />
+            <PwaUpdateBanner />
+            <PwaNetworkNotice />
             <GestionaleClientErrorBoundary>
               <ThemeProvider>{children}</ThemeProvider>
             </GestionaleClientErrorBoundary>

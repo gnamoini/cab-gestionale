@@ -31,6 +31,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_BUILD_TIME: appBuildTime,
     NEXT_PUBLIC_APP_COMMIT: appCommit,
     NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV?.trim() ?? "",
+    PWA_PUSH_ENABLED: process.env.PWA_PUSH_ENABLED?.trim() ?? "",
   },
   /** Evita root inference errata (HMR loop / segment-config churn su Windows). */
   turbopack: {
@@ -41,6 +42,14 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
       {
         source: "/:path*",
         headers: getHttpSecurityHeaders(),

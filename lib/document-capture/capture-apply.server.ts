@@ -25,6 +25,7 @@ import { executeInterventoWrite } from "@/lib/domain/intervento-context/write-co
 import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
 import { auditContext, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
+import { maybePublishTagliandoDueOnInterventoCreateServer } from "@/lib/maintenance-plans/tagliando-due-notification.server";
 
 export type { CaptureApplyPlan, ApprovedCreatesJson };
 export { CaptureApplyInProgressError, CapturePlanStaleError };
@@ -205,6 +206,13 @@ async function runCaptureApplySaga(input: {
       lavorazioneId: saga.lavorazioneId,
       mezzoId: saga.mezzoId,
       payload: applyPlan,
+    });
+
+    await maybePublishTagliandoDueOnInterventoCreateServer(sb, {
+      lavorazioneId: saga.lavorazioneId,
+      mezzoId: saga.mezzoId,
+      fields: ingressoFields,
+      mezzo: mezzoCatalog.find((m) => m.id === saga.mezzoId) ?? null,
     });
 
     await writeModificaLog(sb, {

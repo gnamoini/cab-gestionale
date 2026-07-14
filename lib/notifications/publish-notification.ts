@@ -6,21 +6,14 @@ import {
 } from "@/lib/lavorazioni/admin-notification-store";
 import {
   formatAdminNotificationDesktopBody,
-  buildAdminNotificationDashboardHref,
   buildAdminNotificationDipendentiHref,
   buildAdminNotificationFatturazioneHref,
   buildAdminNotificationLavorazioneHref,
   buildAdminNotificationMagazzinoHref,
-  buildAdminNotificationPreventivoHref,
   formatLavorazioneCompletataToastMessage,
   formatMagazzinoSottoScortaToastMessage,
 } from "@/lib/lavorazioni/admin-notifications";
-import { formatLavorazioniRitardoDigestBody } from "@/lib/lavorazioni/lavorazioni-ritardo-digest";
 import { formatFattureScaduteDigestBody } from "@/lib/fatturazione/fatture-scadute-digest";
-import {
-  formatDashboardPromemoriaReminderDesktopBody,
-  DASHBOARD_PROMEMORIA_REMINDER_DESKTOP_TITLE,
-} from "@/lib/dashboard/dashboard-promemoria-reminder";
 import {
   formatDipendentiPresenzeReminderDesktopBody,
   formatDipendentiPresenzeReminderTitle,
@@ -33,14 +26,12 @@ import { createNotification } from "@/lib/notifications/create-notification";
 import type { CreateNotificationInput } from "@/lib/notifications/notification-types";
 import {
   adminDashboardTestDedupKey,
-  dashboardPromemoriaReminderDedupKey,
   dipendentiPresenzeReminderDedupKey,
   fattureScaduteDigestDedupKey,
   lavorazioneCompletataDedupKey,
   lavorazioneCreatedDedupKey,
-  lavorazioniRitardoDigestDedupKey,
   magazzinoSottoScortaDedupKey,
-  preventivoApprovatoDedupKey,
+  tagliandoDaEseguireDedupKey,
 } from "@/lib/notifications/notification-dedup-keys";
 import {
   notificationsV2WritesDb,
@@ -48,16 +39,15 @@ import {
   resolveNotificationsV2Mode,
   type NotificationsV2Mode,
 } from "@/lib/notifications/notifications-v2-flag";
+import { formatTagliandoDaEseguireBody } from "@/lib/maintenance-plans/tagliando-due-notification-mapper";
 import {
   isAdminDashboardTestNotification,
-  isDashboardPromemoriaReminderNotification,
   isDipendentiPresenzeReminderNotification,
   isFattureScaduteDigestNotification,
   isLavorazioneCompletataNotification,
   isLavorazioneDashboardNotification,
-  isLavorazioniRitardoDigestNotification,
   isMagazzinoDashboardNotification,
-  isPreventivoApprovatoNotification,
+  isTagliandoDaEseguireNotification,
   notificationStoreKey,
   type AdminDashboardNotification,
 } from "@/lib/notifications/admin-dashboard-notifications";
@@ -85,29 +75,6 @@ function legacyToCreateInput(notification: AdminDashboardNotification): CreateNo
       entity_type: "lavorazioni",
       entity_id: notification.lavorazioneId,
       dedup_key: lavorazioneCompletataDedupKey(notification.lavorazioneId),
-    };
-  }
-  if (isLavorazioniRitardoDigestNotification(notification)) {
-    return {
-      type: "lavorazioni_ritardo_digest",
-      title: `${notification.count} lavorazioni in ritardo`,
-      body: formatLavorazioniRitardoDigestBody(notification),
-      href: "/lavorazioni",
-      dedup_key: lavorazioniRitardoDigestDedupKey(notification.dateYmd),
-    };
-  }
-  if (isPreventivoApprovatoNotification(notification)) {
-    const title = notification.numero?.trim() || "Preventivo approvato";
-    const body = [notification.cliente?.trim(), notification.numero?.trim()].filter(Boolean).join(" · ")
-      || "Preventivo approvato — procedi con fatturazione/DDT.";
-    return {
-      type: "preventivo_approvato",
-      title,
-      body,
-      href: buildAdminNotificationPreventivoHref(notification.preventivoId),
-      entity_type: "preventivi",
-      entity_id: notification.preventivoId,
-      dedup_key: preventivoApprovatoDedupKey(notification.preventivoId),
     };
   }
   if (isMagazzinoDashboardNotification(notification)) {
@@ -141,19 +108,15 @@ function legacyToCreateInput(notification: AdminDashboardNotification): CreateNo
       dedup_key: dipendentiPresenzeReminderDedupKey(notification.dateYmd),
     };
   }
-  if (isDashboardPromemoriaReminderNotification(notification)) {
+  if (isTagliandoDaEseguireNotification(notification)) {
     return {
-      type: "dashboard_promemoria_reminder",
-      title: notification.title?.trim() || DASHBOARD_PROMEMORIA_REMINDER_DESKTOP_TITLE,
-      body: formatDashboardPromemoriaReminderDesktopBody(
-        notification.title,
-        notification.description,
-        notification.eventTime,
-      ),
-      href: buildAdminNotificationDashboardHref(),
-      entity_type: "dashboard_promemoria",
-      entity_id: notification.promemoriaId,
-      dedup_key: dashboardPromemoriaReminderDedupKey(notification.promemoriaId, notification.eventDateYmd),
+      type: "tagliando_da_eseguire",
+      title: "Tagliando da eseguire",
+      body: formatTagliandoDaEseguireBody(notification),
+      href: "/mezzi",
+      entity_type: "lavorazioni",
+      entity_id: notification.lavorazioneId,
+      dedup_key: tagliandoDaEseguireDedupKey(notification.lavorazioneId),
     };
   }
   if (isAdminDashboardTestNotification(notification)) {
@@ -187,22 +150,6 @@ function desktopPayloadFromLegacy(notification: AdminDashboardNotification) {
       tag: key,
     };
   }
-  if (isLavorazioniRitardoDigestNotification(notification)) {
-    return {
-      title: `${notification.count} lavorazioni in ritardo`,
-      body: formatLavorazioniRitardoDigestBody(notification),
-      href: "/lavorazioni",
-      tag: key,
-    };
-  }
-  if (isPreventivoApprovatoNotification(notification)) {
-    return {
-      title: "Preventivo approvato",
-      body: notification.numero?.trim() || notification.cliente?.trim() || "Preventivo approvato",
-      href: buildAdminNotificationPreventivoHref(notification.preventivoId),
-      tag: key,
-    };
-  }
   if (isMagazzinoDashboardNotification(notification)) {
     return {
       title: notification.esaurito ? "Ricambio esaurito" : "Sotto scorta minima",
@@ -227,15 +174,11 @@ function desktopPayloadFromLegacy(notification: AdminDashboardNotification) {
       tag: key,
     };
   }
-  if (isDashboardPromemoriaReminderNotification(notification)) {
+  if (isTagliandoDaEseguireNotification(notification)) {
     return {
-      title: DASHBOARD_PROMEMORIA_REMINDER_DESKTOP_TITLE,
-      body: formatDashboardPromemoriaReminderDesktopBody(
-        notification.title,
-        notification.description,
-        notification.eventTime,
-      ),
-      href: buildAdminNotificationDashboardHref(),
+      title: "Tagliando da eseguire",
+      body: formatTagliandoDaEseguireBody(notification),
+      href: "/mezzi",
       tag: key,
     };
   }

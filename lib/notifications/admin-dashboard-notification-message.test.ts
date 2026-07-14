@@ -37,19 +37,6 @@ assert.equal(magVm.tipoRiga, "SOTTO SCORTA");
 assert.equal(magVm.oggettoRiga, "Filtro olio");
 assert.match(magVm.modificaRiga, /Scorta: 1 \(min\. 5\)/);
 
-const promVm = toAdminNotificationLogViewModel({
-  kind: "dashboard_promemoria_reminder",
-  id: "prm-1",
-  promemoriaId: "p-1",
-  eventDateYmd: "2026-06-01",
-  title: "Revisione mezzo",
-  message: "Promemoria: Revisione mezzo previsto per oggi.",
-  createdAt: at,
-});
-assert.equal(promVm.tipoRiga, "PROMEMORIA");
-assert.equal(promVm.oggettoRiga, "Revisione mezzo");
-assert.match(promVm.modificaRiga, /Revisione mezzo previsto/);
-
 const testRow = buildAdminDashboardTestNotification();
 assert.equal(getAdminNotificationOpenLinkLabel(testRow), null);
 assert.equal(getAdminNotificationOpenLinkLabel({ kind: "lavorazione_created", lavorazioneId: "x", titolo: "", cliente: "", mezzo: "", targa: null, createdBy: null, createdAt: at }), "Apri lavorazione");

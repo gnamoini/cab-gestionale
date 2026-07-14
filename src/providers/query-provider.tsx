@@ -4,11 +4,13 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   QueryClient,
   QueryClientProvider,
+  onlineManager,
   type MutationCacheNotifyEvent,
   type QueryCacheNotifyEvent,
 } from "@tanstack/react-query";
 import { useToastContext } from "@/context/toast-context";
 
+import { PWA_QUERY_CLIENT_DEFAULTS } from "@/lib/pwa/pwa-query-policy";
 import { installLongSessionDevHook } from "@/lib/observability/long-session-dev-hook";
 import { isBootInvestigationEnabled, trackQueryEvent } from "@/lib/observability/boot-investigation";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
@@ -55,15 +57,39 @@ export function QueryProvider({ children }: { children: ReactNode }) {
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { staleTime: 30_000, gcTime: 300_000, retry: 1 },
-          mutations: { retry: 0 },
+          queries: {
+            staleTime: PWA_QUERY_CLIENT_DEFAULTS.staleTime,
+            gcTime: PWA_QUERY_CLIENT_DEFAULTS.gcTime,
+            retry: PWA_QUERY_CLIENT_DEFAULTS.retry,
+            refetchOnWindowFocus: PWA_QUERY_CLIENT_DEFAULTS.refetchOnWindowFocus,
+            refetchOnReconnect: PWA_QUERY_CLIENT_DEFAULTS.refetchOnReconnect,
+          },
+          mutations: { retry: 0, networkMode: "online" },
         },
       }),
   );
 
   useEffect(() => {
     installLongSessionDevHook(client);
-    if (!isBootInvestigationEnabled()) return;
+
+    onlineManager.setEventListener((setOnline) => {
+      const sync = () => setOnline(navigator.onLine);
+      window.addEventListener("online", sync);
+      window.addEventListener("offline", sync);
+      sync();
+      return () => {
+        window.removeEventListener("online", sync);
+        window.removeEventListener("offline", sync);
+      };
+    });
+
+    const cleanupOnline = () => {
+      onlineManager.setEventListener(() => undefined);
+    };
+
+    if (!isBootInvestigationEnabled()) {
+      return cleanupOnline;
+    }
 
     const onQuery = (e: QueryCacheNotifyEvent) => {
       if (e.type !== "added" && e.type !== "updated" && e.type !== "removed") return;
@@ -90,7 +116,10 @@ export function QueryProvider({ children }: { children: ReactNode }) {
     };
 
     const unsub = client.getQueryCache().subscribe(onQuery);
-    return () => unsub();
+    return () => {
+      unsub();
+      cleanupOnline();
+    };
   }, [client]);
 
   return (

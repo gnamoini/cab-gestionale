@@ -533,7 +533,14 @@ export function MezziTable({
               onSort={onSort}
               align="center"
             />
-            <GlobalTableHeadLabel label="Tagliandi" align="center" />
+            <GlobalTableSortTh
+              label="Tagliandi"
+              columnKey="tagliandi"
+              sortColumn={sortColumn}
+              sortPhase={sortPhase}
+              onSort={onSort}
+              align="center"
+            />
             <GestionaleListTableActionsHead />
           </>
         }
