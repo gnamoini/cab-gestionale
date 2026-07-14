@@ -21,7 +21,9 @@ import {
   prioritaPillShellClassDynamic,
   prioritaPillShellStyle,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import { lavorazioneNoteOperative, LAVORAZIONE_EMPTY_DISPLAY } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import { resolveAddettoDisplay } from "@/lib/lavorazioni/resolve-addetto-display";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { lavorazioneAddettoNomeKey } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import {
   findAccettazioneColumnId,
@@ -75,33 +77,40 @@ function findAttesaPreventivoColumnConfig(stati: readonly StatoLavorazioneConfig
   );
 }
 
+function kanbanDisplayText(value: string | null | undefined): string {
+  const t = value?.trim();
+  if (!t || t === LAVORAZIONE_EMPTY_DISPLAY || t === "-") return "";
+  return t;
+}
+
 function macchinaLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
   const ing = schedeStore?.[row.id]?.ingresso?.campi;
   if (ing?.marcaAttrezzatura?.trim() || ing?.modelloAttrezzatura?.trim()) {
-    return [ing.marcaAttrezzatura, ing.modelloAttrezzatura].filter(Boolean).join(" ").trim() || "—";
+    return kanbanDisplayText(
+      [ing.marcaAttrezzatura, ing.modelloAttrezzatura].filter(Boolean).join(" ").trim(),
+    );
   }
   const m = row.mezzo;
-  return m ? `${m.marca} ${m.modello}`.trim() : "—";
+  return kanbanDisplayText(m ? `${m.marca} ${m.modello}`.trim() : "");
 }
 
 function clienteLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
   const fromScheda = schedeStore?.[row.id]?.ingresso?.campi.cliente?.trim();
-  return fromScheda || row.mezzo?.cliente?.trim() || "—";
+  return kanbanDisplayText(fromScheda || row.mezzo?.cliente?.trim() || "");
 }
 
 function utilizzatoreLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  return schedeStore?.[row.id]?.ingresso?.campi.utilizzatore?.trim() || row.mezzo?.utilizzatore?.trim() || "";
+  return kanbanDisplayText(
+    schedeStore?.[row.id]?.ingresso?.campi.utilizzatore?.trim() || row.mezzo?.utilizzatore?.trim() || "",
+  );
 }
 
 function cantiereLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  return schedeStore?.[row.id]?.ingresso?.campi.cantiere?.trim() || "—";
+  return kanbanDisplayText(schedeStore?.[row.id]?.ingresso?.campi.cantiere?.trim() || "");
 }
 
-import { resolveAddettoDisplayLabel } from "@/lib/lavorazioni/resolve-addetto-display";
-import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 function identValue(raw: string): string {
-  const t = raw.trim();
-  return t && t !== "—" ? t : "";
+  return kanbanDisplayText(raw);
 }
 
 function mezzoIdentLines(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string[] {
@@ -185,7 +194,7 @@ const KanbanCard = memo(function KanbanCard({
   const cantiere = cantiereLabel(row, schedeStore);
   const utilizzatore = utilizzatoreLabel(row, schedeStore);
   const identLines = mezzoIdentLines(row, schedeStore);
-  const addetto = resolveAddettoDisplayLabel(row, { schedeStore, addettiRecords });
+  const addetto = resolveAddettoDisplay(row, { schedeStore, addettiRecords });
   const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, undefined, addettiRecords);
   const p = row.priorita as PrioritaLavorazione;
   const prioLav = p as PrioritaLav;
@@ -212,13 +221,17 @@ const KanbanCard = memo(function KanbanCard({
       <div className="flex items-start gap-2">
         <Tooltip content={prioritaLabel(p)}><span className={prioVisual.dotClassName} style={prioVisual.dotStyle} aria-hidden/></Tooltip>
         <div className="min-w-0 flex-1 space-y-1 leading-tight">
-          <p className="text-sm font-semibold leading-snug text-[color:var(--cab-text)]">{macchina}</p>
+          {macchina ? (
+            <p className="text-sm font-semibold leading-snug text-[color:var(--cab-text)]">{macchina}</p>
+          ) : null}
           <div className="min-w-0 space-y-0.5">
-            <p className="truncate text-sm font-medium text-[color:var(--cab-text)]">{cliente}</p>
-            {identValue(cantiere) ? (
+            {cliente ? (
+              <p className="truncate text-sm font-medium text-[color:var(--cab-text)]">{cliente}</p>
+            ) : null}
+            {cantiere ? (
               <p className="truncate text-[11px] text-[color:var(--cab-text-muted)]">{cantiere}</p>
             ) : null}
-            {utilizzatore.trim() ? (
+            {utilizzatore ? (
               <p className="truncate text-[11px] text-[color:color-mix(in_srgb,var(--cab-text-muted)_88%,var(--cab-text))]">
                 {utilizzatore}
               </p>
@@ -234,7 +247,7 @@ const KanbanCard = memo(function KanbanCard({
             </div>
           ) : null}
           <div className="text-[11px] text-[color:var(--cab-text-muted)]">
-            <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
+            <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} layout="inline" />
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
@@ -246,14 +259,16 @@ const KanbanCard = memo(function KanbanCard({
           >
             {prioritaLabel(p)}
           </TablePillReadonly>
-          <TablePillReadonly
-            shellClass={addettoPillShellClassDynamic()}
-            shellStyle={addettoPillStyle}
-            title={addetto}
-            fitContent
-          >
-            {addetto}
-          </TablePillReadonly>
+          {addetto ? (
+            <TablePillReadonly
+              shellClass={addettoPillShellClassDynamic()}
+              shellStyle={addettoPillStyle}
+              title={addetto}
+              fitContent
+            >
+              {addetto}
+            </TablePillReadonly>
+          ) : null}
         </div>
       </div>
       {note.trim() ? (
@@ -378,7 +393,7 @@ export function LavorazioniKanbanView({
       macchina: (row: LavorazioneListRow) => macchinaLabel(row, schedeStore),
       cliente: (row: LavorazioneListRow) => clienteLabel(row, schedeStore),
       identSummary: (row: LavorazioneListRow) => identSummaryLabel(row, schedeStore),
-      addetto: (row: LavorazioneListRow) => resolveAddettoDisplayLabel(row, { schedeStore, addettiRecords }),
+      addetto: (row: LavorazioneListRow) => resolveAddettoDisplay(row, { schedeStore, addettiRecords }),
     }),
     [schedeStore, addettiRecords],
   );

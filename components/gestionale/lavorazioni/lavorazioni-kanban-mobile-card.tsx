@@ -67,8 +67,12 @@ export const KanbanCardMobile = memo(function KanbanCardMobile({
       <div className="flex items-start gap-2.5">
         <Tooltip content={prioritaLabel(p)}><span className={prioVisual.dotClassName} style={prioVisual.dotStyle} aria-hidden/></Tooltip>
         <div className="min-w-0 flex-1 space-y-0.5">
-          <p className="text-[15px] font-semibold leading-snug text-[color:var(--cab-text)]">{macchina}</p>
-          <p className="truncate text-sm font-medium text-[color:var(--cab-text)]">{cliente}</p>
+          {macchina ? (
+            <p className="text-[15px] font-semibold leading-snug text-[color:var(--cab-text)]">{macchina}</p>
+          ) : null}
+          {cliente ? (
+            <p className="truncate text-sm font-medium text-[color:var(--cab-text)]">{cliente}</p>
+          ) : null}
           {identSummary ? (
             <p className="truncate font-mono text-xs text-[color:var(--cab-text-muted)]">{identSummary}</p>
           ) : null}
@@ -95,7 +99,7 @@ export const KanbanCardMobile = memo(function KanbanCardMobile({
       </div>
 
       <div className="mt-2 text-xs text-[color:var(--cab-text-muted)]">
-        <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
+        <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} layout="inline" />
       </div>
 
       {note.trim() ? (

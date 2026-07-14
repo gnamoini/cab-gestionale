@@ -13,6 +13,7 @@ export type SistemaSectionId =
   | "cli-cantiere"
   | "cli-utilizzatore"
   | "att-tipo"
+  | "att-piani-tagliando"
   | "att-marca"
   | "att-modello"
   | "tel-tipo"
@@ -48,6 +49,7 @@ export const SETTINGS_NAV_STRUCTURE: SettingsNavEntry[] = [
   { kind: "item", id: "cli-utilizzatore", label: "Utilizzatore" },
   { kind: "group", label: "Attrezzatura" },
   { kind: "item", id: "att-tipo", label: "Tipo attrezzatura" },
+  { kind: "item", id: "att-piani-tagliando", label: "Piani tagliando" },
   { kind: "item", id: "att-marca", label: "Marca attrezzatura" },
   { kind: "item", id: "att-modello", label: "Modello attrezzatura" },
   { kind: "group", label: "Telaio" },

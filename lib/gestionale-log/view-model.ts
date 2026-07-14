@@ -97,6 +97,108 @@ export function formatLogAuthorDisplay(name: string): string {
   return t || "Sistema";
 }
 
+/** Etichetta breve per feed attività (senza dettaglio campi — il link porta all'oggetto). */
+export function activityFeedEventLabel(vm: GestionaleLogViewModel): string {
+  const tipo = safeStr(vm.tipoRiga).trim().toUpperCase();
+  if (vm.annullato || tipo.includes("ANNULLAT")) return "Operazione annullata";
+  if (tipo.includes("CARICAMENTO FILE")) return "File caricato";
+  if (tipo.includes("ELIMINAZIONE FILE")) return "File eliminato";
+
+  if (tipo.includes("MOVIMENTO")) {
+    if (tipo.includes("ENTRAT") || tipo.includes("INGRESS")) return "Ingresso magazzino";
+    if (tipo.includes("USCIT") || tipo.includes("SCARIC")) return "Uscita magazzino";
+    return "Movimento magazzino";
+  }
+
+  switch (vm.tone) {
+    case "create":
+      if (tipo.includes("RICAMBIO")) return "Ricambio inserito";
+      if (tipo.includes("LAVORAZIONE") || tipo.includes("SCHEDA")) return "Ingresso";
+      if (tipo.includes("PREVENTIVO")) return "Preventivo creato";
+      if (tipo.includes("FATTUR") || tipo.includes("INVOICE")) return "Fattura emessa";
+      if (tipo.includes("DDT")) return "DDT creato";
+      if (tipo.includes("PAGAMENT")) return "Incasso registrato";
+      return "Nuovo elemento";
+    case "delete":
+      if (tipo.includes("RICAMBIO")) return "Ricambio eliminato";
+      if (tipo.includes("PREVENTIVO")) return "Preventivo eliminato";
+      if (tipo.includes("FATTUR") || tipo.includes("INVOICE")) return "Fattura eliminata";
+      if (tipo.includes("DDT")) return "DDT eliminato";
+      return "Elemento eliminato";
+    case "complete":
+      return "Completata";
+    case "archive":
+      return "Archiviata";
+    case "reopen":
+      return "Riaperta";
+    case "update":
+    default:
+      if (tipo.includes("RICAMBIO")) return "Ricambio aggiornato";
+      if (tipo.includes("LAVORAZIONE") || tipo.includes("SCHEDA")) return "Lavorazione aggiornata";
+      if (tipo.includes("PREVENTIVO")) return "Preventivo aggiornato";
+      if (tipo.includes("FATTUR") || tipo.includes("INVOICE") || tipo.includes("PAGAMENT")) return "Fattura aggiornata";
+      if (tipo.includes("DDT")) return "DDT aggiornato";
+      if (tipo.includes("ORDINE")) return "Ordine aggiornato";
+      return "Aggiornamento";
+  }
+}
+
+function movimentoTipoFromLogRow(row: { entita: string; payload?: unknown }): "entrata" | "uscita" | null {
+  if (row.entita !== "movimenti_ricambi") return null;
+  const payload = row.payload;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const record = payload as Record<string, unknown>;
+  for (const rec of [record.after, record.snapshot, record.before]) {
+    if (!rec || typeof rec !== "object" || Array.isArray(rec)) continue;
+    const tipo = safeStr((rec as Record<string, unknown>).tipo).toLowerCase();
+    if (tipo === "entrata") return "entrata";
+    if (tipo === "uscita") return "uscita";
+  }
+  return null;
+}
+
+/** Etichetta feed da gruppo log aggregati — privilegia l'esito semantico (completata, ingresso, …). */
+export function activityFeedEventLabelFromGroup(
+  vm: GestionaleLogViewModel,
+  sourceRows?: readonly { entita: string; azione: string; payload?: unknown }[],
+): string {
+  if (!sourceRows?.length) return activityFeedEventLabel(vm);
+
+  for (const row of [...sourceRows].reverse()) {
+    const az = safeStr(row.azione).trim().toUpperCase();
+    if (az.includes("COMPLET") || az === "CONCLUDE") {
+      if (row.entita === "lavorazioni" || row.entita === "scheda_lavorazione") return "Completata";
+    }
+    if (az.includes("ARCHIV")) {
+      if (row.entita === "lavorazioni") return "Archiviata";
+    }
+    if (az === "CREATE" && row.entita === "lavorazioni") return "Ingresso";
+    if (az === "CREATE" && row.entita === "scheda_lavorazione") return "Ingresso";
+    const movTipo = movimentoTipoFromLogRow(row);
+    if (movTipo === "entrata") return "Ingresso magazzino";
+    if (movTipo === "uscita") return "Uscita magazzino";
+  }
+
+  const mod = safeStr(vm.modificaRiga).toLowerCase();
+  if (/\bcompletat/.test(mod) || /\barchiviata?\b/.test(mod)) return "Completata";
+  if (mod.includes("data ingresso") || (mod.includes("ingresso") && mod.includes("scheda"))) return "Ingresso";
+
+  return activityFeedEventLabel(vm);
+}
+
+export function formatActivityFeedWhen(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+export function activityFeedMetaLine(vm: GestionaleLogViewModel, eventCount: number): string {
+  const who = formatLogAuthorDisplay(vm.autore);
+  const when = formatActivityFeedWhen(vm.atIso);
+  if (eventCount > 1) return `${who} · ${eventCount} eventi · ${when}`;
+  return `${who} · ${when}`;
+}
+
 export function formatGestionaleLogMetaLine(autore: string, iso: string): string {
   return `${formatLogAuthorDisplay(autore)} • ${formatGestionaleLogDateTime(iso)}`;
 }
@@ -406,8 +508,8 @@ function lavorazioniTipoRiga(tipo: LavorazioniLogTipo): string {
 function formatLavorazioneOggettoLine(titolo: string): string {
   const t = safeStr(titolo).trim();
   if (!t) return "—";
-  const parts = t.split("—").map((x) => formatTitleCasePhrase(x.trim()));
-  return parts.join(" — ");
+  const parts = t.split(/\s*(?:—|·)\s*/).map((x) => formatTitleCasePhrase(x.trim()));
+  return parts.filter((p) => p && p !== "—").join(" · ");
 }
 
 export function buildLavorazioniGestionaleLogViewModel(entry: LavorazioniLogEntry): GestionaleLogViewModel {

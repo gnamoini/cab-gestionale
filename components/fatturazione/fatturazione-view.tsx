@@ -116,11 +116,17 @@ export function FatturazioneView() {
     }
   }, []);
 
+  const fattOpenId = searchParams.get("fattOpen");
+  const nuovoRequested = searchParams.get("nuovo") === "1";
+  const canWriteFatturazione = perms.canWrite;
+
   useEffect(() => {
-    const openId = searchParams.get("fattOpen");
-    if (openId) void openDetail(openId);
-    if (searchParams.get("nuovo") === "1") setWizardOpen(true);
-  }, [openDetail, searchParams]);
+    if (fattOpenId) void openDetail(fattOpenId);
+  }, [fattOpenId, openDetail]);
+
+  useEffect(() => {
+    if (nuovoRequested && canWriteFatturazione) setWizardOpen(true);
+  }, [nuovoRequested, canWriteFatturazione]);
 
   const logEntries = useMemo(
     () =>

@@ -10,6 +10,7 @@ assert.ok(fs.existsSync(path.join(ROOT, "components/fatturazione/fatturazione-fa
 assert.ok(fs.existsSync(path.join(ROOT, "lib/fatturazione/fatturazione-sections-config.ts")));
 assert.ok(fs.existsSync(path.join(ROOT, "supabase/migrations/20260910150000_fatturazione_erp_phase1a.sql")));
 assert.ok(fs.existsSync(path.join(ROOT, "supabase/migrations/20260910150500_fatturazione_status_axes_ssot.sql")));
+assert.ok(fs.existsSync(path.join(ROOT, "supabase/migrations/20260915120200_fatturazione_write_rls_alignment.sql")));
 assert.ok(fs.existsSync(path.join(ROOT, "lib/fatturazione/ddt-to-invoice-draft.ts")));
 
 const view = fs.readFileSync(path.join(ROOT, "components/fatturazione/fatturazione-view.tsx"), "utf8");

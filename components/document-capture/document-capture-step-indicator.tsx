@@ -120,9 +120,9 @@ export const DOCUMENT_CAPTURE_STEP_COPY: Record<
   { title: string; subtitle: string }
 > = {
   hub: {
-    title: "Acquisizione scheda",
+    title: "Acquisizione documento con IA",
     subtitle:
-      "Carica foto, PDF, Word o Excel della scheda compilata. I documenti Office vengono convertiti automaticamente per la lettura AI.",
+      "Carica il documento in qualsiasi formato. L'intelligenza artificiale riconosce scheda ingresso, lavorazioni o ricambi e legge i campi in automatico.",
   },
   analyze: {
     title: "Lettura documento",

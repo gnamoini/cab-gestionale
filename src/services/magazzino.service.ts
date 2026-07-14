@@ -77,6 +77,7 @@ export const magazzinoService = {
       if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
       const r = row as MagazzinoRicambioRow;
       await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, oggettoRicambio(r)) });
+      void fetch(`/api/inventory-labels/ricambi/${encodeURIComponent(r.id)}`).catch(() => undefined);
       return success(r);
     } catch (e) {
       return serviceFailFromError(e);

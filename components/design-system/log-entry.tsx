@@ -5,7 +5,11 @@ import { memo } from "react";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { filterAuditMetadataModifiche, parseModificheLines, sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
-import type { GestionaleLogEventTone, GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
+import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
+import {
+  GESTIONALE_LOG_TONE_BADGE,
+  GESTIONALE_LOG_TONE_DOT,
+} from "@/lib/gestionale-log/log-event-tone-styles";
 import { formatGestionaleLogMetaLine } from "@/lib/gestionale-log/view-model";
 
 const LOG_ENTRY_SHELL_CLASS =
@@ -26,25 +30,8 @@ function logEntryActivate(onClick: () => void, e: KeyboardEvent<HTMLDivElement>)
   }
 }
 
-const TONE_BADGE: Record<GestionaleLogEventTone, string> = {
-  create: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
-  update: "bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,transparent)] text-[color:var(--cab-primary)]",
-  delete: "bg-red-500/15 text-red-800 dark:text-red-300",
-  complete: "bg-sky-500/15 text-sky-800 dark:text-sky-300",
-  archive: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300",
-  reopen: "bg-indigo-500/15 text-indigo-800 dark:text-indigo-300",
-  neutral: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
-};
-
-const TONE_DOT: Record<GestionaleLogEventTone, string> = {
-  create: "bg-emerald-500",
-  update: "bg-[color:var(--cab-primary)]",
-  delete: "bg-red-500",
-  complete: "bg-sky-500",
-  archive: "bg-zinc-400",
-  reopen: "bg-indigo-500",
-  neutral: "bg-zinc-400",
-};
+const TONE_BADGE = GESTIONALE_LOG_TONE_BADGE;
+const TONE_DOT = GESTIONALE_LOG_TONE_DOT;
 
 export type LogEntryProps = {
   vm: GestionaleLogViewModel;

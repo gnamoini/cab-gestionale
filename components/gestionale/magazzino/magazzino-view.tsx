@@ -17,6 +17,7 @@ import {
 } from "@/components/design-system";
 import { DisabledElementTooltip, OptionalTooltip, Tooltip } from "@/components/ui";
 import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzino-giacenza-bell";
+import { MagazzinoBulkLabelToolbar } from "@/components/gestionale/magazzino/magazzino-bulk-label-toolbar";
 import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
 import { MagazzinoListinoAiBadge } from "@/components/gestionale/magazzino/magazzino-listino-ai-badge";
 import { MagazzinoMarcaMobileBadge } from "@/components/gestionale/magazzino/magazzino-marca-mobile-badge";
@@ -77,6 +78,7 @@ import type { RicambioMagazzino, SortKeyMagazzino } from "@/lib/magazzino/types"
 import { formatRicambioUnitaMisuraLabel } from "@/lib/magazzino/ricambio-unita-misura";
 import {
   dsPageToolbarCtaCompact,
+  dsPageToolbarBtnCompact,
   dsStackPage,
   GESTIONALE_SEARCH_PLACEHOLDER,
   dsBtnNeutral,
@@ -179,7 +181,7 @@ import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/ke
 import { useCabAppSettingsPayloadQuery, useSettingsUpsertMutation } from "@/src/hooks/gestionale/use-settings-queries";
 import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
-import { Q_FOCUS_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
+import { Q_FOCUS_RICAMBIO, Q_OPEN_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
 import { useAdminNotificationStore } from "@/src/hooks/gestionale/use-admin-notification-store";
 import { deleteGeneratedListinoRicambiRequest } from "@/lib/magazzino/listino-import/listino-import-client";
 
@@ -614,6 +616,8 @@ export function MagazzinoView() {
   const [dupCheckModalOpen, setDupCheckModalOpen] = useState(false);
 
   const [detail, setDetail] = useState<{ id: string; mode: "info" | "edit" } | null>(null);
+  const [selectedRicambioIds, setSelectedRicambioIds] = useState<Set<string>>(() => new Set());
+  const [labelMode, setLabelMode] = useState(false);
   useUIAutonomyFixEngine("/magazzino", [newOpen, detail, dupCheckModalOpen]);
 
   const [flashRowId, setFlashRowId] = useState<string | null>(null);
@@ -873,6 +877,19 @@ export function MagazzinoView() {
     }, 120);
     return () => window.clearTimeout(t);
   }, [searchParams, pathname, router, focusRicambioInTable]);
+
+  useEffect(() => {
+    const id = searchParams.get(Q_OPEN_RICAMBIO);
+    if (!id || magazzinoInitialLoading) return;
+    const t = window.setTimeout(() => {
+      const ricambio = prodotti.find((p) => p.id === id);
+      if (ricambio) {
+        setDetail({ id: ricambio.id, mode: "info" });
+      }
+      router.replace(pathname, { scroll: false });
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [searchParams, pathname, router, prodotti, magazzinoInitialLoading]);
 
   useEffect(() => {
     if (!globalPerm.isAdmin) return;
@@ -1317,6 +1334,37 @@ export function MagazzinoView() {
     setDetail({ id: p.id, mode: "info" });
   }
 
+  function toggleRicambioSelected(id: string) {
+    if (!labelMode) return;
+    setSelectedRicambioIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible() {
+    if (!labelMode) return;
+    const visibleIds = pagedMagazzino.map((p) => p.id);
+    setSelectedRicambioIds((prev) => {
+      const allSelected = visibleIds.length > 0 && visibleIds.every((id) => prev.has(id));
+      if (allSelected) {
+        const next = new Set(prev);
+        for (const id of visibleIds) next.delete(id);
+        return next;
+      }
+      return new Set([...prev, ...visibleIds]);
+    });
+  }
+
+  function toggleLabelMode() {
+    setLabelMode((on) => {
+      if (on) setSelectedRicambioIds(new Set());
+      return !on;
+    });
+  }
+
   function startEditFromInfo() {
     if (!magCanCreateRicambio) return;
     if (!detailRicambio) return;
@@ -1496,16 +1544,29 @@ export function MagazzinoView() {
       const avgM = consumoRow?.avgMonthly ?? null;
       const low = p.scorta < p.scortaMinima;
       const stale = isModificaOlderThanMonths(p.dataUltimaModifica, MAGAZZINO_STALE_MODIFICA_MONTHS);
+      const selected = selectedRicambioIds.has(p.id);
       return (
         <tr
           id={`magazzino-row-${p.id}`}
           key={p.id}
           data-gestionale-row-tone={gestionaleListTableRowTone({ lowStock: low })}
+          data-selected={selected ? "true" : undefined}
           {...(gestionaleListTableIsLastRow(index, pagedMagazzino.length)
             ? { [gestionaleListTableLastRowAttr]: "true" }
             : {})}
           className={gestionaleListTableRowClass}
         >
+          {labelMode ? (
+            <td className={`${gestionaleListTableTdCenter} w-10`}>
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-zinc-300"
+                checked={selected}
+                onChange={() => toggleRicambioSelected(p.id)}
+                aria-label={`Seleziona ${p.codiceFornitoreOriginale}`}
+              />
+            </td>
+          ) : null}
           <td className={`min-w-0 w-[7.75rem] max-w-[7.75rem] overflow-hidden ${gestionaleListTableTd}`}>
             <RicambioCodiceCell p={p} />
           </td>
@@ -1603,6 +1664,8 @@ export function MagazzinoView() {
       compatModelsDisplayFor,
       magCanCreateRicambio,
       canUndoScortaById,
+      selectedRicambioIds,
+      labelMode,
     ],
   );
 
@@ -1747,16 +1810,39 @@ export function MagazzinoView() {
             }
             onFilterReset={resetMagazzinoFilters}
             meta={
-              <PageToolbarResultCount
-                count={filteredSorted.length}
-                filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
-                searchActive={searchApplied.trim().length > 0 || searchInput.trim().length > 0}
-                onSearchReset={resetMagazzinoRicerca}
-                onFilterReset={resetMagazzinoFilters}
-              />
+              <div className="flex min-w-0 w-full items-center justify-between gap-2">
+                <PageToolbarResultCount
+                  count={filteredSorted.length}
+                  filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
+                  searchActive={searchApplied.trim().length > 0 || searchInput.trim().length > 0}
+                  onSearchReset={resetMagazzinoRicerca}
+                  onFilterReset={resetMagazzinoFilters}
+                />
+                {magPerm.canRead ? (
+                  <button
+                    type="button"
+                    onClick={toggleLabelMode}
+                    aria-pressed={labelMode}
+                    className={`${dsPageToolbarBtnCompact} shrink-0${
+                      labelMode
+                        ? " border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]"
+                        : ""
+                    }`}
+                  >
+                    {labelMode ? "Chiudi etichette" : "Etichette"}
+                  </button>
+                ) : null}
+              </div>
             }
           />
         </section>
+
+        {labelMode ? (
+          <MagazzinoBulkLabelToolbar
+            selectedIds={selectedRicambioIds}
+            onClearSelection={() => setSelectedRicambioIds(new Set())}
+          />
+        ) : null}
 
         {magazzinoInitialLoading ? (
           <LoadingMagazzinoListSkeleton withToolbar={false} />
@@ -1767,6 +1853,7 @@ export function MagazzinoView() {
           visibilityClass={`mt-4 ${GESTIONALE_LIST_DESKTOP_ONLY_CLASS}`}
           colgroup={
             <>
+              {labelMode ? <col className="w-10" /> : null}
               <col style={{ width: "7.75rem" }} />
               <col className="w-[7%]" />
               <col className="w-[20%]" />
@@ -1781,6 +1868,19 @@ export function MagazzinoView() {
           }
           headRow={
             <>
+              {labelMode ? (
+                <th className="w-10 px-2 text-center" scope="col">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-zinc-300"
+                    checked={
+                      pagedMagazzino.length > 0 && pagedMagazzino.every((p) => selectedRicambioIds.has(p.id))
+                    }
+                    onChange={toggleSelectAllVisible}
+                    aria-label="Seleziona tutti in pagina"
+                  />
+                </th>
+              ) : null}
               <GlobalTableSortTh
                 label="CODICE"
                 columnKey="codiceFornitoreOriginale"
@@ -1853,7 +1953,7 @@ export function MagazzinoView() {
           }
           empty={filteredSorted.length === 0}
           emptyMessage="Nessun ricambio corrisponde ai filtri selezionati."
-          colSpan={10}
+          colSpan={labelMode ? 11 : 10}
           virtualRows={{
             rowCount: pagedMagazzino.length,
             renderRow: renderMagazzinoDesktopRow,
@@ -1882,6 +1982,20 @@ export function MagazzinoView() {
                     : "min-w-0 h-full !p-3"
                 }
               >
+                {labelMode ? (
+                  <div className="mb-2 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 shrink-0 rounded border-zinc-300"
+                      checked={selectedRicambioIds.has(p.id)}
+                      onChange={() => toggleRicambioSelected(p.id)}
+                      aria-label={`Seleziona ${p.codiceFornitoreOriginale}`}
+                    />
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+                      Etichetta
+                    </span>
+                  </div>
+                ) : null}
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1 space-y-0.5">
                     {!isMagazzinoMobilePlaceholderValue(p.marca) ? (

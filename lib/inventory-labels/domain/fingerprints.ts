@@ -1,0 +1,37 @@
+import { createHash } from "node:crypto";
+import type { LabelPayload } from "@/lib/inventory-labels/domain/types";
+
+function canonicalizeJson(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((v) => canonicalizeJson(v)).join(",")}]`;
+  }
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${canonicalizeJson(obj[k])}`).join(",")}}`;
+}
+
+export type LabelFingerprintInput = {
+  payload: LabelPayload;
+  templateId: string;
+  templateVersion: string;
+  generatorVersion: string;
+  preset: string;
+};
+
+export function computeLabelFingerprint(input: LabelFingerprintInput): string {
+  const canonical = canonicalizeJson({
+    marca: input.payload.marca.trim(),
+    descrizione: input.payload.descrizione.trim(),
+    codice: input.payload.codice.trim(),
+    fornitoreAlternativo: input.payload.fornitoreAlternativo.trim(),
+    codiceAlternativo: input.payload.codiceAlternativo.trim(),
+    templateId: input.templateId,
+    templateVersion: input.templateVersion,
+    generatorVersion: input.generatorVersion,
+    preset: input.preset,
+  });
+  return createHash("sha256").update(canonical).digest("hex").slice(0, 16);
+}

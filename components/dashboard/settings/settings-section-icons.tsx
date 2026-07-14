@@ -203,6 +203,7 @@ export const SETTINGS_SECTION_ICONS: Record<SistemaSectionId, SettingsSectionIco
   "cli-cantiere": IconCantiere,
   "cli-utilizzatore": IconUtilizzatore,
   "att-tipo": IconAttrezzaturaTipo,
+  "att-piani-tagliando": IconAttrezzaturaTipo,
   "att-marca": IconAttMarca,
   "att-modello": IconAttModello,
   "tel-tipo": IconNavMezzi,

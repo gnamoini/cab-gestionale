@@ -36,6 +36,7 @@ import {
 import { SettingsDipendentiAssenzeSection } from "@/components/dashboard/settings-dipendenti-assenze-section";
 import { SettingsEconomiciSection } from "@/components/dashboard/settings/settings-economici-section";
 import { SettingsTkbAdminSection } from "@/components/dashboard/settings/settings-tkb-admin-section";
+import { SettingsMaintenancePlansSection } from "@/components/dashboard/settings/settings-maintenance-plans-section";
 import { SettingsOfficinaProfiloSection } from "@/components/dashboard/settings/settings-officina-profilo-section";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
 import { SettingsRinominaPropagaDialog } from "@/components/dashboard/settings-rinomina-propaga-dialog";
@@ -1282,6 +1283,8 @@ export function SistemaImpostazioniWorkspace({
             ) : null}
 
             {section === "sys-tkb-kb" ? <SettingsTkbAdminSection /> : null}
+
+            {section === "att-piani-tagliando" ? <SettingsMaintenancePlansSection /> : null}
 
             {pageMode ? <div aria-hidden className={dsGestionaleScrollEndPad} /> : null}
           </SettingsMainPanel>

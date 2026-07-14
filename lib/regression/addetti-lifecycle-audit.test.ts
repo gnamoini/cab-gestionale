@@ -16,7 +16,7 @@ const root = resolve(import.meta.dirname, "../..");
 
 {
   const row = { id: "x" } as LavorazioneListRow;
-  assert.equal(isLavorazioneAddettoUnassigned(row, { schedeStore: {} }), true);
+  assert.equal(isLavorazioneAddettoUnassigned(row, { schedeStore: {} }), false, "no bundle → non contare come senza addetto");
   assert.equal(resolveAddettoDisplayLabel(row, { schedeStore: {} }), "—");
 }
 

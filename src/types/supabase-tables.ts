@@ -202,6 +202,64 @@ export type AssetMileageReadingRow = {
   created_at: string;
 };
 
+export type TipoAttrezzaturaCatalogRow = {
+  id: string;
+  label: string;
+  label_norm: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MaintenancePlanRow = {
+  id: string;
+  nome: string;
+  interval_ore: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  deleted_at: string | null;
+};
+
+export type MaintenancePlanEquipmentTypeRow = {
+  id: string;
+  plan_id: string;
+  tipo_attrezzatura_id: string;
+  created_at: string;
+};
+
+export type MaintenancePlanPartRow = {
+  id: string;
+  plan_id: string;
+  ricambio_id: string;
+  quantita: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VehicleMaintenanceServiceRow = {
+  id: string;
+  mezzo_id: string;
+  plan_id: string;
+  performed_at: string;
+  ore_at_service: number;
+  mezzo_ore_snapshot: number | null;
+  note: string | null;
+  performed_by: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type VehicleMaintenanceServicePartRow = {
+  id: string;
+  service_id: string;
+  ricambio_id: string;
+  quantita: number;
+  descrizione_snapshot: string | null;
+  created_at: string;
+};
+
 export type AssetTimelineProjectionRow = {
   event_category: string;
   event_domain: "lifecycle";
@@ -842,4 +900,44 @@ export type OrdineFornitoreRigaRow = {
   totale_riga: number;
   meta: Record<string, unknown>;
   created_at: string;
+};
+
+export type InventoryQrTokenRow = {
+  id: string;
+  token: string;
+  entity_type: string;
+  entity_id: string;
+  status: "active" | "revoked" | "expired";
+  created_at: string;
+  created_by: string | null;
+  revoked_at: string | null;
+  revoked_by: string | null;
+  superseded_by: string | null;
+};
+
+export type InventoryLabelArtifactRow = {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  hash: string;
+  format: "png" | "svg" | "pdf";
+  preset: string;
+  template_id: string;
+  storage_path: string;
+  generator_version: string;
+  template_version: string;
+  created_at: string;
+};
+
+export type LabelGenerationJobRow = {
+  id: string;
+  status: "pending" | "running" | "completed" | "failed";
+  entity_ids: string[];
+  preset: string;
+  format: string;
+  result_storage_path: string | null;
+  error: string | null;
+  created_by: string | null;
+  created_at: string;
+  completed_at: string | null;
 };

@@ -1958,6 +1958,7 @@ export function LavorazioniView() {
           advancedFilters={advancedFilters}
           onAdvancedFiltersChange={patchAdvancedFilters}
           filterCatalog={filterCatalog}
+          addettiRecords={addettiRecords}
           statiOpts={statiOpts}
           onFilterReset={resetFiltriPagina}
           totalFilteredCount={totalFilteredCount}

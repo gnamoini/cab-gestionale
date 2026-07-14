@@ -9,7 +9,14 @@ import type {
 import type { DashboardWidgetDefinition } from "@/lib/dashboard/dashboard-widget-registry";
 import { useControlTowerContext } from "@/components/dashboard/control-tower-metrics-provider";
 import { wrapDashboardWidget } from "@/components/dashboard/dashboard-widget-shell";
-import { parseModificheLines } from "@/lib/gestionale-log/view-model";
+import { sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
+import {
+  activityFeedMetaLine,
+} from "@/lib/gestionale-log/view-model";
+import {
+  activityFeedEventBadgeClass,
+  activityFeedEventRowClass,
+} from "@/lib/gestionale-log/activity-feed-event-styles";
 import { reportMetricCardCompactClass } from "@/components/report/report-ui-tokens";
 
 const ACTIVITY_EMPTY_LABEL = "Nessuna attività recente.";
@@ -61,23 +68,8 @@ function ActivityCardShell({
   );
 }
 
-function formatActivityWhen(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-}
-
-function activitySummaryLine(vm: ControlTowerActivityItem["vm"], eventCount: number): string {
-  const changes = parseModificheLines(vm.modificaRiga).filter(
-    (line) => !/aggiornamenti nel periodo$/i.test(line.trim()),
-  );
-  const detail = changes[0] ?? vm.tipoRiga;
-  const extra = eventCount > 1 ? ` (+${eventCount - 1})` : "";
-  return `${detail}${extra} · ${vm.autore}`;
-}
-
 const ACTIVITY_ROW_SHELL_CLASS =
-  "rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2.5 py-2 shadow-[var(--cab-shadow-sm)]";
+  "rounded-md border border-[color:var(--cab-border)] px-2.5 py-2 shadow-[var(--cab-shadow-sm)]";
 
 function ActivityEntityRow({
   item,
@@ -87,30 +79,38 @@ function ActivityEntityRow({
   onOpen?: () => void;
 }) {
   const { vm } = item;
+  const eventLabel = item.eventLabel;
+  const toneClass = activityFeedEventRowClass(eventLabel);
+  const toneBadge = activityFeedEventBadgeClass(eventLabel);
+  const metaLine = activityFeedMetaLine(vm, item.eventCount);
   const Shell = onOpen ? "button" : "div";
   const shellProps = onOpen
     ? ({
         type: "button" as const,
         onClick: onOpen,
         className:
-          `w-full text-left transition-colors hover:bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-card))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_42%,transparent)] ${ACTIVITY_ROW_SHELL_CLASS}`,
+          `w-full text-left transition-colors hover:bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-card))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_42%,transparent)] ${ACTIVITY_ROW_SHELL_CLASS} ${toneClass}`,
       })
     : ({
-        className: ACTIVITY_ROW_SHELL_CLASS,
+        className: `${ACTIVITY_ROW_SHELL_CLASS} ${toneClass}`,
       });
 
   return (
     <li className="list-none">
       <Shell {...shellProps}>
-        <div className="flex min-w-0 items-start justify-between gap-2">
-          <p className="min-w-0 truncate text-sm font-medium text-[color:var(--cab-text)]">{vm.oggettoRiga}</p>
-          <time className="shrink-0 text-[10px] tabular-nums text-[color:var(--cab-text-muted)]" dateTime={vm.atIso}>
-            {formatActivityWhen(vm.atIso)}
-          </time>
-        </div>
-        <p className="mt-1 truncate text-xs text-[color:var(--cab-text-muted)]">
-          {activitySummaryLine(vm, item.eventCount)}
+        <p className="min-w-0 truncate text-sm font-medium leading-snug text-[color:var(--cab-text)]">
+          {sanitizeLogOggettoRiga(vm.oggettoRiga)}
         </p>
+        <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2">
+          <span
+            className={`inline-flex shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-tight ${toneBadge}`}
+          >
+            {eventLabel}
+          </span>
+          <span className="min-w-0 truncate text-right text-[10px] tabular-nums text-[color:var(--cab-text-muted)]">
+            {metaLine}
+          </span>
+        </div>
       </Shell>
     </li>
   );

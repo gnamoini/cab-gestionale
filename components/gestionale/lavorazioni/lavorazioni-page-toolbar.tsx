@@ -25,6 +25,7 @@ import type {
   LavorazioniAdvancedFilters,
   LavorazioniFilterCatalog,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { LavorazioniDigitalCaptureLauncher, type CaptureSchedeOpenRequest } from "@/components/document-capture/lavorazioni-digital-capture-launcher";
 import { SchedaBlankPdfMenu } from "@/components/document-capture/scheda-blank-pdf-actions";
@@ -111,6 +112,7 @@ export type LavorazioniListToolbarProps = {
   advancedFilters: LavorazioniAdvancedFilters;
   onAdvancedFiltersChange: (patch: Partial<LavorazioniAdvancedFilters>) => void;
   filterCatalog: LavorazioniFilterCatalog;
+  addettiRecords?: readonly AddettoRecord[];
   statiOpts: { id: string; label: string }[];
   onFilterReset: () => void;
   totalFilteredCount: number;
@@ -145,6 +147,7 @@ export function LavorazioniListToolbar({
   advancedFilters,
   onAdvancedFiltersChange,
   filterCatalog,
+  addettiRecords = [],
   statiOpts,
   onFilterReset,
   totalFilteredCount,
@@ -227,6 +230,7 @@ export function LavorazioniListToolbar({
               filters={advancedFilters}
               onChange={onAdvancedFiltersChange}
               catalog={filterCatalog}
+              addettiRecords={addettiRecords}
               statiOpts={statiOpts}
             />
           }

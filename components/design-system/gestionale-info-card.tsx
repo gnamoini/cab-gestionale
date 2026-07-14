@@ -5,6 +5,9 @@ import { GestionaleCollapsibleHeader } from "@/components/design-system/gestiona
 import { useCollapsibleAccordionOptional } from "@/lib/ui/collapsible-accordion";
 import {
   dsGestionaleInfoCard,
+  dsGestionaleInfoCardCollapsibleBodyPad,
+  dsGestionaleInfoCardCollapsibleBodyPadCompact,
+  dsGestionaleInfoCardCollapsibleShell,
   dsGestionaleInfoCardCompact,
   dsGestionaleInfoCardMetricRow,
   dsGestionaleInfoCardRow,
@@ -78,19 +81,22 @@ export function GestionaleInfoCard({
   if (collapsible && !hasHeaderRow && !hideTitle) {
     const titleId = `${panelId}-title`;
     const toggleLabel = `${expanded ? "Nascondi" : "Mostra"} ${title}`;
+    const collapseShell = dsGestionaleInfoCardCollapsibleShell;
+    const bodyPad = compact ? dsGestionaleInfoCardCollapsibleBodyPadCompact : dsGestionaleInfoCardCollapsibleBodyPad;
 
     return (
-      <section className={`${shell}${className ? ` ${className}` : ""}`}>
+      <section className={`${collapseShell}${className ? ` ${className}` : ""}`}>
         <GestionaleCollapsibleHeader
           panelId={panelId}
           titleId={titleId}
           expanded={expanded}
           toggleLabel={toggleLabel}
           onToggle={toggleCollapsed}
-          shellClassName="py-0.5"
-          surfaceClass="bg-transparent"
+          compact={compact}
+          form
+          formFlat
           titleNode={
-            <h3 id={titleId} className={`${dsGestionaleInfoCardTitle} mb-0 min-w-0 text-left`}>
+            <h3 id={titleId} className={`${dsGestionaleInfoCardTitle} mb-0 min-w-0 text-left leading-snug`}>
               {title}
             </h3>
           }
@@ -103,7 +109,7 @@ export function GestionaleInfoCard({
           className={`${gestionaleCollapsiblePanelGridClass} ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
         >
           <div className={gestionaleCollapsiblePanelInnerClass}>
-            <div className="min-w-0 pt-3">{children}</div>
+            <div className={`min-w-0 ${bodyPad}`}>{children}</div>
           </div>
         </div>
       </section>

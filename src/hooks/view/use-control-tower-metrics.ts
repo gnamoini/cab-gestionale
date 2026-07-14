@@ -4,19 +4,19 @@ import { useMemo } from "react";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { moduleAllows } from "@/src/lib/auth/effective-module-access";
 import {
+  buildControlTowerHeaderKpiSlice,
   composeControlTowerSlices,
   filterControlTowerKpiClusters,
 } from "@/lib/dashboard/control-tower-selectors";
-import {
-  getControlTowerCurrentWeekRange,
-  getControlTowerPreviousWeekSameWindowRange,
-} from "@/lib/dashboard/control-tower-time-ranges";
+import { getControlTowerBriefDataFetchRange } from "@/lib/dashboard/control-tower-time-ranges";
+import { movimentiRowsToMagazzinoChangeLog } from "@/lib/report/report-movimenti-log";
+import { filterMovimentiForReport } from "@/lib/report/report-truth-dataset";
 import { resolveVisibleDashboardWidgets } from "@/lib/dashboard/dashboard-widget-registry";
 import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import { useInvoicesQuery } from "@/src/hooks/gestionale/use-invoices-query";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
-import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useLogListQuery, useMovimentiListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
@@ -78,6 +78,16 @@ export function controlTowerEmptyDashSlice(
     isLoading: false,
   };
 }
+
+export type ControlTowerHeaderKpiBase = {
+  input: Parameters<typeof buildControlTowerHeaderKpiSlice>[0];
+  filter: {
+    lavorazioni: boolean;
+    magazzino: boolean;
+    admin: boolean;
+    dipendenti: boolean;
+  };
+};
 
 export type ControlTowerShell = {
   staging: boolean;
@@ -191,22 +201,39 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
   );
 
   const timesheetRange = useMemo(() => {
-    const cur = getControlTowerCurrentWeekRange();
-    const prev = getControlTowerPreviousWeekSameWindowRange();
-    return { from: ymdFromDate(prev.start), to: ymdFromDate(cur.end) };
+    const fetch = getControlTowerBriefDataFetchRange();
+    return { from: ymdFromDate(fetch.start), to: ymdFromDate(fetch.end) };
   }, []);
 
   const needTimesheet = !staging && headerVisible && canDipendenti;
+  const needMovimenti = !staging && headerVisible && canMagazzino;
   const timesheetQ = useServiceQuery(
     [...QK.dipendentiTimesheetEntries, "control-tower", timesheetRange.from, timesheetRange.to] as const,
     () => dipendentiTimesheetEntry.listEntriesForRange(timesheetRange.from, timesheetRange.to),
     { enabled: needTimesheet, ...viewOpts },
   );
+  const movimentiQ = useMovimentiListQuery(undefined, {
+    enabled: needMovimenti,
+    ...viewOpts,
+  });
 
-  const magLog = useMemo(
+  const magLogFromLogs = useMemo(
     () => resolveMagazzinoReportLogEntries([], dash.magLogs as LogModificaWithProfileRow[]),
     [dash.magLogs],
   );
+
+  const magLog = useMemo(() => {
+    const movimentiRows = movimentiQ.data ?? [];
+    if (movimentiRows.length > 0) {
+      const validRicambioIds = new Set(dash.ricambi.map((r) => r.id));
+      const validLavorazioneIds = new Set(dash.lavRows.map((r) => r.id));
+      const { rows } = filterMovimentiForReport(movimentiRows, validRicambioIds, validLavorazioneIds);
+      if (rows.length > 0) return movimentiRowsToMagazzinoChangeLog(rows);
+    }
+    return magLogFromLogs;
+  }, [movimentiQ.data, dash.ricambi, dash.lavRows, magLogFromLogs]);
+
+  const useMovimentiMagLog = (movimentiQ.data?.length ?? 0) > 0 && magLog.length > 0;
 
   const schedeIds = useMemo(
     () =>
@@ -219,6 +246,50 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
   const needSchede = !staging && activityVisible && canLavorazioni;
   const { store: schedeStore } = useSchedeBundlesQuery(needSchede, { lavorazioneIds: schedeIds });
 
+  const headerKpiBase = useMemo((): ControlTowerHeaderKpiBase | null => {
+    if (!modules || !headerVisible) return null;
+    return {
+      input: {
+        lavRows: dash.lavRows,
+        ricambi: dash.ricambi,
+        movimentiLogs: useMovimentiMagLog ? [] : dash.movLogs,
+        magLog,
+        preventivi: preventiviQ.records,
+        invoices: invoicesQ.invoices,
+        timesheetEntries: (timesheetQ.data ?? []) as DipendenteTimesheetEntryRow[],
+        tipiAssenza: dipendentiOpts.tipiAssenza,
+        includeLavorazioni: canLavorazioni,
+        includeMagazzino: canMagazzino,
+        includeAdmin: needAdminData,
+        includeDipendenti: needTimesheet,
+      },
+      filter: {
+        lavorazioni: canLavorazioni,
+        magazzino: canMagazzino,
+        admin: needAdminData,
+        dipendenti: canDipendenti,
+      },
+    };
+  }, [
+    modules,
+    headerVisible,
+    dash.lavRows,
+    dash.ricambi,
+    dash.movLogs,
+    magLog,
+    useMovimentiMagLog,
+    movimentiQ.data,
+    preventiviQ.records,
+    invoicesQ.invoices,
+    timesheetQ.data,
+    dipendentiOpts.tipiAssenza,
+    canLavorazioni,
+    canMagazzino,
+    needAdminData,
+    needTimesheet,
+    canDipendenti,
+  ]);
+
   const slices = useMemo(() => {
     if (!modules) return null;
     const composed = composeControlTowerSlices({
@@ -227,7 +298,7 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
       ricambi: dash.ricambi,
       magMovements: dash.magRecentMovements,
       magLog,
-      movimentiLogs: dash.movLogs,
+      movimentiLogs: useMovimentiMagLog ? [] : dash.movLogs,
       preventivi: preventiviQ.records,
       invoices: invoicesQ.invoices,
       logLavorazioni: [...(lavLogsQ.data ?? []), ...(schedeLogsQ.data ?? [])],
@@ -261,6 +332,7 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     dash.ricambi,
     dash.magRecentMovements,
     magLog,
+    useMovimentiMagLog,
     dash.movLogs,
     schedeStore,
     preventiviQ.records,
@@ -288,6 +360,7 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     (!staging && headerVisible && canPreventivi && preventiviQ.isLoading) ||
     (needInvoices && invoicesQ.isLoading) ||
     (needTimesheet && timesheetQ.isPending) ||
+    (needMovimenti && movimentiQ.isLoading) ||
     (activityEnabled &&
       ((canLavorazioni && (lavLogsQ.isLoading || schedeLogsQ.isLoading)) ||
         (canMagazzino && (magLogsQ.isLoading || movLogsQ.isLoading)) ||
@@ -317,6 +390,7 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     staging,
     visibleWidgets,
     slices,
+    headerKpiBase,
     isLoading,
     activityFeedLoading,
     canPreventivi,

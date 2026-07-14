@@ -81,10 +81,15 @@ export function resolveAddettoDisplayLabel(
   return label.trim() || LAVORAZIONE_EMPTY_DISPLAY;
 }
 
-/** Per filtri/KPI: true se nessun addetto assegnato (no ghost fallback). */
+/**
+ * Per filtri/KPI: true solo con bundle scheda caricato e nessun addetto persistito.
+ * ponytail: senza bundle non inferire «senza addetto» (prefetch parziale dashboard).
+ */
 export function isLavorazioneAddettoUnassigned(
   row: Pick<LavorazioneListRow, "id">,
   ctx: ResolveAddettoDisplayContext = {},
 ): boolean {
+  const store = ctx.schedeStore ?? {};
+  if (!store[row.id]) return false;
   return !resolveAddettoSnapshotRaw(row, ctx.schedeStore, ctx.logs).trim();
 }

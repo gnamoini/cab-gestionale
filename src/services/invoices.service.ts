@@ -25,7 +25,7 @@ import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 const ENTITA = "invoices";
 const PAYMENT_ENTITA = "invoice_payments";
 
-/** Stati eliminabili (hard delete) — allineato a RLS `cap_invoices_delete`. */
+/** Stati eliminabili (hard delete) — allineato a RLS `cap_invoices_delete` (write + bozza|da_verificare). */
 export const INVOICE_DELETABLE_STATUSES = new Set<InvoiceRow["status"]>(["bozza", "da_verificare"]);
 
 export function invoiceIsDeletable(status: InvoiceRow["status"]): boolean {

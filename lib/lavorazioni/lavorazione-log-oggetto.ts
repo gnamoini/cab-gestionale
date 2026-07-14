@@ -1,14 +1,36 @@
 import { formatTitleCasePhrase } from "@/lib/gestionale-log/view-model";
+import { lavorazioneMezzoIdentParts } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { MezzoRow } from "@/src/types/supabase-tables";
 
-/** Cliente — attrezzatura (marca e modello uniti, come in tabella) per titolo voce log. */
+function identSegment(raw: string | null | undefined): string {
+  const t = (raw ?? "").trim();
+  return t && t !== "—" ? t : "";
+}
+
+/** Un solo identificativo mezzo: scuderia → targa → matricola. */
+export function pickMezzoIdentPriority(opts: {
+  scuderia?: string | null;
+  targa?: string | null;
+  matricola?: string | null;
+}): string {
+  return (
+    identSegment(opts.scuderia) ||
+    identSegment(opts.targa) ||
+    identSegment(opts.matricola)
+  );
+}
+
+/** Cliente · attrezzatura · ident (scuderia/targa/matricola) per titolo voce log. */
 export function formatLavorazioneLogOggettoLabel(opts: {
   cliente?: string | null;
   marca?: string | null;
   modello?: string | null;
   tipoAttrezzatura?: string | null;
+  scuderia?: string | null;
+  targa?: string | null;
+  matricola?: string | null;
 }): string {
   const cliente = formatTitleCasePhrase((opts.cliente ?? "").trim());
   const marcaModello = [formatTitleCasePhrase((opts.marca ?? "").trim()), formatTitleCasePhrase((opts.modello ?? "").trim())]
@@ -16,8 +38,9 @@ export function formatLavorazioneLogOggettoLabel(opts: {
     .join(" ");
   const attrezzatura =
     marcaModello || formatTitleCasePhrase((opts.tipoAttrezzatura ?? "").trim());
-  const parts = [cliente, attrezzatura].filter((p) => p && p !== "—");
-  return parts.length ? parts.join(" — ") : "—";
+  const ident = pickMezzoIdentPriority(opts);
+  const parts = [cliente, attrezzatura, ident].filter((p) => p && p !== "—");
+  return parts.length ? parts.join(" · ") : "—";
 }
 
 export function lavorazioneLogOggettoFromMezzo(mezzo: MezzoRow | null | undefined): string {
@@ -27,6 +50,9 @@ export function lavorazioneLogOggettoFromMezzo(mezzo: MezzoRow | null | undefine
     marca: mezzo.marca,
     modello: mezzo.modello,
     tipoAttrezzatura: mezzo.tipo_attrezzatura,
+    scuderia: mezzo.numero_scuderia,
+    targa: mezzo.targa,
+    matricola: mezzo.matricola,
   });
 }
 
@@ -35,11 +61,15 @@ export function lavorazioneLogOggettoFromListRow(
   schedeStore?: LavorazioneSchedeStore,
 ): string {
   const ing = schedeStore?.[row.id]?.ingresso?.campi;
+  const ident = lavorazioneMezzoIdentParts(row, schedeStore);
   return formatLavorazioneLogOggettoLabel({
     cliente: ing?.cliente?.trim() || row.mezzo?.cliente,
     marca: ing?.marcaAttrezzatura?.trim() || row.mezzo?.marca,
     modello: ing?.modelloAttrezzatura?.trim() || row.mezzo?.modello,
     tipoAttrezzatura: ing?.tipoAttrezzatura?.trim() || row.mezzo?.tipo_attrezzatura,
+    scuderia: ing?.nScuderia?.trim() || ident.scuderia || row.mezzo?.numero_scuderia,
+    targa: ing?.targa?.trim() || ident.targa || row.mezzo?.targa,
+    matricola: ing?.matricola?.trim() || ident.matricola || row.mezzo?.matricola,
   });
 }
 
@@ -68,6 +98,9 @@ export function lavorazioneLogOggettoFromSchedaContenuto(contenuto: unknown): st
     marca: str("marcaAttrezzatura"),
     modello: str("modelloAttrezzatura"),
     tipoAttrezzatura: str("tipoAttrezzatura"),
+    scuderia: str("nScuderia"),
+    targa: str("targa"),
+    matricola: str("matricola"),
   });
 }
 

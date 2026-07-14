@@ -46,7 +46,7 @@ export function FatturazioneDetailDrawer({
 
   const issue = useCallback(
     async (status: "emessa" | "inviata") => {
-      if (!inv || busy) return;
+      if (!inv || busy || !canWrite) return;
       setBusy(true);
       try {
         const res = await invoicesEntry.issue(inv.id, status);
@@ -59,7 +59,7 @@ export function FatturazioneDetailDrawer({
         setBusy(false);
       }
     },
-    [busy, inv, onChanged, toast],
+    [busy, canWrite, inv, onChanged, toast],
   );
 
   const createCreditNote = useCallback(async () => {

@@ -437,11 +437,15 @@ export const dsToastDismiss =
 
 /** Contenuto tooltip portal (icon-only actions). */
 export const dsTooltipContent =
-  "pointer-events-none max-w-[12rem] whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-2 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)] transition-[opacity,transform] duration-150 ease-out";
+  "pointer-events-none max-w-[12rem] whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)] transition-[visibility,transform] duration-150 ease-out";
 
 /** Tooltip multilinea (es. celle timesheet). */
 export const dsTooltipContentMultiline =
-  "pointer-events-none max-w-[14rem] whitespace-pre-line text-center leading-snug rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)] transition-[opacity,transform] duration-150 ease-out";
+  "pointer-events-none max-w-[14rem] whitespace-pre-line text-center leading-snug rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)] transition-[visibility,transform] duration-150 ease-out";
+
+/** Stato portal tooltip — visibility (non opacity) così lo sfondo resta opaco. */
+export const dsTooltipPortalVisible = "visible scale-100";
+export const dsTooltipPortalHidden = "invisible scale-95";
 
 /** Skeleton */
 export const dsSkeletonPulse =
@@ -500,6 +504,11 @@ export const dsPageHeaderGrid = dsPageHeaderTopRow;
 
 export const dsLabel = dsTypoSmall + " font-medium";
 
+/** F — Stack campo form modale (label + control). */
+export const dsFormField = "block space-y-1.5";
+export const dsFormLabel = `${dsLabel} text-[color:var(--cab-text)]`;
+export const dsFormInput = dsInput;
+
 /** I — Header modale gestionale full-bleed (barra app sopra il pannello). */
 export const dsModalHeader =
   "flex w-full shrink-0 self-stretch border-b border-[color:var(--cab-border)] bg-[var(--cab-card)] px-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] shadow-[inset_0_-1px_0_0_var(--cab-border)] sm:py-3";
@@ -516,7 +525,7 @@ export const dsModalTitleBlock = "min-w-0 flex-1";
 
 export const dsModalTitle = `truncate text-base font-semibold leading-tight tracking-tight ${cabText} sm:text-lg`;
 
-export const dsModalSubtitle = `mt-0.5 truncate ${dsTypoCaption}`;
+export const dsModalSubtitle = `mt-0.5 line-clamp-2 ${dsTypoCaption}`;
 
 /** Sottotitolo hub (mezzo, configurazione): fino a 2 righe senza troncare metadata densi. */
 export const dsModalSubtitleHub = `mt-0.5 line-clamp-2 ${dsTypoCaption}`;
@@ -605,6 +614,11 @@ export const dsGestionaleInfoCard =
 /** Variante compatta (hub schede): stesso stile, padding ridotto. */
 export const dsGestionaleInfoCardCompact =
   "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,var(--cab-card))] px-2.5 py-2 shadow-[var(--cab-shadow-sm)]";
+/** Shell collapsible: niente padding esterno — header button flush + corpo animato. */
+export const dsGestionaleInfoCardCollapsibleShell =
+  "overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,var(--cab-card))] shadow-[var(--cab-shadow-sm)]";
+export const dsGestionaleInfoCardCollapsibleBodyPad = "px-3 pb-3 pt-2";
+export const dsGestionaleInfoCardCollapsibleBodyPadCompact = "px-2.5 pb-2 pt-2";
 export const dsGestionaleInfoCardTitle =
   "text-xs font-bold uppercase tracking-wide text-[color:var(--cab-text)]";
 export const dsGestionaleInfoCardSubgroup =

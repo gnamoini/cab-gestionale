@@ -292,6 +292,7 @@ export function AddettoSelectField({
   title,
   tablePillWidth,
   className = "",
+  inputClassName,
 }: {
   variant?: "pill" | "default";
   shellClass?: string;
@@ -304,6 +305,8 @@ export function AddettoSelectField({
   title?: string;
   tablePillWidth?: string;
   className?: string;
+  /** Stili sul campo input — non usare `className` per il bordo del controllo. */
+  inputClassName?: string;
 }) {
   const pillOptions = useMemo(
     () =>
@@ -330,6 +333,7 @@ export function AddettoSelectField({
         disabled={disabled}
         strictFromList
         className={className}
+        inputClassName={inputClassName}
       />
     );
   }

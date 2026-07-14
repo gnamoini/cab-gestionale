@@ -64,6 +64,24 @@ export const ASSET_ASSIGNMENT_HISTORY_COLUMNS =
 export const ASSET_MILEAGE_READINGS_COLUMNS =
   "id, mezzo_id, recorded_at, km, source, lavorazione_id, created_by, note, created_at" as const;
 
+export const TIPI_ATTREZZATURA_CATALOG_COLUMNS =
+  "id, label, label_norm, created_at, updated_at" as const;
+
+export const MAINTENANCE_PLANS_COLUMNS =
+  "id, nome, interval_ore, is_active, created_at, updated_at, created_by, deleted_at" as const;
+
+export const MAINTENANCE_PLAN_EQUIPMENT_TYPES_COLUMNS =
+  "id, plan_id, tipo_attrezzatura_id, created_at" as const;
+
+export const MAINTENANCE_PLAN_PARTS_COLUMNS =
+  "id, plan_id, ricambio_id, quantita, created_at, updated_at" as const;
+
+export const VEHICLE_MAINTENANCE_SERVICES_COLUMNS =
+  "id, mezzo_id, plan_id, performed_at, ore_at_service, mezzo_ore_snapshot, note, performed_by, created_at, updated_at, created_by" as const;
+
+export const VEHICLE_MAINTENANCE_SERVICE_PARTS_COLUMNS =
+  "id, service_id, ricambio_id, quantita, descrizione_snapshot, created_at" as const;
+
 export const ASSET_TIMELINE_PROJECTION_COLUMNS =
   "event_category, event_domain, source_id, asset_kind, mezzo_id, attrezzatura_id, event_at, event_subtype, priority, label" as const;
 

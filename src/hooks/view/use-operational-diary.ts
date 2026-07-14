@@ -10,11 +10,16 @@ export function operationalDiaryQueryKey(fromYmd?: string, toYmd?: string) {
   return [...QK.operationalDiary, fromYmd ?? "", toYmd ?? ""] as const;
 }
 
-export function useOperationalDiaryQuery(input?: { fromYmd?: string; toYmd?: string }) {
+export function useOperationalDiaryQuery(
+  input?: { fromYmd?: string; toYmd?: string },
+  options?: { enabled?: boolean },
+) {
   const fromYmd = input?.fromYmd;
   const toYmd = input?.toYmd;
-  return useServiceQuery(operationalDiaryQueryKey(fromYmd, toYmd), () =>
-    operationalDiaryEntry.list({ fromYmd, toYmd }),
+  return useServiceQuery(
+    operationalDiaryQueryKey(fromYmd, toYmd),
+    () => operationalDiaryEntry.list({ fromYmd, toYmd }),
+    { enabled: options?.enabled ?? true },
   );
 }
 

@@ -147,16 +147,27 @@ function isLogPlaceholderValue(s: string): boolean {
   return !t || t === "—" || t === "–" || t === "-";
 }
 
+/** Separatore parti etichetta oggetto log (cliente · attrezzatura, …). */
+export const GESTIONALE_LOG_OGGETTO_SEP = " · ";
+
 /** Rimuove segmenti vuoti/placeholder (—) dall'etichetta oggetto log. */
 export function sanitizeLogOggettoRiga(raw: string): string {
   const s = safeStr(raw).trim();
   if (isLogPlaceholderValue(s)) return "—";
-  const parts = s.split(/\s—\s/).map((p) => p.trim()).filter((p) => !isLogPlaceholderValue(p));
-  return parts.length ? parts.join(" — ") : "—";
+  const parts = s
+    .split(/\s(?:—|·)\s/)
+    .map((p) => p.trim())
+    .filter((p) => !isLogPlaceholderValue(p));
+  return parts.length ? parts.join(GESTIONALE_LOG_OGGETTO_SEP) : "—";
 }
 
 function joinOggetto(parts: string[]): string {
-  return parts.map((p) => safeStr(p).trim()).filter((p) => !isLogPlaceholderValue(p)).join(" — ") || "—";
+  return (
+    parts
+      .map((p) => safeStr(p).trim())
+      .filter((p) => !isLogPlaceholderValue(p))
+      .join(GESTIONALE_LOG_OGGETTO_SEP) || "—"
+  );
 }
 
 function pickStr(obj: Record<string, unknown>, keys: string[]): string {

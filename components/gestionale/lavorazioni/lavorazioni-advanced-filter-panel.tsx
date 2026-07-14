@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input/global-settings-list-select";
-import { AddettoSelectField } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import { GlobalFilterDateField } from "@/components/gestionale/global-input/global-date-picker";
 import {
   LavorazioniFilterField,
@@ -12,9 +11,12 @@ import {
 } from "@/components/gestionale/lavorazioni/lavorazioni-filter-fields";
 import {
   FILTER_ALL,
+  buildLavorazioniAddettoFilterItems,
+  normalizeAddettoFilterValue,
   type LavorazioniAdvancedFilters,
   type LavorazioniFilterCatalog,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 
 export type LavorazioniAdvancedFilterPanelVariant = "staff" | "clientPortal";
@@ -24,12 +26,14 @@ export function LavorazioniAdvancedFilterPanel({
   onChange,
   catalog,
   statiOpts = [],
+  addettiRecords = [],
   variant = "staff",
 }: {
   filters: LavorazioniAdvancedFilters;
   onChange: (patch: Partial<LavorazioniAdvancedFilters>) => void;
   catalog: LavorazioniFilterCatalog;
   statiOpts?: { id: string; label: string }[];
+  addettiRecords?: readonly AddettoRecord[];
   variant?: LavorazioniAdvancedFilterPanelVariant;
 }) {
   const isStaff = variant === "staff";
@@ -57,12 +61,11 @@ export function LavorazioniAdvancedFilterPanel({
   );
 
   const addettoItems = useMemo(
-    () => [
-      { value: FILTER_ALL, label: "Tutti gli addetti" },
-      ...catalog.addetti.map((a) => ({ value: a, label: a })),
-    ],
-    [catalog.addetti],
+    () => buildLavorazioniAddettoFilterItems(addettiRecords),
+    [addettiRecords],
   );
+
+  const addettoFilterValue = normalizeAddettoFilterValue(filters.addetto);
 
   return (
     <div className="space-y-3" aria-label="Filtri avanzati">
@@ -139,13 +142,21 @@ export function LavorazioniAdvancedFilterPanel({
         </LavorazioniFilterField>
         {isStaff ? (
           <LavorazioniFilterField label="Addetto">
-            <AddettoSelectField
-              variant="default"
-              value={filters.addetto}
-              onChange={(v) => onChange({ addetto: v })}
-              options={addettoItems}
-              ariaLabel="Seleziona addetto"
-              className={gestionaleFilterFieldInputClass}
+            <GlobalSelect
+              items={addettoItems}
+              value={addettoFilterValue}
+              onChange={(v) => onChange({ addetto: normalizeAddettoFilterValue(v) })}
+              inputClassName={gestionaleFilterFieldInputClass}
+              strictFromList
+              selectOnly
+              variant="filter"
+              filterNeutralValues={[FILTER_ALL]}
+              preserveItemOrder
+              alphabeticalBrowse={false}
+              selectorDomain="addetti"
+              dynamicList
+              operationalFilter
+              aria-label="Filtra addetto"
             />
           </LavorazioniFilterField>
         ) : null}

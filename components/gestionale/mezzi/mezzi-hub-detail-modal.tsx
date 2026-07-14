@@ -54,6 +54,7 @@ import {
   type MezziHubTabId,
 } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 import { MezziHubAttrezzaturePanel } from "@/components/gestionale/mezzi/mezzi-hub-attrezzature-panel";
+import { MezziHubTagliandiTab } from "@/components/gestionale/mezzi/mezzi-hub-tagliandi-tab";
 import {
   dsScrollbar,
   dsTable,
@@ -199,6 +200,8 @@ export function MezziHubDetailModal({
         return "Foto";
       case "lavorazioni":
         return `Lavorazioni (${interventi.length})`;
+      case "tagliandi":
+        return "Tagliandi";
       case "timeline":
         return `Timeline (${nTimeline})`;
       case "preventivi":
@@ -417,6 +420,10 @@ export function MezziHubDetailModal({
               ) : null}
             </div>
           </GestionaleInfoCard>
+        ) : null}
+
+        {tab === "tagliandi" ? (
+          <MezziHubTagliandiTab mezzo={mezzo} canEdit={canEdit} active={tab === "tagliandi"} />
         ) : null}
 
         {tab === "timeline" ? (

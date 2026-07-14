@@ -31,7 +31,7 @@ const cachedSummary = buildLogModificaSummary({
   payload: {
     summary: {
       tipoRiga: "AGGIORNAMENTO LAVORAZIONE",
-      oggettoRiga: "Cliente — Mezzo",
+      oggettoRiga: "Cliente · Mezzo",
       modifiche: ['Stato modificato da "Custom_2" a "Custom_1"'],
     },
   },
@@ -53,7 +53,7 @@ const payloadDiff = buildLogModificaSummary({
     after: { stato: "custom_1" },
     summary: {
       tipoRiga: "AGGIORNAMENTO LAVORAZIONE",
-      oggettoRiga: "Cliente — Mezzo",
+      oggettoRiga: "Cliente · Mezzo",
       modifiche: ['Stato modificato da "Custom_2" a "Custom_1"'],
     },
   },
@@ -71,7 +71,7 @@ const genericRefresh = buildLogModificaSummary({
   azione: "UPDATE",
   statiLavorazione: stati,
   payload: {
-    context: { oggetto: "Cliente Demo — Bobcat E35" },
+    context: { oggetto: "Cliente Demo · Bobcat E35" },
     before: { priorita: "media", note: "Prima" },
     after: { priorita: "alta", note: "Dopo" },
     summary: {
@@ -82,7 +82,7 @@ const genericRefresh = buildLogModificaSummary({
   },
 });
 
-assert.equal(genericRefresh.oggettoRiga, "Cliente Demo — Bobcat E35", "context oggetto must replace generic title");
+assert.equal(genericRefresh.oggettoRiga, "Cliente Demo · Bobcat E35", "context oggetto must replace generic title");
 assert.ok(
   genericRefresh.modifiche.some((m) => m.includes("Priorità")),
   "generic cached summary must refresh from payload diff",
@@ -141,11 +141,11 @@ const addettoLog = buildLogModificaSummary({
   payload: {
     before: { addetto: "Angelo" },
     after: { addetto: "Donato" },
-    context: { oggetto: "Acme Spa — Bobcat E35" },
+    context: { oggetto: "Acme Spa · Bobcat E35" },
   },
 });
 
-assert.equal(addettoLog.oggettoRiga, "Acme Spa — Bobcat E35", "addetto log must show lavorazione label from context");
+assert.equal(addettoLog.oggettoRiga, "Acme Spa · Bobcat E35", "addetto log must show lavorazione label from context");
 
 const cachedAddetto = buildLogModificaSummary({
   entita: "lavorazioni",
@@ -154,7 +154,7 @@ const cachedAddetto = buildLogModificaSummary({
   payload: {
     before: { addetto: "Angelo" },
     after: { addetto: "Donato" },
-    context: { oggetto: "Acme Spa — Bobcat E35" },
+    context: { oggetto: "Acme Spa · Bobcat E35" },
     summary: {
       tipoRiga: "AGGIORNAMENTO LAVORAZIONE",
       oggettoRiga: "Lavorazione",
@@ -163,7 +163,7 @@ const cachedAddetto = buildLogModificaSummary({
   },
 });
 
-assert.equal(cachedAddetto.oggettoRiga, "Acme Spa — Bobcat E35", "cached addetto log must refresh oggetto from context");
+assert.equal(cachedAddetto.oggettoRiga, "Acme Spa · Bobcat E35", "cached addetto log must refresh oggetto from context");
 
 const schedaOggetto = buildLogModificaSummary({
   entita: "scheda_lavorazione",
@@ -181,7 +181,7 @@ const schedaOggetto = buildLogModificaSummary({
   },
 });
 
-assert.equal(schedaOggetto.oggettoRiga, "Rossi Srl — FIAT 500X", "scheda log must identify cliente and attrezzatura");
+assert.equal(schedaOggetto.oggettoRiga, "Rossi Srl · FIAT 500X", "scheda log must identify cliente and attrezzatura");
 
 const securityRow = {
   id: "log-1",
@@ -209,10 +209,10 @@ const updatedByOnly = buildLogModificaSummary({
   payload: {
     before: { stato: "accettazione", updated_by: "52424242-0000-0000-0000-000000000001" },
     after: { stato: "accettazione", updated_by: "24243434-0000-0000-0000-000000000002" },
-    context: { oggetto: "Cliente Demo — Bobcat E35" },
+    context: { oggetto: "Cliente Demo · Bobcat E35" },
     summary: {
       tipoRiga: "AGGIORNAMENTO LAVORAZIONE",
-      oggettoRiga: "Cliente Demo — Bobcat E35",
+      oggettoRiga: "Cliente Demo · Bobcat E35",
       modifiche: ['Updated By modificato da "524242" a "24243"'],
     },
   },
@@ -222,7 +222,7 @@ assert.ok(
   !updatedByOnly.modifiche.some((m) => /updated by/i.test(m)),
   "updated_by audit metadata must not appear in log modifiche",
 );
-assert.equal(updatedByOnly.oggettoRiga, "Cliente Demo — Bobcat E35");
+assert.equal(updatedByOnly.oggettoRiga, "Cliente Demo · Bobcat E35");
 
 const updatedByWithRealChange = buildLogModificaSummary({
   entita: "lavorazioni",
@@ -232,7 +232,7 @@ const updatedByWithRealChange = buildLogModificaSummary({
   payload: {
     before: { stato: "custom_2", updated_by: "52424242-0000-0000-0000-000000000001" },
     after: { stato: "custom_1", updated_by: "24243434-0000-0000-0000-000000000002" },
-    context: { oggetto: "Cliente Demo — Bobcat E35" },
+    context: { oggetto: "Cliente Demo · Bobcat E35" },
   },
 });
 
@@ -249,12 +249,12 @@ const ordineStatus = buildLogModificaSummary({
   payload: {
     before: { status: "bozza", numero: "OF-001", fornitore_label: "Ricambi SRL" },
     after: { status: "inviato", numero: "OF-001", fornitore_label: "Ricambi SRL" },
-    context: { oggetto: "OF-001 — Ricambi SRL" },
+    context: { oggetto: "OF-001 · Ricambi SRL" },
   },
 });
 
 assert.equal(ordineStatus.tipoRiga, "AGGIORNAMENTO ORDINE FORNITORE");
-assert.equal(ordineStatus.oggettoRiga, "OF-001 — Ricambi SRL");
+assert.equal(ordineStatus.oggettoRiga, "OF-001 · Ricambi SRL");
 assert.equal(ordineStatus.modifiche[0], "Stato modificato da “Bozza” a “Inviato”");
 
 console.log("log-summary-stato.test.ts OK");

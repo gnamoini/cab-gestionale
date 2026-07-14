@@ -16,6 +16,7 @@ export type MezziHubTabId =
   | "attrezzature"
   | "foto"
   | "lavorazioni"
+  | "tagliandi"
   | "timeline"
   | "preventivi"
   | "documenti"
@@ -26,6 +27,7 @@ export const MEZZI_HUB_TAB_ORDER: readonly MezziHubTabId[] = [
   "attrezzature",
   "foto",
   "lavorazioni",
+  "tagliandi",
   "timeline",
   "preventivi",
   "documenti",
@@ -203,7 +205,7 @@ export function MezziHubFooter({
   const linkPrimary = `${dsBtnPrimary} inline-flex w-full justify-center no-underline sm:w-auto`;
   const linkNeutral = `${dsBtnNeutral} inline-flex w-full justify-center no-underline sm:w-auto`;
 
-  if (tab === "foto" || tab === "log") {
+  if (tab === "foto" || tab === "log" || tab === "tagliandi") {
     return null;
   }
 

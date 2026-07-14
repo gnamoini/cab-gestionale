@@ -106,6 +106,8 @@ export const CONTROL_CATALOG: Record<string, CatalogEntry> = {
   "smoke:playwright:cert": { resolve: () => spawnNpm("smoke:playwright:cert") },
   "smoke:playwright:scheda-smoke": { resolve: () => spawnNpm("smoke:playwright:scheda-smoke") },
   "smoke:playwright:ricambio:cert": { resolve: () => spawnNpm("smoke:playwright:ricambio:cert") },
+  "smoke:playwright:inventory-qr": { resolve: () => spawnNpm("smoke:playwright:inventory-qr") },
+  "test:inventory-labels": { resolve: () => spawnNpm("test:inventory-labels") },
   "smoke:cleanup:apply": {
     resolve: () => spawnNpm("smoke:cleanup:apply", { SMOKE_CLEANUP_APPLY: "1" }),
   },

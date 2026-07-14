@@ -26,6 +26,7 @@ export function GestionaleCollapsibleHeader({
   onToggle,
   titleNode,
   headerActions,
+  headerLeadingActions,
   shellClassName = "",
   compact = false,
   form = false,
@@ -40,6 +41,8 @@ export function GestionaleCollapsibleHeader({
   onToggle: () => void;
   titleNode: ReactNode;
   headerActions?: ReactNode;
+  /** Azioni inline accanto al titolo — fuori dal trigger per evitare button annidati. */
+  headerLeadingActions?: ReactNode;
   shellClassName?: string;
   compact?: boolean;
   /** Form modale: un solo button edge-to-edge (niente wrapper shell + bleed). */
@@ -65,7 +68,47 @@ export function GestionaleCollapsibleHeader({
     .filter(Boolean)
     .join(" ");
 
-  const trigger = (
+  const trigger = headerLeadingActions ? (
+    <div
+      id={`${panelId}-trigger`}
+      role="button"
+      tabIndex={0}
+      aria-expanded={expanded}
+      aria-controls={bodyId}
+      aria-label={toggleLabel}
+      onClick={onToggle}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onToggle();
+        }
+      }}
+      className={[
+        gestionaleCollapsibleShellHeaderBtnClass,
+        compactClass,
+        dividerClass,
+        gestionaleCollapsibleShellHeaderFocusClass,
+        surfaceClass,
+        "justify-between gap-2.5 rounded-none sm:gap-3",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-2.5 text-left sm:gap-3">
+        {titleNode}
+        <div
+          className="shrink-0"
+          role="presentation"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          {headerLeadingActions}
+        </div>
+      </div>
+      <GestionaleCollapsibleChevronBox expanded={expanded} />
+    </div>
+  ) : (
     <button
       type="button"
       id={`${panelId}-trigger`}

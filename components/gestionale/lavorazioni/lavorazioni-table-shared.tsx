@@ -151,9 +151,11 @@ export const lavTablePrimaryTextClass =
 export function LavorazioneIngressoDateCell({
   row,
   schedeStore,
+  layout = "stack",
 }: {
   row: LavorazioneListRow;
   schedeStore?: LavorazioneSchedeStore;
+  layout?: "stack" | "inline";
 }) {
   const iso = lavorazioneIngressoIso(
     row,
@@ -161,9 +163,24 @@ export function LavorazioneIngressoDateCell({
   );
   const { date } = formatLavorazioneIngressoDisplay(iso);
   const permanenza = lavorazionePermanenzaGiorniLabel(row);
+  const inline = layout === "inline";
   return (
-    <div className="flex min-w-0 flex-col gap-0.5 text-left">
-      <span className={`tabular-nums ${lavTableBodyTextClass}`}>{date}</span>
+    <div
+      className={
+        inline
+          ? "flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-left"
+          : "flex min-w-0 flex-col gap-0.5 text-left"
+      }
+    >
+      <span
+        className={
+          inline
+            ? "tabular-nums text-[11px] font-normal leading-tight text-zinc-700 dark:text-zinc-200"
+            : `tabular-nums ${lavTableBodyTextClass}`
+        }
+      >
+        {date}
+      </span>
       {permanenza !== "—" ? (
         <span className="text-[11px] font-normal leading-tight text-zinc-500 dark:text-zinc-400">{permanenza}</span>
       ) : null}

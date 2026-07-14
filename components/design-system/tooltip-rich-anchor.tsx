@@ -14,7 +14,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTooltip } from "./use-tooltip";
-import { dsZTooltip } from "@/lib/ui/design-system";
+import { dsTooltipPortalHidden, dsTooltipPortalVisible, dsZTooltip } from "@/lib/ui/design-system";
 import { tooltipFixedStyle, tooltipTransformOrigin, type TooltipSide } from "@/lib/ui/tooltip-portal";
 
 function mergeRefs<T>(...refs: Array<React.Ref<T> | undefined>): (node: T | null) => void {
@@ -115,11 +115,12 @@ export function TooltipRichAnchor({
           <div
             ref={contentRef}
             role="tooltip"
-            className={`${panelClassName} ${dsZTooltip} pointer-events-none ${visible ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
+            className={`${panelClassName} ${dsZTooltip} pointer-events-none ${visible ? dsTooltipPortalVisible : dsTooltipPortalHidden}`}
             style={{
               ...tooltipFixedStyle(coords ?? { top: -9999, left: -9999, side }),
               transformOrigin: tooltipTransformOrigin(coords?.side ?? side),
               backgroundColor: "var(--cab-card)",
+              opacity: 1,
             }}
           >
             {panel}

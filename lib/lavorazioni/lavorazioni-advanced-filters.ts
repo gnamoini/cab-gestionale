@@ -4,7 +4,11 @@ import { isoToDateInputValue, normalizeYmdRangeBounds } from "@/lib/lavorazioni/
 import { migrateStatoConfigId } from "@/lib/lavorazioni/stati-dynamic";
 import { lavRowIngressoInRange } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
 import type { LavorazioneSchedeStore } from "@/types/schede";
-import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import {
+  addettoDisplayName,
+  sortAddettiRecordsByCognomeNome,
+  type AddettoRecord,
+} from "@/lib/lavorazioni/addetto-model";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 
@@ -250,13 +254,41 @@ export function lavRowMatchesAdvancedFilters(
   return true;
 }
 
+export const LAVORAZIONI_ADDETTO_FILTER_ALL_LABEL = "Tutti gli addetti";
+
+/** Voce neutra + addetti da impostazioni (nome completo, allineato al filtro riga). */
+export function buildLavorazioniAddettoFilterItems(
+  addettiRecords: readonly AddettoRecord[],
+): { value: string; label: string }[] {
+  const items = [{ value: FILTER_ALL, label: LAVORAZIONI_ADDETTO_FILTER_ALL_LABEL }];
+  const seen = new Set<string>([FILTER_ALL]);
+  for (const rec of sortAddettiRecordsByCognomeNome(addettiRecords)) {
+    const label = addettoDisplayName(rec).trim();
+    const key = norm(label);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    items.push({ value: label, label });
+  }
+  return items;
+}
+
+export function normalizeAddettoFilterValue(value: string | null | undefined): string {
+  const t = value?.trim();
+  return t && t !== FILTER_ALL ? t : FILTER_ALL;
+}
+
 export function loadGestionaleAdvancedFiltersPersisted(): LavorazioniAdvancedFilters | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.sessionStorage.getItem(GESTIONALE_STORAGE_KEY);
     if (!raw) return null;
     const o = JSON.parse(raw) as Partial<LavorazioniAdvancedFilters>;
-    return { ...LAVORAZIONI_ADVANCED_FILTERS_EMPTY, ...o, section: "" };
+    return {
+      ...LAVORAZIONI_ADVANCED_FILTERS_EMPTY,
+      ...o,
+      section: "",
+      addetto: normalizeAddettoFilterValue(o.addetto),
+    };
   } catch {
     return null;
   }

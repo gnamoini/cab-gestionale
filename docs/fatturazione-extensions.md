@@ -37,5 +37,5 @@ Documentazione di riferimento per evoluzioni pianificate fuori scope v1.
 | `create_invoice_with_rows_and_links` | Creazione atomica |
 | `update_invoice_draft_with_rows` | Modifica bozza con replace righe/links |
 | `register_invoice_payment` | Pagamenti + ricalcolo stato |
-| `cancel_invoice` | Annullamento (admin) |
+| `cancel_invoice` | Annullamento | write (page fatturazione) |
 | `assert_invoice_preventivo_allocations` | Guard anti-overbilling |

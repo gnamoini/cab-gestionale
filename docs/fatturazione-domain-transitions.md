@@ -78,3 +78,22 @@ Tutti gli eventi condividono `correlation_id`; `causation_id` punta all'evento p
 | SDI | `sdi_*` | nuovo | Fase 2+ |
 
 INSERT su `invoice_events`: solo `invoice_insert_event()` (SQL) e `append_billing_event` / `appendBillingEvent` (TS).
+
+## RBAC pagina Fatturazione (page SSOT)
+
+**Contratto:** WRITE sulla pagina `fatturazione` abilita tutte le operazioni disponibili nella pagina, salvo vincoli fiscali espliciti o capability separate future.
+
+| Layer | Verifica |
+|-------|----------|
+| Route / UI | `canWritePage(resolved, 'fatturazione')` |
+| Client mutation | `withPageWriteGuard('fatturazione')` → `ensurePageWrite` |
+| DB RLS / RPC | `rbac_module_can('fatturazione', 'write')` → page SSOT |
+
+**Vincoli non-RBAC (fiscali / integrità):**
+- Annulla nascosto in UI se `status = pagata` → usare nota di credito
+- Modifica dati solo su bozze (`bozza`, `da_verificare`)
+- Delete pagamento su fatture emesse: bloccato (RLS condizionale su stato fattura padre)
+
+**Whitelist `admin` (manutenzione, non UX pagina):** `apply_invoice_status_backfill`, backfill assi, report migrazione.
+
+Migration allineamento: `20260915120200_fatturazione_write_rls_alignment.sql`.

@@ -9,21 +9,28 @@ export function DashboardWidgetShell({
   def,
   children,
   headerActions,
+  headerLeadingActions,
+  title,
+  subtitle,
 }: {
   def: DashboardWidgetDefinition;
   children: ReactNode;
   headerActions?: ReactNode;
+  headerLeadingActions?: ReactNode;
+  title?: string;
+  subtitle?: string;
 }) {
   return (
     <ShellCard
       id={`dashboard-widget-${def.id}`}
-      title={def.title}
-      subtitle={def.subtitle}
+      title={title ?? def.title}
+      subtitle={subtitle ?? def.subtitle}
       collapsible
       defaultCollapsed={def.defaultCollapsed}
       persistScope="dashboard"
       persistKey={def.id}
       headerActions={headerActions}
+      headerLeadingActions={headerLeadingActions}
       className={reportZoneShellClass}
     >
       {children}
@@ -35,11 +42,22 @@ export function DashboardWidgetShell({
 export function wrapDashboardWidget(
   def: DashboardWidgetDefinition,
   body: ReactNode | null | false,
-  headerActions?: ReactNode,
+  options?: {
+    headerActions?: ReactNode;
+    headerLeadingActions?: ReactNode;
+    title?: string;
+    subtitle?: string;
+  },
 ): ReactNode {
   if (body == null || body === false) return null;
   return (
-    <DashboardWidgetShell def={def} headerActions={headerActions}>
+    <DashboardWidgetShell
+      def={def}
+      headerActions={options?.headerActions}
+      headerLeadingActions={options?.headerLeadingActions}
+      title={options?.title}
+      subtitle={options?.subtitle}
+    >
       {body}
     </DashboardWidgetShell>
   );

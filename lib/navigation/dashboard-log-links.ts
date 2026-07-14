@@ -10,6 +10,14 @@ export const Q_FOCUS_LAV_TITOLO = "focusLavTitolo";
 /** Query: focus ricambio in tabella magazzino. */
 export const Q_FOCUS_RICAMBIO = "focusRicambio";
 
+/** Query: apre modale info ricambio. */
+export const Q_OPEN_RICAMBIO = "openRicambio";
+
+/** Origine apertura ricambio (qr, manual, dashboard, report). */
+export const Q_OPEN_SOURCE = "source";
+
+export type OpenRicambioSource = "qr" | "manual" | "dashboard" | "report";
+
 /** Query: evidenzia lavorazioni collegate a un mezzo (anagrafica id). Valori speciali es. `hub-lav-*`. */
 export const Q_FOCUS_MEZZO = "focusMezzo";
 
@@ -28,5 +36,15 @@ export function buildLavorazioniLogFocusHref(entry: LavorazioniLogEntry): string
 export function buildMagazzinoLogFocusHref(entry: MagazzinoChangeLogEntry): string {
   const sp = new URLSearchParams();
   sp.set(Q_FOCUS_RICAMBIO, entry.ricambioId);
+  return `/magazzino?${sp.toString()}`;
+}
+
+export function buildMagazzinoOpenRicambioHref(
+  ricambioId: string,
+  source: OpenRicambioSource = "manual",
+): string {
+  const sp = new URLSearchParams();
+  sp.set(Q_OPEN_RICAMBIO, ricambioId.trim());
+  if (source) sp.set(Q_OPEN_SOURCE, source);
   return `/magazzino?${sp.toString()}`;
 }

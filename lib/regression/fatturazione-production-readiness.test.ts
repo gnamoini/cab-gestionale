@@ -11,6 +11,7 @@ const REQUIRED_TESTS = [
   "lib/regression/fatturazione-events-coverage.test.ts",
   "lib/regression/fatturazione-explain-plans.test.ts",
   "lib/regression/fatturazione-module-isolation.test.ts",
+  "lib/regression/fatturazione-rbac-write-parity.test.ts",
   "lib/fatturazione/allocate-invoice-number.concurrency.test.ts",
 ] as const;
 

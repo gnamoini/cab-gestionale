@@ -74,6 +74,13 @@ type FieldReviewStatus = {
   label: string;
 } | null;
 
+function shouldShowAmbiguityHint(
+  resolution: EntityResolutionResult | undefined,
+  fieldWarnings: readonly CaptureCatalogWarning[],
+): boolean {
+  return resolution?.status === "ambiguous" && fieldWarnings.length === 0;
+}
+
 function fieldReviewStatus(
   resolution: EntityResolutionResult | undefined,
   fieldWarnings: readonly CaptureCatalogWarning[],
@@ -83,7 +90,7 @@ function fieldReviewStatus(
 ): FieldReviewStatus[] {
   const badges: FieldReviewStatus[] = [];
 
-  if (resolution?.status === "ambiguous") {
+  if (shouldShowAmbiguityHint(resolution, fieldWarnings)) {
     badges.push({ tone: "warn", label: "Da confermare" });
   } else if (
     resolution?.status === "resolved" &&
@@ -233,8 +240,11 @@ export function CaptureFieldReviewGrid({
   );
 
   const ambiguousCount = useMemo(
-    () => Object.values(resolutionByKey).filter((r) => r.status === "ambiguous").length,
-    [resolutionByKey],
+    () =>
+      Object.entries(resolutionByKey).filter(
+        ([fieldKey, r]) => shouldShowAmbiguityHint(r, warningsByField.get(fieldKey) ?? []),
+      ).length,
+    [resolutionByKey, warningsByField],
   );
 
   const load = useCallback(async () => {
@@ -329,13 +339,13 @@ export function CaptureFieldReviewGrid({
   const getAmbiguousItems = useCallback(
     () =>
       Object.entries(resolutionByKey)
-        .filter(([, r]) => r.status === "ambiguous")
+        .filter(([fieldKey, r]) => shouldShowAmbiguityHint(r, warningsByField.get(fieldKey) ?? []))
         .map(([fieldKey, resolution]) => ({
           fieldKey,
           original: resolution.originalValue,
           resolution,
         })),
-    [resolutionByKey],
+    [resolutionByKey, warningsByField],
   );
 
   const getResolutionResults = useCallback(() => Object.values(resolutionByKey), [resolutionByKey]);
@@ -457,7 +467,7 @@ export function CaptureFieldReviewGrid({
                 </p>
               ) : null}
 
-              {resolution?.status === "ambiguous" ? (
+              {shouldShowAmbiguityHint(resolution, fieldWarnings) ? (
                 <p className="text-xs text-[color:color-mix(in_srgb,var(--cab-warning)_88%,var(--cab-text))]">
                   Più corrispondenze possibili nelle impostazioni. Conferma il valore corretto prima di proseguire.
                 </p>

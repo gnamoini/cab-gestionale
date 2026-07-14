@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  isLavorazioneAddettoUnassigned,
   resolveAddettoDisplayLabel,
   resolveAddettoNomeKey,
 } from "@/lib/lavorazioni/resolve-addetto-display";
@@ -31,6 +32,18 @@ const schedeStore = {
   };
   assert.equal(resolveAddettoNomeKey(row, ctx), "Vito");
   assert.equal(resolveAddettoDisplayLabel(row, ctx), "Vito Polieri");
+}
+
+{
+  assert.equal(isLavorazioneAddettoUnassigned(row, { schedeStore: {} }), false);
+  const emptyIngresso = {
+    "lav-1": { ingresso: { campi: { addettoAccettazione: "" } } },
+  } as unknown as LavorazioneSchedeStore;
+  assert.equal(isLavorazioneAddettoUnassigned(row, { schedeStore: emptyIngresso }), true);
+  const defaultAddetto = {
+    "lav-1": { ingresso: { campi: { addettoAccettazione: "Mario" } } },
+  } as unknown as LavorazioneSchedeStore;
+  assert.equal(isLavorazioneAddettoUnassigned(row, { schedeStore: defaultAddetto }), false);
 }
 
 console.log("resolve-addetto-display.test.ts OK");

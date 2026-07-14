@@ -5,7 +5,7 @@ import {
   buildControlTowerWipSlice,
   buildControlTowerActivityFeedSlice,
 } from "@/lib/dashboard/control-tower-selectors";
-import { CONTROL_TOWER_KPI_WINDOW_LABEL, CONTROL_TOWER_STALE_UPDATE_DAYS } from "@/lib/dashboard/control-tower-constants";
+import { CONTROL_TOWER_KPI_DAY_WINDOW_LABEL, CONTROL_TOWER_KPI_MONTH_WINDOW_LABEL, CONTROL_TOWER_KPI_WINDOW_LABEL, CONTROL_TOWER_STALE_UPDATE_DAYS } from "@/lib/dashboard/control-tower-constants";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { DipendenteTimesheetEntryRow } from "@/lib/dipendenti/types";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
@@ -78,8 +78,50 @@ const oreMetric = dipCluster!.metrics.find((m) => m.id === "dip-ore");
 assert.equal(oreMetric?.value, 8);
 assert.equal(oreMetric?.prevValue, 4);
 assert.equal(oreMetric?.unit, "hours");
+
+const dailyHeader = buildControlTowerHeaderKpiSlice({
+  lavRows: [],
+  ricambi: [],
+  anchor: ANCHOR,
+  includeAdmin: false,
+  includeDipendenti: true,
+  briefMode: "day",
+  timesheetEntries: [
+    timesheetEntry({ id: "t1", work_date: "2026-06-04", ore_ordinarie: 6 }),
+    timesheetEntry({ id: "t2", work_date: "2026-06-02", ore_ordinarie: 8 }),
+  ],
+});
+assert.equal(dailyHeader.windowLabel, CONTROL_TOWER_KPI_DAY_WINDOW_LABEL);
+const dailyDip = dailyHeader.clusters.find((c) => c.id === "dipendenti");
+assert.ok(dailyDip);
+const dailyOre = dailyDip!.metrics.find((m) => m.id === "dip-ore");
+assert.equal(dailyOre?.value, 6);
+assert.equal(dailyOre?.prevValue, null);
+assert.equal(dailyOre?.deltaPct, null);
 assert.equal(oreMetric?.deltaAbs, "+4");
 assert.equal(oreMetric?.deltaPct, 100);
+
+const monthlyHeader = buildControlTowerHeaderKpiSlice({
+  lavRows: [],
+  ricambi: [],
+  anchor: ANCHOR,
+  includeAdmin: false,
+  includeDipendenti: true,
+  briefMode: "month",
+  timesheetEntries: [
+    timesheetEntry({ id: "t1", work_date: "2026-06-02", ore_ordinarie: 8 }),
+    timesheetEntry({ id: "t2", work_date: "2026-05-02", ore_ordinarie: 4 }),
+    timesheetEntry({ id: "t3", work_date: "2026-05-26", ore_ordinarie: 99 }),
+  ],
+});
+assert.equal(monthlyHeader.windowLabel, CONTROL_TOWER_KPI_MONTH_WINDOW_LABEL);
+const monthlyDip = monthlyHeader.clusters.find((c) => c.id === "dipendenti");
+assert.ok(monthlyDip);
+const monthlyOre = monthlyDip!.metrics.find((m) => m.id === "dip-ore");
+assert.equal(monthlyOre?.value, 8);
+assert.equal(monthlyOre?.prevValue, 4);
+assert.equal(monthlyOre?.deltaAbs, "+4");
+assert.equal(monthlyOre?.deltaPct, 100);
 
 const staleLav = lavRow({
   id: "stale-1",
@@ -190,7 +232,48 @@ const mergedLavActivity = buildControlTowerActivityFeedSlice({
   logLavorazioni: [...logs, ...schedaLogs],
   anchor: ANCHOR,
 });
-assert.equal(mergedLavActivity.byDomain.lavorazioni.length, 3, "lavorazioni + scheda_lavorazione merged");
+assert.equal(mergedLavActivity.byDomain.lavorazioni.length, 3, "distinct lavorazioni stay separate when not same lav id");
+
+const lavSchedaMergedLogs: LogModificaRow[] = [
+  {
+    id: "lav-1a",
+    entita: "lavorazioni",
+    entita_id: "lav-1",
+    azione: "UPDATE",
+    created_at: "2026-06-03T10:00:00.000Z",
+    payload: { before: { stato: "accettazione" }, after: { stato: "in_lavorazione" } },
+    autore_id: null,
+  },
+  {
+    id: "lav-1b",
+    entita: "lavorazioni",
+    entita_id: "lav-1",
+    azione: "UPDATE",
+    created_at: "2026-06-03T11:00:00.000Z",
+    payload: { before: { priorita: "media" }, after: { priorita: "alta" } },
+    autore_id: null,
+  },
+  {
+    id: "sch-lav-1",
+    entita: "scheda_lavorazione",
+    entita_id: "scheda-1",
+    azione: "UPDATE",
+    created_at: "2026-06-03T12:00:00.000Z",
+    payload: {
+      before: { lavorazione_id: "lav-1", note: "a" },
+      after: { lavorazione_id: "lav-1", note: "b" },
+    },
+    autore_id: null,
+  },
+];
+const lavSchedaMergedActivity = buildControlTowerActivityFeedSlice({
+  lavRows: [lavRow({ id: "lav-1", codice: "L-001" })],
+  ricambi: [],
+  logLavorazioni: lavSchedaMergedLogs,
+  anchor: ANCHOR,
+});
+assert.equal(lavSchedaMergedActivity.byDomain.lavorazioni.length, 1, "lavorazioni + scheda merge by lavorazione_id");
+assert.equal(lavSchedaMergedActivity.byDomain.lavorazioni[0]?.eventCount, 3, "merged lav+scheda event count");
 
 const oldLog: LogModificaRow = {
   id: "old-1",

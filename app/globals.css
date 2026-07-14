@@ -683,12 +683,12 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
   flex-shrink: 0;
 }
 
-/** Dashboard welcome — testo a sinistra dopo logo; data ancorata a destra. */
+/** Dashboard welcome — logo + copy a sinistra; data a destra nel banner. */
 @media (min-width: 768px) {
   .cab-dashboard-welcome-layout {
     grid-template-columns: auto minmax(0, max-content) 1fr auto;
     align-items: center;
-    column-gap: 1rem;
+    column-gap: 0.75rem;
   }
 
   .cab-dashboard-welcome-logo {
@@ -696,6 +696,7 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
     grid-row: 1;
     width: fit-content;
     max-width: 8.5rem;
+    align-self: center;
   }
 
   .cab-dashboard-welcome-copy {
@@ -703,6 +704,7 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
     grid-row: 1;
     justify-self: start;
     text-align: left;
+    align-self: center;
   }
 
   .cab-dashboard-welcome-date {
@@ -710,6 +712,7 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
     grid-row: 1;
     justify-self: end;
     width: auto;
+    align-self: center;
     border-top-width: 0;
     border-left-width: 2px;
     border-left-style: solid;

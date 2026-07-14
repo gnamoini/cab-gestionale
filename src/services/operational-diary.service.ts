@@ -56,13 +56,14 @@ export const operationalDiaryService = {
       const body = input.body.trim().slice(0, OPERATIONAL_DIARY_BODY_MAX);
       const c = await sb();
 
-      const { data: existing, error: findErr } = await c
+      const { data: existingRows, error: findErr } = await c
         .from("operational_diary_entries")
         .select("id")
         .eq("work_date", workDate)
         .is("deleted_at", null)
-        .maybeSingle();
+        .limit(1);
       if (findErr) return err(findErr.message);
+      const existing = existingRows?.[0] ?? null;
 
       if (!body) {
         if (!existing?.id) return success(null);
@@ -70,7 +71,8 @@ export const operationalDiaryService = {
         const { error } = await c
           .from("operational_diary_entries")
           .update({ deleted_at: now })
-          .eq("id", existing.id);
+          .eq("id", existing.id)
+          .is("deleted_at", null);
         if (error) return err(error.message);
         return success(null);
       }
@@ -80,10 +82,12 @@ export const operationalDiaryService = {
           .from("operational_diary_entries")
           .update({ body })
           .eq("id", existing.id)
+          .is("deleted_at", null)
           .select(OPERATIONAL_DIARY_ENTRIES_COLUMNS)
-          .single();
+          .maybeSingle();
         if (error) return err(error.message);
-        return success(data as OperationalDiaryEntryRow);
+        if (data) return success(data as OperationalDiaryEntryRow);
+        if (!body) return success(null);
       }
 
       const { data, error } = await c

@@ -39,7 +39,7 @@ export const DASHBOARD_WIDGET_REGISTRY: readonly DashboardWidgetDefinition[] = [
     section: "kpi-header",
     order: 5,
     layout: "full",
-    title: "Brief settimanale",
+    title: "Brief operativo",
     defaultCollapsed: false,
   },
   {

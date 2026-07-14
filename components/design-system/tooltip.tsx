@@ -13,7 +13,7 @@ import {
   type TouchEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { dsTooltipContent, dsTooltipContentMultiline, dsZTooltip } from "@/lib/ui/design-system";
+import { dsTooltipContent, dsTooltipContentMultiline, dsTooltipPortalHidden, dsTooltipPortalVisible, dsZTooltip } from "@/lib/ui/design-system";
 import { tooltipFixedStyle, tooltipTransformOrigin, type TooltipSide } from "@/lib/ui/tooltip-portal";
 import { useTooltip } from "@/components/design-system/use-tooltip";
 
@@ -134,11 +134,12 @@ export function Tooltip({
           <div
             ref={contentRef}
             role="tooltip"
-            className={`${multiline ? dsTooltipContentMultiline : dsTooltipContent} ${dsZTooltip} ${visible ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
+            className={`${multiline ? dsTooltipContentMultiline : dsTooltipContent} ${dsZTooltip} ${visible ? dsTooltipPortalVisible : dsTooltipPortalHidden}`}
             style={{
               ...tooltipFixedStyle(coords ?? { top: -9999, left: -9999, side }),
               transformOrigin: tooltipTransformOrigin(coords?.side ?? side),
               backgroundColor: "var(--cab-card)",
+              opacity: 1,
             }}
           >
             {displayContent}

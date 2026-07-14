@@ -11,6 +11,7 @@ import type { MagazzinoArchiveDuplicateCodeGroup } from "@/lib/magazzino/duplica
 import type { MagazzinoLogFeedItem } from "@/lib/magazzino/use-magazzino-log-feed";
 import type { RicambioConsumoDaLog } from "@/lib/magazzino/ricambio-consumo-from-log";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { RicambioLabelActions } from "@/components/gestionale/magazzino/ricambio-label-actions";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
@@ -63,23 +64,31 @@ export function MagazzinoRicambioInfoModal({
   return (
     <GestionaleModalShell
       modalSize="info"
+      modalHeight="standard"
       onRequestClose={onClose}
       title="Scheda ricambio"
       titleId="detail-ricambio-title"
       footer={
-        <DisabledElementTooltip
-          content={magCanCreateRicambio ? "Modifica" : READONLY_PERMISSION_HINT}
-          disabled={!magCanCreateRicambio}
-        >
-          <button
-            type="button"
-            onClick={onEdit}
-            className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
+        <div className="flex w-full min-w-0 flex-col gap-2">
+          <RicambioLabelActions
+            ricambioId={ricambio.id}
+            codice={ricambio.codiceFornitoreOriginale}
+            canManage={magCanCreateRicambio}
+          />
+          <DisabledElementTooltip
+            content={magCanCreateRicambio ? "Modifica" : READONLY_PERMISSION_HINT}
             disabled={!magCanCreateRicambio}
           >
-            Modifica
-          </button>
-        </DisabledElementTooltip>
+            <button
+              type="button"
+              onClick={onEdit}
+              className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
+              disabled={!magCanCreateRicambio}
+            >
+              Modifica
+            </button>
+          </DisabledElementTooltip>
+        </div>
       }
     >
       <div className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}>

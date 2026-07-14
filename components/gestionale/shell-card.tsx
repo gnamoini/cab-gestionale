@@ -127,17 +127,13 @@ export function ShellCard({
             formFlat={collapsibleInset}
             headerActionsDivider={headerActionsDivider}
             headerActions={headerActions}
+            headerLeadingActions={headerLeadingActions}
             titleNode={
               <>
-                {title || headerLeadingActions ? (
-                  <div className="flex min-w-0 items-center gap-2">
-                    {title ? (
-                      <h2 id={titleId} className={`${dsCardTitle} ${compactHeader ? "text-sm" : ""} leading-snug`}>
-                        {title}
-                      </h2>
-                    ) : null}
-                    {headerLeadingActions}
-                  </div>
+                {title ? (
+                  <h2 id={titleId} className={`${dsCardTitle} ${compactHeader ? "text-sm" : ""} leading-snug`}>
+                    {title}
+                  </h2>
                 ) : null}
                 {subtitle ? <p className={dsTypoSmall}>{subtitle}</p> : null}
               </>

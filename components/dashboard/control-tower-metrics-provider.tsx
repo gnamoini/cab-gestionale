@@ -6,6 +6,7 @@ import {
   controlTowerEmptyDashSlice,
   useControlTowerMetricsValue,
   useControlTowerShell,
+  type ControlTowerHeaderKpiBase,
   type ControlTowerShell,
 } from "@/src/hooks/view/use-control-tower-metrics";
 import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
@@ -21,6 +22,7 @@ type ControlTowerContextValue = {
   staging: boolean;
   visibleWidgets: DashboardWidgetDefinition[];
   slices: ControlTowerSlices | null;
+  headerKpiBase: ControlTowerHeaderKpiBase | null;
   isLoading: boolean;
   activityFeedLoading: boolean;
   canPreventivi: boolean;

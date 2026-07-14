@@ -16,6 +16,10 @@ const securityTable = read("components/dashboard/security/security-users-table.t
 const securityCreate = read("components/dashboard/security-create-user-modal.tsx");
 const promemoriaForm = read("components/dashboard/promemoria/dashboard-promemoria-form-modal.tsx");
 const tasksPanel = read("components/dashboard/dashboard-diary-panel.tsx");
+const welcome = read("components/dashboard/dashboard-welcome.tsx");
+
+assert.match(welcome, /DashboardHealthScoreRing/);
+assert.match(welcome, /useOperationalHealthScore/);
 
 assert.match(securityView, /GlobalDatePickerYmd/);
 assert.doesNotMatch(securityView, /type="date"/);
@@ -34,5 +38,20 @@ assert.match(promemoriaForm, /id=\{titleFieldId\}/);
 
 assert.match(tasksPanel, /OPERATIONAL_DIARY_BODY_MAX|maxLength/);
 assert.match(tasksPanel, /break-words|whitespace-pre-wrap/);
+assert.match(tasksPanel, /persistQueueRef/);
+assert.match(tasksPanel, /canReadPage\("dashboard"\)/);
+assert.match(tasksPanel, /canWritePage\("dashboard"\)/);
+assert.doesNotMatch(tasksPanel, /readOnly\s*=\s*rbac\.isGuest/);
+
+const diaryEntry = read("lib/domain/operational-diary-entry.ts");
+assert.match(diaryEntry, /withPageReadGuard\("dashboard"/);
+assert.match(diaryEntry, /withPageWriteGuard\("dashboard"/);
+
+const diaryRls = read("supabase/migrations/20260911130100_operational_diary_dashboard_rls.sql");
+assert.match(diaryRls, /rbac_user_page_access_level\(public\.rbac_auth_uid\(\), 'dashboard'\)/);
+
+const diaryService = read("src/services/operational-diary.service.ts");
+assert.match(diaryService, /maybeSingle/);
+assert.match(diaryService, /deleted_at/);
 
 console.log("dashboard-inputs-audit.test.ts OK");
