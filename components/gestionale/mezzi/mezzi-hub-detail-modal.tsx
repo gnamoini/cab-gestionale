@@ -80,18 +80,24 @@ const lavorazioneAttivaPillStyle = (active: boolean): CSSProperties | undefined 
 
 export function MezziHubDetailModal({
   mezzo,
+  initialTab = "panoramica",
   onClose,
   onEdit,
   onDelete,
   canEdit = true,
 }: {
   mezzo: MezzoGestito;
+  initialTab?: MezziHubTabId;
   onClose: () => void;
   onEdit: () => void;
   onDelete?: () => void;
   canEdit?: boolean;
 }) {
-  const [tab, setTab] = useState<MezziHubTabId>("panoramica");
+  const [tab, setTab] = useState<MezziHubTabId>(initialTab);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [mezzo.id, initialTab]);
 
   const hubQuery = useMezzoHub(mezzo.id);
   const hubData = hubQuery.data;
@@ -201,7 +207,7 @@ export function MezziHubDetailModal({
       case "lavorazioni":
         return `Lavorazioni (${interventi.length})`;
       case "tagliandi":
-        return "Tagliandi";
+        return "Tagliandi/revisioni";
       case "timeline":
         return `Timeline (${nTimeline})`;
       case "preventivi":

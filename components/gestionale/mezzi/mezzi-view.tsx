@@ -9,13 +9,16 @@ import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { MezziSearchBar, MezziFilterFields } from "@/components/gestionale/mezzi/mezzi-filters";
+import { MezziSearchBar, MezziFilterFields, mezziFieldFiltersActive } from "@/components/gestionale/mezzi/mezzi-filters";
 import { MezziHubDetailModal } from "@/components/gestionale/mezzi/mezzi-hub-detail-modal";
+import type { MezziHubTabId } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 import { MezzoEliminaConfirmDialog } from "@/components/gestionale/mezzi/mezzo-elimina-confirm-dialog";
+import { MezziTagliandiMatrixModal } from "@/components/gestionale/mezzi/mezzi-tagliandi-matrix-modal";
 import { MezziTable } from "@/components/gestionale/mezzi/mezzi-table";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { erpBtnAccent, erpBtnNeutral, erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { compareMezzi, mezzoMatchesUltimaLavFilter, type UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
+import { compareMezzi, mezzoMatchesNumeroLavorazioniFilter, mezzoMatchesUltimaLavFilter, type NumeroLavorazioniFilter, type TagliandiFilter, type UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
+import { mezzoTagliandiEnabled } from "@/lib/mezzi/mezzi-meta";
 import {
   buildUltimaModificaByMezzoIdFromLogs,
   resolveMezzoUltimaModificaInfo,
@@ -46,7 +49,7 @@ import {
 import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
 import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
 import { useMezzoRemoveMutation } from "@/src/hooks/gestionale/use-mezzo-remove-mutation";
-import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
+import { useMezzoSetTagliandiMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
@@ -77,25 +80,99 @@ export function MezziView() {
 
   const [search, setSearch] = useState("");
   const [filtroCliente, setFiltroCliente] = useState("");
+  const [filtroUtilizzatore, setFiltroUtilizzatore] = useState("");
+  const [filtroCantiere, setFiltroCantiere] = useState("");
+  const [filtroTipoAttrezzatura, setFiltroTipoAttrezzatura] = useState("");
   const [filtroMarca, setFiltroMarca] = useState("");
   const [filtroModello, setFiltroModello] = useState("");
+  const [filtroMatricola, setFiltroMatricola] = useState("");
   const [filtroTarga, setFiltroTarga] = useState("");
   const [filtroNumeroScuderia, setFiltroNumeroScuderia] = useState("");
+  const [filtroMarcaTelaio, setFiltroMarcaTelaio] = useState("");
+  const [filtroModelloTelaio, setFiltroModelloTelaio] = useState("");
+  const [filtroTipoTelaio, setFiltroTipoTelaio] = useState("");
+  const [filtroVin, setFiltroVin] = useState("");
+  const [filtroTagliandi, setFiltroTagliandi] = useState<TagliandiFilter>("");
+  const [filtroNumeroLav, setFiltroNumeroLav] = useState<NumeroLavorazioniFilter>("");
   const [filtroUltimaLav, setFiltroUltimaLav] = useState<UltimaLavorazioneFilter>("");
   const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
     collapsibleExpandedBoolPref(false, { scope: "mezzi", key: "filters", userId: user?.id ?? null }),
+  );
+
+  const mezziFieldFilterState = useMemo(
+    () => ({
+      filtroCliente,
+      filtroUtilizzatore,
+      filtroCantiere,
+      filtroTipoAttrezzatura,
+      filtroMarca,
+      filtroModello,
+      filtroMatricola,
+      filtroTarga,
+      filtroNumeroScuderia,
+      filtroMarcaTelaio,
+      filtroModelloTelaio,
+      filtroTipoTelaio,
+      filtroVin,
+      filtroTagliandi,
+      filtroNumeroLav,
+      filtroUltimaLav,
+    }),
+    [
+      filtroCliente,
+      filtroUtilizzatore,
+      filtroCantiere,
+      filtroTipoAttrezzatura,
+      filtroMarca,
+      filtroModello,
+      filtroMatricola,
+      filtroTarga,
+      filtroNumeroScuderia,
+      filtroMarcaTelaio,
+      filtroModelloTelaio,
+      filtroTipoTelaio,
+      filtroVin,
+      filtroTagliandi,
+      filtroNumeroLav,
+      filtroUltimaLav,
+    ],
   );
 
   const serviceFilters = useMemo((): MezzoFilters => {
     return {
       search: search.trim() || undefined,
       cliente: filtroCliente.trim() || undefined,
+      utilizzatore: filtroUtilizzatore.trim() || undefined,
+      cantiere: filtroCantiere.trim() || undefined,
+      tipo_attrezzatura: filtroTipoAttrezzatura.trim() || undefined,
       marca: filtroMarca.trim() || undefined,
       modello: filtroModello.trim() || undefined,
+      matricola: filtroMatricola.trim() || undefined,
       targa: filtroTarga.trim() || undefined,
       numero_scuderia: filtroNumeroScuderia.trim() || undefined,
+      marca_telaio: filtroMarcaTelaio.trim() || undefined,
+      modello_telaio: filtroModelloTelaio.trim() || undefined,
+      tipo_telaio: filtroTipoTelaio.trim() || undefined,
+      vin: filtroVin.trim() || undefined,
+      tagliandi: filtroTagliandi || undefined,
     };
-  }, [search, filtroCliente, filtroMarca, filtroModello, filtroTarga, filtroNumeroScuderia]);
+  }, [
+    search,
+    filtroCliente,
+    filtroUtilizzatore,
+    filtroCantiere,
+    filtroTipoAttrezzatura,
+    filtroMarca,
+    filtroModello,
+    filtroMatricola,
+    filtroTarga,
+    filtroNumeroScuderia,
+    filtroMarcaTelaio,
+    filtroModelloTelaio,
+    filtroTipoTelaio,
+    filtroVin,
+    filtroTagliandi,
+  ]);
 
   const {
     data: mezzoRowsRaw,
@@ -144,11 +221,13 @@ export function MezziView() {
   );
 
   const filteredMezzi = useMemo(() => {
-    if (!filtroUltimaLav) return mezziUi;
-    return mezziUi.filter((m) =>
-      mezzoMatchesUltimaLavFilter(interventiByMezzoId.get(m.id) ?? [], filtroUltimaLav),
-    );
-  }, [mezziUi, interventiByMezzoId, filtroUltimaLav]);
+    return mezziUi.filter((m) => {
+      const interventi = interventiByMezzoId.get(m.id) ?? [];
+      if (!mezzoMatchesUltimaLavFilter(interventi, filtroUltimaLav)) return false;
+      if (!mezzoMatchesNumeroLavorazioniFilter(interventi.length, filtroNumeroLav)) return false;
+      return true;
+    });
+  }, [mezziUi, interventiByMezzoId, filtroUltimaLav, filtroNumeroLav]);
 
   const sorted = useMemo(() => {
     const rows = [...filteredMezzi];
@@ -166,18 +245,11 @@ export function MezziView() {
     return rows;
   }, [filteredMezzi, interventiByMezzoId, sortColumn, sortPhase]);
 
-  const hasMezziFilters =
-    search.trim().length > 0 ||
-    filtroCliente.trim().length > 0 ||
-    filtroMarca.trim().length > 0 ||
-    filtroModello.trim().length > 0 ||
-    filtroTarga.trim().length > 0 ||
-    filtroNumeroScuderia.trim().length > 0 ||
-    Boolean(filtroUltimaLav);
+  const hasMezziFilters = search.trim().length > 0 || mezziFieldFiltersActive(mezziFieldFilterState);
 
   const listPageSize = useResponsiveListPageSize();
   const { page, setPage, pageCount, sliceItems, showPager, label, resetPage } = useClientPagination(sorted.length, listPageSize);
-  const mezziFilterKey = `${search}|${filtroCliente}|${filtroMarca}|${filtroModello}|${filtroTarga}|${filtroNumeroScuderia}|${filtroUltimaLav}|${sortColumn ?? ""}|${sortPhase}`;
+  const mezziFilterKey = `${search}|${JSON.stringify(mezziFieldFilterState)}|${sortColumn ?? ""}|${sortPhase}`;
 
   useEffect(() => {
     resetPage();
@@ -185,7 +257,14 @@ export function MezziView() {
 
   const pagedSorted = useMemo(() => sliceItems(sorted), [sliceItems, sorted, page]);
 
+  const [tagliandiMatrixOpen, setTagliandiMatrixOpen] = useState(false);
   const [hubMezzo, setHubMezzo] = useState<MezzoGestito | null>(null);
+  const [hubInitialTab, setHubInitialTab] = useState<MezziHubTabId>("panoramica");
+
+  const openMezzoHub = useCallback((m: MezzoGestito, tab: MezziHubTabId = "panoramica") => {
+    setHubInitialTab(tab);
+    setHubMezzo(m);
+  }, []);
   const [nuovoOpen, setNuovoOpen] = useState(false);
   const [editMezzo, setEditMezzo] = useState<MezzoGestito | null>(null);
 
@@ -232,8 +311,10 @@ export function MezziView() {
 
   const [flashRowId, setFlashRowId] = useState<string | null>(null);
   const flashClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tagliandiPendingId, setTagliandiPendingId] = useState<string | null>(null);
 
   const updateMut = useMezzoUpdateMutation();
+  const tagliandiMut = useMezzoSetTagliandiMutation();
   const removeMut = useMezzoRemoveMutation();
   const { success: toastSuccess, error: toastError, validation: toastValidation, successOnce, errorOnce } =
     useGestionaleToast();
@@ -252,16 +333,52 @@ export function MezziView() {
     }, 820);
   }, []);
 
+  const handleTagliandiChange = useCallback(
+    async (m: MezzoGestito, enabled: boolean) => {
+      if (!canEditVehicles || m.hubSynthetic) return;
+      if (mezzoTagliandiEnabled(m) === enabled) return;
+      setTagliandiPendingId(m.id);
+      try {
+        await tagliandiMut.mutateAsync({ id: m.id, enabled });
+        setHubMezzo((prev) =>
+          prev?.id === m.id ? { ...prev, tagliandi: enabled ? true : undefined } : prev,
+        );
+        flashRow(m.id);
+        toastSuccess(
+          enabled
+            ? "Mezzo incluso nella matrice tagliandi."
+            : "Mezzo escluso dalla matrice tagliandi. Le registrazioni già inserite restano in archivio.",
+        );
+      } catch {
+        toastError("Aggiornamento tagliandi non riuscito.", { entity: "mezzo", action: "update" });
+      } finally {
+        setTagliandiPendingId(null);
+      }
+    },
+    [canEditVehicles, flashRow, tagliandiMut, toastError, toastSuccess],
+  );
+
   const focusMezzoInTable = useCallback(
     (id: string) => {
       setHubMezzo(null);
       setEditMezzo(null);
       setNuovoOpen(false);
       setFiltroCliente("");
+      setFiltroUtilizzatore("");
+      setFiltroCantiere("");
+      setFiltroTipoAttrezzatura("");
       setFiltroMarca("");
       setFiltroModello("");
+      setFiltroMatricola("");
       setFiltroTarga("");
       setFiltroNumeroScuderia("");
+      setFiltroMarcaTelaio("");
+      setFiltroModelloTelaio("");
+      setFiltroTipoTelaio("");
+      setFiltroVin("");
+      setFiltroTagliandi("");
+      setFiltroNumeroLav("");
+      setFiltroUltimaLav("");
       setSearch("");
       setFiltriEspansi(false);
       setLogOpen(false);
@@ -278,10 +395,20 @@ export function MezziView() {
   function resetMezziToolbarFilters() {
     setSearch("");
     setFiltroCliente("");
+    setFiltroUtilizzatore("");
+    setFiltroCantiere("");
+    setFiltroTipoAttrezzatura("");
     setFiltroMarca("");
     setFiltroModello("");
+    setFiltroMatricola("");
     setFiltroTarga("");
     setFiltroNumeroScuderia("");
+    setFiltroMarcaTelaio("");
+    setFiltroModelloTelaio("");
+    setFiltroTipoTelaio("");
+    setFiltroVin("");
+    setFiltroTagliandi("");
+    setFiltroNumeroLav("");
     setFiltroUltimaLav("");
     setFiltriEspansi(false);
   }
@@ -344,7 +471,7 @@ export function MezziView() {
     };
   }, []);
 
-  const scrollLockActive = Boolean(hubMezzo || nuovoOpen || editMezzo || logOpen);
+  const scrollLockActive = Boolean(hubMezzo || nuovoOpen || editMezzo || logOpen || tagliandiMatrixOpen);
   const anyOverlay = scrollLockActive || Boolean(eliminaConfirmMezzo);
   useEffect(() => {
     const id = searchParams.get(Q_FOCUS_MEZZO)?.trim();
@@ -364,6 +491,7 @@ export function MezziView() {
       setNuovoOpen(false);
       setEditMezzo(null);
       setLogOpen(false);
+      setTagliandiMatrixOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -437,6 +565,16 @@ export function MezziView() {
         title="Mezzi"
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className={erpBtnNeutral}
+              onClick={() => {
+                void refetchMezzi();
+                setTagliandiMatrixOpen(true);
+              }}
+            >
+              Matrice tagliandi
+            </button>
             <ModuleImportEntry entity="mezzi" module="mezzi" onCompleted={() => void refetchMezzi()} />
             <GestionalePageToolbarActions
             canUndo={Boolean(undoableMezziLog)}
@@ -474,14 +612,34 @@ export function MezziView() {
                 embedded
                 filtroCliente={filtroCliente}
                 onFiltroCliente={setFiltroCliente}
+                filtroUtilizzatore={filtroUtilizzatore}
+                onFiltroUtilizzatore={setFiltroUtilizzatore}
+                filtroCantiere={filtroCantiere}
+                onFiltroCantiere={setFiltroCantiere}
+                filtroTipoAttrezzatura={filtroTipoAttrezzatura}
+                onFiltroTipoAttrezzatura={setFiltroTipoAttrezzatura}
                 filtroMarca={filtroMarca}
                 onFiltroMarca={setFiltroMarca}
                 filtroModello={filtroModello}
                 onFiltroModello={setFiltroModello}
+                filtroMatricola={filtroMatricola}
+                onFiltroMatricola={setFiltroMatricola}
                 filtroTarga={filtroTarga}
                 onFiltroTarga={setFiltroTarga}
                 filtroNumeroScuderia={filtroNumeroScuderia}
                 onFiltroNumeroScuderia={setFiltroNumeroScuderia}
+                filtroMarcaTelaio={filtroMarcaTelaio}
+                onFiltroMarcaTelaio={setFiltroMarcaTelaio}
+                filtroModelloTelaio={filtroModelloTelaio}
+                onFiltroModelloTelaio={setFiltroModelloTelaio}
+                filtroTipoTelaio={filtroTipoTelaio}
+                onFiltroTipoTelaio={setFiltroTipoTelaio}
+                filtroVin={filtroVin}
+                onFiltroVin={setFiltroVin}
+                filtroTagliandi={filtroTagliandi}
+                onFiltroTagliandi={setFiltroTagliandi}
+                filtroNumeroLav={filtroNumeroLav}
+                onFiltroNumeroLav={setFiltroNumeroLav}
                 filtroUltimaLav={filtroUltimaLav}
                 onFiltroUltimaLav={setFiltroUltimaLav}
               />
@@ -490,14 +648,7 @@ export function MezziView() {
             meta={
               <PageToolbarResultCount
                 count={sorted.length}
-                filtersActive={
-                  filtroCliente.trim().length > 0 ||
-                  filtroMarca.trim().length > 0 ||
-                  filtroModello.trim().length > 0 ||
-                  filtroTarga.trim().length > 0 ||
-                  filtroNumeroScuderia.trim().length > 0 ||
-                  Boolean(filtroUltimaLav)
-                }
+                filtersActive={mezziFieldFiltersActive(mezziFieldFilterState)}
                 searchActive={search.trim().length > 0}
                 onSearchReset={() => setSearch("")}
                 onFilterReset={resetMezziToolbarFilters}
@@ -528,7 +679,10 @@ export function MezziView() {
                 sortPhase={sortPhase}
                 onSort={onSort}
                 flashRowId={flashRowId}
-                onHub={setHubMezzo}
+                onHub={openMezzoHub}
+                canEditTagliandi={canEditVehicles}
+                tagliandiPendingId={tagliandiPendingId}
+                onTagliandiChange={handleTagliandiChange}
               />
             )}
           </div>
@@ -538,10 +692,22 @@ export function MezziView() {
         </ShellCard>
       </div>
 
+      {tagliandiMatrixOpen ? (
+        <MezziTagliandiMatrixModal
+          open={tagliandiMatrixOpen}
+          onClose={() => setTagliandiMatrixOpen(false)}
+          canEdit={canEditVehicles}
+        />
+      ) : null}
+
       {hubMezzo ? (
         <MezziHubDetailModal
           mezzo={hubMezzo}
-          onClose={() => setHubMezzo(null)}
+          initialTab={hubInitialTab}
+          onClose={() => {
+            setHubMezzo(null);
+            setHubInitialTab("panoramica");
+          }}
           onEdit={() => {
             if (!canEditVehicles) return;
             const h = hubMezzo;

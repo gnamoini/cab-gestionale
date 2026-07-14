@@ -2,7 +2,7 @@
 
 import { Tooltip } from "@/components/ui";
 import type { ReactNode } from "react";
-import { dsPageToolbar, dsPageToolbarIconBtn } from "@/lib/ui/design-system";
+import { dsPageToolbar, dsPageToolbarFilterColWidth, dsPageToolbarIconBtn } from "@/lib/ui/design-system";
 
 /**
  * ToolbarGroup — shell strutturale liste gestionale (search + filtri + azioni).
@@ -99,7 +99,7 @@ export function ToolbarGroupFiltersToggle({
     <button
       type="button"
       onClick={onToggle}
-      className={`${dsPageToolbarIconBtn} relative sm:h-11 sm:min-h-11 sm:w-auto sm:min-w-[8.25rem] sm:gap-2 sm:px-3 sm:py-0 sm:text-sm`}
+      className={`${dsPageToolbarIconBtn} relative sm:h-11 sm:min-h-11 sm:w-auto ${dsPageToolbarFilterColWidth} sm:gap-2 sm:px-3 sm:py-0 sm:text-sm`}
       aria-expanded={expanded}
       aria-label="Filtri"
     >

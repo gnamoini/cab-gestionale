@@ -37,6 +37,7 @@ export function composeMezzoGestitoFromRows(
     numeroScuderia: mezzo.numero_scuderia?.trim() || undefined,
     tipoAttrezzatura: att?.tipoAttrezzatura ?? "—",
     cantiere: meta.cantiere,
+    tagliandi: meta.tagliandi === true ? true : undefined,
     tipoTelaio: tipoTelaio || undefined,
     marcaTelaio: marcaTelaio || undefined,
     modelloTelaio: modelloTelaio || undefined,

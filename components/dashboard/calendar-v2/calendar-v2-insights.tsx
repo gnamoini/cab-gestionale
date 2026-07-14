@@ -10,6 +10,7 @@ import { buildKpiPerformanceModel } from "@/lib/report/kpi-performance/build-kpi
 import { buildTopRicambiPeriodo } from "@/lib/report/report-classifiche";
 import { compareRangeFor, dayRangeFromYmd, weekRangeFromYmd, ymdFromDate } from "@/lib/report/date-ranges";
 import { useOperationalDiaryQuery } from "@/src/hooks/view/use-operational-diary";
+import { useRbac } from "@/src/hooks/use-rbac";
 import type { CalendarReportServiceInput } from "@/lib/report/calendar-report-service";
 import type { ReportDerivedBundle } from "@/lib/report/report-derived-cache";
 import type { ReportIntegrityBadgeView } from "@/lib/report/report-integrity-badge-model";
@@ -34,6 +35,8 @@ export function CalendarV2InsightsBlock({
   canUseAi: boolean;
 }) {
   const [aiRequested, setAiRequested] = useState(false);
+  const rbac = useRbac();
+  const canReadDiary = rbac.canReadPage("dashboard");
 
   const filterRange = useMemo(() => {
     if (selection.mode === "day") return dayRangeFromYmd(selection.ymd);
@@ -102,7 +105,10 @@ export function CalendarV2InsightsBlock({
 
   const diaryFromYmd = filterRange ? ymdFromDate(filterRange.start) : undefined;
   const diaryToYmd = filterRange ? ymdFromDate(filterRange.end) : undefined;
-  const { data: diaryRows = [] } = useOperationalDiaryQuery({ fromYmd: diaryFromYmd, toYmd: diaryToYmd });
+  const { data: diaryRows = [] } = useOperationalDiaryQuery(
+    { fromYmd: diaryFromYmd, toYmd: diaryToYmd },
+    { enabled: !rbac.isLoading && canReadDiary && Boolean(diaryFromYmd && diaryToYmd) },
+  );
   const diaryEntries = useMemo(
     () => diaryRows.map((e) => ({ workDate: e.work_date, body: e.body })),
     [diaryRows],

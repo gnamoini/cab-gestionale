@@ -9,6 +9,7 @@ import type {
   RegisterMaintenanceServiceInput,
   UpsertMaintenancePlanInput,
 } from "@/lib/maintenance-plans/types";
+import type { MaintenanceServiceLite } from "@/lib/maintenance-plans/tagliandi-matrix";
 import {
   MAINTENANCE_PLAN_EQUIPMENT_TYPES_COLUMNS,
   MAINTENANCE_PLAN_PARTS_COLUMNS,
@@ -417,5 +418,67 @@ export const maintenancePlansService = {
     } catch (e) {
       return serviceFailFromError<RicambioLite[]>(e, [], { entity: "magazzino", action: "read" });
     }
+  },
+
+  async listServicesLite(): Promise<ServiceResult<MaintenanceServiceLite[]>> {
+    try {
+      const client = await sb();
+      const { data, error } = await client
+        .from("vehicle_maintenance_services")
+        .select("id, mezzo_id, plan_id, ore_at_service");
+      if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "read" }));
+      const rows = (data ?? []) as Pick<
+        VehicleMaintenanceServiceRow,
+        "id" | "mezzo_id" | "plan_id" | "ore_at_service"
+      >[];
+      return success(
+        rows.map((s) => ({
+          id: s.id,
+          mezzoId: s.mezzo_id,
+          planId: s.plan_id,
+          oreAtService: Number(s.ore_at_service),
+        })),
+      );
+    } catch (e) {
+      return serviceFailFromError<MaintenanceServiceLite[]>(e, [], { entity: "mezzo", action: "read" });
+    }
+  },
+
+  async deleteService(serviceId: string): Promise<ServiceResult<void>> {
+    try {
+      const client = await sb();
+      const { error } = await client.from("vehicle_maintenance_services").delete().eq("id", serviceId);
+      if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "delete" }));
+      return success(undefined);
+    } catch (e) {
+      return serviceFailFromError<void>(e, undefined as never, { entity: "mezzo", action: "delete" });
+    }
+  },
+
+  async toggleMatrixMilestone(input: {
+    mezzoId: string;
+    planId: string;
+    milestoneOre: number;
+    done: boolean;
+    mezzoOreSnapshot: number;
+    existingServiceId?: string | null;
+  }): Promise<ServiceResult<void>> {
+    if (input.done) {
+      const today = new Date().toISOString().slice(0, 10);
+      const res = await maintenancePlansService.registerService({
+        mezzoId: input.mezzoId,
+        planId: input.planId,
+        performedAt: today,
+        oreAtService: input.milestoneOre,
+        mezzoOreSnapshot: input.mezzoOreSnapshot,
+        note: "Matrice tagliandi",
+        parts: [],
+      });
+      if (!res.success) return err(res.error ?? "Registrazione non riuscita.");
+      return success(undefined);
+    }
+    const serviceId = input.existingServiceId?.trim();
+    if (!serviceId) return err("Tagliando non trovato.");
+    return maintenancePlansService.deleteService(serviceId);
   },
 };

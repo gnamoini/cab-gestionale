@@ -5,6 +5,8 @@ export type MezzoAnagraficaMeta = {
   modelloTelaio?: string;
   oreLavoro?: number;
   km?: number;
+  /** Se true il mezzo compare nella matrice tagliandi. */
+  tagliandi?: boolean;
 };
 
 function str(v: unknown): string {
@@ -14,6 +16,12 @@ function str(v: unknown): string {
 function num(v: unknown): number | undefined {
   const n = Number(v);
   return Number.isFinite(n) ? n : undefined;
+}
+
+function bool(v: unknown): boolean | undefined {
+  if (v === true || v === "true" || v === 1 || v === "1") return true;
+  if (v === false || v === "false" || v === 0 || v === "0") return false;
+  return undefined;
 }
 
 export function parseMezzoMeta(raw: unknown): MezzoAnagraficaMeta {
@@ -28,7 +36,22 @@ export function parseMezzoMeta(raw: unknown): MezzoAnagraficaMeta {
     modelloTelaio: str(m.modelloTelaio) || undefined,
     oreLavoro: oreLavoro != null && oreLavoro >= 0 ? oreLavoro : undefined,
     km: km != null && km >= 0 ? km : undefined,
+    tagliandi: bool(m.tagliandi),
   };
+}
+
+/** Mezzo incluso nella matrice tagliandi solo con flag esplicito Sì. */
+export function mezzoTagliandiEnabled(m: { tagliandi?: boolean }): boolean {
+  return m.tagliandi === true;
+}
+
+export function mergeMezzoMetaPatch(
+  raw: unknown,
+  patch: Partial<MezzoAnagraficaMeta>,
+): Record<string, unknown> {
+  const base =
+    raw && typeof raw === "object" && !Array.isArray(raw) ? { ...(raw as Record<string, unknown>) } : {};
+  return { ...base, ...patch };
 }
 
 export function mezzoFormToMeta(f: {

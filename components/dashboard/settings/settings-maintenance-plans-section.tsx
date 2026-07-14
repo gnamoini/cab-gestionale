@@ -24,6 +24,7 @@ import {
   useMaintenancePlanDeleteMutation,
   useMaintenancePlanUpsertMutation,
 } from "@/src/hooks/gestionale/use-maintenance-plan-mutations";
+import { usePermissions } from "@/src/hooks/use-permissions";
 
 type PartDraft = { ricambioId: string; codice: string; descrizione: string; quantita: number };
 
@@ -249,6 +250,7 @@ function MaintenancePlanEditorModal({
 
 export function SettingsMaintenancePlansSection() {
   const settingsPayload = useCabAppSettingsPayloadQuery({ enabled: true });
+  const { canManageSettings } = usePermissions();
   const plansQ = useMaintenancePlansListQuery();
   const deleteMut = useMaintenancePlanDeleteMutation();
   const [editorOpen, setEditorOpen] = useState(false);
@@ -257,9 +259,9 @@ export function SettingsMaintenancePlansSection() {
 
   useEffect(() => {
     const labels = settingsPayload.data?.resolved?.mezziListe?.tipiAttrezzatura;
-    if (!labels?.length) return;
+    if (!canManageSettings || !labels?.length) return;
     void maintenancePlansEntry.ensureCatalogLabels(labels);
-  }, [settingsPayload.data?.resolved?.mezziListe?.tipiAttrezzatura]);
+  }, [canManageSettings, settingsPayload.data?.resolved?.mezziListe?.tipiAttrezzatura]);
 
   const plans = plansQ.data ?? [];
   const loading = plansQ.isLoading;

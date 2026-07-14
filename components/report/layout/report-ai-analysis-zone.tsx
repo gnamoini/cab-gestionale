@@ -22,6 +22,7 @@ import type {
 import type { ReportIntegrityBadgeView } from "@/lib/report/report-integrity-badge-model";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useOperationalDiaryQuery } from "@/src/hooks/view/use-operational-diary";
+import { useRbac } from "@/src/hooks/use-rbac";
 
 function fmtDiaryYmd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -97,10 +98,15 @@ export function ReportAiAnalysisZone({
 }) {
   const { perf, perfLoading } = useReportPerformanceContext();
   const gestToast = useGestionaleToast();
+  const rbac = useRbac();
+  const canReadDiary = rbac.canReadPage("dashboard");
 
   const diaryFromYmd = fmtDiaryYmd(filterRange.start);
   const diaryToYmd = fmtDiaryYmd(filterRange.end);
-  const { data: diaryRows = [] } = useOperationalDiaryQuery({ fromYmd: diaryFromYmd, toYmd: diaryToYmd });
+  const { data: diaryRows = [] } = useOperationalDiaryQuery(
+    { fromYmd: diaryFromYmd, toYmd: diaryToYmd },
+    { enabled: !rbac.isLoading && canReadDiary && Boolean(diaryFromYmd && diaryToYmd) },
+  );
   const diaryEntries = useMemo(
     () => diaryRows.map((e) => ({ workDate: e.work_date, body: e.body })),
     [diaryRows],

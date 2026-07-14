@@ -66,6 +66,16 @@ assert.equal(adminNav.shouldHideHref("/sicurezza"), false);
 
 const operatoreSnap = buildTestSnapshot({ userId: "o1", roleKey: "operatore" });
 const operatoreNav = createRbacNavAccess(operatoreSnap);
+assert.equal(resolveFirstAccessibleNavHref(operatoreNav, operatoreSnap), "/agenda");
+assert.equal(
+  resolvePostLoginRedirectPath({
+    user: { ruolo: "operatore", id: "o1" },
+    navAccess: operatoreNav,
+    snapshot: operatoreSnap,
+  }),
+  "/agenda",
+);
+assert.equal(operatoreNav.canAccessHref("/dashboard"), false);
 assert.equal(operatoreNav.canAccessHref("/sicurezza"), false);
 assert.equal(operatoreNav.shouldHideHref("/sicurezza"), true);
 

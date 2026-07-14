@@ -16,6 +16,8 @@ export type MezzoGestito = {
   tipoAttrezzatura: string;
   /** Da meta impostazioni / anagrafica estesa. */
   cantiere?: string;
+  /** Da meta: mezzo in matrice tagliandi (default no). */
+  tagliandi?: boolean;
   tipoTelaio?: string;
   marcaTelaio?: string;
   modelloTelaio?: string;

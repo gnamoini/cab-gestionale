@@ -46,7 +46,8 @@ const cases: RoleCase[] = [
   {
     role: "operatore",
     pageExpect: {
-      "/dashboard": true,
+      "/dashboard": false,
+      "/agenda": true,
       "/magazzino": true,
       "/lavorazioni": true,
       "/documenti": true,

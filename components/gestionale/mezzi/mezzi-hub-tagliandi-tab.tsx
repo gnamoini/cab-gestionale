@@ -6,7 +6,6 @@ import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/g
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import { MezziHubTabEmpty } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 import { MezziRegistraTagliandoModal } from "@/components/gestionale/mezzi/mezzi-registra-tagliando-modal";
-import { resolveMaintenancePlansV1EnabledClient } from "@/lib/officina/resolve-maintenance-plans-v1-client";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { dsBtnPrimary, dsScrollbar, dsTable, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
@@ -33,16 +32,13 @@ export function MezziHubTagliandiTab({
   canEdit: boolean;
   active: boolean;
 }) {
-  const flagOn = resolveMaintenancePlansV1EnabledClient().enabled;
-  const enabled = active && flagOn;
-
   const statusesQ = useMezzoMaintenanceStatusesQuery({
     mezzoId: mezzo.id,
     tipoAttrezzatura: mezzo.tipoAttrezzatura,
     currentOreMezzo: mezzo.oreKm ?? 0,
-    enabled,
+    enabled: active,
   });
-  const historyQ = useMezzoMaintenanceHistoryQuery(mezzo.id, enabled);
+  const historyQ = useMezzoMaintenanceHistoryQuery(mezzo.id, active);
 
   const [registerOpen, setRegisterOpen] = useState(false);
 
@@ -51,12 +47,6 @@ export function MezziHubTagliandiTab({
   const listPageSize = useResponsiveListPageSize();
   const { page, setPage, pageCount, sliceItems, showPager, label } = useClientPagination(history.length, listPageSize);
   const pagedHistory = useMemo(() => sliceItems(history), [history, sliceItems, page]);
-
-  if (!flagOn) {
-    return (
-      <MezziHubTabEmpty message="Modulo tagliandi non abilitato. Attiva maintenance_plans_v1 in impostazioni di sistema." />
-    );
-  }
 
   if (statusesQ.isLoading || historyQ.isLoading) {
     return <MezziHubTabEmpty message="Caricamento tagliandi…" />;

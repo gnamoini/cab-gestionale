@@ -8,6 +8,7 @@ import {
   ACCESS_DENIED_PATH,
   defaultHomePathForRole,
   READONLY_PERMISSION_HINT,
+  resolveFirstAccessiblePageHrefFromResolved,
 } from "@/lib/auth/rbac";
 import { canAccessRoute } from "@/src/lib/auth/can-access-route";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
@@ -143,7 +144,15 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
   }
 
   if (!allowed) {
-    return <AccessDeniedPanel homePath={defaultHomePathForRole(user)} />;
+    return (
+      <AccessDeniedPanel
+        homePath={
+          snapshot?.resolved
+            ? resolveFirstAccessiblePageHrefFromResolved(snapshot.resolved)
+            : defaultHomePathForRole(user, { rolePageAccess: snapshot?.rolePageAccess })
+        }
+      />
+    );
   }
 
   return <>{children}</>;

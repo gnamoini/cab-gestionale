@@ -16,7 +16,7 @@ const matrix: Array<{
 }> = [
   { role: "admin", dashboardWrite: true, impostazioniWrite: true, sicurezzaWrite: true, lavorazioniWrite: true, lavorazioniClientiRead: true },
   { role: "manager", dashboardWrite: true, impostazioniWrite: true, sicurezzaWrite: false, lavorazioniWrite: true, lavorazioniClientiRead: false },
-  { role: "operatore", dashboardWrite: true, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: true, lavorazioniClientiRead: false },
+  { role: "operatore", dashboardWrite: false, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: true, lavorazioniClientiRead: false },
   { role: "addetto_amministrativo", dashboardWrite: true, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: false, lavorazioniClientiRead: false },
   { role: "cliente", dashboardWrite: false, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: false, lavorazioniClientiRead: true },
   { role: "guest", dashboardWrite: false, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: false, lavorazioniClientiRead: false },

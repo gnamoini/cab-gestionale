@@ -102,11 +102,12 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
   const auth = await resolveServerAuthWithSupabase(supabase, request.cookies.getAll());
   const activeUser = auth.user;
   const role = activeUser?.ruolo ?? null;
+  const homePathOpts = { rolePageAccess: auth.rolePageAccess ?? {} };
 
   if (pathname === LOGIN_PATH || pathname.startsWith(`${LOGIN_PATH}/`)) {
     const isResetPassword = pathname === RESET_PASSWORD_PATH;
     if (activeUser && !isResetPassword) {
-      const home = defaultHomePathForRole(role);
+      const home = defaultHomePathForRole(role, homePathOpts);
       return redirectWithLog(request, pathname, new URL(home, request.url), "logged_in_on_login");
     }
     return forwardProxyResponse(request, response);
@@ -135,7 +136,7 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
   }
 
   if (pathname === "/") {
-    const home = defaultHomePathForRole(role);
+    const home = defaultHomePathForRole(role, homePathOpts);
     const redirect = redirectWithLog(request, pathname, new URL(home, request.url), "root_home");
     if (bootTiming) {
       console.info(`[boot-timing] proxy GET / → ${home} ${Date.now() - t0}ms`);
@@ -186,7 +187,7 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
   ) {
     const url = request.nextUrl.clone();
     url.pathname = ACCESS_DENIED_PATH;
-    url.searchParams.set("from", defaultHomePathForRole(role));
+    url.searchParams.set("from", defaultHomePathForRole(role, homePathOpts));
     url.searchParams.set("denied", page.key);
     return redirectWithLog(request, pathname, url, `rbac_denied_${page.key}`);
   }

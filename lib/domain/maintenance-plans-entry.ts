@@ -13,4 +13,7 @@ export const maintenancePlansEntry = {
   upsertPlan: withPageWriteGuard("impostazioni", maintenancePlansService.upsertPlan.bind(maintenancePlansService)),
   softDeletePlan: withPageWriteGuard("impostazioni", maintenancePlansService.softDeletePlan.bind(maintenancePlansService)),
   registerService: withPageWriteGuard("mezzi", maintenancePlansService.registerService.bind(maintenancePlansService)),
+  listServicesLite: maintenancePlansService.listServicesLite.bind(maintenancePlansService),
+  deleteService: withPageWriteGuard("mezzi", maintenancePlansService.deleteService.bind(maintenancePlansService)),
+  toggleMatrixMilestone: withPageWriteGuard("mezzi", maintenancePlansService.toggleMatrixMilestone.bind(maintenancePlansService)),
 };

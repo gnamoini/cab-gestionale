@@ -29,6 +29,12 @@ export const mezziEntry = {
     return mezziService.update(id, data);
   },
 
+  async setTagliandiEnabled(id: string, enabled: boolean): Promise<ServiceResult<MezzoRow>> {
+    const allowed = await ensurePageWrite("mezzi");
+    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+    return mezziService.setTagliandiEnabled(id, enabled);
+  },
+
   async remove(id: string): Promise<ServiceResult<null>> {
     const allowed = await ensurePageWrite("mezzi");
     if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");

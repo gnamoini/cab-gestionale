@@ -21,7 +21,7 @@ export const RBAC_PAGE_SEED_MATRIX: Record<CanonicalRole, Partial<Record<Gestion
     sicurezza: "none",
   },
   operatore: {
-    dashboard: "write",
+    dashboard: "none",
     agenda: "write",
     lavorazioni: "write",
     lavorazioni_clienti: "none",

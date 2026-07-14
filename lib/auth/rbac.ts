@@ -14,12 +14,13 @@ import {
 import {
   ACCESS_DENIED_PATH,
   CLIENTE_HOME_PATH,
-  getGestionalePage,
   GESTIONALE_PAGES,
   pathnameToPage,
   SECURITY_HOME_PATH,
   type GestionalePageKey,
+  type PageAccessLevel,
 } from "@/src/lib/permissions/gestionale-pages";
+import { mergeRolePageAccessWithSeed } from "@/src/lib/rbac/load-rbac-data";
 import {
   canAccessPathname,
   canReadPage,
@@ -88,8 +89,47 @@ export function isClienteRole(user: RbacUser): boolean {
   return resolveRole(user) === "cliente";
 }
 
-export function defaultHomePathForRole(user: RbacUser): string {
-  return isClienteRole(user) ? CLIENTE_HOME_PATH : getGestionalePage("dashboard")!.href;
+export function resolveFirstAccessiblePageHrefFromResolved(resolved: ResolvedPageAccess): string {
+  const sortedPages = [...GESTIONALE_PAGES].sort((a, b) => a.order - b.order);
+  for (const page of sortedPages) {
+    if (isPageVisible(resolved, page.key as GestionalePageKey)) {
+      return page.href;
+    }
+  }
+  return ACCESS_DENIED_PATH;
+}
+
+export function resolveFirstAccessiblePageHref(input: {
+  roleKey: string;
+  rolePageAccess?: Record<string, PageAccessLevel>;
+  userPageOverrides?: Record<string, PageAccessLevel>;
+}): string {
+  const roleKey = resolveRole(input.roleKey);
+  const merged = {
+    ...mergeRolePageAccessWithSeed(roleKey, input.rolePageAccess ?? {}),
+    ...input.userPageOverrides,
+  };
+  const sortedPages = [...GESTIONALE_PAGES].sort((a, b) => a.order - b.order);
+  for (const page of sortedPages) {
+    if ((merged[page.key as GestionalePageKey] ?? "none") !== "none") {
+      return page.href;
+    }
+  }
+  return ACCESS_DENIED_PATH;
+}
+
+export function defaultHomePathForRole(
+  user: RbacUser,
+  opts?: {
+    rolePageAccess?: Record<string, PageAccessLevel>;
+    userPageOverrides?: Record<string, PageAccessLevel>;
+  },
+): string {
+  return resolveFirstAccessiblePageHref({
+    roleKey: resolveRole(user),
+    rolePageAccess: opts?.rolePageAccess,
+    userPageOverrides: opts?.userPageOverrides,
+  });
 }
 
 export function accessDeniedRedirectPath(user: RbacUser): string {

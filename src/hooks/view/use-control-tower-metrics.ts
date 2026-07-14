@@ -18,6 +18,7 @@ import { useInvoicesQuery } from "@/src/hooks/gestionale/use-invoices-query";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
 import { useLogListQuery, useMovimentiListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
+import { isRbacSnapshotReady, snapshotCanReadPage } from "@/src/lib/rbac/rbac-snapshot-access";
 import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 import { resolveMagazzinoReportLogEntries } from "@/lib/report/resolve-magazzino-report-log";
@@ -101,6 +102,7 @@ export type ControlTowerShell = {
   canFatturazione: boolean;
   canDdt: boolean;
   canDipendenti: boolean;
+  canReadDipendentiPage: boolean;
   activityVisible: boolean;
   headerVisible: boolean;
   globalOpts: ReturnType<typeof useGlobalOptions>;
@@ -119,6 +121,8 @@ export function useControlTowerShell(): ControlTowerShell {
     [modules, staging],
   );
   const visibleIds = useMemo(() => new Set(visibleWidgets.map((w) => w.id)), [visibleWidgets]);
+  const canReadDipendentiPage =
+    snapshot != null && isRbacSnapshotReady(snapshot) && snapshotCanReadPage(snapshot, "dipendenti");
 
   return {
     staging,
@@ -132,6 +136,7 @@ export function useControlTowerShell(): ControlTowerShell {
     canFatturazione: modules ? moduleAllows(modules, "fatturazione", "read") : false,
     canDdt: modules ? moduleAllows(modules, "ddt", "read") : false,
     canDipendenti: modules ? moduleAllows(modules, "dipendenti", "read") : false,
+    canReadDipendentiPage,
     activityVisible: visibleIds.has("recent-activity"),
     headerVisible: visibleIds.has("operational-kpi-header"),
     globalOpts,
@@ -154,6 +159,7 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     canFatturazione,
     canDdt,
     canDipendenti,
+    canReadDipendentiPage,
     activityVisible,
     headerVisible,
     visibleIds,
@@ -205,7 +211,7 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     return { from: ymdFromDate(fetch.start), to: ymdFromDate(fetch.end) };
   }, []);
 
-  const needTimesheet = !staging && headerVisible && canDipendenti;
+  const needTimesheet = !staging && headerVisible && !rbacLoading && canReadDipendentiPage;
   const needMovimenti = !staging && headerVisible && canMagazzino;
   const timesheetQ = useServiceQuery(
     [...QK.dipendentiTimesheetEntries, "control-tower", timesheetRange.from, timesheetRange.to] as const,

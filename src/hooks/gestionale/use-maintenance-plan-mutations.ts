@@ -43,3 +43,22 @@ export function useRegisterMaintenanceServiceMutation() {
     },
   );
 }
+
+export function useToggleTagliandiMatrixCellMutation() {
+  const qc = useQueryClient();
+  return useServiceMutation(
+    (input: {
+      mezzoId: string;
+      planId: string;
+      milestoneOre: number;
+      done: boolean;
+      mezzoOreSnapshot: number;
+      existingServiceId?: string | null;
+    }) => maintenancePlansEntry.toggleMatrixMilestone(input),
+    {
+      onSettled: async (_data, _err, variables) => {
+        await invalidateMaintenancePlans(qc, variables.mezzoId);
+      },
+    },
+  );
+}

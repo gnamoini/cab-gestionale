@@ -11,6 +11,7 @@ export const maintenancePlansQueryKeys = {
   mezzoStatuses: (mezzoId: string, tipo: string, ore: number) =>
     [...maintenancePlansQueryKeys.root, "statuses", mezzoId, tipo, ore] as const,
   mezzoHistory: (mezzoId: string) => [...maintenancePlansQueryKeys.root, "history", mezzoId] as const,
+  servicesLite: () => [...maintenancePlansQueryKeys.root, "services-lite"] as const,
 };
 
 export function useMaintenancePlansCatalogQuery(enabled = true) {
@@ -65,4 +66,12 @@ export function useMaintenanceRicambiSearchQuery(term: string, enabled: boolean)
     enabled,
     staleTime: 30_000,
   });
+}
+
+export function useMaintenanceServicesLiteQuery(enabled = true) {
+  return useServiceQuery(
+    maintenancePlansQueryKeys.servicesLite(),
+    () => maintenancePlansEntry.listServicesLite(),
+    { enabled },
+  );
 }

@@ -12,7 +12,7 @@ import {
   ToolbarGroupSearchRow,
 } from "@/components/design-system/toolbar-group";
 import { MobileFilterDrawer } from "@/components/gestionale/mobile-filter-drawer";
-import { dsPageToolbarMetaActionBtn, dsPageToolbarMetaChip, dsPageToolbarMetaChipAccent } from "@/lib/ui/design-system";
+import { dsPageToolbarMetaActionBtnFilterCol, dsPageToolbarMetaChip, dsPageToolbarMetaChipAccent } from "@/lib/ui/design-system";
 import { useSmUp } from "@/lib/ui/use-sm-up";
 
 export type PageToolbarProps = {
@@ -224,12 +224,12 @@ export function PageToolbarResultCount({
       {showSearchReset || showFilterReset ? (
         <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-2 sm:ms-auto sm:flex-wrap">
           {showSearchReset ? (
-            <button type="button" onClick={onSearchReset} className={dsPageToolbarMetaActionBtn}>
+            <button type="button" onClick={onSearchReset} className={dsPageToolbarMetaActionBtnFilterCol}>
               <PageToolbarCtaLabel short="Cancella" full="Cancella ricerca" />
             </button>
           ) : null}
           {showFilterReset ? (
-            <button type="button" onClick={onFilterReset} className={dsPageToolbarMetaActionBtn}>
+            <button type="button" onClick={onFilterReset} className={dsPageToolbarMetaActionBtnFilterCol}>
               <PageToolbarCtaLabel short="Reimposta" full="Reimposta filtri" />
             </button>
           ) : null}

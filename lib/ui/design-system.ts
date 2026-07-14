@@ -578,7 +578,11 @@ export const dsPageToolbarPrimaryBtn = `${dsBtnPrimary} inline-flex h-10 min-h-[
 
 /** Primario compatto toolbar header — allineato a `dsPageToolbarBtnCompact`. */
 export const dsPageToolbarPrimaryBtnCompact = `${dsBtnPrimary} inline-flex h-8 min-h-8 shrink-0 items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold shadow-[var(--cab-shadow-sm)] sm:px-4`;
+/** Larghezza desktop allineata al toggle Filtri (`ToolbarGroupFiltersToggle`). */
+export const dsPageToolbarFilterColWidth = "sm:min-w-[8.25rem]";
 export const dsPageToolbarMetaActionBtn = `inline-flex min-h-[1.75rem] shrink-0 items-center justify-center gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2.5 py-1 text-xs font-semibold text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow,color] duration-200 ease-out hover:border-[color:color-mix(in_srgb,var(--cab-primary)_58%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-surface))] hover:shadow-[var(--cab-shadow-md)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
+/** Meta reset allineati alla colonna Filtri (Cancella ricerca, Reimposta filtri). */
+export const dsPageToolbarMetaActionBtnFilterCol = `${dsPageToolbarMetaActionBtn} ${dsPageToolbarFilterColWidth}`;
 /** @deprecated Usare `dsPageToolbarMetaActionBtn`. */
 export const dsPageToolbarMetaResetBtn = dsPageToolbarMetaActionBtn;
 

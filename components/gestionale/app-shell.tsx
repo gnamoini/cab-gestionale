@@ -7,7 +7,7 @@ import { CloseButton } from "@/components/design-system";
 import { useAuth } from "@/context/auth-context";
 import { erpFocus } from "@/lib/ui/erp-tokens";
 import { buildGestionaleNav, type GestionaleNavResolvedItem } from "@/components/gestionale/gestionale-nav-config";
-import { CLIENTE_HOME_PATH, isClienteRole } from "@/lib/auth/rbac";
+import { defaultHomePathForRole, resolveFirstAccessiblePageHrefFromResolved } from "@/lib/auth/rbac";
 import { useRbac } from "@/src/hooks/use-rbac";
 import { useRbacNavAccess } from "@/src/hooks/use-rbac-nav-access";
 import { SidebarNavSkeleton } from "@/components/gestionale/sidebar-nav-skeleton";
@@ -392,8 +392,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const suppressGlobalScrollEndPad = pathname.startsWith("/impostazioni");
   const rbac = useRbac();
   const { navAccess, snapshot, isNavLoading } = useRbacNavAccess();
-  const clienteOnly = isClienteRole(user);
-  const homePath = clienteOnly ? CLIENTE_HOME_PATH : "/dashboard";
+  const homePath = useMemo(() => {
+    if (snapshot?.resolved) {
+      return resolveFirstAccessiblePageHrefFromResolved(snapshot.resolved);
+    }
+    return defaultHomePathForRole(user, { rolePageAccess: rbac.effectivePermissions?.rolePageAccess });
+  }, [snapshot?.resolved, user, rbac.effectivePermissions?.rolePageAccess]);
 
   useLayoutEffect(() => {
     healBodyScrollLockState("app-shell-mount");

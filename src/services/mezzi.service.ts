@@ -11,6 +11,7 @@ import type { MezzoRow } from "@/src/types/supabase-tables";
 import { logAttrezzatureV2WritePath } from "@/lib/observability/attrezzature-v2-telemetry";
 import { attachMezzoEntityKey } from "@/lib/validation/entity-persistence";
 import { sanitizeMezzoWritePayload } from "@/lib/validation/services/mezzi-payload";
+import { mergeMezzoMetaPatch } from "@/lib/mezzi/mezzi-meta";
 import { normalizeVin } from "@/lib/mezzi/vin-normalize";
 import { humanizeGestionaleError } from "@/src/utils/gestionale-error-messages";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
@@ -25,13 +26,24 @@ function oggettoMezzo(r: MezzoRow) {
 
 export type MezzoFilters = {
   cliente?: string;
+  utilizzatore?: string;
+  cantiere?: string;
   marca?: string;
   modello?: string;
+  tipo_attrezzatura?: string;
+  matricola?: string;
   /** Contiene (case-insensitive) */
   targa?: string;
   /** Contiene (case-insensitive) — colonna `numero_scuderia` */
   numero_scuderia?: string;
-  /** Ricerca OR su cliente, marca, modello, targa, matricola, numero_scuderia */
+  marca_telaio?: string;
+  modello_telaio?: string;
+  tipo_telaio?: string;
+  /** Contiene su `telaio_num` (VIN) */
+  vin?: string;
+  /** Matrice tagliandi: solo mezzi con flag Sì / No */
+  tagliandi?: "" | "si" | "no";
+  /** Ricerca globale su campi principali del mezzo */
   search?: string;
 };
 
@@ -235,6 +247,19 @@ export const mezziService = {
         payload: auditDiff(before, r, oggettoMezzo(r)),
       });
       return success(r);
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
+  async setTagliandiEnabled(id: string, enabled: boolean): Promise<ServiceResult<MezzoRow>> {
+    try {
+      const c = await sb();
+      const { data: before, error: e0 } = await c.from("mezzi").select(MEZZI_COLUMNS).eq("id", id).maybeSingle();
+      if (e0) return err(e0.message);
+      if (!before) return err(humanizeGestionaleError("Mezzo non trovato.", { entity: "mezzo", action: "update" }));
+      const meta = mergeMezzoMetaPatch(before.meta, { tagliandi: enabled });
+      return mezziService.update(id, { meta });
     } catch (e) {
       return serviceFailFromError(e);
     }

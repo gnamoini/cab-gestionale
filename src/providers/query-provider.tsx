@@ -31,15 +31,7 @@ function QueryErrorToasts({ client }: { client: QueryClient }) {
       pushRef.current(message, "warning", 5600);
     };
 
-    const onQuery = (e: QueryCacheNotifyEvent) => {
-      if (e.type !== "updated") return;
-      const q = e.query;
-      if (q.state.status !== "error" || !q.state.error) return;
-      if (!isPermissionDeniedError(q.state.error)) return;
-      maybePush(`q:${JSON.stringify(q.queryKey)}`, formatSupabaseError(q.state.error));
-    };
-
-    const uq = client.getQueryCache().subscribe(onQuery);
+    // ponytail: solo mutation — le query in background (dashboard KPI, prefetch) gestiscono empty/error in UI
     const um = client.getMutationCache().subscribe((ev: MutationCacheNotifyEvent) => {
       if (ev.type !== "updated") return;
       const m = ev.mutation;
@@ -50,7 +42,6 @@ function QueryErrorToasts({ client }: { client: QueryClient }) {
     });
 
     return () => {
-      uq();
       um();
     };
   }, [client]);

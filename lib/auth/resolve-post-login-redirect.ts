@@ -6,11 +6,10 @@ import {
   CLIENTE_HOME_PATH,
   defaultHomePathForRole,
   isClienteRole,
+  resolveFirstAccessiblePageHrefFromResolved,
   type RbacUser,
 } from "@/lib/auth/rbac";
 import type { RbacNavAccess, RbacSnapshotBound } from "@/src/lib/rbac/rbac-snapshot-access";
-
-const DASHBOARD_FALLBACK = "/dashboard";
 
 /** Normalizza path `from` (sicurezza base, senza default). */
 export function sanitizePostLoginRequestedPath(raw: string | null | undefined): string | null {
@@ -37,7 +36,7 @@ export function resolveFirstAccessibleNavHref(
     hidePageKey: (pageKey) => navAccess.shouldHidePageKey(pageKey),
   });
   const first = items.find((item) => !item.disabled && navAccess.canAccessHref(item.href));
-  return first?.href ?? DASHBOARD_FALLBACK;
+  return first?.href ?? resolveFirstAccessiblePageHrefFromResolved(snapshot.resolved);
 }
 
 export type ResolvePostLoginRedirectInput = {
@@ -52,7 +51,7 @@ export type ResolvePostLoginRedirectInput = {
  * fallback home per ruolo.
  */
 export function resolvePostLoginRedirectPath(input: ResolvePostLoginRedirectInput): string {
-  if (!input.user) return DASHBOARD_FALLBACK;
+  if (!input.user) return ACCESS_DENIED_PATH;
 
   if (isClienteRole(input.user)) {
     const requested = sanitizePostLoginRequestedPath(input.requestedPath);

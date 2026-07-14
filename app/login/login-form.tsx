@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useAuth, isAuthFullyAuthenticated } from "@/context/auth-context";
 import { clearGestionaleToasts } from "@/context/toast-context";
+import { resolveFirstAccessiblePageHrefFromResolved } from "@/lib/auth/rbac";
 import { resolvePostLoginRedirectPath } from "@/lib/auth/resolve-post-login-redirect";
 import { buildBootstrapRbacSnapshot, createRbacNavAccess } from "@/src/lib/rbac/rbac-snapshot-access";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
@@ -171,7 +172,7 @@ export function LoginForm() {
 
     let finalTarget = target;
     if (isStagingPublicSlice() && isStagingBlockedPathname(target.split("?")[0] ?? target)) {
-      finalTarget = "/dashboard?staging_unavailable=1";
+      finalTarget = `${resolveFirstAccessiblePageHrefFromResolved(bootstrap.resolved)}?staging_unavailable=1`;
     }
 
     setRedirecting(true);

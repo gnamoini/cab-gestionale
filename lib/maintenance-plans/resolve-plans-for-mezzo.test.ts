@@ -35,4 +35,7 @@ assert.equal(hit[0]!.id, "p1");
 const miss = resolvePlansForMezzo({ tipoAttrezzatura: "—", catalog, plans });
 assert.equal(miss.length, 0);
 
+const shorthand = resolvePlansForMezzo({ tipoAttrezzatura: "Spazzatrice", catalog, plans });
+assert.equal(shorthand.length, 0);
+
 console.log("resolve-plans-for-mezzo.test.ts OK");

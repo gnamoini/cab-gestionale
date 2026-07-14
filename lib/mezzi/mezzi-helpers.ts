@@ -169,6 +169,20 @@ export function ultimoInterventoIso(rows: MezzoInterventoLavorazione[]): string 
 
 export type UltimaLavorazioneFilter = "" | "con" | "senza" | "recenti12m" | "oltre12m";
 
+export type NumeroLavorazioniFilter = "" | "con" | "senza";
+
+export type TagliandiFilter = "" | "si" | "no";
+
+export function mezzoMatchesNumeroLavorazioniFilter(
+  count: number,
+  filtro: NumeroLavorazioniFilter,
+): boolean {
+  if (!filtro) return true;
+  if (filtro === "con") return count > 0;
+  if (filtro === "senza") return count === 0;
+  return true;
+}
+
 export function mezzoMatchesUltimaLavFilter(
   interventi: MezzoInterventoLavorazione[],
   filtro: UltimaLavorazioneFilter,
@@ -237,6 +251,7 @@ const MEZZO_LOG_FIELDS: { key: keyof MezzoGestito; label: string }[] = [
   { key: "modelloTelaio", label: "Modello telaio" },
   { key: "targa", label: "Targa" },
   { key: "anno", label: "Anno" },
+  { key: "tagliandi", label: "Tagliandi" },
   { key: "oreKm", label: "Ore lavoro" },
   { key: "km", label: "KM" },
   { key: "dataUltimaUscita", label: "Ultima uscita" },
