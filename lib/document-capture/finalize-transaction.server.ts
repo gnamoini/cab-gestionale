@@ -57,7 +57,7 @@ export async function finalizeDocumentCaptureInTransaction(input: {
     };
   }
 
-  let bytes = new Uint8Array(await fileData.arrayBuffer());
+  let bytes: Uint8Array = new Uint8Array(await fileData.arrayBuffer());
   if (bytes.byteLength > DOCUMENT_CAPTURE_MAX_BYTES) {
     throw new Error("File troppo grande");
   }

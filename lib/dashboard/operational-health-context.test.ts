@@ -6,7 +6,7 @@ import {
 } from "@/lib/dashboard/operational-health-criticality";
 import { computeOperationalHealthScore } from "@/lib/dashboard/operational-health-score";
 import type { DipendenteTimesheetEntryRow } from "@/src/types/supabase-tables";
-import type { LavorazioneListRow } from "@/lib/lavorazioni/types";
+import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
 const range = { start: new Date("2026-07-01"), end: new Date("2026-07-13T23:59:59") };
 const prevRange = { start: new Date("2026-06-01"), end: new Date("2026-06-30T23:59:59") };

@@ -260,7 +260,7 @@ export const LAVORAZIONI_ADDETTO_FILTER_ALL_LABEL = "Tutti gli addetti";
 export function buildLavorazioniAddettoFilterItems(
   addettiRecords: readonly AddettoRecord[],
 ): { value: string; label: string }[] {
-  const items = [{ value: FILTER_ALL, label: LAVORAZIONI_ADDETTO_FILTER_ALL_LABEL }];
+  const items: { value: string; label: string }[] = [{ value: FILTER_ALL, label: LAVORAZIONI_ADDETTO_FILTER_ALL_LABEL }];
   const seen = new Set<string>([FILTER_ALL]);
   for (const rec of sortAddettiRecordsByCognomeNome(addettiRecords)) {
     const label = addettoDisplayName(rec).trim();

@@ -32,13 +32,23 @@ function strategyLabel(strategy: string): string {
   return strategy;
 }
 
+function recordOriginal(r: EntityResolutionAuditRecord | EntityResolutionResult): string {
+  return "original" in r ? r.original : r.originalValue;
+}
+
+function recordResolvedLabel(r: EntityResolutionAuditRecord | EntityResolutionResult): string | null {
+  return "chosen" in r ? r.chosen.label : r.resolvedLabel;
+}
+
 export function CaptureEntityResolutionPreview({
   records,
 }: {
   records: readonly (EntityResolutionAuditRecord | EntityResolutionResult)[];
 }) {
   const resolved = records.filter(
-    (r) => ("status" in r ? r.status === "resolved" : Boolean(r.chosen?.label)) && r.original !== (r.chosen?.label ?? ("resolvedLabel" in r ? r.resolvedLabel : null)),
+    (r) =>
+      ("status" in r ? r.status === "resolved" : Boolean(r.chosen?.label)) &&
+      recordOriginal(r) !== recordResolvedLabel(r),
   );
   if (resolved.length === 0) return null;
 
@@ -47,13 +57,13 @@ export function CaptureEntityResolutionPreview({
       <h3 className="text-sm font-medium text-[color:var(--cab-fg)]">Riconciliazione entità</h3>
       <ul className="space-y-2 text-sm">
         {resolved.map((r) => {
-          const original = "original" in r ? r.original : r.originalValue;
-          const label = "chosen" in r ? r.chosen.label : r.resolvedLabel;
+          const original = recordOriginal(r);
+          const label = recordResolvedLabel(r);
           const confidence = r.confidence;
           const reason = "reason" in r ? r.reason : "exact_match";
           const strategy = "strategy" in r ? r.strategy : "exact";
           return (
-            <li key={`${"fieldKey" in r ? r.fieldKey : r.fieldKey}-${original}`} className="grid gap-0.5 sm:grid-cols-[1fr_auto]">
+            <li key={`${r.fieldKey}-${original}`} className="grid gap-0.5 sm:grid-cols-[1fr_auto]">
               <div>
                 <span className="text-[color:var(--cab-muted-fg)]">Documento:</span>{" "}
                 <span className="font-medium">{original}</span>

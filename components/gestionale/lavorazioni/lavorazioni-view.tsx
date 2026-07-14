@@ -1255,7 +1255,8 @@ export function LavorazioniView() {
       const row = await resolveLavorazioneListRowForSchedeOpen(
         req.lavorazioneId,
         attiveRows,
-        () => attiveQuery.refetch(),
+        () =>
+          attiveQuery.refetch() as Promise<{ data?: readonly LavorazioneListRow[] } | void>,
       );
       if (!row) {
         gestToast.error("Lavorazione in corso non trovata. Aggiorna l'elenco e riprova.");

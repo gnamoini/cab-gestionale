@@ -94,7 +94,7 @@ export function DocumentCaptureWizardBody({
   catalogValidation?: import("@/lib/document-capture/capture-catalog-validation").CaptureCatalogValidationInput | null;
   sharedGlobalOpts?: import("@/src/hooks/use-global-options").GlobalOptionsSlice;
   magazzino?: import("@/lib/magazzino/types").RicambioMagazzino[];
-  mezzi?: import("@/lib/mezzi/types").MezzoGestito[];
+  mezzi?: readonly import("@/lib/mezzi/types").MezzoGestito[];
 }) {
   const acquisitionActive = acquisition?.active ?? false;
 

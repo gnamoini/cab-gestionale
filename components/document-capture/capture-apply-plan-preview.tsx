@@ -17,7 +17,7 @@ function ingressoRows(campi: SchedaIngressoFields): Array<[string, string]> {
     ["Km", campi.km],
     ["Anomalia", campi.descrizioneAnomalia],
     ["Note", campi.noteIntervento],
-  ].filter(([, value]) => value.trim().length > 0);
+  ].filter((row): row is [string, string] => row[1].trim().length > 0);
 }
 
 export function CaptureApplyPlanPreview({ plan }: { plan: CaptureApplyPlan | null }) {

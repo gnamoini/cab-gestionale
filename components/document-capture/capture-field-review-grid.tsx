@@ -87,8 +87,8 @@ function fieldReviewStatus(
   baselineValue: string,
   draft: string,
   raw: string,
-): FieldReviewStatus[] {
-  const badges: FieldReviewStatus[] = [];
+): NonNullable<FieldReviewStatus>[] {
+  const badges: NonNullable<FieldReviewStatus>[] = [];
 
   if (shouldShowAmbiguityHint(resolution, fieldWarnings)) {
     badges.push({ tone: "warn", label: "Da confermare" });
@@ -108,7 +108,7 @@ function fieldReviewStatus(
     badges.push({ tone: "warn", label: "Non in anagrafica" });
   }
 
-  return badges.filter((b): b is NonNullable<FieldReviewStatus> => Boolean(b));
+  return badges;
 }
 
 function CaptureReviewSummary({

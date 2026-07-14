@@ -1,7 +1,7 @@
 import type { CampoChangeLike } from "@/lib/gestionale-log/view-model";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
-import type { LavorazioneListRow } from "@/lib/lavorazioni/types";
+import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { isLavorazioneInCorso } from "@/lib/lavorazioni/archived";
 import { migrateStatoConfigId, statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";

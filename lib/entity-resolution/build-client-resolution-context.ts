@@ -8,6 +8,7 @@ import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
+import { resolveCabAppSettingsFallback } from "@/src/lib/app-settings/settings-fallback";
 
 export function buildClientResolutionContext(input: {
   sharedGlobalOpts: GlobalOptionsSlice;
@@ -22,7 +23,7 @@ export function buildClientResolutionContext(input: {
     magazzinoMaster: input.sharedGlobalOpts.magazzinoMaster,
     preventiviDefaults: input.sharedGlobalOpts.preventiviDefaults,
     dipendenti: input.sharedGlobalOpts.dipendenti,
-    branding: input.sharedGlobalOpts.branding,
+    branding: resolveCabAppSettingsFallback().branding,
   };
   const sources: ResolutionDataSources = {
     settings,
