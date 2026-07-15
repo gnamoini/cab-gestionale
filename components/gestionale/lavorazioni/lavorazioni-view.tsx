@@ -252,6 +252,7 @@ import {
 import {
   LavorazioniListToolbar,
   LavorazioniPageHeaderToolbar,
+  LavorazioniPageMenuProvider,
 } from "@/components/gestionale/lavorazioni/lavorazioni-page-toolbar";
 const dataCompletamentoIso = lavorazioneDataCompletamentoIso;
 
@@ -1899,17 +1900,39 @@ export function LavorazioniView() {
 
   return (
     <GestionaleSectionGate module="lavorazioni">
+    <LavorazioniPageMenuProvider
+      listRefreshBusy={listRefreshBusy}
+      printBusy={printBusy}
+      onRefresh={() => void refreshLavorazioniLists()}
+      onOpenLog={() => setLavLogOpen(true)}
+      onPrint={onPrintLavorazioniInCorso}
+      listViewMode={listViewMode}
+      onToggleListViewMode={() => setListViewMode((m) => (m === "table" ? "kanban" : "table"))}
+      canEditWorkOrders={canEditWorkOrders}
+      createdBy={createdBy}
+      mutPendingBlocking={mutPendingBlocking}
+      filtriAttiviEspansi={filtriAttiviEspansi}
+      onFiltersToggle={() => setFiltriAttiviEspansi((o) => !o)}
+      filtersActive={hasPageClientFilters || Boolean(navMezzoFilter)}
+      onOpenCreate={openCreateModal}
+      onPrimeCreate={primeCreateModal}
+      onCaptureLavorazioneCreated={(id, opts) => {
+        if (!opts?.skipTableFocus) {
+          invalidateSchedeStore();
+          focusLavorazioneInTable(id);
+        }
+      }}
+      onOpenSchedeFromCapture={onOpenSchedeFromCapture}
+      captureMezzi={mezziCatalog}
+      captureSchedeStore={schedeStore}
+      captureAttive={attiveLegacyRows}
+      captureStorico={storicoLegacyRows}
+      captureSharedGlobalOpts={globalOpts}
+      captureSharedMezziCatalog={mezziCatalog}
+    >
     <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
-      <LavorazioniPageHeaderToolbar
-        listRefreshBusy={listRefreshBusy}
-        printBusy={printBusy}
-        onRefresh={() => void refreshLavorazioniLists()}
-        onOpenLog={() => setLavLogOpen(true)}
-        onPrint={onPrintLavorazioniInCorso}
-        listViewMode={listViewMode}
-        onToggleListViewMode={() => setListViewMode((m) => (m === "table" ? "kanban" : "table"))}
-      />
+      <LavorazioniPageHeaderToolbar />
 
       <div className={dsStackPage}>
         {loadErr ? (
@@ -1946,9 +1969,6 @@ export function LavorazioniView() {
         ) : null}
 
         <LavorazioniListToolbar
-          canEditWorkOrders={canEditWorkOrders}
-          createdBy={createdBy}
-          mutPendingBlocking={mutPendingBlocking}
           searchInput={searchInput}
           onSearchInputChange={(e) => setSearchInput(e.target.value)}
           onSearchEnter={flushPageSearch}
@@ -1967,21 +1987,8 @@ export function LavorazioniView() {
           onSearchReset={resetRicercaPagina}
           attiveFilteredCount={attiveRowsFiltered.length}
           chiuseFilteredCount={archivioFilteredCount ?? 0}
-          onOpenCreate={openCreateModal}
-          onPrimeCreate={primeCreateModal}
-          onCaptureLavorazioneCreated={(id, opts) => {
-            if (!opts?.skipTableFocus) {
-              invalidateSchedeStore();
-              focusLavorazioneInTable(id);
-            }
-          }}
-          onOpenSchedeFromCapture={onOpenSchedeFromCapture}
-          captureMezzi={mezziCatalog}
-          captureSchedeStore={schedeStore}
-          captureAttive={attiveLegacyRows}
-          captureStorico={storicoLegacyRows}
-          captureSharedGlobalOpts={globalOpts}
-          captureSharedMezziCatalog={mezziCatalog}
+          mutPendingBlocking={mutPendingBlocking}
+          createdBy={createdBy}
         />
 
         {initialListLoading ? (
@@ -2566,6 +2573,7 @@ export function LavorazioniView() {
       {confirmDialog}
     </>
     </div>
+    </LavorazioniPageMenuProvider>
     </GestionaleSectionGate>
   );
 }

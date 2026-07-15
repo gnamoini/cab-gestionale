@@ -4,6 +4,7 @@ import { Tooltip } from "@/components/ui";
 import type { ReactNode } from "react";
 
 import { PageHeader } from "@/components/gestionale/page-header";
+import { PageActionMenu, type PageActionItem } from "@/components/ui";
 
 import { ReportControls } from "@/components/report/report-controls";
 
@@ -114,15 +115,16 @@ export function ReportToolbar({
         titleAddon={titleAddon}
 
         actions={
-
-          <Tooltip content={"Esporta PDF report gestionale"}><button type="button" className={dsPageToolbarBtn} onClick={() => void openPdfArtifact("report-bundle")} aria-label="Esporta PDF report gestionale">
-
-            <IconPrint />
-
-            Esporta PDF
-
-          </button></Tooltip>
-
+          <PageActionMenu
+            items={[
+              {
+                id: "export-pdf",
+                label: "Esporta PDF",
+                description: "Esporta il report gestionale in PDF",
+                onSelect: () => void openPdfArtifact("report-bundle"),
+              },
+            ]}
+          />
         }
 
       />

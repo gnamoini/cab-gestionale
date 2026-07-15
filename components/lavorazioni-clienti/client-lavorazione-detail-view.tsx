@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, type MouseEvent } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { PageActionMenu } from "@/components/ui";
 import { MobileNavBackButton } from "@/components/gestionale/mobile-nav-open-button";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { IconQrCode } from "@/components/lavorazioni-clienti/client-lavorazioni-icons";
@@ -149,13 +150,17 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
           onClick: goToClientList,
         }}
         actions={
-          <IconActionButton
-            label="QR lavorazione"
-            toolbar
-            onClick={() => setQrOpen(true)}
-          >
-            <IconQrCode />
-          </IconActionButton>
+          <PageActionMenu
+            items={[
+              {
+                id: "qr",
+                label: "QR lavorazione",
+                description: "Mostra il codice QR della lavorazione",
+                onSelect: () => setQrOpen(true),
+              },
+            ]}
+            back={{ href: listPath, label: CLIENT_PORTAL_BACK_LABEL }}
+          />
         }
       />
 

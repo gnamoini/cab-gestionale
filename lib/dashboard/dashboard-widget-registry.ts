@@ -8,8 +8,8 @@ export type DashboardWidgetSection =
   | "optional";
 
 export const DASHBOARD_SECTION_ORDER: readonly DashboardWidgetSection[] = [
-  "kpi-header",
   "health-score",
+  "kpi-header",
   "activity",
   "optional",
 ] as const;
@@ -126,10 +126,7 @@ export function groupVisibleWidgetsBySection(
   return map;
 }
 
-/** Mobile: stato operativo subito sotto il welcome; desktop mantiene brief operativo prima. */
-export function resolveDashboardSectionOrder(compactShell: boolean): readonly DashboardWidgetSection[] {
-  if (compactShell) {
-    return ["health-score", "kpi-header", "activity", "optional"];
-  }
+/** Stato operativo sopra brief operativo (tutti i breakpoint). */
+export function resolveDashboardSectionOrder(_compactShell?: boolean): readonly DashboardWidgetSection[] {
   return DASHBOARD_SECTION_ORDER;
 }

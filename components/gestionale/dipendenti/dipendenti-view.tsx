@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
-import { DipendentiPdfToolbar } from "@/components/gestionale/dipendenti/dipendenti-pdf-toolbar";
+import { PageActionMenu, type PageActionItem } from "@/components/ui";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import {
@@ -288,19 +288,30 @@ export function DipendentiView() {
   const showNoAddetti = ts.loadPhase !== "error" && ts.addettiReady && !ts.hasRealAddetti;
   const settingsLoading = ts.addettiSource !== "app_settings" && !ts.addettiReady;
 
+  const dipendentiMenuItems = useMemo((): PageActionItem[] => [
+    {
+      id: "pdf-complessivo",
+      label: "PDF complessivo",
+      description: "Esporta presenze di tutti i dipendenti",
+      onSelect: handleExportPdfComplessivo,
+      loading: pdfExporting,
+    },
+    {
+      id: "pdf-dipendente",
+      label: "PDF dipendente",
+      description: filterEmployeeId ? "Esporta presenze del dipendente selezionato" : "Seleziona un dipendente",
+      onSelect: handleExportPdfDipendente,
+      disabled: !filterEmployeeId,
+      loading: pdfExporting,
+    },
+  ], [filterEmployeeId, pdfExporting, handleExportPdfComplessivo, handleExportPdfDipendente]);
+
   return (
     <GestionaleSectionGate module="dipendenti">
       <div ref={listLayoutRef} className={`${layoutPageRoot} ${listLayoutClassName}`.trim()}>
         <PageHeader
           title="Dipendenti"
-          actions={
-            <DipendentiPdfToolbar
-              filterEmployeeId={filterEmployeeId}
-              exporting={pdfExporting}
-              onExportComplessivo={handleExportPdfComplessivo}
-              onExportDipendente={handleExportPdfDipendente}
-            />
-          }
+          actions={<PageActionMenu items={dipendentiMenuItems} />}
         />
         <div className={`${dsStackPage} flex-safe-col min-w-0 max-w-full`}>
           <TimesheetHeader

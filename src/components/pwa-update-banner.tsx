@@ -13,29 +13,20 @@ import { getPwaServiceWorkerRegistration } from "@/lib/pwa/sw-client";
 import { dsSystemBannerGhostBtn, dsSystemBannerPrimaryBtn } from "@/lib/ui/design-system";
 import { PWA_UPDATE_EVENT } from "@/src/components/pwa-service-worker-bridge";
 
-function readUpdateVisible(): boolean {
-  const registration = getPwaServiceWorkerRegistration();
-  if (!registration) return false;
-  return Boolean(getWaitingServiceWorker(registration));
-}
-
 export function PwaUpdateBanner() {
   const [visible, setVisible] = useState(false);
   const [applying, setApplying] = useState(false);
 
-  const syncWaiting = useCallback(() => {
-    setVisible(readUpdateVisible());
-  }, []);
-
   useEffect(() => {
-    const onUpdate = () => syncWaiting();
+    const onUpdate = () => {
+      const registration = getPwaServiceWorkerRegistration();
+      setVisible(Boolean(registration && getWaitingServiceWorker(registration)));
+    };
     window.addEventListener(PWA_UPDATE_EVENT, onUpdate);
-    const id = window.requestAnimationFrame(onUpdate);
     return () => {
-      window.cancelAnimationFrame(id);
       window.removeEventListener(PWA_UPDATE_EVENT, onUpdate);
     };
-  }, [syncWaiting]);
+  }, []);
 
   const handleApply = useCallback(() => {
     const registration = getPwaServiceWorkerRegistration();

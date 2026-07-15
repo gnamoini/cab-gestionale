@@ -9,20 +9,13 @@ import type { GestionalePageKey } from "@/src/lib/permissions/gestionale-pages";
 import { canReadPage, canWritePage } from "@/src/lib/rbac/resolve-page-access";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
-import { readStickyRbacSnapshot } from "@/src/lib/rbac/sticky-rbac-snapshot";
 
 export function useRbac() {
   const { user, status } = useAuth();
   const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
-  const sticky = readStickyRbacSnapshot();
-  const effectiveSnap =
-    snapshot && isRbacSnapshotReady(snapshot)
-      ? snapshot
-      : sticky && isRbacSnapshotReady(sticky)
-        ? sticky
-        : null;
+  const effectiveSnap = snapshot && isRbacSnapshotReady(snapshot) ? snapshot : null;
 
-  const isLoading = status === "loading" || (permsLoading && !effectiveSnap);
+  const isLoading = status === "loading" || permsLoading;
   const role = effectiveSnap?.role ?? user?.ruolo ?? "guest";
   const rbacCtx = effectiveSnap?.rbacContext as RequiredRbacContext | undefined;
   const resolved = effectiveSnap?.resolved;

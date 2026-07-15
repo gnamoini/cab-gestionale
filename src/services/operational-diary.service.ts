@@ -1,11 +1,13 @@
 "use client";
 
 import { OPERATIONAL_DIARY_BODY_MAX } from "@/lib/operational-diary/operational-diary-week";
+import { RBAC_DENIED_MESSAGE } from "@/lib/rbac";
 import { OPERATIONAL_DIARY_ENTRIES_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { OperationalDiaryEntryRow } from "@/src/types/supabase-tables";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type OperationalDiaryUpsert = {
   workDate: string;
@@ -14,6 +16,11 @@ export type OperationalDiaryUpsert = {
 
 async function sb() {
   return getBrowserSupabase();
+}
+
+async function authUserId(c: SupabaseClient): Promise<string | null> {
+  const { data } = await c.auth.getUser();
+  return data.user?.id ?? null;
 }
 
 function normalizeYmd(raw: string): string | null {
@@ -55,24 +62,20 @@ export const operationalDiaryService = {
       if (!workDate) return err("Data non valida (usa YYYY-MM-DD).");
       const body = input.body.trim().slice(0, OPERATIONAL_DIARY_BODY_MAX);
       const c = await sb();
+      const uid = await authUserId(c);
+      if (!uid) return err(RBAC_DENIED_MESSAGE);
 
-      const { data: existingRows, error: findErr } = await c
+      const { data: existing, error: findErr } = await c
         .from("operational_diary_entries")
         .select("id")
         .eq("work_date", workDate)
         .is("deleted_at", null)
-        .limit(1);
+        .maybeSingle();
       if (findErr) return err(findErr.message);
-      const existing = existingRows?.[0] ?? null;
 
       if (!body) {
         if (!existing?.id) return success(null);
-        const now = new Date().toISOString();
-        const { error } = await c
-          .from("operational_diary_entries")
-          .update({ deleted_at: now })
-          .eq("id", existing.id)
-          .is("deleted_at", null);
+        const { error } = await c.rpc("soft_delete_operational_diary_entry", { p_id: existing.id });
         if (error) return err(error.message);
         return success(null);
       }
@@ -87,15 +90,24 @@ export const operationalDiaryService = {
           .maybeSingle();
         if (error) return err(error.message);
         if (data) return success(data as OperationalDiaryEntryRow);
-        if (!body) return success(null);
+        const { data: reread, error: readErr } = await c
+          .from("operational_diary_entries")
+          .select(OPERATIONAL_DIARY_ENTRIES_COLUMNS)
+          .eq("id", existing.id)
+          .is("deleted_at", null)
+          .maybeSingle();
+        if (readErr) return err(readErr.message);
+        if (reread) return success(reread as OperationalDiaryEntryRow);
+        return err("Operazione non riuscita. Riprova tra poco.");
       }
 
       const { data, error } = await c
         .from("operational_diary_entries")
-        .insert({ work_date: workDate, body })
+        .insert({ work_date: workDate, body, created_by: uid })
         .select(OPERATIONAL_DIARY_ENTRIES_COLUMNS)
-        .single();
+        .maybeSingle();
       if (error) return err(error.message);
+      if (!data) return err("Operazione non riuscita. Riprova tra poco.");
       return success(data as OperationalDiaryEntryRow);
     } catch (e) {
       return serviceFailFromError(e);

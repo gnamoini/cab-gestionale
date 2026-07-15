@@ -7,7 +7,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { PageHeader } from "@/components/gestionale/page-header";
-import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
+import {
+  PageActionMenu,
+  PageActionMenuProvider,
+  pageActionLogItem,
+  usePageActionMenu,
+  type PageActionItem,
+} from "@/components/ui";
 import { FatturazioneDetailDrawer } from "@/components/fatturazione/fatturazione-detail-drawer";
 import { FatturaPaymentModal } from "@/components/fatturazione/fattura-payment-modal";
 import { FatturazioneFattureSection } from "@/components/fatturazione/fatturazione-fatture-section";
@@ -77,6 +83,11 @@ const FatturazioneImpostazioniSection = dynamic(
     ),
   { ssr: false },
 );
+
+function FatturazionePageMenuRegistrar({ items }: { items: PageActionItem[] }) {
+  usePageActionMenu(items, { group: "fatturazione-base", deps: [items] });
+  return null;
+}
 
 export function FatturazioneView() {
   const searchParams = useSearchParams();
@@ -182,18 +193,19 @@ export function FatturazioneView() {
     }
   })();
 
+  const fatturazioneBaseMenuItems = useMemo(
+    (): PageActionItem[] => [pageActionLogItem(() => setLogOpen(true), "Log attività")],
+    [],
+  );
+
   return (
     <GestionaleSectionGate module="fatturazione">
+      <PageActionMenuProvider onRefresh={() => void refetch()}>
+        <FatturazionePageMenuRegistrar items={fatturazioneBaseMenuItems} />
       <div ref={containerRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${layoutClassName}`}>
         <PageHeader
           title="Fatturazione"
-          actions={
-            <GestionalePageToolbarActions
-              canUndo={false}
-              onOpenLog={() => setLogOpen(true)}
-              logTitle="Log fatturazione"
-            />
-          }
+          actions={<PageActionMenu />}
         />
         <div className={dsStackPage}>
           <FatturazioneKpiGrid
@@ -279,6 +291,7 @@ export function FatturazioneView() {
           </div>
         </Drawer>
       </div>
+      </PageActionMenuProvider>
     </GestionaleSectionGate>
   );
 }

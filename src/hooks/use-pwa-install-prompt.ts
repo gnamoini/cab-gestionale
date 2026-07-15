@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { isPwaStandaloneMode } from "@/lib/pwa/pwa-display-mode";
+import {
+  isPwaAppInstalledOnDeviceSync,
+  queryPwaRelatedAppInstalledOnDevice,
+} from "@/lib/pwa/pwa-installed-detection";
 import type { PwaInstallPromptOutcome, PwaInstallUiVariant } from "@/lib/pwa/pwa-install";
 import { resolvePwaInstallMenuAvailable, resolvePwaInstallUiVariant } from "@/lib/pwa/pwa-install";
 import {
@@ -11,7 +14,6 @@ import {
 } from "@/lib/pwa/pwa-install-runtime";
 import {
   isInstallPromptDismissedInStorage,
-  isPwaInstallCompletedInStorage,
   markPwaInstallCompleted,
   PWA_INSTALL_MIN_ENGAGEMENT_MS,
   writeInstallDismiss,
@@ -30,12 +32,20 @@ export function usePwaInstallPrompt() {
   const { displayMode, isStandalone } = usePwaDisplayMode();
   const [engagementElapsed, setEngagementElapsed] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-  const [installMarked, setInstallMarked] = useState(false);
+  const [relatedAppInstalled, setRelatedAppInstalled] = useState(false);
 
   const platform =
     typeof navigator !== "undefined"
       ? detectPwaPlatform(navigator.userAgent, navigator.maxTouchPoints)
       : ("unknown" as const);
+
+  const refreshInstalledOnDevice = useCallback(async () => {
+    if (isPwaAppInstalledOnDeviceSync(displayMode)) {
+      setRelatedAppInstalled(false);
+      return;
+    }
+    setRelatedAppInstalled(await queryPwaRelatedAppInstalledOnDevice());
+  }, [displayMode]);
 
   useEffect(() => {
     const schedule = (cb: () => void) => {
@@ -50,22 +60,37 @@ export function usePwaInstallPrompt() {
   }, []);
 
   useEffect(() => {
-    const syncStorage = () => {
-      const now = Date.now();
-      setDismissed(isInstallPromptDismissedInStorage(now));
-      setInstallMarked(isPwaInstallCompletedInStorage() || isStandalone);
+    const syncDismiss = () => {
+      setDismissed(isInstallPromptDismissedInStorage(Date.now()));
     };
-    syncStorage();
-    window.addEventListener("storage", syncStorage);
-    return () => window.removeEventListener("storage", syncStorage);
-  }, [isStandalone]);
+    syncDismiss();
+    window.addEventListener("storage", syncDismiss);
+    return () => window.removeEventListener("storage", syncDismiss);
+  }, []);
+
+  useEffect(() => {
+    void refreshInstalledOnDevice();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshInstalledOnDevice();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [refreshInstalledOnDevice]);
+
+  useEffect(() => {
+    if (isPwaAppInstalledOnDeviceSync(displayMode)) return;
+    if (!runtime.deferredPrompt) return;
+    setRelatedAppInstalled(false);
+  }, [displayMode, runtime.deferredPrompt]);
+
+  const isAppInstalled = isStandalone || relatedAppInstalled;
 
   const variant: PwaInstallUiVariant = resolvePwaInstallUiVariant({
     platform,
     displayMode,
     hasDeferredPrompt: Boolean(runtime.deferredPrompt),
     dismissed,
-    installMarked: installMarked || runtime.installed,
+    installMarked: isAppInstalled,
     engagementElapsed,
   });
 
@@ -74,7 +99,7 @@ export function usePwaInstallPrompt() {
     platform,
     displayMode,
     hasDeferredPrompt: Boolean(runtime.deferredPrompt),
-    installMarked: installMarked || runtime.installed,
+    installMarked: isAppInstalled,
   });
 
   const promptInstall = useCallback(async (): Promise<PwaInstallPromptOutcome> => {
@@ -86,7 +111,7 @@ export function usePwaInstallPrompt() {
       clearPwaDeferredInstallPrompt();
       if (outcome === "accepted") {
         markPwaInstallCompleted();
-        setInstallMarked(true);
+        setRelatedAppInstalled(true);
         return "accepted";
       }
       const until = writeInstallDismiss(Date.now());
@@ -109,8 +134,8 @@ export function usePwaInstallPrompt() {
     menuInstallAvailable,
     promptInstall,
     dismissInstall,
-    isStandalone: isStandalone || isPwaStandaloneMode(displayMode),
-    isAppInstalled: isStandalone || installMarked || runtime.installed,
+    isStandalone,
+    isAppInstalled,
     platform,
     engagementElapsed,
   };

@@ -14,7 +14,16 @@ import {
 } from "@/components/gestionale/global-table";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { IconNavLavorazioni } from "@/components/gestionale/gestionale-nav-config";
-import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
+import {
+  PageActionMenu,
+  PageActionMenuProvider,
+  clickPageActionHiddenTrigger,
+  pageActionCreateItem,
+  pageActionFiltersItem,
+  pageActionLogItem,
+  usePageActionMenu,
+  type PageActionItem,
+} from "@/components/ui";
 import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
@@ -175,6 +184,11 @@ function IconPreventivoEdit({ className = dsTableActionGlyph }: { className?: st
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
     </svg>
   );
+}
+
+function PreventiviPageMenuRegistrar({ items }: { items: PageActionItem[] }) {
+  usePageActionMenu(items, { group: "preventivi", deps: [items] });
+  return null;
 }
 
 function IconPreventivoPdf({ className = dsTableActionGlyph }: { className?: string }) {
@@ -882,24 +896,61 @@ export function PreventiviView() {
     </div>
   ) : null;
 
+  const importTriggerRef = useRef<HTMLDivElement>(null);
+  const preventiviMenuItems = useMemo((): PageActionItem[] => {
+    if (pageTab !== "preventivi") {
+      return [pageActionLogItem(() => setLogOpen(true), "Log attività")];
+    }
+    return [
+      pageActionCreateItem({
+        label: "Nuovo preventivo",
+        description: "Crea un preventivo senza collegamento a lavorazione",
+        shortLabel: "+ Nuovo",
+        onSelect: () =>
+          canEditWorkOrders &&
+          setEditor({
+            open: true,
+            record: buildEmptyManualPreventivo(autore.trim() || "Operatore", rows),
+            isNew: true,
+            isRollbackDraft: false,
+          }),
+        disabled: !canEditWorkOrders,
+        module: "preventivi",
+        requireWrite: true,
+      }),
+      pageActionFiltersItem({
+        expanded: filtriEspansi,
+        active: hasAdvancedPanelFilters,
+        onToggle: () => setFiltriEspansi((o) => !o),
+      }),
+      { id: "__divider__", label: "" },
+      {
+        id: "import",
+        label: "Importa",
+        description: "Importa preventivi da file Excel",
+        onSelect: () => clickPageActionHiddenTrigger(importTriggerRef.current),
+        module: "preventivi",
+        requireWrite: true,
+      },
+      pageActionLogItem(() => setLogOpen(true), "Log attività"),
+    ];
+  }, [pageTab, canEditWorkOrders, filtriEspansi, hasAdvancedPanelFilters, autore, rows]);
+
   return (
     <GestionaleSectionGate module="preventivi">
+    <PageActionMenuProvider
+      filtersActive={pageTab === "preventivi" && (hasAdvancedPanelFilters || Boolean(filterLavId) || Boolean(filterMezzoRaw))}
+    >
+    <PreventiviPageMenuRegistrar items={preventiviMenuItems} />
+    <div ref={importTriggerRef} className="sr-only" aria-hidden>
+      <ModuleImportEntry entity="preventivi" module="preventivi" />
+    </div>
     <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
       <PageHeader
         title="Preventivi"
         titleAddon={documentSectionTabs}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <ModuleImportEntry entity="preventivi" module="preventivi" />
-            <GestionalePageToolbarActions
-            canUndo={false}
-            undoDisabled
-            onOpenLog={() => setLogOpen(true)}
-            logTitle="Storico modifiche preventivi (ultime 200)"
-          />
-          </div>
-        }
+        actions={<PageActionMenu showFiltersActiveDot />}
       />
 
       <div className={dsStackPage}>
@@ -914,17 +965,6 @@ export function PreventiviView() {
       <ShellCard>
         <section aria-label="Azioni e filtri preventivi">
           <PageToolbar
-            primaryAction={
-              <Tooltip content={canEditWorkOrders ? "Crea un preventivo senza collegamento a lavorazione" : READONLY_PERMISSION_HINT}><button type="button" onClick={() => canEditWorkOrders &&
-        setEditor({
-            open: true,
-            record: buildEmptyManualPreventivo(autore.trim() || "Operatore", rows),
-            isNew: true,
-            isRollbackDraft: false,
-        })} className={dsPageToolbarCtaCompact} disabled={!canEditWorkOrders}>
-                <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo preventivo"/>
-              </button></Tooltip>
-            }
             search={
               <GestionaleListSearchField
                 id="preventivi-search"
@@ -1345,6 +1385,7 @@ export function PreventiviView() {
       {confirmDialog}
     </>
     </div>
+    </PageActionMenuProvider>
     </GestionaleSectionGate>
   );
 }

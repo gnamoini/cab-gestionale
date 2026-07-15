@@ -1,38 +1,45 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
 import type { ChangeEvent, ReactNode } from "react";
+import { useMemo, useRef } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
-import {
-  GestionalePageToolbarActions,
-  GestionaleRefreshToolbarButton,
-} from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
 import {
   PageToolbar,
-  PageToolbarCtaLabel,
   PageToolbarResultCount,
 } from "@/components/design-system";
-import { LoadingSpinner } from "@/components/design-system/loading";
-import {
-  dsPageToolbarBtn,
-  dsPageToolbarCtaCompact,
-  GESTIONALE_SEARCH_PLACEHOLDER,
-} from "@/lib/ui/design-system";
+import { GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
 import type {
   LavorazioniAdvancedFilters,
   LavorazioniFilterCatalog,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
-import { LavorazioniDigitalCaptureLauncher, type CaptureSchedeOpenRequest } from "@/components/document-capture/lavorazioni-digital-capture-launcher";
-import { SchedaBlankPdfMenu } from "@/components/document-capture/scheda-blank-pdf-actions";
+import {
+  LavorazioniDigitalCaptureLauncher,
+  type CaptureSchedeOpenRequest,
+} from "@/components/document-capture/lavorazioni-digital-capture-launcher";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioneSchedeStore } from "@/types/schede";
+import {
+  PageActionMenu,
+  PageActionMenuProvider,
+  pageActionCreateItem,
+  pageActionFiltersItem,
+  pageActionLogItem,
+  usePageActionMenu,
+  type PageActionItem,
+} from "@/components/ui";
+
+const BLANK_PDF_TYPES = [
+  { id: "scheda-ingresso-blank", label: "Scheda ingresso" },
+  { id: "scheda-lavorazioni-blank", label: "Scheda lavorazioni" },
+  { id: "scheda-ricambi-blank", label: "Scheda ricambi" },
+] as const;
 
 function IconPrint({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
   return (
@@ -43,7 +50,24 @@ function IconPrint({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
   );
 }
 
-export type LavorazioniPageHeaderToolbarProps = {
+function IconKanban({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H5v14h4V5zm10 0h-4v9h4V5z" />
+    </svg>
+  );
+}
+
+function IconSpark({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5L12 3z" />
+    </svg>
+  );
+}
+
+export type LavorazioniPageMenuProviderProps = {
+  children: ReactNode;
   listRefreshBusy: boolean;
   printBusy?: boolean;
   onRefresh: () => void;
@@ -51,57 +75,204 @@ export type LavorazioniPageHeaderToolbarProps = {
   onPrint: () => void;
   listViewMode: "table" | "kanban";
   onToggleListViewMode: () => void;
+  canEditWorkOrders: boolean;
+  createdBy: string | null | undefined;
+  mutPendingBlocking: boolean;
+  filtriAttiviEspansi: boolean;
+  onFiltersToggle: () => void;
+  filtersActive: boolean;
+  onOpenCreate: () => void;
+  onPrimeCreate: () => void;
+  onCaptureLavorazioneCreated?: (id: string, opts?: { skipTableFocus?: boolean }) => void;
+  onOpenSchedeFromCapture?: (request: CaptureSchedeOpenRequest) => void | Promise<boolean>;
+  captureMezzi?: readonly MezzoGestito[];
+  captureSchedeStore?: LavorazioneSchedeStore;
+  captureAttive?: readonly LavorazioneAttiva[];
+  captureStorico?: readonly LavorazioneArchiviata[];
+  captureSharedGlobalOpts?: GlobalOptionsSlice;
+  captureSharedMezziCatalog?: readonly MezzoGestito[];
 };
 
-/** Azioni header pagina Lavorazioni — presentational. */
-export function LavorazioniPageHeaderToolbar({
-  listRefreshBusy,
+function LavorazioniPageMenuRegistrar({
   printBusy = false,
-  onRefresh,
   onOpenLog,
   onPrint,
   listViewMode,
   onToggleListViewMode,
-}: LavorazioniPageHeaderToolbarProps) {
+  canEditWorkOrders,
+  createdBy,
+  mutPendingBlocking,
+  filtriAttiviEspansi,
+  onFiltersToggle,
+  filtersActive,
+  onOpenCreate,
+  onPrimeCreate,
+  onCaptureLavorazioneCreated,
+  onOpenSchedeFromCapture,
+  captureMezzi,
+  captureSchedeStore,
+  captureAttive,
+  captureStorico,
+  captureSharedGlobalOpts,
+  captureSharedMezziCatalog,
+}: Omit<LavorazioniPageMenuProviderProps, "children" | "listRefreshBusy" | "onRefresh">) {
+  const captureRef = useRef<HTMLDivElement>(null);
+
+  const items = useMemo((): PageActionItem[] => {
+    const createDisabled = mutPendingBlocking || !createdBy || !canEditWorkOrders;
+    const createReason = !canEditWorkOrders
+      ? READONLY_PERMISSION_HINT
+      : !createdBy
+        ? "Accedi per creare una lavorazione."
+        : undefined;
+
+    return [
+      pageActionCreateItem({
+        id: "new-lavorazione",
+        label: "Nuova lavorazione",
+        description: "Crea una nuova lavorazione in officina",
+        shortLabel: "+ Nuova",
+        onSelect: () => {
+          onPrimeCreate();
+          onOpenCreate();
+        },
+        disabled: createDisabled,
+        disabledReason: createReason,
+        pageKey: "lavorazioni",
+        requireWrite: true,
+        shortcut: "Ctrl+N",
+      }),
+      {
+        id: "ai-capture",
+        label: "Acquisizione AI",
+        description: "Digitalizza schede con intelligenza artificiale",
+        icon: <IconSpark />,
+        badge: "NEW",
+        onSelect: () => {
+          captureRef.current?.querySelector("button")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        },
+        disabled: createDisabled,
+        disabledReason: createReason,
+        pageKey: "lavorazioni",
+        requireWrite: true,
+      },
+      pageActionFiltersItem({
+        expanded: filtriAttiviEspansi,
+        active: filtersActive,
+        onToggle: onFiltersToggle,
+      }),
+      { id: "__divider__", label: "" },
+      {
+        id: "schede-pdf",
+        label: "Schede da stampare",
+        description: "Scarica schede vuote in PDF",
+        chevron: true,
+        submenu: BLANK_PDF_TYPES.map((t) => ({
+          id: t.id,
+          label: t.label,
+          onSelect: () => {
+            window.open(`/api/pdf/artifacts/scheda-blank/${t.id}`, "_blank", "noopener,noreferrer");
+          },
+        })),
+      },
+      {
+        id: "print",
+        label: "Stampa lavorazioni",
+        description: "Esporta PDF delle lavorazioni in corso",
+        icon: <IconPrint />,
+        onSelect: onPrint,
+        loading: printBusy,
+        disabled: printBusy,
+      },
+      {
+        id: "view-mode",
+        label: listViewMode === "table" ? "Vista Kanban" : "Vista Tabella",
+        description: "Cambia modalità di visualizzazione lista",
+        icon: <IconKanban />,
+        onSelect: onToggleListViewMode,
+      },
+      pageActionLogItem(onOpenLog, "Log attività"),
+    ];
+  }, [
+    canEditWorkOrders,
+    createdBy,
+    mutPendingBlocking,
+    filtriAttiviEspansi,
+    onFiltersToggle,
+    filtersActive,
+    onOpenCreate,
+    onPrimeCreate,
+    onPrint,
+    printBusy,
+    listViewMode,
+    onToggleListViewMode,
+    onOpenLog,
+  ]);
+
+  usePageActionMenu(items, {
+    deps: [
+      canEditWorkOrders,
+      createdBy,
+      mutPendingBlocking,
+      filtriAttiviEspansi,
+      filtersActive,
+      printBusy,
+      listViewMode,
+    ],
+  });
+
+  return (
+    <div ref={captureRef} className="sr-only" aria-hidden>
+      <LavorazioniDigitalCaptureLauncher
+        enabled={canEditWorkOrders}
+        createdBy={createdBy ?? null}
+        mezzi={captureMezzi}
+        schedeStore={captureSchedeStore}
+        attive={captureAttive}
+        storico={captureStorico}
+        sharedGlobalOpts={captureSharedGlobalOpts}
+        sharedMezziCatalog={captureSharedMezziCatalog}
+        onLavorazioneCreated={onCaptureLavorazioneCreated}
+        onOpenSchedeFromCapture={onOpenSchedeFromCapture}
+      />
+    </div>
+  );
+}
+
+export function LavorazioniPageMenuProvider({
+  children,
+  listRefreshBusy,
+  onRefresh,
+  filtersActive,
+  ...registrarProps
+}: LavorazioniPageMenuProviderProps) {
+  return (
+    <PageActionMenuProvider
+      onRefresh={onRefresh}
+      refreshBusy={listRefreshBusy}
+      filtersActive={filtersActive}
+    >
+      <LavorazioniPageMenuRegistrar {...registrarProps} filtersActive={filtersActive} />
+      {children}
+    </PageActionMenuProvider>
+  );
+}
+
+export type LavorazioniPageHeaderToolbarProps = {
+  listRefreshBusy?: boolean;
+};
+
+/** Header Lavorazioni — solo menu overflow ⋮. */
+export function LavorazioniPageHeaderToolbar(_props: LavorazioniPageHeaderToolbarProps = {}) {
   return (
     <PageHeader
       title="Lavorazioni"
-      actions={
-        <GestionalePageToolbarActions
-          leading={
-            <GestionaleRefreshToolbarButton busy={listRefreshBusy} onClick={onRefresh} />
-          }
-          showUndo={false}
-          canUndo={false}
-          onOpenLog={onOpenLog}
-          logTitle="Storico modifiche lavorazioni"
-          overflowActions={
-            <>
-              <SchedaBlankPdfMenu />
-              <Tooltip content={printBusy ? "Generazione PDF…" : "Stampa PDF lavorazioni in corso"}><button type="button" className={`${dsPageToolbarBtn}${printBusy ? " !cursor-wait !opacity-100" : ""}`} onClick={onPrint} disabled={printBusy} aria-busy={printBusy} aria-label={printBusy ? "Generazione PDF in corso" : "Stampa lavorazioni in corso"}>
-                {printBusy ? (<LoadingSpinner size="sm" label="Generazione PDF…"/>) : (<IconPrint />)}
-                {printBusy ? "Generazione PDF…" : "Stampa"}
-              </button></Tooltip>
-              <button
-                type="button"
-                className={dsPageToolbarBtn}
-                onClick={onToggleListViewMode}
-                aria-pressed={listViewMode === "kanban"}
-              >
-                {listViewMode === "table" ? "Vista Kanban" : "Vista Tabella"}
-              </button>
-            </>
-          }
-        />
-      }
+      actions={<PageActionMenu showFiltersActiveDot />}
     />
   );
 }
 
 export type LavorazioniListToolbarProps = {
-  canEditWorkOrders: boolean;
-  createdBy: string | null | undefined;
-  mutPendingBlocking: boolean;
   searchInput: string;
   onSearchInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onSearchEnter: () => void;
@@ -120,23 +291,12 @@ export type LavorazioniListToolbarProps = {
   onSearchReset: () => void;
   attiveFilteredCount: number;
   chiuseFilteredCount: number;
-  onOpenCreate: () => void;
-  onPrimeCreate: () => void;
-  onCaptureLavorazioneCreated?: (id: string, opts?: { skipTableFocus?: boolean }) => void;
-  onOpenSchedeFromCapture?: (request: CaptureSchedeOpenRequest) => void | Promise<boolean>;
-  captureMezzi?: readonly MezzoGestito[];
-  captureSchedeStore?: LavorazioneSchedeStore;
-  captureAttive?: readonly LavorazioneAttiva[];
-  captureStorico?: readonly LavorazioneArchiviata[];
-  captureSharedGlobalOpts?: GlobalOptionsSlice;
-  captureSharedMezziCatalog?: readonly MezzoGestito[];
+  mutPendingBlocking?: boolean;
+  createdBy?: string | null;
 };
 
-/** Toolbar ricerca/filtri lista Lavorazioni — presentational. */
+/** Toolbar ricerca/filtri lista Lavorazioni — slim (azioni nel menu). */
 export function LavorazioniListToolbar({
-  canEditWorkOrders,
-  createdBy,
-  mutPendingBlocking,
   searchInput,
   onSearchInputChange,
   onSearchEnter,
@@ -155,16 +315,8 @@ export function LavorazioniListToolbar({
   onSearchReset,
   attiveFilteredCount,
   chiuseFilteredCount,
-  onOpenCreate,
-  onPrimeCreate,
-  onCaptureLavorazioneCreated,
-  onOpenSchedeFromCapture,
-  captureMezzi,
-  captureSchedeStore,
-  captureAttive,
-  captureStorico,
-  captureSharedGlobalOpts,
-  captureSharedMezziCatalog,
+  mutPendingBlocking = false,
+  createdBy,
 }: LavorazioniListToolbarProps) {
   const filtersActive = hasPageClientFilters || navMezzoFilterActive;
   const searchActive = searchApplied.trim().length > 0 || searchInput.trim().length > 0;
@@ -178,34 +330,8 @@ export function LavorazioniListToolbar({
 
   return (
     <ShellCard>
-      <section aria-label="Azioni e filtri lavorazioni (in corso e archivio)">
+      <section aria-label="Ricerca e filtri lavorazioni">
         <PageToolbar
-          primaryAction={
-            <div className="flex min-w-0 w-full items-center gap-1.5 overflow-hidden">
-              <Tooltip content={!canEditWorkOrders
-                    ? READONLY_PERMISSION_HINT
-                    : !createdBy
-                      ? "Accedi per creare una lavorazione."
-                      : undefined}><button type="button" onClick={onOpenCreate} onPointerEnter={onPrimeCreate} className={`${dsPageToolbarCtaCompact} flex-1`} disabled={mutPendingBlocking || !createdBy || !canEditWorkOrders}>
-                <PageToolbarCtaLabel short="+ Nuova" full="+ Nuova lavorazione"/>
-              </button></Tooltip>
-              <LavorazioniDigitalCaptureLauncher
-                enabled={canEditWorkOrders}
-                createdBy={createdBy ?? null}
-                size="md"
-                className="shrink-0"
-                mobileIconOnly
-                mezzi={captureMezzi}
-                schedeStore={captureSchedeStore}
-                attive={captureAttive}
-                storico={captureStorico}
-                sharedGlobalOpts={captureSharedGlobalOpts}
-                sharedMezziCatalog={captureSharedMezziCatalog}
-                onLavorazioneCreated={onCaptureLavorazioneCreated}
-                onOpenSchedeFromCapture={onOpenSchedeFromCapture}
-              />
-            </div>
-          }
           search={
             <GestionaleSearchField
               id="lavorazioni-search"
@@ -219,7 +345,7 @@ export function LavorazioniListToolbar({
               }}
               placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
               aria-label="Cerca in lavorazioni in corso e archivio"
-              wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
+              wrapperClassName="min-w-0 w-full"
             />
           }
           filtersExpanded={filtriAttiviEspansi}

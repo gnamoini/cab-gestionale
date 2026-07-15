@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ShellNavBackLink } from "@/components/design-system/shell-nav-icon-button";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { PageActionMenu } from "@/components/ui";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { runProductionReadinessCheckAction } from "@/src/actions/production-readiness";
 import type { ProductionReadinessResult } from "@/lib/production/production-readiness-types";
@@ -79,12 +79,19 @@ export function ProductionReadinessView() {
         title="Production Readiness"
         description="Gate automatico pilot → production: verifica flag, storage, RBAC e coerenza codice prima del deploy."
         actions={
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ShellNavBackLink href={SECURITY_HOME_PATH} label="Sicurezza" />
-            <button type="button" className={dsPageToolbarBtn} onClick={() => void runCheck()} disabled={loading}>
-              {loading ? "Verifica…" : "Riesegui check"}
-            </button>
-          </div>
+          <PageActionMenu
+            items={[
+              {
+                id: "rerun",
+                label: loading ? "Verifica…" : "Riesegui check",
+                description: "Esegue nuovamente il controllo production readiness",
+                onSelect: () => void runCheck(),
+                loading,
+                disabled: loading,
+              },
+            ]}
+            back={{ href: SECURITY_HOME_PATH, label: "Sicurezza" }}
+          />
         }
       />
 

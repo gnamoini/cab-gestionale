@@ -204,6 +204,7 @@ assert.match(installState, new RegExp(PWA_INSTALL_STATE_NS.replace(/[.*+?^${}()|
 const bridge = read("src/components/pwa-install-bridge.tsx");
 assert.match(bridge, /beforeinstallprompt/);
 assert.match(bridge, /handlePwaAppInstalled/);
+assert.match(bridge, /clearStalePwaInstallDetectionState/);
 
 const providers = read("components/app-providers-core.tsx");
 assert.match(providers, /PwaInstallBanner/);
@@ -240,6 +241,8 @@ for (const rel of phase3Files) {
 
 const hookInstall = read("src/hooks/use-pwa-install-prompt.ts");
 assert.doesNotMatch(hookInstall, /beforeinstallprompt/, "hook non registra listener");
+assert.match(hookInstall, /queryPwaRelatedAppInstalledOnDevice/);
+assert.doesNotMatch(hookInstall, /isPwaInstallCompletedInStorage\(\)/);
 
 // beforeinstallprompt solo nel bridge
 const searchDirs = ["src", "components", "lib/pwa"];

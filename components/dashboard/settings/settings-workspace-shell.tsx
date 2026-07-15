@@ -10,7 +10,13 @@ import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { Drawer } from "@/components/design-system";
 import { PageHeader } from "@/components/gestionale/page-header";
-import { GestionaleDirtySaveActions, GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
+import {
+  PageActionMenu,
+  pageActionLogItem,
+  pageActionUndoItem,
+  type PageActionItem,
+} from "@/components/ui";
+import { GestionaleDirtySaveActions } from "@/components/gestionale/page-header-toolbar";
 import { LavorazioniModalHeader, LavorazioniModalShell, SettingsLavorazioniModal } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { ConfigurazioneLogListEmbedded } from "@/components/configurazione/configurazione-log-section";
 import { gestionaleLogDrawerPanelClass } from "@/components/gestionale/gestionale-log-ui";
@@ -761,22 +767,41 @@ export function SistemaImpostazioniWorkspace({
     />
   ) : null;
 
+  const settingsMenuItems = useMemo((): PageActionItem[] => [
+    pageActionUndoItem({
+      canUndo: Boolean(undoableConfigSave) || isDirty,
+      undoPending: bulkSave.isPending,
+      onUndo: () => {
+        if (undoableConfigSave) void undoUltimaConfigurazione();
+        else if (isDirty) void handleCancelChanges();
+      },
+    }),
+    pageActionLogItem(() => setConfigLogOpen(true), "Log attività"),
+    {
+      id: "save",
+      label: "Salva modifiche",
+      description: "Salva tutte le modifiche alla configurazione",
+      onSelect: () => void handleSaveNow(),
+      disabled: !isDirty || bulkSave.isPending,
+      loading: bulkSave.isPending,
+    },
+    {
+      id: "cancel",
+      label: "Annulla modifiche",
+      description: "Ripristina le modifiche non salvate",
+      onSelect: () => void handleCancelChanges(),
+      disabled: !isDirty || bulkSave.isPending,
+    },
+  ], [undoableConfigSave, isDirty, bulkSave.isPending]);
+
   const settingsPageHeader = pageMode ? (
     <div className={SETTINGS_PAGE_HEADER_WRAP}>
       <PageHeader
         title="Configurazione"
         titleAddon={<OperatorGlobalSettingsPilotBadge />}
         actions={
-          <GestionalePageToolbarActions
-            canUndo={Boolean(undoableConfigSave) || isDirty}
-            undoPending={bulkSave.isPending}
-            onUndo={() => {
-              if (undoableConfigSave) void undoUltimaConfigurazione();
-              else if (isDirty) void handleCancelChanges();
-            }}
-            onOpenLog={() => setConfigLogOpen(true)}
-            logTitle="Storico modifiche configurazione"
-            overflowActions={
+          <>
+            {isDirty ? (
               <GestionaleDirtySaveActions
                 isDirty={isDirty}
                 saving={bulkSave.isPending}
@@ -784,8 +809,9 @@ export function SistemaImpostazioniWorkspace({
                 onSave={handleSaveNow}
                 saveTitle="Salva tutte le modifiche alla configurazione globale"
               />
-            }
-          />
+            ) : null}
+            <PageActionMenu items={settingsMenuItems} />
+          </>
         }
       />
     </div>

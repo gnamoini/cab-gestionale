@@ -6,7 +6,10 @@ import {
   setPwaServiceWorkerRegistration,
 } from "@/lib/pwa/sw-client";
 import { registerPwaServiceWorker } from "@/lib/pwa/sw-register";
-import { subscribeToServiceWorkerUpdates } from "@/lib/pwa/sw-update";
+import {
+  refreshServiceWorkerUpdateCheck,
+  subscribeToServiceWorkerUpdates,
+} from "@/lib/pwa/sw-update";
 
 const PWA_UPDATE_EVENT = "cab-pwa-update-available";
 
@@ -18,18 +21,31 @@ export function dispatchPwaUpdateAvailable(): void {
 export function PwaServiceWorkerBridge() {
   useEffect(() => {
     const removeControllerListener = installServiceWorkerControllerChangeReload();
+    const subscribedAtMs = performance.now();
 
     let removeUpdateListener: (() => void) | undefined;
+    let registration: ServiceWorkerRegistration | null = null;
 
-    void registerPwaServiceWorker().then((registration) => {
-      if (!registration) return;
-      setPwaServiceWorkerRegistration(registration);
-      removeUpdateListener = subscribeToServiceWorkerUpdates(registration, dispatchPwaUpdateAvailable);
+    void registerPwaServiceWorker().then((nextRegistration) => {
+      if (!nextRegistration) return;
+      registration = nextRegistration;
+      setPwaServiceWorkerRegistration(nextRegistration);
+      removeUpdateListener = subscribeToServiceWorkerUpdates(nextRegistration, dispatchPwaUpdateAvailable, {
+        subscribedAtMs,
+      });
     });
+
+    const onVisible = () => {
+      if (document.visibilityState !== "visible" || !registration) return;
+      void refreshServiceWorkerUpdateCheck(registration, subscribedAtMs);
+    };
+
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       removeControllerListener();
       removeUpdateListener?.();
+      document.removeEventListener("visibilitychange", onVisible);
       setPwaServiceWorkerRegistration(null);
     };
   }, []);

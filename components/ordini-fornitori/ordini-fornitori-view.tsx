@@ -1,6 +1,12 @@
 "use client";
 
 import { Tooltip } from "@/components/ui";
+import {
+  pageActionCreateItem,
+  pageActionFiltersItem,
+  usePageActionMenu,
+  type PageActionItem,
+} from "@/components/ui";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -363,37 +369,44 @@ export function OrdiniFornitoriView({
     [canWrite, gestToast, qc, refetch, reload],
   );
 
+  const ordiniMenuItems = useMemo((): PageActionItem[] => [
+    pageActionCreateItem({
+      id: "new-ordine",
+      label: "Nuovo ordine",
+      description: "Crea un ordine fornitore",
+      shortLabel: "+ Nuovo",
+      onSelect: () => {
+        if (!canWrite) return;
+        setEditor({ open: true, record: buildEmptyOrdineFornitore(records), isNew: true });
+      },
+      disabled: !canWrite,
+      requireWrite: true,
+    }),
+    {
+      id: "import-preventivo",
+      label: "Importa da preventivo",
+      description: "Genera ordine da preventivo fornitore",
+      badge: "NEW",
+      onSelect: () => {
+        if (!canWrite) return;
+        setImportOpen(true);
+      },
+      disabled: !canWrite,
+    },
+    pageActionFiltersItem({
+      expanded: filtriEspansi,
+      active: ordiniFornitoriFiltersActive(filters),
+      onToggle: () => setFiltriEspansi((o) => !o),
+    }),
+  ], [canWrite, filtriEspansi, filters, records]);
+
+  usePageActionMenu(ordiniMenuItems, { group: "ordini", order: 1, deps: [ordiniMenuItems] });
+
   return (
     <>
       <ShellCard>
         <section aria-label="Azioni e filtri ordini fornitori">
           <PageToolbar
-            primaryAction={
-              <div className="flex flex-wrap gap-2">
-                <Tooltip content={canWrite ? "Nuovo ordine fornitore" : READONLY_PERMISSION_HINT}><button type="button" onClick={() => {
-        if (!canWrite)
-            return;
-        setEditor({ open: true, record: buildEmptyOrdineFornitore(records), isNew: true });
-    }} className={dsPageToolbarCtaCompact} disabled={!canWrite}>
-                  <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo ordine"/>
-                </button></Tooltip>
-                <GestionaleAiActionButton
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  className="h-11 shrink-0"
-                  disabled={!canWrite}
-                  title={canWrite ? "Importa ordine da preventivo fornitore" : READONLY_PERMISSION_HINT}
-                  onClick={() => {
-                    if (!canWrite) return;
-                    setImportOpen(true);
-                  }}
-                >
-                  <span className="hidden sm:inline">Importa da preventivo</span>
-                  <span className="sm:hidden">Importa</span>
-                </GestionaleAiActionButton>
-              </div>
-            }
             search={
               <GestionaleListSearchField
                 id="ordini-fornitori-search"

@@ -110,6 +110,7 @@ export function GestionaleDirtySaveActions({
   );
 }
 
+/** @deprecated Sostituito da PageActionMenu — mantenuto per GestionaleDirtySaveActions e refresh interni. */
 export function GestionalePageToolbarActions({
   className,
   leading,

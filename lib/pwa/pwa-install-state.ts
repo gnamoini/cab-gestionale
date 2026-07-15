@@ -62,6 +62,15 @@ export function clearInstallDismiss(): void {
   }
 }
 
+export function clearPwaInstallCompleted(): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.removeItem(PWA_INSTALL_COMPLETED_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function markPwaInstallCompleted(): void {
   if (typeof localStorage === "undefined") return;
   try {

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { BeforeInstallPromptEvent } from "@/lib/pwa/pwa-install";
+import { clearStalePwaInstallDetectionState } from "@/lib/pwa/pwa-installed-detection";
 import {
   claimPwaInstallBridgeMount,
   handlePwaAppInstalled,
@@ -16,6 +17,7 @@ export function PwaInstallBridge() {
 
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
+      clearStalePwaInstallDetectionState();
       setPwaDeferredInstallPrompt(event as BeforeInstallPromptEvent);
     };
 

@@ -4,12 +4,17 @@ import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
+import {
+  PageActionMenu,
+  pageActionFiltersItem,
+  pageActionRefreshItem,
+  type PageActionItem,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth-context";
 import {
   collapsibleExpandedBoolPref,
   useCollapsiblePreference,
 } from "@/lib/ui/collapsible-prefs";
-import { GestionaleRefreshToolbarButton, gestionalePageToolbarActionsInnerClass } from "@/components/gestionale/page-header-toolbar";
 import { ClientContattaciButton } from "@/components/lavorazioni-clienti/client-contattaci-button";
 import { ClientContattaciDialog } from "@/components/lavorazioni-clienti/client-contattaci-dialog";
 import { ShellCard } from "@/components/gestionale/shell-card";
@@ -913,6 +918,21 @@ export function ClientLavorazioniView() {
     );
   }
 
+  const clientMenuItems = useMemo((): PageActionItem[] => [
+    pageActionRefreshItem({ busy: refreshBusy, onRefresh: () => void refreshClientData() }),
+    {
+      id: "contattaci",
+      label: "Contattaci",
+      description: "Invia una richiesta all'officina",
+      onSelect: () => setContattaciOpen(true),
+    },
+    pageActionFiltersItem({
+      expanded: filtriEspansi,
+      active: filtersActive,
+      onToggle: () => setFiltriEspansi((o) => !o),
+    }),
+  ], [refreshBusy, filtriEspansi, filtersActive]);
+
   return (
     <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
@@ -920,9 +940,11 @@ export function ClientLavorazioniView() {
         <PageHeader
           title={PORTALE_CLIENTI_LABEL}
           actions={
-            <div className={gestionalePageToolbarActionsInnerClass}>
-              <GestionaleRefreshToolbarButton busy={refreshBusy} onClick={() => void refreshClientData()} />
-            </div>
+            <PageActionMenu
+              items={clientMenuItems}
+              filtersActive={filtersActive}
+              showFiltersActiveDot
+            />
           }
         />
       </div>
@@ -937,9 +959,6 @@ export function ClientLavorazioniView() {
             <ShellCard>
               <section aria-label="Azioni e filtri lavorazioni clienti">
                 <PageToolbar
-                  primaryAction={
-                    <ClientContattaciButton variant="primary" onClick={() => setContattaciOpen(true)} />
-                  }
                   search={
                     <GestionaleSearchField
                       id="client-lavorazioni-search"

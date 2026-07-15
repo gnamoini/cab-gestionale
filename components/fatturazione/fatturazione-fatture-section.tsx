@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  pageActionCreateItem,
+  pageActionFiltersItem,
+  usePageActionMenu,
+  type PageActionItem,
+} from "@/components/ui";
+import {
   GestionaleListTable,
   GestionaleListTableActionsHead,
   GlobalTableSortTh,
@@ -130,22 +136,61 @@ export function FatturazioneFattureSection({
     setSortPhase(next.phase);
   };
 
+  const fattureMenuItems = useMemo((): PageActionItem[] => {
+    const items: PageActionItem[] = [];
+    if (canWrite) {
+      items.push(
+        pageActionCreateItem({
+          id: "new-fattura",
+          label: "Nuova fattura",
+          description: "Crea una fattura manuale",
+          shortLabel: "+ Nuova",
+          onSelect: onNewManuale,
+          module: "fatturazione",
+          requireWrite: true,
+        }),
+        {
+          id: "from-preventivo",
+          label: "Da preventivo",
+          description: "Genera fattura da preventivo approvato",
+          onSelect: onNewPreventivo,
+        },
+      );
+    }
+    items.push(
+      pageActionFiltersItem({
+        expanded: filtriEspansi,
+        active: fatturazionePageFiltersActive(filters),
+        onToggle: () => setFiltriEspansi((o) => !o),
+      }),
+      {
+        id: "export-csv",
+        label: "Esporta CSV",
+        description: "Esporta l'elenco fatture filtrato",
+        onSelect: () => {
+          void appendBillingEvent({
+            entityType: "export",
+            entityId: crypto.randomUUID(),
+            aggregateType: "fatturazione_list",
+            aggregateId: crypto.randomUUID(),
+            invoiceId: null,
+            eventCategory: "audit",
+            eventType: "export",
+            payload: { count: filtered.length },
+          });
+          downloadInvoicesCsv(filtered);
+        },
+      },
+    );
+    return items;
+  }, [canWrite, filtriEspansi, filters, filtered.length, onNewManuale, onNewPreventivo]);
+
+  usePageActionMenu(fattureMenuItems, { group: "fatture", deps: [fattureMenuItems] });
+
   return (
     <ShellCard>
       <section aria-label="Azioni e filtri fatturazione">
         <PageToolbar
-          primaryAction={
-            canWrite ? (
-              <div className="flex flex-wrap gap-2">
-                <button type="button" className={dsPageToolbarCtaCompact} onClick={onNewManuale}>
-                  <PageToolbarCtaLabel short="+ Nuova" full="+ Nuova fattura" />
-                </button>
-                <button type="button" className={dsPageToolbarBtn} onClick={onNewPreventivo}>
-                  Da preventivo
-                </button>
-              </div>
-            ) : null
-          }
           search={
             <GestionaleListSearchField
               value={filters.search}
@@ -161,29 +206,6 @@ export function FatturazioneFattureSection({
             <FatturazioneAdvancedFilterPanel filters={filters} onChange={(p) => setFilters((f) => ({ ...f, ...p }))} />
           }
           onFilterReset={() => setFilters(FATTURAZIONE_PAGE_FILTERS_EMPTY)}
-          overflowOpen={overflowOpen}
-          onOverflowToggle={() => setOverflowOpen((o) => !o)}
-          overflowActions={
-            <button
-              type="button"
-              className={dsPageToolbarBtn}
-              onClick={() => {
-                void appendBillingEvent({
-                  entityType: "export",
-                  entityId: crypto.randomUUID(),
-                  aggregateType: "fatturazione_list",
-                  aggregateId: crypto.randomUUID(),
-                  invoiceId: null,
-                  eventCategory: "audit",
-                  eventType: "export",
-                  payload: { count: filtered.length },
-                });
-                downloadInvoicesCsv(filtered);
-              }}
-            >
-              Esporta CSV
-            </button>
-          }
           meta={
             <PageToolbarResultCount
               count={filtered.length}

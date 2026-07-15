@@ -22,6 +22,7 @@ export const UI_PRIMITIVE_VERSIONS = {
   TooltipList: "1.0.0",
   TooltipStatus: "1.0.0",
   GlobalAnchoredMenu: "1.0.0",
+  PageActionMenu: "1.0.0",
   GestionaleListTable: "3.0.0",
 } as const;
 
@@ -76,9 +77,26 @@ export const MENU_CONTRACT = {
   contractVersion: UI_CONTRACT_VERSION,
   primitiveVersion: UI_PRIMITIVE_VERSIONS.GlobalAnchoredMenu,
   category: "Overlay",
-  canonical: ["GlobalAnchoredMenu", "GlobalSelect"],
+  canonical: ["GlobalAnchoredMenu", "GlobalSelect", "PageActionMenu"],
   forbiddenLocalMenus: true,
   consumerImportPath: "@/components/ui",
+} as const;
+
+export const PAGE_ACTION_MENU_CONTRACT = {
+  ...UI_CONTRACT_META,
+  contractVersion: UI_CONTRACT_VERSION,
+  primitiveVersion: UI_PRIMITIVE_VERSIONS.PageActionMenu,
+  category: "Navigation",
+  canonical: [
+    "PageActionMenu",
+    "PageActionMenuItem",
+    "PageActionMenuProvider",
+    "usePageActionMenu",
+  ],
+  consumerImportPath: "@/components/ui",
+  forbiddenPatterns: {
+    fail: ["ToolbarGroupOverflowToggle.*PageHeader", "GestionalePageToolbarActions"],
+  },
 } as const;
 
 /** Path substrings allowed to import design-system tooltip directly */

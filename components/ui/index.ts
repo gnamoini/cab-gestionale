@@ -29,6 +29,33 @@ export {
 } from "@/components/gestionale/global-input/global-anchored-menu";
 
 export {
+  PageActionMenu,
+  PageActionMenuItem,
+  PageActionMenuDivider,
+  PageActionMenuHeader,
+  PageActionMenuFooter,
+  PageActionMenuProvider,
+  usePageActionMenu,
+  usePageActionMenuContext,
+  usePageActionMenuContextRequired,
+  filterPageActionItems,
+  mergePageActionGroups,
+  pageActionCreateItem,
+  pageActionFiltersItem,
+  pageActionLogItem,
+  pageActionRefreshItem,
+  pageActionUndoItem,
+  clickPageActionHiddenTrigger,
+  type PageActionItem,
+  type PageActionItemToggle,
+  type PageActionMenuBackConfig,
+  type PageActionMenuGroup,
+  type PageActionMenuProps,
+  type PageActionMenuProviderProps,
+  type UsePageActionMenuOptions,
+} from "@/components/ui/page-action-menu";
+
+export {
   LIST_DIVIDER_UL,
   LIST_ROW_SHELL,
   LIST_EMPTY_STATE,

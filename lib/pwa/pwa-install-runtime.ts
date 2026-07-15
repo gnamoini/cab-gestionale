@@ -70,6 +70,12 @@ export function markPwaInstallRuntimeInstalled(): void {
   notify();
 }
 
+export function clearPwaInstallRuntimeInstalled(): void {
+  if (!state.installed) return;
+  state = { ...state, installed: false };
+  notify();
+}
+
 /** Reset coerente su appinstalled. */
 export function handlePwaAppInstalled(): void {
   clearInstallDismiss();

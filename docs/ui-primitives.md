@@ -19,6 +19,7 @@ Riferimento tecnico per tooltip, liste, menu e overlay. Governance: [`ui-governa
 |-----------|------|
 | Select / Dropdown | `GlobalSelect`, `GlobalMultiSelect` |
 | Anchored menu | `GlobalAnchoredMenu` (API frozen) |
+| Page overflow menu | `PageActionMenu` |
 | ContextMenu | non implementato — ADR richiesta |
 
 ### Collections

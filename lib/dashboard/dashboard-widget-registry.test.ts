@@ -74,7 +74,8 @@ function main(): void {
 
   assert.deepEqual(resolveDashboardSectionOrder(true)[0], "health-score");
   assert.deepEqual(resolveDashboardSectionOrder(true)[1], "kpi-header");
-  assert.deepEqual(resolveDashboardSectionOrder(false)[0], "kpi-header");
+  assert.deepEqual(resolveDashboardSectionOrder(false)[0], "health-score");
+  assert.deepEqual(resolveDashboardSectionOrder(false)[1], "kpi-header");
 
   console.log("dashboard-widget-registry.test: OK");
 }

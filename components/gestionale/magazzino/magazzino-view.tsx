@@ -112,7 +112,15 @@ import {
 } from "@/lib/ui/gestionale-list-table";
 import { MagazzinoDescrizioneSortTh } from "@/components/gestionale/magazzino/magazzino-descrizione-sort-th";
 import { PageHeader } from "@/components/gestionale/page-header";
-import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
+import {
+  PageActionMenu,
+  clickPageActionHiddenTrigger,
+  pageActionCreateItem,
+  pageActionFiltersItem,
+  pageActionLogItem,
+  pageActionUndoItem,
+  type PageActionItem,
+} from "@/components/ui";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import {
@@ -570,6 +578,7 @@ export function MagazzinoView() {
     collapsibleExpandedBoolPref(false, { scope: "magazzino", key: "filters", userId: user?.id ?? null }),
   );
   const [headerToolbarOverflowOpen, setHeaderToolbarOverflowOpen] = useState(false);
+  const importExportRef = useRef<HTMLDivElement>(null);
 
   const patchAdvancedFilters = useCallback((patch: Partial<MagazzinoAdvancedFilters>) => {
     setAdvancedFilters((prev) => {
@@ -1669,8 +1678,92 @@ export function MagazzinoView() {
     ],
   );
 
+  const magazzinoMenuItems = useMemo((): PageActionItem[] => {
+    const items: PageActionItem[] = [
+      pageActionCreateItem({
+        label: "Nuovo ricambio",
+        description: "Aggiungi un ricambio al magazzino",
+        shortLabel: "+ Nuovo",
+        onSelect: openNewModal,
+        disabled: !magCanCreateRicambio,
+        module: "magazzino",
+        requireWrite: true,
+      }),
+      pageActionFiltersItem({
+        expanded: filtriEspansi,
+        active: hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero,
+        onToggle: () => setFiltriEspansi((o) => !o),
+      }),
+      {
+        id: "etichette",
+        label: labelMode ? "Chiudi etichette" : "Etichette",
+        description: "Modalità stampa etichette ricambi",
+        onSelect: toggleLabelMode,
+        hidden: !magPerm.canRead,
+      },
+      { id: "__divider__", label: "" },
+      {
+        id: "import-export",
+        label: "Importa / Esporta",
+        description: "Gestione dati magazzino e listino",
+        onSelect: () => clickPageActionHiddenTrigger(importExportRef.current),
+        module: "magazzino",
+        requireWrite: true,
+      },
+      pageActionUndoItem({
+        canUndo: Boolean(undoableMagazzinoLog),
+        undoDisabled: !magCanCreateRicambio,
+        onUndo: () => void undoUltimoMagazzino(),
+      }),
+      pageActionLogItem(() => setLogOpen(true), "Log attività"),
+    ];
+    if (magCanDeleteRicambio && generatedListinoCount > 0) {
+      items.push({
+        id: "delete-listino",
+        label: "Elimina ricambi da listino",
+        description: `${generatedListinoCount} ricambi generati dal listino`,
+        onSelect: () => setDeleteGeneratedOpen(true),
+        danger: true,
+      });
+    }
+    if (sottoScortaTotale > 0) {
+      items.unshift({
+        id: "sotto-scorta",
+        label: "Sotto scorta",
+        description: `${sottoScortaTotale} ricambi sotto scorta minima`,
+        badge: sottoScortaTotale,
+        onSelect: () => {
+          if (sottoScortaList[0]) focusRicambioInTable(sottoScortaList[0].id, { applySottoScorta: true });
+        },
+      });
+    }
+    return items;
+  }, [
+    magCanCreateRicambio,
+    filtriEspansi,
+    hasAdvancedPanelFilters,
+    soloSottoScorta,
+    nascondiScortaZero,
+    labelMode,
+    magPerm.canRead,
+    undoableMagazzinoLog,
+    magCanDeleteRicambio,
+    generatedListinoCount,
+    sottoScortaTotale,
+    sottoScortaList,
+  ]);
+
   return (
     <GestionaleSectionGate module="magazzino">
+    <div ref={importExportRef} className="sr-only" aria-hidden>
+      <DataImportExportToolbar
+        entity="magazzino_ricambi"
+        module="magazzino"
+        extraImportEntities={["listino_ricambi"]}
+        disabled={!magCanCreateRicambio}
+        onImportCompleted={() => void magazzinoListQ.refetch()}
+      />
+    </div>
     <div
       ref={listLayoutRef}
       className={`magazzino-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}
@@ -1678,57 +1771,11 @@ export function MagazzinoView() {
       <PageHeader
         title="Magazzino ricambi"
         actions={
-          <GestionalePageToolbarActions
-            leading={
-              <>
-                <MagazzinoGiacenzaBell
-                  count={sottoScortaTotale}
-                  items={sottoScortaList}
-                  onSelectRicambio={(id) => focusRicambioInTable(id, { applySottoScorta: true })}
-                />
-                <div className="hidden sm:block">
-                  <DataImportExportToolbar
-                    entity="magazzino_ricambi"
-                    module="magazzino"
-                    extraImportEntities={["listino_ricambi"]}
-                    disabled={!magCanCreateRicambio}
-                    onImportCompleted={() => void magazzinoListQ.refetch()}
-                  />
-                </div>
-              </>
-            }
-            canUndo={Boolean(undoableMagazzinoLog)}
-            undoDisabled={!magCanCreateRicambio}
-            onUndo={() => void undoUltimoMagazzino()}
-            onOpenLog={() => setLogOpen(true)}
-            logTitle="Storico modifiche magazzino"
-            logInOverflowOnMobile
-            overflowOpen={headerToolbarOverflowOpen}
-            onOverflowToggle={() => setHeaderToolbarOverflowOpen((o) => !o)}
-            overflowActions={
-              <>
-                <DataImportExportToolbar
-                  layout="drawer"
-                  className="sm:hidden"
-                  entity="magazzino_ricambi"
-                  module="magazzino"
-                  extraImportEntities={["listino_ricambi"]}
-                  disabled={!magCanCreateRicambio}
-                  onImportCompleted={() => void magazzinoListQ.refetch()}
-                />
-                {magCanDeleteRicambio && generatedListinoCount > 0 ? (
-                  <GestionaleAiActionButton
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="w-full justify-start sm:w-auto sm:justify-center"
-                    onClick={() => setDeleteGeneratedOpen(true)}
-                  >
-                    Elimina ricambi da listino ({generatedListinoCount})
-                  </GestionaleAiActionButton>
-                ) : null}
-              </>
-            }
+          <PageActionMenu
+            items={magazzinoMenuItems}
+            onRefresh={() => void magazzinoListQ.refetch()}
+            filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
+            showFiltersActiveDot
           />
         }
       />
@@ -1761,21 +1808,6 @@ export function MagazzinoView() {
 
         <section aria-label="Azioni e filtri magazzino">
           <PageToolbar
-            primaryAction={
-              <DisabledElementTooltip
-                content={magCanCreateRicambio ? "Aggiungi un ricambio" : "Sola lettura"}
-                disabled={!magCanCreateRicambio}
-              >
-                <button
-                  type="button"
-                  onClick={openNewModal}
-                  disabled={!magCanCreateRicambio}
-                  className={`${dsPageToolbarCtaCompact} disabled:cursor-not-allowed disabled:opacity-50`}
-                >
-                  <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo ricambio" />
-                </button>
-              </DisabledElementTooltip>
-            }
             search={
               <GestionaleListSearchField
                 id="magazzino-search"
@@ -1810,29 +1842,13 @@ export function MagazzinoView() {
             }
             onFilterReset={resetMagazzinoFilters}
             meta={
-              <div className="flex min-w-0 w-full items-center justify-between gap-2">
-                <PageToolbarResultCount
-                  count={filteredSorted.length}
-                  filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
-                  searchActive={searchApplied.trim().length > 0 || searchInput.trim().length > 0}
-                  onSearchReset={resetMagazzinoRicerca}
-                  onFilterReset={resetMagazzinoFilters}
-                />
-                {magPerm.canRead ? (
-                  <button
-                    type="button"
-                    onClick={toggleLabelMode}
-                    aria-pressed={labelMode}
-                    className={`${dsPageToolbarBtnCompact} shrink-0${
-                      labelMode
-                        ? " border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]"
-                        : ""
-                    }`}
-                  >
-                    {labelMode ? "Chiudi etichette" : "Etichette"}
-                  </button>
-                ) : null}
-              </div>
+              <PageToolbarResultCount
+                count={filteredSorted.length}
+                filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
+                searchActive={searchApplied.trim().length > 0 || searchInput.trim().length > 0}
+                onSearchReset={resetMagazzinoRicerca}
+                onFilterReset={resetMagazzinoFilters}
+              />
             }
           />
         </section>

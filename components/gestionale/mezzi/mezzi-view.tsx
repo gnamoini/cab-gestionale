@@ -7,7 +7,15 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MezziEditModal } from "@/components/gestionale/mezzi/mezzi-edit-modal";
 import { MezziNewModal } from "@/components/gestionale/mezzi/mezzi-new-modal";
 import { PageHeader } from "@/components/gestionale/page-header";
-import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
+import {
+  PageActionMenu,
+  clickPageActionHiddenTrigger,
+  pageActionCreateItem,
+  pageActionFiltersItem,
+  pageActionLogItem,
+  pageActionUndoItem,
+  type PageActionItem,
+} from "@/components/ui";
 import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { MezziSearchBar, MezziFilterFields, mezziFieldFiltersActive } from "@/components/gestionale/mezzi/mezzi-filters";
@@ -116,6 +124,7 @@ export function MezziView() {
   const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
     collapsibleExpandedBoolPref(false, { scope: "mezzi", key: "filters", userId: user?.id ?? null }),
   );
+  const importTriggerRef = useRef<HTMLDivElement>(null);
 
   const mezziFieldFilterState = useMemo(
     () => ({
@@ -574,25 +583,66 @@ export function MezziView() {
     }
   }
 
+  const mezziPageMenuItems = useMemo((): PageActionItem[] => {
+    if (!isAnagrafica) return [pageActionLogItem(() => setLogOpen(true), "Log attività")];
+    return [
+      pageActionCreateItem({
+        label: "Nuovo mezzo",
+        description: "Registra un nuovo mezzo in anagrafica",
+        shortLabel: "+ Nuovo",
+        onSelect: () => setNuovoOpen(true),
+        disabled: !canEditVehicles,
+        module: "mezzi",
+        requireWrite: true,
+      }),
+      pageActionFiltersItem({
+        expanded: filtriEspansi,
+        active: hasMezziFilters,
+        onToggle: () => setFiltriEspansi((o) => !o),
+      }),
+      { id: "__divider__", label: "" },
+      {
+        id: "import",
+        label: "Importa",
+        description: "Importa mezzi da file Excel",
+        onSelect: () => clickPageActionHiddenTrigger(importTriggerRef.current),
+        module: "mezzi",
+        requireWrite: true,
+      },
+      pageActionUndoItem({
+        canUndo: Boolean(undoableMezziLog),
+        undoDisabled: !canEditVehicles,
+        undoPending: updateMut.isPending,
+        onUndo: () => void undoUltimoMezzo(),
+      }),
+      pageActionLogItem(() => setLogOpen(true), "Log attività"),
+    ];
+  }, [
+    isAnagrafica,
+    canEditVehicles,
+    filtriEspansi,
+    hasMezziFilters,
+    undoableMezziLog,
+    updateMut.isPending,
+  ]);
+
   return (
     <GestionaleSectionGate module="mezzi">
+    <div ref={importTriggerRef} className="sr-only" aria-hidden>
+      <ModuleImportEntry entity="mezzi" module="mezzi" onCompleted={() => void refetchMezzi()} />
+    </div>
     <div ref={listLayoutRef} className={`${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
       <PageHeader
         title="Mezzi"
         titleAddon={<MezziPageViewToggle value={pageView} onChange={setPageView} />}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <ModuleImportEntry entity="mezzi" module="mezzi" onCompleted={() => void refetchMezzi()} />
-            <GestionalePageToolbarActions
-            canUndo={isAnagrafica && Boolean(undoableMezziLog)}
-            undoDisabled={!canEditVehicles || !isAnagrafica}
-            undoPending={updateMut.isPending}
-            onUndo={() => void undoUltimoMezzo()}
-            onOpenLog={() => setLogOpen(true)}
-            logTitle="Storico modifiche anagrafica mezzi"
+          <PageActionMenu
+            items={mezziPageMenuItems}
+            onRefresh={() => void refetchMezzi()}
+            filtersActive={hasMezziFilters && isAnagrafica}
+            showFiltersActiveDot
           />
-          </div>
         }
       />
 
@@ -602,17 +652,8 @@ export function MezziView() {
             <>
           <PageToolbar
             className="sm:mx-0"
-            primaryAction={
-              <Tooltip content={canEditVehicles ? "Registra un nuovo mezzo in anagrafica" : READONLY_PERMISSION_HINT}><button type="button" onClick={() => {
-        if (!canEditVehicles)
-            return;
-        setNuovoOpen(true);
-    }} className={dsPageToolbarCtaCompact} disabled={!canEditVehicles}>
-                <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo mezzo"/>
-              </button></Tooltip>
-            }
             search={
-              <MezziSearchBar search={search} onSearch={setSearch} wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]" />
+              <MezziSearchBar search={search} onSearch={setSearch} wrapperClassName="min-w-0 w-full" />
             }
             filtersExpanded={filtriEspansi}
             onFiltersToggle={() => setFiltriEspansi((o) => !o)}
