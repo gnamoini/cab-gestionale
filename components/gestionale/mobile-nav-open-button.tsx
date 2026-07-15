@@ -1,32 +1,11 @@
 "use client";
 
 import { useEffect, useRef, type MouseEvent } from "react";
-import { IconActionButton } from "@/components/design-system";
+import { IconActionButton, ShellNavBackLink, ShellNavIconMenu } from "@/components/design-system";
 import { useProfileSheet } from "@/components/profile/profile-sheet-context";
 import { useMobileNavShell } from "@/context/mobile-nav-shell-context";
-import { dsPageHeaderBackBtn, dsPageHeaderNavOpenBtn, dsTableActionGlyph } from "@/lib/ui/design-system";
-
-function IconMenu({ className = dsTableActionGlyph }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconBack({ className = "h-5 w-5 shrink-0" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M19 12H5M12 19l-7-7 7-7"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+import { dsPageHeaderIconBtn } from "@/lib/ui/design-system";
+import { TOOLTIP_GAP_SHELL_NAV } from "@/lib/ui/tooltip-portal";
 
 export function MobileNavOpenButton({ onOpen }: { onOpen: () => void }) {
   const { closeProfileSheet } = useProfileSheet();
@@ -43,14 +22,15 @@ export function MobileNavOpenButton({ onOpen }: { onOpen: () => void }) {
     <span ref={wrapRef} className="contents">
     <IconActionButton
       label="Apri menu"
-      className={`${dsPageHeaderNavOpenBtn} cab-mobile-nav-open shrink-0`}
+      tooltipSideOffset={TOOLTIP_GAP_SHELL_NAV}
+      className={`${dsPageHeaderIconBtn} cab-mobile-nav-open shrink-0`}
       data-testid="smoke-nav-drawer-open"
       onClick={() => {
         closeProfileSheet();
         onOpen();
       }}
     >
-      <IconMenu className="h-5 w-5 shrink-0 opacity-90" />
+      <ShellNavIconMenu />
     </IconActionButton>
     </span>
   );
@@ -66,15 +46,12 @@ export function MobileNavBackButton({
   onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   return (
-    <IconActionButton
-      as="link"
+    <ShellNavBackLink
       href={href}
       label={label}
-      className={`${dsPageHeaderBackBtn} cab-mobile-nav-back`}
+      className="cab-mobile-nav-back"
       data-testid="smoke-nav-mobile-back"
       onClick={onClick}
-    >
-      <IconBack />
-    </IconActionButton>
+    />
   );
 }

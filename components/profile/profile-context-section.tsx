@@ -16,7 +16,7 @@ function ContextInfoRow({ label, value, multilineTooltip = false }: { label: str
       <dd className="min-w-0 max-w-[62%] text-right">
         <TruncatedTextTooltip
           text={value}
-          side="left"
+          side="top"
           multiline={multilineTooltip}
           className="truncate text-[color:var(--cab-text)]"
         />

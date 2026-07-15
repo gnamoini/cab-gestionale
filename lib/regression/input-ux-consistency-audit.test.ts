@@ -17,6 +17,7 @@ const ricambioForm = read("components/gestionale/magazzino/ricambio-form-fields.
 const globalSelect = read("components/gestionale/global-input/global-select.tsx");
 const globalDatePicker = read("components/gestionale/global-input/global-date-picker.tsx");
 const closeButton = read("components/design-system/close-button.tsx");
+const designSystem = read("lib/ui/design-system.ts");
 const mobileBehavior = read("lib/ui/mobile-modal-behavior.ts");
 const numberInput = read("components/gestionale/gestionale-number-input.tsx");
 const globalInput = read("lib/ui/global-input.ts");
@@ -96,7 +97,22 @@ assert.match(inlineSelect, /@deprecated/);
 assert.match(inlineSelect, /GlobalFixedListPillSelect/);
 
 // P0-C: close button touch target mobile
-assert.match(closeButton, /max-md:min-h-11/);
-assert.match(closeButton, /max-md:min-w-11/);
+assert.match(closeButton, /dsShellNavIconBtn/);
+assert.doesNotMatch(closeButton, /hover:bg-\[var\(--cab-hover\)\]/);
+assert.match(designSystem, /hover:\[&_svg\]:scale-\[1\.08\]/);
+
+const calendarPanel = read("components/gestionale/global-input/global-calendar-panel.tsx");
+const calendarV2Grid = read("components/dashboard/calendar-v2/calendar-v2-grid.tsx");
+const promemoriaCal = read("components/dashboard/promemoria/dashboard-promemoria-calendar.tsx");
+const diaryPanel = read("components/dashboard/dashboard-diary-panel.tsx");
+const monthYearPicker = read("components/gestionale/global-input/calendar-month-year-picker.tsx");
+
+assert.match(monthYearPicker, /export function CalendarMonthYearPicker/);
+assert.match(calendarPanel, /CalendarMonthYearPicker/);
+assert.match(calendarV2Grid, /CalendarMonthYearPicker/);
+assert.match(promemoriaCal, /CalendarMonthYearPicker/);
+assert.match(diaryPanel, /CalendarMonthYearPicker/);
+assert.doesNotMatch(diaryPanel, /DiaryCalendarMonthYearMenu/);
+assert.doesNotMatch(promemoriaCal, /PromemoriaMonthYearPickers/);
 
 console.log("input-ux-consistency-audit.test.ts OK");

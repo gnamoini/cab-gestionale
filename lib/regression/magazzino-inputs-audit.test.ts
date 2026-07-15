@@ -91,4 +91,9 @@ assert.match(multiSelect, /selectorDomain=\{selectorDomain\}/);
 assert.match(globalSelect, /resolvedMinSheetOptions/);
 assert.match(globalSelect, /isSelectorDomainSheetRolloutEnabled\(selectorDomain\)/);
 
+const recordImages = read("components/gestionale/media/record-image-manager.tsx");
+const uploadBtn = read("components/gestionale/upload/gestionale-image-upload-button.tsx");
+assert.match(recordImages, /clickToPick: !hubCardLayout/);
+assert.match(uploadBtn, /stopPropagation/);
+
 console.log("magazzino-inputs-audit.test.ts OK");

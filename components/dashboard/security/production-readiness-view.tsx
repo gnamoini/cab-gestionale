@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { ShellNavBackLink } from "@/components/design-system/shell-nav-icon-button";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { runProductionReadinessCheckAction } from "@/src/actions/production-readiness";
@@ -9,7 +9,6 @@ import type { ProductionReadinessResult } from "@/lib/production/production-read
 import { SECURITY_HOME_PATH } from "@/lib/auth/rbac";
 import { LoadingProductionReadinessSkeleton } from "@/components/design-system";
 import {
-  dsBtnNeutral,
   dsBtnPrimary,
   dsPageToolbarBtn,
   dsStackPage,
@@ -81,9 +80,7 @@ export function ProductionReadinessView() {
         description="Gate automatico pilot → production: verifica flag, storage, RBAC e coerenza codice prima del deploy."
         actions={
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <Link href={SECURITY_HOME_PATH} className={dsBtnNeutral}>
-              ← Sicurezza
-            </Link>
+            <ShellNavBackLink href={SECURITY_HOME_PATH} label="Sicurezza" />
             <button type="button" className={dsPageToolbarBtn} onClick={() => void runCheck()} disabled={loading}>
               {loading ? "Verifica…" : "Riesegui check"}
             </button>

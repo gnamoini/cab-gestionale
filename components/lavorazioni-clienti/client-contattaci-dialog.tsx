@@ -60,7 +60,23 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
       onRequestClose={onClose}
       titleId={CONTATTACI_TITLE_ID}
       header={<ClientContattaciModalHeader onClose={onClose} />}
-      footer={
+    >
+      <GestionaleModalScrollBody className="flex min-w-0 flex-col gap-5">
+        <p className="text-sm text-[color:var(--cab-text-muted)]">
+          Per assistenza puoi contattarci telefonicamente, via WhatsApp o email.
+        </p>
+
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <span className={dsLabel}>Email</span>
+            <p className="break-all text-sm font-medium text-[color:var(--cab-text)]">{email}</p>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className={dsLabel}>Telefono</span>
+            <p className="text-sm font-medium text-[color:var(--cab-text)]">{phoneDisplay}</p>
+          </div>
+        </div>
+
         <div className="flex w-full min-w-0 flex-col gap-2">
           <a
             href={telHref}
@@ -97,23 +113,6 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
             <IconMail className={CONTATTACI_BTN_ICON} />
             Email
           </a>
-        </div>
-      }
-    >
-      <GestionaleModalScrollBody className="flex min-w-0 flex-col gap-5">
-        <p className="text-sm text-[color:var(--cab-text-muted)]">
-          Per assistenza puoi contattarci telefonicamente, via WhatsApp o email.
-        </p>
-
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <span className={dsLabel}>Email</span>
-            <p className="break-all text-sm font-medium text-[color:var(--cab-text)]">{email}</p>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className={dsLabel}>Telefono</span>
-            <p className="text-sm font-medium text-[color:var(--cab-text)]">{phoneDisplay}</p>
-          </div>
         </div>
       </GestionaleModalScrollBody>
     </LavorazioniModalShell>

@@ -26,6 +26,17 @@ export {
   clampTooltipStatusLines,
 } from "./tooltip-status";
 export { CloseButton, type CloseButtonProps } from "./close-button";
+export {
+  ShellNavBackButton,
+  ShellNavBackLink,
+} from "./shell-nav-icon-button";
+export {
+  ShellNavIconBack,
+  ShellNavIconClose,
+  ShellNavIconMenu,
+  ShellNavIconRefresh,
+  type ShellNavIconProps,
+} from "./shell-nav-icons";
 export { Badge, type BadgeTone } from "./badge";
 export { EntitySimilarWarning, useEntitySimilarWarning } from "./entity-similar-warning";
 export { SearchBar, GESTIONALE_SEARCH_PLACEHOLDER, type SearchBarProps } from "./search-bar";

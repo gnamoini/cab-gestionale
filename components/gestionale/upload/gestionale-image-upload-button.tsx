@@ -204,7 +204,8 @@ export function GestionaleImageUploadButton({
   return (
     <>
       <div className={wrapperClassName}>
-        <Tooltip content={title}><button type="button" disabled={inputDisabled} className={`${buttonClassName ?? dsBtnNeutral} ${inputDisabled ? `cursor-wait opacity-60 ${dsDisabled}` : "cursor-pointer"}`} onClick={() => {
+        <Tooltip content={title}><button type="button" disabled={inputDisabled} className={`${buttonClassName ?? dsBtnNeutral} ${inputDisabled ? `cursor-wait opacity-60 ${dsDisabled}` : "cursor-pointer"}`} onClick={(e) => {
+        e.stopPropagation();
         if (!inputDisabled)
             setPickerOpen(true);
     }}>

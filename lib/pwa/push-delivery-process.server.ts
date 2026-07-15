@@ -5,6 +5,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { assertSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
 import { buildPushNotificationPayload } from "@/lib/pwa/push-payload";
+import { resolvePwaPushServerEnabled } from "@/lib/pwa/push-enabled";
 import type { ProcessPushDeliveryResult } from "@/lib/pwa/push-send";
 
 type NotificationRow = {
@@ -38,8 +39,7 @@ type PushSubscriptionRow = {
 const STAFF_ROLES = ["admin", "manager", "operatore", "addetto_amministrativo"] as const;
 
 function isPushDeliveryEnabled(): boolean {
-  const raw = process.env.PWA_PUSH_ENABLED?.trim().toLowerCase();
-  return raw === "true" || raw === "1";
+  return resolvePwaPushServerEnabled(getVapidConfig() !== null);
 }
 
 function getVapidConfig(): { publicKey: string; privateKey: string; subject: string } | null {

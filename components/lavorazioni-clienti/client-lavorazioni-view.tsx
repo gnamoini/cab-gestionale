@@ -34,7 +34,6 @@ import {
 } from "@/components/gestionale/lavorazioni/lavorazione-mobile-card";
 import { ClientLavorazioneIngressoDialog } from "@/components/lavorazioni-clienti/client-lavorazione-ingresso-dialog";
 import {
-  IconInfo,
   IconQrCode,
   IconSchedeIngresso,
 } from "@/components/lavorazioni-clienti/client-lavorazioni-icons";
@@ -53,6 +52,7 @@ import {
 } from "@/lib/lavorazioni/client-portal-list-filters";
 import { groupLavorazioniLogsById, buildClientPortalLogAutoreByLavorazioneId } from "@/lib/lavorazioni/client-portal-ui";
 import { clientLavorazioniDetailPath, PORTALE_CLIENTI_LABEL } from "@/lib/lavorazioni/client-portal-access";
+import { dsTableActionGlyph } from "@/lib/ui/design-system";
 import {
   filterClientPortalStatiOptions,
   resolveClientPortalStatoId,
@@ -78,7 +78,6 @@ import {
 import {
   LavorazioneIngressoDateCellFromIso,
   lavTablePrimaryTextClass,
-  dsTableActionBtnWithBadge,
   lavTableActionBtnPrimary,
   lavTableActionBtnSecondary,
   lavTableActionsRow,
@@ -187,16 +186,10 @@ function RowActions({
         href={clientLavorazioniDetailPath(rowId)}
         label="Informazioni e avanzamento"
         tooltipContent="Informazioni e avanzamento"
-        className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge} no-underline`}
+        className={`${lavTableActionBtnPrimary} no-underline`}
         onClick={(e) => e.stopPropagation()}
       >
-        <IconInfo />
-        <span
-          className="pointer-events-none absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-[4px] border border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[var(--cab-card)] text-[color:var(--cab-primary)] shadow-[var(--cab-shadow-sm)]"
-          aria-hidden
-        >
-          <HubIconOpen className="h-2 w-2" />
-        </span>
+        <HubIconOpen className={dsTableActionGlyph} />
       </IconActionButton>
     </div>
   );
@@ -415,16 +408,16 @@ function ClientPortalMobileCardHeader({
   ].filter((f) => clientPortalFieldHasValue(f.value));
 
   const identificazioneFields = [
+    { label: "Scuderia", value: scuderia, tabular: true },
     { label: "Targa", value: targa, tabular: true },
     { label: "Matricola", value: matricola, tabular: true },
-    { label: "Scuderia", value: scuderia, tabular: true },
-  ];
+  ].filter((f) => clientPortalFieldHasValue(f.value));
 
   return (
     <div className="pb-1">
-      <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+      <div className="grid grid-cols-3 gap-x-2 gap-y-2">
         {clientPortalFieldHasValue(oggetto) ? (
-          <div className="min-w-0 flex-1 basis-[8rem]">
+          <div className="col-span-2 min-w-0">
             <p className={clientPortalMobileMetaLabelClass}>Oggetto</p>
             <p
               className="mt-0.5 break-words text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50"
@@ -434,12 +427,12 @@ function ClientPortalMobileCardHeader({
             </p>
           </div>
         ) : null}
-        <div className="shrink-0">
+        <div className={`min-w-0${clientPortalFieldHasValue(oggetto) ? "" : " col-start-3"}`}>
           <p className={clientPortalMobileMetaLabelClass}>Ingresso</p>
           <div className={`${clientPortalMobileMetaValueClass} tabular-nums`}>{ingresso}</div>
         </div>
         {secondaryDate ? (
-          <div className="shrink-0">
+          <div className="col-start-3 min-w-0">
             <p className={clientPortalMobileMetaLabelClass}>{secondaryDate.label}</p>
             <div className={`${clientPortalMobileMetaValueClass} tabular-nums`}>{secondaryDate.value}</div>
           </div>
@@ -457,17 +450,18 @@ function ClientPortalMobileCardHeader({
           ))}
         </dl>
       ) : null}
-      <dl className="mt-2 grid grid-cols-3 gap-x-2 gap-y-2">
-        {identificazioneFields.map((f) => (
-          <ClientPortalMobileField
-            key={f.label}
-            label={f.label}
-            value={f.value}
-            tabular={f.tabular}
-            alwaysShow
-          />
-        ))}
-      </dl>
+      {identificazioneFields.length > 0 ? (
+        <dl className="mt-2 grid grid-cols-3 gap-x-2 gap-y-2">
+          {identificazioneFields.map((f) => (
+            <ClientPortalMobileField
+              key={f.label}
+              label={f.label}
+              value={f.value}
+              tabular={f.tabular}
+            />
+          ))}
+        </dl>
+      ) : null}
     </div>
   );
 }

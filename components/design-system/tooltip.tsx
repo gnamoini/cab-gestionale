@@ -47,6 +47,8 @@ export type TooltipProps = {
   dismissOnPointerDown?: boolean;
   /** Supporta `\n` nel contenuto (es. tooltip celle timesheet). */
   multiline?: boolean;
+  /** Distanza dal trigger (px). Default `TOOLTIP_GAP`. */
+  sideOffset?: number;
 };
 
 function mergeHandler<E>(
@@ -70,6 +72,7 @@ export function Tooltip({
   showOnFocus = true,
   dismissOnPointerDown = true,
   multiline = false,
+  sideOffset,
 }: TooltipProps) {
   const contentRef = useRef<HTMLDivElement | null>(null);
   const displayContent = multiline
@@ -82,6 +85,7 @@ export function Tooltip({
     disabled,
     delayMs,
     side,
+    sideOffset,
     showOnFocus,
     dismissOnPointerDown,
     contentRef,

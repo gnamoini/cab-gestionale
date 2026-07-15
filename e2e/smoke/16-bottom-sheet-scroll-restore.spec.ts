@@ -98,6 +98,8 @@ test("mobile image upload sheet restores main scroll after close", async ({ page
   await nuovoModal.getByRole("button", { name: "Aggiungi foto" }).click();
   const photoSheet = page.getByRole("dialog", { name: "Aggiungi foto" });
   await expect(photoSheet).toBeVisible();
+  await expect(photoSheet.getByRole("button", { name: "Scatta foto" })).toBeVisible();
+  await expect(photoSheet.getByRole("button", { name: "Scegli dalla galleria" })).toBeVisible();
 
   await photoSheet.getByRole("button", { name: "Chiudi" }).click();
   await expect(photoSheet).not.toBeVisible();

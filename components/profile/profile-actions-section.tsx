@@ -15,11 +15,10 @@ import type { PublicAuthUser } from "@/src/types/auth-user";
 
 const profileActionItemClass =
   "group flex w-full min-h-11 items-center gap-2.5 px-3 py-2.5 text-left text-xs font-medium text-[color:var(--cab-text)] transition-colors duration-150 hover:bg-[var(--cab-hover)] active:bg-[color:color-mix(in_srgb,var(--cab-hover)_92%,var(--cab-card))] sm:min-h-10";
-const profileActionLogoutClass = `${profileActionItemClass} hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-hover))] active:bg-[color:color-mix(in_srgb,var(--cab-danger)_14%,var(--cab-hover))]`;
 
 function SessionMenuIcon({ children }: { children: React.ReactNode }) {
   return (
-    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,var(--cab-card))] text-[color:var(--cab-text-muted)] transition-colors duration-150 group-hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] group-hover:text-[color:var(--cab-text)]">
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,var(--cab-card))] text-[color:var(--cab-text-muted)] transition-colors duration-150 group-hover:bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-hover))] group-hover:text-[color:var(--cab-text)]">
       {children}
     </span>
   );
@@ -124,7 +123,7 @@ export function ProfileActionsSection({
             role="menuitem"
             data-testid="smoke-logout"
             onClick={onLogout}
-            className={`${profileActionLogoutClass} ${dsFocusRing}`}
+            className={`${profileActionItemClass} ${dsFocusRing}`}
           >
             <SessionMenuIcon>
               <LogoutIcon className="h-4 w-4" />

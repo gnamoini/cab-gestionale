@@ -19,6 +19,22 @@ export const THEME_CRITICAL_BG: Record<PersistedThemeMode, string> = {
   light: "#f4f4f5",
 };
 
+/** Allinea status bar / navigation bar mobile al tema app (`meta theme-color`). */
+export function syncBrowserChromeThemeColor(mode: PersistedThemeMode): void {
+  if (typeof document === "undefined") return;
+  const color = THEME_CRITICAL_BG[mode];
+  document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+    meta.setAttribute("content", color);
+  });
+  let primary = document.querySelector('meta[name="theme-color"]:not([media])');
+  if (!primary) {
+    primary = document.createElement("meta");
+    primary.setAttribute("name", "theme-color");
+    document.head.appendChild(primary);
+  }
+  primary.setAttribute("content", color);
+}
+
 /** Tema SSR da cookie (fallback default globale dark). */
 export function resolveServerThemeMode(cookieValue: string | undefined | null): PersistedThemeMode {
   return parsePersistedThemeMode(cookieValue) ?? DEFAULT_PERSISTED_THEME_MODE;
@@ -27,6 +43,7 @@ export function resolveServerThemeMode(cookieValue: string | undefined | null): 
 /** Applica tema al documento (condiviso con ThemeProvider). */
 export function applyPersistedThemeToDocument(mode: PersistedThemeMode): void {
   if (typeof document === "undefined") return;
+  syncBrowserChromeThemeColor(mode);
   const isDark = mode === "dark";
   const root = document.documentElement;
   const needsApply =

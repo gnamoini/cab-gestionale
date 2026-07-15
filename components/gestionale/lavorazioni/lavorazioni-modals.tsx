@@ -45,11 +45,11 @@ import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea"
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { useGestionaleModalDialogFocus } from "@/components/gestionale/gestionale-modal-focus";
 import { CloseButton } from "@/components/design-system/close-button";
+import { ShellNavBackButton } from "@/components/design-system/shell-nav-icon-button";
 import {
   dsInput,
   dsLavorazioniModalLayer,
   dsLabel,
-  dsModalBackBtn,
   dsModalCloseBtn,
   dsLavorazioniModalWindowHeader,
   dsModalHeaderInner,
@@ -234,11 +234,7 @@ export function LavorazioniModalHeader({
       <header className={dsLavorazioniModalWindowHeader}>
         <div className="flex w-full min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-2">
           <div className={`${dsModalHeaderLead} min-w-0 basis-[min(100%,12rem)]`}>
-            {onBack ? (
-              <button type="button" className={dsModalBackBtn} onClick={onBack}>
-                ← Indietro
-              </button>
-            ) : null}
+            {onBack ? <ShellNavBackButton onClick={onBack} showOnFocus={false} /> : null}
             <div className={dsModalTitleBlock}>
               <h2 id={titleId} className={dsModalTitle}>
                 {title}
@@ -259,11 +255,7 @@ export function LavorazioniModalHeader({
     <header className={dsLavorazioniModalWindowHeader}>
       <div className={`${dsModalHeaderInner}${stacked ? " items-start sm:items-center" : ""}`}>
         <div className={`${dsModalHeaderLead}${stacked ? " flex-col items-stretch sm:flex-row sm:items-center" : ""}`}>
-          {onBack ? (
-            <button type="button" className={dsModalBackBtn} onClick={onBack}>
-              ← Indietro
-            </button>
-          ) : null}
+          {onBack ? <ShellNavBackButton onClick={onBack} showOnFocus={false} /> : null}
           <div className={dsModalTitleBlock}>
             <h2 id={titleId} className={dsModalTitle}>
               {title}

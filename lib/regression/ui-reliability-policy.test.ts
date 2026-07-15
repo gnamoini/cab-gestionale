@@ -114,6 +114,11 @@ assert.doesNotMatch(
   "content max token must not center with side bands on desktop",
 );
 
+assert.match(designSystem, /dsToastViewport[\s\S]*max-md:top-0/);
+assert.match(designSystem, /dsToastViewport[\s\S]*md:bottom-0/);
+assert.match(globalsCss, /cab-toast-in-top/);
+assert.match(globalsCss, /\.cab-toast-viewport \.cab-toast-item/);
+
 // --- Flex anti-pattern: files with flex-1 must have containment in same line ---
 const flex1Violations: string[] = [];
 const FLEX1_ALLOWLIST = [

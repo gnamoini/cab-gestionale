@@ -147,6 +147,7 @@ function meetsSheetOptionThreshold(ctx: SelectorContext): boolean {
 function isSheetEligible(ctx: SelectorContext): boolean {
   if (!ctx.isMobile) return false;
   if (!meetsSheetOptionThreshold(ctx)) return false;
+  if (ctx.isOperationalFilter) return true;
   const domain = resolveDomain(ctx);
   return isSelectorDomainSheetRolloutEnabled(domain || undefined);
 }

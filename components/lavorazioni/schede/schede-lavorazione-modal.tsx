@@ -19,6 +19,7 @@ import {
 } from "@/components/design-system/hub-modal-panoramica";
 import { canOpenDocumento, formatDocumentoRigaSintetica, openDocumentoFile } from "@/components/gestionale/documenti/documenti-helpers";
 import { HubIconOpen, HubIconTrash } from "@/components/design-system/hub-table-action-icons";
+import { ShellNavBackButton } from "@/components/design-system/shell-nav-icon-button";
 import {
   LavorazioniModalHeader,
   LavorazioniModalShell,
@@ -1794,9 +1795,7 @@ function LavorazioniPanel({
   return (
     <div className="space-y-4">
       <div className="flex flex-nowrap justify-between gap-2 sm:flex-wrap">
-        <button type="button" className={dsBtnNeutral} onClick={onBack}>
-          ← Indietro
-        </button>
+        <ShellNavBackButton onClick={onBack} />
         <div className="flex flex-nowrap items-center gap-2 sm:flex-wrap">
           {doc.sorgente !== "file_esterno" ? (
             <button type="button" className={dsBtnDanger} onClick={onDelete}>
@@ -2124,9 +2123,7 @@ function RicambiPanel({
   return (
     <div className="space-y-4">
       <div className="flex flex-nowrap justify-between gap-2 sm:flex-wrap">
-        <button type="button" className={dsBtnNeutral} onClick={onBack}>
-          ← Indietro
-        </button>
+        <ShellNavBackButton onClick={onBack} />
         <div className="flex flex-nowrap items-center gap-2 sm:flex-wrap">
           {doc.sorgente !== "file_esterno" ? (
             <button type="button" className={dsBtnDanger} onClick={onDelete}>

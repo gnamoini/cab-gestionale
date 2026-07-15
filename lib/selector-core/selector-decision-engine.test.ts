@@ -121,6 +121,18 @@ const mezziSearchableEmpty = SelectorDecisionEngine.resolve({
 assert.equal(mezziSearchableEmpty.surface, "sheet");
 assert.equal(mezziSearchableEmpty.flags.usesSearch, true);
 
+const operationalFilterSheet = SelectorDecisionEngine.resolve({
+  domain: "unknown",
+  mode: "selectOnly",
+  optionCount: 3,
+  isMobile: true,
+  isOperationalFilter: true,
+  mobileSheetMode: "selectOnly",
+  minSheetOptions: 0,
+});
+assert.equal(operationalFilterSheet.surface, "sheet");
+assert.equal(operationalFilterSheet.flags.usesSheet, true);
+
 const deterministic = stable(
   SelectorDecisionEngine.resolve(ctx({ optionCount: 21, domain: "addetti" })),
 );

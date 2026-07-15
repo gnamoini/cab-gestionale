@@ -41,7 +41,7 @@ const centerBellSrc = fs.readFileSync(
   "utf8",
 );
 const bridgesPromptSrc = fs.readFileSync(
-  path.join(ROOT, "src/components/desktop-notification-permission-prompt.tsx"),
+  path.join(ROOT, "src/components/notification-opt-in-banner.tsx"),
   "utf8",
 );
 
@@ -158,8 +158,11 @@ assert.match(
   desktopNotifSrc.slice(interactiveFnStart),
   /Notification\.requestPermission/,
 );
-assert.match(bridgesSrc, /DesktopNotificationPermissionPrompt/);
+assert.match(bridgesSrc, /NotificationOptInBanner/);
 assert.match(bridgesPromptSrc, /requestDesktopNotificationPermissionInteractive/);
+assert.match(bridgesPromptSrc, /enablePush/);
+assert.match(bridgesPromptSrc, /Attiva le notifiche/);
+assert.match(bridgesPromptSrc, /notificationOptInContextLabel/);
 assert.match(bellSrc, /NotificationsPanelFooter/);
 assert.match(bellSrc, />\s*Abilita\s*</);
 assert.match(bellSrc, />\s*Test\s*</);

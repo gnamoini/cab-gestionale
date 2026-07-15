@@ -1,4 +1,10 @@
 import assert from "node:assert/strict";
+import { clampSwipeDismissDragX } from "@/lib/ui/use-swipe-to-dismiss";
+
+assert.equal(clampSwipeDismissDragX(-160, 320), -160);
+assert.equal(clampSwipeDismissDragX(-400, 320), -320);
+assert.equal(clampSwipeDismissDragX(40, 320), 0);
+assert.equal(clampSwipeDismissDragX(0, 320), 0);
 
 /** ponytail: sanity check formula backdrop durante drag (speculare al hook). */
 function backdropOpacityForDrag(dragX: number, width: number): number {

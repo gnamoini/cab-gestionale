@@ -5,6 +5,7 @@ import {
 } from "@/lib/theme/user-theme-prefs";
 import {
   resolveServerThemeMode,
+  syncBrowserChromeThemeColor,
   THEME_CRITICAL_BG,
 } from "@/lib/theme/cab-theme-storage";
 
@@ -20,5 +21,7 @@ const modes: PersistedThemeMode[] = ["dark", "light"];
 for (const mode of modes) {
   assert.ok(THEME_CRITICAL_BG[mode].startsWith("#"), `THEME_CRITICAL_BG.${mode} must be hex`);
 }
+
+assert.equal(typeof syncBrowserChromeThemeColor, "function");
 
 console.log("cab-theme-storage.test.ts OK");

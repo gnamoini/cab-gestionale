@@ -12,7 +12,9 @@ const board = fs.readFileSync(
 
 assert.match(board, /lastSyncedSectionIdsKeyRef/);
 assert.match(board, /if \(lastSyncedSectionIdsKeyRef\.current === sectionIdsKey\) return/);
-assert.match(board, /prev === id \? "" : id/);
+assert.match(board, /openSectionIds\.has\(section\.id\)/);
+assert.match(board, /if \(next\.has\(id\)\) next\.delete\(id\)/);
+assert.match(board, /else next\.add\(id\)/);
 assert.match(board, /section\.nested/);
 
 const view = fs.readFileSync(

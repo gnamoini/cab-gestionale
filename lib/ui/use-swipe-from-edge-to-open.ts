@@ -32,24 +32,20 @@ export function shouldCommitEdgeOpen(dragX: number, panelWidth: number): boolean
   return dragX >= panelWidth * OPEN_RATIO;
 }
 
-function readSafeAreaLeftPx(): number {
-  if (typeof document === "undefined") return 0;
-  const probe = document.createElement("div");
-  probe.style.cssText =
-    "position:fixed;left:0;top:0;padding-left:env(safe-area-inset-left);visibility:hidden;pointer-events:none";
-  document.documentElement.appendChild(probe);
-  const px = probe.offsetWidth;
-  probe.remove();
-  return px;
-}
-
-function isHorizontallyScrollable(el: Element | null): boolean {
-  let node = el;
+/**
+ * Target touch che non deve avviare l'apertura menu (scroll orizzontale, opt-out esplicito).
+ */
+export function isSwipeNavGestureBlockedTarget(el: Element | null): boolean {
+  if (el == null || typeof HTMLElement === "undefined") return false;
+  let node: Element | null = el;
   while (node instanceof HTMLElement) {
+    if (node.dataset.cabSwipeNavIgnore !== undefined) return true;
     const style = getComputedStyle(node);
+    const touchAction = style.touchAction;
+    if (touchAction.includes("pan-x") && !touchAction.includes("pan-y")) return true;
     const overflowX = style.overflowX;
     if (
-      (overflowX === "auto" || overflowX === "scroll") &&
+      (overflowX === "auto" || overflowX === "scroll" || overflowX === "overlay") &&
       node.scrollWidth > node.clientWidth + 1
     ) {
       return true;
@@ -76,8 +72,9 @@ export type UseSwipeFromEdgeToOpenOptions = {
 };
 
 /**
- * Swipe orizzontale dal bordo sinistro per aprire drawer nav (mobile).
+ * Swipe orizzontale verso destra per aprire drawer nav (mobile).
  * ponytail: soglia fissa 30% larghezza; upgrade = velocity-based open.
+ * Parte da tutta la pagina, tranne target con scroll orizzontale (`isSwipeNavGestureBlockedTarget`).
  */
 export function useSwipeFromEdgeToOpen({
   enabled,
@@ -130,15 +127,12 @@ export function useSwipeFromEdgeToOpen({
   useEffect(() => {
     if (!enabled) return;
 
-    const edgeZone = resolveEdgeZonePx(readSafeAreaLeftPx());
-
     function onTouchStart(e: TouchEvent) {
       if (edgeActiveRef.current || isSnapping) return;
       const touch = e.touches[0];
       if (!touch) return;
-      if (touch.clientX > edgeZone) return;
       const target = e.target;
-      if (target instanceof Element && isHorizontallyScrollable(target)) return;
+      if (target instanceof Element && isSwipeNavGestureBlockedTarget(target)) return;
 
       dragRef.current = {
         startX: touch.clientX,

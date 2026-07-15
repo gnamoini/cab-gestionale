@@ -1,22 +1,16 @@
 "use client";
 
 import { Tooltip } from "@/components/ui";
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { LoadingSpinner } from "@/components/design-system/loading";
+import { CalendarMonthYearPicker } from "@/components/gestionale/global-input/calendar-month-year-picker";
 import {
-  useDropdownOutsideDismiss,
-  useGlobalDropdownPortal,
-} from "@/components/gestionale/global-input/use-global-dropdown-portal";
-import {
-  CalendarNavChevronDown,
   CalendarNavChevronLeft,
   CalendarNavChevronRight,
   CalendarTodayIcon,
 } from "@/components/gestionale/global-input/calendar-nav-icons";
 import {
   WEEKDAYS_IT,
-  MONTHS_IT,
   addMonths,
   buildMonthGrid,
   toYmd,
@@ -32,328 +26,10 @@ import {
   globalInputCalendarDaySelected,
   globalInputCalendarDayToday,
   globalInputCalendarGridShell,
-  promemoriaPickerMenuPanel,
-  promemoriaPickerOptionClass,
-  promemoriaPickerTodayBadge,
 } from "@/lib/ui/global-input";
 
 const promemoriaDayBtnClass = `${globalInputCalendarDayBtn} relative touch-manipulation motion-reduce:transition-none`;
 
-const pickerTriggerClass = [
-  "inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-0.5 rounded-[var(--ds-radius-lg)] px-1.5",
-  "text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text)] sm:flex-none sm:gap-1 sm:px-2 sm:text-sm",
-  "transition-[background-color,opacity] duration-150 hover:bg-[var(--cab-hover)]",
-].join(" ");
-
-function useListboxKeyboardNav(
-  open: boolean,
-  itemCount: number,
-  activeIndex: number,
-  setActiveIndex: (index: number) => void,
-  onConfirm: (index: number) => void,
-  onClose: () => void,
-) {
-  useEffect(() => {
-    if (!open || itemCount === 0) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-        return;
-      }
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setActiveIndex(activeIndex < 0 ? 0 : (activeIndex + 1) % itemCount);
-        return;
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setActiveIndex(activeIndex < 0 ? itemCount - 1 : (activeIndex - 1 + itemCount) % itemCount);
-        return;
-      }
-      if (e.key === "Enter" && activeIndex >= 0) {
-        e.preventDefault();
-        onConfirm(activeIndex);
-      }
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, itemCount, activeIndex, setActiveIndex, onConfirm, onClose]);
-}
-
-function PromemoriaMonthYearPickers({
-  viewYear,
-  viewMonth1,
-  onApply,
-  isMonthLoading = false,
-}: {
-  viewYear: number;
-  viewMonth1: number;
-  onApply: (year: number, month1: number) => void;
-  isMonthLoading?: boolean;
-}) {
-  const [monthOpen, setMonthOpen] = useState(false);
-  const [yearOpen, setYearOpen] = useState(false);
-  const [monthActiveIndex, setMonthActiveIndex] = useState(-1);
-  const [yearActiveIndex, setYearActiveIndex] = useState(-1);
-  const monthTriggerRef = useRef<HTMLButtonElement>(null);
-  const monthMenuRef = useRef<HTMLUListElement>(null);
-  const yearTriggerRef = useRef<HTMLButtonElement>(null);
-  const yearMenuRef = useRef<HTMLUListElement>(null);
-  const monthListId = useId();
-  const yearListId = useId();
-
-  const { todayYear, todayMonth1 } = useMemo(() => {
-    const t = new Date();
-    return { todayYear: t.getFullYear(), todayMonth1: t.getMonth() + 1 };
-  }, []);
-
-  const yearOptions = useMemo(
-    () => Array.from({ length: 10 }, (_, i) => todayYear + i),
-    [todayYear],
-  );
-
-  const monthLabel = MONTHS_IT[viewMonth1 - 1] ?? "";
-
-  const closeAll = useCallback(() => {
-    setMonthOpen(false);
-    setYearOpen(false);
-    setMonthActiveIndex(-1);
-    setYearActiveIndex(-1);
-  }, []);
-
-  const closeMonth = useCallback(() => {
-    setMonthOpen(false);
-    setMonthActiveIndex(-1);
-  }, []);
-
-  const closeYear = useCallback(() => {
-    setYearOpen(false);
-    setYearActiveIndex(-1);
-  }, []);
-
-  const {
-    style: monthPortalStyle,
-    scrollInside: monthScrollInside,
-    placementOriginClass: monthPlacementClass,
-  } = useGlobalDropdownPortal({
-    open: monthOpen,
-    anchorRef: monthTriggerRef,
-    contentRef: monthMenuRef,
-    repositionDeps: [MONTHS_IT.length, viewMonth1],
-    panelWidth: 216,
-    matchAnchorWidth: true,
-    maxHeight: 280,
-  });
-
-  const {
-    style: yearPortalStyle,
-    scrollInside: yearScrollInside,
-    placementOriginClass: yearPlacementClass,
-  } = useGlobalDropdownPortal({
-    open: yearOpen,
-    anchorRef: yearTriggerRef,
-    contentRef: yearMenuRef,
-    repositionDeps: [yearOptions.length, viewYear],
-    panelWidth: 144,
-    matchAnchorWidth: true,
-    maxHeight: 280,
-  });
-
-  useDropdownOutsideDismiss(monthOpen, monthTriggerRef, monthMenuRef, closeMonth);
-  useDropdownOutsideDismiss(yearOpen, yearTriggerRef, yearMenuRef, closeYear);
-
-  const selectMonth = useCallback(
-    (month1: number) => {
-      onApply(viewYear, month1);
-      closeAll();
-    },
-    [closeAll, onApply, viewYear],
-  );
-
-  const selectYear = useCallback(
-    (y: number) => {
-      onApply(y, viewMonth1);
-      closeAll();
-    },
-    [closeAll, onApply, viewMonth1],
-  );
-
-  useListboxKeyboardNav(
-    monthOpen,
-    MONTHS_IT.length,
-    monthActiveIndex,
-    setMonthActiveIndex,
-    (index) => selectMonth(index + 1),
-    closeMonth,
-  );
-
-  useListboxKeyboardNav(
-    yearOpen,
-    yearOptions.length,
-    yearActiveIndex,
-    setYearActiveIndex,
-    (index) => selectYear(yearOptions[index]!),
-    closeYear,
-  );
-
-  const monthMenuPanelClass = `${promemoriaPickerMenuPanel} min-w-[13.5rem] ${monthPlacementClass} ${
-    monthScrollInside ? "overflow-y-auto" : "overflow-hidden"
-  }`;
-
-  const yearMenuPanelClass = `${promemoriaPickerMenuPanel} min-w-[9rem] ${yearPlacementClass} ${
-    yearScrollInside ? "overflow-y-auto" : "overflow-hidden"
-  }`;
-
-  const monthMenu =
-    monthOpen && monthPortalStyle ? (
-      <ul
-        ref={monthMenuRef}
-        id={monthListId}
-        role="listbox"
-        aria-label="Seleziona mese"
-        style={monthPortalStyle}
-        className={`${monthMenuPanelClass} space-y-0.5`}
-      >
-        {MONTHS_IT.map((label, index) => {
-          const month1 = index + 1;
-          const selected = month1 === viewMonth1;
-          const active = index === monthActiveIndex;
-          const isTodayMonth = viewYear === todayYear && month1 === todayMonth1;
-          return (
-            <li key={label} role="presentation">
-              <button
-                type="button"
-                role="option"
-                aria-selected={selected}
-                className={`${promemoriaPickerOptionClass(active, selected)} ${dsFocus}`}
-                onMouseDown={(e) => e.preventDefault()}
-                onMouseEnter={() => setMonthActiveIndex(index)}
-                onClick={() => selectMonth(month1)}
-              >
-                <span className="min-w-0 truncate">{label}</span>
-                {isTodayMonth ? <span className={promemoriaPickerTodayBadge}>Oggi</span> : null}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    ) : null;
-
-  const yearMenu =
-    yearOpen && yearPortalStyle ? (
-      <ul
-        ref={yearMenuRef}
-        id={yearListId}
-        role="listbox"
-        aria-label="Seleziona anno"
-        style={yearPortalStyle}
-        className={`${yearMenuPanelClass} space-y-0.5`}
-      >
-        {yearOptions.map((y, index) => {
-          const selected = y === viewYear;
-          const active = index === yearActiveIndex;
-          const isTodayYear = y === todayYear;
-          return (
-            <li key={y} role="presentation">
-              <button
-                type="button"
-                role="option"
-                aria-selected={selected}
-                className={`${promemoriaPickerOptionClass(active, selected)} ${dsFocus} tabular-nums`}
-                onMouseDown={(e) => e.preventDefault()}
-                onMouseEnter={() => setYearActiveIndex(index)}
-                onClick={() => selectYear(y)}
-              >
-                <span>{y}</span>
-                {isTodayYear ? <span className={promemoriaPickerTodayBadge}>Oggi</span> : null}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    ) : null;
-
-  return (
-    <div
-      className={`flex min-w-0 flex-1 items-center justify-center gap-0.5 max-sm:min-w-0 ${isMonthLoading ? "opacity-60" : "opacity-100"}`}
-    >
-      <button
-          ref={monthTriggerRef}
-          type="button"
-          className={`${pickerTriggerClass} ${dsFocus}`}
-          aria-expanded={monthOpen}
-          aria-haspopup="listbox"
-          aria-controls={monthOpen ? monthListId : undefined}
-          aria-label={`Seleziona mese, attuale ${monthLabel}`}
-          onClick={() => {
-            setYearOpen(false);
-            setYearActiveIndex(-1);
-            setMonthOpen((open) => {
-              if (!open) setMonthActiveIndex(viewMonth1 - 1);
-              return !open;
-            });
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setYearOpen(false);
-              setYearActiveIndex(-1);
-              setMonthActiveIndex(viewMonth1 - 1);
-              setMonthOpen(true);
-            }
-          }}
-        >
-          <span className="min-w-0 truncate">{monthLabel}</span>
-          <CalendarNavChevronDown
-            className={`text-[color:var(--cab-text-muted)] transition-transform duration-150 ${monthOpen ? "rotate-180" : ""}`}
-          />
-        </button>
-      {typeof document !== "undefined" && monthMenu ? createPortal(monthMenu, document.body) : null}
-
-      <button
-          ref={yearTriggerRef}
-          type="button"
-          className={`${pickerTriggerClass} tabular-nums ${dsFocus}`}
-          aria-expanded={yearOpen}
-          aria-haspopup="listbox"
-          aria-controls={yearOpen ? yearListId : undefined}
-          aria-label={`Seleziona anno, attuale ${viewYear}`}
-          onClick={() => {
-            setMonthOpen(false);
-            setMonthActiveIndex(-1);
-            setYearOpen((open) => {
-              if (!open) {
-                const idx = yearOptions.indexOf(viewYear);
-                setYearActiveIndex(idx >= 0 ? idx : 0);
-              }
-              return !open;
-            });
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setMonthOpen(false);
-              setMonthActiveIndex(-1);
-              const idx = yearOptions.indexOf(viewYear);
-              setYearActiveIndex(idx >= 0 ? idx : 0);
-              setYearOpen(true);
-            }
-          }}
-        >
-          <span>{viewYear}</span>
-          <CalendarNavChevronDown
-            className={`text-[color:var(--cab-text-muted)] transition-transform duration-150 ${yearOpen ? "rotate-180" : ""}`}
-          />
-        </button>
-      {typeof document !== "undefined" && yearMenu ? createPortal(yearMenu, document.body) : null}
-
-      {isMonthLoading ? (
-        <LoadingSpinner size="sm" label="Caricamento mese" className="ms-1 shrink-0 text-[color:var(--cab-text-muted)]" />
-      ) : null}
-    </div>
-  );
-}
 
 export function DashboardPromemoriaCalendar({
   selectedYmd,
@@ -446,12 +122,24 @@ export function DashboardPromemoriaCalendar({
           >
             <CalendarNavChevronLeft />
           </button>
-          <PromemoriaMonthYearPickers
-            viewYear={year}
-            viewMonth1={month}
-            onApply={jumpToMonth}
-            isMonthLoading={isMonthLoading}
-          />
+          <div
+            className={`flex min-w-0 flex-1 items-center justify-center ${isMonthLoading ? "opacity-60" : "opacity-100"}`}
+          >
+            <CalendarMonthYearPicker
+              viewYear={year}
+              viewMonth={month - 1}
+              variant="grid"
+              disabled={isMonthLoading}
+              onApply={(y, m) => jumpToMonth(y, m + 1)}
+            />
+            {isMonthLoading ? (
+              <LoadingSpinner
+                size="sm"
+                label="Caricamento mese"
+                className="ms-1 shrink-0 text-[color:var(--cab-text-muted)]"
+              />
+            ) : null}
+          </div>
           <button
             type="button"
             className={`${dsPageToolbarIconBtn} ${dsFocus} shrink-0`}

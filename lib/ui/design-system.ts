@@ -94,11 +94,43 @@ export const dsPageToolbarBtn = `inline-flex min-h-11 min-w-0 shrink-0 items-cen
 /** Solo icona in toolbar header — footprint quadrato 44×44. */
 export const dsPageToolbarIconBtn = `${dsPageToolbarBtn} h-11 w-11 min-h-11 p-0`;
 
-/** Freccia indietro header — affordance hover, non box bottone. */
-export const dsPageHeaderBackBtn = `inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] border border-transparent bg-transparent p-0 text-[color:var(--cab-text-muted)] transition-[color,background-color,transform] duration-150 ease-out hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] active:scale-[0.97] ${dsBtnCursor} ${dsFocus}`;
+/** Bottone icona ghost shell — menu, indietro, chiudi (44×44). Hover: icona più luminosa/spessa, no box. */
+export const dsShellNavIconBtn = [
+  "group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)]",
+  "border border-transparent bg-transparent p-0 text-[color:var(--cab-text)]",
+  "transition-[color,transform] duration-200 ease-out",
+  "hover:text-[color:color-mix(in_srgb,var(--cab-primary)_82%,var(--cab-text))]",
+  "focus-visible:text-[color:color-mix(in_srgb,var(--cab-primary)_82%,var(--cab-text))]",
+  "active:scale-[0.97]",
+  "[&_svg]:transition-[transform,filter,opacity] [&_svg]:duration-200 [&_svg]:ease-out",
+  "hover:[&_svg]:scale-[1.08] hover:[&_svg]:drop-shadow-[0_0_8px_color-mix(in_srgb,var(--cab-primary)_40%,transparent)]",
+  "focus-visible:[&_svg]:scale-[1.08] focus-visible:[&_svg]:drop-shadow-[0_0_8px_color-mix(in_srgb,var(--cab-primary)_40%,transparent)]",
+  "hover:[&_svg_path]:[stroke-width:2.25] focus-visible:[&_svg_path]:[stroke-width:2.25]",
+  "motion-reduce:hover:[&_svg]:scale-100 motion-reduce:hover:[&_svg]:drop-shadow-none motion-reduce:focus-visible:[&_svg]:scale-100",
+  dsBtnCursor,
+  dsFocus,
+].join(" ");
 
-/** Hamburger menu mobile — leggermente più grande del back (44×44). */
-export const dsPageHeaderNavOpenBtn = dsPageHeaderBackBtn.replace("h-10 w-10", "h-11 w-11");
+/** Icona ghost header mobile — alias `dsShellNavIconBtn`. */
+export const dsPageHeaderIconBtn = dsShellNavIconBtn;
+
+/** Freccia indietro header — alias ghost unificato. */
+export const dsPageHeaderBackBtn = dsShellNavIconBtn;
+
+/** Glyf header mobile — allineato menu hamburger. SSOT icone: `components/design-system/shell-nav-icons.tsx`. */
+export const dsPageHeaderIconGlyph = "h-7 w-7 shrink-0";
+
+/** Glyf header mobile con artwork più pieno (refresh) — stessa percezione del menu. */
+export const dsPageHeaderIconGlyphDense = "h-5 w-5 shrink-0";
+
+/** Spessore tratto icone header mobile (menu, refresh, …). */
+export const dsPageHeaderIconStroke = 1.75;
+
+/** Azione header destra: ghost su mobile, boxed da sm+ (es. Aggiorna). */
+export const dsPageHeaderToolbarActionBtn = `${dsPageHeaderIconBtn} ${dsDisabled} sm:min-h-11 sm:min-w-0 sm:w-auto sm:gap-2 sm:border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] sm:${cabSurface} sm:px-3 sm:py-0 sm:text-xs sm:font-semibold ${cabText} sm:shadow-[var(--cab-shadow-sm)] sm:transition-[background-color,box-shadow,ring-color,border-color,color] sm:duration-200 sm:ease-out sm:hover:bg-[var(--cab-hover)] sm:hover:shadow-[var(--cab-shadow-md)] sm:hover:ring-1 sm:hover:ring-[color:color-mix(in_srgb,var(--cab-border-strong)_70%,transparent)]`;
+
+/** Hamburger menu mobile — alias di `dsPageHeaderIconBtn`. */
+export const dsPageHeaderNavOpenBtn = dsPageHeaderIconBtn;
 
 export const dsBtnSettings = dsPageToolbarBtn;
 
@@ -418,9 +450,9 @@ export const dsZTooltip = "z-[190]";
 export const dsZGlobalLoading = "z-[170]";
 export const dsZToast = "z-[200]";
 
-/** Stack toast (basso a destra). */
+/** Stack toast: alto su mobile, basso a destra da md. */
 export const dsToastViewport =
-  "pointer-events-none fixed bottom-0 right-0 flex max-h-[min(50dvh,24rem)] w-full max-w-[min(100%,24rem)] flex-col-reverse overflow-hidden p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))]";
+  "cab-toast-viewport pointer-events-none fixed right-0 flex max-h-[min(50dvh,24rem)] w-full max-w-[min(100%,24rem)] flex-col-reverse overflow-hidden max-md:top-0 max-md:bottom-auto max-md:p-3 max-md:pt-[max(0.75rem,env(safe-area-inset-top))] max-md:pb-0 md:bottom-0 md:p-4 md:pb-[max(1rem,env(safe-area-inset-bottom))]";
 
 /** Singola notifica toast — tono via classi aggiuntive (bordo + sfondo). */
 export const dsToastItem =
@@ -437,11 +469,11 @@ export const dsToastDismiss =
 
 /** Contenuto tooltip portal (azioni / CTA — testo breve o frase su più righe, senza scroll). */
 export const dsTooltipContent =
-  "pointer-events-none max-w-[16rem] overflow-hidden whitespace-normal leading-snug rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)]";
+  "pointer-events-none max-w-[16rem] overflow-hidden whitespace-normal break-words leading-snug rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)]";
 
 /** Tooltip multilinea (es. celle timesheet). */
 export const dsTooltipContentMultiline =
-  "pointer-events-none max-w-[14rem] overflow-hidden whitespace-pre-line text-center leading-snug rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)]";
+  "pointer-events-none max-w-[14rem] overflow-hidden whitespace-pre-line break-words text-center leading-snug rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)]";
 
 /** Stato portal tooltip — solo visibility (no opacity/transform: evita sfondo trasparente). */
 export const dsTooltipPortalVisible = "visible";
@@ -530,9 +562,9 @@ export const dsModalSubtitle = `mt-0.5 line-clamp-2 ${dsTypoCaption}`;
 /** Sottotitolo hub (mezzo, configurazione): fino a 2 righe senza troncare metadata densi. */
 export const dsModalSubtitleHub = `mt-0.5 line-clamp-2 ${dsTypoCaption}`;
 
-export const dsModalCloseBtn = "h-11 w-11 shrink-0 sm:h-9 sm:w-9";
+export const dsModalCloseBtn = "shrink-0";
 
-export const dsModalBackBtn = `${dsPageToolbarBtn} h-9 shrink-0 px-2.5 text-xs sm:px-3`;
+export const dsModalBackBtn = dsShellNavIconBtn;
 
 /** Alias espliciti sezione / card */
 export const dsSectionTitle = dsTypoSectionTitle;

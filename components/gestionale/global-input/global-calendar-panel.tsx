@@ -5,10 +5,10 @@ import {
   WEEKDAYS_IT,
   addMonths,
   buildMonthGrid,
-  formatMonthTitle,
   toYmd,
   ymdToLocalDate,
 } from "@/components/gestionale/global-input/calendar-utils";
+import { CalendarMonthYearPicker } from "@/components/gestionale/global-input/calendar-month-year-picker";
 import {
   CalendarNavChevronLeft,
   CalendarNavChevronRight,
@@ -65,9 +65,12 @@ export function GlobalCalendarPanel({
         >
           <CalendarNavChevronLeft />
         </button>
-        <span className="min-w-0 flex-1 truncate text-center text-xs font-bold uppercase tracking-wide text-[color:var(--cab-text)]">
-          {formatMonthTitle(viewYear, viewMonth)}
-        </span>
+        <CalendarMonthYearPicker
+          viewYear={viewYear}
+          viewMonth={viewMonth}
+          variant="popup"
+          onApply={onViewChange}
+        />
         <button
           type="button"
           className={globalInputCalendarNavBtn}

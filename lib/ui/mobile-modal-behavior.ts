@@ -97,6 +97,8 @@ export const MOBILE_FOCUS_EXTRA_TOP = 16;
 export const DESKTOP_FOCUS_EXTRA_TOP = 8;
 export const MOBILE_FOCUS_EXTRA_BOTTOM = 16;
 export const DESKTOP_FOCUS_EXTRA_BOTTOM = 12;
+/** Padding extra sotto il campo quando la tastiera virtuale è aperta in modale. */
+export const MOBILE_KEYBOARD_FOCUS_EXTRA_BOTTOM = 32;
 
 export function resolveFocusExtraTop(): number {
   return isMobileFocusScrollViewport() ? MOBILE_FOCUS_EXTRA_TOP : DESKTOP_FOCUS_EXTRA_TOP;
@@ -104,6 +106,26 @@ export function resolveFocusExtraTop(): number {
 
 export function resolveFocusExtraBottom(): number {
   return isMobileFocusScrollViewport() ? MOBILE_FOCUS_EXTRA_BOTTOM : DESKTOP_FOCUS_EXTRA_BOTTOM;
+}
+
+function isModalTextEntryField(field: HTMLElement): boolean {
+  if (!field.closest(`[${CAB_MODAL_ROOT_ATTR}]`)) return false;
+  const tag = field.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || field.isContentEditable;
+}
+
+function resolveFocusScrollRectForDelta(field: HTMLElement): FocusScrollRect {
+  if (computeKeyboardInset() > 0 || isModalTextEntryField(field)) {
+    return getFocusScrollBlockRect(field);
+  }
+  return getFocusScrollRect(field);
+}
+
+function resolveEffectiveFocusExtraBottom(field: HTMLElement, base: number): number {
+  if (computeKeyboardInset() > 0 && field.closest(`[${CAB_MODAL_ROOT_ATTR}]`)) {
+    return Math.max(base, MOBILE_KEYBOARD_FOCUS_EXTRA_BOTTOM);
+  }
+  return base;
 }
 
 function isMobileFocusScrollViewport(): boolean {
@@ -510,7 +532,10 @@ export function scrollGestionaleFieldIntoView(
   const container = findGestionaleScrollContainer(field);
   if (!container) return false;
 
-  const extraBottom = options.extraBottom ?? resolveFocusExtraBottom();
+  const extraBottom = resolveEffectiveFocusExtraBottom(
+    field,
+    options.extraBottom ?? resolveFocusExtraBottom(),
+  );
   const extraTop = options.extraTop ?? resolveFocusExtraTop();
   const containerRect = container.getBoundingClientRect();
   const { visibleTop, visibleBottom } = getEffectiveVisibleBand({
@@ -529,7 +554,7 @@ export function scrollGestionaleFieldIntoView(
     return true;
   }
 
-  const scrollRect = getFocusScrollRect(field);
+  const scrollRect = resolveFocusScrollRectForDelta(field);
   const delta = computeFocusScrollDelta(scrollRect, visibleTop, visibleBottom);
 
   if (Math.abs(delta) < 2) {
@@ -669,6 +694,7 @@ export const MobileModalBehaviorLayer = {
   isGestionaleFocusableField,
   MOBILE_FOCUS_EXTRA_TOP,
   DESKTOP_FOCUS_EXTRA_TOP,
+  MOBILE_KEYBOARD_FOCUS_EXTRA_BOTTOM,
   resolveFocusExtraTop,
   resolveFocusExtraBottom,
   resolveFocusScrollTarget,

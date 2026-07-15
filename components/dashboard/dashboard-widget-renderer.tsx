@@ -2,6 +2,7 @@
 
 import type { DashboardWidgetId } from "@/lib/dashboard/dashboard-widget-registry";
 import { getDashboardWidgetDef } from "@/lib/dashboard/dashboard-widget-registry";
+import { DashboardHealthScoreWidget } from "@/components/dashboard/widgets/dashboard-health-score-widget";
 import { DashboardOperationalKpiHeaderWidget } from "@/components/dashboard/widgets/dashboard-operational-kpi-header-widget";
 import { DashboardLocalNotesWidget } from "@/components/dashboard/widgets/dashboard-local-notes-widget";
 import { DashboardRecentActivityWidget } from "@/components/dashboard/widgets/dashboard-recent-activity-widget";
@@ -27,6 +28,8 @@ export function DashboardWidgetRenderer({ id }: { id: DashboardWidgetId }) {
   switch (id) {
     case "operational-kpi-header":
       return <DashboardOperationalKpiHeaderWidget def={def} />;
+    case "health-score":
+      return <DashboardHealthScoreWidget def={def} />;
     case "recent-activity":
       return <DashboardRecentActivityWidget def={def} />;
     case "local-notes":

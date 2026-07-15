@@ -31,7 +31,7 @@ for (const testId of ["smoke-contattaci-call", "smoke-contattaci-whatsapp", "smo
 }
 
 const actionAnchors = dialog.match(/<a[\s\S]*?data-testid="smoke-contattaci-(call|whatsapp|email)"[\s\S]*?<\/a>/g) ?? [];
-assert.equal(actionAnchors.length, 3, "expected exactly 3 action anchors in footer");
+assert.equal(actionAnchors.length, 3, "expected exactly 3 action anchors");
 for (const block of actionAnchors) {
   if (block.includes('smoke-contattaci-email')) {
     assert.match(block, /openNativeContactHref\(mailtoHref\)/, "email must open mailto draft");
@@ -51,7 +51,10 @@ assert.match(dialog, /data-testid="smoke-contattaci-close"/);
 const scrollBodyMatch = dialog.match(/<GestionaleModalScrollBody[\s\S]*?<\/GestionaleModalScrollBody>/);
 assert.ok(scrollBodyMatch, "GestionaleModalScrollBody block expected");
 const scrollBody = scrollBodyMatch[0]!;
-assert.doesNotMatch(scrollBody, /<a\s+href=/, "scroll body must not contain action links");
+assert.doesNotMatch(dialog, /footer=\{/);
+assert.match(scrollBody, /data-testid="smoke-contattaci-call"/);
+assert.match(scrollBody, /data-testid="smoke-contattaci-whatsapp"/);
+assert.match(scrollBody, /data-testid="smoke-contattaci-email"/);
 
 assert.match(listView, /primaryAction=\{[\s\S]*ClientContattaciButton/);
 

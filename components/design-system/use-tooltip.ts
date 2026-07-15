@@ -5,6 +5,7 @@ import {
   flip,
   offset,
   shift,
+  size,
   useFloating,
   type Placement,
 } from "@floating-ui/react-dom";
@@ -56,6 +57,7 @@ export function useTooltip({
   disabled = false,
   delayMs = DEFAULT_SHOW_DELAY_MS,
   side = "top",
+  sideOffset,
   showOnFocus = true,
   dismissOnPointerDown = true,
   contentRef,
@@ -64,6 +66,7 @@ export function useTooltip({
   disabled?: boolean;
   delayMs?: number;
   side?: TooltipSide;
+  sideOffset?: number;
   /** Tooltip su focus tastiera (`:focus-visible`). Disabilitare per azioni che restano focalizzate al click. */
   showOnFocus?: boolean;
   /** Default `true`. Impostare `false` su handle drag (mousedown avvia il drag, non un click). */
@@ -109,9 +112,20 @@ export function useTooltip({
     placement: sideToPlacement(side),
     strategy: "fixed",
     middleware: [
-      offset(TOOLTIP_GAP),
-      flip({ padding: TOOLTIP_VIEWPORT_PAD }),
-      shift({ padding: TOOLTIP_VIEWPORT_PAD }),
+      offset(sideOffset ?? TOOLTIP_GAP),
+      flip({
+        padding: TOOLTIP_VIEWPORT_PAD,
+        fallbackPlacements: ["top", "bottom", "left", "right"],
+      }),
+      shift({ padding: TOOLTIP_VIEWPORT_PAD, crossAxis: true }),
+      size({
+        padding: TOOLTIP_VIEWPORT_PAD,
+        apply({ availableWidth, elements }) {
+          Object.assign(elements.floating.style, {
+            maxWidth: `${Math.max(0, Math.floor(availableWidth))}px`,
+          });
+        },
+      }),
     ],
     whileElementsMounted: open ? autoUpdate : undefined,
   });

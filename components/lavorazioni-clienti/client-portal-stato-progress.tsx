@@ -12,7 +12,7 @@ import {
 } from "@/lib/ui/collapsible-prefs";
 import { dsHubModalFieldLabel } from "@/lib/ui/design-system";
 import {
-  GestionaleCollapsibleChevronBox,
+  GestionaleCollapsibleChevronIcon,
 } from "@/components/design-system/gestionale-collapsible-chevron";
 import {
   gestionaleCollapsiblePanelGridClass,
@@ -99,7 +99,7 @@ export function ClientPortalStatoProgress({
           const isDone = step.status === "done";
           const isUpcoming = step.status === "upcoming";
           const dotStyle = readablePillStyleFromHex(step.color);
-          const dotClass = `client-portal-stato-progress-dot absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] ${
+          const dotClass = `client-portal-stato-progress-dot absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ${
             isCurrent
               ? "client-portal-stato-progress-dot--current z-10 h-3.5 w-3.5"
               : isDone
@@ -130,24 +130,25 @@ export function ClientPortalStatoProgress({
         </div>
       </div>
 
-      <div className="mt-3 min-w-0">
+      <div className="mt-3 min-w-0 overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_72%,var(--cab-card))] shadow-[var(--cab-shadow-sm)]">
         <button
           type="button"
-          className="flex min-w-0 items-center gap-2 text-left touch-manipulation"
+          className="group flex w-full min-w-0 items-center justify-between gap-2 border-0 bg-transparent px-2.5 py-2 text-left outline-none transition-colors duration-200 ease-out hover:bg-[var(--cab-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)] touch-manipulation [-webkit-tap-highlight-color:transparent]"
           onClick={() => setPhasesOpen((open) => !open)}
           aria-expanded={phasesOpen}
           aria-controls="client-portal-stato-phases"
         >
-          <GestionaleCollapsibleChevronBox expanded={phasesOpen} />
           <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
             Dettaglio fasi
           </span>
+          <GestionaleCollapsibleChevronIcon expanded={phasesOpen} className="h-4 w-4 shrink-0" />
         </button>
         <div
           className={`${gestionaleCollapsiblePanelGridClass} ${phasesOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
         >
           <div className={`${gestionaleCollapsiblePanelInnerClass} ${phasesOpen ? "opacity-100" : "opacity-0"}`}>
-            <ul id="client-portal-stato-phases" className="space-y-1.5 pt-1.5">
+            <div className="border-t border-[color:var(--cab-border)] px-2.5 pb-2.5 pt-2">
+              <ul id="client-portal-stato-phases" className="space-y-1.5">
         {steps.map((step) => {
           const dotStyle =
             step.status === "upcoming"
@@ -157,13 +158,16 @@ export function ClientPortalStatoProgress({
           return (
             <li key={step.id} className="flex min-w-0 items-center gap-2">
               <span
-                className={`h-2 w-2 shrink-0 rounded-full ring-2 ring-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] ${
+                className={`client-portal-stato-progress-phase-dot h-2 w-2 shrink-0 rounded-full ${
                   step.status === "upcoming" ? "bg-[color:var(--cab-border)]" : ""
                 }`}
                 style={
                   step.status === "upcoming"
                     ? undefined
-                    : { backgroundColor: dotStyle?.backgroundColor }
+                    : {
+                        backgroundColor: dotStyle?.backgroundColor,
+                        ["--client-portal-dot-color" as string]: dotStyle?.backgroundColor,
+                      }
                 }
                 aria-hidden
               />
@@ -187,7 +191,8 @@ export function ClientPortalStatoProgress({
             </li>
           );
         })}
-            </ul>
+              </ul>
+            </div>
           </div>
         </div>
       </div>

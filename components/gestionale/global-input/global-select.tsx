@@ -282,10 +282,12 @@ export function GlobalSelect(props: GlobalSelectProps) {
         mobileSheet,
         sheetSearchableEnabled: resolvedMobileSheetMode === "searchable",
         dynamicList,
-        operationalFilter,
+        operationalFilter: operationalFilter ?? variant === "filter",
         isMobile,
         optionCount: totalOptionCount,
-        minSheetOptions: resolvedMinSheetOptions,
+        minSheetOptions:
+          minSheetOptions ??
+          (variant === "filter" ? 0 : resolvedMinSheetOptions),
       }),
     );
     decisionTraceIdRef.current = decision.traceId ?? "";
@@ -298,8 +300,10 @@ export function GlobalSelect(props: GlobalSelectProps) {
     mobileSheet,
     dynamicList,
     operationalFilter,
+    variant,
     isMobile,
     totalOptionCount,
+    minSheetOptions,
     resolvedMinSheetOptions,
   ]);
 
@@ -1104,8 +1108,9 @@ export function GlobalSelect(props: GlobalSelectProps) {
         highlightQuery,
         highlightSearch,
         onPointerSelect,
+        sheetTapSelect: sheetOpen,
       }),
-    [highlightQuery, highlightSearch, onPointerSelect],
+    [highlightQuery, highlightSearch, onPointerSelect, sheetOpen],
   );
 
   const itemRenderOption = useMemo(
@@ -1116,8 +1121,9 @@ export function GlobalSelect(props: GlobalSelectProps) {
         highlightQuery,
         highlightSearch,
         onPointerSelect,
+        sheetTapSelect: sheetOpen,
       }),
-    [value, coloredOptions, highlightQuery, highlightSearch, onPointerSelect],
+    [value, coloredOptions, highlightQuery, highlightSearch, onPointerSelect, sheetOpen],
   );
 
   const listFooterNote = isListTruncated ? (

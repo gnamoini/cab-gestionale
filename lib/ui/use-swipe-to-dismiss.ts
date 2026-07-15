@@ -14,6 +14,11 @@ type DragState = {
   lastDeltaX: number;
 };
 
+/** Chiusura drawer: mai oltre la posizione aperta (bordo sinistro ancorato). */
+export function clampSwipeDismissDragX(deltaX: number, panelWidth: number): number {
+  return Math.min(0, Math.max(-panelWidth, deltaX));
+}
+
 /**
  * Swipe orizzontale verso sinistra per chiudere pannelli drawer (mobile).
  * ponytail: soglia fissa 30% larghezza; upgrade = velocity-based dismiss.
@@ -78,7 +83,7 @@ export function useSwipeToDismiss(onDismiss: () => void, enabled: boolean) {
 
       e.preventDefault();
       const width = panelRef.current?.offsetWidth ?? 320;
-      const nextX = Math.max(-width, deltaX);
+      const nextX = clampSwipeDismissDragX(deltaX, width);
       dragRef.current.lastDeltaX = nextX;
       setDragX(nextX);
     },

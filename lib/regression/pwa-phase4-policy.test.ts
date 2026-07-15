@@ -49,7 +49,8 @@ assert.match(appProviders, /PwaInstallBanner/);
 
 const deferredBridges = read("src/components/deferred-gestionale-bridges.tsx");
 assert.match(deferredBridges, /PwaPushPermissionBridge/);
-assert.match(deferredBridges, /PwaPushOptInBanner/);
+assert.match(deferredBridges, /NotificationOptInBanner/);
+assert.doesNotMatch(deferredBridges, /DesktopNotificationPermissionPrompt/);
 
 // --- push config / modules ---
 assert.equal(PWA_PUSH_ENABLED, false);
@@ -140,7 +141,8 @@ assert.match(runbook, /PWA_PUSH_ENABLED/);
 assert.match(runbook, /VAPID/);
 
 const pwaConfig = read("lib/pwa/pwa-config.ts");
-assert.match(pwaConfig, /process\.env\.PWA_PUSH_ENABLED/);
+assert.match(pwaConfig, /resolvePwaPushClientEnabled/);
+assert.ok(fs.existsSync(path.join(ROOT, "lib/pwa/push-enabled.ts")));
 
 // --- SW push handlers ---
 const swWorker = read("lib/pwa/sw-worker-entry.ts");

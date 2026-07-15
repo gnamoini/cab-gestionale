@@ -154,11 +154,11 @@ async function main(): Promise<void> {
   fs.mkdirSync(ICONS_DIR, { recursive: true });
 
   const master = await buildIconMaster({
-    logoMaxWidthRatio: 0.62,
+    logoMaxWidthRatio: 0.76,
     transparentCanvas: true,
   });
   const maskable = await buildIconMaster({
-    logoMaxWidthRatio: 0.5,
+    logoMaxWidthRatio: 0.62,
     fullBleedTile: true,
     transparentCanvas: false,
   });

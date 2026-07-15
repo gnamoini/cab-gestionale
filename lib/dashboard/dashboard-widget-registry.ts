@@ -3,17 +3,20 @@ import type { ResolvedPageAccess } from "@/src/lib/rbac/resolve-page-access";
 
 export type DashboardWidgetSection =
   | "kpi-header"
+  | "health-score"
   | "activity"
   | "optional";
 
 export const DASHBOARD_SECTION_ORDER: readonly DashboardWidgetSection[] = [
   "kpi-header",
+  "health-score",
   "activity",
   "optional",
 ] as const;
 
 export type DashboardWidgetId =
   | "operational-kpi-header"
+  | "health-score"
   | "recent-activity"
   | "local-notes"
   | "recent-lavorazioni"
@@ -40,6 +43,14 @@ export const DASHBOARD_WIDGET_REGISTRY: readonly DashboardWidgetDefinition[] = [
     order: 5,
     layout: "full",
     title: "Brief operativo",
+    defaultCollapsed: false,
+  },
+  {
+    id: "health-score",
+    section: "health-score",
+    order: 10,
+    layout: "full",
+    title: "Stato operativo",
     defaultCollapsed: false,
   },
   {

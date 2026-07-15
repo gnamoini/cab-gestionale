@@ -12,8 +12,7 @@ import { GestionaleNotificationsBridge } from "@/src/components/gestionale-notif
 import { GestionaleRealtimeBridge } from "@/src/components/gestionale-realtime-bridge";
 import { GestionaleSnapshotRecoveryBridge } from "@/src/components/gestionale-snapshot-recovery-bridge";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
-import { DesktopNotificationPermissionPrompt } from "@/src/components/desktop-notification-permission-prompt";
-import { PwaPushOptInBanner } from "@/src/components/pwa-push-opt-in-banner";
+import { NotificationOptInBanner } from "@/src/components/notification-opt-in-banner";
 import { PwaPushPermissionBridge } from "@/src/components/pwa-push-permission-bridge";
 import { PwaPushOpenBridge } from "@/src/components/pwa-push-open-bridge";
 import { PwaNotificationBadgeBridge } from "@/src/components/pwa-notification-badge";
@@ -56,11 +55,10 @@ export function DeferredGestionaleBridges() {
   return (
     <>
       <PwaPushPermissionBridge />
-      <PwaPushOptInBanner />
+      <NotificationOptInBanner />
       <PwaPushOpenBridge />
       <PwaNotificationBadgeBridge />
       <PwaSyncFinalizationBridge />
-      <DesktopNotificationPermissionPrompt />
       <GestionaleRealtimeBridge />
       <GestionaleNotificationsBridge />
       <AdminLavorazioniNotificationBridge />

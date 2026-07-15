@@ -17,9 +17,15 @@ const securityCreate = read("components/dashboard/security-create-user-modal.tsx
 const promemoriaForm = read("components/dashboard/promemoria/dashboard-promemoria-form-modal.tsx");
 const tasksPanel = read("components/dashboard/dashboard-diary-panel.tsx");
 const welcome = read("components/dashboard/dashboard-welcome.tsx");
+const healthScoreWidget = read("components/dashboard/widgets/dashboard-health-score-widget.tsx");
+const healthScoreRing = read("components/dashboard/dashboard-health-score-ring.tsx");
 
-assert.match(welcome, /DashboardHealthScoreRing/);
-assert.match(welcome, /useOperationalHealthScore/);
+assert.doesNotMatch(welcome, /DashboardHealthScoreRing/);
+assert.doesNotMatch(welcome, /useOperationalHealthScore/);
+assert.match(healthScoreWidget, /DashboardHealthScoreWidget/);
+assert.match(healthScoreWidget, /HealthScoreBreakdownBody/);
+assert.match(healthScoreRing, /export function HealthScoreBreakdownBody/);
+assert.doesNotMatch(healthScoreRing, /createPortal/);
 
 assert.match(securityView, /GlobalDatePickerYmd/);
 assert.doesNotMatch(securityView, /type="date"/);
@@ -42,14 +48,24 @@ assert.match(tasksPanel, /persistQueueRef/);
 assert.match(tasksPanel, /canReadPage\("dashboard"\)/);
 assert.match(tasksPanel, /isPermissionDeniedError/);
 assert.match(tasksPanel, /rbac\.isLoading \|\| readOnly/);
+assert.match(tasksPanel, /touch-pan-y/);
+assert.match(tasksPanel, /onClick=\{\(e\) => \{[\s\S]*focusField/);
+assert.doesNotMatch(tasksPanel, /onPointerDown=\{[\s\S]*preventDefault/);
 assert.doesNotMatch(tasksPanel, /readOnly\s*=\s*rbac\.isGuest/);
 
 const diaryEntry = read("lib/domain/operational-diary-entry.ts");
 assert.match(diaryEntry, /withPageReadGuard\("dashboard"/);
 assert.match(diaryEntry, /withPageWriteGuard\("dashboard"/);
 
-const diaryRls = read("supabase/migrations/20260911130100_operational_diary_dashboard_rls.sql");
-assert.match(diaryRls, /rbac_user_page_access_level\(public\.rbac_auth_uid\(\), 'dashboard'\)/);
+const diaryRlsFix = read("supabase/migrations/20260915122000_operational_diary_rls_exec_fix.sql");
+assert.match(diaryRlsFix, /rbac_operational_diary_dashboard_read/);
+assert.match(diaryRlsFix, /rbac_operational_diary_dashboard_write/);
+assert.match(diaryRlsFix, /grant execute on function public\.rbac_operational_diary_dashboard_write\(\) to authenticated/);
+assert.doesNotMatch(
+  diaryRlsFix,
+  /create policy cap_operational_diary_select[\s\S]*rbac_user_page_access_level/,
+  "RLS diario: no chiamate dirette a rbac_user_page_access_level da authenticated",
+);
 
 const diaryService = read("src/services/operational-diary.service.ts");
 assert.match(diaryService, /maybeSingle/);

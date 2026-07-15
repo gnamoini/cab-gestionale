@@ -4,6 +4,8 @@ import { dsZTooltip } from "@/lib/ui/design-system";
 /** Sopra sticky table / dropdown; sotto toast (200). */
 export const TOOLTIP_PORTAL_Z = 190;
 export const TOOLTIP_GAP = 6;
+/** Tooltip vicino ai tasti icona shell (menu, indietro, chiudi, aggiorna). */
+export const TOOLTIP_GAP_SHELL_NAV = 2;
 export const TOOLTIP_VIEWPORT_PAD = 8;
 
 export const CAB_TOOLTIP_PORTAL_ATTR = "data-cab-tooltip-portal";

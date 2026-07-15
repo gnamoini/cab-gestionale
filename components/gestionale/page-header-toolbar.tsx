@@ -6,12 +6,16 @@ import { LoadingSpinner } from "@/components/design-system/loading";
 import { PageToolbarCtaLabel } from "@/components/design-system/page-toolbar";
 import { ToolbarGroupOverflowToggle } from "@/components/design-system/toolbar-group";
 import { MobileFilterDrawer } from "@/components/gestionale/mobile-filter-drawer";
-import { IconGestionaleLog, IconGestionaleUndo, IconGestionaleRefresh } from "@/components/gestionale/gestionale-log-ui";
+import { IconGestionaleLog, IconGestionaleUndo } from "@/components/gestionale/gestionale-log-ui";
+import { ShellNavIconRefresh } from "@/components/design-system";
 import {
   dsPageToolbarBtn,
+  dsPageHeaderIconGlyphDense,
+  dsPageHeaderToolbarActionBtn,
   dsPageToolbarIconBtn,
   dsPageToolbarPrimaryBtn,
 } from "@/lib/ui/design-system";
+import { TOOLTIP_GAP_SHELL_NAV } from "@/lib/ui/tooltip-portal";
 import { useSmUp } from "@/lib/ui/use-sm-up";
 
 /** Shell toolbar header (PageHeader): unico `flex-safe-row` per evitare doppia signature linter. */
@@ -34,38 +38,19 @@ export function GestionaleRefreshToolbarButton({
   const tip = busy ? "Aggiornamento…" : label;
   const busyLabel = "Aggiornamento…";
   return (
-    <Tooltip content={tip} showOnFocus={false}>
+    <Tooltip content={tip} showOnFocus={false} sideOffset={TOOLTIP_GAP_SHELL_NAV}>
       <button
         type="button"
         onClick={onClick}
         disabled={busy}
         aria-busy={busy}
         aria-label={label}
-        className={`${dsPageToolbarIconBtn} sm:h-11 sm:min-h-11 sm:w-auto sm:gap-2 sm:px-3 sm:py-0 ${
-          busy
-            ? "!cursor-wait !opacity-100 border-[color:color-mix(in_srgb,var(--cab-primary)_38%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] shadow-[var(--cab-shadow-sm)] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_32%,transparent)]"
-            : ""
-        }`}
+        className={`${dsPageHeaderToolbarActionBtn} ${busy ? "!cursor-wait" : ""}`}
       >
-        <span className="relative inline-flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden>
-          <span
-            className={`absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none ${
-              busy ? "scale-75 opacity-0" : "scale-100 opacity-100"
-            }`}
-          >
-            <IconGestionaleRefresh />
-          </span>
-          <span
-            className={`absolute inset-0 flex items-center justify-center transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none ${
-              busy ? "scale-100 opacity-100" : "scale-75 opacity-0"
-            }`}
-          >
-            <LoadingSpinner size="sm" label={busyLabel} />
-          </span>
-        </span>
-        <span
-          className={`hidden sm:inline transition-opacity duration-200 ${busy ? "text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))]" : ""}`}
-        >
+        <ShellNavIconRefresh
+          className={`${dsPageHeaderIconGlyphDense} sm:h-4 sm:w-4 max-sm:opacity-100 sm:opacity-90 motion-reduce:animate-none${busy ? " animate-spin" : ""}`}
+        />
+        <span className={`hidden sm:inline transition-opacity duration-200`}>
           {busy ? busyLabel : label}
         </span>
         <span className="sr-only sm:hidden">{busy ? busyLabel : label}</span>

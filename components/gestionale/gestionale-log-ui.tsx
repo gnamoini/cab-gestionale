@@ -77,7 +77,7 @@ export function IconGestionaleRefresh(props: SVGProps<SVGSVGElement>) {
 }
 
 export const gestionaleLogScrollClass =
-  "gestionale-scrollbar min-h-0 min-w-0 flex-1 overflow-y-scroll overscroll-contain [scrollbar-gutter:stable]";
+  "gestionale-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:auto]";
 
 export const gestionaleLogScrollEmbeddedClass =
   "gestionale-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] max-md:flex-none max-md:overflow-visible";

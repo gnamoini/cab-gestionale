@@ -11,8 +11,27 @@ import { prezzoNetto } from "@/lib/magazzino/calculations";
 import { formatMarkupDisplay } from "@/lib/magazzino/form";
 import type { RicambioFornitoreAlternativo } from "@/lib/magazzino/types";
 
+function safePrezzoNum(n: unknown): number {
+  const v = Number(n);
+  return Number.isFinite(v) ? v : 0;
+}
+
+function safeAltStr(v: unknown): string {
+  return typeof v === "string" ? v.trim() : "";
+}
+
 function defaultEur(n: number) {
-  return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
+  const v = safePrezzoNum(n);
+  return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(v);
+}
+
+function altRowLabel(row: Pick<RicambioFornitoreAlternativo, "fornitore" | "produttore" | "codice">, index: number): string {
+  return (
+    safeAltStr(row.fornitore) ||
+    safeAltStr(row.produttore) ||
+    safeAltStr(row.codice) ||
+    `Alternativo ${index + 1}`
+  );
 }
 
 function PrezzoRow({ label, value }: { label: string; value: string }) {
@@ -56,7 +75,9 @@ function resolveAltWithPrice(
           ]
         : [];
 
-  return altRows.filter((r) => r.prezzo > 0 || r.fornitore.trim() || r.codice.trim());
+  return altRows.filter(
+    (r) => safePrezzoNum(r.prezzo) > 0 || safeAltStr(r.fornitore) || safeAltStr(r.codice),
+  );
 }
 
 function PrezziLineariInfoBody({
@@ -90,16 +111,12 @@ function PrezziLineariInfoBody({
         <GestionaleInfoMetricRow label="Netto originale" value={formatEur(nettoOE)} />
       </GestionaleInfoSubgroup>
       {altWithPrice.map((row, i) => {
-        const nettoAlt = prezzoNetto(row.prezzo, row.sconto);
-        const label =
-          row.fornitore.trim() ||
-          row.produttore.trim() ||
-          row.codice.trim() ||
-          `Alternativo ${i + 1}`;
+        const nettoAlt = prezzoNetto(safePrezzoNum(row.prezzo), safePrezzoNum(row.sconto));
+        const label = altRowLabel(row, i);
         return (
           <GestionaleInfoSubgroup key={row.id || i} title={label}>
             <GestionaleInfoMetricRow label="Prezzo" value={formatEur(row.prezzo)} />
-            <GestionaleInfoMetricRow label="Sconto" value={`${row.sconto}%`} />
+            <GestionaleInfoMetricRow label="Sconto" value={`${safePrezzoNum(row.sconto)}%`} />
             <GestionaleInfoMetricRow label="Netto" value={formatEur(nettoAlt)} />
           </GestionaleInfoSubgroup>
         );
@@ -146,12 +163,8 @@ function PrezziLineariFormBody({
       {altWithPrice.length > 0 ? (
         <PrezzoGroup title={altWithPrice.length > 1 ? "Alternativi" : "Alternativo"}>
           {altWithPrice.map((row, i) => {
-            const nettoAlt = prezzoNetto(row.prezzo, row.sconto);
-            const label =
-              row.fornitore.trim() ||
-              row.produttore.trim() ||
-              row.codice.trim() ||
-              `Alternativo ${i + 1}`;
+            const nettoAlt = prezzoNetto(safePrezzoNum(row.prezzo), safePrezzoNum(row.sconto));
+            const label = altRowLabel(row, i);
             return (
               <div
                 key={row.id || i}
@@ -159,7 +172,7 @@ function PrezziLineariFormBody({
               >
                 <p className="mb-1 text-xs font-semibold text-[color:var(--cab-text)]">{label}</p>
                 <PrezzoRow label="Prezzo" value={formatEur(row.prezzo)} />
-                <PrezzoRow label="Sconto" value={`${row.sconto}%`} />
+                <PrezzoRow label="Sconto" value={`${safePrezzoNum(row.sconto)}%`} />
                 <PrezzoRow label="Netto" value={formatEur(nettoAlt)} />
               </div>
             );
@@ -204,13 +217,13 @@ export function MagazzinoPrezziLineari({
 }) {
   const bodyProps = {
     formatEur,
-    listinoOE,
-    scontoOE,
+    listinoOE: safePrezzoNum(listinoOE),
+    scontoOE: safePrezzoNum(scontoOE),
     fornitoriAlternativi,
     listinoAlt,
     scontoAlt,
-    markupPct,
-    prezzoVendita,
+    markupPct: safePrezzoNum(markupPct),
+    prezzoVendita: safePrezzoNum(prezzoVendita),
   };
 
   if (variant === "form") {

@@ -224,6 +224,7 @@ export function RecordImageManager({
     dropTitle: "Rilascia per caricare",
     dropHint: `Immagini · max ${maxImages}`,
     overlay: !!hubCardLayout,
+    clickToPick: !hubCardLayout,
     validateFile: () =>
       images.length >= maxImages ? `Limite massimo ${maxImages} immagini raggiunto` : null,
     onFile: handleDropFile,

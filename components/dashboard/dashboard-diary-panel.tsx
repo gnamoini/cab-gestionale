@@ -1,25 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { initialViewFromYmd } from "@/components/gestionale/global-input/global-calendar-panel";
+import { CalendarMonthYearPicker } from "@/components/gestionale/global-input/calendar-month-year-picker";
 import {
   addMonths,
   buildMonthGrid,
-  formatMonthTitle,
-  MONTHS_IT,
   toYmd,
   WEEKDAYS_IT,
 } from "@/components/gestionale/global-input/calendar-utils";
 import {
-  CalendarNavChevronDown,
   CalendarNavChevronLeft,
   CalendarNavChevronRight,
 } from "@/components/gestionale/global-input/calendar-nav-icons";
-import {
-  useDropdownOutsideDismiss,
-  useGlobalDropdownPortal,
-} from "@/components/gestionale/global-input/use-global-dropdown-portal";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import {
   OPERATIONAL_DIARY_BODY_MAX,
@@ -45,11 +38,7 @@ import {
   globalInputCalendarDayToday,
   globalInputCalendarGridShell,
   globalInputCalendarNavBtn,
-  promemoriaPickerMenuPanel,
 } from "@/lib/ui/global-input";
-
-const DIARY_MONTH_PICKER_CELL =
-  "min-h-9 rounded-md px-1 py-2 text-xs font-semibold text-[color:var(--cab-text)] transition-colors hover:bg-[var(--cab-hover)]";
 
 const SAVE_DEBOUNCE_MS = 700;
 const DIARY_LIST_SHELL = "flex h-full min-h-0 flex-col gap-1";
@@ -62,7 +51,7 @@ const DIARY_LAYOUT_GRID =
 const DIARY_LIST_ROW =
   "relative flex min-h-[3rem] min-w-0 flex-1 items-center gap-2.5 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-card)] px-2.5 py-2 shadow-[var(--cab-shadow-sm)] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] [-webkit-tap-highlight-color:transparent]";
 const DIARY_LIST_ROW_INTERACTIVE =
-  "cursor-text active:scale-[0.995] active:shadow-none active:duration-100 motion-reduce:active:scale-100";
+  "cursor-text touch-pan-y active:scale-[0.995] active:shadow-none active:duration-100 motion-reduce:active:scale-100";
 const DIARY_DAY_SQUARE =
   "flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[10px] font-semibold tabular-nums transition-colors";
 const DIARY_CALENDAR_DAY_BTN =
@@ -80,141 +69,6 @@ function diaryDaySquareClass(isToday: boolean, hasValue: boolean): string {
     return `${DIARY_DAY_SQUARE} text-[color:var(--cab-text)] ${globalInputCalendarDayToday}`;
   }
   return `${DIARY_DAY_SQUARE} bg-[color:var(--cab-surface-2)] text-[color:var(--cab-text-muted)]`;
-}
-
-function DiaryCalendarMonthYearMenu({
-  viewYear,
-  viewMonth,
-  onApply,
-}: {
-  viewYear: number;
-  viewMonth: number;
-  onApply: (year: number, month: number) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [draftYear, setDraftYear] = useState(viewYear);
-  const [draftMonth, setDraftMonth] = useState(viewMonth);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const menuId = useId();
-
-  const { todayYear, todayMonth } = useMemo(() => {
-    const now = new Date();
-    return { todayYear: now.getFullYear(), todayMonth: now.getMonth() };
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    setDraftYear(viewYear);
-    setDraftMonth(viewMonth);
-  }, [open, viewYear, viewMonth]);
-
-  const close = useCallback(() => setOpen(false), []);
-
-  const { style: portalStyle, placementOriginClass } = useGlobalDropdownPortal({
-    open,
-    anchorRef: triggerRef,
-    contentRef: menuRef,
-    repositionDeps: [draftYear, draftMonth],
-    panelWidth: 272,
-    matchAnchorWidth: false,
-    maxHeight: 360,
-  });
-
-  useDropdownOutsideDismiss(open, triggerRef, menuRef, close);
-
-  const menuPanelClass = `${promemoriaPickerMenuPanel} ${placementOriginClass} overflow-hidden`;
-
-  const applySelection = useCallback(
-    (year: number, month: number) => {
-      onApply(year, month);
-      close();
-    },
-    [close, onApply],
-  );
-
-  const menu =
-    open && portalStyle ? (
-      <div
-        ref={menuRef}
-        id={menuId}
-        role="dialog"
-        aria-label="Seleziona mese e anno"
-        style={portalStyle}
-        className={`${menuPanelClass} p-2.5`}
-        onMouseDown={(event) => event.preventDefault()}
-      >
-        <div className="mb-2.5 flex items-center justify-between gap-1">
-          <button
-            type="button"
-            className={`${globalInputCalendarNavBtn} !h-8 !w-8 ${dsFocus}`}
-            aria-label="Anno precedente"
-            onClick={() => setDraftYear((year) => year - 1)}
-          >
-            <CalendarNavChevronLeft />
-          </button>
-          <span className="min-w-0 flex-1 text-center text-sm font-bold tabular-nums text-[color:var(--cab-text)]">
-            {draftYear}
-          </span>
-          <button
-            type="button"
-            className={`${globalInputCalendarNavBtn} !h-8 !w-8 ${dsFocus}`}
-            aria-label="Anno successivo"
-            onClick={() => setDraftYear((year) => year + 1)}
-          >
-            <CalendarNavChevronRight />
-          </button>
-        </div>
-        <div className="grid grid-cols-3 gap-1" role="group" aria-label="Mesi">
-          {MONTHS_IT.map((label, index) => {
-            const selected = index === draftMonth;
-            const isToday = draftYear === todayYear && index === todayMonth;
-            return (
-              <button
-                key={label}
-                type="button"
-                className={`${DIARY_MONTH_PICKER_CELL} ${dsFocus} ${
-                  selected ? globalInputCalendarDaySelected : ""
-                } ${isToday && !selected ? globalInputCalendarDayToday : ""}`}
-                aria-pressed={selected}
-                aria-label={label}
-                onClick={() => applySelection(draftYear, index)}
-              >
-                {label.slice(0, 3)}
-              </button>
-            );
-          })}
-        </div>
-        <button
-          type="button"
-          className={`${dsFocus} mt-2.5 w-full rounded-md py-1.5 text-[11px] font-semibold text-[color:var(--cab-text-muted)] transition hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)]`}
-          onClick={() => applySelection(todayYear, todayMonth)}
-        >
-          Vai a oggi
-        </button>
-      </div>
-    ) : null;
-
-  return (
-    <>
-      <button
-        ref={triggerRef}
-        type="button"
-        className={`${dsFocus} inline-flex min-w-0 flex-1 items-center justify-center gap-1 truncate rounded-[var(--ds-radius-lg)] px-2 py-1.5 text-sm font-bold uppercase tracking-wide text-[color:var(--cab-text)] transition hover:bg-[var(--cab-hover)] active:scale-[0.98] motion-reduce:active:scale-100`}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        aria-controls={open ? menuId : undefined}
-        aria-label={`Mese e anno, attuale ${formatMonthTitle(viewYear, viewMonth)}`}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <span className="min-w-0 truncate">{formatMonthTitle(viewYear, viewMonth)}</span>
-        <CalendarNavChevronDown
-          className={`shrink-0 text-[color:var(--cab-text-muted)] transition-transform duration-150 ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-      {typeof document !== "undefined" && menu ? createPortal(menu, document.body) : null}
-    </>
-  );
 }
 
 function DiaryInlineWeekCalendar({
@@ -266,9 +120,10 @@ function DiaryInlineWeekCalendar({
         >
           <CalendarNavChevronLeft />
         </button>
-        <DiaryCalendarMonthYearMenu
+        <CalendarMonthYearPicker
           viewYear={viewYear}
           viewMonth={viewMonth}
+          variant="embedded"
           onApply={(year, month) => {
             setViewYear(year);
             setViewMonth(month);
@@ -379,10 +234,9 @@ function DiaryDayField({
   return (
     <div
       className={`${DIARY_LIST_ROW} ${readOnly ? "" : DIARY_LIST_ROW_INTERACTIVE}`}
-      onPointerDown={(e) => {
+      onClick={(e) => {
         if (readOnly) return;
         if ((e.target as HTMLElement).closest("textarea")) return;
-        e.preventDefault();
         focusField();
       }}
     >

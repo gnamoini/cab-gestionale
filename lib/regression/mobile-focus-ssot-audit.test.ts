@@ -30,7 +30,9 @@ const mezzoAc = read("components/gestionale/gestionale-mezzo-autocomplete.tsx");
 const bottomSheet = read("components/gestionale/gestionale-mobile-bottom-sheet.tsx");
 const searchableSheet = read("components/gestionale/global-input/gestionale-searchable-sheet-select.tsx");
 
-assert.match(behavior, /getEffectiveVisibleBand/);
+assert.match(behavior, /getFocusScrollBlockRect/);
+assert.match(behavior, /MOBILE_KEYBOARD_FOCUS_EXTRA_BOTTOM/);
+assert.match(behavior, /resolveFocusScrollRectForDelta/);
 assert.match(behavior, /findStickyObstructions/);
 assert.match(behavior, /scrollGestionaleFieldIntoView/);
 assert.match(behavior, /GESTIONALE_PAGE_SCROLL_SELECTOR/);

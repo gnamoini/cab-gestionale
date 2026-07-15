@@ -176,6 +176,7 @@ function SchedaIngressoPortalMezzoSplit({
 }) {
   const showUtilizzatore = hasPanoramicaFieldValue(fields.utilizzatore);
   const showScuderia = hasPanoramicaFieldValue(fields.nScuderia);
+  const showVin = hasPanoramicaFieldValue(fields.vin);
 
   return (
     <div className="grid min-w-0 gap-3 lg:grid-cols-2">
@@ -209,8 +210,10 @@ function SchedaIngressoPortalMezzoSplit({
           <PanoramicaStringField label="Tipo" value={fields.tipoTelaio} fieldLayout={fieldLayout} rowLayout={rowLayout} />
           <PanoramicaStringField label="Marca" value={fields.marcaTelaio} fieldLayout={fieldLayout} rowLayout={rowLayout} />
           <PanoramicaStringField label="Modello" value={fields.modelloTelaio} fieldLayout={fieldLayout} rowLayout={rowLayout} />
-          <PanoramicaStringField label="VIN" value={fields.vin} mono fieldLayout={fieldLayout} rowLayout={rowLayout} />
           <PanoramicaStringField label="Targa" value={fields.targa} mono strong fieldLayout={fieldLayout} rowLayout={rowLayout} />
+          {showVin ? (
+            <PanoramicaStringField label="VIN" value={fields.vin} mono fieldLayout={fieldLayout} rowLayout={rowLayout} />
+          ) : null}
         </PanoramicaFieldsShell>
       </GestionaleInfoCard>
     </div>
@@ -454,18 +457,20 @@ export function SchedaIngressoPanoramicaView({
   const accettazionePortalContent = omitPanoramaDuplicates ? (
     <div className="flex min-w-0 flex-col gap-3">
       <HubModalPanoramicaInlineCell label="Richiedente">
-        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <span className="min-w-0 text-sm text-[color:var(--cab-text)]">
             {hubPanoramicaDisplayValue(fields.richiedente)}
           </span>
           <RichiedenteFirmaDisplay dataUrl={fields.richiedenteFirma} consultable buttonOnly />
         </div>
       </HubModalPanoramicaInlineCell>
-      <HubModalPanoramicaInlineCell label="Telefono richiedente">
-        <span className="text-sm text-[color:var(--cab-text)]">
-          {hubPanoramicaDisplayValue(fields.richiedenteTelefono)}
-        </span>
-      </HubModalPanoramicaInlineCell>
+      {fields.richiedenteTelefono?.trim() ? (
+        <HubModalPanoramicaInlineCell label="Telefono richiedente">
+          <span className="text-sm text-[color:var(--cab-text)]">
+            {hubPanoramicaDisplayValue(fields.richiedenteTelefono)}
+          </span>
+        </HubModalPanoramicaInlineCell>
+      ) : null}
       <HubModalPanoramicaInlineCell label="Descrizione anomalia">
         <div className="text-sm leading-relaxed">{multilineValue(fields.descrizioneAnomalia)}</div>
       </HubModalPanoramicaInlineCell>

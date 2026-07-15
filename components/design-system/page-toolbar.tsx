@@ -163,11 +163,14 @@ function PageToolbarPlusIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      fill="currentColor"
-      className={pageToolbarCtaPlusIconClass}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.25}
+      strokeLinecap="round"
+      className={`${pageToolbarCtaPlusIconClass} block`}
       aria-hidden
     >
-      <path d="M10 4h4v7h7v4h-7v7h-4v-7H4v-4h7V4z" />
+      <path d="M12 5v14M5 12h14" />
     </svg>
   );
 }
@@ -183,7 +186,7 @@ export function PageToolbarCtaLabel({ short, full }: { short: string; full: stri
   const mobile = splitPlusShortLabel(short);
   return (
     <>
-      <span className="inline-flex min-w-0 items-center gap-1.5 sm:hidden">
+      <span className="inline-flex w-full min-w-0 items-center justify-center gap-1.5 leading-none sm:hidden">
         {mobile.hasPlus ? <PageToolbarPlusIcon /> : null}
         <span className="min-w-0 truncate">{mobile.label}</span>
       </span>

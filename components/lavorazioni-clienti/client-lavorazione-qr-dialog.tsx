@@ -1,12 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { HubIconCopy, HubIconDownload } from "@/components/design-system/hub-table-action-icons";
+import {
+  HubIconCopy,
+  HubIconDownload,
+  HubIconShare,
+} from "@/components/design-system/hub-table-action-icons";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { clientLavorazioniPublicUrl } from "@/lib/lavorazioni/client-portal-access";
 import { dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+
+function qrPngFilename(refLabel: string): string {
+  return `lavorazione-${refLabel.replace(/[^a-zA-Z0-9_-]/g, "")}-qr.png`;
+}
+
+async function qrDataUrlToFile(dataUrl: string, filename: string): Promise<File> {
+  const blob = await fetch(dataUrl).then((res) => res.blob());
+  return new File([blob], filename, { type: blob.type || "image/png" });
+}
 
 export function ClientLavorazioneQrDialog({
   open,
@@ -45,6 +58,8 @@ export function ClientLavorazioneQrDialog({
 
   if (!open) return null;
 
+  const shareText = `Lavorazione ${refLabel}\n${url}`;
+
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(url);
@@ -58,38 +73,44 @@ export function ClientLavorazioneQrDialog({
     if (!dataUrl) return;
     const a = document.createElement("a");
     a.href = dataUrl;
-    a.download = `lavorazione-${refLabel.replace(/[^a-zA-Z0-9_-]/g, "")}-qr.png`;
+    a.download = qrPngFilename(refLabel);
     a.click();
   }
 
-  return (
-    <LavorazioniModalShell
-      modalSize="info"
-      onRequestClose={onClose}
-      title="QR lavorazione"
-      footer={
-        <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
-          <button
-            type="button"
-            className={`${dsBtnNeutral} min-h-11 w-full gap-2 px-4 sm:w-auto`}
-            onClick={() => void copyLink()}
-            disabled={!url}
-          >
-            <HubIconCopy className="h-4 w-4 shrink-0 opacity-90" />
-            Copia link
-          </button>
-          <button
-            type="button"
-            className={`${dsBtnPrimary} min-h-11 w-full gap-2 sm:w-auto`}
-            onClick={downloadQr}
-            disabled={!dataUrl}
-          >
-            <HubIconDownload className="h-4 w-4 shrink-0 opacity-90" />
-            Scarica PNG
-          </button>
-        </div>
+  async function shareQr() {
+    if (!url || !dataUrl) return;
+
+    if (typeof navigator.share !== "function") {
+      await copyLink();
+      gestToast.info("Condividi non disponibile su questo dispositivo: link copiato.");
+      return;
+    }
+
+    try {
+      const file = await qrDataUrlToFile(dataUrl, qrPngFilename(refLabel));
+      const withFiles: ShareData = {
+        title: `QR lavorazione ${refLabel}`,
+        text: shareText,
+        files: [file],
+      };
+      if (navigator.canShare?.(withFiles)) {
+        await navigator.share(withFiles);
+        return;
       }
-    >
+
+      await navigator.share({
+        title: `QR lavorazione ${refLabel}`,
+        text: shareText,
+        url,
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      gestToast.warning("Condivisione non riuscita.");
+    }
+  }
+
+  return (
+    <LavorazioniModalShell modalSize="info" onRequestClose={onClose} title="QR lavorazione">
       <GestionaleModalScrollBody className="flex flex-col items-center gap-4">
         {dataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -103,6 +124,35 @@ export function ClientLavorazioneQrDialog({
             Generazione QR…
           </div>
         )}
+        <div className="flex w-full min-w-0 max-w-sm flex-col gap-2">
+          <button
+            type="button"
+            className={`${dsBtnNeutral} min-h-11 w-full gap-2 px-4`}
+            onClick={() => void copyLink()}
+            disabled={!url}
+          >
+            <HubIconCopy className="h-4 w-4 shrink-0 opacity-90" />
+            Copia link
+          </button>
+          <button
+            type="button"
+            className={`${dsBtnNeutral} min-h-11 w-full gap-2 px-4`}
+            onClick={() => void shareQr()}
+            disabled={!url || !dataUrl}
+          >
+            <HubIconShare className="h-4 w-4 shrink-0 opacity-90" />
+            Condividi
+          </button>
+          <button
+            type="button"
+            className={`${dsBtnPrimary} min-h-11 w-full gap-2 px-4`}
+            onClick={downloadQr}
+            disabled={!dataUrl}
+          >
+            <HubIconDownload className="h-4 w-4 shrink-0 opacity-90" />
+            Scarica PNG
+          </button>
+        </div>
         <p className="max-w-sm break-all text-center text-xs text-[color:var(--cab-text-muted)]">{url}</p>
       </GestionaleModalScrollBody>
     </LavorazioniModalShell>

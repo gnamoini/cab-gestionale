@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   backdropOpacityForEdgeOpen,
   panelTransformForEdgeOpen,
   resolveEdgeZonePx,
   shouldCommitEdgeOpen,
 } from "@/lib/ui/use-swipe-from-edge-to-open";
+
+const root = process.cwd();
 
 assert.equal(resolveEdgeZonePx(0), 20);
 assert.equal(resolveEdgeZonePx(12), 20);
@@ -22,5 +26,9 @@ assert.ok(backdropOpacityForEdgeOpen(200, 320) > backdropOpacityForEdgeOpen(100,
 assert.equal(shouldCommitEdgeOpen(95, 320), false);
 assert.equal(shouldCommitEdgeOpen(96, 320), true);
 assert.equal(shouldCommitEdgeOpen(320, 320), true);
+
+const swipeOpenSrc = readFileSync(join(root, "lib/ui/use-swipe-from-edge-to-open.ts"), "utf8");
+assert.match(swipeOpenSrc, /isSwipeNavGestureBlockedTarget/);
+assert.doesNotMatch(swipeOpenSrc, /touch\.clientX > edgeZone/);
 
 console.log("use-swipe-from-edge-to-open.test.ts ok");

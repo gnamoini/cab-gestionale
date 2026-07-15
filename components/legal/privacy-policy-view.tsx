@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { ShellNavBackButton } from "@/components/design-system/shell-nav-icon-button";
 import {
   AuthStandaloneCardHeader,
   AuthStandalonePageShell,
@@ -15,7 +16,7 @@ import {
   privacyPolicySections,
 } from "@/lib/legal/privacy-policy-content";
 import { sanitizePrivacyPolicyReturnPath } from "@/lib/legal/privacy-policy-return";
-import { dsBtnGhost, dsFocus, dsTypoCaption, dsTypoPageTitle } from "@/lib/ui/design-system";
+import { dsFocus, dsTypoCaption, dsTypoPageTitle } from "@/lib/ui/design-system";
 
 const privacyPolicyCardClass =
   "mx-auto w-full min-w-0 max-w-full shrink-0 rounded-[var(--ds-radius-xl)] border border-[color:color-mix(in_srgb,var(--cab-border)_70%,var(--cab-border-strong))] bg-[var(--cab-card)] p-6 shadow-[var(--cab-shadow-md)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-border)_45%,transparent)] sm:p-8 lg:p-10";
@@ -39,26 +40,15 @@ function PrivacyPolicyBackButtonInner() {
     router.push("/login");
   };
 
-  return (
-    <button
-      type="button"
-      onClick={goBack}
-      className={`${dsBtnGhost} ${dsFocus} min-h-[2.25rem] px-3 py-1.5 text-sm`}
-    >
-      ← Indietro
-    </button>
-  );
+  return <ShellNavBackButton onClick={goBack} />;
 }
 
 function PrivacyPolicyBackButton() {
   return (
     <Suspense
       fallback={
-        <span
-          className={`${dsBtnGhost} inline-flex min-h-[2.25rem] items-center px-3 py-1.5 text-sm opacity-60`}
-          aria-hidden
-        >
-          ← Indietro
+        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center opacity-60" aria-hidden>
+          <span className="sr-only">Indietro</span>
         </span>
       }
     >

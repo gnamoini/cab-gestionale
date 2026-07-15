@@ -6,6 +6,7 @@ import {
   buildMonthGrid,
   toYmd,
 } from "@/components/gestionale/global-input/calendar-utils";
+import { CalendarMonthYearPicker } from "@/components/gestionale/global-input/calendar-month-year-picker";
 import {
   CalendarNavChevronLeft,
   CalendarNavChevronRight,
@@ -72,10 +73,12 @@ export function CalendarV2Grid({
     [viewYear, viewMonth, onMonthKeyChange],
   );
 
-  const monthTitle = useMemo(() => {
-    const d = new Date(viewYear, viewMonth, 1);
-    return d.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
-  }, [viewYear, viewMonth]);
+  const applyMonthYear = useCallback(
+    (year: number, month: number) => {
+      onMonthKeyChange(`${year}-${String(month + 1).padStart(2, "0")}`);
+    },
+    [onMonthKeyChange],
+  );
 
   return (
     <div className={`${globalInputCalendarGridShell} min-w-0`}>
@@ -89,9 +92,12 @@ export function CalendarV2Grid({
           >
             <CalendarNavChevronLeft />
           </button>
-          <span className="min-w-0 px-1 text-sm font-semibold capitalize text-[color:var(--cab-text)]">
-            {monthTitle}
-          </span>
+          <CalendarMonthYearPicker
+            viewYear={viewYear}
+            viewMonth={viewMonth}
+            variant="grid"
+            onApply={applyMonthYear}
+          />
           <button
             type="button"
             className={dsPageToolbarIconBtn}

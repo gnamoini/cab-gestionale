@@ -16,6 +16,8 @@ type IconActionButtonBase = {
   tooltipDisabled?: boolean;
   /** Tooltip alternativo (es. "Sola lettura" quando disabled). Default: label. */
   tooltipContent?: string;
+  /** Distanza tooltip dal trigger (px). */
+  tooltipSideOffset?: number;
 };
 
 type IconActionAsButton = IconActionButtonBase &
@@ -40,6 +42,7 @@ export function IconActionButton(props: IconActionButtonProps) {
     tooltipSide,
     tooltipDisabled,
     tooltipContent,
+    tooltipSideOffset,
     as = "button",
     ...rest
   } = props;
@@ -56,7 +59,7 @@ export function IconActionButton(props: IconActionButtonProps) {
       </Link>
     );
     return (
-      <Tooltip content={content} side={tooltipSide} disabled={tooltipDisabled} multiline={multiline}>
+      <Tooltip content={content} side={tooltipSide} disabled={tooltipDisabled} multiline={multiline} sideOffset={tooltipSideOffset}>
         {link}
       </Tooltip>
     );
@@ -70,7 +73,7 @@ export function IconActionButton(props: IconActionButtonProps) {
   );
 
   return (
-    <Tooltip content={content} side={tooltipSide} disabled={tooltipDisabled} multiline={multiline}>
+    <Tooltip content={content} side={tooltipSide} disabled={tooltipDisabled} multiline={multiline} sideOffset={tooltipSideOffset}>
       {buttonRest.disabled ? <span className="inline-flex min-w-0">{button}</span> : button}
     </Tooltip>
   );

@@ -129,17 +129,19 @@ export function LavorazioniAdvancedFilterPanel({
             aria-label="Filtra cantiere"
           />
         </LavorazioniFilterField>
-        <LavorazioniFilterField label="Utilizzatore">
-          <GlobalSettingsListSelect
-            listKey="mezzi:utilizzatori"
-            value={filters.utilizzatore}
-            onChange={(v) => onChange({ utilizzatore: v })}
-            placeholder="Cerca e seleziona…"
-            inputClassName={gestionaleFilterFieldInputClass}
-            variant="filter"
-            aria-label="Filtra utilizzatore"
-          />
-        </LavorazioniFilterField>
+        <div className="hidden min-w-0 sm:contents">
+          <LavorazioniFilterField label="Utilizzatore">
+            <GlobalSettingsListSelect
+              listKey="mezzi:utilizzatori"
+              value={filters.utilizzatore}
+              onChange={(v) => onChange({ utilizzatore: v })}
+              placeholder="Cerca e seleziona…"
+              inputClassName={gestionaleFilterFieldInputClass}
+              variant="filter"
+              aria-label="Filtra utilizzatore"
+            />
+          </LavorazioniFilterField>
+        </div>
         {isStaff ? (
           <LavorazioniFilterField label="Addetto">
             <GlobalSelect

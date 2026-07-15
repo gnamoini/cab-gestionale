@@ -78,6 +78,7 @@ export {
   type UseGlobalDropdownPortalOptions,
   type UseGlobalDropdownPortalResult,
 } from "@/components/gestionale/global-input/use-global-dropdown-portal";
+export { CalendarMonthYearPicker } from "@/components/gestionale/global-input/calendar-month-year-picker";
 export { GestionaleSearchableSheetSelect } from "@/components/gestionale/global-input/gestionale-searchable-sheet-select";
 export {
   GlobalVirtualizedListbox,

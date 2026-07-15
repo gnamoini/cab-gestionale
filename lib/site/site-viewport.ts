@@ -6,8 +6,5 @@ export const siteViewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   maximumScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: THEME_CRITICAL_BG.light },
-    { media: "(prefers-color-scheme: dark)", color: THEME_CRITICAL_BG.dark },
-  ],
+  themeColor: THEME_CRITICAL_BG.dark,
 };

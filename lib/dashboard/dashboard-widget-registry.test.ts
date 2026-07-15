@@ -14,6 +14,7 @@ import {
 
 const ALL_WIDGETS: DashboardWidgetId[] = [
   "operational-kpi-header",
+  "health-score",
   "recent-activity",
   "local-notes",
 ];
@@ -24,6 +25,7 @@ const EXPECTED_WIDGETS: Record<string, DashboardWidgetId[]> = {
   operatore: ALL_WIDGETS,
   addetto_amministrativo: [
     "operational-kpi-header",
+    "health-score",
     "recent-activity",
     "local-notes",
   ],
@@ -46,7 +48,7 @@ function assertWidgetSnapshot(role: string, staging: boolean, expected: Dashboar
 }
 
 function main(): void {
-  assert.equal(DASHBOARD_WIDGET_REGISTRY.length, 3);
+  assert.equal(DASHBOARD_WIDGET_REGISTRY.length, 4);
 
   const ids = DASHBOARD_WIDGET_REGISTRY.map((w) => w.id);
   assert.equal(new Set(ids).size, ids.length, "registry must not contain duplicate widget ids");
@@ -64,7 +66,7 @@ function main(): void {
   assertWidgetSnapshot("addetto_amministrativo", false, EXPECTED_WIDGETS.addetto_amministrativo);
   assertWidgetSnapshot("guest", false, EXPECTED_WIDGETS.guest);
 
-  assertWidgetSnapshot("operatore", true, ["operational-kpi-header", "local-notes"]);
+  assertWidgetSnapshot("operatore", true, ["operational-kpi-header", "health-score", "local-notes"]);
 
   assert.deepEqual(resolveVisibleDashboardWidgets({ modules: null, staging: false }), []);
   assert.deepEqual(resolveVisibleDashboardWidgets({ modules: undefined, staging: false }), []);

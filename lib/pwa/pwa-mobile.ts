@@ -23,6 +23,33 @@ export function isMobilePwaContext(input?: {
   return isPwaStandaloneMode(mode);
 }
 
+export function isMobileHandheldPlatform(input?: {
+  userAgent?: string;
+  maxTouchPoints?: number;
+}): boolean {
+  const ua = input?.userAgent ?? (typeof navigator !== "undefined" ? navigator.userAgent : "");
+  const maxTouchPoints =
+    input?.maxTouchPoints ?? (typeof navigator !== "undefined" ? navigator.maxTouchPoints : 0);
+  const platform = detectPwaPlatform(ua, maxTouchPoints);
+  return platform === "ios" || platform === "android";
+}
+
+/** Mobile contexts where Web Push can deliver with the app closed. */
+export function isMobileBackgroundPushEligible(input?: {
+  userAgent?: string;
+  maxTouchPoints?: number;
+  matchMedia?: (query: string) => { matches: boolean };
+  navigatorStandalone?: boolean;
+}): boolean {
+  const ua = input?.userAgent ?? (typeof navigator !== "undefined" ? navigator.userAgent : "");
+  const maxTouchPoints =
+    input?.maxTouchPoints ?? (typeof navigator !== "undefined" ? navigator.maxTouchPoints : 0);
+  const platform = detectPwaPlatform(ua, maxTouchPoints);
+  if (platform === "ios") return isMobilePwaContext(input);
+  if (platform === "android") return true;
+  return false;
+}
+
 export function supportsWebPushMobile(): boolean {
   return PWA_PUSH_ENABLED && isWebPushSupported() && Boolean(getVapidPublicKey());
 }

@@ -35,12 +35,15 @@ for (const rel of files) {
 }
 
 const contattaci = read("components/lavorazioni-clienti/client-contattaci-dialog.tsx");
-assert.match(contattaci, /footer=\{/);
+assert.doesNotMatch(contattaci, /footer=\{/);
 assert.match(contattaci, /min-h-11/);
+assert.match(contattaci, /data-testid="smoke-contattaci-call"/);
 
 const qr = read("components/lavorazioni-clienti/client-lavorazione-qr-dialog.tsx");
 assert.match(qr, /GestionaleModalScrollBody/);
-assert.match(qr, /footer=\{/);
+assert.doesNotMatch(qr, /footer=\{/);
+assert.match(qr, /Condividi/);
+assert.match(qr, /navigator\.share/);
 assert.match(qr, /border-\[color:var\(--cab-border\)\]/);
 assert.doesNotMatch(qr, /border-zinc-200/);
 

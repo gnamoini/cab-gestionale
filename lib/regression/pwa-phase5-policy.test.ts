@@ -140,6 +140,7 @@ assert.match(deferred, /PwaSyncFinalizationBridge/);
 // --- mobile ---
 const mobile = read("lib/pwa/pwa-mobile.ts");
 assert.match(mobile, /isMobilePwaContext/);
+assert.match(mobile, /isMobileBackgroundPushEligible/);
 assert.ok(typeof supportsPwaAppBadge() === "boolean");
 
 assert.equal(PWA_PUSH_OPEN_MESSAGE_TYPE, "PWA_PUSH_OPEN");

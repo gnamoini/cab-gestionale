@@ -67,7 +67,8 @@ function buildPushPayload(notification: NotificationRow) {
 function isPushEnabled(): boolean {
   const raw = Deno.env.get("PWA_PUSH_ENABLED")?.trim().toLowerCase();
   if (raw === "true" || raw === "1") return true;
-  return false;
+  if (raw === "false" || raw === "0") return false;
+  return getVapidConfig() !== null;
 }
 
 function getVapidConfig() {

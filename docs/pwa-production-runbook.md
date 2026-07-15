@@ -6,8 +6,8 @@ Operatività minima per abilitare, monitorare e disattivare il push PWA.
 
 | Ambiente | Variabile | Valore consigliato |
 |----------|-----------|-------------------|
-| Preview / staging | `PWA_PUSH_ENABLED` | `true` (dopo VAPID configurati) |
-| Production | `PWA_PUSH_ENABLED` | `false` fino a validazione staging, poi `true` |
+| Preview / staging | `PWA_PUSH_ENABLED` | `true` oppure omettere se VAPID configurati (auto-on) |
+| Production | `PWA_PUSH_ENABLED` | `true` oppure omettere se VAPID configurati |
 
 Il flag è letto da:
 

@@ -11,9 +11,9 @@ import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import {
   COLLAPSIBLE_KANBAN_OPEN_KEY,
-  collapsibleAccordionPref,
   useCollapsiblePreference,
 } from "@/lib/ui/collapsible-prefs";
+import { gestionaleCollapsibleShellHeaderFocusClass } from "@/lib/ui/gestionale-collapsible-toggle";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
@@ -58,34 +58,50 @@ export function LavorazioniKanbanMobileBoard({
   const userId = useAuthUserId();
   const sectionIdsKey = useMemo(() => sections.map((s) => s.id).join("|"), [sections]);
   const lastSyncedSectionIdsKeyRef = useRef<string | null>(null);
-  const [openSectionId, setOpenSectionId] = useCollapsiblePreference(
-    collapsibleAccordionPref("", {
-      scope: "lavorazioni",
-      key: COLLAPSIBLE_KANBAN_OPEN_KEY,
-      userId,
-    }),
-  );
+  const [openSectionIds, setOpenSectionIds] = useCollapsiblePreference<Set<string>>({
+    scope: "lavorazioni",
+    key: COLLAPSIBLE_KANBAN_OPEN_KEY,
+    userId,
+    defaultValue: new Set<string>(),
+    serialize: (ids) => [...ids],
+    deserialize: (raw, fallback) => {
+      if (Array.isArray(raw)) {
+        return new Set(raw.filter((id): id is string => typeof id === "string" && id.length > 0));
+      }
+      if (typeof raw === "string" && raw.trim()) {
+        return new Set([raw.trim()]);
+      }
+      return new Set(fallback);
+    },
+  });
 
   useEffect(() => {
     if (sections.length === 0) {
-      setOpenSectionId("");
+      setOpenSectionIds(new Set());
       lastSyncedSectionIdsKeyRef.current = null;
       return;
     }
     if (lastSyncedSectionIdsKeyRef.current === sectionIdsKey) return;
     lastSyncedSectionIdsKeyRef.current = sectionIdsKey;
 
-    setOpenSectionId((prev) => {
-      if (prev && sections.some((s) => s.id === prev)) return prev;
-      return pickDefaultOpenSectionId(sections);
+    setOpenSectionIds((prev) => {
+      const valid = new Set([...prev].filter((id) => sections.some((s) => s.id === id)));
+      if (valid.size > 0) return valid;
+      const defaultId = pickDefaultOpenSectionId(sections);
+      return defaultId ? new Set([defaultId]) : new Set();
     });
-  }, [sectionIdsKey, sections, setOpenSectionId]);
+  }, [sectionIdsKey, sections, setOpenSectionIds]);
 
   const toggleSection = useCallback(
     (id: string) => {
-      setOpenSectionId((prev) => (prev === id ? "" : id));
+      setOpenSectionIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
     },
-    [setOpenSectionId],
+    [setOpenSectionIds],
   );
 
   const renderStatoHeaderInner = (statoCol: StatoLavorazioneConfig, count: number, compact?: boolean) => (
@@ -101,7 +117,7 @@ export function LavorazioniKanbanMobileBoard({
       >
         <span className="truncate">{statoCol.label}</span>
       </span>
-      <span className="shrink-0 rounded-md bg-zinc-200/90 px-2 py-0.5 text-xs font-bold tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+      <span className="shrink-0 rounded-md border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,var(--cab-card))] px-2 py-0.5 text-xs font-bold tabular-nums text-[color:var(--cab-text)]">
         {count}
       </span>
     </>
@@ -125,9 +141,9 @@ export function LavorazioniKanbanMobileBoard({
   );
 
   return (
-    <div className="lavorazioni-kanban-mobile min-w-0 max-w-full space-y-2 pb-2">
+    <div className="lavorazioni-kanban-mobile min-w-0 max-w-full space-y-2.5 pb-2">
       {sections.map((section) => {
-        const open = openSectionId === section.id;
+        const open = openSectionIds.has(section.id);
         const total = sectionTotalCount(section);
         const panelId = `kanban-mobile-panel-${section.id}`;
         const headerId = `kanban-mobile-header-${section.id}`;
@@ -135,7 +151,7 @@ export function LavorazioniKanbanMobileBoard({
         return (
           <section
             key={section.id}
-            className="lavorazioni-kanban-mobile-section overflow-hidden rounded-xl border border-zinc-200/90 bg-zinc-50/60 dark:border-zinc-700/80 dark:bg-zinc-900/40"
+            className="lavorazioni-kanban-mobile-section overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] shadow-[var(--cab-shadow-sm)]"
           >
             <button
               type="button"
@@ -143,10 +159,10 @@ export function LavorazioniKanbanMobileBoard({
               aria-expanded={open}
               aria-controls={panelId}
               onClick={() => toggleSection(section.id)}
-              className="flex min-h-11 w-full items-center justify-between gap-3 px-3 py-3 text-left touch-manipulation"
+              className={`group flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2.5 text-left outline-none transition-colors duration-200 ease-out hover:bg-[var(--cab-hover)] touch-manipulation [-webkit-tap-highlight-color:transparent] ${gestionaleCollapsibleShellHeaderFocusClass}`}
             >
               <div className="flex min-w-0 flex-1 items-center gap-2">{renderStatoHeaderInner(section.col, total)}</div>
-              <GestionaleCollapsibleChevronIcon expanded={open} className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400" />
+              <GestionaleCollapsibleChevronIcon expanded={open} className="h-4 w-4 shrink-0 text-[color:var(--cab-text-muted)]" />
             </button>
 
             <div
@@ -156,22 +172,22 @@ export function LavorazioniKanbanMobileBoard({
               aria-hidden={!open}
               className={`lavorazioni-kanban-mobile-panel ${open ? "lavorazioni-kanban-mobile-panel-open" : ""}`}
             >
-              <div className="lavorazioni-kanban-mobile-panel-inner border-t border-zinc-200/80 px-2 pb-3 pt-1 dark:border-zinc-700/80">
+              <div className="lavorazioni-kanban-mobile-panel-inner border-t border-[color:var(--cab-border)] px-2.5 pb-3 pt-1.5">
                 {section.items.length === 0 && !(section.nested?.some((n) => n.items.length > 0) ?? false) ? (
-                  <p className="py-4 text-center text-xs text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
+                  <p className="py-4 text-center text-xs text-[color:var(--cab-text-muted)]">Nessuna lavorazione</p>
                 ) : (
                   <div className="flex flex-col gap-2.5">
                     {section.items.map((row) => renderMobileCard(row, section.onOpen))}
                     {section.nested?.map((nested) => (
                       <div
                         key={nested.col.id}
-                        className="space-y-2 rounded-lg border border-dashed border-zinc-200/90 bg-white/50 p-2 dark:border-zinc-700/80 dark:bg-zinc-950/30"
+                        className="space-y-2 rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))] p-2"
                       >
                         <div className="flex items-center justify-between gap-2 px-0.5">
                           {renderStatoHeaderInner(nested.col, nested.items.length, true)}
                         </div>
                         {nested.items.length === 0 ? (
-                          <p className="py-2 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
+                          <p className="py-2 text-center text-[11px] text-[color:var(--cab-text-muted)]">Nessuna lavorazione</p>
                         ) : (
                           <div className="flex flex-col gap-2.5">
                             {nested.items.map((row) => renderMobileCard(row, section.onOpen))}

@@ -349,7 +349,7 @@ function GlobalSettingsListSelectInner({
 
     dynamicList: dynamicList ?? (isMagazzinoListKey || isMezziListKey),
 
-    operationalFilter,
+    operationalFilter: operationalFilter ?? variant === "filter",
 
     recentsKey: isMagazzinoListKey ? undefined : listKey,
 

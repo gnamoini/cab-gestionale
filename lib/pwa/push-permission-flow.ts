@@ -1,14 +1,14 @@
 import { PWA_PUSH_ENABLED } from "@/lib/pwa/pwa-config";
 import { isPwaPushDeviceEnabled, readPwaPushDeviceState } from "@/lib/pwa/push-device-state";
 import { isPushOptInDismissedInStorage } from "@/lib/pwa/push-optin-state";
-import { isMobilePwaContext } from "@/lib/pwa/pwa-mobile";
+import { isMobileBackgroundPushEligible } from "@/lib/pwa/pwa-mobile";
 import { shouldShowPushOptInBanner } from "@/lib/pwa/push-permission-state";
 import type { PushPermissionState } from "@/lib/pwa/push-types";
 
-/** Mobile PWA standalone: priorità push opt-in su desktop prompt. */
+/** Mobile con push in background: priorità subscription Web Push su prompt desktop. */
 export function shouldPreferPwaPushOverDesktopPrompt(): boolean {
   if (!PWA_PUSH_ENABLED) return false;
-  return isMobilePwaContext();
+  return isMobileBackgroundPushEligible();
 }
 
 export function shouldShowDesktopNotificationPromptWhenPushEligible(): boolean {
