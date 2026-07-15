@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { GestionaleCollapsibleHeader } from "@/components/design-system/gestionale-collapsible-header";
 import { useAuthUserId } from "@/context/auth-context";
 import { dsCardTitle, dsSurfaceCard, dsTypoSmall } from "@/lib/ui/design-system";
@@ -76,11 +76,6 @@ export function ShellCard({
 
   const collapsedState = usePersistence ? persistedCollapsed : localCollapsed;
   const collapsed = inAccordionGroup ? !accordion!.isOpen(accordionId!) : (collapsedProp ?? collapsedState);
-
-  useEffect(() => {
-    if (!usePersistence || collapsedProp !== undefined) return;
-    onCollapsedChange?.(collapsedState);
-  }, [usePersistence, collapsedState, collapsedProp, onCollapsedChange]);
 
   const setCollapsed = (next: boolean) => {
     if (inAccordionGroup) {

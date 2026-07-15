@@ -2,7 +2,7 @@
 
 export type CaptureFieldHashRow = {
   field_key: string;
-  confirmed_value: string | null;
+  confirmed_value?: string | null;
   normalized_value?: string | null;
 };
 

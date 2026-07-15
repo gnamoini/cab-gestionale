@@ -11,12 +11,15 @@ export function RichiedenteFirmaDisplay({
   compact = false,
   /** Solo pulsante testuale (header card / righe compatte). */
   buttonOnly = false,
+  label = "richiedente",
 }: {
   dataUrl?: string | null;
   /** Apre modale ingrandita per consultazione. */
   consultable?: boolean;
   compact?: boolean;
   buttonOnly?: boolean;
+  /** Etichetta accessibilità (es. "addetto officina"). */
+  label?: string;
 }) {
   const [viewOpen, setViewOpen] = useState(false);
   const src = dataUrl?.trim() ?? "";
@@ -37,11 +40,11 @@ export function RichiedenteFirmaDisplay({
               consultable ? "cursor-zoom-in transition-shadow hover:shadow-[var(--cab-shadow-md)]" : ""
             }`}
             disabled={!consultable}
-            aria-label={consultable ? "Visualizza firma richiedente" : "Firma richiedente"}
+            aria-label={consultable ? `Visualizza firma ${label}` : `Firma ${label}`}
             onClick={() => consultable && setViewOpen(true)}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt="Firma richiedente" className={`object-contain ${thumbClass}`} />
+            <img src={src} alt={`Firma ${label}`} className={`object-contain ${thumbClass}`} />
           </button>
         ) : null}
         {buttonOnly || consultable ? (
@@ -49,7 +52,7 @@ export function RichiedenteFirmaDisplay({
             type="button"
             className={buttonClass}
             disabled={!hasFirma}
-            aria-label={hasFirma ? "Visualizza firma richiedente" : "Firma non disponibile"}
+            aria-label={hasFirma ? `Visualizza firma ${label}` : "Firma non disponibile"}
             aria-disabled={!hasFirma}
             onClick={() => hasFirma && setViewOpen(true)}
           >
@@ -62,14 +65,14 @@ export function RichiedenteFirmaDisplay({
         <GestionaleModalShell
           modalSize="formSmall"
           onRequestClose={() => setViewOpen(false)}
-          title="Firma richiedente"
+          title={`Firma ${label}`}
           titleId="richiedente-firma-view-title"
         >
           <div className="space-y-3 p-4">
             <p className={dsTypoCaption}>Firma acquisita alla scheda ingresso.</p>
             <div className="overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-white p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt="Firma richiedente ingrandita" className="mx-auto max-h-[min(40vh,280px)] w-full object-contain" />
+              <img src={src} alt={`Firma ${label} ingrandita`} className="mx-auto max-h-[min(40vh,280px)] w-full object-contain" />
             </div>
           </div>
           <div className="flex justify-end border-t border-[color:var(--cab-border)] p-3">

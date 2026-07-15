@@ -5,6 +5,14 @@ function row(field_key: string, value: string): CaptureFieldRow {
   return { field_key, confirmed_value: value, normalized_value: value };
 }
 
+function rowMultiline(
+  field_key: string,
+  raw: string,
+  normalized: string,
+): CaptureFieldRow {
+  return { field_key, confirmed_value: null, normalized_value: normalized, raw_value: raw };
+}
+
 const fields: CaptureFieldRow[] = [
   row("attrezzatura_marca", "CAT"),
   row("telaio_marca", "Iveco"),
@@ -28,5 +36,19 @@ const withRichiedente = mapCaptureFieldsToIngresso([
   row("cognome", "Ignorato"),
 ]);
 assert.equal(withRichiedente.richiedente, "Già compilato");
+
+const FIRMA = "data:image/png;base64,iVBORw0KGgo=";
+const withFirme = mapCaptureFieldsToIngresso([
+  row("firma_richiedente", FIRMA),
+  row("firma_addetto", FIRMA),
+]);
+assert.equal(withFirme.richiedenteFirma, FIRMA);
+assert.equal(withFirme.addettoFirma, FIRMA);
+
+const MULTILINE = "Riga 1\nRiga 2\nRiga 3";
+const withAnomalia = mapCaptureFieldsToIngresso([
+  rowMultiline("descrizione_anomalia", MULTILINE, "Riga 1 Riga 2 Riga 3"),
+]);
+assert.equal(withAnomalia.descrizioneAnomalia, MULTILINE);
 
 console.log("capture-field-mapper.test.ts OK");

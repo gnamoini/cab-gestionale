@@ -3,7 +3,7 @@ export const PWA_INSTALL_STATE_NS = "cab-pwa-install-state-v1" as const;
 export const PWA_INSTALL_DISMISS_KEY = `${PWA_INSTALL_STATE_NS}:dismissed-until` as const;
 export const PWA_INSTALL_COMPLETED_KEY = `${PWA_INSTALL_STATE_NS}:completed` as const;
 
-export const PWA_INSTALL_DISMISS_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+export const PWA_INSTALL_DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const PWA_INSTALL_MIN_ENGAGEMENT_MS = 5_000;
 
 export function readInstallDismissedUntil(now: number, raw: string | null): number | null {

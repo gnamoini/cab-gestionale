@@ -8,7 +8,7 @@ import {
 } from "@/components/gestionale/gestionale-log-ui";
 import { GestionaleConfirmDialogLazy } from "@/components/gestionale/gestionale-confirm-dialog-lazy";
 import { ProfileSheetContent } from "@/components/profile/profile-sheet-content";
-import { ProfileVersionFooter } from "@/components/profile/profile-version-footer";
+import { ProfileSheetFooter } from "@/components/profile/profile-sheet-footer";
 import { useProfileSheet } from "@/components/profile/profile-sheet-context";
 import { useAuth } from "@/context/auth-context";
 import { useShowGlobalLoading } from "@/context/global-loading-context";
@@ -55,7 +55,7 @@ export function ProfileSheet({ restoreFocusRef }: { restoreFocusRef?: RefObject<
         >
           <ProfileSheetContent user={user} onLogout={requestLogout} />
           <footer className={gestionaleLogDrawerFooterClass}>
-            <ProfileVersionFooter />
+            <ProfileSheetFooter />
           </footer>
         </div>
       </Drawer>

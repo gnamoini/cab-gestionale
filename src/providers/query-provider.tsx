@@ -30,7 +30,7 @@ function QueryErrorToasts({ client }: { client: QueryClient }) {
       const now = Date.now();
       if ((last.get(key) ?? 0) > now - 5000) return;
       last.set(key, now);
-      pushRef.current(message, "warning", 5600);
+      pushRef.current(message, "error", 5600);
     };
 
     // ponytail: solo mutation — le query in background (dashboard KPI, prefetch) gestiscono empty/error in UI

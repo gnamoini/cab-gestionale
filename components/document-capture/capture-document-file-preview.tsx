@@ -1,7 +1,11 @@
 "use client";
 
-import { LoadingSpinner } from "@/components/design-system/loading";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
+import {
+  CaptureReviewPanelError,
+  CaptureReviewPanelFrame,
+  CaptureReviewPanelLoading,
+} from "@/components/document-capture/capture-review-panel";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
 import { cabModalZStacked } from "@/lib/ui/mobile-modal-behavior";
 import { useCallback, useEffect, useState } from "react";
@@ -23,9 +27,12 @@ function isPdfMime(mime: string | null | undefined): boolean {
 export function CaptureDocumentFilePreview({
   captureId,
   compact = false,
+  /** Anteprima fissa durante scroll review (colonna sinistra desktop). */
+  pinned = false,
 }: {
   captureId: string;
   compact?: boolean;
+  pinned?: boolean;
 }) {
   const [meta, setMeta] = useState<CaptureMeta | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,44 +66,44 @@ export function CaptureDocumentFilePreview({
   }, [load]);
 
   const fileUrl = `/api/document-capture/${captureId}/file`;
-  const frameClass = compact ? "max-h-48" : "max-h-[min(50vh,28rem)]";
+  const frameClass = compact
+    ? "max-h-48"
+    : pinned
+      ? "max-h-[min(calc(100dvh-16rem),32rem)]"
+      : "max-h-[min(50vh,28rem)]";
+  const pdfFrameClass = pinned ? "h-[min(calc(100dvh-16rem),32rem)]" : "h-[min(50vh,28rem)]";
   const canFullscreen = meta ? isImageMime(meta.mime) || isPdfMime(meta.mime) : false;
+  const panelTitle = "Documento caricato";
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] p-4 text-sm text-[color:var(--cab-muted-fg)]">
-        <LoadingSpinner size="sm" />
-        Caricamento anteprima…
-      </div>
+      <CaptureReviewPanelLoading title={panelTitle} message="Caricamento anteprima…" skeleton="preview" />
     );
   }
 
   if (error || !meta) {
     return (
-      <div className="space-y-2 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] p-4 text-sm">
-        <p className="text-[color:var(--cab-muted-fg)]">{error ?? "Anteprima non disponibile"}</p>
-        <button type="button" className="text-xs underline" onClick={() => void load()}>
-          Riprova
-        </button>
-      </div>
+      <CaptureReviewPanelError
+        title={panelTitle}
+        message={error ?? "Anteprima non disponibile"}
+        onRetry={() => void load()}
+      />
     );
   }
 
+  const fullscreenAction = canFullscreen ? (
+    <button
+      type="button"
+      className="text-xs text-[color:var(--cab-accent-fg)] underline"
+      onClick={() => setFullscreenOpen(true)}
+    >
+      Apri a schermo intero
+    </button>
+  ) : null;
+
   return (
     <>
-      <section className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-medium">Documento caricato</h3>
-          {canFullscreen ? (
-            <button
-              type="button"
-              className="text-xs text-[color:var(--cab-accent-fg)] underline"
-              onClick={() => setFullscreenOpen(true)}
-            >
-              Apri a schermo intero
-            </button>
-          ) : null}
-        </div>
+      <CaptureReviewPanelFrame title={panelTitle} action={fullscreenAction}>
         <div
           className={`overflow-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)] ${frameClass}`}
         >
@@ -121,7 +128,7 @@ export function CaptureDocumentFilePreview({
               aria-label={`Apri ${meta.file_name} a schermo intero`}
               onClick={() => setFullscreenOpen(true)}
             >
-              <iframe title={meta.file_name} src={fileUrl} className="pointer-events-none h-[min(50vh,28rem)] w-full bg-white" />
+              <iframe title={meta.file_name} src={fileUrl} className={`pointer-events-none w-full bg-white ${pdfFrameClass}`} />
             </button>
           ) : (
             <div className="p-4 text-sm text-[color:var(--cab-muted-fg)]">
@@ -132,7 +139,7 @@ export function CaptureDocumentFilePreview({
             </div>
           )}
         </div>
-      </section>
+      </CaptureReviewPanelFrame>
 
       {fullscreenOpen && canFullscreen ? (
         <GestionaleModalShell

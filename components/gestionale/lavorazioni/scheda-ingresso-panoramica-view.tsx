@@ -537,6 +537,15 @@ export function SchedaIngressoPanoramicaView({
                 />
               </PanoramicaCustomField>
             ) : null}
+            {hasSignatureDataUrl(fields.addettoFirma ?? "") ? (
+              <PanoramicaCustomField
+                label="Firma addetto officina"
+                fieldLayout={fieldLayout}
+                rowLayout={rowLayout}
+              >
+                <RichiedenteFirmaDisplay dataUrl={fields.addettoFirma} consultable label="addetto officina" />
+              </PanoramicaCustomField>
+            ) : null}
             <PanoramicaStringField
               label="Richiedente"
               value={fields.richiedente}

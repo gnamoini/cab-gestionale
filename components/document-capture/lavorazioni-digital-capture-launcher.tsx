@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { LoadingButton } from "@/components/design-system";
 import { LoadingSpinner } from "@/components/design-system/loading";
@@ -8,14 +7,13 @@ import {
   GestionaleAiActionButton,
   type GestionaleAiActionButtonSize,
 } from "@/components/design-system/gestionale-ai-action-button";
-import type { CaptureFieldReviewGridHandle } from "@/components/document-capture/capture-field-review-grid";
-import { CaptureIngressoMissingDialog } from "@/components/document-capture/capture-ingresso-missing-dialog";
 import {
-  CaptureEntityAmbiguityDialog,
-  type AmbiguityPick,
-} from "@/components/document-capture/capture-entity-ambiguity-dialog";
-import { CaptureLavorazioneAssignConfirmDialog } from "@/components/document-capture/capture-lavorazione-assign-confirm-dialog";
-import { CaptureUnsavedChangesDialog } from "@/components/document-capture/capture-unsaved-changes-dialog";
+  CaptureMezzoMatchStep,
+} from "@/components/document-capture/capture-mezzo-match-step";
+import {
+  CAPTURE_COMPILE_FORM_ID,
+  CaptureSchedaCompileStep,
+} from "@/components/document-capture/capture-scheda-compile-step";
 import {
   DocumentCaptureWizardBody,
   useDocumentCaptureWizardApi,
@@ -30,35 +28,20 @@ import { deriveCaptureAcquisitionProgress } from "@/lib/document-capture/capture
 import { useDocumentCaptureUpload } from "@/lib/document-capture/use-document-capture-upload";
 import {
   fetchCaptureFieldRows,
-  fetchCaptureIngressoFields,
   inferCaptureSchedaTipo,
-  mapCaptureFieldsToIngresso,
   type CaptureFieldRow,
 } from "@/lib/document-capture/capture-field-mapper";
-import {
-  describeCaptureLavorazioneAssignTarget,
-  findActiveLavorazioneWithIngressoForCaptureIdent,
-  resolveCaptureIdentFromFields,
-  type CaptureIdent,
-} from "@/lib/document-capture/capture-lavorazione-match";
+import { describeCaptureLavorazioneAssignTarget } from "@/lib/document-capture/capture-lavorazione-match";
 import { LavorazioniCaptureDropOverlay } from "@/components/document-capture/lavorazioni-capture-drop-overlay";
 import { GestionaleModalShell, GestionaleModalScrollBody } from "@/components/gestionale/gestionale-modal";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
-import type { CaptureCatalogValidationInput } from "@/lib/document-capture/capture-catalog-validation";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
-import type { LavorazioneSchedeStore, SchedaIngressoFields, SchedaTipo } from "@/types/schede";
+import type { LavorazioneSchedeStore, SchedaTipo } from "@/types/schede";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
-
-const LavorazioneCreateModal = dynamic(
-  () =>
-    import("@/components/gestionale/lavorazioni/lavorazione-create-modal").then((m) => ({
-      default: m.LavorazioneCreateModal,
-    })),
-  { ssr: false },
-);
+import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 
 export type CaptureSchedeOpenRequest = {
   lavorazioneId: string;
@@ -66,13 +49,7 @@ export type CaptureSchedeOpenRequest = {
   fieldRows: CaptureFieldRow[];
 };
 
-type PendingAssign = {
-  lavorazioneId: string;
-  schedaTipo: Extract<SchedaTipo, "lavorazioni" | "ricambi">;
-  fieldRows: CaptureFieldRow[];
-  ident: CaptureIdent;
-  targetLabel: string;
-};
+type CompileView = "ingresso" | "mezzo-match";
 
 type Props = {
   enabled: boolean;
@@ -108,27 +85,15 @@ export function LavorazioniDigitalCaptureLauncher({
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<DocumentCaptureFlowStep>("hub");
   const [captureId, setCaptureId] = useState<string | null>(null);
-  const [createFields, setCreateFields] = useState<SchedaIngressoFields | null>(null);
-  const [prepareCreateBusy, setPrepareCreateBusy] = useState(false);
-  const [prepareCreateError, setPrepareCreateError] = useState<string | null>(null);
-  const [ingressoMissingOpen, setIngressoMissingOpen] = useState(false);
-  const [missingIdent, setMissingIdent] = useState<CaptureIdent | null>(null);
+  const [compileView, setCompileView] = useState<CompileView>("ingresso");
+  const [fieldRows, setFieldRows] = useState<CaptureFieldRow[] | null>(null);
   const [pendingSchedaTipo, setPendingSchedaTipo] = useState<Extract<SchedaTipo, "lavorazioni" | "ricambi"> | null>(
     null,
   );
-  const [pendingFieldRows, setPendingFieldRows] = useState<CaptureFieldRow[] | null>(null);
-  const [assignConfirmOpen, setAssignConfirmOpen] = useState(false);
-  const [ambiguityOpen, setAmbiguityOpen] = useState(false);
-  const [ambiguityItems, setAmbiguityItems] = useState<
-    Array<{ fieldKey: string; original: string; resolution: import("@/lib/entity-resolution/entity-resolution-types").EntityResolutionResult }>
-  >([]);
-  const [ambiguityBusy, setAmbiguityBusy] = useState(false);
-  const [unsavedChangesOpen, setUnsavedChangesOpen] = useState(false);
-  const [unsavedChangesBusy, setUnsavedChangesBusy] = useState(false);
-  const [pendingAssign, setPendingAssign] = useState<PendingAssign | null>(null);
+  const [compileError, setCompileError] = useState<string | null>(null);
+  const [compileFieldsLoading, setCompileFieldsLoading] = useState(false);
   const [schedeHandoffBusy, setSchedeHandoffBusy] = useState(false);
   const analyzeTriggeredRef = useRef<string | null>(null);
-  const reviewSaveRef = useRef<CaptureFieldReviewGridHandle | null>(null);
   const gestToast = useGestionaleToast();
 
   const { busy: wizardBusy, error, runAnalyze, reset: resetWizardApi } = useDocumentCaptureWizardApi(captureId);
@@ -141,27 +106,14 @@ export function LavorazioniDigitalCaptureLauncher({
   } = useDocumentCaptureUpload();
   const magazzinoQuery = useMagazzinoRicambiUIQuery(undefined, { enabled: open });
 
-  const catalogValidation = useMemo((): CaptureCatalogValidationInput | null => {
-    if (!sharedGlobalOpts || sharedGlobalOpts.isLoading) return null;
-    return {
-      fields: [],
-      addettiRecords: sharedGlobalOpts.lavorazioni.addettiRecords,
-      mezziListe: sharedGlobalOpts.mezziListe,
-      magazzino: magazzinoQuery.data ?? [],
-    };
-  }, [magazzinoQuery.data, sharedGlobalOpts]);
-
   const resetFlow = useCallback(() => {
     setStep("hub");
     setCaptureId(null);
-    setCreateFields(null);
-    setPrepareCreateError(null);
-    setIngressoMissingOpen(false);
-    setMissingIdent(null);
+    setCompileView("ingresso");
+    setFieldRows(null);
     setPendingSchedaTipo(null);
-    setPendingFieldRows(null);
-    setAssignConfirmOpen(false);
-    setPendingAssign(null);
+    setCompileError(null);
+    setCompileFieldsLoading(false);
     setSchedeHandoffBusy(false);
     resetWizardApi();
     resetUpload();
@@ -177,12 +129,6 @@ export function LavorazioniDigitalCaptureLauncher({
     setOpen(false);
     resetFlow();
   }, [discardCurrentCapture, resetFlow]);
-
-  const handleCreateModalClose = useCallback(() => {
-    setCreateFields(null);
-    if (pendingSchedaTipo && pendingFieldRows) return;
-    setStep("review");
-  }, [pendingFieldRows, pendingSchedaTipo]);
 
   const openSchedeEditor = useCallback(
     async (request: CaptureSchedeOpenRequest, opts?: { handoff?: boolean }): Promise<boolean> => {
@@ -201,10 +147,33 @@ export function LavorazioniDigitalCaptureLauncher({
     [discardCurrentCapture, onOpenSchedeFromCapture, resetFlow],
   );
 
+  const enterCompileStep = useCallback(async (id: string) => {
+    setCompileFieldsLoading(true);
+    setCompileError(null);
+    try {
+      const rows = await fetchCaptureFieldRows(id);
+      const schedaTipo = inferCaptureSchedaTipo(rows) ?? "ingresso";
+      setFieldRows(rows);
+      if (schedaTipo === "ingresso") {
+        setCompileView("ingresso");
+        setPendingSchedaTipo(null);
+      } else {
+        setCompileView("mezzo-match");
+        setPendingSchedaTipo(schedaTipo);
+      }
+      setStep("compile");
+    } catch (e) {
+      setCompileError(e instanceof Error ? e.message : "Impossibile caricare i dati letti");
+    } finally {
+      setCompileFieldsLoading(false);
+    }
+  }, []);
+
   const runCapturePipeline = useCallback(
     async (file: File) => {
       setStep("analyze");
       setCaptureId(null);
+      setFieldRows(null);
       analyzeTriggeredRef.current = null;
       resetWizardApi();
 
@@ -221,16 +190,16 @@ export function LavorazioniDigitalCaptureLauncher({
       setCaptureId(result.captureId);
       analyzeTriggeredRef.current = result.captureId;
       const ok = await runAnalyze(result.captureId);
-      if (ok) setStep("review");
+      if (ok) await enterCompileStep(result.captureId);
     },
-    [gestToast, resetWizardApi, runAnalyze, upload],
+    [enterCompileStep, gestToast, resetWizardApi, runAnalyze, upload],
   );
 
   const retryAnalyze = useCallback(async () => {
     if (!captureId || wizardBusy) return;
     const ok = await runAnalyze(captureId);
-    if (ok) setStep("review");
-  }, [captureId, runAnalyze, wizardBusy]);
+    if (ok) await enterCompileStep(captureId);
+  }, [captureId, enterCompileStep, runAnalyze, wizardBusy]);
 
   const handleFilePicked = useCallback(
     (file: File) => {
@@ -240,148 +209,57 @@ export function LavorazioniDigitalCaptureLauncher({
   );
 
   const goBack = useCallback(() => {
-    if (step === "analyze" || step === "review") {
+    if (step === "analyze" || step === "compile") {
       discardCurrentCapture();
       resetFlow();
-      return;
     }
-    if (step === "confirm") {
-      handleCreateModalClose();
-    }
-  }, [discardCurrentCapture, handleCreateModalClose, resetFlow, step]);
+  }, [discardCurrentCapture, resetFlow, step]);
 
-  const continueAfterReview = useCallback(async () => {
-    if (!captureId) return;
-    setPrepareCreateBusy(true);
-    setPrepareCreateError(null);
-    try {
-      const ambiguous = reviewSaveRef.current?.getAmbiguousItems() ?? [];
-      if (ambiguous.length > 0) {
-        setAmbiguityItems(ambiguous);
-        setAmbiguityOpen(true);
-        return;
-      }
-
-      const fieldRows = await fetchCaptureFieldRows(captureId);
-      const schedaTipo = inferCaptureSchedaTipo(fieldRows) ?? "ingresso";
-
-      if (schedaTipo === "ingresso") {
-        setCreateFields(mapCaptureFieldsToIngresso(fieldRows));
-        setPendingSchedaTipo(null);
-        setPendingFieldRows(null);
-        setStep("confirm");
-        return;
-      }
-
-      const ident = resolveCaptureIdentFromFields(fieldRows);
-      const match = findActiveLavorazioneWithIngressoForCaptureIdent(ident, mezzi, schedeStore, attive);
-      if (!match) {
-        setMissingIdent(ident);
-        setPendingSchedaTipo(schedaTipo);
-        setPendingFieldRows(fieldRows);
-        setIngressoMissingOpen(true);
-        return;
-      }
-
-      setPendingAssign({
-        lavorazioneId: match.lavorazioneId,
-        schedaTipo,
+  const handleAssignToLavorazione = useCallback(
+    async (lavorazioneId: string) => {
+      if (!fieldRows || !pendingSchedaTipo) return;
+      const request: CaptureSchedeOpenRequest = {
+        lavorazioneId,
+        schedaTipo: pendingSchedaTipo,
         fieldRows,
-        ident,
-        targetLabel: describeCaptureLavorazioneAssignTarget(match.lavorazioneId, attive, schedeStore),
-      });
-      setAssignConfirmOpen(true);
-    } catch (e) {
-      setPrepareCreateError(e instanceof Error ? e.message : "Impossibile preparare la lavorazione");
-    } finally {
-      setPrepareCreateBusy(false);
-    }
-  }, [attive, captureId, mezzi, schedeStore]);
-
-  const proceedAfterReview = useCallback(async () => {
-    if (!captureId) return;
-    if (reviewSaveRef.current?.hasUnsavedChanges()) {
-      setUnsavedChangesOpen(true);
-      return;
-    }
-    await continueAfterReview();
-  }, [captureId, continueAfterReview]);
-
-  const goToCreate = useCallback(async () => {
-    await proceedAfterReview();
-  }, [proceedAfterReview]);
-
-  const handleSaveAndContinueReview = useCallback(async () => {
-    setUnsavedChangesBusy(true);
-    try {
-      const saved = (await reviewSaveRef.current?.saveConfirmed()) ?? false;
-      if (!saved) throw new Error("Salvataggio non riuscito");
-      setUnsavedChangesOpen(false);
-      await continueAfterReview();
-    } catch (e) {
-      setPrepareCreateError(e instanceof Error ? e.message : "Salvataggio non riuscito");
-    } finally {
-      setUnsavedChangesBusy(false);
-    }
-  }, [continueAfterReview]);
-
-  const handleContinueWithoutSavingReview = useCallback(async () => {
-    setUnsavedChangesOpen(false);
-    await continueAfterReview();
-  }, [continueAfterReview]);
-
-  const confirmAmbiguityPicks = useCallback(
-    async (picks: AmbiguityPick[]) => {
-      if (!captureId) return;
-      setAmbiguityBusy(true);
-      try {
-        const payload = picks.map((p) => ({
-          fieldKey: p.fieldKey,
-          label: p.label === "__keep__" ? p.original : p.label,
-          id: p.id,
-          original: p.original,
-        }));
-        const res = await fetch(`/api/document-capture/${captureId}/entity-resolution`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ picks: payload }),
-        });
-        if (!res.ok) throw new Error("Conferma riconciliazione non riuscita");
-        setAmbiguityOpen(false);
-        setAmbiguityItems([]);
-        await proceedAfterReview();
-      } catch (e) {
-        setPrepareCreateError(e instanceof Error ? e.message : "Conferma non riuscita");
-      } finally {
-        setAmbiguityBusy(false);
+      };
+      const opened = await openSchedeEditor(request, { handoff: true });
+      if (opened) {
+        gestToast.success(
+          `Scheda assegnata a ${describeCaptureLavorazioneAssignTarget(lavorazioneId, attive, schedeStore)}`,
+        );
       }
     },
-    [captureId, proceedAfterReview],
+    [attive, fieldRows, gestToast, openSchedeEditor, pendingSchedaTipo, schedeStore],
   );
 
-  const confirmAssignToLavorazione = useCallback(async () => {
-    if (!pendingAssign) return;
-    setAssignConfirmOpen(false);
-    const request: CaptureSchedeOpenRequest = {
-      lavorazioneId: pendingAssign.lavorazioneId,
-      schedaTipo: pendingAssign.schedaTipo,
-      fieldRows: pendingAssign.fieldRows,
-    };
-    setPendingAssign(null);
-    await openSchedeEditor(request, { handoff: true });
-  }, [openSchedeEditor, pendingAssign]);
+  const handleCreateNewFromMatch = useCallback(() => {
+    setCompileView("ingresso");
+  }, []);
 
-  const startIngressoCreateForPendingScheda = useCallback(async () => {
-    if (!pendingFieldRows || !pendingSchedaTipo) return;
-    setIngressoMissingOpen(false);
-    try {
-      const ingresso = mapCaptureFieldsToIngresso(pendingFieldRows);
-      setCreateFields(ingresso);
-      setStep("confirm");
-    } catch (e) {
-      setPrepareCreateError(e instanceof Error ? e.message : "Impossibile preparare la scheda ingresso");
-    }
-  }, [pendingFieldRows, pendingSchedaTipo]);
+  const handleCaptureLavorazioneCreated = useCallback(
+    (id: string) => {
+      void (async () => {
+        if (pendingSchedaTipo && fieldRows) {
+          const opened = await openSchedeEditor(
+            {
+              lavorazioneId: id,
+              schedaTipo: pendingSchedaTipo,
+              fieldRows,
+            },
+            { handoff: true },
+          );
+          if (opened) onLavorazioneCreated?.(id, { skipTableFocus: true });
+          return;
+        }
+        discardCurrentCapture();
+        onLavorazioneCreated?.(id);
+        setOpen(false);
+        resetFlow();
+      })();
+    },
+    [discardCurrentCapture, fieldRows, onLavorazioneCreated, openSchedeEditor, pendingSchedaTipo, resetFlow],
+  );
 
   const acquisition = useMemo(
     () =>
@@ -401,8 +279,9 @@ export function LavorazioniDigitalCaptureLauncher({
     (uploadPhase === "uploading" || uploadPhase === "finalizing" || wizardBusy);
 
   const stepCopy = DOCUMENT_CAPTURE_STEP_COPY[step];
-  const footerBusy = wizardBusy || prepareCreateBusy || pipelineBusy;
-  const reviewCta = "Prosegui";
+  const footerBusy = wizardBusy || pipelineBusy || compileFieldsLoading || schedeHandoffBusy;
+
+  const showCompileIngressoFooter = step === "compile" && compileView === "ingresso" && fieldRows && captureId;
 
   if (!enabled) return null;
 
@@ -419,7 +298,7 @@ export function LavorazioniDigitalCaptureLauncher({
         <span className="hidden sm:inline">Acquisizione AI</span>
         {!mobileIconOnly ? <span className="sm:hidden">Acquisizione</span> : null}
       </GestionaleAiActionButton>
-      {open && step !== "confirm" ? (
+      {open ? (
         <GestionaleModalShell
           modalSize="formLarge"
           onRequestClose={handleClose}
@@ -428,119 +307,77 @@ export function LavorazioniDigitalCaptureLauncher({
           subtitle={stepCopy.subtitle}
           titleId="lav-digital-capture-title"
           footer={
-            step === "review" && !prepareCreateBusy ? (
+            showCompileIngressoFooter ? (
               <div className="flex min-w-0 w-full justify-end gap-2">
                 <LoadingButton
-                  type="button"
+                  type="submit"
+                  form={CAPTURE_COMPILE_FORM_ID}
                   variant="primary"
+                  className={`${erpBtnAccent} min-h-11 sm:min-w-[10rem]`}
                   loading={footerBusy}
-                  onClick={() => void goToCreate()}
+                  loadingLabel="Salvataggio…"
+                  disabled={!createdBy}
                 >
-                  {reviewCta}
+                  Crea lavorazione
                 </LoadingButton>
               </div>
             ) : undefined
           }
         >
-          <GestionaleModalScrollBody className="space-y-5">
+          <GestionaleModalScrollBody className="space-y-5 [--capture-review-pin-top:5.5rem]">
             <DocumentCaptureStepIndicator current={step} />
             {step === "hub" ? (
               <LavorazioniCaptureDropOverlay enabled onFilePicked={handleFilePicked} />
             ) : null}
-            {step !== "hub" ? (
+            {step === "analyze" ? (
               <DocumentCaptureWizardBody
                 captureId={captureId}
-                step={step}
+                step="analyze"
                 acquisition={acquisition}
-                error={error ?? prepareCreateError}
+                error={error ?? compileError}
                 onRetryAnalyze={() => void retryAnalyze()}
-                reviewSaveRef={reviewSaveRef}
-                catalogValidation={catalogValidation}
-                sharedGlobalOpts={sharedGlobalOpts}
-                magazzino={magazzinoQuery.data ?? []}
-                mezzi={mezzi}
               />
+            ) : null}
+            {step === "compile" && captureId && fieldRows ? (
+              compileFieldsLoading ? (
+                <div className="flex min-h-[12rem] items-center justify-center">
+                  <LoadingSpinner size="md" />
+                </div>
+              ) : compileView === "ingresso" ? (
+                <CaptureSchedaCompileStep
+                  captureId={captureId}
+                  fieldRows={fieldRows}
+                  createdBy={createdBy}
+                  mezzi={mezzi}
+                  schedeStore={schedeStore}
+                  attive={attive}
+                  storico={storico}
+                  sharedGlobalOpts={sharedGlobalOpts}
+                  sharedMezziCatalog={sharedMezziCatalog}
+                  magazzino={magazzinoQuery.data ?? []}
+                  onCreated={handleCaptureLavorazioneCreated}
+                  onCompileError={setCompileError}
+                />
+              ) : pendingSchedaTipo ? (
+                <CaptureMezzoMatchStep
+                  captureId={captureId}
+                  fieldRows={fieldRows}
+                  schedaTipo={pendingSchedaTipo}
+                  mezzi={mezzi}
+                  schedeStore={schedeStore}
+                  attive={attive}
+                  onAssign={(id) => void handleAssignToLavorazione(id)}
+                  onCreateNew={handleCreateNewFromMatch}
+                  onCancel={goBack}
+                  assignBusy={schedeHandoffBusy}
+                />
+              ) : null
+            ) : null}
+            {compileError && step === "compile" ? (
+              <p className="text-sm text-[color:var(--cab-danger)]">{compileError}</p>
             ) : null}
           </GestionaleModalScrollBody>
         </GestionaleModalShell>
-      ) : null}
-      {pendingAssign ? (
-        <CaptureLavorazioneAssignConfirmDialog
-          open={assignConfirmOpen}
-          schedaLabel={pendingAssign.schedaTipo === "ricambi" ? "scheda ricambi" : "scheda lavorazioni"}
-          targetLabel={pendingAssign.targetLabel}
-          captureIdent={pendingAssign.ident}
-          onCancel={() => {
-            setAssignConfirmOpen(false);
-            setPendingAssign(null);
-          }}
-          onConfirm={() => void confirmAssignToLavorazione()}
-        />
-      ) : null}
-      {missingIdent && pendingSchedaTipo ? (
-        <CaptureIngressoMissingDialog
-          open={ingressoMissingOpen}
-          schedaLabel={pendingSchedaTipo === "ricambi" ? "scheda ricambi" : "scheda lavorazioni"}
-          ident={missingIdent}
-          onCancel={() => {
-            setIngressoMissingOpen(false);
-            setMissingIdent(null);
-            setPendingSchedaTipo(null);
-            setPendingFieldRows(null);
-          }}
-          onCreateIngresso={() => void startIngressoCreateForPendingScheda()}
-        />
-      ) : null}
-      <CaptureEntityAmbiguityDialog
-        open={ambiguityOpen}
-        items={ambiguityItems}
-        pending={ambiguityBusy}
-        onCancel={() => {
-          setAmbiguityOpen(false);
-          setAmbiguityItems([]);
-        }}
-        onConfirm={(picks) => void confirmAmbiguityPicks(picks)}
-      />
-      <CaptureUnsavedChangesDialog
-        open={unsavedChangesOpen}
-        pending={unsavedChangesBusy}
-        onCancel={() => setUnsavedChangesOpen(false)}
-        onSaveAndContinue={() => void handleSaveAndContinueReview()}
-        onContinueWithoutSave={() => void handleContinueWithoutSavingReview()}
-      />
-      {open && step === "confirm" && createFields ? (
-        <LavorazioneCreateModal
-          open
-          initialFields={createFields}
-          createdBy={createdBy}
-          mezzi={mezzi}
-          schedeStore={schedeStore}
-          attive={attive}
-          storico={storico}
-          sharedGlobalOpts={sharedGlobalOpts}
-          sharedMezziCatalog={sharedMezziCatalog}
-          onClose={handleCreateModalClose}
-          onCreated={(id) => {
-            void (async () => {
-              if (pendingSchedaTipo && pendingFieldRows) {
-                const opened = await openSchedeEditor(
-                  {
-                    lavorazioneId: id,
-                    schedaTipo: pendingSchedaTipo,
-                    fieldRows: pendingFieldRows,
-                  },
-                  { handoff: true },
-                );
-                if (opened) onLavorazioneCreated?.(id, { skipTableFocus: true });
-                return;
-              }
-              discardCurrentCapture();
-              onLavorazioneCreated?.(id);
-              setOpen(false);
-              resetFlow();
-            })();
-          }}
-        />
       ) : null}
       {schedeHandoffBusy ? (
         <div

@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import {
+  drawSignaturePadSegment,
   exportSignatureDataUrl,
   hasSignatureDataUrl,
   setupSignaturePadContext,
+  type SignaturePadPoint,
 } from "@/lib/media/signature-pad";
 import { dsBtnNeutral, dsBtnPrimary, dsTypoCaption } from "@/lib/ui/design-system";
 
-type Point = { x: number; y: number };
+type Point = SignaturePadPoint;
 
 function clientPoint(canvas: HTMLCanvasElement, clientX: number, clientY: number): Point {
   const rect = canvas.getBoundingClientRect();
@@ -24,11 +26,15 @@ export function RichiedenteFirmaCaptureModal({
   initialDataUrl = "",
   onClose,
   onSave,
+  title = "Firma richiedente",
+  titleId = "richiedente-firma-capture-title",
 }: {
   open: boolean;
   initialDataUrl?: string;
   onClose: () => void;
   onSave: (dataUrl: string) => void;
+  title?: string;
+  titleId?: string;
 }) {
   const padRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -118,10 +124,7 @@ export function RichiedenteFirmaCaptureModal({
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.beginPath();
-    ctx.moveTo(from.x, from.y);
-    ctx.lineTo(to.x, to.y);
-    ctx.stroke();
+    drawSignaturePadSegment(ctx, from, to);
     hasInkRef.current = true;
     setHasInk(true);
   }, []);
@@ -180,8 +183,8 @@ export function RichiedenteFirmaCaptureModal({
     <GestionaleModalShell
       modalSize="formMedium"
       onRequestClose={onClose}
-      title="Firma richiedente"
-      titleId="richiedente-firma-capture-title"
+      title={title}
+      titleId={titleId}
     >
       <div className="space-y-3 p-4">
         <p className={dsTypoCaption}>Firma con dito o pennino nell&apos;area bianca.</p>

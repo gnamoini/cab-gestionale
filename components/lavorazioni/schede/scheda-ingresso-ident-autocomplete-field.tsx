@@ -104,19 +104,24 @@ export function SchedaIngressoIdentAutocompleteField({
     repositionDeps: [suggestions.length, value],
   });
 
-  const resetUi = useCallback(() => {
+  const closeUiOnly = useCallback(() => {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
     setOpen(false);
     setActiveIndex(-1);
     setFocused(false);
     setSheetQuery("");
+  }, []);
+
+  const resetUi = useCallback(() => {
+    closeUiOnly();
     skipSheetOpenOnFocusRef.current = true;
     restoreFocus();
     requestAnimationFrame(() => {
       skipSheetOpenOnFocusRef.current = false;
     });
-  }, [restoreFocus]);
+  }, [closeUiOnly, restoreFocus]);
 
-  const { notifyOpening } = useSelectorExclusiveGroup(exclusiveGroup, resetUi);
+  const { notifyOpening } = useSelectorExclusiveGroup(exclusiveGroup, closeUiOnly);
 
   const onFocusIn = useCallback((el: HTMLElement) => {
     void el;

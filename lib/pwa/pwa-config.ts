@@ -16,6 +16,8 @@ export const PWA_DISPLAY = "standalone" as const;
 export const PWA_ORIENTATION = "any" as const;
 export const PWA_THEME_COLOR = CAB_BRAND_ORANGE;
 export const PWA_BACKGROUND_COLOR = THEME_CRITICAL_BG.dark;
+/** Tile icone PWA — logo CAB su quadrato arrotondato scuro (non arancione pieno). */
+export const PWA_ICON_TILE_COLOR = "#18181b" as const;
 export const PWA_CATEGORIES = ["business", "productivity"] as const;
 export const PWA_PREFER_RELATED_APPLICATIONS = false;
 

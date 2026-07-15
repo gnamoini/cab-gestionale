@@ -28,6 +28,15 @@ import type { MezzoGestito } from "@/lib/mezzi/types";
 import { attrezzatureEntry } from "@/lib/domain/attrezzature-entry";
 import type { AttrezzaturaRow } from "@/src/types/supabase-tables";
 import type { SchedaIngressoFields } from "@/types/schede";
+import type { CaptureIngressoFieldHint } from "@/lib/document-capture/capture-ingresso-field-hints";
+import {
+  SCHEDA_INGRESSO_ANAGRAFICA_FIELD_KEYS,
+  schedaIngressoFieldsSliceEqual,
+} from "@/lib/schede/scheda-ingresso-form-field-groups";
+import {
+  CaptureAwareFormField,
+  CaptureIngressoFieldHintInline,
+} from "@/components/document-capture/capture-ingresso-field-hint";
 
 export type SchedaIngressoAnagraficaSection = "cliente" | "attrezzatura" | "telaio" | "dettagli";
 
@@ -51,6 +60,8 @@ function SchedaIngressoAnagraficaFieldsInner({
   marcaAttrezzaturaRequired = false,
   mezzoLinked = false,
   mezzoId = "",
+  captureHints,
+  onApplyCaptureHint,
 }: {
   value: SchedaIngressoFields;
   onPatch: (patch: Partial<SchedaIngressoFields>) => void;
@@ -66,6 +77,8 @@ function SchedaIngressoAnagraficaFieldsInner({
   marcaAttrezzaturaRequired?: boolean;
   mezzoLinked?: boolean;
   mezzoId?: string;
+  captureHints?: Partial<Record<keyof SchedaIngressoFields, CaptureIngressoFieldHint>>;
+  onApplyCaptureHint?: (key: keyof SchedaIngressoFields, value: string) => void;
 }) {
   const profilo = useOfficinaProfiloOperativo();
   const resolvedSections = useMemo(() => {
@@ -117,12 +130,23 @@ function SchedaIngressoAnagraficaFieldsInner({
   const uid = useId();
   const fieldId = (suffix: string) => `${uid}-${suffix}`;
 
+  const hintAfter = (key: keyof SchedaIngressoFields, embedded = false) => (
+    <CaptureIngressoFieldHintInline
+      embedded={embedded}
+      fieldKey={key}
+      hint={captureHints?.[key]}
+      currentValue={String(value[key] ?? "")}
+      onApply={onApplyCaptureHint}
+    />
+  );
+
   return (
     <>
       {show("cliente") ? (
         <FormSection title="Anagrafica cliente">
           <FormField label="Cliente" htmlFor={fieldId("cliente")} required={clienteRequired}>
-            <GlobalSettingsListSelect
+            <CaptureAwareFormField hint={captureHints?.cliente} footer={hintAfter("cliente", true)}>
+              <GlobalSettingsListSelect
               id={fieldId("cliente")}
               listKey="mezzi:clienti"
               className={listSelectWrapClass}
@@ -133,9 +157,11 @@ function SchedaIngressoAnagraficaFieldsInner({
               exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
               aria-label="Cliente"
             />
+            </CaptureAwareFormField>
           </FormField>
           <FormField label="Cantiere" htmlFor={fieldId("cantiere")}>
-            <GlobalSettingsListSelect
+            <CaptureAwareFormField hint={captureHints?.cantiere} footer={hintAfter("cantiere", true)}>
+              <GlobalSettingsListSelect
               id={fieldId("cantiere")}
               listKey="mezzi:cantieri"
               className={listSelectWrapClass}
@@ -145,9 +171,11 @@ function SchedaIngressoAnagraficaFieldsInner({
               exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
               aria-label="Cantiere"
             />
+            </CaptureAwareFormField>
           </FormField>
           <FormField label="Utilizzatore" htmlFor={fieldId("utilizzatore")}>
-            <GlobalSettingsListSelect
+            <CaptureAwareFormField hint={captureHints?.utilizzatore} footer={hintAfter("utilizzatore", true)}>
+              <GlobalSettingsListSelect
               id={fieldId("utilizzatore")}
               listKey="mezzi:utilizzatori"
               className={listSelectWrapClass}
@@ -157,9 +185,11 @@ function SchedaIngressoAnagraficaFieldsInner({
               exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
               aria-label="Utilizzatore"
             />
+            </CaptureAwareFormField>
           </FormField>
           <FormField label="Richiedente" htmlFor={fieldId("richiedente")}>
-            <div className="flex min-w-0 items-start gap-2">
+            <CaptureAwareFormField hint={captureHints?.richiedente} footer={hintAfter("richiedente", true)}>
+            <div className="flex min-w-0 items-center gap-2">
               <input
                 id={fieldId("richiedente")}
                 className={`min-w-0 flex-1 ${inputFieldClass}`}
@@ -198,6 +228,7 @@ function SchedaIngressoAnagraficaFieldsInner({
                 </button>
               </div>
             ) : null}
+            </CaptureAwareFormField>
           </FormField>
           <FormField label="Telefono richiedente" htmlFor={fieldId("richiedente-telefono")}>
             <input
@@ -248,6 +279,7 @@ function SchedaIngressoAnagraficaFieldsInner({
           </FormField>
           <div className="grid gap-2 sm:grid-cols-2">
             <FormField label="Marca" htmlFor={fieldId("marca-attrezzatura")} required={marcaAttrezzaturaRequired}>
+              <CaptureAwareFormField hint={captureHints?.marcaAttrezzatura} footer={hintAfter("marcaAttrezzatura", true)}>
               <CompatHierarchySelect
                 id={fieldId("marca-attrezzatura")}
                 tree="attrezzature"
@@ -260,8 +292,10 @@ function SchedaIngressoAnagraficaFieldsInner({
                 exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
                 ariaLabel="Marca attrezzatura"
               />
+              </CaptureAwareFormField>
             </FormField>
             <FormField label="Modello" htmlFor={fieldId("modello-attrezzatura")}>
+              <CaptureAwareFormField hint={captureHints?.modelloAttrezzatura} footer={hintAfter("modelloAttrezzatura", true)}>
               <CompatHierarchySelect
                 id={fieldId("modello-attrezzatura")}
                 tree="attrezzature"
@@ -274,33 +308,40 @@ function SchedaIngressoAnagraficaFieldsInner({
                 exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
                 ariaLabel="Modello attrezzatura"
               />
+              </CaptureAwareFormField>
             </FormField>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
-            <SchedaIngressoIdentAutocompleteField
-              field="matricola"
-              label="Matricola"
-              id={fieldId("matricola")}
-              value={value.matricola}
-              siblingIdent={identSibling}
-              mezzi={mezzi}
-              disabled={disabled}
-              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
-              onChange={(v) => onPatch({ matricola: v })}
-              onExactMezzoMatch={mezzoMatchHandler}
-            />
-            <SchedaIngressoIdentAutocompleteField
-              field="nScuderia"
-              label="N. scuderia"
-              id={fieldId("n-scuderia")}
-              value={value.nScuderia}
-              siblingIdent={identSibling}
-              mezzi={mezzi}
-              disabled={disabled}
-              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
-              onChange={(v) => onPatch({ nScuderia: v })}
-              onExactMezzoMatch={mezzoMatchHandler}
-            />
+            <div>
+              <SchedaIngressoIdentAutocompleteField
+                field="matricola"
+                label="Matricola"
+                id={fieldId("matricola")}
+                value={value.matricola}
+                siblingIdent={identSibling}
+                mezzi={mezzi}
+                disabled={disabled}
+                exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
+                onChange={(v) => onPatch({ matricola: v })}
+                onExactMezzoMatch={mezzoMatchHandler}
+              />
+              {hintAfter("matricola")}
+            </div>
+            <div>
+              <SchedaIngressoIdentAutocompleteField
+                field="nScuderia"
+                label="N. scuderia"
+                id={fieldId("n-scuderia")}
+                value={value.nScuderia}
+                siblingIdent={identSibling}
+                mezzi={mezzi}
+                disabled={disabled}
+                exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
+                onChange={(v) => onPatch({ nScuderia: v })}
+                onExactMezzoMatch={mezzoMatchHandler}
+              />
+              {hintAfter("nScuderia")}
+            </div>
           </div>
           {onCopyLastIngresso ? (
             <CopiaUltimaSchedaIngressoBanner
@@ -363,6 +404,7 @@ function SchedaIngressoAnagraficaFieldsInner({
             </FormField>
           </div>
           <FormField label="VIN" htmlFor={fieldId("vin")}>
+            <CaptureAwareFormField hint={captureHints?.vin} footer={hintAfter("vin", true)}>
             <input
               id={fieldId("vin")}
               value={value.vin}
@@ -372,18 +414,22 @@ function SchedaIngressoAnagraficaFieldsInner({
               autoComplete="off"
               spellCheck={false}
             />
+            </CaptureAwareFormField>
           </FormField>
-          <SchedaIngressoIdentAutocompleteField
-            field="targa"
-            label="Targa"
-            value={value.targa}
-            siblingIdent={identSibling}
-            mezzi={mezzi}
-            disabled={disabled}
-            exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
-            onChange={(v) => onPatch({ targa: v })}
-            onExactMezzoMatch={mezzoMatchHandler}
-          />
+          <div>
+            <SchedaIngressoIdentAutocompleteField
+              field="targa"
+              label="Targa"
+              value={value.targa}
+              siblingIdent={identSibling}
+              mezzi={mezzi}
+              disabled={disabled}
+              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
+              onChange={(v) => onPatch({ targa: v })}
+              onExactMezzoMatch={mezzoMatchHandler}
+            />
+            {hintAfter("targa")}
+          </div>
         </FormSection>
       ) : null}
 
@@ -428,4 +474,28 @@ function SchedaIngressoAnagraficaFieldsInner({
   );
 }
 
-export const SchedaIngressoAnagraficaFields = memo(SchedaIngressoAnagraficaFieldsInner);
+export const SchedaIngressoAnagraficaFields = memo(
+  SchedaIngressoAnagraficaFieldsInner,
+  (prev, next) => {
+    if (prev.disabled !== next.disabled) return false;
+    if (prev.onPatch !== next.onPatch) return false;
+    if (prev.mezzi !== next.mezzi) return false;
+    if (prev.sections !== next.sections) return false;
+    if (prev.onExactMezzoMatch !== next.onExactMezzoMatch) return false;
+    if (prev.lastIngressoMatch !== next.lastIngressoMatch) return false;
+    if (prev.lastIngressoMatchCount !== next.lastIngressoMatchCount) return false;
+    if (prev.mezzoInAnagraficaOnly !== next.mezzoInAnagraficaOnly) return false;
+    if (prev.onCopyLastIngresso !== next.onCopyLastIngresso) return false;
+    if (prev.clienteRequired !== next.clienteRequired) return false;
+    if (prev.marcaAttrezzaturaRequired !== next.marcaAttrezzaturaRequired) return false;
+    if (prev.mezzoLinked !== next.mezzoLinked) return false;
+    if (prev.mezzoId !== next.mezzoId) return false;
+    if (prev.captureHints !== next.captureHints) return false;
+    if (prev.onApplyCaptureHint !== next.onApplyCaptureHint) return false;
+    return schedaIngressoFieldsSliceEqual(
+      prev.value,
+      next.value,
+      SCHEDA_INGRESSO_ANAGRAFICA_FIELD_KEYS,
+    );
+  },
+);

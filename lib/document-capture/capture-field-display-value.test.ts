@@ -83,4 +83,17 @@ assert.equal(formatCaptureReviewDraftValue("riga_1_nome", "mario b.", { addettiR
 assert.equal(isCaptureMultilineFieldKey("descrizione_anomalia"), true);
 assert.equal(isCaptureMultilineFieldKey("cliente"), false);
 
+assert.equal(
+  formatCaptureReviewDisplayValue("descrizione_anomalia", {
+    raw: "Riga 1\nRiga 2",
+    normalized: "Riga 1 Riga 2",
+  }),
+  "Riga 1\nRiga 2",
+);
+
+assert.equal(
+  formatCaptureReviewDraftValue("descrizione_anomalia", "  prima\nseconda  "),
+  "prima\nseconda",
+);
+
 console.log("capture-field-display-value.test.ts OK");

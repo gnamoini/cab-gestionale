@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChangeEvent, InputHTMLAttributes } from "react";
-import { dsInput } from "@/lib/ui/design-system";
+import { dsInput, dsInputNoSpinner } from "@/lib/ui/design-system";
 import { resolveGestionaleInputClassName } from "@/lib/ui/global-input";
 
 export type GestionaleNumberInputProps = Omit<
@@ -34,7 +34,7 @@ export function GestionaleNumberInput({
       value={value}
       onChange={handleChange}
       aria-invalid={invalid || undefined}
-      className={resolveGestionaleInputClassName(`${dsInput} tabular-nums ${className}`.trim(), invalid)}
+      className={resolveGestionaleInputClassName(`${dsInput} ${dsInputNoSpinner} tabular-nums ${className}`.trim(), invalid)}
       {...rest}
     />
   );

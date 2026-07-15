@@ -204,9 +204,14 @@ function ReportLavorazioniSectionInner({
                     Anno
                   </th>
                   {monthLabels.map((lab, mi) => (
-                    <Tooltip content={lab}><th key={`h-${mi}-${lab}`} scope="col" className={`${globalTableThCell} ${globalTableThLabel} min-w-0 border-b border-[color:var(--cab-border)] px-1 text-center`}>
+                    <th
+                      key={`h-${mi}-${lab}`}
+                      scope="col"
+                      title={lab}
+                      className={`${globalTableThCell} ${globalTableThLabel} min-w-0 border-b border-[color:var(--cab-border)] px-1 text-center`}
+                    >
                       {lab}
-                    </th></Tooltip>
+                    </th>
                   ))}
                   <th
                     scope="col"
@@ -214,9 +219,14 @@ function ReportLavorazioniSectionInner({
                   >
                     Totale
                   </th>
-                  <Tooltip content={"Variazione percentuale rispetto all'anno precedente"}><th scope="col" className={`${globalTableThCell} ${globalTableThLabel} min-w-0 border-b border-[color:var(--cab-border)] text-center`}>
-                    Vs prec.
-                  </th></Tooltip>
+                  <th
+                    scope="col"
+                    className={`${globalTableThCell} ${globalTableThLabel} min-w-0 border-b border-[color:var(--cab-border)] text-center`}
+                  >
+                    <Tooltip content={"Variazione percentuale rispetto all'anno precedente"}>
+                      <span className="block truncate">Vs prec.</span>
+                    </Tooltip>
+                  </th>
                 </tr>
               </GlobalTableHead>
               <tbody>
@@ -228,9 +238,16 @@ function ReportLavorazioniSectionInner({
                       {row.months.map((v, mi) => {
                         const mk = ymKey(row.year, mi);
                         return (
-                          <Tooltip content={`${mk}: ${v}`}><td key={`${row.year}-${mi}`} className="border-r border-[color:var(--cab-border)] px-0.5 py-2 text-center align-middle text-sm tabular-nums leading-tight text-[color:var(--cab-text)]">
-                            {v > 0 ? v : <span className="text-[color:var(--cab-text-muted)]">—</span>}
-                          </td></Tooltip>
+                          <td
+                            key={`${row.year}-${mi}`}
+                            className="border-r border-[color:var(--cab-border)] px-0.5 py-2 text-center align-middle text-sm tabular-nums leading-tight text-[color:var(--cab-text)]"
+                          >
+                            <Tooltip content={`${mk}: ${v}`}>
+                              <span className="block w-full">
+                                {v > 0 ? v : <span className="text-[color:var(--cab-text-muted)]">—</span>}
+                              </span>
+                            </Tooltip>
+                          </td>
                         );
                       })}
                       <td className="border-l border-[color:var(--cab-border)] px-2 py-2 text-center align-middle text-sm tabular-nums text-[color:var(--cab-text)]">

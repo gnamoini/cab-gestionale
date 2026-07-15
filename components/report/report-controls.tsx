@@ -177,9 +177,11 @@ export function ReportControls({
 
         <div className={periodPanelChipRowClass} role="group" aria-label="Scorciatoie periodo analisi">
           {REPORT_QUICK_PRESET_IDS.map((id) => (
-            <Tooltip content={REPORT_PRESET_LABELS[id]}><button key={id} type="button" aria-pressed={preset === id} onClick={() => onPreset(id)} className={periodChipBtnClass(preset === id)}>
-              {reportQuickPresetChipLabel(id)}
-            </button></Tooltip>
+            <Tooltip key={id} content={REPORT_PRESET_LABELS[id]}>
+              <button type="button" aria-pressed={preset === id} onClick={() => onPreset(id)} className={periodChipBtnClass(preset === id)}>
+                {reportQuickPresetChipLabel(id)}
+              </button>
+            </Tooltip>
           ))}
         </div>
 
@@ -239,9 +241,11 @@ export function ReportControls({
           {REPORT_COMPARE_QUICK_IDS.map((id) => {
             const fullLabel = REPORT_COMPARE_OPTIONS.find((o) => o.value === id)?.label ?? id;
             return (
-              <Tooltip content={fullLabel}><button key={id} type="button" aria-pressed={compareMode === id} onClick={() => onCompareMode(id)} className={periodChipBtnClass(compareMode === id)}>
-                {reportCompareQuickChipLabel(id)}
-              </button></Tooltip>
+              <Tooltip key={id} content={fullLabel}>
+                <button type="button" aria-pressed={compareMode === id} onClick={() => onCompareMode(id)} className={periodChipBtnClass(compareMode === id)}>
+                  {reportCompareQuickChipLabel(id)}
+                </button>
+              </Tooltip>
             );
           })}
         </div>

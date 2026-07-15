@@ -235,9 +235,11 @@ export function ReportRicambiConsumoSection({
                           {r.rank}
                         </td>
                         <td className={`${ricambiTd} whitespace-nowrap font-mono text-xs font-semibold tracking-wide`}>{r.codice}</td>
-                        <Tooltip content={r.marca}><td className={`${ricambiTd} max-w-0 truncate text-xs`}>
-                          {r.marca}
-                        </td></Tooltip>
+                        <td className={`${ricambiTd} max-w-0 truncate text-xs`}>
+                          <Tooltip content={r.marca}>
+                            <span className="block truncate">{r.marca}</span>
+                          </Tooltip>
+                        </td>
                         <td className={`${ricambiTd} min-w-0`}>
                           <Tooltip content={r.nome}><div className="truncate font-medium">
                             {r.nome}

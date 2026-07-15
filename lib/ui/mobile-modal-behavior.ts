@@ -23,8 +23,26 @@ export function shouldSkipRedundantGestionaleFocusScroll(
   _reason: "keyboard-open" | "textarea-grow",
 ): boolean {
   if (typeof performance === "undefined") return false;
+  const target = resolveFocusScrollTarget(field);
   if (performance.now() - lastGestionaleFocusScrollAt > GESTIONALE_FOCUS_SCROLL_COALESCE_MS) return false;
-  return resolveFocusScrollTarget(field) === lastGestionaleFocusScrollTarget;
+  if (target === lastGestionaleFocusScrollTarget) return true;
+
+  const prev = lastGestionaleFocusScrollTarget;
+  if (!prev) return false;
+  const prevGroup = findFocusScrollGroup(prev);
+  const nextGroup = findFocusScrollGroup(target);
+  if (!prevGroup || prevGroup !== nextGroup) return false;
+
+  const container = findGestionaleScrollContainer(target);
+  if (!container) return false;
+  const containerRect = container.getBoundingClientRect();
+  const { visibleTop, visibleBottom } = getEffectiveVisibleBand({
+    containerRect,
+    field: target,
+    extraTop: resolveFocusExtraTop(),
+    extraBottom: resolveFocusExtraBottom(),
+  });
+  return isFocusScrollBlockFullyVisible(getFocusScrollBlockRect(target), visibleTop, visibleBottom);
 }
 
 export const CAB_MODAL_ROOT_ATTR = "data-cab-modal-root";
@@ -421,11 +439,42 @@ export function computeFocusScrollDelta(
   return deltaMax;
 }
 
+const FOCUS_SCROLL_VISIBLE_TOLERANCE_PX = 2;
+
+/** Rettangolo etichetta + controllo (senza titolo sezione). */
+export function getFocusScrollBlockRect(field: HTMLElement): FocusScrollRect {
+  const fieldRect = field.getBoundingClientRect();
+  const labelBlock = findFieldLabelBlock(field);
+  if (labelBlock) {
+    const blockRect = labelBlock.getBoundingClientRect();
+    return {
+      top: blockRect.top,
+      bottom: Math.max(blockRect.bottom, fieldRect.bottom),
+      left: Math.min(blockRect.left, fieldRect.left),
+      right: Math.max(blockRect.right, fieldRect.right),
+    };
+  }
+  return {
+    top: fieldRect.top,
+    bottom: fieldRect.bottom,
+    left: fieldRect.left,
+    right: fieldRect.right,
+  };
+}
+
+function isFocusScrollBlockFullyVisible(
+  block: FocusScrollRect,
+  visibleTop: number,
+  visibleBottom: number,
+  tolerance = FOCUS_SCROLL_VISIBLE_TOLERANCE_PX,
+): boolean {
+  return block.top >= visibleTop - tolerance && block.bottom <= visibleBottom + tolerance;
+}
+
 /** Rettangolo scroll: top = min(titolo sezione, etichetta campo, campo); bottom = blocco label o campo. */
 export function getFocusScrollRect(field: HTMLElement): FocusScrollRect {
-  const fieldRect = field.getBoundingClientRect();
+  const block = getFocusScrollBlockRect(field);
   const anchorTops: number[] = [];
-  let bottom = fieldRect.bottom;
 
   const group = findFocusScrollGroup(field);
   if (group) {
@@ -435,18 +484,11 @@ export function getFocusScrollRect(field: HTMLElement): FocusScrollRect {
     }
   }
 
-  const labelBlock = findFieldLabelBlock(field);
-  if (labelBlock) {
-    const blockRect = labelBlock.getBoundingClientRect();
-    anchorTops.push(blockRect.top);
-    bottom = Math.max(blockRect.bottom, fieldRect.bottom);
-  }
-
   return {
-    top: minFocusScrollTop(fieldRect.top, anchorTops),
-    bottom,
-    left: fieldRect.left,
-    right: fieldRect.right,
+    top: minFocusScrollTop(block.top, anchorTops),
+    bottom: block.bottom,
+    left: block.left,
+    right: block.right,
   };
 }
 
@@ -471,7 +513,6 @@ export function scrollGestionaleFieldIntoView(
   const extraBottom = options.extraBottom ?? resolveFocusExtraBottom();
   const extraTop = options.extraTop ?? resolveFocusExtraTop();
   const containerRect = container.getBoundingClientRect();
-  const scrollRect = getFocusScrollRect(field);
   const { visibleTop, visibleBottom } = getEffectiveVisibleBand({
     containerRect,
     field,
@@ -479,6 +520,16 @@ export function scrollGestionaleFieldIntoView(
     extraBottom,
   });
 
+  const blockRect = getFocusScrollBlockRect(field);
+  if (isFocusScrollBlockFullyVisible(blockRect, visibleTop, visibleBottom)) {
+    if (field.closest(`[${CAB_MODAL_ROOT_ATTR}]`)) {
+      applyKeyboardPadToScrollContainer(container);
+    }
+    markGestionaleFocusScrollCompleted(field);
+    return true;
+  }
+
+  const scrollRect = getFocusScrollRect(field);
   const delta = computeFocusScrollDelta(scrollRect, visibleTop, visibleBottom);
 
   if (Math.abs(delta) < 2) {
@@ -528,12 +579,42 @@ export function scrollGestionaleFieldIntoModal(
 
 let focusScrollGeneration = 0;
 
+function shouldSkipGestionaleFocusScroll(field: HTMLElement): boolean {
+  if (field.closest(`[${CAB_IOS_NO_FOCUS_SCROLL_ATTR}]`)) return true;
+  const container = findGestionaleScrollContainer(field);
+  if (!container) return true;
+  const containerRect = container.getBoundingClientRect();
+  const { visibleTop, visibleBottom } = getEffectiveVisibleBand({
+    containerRect,
+    field,
+    extraTop: resolveFocusExtraTop(),
+    extraBottom: resolveFocusExtraBottom(),
+  });
+  return isFocusScrollBlockFullyVisible(
+    getFocusScrollBlockRect(field),
+    visibleTop,
+    visibleBottom,
+  );
+}
+
+function completeGestionaleFocusScrollWithoutMove(field: HTMLElement): void {
+  if (field.closest(`[${CAB_MODAL_ROOT_ATTR}]`)) {
+    const container = findGestionaleScrollContainer(field);
+    applyKeyboardPadToScrollContainer(container);
+  }
+  markGestionaleFocusScrollCompleted(field);
+}
+
 /** Scroll dopo layout stabile — last-wins: solo l'ultimo focus esegue retry post viewport stable. */
 export function scheduleGestionaleFieldScroll(
   field: HTMLElement | null | undefined,
   options: ScrollFieldIntoModalOptions = {},
 ): void {
   if (!field || typeof window === "undefined") return;
+  if (shouldSkipGestionaleFocusScroll(field)) {
+    completeGestionaleFocusScrollWithoutMove(field);
+    return;
+  }
   const merged: ScrollFieldIntoModalOptions = {
     extraTop: resolveFocusExtraTop(),
     extraBottom: resolveFocusExtraBottom(),
@@ -580,6 +661,7 @@ export const MobileModalBehaviorLayer = {
   syncKeyboardCssVars,
   computeFocusScrollDelta,
   getFocusScrollRect,
+  getFocusScrollBlockRect,
   findFocusScrollGroup,
   findFieldLabelBlock,
   findGestionaleFieldContainer,

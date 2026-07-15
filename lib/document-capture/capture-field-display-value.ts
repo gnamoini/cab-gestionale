@@ -3,7 +3,9 @@ import {
   findAddettoByStoredName,
   type AddettoRecord,
 } from "@/lib/lavorazioni/addetto-model";
+import { isCaptureSignatureFieldKey } from "@/lib/document-capture/capture-signature-field-keys";
 import type { EntityResolutionResult } from "@/lib/entity-resolution/entity-resolution-types";
+import { hasSignatureDataUrl } from "@/lib/media/signature-pad";
 
 function normFieldKey(key: string): string {
   return key.trim().toLowerCase().replace(/^ingresso\./, "");
@@ -155,6 +157,24 @@ export function formatCaptureReviewDisplayValue(
   opts?: { addettiRecords?: readonly AddettoRecord[] },
 ): string {
   const key = normFieldKey(fieldKey);
+  if (isCaptureMultilineFieldKey(key)) {
+    const confirmed = safeTrim(input.confirmed);
+    const raw = safeTrim(input.raw);
+    const normalized = safeTrim(input.normalized);
+    const resolved = safeTrim(input.resolvedLabel);
+    if (confirmed) {
+      const fromRaw = raw ? preferRawIfSameMeaning(raw, confirmed) : null;
+      return fromRaw ?? confirmed;
+    }
+    const candidate = normalized || raw;
+    const fromRaw = raw && candidate ? preferRawIfSameMeaning(raw, candidate) : null;
+    if (fromRaw) return fromRaw;
+    return raw || normalized || resolved;
+  }
+  if (isCaptureSignatureFieldKey(key)) {
+    const v = safeTrim(input.confirmed) || safeTrim(input.normalized) || safeTrim(input.raw);
+    return hasSignatureDataUrl(v) ? v : "";
+  }
   const raw = safeTrim(input.raw);
   const confirmed = safeTrim(input.confirmed);
   const normalized = safeTrim(input.normalized);
@@ -202,6 +222,12 @@ export function formatCaptureReviewDraftValue(
   value: string,
   opts?: { addettiRecords?: readonly AddettoRecord[] },
 ): string {
+  if (isCaptureSignatureFieldKey(fieldKey)) {
+    return hasSignatureDataUrl(value) ? value.trim() : "";
+  }
+  if (isCaptureMultilineFieldKey(fieldKey)) {
+    return value.trim();
+  }
   const trimmed = value.trim();
   if (!trimmed) return "";
   if (isCaptureTargaFieldKey(fieldKey)) return formatCaptureTargaValue(trimmed);

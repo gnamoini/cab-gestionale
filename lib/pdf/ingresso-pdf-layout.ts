@@ -11,7 +11,7 @@ import {
   schedaIngressoFieldsFromDisplay,
 } from "@/lib/domain/intervento-context/resolve-intervento-display-for-surface";
 import type { PdfField } from "@/lib/pdf/core/pdf-base-template";
-import { drawRichiedenteFirmaPdfBlock } from "@/lib/pdf/richiedente-firma-pdf";
+import { drawAddettoFirmaPdfBlock, drawRichiedenteFirmaPdfBlock } from "@/lib/pdf/richiedente-firma-pdf";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore, SchedaIngressoDoc, SchedaIngressoFields } from "@/types/schede";
 
@@ -71,6 +71,7 @@ export function drawIngressoPdfBody(
   let y = startY;
 
   y = drawGestionaleFieldSectionTable(doc, y, pageW, "Data", data);
+  y = drawAddettoFirmaPdfBlock(doc, pageW, y, scheda.campi.addettoFirma ?? ctxFields.addettoFirma);
   y = drawGestionaleFieldSectionTable(doc, y, pageW, "Cliente", anagSections.cliente);
   y = drawRichiedenteFirmaPdfBlock(doc, pageW, y, scheda.campi.richiedenteFirma ?? ctxFields.richiedenteFirma);
   const targetType =

@@ -144,6 +144,33 @@ export function drawSchedaIngressoBlankPdf(doc: jsPDF): void {
   drawMultilineBox(doc, "Note", y, 20);
 }
 
+const INGRESSO_BLANK_PAGE_W_MM = 210;
+const INGRESSO_BLANK_PAGE_H_MM = 297;
+
+/** Caselle firma (mm) — stessa sequenza y di drawSchedaIngressoBlankPdf. */
+export function getIngressoBlankSignatureBoxesMm(): {
+  richiedente: { left: number; top: number; width: number; height: number };
+  addetto: { left: number; top: number; width: number; height: number };
+} {
+  const gap = 4;
+  const boxW = (CONTENT_W - gap) / 2;
+  const boxH = 18;
+  let y = 28 + 8 * 4;
+  y += 7 + 10 + 5;
+  y += 7 + 10 + 5;
+  y += 24 + 6;
+  const boxTop = y + 2;
+  return {
+    richiedente: { left: MARGIN_L, top: boxTop, width: boxW, height: boxH },
+    addetto: { left: MARGIN_L + boxW + gap, top: boxTop, width: boxW, height: boxH },
+  };
+}
+
+export const ingressoBlankPageSizeMm = {
+  width: INGRESSO_BLANK_PAGE_W_MM,
+  height: INGRESSO_BLANK_PAGE_H_MM,
+} as const;
+
 const LAVORAZIONI_ROWS_PER_PAGE = 12;
 const LAVORAZIONI_BLANK_PAGES = 2;
 

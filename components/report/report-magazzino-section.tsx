@@ -290,9 +290,11 @@ export function ReportMagazzinoSection({
           <tbody>
             {sortedRows.map((r) => (
               <tr key={r.key} className={dsTableRow}>
-                <Tooltip content={r.label}><td className={`${dsTableTd} font-medium whitespace-nowrap`}>
-                  {r.label}
-                </td></Tooltip>
+                <td className={`${dsTableTd} font-medium whitespace-nowrap`}>
+                  <Tooltip content={r.label}>
+                    <span className="block truncate">{r.label}</span>
+                  </Tooltip>
+                </td>
                 <td className={`${dsTableTd} text-right tabular-nums`}>{r.entrate}</td>
                 <td className={`${dsTableTd} text-right tabular-nums`}>{r.uscite}</td>
                 <td className={`${dsTableTd} text-right tabular-nums`}>{r.deltaQty > 0 ? `+${r.deltaQty}` : r.deltaQty}</td>

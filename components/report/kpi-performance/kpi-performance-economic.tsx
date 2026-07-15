@@ -35,9 +35,11 @@ export function KpiPerformanceEconomic({ data }: { data: KpiPerformanceEconomic 
               ) : (
                 data.topMezziByCost.map((r) => (
                   <tr key={r.mezzoId} className={dsTableRow}>
-                    <Tooltip content={r.label}><td className={`${dsTableTd} max-w-0 truncate`}>
-                      {r.label}
-                    </td></Tooltip>
+                    <td className={`${dsTableTd} max-w-0 truncate`}>
+                      <Tooltip content={r.label}>
+                        <span className="block truncate">{r.label}</span>
+                      </Tooltip>
+                    </td>
                     <td className={`${dsTableTd} text-right tabular-nums font-medium`}>{fmtEur(r.cost)}</td>
                   </tr>
                 ))
@@ -64,9 +66,11 @@ export function KpiPerformanceEconomic({ data }: { data: KpiPerformanceEconomic 
               ) : (
                 data.topComponents.map((r) => (
                   <tr key={r.id} className={dsTableRow}>
-                    <Tooltip content={r.nome}><td className={`${dsTableTd} max-w-0 truncate`}>
-                      {r.nome}
-                    </td></Tooltip>
+                    <td className={`${dsTableTd} max-w-0 truncate`}>
+                      <Tooltip content={r.nome}>
+                        <span className="block truncate">{r.nome}</span>
+                      </Tooltip>
+                    </td>
                     <td className={`${dsTableTd} text-right tabular-nums`}>{r.totalUscite}</td>
                   </tr>
                 ))

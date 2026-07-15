@@ -34,6 +34,7 @@ const INGRESSO_LABELS: Record<keyof SchedaIngressoFields, string> = {
   richiedente: "Richiedente",
   richiedenteTelefono: "Telefono richiedente",
   richiedenteFirma: "Firma richiedente",
+  addettoFirma: "Firma addetto officina",
   noteIntervento: "Note",
 };
 
@@ -46,7 +47,7 @@ export function diffSchedaIngressoCampi(
     const a = prima[k] ?? "";
     const b = dopo[k] ?? "";
     if (a === b) return;
-    if (k === "richiedenteFirma") {
+    if (k === "richiedenteFirma" || k === "addettoFirma") {
       out.push({
         campo: INGRESSO_LABELS[k],
         prima: String(a).trim() ? "Presente" : "—",

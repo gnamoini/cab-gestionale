@@ -26,3 +26,16 @@ export function resolvePwaInstallUiVariant(input: {
   if (input.platform === "ios") return "ios-hint";
   return "none";
 }
+
+/** Menu profilo: offre install anche se il banner è stato chiuso con «Non ora». */
+export function resolvePwaInstallMenuAvailable(input: {
+  platform: PwaPlatform;
+  displayMode: PwaDisplayMode;
+  hasDeferredPrompt: boolean;
+  installMarked: boolean;
+}): boolean {
+  if (isPwaStandaloneMode(input.displayMode) || input.installMarked) return false;
+  if (input.hasDeferredPrompt) return true;
+  if (input.platform === "ios") return true;
+  return false;
+}

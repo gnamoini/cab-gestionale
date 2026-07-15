@@ -16,9 +16,10 @@ import {
   computeInstallDismissUntil,
   isInstallPromptDismissed,
   PWA_INSTALL_STATE_NS,
+  PWA_INSTALL_DISMISS_TTL_MS,
   readInstallDismissedUntil,
 } from "@/lib/pwa/pwa-install-state";
-import { resolvePwaInstallUiVariant } from "@/lib/pwa/pwa-install";
+import { resolvePwaInstallMenuAvailable, resolvePwaInstallUiVariant } from "@/lib/pwa/pwa-install";
 import { detectPwaPlatform, isIosSafariLike } from "@/lib/pwa/pwa-platform";
 
 const ROOT = process.cwd();
@@ -76,10 +77,45 @@ assert.equal(
 
 // --- dismiss TTL ---
 const now = 1_700_000_000_000;
+assert.equal(PWA_INSTALL_DISMISS_TTL_MS, 7 * 24 * 60 * 60 * 1000);
 const until = computeInstallDismissUntil(now);
 assert.ok(isInstallPromptDismissed(now, String(until)));
 assert.ok(!isInstallPromptDismissed(until + 1, String(until)));
 assert.equal(readInstallDismissedUntil(now + 1, String(until)), until);
+
+assert.equal(
+  resolvePwaInstallUiVariant({
+    platform: "ios",
+    displayMode: "browser",
+    hasDeferredPrompt: false,
+    dismissed: true,
+    installMarked: false,
+    engagementElapsed: true,
+  }),
+  "none",
+  "banner nascosto dopo dismiss",
+);
+
+assert.equal(
+  resolvePwaInstallMenuAvailable({
+    platform: "android",
+    displayMode: "browser",
+    hasDeferredPrompt: true,
+    installMarked: false,
+  }),
+  true,
+  "menu install disponibile anche senza banner",
+);
+
+assert.equal(
+  resolvePwaInstallMenuAvailable({
+    platform: "ios",
+    displayMode: "browser",
+    hasDeferredPrompt: false,
+    installMarked: false,
+  }),
+  true,
+);
 
 // --- install UI variant ---
 assert.equal(
@@ -175,6 +211,10 @@ assert.match(providers, /PwaIosInstallHint/);
 assert.match(providers, /PwaInstallBridge/);
 assert.match(providers, /PwaDisplayModeBridge/);
 assert.doesNotMatch(providers, /useAuth/);
+
+const profileFooter = read("components/profile/profile-sheet-footer.tsx");
+assert.match(profileFooter, /usePwaInstallPrompt/);
+assert.match(profileFooter, /Installa app/);
 
 const phase3Files = [
   "lib/pwa/pwa-platform.ts",

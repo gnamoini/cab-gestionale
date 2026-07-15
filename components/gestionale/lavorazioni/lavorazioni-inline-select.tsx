@@ -5,6 +5,7 @@ import { Children, isValidElement, useMemo, type CSSProperties, type ReactNode }
 import {
   GlobalFixedListPillSelect,
   type FixedListPillOption,
+  type FixedListPillSelectSize,
 } from "@/components/gestionale/global-input/global-fixed-list-pill";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 import {
@@ -293,13 +294,14 @@ export function AddettoSelectField({
   tablePillWidth,
   className = "",
   inputClassName,
+  size = "compact",
 }: {
   variant?: "pill" | "default";
   shellClass?: string;
   shellStyle?: CSSProperties;
   value: string;
   onChange: (next: string) => void;
-  options: TablePillOption[];
+  options: readonly TablePillOption[];
   ariaLabel: string;
   disabled?: boolean;
   title?: string;
@@ -307,6 +309,8 @@ export function AddettoSelectField({
   className?: string;
   /** Stili sul campo input — non usare `className` per il bordo del controllo. */
   inputClassName?: string;
+  /** `form` = altezza allineata ai campi modale (`GlobalFixedListPillSelect`). */
+  size?: FixedListPillSelectSize;
 }) {
   const pillOptions = useMemo(
     () =>
@@ -341,7 +345,7 @@ export function AddettoSelectField({
   const widthClass = tablePillWidth ?? "w-full min-w-0";
   return (
     <Tooltip content={title}><div className={`group overflow-visible ${widthClass} ${disabled ? "opacity-60" : ""}`}>
-      <GlobalFixedListPillSelect value={value} onChange={onChange} options={pillOptions} ariaLabel={ariaLabel} disabled={disabled} title={title} sheetTitle={ariaLabel} shellClass={shellClass} fallbackPillStyle={shellStyle}/>
+      <GlobalFixedListPillSelect value={value} onChange={onChange} options={pillOptions} ariaLabel={ariaLabel} disabled={disabled} title={title} sheetTitle={ariaLabel} shellClass={shellClass} fallbackPillStyle={shellStyle} size={size}/>
     </div></Tooltip>
   );
 }

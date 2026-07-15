@@ -81,6 +81,7 @@ export function schedaIngressoFieldsFromDisplay(
     richiedente: base.richiedente ?? "",
     richiedenteTelefono: base.richiedenteTelefono ?? "",
     richiedenteFirma: base.richiedenteFirma,
+    addettoFirma: base.addettoFirma,
     noteIntervento: base.noteIntervento ?? "",
   };
 }

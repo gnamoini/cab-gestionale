@@ -1,7 +1,6 @@
 "use client";
 
 import { Badge } from "@/components/design-system/badge";
-import { LoadingSpinner } from "@/components/design-system/loading";
 import {
   captureCatalogWarningsByFieldKey,
   validateCaptureFieldsAgainstCatalogs,
@@ -14,7 +13,16 @@ import {
   formatCaptureReviewDraftValue,
   isCaptureMultilineFieldKey,
 } from "@/lib/document-capture/capture-field-display-value";
+import { sortCaptureReviewFields } from "@/lib/document-capture/capture-field-review-order";
+import { captureSignatureFieldLabel, isCaptureSignatureFieldKey } from "@/lib/document-capture/capture-signature-field-keys";
+import {
+  CaptureReviewPanelError,
+  CaptureReviewPanelFrame,
+  CaptureReviewPanelLoading,
+} from "@/components/document-capture/capture-review-panel";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
+import { RichiedenteFirmaDisplay } from "@/components/gestionale/schede/richiedente-firma-display";
+import { hasSignatureDataUrl } from "@/lib/media/signature-pad";
 import { buildClientResolutionContext } from "@/lib/entity-resolution/build-client-resolution-context";
 import type { EntityResolutionResult } from "@/lib/entity-resolution/entity-resolution-types";
 import { resolveCaptureGraph } from "@/lib/entity-resolution/resolve-capture-graph";
@@ -34,8 +42,10 @@ type FieldRow = {
 };
 
 function fieldLabel(key: string): string {
-  const spaced = key.replace(/_/g, " ");
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  return captureSignatureFieldLabel(key) ?? (() => {
+    const spaced = key.replace(/_/g, " ");
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  })();
 }
 
 function safeTrim(v: string | null | undefined): string {
@@ -257,7 +267,7 @@ export function CaptureFieldReviewGrid({
         return;
       }
       const body = (await res.json()) as { fields?: FieldRow[] };
-      const rows = body.fields ?? [];
+      const rows = sortCaptureReviewFields(body.fields ?? []);
       setFields(rows);
       const next: Record<string, string> = {};
       const raw: Record<string, string> = {};
@@ -308,7 +318,11 @@ export function CaptureFieldReviewGrid({
         body: JSON.stringify({
           fields: Object.entries(draft).map(([fieldKey, confirmedValue]) => ({
             fieldKey,
-            confirmedValue: formatCaptureReviewDraftValue(fieldKey, confirmedValue, { addettiRecords }) || null,
+            confirmedValue: isCaptureSignatureFieldKey(fieldKey)
+              ? hasSignatureDataUrl(confirmedValue)
+                ? confirmedValue.trim()
+                : null
+              : formatCaptureReviewDraftValue(fieldKey, confirmedValue, { addettiRecords }) || null,
             valueSource: "manual" as const,
           })),
         }),
@@ -358,34 +372,33 @@ export function CaptureFieldReviewGrid({
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 py-8 text-sm text-[color:var(--cab-muted-fg)]" role="status">
-        <LoadingSpinner size="sm" />
-        Caricamento dati letti…
-      </div>
+      <CaptureReviewPanelLoading title="Dati letti" message="Caricamento dati letti…" skeleton="fields" />
     );
   }
 
   if (loadError) {
     return (
-      <div className="space-y-2 text-sm">
-        <p className="text-[color:var(--cab-danger)]">{loadError}</p>
-        <button type="button" className="text-xs underline" onClick={() => void load()}>
-          Riprova
-        </button>
-      </div>
+      <CaptureReviewPanelError
+        title="Dati letti"
+        message={loadError}
+        onRetry={() => void load()}
+      />
     );
   }
 
   if (fields.length === 0) {
     return (
-      <p className="text-sm text-[color:var(--cab-muted-fg)]">
-        Nessun dato letto dalla scheda. Torna indietro, carica un file più nitido e ripeti la lettura.
-      </p>
+      <CaptureReviewPanelFrame title="Dati letti">
+        <p className="py-6 text-sm text-[color:var(--cab-muted-fg)]">
+          Nessun dato letto dalla scheda. Torna indietro, carica un file più nitido e ripeti la lettura.
+        </p>
+      </CaptureReviewPanelFrame>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <CaptureReviewPanelFrame title="Dati letti">
+      <div className="space-y-3">
       <CaptureReviewSummary catalogWarnings={catalogWarnings} ambiguousCount={ambiguousCount} />
       <div className="grid gap-2.5">
         {fields.map((f) => {
@@ -396,6 +409,7 @@ export function CaptureFieldReviewGrid({
           const baselineValue = baseline[f.field_key] ?? "";
           const badges = fieldReviewStatus(resolution, fieldWarnings, baselineValue, value, raw);
           const showOcrLine =
+            !isCaptureSignatureFieldKey(f.field_key) &&
             raw &&
             (safeTrim(raw).toLowerCase() !== safeTrim(value).toLowerCase() ||
               (resolution?.resolvedLabel && safeTrim(raw) !== safeTrim(resolution.resolvedLabel)));
@@ -424,7 +438,11 @@ export function CaptureFieldReviewGrid({
               </div>
 
               {showOcrLine ? (
-                <p className="text-xs leading-snug text-[color:var(--cab-text-muted)]">
+                <p
+                  className={`text-xs leading-snug text-[color:var(--cab-text-muted)]${
+                    isCaptureMultilineFieldKey(f.field_key) ? " whitespace-pre-wrap" : ""
+                  }`}
+                >
                   <span className="font-medium text-[color:var(--cab-text)]">Letto dal documento:</span> {raw}
                   {resolution?.resolvedLabel && safeTrim(resolution.resolvedLabel) !== safeTrim(raw) ? (
                     <>
@@ -437,7 +455,17 @@ export function CaptureFieldReviewGrid({
                 </p>
               ) : null}
 
-              {isCaptureMultilineFieldKey(f.field_key) ? (
+              {isCaptureSignatureFieldKey(f.field_key) ? (
+                hasSignatureDataUrl(value) ? (
+                  <RichiedenteFirmaDisplay
+                    dataUrl={value}
+                    consultable
+                    label={captureSignatureFieldLabel(f.field_key) ?? "Firma"}
+                  />
+                ) : (
+                  <p className="text-xs text-[color:var(--cab-text-muted)]">Firma non rilevata sul documento.</p>
+                )
+              ) : isCaptureMultilineFieldKey(f.field_key) ? (
                 <GestionaleTextarea
                   value={value}
                   size="md"
@@ -486,6 +514,7 @@ export function CaptureFieldReviewGrid({
           {saving ? "Salvataggio…" : "Salva modifiche"}
         </button>
       </div>
-    </div>
+      </div>
+    </CaptureReviewPanelFrame>
   );
 }

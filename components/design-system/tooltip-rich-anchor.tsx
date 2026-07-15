@@ -14,6 +14,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTooltip } from "./use-tooltip";
+import { useMergedRefs } from "./use-merged-refs";
 import { dsTooltipPortalHidden, dsTooltipPortalVisible, dsZTooltip } from "@/lib/ui/design-system";
 import {
   CAB_TOOLTIP_PORTAL_ATTR,
@@ -21,16 +22,6 @@ import {
   tooltipPortalInlineStyle,
   type TooltipSide,
 } from "@/lib/ui/tooltip-portal";
-
-function mergeRefs<T>(...refs: Array<React.Ref<T> | undefined>): (node: T | null) => void {
-  return (node) => {
-    for (const ref of refs) {
-      if (!ref) continue;
-      if (typeof ref === "function") ref(node);
-      else (ref as React.MutableRefObject<T | null>).current = node;
-    }
-  };
-}
 
 function mergeHandler<E>(
   ours: ((e: E) => void) | undefined,
@@ -66,7 +57,6 @@ export function TooltipRichAnchor({
   dismissOnPointerDown?: boolean;
   panel: ReactNode;
 }) {
-  const anchorRef = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const { open, visible, resolvedSide, floatingStyles, setFloatingRef, setReferenceRef, triggerProps, hideImmediate } = useTooltip({
     content: summary,
@@ -75,11 +65,15 @@ export function TooltipRichAnchor({
     side,
     showOnFocus,
     dismissOnPointerDown,
-    anchorRef,
     contentRef,
   });
 
   useEffect(() => () => hideImmediate(), [hideImmediate]);
+
+  const childRef = isValidElement(children)
+    ? ((children as ReactElement<Record<string, unknown>>).props.ref as React.Ref<HTMLElement> | undefined)
+    : undefined;
+  const mergedReferenceRef = useMergedRefs(childRef, setReferenceRef);
 
   if (!isValidElement(children)) {
     return children as ReactNode;
@@ -87,10 +81,9 @@ export function TooltipRichAnchor({
 
   const child = children as ReactElement<Record<string, unknown>>;
   const childProps = child.props as Record<string, unknown>;
-  const childRef = childProps.ref as React.Ref<HTMLElement> | undefined;
 
   const trigger = cloneElement(child, {
-    ref: mergeRefs(childRef, setReferenceRef),
+    ref: mergedReferenceRef,
     title: undefined,
     onMouseEnter: mergeHandler(triggerProps.onMouseEnter, childProps.onMouseEnter as ((e: MouseEvent<HTMLElement>) => void) | undefined),
     onMouseLeave: mergeHandler(triggerProps.onMouseLeave, childProps.onMouseLeave as ((e: MouseEvent<HTMLElement>) => void) | undefined),

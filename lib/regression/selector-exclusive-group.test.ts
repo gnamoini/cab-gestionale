@@ -19,11 +19,12 @@ const schedaAnagrafica = read("components/gestionale/schede/scheda-ingresso-anag
 const identField = read("components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field.tsx");
 
 assert.match(globalSelect, /exclusiveGroup\?: string/);
-assert.match(globalSelect, /useSelectorExclusiveGroup/);
+assert.match(globalSelect, /closeForExclusiveGroup/);
+assert.match(globalSelect, /useSelectorExclusiveGroup\(\s*exclusiveGroup,\s*closeForExclusiveGroup/);
 assert.match(globalSelect, /setSelectorOpen/);
 assert.match(settingsListSelect, /exclusiveGroup\?: string/);
 assert.match(schedaAnagrafica, /SCHEDA_INGRESSO_EXCLUSIVE_GROUP = "scheda-ingresso"/);
-assert.match(identField, /useSelectorExclusiveGroup/);
+assert.match(identField, /useSelectorExclusiveGroup\(exclusiveGroup, closeUiOnly\)/);
 assert.match(exclusiveGroup, /closeOtherSelectorsInExclusiveGroup/);
 assert.match(timesheetHeader, /exclusiveGroup="dipendenti-timesheet-filters"/);
 

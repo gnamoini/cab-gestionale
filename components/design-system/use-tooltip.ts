@@ -58,7 +58,6 @@ export function useTooltip({
   side = "top",
   showOnFocus = true,
   dismissOnPointerDown = true,
-  anchorRef,
   contentRef,
 }: {
   content?: string;
@@ -69,7 +68,6 @@ export function useTooltip({
   showOnFocus?: boolean;
   /** Default `true`. Impostare `false` su handle drag (mousedown avvia il drag, non un click). */
   dismissOnPointerDown?: boolean;
-  anchorRef: RefObject<HTMLElement | null>;
   contentRef: RefObject<HTMLElement | null>;
 }): {
   open: boolean;
@@ -125,16 +123,10 @@ export function useTooltip({
       refs.setFloating(node);
       contentRef.current = node;
     },
-    [contentRef, refs],
+    [contentRef, refs.setFloating],
   );
 
-  const setReferenceRef = useCallback(
-    (node: HTMLElement | null) => {
-      refs.setReference(node);
-      anchorRef.current = node;
-    },
-    [anchorRef, refs],
-  );
+  const setReferenceRef = refs.setReference;
 
   const clearShowTimer = useCallback(() => {
     if (showTimerRef.current) {
@@ -229,11 +221,11 @@ export function useTooltip({
   useLayoutEffect(() => {
     if (!open) {
       hideTooltipPopover(contentRef.current);
-      setVisible(false);
+      setVisible((v) => (v ? false : v));
       return;
     }
     if (isPositioned && activeRef.current) {
-      setVisible(true);
+      setVisible((v) => (v ? v : true));
       showTooltipPopover(contentRef.current);
     }
   }, [open, isPositioned, content, contentRef]);

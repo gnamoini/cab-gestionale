@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { isPwaStandaloneMode } from "@/lib/pwa/pwa-display-mode";
 import type { PwaInstallPromptOutcome, PwaInstallUiVariant } from "@/lib/pwa/pwa-install";
-import { resolvePwaInstallUiVariant } from "@/lib/pwa/pwa-install";
+import { resolvePwaInstallMenuAvailable, resolvePwaInstallUiVariant } from "@/lib/pwa/pwa-install";
 import {
   getPwaInstallRuntime,
   subscribePwaInstallRuntime,
@@ -70,6 +70,12 @@ export function usePwaInstallPrompt() {
   });
 
   const canPrompt = variant === "native" && Boolean(runtime.deferredPrompt);
+  const menuInstallAvailable = resolvePwaInstallMenuAvailable({
+    platform,
+    displayMode,
+    hasDeferredPrompt: Boolean(runtime.deferredPrompt),
+    installMarked: installMarked || runtime.installed,
+  });
 
   const promptInstall = useCallback(async (): Promise<PwaInstallPromptOutcome> => {
     const prompt = getPwaInstallRuntime().deferredPrompt;
@@ -100,6 +106,7 @@ export function usePwaInstallPrompt() {
   return {
     variant,
     canPrompt,
+    menuInstallAvailable,
     promptInstall,
     dismissInstall,
     isStandalone: isStandalone || isPwaStandaloneMode(displayMode),

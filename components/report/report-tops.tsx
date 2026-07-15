@@ -140,9 +140,11 @@ export function ReportTopRicambi({ rows, showCompare }: { rows: TopRicambioRepor
                     {r.nome}
                   </Link>
                 </td>
-                <Tooltip content={r.marca}><td className={`${tdBase} max-w-0 truncate text-xs`}>
-                  {r.marca}
-                </td></Tooltip>
+                <td className={`${tdBase} max-w-0 truncate text-xs`}>
+                  <Tooltip content={r.marca}>
+                    <span className="block truncate">{r.marca}</span>
+                  </Tooltip>
+                </td>
                 <td className={`${tdBase} text-right tabular-nums`}>{r.qtaEntrata}</td>
                 <td className={`${tdBase} text-right tabular-nums font-medium`}>{r.qtaUscita}</td>
                 {showCompare ? (

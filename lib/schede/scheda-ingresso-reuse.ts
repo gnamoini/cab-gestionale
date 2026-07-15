@@ -36,6 +36,7 @@ import {
 const INGRESSO_FIELDS_NEVER_COPY: ReadonlySet<keyof SchedaIngressoFields> = new Set([
   "dataIngresso",
   "richiedenteFirma",
+  "addettoFirma",
 ]);
 
 export type LastSchedaIngressoMatch = {

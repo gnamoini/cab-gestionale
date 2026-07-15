@@ -1,12 +1,11 @@
 "use client";
 
-export type DocumentCaptureFlowStep = "hub" | "analyze" | "review" | "confirm";
+export type DocumentCaptureFlowStep = "hub" | "analyze" | "compile";
 
 const STEPS: { id: DocumentCaptureFlowStep; label: string; shortLabel: string }[] = [
   { id: "hub", label: "Carica documento", shortLabel: "Carica" },
   { id: "analyze", label: "Leggi con AI", shortLabel: "AI" },
-  { id: "review", label: "Controlla i dati", shortLabel: "Controlla" },
-  { id: "confirm", label: "Crea lavorazione", shortLabel: "Crea" },
+  { id: "compile", label: "Compila scheda", shortLabel: "Compila" },
 ];
 
 function StepCheckIcon({ className = "h-3.5 w-3.5" }: { className?: string }) {
@@ -30,7 +29,7 @@ export function DocumentCaptureStepIndicator({ current }: { current: DocumentCap
   return (
     <nav
       aria-label="Passaggi acquisizione"
-      className="sticky top-0 z-[1] -mx-1 bg-[var(--cab-card)] px-1 pb-3 pt-0.5"
+      className="sticky top-0 z-[2] -mx-1 border-b border-[color:var(--cab-border)] bg-[var(--cab-card)] px-1 pb-3 pt-0.5 shadow-[0_1px_0_0_color-mix(in_srgb,var(--cab-card)_92%,transparent)]"
     >
       <ol className="flex w-full items-start justify-between gap-1 sm:gap-2">
         {STEPS.map((step, index) => {
@@ -128,13 +127,9 @@ export const DOCUMENT_CAPTURE_STEP_COPY: Record<
     title: "Lettura documento",
     subtitle: "Stiamo estraendo i dati dalla scheda con l'intelligenza artificiale.",
   },
-  review: {
-    title: "Controlla i dati",
+  compile: {
+    title: "Compila scheda",
     subtitle:
-      "Verifica e correggi i campi letti. Per schede lavorazioni/ricambi verrà cercata una lavorazione in corso con scheda ingresso corrispondente.",
-  },
-  confirm: {
-    title: "Crea lavorazione",
-    subtitle: "Verifica i campi precompilati dalla scheda e salva la nuova lavorazione.",
+      "I dati letti sono già nella scheda. Controlla i campi evidenziati e salva la lavorazione o assegna alla lavorazione corretta.",
   },
 };

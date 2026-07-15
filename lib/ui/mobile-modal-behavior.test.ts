@@ -63,6 +63,10 @@ assert.equal(
 
 const behaviorSrc = readFileSync(join(root, "lib/ui/mobile-modal-behavior.ts"), "utf8");
 assert.match(behaviorSrc, /computeFocusScrollDelta/);
+assert.match(behaviorSrc, /getFocusScrollBlockRect/);
+assert.match(behaviorSrc, /shouldSkipGestionaleFocusScroll/);
+assert.match(behaviorSrc, /completeGestionaleFocusScrollWithoutMove/);
+assert.match(behaviorSrc, /isFocusScrollBlockFullyVisible/);
 assert.match(behaviorSrc, /getFocusScrollRect\(field\)/);
 assert.match(behaviorSrc, /computeFocusScrollDelta\(scrollRect/);
 assert.match(behaviorSrc, /findFieldLabelBlock/);

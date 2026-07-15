@@ -69,6 +69,7 @@ assert.doesNotMatch(ricambioForm, /label=\{fieldsOptional \? "Marca" : "Marca \*
 
 // P1 R-04/R-05: GestionaleNumberInput + error helper
 assert.match(numberInput, /resolveGestionaleInputClassName/);
+assert.match(numberInput, /dsInputNoSpinner/);
 assert.match(numberInput, /aria-invalid=\{invalid/);
 assert.match(globalInput, /export function resolveGestionaleInputClassName/);
 assert.match(searchField, /invalid\?: boolean/);

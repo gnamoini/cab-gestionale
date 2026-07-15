@@ -4,13 +4,9 @@ import { CaptureDocumentFilePreview } from "@/components/document-capture/captur
 import { DocumentCaptureAcquisitionProgress } from "@/components/document-capture/document-capture-acquisition-progress";
 import type { CaptureAcquisitionProgressState } from "@/lib/document-capture/capture-acquisition-progress";
 import type { DocumentCaptureFlowStep } from "@/components/document-capture/document-capture-step-indicator";
-import {
-  CaptureFieldReviewGrid,
-  type CaptureFieldReviewGridHandle,
-} from "@/components/document-capture/capture-field-review-grid";
-import { useCallback, useRef, useState, type Ref } from "react";
+import { useCallback, useRef, useState } from "react";
 
-export type DocumentCaptureWizardStep = Extract<DocumentCaptureFlowStep, "analyze" | "review">;
+export type DocumentCaptureWizardStep = Extract<DocumentCaptureFlowStep, "analyze">;
 
 type WizardApi = {
   busy: boolean;
@@ -79,22 +75,12 @@ export function DocumentCaptureWizardBody({
   acquisition,
   error,
   onRetryAnalyze,
-  reviewSaveRef,
-  catalogValidation,
-  sharedGlobalOpts,
-  magazzino,
-  mezzi,
 }: {
   captureId: string | null;
   step: DocumentCaptureWizardStep;
   acquisition?: CaptureAcquisitionProgressState | null;
   error: string | null;
   onRetryAnalyze?: () => void;
-  reviewSaveRef?: Ref<CaptureFieldReviewGridHandle | null>;
-  catalogValidation?: import("@/lib/document-capture/capture-catalog-validation").CaptureCatalogValidationInput | null;
-  sharedGlobalOpts?: import("@/src/hooks/use-global-options").GlobalOptionsSlice;
-  magazzino?: import("@/lib/magazzino/types").RicambioMagazzino[];
-  mezzi?: readonly import("@/lib/mezzi/types").MezzoGestito[];
 }) {
   const acquisitionActive = acquisition?.active ?? false;
 
@@ -117,19 +103,6 @@ export function DocumentCaptureWizardBody({
           {step === "analyze" && captureId && !error ? (
             <div className="space-y-4">
               <CaptureDocumentFilePreview captureId={captureId} compact />
-            </div>
-          ) : null}
-          {step === "review" && captureId ? (
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-              <CaptureDocumentFilePreview captureId={captureId} />
-              <CaptureFieldReviewGrid
-                captureId={captureId}
-                saveRef={reviewSaveRef}
-                catalogValidation={catalogValidation}
-                sharedGlobalOpts={sharedGlobalOpts}
-                magazzino={magazzino}
-                mezzi={mezzi}
-              />
             </div>
           ) : null}
         </>

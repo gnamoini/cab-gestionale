@@ -22,6 +22,7 @@ import {
   applyEntityResolutionToCaptureFields,
   mergeResolutionIntoFieldRows,
 } from "@/lib/entity-resolution/server/apply-capture-resolution.server";
+import { upsertCaptureSignatureFields } from "@/lib/document-capture/upsert-capture-signature-fields.server";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 const RETRY_BACKOFF_MS = [1_000, 3_000] as const;
@@ -166,6 +167,19 @@ export async function analyzeDocumentCapture(captureId: string): Promise<Analyze
         await sb.from("document_capture_fields").upsert(fieldRows, {
           onConflict: "document_capture_id,field_key",
         });
+      }
+
+      const signatureRows = await upsertCaptureSignatureFields(sb, {
+        companyId: capture.company_id,
+        captureId,
+        attemptId: attempt.id,
+        bytes,
+        mime,
+        schedaTipo: object.schedaTipo ?? null,
+        existingFieldKeys: fieldRows.map((f) => f.field_key),
+      });
+      if (signatureRows.length > 0) {
+        fieldRows = [...fieldRows, ...signatureRows];
       }
 
       if (fieldRows.length === 0) {

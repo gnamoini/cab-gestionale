@@ -192,12 +192,18 @@ function ReportLavorazioniTemporalSectionInner({
                   {expanded
                     ? m.weeks.map((w) => (
                         <tr key={`${m.monthKey}-w${w.weekIndex}`} className={`${globalTableRow} bg-[color:color-mix(in_srgb,var(--cab-surface-2)_45%,var(--cab-card))]`}>
-                          <Tooltip content={`${w.rangeStart} — ${w.rangeEnd}`}><td className={`${dsTableTd} pl-8 text-sm text-[color:var(--cab-text-muted)]`}>
-                            {w.label}
-                          </td></Tooltip>
-                          <Tooltip content={m.hasManualOverride ? "Conteggio DB; il totale mese include lo storico manuale" : undefined}><td className={`${dsTableTd} tabular-nums text-sm`}>
-                            {m.hasManualOverride && w.count === 0 ? "—" : w.count}
-                          </td></Tooltip>
+                          <td className={`${dsTableTd} pl-8 text-sm text-[color:var(--cab-text-muted)]`}>
+                            <Tooltip content={`${w.rangeStart} — ${w.rangeEnd}`}>
+                              <span className="block truncate">{w.label}</span>
+                            </Tooltip>
+                          </td>
+                          <td className={`${dsTableTd} tabular-nums text-sm`}>
+                            <Tooltip content={m.hasManualOverride ? "Conteggio DB; il totale mese include lo storico manuale" : undefined}>
+                              <span className="block w-full">
+                                {m.hasManualOverride && w.count === 0 ? "—" : w.count}
+                              </span>
+                            </Tooltip>
+                          </td>
                           <td className={dsTableTd} />
                           <td className={dsTableTd} />
                         </tr>

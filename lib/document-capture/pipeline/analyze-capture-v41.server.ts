@@ -29,6 +29,8 @@ import {
   applyEntityResolutionToCaptureFields,
   mergeResolutionIntoFieldRows,
 } from "@/lib/entity-resolution/server/apply-capture-resolution.server";
+import { inferCaptureSchedaTipo } from "@/lib/document-capture/capture-field-mapper";
+import { upsertCaptureSignatureFields } from "@/lib/document-capture/upsert-capture-signature-fields.server";
 import { parsePhysicalPages } from "@/lib/document-capture/physical/physical-parser";
 import { projectDocumentModelToFlatFields } from "@/lib/document-capture/projection/document-model-flat-projection";
 import {
@@ -291,6 +293,20 @@ export async function analyzeDocumentCaptureV41(
         await sb.from("document_capture_fields").upsert(fieldRows, {
           onConflict: "document_capture_id,field_key",
         });
+      }
+
+      const schedaTipo = object.schedaTipo ?? inferCaptureSchedaTipo(fieldRows) ?? null;
+      const signatureRows = await upsertCaptureSignatureFields(sb, {
+        companyId: capture.company_id,
+        captureId,
+        attemptId,
+        bytes,
+        mime,
+        schedaTipo,
+        existingFieldKeys: fieldRows.map((f) => f.field_key),
+      });
+      if (signatureRows.length > 0) {
+        fieldRows = [...fieldRows, ...signatureRows];
       }
 
       pipelineState = advancePipelineStateForPhase(pipelineState, "ai_extract", true);

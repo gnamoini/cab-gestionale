@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { LoadingErrorState } from "@/components/design-system";
 import { LoadingCardSkeleton } from "@/components/design-system";
+import { useAuthUserId } from "@/context/auth-context";
 import { useReportSectionVisibility } from "@/components/report/layout/report-section-visibility-context";
 import {
   filterReportSectionsByPermission,
@@ -15,6 +16,7 @@ import { REPORT_SECTION_UI } from "@/components/report/report-section-ui-config"
 import { loadReportSection } from "@/components/report/report-section-loaders";
 import type { DomainReportSectionProps, ReportAiSectionProps } from "@/components/report/report-section-types";
 import { reportZoneShellClass } from "@/components/report/report-ui-tokens";
+import { readSection } from "@/lib/ui/collapsible-prefs";
 import { moduleAllows } from "@/src/lib/auth/effective-module-access";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
@@ -132,8 +134,43 @@ function ReportSectionShell({
 }) {
   const ui = REPORT_SECTION_UI[section.id];
   const { setOpen } = useReportSectionVisibility();
+  const userId = useAuthUserId();
+  const didSyncPersistedRef = useRef(false);
   const [lazyEnabled, setLazyEnabled] = useState(!section.defaultCollapsed);
   const [mounted, setMounted] = useState(!section.defaultCollapsed);
+
+  useEffect(() => {
+    if (didSyncPersistedRef.current || !userId) return;
+    didSyncPersistedRef.current = true;
+
+    const collapsed = readSection(
+      userId,
+      "report",
+      section.id,
+      section.defaultCollapsed,
+      (raw, fallback) => (typeof raw === "boolean" ? raw : fallback),
+    );
+
+    if (!collapsed) {
+      setLazyEnabled(true);
+      setMounted(true);
+    } else if (ui.lazyMode === "unmount-on-close") {
+      setMounted(false);
+    }
+  }, [section.defaultCollapsed, section.id, ui.lazyMode, userId]);
+
+  const onCollapsedChange = useCallback(
+    (collapsed: boolean) => {
+      setOpen(section.id, !collapsed);
+      if (!collapsed) {
+        setLazyEnabled(true);
+        setMounted(true);
+      } else if (ui.lazyMode === "unmount-on-close") {
+        setMounted(false);
+      }
+    },
+    [section.id, setOpen, ui.lazyMode],
+  );
 
   return (
     <ShellCard
@@ -145,15 +182,7 @@ function ReportSectionShell({
       persistScope="report"
       persistKey={section.id}
       className={reportZoneShellClass}
-      onCollapsedChange={(collapsed) => {
-        setOpen(section.id, !collapsed);
-        if (!collapsed) {
-          setLazyEnabled(true);
-          setMounted(true);
-        } else if (ui.lazyMode === "unmount-on-close") {
-          setMounted(false);
-        }
-      }}
+      onCollapsedChange={onCollapsedChange}
     >
       <ReportSectionBody
         section={section}

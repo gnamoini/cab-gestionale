@@ -712,18 +712,30 @@ export function GlobalSelect(props: GlobalSelectProps) {
   useDropdownOutsideDismiss(portalOpen, wrapRef, listScrollRef, dismissDropdown);
 
   const closeAndReset = useCallback(() => {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
     setOpen(false);
     setActiveIndex(-1);
     setFocused(false);
+    editSessionRef.current.modified = false;
     resetQuery();
     restoreFocus();
   }, [restoreFocus, resetQuery]);
+
+  /** Chiusura da sibling nello stesso exclusiveGroup — non rubare focus al campo cliccato. */
+  const closeForExclusiveGroup = useCallback(() => {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    setOpen(false);
+    setActiveIndex(-1);
+    setFocused(false);
+    editSessionRef.current.modified = false;
+    resetQuery();
+  }, [resetQuery]);
 
   closeAndResetRef.current = closeAndReset;
 
   const { notifyOpening: notifyExclusiveGroupOpening } = useSelectorExclusiveGroup(
     exclusiveGroup,
-    closeAndReset,
+    closeForExclusiveGroup,
   );
 
   const setSelectorOpen = useCallback(

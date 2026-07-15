@@ -40,7 +40,8 @@ assert.match(tasksPanel, /OPERATIONAL_DIARY_BODY_MAX|maxLength/);
 assert.match(tasksPanel, /break-words|whitespace-pre-wrap/);
 assert.match(tasksPanel, /persistQueueRef/);
 assert.match(tasksPanel, /canReadPage\("dashboard"\)/);
-assert.match(tasksPanel, /canWritePage\("dashboard"\)/);
+assert.match(tasksPanel, /isPermissionDeniedError/);
+assert.match(tasksPanel, /rbac\.isLoading \|\| readOnly/);
 assert.doesNotMatch(tasksPanel, /readOnly\s*=\s*rbac\.isGuest/);
 
 const diaryEntry = read("lib/domain/operational-diary-entry.ts");

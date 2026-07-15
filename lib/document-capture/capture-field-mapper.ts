@@ -1,3 +1,4 @@
+import { isCaptureMultilineFieldKey } from "@/lib/document-capture/capture-field-display-value";
 import { emptySchedaIngressoFields } from "@/lib/domain/intervento-context/build-intervento-context";
 import { findAddettoByStoredName, addettoDisplayName, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { findDuplicateByCodici } from "@/lib/magazzino/duplicates";
@@ -61,6 +62,14 @@ const INGRESSO_KEY_MAP: Record<string, keyof SchedaIngressoFields> = {
   noteintervento: "noteIntervento",
   note_intervento: "noteIntervento",
   note: "noteIntervento",
+  richiedentefirma: "richiedenteFirma",
+  richiedente_firma: "richiedenteFirma",
+  firma_richiedente: "richiedenteFirma",
+  firma_autista: "richiedenteFirma",
+  addettofirma: "addettoFirma",
+  addetto_firma: "addettoFirma",
+  firma_addetto: "addettoFirma",
+  firma_addetto_officina: "addettoFirma",
 };
 
 const MAX_LAVORAZIONI_RIGHE = 24;
@@ -74,12 +83,15 @@ function normKey(key: string): string {
 
 export type CaptureFieldRow = {
   field_key: string;
-  confirmed_value: string | null;
+  confirmed_value?: string | null;
   normalized_value: string | null;
+  raw_value?: string | null;
 };
 
 export function resolveCaptureFieldValue(row: CaptureFieldRow): string {
-  const v = row.confirmed_value ?? row.normalized_value ?? "";
+  const v = isCaptureMultilineFieldKey(row.field_key)
+    ? (row.confirmed_value ?? row.raw_value ?? row.normalized_value ?? "")
+    : (row.confirmed_value ?? row.normalized_value ?? "");
   return typeof v === "string" ? v.trim() : "";
 }
 
@@ -358,12 +370,18 @@ export async function fetchCaptureFieldRows(captureId: string): Promise<CaptureF
   const res = await fetch(`/api/document-capture/${captureId}/fields`);
   if (!res.ok) throw new Error("Impossibile caricare i dati letti");
   const body = (await res.json()) as {
-    fields?: Array<{ field_key: string; confirmed_value: string | null; normalized_value: string | null }>;
+    fields?: Array<{
+      field_key: string;
+      confirmed_value: string | null;
+      normalized_value: string | null;
+      raw_value?: string | null;
+    }>;
   };
   return (body.fields ?? []).map((f) => ({
     field_key: f.field_key,
     confirmed_value: f.confirmed_value,
     normalized_value: f.normalized_value,
+    raw_value: f.raw_value ?? null,
   }));
 }
 

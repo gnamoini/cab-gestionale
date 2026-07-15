@@ -43,10 +43,12 @@ assert.doesNotMatch(profileHeader, /resolveProfileRoleDescription/);
 
 const profileSheet = read("components/profile/profile-sheet.tsx");
 assert.match(profileSheet, /gestionaleLogDrawerFooterClass/);
-assert.match(profileSheet, /ProfileVersionFooter/);
+assert.match(profileSheet, /ProfileSheetFooter/);
 
-const profileVersionFooter = read("components/profile/profile-version-footer.tsx");
-assert.match(profileVersionFooter, /PrivacyPolicyLink/);
+const profileSheetFooter = read("components/profile/profile-sheet-footer.tsx");
+assert.match(profileSheetFooter, /Installa app/);
+assert.match(profileSheetFooter, /PrivacyPolicyLink/);
+assert.doesNotMatch(profileSheetFooter, /formatAppBuildFooterLines/);
 
 const privacyPolicyLink = read("components/legal/privacy-policy-link.tsx");
 assert.match(privacyPolicyLink, /buildPrivacyPolicyHref/);

@@ -1,5 +1,5 @@
 /**
- * Genera icone PWA da public/cab-logo.png (composita quadrata su sfondo brand).
+ * Genera icone PWA da public/cab-logo.png (logo CAB su tile arrotondata scura).
  * Eseguire: npm run pwa:icons
  */
 import fs from "node:fs";
@@ -13,14 +13,20 @@ import {
   PWA_MASKABLE_ICON_PATH,
   PWA_MONOCHROME_ICON_PATH,
 } from "@/lib/pwa/pwa-icons";
-import { PWA_THEME_COLOR } from "@/lib/pwa/pwa-config";
+import { PWA_BACKGROUND_COLOR, PWA_ICON_TILE_COLOR } from "@/lib/pwa/pwa-config";
 
 const ROOT = process.cwd();
 const LOGO_PATH = path.join(ROOT, "public", "cab-logo.png");
 const ICONS_DIR = path.join(ROOT, "public", "icons");
 const MASTER_SIZE = 1024;
 
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
+/** Tile arrotondata — ~88% canvas, raggio ~22% lato tile (stile app iOS/Android). */
+const TILE_SIZE_RATIO = 0.88;
+const TILE_RADIUS_RATIO = 0.22;
+
+type Rgb = { r: number; g: number; b: number };
+
+function hexToRgb(hex: string): Rgb {
   const normalized = hex.replace("#", "");
   return {
     r: Number.parseInt(normalized.slice(0, 2), 16),
@@ -29,31 +35,79 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   };
 }
 
-async function buildMasterSquare(logoMaxWidthRatio: number): Promise<Buffer> {
+function colorDistance(a: Rgb, b: Rgb): number {
+  return Math.abs(a.r - b.r) + Math.abs(a.g - b.g) + Math.abs(a.b - b.b);
+}
+
+function roundedTileSvg(input: {
+  canvasSize: number;
+  tileSize: number;
+  radius: number;
+  fill: string;
+  fullBleed?: boolean;
+}): Buffer {
+  const { canvasSize, tileSize, radius, fill, fullBleed = false } = input;
+  const offset = fullBleed ? 0 : Math.round((canvasSize - tileSize) / 2);
+  const width = fullBleed ? canvasSize : tileSize;
+  const height = fullBleed ? canvasSize : tileSize;
+  const rx = fullBleed ? Math.round(canvasSize * TILE_RADIUS_RATIO) : radius;
+
+  return Buffer.from(
+    `<svg width="${canvasSize}" height="${canvasSize}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="${offset}" y="${offset}" width="${width}" height="${height}" rx="${rx}" ry="${rx}" fill="${fill}"/>
+    </svg>`,
+  );
+}
+
+async function resizeLogo(maxLogoWidth: number): Promise<{ buffer: Buffer; width: number; height: number }> {
   const logo = sharp(LOGO_PATH);
   const meta = await logo.metadata();
   const logoWidth = meta.width ?? 790;
   const logoHeight = meta.height ?? 226;
-
-  const maxLogoWidth = Math.round(MASTER_SIZE * logoMaxWidthRatio);
   const scale = maxLogoWidth / logoWidth;
+  const resizedWidth = maxLogoWidth;
   const resizedHeight = Math.round(logoHeight * scale);
+  const buffer = await logo.resize(resizedWidth, resizedHeight, { fit: "inside" }).png().toBuffer();
+  return { buffer, width: resizedWidth, height: resizedHeight };
+}
 
-  const resizedLogo = await logo.resize(maxLogoWidth, resizedHeight, { fit: "inside" }).png().toBuffer();
+async function buildIconMaster(input: {
+  logoMaxWidthRatio: number;
+  fullBleedTile?: boolean;
+  transparentCanvas?: boolean;
+}): Promise<Buffer> {
+  const tileSize = Math.round(MASTER_SIZE * TILE_SIZE_RATIO);
+  const tileRadius = Math.round(tileSize * TILE_RADIUS_RATIO);
+  const effectiveTile = input.fullBleedTile ? MASTER_SIZE : tileSize;
+  const maxLogoWidth = Math.round(effectiveTile * input.logoMaxWidthRatio);
+  const { buffer: resizedLogo, width: logoWidth, height: logoHeight } = await resizeLogo(maxLogoWidth);
 
-  const left = Math.round((MASTER_SIZE - maxLogoWidth) / 2);
-  const top = Math.round((MASTER_SIZE - resizedHeight) / 2);
-  const { r, g, b } = hexToRgb(PWA_THEME_COLOR);
+  const tile = roundedTileSvg({
+    canvasSize: MASTER_SIZE,
+    tileSize,
+    radius: tileRadius,
+    fill: PWA_ICON_TILE_COLOR,
+    fullBleed: input.fullBleedTile,
+  });
+
+  const left = Math.round((MASTER_SIZE - logoWidth) / 2);
+  const top = Math.round((MASTER_SIZE - logoHeight) / 2);
+  const canvasBg = input.transparentCanvas
+    ? { r: 0, g: 0, b: 0, alpha: 0 }
+    : { ...hexToRgb(PWA_BACKGROUND_COLOR), alpha: 1 };
 
   return sharp({
     create: {
       width: MASTER_SIZE,
       height: MASTER_SIZE,
       channels: 4,
-      background: { r, g, b, alpha: 1 },
+      background: canvasBg,
     },
   })
-    .composite([{ input: resizedLogo, left, top }])
+    .composite([
+      { input: tile, left: 0, top: 0 },
+      { input: resizedLogo, left, top },
+    ])
     .png()
     .toBuffer();
 }
@@ -61,16 +115,18 @@ async function buildMasterSquare(logoMaxWidthRatio: number): Promise<Buffer> {
 async function buildMonochrome(master: Buffer): Promise<Buffer> {
   const { data, info } = await sharp(master).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const out = Buffer.from(data);
-  const bg = hexToRgb(PWA_THEME_COLOR);
+  const tile = hexToRgb(PWA_ICON_TILE_COLOR);
+  const outer = hexToRgb(PWA_BACKGROUND_COLOR);
 
   for (let i = 0; i < out.length; i += 4) {
     const r = out[i]!;
     const g = out[i + 1]!;
     const b = out[i + 2]!;
     const a = out[i + 3]!;
+    const pixel = { r, g, b };
+    const isTransparent = a < 16;
     const isBackground =
-      a < 16 ||
-      (Math.abs(r - bg.r) < 24 && Math.abs(g - bg.g) < 24 && Math.abs(b - bg.b) < 24);
+      isTransparent || colorDistance(pixel, tile) < 36 || colorDistance(pixel, outer) < 36;
     if (isBackground) {
       out[i + 3] = 0;
     } else {
@@ -97,8 +153,15 @@ async function main(): Promise<void> {
 
   fs.mkdirSync(ICONS_DIR, { recursive: true });
 
-  const master = await buildMasterSquare(0.7);
-  const maskable = await buildMasterSquare(0.56);
+  const master = await buildIconMaster({
+    logoMaxWidthRatio: 0.62,
+    transparentCanvas: true,
+  });
+  const maskable = await buildIconMaster({
+    logoMaxWidthRatio: 0.5,
+    fullBleedTile: true,
+    transparentCanvas: false,
+  });
   const monochrome = await buildMonochrome(master);
 
   for (const size of PWA_ICON_SIZES) {

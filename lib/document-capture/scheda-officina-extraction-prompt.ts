@@ -10,6 +10,7 @@ data_ingresso, cliente, cantiere, utilizzatore,
 attrezzatura_marca, attrezzatura_modello, attrezzatura_matricola, n_scuderia, ore,
 telaio_marca, telaio_modello, targa, km,
 descrizione_anomalia, nome, cognome, telefono, note.
+Le firme (autista/richiedente e addetto officina) vengono ritagliate automaticamente dalle caselle fisse del template blank: non estrarle in fields.
 
 Scheda lavorazioni blank CAB — imposta schedaTipo "lavorazioni" e usa:
 cliente, targa_matricola,

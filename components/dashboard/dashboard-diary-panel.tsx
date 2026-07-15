@@ -35,6 +35,7 @@ import {
 } from "@/src/hooks/view/use-operational-diary";
 import { useRbac } from "@/src/hooks/use-rbac";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { isPermissionDeniedError } from "@/src/utils/supabaseErrorHandler";
 import {
   dsFocus,
   dsTypoTableHeader,
@@ -59,7 +60,7 @@ const DIARY_TEXTAREA_MIN_H = "1.25rem";
 const DIARY_LAYOUT_GRID =
   "grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[calc((100%-0.75rem)/2)_minmax(0,1fr)] xl:grid-cols-[calc((100%-2.25rem)/4)_minmax(0,1fr)] lg:items-start";
 const DIARY_LIST_ROW =
-  "relative flex min-h-[3rem] min-w-0 flex-1 items-center gap-2.5 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_30%,var(--cab-card))] px-2.5 py-2 shadow-[var(--cab-shadow-sm)] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] [-webkit-tap-highlight-color:transparent]";
+  "relative flex min-h-[3rem] min-w-0 flex-1 items-center gap-2.5 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-card)] px-2.5 py-2 shadow-[var(--cab-shadow-sm)] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] [-webkit-tap-highlight-color:transparent]";
 const DIARY_LIST_ROW_INTERACTIVE =
   "cursor-text active:scale-[0.995] active:shadow-none active:duration-100 motion-reduce:active:scale-100";
 const DIARY_DAY_SQUARE =
@@ -78,7 +79,7 @@ function diaryDaySquareClass(isToday: boolean, hasValue: boolean): string {
   if (hasValue) {
     return `${DIARY_DAY_SQUARE} text-[color:var(--cab-text)] ${globalInputCalendarDayToday}`;
   }
-  return `${DIARY_DAY_SQUARE} text-[color:var(--cab-text-muted)]`;
+  return `${DIARY_DAY_SQUARE} bg-[color:var(--cab-surface-2)] text-[color:var(--cab-text-muted)]`;
 }
 
 function DiaryCalendarMonthYearMenu({
@@ -489,7 +490,7 @@ export function DashboardDiaryPanel() {
 
   const runPersist = useCallback(
     async (ymd: string, body: string) => {
-      if (readOnly) return;
+      if (rbac.isLoading || readOnly) return;
       const trimmed = body.trim();
       if (trimmed === (lastSavedRef.current[ymd] ?? "").trim()) return;
       savingYmdRef.current = ymd;
@@ -506,13 +507,15 @@ export function DashboardDiaryPanel() {
           });
         }
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Salvataggio non riuscito.");
+        if (!isPermissionDeniedError(e)) {
+          toast.error(e, { action: "update" });
+        }
       } finally {
         if (savingYmdRef.current === ymd) savingYmdRef.current = null;
         setSavingYmd((current) => (current === ymd ? null : current));
       }
     },
-    [readOnly, upsert, toast],
+    [readOnly, rbac.isLoading, upsert, toast],
   );
 
   const persist = useCallback(
