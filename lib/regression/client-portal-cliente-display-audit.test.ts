@@ -35,7 +35,7 @@ assert.match(profileFetch, /cognome/);
 const profileAccount = read("components/profile/profile-account-section.tsx");
 assert.match(profileAccount, /user\.givenName/);
 assert.match(profileAccount, /user\.cognome/);
-assert.match(profileAccount, /if \(!isCliente\) \{[\s\S]*ID utente/);
+assert.doesNotMatch(profileAccount, /ID utente/);
 
 const profileHeader = read("components/profile/profile-sheet-header.tsx");
 assert.match(profileHeader, /profileDisplayName/);
@@ -46,9 +46,18 @@ assert.match(profileSheet, /gestionaleLogDrawerFooterClass/);
 assert.match(profileSheet, /ProfileSheetFooter/);
 
 const profileSheetFooter = read("components/profile/profile-sheet-footer.tsx");
-assert.match(profileSheetFooter, /Installa app/);
+assert.match(profileSheetFooter, /PwaInstallFooterButton/);
 assert.match(profileSheetFooter, /PrivacyPolicyLink/);
+assert.doesNotMatch(profileSheetFooter, /menuInstallAvailable/);
 assert.doesNotMatch(profileSheetFooter, /formatAppBuildFooterLines/);
+
+const authFooter = read("components/gestionale/auth-standalone-page-footer.tsx");
+assert.match(authFooter, /PwaInstallFooterButton/);
+assert.match(authFooter, /PrivacyPolicyLink/);
+
+const installFooterBtn = read("components/legal/pwa-install-footer-button.tsx");
+assert.match(installFooterBtn, /isAppInstalled/);
+assert.match(installFooterBtn, /disabled=\{isAppInstalled/);
 
 const privacyPolicyLink = read("components/legal/privacy-policy-link.tsx");
 assert.match(privacyPolicyLink, /buildPrivacyPolicyHref/);

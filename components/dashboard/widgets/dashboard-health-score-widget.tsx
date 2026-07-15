@@ -49,7 +49,6 @@ export function DashboardHealthScoreWidget({ def }: { def: DashboardWidgetDefini
     );
   } else {
     body = <HealthScoreBreakdownBody score={score} />;
-    subtitle = score.periodLabel;
     headerLeadingActions = (
       <HealthScoreSummary score={score.score} label={score.label} tone={score.tone} hideTitle />
     );

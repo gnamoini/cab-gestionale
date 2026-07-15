@@ -7,14 +7,17 @@ import {
   useControlTowerContext,
 } from "@/components/dashboard/control-tower-metrics-provider";
 import {
-  DASHBOARD_SECTION_ORDER,
   groupVisibleWidgetsBySection,
+  resolveDashboardSectionOrder,
 } from "@/lib/dashboard/dashboard-widget-registry";
+import { useGestionaleShellLayout } from "@/context/gestionale-shell-layout-context";
 import { dsStackPage } from "@/lib/ui/design-system";
 
 function DashboardControlTowerLayoutInner() {
   const { visibleWidgets, isLoading } = useControlTowerContext();
-  const bySection = groupVisibleWidgetsBySection(visibleWidgets);
+  const { isCompactShell } = useGestionaleShellLayout();
+  const sectionOrder = resolveDashboardSectionOrder(isCompactShell);
+  const bySection = groupVisibleWidgetsBySection(visibleWidgets, sectionOrder);
 
   if (isLoading && visibleWidgets.length === 0) {
     return <LoadingCardSkeleton minHeightClass="min-h-[12rem]" />;
@@ -22,7 +25,7 @@ function DashboardControlTowerLayoutInner() {
 
   return (
     <div className={`${dsStackPage} min-w-0`}>
-      {DASHBOARD_SECTION_ORDER.map((section) => {
+      {sectionOrder.map((section) => {
         const widgets = bySection.get(section) ?? [];
         if (widgets.length === 0) return null;
         return (

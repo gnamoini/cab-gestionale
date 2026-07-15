@@ -16,17 +16,17 @@ import { QK } from "@/src/lib/react-query/invalidate-related";
 import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 import type { GestionalePageKey } from "@/src/lib/permissions/gestionale-pages";
 
-export function useRolePageAccessQuery(): UseQueryResult<Record<string, PageAccessLevel>, Error> {
+export function useRolePageAccessQuery(): UseQueryResult<import("@/src/services/permissions.service").RolePageAccessBundle, Error> {
   const { user, status } = useAuth();
   return useQuery({
     queryKey: [...QK.userPermissions, "role-page-access", user?.id ?? "anon"] as const,
     queryFn: async () => {
       const r = await permissionsEntry.listMyRolePageAccess(user?.id);
       if (!r.success) {
-        if (isRbacPageTableUnavailableError(r.error)) return {};
+        if (isRbacPageTableUnavailableError(r.error)) return { roleKey: "guest", rolePageAccess: {} };
         throw new Error(r.error ?? "Errore permessi ruolo");
       }
-      return r.data ?? {};
+      return r.data ?? { roleKey: "guest", rolePageAccess: {} };
     },
     enabled: isAuthSessionEstablished(status) && !!user?.id,
     staleTime: Number.POSITIVE_INFINITY,

@@ -13,6 +13,7 @@ const input = {
   rolePageAccess,
   userPageOverrideRows: [],
   pilotDbEnabled: false,
+  permissionsHydrated: true,
 };
 
 const clientSnap = resolveEffectivePermissions(input);

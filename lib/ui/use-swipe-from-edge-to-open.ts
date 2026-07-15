@@ -14,6 +14,7 @@ type DragState = {
   active: boolean;
   dragging: boolean;
   lastDeltaX: number;
+  rawDeltaX: number;
 };
 
 export function resolveEdgeZonePx(safeAreaLeftPx = 0): number {
@@ -30,6 +31,18 @@ export function backdropOpacityForEdgeOpen(dragX: number, panelWidth: number): n
 
 export function shouldCommitEdgeOpen(dragX: number, panelWidth: number): boolean {
   return dragX >= panelWidth * OPEN_RATIO;
+}
+
+export function peakEdgeOpenDragX(currentX: number, peakX: number): number {
+  return Math.max(currentX, peakX);
+}
+
+export function shouldCommitEdgeOpenGesture(currentX: number, peakX: number, panelWidth: number): boolean {
+  return shouldCommitEdgeOpen(peakEdgeOpenDragX(currentX, peakX), panelWidth);
+}
+
+export function clampEdgeOpenDragX(rawDeltaX: number, panelWidth: number): number {
+  return Math.max(0, Math.min(panelWidth, rawDeltaX));
 }
 
 /**
@@ -89,10 +102,13 @@ export function useSwipeFromEdgeToOpen({
     active: false,
     dragging: false,
     lastDeltaX: 0,
+    rawDeltaX: 0,
   });
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_WIDTH);
   const panelWidthGestureRef = useRef(DEFAULT_PANEL_WIDTH);
+  const panelWidthLockedRef = useRef(false);
+  const peakDragXRef = useRef(0);
   const edgeActiveRef = useRef(false);
   const [edgeActive, setEdgeActive] = useState(false);
   const [dragX, setDragX] = useState(0);
@@ -105,8 +121,17 @@ export function useSwipeFromEdgeToOpen({
   }, [panelWidthProp]);
 
   const resetDrag = useCallback(() => {
-    dragRef.current = { startX: 0, startY: 0, active: false, dragging: false, lastDeltaX: 0 };
+    dragRef.current = {
+      startX: 0,
+      startY: 0,
+      active: false,
+      dragging: false,
+      lastDeltaX: 0,
+      rawDeltaX: 0,
+    };
     edgeActiveRef.current = false;
+    panelWidthLockedRef.current = false;
+    peakDragXRef.current = 0;
     setEdgeActive(false);
     setIsDragging(false);
     setDragX(0);
@@ -115,8 +140,10 @@ export function useSwipeFromEdgeToOpen({
   }, []);
 
   const finishCommit = useCallback(() => {
-    resetDrag();
     onCommit();
+    requestAnimationFrame(() => {
+      resetDrag();
+    });
   }, [onCommit, resetDrag]);
 
   const finishCancel = useCallback(() => {
@@ -125,7 +152,9 @@ export function useSwipeFromEdgeToOpen({
   }, [onCancel, resetDrag]);
 
   useEffect(() => {
-    if (!enabled) return;
+    const keepListening =
+      enabled || edgeActiveRef.current || dragRef.current.active || isSnapping;
+    if (!keepListening) return;
 
     function onTouchStart(e: TouchEvent) {
       if (edgeActiveRef.current || isSnapping) return;
@@ -140,7 +169,9 @@ export function useSwipeFromEdgeToOpen({
         active: true,
         dragging: false,
         lastDeltaX: 0,
+        rawDeltaX: 0,
       };
+      peakDragXRef.current = 0;
     }
 
     function onTouchMove(e: TouchEvent) {
@@ -175,8 +206,10 @@ export function useSwipeFromEdgeToOpen({
 
       e.preventDefault();
       const width = panelWidthGestureRef.current;
-      const nextX = Math.max(0, Math.min(width, deltaX));
+      dragRef.current.rawDeltaX = deltaX;
+      const nextX = clampEdgeOpenDragX(deltaX, width);
       dragRef.current.lastDeltaX = nextX;
+      peakDragXRef.current = Math.max(peakDragXRef.current, nextX);
       setDragX(nextX);
     }
 
@@ -184,23 +217,29 @@ export function useSwipeFromEdgeToOpen({
       if (!dragRef.current.active) return;
       const width = panelWidthGestureRef.current;
       const currentX = dragRef.current.dragging ? dragRef.current.lastDeltaX : 0;
-      const shouldCommit = dragRef.current.dragging && shouldCommitEdgeOpen(currentX, width);
+      const peakX = peakDragXRef.current;
+      const shouldCommit =
+        dragRef.current.dragging && shouldCommitEdgeOpenGesture(currentX, peakX, width);
 
-      dragRef.current = { startX: 0, startY: 0, active: false, dragging: false, lastDeltaX: 0 };
+      dragRef.current = {
+        startX: 0,
+        startY: 0,
+        active: false,
+        dragging: false,
+        lastDeltaX: 0,
+        rawDeltaX: 0,
+      };
       setIsDragging(false);
 
       if (!edgeActiveRef.current) return;
 
-      if (prefersReducedMotion()) {
-        if (shouldCommit) finishCommit();
-        else finishCancel();
+      if (shouldCommit) {
+        finishCommit();
         return;
       }
 
-      if (shouldCommit) {
-        setIsSnapping(true);
-        setSnapTarget("open");
-        setDragX(width);
+      if (prefersReducedMotion()) {
+        finishCancel();
         return;
       }
 
@@ -228,39 +267,41 @@ export function useSwipeFromEdgeToOpen({
   }, [enabled, finishCancel, finishCommit, getPanelWidth, isSnapping, onBegin]);
 
   useLayoutEffect(() => {
-    if (!edgeActive) return;
-    const w = panelRef.current?.offsetWidth;
+    if (!edgeActive || panelWidthLockedRef.current) return;
+    const w = panelRef.current?.offsetWidth ?? panelWidthProp;
     if (!w) return;
     panelWidthGestureRef.current = w;
+    panelWidthLockedRef.current = true;
     setPanelWidth(w);
-  }, [edgeActive, dragX, isSnapping]);
+    const nextX = clampEdgeOpenDragX(dragRef.current.rawDeltaX, w);
+    dragRef.current.lastDeltaX = nextX;
+    peakDragXRef.current = Math.max(peakDragXRef.current, nextX);
+    setDragX(nextX);
+  }, [edgeActive, panelWidthProp]);
 
   useEffect(() => {
-    if (!isSnapping || !snapTarget) return;
+    if (!isSnapping || snapTarget !== "closed") return;
     const el = panelRef.current;
     if (!el) {
-      if (snapTarget === "open") finishCommit();
-      else finishCancel();
+      finishCancel();
       return;
     }
 
     function onTransitionEnd(e: TransitionEvent) {
       if (e.target !== el || e.propertyName !== "transform") return;
-      if (snapTarget === "open") finishCommit();
-      else finishCancel();
+      finishCancel();
     }
 
     el.addEventListener("transitionend", onTransitionEnd);
     const fallback = window.setTimeout(() => {
-      if (snapTarget === "open") finishCommit();
-      else finishCancel();
+      finishCancel();
     }, SNAP_MS + 80);
 
     return () => {
       el.removeEventListener("transitionend", onTransitionEnd);
       window.clearTimeout(fallback);
     };
-  }, [finishCancel, finishCommit, isSnapping, snapTarget]);
+  }, [finishCancel, isSnapping, snapTarget]);
 
   const panelStyle =
     dragX > 0 || isSnapping

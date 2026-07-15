@@ -58,6 +58,26 @@ export const dsAccentRowHighlight =
 export const dsAccentSoftBanner =
   "rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))]";
 
+/** Banner di sistema (PWA install, notifiche, aggiornamento) — sfondo scuro fisso, indipendente dal tema. */
+export const dsSystemBannerShell =
+  "bg-[#09090b] text-[color:#fafafa] shadow-[var(--cab-shadow-md)]";
+export const dsSystemBannerShellTop =
+  "sticky top-0 z-[90] border-b border-[color:color-mix(in_srgb,#ffffff_10%,transparent)] pt-[max(0.625rem,env(safe-area-inset-top))]";
+export const dsSystemBannerInner = "mx-auto max-w-4xl px-3 py-2.5 sm:px-4";
+export const dsSystemBannerLayout = "flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4";
+export const dsSystemBannerLead = "flex min-w-0 flex-1 items-start gap-3 sm:items-center";
+export const dsSystemBannerContent = "min-w-0 flex-1";
+export const dsSystemBannerTitle = "text-sm font-semibold leading-snug text-[color:#fafafa]";
+export const dsSystemBannerDescription = "mt-0.5 text-xs leading-relaxed text-[color:#a1a1aa]";
+export const dsSystemBannerAside = "flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:min-w-[9.5rem]";
+export const dsSystemBannerActions = "flex w-full flex-col gap-2";
+export const dsSystemBannerChip =
+  "rounded-full border border-[color:color-mix(in_srgb,#ffffff_14%,transparent)] bg-[color:color-mix(in_srgb,#ffffff_6%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:#d4d4d8]";
+export const dsSystemBannerContextChip =
+  "rounded-full border border-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--cab-primary)_90%,#fafafa)]";
+export const dsSystemBannerIconWrap =
+  "flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] bg-[color:color-mix(in_srgb,#ffffff_8%,transparent)] text-[color:var(--cab-primary)] ring-1 ring-[color:color-mix(in_srgb,#ffffff_12%,transparent)]";
+
 /** Toggle pill attivo (arancione piatto). */
 export const dsAccentToggleOn =
   "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_15%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]";
@@ -136,6 +156,13 @@ export const dsBtnSettings = dsPageToolbarBtn;
 
 /** A — Primario */
 export const dsBtnPrimary = `inline-flex items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] ${cabPrimaryBg} px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--cab-shadow-sm)] ${cabPrimaryBgHover} hover:shadow-[var(--cab-shadow-md)] hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
+
+export const dsSystemBannerDismissBtn =
+  `inline-flex h-8 w-8 shrink-0 items-center justify-center self-end rounded-[var(--ds-radius-lg)] text-[color:#a1a1aa] transition-colors hover:bg-[color:color-mix(in_srgb,#ffffff_8%,transparent)] hover:text-[color:#fafafa] ${dsFocus}`;
+export const dsSystemBannerGhostBtn =
+  `inline-flex w-full items-center justify-center gap-1.5 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,#ffffff_14%,transparent)] bg-transparent px-3 py-1.5 text-xs font-medium text-[color:#d4d4d8] hover:bg-[color:color-mix(in_srgb,#ffffff_8%,transparent)] hover:text-[color:#fafafa] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
+export const dsSystemBannerPrimaryBtn =
+  `${dsBtnPrimary} w-full text-xs py-2 px-4`;
 
 /** A — CTA hero (stesso arancio piatto del primario) */
 export const dsBtnCtaHero = `inline-flex items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] ${cabPrimaryBg} px-5 py-2.5 text-sm font-semibold text-white shadow-[var(--cab-shadow-md)] transition-[box-shadow,background-color] duration-200 ease-out ${cabPrimaryBgHover} hover:shadow-lg ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;

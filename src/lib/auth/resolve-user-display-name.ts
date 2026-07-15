@@ -78,6 +78,17 @@ export function resolveUserDisplayName(input: {
   return "Utente";
 }
 
+/** Nome breve per welcome dashboard — solo primo nome, senza cognome. */
+export function welcomeFirstName(input: { givenName?: string | null; displayName?: string }): string {
+  const given = input.givenName?.trim();
+  if (given) {
+    const first = given.split(/\s+/).filter(Boolean)[0] ?? given;
+    return formatUserDisplayName(first);
+  }
+  const display = formatUserDisplayName(input.displayName?.trim() || "Team CAB");
+  return display.split(/\s+/).filter(Boolean)[0] ?? display;
+}
+
 /** Nome utente in forma leggibile (es. «mario rossi» → «Mario Rossi»). */
 export function formatUserDisplayName(raw: string): string {
   return raw

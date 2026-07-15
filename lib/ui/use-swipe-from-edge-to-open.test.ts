@@ -3,9 +3,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   backdropOpacityForEdgeOpen,
+  clampEdgeOpenDragX,
   panelTransformForEdgeOpen,
+  peakEdgeOpenDragX,
   resolveEdgeZonePx,
   shouldCommitEdgeOpen,
+  shouldCommitEdgeOpenGesture,
 } from "@/lib/ui/use-swipe-from-edge-to-open";
 
 const root = process.cwd();
@@ -27,8 +30,22 @@ assert.equal(shouldCommitEdgeOpen(95, 320), false);
 assert.equal(shouldCommitEdgeOpen(96, 320), true);
 assert.equal(shouldCommitEdgeOpen(320, 320), true);
 
+assert.equal(peakEdgeOpenDragX(40, 180), 180);
+assert.equal(shouldCommitEdgeOpenGesture(40, 180, 320), true);
+assert.equal(clampEdgeOpenDragX(400, 320), 320);
+assert.equal(clampEdgeOpenDragX(-10, 320), 0);
+
 const swipeOpenSrc = readFileSync(join(root, "lib/ui/use-swipe-from-edge-to-open.ts"), "utf8");
 assert.match(swipeOpenSrc, /isSwipeNavGestureBlockedTarget/);
 assert.doesNotMatch(swipeOpenSrc, /touch\.clientX > edgeZone/);
+assert.match(swipeOpenSrc, /keepListening/);
+assert.match(swipeOpenSrc, /panelWidthLockedRef/);
+assert.match(swipeOpenSrc, /peakDragXRef/);
+assert.doesNotMatch(swipeOpenSrc, /setSnapTarget\("open"\)/);
+
+const appShellSrc = readFileSync(join(root, "components/gestionale/app-shell.tsx"), "utf8");
+assert.match(appShellSrc, /enabled: isCompactShell && !mobileOpen && !overlayActive/);
+assert.doesNotMatch(appShellSrc, /!edgeOpening && !overlayActive/);
+assert.match(appShellSrc, /cab-nav-drawer-open-settled/);
 
 console.log("use-swipe-from-edge-to-open.test.ts ok");

@@ -184,7 +184,9 @@ function MobileNavDrawer({
   const mobileNav = useMobileNavShell();
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [edgeSettledOpen, setEdgeSettledOpen] = useState(false);
   const wasCommittedRef = useRef(false);
+  const prevEdgeOpeningRef = useRef(false);
   const panelState = closing ? "closing" : "open";
   const drawerVisible = open || edgeOpening;
   const committed = open && !edgeOpening;
@@ -195,6 +197,17 @@ function MobileNavDrawer({
   useEffect(() => {
     if (open) wasCommittedRef.current = true;
   }, [open]);
+
+  useEffect(() => {
+    const wasEdge = prevEdgeOpeningRef.current;
+    prevEdgeOpeningRef.current = edgeOpening;
+    if (wasEdge && !edgeOpening && open) {
+      setEdgeSettledOpen(true);
+    }
+    if (!open) {
+      setEdgeSettledOpen(false);
+    }
+  }, [edgeOpening, open]);
 
   useEffect(() => {
     if (drawerVisible) {
@@ -288,6 +301,7 @@ function MobileNavDrawer({
   const panelClassExtra = edgeOpening
     ? edgePanelProps?.className
     : swipeDismiss.panelProps.className;
+  const settledOpenClass = edgeSettledOpen ? "cab-nav-drawer-open-settled" : "";
   const backdropStyle = edgeOpening ? edgeBackdropProps?.style : swipeDismiss.backdropProps.style;
   const backdropClassExtra = edgeOpening
     ? edgeBackdropProps?.className
@@ -297,7 +311,7 @@ function MobileNavDrawer({
     <div className={`fixed inset-0 ${dsZModalHigh} overscroll-none`} role="presentation">
       <button
         type="button"
-        className={`cab-nav-drawer-backdrop absolute inset-0 touch-none bg-black/50 backdrop-blur-[1px] touch-manipulation${backdropClassExtra ? ` ${backdropClassExtra}` : ""}`}
+        className={`cab-nav-drawer-backdrop absolute inset-0 touch-none bg-black/50 backdrop-blur-[1px] touch-manipulation${backdropClassExtra ? ` ${backdropClassExtra}` : ""}${edgeSettledOpen ? " cab-nav-drawer-open-settled-backdrop" : ""}`}
         data-state={panelState}
         style={backdropStyle}
         aria-label="Chiudi menu"
@@ -306,7 +320,7 @@ function MobileNavDrawer({
       />
       <div
         ref={panelContainerRef}
-        className={`cab-nav-drawer-panel cab-sidebar ${resolveDrawerAsideClasses("drawerNav")}${panelClassExtra ? ` ${panelClassExtra}` : ""}`}
+        className={`cab-nav-drawer-panel cab-sidebar ${resolveDrawerAsideClasses("drawerNav")}${panelClassExtra ? ` ${panelClassExtra}` : ""}${settledOpenClass ? ` ${settledOpenClass}` : ""}`}
         data-state={panelState}
         role="dialog"
         aria-modal="true"
@@ -420,7 +434,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   const edgeSwipe = useSwipeFromEdgeToOpen({
-    enabled: isCompactShell && !mobileOpen && !edgeOpening && !overlayActive,
+    enabled: isCompactShell && !mobileOpen && !overlayActive,
     onBegin: () => setEdgeOpening(true),
     onCommit: () => {
       setEdgeOpening(false);

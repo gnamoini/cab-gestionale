@@ -12,6 +12,8 @@ export type EffectivePermissionsInput = {
   rolePageAccess: Record<string, PageAccessLevel>;
   userPageOverrideRows: { page_key: string; access_level: string }[] | undefined;
   pilotDbEnabled: boolean;
+  /** true solo dopo caricamento DB role_page_access (+ override); evita phantom write da seed. */
+  permissionsHydrated?: boolean;
 };
 
 export type EffectivePermissionsSnapshot = {
@@ -24,4 +26,6 @@ export type EffectivePermissionsSnapshot = {
   rolePageAccess: Record<string, PageAccessLevel>;
   /** Moduli ERP derivati dal resolver pagina (bridge RLS). */
   modules: ResolvedPageAccess["modules"];
+  /** Snapshot autorizzativo pronto (matrice pagina da DB, non seed). */
+  permissionsHydrated: boolean;
 };

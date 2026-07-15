@@ -44,6 +44,14 @@ assert.match(
 );
 assert.match(globalsCss, /data-cab-scroll-lock-fixed-compensate/);
 assert.match(globalsCss, /--cab-scroll-lock-gap/);
+assert.match(
+  globalsCss,
+  /data-mobile-nav-visible[\s\S]*\.cab-page-title-box[\s\S]*position:\s*absolute[\s\S]*left:\s*0[\s\S]*right:\s*0/,
+);
+assert.doesNotMatch(
+  globalsCss,
+  /data-mobile-nav-visible[\s\S]*\.cab-page-header-top-row[\s\S]*grid-template-columns:\s*auto minmax\(0,\s*1fr\) auto/,
+);
 
 assert.match(globalsCss, /\.flex-safe\s*\{/);
 assert.match(globalsCss, /\.flex-fill,\s*\n?\s*\.flex-fill-safe\s*\{/);
@@ -73,6 +81,7 @@ assert.doesNotMatch(pageLayout, /useLayoutEffect|window\.innerWidth|matchMedia/)
 // --- SSR/hydration: app-shell layout tokens CSS-only (no width sync in render) ---
 const appShell = read("components/gestionale/app-shell.tsx");
 const accountMenu = read("components/gestionale/account-menu.tsx");
+const profileSheetContext = read("components/profile/profile-sheet-context.tsx");
 assert.match(appShell, /layoutResponsiveCoreScope/);
 assert.match(appShell, /gestionale-scroll-y/);
 assert.match(appShell, /dsGestionaleContentRail/);
@@ -90,7 +99,9 @@ assert.match(appShell, /suppressGlobalScrollEndPad/);
 assert.match(appShell, /useGestionaleScrollEnd/);
 assert.match(appShell, /SidebarSessionPanel/);
 assert.match(appShell, /ProfileSheetProvider/);
-assert.match(accountMenu, /ProfileSheet/);
+assert.match(profileSheetContext, /<ProfileSheet restoreFocusRef=\{restoreFocusRef\} \/>/);
+assert.match(accountMenu, /restoreFocusRef/);
+assert.doesNotMatch(accountMenu, /<ProfileSheet/);
 assert.match(accountMenu, /aria-haspopup="dialog"/);
 assert.doesNotMatch(accountMenu, /useGlobalDropdownPortal/);
 assert.doesNotMatch(

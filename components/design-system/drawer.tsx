@@ -95,6 +95,8 @@ export function Drawer({
   const maxMdDown = useMaxMdDown();
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
+  const overlayRegisteredRef = useRef(false);
+  const didInitialFocusRef = useRef(false);
   const panelState = closing ? "closing" : "open";
   const isActive = mounted && open && !closing;
   const { restoreFocus } = useDropdownFocusRestore(isActive);
@@ -103,7 +105,16 @@ export function Drawer({
     if (open) {
       setMounted(true);
       setClosing(false);
-      dispatchGestionaleOverlayOpened();
+      if (!overlayRegisteredRef.current) {
+        overlayRegisteredRef.current = true;
+        dispatchGestionaleOverlayOpened();
+      }
+      return;
+    }
+
+    if (overlayRegisteredRef.current) {
+      overlayRegisteredRef.current = false;
+      dispatchGestionaleOverlayClosed();
     }
   }, [open]);
 
@@ -124,7 +135,6 @@ export function Drawer({
   useBodyScrollLock(lockScroll && mounted && !closing, "design-system-Drawer");
   const requestClose = useCallback(() => {
     onClose();
-    dispatchGestionaleOverlayClosed();
   }, [onClose]);
 
   useOverlayBackHandler(isActive, requestClose, "design-system-Drawer");
@@ -142,7 +152,12 @@ export function Drawer({
   }, [isActive, closeOnEscape, requestClose]);
 
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive) {
+      didInitialFocusRef.current = false;
+      return;
+    }
+    if (didInitialFocusRef.current) return;
+    didInitialFocusRef.current = true;
     const id = window.requestAnimationFrame(() => {
       const btn = asideRef.current?.querySelector('button[aria-label="Chiudi"]');
       if (btn instanceof HTMLButtonElement) btn.focus({ preventScroll: true });

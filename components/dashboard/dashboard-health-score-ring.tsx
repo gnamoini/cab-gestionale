@@ -7,7 +7,7 @@ import type {
   OperationalHealthTone,
 } from "@/lib/dashboard/operational-health-score";
 import { splitHealthFactors } from "@/lib/dashboard/operational-health-score";
-import { dsSkeletonPulse, dsTypoCaption } from "@/lib/ui/design-system";
+import { dsSkeletonPulse } from "@/lib/ui/design-system";
 
 const RING_SIZE = 68;
 const RING_STROKE = 5;
@@ -255,7 +255,6 @@ export function HealthScoreBreakdownBody({ score }: { score: OperationalHealthSc
 
   return (
     <div className="min-w-0 space-y-3.5">
-      <p className={`${dsTypoCaption} text-[color:var(--cab-text-muted)]`}>{score.periodLabel}</p>
       <FactorList title="Ha alzato il punteggio" factors={positive} tone="up" />
       <FactorList title="Ha abbassato il punteggio" factors={negative} tone="down" />
       {positive.length === 0 && negative.length === 0 ? (

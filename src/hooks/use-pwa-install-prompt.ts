@@ -110,6 +110,7 @@ export function usePwaInstallPrompt() {
     promptInstall,
     dismissInstall,
     isStandalone: isStandalone || isPwaStandaloneMode(displayMode),
+    isAppInstalled: isStandalone || installMarked || runtime.installed,
     platform,
     engagementElapsed,
   };

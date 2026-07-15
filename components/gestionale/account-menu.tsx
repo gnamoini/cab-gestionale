@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type MouseEvent } from "react";
 import { useAuth } from "@/context/auth-context";
 import { UserProfileAvatar } from "@/components/gestionale/user-profile-avatar";
-import { ProfileSheet } from "@/components/profile/profile-sheet";
 import { useProfileSheet } from "@/components/profile/profile-sheet-context";
 import { SidebarNavRow, SidebarSessionExpandChevron } from "@/components/gestionale/sidebar-nav-row";
 
@@ -20,8 +19,7 @@ export function AccountMenu({
   onOpenProfile?: () => void;
 }) {
   const { user, status } = useAuth();
-  const { open, openProfileSheet, closeProfileSheet } = useProfileSheet();
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const { open, openProfileSheet, closeProfileSheet, restoreFocusRef } = useProfileSheet();
   const openRef = useRef(open);
   openRef.current = open;
 
@@ -34,11 +32,12 @@ export function AccountMenu({
       }
     : {};
 
-  const toggle = () => {
+  const toggle = (event: MouseEvent<HTMLButtonElement>) => {
     if (openRef.current) {
       closeProfileSheet();
       return;
     }
+    restoreFocusRef.current = event.currentTarget;
     onOpenProfile?.();
     openProfileSheet();
   };
@@ -46,7 +45,6 @@ export function AccountMenu({
   const row = (
     <SidebarNavRow
       as="button"
-      ref={triggerRef}
       data-testid="smoke-account-menu"
       active={false}
       collapsed={collapsed}
@@ -71,10 +69,5 @@ export function AccountMenu({
     />
   );
 
-  return (
-    <div className="relative w-full min-w-0">
-      {row}
-      <ProfileSheet restoreFocusRef={triggerRef} />
-    </div>
-  );
+  return <div className="relative w-full min-w-0">{row}</div>;
 }

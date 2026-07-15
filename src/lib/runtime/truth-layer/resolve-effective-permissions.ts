@@ -3,7 +3,6 @@ import {
   type RbacEvaluationContext,
   type RequiredRbacContext,
 } from "@/lib/auth/rbac";
-import { mergeRolePageAccessWithSeed } from "@/src/lib/rbac/load-rbac-data";
 import { resolvePilotSettingsState } from "@/src/lib/runtime/truth-layer/resolve-pilot-settings-state";
 import { resolvePageAccess, type ResolvedPageAccess } from "@/src/lib/rbac/resolve-page-access";
 import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
@@ -38,8 +37,7 @@ export function resolveEffectivePermissions(input: EffectivePermissionsInput): E
   const roleKey = resolveRole(input.roleKey ?? input.ruolo);
   const userId = input.userId ?? "";
   const userPageOverrides = userOverridesFromRows(input.userPageOverrideRows);
-  // ponytail: seed = default ruoli canonici; DB (role_page_access) sovrascrive per pagina
-  const rolePageAccess = mergeRolePageAccessWithSeed(roleKey, input.rolePageAccess);
+  const rolePageAccess = input.rolePageAccess;
   const resolved = resolvePageAccess({
     userId,
     roleKey,
@@ -58,5 +56,6 @@ export function resolveEffectivePermissions(input: EffectivePermissionsInput): E
     resolved,
     rolePageAccess,
     modules: resolved.modules,
+    permissionsHydrated: input.permissionsHydrated === true,
   };
 }

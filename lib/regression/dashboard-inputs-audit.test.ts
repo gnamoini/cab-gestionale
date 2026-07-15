@@ -25,7 +25,19 @@ assert.doesNotMatch(welcome, /useOperationalHealthScore/);
 assert.match(healthScoreWidget, /DashboardHealthScoreWidget/);
 assert.match(healthScoreWidget, /HealthScoreBreakdownBody/);
 assert.match(healthScoreRing, /export function HealthScoreBreakdownBody/);
-assert.doesNotMatch(healthScoreRing, /createPortal/);
+assert.doesNotMatch(healthScoreRing, /score\.periodLabel/);
+assert.doesNotMatch(healthScoreWidget, /score\.periodLabel/);
+assert.match(welcome, /welcomeFirstName/);
+
+const controlTowerLayout = read("components/dashboard/dashboard-control-tower-layout.tsx");
+assert.match(controlTowerLayout, /resolveDashboardSectionOrder/);
+
+const widgetRegistry = read("lib/dashboard/dashboard-widget-registry.ts");
+assert.match(widgetRegistry, /health-score.*kpi-header/s);
+
+const kpiHeaderWidget = read("components/dashboard/widgets/dashboard-operational-kpi-header-widget.tsx");
+assert.match(kpiHeaderWidget, /headerActions: <BriefPeriodToggle/);
+assert.doesNotMatch(kpiHeaderWidget, /headerLeadingActions: <BriefPeriodToggle/);
 
 assert.match(securityView, /GlobalDatePickerYmd/);
 assert.doesNotMatch(securityView, /type="date"/);
@@ -70,5 +82,12 @@ assert.doesNotMatch(
 const diaryService = read("src/services/operational-diary.service.ts");
 assert.match(diaryService, /maybeSingle/);
 assert.match(diaryService, /deleted_at/);
+
+const resolverRuntime = read("src/lib/runtime/truth-layer/resolve-effective-permissions.ts");
+assert.doesNotMatch(resolverRuntime, /mergeRolePageAccessWithSeed/);
+
+const permsHook = read("src/lib/runtime/truth-layer/use-effective-permissions.ts");
+assert.match(permsHook, /permissionsHydrated/);
+assert.match(permsHook, /roleBundle\?\.roleKey/);
 
 console.log("dashboard-inputs-audit.test.ts OK");

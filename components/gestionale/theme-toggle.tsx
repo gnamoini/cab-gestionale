@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Tooltip } from "@/components/ui";
 import { useTheme } from "@/context/theme-context";
+import { suppressSidebarBlurCollapse } from "@/lib/ui/use-sidebar-collapsed";
 import { dsBtnGhost, dsFocus, dsPageToolbarBtn } from "@/lib/ui/design-system";
 
 function IconSun({ className }: { className?: string }) {
@@ -53,6 +54,11 @@ export function ThemeToggle({
   const label = resolved === "dark" ? "Passa a tema chiaro" : "Passa a tema scuro";
   const tip = themeSaving ? "Salvataggio…" : resolved === "dark" ? "Chiaro" : "Scuro";
 
+  const handleToggle = () => {
+    suppressSidebarBlurCollapse(480);
+    toggleLightDark();
+  };
+
   if (!mounted || !themeReady) {
     const ghostPlaceholder = variant === "ghost" ? "h-[1.75rem] min-w-[4.5rem] rounded-[var(--ds-radius-lg)]" : "";
     return (
@@ -74,7 +80,11 @@ export function ThemeToggle({
     return (
       <button
         type="button"
-        onClick={toggleLightDark}
+        onPointerDown={(event) => {
+          event.stopPropagation();
+          suppressSidebarBlurCollapse(480);
+        }}
+        onClick={handleToggle}
         disabled={themeSaving}
         className={`${dsBtnGhost} ${dsFocus} inline-flex min-h-[1.75rem] items-center gap-1.5 px-2 py-1 text-[10px] sm:text-xs disabled:opacity-60`}
         aria-label={label}
@@ -94,7 +104,11 @@ export function ThemeToggle({
           type="button"
           role="switch"
           aria-checked={checked}
-          onClick={toggleLightDark}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            suppressSidebarBlurCollapse(480);
+          }}
+          onClick={handleToggle}
           disabled={themeSaving}
           className={`relative inline-flex h-6 w-10 shrink-0 items-center rounded-full transition-colors duration-200 ease-out ${dsFocus} ${
             themeSaving ? "cursor-not-allowed opacity-55" : "cursor-pointer"
@@ -117,7 +131,11 @@ export function ThemeToggle({
     <Tooltip content={tip} showOnFocus={false}>
       <button
         type="button"
-        onClick={toggleLightDark}
+        onPointerDown={(event) => {
+          event.stopPropagation();
+          suppressSidebarBlurCollapse(480);
+        }}
+        onClick={handleToggle}
         disabled={themeSaving}
         className={`${dsPageToolbarBtn} h-11 min-w-[2.75rem] px-2.5 sm:px-3 disabled:opacity-60`}
         aria-label={label}

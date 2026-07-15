@@ -17,5 +17,6 @@ export async function resolveServerEffectivePermissions(): Promise<EffectivePerm
     rolePageAccess: session.rolePageAccess,
     userPageOverrideRows: session.userPageOverrides,
     pilotDbEnabled,
+    permissionsHydrated: true,
   });
 }

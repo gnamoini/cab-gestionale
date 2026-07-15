@@ -3,15 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { CabLogo } from "@/components/gestionale/cab-logo";
-import { formatUserDisplayName } from "@/src/lib/auth/resolve-user-display-name";
+import { welcomeFirstName } from "@/src/lib/auth/resolve-user-display-name";
 import { dsSkeletonPulse, dsTypoBody } from "@/lib/ui/design-system";
 
 const dashboardWelcomeCardClass =
-  "relative flex min-w-0 max-w-full flex-1 flex-col justify-center overflow-hidden rounded-2xl border-2 border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_5%,var(--cab-card))] px-4 py-2.5 shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,#fff_7%,transparent)] sm:px-5 sm:py-3 dark:border-[color:color-mix(in_srgb,var(--cab-primary)_26%,var(--cab-border))] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_7%,var(--cab-card))] dark:shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,var(--cab-primary)_14%,transparent)]";
+  "relative flex min-w-0 max-w-full flex-1 flex-col justify-center overflow-hidden rounded-2xl border-2 border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_5%,var(--cab-card))] px-4 py-3 shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,#fff_7%,transparent)] sm:px-5 sm:py-3 dark:border-[color:color-mix(in_srgb,var(--cab-primary)_26%,var(--cab-border))] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_7%,var(--cab-card))] dark:shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,var(--cab-primary)_14%,transparent)]";
 
-/** Mobile: logo+data, copy. Desktop: logo | copy | spacer | data. */
+/** Mobile: copy poi meta. Desktop: logo | copy | spacer | data. */
 const welcomeLayoutClass =
-  "cab-dashboard-welcome-layout grid min-h-0 min-w-0 max-w-full flex-1 grid-cols-1 items-center gap-y-2.5 md:h-full md:grid-cols-[auto_minmax(0,max-content)_1fr_auto] md:gap-x-3";
+  "cab-dashboard-welcome-layout grid min-h-0 min-w-0 max-w-full flex-1 grid-cols-1 gap-y-3 md:h-full md:grid-cols-[auto_minmax(0,max-content)_1fr_auto] md:items-center md:gap-x-3 md:gap-y-0";
 
 const welcomeDateClass =
   "cab-dashboard-welcome-date flex shrink-0 flex-col justify-center text-right md:text-left md:border-l-2 md:border-[color:color-mix(in_srgb,var(--cab-primary)_50%,transparent)] md:pl-4";
@@ -47,14 +47,13 @@ function WelcomeSkeleton() {
   return (
     <div className={dashboardWelcomeCardClass} aria-hidden>
       <div className={welcomeLayoutClass}>
-        <div className="flex min-w-0 items-center justify-between gap-3 md:contents">
-          <div className={`cab-dashboard-welcome-logo h-9 w-24 shrink-0 ${dsSkeletonPulse}`} />
-          <div className={`${welcomeDateClass} h-10 w-[4.5rem] ${dsSkeletonPulse} opacity-50`} />
-        </div>
         <div className="cab-dashboard-welcome-copy flex min-w-0 flex-col justify-center space-y-1.5">
-          <div className={`h-3 w-24 ${dsSkeletonPulse} opacity-60`} />
           <div className={`h-6 w-56 max-w-full ${dsSkeletonPulse}`} />
           <div className={`h-4 w-40 max-w-full ${dsSkeletonPulse} opacity-70`} />
+        </div>
+        <div className="cab-dashboard-welcome-meta flex min-w-0 items-center justify-between gap-3">
+          <div className={`cab-dashboard-welcome-logo h-9 w-24 shrink-0 ${dsSkeletonPulse}`} />
+          <div className={`${welcomeDateClass} h-10 w-[4.5rem] ${dsSkeletonPulse} opacity-50`} />
         </div>
       </div>
     </div>
@@ -62,7 +61,7 @@ function WelcomeSkeleton() {
 }
 
 export function DashboardWelcome() {
-  const { status, authorName } = useAuth();
+  const { status, authorName, user } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -78,16 +77,15 @@ export function DashboardWelcome() {
       };
     }
     const now = new Date();
-    const w =
-      isAuthSessionEstablished(status) && authorName.trim()
-        ? formatUserDisplayName(authorName)
-        : "Team CAB";
+    const w = isAuthSessionEstablished(status)
+      ? welcomeFirstName({ givenName: user?.givenName, displayName: authorName.trim() || "Team CAB" })
+      : "Team CAB";
     return {
       greeting: timeGreeting(now.getHours()),
       who: w,
       welcomeDate: formatWelcomeDate(now),
     };
-  }, [mounted, status, authorName]);
+  }, [mounted, status, authorName, user?.givenName]);
 
   if (!mounted) {
     return <WelcomeSkeleton />;
@@ -96,7 +94,17 @@ export function DashboardWelcome() {
   return (
     <div className={dashboardWelcomeCardClass}>
       <div className={welcomeLayoutClass}>
-        <div className="flex min-w-0 items-center justify-between gap-3 md:contents">
+        <div className="cab-dashboard-welcome-copy order-1 flex min-w-0 flex-col justify-center md:order-none">
+          <h2 className="text-left text-base font-semibold leading-snug tracking-tight text-[color:var(--cab-text)] sm:text-lg md:text-xl">
+            {greeting},{" "}
+            <span className="font-bold text-[color:var(--cab-primary)]">{who}</span>
+          </h2>
+          <p className={`${dsTypoBody} mt-0.5 text-left text-[color:var(--cab-text-muted)]`}>
+            Benvenuto nel gestionale officina.
+          </p>
+        </div>
+
+        <div className="cab-dashboard-welcome-meta order-2 flex min-w-0 items-center justify-between gap-3 md:contents">
           <div className="cab-dashboard-welcome-logo flex shrink-0 items-center">
             <CabLogo height={36} priority sizes="126px" />
           </div>
@@ -118,15 +126,6 @@ export function DashboardWelcome() {
               </span>
             </span>
           </time>
-        </div>
-        <div className="cab-dashboard-welcome-copy flex min-w-0 flex-col justify-center">
-          <h2 className="text-left text-base font-semibold leading-snug tracking-tight text-[color:var(--cab-text)] sm:text-lg md:text-xl">
-            {greeting},{" "}
-            <span className="font-bold text-[color:var(--cab-primary)]">{who}</span>
-          </h2>
-          <p className={`${dsTypoBody} mt-0.5 text-left text-[color:var(--cab-text-muted)]`}>
-            Benvenuto nel gestionale officina.
-          </p>
         </div>
       </div>
     </div>

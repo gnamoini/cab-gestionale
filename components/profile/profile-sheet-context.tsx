@@ -1,24 +1,42 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
+import { ProfileSheet } from "@/components/profile/profile-sheet";
 
 type ProfileSheetContextValue = {
   open: boolean;
   openProfileSheet: () => void;
   closeProfileSheet: () => void;
+  restoreFocusRef: RefObject<HTMLElement | null>;
 };
 
 const ProfileSheetContext = createContext<ProfileSheetContextValue | null>(null);
 
 export function ProfileSheetProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
   const openProfileSheet = useCallback(() => setOpen(true), []);
   const closeProfileSheet = useCallback(() => setOpen(false), []);
   const value = useMemo(
-    () => ({ open, openProfileSheet, closeProfileSheet }),
+    () => ({ open, openProfileSheet, closeProfileSheet, restoreFocusRef }),
     [open, openProfileSheet, closeProfileSheet],
   );
-  return <ProfileSheetContext.Provider value={value}>{children}</ProfileSheetContext.Provider>;
+
+  return (
+    <ProfileSheetContext.Provider value={value}>
+      {children}
+      <ProfileSheet restoreFocusRef={restoreFocusRef} />
+    </ProfileSheetContext.Provider>
+  );
 }
 
 export function useProfileSheet(): ProfileSheetContextValue {

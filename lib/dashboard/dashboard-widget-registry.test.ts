@@ -8,6 +8,7 @@ import {
   dashboardWidgetIds,
   DASHBOARD_WIDGET_REGISTRY,
   isKnownDashboardWidgetId,
+  resolveDashboardSectionOrder,
   resolveVisibleDashboardWidgets,
   type DashboardWidgetId,
 } from "@/lib/dashboard/dashboard-widget-registry";
@@ -70,6 +71,10 @@ function main(): void {
 
   assert.deepEqual(resolveVisibleDashboardWidgets({ modules: null, staging: false }), []);
   assert.deepEqual(resolveVisibleDashboardWidgets({ modules: undefined, staging: false }), []);
+
+  assert.deepEqual(resolveDashboardSectionOrder(true)[0], "health-score");
+  assert.deepEqual(resolveDashboardSectionOrder(true)[1], "kpi-header");
+  assert.deepEqual(resolveDashboardSectionOrder(false)[0], "kpi-header");
 
   console.log("dashboard-widget-registry.test: OK");
 }

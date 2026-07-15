@@ -112,9 +112,10 @@ export function dashboardWidgetIds(widgets: readonly DashboardWidgetDefinition[]
 
 export function groupVisibleWidgetsBySection(
   widgets: readonly DashboardWidgetDefinition[],
+  sectionOrder: readonly DashboardWidgetSection[] = DASHBOARD_SECTION_ORDER,
 ): Map<DashboardWidgetSection, DashboardWidgetDefinition[]> {
   const map = new Map<DashboardWidgetSection, DashboardWidgetDefinition[]>();
-  for (const section of DASHBOARD_SECTION_ORDER) {
+  for (const section of sectionOrder) {
     map.set(section, []);
   }
   for (const w of widgets) {
@@ -123,4 +124,12 @@ export function groupVisibleWidgetsBySection(
     map.set(w.section, list);
   }
   return map;
+}
+
+/** Mobile: stato operativo subito sotto il welcome; desktop mantiene brief operativo prima. */
+export function resolveDashboardSectionOrder(compactShell: boolean): readonly DashboardWidgetSection[] {
+  if (compactShell) {
+    return ["health-score", "kpi-header", "activity", "optional"];
+  }
+  return DASHBOARD_SECTION_ORDER;
 }

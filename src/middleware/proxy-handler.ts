@@ -50,6 +50,11 @@ function isPwaStaticAsset(pathname: string): boolean {
   if (pathname.startsWith("/icons/")) return true;
   return isStaticAsset(pathname);
 }
+
+/** Cron worker (Bearer CRON_SECRET / service role) — no sessione utente. */
+function isCronApiPath(pathname: string): boolean {
+  return pathname.startsWith("/api/cron/");
+}
 function logEdgeRedirect(from: string, to: string, reason: string): void {
   logBootServer("REDIRECT", "edge", { from, to, reason }, `${from}→${to}`);
 }
@@ -90,6 +95,10 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
   const t0 = bootTiming ? Date.now() : 0;
 
   if (isPwaStaticAsset(pathname)) {
+    return NextResponse.next();
+  }
+
+  if (isCronApiPath(pathname)) {
     return NextResponse.next();
   }
 

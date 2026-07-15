@@ -6,7 +6,8 @@ import { useAuth, isAuthFullyAuthenticated } from "@/context/auth-context";
 import { clearGestionaleToasts } from "@/context/toast-context";
 import { resolveFirstAccessiblePageHrefFromResolved } from "@/lib/auth/rbac";
 import { resolvePostLoginRedirectPath } from "@/lib/auth/resolve-post-login-redirect";
-import { buildBootstrapRbacSnapshot, createRbacNavAccess } from "@/src/lib/rbac/rbac-snapshot-access";
+import { createRbacNavAccess, isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
+import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import {
   AuthStandaloneCardHeader,
@@ -114,6 +115,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, status, configurationError, user } = useAuth();
+  const { snapshot: permissionsSnapshot, isLoading: permissionsLoading } = useEffectivePermissions();
   const clientLavAccess = useClientLavorazioniAccess();
   const formId = useId();
   const identifierId = `${formId}-identifier`;
@@ -160,25 +162,26 @@ export function LoginForm() {
 
     if (!user?.id) return;
 
-    const bootstrap = buildBootstrapRbacSnapshot(user.id, user.roleKey ?? user.ruolo);
-    const navAccess = createRbacNavAccess(bootstrap);
+    if (permissionsLoading || !permissionsSnapshot || !isRbacSnapshotReady(permissionsSnapshot)) return;
+
+    const navAccess = createRbacNavAccess(permissionsSnapshot);
 
     const target = resolvePostLoginRedirectPath({
       user: { ruolo: user.ruolo, id: user.id },
       navAccess,
-      snapshot: bootstrap,
+      snapshot: permissionsSnapshot,
       requestedPath: searchParams.get("from"),
     });
 
     let finalTarget = target;
     if (isStagingPublicSlice() && isStagingBlockedPathname(target.split("?")[0] ?? target)) {
-      finalTarget = `${resolveFirstAccessiblePageHrefFromResolved(bootstrap.resolved)}?staging_unavailable=1`;
+      finalTarget = `${resolveFirstAccessiblePageHrefFromResolved(permissionsSnapshot.resolved)}?staging_unavailable=1`;
     }
 
     setRedirecting(true);
     deferredRouterReplace(router, finalTarget);
     deferredRouterRefresh(router);
-  }, [status, user, clientLavAccess.allowed, router, searchParams]);
+  }, [status, user, permissionsLoading, permissionsSnapshot, clientLavAccess.allowed, router, searchParams]);
 
   useEffect(() => {
     if (status === "loading" || status === "authenticated" || status === "degraded") return;

@@ -27,23 +27,25 @@ for (const page of GESTIONALE_PAGES) {
 const guest = resolveEffectivePermissions({
   userId: USER,
   roleKey: "guest",
-  rolePageAccess: {},
+  rolePageAccess: { dashboard: "read", agenda: "read" },
   userPageOverrideRows: [],
   pilotDbEnabled: false,
+  permissionsHydrated: true,
 });
 assert.equal(canReadPage(guest.resolved!, "lavorazioni"), false);
 
-// Cliente senza righe DB — seed concede portale clienti
-const clienteEmptyDb = resolveEffectivePermissions({
+// Cliente — portale clienti da matrice DB
+const clienteDb = resolveEffectivePermissions({
   userId: USER,
   roleKey: "cliente",
-  rolePageAccess: {},
+  rolePageAccess: { lavorazioni_clienti: "read" },
   userPageOverrideRows: [],
   pilotDbEnabled: false,
+  permissionsHydrated: true,
 });
-assert.equal(canReadPage(clienteEmptyDb.resolved!, "lavorazioni_clienti"), true);
-assert.equal(isPageVisible(clienteEmptyDb.resolved!, "lavorazioni_clienti"), true);
-assert.equal(canReadPage(clienteEmptyDb.resolved!, "mezzi"), false);
+assert.equal(canReadPage(clienteDb.resolved!, "lavorazioni_clienti"), true);
+assert.equal(isPageVisible(clienteDb.resolved!, "lavorazioni_clienti"), true);
+assert.equal(canReadPage(clienteDb.resolved!, "mezzi"), false);
 
 // Override utente batte ruolo
 const operatoreBase = seedPageAccessForRole("operatore");

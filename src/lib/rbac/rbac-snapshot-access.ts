@@ -17,7 +17,7 @@ export type RbacSnapshotBound = EffectivePermissionsSnapshot & {
 export function isRbacSnapshotReady(
   snap: EffectivePermissionsSnapshot | null | undefined,
 ): snap is RbacSnapshotBound {
-  return snap?.resolved != null;
+  return snap?.resolved != null && snap.permissionsHydrated === true;
 }
 
 export type RbacNavAccess = {
@@ -73,9 +73,10 @@ export function buildBootstrapRbacSnapshot(userId: string, roleKey: string): Rba
     rolePageAccess: {},
     userPageOverrideRows: [],
     pilotDbEnabled: false,
+    permissionsHydrated: false,
   });
   if (!isRbacSnapshotReady(snap)) {
-    throw new Error("buildBootstrapRbacSnapshot: resolved snapshot required");
+    throw new Error("buildBootstrapRbacSnapshot: hydrated snapshot required — use useEffectivePermissions");
   }
   return snap;
 }

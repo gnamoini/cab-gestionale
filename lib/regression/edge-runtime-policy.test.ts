@@ -42,6 +42,8 @@ assert.match(edgeRouter, /tryEdgeRoute/);
 assert.match(edgeRouter, /tryAuthPrecheckEdge/);
 
 const proxyHandler = read("src/middleware/proxy-handler.ts");
+assert.match(proxyHandler, /isCronApiPath/);
+assert.match(proxyHandler, /\/api\/cron\//);
 assert.match(proxyHandler, /tryAuthPrecheckEdge/);
 assert.match(proxyHandler, /tryEdgeRoute/);
 

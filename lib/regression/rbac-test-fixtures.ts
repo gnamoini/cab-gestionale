@@ -27,5 +27,6 @@ export function buildTestSnapshot(input: {
     rolePageAccess: seedPageAccessForRole(input.roleKey),
     userPageOverrideRows,
     pilotDbEnabled: false,
+    permissionsHydrated: true,
   });
 }

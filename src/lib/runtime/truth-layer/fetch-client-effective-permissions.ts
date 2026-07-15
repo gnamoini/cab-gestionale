@@ -22,7 +22,7 @@ function resolveAuthUserId(
 
 export async function fetchClientEffectivePermissionsSnapshot(): Promise<EffectivePermissionsSnapshot | null> {
   const cached = readClientEffectivePermissionsSnapshotCache();
-  if (cached && cached.role !== "guest") return cached;
+  if (cached && cached.role !== "guest" && cached.permissionsHydrated) return cached;
 
   const start = performance.now();
   trackRuntimeEvent(RuntimeEvents.rbacResolveStart);
@@ -85,6 +85,7 @@ export async function fetchClientEffectivePermissionsSnapshot(): Promise<Effecti
         access_level,
       })),
       pilotDbEnabled,
+      permissionsHydrated: true,
     });
     trackRuntimeEvent(RuntimeEvents.rbacResolveSuccess, {
       userId,
@@ -94,7 +95,7 @@ export async function fetchClientEffectivePermissionsSnapshot(): Promise<Effecti
     return snap;
   } catch (e) {
     const cachedOnError = readClientEffectivePermissionsSnapshotCache();
-    if (cachedOnError?.userId === userId) {
+    if (cachedOnError?.userId === userId && cachedOnError.permissionsHydrated) {
       trackRuntimeEvent(RuntimeEvents.rbacResolveSuccess, {
         userId,
         role: cachedOnError.role,

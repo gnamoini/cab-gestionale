@@ -40,10 +40,6 @@ export function ProfileAccountSection({ user }: { user: PublicAuthUser }) {
     rows.push({ label: "Nome utente", value: user.username });
   }
 
-  if (!isCliente) {
-    rows.push({ label: "ID utente", value: user.id });
-  }
-
   rows.push({ label: "Account creato", value: formatSecurityNullableWhen(user.createdAt) });
 
   return (

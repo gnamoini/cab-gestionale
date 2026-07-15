@@ -230,6 +230,6 @@ export function DashboardOperationalKpiHeaderWidget({ def }: { def: DashboardWid
   );
 
   return wrapDashboardWidget(def, body, {
-    headerLeadingActions: <BriefPeriodToggle period={period} onChange={setPeriod} />,
+    headerActions: <BriefPeriodToggle period={period} onChange={setPeriod} />,
   });
 }

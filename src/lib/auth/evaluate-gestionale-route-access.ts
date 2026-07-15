@@ -26,6 +26,7 @@ export function evaluateGestionaleRouteAccess(input: EvaluateGestionaleRouteAcce
           rolePageAccess: input.rolePageAccess ?? {},
           userPageOverrideRows: input.userPageOverrideRows ?? [],
           pilotDbEnabled,
+          permissionsHydrated: true,
         })
       : null;
 

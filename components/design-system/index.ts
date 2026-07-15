@@ -27,6 +27,12 @@ export {
 } from "./tooltip-status";
 export { CloseButton, type CloseButtonProps } from "./close-button";
 export {
+  SystemBannerChips,
+  SystemBannerDismiss,
+  SystemBannerLayout,
+  SystemBannerShell,
+} from "./system-banner";
+export {
   ShellNavBackButton,
   ShellNavBackLink,
 } from "./shell-nav-icon-button";

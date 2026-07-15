@@ -213,8 +213,10 @@ assert.match(providers, /PwaDisplayModeBridge/);
 assert.doesNotMatch(providers, /useAuth/);
 
 const profileFooter = read("components/profile/profile-sheet-footer.tsx");
-assert.match(profileFooter, /usePwaInstallPrompt/);
-assert.match(profileFooter, /Installa app/);
+assert.match(profileFooter, /PwaInstallFooterButton/);
+
+const installFooterBtn = read("components/legal/pwa-install-footer-button.tsx");
+assert.match(installFooterBtn, /Installa app/);
 
 const phase3Files = [
   "lib/pwa/pwa-platform.ts",
