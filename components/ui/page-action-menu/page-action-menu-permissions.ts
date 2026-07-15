@@ -1,5 +1,6 @@
 import type { PermissionsSnapshot } from "@/src/hooks/use-permissions";
 import type { useRbac } from "@/src/hooks/use-rbac";
+import type { GestionalePageKey } from "@/src/lib/permissions/gestionale-pages";
 import type { PageActionItem } from "@/components/ui/page-action-menu/page-action-menu-types";
 
 export type PageActionPermissionContext = {
@@ -71,7 +72,7 @@ if (process.env.NODE_ENV !== "production") {
   const mockCtx: PageActionPermissionContext = {
     rbac: {
       canReadPage: () => true,
-      canWritePage: (k) => k !== "sicurezza",
+      canWritePage: (k: GestionalePageKey) => k !== "sicurezza",
       isAdmin: false,
     } as unknown as PageActionPermissionContext["rbac"],
     perms: {
