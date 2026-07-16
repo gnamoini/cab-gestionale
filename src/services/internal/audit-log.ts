@@ -6,7 +6,12 @@ import {
   type AuditLogContext,
 } from "@/lib/gestionale-log/log-summary";
 import { getOrCreateUndoSessionId } from "@/lib/gestionale-log/undo-session";
-import { flushAllModificaLogs, queueModificaLog } from "@/src/services/internal/log-modifiche-batcher";
+import { emitCabSyncEvent } from "@/lib/sync/cab-sync-bus";
+import {
+  flushAllModificaLogs,
+  queueModificaLog,
+  registerModificaLogPageLifecycleFlush,
+} from "@/src/services/internal/log-modifiche-batcher";
 
 export type AuditAzione = "CREATE" | "UPDATE" | "DELETE" | "RESTORE";
 
@@ -75,18 +80,32 @@ async function writeModificaLogImmediate(
   });
   const payload = mergePayloadWithSummary(enriched, summary);
 
-  const { error } = await client.from("log_modifiche").insert({
-    entita: input.entita,
-    entita_id: input.entita_id,
-    azione: input.azione,
-    autore_id: autore,
-    payload,
-  });
+  const { data, error } = await client
+    .from("log_modifiche")
+    .insert({
+      entita: input.entita,
+      entita_id: input.entita_id,
+      azione: input.azione,
+      autore_id: autore,
+      payload,
+    })
+    .select("id")
+    .single();
   if (error) {
     logModificaWriteError(error, {
       entita: input.entita,
       entita_id: input.entita_id,
       azione: input.azione,
+    });
+    return;
+  }
+  const logId = data?.id;
+  if (typeof logId === "string" && logId && typeof window !== "undefined") {
+    emitCabSyncEvent({
+      type: "entity_created",
+      entity: "log_modifiche",
+      id: logId,
+      table: "log_modifiche",
     });
   }
 }
@@ -110,7 +129,20 @@ function safeWriteModificaLogImmediate(
   });
 }
 
-/** Scrive su `log_modifiche` con batching UPDATE (debounce ~3.5s per stessa entità). */
+const flushModificaLog = (item: {
+  client: SupabaseClient;
+  entita: string;
+  entita_id: string;
+  azione: AuditAzione;
+  payload?: AuditPayload;
+  autore_id?: string | null;
+}) => safeWriteModificaLogImmediate(item.client, item);
+
+if (typeof window !== "undefined") {
+  registerModificaLogPageLifecycleFlush(flushModificaLog);
+}
+
+/** Scrive su `log_modifiche`; UPDATE magazzino in batch (~3.5s), altre entità subito. */
 export function writeModificaLog(
   client: SupabaseClient,
   input: {
@@ -121,7 +153,7 @@ export function writeModificaLog(
     autore_id?: string | null;
   },
 ): Promise<void> {
-  return queueModificaLog((item) => safeWriteModificaLogImmediate(item.client, item), client, {
+  return queueModificaLog(flushModificaLog, client, {
     client,
     ...input,
   });
@@ -129,7 +161,7 @@ export function writeModificaLog(
 
 /** Scrive subito tutti i log UPDATE in coda (es. logout). Non propaga errori al chiamante. */
 export async function flushPendingModificaLogs(client: SupabaseClient): Promise<void> {
-  await flushAllModificaLogs((item) => safeWriteModificaLogImmediate(item.client, item));
+  await flushAllModificaLogs(flushModificaLog);
 }
 
 export { auditContext };

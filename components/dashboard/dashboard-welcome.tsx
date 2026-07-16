@@ -4,17 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { CabLogo } from "@/components/gestionale/cab-logo";
 import { welcomeFirstName } from "@/src/lib/auth/resolve-user-display-name";
-import { dsSkeletonPulse, dsTypoBody } from "@/lib/ui/design-system";
+import { dsSkeletonPulse } from "@/lib/ui/design-system";
 
 const dashboardWelcomeCardClass =
-  "relative flex min-w-0 max-w-full flex-1 flex-col justify-center overflow-hidden rounded-2xl border-2 border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_5%,var(--cab-card))] px-4 py-3 shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,#fff_7%,transparent)] sm:px-5 sm:py-3 dark:border-[color:color-mix(in_srgb,var(--cab-primary)_26%,var(--cab-border))] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_7%,var(--cab-card))] dark:shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,var(--cab-primary)_14%,transparent)]";
+  "relative flex min-w-0 max-w-full overflow-hidden rounded-2xl border-2 border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_5%,var(--cab-card))] px-3 py-2 shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,#fff_7%,transparent)] sm:px-4 sm:py-2.5 dark:border-[color:color-mix(in_srgb,var(--cab-primary)_26%,var(--cab-border))] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_7%,var(--cab-card))] dark:shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,var(--cab-primary)_14%,transparent)]";
 
-/** Mobile: copy poi meta. Desktop: logo | copy | spacer | data. */
+/** Logo | copy | data — una riga compatta. */
 const welcomeLayoutClass =
-  "cab-dashboard-welcome-layout grid min-h-0 min-w-0 max-w-full flex-1 grid-cols-1 gap-y-3 md:h-full md:grid-cols-[auto_minmax(0,max-content)_1fr_auto] md:items-center md:gap-x-3 md:gap-y-0";
+  "cab-dashboard-welcome-layout grid min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2.5 sm:items-center sm:gap-x-3";
 
 const welcomeDateClass =
-  "cab-dashboard-welcome-date flex shrink-0 flex-col justify-center text-right md:text-left md:border-l-2 md:border-[color:color-mix(in_srgb,var(--cab-primary)_50%,transparent)] md:pl-4";
+  "cab-dashboard-welcome-date flex shrink-0 flex-col justify-center border-l border-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] pl-2.5 text-right sm:border-l-2 sm:pl-3";
 
 function timeGreeting(hour: number): string {
   if (hour >= 5 && hour < 12) return "Buongiorno";
@@ -27,34 +27,38 @@ function capitalizeIt(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-/** Parti per blocco data in welcome: giorno, weekday, mese, anno */
+/** Parti per blocco data in welcome. */
 function formatWelcomeDate(d: Date): {
   iso: string;
   day: string;
   weekday: string;
+  weekdayShort: string;
   month: string;
+  monthShort: string;
   year: string;
 } {
   const weekday = capitalizeIt(d.toLocaleDateString("it-IT", { weekday: "long" }));
+  const weekdayShort = capitalizeIt(d.toLocaleDateString("it-IT", { weekday: "short" })).replace(/\.$/, "");
   const month = d.toLocaleDateString("it-IT", { month: "long" });
+  const monthShort = d.toLocaleDateString("it-IT", { month: "short" }).replace(/\.$/, "");
   const year = d.toLocaleDateString("it-IT", { year: "numeric" });
   const day = d.toLocaleDateString("it-IT", { day: "numeric" });
   const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  return { iso, day, weekday, month, year };
+  return { iso, day, weekday, weekdayShort, month, monthShort, year };
 }
 
 function WelcomeSkeleton() {
   return (
     <div className={dashboardWelcomeCardClass} aria-hidden>
       <div className={welcomeLayoutClass}>
-        <div className="cab-dashboard-welcome-copy flex min-w-0 flex-col justify-center space-y-1.5">
-          <div className={`h-6 w-56 max-w-full ${dsSkeletonPulse}`} />
-          <div className={`h-4 w-40 max-w-full ${dsSkeletonPulse} opacity-70`} />
+        <div className="cab-dashboard-welcome-logo shrink-0">
+          <div className={`h-7 w-[4.5rem] ${dsSkeletonPulse}`} />
         </div>
-        <div className="cab-dashboard-welcome-meta flex min-w-0 items-center justify-between gap-3">
-          <div className={`cab-dashboard-welcome-logo h-9 w-24 shrink-0 ${dsSkeletonPulse}`} />
-          <div className={`${welcomeDateClass} h-10 w-[4.5rem] ${dsSkeletonPulse} opacity-50`} />
+        <div className="cab-dashboard-welcome-copy min-w-0 space-y-1">
+          <div className={`h-4 w-full max-w-[12rem] ${dsSkeletonPulse}`} />
+          <div className={`h-3 w-full max-w-[9rem] ${dsSkeletonPulse} opacity-70`} />
         </div>
+        <div className={`${welcomeDateClass} h-9 w-12 ${dsSkeletonPulse} opacity-50`} />
       </div>
     </div>
   );
@@ -73,7 +77,15 @@ export function DashboardWelcome() {
       return {
         greeting: "Buongiorno",
         who: "",
-        welcomeDate: { iso: "", day: "", weekday: "", month: "", year: "" },
+        welcomeDate: {
+          iso: "",
+          day: "",
+          weekday: "",
+          weekdayShort: "",
+          month: "",
+          monthShort: "",
+          year: "",
+        },
       };
     }
     const now = new Date();
@@ -94,39 +106,39 @@ export function DashboardWelcome() {
   return (
     <div className={dashboardWelcomeCardClass}>
       <div className={welcomeLayoutClass}>
-        <div className="cab-dashboard-welcome-copy order-1 flex min-w-0 flex-col justify-center md:order-none">
-          <h2 className="text-left text-base font-semibold leading-snug tracking-tight text-[color:var(--cab-text)] sm:text-lg md:text-xl">
+        <div className="cab-dashboard-welcome-logo shrink-0 self-center">
+          <CabLogo height={28} priority sizes="80px" />
+        </div>
+
+        <div className="cab-dashboard-welcome-copy min-w-0">
+          <h2 className="truncate text-sm font-semibold leading-tight tracking-tight text-[color:var(--cab-text)] sm:text-base">
             {greeting},{" "}
             <span className="font-bold text-[color:var(--cab-primary)]">{who}</span>
           </h2>
-          <p className={`${dsTypoBody} mt-0.5 text-left text-[color:var(--cab-text-muted)]`}>
+          <p className="mt-0.5 text-balance text-[11px] leading-snug text-[color:var(--cab-text-muted)] sm:text-xs">
             Benvenuto nel gestionale officina.
           </p>
         </div>
 
-        <div className="cab-dashboard-welcome-meta order-2 flex min-w-0 items-center justify-between gap-3 md:contents">
-          <div className="cab-dashboard-welcome-logo flex shrink-0 items-center">
-            <CabLogo height={36} priority sizes="126px" />
-          </div>
-          <time
-            dateTime={welcomeDate.iso}
-            className={welcomeDateClass}
-            aria-label={`${welcomeDate.weekday}, ${welcomeDate.day} ${welcomeDate.month} ${welcomeDate.year}`}
-          >
-            <span className="block text-[9px] font-semibold uppercase tracking-[0.18em] text-[color:var(--cab-text-muted)] md:text-[10px] md:tracking-[0.22em]">
-              {welcomeDate.weekday}
+        <time
+          dateTime={welcomeDate.iso}
+          className={welcomeDateClass}
+          aria-label={`${welcomeDate.weekday}, ${welcomeDate.day} ${welcomeDate.month} ${welcomeDate.year}`}
+        >
+          <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-[color:var(--cab-text-muted)] sm:text-[10px]">
+            <span className="sm:hidden">{welcomeDate.weekdayShort}</span>
+            <span className="hidden sm:inline">{welcomeDate.weekday}</span>
+          </span>
+          <span className="mt-0.5 flex items-baseline justify-end gap-1 leading-none">
+            <span className="text-base font-bold tabular-nums text-[color:var(--cab-text)] sm:text-lg">
+              {welcomeDate.day}
             </span>
-            <span className="mt-0.5 flex items-baseline justify-end gap-1.5 md:mt-1 md:block">
-              <span className="text-xl font-semibold tabular-nums leading-none tracking-tight text-[color:var(--cab-text)] md:text-4xl">
-                {welcomeDate.day}
-              </span>
-              <span className="text-[11px] leading-snug text-[color:var(--cab-text-muted)] md:mt-0.5 md:block md:text-sm">
-                <span className="capitalize">{welcomeDate.month}</span>
-                <span className="tabular-nums md:mx-1"> {welcomeDate.year}</span>
-              </span>
+            <span className="text-[10px] capitalize text-[color:var(--cab-text-muted)] sm:text-[11px]">
+              {welcomeDate.monthShort}
+              <span className="tabular-nums"> {welcomeDate.year}</span>
             </span>
-          </time>
-        </div>
+          </span>
+        </time>
       </div>
     </div>
   );

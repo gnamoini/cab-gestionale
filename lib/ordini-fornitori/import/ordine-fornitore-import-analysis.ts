@@ -1,11 +1,10 @@
 import "server-only";
 
-import { generateObject } from "ai";
+import { generateObjectWithGeminiFailover } from "@/lib/ai/gemini-generate-object.server";
 import {
   GEMINI_AUTH_ERROR_HINT,
   GEMINI_FILE_ANALYSIS_TIMEOUT_MS,
   GEMINI_NOT_CONFIGURED_MESSAGE,
-  getGeminiReportModel,
   isGeminiAuthError,
   isGeminiConfigured,
 } from "@/lib/ai/gemini-client";
@@ -31,8 +30,7 @@ export async function parsePreventivoFornitoreWithAi(
   bytes: Uint8Array,
   mime: string,
 ): Promise<OrdineFornitoreAiParseResult> {
-  const model = getGeminiReportModel();
-  if (!model || !isGeminiConfigured()) {
+  if (!isGeminiConfigured()) {
     return {
       ok: false,
       code: "not_configured",
@@ -43,8 +41,7 @@ export async function parsePreventivoFornitoreWithAi(
   const mediaType = mime || "application/pdf";
 
   try {
-    const { object } = await generateObject({
-      model,
+    const { object } = await generateObjectWithGeminiFailover({
       schema: ordineFornitoreImportExtractionSchema,
       system: SYSTEM,
       messages: [
@@ -62,8 +59,9 @@ export async function parsePreventivoFornitoreWithAi(
       temperature: 0.2,
       abortSignal: AbortSignal.timeout(GEMINI_FILE_ANALYSIS_TIMEOUT_MS),
     });
+    const extraction = object as OrdineFornitoreImportExtraction;
 
-    return { ok: true, extraction: object, warnings: object.warnings ?? [] };
+    return { ok: true, extraction, warnings: extraction.warnings ?? [] };
   } catch (error) {
     if (error instanceof Error && error.name === "TimeoutError") {
       return {

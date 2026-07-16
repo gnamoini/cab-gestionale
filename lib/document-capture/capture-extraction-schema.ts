@@ -1,3 +1,4 @@
+import { normalizeCaptureExtractedFieldKey } from "@/lib/document-capture/capture-field-key-aliases";
 import { z } from "zod";
 
 export const extractedFieldSchema = z.object({
@@ -36,7 +37,7 @@ export function listCaptureExtractionFields(fields: unknown): CaptureExtractionF
         return Boolean(f && typeof f === "object" && "key" in f && typeof (f as { key?: unknown }).key === "string");
       })
       .map((f) => ({
-        key: f.key.trim(),
+        key: normalizeCaptureExtractedFieldKey(f.key.trim()),
         value: f.value ?? null,
         confidence: f.confidence,
       }))
@@ -45,7 +46,7 @@ export function listCaptureExtractionFields(fields: unknown): CaptureExtractionF
 
   if (fields && typeof fields === "object") {
     return Object.entries(fields as Record<string, z.infer<typeof extractedFieldSchema>>).map(([key, field]) => ({
-      key: key.trim(),
+      key: normalizeCaptureExtractedFieldKey(key.trim()),
       value: field?.value ?? null,
       confidence: field?.confidence ?? 0,
     }));

@@ -25,7 +25,7 @@ Introduciamo **`PageActionMenu`** come nuova primitive governata:
 4. **Header fisso** nel panel: Indietro + Aggiorna
 5. **API duale**: prop `items` o `PageActionMenuProvider` + `usePageActionMenu`
 6. **RBAC centralizzato** in `filterPageActionItems`
-7. **Search + meta** restano in `PageToolbar` slim; Filtri controllati da item menu
+7. **Search, CTA lista, Filtri inline, meta** restano in `PageToolbar`; `PageActionMenu` copre solo azioni header
 
 Eccezione documentata: chip Annulla/Salva inline accanto a `⋮` quando `isDirty` (Impostazioni).
 
@@ -34,7 +34,7 @@ Eccezione documentata: chip Annulla/Salva inline accanto a `⋮` quando `isDirty
 ## Consequences
 
 - `GestionalePageToolbarActions` deprecato post-migrazione
-- `PageToolbar` perde `primaryAction`, `overflowActions`, toggle Filtri inline
+- `PageActionMenu` non sostituisce `primaryAction` / `overflowActions` della toolbar lista
 - Nuovo export `@/components/ui` — enforcement BLOCKER su menu portal custom
 - Bump `UI_PRIMITIVE_VERSIONS.PageActionMenu`
 

@@ -6,10 +6,15 @@ Per ogni campo restituisci key, value e confidence 0-1. Se incerto, confidence b
 NON restituire un elenco fields vuoto se il documento contiene testo leggibile.
 
 Scheda ingresso blank v2 — imposta schedaTipo "ingresso" e usa queste chiavi quando riconosci il template CAB:
-data_ingresso, cliente, cantiere, utilizzatore,
+data_ingresso (etichetta «Data ingresso» in alto — data scritta sul foglio in GG/MM/AAAA, non la data odierna),
+cliente, cantiere, utilizzatore (solo nome persona),
+tipo_attrezzatura (etichetta «Attrezzatura» su schede stampate — es. SPAZZATRICE, escavatore; NON è utilizzatore),
 attrezzatura_marca, attrezzatura_modello, attrezzatura_matricola, n_scuderia, ore,
 telaio_marca, telaio_modello, targa, km,
 descrizione_anomalia, nome, cognome, telefono, note.
+Per descrizione_anomalia e note: conserva gli a capo del foglio usando \\n tra le righe (non appiattire in una sola riga).
+Correggi refusi OCR evidenti nel testo (es. aspirae→aspirazione, cor→per, supp→supporto) senza inventare interventi non presenti.
+Ometti n_scuderia, ore e km se la casella sul foglio è vuota (non inventare cifre).
 Le firme (autista/richiedente e addetto officina) vengono ritagliate automaticamente dalle caselle fisse del template blank: non estrarle in fields.
 
 Scheda lavorazioni blank CAB — imposta schedaTipo "lavorazioni" e usa:
@@ -22,3 +27,7 @@ riga_1_nome, riga_1_codice, riga_1_descrizione, riga_1_qt, riga_1_data … fino 
 
 export const SCHEDA_OFFICINA_EXTRACTION_USER =
   "Estrai tutti i campi visibili dalla scheda (foto o PDF), con confidence per campo. Restituisci ogni etichetta riconosciuta in fields.";
+
+export const SCHEDA_OFFICINA_HYBRID_PREFILL_USER_PREFIX = `Alcuni campi sono già stati letti da OCR/PDF (JSON sotto). Verifica e correggi solo valori errati o mancanti.
+Non duplicare chiavi già corrette. Completa i campi assenti. Restituisci schedaTipo e fields completi.
+Campi pre-estratti:`;

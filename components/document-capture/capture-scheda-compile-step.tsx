@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CaptureDocumentFilePreview } from "@/components/document-capture/capture-document-file-preview";
 import {
   CaptureIngressoHintsBanner,
@@ -18,9 +18,11 @@ import {
   buildCaptureIngressoCompileData,
   captureAmbiguousItemsFromCompileData,
   countCaptureHintsNeedingReview,
+  reconcileCaptureIngressoHintAfterEdit,
   type CaptureIngressoCompileData,
   type CaptureIngressoFieldHint,
 } from "@/lib/document-capture/capture-ingresso-field-hints";
+import type { CaptureCatalogValidationInput } from "@/lib/document-capture/capture-catalog-validation";
 import type { CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
@@ -30,6 +32,21 @@ import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { useLavorazioneCreateSubmit } from "@/src/hooks/use-lavorazione-create-submit";
 
 export const CAPTURE_COMPILE_FORM_ID = "capture-scheda-compile-form";
+
+const HINT_RECONCILE_MS = 250;
+
+/** Anteprima isolata — evita reload iframe PDF a ogni keystroke del form. */
+const CaptureCompileDocumentPreview = memo(function CaptureCompileDocumentPreview({
+  captureId,
+}: {
+  captureId: string;
+}) {
+  return (
+    <div className={`lg:sticky ${CAPTURE_REVIEW_PIN_TOP_CLASS} lg:z-[1] lg:self-start`}>
+      <CaptureDocumentFilePreview captureId={captureId} pinned />
+    </div>
+  );
+});
 
 export function CaptureSchedaCompileStep({
   captureId,
@@ -116,17 +133,85 @@ export function CaptureSchedaCompileStep({
 
   const reviewCount = useMemo(() => countCaptureHintsNeedingReview(captureHints), [captureHints]);
 
-  const onApplyCaptureHint = useCallback(
-    (key: keyof SchedaIngressoFields, value: string) => {
-      create.patch({ [key]: value } as Partial<SchedaIngressoFields>);
-      setCaptureHints((prev) => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
+  const catalogValidationInput = useMemo((): CaptureCatalogValidationInput | null => {
+    if (!sharedGlobalOpts || sharedGlobalOpts.isLoading) return null;
+    return {
+      fields: [],
+      addettiRecords: sharedGlobalOpts.lavorazioni.addettiRecords ?? [],
+      mezziListe: sharedGlobalOpts.mezziListe,
+      magazzino: magazzino ?? [],
+    };
+  }, [magazzino, sharedGlobalOpts]);
+
+  const patchFieldsRef = useRef(create.patch);
+  patchFieldsRef.current = create.patch;
+  const fieldsRef = useRef(create.fields);
+  fieldsRef.current = create.fields;
+  const catalogValidationInputRef = useRef(catalogValidationInput);
+  catalogValidationInputRef.current = catalogValidationInput;
+  const captureHintsRef = useRef(captureHints);
+  captureHintsRef.current = captureHints;
+  const hintReconcileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingHintKeysRef = useRef(new Set<keyof SchedaIngressoFields>());
+
+  useEffect(
+    () => () => {
+      if (hintReconcileTimerRef.current) clearTimeout(hintReconcileTimerRef.current);
     },
-    [create],
+    [],
   );
+
+  const flushHintReconcile = useCallback(() => {
+    hintReconcileTimerRef.current = null;
+    const catalogInput = catalogValidationInputRef.current;
+    if (!catalogInput || pendingHintKeysRef.current.size === 0) return;
+    const keys = [...pendingHintKeysRef.current];
+    pendingHintKeysRef.current.clear();
+    const currentFields = fieldsRef.current;
+    setCaptureHints((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const rawKey of keys) {
+        const hint = prev[rawKey];
+        if (!hint) continue;
+        const reconciled = reconcileCaptureIngressoHintAfterEdit(
+          rawKey,
+          String(currentFields[rawKey] ?? ""),
+          hint,
+          catalogInput,
+        );
+        if (reconciled) next[rawKey] = reconciled;
+        else delete next[rawKey];
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
+  const onPatchCaptureAware = useCallback((patch: Partial<SchedaIngressoFields>) => {
+    patchFieldsRef.current(patch);
+    if (!catalogValidationInputRef.current) return;
+    const hints = captureHintsRef.current;
+    for (const rawKey of Object.keys(patch) as Array<keyof SchedaIngressoFields>) {
+      if (patch[rawKey] === undefined || !hints[rawKey]) continue;
+      pendingHintKeysRef.current.add(rawKey);
+    }
+    if (pendingHintKeysRef.current.size === 0) return;
+    if (hintReconcileTimerRef.current) clearTimeout(hintReconcileTimerRef.current);
+    hintReconcileTimerRef.current = setTimeout(flushHintReconcile, HINT_RECONCILE_MS);
+  }, [flushHintReconcile]);
+
+  const onApplyCaptureHint = useCallback((key: keyof SchedaIngressoFields, value: string) => {
+    patchFieldsRef.current({ [key]: value } as Partial<SchedaIngressoFields>);
+    if (hintReconcileTimerRef.current) clearTimeout(hintReconcileTimerRef.current);
+    pendingHintKeysRef.current.delete(key);
+    setCaptureHints((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
 
   const handleSubmitAttempt = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
@@ -170,7 +255,7 @@ export function CaptureSchedaCompileStep({
             ([, h]) => h.captureFieldKey === pick.fieldKey,
           )?.[0] as keyof SchedaIngressoFields | undefined;
           if (ingressoKey && pick.label !== "__keep__") {
-            create.patch({ [ingressoKey]: pick.label } as Partial<SchedaIngressoFields>);
+            patchFieldsRef.current({ [ingressoKey]: pick.label } as Partial<SchedaIngressoFields>);
           }
         }
         setCaptureHints((prev) => {
@@ -209,9 +294,7 @@ export function CaptureSchedaCompileStep({
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
-        <div className={`lg:sticky ${CAPTURE_REVIEW_PIN_TOP_CLASS} lg:z-[1] lg:self-start`}>
-          <CaptureDocumentFilePreview captureId={captureId} pinned />
-        </div>
+        <CaptureCompileDocumentPreview captureId={captureId} />
         <form
           ref={create.formRef}
           id={CAPTURE_COMPILE_FORM_ID}
@@ -231,7 +314,7 @@ export function CaptureSchedaCompileStep({
             variant="create-lavorazione"
             fields={create.fields}
             setFields={create.setFields}
-            onPatch={create.patch}
+            onPatch={onPatchCaptureAware}
             pending={create.pending}
             mezzi={mezzi}
             schedeStore={schedeStore}

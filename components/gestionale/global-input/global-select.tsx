@@ -470,10 +470,18 @@ export function GlobalSelect(props: GlobalSelectProps) {
     disabled: Boolean(disabled),
     isLoading,
   });
+  /** selectOnly / sheet elenco: niente superficie di scrittura — non mostrare «Aggiungi». */
+  const canWriteForAdd = !browseAsSelectOnly || sheetUsesSearch;
   /** Sheet searchable: browse prima — «Aggiungi» solo dopo ricerca digitata. */
   const showAddOptionInUi =
-    showAddOption && !(sheetActive && sheetUsesSearch && !sheetQuery.trim());
-  const addOptionEnabled = autocompleteAddOptionEnabled(addCandidate, addPending);
+    showAddOption &&
+    canWriteForAdd &&
+    !(sheetActive && sheetUsesSearch && !sheetQuery.trim());
+  const addOptionEnabled = autocompleteAddOptionEnabled(addCandidate, addPending, {
+    mode,
+    options,
+    items,
+  });
   const addOptionCount =
     showAddOptionInUi && addOptionEnabled ? (hasMultiAdd ? addActionsList.length : hasSingleAdd ? 1 : 0) : 0;
   const addOptionIndex = hasSingleAdd && showAddOptionInUi ? suggestions.length : -1;

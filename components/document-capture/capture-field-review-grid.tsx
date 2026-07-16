@@ -210,7 +210,7 @@ export function CaptureFieldReviewGrid({
     ) => {
       if (!resolutionCtx) return;
       const inputs = Object.entries(draftValues)
-        .filter(([, v]) => v.trim())
+        .filter(([fieldKey, v]) => v.trim() && !isCaptureSignatureFieldKey(fieldKey))
         .map(([field_key, value]) => ({
           field_key,
           raw_value: rawValues[field_key] ?? value,

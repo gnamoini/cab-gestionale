@@ -45,7 +45,7 @@ export async function invalidateOperationalTruth(opts: InvalidateOperationalTrut
     case "lavorazioni":
       dispatchGestionaleAction(
         queryClient,
-        ["lavorazioni", "scheda_lavorazione", "documenti", "movimenti_ricambi", "preventivi"],
+        ["lavorazioni", "scheda_lavorazione", "documenti", "movimenti_ricambi", "preventivi", "log_modifiche"],
         { source: "local_mutation", cabSyncEvents },
       );
       if (!skipReportBroadcast) bumpReportDataRefresh();

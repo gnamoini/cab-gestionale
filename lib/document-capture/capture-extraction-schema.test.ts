@@ -11,6 +11,11 @@ assert.deepEqual(
   [{ key: "cliente", value: "Rossi", confidence: 0.8 }],
 );
 
+assert.deepEqual(
+  listCaptureExtractionFields([{ key: "Data ingresso", value: "18/06/2024", confidence: 0.95 }]),
+  [{ key: "data_ingresso", value: "18/06/2024", confidence: 0.95 }],
+);
+
 assert.equal(listCaptureExtractionFields([]).length, 0);
 assert.equal(listCaptureExtractionFields(null).length, 0);
 

@@ -303,7 +303,7 @@ const SchedaIngressoInterventoSection = memo(function SchedaIngressoInterventoSe
       <FormField label="Descrizione anomalia" htmlFor={anomaliaFieldId}>
         <GestionaleTextarea
           id={anomaliaFieldId}
-          className="min-h-[4.5rem]"
+          className="min-h-[4.5rem] whitespace-pre-wrap"
           size="md"
           value={descrizioneAnomalia}
           onChange={(v) => onPatch({ descrizioneAnomalia: sliceInputValue(v, TEXT_EXTRA) })}
@@ -698,6 +698,9 @@ export function SchedaIngressoFormBody({
       ),
     [identScan.matricola, identScan.nScuderia, identScan.targa, mezziCatalog],
   );
+  const ingressoReuseBannerVisible =
+    Boolean(lastIngressoMatch) ||
+    (lastIngressoCandidates.length === 0 && lastIngressoMezzoInAnagrafica);
   const [copyPickOpen, setCopyPickOpen] = useState(false);
   const [addettoFirmaModalOpen, setAddettoFirmaModalOpen] = useState(false);
 
@@ -797,7 +800,7 @@ export function SchedaIngressoFormBody({
   return (
     <>
       <MezzoRegistratoIngressoDialog
-        open={mezzoPrompt.promptOpen && !readOnly}
+        open={mezzoPrompt.promptOpen && !readOnly && !ingressoReuseBannerVisible}
         mezzo={mezzoPrompt.promptMezzo}
         onAccept={onMezzoDialogAccept ?? mezzoPrompt.acceptAutofill}
         onDismiss={onMezzoDialogDismiss ?? mezzoPrompt.dismissPrompt}

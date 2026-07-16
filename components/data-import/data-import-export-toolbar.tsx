@@ -2,8 +2,10 @@
 
 import { GlobalAnchoredMenu, OptionalTooltip } from "@/components/ui";
 import dynamic from "next/dynamic";
-import { useCallback, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { createElement, useCallback, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { HubIconDownload, HubIconUpload } from "@/components/design-system/hub-table-action-icons";
+import { PageActionIconTemplate } from "@/components/ui/page-action-menu/page-action-menu-icons";
+import type { PageActionItem } from "@/components/ui/page-action-menu/page-action-menu-types";
 import type { ImportEntity } from "@/lib/data-import/core/types";
 import type { ExportMode } from "@/lib/data-import/core/field-schema";
 import { labelForImportEntity, routeSlugForEntity } from "@/lib/data-import/import-registry-client";
@@ -380,4 +382,147 @@ export function DataImportExportToolbar({
       ) : null}
     </>
   );
+}
+
+/** Voci flat per `PageActionMenu` (import/export senza sottomenu). */
+export function useDataImportExportPageActions({
+  entity,
+  module,
+  exportScope,
+  onImportCompleted,
+  showTemplate = true,
+  disabled = false,
+  extraImportEntities,
+}: Omit<DataImportExportToolbarProps, "layout" | "className">): {
+  items: PageActionItem[];
+  modal: ReactNode;
+} {
+  const perm = usePermissions(module);
+  const toast = useGestionaleToast();
+  const [exporting, setExporting] = useState(false);
+  const [wizardEntity, setWizardEntity] = useState<ImportEntity | null>(null);
+  const slug = routeSlugForEntity(entity);
+
+  const permissionCtx: ImportPermissionContext = useMemo(
+    () => ({
+      moduleWrite: { [module]: perm.canWrite },
+      magazzinoWrite: module === "magazzino" ? perm.canWrite : false,
+      magazzinoAdmin: false,
+      manageSettings: false,
+    }),
+    [module, perm.canWrite],
+  );
+
+  const importEntities = useMemo(() => {
+    const ids = [entity, ...(extraImportEntities ?? [])];
+    return [...new Set(ids)];
+  }, [entity, extraImportEntities]);
+
+  const runExport = useCallback(
+    async (mode: ExportMode) => {
+      if (!perm.canWrite || exporting || disabled) return;
+      setExporting(true);
+      try {
+        await downloadExport(slug, mode, exportScope);
+        toast.success(mode === "template" ? "Template scaricato." : "Export completato.");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Export non riuscito");
+      } finally {
+        setExporting(false);
+      }
+    },
+    [disabled, exportScope, exporting, perm.canWrite, slug, toast],
+  );
+
+  const importMenuItems = useMemo(() => {
+    const items: ToolbarMenuItem[] = [];
+    if (showTemplate && canExportEntity(entity)) {
+      items.push({
+        id: "template",
+        label: "Scarica template",
+        onClick: () => void runExport("template"),
+      });
+    }
+    const hasTemplate = items.length > 0;
+    for (const importEntity of importEntities) {
+      if (!canImportEntity(permissionCtx, importEntity)) continue;
+      if (isImportExcelActive(importEntity)) {
+        items.push({
+          id: `import-${importEntity}`,
+          label: importMenuLabel(importEntity),
+          dividerBefore: hasTemplate && !items.some((i) => i.id.startsWith("import-")),
+          onClick: () => setWizardEntity(importEntity),
+        });
+      } else if (isImportExcelExportOnly(importEntity)) {
+        const cap = getEntityCapabilities(importEntity);
+        items.push({
+          id: `import-roadmap-${importEntity}`,
+          label: "Import Excel",
+          disabled: true,
+          title: cap.note ?? "Import Excel disponibile in una versione successiva.",
+          dividerBefore: hasTemplate && !items.some((i) => i.id.startsWith("import-")),
+          onClick: () => {},
+        });
+      }
+    }
+    return items;
+  }, [entity, importEntities, permissionCtx, runExport, showTemplate]);
+
+  const canExport = canExportEntity(entity);
+
+  const items = useMemo((): PageActionItem[] => {
+    if (!perm.canWrite || !canExport) return [];
+    const out: PageActionItem[] = [];
+    for (const menuItem of importMenuItems) {
+      out.push({
+        id: menuItem.id,
+        label: menuItem.label,
+        description:
+          menuItem.title ??
+          (menuItem.id === "template"
+            ? "Modello Excel vuoto da compilare"
+            : menuItem.id.startsWith("import-")
+              ? "Carica dati da file Excel"
+              : undefined),
+        disabled: menuItem.disabled || disabled,
+        disabledReason: menuItem.title,
+        onSelect: menuItem.onClick,
+        icon:
+          menuItem.id === "template"
+            ? createElement(PageActionIconTemplate)
+            : createElement(HubIconDownload, { className: "h-4 w-4 shrink-0" }),
+        module,
+        requireWrite: true,
+      });
+    }
+    if (canExport) {
+      out.push({
+        id: "export-importable",
+        label: exporting ? "Esportazione…" : "Esporta",
+        description: "Scarica Excel del magazzino",
+        onSelect: () => void runExport("importable"),
+        disabled: disabled || exporting,
+        loading: exporting,
+        icon: createElement(HubIconUpload, { className: "h-4 w-4 shrink-0" }),
+        module,
+        requireWrite: true,
+      });
+    }
+    return out;
+  }, [canExport, disabled, exporting, importMenuItems, module, perm.canWrite, runExport]);
+
+  const modal =
+    wizardEntity != null ? (
+      <DataImportWizardModal
+        entity={wizardEntity}
+        title={importWizardModalTitle(wizardEntity)}
+        onRequestClose={() => setWizardEntity(null)}
+        onCompleted={() => {
+          onImportCompleted?.();
+          setWizardEntity(null);
+        }}
+      />
+    ) : null;
+
+  return { items, modal };
 }

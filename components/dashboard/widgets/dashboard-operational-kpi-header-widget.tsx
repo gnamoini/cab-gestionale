@@ -81,7 +81,7 @@ function briefMetricsForCluster(cluster: ControlTowerKpiCluster): ControlTowerKp
 }
 
 function briefPeriodChipClass(active: boolean): string {
-  return `inline-flex h-8 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] px-2 text-[11px] font-medium !py-0 sm:px-2.5 sm:text-xs ${
+  return `flex min-h-10 min-w-0 flex-1 items-center justify-center rounded-[var(--ds-radius-lg)] px-2 text-xs font-semibold !py-0 sm:min-h-9 sm:px-3 sm:text-sm ${
     active ? dsSegmentedBtnOn : dsSegmentedBtnOff
   } ${dsFocus}`;
 }
@@ -95,7 +95,7 @@ function BriefPeriodToggle({
 }) {
   return (
     <div
-      className={`${dsSegmentedWrap} shrink-0 gap-0.5 p-0.5`}
+      className={`${dsSegmentedWrap} w-full min-w-0 gap-0.5 p-0.5`}
       role="group"
       aria-label="Periodo brief operativo"
       onPointerDown={(event) => event.stopPropagation()}
@@ -214,8 +214,14 @@ export function DashboardOperationalKpiHeaderWidget({ def }: { def: DashboardWid
 
   const body: ReactNode = (
     <div className="grid min-w-0 gap-3 lg:grid-cols-2 xl:grid-cols-4">
+      <div className="min-w-0 max-xl:col-span-full xl:col-span-1 xl:row-start-1">
+        <BriefPeriodToggle period={period} onChange={setPeriod} />
+      </div>
       {header.clusters.map((cluster) => (
-        <article key={cluster.id} className={`${reportMetricCardCompactClass} flex h-full min-w-0 flex-col`}>
+        <article
+          key={cluster.id}
+          className={`${reportMetricCardCompactClass} flex h-full min-w-0 flex-col xl:row-start-2`}
+        >
           <h3 className="border-b border-[color:var(--cab-border)] pb-2 text-sm font-semibold text-[color:var(--cab-text)]">
             {cluster.label}
           </h3>
@@ -229,7 +235,5 @@ export function DashboardOperationalKpiHeaderWidget({ def }: { def: DashboardWid
     </div>
   );
 
-  return wrapDashboardWidget(def, body, {
-    headerActions: <BriefPeriodToggle period={period} onChange={setPeriod} />,
-  });
+  return wrapDashboardWidget(def, body);
 }

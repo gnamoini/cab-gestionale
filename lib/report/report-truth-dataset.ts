@@ -63,6 +63,10 @@ export function filterMovimentiForReport(
       excludedCount += 1;
       continue;
     }
+    if (m.conta_statistiche === false) {
+      excludedCount += 1;
+      continue;
+    }
     rows.push(m);
   }
   return { rows, excludedCount };

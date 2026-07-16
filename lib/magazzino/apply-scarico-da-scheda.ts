@@ -25,6 +25,7 @@ export async function applyMagazzinoScaricoDaScheda(opts: {
     lavorazione_id: opts.lavorazioneId,
     tipo: "uscita",
     quantita: qty,
+    conta_statistiche: true,
   });
 
   if (!res.success || !res.data) {

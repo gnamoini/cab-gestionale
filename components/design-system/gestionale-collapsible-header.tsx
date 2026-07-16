@@ -27,6 +27,7 @@ export function GestionaleCollapsibleHeader({
   titleNode,
   headerActions,
   headerLeadingActions,
+  headerLeadingActionsInteractive = true,
   shellClassName = "",
   compact = false,
   form = false,
@@ -43,6 +44,8 @@ export function GestionaleCollapsibleHeader({
   headerActions?: ReactNode;
   /** Azioni inline accanto al titolo — fuori dal trigger per evitare button annidati. */
   headerLeadingActions?: ReactNode;
+  /** `false` = click sull'area azioni propaga al trigger (es. riepilogo health score). */
+  headerLeadingActionsInteractive?: boolean;
   shellClassName?: string;
   compact?: boolean;
   /** Form modale: un solo button edge-to-edge (niente wrapper shell + bleed). */
@@ -98,10 +101,10 @@ export function GestionaleCollapsibleHeader({
         {titleNode}
         <div
           className="shrink-0"
-          role="presentation"
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => event.stopPropagation()}
-          onKeyDown={(event) => event.stopPropagation()}
+          role={headerLeadingActionsInteractive ? "presentation" : undefined}
+          onPointerDown={headerLeadingActionsInteractive ? (event) => event.stopPropagation() : undefined}
+          onClick={headerLeadingActionsInteractive ? (event) => event.stopPropagation() : undefined}
+          onKeyDown={headerLeadingActionsInteractive ? (event) => event.stopPropagation() : undefined}
         >
           {headerLeadingActions}
         </div>

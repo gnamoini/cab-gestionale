@@ -6,9 +6,6 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { PageHeader } from "@/components/gestionale/page-header";
 import {
   PageActionMenu,
-  pageActionFiltersItem,
-  pageActionRefreshItem,
-  type PageActionItem,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth-context";
 import {
@@ -918,21 +915,6 @@ export function ClientLavorazioniView() {
     );
   }
 
-  const clientMenuItems = useMemo((): PageActionItem[] => [
-    pageActionRefreshItem({ busy: refreshBusy, onRefresh: () => void refreshClientData() }),
-    {
-      id: "contattaci",
-      label: "Contattaci",
-      description: "Invia una richiesta all'officina",
-      onSelect: () => setContattaciOpen(true),
-    },
-    pageActionFiltersItem({
-      expanded: filtriEspansi,
-      active: filtersActive,
-      onToggle: () => setFiltriEspansi((o) => !o),
-    }),
-  ], [refreshBusy, filtriEspansi, filtersActive]);
-
   return (
     <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
@@ -941,9 +923,8 @@ export function ClientLavorazioniView() {
           title={PORTALE_CLIENTI_LABEL}
           actions={
             <PageActionMenu
-              items={clientMenuItems}
-              filtersActive={filtersActive}
-              showFiltersActiveDot
+              onRefresh={() => void refreshClientData()}
+              refreshBusy={refreshBusy}
             />
           }
         />
@@ -959,6 +940,9 @@ export function ClientLavorazioniView() {
             <ShellCard>
               <section aria-label="Azioni e filtri lavorazioni clienti">
                 <PageToolbar
+                  primaryAction={
+                    <ClientContattaciButton variant="primary" onClick={() => setContattaciOpen(true)} />
+                  }
                   search={
                     <GestionaleSearchField
                       id="client-lavorazioni-search"

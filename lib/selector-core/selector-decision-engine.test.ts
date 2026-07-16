@@ -126,6 +126,7 @@ const operationalFilterSheet = SelectorDecisionEngine.resolve({
   mode: "selectOnly",
   optionCount: 3,
   isMobile: true,
+  isDynamicList: false,
   isOperationalFilter: true,
   mobileSheetMode: "selectOnly",
   minSheetOptions: 0,

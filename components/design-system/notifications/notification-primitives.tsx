@@ -41,6 +41,7 @@ import {
   dsModalSubtitle,
   dsModalTitle,
   dsModalTitleBlock,
+  dsPageHeaderIconBtn,
   dsPageToolbarIconBtn,
   dsPageToolbarMetaChipAccent,
   dsScrollbar,
@@ -323,12 +324,15 @@ export function NotificationDangerDetail({ children }: { children: ReactNode }) 
 
 export type NotificationBellActiveTone = "info" | "danger";
 
+export type NotificationBellTriggerVariant = "toolbar" | "ghost";
+
 export function NotificationBellTrigger({
   buttonRef,
   count,
   ariaLabel,
   ariaExpanded,
   onClick,
+  variant = "toolbar",
   className = "",
 }: {
   buttonRef?: Ref<HTMLButtonElement>;
@@ -339,15 +343,18 @@ export function NotificationBellTrigger({
   ariaLabel: string;
   ariaExpanded: boolean;
   onClick: () => void;
+  /** `ghost`: stesso hover/click del refresh header mobile (no bordo). */
+  variant?: NotificationBellTriggerVariant;
   className?: string;
 }) {
+  const shell = variant === "ghost" ? dsPageHeaderIconBtn : dsPageToolbarIconBtn;
   return (
     <button
       ref={buttonRef}
       type="button"
       onClick={onClick}
       className={[
-        dsPageToolbarIconBtn,
+        shell,
         dsFocus,
         "relative shrink-0 overflow-visible",
         className,

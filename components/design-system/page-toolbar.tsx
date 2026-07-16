@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, type ReactNode } from "react";
+import { useCallback, useEffect, type ReactNode } from "react";
 import {
   ToolbarGroup,
   ToolbarGroupBody,
   ToolbarGroupFiltersCollapse,
+  ToolbarGroupFiltersToggle,
   ToolbarGroupMetaRow,
+  ToolbarGroupOverflowToggle,
+  ToolbarGroupPrimaryRow,
   ToolbarGroupSearchRow,
 } from "@/components/design-system/toolbar-group";
 import { MobileFilterDrawer } from "@/components/gestionale/mobile-filter-drawer";
@@ -13,13 +16,18 @@ import { dsPageToolbarMetaActionBtnFilterCol, dsPageToolbarMetaChip, dsPageToolb
 import { useSmUp } from "@/lib/ui/use-sm-up";
 
 export type PageToolbarProps = {
+  /** CTA principale; se assente, filtri affiancati alla search (nessuna riga vuota). */
+  primaryAction?: ReactNode | null;
   search: ReactNode;
   filtersPanel: ReactNode;
   filtersExpanded: boolean;
-  /** @deprecated Filtri si aprono da PageActionMenu. Mantenuto per compatibilità drawer mobile. */
-  onFiltersToggle?: () => void;
+  onFiltersToggle: () => void;
   filtersActive?: boolean;
   meta?: ReactNode;
+  /** Azioni secondarie (reset, sort, toggle) — drawer «Altro» su mobile, inline da sm+. */
+  overflowActions?: ReactNode;
+  overflowOpen?: boolean;
+  onOverflowToggle?: () => void;
   filterDrawerTitle?: string;
   onFilterReset?: () => void;
   onFilterApply?: () => void;
@@ -27,14 +35,18 @@ export type PageToolbarProps = {
   className?: string;
 };
 
-/** Toolbar liste slim: search + filtri collapsible + meta. Azioni in PageActionMenu. */
+/** Toolbar liste: search + filtri + azioni inline; scorre col contenuto pagina. */
 export function PageToolbar({
+  primaryAction,
   search,
   filtersPanel,
   filtersExpanded,
   onFiltersToggle,
   filtersActive,
   meta,
+  overflowActions,
+  overflowOpen = false,
+  onOverflowToggle,
   filterDrawerTitle = "Filtri",
   onFilterReset,
   onFilterApply,
@@ -43,21 +55,71 @@ export function PageToolbar({
 }: PageToolbarProps) {
   const smUp = useSmUp();
   const showFilterDrawer = !smUp && filtersExpanded;
+  const showOverflowDrawer = !smUp && overflowOpen && Boolean(overflowActions);
 
   const closeFilterDrawer = useCallback(() => {
-    onFiltersToggle?.();
-  }, [onFiltersToggle]);
+    if (filtersExpanded) onFiltersToggle();
+  }, [filtersExpanded, onFiltersToggle]);
+
+  const closeOverflowDrawer = useCallback(() => {
+    onOverflowToggle?.();
+  }, [onOverflowToggle]);
+
+  useEffect(() => {
+    if (smUp && overflowOpen) onOverflowToggle?.();
+  }, [smUp, overflowOpen, onOverflowToggle]);
+
+  const hasOverflow = Boolean(overflowActions) && Boolean(onOverflowToggle);
+  const hasPrimaryAction = primaryAction != null && primaryAction !== false;
+
+  const filterActions = (
+    <div className="flex shrink-0 flex-nowrap items-center gap-2">
+      <ToolbarGroupFiltersToggle
+        expanded={filtersExpanded}
+        onToggle={onFiltersToggle}
+        filtersActive={filtersActive}
+      />
+      {hasOverflow ? (
+        <ToolbarGroupOverflowToggle expanded={overflowOpen} onToggle={onOverflowToggle!} />
+      ) : null}
+    </div>
+  );
 
   return (
     <>
       <ToolbarGroup className={className}>
         <ToolbarGroupBody>
-          <ToolbarGroupSearchRow>
-            <div className="min-w-0 w-full flex-1">{search}</div>
-          </ToolbarGroupSearchRow>
-          {meta ? (
+          {hasPrimaryAction ? (
+            <>
+              <div className="flex min-w-0 w-full flex-col items-stretch gap-2 sm:hidden">
+                <ToolbarGroupSearchRow>{search}</ToolbarGroupSearchRow>
+                <ToolbarGroupPrimaryRow>
+                  <div className="min-w-0 flex-1 [&>*]:w-full">{primaryAction}</div>
+                  {filterActions}
+                </ToolbarGroupPrimaryRow>
+              </div>
+              <div className="hidden min-w-0 w-full sm:flex">
+                <ToolbarGroupPrimaryRow className="min-w-0 w-full sm:flex-nowrap sm:justify-start">
+                  <div className="shrink-0">{primaryAction}</div>
+                  <div className="min-w-0 flex-1">{search}</div>
+                  {filterActions}
+                </ToolbarGroupPrimaryRow>
+              </div>
+            </>
+          ) : (
+            <div className="flex-safe-row min-w-0 w-full flex-row flex-nowrap items-stretch gap-2">
+              <div className="flex-safe-item min-w-0 flex-1">{search}</div>
+              {filterActions}
+            </div>
+          )}
+          {meta || overflowActions ? (
             <ToolbarGroupMetaRow>
-              <div className="flex min-w-0 flex-1 items-center gap-2">{meta}</div>
+              {meta ? <div className="flex min-w-0 flex-1 items-center gap-2">{meta}</div> : null}
+              {overflowActions ? (
+                <div className="hidden min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 sm:flex sm:flex-wrap">
+                  {overflowActions}
+                </div>
+              ) : null}
             </ToolbarGroupMetaRow>
           ) : null}
         </ToolbarGroupBody>
@@ -71,10 +133,24 @@ export function PageToolbar({
           onClose={closeFilterDrawer}
           title={filterDrawerTitle}
           onReset={onFilterReset}
-          onApply={onFilterApply ?? closeFilterDrawer}
-          applyLabel={filterApplyLabel ?? "Chiudi"}
+          onApply={onFilterApply}
+          applyLabel={filterApplyLabel}
         >
           {filtersPanel}
+        </MobileFilterDrawer>
+      ) : null}
+
+      {showOverflowDrawer && onOverflowToggle ? (
+        <MobileFilterDrawer
+          open
+          onClose={closeOverflowDrawer}
+          title="Altro"
+          applyLabel="Chiudi"
+          onApply={closeOverflowDrawer}
+          closeOnBodyButtonClick
+        >
+          {meta ? <div className="mb-3 min-w-0 border-b border-[color:var(--cab-border)] pb-3">{meta}</div> : null}
+          <div className="flex flex-col gap-2">{overflowActions}</div>
         </MobileFilterDrawer>
       ) : null}
     </>
@@ -166,12 +242,63 @@ export function PageToolbarResultCount({
   );
 }
 
-/** @deprecated Azioni migrate in PageActionMenu. */
+/** Toggle meta toolbar (label + switch) — es. modalità modifica magazzino. */
+export function PageToolbarMetaToggle({
+  label,
+  shortLabel,
+  checked,
+  onChange,
+  title,
+  className = "",
+}: {
+  label: string;
+  shortLabel?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  title?: string;
+  className?: string;
+}) {
+  const shell = checked
+    ? `${dsPageToolbarMetaActionBtnFilterCol} border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_24%,transparent)]`
+    : dsPageToolbarMetaActionBtnFilterCol;
+
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      title={title}
+      onClick={() => onChange(!checked)}
+      className={`${shell} justify-between gap-2 ${className}`.trim()}
+    >
+      <span className="min-w-0 truncate text-left">
+        <span className="sm:hidden">{shortLabel ?? label}</span>
+        <span className="hidden sm:inline">{label}</span>
+      </span>
+      <span
+        aria-hidden
+        className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${
+          checked
+            ? "bg-[color:var(--cab-primary)]"
+            : "bg-[color:color-mix(in_srgb,var(--cab-border)_80%,var(--cab-surface))]"
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 translate-y-0.5 rounded-full bg-white shadow transition-transform ${
+            checked ? "translate-x-4" : "translate-x-0.5"
+          }`}
+        />
+      </span>
+    </button>
+  );
+}
+
+/** @deprecated Preferire prop `overflowActions` su PageToolbar. Wrapper inline desktop-only. */
 export function PageToolbarActions({ children }: { children: ReactNode }) {
   return <div className="flex min-w-0 max-w-full shrink-0 flex-nowrap items-center gap-2 sm:flex-wrap sm:justify-end">{children}</div>;
 }
 
-/** @deprecated Overflow migrate in PageActionMenu. */
+/** Pulsanti overflow full-width nel drawer mobile. */
 export function PageToolbarOverflowAction({
   children,
   className = "",

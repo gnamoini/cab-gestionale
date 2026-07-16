@@ -1,14 +1,17 @@
 import assert from "node:assert/strict";
 import {
+  formatCaptureMultilineText,
   formatCapturePersonName,
   formatCaptureProperLabel,
   formatCaptureReviewDisplayValue,
   formatCaptureReviewDraftValue,
   formatCaptureTargaValue,
+  inferCaptureMultilineBreaks,
   isCaptureMultilineFieldKey,
   isCapturePersonNameFieldKey,
   isCaptureTargaFieldKey,
   matchCapturePersonNameFromAddetti,
+  polishCaptureWorkshopOcrText,
 } from "@/lib/document-capture/capture-field-display-value";
 
 assert.equal(formatCaptureTargaValue("ab 123 cd"), "AB123CD");
@@ -93,7 +96,50 @@ assert.equal(
 
 assert.equal(
   formatCaptureReviewDraftValue("descrizione_anomalia", "  prima\nseconda  "),
-  "prima\nseconda",
+  "Prima\nSeconda",
+);
+
+assert.equal(formatCaptureMultilineText("PERDITA OLIO\nVALVOLA ROTTA"), "Perdita olio\nValvola rotta");
+assert.equal(formatCaptureMultilineText("motore non parte"), "Motore non parte");
+
+assert.equal(
+  formatCaptureMultilineText("* gia' sostituita una ruota. Completa di supp da."),
+  "* Già sostituita una ruota.\nCompleta di supporto da.",
+);
+
+assert.equal(
+  formatCaptureMultilineText(
+    "* Già SOSTITUITA UNA RUOTA BOCCA ASPIRAZ. COMPLETA di supporto.",
+  ),
+  "* Già sostituita una ruota bocca aspiraz.\nCompleta di supporto.",
+);
+
+const workshopScan = `Gia' sostituita una ruota bocca aspirae. Completa di supp
+Da. Sostituire
+Xn. 1 pompa acqua elettrica ok
+N.1 motore pompa cod. Ok
+N ugelli non funzionanti cor verificare) ok
+In 1 kit minigonne bocca aspiratione ok`;
+
+const polished = formatCaptureMultilineText(workshopScan);
+assert.match(polished, /Già sostituita una ruota bocca aspirazione/i);
+assert.match(polished, /Completa di supporto da\./i);
+assert.match(polished, /N\. 1 pompa acqua elettrica OK/i);
+assert.match(polished, /per verificare/i);
+assert.doesNotMatch(polished, /aspirae|aspiratione| cor /i);
+assert.match(polishCaptureWorkshopOcrText("xn. 2 valvole"), /n\. 2 valvole/);
+
+assert.equal(
+  inferCaptureMultilineBreaks("riga uno. Riga due"),
+  "riga uno.\nRiga due",
+);
+
+assert.equal(
+  formatCaptureReviewDisplayValue("descrizione_anomalia", {
+    raw: "PERDITA OLIO\nRIGA 2",
+    normalized: "perdita olio riga 2",
+  }),
+  "Perdita olio\nRiga 2",
 );
 
 console.log("capture-field-display-value.test.ts OK");

@@ -41,7 +41,9 @@ function normalizeEntry(raw: unknown): MagazzinoChangeLogEntry | null {
   const annullato = e.annullato === true;
   const autoreUserId = typeof e.autoreUserId === "string" && e.autoreUserId.trim() ? e.autoreUserId.trim() : undefined;
   const undoSessionId = typeof e.undoSessionId === "string" && e.undoSessionId.trim() ? e.undoSessionId.trim() : undefined;
-  return { id, tipo, ricambioId, ricambio, autore, at, riepilogo, changes, annullato, autoreUserId, undoSessionId };
+  const contaStatistiche =
+    e.contaStatistiche === false ? false : e.contaStatistiche === true ? true : undefined;
+  return { id, tipo, ricambioId, ricambio, autore, at, riepilogo, changes, annullato, autoreUserId, undoSessionId, contaStatistiche };
 }
 
 /** Cache locale opzionale (undo / draft non ancora su server). */

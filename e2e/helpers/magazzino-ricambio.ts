@@ -8,7 +8,7 @@ export function uniqueRicambioCodice(prefix = "E2E"): string {
 export async function createRicambioLenientSmoke(
   page: Page,
   codice: string,
-): Promise<void> {
+): Promise<{ id: string }> {
   const listLoaded = page.waitForResponse(
     (res) =>
       res.url().includes("/rest/v1/magazzino_ricambi") && res.request().method() === "GET" && res.ok(),
@@ -47,9 +47,13 @@ export async function createRicambioLenientSmoke(
   });
   const response = await createResponse;
   expect(response.ok(), `magazzino_ricambi POST failed: ${response.status()}`).toBeTruthy();
+  const created = (await response.json()) as { id: string } | { id: string }[];
+  const id = Array.isArray(created) ? created[0]?.id : created.id;
+  expect(id, "magazzino_ricambi POST senza id").toBeTruthy();
   await expect(modal).toBeHidden({ timeout: 30_000 });
 
   const row = page.getByText(codice, { exact: false }).first();
   await row.scrollIntoViewIfNeeded();
   await expect(row).toBeVisible({ timeout: 20_000 });
+  return { id: id! };
 }

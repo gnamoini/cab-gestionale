@@ -31,7 +31,9 @@ assert.match(nextConfig, /Cache-Control.*no-cache/, "sw.js no-cache");
 assert.match(nextConfig, /Service-Worker-Allowed/, "Service-Worker-Allowed");
 
 assert.ok(
-  !PWA_PRECACHE_URLS.some((url) => url === "/login" || url.startsWith("/login")),
+  !(PWA_PRECACHE_URLS as readonly string[]).some(
+    (url) => url === "/login" || url.startsWith("/login"),
+  ),
   "precache non deve includere /login",
 );
 

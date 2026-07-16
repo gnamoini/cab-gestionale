@@ -4,6 +4,7 @@ import {
   buildControlTowerHeaderKpiSlice,
   buildControlTowerWipSlice,
   buildControlTowerActivityFeedSlice,
+  pickLavorazioneIdsFromActivityLogs,
 } from "@/lib/dashboard/control-tower-selectors";
 import { CONTROL_TOWER_KPI_DAY_WINDOW_LABEL, CONTROL_TOWER_KPI_MONTH_WINDOW_LABEL, CONTROL_TOWER_KPI_WINDOW_LABEL, CONTROL_TOWER_STALE_UPDATE_DAYS } from "@/lib/dashboard/control-tower-constants";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
@@ -291,6 +292,16 @@ const outsideWindowActivity = buildControlTowerActivityFeedSlice({
   anchor: ANCHOR,
 });
 assert.equal(outsideWindowActivity.byDomain.lavorazioni.length, 1, "activity not filtered by rolling 7d window");
+
+const pickIds = pickLavorazioneIdsFromActivityLogs(
+  [
+    { id: "a", entita: "lavorazioni", entita_id: "lav-2", azione: "UPDATE", created_at: "2026-06-03T10:00:00.000Z", payload: {}, autore_id: null },
+    { id: "b", entita: "lavorazioni", entita_id: "lav-1", azione: "UPDATE", created_at: "2026-06-04T10:00:00.000Z", payload: {}, autore_id: null },
+    { id: "c", entita: "lavorazioni", entita_id: "lav-2", azione: "UPDATE", created_at: "2026-06-05T10:00:00.000Z", payload: {}, autore_id: null },
+  ],
+  2,
+);
+assert.deepEqual(pickIds, ["lav-2", "lav-1"], "schede prefetch ids from latest activity per macchina");
 
 const magLogEntry: MagazzinoChangeLogEntry = {
   id: "local-1",

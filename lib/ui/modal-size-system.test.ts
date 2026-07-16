@@ -24,6 +24,10 @@ const legacyHub = resolveShellModalLayout({ legacyDialogSize: "hub" });
 assert.match(legacyHub.widthClass, /cab-modal-min-w-form-medium/);
 assert.match(legacyHub.surfaceClass, /840px/);
 
+const fullscreenLayout = resolveShellModalLayout({ modalSize: "fullscreen" });
+assert.match(fullscreenLayout.surfaceClass, /100dvh/);
+assert.doesNotMatch(fullscreenLayout.surfaceClass, /840px/);
+
 assert.match(resolveDrawerAsideClasses("drawerLog"), /drawer-log|28rem/);
 assert.match(resolveDrawerAsideClasses("drawerFilter"), /22rem/);
 assert.match(resolveDrawerAsideClasses("drawerNav"), /19\.5rem/);

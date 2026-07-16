@@ -6,6 +6,7 @@
 import {
   dsLavorazioniModalDialog,
   dsLavorazioniModalDialogCompact,
+  dsLavorazioniModalDialogFullscreen,
   dsLavorazioniModalDialogTall,
 } from "@/lib/ui/design-system";
 
@@ -125,9 +126,11 @@ export function resolveShellModalLayout(opts: {
         : MODAL_WIDTH_CLASSES[modalSize as keyof typeof MODAL_WIDTH_CLASSES];
 
   const surfaceClass =
-    modalHeight === "auto"
-      ? dsLavorazioniModalDialog
-      : resolveModalHeightClasses(modalHeight);
+    modalSize === "fullscreen"
+      ? dsLavorazioniModalDialogFullscreen
+      : modalHeight === "auto"
+        ? dsLavorazioniModalDialog
+        : resolveModalHeightClasses(modalHeight);
 
   return { widthClass, surfaceClass, modalSize, modalHeight };
 }

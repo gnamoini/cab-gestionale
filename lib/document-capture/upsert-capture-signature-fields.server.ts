@@ -2,9 +2,9 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  extractCaptureSignatureFields,
   shouldExtractCaptureSignatures,
 } from "@/lib/document-capture/capture-signature-crop";
+import { extractCaptureSignatureFields } from "@/lib/document-capture/capture-signature-crop.server";
 
 type FieldRow = {
   company_id: string;

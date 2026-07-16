@@ -1,8 +1,10 @@
 /**
  * governance.rbac.sync-check — advisory TS seed structure (experimental)
  */
-import { GESTIONALE_PAGE_KEYS } from "@/src/lib/permissions/gestionale-pages";
+import { allGestionalePageKeys } from "@/src/lib/permissions/gestionale-pages";
 import { RBAC_PAGE_SEED_MATRIX } from "@/lib/rbac-page-seed";
+
+const GESTIONALE_PAGE_KEYS = allGestionalePageKeys();
 
 const blockers: string[] = [];
 

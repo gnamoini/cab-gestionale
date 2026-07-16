@@ -1,15 +1,17 @@
 import assert from "node:assert/strict";
 import sharp from "sharp";
-import {
-  cropNormalizedBboxToPngDataUrl,
-  shouldExtractCaptureSignatures,
-} from "@/lib/document-capture/capture-signature-crop";
-import { hasSignatureDataUrl } from "@/lib/media/signature-pad";
+import { shouldExtractCaptureSignatures } from "@/lib/document-capture/capture-signature-crop";
+import { cropNormalizedBboxToPngDataUrl } from "@/lib/document-capture/capture-bbox-crop.server";
 
 assert.equal(shouldExtractCaptureSignatures("ingresso", []), true);
 assert.equal(shouldExtractCaptureSignatures("lavorazioni", ["cliente"]), false);
 assert.equal(shouldExtractCaptureSignatures(null, ["riga_1_nome"]), false);
+assert.equal(
+  shouldExtractCaptureSignatures(null, ["riga_1_nome", "cliente", "data_ingresso"]),
+  true,
+);
 assert.equal(shouldExtractCaptureSignatures(null, ["cliente", "data_ingresso"]), true);
+assert.equal(shouldExtractCaptureSignatures(null, []), true);
 
 async function run(): Promise<void> {
   const png = await sharp({
@@ -23,7 +25,7 @@ async function run(): Promise<void> {
     { ymin: 200, xmin: 100, ymax: 800, xmax: 900 },
     "image/png",
   );
-  assert.ok(hasSignatureDataUrl(dataUrl));
+  assert.ok(dataUrl?.startsWith("data:image/png;base64,"));
   console.log("capture-signature-crop.test.ts OK");
 }
 

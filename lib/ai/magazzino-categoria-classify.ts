@@ -1,12 +1,11 @@
 import "server-only";
 
-import { generateObject } from "ai";
+import { generateObjectWithGeminiFailover } from "@/lib/ai/gemini-generate-object.server";
 import { z } from "zod";
 import {
   GEMINI_AUTH_ERROR_HINT,
   GEMINI_FILE_ANALYSIS_TIMEOUT_MS,
   GEMINI_NOT_CONFIGURED_MESSAGE,
-  getGeminiReportModel,
   isGeminiAuthError,
   isGeminiConfigured,
 } from "@/lib/ai/gemini-client";
@@ -48,18 +47,14 @@ async function classifyBatch(
   }
 
   try {
-    const model = getGeminiReportModel();
-    if (!model) {
-      return { ok: false, reason: GEMINI_NOT_CONFIGURED_MESSAGE };
-    }
-    const { object } = await generateObject({
-      model,
+    const { object: rawObject } = await generateObjectWithGeminiFailover({
       schema: magazzinoCategoriaClassifySchema,
       system: CLASSIFY_SYSTEM,
       prompt: buildPrompt(items, categories),
       temperature: 0.1,
       abortSignal: AbortSignal.timeout(GEMINI_FILE_ANALYSIS_TIMEOUT_MS),
     });
+    const object = rawObject as z.infer<typeof magazzinoCategoriaClassifySchema>;
 
     const map = new Map<number, string>();
     for (const assignment of object.assignments) {

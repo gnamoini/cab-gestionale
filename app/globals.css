@@ -743,62 +743,28 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
   flex-shrink: 0;
 }
 
-/** Dashboard welcome — logo + copy a sinistra; data a destra nel banner. */
-@media (max-width: 767px) {
-  .cab-dashboard-welcome-layout {
-    gap: 0.75rem;
-  }
-
-  .cab-dashboard-welcome-meta {
-    align-items: center;
-    border-top: 1px solid color-mix(in srgb, var(--cab-border) 72%, transparent);
-    padding-top: 0.75rem;
-  }
-
-  .cab-dashboard-welcome-logo {
-    max-width: 7.5rem;
-  }
-
-  .cab-dashboard-welcome-date {
-    min-width: 4.75rem;
-  }
+/** Dashboard welcome — logo, copy e data su una riga compatta. */
+.cab-dashboard-welcome-layout {
+  align-items: center;
+  column-gap: 0.625rem;
 }
 
-@media (min-width: 768px) {
-  .cab-dashboard-welcome-layout {
-    grid-template-columns: auto minmax(0, max-content) 1fr auto;
-    align-items: center;
-    column-gap: 0.75rem;
-  }
+.cab-dashboard-welcome-logo {
+  max-width: 4.75rem;
+}
 
+.cab-dashboard-welcome-date {
+  min-width: 3.5rem;
+}
+
+@media (min-width: 640px) {
   .cab-dashboard-welcome-logo {
-    grid-column: 1;
-    grid-row: 1;
-    width: fit-content;
-    max-width: 8.5rem;
-    align-self: center;
-  }
-
-  .cab-dashboard-welcome-copy {
-    grid-column: 2;
-    grid-row: 1;
-    justify-self: start;
-    text-align: left;
-    align-self: center;
+    max-width: 5.25rem;
   }
 
   .cab-dashboard-welcome-date {
-    grid-column: 4;
-    grid-row: 1;
-    justify-self: end;
-    width: auto;
-    align-self: center;
-    border-top-width: 0;
-    border-left-width: 2px;
-    border-left-style: solid;
-    border-left-color: color-mix(in srgb, var(--cab-primary) 50%, transparent);
-    padding-top: 0;
-    padding-left: 1rem;
+    min-width: 4rem;
+    padding-left: 0.75rem;
   }
 }
 

@@ -1,16 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/gestionale/page-header";
-import { PageActionMenu } from "@/components/ui";
+import { PageHeaderNotificationsBell } from "@/components/gestionale/page-header-notifications-bell";
 import { LoadingCardSkeleton } from "@/components/design-system";
 import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
 import { useCalendarV2Enabled } from "@/src/hooks/use-calendar-v2-enabled";
-import { AdminNotificationsBell } from "@/components/dashboard/admin-notifications-bell";
-import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
-import { clickPageActionHiddenTrigger } from "@/components/ui";
 import { erpBtnNeutral } from "@/lib/ui/erp-tokens";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { dsStackPage } from "@/lib/ui/design-system";
@@ -31,24 +28,7 @@ export function DashboardView() {
   const searchParams = useSearchParams();
   const staging = isStagingPublicSlice();
   const calendarV2Enabled = useCalendarV2Enabled();
-  const { readsDb, isLoading: notificationsModeLoading } = useNotificationsV2Mode();
-  const notificationsBellRef = useRef<HTMLDivElement>(null);
   const [stagingRouteHint, setStagingRouteHint] = useState(false);
-
-  const dashboardMenuItems = useMemo(
-    () =>
-      readsDb || notificationsModeLoading
-        ? []
-        : [
-            {
-              id: "notifications",
-              label: "Notifiche",
-              description: "Visualizza le notifiche amministratore",
-              onSelect: () => clickPageActionHiddenTrigger(notificationsBellRef.current),
-            },
-          ],
-    [readsDb, notificationsModeLoading],
-  );
 
   useEffect(() => {
     if (searchParams.get("staging_unavailable") === "1") setStagingRouteHint(true);
@@ -61,13 +41,7 @@ export function DashboardView() {
 
   return (
     <>
-      <div ref={notificationsBellRef} className="sr-only" aria-hidden>
-        <AdminNotificationsBell />
-      </div>
-      <PageHeader
-        title="Dashboard"
-        actions={staging ? null : <PageActionMenu items={dashboardMenuItems} />}
-      />
+      <PageHeader title="Dashboard" />
 
       <div className={dsStackPage}>
         {stagingRouteHint ? (

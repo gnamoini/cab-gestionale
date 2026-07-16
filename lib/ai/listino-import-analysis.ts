@@ -1,12 +1,11 @@
 import "server-only";
 
-import { generateObject, type LanguageModel } from "ai";
+import { generateObjectWithGeminiFailover } from "@/lib/ai/gemini-generate-object.server";
 import {
   GEMINI_AUTH_ERROR_HINT,
   GEMINI_FILE_ANALYSIS_TIMEOUT_MS,
   GEMINI_NOT_CONFIGURED_MESSAGE,
   GEMINI_QUOTA_ERROR_HINT,
-  getGeminiReportModel,
   isGeminiAuthError,
   isGeminiConfigured,
   isGeminiQuotaError,
@@ -16,6 +15,7 @@ import {
   listinoImportAiRowsSchema,
   listinoImportColumnMapSchema,
 } from "@/lib/magazzino/listino-import/listino-import-schema";
+import type { z } from "zod";
 import {
   applyListinoColumnMap,
 } from "@/lib/magazzino/listino-import/parse-listino-column-map";
@@ -128,14 +128,12 @@ function chunkPrompt(marcaDefault: string, fromPage: number, toPage: number, tot
 }
 
 async function parseListinoPdfChunkWithAi(
-  model: LanguageModel,
   chunk: PdfChunkInput,
   marcaDefault: string,
   totalPages: number,
 ): Promise<PdfChunkOutcome> {
   try {
-    const { object } = await generateObject({
-      model,
+    const { object: rawObject } = await generateObjectWithGeminiFailover({
       schema: listinoImportAiRowsSchema,
       system: LISTINO_PDF_SYSTEM,
       messages: [
@@ -153,6 +151,7 @@ async function parseListinoPdfChunkWithAi(
       temperature: 0.2,
       abortSignal: AbortSignal.timeout(GEMINI_FILE_ANALYSIS_TIMEOUT_MS),
     });
+    const object = rawObject as z.infer<typeof listinoImportAiRowsSchema>;
 
     const rows = object.rows
       .map((r) => normalizeListinoRow(r, marcaDefault))
@@ -172,12 +171,11 @@ async function parseListinoPdfChunkWithAi(
 }
 
 async function parseChunkWithSplitRetry(
-  model: LanguageModel,
   chunk: PdfChunkInput,
   marcaDefault: string,
   totalPages: number,
 ): Promise<PdfChunkOutcome> {
-  const first = await parseListinoPdfChunkWithAi(model, chunk, marcaDefault, totalPages);
+  const first = await parseListinoPdfChunkWithAi(chunk, marcaDefault, totalPages);
   if (first.ok || !first.timedOut || chunk.fromPage >= chunk.toPage) return first;
 
   const pageCount = chunk.toPage - chunk.fromPage + 1;
@@ -189,7 +187,7 @@ async function parseChunkWithSplitRetry(
   const warnings: string[] = [];
   const rowBatches: ListinoImportRawRow[][] = [];
   for (const sub of subChunks) {
-    const subOutcome = await parseListinoPdfChunkWithAi(model, sub, marcaDefault, totalPages);
+    const subOutcome = await parseListinoPdfChunkWithAi(sub, marcaDefault, totalPages);
     if (!subOutcome.ok) {
       return {
         ok: false,
@@ -212,7 +210,6 @@ function isFatalListinoChunkError(message: string): boolean {
 }
 
 async function runChunksSequential(
-  model: LanguageModel,
   chunks: PdfChunkInput[],
   marcaDefault: string,
   totalPages: number,
@@ -224,10 +221,10 @@ async function runChunksSequential(
 
   for (let index = 0; index < chunks.length; index += 1) {
     const chunk = chunks[index]!;
-    let outcome = await parseChunkWithSplitRetry(model, chunk, marcaDefault, totalPages);
+    let outcome = await parseChunkWithSplitRetry(chunk, marcaDefault, totalPages);
     if (!outcome.ok && isRetryableListinoChunkMessage(outcome.message)) {
       await sleep(LISTINO_PDF_CHUNK_DELAY_MS);
-      outcome = await parseChunkWithSplitRetry(model, chunk, marcaDefault, totalPages);
+      outcome = await parseChunkWithSplitRetry(chunk, marcaDefault, totalPages);
     }
 
     if (outcome.ok) {
@@ -266,8 +263,7 @@ export async function parseListinoPdfWithAi(
   bytes: Uint8Array,
   marcaDefault: string,
 ): Promise<ListinoAiParseResult> {
-  const model = getGeminiReportModel();
-  if (!model || !isGeminiConfigured()) {
+  if (!isGeminiConfigured()) {
     return {
       ok: false,
       code: "not_configured",
@@ -288,7 +284,6 @@ export async function parseListinoPdfWithAi(
 
   if (pageCount <= LISTINO_PDF_SINGLE_CALL_MAX_PAGES) {
     const single = await parseChunkWithSplitRetry(
-      model,
       { bytes, fromPage: 1, toPage: pageCount },
       marcaDefault,
       pageCount,
@@ -310,7 +305,6 @@ export async function parseListinoPdfWithAi(
   }
 
   const { rows, warnings, failedRanges, failureMessages } = await runChunksSequential(
-    model,
     ranges.map((r) => ({ bytes: r.bytes, fromPage: r.fromPage, toPage: r.toPage })),
     marcaDefault,
     pageCount,
@@ -339,8 +333,7 @@ export async function mapListinoColumnsWithAi(
   matrix: unknown[][],
   marcaDefault: string,
 ): Promise<ListinoAiParseResult> {
-  const model = getGeminiReportModel();
-  if (!model || !isGeminiConfigured()) {
+  if (!isGeminiConfigured()) {
     return {
       ok: false,
       code: "not_configured",
@@ -351,14 +344,14 @@ export async function mapListinoColumnsWithAi(
   const sample = JSON.stringify(matrix.slice(0, 12));
 
   try {
-    const { object } = await generateObject({
-      model,
+    const { object: rawObject } = await generateObjectWithGeminiFailover({
       schema: listinoImportColumnMapSchema,
       system: LISTINO_COLUMNS_SYSTEM,
       prompt: `Marca default: ${marcaDefault}. Sample: ${sample}`,
       temperature: 0.1,
       abortSignal: AbortSignal.timeout(GEMINI_FILE_ANALYSIS_TIMEOUT_MS),
     });
+    const object = rawObject as z.infer<typeof listinoImportColumnMapSchema>;
 
     if (object.codiceColumn == null || object.descrizioneColumn == null || object.costoColumn == null) {
       return { ok: false, code: "failed", message: "IA non ha identificato colonne codice/descrizione/prezzo." };

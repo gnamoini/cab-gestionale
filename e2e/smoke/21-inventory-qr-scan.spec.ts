@@ -20,16 +20,12 @@ test.afterAll(async () => {
 });
 
 test("QR scan → login → modale ricambio → modifica scorta", async ({ page }) => {
+  await loginViaUi(page, adminCredentials());
   const codice = uniqueRicambioCodice("QR-SMOKE");
-  const created = await createRicambioLenientSmoke({
-    codice,
-    marca: "SMOKE-QR",
-    descrizione: `Ricambio QR smoke ${Date.now()}`,
-    scorta: 3,
-  });
-  test.skip(!created?.id, "Creazione ricambio smoke fallita");
+  const created = await createRicambioLenientSmoke(page, codice);
+  test.skip(!created.id, "Creazione ricambio smoke fallita");
 
-  const metaRes = await page.request.get(`/api/inventory-labels/ricambi/${created!.id}`);
+  const metaRes = await page.request.get(`/api/inventory-labels/ricambi/${created.id}`);
   expect(metaRes.ok()).toBeTruthy();
   const meta = (await metaRes.json()) as { token: string };
   expect(meta.token).toMatch(/^CAB-/);

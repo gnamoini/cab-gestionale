@@ -1,6 +1,21 @@
 import "server-only";
 
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import type { LanguageModel } from "ai";
+import {
+  geminiKeySlotForIndex,
+  resolveGeminiApiKeysFromEnv,
+  runWithGeminiApiKeysFailover,
+} from "@/lib/ai/gemini-api-keys";
+
+export {
+  geminiKeySlotForIndex,
+  isGeminiAuthError,
+  isGeminiFailoverError,
+  isGeminiQuotaError,
+  resolveGeminiApiKeysFromEnv,
+  runWithGeminiApiKeysFailover,
+} from "@/lib/ai/gemini-api-keys";
 
 /**
  * AI-SSOT-1: unica fonte di verità Gemini.
@@ -8,8 +23,13 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
  * Nessuna feature deve leggere process.env.GEMINI_* direttamente.
  */
 
-/** Modello default — allineato alla quickstart npm (@google/genai). */
-export const GEMINI_REPORT_MODEL_ID = "gemini-2.5-flash";
+/** Modello default — sostituto stabile di gemini-2.5-flash (non disponibile su chiavi nuove). */
+export const GEMINI_REPORT_MODEL_ID = "gemini-3.5-flash";
+
+export function resolveGeminiReportModelId(): string {
+  const fromEnv = process.env.GEMINI_MODEL_ID?.trim();
+  return fromEnv || GEMINI_REPORT_MODEL_ID;
+}
 
 /** Timeout default analisi testo (Report AI). Override: REPORT_ANALYSIS_LLM_TIMEOUT_MS. */
 export const GEMINI_REPORT_ANALYSIS_TIMEOUT_MS_DEFAULT = 45_000;
@@ -23,29 +43,20 @@ export const GEMINI_NOT_CONFIGURED_MESSAGE =
 export const GEMINI_AUTH_ERROR_HINT =
   "Chiave Gemini non valida. Genera una nuova chiave su Google AI Studio (formato AIza...) e impostala in GOOGLE_GENERATIVE_AI_API_KEY o GEMINI_API_KEY.";
 
-const ENV_KEY_NAMES = [
-  "GOOGLE_GENERATIVE_AI_API_KEY",
-  "GEMINI_API_KEY",
-  "GOOGLE_API_KEY",
-] as const;
-
-function readEnvKey(name: (typeof ENV_KEY_NAMES)[number]): string | null {
-  const value = process.env[name]?.trim();
-  return value || null;
+export function listGeminiApiKeys(): string[] {
+  return resolveGeminiApiKeysFromEnv(process.env as Record<string, string | undefined>);
 }
 
-/** Risolve la API key: Vercel AI SDK name → nomi ufficiali Google quickstart. */
+/** Risolve la API key primaria. */
 export function getGeminiApiKey(): string | null {
-  for (const name of ENV_KEY_NAMES) {
-    const key = readEnvKey(name);
-    if (key) return key;
-  }
-  return null;
+  return listGeminiApiKeys()[0] ?? null;
 }
 
 export function isGeminiConfigured(): boolean {
-  return Boolean(getGeminiApiKey());
+  return listGeminiApiKeys().length > 0;
 }
+
+export type GeminiKeySlot = "primary" | "secondary";
 
 export function resolveGeminiReportAnalysisTimeoutMs(): number {
   const raw = process.env.REPORT_ANALYSIS_LLM_TIMEOUT_MS?.trim();
@@ -54,46 +65,37 @@ export function resolveGeminiReportAnalysisTimeoutMs(): number {
   return Number.isFinite(n) && n > 0 ? n : GEMINI_REPORT_ANALYSIS_TIMEOUT_MS_DEFAULT;
 }
 
-export function isGeminiAuthError(error: unknown): boolean {
-  const text = error instanceof Error ? error.message : String(error);
-  const upper = text.toUpperCase();
-  return (
-    upper.includes("401") ||
-    upper.includes("403") ||
-    upper.includes("API KEY") ||
-    upper.includes("API_KEY") ||
-    upper.includes("PERMISSION_DENIED") ||
-    upper.includes("UNAUTHENTICATED") ||
-    upper.includes("INVALID API KEY")
-  );
-}
-
-export function isGeminiQuotaError(error: unknown): boolean {
-  const text = error instanceof Error ? error.message : String(error);
-  const upper = text.toUpperCase();
-  return (
-    upper.includes("429") ||
-    upper.includes("RESOURCE_EXHAUSTED") ||
-    upper.includes("QUOTA") ||
-    upper.includes("RATE LIMIT") ||
-    upper.includes("TOO MANY REQUESTS")
-  );
-}
-
 export const GEMINI_QUOTA_ERROR_HINT =
   "Limite richieste o quota Gemini raggiunta. Attendi qualche minuto, riduci le pagine del PDF o usa Excel/CSV.";
 
+export function getGeminiReportModelForApiKey(apiKey: string): LanguageModel {
+  const google = createGoogleGenerativeAI({ apiKey });
+  return google(resolveGeminiReportModelId());
+}
+
 /** Modello Gemini — null se API key assente. */
-export function getGeminiReportModel() {
+export function getGeminiReportModel(): LanguageModel | null {
   const apiKey = getGeminiApiKey();
   if (!apiKey) return null;
-  const google = createGoogleGenerativeAI({ apiKey });
-  return google(GEMINI_REPORT_MODEL_ID);
+  return getGeminiReportModelForApiKey(apiKey);
 }
 
 /** Modello Gemini — throw se API key assente (per generateObject / generateText). */
-export function requireGeminiReportModel() {
+export function requireGeminiReportModel(): LanguageModel {
   const model = getGeminiReportModel();
   if (!model) throw new Error(GEMINI_NOT_CONFIGURED_MESSAGE);
   return model;
+}
+
+export async function runWithGeminiFailover<T>(
+  fn: (
+    model: LanguageModel,
+    meta: { keyIndex: number; keySlot: GeminiKeySlot },
+  ) => Promise<T>,
+): Promise<T> {
+  return runWithGeminiApiKeysFailover(
+    listGeminiApiKeys(),
+    async (apiKey, meta) => fn(getGeminiReportModelForApiKey(apiKey), meta),
+    { notConfiguredMessage: GEMINI_NOT_CONFIGURED_MESSAGE },
+  );
 }

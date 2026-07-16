@@ -28,7 +28,7 @@ export type PageActionMenuContextValue = {
   refreshBusy: boolean;
   refreshLabel: string;
   back: PageActionMenuBackConfig | null;
-  filtersActive: boolean;
+  menuAttention: boolean;
 };
 
 const PageActionMenuContext = createContext<PageActionMenuContextValue | null>(null);
@@ -39,7 +39,7 @@ export function PageActionMenuProvider({
   refreshBusy = false,
   refreshLabel = "Aggiorna",
   back = null,
-  filtersActive = false,
+  menuAttention = false,
 }: PageActionMenuProviderProps) {
   const [groups, setGroups] = useState<RegisteredGroup[]>([]);
 
@@ -64,9 +64,9 @@ export function PageActionMenuProvider({
       refreshBusy,
       refreshLabel,
       back: back ?? null,
-      filtersActive,
+      menuAttention,
     }),
-    [items, registerGroup, onRefresh, refreshBusy, refreshLabel, back, filtersActive],
+    [items, registerGroup, onRefresh, refreshBusy, refreshLabel, back, menuAttention],
   );
 
   return <PageActionMenuContext.Provider value={value}>{children}</PageActionMenuContext.Provider>;

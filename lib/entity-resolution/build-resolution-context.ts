@@ -124,7 +124,7 @@ export function entityTypeForFieldKey(fieldKey: string): EntityType | null {
   if (["modello_attrezzatura", "modelloattrezzatura", "attrezzatura_modello"].includes(k)) return "MODELLO";
   if (["marca_telaio", "marcatelaio", "telaio_marca"].includes(k)) return "MARCA";
   if (["modello_telaio", "modellotelaio", "telaio_modello"].includes(k)) return "MODELLO";
-  if (["tipo_attrezzatura", "tipoattrezzatura"].includes(k)) return "TIPO_ATTREZZATURA";
+  if (["tipo_attrezzatura", "tipoattrezzatura", "attrezzatura"].includes(k)) return "TIPO_ATTREZZATURA";
   if (["tipo_telaio", "tipotelaio"].includes(k)) return "TIPO_TELAIO";
   if (k === "addetto_accettazione" || k === "addettoaccettazione") return "OPERATORE";
   if (/^riga_\d+_codice$/.test(k)) return "RICAMBIO";

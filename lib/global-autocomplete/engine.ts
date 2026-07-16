@@ -143,6 +143,29 @@ export function autocompleteShowAddPanel(params: {
   return autocompleteShowAddOption(params);
 }
 
-export function autocompleteAddOptionEnabled(searchText: string, addPending: boolean): boolean {
-  return searchText.trim().length > 0 && !addPending;
+export function autocompleteAddCandidateExistsInPool(
+  candidate: string,
+  mode: AutocompleteDataMode,
+  options: readonly string[],
+  items: readonly ListSelectItem[],
+): boolean {
+  const q = candidate.trim();
+  if (!q) return false;
+  if (mode === "items") {
+    return findItemByLabel(q, items) !== null || isValueInItems(q, items);
+  }
+  return isValueInListOptions(q, options);
+}
+
+export function autocompleteAddOptionEnabled(
+  searchText: string,
+  addPending: boolean,
+  pool?: { mode: AutocompleteDataMode; options: readonly string[]; items: readonly ListSelectItem[] },
+): boolean {
+  const trimmed = searchText.trim();
+  if (!trimmed || addPending) return false;
+  if (pool && autocompleteAddCandidateExistsInPool(trimmed, pool.mode, pool.options, pool.items)) {
+    return false;
+  }
+  return true;
 }

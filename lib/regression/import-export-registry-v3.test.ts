@@ -33,16 +33,19 @@ assert.match(registrySrc, /ensureImportExportFrameworkBootstrapped/);
 const clientSrc = fs.readFileSync(path.join(ROOT, "lib/data-import/import-registry-client.ts"), "utf8");
 assert.match(clientSrc, /ordini_fornitori:\s*"ordini-fornitori"/);
 
-for (const view of [
-  "components/gestionale/mezzi/mezzi-view.tsx",
-  "components/preventivi/preventivi-view.tsx",
-  "components/gestionale/magazzino/magazzino-view.tsx",
-  "components/fatturazione/fatturazione-view.tsx",
-  "components/ordini-fornitori/ordini-fornitori-view.tsx",
-  "components/gestionale/lavorazioni/lavorazioni-page-toolbar.tsx",
-]) {
+const viewImportWiring: [string, RegExp][] = [
+  ["components/gestionale/magazzino/magazzino-view.tsx", /useDataImportExportPageActions/],
+  ["components/gestionale/mezzi/mezzi-view.tsx", /ModuleImportEntry/],
+  ["components/preventivi/preventivi-view.tsx", /ModuleImportEntry/],
+];
+for (const [view, pattern] of viewImportWiring) {
   const src = fs.readFileSync(path.join(ROOT, view), "utf8");
-  assert.match(src, /DataImportExportToolbar/, `${view} should wire DataImportExportToolbar`);
+  assert.match(src, pattern, `${view} should wire import/export UI`);
 }
+
+assert.match(
+  fs.readFileSync(path.join(ROOT, "components/data-import/data-import-export-toolbar.tsx"), "utf8"),
+  /useDataImportExportPageActions/,
+);
 
 console.log("import-export-registry-v3.test.ts OK");

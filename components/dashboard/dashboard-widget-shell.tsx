@@ -10,6 +10,7 @@ export function DashboardWidgetShell({
   children,
   headerActions,
   headerLeadingActions,
+  headerLeadingActionsInteractive,
   title,
   subtitle,
 }: {
@@ -17,6 +18,7 @@ export function DashboardWidgetShell({
   children: ReactNode;
   headerActions?: ReactNode;
   headerLeadingActions?: ReactNode;
+  headerLeadingActionsInteractive?: boolean;
   title?: string;
   subtitle?: string;
 }) {
@@ -31,6 +33,7 @@ export function DashboardWidgetShell({
       persistKey={def.id}
       headerActions={headerActions}
       headerLeadingActions={headerLeadingActions}
+      headerLeadingActionsInteractive={headerLeadingActionsInteractive}
       className={reportZoneShellClass}
     >
       {children}
@@ -45,6 +48,7 @@ export function wrapDashboardWidget(
   options?: {
     headerActions?: ReactNode;
     headerLeadingActions?: ReactNode;
+    headerLeadingActionsInteractive?: boolean;
     title?: string;
     subtitle?: string;
   },
@@ -55,6 +59,7 @@ export function wrapDashboardWidget(
       def={def}
       headerActions={options?.headerActions}
       headerLeadingActions={options?.headerLeadingActions}
+      headerLeadingActionsInteractive={options?.headerLeadingActionsInteractive}
       title={options?.title}
       subtitle={options?.subtitle}
     >

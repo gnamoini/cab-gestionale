@@ -81,10 +81,14 @@ import {
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
 import {
   buildCaptureBundleSchedaPatch,
+  buildCaptureMultiSchedaBundlePatch,
   mergeCaptureBundlePatch,
 } from "@/lib/document-capture/capture-field-mapper";
 import { resolveLavorazioneListRowForSchedeOpen } from "@/lib/document-capture/resolve-lavorazione-list-row-for-schede.client";
-import type { CaptureSchedeOpenRequest } from "@/components/document-capture/lavorazioni-digital-capture-launcher";
+import type {
+  CaptureSchedeOpenRequest,
+  LavorazioniCapturePageDropHandle,
+} from "@/components/document-capture/lavorazioni-digital-capture-launcher";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
 import { SchedaConcurrencyMergeDialog } from "@/components/lavorazioni/schede/scheda-concurrency-merge-dialog";
 import {
@@ -111,6 +115,7 @@ import {
 import { newSchedaMeta } from "@/lib/schede/schede-ui";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
+import { useGestionaleForegroundOverlayActive } from "@/lib/ui/use-gestionale-foreground-overlay";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
 import { formatSupabaseError } from "@/src/utils/supabaseErrorHandler";
@@ -680,6 +685,11 @@ export function LavorazioniView() {
     dialogSize?: SchedeLavorazioneDialogSize;
     initialSchedaStage?: "lavorazioni" | "ricambi";
     bundleOverride?: LavorazioneSchedeBundle;
+    captureHandoff?: {
+      sequentialStages: Array<"lavorazioni" | "ricambi">;
+      identMismatchWarnings?: string[];
+      multiSchedaLabels?: string;
+    };
   } | null>(null);
 
   type ConcurrencyConflict = Extract<PersistSchedeErrorResult, { kind: "concurrency" }>;
@@ -1109,6 +1119,18 @@ export function LavorazioniView() {
     concludeLav.isPending ||
     updateCompletamentoLav.isPending;
 
+  const foregroundOverlayActive = useGestionaleForegroundOverlayActive();
+  const capturePageDropRef = useRef<LavorazioniCapturePageDropHandle | null>(null);
+  const capturePageDropDisabled =
+    !canEditWorkOrders || !createdBy || mutPendingBlocking || foregroundOverlayActive;
+  const handlePageCaptureDrop = useCallback(
+    (file: File) => {
+      if (capturePageDropDisabled) return;
+      capturePageDropRef.current?.openWithFile(file);
+    },
+    [capturePageDropDisabled, capturePageDropRef],
+  );
+
   const onStatoRow = useCallback(
     (row: LavorazioneListRow, next: string) => {
       if (!canEditWorkOrders) return;
@@ -1264,13 +1286,26 @@ export function LavorazioniView() {
         return false;
       }
       const base = getOrCreateBundle(schedeStore, row.id, row.codice);
-      const patch = buildCaptureBundleSchedaPatch({
-        lavorazioneId: row.id,
-        schedaTipo: req.schedaTipo,
-        fields: req.fieldRows,
-        createdBy: createdBy ?? authorName ?? "Operatore",
-        addettiRecords: globalOpts.lavorazioni.addettiRecords,
-      });
+      const postStages =
+        req.sequentialStages && req.sequentialStages.length > 0
+          ? [req.schedaTipo, ...req.sequentialStages]
+          : [req.schedaTipo];
+      const patch =
+        postStages.length > 1
+          ? buildCaptureMultiSchedaBundlePatch({
+              lavorazioneId: row.id,
+              fields: req.fieldRows,
+              createdBy: createdBy ?? authorName ?? "Operatore",
+              stages: postStages,
+              addettiRecords: globalOpts.lavorazioni.addettiRecords,
+            })
+          : buildCaptureBundleSchedaPatch({
+              lavorazioneId: row.id,
+              schedaTipo: req.schedaTipo,
+              fields: req.fieldRows,
+              createdBy: createdBy ?? authorName ?? "Operatore",
+              addettiRecords: globalOpts.lavorazioni.addettiRecords,
+            });
       setSchedeRow({
         row,
         origine: "attiva",
@@ -1278,6 +1313,14 @@ export function LavorazioniView() {
         dialogSize: "hub",
         initialSchedaStage: req.schedaTipo,
         bundleOverride: mergeCaptureBundlePatch(base, patch),
+        captureHandoff:
+          req.sequentialStages && req.sequentialStages.length > 0
+            ? {
+                sequentialStages: req.sequentialStages,
+                identMismatchWarnings: req.identMismatchWarnings,
+                multiSchedaLabels: req.multiSchedaLabels,
+              }
+            : undefined,
       });
       return true;
     },
@@ -1908,27 +1951,7 @@ export function LavorazioniView() {
       onPrint={onPrintLavorazioniInCorso}
       listViewMode={listViewMode}
       onToggleListViewMode={() => setListViewMode((m) => (m === "table" ? "kanban" : "table"))}
-      canEditWorkOrders={canEditWorkOrders}
-      createdBy={createdBy}
-      mutPendingBlocking={mutPendingBlocking}
-      filtriAttiviEspansi={filtriAttiviEspansi}
-      onFiltersToggle={() => setFiltriAttiviEspansi((o) => !o)}
       filtersActive={hasPageClientFilters || Boolean(navMezzoFilter)}
-      onOpenCreate={openCreateModal}
-      onPrimeCreate={primeCreateModal}
-      onCaptureLavorazioneCreated={(id, opts) => {
-        if (!opts?.skipTableFocus) {
-          invalidateSchedeStore();
-          focusLavorazioneInTable(id);
-        }
-      }}
-      onOpenSchedeFromCapture={onOpenSchedeFromCapture}
-      captureMezzi={mezziCatalog}
-      captureSchedeStore={schedeStore}
-      captureAttive={attiveLegacyRows}
-      captureStorico={storicoLegacyRows}
-      captureSharedGlobalOpts={globalOpts}
-      captureSharedMezziCatalog={mezziCatalog}
     >
     <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
@@ -1969,6 +1992,9 @@ export function LavorazioniView() {
         ) : null}
 
         <LavorazioniListToolbar
+          canEditWorkOrders={canEditWorkOrders}
+          createdBy={createdBy}
+          mutPendingBlocking={mutPendingBlocking}
           searchInput={searchInput}
           onSearchInputChange={(e) => setSearchInput(e.target.value)}
           onSearchEnter={flushPageSearch}
@@ -1987,8 +2013,24 @@ export function LavorazioniView() {
           onSearchReset={resetRicercaPagina}
           attiveFilteredCount={attiveRowsFiltered.length}
           chiuseFilteredCount={archivioFilteredCount ?? 0}
-          mutPendingBlocking={mutPendingBlocking}
-          createdBy={createdBy}
+          onOpenCreate={openCreateModal}
+          onPrimeCreate={primeCreateModal}
+          onCaptureLavorazioneCreated={(id, opts) => {
+            if (!opts?.skipTableFocus) {
+              invalidateSchedeStore();
+              focusLavorazioneInTable(id);
+            }
+          }}
+          onOpenSchedeFromCapture={onOpenSchedeFromCapture}
+          captureMezzi={mezziCatalog}
+          captureSchedeStore={schedeStore}
+          captureAttive={attiveLegacyRows}
+          captureStorico={storicoLegacyRows}
+          captureSharedGlobalOpts={globalOpts}
+          captureSharedMezziCatalog={mezziCatalog}
+          capturePageDropRef={capturePageDropRef}
+          capturePageDropDisabled={capturePageDropDisabled}
+          onCapturePageDrop={handlePageCaptureDrop}
         />
 
         {initialListLoading ? (
@@ -2492,6 +2534,7 @@ export function LavorazioniView() {
           initialTab={schedeRow.initialTab}
           dialogSize={schedeRow.dialogSize}
           initialSchedaStage={schedeRow.initialSchedaStage}
+          captureHandoff={schedeRow.captureHandoff}
           bundle={
             schedeRow.bundleOverride ??
             getOrCreateBundle(schedeStore, schedeRow.row.id, schedeRow.row.codice)

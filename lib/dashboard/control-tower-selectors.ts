@@ -978,7 +978,25 @@ function mapLogToActivity(
   return out;
 }
 
-/** Activity feed — ultimi log per entità (limit query server + slice card). */
+/** Activity feed — ultimi N aggiornamenti per macchina (raggruppo per lavorazione), ordinati per data. */
+export function pickLavorazioneIdsFromActivityLogs(
+  logs: readonly LogModificaRow[],
+  limit: number,
+): string[] {
+  const latestAtByLav = new Map<string, string>();
+  for (const row of logs) {
+    const lavId = lavorazioneIdFromLogRow(row);
+    if (!lavId) continue;
+    const prev = latestAtByLav.get(lavId);
+    if (!prev || row.created_at.localeCompare(prev) > 0) latestAtByLav.set(lavId, row.created_at);
+  }
+  return [...latestAtByLav.entries()]
+    .sort((a, b) => b[1].localeCompare(a[1]))
+    .slice(0, limit)
+    .map(([id]) => id);
+}
+
+/** Activity feed — ultimi log per entità/macchina (limit query server + slice card). */
 export function buildControlTowerActivityFeedSlice(input: ControlTowerBaseInput): ControlTowerActivityFeedSlice {
   const ctx: ActivityMapContext = {
     statiLavorazione: input.statiLavorazione,

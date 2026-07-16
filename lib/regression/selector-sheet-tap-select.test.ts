@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import {
   SELECTOR_SHEET_TAP_SLOP_PX,
   createSelectorSheetTapSelectHandlers,
@@ -16,13 +17,7 @@ function pe(type: string, x: number, y: number, opts: { preventDefault?: () => v
     clientY: y,
     preventDefault: opts.preventDefault ?? (() => {}),
     stopPropagation: opts.stopPropagation ?? (() => {}),
-  } as {
-    type: string;
-    clientX: number;
-    clientY: number;
-    preventDefault: () => void;
-    stopPropagation: () => void;
-  };
+  } as unknown as ReactPointerEvent;
 }
 
 selected = false;

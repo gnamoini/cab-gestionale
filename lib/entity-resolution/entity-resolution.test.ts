@@ -20,11 +20,18 @@ function mockSettings(overrides: Partial<CabAppSettingsResolved["mezziListe"]> =
       prioritaDb: [],
     },
     mezziListe: { ...createMezziListePrefsDefault(), marche: ["SCHMIDT", "SCHMID", "IVECO"], modelli: ["Swingo"], ...overrides },
-    magazzinoMaster: { marche: [], categorie: [], fornitori: [], fornitoriOrdine: [] },
+    magazzinoMaster: {
+      marche: [],
+      categorie: [],
+      fornitori: [],
+      fornitoriOrdine: [],
+      mezziCompatibili: [],
+      produttori: [],
+    },
     preventiviDefaults: { costoOrarioDefault: 48 },
     dipendenti: { tipiAssenza: [] },
     branding: { nomeAzienda: "Test" },
-  } as CabAppSettingsResolved;
+  } as unknown as CabAppSettingsResolved;
 }
 
 async function run() {

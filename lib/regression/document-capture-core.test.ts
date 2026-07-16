@@ -51,10 +51,28 @@ assert.match(applyLock, /document_capture_begin_apply/);
 assert.match(applyLock, /document_capture_complete_apply/);
 assert.match(applyLock, /document_capture_abort_apply/);
 
+const v41Analyze = fs.readFileSync(
+  path.join(ROOT, "lib/document-capture/pipeline/analyze-capture-v41.server.ts"),
+  "utf8",
+);
+assert.match(v41Analyze, /projectDocumentModelToFlatFields/);
+assert.match(v41Analyze, /runHybridExtraction/);
+
+assert.ok(fs.existsSync(path.join(ROOT, "lib/document-capture/extraction/run-hybrid-extraction.server.ts")));
+assert.ok(fs.existsSync(path.join(ROOT, "lib/document-capture/capture-template-field-template.ts")));
+
 const lavToolbar = fs.readFileSync(
   path.join(ROOT, "components/gestionale/lavorazioni/lavorazioni-page-toolbar.tsx"),
   "utf8",
 );
 assert.match(lavToolbar, /LavorazioniDigitalCaptureLauncher/);
+
+const lavView = fs.readFileSync(
+  path.join(ROOT, "components/gestionale/lavorazioni/lavorazioni-view.tsx"),
+  "utf8",
+);
+assert.match(lavView, /useGestionaleForegroundOverlayActive/);
+assert.match(lavView, /foregroundOverlayActive/);
+assert.match(lavToolbar, /GestionaleUploadDropExpand/);
 
 console.log("document-capture-core.test.ts OK");

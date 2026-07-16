@@ -56,11 +56,13 @@ export function MagazzinoGiacenzaBell({
   items,
   onSelectRicambio,
   triggerClassName,
+  triggerVariant = "toolbar",
 }: {
   count: number;
   items: RicambioMagazzino[];
   onSelectRicambio: (id: string) => void;
   triggerClassName?: string;
+  triggerVariant?: "toolbar" | "ghost";
 }) {
   const [open, setOpen] = useState(false);
   const sortedItems = useMemo(() => sortSottoScortaItems(items), [items]);
@@ -91,6 +93,7 @@ export function MagazzinoGiacenzaBell({
             ariaLabel={alertLabel}
             ariaExpanded={open}
             onClick={toggle}
+            variant={triggerVariant}
             className={triggerClassName}
           />
         </Tooltip>

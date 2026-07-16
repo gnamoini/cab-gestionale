@@ -1,5 +1,5 @@
 /**
- * Struttura toolbar slim: PageToolbar = search + filtri collapse + meta.
+ * Struttura toolbar liste: PageToolbar = primaryAction + search + filtri + meta + overflow.
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -21,11 +21,12 @@ assert.match(pageToolbar, /ToolbarGroup/);
 assert.match(pageToolbar, /ToolbarGroupSearchRow/);
 assert.match(pageToolbar, /ToolbarGroupMetaRow/);
 assert.match(pageToolbar, /ToolbarGroupFiltersCollapse/);
+assert.match(pageToolbar, /ToolbarGroupFiltersToggle/);
+assert.match(pageToolbar, /ToolbarGroupOverflowToggle/);
+assert.match(pageToolbar, /primaryAction/);
+assert.match(pageToolbar, /overflowActions/);
 assert.match(pageToolbar, /MobileFilterDrawer/);
 assert.match(pageToolbar, /PageToolbarCtaLabel/);
-assert.doesNotMatch(pageToolbar, /primaryAction/);
-assert.doesNotMatch(pageToolbar, /overflowActions/);
-assert.doesNotMatch(pageToolbar, /ToolbarGroupOverflowToggle/);
 
 assert.match(toolbarGroup, /export function ToolbarGroup/);
 assert.match(toolbarGroup, /dsPageToolbar/);
@@ -34,7 +35,8 @@ assert.doesNotMatch(toolbarGroup, /\bdsStickyToolbar\b/);
 assert.match(dsIndex, /PageToolbarCtaLabel/);
 
 assert.match(pageActionMenu, /page-action-menu-trigger/);
-assert.match(pageActionMenu, /GestionaleMobileBottomSheet/);
+assert.doesNotMatch(pageActionMenu, /GestionaleMobileBottomSheet/);
 assert.match(pageActionMenu, /useGlobalDropdownPortal/);
+assert.match(pageActionMenu, /bottom-end/);
 
 console.log("toolbar-structure.test.ts OK");

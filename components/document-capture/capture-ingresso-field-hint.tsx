@@ -1,6 +1,9 @@
 "use client";
 
-import type { CaptureIngressoFieldHint } from "@/lib/document-capture/capture-ingresso-field-hints";
+import {
+  captureFieldValuesEquivalent,
+  type CaptureIngressoFieldHint,
+} from "@/lib/document-capture/capture-ingresso-field-hints";
 import { isCaptureMultilineFieldKey } from "@/lib/document-capture/capture-field-display-value";
 import type { SchedaIngressoFields } from "@/types/schede";
 import type { ReactNode } from "react";
@@ -90,7 +93,9 @@ export function CaptureIngressoFieldHintInline<K extends keyof SchedaIngressoFie
   const showApply =
     Boolean(suggestion) &&
     Boolean(onApply) &&
-    suggestion!.toLowerCase() !== currentValue.trim().toLowerCase();
+    !captureFieldValuesEquivalent(suggestion!, currentValue, {
+      standardizeLegalSuffix: fieldKey === "cliente",
+    });
 
   const content = (
     <>

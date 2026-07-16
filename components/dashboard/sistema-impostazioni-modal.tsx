@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
@@ -11,11 +10,6 @@ import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-s
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { dsStackPage } from "@/lib/ui/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
-
-const ImportCenterPanel = dynamic(
-  () => import("@/components/import-core/import-center-panel").then((m) => m.ImportCenterPanel),
-  { ssr: false },
-);
 
 /**
  * @deprecated Nessun import attivo. Usare la pagina `/impostazioni` (`SistemaImpostazioniPageView`).
@@ -55,7 +49,6 @@ export function SistemaImpostazioniPageView() {
 
   return (
     <div className={`${layoutPageRoot} min-w-0 ${dsStackPage}`}>
-      <ImportCenterPanel />
       <SistemaImpostazioniWorkspace surface="page" />
     </div>
   );

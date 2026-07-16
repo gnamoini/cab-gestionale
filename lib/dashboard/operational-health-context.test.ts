@@ -24,7 +24,7 @@ function lav(partial: Partial<LavorazioneListRow> & Pick<LavorazioneListRow, "id
     cliente: "C",
     macchina: "M",
     priorita: "media",
-  } as LavorazioneListRow;
+  } as unknown as LavorazioneListRow;
 }
 
 const inactive = computeInactiveLavorazioniCriticality(

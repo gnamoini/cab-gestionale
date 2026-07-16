@@ -1,10 +1,9 @@
 ﻿import "server-only";
 
-import { generateObject } from "ai";
+import { generateObjectWithGeminiFailover } from "@/lib/ai/gemini-generate-object.server";
 import {
   GEMINI_AUTH_ERROR_HINT,
   GEMINI_NOT_CONFIGURED_MESSAGE,
-  getGeminiReportModel,
   isGeminiAuthError,
   isGeminiConfigured,
   resolveGeminiReportAnalysisTimeoutMs,
@@ -14,6 +13,7 @@ import { REPORT_ANALYSIS_SYSTEM_PROMPT } from "@/lib/ai/report-analysis-prompts"
 import {
   reportAnalysisOutputSchema,
   type ReportAnalysisContext,
+  type ReportAnalysisOutput,
 } from "@/lib/report/report-analysis/report-analysis-schema";
 
 function logGenerationError(error: unknown): void {
@@ -28,8 +28,7 @@ export async function generateReportAnalysis(
   context: ReportAnalysisContext,
   signal?: AbortSignal,
 ): Promise<GenerateReportAnalysisResult> {
-  const model = getGeminiReportModel();
-  if (!model) {
+  if (!isGeminiConfigured()) {
     return {
       ok: false,
       code: "not_configured",
@@ -44,14 +43,14 @@ export async function generateReportAnalysis(
     : timeoutSignal;
 
   try {
-    const { object } = await generateObject({
-      model,
+    const { object: rawObject } = await generateObjectWithGeminiFailover({
       schema: reportAnalysisOutputSchema,
       system: REPORT_ANALYSIS_SYSTEM_PROMPT,
       prompt: JSON.stringify(context),
       temperature: 0.3,
       abortSignal: combinedSignal,
     });
+    const object = rawObject as ReportAnalysisOutput;
 
     return { ok: true, data: object };
   } catch (error) {

@@ -89,6 +89,7 @@ const movFiltered = filterMovimentiForReport(
       lavorazione_id: null,
       tipo: "uscita",
       quantita: 2,
+      conta_statistiche: true,
       created_at: "2025-03-10T12:00:00.000Z",
     } satisfies MovimentoRicambioRow,
     {
@@ -97,6 +98,7 @@ const movFiltered = filterMovimentiForReport(
       lavorazione_id: "lav-gone",
       tipo: "uscita",
       quantita: 1,
+      conta_statistiche: true,
       created_at: "2025-03-11T12:00:00.000Z",
     } satisfies MovimentoRicambioRow,
     {
@@ -105,7 +107,17 @@ const movFiltered = filterMovimentiForReport(
       lavorazione_id: "lav-1",
       tipo: "uscita",
       quantita: 4,
+      conta_statistiche: true,
       created_at: "2025-03-12T12:00:00.000Z",
+    } satisfies MovimentoRicambioRow,
+    {
+      id: "m4",
+      ricambio_id: "r1",
+      lavorazione_id: null,
+      tipo: "entrata",
+      quantita: 9,
+      conta_statistiche: false,
+      created_at: "2025-03-13T12:00:00.000Z",
     } satisfies MovimentoRicambioRow,
   ],
   validRicambi,
@@ -113,7 +125,7 @@ const movFiltered = filterMovimentiForReport(
 );
 assert.equal(movFiltered.rows.length, 1);
 assert.equal(movFiltered.rows[0]?.id, "m3");
-assert.equal(movFiltered.excludedCount, 2);
+assert.equal(movFiltered.excludedCount, 3);
 
 const dataset = ReportDataIntegrityLayer.buildValidatedDataset({
   lavorazioniRaw: [
@@ -135,6 +147,7 @@ const dataset = ReportDataIntegrityLayer.buildValidatedDataset({
       tipo: "uscita",
       quantita: 7,
       created_at: "2025-03-20T10:00:00.000Z",
+      conta_statistiche: true,
     },
   ],
   manualEntries: [],

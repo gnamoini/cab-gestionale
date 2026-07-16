@@ -13,6 +13,20 @@ import { dsBtnNeutral, dsBtnPrimary, dsTypoCaption } from "@/lib/ui/design-syste
 
 type Point = SignaturePadPoint;
 
+function ScannedSignaturePreview({ dataUrl, label }: { dataUrl: string; label: string }) {
+  return (
+    <div className="overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-white p-2">
+      <p className={`mb-2 ${dsTypoCaption}`}>Firma letta dal documento</p>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={dataUrl}
+        alt={label}
+        className="mx-auto max-h-[min(28vh,12rem)] w-full object-contain"
+      />
+    </div>
+  );
+}
+
 function clientPoint(canvas: HTMLCanvasElement, clientX: number, clientY: number): Point {
   const rect = canvas.getBoundingClientRect();
   return {
@@ -77,9 +91,15 @@ export function RichiedenteFirmaCaptureModal({
       if (restoreInitial && hasSignatureDataUrl(initialDataUrl)) {
         const img = new Image();
         img.onload = () => {
-          ctx.drawImage(img, 0, 0, cssW, cssH);
+          const canvas = canvasRef.current;
+          const live = canvas?.getContext("2d");
+          if (!canvas || !live) return;
+          live.drawImage(img, 0, 0, cssW, cssH);
           hasInkRef.current = true;
           setHasInk(true);
+        };
+        img.onerror = () => {
+          setError("Impossibile caricare la firma acquisita.");
         };
         img.src = initialDataUrl;
       }
@@ -90,7 +110,7 @@ export function RichiedenteFirmaCaptureModal({
   useLayoutEffect(() => {
     if (!open) return;
     resetPad(true);
-  }, [open, resetPad]);
+  }, [open, initialDataUrl, resetPad]);
 
   useEffect(() => {
     if (!open) return;
@@ -99,7 +119,12 @@ export function RichiedenteFirmaCaptureModal({
 
     const ro = new ResizeObserver(() => {
       const canvas = canvasRef.current;
-      if (!canvas || !hasInkRef.current) {
+      if (!canvas) return;
+      if (!hasInkRef.current) {
+        if (hasSignatureDataUrl(initialDataUrl)) {
+          resetPad(true);
+          return;
+        }
         syncCanvasToPad();
         return;
       }
@@ -117,7 +142,7 @@ export function RichiedenteFirmaCaptureModal({
 
     ro.observe(container);
     return () => ro.disconnect();
-  }, [open, syncCanvasToPad]);
+  }, [open, initialDataUrl, resetPad, syncCanvasToPad]);
 
   const drawLine = useCallback((from: Point, to: Point) => {
     const canvas = canvasRef.current;
@@ -169,15 +194,26 @@ export function RichiedenteFirmaCaptureModal({
 
   const handleSave = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !hasInkRef.current) {
+    if (!canvas) {
+      setError("Area firma non disponibile.");
+      return;
+    }
+    if (!hasInkRef.current) {
+      if (hasSignatureDataUrl(initialDataUrl)) {
+        onSave(initialDataUrl.trim());
+        onClose();
+        return;
+      }
       setError("Disegna la firma prima di salvare.");
       return;
     }
     onSave(exportSignatureDataUrl(canvas));
     onClose();
-  }, [onClose, onSave]);
+  }, [initialDataUrl, onClose, onSave]);
 
   if (!open) return null;
+
+  const scannedFirma = hasSignatureDataUrl(initialDataUrl) ? initialDataUrl.trim() : "";
 
   return (
     <GestionaleModalShell
@@ -187,7 +223,12 @@ export function RichiedenteFirmaCaptureModal({
       titleId={titleId}
     >
       <div className="space-y-3 p-4">
-        <p className={dsTypoCaption}>Firma con dito o pennino nell&apos;area bianca.</p>
+        <p className={dsTypoCaption}>
+          {scannedFirma
+            ? "Anteprima dalla scansione. Puoi confermarla o ridisegnarla nell'area sotto."
+            : "Firma con dito o pennino nell'area bianca."}
+        </p>
+        {scannedFirma ? <ScannedSignaturePreview dataUrl={scannedFirma} label={title} /> : null}
         <div
           ref={padRef}
           className="relative h-[12.5rem] min-h-[12.5rem] w-full overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-white"

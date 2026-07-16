@@ -27,14 +27,18 @@ export function useSchedaIngressoMezzoPrompt({
 }) {
   const [promptMezzo, setPromptMezzo] = useState<MezzoGestito | null>(null);
   const dismissedIds = useRef(new Set<string>());
+  const promptedIdRef = useRef<string | null>(null);
 
   const requestPrompt = useCallback((mezzo: MezzoGestito) => {
     if (dismissedIds.current.has(mezzo.id)) return;
+    if (promptedIdRef.current === mezzo.id) return;
+    promptedIdRef.current = mezzo.id;
     setPromptMezzo(mezzo);
   }, []);
 
   const dismissPrompt = useCallback(() => {
     if (promptMezzo) dismissedIds.current.add(promptMezzo.id);
+    promptedIdRef.current = null;
     setPromptMezzo(null);
   }, [promptMezzo]);
 
@@ -56,6 +60,7 @@ export function useSchedaIngressoMezzoPrompt({
       if (copyResult.kind === "single") next = copyResult.fields;
     }
     setFields(next);
+    promptedIdRef.current = null;
     setPromptMezzo(null);
   }, [attive, excludeLavorazioneId, fields, mezzi, promptMezzo, schedeStore, setFields, storico]);
 

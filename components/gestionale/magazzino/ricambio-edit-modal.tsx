@@ -26,6 +26,7 @@ import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { dsBtnDanger, dsBtnNeutral } from "@/lib/ui/design-system";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
+import { applyScortaDeltaViaMovimento } from "@/lib/magazzino/scorta-movement";
 import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
 import { ricambioUiFromMagazzinoRow } from "@/lib/magazzino/magazzino-list-cache";
 import {
@@ -54,6 +55,7 @@ export function RicambioEditModal({
   onSaved,
   onSaveError,
   onImageEvent,
+  modalitaModifica = false,
 }: {
   ricambioId: string;
   ricambio: RicambioMagazzino;
@@ -71,6 +73,8 @@ export function RicambioEditModal({
   onSaved: (ui: RicambioMagazzino, message: string) => void;
   onSaveError: (message: string) => void;
   onImageEvent?: (event: RecordImageLogEvent) => void;
+  /** Se true, variazioni scorta contano nelle statistiche. */
+  modalitaModifica?: boolean;
 }) {
   const baselineForm = useMemo(() => toFormDraft(ricambio, mezziListePrefs), [ricambio, mezziListePrefs]);
   const formEngine = useFormEngine<RicambioFormState>({
@@ -168,8 +172,18 @@ export function RicambioEditModal({
       const next = ricambioFromFormLenient(currentDraft, ricambioId, authorName, {
         mezziListe: mezziListePrefs,
       });
+      const scortaPrima = Math.round(ricambio.scorta);
+      const scortaDelta = Math.round(next.scorta) - scortaPrima;
       setSaveBusy(true);
       try {
+        if (scortaDelta !== 0) {
+          const moved = await applyScortaDeltaViaMovimento(ricambioId, scortaDelta, modalitaModifica);
+          if (!moved.success) {
+            onSaveError(moved.error ?? "Aggiornamento scorta non riuscito.");
+            return;
+          }
+          next.scorta = moved.data!;
+        }
         const updated = await magazzinoEntry.update(
           ricambioId,
           ricambioUiToMagazzinoUpdate(next, mezziListePrefs),

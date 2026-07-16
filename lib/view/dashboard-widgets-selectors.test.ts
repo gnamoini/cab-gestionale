@@ -184,9 +184,9 @@ assert.equal(computeDashboardMagRecentRicambi(ricambiMix)[0]?.id, "r2");
 
 const today = new Date().toISOString();
 const movs: MovimentoRicambioRow[] = [
-  { id: "m1", ricambio_id: "r1", lavorazione_id: null, tipo: "entrata", quantita: 2, created_at: today },
-  { id: "m2", ricambio_id: "r1", lavorazione_id: null, tipo: "uscita", quantita: 1, created_at: today },
-  { id: "m3", ricambio_id: "r1", lavorazione_id: null, tipo: "entrata", quantita: 1, created_at: "2020-01-01T00:00:00.000Z" },
+  { id: "m1", ricambio_id: "r1", lavorazione_id: null, tipo: "entrata", quantita: 2, conta_statistiche: true, created_at: today },
+  { id: "m2", ricambio_id: "r1", lavorazione_id: null, tipo: "uscita", quantita: 1, conta_statistiche: true, created_at: today },
+  { id: "m3", ricambio_id: "r1", lavorazione_id: null, tipo: "entrata", quantita: 1, conta_statistiche: true, created_at: "2020-01-01T00:00:00.000Z" },
 ];
 const daily = computeDashboardMagDailyMovements(movs);
 assert.equal(daily.entrate, 2);

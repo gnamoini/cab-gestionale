@@ -43,6 +43,20 @@ assert.equal(merged.cliente, "Già inserito");
 assert.equal(merged.marcaAttrezzatura, "Bobcat");
 assert.equal(merged.dataIngresso, "01/01/2026");
 
+const FIRMA = "data:image/png;base64,abc";
+const withCaptureFirme = mergeSchedaIngressoFields(
+  baseFields(),
+  { ...baseFields(), richiedenteFirma: FIRMA, addettoFirma: FIRMA },
+);
+assert.equal(withCaptureFirme.richiedenteFirma, undefined);
+const fromCapture = mergeSchedaIngressoFields(
+  baseFields(),
+  { ...baseFields(), richiedenteFirma: FIRMA, addettoFirma: FIRMA },
+  { copySignatures: true },
+);
+assert.equal(fromCapture.richiedenteFirma, FIRMA);
+assert.equal(fromCapture.addettoFirma, FIRMA);
+
 const store = {
   "lav-old": {
     lavorazioneId: "lav-old",

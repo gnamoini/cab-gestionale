@@ -342,6 +342,8 @@ export type MovimentoRicambioRow = {
   lavorazione_id: string | null;
   tipo: TipoMovimentoRicambio;
   quantita: number;
+  /** false = rettifica inventario, esclusa da KPI/report. */
+  conta_statistiche: boolean;
   created_at: string;
 };
 

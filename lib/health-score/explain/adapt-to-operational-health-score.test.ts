@@ -84,4 +84,12 @@ assert.ok(
   "sla-late-pct nascosto se late-ingress è già in elenco",
 );
 
+assert.ok(operational.calculation, "riepilogo calcolo presente");
+assert.ok(operational.calculation!.baseScore >= 0 && operational.calculation!.baseScore <= 100);
+assert.ok(operational.factors.some((f) => f.detail && f.detail.includes("indicatore")), "dettaglio KPI");
+assert.ok(
+  operational.factors.some((f) => f.impact < 0 && f.detail?.includes("Penalità")),
+  "dettaglio penalità risk",
+);
+
 console.log("adapt-to-operational-health-score.test.ts OK");

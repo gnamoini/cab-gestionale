@@ -12,6 +12,7 @@ import {
 } from "@/lib/document-capture/capture-extraction-schema";
 import { buildGeminiCaptureDocumentPart } from "@/lib/document-capture/gemini-capture-content";
 import { normalizeCaptureMime } from "@/lib/document-capture/capture-mime";
+import { resolveGeminiReportModelId } from "@/lib/ai/gemini-client";
 import {
   SCHEDA_OFFICINA_EXTRACTION_SYSTEM,
   SCHEDA_OFFICINA_EXTRACTION_USER,
@@ -35,7 +36,7 @@ async function main(): Promise<void> {
   }
   const bytes = new Uint8Array(fs.readFileSync(imagePath));
   const mime = normalizeCaptureMime({ fileName: path.basename(imagePath), bytes });
-  const model = createGoogleGenerativeAI({ apiKey })("gemini-2.5-flash");
+  const model = createGoogleGenerativeAI({ apiKey })(resolveGeminiReportModelId());
 
   const t0 = performance.now();
   const { object } = await generateObject({

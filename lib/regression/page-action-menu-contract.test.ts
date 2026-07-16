@@ -30,6 +30,7 @@ assert.match(types, /submenu\?:/);
 assert.match(menu, /data-testid="page-action-menu-trigger"/);
 assert.match(menu, /role="menu"/);
 assert.match(menu, /filterPageActionItems/);
+assert.match(menu, /pageActionMenuHasContent/);
 assert.match(menu, /e\.key !== "a"/);
 
 assert.match(provider, /registerGroup/);

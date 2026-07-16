@@ -31,6 +31,9 @@ const PROPER_LABEL_FIELD_KEYS = new Set([
   "cliente",
   "cantiere",
   "utilizzatore",
+  "tipo_attrezzatura",
+  "tipoattrezzatura",
+  "attrezzatura",
   "fornitore",
   "marca_attrezzatura",
   "marcaattrezzatura",
@@ -146,6 +149,96 @@ export function matchCapturePersonNameFromAddetti(
   return null;
 }
 
+/** Ripristina a capo quando l'estrazione ha appiattito righe separate sulla scheda. */
+export function inferCaptureMultilineBreaks(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed || /\n/.test(trimmed)) return trimmed;
+  // ponytail: euristica — nuova riga dopo .!? se segue maiuscola o bullet (non cifra: evita "n. 1")
+  return trimmed.replace(/([.!?])\s+(?=[A-ZÀ-ÖØ-Þ*•\-])/g, "$1\n");
+}
+
+/** Correzioni refuso OCR frequenti su note officina — nessuna chiamata AI aggiuntiva. */
+export function polishCaptureWorkshopOcrText(value: string): string {
+  let text = value.replace(/\r\n/g, "\n");
+  // Frammenti spezzati su due righe (es. "di supp" + "Da.")
+  text = text.replace(/\bdi supp\s*\n\s*Da\.\s*/gi, "di supporto da. ");
+  text = text.replace(/\bCompleta di supp\s*\n\s*Da\.\s*/gi, "Completa di supporto da. ");
+  text = text.replace(/\bdi supp\b/gi, "di supporto");
+  text = text.replace(/\bCompleta di supp\b/gi, "Completa di supporto");
+
+  const wordFixes: Array<[RegExp, string]> = [
+    [/\bXn\./g, "N."],
+    [/\bxn\./g, "n."],
+    [/\bIn (\d+) kit\b/gi, "N. $1 kit"],
+    [/\baspirae\b/gi, "aspirazione"],
+    [/\baspiratione\b/gi, "aspirazione"],
+    [/\bbocca aspirae\b/gi, "bocca aspirazione"],
+    [/\bcor verificare\b/gi, "per verificare"],
+    [/\bcor\s+verificare\b/gi, "per verificare"],
+    [/\bgia[''`´]/gi, "già"],
+    [/\bverificare\)\b/gi, "verificare"],
+    [/\s+\)\s*$/gm, ""],
+    [/\bN ugelli\b/gi, "N. ugelli"],
+    [/\bN\.1\b/g, "n. 1"],
+  ];
+  for (const [pattern, replacement] of wordFixes) {
+    text = text.replace(pattern, replacement);
+  }
+  // Segnaposto "ok" a fine voce (checklist manoscritta)
+  text = text.replace(/\bok\b/gi, "OK");
+  return text;
+}
+
+const WORKSHOP_ALL_CAPS_WORD_ALLOWLIST = new Set(["OK", "N"]);
+
+/** Parole OCR tutte maiuscole nel mezzo di una frase mista → minuscole (es. «Già SOSTITUITA»). */
+function lowerWorkshopAllCapsWords(text: string): string {
+  return text.replace(/\b([A-ZÀ-ÖØ-Þ]+)([.,;:!?]?)\b/g, (full, letters, punct) => {
+    if (letters.length < 2 || WORKSHOP_ALL_CAPS_WORD_ALLOWLIST.has(letters)) return full;
+    if (letters !== letters.toUpperCase()) return full;
+    return letters.toLocaleLowerCase("it-IT") + punct;
+  });
+}
+
+function capitalizeMultilineToken(text: string): string {
+  const t = lowerWorkshopAllCapsWords(text.trim());
+  if (!t) return "";
+  const normalized =
+    t === t.toUpperCase() && /[A-ZÀ-ÖØ-Þ]/.test(t) ? t.toLocaleLowerCase("it-IT") : t;
+  return normalized.charAt(0).toLocaleUpperCase("it-IT") + normalized.slice(1);
+}
+
+function capitalizeMultilineFragment(fragment: string): string {
+  const trimmed = fragment.trim();
+  if (!trimmed) return "";
+  const bullet = /^([*•\-–]\s+)([\s\S]*)$/.exec(trimmed);
+  if (bullet) {
+    return `${bullet[1]}${capitalizeMultilineToken(bullet[2] ?? "")}`;
+  }
+  return capitalizeMultilineToken(trimmed);
+}
+
+/** Testo multilinea da OCR: conserva a capo, corregge refusi officina, normalizza maiuscole. */
+export function formatCaptureMultilineText(value: string): string {
+  const withBreaks = inferCaptureMultilineBreaks(value);
+  const polished = polishCaptureWorkshopOcrText(withBreaks);
+  const trimmed = polished.trim();
+  if (!trimmed) return "";
+  const lines = trimmed.split(/\r?\n/).map((line) => line.trim());
+  const parts = lines.some((line) => line.length > 0) ? lines.filter((line) => line.length > 0) : [trimmed];
+  return parts.map(formatCaptureMultilineLine).join("\n");
+}
+
+function formatCaptureMultilineLine(line: string): string {
+  const collapsed = line.replace(/[^\S\n]+/g, " ").trim();
+  if (!collapsed) return "";
+  return collapsed
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => capitalizeMultilineFragment(sentence))
+    .filter(Boolean)
+    .join(" ");
+}
+
 export function formatCaptureReviewDisplayValue(
   fieldKey: string,
   input: {
@@ -162,14 +255,17 @@ export function formatCaptureReviewDisplayValue(
     const raw = safeTrim(input.raw);
     const normalized = safeTrim(input.normalized);
     const resolved = safeTrim(input.resolvedLabel);
+    let picked = "";
     if (confirmed) {
       const fromRaw = raw ? preferRawIfSameMeaning(raw, confirmed) : null;
-      return fromRaw ?? confirmed;
+      picked = fromRaw ?? confirmed;
+    } else {
+      const candidate = normalized || raw;
+      const fromRaw = raw && candidate ? preferRawIfSameMeaning(raw, candidate) : null;
+      if (fromRaw) picked = fromRaw;
+      else picked = raw || normalized || resolved;
     }
-    const candidate = normalized || raw;
-    const fromRaw = raw && candidate ? preferRawIfSameMeaning(raw, candidate) : null;
-    if (fromRaw) return fromRaw;
-    return raw || normalized || resolved;
+    return formatCaptureMultilineText(picked);
   }
   if (isCaptureSignatureFieldKey(key)) {
     const v = safeTrim(input.confirmed) || safeTrim(input.normalized) || safeTrim(input.raw);
@@ -226,7 +322,7 @@ export function formatCaptureReviewDraftValue(
     return hasSignatureDataUrl(value) ? value.trim() : "";
   }
   if (isCaptureMultilineFieldKey(fieldKey)) {
-    return value.trim();
+    return formatCaptureMultilineText(value.trim());
   }
   const trimmed = value.trim();
   if (!trimmed) return "";
@@ -271,6 +367,7 @@ export function applyCaptureResolutionToDraft(
 const MULTILINE_CAPTURE_FIELD_KEYS = new Set([
   "descrizione_anomalia",
   "descrizioneanomalia",
+  "note",
   "note_intervento",
   "noteintervento",
 ]);

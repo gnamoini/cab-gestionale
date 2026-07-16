@@ -1,4 +1,6 @@
-import { isCaptureMultilineFieldKey } from "@/lib/document-capture/capture-field-display-value";
+import { formatCaptureMultilineText, isCaptureMultilineFieldKey } from "@/lib/document-capture/capture-field-display-value";
+import { normalizeCaptureIngressoDateValue, sanitizeCaptureExtractedFieldValue } from "@/lib/document-capture/capture-field-key-aliases";
+import { isCaptureSignatureFieldKey } from "@/lib/document-capture/capture-signature-field-keys";
 import { emptySchedaIngressoFields } from "@/lib/domain/intervento-context/build-intervento-context";
 import { findAddettoByStoredName, addettoDisplayName, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { findDuplicateByCodici } from "@/lib/magazzino/duplicates";
@@ -22,6 +24,7 @@ const INGRESSO_KEY_MAP: Record<string, keyof SchedaIngressoFields> = {
   data_ingresso: "dataIngresso",
   tipoattrezzatura: "tipoAttrezzatura",
   tipo_attrezzatura: "tipoAttrezzatura",
+  attrezzatura: "tipoAttrezzatura",
   marcaattrezzatura: "marcaAttrezzatura",
   marca_attrezzatura: "marcaAttrezzatura",
   attrezzatura_marca: "marcaAttrezzatura",
@@ -89,10 +92,18 @@ export type CaptureFieldRow = {
 };
 
 export function resolveCaptureFieldValue(row: CaptureFieldRow): string {
+  if (isCaptureSignatureFieldKey(row.field_key)) {
+    const v = row.confirmed_value ?? row.raw_value ?? row.normalized_value ?? "";
+    return typeof v === "string" ? v.trim() : "";
+  }
   const v = isCaptureMultilineFieldKey(row.field_key)
     ? (row.confirmed_value ?? row.raw_value ?? row.normalized_value ?? "")
     : (row.confirmed_value ?? row.normalized_value ?? "");
-  return typeof v === "string" ? v.trim() : "";
+  const trimmed = typeof v === "string" ? v.trim() : "";
+  if (isCaptureMultilineFieldKey(row.field_key) && trimmed) {
+    return formatCaptureMultilineText(trimmed);
+  }
+  return sanitizeCaptureExtractedFieldValue(row.field_key, trimmed);
 }
 
 export function resolveRawFieldValue(fields: readonly CaptureFieldRow[], ...keys: string[]): string {
@@ -269,7 +280,9 @@ export function mapCaptureFieldsToIngresso(
     if (rec) out.addettoAccettazione = addettoDisplayName(rec);
   }
   applyIngressoSlice(out, mapCaptureHeaderToIngressoSlice(fields));
-  if (!out.dataIngresso.trim()) {
+  if (out.dataIngresso.trim()) {
+    out.dataIngresso = normalizeCaptureIngressoDateValue(out.dataIngresso);
+  } else {
     out.dataIngresso = new Date().toLocaleDateString("it-IT");
   }
   return out;
@@ -404,6 +417,27 @@ export function buildCaptureBundleSchedaPatch(input: {
     includeLavorazioni: input.schedaTipo === "lavorazioni",
     includeRicambi: input.schedaTipo === "ricambi",
     schedaTipo: input.schedaTipo,
+    addettiRecords: input.addettiRecords,
+    magazzino: input.magazzino,
+  });
+  return { lavorazioni: bundle.lavorazioni, ricambi: bundle.ricambi };
+}
+
+export function buildCaptureMultiSchedaBundlePatch(input: {
+  lavorazioneId: string;
+  fields: readonly CaptureFieldRow[];
+  createdBy: string;
+  stages: readonly ("lavorazioni" | "ricambi")[];
+  addettiRecords?: readonly AddettoRecord[];
+  magazzino?: readonly RicambioMagazzino[];
+}): Pick<LavorazioneSchedeBundle, "lavorazioni" | "ricambi"> {
+  const bundle = buildCaptureSchedeBundle({
+    lavorazioneId: input.lavorazioneId,
+    fields: input.fields,
+    createdBy: input.createdBy,
+    includeLavorazioni: input.stages.includes("lavorazioni"),
+    includeRicambi: input.stages.includes("ricambi"),
+    schedaTipo: input.stages[0] ?? "lavorazioni",
     addettiRecords: input.addettiRecords,
     magazzino: input.magazzino,
   });

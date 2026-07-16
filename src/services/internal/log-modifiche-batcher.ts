@@ -3,6 +3,14 @@ import type { AuditAzione, AuditPayload } from "@/src/services/internal/audit-lo
 
 const BATCH_DEBOUNCE_MS = 3_500;
 
+/** ponytail: batch solo burst magazzino (+/− scorta); altre entità scrivono subito. */
+const LOG_UPDATE_BATCH_ENTITA = new Set(["magazzino_ricambi", "movimenti_ricambi"]);
+
+type FlushWaiter = {
+  resolve: () => void;
+  reject: (reason?: unknown) => void;
+};
+
 type PendingLog = {
   client: SupabaseClient;
   entita: string;
@@ -11,9 +19,13 @@ type PendingLog = {
   payload?: AuditPayload;
   autore_id?: string | null;
   timer: ReturnType<typeof setTimeout>;
+  waiters: FlushWaiter[];
 };
 
 const pending = new Map<string, PendingLog>();
+
+let lifecycleRegistered = false;
+let lifecycleFlush: FlushModificaLogFn | null = null;
 
 function batchKey(entita: string, entita_id: string, azione: AuditAzione, autore_id: string | null | undefined): string {
   return `${autore_id ?? ""}:${entita}:${entita_id}:${azione}`;
@@ -45,8 +57,8 @@ export function mergeAuditDiffPayload(existing: AuditPayload | undefined, incomi
   return merged;
 }
 
-function shouldBatch(azione: AuditAzione): boolean {
-  return azione === "UPDATE";
+export function shouldBatchModificaLogUpdate(azione: AuditAzione, entita: string): boolean {
+  return azione === "UPDATE" && LOG_UPDATE_BATCH_ENTITA.has(entita);
 }
 
 type FlushInput = {
@@ -61,22 +73,34 @@ type FlushInput = {
 /** Inserimento diretto (senza batch) — usato dal flush. */
 export type FlushModificaLogFn = (input: FlushInput) => Promise<void>;
 
+function createFlushWaiter(): { promise: Promise<void>; waiter: FlushWaiter } {
+  let resolve!: () => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<void>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, waiter: { resolve, reject } };
+}
+
 export function queueModificaLog(
   flush: FlushModificaLogFn,
   client: SupabaseClient,
   input: FlushInput,
 ): Promise<void> {
-  if (!shouldBatch(input.azione)) {
+  if (!shouldBatchModificaLogUpdate(input.azione, input.entita)) {
     return flush(input);
   }
 
   const key = batchKey(input.entita, input.entita_id, input.azione, input.autore_id);
+  const { promise, waiter } = createFlushWaiter();
   const existing = pending.get(key);
   if (existing) {
     clearTimeout(existing.timer);
     existing.payload = mergeAuditDiffPayload(existing.payload, input.payload);
+    existing.waiters.push(waiter);
     existing.timer = setTimeout(() => void flushPending(key, flush), BATCH_DEBOUNCE_MS);
-    return Promise.resolve();
+    return promise;
   }
 
   const entry: PendingLog = {
@@ -86,10 +110,11 @@ export function queueModificaLog(
     azione: input.azione,
     payload: input.payload,
     autore_id: input.autore_id,
+    waiters: [waiter],
     timer: setTimeout(() => void flushPending(key, flush), BATCH_DEBOUNCE_MS),
   };
   pending.set(key, entry);
-  return Promise.resolve();
+  return promise;
 }
 
 async function flushPending(key: string, flush: FlushModificaLogFn): Promise<void> {
@@ -97,17 +122,23 @@ async function flushPending(key: string, flush: FlushModificaLogFn): Promise<voi
   if (!entry) return;
   pending.delete(key);
   clearTimeout(entry.timer);
-  await flush({
-    client: entry.client,
-    entita: entry.entita,
-    entita_id: entry.entita_id,
-    azione: entry.azione,
-    payload: entry.payload,
-    autore_id: entry.autore_id,
-  });
+  const waiters = entry.waiters;
+  try {
+    await flush({
+      client: entry.client,
+      entita: entry.entita,
+      entita_id: entry.entita_id,
+      azione: entry.azione,
+      payload: entry.payload,
+      autore_id: entry.autore_id,
+    });
+    for (const w of waiters) w.resolve();
+  } catch (error) {
+    for (const w of waiters) w.reject(error);
+  }
 }
 
-/** Per test o logout: scrive subito tutti i log in coda. */
+/** Per test, logout o pagehide: scrive subito tutti i log in coda. */
 export async function flushAllModificaLogs(flush: FlushModificaLogFn): Promise<void> {
   const keys = [...pending.keys()];
   await Promise.all(
@@ -117,4 +148,19 @@ export async function flushAllModificaLogs(flush: FlushModificaLogFn): Promise<v
       }),
     ),
   );
+}
+
+/** ponytail: flush su tab hide — evita perdita coda magazzino su reload/HMR. */
+export function registerModificaLogPageLifecycleFlush(flush: FlushModificaLogFn): void {
+  if (typeof window === "undefined" || lifecycleRegistered) return;
+  lifecycleRegistered = true;
+  lifecycleFlush = flush;
+  const run = () => {
+    if (!lifecycleFlush) return;
+    void flushAllModificaLogs(lifecycleFlush);
+  };
+  window.addEventListener("pagehide", run);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") run();
+  });
 }

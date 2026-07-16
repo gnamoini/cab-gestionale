@@ -1,10 +1,9 @@
 import "server-only";
 
-import { generateObject } from "ai";
+import { generateObjectWithGeminiFailover } from "@/lib/ai/gemini-generate-object.server";
 import {
   GEMINI_FILE_ANALYSIS_TIMEOUT_MS,
   GEMINI_NOT_CONFIGURED_MESSAGE,
-  getGeminiReportModel,
   isGeminiConfigured,
 } from "@/lib/ai/gemini-client";
 import type { CaptureExtractionResult } from "@/lib/document-capture/capture-extraction-schema";
@@ -32,17 +31,49 @@ import {
 import { inferCaptureSchedaTipo } from "@/lib/document-capture/capture-field-mapper";
 import { upsertCaptureSignatureFields } from "@/lib/document-capture/upsert-capture-signature-fields.server";
 import { parsePhysicalPages } from "@/lib/document-capture/physical/physical-parser";
+import { normalizeCaptureExtractedFieldKey } from "@/lib/document-capture/capture-field-key-aliases";
 import { projectDocumentModelToFlatFields } from "@/lib/document-capture/projection/document-model-flat-projection";
 import {
   ensureSchedaOfficinaPluginRegistered,
   runSchedaPipelineViews,
 } from "@/lib/document-capture/registry/scheda-officina-plugin";
 import { schedaOfficinaPromptContract } from "@/lib/document-capture/registry/prompt-contract";
+import { isDocumentCaptureHybridExtractionEnabled } from "@/lib/document-capture/document-capture-hybrid.server";
+import {
+  captureResultToHybridFields,
+  hybridFieldsToCaptureExtraction,
+  mergeWithGeminiFields,
+} from "@/lib/document-capture/extraction/hybrid-extraction-merge";
+import { runHybridExtractionWithTimeout } from "@/lib/document-capture/extraction/run-hybrid-extraction.server";
+import { SCHEDA_OFFICINA_EXTRACTION_USER } from "@/lib/document-capture/scheda-officina-extraction-prompt";
 import { classifyStorageDownloadError } from "@/lib/storage/storage-download-errors";
 import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
+import { appendFileSync } from "node:fs";
+import { join } from "node:path";
 
 const RETRY_BACKOFF_MS = [1_000, 3_000] as const;
+
+const DEBUG_LOG_PATHS = [
+  join(process.cwd(), "debug-bd086a.log"),
+  join(process.cwd(), ".cursor", "debug-bd086a.log"),
+];
+
+function debugAnalyzePipelineLog(payload: Record<string, unknown>): void {
+  const line = `${JSON.stringify({ sessionId: "bd086a", timestamp: Date.now(), ...payload })}\n`;
+  for (const logPath of DEBUG_LOG_PATHS) {
+    try {
+      appendFileSync(logPath, line);
+    } catch {
+      /* ignore */
+    }
+  }
+  fetch("http://127.0.0.1:7863/ingest/89dc6c11-bff2-45f2-876e-83e3ac496a5d", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bd086a" },
+    body: JSON.stringify({ sessionId: "bd086a", timestamp: Date.now(), ...payload }),
+  }).catch(() => {});
+}
 
 export type AnalyzeCaptureV41Result =
   | {
@@ -92,10 +123,16 @@ export async function analyzeDocumentCaptureV41(
   captureId: string,
   userId: string,
 ): Promise<AnalyzeCaptureV41Result> {
-  const model = getGeminiReportModel();
-  if (!model || !isGeminiConfigured()) {
-    return { ok: false, code: "not_configured", message: GEMINI_NOT_CONFIGURED_MESSAGE };
-  }
+  // #region agent log
+  debugAnalyzePipelineLog({
+    hypothesisId: "ANALYZE_START",
+    location: "analyze-capture-v41.server.ts",
+    message: "analyze v41 started",
+    data: { captureId },
+  });
+  // #endregion
+  const geminiReady = isGeminiConfigured();
+  const hybridEnabled = isDocumentCaptureHybridExtractionEnabled();
 
   const sb = await createSupabaseServerUserClient();
   const { data: capture, error } = await sb
@@ -186,42 +223,127 @@ export async function analyzeDocumentCaptureV41(
     return { ok: false, code: "failed", message };
   }
 
+  const hybridResult = hybridEnabled
+    ? await runHybridExtractionWithTimeout({ bytes, mime, pageObjects })
+    : null;
+
+  // #region agent log
+  debugAnalyzePipelineLog({
+    hypothesisId: "HYBRID_PHASE_DONE",
+    location: "analyze-capture-v41.server.ts",
+    message: "hybrid phase completed",
+    data: {
+      captureId,
+      hybridEnabled,
+      hybridNull: hybridResult === null,
+      mergedCount: hybridResult?.mergedPrefill.length ?? 0,
+      needsGemini: hybridResult?.needsGemini ?? true,
+      schedaTipo: hybridResult?.schedaTipo ?? null,
+      geminiReady,
+    },
+  });
+  // #endregion
+
+  if (!geminiReady && (!hybridResult || hybridResult.mergedPrefill.length === 0)) {
+    return { ok: false, code: "not_configured", message: GEMINI_NOT_CONFIGURED_MESSAGE };
+  }
+
   let lastError: unknown;
   let attemptId = "";
   let usage: { inputTokens?: number; outputTokens?: number; totalTokens?: number } | undefined;
+  let geminiUsed = false;
+  let hybridMetadata: Record<string, unknown> | undefined;
 
-  for (let attempt = 0; attempt <= RETRY_BACKOFF_MS.length; attempt += 1) {
+  for (let retryAttempt = 0; retryAttempt <= RETRY_BACKOFF_MS.length; retryAttempt += 1) {
     try {
-      const { object, usage: u, response } = await generateObject({
-        model,
-        schema: captureExtractionSchema,
-        system: schedaOfficinaPromptContract.systemPrompt,
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: schedaOfficinaPromptContract.userPromptTemplate },
-              buildGeminiCaptureDocumentPart(bytes, mime),
-            ],
+      let object: CaptureExtractionResult;
+
+      if (hybridResult && !hybridResult.needsGemini && hybridResult.mergedPrefill.length > 0) {
+        object = hybridFieldsToCaptureExtraction(hybridResult.mergedPrefill, hybridResult.schedaTipo);
+        hybridMetadata = {
+          hybrid: {
+            geminiUsed: false,
+            schedaTipoDetected: hybridResult.schedaTipo,
+            pdfTextFieldCount: hybridResult.pdfTextFields.length,
+            templateOcrFieldCount: hybridResult.templateOcrFields.length,
           },
-        ],
-        temperature: 0.2,
-        abortSignal: AbortSignal.timeout(GEMINI_FILE_ANALYSIS_TIMEOUT_MS),
-      });
-      usage = u;
+        };
+      } else if (geminiReady) {
+        geminiUsed = true;
+        // #region agent log
+        debugAnalyzePipelineLog({
+          hypothesisId: "GEMINI_START",
+          location: "analyze-capture-v41.server.ts",
+          message: "calling gemini generateObject",
+          data: { captureId, retryAttempt, hasPrefill: Boolean(hybridResult?.geminiUserPrompt) },
+        });
+        // #endregion
+        const userPrompt =
+          hybridResult?.geminiUserPrompt ??
+          schedaOfficinaPromptContract.userPromptTemplate ??
+          SCHEDA_OFFICINA_EXTRACTION_USER;
+        const { object: geminiObject, usage: u, response } = await generateObjectWithGeminiFailover({
+          schema: captureExtractionSchema,
+          system: schedaOfficinaPromptContract.systemPrompt,
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: userPrompt },
+                buildGeminiCaptureDocumentPart(bytes, mime),
+              ],
+            },
+          ],
+          temperature: 0.2,
+          abortSignal: AbortSignal.timeout(GEMINI_FILE_ANALYSIS_TIMEOUT_MS),
+        });
+        usage = u;
+        const geminiExtraction = geminiObject as CaptureExtractionResult;
+        const geminiFields = captureResultToHybridFields(listCaptureExtractionFields(geminiExtraction.fields));
+        const merged = mergeWithGeminiFields(hybridResult?.mergedPrefill ?? [], geminiFields);
+        object = hybridFieldsToCaptureExtraction(merged, geminiExtraction.schedaTipo ?? hybridResult?.schedaTipo ?? null);
+        if (geminiExtraction.schedaTipo) object.schedaTipo = geminiExtraction.schedaTipo;
+        if (geminiExtraction.warnings?.length) object.warnings = geminiExtraction.warnings;
+        hybridMetadata = {
+          hybrid: {
+            geminiUsed: true,
+            schedaTipoDetected: hybridResult?.schedaTipo ?? geminiExtraction.schedaTipo ?? null,
+            pdfTextFieldCount: hybridResult?.pdfTextFields.length ?? 0,
+            templateOcrFieldCount: hybridResult?.templateOcrFields.length ?? 0,
+            prefillFieldCount: hybridResult?.mergedPrefill.length ?? 0,
+          },
+          providerRequestId:
+            response && typeof response === "object" && "id" in response
+              ? String((response as { id?: string }).id ?? "")
+              : null,
+        };
+      } else if (hybridResult && hybridResult.mergedPrefill.length > 0) {
+        object = hybridFieldsToCaptureExtraction(hybridResult.mergedPrefill, hybridResult.schedaTipo);
+        hybridMetadata = {
+          hybrid: {
+            geminiUsed: false,
+            schedaTipoDetected: hybridResult.schedaTipo,
+            pdfTextFieldCount: hybridResult.pdfTextFields.length,
+            templateOcrFieldCount: hybridResult.templateOcrFields.length,
+          },
+        };
+      } else {
+        return { ok: false, code: "no_fields", message: "Nessun dato letto dalla scheda. Verifica che foto o PDF siano nitidi e riprova." };
+      }
+
       const { count } = await sb
         .from("document_capture_attempts")
         .select("id", { count: "exact", head: true })
         .eq("document_capture_id", captureId);
       const attemptNumber = (count ?? 0) + 1;
       const providerRequestId =
-        response && typeof response === "object" && "id" in response
-          ? String((response as { id?: string }).id ?? "")
+        hybridMetadata && "providerRequestId" in hybridMetadata
+          ? String(hybridMetadata.providerRequestId ?? "")
           : null;
 
       const durationMs = Math.round(performance.now() - t0);
       const extractionResult = legacyToExtractionResult("pending", object, {
-        modelId: "gemini",
+        modelId: geminiUsed ? "gemini" : "hybrid",
         promptContractId: schedaOfficinaPromptContract.id,
         promptVersion: schedaOfficinaPromptContract.version,
         outputSchemaVersion: schedaOfficinaPromptContract.outputSchemaVersion,
@@ -242,19 +364,19 @@ export async function analyzeDocumentCaptureV41(
       const { validation } = runSchedaPipelineViews(document);
       void validation;
 
-      const { data: attempt, error: insError } = await sb
+      const { data: attemptRow, error: insError } = await sb
         .from("document_capture_attempts")
         .insert({
           company_id: capture.company_id,
           document_capture_id: captureId,
           attempt_number: attemptNumber,
-          provider: "google",
-          model: "gemini",
+          provider: geminiUsed ? "google" : "hybrid",
+          model: geminiUsed ? "gemini" : "tesseract+pdfjs",
           structured_response: object,
           extraction_result: { ...extractionResult, attemptId: "pending" },
           prompt_contract_id: schedaOfficinaPromptContract.id,
           prompt_version: schedaOfficinaPromptContract.version,
-          metadata: extractionResult.modelMetadata,
+          metadata: { ...extractionResult.modelMetadata, ...hybridMetadata },
           status: "completed",
           input_tokens: usage?.inputTokens ?? null,
           output_tokens: usage?.outputTokens ?? null,
@@ -266,8 +388,8 @@ export async function analyzeDocumentCaptureV41(
         .select("id")
         .single();
 
-      if (insError || !attempt) throw new Error(insError?.message ?? "Salvataggio attempt fallito.");
-      attemptId = attempt.id;
+      if (insError || !attemptRow) throw new Error(insError?.message ?? "Salvataggio attempt fallito.");
+      attemptId = attemptRow.id;
       extractionResult.attemptId = attemptId;
 
       const flatFields = projectDocumentModelToFlatFields(document);
@@ -275,7 +397,7 @@ export async function analyzeDocumentCaptureV41(
         company_id: capture.company_id,
         document_capture_id: captureId,
         attempt_id: attemptId,
-        field_key: f.fieldKey,
+        field_key: normalizeCaptureExtractedFieldKey(f.fieldKey),
         raw_value: f.value,
         normalized_value: f.value,
         confidence: f.confidence,
@@ -363,11 +485,31 @@ export async function analyzeDocumentCaptureV41(
       };
     } catch (e) {
       lastError = e;
-      if (attempt < RETRY_BACKOFF_MS.length) await sleep(RETRY_BACKOFF_MS[attempt] ?? 1_000);
+      // #region agent log
+      debugAnalyzePipelineLog({
+        hypothesisId: "ANALYZE_ATTEMPT_FAIL",
+        location: "analyze-capture-v41.server.ts",
+        message: "analyze attempt failed",
+        data: {
+          captureId,
+          retryAttempt,
+          error: e instanceof Error ? e.message : String(e),
+        },
+      });
+      // #endregion
+      if (retryAttempt < RETRY_BACKOFF_MS.length) await sleep(RETRY_BACKOFF_MS[retryAttempt] ?? 1_000);
     }
   }
 
   const message = lastError instanceof Error ? lastError.message : "Analisi non riuscita.";
+  // #region agent log
+  debugAnalyzePipelineLog({
+    hypothesisId: "ANALYZE_FAIL",
+    location: "analyze-capture-v41.server.ts",
+    message: "analyze failed after retries",
+    data: { captureId, error: message },
+  });
+  // #endregion
   await mutateCaptureWithEvent({
     captureId,
     eventType: "analyze_failed",

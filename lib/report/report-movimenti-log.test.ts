@@ -13,6 +13,7 @@ function mockMov(over: Partial<MovimentoRicambioRow> = {}): MovimentoRicambioRow
     lavorazione_id: null,
     tipo: "uscita",
     quantita: 3,
+    conta_statistiche: true,
     created_at: "2025-03-10T12:00:00.000Z",
     ...over,
   };
@@ -22,6 +23,9 @@ const uscita = movimentoRowToChangeLogEntry(mockMov());
 assert.equal(uscita.id, "mov-mov-1");
 assert.equal(uscita.ricambioId, "r1");
 assert.equal(uscita.annullato, false);
+assert.equal(uscita.contaStatistiche, true);
+const rettifica = movimentoRowToChangeLogEntry(mockMov({ conta_statistiche: false }));
+assert.equal(rettifica.contaStatistiche, false);
 const uscitaDelta = extractScortaDelta(uscita);
 assert.equal(uscitaDelta, -3);
 

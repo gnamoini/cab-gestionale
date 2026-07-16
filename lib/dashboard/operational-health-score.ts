@@ -17,6 +17,26 @@ export type OperationalHealthTone = "excellent" | "good" | "warn" | "critical" |
 export type OperationalHealthFactor = {
   label: string;
   impact: number;
+  /** Dettaglio calcolo (peso, trend, penalità). */
+  detail?: string;
+};
+
+export type OperationalHealthSectionSummary = {
+  label: string;
+  score: number;
+  contributionPoints: number;
+};
+
+export type OperationalHealthCalculation = {
+  periodLabel: string;
+  workshopSizeLabel: string;
+  baseScore: number;
+  riskPenalty: number;
+  scoreRaw: number;
+  smoothedScore: number;
+  confidencePct: number;
+  dataQualityPct: number;
+  sections: OperationalHealthSectionSummary[];
 };
 
 export type OperationalHealthScore = {
@@ -27,6 +47,7 @@ export type OperationalHealthScore = {
   factors: OperationalHealthFactor[];
   metricCount: number;
   methodology: string;
+  calculation?: OperationalHealthCalculation;
 };
 
 const METHODOLOGY =

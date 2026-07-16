@@ -6,7 +6,7 @@ import { extractScortaDelta, monthKeyFromIso } from "@/lib/report/magazzino-log-
 
 /** Quantità entrata attribuibile a una riga di log (carichi scorta). Esclude movimenti annullati. */
 export function entrateQtyFromMagazzinoEntry(e: MagazzinoChangeLogEntry): number {
-  if (e.annullato) return 0;
+  if (e.annullato || e.contaStatistiche === false) return 0;
   const d = extractScortaDelta(e);
   if (e.tipo === "aggiunta") {
     return d != null && d > 0 ? d : 1;
@@ -19,7 +19,7 @@ export function entrateQtyFromMagazzinoEntry(e: MagazzinoChangeLogEntry): number
 
 /** Quantità uscita attribuibile a una riga di log (scarichi da scorta). Esclude movimenti annullati. */
 export function usciteQtyFromMagazzinoEntry(e: MagazzinoChangeLogEntry): number {
-  if (e.annullato) return 0;
+  if (e.annullato || e.contaStatistiche === false) return 0;
   const d = extractScortaDelta(e);
   if (e.tipo === "rimozione") {
     return d != null && d < 0 ? -d : 1;

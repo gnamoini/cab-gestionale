@@ -77,7 +77,7 @@ const n = buildDashboardPromemoriaReminderNotification({
 });
 assert.equal(n.kind, "dashboard_promemoria_reminder");
 assert.ok(n.message.includes("10:00"));
-assert.equal(notificationStoreKey(n), "promemoria:id-1:2026-06-01");
+assert.equal(notificationStoreKey(n as unknown as Parameters<typeof notificationStoreKey>[0]), "promemoria:id-1:2026-06-01");
 assert.equal(promemoriaNeedsReminderToday({ event_date: "2026-06-01", notified_on: null }, "2026-06-01"), true);
 assert.equal(
   promemoriaNeedsReminderToday({ event_date: "2026-06-01", notified_on: "2026-06-01" }, "2026-06-01"),

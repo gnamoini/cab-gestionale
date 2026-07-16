@@ -27,8 +27,8 @@ const apiRoute = read("app/api/cache/invalidate-entity/route.ts");
 assert.match(apiRoute, /runMicServerInvalidations/);
 assert.match(apiRoute, /verifyServerPageWrite/);
 
-const invalidateRelated = read("src/lib/react-query/invalidate-related.ts");
-assert.match(invalidateRelated, /invalidateEntity/);
+const invalidateOperational = read("src/lib/runtime/truth-layer/invalidate-operational-truth.ts");
+assert.match(invalidateOperational, /case "lavorazioni":[\s\S]*log_modifiche/);
 
 const lavMutations = read("src/hooks/gestionale/use-lavorazione-mutations.ts");
 assert.match(lavMutations, /invalidateAfterLavorazioneMutations/);

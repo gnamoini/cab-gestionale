@@ -72,13 +72,16 @@ type RicambioFieldTone = "required" | "operational" | "optional";
 const noSpinner =
   "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
-/** Bordo/superficie condivisi tra input e pulsanti ± dello stepper scorta. */
-const stepperChromeClass =
-  "rounded-[var(--ds-radius-lg)] border-2 border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] bg-[var(--cab-surface)] shadow-[var(--cab-shadow-sm)] hover:border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border-strong))] hover:shadow-[var(--cab-shadow-md)]";
+/** Box unico: − | valore | + */
+const stepperShellClass =
+  "flex w-full min-w-0 max-w-full items-stretch overflow-hidden rounded-[var(--ds-radius-lg)] border-2 border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] bg-[var(--cab-surface)] shadow-[var(--cab-shadow-sm)] transition-[border-color,box-shadow] duration-150 focus-within:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]";
 
-const stepperInputClass = `w-full ${stepperChromeClass} ${noSpinner} h-11 min-h-11 min-w-0 flex-1 py-0 text-center text-sm text-[color:var(--cab-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] ${dsFocus} touch-manipulation`;
+const stepperBtnBaseClass = `inline-flex h-11 w-10 min-h-11 min-w-10 shrink-0 select-none items-center justify-center border-0 bg-transparent p-0 text-lg font-bold leading-none text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)] ${dsFocus} touch-manipulation [-webkit-tap-highlight-color:transparent] transition-[background-color,transform] duration-150 active:scale-[0.97] active:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]`;
 
-const stepperBtnClass = `inline-flex h-11 w-11 min-h-11 min-w-11 shrink-0 select-none items-center justify-center ${stepperChromeClass} p-0 text-lg font-bold leading-none text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)] ${dsFocus} touch-manipulation [-webkit-tap-highlight-color:transparent] relative z-[1] transition-[background-color,border-color,box-shadow,transform] duration-150 active:scale-[0.97] active:border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border-strong))] active:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]`;
+const stepperBtnMinusClass = `${stepperBtnBaseClass} border-r border-[color:var(--cab-border)]`;
+const stepperBtnPlusClass = `${stepperBtnBaseClass} border-l border-[color:var(--cab-border)]`;
+
+const stepperInputClass = `min-w-0 flex-1 border-0 bg-transparent ${noSpinner} h-11 min-h-11 py-0 text-center text-sm font-mono tabular-nums text-[color:var(--cab-text)] outline-none ${dsFocus} touch-manipulation`;
 
 function formatEurIt(n: number): string {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
@@ -91,10 +94,9 @@ function StockStepper({
   groupLabel,
   ariaDecrease,
   ariaIncrease,
-  inputClass,
+  inputClass = stepperInputClass,
   inputId,
-  btnClass = stepperBtnClass,
-  wrapClassName = "flex w-full min-w-0 max-w-full items-stretch gap-2.5",
+  wrapClassName = stepperShellClass,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -103,16 +105,15 @@ function StockStepper({
   groupLabel: string;
   ariaDecrease: string;
   ariaIncrease: string;
-  inputClass: string;
+  inputClass?: string;
   inputId?: string;
-  btnClass?: string;
   wrapClassName?: string;
 }) {
   return (
     <div role="group" aria-label={groupLabel} className={wrapClassName}>
       <button
         type="button"
-        className={btnClass}
+        className={stepperBtnMinusClass}
         aria-label={ariaDecrease}
         onPointerDown={(e) => {
           e.preventDefault();
@@ -133,12 +134,12 @@ function StockStepper({
         inputMode="numeric"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`${inputClass} relative z-0 font-mono tabular-nums`}
+        className={inputClass}
         aria-label={groupLabel}
       />
       <button
         type="button"
-        className={btnClass}
+        className={stepperBtnPlusClass}
         aria-label={ariaIncrease}
         onPointerDown={(e) => {
           e.preventDefault();
@@ -457,16 +458,6 @@ export function RicambioFormFields({
           className={ricambioFormInputClass}
         />
       </RicambioField>
-      <RicambioField label="Note" tone="optional" htmlFor="magazzino-ricambio-note">
-        <GestionaleTextarea
-          id="magazzino-ricambio-note"
-          value={form.note}
-          onChange={(note) => setForm((f) => ({ ...f, note }))}
-          rows={2}
-          size="sm"
-          className="min-h-[4.5rem]"
-        />
-      </RicambioField>
       <RicambioField
         label="Categoria"
         tone={fieldsOptional ? "optional" : "required"}
@@ -484,6 +475,16 @@ export function RicambioFormFields({
           inputClassName={ricambioFormInputClass}
           placeholder="Seleziona categoria…"
           aria-label="Categoria ricambio"
+        />
+      </RicambioField>
+      <RicambioField label="Note" tone="optional" htmlFor="magazzino-ricambio-note">
+        <GestionaleTextarea
+          id="magazzino-ricambio-note"
+          value={form.note}
+          onChange={(note) => setForm((f) => ({ ...f, note }))}
+          rows={2}
+          size="sm"
+          className="min-h-[4.5rem]"
         />
       </RicambioField>
       <div className="grid grid-cols-2 gap-3">
@@ -553,7 +554,6 @@ export function RicambioFormFields({
               onDelta={(d) => bumpScorta("scorta", d)}
               ariaDecrease="Diminuisci scorta"
               ariaIncrease="Aumenta scorta"
-              inputClass={`${stepperInputClass} text-center`}
             />
           </RicambioField>
           <RicambioField label="Scorta minima" tone="operational" htmlFor="magazzino-ricambio-scorta-minima">
@@ -565,7 +565,6 @@ export function RicambioFormFields({
               onDelta={(d) => bumpScorta("scortaMinima", d)}
               ariaDecrease="Diminuisci scorta minima"
               ariaIncrease="Aumenta scorta minima"
-              inputClass={`${stepperInputClass} text-center`}
             />
           </RicambioField>
         </div>

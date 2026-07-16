@@ -14,6 +14,7 @@ export type BuildMagazzinoLocalLogInput = {
   changes: CampoChangeLike[];
   autoreUserId?: string;
   undoSessionId?: string;
+  contaStatistiche?: boolean;
 };
 
 /** Etichette campi UI magazzino (allineate a `CAMPO_LABEL` in magazzino-view). */
@@ -109,6 +110,7 @@ export function buildMagazzinoLocalLogEntry(input: BuildMagazzinoLocalLogInput):
     annullato: false,
     autoreUserId: input.autoreUserId,
     undoSessionId: input.undoSessionId,
+    contaStatistiche: input.contaStatistiche,
   };
 }
 
@@ -122,6 +124,7 @@ export function buildMagazzinoScortaPersistedLogEntry(input: {
   dopo: number;
   autoreUserId?: string;
   undoSessionId?: string;
+  contaStatistiche?: boolean;
 }): MagazzinoChangeLogEntry {
   return buildMagazzinoLocalLogEntry({
     id: input.id,
@@ -132,6 +135,7 @@ export function buildMagazzinoScortaPersistedLogEntry(input: {
     changes: [{ campo: "Scorta", prima: String(input.prima), dopo: String(input.dopo) }],
     autoreUserId: input.autoreUserId,
     undoSessionId: input.undoSessionId,
+    contaStatistiche: input.contaStatistiche,
   });
 }
 

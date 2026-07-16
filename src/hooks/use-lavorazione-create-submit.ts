@@ -255,7 +255,7 @@ export function useLavorazioneCreateSubmit({
     const addetto0 = addettiOpts[0] ?? "";
     const emptyFields = emptySchedaIngressoFields(addetto0);
     const fieldsInit = initialFields
-      ? mergeSchedaIngressoFields(emptyFields, initialFields)
+      ? mergeSchedaIngressoFields(emptyFields, initialFields, { copySignatures: true })
       : emptyFields;
     if (!fieldsInit.addettoAccettazione.trim()) {
       fieldsInit.addettoAccettazione = addetto0;

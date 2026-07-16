@@ -24,6 +24,7 @@ export function ShellCard({
   onCollapsedChange,
   headerActions,
   headerLeadingActions,
+  headerLeadingActionsInteractive,
   compactContent = false,
   compactHeader = false,
   headerActionsDivider = true,
@@ -47,6 +48,7 @@ export function ShellCard({
   onCollapsedChange?: (collapsed: boolean) => void;
   headerActions?: ReactNode;
   headerLeadingActions?: ReactNode;
+  headerLeadingActionsInteractive?: boolean;
   accordionId?: string;
   collapsibleInset?: boolean;
   /** Scope persistenza localStorage (`gestionale-collapse-prefs:v1`). */
@@ -123,6 +125,7 @@ export function ShellCard({
             headerActionsDivider={headerActionsDivider}
             headerActions={headerActions}
             headerLeadingActions={headerLeadingActions}
+            headerLeadingActionsInteractive={headerLeadingActionsInteractive}
             titleNode={
               <>
                 {title ? (

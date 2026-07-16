@@ -106,7 +106,7 @@ const SETTINGS_LIST_RULES: ReadonlyArray<{
   { keys: ["cantiere"], pool: (l) => l.cantieri, label: "Cantiere" },
   { keys: ["utilizzatore"], pool: (l) => l.utilizzatori, label: "Utilizzatore" },
   {
-    keys: ["tipo_attrezzatura", "tipoattrezzatura"],
+    keys: ["tipo_attrezzatura", "tipoattrezzatura", "attrezzatura"],
     pool: (l) => l.tipiAttrezzatura,
     label: "Tipo attrezzatura",
   },

@@ -27,8 +27,8 @@ const magLegacy = fs.readFileSync(path.join(ROOT, "app/api/import/magazzino/pars
 assert.match(magLegacy, /legacyImportParseRoute/);
 
 const magView = fs.readFileSync(path.join(ROOT, "components/gestionale/magazzino/magazzino-view.tsx"), "utf8");
-assert.match(magView, /DataImportExportToolbar/);
-assert.match(magView, /extraImportEntities=\{\["listino_ricambi"\]\}/);
+assert.match(magView, /useDataImportExportPageActions/);
+assert.match(magView, /extraImportEntities:\s*\["listino_ricambi"\]/);
 
 const toolbar = fs.readFileSync(path.join(ROOT, "components/data-import/data-import-export-toolbar.tsx"), "utf8");
 assert.match(toolbar, /label="Importa"/);
@@ -36,7 +36,7 @@ assert.match(toolbar, /Esporta/);
 assert.match(toolbar, /GlobalAnchoredMenu/);
 assert.match(toolbar, /layout\?: "inline" \| "drawer"/);
 assert.match(toolbar, /Scarica template/);
-assert.match(magView, /layout="drawer"/);
+assert.doesNotMatch(magView, /layout="drawer"/);
 
 const mezziView = fs.readFileSync(path.join(ROOT, "components/gestionale/mezzi/mezzi-view.tsx"), "utf8");
 assert.match(mezziView, /ModuleImportEntry/);

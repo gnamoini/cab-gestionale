@@ -5,6 +5,7 @@ import {
   Drawer,
   LogEntry,
   NotificationBellIcon,
+  NotificationBellTrigger,
   NotificationCountBadge,
   NotificationRowDismiss,
   Tooltip,
@@ -219,6 +220,8 @@ type NotificationCenterBellProps = {
   layerAboveNav?: boolean;
   /** Riga nel blocco sessione unificato (sidebar/drawer). */
   embedded?: boolean;
+  /** Icona campanella in header pagina (stile PageHeader). */
+  headerTrigger?: boolean;
 };
 
 export function NotificationCenterBell({
@@ -227,6 +230,7 @@ export function NotificationCenterBell({
   onOpenInbox,
   layerAboveNav = false,
   embedded = false,
+  headerTrigger = false,
 }: NotificationCenterBellProps) {
   const gestToast = useGestionaleToast();
   const { user } = useAuth();
@@ -355,7 +359,20 @@ export function NotificationCenterBell({
 
   const trailingExpanded = !collapsed ? <SidebarSessionExpandChevron active={open} /> : undefined;
 
-  const triggerButton = (
+  const triggerButton = headerTrigger ? (
+    <div className="relative shrink-0">
+      <Tooltip content={unreadCount > 0 ? `Notifiche (${unreadCount})` : "Notifiche"}>
+        <NotificationBellTrigger
+          count={unreadCount}
+          active={unreadCount > 0}
+          activeTone="info"
+          ariaLabel={ariaLabel}
+          ariaExpanded={open}
+          onClick={toggle}
+        />
+      </Tooltip>
+    </div>
+  ) : (
     <SidebarNavRow
       as="button"
       onClick={toggle}
@@ -379,7 +396,11 @@ export function NotificationCenterBell({
 
   return (
     <>
-      {embedded ? trigger : <div className="cab-sidebar-notifications relative shrink-0 px-1 pb-2">{trigger}</div>}
+      {embedded || headerTrigger ? (
+        trigger
+      ) : (
+        <div className="cab-sidebar-notifications relative shrink-0 px-1 pb-2">{trigger}</div>
+      )}
 
       <Drawer
         open={open}

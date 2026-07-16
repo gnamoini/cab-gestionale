@@ -27,8 +27,6 @@ import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { PageHeader } from "@/components/gestionale/page-header";
 import {
   PageActionMenu,
-  pageActionCreateItem,
-  pageActionFiltersItem,
   pageActionLogItem,
   type PageActionItem,
 } from "@/components/ui";
@@ -879,55 +877,9 @@ export function DocumentiView() {
     uploadSourceFileRef.current = null;
   }, []);
 
-  const documentiMenuItems = useMemo((): PageActionItem[] => {
-    const items: PageActionItem[] = [
-      pageActionCreateItem({
-        id: "upload",
-        label: "Carica documento",
-        description: "Carica un nuovo file documento",
-        shortLabel: "Carica",
-        onSelect: () => setUploadOpen(true),
-        disabled: docBusy || documentiQuery.isLoading || !canUploadDocuments,
-        module: "documenti",
-        requireWrite: true,
-      }),
-      pageActionFiltersItem({
-        expanded: filtriEspansi,
-        active: hasPageClientFilters,
-        onToggle: () => setFiltriEspansi((o) => !o),
-      }),
-    ];
-    if (hasDocumentiInLista) {
-      items.push(
-        { id: "__divider__", label: "" },
-        {
-          id: "collapse-all",
-          label: "Comprimi tutto",
-          description: "Chiudi tutti i gruppi documenti",
-          onSelect: () => {
-            if (searchActive) resetRicerca();
-            collapseAllTreeGroups();
-          },
-        },
-        {
-          id: "expand-all",
-          label: "Espandi tutto",
-          description: "Apri tutti i gruppi della pagina",
-          onSelect: expandAllTreeGroups,
-        },
-      );
-    }
-    items.push(pageActionLogItem(() => setLogOpen(true), "Log attività"));
-    return items;
-  }, [
-    canUploadDocuments,
-    docBusy,
-    documentiQuery.isLoading,
-    filtriEspansi,
-    hasPageClientFilters,
-    hasDocumentiInLista,
-    searchActive,
-  ]);
+  const documentiMenuItems = useMemo((): PageActionItem[] => [
+    pageActionLogItem(() => setLogOpen(true), "Log attività"),
+  ], []);
 
   return (
     <GestionaleSectionGate module="documenti">
@@ -939,8 +891,6 @@ export function DocumentiView() {
           <PageActionMenu
             items={documentiMenuItems}
             onRefresh={() => void refreshDocumenti()}
-            filtersActive={hasPageClientFilters}
-            showFiltersActiveDot
           />
         }
       />
@@ -959,6 +909,34 @@ export function DocumentiView() {
         <ShellCard>
         <PageToolbar
           className="sm:mx-0"
+          primaryAction={
+            <Tooltip content={!canUploadDocuments ? READONLY_PERMISSION_HINT : undefined}>
+              <button
+                type="button"
+                onClick={() => setUploadOpen(true)}
+                disabled={docBusy || documentiQuery.isLoading || !canUploadDocuments}
+                className={`${dsPageToolbarCtaCompact} disabled:opacity-60`}
+              >
+                {docBusy ? (
+                  <>
+                    <svg className="h-5 w-5 shrink-0 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" opacity="0.25" />
+                      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <span className="sm:hidden">…</span>
+                    <span className="hidden sm:inline">Caricamento…</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <PageToolbarCtaLabel short="Carica" full="Carica documento" />
+                  </>
+                )}
+              </button>
+            </Tooltip>
+          }
           search={
             <GestionaleSearchField
               value={searchInput}
@@ -986,6 +964,35 @@ export function DocumentiView() {
             />
           }
           onFilterReset={resetFiltri}
+          overflowOpen={toolbarOverflowOpen}
+          onOverflowToggle={() => setToolbarOverflowOpen((o) => !o)}
+          overflowActions={
+            hasDocumentiInLista ? (
+              <>
+                <Tooltip content="Chiudi tutti i gruppi">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (searchActive) resetRicerca();
+                      collapseAllTreeGroups();
+                    }}
+                    className={`${dsPageToolbarBtn} h-9 w-full justify-center px-3 text-xs sm:w-auto`}
+                  >
+                    Comprimi tutto
+                  </button>
+                </Tooltip>
+                <Tooltip content="Apri tutti i gruppi della pagina">
+                  <button
+                    type="button"
+                    onClick={expandAllTreeGroups}
+                    className={`${dsPageToolbarBtn} h-9 w-full justify-center px-3 text-xs sm:w-auto`}
+                  >
+                    Espandi tutto
+                  </button>
+                </Tooltip>
+              </>
+            ) : null
+          }
           meta={
             <PageToolbarResultCount
               count={totalDocs}

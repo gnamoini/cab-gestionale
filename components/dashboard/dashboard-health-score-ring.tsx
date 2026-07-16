@@ -161,6 +161,8 @@ function HealthScoreRingSvg({ score, tone }: { score: number; tone: OperationalH
   );
 }
 
+const FACTOR_LIST_MAX = 12;
+
 function FactorList({
   title,
   factors,
@@ -179,17 +181,72 @@ function FactorList({
   return (
     <div className="min-w-0">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">{title}</p>
-      <ul className="mt-1.5 space-y-1.5">
-        {factors.slice(0, 6).map((factor) => (
-          <li
-            key={`${tone}-${factor.label}`}
-            className="flex min-w-0 items-start justify-between gap-2.5 text-sm leading-snug text-[color:var(--cab-text)]"
-          >
-            <span className="min-w-0 break-words">{factor.label}</span>
-            <span className={`shrink-0 font-semibold tabular-nums ${toneClass}`}>{formatImpact(factor.impact)}</span>
+      <ul className="mt-1.5 space-y-2">
+        {factors.slice(0, FACTOR_LIST_MAX).map((factor) => (
+          <li key={`${tone}-${factor.label}`} className="min-w-0">
+            <div className="flex min-w-0 items-start justify-between gap-2.5 text-sm leading-snug text-[color:var(--cab-text)]">
+              <span className="min-w-0 break-words">{factor.label}</span>
+              <span className={`shrink-0 font-semibold tabular-nums ${toneClass}`}>{formatImpact(factor.impact)}</span>
+            </div>
+            {factor.detail ? (
+              <p className="mt-0.5 text-xs leading-snug text-[color:var(--cab-text-muted)]">{factor.detail}</p>
+            ) : null}
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function HealthScoreCalculationSummary({ score }: { score: OperationalHealthScore }) {
+  const calc = score.calculation;
+  if (!calc) return null;
+
+  return (
+    <div className="min-w-0 space-y-2">
+      <p className="text-xs leading-snug text-[color:var(--cab-text-muted)]">
+        <span className="font-medium text-[color:var(--cab-text)]">{calc.periodLabel}</span>
+        {" · "}
+        {calc.workshopSizeLabel}
+      </p>
+      <p className="text-xs leading-snug text-[color:var(--cab-text-muted)]">
+        Media aree{" "}
+        <span className="font-semibold tabular-nums text-[color:var(--cab-text)]">{calc.baseScore}/100</span>
+        {calc.riskPenalty > 0 ? (
+          <>
+            {" · "}
+            Penalità{" "}
+            <span className="font-semibold tabular-nums text-[color:var(--cab-danger)]">−{calc.riskPenalty}</span>
+          </>
+        ) : null}
+        {" · "}
+        Totale{" "}
+        <span className="font-semibold tabular-nums text-[color:var(--cab-text)]">{calc.smoothedScore}/100</span>
+        {calc.scoreRaw !== calc.smoothedScore ? (
+          <span className="text-[color:var(--cab-text-muted)]"> (grezzo {calc.scoreRaw})</span>
+        ) : null}
+      </p>
+      {calc.sections.length > 0 ? (
+        <ul className="space-y-1 border-t border-[color:var(--cab-border)] pt-2 text-xs text-[color:var(--cab-text-muted)]">
+          {calc.sections.map((section) => (
+            <li key={section.label} className="flex min-w-0 items-center justify-between gap-2">
+              <span className="min-w-0 truncate">{section.label}</span>
+              <span className="shrink-0 tabular-nums">
+                <span className="font-medium text-[color:var(--cab-text)]">{section.score}/100</span>
+                {section.contributionPoints !== 0 ? (
+                  <span className="ms-1.5 text-[color:var(--cab-text-muted)]">
+                    ({section.contributionPoints > 0 ? "+" : ""}
+                    {section.contributionPoints} pt)
+                  </span>
+                ) : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <p className="text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
+        Affidabilità dati {calc.confidencePct}% · Qualità dati {calc.dataQualityPct}%
+      </p>
     </div>
   );
 }
@@ -255,6 +312,7 @@ export function HealthScoreBreakdownBody({ score }: { score: OperationalHealthSc
 
   return (
     <div className="min-w-0 space-y-3.5">
+      <HealthScoreCalculationSummary score={score} />
       <FactorList title="Ha alzato il punteggio" factors={positive} tone="up" />
       <FactorList title="Ha abbassato il punteggio" factors={negative} tone="down" />
       {positive.length === 0 && negative.length === 0 ? (

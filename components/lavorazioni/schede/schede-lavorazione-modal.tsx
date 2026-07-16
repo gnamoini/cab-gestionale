@@ -1,5 +1,6 @@
 "use client";
 
+import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
 import { Tooltip } from "@/components/ui";
 import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import type { ReactNode } from "react";
@@ -29,7 +30,7 @@ import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-
 import { SchedaIngressoEditModal } from "@/components/gestionale/lavorazioni/lavorazione-create-modal";
 import { SchedaEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/scheda-elimina-confirm-dialog";
 import { normalizeSchedaIngressoFields } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
-import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
+import { CaptureMultiSchedaNotice } from "@/components/document-capture/capture-multi-scheda-notice";
 import { GlobalDatePicker, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { LavorazioneCostoDiscreto } from "@/components/gestionale/lavorazioni/lavorazione-costo-discreto";
 import { LavorazioneMediaPanel } from "@/components/gestionale/media/lavorazione-media-panel";
@@ -327,6 +328,7 @@ export function SchedeLavorazioneModal({
   initialTab: initialTabProp = "schede",
   dialogSize: dialogSizeProp,
   initialSchedaStage,
+  captureHandoff,
   bundle,
   onPersist,
   attive,
@@ -350,6 +352,12 @@ export function SchedeLavorazioneModal({
   dialogSize?: SchedeLavorazioneDialogSize;
   /** Apre direttamente l'editor scheda lavorazioni/ricambi (es. acquisizione AI). */
   initialSchedaStage?: "lavorazioni" | "ricambi";
+  /** Handoff acquisizione multi-schede: sequenza lavorazioni → ricambi. */
+  captureHandoff?: {
+    sequentialStages: Array<"lavorazioni" | "ricambi">;
+    identMismatchWarnings?: string[];
+    multiSchedaLabels?: string;
+  };
   bundle: LavorazioneSchedeBundle;
   onPersist: (
     next: LavorazioneSchedeBundle,
@@ -386,6 +394,8 @@ export function SchedeLavorazioneModal({
   const hubData = hubQuery.data;
   const initialTab = normalizeHubTab(initialTabProp);
   const [frozenDialogSize] = useState(() => resolveSchedeDialogSize(dialogSizeProp, initialTab));
+  const [frozenCaptureHandoff] = useState(() => captureHandoff);
+  const captureNextStageRef = useRef(captureHandoff?.sequentialStages[0] ?? null);
   const mezzo = useMemo(() => findMezzoForLavorazione(mezzi, lav), [mezzi, lav]);
   const interventoCtx = useInterventoContext(lav.id, {
     enabled: open,
@@ -462,6 +472,7 @@ export function SchedeLavorazioneModal({
         setLavDoc(cloned.lavorazioni);
         baselineLavorazioniJson.current = JSON.stringify(cloned.lavorazioni);
         setStage({ kind: "lavorazioni" });
+        captureNextStageRef.current = frozenCaptureHandoff?.sequentialStages[0] ?? null;
       } else if (initialSchedaStage === "ricambi" && cloned.ricambi) {
         setRicDoc(cloned.ricambi);
         baselineRicambiJson.current = JSON.stringify(cloned.ricambi);
@@ -1230,6 +1241,19 @@ export function SchedeLavorazioneModal({
           aria-labelledby={stage.kind === "hub" ? `schede-lav-tab-${hubTab}` : undefined}
           id={stage.kind === "hub" ? hubTabPanelId : undefined}
         >
+          {frozenCaptureHandoff?.multiSchedaLabels ? (
+            <div className="mb-4">
+              <CaptureMultiSchedaNotice
+                schedaLabels={frozenCaptureHandoff.multiSchedaLabels}
+                identWarnings={frozenCaptureHandoff.identMismatchWarnings}
+              />
+              {stage.kind === "lavorazioni" && frozenCaptureHandoff.sequentialStages.includes("ricambi") ? (
+                <p className="mt-2 text-xs text-[color:var(--cab-muted-fg)]">
+                  Dopo il salvataggio passerai alla scheda ricambi.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           {stage.kind === "hub" && hubTab === "schede" ? (
             <div className="flex flex-col gap-5">
               {showHubCopiaIngressoBanner ? (
@@ -1486,6 +1510,17 @@ export function SchedeLavorazioneModal({
                   try {
                     const ok = await commitLavorazioniSave();
                     if (!ok) return;
+                    const nextStage = captureNextStageRef.current;
+                    const current = draftRef.current;
+                    if (nextStage === "ricambi" && current.ricambi) {
+                      captureNextStageRef.current = null;
+                      setRicDoc(current.ricambi);
+                      baselineRicambiJson.current = JSON.stringify(current.ricambi);
+                      setStage({ kind: "ricambi" });
+                      setLavDoc(null);
+                      gestToast.info("Completa ora la scheda ricambi.");
+                      return;
+                    }
                     setStage({ kind: "hub" });
                     setLavDoc(null);
                   } finally {

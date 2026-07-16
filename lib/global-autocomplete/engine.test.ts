@@ -8,6 +8,7 @@ import {
   autocompleteStringSuggestions,
   autocompleteShowAddOption,
   autocompleteAddOptionEnabled,
+  autocompleteAddCandidateExistsInPool,
   type AutocompleteEngineInput,
 } from "@/lib/global-autocomplete/engine";
 
@@ -145,5 +146,12 @@ assert.equal(autocompleteShowAddOption({ ...addBase, isLoading: true }), false);
 assert.equal(autocompleteAddOptionEnabled(" nuovo ", false), true);
 assert.equal(autocompleteAddOptionEnabled("   ", false), false);
 assert.equal(autocompleteAddOptionEnabled("x", true), false);
+
+const pool = { mode: "strings" as const, options: ["Alpha", "Adelfia"], items: [] };
+assert.equal(autocompleteAddCandidateExistsInPool("Adelfia", pool.mode, pool.options, pool.items), true);
+assert.equal(autocompleteAddCandidateExistsInPool("adelfia", pool.mode, pool.options, pool.items), true);
+assert.equal(autocompleteAddCandidateExistsInPool("Nuovo", pool.mode, pool.options, pool.items), false);
+assert.equal(autocompleteAddOptionEnabled("Adelfia", false, pool), false);
+assert.equal(autocompleteAddOptionEnabled("Nuovo", false, pool), true);
 
 console.log("global-autocomplete/engine.test.ts: ok");

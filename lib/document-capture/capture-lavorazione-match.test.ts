@@ -89,13 +89,13 @@ const store: LavorazioneSchedeStore = {
   "lav-1": {
     lavorazioneId: "lav-1",
     ingresso: {
-      id: "ing-1",
       tipo: "ingresso",
       createdAt: "2026-01-01",
       updatedAt: "2026-01-02T10:00:00.000Z",
       createdBy: "test",
       updatedBy: "test",
-      sorgente: "digitale",
+      sorgente: "generata",
+      fileEsterno: null,
       campi: ingressoCampi({ targa: "AB123CD" }),
     },
     lavorazioni: null,
@@ -104,13 +104,13 @@ const store: LavorazioneSchedeStore = {
   "lav-2": {
     lavorazioneId: "lav-2",
     ingresso: {
-      id: "ing-2",
       tipo: "ingresso",
       createdAt: "2026-01-02",
       updatedAt: "2026-01-03T10:00:00.000Z",
       createdBy: "test",
       updatedBy: "test",
-      sorgente: "digitale",
+      sorgente: "generata",
+      fileEsterno: null,
       campi: ingressoCampi({ targa: "XY999ZZ", matricola: "MAT-999", cliente: "Bianchi" }),
     },
     lavorazioni: null,
@@ -177,13 +177,13 @@ const byScuderia = findActiveLavorazioneWithIngressoForCaptureIdent(
     "lav-s": {
       lavorazioneId: "lav-s",
       ingresso: {
-        id: "ing-s",
         tipo: "ingresso",
         createdAt: "2026-01-01",
         updatedAt: "2026-01-02T10:00:00.000Z",
         createdBy: "test",
         updatedBy: "test",
-        sorgente: "digitale",
+        sorgente: "generata",
+        fileEsterno: null,
         campi: ingressoCampi({ nScuderia: "42", cliente: "Scuderia" }),
       },
       lavorazioni: null,
@@ -220,13 +220,13 @@ const legacyHit = findActiveLavorazioneWithIngressoForCaptureIdent(
     "lav-legacy": {
       lavorazioneId: "lav-legacy",
       ingresso: {
-        id: "ing-legacy",
         tipo: "ingresso",
         createdAt: "2026-01-01",
         updatedAt: "2026-01-02T10:00:00.000Z",
         createdBy: "test",
         updatedBy: "test",
-        sorgente: "digitale",
+        sorgente: "generata",
+        fileEsterno: null,
         campi: {
           ...ingressoCampi({ targa: "AB123CD" }),
           vin: undefined as unknown as string,

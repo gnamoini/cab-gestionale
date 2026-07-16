@@ -1,5 +1,5 @@
 /**
- * Header actions audit — PageActionMenu SSOT.
+ * Header actions audit — PageActionMenu SSOT (solo header, non toolbar CTA).
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -34,15 +34,12 @@ for (const rel of TARGETS) {
   if (src.includes("GestionalePageToolbarActions")) {
     offenders.push(`${rel}: GestionalePageToolbarActions`);
   }
-  if (src.includes("primaryAction=") && src.includes("PageToolbar")) {
-    offenders.push(`${rel}: PageToolbar primaryAction`);
-  }
 }
 
 assert.equal(
   offenders.length,
   0,
-  `Page header/toolbar legacy actions:\n${offenders.join("\n")}`,
+  `Page header legacy actions:\n${offenders.join("\n")}`,
 );
 
 console.log("page-header-actions-audit.test.ts OK");

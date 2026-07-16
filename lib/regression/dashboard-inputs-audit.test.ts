@@ -25,6 +25,8 @@ assert.doesNotMatch(welcome, /useOperationalHealthScore/);
 assert.match(healthScoreWidget, /DashboardHealthScoreWidget/);
 assert.match(healthScoreWidget, /HealthScoreBreakdownBody/);
 assert.match(healthScoreRing, /export function HealthScoreBreakdownBody/);
+assert.match(healthScoreRing, /HealthScoreCalculationSummary/);
+assert.match(healthScoreRing, /factor\.detail/);
 assert.doesNotMatch(healthScoreRing, /score\.periodLabel/);
 assert.doesNotMatch(healthScoreWidget, /score\.periodLabel/);
 assert.match(welcome, /welcomeFirstName/);
@@ -33,10 +35,11 @@ const controlTowerLayout = read("components/dashboard/dashboard-control-tower-la
 assert.match(controlTowerLayout, /resolveDashboardSectionOrder/);
 
 const widgetRegistry = read("lib/dashboard/dashboard-widget-registry.ts");
-assert.match(widgetRegistry, /health-score.*kpi-header/s);
+assert.match(widgetRegistry, /health-score[\s\S]*kpi-header/);
 
 const kpiHeaderWidget = read("components/dashboard/widgets/dashboard-operational-kpi-header-widget.tsx");
-assert.match(kpiHeaderWidget, /headerActions: <BriefPeriodToggle/);
+assert.match(kpiHeaderWidget, /BriefPeriodToggle/);
+assert.doesNotMatch(kpiHeaderWidget, /headerActions: <BriefPeriodToggle/);
 assert.doesNotMatch(kpiHeaderWidget, /headerLeadingActions: <BriefPeriodToggle/);
 
 assert.match(securityView, /GlobalDatePickerYmd/);

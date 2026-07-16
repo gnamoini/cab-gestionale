@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { LoadingButton } from "@/components/design-system";
 import { LoadingSpinner } from "@/components/design-system/loading";
 import {
@@ -32,8 +32,26 @@ import {
   type CaptureFieldRow,
 } from "@/lib/document-capture/capture-field-mapper";
 import { describeCaptureLavorazioneAssignTarget } from "@/lib/document-capture/capture-lavorazione-match";
+import { CaptureMultiSchedaNotice } from "@/components/document-capture/capture-multi-scheda-notice";
+import {
+  captureMultiSchedaPostIngressoQueue,
+  checkCaptureIngressoVsSheetsIdent,
+  checkCaptureMultiSchedaIdentMismatches,
+  detectCaptureSchedaTipos,
+  formatCaptureMultiSchedaLabels,
+  isCaptureMultiSchedaBundle,
+  type CaptureSchedaTipoDetected,
+} from "@/lib/document-capture/capture-multi-scheda";
 import { LavorazioniCaptureDropOverlay } from "@/components/document-capture/lavorazioni-capture-drop-overlay";
 import { GestionaleModalShell, GestionaleModalScrollBody } from "@/components/gestionale/gestionale-modal";
+import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
+import {
+  captureAcquisitionDraftStillValid,
+  clearCaptureAcquisitionDraft,
+  readCaptureAcquisitionDraft,
+  saveCaptureAcquisitionDraft,
+  type CaptureAcquisitionDraft,
+} from "@/lib/document-capture/capture-acquisition-draft";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -47,9 +65,17 @@ export type CaptureSchedeOpenRequest = {
   lavorazioneId: string;
   schedaTipo: Extract<SchedaTipo, "lavorazioni" | "ricambi">;
   fieldRows: CaptureFieldRow[];
+  /** Dopo il primo stage, apri in sequenza (es. lavorazioni → ricambi). */
+  sequentialStages?: Array<Extract<SchedaTipo, "lavorazioni" | "ricambi">>;
+  identMismatchWarnings?: string[];
+  multiSchedaLabels?: string;
 };
 
 type CompileView = "ingresso" | "mezzo-match";
+
+export type LavorazioniCapturePageDropHandle = {
+  openWithFile: (file: File) => void;
+};
 
 type Props = {
   enabled: boolean;
@@ -65,6 +91,8 @@ type Props = {
   sharedMezziCatalog?: readonly MezzoGestito[];
   onLavorazioneCreated?: (id: string, opts?: { skipTableFocus?: boolean }) => void;
   onOpenSchedeFromCapture?: (request: CaptureSchedeOpenRequest) => void | Promise<boolean>;
+  /** Drop file sulla pagina Lavorazioni → apre il modal acquisizione AI. */
+  pageDropRef?: MutableRefObject<LavorazioniCapturePageDropHandle | null>;
 };
 
 export function LavorazioniDigitalCaptureLauncher({
@@ -81,6 +109,7 @@ export function LavorazioniDigitalCaptureLauncher({
   sharedMezziCatalog,
   onLavorazioneCreated,
   onOpenSchedeFromCapture,
+  pageDropRef,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<DocumentCaptureFlowStep>("hub");
@@ -93,10 +122,21 @@ export function LavorazioniDigitalCaptureLauncher({
   const [compileError, setCompileError] = useState<string | null>(null);
   const [compileFieldsLoading, setCompileFieldsLoading] = useState(false);
   const [schedeHandoffBusy, setSchedeHandoffBusy] = useState(false);
+  const [resumePromptOpen, setResumePromptOpen] = useState(false);
+  const [resumeDraft, setResumeDraft] = useState<CaptureAcquisitionDraft | null>(null);
+  const [resumeBusy, setResumeBusy] = useState(false);
+  const [detectedSchedaTipos, setDetectedSchedaTipos] = useState<CaptureSchedaTipoDetected[]>([]);
+  const [multiSchedaPromptOpen, setMultiSchedaPromptOpen] = useState(false);
+  const [pendingMultiSchedaQueue, setPendingMultiSchedaQueue] = useState<
+    Array<Extract<SchedaTipo, "lavorazioni" | "ricambi">>
+  >([]);
+  const [identMismatchWarnings, setIdentMismatchWarnings] = useState<string[]>([]);
+  const [identMismatchConfirmOpen, setIdentMismatchConfirmOpen] = useState(false);
+  const [pendingHandoffLavorazioneId, setPendingHandoffLavorazioneId] = useState<string | null>(null);
   const analyzeTriggeredRef = useRef<string | null>(null);
   const gestToast = useGestionaleToast();
 
-  const { busy: wizardBusy, error, runAnalyze, reset: resetWizardApi } = useDocumentCaptureWizardApi(captureId);
+  const { busy: wizardBusy, error, retryAfterSec, runAnalyze, reset: resetWizardApi } = useDocumentCaptureWizardApi(captureId);
   const {
     phase: uploadPhase,
     error: uploadError,
@@ -115,6 +155,12 @@ export function LavorazioniDigitalCaptureLauncher({
     setCompileError(null);
     setCompileFieldsLoading(false);
     setSchedeHandoffBusy(false);
+    setDetectedSchedaTipos([]);
+    setMultiSchedaPromptOpen(false);
+    setPendingMultiSchedaQueue([]);
+    setIdentMismatchWarnings([]);
+    setIdentMismatchConfirmOpen(false);
+    setPendingHandoffLavorazioneId(null);
     resetWizardApi();
     resetUpload();
     analyzeTriggeredRef.current = null;
@@ -125,10 +171,36 @@ export function LavorazioniDigitalCaptureLauncher({
   }, [captureId]);
 
   const handleClose = useCallback(() => {
-    discardCurrentCapture();
+    if (captureId && step !== "hub") {
+      saveCaptureAcquisitionDraft({
+        captureId,
+        step,
+        compileView,
+        pendingSchedaTipo,
+      });
+    }
     setOpen(false);
     resetFlow();
-  }, [discardCurrentCapture, resetFlow]);
+  }, [captureId, compileView, pendingSchedaTipo, resetFlow, step]);
+
+  const handleOpenRequest = useCallback(() => {
+    const draft = readCaptureAcquisitionDraft();
+    if (draft) {
+      setResumeDraft(draft);
+      setResumePromptOpen(true);
+      return;
+    }
+    setOpen(true);
+  }, []);
+
+  const handleResumeDiscard = useCallback(() => {
+    if (resumeDraft) discardEphemeralCaptureClient(resumeDraft.captureId);
+    clearCaptureAcquisitionDraft();
+    setResumeDraft(null);
+    setResumePromptOpen(false);
+    resetFlow();
+    setOpen(true);
+  }, [resetFlow, resumeDraft]);
 
   const openSchedeEditor = useCallback(
     async (request: CaptureSchedeOpenRequest, opts?: { handoff?: boolean }): Promise<boolean> => {
@@ -137,6 +209,7 @@ export function LavorazioniDigitalCaptureLauncher({
         const opened = (await onOpenSchedeFromCapture?.(request)) ?? false;
         if (!opened) return false;
         discardCurrentCapture();
+        clearCaptureAcquisitionDraft();
         setOpen(false);
         resetFlow();
         return true;
@@ -152,14 +225,28 @@ export function LavorazioniDigitalCaptureLauncher({
     setCompileError(null);
     try {
       const rows = await fetchCaptureFieldRows(id);
-      const schedaTipo = inferCaptureSchedaTipo(rows) ?? "ingresso";
+      const tipos = detectCaptureSchedaTipos(rows);
+      setDetectedSchedaTipos(tipos);
       setFieldRows(rows);
-      if (schedaTipo === "ingresso") {
+
+      if (isCaptureMultiSchedaBundle(tipos)) {
+        const queue = captureMultiSchedaPostIngressoQueue(tipos);
+        setPendingMultiSchedaQueue(queue);
+        setIdentMismatchWarnings(checkCaptureMultiSchedaIdentMismatches(rows));
         setCompileView("ingresso");
         setPendingSchedaTipo(null);
+        setMultiSchedaPromptOpen(true);
       } else {
-        setCompileView("mezzo-match");
-        setPendingSchedaTipo(schedaTipo);
+        setPendingMultiSchedaQueue([]);
+        setIdentMismatchWarnings([]);
+        const schedaTipo = inferCaptureSchedaTipo(rows) ?? "ingresso";
+        if (schedaTipo === "ingresso") {
+          setCompileView("ingresso");
+          setPendingSchedaTipo(null);
+        } else {
+          setCompileView("mezzo-match");
+          setPendingSchedaTipo(schedaTipo);
+        }
       }
       setStep("compile");
     } catch (e) {
@@ -169,8 +256,69 @@ export function LavorazioniDigitalCaptureLauncher({
     }
   }, []);
 
+  const runMultiSchedaHandoff = useCallback(
+    async (lavorazioneId: string, warnings: string[]) => {
+      if (!fieldRows || pendingMultiSchedaQueue.length === 0) return false;
+      const [first, ...rest] = pendingMultiSchedaQueue;
+      const opened = await openSchedeEditor(
+        {
+          lavorazioneId,
+          schedaTipo: first,
+          fieldRows,
+          sequentialStages: rest.length > 0 ? rest : undefined,
+          identMismatchWarnings: warnings,
+          multiSchedaLabels: formatCaptureMultiSchedaLabels(detectedSchedaTipos),
+        },
+        { handoff: true },
+      );
+      if (opened) onLavorazioneCreated?.(lavorazioneId, { skipTableFocus: true });
+      return opened;
+    },
+    [detectedSchedaTipos, fieldRows, onLavorazioneCreated, openSchedeEditor, pendingMultiSchedaQueue],
+  );
+
+  const restoreFromDraft = useCallback(
+    async (draft: CaptureAcquisitionDraft) => {
+      setCaptureId(draft.captureId);
+      if (draft.step === "compile") {
+        await enterCompileStep(draft.captureId);
+        if (draft.compileView === "ingresso" && draft.pendingSchedaTipo) {
+          setCompileView("ingresso");
+          setPendingSchedaTipo(draft.pendingSchedaTipo);
+        }
+      } else {
+        setStep("analyze");
+      }
+      clearCaptureAcquisitionDraft();
+    },
+    [enterCompileStep],
+  );
+
+  const handleResumeConfirm = useCallback(async () => {
+    if (!resumeDraft) return;
+    setResumeBusy(true);
+    try {
+      const valid = await captureAcquisitionDraftStillValid(resumeDraft.captureId);
+      setResumePromptOpen(false);
+      if (!valid) {
+        gestToast.info("L'acquisizione salvata non è più disponibile.");
+        discardEphemeralCaptureClient(resumeDraft.captureId);
+        clearCaptureAcquisitionDraft();
+        setResumeDraft(null);
+        setOpen(true);
+        return;
+      }
+      setOpen(true);
+      await restoreFromDraft(resumeDraft);
+      setResumeDraft(null);
+    } finally {
+      setResumeBusy(false);
+    }
+  }, [gestToast, restoreFromDraft, resumeDraft]);
+
   const runCapturePipeline = useCallback(
     async (file: File) => {
+      clearCaptureAcquisitionDraft();
       setStep("analyze");
       setCaptureId(null);
       setFieldRows(null);
@@ -208,9 +356,29 @@ export function LavorazioniDigitalCaptureLauncher({
     [runCapturePipeline],
   );
 
+  const openCaptureWithFile = useCallback(
+    (file: File) => {
+      clearCaptureAcquisitionDraft();
+      setResumeDraft(null);
+      setResumePromptOpen(false);
+      setOpen(true);
+      void runCapturePipeline(file);
+    },
+    [runCapturePipeline],
+  );
+
+  useEffect(() => {
+    if (!pageDropRef) return;
+    pageDropRef.current = { openWithFile: openCaptureWithFile };
+    return () => {
+      pageDropRef.current = null;
+    };
+  }, [openCaptureWithFile, pageDropRef]);
+
   const goBack = useCallback(() => {
     if (step === "analyze" || step === "compile") {
       discardCurrentCapture();
+      clearCaptureAcquisitionDraft();
       resetFlow();
     }
   }, [discardCurrentCapture, resetFlow, step]);
@@ -240,6 +408,25 @@ export function LavorazioniDigitalCaptureLauncher({
   const handleCaptureLavorazioneCreated = useCallback(
     (id: string) => {
       void (async () => {
+        if (pendingMultiSchedaQueue.length > 0 && fieldRows) {
+          const ingressoCampi = schedeStore[id]?.ingresso?.campi;
+          const warnings = ingressoCampi
+            ? [
+                ...new Set([
+                  ...identMismatchWarnings,
+                  ...checkCaptureIngressoVsSheetsIdent(ingressoCampi, fieldRows, pendingMultiSchedaQueue),
+                ]),
+              ]
+            : identMismatchWarnings;
+          if (warnings.length > 0) {
+            setIdentMismatchWarnings(warnings);
+            setPendingHandoffLavorazioneId(id);
+            setIdentMismatchConfirmOpen(true);
+            return;
+          }
+          await runMultiSchedaHandoff(id, warnings);
+          return;
+        }
         if (pendingSchedaTipo && fieldRows) {
           const opened = await openSchedeEditor(
             {
@@ -253,13 +440,33 @@ export function LavorazioniDigitalCaptureLauncher({
           return;
         }
         discardCurrentCapture();
+        clearCaptureAcquisitionDraft();
         onLavorazioneCreated?.(id);
         setOpen(false);
         resetFlow();
       })();
     },
-    [discardCurrentCapture, fieldRows, onLavorazioneCreated, openSchedeEditor, pendingSchedaTipo, resetFlow],
+    [
+      discardCurrentCapture,
+      fieldRows,
+      identMismatchWarnings,
+      onLavorazioneCreated,
+      openSchedeEditor,
+      pendingMultiSchedaQueue,
+      pendingSchedaTipo,
+      resetFlow,
+      runMultiSchedaHandoff,
+      schedeStore,
+    ],
   );
+
+  const handleIdentMismatchProceed = useCallback(() => {
+    const id = pendingHandoffLavorazioneId;
+    if (!id) return;
+    setIdentMismatchConfirmOpen(false);
+    setPendingHandoffLavorazioneId(null);
+    void runMultiSchedaHandoff(id, identMismatchWarnings);
+  }, [identMismatchWarnings, pendingHandoffLavorazioneId, runMultiSchedaHandoff]);
 
   const acquisition = useMemo(
     () =>
@@ -282,6 +489,7 @@ export function LavorazioniDigitalCaptureLauncher({
   const footerBusy = wizardBusy || pipelineBusy || compileFieldsLoading || schedeHandoffBusy;
 
   const showCompileIngressoFooter = step === "compile" && compileView === "ingresso" && fieldRows && captureId;
+  const isMultiSchedaFlow = isCaptureMultiSchedaBundle(detectedSchedaTipos);
 
   if (!enabled) return null;
 
@@ -293,7 +501,7 @@ export function LavorazioniDigitalCaptureLauncher({
         iconOnly={mobileIconOnly}
         className={className}
         aria-label="Acquisizione digitale schede"
-        onClick={() => setOpen(true)}
+        onClick={handleOpenRequest}
       >
         <span className="hidden sm:inline">Acquisizione AI</span>
         {!mobileIconOnly ? <span className="sm:hidden">Acquisizione</span> : null}
@@ -335,6 +543,7 @@ export function LavorazioniDigitalCaptureLauncher({
                 step="analyze"
                 acquisition={acquisition}
                 error={error ?? compileError}
+                retryAfterSec={error ? retryAfterSec : null}
                 onRetryAnalyze={() => void retryAnalyze()}
               />
             ) : null}
@@ -343,8 +552,16 @@ export function LavorazioniDigitalCaptureLauncher({
                 <div className="flex min-h-[12rem] items-center justify-center">
                   <LoadingSpinner size="md" />
                 </div>
-              ) : compileView === "ingresso" ? (
-                <CaptureSchedaCompileStep
+              ) : (
+                <>
+                  {isMultiSchedaFlow ? (
+                    <CaptureMultiSchedaNotice
+                      schedaLabels={formatCaptureMultiSchedaLabels(detectedSchedaTipos)}
+                      identWarnings={identMismatchWarnings}
+                    />
+                  ) : null}
+                  {compileView === "ingresso" ? (
+                    <CaptureSchedaCompileStep
                   captureId={captureId}
                   fieldRows={fieldRows}
                   createdBy={createdBy}
@@ -358,20 +575,22 @@ export function LavorazioniDigitalCaptureLauncher({
                   onCreated={handleCaptureLavorazioneCreated}
                   onCompileError={setCompileError}
                 />
-              ) : pendingSchedaTipo ? (
-                <CaptureMezzoMatchStep
-                  captureId={captureId}
-                  fieldRows={fieldRows}
-                  schedaTipo={pendingSchedaTipo}
-                  mezzi={mezzi}
-                  schedeStore={schedeStore}
-                  attive={attive}
-                  onAssign={(id) => void handleAssignToLavorazione(id)}
-                  onCreateNew={handleCreateNewFromMatch}
-                  onCancel={goBack}
-                  assignBusy={schedeHandoffBusy}
-                />
-              ) : null
+                  ) : pendingSchedaTipo ? (
+                    <CaptureMezzoMatchStep
+                      captureId={captureId}
+                      fieldRows={fieldRows}
+                      schedaTipo={pendingSchedaTipo}
+                      mezzi={mezzi}
+                      schedeStore={schedeStore}
+                      attive={attive}
+                      onAssign={(id) => void handleAssignToLavorazione(id)}
+                      onCreateNew={handleCreateNewFromMatch}
+                      onCancel={goBack}
+                      assignBusy={schedeHandoffBusy}
+                    />
+                  ) : null}
+                </>
+              )
             ) : null}
             {compileError && step === "compile" ? (
               <p className="text-sm text-[color:var(--cab-danger)]">{compileError}</p>
@@ -379,6 +598,56 @@ export function LavorazioniDigitalCaptureLauncher({
           </GestionaleModalScrollBody>
         </GestionaleModalShell>
       ) : null}
+      <GestionaleConfirmDialog
+        open={resumePromptOpen}
+        title="Riprendere l'acquisizione?"
+        subtitle="Hai un'acquisizione AI interrotta."
+        message="Vuoi continuare da dove eri rimasto o ricominciare da capo?"
+        confirmLabel="Riprendi"
+        cancelLabel="Ricomincia"
+        pending={resumeBusy}
+        layerClassName="z-[120]"
+        onCancel={handleResumeDiscard}
+        onConfirm={() => void handleResumeConfirm()}
+      />
+      <GestionaleConfirmDialog
+        open={multiSchedaPromptOpen}
+        title="Più schede nel documento"
+        subtitle="Acquisizione multi-schede"
+        message={`Sono state lette più schede insieme (${formatCaptureMultiSchedaLabels(detectedSchedaTipos)}). Procederemo in sequenza: prima la scheda ingresso, poi le altre schede sulla stessa lavorazione.`}
+        confirmLabel="Procedi"
+        cancelLabel="Annulla acquisizione"
+        layerClassName="z-[120]"
+        onCancel={goBack}
+        onConfirm={() => setMultiSchedaPromptOpen(false)}
+      />
+      <GestionaleConfirmDialog
+        open={identMismatchConfirmOpen}
+        title="Identificativi non corrispondenti"
+        subtitle="Verifica prima di assegnare le schede"
+        message={
+          <>
+            <p className="mb-2">
+              Targa, matricola, cliente o n. scuderia non coincidono tra scheda ingresso e schede lavorazioni/ricambi
+              lette dal file:
+            </p>
+            <ul className="list-disc space-y-1 pl-4 text-sm">
+              {identMismatchWarnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+            <p className="mt-2">Vuoi procedere comunque con l&apos;assegnazione automatica?</p>
+          </>
+        }
+        confirmLabel="Procedi comunque"
+        cancelLabel="Torna al form"
+        layerClassName="z-[120]"
+        onCancel={() => {
+          setIdentMismatchConfirmOpen(false);
+          setPendingHandoffLavorazioneId(null);
+        }}
+        onConfirm={handleIdentMismatchProceed}
+      />
       {schedeHandoffBusy ? (
         <div
           className="fixed inset-0 z-[115] flex flex-col items-center justify-center gap-3 bg-[var(--cab-overlay)] backdrop-blur-[2px]"

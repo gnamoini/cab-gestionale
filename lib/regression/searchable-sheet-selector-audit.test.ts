@@ -53,6 +53,7 @@ assert.match(virtual, /externalScrollHost/);
 assert.match(virtual, /externalMeasureReady/);
 assert.match(virtual, /virtualizer\.measure\(\)/);
 assert.match(globalSelect, /browseCap: sheetBrowseAll/);
+assert.match(globalSelect, /canWriteForAdd/);
 assert.match(globalSelect, /showAddOptionInUi/);
 assert.match(sheet, /saved\.has\(el\)/);
 assert.match(sheet, /onTouchMove/);

@@ -30,7 +30,7 @@ export function DocumentCaptureStepIndicator({ current }: { current: DocumentCap
   return (
     <nav
       aria-label="Passaggi acquisizione"
-      className="sticky top-0 z-[2] -mx-1 min-w-0 border-b border-[color:var(--cab-border)] bg-[var(--cab-card)] px-0.5 pb-2 pt-1 shadow-[0_1px_0_0_color-mix(in_srgb,var(--cab-card)_92%,transparent)] sm:px-1 sm:pb-3 sm:pt-0.5"
+      className="sticky top-0 z-[2] -mx-1 min-w-0 bg-[var(--cab-card)] px-0.5 pb-2 pt-1 sm:px-1 sm:pb-3 sm:pt-0.5"
     >
       <div className="relative min-w-0 px-1 sm:px-0.5">
         <div

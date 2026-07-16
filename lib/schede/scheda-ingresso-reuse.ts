@@ -108,10 +108,16 @@ export function listSchedaIngressoMatchesForIdent(
 export function mergeSchedaIngressoFields(
   current: SchedaIngressoFields,
   source: SchedaIngressoFields,
+  options?: { copySignatures?: boolean },
 ): SchedaIngressoFields {
+  const skipKeys = new Set(INGRESSO_FIELDS_NEVER_COPY);
+  if (options?.copySignatures) {
+    skipKeys.delete("richiedenteFirma");
+    skipKeys.delete("addettoFirma");
+  }
   const next = { ...current };
   for (const key of Object.keys(source) as (keyof SchedaIngressoFields)[]) {
-    if (INGRESSO_FIELDS_NEVER_COPY.has(key)) continue;
+    if (skipKeys.has(key)) continue;
     if (isSchedaIngressoFieldEmpty(key, next[key])) {
       copySchedaIngressoFieldFromClient(next, source, key);
     }

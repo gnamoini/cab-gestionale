@@ -18,6 +18,7 @@ const INGRESSO_FIELD_ORDER: readonly string[] = [
   "utilizzatore",
   "tipo_attrezzatura",
   "tipoattrezzatura",
+  "attrezzatura",
   "attrezzatura_marca",
   "marca_attrezzatura",
   "marcaattrezzatura",

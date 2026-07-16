@@ -14,6 +14,8 @@ export type PageActionItem = {
   icon?: ReactNode;
   onSelect?: () => void;
   href?: string;
+  /** Evidenzia voce con novità / notifica — contribuisce al pallino sul trigger ⋮. */
+  attention?: boolean;
   badge?: string | number;
   shortcut?: string;
   chevron?: boolean;
@@ -56,7 +58,8 @@ export type PageActionMenuProviderProps = {
   refreshBusy?: boolean;
   refreshLabel?: string;
   back?: PageActionMenuBackConfig | null;
-  filtersActive?: boolean;
+  /** Pallino sul trigger se true (es. notifiche non lette nel menu). */
+  menuAttention?: boolean;
 };
 
 export type PageActionMenuProps = {
@@ -65,8 +68,9 @@ export type PageActionMenuProps = {
   refreshBusy?: boolean;
   refreshLabel?: string;
   back?: PageActionMenuBackConfig | null;
-  filtersActive?: boolean;
   className?: string;
-  /** Mostra dot sul trigger quando filtri attivi. */
-  showFiltersActiveDot?: boolean;
+  /** Azioni rapide in header panel (accanto ad Aggiorna). */
+  headerActions?: ReactNode;
+  /** Pallino sul trigger ⋮ — override esplicito; default da `attention`/`badge` sulle voci. */
+  menuAttention?: boolean;
 };

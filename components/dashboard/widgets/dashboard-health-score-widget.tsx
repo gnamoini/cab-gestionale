@@ -54,5 +54,5 @@ export function DashboardHealthScoreWidget({ def }: { def: DashboardWidgetDefini
     );
   }
 
-  return wrapDashboardWidget(def, body, { subtitle, headerLeadingActions });
+  return wrapDashboardWidget(def, body, { subtitle, headerLeadingActions, headerLeadingActionsInteractive: false });
 }

@@ -29,6 +29,7 @@ const baseInput = {
       tipo: "uscita" as const,
       quantita: 2,
       created_at: "2025-03-10T12:00:00.000Z",
+      conta_statistiche: true,
     },
   ],
   manualEntries: [],

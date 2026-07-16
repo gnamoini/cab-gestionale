@@ -49,6 +49,8 @@ export type MagazzinoLogEntryLike = {
   changes: CampoChangeLike[];
   /** Se true: modifica annullata in UI (es. undo scorta); la voce resta nello storico. */
   annullato?: boolean;
+  /** false = rettifica inventario, esclusa da consumo/KPI. Default: conta. */
+  contaStatistiche?: boolean;
 };
 
 export function gestionaleLogToneMagazzino(tipo: MagazzinoLogEntryLike["tipo"]): GestionaleLogEventTone {

@@ -1,13 +1,14 @@
 import "server-only";
 
-import { generateObject, type LanguageModel } from "ai";
+import type { LanguageModel } from "ai";
 import type { ZodType } from "zod";
 import {
   GEMINI_FILE_ANALYSIS_TIMEOUT_MS,
   GEMINI_NOT_CONFIGURED_MESSAGE,
-  requireGeminiReportModel,
   isGeminiConfigured,
+  resolveGeminiReportModelId,
 } from "@/lib/ai/gemini-client";
+import { generateObjectWithGeminiFailover } from "@/lib/ai/gemini-generate-object.server";
 import { writeImportAuditEvent } from "@/lib/import-core/import-audit-events.server";
 import type { ImportExecutionFeature } from "@/lib/import-core/types";
 import { touchImportExecutionHeartbeat, updateImportExecutionStatus } from "@/lib/import-core/import-executions.server";
@@ -21,7 +22,7 @@ export type AiExtractionRequest<T> = {
   schema: ZodType<T>;
   system: string;
   prompt: string;
-  messages?: Parameters<typeof generateObject>[0]["messages"];
+  messages?: Parameters<typeof generateObjectWithGeminiFailover>[0]["messages"];
   model?: LanguageModel;
   timeoutMs?: number;
   temperature?: number;
@@ -46,7 +47,6 @@ export async function runAiExtraction<T>(input: AiExtractionRequest<T>): Promise
   }
 
   const sb = await createSupabaseServerUserClient();
-  const model = input.model ?? requireGeminiReportModel();
   const timeoutMs = input.timeoutMs ?? GEMINI_FILE_ANALYSIS_TIMEOUT_MS;
   const workerId = input.workerId ?? `worker-${input.executionId.slice(0, 8)}`;
 
@@ -71,15 +71,15 @@ export async function runAiExtraction<T>(input: AiExtractionRequest<T>): Promise
   const t0 = performance.now();
   try {
     const baseInput = {
-      model,
+      model: input.model,
       schema: input.schema,
       system: input.system,
       temperature: input.temperature ?? 0.2,
       abortSignal: AbortSignal.timeout(timeoutMs),
     };
     const result = input.messages
-      ? await generateObject({ ...baseInput, messages: input.messages })
-      : await generateObject({ ...baseInput, prompt: input.prompt });
+      ? await generateObjectWithGeminiFailover({ ...baseInput, messages: input.messages })
+      : await generateObjectWithGeminiFailover({ ...baseInput, prompt: input.prompt });
     const durationMs = Math.round(performance.now() - t0);
     const usage = result.usage ?? {};
     const tokens = {
@@ -91,7 +91,7 @@ export async function runAiExtraction<T>(input: AiExtractionRequest<T>): Promise
       .from("import_executions")
       .update({
         provider: "google_gemini",
-        model_id: "gemini-2.5-flash",
+        model_id: resolveGeminiReportModelId(),
         prompt_version: input.promptVersion ?? "1",
         tokens_input: tokens.input,
         tokens_output: tokens.output,
@@ -115,7 +115,7 @@ export async function runAiExtraction<T>(input: AiExtractionRequest<T>): Promise
     return {
       data: result.object as T,
       provider: "google_gemini",
-      modelId: "gemini-2.5-flash",
+      modelId: resolveGeminiReportModelId(),
       promptVersion: input.promptVersion ?? "1",
       durationMs,
       tokens,

@@ -136,12 +136,16 @@ export const magazzinoService = {
       since.setMonth(since.getMonth() - Math.max(1, Math.min(windowMonths, 24)));
       const { data: movs, error: eM } = await c
         .from("movimenti_ricambi")
-        .select("quantita")
+        .select("quantita, conta_statistiche")
         .eq("ricambio_id", id)
         .eq("tipo", "uscita")
         .gte("created_at", since.toISOString());
       if (eM) return err(errMessageFromSupabase(eM, { module: "magazzino" }));
-      const sum = (movs ?? []).reduce((s, m) => s + num((m as { quantita: unknown }).quantita), 0);
+      const sum = (movs ?? []).reduce((s, m) => {
+        const row = m as { quantita: unknown; conta_statistiche?: boolean };
+        if (row.conta_statistiche === false) return s;
+        return s + num(row.quantita);
+      }, 0);
       const months = Math.max(1, Math.min(windowMonths, 24));
       const mensile = Math.round((sum / months) * 1000) / 1000;
       return magazzinoService.update(id, { consumo_medio_mensile: mensile });

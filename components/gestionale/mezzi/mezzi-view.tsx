@@ -10,8 +10,6 @@ import { PageHeader } from "@/components/gestionale/page-header";
 import {
   PageActionMenu,
   clickPageActionHiddenTrigger,
-  pageActionCreateItem,
-  pageActionFiltersItem,
   pageActionLogItem,
   pageActionUndoItem,
   type PageActionItem,
@@ -586,21 +584,6 @@ export function MezziView() {
   const mezziPageMenuItems = useMemo((): PageActionItem[] => {
     if (!isAnagrafica) return [pageActionLogItem(() => setLogOpen(true), "Log attività")];
     return [
-      pageActionCreateItem({
-        label: "Nuovo mezzo",
-        description: "Registra un nuovo mezzo in anagrafica",
-        shortLabel: "+ Nuovo",
-        onSelect: () => setNuovoOpen(true),
-        disabled: !canEditVehicles,
-        module: "mezzi",
-        requireWrite: true,
-      }),
-      pageActionFiltersItem({
-        expanded: filtriEspansi,
-        active: hasMezziFilters,
-        onToggle: () => setFiltriEspansi((o) => !o),
-      }),
-      { id: "__divider__", label: "" },
       {
         id: "import",
         label: "Importa",
@@ -617,14 +600,7 @@ export function MezziView() {
       }),
       pageActionLogItem(() => setLogOpen(true), "Log attività"),
     ];
-  }, [
-    isAnagrafica,
-    canEditVehicles,
-    filtriEspansi,
-    hasMezziFilters,
-    undoableMezziLog,
-    updateMut.isPending,
-  ]);
+  }, [isAnagrafica, canEditVehicles, undoableMezziLog, updateMut.isPending]);
 
   return (
     <GestionaleSectionGate module="mezzi">
@@ -640,8 +616,6 @@ export function MezziView() {
           <PageActionMenu
             items={mezziPageMenuItems}
             onRefresh={() => void refetchMezzi()}
-            filtersActive={hasMezziFilters && isAnagrafica}
-            showFiltersActiveDot
           />
         }
       />
@@ -652,6 +626,21 @@ export function MezziView() {
             <>
           <PageToolbar
             className="sm:mx-0"
+            primaryAction={
+              <Tooltip content={canEditVehicles ? "Registra un nuovo mezzo in anagrafica" : READONLY_PERMISSION_HINT}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!canEditVehicles) return;
+                    setNuovoOpen(true);
+                  }}
+                  className={dsPageToolbarCtaCompact}
+                  disabled={!canEditVehicles}
+                >
+                  <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo mezzo" />
+                </button>
+              </Tooltip>
+            }
             search={
               <MezziSearchBar search={search} onSearch={setSearch} wrapperClassName="min-w-0 w-full" />
             }

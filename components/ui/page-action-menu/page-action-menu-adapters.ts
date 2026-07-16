@@ -1,4 +1,10 @@
+import { createElement } from "react";
 import type { PageActionItem } from "@/components/ui/page-action-menu/page-action-menu-types";
+import {
+  PageActionIconLog,
+  PageActionIconRefresh,
+  PageActionIconUndo,
+} from "@/components/ui/page-action-menu/page-action-menu-icons";
 
 export function clickPageActionHiddenTrigger(container: HTMLElement | null | undefined): void {
   container?.querySelector("button")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -25,6 +31,7 @@ export function pageActionLogItem(onOpenLog: () => void, title = "Log attività"
     id: "log",
     label: title,
     description: "Storico modifiche e attività",
+    icon: createElement(PageActionIconLog),
     onSelect: onOpenLog,
   };
 }
@@ -40,6 +47,7 @@ export function pageActionUndoItem(opts: {
     id: "undo",
     label: "Annulla",
     description: "Annulla l'ultima azione",
+    icon: createElement(PageActionIconUndo),
     onSelect: opts.onUndo,
     disabled,
     loading: opts.undoPending,
@@ -48,12 +56,14 @@ export function pageActionUndoItem(opts: {
 
 export function pageActionRefreshItem(opts: {
   busy?: boolean;
+  label?: string;
   onRefresh: () => void;
 }): PageActionItem {
   return {
     id: "refresh-inline",
-    label: "Aggiorna",
+    label: opts.label ?? "Aggiorna",
     description: "Ricarica i dati della pagina",
+    icon: createElement(PageActionIconRefresh),
     onSelect: opts.onRefresh,
     loading: opts.busy,
   };

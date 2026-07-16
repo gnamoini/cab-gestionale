@@ -71,6 +71,21 @@ PDF → Orchestrator → PhysicalParser → PageObjects (view)
 
 `DOCUMENT_CAPTURE_V41=1` abilita pipeline v4.1; `0` mantiene legacy flat map.
 
+`DOCUMENT_CAPTURE_HYBRID_EXTRACTION` (default on) abilita estrazione ibrida: testo nativo PDF → OCR Tesseract su bbox template CAB blank v2 → Gemini solo fallback. Impostare `=0` per tornare a Gemini-only.
+
+## Estrazione ibrida (hybrid)
+
+```
+PDF/immagine → PhysicalParser
+  → Tier 0: pdfjs text layer (PDF digitali)
+  → Tier 1: Tesseract su bbox template (scan manoscritti)
+  → Merge per field_key
+  → Gate campi critici → skip Gemini se sufficiente
+  → Gemini fallback con prefill JSON (token ridotti)
+```
+
+Code: `lib/document-capture/extraction/` (`native-pdf-text-extractor`, `template-ocr-extractor`, `hybrid-extraction-merge`, `run-hybrid-extraction`).
+
 ## Code map
 
 - `lib/document-capture/model/` — contratti SSOT  

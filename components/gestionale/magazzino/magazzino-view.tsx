@@ -16,7 +16,6 @@ import {
   LoadingMagazzinoListSkeleton,
 } from "@/components/design-system";
 import { DisabledElementTooltip, OptionalTooltip, Tooltip } from "@/components/ui";
-import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzino-giacenza-bell";
 import { MagazzinoBulkLabelToolbar } from "@/components/gestionale/magazzino/magazzino-bulk-label-toolbar";
 import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
 import { MagazzinoListinoAiBadge } from "@/components/gestionale/magazzino/magazzino-listino-ai-badge";
@@ -78,7 +77,6 @@ import type { RicambioMagazzino, SortKeyMagazzino } from "@/lib/magazzino/types"
 import { formatRicambioUnitaMisuraLabel } from "@/lib/magazzino/ricambio-unita-misura";
 import {
   dsPageToolbarCtaCompact,
-  dsPageToolbarBtnCompact,
   dsStackPage,
   GESTIONALE_SEARCH_PLACEHOLDER,
   dsBtnNeutral,
@@ -114,13 +112,14 @@ import { MagazzinoDescrizioneSortTh } from "@/components/gestionale/magazzino/ma
 import { PageHeader } from "@/components/gestionale/page-header";
 import {
   PageActionMenu,
-  clickPageActionHiddenTrigger,
-  pageActionCreateItem,
-  pageActionFiltersItem,
   pageActionLogItem,
   pageActionUndoItem,
   type PageActionItem,
 } from "@/components/ui";
+import {
+  PageActionIconDelete,
+  PageActionIconLabels,
+} from "@/components/ui/page-action-menu/page-action-menu-icons";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import {
@@ -128,10 +127,12 @@ import {
   PageToolbar,
   PageToolbarCtaLabel,
   PageToolbarResultCount,
+  PageToolbarMetaToggle,
 } from "@/components/design-system";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { MagazzinoAdvancedFilterPanel } from "@/components/gestionale/magazzino/magazzino-advanced-filter-panel";
-import { DataImportExportToolbar } from "@/components/data-import/data-import-export-toolbar";
+import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzino-giacenza-bell";
+import { useDataImportExportPageActions } from "@/components/data-import/data-import-export-toolbar";
 import type { RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
@@ -164,6 +165,11 @@ import {
   awaitScortaSyncDrain,
   enqueueScortaSync,
 } from "@/lib/magazzino/scorta-adjust-sync";
+import {
+  readMagazzinoModalitaModifica,
+  writeMagazzinoModalitaModifica,
+} from "@/lib/magazzino/magazzino-modalita-modifica-storage";
+import { applyScortaDeltaViaMovimento } from "@/lib/magazzino/scorta-movement";
 import { revealRicambioInTableAfterSave } from "@/lib/magazzino/magazzino-table-focus";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
@@ -577,8 +583,13 @@ export function MagazzinoView() {
   const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
     collapsibleExpandedBoolPref(false, { scope: "magazzino", key: "filters", userId: user?.id ?? null }),
   );
-  const [headerToolbarOverflowOpen, setHeaderToolbarOverflowOpen] = useState(false);
-  const importExportRef = useRef<HTMLDivElement>(null);
+  const importExportActions = useDataImportExportPageActions({
+    entity: "magazzino_ricambi",
+    module: "magazzino",
+    extraImportEntities: ["listino_ricambi"],
+    disabled: !magCanCreateRicambio,
+    onImportCompleted: () => void magazzinoListQ.refetch(),
+  });
 
   const patchAdvancedFilters = useCallback((patch: Partial<MagazzinoAdvancedFilters>) => {
     setAdvancedFilters((prev) => {
@@ -627,6 +638,10 @@ export function MagazzinoView() {
   const [detail, setDetail] = useState<{ id: string; mode: "info" | "edit" } | null>(null);
   const [selectedRicambioIds, setSelectedRicambioIds] = useState<Set<string>>(() => new Set());
   const [labelMode, setLabelMode] = useState(false);
+  const [modalitaModifica, setModalitaModifica] = useState(false);
+  useEffect(() => {
+    setModalitaModifica(readMagazzinoModalitaModifica());
+  }, []);
   useUIAutonomyFixEngine("/magazzino", [newOpen, detail, dupCheckModalOpen]);
 
   const [flashRowId, setFlashRowId] = useState<string | null>(null);
@@ -1207,31 +1222,49 @@ export function MagazzinoView() {
 
   function adjustScorta(id: string, delta: number) {
     if (!magCanCreateRicambio) return;
-    const applied = applyScortaOptimisticDelta(queryClient, id, delta, authorName, touch, mezziListePrefs);
+    const contaStatistiche = modalitaModifica;
+    const applied = applyScortaOptimisticDelta(
+      queryClient,
+      id,
+      delta,
+      authorName,
+      touch,
+      mezziListePrefs,
+      contaStatistiche,
+    );
     if (!applied.found) return;
     flashRow(id);
-    enqueueScortaSync(queryClient, id, authorName, {
-      onPersisted: ({ ricambioId, label, prima, dopo }) => {
-        const entry = buildMagazzinoScortaPersistedLogEntry({
-          id: `log-${Date.now()}-${++logSeqRef.current}`,
-          ricambioId,
-          ricambioLabel: label,
-          autore: authorName,
-          prima,
-          dopo,
-          ...magazzinoLogScopeFields(),
-        });
-        applyLogEntry(entry);
+    enqueueScortaSync(
+      queryClient,
+      id,
+      authorName,
+      {
+        onPersisted: ({ ricambioId, label, prima, dopo, contaStatistiche: conta }) => {
+          const entry = buildMagazzinoScortaPersistedLogEntry({
+            id: `log-${Date.now()}-${++logSeqRef.current}`,
+            ricambioId,
+            ricambioLabel: label,
+            autore: authorName,
+            prima,
+            dopo,
+            contaStatistiche: conta,
+            ...magazzinoLogScopeFields(),
+          });
+          applyLogEntry(entry);
+        },
+        onError: ({ error }) => {
+          toastError(error);
+        },
+        invalidate: () => {
+          void invalidateAfterMagazzinoOrMovimenti(queryClient, [
+            cabSyncEventForEntity("movimenti_ricambi", id, "entity_created", "movimenti_ricambi"),
+            cabSyncEventForEntity("magazzino_ricambi", id, "entity_updated", "magazzino_ricambi"),
+          ]);
+        },
       },
-      onError: ({ error }) => {
-        toastError(error);
-      },
-      invalidate: () => {
-        void invalidateAfterMagazzinoOrMovimenti(queryClient, [
-          cabSyncEventForEntity("magazzino_ricambi", id, "entity_updated", "magazzino_ricambi"),
-        ]);
-      },
-    }, mezziListePrefs);
+      mezziListePrefs,
+      contaStatistiche,
+    );
   }
 
   async function undoLastScorta(id: string) {
@@ -1251,16 +1284,32 @@ export function MagazzinoView() {
       return;
     }
     const touched = touch({ ...row, scorta: parsed.prima });
-    const updated = await magazzinoEntry.update(id, ricambioUiToMagazzinoUpdate(touched, mezziListePrefs));
-    if (!updated.success || !updated.data) {
-      toastError(updated.error ?? "Annullamento scorta non riuscito.");
-      return;
+    const scortaDelta = parsed.prima - parsed.dopo;
+    if (scortaDelta !== 0) {
+      const moved = await applyScortaDeltaViaMovimento(
+        id,
+        scortaDelta,
+        entry.contaStatistiche !== false,
+      );
+      if (!moved.success) {
+        toastError(moved.error ?? "Annullamento scorta non riuscito.");
+        return;
+      }
+      const ui = touch({ ...row, scorta: moved.data! });
+      patchProdotti((prev) => prev.map((p) => (p.id === id ? ui : p)));
+    } else {
+      const updated = await magazzinoEntry.update(id, ricambioUiToMagazzinoUpdate(touched, mezziListePrefs));
+      if (!updated.success || !updated.data) {
+        toastError(updated.error ?? "Annullamento scorta non riuscito.");
+        return;
+      }
+      const ui = ricambioUiFromMagazzinoRow(updated.data, authorName, mezziListePrefs);
+      patchProdotti((prev) => prev.map((p) => (p.id === id ? touch(ui) : p)));
     }
-    const ui = ricambioUiFromMagazzinoRow(updated.data, authorName, mezziListePrefs);
-    patchProdotti((prev) => prev.map((p) => (p.id === id ? touch(ui) : p)));
     markMagazzinoLogEntryAnnullato(entry.id);
     flashRow(id);
     void invalidateAfterMagazzinoOrMovimenti(queryClient, [
+      cabSyncEventForEntity("movimenti_ricambi", id, "entity_created", "movimenti_ricambi"),
       cabSyncEventForEntity("magazzino_ricambi", id, "entity_updated", "magazzino_ricambi"),
     ]);
   }
@@ -1364,13 +1413,6 @@ export function MagazzinoView() {
         return next;
       }
       return new Set([...prev, ...visibleIds]);
-    });
-  }
-
-  function toggleLabelMode() {
-    setLabelMode((on) => {
-      if (on) setSelectedRicambioIds(new Set());
-      return !on;
     });
   }
 
@@ -1680,36 +1722,8 @@ export function MagazzinoView() {
 
   const magazzinoMenuItems = useMemo((): PageActionItem[] => {
     const items: PageActionItem[] = [
-      pageActionCreateItem({
-        label: "Nuovo ricambio",
-        description: "Aggiungi un ricambio al magazzino",
-        shortLabel: "+ Nuovo",
-        onSelect: openNewModal,
-        disabled: !magCanCreateRicambio,
-        module: "magazzino",
-        requireWrite: true,
-      }),
-      pageActionFiltersItem({
-        expanded: filtriEspansi,
-        active: hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero,
-        onToggle: () => setFiltriEspansi((o) => !o),
-      }),
-      {
-        id: "etichette",
-        label: labelMode ? "Chiudi etichette" : "Etichette",
-        description: "Modalità stampa etichette ricambi",
-        onSelect: toggleLabelMode,
-        hidden: !magPerm.canRead,
-      },
-      { id: "__divider__", label: "" },
-      {
-        id: "import-export",
-        label: "Importa / Esporta",
-        description: "Gestione dati magazzino e listino",
-        onSelect: () => clickPageActionHiddenTrigger(importExportRef.current),
-        module: "magazzino",
-        requireWrite: true,
-      },
+      ...importExportActions.items,
+      ...(importExportActions.items.length > 0 ? [{ id: "__divider__", label: "" }] : []),
       pageActionUndoItem({
         canUndo: Boolean(undoableMagazzinoLog),
         undoDisabled: !magCanCreateRicambio,
@@ -1717,53 +1731,59 @@ export function MagazzinoView() {
       }),
       pageActionLogItem(() => setLogOpen(true), "Log attività"),
     ];
+    if (magPerm.canRead) {
+      items.push({
+        id: "etichette",
+        label: "Etichette",
+        description: labelMode
+          ? "Modalità selezione attiva per stampa etichette"
+          : "Seleziona ricambi per stampare etichette",
+        icon: <PageActionIconLabels />,
+        toggle: {
+          checked: labelMode,
+          onChange: (checked) => {
+            setLabelMode(checked);
+            if (!checked) setSelectedRicambioIds(new Set());
+          },
+        },
+      });
+    }
     if (magCanDeleteRicambio && generatedListinoCount > 0) {
       items.push({
         id: "delete-listino",
         label: "Elimina ricambi da listino",
         description: `${generatedListinoCount} ricambi generati dal listino`,
+        icon: <PageActionIconDelete />,
         onSelect: () => setDeleteGeneratedOpen(true),
         danger: true,
       });
     }
-    if (sottoScortaTotale > 0) {
-      items.unshift({
-        id: "sotto-scorta",
-        label: "Sotto scorta",
-        description: `${sottoScortaTotale} ricambi sotto scorta minima`,
-        badge: sottoScortaTotale,
-        onSelect: () => {
-          if (sottoScortaList[0]) focusRicambioInTable(sottoScortaList[0].id, { applySottoScorta: true });
-        },
-      });
-    }
     return items;
   }, [
+    importExportActions.items,
     magCanCreateRicambio,
-    filtriEspansi,
-    hasAdvancedPanelFilters,
-    soloSottoScorta,
-    nascondiScortaZero,
-    labelMode,
-    magPerm.canRead,
     undoableMagazzinoLog,
     magCanDeleteRicambio,
     generatedListinoCount,
-    sottoScortaTotale,
-    sottoScortaList,
+    magPerm.canRead,
+    labelMode,
   ]);
+
+  const magazzinoMenuHeaderActions = useMemo(
+    () => (
+      <MagazzinoGiacenzaBell
+        count={sottoScortaTotale}
+        items={sottoScortaList}
+        onSelectRicambio={(id) => focusRicambioInTable(id, { applySottoScorta: true })}
+        triggerVariant="ghost"
+      />
+    ),
+    [sottoScortaTotale, sottoScortaList, focusRicambioInTable],
+  );
 
   return (
     <GestionaleSectionGate module="magazzino">
-    <div ref={importExportRef} className="sr-only" aria-hidden>
-      <DataImportExportToolbar
-        entity="magazzino_ricambi"
-        module="magazzino"
-        extraImportEntities={["listino_ricambi"]}
-        disabled={!magCanCreateRicambio}
-        onImportCompleted={() => void magazzinoListQ.refetch()}
-      />
-    </div>
+    {importExportActions.modal}
     <div
       ref={listLayoutRef}
       className={`magazzino-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}
@@ -1773,9 +1793,9 @@ export function MagazzinoView() {
         actions={
           <PageActionMenu
             items={magazzinoMenuItems}
+            headerActions={magazzinoMenuHeaderActions}
             onRefresh={() => void magazzinoListQ.refetch()}
-            filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
-            showFiltersActiveDot
+            refreshBusy={magazzinoListQ.isFetching}
           />
         }
       />
@@ -1808,6 +1828,21 @@ export function MagazzinoView() {
 
         <section aria-label="Azioni e filtri magazzino">
           <PageToolbar
+            primaryAction={
+              <DisabledElementTooltip
+                content={magCanCreateRicambio ? "Aggiungi un ricambio" : "Sola lettura"}
+                disabled={!magCanCreateRicambio}
+              >
+                <button
+                  type="button"
+                  onClick={openNewModal}
+                  disabled={!magCanCreateRicambio}
+                  className={`${dsPageToolbarCtaCompact} disabled:cursor-not-allowed disabled:opacity-50`}
+                >
+                  <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo ricambio" />
+                </button>
+              </DisabledElementTooltip>
+            }
             search={
               <GestionaleListSearchField
                 id="magazzino-search"
@@ -1842,13 +1877,31 @@ export function MagazzinoView() {
             }
             onFilterReset={resetMagazzinoFilters}
             meta={
-              <PageToolbarResultCount
-                count={filteredSorted.length}
-                filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
-                searchActive={searchApplied.trim().length > 0 || searchInput.trim().length > 0}
-                onSearchReset={resetMagazzinoRicerca}
-                onFilterReset={resetMagazzinoFilters}
-              />
+              <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2">
+                <PageToolbarResultCount
+                  count={filteredSorted.length}
+                  filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
+                  searchActive={searchApplied.trim().length > 0 || searchInput.trim().length > 0}
+                  onSearchReset={resetMagazzinoRicerca}
+                  onFilterReset={resetMagazzinoFilters}
+                />
+                {magCanCreateRicambio ? (
+                  <PageToolbarMetaToggle
+                    label="Modalità modifica"
+                    shortLabel="Modifica"
+                    checked={modalitaModifica}
+                    onChange={(next) => {
+                      setModalitaModifica(next);
+                      writeMagazzinoModalitaModifica(next);
+                    }}
+                    title={
+                      modalitaModifica
+                        ? "Attiva: le variazioni scorta contano nelle statistiche"
+                        : "Disattiva: rettifica inventario senza impatto su statistiche e report"
+                    }
+                  />
+                ) : null}
+              </div>
             }
           />
         </section>
@@ -2206,6 +2259,7 @@ export function MagazzinoView() {
           onCancel={cancelEditBackToInfo}
           onRequestDelete={requestEliminaRicambio}
           onSaveError={(message) => toastError(message)}
+          modalitaModifica={modalitaModifica}
           onSaved={(ui, message) => {
             patchProdotti((prev) => prev.map((p) => (p.id === ui.id ? touch(ui) : p)));
             completeMagazzinoSave(ui.id, message);

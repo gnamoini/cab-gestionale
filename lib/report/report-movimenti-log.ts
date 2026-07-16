@@ -26,6 +26,7 @@ export function movimentoRowToChangeLogEntry(row: MovimentoRicambioRow): Magazzi
       },
     ],
     annullato: false,
+    contaStatistiche: row.conta_statistiche !== false,
   };
 }
 

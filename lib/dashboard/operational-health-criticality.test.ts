@@ -11,7 +11,6 @@ const anchor = new Date("2026-07-13T12:00:00.000Z");
 
 function ricambio(partial: Partial<RicambioMagazzino> & Pick<RicambioMagazzino, "id">): RicambioMagazzino {
   return {
-    id: partial.id,
     marca: "",
     codiceFornitoreOriginale: "",
     descrizione: "",

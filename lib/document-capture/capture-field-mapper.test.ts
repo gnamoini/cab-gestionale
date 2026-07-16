@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { mapCaptureFieldsToIngresso, type CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
+import {
+  mapCaptureFieldsToIngresso,
+  type CaptureFieldRow,
+} from "@/lib/document-capture/capture-field-mapper";
 
 function row(field_key: string, value: string): CaptureFieldRow {
   return { field_key, confirmed_value: value, normalized_value: value };
@@ -14,6 +17,8 @@ function rowMultiline(
 }
 
 const fields: CaptureFieldRow[] = [
+  row("data_ingresso", "18/06/2024"),
+  row("attrezzatura", "Spazzatrice"),
   row("attrezzatura_marca", "CAT"),
   row("telaio_marca", "Iveco"),
   row("nome", "Mario"),
@@ -24,6 +29,8 @@ const fields: CaptureFieldRow[] = [
 
 const out = mapCaptureFieldsToIngresso(fields);
 
+assert.equal(out.dataIngresso, "18/06/2024");
+assert.equal(out.tipoAttrezzatura, "Spazzatrice");
 assert.equal(out.marcaAttrezzatura, "CAT");
 assert.equal(out.marcaTelaio, "Iveco");
 assert.equal(out.richiedente, "Mario Rossi");
@@ -44,6 +51,13 @@ const withFirme = mapCaptureFieldsToIngresso([
 ]);
 assert.equal(withFirme.richiedenteFirma, FIRMA);
 assert.equal(withFirme.addettoFirma, FIRMA);
+
+const withFirmeRawOnly = mapCaptureFieldsToIngresso([
+  { field_key: "firma_richiedente", confirmed_value: null, normalized_value: null, raw_value: FIRMA },
+  { field_key: "firma_addetto", confirmed_value: null, normalized_value: null, raw_value: FIRMA },
+]);
+assert.equal(withFirmeRawOnly.richiedenteFirma, FIRMA);
+assert.equal(withFirmeRawOnly.addettoFirma, FIRMA);
 
 const MULTILINE = "Riga 1\nRiga 2\nRiga 3";
 const withAnomalia = mapCaptureFieldsToIngresso([

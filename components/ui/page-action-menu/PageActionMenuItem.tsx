@@ -12,6 +12,7 @@ import {
   pageActionMenuItemDangerClass,
   pageActionMenuItemDescClass,
   pageActionMenuItemIconClass,
+  pageActionMenuItemIconDangerClass,
   pageActionMenuItemTitleClass,
   pageActionMenuSectionLabelClass,
 } from "@/lib/ui/page-action-menu-tokens";
@@ -68,7 +69,15 @@ export const PageActionMenuItem = memo(function PageActionMenuItem({
 
   const content = (
     <>
-      {item.icon ? <span className={pageActionMenuItemIconClass}>{item.icon}</span> : <span className="w-9 shrink-0" aria-hidden />}
+      {item.icon ? (
+        <span
+          className={`${pageActionMenuItemIconClass}${item.danger ? ` ${pageActionMenuItemIconDangerClass}` : ""}`}
+        >
+          {item.icon}
+        </span>
+      ) : (
+        <span className="w-5 shrink-0" aria-hidden />
+      )}
       <span className="min-w-0 flex-1">
         {showSectionLabel && item.sectionLabel ? (
           <span className={pageActionMenuSectionLabelClass}>{item.sectionLabel}</span>

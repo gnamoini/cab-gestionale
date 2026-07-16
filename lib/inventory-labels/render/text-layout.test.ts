@@ -50,9 +50,9 @@ const m12 = resolveLabelTextLayout(template, {
   codiceAlternativo: "",
 });
 const m12desc = m12.find((p) => p.field === "descrizione")!;
-const textW =
-  template.elements.find((e) => e.type === "text" && e.field === "marca" && "maxWidthMm" in e)!
-    .maxWidthMm ?? 24.5;
+const marcaEl = template.elements.find((e) => e.type === "text" && e.field === "marca");
+assert.ok(marcaEl?.type === "text");
+const textW = marcaEl.maxWidthMm ?? 24.5;
 assert.ok(linesFitWrapWidth(m12desc.lines, textW, m12desc.fontPt));
 assert.ok(
   !m12desc.lines.some((l) => l.includes("fotoelettrico M12")),

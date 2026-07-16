@@ -7,7 +7,9 @@ import {
   formatCaptureReviewDisplayValue,
   formatCaptureReviewDraftValue,
 } from "@/lib/document-capture/capture-field-display-value";
+import { isCaptureSignatureFieldKey } from "@/lib/document-capture/capture-signature-field-keys";
 import type { CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
+import { normalizeIngressoCaptureFieldRows } from "@/lib/document-capture/capture-field-key-aliases";
 import { mapCaptureFieldsToIngresso } from "@/lib/document-capture/capture-field-mapper";
 import { sortCaptureReviewFields } from "@/lib/document-capture/capture-field-review-order";
 import { buildClientResolutionContext } from "@/lib/entity-resolution/build-client-resolution-context";
@@ -18,6 +20,9 @@ import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import type { SchedaIngressoFields } from "@/types/schede";
+import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { normListSelectValue } from "@/lib/ui/list-select-utils";
+import { findExactEntityInPool } from "@/lib/validation/global-entity-validation";
 
 export type CaptureIngressoFieldHint = {
   tone: "ok" | "suggested" | "ambiguous" | "catalog";
@@ -37,6 +42,7 @@ const CAPTURE_TO_INGRESSO: Record<string, keyof SchedaIngressoFields> = {
   dataingresso: "dataIngresso",
   tipo_attrezzatura: "tipoAttrezzatura",
   tipoattrezzatura: "tipoAttrezzatura",
+  attrezzatura: "tipoAttrezzatura",
   marca_attrezzatura: "marcaAttrezzatura",
   marcaattrezzatura: "marcaAttrezzatura",
   attrezzatura_marca: "marcaAttrezzatura",
@@ -97,6 +103,73 @@ function safeTrim(v: string | null | undefined): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+/** Stesso valore per hint/capture — case, punteggiatura e sigle societarie (cliente). */
+export function captureFieldValuesEquivalent(
+  a: string,
+  b: string,
+  options?: { standardizeLegalSuffix?: boolean },
+): boolean {
+  const left = safeTrim(a);
+  const right = safeTrim(b);
+  if (!left || !right) return false;
+  if (left === right) return true;
+  if (left.toLowerCase() === right.toLowerCase()) return true;
+  const normOpts = options?.standardizeLegalSuffix ? { standardizeLegalSuffix: true as const } : undefined;
+  if (findExactEntityInPool(left, [right], normOpts)) return true;
+  return normListSelectValue(left) === normListSelectValue(right);
+}
+
+const INGRESSO_SETTINGS_CANON: Partial<
+  Record<
+    keyof SchedaIngressoFields,
+    { pool: (liste: MezziListePrefs) => readonly string[]; standardizeLegalSuffix?: boolean }
+  >
+> = {
+  cliente: { pool: (l) => l.clienti, standardizeLegalSuffix: true },
+  cantiere: { pool: (l) => l.cantieri },
+  utilizzatore: { pool: (l) => l.utilizzatori },
+  tipoAttrezzatura: { pool: (l) => l.tipiAttrezzatura },
+  marcaAttrezzatura: { pool: (l) => l.marche },
+  modelloAttrezzatura: { pool: (l) => l.modelli },
+  tipoTelaio: { pool: (l) => l.tipiTelaio ?? [] },
+  marcaTelaio: {
+    pool: (l) => (l.telai ?? []).map((t) => safeTrim(t?.nome)).filter(Boolean),
+  },
+};
+
+function canonicalizeIngressoCatalogFields(
+  fields: SchedaIngressoFields,
+  mezziListe: MezziListePrefs,
+): SchedaIngressoFields {
+  const next = { ...fields };
+  for (const [key, rule] of Object.entries(INGRESSO_SETTINGS_CANON) as Array<
+    [keyof SchedaIngressoFields, (typeof INGRESSO_SETTINGS_CANON)[keyof SchedaIngressoFields]]
+  >) {
+    if (!rule) continue;
+    const raw = safeTrim(String(next[key] ?? ""));
+    if (!raw) continue;
+    const canon = findExactEntityInPool(raw, rule.pool(mezziListe), {
+      standardizeLegalSuffix: rule.standardizeLegalSuffix,
+    });
+    if (canon) (next[key] as string) = canon;
+  }
+  return next;
+}
+
+function canonicalIngressoLabelFromSettings(
+  ingressoKey: keyof SchedaIngressoFields,
+  label: string,
+  mezziListe: MezziListePrefs,
+): string {
+  const rule = INGRESSO_SETTINGS_CANON[ingressoKey];
+  if (!rule) return label.trim();
+  return (
+    findExactEntityInPool(label, rule.pool(mezziListe), {
+      standardizeLegalSuffix: rule.standardizeLegalSuffix,
+    }) ?? label.trim()
+  );
+}
+
 function fieldRawValue(row: CaptureFieldRow): string {
   const ext = row as CaptureFieldRow & { raw_value?: string | null };
   return safeTrim(ext.raw_value) || safeTrim(row.confirmed_value) || safeTrim(row.normalized_value);
@@ -119,7 +192,9 @@ export async function buildCaptureIngressoCompileData(input: {
   mezzi?: readonly MezzoGestito[];
   addettiRecords?: readonly AddettoRecord[];
 }): Promise<CaptureIngressoCompileData> {
-  const rows = sortCaptureReviewFields([...input.fieldRows]);
+  const rows = sortCaptureReviewFields(
+    normalizeIngressoCaptureFieldRows(input.fieldRows, input.sharedGlobalOpts.mezziListe),
+  );
   const addettiRecords =
     input.addettiRecords ?? input.sharedGlobalOpts.lavorazioni.addettiRecords ?? [];
 
@@ -149,7 +224,7 @@ export async function buildCaptureIngressoCompileData(input: {
   const resolutionByCaptureKey: Record<string, EntityResolutionResult> = {};
   if (resolutionCtx) {
     const resolutionInputs = Object.entries(draftByKey)
-      .filter(([, v]) => v.trim())
+      .filter(([fieldKey, v]) => v.trim() && !isCaptureSignatureFieldKey(fieldKey))
       .map(([field_key, value]) => ({
         field_key,
         raw_value: rawByKey[field_key] ?? value,
@@ -181,7 +256,10 @@ export async function buildCaptureIngressoCompileData(input: {
     normalized_value: draftByKey[row.field_key] ?? row.normalized_value,
   }));
 
-  const fields = mapCaptureFieldsToIngresso(mappedRows, addettiRecords);
+  const fields = canonicalizeIngressoCatalogFields(
+    mapCaptureFieldsToIngresso(mappedRows, addettiRecords),
+    input.sharedGlobalOpts.mezziListe,
+  );
 
   const catalogValidation: CaptureCatalogValidationInput = {
     fields: Object.entries(draftByKey).map(([field_key, value]) => ({ field_key, value })),
@@ -229,12 +307,20 @@ export async function buildCaptureIngressoCompileData(input: {
       continue;
     }
 
-    const suggested = resolution?.resolvedLabel?.trim();
+    const suggested = resolution?.resolvedLabel?.trim()
+      ? canonicalIngressoLabelFromSettings(
+          ingressoKey,
+          resolution.resolvedLabel,
+          input.sharedGlobalOpts.mezziListe,
+        )
+      : "";
+    const equivOpts =
+      ingressoKey === "cliente" ? ({ standardizeLegalSuffix: true } as const) : undefined;
     if (
       suggested &&
       raw &&
-      safeTrim(suggested).toLowerCase() !== raw.toLowerCase() &&
-      safeTrim(suggested).toLowerCase() !== current.toLowerCase()
+      !captureFieldValuesEquivalent(suggested, raw, equivOpts) &&
+      !captureFieldValuesEquivalent(suggested, current, equivOpts)
     ) {
       hints[ingressoKey] = {
         tone: "suggested",
@@ -245,7 +331,7 @@ export async function buildCaptureIngressoCompileData(input: {
       continue;
     }
 
-    if (raw && current && raw.toLowerCase() !== current.toLowerCase()) {
+    if (raw && current && !captureFieldValuesEquivalent(raw, current, equivOpts)) {
       hints[ingressoKey] = {
         tone: "suggested",
         rawOcr: raw,
@@ -272,6 +358,70 @@ export function countCaptureHintsNeedingReview(
 ): number {
   return Object.values(hints).filter((h) => h.tone === "ambiguous" || h.tone === "catalog" || h.tone === "suggested")
     .length;
+}
+
+const INGRESSO_CATALOG_CAPTURE_KEY: Partial<Record<keyof SchedaIngressoFields, string>> = {
+  cliente: "cliente",
+  cantiere: "cantiere",
+  utilizzatore: "utilizzatore",
+  tipoAttrezzatura: "tipo_attrezzatura",
+  marcaAttrezzatura: "marca_attrezzatura",
+  modelloAttrezzatura: "modello_attrezzatura",
+  tipoTelaio: "tipo_telaio",
+  marcaTelaio: "marca_telaio",
+  addettoAccettazione: "addetto_accettazione",
+};
+
+function catalogWarningsForIngressoValue(
+  key: keyof SchedaIngressoFields,
+  value: string,
+  hint: CaptureIngressoFieldHint,
+  catalogInput: CaptureCatalogValidationInput,
+) {
+  const captureKey = hint.captureFieldKey ?? INGRESSO_CATALOG_CAPTURE_KEY[key];
+  if (!captureKey || !value.trim()) return [];
+  return validateCaptureFieldsAgainstCatalogs({
+    ...catalogInput,
+    fields: [{ field_key: captureKey, value: value.trim() }],
+  });
+}
+
+/** Aggiorna/rimuove hint dopo modifica manuale del campo (es. correzione da lista impostazioni). */
+export function reconcileCaptureIngressoHintAfterEdit(
+  key: keyof SchedaIngressoFields,
+  newValue: string,
+  hint: CaptureIngressoFieldHint,
+  catalogInput: CaptureCatalogValidationInput,
+): CaptureIngressoFieldHint | undefined {
+  const trimmed = newValue.trim();
+
+  if (hint.tone === "ambiguous") {
+    const picked = hint.candidates?.some((c) => c.label.trim().toLowerCase() === trimmed.toLowerCase());
+    return picked ? undefined : hint;
+  }
+
+  const catalogWarnings = catalogWarningsForIngressoValue(key, trimmed, hint, catalogInput);
+
+  if (hint.tone === "catalog") {
+    return catalogWarnings.length > 0
+      ? { ...hint, message: catalogWarnings[0]?.message ?? hint.message }
+      : undefined;
+  }
+
+  if (hint.tone === "suggested") {
+    const suggestion = hint.suggestion?.trim();
+    const equivOpts = key === "cliente" ? ({ standardizeLegalSuffix: true } as const) : undefined;
+    if (suggestion && captureFieldValuesEquivalent(suggestion, trimmed, equivOpts)) return undefined;
+    if (catalogWarnings.length === 0) return undefined;
+    return {
+      tone: "catalog",
+      rawOcr: hint.rawOcr,
+      message: catalogWarnings[0]!.message,
+      captureFieldKey: hint.captureFieldKey ?? INGRESSO_CATALOG_CAPTURE_KEY[key],
+    };
+  }
+
+  return hint;
 }
 
 export function captureAmbiguousItemsFromCompileData(data: CaptureIngressoCompileData): Array<{

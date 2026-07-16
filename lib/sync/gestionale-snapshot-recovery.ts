@@ -2,6 +2,7 @@
 
 import type { QueryClient } from "@tanstack/react-query";
 import { collectQueryKeysForGestionaleTables } from "@/src/lib/react-query/invalidate-targets";
+import { QK } from "@/src/lib/react-query/query-keys";
 
 export const OPERATIONAL_DOMAINS = {
   lavorazioni: ["lavorazioni"],
@@ -49,6 +50,14 @@ export function activeOperationalDomains(qc: QueryClient): OperationalDomain[] {
   return out;
 }
 
+/** Refetch query log attive (feed attività dashboard). */
+export function refetchActiveLogQueries(qc: QueryClient, opts?: Pick<RefetchOperationalSnapshotOptions, "onlyActive">): void {
+  const type = opts?.onlyActive !== false ? "active" : "all";
+  const hasActive = qc.getQueryCache().findAll({ queryKey: QK.log, type: "active" }).length > 0;
+  if (!hasActive) return;
+  void qc.refetchQueries({ queryKey: QK.log, type });
+}
+
 /** Snapshot solo per domini con query attive montate. */
 export function refetchActiveOperationalSnapshot(
   qc: QueryClient,
@@ -57,4 +66,5 @@ export function refetchActiveOperationalSnapshot(
   const domains = activeOperationalDomains(qc);
   if (domains.length === 0) return;
   refetchOperationalSnapshot(qc, domains, opts);
+  refetchActiveLogQueries(qc, opts);
 }

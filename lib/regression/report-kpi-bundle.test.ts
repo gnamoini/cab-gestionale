@@ -66,6 +66,7 @@ const truth = ReportDataIntegrityLayer.buildValidatedDataset({
       lavorazione_id: "c2",
       tipo: "uscita",
       quantita: 6,
+      conta_statistiche: true,
       created_at: "2025-03-18T09:00:00.000Z",
     },
   ],

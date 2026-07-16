@@ -455,6 +455,10 @@ export const dsLavorazioniModalDialogCompact =
 export const dsLavorazioniModalDialogTall =
   `${cabModalDialogBase} max-md:min-w-0 max-w-full overflow-x-hidden w-full md:w-auto flex flex-col overflow-hidden max-md:flex-1 max-md:min-h-0 max-md:max-h-[min(100dvh,calc(var(--cab-vv-height,100dvh)))] max-md:rounded-none max-md:border-0 max-md:shadow-none md:flex-none md:max-h-[min(92dvh,920px)] md:rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} md:shadow-2xl`;
 
+/** Fullscreen documento/media: viewport intero desktop e mobile. */
+export const dsLavorazioniModalDialogFullscreen =
+  `${cabModalDialogBase} max-md:min-w-0 max-w-full overflow-x-hidden w-full flex flex-col overflow-hidden flex-1 min-h-0 max-md:max-h-[min(100dvh,calc(var(--cab-vv-height,100dvh)))] max-md:rounded-none max-md:border-0 max-md:shadow-none md:max-h-[min(100dvh,calc(var(--cab-vv-height,100dvh)))] md:rounded-none md:border-0 ${cabBorder} ${cabCard} md:shadow-2xl`;
+
 /** @deprecated Liste dense: `GlobalTableHead sticky` + `globalTableTheadSticky`. */
 export const dsTableThSticky =
   "sticky top-0 z-[2] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_96%,transparent)] shadow-[inset_0_-1px_0_0_var(--cab-border)] backdrop-blur-sm";

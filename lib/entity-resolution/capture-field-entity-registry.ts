@@ -33,6 +33,7 @@ export const CAPTURE_FIELD_BINDINGS: CaptureFieldBinding[] = [
   },
   { fieldKeyPattern: "tipo_attrezzatura", entityType: "TIPO_ATTREZZATURA" },
   { fieldKeyPattern: "tipoattrezzatura", entityType: "TIPO_ATTREZZATURA" },
+  { fieldKeyPattern: "attrezzatura", entityType: "TIPO_ATTREZZATURA" },
   { fieldKeyPattern: "tipo_telaio", entityType: "TIPO_TELAIO" },
   { fieldKeyPattern: "tipotelaio", entityType: "TIPO_TELAIO" },
   { fieldKeyPattern: "addetto_accettazione", entityType: "OPERATORE" },
