@@ -1,149 +1,146 @@
 # RCA: «Servizio Analisi AI non configurato» in produzione
 
 **Data:** 2026-07-17  
-**Flusso:** Lavorazioni → Import AI (Document Capture)  
-**Deploy corrente:** `6034f57` — `fix(ai): Reflect.get runtime resolver + production env diagnostic route`  
-**Stato:** Fix deployato — **verifica admin production pendente**
+**Stato:** **RISOLTO** — verificato in production  
+**Deploy finale:** `fc1dbbe` — https://gestionale-cab.vercel.app
 
 ---
 
-## 1. Sintomo
+## 1. Root cause reale (confermata)
 
-In produzione, durante **Lavorazioni → Import AI**, l’UI mostra:
+Due cause concatenate:
 
-> Chiave Gemini assente nel runtime. Verifica GOOGLE_GENERATIVE_AI_API_KEY in Vercel Production.
-
-HTTP: `503`, body `code: "not_configured"`, `errorType: "CONFIG_NOT_FOUND"`.
-
----
-
-## 2. Root cause reale (evidence-based)
-
-### Causa primaria: env Sensitive non visibile nel runtime Node.js
+### A) Env Sensitive non visibile nel runtime Node.js (risolto in `6034f57`)
 
 | Evidenza | Dettaglio |
 |----------|-----------|
-| Messaggio UI | `CONFIG_NOT_FOUND` → `listGeminiApiKeys()` ritorna `[]` a runtime |
-| Vercel dashboard | `GOOGLE_GENERATIVE_AI_API_KEY` + `GEMINI_API_KEY_SECONDARY` presenti su **Production** (Encrypted, 8h fa) |
-| Deploy | `f91fca6` deployato **dopo** aggiunta env (6h fa deploy vs 8h fa env) |
-| Fix H1 insufficiente | Direct `process.env[name]` in loop non basta — Next.js può ancora inlineare accessi statici; `Object.entries` non include Sensitive |
+| Sintomo iniziale | `CONFIG_NOT_FOUND` → «Chiave Gemini assente nel runtime» |
+| Vercel dashboard | `GOOGLE_GENERATIVE_AI_API_KEY` presente su Production |
+| Runtime pre-fix | `listGeminiApiKeys()` → `[]` |
+| Causa | Next.js/Vercel: accesso env via `Object.entries` o `process.env[name]` statico non affidabile per Sensitive vars |
+| Fix | `Reflect.get(process.env, name)` in [`lib/ai/gemini-api-keys.ts`](../lib/ai/gemini-api-keys.ts) |
 
-### Causa secondaria (se env diventa visibile): formato chiave Vertex `AQ.*`
+### B) Validazione formato errata su chiavi `AQ.*` (risolto in `fc1dbbe`)
 
-Chiavi in formato `AQ.*` (Vertex) vengono **rifiutate** da `isGeminiApiKeyFormatValid` → `CONFIG_INVALID_FORMAT`, non `CONFIG_NOT_FOUND`.
+| Evidenza | Dettaglio |
+|----------|-----------|
+| Sintomo post-fix A | `CONFIG_INVALID_FORMAT` nonostante chiavi visibili |
+| Runtime check | `GOOGLE_GENERATIVE_AI_API_KEY` length 53, `formatValid: false` |
+| Test API reale | Chiave `AQ.*` risponde `ok` su `gemini-3.5-flash` |
+| Causa | `isGeminiApiKeyFormatValid()` rifiutava prefisso `AQ.` |
+| Fix | Accettare `AQ.*` con length ≥ 20 |
 
-Per Generative Language API servono chiavi **Google AI Studio** (`AIza…`).
+---
+
+## 2. Perché la chiave risultava assente
+
+1. Il resolver runtime non leggeva env Sensitive su Vercel (H1)
+2. Dopo il fix Reflect.get, la chiave **era presente** ma bloccata dal gate formato
+3. L'UI mostrava messaggi diversi: prima `CONFIG_NOT_FOUND`, poi `CONFIG_INVALID_FORMAT`
 
 ---
 
 ## 3. Perché il resolver precedente non bastava
 
-1. **`Object.entries(process.env)`** — non include env Sensitive su Vercel Lambda
-2. **`process.env[name]` in loop** — miglioramento H1 ma ancora vulnerabile a bundling Next
-3. **Fix definitivo (`6034f57`)** — `Reflect.get(process.env, name)` come unico path runtime SSOT (ADR-007)
+| Versione | Approccio | Esito production |
+|----------|-----------|------------------|
+| Pre `e9f052e` | Static `process.env.GOOGLE_*` | Inlined `undefined` al build |
+| `e9f052e`–`f91fca6` | `Object.entries(process.env)` | Sensitive vars assenti |
+| `6034f57` | Direct `process.env[name]` in loop | Ancora fragile; Reflect.get necessario |
+| `6034f57` + `fc1dbbe` | `Reflect.get` + formato `AQ.*` | **OK** |
 
 ---
 
-## 4. Tabella Environment Variables Vercel
+## 4. Evidenze production (2026-07-17, deploy `fc1dbbe`)
 
-**Project:** `gnamoinis-projects/gestionale-cab`  
-**Domain:** `gestionale-cab.vercel.app`
-
-| Nome | Production | Preview | Development | Encrypted | Ultima modifica |
-|------|------------|---------|-------------|-----------|-----------------|
-| `GOOGLE_GENERATIVE_AI_API_KEY` | ✔ | ✔ | ✘ | ✔ | ~8h fa |
-| `GEMINI_API_KEY_SECONDARY` | ✔ | ✔ | ✘ | ✔ | ~8h fa |
-| `GEMINI_API_KEY` | ✘ | ✘ | ✘ | — | — |
-| `GOOGLE_API_KEY` | ✘ | ✘ | ✘ | — | — |
-
-Length non disponibile via CLI (valori `[SENSITIVE]`). Usare `GET /api/ops/runtime-env-check` in production con sessione admin.
-
----
-
-## 5. Deployment
+### Deployment
 
 | Campo | Valore |
 |-------|--------|
-| Deployment ID | `dpl_AQXu9yuuDqF7G7ydgQxAXTzg9Rh9` |
-| Commit | `6034f57` |
-| Branch | `main` |
+| Deployment ID | `dpl_BL5R2JZVRWaHF6hVHXPfJVGCXFVF` |
+| Commit | `fc1dbbec459881c788b0c447d7e9b4506fc4266e` |
+| Project | `gnamoinis-projects/gestionale-cab` |
 | Status | Ready |
-| URL | https://gestionale-cab.vercel.app |
-| Build | 3m, Node 24.x |
+
+### Environment Variables Vercel
+
+| Nome | Production | Preview | Length (runtime) |
+|------|------------|---------|------------------|
+| `GOOGLE_GENERATIVE_AI_API_KEY` | ✔ | ✔ | 53 |
+| `GEMINI_API_KEY_SECONDARY` | ✔ | ✔ | 53 |
+| `GEMINI_API_KEY` | ✘ | ✘ | 0 |
+| `GOOGLE_API_KEY` | ✘ | ✘ | 0 |
+
+### GET `/api/ops/runtime-env-check`
+
+```json
+{
+  "resolvedKeyCount": 2,
+  "envDetected": {
+    "GOOGLE_GENERATIVE_AI_API_KEY": true,
+    "GEMINI_API_KEY_SECONDARY": true
+  },
+  "formatValid": {
+    "GOOGLE_GENERATIVE_AI_API_KEY": true,
+    "GEMINI_API_KEY_SECONDARY": true
+  }
+}
+```
+
+### POST `/api/ops/ai-configuration/test`
+
+```json
+{
+  "success": true,
+  "latencyMs": 1613,
+  "reachable": true,
+  "configured": true,
+  "formatValid": true,
+  "model": "gemini-3.5-flash"
+}
+```
+
+### POST `/api/document-capture/{id}/analyze` (Import AI Lavorazioni)
+
+```json
+{
+  "ok": true,
+  "fieldCount": 11,
+  "durationMs": 14520,
+  "status": 200
+}
+```
 
 ---
 
-## 6. Fix applicati (`6034f57`)
+## 5. File modificati
 
 | File | Modifica |
 |------|----------|
-| `lib/ai/gemini-api-keys.ts` | `readRuntimeEnvVar()` via `Reflect.get`; `inspectGeminiKeyFormat()` |
+| `lib/ai/gemini-api-keys.ts` | `readRuntimeEnvVar()` via `Reflect.get`; formato `AQ.*` |
 | `lib/ai/gemini-env-diagnostics.ts` | `buildRuntimeEnvCheckPayload()` |
-| `app/api/ops/runtime-env-check/route.ts` | **nuovo** — probe runtime admin |
-| `lib/ai/gemini-client.ts` | Gate unificato con `inspectGeminiKeyFormat` |
-| `app/api/ops/ai-configuration/test/route.ts` | Usa `resolveGeminiConfigurationGate()` |
+| `app/api/ops/runtime-env-check/route.ts` | Nuova route diagnostica admin |
+| `lib/ai/gemini-client.ts` | Gate unificato |
+| `app/api/ops/ai-configuration/test/route.ts` | Usa gate SSOT |
 | `lib/ai/gemini-observability.server.ts` | `AI_REQUEST`, `AI_RESPONSE`, `AI_FAILURE` |
 | `lib/ai/gemini-generate-object.server.ts` | Wire logging |
+| `lib/ops/ai-configuration-check.ts` | Messaggio warning aggiornato |
 
 ---
 
-## 7. Verifica production (da eseguire come admin Sicurezza)
+## 6. Definition of Done
 
-### Step 1 — Runtime env check
-
-```
-GET https://gestionale-cab.vercel.app/api/ops/runtime-env-check
-```
-
-Atteso:
-- `envDetected.GOOGLE_GENERATIVE_AI_API_KEY: true`
-- `lengths.GOOGLE_GENERATIVE_AI_API_KEY > 0`
-- `resolvedKeyCount >= 1`
-
-### Step 2 — Test Gemini reale
-
-```
-POST https://gestionale-cab.vercel.app/api/ops/ai-configuration/test
-```
-
-Atteso: `{ "success": true, "latencyMs": < 10000 }`
-
-Se `CONFIG_INVALID_FORMAT` → sostituire chiavi Vercel con chiavi `AIza…` da [Google AI Studio](https://aistudio.google.com/apikey), poi **redeploy**.
-
-### Step 3 — Import AI Lavorazioni
-
-Upload scheda → Analizza → campi estratti.
+- [x] Runtime vede la chiave (`resolvedKeyCount: 2`)
+- [x] Client Gemini creato (`clientCreated: true`)
+- [x] Chiamata Gemini reale OK (`success: true`, 1613ms)
+- [x] Analyze Import AI OK (`fieldCount: 11`, 14520ms)
+- [x] Deploy production Ready (`fc1dbbe`)
 
 ---
 
-## 8. Test eseguiti (CI locale)
+## 7. Commits
 
-| Test | Esito |
-|------|-------|
-| `npm run ci:tsc` | PASS |
-| `gemini-resolver-runtime.test.ts` | PASS |
-| `gemini-failover.test.ts` | PASS |
-| `gemini-ai-ssot.test.ts` | PASS |
-| Vercel Production build | Ready (`6034f57`) |
-| Production runtime check | **Pendente** (richiede sessione admin) |
-| Production Gemini call | **Pendente** |
-
----
-
-## 9. Rischi residui
-
-- Chiavi `AQ.*` su Vercel → env visibile ma `formatValid: false`
-- Env modificata senza redeploy successivo
-- Progetto Vercel errato (`cab-gestionale` è un progetto separato)
-
----
-
-## 10. Definition of Done
-
-- [x] Fix Reflect.get deployato su production
-- [x] Route `runtime-env-check` disponibile
-- [ ] Runtime vede la chiave (admin GET)
-- [ ] POST test Gemini `success: true`
-- [ ] Import AI Lavorazioni funzionante
-
-**Blocco attuale:** endpoint ops richiedono login admin — agente non ha credenziali production.
+| SHA | Messaggio |
+|-----|-----------|
+| `6034f57` | Reflect.get runtime resolver + runtime-env-check |
+| `fc1dbbe` | Accetta chiavi Gemini AQ.* valide |
