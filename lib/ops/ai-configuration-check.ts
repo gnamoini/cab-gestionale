@@ -33,7 +33,7 @@ export function checkAiConfigurationForProduction(env: NodeJS.ProcessEnv = proce
       id: AI_CONFIGURATION_FORMAT_WARNING_ID,
       category: "ops-env",
       message:
-        "Chiave Gemini presente ma formato sospetto (es. AQ.* o troppo corta). Verifica su Google AI Studio (AIza…).",
+        "Chiave Gemini presente ma formato non riconosciuto (troppo corta o caratteri non validi).",
     });
   }
 

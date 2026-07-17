@@ -54,6 +54,7 @@ assert.equal(isGeminiFailoverError(new Error("TimeoutError")), false);
 
 assert.equal(isGeminiApiKeyFormatValid("AIzaSyD-example-key-1234567890"), true);
 assert.equal(isGeminiApiKeyFormatValid("AQ.AbCdEf"), false);
+assert.equal(isGeminiApiKeyFormatValid("AQ.AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"), true);
 assert.equal(isGeminiApiKeyFormatValid("test"), false);
 
 const statusOk = getGeminiConfigurationStatus({ GOOGLE_GENERATIVE_AI_API_KEY: "AIzaSyD-example-key-1234567890" });

@@ -45,9 +45,8 @@ export function inspectGeminiKeyFormat(key: string | null | undefined): GeminiKe
   const trimmed = key.trim();
   if (/\s/.test(trimmed)) issues.push("contains_whitespace");
   if (trimmed.length < 12) issues.push("too_short");
-  if (/^AQ\./i.test(trimmed)) issues.push("vertex_style_aq_prefix");
   if (trimmed === "test") issues.push("placeholder_test");
-  if (!trimmed.startsWith("AIza") && !/^[A-Za-z0-9_-]{20,}$/.test(trimmed)) {
+  if (!trimmed.startsWith("AIza") && !/^AQ\./i.test(trimmed) && !/^[A-Za-z0-9_.-]{20,}$/.test(trimmed)) {
     issues.push("invalid_charset_or_length");
   }
   const valid = isGeminiApiKeyFormatValid(trimmed);
@@ -65,14 +64,14 @@ export type GeminiConfigurationStatus = {
   modelId: string;
 };
 
-/** Google AI Studio keys usually start with AIza; AQ.* keys are Vertex-style and often invalid for Generative Language API. */
+/** Google AI Studio (AIza…) e chiavi Express/Vertex (AQ.) per Generative Language API. */
 export function isGeminiApiKeyFormatValid(key: string | null | undefined): boolean {
   const trimmed = key?.trim() ?? "";
   if (!trimmed) return false;
   if (trimmed.startsWith("AIza") && trimmed.length >= 20) return true;
-  if (/^AQ\./i.test(trimmed)) return false;
+  if (/^AQ\./i.test(trimmed) && trimmed.length >= 20) return true;
   if (trimmed === "test" || trimmed.length < 12) return false;
-  return /^[A-Za-z0-9_-]{20,}$/.test(trimmed);
+  return /^[A-Za-z0-9_.-]{20,}$/.test(trimmed);
 }
 
 export function resolvePrimaryGeminiEnvSource(env?: Record<string, string | undefined>): string | null {
