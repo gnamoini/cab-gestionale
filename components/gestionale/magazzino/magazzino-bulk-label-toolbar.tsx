@@ -3,23 +3,23 @@
 import { useCallback, useState } from "react";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { BULK_SYNC_MAX, DEFAULT_LABEL_PRESET, LABEL_PRESET_IDS } from "@/lib/inventory-labels";
+import { openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
+import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
-type BulkLabelPhase = "idle" | "preparing" | "generating" | "downloading";
+type BulkLabelPhase = "idle" | "preparing" | "generating" | "opening";
 
-function openPdfBlob(blob: Blob, filename = "etichette.pdf"): void {
-  const blobUrl = URL.createObjectURL(blob);
-  const opened = window.open(blobUrl, "_blank", "noopener,noreferrer");
-  if (!opened) {
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = filename;
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+async function openLabelArtifact(blob: Blob, filename: string): Promise<void> {
+  const isPdf = blob.type === "application/pdf" || filename.endsWith(".pdf");
+  if (isPdf) {
+    await openPdfBlobInNewTab(blob, filename, { showLoadingFeedback: false });
+    return;
   }
-  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000);
+  const blobUrl = URL.createObjectURL(blob);
+  openUrlInNewTab(blobUrl, {
+    revokeBlobUrlAfterMs: 120_000,
+    blockedMessage: "Impossibile aprire il file in una nuova scheda. Consenti i pop-up per questo sito.",
+  });
 }
 
 const BULK_FETCH_TIMEOUT_MS = 240_000;
@@ -62,20 +62,20 @@ export function MagazzinoBulkLabelToolbar({
           if (attempt > 120) throw new Error("Timeout job etichette");
           const jobRes = await fetch(`/api/inventory-labels/bulk/jobs/${jobId}`);
           if (jobRes.headers.get("Content-Type")?.includes("application/pdf")) {
-            setPhase("downloading");
+            setPhase("opening");
             setProgress(100);
             const blob = await jobRes.blob();
-            openPdfBlob(blob, `etichette-${ids.length}.pdf`);
+            await openLabelArtifact(blob, `etichette-${ids.length}.pdf`);
             gestToast.successOnce("bulk-labels", "PDF etichette pronto.");
             onClearSelection();
             return;
           }
           if (jobRes.headers.get("Content-Type")?.includes("application/zip")) {
-            setPhase("downloading");
+            setPhase("opening");
             setProgress(100);
             const blob = await jobRes.blob();
-            openPdfBlob(blob, `etichette-${ids.length}.zip`);
-            gestToast.info("PDF non disponibile — scaricato archivio PNG emergenza.");
+            await openLabelArtifact(blob, `etichette-${ids.length}.zip`);
+            gestToast.info("PDF non disponibile — archivio PNG aperto in nuova scheda.");
             onClearSelection();
             return;
           }
@@ -90,11 +90,11 @@ export function MagazzinoBulkLabelToolbar({
           }
           if (typeof status.progress === "number") setProgress(status.progress);
           if (status.status === "completed") {
-            setPhase("downloading");
+            setPhase("opening");
             const pdfRes = await fetch(`/api/inventory-labels/bulk/jobs/${jobId}`);
             const blob = await pdfRes.blob();
             const isZip = pdfRes.headers.get("Content-Type")?.includes("zip");
-            openPdfBlob(blob, `etichette-${ids.length}.${isZip ? "zip" : "pdf"}`);
+            await openLabelArtifact(blob, `etichette-${ids.length}.${isZip ? "zip" : "pdf"}`);
             onClearSelection();
             return;
           }
@@ -109,11 +109,11 @@ export function MagazzinoBulkLabelToolbar({
         const err = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(err.error ?? "Stampa bulk non riuscita");
       }
-      setPhase("downloading");
+      setPhase("opening");
       setProgress(100);
       const blob = await res.blob();
       const isZip = res.headers.get("Content-Type")?.includes("zip");
-      openPdfBlob(blob, `etichette-${ids.length}.${isZip ? "zip" : "pdf"}`);
+      await openLabelArtifact(blob, `etichette-${ids.length}.${isZip ? "zip" : "pdf"}`);
       gestToast.successOnce("bulk-labels-sync", "PDF etichette pronto.");
       onClearSelection();
     } catch (e) {
@@ -139,8 +139,8 @@ export function MagazzinoBulkLabelToolbar({
         ? progress > 0
           ? `Generazione ${progress}%`
           : "Generazione…"
-        : phase === "downloading"
-          ? "Download…"
+        : phase === "opening"
+          ? "Apertura…"
           : null;
 
   return (

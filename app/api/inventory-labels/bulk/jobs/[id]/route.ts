@@ -34,7 +34,7 @@ export async function GET(_request: Request, context: RouteContext) {
           status: 200,
           headers: {
             "Content-Type": contentType,
-            "Content-Disposition": `attachment; filename="etichette-job-${id.slice(0, 8)}.${ext}"`,
+            "Content-Disposition": `inline; filename="etichette-job-${id.slice(0, 8)}.${ext}"`,
             "X-Job-Status": "completed",
           },
         });

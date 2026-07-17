@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         status: 200,
         headers: {
           "Content-Type": contentType,
-          "Content-Disposition": `attachment; filename="etichette-${ids.length}.${ext}"`,
+          "Content-Disposition": `inline; filename="etichette-${ids.length}.${ext}"`,
           "X-Label-Pdf-Pipeline": pipeline,
         },
       });

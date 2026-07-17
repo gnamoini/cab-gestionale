@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { DisabledElementTooltip } from "@/components/ui";
 import { erpBtnNeutral, erpBtnSubtleNew } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { DEFAULT_LABEL_PRESET, LABEL_PRESET_IDS } from "@/lib/inventory-labels";
+import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
@@ -78,7 +79,16 @@ export function RicambioLabelActions({
     }
   }
 
-  async function handleDownload(format: "png" | "svg" | "pdf") {
+  function handleOpenPdf() {
+    void (async () => {
+      await ensureExpanded();
+      openUrlInNewTab(renderUrl("pdf"), {
+        blockedMessage: "Impossibile aprire il PDF. Consenti i pop-up per questo sito.",
+      });
+    })();
+  }
+
+  async function handleDownload(format: "png" | "svg") {
     await ensureExpanded();
     try {
       const res = await fetch(renderUrl(format));
@@ -201,7 +211,7 @@ export function RicambioLabelActions({
             <button type="button" className={erpBtnNeutral} disabled={loading} onClick={() => void handleDownload("png")}>
               PNG
             </button>
-            <button type="button" className={erpBtnNeutral} disabled={loading} onClick={() => void handleDownload("pdf")}>
+            <button type="button" className={erpBtnNeutral} disabled={loading} onClick={handleOpenPdf}>
               PDF
             </button>
             <button type="button" className={erpBtnNeutral} disabled={loading} onClick={() => void handleDownload("svg")}>
