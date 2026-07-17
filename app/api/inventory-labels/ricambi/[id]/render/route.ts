@@ -8,6 +8,7 @@ import { MAGAZZINO_RICAMBI_COLUMNS } from "@/lib/db/table-select-columns";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 type RouteContext = { params: Promise<{ id: string }> };
 

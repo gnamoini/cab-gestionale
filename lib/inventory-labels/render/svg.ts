@@ -24,14 +24,18 @@ export async function renderLabelSvg(
   template: LabelTemplateDefinition,
   payload: LabelPayload,
   qrUrl: string,
+  options?: { embedFonts?: boolean },
 ): Promise<string> {
   const w = mmToPx(template.widthMm, template.dpi);
   const h = mmToPx(template.heightMm, template.dpi);
+  const embedFonts = options?.embedFonts ?? true;
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`,
     `<rect width="100%" height="100%" fill="#ffffff"/>`,
-    `<defs><style>${labelFontFaceCss()}</style></defs>`,
   ];
+  if (embedFonts) {
+    parts.push(`<defs><style>${labelFontFaceCss()}</style></defs>`);
+  }
 
   const cutBorder = cutBorderRectSvg(w, h, template.cutBorderMm, template.dpi);
   if (cutBorder) parts.push(cutBorder);

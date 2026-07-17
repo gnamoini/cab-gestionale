@@ -47,7 +47,7 @@ SSOT: [`lib/inventory-labels/`](../lib/inventory-labels/)
 1. **Alto:** marche unite (`BTE / OMB`), descrizione, codice OE principale `XXXX (BTE)`, codice OE secondario `YYYY (OMB)` se presente
 2. **Basso (fascia barcode):** fornitore alternativo + codice fornitore ancorati al bordo inferiore etichetta, accanto al barcode
 
-Font DejaVu embedded nel SVG (`LabelSans` / `LabelMono`) — necessario perché sharp/librsvg non risolve `sans-serif` generici in headless.
+Font DejaVu (`LabelSans` / `LabelMono`): WOFF2 embedded nel SVG per download browser; su Linux/Vercel sharp usa **fontconfig** + TTF in `render/fonts/` (`fonts.conf`, `FONTCONFIG_FILE`) perché librsvg ignora `@font-face` embedded.
 
 | Preset | QR tipico | Default |
 |--------|-----------|---------|

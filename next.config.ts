@@ -40,6 +40,9 @@ const nextConfig: NextConfig = {
   images: {
     qualities: [75, 100],
   },
+  outputFileTracingIncludes: {
+    "/api/inventory-labels/**": ["./lib/inventory-labels/render/fonts/**"],
+  },
   experimental: {
     optimizePackageImports: [
       "@tanstack/react-query",
