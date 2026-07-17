@@ -3,11 +3,15 @@ import "server-only";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import type { LanguageModel } from "ai";
 import {
-  geminiKeySlotForIndex,
-  normalizeGeminiReportModelId,
   resolveGeminiApiKeysFromEnv,
+  resolvePrimaryGeminiEnvSource,
+  isGeminiApiKeyFormatValid,
+  normalizeGeminiReportModelId,
   runWithGeminiApiKeysFailover,
 } from "@/lib/ai/gemini-api-keys";
+import type { GeminiErrorType } from "@/lib/ai/gemini-error-types";
+import { buildGeminiResolverDiagnostics } from "@/lib/ai/gemini-env-diagnostics";
+import { logGeminiConfigurationCheck } from "@/lib/ai/gemini-observability.server";
 
 export {
   geminiKeySlotForIndex,
@@ -68,7 +72,47 @@ export function getGeminiApiKey(): string | null {
 }
 
 export function isGeminiConfigured(): boolean {
-  return listGeminiApiKeys().length > 0;
+  const keys = listGeminiApiKeys();
+  if (keys.length > 0) return true;
+  const resolver = buildGeminiResolverDiagnostics();
+  const primarySource = resolvePrimaryGeminiEnvSource();
+  const keyLength = primarySource ? (resolver.directPresence[primarySource]?.length ?? 0) : 0;
+  logGeminiConfigurationCheck({
+    configured: false,
+    primarySource,
+    keyLength,
+    formatValid: false,
+    resolverMismatch: resolver.mismatchEntriesVsDirect,
+  });
+  return false;
+}
+
+export type GeminiConfigurationGateFailure = {
+  code: "not_configured";
+  errorType: GeminiErrorType;
+  message: string;
+};
+
+export function resolveGeminiConfigurationGate(): GeminiConfigurationGateFailure | null {
+  const keys = listGeminiApiKeys();
+  if (keys.length > 0) {
+    const primary = keys[0]!;
+    if (!isGeminiApiKeyFormatValid(primary)) {
+      return {
+        code: "not_configured",
+        errorType: "CONFIG_INVALID_FORMAT",
+        message: GEMINI_AUTH_ERROR_HINT,
+      };
+    }
+    return null;
+  }
+  const resolver = buildGeminiResolverDiagnostics();
+  const directAny = resolver.geminiKeysViaDirect;
+  return {
+    code: "not_configured",
+    errorType: directAny ? "CONFIG_EMPTY" : "CONFIG_NOT_FOUND",
+    message: GEMINI_NOT_CONFIGURED_MESSAGE,
+  };
 }
 
 export type GeminiKeySlot = "primary" | "secondary";

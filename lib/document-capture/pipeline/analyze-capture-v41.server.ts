@@ -4,8 +4,9 @@ import { generateObjectWithGeminiFailover } from "@/lib/ai/gemini-generate-objec
 import {
   GEMINI_FILE_ANALYSIS_TIMEOUT_MS,
   GEMINI_NOT_CONFIGURED_MESSAGE,
-  isGeminiConfigured,
+  resolveGeminiConfigurationGate,
 } from "@/lib/ai/gemini-client";
+import type { GeminiErrorType } from "@/lib/ai/gemini-error-types";
 import type { CaptureExtractionResult } from "@/lib/document-capture/capture-extraction-schema";
 import { captureExtractionSchema, listCaptureExtractionFields } from "@/lib/document-capture/capture-extraction-schema";
 import { buildGeminiCaptureDocumentPart } from "@/lib/document-capture/gemini-capture-content";
@@ -64,7 +65,7 @@ export type AnalyzeCaptureV41Result =
       documentModelVersionHash: string;
       fieldCount: number;
     }
-  | { ok: false; code: "not_configured" | "auth_invalid" | "unreachable" | "not_finalized" | "failed" | "no_fields"; message: string };
+  | { ok: false; code: "not_configured" | "auth_invalid" | "unreachable" | "not_finalized" | "failed" | "no_fields"; message: string; errorType?: GeminiErrorType };
 
 async function countCaptureFields(captureId: string): Promise<number> {
   const sb = await createSupabaseServerUserClient();
@@ -103,7 +104,8 @@ export async function analyzeDocumentCaptureV41(
   captureId: string,
   userId: string,
 ): Promise<AnalyzeCaptureV41Result> {
-  const geminiReady = isGeminiConfigured();
+  const configGate = resolveGeminiConfigurationGate();
+  const geminiReady = configGate == null;
   const hybridEnabled = isDocumentCaptureHybridExtractionEnabled();
 
   const sb = await createSupabaseServerUserClient();
@@ -200,7 +202,12 @@ export async function analyzeDocumentCaptureV41(
     : null;
 
   if (!geminiReady && (!hybridResult || hybridResult.mergedPrefill.length === 0)) {
-    return { ok: false, code: "not_configured", message: GEMINI_NOT_CONFIGURED_MESSAGE };
+    return {
+      ok: false,
+      code: "not_configured",
+      errorType: configGate?.errorType ?? "CONFIG_NOT_FOUND",
+      message: configGate?.message ?? GEMINI_NOT_CONFIGURED_MESSAGE,
+    };
   }
 
   let lastError: unknown;

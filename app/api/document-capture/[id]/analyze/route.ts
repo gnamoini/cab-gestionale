@@ -78,7 +78,11 @@ export async function POST(request: Request, context: RouteContext) {
       if (retrySec != null) headers["Retry-After"] = String(retrySec);
     }
     return NextResponse.json(
-      withImportCorrelation(correlationId, { error: result.message, code: result.code }),
+      withImportCorrelation(correlationId, {
+        error: result.message,
+        code: result.code,
+        errorType: "errorType" in result ? result.errorType : undefined,
+      }),
       { status, headers },
     );
   }

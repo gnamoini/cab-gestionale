@@ -56,13 +56,20 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
       const body = (await res.json().catch(() => ({}))) as {
         error?: string;
         code?: string;
+        errorType?: string;
         fieldCount?: number;
       };
       if (seq !== analyzeSeqRef.current) return false;
       retryHintSec = parseRetryAfterHeader(res.headers.get("Retry-After"));
       if (!res.ok) {
         if (body.code === "not_configured") {
-          throw new Error(body.error ?? "Servizio AI non configurato.");
+          const hint =
+            body.errorType === "CONFIG_INVALID_FORMAT"
+              ? "Chiave Gemini non valida. Verifica il formato (AIza...) in Vercel → Environment Variables."
+              : body.errorType === "CONFIG_NOT_FOUND"
+                ? "Chiave Gemini assente nel runtime. Verifica GOOGLE_GENERATIVE_AI_API_KEY in Vercel Production."
+                : null;
+          throw new Error(hint ?? body.error ?? "Servizio AI non configurato.");
         }
         if (body.code === "not_finalized") {
           throw new Error("Documento non disponibile. Torna indietro e carica di nuovo il file.");

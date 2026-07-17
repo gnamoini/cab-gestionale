@@ -32,9 +32,14 @@ export function isGeminiApiKeyFormatValid(key: string | null | undefined): boole
 }
 
 export function resolvePrimaryGeminiEnvSource(env?: Record<string, string | undefined>): string | null {
-  const lookup = env ?? Object.fromEntries(Object.entries(process.env));
+  if (env) {
+    for (const name of PRIMARY_ENV_KEY_NAMES) {
+      if (env[name]?.trim()) return name;
+    }
+    return null;
+  }
   for (const name of PRIMARY_ENV_KEY_NAMES) {
-    if (lookup[name]?.trim()) return name;
+    if (process.env[name]?.trim()) return name;
   }
   return null;
 }
@@ -81,10 +86,26 @@ function resolveFromExplicitEnv(env: Record<string, string | undefined>): string
   return keys;
 }
 
-/** Scan dinamico di process.env — evita inlining Next a build (Vercel sensitive env). */
+/** Scan dinamico di process.env — direct lookup primario; entries come fallback. */
 function resolveFromRuntimeProcessEnv(): string[] {
+  const keys: string[] = [];
+  const push = (key: string | null) => {
+    if (!key || keys.includes(key)) return;
+    keys.push(key);
+  };
+  const directLookup = (names: readonly string[]) => {
+    for (const name of names) {
+      const value = process.env[name]?.trim();
+      if (value) return value;
+    }
+    return null;
+  };
+  push(directLookup(PRIMARY_ENV_KEY_NAMES));
+  push(directLookup(SECONDARY_ENV_KEY_NAMES));
+  if (keys.length > 0) return keys;
+
   const entries = Object.entries(process.env) as [string, string | undefined][];
-  const lookup = (names: readonly string[]) => {
+  const entriesLookup = (names: readonly string[]) => {
     for (const name of names) {
       const hit = entries.find(([key]) => key === name);
       const value = hit?.[1]?.trim();
@@ -92,13 +113,8 @@ function resolveFromRuntimeProcessEnv(): string[] {
     }
     return null;
   };
-  const keys: string[] = [];
-  const push = (key: string | null) => {
-    if (!key || keys.includes(key)) return;
-    keys.push(key);
-  };
-  push(lookup(PRIMARY_ENV_KEY_NAMES));
-  push(lookup(SECONDARY_ENV_KEY_NAMES));
+  push(entriesLookup(PRIMARY_ENV_KEY_NAMES));
+  push(entriesLookup(SECONDARY_ENV_KEY_NAMES));
   return keys;
 }
 

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { generateText } from "ai";
 import {
+  buildGeminiOpsConfigurationPayload,
+  resolveConfigurationErrorType,
+} from "@/lib/ai/gemini-env-diagnostics";
+import { classifyGeminiError } from "@/lib/ai/gemini-error-types";
+import {
   getGeminiConfigurationStatus,
   isGeminiApiKeyFormatValid,
   isGeminiAuthError,
@@ -13,6 +18,7 @@ import {
   listGeminiApiKeys,
   resolveGeminiReportModelId,
 } from "@/lib/ai/gemini-client";
+import { logGeminiClientCreated, logGeminiRequestFailed } from "@/lib/ai/gemini-observability.server";
 import { requireOpsAdmin } from "@/lib/ops/ops-api-auth.server";
 
 export const runtime = "nodejs";
@@ -25,19 +31,28 @@ export async function POST() {
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const modelId = resolveGeminiReportModelId();
+  const base = buildGeminiOpsConfigurationPayload(modelId);
   const keys = listGeminiApiKeys();
   const primary = keys[0] ?? null;
   const primarySource = getGeminiConfigurationStatus().primarySource;
+  const keyLength = primarySource ? (base.resolver.directPresence[primarySource]?.length ?? 0) : 0;
 
-  if (!primary) {
+  const configErrorType = resolveConfigurationErrorType({
+    configured: Boolean(primary),
+    keyLength,
+    formatValid: isGeminiApiKeyFormatValid(primary),
+  });
+
+  if (!primary || configErrorType) {
     return NextResponse.json(
       {
-        configured: false,
+        ...base,
+        success: false,
+        latencyMs: 0,
+        errorType: configErrorType ?? "CONFIG_NOT_FOUND",
+        errorMessage: GEMINI_NOT_CONFIGURED_MESSAGE,
+        httpStatus: 503,
         reachable: false,
-        provider: "google",
-        primarySource: null,
-        formatValid: false,
-        message: GEMINI_NOT_CONFIGURED_MESSAGE,
       },
       { status: 503 },
     );
@@ -48,6 +63,7 @@ export async function POST() {
 
   try {
     const model = getGeminiReportModelForApiKey(primary, modelId);
+    logGeminiClientCreated({ primarySource, model: modelId });
     await generateText({
       model,
       prompt: "ok",
@@ -55,59 +71,53 @@ export async function POST() {
     });
     const latencyMs = Math.round(performance.now() - t0);
     return NextResponse.json({
-      configured: true,
-      reachable: true,
-      provider: "google",
-      primarySource,
+      ...base,
+      success: true,
       latencyMs,
+      errorType: null,
+      errorMessage: null,
+      httpStatus: 200,
       formatValid,
-      modelId,
+      reachable: true,
+      lastInitializationError: null,
     });
   } catch (error) {
     const latencyMs = Math.round(performance.now() - t0);
-    if (isGeminiAuthError(error)) {
-      return NextResponse.json(
-        {
-          configured: true,
-          reachable: false,
-          provider: "google",
-          primarySource,
-          latencyMs,
-          formatValid,
-          modelId,
-          message: GEMINI_AUTH_ERROR_HINT,
-        },
-        { status: 502 },
-      );
-    }
-    if (isGeminiUnreachableError(error)) {
-      return NextResponse.json(
-        {
-          configured: true,
-          reachable: false,
-          provider: "google",
-          primarySource,
-          latencyMs,
-          formatValid,
-          modelId,
-          message: "Chiave presente ma API Gemini non raggiungibile.",
-        },
-        { status: 503 },
-      );
-    }
-    const message = error instanceof Error ? error.message : "Test Gemini fallito";
+    const errorType = isGeminiAuthError(error)
+      ? "AUTH_INVALID_KEY"
+      : isGeminiUnreachableError(error)
+        ? "NETWORK_ERROR"
+        : classifyGeminiError(error);
+    const errorMessage =
+      errorType === "AUTH_INVALID_KEY"
+        ? GEMINI_AUTH_ERROR_HINT
+        : errorType === "NETWORK_ERROR"
+          ? "Chiave presente ma API Gemini non raggiungibile."
+          : error instanceof Error
+            ? error.message
+            : "Test Gemini fallito";
+    logGeminiRequestFailed({
+      model: modelId,
+      operation: "ops_health_check",
+      durationMs: latencyMs,
+      errorCode: errorType,
+      errorMessage,
+    });
+    const httpStatus =
+      errorType === "AUTH_INVALID_KEY" || errorType === "AUTH_FORBIDDEN" ? 502 : 503;
     return NextResponse.json(
       {
-        configured: true,
-        reachable: false,
-        provider: "google",
-        primarySource,
+        ...base,
+        success: false,
         latencyMs,
+        errorType,
+        errorMessage,
+        httpStatus,
         formatValid,
-        modelId,
-        message,
+        reachable: false,
+        lastInitializationError: errorMessage,
       },
-      { status: 502 },
+      { status: httpStatus },
     );
   }
 }
