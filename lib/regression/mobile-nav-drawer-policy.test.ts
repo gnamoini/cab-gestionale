@@ -17,6 +17,16 @@ for (const row of NAV_DRAWER_CONTRACT_TRANSITIONS.slice(0, 8)) {
 }
 
 const sidebarSrc = readFileSync(join(root, "components/gestionale/app-shell-sidebar.tsx"), "utf8");
+assert.doesNotMatch(
+  sidebarSrc,
+  /\[activePath,\s*collapseSidebar,\s*drawer,/,
+  "route effect must not depend on unstable drawer object",
+);
+assert.doesNotMatch(
+  sidebarSrc,
+  /\[drawer,\s*isCompactShell\]/,
+  "tier forceClose effect must not depend on unstable drawer object",
+);
 assert.match(sidebarSrc, /useBodyScrollLock/);
 assert.match(sidebarSrc, /useDialogFocusTrap/);
 assert.match(sidebarSrc, /useOverlayBackHandler/);

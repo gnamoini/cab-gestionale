@@ -10,6 +10,7 @@ export const PWA_ICON_SIZES = [
 export const PWA_APPLE_TOUCH_SIZES = [152, 167, 180] as const;
 
 export const PWA_FAVICON_ICO_PATH = `${PWA_ICON_BASE_PATH}/favicon.ico` as const;
+export const PWA_FAVICON_ROOT_PATH = "/favicon.ico" as const;
 export const PWA_MASKABLE_ICON_PATH = `${PWA_ICON_BASE_PATH}/icon-512x512-maskable.png` as const;
 export const PWA_MONOCHROME_ICON_PATH = `${PWA_ICON_BASE_PATH}/icon-monochrome.png` as const;
 
@@ -23,6 +24,7 @@ function appleTouchIconPath(size: number): string {
 
 /** File generati da `scripts/generate-pwa-icons.ts` — usato da regression test. */
 export const PWA_GENERATED_ICON_FILES = [
+  PWA_FAVICON_ROOT_PATH,
   PWA_FAVICON_ICO_PATH,
   ...PWA_ICON_SIZES.map((size) => iconPath(size)),
   ...PWA_APPLE_TOUCH_SIZES.map((size) => appleTouchIconPath(size)),
@@ -58,6 +60,7 @@ export function buildPwaManifestIcons(): NonNullable<MetadataRoute.Manifest["ico
 export function buildPwaMetadataIcons(): Metadata["icons"] {
   return {
     icon: [
+      { url: PWA_FAVICON_ROOT_PATH, sizes: "any" },
       { url: PWA_FAVICON_ICO_PATH, sizes: "any" },
       ...PWA_ICON_SIZES.map((size) => ({
         url: iconPath(size),

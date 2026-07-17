@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerServiceClient } from "@/src/lib/supabase/server-service-client";
-import { decryptApiKey } from "@/lib/ai/runtime/key-crypto";
+import { decryptApiKey, canEncryptApiKeys } from "@/lib/ai/runtime/key-crypto";
 import { createLanguageModel } from "@/lib/ai/runtime/client-factory";
 import { generateText } from "ai";
 import { classifyAiError } from "@/lib/ai/runtime/errors";
@@ -17,6 +17,16 @@ export async function POST(_request: Request, context: RouteContext) {
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const { id } = await context.params;
+  if (!canEncryptApiKeys()) {
+    return NextResponse.json(
+      {
+        success: false,
+        errorMessage:
+          "AI_MASTER_KEY_ENCRYPTION_KEY non configurata sul server. Impostarla su Vercel (Production) e ridistribuire.",
+      },
+      { status: 503 },
+    );
+  }
   const sb = createSupabaseServerServiceClient();
   const { data, error } = await sb.from("ai_provider_keys").select("*").eq("id", id).maybeSingle();
   if (error || !data) {

@@ -20,9 +20,12 @@ const LOGO_PATH = path.join(ROOT, "public", "cab-logo.png");
 const ICONS_DIR = path.join(ROOT, "public", "icons");
 const MASTER_SIZE = 1024;
 
-/** Tile arrotondata — ~88% canvas, raggio ~22% lato tile (stile app iOS/Android). */
-const TILE_SIZE_RATIO = 0.88;
-const TILE_RADIUS_RATIO = 0.22;
+/** Tile arrotondata — full-bleed per bookmark/PWA; maskable mantiene safe zone. */
+const TILE_SIZE_RATIO = 1;
+const TILE_RADIUS_RATIO = 0.18;
+/** Logo wide (C.A.B.): riempie quasi tutta la larghezza del quadrato. */
+const MASTER_LOGO_MAX_WIDTH_RATIO = 0.94;
+const FAVICON_LOGO_MAX_WIDTH_RATIO = 1;
 
 type Rgb = { r: number; g: number; b: number };
 
@@ -59,16 +62,28 @@ function roundedTileSvg(input: {
   );
 }
 
-async function resizeLogo(maxLogoWidth: number): Promise<{ buffer: Buffer; width: number; height: number }> {
-  const logo = sharp(LOGO_PATH);
-  const meta = await logo.metadata();
+async function loadTrimmedLogo(): Promise<{ buffer: Buffer; width: number; height: number }> {
+  const trimmed = sharp(LOGO_PATH).trim({ threshold: 12 });
+  const meta = await trimmed.metadata();
   const logoWidth = meta.width ?? 790;
   const logoHeight = meta.height ?? 226;
+  const buffer = await trimmed.png().toBuffer();
+  return { buffer, width: logoWidth, height: logoHeight };
+}
+
+async function resizeLogo(
+  source: { buffer: Buffer; width: number; height: number },
+  maxLogoWidth: number,
+): Promise<{ buffer: Buffer; width: number; height: number }> {
+  const { buffer, width: logoWidth, height: logoHeight } = source;
   const scale = maxLogoWidth / logoWidth;
   const resizedWidth = maxLogoWidth;
   const resizedHeight = Math.round(logoHeight * scale);
-  const buffer = await logo.resize(resizedWidth, resizedHeight, { fit: "inside" }).png().toBuffer();
-  return { buffer, width: resizedWidth, height: resizedHeight };
+  const resized = await sharp(buffer)
+    .resize(resizedWidth, resizedHeight, { fit: "inside" })
+    .png()
+    .toBuffer();
+  return { buffer: resized, width: resizedWidth, height: resizedHeight };
 }
 
 async function buildIconMaster(input: {
@@ -80,7 +95,11 @@ async function buildIconMaster(input: {
   const tileRadius = Math.round(tileSize * TILE_RADIUS_RATIO);
   const effectiveTile = input.fullBleedTile ? MASTER_SIZE : tileSize;
   const maxLogoWidth = Math.round(effectiveTile * input.logoMaxWidthRatio);
-  const { buffer: resizedLogo, width: logoWidth, height: logoHeight } = await resizeLogo(maxLogoWidth);
+  const trimmedLogo = await loadTrimmedLogo();
+  const { buffer: resizedLogo, width: logoWidth, height: logoHeight } = await resizeLogo(
+    trimmedLogo,
+    maxLogoWidth,
+  );
 
   const tile = roundedTileSvg({
     canvasSize: MASTER_SIZE,
@@ -154,8 +173,14 @@ async function main(): Promise<void> {
   fs.mkdirSync(ICONS_DIR, { recursive: true });
 
   const master = await buildIconMaster({
-    logoMaxWidthRatio: 0.76,
-    transparentCanvas: true,
+    logoMaxWidthRatio: MASTER_LOGO_MAX_WIDTH_RATIO,
+    fullBleedTile: true,
+    transparentCanvas: false,
+  });
+  const faviconMaster = await buildIconMaster({
+    logoMaxWidthRatio: FAVICON_LOGO_MAX_WIDTH_RATIO,
+    fullBleedTile: true,
+    transparentCanvas: false,
   });
   const maskable = await buildIconMaster({
     logoMaxWidthRatio: 0.62,
@@ -179,10 +204,12 @@ async function main(): Promise<void> {
 
   const faviconSizes = [16, 32, 48] as const;
   const faviconPngs = await Promise.all(
-    faviconSizes.map((size) => sharp(master).resize(size, size).png().toBuffer()),
+    faviconSizes.map((size) => sharp(faviconMaster).resize(size, size).png().toBuffer()),
   );
   const faviconIco = await toIco(faviconPngs);
-  fs.writeFileSync(publicIconPath(`${PWA_ICON_BASE_PATH}/favicon.ico`), faviconIco);
+  const faviconPath = publicIconPath(`${PWA_ICON_BASE_PATH}/favicon.ico`);
+  fs.writeFileSync(faviconPath, faviconIco);
+  fs.writeFileSync(publicIconPath("favicon.ico"), faviconIco);
 
   console.log(`pwa:icons — generate ${PWA_ICON_SIZES.length + PWA_APPLE_TOUCH_SIZES.length + 3} asset in public/icons/`);
 }

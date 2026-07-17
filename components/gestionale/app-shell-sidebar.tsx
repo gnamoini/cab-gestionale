@@ -201,7 +201,7 @@ function MobileNavDrawer({
   isNavLoading: boolean;
   activePath: string;
 }) {
-  const { flags, dispatch, onAnimationEnd, close } = drawer;
+  const { flags, dispatch, onAnimationEnd, close, forceClose } = drawer;
   const mobileNav = useMobileNavShell();
   const swipeDismissedRef = useRef(false);
   const panelContainerRef = useRef<HTMLDivElement | null>(null);
@@ -289,9 +289,9 @@ function MobileNavDrawer({
 
   useEffect(() => {
     if (!isCompactShell) {
-      drawer.forceClose();
+      forceClose();
     }
-  }, [drawer, isCompactShell]);
+  }, [forceClose, isCompactShell]);
 
   useEffect(() => {
     if (!focusTrapActive) return;
@@ -448,6 +448,7 @@ function AppShellSidebarInner({
   edgeSwipeBackdropRef,
 }: AppShellSidebarProps) {
   const activePath = usePathname();
+  const { routeLock } = drawer;
   routePathnameRef.current = activePath;
 
   useEffect(() => {
@@ -456,9 +457,9 @@ function AppShellSidebarInner({
       recordHealthMetric("routeTransitionMs", durationMs);
       routeTransitionStartRef.current = null;
     }
-    drawer.routeLock();
+    routeLock();
     collapseSidebar();
-  }, [activePath, collapseSidebar, drawer, routeTransitionStartRef]);
+  }, [activePath, collapseSidebar, routeLock, routeTransitionStartRef]);
 
   const onHeaderHomeClick = useCallback(
     (e: ReactMouseEvent<HTMLAnchorElement>) => {
