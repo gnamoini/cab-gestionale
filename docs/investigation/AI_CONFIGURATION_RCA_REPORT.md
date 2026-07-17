@@ -2,164 +2,148 @@
 
 **Data:** 2026-07-17  
 **Flusso:** Lavorazioni → Import AI (Document Capture)  
-**Ultimo deploy analizzato:** `ef9cef3` (`update production version`)  
-**Stato:** Fix H1 implementato in working tree — **verifica production post-deploy pendente**
+**Deploy corrente:** `6034f57` — `fix(ai): Reflect.get runtime resolver + production env diagnostic route`  
+**Stato:** Fix deployato — **verifica admin production pendente**
 
 ---
 
 ## 1. Sintomo
 
-In produzione, durante **Lavorazioni → Import AI**, dopo upload e analisi documento, l’UI mostra:
+In produzione, durante **Lavorazioni → Import AI**, l’UI mostra:
 
-> Servizio Analisi AI non configurato. Imposta GOOGLE_GENERATIVE_AI_API_KEY, GEMINI_API_KEY o GOOGLE_API_KEY.
+> Chiave Gemini assente nel runtime. Verifica GOOGLE_GENERATIVE_AI_API_KEY in Vercel Production.
 
-HTTP: `503`, body `code: "not_configured"`.
-
----
-
-## 2. Stack end-to-end (Lavorazioni)
-
-| Passo | Componente | File |
-|-------|------------|------|
-| 1 | Launcher UI | `components/document-capture/lavorazioni-digital-capture-launcher.tsx` |
-| 2 | Wizard analyze | `components/document-capture/document-capture-wizard-modal.tsx` → `runAnalyze()` |
-| 3 | API | `POST /api/document-capture/[id]/analyze` (`runtime = "nodejs"`) |
-| 4 | Pipeline v4.1 | `lib/document-capture/pipeline/analyze-capture-v41.server.ts` |
-| 5 | Gate Gemini | `resolveGeminiConfigurationGate()` → `lib/ai/gemini-client.ts` |
-| 6 | Resolver chiavi | `listGeminiApiKeys()` → `resolveGeminiApiKeysFromEnv()` → `lib/ai/gemini-api-keys.ts` |
-
-Messaggio SSOT unico: `GEMINI_NOT_CONFIGURED_MESSAGE` in `lib/ai/gemini-client.ts`.
-
-**Conclusione logica:** `listGeminiApiKeys()` ritorna `[]` a runtime in production, non un errore auth/quota (che userebbero `auth_invalid` o messaggi distinti).
+HTTP: `503`, body `code: "not_configured"`, `errorType: "CONFIG_NOT_FOUND"`.
 
 ---
 
-## 3. Ipotesi e evidenze
+## 2. Root cause reale (evidence-based)
 
-| ID | Ipotesi | Evidenza | Esito |
-|----|---------|----------|-------|
-| **H1** | `Object.entries(process.env)` su Vercel/Next non espone env **Sensitive**; lookup diretto `process.env[name]` sì | Pattern noto su serverless; resolver pre-fix usava solo `entries` scan | **Probabile root cause** — fix applicato |
-| **H2** | Chiavi assenti su Production | `npx vercel env ls production` → `GOOGLE_GENERATIVE_AI_API_KEY` + `GEMINI_API_KEY_SECONDARY` presenti (Encrypted, Production+Preview) | **Esclusa** (env configurato) |
-| **H3** | Production su commit vecchio | Deploy `ef9cef3` confermato Ready; diagnostic espone `commitSha` post-fix | Da ri-verificare post-deploy RCA |
-| **H4** | Chiave presente ma vuota dopo trim | Possibile se typo; diagnostic `keyLength` post-fix | Da verificare in GET admin |
-| **H5** | Chiave Vertex `AQ.*` | Con chiave presente → `configured: true`; errore sarebbe auth, non `not_configured` | **Esclusa** per questo sintomo |
+### Causa primaria: env Sensitive non visibile nel runtime Node.js
+
+| Evidenza | Dettaglio |
+|----------|-----------|
+| Messaggio UI | `CONFIG_NOT_FOUND` → `listGeminiApiKeys()` ritorna `[]` a runtime |
+| Vercel dashboard | `GOOGLE_GENERATIVE_AI_API_KEY` + `GEMINI_API_KEY_SECONDARY` presenti su **Production** (Encrypted, 8h fa) |
+| Deploy | `f91fca6` deployato **dopo** aggiunta env (6h fa deploy vs 8h fa env) |
+| Fix H1 insufficiente | Direct `process.env[name]` in loop non basta — Next.js può ancora inlineare accessi statici; `Object.entries` non include Sensitive |
+
+### Causa secondaria (se env diventa visibile): formato chiave Vertex `AQ.*`
+
+Chiavi in formato `AQ.*` (Vertex) vengono **rifiutate** da `isGeminiApiKeyFormatValid` → `CONFIG_INVALID_FORMAT`, non `CONFIG_NOT_FOUND`.
+
+Per Generative Language API servono chiavi **Google AI Studio** (`AIza…`).
 
 ---
 
-## 4. Prove raccolte
+## 3. Perché il resolver precedente non bastava
 
-### 4.1 Vercel env (CLI, 2026-07-17)
+1. **`Object.entries(process.env)`** — non include env Sensitive su Vercel Lambda
+2. **`process.env[name]` in loop** — miglioramento H1 ma ancora vulnerabile a bundling Next
+3. **Fix definitivo (`6034f57`)** — `Reflect.get(process.env, name)` come unico path runtime SSOT (ADR-007)
+
+---
+
+## 4. Tabella Environment Variables Vercel
+
+**Project:** `gnamoinis-projects/gestionale-cab`  
+**Domain:** `gestionale-cab.vercel.app`
+
+| Nome | Production | Preview | Development | Encrypted | Ultima modifica |
+|------|------------|---------|-------------|-----------|-----------------|
+| `GOOGLE_GENERATIVE_AI_API_KEY` | ✔ | ✔ | ✘ | ✔ | ~8h fa |
+| `GEMINI_API_KEY_SECONDARY` | ✔ | ✔ | ✘ | ✔ | ~8h fa |
+| `GEMINI_API_KEY` | ✘ | ✘ | ✘ | — | — |
+| `GOOGLE_API_KEY` | ✘ | ✘ | ✘ | — | — |
+
+Length non disponibile via CLI (valori `[SENSITIVE]`). Usare `GET /api/ops/runtime-env-check` in production con sessione admin.
+
+---
+
+## 5. Deployment
+
+| Campo | Valore |
+|-------|--------|
+| Deployment ID | `dpl_AQXu9yuuDqF7G7ydgQxAXTzg9Rh9` |
+| Commit | `6034f57` |
+| Branch | `main` |
+| Status | Ready |
+| URL | https://gestionale-cab.vercel.app |
+| Build | 3m, Node 24.x |
+
+---
+
+## 6. Fix applicati (`6034f57`)
+
+| File | Modifica |
+|------|----------|
+| `lib/ai/gemini-api-keys.ts` | `readRuntimeEnvVar()` via `Reflect.get`; `inspectGeminiKeyFormat()` |
+| `lib/ai/gemini-env-diagnostics.ts` | `buildRuntimeEnvCheckPayload()` |
+| `app/api/ops/runtime-env-check/route.ts` | **nuovo** — probe runtime admin |
+| `lib/ai/gemini-client.ts` | Gate unificato con `inspectGeminiKeyFormat` |
+| `app/api/ops/ai-configuration/test/route.ts` | Usa `resolveGeminiConfigurationGate()` |
+| `lib/ai/gemini-observability.server.ts` | `AI_REQUEST`, `AI_RESPONSE`, `AI_FAILURE` |
+| `lib/ai/gemini-generate-object.server.ts` | Wire logging |
+
+---
+
+## 7. Verifica production (da eseguire come admin Sicurezza)
+
+### Step 1 — Runtime env check
 
 ```
-GOOGLE_GENERATIVE_AI_API_KEY    Encrypted    Production, Preview
-GEMINI_API_KEY_SECONDARY        Encrypted    Production, Preview
+GET https://gestionale-cab.vercel.app/api/ops/runtime-env-check
 ```
 
-→ H2 esclusa: le variabili esistono su Production.
+Atteso:
+- `envDetected.GOOGLE_GENERATIVE_AI_API_KEY: true`
+- `lengths.GOOGLE_GENERATIVE_AI_API_KEY > 0`
+- `resolvedKeyCount >= 1`
 
-### 4.2 Endpoint diagnostic (production, senza sessione admin)
+### Step 2 — Test Gemini reale
 
-`GET https://gestionale-cab.vercel.app/api/ops/ai-configuration` → **HTTP 307** (redirect auth).
+```
+POST https://gestionale-cab.vercel.app/api/ops/ai-configuration/test
+```
 
-Endpoint protetto da `requireOpsAdmin` (Sicurezza). Prove runtime complete richiedono sessione admin.
+Atteso: `{ "success": true, "latencyMs": < 10000 }`
 
-### 4.3 Audit codice (pre-fix `ef9cef3`)
+Se `CONFIG_INVALID_FORMAT` → sostituire chiavi Vercel con chiavi `AIza…` da [Google AI Studio](https://aistudio.google.com/apikey), poi **redeploy**.
 
-`resolveFromRuntimeProcessEnv()` usava `Object.entries(process.env)` come unico path runtime.
+### Step 3 — Import AI Lavorazioni
 
----
-
-## 5. Root cause (conclusione)
-
-**Causa primaria (H1):** il resolver runtime non trovava chiavi Gemini perché lo scan `Object.entries(process.env)` può non includere variabili Sensitive su bundle Vercel/Next, mentre `process.env.GOOGLE_GENERATIVE_AI_API_KEY` funziona.
-
-Effetto: `isGeminiConfigured()` → `false` → `not_configured` + messaggio SSOT, nonostante chiavi configurate su Vercel.
-
----
-
-## 6. Correzione SSOT applicata
-
-### 6.1 Resolver (`lib/ai/gemini-api-keys.ts`)
-
-- Lookup **diretto** `process.env[name]` per PRIMARY + SECONDARY **prima**
-- Fallback `Object.entries` solo se direct non trova nulla
-- `resolvePrimaryGeminiEnvSource()` usa direct lookup
-
-### 6.2 Diagnostic ops
-
-- `GET /api/ops/ai-configuration` — payload con `resolver` (entries vs direct), `commitSha`, `deploymentId`
-- `POST /api/ops/ai-configuration/test` — health check Gemini + `errorType`
-
-### 6.3 Osservabilità
-
-- `lib/ai/gemini-observability.server.ts` — eventi `AI_CONFIGURATION_CHECK`, `AI_CLIENT_CREATED`, `AI_REQUEST_FAILED`
-- Log su `isGeminiConfigured() === false`
-
-### 6.4 Tassonomia errori
-
-- `lib/ai/gemini-error-types.ts` — `GeminiErrorType` + `classifyGeminiError()`
-- `resolveGeminiConfigurationGate()` — `CONFIG_NOT_FOUND` | `CONFIG_EMPTY` | `CONFIG_INVALID_FORMAT`
-- Pipeline analyze + API route + wizard UI espongono `errorType`
-
-### 6.5 Test
-
-- `lib/ai/gemini-resolver-runtime.test.ts` — precedence env, direct lookup, `resolveConfigurationErrorType`
-- `gemini-failover.test.ts`, `gemini-ai-ssot.test.ts` — OK
-- `npm run ci:tsc` — PASS
-- `npm run build` — PASS
+Upload scheda → Analizza → campi estratti.
 
 ---
 
-## 7. Checklist accettazione (post-deploy)
+## 8. Test eseguiti (CI locale)
 
-| Check | Criterio | Stato |
-|-------|----------|-------|
-| Diagnostic GET prod | `configured: true`, `geminiKeysViaDirect: true`, `resolverMismatch: false` | ⏳ Pendente (serve deploy + admin) |
-| Diagnostic POST prod | `success: true`, `latencyMs` < 10s | ⏳ Pendente |
-| Lavorazioni Import AI | Upload → Analizza → campi estratti, no `not_configured` | ⏳ Pendente |
-| Preview | Stesso test | ⏳ Pendente |
-| CI locale | tsc + build + test gemini | ✅ |
-
-### Comandi verifica admin (dopo deploy)
-
-1. Login come admin Sicurezza su production
-2. `GET /api/ops/ai-configuration` — verificare `configured`, `resolver`, `commitSha`
-3. `POST /api/ops/ai-configuration/test` — verificare `success: true`
-4. Lavorazioni → Import AI → smoke analyze
+| Test | Esito |
+|------|-------|
+| `npm run ci:tsc` | PASS |
+| `gemini-resolver-runtime.test.ts` | PASS |
+| `gemini-failover.test.ts` | PASS |
+| `gemini-ai-ssot.test.ts` | PASS |
+| Vercel Production build | Ready (`6034f57`) |
+| Production runtime check | **Pendente** (richiede sessione admin) |
+| Production Gemini call | **Pendente** |
 
 ---
 
-## 8. Rischi residui
+## 9. Rischi residui
 
-- Chiavi `AQ.*` (Vertex): `formatValid: false` → errore auth esplicito, non più mascherato
-- PDF grandi: timeout analyze — errore distinto da configurazione
-- Diagnostic POST consuma quota minima (admin-only)
-
----
-
-## 9. Cosa NON è stato fatto
-
-- Nessun workaround `process.env` nei file feature (SSOT rispettato)
-- Nessuna esposizione chiavi in log o API
-- Nessun `env` in `next.config.ts` per Gemini
+- Chiavi `AQ.*` su Vercel → env visibile ma `formatValid: false`
+- Env modificata senza redeploy successivo
+- Progetto Vercel errato (`cab-gestionale` è un progetto separato)
 
 ---
 
-## 10. Deliverable summary
+## 10. Definition of Done
 
-1. ✅ Sintomo e contesto documentati  
-2. ✅ Stack Lavorazioni tracciato  
-3. ✅ SSOT messaggio identificato  
-4. ✅ Ipotesi H1–H5 valutate  
-5. ✅ Evidenza Vercel env (H2 esclusa)  
-6. ✅ Root cause H1 con fix resolver  
-7. ✅ Endpoint diagnostic estesi  
-8. ✅ Tassonomia errori + osservabilità  
-9. ✅ Test e build locali verdi  
-10. ⏳ Verifica production end-to-end — **bloccata fino a deploy + sessione admin**
+- [x] Fix Reflect.get deployato su production
+- [x] Route `runtime-env-check` disponibile
+- [ ] Runtime vede la chiave (admin GET)
+- [ ] POST test Gemini `success: true`
+- [ ] Import AI Lavorazioni funzionante
 
----
-
-## Prossimo passo operativo
-
-Commit + push su `main` → attendere Vercel Ready → eseguire checklist §7 con sessione admin.
+**Blocco attuale:** endpoint ops richiedono login admin — agente non ha credenziali production.
