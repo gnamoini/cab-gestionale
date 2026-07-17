@@ -39,6 +39,51 @@ export function lavorazioneCollegataMezzoDb(m: MezzoGestito, row: LavorazioneLis
   return lavorazioneMatchesMezzo(m, lavRowToMatchShape(row));
 }
 
+function lavRowToIntervento(row: LavorazioneListRow): MezzoInterventoLavorazione {
+  const ing = row.data_ingresso?.trim() ? row.data_ingresso : row.created_at;
+  const fin = row.data_uscita;
+  const statoLabel = labelLavorazioneStatoDb(row.stato);
+  if (isLavorazioneArchived(row)) {
+    const { label, num } = giorniTra(ing, fin);
+    return {
+      id: row.id,
+      origine: "storico",
+      dataIngresso: ing,
+      dataCompletamento: fin,
+      durataGiorniLabel: label,
+      durataGiorniNum: num,
+      tipoIntervento: statoLabel,
+      descrizione: (row.note ?? "").trim() || "—",
+      prioritaLabel: prioritaIt(row.priorita),
+      statoFinale: statoLabel,
+    };
+  }
+  const completed = fin;
+  const dur = completed ? giorniTra(ing, completed) : { label: "In corso", num: 0 };
+  return {
+    id: row.id,
+    origine: "attiva",
+    dataIngresso: ing,
+    dataCompletamento: completed,
+    durataGiorniLabel: dur.label,
+    durataGiorniNum: dur.num,
+    tipoIntervento: statoLabel,
+    descrizione: (row.note ?? "").trim() || "—",
+    prioritaLabel: prioritaIt(row.priorita),
+    statoFinale: completed ? statoLabel : "In officina",
+  };
+}
+
+function sortInterventi(rows: MezzoInterventoLavorazione[]): MezzoInterventoLavorazione[] {
+  rows.sort((a, b) => {
+    const ta = new Date(a.dataIngresso).getTime();
+    const tb = new Date(b.dataIngresso).getTime();
+    if (tb !== ta) return tb - ta;
+    return b.id.localeCompare(a.id);
+  });
+  return rows;
+}
+
 export function interventiMezzoDaLavorazioniDb(
   m: MezzoGestito,
   rows: readonly LavorazioneListRow[],
@@ -46,47 +91,41 @@ export function interventiMezzoDaLavorazioniDb(
   const out: MezzoInterventoLavorazione[] = [];
   for (const row of rows) {
     if (!lavorazioneCollegataMezzoDb(m, row)) continue;
-    const ing = row.data_ingresso?.trim() ? row.data_ingresso : row.created_at;
-    const fin = row.data_uscita;
-    const statoLabel = labelLavorazioneStatoDb(row.stato);
-    if (isLavorazioneArchived(row)) {
-      const { label, num } = giorniTra(ing, fin);
-      out.push({
-        id: row.id,
-        origine: "storico",
-        dataIngresso: ing,
-        dataCompletamento: fin,
-        durataGiorniLabel: label,
-        durataGiorniNum: num,
-        tipoIntervento: statoLabel,
-        descrizione: (row.note ?? "").trim() || "—",
-        prioritaLabel: prioritaIt(row.priorita),
-        statoFinale: statoLabel,
-      });
+    out.push(lavRowToIntervento(row));
+  }
+  return sortInterventi(out);
+}
+
+/** Index FK lavorazioni + fuzzy su orphan rows — evita scan completo per ogni mezzo. */
+export function buildInterventiByMezzoIdFromLavorazioni(
+  mezzi: readonly MezzoGestito[],
+  rows: readonly LavorazioneListRow[],
+): Map<string, MezzoInterventoLavorazione[]> {
+  const fkByMezzoId = new Map<string, LavorazioneListRow[]>();
+  const orphans: LavorazioneListRow[] = [];
+  for (const row of rows) {
+    if (row.deleted_at) continue;
+    const mezzoId = row.mezzo_id?.trim();
+    if (mezzoId) {
+      const list = fkByMezzoId.get(mezzoId);
+      if (list) list.push(row);
+      else fkByMezzoId.set(mezzoId, [row]);
     } else {
-      const completed = fin;
-      const dur = completed ? giorniTra(ing, completed) : { label: "In corso", num: 0 };
-      out.push({
-        id: row.id,
-        origine: "attiva",
-        dataIngresso: ing,
-        dataCompletamento: completed,
-        durataGiorniLabel: dur.label,
-        durataGiorniNum: dur.num,
-        tipoIntervento: statoLabel,
-        descrizione: (row.note ?? "").trim() || "—",
-        prioritaLabel: prioritaIt(row.priorita),
-        statoFinale: completed ? statoLabel : "In officina",
-      });
+      orphans.push(row);
     }
   }
-  out.sort((a, b) => {
-    const ta = new Date(a.dataIngresso).getTime();
-    const tb = new Date(b.dataIngresso).getTime();
-    if (tb !== ta) return tb - ta;
-    return b.id.localeCompare(a.id);
-  });
-  return out;
+
+  const map = new Map<string, MezzoInterventoLavorazione[]>();
+  for (const m of mezzi) {
+    const matched: LavorazioneListRow[] = [...(fkByMezzoId.get(m.id) ?? [])];
+    if (orphans.length > 0) {
+      for (const row of orphans) {
+        if (lavorazioneMatchesMezzo(m, lavRowToMatchShape(row))) matched.push(row);
+      }
+    }
+    map.set(m.id, sortInterventi(matched.map(lavRowToIntervento)));
+  }
+  return map;
 }
 
 export function mezzoHaLavorazioneAttivaDb(m: MezzoGestito, rows: readonly LavorazioneListRow[]): boolean {

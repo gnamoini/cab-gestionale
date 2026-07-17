@@ -1,10 +1,10 @@
-import { isUserBanned } from "@/lib/auth/user-ban-state";
+import { jwtExpFromCookies, isJwtFreshForProxyCache } from "@/lib/decision/request-context";
 import type { AuthError, SupabaseClient } from "@supabase/supabase-js";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE, readSupabasePublicEnv } from "@/lib/env/supabase-public";
+import { isUserBanned } from "@/lib/auth/user-ban-state";
 import {
   shouldClearSessionOnAuthError,
-  isTransientNetworkAuthError,
-  isRecoverableAuthError,
+  getUserWithAuthRetry,
 } from "@/src/lib/auth/auth-network-retry";
 import { mapDegradedPublicAuthUser, mapSupabaseUserToPublicAuthUser } from "@/src/lib/auth/map-auth-user";
 import {
@@ -24,27 +24,7 @@ import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 type CookieLike = { name: string; value: string };
 
 async function getUserWithNetworkRetry(supabase: SupabaseClient) {
-  const first = await supabase.auth.getUser();
-  if (!first.error && first.data?.user) return first;
-  if (first.error && shouldClearSessionOnAuthError(first.error)) return first;
-
-  if (first.error && isRecoverableAuthError(first.error)) {
-    await supabase.auth.refreshSession();
-    const afterRefresh = await supabase.auth.getUser();
-    if (!afterRefresh.error && afterRefresh.data?.user) return afterRefresh;
-    if (afterRefresh.error && shouldClearSessionOnAuthError(afterRefresh.error)) return afterRefresh;
-    if (afterRefresh.error && isTransientNetworkAuthError(afterRefresh.error)) {
-      await new Promise((r) => setTimeout(r, 300));
-      return supabase.auth.getUser();
-    }
-    return afterRefresh;
-  }
-
-  if (first.error && isTransientNetworkAuthError(first.error)) {
-    await new Promise((r) => setTimeout(r, 300));
-    return supabase.auth.getUser();
-  }
-  return first;
+  return getUserWithAuthRetry(supabase, "server");
 }
 
 function shouldWriteEmptySnapshotToCache(authError: AuthError | Error | null): boolean {
@@ -171,6 +151,11 @@ export async function resolveServerAuthWithSupabase(
   const fingerprint = cookieFingerprintFromList(cookies);
 
   const profileCached = readCachedServerAuthSnapshot(fingerprint);
+  const { jwtExpSeconds } = jwtExpFromCookies(cookies);
+  if (profileCached?.user?.id && isJwtFreshForProxyCache(jwtExpSeconds)) {
+    return profileCached;
+  }
+
   const { data: authData, error: authError } = await getUserWithNetworkRetry(supabase);
 
   if (authError && shouldClearSessionOnAuthError(authError)) {

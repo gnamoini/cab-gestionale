@@ -40,14 +40,27 @@ export type ClientPortalDataContract = {
   retryL0: () => Promise<void>;
 };
 
-export function useClientPortalDataContract(enabled: boolean): ClientPortalDataContract {
-  const globalOpts = useGlobalOptions({ debugTag: "ClientPortalDataContract" });
-  const inCorsoQ = useClientLavorazioniInCorsoQuery(enabled);
-  const archivioQ = useClientLavorazioniArchivioQuery(enabled);
+export type ClientPortalDataContractOptions = {
+  /** Fetch lista archivio L0 (on-demand quando sezione espansa o filtro archivio). */
+  archivioListEnabled?: boolean;
+  /** Fetch schede L1 anche per righe archivio (on-demand quando sezione espansa). */
+  archivioSchedeEnabled?: boolean;
+};
 
-  const l0Loading = inCorsoQ.isLoading || archivioQ.isLoading;
-  const l0Error = inCorsoQ.error ?? archivioQ.error ?? null;
-  const l0HasData = inCorsoQ.data !== undefined && archivioQ.data !== undefined;
+export function useClientPortalDataContract(
+  enabled: boolean,
+  options?: ClientPortalDataContractOptions,
+): ClientPortalDataContract {
+  const globalOpts = useGlobalOptions({ debugTag: "ClientPortalDataContract" });
+  const archivioListEnabled = options?.archivioListEnabled === true;
+  const inCorsoQ = useClientLavorazioniInCorsoQuery(enabled);
+  const archivioQ = useClientLavorazioniArchivioQuery(enabled && archivioListEnabled);
+  const archivioSchedeEnabled = options?.archivioSchedeEnabled === true;
+
+  const l0Loading = inCorsoQ.isLoading || (archivioListEnabled && archivioQ.isLoading);
+  const l0Error = inCorsoQ.error ?? (archivioListEnabled ? archivioQ.error : null) ?? null;
+  const l0HasData =
+    inCorsoQ.data !== undefined && (!archivioListEnabled || archivioQ.data !== undefined);
 
   let l0Status: L0ContractStatus = "idle";
   if (!enabled) l0Status = "idle";
@@ -56,7 +69,7 @@ export function useClientPortalDataContract(enabled: boolean): ClientPortalDataC
   else if (l0HasData) l0Status = "success";
 
   const inCorsoRows = inCorsoQ.data ?? [];
-  const archivioRows = archivioQ.data ?? [];
+  const archivioRows = archivioListEnabled ? (archivioQ.data ?? []) : [];
   const ids = useMemo(
     () => [...inCorsoRows, ...archivioRows].map((r) => r.id),
     [inCorsoRows, archivioRows],
@@ -66,16 +79,22 @@ export function useClientPortalDataContract(enabled: boolean): ClientPortalDataC
 
   const l0Settled = l0Status === "success";
 
+  const schedeLavorazioneIds = useMemo(() => {
+    const inCorsoIds = inCorsoRows.map((r) => r.id);
+    if (!archivioSchedeEnabled) return inCorsoIds;
+    return [...inCorsoIds, ...archivioRows.map((r) => r.id)];
+  }, [archivioRows, archivioSchedeEnabled, inCorsoRows]);
+
   const { store: schedeStore, isLoading: schedeLoading } = useSchedeBundlesQuery(enabled && l0Settled, {
     viewLayer: true,
     clientPortal: true,
-    lavorazioneIds: ids,
+    lavorazioneIds: schedeLavorazioneIds,
   });
 
   const l1Status: L1ContractStatus =
     !enabled || !l0Settled
       ? "idle"
-      : ids.length === 0
+      : schedeLavorazioneIds.length === 0
         ? "success"
         : schedeLoading
           ? "loading"

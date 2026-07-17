@@ -1,4 +1,3 @@
-"use client";
 
 import { memo } from "react";
 import { GESTIONALE_LIST_DESKTOP_ONLY_CLASS } from "@/lib/ui/use-gestionale-list-layout";

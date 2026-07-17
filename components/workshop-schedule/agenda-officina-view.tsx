@@ -11,10 +11,12 @@ import { AgendaFiltersBar } from "@/components/workshop-schedule/agenda-filters-
 import { AgendaDayTimeline } from "@/components/workshop-schedule/agenda-day-timeline";
 import { AgendaSessionFormModal, type AgendaSessionFormValues } from "@/components/workshop-schedule/agenda-session-form-modal";
 import { AgendaSessionGroupedList, AgendaWeekDayColumn } from "@/components/workshop-schedule/agenda-session-list";
-import { AgendaDndLayer } from "@/components/workshop-schedule/agenda-dnd-layer";
+import {
+  AgendaDndLayerLazy,
+  AgendaGanttViewLazy,
+  AgendaIntelligenceSidebarLazy,
+} from "@/components/workshop-schedule/agenda-lazy-panels";
 import { AgendaViewTabs } from "@/components/workshop-schedule/agenda-view-tabs";
-import { AgendaGanttView } from "@/components/workshop-schedule/agenda-gantt-view";
-import { AgendaIntelligenceSidebar } from "@/components/workshop-schedule/agenda-intelligence-sidebar";
 import { AgendaInsightsPanel } from "@/components/workshop-schedule/agenda-insights-panel";
 import { AgendaToolbarShell } from "@/components/workshop-schedule/agenda-toolbar-shell";
 import { AgendaCapacityCard } from "@/components/workshop-schedule/agenda-capacity-card";
@@ -40,6 +42,7 @@ import {
   dsTypoCaption,
 } from "@/lib/ui/design-system";
 import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
+import { GestionaleModalGate } from "@/components/gestionale/gestionale-modal-gate";
 
 function todayYmd() {
   const d = new Date();
@@ -280,7 +283,7 @@ export function AgendaOfficinaView() {
             ) : isLoading ? (
               <LoadingAgendaContentSkeleton />
             ) : viewMode === "gantt" ? (
-              <AgendaGanttView
+              <AgendaGanttViewLazy
                 rows={intelligence.gantt.rows}
                 axis={intelligence.gantt.axis}
                 selectedSessionId={selectedSession?.id}
@@ -347,7 +350,7 @@ export function AgendaOfficinaView() {
                   }}
                 />
                 {canWriteAgenda ? (
-                  <AgendaDndLayer
+                  <AgendaDndLayerLazy
                     dayYmd={selectedYmd}
                     sessions={sessions.filter((s) => ymdFromIso(s.startAt) === selectedYmd)}
                     selectedId={selectedSession?.id}
@@ -402,7 +405,7 @@ export function AgendaOfficinaView() {
             ) : null}
           </div>
 
-          <AgendaIntelligenceSidebar
+          <AgendaIntelligenceSidebarLazy
             heatmapCells={intelligence.heatmap}
             weeklyLoad={intelligence.weeklyLoad}
             autoSchedulePlan={autoSchedulePlan}
@@ -437,7 +440,7 @@ export function AgendaOfficinaView() {
         </div>
       </div>
 
-      {formOpen ? (
+      <GestionaleModalGate open={formOpen}>
         <AgendaSessionFormModal
           open={formOpen}
         initial={
@@ -487,7 +490,7 @@ export function AgendaOfficinaView() {
             : undefined
         }
         />
-      ) : null}
+      </GestionaleModalGate>
     </>
   );
 }

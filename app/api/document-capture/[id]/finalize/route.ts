@@ -44,26 +44,6 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Capture non trovato" }, { status: 404 });
   }
 
-  // #region agent log
-  fetch("http://127.0.0.1:7863/ingest/89dc6c11-bff2-45f2-876e-83e3ac496a5d", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bd086a" },
-    body: JSON.stringify({
-      sessionId: "bd086a",
-      hypothesisId: "E",
-      location: "finalize/route.ts:entry",
-      message: "finalize started",
-      data: {
-        captureId: id,
-        status: capture.status,
-        finalizedAt: capture.finalized_at,
-        storagePath: capture.storage_path,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-
   try {
     const result = await finalizeDocumentCaptureInTransaction({
       captureId: capture.id,
@@ -71,20 +51,6 @@ export async function POST(_request: Request, context: RouteContext) {
     });
 
     if (!result.ok) {
-      // #region agent log
-      fetch("http://127.0.0.1:7863/ingest/89dc6c11-bff2-45f2-876e-83e3ac496a5d", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bd086a" },
-        body: JSON.stringify({
-          sessionId: "bd086a",
-          hypothesisId: "A",
-          location: "finalize/route.ts:storage-fail",
-          message: "finalize storage failure",
-          data: { captureId: id, code: result.code, message: result.message },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       const errorCode = finalizeStorageErrorToDocumentCaptureCode(result.code);
       traceDocumentCaptureOperation({
         operation: "finalize",
@@ -114,24 +80,6 @@ export async function POST(_request: Request, context: RouteContext) {
     });
     return NextResponse.json(result);
   } catch (e) {
-    // #region agent log
-    fetch("http://127.0.0.1:7863/ingest/89dc6c11-bff2-45f2-876e-83e3ac496a5d", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bd086a" },
-      body: JSON.stringify({
-        sessionId: "bd086a",
-        hypothesisId: "D",
-        location: "finalize/route.ts:catch",
-        message: "finalize threw",
-        data: {
-          captureId: id,
-          error: e instanceof Error ? e.message : String(e),
-          code: (e as Error & { code?: string }).code ?? null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     const errorCode = e instanceof CompanyNotConfiguredError ? "TENANT_MISSING" : "UPLOAD_FAILED";
     traceDocumentCaptureOperation({
       operation: "finalize",

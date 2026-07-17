@@ -1,13 +1,56 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { LoadingCardSkeleton } from "@/components/design-system";
 import type { DashboardWidgetId } from "@/lib/dashboard/dashboard-widget-registry";
 import { getDashboardWidgetDef } from "@/lib/dashboard/dashboard-widget-registry";
-import { DashboardHealthScoreWidget } from "@/components/dashboard/widgets/dashboard-health-score-widget";
-import { DashboardOperationalKpiHeaderWidget } from "@/components/dashboard/widgets/dashboard-operational-kpi-header-widget";
-import { DashboardLocalNotesWidget } from "@/components/dashboard/widgets/dashboard-local-notes-widget";
-import { DashboardRecentActivityWidget } from "@/components/dashboard/widgets/dashboard-recent-activity-widget";
-import { DashboardRecentLavorazioniWidget } from "@/components/dashboard/widgets/dashboard-recent-lavorazioni-widget";
-import { DashboardRecentRicambiWidget } from "@/components/dashboard/widgets/dashboard-recent-ricambi-widget";
+import type { DashboardWidgetDefinition } from "@/lib/dashboard/dashboard-widget-registry";
+
+function widgetSkeleton(minHeight = "min-h-[10rem]") {
+  return <LoadingCardSkeleton minHeightClass={minHeight} />;
+}
+
+const DashboardOperationalKpiHeaderWidget = dynamic(
+  () =>
+    import("@/components/dashboard/widgets/dashboard-operational-kpi-header-widget").then(
+      (m) => m.DashboardOperationalKpiHeaderWidget,
+    ),
+  { loading: () => widgetSkeleton("min-h-[8rem]") },
+);
+
+const DashboardHealthScoreWidget = dynamic(
+  () =>
+    import("@/components/dashboard/widgets/dashboard-health-score-widget").then((m) => m.DashboardHealthScoreWidget),
+  { loading: () => widgetSkeleton("min-h-[12rem]") },
+);
+
+const DashboardRecentActivityWidget = dynamic(
+  () =>
+    import("@/components/dashboard/widgets/dashboard-recent-activity-widget").then(
+      (m) => m.DashboardRecentActivityWidget,
+    ),
+  { loading: () => widgetSkeleton("min-h-[14rem]") },
+);
+
+const DashboardLocalNotesWidget = dynamic(
+  () =>
+    import("@/components/dashboard/widgets/dashboard-local-notes-widget").then((m) => m.DashboardLocalNotesWidget),
+  { loading: () => widgetSkeleton("min-h-[12rem]") },
+);
+
+const DashboardRecentLavorazioniWidget = dynamic(
+  () =>
+    import("@/components/dashboard/widgets/dashboard-recent-lavorazioni-widget").then(
+      (m) => m.DashboardRecentLavorazioniWidget,
+    ),
+  { loading: () => widgetSkeleton() },
+);
+
+const DashboardRecentRicambiWidget = dynamic(
+  () =>
+    import("@/components/dashboard/widgets/dashboard-recent-ricambi-widget").then((m) => m.DashboardRecentRicambiWidget),
+  { loading: () => widgetSkeleton() },
+);
 
 export function DashboardWidgetRenderer({ id }: { id: DashboardWidgetId }) {
   const def = getDashboardWidgetDef(id);
@@ -25,6 +68,16 @@ export function DashboardWidgetRenderer({ id }: { id: DashboardWidgetId }) {
     }
   }
 
+  return <DashboardWidgetRendererKnown def={def} id={id} />;
+}
+
+function DashboardWidgetRendererKnown({
+  id,
+  def,
+}: {
+  id: DashboardWidgetId;
+  def: DashboardWidgetDefinition;
+}) {
   switch (id) {
     case "operational-kpi-header":
       return <DashboardOperationalKpiHeaderWidget def={def} />;

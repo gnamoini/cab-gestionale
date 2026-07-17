@@ -132,7 +132,19 @@
   text-align: right;
   white-space: nowrap;
   vertical-align: middle;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
   box-shadow: -12px 0 16px -12px color-mix(in srgb, var(--cab-card) 94%, transparent);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .gestionale-list-table-scope .gestionale-list-table-actions-cell,
+  .lavorazioni-scroll-scope .gestionale-list-table-actions-cell,
+  .dark .gestionale-list-table-scope .gestionale-list-table-actions-cell,
+  .dark .lavorazioni-scroll-scope .gestionale-list-table-actions-cell {
+    box-shadow: none;
+  }
 }
 
 .dark .gestionale-list-table-scope .gestionale-list-table-actions-cell,

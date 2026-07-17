@@ -33,12 +33,16 @@ export function securityUsersFromQueryData(data: SecurityUsersQueryData | undefi
   return Array.isArray(data.users) ? data.users : [];
 }
 
-export function useSecurityUsersPermissionsQuery(enabled = true) {
+export function useSecurityUsersPermissionsQuery(
+  enabled = true,
+  options?: { skipMountRefetch?: boolean },
+) {
   const query = useQuery({
     queryKey: QK.securityUsersPermissions,
     enabled,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
+    refetchOnMount: options?.skipMountRefetch ? false : true,
     queryFn: fetchSecurityUsersPermissionsQuery,
   });
 

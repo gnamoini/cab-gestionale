@@ -50,6 +50,10 @@ jobs:
         env:
           PORT: "3210"
           SMOKE_BASE_URL: http://127.0.0.1:3210
+      - name: Performance trend report
+        if: always()
+        run: npm run ops:performance-trend-report
+        continue-on-error: true
       - name: Certification bundle
         if: success()
         run: npm run control:certify
@@ -66,3 +70,14 @@ jobs:
           name: control-report-cert-${{ github.run_id }}
           path: control-report.json
           retention-days: 365
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-trends-cert-${{ github.run_id }}
+          path: |
+            test-results/performance-trends/**
+            test-results/build-budget-snapshot.json
+            test-results/performance-snapshot.json
+            docs/performance-governance-report.md
+          retention-days: 90
+          if-no-files-found: ignore

@@ -123,6 +123,53 @@ for (const roleSpec of [
     mkdirSync(join(process.cwd(), "test-results"), { recursive: true });
     const outPath = join(process.cwd(), "test-results", `perf-audit-${roleSpec.role}.json`);
     writeFileSync(outPath, JSON.stringify({ generatedAt: new Date().toISOString(), snapshots }, null, 2));
+
+    const playwrightDir = join(process.cwd(), "e2e", "test-results", "perf-playwright");
+    mkdirSync(playwrightDir, { recursive: true });
+    const legacyName = roleSpec.role === "admin" ? "perf-snapshot-admin.json" : "perf-snapshot.json";
+    writeFileSync(
+      join(playwrightDir, legacyName),
+      JSON.stringify({ generatedAt: new Date().toISOString(), snapshots }, null, 2),
+    );
+
     expect(snapshots.length).toBe(ROUTES.length * 2);
   });
 }
+
+test.describe("stress weak hardware proxy", () => {
+  test("throttled cold navigation", async ({ browser }) => {
+    const creds = adminCredentials();
+    if (!creds) {
+      test.skip();
+      return;
+    }
+
+    const context = await browser.newContext({
+      // ponytail: Playwright CPU/network throttle proxies weak hardware — not literal Win7/HDD
+    });
+    const page = await context.newPage();
+    const client = await context.newCDPSession(page);
+    await client.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+    await client.send("Network.enable");
+    await client.send("Network.emulateNetworkConditions", {
+      offline: false,
+      downloadThroughput: (500 * 1024) / 8,
+      uploadThroughput: (500 * 1024) / 8,
+      latency: 400,
+    });
+
+    await loginViaUi(page, creds);
+    const spec = ROUTES[1];
+    await page.goto(spec.path, { waitUntil: "domcontentloaded" });
+    await waitRouteReady(page, spec);
+    const snap = { role: "admin", route: spec.path, mode: "stress", ...(await collectPerf(page)) };
+
+    const outDir = join(process.cwd(), "e2e", "test-results", "perf-playwright");
+    mkdirSync(outDir, { recursive: true });
+    const stressPath = join(outDir, "perf-stress-snapshot.json");
+    writeFileSync(stressPath, JSON.stringify({ generatedAt: new Date().toISOString(), snap }, null, 2));
+    expect(snap.interactiveMs ?? snap.navigationMs ?? 0).toBeGreaterThan(0);
+
+    await context.close();
+  });
+});

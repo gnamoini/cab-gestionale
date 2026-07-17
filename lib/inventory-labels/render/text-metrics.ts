@@ -1,5 +1,8 @@
 import { ptToPx } from "@/lib/inventory-labels/domain/templates";
 
+/** Ink caps DejaVu embedded — righe fornitore/codice alt sono sempre maiuscole. */
+const CAP_HEIGHT_RATIO = 0.72;
+
 /** Metriche riga allineate a `svg.ts` (`fontPt` + `lineStep = fontPt * 1.2`). */
 export function lineMetrics(fontPt: number, dpi: number) {
   const fontSizePx = ptToPx(fontPt, dpi);
@@ -11,6 +14,16 @@ export function lineMetrics(fontPt: number, dpi: number) {
     fontHeightMm: fontSizePx * pxToMm,
     lineStepMm: lineStepPx * pxToMm,
   };
+}
+
+export function capHeightMm(fontPt: number, dpi: number): number {
+  return lineMetrics(fontPt, dpi).fontHeightMm * CAP_HEIGHT_RATIO;
+}
+
+/** Baseline riga fornitore/codice alt — alzata rispetto al fondo barcode (caps, no discendenti visibili). */
+export function supplierCapBaselineMm(barcodeBottomMm: number, fontPt: number, dpi: number): number {
+  const liftMm = Math.max(0.35, lineMetrics(fontPt, dpi).fontHeightMm * 0.14);
+  return barcodeBottomMm - liftMm;
 }
 
 export function blockHeightMm(lineCount: number, fontPt: number, dpi: number): number {

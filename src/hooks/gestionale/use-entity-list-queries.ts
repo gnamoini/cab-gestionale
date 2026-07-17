@@ -14,9 +14,13 @@ import { mapMagazzinoRowsToUI } from "@/lib/magazzino/magazzino-list-cache";
 import { scheduleCompatBackgroundAudit } from "@/lib/magazzino/compat/compat-runtime-sanitize";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { semiDynamicQueryOpts } from "@/lib/react-query/data-cache-tiers";
-import { useServiceQuery } from "@/src/hooks/use-service-query";
-import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
-import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
+import { magazzinoEntry, type MagazzinoFilters } from "@/lib/domain/magazzino-entry";
+import { documentiEntry, type DocumentiFilters } from "@/lib/domain/documenti-entry";
+import { logEntry, type LogFilters } from "@/lib/domain/log-entry";
+import { mezziEntry, type MezzoFilters } from "@/lib/domain/mezzi-entry";
+import { movimentiEntry, type MovimentiFilters } from "@/lib/domain/movimenti-entry";
+import { preventiviEntry, type PreventiviFilters } from "@/lib/domain/preventivi-entry";
+import { schedeEntry, type SchedaFilters } from "@/lib/domain/schede-entry";
 import {
   documentiListQueryKey,
   magazzinoListQueryKey,
@@ -25,14 +29,11 @@ import {
   type MagazzinoListVariant,
   type MezziListVariant,
 } from "@/lib/render/query-key-factory";
+import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
+import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
+import { useSharedEntityQuery } from "@/src/hooks/use-shared-entity-query";
+import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import { documentiEntry, type DocumentiFilters } from "@/lib/domain/documenti-entry";
-import { logEntry, type LogFilters } from "@/lib/domain/log-entry";
-import { magazzinoEntry, type MagazzinoFilters } from "@/lib/domain/magazzino-entry";
-import { mezziEntry, type MezzoFilters } from "@/lib/domain/mezzi-entry";
-import { movimentiEntry, type MovimentiFilters } from "@/lib/domain/movimenti-entry";
-import { preventiviEntry, type PreventiviFilters } from "@/lib/domain/preventivi-entry";
-import { schedeEntry, type SchedaFilters } from "@/lib/domain/schede-entry";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type {
   DocumentoRow,
@@ -45,6 +46,9 @@ type RqOpts<T> = Omit<UseQueryOptions<T, Error, T, readonly unknown[]>, "queryKe
 
 export type { MezziListVariant };
 
+const MEZZI_LIST_SCOPE = "mezzi.list" as const;
+const MEZZI_REPORT_SCOPE = "mezzi.report" as const;
+
 export function useMezziListQuery(
   filters?: MezzoFilters,
   options?: RqOpts<MezzoGestito[]> & { variant?: MezziListVariant },
@@ -52,14 +56,24 @@ export function useMezziListQuery(
   const { variant = "list", ...rqOpts } = options ?? {};
   const gestOpts = useGestionaleQueryOpts();
   const tierOpts = variant === "report" ? {} : semiDynamicQueryOpts();
-  return useServiceQuery(
-    mezziListQueryKey(variant, filters ?? null),
-    () => (variant === "report" ? mezziEntry.getAllForReport(filters) : mezziEntry.getAll(filters)),
-    { ...gestOpts, ...tierOpts, ...rqOpts },
-  );
+  const queryKey = mezziListQueryKey(variant, filters ?? null);
+  return useSharedEntityQuery({
+    queryKey,
+    queryFn: () => (variant === "report" ? mezziEntry.getAllForReport(filters) : mezziEntry.getAll(filters)),
+    entityType: "mezzi",
+    scope: "list",
+    ownershipScopeKey: variant === "list" ? MEZZI_LIST_SCOPE : MEZZI_REPORT_SCOPE,
+    expectedServerKey: queryKey,
+    ...gestOpts,
+    ...tierOpts,
+    ...rqOpts,
+  });
 }
 
 export type { MagazzinoListVariant };
+
+const MAGAZZINO_LIST_SCOPE = "magazzino.list" as const;
+const MAGAZZINO_REPORT_SCOPE = "magazzino.report" as const;
 
 export function useMagazzinoListQuery(
   filters?: MagazzinoFilters,
@@ -70,15 +84,19 @@ export function useMagazzinoListQuery(
   const { variant = "list", ...rqOpts } = options ?? {};
   const gestOpts = useGestionaleQueryOpts();
   const tierOpts = variant === "report" ? {} : semiDynamicQueryOpts();
-  return useServiceQuery(
-    magazzinoListQueryKey(variant, filters ?? null),
-    () => (variant === "report" ? magazzinoEntry.getAllForReport(filters) : magazzinoEntry.getAll(filters)),
-    {
-      ...gestOpts,
-      ...tierOpts,
-      ...rqOpts,
-    },
-  );
+  const queryKey = magazzinoListQueryKey(variant, filters ?? null);
+  return useSharedEntityQuery({
+    queryKey,
+    queryFn: () =>
+      variant === "report" ? magazzinoEntry.getAllForReport(filters) : magazzinoEntry.getAll(filters),
+    entityType: "magazzino",
+    scope: "list",
+    ownershipScopeKey: variant === "list" ? MAGAZZINO_LIST_SCOPE : MAGAZZINO_REPORT_SCOPE,
+    expectedServerKey: queryKey,
+    ...gestOpts,
+    ...tierOpts,
+    ...rqOpts,
+  });
 }
 
 /** Lista magazzino mappata al modello UI — unica source per componenti gestionali. */
@@ -106,9 +124,18 @@ export function useMagazzinoRicambiUIQuery(
   return { ...q, data };
 }
 
+const MOVIMENTI_LIST_SCOPE = "movimenti.list" as const;
+
 export function useMovimentiListQuery(filters?: MovimentiFilters, options?: RqOpts<MovimentoRicambioRow[]>) {
   const gestOpts = useGestionaleQueryOpts();
-  return useServiceQuery(movimentiListQueryKey(filters ?? null), () => movimentiEntry.getAll(filters), {
+  const queryKey = movimentiListQueryKey(filters ?? null);
+  return useSharedEntityQuery({
+    queryKey,
+    queryFn: () => movimentiEntry.getAll(filters),
+    entityType: "movimenti",
+    scope: "list",
+    ownershipScopeKey: MOVIMENTI_LIST_SCOPE,
+    expectedServerKey: queryKey,
     ...gestOpts,
     ...options,
   });
@@ -119,13 +146,22 @@ export function usePreventiviListQuery(filters?: PreventiviFilters, options?: Rq
 }
 
 const DOCUMENTI_LIST_STALE_MS = 5 * 60_000;
+const DOCUMENTI_LIST_SCOPE = "documenti.list" as const;
 
 export function useDocumentiListQuery(filters?: DocumentiFilters, options?: RqOpts<DocumentoRow[]>) {
-  return useServiceQuery(
-    documentiListQueryKey(filters ?? null),
-    () => documentiEntry.getAll(filters),
-    { staleTime: DOCUMENTI_LIST_STALE_MS, ...options },
-  );
+  const gestOpts = useGestionaleQueryOpts();
+  const queryKey = documentiListQueryKey(filters ?? null);
+  return useSharedEntityQuery({
+    queryKey,
+    queryFn: () => documentiEntry.getAll(filters),
+    entityType: "documenti",
+    scope: "list",
+    ownershipScopeKey: DOCUMENTI_LIST_SCOPE,
+    expectedServerKey: queryKey,
+    ...gestOpts,
+    staleTime: DOCUMENTI_LIST_STALE_MS,
+    ...options,
+  });
 }
 
 export function useLogListQuery(filters?: LogFilters, options?: RqOpts<LogModificaWithProfileRow[]>) {

@@ -45,7 +45,7 @@ assert.match(designSystem, /resize-none/);
 assert.match(designSystem, /gestionaleTextareaMaxHeightDefault/);
 assert.match(designSystem, /gestionaleTextareaMaxHeightCompact/);
 
-const globals = read("app/globals.css");
+const globals = read("app/globals-core.css");
 assert.match(globals, /\.gestionale-textarea/);
 assert.match(globals, /field-sizing:\s*content/);
 assert.match(globals, /data-cab-auto-grow/);

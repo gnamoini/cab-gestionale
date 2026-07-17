@@ -115,6 +115,21 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
     if (authPrecheck) return authPrecheck;
   }
 
+  const isLoginArea = pathname === LOGIN_PATH || pathname.startsWith(`${LOGIN_PATH}/`);
+  if (
+    !pathname.startsWith("/api/") &&
+    !isLoginArea &&
+    !isPublicInfoPath(pathname) &&
+    !isPwaPublicPath(pathname) &&
+    !requestHadSupabaseAuthCookies(request)
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = LOGIN_PATH;
+    const from = pathname === "/" ? "/dashboard" : `${pathname}${request.nextUrl.search}`;
+    url.searchParams.set("from", from);
+    return redirectWithLog(request, pathname, url, "no_auth_cookie");
+  }
+
   const { supabase, response } = createSupabaseMiddlewareClient(request);
 
   if (!supabase) {

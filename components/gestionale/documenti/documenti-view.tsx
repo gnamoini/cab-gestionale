@@ -57,7 +57,6 @@ import {
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
 import {
-  Drawer,
   IconActionButton,
   LoadingButton,
   LoadingErrorState,
@@ -67,14 +66,6 @@ import {
   PageToolbarCtaLabel,
   PageToolbarResultCount,
 } from "@/components/design-system";
-import {
-  GestionaleLogEmpty,
-  GestionaleLogEntryFourLines,
-  GestionaleLogEntryDismissButton,
-  GestionaleLogList,
-  gestionaleLogDrawerPanelClass,
-  gestionaleLogScrollEmbeddedClass,
-} from "@/components/gestionale/gestionale-log-ui";
 import { buildModificaRigaFromChanges, type CampoChangeLike } from "@/lib/gestionale-log/view-model";
 import { useAuth } from "@/context/auth-context";
 import {
@@ -100,7 +91,6 @@ import {
   type DocumentiSortPhase,
 } from "@/components/gestionale/documenti/documenti-helpers";
 import {
-  DocumentiAdvancedFilterPanel,
   applyDocumentiSortSelect,
   documentiSortSelectValue,
 } from "@/components/gestionale/documenti/documenti-advanced-filter-panel";
@@ -113,12 +103,12 @@ import {
   type DocumentiAdvancedFilters,
 } from "@/lib/documenti/documenti-advanced-filters";
 import {
-  buildDocumentiFilteredView,
   documentiMarcaPageCount,
   documentiMarcaPagerLabel,
   sliceDocumentiTreePage,
   type DocumentiPageFilters,
 } from "@/lib/documenti/documenti-list-ui-filters";
+import { useDocumentiListDerived } from "@/lib/documenti/use-documenti-list-derived";
 import { buildDocumentiCatalogFromImpostazioni } from "@/lib/documenti/documenti-catalog";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
@@ -159,6 +149,19 @@ const ListinoImportPreviewModal = dynamic(
     import("@/components/gestionale/documenti/listino-import-preview-modal").then(
       (m) => m.ListinoImportPreviewModal,
     ),
+  { ssr: false },
+);
+
+const DocumentiAdvancedFilterPanel = dynamic(
+  () =>
+    import("@/components/gestionale/documenti/documenti-advanced-filter-panel").then(
+      (m) => m.DocumentiAdvancedFilterPanel,
+    ),
+  { ssr: false },
+);
+
+const DocumentiLogDrawer = dynamic(
+  () => import("@/components/gestionale/documenti/documenti-log-drawer").then((m) => m.DocumentiLogDrawer),
   { ssr: false },
 );
 
@@ -535,14 +538,10 @@ export function DocumentiView() {
 
   const searchActive = searchApplied.trim().length > 0;
 
-  const filteredView = useMemo(
-    () =>
-      buildDocumentiFilteredView(docs, catalog, mezziSnap, pageFilters, {
-        sortColumn,
-        sortPhase,
-      }),
-    [docs, catalog, mezziSnap, pageFilters, sortColumn, sortPhase],
-  );
+  const filteredView = useDocumentiListDerived(docs, catalog, mezziSnap, pageFilters, {
+    sortColumn,
+    sortPhase,
+  });
 
   const {
     senzaMarca: documentiSenzaMarca,
@@ -956,12 +955,14 @@ export function DocumentiView() {
           onFiltersToggle={() => setFiltriEspansi((o) => !o)}
           filtersActive={hasPageClientFilters}
           filtersPanel={
-            <DocumentiAdvancedFilterPanel
-              filters={advancedFilters}
-              onChange={patchAdvancedFilters}
-              sortSelectValue={sortSelectValue}
-              onSortSelect={onSortSelect}
-            />
+            filtriEspansi ? (
+              <DocumentiAdvancedFilterPanel
+                filters={advancedFilters}
+                onChange={patchAdvancedFilters}
+                sortSelectValue={sortSelectValue}
+                onSortSelect={onSortSelect}
+              />
+            ) : null
           }
           onFilterReset={resetFiltri}
           overflowOpen={toolbarOverflowOpen}
@@ -1224,40 +1225,18 @@ export function DocumentiView() {
         <DocumentoEditModal key={editDoc.id} doc={editDoc} onRequestClose={() => setEditDoc(null)} onSave={handleSaveEdit} />
       ) : null}
 
-      <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche documenti" ariaLabel="Log modifiche documenti">
-        <div className={gestionaleLogDrawerPanelClass}>
-          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>
-            {logEntries.length === 0 ? (
-                  <GestionaleLogEmpty message="Nessuna modifica registrata." />
-                ) : (
-                  <GestionaleLogList>
-                    {pagedDocLogEntries.map((entry) => (
-                      <li key={entry.id} className="list-none">
-                        <GestionaleLogEntryFourLines
-                          vm={{
-                            tone: entry.tone,
-                            tipoRiga: entry.tipoRiga,
-                            oggettoRiga: entry.oggettoRiga,
-                            modificaRiga: entry.modificaRiga,
-                            autore: entry.autore,
-                            atIso: entry.atIso,
-                          }}
-                          trailing={
-                            <GestionaleLogEntryDismissButton
-                              onDismiss={() => removeDocumentiChangeLogEntryById(entry.id)}
-                            />
-                          }
-                        />
-                      </li>
-                    ))}
-                  </GestionaleLogList>
-            )}
-          </div>
-          {showDocLogPager ? (
-            <TablePagination page={docLogPage} pageCount={docLogPageCount} onPageChange={setDocLogPage} label={docLogPagerLabel} />
-          ) : null}
-        </div>
-      </Drawer>
+      <DocumentiLogDrawer
+        open={logOpen}
+        onClose={() => setLogOpen(false)}
+        entries={logEntries}
+        pagedEntries={pagedDocLogEntries}
+        showPager={showDocLogPager}
+        page={docLogPage}
+        pageCount={docLogPageCount}
+        pagerLabel={docLogPagerLabel}
+        onPageChange={setDocLogPage}
+        onDismiss={removeDocumentiChangeLogEntryById}
+      />
 
       <SettingsEliminaConfirmDialog
         open={deleteConfirmDoc != null}

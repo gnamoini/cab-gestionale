@@ -3,9 +3,8 @@
 import dynamic from "next/dynamic";
 import { Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { MezziEditModal } from "@/components/gestionale/mezzi/mezzi-edit-modal";
-import { MezziNewModal } from "@/components/gestionale/mezzi/mezzi-new-modal";
 import { PageHeader } from "@/components/gestionale/page-header";
 import {
   PageActionMenu,
@@ -16,34 +15,27 @@ import {
 } from "@/components/ui";
 import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { MezziSearchBar, MezziFilterFields, mezziFieldFiltersActive } from "@/components/gestionale/mezzi/mezzi-filters";
-import { MezziHubDetailModal } from "@/components/gestionale/mezzi/mezzi-hub-detail-modal";
+import { MezziSearchBar, mezziFieldFiltersActive } from "@/components/gestionale/mezzi/mezzi-filters";
 import type { MezziHubTabId } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 import { MezzoEliminaConfirmDialog } from "@/components/gestionale/mezzi/mezzo-elimina-confirm-dialog";
 import { MezziPageViewToggle, type MezziPageView } from "@/components/gestionale/mezzi/mezzi-page-view-toggle";
 import { MezziTable } from "@/components/gestionale/mezzi/mezzi-table";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { compareMezzi, mezzoMatchesNumeroLavorazioniFilter, mezzoMatchesUltimaLavFilter, type NumeroLavorazioniFilter, type TagliandiFilter, type UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
+import { type NumeroLavorazioniFilter, type TagliandiFilter, type UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
+import { prefetchMezziTagliandiQueries } from "@/lib/mezzi/prefetch-mezzi-tagliandi-queries";
+import { useMezziListDerived } from "@/lib/mezzi/use-mezzi-list-derived";
 import { mezzoTagliandiEnabled } from "@/lib/mezzi/mezzi-meta";
 import {
   buildUltimaModificaByMezzoIdFromLogs,
   resolveMezzoUltimaModificaInfo,
   type MezzoUltimaModificaInfo,
 } from "@/lib/mezzi/mezzo-ultima-modifica-info";
-import { interventiMezzoDaLavorazioniDb, mezzoHaLavorazioneAttivaDb, mezzoHaLavorazioneCollegataDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
+import { mezzoHaLavorazioneCollegataDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import { logModificaRowToMezziHubLogEntry } from "@/lib/mezzi/mezzi-db-ui-adapter";
-import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
+import type { MezzoGestito, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 import { dsPageToolbarCtaCompact, dsStackPage } from "@/lib/ui/design-system";
 import { useGestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
-import { Drawer, LoadingErrorState, LoadingFormSkeleton, LoadingMezziListSkeleton, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount } from "@/components/design-system";
-import {
-  GestionaleLogEmpty,
-  GestionaleLogEntryFourLines,
-  GestionaleLogList,
-  buildMezziGestionaleLogViewModel,
-  gestionaleLogDrawerPanelClass,
-  gestionaleLogScrollEmbeddedClass,
-} from "@/components/gestionale/gestionale-log-ui";
+import { LoadingErrorState, LoadingMezziListSkeleton, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount } from "@/components/design-system";
 import { Q_FOCUS_MEZZO } from "@/lib/navigation/dashboard-log-links";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
@@ -79,11 +71,50 @@ const MezziTagliandiPanel = dynamic(
   { ssr: false, loading: () => <LoadingMezziListSkeleton /> },
 );
 
-function naturalMezziOrder(a: MezzoGestito, b: MezzoGestito) {
-  return a.id.localeCompare(b.id, "en");
-}
+const MezziNewModal = dynamic(
+  () =>
+    import("@/components/gestionale/mezzi/mezzi-new-modal").then((m) => ({
+      default: m.MezziNewModal,
+    })),
+  { ssr: false },
+);
+
+const MezziHubDetailModal = dynamic(
+  () =>
+    import("@/components/gestionale/mezzi/mezzi-hub-detail-modal").then((m) => ({
+      default: m.MezziHubDetailModal,
+    })),
+  { ssr: false },
+);
+
+const MezziFilterFields = dynamic(
+  () =>
+    import("@/components/gestionale/mezzi/mezzi-filters").then((m) => ({
+      default: m.MezziFilterFields,
+    })),
+  { ssr: false },
+);
+
+const MezziEditModal = dynamic(
+  () =>
+    import("@/components/gestionale/mezzi/mezzi-edit-modal").then((m) => ({
+      default: m.MezziEditModal,
+    })),
+  { ssr: false },
+);
+
+const MezziLogDrawer = dynamic(
+  () =>
+    import("@/components/gestionale/mezzi/mezzi-log-drawer").then((m) => ({
+      default: m.MezziLogDrawer,
+    })),
+  { ssr: false },
+);
+
+const MEZZI_SEARCH_DEBOUNCE_MS = 300;
 
 export function MezziView() {
+  const queryClient = useQueryClient();
   const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "xl" });
   const mezziPerm = usePermissions("mezzi");
   const { user } = useAuth();
@@ -96,6 +127,11 @@ export function MezziView() {
   const isAnagrafica = pageView === "anagrafica";
 
   const [search, setSearch] = useState("");
+  const [searchApplied, setSearchApplied] = useState("");
+  useEffect(() => {
+    const t = window.setTimeout(() => setSearchApplied(search.trim()), MEZZI_SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(t);
+  }, [search]);
   const [filtroCliente, setFiltroCliente] = useState("");
   const [filtroUtilizzatore, setFiltroUtilizzatore] = useState("");
   const [filtroCantiere, setFiltroCantiere] = useState("");
@@ -165,7 +201,7 @@ export function MezziView() {
 
   const serviceFilters = useMemo((): MezzoFilters => {
     return {
-      search: search.trim() || undefined,
+      search: searchApplied || undefined,
       cliente: filtroCliente.trim() || undefined,
       utilizzatore: filtroUtilizzatore.trim() || undefined,
       cantiere: filtroCantiere.trim() || undefined,
@@ -182,7 +218,7 @@ export function MezziView() {
       tagliandi: filtroTagliandi || undefined,
     };
   }, [
-    search,
+    searchApplied,
     filtroCliente,
     filtroUtilizzatore,
     filtroCantiere,
@@ -205,29 +241,28 @@ export function MezziView() {
     isError: mezziError,
     error: mezziErr,
     refetch: refetchMezzi,
-  } = useMezziListQuery(serviceFilters, { enabled: isAnagrafica });
+  } = useMezziListQuery(undefined);
   const mezzoRows = mezzoRowsRaw ?? [];
-  const mezziInitialLoading = isAnagrafica && mezziLoading && mezzoRowsRaw === undefined && !mezziError;
+  const mezziInitialLoading = mezziLoading && mezzoRowsRaw === undefined && !mezziError;
 
   const { data: lavRows = [] } = useLavorazioniReportSlice({
     mezziRows: mezzoRows,
     enabled: needsLavorazioniSlice,
   });
-  const mezziUi = mezzoRows;
-
-  const interventiByMezzoId = useMemo(() => {
-    if (!isAnagrafica) return new Map<string, MezzoInterventoLavorazione[]>();
-    const map = new Map<string, MezzoInterventoLavorazione[]>();
-    for (const m of mezziUi) {
-      map.set(m.id, interventiMezzoDaLavorazioniDb(m, lavRows));
-    }
-    return map;
-  }, [isAnagrafica, mezziUi, lavRows]);
-
-  const inOfficina = useCallback((m: MezzoGestito) => mezzoHaLavorazioneAttivaDb(m, lavRows), [lavRows]);
 
   const [sortColumn, setSortColumn] = useState<MezziSortKey | null>(null);
   const [sortPhase, setSortPhase] = useState<MezziSortPhase>("natural");
+
+  const { sorted, interventiByMezzoId, inOfficina, mezziUi } = useMezziListDerived(
+    mezzoRows,
+    serviceFilters,
+    lavRows,
+    sortColumn,
+    sortPhase,
+    filtroUltimaLav,
+    filtroNumeroLav,
+    isAnagrafica,
+  );
 
   const onSort = useCallback(
     (k: MezziSortKey) => {
@@ -248,33 +283,6 @@ export function MezziView() {
     },
     [sortColumn, sortPhase],
   );
-
-  const filteredMezzi = useMemo(() => {
-    if (!isAnagrafica) return [];
-    return mezziUi.filter((m) => {
-      const interventi = interventiByMezzoId.get(m.id) ?? [];
-      if (!mezzoMatchesUltimaLavFilter(interventi, filtroUltimaLav)) return false;
-      if (!mezzoMatchesNumeroLavorazioniFilter(interventi.length, filtroNumeroLav)) return false;
-      return true;
-    });
-  }, [isAnagrafica, mezziUi, interventiByMezzoId, filtroUltimaLav, filtroNumeroLav]);
-
-  const sorted = useMemo(() => {
-    if (!isAnagrafica) return [];
-    const rows = [...filteredMezzi];
-    rows.sort((a, b) =>
-      compareMezzi(
-        a,
-        b,
-        sortColumn,
-        sortPhase,
-        naturalMezziOrder,
-        (m) => interventiByMezzoId.get(m.id)?.[0]?.dataIngresso ?? "",
-        (m) => interventiByMezzoId.get(m.id)?.length ?? 0,
-      ),
-    );
-    return rows;
-  }, [isAnagrafica, filteredMezzi, interventiByMezzoId, sortColumn, sortPhase]);
 
   const hasMezziFilters = search.trim().length > 0 || mezziFieldFiltersActive(mezziFieldFilterState);
 
@@ -491,6 +499,11 @@ export function MezziView() {
   }
 
   useEffect(() => {
+    if (pageView !== "tagliandi") return;
+    void prefetchMezziTagliandiQueries(queryClient);
+  }, [pageView, queryClient]);
+
+  useEffect(() => {
     return () => {
       if (flashClearRef.current) clearTimeout(flashClearRef.current);
     };
@@ -648,6 +661,7 @@ export function MezziView() {
             onFiltersToggle={() => setFiltriEspansi((o) => !o)}
             filtersActive={hasMezziFilters}
             filtersPanel={
+              filtriEspansi ? (
               <MezziFilterFields
                 embedded
                 filtroCliente={filtroCliente}
@@ -683,6 +697,7 @@ export function MezziView() {
                 filtroUltimaLav={filtroUltimaLav}
                 onFiltroUltimaLav={setFiltroUltimaLav}
               />
+              ) : null
             }
             onFilterReset={resetMezziToolbarFilters}
             meta={
@@ -768,38 +783,18 @@ export function MezziView() {
         onConfirm={confirmEliminaMezzo}
       />
 
-      <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche" ariaLabel="Log modifiche mezzi">
-        <div className={gestionaleLogDrawerPanelClass}>
-              <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>
-                {logQuery.isLoading ? (
-                  <LoadingFormSkeleton fields={2} className="px-1 py-2" />
-                ) : logEntriesUi.length === 0 ? (
-                  <GestionaleLogEmpty message="Nessuna modifica registrata su Supabase." />
-                ) : (
-                  <GestionaleLogList>
-                    {pagedLogEntries.map((e) => {
-                      const vm = buildMezziGestionaleLogViewModel({
-                        tipo: e.tipo,
-                        mezzo: e.mezzo,
-                        riepilogo: e.riepilogo,
-                        autore: e.autore,
-                        at: e.at,
-                        changes: e.changes,
-                      });
-                      return (
-                        <li key={e.id}>
-                          <GestionaleLogEntryFourLines vm={vm} />
-                        </li>
-                      );
-                    })}
-                  </GestionaleLogList>
-                )}
-              </div>
-          {showLogPager ? (
-            <TablePagination page={logPage} pageCount={logPageCount} onPageChange={setLogPage} label={logPagerLabel} />
-          ) : null}
-        </div>
-      </Drawer>
+      <MezziLogDrawer
+        open={logOpen}
+        onClose={() => setLogOpen(false)}
+        loading={logQuery.isLoading}
+        entries={logEntriesUi}
+        pagedEntries={pagedLogEntries}
+        showPager={showLogPager}
+        page={logPage}
+        pageCount={logPageCount}
+        pagerLabel={logPagerLabel}
+        onPageChange={setLogPage}
+      />
 
       {nuovoOpen ? (
         <MezziNewModal

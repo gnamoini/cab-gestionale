@@ -2,6 +2,7 @@
 
 import { Tooltip } from "@/components/ui";
 import { memo, useCallback, useMemo, useRef, useState, type ChangeEvent } from "react";
+import dynamic from "next/dynamic";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { GlobalTableHead } from "@/components/gestionale/global-table";
@@ -23,14 +24,11 @@ import { invalidateReportDerivedCache } from "@/lib/report/report-derived-cache"
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { QK } from "@/src/lib/react-query/query-keys";
-import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
-import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import {
   dsScrollbar,
   dsTypoCaption,
   dsTypoSmall,
 } from "@/lib/ui/design-system";
-import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import {
   globalTableFixed,
   globalTableHeadEdgeInset,
@@ -39,6 +37,13 @@ import {
   globalTableThLabel,
   globalTableWrap,
 } from "@/lib/ui/global-table";
+
+const ReportLavorazioniImportResultModal = dynamic(
+  () =>
+    import("@/components/report/report-lavorazioni-import-result-modal").then(
+      (m) => m.ReportLavorazioniImportResultModal,
+    ),
+);
 
 const REPORT_MANUAL_IMPORT_ACCEPT = ".xlsx,.xls,.csv";
 
@@ -312,52 +317,7 @@ function ReportLavorazioniSectionInner({
 
   const importResultModal =
     importResult ? (
-      <GestionaleModalShell
-        modalSize="formMedium"
-        title="Import Excel completato"
-        titleId="report-lavorazioni-import-result-title"
-        onRequestClose={() => setImportResult(null)}
-      >
-        <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-          <GestionaleModalScrollBody className="space-y-3">
-            <p className="text-sm text-[color:var(--cab-text)]">
-              Importati <span className="font-semibold tabular-nums">{importResult.imported}</span> periodi nuovi e
-              aggiornati <span className="font-semibold tabular-nums">{importResult.updated}</span>.
-              {importResult.skipped > 0 ? (
-                <>
-                  {" "}
-                  Righe saltate: <span className="font-semibold tabular-nums">{importResult.skipped}</span>.
-                </>
-              ) : null}
-            </p>
-            {importResult.warnings.length > 0 ? (
-              <div>
-                <p className="text-xs font-semibold text-[color:var(--cab-text-muted)]">Avvisi</p>
-                <ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-[color:var(--cab-text-muted)]">
-                  {importResult.warnings.map((w) => (
-                    <li key={w}>{w}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-            {importResult.errors.length > 0 ? (
-              <div>
-                <p className="text-xs font-semibold text-[color:var(--cab-danger)]">Errori riga</p>
-                <ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-[color:var(--cab-danger)]">
-                  {importResult.errors.map((e) => (
-                    <li key={e}>{e}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </GestionaleModalScrollBody>
-          <div className="flex shrink-0 justify-end border-t border-[color:var(--cab-border)] p-4">
-            <button type="button" className={erpBtnAccent} onClick={() => setImportResult(null)}>
-              Chiudi
-            </button>
-          </div>
-        </div>
-      </GestionaleModalShell>
+      <ReportLavorazioniImportResultModal result={importResult} onClose={() => setImportResult(null)} />
     ) : null;
 
   if (embed) {

@@ -4,6 +4,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import type { LanguageModel } from "ai";
 import {
   geminiKeySlotForIndex,
+  normalizeGeminiReportModelId,
   resolveGeminiApiKeysFromEnv,
   runWithGeminiApiKeysFailover,
 } from "@/lib/ai/gemini-api-keys";
@@ -12,7 +13,9 @@ export {
   geminiKeySlotForIndex,
   isGeminiAuthError,
   isGeminiFailoverError,
+  isGeminiModelUnavailableError,
   isGeminiQuotaError,
+  normalizeGeminiReportModelId,
   resolveGeminiApiKeysFromEnv,
   runWithGeminiApiKeysFailover,
 } from "@/lib/ai/gemini-api-keys";
@@ -27,8 +30,17 @@ export {
 export const GEMINI_REPORT_MODEL_ID = "gemini-3.5-flash";
 
 export function resolveGeminiReportModelId(): string {
+  const normalized = normalizeGeminiReportModelId(
+    process.env.GEMINI_MODEL_ID,
+    GEMINI_REPORT_MODEL_ID,
+  );
   const fromEnv = process.env.GEMINI_MODEL_ID?.trim();
-  return fromEnv || GEMINI_REPORT_MODEL_ID;
+  if (fromEnv && fromEnv !== normalized) {
+    console.warn(
+      `[gemini-client] deprecated GEMINI_MODEL_ID=${fromEnv} → using ${normalized}`,
+    );
+  }
+  return normalized;
 }
 
 /** Timeout default analisi testo (Report AI). Override: REPORT_ANALYSIS_LLM_TIMEOUT_MS. */
@@ -68,9 +80,9 @@ export function resolveGeminiReportAnalysisTimeoutMs(): number {
 export const GEMINI_QUOTA_ERROR_HINT =
   "Limite richieste o quota Gemini raggiunta. Attendi qualche minuto, riduci le pagine del PDF o usa Excel/CSV.";
 
-export function getGeminiReportModelForApiKey(apiKey: string): LanguageModel {
+export function getGeminiReportModelForApiKey(apiKey: string, modelId?: string): LanguageModel {
   const google = createGoogleGenerativeAI({ apiKey });
-  return google(resolveGeminiReportModelId());
+  return google(modelId ?? resolveGeminiReportModelId());
 }
 
 /** Modello Gemini — null se API key assente. */

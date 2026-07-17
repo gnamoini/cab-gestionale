@@ -15,6 +15,7 @@ import {
 } from "@/lib/document-capture/capture-extraction-schema";
 import { buildGeminiCaptureDocumentPart } from "@/lib/document-capture/gemini-capture-content";
 import { SCHEDA_OFFICINA_EXTRACTION_SYSTEM, SCHEDA_OFFICINA_EXTRACTION_USER } from "@/lib/document-capture/scheda-officina-extraction-prompt";
+import { resolveGeminiAnalyzeRetryDelayMs } from "@/lib/ai/gemini-retry-after";
 import { mutateCaptureWithEvent } from "@/lib/document-capture/mutate-capture-with-event.server";
 import { normalizeCaptureMime } from "@/lib/document-capture/capture-mime";
 import {
@@ -213,7 +214,7 @@ export async function analyzeDocumentCapture(captureId: string): Promise<Analyze
     } catch (e) {
       lastError = e;
       if (attempt < RETRY_BACKOFF_MS.length) {
-        await sleep(RETRY_BACKOFF_MS[attempt] ?? 1_000);
+        await sleep(resolveGeminiAnalyzeRetryDelayMs(e, attempt, RETRY_BACKOFF_MS));
       }
     }
   }

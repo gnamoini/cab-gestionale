@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal-shell";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import type { GestionaleModalWidth, ModalSize } from "@/lib/ui/modal-max-width-class";
 
@@ -28,7 +28,7 @@ export function Modal({
   if (!open) return null;
 
   return (
-    <LavorazioniModalShell
+    <GestionaleModalShell
       modalSize={modalSize}
       onRequestClose={onClose}
       title={title}
@@ -36,6 +36,6 @@ export function Modal({
       footer={footer}
     >
       <GestionaleModalScrollBody>{children}</GestionaleModalScrollBody>
-    </LavorazioniModalShell>
+    </GestionaleModalShell>
   );
 }

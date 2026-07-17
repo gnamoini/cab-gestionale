@@ -4,6 +4,15 @@ export const gestionaleCollapsibleEase = "ease-[cubic-bezier(0.22,1,0.36,1)]";
 /** Griglia animata apertura/chiusura corpo sezione. */
 export const gestionaleCollapsiblePanelGridClass = `grid transition-[grid-template-rows] duration-300 ${gestionaleCollapsibleEase} motion-reduce:transition-none`;
 
+/** Corpo pannello collapsible — sfondo opaco su tutti i livelli (evita flash barra bianca in animazione). */
+export const gestionaleCollapsiblePanelBodyClass = "bg-[var(--cab-card)]";
+
+/** Padding corpo ShellCard collapsible — flush in alto verso header (no striscia in animazione). */
+export const gestionaleCollapsibleShellBodyPadClass = "px-4 pb-4 pt-0 sm:px-5 sm:pb-5";
+
+/** Variante compatta ShellCard collapsible. */
+export const gestionaleCollapsibleShellBodyPadCompactClass = "px-2 pb-2 pt-0 sm:px-2.5 sm:pb-2.5";
+
 /** Wrapper interno pannello collapsible (altezza). */
 export const gestionaleCollapsiblePanelInnerClass = "min-h-0 overflow-hidden";
 
@@ -28,7 +37,7 @@ export const gestionaleCollapsibleShellHeaderSurfaceClass =
   "bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))]";
 
 export const gestionaleCollapsibleShellHeaderFocusClass =
-  "outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_42%,transparent)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--cab-bg-app)] dark:focus-visible:ring-offset-[var(--cab-bg-app)]";
+  "outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_42%,transparent)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--cab-card)]";
 
 /** Unico trigger SSOT — ShellCard Lavorazioni + form modale (nessun merge di varianti). */
 export const gestionaleCollapsibleShellHeaderBtnClass =
@@ -63,3 +72,26 @@ export const gestionaleCollapsibleShellHeaderActionsDividerClass =
 /** Separatore header/contenuto — border solido (no inset shadow: evita flash in dark mode). */
 export const gestionaleCollapsibleShellHeaderDividerClass =
   "border-b border-[color:var(--cab-border)]";
+
+/** Raggio shell card (ShellCard / liste pagina). */
+export const gestionaleCollapsibleShellCardRadiusClass = "rounded-[var(--ds-radius-xl)]";
+
+/** Raggio header shell card — espanso: solo angoli superiori. */
+export const gestionaleCollapsibleShellHeaderRadiusExpandedClass =
+  "overflow-hidden rounded-t-[var(--ds-radius-xl)]";
+
+/** Raggio header shell card — collassato: pill/card intera. */
+export const gestionaleCollapsibleShellHeaderRadiusCollapsedClass =
+  "overflow-hidden rounded-[var(--ds-radius-xl)]";
+
+export function gestionaleCollapsibleShellHeaderShellRadiusClass(expanded: boolean): string {
+  return expanded
+    ? gestionaleCollapsibleShellHeaderRadiusExpandedClass
+    : gestionaleCollapsibleShellHeaderRadiusCollapsedClass;
+}
+
+export function gestionaleCollapsibleShellHeaderBtnRadiusClass(expanded: boolean): string {
+  return expanded
+    ? "rounded-t-[var(--ds-radius-xl)]"
+    : gestionaleCollapsibleShellCardRadiusClass;
+}

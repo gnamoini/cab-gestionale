@@ -2,11 +2,9 @@
 
 import { Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { GlobalSelect } from "@/components/gestionale/global-input";
-import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
-import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { ReportCompareBanner } from "@/components/report/report-compare-banner";
 import { MagazzinoCapitalLineChart, MagazzinoEntrateUsciteBars } from "@/components/report/report-charts";
 import { reportChartShellClass } from "@/components/report/report-ui-tokens";
@@ -30,15 +28,19 @@ import {
 import type { ReportDerivedBundle } from "@/lib/report/report-derived-cache";
 import { getMagazzinoMonthlyRowsForRange } from "@/lib/report/report-derived-cache";
 import {
-  dsInput,
   dsTableRow,
   dsTableTd,
   dsTableWrap,
   dsScrollbar,
   dsTypoSmall,
 } from "@/lib/ui/design-system";
-import { globalInputFieldFilter } from "@/lib/ui/global-input";
-import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
+
+const ReportMagazzinoManualHistoryModal = dynamic(
+  () =>
+    import("@/components/report/report-magazzino-manual-history-modal").then(
+      (m) => m.ReportMagazzinoManualHistoryModal,
+    ),
+);
 
 function fmtPct(p: number | null): string {
   if (p == null) return "—";
@@ -154,6 +156,16 @@ export function ReportMagazzinoSection({
     });
     return c;
   }, [rows, sortColumn, sortPhase, orderIndex]);
+
+  function onMonthKeyChange(k: string) {
+    setKey(k);
+    const p = manual[k] ?? {};
+    setEnt(p.entrate != null ? String(p.entrate) : "");
+    setUsc(p.uscite != null ? String(p.uscite) : "");
+    setDQty(p.deltaQty != null ? String(p.deltaQty) : "");
+    setDCap(p.deltaCapitale != null ? String(p.deltaCapitale) : "");
+    setCFin(p.capitaleFinale != null ? String(p.capitaleFinale) : "");
+  }
 
   function openModal() {
     const k = rows[0]?.key ?? "";
@@ -335,106 +347,24 @@ export function ReportMagazzinoSection({
 
   const modal =
     open ? (
-      <GestionaleModalShell
-          modalSize="analytics"
-          modalHeight="tall"
-          title="Storico manuale magazzino"
-          titleId="report-magazzino-manual-title"
-          onRequestClose={() => setOpen(false)}
-        >
-          <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-            <GestionaleModalScrollBody className="space-y-0">
-              <p className="text-xs text-[color:var(--cab-text-muted)]">
-                Opzionale: sovrascrivi i valori calcolati per un mese. Lascia vuoto un campo per usare il valore automatico.
-              </p>
-              <label htmlFor="report-mag-manual-mese" className="mt-3 block text-xs text-[color:var(--cab-text-muted)]">
-                Mese (YYYY-MM)
-                <GlobalSelect
-                  id="report-mag-manual-mese"
-                  variant="default"
-                  selectOnly
-                  inputClassName={`${globalInputFieldFilter} mt-1 w-full`}
-                  items={(rows.length ? rows : [{ key: key || "2026-01", label: key || "2026-01" }]).map((r) => ({
-                    value: r.key,
-                    label: r.key,
-                  }))}
-                  value={key}
-                  onChange={(k) => {
-                    setKey(k);
-                    const p = manual[k] ?? {};
-                    setEnt(p.entrate != null ? String(p.entrate) : "");
-                    setUsc(p.uscite != null ? String(p.uscite) : "");
-                    setDQty(p.deltaQty != null ? String(p.deltaQty) : "");
-                    setDCap(p.deltaCapitale != null ? String(p.deltaCapitale) : "");
-                    setCFin(p.capitaleFinale != null ? String(p.capitaleFinale) : "");
-                  }}
-                  strictFromList
-                />
-              </label>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <label htmlFor="report-mag-manual-entrate" className="text-xs text-[color:var(--cab-text-muted)]">
-                  Entrate
-                  <input
-                    id="report-mag-manual-entrate"
-                    className={`${dsInput} mt-1`}
-                    inputMode="decimal"
-                    value={ent}
-                    onChange={(e) => setEnt(e.target.value)}
-                  />
-                </label>
-                <label htmlFor="report-mag-manual-uscite" className="text-xs text-[color:var(--cab-text-muted)]">
-                  Uscite
-                  <input
-                    id="report-mag-manual-uscite"
-                    className={`${dsInput} mt-1`}
-                    inputMode="decimal"
-                    value={usc}
-                    onChange={(e) => setUsc(e.target.value)}
-                  />
-                </label>
-                <label htmlFor="report-mag-manual-dqty" className="text-xs text-[color:var(--cab-text-muted)]">
-                  Δ Quantità
-                  <input
-                    id="report-mag-manual-dqty"
-                    className={`${dsInput} mt-1`}
-                    inputMode="decimal"
-                    value={dQty}
-                    onChange={(e) => setDQty(e.target.value)}
-                  />
-                </label>
-                <label htmlFor="report-mag-manual-dcap" className="text-xs text-[color:var(--cab-text-muted)]">
-                  Δ Capitale (€)
-                  <input
-                    id="report-mag-manual-dcap"
-                    className={`${dsInput} mt-1`}
-                    inputMode="decimal"
-                    value={dCap}
-                    onChange={(e) => setDCap(e.target.value)}
-                  />
-                </label>
-                <label htmlFor="report-mag-manual-cfin" className="col-span-2 text-xs text-[color:var(--cab-text-muted)]">
-                  Capitale finale (€)
-                  <input
-                    id="report-mag-manual-cfin"
-                    className={`${dsInput} mt-1`}
-                    inputMode="decimal"
-                    value={cFin}
-                    onChange={(e) => setCFin(e.target.value)}
-                  />
-                </label>
-              </div>
-            </GestionaleModalScrollBody>
-            <div className="flex shrink-0 justify-end gap-2 border-t border-[color:var(--cab-border)] p-4">
-              <button type="button" className={erpBtnNeutral} onClick={() => setOpen(false)}>
-                Annulla
-              </button>
-              <button type="button" className={erpBtnAccent} onClick={saveManual}>
-                Salva
-              </button>
-            </div>
-          </div>
-        </GestionaleModalShell>
-      ) : null;
+      <ReportMagazzinoManualHistoryModal
+        rows={rows}
+        monthKey={key}
+        entrate={ent}
+        uscite={usc}
+        deltaQty={dQty}
+        deltaCapitale={dCap}
+        capitaleFinale={cFin}
+        onMonthKeyChange={onMonthKeyChange}
+        onEntrateChange={setEnt}
+        onUsciteChange={setUsc}
+        onDeltaQtyChange={setDQty}
+        onDeltaCapitaleChange={setDCap}
+        onCapitaleFinaleChange={setCFin}
+        onClose={() => setOpen(false)}
+        onSave={saveManual}
+      />
+    ) : null;
 
   if (embed) {
     return (

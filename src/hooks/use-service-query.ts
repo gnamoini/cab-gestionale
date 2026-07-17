@@ -7,6 +7,33 @@ import type { ObsOperation } from "@/lib/observability/types";
 import { dedupQuery, type DedupQueryMeta } from "@/lib/query/dedup-query";
 import type { ServiceResult } from "@/src/services/service-result";
 
+function serviceQueryAbortError(): DOMException {
+  return new DOMException("The operation was aborted.", "AbortError");
+}
+
+/** Reject the query promise on abort — never throw from an abort listener (uncaught runtime error). */
+function runWithAbortSignal<T>(signal: AbortSignal | undefined, run: () => Promise<T>): Promise<T> {
+  if (!signal) return run();
+  if (signal.aborted) return Promise.reject(serviceQueryAbortError());
+
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      reject(serviceQueryAbortError());
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+    run()
+      .then((value) => {
+        signal.removeEventListener("abort", onAbort);
+        if (signal.aborted) reject(serviceQueryAbortError());
+        else resolve(value);
+      })
+      .catch((err) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(err);
+      });
+  });
+}
+
 export type UseServiceQueryOptions<TData, TKey extends readonly unknown[]> = Omit<
   UseQueryOptions<TData, Error, TData, TKey>,
   "queryKey" | "queryFn"
@@ -26,15 +53,16 @@ export function useServiceQuery<TData, TKey extends readonly unknown[]>(
 
   return useQuery({
     queryKey,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       return dedupQuery(
         queryKey,
-        async () => {
-          recordQueryFetch(queryKey);
-          const res = await measureAsync(label, obsOperation, queryFn);
-          if (!res.success) throw new Error(res.error ?? "Errore servizio");
-          return res.data as TData;
-        },
+        () =>
+          runWithAbortSignal(signal, async () => {
+            recordQueryFetch(queryKey);
+            const res = await measureAsync(label, obsOperation, queryFn);
+            if (!res.success) throw new Error(res.error ?? "Errore servizio");
+            return res.data as TData;
+          }),
         { ...dedupMeta, consumerTag: dedupTag },
       );
     },

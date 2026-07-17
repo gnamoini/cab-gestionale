@@ -2,9 +2,13 @@ import assert from "node:assert/strict";
 import {
   geminiKeySlotForIndex,
   isGeminiFailoverError,
+  isGeminiModelUnavailableError,
+  normalizeGeminiReportModelId,
   resolveGeminiApiKeysFromEnv,
   runWithGeminiApiKeysFailover,
 } from "@/lib/ai/gemini-api-keys";
+
+const GEMINI_REPORT_MODEL_ID = "gemini-3.5-flash";
 
 assert.deepEqual(
   resolveGeminiApiKeysFromEnv({
@@ -35,6 +39,25 @@ assert.equal(geminiKeySlotForIndex(1), "secondary");
 assert.equal(isGeminiFailoverError(new Error("429 quota exceeded")), true);
 assert.equal(isGeminiFailoverError(new Error("401 API KEY invalid")), true);
 assert.equal(isGeminiFailoverError(new Error("TimeoutError")), false);
+
+assert.equal(
+  normalizeGeminiReportModelId("gemini-2.5-flash", GEMINI_REPORT_MODEL_ID),
+  "gemini-3.5-flash",
+);
+assert.equal(
+  normalizeGeminiReportModelId("gemini-3.5-flash", GEMINI_REPORT_MODEL_ID),
+  "gemini-3.5-flash",
+);
+assert.equal(
+  normalizeGeminiReportModelId(null, GEMINI_REPORT_MODEL_ID),
+  "gemini-3.5-flash",
+);
+assert.equal(
+  isGeminiModelUnavailableError(
+    new Error("models/gemini-2.5-flash is no longer available to new users"),
+  ),
+  true,
+);
 
 let attempts = 0;
 void runWithGeminiApiKeysFailover(["key-a", "key-b"], async (_key, meta) => {

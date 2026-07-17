@@ -62,7 +62,7 @@ async function measure(client, entry) {
   const t0 = performance.now();
   let q = client.from(entry.table).select(entry.select);
   if (entry.filters) q = entry.filters(q);
-  const { data, error } = await q;
+  const { data, error, status } = await q;
   const wallMs = Math.round((performance.now() - t0) * 100) / 100;
   const json = JSON.stringify(data ?? []);
   return {
@@ -72,6 +72,7 @@ async function measure(client, entry) {
     bytesKb: Math.round((Buffer.byteLength(json, "utf8") / 1024) * 100) / 100,
     rowCount: Array.isArray(data) ? data.length : 0,
     error: error?.message ?? null,
+    httpStatus: status ?? null,
   };
 }
 
@@ -87,10 +88,19 @@ export async function runRestBenchmarkSubset() {
   }
   const client = createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${serviceKey}` } },
   });
   const results = [];
   for (const entry of SUBSET_QUERIES) {
     results.push(await measure(client, entry));
+  }
+  const authFailures = results.filter((r) => r.httpStatus === 401 || r.error?.includes("JWT"));
+  if (authFailures.length > 0) {
+    return {
+      ok: false,
+      error: `REST auth failed (${authFailures.length} queries) — verify SUPABASE_SERVICE_ROLE_KEY in CI`,
+      results,
+    };
   }
   return { ok: true, results };
 }

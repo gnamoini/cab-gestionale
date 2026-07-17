@@ -54,6 +54,15 @@ import {
 
 const notificationFooterBtnClass = `${dsBtnGhost} min-h-[2rem] shrink-0`;
 
+/** ponytail: allineato a realtime-inbox-coordinator SEEN_TTL_MS — upgrade: export SSOT condiviso */
+const CLIENT_TOAST_SEEN_TTL_MS = 5 * 60_000;
+
+function pruneClientToastSeen(seen: Map<string, number>, now = Date.now()) {
+  for (const [id, ts] of seen) {
+    if (now - ts > CLIENT_TOAST_SEEN_TTL_MS) seen.delete(id);
+  }
+}
+
 function NotificationsDesktopStatusBadge({
   permissionState,
   onPermissionChange,
@@ -296,15 +305,18 @@ export function NotificationCenterBell({
 
   const prevUnreadRef = useRef<number | null>(null);
   const [bellArrive, setBellArrive] = useState(false);
-  const clientToastSeenRef = useRef<Set<string>>(new Set());
+  const clientToastSeenRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (!clientInbox || isLoading || open) return;
+    const now = Date.now();
+    pruneClientToastSeen(clientToastSeenRef.current, now);
     for (const row of notifications) {
       if (!row.is_unread) continue;
       if (row.type !== "client_portal_ingresso" && row.type !== "client_portal_completata") continue;
-      if (clientToastSeenRef.current.has(row.id)) continue;
-      clientToastSeenRef.current.add(row.id);
+      const seenAt = clientToastSeenRef.current.get(row.id);
+      if (seenAt != null && now - seenAt <= CLIENT_TOAST_SEEN_TTL_MS) continue;
+      clientToastSeenRef.current.set(row.id, now);
       const message = row.body?.trim() || row.title?.trim() || "Nuova notifica";
       gestToast.info(message, 6000);
     }

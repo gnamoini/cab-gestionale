@@ -40,9 +40,14 @@ SSOT: [`lib/inventory-labels/`](../lib/inventory-labels/)
 
 ## Preset etichetta
 
-40×20, 50×30, 60×40, 70×50, 80×50 mm — definiti in `domain/templates.ts` (`computeLabelLayout`).
+40×20, 50×30, 60×40, 70×50, 80×40, 80×50 mm — definiti in `domain/templates.ts` (`computeLabelLayout`).
 
-**Layout (v1.4.0):** QR grande a sinistra; a destra marca, descrizione e codice (codice centrato tra fondo QR e barcode); barcode full-width in basso. Testo a capo senza ellissi.
+**Layout (v1.5.0):** QR grande a sinistra; barcode Code128 sotto il QR; a destra:
+
+1. **Alto:** marche unite (`BTE / OMB`), descrizione, codice OE principale `XXXX (BTE)`, codice OE secondario `YYYY (OMB)` se presente
+2. **Basso (fascia barcode):** fornitore alternativo + codice fornitore ancorati al bordo inferiore etichetta, accanto al barcode
+
+Font DejaVu embedded nel SVG (`LabelSans` / `LabelMono`) — necessario perché sharp/librsvg non risolve `sans-serif` generici in headless.
 
 | Preset | QR tipico | Default |
 |--------|-----------|---------|
@@ -52,10 +57,12 @@ SSOT: [`lib/inventory-labels/`](../lib/inventory-labels/)
 
 Per scansione affidabile con fotocamera mobile usare **60×40** o superiori.
 
-Campi etichetta: **marca**, **descrizione**, **codice**, QR (EC level Q, quiet zone 2 moduli), Code128.  
-Esclusi: prezzo, quantità, costo, fornitore, note.
+Campi etichetta: **marca** (+ secondaria), **descrizione**, **codice** (+ secondario OE), fornitore/codice alternativo, QR (EC level Q, quiet zone 2 moduli), Code128.  
+Esclusi: prezzo, quantità, costo, fornitore principale, note.
 
-`GENERATOR_VERSION` `1.3.0` invalida cache artifact al primo download post-aggiornamento.
+`GENERATOR_VERSION` invalida cache artifact al primo download post-aggiornamento.
+
+**Produzione:** il bucket `pdf-artifacts` deve accettare `application/pdf`, `image/png`, `image/svg+xml` (migration `20260917120200_pdf_artifacts_inventory_label_mime_types.sql`). Senza PNG/SVG la cache fallisce; con `uploadLabelArtifactBestEffort` la consegna resta comunque possibile.
 
 ## Estensione futura
 

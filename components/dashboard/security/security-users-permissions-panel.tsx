@@ -15,8 +15,7 @@ import {
 } from "@/components/design-system";
 import { GestionaleRefreshToolbarButton } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { SecurityCreateUserModal } from "@/components/dashboard/security-create-user-modal";
-import { SecurityUserDetailDrawer } from "@/components/dashboard/security/security-user-detail-drawer";
+import { SecurityCreateUserModalLazy, SecurityUserDetailDrawerLazy } from "@/components/dashboard/security/security-tab-loaders";
 import {
   buildInitialPageDraft,
   SecurityUserPagePermissionsEditor,
@@ -416,24 +415,28 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ }
 
       <SecurityClienteAuditPanel readOnly={readOnly} />
 
-      <SecurityUserDetailDrawer
-        user={selectedUser}
-        open={!!selectedUser}
-        readOnly={readOnly}
-        pageDraft={selectedPageDraft}
-        onPageDraftChange={handlePageDraftChange}
-        onRestorePageFromRole={handleRestorePageFromRole}
-        onClose={() => setSelectedUserId(null)}
-      />
+      {selectedUser ? (
+        <SecurityUserDetailDrawerLazy
+          user={selectedUser}
+          open
+          readOnly={readOnly}
+          pageDraft={selectedPageDraft}
+          onPageDraftChange={handlePageDraftChange}
+          onRestorePageFromRole={handleRestorePageFromRole}
+          onClose={() => setSelectedUserId(null)}
+        />
+      ) : null}
 
-      <SecurityCreateUserModal
-        open={createOpen}
-        onClose={() => {
-          setCreateOpen(false);
-          hydratedRef.current = false;
-          void invalidateRuntimeTruth({ reason: "roleOrPermissionsChanged", queryClient });
-        }}
-      />
+      {createOpen ? (
+        <SecurityCreateUserModalLazy
+          open
+          onClose={() => {
+            setCreateOpen(false);
+            hydratedRef.current = false;
+            void invalidateRuntimeTruth({ reason: "roleOrPermissionsChanged", queryClient });
+          }}
+        />
+      ) : null}
       {confirmDialog}
     </ShellCard>
   );

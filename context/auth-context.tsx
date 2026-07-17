@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -40,6 +41,7 @@ import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate
 import { publishStickyRbacSnapshot } from "@/src/lib/rbac/sticky-rbac-snapshot";
 import { isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
 import { QK } from "@/src/lib/react-query/query-keys";
+import { setAuthRememberPreference } from "@/lib/auth/auth-remember-preference";
 import { clearInvalidAuthSession } from "@/src/lib/auth/clear-invalid-auth-session";
 import {
   isReconcileInFlight,
@@ -59,17 +61,29 @@ import type { PublicAuthUser } from "@/src/types/auth-user";
 export type { AuthStatus } from "@/src/lib/auth/auth-status";
 export { isAuthFullyAuthenticated, isAuthSessionEstablished } from "@/src/lib/auth/auth-status";
 
-type AuthContextValue = {
+type AuthStateValue = {
   status: AuthStatus;
   user: PublicAuthUser | null;
   configurationError: string | null;
   authorName: string;
+};
+
+type AuthActionsValue = {
   login: (email: string, password: string, remember: boolean) => Promise<{ ok: true } | { ok: false; message: string }>;
   logout: () => Promise<void>;
   refresh: (opts?: { force?: boolean }) => Promise<ReconcileResult["verdict"] | null>;
 };
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+type AuthContextValue = AuthStateValue & AuthActionsValue;
+
+type AuthUserIdStore = {
+  subscribe: (onStoreChange: () => void) => () => void;
+  getSnapshot: () => string | null;
+};
+
+const AuthStateContext = createContext<AuthStateValue | null>(null);
+const AuthActionsContext = createContext<AuthActionsValue | null>(null);
+const AuthUserIdStoreContext = createContext<AuthUserIdStore | null>(null);
 
 const FALLBACK_AUTHOR = "Utente CAB";
 const AUTH_INIT_FAILSAFE_MS = 7_000;
@@ -147,6 +161,7 @@ export function AuthProvider({
   const [configurationError, setConfigurationError] = useState<string | null>(initial.configurationError);
   const queryClient = useQueryClient();
   const userIdRef = useRef<string | null>(null);
+  const userIdListenersRef = useRef(new Set<() => void>());
   const lastStableUserRef = useRef<PublicAuthUser | null>(null);
   const skipInitGetSessionRef = useRef(isServerSnapshotFresh(initialSnapshot));
   const initialSnapshotUserIdRef = useRef(initialSnapshot?.user?.id ?? null);
@@ -207,7 +222,11 @@ export function AuthProvider({
 
   useEffect(() => {
     statusRef.current = status;
-    userIdRef.current = user?.id ?? null;
+    const nextUserId = user?.id ?? null;
+    if (nextUserId !== userIdRef.current) {
+      userIdRef.current = nextUserId;
+      userIdListenersRef.current.forEach((listener) => listener());
+    }
     if (user && (status === "authenticated" || status === "degraded")) {
       lastStableUserRef.current = user;
       hadEstablishedSessionRef.current = true;
@@ -478,7 +497,7 @@ export function AuthProvider({
   ]);
 
   const login = useCallback(
-    async (email: string, password: string, _remember: boolean) => {
+    async (email: string, password: string, remember: boolean) => {
       if (!isSupabasePublicEnvConfigured()) {
         setConfigurationError(MISSING_SUPABASE_ENV_MESSAGE);
         return { ok: false as const, message: MISSING_SUPABASE_ENV_MESSAGE };
@@ -492,6 +511,7 @@ export function AuthProvider({
             message: "Accesso non riuscito. Verifica email o nome utente e password.",
           };
         }
+        setAuthRememberPreference(remember);
         const sb = getBrowserSupabase();
         const signInEmail = await resolveSignInEmail(sb, identifier);
         if (!signInEmail) {
@@ -578,29 +598,69 @@ export function AuthProvider({
     return n || FALLBACK_AUTHOR;
   }, [user]);
 
-  const value = useMemo<AuthContextValue>(
+  const userIdStore = useMemo<AuthUserIdStore>(
+    () => ({
+      getSnapshot: () => userIdRef.current,
+      subscribe: (onStoreChange) => {
+        userIdListenersRef.current.add(onStoreChange);
+        return () => {
+          userIdListenersRef.current.delete(onStoreChange);
+        };
+      },
+    }),
+    [],
+  );
+
+  const stateValue = useMemo<AuthStateValue>(
     () => ({
       status,
       user,
       configurationError,
       authorName,
+    }),
+    [status, user, configurationError, authorName],
+  );
+
+  const actionsValue = useMemo<AuthActionsValue>(
+    () => ({
       login,
       logout,
       refresh,
     }),
-    [status, user, configurationError, authorName, login, logout, refresh],
+    [login, logout, refresh],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthUserIdStoreContext.Provider value={userIdStore}>
+      <AuthStateContext.Provider value={stateValue}>
+        <AuthActionsContext.Provider value={actionsValue}>{children}</AuthActionsContext.Provider>
+      </AuthStateContext.Provider>
+    </AuthUserIdStoreContext.Provider>
+  );
+}
+
+export function useAuthState(): AuthStateValue {
+  const ctx = useContext(AuthStateContext);
+  if (!ctx) throw new Error("useAuthState deve essere usato dentro AuthProvider");
+  return ctx;
+}
+
+export function useAuthActions(): AuthActionsValue {
+  const ctx = useContext(AuthActionsContext);
+  if (!ctx) throw new Error("useAuthActions deve essere usato dentro AuthProvider");
+  return ctx;
 }
 
 export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth deve essere usato dentro AuthProvider");
-  return ctx;
+  return { ...useAuthState(), ...useAuthActions() };
 }
 
 /** Id utente per prefs UI locali — null se fuori provider o non autenticato. */
 export function useAuthUserId(): string | null {
-  return useContext(AuthContext)?.user?.id ?? null;
+  const store = useContext(AuthUserIdStoreContext);
+  return useSyncExternalStore(
+    store?.subscribe ?? (() => () => {}),
+    () => store?.getSnapshot() ?? null,
+    () => null,
+  );
 }

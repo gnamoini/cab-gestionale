@@ -29,6 +29,19 @@ assert.match(paths, /\.pdf/);
 const storageConfig = read("src/lib/storage/storage-config.ts");
 assert.match(storageConfig, /pdfArtifacts:\s*"pdf-artifacts"/);
 
+const pdfArtifactsBucketMigration = read("supabase/migrations/20260917120100_pdf_artifacts_storage_bucket.sql");
+assert.match(pdfArtifactsBucketMigration, /'pdf-artifacts'/);
+assert.match(pdfArtifactsBucketMigration, /rbac_storage_pdf_artifacts_select/);
+
+const labelMimeMigration = read(
+  "supabase/migrations/20260917120200_pdf_artifacts_inventory_label_mime_types.sql",
+);
+assert.match(labelMimeMigration, /image\/png/);
+assert.match(labelMimeMigration, /image\/svg\+xml/);
+
+const deliverLabel = read("lib/inventory-labels/render/deliver.server.ts");
+assert.match(deliverLabel, /uploadLabelArtifactBestEffort/);
+
 const migratedOpeners = [
   "lib/lavorazioni/lavorazioni-list-pdf.ts",
   "lib/preventivi/preventivi-pdf.ts",

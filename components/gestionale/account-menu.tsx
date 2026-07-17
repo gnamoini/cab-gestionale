@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, type MouseEvent } from "react";
+import { type MouseEvent } from "react";
 import { useAuth } from "@/context/auth-context";
 import { UserProfileAvatar } from "@/components/gestionale/user-profile-avatar";
-import { useProfileSheet } from "@/components/profile/profile-sheet-context";
+import { useProfileSheet, useProfileSheetOpen } from "@/components/profile/profile-sheet-context";
 import { SidebarNavRow, SidebarSessionExpandChevron } from "@/components/gestionale/sidebar-nav-row";
 
 export function AccountMenu({
@@ -19,9 +19,8 @@ export function AccountMenu({
   onOpenProfile?: () => void;
 }) {
   const { user, status } = useAuth();
-  const { open, openProfileSheet, closeProfileSheet, restoreFocusRef } = useProfileSheet();
-  const openRef = useRef(open);
-  openRef.current = open;
+  const { toggleProfileSheet } = useProfileSheet();
+  const open = useProfileSheetOpen();
 
   const displayName = user?.nome?.trim() || "Account";
   const collapsed = variant === "sidebar" && sidebarCollapsed;
@@ -33,13 +32,8 @@ export function AccountMenu({
     : {};
 
   const toggle = (event: MouseEvent<HTMLButtonElement>) => {
-    if (openRef.current) {
-      closeProfileSheet();
-      return;
-    }
-    restoreFocusRef.current = event.currentTarget;
     onOpenProfile?.();
-    openProfileSheet();
+    toggleProfileSheet(event.currentTarget);
   };
 
   const row = (

@@ -19,9 +19,9 @@ export async function POST(request: Request, context: RouteContext) {
   if (authError) return authError;
 
   const { id } = await context.params;
-  let body: { applicationId?: string };
+  let body: { applicationId?: string; forceReview?: boolean };
   try {
-    body = (await request.json()) as { applicationId?: string };
+    body = (await request.json()) as { applicationId?: string; forceReview?: boolean };
   } catch {
     return NextResponse.json({ error: "Body JSON non valido" }, { status: 400 });
   }
@@ -49,6 +49,7 @@ export async function POST(request: Request, context: RouteContext) {
     const result = await applyDocumentCapturePlan({
       captureId: id,
       applicationId: body.applicationId,
+      forceReview: body.forceReview,
     });
     traceDocumentCaptureOperation({
       operation: "apply",

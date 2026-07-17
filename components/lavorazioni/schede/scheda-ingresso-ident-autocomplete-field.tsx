@@ -23,7 +23,7 @@ import {
 } from "@/lib/ui/global-input";
 import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
 import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
-import { armSelectorGhostClickGuard } from "@/lib/selector-interaction/suppress-selector-ghost-click";
+import { createSelectorSheetTapSelectHandlers } from "@/lib/selector-interaction/selector-sheet-tap-select";
 import { useSelectorExclusiveGroup } from "@/lib/selector-interaction/use-selector-exclusive-group";
 import { useSelectorFocusChain } from "@/lib/selector-interaction/use-selector-focus-chain";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
@@ -212,7 +212,14 @@ export function SchedaIngressoIdentAutocompleteField({
     const active = idx === activeIndex;
     const ident = identPreview(mezzo);
     const query = variant === "sheet" ? sheetQuery : value;
-    const touchClass = variant === "sheet" ? "min-h-11 py-2.5 sm:min-h-0 sm:py-1.5" : "";
+    const touchClass = variant === "sheet" ? "min-h-11 touch-pan-y py-2.5 sm:min-h-0 sm:py-1.5" : "";
+    const sheetTap =
+      variant === "sheet"
+        ? createSelectorSheetTapSelectHandlers(() => {
+            if (blurTimer.current) clearTimeout(blurTimer.current);
+            pickMezzo(mezzo);
+          })
+        : null;
     return (
       <li key={mezzo.id} role="presentation" className={variant === "sheet" ? "px-2 py-0.5" : "py-0.5"}>
         <button
@@ -220,13 +227,19 @@ export function SchedaIngressoIdentAutocompleteField({
           role="option"
           aria-selected={active}
           className={`${globalAutocompleteOptionClass(active)} ${touchClass}`.trim()}
-          onPointerDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (variant === "sheet") armSelectorGhostClickGuard();
-            if (blurTimer.current) clearTimeout(blurTimer.current);
-            pickMezzo(mezzo);
-          }}
+          onPointerDown={
+            sheetTap
+              ? sheetTap.onPointerDown
+              : (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (blurTimer.current) clearTimeout(blurTimer.current);
+                  pickMezzo(mezzo);
+                }
+          }
+          onPointerMove={sheetTap?.onPointerMove}
+          onPointerUp={sheetTap?.onPointerUp}
+          onPointerCancel={sheetTap?.onPointerCancel}
           onClick={(e) => {
             if (variant === "sheet") {
               e.preventDefault();

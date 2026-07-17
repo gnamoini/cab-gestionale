@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import {
   computeDashboardMagDailyMovementsFromLogs,
@@ -19,41 +19,19 @@ import { computeReportMagazzinoKpiWidgetFromUi } from "@/lib/report/report-kpi-s
 import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 import { useLogListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
-import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
-import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { isLavorazioneInCorso } from "@/lib/lavorazioni/archived";
 import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
-import { useRealtimeStatus } from "@/src/context/realtime-status-context";
 import { MAGAZZINO_DASHBOARD_KPI_QUERY_KEY } from "@/lib/magazzino/dashboard-mag-query-keys";
-
-const DASHBOARD_REPORT_INVALIDATE_DEBOUNCE_MS = 400;
 
 /** Query + selector aggregati per widget Lavorazioni/Magazzino dashboard (VIEW layer, read-only). */
 export function useDashboardMetrics() {
   const staging = isStagingPublicSlice();
   const viewOpts = useViewQueryOpts();
-  const qc = useQueryClient();
-  const { gestionale } = useRealtimeStatus();
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
   const loadLoggedRef = useRef(false);
-
-  const invalidateMagLogs = useCallback(() => {
-    if (gestionale === "connected") return;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      debounceRef.current = null;
-      void invalidateOperationalTruth({ queryClient: qc, domain: "report" });
-    }, DASHBOARD_REPORT_INVALIDATE_DEBOUNCE_MS);
-  }, [qc, gestionale]);
-
-  useCabSyncListener("log_modifiche", invalidateMagLogs);
-  useCabSyncListener("magazzino_ricambi", invalidateMagLogs);
-  useCabSyncListener("movimenti_ricambi", invalidateMagLogs);
-
   const globalOpts = useGlobalOptions({ debugTag: "useDashboardMetrics" });
 
   // ponytail: report slice (attive + archivio) — KPI brief settimanale; widget filtra in corso lato selector.
@@ -157,6 +135,7 @@ export function useDashboardMetrics() {
     magQuery,
     magLogs,
     movLogs,
+    lavActiveRows,
     lavRows,
     lavStats,
     magStats,

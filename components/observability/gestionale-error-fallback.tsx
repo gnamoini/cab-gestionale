@@ -5,7 +5,8 @@ import {
   AuthStandalonePageShell,
 } from "@/components/gestionale/auth-standalone-page";
 import { ErrorPageCard } from "@/components/observability/error-page-card";
-import { useSafeGestionaleHomeLink } from "@/components/observability/use-safe-gestionale-home-link";
+import { labelForGestionaleNavHref, useSafeGestionaleHomeLink } from "@/components/observability/use-safe-gestionale-home-link";
+import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import {
   buildTechnicalDetail,
   errorTitle,
@@ -19,7 +20,48 @@ export type GestionaleErrorFallbackProps = {
   onRetry?: () => void;
 };
 
-function GestionaleEmbeddedError({
+function GestionaleEmbeddedErrorAnonymous({
+  title,
+  description,
+  technicalDetail,
+  onRetry,
+}: {
+  title: string;
+  description: string;
+  technicalDetail?: string;
+  onRetry?: () => void;
+}) {
+  const router = useRouter();
+  const loginHref = "/login";
+  const loginLabel = labelForGestionaleNavHref(loginHref);
+
+  const goBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push(loginHref);
+  };
+
+  return (
+    <div className="flex min-w-0 flex-col items-center justify-center px-2 py-10">
+      <ErrorPageCard
+        title={title}
+        description={description}
+        technicalDetail={technicalDetail}
+        showLogo={false}
+        layout="embedded"
+        onRetry={onRetry}
+        onBack={goBack}
+        safeExitHref={loginHref}
+        safeExitLabel={loginLabel}
+        safeExitReady
+      />
+    </div>
+  );
+}
+
+function GestionaleEmbeddedErrorAuthenticated({
   title,
   description,
   technicalDetail,
@@ -55,6 +97,59 @@ function GestionaleEmbeddedError({
         safeExitHref={safeHome.href}
         safeExitLabel={safeHome.label}
         safeExitReady={safeHome.ready}
+      />
+    </div>
+  );
+}
+
+function GestionaleEmbeddedError({
+  title,
+  description,
+  technicalDetail,
+  onRetry,
+}: {
+  title: string;
+  description: string;
+  technicalDetail?: string;
+  onRetry?: () => void;
+}) {
+  const { user, status } = useAuth();
+  const sessionReady = isAuthSessionEstablished(status);
+
+  if (sessionReady && !user?.id) {
+    return (
+      <GestionaleEmbeddedErrorAnonymous
+        title={title}
+        description={description}
+        technicalDetail={technicalDetail}
+        onRetry={onRetry}
+      />
+    );
+  }
+
+  if (sessionReady && user?.id) {
+    return (
+      <GestionaleEmbeddedErrorAuthenticated
+        title={title}
+        description={description}
+        technicalDetail={technicalDetail}
+        onRetry={onRetry}
+      />
+    );
+  }
+
+  return (
+    <div className="flex min-w-0 flex-col items-center justify-center px-2 py-10">
+      <ErrorPageCard
+        title={title}
+        description={description}
+        technicalDetail={technicalDetail}
+        showLogo={false}
+        layout="embedded"
+        onRetry={onRetry}
+        safeExitHref="/login"
+        safeExitLabel="Caricamento…"
+        safeExitReady={false}
       />
     </div>
   );

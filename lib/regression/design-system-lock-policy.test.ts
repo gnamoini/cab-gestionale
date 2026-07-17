@@ -81,7 +81,7 @@ assert.match(
 );
 assert.match(
   fs.readFileSync(path.join(ROOT, "components/gestionale/app-shell.tsx"), "utf8"),
-  /DevAuditMounts/,
+  /useBootInvestigationMount\("AppShell"\)/,
 );
 assert.match(
   fs.readFileSync(path.join(ROOT, "components/gestionale/dev-audit-mounts.tsx"), "utf8"),

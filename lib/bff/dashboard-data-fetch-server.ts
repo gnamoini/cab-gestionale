@@ -12,10 +12,14 @@ import type { MagazzinoDashboardKpi } from "@/lib/magazzino/dashboard-mag-query-
 import { getMagazzinoReportLightServer } from "@/lib/magazzino/magazzino-list-fetch-server";
 import { fetchCabAppSettingsPayloadServer } from "@/lib/app-settings/resolve-settings-for-server";
 import { fetchSchedeBundlesStoreServer } from "@/lib/schede/schede-bundles-fetch-server";
-import { LAVORAZIONI_DASHBOARD_STATS_FILTERS } from "@/lib/lavorazioni/lavorazioni-prefetch-filters";
+import { LAVORAZIONI_DASHBOARD_REPORT_FILTERS } from "@/lib/lavorazioni/lavorazioni-prefetch-filters";
+import { isLavorazioneInCorso } from "@/lib/lavorazioni/archived";
 import { resolveLavorazioniStatiForServer } from "@/lib/app-settings/resolve-settings-for-server";
 import { pickDashboardPriorityLavorazioneIds, DASHBOARD_SCHEde_PREFETCH_LIMIT } from "@/lib/view/dashboard-widgets-selectors";
-import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
+import {
+  verifyServerModuleCan,
+  verifyServerPageRead,
+} from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
 import type { LogFilters } from "@/src/services/log.service";
@@ -42,11 +46,25 @@ export type DashboardDataDTO = {
 
 const DASHBOARD_MEZZO_ENRICH_LIMIT = DASHBOARD_SCHEde_PREFETCH_LIMIT;
 
-const DASHBOARD_LOG_PREFETCH: readonly LogFilters[] = [
+const DASHBOARD_LOG_PREFETCH_BASE: readonly LogFilters[] = [
   { entita: "lavorazioni", limit: GESTIONALE_LOG_FEED_LIMIT },
   { entita: "magazzino_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT },
   { entita: "movimenti_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT },
 ] as const;
+
+async function resolveDashboardLogPrefetchFilters(): Promise<LogFilters[]> {
+  const filters: LogFilters[] = [...DASHBOARD_LOG_PREFETCH_BASE];
+  if (await verifyServerPageRead("lavorazioni")) {
+    filters.push({ entita: "scheda_lavorazione", limit: GESTIONALE_LOG_FEED_LIMIT });
+  }
+  if (await verifyServerModuleCan("preventivi", "read")) {
+    filters.push({ entita: "preventivi", limit: GESTIONALE_LOG_FEED_LIMIT });
+  }
+  if (await verifyServerModuleCan("fatturazione", "read")) {
+    filters.push({ entita: "invoices", limit: GESTIONALE_LOG_FEED_LIMIT });
+  }
+  return filters;
+}
 
 function codiciMapFromRows(rows: readonly LavorazioneListRow[]): Record<string, string | null> {
   const out: Record<string, string | null> = {};
@@ -54,44 +72,57 @@ function codiciMapFromRows(rows: readonly LavorazioneListRow[]): Record<string, 
   return out;
 }
 
+function activeLavorazioniForDashboard(rows: readonly LavorazioneListRow[]): LavorazioneListRow[] {
+  return rows.filter((r) => !r.deleted_at && isLavorazioneInCorso(r));
+}
+
 async function fetchDashboardLavorazioniAuthorizedServer(): Promise<ServiceResult<LavorazioneListRow[]>> {
   const allowed = await verifyServerPageRead("lavorazioni");
   if (!allowed) return err("Permesso richiesto.");
   const sb = await createSupabaseServerUserClient();
   const sanitizeStati = await resolveLavorazioniStatiForServer();
-  return fetchLavorazioniListRows(sb, LAVORAZIONI_DASHBOARD_STATS_FILTERS, { sanitizeStati });
+  return fetchLavorazioniListRows(sb, LAVORAZIONI_DASHBOARD_REPORT_FILTERS, { sanitizeStati });
 }
 
 /**
- * BFF Dashboard lite — wave 1: lav (no mezzo) ∥ mag ∥ settings ∥ logs;
- * wave 2: enrich mezzo top-N + schede batch mirato.
+ * BFF Dashboard lite — wave 1: lav report ∥ mag ∥ settings ∥ logs;
+ * wave 2: enrich mezzo top-N ∥ schede batch mirato.
  */
 export const fetchDashboardDataDTOServer = cache(async (): Promise<DashboardDataDTO> => {
+  const logFilters = await resolveDashboardLogPrefetchFilters();
+
   const [lavRes, magRes, settingsPayload, ...logResults] = await Promise.all([
     fetchDashboardLavorazioniAuthorizedServer(),
     getMagazzinoReportLightServer(),
     fetchCabAppSettingsPayloadServer(),
-    ...DASHBOARD_LOG_PREFETCH.map((filters) => fetchLogModificheListServer(filters)),
+    ...logFilters.map((filters) => fetchLogModificheListServer(filters)),
   ]);
 
   let lavorazioni = lavRes.success ? (lavRes.data ?? []) : [];
-  const schedeTargetIds = pickDashboardPriorityLavorazioneIds(lavorazioni, DASHBOARD_SCHEde_PREFETCH_LIMIT);
-  const mezzoTargetIds = pickDashboardPriorityLavorazioneIds(lavorazioni, DASHBOARD_MEZZO_ENRICH_LIMIT);
+  const activeRows = activeLavorazioniForDashboard(lavorazioni);
+  const schedeTargetIds = pickDashboardPriorityLavorazioneIds(activeRows, DASHBOARD_SCHEde_PREFETCH_LIMIT);
+  const mezzoTargetIds = pickDashboardPriorityLavorazioneIds(activeRows, DASHBOARD_MEZZO_ENRICH_LIMIT);
 
-  if (mezzoTargetIds.length > 0) {
+  const mezzoEnrichPromise = (async () => {
+    if (mezzoTargetIds.length === 0) return lavorazioni;
     const sb = await createSupabaseServerUserClient();
     const sanitizeStati = await resolveLavorazioniStatiForServer();
     const enrichedRes = await fetchLavorazioniListRowsByIds(sb, mezzoTargetIds, { sanitizeStati });
     if (enrichedRes.success && enrichedRes.data?.length) {
-      lavorazioni = mergeMezzoIntoLavorazioneRows(lavorazioni, enrichedRes.data);
+      return mergeMezzoIntoLavorazioneRows(lavorazioni, enrichedRes.data);
     }
-  }
+    return lavorazioni;
+  })();
 
-  const schedeRes = schedeTargetIds.length
-    ? await fetchSchedeBundlesStoreServer(schedeTargetIds, codiciMapFromRows(lavorazioni))
-    : { success: true as const, data: {} as LavorazioneSchedeStore };
+  const schedePromise =
+    schedeTargetIds.length > 0
+      ? fetchSchedeBundlesStoreServer(schedeTargetIds, codiciMapFromRows(lavorazioni))
+      : Promise.resolve({ success: true as const, data: {} as LavorazioneSchedeStore });
 
-  const logSlices: DashboardLogPrefetchSlice[] = DASHBOARD_LOG_PREFETCH.map((filters, index) => ({
+  const [enrichedLavorazioni, schedeRes] = await Promise.all([mezzoEnrichPromise, schedePromise]);
+  lavorazioni = enrichedLavorazioni;
+
+  const logSlices: DashboardLogPrefetchSlice[] = logFilters.map((filters, index) => ({
     filters,
     rows: logResults[index]?.success ? (logResults[index].data ?? []) : [],
   }));

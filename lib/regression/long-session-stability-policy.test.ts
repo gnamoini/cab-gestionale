@@ -22,7 +22,9 @@ assert.match(securityDash, /usersRefetchRef/);
 assert.doesNotMatch(securityDash, /runControlCenterCheck, usersQ\]/);
 
 const queryProvider = read("src/providers/query-provider.tsx");
-assert.match(queryProvider, /gcTime:\s*300_000/);
+const pwaQueryPolicy = read("lib/pwa/pwa-query-policy.ts");
+assert.match(queryProvider, /gcTime:\s*PWA_QUERY_CLIENT_DEFAULTS\.gcTime/);
+assert.match(pwaQueryPolicy, /gcTime:\s*300_000/);
 
 const lavMutations = read("src/hooks/gestionale/use-lavorazione-mutations.ts");
 assert.match(lavMutations, /evictLavorazioneDomainCache/);
@@ -126,5 +128,15 @@ const authCtx = read("context/auth-context.tsx");
 assert.match(authCtx, /registerGestionaleVisibilityHandler/);
 assert.match(authCtx, /reconcileSeqRef/);
 assert.match(authCtx, /AUTH_REFRESH_DEBOUNCE_MS/);
+
+const notificationBell = read("components/gestionale/notification-center-bell.tsx");
+assert.match(notificationBell, /CLIENT_TOAST_SEEN_TTL_MS/);
+assert.match(notificationBell, /pruneClientToastSeen/);
+assert.doesNotMatch(notificationBell, /clientToastSeenRef = useRef<Set<string>>/);
+
+const dashboardSyncInvalidation = read("src/hooks/view/use-dashboard-sync-invalidation.ts");
+assert.match(dashboardSyncInvalidation, /magDebounceRef\.current\) clearTimeout/);
+assert.match(dashboardSyncInvalidation, /activityDebounceRef\.current\) clearTimeout/);
+assert.match(dashboardSyncInvalidation, /useEffect\(\(\) => \{[\s\S]*return \(\) =>/);
 
 console.log("long-session-stability-policy.test.ts OK");

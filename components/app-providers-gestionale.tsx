@@ -9,6 +9,7 @@ import { DeferredGestionaleBridges } from "@/src/components/deferred-gestionale-
 import { RealtimeStatusProvider } from "@/src/context/realtime-status-context";
 import { SettingsModalOpenProvider } from "@/src/context/settings-modal-open-context";
 import { DevUxEnforcementGuard } from "@/src/components/dev-ux-enforcement-guard";
+import { PermissionsSnapshotMount } from "@/components/gestionale/permissions-snapshot-mount";
 import { ObservabilityProvider } from "@/components/observability/observability-provider";
 import { RuntimeHealthBridge } from "@/components/observability/runtime-health-bridge";
 import { BootInvestigationMount } from "@/components/observability/boot-investigation-mount";
@@ -33,8 +34,10 @@ export function AppProvidersGestionale({ children }: { children: React.ReactNode
               <SettingsModalOpenProvider>
                 <DevUxEnforcementGuard />
                 <SupabaseConfigurationBanner />
-                <DeferredGestionaleBridges />
-                {children}
+                <PermissionsSnapshotMount>
+                  <DeferredGestionaleBridges />
+                  {children}
+                </PermissionsSnapshotMount>
               </SettingsModalOpenProvider>
             </BrandingProvider>
           </ObservabilityProvider>

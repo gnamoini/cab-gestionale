@@ -222,7 +222,7 @@ export function Drawer({
                 : "flex min-h-0 min-w-0 flex-col max-md:flex-none max-md:overflow-visible md:flex-1 md:overflow-hidden"
             }
           >
-            {children}
+            {closing ? null : children}
           </div>
         </div>
       </aside>

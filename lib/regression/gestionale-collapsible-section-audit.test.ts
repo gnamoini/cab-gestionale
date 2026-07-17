@@ -34,6 +34,7 @@ function grepSvgChevronPaths(): string[] {
 
 const collapsible = read("components/design-system/gestionale-collapsible-section.tsx");
 const header = read("components/design-system/gestionale-collapsible-header.tsx");
+const panel = read("components/design-system/gestionale-collapsible-panel.tsx");
 const chevron = read("components/design-system/gestionale-collapsible-chevron.tsx");
 const ricambioUi = read("components/gestionale/magazzino/ricambio-modal-ui.tsx");
 const dsIndex = read("components/design-system/index.ts");
@@ -41,13 +42,14 @@ const shellCard = read("components/gestionale/shell-card.tsx");
 const preventiviModal = read("components/preventivi/preventivi-editor-modal.tsx");
 
 assert.match(collapsible, /export function GestionaleCollapsibleSection/);
-assert.match(collapsible, /GestionaleCollapsibleHeader/);
+assert.match(collapsible, /GestionaleCollapsiblePanel/);
 assert.doesNotMatch(collapsible, /scrollCollapsiblePanelIntoViewIfClipped/);
 assert.doesNotMatch(collapsible, /scrollGestionaleFieldIntoView/);
 assert.doesNotMatch(collapsible, /GestionaleCollapsibleChevronBox/);
 
 assert.match(header, /export function GestionaleCollapsibleHeader/);
 assert.match(header, /gestionaleCollapsibleShellHeaderBtnClass/);
+assert.match(header, /gestionaleCollapsibleShellHeaderShellRadiusClass/);
 assert.match(header, /if \(form\) \{[\s\S]*return trigger;/);
 assert.match(collapsible, /gestionaleCollapsibleSectionBodyPadClass/);
 assert.match(collapsible, /gestionaleCollapsibleSectionFormClass[\s\S]*?overflow-hidden/);
@@ -55,7 +57,11 @@ assert.doesNotMatch(
   collapsible.match(/export const gestionaleCollapsibleSectionFormClass =[\s\S]*?;/)?.[0] ?? "",
   /\bp-3\b/,
 );
-assert.match(header, /GestionaleCollapsibleChevronBox/);
+assert.match(panel, /export function GestionaleCollapsiblePanel/);
+assert.match(panel, /GestionaleCollapsibleHeader/);
+assert.match(panel, /gestionaleCollapsibleEase/);
+assert.match(panel, /gestionaleCollapsiblePanelBodyClass/);
+assert.match(panel, /collapseAnimated/);
 assert.match(header, /aria-expanded/);
 
 assert.match(chevron, /export function GestionaleCollapsibleChevronBox/);
@@ -68,8 +74,10 @@ assert.match(ricambioUi, /export function RicambioCollapsibleSection/);
 assert.match(dsIndex, /GestionaleCollapsibleChevronBox/);
 assert.match(dsIndex, /GestionaleCollapsibleSection/);
 assert.match(dsIndex, /GestionaleCollapsibleHeader/);
+assert.match(dsIndex, /GestionaleCollapsiblePanel/);
 
-assert.match(shellCard, /GestionaleCollapsibleHeader/);
+assert.match(shellCard, /GestionaleCollapsiblePanel/);
+assert.match(shellCard, /collapsePrefsHydrated/);
 assert.match(shellCard, /persistScope/);
 assert.match(shellCard, /persistKey/);
 assert.doesNotMatch(shellCard, /GestionaleCollapsibleChevronBox/);
@@ -86,8 +94,8 @@ assert.doesNotMatch(collapsible, /useLayoutEffect/);
 assert.doesNotMatch(collapsible, /scrollIntoView/);
 assert.doesNotMatch(header, /scrollIntoView/);
 assert.doesNotMatch(header, /\.focus\(/);
-assert.match(collapsible, /gestionaleCollapsibleEase/);
-assert.match(shellCard, /gestionaleCollapsibleEase/);
+assert.match(panel, /gestionaleCollapsibleEase/);
+assert.doesNotMatch(shellCard, /gestionaleCollapsibleEase/);
 assert.doesNotMatch(shellCard, /gestionaleCollapsibleShellHeaderBtnClass/);
 
 const duplicateChevronSvgs = grepSvgChevronPaths();

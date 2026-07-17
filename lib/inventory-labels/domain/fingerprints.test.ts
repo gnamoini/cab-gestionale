@@ -5,8 +5,10 @@ import { GENERATOR_VERSION } from "@/lib/inventory-labels/domain/types";
 const base = {
   payload: {
     marca: "BOSCH",
+    marcaSecondaria: "",
     descrizione: "Filtro olio",
     codice: "ABC123",
+    codiceSecondario: "",
     fornitoreAlternativo: "",
     codiceAlternativo: "",
   },

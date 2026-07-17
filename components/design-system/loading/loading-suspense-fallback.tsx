@@ -1,4 +1,3 @@
-"use client";
 
 import { memo } from "react";
 import { ClientLavorazioniPageSkeleton } from "@/components/lavorazioni-clienti/client-lavorazioni-loading-skeleton";

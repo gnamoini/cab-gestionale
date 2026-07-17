@@ -2,6 +2,7 @@
 
 import {
   isValidElement,
+  memo,
   useLayoutEffect,
   useRef,
   useState,
@@ -53,7 +54,7 @@ function normalizeColgroup(node: ReactNode): ReactNode {
   return <colgroup>{node}</colgroup>;
 }
 
-function VirtualTableBody({
+const VirtualTableBody = memo(function VirtualTableBody({
   scrollRef,
   virtualRows,
   colSpan,
@@ -162,7 +163,7 @@ function VirtualTableBody({
       ) : null}
     </tbody>
   );
-}
+});
 
 /**
  * Shell tabella gestionale — design globale (header Preventivi).

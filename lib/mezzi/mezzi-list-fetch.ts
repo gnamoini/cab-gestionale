@@ -62,6 +62,18 @@ function applyMezzoIdentityFilters<
 export function filterMezziGestiti(gestiti: MezzoGestito[], filters?: MezzoFilters): MezzoGestito[] {
   if (!filters) return gestiti;
   let out = gestiti;
+  if (filters.cliente?.trim()) {
+    const m = norm(filters.cliente);
+    out = out.filter((g) => norm(g.cliente).includes(m));
+  }
+  if (filters.targa?.trim()) {
+    const m = norm(filters.targa);
+    out = out.filter((g) => norm(g.targa).includes(m));
+  }
+  if (filters.numero_scuderia?.trim()) {
+    const m = norm(filters.numero_scuderia);
+    out = out.filter((g) => norm(g.numeroScuderia ?? "").includes(m));
+  }
   if (filters.utilizzatore?.trim()) {
     const m = norm(filters.utilizzatore);
     out = out.filter((g) => norm(g.utilizzatore).includes(m));

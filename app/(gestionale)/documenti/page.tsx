@@ -1,16 +1,26 @@
+import { dehydrate } from "@tanstack/react-query";
 import { Suspense } from "react";
 import { LoadingSuspenseFallback } from "@/components/design-system";
+import { DocumentiDeferredHydration } from "@/components/gestionale/documenti/documenti-deferred-hydration";
 import { DocumentiViewLazy } from "@/components/gestionale/lazy-route-views";
 import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";
-import { prefetchDocumentiPage } from "@/src/lib/react-query/prefetch-gestionale-page";
+import {
+  createServerQueryClient,
+  prefetchCriticalPage,
+} from "@/src/lib/react-query/prefetch-gestionale-page";
 
 export default async function DocumentiPage() {
-  const dehydratedState = await prefetchDocumentiPage();
+  const qc = createServerQueryClient();
+  await prefetchCriticalPage(qc, "documenti");
+  const criticalState = dehydrate(qc);
+
   return (
-    <Suspense fallback={<LoadingSuspenseFallback variant="documenti" />}>
-      <GestionaleHydrationBoundary state={dehydratedState}>
-        <DocumentiViewLazy />
-      </GestionaleHydrationBoundary>
-    </Suspense>
+    <GestionaleHydrationBoundary state={criticalState}>
+      <Suspense fallback={<LoadingSuspenseFallback variant="documenti" />}>
+        <DocumentiDeferredHydration>
+          <DocumentiViewLazy />
+        </DocumentiDeferredHydration>
+      </Suspense>
+    </GestionaleHydrationBoundary>
   );
 }

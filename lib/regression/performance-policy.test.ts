@@ -70,7 +70,8 @@ assert.match(lazyRouteViews, /DashboardViewLazy/);
 assert.match(lazyRouteViews, /dynamic\s*\(/);
 
 const appShell = read("components/gestionale/app-shell.tsx");
-assert.match(appShell, /DevAuditMounts/);
+assert.match(appShell, /useBootInvestigationMount/);
+assert.match(appShell, /AppShellSidebar/);
 assert.doesNotMatch(appShell, /UiOsShadowMount/);
 assert.doesNotMatch(appShell, /from "@\/lib\/ui-os"/);
 
@@ -118,7 +119,8 @@ assert.match(read("src/context/app-settings-query-context.tsx"), /AppSettingsQue
 assert.match(read("docs/cache-strategy-map.md"), /STATIC/);
 
 const queryProvider = read("src/providers/query-provider.tsx");
-assert.match(queryProvider, /gcTime:\s*300_000/, "QueryClient must set explicit gcTime for long-session cache lifecycle");
+assert.match(queryProvider, /gcTime:\s*PWA_QUERY_CLIENT_DEFAULTS\.gcTime/, "QueryClient must set explicit gcTime for long-session cache lifecycle");
+assert.match(queryProvider, /shouldRefetchPwaGroupOnReconnect/);
 
 const tableSelectColumns = read("lib/db/table-select-columns.ts");
 assert.match(tableSelectColumns, /export const LAVORAZIONI_COLUMNS/);
@@ -161,11 +163,14 @@ const mezziView = read("components/gestionale/mezzi/mezzi-view.tsx");
 assert.match(mezziView, /useLavorazioniReportSlice/);
 
 const reportLiveData = read("lib/report/use-report-live-data.ts");
+const reportLiveDerived = read("lib/report/use-report-live-data-derived.ts");
+const reportQueries = read("src/hooks/gestionale/use-report-queries.ts");
 assert.doesNotMatch(reportLiveData, /LAV_ARCHIVIO_FILTERS/, "report must use single lavorazioni fetch");
-assert.doesNotMatch(reportLiveData, /includeMezzo:\s*true/, "report lavorazioni must not embed mezzo");
-assert.match(reportLiveData, /fetchMode:\s*"report"/);
-assert.match(reportLiveData, /enrichLavorazioneListRowsWithMezzi/);
-assert.match(reportLiveData, /lavorazioniArchivioRaw = .*\.filter\(\(row\) => row\.archived === true\)/);
+assert.doesNotMatch(reportQueries, /includeMezzo:\s*true/, "report lavorazioni must not embed mezzo");
+assert.match(reportQueries, /LAVORAZIONI_REPORT_FILTERS/);
+assert.match(reportLiveDerived, /needsClientEnrich/);
+assert.match(reportLiveDerived, /enrichLavorazioneListRowsWithMezzi/);
+assert.match(reportLiveDerived, /lavorazioniArchivioRaw/);
 
 const mezziService = read("src/services/mezzi.service.ts");
 assert.match(mezziService, /fetchMezziListRows/);
@@ -206,6 +211,13 @@ const perfRegressionGuard = read("scripts/ops/performance-regression-check.mjs")
 assert.match(perfRegressionGuard, /FAIL_PCT|failPct/);
 assert.match(perfRegressionGuard, /performance-regression-diff\.json/);
 
+const buildBudgetGate = read("scripts/ops/extract-build-budgets.mjs");
+assert.match(buildBudgetGate, /build-budget-snapshot\.json/);
+assert.match(buildBudgetGate, /--gate/);
+
+const perfGovernanceDoc = read("docs/performance-governance-v6-budget.md");
+assert.match(perfGovernanceDoc, /GLOBAL_FIRST_LOAD_JS_KB/);
+
 const slowQueryDoc = read("docs/slow-query-audit.md");
 for (const section of [
   "Top query lente",
@@ -216,5 +228,86 @@ for (const section of [
 ]) {
   assert.match(slowQueryDoc, new RegExp(section), `docs/slow-query-audit.md missing section: ${section}`);
 }
+
+const gestionaleModal = read("components/gestionale/gestionale-modal.tsx");
+assert.doesNotMatch(
+  gestionaleModal,
+  /lavorazioni-modals/,
+  "gestionale-modal must import shell from gestionale-modal-shell, not lavorazioni-modals",
+);
+assert.match(gestionaleModal, /gestionale-modal-shell/);
+
+const modalShell = read("components/gestionale/gestionale-modal-shell.tsx");
+assert.match(modalShell, /GestionaleModalShell/);
+
+const resolveAuth = read("src/lib/auth/resolve-server-auth.ts");
+assert.match(resolveAuth, /isJwtFreshForProxyCache/);
+
+const proxyHandler = read("src/middleware/proxy-handler.ts");
+assert.match(proxyHandler, /no_auth_cookie/);
+
+const prefetchGestionale = read("src/lib/react-query/prefetch-gestionale-page.ts");
+assert.match(prefetchGestionale, /seedPrefetchedData/);
+assert.doesNotMatch(prefetchGestionale, /qc\.setQueryData\(/, "prefetch must use prefetchQuery tiers, not bare setQueryData");
+
+const gestionaleLoadingRoutes = [
+  "app/(gestionale)/dashboard/loading.tsx",
+  "app/(gestionale)/lavorazioni/loading.tsx",
+  "app/(gestionale)/magazzino/loading.tsx",
+  "app/(gestionale)/mezzi/loading.tsx",
+  "app/(gestionale)/preventivi/loading.tsx",
+  "app/(gestionale)/fatturazione/loading.tsx",
+  "app/(gestionale)/documenti/loading.tsx",
+  "app/(gestionale)/report/loading.tsx",
+  "app/(gestionale)/impostazioni/loading.tsx",
+  "app/(gestionale)/agenda/loading.tsx",
+  "app/(gestionale)/dipendenti/loading.tsx",
+  "app/(gestionale)/sicurezza/loading.tsx",
+  "app/(gestionale)/lavorazioni-clienti/loading.tsx",
+  "app/(gestionale)/acesso-negato/loading.tsx",
+];
+for (const route of gestionaleLoadingRoutes) {
+  assert.ok(fs.existsSync(path.join(ROOT, route)), `missing loading.tsx: ${route}`);
+}
+
+assert.match(prefetchGestionale, /prefetchCriticalPage/);
+assert.match(prefetchGestionale, /prefetchDeferredPage/);
+
+const globalsCore = read("app/globals-core.css");
+assert.match(globalsCore, /gestionale-list-layout\.css/);
+assert.ok(fs.existsSync(path.join(ROOT, "app/globals-gestionale-shell.css")), "missing globals-gestionale-shell.css");
+const globalsGestionaleShell = read("app/globals-gestionale-shell.css");
+
+const gestionaleLayout = read("app/(gestionale)/layout.tsx");
+const rootLayout = read("app/layout.tsx");
+assert.match(gestionaleLayout, /globals-gestionale-shell\.css/);
+assert.doesNotMatch(rootLayout, /globals-gestionale-shell/);
+assert.match(read("app/globals.css"), /@import "\.\/globals-core\.css"/);
+assert.match(globalsGestionaleShell, /cab-nav-drawer-panel\.cab-sidebar[\s\S]*--cab-sidebar-icon-anchor: 0/);
+assert.match(globalsGestionaleShell, /cab-nav-drawer-panel\.cab-sidebar \.cab-sidebar-nav-row[\s\S]*min-height: 3\.25rem/);
+
+const drawerNavSsot = read("lib/ui/modal-size-system.ts");
+assert.match(drawerNavSsot, /drawerNav:[\s\S]*bg-\[var\(--cab-card\)\]/);
+
+const useGestionaleConfirm = read("src/hooks/use-gestionale-confirm.tsx");
+assert.match(useGestionaleConfirm, /GestionaleConfirmDialogLazy/);
+assert.doesNotMatch(useGestionaleConfirm, /from "@\/components\/gestionale\/gestionale-confirm-dialog"/);
+
+const globalTableSortIcon = read("components/gestionale/global-table/global-table-sort-icon.tsx");
+assert.doesNotMatch(globalTableSortIcon, /"use client"/);
+
+const useServiceQuery = read("src/hooks/use-service-query.ts");
+assert.match(useServiceQuery, /signal/);
+assert.match(useServiceQuery, /runWithAbortSignal/);
+assert.doesNotMatch(useServiceQuery, /onAbort = \(\) => \{\s*throw/);
+
+const useGestionaleQueryOpts = read("src/hooks/gestionale/use-gestionale-query-opts.ts");
+assert.match(useGestionaleQueryOpts, /GESTIONALE_CORE_STALE_MS/);
+
+const globalLoadingBridge = read("src/components/global-loading-query-bridge.tsx");
+assert.match(globalLoadingBridge, /readGlobalLoadingMeta\(q\.meta\) === null/);
+
+const authRetry = read("src/lib/auth/auth-network-retry.ts");
+assert.match(authRetry, /getUserWithAuthRetry/);
 
 console.log("performance-policy.test.ts OK");

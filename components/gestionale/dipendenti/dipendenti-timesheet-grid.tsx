@@ -1,6 +1,7 @@
 "use client";
 
 import "@/components/gestionale/global-table/gestionale-list-table.css";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Tooltip } from "@/components/ui";
 import {
   useCallback,
@@ -385,6 +386,17 @@ export function DipendentiTimesheetGrid({
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  const employeeVirtualizer = useVirtualizer({
+    count: visibleEmployees.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 72,
+    overscan: 3,
+  });
+  const virtualEmployeeRows =
+    visibleEmployees.length > 15
+      ? employeeVirtualizer.getVirtualItems().map((item) => visibleEmployees[item.index]!)
+      : visibleEmployees;
+
   const applyCrosshair = useCallback((target: TimesheetCrosshairTarget | null) => {
     const grid = scrollContainerRef.current;
     if (target === null) clearTimesheetCrosshair(grid);
@@ -559,7 +571,7 @@ export function DipendentiTimesheetGrid({
               </Tooltip>
             </th>
           </GlobalTableHead>
-          {visibleEmployees.map((emp) => {
+          {virtualEmployeeRows.map((emp) => {
             const totals = totalsByEmployee.get(emp.id)!;
             const addetto = emp.source_addetto_id ? addettiById.get(emp.source_addetto_id) : undefined;
             const { nome, cognome } = employeeNameLines(emp, addetto);

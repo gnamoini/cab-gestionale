@@ -8,6 +8,7 @@ import { checkDocumentCaptureRateLimit } from "@/lib/document-capture/document-c
 import { traceDocumentCaptureOperation } from "@/lib/document-capture/document-capture-telemetry.server";
 import { traceDocumentCapturePipelinePath } from "@/lib/import-core/document-capture-path-telemetry.server";
 import { importCorrelationHeaders, resolveRequestCorrelationId, withImportCorrelation } from "@/lib/import-core/import-http.server";
+import { isGeminiQuotaErrorMessage, parseGeminiRetryAfterSec } from "@/lib/ai/gemini-retry-after";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 export const runtime = "nodejs";
@@ -63,9 +64,16 @@ export async function POST(request: Request, context: RouteContext) {
   if (!result.ok) {
     const status =
       result.code === "not_configured" ? 503 : result.code === "no_fields" ? 422 : 400;
+    const headers: Record<string, string> = {
+      "X-Correlation-Id": correlationId,
+    };
+    if (result.code === "failed" && isGeminiQuotaErrorMessage(result.message)) {
+      const retrySec = parseGeminiRetryAfterSec(result.message);
+      if (retrySec != null) headers["Retry-After"] = String(retrySec);
+    }
     return NextResponse.json(
       withImportCorrelation(correlationId, { error: result.message, code: result.code }),
-      { status, headers: importCorrelationHeaders(correlationId) },
+      { status, headers },
     );
   }
 

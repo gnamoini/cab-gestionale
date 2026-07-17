@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
-import { GestionaleCollapsibleHeader } from "@/components/design-system/gestionale-collapsible-header";
+import { GestionaleCollapsiblePanel } from "@/components/design-system/gestionale-collapsible-panel";
 import { useAuthUserId } from "@/context/auth-context";
 import { dsCardTitle, dsSurfaceCard, dsTypoSmall } from "@/lib/ui/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
@@ -10,7 +10,11 @@ import {
   collapsibleCollapsedBoolPref,
   useCollapsiblePreference,
 } from "@/lib/ui/collapsible-prefs";
-import { gestionaleCollapsibleEase } from "@/lib/ui/gestionale-collapsible-toggle";
+import {
+  gestionaleCollapsiblePanelBodyClass,
+  gestionaleCollapsibleShellBodyPadClass,
+  gestionaleCollapsibleShellBodyPadCompactClass,
+} from "@/lib/ui/gestionale-collapsible-toggle";
 
 export function ShellCard({
   title,
@@ -67,7 +71,7 @@ export function ShellCard({
   );
 
   const [localCollapsed, setLocalCollapsed] = useState(() => defaultCollapsed);
-  const [persistedCollapsed, setPersistedCollapsed] = useCollapsiblePreference(
+  const [persistedCollapsed, setPersistedCollapsed, collapsePrefsHydrated] = useCollapsiblePreference(
     collapsibleCollapsedBoolPref(defaultCollapsed, {
       scope: persistScope ?? "__noop",
       key: persistKey ?? "__noop",
@@ -100,8 +104,12 @@ export function ShellCard({
   const hasHeader = Boolean(title || subtitle);
   const expanded = !collapsed;
   const bodyPad = compactContent ? "p-2 sm:p-2.5" : "p-4 sm:p-5";
-  const collapseBodyPad = collapsibleInset ? "p-3 sm:p-4" : bodyPad;
-  const collapseBodyBg = collapsibleInset ? "bg-transparent" : "bg-[var(--cab-card)]";
+  const collapseBodyPad = collapsibleInset
+    ? "p-3 sm:p-4"
+    : compactContent
+      ? gestionaleCollapsibleShellBodyPadCompactClass
+      : gestionaleCollapsibleShellBodyPadClass;
+  const collapseBodyBg = collapsibleInset ? "bg-transparent" : gestionaleCollapsiblePanelBodyClass;
   const titleId = hasHeader ? `${panelId}-title` : undefined;
   const toggleLabel = title
     ? `${expanded ? "Nascondi" : "Mostra"} ${title}`
@@ -110,10 +118,13 @@ export function ShellCard({
       : "Mostra sezione";
 
   return (
-    <section id={id} className={`${dsSurfaceCard} ${layoutPageRoot} cab-shell-card ${className}`}>
+    <section
+      id={id}
+      className={`${dsSurfaceCard} ${layoutPageRoot} cab-shell-card ${collapsible ? "overflow-hidden" : ""} ${className}`}
+    >
       {hasHeader ? (
         collapsible ? (
-          <GestionaleCollapsibleHeader
+          <GestionaleCollapsiblePanel
             panelId={panelId}
             titleId={titleId!}
             expanded={expanded}
@@ -126,6 +137,9 @@ export function ShellCard({
             headerActions={headerActions}
             headerLeadingActions={headerLeadingActions}
             headerLeadingActionsInteractive={headerLeadingActionsInteractive}
+            bodyClassName={collapseBodyBg}
+            bodyPadClassName={collapseBodyPad}
+            collapseAnimated={!usePersistence || collapsePrefsHydrated}
             titleNode={
               <>
                 {title ? (
@@ -136,7 +150,9 @@ export function ShellCard({
                 {subtitle ? <p className={dsTypoSmall}>{subtitle}</p> : null}
               </>
             }
-          />
+          >
+            {children}
+          </GestionaleCollapsiblePanel>
         ) : (
           <div className="flex min-h-12 min-w-0 max-w-full items-stretch border-b border-[color:var(--cab-border)]">
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 px-4 py-3 sm:min-h-[3.25rem] sm:px-5">
@@ -160,23 +176,7 @@ export function ShellCard({
           </div>
         )
       ) : null}
-      {collapsible ? (
-        <div
-          id={`${panelId}-body`}
-          role="region"
-          aria-labelledby={titleId}
-          aria-hidden={collapsed}
-          className={`grid ${collapseBodyBg} transition-[grid-template-rows] duration-300 ${gestionaleCollapsibleEase} motion-reduce:transition-none ${
-            expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-          }`}
-        >
-          <div className={`min-h-0 overflow-hidden ${collapseBodyBg}`}>
-            <div className={`min-w-0 max-w-full ${collapseBodyPad}`}>{children}</div>
-          </div>
-        </div>
-      ) : (
-        <div className={`min-w-0 max-w-full ${bodyPad}`}>{children}</div>
-      )}
+      {!collapsible ? <div className={`min-w-0 max-w-full ${bodyPad}`}>{children}</div> : null}
     </section>
   );
 }

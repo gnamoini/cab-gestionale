@@ -97,6 +97,10 @@ export function shouldRefetchPwaGroupOnReconnect(group: PwaQueryGroup): boolean 
   return PWA_QUERY_GROUP_POLICIES[group].refetchOnReconnect;
 }
 
+export function pwaQueryGroupMeta(group: PwaQueryGroup) {
+  return { pwaQueryGroup: group } as const;
+}
+
 export {
   GESTIONALE_CORE_QUERY_POLICY,
   GESTIONALE_REPORT_QUERY_POLICY,

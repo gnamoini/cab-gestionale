@@ -1,14 +1,10 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useAuth, isAuthFullyAuthenticated } from "@/context/auth-context";
 import { clearGestionaleToasts } from "@/context/toast-context";
-import { resolveFirstAccessiblePageHrefFromResolved } from "@/lib/auth/rbac";
-import { resolvePostLoginRedirectPath } from "@/lib/auth/resolve-post-login-redirect";
-import { createRbacNavAccess, isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
-import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
-import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import {
   AuthStandaloneCardHeader,
   AuthStandalonePageShell,
@@ -16,31 +12,32 @@ import {
 } from "@/components/gestionale/auth-standalone-page";
 import { AUTH_STANDALONE_LOGO_SUBTITLE } from "@/components/gestionale/cab-logo";
 import { AuthStandalonePageFooter } from "@/components/gestionale/auth-standalone-page-footer";
-import { CloseButton, GlobalLoadingSpinner } from "@/components/design-system";
+import { GlobalLoadingSpinner } from "@/components/design-system";
 import { useGlobalLoading } from "@/context/global-loading-context";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
-import { isStagingBlockedPathname, isStagingPublicSlice } from "@/lib/env/staging-public";
-import { deferredRouterReplace, deferredRouterRefresh } from "@/lib/navigation/deferred-app-router";
+import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
 import {
-  dsBtnNeutral,
   dsBtnPrimary,
   dsCheckboxInput,
   dsLabel,
-  dsModalBackdrop,
-  dsModalPanel,
   dsSearchFieldInput,
   dsTypoCaption,
 } from "@/lib/ui/design-system";
-import { resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
-import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
-import { requestPasswordResetEmail } from "@/lib/auth/request-password-reset.client";
+import { readAuthRememberPreference } from "@/lib/auth/auth-remember-preference";
 import {
   formatLoginIdentifierInput,
-  isValidEmailFormat,
   isValidLoginIdentifier,
   loginIdentifierFieldError,
 } from "@/src/lib/auth/username";
+import { LoginPostAuthRedirect } from "@/app/login/login-post-auth-redirect";
+
+const LoginForgotPasswordModalLazy = dynamic(
+  () =>
+    import("@/app/login/login-forgot-password-modal").then((m) => ({
+      default: m.LoginForgotPasswordModal,
+    })),
+);
 
 /** Messaggi login senza esporre dettagli interni Supabase. */
 function loginErrorUserMessage(raw: string): string {
@@ -112,11 +109,8 @@ const loginAlertInfoClass =
   "rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-info)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-info)_8%,var(--cab-surface))] px-3 py-2 text-sm text-[color:color-mix(in_srgb,var(--cab-info)_90%,var(--cab-text))]";
 
 export function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { login, status, configurationError, user } = useAuth();
-  const { snapshot: permissionsSnapshot, isLoading: permissionsLoading } = useEffectivePermissions();
-  const clientLavAccess = useClientLavorazioniAccess();
   const formId = useId();
   const identifierId = `${formId}-identifier`;
   const passwordId = `${formId}-password`;
@@ -131,12 +125,9 @@ export function LoginForm() {
   const [pending, setPending] = useState(false);
 
   const [forgotOpen, setForgotOpen] = useState(false);
-  useBodyScrollLock(forgotOpen, "login-forgot-password");
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetPending, setResetPending] = useState(false);
-  const [resetDone, setResetDone] = useState(false);
-  const [resetError, setResetError] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+
+  const handleRedirecting = useCallback(() => setRedirecting(true), []);
 
   const authWaitMessage =
     redirecting
@@ -158,30 +149,8 @@ export function LoginForm() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthFullyAuthenticated(status)) return;
-
-    if (!user?.id) return;
-
-    if (permissionsLoading || !permissionsSnapshot || !isRbacSnapshotReady(permissionsSnapshot)) return;
-
-    const navAccess = createRbacNavAccess(permissionsSnapshot);
-
-    const target = resolvePostLoginRedirectPath({
-      user: { ruolo: user.ruolo, id: user.id },
-      navAccess,
-      snapshot: permissionsSnapshot,
-      requestedPath: searchParams.get("from"),
-    });
-
-    let finalTarget = target;
-    if (isStagingPublicSlice() && isStagingBlockedPathname(target.split("?")[0] ?? target)) {
-      finalTarget = `${resolveFirstAccessiblePageHrefFromResolved(permissionsSnapshot.resolved)}?staging_unavailable=1`;
-    }
-
-    setRedirecting(true);
-    deferredRouterReplace(router, finalTarget);
-    deferredRouterRefresh(router);
-  }, [status, user, permissionsLoading, permissionsSnapshot, clientLavAccess.allowed, router, searchParams]);
+    setRemember(readAuthRememberPreference());
+  }, []);
 
   useEffect(() => {
     if (status === "loading" || status === "authenticated" || status === "degraded") return;
@@ -190,46 +159,12 @@ export function LoginForm() {
   }, [status]);
 
   const openForgot = useCallback(() => {
-    setResetEmail(email.trim());
-    setResetDone(false);
-    setResetError(null);
     setForgotOpen(true);
-  }, [email]);
+  }, []);
 
   const closeForgot = useCallback(() => {
     setForgotOpen(false);
-    setResetPending(false);
-    setResetDone(false);
-    setResetError(null);
   }, []);
-
-  async function submitReset(e: React.FormEvent) {
-    e.preventDefault();
-    setResetError(null);
-    setResetDone(false);
-    const trimmed = resetEmail.trim();
-    if (!isValidEmailFormat(trimmed)) {
-      setResetError("Inserisci un indirizzo email valido.");
-      return;
-    }
-    if (!isSupabasePublicEnvConfigured()) {
-      setResetError("Servizio non disponibile. Controlla la configurazione.");
-      return;
-    }
-    setResetPending(true);
-    try {
-      const res = await requestPasswordResetEmail(trimmed);
-      if (!res.ok) {
-        setResetError(res.message);
-        return;
-      }
-      setResetDone(true);
-    } catch {
-      setResetError("Impossibile completare la richiesta. Riprova tra poco.");
-    } finally {
-      setResetPending(false);
-    }
-  }
 
   if (redirecting) {
     return null;
@@ -260,7 +195,7 @@ export function LoginForm() {
         setError(loginErrorUserMessage(res.message));
         return;
       }
-      /* Redirect gestito dall'effect post-auth (permessi + ordine menu). */
+      /* Redirect gestito da LoginPostAuthRedirect (permessi + ordine menu). */
     } finally {
       setPending(false);
     }
@@ -271,6 +206,10 @@ export function LoginForm() {
 
   return (
     <AuthStandalonePageShell showThemeToggle={false} decorativeBackground="login">
+      {isAuthFullyAuthenticated(status) && user?.id ? (
+        <LoginPostAuthRedirect onRedirecting={handleRedirecting} />
+      ) : null}
+
       <div
         className="relative z-10 flex min-h-dvh min-w-0 flex-col"
         aria-hidden={authWaitActive || undefined}
@@ -375,7 +314,7 @@ export function LoginForm() {
                   <button
                     type="button"
                     onClick={openForgot}
-                    disabled={busy || configBlocked || resetPending}
+                    disabled={busy || configBlocked}
                     className="text-xs font-medium text-[color:var(--cab-primary)] underline-offset-2 transition-colors hover:underline disabled:opacity-50"
                   >
                     Password dimenticata?
@@ -443,90 +382,11 @@ export function LoginForm() {
       </div>
 
       {forgotOpen ? (
-        <div className={dsModalBackdrop} role="presentation" onMouseDown={(e) => e.target === e.currentTarget && closeForgot()}>
-          <div
-            className={`${dsModalPanel} relative mx-auto flex flex-col overflow-hidden shadow-[var(--cab-shadow-md)] ${resolveModalMaxWidthClass("max-w-md")}`}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={`${formId}-forgot-title`}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <h2 id={`${formId}-forgot-title`} className="text-base font-semibold text-[color:var(--cab-text)]">
-                Recupero password
-              </h2>
-              <CloseButton onClick={closeForgot} disabled={resetPending} />
-            </div>
-            <p className={`mt-1.5 ${dsTypoCaption}`}>
-              Link di reimpostazione se l&apos;email è associata a un account.
-            </p>
-
-            {resetDone ? (
-              <p
-                className="mt-4 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-success)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-success)_10%,var(--cab-surface))] px-3 py-2.5 text-sm text-[color:var(--cab-text)]"
-                role="status"
-              >
-                <span className="font-medium">Email inviata se l&apos;account esiste.</span>
-                <span className={`mt-1 block ${dsTypoCaption}`}>Controlla anche lo spam.</span>
-              </p>
-            ) : (
-              <form onSubmit={submitReset} className="mt-4 space-y-4">
-                <div>
-                  <label htmlFor={`${formId}-reset-email`} className={`block ${dsLabel} text-[color:var(--cab-text)]`}>
-                    Email
-                  </label>
-                  <div className="relative mt-1.5">
-                    <span className={iconInset} aria-hidden>
-                      <IconUser />
-                    </span>
-                    <input
-                      id={`${formId}-reset-email`}
-                      type="email"
-                      inputMode="email"
-                      autoComplete="email"
-                      placeholder="nome@azienda.it"
-                      className={`${dsSearchFieldInput} min-w-0 pl-10`}
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      disabled={resetPending}
-                    />
-                  </div>
-                </div>
-                {resetError ? (
-                  <p
-                    className="text-sm font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]"
-                    role="alert"
-                  >
-                    {resetError}
-                  </p>
-                ) : null}
-                <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-                  <button type="button" className={dsBtnNeutral} onClick={closeForgot} disabled={resetPending}>
-                    Annulla
-                  </button>
-                  <button type="submit" className={dsBtnPrimary} disabled={resetPending}>
-                    {resetPending ? (
-                      <>
-                        <GlobalLoadingSpinner size="sm" className="text-white" />
-                        <span>Invio…</span>
-                      </>
-                    ) : (
-                      "Invia link"
-                    )}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {resetDone ? (
-              <div className="mt-4 flex justify-end">
-                <button type="button" className={dsBtnPrimary} onClick={closeForgot}>
-                  Chiudi
-                </button>
-              </div>
-            ) : null}
-          </div>
-        </div>
+        <LoginForgotPasswordModalLazy
+          formId={formId}
+          initialEmail={email.trim()}
+          onClose={closeForgot}
+        />
       ) : null}
     </AuthStandalonePageShell>
   );

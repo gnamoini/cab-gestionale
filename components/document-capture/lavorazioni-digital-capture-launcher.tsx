@@ -60,6 +60,12 @@ import type { LavorazioneSchedeStore, SchedaTipo } from "@/types/schede";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { isDocumentCaptureLauncherApplyV1ClientEnabled } from "@/lib/document-capture/document-capture-launcher-apply-v1.client";
+import {
+  CaptureDuplicateDialog,
+  type CaptureDuplicateContext,
+} from "@/components/document-capture/capture-duplicate-dialog";
+import { useCaptureApplyFlow } from "@/lib/document-capture/use-capture-apply-flow";
 
 export type CaptureSchedeOpenRequest = {
   lavorazioneId: string;
@@ -133,6 +139,11 @@ export function LavorazioniDigitalCaptureLauncher({
   const [identMismatchWarnings, setIdentMismatchWarnings] = useState<string[]>([]);
   const [identMismatchConfirmOpen, setIdentMismatchConfirmOpen] = useState(false);
   const [pendingHandoffLavorazioneId, setPendingHandoffLavorazioneId] = useState<string | null>(null);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [pendingDuplicateOf, setPendingDuplicateOf] = useState<string | null>(null);
+  const [pendingUploadCaptureId, setPendingUploadCaptureId] = useState<string | null>(null);
+  const applyV1 = isDocumentCaptureLauncherApplyV1ClientEnabled();
+  const assignApplyFlow = useCaptureApplyFlow(applyV1 ? captureId : null);
   const analyzeTriggeredRef = useRef<string | null>(null);
   const gestToast = useGestionaleToast();
 
@@ -316,6 +327,22 @@ export function LavorazioniDigitalCaptureLauncher({
     }
   }, [gestToast, restoreFromDraft, resumeDraft]);
 
+  const continueAfterUpload = useCallback(
+    async (captureIdToUse: string, duplicateOf?: string | null) => {
+      if (duplicateOf && applyV1) {
+        setPendingDuplicateOf(duplicateOf);
+        setPendingUploadCaptureId(captureIdToUse);
+        setDuplicateDialogOpen(true);
+        return;
+      }
+      setCaptureId(captureIdToUse);
+      analyzeTriggeredRef.current = captureIdToUse;
+      const ok = await runAnalyze(captureIdToUse);
+      if (ok) await enterCompileStep(captureIdToUse);
+    },
+    [applyV1, enterCompileStep, runAnalyze],
+  );
+
   const runCapturePipeline = useCallback(
     async (file: File) => {
       clearCaptureAcquisitionDraft();
@@ -331,16 +358,13 @@ export function LavorazioniDigitalCaptureLauncher({
         return;
       }
 
-      if (result.duplicateOf) {
+      if (result.duplicateOf && !applyV1) {
         gestToast.info("Documento già presente in archivio (duplicato).");
       }
 
-      setCaptureId(result.captureId);
-      analyzeTriggeredRef.current = result.captureId;
-      const ok = await runAnalyze(result.captureId);
-      if (ok) await enterCompileStep(result.captureId);
+      await continueAfterUpload(result.captureId, result.duplicateOf ?? null);
     },
-    [enterCompileStep, gestToast, resetWizardApi, runAnalyze, upload],
+    [applyV1, continueAfterUpload, gestToast, resetWizardApi, upload],
   );
 
   const retryAnalyze = useCallback(async () => {
@@ -385,7 +409,29 @@ export function LavorazioniDigitalCaptureLauncher({
 
   const handleAssignToLavorazione = useCallback(
     async (lavorazioneId: string) => {
-      if (!fieldRows || !pendingSchedaTipo) return;
+      if (!fieldRows || !pendingSchedaTipo || !captureId) return;
+      if (applyV1) {
+        setSchedeHandoffBusy(true);
+        try {
+          await fetch(`/api/document-capture/${captureId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lavorazioneId }),
+          });
+          const result = await assignApplyFlow.applyAssignOnly();
+          gestToast.success(
+            `Scheda applicata a ${describeCaptureLavorazioneAssignTarget(lavorazioneId, attive, schedeStore)}`,
+          );
+          onLavorazioneCreated?.(result.lavorazioneId);
+          setOpen(false);
+          resetFlow();
+        } catch (e) {
+          gestToast.error(e instanceof Error ? e.message : "Apply non riuscito");
+        } finally {
+          setSchedeHandoffBusy(false);
+        }
+        return;
+      }
       const request: CaptureSchedeOpenRequest = {
         lavorazioneId,
         schedaTipo: pendingSchedaTipo,
@@ -398,7 +444,19 @@ export function LavorazioniDigitalCaptureLauncher({
         );
       }
     },
-    [attive, fieldRows, gestToast, openSchedeEditor, pendingSchedaTipo, schedeStore],
+    [
+      applyV1,
+      assignApplyFlow,
+      attive,
+      captureId,
+      fieldRows,
+      gestToast,
+      onLavorazioneCreated,
+      openSchedeEditor,
+      pendingSchedaTipo,
+      resetFlow,
+      schedeStore,
+    ],
   );
 
   const handleCreateNewFromMatch = useCallback(() => {
@@ -458,6 +516,83 @@ export function LavorazioniDigitalCaptureLauncher({
       runMultiSchedaHandoff,
       schedeStore,
     ],
+  );
+
+  const handleApplySuccess = useCallback(
+    (id: string) => {
+      if (applyV1) {
+        clearCaptureAcquisitionDraft();
+        onLavorazioneCreated?.(id);
+        setOpen(false);
+        resetFlow();
+        gestToast.success("Lavorazione creata da acquisizione AI.");
+        return;
+      }
+      handleCaptureLavorazioneCreated(id);
+    },
+    [applyV1, gestToast, handleCaptureLavorazioneCreated, onLavorazioneCreated, resetFlow],
+  );
+
+  const handleDuplicateCancel = useCallback(() => {
+    setDuplicateDialogOpen(false);
+    setPendingDuplicateOf(null);
+    if (pendingUploadCaptureId) discardEphemeralCaptureClient(pendingUploadCaptureId);
+    setPendingUploadCaptureId(null);
+    resetFlow();
+    setStep("hub");
+  }, [pendingUploadCaptureId, resetFlow]);
+
+  const handleDuplicateOpenExisting = useCallback(
+    (ctx: CaptureDuplicateContext) => {
+      setDuplicateDialogOpen(false);
+      if (ctx.lavorazioneId) {
+        onLavorazioneCreated?.(ctx.lavorazioneId);
+        setOpen(false);
+        resetFlow();
+      }
+    },
+    [onLavorazioneCreated, resetFlow],
+  );
+
+  const handleDuplicateAttach = useCallback(
+    async (ctx: CaptureDuplicateContext) => {
+      setDuplicateDialogOpen(false);
+      if (!pendingUploadCaptureId) return;
+      await fetch(`/api/document-capture/${pendingUploadCaptureId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lavorazioneId: ctx.lavorazioneId ?? null }),
+      });
+      setCaptureId(pendingUploadCaptureId);
+      await continueAfterUpload(pendingUploadCaptureId, null);
+      setPendingDuplicateOf(null);
+      setPendingUploadCaptureId(null);
+    },
+    [continueAfterUpload, pendingUploadCaptureId],
+  );
+
+  const handleDuplicateForceNew = useCallback(
+    async (_ctx: CaptureDuplicateContext, reason: string) => {
+      setDuplicateDialogOpen(false);
+      const id = pendingUploadCaptureId;
+      if (!id) return;
+      await fetch(`/api/document-capture/${id}/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventType: "duplicate_override",
+          idempotencyKey: `duplicate_override:${id}:${Date.now()}`,
+          payload: { reason, duplicateOf: pendingDuplicateOf },
+        }),
+      }).catch(() => null);
+      setCaptureId(id);
+      analyzeTriggeredRef.current = id;
+      const ok = await runAnalyze(id);
+      if (ok) await enterCompileStep(id);
+      setPendingDuplicateOf(null);
+      setPendingUploadCaptureId(null);
+    },
+    [enterCompileStep, pendingDuplicateOf, pendingUploadCaptureId, runAnalyze],
   );
 
   const handleIdentMismatchProceed = useCallback(() => {
@@ -523,10 +658,10 @@ export function LavorazioniDigitalCaptureLauncher({
                   variant="primary"
                   className={`${erpBtnAccent} min-h-11 sm:min-w-[10rem]`}
                   loading={footerBusy}
-                  loadingLabel="Salvataggio…"
+                  loadingLabel={applyV1 ? "Import…" : "Salvataggio…"}
                   disabled={!createdBy}
                 >
-                  Crea lavorazione
+                  {applyV1 ? "Conferma import" : "Crea lavorazione"}
                 </LoadingButton>
               </div>
             ) : undefined
@@ -572,7 +707,9 @@ export function LavorazioniDigitalCaptureLauncher({
                   sharedGlobalOpts={sharedGlobalOpts}
                   sharedMezziCatalog={sharedMezziCatalog}
                   magazzino={magazzinoQuery.data ?? []}
-                  onCreated={handleCaptureLavorazioneCreated}
+                  applyMode={applyV1}
+                  onApplySuccess={handleApplySuccess}
+                  onCreated={applyV1 ? undefined : handleCaptureLavorazioneCreated}
                   onCompileError={setCompileError}
                 />
                   ) : pendingSchedaTipo ? (
@@ -647,6 +784,14 @@ export function LavorazioniDigitalCaptureLauncher({
           setPendingHandoffLavorazioneId(null);
         }}
         onConfirm={handleIdentMismatchProceed}
+      />
+      <CaptureDuplicateDialog
+        open={duplicateDialogOpen}
+        duplicateCaptureId={pendingDuplicateOf}
+        onCancel={handleDuplicateCancel}
+        onOpenExisting={handleDuplicateOpenExisting}
+        onAttach={handleDuplicateAttach}
+        onForceNew={handleDuplicateForceNew}
       />
       {schedeHandoffBusy ? (
         <div

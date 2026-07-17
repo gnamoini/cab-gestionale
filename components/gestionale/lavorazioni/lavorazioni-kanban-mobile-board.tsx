@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { KanbanCardMobile } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-card";
 import type { KanbanMobileSection } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-types";
-import { GestionaleCollapsibleChevronIcon } from "@/components/design-system/gestionale-collapsible-chevron";
+import { GestionaleCollapsibleHeader } from "@/components/design-system/gestionale-collapsible-header";
 import { useAuthUserId } from "@/context/auth-context";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
@@ -13,7 +13,6 @@ import {
   COLLAPSIBLE_KANBAN_OPEN_KEY,
   useCollapsiblePreference,
 } from "@/lib/ui/collapsible-prefs";
-import { gestionaleCollapsibleShellHeaderFocusClass } from "@/lib/ui/gestionale-collapsible-toggle";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
@@ -146,29 +145,32 @@ export function LavorazioniKanbanMobileBoard({
         const open = openSectionIds.has(section.id);
         const total = sectionTotalCount(section);
         const panelId = `kanban-mobile-panel-${section.id}`;
-        const headerId = `kanban-mobile-header-${section.id}`;
 
         return (
           <section
             key={section.id}
             className="lavorazioni-kanban-mobile-section overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] shadow-[var(--cab-shadow-sm)]"
           >
-            <button
-              type="button"
-              id={headerId}
-              aria-expanded={open}
-              aria-controls={panelId}
-              onClick={() => toggleSection(section.id)}
-              className={`group flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2.5 text-left outline-none transition-colors duration-200 ease-out hover:bg-[var(--cab-hover)] touch-manipulation [-webkit-tap-highlight-color:transparent] ${gestionaleCollapsibleShellHeaderFocusClass}`}
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-2">{renderStatoHeaderInner(section.col, total)}</div>
-              <GestionaleCollapsibleChevronIcon expanded={open} className="h-4 w-4 shrink-0 text-[color:var(--cab-text-muted)]" />
-            </button>
+            <GestionaleCollapsibleHeader
+              panelId={panelId}
+              titleId={`${panelId}-trigger`}
+              expanded={open}
+              toggleLabel={`${open ? "Chiudi" : "Apri"} sezione ${section.col.label}`}
+              onToggle={() => toggleSection(section.id)}
+              titleNode={
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  {renderStatoHeaderInner(section.col, total)}
+                </div>
+              }
+              form
+              formFlat
+              surfaceClass="min-h-11 bg-transparent px-3 py-2.5 hover:bg-[var(--cab-hover)] touch-manipulation [-webkit-tap-highlight-color:transparent]"
+            />
 
             <div
-              id={panelId}
+              id={`${panelId}-body`}
               role="region"
-              aria-labelledby={headerId}
+              aria-labelledby={`${panelId}-trigger`}
               aria-hidden={!open}
               className={`lavorazioni-kanban-mobile-panel ${open ? "lavorazioni-kanban-mobile-panel-open" : ""}`}
             >

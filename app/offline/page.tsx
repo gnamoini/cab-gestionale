@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { OfflinePageView } from "@/components/pwa/offline-page-view";
+import { OfflinePageViewLazy } from "@/components/public-surfaces/public-surface-loaders";
 
 export const metadata: Metadata = {
   title: "Offline | CAB",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function OfflinePage() {
-  return <OfflinePageView />;
+  return <OfflinePageViewLazy />;
 }

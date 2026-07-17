@@ -17,11 +17,18 @@ import {
   type PageActionItem,
 } from "@/components/ui";
 import { GestionaleDirtySaveActions } from "@/components/gestionale/page-header-toolbar";
-import { LavorazioniModalHeader, LavorazioniModalShell, SettingsLavorazioniModal } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { ConfigurazioneLogListEmbedded } from "@/components/configurazione/configurazione-log-section";
-import { gestionaleLogDrawerPanelClass } from "@/components/gestionale/gestionale-log-ui";
-import { HierarchyTreeSettingsSection } from "@/components/dashboard/hierarchy-tree-settings-section";
-import { SettingsBrandingSection } from "@/components/dashboard/settings-branding-section";
+import { LavorazioniModalHeader, LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import {
+  ConfigurazioneLogListEmbeddedLazy,
+  HierarchyTreeSettingsSectionLazy,
+  SettingsBrandingSectionLazy,
+  SettingsEconomiciSectionLazy,
+  SettingsEliminaConfirmDialogLazy,
+  SettingsLavorazioniModalLazy,
+  SettingsMaintenancePlansSectionLazy,
+  SettingsRinominaPropagaDialogLazy,
+  SettingsTkbAdminSectionLazy,
+} from "@/components/dashboard/settings/settings-section-loaders";
 import { SettingsClientiCommercialiList } from "@/components/dashboard/settings/settings-clienti-list";
 import { SettingsImportEntry } from "@/components/dashboard/settings/settings-import-entry";
 import { SettingsMagazzinoFornitoriList } from "@/components/dashboard/settings/settings-magazzino-fornitori-list";
@@ -40,12 +47,8 @@ import {
   type SistemaSectionId,
 } from "@/components/dashboard/settings/settings-workspace-types";
 import { SettingsDipendentiAssenzeSection } from "@/components/dashboard/settings-dipendenti-assenze-section";
-import { SettingsEconomiciSection } from "@/components/dashboard/settings/settings-economici-section";
-import { SettingsTkbAdminSection } from "@/components/dashboard/settings/settings-tkb-admin-section";
-import { SettingsMaintenancePlansSection } from "@/components/dashboard/settings/settings-maintenance-plans-section";
 import { SettingsOfficinaProfiloSection } from "@/components/dashboard/settings/settings-officina-profilo-section";
-import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
-import { SettingsRinominaPropagaDialog } from "@/components/dashboard/settings-rinomina-propaga-dialog";
+import { gestionaleLogDrawerPanelClass } from "@/components/gestionale/gestionale-log-ui";
 import { useSettingsSidebarScrollportHeight } from "@/components/dashboard/settings/use-settings-sidebar-scrollport-height";
 import {
   SettingsSectionHeader,
@@ -66,6 +69,7 @@ import {
   type CabBrandingSettings,
 } from "@/lib/branding/branding-settings-model";
 import { resolveBrandingForSave, type BrandingLogoUploadDraft } from "@/lib/branding/branding-logo-upload";
+import { prefetchImpostazioniInUsoQueries } from "@/lib/app-settings/prefetch-impostazioni-in-uso-queries";
 import { appendConfigurazioneLog, appendConfigurazioneLogs } from "@/lib/configurazione/configurazione-log-storage";
 import { markConfigurazioneUndoReverted, pushConfigurazioneUndo } from "@/lib/configurazione/configurazione-undo-storage";
 import { areConfigurazioneSnapshotsEqual } from "@/lib/configurazione/settings-snapshot-compare";
@@ -110,7 +114,8 @@ import { invalidateAfterSettingsRenamePropagation } from "@/src/lib/react-query/
 import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context";
 import { useLavorazioniAddettiInUsoQuery } from "@/src/hooks/gestionale/use-lavorazioni-addetti-in-uso";
 import { useLavorazioniStatiInUsoQuery } from "@/src/hooks/gestionale/use-lavorazioni-stati-in-uso";
-import { useCabAppSettingsPayloadQuery, useSettingsBulkMutation } from "@/src/hooks/gestionale/use-settings-queries";
+import { useImpostazioniSettingsQuery } from "@/src/hooks/gestionale/use-impostazioni-settings-query";
+import { useSettingsBulkMutation } from "@/src/hooks/gestionale/use-settings-queries";
 import { useUndoableConfigurazioneSave } from "@/src/hooks/gestionale/use-undoable-configurazione-save";
 import { mergeAppSettingsUpsertWithVersions } from "@/lib/domain/settings-entry";
 import { settingsRenamePropagationEntry } from "@/lib/domain/settings-rename-propagation-entry";
@@ -151,7 +156,7 @@ export function SistemaImpostazioniWorkspace({
   const queryClient = useQueryClient();
   const { setOpen: setSettingsModalOpen } = useSettingsModalOpen();
   const { syncBranding } = useBranding();
-  const settingsPayload = useCabAppSettingsPayloadQuery({ enabled: open });
+  const settingsPayload = useImpostazioniSettingsQuery(open);
   const resolvedSettings = settingsPayload.data?.resolved;
   const settingsRows = settingsPayload.data?.rows ?? [];
   const pageMode = surface === "page";
@@ -160,8 +165,6 @@ export function SistemaImpostazioniWorkspace({
   const { undoable: undoableConfigSave, sessionId: undoSessionId } = useUndoableConfigurazioneSave({
     enabled: open && surface === "page",
   });
-  const statiInUsoQ = useLavorazioniStatiInUsoQuery({ enabled: open });
-  const addettiInUsoQ = useLavorazioniAddettiInUsoQuery({ enabled: open });
 
   const savedSnapshotRef = useRef<SettingsWorkspaceSnapshot | null>(null);
   /** Evita reset sezione/stato locale su refetch React Query mentre il modal resta aperto. */
@@ -194,6 +197,11 @@ export function SistemaImpostazioniWorkspace({
 
   const section = pageMode ? urlSection : modalSection;
 
+  const needsStatiInUso = open && section === "op-stati";
+  const needsAddettiInUso = open && section === "op-addetti";
+  const statiInUsoQ = useLavorazioniStatiInUsoQuery({ enabled: needsStatiInUso });
+  const addettiInUsoQ = useLavorazioniAddettiInUsoQuery({ enabled: needsAddettiInUso });
+
   const currentImpostazioniPath = useMemo(() => {
     const q = searchParams.toString();
     return q ? `${pathname}?${q}` : pathname;
@@ -202,6 +210,7 @@ export function SistemaImpostazioniWorkspace({
   const pickSection = useCallback(
     (id: SistemaSectionId) => {
       setMobileNavOpen(false);
+      prefetchImpostazioniInUsoQueries(queryClient, id);
       if (pageMode) {
         const target = impostazioniPathForSection(id);
         if (target !== currentImpostazioniPath) {
@@ -211,7 +220,7 @@ export function SistemaImpostazioniWorkspace({
       }
       setModalSection(id);
     },
-    [currentImpostazioniPath, pageMode, router],
+    [currentImpostazioniPath, pageMode, queryClient, router],
   );
 
   const attiveStatoIds = useMemo(() => {
@@ -897,7 +906,7 @@ export function SistemaImpostazioniWorkspace({
                     <SettingsImportBar entity="settings_addetti" />
                   </div>
                 ) : null}
-              <SettingsLavorazioniModal
+              <SettingsLavorazioniModalLazy
                 layout="embedded"
                 embeddedFocus={lavEmbeddedFocus}
                 stati={stati}
@@ -1123,7 +1132,7 @@ export function SistemaImpostazioniWorkspace({
                   senza match in anagrafica mezzi.
                 </p>
                 <SettingsImportBar entity="settings_hierarchy_attrezzature" />
-              <HierarchyTreeSettingsSection
+              <HierarchyTreeSettingsSectionLazy
                 treeKey="attrezzature"
                 variant="marca"
                 liste={liste}
@@ -1137,7 +1146,7 @@ export function SistemaImpostazioniWorkspace({
             ) : null}
 
             {section === "att-modello" ? (
-              <HierarchyTreeSettingsSection
+              <HierarchyTreeSettingsSectionLazy
                 treeKey="attrezzature"
                 variant="modello"
                 liste={liste}
@@ -1179,7 +1188,7 @@ export function SistemaImpostazioniWorkspace({
             {section === "tel-marca" ? (
               <>
                 <SettingsImportBar entity="settings_hierarchy_telai" />
-                <HierarchyTreeSettingsSection
+                <HierarchyTreeSettingsSectionLazy
                 treeKey="telai"
                 variant="marca"
                 liste={liste}
@@ -1193,7 +1202,7 @@ export function SistemaImpostazioniWorkspace({
             ) : null}
 
             {section === "tel-modello" ? (
-              <HierarchyTreeSettingsSection
+              <HierarchyTreeSettingsSectionLazy
                 treeKey="telai"
                 variant="modello"
                 liste={liste}
@@ -1280,7 +1289,7 @@ export function SistemaImpostazioniWorkspace({
             ) : null}
 
             {section === "brand-personalizzazione" ? (
-              <SettingsBrandingSection
+              <SettingsBrandingSectionLazy
                 layout={listLayout}
                 branding={branding}
                 onBrandingChange={setBranding}
@@ -1301,35 +1310,39 @@ export function SistemaImpostazioniWorkspace({
 
 
             {section === "sys-economici" ? (
-              <SettingsEconomiciSection
+              <SettingsEconomiciSectionLazy
                 layout={listLayout}
                 costoOrarioDefault={eco.costoOrarioDefault}
                 onChange={(v) => setEco({ costoOrarioDefault: v })}
               />
             ) : null}
 
-            {section === "sys-tkb-kb" ? <SettingsTkbAdminSection /> : null}
+            {section === "sys-tkb-kb" ? <SettingsTkbAdminSectionLazy /> : null}
 
-            {section === "att-piani-tagliando" ? <SettingsMaintenancePlansSection /> : null}
+            {section === "att-piani-tagliando" ? <SettingsMaintenancePlansSectionLazy /> : null}
 
             {pageMode ? <div aria-hidden className={dsGestionaleScrollEndPad} /> : null}
           </SettingsMainPanel>
         </div>
       </div>
-      <SettingsEliminaConfirmDialog
-        open={settingsDeleteConfirm != null}
-        itemLabel={settingsDeleteConfirm?.label}
-        detail={settingsDeleteConfirm?.detail}
-        onCancel={() => setSettingsDeleteConfirm(null)}
-        onConfirm={() => settingsDeleteConfirm?.onConfirm()}
-      />
-      <SettingsRinominaPropagaDialog
-        open={propagaOpen}
-        entries={propagaEntries}
-        pending={propagaPending}
-        onCancel={() => void finalizePropaga(false)}
-        onConfirm={() => void finalizePropaga(true)}
-      />
+      {settingsDeleteConfirm != null ? (
+        <SettingsEliminaConfirmDialogLazy
+          open
+          itemLabel={settingsDeleteConfirm.label}
+          detail={settingsDeleteConfirm.detail}
+          onCancel={() => setSettingsDeleteConfirm(null)}
+          onConfirm={() => settingsDeleteConfirm.onConfirm()}
+        />
+      ) : null}
+      {propagaOpen ? (
+        <SettingsRinominaPropagaDialogLazy
+          open
+          entries={propagaEntries}
+          pending={propagaPending}
+          onCancel={() => void finalizePropaga(false)}
+          onConfirm={() => void finalizePropaga(true)}
+        />
+      ) : null}
       {addettiSimilarDialog}
       {confirmDialog}
       <GestionaleUnsavedChangesDialog
@@ -1372,7 +1385,7 @@ export function SistemaImpostazioniWorkspace({
           ariaLabel="Log modifiche configurazione"
         >
           <div className={gestionaleLogDrawerPanelClass}>
-            <ConfigurazioneLogListEmbedded paged />
+            {configLogOpen ? <ConfigurazioneLogListEmbeddedLazy paged /> : null}
           </div>
         </Drawer>
       </div>

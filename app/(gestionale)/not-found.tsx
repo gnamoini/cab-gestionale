@@ -1,5 +1,5 @@
-import { NotFoundView } from "@/components/gestionale/not-found-view";
+import { NotFoundViewLazy } from "@/components/public-surfaces/public-surface-loaders";
 
 export default function GestionaleNotFound() {
-  return <NotFoundView variant="embedded" />;
+  return <NotFoundViewLazy variant="embedded" />;
 }

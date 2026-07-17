@@ -15,6 +15,8 @@ import {
   gestionaleCollapsibleShellHeaderFocusClass,
   gestionaleCollapsibleShellHeaderShellClass,
   gestionaleCollapsibleShellHeaderSurfaceClass,
+  gestionaleCollapsibleShellHeaderBtnRadiusClass,
+  gestionaleCollapsibleShellHeaderShellRadiusClass,
 } from "@/lib/ui/gestionale-collapsible-toggle";
 
 /** Header collapsible SSOT — stesso trigger di ShellCard Lavorazioni. */
@@ -56,7 +58,9 @@ export function GestionaleCollapsibleHeader({
   surfaceClass?: string;
 }) {
   const bodyId = `${panelId}-body`;
-  const showHeaderDivider = form && formFlat ? expanded : true;
+  const showHeaderDivider = form ? (formFlat ? expanded : true) : true;
+  const shellRadiusClass = form ? "" : gestionaleCollapsibleShellHeaderShellRadiusClass(expanded);
+  const btnRadiusClass = form ? "" : gestionaleCollapsibleShellHeaderBtnRadiusClass(expanded);
   const dividerClass = showHeaderDivider ? gestionaleCollapsibleShellHeaderDividerClass : "";
   const compactClass = compact ? gestionaleCollapsibleShellHeaderBtnCompactClass : "";
 
@@ -64,6 +68,7 @@ export function GestionaleCollapsibleHeader({
     gestionaleCollapsibleShellHeaderBtnClass,
     compactClass,
     dividerClass,
+    btnRadiusClass,
     gestionaleCollapsibleShellHeaderFocusClass,
     form ? (formFlat ? gestionaleCollapsibleFlatFormHeaderBtnClass : gestionaleCollapsibleFormHeaderBtnClass) : surfaceClass,
     form && headerActions ? "min-w-0 flex-1 rounded-none" : "",
@@ -90,9 +95,10 @@ export function GestionaleCollapsibleHeader({
         gestionaleCollapsibleShellHeaderBtnClass,
         compactClass,
         dividerClass,
+        btnRadiusClass,
         gestionaleCollapsibleShellHeaderFocusClass,
         surfaceClass,
-        "justify-between gap-2.5 rounded-none sm:gap-3",
+        "justify-between gap-2.5 sm:gap-3",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -162,7 +168,16 @@ export function GestionaleCollapsibleHeader({
   }
 
   return (
-    <div className={[gestionaleCollapsibleShellHeaderShellClass, surfaceClass, shellClassName].filter(Boolean).join(" ")}>
+    <div
+      className={[
+        gestionaleCollapsibleShellHeaderShellClass,
+        surfaceClass,
+        shellRadiusClass,
+        shellClassName,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       {trigger}
       {actionsSlot}
     </div>

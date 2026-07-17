@@ -1,13 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useState } from "react";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import { SettingsSimileConfirmDialog } from "@/components/dashboard/settings-simile-confirm-dialog";
 import {
   findSimilarSettingsDuplicate,
   isBlockingExactDuplicate,
   settingsNormKey,
 } from "@/lib/settings/settings-list-duplicate";
+
+const SettingsSimileConfirmDialog = dynamic(() =>
+  import("@/components/dashboard/settings-simile-confirm-dialog").then((m) => ({
+    default: m.SettingsSimileConfirmDialog,
+  })),
+);
 
 type SimilarPending =
   | { mode: "add"; candidate: string; similarTo: string; onConfirm: () => void; onAbort?: () => void }

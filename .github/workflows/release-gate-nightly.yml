@@ -45,6 +45,10 @@ jobs:
         run: npm run ops:long-session-soak -- --samples 4 --interval-ms 60000 > long-session-soak-nightly.log 2>&1
         continue-on-error: true
 
+      - name: Performance trend report
+        run: npm run ops:performance-trend-report
+        continue-on-error: true
+
       - name: Upload soak artifact
         uses: actions/upload-artifact@v4
         if: always()
@@ -52,3 +56,15 @@ jobs:
           name: long-session-soak-nightly
           path: long-session-soak-nightly.log
           retention-days: 30
+
+      - name: Upload performance trends
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-trends-nightly
+          path: |
+            test-results/performance-trends/**
+            test-results/build-budget-snapshot.json
+            docs/performance-governance-report.md
+          retention-days: 90
+          if-no-files-found: ignore

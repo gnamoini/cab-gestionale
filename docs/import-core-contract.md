@@ -103,7 +103,7 @@ Obbligatori: `executionId`, `correlationId`, `companyId`.
 
 Aggiorna: `import_executions` (provider, model, tokens, duration) + `import_audit_events`.
 
-Provider attuale: `google_gemini` / `gemini-2.5-flash`.
+Provider attuale: `google_gemini` / `gemini-3.5-flash`.
 
 Timeout: `GEMINI_FILE_ANALYSIS_TIMEOUT_MS` (SSOT `gemini-client.ts`).
 

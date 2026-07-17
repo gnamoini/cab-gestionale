@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
-import { useDevModalLayoutLint } from "@/lib/ui-visual-linter/use-visual-layout-linter";
-import { recordHealthMetric } from "@/lib/observability/runtime-health";
+import {
+  LavorazioniModalShell,
+  type LavorazioniModalDialogSize,
+} from "@/components/gestionale/gestionale-modal-shell";
 import type { LavorazioneAttiva, PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
@@ -43,46 +44,18 @@ import {
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
-import { useGestionaleModalDialogFocus } from "@/components/gestionale/gestionale-modal-focus";
-import { CloseButton } from "@/components/design-system/close-button";
-import { ShellNavBackButton } from "@/components/design-system/shell-nav-icon-button";
 import {
   dsInput,
-  dsLavorazioniModalLayer,
   dsLabel,
-  dsModalCloseBtn,
-  dsLavorazioniModalWindowHeader,
-  dsModalHeaderInner,
-  dsModalHeaderLead,
-  dsModalSubtitle,
-  dsModalSubtitleHub,
-  dsModalTitle,
-  dsModalTitleBlock,
-  dsModalFormFooter,
   dsHubModalTabBar,
   dsSegmentedBtnOn,
 } from "@/lib/ui/design-system";
-import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
-import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
-import {
-  gestionaleModalBodyFlexClass,
-  resolveShellModalLayout,
-  type GestionaleModalWidth,
-  type ModalHeight,
-  type ModalSize,
-} from "@/lib/ui/modal-max-width-class";
+import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import {
   CAB_FOCUS_SCROLL_GROUP_ATTR,
   CAB_FOCUS_SCROLL_TITLE_ATTR,
-  CAB_MODAL_ROOT_ATTR,
-  CAB_MODAL_SCROLL_ATTR,
-  gestionaleModalScrollBodyMobileClass,
 } from "@/lib/ui/mobile-modal-behavior";
-import { cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
-import { flexShrinkSafe } from "@/lib/ui/global-flex-system";
-import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
-import { useMobileModalKeyboard } from "@/lib/ui/use-mobile-modal-keyboard";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -112,7 +85,12 @@ function Field({
 
 const PRIORITA: PrioritaLav[] = orderPrioritaList(["bassa", "media", "alta", "urgente"]) as PrioritaLav[];
 
-const LAV_MODAL_TITLE_ID = "lav-modal-title";
+export {
+  LavorazioniModalShell,
+  LavorazioniModalHeader,
+  LavorazioniModalTitleBar,
+  type LavorazioniModalDialogSize,
+} from "@/components/gestionale/gestionale-modal-shell";
 
 function LavorazioniInterventoPillFields({
   statoId,
@@ -205,243 +183,6 @@ function LavorazioniInterventoPillFields({
       </div>
     </div>
   );
-}
-
-export function LavorazioniModalHeader({
-  title,
-  subtitle,
-  onRequestClose,
-  onBack,
-  titleId = LAV_MODAL_TITLE_ID,
-  actions,
-  belowTitle,
-}: {
-  title: string;
-  subtitle?: string;
-  onRequestClose: () => void;
-  onBack?: () => void;
-  titleId?: string;
-  /** Azioni tra titolo e pulsante chiudi (es. Salva, Modifica). */
-  actions?: React.ReactNode;
-  /** Contenuto sotto titolo/sottotitolo (meta, link). */
-  belowTitle?: React.ReactNode;
-}) {
-  const stacked = Boolean(belowTitle);
-  const hubToolbar = Boolean(actions && subtitle && !stacked);
-
-  if (hubToolbar) {
-    return (
-      <header className={dsLavorazioniModalWindowHeader}>
-        <div className="flex w-full min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-2">
-          <div className={`${dsModalHeaderLead} min-w-0 basis-[min(100%,12rem)]`}>
-            {onBack ? <ShellNavBackButton onClick={onBack} showOnFocus={false} /> : null}
-            <div className={dsModalTitleBlock}>
-              <h2 id={titleId} className={dsModalTitle}>
-                {title}
-              </h2>
-              <p className={dsModalSubtitleHub}>{subtitle}</p>
-            </div>
-          </div>
-          <div className="ml-auto flex shrink-0 flex-nowrap items-center justify-end gap-2">
-            {actions}
-            <CloseButton onClick={onRequestClose} className={dsModalCloseBtn} showOnFocus={false} />
-          </div>
-        </div>
-      </header>
-    );
-  }
-
-  return (
-    <header className={dsLavorazioniModalWindowHeader}>
-      <div className={`${dsModalHeaderInner}${stacked ? " items-start sm:items-center" : ""}`}>
-        <div className={`${dsModalHeaderLead}${stacked ? " flex-col items-stretch sm:flex-row sm:items-center" : ""}`}>
-          {onBack ? <ShellNavBackButton onClick={onBack} showOnFocus={false} /> : null}
-          <div className={dsModalTitleBlock}>
-            <h2 id={titleId} className={dsModalTitle}>
-              {title}
-            </h2>
-            {subtitle ? <p className={dsModalSubtitle}>{subtitle}</p> : null}
-            {belowTitle}
-          </div>
-        </div>
-        {actions ? <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2 sm:flex-wrap">{actions}</div> : null}
-        <CloseButton onClick={onRequestClose} className={dsModalCloseBtn} showOnFocus={false} />
-      </div>
-    </header>
-  );
-}
-
-/** @deprecated Preferire `LavorazioniModalShell` con `title` / `header` — wrapper compat per meta sotto titolo. */
-export function LavorazioniModalTitleBar({
-  title,
-  titleId,
-  onRequestClose,
-  children,
-}: {
-  title?: string;
-  titleId?: string;
-  onRequestClose: () => void;
-  children?: React.ReactNode;
-}) {
-  if (!title) return null;
-  return (
-    <LavorazioniModalHeader
-      title={title}
-      titleId={titleId}
-      onRequestClose={onRequestClose}
-      belowTitle={children}
-    />
-  );
-}
-
-export type LavorazioniModalDialogSize = "hub" | "compact";
-
-/** Chiusura: click fuori, ESC, X in header; scroll lock come `Modal` globale. */
-export function LavorazioniModalShell({
-  children,
-  modalSize,
-  modalHeight,
-  size = "standard",
-  dialogSize = "hub",
-  alignTop,
-  layerClassName,
-  onRequestClose,
-  title,
-  subtitle,
-  onBack,
-  header,
-  actions,
-  titleId,
-  footer,
-  modalRootRef,
-}: {
-  children: React.ReactNode;
-  /** Categoria semantica — SSOT dimensioni (`lib/ui/modal-size-system.ts`). */
-  modalSize?: ModalSize;
-  /** Override altezza desktop (default derivato da `modalSize`). */
-  modalHeight?: ModalHeight;
-  /** @deprecated Usare `modalSize="formMedium"`. */
-  size?: GestionaleModalWidth;
-  /** @deprecated Usare `modalHeight="compact"|"standard"`. */
-  dialogSize?: LavorazioniModalDialogSize;
-  alignTop?: boolean;
-  /** Es. `z-[110]` quando la modale si apre sopra un'altra modale gestionale. */
-  layerClassName?: string;
-  onRequestClose: () => void;
-  /** Se impostato, mostra header standard con titolo e X. */
-  title?: string;
-  subtitle?: string;
-  onBack?: () => void;
-  /** Header custom (ignora title/subtitle se fornito). */
-  header?: React.ReactNode;
-  /** Azioni in header tra titolo e pulsante chiudi. */
-  actions?: React.ReactNode;
-  /** Id titolo per `aria-labelledby` (default se `title` è impostato). */
-  titleId?: string;
-  /** Footer fisso sotto il corpo scrollabile. */
-  footer?: React.ReactNode;
-  /** Ref opzionale al dialog root (`data-cab-modal-root`) per flush pre-save via button. */
-  modalRootRef?: React.RefObject<HTMLDivElement | null>;
-}) {
-  useBodyScrollLock(true, "LavorazioniModalShell");
-  useOverlayBackHandler(true, onRequestClose, "LavorazioniModalShell", { layer: "modal" });
-  useDevModalLayoutLint(true, "lavorazioni-modal-shell");
-  const dialogFocus = useGestionaleModalDialogFocus();
-  useMobileModalKeyboard(dialogFocus.ref);
-  const maxMdDown = useMaxMdDown();
-  const modalOpenStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
-
-  useLayoutEffect(() => {
-    const durationMs = Math.round(performance.now() - modalOpenStartRef.current);
-    recordHealthMetric("modalOpenMs", durationMs);
-  }, []);
-
-  const labelledBy = title ? (titleId ?? LAV_MODAL_TITLE_ID) : titleId;
-  const { widthClass: dialogMaxWidth, surfaceClass: dialogSurfaceClass } = resolveShellModalLayout({
-    modalSize,
-    modalHeight,
-    legacyDialogSize: modalSize == null && modalHeight == null ? dialogSize : undefined,
-  });
-  const headerNode =
-    header ??
-    (title ? (
-      <LavorazioniModalHeader
-        title={title}
-        subtitle={subtitle}
-        onRequestClose={onRequestClose}
-        onBack={onBack}
-        titleId={labelledBy}
-        actions={actions}
-      />
-    ) : null);
-
-  useEffect(() => {
-    function hasVisibleOpenDropdown(): boolean {
-      if (document.querySelector('input[role="combobox"][aria-expanded="true"]')) return true;
-      for (const el of document.querySelectorAll('[role="listbox"]')) {
-        if (el instanceof HTMLElement && el.offsetParent !== null) return true;
-      }
-      return false;
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key !== "Escape") return;
-      if (hasVisibleOpenDropdown()) return;
-      onRequestClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onRequestClose]);
-
-  return typeof document === "undefined"
-    ? null
-    : createPortal(
-        <div
-          className={`${dsLavorazioniModalLayer} ${layerClassName ?? ""}`}
-          role="presentation"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              e.preventDefault();
-              onRequestClose();
-            }
-          }}
-        >
-          <div
-            ref={(el) => {
-              dialogFocus.ref.current = el;
-              if (modalRootRef) modalRootRef.current = el;
-            }}
-            {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
-            className={`${dialogSurfaceClass} ${flexShrinkSafe} flex-safe-col touch-auto cursor-default ${dialogMaxWidth} ${alignTop ? "md:mt-3 md:self-start" : ""}`}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={labelledBy}
-            onKeyDown={dialogFocus.onKeyDown}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div
-              {...(maxMdDown ? { [CAB_MODAL_SCROLL_ATTR]: "" } : {})}
-              className={`flex min-h-0 min-w-0 flex-1 flex-col ${
-                maxMdDown
-                  ? `${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad} overflow-y-auto`
-                  : "overflow-hidden"
-              }`.trim()}
-            >
-              {headerNode}
-              <div className="flex min-h-0 min-w-0 flex-col max-md:flex-none max-md:overflow-visible md:flex-1 md:overflow-hidden">
-                {children}
-              </div>
-            </div>
-            {footer ? (
-              <footer
-                className={`${dsModalFormFooter} max-md:pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]`}
-              >
-                {footer}
-              </footer>
-            ) : null}
-          </div>
-        </div>,
-        document.body,
-      );
 }
 
 export function EditLavorazioneModal({

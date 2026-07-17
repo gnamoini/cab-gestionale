@@ -12,7 +12,7 @@ import { renderLabelSvg } from "@/lib/inventory-labels/render/svg";
 import {
   downloadLabelArtifact,
   getLabelArtifactByHash,
-  uploadLabelArtifact,
+  uploadLabelArtifactBestEffort,
 } from "@/lib/inventory-labels/storage/artifacts.server";
 import { writeInventoryLabelEvent } from "@/lib/inventory-labels/audit/events.server";
 
@@ -92,7 +92,7 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
     buffer = Buffer.from(pdf);
   }
 
-  const storagePath = await uploadLabelArtifact({
+  const storagePath = await uploadLabelArtifactBestEffort({
     entityType: input.entityType,
     entityId: input.entityId,
     hash,
@@ -100,17 +100,19 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
     bytes: new Uint8Array(buffer),
   });
 
-  await input.sb.from("inventory_label_artifacts").insert({
-    entity_type: input.entityType,
-    entity_id: input.entityId,
-    hash,
-    format: input.format,
-    preset: input.preset,
-    template_id: template.id,
-    storage_path: storagePath,
-    generator_version: GENERATOR_VERSION,
-    template_version: template.version,
-  });
+  if (storagePath) {
+    await input.sb.from("inventory_label_artifacts").insert({
+      entity_type: input.entityType,
+      entity_id: input.entityId,
+      hash,
+      format: input.format,
+      preset: input.preset,
+      template_id: template.id,
+      storage_path: storagePath,
+      generator_version: GENERATOR_VERSION,
+      template_version: template.version,
+    });
+  }
 
   const downloadEvent =
     input.format === "png" ? "DOWNLOAD_PNG" : input.format === "svg" ? "DOWNLOAD_SVG" : "DOWNLOAD_PDF";

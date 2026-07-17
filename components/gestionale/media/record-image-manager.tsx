@@ -17,7 +17,7 @@ import {
 } from "@/lib/media/image-storage";
 import { prefetchStorageBuckets } from "@/lib/domain/storage-entry";
 import { LoadingSpinner } from "@/components/design-system/loading";
-import { GestionaleImageCropModal } from "@/components/gestionale/upload/gestionale-image-crop-modal";
+import { GestionaleImageCropModalLazy } from "@/components/gestionale/upload/gestionale-image-crop-modal-lazy";
 import { GestionaleImageUploadButton } from "@/components/gestionale/upload/gestionale-image-upload-button";
 import { GestionaleUploadDropExpand } from "@/components/gestionale/upload";
 import { useFileUpload } from "@/hooks/use-file-upload";
@@ -266,7 +266,7 @@ export function RecordImageManager({
     ) : null;
 
   const cropModal = (
-    <GestionaleImageCropModal
+    <GestionaleImageCropModalLazy
       file={cropSource}
       onClose={() => setCropSource(null)}
       onConfirm={commitCroppedUpload}

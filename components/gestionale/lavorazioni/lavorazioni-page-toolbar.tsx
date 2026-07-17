@@ -2,6 +2,7 @@
 
 import { Tooltip } from "@/components/ui";
 import type { ChangeEvent, MutableRefObject, ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
@@ -12,18 +13,25 @@ import {
   PageToolbarCtaLabel,
   PageToolbarResultCount,
 } from "@/components/design-system";
-import { dsPageToolbarCtaCompact, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
+import { dsPageToolbarCtaCompact, dsTypoSmall, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
 import type {
   LavorazioniAdvancedFilters,
   LavorazioniFilterCatalog,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
-import {
-  LavorazioniDigitalCaptureLauncher,
-  type CaptureSchedeOpenRequest,
-  type LavorazioniCapturePageDropHandle,
+import type {
+  CaptureSchedeOpenRequest,
+  LavorazioniCapturePageDropHandle,
 } from "@/components/document-capture/lavorazioni-digital-capture-launcher";
+
+const LavorazioniDigitalCaptureLauncher = dynamic(
+  () =>
+    import("@/components/document-capture/lavorazioni-digital-capture-launcher").then(
+      (m) => m.LavorazioniDigitalCaptureLauncher,
+    ),
+  { ssr: false },
+);
 import {
   DOCUMENT_CAPTURE_UPLOAD_ACCEPT,
   DOCUMENT_CAPTURE_UPLOAD_FORMAT_HINT,
@@ -234,7 +242,7 @@ export function LavorazioniListToolbar({
 
   const metaExtra: ReactNode =
     filtersActive ? (
-      <span className="text-xs text-zinc-500 dark:text-zinc-400">
+      <span className={dsTypoSmall}>
         {attiveFilteredCount} in corso · {chiuseFilteredCount} in archivio
       </span>
     ) : null;
@@ -323,7 +331,7 @@ export function LavorazioniListToolbar({
           meta={
             <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-2 gap-y-1 sm:flex-wrap">
               {mutPendingBlocking ? (
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                <span className={`${dsTypoSmall} font-medium`}>
                   Salvataggio in corso…
                 </span>
               ) : null}

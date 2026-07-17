@@ -9,6 +9,7 @@ import {
 } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-dnd";
 import { LoadingKanbanSkeleton } from "@/components/design-system";
 import { KanbanColumnScroll } from "@/components/gestionale/lavorazioni/kanban-column-scroll";
+import { KanbanVirtualColumnScroll } from "@/components/gestionale/lavorazioni/kanban-virtual-column-scroll";
 import { LavorazioniKanbanMobileBoard } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-board";
 import type { KanbanMobileSection } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-types";
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";

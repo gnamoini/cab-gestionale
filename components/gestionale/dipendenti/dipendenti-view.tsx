@@ -1,6 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { PageActionMenu, type PageActionItem } from "@/components/ui";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
@@ -10,8 +12,6 @@ import {
   defaultWeekAnchor,
   TimesheetHeader,
 } from "@/components/gestionale/dipendenti/timesheet-header";
-import { TimesheetEditorModal } from "@/components/gestionale/dipendenti/timesheet-editor-modal";
-import { DipendenteDetailModal } from "@/components/gestionale/dipendenti/dipendente-detail-modal";
 import { TimesheetEmptyState } from "@/components/gestionale/dipendenti/timesheet-empty-state";
 import { TimesheetLoadError } from "@/components/gestionale/dipendenti/timesheet-load-error";
 import { TimesheetTableView } from "@/components/gestionale/dipendenti/timesheet-table-view";
@@ -22,6 +22,7 @@ import {
   openDipendentiPdfComplessivoInNewTab,
   openDipendentiPdfDipendenteInNewTab,
 } from "@/lib/dipendenti/pdf/dipendenti-pdf-export";
+import { prefetchDipendentiMonthEntries } from "@/lib/dipendenti/prefetch-dipendenti-month-entries";
 import { buildEmptyDay8hUpserts } from "@/lib/dipendenti/timesheet-bulk-fill-day";
 import {
   currentMonthKey,
@@ -48,12 +49,29 @@ import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 const TIMESHEET_TODAY_ACCENT_HOLD_MS = 900;
 const TIMESHEET_TODAY_ACCENT_FADE_MS = 360;
 
+const TimesheetEditorModal = dynamic(
+  () =>
+    import("@/components/gestionale/dipendenti/timesheet-editor-modal").then((m) => ({
+      default: m.TimesheetEditorModal,
+    })),
+  { ssr: false },
+);
+
+const DipendenteDetailModal = dynamic(
+  () =>
+    import("@/components/gestionale/dipendenti/dipendente-detail-modal").then((m) => ({
+      default: m.DipendenteDetailModal,
+    })),
+  { ssr: false },
+);
+
 function formatWorkDateIt(dateYmd: string): string {
   const [y, m, d] = dateYmd.split("-");
   return `${d}/${m}/${y}`;
 }
 
 export function DipendentiView() {
+  const queryClient = useQueryClient();
   const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "md" });
   const [monthKey, setMonthKey] = useState<TimesheetMonthKey>(() => monthKeyFromDate(new Date()));
   const [periodMode] = useState<TimesheetPeriodMode>("month");
@@ -80,6 +98,11 @@ export function DipendentiView() {
   const perm = usePermissions("dipendenti");
   const { validation: toastValidation, successOnce, errorOnce } = useGestionaleToast();
   const ts = useDipendentiTimesheet({ monthKey, periodMode, weekAnchor, dayDate });
+
+  useEffect(() => {
+    void prefetchDipendentiMonthEntries(queryClient, shiftMonthKey(monthKey, -1));
+    void prefetchDipendentiMonthEntries(queryClient, shiftMonthKey(monthKey, 1));
+  }, [monthKey, queryClient]);
 
   useEffect(() => {
     if (!filterEmployeeId) return;

@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import path from "node:path";
+import { PERFORMANCE_GOVERNANCE_SUITE } from "@/lib/control/suites/performance-governance.suite";
 import {
   SECURITY_RBAC_HARDENING_SUITE,
   SECURITY_RBAC_SUITE,
@@ -116,6 +117,10 @@ export const CONTROL_CATALOG: Record<string, CatalogEntry> = {
   "ops:long-session-soak": { resolve: () => spawnNpm("ops:long-session-soak") },
   lint: { resolve: () => spawnNpm("lint") },
   "ops:performance-regression-check": { resolve: () => spawnNpm("ops:performance-regression-check") },
+  "ops:build-budget-gate": { resolve: () => spawnNpm("ops:build-budget-gate") },
+  "ops:lighthouse-budget": { resolve: () => spawnNpm("ops:lighthouse-budget") },
+  "ops:performance-trend-report": { resolve: () => spawnNpm("ops:performance-trend-report") },
+  "performance-governance": { resolve: () => runTestFiles(PERFORMANCE_GOVERNANCE_SUITE) },
   "verify-supabase-ci-env": {
     resolve: () => spawnScript("scripts/verify-supabase-ci-env.ts"),
   },

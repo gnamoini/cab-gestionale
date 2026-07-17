@@ -320,7 +320,7 @@ export function OrdineFornitoreEditorModal({
 
   const { oggetti: righeOggetti, speseVarie } = useMemo(() => splitOrdineRighe(record.righe), [record.righe]);
 
-  const magazzinoQ = useMagazzinoRicambiUIQuery();
+  const magazzinoQ = useMagazzinoRicambiUIQuery(undefined, { enabled: !viewMode });
   const prodottiMagazzino = magazzinoQ.data ?? [];
   const [magAcRowId, setMagAcRowId] = useState<string | null>(null);
   const [magAcField, setMagAcField] = useState<"codice" | "descrizione" | null>(null);

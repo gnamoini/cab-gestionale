@@ -14,7 +14,7 @@ import {
 import { CAB_BRANDING_BOOT_INLINE_SCRIPT } from "@/lib/theme/branding-boot-inline-script";
 import { CAB_CURSOR_AUTOMATION_DOM_SHIELD_INLINE_SCRIPT } from "@/lib/theme/cursor-automation-dom-shield-inline-script";
 import { logBootServer } from "@/lib/observability/boot-investigation";
-import "./globals.css";
+import "./globals-core.css";
 
 export { siteMetadata as metadata } from "@/lib/site/site-metadata";
 export { siteViewport as viewport } from "@/lib/site/site-viewport";

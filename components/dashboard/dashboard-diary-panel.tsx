@@ -49,7 +49,7 @@ const DIARY_TEXTAREA_MIN_H = "1.25rem";
 const DIARY_LAYOUT_GRID =
   "grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[calc((100%-0.75rem)/2)_minmax(0,1fr)] xl:grid-cols-[calc((100%-2.25rem)/4)_minmax(0,1fr)] lg:items-start";
 const DIARY_LIST_ROW =
-  "relative flex min-h-[3rem] min-w-0 flex-1 items-center gap-2.5 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-card)] px-2.5 py-2 shadow-[var(--cab-shadow-sm)] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] [-webkit-tap-highlight-color:transparent]";
+  "relative flex min-h-[3rem] min-w-0 flex-1 items-center gap-2.5 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-card)] px-2.5 py-2 motion-safe:shadow-[var(--cab-shadow-sm)] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] [-webkit-tap-highlight-color:transparent]";
 const DIARY_LIST_ROW_INTERACTIVE =
   "cursor-text touch-pan-y active:scale-[0.995] active:shadow-none active:duration-100 motion-reduce:active:scale-100";
 const DIARY_DAY_SQUARE =

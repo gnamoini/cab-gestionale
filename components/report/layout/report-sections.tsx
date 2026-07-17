@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { LoadingErrorState } from "@/components/design-system";
 import { LoadingCardSkeleton } from "@/components/design-system";
@@ -17,6 +18,7 @@ import { loadReportSection } from "@/components/report/report-section-loaders";
 import type { DomainReportSectionProps, ReportAiSectionProps } from "@/components/report/report-section-types";
 import { reportZoneShellClass } from "@/components/report/report-ui-tokens";
 import { readSection } from "@/lib/ui/collapsible-prefs";
+import { prefetchReportEconomicQueries } from "@/lib/report/prefetch-report-economic-queries";
 import { moduleAllows } from "@/src/lib/auth/effective-module-access";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
@@ -134,6 +136,7 @@ function ReportSectionShell({
 }) {
   const ui = REPORT_SECTION_UI[section.id];
   const { setOpen } = useReportSectionVisibility();
+  const queryClient = useQueryClient();
   const userId = useAuthUserId();
   const didSyncPersistedRef = useRef(false);
   const [lazyEnabled, setLazyEnabled] = useState(!section.defaultCollapsed);
@@ -165,11 +168,14 @@ function ReportSectionShell({
       if (!collapsed) {
         setLazyEnabled(true);
         setMounted(true);
+        if (section.id === "dati_economici" || section.id === "grafici_kpi") {
+          void prefetchReportEconomicQueries(queryClient);
+        }
       } else if (ui.lazyMode === "unmount-on-close") {
         setMounted(false);
       }
     },
-    [section.id, setOpen, ui.lazyMode],
+    [section.id, setOpen, ui.lazyMode, queryClient],
   );
 
   return (

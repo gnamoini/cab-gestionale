@@ -1,6 +1,7 @@
 "use client";
 
 import { Tooltip } from "@/components/ui";
+import dynamic from "next/dynamic";
 import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState, startTransition } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -58,8 +59,16 @@ import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { findSimilarEntityInPool } from "@/lib/validation/global-entity-validation";
 import { EntitySimilarWarning } from "@/components/design-system/entity-similar-warning";
-import { GestionaleSearchableSheetSelect } from "@/components/gestionale/global-input/gestionale-searchable-sheet-select";
 import { SelectorEmptyState } from "@/components/gestionale/global-input/selector-empty-state";
+import {
+  EMPTY_SUGGESTIONS,
+  fieldClassForVariant,
+  isFilterNeutralValue,
+  type GlobalSelectAddAction,
+  type GlobalSelectOption,
+  type GlobalSelectProps,
+} from "@/components/gestionale/global-input/global-select-types";
+import { globalSelectDropdownPanelClass } from "@/components/gestionale/global-input/global-select-listbox-panel";
 import { SelectorListbox } from "@/components/gestionale/selector/selector-listbox";
 import {
   defaultItemRenderOption,
@@ -71,103 +80,20 @@ import {
 } from "@/components/gestionale/global-input/use-global-dropdown-portal";
 import type { CSSProperties } from "react";
 
-export type GlobalSelectOption = ListSelectItem & { pillStyle?: CSSProperties };
+export type {
+  GlobalSelectAddAction,
+  GlobalSelectItemsProps,
+  GlobalSelectOption,
+  GlobalSelectProps,
+  GlobalSelectStringProps,
+} from "@/components/gestionale/global-input/global-select-types";
 
-export type GlobalSelectAddAction = {
-  id: string;
-  label: (candidate: string) => string;
-  onAdd: (value: string) => void | Promise<string | null | void> | string | null;
-};
-
-type GlobalSelectBaseProps = {
-  disabled?: boolean;
-  required?: boolean;
-  placeholder?: string;
-  className?: string;
-  variant?: "default" | "filter";
-  inputClassName?: string;
-  id?: string;
-  strictFromList?: boolean;
-  invalidMessage?: string;
-  forceInvalid?: boolean;
-  onValidityChange?: (valid: boolean) => void;
-  isLoading?: boolean;
-  emptyMessage?: string;
-  allowAdd?: boolean;
-  canAdd?: boolean;
-  addPending?: boolean;
-  onAddToList?: (value: string) => void | Promise<string | null | void> | string | null;
-  /** Sostituisce il singolo «Aggiungi» con più azioni (es. originale vs alternativo). */
-  addActions?: readonly GlobalSelectAddAction[];
-  coloredOptions?: boolean;
-  filterNeutralValues?: readonly string[];
-  "aria-label"?: string;
-  showSimilarWarning?: boolean;
-  similarStandardizeLegalSuffix?: boolean;
-  selectOnly?: boolean;
-  /** Su mobile apre bottom sheet con ricerca dedicata (default: true se selectOnly e >15 opzioni). */
-  mobileSheet?: boolean;
-  /** Rollout sheet searchable mobile — default selectOnly (parità produzione). */
-  mobileSheetMode?: "selectOnly" | "searchable" | "off";
-  /** Chiave dominio per rollout Fase 3b (legacy). Preferire `selectorDomain`. */
-  rolloutKey?: string;
-  /** Dominio UX per sheet rollout condizionale (v2). */
-  selectorDomain?: SelectorDomain;
-  /** Lista DB-driven / volatile — influisce su selectOnly policy dev warn. */
-  dynamicList?: boolean;
-  /** Filtro operativo ad alta frequenza. */
-  operationalFilter?: boolean;
-  /** Titolo sheet mobile (default: aria-label). */
-  sheetTitle?: string;
-  /** Chiave per cronologia recenti in localStorage. */
-  recentsKey?: string;
-  /** Browse/selectOnly: ordine alfabetico puro, voce vuota in testa. */
-  alphabeticalBrowse?: boolean;
-  /** Mantiene l'ordine originale di `items`/`options` (no rank alfabetico). */
-  preserveItemOrder?: boolean;
-  /** Evidenzia testo cercato nelle opzioni (default: true). */
-  highlightSearch?: boolean;
-  /** Override soglia opzioni per sheet mobile (default: 0 se selectOnly + dominio rollout, altrimenti 20). */
-  minSheetOptions?: number;
-  /** Chiude gli altri GlobalSelect con lo stesso id quando questo si apre. */
-  exclusiveGroup?: string;
-};
-
-export type GlobalSelectStringProps = GlobalSelectBaseProps & {
-  value: string;
-  onChange: (value: string) => void;
-  options: readonly string[];
-  items?: never;
-};
-
-export type GlobalSelectItemsProps = GlobalSelectBaseProps & {
-  value: string;
-  onChange: (value: string) => void;
-  items: readonly GlobalSelectOption[];
-  options?: never;
-};
-
-export type GlobalSelectProps = GlobalSelectStringProps | GlobalSelectItemsProps;
-
-const EMPTY_SUGGESTIONS: (string | ListSelectItem)[] = [];
-
-function fieldClassForVariant(
-  variant: "default" | "filter",
-  inputClassName?: string,
-  selectOnly?: boolean,
-): string {
-  if (inputClassName) return inputClassName;
-  if (variant === "filter") {
-    return selectOnly ? globalInputFieldFilterSelect : globalInputFieldFilterSearch;
-  }
-  return globalInputFieldDefault;
-}
-
-function isFilterNeutralValue(value: string, neutralValues?: readonly string[]): boolean {
-  if (!value.trim()) return true;
-  if (!neutralValues?.length) return false;
-  return neutralValues.includes(value);
-}
+const GestionaleSearchableSheetSelect = dynamic(
+  () =>
+    import("@/components/gestionale/global-input/gestionale-searchable-sheet-select").then((m) => ({
+      default: m.GestionaleSearchableSheetSelect,
+    })),
+);
 
 /** @deprecated Usare `GlobalSelect` — alias storico. */
 export const GlobalAutocompleteCombobox = GlobalSelect;
@@ -952,6 +878,9 @@ export function GlobalSelect(props: GlobalSelectProps) {
     setSelectorOpen(true);
     if (isFilterVariant && isFilterNeutralValue(value, filterNeutralValues)) {
       setQuery("");
+    } else if (!value.trim()) {
+      // ponytail: voce vuota (es. «Nessuna marca») — input pulito al focus, niente testo da cancellare a mano
+      setQuery("");
     } else {
       seedSearchFromCommitted();
     }
@@ -1085,7 +1014,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
         ? fuzzySuggestion
         : null;
 
-  const dropdownPanelClass = `${globalAutocompleteDropdownPortalPanel} p-1 ${placementOriginClass} min-h-0 overflow-y-auto overscroll-y-contain`;
+  const dropdownPanelClass = globalSelectDropdownPanelClass(placementOriginClass);
 
   const addOptionBtnClass = (active: boolean) =>
     `${globalAutocompleteAddBtnClass}${active ? " ring-2 ring-inset ring-white/25 shadow-sm" : ""}`;

@@ -21,6 +21,8 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { ServerListLoadMore } from "@/components/gestionale/server-list-load-more";
 import { isServerListPaginationEnabled } from "@/lib/performance/list-pagination-rollout";
+import { enrichLavorazioneListRowsWithMezzi } from "@/lib/db/dto-mappers";
+import { mezziGestitiToEmbedMap } from "@/lib/mezzi/mezzi-attrezzature-batch";
 const LavorazioneCreateModal = dynamic(
   () =>
     import("@/components/gestionale/lavorazioni/lavorazione-create-modal").then((m) => ({
@@ -42,9 +44,25 @@ const LavorazioniKanbanView = dynamic(
     import("@/components/gestionale/lavorazioni/lavorazioni-kanban-view").then((m) => m.LavorazioniKanbanView),
   { ssr: false, loading: () => <LoadingKanbanSkeleton /> },
 );
-import { LavorazioneConcludiConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog";
-import { LavorazioneCompletamentoEditModal } from "@/components/gestionale/lavorazioni/lavorazione-completamento-edit-modal";
-import { LavorazioneEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-elimina-confirm-dialog";
+const LavorazioneCompletamentoEditModal = dynamic(
+  () =>
+    import("@/components/gestionale/lavorazioni/lavorazione-completamento-edit-modal").then((m) => ({
+      default: m.LavorazioneCompletamentoEditModal,
+    })),
+  { ssr: false },
+);
+const SchedaConcurrencyMergeDialog = dynamic(
+  () =>
+    import("@/components/lavorazioni/schede/scheda-concurrency-merge-dialog").then((m) => ({
+      default: m.SchedaConcurrencyMergeDialog,
+    })),
+  { ssr: false },
+);
+import { GestionaleModalGate } from "@/components/gestionale/gestionale-modal-gate";
+import {
+  LavorazioneConcludiConfirmDialogLazy,
+  LavorazioneEliminaConfirmDialogLazy,
+} from "@/components/gestionale/lavorazioni/lavorazioni-confirm-dialogs-lazy";
 import { type TablePillOption } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import { lavRowToMatchShape } from "@/lib/mezzi/mezzi-db-ui-adapter";
@@ -56,6 +74,7 @@ import {
   buildLavorazioniPillOptionsFromGlobal,
 } from "@/lib/global-list/build-lavorazioni-pill-options";
 import { gestionaleLavorazioniDenseTableClass } from "@/lib/ui/gestionale-list-table";
+import { pickLavorazioniInitialSchedeIds } from "@/lib/lavorazioni/lavorazioni-schede-prefetch";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { comparePrioritaLavorazione, orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
@@ -90,7 +109,6 @@ import type {
   LavorazioniCapturePageDropHandle,
 } from "@/components/document-capture/lavorazioni-digital-capture-launcher";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
-import { SchedaConcurrencyMergeDialog } from "@/components/lavorazioni/schede/scheda-concurrency-merge-dialog";
 import {
   resolveSchedaConcurrencyBundle,
   type SchedaConcurrencyResolution,
@@ -113,7 +131,7 @@ import {
   type CabAddettoRenameDetail,
 } from "@/lib/sistema/cab-events";
 import { newSchedaMeta } from "@/lib/schede/schede-ui";
-import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useMezziListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { useGestionaleForegroundOverlayActive } from "@/lib/ui/use-gestionale-foreground-overlay";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
@@ -465,6 +483,22 @@ function cmpCh(
   return t(ua === ub ? 0 : ua < ub ? -1 : 1);
 }
 
+const ATTIVE_SORT_KEYS_NEED_SCHEde = new Set<SortKeyAtt>([
+  "macchina",
+  "nScuderia",
+  "targa",
+  "matricola",
+  "cliente",
+  "utilizzatore",
+  "cantiere",
+  "addetto",
+]);
+
+function attiveSortNeedsFullSchede(sortCol: SortKeyAtt | null, sortPhase: SortPhase): boolean {
+  if (sortPhase === "natural" || sortCol === null) return false;
+  return ATTIVE_SORT_KEYS_NEED_SCHEde.has(sortCol);
+}
+
 const ARCHIVIO_SORT_KEYS_NEED_SCHEde = new Set<SortKeyCh>([
   "macchina",
   "nScuderia",
@@ -537,6 +571,7 @@ export function LavorazioniView() {
     [globalOpts.lavorazioni.addettiRecords],
   );
   const mezziListQ = useMezziListQuery();
+  const magazzinoQuery = useMagazzinoRicambiUIQuery();
   const statiOpts = useMemo(
     () => globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata"),
     [globalOpts.lavorazioni.stati],
@@ -873,26 +908,29 @@ export function LavorazioniView() {
     [globalOpts.lavorazioni.statiChiusi],
   );
 
+  const serverListPagination = isServerListPaginationEnabled();
+  const listIncludeMezzo = !serverListPagination;
+
   const filtersAttive = useMemo(
     (): LavorazioneFilters => ({
-      includeMezzo: true,
+      includeMezzo: listIncludeMezzo,
       fetchMode: "light",
       includeProfiles: false,
       ...mezzoFilterPart,
       archived: false,
     }),
-    [mezzoFilterPart],
+    [listIncludeMezzo, mezzoFilterPart],
   );
 
   const filtersChiuse = useMemo(
     (): LavorazioneFilters => ({
-      includeMezzo: true,
+      includeMezzo: listIncludeMezzo,
       fetchMode: "light",
       includeProfiles: false,
       ...mezzoFilterPart,
       archived: true,
     }),
-    [mezzoFilterPart],
+    [listIncludeMezzo, mezzoFilterPart],
   );
 
   const [archivioSectionOpen, setArchivioSectionOpen] = useState(false);
@@ -919,12 +957,23 @@ export function LavorazioniView() {
     enabled: !needsChiuseFetch,
     staleTime: 30_000,
   });
-  const serverListPagination = isServerListPaginationEnabled();
 
   const { logQuery: lavModificheLogQuery } = useUndoableLog("lavorazioni");
 
-  const attiveRowsRaw = attiveQuery.data ?? [];
-  const chiuseRowsRaw = chiuseQuery.data ?? [];
+  const mezziById = useMemo(() => mezziGestitiToEmbedMap(mezziCatalog), [mezziCatalog]);
+
+  const attiveRowsRawEnriched = useMemo(() => {
+    if (!serverListPagination) return attiveQuery.data ?? [];
+    return enrichLavorazioneListRowsWithMezzi(attiveQuery.data ?? [], mezziById);
+  }, [attiveQuery.data, mezziById, serverListPagination]);
+
+  const chiuseRowsRawEnriched = useMemo(() => {
+    if (!serverListPagination) return chiuseQuery.data ?? [];
+    return enrichLavorazioneListRowsWithMezzi(chiuseQuery.data ?? [], mezziById);
+  }, [chiuseQuery.data, mezziById, serverListPagination]);
+
+  const attiveRowsRaw = attiveRowsRawEnriched;
+  const chiuseRowsRaw = chiuseRowsRawEnriched;
 
   const attiveRows = useMemo(() => {
     const filtered = attiveRowsRaw.filter(isLavorazioneInCorso);
@@ -961,18 +1010,25 @@ export function LavorazioniView() {
   const hasPageClientFilters =
     searchApplied.trim().length > 0 || lavorazioniAdvancedFiltersActive(advancedFilters);
 
-  const needsFullChiuseSchede = useMemo(
-    () => hasPageClientFilters || archivioSortNeedsFullSchede(sortColC, sortPhaseC),
-    [hasPageClientFilters, sortColC, sortPhaseC],
+  const needsFullSchedeFetch = useMemo(
+    () =>
+      hasPageClientFilters ||
+      archivioSortNeedsFullSchede(sortColC, sortPhaseC) ||
+      attiveSortNeedsFullSchede(sortColA, sortPhaseA),
+    [hasPageClientFilters, sortColC, sortPhaseC, sortColA, sortPhaseA],
   );
 
   const schedeLavorazioneIds = useMemo(() => {
-    const ids = attiveRows.map((row) => row.id);
-    if (needsChiuseFetch && needsFullChiuseSchede) {
+    if (needsChiuseFetch && needsFullSchedeFetch) {
+      const ids = attiveRows.map((row) => row.id);
       ids.push(...chiuseRows.map((row) => row.id));
+      return ids;
     }
-    return ids;
-  }, [attiveRows, chiuseRows, needsChiuseFetch, needsFullChiuseSchede]);
+    if (needsFullSchedeFetch) {
+      return attiveRows.map((row) => row.id);
+    }
+    return pickLavorazioniInitialSchedeIds(attiveRows);
+  }, [attiveRows, chiuseRows, needsChiuseFetch, needsFullSchedeFetch]);
   const {
     store: schedeStore,
     invalidate: invalidateSchedeStore,
@@ -1298,6 +1354,7 @@ export function LavorazioniView() {
               createdBy: createdBy ?? authorName ?? "Operatore",
               stages: postStages,
               addettiRecords: globalOpts.lavorazioni.addettiRecords,
+              magazzino: magazzinoQuery.data ?? [],
             })
           : buildCaptureBundleSchedaPatch({
               lavorazioneId: row.id,
@@ -1305,6 +1362,7 @@ export function LavorazioniView() {
               fields: req.fieldRows,
               createdBy: createdBy ?? authorName ?? "Operatore",
               addettiRecords: globalOpts.lavorazioni.addettiRecords,
+              magazzino: magazzinoQuery.data ?? [],
             });
       setSchedeRow({
         row,
@@ -1324,7 +1382,7 @@ export function LavorazioniView() {
       });
       return true;
     },
-    [attiveQuery, attiveRows, authorName, createdBy, gestToast, globalOpts.lavorazioni.addettiRecords, schedeStore],
+    [attiveQuery, attiveRows, authorName, createdBy, gestToast, globalOpts.lavorazioni.addettiRecords, magazzinoQuery.data, schedeStore],
   );
 
   const onOpenArchivioInfo = useCallback((row: LavorazioneListRow) => {
@@ -1551,10 +1609,21 @@ export function LavorazioniView() {
   );
 
   useEffect(() => {
-    if (!needsChiuseFetch || needsFullChiuseSchede || !pagedChiuseIdsKey) return;
+    if (!needsChiuseFetch || needsFullSchedeFetch || !pagedChiuseIdsKey) return;
     const ids = pagedChiuseIdsKey.split(",").filter(Boolean);
     void ensureSchedeBundlesInCache(qc, ids);
-  }, [needsChiuseFetch, needsFullChiuseSchede, pagedChiuseIdsKey, qc]);
+  }, [needsChiuseFetch, needsFullSchedeFetch, pagedChiuseIdsKey, qc]);
+
+  const pagedAttiveIdsKey = useMemo(
+    () => pagedAttive.map((row) => row.id).sort().join(","),
+    [pagedAttive],
+  );
+
+  useEffect(() => {
+    if (needsFullSchedeFetch || !pagedAttiveIdsKey) return;
+    const ids = pagedAttiveIdsKey.split(",").filter(Boolean);
+    void ensureSchedeBundlesInCache(qc, ids);
+  }, [needsFullSchedeFetch, pagedAttiveIdsKey, qc]);
 
   const archivioPagedSchedePending = useMemo(
     () =>
@@ -1781,7 +1850,7 @@ export function LavorazioniView() {
   const archivioTableLoading =
     archivioSectionOpen &&
     (chiuseQuery.isPending ||
-      (needsFullChiuseSchede
+      (needsFullSchedeFetch
         ? chiuseRows.length > 0 && schedeEnsureLoading
         : archivioPagedSchedePending && (schedeEnsureLoading || schedeEnsureFetching)));
   const archivioCardTitle =
@@ -2582,14 +2651,16 @@ export function LavorazioniView() {
       />
       ) : null}
 
-      <LavorazioneConcludiConfirmDialog
+      <GestionaleModalGate open={concludiConfirmRow != null}>
+        <LavorazioneConcludiConfirmDialogLazy
         open={concludiConfirmRow != null}
         pending={concludeLav.isPending}
         onCancel={() => {
           if (!concludeLav.isPending) setConcludiConfirmRow(null);
         }}
         onConfirm={confirmConcludiLavorazione}
-      />
+        />
+      </GestionaleModalGate>
 
       {canEditWorkOrders && completamentoEditRow ? (
         <LavorazioneCompletamentoEditModal
@@ -2604,14 +2675,16 @@ export function LavorazioniView() {
         />
       ) : null}
 
-      <LavorazioneEliminaConfirmDialog
+      <GestionaleModalGate open={eliminaConfirmRow != null}>
+        <LavorazioneEliminaConfirmDialogLazy
         open={eliminaConfirmRow != null}
         pending={removeLav.isPending}
         onCancel={() => {
           if (!removeLav.isPending) setEliminaConfirmRow(null);
         }}
         onConfirm={confirmEliminaLavorazione}
-      />
+        />
+      </GestionaleModalGate>
 
       {confirmDialog}
     </>

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Tooltip } from "@/components/ui";
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import { CardMobile, IconActionButton } from "@/components/design-system";
 import {
   LavorazioneMobileCardFooter,
@@ -492,6 +492,36 @@ export function MezziTable({
   tagliandiPendingId,
   onTagliandiChange,
 }: MezziTableProps) {
+  const renderMezzoRow = useCallback(
+    (index: number) => {
+      const m = rows[index];
+      if (!m) return null;
+      return (
+        <MezzoRow
+          key={m.id}
+          m={m}
+          interventi={interventiByMezzoId.get(m.id) ?? []}
+          inOff={inOfficina(m)}
+          flash={flashRowId === m.id}
+          onHub={onHub}
+          canEditTagliandi={canEditTagliandi}
+          tagliandiPendingId={tagliandiPendingId}
+          onTagliandiChange={onTagliandiChange}
+        />
+      );
+    },
+    [
+      rows,
+      interventiByMezzoId,
+      inOfficina,
+      flashRowId,
+      onHub,
+      canEditTagliandi,
+      tagliandiPendingId,
+      onTagliandiChange,
+    ],
+  );
+
   return (
     <>
       {listLayout === "desktop" ? (
@@ -547,20 +577,13 @@ export function MezziTable({
         empty={rows.length === 0}
         emptyMessage="Nessun mezzo corrisponde ai criteri."
         colSpan={9}
+        virtualRows={{
+          rowCount: rows.length,
+          renderRow: renderMezzoRow,
+          estimateRowHeight: 56,
+        }}
       >
-        {rows.map((m) => (
-          <MezzoRow
-            key={m.id}
-            m={m}
-            interventi={interventiByMezzoId.get(m.id) ?? []}
-            inOff={inOfficina(m)}
-            flash={flashRowId === m.id}
-            onHub={onHub}
-            canEditTagliandi={canEditTagliandi}
-            tagliandiPendingId={tagliandiPendingId}
-            onTagliandiChange={onTagliandiChange}
-          />
-        ))}
+        {null}
       </GestionaleListTable>
       ) : null}
 

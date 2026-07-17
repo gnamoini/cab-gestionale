@@ -1,0 +1,850 @@
+@import "tailwindcss";
+@import "../components/gestionale/global-table/gestionale-list-layout.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant cab-shell-mobile (&:where(.cab-app-shell[data-gestionale-shell-tier="mobile"] *));
+@custom-variant cab-shell-tablet (&:where(.cab-app-shell[data-gestionale-shell-tier="tablet"] *));
+@custom-variant cab-shell-desktop (&:where(.cab-app-shell[data-gestionale-shell-tier="desktop"] *));
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  min-height: var(--cab-app-height, 100dvh);
+  /* Larghezza fluida: non usare --cab-app-width (px) come min-width — resta stale dopo resize/HMR webview IDE. */
+  min-width: 0;
+  width: 100%;
+  background-color: var(--cab-bg-app);
+}
+
+/* PWA Fase 3 — offset mirati in modalità standalone (no padding globali). */
+html.pwa-standalone [data-pwa-standalone-offset] {
+  /* hook per theme toggle login/offline; posizione via Tailwind sul nodo */
+}
+
+:root {
+  --cab-app-width: 100%;
+  --cab-app-height: 100dvh;
+  --cab-vv-height: 100dvh;
+  --cab-vv-offset-top: 0px;
+  --cab-safe-top: env(safe-area-inset-top, 0px);
+  --cab-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --cab-safe-left: env(safe-area-inset-left, 0px);
+  --cab-safe-right: env(safe-area-inset-right, 0px);
+  /* — CAB design tokens (SaaS enterprise, light) — */
+  --cab-bg-app: #f4f4f5;
+  --cab-bg: #fafafa;
+  --cab-surface: #ffffff;
+  --cab-surface-2: #f4f4f5;
+  --cab-card: #ffffff;
+  --cab-text: #18181b;
+  --cab-text-muted: #71717a;
+  --cab-border: #e4e4e7;
+  --cab-border-strong: #d4d4d8;
+  /* Arancione logo CAB (monocolore — no gradient) */
+  --cab-primary: #ff6633;
+  --cab-primary-bg: var(--cab-primary);
+  --cab-primary-bg-hover: color-mix(in srgb, var(--cab-primary) 88%, black);
+  --cab-primary-hover: color-mix(in srgb, var(--cab-primary) 88%, black);
+  --cab-select-chevron-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ff6633'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.25' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  --cab-success: #059669;
+  --cab-danger: #dc2626;
+  --cab-info: #0284c7;
+  --cab-hover: rgb(24 24 27 / 0.06);
+  --cab-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05), 0 1px 3px rgb(0 0 0 / 0.08);
+  --cab-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --cab-overlay: rgb(0 0 0 / 0.48);
+  --cab-scrollbar-size: 10px;
+  --cab-scrollbar-thumb: rgb(161 161 170 / 0.55);
+  --cab-scrollbar-thumb-hover: rgb(113 113 122 / 0.75);
+  --cab-scrollbar-track: rgb(244 244 245 / 0.65);
+
+  /* Retrocompatibilità Next / Tailwind theme */
+  --background: var(--cab-bg-app);
+  --foreground: var(--cab-text);
+  --ds-radius-lg: 0.75rem;
+  --ds-radius-xl: 0.875rem;
+  --ds-shadow-card: var(--cab-shadow-sm);
+  --ds-border-subtle: var(--cab-border);
+
+  /* Spacing scale (padding/gap/margin via arbitrary Tailwind) */
+  --ds-space-xs: 0.25rem;
+  --ds-space-sm: 0.5rem;
+  --ds-space-md: 0.75rem;
+  --ds-space-lg: 1rem;
+  --ds-space-xl: 1.5rem;
+  --ds-space-2xl: 2rem;
+
+  /** Margine paint oltre clip edge — shadow-sm + focus ring-offset senza overflow layout. */
+  --cab-paint-clip-margin: 12px;
+}
+
+.dark {
+  --cab-bg-app: #09090b;
+  --cab-bg: #09090b;
+  --cab-surface: #18181b;
+  --cab-surface-2: #27272a;
+  --cab-card: #18181b;
+  --cab-text: #fafafa;
+  --cab-text-muted: #a1a1aa;
+  --cab-border: rgb(39 39 42);
+  --cab-border-strong: rgb(63 63 70);
+  /* Stesso arancio della light mode: CTA / primario identici in dark */
+  /* Arancione logo CAB (monocolore — no gradient) */
+  --cab-primary: #ff6633;
+  --cab-primary-bg: var(--cab-primary);
+  --cab-primary-bg-hover: color-mix(in srgb, var(--cab-primary) 88%, black);
+  --cab-primary-hover: color-mix(in srgb, var(--cab-primary) 88%, black);
+  --cab-select-chevron-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ff6633'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.25' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  --cab-success: #34d399;
+  --cab-warning: #fbbf24;
+  --cab-danger: #f87171;
+  --cab-info: #38bdf8;
+  --cab-hover: rgb(255 255 255 / 0.06);
+  --cab-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35), 0 0 0 1px rgb(255 255 255 / 0.04);
+  --cab-shadow-md: 0 8px 24px -4px rgb(0 0 0 / 0.45);
+  --cab-overlay: rgb(0 0 0 / 0.58);
+  --cab-scrollbar-thumb: rgb(82 82 91 / 0.6);
+  --cab-scrollbar-thumb-hover: rgb(113 113 122 / 0.85);
+  --cab-scrollbar-track: rgb(24 24 27 / 0.75);
+
+  --background: var(--cab-bg-app);
+  --foreground: var(--cab-text);
+  --ds-border-subtle: var(--cab-border);
+
+  --ds-space-xs: 0.25rem;
+  --ds-space-sm: 0.5rem;
+  --ds-space-md: 0.75rem;
+  --ds-space-lg: 1rem;
+  --ds-space-xl: 1.5rem;
+  --ds-space-2xl: 2rem;
+}
+
+/* Portal tooltip — top layer / sticky table: sfondo opaco forzato. */
+[data-cab-tooltip-portal] {
+  opacity: 1 !important;
+  background-color: var(--cab-card) !important;
+  color: var(--cab-text) !important;
+  border-color: var(--cab-border-strong) !important;
+  isolation: isolate;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  overflow: hidden;
+  scrollbar-width: none;
+}
+
+[data-cab-tooltip-portal]::-webkit-scrollbar {
+  display: none;
+}
+
+#cab-tooltip-root {
+  overflow: hidden;
+  scrollbar-width: none;
+}
+
+[data-cab-tooltip-portal]:popover-open {
+  opacity: 1 !important;
+  background-color: var(--cab-card) !important;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@keyframes cab-drawer-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes cab-nav-drawer-in {
+  from {
+    transform: translateX(-100%);
+    opacity: 0.65;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes cab-nav-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cab-toast-in {
+  from {
+    transform: translate3d(0.75rem, 0.35rem, 0);
+    opacity: 0;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes cab-toast-in-top {
+  from {
+    transform: translate3d(0.75rem, -0.35rem, 0);
+    opacity: 0;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes promemoria-calendar-in {
+  from {
+    opacity: 0.35;
+    transform: translateX(var(--promemoria-cal-slide, 0));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.promemoria-calendar-grid-enter {
+  animation: promemoria-calendar-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .promemoria-calendar-grid-enter {
+    animation: none;
+  }
+}
+
+@keyframes global-dropdown-portal-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -4px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.global-dropdown-portal-enter {
+  animation: global-dropdown-portal-in 200ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.origin-bottom.global-dropdown-portal-enter {
+  animation-name: global-dropdown-portal-in-top;
+}
+
+@keyframes global-dropdown-portal-in-top {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 4px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/** Menu account — solo fade + slide leggero, niente scale (evita effetto «bounce»). */
+@keyframes account-menu-portal-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -3px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.account-menu-portal-enter {
+  animation: account-menu-portal-in 220ms cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
+.origin-bottom.account-menu-portal-enter {
+  animation-name: account-menu-portal-in-top;
+}
+
+@keyframes account-menu-portal-in-top {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 3px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .global-dropdown-portal-enter,
+  .account-menu-portal-enter {
+    animation: none;
+  }
+}
+
+@keyframes gestionale-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[gestionale-sheet-in_280ms_cubic-bezier\(0\.22\,1\,0\.36\,1\)\] {
+    animation: none;
+  }
+}
+
+.cab-toast-slot {
+  max-height: 6rem;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    max-height 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    margin-bottom 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cab-toast-slot:not(.cab-toast-slot--out) {
+  pointer-events: auto;
+  margin-bottom: 0.5rem;
+}
+
+.cab-toast-slot--out {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: 0;
+}
+
+.cab-toast-item {
+  animation: cab-toast-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (max-width: 767px) {
+  .cab-toast-viewport .cab-toast-item {
+    animation-name: cab-toast-in-top;
+  }
+}
+
+.cab-drawer-panel {
+  animation: cab-drawer-in 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.cab-nav-drawer-panel,
+.cab-nav-drawer-backdrop {
+  --cab-nav-drawer-duration: 0.24s;
+  --cab-nav-drawer-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cab-nav-drawer-panel {
+  touch-action: pan-y;
+  animation: cab-nav-drawer-in var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) both;
+}
+
+.cab-nav-drawer-panel.cab-nav-drawer-dragging {
+  animation: none;
+}
+
+.cab-nav-drawer-panel.cab-nav-drawer-edge-opening {
+  animation: none;
+}
+
+.cab-nav-drawer-panel.cab-nav-drawer-snap-back {
+  animation: none;
+  transition: transform var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease);
+}
+
+.cab-nav-drawer-panel.cab-nav-drawer-open-settled {
+  animation: none;
+  transform: translateX(0);
+}
+
+.cab-nav-drawer-backdrop.cab-nav-drawer-open-settled-backdrop {
+  animation: none;
+  opacity: 1;
+}
+
+.cab-nav-drawer-panel[data-state="closing"] {
+  animation: cab-nav-drawer-in var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) reverse both;
+}
+
+.cab-nav-drawer-backdrop {
+  animation: cab-nav-backdrop-in var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) both;
+}
+
+.cab-nav-drawer-backdrop.cab-nav-drawer-backdrop-dragging {
+  animation: none;
+  transition: opacity var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease);
+}
+
+.cab-nav-drawer-backdrop[data-state="closing"] {
+  animation: cab-nav-backdrop-in var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) reverse both;
+}
+
+.cab-log-drawer-panel,
+.cab-log-drawer-backdrop {
+  --cab-log-drawer-duration: 0.22s;
+  --cab-log-drawer-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cab-log-drawer-panel {
+  animation: cab-drawer-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) both;
+}
+
+.cab-log-drawer-panel[data-state="closing"] {
+  animation: cab-drawer-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) reverse both;
+}
+
+.cab-log-drawer-backdrop {
+  animation: cab-nav-backdrop-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) both;
+}
+
+.cab-log-drawer-backdrop[data-state="closing"] {
+  animation: cab-nav-backdrop-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) reverse both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cab-drawer-panel,
+  .cab-nav-drawer-panel,
+  .cab-nav-drawer-backdrop,
+  .cab-log-drawer-panel,
+  .cab-log-drawer-backdrop {
+    animation: none;
+  }
+  .cab-toast-item {
+    animation: none;
+  }
+
+  .cab-toast-slot {
+    transition: none;
+  }
+}
+
+html,
+body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cab-scrollbar-thumb) var(--cab-scrollbar-track);
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: var(--cab-scrollbar-size);
+  height: var(--cab-scrollbar-size);
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+  background: var(--cab-scrollbar-track);
+  border-radius: 9999px;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+  background-color: var(--cab-scrollbar-thumb);
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover {
+  background-color: var(--cab-scrollbar-thumb-hover);
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+body {
+  background: var(--cab-bg-app);
+  color: var(--cab-text);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  padding-left: var(--cab-safe-left);
+  padding-right: var(--cab-safe-right);
+}
+
+
+@supports (height: 100dvh) {
+  body {
+    min-height: 100dvh;
+  }
+}
+
+@layer base {
+  button:not(:disabled):not([disabled]) {
+    cursor: pointer;
+  }
+}
+
+html.dark select option {
+  background-color: #18181b;
+  color: #fafafa;
+}
+
+@layer utilities {
+  /* Allineata a html/body: 10px, stessi colori light/dark. */
+  .gestionale-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--cab-scrollbar-thumb) var(--cab-scrollbar-track);
+  }
+  .gestionale-scrollbar::-webkit-scrollbar {
+    width: var(--cab-scrollbar-size);
+    height: var(--cab-scrollbar-size);
+  }
+  .gestionale-scrollbar::-webkit-scrollbar-track {
+    background: var(--cab-scrollbar-track);
+    border-radius: 9999px;
+  }
+  .gestionale-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--cab-scrollbar-thumb);
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+  }
+  .gestionale-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--cab-scrollbar-thumb-hover);
+  }
+
+  .gestionale-scrollbar::-webkit-scrollbar-button {
+    display: none;
+    height: 0;
+    width: 0;
+  }
+
+  /** Profilo drawer — niente gutter riservato se il contenuto non overflowa. */
+  .cab-profile-sheet-scroll {
+    scrollbar-gutter: auto;
+  }
+
+  /** Trigger GlobalSelect selectOnly / readonly — nasconde scrollbar nativa (Windows Chromium). */
+  .gestionale-combobox-trigger {
+    overflow: hidden;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .gestionale-combobox-trigger::-webkit-scrollbar {
+    display: none;
+  }
+
+  /**
+   * Titolo pagina allineato ai pulsanti toolbar: la scatola di layout usa cap/ex,
+   * senza contare discendenti (g, p, y…) per il centraggio verticale.
+   */
+  .cab-page-title-box {
+    line-height: 1;
+    text-box-trim: trim-both;
+    text-box-edge: cap ex;
+  }
+
+  @supports not (text-box-trim: trim-both) {
+    .cab-page-title-box {
+      margin-bottom: -0.14em;
+    }
+  }
+
+  /* Flex containment utilities — Global Flex System */
+  .flex-safe {
+    display: flex;
+    min-width: 0;
+  }
+
+  .flex-safe-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .flex-safe-row > * {
+    min-width: 0;
+  }
+
+  .flex-safe-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .flex-safe-col > * {
+    min-width: 0;
+  }
+
+  .flex-safe-item {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .flex-fill,
+  .flex-fill-safe {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .flex-shrink-safe {
+    flex-shrink: 0;
+  }
+
+  .text-safe {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-safe\:transition {
+    transition: none !important;
+  }
+}
+
+
+
+[data-cab-modal-scroll] {
+  scroll-padding-bottom: var(--cab-keyboard-inset, 0px);
+}
+
+/** SSOT textarea gestionale — niente maniglia resize browser (WebKit/Chromium). */
+.gestionale-textarea {
+  resize: none;
+}
+
+.gestionale-textarea::-webkit-resizer {
+  display: none;
+}
+
+@supports (field-sizing: content) {
+  .gestionale-textarea[data-cab-auto-grow="true"] {
+    field-sizing: content;
+  }
+
+  .gestionale-textarea[data-cab-auto-grow="true"][data-cab-textarea-scrollable="true"] {
+    field-sizing: fixed;
+  }
+}
+
+/** Auto-grow: niente scrollbar finché non si raggiunge maxHeight; gutter stabile evita flash layout. */
+.gestionale-textarea[data-cab-auto-grow="true"] {
+  overflow-y: hidden;
+}
+
+.gestionale-textarea[data-cab-auto-grow="true"][data-cab-textarea-scrollable="true"] {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+@media (max-width: 1023px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
+body[data-cab-scroll-lock-count] {
+  overscroll-behavior: none;
+}
+
+/** Pagine senza app shell (login): opt-in per header/barre fixed allineate al body padding. */
+body[data-cab-scroll-lock-count]:not(:has(.cab-app-shell)) [data-cab-scroll-lock-fixed-compensate] {
+  padding-right: var(--cab-scroll-lock-gap, 0px);
+}
+
+/** Scroll lock: mantieni gutter colonna scrollbar su main (evita layout shift tier tablet/mobile). */
+main.gestionale-scroll-y[data-cab-main-scroll-lock] {
+  scrollbar-gutter: stable;
+}
+
+
+/** Slider livello carburante — track unico, thumb touch-friendly su mobile. */
+.livello-carburante-range {
+  height: 0.5rem;
+  touch-action: pan-y;
+}
+
+.livello-carburante-range::-webkit-slider-runnable-track {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--cab-primary) 0%,
+    var(--cab-primary) var(--livello-pct, 0%),
+    color-mix(in srgb, var(--cab-border) 40%, var(--cab-surface)) var(--livello-pct, 0%),
+    color-mix(in srgb, var(--cab-border) 40%, var(--cab-surface)) 100%
+  );
+}
+
+.livello-carburante-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin-top: -0.4375rem;
+  border-radius: 9999px;
+  border: 2px solid var(--cab-card);
+  background: var(--cab-primary);
+  box-shadow: var(--cab-shadow-sm);
+}
+
+.livello-carburante-range::-moz-range-track {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--cab-primary) 0%,
+    var(--cab-primary) var(--livello-pct, 0%),
+    color-mix(in srgb, var(--cab-border) 40%, var(--cab-surface)) var(--livello-pct, 0%),
+    color-mix(in srgb, var(--cab-border) 40%, var(--cab-surface)) 100%
+  );
+}
+
+.livello-carburante-range::-moz-range-thumb {
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 9999px;
+  border: 2px solid var(--cab-card);
+  background: var(--cab-primary);
+  box-shadow: var(--cab-shadow-sm);
+}
+
+@media (max-width: 639px) {
+  .livello-carburante-range {
+    height: 0.625rem;
+  }
+
+  .livello-carburante-range::-webkit-slider-runnable-track {
+    height: 0.625rem;
+  }
+
+  .livello-carburante-range::-webkit-slider-thumb {
+    width: 1.625rem;
+    height: 1.625rem;
+    margin-top: -0.5rem;
+  }
+
+  .livello-carburante-range::-moz-range-track {
+    height: 0.625rem;
+  }
+
+  .livello-carburante-range::-moz-range-thumb {
+    width: 1.625rem;
+    height: 1.625rem;
+  }
+}
+
+/* Tasti azioni IA — gradiente arancione ad alto contrasto */
+.gestionale-ai-action-btn-primary {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--cab-primary) 92%, white) 0%,
+    var(--cab-primary) 48%,
+    var(--cab-primary-hover) 100%
+  );
+}
+
+.gestionale-ai-action-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--cab-primary) 96%, white) 0%,
+    color-mix(in srgb, var(--cab-primary) 98%, #fff) 48%,
+    color-mix(in srgb, var(--cab-primary-hover) 92%, #000) 100%
+  );
+}
+
+.dark .gestionale-ai-action-btn-primary {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--cab-primary) 88%, white) 0%,
+    var(--cab-primary) 44%,
+    color-mix(in srgb, var(--cab-primary-hover) 96%, #000) 100%
+  );
+}
+
+.dark .gestionale-ai-action-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--cab-primary) 94%, white) 0%,
+    var(--cab-primary) 50%,
+    color-mix(in srgb, var(--cab-primary-hover) 90%, #000) 100%
+  );
+}
+
+/** Toolbar mobile — solo spark, centrato; ombra più leggera del pill con testo. */
+@media (max-width: 639px) {
+  .gestionale-ai-action-btn-primary.gestionale-ai-action-btn-icon-only {
+    box-shadow:
+      0 1px 2px color-mix(in srgb, #000 16%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fff 16%, transparent);
+  }
+
+  .gestionale-ai-action-btn-primary.gestionale-ai-action-btn-icon-only:hover:not(:disabled) {
+    box-shadow:
+      0 2px 10px color-mix(in srgb, var(--cab-primary) 28%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent);
+  }
+
+  .dark .gestionale-ai-action-btn-primary.gestionale-ai-action-btn-icon-only {
+    box-shadow:
+      0 1px 3px color-mix(in srgb, #000 42%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--cab-primary) 22%, transparent);
+  }
+
+  .dark .gestionale-ai-action-btn-primary.gestionale-ai-action-btn-icon-only:hover:not(:disabled) {
+    box-shadow:
+      0 2px 12px color-mix(in srgb, var(--cab-primary) 34%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--cab-primary) 24%, transparent);
+  }
+}
+
+@keyframes gestionale-ai-spark-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(0.92);
+  }
+}
+
+.gestionale-ai-action-btn-icon-pulse {
+  animation: gestionale-ai-spark-pulse 1.2s ease-in-out infinite;
+}
+
+.gestionale-ai-action-btn-loading {
+  cursor: wait;
+}
+
+.gestionale-inbox-log-entry {
+  background: var(--cab-card);
+}
+
+.dark .gestionale-inbox-log-entry {
+  background: color-mix(in srgb, var(--cab-surface-2) 28%, var(--cab-card));
+}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { PrivacyPolicyView } from "@/components/legal/privacy-policy-view";
+import { PrivacyPolicyBody } from "@/components/legal/privacy-policy-body";
+import { PrivacyPolicyViewLazy } from "@/components/public-surfaces/public-surface-loaders";
 
 export const metadata: Metadata = {
   title: "Informativa privacy | CAB Gestionale Officina",
@@ -8,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function PrivacyPolicyPage() {
-  return <PrivacyPolicyView />;
+  return (
+    <PrivacyPolicyViewLazy>
+      <PrivacyPolicyBody />
+    </PrivacyPolicyViewLazy>
+  );
 }

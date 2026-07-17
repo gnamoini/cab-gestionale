@@ -13,13 +13,14 @@ function exists(rel: string): boolean {
 }
 
 const layout = read("app/layout.tsx");
-assert.match(layout, /viewportFit:\s*"cover"/);
-assert.match(layout, /width:\s*"device-width"/);
+const siteViewport = read("lib/site/site-viewport.ts");
+assert.match(siteViewport, /viewportFit:\s*"cover"/);
+assert.match(siteViewport, /width:\s*"device-width"/);
 
-const globalsCss = read("app/globals.css");
-assert.match(globalsCss, /--cab-vv-height:\s*100dvh/);
-assert.match(globalsCss, /safe-area-inset/);
-assert.match(globalsCss, /-webkit-overflow-scrolling:\s*touch/);
+const globalsCoreCss = read("app/globals-core.css");
+assert.match(globalsCoreCss, /--cab-vv-height:\s*100dvh/);
+assert.match(globalsCoreCss, /safe-area-inset/);
+assert.match(globalsCoreCss, /-webkit-overflow-scrolling:\s*touch/);
 
 const appProvidersCore = read("components/app-providers-core.tsx");
 assert.match(appProvidersCore, /IosInteractionStability/);

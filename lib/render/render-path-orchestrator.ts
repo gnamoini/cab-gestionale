@@ -1,13 +1,21 @@
 import {
   LAVORAZIONI_ATTIVE_LIGHT_FILTERS,
   LAVORAZIONI_REPORT_FILTERS,
+  lavorazioniAttiveListFilters,
 } from "@/lib/lavorazioni/lavorazioni-prefetch-filters";
 import { normalizeLavorazioniFilters } from "@/lib/domain/normalize-filters";
+import {
+  CLIENT_PORTAL_ARCHIVIO_FILTERS,
+  CLIENT_PORTAL_INCORSO_FILTERS,
+} from "@/lib/lavorazioni/client-portal-prefetch-filters";
 import { lavorazioniInfiniteSeedFromRows } from "@/lib/lavorazioni/lavorazioni-infinite-cache";
 import { isServerListPaginationEnabled } from "@/lib/performance/list-pagination-rollout";
 import { buildLavorazioniListKey } from "@/lib/react-query/build-list-keys";
 import {
   documentiListQueryKey,
+  fatturazioneListQueryKey,
+  fatturazioneOpenItemsQueryKey,
+  fatturazionePaymentsQueryKey,
   lavorazioniListQueryKey,
   magazzinoListQueryKey,
   mezziListQueryKey,
@@ -26,6 +34,8 @@ import {
 } from "@/lib/render/query-ownership-registry";
 import { isHydrationConsistencyAuditEnabled } from "@/lib/observability/config";
 import { registerExpectedQueryKey } from "@/lib/render/hydration-consistency-audit";
+import { monthDateRange, monthKeyFromDate } from "@/lib/dipendenti/timesheet-month";
+import { QK } from "@/src/lib/react-query/query-keys";
 
 export type RenderLifecycle = "server_seed" | "client_only" | "hybrid_seed";
 
@@ -47,7 +57,7 @@ function queryKeyForScope(scopeKey: QueryScopeKey): readonly unknown[] {
   switch (scopeKey) {
     case "lavorazioni.list.attive":
       if (isServerListPaginationEnabled()) {
-        return buildLavorazioniListKey(normalizeLavorazioniFilters(LAVORAZIONI_ATTIVE_LIGHT_FILTERS), false);
+        return buildLavorazioniListKey(normalizeLavorazioniFilters(lavorazioniAttiveListFilters()), false);
       }
       return lavorazioniListQueryKey(LAVORAZIONI_ATTIVE_LIGHT_FILTERS, false);
     case "lavorazioni.list.chiuse":
@@ -74,10 +84,36 @@ function queryKeyForScope(scopeKey: QueryScopeKey): readonly unknown[] {
       return preventiviRecordsQueryKey();
     case "ordini_fornitori.list":
       return ordiniFornitoriListQueryKey();
+    case "fatturazione.list":
+      return fatturazioneListQueryKey();
+    case "fatturazione.openItems":
+      return fatturazioneOpenItemsQueryKey();
+    case "fatturazione.payments":
+      return fatturazionePaymentsQueryKey();
     case "schede.bundles":
       return ["schede", "bundles"] as const;
     case "dashboard.promemoria":
       return ["dashboard-promemoria"] as const;
+    case "clientPortal.lavorazioni.inCorso":
+      if (isServerListPaginationEnabled()) {
+        return buildLavorazioniListKey(normalizeLavorazioniFilters(CLIENT_PORTAL_INCORSO_FILTERS), true);
+      }
+      return lavorazioniListQueryKey(CLIENT_PORTAL_INCORSO_FILTERS, true);
+    case "clientPortal.lavorazioni.archivio":
+      if (isServerListPaginationEnabled()) {
+        return buildLavorazioniListKey(normalizeLavorazioniFilters(CLIENT_PORTAL_ARCHIVIO_FILTERS), true);
+      }
+      return lavorazioniListQueryKey(CLIENT_PORTAL_ARCHIVIO_FILTERS, true);
+    case "dipendenti.employees":
+      return QK.dipendentiTimesheetEmployees;
+    case "dipendenti.monthKeys":
+      return QK.dipendentiTimesheetMonthKeysWithData;
+    case "dipendenti.entries": {
+      const { from, to } = monthDateRange(monthKeyFromDate(new Date()));
+      return [...QK.dipendentiTimesheetEntries, from, to] as const;
+    }
+    case "security.usersPermissions":
+      return QK.securityUsersPermissions;
     default: {
       const _exhaustive: never = scopeKey;
       return [_exhaustive];

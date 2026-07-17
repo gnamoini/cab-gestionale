@@ -86,6 +86,12 @@ Z-index SSOT: `cabModalLayerClass("base"|"stacked"|"confirm")` o costanti `cabMo
 - Backdrop: `bg-[var(--cab-overlay)]`; z: `cabModalLayerClass("stacked")`
 - Usato da `GestionaleSearchableSheetSelect` e picker foto mobile
 
+## Modal gate (opt-in)
+
+- **SSOT:** `GestionaleModalGate` in `components/gestionale/gestionale-modal-gate.tsx`
+- Pattern `{ open, children }` → `null` se chiuso; evita mount subtree quando il modale non è aperto
+- Adozione consumer opzionale — nessuna migrazione obbligatoria
+
 ## Drawer e filtri (z ladder)
 
 | Layer | Token / costante | Valore | Uso |

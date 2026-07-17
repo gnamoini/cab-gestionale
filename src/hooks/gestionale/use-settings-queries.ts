@@ -130,6 +130,7 @@ export function useCabAppSettingsPayloadQuery(
   const cachedPayload = getRuntimeCabAppSettingsPayload();
   const qc = useQueryClient();
   const dehydratedPayload = qc.getQueryData<CabAppSettingsQueryPayload>(SETTINGS_PAYLOAD_QK);
+  // ponytail: tier static + hasHydratedPayload → refetchOnMount false; allineato a settings.payload SERVER_OWNER su /impostazioni
   const hasHydratedPayload = dehydratedPayload != null || cachedPayload != null;
   const policy = resolveSettingsQueryPolicy(options, wantShared || (tier === "static" && hasHydratedPayload));
 

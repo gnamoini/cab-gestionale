@@ -1,8 +1,10 @@
 import {
   buildCaptureSchedeBundle,
+  inferCaptureSchedaTipo,
   mapCaptureFieldsToIngresso,
   type CaptureFieldRow,
 } from "@/lib/document-capture/capture-field-mapper";
+import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import {
   CapturePlanStaleError,
   hashConfirmedCaptureFields,
@@ -39,10 +41,13 @@ export function buildCaptureApplyPlanFromFields(input: {
   attrezzaturaId: string | null;
   approvedCreates?: ApprovedCreatesJson;
   createdBy: string;
+  magazzino?: readonly RicambioMagazzino[];
 }): CaptureApplyPlan {
   const approved = input.approvedCreates ?? { mezzo: true, lavorazioni: true, ricambi: true };
+  const schedaTipo = inferCaptureSchedaTipo(input.fields);
   const ingressoFields = mapCaptureFieldsToIngresso(input.fields);
   const previewLavId = input.lavorazioneId ?? "00000000-0000-4000-8000-000000000099";
+  const includeIngresso = schedaTipo === "ingresso" || schedaTipo === null || !input.lavorazioneId;
 
   return {
     creates: {
@@ -62,13 +67,19 @@ export function buildCaptureApplyPlanFromFields(input: {
       movimentiPrevisti: [],
       approvedMagazzinoScarico: approved.magazzinoScarico === true,
     },
-    bundlePreview: buildCaptureSchedeBundle({
-      lavorazioneId: previewLavId,
-      fields: input.fields,
-      createdBy: input.createdBy,
-      includeLavorazioni: approved.lavorazioni !== false,
-      includeRicambi: approved.ricambi !== false,
-    }),
+    bundlePreview: (() => {
+      const bundle = buildCaptureSchedeBundle({
+        lavorazioneId: previewLavId,
+        fields: input.fields,
+        createdBy: input.createdBy,
+        includeLavorazioni: approved.lavorazioni !== false,
+        includeRicambi: approved.ricambi !== false,
+        schedaTipo,
+        magazzino: input.magazzino,
+      });
+      if (!includeIngresso) bundle.ingresso = null;
+      return bundle;
+    })(),
   };
 }
 

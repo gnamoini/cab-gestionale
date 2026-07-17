@@ -60,7 +60,7 @@ assert.match(sheet, /onTouchMove/);
 assert.match(sheet, /role=\{comboboxAria \? "combobox"/);
 assert.match(sheet, /exemptPanelRef: panelRef/);
 assert.match(sheet, /allowPanelTouchMove/);
-assert.match(sheet, /min-h-0 min-w-0 flex-1 overflow-y-auto/);
+assert.match(sheet, /min-h-0 min-w-0 flex-1 touch-pan-y overflow-y-auto/);
 assert.doesNotMatch(sheet, /resolvedSearchRef\.current\?\.focus/);
 assert.match(recents, /readSelectorRecents/);
 assert.match(ordering, /orderSelectSuggestions/);
@@ -83,8 +83,13 @@ assert.match(bottomSheet, /armSelectorGhostClickGuard/);
 assert.match(bottomSheet, /onPointerDown/);
 assert.match(globalSelect, /armSelectorGhostClickGuard/);
 assert.match(globalSelect, /e\.stopPropagation\(\)/);
-assert.match(pillSelect, /armSelectorGhostClickGuard/);
-assert.match(pillSelect, /onPointerDown/);
+assert.match(pillSelect, /createSelectorSheetTapSelectHandlers/);
+assert.match(pillSelect, /touch-pan-y/);
+assert.doesNotMatch(pillSelect, /armSelectorGhostClickGuard/);
+
+const identAutocomplete = read("components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field.tsx");
+assert.match(identAutocomplete, /createSelectorSheetTapSelectHandlers/);
+assert.match(identAutocomplete, /touch-pan-y/);
 
 const listboxHelpers = read("components/gestionale/selector/selector-listbox-helpers.tsx");
 assert.match(listboxHelpers, /onClick=\{\(e\) => \{/);
@@ -92,7 +97,9 @@ assert.match(listboxHelpers, /sheetTapSelect/);
 assert.match(listboxHelpers, /touch-pan-y/);
 
 const sheetTapSelect = read("lib/selector-interaction/selector-sheet-tap-select.ts");
+assert.match(sheet, /touch-pan-y/);
 assert.match(sheetTapSelect, /SELECTOR_SHEET_TAP_SLOP_PX/);
+assert.match(sheetTapSelect, /setPointerCapture/);
 assert.match(sheetTapSelect, /armSelectorGhostClickGuard/);
 
 const focusChain = read("lib/selector-interaction/use-selector-focus-chain.ts");

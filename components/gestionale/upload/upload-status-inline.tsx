@@ -1,11 +1,12 @@
 "use client";
 
+import { memo } from "react";
 import { LoadingProgressBar, LoadingSpinner } from "@/components/design-system/loading";
 import { UPLOAD_MESSAGES } from "@/lib/upload/upload-feedback-messages";
 import type { UploadFeedbackPhase } from "@/lib/upload/upload-feedback-types";
 import { dsBtnGhost } from "@/lib/ui/design-system";
 
-export function UploadStatusInline({
+export const UploadStatusInline = memo(function UploadStatusInline({
   phase,
   fileName,
   error,
@@ -103,4 +104,4 @@ export function UploadStatusInline({
   }
 
   return null;
-}
+});

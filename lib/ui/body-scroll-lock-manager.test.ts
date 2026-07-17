@@ -16,13 +16,13 @@ import {
 } from "./body-scroll-lock-manager";
 
 const ROOT = process.cwd();
-const globalsCss = fs.readFileSync(path.join(ROOT, "app/globals.css"), "utf8");
+const globalsCoreCss = fs.readFileSync(path.join(ROOT, "app/globals-core.css"), "utf8");
 const managerSrc = fs.readFileSync(path.join(ROOT, "lib/ui/body-scroll-lock-manager.ts"), "utf8");
 const shellLayoutSrc = fs.readFileSync(path.join(ROOT, "lib/ui/gestionale-shell-layout.ts"), "utf8");
 
-assert.match(globalsCss, /main\.gestionale-scroll-y\[data-cab-main-scroll-lock\][\s\S]*scrollbar-gutter:\s*stable/);
-assert.match(globalsCss, /data-cab-scroll-lock-fixed-compensate/);
-assert.match(globalsCss, /--cab-scroll-lock-gap/);
+assert.match(globalsCoreCss, /main\.gestionale-scroll-y\[data-cab-main-scroll-lock\][\s\S]*scrollbar-gutter:\s*stable/);
+assert.match(globalsCoreCss, /data-cab-scroll-lock-fixed-compensate/);
+assert.match(globalsCoreCss, /--cab-scroll-lock-gap/);
 assert.match(managerSrc, /shouldPadMainForScrollbarLock/);
 assert.match(managerSrc, /syncMainScrollbarLockCompensation/);
 assert.match(managerSrc, /contentWidthBefore/);

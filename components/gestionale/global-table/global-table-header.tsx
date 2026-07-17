@@ -4,6 +4,7 @@ import {
   Children,
   cloneElement,
   isValidElement,
+  memo,
   type ReactElement,
   type ReactNode,
 } from "react";
@@ -153,7 +154,7 @@ export function GlobalTableHead({
 }
 
 /** Colonna ordinabile — design globale ufficiale. */
-export function GlobalTableSortTh<K extends string>({
+function GlobalTableSortThInner<K extends string>({
   label,
   /** Titolo su due righe (es. `["Data", "ingresso"]`) — evita troncamento in colonne strette. */
   labelLines,
@@ -221,6 +222,8 @@ export function GlobalTableSortTh<K extends string>({
     </th>
   );
 }
+
+export const GlobalTableSortTh = memo(GlobalTableSortThInner) as typeof GlobalTableSortThInner;
 
 /**
  * Colonna statica (es. Azioni).

@@ -17,7 +17,14 @@ import {
   createCaptureInterventoWriteDeps,
   fetchCaptureMezziCatalog,
 } from "@/lib/document-capture/capture-intervento-write-deps.server";
-import { discardEphemeralDocumentCapture } from "@/lib/document-capture/discard-ephemeral-capture.server";
+import {
+  createCaptureApplyJob,
+  findRecoveryApplyJob,
+  updateCaptureApplyJob,
+} from "@/lib/document-capture/capture-apply-jobs.server";
+import { insertCaptureLinks } from "@/lib/document-capture/capture-links.server";
+import { fetchCaptureMagazzinoCatalog } from "@/lib/document-capture/capture-intervento-write-deps.server";
+import { validateCaptureForApply, captureReviewAllowsForceApply } from "@/lib/document-capture/validation/validate-capture-for-apply";
 import { mutateCaptureWithEvent } from "@/lib/document-capture/mutate-capture-with-event.server";
 import { resolveFieldsForHash } from "@/lib/document-capture/resolve-fields-for-hash";
 import { CapturePlanStaleError, hashConfirmedCaptureFields } from "@/lib/document-capture/capture-plan-staleness";
@@ -40,7 +47,7 @@ async function loadCaptureFields(captureId: string): Promise<CaptureFieldRow[]> 
   const sb = await createSupabaseServerUserClient();
   const { data } = await sb
     .from("document_capture_fields")
-    .select("field_key, confirmed_value, normalized_value")
+    .select("field_key, confirmed_value, normalized_value, confidence")
     .eq("document_capture_id", captureId);
   return (data ?? []) as CaptureFieldRow[];
 }
@@ -67,6 +74,7 @@ async function runCaptureApplySaga(input: {
   userId: string;
   resume?: boolean;
   existingLavorazioneId?: string | null;
+  forceReview?: boolean;
 }): Promise<{ ok: true; lavorazioneId: string; mezzoId: string }> {
   const sb = await createSupabaseServerUserClient();
 
@@ -104,6 +112,61 @@ async function runCaptureApplySaga(input: {
   const idempotencyKey = `document-capture-apply:${input.applicationId}`;
   const existingLavorazioneId = input.existingLavorazioneId ?? capture.lavorazione_id;
 
+  let applyJob = await findRecoveryApplyJob(input.captureId);
+  if (!applyJob) {
+    applyJob = await createCaptureApplyJob({
+      captureId: input.captureId,
+      companyId: capture.company_id,
+      applicationId: input.applicationId,
+      userId: input.userId,
+      status: "VALIDATING",
+      stepCurrent: "VALIDATING",
+    });
+  } else {
+    await updateCaptureApplyJob(applyJob.id, {
+      status: "APPLYING",
+      stepCurrent: "APPLYING",
+      applicationId: input.applicationId,
+    });
+  }
+
+  const magazzino = await fetchCaptureMagazzinoCatalog();
+  const validation = validateCaptureForApply({
+    fields,
+    magazzino,
+    lavorazioneId: capture.lavorazione_id,
+  });
+  if (validation.status === "BLOCKED") {
+    await updateCaptureApplyJob(applyJob.id, {
+      status: "FAILED",
+      stepCurrent: "VALIDATING",
+      errorCode: "VALIDATION_BLOCKED",
+      errorMessage:
+        validation.issues.find((i) => i.severity === "error")?.message ?? "Validazione bloccata",
+    });
+    throw new Error(
+      validation.issues.find((i) => i.severity === "error")?.message ?? "Validazione bloccata",
+    );
+  }
+  if (validation.status === "REVIEW" && !input.forceReview) {
+    await updateCaptureApplyJob(applyJob.id, {
+      status: "FAILED",
+      stepCurrent: "VALIDATING",
+      errorCode: "REVIEW_REQUIRED",
+      errorMessage: "Revisione operatore richiesta prima dell'apply",
+    });
+    throw new Error("REVIEW_REQUIRED");
+  }
+  if (input.forceReview && validation.status === "REVIEW" && !captureReviewAllowsForceApply(validation)) {
+    await updateCaptureApplyJob(applyJob.id, {
+      status: "FAILED",
+      stepCurrent: "VALIDATING",
+      errorCode: "RICAMBIO_NOT_FOUND",
+      errorMessage: "Ricambi non trovati in magazzino: correggi o rimuovi le righe prima dell'import.",
+    });
+    throw new Error("Ricambi non trovati in magazzino: correggi o rimuovi le righe prima dell'import.");
+  }
+
   await beginCaptureApplyRpc({
     captureId: input.captureId,
     applicationId: input.applicationId,
@@ -118,6 +181,8 @@ async function runCaptureApplySaga(input: {
       lavorazioni: approvedCreates.lavorazioni !== false,
       ricambi: approvedCreates.ricambi !== false,
     },
+    magazzino,
+    existingLavorazioneId,
   });
 
   const mezzoCatalog = await fetchCaptureMezziCatalog();
@@ -151,6 +216,14 @@ async function runCaptureApplySaga(input: {
         lavorazioneId: saga.lavorazioneId ?? null,
       };
 
+      await updateCaptureApplyJob(applyJob.id, {
+        status: saga.lavorazioneId ? "RECOVERY_REQUIRED" : "FAILED",
+        stepCurrent: saga.stage,
+        createdLavorazioneId: saga.lavorazioneId ?? null,
+        errorCode: eventType,
+        errorMessage: saga.error,
+      });
+
       await sb.from("document_capture_applications").insert({
         company_id: capture.company_id,
         document_capture_id: input.captureId,
@@ -176,6 +249,49 @@ async function runCaptureApplySaga(input: {
 
       throw new Error(saga.error);
     }
+
+    await updateCaptureApplyJob(applyJob.id, {
+      status: "COMMITTED",
+      stepCurrent: "COMMITTED",
+      createdLavorazioneId: saga.lavorazioneId,
+      completedAt: new Date().toISOString(),
+    });
+
+    const { data: schedaRows } = await sb
+      .from("scheda_lavorazione")
+      .select("id, tipo")
+      .eq("lavorazione_id", saga.lavorazioneId);
+
+    await insertCaptureLinks([
+      {
+        captureId: input.captureId,
+        companyId: capture.company_id,
+        entityType: "lavorazione",
+        entityId: saga.lavorazioneId,
+        relation: "created_from",
+        createdBy: input.userId,
+      },
+      ...(saga.mezzoId
+        ? [
+            {
+              captureId: input.captureId,
+              companyId: capture.company_id,
+              entityType: "mezzo" as const,
+              entityId: saga.mezzoId,
+              relation: "created_from" as const,
+              createdBy: input.userId,
+            },
+          ]
+        : []),
+      ...(schedaRows ?? []).map((row) => ({
+        captureId: input.captureId,
+        companyId: capture.company_id,
+        entityType: "scheda_lavorazione" as const,
+        entityId: (row as { id: string }).id,
+        relation: "created_from" as const,
+        createdBy: input.userId,
+      })),
+    ]);
 
     const applyPlan = {
       ...(application.plan_json as Record<string, unknown>),
@@ -242,6 +358,7 @@ async function runCaptureApplySaga(input: {
 export async function buildCaptureDryRunApplication(captureId: string): Promise<{
   applicationId: string;
   plan: CaptureApplyPlan;
+  validation: ReturnType<typeof validateCaptureForApply>;
 }> {
   const sb = await createSupabaseServerUserClient();
   const { data: auth } = await sb.auth.getUser();
@@ -263,6 +380,12 @@ export async function buildCaptureDryRunApplication(captureId: string): Promise<
 
   const fields = await loadCaptureFields(captureId);
   const sourceFieldsHash = hashCaptureFieldsRows(fields);
+  const magazzino = await fetchCaptureMagazzinoCatalog();
+  const validation = validateCaptureForApply({
+    fields,
+    magazzino,
+    lavorazioneId: capture.lavorazione_id,
+  });
   const approvedCreates = { mezzo: true, lavorazioni: true, ricambi: true } satisfies ApprovedCreatesJson;
 
   const plan = buildCaptureApplyPlanFromFields({
@@ -272,6 +395,7 @@ export async function buildCaptureDryRunApplication(captureId: string): Promise<
     attrezzaturaId: capture.attrezzatura_id,
     approvedCreates,
     createdBy: userId ?? "Document Capture",
+    magazzino,
   });
 
   const { data: app, error: appError } = await sb
@@ -303,12 +427,13 @@ export async function buildCaptureDryRunApplication(captureId: string): Promise<
     newStatus: "dry_run",
   });
 
-  return { applicationId: app.id, plan };
+  return { applicationId: app.id, plan, validation };
 }
 
 export async function applyDocumentCapturePlan(input: {
   captureId: string;
   applicationId: string;
+  forceReview?: boolean;
 }): Promise<{ ok: true; lavorazioneId: string }> {
   const sb = await createSupabaseServerUserClient();
   const { data: auth } = await sb.auth.getUser();
@@ -337,13 +462,10 @@ export async function applyDocumentCapturePlan(input: {
     captureId: input.captureId,
     applicationId: input.applicationId,
     userId,
+    forceReview: input.forceReview,
   });
 
-  try {
-    await discardEphemeralDocumentCapture(input.captureId, "ephemeral_after_apply");
-  } catch {
-    // ponytail: lavorazione creata — discard best-effort
-  }
+  // ponytail: apply v1 keeps capture linked — no ephemeral discard after success
 
   return { ok: true, lavorazioneId: result.lavorazioneId };
 }
@@ -364,7 +486,20 @@ export async function resumeFailedCaptureApply(input: {
     .maybeSingle();
 
   if (capture?.status !== "failed") {
+    if (capture?.status === "applied" || capture?.status === "dry_run") {
+      const existingApply = await findCommittedApply(input.captureId, input.applicationId);
+      if (existingApply) {
+        const lavId = (existingApply.plan_json as { lavorazioneId?: string })?.lavorazioneId;
+        if (lavId) return { ok: true, lavorazioneId: lavId };
+      }
+    }
     throw new Error("Resume consentito solo da failed");
+  }
+
+  const existingCommitted = await findCommittedApply(input.captureId, input.applicationId);
+  if (existingCommitted) {
+    const lavId = (existingCommitted.plan_json as { lavorazioneId?: string })?.lavorazioneId;
+    if (lavId) return { ok: true, lavorazioneId: lavId };
   }
 
   const { data: failedApply } = await sb
@@ -386,12 +521,6 @@ export async function resumeFailedCaptureApply(input: {
     resume: true,
     existingLavorazioneId: partialLavId,
   });
-
-  try {
-    await discardEphemeralDocumentCapture(input.captureId, "ephemeral_after_apply");
-  } catch {
-    // ponytail: best-effort
-  }
 
   return { ok: true, lavorazioneId: result.lavorazioneId };
 }

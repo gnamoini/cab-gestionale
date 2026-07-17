@@ -50,5 +50,17 @@ assert.equal(
   filterMezziGestiti([base], { search: "escavatore s-7" }).length,
   1,
 );
+assert.equal(
+  filterMezziGestiti([base], { cliente: "rossi" }).length,
+  1,
+);
+assert.equal(
+  filterMezziGestiti([base], { targa: "ab123" }).length,
+  1,
+);
+assert.equal(
+  filterMezziGestiti([base], { numero_scuderia: "s-7" }).length,
+  1,
+);
 
 console.log("mezzi-list-fetch.test.ts OK");

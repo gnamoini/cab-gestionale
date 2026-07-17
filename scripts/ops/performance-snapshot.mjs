@@ -1,6 +1,6 @@
 /**
  * Performance snapshot — baseline for regression guard.
- * Usage: node scripts/ops/performance-snapshot.mjs
+ * Usage: node scripts/ops/performance-snapshot.mjs [--refresh-baseline]
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,6 +14,7 @@ const ROOT = process.cwd();
 const RESULTS_DIR = join(ROOT, "test-results");
 const OUTPUT = join(RESULTS_DIR, "performance-snapshot.json");
 const BASELINE = join(RESULTS_DIR, "performance-snapshot-baseline.json");
+const REFRESH_BASELINE = process.argv.includes("--refresh-baseline");
 
 function loadJson(path) {
   if (!existsSync(path)) return null;
@@ -38,9 +39,43 @@ function loadPlaywrightHydration() {
 }
 
 function loadBundleMetrics() {
+  const buildBudget = loadJson(join(RESULTS_DIR, "build-budget-snapshot.json"));
+  if (buildBudget?.firstLoadJsKb) {
+    return {
+      firstLoadJsKb: buildBudget.firstLoadJsKb,
+      routeChunks: buildBudget.routeChunks ?? {},
+      vendorChunkKb: buildBudget.vendorChunkKb ?? null,
+    };
+  }
   const synthetic = loadJson(join(RESULTS_DIR, "perf-audit-synthetic.json"));
   if (synthetic?.bundleKb) return { firstLoadJsKb: synthetic.bundleKb, routeChunks: synthetic.routeChunks ?? {} };
-  return { firstLoadJsKb: null, routeChunks: {} };
+  return { firstLoadJsKb: null, routeChunks: {}, vendorChunkKb: null };
+}
+
+function loadDuplicateQueries() {
+  const audit = loadJson(join(RESULTS_DIR, "query-frequency-audit.json"));
+  if (!audit?.duplicate) return null;
+  return audit.duplicate.length;
+}
+
+function loadWebsocketChannels() {
+  const globalRaw = readFileSync(join(ROOT, "lib/performance/performance-global-budgets.ts"), "utf8");
+  const match = globalRaw.match(/MAX_REALTIME_CHANNELS\s*=\s*(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+function loadMemoryMb() {
+  const soak = loadJson(join(RESULTS_DIR, "long-session-soak-snapshot.json"));
+  if (soak?.heapUsedMb != null) return soak.heapUsedMb;
+  const diag = loadJson(join(RESULTS_DIR, "perf-diagnostics-snapshot.json"));
+  if (diag?.memoryMb != null) return diag.memoryMb;
+  return null;
+}
+
+function coldLoadQueryCount(budget) {
+  if (budget.scopeKeys?.length) return budget.scopeKeys.length;
+  if (budget.restProxyId) return 1;
+  return 0;
 }
 
 function loadCacheHitRatio() {
@@ -62,6 +97,9 @@ async function main() {
   const hydrationByRoute = loadPlaywrightHydration();
   const bundle = loadBundleMetrics();
   const cacheHitRatio = loadCacheHitRatio();
+  const duplicateQueries = loadDuplicateQueries();
+  const websocketChannels = loadWebsocketChannels();
+  const memoryMb = loadMemoryMb();
 
   const linkedDb = canRunLinkedDb();
   const explainQueries = buildExplainQueries();
@@ -100,7 +138,7 @@ async function main() {
       route: budget.route,
       label: budget.label,
       payloadKb: rest?.bytesKb ?? null,
-      queryCount: budget.maxQueries,
+      queryCount: coldLoadQueryCount(budget),
       serverExecutionMs: explain?.executionTimeMs ?? null,
       hydrationMs: hydrationByRoute[budget.route] ?? null,
       clientComputeMs: null,
@@ -132,14 +170,17 @@ async function main() {
       ? "test-results/slow-query-audit.json"
       : null,
     cacheHitRatio,
+    duplicateQueries,
+    websocketChannels,
+    memoryMb,
   };
 
   mkdirSync(RESULTS_DIR, { recursive: true });
   writeFileSync(OUTPUT, JSON.stringify(snapshot, null, 2));
 
-  if (!existsSync(BASELINE)) {
+  if (REFRESH_BASELINE || !existsSync(BASELINE)) {
     writeFileSync(BASELINE, JSON.stringify({ ...snapshot, isBaseline: true }, null, 2));
-    warnings.push("Created performance-snapshot-baseline.json");
+    warnings.push(REFRESH_BASELINE ? "Refreshed performance-snapshot-baseline.json" : "Created performance-snapshot-baseline.json");
   }
 
   console.log(`performance-snapshot: wrote ${OUTPUT}`);

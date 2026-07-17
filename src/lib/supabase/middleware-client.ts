@@ -1,5 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { applyRememberToCookiesToSet } from "@/lib/auth/auth-cookie-options";
+import { readAuthRememberPreferenceFromCookies } from "@/lib/auth/auth-remember-preference";
 import { readSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -30,11 +32,13 @@ export function createSupabaseMiddlewareClient(request: NextRequest): SupabaseMi
         return request.cookies.getAll();
       },
       setAll(cookiesToSet: CookieToSet[]) {
-        cookiesToSet.forEach(({ name, value }) => {
+        const remember = readAuthRememberPreferenceFromCookies(request.cookies.getAll());
+        const resolved = applyRememberToCookiesToSet(cookiesToSet, remember);
+        resolved.forEach(({ name, value }) => {
           request.cookies.set(name, value);
         });
         response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => {
+        resolved.forEach(({ name, value, options }) => {
           response.cookies.set(name, value, options as CookieOptions | undefined);
         });
       },

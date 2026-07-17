@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import { LoadingLoginSkeleton } from "@/components/design-system";
-import { ResetPasswordForm } from "./reset-password-form";
+import { ResetPasswordFormLazy } from "@/components/public-surfaces/public-surface-loaders";
 
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={<LoadingLoginSkeleton />}>
-      <ResetPasswordForm />
+      <ResetPasswordFormLazy />
     </Suspense>
   );
 }

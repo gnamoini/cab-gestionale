@@ -253,7 +253,7 @@ export function GestionaleSearchableSheetSelect({
           if (listScrollRef) listScrollRef.current = node;
         }}
         {...{ [CAB_MODAL_SCROLL_ATTR]: "" }}
-        className={`gestionale-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-1 py-1 [-webkit-overflow-scrolling:touch] ${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad}`}
+        className={`gestionale-scrollbar min-h-0 min-w-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain px-1 py-1 [-webkit-overflow-scrolling:touch] ${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad}`}
       >
         {children}
       </div>

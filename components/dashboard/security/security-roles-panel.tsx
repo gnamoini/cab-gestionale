@@ -5,7 +5,7 @@ import { QK } from "@/src/lib/react-query/invalidate-related";
 import { getPageMatrixAction, updatePageMatrixAction } from "@/src/actions/security-roles-permissions";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { SecurityPageMatrixEditor } from "@/components/dashboard/security/security-page-matrix-editor";
-import { SecurityRoleCreateModal } from "@/components/dashboard/security/security-role-create-modal";
+import { SecurityRoleCreateModalLazy } from "@/components/dashboard/security/security-tab-loaders";
 import { PageAccessLegend } from "@/components/dashboard/security/page-access-level-cell";
 import { SecurityInlineNotice } from "@/components/dashboard/security/security-inline-notice";
 import {
@@ -144,16 +144,18 @@ export function SecurityRolesPanel({ readOnly = false }: Props) {
         <SecurityPageMatrixEditor matrix={matrixQ.data} draft={draft} onDraftChange={setDraft} readOnly={readOnly} />
       ) : null}
 
-      <SecurityRoleCreateModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        roles={roles}
-        onCreated={() => {
-          setCreateOpen(false);
-          void queryClient.invalidateQueries({ queryKey: ["security", "page-matrix"] });
-          void queryClient.invalidateQueries({ queryKey: QK.securityUsersPermissions });
-        }}
-      />
+      {createOpen ? (
+        <SecurityRoleCreateModalLazy
+          open
+          onClose={() => setCreateOpen(false)}
+          roles={roles}
+          onCreated={() => {
+            setCreateOpen(false);
+            void queryClient.invalidateQueries({ queryKey: ["security", "page-matrix"] });
+            void queryClient.invalidateQueries({ queryKey: QK.securityUsersPermissions });
+          }}
+        />
+      ) : null}
     </ShellCard>
   );
 }

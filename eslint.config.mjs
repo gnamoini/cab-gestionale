@@ -31,10 +31,11 @@ const eslintConfig = defineConfig([
   },
   {
     files: ["lib/domain/**/*-entry.ts", "src/services/**/*.service.ts"],
-    plugins: { "cab-rbac": cabLayout },
+    plugins: { "cab-rbac": cabLayout, "cab-perf": cabLayout },
     rules: {
       "cab-rbac/no-auth-in-services": "error",
       "cab-rbac/no-entrypoint-chaining": "error",
+      "cab-perf/no-select-star": "error",
     },
   },
   {
@@ -42,6 +43,27 @@ const eslintConfig = defineConfig([
     plugins: { "cab-rbac": cabLayout },
     rules: {
       "cab-rbac/no-ensure-workflow-write": "error",
+    },
+  },
+  {
+    files: ["components/gestionale/report/**/*.tsx"],
+    plugins: { "cab-perf": cabLayout },
+    rules: {
+      "cab-perf/no-ssr-false-prefetched-route": "error",
+    },
+  },
+  {
+    files: ["components/gestionale/**/*.{ts,tsx}"],
+    plugins: { "cab-perf": cabLayout },
+    rules: {
+      "cab-perf/no-img-without-next-image": "warn",
+    },
+  },
+  {
+    files: ["**/*.{ts,tsx}"],
+    plugins: { "cab-perf": cabLayout },
+    rules: {
+      "cab-perf/no-heavy-import-in-client": "error",
     },
   },
   {

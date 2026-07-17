@@ -55,6 +55,7 @@ export function buildMagazzinoSearchSuggestions(
 
   const labels: string[] = [];
   const seen = new Set<string>();
+  const tokens = new Set<string>();
 
   const push = (label: string) => {
     const t = label.trim();
@@ -67,11 +68,6 @@ export function buildMagazzinoSearchSuggestions(
     if (q && !magazzinoRowSearchHaystack(p, listePrefs).includes(q)) continue;
     push(`${p.codiceFornitoreOriginale} · ${p.descrizione || p.marca}`);
     if (p.marca.trim()) push(p.marca);
-    if (labels.length >= limit * 2) break;
-  }
-
-  const tokens = new Set<string>();
-  for (const p of prodotti) {
     for (const part of [
       p.marca,
       p.codiceFornitoreOriginale,
@@ -83,6 +79,7 @@ export function buildMagazzinoSearchSuggestions(
       const t = part.trim();
       if (t.length >= 2) tokens.add(t);
     }
+    if (labels.length >= limit * 2) break;
   }
 
   for (const s of filterListSelectSuggestions(query, [...tokens], limit)) {

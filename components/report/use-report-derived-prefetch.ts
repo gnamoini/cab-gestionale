@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useReportSectionVisibility } from "@/components/report/layout/report-section-visibility-context";
 import { useReportAnalyticsDerivedActions } from "@/components/report/report-analytics-derived-context";
 import type { DomainReportSectionProps } from "@/components/report/report-section-types";
 import { countCompletedInRange } from "@/lib/report/lavorazioni-report-selectors";
-import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import { useInvoicesQuery } from "@/src/hooks/gestionale/use-invoices-query";
+import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 
 type PrefetchProps = Pick<
   DomainReportSectionProps,
@@ -23,9 +24,11 @@ type PrefetchProps = Pick<
 
 /** ponytail: prefetch high-priority derived on period change — sections may republish with fresher requestId. */
 export function useReportDerivedPrefetch(props: PrefetchProps) {
+  const { isOpen } = useReportSectionVisibility();
   const { publishOperationalAnalytics, publishEconomicAnalytics } = useReportAnalyticsDerivedActions();
-  const preventiviQ = usePreventiviRecordsQuery(true);
-  const invoicesQ = useInvoicesQuery(true);
+  const economicEnabled = isOpen("dati_economici") || isOpen("grafici_kpi");
+  const preventiviQ = usePreventiviRecordsQuery(economicEnabled);
+  const invoicesQ = useInvoicesQuery(economicEnabled);
   const reqRef = useRef(0);
 
   useEffect(() => {
@@ -45,7 +48,13 @@ export function useReportDerivedPrefetch(props: PrefetchProps) {
       manualByMonth: props.manualByMonth,
     });
 
-    if (!preventiviQ.isLoading && !invoicesQ.isLoading && !preventiviQ.isError && !invoicesQ.isError) {
+    if (
+      economicEnabled &&
+      !preventiviQ.isLoading &&
+      !invoicesQ.isLoading &&
+      !preventiviQ.isError &&
+      !invoicesQ.isError
+    ) {
       const completed = countCompletedInRange(props.completate, props.range, props.manualByMonth);
       const completedPrev =
         props.showCompare && props.compareRange
@@ -68,6 +77,7 @@ export function useReportDerivedPrefetch(props: PrefetchProps) {
       });
     }
   }, [
+    economicEnabled,
     props.rangeKey,
     props.range,
     props.compareRange,

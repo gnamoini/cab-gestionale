@@ -1,6 +1,6 @@
 "use client";
 
-import { LoadingCardSkeleton } from "@/components/design-system";
+import { memo, useMemo } from "react";
 import { DashboardWidgetRenderer } from "@/components/dashboard/dashboard-widget-renderer";
 import {
   ControlTowerMetricsProvider,
@@ -10,14 +10,18 @@ import {
   groupVisibleWidgetsBySection,
   resolveDashboardSectionOrder,
 } from "@/lib/dashboard/dashboard-widget-registry";
-import { useGestionaleShellLayout } from "@/context/gestionale-shell-layout-context";
+import { useGestionaleShellTier } from "@/context/gestionale-shell-layout-context";
+import { LoadingCardSkeleton } from "@/components/design-system";
 import { dsStackPage } from "@/lib/ui/design-system";
 
-function DashboardControlTowerLayoutInner() {
+const DashboardControlTowerLayoutInner = memo(function DashboardControlTowerLayoutInner() {
   const { visibleWidgets, isLoading } = useControlTowerContext();
-  const { isCompactShell } = useGestionaleShellLayout();
+  const { isCompactShell } = useGestionaleShellTier();
   const sectionOrder = resolveDashboardSectionOrder(isCompactShell);
-  const bySection = groupVisibleWidgetsBySection(visibleWidgets, sectionOrder);
+  const bySection = useMemo(
+    () => groupVisibleWidgetsBySection(visibleWidgets, sectionOrder),
+    [visibleWidgets, sectionOrder],
+  );
 
   if (isLoading && visibleWidgets.length === 0) {
     return <LoadingCardSkeleton minHeightClass="min-h-[12rem]" />;
@@ -43,7 +47,7 @@ function DashboardControlTowerLayoutInner() {
       })}
     </div>
   );
-}
+});
 
 export function DashboardControlTowerLayout() {
   return (

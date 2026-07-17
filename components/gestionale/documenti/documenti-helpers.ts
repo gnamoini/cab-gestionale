@@ -222,25 +222,38 @@ export function buildDocumentiViewTree(
   sortColumn: DocumentiSortKey | null,
   sortPhase: DocumentiSortPhase,
 ): ArchiveDocMarcaNode[] {
+  const marcaLevel = new Map<string, DocumentoGestionale[]>();
+  const modelloByMarca = new Map<string, DocumentoGestionale[]>();
+
+  for (const d of sortedDocs) {
+    if (documentoSenzaMarca(d)) continue;
+    const r = resolveDocumentoApplicazione(d);
+    const marcaKey = normalizeKey(r.marcaKey ?? r.marca);
+    if (!marcaKey) continue;
+    if (r.applicabilita === "marca") {
+      const list = marcaLevel.get(marcaKey) ?? [];
+      list.push(d);
+      marcaLevel.set(marcaKey, list);
+    } else if (r.applicabilita === "modello") {
+      const list = modelloByMarca.get(marcaKey) ?? [];
+      list.push(d);
+      modelloByMarca.set(marcaKey, list);
+    }
+  }
+
   const out: ArchiveDocMarcaNode[] = [];
   for (const marca of catalog) {
-    const filesMarca: DocumentoGestionale[] = [];
-    const modelli: ArchiveDocModelloNode[] = [];
-
-    for (const d of sortedDocs) {
-      if (documentoSenzaMarca(d)) continue;
-      const r = resolveDocumentoApplicazione(d);
-      if (r.applicabilita === "marca" && sameMarca(r.marcaKey ?? r.marca, marca.nome)) filesMarca.push(d);
-    }
+    const marcaKey = normalizeKey(marca.nome);
+    const filesMarca = [...(marcaLevel.get(marcaKey) ?? [])];
     filesMarca.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase, { skipSenzaMarcaPartition: true }));
+
+    const modelloCandidates = modelloByMarca.get(marcaKey) ?? [];
+    const modelli: ArchiveDocModelloNode[] = [];
 
     for (const mac of marca.macchine) {
       const filesModello: DocumentoGestionale[] = [];
-      for (const d of sortedDocs) {
-        if (documentoSenzaMarca(d)) continue;
+      for (const d of modelloCandidates) {
         const r = resolveDocumentoApplicazione(d);
-        if (r.applicabilita !== "modello") continue;
-        if (!sameMarca(r.marcaKey ?? r.marca, marca.nome)) continue;
         if (!sameModello(r.modelloKey ?? r.macchina, mac.nome, marca.nome)) continue;
         filesModello.push(d);
       }

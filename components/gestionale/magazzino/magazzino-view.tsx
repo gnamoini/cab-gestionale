@@ -21,6 +21,7 @@ import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzin
 import { MagazzinoListinoAiBadge } from "@/components/gestionale/magazzino/magazzino-listino-ai-badge";
 import { MagazzinoMarcaMobileBadge } from "@/components/gestionale/magazzino/magazzino-marca-mobile-badge";
 import dynamic from "next/dynamic";
+import { GestionaleModalGate } from "@/components/gestionale/gestionale-modal-gate";
 
 const RicambioNewModal = dynamic(
   () => import("@/components/gestionale/magazzino/ricambio-new-modal").then((m) => m.RicambioNewModal),
@@ -36,6 +37,17 @@ const MagazzinoRicambioInfoModal = dynamic(
 );
 const MagazzinoDupCodesModal = dynamic(
   () => import("@/components/gestionale/magazzino/magazzino-modals").then((m) => m.MagazzinoDupCodesModal),
+  { ssr: false },
+);
+const MagazzinoAdvancedFilterPanel = dynamic(
+  () =>
+    import("@/components/gestionale/magazzino/magazzino-advanced-filter-panel").then(
+      (m) => m.MagazzinoAdvancedFilterPanel,
+    ),
+  { ssr: false, loading: () => <LoadingFormSkeleton fields={3} className="px-1 py-2" /> },
+);
+const MagazzinoLogDrawer = dynamic(
+  () => import("@/components/gestionale/magazzino/magazzino-log-drawer").then((m) => m.MagazzinoLogDrawer),
   { ssr: false },
 );
 import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
@@ -60,7 +72,6 @@ import {
 import { readCompatDisplayForUi, readCompatLabelsForUi, readCompatModelsDisplayForUi } from "@/lib/magazzino/compat/compat-read-guard";
 import { buildLatestUndoableScortaEntryByRicambioId, latestUndoableScortaEntryForRicambio, parseScortaChange, entryMatchesMagazzinoUndoScope, type MagazzinoUndoScope } from "@/lib/magazzino/magazzino-scorta-undo";
 import { useUndoSessionId } from "@/lib/gestionale-log/use-undo-session-id";
-import { analyzeArchiveDuplicateCodes } from "@/lib/magazzino/duplicates";
 import { ricambioHasFornitoreAlternativo } from "@/lib/magazzino/ricambio-fornitori-alternativi";
 import {
   compareByColumn,
@@ -71,6 +82,7 @@ import {
 import {
   buildConsumoMapMagazzinoRolling36ForProducts,
   formatAvgMonthlyMagazzinoIt,
+  type RicambioConsumoDaLog,
 } from "@/lib/magazzino/ricambio-consumo-from-log";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import type { RicambioMagazzino, SortKeyMagazzino } from "@/lib/magazzino/types";
@@ -123,18 +135,15 @@ import {
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import {
-  Drawer,
   PageToolbar,
   PageToolbarCtaLabel,
   PageToolbarResultCount,
   PageToolbarMetaToggle,
 } from "@/components/design-system";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
-import { MagazzinoAdvancedFilterPanel } from "@/components/gestionale/magazzino/magazzino-advanced-filter-panel";
 import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzino-giacenza-bell";
 import { useDataImportExportPageActions } from "@/components/data-import/data-import-export-toolbar";
 import type { RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
-import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   buildMagazzinoFilterCatalog,
   loadMagazzinoAdvancedFiltersPersisted,
@@ -148,14 +157,6 @@ import {
   magazzinoRowMatchesPageFilters,
   type MagazzinoPageFilters,
 } from "@/lib/magazzino/magazzino-list-ui-filters";
-import {
-  GestionaleLogEmpty,
-  GestionaleLogEntryFourLines,
-  GestionaleLogEntryDismissButton,
-  GestionaleLogList,
-  gestionaleLogDrawerPanelClass,
-  gestionaleLogScrollEmbeddedClass,
-} from "@/components/gestionale/gestionale-log-ui";
 import {
   buildMagazzinoLocalLogEntry,
   buildMagazzinoScortaPersistedLogEntry,
@@ -178,6 +179,7 @@ import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-el
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useMagazzinoLogFeed } from "@/lib/magazzino/use-magazzino-log-feed";
+import { useMagazzinoListDerived } from "@/lib/magazzino/use-magazzino-list-derived";
 import { formatCompatMezziArrayForLog } from "@/lib/gestionale-log/log-summary";
 import { useAuth } from "@/context/auth-context";
 import {
@@ -560,10 +562,6 @@ export function MagazzinoView() {
   const queryClient = useQueryClient();
   const magazzinoListQ = useMagazzinoRicambiUIQuery();
   const prodotti = magazzinoListQ.data ?? [];
-  const generatedListinoCount = useMemo(
-    () => prodotti.filter((p) => p.listinoImport?.generatoAutomaticamente).length,
-    [prodotti],
-  );
   const [deleteGeneratedOpen, setDeleteGeneratedOpen] = useState(false);
   const [deleteGeneratedLoading, setDeleteGeneratedLoading] = useState(false);
   const magazzinoInitialLoading = magazzinoListQ.isLoading && magazzinoListQ.data === undefined;
@@ -627,6 +625,18 @@ export function MagazzinoView() {
     () => migrateMezziListePrefs(appSettings?.mezziListe ?? createMezziListePrefsDefault()),
     [appSettings?.mezziListe],
   );
+  const listDerived = useMagazzinoListDerived(prodotti, mezziListePrefs);
+  const {
+    sottoScortaList,
+    sottoScortaTotale,
+    generatedListinoCount,
+    marcheFromRows,
+    categorieFromRows,
+    fornitoriFromRows,
+    mezziFromRows,
+    archivioDupCodeGroups,
+    archivioDupCodeCount,
+  } = listDerived;
 
   const [newOpen, setNewOpen] = useState(false);
   const { success: toastSuccess, error: toastError, validation: toastValidation, successDeleted, errorOnce } =
@@ -1046,13 +1056,13 @@ export function MagazzinoView() {
   }, [logEntries, logPersistReady]);
 
   const marche = useMemo(
-    () => mergeMasterWithRows(masterMarche, prodotti.map((p) => p.marca)),
-    [masterMarche, prodotti],
+    () => mergeMasterWithRows(masterMarche, marcheFromRows),
+    [masterMarche, marcheFromRows],
   );
 
   const categorie = useMemo(
-    () => mergeMasterWithRows(masterCategorie, prodotti.map((p) => p.categoria)),
-    [masterCategorie, prodotti],
+    () => mergeMasterWithRows(masterCategorie, categorieFromRows),
+    [masterCategorie, categorieFromRows],
   );
 
   /** Elenchi globali puri (`Impostazioni → Magazzino`) — SSOT per selettori e validazione form. */
@@ -1066,48 +1076,26 @@ export function MagazzinoView() {
   );
 
   const fornitori = useMemo(
-    () =>
-      mergeMasterWithRows(
-        masterFornitori,
-        prodotti.flatMap((p) => {
-          const names: string[] = [];
-          const first = p.fornitoreNonOriginale.trim();
-          if (first) names.push(first);
-          for (const alt of p.fornitoriAlternativi ?? []) {
-            const f = alt.fornitore.trim();
-            if (f) names.push(f);
-          }
-          return names;
-        }),
-      ),
-    [masterFornitori, prodotti],
+    () => mergeMasterWithRows(masterFornitori, fornitoriFromRows),
+    [masterFornitori, fornitoriFromRows],
   );
 
-  const mezzi = useMemo(() => {
-    const fromRows: string[] = [];
-    prodotti.forEach((p) =>
-      readCompatLabelsForUi(p, mezziListePrefs, "magazzino-view.masterMezzi").forEach((m) => fromRows.push(m)),
-    );
-    return mergeMasterWithRows(masterMezzi, fromRows);
-  }, [masterMezzi, prodotti, mezziListePrefs]);
-
-  const sottoScortaTotale = useMemo(
-    () => prodotti.filter((p) => p.scorta < p.scortaMinima).length,
-    [prodotti],
+  const mezzi = useMemo(
+    () => mergeMasterWithRows(masterMezzi, mezziFromRows),
+    [masterMezzi, mezziFromRows],
   );
 
-  const sottoScortaList = useMemo(
-    () => prodotti.filter((p) => p.scorta < p.scortaMinima),
-    [prodotti],
-  );
+  const needConsumoMap =
+    !magazzinoInitialLoading &&
+    (listLayout === "desktop" ||
+      listLayout === "mobile" ||
+      detail != null ||
+      sortColumn === "consumoMedioMensile");
 
-  const archivioDupCodeGroups = useMemo(() => analyzeArchiveDuplicateCodes(prodotti), [prodotti]);
-  const archivioDupCodeCount = archivioDupCodeGroups.length;
-
-  const consumoMap = useMemo(
-    () => buildConsumoMapMagazzinoRolling36ForProducts(logEntries, prodotti, new Date()),
-    [logEntries, prodotti],
-  );
+  const consumoMap = useMemo((): Map<string, RicambioConsumoDaLog> => {
+    if (!needConsumoMap) return new Map();
+    return buildConsumoMapMagazzinoRolling36ForProducts(logEntries, prodotti, new Date());
+  }, [needConsumoMap, logEntries, prodotti]);
 
   const consumoAvgById = useMemo(() => {
     const m = new Map<string, number | null>();
@@ -1865,15 +1853,17 @@ export function MagazzinoView() {
             onFiltersToggle={() => setFiltriEspansi((o) => !o)}
             filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
             filtersPanel={
-              <MagazzinoAdvancedFilterPanel
-                filters={advancedFilters}
-                onChange={patchAdvancedFilters}
-                catalog={filterCatalog}
-                soloSottoScorta={soloSottoScorta}
-                nascondiScortaZero={nascondiScortaZero}
-                onSoloSottoScortaChange={setSoloSottoScorta}
-                onNascondiScortaZeroChange={setNascondiScortaZero}
-              />
+              <GestionaleModalGate open={filtriEspansi}>
+                <MagazzinoAdvancedFilterPanel
+                  filters={advancedFilters}
+                  onChange={patchAdvancedFilters}
+                  catalog={filterCatalog}
+                  soloSottoScorta={soloSottoScorta}
+                  nascondiScortaZero={nascondiScortaZero}
+                  onSoloSottoScortaChange={setSoloSottoScorta}
+                  onNascondiScortaZeroChange={setNascondiScortaZero}
+                />
+              </GestionaleModalGate>
             }
             onFilterReset={resetMagazzinoFilters}
             meta={
@@ -2234,6 +2224,7 @@ export function MagazzinoView() {
           consumo={consumoMap.get(detailRicambio.id)}
           formatEur={eur}
           magCanCreateRicambio={magCanCreateRicambio}
+          magCanReadRicambio={magPerm.canRead}
           logTimeline={infoTimeline}
           logLoading={magLogFeedLoading}
           onClose={closeDetail}
@@ -2268,49 +2259,22 @@ export function MagazzinoView() {
         />
       ) : null}
 
-      <Drawer
-        open={logOpen}
-        onClose={() => setLogOpen(false)}
-        title="Log modifiche magazzino"
-        ariaLabel="Log modifiche magazzino"
-      >
-        <div className={gestionaleLogDrawerPanelClass}>
-          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>
-              {magLogFeedLoading && magLogFeed.length === 0 ? (
-                <LoadingFormSkeleton fields={2} className="px-1 py-2" />
-              ) : magLogFeed.length === 0 ? (
-                <GestionaleLogEmpty message="Nessuna modifica registrata." />
-              ) : (
-                <GestionaleLogList>
-                  {pagedMagLogFeed.map((item) => (
-                    <li key={item.id} className="list-none">
-                      <GestionaleLogEntryFourLines
-                        vm={item.vm}
-                        onClick={() => focusRicambioInTable(item.ricambioId)}
-                        title="Mostra ricambio in tabella"
-                        trailing={
-                          item.source === "local" ? (
-                            <GestionaleLogEntryDismissButton
-                              onDismiss={() => removeMagazzinoLogEntry(item.id)}
-                            />
-                          ) : undefined
-                        }
-                      />
-                    </li>
-                  ))}
-                </GestionaleLogList>
-            )}
-          </div>
-          {showMagLogDrawerPager ? (
-            <TablePagination
-              page={magLogDrawerPage}
-              pageCount={magLogDrawerPageCount}
-              onPageChange={setMagLogDrawerPage}
-              label={magLogDrawerPagerLabel}
-            />
-          ) : null}
-        </div>
-      </Drawer>
+      <GestionaleModalGate open={logOpen}>
+        <MagazzinoLogDrawer
+          open={logOpen}
+          onClose={() => setLogOpen(false)}
+          feed={magLogFeed}
+          loading={magLogFeedLoading}
+          pagedFeed={pagedMagLogFeed}
+          showPager={showMagLogDrawerPager}
+          page={magLogDrawerPage}
+          pageCount={magLogDrawerPageCount}
+          pagerLabel={magLogDrawerPagerLabel}
+          onPageChange={setMagLogDrawerPage}
+          onFocusRicambio={focusRicambioInTable}
+          onDismissLocal={removeMagazzinoLogEntry}
+        />
+      </GestionaleModalGate>
 
       {dupCheckModalOpen ? (
         <MagazzinoDupCodesModal

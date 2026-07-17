@@ -20,7 +20,8 @@ const designSystem = read("lib/ui/design-system.ts");
 const modalBody = read("lib/ui/modal-max-width-class.ts");
 const scrollPanel = read("lib/ui/scroll-system.ts");
 const globalTable = read("lib/ui/global-table.ts");
-const globalsCss = read("app/globals.css");
+const globalsCoreCss = read("app/globals-core.css");
+const globalsShellCss = read("app/globals-gestionale-shell.css");
 const globalFlexSystem = read("lib/ui/global-flex-system.ts");
 
 assert.match(toolbarGroup, /ToolbarGroup[\s\S]*min-w-0 max-w-full/);
@@ -39,13 +40,13 @@ assert.match(globalTable, /globalTableTdBody[\s\S]*min-w-0/);
 assert.match(globalTable, /globalTableThCell[\s\S]*min-w-0/);
 assert.match(globalTable, /globalTableHeadEdgeInset[\s\S]*min-w-0/);
 
-assert.match(globalsCss, /\.flex-safe\s*\{/);
-assert.match(globalsCss, /\.flex-safe-row\s*\{/);
-assert.match(globalsCss, /\.flex-fill,\s*\n?\s*\.flex-fill-safe\s*\{/);
-assert.match(globalsCss, /\.text-safe\s*\{/);
-assert.match(globalsCss, /\.flex-fill-safe\s*\{/);
-assert.match(globalsCss, /gestionale-responsive-core \.flex > \*/);
-assert.doesNotMatch(globalsCss, /gestionale-responsive-core[\s\S]*flex-wrap:\s*wrap/);
+assert.match(globalsCoreCss, /\.flex-safe\s*\{/);
+assert.match(globalsCoreCss, /\.flex-safe-row\s*\{/);
+assert.match(globalsCoreCss, /\.flex-fill,\s*\n?\s*\.flex-fill-safe\s*\{/);
+assert.match(globalsCoreCss, /\.text-safe\s*\{/);
+assert.match(globalsCoreCss, /\.flex-fill-safe\s*\{/);
+assert.match(globalsShellCss, /gestionale-responsive-core \.flex > \*/);
+assert.doesNotMatch(globalsShellCss, /gestionale-responsive-core[\s\S]*flex-wrap:\s*wrap/);
 
 assert.match(globalFlexSystem, /flexSafeRow = "flex-safe-row"/);
 assert.match(globalFlexSystem, /flexFillSafe = "flex-fill-safe"/);

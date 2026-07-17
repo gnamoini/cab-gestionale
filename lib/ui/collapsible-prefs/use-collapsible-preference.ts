@@ -28,7 +28,7 @@ export type UseCollapsiblePreferenceOptions<T> = {
 
 export function useCollapsiblePreference<T>(
   options: UseCollapsiblePreferenceOptions<T>,
-): [value: T, setValue: (v: T | ((prev: T) => T)) => void] {
+): [value: T, setValue: (v: T | ((prev: T) => T)) => void, hydrated: boolean] {
   const {
     userId,
     scope,
@@ -48,20 +48,22 @@ export function useCollapsiblePreference<T>(
   defaultValueRef.current = defaultValue;
 
   const [value, setValueState] = useState<T>(defaultValue);
-  const hydratedRef = useRef(false);
+  const [hydrated, setHydrated] = useState(!shouldPersist);
   const userTouchedRef = useRef(false);
 
   useEffect(() => {
     if (!shouldPersist) {
-      hydratedRef.current = true;
       return;
     }
-    if (userTouchedRef.current) return;
+    if (userTouchedRef.current) {
+      setHydrated(true);
+      return;
+    }
     const stored = readSection(userId!, scope, key, defaultValueRef.current, (raw, fb) =>
       deserializeRef.current(raw, fb),
     );
     setValueState((prev) => (collapsiblePrefValuesEqual(stored, prev) ? prev : stored));
-    hydratedRef.current = true;
+    setHydrated(true);
   }, [shouldPersist, userId, scope, key]);
 
   const setValue = useCallback(
@@ -78,5 +80,5 @@ export function useCollapsiblePreference<T>(
     [shouldPersist, userId, scope, key],
   );
 
-  return [value, setValue];
+  return [value, setValue, hydrated] as const;
 }

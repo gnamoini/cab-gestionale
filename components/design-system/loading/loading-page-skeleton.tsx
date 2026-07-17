@@ -1,4 +1,3 @@
-"use client";
 
 import { memo } from "react";
 import { LoadingAgendaSkeleton } from "./loading-agenda-skeleton";

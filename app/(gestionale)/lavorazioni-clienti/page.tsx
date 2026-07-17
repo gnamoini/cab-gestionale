@@ -1,11 +1,26 @@
+import { dehydrate } from "@tanstack/react-query";
 import { Suspense } from "react";
-import { ClientLavorazioniPageSkeleton } from "@/components/lavorazioni-clienti/client-lavorazioni-loading-skeleton";
+import { LoadingSuspenseFallback } from "@/components/design-system";
+import { ClientPortalDeferredHydration } from "@/components/lavorazioni-clienti/client-portal-deferred-hydration";
 import { ClientLavorazioniViewLazy } from "@/components/gestionale/lazy-route-views";
+import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";
+import {
+  createServerQueryClient,
+  prefetchCriticalPage,
+} from "@/src/lib/react-query/prefetch-gestionale-page";
 
-export default function LavorazioniClientiPage() {
+export default async function LavorazioniClientiPage() {
+  const qc = createServerQueryClient();
+  await prefetchCriticalPage(qc, "lavorazioni_clienti");
+  const criticalState = dehydrate(qc);
+
   return (
-    <Suspense fallback={<ClientLavorazioniPageSkeleton />}>
-      <ClientLavorazioniViewLazy />
-    </Suspense>
+    <GestionaleHydrationBoundary state={criticalState}>
+      <Suspense fallback={<LoadingSuspenseFallback variant="clienti" />}>
+        <ClientPortalDeferredHydration>
+          <ClientLavorazioniViewLazy />
+        </ClientPortalDeferredHydration>
+      </Suspense>
+    </GestionaleHydrationBoundary>
   );
 }

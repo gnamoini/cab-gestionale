@@ -42,27 +42,22 @@ function qrSizeMm(contentBottomMm: number, marginMm: number): number {
 }
 
 /**
- * QR sinistra · colonna destra impilata a runtime (marca → desc → codice → alt) · barcode in basso.
+ * QR sinistra · colonna destra: marche, desc, codici OE · fornitore alt in fascia barcode · barcode sotto QR.
  */
 export function computeLabelLayout(widthMm: number, heightMm: number): LabelTemplateElement[] {
   const m = labelMarginMm(widthMm, heightMm);
   const innerW = widthMm - m * 2;
   const scale = labelFontScale(widthMm, heightMm);
-  const marcaPt = scaledFontPt(8.5, scale, 6.5, 15);
-  const descPt = scaledFontPt(7.5, scale, 6, 14);
-  const codicePt = scaledFontPt(8.5, scale, 6.5, 14);
+  const primaryPt = scaledFontPt(7, scale, 7, 16);
   const altPt = scaledFontPt(7, scale, 5.5, 10);
   const barcodeH = barcodeHeightMm(widthMm, heightMm);
   const barcodeY = heightMm - m - barcodeH;
-  const contentBottom = barcodeY - BARCODE_GAP_MM;
+  const labelBottomMm = heightMm - m;
+  const topGroupBottomMm = barcodeY - BARCODE_GAP_MM;
 
-  const qr = qrSizeMm(contentBottom, m);
+  const qr = qrSizeMm(topGroupBottomMm, m);
   const textX = m + qr + GAP_MM;
   const textW = Math.max(10, innerW - qr - GAP_MM);
-
-  const marcaMaxLines = heightMm <= 22 ? 1 : 2;
-  const marcaLh = fontLineHeightMm(marcaPt);
-  const marcaZoneBottom = m + marcaLh * marcaMaxLines;
 
   return [
     { type: "qr", xMm: m, yMm: m, sizeMm: qr },
@@ -71,48 +66,58 @@ export function computeLabelLayout(widthMm: number, heightMm: number): LabelTemp
       field: "marca",
       xMm: textX,
       yMm: m,
-      fontPt: marcaPt,
-      maxLines: marcaMaxLines,
+      fontPt: primaryPt,
+      maxLines: 3,
       maxWidthMm: textW,
-      zoneBottomMm: marcaZoneBottom,
+      zoneBottomMm: topGroupBottomMm,
     },
     {
       type: "text",
       field: "descrizione",
       xMm: textX,
-      yMm: marcaZoneBottom + TEXT_GAP_MM,
-      fontPt: descPt,
+      yMm: m,
+      fontPt: primaryPt,
       maxWidthMm: textW,
-      zoneBottomMm: contentBottom,
+      zoneBottomMm: topGroupBottomMm,
     },
     {
       type: "text",
       field: "codice",
       xMm: textX,
       yMm: m,
-      fontPt: codicePt,
+      fontPt: primaryPt,
       font: "mono",
       maxWidthMm: textW,
-      zoneBottomMm: contentBottom,
+      zoneBottomMm: topGroupBottomMm,
+    },
+    {
+      type: "text",
+      field: "codiceSecondario",
+      xMm: textX,
+      yMm: m,
+      fontPt: primaryPt,
+      font: "mono",
+      maxWidthMm: textW,
+      zoneBottomMm: topGroupBottomMm,
     },
     {
       type: "text",
       field: "fornitoreAlternativo",
       xMm: textX,
-      yMm: m,
+      yMm: barcodeY,
       fontPt: altPt,
       maxWidthMm: textW,
-      zoneBottomMm: contentBottom,
+      zoneBottomMm: labelBottomMm,
     },
     {
       type: "text",
       field: "codiceAlternativo",
       xMm: textX,
-      yMm: m,
+      yMm: barcodeY,
       fontPt: altPt,
       font: "mono",
       maxWidthMm: textW,
-      zoneBottomMm: contentBottom,
+      zoneBottomMm: labelBottomMm,
     },
     {
       type: "barcode",
@@ -121,7 +126,7 @@ export function computeLabelLayout(widthMm: number, heightMm: number): LabelTemp
       xMm: m,
       yMm: barcodeY,
       heightMm: barcodeH,
-      widthMm: innerW,
+      widthMm: qr,
     },
   ];
 }
@@ -129,7 +134,7 @@ export function computeLabelLayout(widthMm: number, heightMm: number): LabelTemp
 function buildTemplate(id: string, widthMm: number, heightMm: number): LabelTemplateDefinition {
   return {
     id,
-    version: "1.4.11",
+    version: "1.6.4",
     widthMm,
     heightMm,
     dpi: 300,
@@ -138,12 +143,13 @@ function buildTemplate(id: string, widthMm: number, heightMm: number): LabelTemp
   };
 }
 
-/** Preset registry — 40×20 … 80×50 mm. */
+/** Preset registry — 40×20 … 80×50 mm (incl. 80×40). */
 export const LABEL_TEMPLATE_REGISTRY: Record<string, LabelTemplateDefinition> = {
   "40x20-default": buildTemplate("40x20-default", 40, 20),
   "50x30-default": buildTemplate("50x30-default", 50, 30),
   "60x40-default": buildTemplate("60x40-default", 60, 40),
   "70x50-default": buildTemplate("70x50-default", 70, 50),
+  "80x40-default": buildTemplate("80x40-default", 80, 40),
   "80x50-default": buildTemplate("80x50-default", 80, 50),
 };
 

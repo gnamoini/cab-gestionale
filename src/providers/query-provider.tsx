@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-query";
 import { useToastContext } from "@/context/toast-context";
 
-import { PWA_QUERY_CLIENT_DEFAULTS } from "@/lib/pwa/pwa-query-policy";
+import { PWA_QUERY_CLIENT_DEFAULTS, shouldRefetchPwaGroupOnReconnect, type PwaQueryGroup } from "@/lib/pwa/pwa-query-policy";
 import { installLongSessionDevHook } from "@/lib/observability/long-session-dev-hook";
 import { isBootInvestigationEnabled, trackQueryEvent } from "@/lib/observability/boot-investigation";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
@@ -83,7 +83,21 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       };
     });
 
+    const unsubPwaReconnect = onlineManager.subscribe((isOnline) => {
+      if (!isOnline) return;
+      void client.refetchQueries({
+        type: "active",
+        predicate: (query) => {
+          const group = (query.meta as { pwaQueryGroup?: PwaQueryGroup } | undefined)?.pwaQueryGroup;
+          if (group) return shouldRefetchPwaGroupOnReconnect(group);
+          const opts = query.options as { refetchOnReconnect?: boolean };
+          return opts.refetchOnReconnect ?? PWA_QUERY_CLIENT_DEFAULTS.refetchOnReconnect;
+        },
+      });
+    });
+
     const cleanupOnline = () => {
+      unsubPwaReconnect();
       onlineManager.setEventListener(() => undefined);
     };
 

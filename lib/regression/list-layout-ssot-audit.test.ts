@@ -14,7 +14,7 @@ function read(rel: string): string {
 const layoutCss = read("components/gestionale/global-table/gestionale-list-layout.css");
 const layoutHook = read("lib/ui/use-gestionale-list-layout.ts");
 const pageLayoutResolver = read("lib/ui/resolve-gestionale-page-layout.ts");
-const globalsCss = read("app/globals.css");
+const globalsCss = read("app/globals-core.css");
 
 assert.match(layoutCss, /\.gestionale-list-layout-desktop/);
 assert.match(layoutCss, /\.gestionale-list-mobile-only/);

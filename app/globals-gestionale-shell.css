@@ -1,0 +1,739 @@
+/* Gestionale app shell + sidebar — scoped to (gestionale) layout */
+
+body:has(.cab-app-shell) {
+  min-height: 0;
+}
+/* — iOS Safari / mobile stability — */
+
+.cab-ios-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.cab-ios-scroll-y,
+.gestionale-scroll-y {
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-clip-margin: var(--cab-paint-clip-margin);
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  /* ponytail: stable su tutti i tier — evita layout shift quando il main smette di overflow (collapse card). */
+  scrollbar-gutter: stable;
+}
+
+/* Legacy: tier desktop mantiene stable (identico al default sopra). */
+.cab-app-shell[data-gestionale-shell-tier="desktop"] .cab-ios-scroll-y,
+.cab-app-shell[data-gestionale-shell-tier="desktop"] .gestionale-scroll-y {
+  scrollbar-gutter: stable;
+}
+
+.gestionale-scroll-end-pad {
+  height: var(--cab-scroll-end-pad);
+  flex-shrink: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 280ms ease-out;
+}
+
+main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-pad--fade {
+  background: linear-gradient(
+    to top,
+    var(--cab-bg-app) 0%,
+    color-mix(in srgb, var(--cab-bg-app) 65%, transparent) 55%,
+    transparent 100%
+  );
+  opacity: 0.35;
+}
+
+/** Stessa larghezza utile del main con `scrollbar-gutter: stable` (mirror solo sul wrapper, non sul padding). */
+.cab-gestionale-scroll-gutter-mirror {
+  overflow: hidden;
+  overflow-clip-margin: var(--cab-paint-clip-margin);
+  scrollbar-gutter: auto;
+  box-sizing: border-box;
+  padding-inline-end: var(--cab-main-scrollbar-inset, 0px);
+}
+
+/** Stack pagina sotto PageHeader — clip layout orizzontale con margine paint per shadow card. */
+.cab-layout-page-stack {
+  overflow-x: clip;
+  overflow-clip-margin: var(--cab-paint-clip-margin);
+}
+
+/** ShellCard — border-radius + collapse; paint margin per shadow/focus ring header. */
+.cab-shell-card {
+  overflow: hidden;
+  overflow-clip-margin: var(--cab-paint-clip-margin);
+}
+
+/** ShellCard collapsible — giunzione header/corpo: niente doppio bordo né gap chiaro in apertura. */
+.cab-shell-card [id$="-body"] {
+  margin-top: -1px;
+}
+
+.cab-shell-card [id$="-body"] .gestionale-list-table-scope {
+  border-top-width: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/** Toolbar liste — blur isolato su ::before per non clipare shadow/ring dei figli. */
+.cab-page-toolbar-surface {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+}
+
+.cab-page-toolbar-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: inherit;
+  /* ponytail: mix su --cab-bg-app (non transparent) — stesso tono della vecchia bg inline, senza scurimento blur su --cab-card */
+  background: color-mix(in srgb, var(--cab-surface-2) 94%, var(--cab-bg-app));
+  z-index: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cab-page-toolbar-surface::before {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+.cab-page-toolbar-surface > * {
+  position: relative;
+  z-index: 1;
+}
+
+.cab-app-shell[data-gestionale-shell-tier="desktop"] .cab-gestionale-scroll-gutter-mirror {
+  scrollbar-gutter: stable;
+}
+
+.cab-app-shell[data-gestionale-shell-tier="mobile"],
+.cab-app-shell[data-gestionale-shell-tier="tablet"] {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  --cab-mobile-nav-btn-gap: 0.5rem;
+}
+
+.cab-app-shell[data-gestionale-shell-tier="mobile"] {
+  --cab-shell-content-gutter: 0.75rem;
+}
+
+.cab-app-shell[data-gestionale-shell-tier="tablet"] {
+  --cab-shell-content-gutter: 1.25rem;
+}
+
+/** Hamburger header — sizing da `dsPageToolbarIconBtn`; back — ghost `dsPageHeaderBackBtn`. */
+.cab-mobile-nav-open,
+.cab-mobile-nav-back {
+  flex-shrink: 0;
+}
+
+/** Dashboard welcome — logo, copy e data su una riga compatta. */
+.cab-dashboard-welcome-layout {
+  align-items: center;
+  column-gap: 0.625rem;
+}
+
+.cab-dashboard-welcome-logo {
+  max-width: 4.75rem;
+}
+
+.cab-dashboard-welcome-date {
+  min-width: 3.5rem;
+}
+
+@media (min-width: 640px) {
+  .cab-dashboard-welcome-logo {
+    max-width: 5.25rem;
+  }
+
+  .cab-dashboard-welcome-date {
+    min-width: 4rem;
+    padding-left: 0.75rem;
+  }
+}
+
+.cab-dashboard-welcome-copy {
+  text-align: left;
+}
+
+/** Titolo centrato rispetto alla larghezza pagina (ignora hamburger/azioni ai lati). */
+.cab-app-shell[data-mobile-nav-visible] .cab-page-header-top-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  column-gap: var(--cab-mobile-nav-btn-gap);
+}
+
+.cab-app-shell[data-mobile-nav-visible] .cab-page-header-top-row > .cab-page-header-title-cluster {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2.75rem;
+  padding-inline-start: 0;
+  justify-content: center;
+}
+
+.cab-app-shell[data-mobile-nav-visible] .cab-page-header-title-cluster .cab-page-title-box {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 0;
+  display: flex;
+  height: 2.75rem;
+  width: 100%;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding-inline: 0;
+  text-align: center;
+  pointer-events: none;
+}
+
+.cab-app-shell[data-mobile-nav-visible] .cab-page-header-top-row > :first-child,
+.cab-app-shell[data-mobile-nav-visible] .cab-page-header-top-row > :last-child:not(.cab-page-header-title-cluster) {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.cab-app-shell[data-mobile-nav-visible] .cab-page-header-top-row > :last-child:not(.cab-page-header-title-cluster) {
+  margin-inline-start: auto;
+}
+/* ResponsiveLayoutCore — media e contenimento globale nel main gestionale */
+.gestionale-responsive-core img,
+.gestionale-responsive-core video,
+.gestionale-responsive-core canvas,
+.gestionale-responsive-core svg:not([class*="shrink-0"]) {
+  max-width: 100%;
+  height: auto;
+}
+
+.gestionale-responsive-core table {
+  max-width: 100%;
+}
+
+/* Global Flex System — scoped min-width containment, NO flex-wrap globale */
+.gestionale-responsive-core .flex > *:not(.shrink-0):not(.flex-shrink-safe),
+.gestionale-responsive-core .inline-flex > *:not(.shrink-0):not(.flex-shrink-safe),
+.gestionale-responsive-core .flex-safe-row > *,
+.gestionale-responsive-core .flex-safe-col > *,
+.gestionale-responsive-core .flex-safe > *:not(.flex-shrink-safe) {
+  min-width: 0;
+}
+/* Sidebar — SSOT layout: lib/ui/sidebar-layout.ts + components/gestionale/sidebar-nav-row.tsx */
+@property --cab-sidebar-logo-scale {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+.cab-app-shell {
+  --cab-sidebar-motion: 150ms;
+  --cab-sidebar-rail-width: 4.25rem;
+  --cab-sidebar-expanded-width: 12.75rem;
+  --cab-sidebar-row-height: 2.5rem;
+  --cab-sidebar-icon-size: 1.75rem;
+  --cab-sidebar-icon-label-gap: 0.375rem;
+  --cab-sidebar-trailing-width: 1.5rem;
+  --cab-sidebar-nav-inset: 0.5rem;
+  --cab-sidebar-width-motion: 150ms;
+  --cab-sidebar-label-in: 110ms;
+  --cab-sidebar-label-out: 80ms;
+  --cab-sidebar-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --cab-sidebar-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --cab-sidebar-icon-anchor: calc(
+    (var(--cab-sidebar-rail-width) - var(--cab-sidebar-nav-inset) * 2 - var(--cab-sidebar-icon-size)) / 2
+  );
+  --cab-sidebar-active-bar-width: 3px;
+  --cab-sidebar-active-bar-height: 1.125rem;
+  --cab-gestionale-top-bar: 0px;
+  --cab-settings-sidebar-inset: var(--ds-space-md);
+  --cab-settings-sidebar-height: calc(
+    var(--cab-vv-height, 100dvh) - var(--cab-gestionale-top-bar) - env(safe-area-inset-top, 0px) -
+      max(1rem, env(safe-area-inset-bottom, 0px)) - var(--cab-settings-sidebar-inset) -
+      var(--cab-settings-sidebar-inset)
+  );
+  --cab-scroll-end-pad: max(2.5rem, calc(env(safe-area-inset-bottom) + 1.25rem));
+  --cab-modal-width-confirmation: 28rem;
+  --cab-modal-width-info: 32rem;
+  --cab-modal-width-form-small: 36rem;
+  --cab-modal-width-form-medium: 48rem;
+  --cab-modal-width-form-large: 56rem;
+  --cab-modal-width-analytics: 64rem;
+  --cab-modal-width-drawer-log: 28rem;
+  --cab-modal-width-drawer-filter: 22rem;
+  --cab-modal-width-drawer-nav: 19.5rem;
+}
+
+@media (min-width: 768px) {
+  .cab-app-shell {
+    --cab-scroll-end-pad: max(3rem, min(10dvh, 4.5rem));
+  }
+
+  /* Larghezza minima modali desktop — SSOT con --cab-modal-width-*; cap 100% evita overflow su tablet. */
+  .cab-modal-min-w-form-small {
+    min-width: min(var(--cab-modal-width-form-small), 100%);
+  }
+  .cab-modal-min-w-form-medium {
+    min-width: min(var(--cab-modal-width-form-medium), 100%);
+  }
+  .cab-modal-min-w-form-large {
+    min-width: min(var(--cab-modal-width-form-large), 100%);
+  }
+  .cab-modal-min-w-analytics {
+    min-width: min(var(--cab-modal-width-analytics), 100%);
+  }
+}
+
+/* —— SidebarNavRow: flex, geometria rail fissa, single anchor —— */
+.cab-sidebar .cab-sidebar-nav-row {
+  min-height: var(--cab-sidebar-row-height);
+  gap: var(--cab-sidebar-icon-label-gap);
+  padding-inline: 0;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition:
+    background-color 200ms ease-out,
+    color 200ms ease-out;
+}
+
+.cab-sidebar .cab-sidebar-nav-row__icon-track {
+  width: var(--cab-sidebar-icon-size);
+  height: var(--cab-sidebar-icon-size);
+  margin-inline-start: var(--cab-sidebar-icon-anchor);
+}
+
+.cab-sidebar .cab-sidebar-nav-row__trailing,
+.cab-sidebar .cab-sidebar-nav-row-trailing {
+  flex: 0 0 var(--cab-sidebar-trailing-width);
+  width: var(--cab-sidebar-trailing-width);
+  min-width: var(--cab-sidebar-trailing-width);
+}
+
+.cab-sidebar .cab-sidebar-nav-row__label,
+.cab-sidebar .cab-sidebar-nav-row__trailing {
+  transition:
+    opacity var(--cab-sidebar-label-in) var(--cab-sidebar-ease-out),
+    clip-path var(--cab-sidebar-label-in) var(--cab-sidebar-ease-out);
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-row__label,
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-row__trailing {
+  opacity: 0;
+  clip-path: inset(0 100% 0 0);
+  pointer-events: none;
+  transition:
+    opacity var(--cab-sidebar-label-out) var(--cab-sidebar-ease-in),
+    clip-path var(--cab-sidebar-label-out) var(--cab-sidebar-ease-in);
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-row:not(.cab-sidebar-nav-row--active):hover {
+  background-color: transparent;
+}
+
+.cab-sidebar .cab-sidebar-nav > .gestionale-scrollbar,
+.cab-sidebar:not([data-sidebar-collapsed]) .cab-sidebar-nav > .gestionale-scrollbar {
+  padding-inline: var(--cab-sidebar-nav-inset);
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav > .gestionale-scrollbar {
+  padding-inline: var(--cab-sidebar-nav-inset);
+}
+
+/* Active — barra accent sinistra + enfasi neutra (niente pill primary / doppio bordo) */
+.cab-sidebar-active-indicator {
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: var(--cab-sidebar-active-bar-width);
+  height: var(--cab-sidebar-active-bar-height);
+  border-radius: 0 2px 2px 0;
+  background: var(--cab-primary);
+  box-shadow: none;
+}
+
+.cab-sidebar-active-indicator--rail,
+.cab-sidebar-active-indicator--row {
+  width: var(--cab-sidebar-active-bar-width);
+  height: var(--cab-sidebar-active-bar-height);
+}
+
+.cab-sidebar:not([data-sidebar-collapsed]) .cab-sidebar-nav-row--active {
+  background-color: rgb(244 244 245 / 0.75);
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-row--active,
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-row--active:hover {
+  background-color: transparent;
+}
+
+.cab-sidebar .cab-sidebar-nav-row--active {
+  color: rgb(39 39 42);
+  font-weight: 600;
+}
+
+.cab-sidebar .cab-sidebar-nav-row--active:hover {
+  color: rgb(39 39 42);
+}
+
+.cab-sidebar:not([data-sidebar-collapsed]) .cab-sidebar-nav-row--active:hover {
+  background-color: rgb(244 244 245 / 0.9);
+}
+
+.cab-sidebar .cab-sidebar-nav-row--active .cab-sidebar-nav-icon {
+  background-color: rgb(255 255 255);
+  color: rgb(39 39 42);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+}
+
+.cab-sidebar .cab-sidebar-nav-row--active:hover .cab-sidebar-nav-icon {
+  background-color: rgb(255 255 255);
+  color: rgb(39 39 42);
+}
+
+.dark .cab-sidebar:not([data-sidebar-collapsed]) .cab-sidebar-nav-row--active {
+  background-color: rgb(39 39 42 / 0.55);
+}
+
+.dark .cab-sidebar:not([data-sidebar-collapsed]) .cab-sidebar-nav-row--active:hover {
+  background-color: rgb(39 39 42 / 0.7);
+}
+
+.dark .cab-sidebar .cab-sidebar-nav-row--active,
+.dark .cab-sidebar .cab-sidebar-nav-row--active:hover {
+  color: rgb(244 244 245);
+}
+
+.dark .cab-sidebar .cab-sidebar-nav-row--active .cab-sidebar-nav-icon,
+.dark .cab-sidebar .cab-sidebar-nav-row--active:hover .cab-sidebar-nav-icon {
+  background-color: rgb(63 63 70);
+  color: rgb(244 244 245);
+  box-shadow: none;
+}
+
+/** Logo sidebar — slot fisso 4rem; logo contenuto nel padding, scala compatto→espanso. */
+.cab-sidebar-brand {
+  --cab-sidebar-logo-scale: 1;
+  --cab-sidebar-brand-h: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 100%;
+  height: var(--cab-sidebar-brand-h);
+  min-height: var(--cab-sidebar-brand-h);
+  max-height: var(--cab-sidebar-brand-h);
+  padding: 0.5rem 0.625rem;
+  box-sizing: border-box;
+  transition: --cab-sidebar-logo-scale var(--cab-sidebar-width-motion) var(--cab-sidebar-ease-out);
+}
+
+.cab-sidebar[data-sidebar-collapsed]:not([data-sidebar-hover-expanded]) .cab-sidebar-brand {
+  --cab-sidebar-logo-scale: 1;
+  padding: 0.375rem 0.25rem;
+}
+
+.cab-sidebar[data-sidebar-collapsed]:not([data-sidebar-hover-expanded]) .cab-sidebar-brand-logo,
+.cab-sidebar[data-sidebar-collapsed]:not([data-sidebar-hover-expanded]) .cab-sidebar-brand > a img {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: 1.25rem !important;
+  transform: none;
+}
+
+.cab-sidebar-brand-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: var(--ds-radius-lg);
+  overflow: hidden;
+}
+
+.cab-sidebar-brand-logo,
+.cab-sidebar-brand > a img {
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: calc(var(--cab-sidebar-brand-h) - 1rem) !important;
+  object-fit: contain;
+  transform: scale(var(--cab-sidebar-logo-scale));
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.cab-sidebar-brand > a > span {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cab-sidebar-session--brand {
+  min-width: 0;
+  padding-inline: 0;
+  padding-bottom: var(--ds-space-md);
+  border-bottom: 1px solid color-mix(in srgb, var(--cab-border) 85%, transparent);
+}
+
+.cab-sidebar:not([data-sidebar-collapsed]) .cab-sidebar-session--brand {
+  padding-inline: var(--cab-sidebar-nav-inset);
+}
+
+.cab-sidebar[data-sidebar-collapsed]:not([data-sidebar-hover-expanded]) .cab-sidebar-session--brand {
+  padding-inline: var(--cab-sidebar-nav-inset);
+}
+
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-session--brand {
+  padding-top: 0.5rem;
+  padding-bottom: 0.75rem;
+  padding-inline: 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--cab-border) 85%, transparent);
+}
+
+/* Mobile nav drawer — touch rows; override geometria rail sidebar desktop */
+.cab-nav-drawer-panel.cab-sidebar {
+  --cab-sidebar-row-height: 3.25rem;
+  --cab-sidebar-icon-size: 2.5rem;
+  --cab-sidebar-icon-label-gap: 0.75rem;
+  --cab-sidebar-icon-anchor: 0;
+  --cab-sidebar-trailing-width: auto;
+}
+
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav-row {
+  min-height: 3.25rem;
+  padding-inline: 0.75rem;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav-row__icon-track {
+  margin-inline-start: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+}
+
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav-row__label {
+  font-size: 1rem;
+}
+
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav-row__trailing,
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav-row-trailing {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav > .gestionale-scrollbar {
+  padding-inline: 0.75rem;
+}
+
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-active-indicator {
+  display: none;
+}
+
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav-row:not(.cab-sidebar-nav-row--active):not(:disabled) {
+  color: rgb(39 39 42);
+}
+
+.dark .cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav-row:not(.cab-sidebar-nav-row--active):not(:disabled) {
+  color: rgb(244 244 245);
+}
+
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav-row--active {
+  background-color: color-mix(in srgb, var(--cab-primary) 16%, var(--cab-card));
+  color: color-mix(in srgb, var(--cab-primary) 8%, var(--cab-text));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cab-primary) 28%, transparent);
+}
+
+.dark .cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav-row--active {
+  color: white;
+}
+
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav-row--active .cab-sidebar-nav-icon {
+  background: color-mix(in srgb, var(--cab-primary) 28%, var(--cab-card));
+  color: var(--cab-primary);
+}
+
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav-row--active:hover {
+  background-color: color-mix(in srgb, var(--cab-primary) 16%, var(--cab-card));
+}
+
+/** Padding orizzontale via `p-3` sul nodo (stesso inset delle voci nav). */
+.cab-sidebar-session {
+  min-width: 0;
+}
+
+.cab-sidebar-session-item--open {
+  background: color-mix(in srgb, var(--cab-primary) 10%, var(--cab-surface));
+}
+
+.cab-sidebar .cab-sidebar-session-expand-chevron {
+  display: block;
+}
+
+.cab-sidebar .cab-sidebar-nav-row__trailing:has(.cab-sidebar-session-expand-chevron) {
+  padding-inline-end: 0.375rem;
+}
+
+@keyframes cab-notification-bell-arrive {
+  0% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-8deg);
+  }
+  40% {
+    transform: rotate(8deg);
+  }
+  60% {
+    transform: rotate(-4deg);
+  }
+  80% {
+    transform: rotate(4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes cab-notification-badge-arrive {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.cab-notification-bell-icon--arrive {
+  animation: cab-notification-bell-arrive 600ms ease-out;
+}
+
+.cab-sidebar .cab-sidebar-notification-trailing-count {
+  justify-self: center;
+}
+
+.cab-sidebar .cab-sidebar-nav-row__trailing:has(.cab-sidebar-notification-trailing-count) {
+  justify-content: center;
+}
+
+.cab-notification-bell--arrive .cab-sidebar-notification-trailing-count {
+  animation: cab-notification-badge-arrive 600ms ease-out;
+}
+
+/* Campanella sidebar — tint unread sulla shell icona */
+.cab-sidebar .cab-sidebar-notification-bell--unread .cab-sidebar-nav-icon {
+  background: color-mix(in srgb, var(--cab-danger) 12%, var(--cab-surface));
+  color: color-mix(in srgb, var(--cab-danger) 82%, var(--cab-text));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cab-danger) 24%, transparent);
+}
+
+.dark .cab-sidebar .cab-sidebar-notification-bell--unread .cab-sidebar-nav-icon {
+  background: color-mix(in srgb, var(--cab-danger) 18%, var(--cab-card));
+  color: color-mix(in srgb, var(--cab-danger) 78%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cab-danger) 32%, transparent);
+}
+
+/** @deprecated alias — use `.cab-sidebar-session` */
+.cab-sidebar-account {
+  min-width: 0;
+}
+
+/** Padding verticale sul nav; rail icona = larghezza sidebar collassata. */
+.cab-sidebar > .cab-sidebar-nav {
+  padding-inline: 0;
+}
+
+.cab-sidebar .cab-sidebar-nav-icon {
+  transition:
+    background-color 200ms ease-out,
+    color 200ms ease-out;
+}
+
+.cab-sidebar {
+  will-change: width;
+}
+
+@media (min-width: 768px) {
+  .cab-sidebar[data-sidebar-hover-expanded] {
+    box-shadow: var(--cab-shadow-lg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cab-sidebar,
+  .cab-sidebar .cab-sidebar-nav-row,
+  .cab-sidebar .cab-sidebar-nav-row__label,
+  .cab-sidebar .cab-sidebar-nav-row__trailing,
+  .cab-sidebar .cab-sidebar-nav-icon,
+  .cab-sidebar-active-indicator,
+  .cab-sidebar-brand,
+  .cab-sidebar-brand-link,
+  .cab-sidebar-brand-logo,
+  .cab-sidebar-brand img,
+  .cab-notification-bell-icon--arrive,
+  .cab-notification-bell--arrive .cab-sidebar-notification-badge,
+  .cab-notification-bell--arrive .cab-sidebar-notification-trailing-count,
+  .cab-notification-bell--arrive span.pointer-events-none.absolute {
+    transition-duration: 0.01ms !important;
+    animation: none !important;
+  }
+}
+
+/* App autenticata: scroll verticale solo su main (.gestionale-scroll-y), non su html/body. */
+html:has(.cab-app-shell),
+body:has(.cab-app-shell) {
+  overflow: hidden;
+  height: var(--cab-app-height, 100dvh);
+  max-height: var(--cab-app-height, 100dvh);
+  overscroll-behavior: none;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+body:has(.cab-app-shell) .cab-app-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+}

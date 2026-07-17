@@ -1,22 +1,15 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { registerCompatDevTools } from "@/lib/magazzino/compat/compat-dev-tools";
-import { AdminLavorazioniNotificationBridge } from "@/src/components/admin-lavorazioni-notification-bridge";
-import { AdminDipendentiPresenzeReminderBridge } from "@/src/components/admin-dipendenti-presenze-reminder-bridge";
-import { AdminMagazzinoNotificationBridge } from "@/src/components/admin-magazzino-notification-bridge";
-import { AdminScheduledDigestNotificationBridge } from "@/src/components/admin-scheduled-digest-notification-bridge";
-import { GestionaleNotificationsBridge } from "@/src/components/gestionale-notifications-bridge";
-import { GestionaleRealtimeBridge } from "@/src/components/gestionale-realtime-bridge";
-import { GestionaleSnapshotRecoveryBridge } from "@/src/components/gestionale-snapshot-recovery-bridge";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
-import { NotificationOptInBanner } from "@/src/components/notification-opt-in-banner";
-import { PwaPushPermissionBridge } from "@/src/components/pwa-push-permission-bridge";
-import { PwaPushOpenBridge } from "@/src/components/pwa-push-open-bridge";
-import { PwaNotificationBadgeBridge } from "@/src/components/pwa-notification-badge";
-import { PwaSyncFinalizationBridge } from "@/src/components/pwa-sync-finalization-bridge";
+
+const PwaBridgePack = dynamic(() => import("@/src/components/pwa-bridge-pack"), { ssr: false });
+const RealtimePack = dynamic(() => import("@/src/components/gestionale-realtime-bridge-pack"), { ssr: false });
+const AdminNotifPack = dynamic(() => import("@/src/components/admin-notification-bridge-pack"), { ssr: false });
 
 /**
  * Monta i bridge realtime/notifiche solo dopo sessione stabile e primo frame,
@@ -25,6 +18,7 @@ import { PwaSyncFinalizationBridge } from "@/src/components/pwa-sync-finalizatio
 export function DeferredGestionaleBridges() {
   const { status, user } = useAuth();
   const authReady = isAuthSessionEstablished(status) && !!user?.id;
+  const isAdmin = user?.ruolo === "admin";
   const [mounted, setMounted] = useState(false);
   const queryClient = useQueryClient();
   const settingsPayload = useCabAppSettingsPayloadQuery({ tier: "static" });
@@ -54,18 +48,9 @@ export function DeferredGestionaleBridges() {
 
   return (
     <>
-      <PwaPushPermissionBridge />
-      <NotificationOptInBanner />
-      <PwaPushOpenBridge />
-      <PwaNotificationBadgeBridge />
-      <PwaSyncFinalizationBridge />
-      <GestionaleRealtimeBridge />
-      <GestionaleNotificationsBridge />
-      <AdminLavorazioniNotificationBridge />
-      <AdminMagazzinoNotificationBridge />
-      <AdminScheduledDigestNotificationBridge />
-      <AdminDipendentiPresenzeReminderBridge />
-      <GestionaleSnapshotRecoveryBridge />
+      <PwaBridgePack />
+      <RealtimePack />
+      {isAdmin ? <AdminNotifPack /> : null}
     </>
   );
 }

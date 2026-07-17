@@ -21,4 +21,7 @@ assert.equal(isRecoverableAuthError(new Error("Failed to fetch")), false);
 assert.equal(isTransientNetworkAuthError(new Error("Failed to fetch")), true);
 assert.equal(isTransientNetworkAuthError(new Error("503 Service Unavailable")), true);
 
+import { getUserWithAuthRetry } from "@/src/lib/auth/auth-network-retry";
+assert.equal(typeof getUserWithAuthRetry, "function");
+
 console.log("auth-network-retry.test.ts OK");

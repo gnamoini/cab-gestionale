@@ -1,27 +1,25 @@
 "use client";
 
+import { fetchFatturazioneOpenItemsClient } from "@/lib/fatturazione/fatturazione-open-items-fetch";
 import { fatturazioneOpenItemsQueryKey } from "@/lib/render/query-key-factory";
-import { CUSTOMER_OPEN_ITEMS_COLUMNS } from "@/lib/db/table-select-columns";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
-import { useServiceQuery } from "@/src/hooks/use-service-query";
-import { success, err } from "@/src/services/service-result";
-import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import type { CustomerOpenItemRow } from "@/src/types/supabase-tables";
+import { useSharedEntityQuery } from "@/src/hooks/use-shared-entity-query";
 
-async function fetchOpenItems() {
-  const c = getBrowserSupabase();
-  const { data, error } = await c
-    .from("customer_open_items")
-    .select(CUSTOMER_OPEN_ITEMS_COLUMNS)
-    .neq("status", "closed")
-    .order("due_date", { ascending: true, nullsFirst: false });
-  if (error) return err(error.message);
-  return success((data ?? []) as CustomerOpenItemRow[]);
-}
+const FATTURAZIONE_OPEN_ITEMS_SCOPE = "fatturazione.openItems" as const;
 
 export function useFatturazioneOpenItemsQuery(enabled = true) {
   const gestOpts = useGestionaleQueryOpts();
-  const q = useServiceQuery(fatturazioneOpenItemsQueryKey(), fetchOpenItems, { enabled, ...gestOpts });
+  const queryKey = fatturazioneOpenItemsQueryKey();
+  const q = useSharedEntityQuery({
+    queryKey,
+    queryFn: () => fetchFatturazioneOpenItemsClient(),
+    entityType: "fatturazione",
+    scope: "openItems",
+    ownershipScopeKey: FATTURAZIONE_OPEN_ITEMS_SCOPE,
+    expectedServerKey: queryKey,
+    enabled,
+    ...gestOpts,
+  });
   return {
     items: q.data ?? [],
     isLoading: q.isLoading,

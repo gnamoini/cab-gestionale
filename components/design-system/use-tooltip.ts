@@ -35,6 +35,8 @@ const HIDE_DELAY_MS = 100;
 const TOUCH_HOLD_MS = 400;
 /** Dopo un tap touch, ignora mouseenter sintetici (ghost events). */
 const TOUCH_GHOST_MOUSE_MS = 500;
+/** Batch posizione tooltip — max 1 update per frame (ponytail: scroll/resize burst). */
+const TOOLTIP_POSITION_RAF_BATCH = true;
 
 function sideToPlacement(side: TooltipSide): Placement {
   return side;
@@ -104,8 +106,25 @@ export function useTooltip({
   const pointerActivatedRef = useRef(false);
   const touchGhostRef = useRef(false);
   const coarsePointerRef = useRef(false);
+  const positionRafRef = useRef<number | null>(null);
 
   const canShow = Boolean(content?.trim()) && !disabled;
+
+  const batchedAutoUpdate: typeof autoUpdate = useCallback(
+    (reference, floating, update) => {
+      if (!TOOLTIP_POSITION_RAF_BATCH) {
+        return autoUpdate(reference, floating, update);
+      }
+      return autoUpdate(reference, floating, () => {
+        if (positionRafRef.current != null) return;
+        positionRafRef.current = requestAnimationFrame(() => {
+          positionRafRef.current = null;
+          update();
+        });
+      });
+    },
+    [],
+  );
 
   const { refs, floatingStyles, isPositioned, placement } = useFloating({
     open,
@@ -127,7 +146,7 @@ export function useTooltip({
         },
       }),
     ],
-    whileElementsMounted: open ? autoUpdate : undefined,
+    whileElementsMounted: open ? batchedAutoUpdate : undefined,
   });
 
   const resolvedSide = placementToSide(placement);
@@ -259,6 +278,10 @@ export function useTooltip({
       clearHideTimer();
       clearTouchTimer();
       clearTouchGhostTimer();
+      if (positionRafRef.current != null) {
+        cancelAnimationFrame(positionRafRef.current);
+        positionRafRef.current = null;
+      }
     };
   }, [clearShowTimer, clearHideTimer, clearTouchTimer, clearTouchGhostTimer]);
 

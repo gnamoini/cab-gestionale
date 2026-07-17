@@ -4,6 +4,7 @@ import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { PageHeader } from "@/components/gestionale/page-header";
@@ -14,39 +15,32 @@ import {
   usePageActionMenu,
   type PageActionItem,
 } from "@/components/ui";
-import { FatturazioneDetailDrawer } from "@/components/fatturazione/fatturazione-detail-drawer";
-import { FatturaPaymentModal } from "@/components/fatturazione/fattura-payment-modal";
 import { FatturazioneFattureSection } from "@/components/fatturazione/fatturazione-fatture-section";
 import { FatturazioneHubNav } from "@/components/fatturazione/fatturazione-hub-nav";
 import { FatturazioneKpiGrid } from "@/components/fatturazione/fatturazione-kpi-grid";
-import { FatturazioneNoteCreditoSection } from "@/components/fatturazione/fatturazione-note-credito-section";
-import { FatturazionePagamentiSection } from "@/components/fatturazione/fatturazione-pagamenti-section";
-import { FatturazioneScadenziarioSection } from "@/components/fatturazione/fatturazione-scadenziario-section";
 import { buildInvoiceKpi } from "@/lib/fatturazione/invoice-calculations";
 import { parseFatturazioneTab } from "@/lib/fatturazione/fatturazione-sections-config";
 import type { FatturazionePageFilters } from "@/lib/fatturazione/fatturazione-list-ui-filters";
 import type { FatturazioneOrigine, InvoiceDetail } from "@/lib/fatturazione/types";
+import { fetchFatturazioneOpenItemsClient } from "@/lib/fatturazione/fatturazione-open-items-fetch";
+import { fetchFatturazionePaymentsClient } from "@/lib/fatturazione/fatturazione-payments-fetch";
 import { invoicesEntry } from "@/lib/domain/invoices-entry";
 import { useInvoicesQuery } from "@/src/hooks/gestionale/use-invoices-query";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
-import { ddtListQueryKey } from "@/lib/render/query-key-factory";
+import {
+  ddtListQueryKey,
+  fatturazioneOpenItemsQueryKey,
+  fatturazionePaymentsQueryKey,
+} from "@/lib/render/query-key-factory";
 import { ddtEntry } from "@/lib/domain/ddt-entry";
 import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
-import { Drawer } from "@/components/design-system";
 import {
   buildLogModificheDisplayEntries,
   logAutoreLabel,
 } from "@/lib/gestionale-log/log-modifiche-view-model";
-import {
-  GestionaleLogEmpty,
-  GestionaleLogEntryFourLines,
-  GestionaleLogList,
-  gestionaleLogDrawerPanelClass,
-  gestionaleLogScrollEmbeddedClass,
-} from "@/components/gestionale/gestionale-log-ui";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useGestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
 import { dsStackPage } from "@/lib/ui/design-system";
@@ -54,6 +48,21 @@ import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries"
 
 const FatturazioneWizardModal = dynamic(
   () => import("@/components/fatturazione/fatturazione-wizard-modal").then((m) => m.FatturazioneWizardModal),
+  { ssr: false },
+);
+
+const FatturazioneScadenziarioSection = dynamic(
+  () =>
+    import("@/components/fatturazione/fatturazione-scadenziario-section").then((m) => m.FatturazioneScadenziarioSection),
+  { ssr: false },
+);
+const FatturazionePagamentiSection = dynamic(
+  () => import("@/components/fatturazione/fatturazione-pagamenti-section").then((m) => m.FatturazionePagamentiSection),
+  { ssr: false },
+);
+const FatturazioneNoteCreditoSection = dynamic(
+  () =>
+    import("@/components/fatturazione/fatturazione-note-credito-section").then((m) => m.FatturazioneNoteCreditoSection),
   { ssr: false },
 );
 
@@ -84,6 +93,21 @@ const FatturazioneImpostazioniSection = dynamic(
   { ssr: false },
 );
 
+const FatturazioneDetailDrawer = dynamic(
+  () => import("@/components/fatturazione/fatturazione-detail-drawer").then((m) => m.FatturazioneDetailDrawer),
+  { ssr: false },
+);
+
+const FatturaPaymentModal = dynamic(
+  () => import("@/components/fatturazione/fattura-payment-modal").then((m) => m.FatturaPaymentModal),
+  { ssr: false },
+);
+
+const FatturazioneLogDrawer = dynamic(
+  () => import("@/components/fatturazione/fatturazione-log-drawer").then((m) => m.FatturazioneLogDrawer),
+  { ssr: false },
+);
+
 function FatturazionePageMenuRegistrar({ items }: { items: PageActionItem[] }) {
   usePageActionMenu(items, { group: "fatturazione-base", deps: [items] });
   return null;
@@ -92,6 +116,8 @@ function FatturazionePageMenuRegistrar({ items }: { items: PageActionItem[] }) {
 export function FatturazioneView() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const gestOpts = useGestionaleQueryOpts();
   const activeTab = parseFatturazioneTab(searchParams.get("tab"));
   const { user } = useAuth();
   const authorName = user?.nome?.trim() || user?.email?.split("@")[0]?.trim() || "Operatore";
@@ -99,14 +125,6 @@ export function FatturazioneView() {
   const perms = permModules.fatturazione;
   const { containerRef, layoutClassName } = useGestionaleListLayout();
   const { invoices, links, customers, preventiviBilling, isLoading, refetch } = useInvoicesQuery();
-  const preventiviQuery = usePreventiviRecordsQuery();
-  const gestOpts = useGestionaleQueryOpts();
-  const ddtQuery = useServiceQuery(ddtListQueryKey(), () => ddtEntry.getList(), gestOpts);
-  const eligibleDdtDocuments = useMemo(
-    () => (ddtQuery.data?.documents ?? []).filter((d) => d.status !== "annullato" && d.status !== "bozza"),
-    [ddtQuery.data?.documents],
-  );
-  const logQuery = useLogListQuery({ entita: "invoices", limit: 100 });
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
@@ -116,6 +134,19 @@ export function FatturazioneView() {
   const [logOpen, setLogOpen] = useState(false);
   const [editDraft, setEditDraft] = useState<InvoiceDetail | null>(null);
   const [fattureFilterBoost, setFattureFilterBoost] = useState<Partial<FatturazionePageFilters> | null>(null);
+
+  const preventiviQuery = usePreventiviRecordsQuery(wizardOpen);
+  const needDdtList = wizardOpen;
+  const ddtQuery = useServiceQuery(ddtListQueryKey(), () => ddtEntry.getList(), {
+    ...gestOpts,
+    enabled: needDdtList,
+  });
+  const logQuery = useLogListQuery({ entita: "invoices", limit: 100 }, { enabled: logOpen });
+
+  const eligibleDdtDocuments = useMemo(
+    () => (ddtQuery.data?.documents ?? []).filter((d) => d.status !== "annullato" && d.status !== "bozza"),
+    [ddtQuery.data?.documents],
+  );
 
   const kpi = useMemo(() => buildInvoiceKpi(invoices), [invoices]);
 
@@ -138,6 +169,36 @@ export function FatturazioneView() {
   useEffect(() => {
     if (nuovoRequested && canWriteFatturazione) setWizardOpen(true);
   }, [nuovoRequested, canWriteFatturazione]);
+
+  useEffect(() => {
+    if (activeTab !== "scadenziario") return;
+    const key = fatturazioneOpenItemsQueryKey();
+    if (queryClient.getQueryData(key)) return;
+    void queryClient.prefetchQuery({
+      queryKey: key,
+      queryFn: async () => {
+        const res = await fetchFatturazioneOpenItemsClient();
+        if (!res.success) throw new Error(res.error ?? "Errore caricamento scadenziario.");
+        return res.data ?? [];
+      },
+      staleTime: gestOpts.staleTime,
+    });
+  }, [activeTab, gestOpts.staleTime, queryClient]);
+
+  useEffect(() => {
+    if (activeTab !== "pagamenti") return;
+    const key = fatturazionePaymentsQueryKey();
+    if (queryClient.getQueryData(key)) return;
+    void queryClient.prefetchQuery({
+      queryKey: key,
+      queryFn: async () => {
+        const res = await fetchFatturazionePaymentsClient();
+        if (!res.success) throw new Error(res.error ?? "Errore caricamento pagamenti.");
+        return res.data ?? [];
+      },
+      staleTime: gestOpts.staleTime,
+    });
+  }, [activeTab, gestOpts.staleTime, queryClient]);
 
   const logEntries = useMemo(
     () =>
@@ -202,95 +263,81 @@ export function FatturazioneView() {
     <GestionaleSectionGate module="fatturazione">
       <PageActionMenuProvider onRefresh={() => void refetch()}>
         <FatturazionePageMenuRegistrar items={fatturazioneBaseMenuItems} />
-      <div ref={containerRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${layoutClassName}`}>
-        <PageHeader
-          title="Fatturazione"
-          actions={<PageActionMenu />}
-        />
-        <div className={dsStackPage}>
-          <FatturazioneKpiGrid
-            kpi={kpi}
-            onScaduteClick={() => {
-              setFattureFilterBoost({ scadenzaPreset: "scadute" });
-              const params = new URLSearchParams(searchParams.toString());
-              params.delete("tab");
-              const qs = params.toString();
-              router.replace(qs ? `/fatturazione?${qs}` : "/fatturazione", { scroll: false });
-            }}
-            onDaIncassareClick={() => {
-              setFattureFilterBoost({ status: "parzialmente_pagata" });
-            }}
-          />
-          <FatturazioneHubNav activeTab={activeTab} />
-          {section}
-        </div>
-
-        <FatturazioneDetailDrawer
-          detail={detail}
-          open={detailOpen}
-          onClose={() => setDetailOpen(false)}
-          canWrite={perms.canWrite}
-          onChanged={() => void refetch()}
-          onRegisterPayment={() => setPaymentOpen(true)}
-          onEditDraft={
-            perms.canWrite
-              ? () => {
-                  if (!detail) return;
-                  setEditDraft(detail);
-                  setWizardOpen(true);
-                  setDetailOpen(false);
-                }
-              : undefined
-          }
-        />
-
-        {paymentOpen && detail ? (
-          <FatturaPaymentModal
-            invoice={detail.invoice}
-            onRequestClose={() => setPaymentOpen(false)}
-            onSaved={() => {
-              void refetch();
-              void openDetail(detail.invoice.id);
-            }}
-          />
-        ) : null}
-
-        {wizardOpen ? (
-          <FatturazioneWizardModal
-            onRequestClose={() => {
-              setWizardOpen(false);
-              setEditDraft(null);
-            }}
-            onSaved={() => void refetch()}
-            preventiviRecords={preventiviQuery.records}
-            preventiviBilling={preventiviBilling}
-            billingCustomers={customers}
-            eligibleDdtDocuments={eligibleDdtDocuments}
-            initialOrigine={wizardOrigine}
-            editDetail={editDraft}
-          />
-        ) : null}
-
-        <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log fatturazione" ariaLabel="Log fatturazione">
-          <div className={gestionaleLogDrawerPanelClass}>
-            <div className={gestionaleLogScrollEmbeddedClass}>
-              {logQuery.isLoading ? (
-                <p className="p-4 text-sm text-[color:var(--cab-text-muted)]">Caricamento…</p>
-              ) : logEntries.length === 0 ? (
-                <GestionaleLogEmpty message="Nessuna voce di log." />
-              ) : (
-                <GestionaleLogList>
-                  {logEntries.map((entry) => (
-                    <li key={entry.id} className="list-none">
-                      <GestionaleLogEntryFourLines vm={entry.vm} />
-                    </li>
-                  ))}
-                </GestionaleLogList>
-              )}
-            </div>
+        <div ref={containerRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${layoutClassName}`}>
+          <PageHeader title="Fatturazione" actions={<PageActionMenu />} />
+          <div className={dsStackPage}>
+            <FatturazioneKpiGrid
+              kpi={kpi}
+              onScaduteClick={() => {
+                setFattureFilterBoost({ scadenzaPreset: "scadute" });
+                const params = new URLSearchParams(searchParams.toString());
+                params.delete("tab");
+                const qs = params.toString();
+                router.replace(qs ? `/fatturazione?${qs}` : "/fatturazione", { scroll: false });
+              }}
+              onDaIncassareClick={() => {
+                setFattureFilterBoost({ status: "parzialmente_pagata" });
+              }}
+            />
+            <FatturazioneHubNav activeTab={activeTab} />
+            {section}
           </div>
-        </Drawer>
-      </div>
+
+          {detailOpen ? (
+            <FatturazioneDetailDrawer
+              detail={detail}
+              open={detailOpen}
+              onClose={() => setDetailOpen(false)}
+              canWrite={perms.canWrite}
+              onChanged={() => void refetch()}
+              onRegisterPayment={() => setPaymentOpen(true)}
+              onEditDraft={
+                perms.canWrite
+                  ? () => {
+                      if (!detail) return;
+                      setEditDraft(detail);
+                      setWizardOpen(true);
+                      setDetailOpen(false);
+                    }
+                  : undefined
+              }
+            />
+          ) : null}
+
+          {paymentOpen && detail ? (
+            <FatturaPaymentModal
+              invoice={detail.invoice}
+              onRequestClose={() => setPaymentOpen(false)}
+              onSaved={() => {
+                void refetch();
+                void openDetail(detail.invoice.id);
+              }}
+            />
+          ) : null}
+
+          {wizardOpen ? (
+            <FatturazioneWizardModal
+              onRequestClose={() => {
+                setWizardOpen(false);
+                setEditDraft(null);
+              }}
+              onSaved={() => void refetch()}
+              preventiviRecords={preventiviQuery.records}
+              preventiviBilling={preventiviBilling}
+              billingCustomers={customers}
+              eligibleDdtDocuments={eligibleDdtDocuments}
+              initialOrigine={wizardOrigine}
+              editDetail={editDraft}
+            />
+          ) : null}
+
+          <FatturazioneLogDrawer
+            open={logOpen}
+            onClose={() => setLogOpen(false)}
+            entries={logEntries}
+            isLoading={logQuery.isLoading}
+          />
+        </div>
       </PageActionMenuProvider>
     </GestionaleSectionGate>
   );

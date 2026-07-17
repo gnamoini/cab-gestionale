@@ -21,7 +21,7 @@ export const cabIosSafePad =
 
 /** Layer modale: backdrop condiviso (z-index aggiunto dal consumer). */
 export const cabModalLayerShared =
-  `${cabIosOverlaySurface} bg-[var(--cab-overlay)] backdrop-blur-[2px]`;
+  `${cabIosOverlaySurface} bg-[var(--cab-overlay)] motion-safe:backdrop-blur-[2px]`;
 
 /** Layer mobile: sheet fullscreen edge-to-edge. */
 export const cabModalLayerMobile =

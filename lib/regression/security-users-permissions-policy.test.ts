@@ -111,4 +111,14 @@ assert.match(dashboardSrc, /Monitoraggio accessi/);
 assert.match(dashboardSrc, /Release e pilot/);
 assert.match(dashboardSrc, /filterUserItems/);
 
+const pageAccessRlsFix = fs.readFileSync(
+  path.join(ROOT, "supabase/migrations/20260917120000_rbac_page_access_rls_exec_fix.sql"),
+  "utf8",
+);
+assert.match(pageAccessRlsFix, /rbac_has_capability\(public\.rbac_auth_uid\(\), 'can_manage_security'\)/);
+assert.doesNotMatch(
+  pageAccessRlsFix,
+  /create policy user_page_overrides_select[\s\S]*rbac_user_page_access_level/,
+);
+
 console.log("security-users-permissions-policy.test.ts OK");

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type {
   ControlTowerActivityDomain,
@@ -37,7 +37,7 @@ const ACTIVITY_COLUMNS: { id: ControlTowerActivityDomain; label: string; canAcce
     { id: "fatturazione", label: "Fatturazione", canAccess: (c) => c.canFatturazione },
   ];
 
-function ActivityCardShell({
+const ActivityCardShell = memo(function ActivityCardShell({
   label,
   empty,
   loading,
@@ -66,12 +66,12 @@ function ActivityCardShell({
       )}
     </article>
   );
-}
+});
 
 const ACTIVITY_ROW_SHELL_CLASS =
-  "rounded-md border border-[color:var(--cab-border)] px-2.5 py-2 shadow-[var(--cab-shadow-sm)]";
+  "rounded-md border border-[color:var(--cab-border)] px-2.5 py-2 motion-safe:shadow-[var(--cab-shadow-sm)]";
 
-function ActivityEntityRow({
+const ActivityEntityRow = memo(function ActivityEntityRow({
   item,
   onOpen,
 }: {
@@ -114,7 +114,7 @@ function ActivityEntityRow({
       </Shell>
     </li>
   );
-}
+});
 
 export function DashboardRecentActivityWidget({ def }: { def: DashboardWidgetDefinition }) {
   const router = useRouter();

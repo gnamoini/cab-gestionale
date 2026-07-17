@@ -90,25 +90,6 @@ export function useDocumentCaptureUpload() {
 
       if (!finalizeRes.ok) {
         const body = (await finalizeRes.json().catch(() => ({}))) as { error?: string; code?: string };
-        // #region agent log
-        fetch("http://127.0.0.1:7863/ingest/89dc6c11-bff2-45f2-876e-83e3ac496a5d", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bd086a" },
-          body: JSON.stringify({
-            sessionId: "bd086a",
-            hypothesisId: "CLIENT",
-            location: "use-document-capture-upload.ts:finalize",
-            message: "finalize response not ok",
-            data: {
-              status: finalizeRes.status,
-              error: body.error ?? null,
-              code: body.code ?? null,
-              captureId: policy.captureId,
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
         throw new Error(mapDocumentCaptureUploadError(body.error ?? "Finalize non riuscito"));
       }
 

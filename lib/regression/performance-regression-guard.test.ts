@@ -15,6 +15,9 @@ function exists(rel: string): boolean {
 for (const script of [
   "scripts/ops/performance-snapshot.mjs",
   "scripts/ops/performance-regression-check.mjs",
+  "scripts/ops/extract-build-budgets.mjs",
+  "scripts/ops/lighthouse-budget.mjs",
+  "scripts/ops/performance-trend-report.mjs",
   "scripts/ops/react-render-audit.mjs",
   "scripts/ops/query-frequency-audit.mjs",
   "scripts/ops/export-performance-budgets.ts",
@@ -25,26 +28,22 @@ for (const script of [
 }
 
 assert.ok(exists("lib/performance/performance-budget-registry.ts"));
+assert.ok(exists("lib/performance/performance-global-budgets.ts"));
 assert.ok(exists("lib/observability/react-render-audit.ts"));
-
-const report = exists("docs/performance-regression-report.md")
-  ? read("docs/performance-regression-report.md")
-  : "";
-if (report.length > 0) {
-  for (const section of ["P0", "P1", "P2"]) {
-    assert.match(report, new RegExp(section), `performance-regression-report.md missing ${section}`);
-  }
-}
+assert.ok(exists("docs/adr/ADR-004-performance-governance.md"));
 
 const guardDoc = read("docs/performance-regression-guard.md");
 assert.match(guardDoc, /ops:performance-snapshot/);
 assert.match(guardDoc, /ops:performance-regression-check/);
+assert.match(guardDoc, /ops:build-budget-gate/);
 
 const pkg = read("package.json");
 assert.match(pkg, /ops:performance-snapshot/);
 assert.match(pkg, /ops:performance-regression-check/);
+assert.match(pkg, /ops:build-budget-gate/);
 
-const appShell = read("components/gestionale/app-shell.tsx");
-assert.match(appShell, /ReactRenderAuditProfiler/);
+const appShellMain = read("components/gestionale/app-shell-main.tsx");
+assert.match(appShellMain, /ReactRenderAuditProfiler/);
+assert.match(appShellMain, /PerformanceDiagnosticsOverlay/);
 
 console.log("performance-regression-guard.test.ts OK");

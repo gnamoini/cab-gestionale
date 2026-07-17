@@ -39,7 +39,7 @@ assert.match(scrollRestore, /onRestoreActiveIndex/);
 
 assert.match(settingsSelect, /listKey\.startsWith\("magazzino:"\)/);
 assert.match(settingsSelect, /resolvedSelectorDomain/);
-assert.match(settingsSelect, /dynamicList: dynamicList \?\? isMagazzinoListKey/);
+assert.match(settingsSelect, /dynamicList: dynamicList \?\? \(isMagazzinoListKey \|\| isMezziListKey\)/);
 
 assert.match(globalSelect, /useSheetTriggerMode/);
 assert.match(focusChain, /onSearchFocus/);

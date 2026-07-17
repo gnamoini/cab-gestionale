@@ -40,6 +40,15 @@ const nextConfig: NextConfig = {
   images: {
     qualities: [75, 100],
   },
+  experimental: {
+    optimizePackageImports: [
+      "@tanstack/react-query",
+      "@tanstack/react-virtual",
+      "@dnd-kit/core",
+      "@dnd-kit/utilities",
+      "@floating-ui/react-dom",
+    ],
+  },
   async headers() {
     return [
       {

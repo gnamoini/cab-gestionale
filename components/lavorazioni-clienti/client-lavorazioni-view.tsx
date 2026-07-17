@@ -1,6 +1,7 @@
 "use client";
 
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
@@ -13,13 +14,18 @@ import {
   useCollapsiblePreference,
 } from "@/lib/ui/collapsible-prefs";
 import { ClientContattaciButton } from "@/components/lavorazioni-clienti/client-contattaci-button";
-import { ClientContattaciDialog } from "@/components/lavorazioni-clienti/client-contattaci-dialog";
+const ClientContattaciDialog = dynamic(
+  () =>
+    import("@/components/lavorazioni-clienti/client-contattaci-dialog").then((m) => ({
+      default: m.ClientContattaciDialog,
+    })),
+  { ssr: false },
+);
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
 import { lavorazioniAdvancedFiltersActive } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
 import {
-  ClientLavorazioniStackSkeleton,
   clientPortalPageStack,
 } from "@/components/lavorazioni-clienti/client-lavorazioni-loading-skeleton";
 import {
@@ -34,13 +40,25 @@ import {
   LavorazioneMobileCardFooter,
   LavorazioneMobileCardShell,
 } from "@/components/gestionale/lavorazioni/lavorazione-mobile-card";
-import { ClientLavorazioneIngressoDialog } from "@/components/lavorazioni-clienti/client-lavorazione-ingresso-dialog";
+const ClientLavorazioneIngressoDialog = dynamic(
+  () =>
+    import("@/components/lavorazioni-clienti/client-lavorazione-ingresso-dialog").then((m) => ({
+      default: m.ClientLavorazioneIngressoDialog,
+    })),
+  { ssr: false },
+);
 import {
   IconQrCode,
   IconSchedeIngresso,
 } from "@/components/lavorazioni-clienti/client-lavorazioni-icons";
 import { ClientLavorazionePhotoStrip } from "@/components/lavorazioni-clienti/client-lavorazione-photos";
-import { ClientLavorazioneQrDialog } from "@/components/lavorazioni-clienti/client-lavorazione-qr-dialog";
+const ClientLavorazioneQrDialog = dynamic(
+  () =>
+    import("@/components/lavorazioni-clienti/client-lavorazione-qr-dialog").then((m) => ({
+      default: m.ClientLavorazioneQrDialog,
+    })),
+  { ssr: false },
+);
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import {
   buildClientPortalRowFields,
@@ -618,6 +636,19 @@ function LavorazioniSection({
   );
 }
 
+const CLIENT_PORTAL_SCHEde_SORT_KEYS = new Set<ClientPortalSortKey>([
+  "cantiere",
+  "attrezzatura",
+  "nScuderia",
+  "targa",
+  "matricola",
+  "addetto",
+]);
+
+function clientPortalSortAllowed(key: ClientPortalSortKey, lsdDegraded: boolean): boolean {
+  return !lsdDegraded || !CLIENT_PORTAL_SCHEde_SORT_KEYS.has(key);
+}
+
 function buildRowBundles(
   rows: readonly LavorazioneListRow[],
   schedeStore: LavorazioneSchedeStore,
@@ -638,7 +669,8 @@ function buildRowBundles(
 }
 
 export function ClientLavorazioniView() {
-  const o = useClientPortalPageOrchestrator();
+  const [archivioExpanded, setArchivioExpanded] = useState(false);
+  const o = useClientPortalPageOrchestrator({ archivioExpanded: archivioExpanded });
   const { user, authorName } = useAuth();
   const {
     containerRef: listLayoutRef,
@@ -665,10 +697,19 @@ export function ClientLavorazioniView() {
   const addettiRecords = l0?.addettiRecords ?? [];
   const colStyles = useLavorazioniListTableColStyles(statiOpts, [], addettiGlobali);
   const addettoColors = l0?.addettoColors ?? {};
-  const { logQuery: lavModificheLogQuery } = useUndoableLog("lavorazioni");
+  const lsdMode = contract.lsdMode;
+  const lsdDegraded = lsdMode === "degraded";
+  const lsdPaginated = lsdMode === "paginated";
+
+  const [qrRow, setQrRow] = useState<LavorazioneListRow | null>(null);
+  const [ingressoRow, setIngressoRow] = useState<LavorazioneListRow | null>(null);
+  const [contattaciOpen, setContattaciOpen] = useState(false);
+  const { logQuery: lavModificheLogQuery } = useUndoableLog("lavorazioni", {
+    enabled: ingressoRow != null,
+  });
   const logsByLavorazioneId = useMemo(
-    () => groupLavorazioniLogsById(lavModificheLogQuery.data ?? []),
-    [lavModificheLogQuery.data],
+    () => (ingressoRow ? groupLavorazioniLogsById(lavModificheLogQuery.data ?? []) : new Map()),
+    [ingressoRow, lavModificheLogQuery.data],
   );
 
   useEffect(() => {
@@ -676,9 +717,6 @@ export function ClientLavorazioniView() {
     return () => window.clearTimeout(t);
   }, [searchInput, patchFilters]);
 
-  const [qrRow, setQrRow] = useState<LavorazioneListRow | null>(null);
-  const [ingressoRow, setIngressoRow] = useState<LavorazioneListRow | null>(null);
-  const [contattaciOpen, setContattaciOpen] = useState(false);
   const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
     collapsibleExpandedBoolPref(false, {
       scope: "client-lavorazioni",
@@ -731,12 +769,14 @@ export function ClientLavorazioniView() {
       const schedaUpdatedBy = schedeStore[row.id]?.ingresso?.updatedBy?.trim();
       if (schedaUpdatedBy && uuidRe.test(schedaUpdatedBy)) ids.add(schedaUpdatedBy);
     }
-    for (const log of lavModificheLogQuery.data ?? []) {
-      const id = log.autore_id?.trim();
-      if (id) ids.add(id);
+    if (ingressoRow) {
+      for (const log of lavModificheLogQuery.data ?? []) {
+        const id = log.autore_id?.trim();
+        if (id) ids.add(id);
+      }
     }
     return [...ids];
-  }, [l0?.archivioRows, l0?.inCorsoRows, lavModificheLogQuery.data, schedeStore]);
+  }, [ingressoRow, l0?.archivioRows, l0?.inCorsoRows, lavModificheLogQuery.data, schedeStore]);
   const lazyProfileNames = useLavorazioneProfileNamesQuery(profileUserIds, canRender);
   const logAutoreByLavorazioneId = useMemo(
     () =>
@@ -793,15 +833,19 @@ export function ClientLavorazioniView() {
   );
 
   const onSortInCorso = useCallback(
-    (k: ClientPortalSortKey) =>
-      cycleLavorazioniTableSort(sortInCorsoCol, setSortInCorsoCol, setSortInCorsoPhase, k),
-    [sortInCorsoCol],
+    (k: ClientPortalSortKey) => {
+      if (!clientPortalSortAllowed(k, lsdDegraded)) return;
+      cycleLavorazioniTableSort(sortInCorsoCol, setSortInCorsoCol, setSortInCorsoPhase, k);
+    },
+    [lsdDegraded, sortInCorsoCol],
   );
 
   const onSortArchivio = useCallback(
-    (k: ClientPortalSortKey) =>
-      cycleLavorazioniTableSort(sortArchivioCol, setSortArchivioCol, setSortArchivioPhase, k),
-    [sortArchivioCol],
+    (k: ClientPortalSortKey) => {
+      if (!clientPortalSortAllowed(k, lsdDegraded)) return;
+      cycleLavorazioniTableSort(sortArchivioCol, setSortArchivioCol, setSortArchivioPhase, k);
+    },
+    [lsdDegraded, sortArchivioCol],
   );
 
   const showInCorso = filters.section !== "archivio";
@@ -841,7 +885,15 @@ export function ClientLavorazioniView() {
   const listError = contract.l0Status === "error" ? contract.error : null;
 
   let listBody: ReactNode;
-  if (listError) {
+  if (lsdPaginated) {
+    listBody = (
+      <ShellCard>
+        <p className="text-sm text-[color:var(--cab-text)]">
+          Lo storico lavorazioni supera la soglia consultabile dal portale. Contatta CAB per assistenza.
+        </p>
+      </ShellCard>
+    );
+  } else if (listError) {
     listBody = (
       <ShellCard>
         <LoadingErrorState
@@ -891,6 +943,7 @@ export function ClientLavorazioniView() {
             persistScope="client-lavorazioni"
             persistKey="archivio"
             persist={false}
+            onCollapsedChange={(collapsed) => setArchivioExpanded(!collapsed)}
           >
             <LavorazioniSection
               listLayout={listLayout}
@@ -932,11 +985,16 @@ export function ClientLavorazioniView() {
 
       <div className={clientPortalPageStack}>
         {!canRender ? (
-          <div className="contents" role="status" aria-busy="true" aria-label="Caricamento lavorazioni">
-            <ClientLavorazioniStackSkeleton />
-          </div>
+          <div className="min-h-[12rem]" role="status" aria-busy="true" aria-label="Caricamento lavorazioni" />
         ) : (
           <>
+            {lsdDegraded ? (
+              <ShellCard>
+                <p className="text-sm text-[color:var(--cab-text-muted)]">
+                  Storico ampio: ordinamento su colonne scheda disabilitato per mantenere la pagina reattiva.
+                </p>
+              </ShellCard>
+            ) : null}
             <ShellCard>
               <section aria-label="Azioni e filtri lavorazioni clienti">
                 <PageToolbar

@@ -2,16 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  employeeIdsWithEntriesInPeriod,
-  selectTimesheetEmployeesForDisplay,
-  sortTimesheetEmployeesForDisplay,
-} from "@/lib/dipendenti/dipendenti-employee-display";
-import { entryToCellValue } from "@/lib/dipendenti/timesheet-totals";
+import { useDipendentiTimesheetDerived } from "@/lib/dipendenti/use-dipendenti-timesheet-derived";
 import type {
   DipendenteTimesheetEmployeeRow,
   DipendenteTimesheetEntryRow,
-  TimesheetCellValue,
   TimesheetEntryUpsert,
   TimesheetMonthKey,
 } from "@/lib/dipendenti/types";
@@ -33,6 +27,12 @@ import {
   dispatchTimesheetEmployeesChanged,
   dispatchTimesheetEntryChanged,
 } from "@/lib/dipendenti/dipendenti-timesheet-sync-dispatch";
+import {
+  dipendentiEntriesQueryKey,
+  useDipendentiEmployeesQuery,
+  useDipendentiEntriesRangeQuery,
+  useDipendentiMonthKeysQuery,
+} from "@/src/hooks/gestionale/use-dipendenti-timesheet-queries";
 
 const DEBOUNCE_MS = 400;
 
@@ -58,10 +58,6 @@ function normalizeOptions(
     weekAnchor: monthKeyOrOptions.weekAnchor ?? "",
     dayDate: monthKeyOrOptions.dayDate ?? "",
   };
-}
-
-function entriesQueryKey(from: string, to: string) {
-  return [...QK.dipendentiTimesheetEntries, from, to] as const;
 }
 
 function classifyError(message: string | null): TimesheetErrorKind {
@@ -127,16 +123,17 @@ export function useDipendentiTimesheet(
     [realAddettiRecords],
   );
 
-  const employeesQuery = useServiceQuery(QK.dipendentiTimesheetEmployees, () =>
-    dipendentiTimesheetEntry.listEmployees(),
-  );
+  const employeesQuery = useDipendentiEmployeesQuery();
 
   const registryReady = employeesQuery.isSuccess && !employeesQuery.isError;
 
-  const entriesQuery = useServiceQuery(
-    entriesQueryKey(periodRange.from, periodRange.to),
-    () => dipendentiTimesheetEntry.listEntriesForRange(periodRange.from, periodRange.to),
-    { enabled: registryReady && addettiReady },
+  const entriesQueryKey = dipendentiEntriesQueryKey(periodRange.from, periodRange.to);
+
+  const entriesQuery = useDipendentiEntriesRangeQuery(
+    periodRange.from,
+    periodRange.to,
+    registryReady && addettiReady,
+    { expectedServerKey: periodMode === "month" ? entriesQueryKey : undefined },
   );
 
   const previousMonthQuery = useServiceQuery(
@@ -145,10 +142,7 @@ export function useDipendentiTimesheet(
     { enabled: registryReady && addettiReady && periodMode === "month" },
   );
 
-  const monthKeysWithDataQuery = useServiceQuery(QK.dipendentiTimesheetMonthKeysWithData, () =>
-    dipendentiTimesheetEntry.listMonthKeysWithEntries(),
-    { enabled: registryReady },
-  );
+  const monthKeysWithDataQuery = useDipendentiMonthKeysQuery(registryReady);
 
   const syncMutation = useServiceMutation(
     (records: readonly AddettoRecord[]) =>
@@ -241,7 +235,7 @@ export function useDipendentiTimesheet(
             return [...list, row];
           });
         };
-        updateList(entriesQueryKey(periodRange.from, periodRange.to));
+        updateList(entriesQueryKey);
         if (periodMode === "month") {
           updateList([...QK.dipendentiTimesheetEntries, "prev", previousMonthKey]);
         }
@@ -259,21 +253,6 @@ export function useDipendentiTimesheet(
       },
       onError: () => setSaveStatus("error"),
     },
-  );
-
-  const entriesByKey = useMemo(() => {
-    const map = new Map<string, DipendenteTimesheetEntryRow>();
-    for (const e of entriesQuery.data ?? []) {
-      map.set(`${e.dipendente_id}|${e.work_date}`, e);
-    }
-    return map;
-  }, [entriesQuery.data]);
-
-  const getCellValue = useCallback(
-    (dipendenteId: string, workDate: string): TimesheetCellValue => {
-      return entryToCellValue(entriesByKey.get(`${dipendenteId}|${workDate}`));
-    },
-    [entriesByKey],
   );
 
   const flushPending = useCallback(() => {
@@ -339,26 +318,13 @@ export function useDipendentiTimesheet(
   );
 
   const employees = (employeesQuery.data ?? []) as DipendenteTimesheetEmployeeRow[];
-  const employeeIdsWithEntriesInPeriodSet = useMemo(
-    () => employeeIdsWithEntriesInPeriod(entriesQuery.data ?? []),
-    [entriesQuery.data],
-  );
 
-  const sortedEmployees = useMemo(
-    () => sortTimesheetEmployeesForDisplay(employees, realAddettiRecords),
-    [employees, realAddettiRecords],
-  );
-
-  const displayEmployees = useMemo(
-    () =>
-      addettiReady
-        ? selectTimesheetEmployeesForDisplay(
-            sortedEmployees,
-            employeeIdsWithEntriesInPeriodSet,
-            currentAddettiIds,
-          )
-        : [],
-    [addettiReady, sortedEmployees, employeeIdsWithEntriesInPeriodSet, currentAddettiIds],
+  const { displayEmployees, employeeIdsWithEntriesInPeriod, getCellValue } = useDipendentiTimesheetDerived(
+    employees,
+    entriesQuery.data ?? [],
+    realAddettiRecords,
+    addettiReady,
+    currentAddettiIds,
   );
 
   const employeesError = employeesQuery.isError ? queryErrorMessage(employeesQuery.error) : null;
@@ -403,7 +369,7 @@ export function useDipendentiTimesheet(
     dayDate,
     employees,
     displayEmployees,
-    employeeIdsWithEntriesInPeriod: employeeIdsWithEntriesInPeriodSet,
+    employeeIdsWithEntriesInPeriod,
     entries: entriesQuery.data ?? [],
     previousMonthEntries: previousMonthQuery.data ?? [],
     tipiAssenza: tipiOpts.tipi,

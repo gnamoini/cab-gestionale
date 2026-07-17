@@ -22,8 +22,17 @@ export type QueryScopeKey =
   | "documenti.list"
   | "preventivi.list"
   | "ordini_fornitori.list"
+  | "fatturazione.list"
+  | "fatturazione.openItems"
+  | "fatturazione.payments"
   | "schede.bundles"
-  | "dashboard.promemoria";
+  | "dashboard.promemoria"
+  | "clientPortal.lavorazioni.inCorso"
+  | "clientPortal.lavorazioni.archivio"
+  | "dipendenti.employees"
+  | "dipendenti.monthKeys"
+  | "dipendenti.entries"
+  | "security.usersPermissions";
 
 const OWNERSHIP_BY_SCOPE: Record<QueryScopeKey, QueryOwnership> = {
   "lavorazioni.list.attive": "SERVER_OWNER",
@@ -39,24 +48,42 @@ const OWNERSHIP_BY_SCOPE: Record<QueryScopeKey, QueryOwnership> = {
   "documenti.list": "HYBRID_OWNER",
   "preventivi.list": "HYBRID_OWNER",
   "ordini_fornitori.list": "HYBRID_OWNER",
+  "fatturazione.list": "HYBRID_OWNER",
+  "fatturazione.openItems": "HYBRID_OWNER",
+  "fatturazione.payments": "HYBRID_OWNER",
   "schede.bundles": "HYBRID_OWNER",
   "dashboard.promemoria": "CLIENT_OWNER",
+  "clientPortal.lavorazioni.inCorso": "SERVER_OWNER",
+  "clientPortal.lavorazioni.archivio": "SERVER_OWNER",
+  "dipendenti.employees": "SERVER_OWNER",
+  "dipendenti.monthKeys": "SERVER_OWNER",
+  "dipendenti.entries": "HYBRID_OWNER",
+  "security.usersPermissions": "SERVER_OWNER",
 };
 
 const PREFETCH_ROUTES_BY_SCOPE: Partial<Record<QueryScopeKey, readonly string[]>> = {
-  "lavorazioni.list.attive": ["/dashboard", "/lavorazioni"],
-  "lavorazioni.list.report": ["/report"],
+  "lavorazioni.list.attive": ["/lavorazioni"],
+  "lavorazioni.list.report": ["/dashboard", "/report"],
   "mezzi.list": ["/mezzi"],
   "mezzi.report": ["/report"],
   "magazzino.list": ["/magazzino"],
   "magazzino.report": ["/dashboard", "/report"],
   "movimenti.list": ["/report"],
-  "settings.payload": ["/dashboard", "/magazzino", "/report", "/impostazioni"],
+  "settings.payload": ["/dashboard", "/magazzino", "/report", "/impostazioni", "/sicurezza"],
   "report.manualEntries": ["/report"],
   "documenti.list": ["/documenti"],
   "preventivi.list": ["/preventivi"],
   "ordini_fornitori.list": ["/preventivi"],
+  "fatturazione.list": ["/fatturazione"],
+  "fatturazione.openItems": ["/fatturazione"],
+  "fatturazione.payments": ["/fatturazione"],
   "schede.bundles": ["/dashboard", "/lavorazioni"],
+  "clientPortal.lavorazioni.inCorso": ["/lavorazioni-clienti"],
+  "clientPortal.lavorazioni.archivio": ["/lavorazioni-clienti"],
+  "dipendenti.employees": ["/dipendenti"],
+  "dipendenti.monthKeys": ["/dipendenti"],
+  "dipendenti.entries": ["/dipendenti"],
+  "security.usersPermissions": ["/sicurezza"],
 };
 
 export function getQueryOwnership(scopeKey: QueryScopeKey): QueryOwnership {
@@ -98,7 +125,18 @@ export function scopeKeyFromEntity(scope: EntityQueryScope): QueryScopeKey | nul
   if (scope.entityType === "documenti") return "documenti.list";
   if (scope.entityType === "preventivi") return "preventivi.list";
   if (scope.entityType === "ordini_fornitori") return "ordini_fornitori.list";
+  if (scope.entityType === "fatturazione") {
+    if (variant === "openItems") return "fatturazione.openItems";
+    if (variant === "payments") return "fatturazione.payments";
+    return "fatturazione.list";
+  }
   if (scope.entityType === "schede") return "schede.bundles";
   if (scope.entityType === "dashboard" && variant === "promemoria") return "dashboard.promemoria";
+  if (scope.entityType === "dipendenti") {
+    if (variant === "monthKeys") return "dipendenti.monthKeys";
+    if (variant === "entries") return "dipendenti.entries";
+    return "dipendenti.employees";
+  }
+  if (scope.entityType === "security" && variant === "usersPermissions") return "security.usersPermissions";
   return null;
 }

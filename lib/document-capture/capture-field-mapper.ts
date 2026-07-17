@@ -1,3 +1,4 @@
+import { resolveRicambiRowsFromCaptureFields } from "@/lib/document-capture/ricambi-resolution";
 import { formatCaptureMultilineText, isCaptureMultilineFieldKey } from "@/lib/document-capture/capture-field-display-value";
 import { normalizeCaptureIngressoDateValue, sanitizeCaptureExtractedFieldValue } from "@/lib/document-capture/capture-field-key-aliases";
 import { isCaptureSignatureFieldKey } from "@/lib/document-capture/capture-signature-field-keys";
@@ -89,6 +90,7 @@ export type CaptureFieldRow = {
   confirmed_value?: string | null;
   normalized_value: string | null;
   raw_value?: string | null;
+  confidence?: number | null;
 };
 
 export function resolveCaptureFieldValue(row: CaptureFieldRow): string {
@@ -231,20 +233,38 @@ export function parseCaptureRicambiRighe(
   magazzino?: readonly RicambioMagazzino[],
 ): RigaRicambioScheda[] {
   const today = new Date().toLocaleDateString("it-IT");
+  const resolutions =
+    magazzino && magazzino.length > 0 ? resolveRicambiRowsFromCaptureFields(fields, magazzino) : [];
+  const byRow = new Map(resolutions.map((r) => [r.rowIndex, r]));
+  const magById = new Map((magazzino ?? []).map((m) => [m.id, m]));
+
   const out: RigaRicambioScheda[] = [];
   for (let n = 1; n <= MAX_RICAMBI_RIGHE; n += 1) {
     const nome = resolveRawFieldValue(fields, `riga_${n}_nome`);
     const codice = resolveRawFieldValue(fields, `riga_${n}_codice`);
-    const dup = codice && magazzino?.length ? findDuplicateByCodici([...magazzino], codice) : null;
     const descrizione = resolveRawFieldValue(fields, `riga_${n}_descrizione`);
     const qtRaw = resolveRawFieldValue(fields, `riga_${n}_qt`);
     const data = resolveRawFieldValue(fields, `riga_${n}_data`);
     if (!nome && !codice && !descrizione && !qtRaw && !data) continue;
+
+    const resolved = byRow.get(n);
+    let ricambioId: string | null = null;
+    let codiceOut = codice;
+    if (resolved?.status === "MATCHED" && resolved.ricambioId) {
+      ricambioId = resolved.ricambioId;
+      const item = magById.get(resolved.ricambioId);
+      if (item?.codiceFornitoreOriginale) codiceOut = item.codiceFornitoreOriginale;
+    } else if (!resolutions.length && codice && magazzino?.length) {
+      const dup = findDuplicateByCodici([...magazzino], codice);
+      ricambioId = dup?.id ?? null;
+      if (dup?.codiceFornitoreOriginale) codiceOut = dup.codiceFornitoreOriginale;
+    }
+
     out.push({
       id: newRigaId(),
-      ricambioId: dup?.id ?? null,
+      ricambioId,
       ricambioNome: composeCaptureRicambioNome(nome, descrizione),
-      codice: dup?.codiceFornitoreOriginale ?? codice,
+      codice: codiceOut,
       quantita: parseCaptureQuantita(qtRaw),
       addetto: "",
       dataUtilizzo: data || today,

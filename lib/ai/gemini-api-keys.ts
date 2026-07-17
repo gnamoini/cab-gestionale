@@ -66,6 +66,29 @@ export function isGeminiFailoverError(error: unknown): boolean {
   return isGeminiQuotaError(error) || isGeminiAuthError(error);
 }
 
+export function isGeminiModelUnavailableError(error: unknown): boolean {
+  const text = error instanceof Error ? error.message : String(error);
+  return /no longer available/i.test(text) || /not found for api version/i.test(text);
+}
+
+/** ponytail: set esplicito — upgrade path: aggiungere ID deprecati qui, non euristica generica. */
+export const DEPRECATED_GEMINI_REPORT_MODEL_IDS = new Set([
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-pro",
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
+]);
+
+/** Remap modelli non più disponibili su chiavi nuove → default stabile. */
+export function normalizeGeminiReportModelId(
+  modelId: string | null | undefined,
+  defaultModelId: string,
+): string {
+  const candidate = modelId?.trim() || defaultModelId;
+  return DEPRECATED_GEMINI_REPORT_MODEL_IDS.has(candidate) ? defaultModelId : candidate;
+}
+
 /** Failover su lista chiavi — testabile senza server-only. */
 export async function runWithGeminiApiKeysFailover<T>(
   keys: readonly string[],

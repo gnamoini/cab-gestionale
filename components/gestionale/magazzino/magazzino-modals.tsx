@@ -42,6 +42,7 @@ export function MagazzinoRicambioInfoModal({
   consumo,
   formatEur,
   magCanCreateRicambio,
+  magCanReadRicambio,
   logTimeline,
   logLoading,
   onClose,
@@ -54,6 +55,7 @@ export function MagazzinoRicambioInfoModal({
   consumo: RicambioConsumoDaLog | undefined;
   formatEur: (n: number) => string;
   magCanCreateRicambio: boolean;
+  magCanReadRicambio: boolean;
   logTimeline: ReadonlyArray<MagazzinoLogFeedItem>;
   logLoading: boolean;
   onClose: () => void;
@@ -73,7 +75,8 @@ export function MagazzinoRicambioInfoModal({
           <RicambioLabelActions
             ricambioId={ricambio.id}
             codice={ricambio.codiceFornitoreOriginale}
-            canManage={magCanCreateRicambio}
+            canRead={magCanReadRicambio}
+            canWrite={magCanCreateRicambio}
           />
           <DisabledElementTooltip
             content={magCanCreateRicambio ? "Modifica" : READONLY_PERMISSION_HINT}

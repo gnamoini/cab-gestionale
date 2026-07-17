@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Tooltip } from "@/components/ui";
-import { forwardRef } from "react";
+import { memo, forwardRef } from "react";
 import type { ComponentPropsWithoutRef, ReactElement, ReactNode } from "react";
 
 import type { TooltipSide } from "@/lib/ui/tooltip-portal";
@@ -156,7 +156,7 @@ function wrapRailTooltip(
   return <Tooltip content={tooltip} side={side}>{node}</Tooltip>;
 }
 
-export const SidebarNavRow = forwardRef<HTMLButtonElement | HTMLAnchorElement | HTMLDivElement, SidebarNavRowProps>(
+export const SidebarNavRow = memo(forwardRef<HTMLButtonElement | HTMLAnchorElement | HTMLDivElement, SidebarNavRowProps>(
   function SidebarNavRow(props, ref) {
   const {
     as = "link",
@@ -234,4 +234,4 @@ export const SidebarNavRow = forwardRef<HTMLButtonElement | HTMLAnchorElement | 
     railTooltipSide,
   );
 },
-);
+));

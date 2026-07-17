@@ -24,8 +24,10 @@ export type OpenRicambioSource = (typeof OPEN_RICAMBIO_SOURCES)[number];
 
 export type LabelPayload = {
   marca: string;
+  marcaSecondaria: string;
   descrizione: string;
   codice: string;
+  codiceSecondario: string;
   fornitoreAlternativo: string;
   codiceAlternativo: string;
 };
@@ -84,4 +86,4 @@ export type InventoryQrTokenRow = {
   superseded_by: string | null;
 };
 
-export const GENERATOR_VERSION = "1.3.11";
+export const GENERATOR_VERSION = "1.3.29";

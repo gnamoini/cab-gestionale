@@ -9,23 +9,29 @@ import {
 import { GestionaleConfirmDialogLazy } from "@/components/gestionale/gestionale-confirm-dialog-lazy";
 import { ProfileSheetContent } from "@/components/profile/profile-sheet-content";
 import { ProfileSheetFooter } from "@/components/profile/profile-sheet-footer";
-import { useProfileSheet } from "@/components/profile/profile-sheet-context";
 import { useAuth } from "@/context/auth-context";
 import { useShowGlobalLoading } from "@/context/global-loading-context";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 
 const PROFILE_SHEET_TITLE_ID = "cab-profile-sheet-title";
 
-export function ProfileSheet({ restoreFocusRef }: { restoreFocusRef?: RefObject<HTMLElement | null> }) {
-  const { open, closeProfileSheet } = useProfileSheet();
+export function ProfileSheet({
+  open,
+  onClose,
+  restoreFocusRef,
+}: {
+  open: boolean;
+  onClose: () => void;
+  restoreFocusRef?: RefObject<HTMLElement | null>;
+}) {
   const { user, logout, status } = useAuth();
   const showGlobalLoading = useShowGlobalLoading();
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   const requestLogout = useCallback(() => {
-    closeProfileSheet();
+    onClose();
     setLogoutConfirmOpen(true);
-  }, [closeProfileSheet]);
+  }, [onClose]);
 
   async function confirmLogout() {
     setLogoutConfirmOpen(false);
@@ -40,7 +46,7 @@ export function ProfileSheet({ restoreFocusRef }: { restoreFocusRef?: RefObject<
     <>
       <Drawer
         open={open}
-        onClose={closeProfileSheet}
+        onClose={onClose}
         title="Profilo"
         titleId={PROFILE_SHEET_TITLE_ID}
         ariaLabel="Profilo utente"

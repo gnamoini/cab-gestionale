@@ -12,6 +12,7 @@ import { useSecurityViewQueryOpts } from "@/lib/view/view-query-opts";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import type { AuthLogWithProfileRow, LogModificaRow } from "@/src/types/supabase-tables";
 import type { UseQueryResult } from "@tanstack/react-query";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import {
   dsBtnDanger,
   dsPageToolbarBtn,
@@ -184,7 +185,6 @@ export type SecurityMonitoringSectionProps = {
   usersLoading: boolean;
   logsQuery: UseQueryResult<AuthLogWithProfileRow[], Error>;
   recentActivityQ: ReturnType<typeof useRecentSystemActivity>;
-  recentActivityRows: RecentActivityRow[];
   recentLogins: AuthLogWithProfileRow[];
   recentLoginFailed: AuthLogWithProfileRow[];
   activeTodayCount: number;
@@ -206,7 +206,6 @@ export function SecurityMonitoringSection({
   usersLoading,
   logsQuery,
   recentActivityQ,
-  recentActivityRows,
   recentLogins,
   recentLoginFailed,
   activeTodayCount,
@@ -217,6 +216,9 @@ export function SecurityMonitoringSection({
   onRefresh,
   onResetChangeLogs,
 }: SecurityMonitoringSectionProps) {
+  const globalOpts = useGlobalOptions({ debugTag: "SecurityMonitoringSection" });
+  const recentActivityRows = useRecentActivityRows(recentActivityQ, globalOpts.lavorazioni.stati);
+
   return (
     <div id="security-panel-monitoring" role="tabpanel" aria-labelledby="security-tab-monitoring" className="space-y-4">
       <div className={gestionalePageToolbarActionsClass}>

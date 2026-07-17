@@ -22,46 +22,47 @@ function walkTsx(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-const globalsCss = read("app/globals.css");
+const globalsCoreCss = read("app/globals-core.css");
+const globalsShellCss = read("app/globals-gestionale-shell.css");
 const globalTable = read("lib/ui/global-table.ts");
 const designSystem = read("lib/ui/design-system.ts");
 const modalBody = read("lib/ui/modal-max-width-class.ts");
 const pageLayout = read("components/design-system/page-layout.tsx");
 
-// --- Global CSS utilities ---
-assert.match(globalsCss, /html:has\(\.cab-app-shell\)/);
-assert.match(globalsCss, /html:has\(\.cab-app-shell\)[\s\S]*width:\s*100%/);
-assert.doesNotMatch(globalsCss, /--cab-host-layout-width/);
-assert.match(globalsCss, /body:has\(\.cab-app-shell\)[\s\S]*overflow:\s*hidden/);
-assert.match(globalsCss, /\.gestionale-scroll-y[\s\S]*scrollbar-gutter:\s*stable/);
+// --- Global CSS utilities (split contract) ---
+assert.match(globalsShellCss, /html:has\(\.cab-app-shell\)/);
+assert.match(globalsShellCss, /html:has\(\.cab-app-shell\)[\s\S]*width:\s*100%/);
+assert.doesNotMatch(globalsShellCss, /--cab-host-layout-width/);
+assert.match(globalsShellCss, /body:has\(\.cab-app-shell\)[\s\S]*overflow:\s*hidden/);
+assert.match(globalsShellCss, /\.gestionale-scroll-y[\s\S]*scrollbar-gutter:\s*stable/);
 assert.match(
-  globalsCss,
+  globalsShellCss,
   /data-gestionale-shell-tier="desktop"[\s\S]*\.gestionale-scroll-y[\s\S]*scrollbar-gutter:\s*stable/,
 );
 assert.match(
-  globalsCss,
+  globalsCoreCss,
   /main\.gestionale-scroll-y\[data-cab-main-scroll-lock\][\s\S]*scrollbar-gutter:\s*stable/,
 );
-assert.match(globalsCss, /data-cab-scroll-lock-fixed-compensate/);
-assert.match(globalsCss, /--cab-scroll-lock-gap/);
+assert.match(globalsCoreCss, /data-cab-scroll-lock-fixed-compensate/);
+assert.match(globalsCoreCss, /--cab-scroll-lock-gap/);
 assert.match(
-  globalsCss,
+  globalsShellCss,
   /data-mobile-nav-visible[\s\S]*\.cab-page-title-box[\s\S]*position:\s*absolute[\s\S]*left:\s*0[\s\S]*right:\s*0/,
 );
 assert.doesNotMatch(
-  globalsCss,
+  globalsShellCss,
   /data-mobile-nav-visible[\s\S]*\.cab-page-header-top-row[\s\S]*grid-template-columns:\s*auto minmax\(0,\s*1fr\) auto/,
 );
 
-assert.match(globalsCss, /\.flex-safe\s*\{/);
-assert.match(globalsCss, /\.flex-fill,\s*\n?\s*\.flex-fill-safe\s*\{/);
-assert.match(globalsCss, /\.text-safe\s*\{/);
+assert.match(globalsCoreCss, /\.flex-safe\s*\{/);
+assert.match(globalsCoreCss, /\.flex-fill,\s*\n?\s*\.flex-fill-safe\s*\{/);
+assert.match(globalsCoreCss, /\.text-safe\s*\{/);
 
-assert.match(globalsCss, /\.flex-fill-safe\s*\{/);
+assert.match(globalsCoreCss, /\.flex-fill-safe\s*\{/);
 
 // --- Scoped min-width containment (NO global flex-wrap) ---
-assert.match(globalsCss, /gestionale-responsive-core \.flex > \*/);
-assert.doesNotMatch(globalsCss, /gestionale-responsive-core[\s\S]*flex-wrap:\s*wrap/);
+assert.match(globalsShellCss, /gestionale-responsive-core \.flex > \*/);
+assert.doesNotMatch(globalsShellCss, /gestionale-responsive-core[\s\S]*flex-wrap:\s*wrap/);
 
 // --- Table layer ---
 assert.match(globalTable, /globalTableWrap[\s\S]*min-w-0[\s\S]*overflow-x-auto/);
@@ -80,27 +81,31 @@ assert.doesNotMatch(pageLayout, /useLayoutEffect|window\.innerWidth|matchMedia/)
 
 // --- SSR/hydration: app-shell layout tokens CSS-only (no width sync in render) ---
 const appShell = read("components/gestionale/app-shell.tsx");
+const appShellMain = read("components/gestionale/app-shell-main.tsx");
+const appShellSidebarSrc = read("components/gestionale/app-shell-sidebar.tsx");
 const accountMenu = read("components/gestionale/account-menu.tsx");
 const profileSheetContext = read("components/profile/profile-sheet-context.tsx");
-assert.match(appShell, /layoutResponsiveCoreScope/);
-assert.match(appShell, /gestionale-scroll-y/);
-assert.match(appShell, /dsGestionaleContentRail/);
-assert.match(appShell, /dsGestionaleContentMax/);
-assert.match(appShell, /gestionaleShellContentGutterClass/);
-assert.doesNotMatch(appShell, /cab-gestionale-scroll-gutter-mirror/);
-assert.match(appShell, /gestionale-scroll-y gestionale-scrollbar w-full/);
+assert.match(appShellMain, /layoutResponsiveCoreScope/);
+assert.match(appShellMain, /gestionale-scroll-y/);
+assert.match(appShellMain, /dsGestionaleContentRail/);
+assert.match(appShellMain, /dsGestionaleContentMax/);
+assert.match(appShellMain, /gestionaleShellContentGutterClass/);
+assert.doesNotMatch(appShellMain, /cab-gestionale-scroll-gutter-mirror/);
+assert.match(appShellMain, /gestionale-scroll-y gestionale-scrollbar w-full/);
 assert.match(
-  appShell,
+  appShellMain,
   /dsGestionaleContentMax[\s\S]*layoutPageRoot[\s\S]*contentGutter/,
   "main scroll inner wrapper must carry content width + gutter",
 );
-assert.match(appShell, /dsGestionaleScrollEndPadFade/);
-assert.match(appShell, /suppressGlobalScrollEndPad/);
+assert.match(appShellMain, /dsGestionaleScrollEndPadFade/);
+assert.match(appShellMain, /suppressGlobalScrollEndPad/);
 assert.match(appShell, /useGestionaleScrollEnd/);
-assert.match(appShell, /SidebarSessionPanel/);
+assert.match(appShellSidebarSrc, /SidebarSessionPanel/);
 assert.match(appShell, /ProfileSheetProvider/);
-assert.match(profileSheetContext, /<ProfileSheet restoreFocusRef=\{restoreFocusRef\} \/>/);
-assert.match(accountMenu, /restoreFocusRef/);
+assert.match(profileSheetContext, /ProfileSheetLazy/);
+assert.match(profileSheetContext, /dynamic\s*\(/);
+assert.doesNotMatch(profileSheetContext, /open,\s*openProfileSheet/);
+assert.match(accountMenu, /toggleProfileSheet/);
 assert.doesNotMatch(accountMenu, /<ProfileSheet/);
 assert.match(accountMenu, /aria-haspopup="dialog"/);
 assert.doesNotMatch(accountMenu, /useGlobalDropdownPortal/);
@@ -127,8 +132,8 @@ assert.doesNotMatch(
 
 assert.match(designSystem, /dsToastViewport[\s\S]*max-md:top-0/);
 assert.match(designSystem, /dsToastViewport[\s\S]*md:bottom-0/);
-assert.match(globalsCss, /cab-toast-in-top/);
-assert.match(globalsCss, /\.cab-toast-viewport \.cab-toast-item/);
+assert.match(globalsCoreCss, /cab-toast-in-top/);
+assert.match(globalsCoreCss, /\.cab-toast-viewport \.cab-toast-item/);
 
 // --- Flex anti-pattern: files with flex-1 must have containment in same line ---
 const flex1Violations: string[] = [];

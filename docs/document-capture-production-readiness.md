@@ -93,11 +93,23 @@ Ogni trace mutante include: `captureId`, `companyId`, `userId`, `operation`, `du
 ```bash
 npm run test:regression -- lib/document-capture/
 npm run test:regression -- lib/regression/document-capture-
+npx tsx lib/document-capture/validation/validate-capture-for-apply.test.ts
+npx tsx lib/document-capture/ricambi-resolution.test.ts
 npm run build
 # E2E (env smoke):
 npx playwright test e2e/smoke/document-capture-production.spec.ts
+npx playwright test e2e/document-capture/apply-v1.spec.ts
 ```
+
+## Launcher Apply v1 (ADR-005)
+
+- **Flag:** `DOCUMENT_CAPTURE_LAUNCHER_APPLY_V1` / `NEXT_PUBLIC_DOCUMENT_CAPTURE_LAUNCHER_APPLY_V1` (default on; `=0` legacy path).
+- **Flow:** upload → analyze → review → `PATCH fields` → dry-run (`validateCaptureForApply`) → apply (`capture-apply.server.ts`) → `document_capture_apply_jobs` + `document_capture_links`.
+- **Migrations:** `20260917130000` (apply_jobs + links), `20260917140000` (`duplicate_override` event), `20260917150000` (links unique / idempotent upsert).
+- **Deploy runbook:** [`docs/document-capture-apply-v1-deploy.md`](document-capture-apply-v1-deploy.md)
+- **Duplicati SHA256:** dialog bloccante; override con motivazione → evento audit.
+- **Resume:** `POST /api/document-capture/[id]/resume` + job `RECOVERY_REQUIRED`.
 
 ---
 
-*Report aggiornato a release v3.3 production-ready.*
+*Report aggiornato a release v3.3 + launcher apply v1.*

@@ -13,7 +13,8 @@ function read(rel: string): string {
 
 const tokensSrc = read("lib/ui/sidebar-layout.ts");
 const rowSrc = read("components/gestionale/sidebar-nav-row.tsx");
-const globalsSrc = read("app/globals.css");
+const globalsShellSrc = read("app/globals-gestionale-shell.css");
+const appShellSidebarSrc = read("components/gestionale/app-shell-sidebar.tsx");
 const appShellSrc = read("components/gestionale/app-shell.tsx");
 const accountSrc = read("components/gestionale/account-menu.tsx");
 const bellSrc = read("components/gestionale/notification-center-bell.tsx");
@@ -22,24 +23,25 @@ const routeTransitionSrc = read("src/lib/navigation/route-transition.ts");
 assert.match(tokensSrc, /sidebarNavRowClass/);
 assert.match(tokensSrc, /SIDEBAR_RAIL_WIDTH/);
 
-assert.match(globalsSrc, /--cab-sidebar-row-height/);
+assert.match(globalsShellSrc, /--cab-sidebar-row-height/);
 
 assert.match(rowSrc, /SidebarNavRow/);
 assert.match(rowSrc, /SidebarActiveIndicator/);
 assert.match(rowSrc, /railTooltip/);
 assert.match(rowSrc, /cab-sidebar-active-indicator/);
 
-assert.match(globalsSrc, /--cab-sidebar-icon-anchor/);
-assert.match(globalsSrc, /--cab-sidebar-trailing-width/);
-assert.match(globalsSrc, /\.cab-sidebar-nav-row/);
-assert.doesNotMatch(globalsSrc, /cab-sidebar-nav-link--rail-active/);
-assert.doesNotMatch(globalsSrc, /grid-template-columns var\(--cab-sidebar-width-motion\)/);
-assert.doesNotMatch(globalsSrc, /padding-inline-start var\(--cab-sidebar-width-motion\)/);
+assert.match(globalsShellSrc, /--cab-sidebar-icon-anchor/);
+assert.match(globalsShellSrc, /--cab-sidebar-trailing-width/);
+assert.match(globalsShellSrc, /\.cab-sidebar-nav-row/);
+assert.doesNotMatch(globalsShellSrc, /cab-sidebar-nav-link--rail-active/);
+assert.doesNotMatch(globalsShellSrc, /grid-template-columns var\(--cab-sidebar-width-motion\)/);
+assert.doesNotMatch(globalsShellSrc, /padding-inline-start var\(--cab-sidebar-width-motion\)/);
 
-assert.match(appShellSrc, /SidebarNavRow/);
-assert.match(appShellSrc, /onOpenInbox=\{collapseSidebar\}/);
-assert.doesNotMatch(appShellSrc, /railCollapsed/);
-assert.doesNotMatch(appShellSrc, /sidebarNavLinkActiveRail/);
+assert.match(appShellSidebarSrc, /SidebarNavRow/);
+assert.match(appShellSidebarSrc, /onOpenInbox=\{collapseSidebar\}/);
+assert.match(appShellSrc, /AppShellSidebar/);
+assert.doesNotMatch(appShellSidebarSrc, /railCollapsed/);
+assert.doesNotMatch(appShellSidebarSrc, /sidebarNavLinkActiveRail/);
 
 assert.match(accountSrc, /SidebarNavRow/);
 assert.doesNotMatch(accountSrc, /sidebarNavLinkBase/);

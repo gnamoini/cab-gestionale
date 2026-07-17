@@ -197,43 +197,21 @@ async function applyUserPagePermissions(
 }
 
 export async function listSecurityUsersPermissionsAction(): Promise<ListSecurityUsersPermissionsResult> {
-  const admin = await assertAdminCaller();
-  if (!admin.ok) return { ok: false, message: admin.message };
-
-  const usersRes = await listUsersByAdminAction();
-  if (!usersRes.ok) return { ok: false, message: usersRes.message };
-
-  const { createClient } = await import("@supabase/supabase-js");
-  const serviceAdmin = createClient(admin.url, admin.serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-
-  const userIds = usersRes.users.map((u) => u.id);
-  const userPageOverrideRows = await loadAllUserPageOverrideRows(serviceAdmin, userIds);
-
-  const assignableRoles = (await listAllRoles(serviceAdmin))
-    .filter((r) => r.is_active)
-    .map((r) => ({ key: r.key, name: r.name }));
-
-  const rolePageAccessMap = await loadAllRolePageAccess(serviceAdmin);
+  const { fetchSecurityUsersPermissionsServer } = await import(
+    "@/lib/security/security-users-permissions-fetch-server"
+  );
+  const res = await fetchSecurityUsersPermissionsServer();
+  if (!res.success) return { ok: false, message: res.error ?? "Errore utenti sicurezza" };
+  const data = res.data!;
   const uniqueRoles = [
-    ...new Set([...usersRes.users.map((u) => resolveRole(u.ruolo)), ...assignableRoles.map((r) => r.key)]),
+    ...new Set([...data.users.map((u) => resolveRole(u.ruolo)), ...data.assignableRoles.map((r) => r.key)]),
   ];
-  for (const rk of uniqueRoles) {
-    if (!rolePageAccessMap.has(rk)) {
-      rolePageAccessMap.set(rk, seedPageAccessForRole(rk));
-    }
-  }
-
-  const users = usersRes.users.map((u) => toPermissionRow(u, userPageOverrideRows, rolePageAccessMap));
-  const rolePageAccessByRole = Object.fromEntries(rolePageAccessMap);
-
   return {
     ok: true,
-    users,
-    userPageOverrideRows,
-    rolePageAccessByRole,
-    assignableRoles,
+    users: data.users,
+    userPageOverrideRows: data.userPageOverrideRows,
+    rolePageAccessByRole: data.rolePageAccessByRole,
+    assignableRoles: data.assignableRoles,
     portalSettingsUpdatedAt: null,
     permissionRows: [],
     rolePermissionKeysByRole: Object.fromEntries(uniqueRoles.map((rk) => [rk, []])),

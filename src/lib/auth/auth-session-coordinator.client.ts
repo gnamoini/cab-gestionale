@@ -5,6 +5,7 @@ import {
   isRecoverableAuthError,
   isTransientNetworkAuthError,
   shouldClearSessionOnAuthError,
+  getUserWithAuthRetry,
 } from "@/src/lib/auth/auth-network-retry";
 
 export type ReconcileReason =
@@ -28,21 +29,11 @@ function nextDebugId(): number {
   return debugIdCounter;
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 async function getUserWithSoftRetry(sb: SupabaseClient): Promise<{
   data: { user: User | null };
   error: AuthError | null;
 }> {
-  const first = await sb.auth.getUser();
-  if (!first.error) return first;
-  if (shouldClearSessionOnAuthError(first.error) || !isTransientNetworkAuthError(first.error)) {
-    return first;
-  }
-  await delay(300);
-  return sb.auth.getUser();
+  return getUserWithAuthRetry(sb, "client");
 }
 
 async function runReconcile(sb: SupabaseClient): Promise<ReconcileResult> {

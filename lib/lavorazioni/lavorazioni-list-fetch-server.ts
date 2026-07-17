@@ -9,6 +9,7 @@ import { err, type ServiceResult } from "@/src/services/service-result";
 import {
   LAVORAZIONI_ATTIVE_LIGHT_FILTERS,
   LAVORAZIONI_REPORT_FILTERS,
+  lavorazioniAttiveListFilters,
 } from "@/lib/lavorazioni/lavorazioni-prefetch-filters";
 import type { LavorazioneFilters, LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
@@ -25,7 +26,7 @@ export async function fetchLavorazioniListAuthorizedServer(
 }
 
 export const getLavorazioniAttiveLightServer = cache(async () => {
-  return fetchLavorazioniListAuthorizedServer(LAVORAZIONI_ATTIVE_LIGHT_FILTERS);
+  return fetchLavorazioniListAuthorizedServer(lavorazioniAttiveListFilters());
 });
 
 export const getLavorazioniReportLightServer = cache(async () => {

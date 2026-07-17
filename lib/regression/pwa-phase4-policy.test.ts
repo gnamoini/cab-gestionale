@@ -42,14 +42,22 @@ assert.match(queryProvider, /refetchOnWindowFocus:\s*PWA_QUERY_CLIENT_DEFAULTS\.
 assert.doesNotMatch(queryProvider, /focusManager/);
 
 const appProviders = read("components/app-providers-core.tsx");
-assert.match(appProviders, /PwaReconnectBridge/);
+const deferredPwa = read("src/components/deferred-pwa-bridges.tsx");
+const pwaCorePack = read("src/components/pwa-core-bridge-pack.tsx");
+assert.match(deferredPwa, /PwaCoreBridgePack|pwa-core-bridge-pack/);
+assert.match(pwaCorePack, /PwaReconnectBridge/);
+assert.match(pwaCorePack, /PwaInstallBridge/);
+assert.match(pwaCorePack, /PwaInstallBanner/);
 assert.doesNotMatch(appProviders, /PwaPush/);
-assert.match(appProviders, /PwaInstallBridge/);
-assert.match(appProviders, /PwaInstallBanner/);
+assert.doesNotMatch(appProviders, /PwaReconnectBridge/);
+assert.doesNotMatch(appProviders, /PwaInstallBridge/);
+assert.doesNotMatch(appProviders, /PwaInstallBanner/);
+assert.match(deferredPwa, /DeferredPwaBridges/);
 
 const deferredBridges = read("src/components/deferred-gestionale-bridges.tsx");
-assert.match(deferredBridges, /PwaPushPermissionBridge/);
-assert.match(deferredBridges, /NotificationOptInBanner/);
+const pwaBridgePack = read("src/components/pwa-bridge-pack.tsx");
+assert.match(deferredBridges, /PwaBridgePack|pwa-bridge-pack/);
+assert.match(pwaBridgePack, /NotificationOptInBanner/);
 assert.doesNotMatch(deferredBridges, /DesktopNotificationPermissionPrompt/);
 
 // --- push config / modules ---

@@ -1,10 +1,13 @@
 "use client";
 
-import type { MouseEvent, ReactNode } from "react";
+import { memo, type MouseEvent, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { PageHeaderMobileNav } from "@/components/gestionale/page-header-mobile-nav";
 import { gestionalePageToolbarActionsClass } from "@/components/gestionale/page-header-toolbar";
-import { useGestionaleShellLayout } from "@/context/gestionale-shell-layout-context";
+import {
+  useGestionaleShellContentWidth,
+  useGestionaleShellTier,
+} from "@/context/gestionale-shell-layout-context";
 import { dsPageHeaderTopRow, dsPageTitle, dsPageTitleToolbarAlign } from "@/lib/ui/design-system";
 import {
   resolveMobilePageHeaderBack,
@@ -15,7 +18,7 @@ export type PageHeaderMobileBackConfig = MobilePageHeaderBack & {
   onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 };
 
-export function PageHeaderTopRow({
+function PageHeaderTopRowInner({
   title,
   titleMobile,
   leading,
@@ -35,7 +38,8 @@ export function PageHeaderTopRow({
   topRowClassName?: string;
 }) {
   const pathname = usePathname();
-  const { isCompactShell, contentWidth } = useGestionaleShellLayout();
+  const { isCompactShell } = useGestionaleShellTier();
+  const contentWidth = useGestionaleShellContentWidth();
   const resolvedBack = mobileBack ?? resolveMobilePageHeaderBack(pathname);
   const showMobileBack = isCompactShell && contentWidth > 0 && resolvedBack != null;
   const showLeading = leading && !showMobileBack;
@@ -56,3 +60,5 @@ export function PageHeaderTopRow({
     </div>
   );
 }
+
+export const PageHeaderTopRow = memo(PageHeaderTopRowInner);

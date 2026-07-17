@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { moduleAllows } from "@/src/lib/auth/effective-module-access";
 import { GESTIONALE_CORE_STALE_MS, GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
@@ -15,15 +15,12 @@ import { movimentiRowsToMagazzinoChangeLog } from "@/lib/report/report-movimenti
 import { filterMovimentiForReport } from "@/lib/report/report-truth-dataset";
 import { resolveVisibleDashboardWidgets } from "@/lib/dashboard/dashboard-widget-registry";
 import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
-import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
-import { useInvoicesQuery } from "@/src/hooks/gestionale/use-invoices-query";
+import { useDashboardHeaderKpiQueries } from "@/lib/dashboard/use-dashboard-header-kpi-queries";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
 import { useLogListQuery, useMovimentiListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { isRbacSnapshotReady, snapshotCanReadPage } from "@/src/lib/rbac/rbac-snapshot-access";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
-import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
-import { useQueryClient } from "@tanstack/react-query";
 import { QK } from "@/src/lib/react-query/query-keys";
 import { resolveMagazzinoReportLogEntries } from "@/lib/report/resolve-magazzino-report-log";
 import { isLavorazioneInCorso } from "@/lib/lavorazioni/archived";
@@ -59,7 +56,7 @@ export function controlTowerDashSliceFromMetrics(
 ): ControlTowerDashSlice {
   return {
     globalOpts: dash.globalOpts,
-    lavRows: dash.lavQuery.data ?? [],
+    lavRows: dash.lavActiveRows,
     ricambi: dash.magQuery.data ?? [],
     magRecentMovements: dash.magRecentMovements,
     magLogs: dash.magLogs,
@@ -150,7 +147,6 @@ export function useControlTowerShell(): ControlTowerShell {
 export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: ControlTowerDashSlice) {
   const viewOpts = useViewQueryOpts();
   const gestOpts = useGestionaleQueryOpts();
-  const qc = useQueryClient();
   const logQueryOpts = { ...gestOpts, ...viewOpts };
   const activityLogQueryOpts = {
     ...logQueryOpts,
@@ -177,18 +173,13 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
 
   const needAdminData =
     !staging && headerVisible && (canPreventivi || canFatturazione);
-  const preventiviQ = usePreventiviRecordsQuery(!staging && headerVisible && canPreventivi);
-  const needInvoices = !staging && headerVisible && canFatturazione;
-  const invoicesQ = useInvoicesQuery(needInvoices);
+  const { preventiviQ, invoicesQ } = useDashboardHeaderKpiQueries({
+    enabled: !staging && headerVisible,
+    canPreventivi,
+    canFatturazione,
+  });
 
   const activityEnabled = !staging && activityVisible;
-
-  const invalidateActivityLogs = useCallback(() => {
-    if (!activityEnabled) return;
-    void qc.invalidateQueries({ queryKey: QK.log, refetchType: "active" });
-  }, [activityEnabled, qc]);
-
-  useCabSyncListener(["log_modifiche", "lavorazioni", "scheda_lavorazione"], invalidateActivityLogs);
 
   const lavLogsQ = useLogListQuery(
     { entita: "lavorazioni", limit: GESTIONALE_LOG_FEED_LIMIT },
@@ -388,7 +379,7 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     rbacLoading ||
     dash.isLoading ||
     (!staging && headerVisible && canPreventivi && preventiviQ.isLoading) ||
-    (needInvoices && invoicesQ.isLoading) ||
+    (!staging && headerVisible && canFatturazione && invoicesQ.isLoading) ||
     (needTimesheet && timesheetQ.isPending) ||
     (needMovimenti && movimentiQ.isLoading) ||
     (activityEnabled &&

@@ -11,34 +11,35 @@ function read(rel: string) {
   return fs.readFileSync(path.join(ROOT, rel), "utf8");
 }
 
-const globalsCss = read("app/globals.css");
+const globalsCoreCss = read("app/globals-core.css");
+const globalsShellCss = read("app/globals-gestionale-shell.css");
 const designSystem = read("lib/ui/design-system.ts");
 const shellCard = read("components/gestionale/shell-card.tsx");
 const responsiveCore = read("lib/ui/responsive-layout-core.ts");
 
-assert.match(globalsCss, /--cab-paint-clip-margin:\s*12px/);
+assert.match(globalsCoreCss, /--cab-paint-clip-margin:\s*12px/);
 
 assert.match(
-  globalsCss,
+  globalsShellCss,
   /\.cab-gestionale-scroll-gutter-mirror[\s\S]*overflow:\s*hidden[\s\S]*overflow-clip-margin:\s*var\(--cab-paint-clip-margin\)/,
 );
 
 assert.match(
-  globalsCss,
+  globalsShellCss,
   /\.gestionale-scroll-y[\s\S]*overflow-x:\s*hidden[\s\S]*overflow-clip-margin:\s*var\(--cab-paint-clip-margin\)/,
 );
 
 assert.match(
-  globalsCss,
+  globalsShellCss,
   /\.cab-layout-page-stack[\s\S]*overflow-x:\s*clip[\s\S]*overflow-clip-margin:\s*var\(--cab-paint-clip-margin\)/,
 );
 
 assert.match(
-  globalsCss,
+  globalsShellCss,
   /\.cab-shell-card[\s\S]*overflow:\s*hidden[\s\S]*overflow-clip-margin:\s*var\(--cab-paint-clip-margin\)/,
 );
 
-assert.match(globalsCss, /\.cab-page-toolbar-surface[\s\S]*::before[\s\S]*backdrop-filter:\s*blur/);
+assert.match(globalsShellCss, /\.cab-page-toolbar-surface[\s\S]*::before[\s\S]*backdrop-filter:\s*blur/);
 
 assert.match(responsiveCore, /cab-layout-page-stack/);
 assert.doesNotMatch(responsiveCore, /overflow-x-clip/);

@@ -12,10 +12,8 @@ import {
   useCollapsiblePreference,
 } from "@/lib/ui/collapsible-prefs";
 import { HubIconPencil } from "@/components/design-system/hub-table-action-icons";
-import {
-  SecurityEditNameModal,
-  type SecurityEditProfileValues,
-} from "@/components/dashboard/security/security-edit-name-modal";
+import type { SecurityEditProfileValues } from "@/components/dashboard/security/security-edit-name-modal";
+import { SecurityEditNameModalLazy } from "@/components/dashboard/security/security-tab-loaders";
 import { deleteUserByAdminAction } from "@/src/actions/admin-users";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
@@ -781,7 +779,7 @@ export function SecurityUsersTable({
       )}
 
       {editNameUser ? (
-        <SecurityEditNameModal
+        <SecurityEditNameModalLazy
           open
           userId={editNameUser.id}
           initialNome={editNameUser.nome}

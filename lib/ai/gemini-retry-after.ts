@@ -30,6 +30,23 @@ export function isGeminiModelUnavailableMessage(message: string): boolean {
   return /no longer available/i.test(message) || /models\/gemini-/i.test(message);
 }
 
+const DEFAULT_ANALYZE_RETRY_BACKOFF_MS = [1_000, 3_000] as const;
+const MAX_QUOTA_RETRY_MS = 120_000;
+
+/** Backoff analyze: rispetta "Please retry in Ns" da Gemini, altrimenti fallback fisso. */
+export function resolveGeminiAnalyzeRetryDelayMs(
+  error: unknown,
+  attemptIndex: number,
+  fallbackMs: readonly number[] = DEFAULT_ANALYZE_RETRY_BACKOFF_MS,
+): number {
+  const message = error instanceof Error ? error.message : String(error);
+  if (isGeminiQuotaErrorMessage(message)) {
+    const fromApiSec = parseGeminiRetryAfterSec(message);
+    if (fromApiSec != null) return Math.min(fromApiSec * 1_000, MAX_QUOTA_RETRY_MS);
+  }
+  return fallbackMs[attemptIndex] ?? fallbackMs[fallbackMs.length - 1] ?? 1_000;
+}
+
 /** Utilizzo quota / token API Gemini (AI Studio). */
 export const GEMINI_API_USAGE_URL = "https://aistudio.google.com/usage";
 

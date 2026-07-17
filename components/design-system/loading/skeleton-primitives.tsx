@@ -1,4 +1,3 @@
-"use client";
 
 import { memo, type CSSProperties } from "react";
 import { dsSurfacePanel } from "@/lib/ui/design-system";

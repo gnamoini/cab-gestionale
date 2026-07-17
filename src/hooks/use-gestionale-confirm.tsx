@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
+import { GestionaleConfirmDialogLazy } from "@/components/gestionale/gestionale-confirm-dialog-lazy";
 
 export type GestionaleConfirmOptions = {
   title: string;
@@ -42,7 +42,7 @@ export function useGestionaleConfirm() {
 
   const confirmDialog = useMemo(
     () => (
-      <GestionaleConfirmDialog
+      <GestionaleConfirmDialogLazy
         open={pending != null}
         title={pending?.title ?? ""}
         message={pending?.message}

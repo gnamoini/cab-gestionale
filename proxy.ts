@@ -11,5 +11,5 @@ export async function proxy(request: NextRequest) {
 
 /** Compile-time literal only (no String.raw / dynamic builder). */
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|_next/data).*)"],
+  matcher: ["/((?!_next/static|_next/image|_next/data|favicon.ico|manifest.webmanifest|sw.js|icons/).*)"],
 };

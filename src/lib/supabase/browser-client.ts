@@ -2,6 +2,9 @@
 
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createBrowserClient } from "@supabase/ssr";
+import { parse, serialize } from "cookie";
+import { applyRememberToCookiesToSet, type AuthCookieToSet } from "@/lib/auth/auth-cookie-options";
+import { readAuthRememberPreference } from "@/lib/auth/auth-remember-preference";
 import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 
 export type { SupabaseClient, User };
@@ -18,7 +21,23 @@ export function getBrowserSupabase(): SupabaseClient {
   }
   const { url, anonKey } = assertSupabasePublicEnv();
   if (!browserClient) {
-    browserClient = createBrowserClient(url, anonKey);
+    browserClient = createBrowserClient(url, anonKey, {
+      cookies: {
+        getAll() {
+          return Object.entries(parse(document.cookie)).map(([name, value]) => ({
+            name,
+            value: value ?? "",
+          }));
+        },
+        setAll(cookiesToSet: AuthCookieToSet[]) {
+          const remember = readAuthRememberPreference();
+          const resolved = applyRememberToCookiesToSet(cookiesToSet, remember);
+          resolved.forEach(({ name, value, options }) => {
+            document.cookie = serialize(name, value, options);
+          });
+        },
+      },
+    });
   }
   return browserClient;
 }

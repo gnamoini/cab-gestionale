@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { memo, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   HealthScoreBreakdownBody,
   HealthScoreSummary,
@@ -19,7 +19,7 @@ function InsufficientHealthScoreBody() {
   );
 }
 
-export function DashboardHealthScoreWidget({ def }: { def: DashboardWidgetDefinition }) {
+function DashboardHealthScoreWidgetLoaded({ def }: { def: DashboardWidgetDefinition }) {
   const { score, isLoading, insufficientData } = useOperationalHealthScore();
 
   let body: ReactNode;
@@ -55,4 +55,46 @@ export function DashboardHealthScoreWidget({ def }: { def: DashboardWidgetDefini
   }
 
   return wrapDashboardWidget(def, body, { subtitle, headerLeadingActions, headerLeadingActionsInteractive: false });
+}
+
+export function DashboardHealthScoreWidget({ def }: { def: DashboardWidgetDefinition }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [fetchEnabled, setFetchEnabled] = useState(false);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || fetchEnabled) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setFetchEnabled(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "120px 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fetchEnabled]);
+
+  if (!fetchEnabled) {
+    return (
+      <div ref={rootRef}>
+        {wrapDashboardWidget(
+          def,
+          <div className="space-y-2" aria-hidden>
+            <div className={`h-3 w-40 ${dsSkeletonPulse}`} />
+            <div className={`h-3 w-full max-w-md ${dsSkeletonPulse}`} />
+          </div>,
+          { headerLeadingActions: <HealthScoreSummarySkeleton />, headerLeadingActionsInteractive: false },
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div ref={rootRef}>
+      <DashboardHealthScoreWidgetLoaded def={def} />
+    </div>
+  );
 }

@@ -47,33 +47,11 @@ import {
 import { runHybridExtractionWithTimeout } from "@/lib/document-capture/extraction/run-hybrid-extraction.server";
 import { SCHEDA_OFFICINA_EXTRACTION_USER } from "@/lib/document-capture/scheda-officina-extraction-prompt";
 import { classifyStorageDownloadError } from "@/lib/storage/storage-download-errors";
+import { resolveGeminiAnalyzeRetryDelayMs } from "@/lib/ai/gemini-retry-after";
 import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
-import { appendFileSync } from "node:fs";
-import { join } from "node:path";
 
 const RETRY_BACKOFF_MS = [1_000, 3_000] as const;
-
-const DEBUG_LOG_PATHS = [
-  join(process.cwd(), "debug-bd086a.log"),
-  join(process.cwd(), ".cursor", "debug-bd086a.log"),
-];
-
-function debugAnalyzePipelineLog(payload: Record<string, unknown>): void {
-  const line = `${JSON.stringify({ sessionId: "bd086a", timestamp: Date.now(), ...payload })}\n`;
-  for (const logPath of DEBUG_LOG_PATHS) {
-    try {
-      appendFileSync(logPath, line);
-    } catch {
-      /* ignore */
-    }
-  }
-  fetch("http://127.0.0.1:7863/ingest/89dc6c11-bff2-45f2-876e-83e3ac496a5d", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bd086a" },
-    body: JSON.stringify({ sessionId: "bd086a", timestamp: Date.now(), ...payload }),
-  }).catch(() => {});
-}
 
 export type AnalyzeCaptureV41Result =
   | {
@@ -123,14 +101,6 @@ export async function analyzeDocumentCaptureV41(
   captureId: string,
   userId: string,
 ): Promise<AnalyzeCaptureV41Result> {
-  // #region agent log
-  debugAnalyzePipelineLog({
-    hypothesisId: "ANALYZE_START",
-    location: "analyze-capture-v41.server.ts",
-    message: "analyze v41 started",
-    data: { captureId },
-  });
-  // #endregion
   const geminiReady = isGeminiConfigured();
   const hybridEnabled = isDocumentCaptureHybridExtractionEnabled();
 
@@ -227,23 +197,6 @@ export async function analyzeDocumentCaptureV41(
     ? await runHybridExtractionWithTimeout({ bytes, mime, pageObjects })
     : null;
 
-  // #region agent log
-  debugAnalyzePipelineLog({
-    hypothesisId: "HYBRID_PHASE_DONE",
-    location: "analyze-capture-v41.server.ts",
-    message: "hybrid phase completed",
-    data: {
-      captureId,
-      hybridEnabled,
-      hybridNull: hybridResult === null,
-      mergedCount: hybridResult?.mergedPrefill.length ?? 0,
-      needsGemini: hybridResult?.needsGemini ?? true,
-      schedaTipo: hybridResult?.schedaTipo ?? null,
-      geminiReady,
-    },
-  });
-  // #endregion
-
   if (!geminiReady && (!hybridResult || hybridResult.mergedPrefill.length === 0)) {
     return { ok: false, code: "not_configured", message: GEMINI_NOT_CONFIGURED_MESSAGE };
   }
@@ -270,14 +223,6 @@ export async function analyzeDocumentCaptureV41(
         };
       } else if (geminiReady) {
         geminiUsed = true;
-        // #region agent log
-        debugAnalyzePipelineLog({
-          hypothesisId: "GEMINI_START",
-          location: "analyze-capture-v41.server.ts",
-          message: "calling gemini generateObject",
-          data: { captureId, retryAttempt, hasPrefill: Boolean(hybridResult?.geminiUserPrompt) },
-        });
-        // #endregion
         const userPrompt =
           hybridResult?.geminiUserPrompt ??
           schedaOfficinaPromptContract.userPromptTemplate ??
@@ -485,31 +430,13 @@ export async function analyzeDocumentCaptureV41(
       };
     } catch (e) {
       lastError = e;
-      // #region agent log
-      debugAnalyzePipelineLog({
-        hypothesisId: "ANALYZE_ATTEMPT_FAIL",
-        location: "analyze-capture-v41.server.ts",
-        message: "analyze attempt failed",
-        data: {
-          captureId,
-          retryAttempt,
-          error: e instanceof Error ? e.message : String(e),
-        },
-      });
-      // #endregion
-      if (retryAttempt < RETRY_BACKOFF_MS.length) await sleep(RETRY_BACKOFF_MS[retryAttempt] ?? 1_000);
+      if (retryAttempt < RETRY_BACKOFF_MS.length) {
+        await sleep(resolveGeminiAnalyzeRetryDelayMs(e, retryAttempt, RETRY_BACKOFF_MS));
+      }
     }
   }
 
   const message = lastError instanceof Error ? lastError.message : "Analisi non riuscita.";
-  // #region agent log
-  debugAnalyzePipelineLog({
-    hypothesisId: "ANALYZE_FAIL",
-    location: "analyze-capture-v41.server.ts",
-    message: "analyze failed after retries",
-    data: { captureId, error: message },
-  });
-  // #endregion
   await mutateCaptureWithEvent({
     captureId,
     eventType: "analyze_failed",

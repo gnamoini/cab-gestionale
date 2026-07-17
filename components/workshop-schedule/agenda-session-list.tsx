@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import type { WorkshopScheduleSessionView } from "@/lib/workshop-schedule/types";
 import { AgendaSessionBlock } from "@/components/workshop-schedule/agenda-session-block";
 import { ymdFromIso } from "@/lib/workshop-schedule/datetime";
@@ -11,6 +12,8 @@ import {
   dsSurfacePanelStatic,
   dsTypoCaption,
 } from "@/lib/ui/design-system";
+
+const AGENDA_LIST_VIRTUAL_THRESHOLD = 40;
 
 export function sortAgendaSessions(sessions: readonly WorkshopScheduleSessionView[]): WorkshopScheduleSessionView[] {
   return [...sessions].sort((a, b) => a.startAt.localeCompare(b.startAt));
@@ -52,9 +55,52 @@ export function AgendaSessionList({
   className?: string;
 }) {
   const sorted = useMemo(() => sortAgendaSessions(sessions), [sessions]);
+  const scrollRef = useRef<HTMLUListElement>(null);
+  const useVirtual = scrollable && sorted.length >= AGENDA_LIST_VIRTUAL_THRESHOLD;
+  const virtualizer = useVirtualizer({
+    count: useVirtual ? sorted.length : 0,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => (compact ? 44 : 56),
+    overscan: 6,
+  });
 
   if (sorted.length === 0) {
     return <AgendaListEmpty message={emptyMessage} />;
+  }
+
+  if (useVirtual) {
+    return (
+      <ul
+        ref={scrollRef}
+        className={`m-0 list-none space-y-1.5 p-0 gestionale-scrollbar max-h-[min(28rem,55vh)] overflow-y-auto pr-0.5 ${className}`.trim()}
+        aria-label="Elenco sessioni"
+      >
+        <li style={{ height: virtualizer.getTotalSize(), position: "relative", listStyle: "none" }} aria-hidden>
+          {virtualizer.getVirtualItems().map((item) => {
+            const session = sorted[item.index]!;
+            return (
+              <div
+                key={session.id}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  transform: `translateY(${item.start}px)`,
+                }}
+              >
+                <AgendaSessionBlock
+                  session={session}
+                  compact={compact}
+                  selected={selectedId === session.id}
+                  onClick={() => onSelect?.(session)}
+                />
+              </div>
+            );
+          })}
+        </li>
+      </ul>
+    );
   }
 
   return (

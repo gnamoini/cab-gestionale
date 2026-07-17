@@ -1,6 +1,5 @@
 import type { CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
 import {
-  buildDocumentiCountByMarcaId,
   buildDocumentiViewTree,
   compareDocs,
   documentoCollocatoInCatalogo,
@@ -41,10 +40,44 @@ export type DocumentiFilteredView = {
   certificazioniSenzaMarca: DocumentoGestionale[];
   conMarca: DocumentoGestionale[];
   tree: ArchiveDocMarcaNode[];
-  countByMarca: Map<string, number>;
   senzaCollocazione: DocumentoGestionale[];
   totalDocs: number;
 };
+
+export function buildDocumentiSearchHaystackById(
+  docs: readonly DocumentoGestionale[],
+  catalog: CatalogMarca[],
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const doc of docs) {
+    const r = resolveDocumentoApplicazione(doc);
+    const assocText = getDocAssocRefs(doc, catalog)
+      .map((ref) => assocPairLabel(catalog, ref))
+      .join(" ");
+    const hay = [
+      doc.nome,
+      r.marcaKey ?? r.marca,
+      r.modelloKey ?? r.macchina,
+      documentoSenzaMarca(doc) ? "senza marca" : "",
+      labelCategoria(doc.categoria),
+      labelTipoFile(doc.tipoFile),
+      labelApplicabilitaBreve(r.applicabilita!),
+      formatDocumentoRigaSintetica(doc),
+      doc.note ?? "",
+      assocText,
+    ]
+      .join(" ")
+      .toLowerCase();
+    map.set(doc.id, hay);
+  }
+  return map;
+}
+
+function docRowMatchesGlobalSearchHaystack(haystack: string, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return haystack.includes(q);
+}
 
 export function docRowMatchesGlobalSearch(
   doc: DocumentoGestionale,
@@ -78,8 +111,12 @@ export function docRowMatchesPageFilters(
   doc: DocumentoGestionale,
   catalog: CatalogMarca[],
   filters: DocumentiPageFilters,
+  searchHaystackById?: Map<string, string>,
 ): boolean {
-  if (!docRowMatchesGlobalSearch(doc, catalog, filters.search)) return false;
+  const searchOk = searchHaystackById
+    ? docRowMatchesGlobalSearchHaystack(searchHaystackById.get(doc.id) ?? "", filters.search)
+    : docRowMatchesGlobalSearch(doc, catalog, filters.search);
+  if (!searchOk) return false;
   const { search: _s, ...advanced } = filters;
   return documentoRowMatchesAdvancedFilters(doc, advanced);
 }
@@ -90,6 +127,7 @@ export function buildDocumentiFilteredView(
   mezziSnap: MezzoGestito[],
   filters: DocumentiPageFilters,
   sort: DocumentiSortState,
+  searchHaystackById?: Map<string, string>,
 ): DocumentiFilteredView {
   const { sortColumn, sortPhase } = sort;
   const senzaMarca: DocumentoGestionale[] = [];
@@ -97,7 +135,7 @@ export function buildDocumentiFilteredView(
   const conMarca: DocumentoGestionale[] = [];
 
   for (const d of docs) {
-    if (!docRowMatchesPageFilters(d, catalog, filters)) continue;
+    if (!docRowMatchesPageFilters(d, catalog, filters, searchHaystackById)) continue;
     if (documentoCertificazioneSenzaMarca(d)) certificazioniSenzaMarca.push(d);
     else if (documentoSenzaMarcaConAvviso(d)) senzaMarca.push(d);
     else conMarca.push(d);
@@ -108,7 +146,6 @@ export function buildDocumentiFilteredView(
   conMarca.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase, { skipSenzaMarcaPartition: true }));
 
   const tree = buildDocumentiViewTree(catalog, mezziSnap, conMarca, sortColumn, sortPhase);
-  const countByMarca = buildDocumentiCountByMarcaId(conMarca, catalog);
   const senzaCollocazione = conMarca.filter((d) => !documentoCollocatoInCatalogo(d, catalog, mezziSnap));
 
   return {
@@ -116,7 +153,6 @@ export function buildDocumentiFilteredView(
     certificazioniSenzaMarca,
     conMarca,
     tree,
-    countByMarca,
     senzaCollocazione,
     totalDocs: senzaMarca.length + certificazioniSenzaMarca.length + conMarca.length,
   };

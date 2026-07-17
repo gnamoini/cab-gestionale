@@ -4,34 +4,61 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 
 export type RealtimeConnectionStatus = "connected" | "polling" | "idle";
 
-type RealtimeStatusContextValue = {
-  gestionale: RealtimeConnectionStatus;
-  settings: RealtimeConnectionStatus;
+type RealtimeStatusSetters = {
   setGestionaleStatus: (s: RealtimeConnectionStatus) => void;
   setSettingsStatus: (s: RealtimeConnectionStatus) => void;
 };
 
-const RealtimeStatusContext = createContext<RealtimeStatusContextValue | null>(null);
+const GestionaleStatusContext = createContext<RealtimeConnectionStatus>("idle");
+const SettingsStatusContext = createContext<RealtimeConnectionStatus>("idle");
+const RealtimeStatusSettersContext = createContext<RealtimeStatusSetters | null>(null);
 
 export function RealtimeStatusProvider({ children }: { children: ReactNode }) {
   const [gestionale, setGestionaleStatus] = useState<RealtimeConnectionStatus>("idle");
   const [settings, setSettingsStatus] = useState<RealtimeConnectionStatus>("idle");
-  const value = useMemo(
-    () => ({ gestionale, settings, setGestionaleStatus, setSettingsStatus }),
-    [gestionale, settings],
+  const setters = useMemo(
+    () => ({ setGestionaleStatus, setSettingsStatus }),
+    [setGestionaleStatus, setSettingsStatus],
   );
-  return <RealtimeStatusContext.Provider value={value}>{children}</RealtimeStatusContext.Provider>;
+
+  return (
+    <RealtimeStatusSettersContext.Provider value={setters}>
+      <GestionaleStatusContext.Provider value={gestionale}>
+        <SettingsStatusContext.Provider value={settings}>{children}</SettingsStatusContext.Provider>
+      </GestionaleStatusContext.Provider>
+    </RealtimeStatusSettersContext.Provider>
+  );
+}
+
+export function useGestionaleRealtimeStatus(): RealtimeConnectionStatus {
+  return useContext(GestionaleStatusContext);
+}
+
+export function useSettingsRealtimeStatus(): RealtimeConnectionStatus {
+  return useContext(SettingsStatusContext);
+}
+
+/** Selector — re-render solo su flip gestionale realtime. */
+export function useRealtimeConnected(): boolean {
+  return useGestionaleRealtimeStatus() === "connected";
+}
+
+export function useRealtimeStatusSetters(): RealtimeStatusSetters {
+  const setters = useContext(RealtimeStatusSettersContext);
+  return {
+    setGestionaleStatus: setters?.setGestionaleStatus ?? (() => undefined),
+    setSettingsStatus: setters?.setSettingsStatus ?? (() => undefined),
+  };
 }
 
 export function useRealtimeStatus() {
-  const ctx = useContext(RealtimeStatusContext);
-  if (!ctx) {
-    return {
-      gestionale: "idle" as RealtimeConnectionStatus,
-      settings: "idle" as RealtimeConnectionStatus,
-      setGestionaleStatus: () => undefined,
-      setSettingsStatus: () => undefined,
-    };
-  }
-  return ctx;
+  const gestionale = useGestionaleRealtimeStatus();
+  const settings = useSettingsRealtimeStatus();
+  const { setGestionaleStatus, setSettingsStatus } = useRealtimeStatusSetters();
+  return {
+    gestionale,
+    settings,
+    setGestionaleStatus,
+    setSettingsStatus,
+  };
 }

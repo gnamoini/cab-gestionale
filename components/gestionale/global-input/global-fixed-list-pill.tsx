@@ -27,7 +27,7 @@ import { GestionaleSearchableSheetSelect } from "@/components/gestionale/global-
 import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
 import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
-import { armSelectorGhostClickGuard } from "@/lib/selector-interaction/suppress-selector-ghost-click";
+import { createSelectorSheetTapSelectHandlers } from "@/lib/selector-interaction/selector-sheet-tap-select";
 
 export type FixedListPillOption = {
   value: string;
@@ -154,6 +154,13 @@ export function GlobalFixedListPillSelect({
     const optStyle = opt.pillStyle ?? fallbackPillStyle;
     const touchMinH = variant === "sheet" ? "min-h-11" : "min-h-11 sm:min-h-0";
     const touchPy = variant === "sheet" ? "py-2.5" : "py-2.5 sm:py-1.5";
+    const sheetTap =
+      variant === "sheet"
+        ? createSelectorSheetTapSelectHandlers(() => {
+            onChange(opt.value);
+            close();
+          })
+        : null;
     return (
       <li key={opt.value} role="presentation" className={variant === "sheet" ? "px-2 py-1" : "py-0.5"}>
         <button
@@ -163,19 +170,12 @@ export function GlobalFixedListPillSelect({
           style={optStyle}
           className={`w-full ${touchMinH} cursor-pointer rounded-md border px-2 ${touchPy} text-center ${fixedListPillTextClass} transition-[filter,box-shadow] duration-150 hover:brightness-[1.06] ${dsFocus} ${
             active ? "ring-2 ring-inset ring-white/35 shadow-sm" : ""
-          }${highlighted && !active ? " ring-2 ring-inset ring-white/20" : ""}`}
+          }${highlighted && !active ? " ring-2 ring-inset ring-white/20" : ""}${sheetTap ? " touch-pan-y" : ""}`}
           onMouseEnter={() => setActiveIndex(idx)}
-          onPointerDown={
-            variant === "sheet"
-              ? (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  armSelectorGhostClickGuard();
-                  onChange(opt.value);
-                  close();
-                }
-              : undefined
-          }
+          onPointerDown={sheetTap?.onPointerDown}
+          onPointerMove={sheetTap?.onPointerMove}
+          onPointerUp={sheetTap?.onPointerUp}
+          onPointerCancel={sheetTap?.onPointerCancel}
           onClick={
             variant === "dropdown"
               ? () => {

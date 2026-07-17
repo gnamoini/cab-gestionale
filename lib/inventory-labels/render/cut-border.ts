@@ -7,7 +7,7 @@ export function cutBorderRectSvg(
   dpi: number,
 ): string | null {
   if (!cutBorderMm || cutBorderMm <= 0) return null;
-  const inset = mmToPx(0.6, dpi);
-  const strokeW = 0.75;
-  return `<rect x="${inset}" y="${inset}" width="${widthPx - inset * 2}" height="${heightPx - inset * 2}" fill="none" stroke="#999999" stroke-width="${strokeW}"/>`;
+  const inset = mmToPx(0.5, dpi);
+  const strokeW = 1.25;
+  return `<rect x="${inset}" y="${inset}" width="${widthPx - inset * 2}" height="${heightPx - inset * 2}" fill="none" stroke="#888888" stroke-width="${strokeW}"/>`;
 }

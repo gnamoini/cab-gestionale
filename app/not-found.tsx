@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { NotFoundView } from "@/components/gestionale/not-found-view";
+import { NotFoundViewLazy } from "@/components/public-surfaces/public-surface-loaders";
 
 export const metadata: Metadata = {
   title: "Pagina non trovata | CAB Gestionale Officina",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function NotFound() {
-  return <NotFoundView variant="standalone" />;
+  return <NotFoundViewLazy variant="standalone" />;
 }

@@ -1,13 +1,9 @@
 "use client";
 
 import { useEffect, useId, useState, type ReactNode } from "react";
-import { GestionaleCollapsibleHeader } from "@/components/design-system/gestionale-collapsible-header";
+import { GestionaleCollapsiblePanel } from "@/components/design-system/gestionale-collapsible-panel";
 import { dsCardTitle } from "@/lib/ui/design-system";
 import { CAB_FOCUS_SCROLL_GROUP_ATTR } from "@/lib/ui/mobile-modal-behavior";
-import {
-  gestionaleCollapsibleEase,
-  gestionaleCollapsiblePanelInnerClass,
-} from "@/lib/ui/gestionale-collapsible-toggle";
 
 /** Sfondo shell sezione form collapsible — anche sul corpo animato (evita flash in dark). */
 export const gestionaleCollapsibleSectionFormShellBgClass =
@@ -59,6 +55,7 @@ export function GestionaleCollapsibleSection({
   titleTone = "primary",
   defaultCollapsed = true,
   forceExpanded = false,
+  unmountOnCollapse = false,
   variant = "form",
   className = "",
   action,
@@ -68,6 +65,8 @@ export function GestionaleCollapsibleSection({
   titleTone?: GestionaleCollapsibleSectionTitleTone;
   defaultCollapsed?: boolean;
   forceExpanded?: boolean;
+  /** Se true, non monta il body quando collassato (opt-in, default false). */
+  unmountOnCollapse?: boolean;
   variant?: GestionaleCollapsibleSectionVariant;
   className?: string;
   /** Azioni header (es. Aggiungi riga) — colonna separata, non toggla. */
@@ -96,7 +95,7 @@ export function GestionaleCollapsibleSection({
       {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
       className={`${sectionShellClass(variant)} ${className}`.trim()}
     >
-      <GestionaleCollapsibleHeader
+      <GestionaleCollapsiblePanel
         panelId={panelId}
         titleId={titleId}
         expanded={expanded}
@@ -105,25 +104,16 @@ export function GestionaleCollapsibleSection({
         headerActions={action}
         form={variant === "form" || variant === "flat"}
         formFlat={variant === "flat"}
+        bodyClassName={bodyBgClass}
+        bodyPadClassName={sectionBodyPadClass(variant)}
         titleNode={
           <h2 id={titleId} className={`${dsCardTitle} leading-snug`}>
             {title}
           </h2>
         }
-      />
-      <div
-        id={`${panelId}-body`}
-        role="region"
-        aria-labelledby={titleId}
-        aria-hidden={!expanded}
-        className={`grid ${bodyBgClass} transition-[grid-template-rows] duration-300 ${gestionaleCollapsibleEase} motion-reduce:transition-none ${
-          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
       >
-        <div className={`${gestionaleCollapsiblePanelInnerClass} ${bodyBgClass}`}>
-          <div className={`min-w-0 ${sectionBodyPadClass(variant)}`}>{children}</div>
-        </div>
-      </div>
+        {unmountOnCollapse && !expanded ? null : children}
+      </GestionaleCollapsiblePanel>
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { applyRememberToCookiesToSet } from "@/lib/auth/auth-cookie-options";
+import { readAuthRememberPreferenceFromCookies } from "@/lib/auth/auth-remember-preference";
 import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
@@ -18,7 +20,9 @@ export async function createSupabaseServerUserClient() {
       },
       setAll(cookiesToSet: CookieToSet[]) {
         try {
-          cookiesToSet.forEach(({ name, value, options }) => {
+          const remember = readAuthRememberPreferenceFromCookies(cookieStore.getAll());
+          const resolved = applyRememberToCookiesToSet(cookiesToSet, remember);
+          resolved.forEach(({ name, value, options }) => {
             cookieStore.set(name, value, options);
           });
         } catch {

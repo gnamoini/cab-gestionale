@@ -33,13 +33,14 @@ assert.equal(baseline.entryCount, baseline.entries.length);
 assert.ok(fs.existsSync(path.join(ROOT, "lib/ui/flex-freeze-manifest.json")));
 assert.ok(fs.existsSync(path.join(ROOT, "eslint-rules/no-flex-overflow-risk.mjs")));
 
-const globalsCss = fs.readFileSync(path.join(ROOT, "app/globals.css"), "utf8");
-assert.match(globalsCss, new RegExp(`\\.${FLEX_SCOPE_CLASS} \\.flex > \\*`));
-assert.match(globalsCss, /\.flex-safe-row\s*\{/);
-assert.match(globalsCss, /\.flex-safe-col\s*\{/);
-assert.match(globalsCss, /\.flex-safe-item\s*\{/);
-assert.match(globalsCss, /\.text-safe\s*\{/);
-assert.doesNotMatch(globalsCss, /gestionale-responsive-core[\s\S]*flex-wrap:\s*wrap/);
+const globalsCoreCss = fs.readFileSync(path.join(ROOT, "app/globals-core.css"), "utf8");
+const globalsShellCss = fs.readFileSync(path.join(ROOT, "app/globals-gestionale-shell.css"), "utf8");
+assert.match(globalsShellCss, new RegExp(`\\.${FLEX_SCOPE_CLASS} \\.flex > \\*`));
+assert.match(globalsCoreCss, /\.flex-safe-row\s*\{/);
+assert.match(globalsCoreCss, /\.flex-safe-col\s*\{/);
+assert.match(globalsCoreCss, /\.flex-safe-item\s*\{/);
+assert.match(globalsCoreCss, /\.text-safe\s*\{/);
+assert.doesNotMatch(globalsShellCss, /gestionale-responsive-core[\s\S]*flex-wrap:\s*wrap/);
 
 const eslintConfig = fs.readFileSync(path.join(ROOT, "eslint.config.mjs"), "utf8");
 assert.match(eslintConfig, /no-flex-overflow-risk":\s*"error"/);

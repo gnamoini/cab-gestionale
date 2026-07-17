@@ -59,7 +59,7 @@ assert.match(formSection, /gestionaleFieldLabelClass/);
 assert.match(fieldLabel, /pointer-events-none/);
 assert.doesNotMatch(formSection, /<label[\s\S]*?<div className="mt-1">\{children\}<\/div>[\s\S]*?<\/label>/);
 assert.match(filterFields, /gestionaleFilterFieldLabelClass/);
-assert.match(shellCard, /GestionaleCollapsibleHeader/);
+assert.match(shellCard, /GestionaleCollapsiblePanel/);
 assert.match(collapsibleHeader, /aria-expanded=\{expanded\}/);
 assert.match(collapsibleHeader, /aria-label=\{toggleLabel\}/);
 

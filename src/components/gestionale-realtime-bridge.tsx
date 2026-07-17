@@ -39,7 +39,7 @@ import { refetchActiveOperationalSnapshot } from "@/lib/sync/gestionale-snapshot
 import { SyncTransportController } from "@/src/lib/runtime/sync/sync-transport-controller";
 import { invalidateRbacTruthClient } from "@/src/lib/rbac/invalidate-rbac-truth";
 import { onUserRoleChangedClient } from "@/src/lib/rbac/on-user-role-changed.client";
-import { useRealtimeStatus } from "@/src/context/realtime-status-context";
+import { useRealtimeStatusSetters } from "@/src/context/realtime-status-context";
 import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 
@@ -60,7 +60,7 @@ export function GestionaleRealtimeBridge() {
   }, [push]);
   const pathname = usePathname();
   const { isOpen: settingsModalOpen } = useSettingsModalOpen();
-  const { setGestionaleStatus, setSettingsStatus } = useRealtimeStatus();
+  const { setGestionaleStatus, setSettingsStatus } = useRealtimeStatusSetters();
   const authReady = isAuthSessionEstablished(status) && !!user?.id;
   const rtConnectedRef = useRef(false);
   const settingsModalOpenRef = useRef(settingsModalOpen);

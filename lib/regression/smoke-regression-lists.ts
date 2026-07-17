@@ -2,6 +2,7 @@
  * Smoke regression tiers — core in release-gate CI; extended in full regression / nightly.
  * Flex UI governance in extended: covered by flex:eslint:gate + flex:freeze:gate.
  */
+import { PERFORMANCE_GOVERNANCE_SUITE } from "@/lib/control/suites/performance-governance.suite";
 
 /** Blocking PR gate — security, data integrity, forms/modal, domain critical. */
 export const REGRESSION_CORE: readonly string[] = [
@@ -31,6 +32,7 @@ export const REGRESSION_CORE: readonly string[] = [
   "lib/regression/performance-policy.test.ts",
   "lib/regression/long-session-stability-policy.test.ts",
   "lib/regression/auth-logout-audit-policy.test.ts",
+  "lib/regression/auth-remember-preference.test.ts",
   "lib/schede/lavorazioni-schede-storage.test.ts",
   "lib/schede/schede-lazy-fetch.test.ts",
   "lib/regression/input-security-policy.test.ts",
@@ -275,8 +277,6 @@ export const REGRESSION_EXTENDED: readonly string[] = [
   "lib/regression/asset-cache-telemetry-policy.test.ts",
   "lib/regression/render-path-policy.test.ts",
   "lib/regression/query-dedup-policy.test.ts",
-  "lib/regression/performance-budget-registry.test.ts",
-  "lib/regression/performance-regression-guard.test.ts",
   "lib/regression/edge-runtime-policy.test.ts",
   "lib/regression/request-decision-policy.test.ts",
   "lib/regression/loading-design-system.test.ts",
@@ -302,6 +302,7 @@ export const REGRESSION_EXTENDED: readonly string[] = [
   "lib/regression/ui-final-stability-audit.test.ts",
   "lib/regression/ui-overflow-regression.test.ts",
   "lib/regression/ui-reliability-policy.test.ts",
+  "lib/regression/gestionale-shell-css-wiring-policy.test.ts",
   "lib/regression/loading-failsafe-policy.test.ts",
   "lib/regression/boot-investigation-policy.test.ts",
   "lib/regression/layout-signature.test.ts",
@@ -371,6 +372,7 @@ export const REGRESSION_EXTENDED: readonly string[] = [
   "lib/regression/global-table-head-audit.test.ts",
   "lib/dipendenti/timesheet-report-kpi-filter.test.ts",
   "lib/regression/smoke-regression-lists-audit.test.ts",
+  ...PERFORMANCE_GOVERNANCE_SUITE,
 ] as const;
 
 export const REGRESSION_ALL: readonly string[] = [...REGRESSION_CORE, ...REGRESSION_EXTENDED];

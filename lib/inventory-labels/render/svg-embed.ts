@@ -30,3 +30,49 @@ export function nestedSvgAt(
 ): string {
   return `<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="${frag.viewBox}" preserveAspectRatio="${preserveAspectRatio}">${frag.inner}</svg>`;
 }
+
+function parseSvgInkBounds(inner: string): { minX: number; minY: number; maxX: number; maxY: number } | null {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let maxStroke = 0;
+  const pathRe = /\bd="([^"]+)"/g;
+  let m: RegExpExecArray | null;
+  while ((m = pathRe.exec(inner))) {
+    const nums = m[1].match(/-?[\d.]+/g)?.map(Number) ?? [];
+    for (let i = 0; i + 1 < nums.length; i += 2) {
+      const x = nums[i]!;
+      const y = nums[i + 1]!;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+  const strokeRe = /stroke-width="([\d.]+)"/g;
+  while ((m = strokeRe.exec(inner))) {
+    maxStroke = Math.max(maxStroke, Number(m[1]));
+  }
+  if (!Number.isFinite(minX)) return null;
+  const pad = maxStroke / 2;
+  return {
+    minX: minX - pad,
+    minY: minY - pad,
+    maxX: maxX + pad,
+    maxY: maxY + pad,
+  };
+}
+
+/** Ritaglia quiet zone — barre a larghezza piena come il QR (margin 0). */
+export function cropSvgFragmentToInkBounds(frag: SvgFragment): SvgFragment {
+  const bounds = parseSvgInkBounds(frag.inner);
+  if (!bounds) return frag;
+  const w = bounds.maxX - bounds.minX;
+  const h = bounds.maxY - bounds.minY;
+  if (w <= 0 || h <= 0) return frag;
+  return {
+    viewBox: `${bounds.minX} ${bounds.minY} ${w} ${h}`,
+    inner: frag.inner,
+  };
+}

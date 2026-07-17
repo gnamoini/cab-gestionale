@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { PREVENTIVI_COLUMNS, MEZZI_LIST_LIGHT_COLUMNS } from "@/lib/db/table-select-columns";
+import { PREVENTIVI_BILLING_STATUS_COLUMNS, PREVENTIVI_COLUMNS, MEZZI_LIST_LIGHT_COLUMNS } from "@/lib/db/table-select-columns";
 import {
   fetchPreventiviListRows,
   mapPreventiviEmbedRowsToRecords,
@@ -13,7 +13,7 @@ import type { PreventivoRecord } from "@/lib/preventivi/types";
 import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
-import type { MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
+import type { MezzoRow, PreventivoBillingStatusRow, PreventivoRow } from "@/src/types/supabase-tables";
 
 export const fetchPreventiviRecordsServer = cache(async (): Promise<ServiceResult<PreventiviRecordsPayload>> => {
   const allowed = await verifyServerPageRead("preventivi");
@@ -27,6 +27,17 @@ export const fetchPreventiviRecordsServer = cache(async (): Promise<ServiceResul
     mezziRows: mezziRowsFromPreventiviEmbed(rows),
   });
 });
+
+export const fetchPreventiviBillingStatusServer = cache(
+  async (): Promise<ServiceResult<PreventivoBillingStatusRow[]>> => {
+    const allowed = await verifyServerPageRead("preventivi");
+    if (!allowed) return success([]);
+    const sb = await createSupabaseServerUserClient();
+    const { data, error } = await sb.from("preventivi_billing_status").select(PREVENTIVI_BILLING_STATUS_COLUMNS);
+    if (error) return err(error.message);
+    return success((data ?? []) as PreventivoBillingStatusRow[]);
+  },
+);
 
 export async function fetchPreventivoRecordServer(id: string): Promise<ServiceResult<PreventivoRecord>> {
   const allowed = await verifyServerPageRead("preventivi");

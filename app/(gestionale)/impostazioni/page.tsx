@@ -1,16 +1,26 @@
+import { dehydrate } from "@tanstack/react-query";
 import { Suspense } from "react";
 import { LoadingSuspenseFallback } from "@/components/design-system";
+import { ImpostazioniDeferredHydration } from "@/components/gestionale/impostazioni/impostazioni-deferred-hydration";
 import { SistemaImpostazioniPageViewLazy } from "@/components/gestionale/lazy-route-views";
 import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";
-import { prefetchImpostazioniPage } from "@/src/lib/react-query/prefetch-gestionale-page";
+import {
+  createServerQueryClient,
+  prefetchCriticalPage,
+} from "@/src/lib/react-query/prefetch-gestionale-page";
 
 export default async function ImpostazioniPage() {
-  const dehydratedState = await prefetchImpostazioniPage();
+  const qc = createServerQueryClient();
+  await prefetchCriticalPage(qc, "impostazioni");
+  const criticalState = dehydrate(qc);
+
   return (
-    <Suspense fallback={<LoadingSuspenseFallback variant="impostazioni" />}>
-      <GestionaleHydrationBoundary state={dehydratedState}>
-        <SistemaImpostazioniPageViewLazy />
-      </GestionaleHydrationBoundary>
-    </Suspense>
+    <GestionaleHydrationBoundary state={criticalState}>
+      <Suspense fallback={<LoadingSuspenseFallback variant="impostazioni" />}>
+        <ImpostazioniDeferredHydration>
+          <SistemaImpostazioniPageViewLazy />
+        </ImpostazioniDeferredHydration>
+      </Suspense>
+    </GestionaleHydrationBoundary>
   );
 }

@@ -70,20 +70,6 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
         if (body.code === "no_fields") {
           throw new Error(body.error ?? "Nessun dato letto dalla scheda.");
         }
-        // #region agent log
-        fetch("http://127.0.0.1:7863/ingest/89dc6c11-bff2-45f2-876e-83e3ac496a5d", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bd086a" },
-          body: JSON.stringify({
-            sessionId: "bd086a",
-            hypothesisId: "ANALYZE_CLIENT",
-            location: "document-capture-wizard-modal.tsx",
-            message: "analyze api failed",
-            data: { status: res.status, code: body.code, error: body.error, captureId: id },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
         const errMsg = body.error ?? "Lettura documento non riuscita";
         retryHintSec = parseGeminiRetryAfterSec(errMsg) ?? retryHintSec;
         throw new Error(errMsg);

@@ -3,6 +3,7 @@
 import {
   cloneElement,
   isValidElement,
+  memo,
   useEffect,
   useRef,
   type FocusEvent,
@@ -63,7 +64,7 @@ function mergeHandler<E>(
   };
 }
 
-export function Tooltip({
+export const Tooltip = memo(function Tooltip({
   content,
   children,
   side = "top",
@@ -153,4 +154,4 @@ export function Tooltip({
       {panel}
     </>
   );
-}
+});

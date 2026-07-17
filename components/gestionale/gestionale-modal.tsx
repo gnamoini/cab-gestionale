@@ -2,16 +2,16 @@
 
 import { useCallback, useState } from "react";
 import {
-  LavorazioniModalHeader,
-  LavorazioniModalShell,
-  LavorazioniModalTitleBar,
-} from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+  GestionaleModalHeader,
+  GestionaleModalShell,
+  GestionaleModalTitleBar,
+} from "@/components/gestionale/gestionale-modal-shell";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 
 export {
-  LavorazioniModalShell as GestionaleModalShell,
-  LavorazioniModalHeader as GestionaleModalHeader,
-  LavorazioniModalTitleBar as GestionaleModalTitleBar,
+  GestionaleModalShell,
+  GestionaleModalHeader,
+  GestionaleModalTitleBar,
   GestionaleModalScrollBody,
 };
 

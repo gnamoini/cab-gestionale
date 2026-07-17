@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-07-17T00:24:29.799Z",
+  "vitals": null,
+  "budget": {
+    "lcpMs": 3500,
+    "inpMs": 300,
+    "cls": 0.15,
+    "ttfbMs": 1200
+  },
+  "warnings": [
+    "LIGHTHOUSE_BASE_URL unset — using Playwright proxy if available"
+  ]
+}

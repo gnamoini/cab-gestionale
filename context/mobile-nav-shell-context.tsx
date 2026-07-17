@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useRef, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, type ReactNode } from "react";
 
 type MobileNavShellContextValue = {
   openMobileNav: () => void;
@@ -25,10 +25,13 @@ export function MobileNavShellProvider({
 
   const getMobileNavTrigger = useCallback(() => triggerRef.current, []);
 
+  const value = useMemo(
+    () => ({ openMobileNav, registerMobileNavTrigger, getMobileNavTrigger }),
+    [openMobileNav, registerMobileNavTrigger, getMobileNavTrigger],
+  );
+
   return (
-    <MobileNavShellContext.Provider
-      value={{ openMobileNav, registerMobileNavTrigger, getMobileNavTrigger }}
-    >
+    <MobileNavShellContext.Provider value={value}>
       {children}
     </MobileNavShellContext.Provider>
   );

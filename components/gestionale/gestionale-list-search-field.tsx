@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   IconGestionaleSearchMagnifier,
@@ -90,6 +90,12 @@ export function GestionaleListSearchField({
   }, []);
 
   useDropdownOutsideDismiss(showDropdown, wrapRef, dropdownRef, dismissDropdown);
+
+  useEffect(() => {
+    return () => {
+      if (blurTimer.current) clearTimeout(blurTimer.current);
+    };
+  }, []);
 
   const inputRef = useRef<HTMLInputElement>(null);
 

@@ -37,6 +37,10 @@ export function preventiviRecordsQueryKey() {
   return [...QK.preventivi, null] as const;
 }
 
+export function preventiviBillingQueryKey() {
+  return [...QK.preventivi, "billing-status"] as const;
+}
+
 export function fatturazioneListQueryKey() {
   return [...QK.fatturazione, "list"] as const;
 }

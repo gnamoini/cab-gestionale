@@ -1,0 +1,124 @@
+{
+  "generatedAt": "2026-07-17T00:34:26.245Z",
+  "firstLoadJsKb": 1793.6,
+  "vendorChunkKb": 443.3,
+  "sharedChunksKb": 1793.6,
+  "routeChunks": {
+    "/report/design-system-preview": {
+      "jsKb": 1793.6,
+      "cssKb": 0,
+      "chunkCount": 35
+    },
+    "/lavorazioni": {
+      "jsKb": 1763.2,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/magazzino": {
+      "jsKb": 1763.2,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/report": {
+      "jsKb": 1763.2,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/agenda": {
+      "jsKb": 1762.7,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/dashboard": {
+      "jsKb": 1762.7,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/dipendenti": {
+      "jsKb": 1762.7,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/documenti": {
+      "jsKb": 1762.7,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/fatturazione": {
+      "jsKb": 1762.7,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/impostazioni": {
+      "jsKb": 1762.7,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/lavorazioni-clienti": {
+      "jsKb": 1762.7,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/mezzi": {
+      "jsKb": 1762.7,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/preventivi": {
+      "jsKb": 1762.7,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/sicurezza": {
+      "jsKb": 1762.7,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/lavorazioni-clienti/[id]": {
+      "jsKb": 1759.9,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/sicurezza/production-readiness": {
+      "jsKb": 1759.9,
+      "cssKb": 0,
+      "chunkCount": 34
+    },
+    "/acesso-negato": {
+      "jsKb": 1748.2,
+      "cssKb": 0,
+      "chunkCount": 33
+    },
+    "/privacy-policy": {
+      "jsKb": 1639.5,
+      "cssKb": 0,
+      "chunkCount": 29
+    },
+    "/login": {
+      "jsKb": 1639,
+      "cssKb": 0,
+      "chunkCount": 28
+    },
+    "/login/reset-password": {
+      "jsKb": 1639,
+      "cssKb": 0,
+      "chunkCount": 28
+    },
+    "/offline": {
+      "jsKb": 1637.4,
+      "cssKb": 0,
+      "chunkCount": 28
+    },
+    "/": {
+      "jsKb": 1631.8,
+      "cssKb": 0,
+      "chunkCount": 27
+    },
+    "/_not-found": {
+      "jsKb": 1631.8,
+      "cssKb": 0,
+      "chunkCount": 27
+    }
+  },
+  "source": "E:\\Projects\\gestionale-cab\\.next\\diagnostics\\route-bundle-stats.json"
+}

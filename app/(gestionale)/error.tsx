@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { GestionaleErrorFallback } from "@/components/observability/gestionale-error-fallback";
+import { GestionaleErrorFallbackLazy } from "@/components/public-surfaces/public-surface-loaders";
 import { gestionaleLogger } from "@/lib/observability/logger";
 
 export default function GestionaleError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
@@ -13,7 +13,7 @@ export default function GestionaleError({ error, reset }: { error: Error & { dig
   }, [error]);
 
   return (
-    <GestionaleErrorFallback
+    <GestionaleErrorFallbackLazy
       variant="gestionale"
       message={error.message}
       digest={error.digest}

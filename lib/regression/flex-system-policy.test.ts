@@ -21,7 +21,8 @@ function read(rel: string): string {
 }
 
 const gfs = read("lib/ui/global-flex-system.ts");
-const globalsCss = read("app/globals.css");
+const globalsCoreCss = read("app/globals-core.css");
+const globalsShellCss = read("app/globals-gestionale-shell.css");
 const toolbarGroup = read("components/design-system/toolbar-group.tsx");
 const designSystem = read("lib/ui/design-system.ts");
 const globalTable = read("lib/ui/global-table.ts");
@@ -36,11 +37,11 @@ assert.equal(GlobalFlexSystem.flexSafeItem, flexSafeItem);
 assert.equal(GlobalFlexSystem.flexFillSafe, flexFillSafe);
 assert.ok(FLEX_OVERFLOW_FILE_ALLOWLIST.some((a) => a.path.includes("lavorazioni-kanban-view")));
 
-assert.match(globalsCss, /\.flex-safe-item\s*\{/);
-assert.match(globalsCss, /\.flex-fill-safe\s*\{/);
-assert.match(globalsCss, new RegExp(`${FLEX_SCOPE_CLASS} \\.flex > \\*`));
+assert.match(globalsCoreCss, /\.flex-safe-item\s*\{/);
+assert.match(globalsCoreCss, /\.flex-fill-safe\s*\{/);
+assert.match(globalsShellCss, new RegExp(`${FLEX_SCOPE_CLASS} \\.flex > \\*`));
 assert.doesNotMatch(
-  globalsCss,
+  globalsShellCss,
   /gestionale-responsive-core[\s\S]*flex-wrap:\s*wrap/,
   "NO flex-wrap globale scoped su .gestionale-responsive-core",
 );

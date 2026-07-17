@@ -1,12 +1,13 @@
 import type { LabelPayload, LabelTemplateDefinition, LabelTemplateElement } from "@/lib/inventory-labels/domain/types";
 import { mmToPx, fontLineHeightMm } from "@/lib/inventory-labels/domain/templates";
 
-/** A capo solo su spazi — mai spezzare parole (es. fotoelettrico → fotoelettr + ico). */
+/** A capo su spazi — parola intera sulla riga successiva, mai spezzata se evitabile. */
 export function wrapLines(text: string, maxLines: number, maxCharsPerLine: number): string[] {
   const words = text.trim().split(/\s+/).filter(Boolean);
   if (!words.length) return [""];
   if (maxLines <= 0) return [""];
 
+  const perLine = Math.max(1, maxCharsPerLine);
   const lines: string[] = [];
   let current = "";
 
@@ -17,7 +18,7 @@ export function wrapLines(text: string, maxLines: number, maxCharsPerLine: numbe
   for (const word of words) {
     if (lines.length >= maxLines) break;
     const next = current ? `${current} ${word}` : word;
-    if (next.length <= maxCharsPerLine) {
+    if (next.length <= perLine) {
       current = next;
       continue;
     }
@@ -26,7 +27,7 @@ export function wrapLines(text: string, maxLines: number, maxCharsPerLine: numbe
       current = "";
       if (lines.length >= maxLines) break;
     }
-    // Parola intera sulla riga successiva (anche se supera maxChars — evita tagli a metà parola)
+    // ponytail: parola intera a capo anche se supera maxChars — no split mid-word
     if (lines.length < maxLines) {
       current = word;
     }
@@ -34,6 +35,87 @@ export function wrapLines(text: string, maxLines: number, maxCharsPerLine: numbe
 
   if (current && lines.length < maxLines) pushLine(current);
   return lines.length ? lines : [""];
+}
+
+/** A capo a carattere — codici OE / fornitore senza spazi. */
+export function wrapChars(text: string, maxLines: number, maxCharsPerLine: number): string[] {
+  const t = text.trim();
+  if (!t) return [""];
+  if (maxLines <= 0) return [""];
+  const perLine = Math.max(1, maxCharsPerLine);
+  const lines: string[] = [];
+  for (let i = 0; i < t.length && lines.length < maxLines; i += perLine) {
+    lines.push(t.slice(i, i + perLine));
+  }
+  return lines.length ? lines : [""];
+}
+
+export function wrapCodiceLabelLine(
+  text: string,
+  maxLines: number,
+  wrapCharsPerLine: number,
+  fitCharsPerLine = wrapCharsPerLine,
+): string[] {
+  const t = text.trim();
+  if (!t) return [""];
+  const wrapPer = Math.max(1, wrapCharsPerLine);
+  const fitPer = Math.max(wrapPer, fitCharsPerLine);
+  if (maxLines <= 0) return [""];
+
+  const marcaSuffix = t.match(/^(.+?)\s+(\([^)]+\))$/);
+  if (!marcaSuffix) return wrapChars(t, maxLines, wrapPer);
+
+  const [, code, marca] = marcaSuffix;
+  const full = `${code} ${marca}`;
+
+  if (full.length <= fitPer) return [full];
+
+  const codeLines = wrapChars(code, maxLines, wrapPer);
+  if (!codeLines.length) return [""];
+
+  const lastIdx = codeLines.length - 1;
+  const withMarca = `${codeLines[lastIdx]} ${marca}`;
+  if (withMarca.length <= fitPer) {
+    codeLines[lastIdx] = withMarca;
+    return codeLines;
+  }
+
+  if (codeLines.length < maxLines) return [...codeLines, marca];
+
+  const suffix = ` ${marca}`;
+  const room = fitPer - suffix.length;
+  if (room < 1) return codeLines;
+
+  const consumedBefore = codeLines.slice(0, -1).join("").length;
+  const trimmed = code.slice(consumedBefore, consumedBefore + room);
+  codeLines[lastIdx] = `${trimmed}${suffix}`;
+  return codeLines;
+}
+
+export function wrapLabelLines(
+  text: string,
+  maxLines: number,
+  maxCharsPerLine: number,
+  breakMode: "words" | "chars" | "codice" = "words",
+  fitCharsPerLine?: number,
+): string[] {
+  if (breakMode === "codice") {
+    return wrapCodiceLabelLine(text, maxLines, maxCharsPerLine, fitCharsPerLine ?? maxCharsPerLine);
+  }
+  return breakMode === "chars"
+    ? wrapChars(text, maxLines, maxCharsPerLine)
+    : wrapLines(text, maxLines, maxCharsPerLine);
+}
+
+export function isFullyWrapped(
+  text: string,
+  lines: string[],
+  maxCharsPerLine: number,
+  breakMode: "words" | "chars",
+): boolean {
+  const full = wrapLabelLines(text, 256, maxCharsPerLine, breakMode);
+  const norm = (ls: string[]) => (breakMode === "chars" ? ls.join("") : ls.join(" "));
+  return norm(full) === norm(lines);
 }
 
 export function fieldValue(payload: LabelPayload, field: keyof LabelPayload): string {
@@ -66,6 +148,17 @@ export function linesFitWrapWidth(
   font?: "sans" | "mono",
 ): boolean {
   const max = maxCharsForWrap(widthMm, fontPt, font);
+  return lines.every((line) => line.length <= max);
+}
+
+/** Larghezza reale tipografica — per righe codice+marca che sfruttano il margine visivo. */
+export function linesFitDisplayWidth(
+  lines: string[],
+  widthMm: number,
+  fontPt: number,
+  font?: "sans" | "mono",
+): boolean {
+  const max = maxCharsForWidth(widthMm, fontPt, font);
   return lines.every((line) => line.length <= max);
 }
 

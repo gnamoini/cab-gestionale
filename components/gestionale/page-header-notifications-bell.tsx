@@ -6,7 +6,7 @@ import { resolveRole } from "@/lib/auth/rbac";
 import { isClientInboxEligible } from "@/lib/notifications/client-inbox-eligible";
 import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
 import { useAuth } from "@/context/auth-context";
-import { useGestionaleShellLayout } from "@/context/gestionale-shell-layout-context";
+import { useGestionaleShellTier } from "@/context/gestionale-shell-layout-context";
 import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 
@@ -15,7 +15,7 @@ export function PageHeaderNotificationsBell() {
   const { user } = useAuth();
   const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
   const { readsDb, isLoading: flagLoading } = useNotificationsV2Mode();
-  const { isCompactShell } = useGestionaleShellLayout();
+  const { isCompactShell } = useGestionaleShellTier();
 
   if (!user?.id) return null;
 

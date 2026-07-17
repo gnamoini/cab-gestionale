@@ -10,20 +10,42 @@ const handlers = createSelectorSheetTapSelectHandlers(() => {
   selected = true;
 });
 
-function pe(type: string, x: number, y: number, opts: { preventDefault?: () => void; stopPropagation?: () => void } = {}) {
+let capturedPointerId: number | null = null;
+
+function pe(
+  type: string,
+  x: number,
+  y: number,
+  opts: { preventDefault?: () => void; stopPropagation?: () => void; pointerId?: number } = {},
+) {
+  const pointerId = opts.pointerId ?? 1;
+  const target = {
+    setPointerCapture: (id: number) => {
+      capturedPointerId = id;
+    },
+    releasePointerCapture: (id: number) => {
+      if (capturedPointerId === id) capturedPointerId = null;
+    },
+    hasPointerCapture: (id: number) => capturedPointerId === id,
+  };
   return {
     type,
     clientX: x,
     clientY: y,
+    pointerId,
+    currentTarget: target,
     preventDefault: opts.preventDefault ?? (() => {}),
     stopPropagation: opts.stopPropagation ?? (() => {}),
   } as unknown as ReactPointerEvent;
 }
 
 selected = false;
+capturedPointerId = null;
 handlers.onPointerDown(pe("pointerdown", 10, 10));
+assert.equal(capturedPointerId, 1, "pointerdown captures pointer");
 handlers.onPointerUp(pe("pointerup", 10, 10));
 assert.equal(selected, true, "tap without movement selects");
+assert.equal(capturedPointerId, null, "pointerup releases capture");
 
 selected = false;
 handlers.onPointerDown(pe("pointerdown", 10, 10));
@@ -33,7 +55,7 @@ assert.equal(selected, false, "scroll gesture does not select");
 
 selected = false;
 handlers.onPointerDown(pe("pointerdown", 20, 20));
-handlers.onPointerCancel();
+handlers.onPointerCancel(pe("pointercancel", 20, 20));
 handlers.onPointerUp(pe("pointerup", 20, 20));
 assert.equal(selected, true, "cancel resets scroll flag");
 

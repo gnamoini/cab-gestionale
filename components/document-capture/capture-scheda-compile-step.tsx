@@ -30,8 +30,39 @@ import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/sched
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { useLavorazioneCreateSubmit } from "@/src/hooks/use-lavorazione-create-submit";
+import { CaptureApplyRecoveryBanner } from "@/components/document-capture/capture-apply-recovery-banner";
+import { useCaptureApplyFlow } from "@/lib/document-capture/use-capture-apply-flow";
+import {
+  captureReviewAllowsForceApply,
+  type ValidateCaptureResult,
+} from "@/lib/document-capture/validation/validate-capture-for-apply";
 
 export const CAPTURE_COMPILE_FORM_ID = "capture-scheda-compile-form";
+
+function CaptureValidationIssuesBanner({ validation }: { validation: ValidateCaptureResult }) {
+  if (validation.status === "READY" && validation.issues.length === 0) return null;
+  return (
+    <div
+      role="status"
+      className={`mb-2 rounded-lg border px-3 py-2 text-sm ${
+        validation.status === "BLOCKED"
+          ? "border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-950/40"
+          : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40"
+      }`}
+    >
+      <p className="font-medium">
+        {validation.status === "BLOCKED"
+          ? "Import bloccato — correggi gli errori"
+          : "Revisione consigliata prima del salvataggio"}
+      </p>
+      <ul className="mt-1 list-disc pl-4 text-xs">
+        {validation.issues.map((issue) => (
+          <li key={`${issue.code}-${issue.fieldKey ?? ""}`}>{issue.message}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 const HINT_RECONCILE_MS = 250;
 
@@ -61,6 +92,8 @@ export function CaptureSchedaCompileStep({
   magazzino = [],
   onCreated,
   onCompileError,
+  applyMode = false,
+  onApplySuccess,
 }: {
   captureId: string;
   fieldRows: readonly CaptureFieldRow[];
@@ -74,6 +107,9 @@ export function CaptureSchedaCompileStep({
   magazzino?: readonly RicambioMagazzino[];
   onCreated?: (id: string) => void;
   onCompileError?: (message: string) => void;
+  /** Single Apply Engine — dry-run → apply invece di create diretto. */
+  applyMode?: boolean;
+  onApplySuccess?: (lavorazioneId: string) => void;
 }) {
   const [compileData, setCompileData] = useState<CaptureIngressoCompileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,6 +122,8 @@ export function CaptureSchedaCompileStep({
     Array<{ fieldKey: string; original: string; resolution: import("@/lib/entity-resolution/entity-resolution-types").EntityResolutionResult }>
   >([]);
   const [ambiguityBusy, setAmbiguityBusy] = useState(false);
+
+  const applyFlow = useCaptureApplyFlow(applyMode ? captureId : null);
 
   const create = useLavorazioneCreateSubmit({
     enabled: Boolean(compileData) && !loading,
@@ -213,6 +251,11 @@ export function CaptureSchedaCompileStep({
     });
   }, []);
 
+  const validationPanel =
+    applyMode && applyFlow.validation ? (
+      <CaptureValidationIssuesBanner validation={applyFlow.validation} />
+    ) : null;
+
   const handleSubmitAttempt = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       if (!compileData) return;
@@ -228,9 +271,22 @@ export function CaptureSchedaCompileStep({
         first?.scrollIntoView({ behavior: "smooth", block: "center" });
         return;
       }
+      if (applyMode) {
+        e.preventDefault();
+        void (async () => {
+          try {
+            const result = await applyFlow.applyFromIngresso(create.fields);
+            onApplySuccess?.(result.lavorazioneId);
+          } catch (err) {
+            if (err instanceof Error && err.message === "REVIEW_REQUIRED") return;
+            onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");
+          }
+        })();
+        return;
+      }
       void create.onSubmit(e);
     },
-    [captureHints, compileData, create],
+    [applyFlow, applyMode, captureHints, compileData, create, onApplySuccess, onCompileError],
   );
 
   const confirmAmbiguityPicks = useCallback(
@@ -268,14 +324,24 @@ export function CaptureSchedaCompileStep({
         });
         setAmbiguityOpen(false);
         setAmbiguityItems([]);
-        create.formRef.current?.requestSubmit();
+        if (applyMode) {
+          try {
+            const result = await applyFlow.applyFromIngresso(fieldsRef.current);
+            onApplySuccess?.(result.lavorazioneId);
+          } catch (err) {
+            if (err instanceof Error && err.message === "REVIEW_REQUIRED") return;
+            onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");
+          }
+        } else {
+          create.formRef.current?.requestSubmit();
+        }
       } catch (e) {
         onCompileError?.(e instanceof Error ? e.message : "Conferma non riuscita");
       } finally {
         setAmbiguityBusy(false);
       }
     },
-    [captureHints, captureId, create, onCompileError],
+    [applyMode, applyFlow, captureHints, captureId, create, onApplySuccess, onCompileError],
   );
 
   if (loading || !sharedGlobalOpts) {
@@ -302,7 +368,56 @@ export function CaptureSchedaCompileStep({
           onSubmit={handleSubmitAttempt}
           className="min-w-0"
         >
-          {create.schedaSyncError ? (
+          {applyMode ? (
+            <CaptureApplyRecoveryBanner
+              visible={applyFlow.recoveryAvailable}
+              busy={applyFlow.busy}
+              onResume={() => {
+                void (async () => {
+                  try {
+                    const result = await applyFlow.resumeApply();
+                    onApplySuccess?.(result.lavorazioneId);
+                  } catch (err) {
+                    onCompileError?.(err instanceof Error ? err.message : "Ripresa non riuscita");
+                  }
+                })();
+              }}
+            />
+          ) : null}
+          {validationPanel}
+          {applyMode &&
+          applyFlow.validation?.status === "REVIEW" &&
+          captureReviewAllowsForceApply(applyFlow.validation) ? (
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm dark:border-amber-900/50 dark:bg-amber-950/40">
+              <span>Alcuni campi richiedono conferma prima del salvataggio.</span>
+              <button
+                type="button"
+                className="erp-btn erp-btn-secondary min-h-9 text-xs"
+                disabled={applyFlow.busy}
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      const result = await applyFlow.applyFromIngresso(create.fields, { forceReview: true });
+                      onApplySuccess?.(result.lavorazioneId);
+                    } catch (err) {
+                      onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");
+                    }
+                  })();
+                }}
+              >
+                Procedi comunque
+              </button>
+            </div>
+          ) : null}
+          {applyMode && applyFlow.error ? (
+            <div
+              role="alert"
+              className="mb-2 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+            >
+              {applyFlow.error}
+            </div>
+          ) : null}
+          {!applyMode && create.schedaSyncError ? (
             <div
               role="alert"
               className="mb-2 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
@@ -315,7 +430,7 @@ export function CaptureSchedaCompileStep({
             fields={create.fields}
             setFields={create.setFields}
             onPatch={onPatchCaptureAware}
-            pending={create.pending}
+            pending={applyMode ? applyFlow.busy : create.pending}
             mezzi={mezzi}
             schedeStore={schedeStore}
             attive={attive}

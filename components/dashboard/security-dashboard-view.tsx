@@ -9,17 +9,17 @@ import { roleLabel } from "@/src/lib/auth/permissions";
 import { logSecurityPageAccessAction } from "@/src/actions/security-read";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { SecurityUsersPermissionsPanel } from "@/components/dashboard/security/security-users-permissions-panel";
-import { SecurityRolesPanel } from "@/components/dashboard/security/security-roles-panel";
 import {
-  SecurityMonitoringSection,
-  useRecentActivityRows,
-  useRecentSystemActivity,
-} from "@/components/dashboard/security/security-monitoring-section";
-import { SecurityReleaseSection } from "@/components/dashboard/security/security-release-section";
+  SecurityMonitoringSectionLazy,
+  SecurityReleaseSectionLazy,
+  SecurityRolesPanelLazy,
+  SecurityUsersPermissionsPanelLazy,
+} from "@/components/dashboard/security/security-tab-loaders";
 import { HubModalTab, HubModalTabBar } from "@/components/design-system/hub-modal-tab-bar";
 import { resetGlobalChangeLogsByAdminAction } from "@/src/actions/admin-users";
-import { useSecurityUsersPermissionsQuery } from "@/src/hooks/use-security-users-permissions-query";
+import { useSicurezzaUsersPermissionsQuery } from "@/src/hooks/use-sicurezza-users-permissions-query";
+import { prefetchSicurezzaTabQueries } from "@/lib/security/prefetch-sicurezza-tab-queries";
+import { useRecentSystemActivity } from "@/components/dashboard/security/security-monitoring-section";
 import {
   dsBtnNeutral,
   dsStackPage,
@@ -33,7 +33,6 @@ import {
   type ChecklistItem,
 } from "@/src/actions/security-release-control";
 import type { PilotControlStatus } from "@/src/lib/runtime/truth-layer/resolve-pilot-settings-state";
-import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 
 type SecurityDashboardTab = "users" | "roles" | "monitoring" | "release";
@@ -80,11 +79,9 @@ export function SecurityDashboardView() {
   );
 
   const dash = useSecurityDashboardData(filters, { enabled: activeTab === "monitoring" });
-  const usersQ = useSecurityUsersPermissionsQuery(!!isAdmin);
-  const globalOpts = useGlobalOptions({ debugTag: "SecurityDashboardView" });
-  const statiLavorazione = globalOpts.lavorazioni.stati;
+  const needsUsers = activeTab === "users" || activeTab === "monitoring";
+  const usersQ = useSicurezzaUsersPermissionsQuery(!!isAdmin && needsUsers);
   const recentActivityQ = useRecentSystemActivity(!!isAdmin && activeTab === "monitoring");
-  const recentActivityRows = useRecentActivityRows(recentActivityQ, statiLavorazione);
 
   const runControlCenterCheck = useCallback(async (includeBuildChecks = false) => {
     setReadinessLoading(true);
@@ -127,9 +124,23 @@ export function SecurityDashboardView() {
   }, [isAdmin, user?.id]);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAdmin || activeTab !== "release") return;
+    if (hasReadinessSnapshotRef.current) return;
     void runControlCenterCheck(false);
-  }, [isAdmin, runControlCenterCheck]);
+  }, [isAdmin, activeTab, runControlCenterCheck]);
+
+  const selectTab = useCallback(
+    (tab: SecurityDashboardTab) => {
+      prefetchSicurezzaTabQueries(queryClient, tab, {
+        userId: user?.id,
+        dateFromYmd: range.dateFromYmd,
+        dateToYmd: range.dateToYmd,
+        filterUserId,
+      });
+      setActiveTab(tab);
+    },
+    [filterUserId, queryClient, range.dateFromYmd, range.dateToYmd, user?.id],
+  );
 
   const usersRefetchRef = useRef(usersQ.refetch);
   usersRefetchRef.current = usersQ.refetch;
@@ -238,46 +249,46 @@ export function SecurityDashboardView() {
           id="security-tab-users"
           label="Utenti e permessi"
           active={activeTab === "users"}
-          onSelect={() => setActiveTab("users")}
+          onSelect={() => selectTab("users")}
           panelId="security-panel-users"
         />
         <HubModalTab
           id="security-tab-roles"
           label="Ruoli e matrice"
           active={activeTab === "roles"}
-          onSelect={() => setActiveTab("roles")}
+          onSelect={() => selectTab("roles")}
           panelId="security-panel-roles"
         />
         <HubModalTab
           id="security-tab-monitoring"
           label="Monitoraggio accessi"
           active={activeTab === "monitoring"}
-          onSelect={() => setActiveTab("monitoring")}
+          onSelect={() => selectTab("monitoring")}
           panelId="security-panel-monitoring"
         />
         <HubModalTab
           id="security-tab-release"
           label="Release e pilot"
           active={activeTab === "release"}
-          onSelect={() => setActiveTab("release")}
+          onSelect={() => selectTab("release")}
           panelId="security-panel-release"
         />
       </HubModalTabBar>
 
       {activeTab === "users" ? (
         <div id="security-panel-users" role="tabpanel" aria-labelledby="security-tab-users">
-          <SecurityUsersPermissionsPanel readOnly={!isAdmin} sharedUsersQ={usersQ} />
+          <SecurityUsersPermissionsPanelLazy readOnly={!isAdmin} sharedUsersQ={usersQ} />
         </div>
       ) : null}
 
       {activeTab === "roles" ? (
         <div id="security-panel-roles" role="tabpanel" aria-labelledby="security-tab-roles">
-          <SecurityRolesPanel readOnly={!isAdmin} />
+          <SecurityRolesPanelLazy readOnly={!isAdmin} />
         </div>
       ) : null}
 
       {activeTab === "release" ? (
-        <SecurityReleaseSection
+        <SecurityReleaseSectionLazy
           pilotStatus={pilotStatus}
           checklist={checklist}
           productionReady={productionReady}
@@ -293,7 +304,7 @@ export function SecurityDashboardView() {
       ) : null}
 
       {activeTab === "monitoring" ? (
-        <SecurityMonitoringSection
+        <SecurityMonitoringSectionLazy
           range={range}
           onRangeChange={setRange}
           onResetRange={() => {
@@ -306,7 +317,6 @@ export function SecurityDashboardView() {
           usersLoading={usersQ.isLoading}
           logsQuery={logsQuery}
           recentActivityQ={recentActivityQ}
-          recentActivityRows={recentActivityRows}
           recentLogins={recentLogins}
           recentLoginFailed={recentLoginFailed}
           activeTodayCount={activeTodayCount}

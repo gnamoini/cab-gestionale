@@ -91,6 +91,7 @@ export {
   GestionaleCollapsibleChevronIcon,
 } from "./gestionale-collapsible-chevron";
 export { GestionaleCollapsibleHeader } from "./gestionale-collapsible-header";
+export { GestionaleCollapsiblePanel } from "./gestionale-collapsible-panel";
 export {
   GestionaleCollapsibleSection,
   gestionaleCollapsibleSectionDefaultClass,

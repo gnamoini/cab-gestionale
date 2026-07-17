@@ -30,5 +30,7 @@ export function generateCode128SvgString(text: string, widthMm: number, heightMm
     height: heightMm,
     includetext: false,
     backgroundcolor: "ffffff",
+    paddingwidth: 0,
+    paddingheight: 0,
   });
 }

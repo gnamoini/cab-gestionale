@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   GestionaleListTable,
   GestionaleListTableActionsHead,
@@ -16,7 +17,6 @@ import {
 } from "@/lib/ui/collapsible-prefs";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
-import { FatturazioneAdvancedFilterPanel } from "@/components/fatturazione/fatturazione-advanced-filter-panel";
 import {
   FatturaStatusBadge,
   formatInvoiceDate,
@@ -28,11 +28,9 @@ import {
   FATTURAZIONE_PAGE_FILTERS_EMPTY,
   fatturazionePageFiltersActive,
   invoiceDisplayNumber,
-  invoiceListContextForRow,
-  invoiceRowMatchesPageFilters,
-  sortInvoices,
   type FatturazioneSortKey,
 } from "@/lib/fatturazione/fatturazione-list-ui-filters";
+import { useFatturazioneListDerived } from "@/lib/fatturazione/use-fatturazione-list-derived";
 import type { InvoiceLinkRow, InvoiceRow } from "@/src/types/supabase-tables";
 import {
   CardMobile,
@@ -64,6 +62,12 @@ import {
   gestionaleListTableTdAzioni,
   gestionaleListTableTdPill,
 } from "@/lib/ui/gestionale-list-table";
+
+const FatturazioneAdvancedFilterPanel = dynamic(
+  () =>
+    import("@/components/fatturazione/fatturazione-advanced-filter-panel").then((m) => m.FatturazioneAdvancedFilterPanel),
+  { ssr: false },
+);
 
 export type FatturazioneFattureSectionProps = {
   invoices: InvoiceRow[];
@@ -102,14 +106,7 @@ export function FatturazioneFattureSection({
     setFilters((f) => ({ ...f, ...externalFilters }));
   }, [externalFilters]);
 
-  const filtered = useMemo(() => {
-    const rows = invoices.filter((inv) => {
-      const ctx = invoiceListContextForRow(inv, links);
-      return invoiceRowMatchesPageFilters(inv, ctx, filters);
-    });
-    if (!sortCol) return rows;
-    return sortInvoices(rows, sortCol, sortPhase === "asc");
-  }, [filters, invoices, links, sortCol, sortPhase]);
+  const { filtered } = useFatturazioneListDerived(invoices, links, filters, sortCol, sortPhase);
 
   const pagerDeps = useMemo(
     () => `${filters.search}|${JSON.stringify(filters)}|${sortCol ?? ""}|${sortPhase}`,
@@ -123,6 +120,34 @@ export function FatturazioneFattureSection({
     resetPage();
   }, [pagerDeps, pageSize, resetPage]);
   const pagedRows = useMemo(() => sliceItems(filtered), [filtered, sliceItems]);
+
+  const renderFatturaRow = useCallback(
+    (index: number) => {
+      const row = pagedRows[index];
+      if (!row) return null;
+      return (
+        <tr key={row.id} className={gestionaleListTableRowClass}>
+          <td className={gestionaleListTableTd}>{invoiceDisplayNumber(row)}</td>
+          <td className={gestionaleListTableTd}>{formatInvoiceDate(row.data_emissione)}</td>
+          <td className={gestionaleListTableTd}>{row.cliente_label}</td>
+          <td className={`${gestionaleListTableTd} text-right tabular-nums`}>{formatInvoiceMoney(row.totale)}</td>
+          <td className={`${gestionaleListTableTd} text-right tabular-nums`}>{formatInvoiceMoney(row.residuo)}</td>
+          <td className={gestionaleListTableTd}>{formatInvoiceDate(row.data_scadenza)}</td>
+          <td className={gestionaleListTableTdPill}>
+            <FatturaStatusBadge status={row.status} />
+          </td>
+          <td className={gestionaleListTableTdAzioni}>
+            <div className={dsTableActionsGroup}>
+              <button type="button" className={dsTableActionBtnPrimary} onClick={() => onOpenDetail(row.id)}>
+                Dettaglio
+              </button>
+            </div>
+          </td>
+        </tr>
+      );
+    },
+    [onOpenDetail, pagedRows],
+  );
 
   const onSort = (key: FatturazioneSortKey) => {
     const next = cycleGlobalTableSort(sortCol, sortPhase, key);
@@ -158,7 +183,9 @@ export function FatturazioneFattureSection({
           onFiltersToggle={() => setFiltriEspansi((o) => !o)}
           filtersActive={fatturazionePageFiltersActive(filters)}
           filtersPanel={
-            <FatturazioneAdvancedFilterPanel filters={filters} onChange={(p) => setFilters((f) => ({ ...f, ...p }))} />
+            filtriEspansi ? (
+              <FatturazioneAdvancedFilterPanel filters={filters} onChange={(p) => setFilters((f) => ({ ...f, ...p }))} />
+            ) : null
           }
           onFilterReset={() => setFilters(FATTURAZIONE_PAGE_FILTERS_EMPTY)}
           overflowOpen={overflowOpen}
@@ -218,27 +245,13 @@ export function FatturazioneFattureSection({
           empty={pagedRows.length === 0}
           emptyMessage="Nessuna fattura corrisponde ai criteri selezionati."
           colSpan={8}
+          virtualRows={{
+            rowCount: pagedRows.length,
+            renderRow: renderFatturaRow,
+            estimateRowHeight: 48,
+          }}
         >
-          {pagedRows.map((row) => (
-            <tr key={row.id} className={gestionaleListTableRowClass}>
-              <td className={gestionaleListTableTd}>{invoiceDisplayNumber(row)}</td>
-              <td className={gestionaleListTableTd}>{formatInvoiceDate(row.data_emissione)}</td>
-              <td className={gestionaleListTableTd}>{row.cliente_label}</td>
-              <td className={`${gestionaleListTableTd} text-right tabular-nums`}>{formatInvoiceMoney(row.totale)}</td>
-              <td className={`${gestionaleListTableTd} text-right tabular-nums`}>{formatInvoiceMoney(row.residuo)}</td>
-              <td className={gestionaleListTableTd}>{formatInvoiceDate(row.data_scadenza)}</td>
-              <td className={gestionaleListTableTdPill}>
-                <FatturaStatusBadge status={row.status} />
-              </td>
-              <td className={gestionaleListTableTdAzioni}>
-                <div className={dsTableActionsGroup}>
-                  <button type="button" className={dsTableActionBtnPrimary} onClick={() => onOpenDetail(row.id)}>
-                    Dettaglio
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
+          {null}
         </GestionaleListTable>
       ) : null}
       {!isLoading && layout === "mobile" ? (

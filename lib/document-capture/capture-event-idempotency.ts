@@ -25,7 +25,8 @@ export type CaptureEventType =
   | "document_edited"
   | "validation_reviewed"
   | "apply_approved"
-  | "entity_resolution_confirmed";
+  | "entity_resolution_confirmed"
+  | "duplicate_override";
 
 export function captureEventIdempotencyKey(
   eventType: CaptureEventType,
@@ -74,6 +75,8 @@ export function captureEventIdempotencyKey(
       return `validation_reviewed:${input.captureVersion ?? 0}`;
     case "apply_approved":
       return `apply_approved:${input.applicationId ?? "unknown"}`;
+    case "duplicate_override":
+      return `duplicate_override:${input.sha256Prefix ?? input.captureId ?? "unknown"}`;
     case "pipeline_phase_completed":
       return `pipeline:${input.linkField ?? "phase"}:${input.captureVersion ?? 0}`;
     default:

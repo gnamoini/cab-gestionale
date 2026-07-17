@@ -1,5 +1,3 @@
-"use client";
-
 import { globalTableSortIconWrap, type GlobalTableSortPhase } from "@/lib/ui/global-table";
 
 /** Chevron su/giù impilati: evidenzia la direzione attiva (asc/desc), entrambi attenuati se inattivo. */

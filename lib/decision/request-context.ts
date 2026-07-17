@@ -123,6 +123,12 @@ export function jwtExpFromCookies(cookies: ReadonlyArray<{ name: string; value: 
   return { hasAuthCookie: true, jwtExpSeconds: decodeJwtExpSeconds(token) };
 }
 
+/** ponytail: fixed 60s slack — upgrade path: env-tunable slack for staging. */
+export function isJwtFreshForProxyCache(jwtExpSeconds: number | null, slackSec = 60): boolean {
+  if (jwtExpSeconds == null) return false;
+  return jwtExpSeconds - Math.floor(Date.now() / 1000) >= slackSec;
+}
+
 export function buildRequestContextFromUrl(
   url: string | URL,
   method: string,

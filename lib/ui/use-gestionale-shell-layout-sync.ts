@@ -12,14 +12,18 @@ import {
 } from "./gestionale-shell-layout";
 import { isBootInvestigationEnabled, logBoot, trackStoreUpdate } from "@/lib/observability/boot-investigation";
 
-export type GestionaleShellLayoutState = {
+export type GestionaleShellTierState = {
   tier: GestionaleShellTier;
-  contentWidth: number;
   isMobile: boolean;
   isTablet: boolean;
   isDesktop: boolean;
   /** Shell compatta (hamburger, no sidebar fissa) per mobile + tablet. */
   isCompactShell: boolean;
+};
+
+/** @deprecated Usare `GestionaleShellTierState` + CSS var per contentWidth. */
+export type GestionaleShellLayoutState = GestionaleShellTierState & {
+  contentWidth: number;
 };
 
 export type UseGestionaleShellLayoutSyncRefs = {
@@ -29,21 +33,19 @@ export type UseGestionaleShellLayoutSyncRefs = {
 };
 
 /** Stato iniziale identico SSR + primo render client (evita hydration mismatch tier shell). */
-const SSR_SAFE_SHELL_LAYOUT_STATE: GestionaleShellLayoutState = {
+const SSR_SAFE_SHELL_TIER_STATE: GestionaleShellTierState = {
   tier: "mobile",
-  contentWidth: 0,
   isMobile: true,
   isTablet: false,
   isDesktop: false,
   isCompactShell: true,
 };
 
-/** Tier da host viewport — contentWidth include padding sidebar e causerebbe flip hamburger/sidebar ~1400px. */
-function toShellLayoutState(contentWidth: number, hostWidth: number): GestionaleShellLayoutState {
+/** Tier da host viewport — contentWidth su CSS var, non in React state. */
+function toShellTierState(hostWidth: number): GestionaleShellTierState {
   const tier = resolveGestionaleShellTier(hostWidth);
   return {
     tier,
-    contentWidth,
     isMobile: tier === "mobile",
     isTablet: tier === "tablet",
     isDesktop: tier === "desktop",
@@ -51,18 +53,18 @@ function toShellLayoutState(contentWidth: number, hostWidth: number): Gestionale
   };
 }
 
-function shellLayoutStateEquals(a: GestionaleShellLayoutState, b: GestionaleShellLayoutState): boolean {
-  return a.tier === b.tier && a.contentWidth === b.contentWidth;
+function shellTierStateEquals(a: GestionaleShellTierState, b: GestionaleShellTierState): boolean {
+  return a.tier === b.tier;
 }
 
 export function useGestionaleShellLayoutSync(
   refs: UseGestionaleShellLayoutSyncRefs,
-): GestionaleShellLayoutState {
-  const [state, setState] = useState<GestionaleShellLayoutState>(SSR_SAFE_SHELL_LAYOUT_STATE);
+): GestionaleShellTierState {
+  const [state, setState] = useState<GestionaleShellTierState>(SSR_SAFE_SHELL_TIER_STATE);
   const syncRafRef = useRef(0);
   const syncCountRef = useRef(0);
   const syncWindowStartRef = useRef(0);
-  const prevLayoutRef = useRef<{ tier: GestionaleShellTier; contentWidth: number } | null>(null);
+  const prevTierRef = useRef<GestionaleShellTier | null>(null);
 
   const sync = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -78,7 +80,7 @@ export function useGestionaleShellLayoutSync(
       mainEl: refs.mainRef?.current,
     });
     const hostWidth = resolveHostLayoutWidth();
-    const next = toShellLayoutState(contentWidth, hostWidth);
+    const next = toShellTierState(hostWidth);
 
     const shell = refs.shellRef.current;
     if (shell instanceof HTMLElement) {
@@ -89,17 +91,17 @@ export function useGestionaleShellLayoutSync(
       shell.style.width = "100%";
     }
 
-    setState((prev) => (shellLayoutStateEquals(prev, next) ? prev : next));
+    setState((prev) => (shellTierStateEquals(prev, next) ? prev : next));
 
     if (isBootInvestigationEnabled()) {
       syncCountRef.current += 1;
       const now = Date.now();
       if (syncWindowStartRef.current === 0) syncWindowStartRef.current = now;
-      const prevLayout = prevLayoutRef.current;
-      if (!prevLayout || prevLayout.tier !== next.tier || prevLayout.contentWidth !== next.contentWidth) {
-        trackStoreUpdate("shellLayout", prevLayout ?? null, { tier: next.tier, contentWidth: next.contentWidth });
-        logBoot("RENDER", "shell_sync", { tier: next.tier, contentWidth: next.contentWidth }, "layout_change");
-        prevLayoutRef.current = { tier: next.tier, contentWidth: next.contentWidth };
+      const prevTier = prevTierRef.current;
+      if (prevTier !== next.tier) {
+        trackStoreUpdate("shellLayout", prevTier ?? null, { tier: next.tier, contentWidth });
+        logBoot("RENDER", "shell_sync", { tier: next.tier, contentWidth }, "layout_change");
+        prevTierRef.current = next.tier;
       }
       if (now - syncWindowStartRef.current >= 1000) {
         const rate = syncCountRef.current;

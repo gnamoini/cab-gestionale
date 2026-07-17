@@ -1,13 +1,22 @@
 "use client";
 
 import { fatturazioneListQueryKey } from "@/lib/render/query-key-factory";
-import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
-import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { invoicesEntry } from "@/lib/domain/invoices-entry";
+import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
+import { useSharedEntityQuery } from "@/src/hooks/use-shared-entity-query";
+
+const FATTURAZIONE_LIST_SCOPE = "fatturazione.list" as const;
 
 export function useInvoicesQuery(enabled = true) {
   const gestOpts = useGestionaleQueryOpts();
-  const q = useServiceQuery(fatturazioneListQueryKey(), () => invoicesEntry.getList(), {
+  const queryKey = fatturazioneListQueryKey();
+  const q = useSharedEntityQuery({
+    queryKey,
+    queryFn: () => invoicesEntry.getList(),
+    entityType: "fatturazione",
+    scope: "list",
+    ownershipScopeKey: FATTURAZIONE_LIST_SCOPE,
+    expectedServerKey: queryKey,
     enabled,
     ...gestOpts,
   });

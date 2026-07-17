@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { cabDevWarn } from "@/src/lib/observability/dev-warn";
 import { useAuth } from "@/context/auth-context";
+import { usePermissionsSnapshotContext } from "@/context/permissions-snapshot-context";
 import { useOperatorGlobalSettings } from "@/src/context/operator-global-settings-context";
 import { useUserPageOverridesQuery, useRolePageAccessQuery } from "@/src/hooks/use-permissions";
 import { publishClientEffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
@@ -20,8 +21,8 @@ function permissionsQueriesSettled(
   return roleAccessQuery.isFetched && overridesQuery.isFetched;
 }
 
-/** Hook canonico permessi runtime (auth + page overrides + pilot). */
-export function useEffectivePermissions(): {
+/** Fonte unica query permessi — montata da `PermissionsSnapshotMount` sotto gestionale. */
+export function useEffectivePermissionsSource(): {
   snapshot: EffectivePermissionsSnapshot | null;
   isLoading: boolean;
 } {
@@ -90,4 +91,13 @@ export function useEffectivePermissions(): {
   }, [overridesQuery.isError, overridesQuery.dataUpdatedAt, user?.id]);
 
   return { snapshot: displaySnapshot, isLoading };
+}
+
+/** Hook canonico permessi runtime — legge snapshot dal provider gestionale. */
+export function useEffectivePermissions(): {
+  snapshot: EffectivePermissionsSnapshot | null;
+  isLoading: boolean;
+} {
+  const ctx = usePermissionsSnapshotContext();
+  return ctx ?? { snapshot: null, isLoading: true };
 }

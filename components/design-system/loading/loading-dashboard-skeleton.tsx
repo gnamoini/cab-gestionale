@@ -1,4 +1,3 @@
-"use client";
 
 import { memo } from "react";
 import { CONTROL_TOWER_KPI_WINDOW_LABEL } from "@/lib/dashboard/control-tower-constants";

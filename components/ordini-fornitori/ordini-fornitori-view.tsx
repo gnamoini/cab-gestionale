@@ -33,11 +33,13 @@ import {
 import { buildEmptyOrdineFornitore } from "@/lib/ordini-fornitori/build-empty-ordine-fornitore";
 import { cloneOrdineFornitoreRecord } from "@/lib/ordini-fornitori/clone-ordine-fornitore";
 import {
-  buildOrdiniFornitoriSearchSuggestions,
+  ordineFornitoreRowMatchesPageFiltersDerived,
+  useOrdiniFornitoriListDerived,
+} from "@/lib/ordini-fornitori/use-ordini-fornitori-list-derived";
+import {
   ORDINI_FORNITORI_FILTERS_EMPTY,
   ordineFornitoreListDestinazioneTipo,
   ordineFornitoreListOggetto,
-  ordineFornitoreRowMatchesPageFilters,
   ordiniFornitoriFiltersActive,
   type OrdiniFornitoriPageFilters,
 } from "@/lib/ordini-fornitori/ordine-fornitore-list-ui-filters";
@@ -153,6 +155,7 @@ export function OrdiniFornitoriView({
   const qc = useQueryClient();
   const gestToast = useGestionaleToast();
   const { records, isLoading, isError, refetch } = useOrdiniFornitoriQuery(canRead);
+  const { searchHaystackById, searchSuggestionPool } = useOrdiniFornitoriListDerived(records);
 
   const [searchInput, setSearchInput] = useState("");
   const [searchApplied, setSearchApplied] = useState("");
@@ -184,8 +187,11 @@ export function OrdiniFornitoriView({
   );
 
   const filteredRows = useMemo(
-    () => records.filter((r) => ordineFornitoreRowMatchesPageFilters(r, pageFilters)),
-    [records, pageFilters],
+    () =>
+      records.filter((r) =>
+        ordineFornitoreRowMatchesPageFiltersDerived(r, pageFilters, searchHaystackById.get(r.id) ?? ""),
+      ),
+    [records, pageFilters, searchHaystackById],
   );
 
   const sortedRows = useMemo(() => {
@@ -219,8 +225,6 @@ export function OrdiniFornitoriView({
   const tableEmptyMessage = hasOrdiniListFilters
     ? "Nessun ordine corrisponde alla ricerca o ai filtri selezionati."
     : "Nessun ordine in archivio.";
-
-  const searchSuggestionPool = useMemo(() => buildOrdiniFornitoriSearchSuggestions(records), [records]);
 
   function onSortMain(k: OrdineFornitoreSortKey) {
     if (sortColumn !== k) {

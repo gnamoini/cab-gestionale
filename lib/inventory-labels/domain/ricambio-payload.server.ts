@@ -2,19 +2,25 @@ import "server-only";
 
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 import type { LabelPayload } from "@/lib/inventory-labels/domain/types";
+import { labelMarcaToken } from "@/lib/inventory-labels/domain/label-display";
 import { INVENTORY_ENTITY_MAGAZZINO_RICAMBIO } from "@/lib/inventory-labels/domain/types";
 import { metaFieldsToRicambioUi, parseMagazzinoRicambioMeta } from "@/lib/magazzino/magazzino-meta";
+import { normalizeRicambioCodice } from "@/lib/magazzino/ricambio-codice";
 
 export function labelPayloadFromMagazzinoRow(row: MagazzinoRicambioRow): LabelPayload {
   const fromMeta = metaFieldsToRicambioUi(parseMagazzinoRicambioMeta(row.meta ?? {}));
   const alt0 = fromMeta.fornitoriAlternativi?.[0];
 
   return {
-    marca: (row.marca ?? "").trim(),
+    marca: labelMarcaToken(row.marca ?? ""),
+    marcaSecondaria: labelMarcaToken(fromMeta.marcaOriginaleSecondaria ?? ""),
     descrizione: (row.nome ?? "").trim(),
-    codice: (row.codice ?? "").trim(),
+    codice: normalizeRicambioCodice((row.codice ?? "").trim()),
+    codiceSecondario: normalizeRicambioCodice(fromMeta.codiceFornitoreOriginaleSecondario ?? ""),
     fornitoreAlternativo: (fromMeta.fornitoreNonOriginale || alt0?.fornitore || "").trim(),
-    codiceAlternativo: (fromMeta.codiceFornitoreNonOriginale || alt0?.codice || "").trim(),
+    codiceAlternativo: normalizeRicambioCodice(
+      fromMeta.codiceFornitoreNonOriginale || alt0?.codice || "",
+    ),
   };
 }
 

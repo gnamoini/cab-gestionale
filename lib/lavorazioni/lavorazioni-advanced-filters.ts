@@ -107,10 +107,11 @@ function rowEntityFields(
   };
 }
 
-function pushUnique(sorted: string[], value: string) {
+function pushUnique(sorted: string[], seen: Set<string>, value: string) {
   const v = value.trim();
-  if (!v || v === "—") return;
-  if (!sorted.includes(v)) sorted.push(v);
+  if (!v || v === "—" || seen.has(v)) return;
+  seen.add(v);
+  sorted.push(v);
 }
 
 export function buildLavorazioniFilterCatalog(
@@ -123,6 +124,9 @@ export function buildLavorazioniFilterCatalog(
   const clienti: string[] = [];
   const cantieri: string[] = [];
   const utilizzatori: string[] = [];
+  const clientiSeen = new Set<string>();
+  const cantieriSeen = new Set<string>();
+  const utilizzatoriSeen = new Set<string>();
   const addettiSet = new Set<string>(addettiGlobali.filter((a) => a.trim()));
   const marcheSet = new Set<string>();
   const modelliByMarca: Record<string, Set<string>> = {};
@@ -139,9 +143,9 @@ export function buildLavorazioniFilterCatalog(
 
   for (const row of rows) {
     const f = rowEntityFields(row, schedeStore, undefined, addettiRecords);
-    pushUnique(clienti, f.cliente);
-    pushUnique(cantieri, f.cantiere);
-    pushUnique(utilizzatori, f.utilizzatore);
+    pushUnique(clienti, clientiSeen, f.cliente);
+    pushUnique(cantieri, cantieriSeen, f.cantiere);
+    pushUnique(utilizzatori, utilizzatoriSeen, f.utilizzatore);
     if (f.addetto) addettiSet.add(f.addetto);
     if (f.marca) {
       marcheSet.add(f.marca);

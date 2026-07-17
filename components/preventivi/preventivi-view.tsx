@@ -25,17 +25,32 @@ import {
 import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
+import { LoadingPreventiviListSkeleton } from "@/components/design-system";
 const PreventiviEditorModal = dynamic(
   () => import("@/components/preventivi/preventivi-editor-modal").then((m) => m.PreventiviEditorModal),
   { ssr: false },
 );
-import { OrdiniFornitoriView } from "@/components/ordini-fornitori/ordini-fornitori-view";
-import { DdtDetailDrawer } from "@/components/ddt/ddt-detail-drawer";
+const OrdiniFornitoriView = dynamic(
+  () => import("@/components/ordini-fornitori/ordini-fornitori-view").then((m) => m.OrdiniFornitoriView),
+  { ssr: false, loading: () => <LoadingPreventiviListSkeleton /> },
+);
+const PreventiviAdvancedFilterPanel = dynamic(
+  () =>
+    import("@/components/preventivi/preventivi-advanced-filter-panel").then((m) => m.PreventiviAdvancedFilterPanel),
+  { ssr: false, loading: () => <LoadingPreventiviListSkeleton /> },
+);
+const DdtDetailDrawer = dynamic(
+  () => import("@/components/ddt/ddt-detail-drawer").then((m) => m.DdtDetailDrawer),
+  { ssr: false },
+);
+const PreventiviLogDrawer = dynamic(
+  () => import("@/components/preventivi/preventivi-log-drawer").then((m) => m.PreventiviLogDrawer),
+  { ssr: false },
+);
 import { DdtStatusBadge } from "@/components/ddt/ddt-status-badge";
 import { buildDdtDraftFromPreventivoAuto } from "@/lib/ddt/preventivo-to-ddt-draft";
 import type { DdtDetail } from "@/lib/ddt/types";
 import { PreventivoEliminaConfirmDialog } from "@/components/preventivi/preventivo-elimina-confirm-dialog";
-import { PreventiviAdvancedFilterPanel } from "@/components/preventivi/preventivi-advanced-filter-panel";
 import { PreventivoBillingBadge } from "@/components/fatturazione/preventivo-billing-badge";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { useAuth } from "@/context/auth-context";
@@ -59,7 +74,6 @@ import {
 } from "@/lib/preventivi/preventivi-learning-sync";
 import { savePreventiviLearning } from "@/lib/preventivi/preventivi-learning-storage";
 import {
-  buildPreventiviFilterCatalog,
   loadPreventiviAdvancedFiltersPersisted,
   PREVENTIVI_ADVANCED_FILTERS_EMPTY,
   preventiviAdvancedFiltersActive,
@@ -91,6 +105,9 @@ import {
   type PreventiviLogStored,
 } from "@/lib/preventivi/preventivi-change-log-storage";
 import { removePreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
+import { usePreventiviListDerived } from "@/lib/preventivi/use-preventivi-list-derived";
+import { ordiniFornitoriListQueryKey } from "@/lib/render/query-key-factory";
+import { ordiniFornitoriEntry } from "@/lib/domain/ordini-fornitori-entry";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
 import { ddtEntry } from "@/lib/domain/ddt-entry";
@@ -98,7 +115,6 @@ import { usePreventiviBillingQuery } from "@/src/hooks/gestionale/use-preventivi
 import { useMagazzinoRicambiUIQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
-import { LoadingPreventiviListSkeleton } from "@/components/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -134,11 +150,9 @@ import {
 } from "@/lib/ui/use-gestionale-list-layout";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
-import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   CardMobile,
   CardMobileActions,
-  Drawer,
   IconActionButton,
   PageToolbar,
   PageToolbarCtaLabel,
@@ -151,14 +165,6 @@ import {
   gestionaleListTableTdAzioni,
   gestionaleListTableTdPill,
 } from "@/lib/ui/gestionale-list-table";
-import {
-  GestionaleLogEmpty,
-  GestionaleLogEntryFourLines,
-  GestionaleLogEntryDismissButton,
-  GestionaleLogList,
-  gestionaleLogDrawerPanelClass,
-  gestionaleLogScrollEmbeddedClass,
-} from "@/components/gestionale/gestionale-log-ui";
 
 const SEARCH_DEBOUNCE_MS = 320;
 
@@ -350,49 +356,9 @@ export function PreventiviView() {
     },
     [router, searchParams],
   );
-  const { authorName: autore, user } = useAuth();
-  const gestToast = useGestionaleToast();
-  const { confirm, confirmDialog } = useGestionaleConfirm();
-  const queryClient = useQueryClient();
-  const { records: rows, refetch: refetchPreventivi, isLoading: preventiviQueryLoading } =
-    usePreventiviRecordsQuery();
-  const { byPreventivoId: preventiviBillingById } = usePreventiviBillingQuery();
-  const preventiviReadyMarked = useRef(false);
-  useEffect(() => {
-    void loadPreventiviLearningMerged().then((merged) => savePreventiviLearning(merged));
-    void migratePreventiviLearningToSettings();
-  }, []);
-  useEffect(() => {
-    if (preventiviReadyMarked.current || rows.length === 0) return;
-    preventiviReadyMarked.current = true;
-    try {
-      performance.mark("preventivi-view-ready");
-    } catch {
-      /* performance API unavailable */
-    }
-  }, [rows.length]);
-  const preventiviInitialLoading = preventiviQueryLoading && rows.length === 0;
-  const mezziListQ = useMezziListQuery();
-  const mezziSnap = mezziListQ.data ?? [];
-  const magazzinoQ = useMagazzinoRicambiUIQuery();
-  const magSnap = magazzinoQ.data ?? [];
-  const mezziRef = useRef(mezziSnap);
-  const magRef = useRef(magSnap);
-  const rowsRef = useRef(rows);
-  const autoreRef = useRef(autore);
-  useEffect(() => {
-    mezziRef.current = mezziSnap;
-    magRef.current = magSnap;
-    rowsRef.current = rows;
-    autoreRef.current = autore;
-  }, [mezziSnap, magSnap, rows, autore]);
-  const lavorazioniListQ = useLavorazioniReportSlice({ mezziRows: mezziListQ.data ?? [] });
-  const lavReport = useMemo(
-    () => splitLavorazioniListRowsForReport(lavorazioniListQ.data ?? []),
-    [lavorazioniListQ.data],
-  );
-  const [sortColumn, setSortColumn] = useState<PreventivoSortKey | null>(null);
-  const [sortPhase, setSortPhase] = useState<PreventivoSortPhase>("natural");
+  const isPreventiviTab = pageTab === "preventivi";
+  const filterMezzoRawEarly = searchParams.get(Q_PREVENTIVI_MEZZO)?.trim() || "";
+  const nuovoHandoffEarly = searchParams.get(Q_PREVENTIVI_NUOVO);
   const [editor, setEditor] = useState<{
     open: boolean;
     record: PreventivoRecord | null;
@@ -404,6 +370,77 @@ export function PreventiviView() {
     isNew: false,
     isRollbackDraft: false,
   });
+  const filterMezzoNeedsCatalog =
+    Boolean(
+      filterMezzoRawEarly &&
+        !filterMezzoRawEarly.startsWith("hub-") &&
+        !filterMezzoRawEarly.startsWith("t:") &&
+        !filterMezzoRawEarly.startsWith("m:"),
+    );
+  const needMezziCatalog =
+    isPreventiviTab && (filterMezzoNeedsCatalog || nuovoHandoffEarly === "1" || editor.open);
+  const needLavorazioniSlice =
+    isPreventiviTab && filterMezzoRawEarly.startsWith("hub-lav-");
+  const needMagazzinoList = isPreventiviTab && editor.open;
+  const { authorName: autore, user } = useAuth();
+  const gestToast = useGestionaleToast();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
+  const queryClient = useQueryClient();
+  const { records: rows, refetch: refetchPreventivi, isLoading: preventiviQueryLoading } =
+    usePreventiviRecordsQuery(isPreventiviTab);
+  const { byPreventivoId: preventiviBillingById } = usePreventiviBillingQuery(isPreventiviTab);
+  const preventiviReadyMarked = useRef(false);
+  useEffect(() => {
+    void loadPreventiviLearningMerged().then((merged) => savePreventiviLearning(merged));
+    void migratePreventiviLearningToSettings();
+  }, []);
+  useEffect(() => {
+    if (pageTab !== "ordini" || !ordiniPerm.canRead) return;
+    const key = ordiniFornitoriListQueryKey();
+    if (queryClient.getQueryData(key) !== undefined) return;
+    void queryClient.prefetchQuery({
+      queryKey: key,
+      queryFn: async () => {
+        const res = await ordiniFornitoriEntry.getList();
+        if (!res.success) throw new Error(res.error ?? "Errore caricamento ordini.");
+        return res.data ?? [];
+      },
+    });
+  }, [pageTab, ordiniPerm.canRead, queryClient]);
+  useEffect(() => {
+    if (preventiviReadyMarked.current || rows.length === 0) return;
+    preventiviReadyMarked.current = true;
+    try {
+      performance.mark("preventivi-view-ready");
+    } catch {
+      /* performance API unavailable */
+    }
+  }, [rows.length]);
+  const preventiviInitialLoading = preventiviQueryLoading && rows.length === 0;
+  const mezziListQ = useMezziListQuery(undefined, { enabled: needMezziCatalog });
+  const mezziSnap = mezziListQ.data ?? [];
+  const magazzinoQ = useMagazzinoRicambiUIQuery(undefined, { enabled: needMagazzinoList });
+  const magSnap = magazzinoQ.data ?? [];
+  const mezziRef = useRef(mezziSnap);
+  const magRef = useRef(magSnap);
+  const rowsRef = useRef(rows);
+  const autoreRef = useRef(autore);
+  useEffect(() => {
+    mezziRef.current = mezziSnap;
+    magRef.current = magSnap;
+    rowsRef.current = rows;
+    autoreRef.current = autore;
+  }, [mezziSnap, magSnap, rows, autore]);
+  const lavorazioniListQ = useLavorazioniReportSlice({
+    mezziRows: mezziListQ.data ?? [],
+    enabled: needLavorazioniSlice,
+  });
+  const lavReport = useMemo(
+    () => splitLavorazioniListRowsForReport(lavorazioniListQ.data ?? []),
+    [lavorazioniListQ.data],
+  );
+  const [sortColumn, setSortColumn] = useState<PreventivoSortKey | null>(null);
+  const [sortPhase, setSortPhase] = useState<PreventivoSortPhase>("natural");
   const [searchInput, setSearchInput] = useState("");
   const [searchApplied, setSearchApplied] = useState("");
   const searchInputRef = useRef(searchInput);
@@ -511,7 +548,7 @@ export function PreventiviView() {
     [settingsPayload?.resolved?.mezziListe],
   );
 
-  const filterCatalog = useMemo(() => buildPreventiviFilterCatalog(rows, listePrefs), [rows, listePrefs]);
+  const { filterCatalog } = usePreventiviListDerived(rows, listePrefs);
 
   const pageFilters = useMemo(
     (): PreventiviPageFilters => ({
@@ -679,6 +716,98 @@ export function PreventiviView() {
     resetPage();
   }, [preventiviPagerDeps, listPageSize, resetPage]);
   const pagedRows = useMemo(() => sliceItems(sortedRows), [sliceItems, sortedRows]);
+
+  const renderPreventivoDesktopRow = useCallback(
+    (index: number) => {
+      const p = pagedRows[index];
+      if (!p) return null;
+      const hrefLav = p.lavorazioneId.trim()
+        ? buildPreventiviLavorazioneFocusHref(p.lavorazioneId, p.lavorazioneOrigine)
+        : null;
+      const focused = focusPreventivoId === p.id;
+      return (
+        <tr
+          key={p.id}
+          id={`preventivo-row-${p.id}`}
+          className={`${gestionaleListTableRowClass} ${
+            focused ? "ring-2 ring-inset ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]" : ""
+          }`}
+        >
+          <td className={`whitespace-nowrap ${gestionaleListTableTd} font-mono text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100`}>
+            <span className="inline-flex items-center gap-1.5">
+              {p.numero}
+              <PreventivoBillingBadge status={preventiviBillingById.get(p.id)?.stato_fatturazione} />
+            </span>
+          </td>
+          <td className={`whitespace-nowrap ${gestionaleListTableTdPill}`}>
+            <Tooltip content={preventivoTipoDocumentoLabel(p.tipoDocumento)}><span className={preventivoTipoDocumentoBadgeClass(p.tipoDocumento)}>
+              {preventivoTipoDocumentoLabel(p.tipoDocumento, "short")}
+            </span></Tooltip>
+          </td>
+          <td className={`whitespace-nowrap ${gestionaleListTableTd} text-xs tabular-nums text-zinc-600 dark:text-zinc-300`}>
+            {fmtDataCreazioneTabella(p.dataCreazione)}
+          </td>
+          <td className={preventiviTableTdText}>
+            <span className="line-clamp-2 break-words leading-snug">{p.cliente || "—"}</span>
+          </td>
+          <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-200`}>
+            <span className="line-clamp-2 break-words text-xs leading-snug">{p.cantiere || "—"}</span>
+          </td>
+          <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-200`}>
+            <span className="line-clamp-2 break-words text-xs leading-snug">{p.utilizzatore || "—"}</span>
+          </td>
+          <td className={`min-w-0 max-w-[1px] ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-200`}>
+            <span className="line-clamp-2 break-words text-sm leading-snug">{p.macchinaRiassunto || "—"}</span>
+          </td>
+          <td className={`whitespace-nowrap ${gestionaleListTableTd} font-mono text-[11px] text-zinc-600 dark:text-zinc-300`}>{p.targa || "—"}</td>
+          <td className={`min-w-0 ${gestionaleListTableTd} font-mono text-[11px] text-zinc-600 dark:text-zinc-300`}>
+            <span className="line-clamp-1">{p.matricola || "—"}</span>
+          </td>
+          <td className={`min-w-0 ${gestionaleListTableTd} text-[11px] text-zinc-600 dark:text-zinc-300`}>
+            <Tooltip content={p.nScuderia || undefined}><span className="line-clamp-1">
+              {p.nScuderia || "—"}
+            </span></Tooltip>
+          </td>
+          <td className={`whitespace-nowrap ${gestionaleListTableTd} text-sm font-medium tabular-nums text-zinc-800 dark:text-zinc-100`}>
+            {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
+          </td>
+          <td className={gestionaleListTableTdAzioni}>
+            <div className={dsTableActionsGroup}>
+              <PreventivoRowActions
+                p={p}
+                hrefLav={hrefLav}
+                canEditWorkOrders={canEditWorkOrders}
+                canDeleteRecords={canDeleteRecords}
+                canWritePreventivi={canWritePreventivi}
+                canReadPreventivi={canReadPreventivi}
+                activeDdt={getDdtForPreventivo(p.id)}
+                ddtBusy={ddtBusyId === p.id}
+                autore={autore}
+                onEdit={apriModifica}
+                onDelete={openEliminaConfirm}
+                onDdtAction={(rec) => void handleDdtAction(rec)}
+              />
+            </div>
+          </td>
+        </tr>
+      );
+    },
+    [
+      apriModifica,
+      autore,
+      canDeleteRecords,
+      canEditWorkOrders,
+      canReadPreventivi,
+      canWritePreventivi,
+      ddtBusyId,
+      focusPreventivoId,
+      getDdtForPreventivo,
+      handleDdtAction,
+      openEliminaConfirm,
+      pagedRows,
+      preventiviBillingById,
+    ],
+  );
 
   const {
     page: logPage,
@@ -980,11 +1109,13 @@ export function PreventiviView() {
             onFiltersToggle={() => setFiltriEspansi((o) => !o)}
             filtersActive={hasAdvancedPanelFilters}
             filtersPanel={
-              <PreventiviAdvancedFilterPanel
-                filters={advancedFilters}
-                onChange={patchAdvancedFilters}
-                catalog={filterCatalog}
-              />
+              filtriEspansi ? (
+                <PreventiviAdvancedFilterPanel
+                  filters={advancedFilters}
+                  onChange={patchAdvancedFilters}
+                  catalog={filterCatalog}
+                />
+              ) : null
             }
             onFilterReset={resetPreventiviFiltriPagina}
             meta={
@@ -1120,79 +1251,13 @@ export function PreventiviView() {
           empty={pagedRows.length === 0}
           emptyMessage={tableEmptyMessage}
           colSpan={12}
+          virtualRows={{
+            rowCount: pagedRows.length,
+            renderRow: renderPreventivoDesktopRow,
+            estimateRowHeight: 56,
+          }}
         >
-              {pagedRows.map((p) => {
-                const hrefLav = p.lavorazioneId.trim()
-                  ? buildPreventiviLavorazioneFocusHref(p.lavorazioneId, p.lavorazioneOrigine)
-                  : null;
-                const focused = focusPreventivoId === p.id;
-                return (
-                  <tr
-                    key={p.id}
-                    id={`preventivo-row-${p.id}`}
-                    className={`${gestionaleListTableRowClass} ${
-                      focused ? "ring-2 ring-inset ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]" : ""
-                    }`}
-                  >
-                    <td className={`whitespace-nowrap ${gestionaleListTableTd} font-mono text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100`}>
-                      <span className="inline-flex items-center gap-1.5">
-                        {p.numero}
-                        <PreventivoBillingBadge status={preventiviBillingById.get(p.id)?.stato_fatturazione} />
-                      </span>
-                    </td>
-                    <td className={`whitespace-nowrap ${gestionaleListTableTdPill}`}>
-                      <Tooltip content={preventivoTipoDocumentoLabel(p.tipoDocumento)}><span className={preventivoTipoDocumentoBadgeClass(p.tipoDocumento)}>
-                        {preventivoTipoDocumentoLabel(p.tipoDocumento, "short")}
-                      </span></Tooltip>
-                    </td>
-                    <td className={`whitespace-nowrap ${gestionaleListTableTd} text-xs tabular-nums text-zinc-600 dark:text-zinc-300`}>
-                      {fmtDataCreazioneTabella(p.dataCreazione)}
-                    </td>
-                    <td className={preventiviTableTdText}>
-                      <span className="line-clamp-2 break-words leading-snug">{p.cliente || "—"}</span>
-                    </td>
-                    <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-200`}>
-                      <span className="line-clamp-2 break-words text-xs leading-snug">{p.cantiere || "—"}</span>
-                    </td>
-                    <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-200`}>
-                      <span className="line-clamp-2 break-words text-xs leading-snug">{p.utilizzatore || "—"}</span>
-                    </td>
-                    <td className={`min-w-0 max-w-[1px] ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-200`}>
-                      <span className="line-clamp-2 break-words text-sm leading-snug">{p.macchinaRiassunto || "—"}</span>
-                    </td>
-                    <td className={`whitespace-nowrap ${gestionaleListTableTd} font-mono text-[11px] text-zinc-600 dark:text-zinc-300`}>{p.targa || "—"}</td>
-                    <td className={`min-w-0 ${gestionaleListTableTd} font-mono text-[11px] text-zinc-600 dark:text-zinc-300`}>
-                      <span className="line-clamp-1">{p.matricola || "—"}</span>
-                    </td>
-                    <td className={`min-w-0 ${gestionaleListTableTd} text-[11px] text-zinc-600 dark:text-zinc-300`}>
-                      <Tooltip content={p.nScuderia || undefined}><span className="line-clamp-1">
-                        {p.nScuderia || "—"}
-                      </span></Tooltip>
-                    </td>
-                    <td className={`whitespace-nowrap ${gestionaleListTableTd} text-sm font-medium tabular-nums text-zinc-800 dark:text-zinc-100`}>
-                      {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
-                    </td>
-                    <td className={gestionaleListTableTdAzioni}>
-                      <div className={dsTableActionsGroup}>
-                        <PreventivoRowActions
-                          p={p}
-                          hrefLav={hrefLav}
-                          canEditWorkOrders={canEditWorkOrders}
-                          canDeleteRecords={canDeleteRecords}
-                          canWritePreventivi={canWritePreventivi}
-                          canReadPreventivi={canReadPreventivi}
-                          activeDdt={getDdtForPreventivo(p.id)}
-                          ddtBusy={ddtBusyId === p.id}
-                          autore={autore}
-                          onEdit={apriModifica}
-                          onDelete={openEliminaConfirm}
-                          onDdtAction={(rec) => void handleDdtAction(rec)}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              {null}
         </GestionaleListTable>
         ) : null}
 
@@ -1292,20 +1357,22 @@ export function PreventiviView() {
         )}
       </ShellCard>
 
-      <PreventiviEditorModal
-        open={editor.open && canEditWorkOrders}
-        record={editor.record}
-        isNew={editor.isNew}
-        isRollbackDraft={editor.isRollbackDraft}
-        autore={autore.trim() || "Operatore"}
-        allRecords={rows}
-        onClose={closeEditor}
-        onSaved={onEditorSaved}
-        onSaveError={(msg) => {
-          if (msg.includes("altro utente")) gestToast.warning(msg);
-          else gestToast.errorOnce("preventivi-editor", msg, { module: "preventivi" });
-        }}
-      />
+      {editor.open && canEditWorkOrders ? (
+        <PreventiviEditorModal
+          open
+          record={editor.record}
+          isNew={editor.isNew}
+          isRollbackDraft={editor.isRollbackDraft}
+          autore={autore.trim() || "Operatore"}
+          allRecords={rows}
+          onClose={closeEditor}
+          onSaved={onEditorSaved}
+          onSaveError={(msg) => {
+            if (msg.includes("altro utente")) gestToast.warning(msg);
+            else gestToast.errorOnce("preventivi-editor", msg, { module: "preventivi" });
+          }}
+        />
+      ) : null}
         </>
       )}
       </div>
@@ -1322,60 +1389,35 @@ export function PreventiviView() {
         }}
       />
 
-      <DdtDetailDrawer
-        open={ddtDrawer.open}
-        detail={ddtDrawer.detail}
-        onClose={() => setDdtDrawer({ open: false, detail: null, preventivo: null })}
-        canWrite={canWritePreventivi}
-        isAdmin={globalPerm.isAdmin}
-        canRegenerate={canWritePreventivi}
-        regenerateBusy={ddtDrawer.preventivo != null && ddtBusyId === ddtDrawer.preventivo.id}
-        onRegenerate={() => void handleRegenerateDdt()}
-        onChanged={() => void refreshDdtDrawer()}
-      />
+      {ddtDrawer.open ? (
+        <DdtDetailDrawer
+          open
+          detail={ddtDrawer.detail}
+          onClose={() => setDdtDrawer({ open: false, detail: null, preventivo: null })}
+          canWrite={canWritePreventivi}
+          isAdmin={globalPerm.isAdmin}
+          canRegenerate={canWritePreventivi}
+          regenerateBusy={ddtDrawer.preventivo != null && ddtBusyId === ddtDrawer.preventivo.id}
+          onRegenerate={() => void handleRegenerateDdt()}
+          onChanged={() => void refreshDdtDrawer()}
+        />
+      ) : null}
 
-      <Drawer
-        open={logOpen}
-        onClose={() => setLogOpen(false)}
-        title="Log modifiche preventivi"
-        ariaLabel="Log modifiche preventivi"
-        lockScroll={!(editor.open && canEditWorkOrders)}
-      >
-        <div className={gestionaleLogDrawerPanelClass}>
-          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>
-            {logEntries.length === 0 ? (
-                <GestionaleLogEmpty message="Nessuna modifica registrata." />
-              ) : (
-                <>
-                  <GestionaleLogList>
-                    {pagedLogEntries.map((entry) => (
-                      <li key={entry.id} className="list-none">
-                        <GestionaleLogEntryFourLines
-                          vm={{
-                            tone: entry.tone,
-                            tipoRiga: entry.tipoRiga,
-                            oggettoRiga: entry.oggettoRiga,
-                            modificaRiga: entry.modificaRiga,
-                            autore: entry.autore,
-                            atIso: entry.atIso,
-                          }}
-                          trailing={
-                            <GestionaleLogEntryDismissButton
-                              onDismiss={() => removePreventiviChangeLogEntryById(entry.id)}
-                            />
-                          }
-                        />
-                      </li>
-                    ))}
-                  </GestionaleLogList>
-                </>
-            )}
-          </div>
-          {showLogPager ? (
-            <TablePagination page={logPage} pageCount={logPageCount} onPageChange={setLogPage} label={logPagerLabel} />
-          ) : null}
-        </div>
-      </Drawer>
+      {logOpen ? (
+        <PreventiviLogDrawer
+          open
+          onClose={() => setLogOpen(false)}
+          entries={logEntries}
+          pagedEntries={pagedLogEntries}
+          showPager={showLogPager}
+          page={logPage}
+          pageCount={logPageCount}
+          pagerLabel={logPagerLabel}
+          onPageChange={setLogPage}
+          onDismiss={removePreventiviChangeLogEntryById}
+          lockScroll={!(editor.open && canEditWorkOrders)}
+        />
+      ) : null}
       {confirmDialog}
     </>
     </div>

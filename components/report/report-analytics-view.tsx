@@ -193,7 +193,11 @@ export function ReportAnalyticsView() {
     }
   }, []);
 
-  const live = useReportLiveData();
+  const live = useReportLiveData({
+    enableMezzi: false,
+    enableMovimenti: false,
+    enableManual: false,
+  });
 
   const magManualRevision = useMemo(
     () => revisionMagazzinoManualMonthMap(loadMagazzinoManualMonthMap()),

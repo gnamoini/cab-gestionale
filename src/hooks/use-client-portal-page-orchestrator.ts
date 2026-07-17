@@ -2,7 +2,7 @@
 
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGestionaleShellLayout } from "@/context/gestionale-shell-layout-context";
+import { useGestionaleShellContentWidth } from "@/lib/ui/use-gestionale-shell-content-width";
 import {
   gestionaleListLayoutClassName,
   resolveGestionaleListContainerWidth,
@@ -42,14 +42,23 @@ export type ClientPortalPageOrchestrator = {
   refreshBusy: boolean;
 };
 
-export function useClientPortalPageOrchestrator(): ClientPortalPageOrchestrator {
+export function useClientPortalPageOrchestrator(options?: {
+  archivioExpanded?: boolean;
+  archivioSchedeEnabled?: boolean;
+}): ClientPortalPageOrchestrator {
   const access = useClientLavorazioniAccess();
-  const shell = useGestionaleShellLayout();
+  const shellContentWidth = useGestionaleShellContentWidth();
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const syncRafRef = useRef(0);
-  const contract = useClientPortalDataContract(access.allowed);
   const persistence = useClientPortalFiltersPersistence();
+  const archivioListEnabled =
+    options?.archivioExpanded === true || persistence.filters.section === "archivio";
+  const archivioSchedeEnabled =
+    options?.archivioSchedeEnabled === true ||
+    options?.archivioExpanded === true ||
+    persistence.filters.section === "archivio";
+  const contract = useClientPortalDataContract(access.allowed, { archivioListEnabled, archivioSchedeEnabled });
   const qc = useQueryClient();
   const gestToast = useGestionaleToast();
   const [refreshBusy, setRefreshBusy] = useState(false);
@@ -86,7 +95,6 @@ export function useClientPortalPageOrchestrator(): ClientPortalPageOrchestrator 
   }, [scheduleMeasure]);
 
   const viewportWidth = typeof window !== "undefined" ? resolveGestionaleShellViewportWidth() : 0;
-  const shellContentWidth = shell.contentWidth;
   const layout = resolveGestionalePageLayout({
     viewportWidth,
     containerWidth,

@@ -15,11 +15,13 @@ type LabelMeta = {
 export function RicambioLabelActions({
   ricambioId,
   codice,
-  canManage,
+  canRead,
+  canWrite,
 }: {
   ricambioId: string;
   codice: string;
-  canManage: boolean;
+  canRead: boolean;
+  canWrite: boolean;
 }) {
   const gestToast = useGestionaleToast();
   const [expanded, setExpanded] = useState(false);
@@ -76,25 +78,7 @@ export function RicambioLabelActions({
     }
   }
 
-  async function openInNewTab(format: "png" | "svg" | "pdf") {
-    await ensureExpanded();
-    try {
-      const res = await fetch(renderUrl(format));
-      if (!res.ok) throw new Error("Apertura non riuscita");
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const opened = window.open(blobUrl, "_blank", "noopener,noreferrer");
-      if (!opened) gestToast.error("Consenti i popup per aprire il PDF.");
-      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000);
-      if (format === "pdf") {
-        gestToast.successOnce("label-pdf-open", "PDF aperto in una nuova scheda.");
-      }
-    } catch {
-      gestToast.error(`Apertura ${format.toUpperCase()} non riuscita.`);
-    }
-  }
-
-  async function handleDownload(format: "png" | "svg") {
+  async function handleDownload(format: "png" | "svg" | "pdf") {
     await ensureExpanded();
     try {
       const res = await fetch(renderUrl(format));
@@ -144,7 +128,7 @@ export function RicambioLabelActions({
   }
 
   async function handleRegenerate() {
-    if (!canManage) return;
+    if (!canWrite) return;
     setLoading(true);
     try {
       const res = await fetch(`/api/inventory-labels/ricambi/${encodeURIComponent(ricambioId)}/regenerate`, {
@@ -167,11 +151,11 @@ export function RicambioLabelActions({
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-2">
-      <DisabledElementTooltip content={canManage ? "Etichetta QR" : READONLY_PERMISSION_HINT} disabled={!canManage}>
+      <DisabledElementTooltip content={canRead ? "Etichetta QR" : READONLY_PERMISSION_HINT} disabled={!canRead}>
         <button
           type="button"
           className={`${erpBtnSubtleNew} min-h-11 w-full justify-center disabled:opacity-45`}
-          disabled={!canManage || loading}
+          disabled={!canRead || loading}
           onClick={() => void ensureExpanded()}
         >
           {expanded ? "Etichetta" : "Genera etichetta"}
@@ -179,7 +163,7 @@ export function RicambioLabelActions({
       </DisabledElementTooltip>
 
       {expanded ? (
-        <div className="space-y-2 rounded-lg border border-[color:var(--cab-border)] bg-[color:var(--cab-surface)] p-3">
+        <div className="max-h-[40vh] space-y-2 overflow-y-auto rounded-lg border border-[color:var(--cab-border)] bg-[color:var(--cab-surface)] p-3">
           <label className="flex flex-col gap-1 text-xs text-[color:var(--cab-text-muted)]">
             Formato etichetta
             <select
@@ -217,7 +201,7 @@ export function RicambioLabelActions({
             <button type="button" className={erpBtnNeutral} disabled={loading} onClick={() => void handleDownload("png")}>
               PNG
             </button>
-            <button type="button" className={erpBtnNeutral} disabled={loading} onClick={() => void openInNewTab("pdf")}>
+            <button type="button" className={erpBtnNeutral} disabled={loading} onClick={() => void handleDownload("pdf")}>
               PDF
             </button>
             <button type="button" className={erpBtnNeutral} disabled={loading} onClick={() => void handleDownload("svg")}>
@@ -229,7 +213,7 @@ export function RicambioLabelActions({
             <button
               type="button"
               className={erpBtnNeutral}
-              disabled={loading || !canManage}
+              disabled={loading || !canWrite}
               onClick={() => void handleRegenerate()}
             >
               Rigenera QR

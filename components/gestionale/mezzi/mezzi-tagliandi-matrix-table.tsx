@@ -16,6 +16,7 @@ import {
 } from "@/lib/maintenance-plans/tagliandi-matrix";
 import { dsFocus, dsScrollbar } from "@/lib/ui/design-system";
 import { gestionaleListTableRowBaseClass, gestionaleListTableTd } from "@/lib/ui/gestionale-list-table";
+import { mezzoTagliandiEnabled } from "@/lib/mezzi/mezzi-meta";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useToggleTagliandiMatrixCellMutation } from "@/src/hooks/gestionale/use-maintenance-plan-mutations";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -170,8 +171,11 @@ export function MezziTagliandiMatrixTable({
   enabled?: boolean;
   canEdit: boolean;
 }) {
-  const tagliandiMezziQ = useMezziListQuery({ tagliandi: "si" }, { enabled });
-  const mezzi = tagliandiMezziQ.data ?? [];
+  const tagliandiMezziQ = useMezziListQuery(undefined, { enabled });
+  const mezzi = useMemo(
+    () => (tagliandiMezziQ.data ?? []).filter(mezzoTagliandiEnabled),
+    [tagliandiMezziQ.data],
+  );
   const plansQ = useMaintenancePlansListQuery(enabled);
   const catalogQ = useMaintenancePlansCatalogQuery(enabled);
   const servicesQ = useMaintenanceServicesLiteQuery(enabled);
@@ -241,6 +245,45 @@ export function MezziTagliandiMatrixTable({
       }
     },
     [canEdit, plans, toastError, toggleMut],
+  );
+
+  const renderMatrixRow = useCallback(
+    (index: number) => {
+      const row = matrixRows[index];
+      if (!row) return null;
+      return (
+        <tr key={`${row.mezzoId}:${row.planId}`} className={matrixRowClass}>
+          <td className={`${gestionaleListTableTd} ${stickyMezzoBodyClass} overflow-hidden`}>
+            <div className="flex min-w-0 flex-col gap-0.5 py-0.5 pr-0.5">
+              <p className={matrixMezzoPrimaryClass}>{row.attrezzaturaLabel}</p>
+              <p className={matrixMezzoSecondaryClass}>{row.cliente}</p>
+            </div>
+          </td>
+          <td className={scuderiaTdClass}>
+            <div className={matrixCellCenterClass}>
+              <span className={matrixScudOreTextClass}>{row.numeroScuderia ?? "—"}</span>
+            </div>
+          </td>
+          <td className={oreCurrentTdClass}>
+            <div className={matrixCellCenterClass}>
+              <span className={matrixScudOreTextClass}>{row.currentOre}</span>
+            </div>
+          </td>
+          {columnOres.map((milestoneOre) => (
+            <MatrixCell
+              key={milestoneOre}
+              row={row}
+              milestoneOre={milestoneOre}
+              serviceLookup={serviceLookup}
+              canEdit={canEdit}
+              pendingKey={pendingKey}
+              onToggle={onToggle}
+            />
+          ))}
+        </tr>
+      );
+    },
+    [canEdit, columnOres, onToggle, pendingKey, serviceLookup],
   );
 
   if (!enabled) return null;
@@ -315,38 +358,13 @@ export function MezziTagliandiMatrixTable({
           empty={false}
           emptyMessage=""
           colSpan={3 + columnOres.length}
+          virtualRows={{
+            rowCount: matrixRows.length,
+            renderRow: renderMatrixRow,
+            estimateRowHeight: 48,
+          }}
         >
-          {matrixRows.map((row) => (
-            <tr key={`${row.mezzoId}:${row.planId}`} className={matrixRowClass}>
-              <td className={`${gestionaleListTableTd} ${stickyMezzoBodyClass} overflow-hidden`}>
-                <div className="flex min-w-0 flex-col gap-0.5 py-0.5 pr-0.5">
-                  <p className={matrixMezzoPrimaryClass}>{row.attrezzaturaLabel}</p>
-                  <p className={matrixMezzoSecondaryClass}>{row.cliente}</p>
-                </div>
-              </td>
-              <td className={scuderiaTdClass}>
-                <div className={matrixCellCenterClass}>
-                  <span className={matrixScudOreTextClass}>{row.numeroScuderia ?? "—"}</span>
-                </div>
-              </td>
-              <td className={oreCurrentTdClass}>
-                <div className={matrixCellCenterClass}>
-                  <span className={matrixScudOreTextClass}>{row.currentOre}</span>
-                </div>
-              </td>
-              {columnOres.map((milestoneOre) => (
-                <MatrixCell
-                  key={milestoneOre}
-                  row={row}
-                  milestoneOre={milestoneOre}
-                  serviceLookup={serviceLookup}
-                  canEdit={canEdit}
-                  pendingKey={pendingKey}
-                  onToggle={onToggle}
-                />
-              ))}
-            </tr>
-          ))}
+          {null}
         </GestionaleListTable>
       </div>
     </div>

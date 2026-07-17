@@ -16,7 +16,10 @@ import {
 } from "@/lib/schede/schede-db-mapper";
 import { normalizeSchedaTipoDb } from "@/lib/schede/scheda-tipo-db-mapper";
 import type { PersistSchedeResult } from "@/lib/schede/schede-sync-adapter";
-import { buildCaptureSchedeBundle, type CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
+import { buildCaptureSchedeBundle, inferCaptureSchedaTipo, type CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
+import { fetchMagazzinoListAuthorizedServer } from "@/lib/magazzino/magazzino-list-fetch-server";
+import { mapMagazzinoRowsToUI } from "@/lib/magazzino/magazzino-list-cache";
+import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { InterventoWriteDeps } from "@/lib/domain/intervento-context/intervento-write-types";
 import { pickLavorazioneCreatePayload } from "@/lib/validation/services/lavorazioni-payload";
 import { sanitizeMezzoWritePayload } from "@/lib/validation/services/mezzi-payload";
@@ -25,6 +28,12 @@ import type { MezzoInsert, MezzoUpdate } from "@/src/services/mezzi.service";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import type { AttrezzaturaRow, LavorazioneRow, MezzoRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
+
+export async function fetchCaptureMagazzinoCatalog(): Promise<RicambioMagazzino[]> {
+  const res = await fetchMagazzinoListAuthorizedServer(undefined, "list");
+  if (!res.success || !res.data) return [];
+  return mapMagazzinoRowsToUI(res.data, "Sistema");
+}
 
 export async function fetchCaptureMezziCatalog(): Promise<MezzoGestito[]> {
   const sb = await createSupabaseServerUserClient();
@@ -91,7 +100,14 @@ export function createCaptureInterventoWriteDeps(input: {
   userId: string;
   captureFields: readonly CaptureFieldRow[];
   approvedCreates: { lavorazioni?: boolean; ricambi?: boolean; mezzo?: boolean };
+  magazzino?: readonly RicambioMagazzino[];
+  existingLavorazioneId?: string | null;
 }): InterventoWriteDeps {
+  const schedaTipo = inferCaptureSchedaTipo(input.captureFields);
+  const includeIngresso =
+    schedaTipo === "ingresso" || schedaTipo === null || !input.existingLavorazioneId?.trim();
+  const magazzino = input.magazzino ?? [];
+
   return {
     upsertMezzo: async ({ fields, preferredMezzoId }) => {
       const sb = await createSupabaseServerUserClient();
@@ -184,10 +200,14 @@ export function createCaptureInterventoWriteDeps(input: {
         createdBy,
         includeLavorazioni: input.approvedCreates.lavorazioni ?? true,
         includeRicambi: input.approvedCreates.ricambi ?? true,
+        schedaTipo,
+        magazzino,
       });
-      bundle.ingresso = bundle.ingresso
-        ? { ...bundle.ingresso, campi: { ...fields } }
-        : null;
+      if (includeIngresso && bundle.ingresso) {
+        bundle.ingresso = { ...bundle.ingresso, campi: { ...fields } };
+      } else {
+        bundle.ingresso = null;
+      }
       return persistCaptureBundleServer(bundle, input.userId);
     },
   };

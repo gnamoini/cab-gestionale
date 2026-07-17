@@ -12,9 +12,11 @@ import {
 import { GESTIONALE_PAGES, pathnameToPage } from "@/src/lib/permissions/gestionale-pages";
 import { resolveRole } from "@/lib/auth/rbac";
 import { useRbac } from "@/src/hooks/use-rbac";
+import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
+import { canReadPage, canWritePage } from "@/src/lib/rbac/resolve-page-access";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
-import type { GestionalePageKey } from "@/src/lib/permissions/gestionale-pages";
+import type { PageAccessLevel, GestionalePageKey } from "@/src/lib/permissions/gestionale-pages";
+import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
 
 export function useRolePageAccessQuery(): UseQueryResult<import("@/src/services/permissions.service").RolePageAccessBundle, Error> {
   const { user, status } = useAuth();
@@ -88,47 +90,58 @@ export type PermissionsSnapshot = {
 
 function buildGlobalPermissions(
   user: ReturnType<typeof useAuth>["user"],
-  rbac: ReturnType<typeof useRbac>,
+  role: string,
+  resolved: EffectivePermissionsSnapshot["resolved"] | undefined,
   authLoading: boolean,
 ): GlobalPermissions {
+  const isAdmin = role === "admin";
+  const isManager = role === "manager";
+  const isOperatore = role === "operatore" || role === "manager";
+  const isGuest = role === "guest";
+  const isReadOnly = role === "guest" || role === "cliente";
+
   return {
     role: resolveRole(user),
-    isAdmin: rbac.isAdmin,
-    isOperatore: rbac.isOperatore,
-    isOspite: rbac.isOspite,
-    canManageSecurity: rbac.canWritePage("sicurezza"),
-    canManageSettings: rbac.canWritePage("impostazioni"),
-    canEditInventory: rbac.canWritePage("magazzino"),
-    canEditWorkOrders: rbac.canWritePage("lavorazioni"),
-    canEditVehicles: rbac.canWritePage("mezzi"),
-    canUploadDocuments: rbac.canWritePage("documenti"),
-    canViewReports: rbac.canReadPage("report"),
+    isAdmin,
+    isOperatore,
+    isOspite: isGuest,
+    canManageSecurity: resolved ? canWritePage(resolved, "sicurezza") : false,
+    canManageSettings: resolved ? canWritePage(resolved, "impostazioni") : false,
+    canEditInventory: resolved ? canWritePage(resolved, "magazzino") : false,
+    canEditWorkOrders: resolved ? canWritePage(resolved, "lavorazioni") : false,
+    canEditVehicles: resolved ? canWritePage(resolved, "mezzi") : false,
+    canUploadDocuments: resolved ? canWritePage(resolved, "documenti") : false,
+    canViewReports: resolved ? canReadPage(resolved, "report") : false,
     canDeleteRecords:
-      !rbac.isReadOnly &&
-      GESTIONALE_PAGES.some((p) => rbac.canWritePage(p.key as import("@/src/lib/permissions/gestionale-pages").GestionalePageKey)),
+      !isReadOnly &&
+      Boolean(
+        resolved &&
+          GESTIONALE_PAGES.some((p) => canWritePage(resolved, p.key as GestionalePageKey)),
+      ),
     isLoading: authLoading,
   };
 }
 
 export function usePermissionsSnapshot(): PermissionsSnapshot {
-  const rbac = useRbac();
+  const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
   const { user, status } = useAuth();
-  const authLoading = status === "loading" || rbac.isLoading;
+  const authLoading = status === "loading" || permsLoading;
+  const resolved = snapshot?.resolved;
+  const role = snapshot?.role ?? user?.ruolo ?? "guest";
 
   const global = useMemo(
-    () => buildGlobalPermissions(user, rbac, authLoading),
-    [user, rbac, authLoading],
+    () => buildGlobalPermissions(user, role, resolved, authLoading),
+    [user, role, resolved, authLoading],
   );
 
   const modules = useMemo(() => {
-    const resolved = rbac.effectivePermissions?.resolved;
     const out = {} as Record<GestionalePermissionModule, ModulePermission>;
     for (const mod of GESTIONALE_PERMISSION_MODULES) {
       const row = resolved?.modules[mod] ?? { canRead: false, canWrite: false };
       out[mod] = { ...row, isLoading: authLoading };
     }
     return out;
-  }, [rbac.effectivePermissions?.resolved, authLoading]);
+  }, [resolved, authLoading]);
 
   return useMemo(() => ({ global, modules }), [global, modules]);
 }

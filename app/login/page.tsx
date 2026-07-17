@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { LoadingLoginSkeleton } from "@/components/design-system";
-import { LoginForm } from "./login-form";
+import { LoginFormLazy } from "@/components/public-surfaces/public-surface-loaders";
 
 function LoginFallback() {
   return <LoadingLoginSkeleton />;
@@ -9,7 +9,7 @@ function LoginFallback() {
 export default function LoginPage() {
   return (
     <Suspense fallback={<LoginFallback />}>
-      <LoginForm />
+      <LoginFormLazy />
     </Suspense>
   );
 }

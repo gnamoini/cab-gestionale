@@ -47,25 +47,6 @@ export async function finalizeDocumentCaptureInTransaction(input: {
 
   if (downloadError || !fileData) {
     const classified = classifyFinalizeStorageDownloadError(downloadError, Boolean(fileData), bucket);
-    // #region agent log
-    fetch("http://127.0.0.1:7863/ingest/89dc6c11-bff2-45f2-876e-83e3ac496a5d", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bd086a" },
-      body: JSON.stringify({
-        sessionId: "bd086a",
-        hypothesisId: "A",
-        location: "finalize-transaction.server.ts:download",
-        message: "storage download failed",
-        data: {
-          captureId: input.captureId,
-          code: classified.code,
-          storagePath: input.storagePath,
-          hasFileData: Boolean(fileData),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     return {
       ok: false,
       code: classified.code,
@@ -88,20 +69,6 @@ export async function finalizeDocumentCaptureInTransaction(input: {
     bytes,
   });
   if (!isAllowedCaptureMime(mime)) {
-    // #region agent log
-    fetch("http://127.0.0.1:7863/ingest/89dc6c11-bff2-45f2-876e-83e3ac496a5d", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bd086a" },
-      body: JSON.stringify({
-        sessionId: "bd086a",
-        hypothesisId: "B",
-        location: "finalize-transaction.server.ts:mime",
-        message: "mime not allowed",
-        data: { captureId: input.captureId, mime, fileName },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     throw new Error("Tipo file non consentito");
   }
   if (mime === "image/svg+xml") {
@@ -109,31 +76,9 @@ export async function finalizeDocumentCaptureInTransaction(input: {
   }
 
   if (needsCaptureOfficeConversion(mime)) {
-    try {
-      const prepared = await prepareCaptureBytesForOcr({ bytes, mime, fileName });
-      bytes = prepared.bytes;
-      mime = prepared.mime;
-    } catch (officeErr) {
-      // #region agent log
-      fetch("http://127.0.0.1:7863/ingest/89dc6c11-bff2-45f2-876e-83e3ac496a5d", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bd086a" },
-        body: JSON.stringify({
-          sessionId: "bd086a",
-          hypothesisId: "C",
-          location: "finalize-transaction.server.ts:office",
-          message: "office conversion failed",
-          data: {
-            captureId: input.captureId,
-            mime,
-            error: officeErr instanceof Error ? officeErr.message : String(officeErr),
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
-      throw officeErr;
-    }
+    const prepared = await prepareCaptureBytesForOcr({ bytes, mime, fileName });
+    bytes = prepared.bytes;
+    mime = prepared.mime;
     if (bytes.byteLength > DOCUMENT_CAPTURE_MAX_BYTES) {
       throw new Error("File convertito troppo grande");
     }
@@ -168,26 +113,6 @@ export async function finalizeDocumentCaptureInTransaction(input: {
   });
 
   if (error) {
-    // #region agent log
-    fetch("http://127.0.0.1:7863/ingest/89dc6c11-bff2-45f2-876e-83e3ac496a5d", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bd086a" },
-      body: JSON.stringify({
-        sessionId: "bd086a",
-        hypothesisId: "D",
-        location: "finalize-transaction.server.ts:rpc",
-        message: "document_capture_finalize rpc failed",
-        data: {
-          captureId: input.captureId,
-          rpcMessage: error.message,
-          rpcCode: error.code,
-          mime,
-          byteLength: bytes.byteLength,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     if (error.message.includes("invalid_status_transition")) {
       const err = new Error(error.message);
       (err as Error & { code?: string }).code = "invalid_status_transition";

@@ -10,6 +10,7 @@ import {
   type ControlTowerShell,
 } from "@/src/hooks/view/use-control-tower-metrics";
 import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
+import { useDashboardSyncInvalidation } from "@/src/hooks/view/use-dashboard-sync-invalidation";
 import type { DashboardWidgetDefinition } from "@/lib/dashboard/dashboard-widget-registry";
 import type { composeControlTowerSlices } from "@/lib/dashboard/control-tower-selectors";
 
@@ -60,6 +61,10 @@ function ControlTowerMetricsWithoutDash({
 
 export function ControlTowerMetricsProvider({ children }: { children: ReactNode }) {
   const shell = useControlTowerShell();
+  useDashboardSyncInvalidation({
+    magDomain: shell.visibleWidgets.length > 0,
+    activityLogs: shell.activityVisible,
+  });
   if (shell.visibleWidgets.length === 0) {
     return <ControlTowerMetricsWithoutDash shell={shell}>{children}</ControlTowerMetricsWithoutDash>;
   }

@@ -61,6 +61,21 @@ export async function uploadLabelArtifact(input: {
   return path;
 }
 
+/** Cache opzionale: non blocca la consegna se lo storage non è pronto (MIME, bucket, RLS). */
+export async function uploadLabelArtifactBestEffort(
+  input: Parameters<typeof uploadLabelArtifact>[0],
+): Promise<string | null> {
+  try {
+    return await uploadLabelArtifact(input);
+  } catch (error) {
+    console.warn(
+      "[inventory-label] cache upload skipped:",
+      error instanceof Error ? error.message : error,
+    );
+    return null;
+  }
+}
+
 export async function downloadLabelArtifact(objectPath: string): Promise<Uint8Array | null> {
   const sb = await createSupabaseServerUserClient();
   const normalized = normalizeStorageObjectPath(objectPath);

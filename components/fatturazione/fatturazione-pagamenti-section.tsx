@@ -5,39 +5,23 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { GestionaleListTable, GestionaleListTableActionsHead } from "@/components/gestionale/global-table";
 import { FatturaMultiPaymentModal } from "@/components/fatturazione/fattura-multi-payment-modal";
 import { formatInvoiceDate, formatInvoiceMoney } from "@/components/fatturazione/fattura-status-badge";
-import { fatturazionePaymentsQueryKey } from "@/lib/render/query-key-factory";
-import { CUSTOMER_PAYMENTS_COLUMNS } from "@/lib/db/table-select-columns";
 import { useFatturazioneOpenItemsQuery } from "@/src/hooks/gestionale/use-fatturazione-open-items-query";
-import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
-import { useServiceQuery } from "@/src/hooks/use-service-query";
-import { success, err } from "@/src/services/service-result";
-import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { useFatturazionePaymentsQuery } from "@/src/hooks/gestionale/use-fatturazione-payments-query";
 import type { CustomerPaymentRow } from "@/src/types/supabase-tables";
 import { LoadingFatturazioneListSkeleton } from "@/components/design-system";
 import { dsPageToolbarBtn, dsTypoSectionTitle } from "@/lib/ui/design-system";
 import { gestionaleListTableRowClass, gestionaleListTableTd } from "@/lib/ui/gestionale-list-table";
 
-async function fetchPayments() {
-  const c = getBrowserSupabase();
-  const { data, error } = await c
-    .from("customer_payments")
-    .select(CUSTOMER_PAYMENTS_COLUMNS)
-    .order("data", { ascending: false });
-  if (error) return err(error.message);
-  return success((data ?? []) as CustomerPaymentRow[]);
-}
-
 export function FatturazionePagamentiSection({ canWrite = false }: { canWrite?: boolean }) {
-  const gestOpts = useGestionaleQueryOpts();
-  const q = useServiceQuery(fatturazionePaymentsQueryKey(), fetchPayments, gestOpts);
-  const openItemsQ = useFatturazioneOpenItemsQuery();
+  const { payments, isLoading, refetch } = useFatturazionePaymentsQuery();
   const [multiOpen, setMultiOpen] = useState(false);
+  const openItemsQ = useFatturazioneOpenItemsQuery(multiOpen);
   const unallocated = useMemo(
-    () => (q.data ?? []).filter((p: CustomerPaymentRow) => p.allocation_status !== "allocated"),
-    [q.data],
+    () => payments.filter((p: CustomerPaymentRow) => p.allocation_status !== "allocated"),
+    [payments],
   );
 
-  if (q.isLoading) return <LoadingFatturazioneListSkeleton withToolbar={false} />;
+  if (isLoading) return <LoadingFatturazioneListSkeleton withToolbar={false} />;
 
   return (
     <div className="space-y-4">
@@ -81,7 +65,7 @@ export function FatturazionePagamentiSection({ canWrite = false }: { canWrite?: 
           openItems={openItemsQ.items}
           onRequestClose={() => setMultiOpen(false)}
           onSaved={() => {
-            void q.refetch();
+            void refetch();
             void openItemsQ.refetch();
           }}
         />

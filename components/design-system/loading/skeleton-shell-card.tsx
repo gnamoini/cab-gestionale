@@ -1,4 +1,3 @@
-"use client";
 
 import { memo, type ReactNode } from "react";
 import { ShellCard } from "@/components/gestionale/shell-card";

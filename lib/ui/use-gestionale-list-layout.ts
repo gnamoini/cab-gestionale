@@ -1,6 +1,6 @@
 "use client";
 
-import { useGestionaleShellLayout } from "@/context/gestionale-shell-layout-context";
+import { useGestionaleShellContentWidth } from "@/lib/ui/use-gestionale-shell-content-width";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import {
   gestionalePageLayoutSsrHint,
@@ -107,7 +107,7 @@ export type UseGestionaleListLayoutOptions = {
  */
 export function useGestionaleListLayout(options: UseGestionaleListLayoutOptions = {}) {
   const tier = options.tier ?? "xl";
-  const shell = useGestionaleShellLayout();
+  const shellContentWidth = useGestionaleShellContentWidth();
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const syncRafRef = useRef(0);
@@ -168,7 +168,6 @@ export function useGestionaleListLayout(options: UseGestionaleListLayoutOptions 
 
   const viewportWidth =
     typeof window !== "undefined" ? resolveGestionaleShellViewportWidth() : 0;
-  const shellContentWidth = shell.contentWidth;
   const ssrHint = gestionalePageLayoutSsrHint(shellContentWidth);
 
   const layout = resolveGestionalePageLayout({

@@ -1,4 +1,4 @@
-import type { AuthError } from "@supabase/supabase-js";
+import type { AuthError, SupabaseClient, User } from "@supabase/supabase-js";
 import { isInvalidRefreshAuthMessage } from "@/src/lib/auth/clear-invalid-auth-session";
 
 export function isTransientNetworkAuthError(err: AuthError | Error): boolean {
@@ -58,4 +58,49 @@ export async function withAuthNetworkRetry<T>(
     }
   }
   throw lastError;
+}
+
+export type AuthUserRetryMode = "server" | "client";
+
+type AuthUserResult = {
+  data: { user: User | null };
+  error: AuthError | null;
+};
+
+/** SSOT getUser con retry rete / refresh sessione (server) o soft retry (client). */
+export async function getUserWithAuthRetry(
+  supabase: SupabaseClient,
+  mode: AuthUserRetryMode = "server",
+): Promise<AuthUserResult> {
+  if (mode === "client") {
+    const first = await supabase.auth.getUser();
+    if (!first.error) return first;
+    if (shouldClearSessionOnAuthError(first.error) || !isTransientNetworkAuthError(first.error)) {
+      return first;
+    }
+    await delay(300);
+    return supabase.auth.getUser();
+  }
+
+  const first = await supabase.auth.getUser();
+  if (!first.error && first.data?.user) return first;
+  if (first.error && shouldClearSessionOnAuthError(first.error)) return first;
+
+  if (first.error && isRecoverableAuthError(first.error)) {
+    await supabase.auth.refreshSession();
+    const afterRefresh = await supabase.auth.getUser();
+    if (!afterRefresh.error && afterRefresh.data?.user) return afterRefresh;
+    if (afterRefresh.error && shouldClearSessionOnAuthError(afterRefresh.error)) return afterRefresh;
+    if (afterRefresh.error && isTransientNetworkAuthError(afterRefresh.error)) {
+      await delay(300);
+      return supabase.auth.getUser();
+    }
+    return afterRefresh;
+  }
+
+  if (first.error && isTransientNetworkAuthError(first.error)) {
+    await delay(300);
+    return supabase.auth.getUser();
+  }
+  return first;
 }
