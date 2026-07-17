@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
 import { generateText } from "ai";
-import {
-  buildGeminiOpsConfigurationPayload,
-  resolveConfigurationErrorType,
-} from "@/lib/ai/gemini-env-diagnostics";
+import { buildGeminiOpsConfigurationPayload } from "@/lib/ai/gemini-env-diagnostics";
 import { classifyGeminiError } from "@/lib/ai/gemini-error-types";
 import {
-  getGeminiConfigurationStatus,
-  isGeminiApiKeyFormatValid,
   isGeminiAuthError,
   isGeminiUnreachableError,
 } from "@/lib/ai/gemini-api-keys";
@@ -16,6 +11,7 @@ import {
   GEMINI_NOT_CONFIGURED_MESSAGE,
   getGeminiReportModelForApiKey,
   listGeminiApiKeys,
+  resolveGeminiConfigurationGate,
   resolveGeminiReportModelId,
 } from "@/lib/ai/gemini-client";
 import { logGeminiClientCreated, logGeminiRequestFailed } from "@/lib/ai/gemini-observability.server";
@@ -32,25 +28,16 @@ export async function POST() {
 
   const modelId = resolveGeminiReportModelId();
   const base = buildGeminiOpsConfigurationPayload(modelId);
-  const keys = listGeminiApiKeys();
-  const primary = keys[0] ?? null;
-  const primarySource = getGeminiConfigurationStatus().primarySource;
-  const keyLength = primarySource ? (base.resolver.directPresence[primarySource]?.length ?? 0) : 0;
+  const configGate = resolveGeminiConfigurationGate();
 
-  const configErrorType = resolveConfigurationErrorType({
-    configured: Boolean(primary),
-    keyLength,
-    formatValid: isGeminiApiKeyFormatValid(primary),
-  });
-
-  if (!primary || configErrorType) {
+  if (configGate) {
     return NextResponse.json(
       {
         ...base,
         success: false,
         latencyMs: 0,
-        errorType: configErrorType ?? "CONFIG_NOT_FOUND",
-        errorMessage: GEMINI_NOT_CONFIGURED_MESSAGE,
+        errorType: configGate.errorType,
+        errorMessage: configGate.message,
         httpStatus: 503,
         reachable: false,
       },
@@ -58,7 +45,10 @@ export async function POST() {
     );
   }
 
-  const formatValid = isGeminiApiKeyFormatValid(primary);
+  const keys = listGeminiApiKeys();
+  const primary = keys[0]!;
+  const primarySource = base.primarySource;
+  const formatValid = base.formatValid;
   const t0 = performance.now();
 
   try {

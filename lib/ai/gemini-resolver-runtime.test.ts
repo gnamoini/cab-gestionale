@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import {
   buildGeminiResolverDiagnostics,
+  buildRuntimeEnvCheckPayload,
   resolveConfigurationErrorType,
 } from "@/lib/ai/gemini-env-diagnostics";
 import {
+  inspectGeminiKeyFormat,
+  readRuntimeEnvVar,
   resolveGeminiApiKeysFromEnv,
   resolvePrimaryGeminiEnvSource,
 } from "@/lib/ai/gemini-api-keys";
@@ -61,5 +64,12 @@ if (saved.GOOGLE_GENERATIVE_AI_API_KEY === undefined) delete process.env.GOOGLE_
 else process.env.GOOGLE_GENERATIVE_AI_API_KEY = saved.GOOGLE_GENERATIVE_AI_API_KEY;
 if (saved.GEMINI_API_KEY_SECONDARY === undefined) delete process.env.GEMINI_API_KEY_SECONDARY;
 else process.env.GEMINI_API_KEY_SECONDARY = saved.GEMINI_API_KEY_SECONDARY;
+
+assert.equal(inspectGeminiKeyFormat("AIzaSyD-example-key-1234567890").valid, true);
+assert.equal(readRuntimeEnvVar("GOOGLE_GENERATIVE_AI_API_KEY", { GOOGLE_GENERATIVE_AI_API_KEY: " AIzaSyD-example-key-1234567890 " }), "AIzaSyD-example-key-1234567890");
+
+const runtimePayload = buildRuntimeEnvCheckPayload();
+assert.equal(typeof runtimePayload.envDetected, "object");
+assert.equal(typeof runtimePayload.nodeVersion, "string");
 
 console.log("gemini-resolver-runtime.test.ts OK");

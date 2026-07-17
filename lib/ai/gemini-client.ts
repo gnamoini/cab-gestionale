@@ -6,6 +6,8 @@ import {
   resolveGeminiApiKeysFromEnv,
   resolvePrimaryGeminiEnvSource,
   isGeminiApiKeyFormatValid,
+  inspectGeminiKeyFormat,
+  readRuntimeEnvVar,
   normalizeGeminiReportModelId,
   runWithGeminiApiKeysFailover,
 } from "@/lib/ai/gemini-api-keys";
@@ -97,7 +99,8 @@ export function resolveGeminiConfigurationGate(): GeminiConfigurationGateFailure
   const keys = listGeminiApiKeys();
   if (keys.length > 0) {
     const primary = keys[0]!;
-    if (!isGeminiApiKeyFormatValid(primary)) {
+    const inspection = inspectGeminiKeyFormat(primary);
+    if (!inspection.valid) {
       return {
         code: "not_configured",
         errorType: "CONFIG_INVALID_FORMAT",
@@ -106,11 +109,28 @@ export function resolveGeminiConfigurationGate(): GeminiConfigurationGateFailure
     }
     return null;
   }
-  const resolver = buildGeminiResolverDiagnostics();
-  const directAny = resolver.geminiKeysViaDirect;
+  const primarySource = resolvePrimaryGeminiEnvSource();
+  if (primarySource) {
+    const raw = Reflect.get(process.env, primarySource) as string | undefined;
+    if (raw != null && raw !== "" && readRuntimeEnvVar(primarySource) === "") {
+      return {
+        code: "not_configured",
+        errorType: "CONFIG_EMPTY",
+        message: GEMINI_NOT_CONFIGURED_MESSAGE,
+      };
+    }
+    const inspection = inspectGeminiKeyFormat(raw ?? null);
+    if (raw && !inspection.valid) {
+      return {
+        code: "not_configured",
+        errorType: "CONFIG_INVALID_FORMAT",
+        message: GEMINI_AUTH_ERROR_HINT,
+      };
+    }
+  }
   return {
     code: "not_configured",
-    errorType: directAny ? "CONFIG_EMPTY" : "CONFIG_NOT_FOUND",
+    errorType: "CONFIG_NOT_FOUND",
     message: GEMINI_NOT_CONFIGURED_MESSAGE,
   };
 }

@@ -5,6 +5,9 @@ import type { GeminiErrorType } from "@/lib/ai/gemini-error-types";
 type GeminiObsEvent =
   | "AI_CONFIGURATION_CHECK"
   | "AI_CLIENT_CREATED"
+  | "AI_REQUEST"
+  | "AI_RESPONSE"
+  | "AI_FAILURE"
   | "AI_REQUEST_STARTED"
   | "AI_REQUEST_COMPLETED"
   | "AI_REQUEST_FAILED";
@@ -40,6 +43,18 @@ export function logGeminiClientCreated(payload: { primarySource: string | null; 
   logGeminiObs("AI_CLIENT_CREATED", payload);
 }
 
+export function logGeminiRequestStarted(payload: { model: string; operation: string }): void {
+  logGeminiObs("AI_REQUEST", payload);
+}
+
+export function logGeminiRequestCompleted(payload: {
+  model: string;
+  operation: string;
+  durationMs: number;
+}): void {
+  logGeminiObs("AI_RESPONSE", payload);
+}
+
 export function logGeminiRequestFailed(payload: {
   model: string;
   operation: string;
@@ -47,5 +62,5 @@ export function logGeminiRequestFailed(payload: {
   errorCode: GeminiErrorType;
   errorMessage: string;
 }): void {
-  logGeminiObs("AI_REQUEST_FAILED", payload);
+  logGeminiObs("AI_FAILURE", payload);
 }

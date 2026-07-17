@@ -11,6 +11,50 @@ const SECONDARY_ENV_KEY_NAMES = [
 
 export { PRIMARY_ENV_KEY_NAMES, SECONDARY_ENV_KEY_NAMES };
 
+const ALL_GEMINI_ENV_KEY_NAMES = [...PRIMARY_ENV_KEY_NAMES, ...SECONDARY_ENV_KEY_NAMES] as const;
+
+/** ponytail: Reflect.get — evita inlining Next di process.env.NOME_FISSO a undefined al build. */
+export function readRuntimeEnvVar(
+  name: string,
+  env?: Record<string, string | undefined>,
+): string {
+  if (env) return env[name]?.trim() ?? "";
+  const raw = Reflect.get(process.env, name) as string | undefined;
+  return raw?.trim() ?? "";
+}
+
+export type GeminiKeyFormatInspection = {
+  valid: boolean;
+  issues: string[];
+};
+
+export function inspectGeminiKeyFormat(key: string | null | undefined): GeminiKeyFormatInspection {
+  const issues: string[] = [];
+  if (key == null || key === "") {
+    issues.push("missing");
+    return { valid: false, issues };
+  }
+  if (key !== key.trim()) issues.push("needs_trim");
+  if (/\r|\n/.test(key)) issues.push("contains_newline");
+  if (
+    (key.startsWith('"') && key.endsWith('"')) ||
+    (key.startsWith("'") && key.endsWith("'"))
+  ) {
+    issues.push("wrapped_quotes");
+  }
+  const trimmed = key.trim();
+  if (/\s/.test(trimmed)) issues.push("contains_whitespace");
+  if (trimmed.length < 12) issues.push("too_short");
+  if (/^AQ\./i.test(trimmed)) issues.push("vertex_style_aq_prefix");
+  if (trimmed === "test") issues.push("placeholder_test");
+  if (!trimmed.startsWith("AIza") && !/^[A-Za-z0-9_-]{20,}$/.test(trimmed)) {
+    issues.push("invalid_charset_or_length");
+  }
+  const valid = isGeminiApiKeyFormatValid(trimmed);
+  if (!valid && issues.length === 0) issues.push("format_rejected");
+  return { valid, issues };
+}
+
 export type GeminiConfigurationStatus = {
   configured: boolean;
   primarySource: string | null;
@@ -32,14 +76,8 @@ export function isGeminiApiKeyFormatValid(key: string | null | undefined): boole
 }
 
 export function resolvePrimaryGeminiEnvSource(env?: Record<string, string | undefined>): string | null {
-  if (env) {
-    for (const name of PRIMARY_ENV_KEY_NAMES) {
-      if (env[name]?.trim()) return name;
-    }
-    return null;
-  }
   for (const name of PRIMARY_ENV_KEY_NAMES) {
-    if (process.env[name]?.trim()) return name;
+    if (readRuntimeEnvVar(name, env)) return name;
   }
   return null;
 }
@@ -69,7 +107,7 @@ function readFirstEnvKey(
   names: readonly string[],
 ): string | null {
   for (const name of names) {
-    const value = env[name]?.trim();
+    const value = readRuntimeEnvVar(name, env);
     if (value) return value;
   }
   return null;
@@ -86,36 +124,27 @@ function resolveFromExplicitEnv(env: Record<string, string | undefined>): string
   return keys;
 }
 
-/** Scan dinamico di process.env — direct lookup primario; entries come fallback. */
+/** Runtime SSOT — solo Reflect.get; Object.entries usato solo in diagnostic. */
 function resolveFromRuntimeProcessEnv(): string[] {
   const keys: string[] = [];
   const push = (key: string | null) => {
     if (!key || keys.includes(key)) return;
     keys.push(key);
   };
-  const directLookup = (names: readonly string[]) => {
+  const lookup = (names: readonly string[]) => {
     for (const name of names) {
-      const value = process.env[name]?.trim();
+      const value = readRuntimeEnvVar(name);
       if (value) return value;
     }
     return null;
   };
-  push(directLookup(PRIMARY_ENV_KEY_NAMES));
-  push(directLookup(SECONDARY_ENV_KEY_NAMES));
-  if (keys.length > 0) return keys;
-
-  const entries = Object.entries(process.env) as [string, string | undefined][];
-  const entriesLookup = (names: readonly string[]) => {
-    for (const name of names) {
-      const hit = entries.find(([key]) => key === name);
-      const value = hit?.[1]?.trim();
-      if (value) return value;
-    }
-    return null;
-  };
-  push(entriesLookup(PRIMARY_ENV_KEY_NAMES));
-  push(entriesLookup(SECONDARY_ENV_KEY_NAMES));
+  push(lookup(PRIMARY_ENV_KEY_NAMES));
+  push(lookup(SECONDARY_ENV_KEY_NAMES));
   return keys;
+}
+
+export function listGeminiEnvKeyNames(): readonly string[] {
+  return ALL_GEMINI_ENV_KEY_NAMES;
 }
 
 /** Risolve chiavi API ordinate: primaria, poi secondaria (deduplicate). */

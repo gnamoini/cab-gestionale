@@ -2,6 +2,8 @@ import {
   PRIMARY_ENV_KEY_NAMES,
   SECONDARY_ENV_KEY_NAMES,
   getGeminiConfigurationStatus,
+  inspectGeminiKeyFormat,
+  readRuntimeEnvVar,
   resolveGeminiApiKeysFromEnv,
 } from "@/lib/ai/gemini-api-keys";
 
@@ -20,7 +22,7 @@ export type GeminiResolverDiagnostics = {
 };
 
 function keyPresence(name: string): GeminiEnvKeyPresence {
-  const value = process.env[name]?.trim() ?? "";
+  const value = readRuntimeEnvVar(name);
   return { present: value.length > 0, length: value.length };
 }
 
@@ -47,7 +49,7 @@ function resolveViaEntriesScan(): string[] {
 function resolveViaDirectLookup(): string[] {
   const keys: string[] = [];
   const push = (name: string) => {
-    const value = process.env[name]?.trim();
+    const value = readRuntimeEnvVar(name);
     if (value && !keys.includes(value)) keys.push(value);
   };
   for (const name of PRIMARY_ENV_KEY_NAMES) push(name);
@@ -110,4 +112,36 @@ export function resolveConfigurationErrorType(input: {
   if (input.configured && input.keyLength === 0) return "CONFIG_EMPTY";
   if (input.configured && !input.formatValid) return "CONFIG_INVALID_FORMAT";
   return null;
+}
+
+export function buildRuntimeEnvCheckPayload() {
+  const names = [...PRIMARY_ENV_KEY_NAMES, ...SECONDARY_ENV_KEY_NAMES];
+  const envDetected: Record<string, boolean> = {};
+  const lengths: Record<string, number> = {};
+  const formatValid: Record<string, boolean> = {};
+  const formatIssues: Record<string, string[]> = {};
+  for (const name of names) {
+    const raw = Reflect.get(process.env, name) as string | undefined;
+    const trimmed = raw?.trim() ?? "";
+    envDetected[name] = trimmed.length > 0;
+    lengths[name] = trimmed.length;
+    const inspection = inspectGeminiKeyFormat(raw ?? null);
+    formatValid[name] = inspection.valid;
+    if (inspection.issues.length > 0) formatIssues[name] = inspection.issues;
+  }
+  const resolved = resolveGeminiApiKeysFromEnv();
+  return {
+    runtime: "nodejs" as const,
+    deployment: process.env.VERCEL_DEPLOYMENT_ID ?? null,
+    commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
+    nodeVersion: process.version,
+    vercelEnv: process.env.VERCEL_ENV ?? null,
+    projectId: process.env.VERCEL_PROJECT_ID ?? null,
+    envDetected,
+    lengths,
+    formatValid,
+    formatIssues,
+    resolvedKeyCount: resolved.length,
+    primarySource: getGeminiConfigurationStatus().primarySource,
+  };
 }

@@ -6,8 +6,14 @@ import {
   GEMINI_REPORT_MODEL_ID,
   getGeminiReportModelForApiKey,
   listGeminiApiKeys,
+  resolveGeminiReportModelId,
   runWithGeminiFailover,
 } from "@/lib/ai/gemini-client";
+import {
+  logGeminiRequestCompleted,
+  logGeminiRequestFailed,
+  logGeminiRequestStarted,
+} from "@/lib/ai/gemini-observability.server";
 
 type GenerateObjectInput = Parameters<typeof generateObject>[0];
 
@@ -36,10 +42,32 @@ export async function generateObjectWithGeminiFailover(
   return runWithGeminiFailover((model, meta) => {
     const apiKey = listGeminiApiKeys()[meta.keyIndex];
     if (!apiKey) throw new Error("Gemini API key not configured");
+    const operation = "generate_object";
+    const modelId = resolveGeminiReportModelId();
+    const t0 = performance.now();
+    logGeminiRequestStarted({ model: modelId, operation });
     return generateObjectWithModelUnavailableFallback(
       rest as Omit<GenerateObjectInput, "model">,
       model,
       apiKey,
-    );
+    )
+      .then((result) => {
+        logGeminiRequestCompleted({
+          model: modelId,
+          operation,
+          durationMs: Math.round(performance.now() - t0),
+        });
+        return result;
+      })
+      .catch((error) => {
+        logGeminiRequestFailed({
+          model: modelId,
+          operation,
+          durationMs: Math.round(performance.now() - t0),
+          errorCode: "UNKNOWN",
+          errorMessage: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      });
   });
 }
