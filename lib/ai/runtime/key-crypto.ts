@@ -1,13 +1,13 @@
 import "server-only";
 
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
-import { readRuntimeSecret } from "@/lib/ai/runtime/env-reader";
+import { readMasterEncryptionKeyEnv, readRuntimeSecret } from "@/lib/ai/runtime/env-reader";
 
 const ALGO = "aes-256-gcm";
 const IV_BYTES = 12;
 
 function resolveMasterKey(): Buffer {
-  const raw = readRuntimeSecret("AI_MASTER_KEY_ENCRYPTION_KEY");
+  const raw = readMasterEncryptionKeyEnv();
   if (!raw) {
     throw new Error("AI_MASTER_KEY_ENCRYPTION_KEY non configurata");
   }
@@ -44,5 +44,5 @@ export function decryptApiKey(ciphertext: string): string {
 }
 
 export function canEncryptApiKeys(): boolean {
-  return readRuntimeSecret("AI_MASTER_KEY_ENCRYPTION_KEY").length > 0;
+  return readMasterEncryptionKeyEnv().length > 0;
 }

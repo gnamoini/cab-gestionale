@@ -1,9 +1,48 @@
 import type { AiProviderId, BootstrapKeyCandidate } from "@/lib/ai/runtime/types";
 
-/** ponytail: Reflect.get — unico accesso env autorizzato nel runtime AI. */
+/** Nome env costruito a runtime — evita inlining statico Next/Turbopack su Sensitive vars. */
+export const MASTER_KEY_ENV_NAME = ["AI_MASTER", "KEY_ENCRYPTION_KEY"].join("_");
+
+function readFromProcessEnv(name: string): string {
+  const fromReflect = Reflect.get(process.env, name) as string | undefined;
+  if (fromReflect?.trim()) return fromReflect.trim();
+  const fromBracket = process.env[name];
+  if (fromBracket?.trim()) return fromBracket.trim();
+  // ponytail: scan entries — fallback documentato per Sensitive Vercel (gemini-env-diagnostics)
+  for (const [key, value] of Object.entries(process.env)) {
+    if (key === name && value?.trim()) return value.trim();
+  }
+  return "";
+}
+
+/** ponytail: Reflect + bracket + entries — SSOT lettura env runtime AI. */
 export function readRuntimeSecret(name: string): string {
-  const raw = Reflect.get(process.env, name) as string | undefined;
-  return raw?.trim() ?? "";
+  return readFromProcessEnv(name);
+}
+
+export function readMasterEncryptionKeyEnv(): string {
+  return readFromProcessEnv(MASTER_KEY_ENV_NAME);
+}
+
+export function runtimeSecretPresence(name: string): {
+  reflectLen: number;
+  bracketLen: number;
+  entriesLen: number;
+} {
+  const fromReflect = Reflect.get(process.env, name) as string | undefined;
+  const fromBracket = process.env[name];
+  let fromEntries = "";
+  for (const [key, value] of Object.entries(process.env)) {
+    if (key === name && value?.trim()) {
+      fromEntries = value.trim();
+      break;
+    }
+  }
+  return {
+    reflectLen: fromReflect?.trim().length ?? 0,
+    bracketLen: fromBracket?.trim().length ?? 0,
+    entriesLen: fromEntries.length,
+  };
 }
 
 export const SUPPORTED_BOOTSTRAP_PROVIDERS = ["google", "openai", "anthropic", "mistral"] as const;

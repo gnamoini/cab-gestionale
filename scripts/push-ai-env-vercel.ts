@@ -4,6 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
+const VERCEL_PROJECT = process.env.VERCEL_PUSH_PROJECT?.trim() || "cab-gestionale";
+
 function loadEnvFile(filePath: string): Record<string, string> {
   const out: Record<string, string> = {};
   if (!fs.existsSync(filePath)) return out;
@@ -28,11 +30,24 @@ function loadEnvFile(filePath: string): Record<string, string> {
 function vercelEnvAdd(name: string, value: string, target: "production" | "preview"): boolean {
   const r = spawnSync(
     "npx",
-    ["vercel", "env", "add", name, target, "--force"],
-    { input: value, encoding: "utf8", shell: true, stdio: ["pipe", "pipe", "pipe"] },
+    [
+      "vercel",
+      "env",
+      "add",
+      name,
+      target,
+      "--project",
+      VERCEL_PROJECT,
+      "--value",
+      value,
+      "--force",
+      "--yes",
+      "--sensitive",
+    ],
+    { encoding: "utf8", shell: true, stdio: ["ignore", "pipe", "pipe"] },
   );
   if (r.status !== 0) {
-    console.error(`FAIL ${name} ${target}:`, r.stderr?.slice(0, 200));
+    console.error(`FAIL ${name} ${target}:`, (r.stderr ?? r.stdout ?? "").slice(0, 200));
     return false;
   }
   console.log(`OK ${name} → ${target}`);

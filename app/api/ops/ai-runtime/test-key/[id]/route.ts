@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerServiceClient } from "@/src/lib/supabase/server-service-client";
 import { decryptApiKey, canEncryptApiKeys } from "@/lib/ai/runtime/key-crypto";
+import { MASTER_KEY_ENV_NAME, runtimeSecretPresence } from "@/lib/ai/runtime/env-reader";
 import { createLanguageModel } from "@/lib/ai/runtime/client-factory";
 import { generateText } from "ai";
 import { classifyAiError } from "@/lib/ai/runtime/errors";
@@ -18,11 +19,20 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const { id } = await context.params;
   if (!canEncryptApiKeys()) {
+    const presence = runtimeSecretPresence(MASTER_KEY_ENV_NAME);
+    const target = process.env.VERCEL_ENV?.trim() || "local";
     return NextResponse.json(
       {
         success: false,
         errorMessage:
-          "AI_MASTER_KEY_ENCRYPTION_KEY non configurata sul server. Impostarla su Vercel (Production) e ridistribuire.",
+          target === "production"
+            ? "AI_MASTER_KEY_ENCRYPTION_KEY non configurata sul server. Impostarla su Vercel (Production) e ridistribuire."
+            : `AI_MASTER_KEY_ENCRYPTION_KEY assente nel runtime (${target}). Verifica .env.local o Vercel env.`,
+        diagnostic: {
+          vercelEnv: process.env.VERCEL_ENV ?? null,
+          deploymentId: process.env.VERCEL_DEPLOYMENT_ID ?? null,
+          masterKey: presence,
+        },
       },
       { status: 503 },
     );
