@@ -56,7 +56,7 @@ export const GEMINI_AUTH_ERROR_HINT =
   "Chiave Gemini non valida. Genera una nuova chiave su Google AI Studio (formato AIza...) e impostala in GOOGLE_GENERATIVE_AI_API_KEY o GEMINI_API_KEY.";
 
 export function listGeminiApiKeys(): string[] {
-  return resolveGeminiApiKeysFromEnv(process.env as Record<string, string | undefined>);
+  return resolveGeminiApiKeysFromEnv();
 }
 
 /** Risolve la API key primaria. */

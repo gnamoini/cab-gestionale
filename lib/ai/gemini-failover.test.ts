@@ -33,6 +33,16 @@ assert.deepEqual(
   ["only"],
 );
 
+const savedPrimary = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+const savedSecondary = process.env.GEMINI_API_KEY_SECONDARY;
+process.env.GOOGLE_GENERATIVE_AI_API_KEY = "runtime-primary";
+process.env.GEMINI_API_KEY_SECONDARY = "runtime-secondary";
+assert.deepEqual(resolveGeminiApiKeysFromEnv(), ["runtime-primary", "runtime-secondary"]);
+if (savedPrimary === undefined) delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+else process.env.GOOGLE_GENERATIVE_AI_API_KEY = savedPrimary;
+if (savedSecondary === undefined) delete process.env.GEMINI_API_KEY_SECONDARY;
+else process.env.GEMINI_API_KEY_SECONDARY = savedSecondary;
+
 assert.equal(geminiKeySlotForIndex(0), "primary");
 assert.equal(geminiKeySlotForIndex(1), "secondary");
 

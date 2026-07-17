@@ -45,6 +45,11 @@ assert.match(geminiClient, /GEMINI_NOT_CONFIGURED_MESSAGE/);
 assert.match(geminiClient, /GEMINI_FILE_ANALYSIS_TIMEOUT_MS/);
 assert.match(geminiClient, /runWithGeminiApiKeysFailover/);
 assert.match(geminiClient, /listGeminiApiKeys/);
+assert.match(geminiClient, /resolveGeminiApiKeysFromEnv\(\)/);
+assert.match(
+  fs.readFileSync(path.join(ROOT, "lib/ai/gemini-api-keys.ts"), "utf8"),
+  /resolveFromRuntimeProcessEnv/,
+);
 assert.match(geminiClient, /gemini-3\.5-flash/);
 
 const geminiGenerate = fs.readFileSync(path.join(ROOT, "lib/ai/gemini-generate-object.server.ts"), "utf8");

@@ -20,8 +20,7 @@ function readFirstEnvKey(
   return null;
 }
 
-/** Risolve chiavi API ordinate: primaria, poi secondaria (deduplicate). */
-export function resolveGeminiApiKeysFromEnv(env: Record<string, string | undefined>): string[] {
+function resolveFromExplicitEnv(env: Record<string, string | undefined>): string[] {
   const keys: string[] = [];
   const push = (key: string | null) => {
     if (!key || keys.includes(key)) return;
@@ -30,6 +29,33 @@ export function resolveGeminiApiKeysFromEnv(env: Record<string, string | undefin
   push(readFirstEnvKey(env, PRIMARY_ENV_KEY_NAMES));
   push(readFirstEnvKey(env, SECONDARY_ENV_KEY_NAMES));
   return keys;
+}
+
+/** Scan dinamico di process.env — evita inlining Next a build (Vercel sensitive env). */
+function resolveFromRuntimeProcessEnv(): string[] {
+  const entries = Object.entries(process.env) as [string, string | undefined][];
+  const lookup = (names: readonly string[]) => {
+    for (const name of names) {
+      const hit = entries.find(([key]) => key === name);
+      const value = hit?.[1]?.trim();
+      if (value) return value;
+    }
+    return null;
+  };
+  const keys: string[] = [];
+  const push = (key: string | null) => {
+    if (!key || keys.includes(key)) return;
+    keys.push(key);
+  };
+  push(lookup(PRIMARY_ENV_KEY_NAMES));
+  push(lookup(SECONDARY_ENV_KEY_NAMES));
+  return keys;
+}
+
+/** Risolve chiavi API ordinate: primaria, poi secondaria (deduplicate). */
+export function resolveGeminiApiKeysFromEnv(env?: Record<string, string | undefined>): string[] {
+  if (env) return resolveFromExplicitEnv(env);
+  return resolveFromRuntimeProcessEnv();
 }
 
 export function geminiKeySlotForIndex(index: number): "primary" | "secondary" {
