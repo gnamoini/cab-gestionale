@@ -1,6 +1,5 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
 import { memo, type KeyboardEvent } from "react";
 import { LavorazioneIngressoDateCell } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import { TablePillReadonly } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
@@ -65,7 +64,7 @@ export const KanbanCardMobile = memo(function KanbanCardMobile({
         .join(" ")}
     >
       <div className="flex items-start gap-2.5">
-        <Tooltip content={prioritaLabel(p)}><span className={prioVisual.dotClassName} style={prioVisual.dotStyle} aria-hidden/></Tooltip>
+        <span className={prioVisual.dotClassName} style={prioVisual.dotStyle} aria-label={prioritaLabel(p)} role="img" />
         <div className="min-w-0 flex-1 space-y-0.5">
           {macchina ? (
             <p className="text-[15px] font-semibold leading-snug text-[color:var(--cab-text)]">{macchina}</p>
@@ -83,7 +82,6 @@ export const KanbanCardMobile = memo(function KanbanCardMobile({
         <TablePillReadonly
           shellClass={prioritaPillShellClassDynamic()}
           shellStyle={prioritaPillShellStyle(prioHex)}
-          title={prioritaLabel(p)}
           fitContent
         >
           {prioritaLabel(p)}
@@ -91,7 +89,6 @@ export const KanbanCardMobile = memo(function KanbanCardMobile({
         <TablePillReadonly
           shellClass={addettoPillShellClassDynamic()}
           shellStyle={addettoPillStyle}
-          title={addetto}
           fitContent
         >
           <span className="max-w-[9rem] truncate">{addetto}</span>

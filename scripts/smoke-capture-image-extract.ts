@@ -1,18 +1,17 @@
 /**
- * Smoke locale: estrazione Gemini da immagine scheda ingresso.
+ * Smoke locale: estrazione AI da immagine scheda ingresso.
  * Uso: npx tsx --env-file=.env.local scripts/smoke-capture-image-extract.ts [path.png]
  */
 import fs from "node:fs";
 import path from "node:path";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { generateObject } from "ai";
+import { aiService } from "@/lib/ai/runtime/service";
 import {
   captureExtractionSchema,
   listCaptureExtractionFields,
+  type CaptureExtractionResult,
 } from "@/lib/document-capture/capture-extraction-schema";
 import { buildGeminiCaptureDocumentPart } from "@/lib/document-capture/gemini-capture-content";
 import { normalizeCaptureMime } from "@/lib/document-capture/capture-mime";
-import { resolveGeminiReportModelId } from "@/lib/ai/gemini-client";
 import {
   SCHEDA_OFFICINA_EXTRACTION_SYSTEM,
   SCHEDA_OFFICINA_EXTRACTION_USER,
@@ -25,25 +24,19 @@ const defaultImage = path.join(
 
 async function main(): Promise<void> {
   const imagePath = process.argv[2] ?? defaultImage;
-  const apiKey =
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() ||
-    process.env.GEMINI_API_KEY?.trim() ||
-    process.env.GOOGLE_API_KEY?.trim() ||
-    "";
-  if (!apiKey) {
-    console.error("Gemini non configurato (.env.local)");
+  const status = await aiService.getConfigurationStatus();
+  if (!status.configured) {
+    console.error("AI non configurato (.env.local o DB)");
     process.exit(1);
   }
   const bytes = new Uint8Array(fs.readFileSync(imagePath));
   const mime = normalizeCaptureMime({ fileName: path.basename(imagePath), bytes });
-  const model = createGoogleGenerativeAI({ apiKey })(resolveGeminiReportModelId());
 
   const t0 = performance.now();
-  const { object } = await generateObject({
-    model,
+  const result = await aiService.analyzeDocument<CaptureExtractionResult>({
     schema: captureExtractionSchema,
     system: SCHEDA_OFFICINA_EXTRACTION_SYSTEM,
-    messages: [
+    userContent: [
       {
         role: "user",
         content: [{ type: "text", text: SCHEDA_OFFICINA_EXTRACTION_USER }, buildGeminiCaptureDocumentPart(bytes, mime)],
@@ -52,11 +45,16 @@ async function main(): Promise<void> {
     temperature: 0.2,
   });
 
-  const fields = listCaptureExtractionFields(object.fields);
+  if (!result.ok) {
+    console.error(result.message);
+    process.exit(1);
+  }
+
+  const fields = listCaptureExtractionFields(result.data.object.fields);
   console.log(
     JSON.stringify(
       {
-        schedaTipo: object.schedaTipo,
+        schedaTipo: result.data.object.schedaTipo,
         fieldCount: fields.length,
         sample: fields.slice(0, 8),
         durationMs: Math.round(performance.now() - t0),

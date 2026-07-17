@@ -12,6 +12,8 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 import { gestionaleMultilineEnterProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { isMobileFocusVisibilityV2 } from "@/lib/ui/focus-visibility-flags";
+import { notifyFocusBlockLayoutChange } from "@/lib/ui/focus-visibility-pipeline";
 import { registerGestionaleTextareaViewportSync } from "@/lib/ui/gestionale-textarea-viewport";
 import {
   scrollGestionaleFieldIntoView,
@@ -133,6 +135,10 @@ function GestionaleTextareaInner(
   const scheduleFocusRescroll = () => {
     const el = innerRef.current;
     if (!el || document.activeElement !== el) return;
+    if (isMobileFocusVisibilityV2()) {
+      notifyFocusBlockLayoutChange(el);
+      return;
+    }
     if (shouldSkipRedundantGestionaleFocusScroll(el, "textarea-grow")) return;
     if (scrollRafRef.current != null) window.cancelAnimationFrame(scrollRafRef.current);
     scrollRafRef.current = window.requestAnimationFrame(() => {

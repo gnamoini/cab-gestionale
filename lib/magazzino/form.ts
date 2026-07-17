@@ -288,6 +288,43 @@ export function ricambioFormHasNoUserInput(
   return !ricambioFormIsDirty(current, baseline);
 }
 
+/** True se l'utente ha inserito almeno un dato significativo (esclude default strutturali). */
+export function ricambioFormHasMeaningfulUserInput(f: RicambioFormState): boolean {
+  const empty = emptyRicambioForm();
+  if (f.marca.trim()) return true;
+  if (f.codiceFornitoreOriginale.trim()) return true;
+  if (f.codiceFornitoreOriginaleSecondario.trim()) return true;
+  if (f.marcaOriginaleSecondaria.trim()) return true;
+  if (f.descrizione.trim()) return true;
+  if (f.note.trim()) return true;
+  if (f.categoria.trim()) return true;
+  if (f.compatibilitaMezzi.trim()) return true;
+  if (f.compatMarcheAttrezzaturaFiltro.trim()) return true;
+  if (f.compatMarcheTelaioFiltro.trim()) return true;
+  if (f.usatoInTagliandi) return true;
+  if (f.unitaMisura !== RICAMBIO_UNITA_MISURA_DEFAULT) return true;
+  if (fornitoriAlternativiFormRowsHaveContent(f.fornitoriAlternativi)) return true;
+  if (f.scorta.trim() !== empty.scorta.trim()) return true;
+  if (f.scortaMinima.trim() !== empty.scortaMinima.trim()) return true;
+  if (f.prezzoFornitoreOriginale.trim() !== empty.prezzoFornitoreOriginale.trim()) return true;
+  if (f.scontoFornitoreOriginale.trim() !== empty.scontoFornitoreOriginale.trim()) return true;
+  if (
+    normalizeMarkupInputString(f.markupPercentuale) !==
+    normalizeMarkupInputString(empty.markupPercentuale)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** Conferma uscita nuovo ricambio: solo se c'è input utente, non per drift di default. */
+export function ricambioFormNeedsCloseConfirm(
+  current: RicambioFormState,
+  baseline: RicambioFormState = emptyRicambioForm(),
+): boolean {
+  return ricambioFormIsDirty(current, baseline) && ricambioFormHasMeaningfulUserInput(current);
+}
+
 export function ricambioFromForm(
   f: RicambioFormState,
   id?: string,

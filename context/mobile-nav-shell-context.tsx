@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, type ReactNode
 
 type MobileNavShellContextValue = {
   openMobileNav: () => void;
+  isNavDrawerOpen: boolean;
   registerMobileNavTrigger: (el: HTMLElement | null) => void;
   getMobileNavTrigger: () => HTMLElement | null;
 };
@@ -12,9 +13,11 @@ const MobileNavShellContext = createContext<MobileNavShellContextValue | null>(n
 
 export function MobileNavShellProvider({
   openMobileNav,
+  isNavDrawerOpen = false,
   children,
 }: {
   openMobileNav: () => void;
+  isNavDrawerOpen?: boolean;
   children: ReactNode;
 }) {
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -26,8 +29,8 @@ export function MobileNavShellProvider({
   const getMobileNavTrigger = useCallback(() => triggerRef.current, []);
 
   const value = useMemo(
-    () => ({ openMobileNav, registerMobileNavTrigger, getMobileNavTrigger }),
-    [openMobileNav, registerMobileNavTrigger, getMobileNavTrigger],
+    () => ({ openMobileNav, isNavDrawerOpen, registerMobileNavTrigger, getMobileNavTrigger }),
+    [openMobileNav, isNavDrawerOpen, registerMobileNavTrigger, getMobileNavTrigger],
   );
 
   return (

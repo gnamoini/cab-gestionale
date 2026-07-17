@@ -25,7 +25,7 @@ export type BulkPdfRenderResult =
 
 type LabelItem = { payload: LabelPayload; qrUrl: string };
 
-function sanitizeFilenamePart(value: string): string {
+export function sanitizeFilenamePart(value: string): string {
   return value.replace(/[^\w.-]+/g, "_").slice(0, 48) || "etichetta";
 }
 
@@ -38,7 +38,7 @@ async function rasterizePngs(
   return mapWithConcurrency(items, concurrency, (item) => renderOne(item));
 }
 
-function assembleMultiLabelPdf(
+export function assembleMultiLabelPdf(
   template: LabelTemplateDefinition,
   items: LabelItem[],
   pngs: Buffer[],
@@ -83,26 +83,29 @@ async function renderMultiLabelPdfFallback(
   return assembleMultiLabelPdf(template, items, pngs);
 }
 
-function renderEmergencyLabelZip(items: LabelItem[], pngs: Buffer[]): Uint8Array {
+type EmergencyZipEntry = { ext: "png" | "svg"; bytes: Buffer };
+
+function renderEmergencyLabelZip(items: LabelItem[], entries: EmergencyZipEntry[]): Uint8Array {
   const files: Record<string, Uint8Array> = {};
   for (let i = 0; i < items.length; i++) {
     const code = sanitizeFilenamePart(items[i]!.payload.codice || `item-${i + 1}`);
-    files[`etichetta-${code}.png`] = new Uint8Array(pngs[i]!);
+    const entry = entries[i]!;
+    files[`etichetta-${code}.${entry.ext}`] = new Uint8Array(entry.bytes);
   }
   return zipSync(files, { level: 1 });
 }
 
 async function renderEmergencyZip(template: LabelTemplateDefinition, items: LabelItem[]): Promise<Uint8Array> {
-  const pngs: Buffer[] = [];
+  const entries: EmergencyZipEntry[] = [];
   for (const item of items) {
     try {
-      pngs.push(await renderLabelPngFallback(template, item.payload, item.qrUrl));
+      entries.push({ ext: "png", bytes: await renderLabelPngFallback(template, item.payload, item.qrUrl) });
     } catch {
       const svg = await renderLabelSvgBytes(template, item.payload, item.qrUrl);
-      pngs.push(svg);
+      entries.push({ ext: "svg", bytes: svg });
     }
   }
-  return renderEmergencyLabelZip(items, pngs);
+  return renderEmergencyLabelZip(items, entries);
 }
 
 export async function renderMultiLabelPdfWithPipeline(

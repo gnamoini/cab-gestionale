@@ -8,6 +8,7 @@ import {
 } from "@/lib/inventory-labels/domain/tokens";
 import type { InventoryEntityType, InventoryQrTokenRow, TokenStatus } from "@/lib/inventory-labels/domain/types";
 import { writeInventoryLabelEvent } from "@/lib/inventory-labels/audit/events.server";
+import { purgeLabelArtifactsForEntity, type PurgeLabelArtifactsResult } from "@/lib/inventory-labels/storage/artifact-purge.server";
 
 const MAX_TOKEN_COLLISION_RETRIES = 5;
 
@@ -104,7 +105,13 @@ export async function regenerateInventoryToken(
   userId?: string | null,
 ): Promise<InventoryQrTokenRow> {
   const active = await getActiveTokenForEntity(sb, entityType, entityId);
-  const newToken = await ensureActiveInventoryTokenAfterRevoke(sb, entityType, entityId, active, userId);
+  const { row: newToken, purge } = await ensureActiveInventoryTokenAfterRevoke(
+    sb,
+    entityType,
+    entityId,
+    active,
+    userId,
+  );
   await writeInventoryLabelEvent(sb, {
     eventType: "QR_REGENERATED",
     entityType,
@@ -113,6 +120,8 @@ export async function regenerateInventoryToken(
     payload: {
       previousTokenId: active?.id ?? null,
       token: newToken.token,
+      purgedArtifactCount: purge.dbDeleted,
+      storageDeleteFailures: purge.storageFailed.length ? purge.storageFailed : undefined,
     },
   });
   return newToken;
@@ -124,7 +133,7 @@ async function ensureActiveInventoryTokenAfterRevoke(
   entityId: string,
   active: InventoryQrTokenRow | null,
   userId?: string | null,
-): Promise<InventoryQrTokenRow> {
+): Promise<{ row: InventoryQrTokenRow; purge: PurgeLabelArtifactsResult }> {
   if (active) {
     const { error: revokeErr } = await sb
       .from("inventory_qr_tokens")
@@ -137,6 +146,8 @@ async function ensureActiveInventoryTokenAfterRevoke(
       .eq("status", "active");
     if (revokeErr) throw new Error(revokeErr.message);
   }
+
+  const purge = await purgeLabelArtifactsForEntity(sb, entityType, entityId);
 
   for (let attempt = 0; attempt < MAX_TOKEN_COLLISION_RETRIES; attempt++) {
     const token = generateInventoryPublicToken();
@@ -160,7 +171,7 @@ async function ensureActiveInventoryTokenAfterRevoke(
           .update({ superseded_by: data.id })
           .eq("id", active.id);
       }
-      return data as InventoryQrTokenRow;
+      return { row: data as InventoryQrTokenRow, purge };
     }
     if (error?.code === "23505") continue;
     if (error) throw new Error(error.message);

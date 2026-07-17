@@ -118,6 +118,82 @@ test("mobile nav drawer scrolls menu items", async ({ page }) => {
   await assertGestionalePageScrollUnlocked(page);
 });
 
+test("mobile nav drawer closes via ESC", async ({ page }) => {
+  attachConsoleGuards(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/dashboard");
+  await page.getByTestId("smoke-nav-drawer-open").click();
+  const dialog = page.getByRole("dialog", { name: "Menu principale" });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible({ timeout: 5_000 });
+  await assertGestionalePageScrollUnlocked(page);
+});
+
+test("mobile nav drawer does not open from center swipe", async ({ page }) => {
+  attachConsoleGuards(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/dashboard");
+
+  await page.evaluate(() => {
+    const startX = 200;
+    const endX = 320;
+    const y = 420;
+    const mkTouch = (x: number) =>
+      new Touch({
+        identifier: 1,
+        target: document.body,
+        clientX: x,
+        clientY: y,
+        pageX: x,
+        pageY: y,
+      });
+    document.dispatchEvent(
+      new TouchEvent("touchstart", {
+        bubbles: true,
+        cancelable: true,
+        touches: [mkTouch(startX)],
+        targetTouches: [mkTouch(startX)],
+      }),
+    );
+    document.dispatchEvent(
+      new TouchEvent("touchmove", {
+        bubbles: true,
+        cancelable: true,
+        touches: [mkTouch(endX)],
+        targetTouches: [mkTouch(endX)],
+      }),
+    );
+    document.dispatchEvent(
+      new TouchEvent("touchend", {
+        bubbles: true,
+        cancelable: true,
+        touches: [],
+        changedTouches: [mkTouch(endX)],
+      }),
+    );
+  });
+
+  await expect(page.getByRole("dialog", { name: "Menu principale" })).not.toBeVisible();
+});
+
+test("mobile nav rapid open close", async ({ page }) => {
+  attachConsoleGuards(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/dashboard");
+  const openBtn = page.getByTestId("smoke-nav-drawer-open");
+  await openBtn.click();
+  await openBtn.click({ force: true });
+  const dialog = page.getByRole("dialog", { name: "Menu principale" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Chiudi" }).click();
+  await expect(dialog).not.toBeVisible();
+  await assertGestionalePageScrollUnlocked(page);
+});
+
 test("main scrollbar track is reachable at viewport right edge", async ({ page }) => {
   attachConsoleGuards(page);
   await page.setViewportSize({ width: 1920, height: 720 });

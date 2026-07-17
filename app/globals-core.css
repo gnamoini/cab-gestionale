@@ -30,6 +30,9 @@ html.pwa-standalone [data-pwa-standalone-offset] {
   --cab-safe-bottom: env(safe-area-inset-bottom, 0px);
   --cab-safe-left: env(safe-area-inset-left, 0px);
   --cab-safe-right: env(safe-area-inset-right, 0px);
+  --cab-mobile-focus-top-offset: 16px;
+  --cab-mobile-focus-bottom-gap: 16px;
+  --cab-mobile-keyboard-safe-area: 32px;
   /* — CAB design tokens (SaaS enterprise, light) — */
   --cab-bg-app: #f4f4f5;
   --cab-bg: #fafafa;
@@ -356,25 +359,34 @@ html.pwa-standalone [data-pwa-standalone-offset] {
 
 .cab-nav-drawer-panel {
   touch-action: pan-y;
+  overscroll-behavior: contain;
   animation: cab-nav-drawer-in var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) both;
 }
 
 .cab-nav-drawer-panel.cab-nav-drawer-dragging {
   animation: none;
+  will-change: transform;
 }
 
 .cab-nav-drawer-panel.cab-nav-drawer-edge-opening {
   animation: none;
+  will-change: transform;
 }
 
 .cab-nav-drawer-panel.cab-nav-drawer-snap-back {
   animation: none;
   transition: transform var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease);
+  will-change: transform;
 }
 
 .cab-nav-drawer-panel.cab-nav-drawer-open-settled {
   animation: none;
-  transform: translateX(0);
+  transform: translate3d(0, 0, 0);
+}
+
+.cab-nav-drawer-locked {
+  pointer-events: none;
+  overscroll-behavior: none;
 }
 
 .cab-nav-drawer-backdrop.cab-nav-drawer-open-settled-backdrop {

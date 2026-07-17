@@ -39,9 +39,13 @@ export function useDashboardMetrics() {
     enabled: !staging,
     staleTime: viewOpts.staleTime,
   });
-  const lavActiveRows = useMemo(
-    () => (lavQuery.data ?? []).filter((r) => !r.deleted_at && isLavorazioneInCorso(r)),
+  const lavReportRows = useMemo(
+    () => (lavQuery.data ?? []).filter((r) => !r.deleted_at),
     [lavQuery.data],
+  );
+  const lavActiveRows = useMemo(
+    () => lavReportRows.filter((r) => isLavorazioneInCorso(r)),
+    [lavReportRows],
   );
   const schedeLavorazioneIds = useMemo(
     () => pickDashboardPriorityLavorazioneIds(lavActiveRows, DASHBOARD_SCHEde_PREFETCH_LIMIT),
@@ -135,6 +139,7 @@ export function useDashboardMetrics() {
     magQuery,
     magLogs,
     movLogs,
+    lavReportRows,
     lavActiveRows,
     lavRows,
     lavStats,

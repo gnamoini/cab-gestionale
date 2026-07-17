@@ -1,7 +1,7 @@
 "use client";
 
+import { Children, isValidElement, useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Tooltip } from "@/components/ui";
-import { Children, isValidElement, useMemo, type CSSProperties, type ReactNode } from "react";
 import {
   GlobalFixedListPillSelect,
   type FixedListPillOption,
@@ -29,6 +29,7 @@ import {
 import { formatLavorazioneIngressoDisplay } from "@/lib/lavorazioni/lavorazione-ingresso-display";
 import { statoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { dsFocus, dsTableActionsRowHeight } from "@/lib/ui/design-system";
+import { resolvePillTooltip } from "@/lib/ui/meaningful-tooltip";
 import {
   lavTablePillMinH,
   lavTablePillTextClass,
@@ -248,7 +249,14 @@ export function LavorazioneCompletamentoDatePill({
   );
 }
 
-/** Pill colorata solo lettura (storico): stessa silhouette delle celle tabella principale. */
+function reactNodeText(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(reactNodeText).join("");
+  if (isValidElement(node)) return reactNodeText((node.props as { children?: ReactNode }).children);
+  return "";
+}
+
+/** Pill colorata sola lettura (storico / kanban). */
 export function TablePillReadonly({
   shellClass,
   shellStyle,
@@ -262,17 +270,41 @@ export function TablePillReadonly({
   children: ReactNode;
   fitContent?: boolean;
 }) {
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [truncated, setTruncated] = useState(false);
+  const visibleText = reactNodeText(children);
+  const measure = useCallback(() => {
+    const el = textRef.current;
+    if (!el) return;
+    setTruncated(el.scrollWidth > el.clientWidth + 1);
+  }, []);
+
+  useLayoutEffect(() => {
+    measure();
+    const el = textRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [visibleText, measure]);
+
+  const tooltip = resolvePillTooltip(visibleText, title ?? visibleText, truncated);
   const widthClass = fitContent ? "w-fit max-w-none" : "min-w-0 max-w-[8.75rem]";
   const textClass = fitContent
     ? `min-w-0 flex-1 whitespace-nowrap ${lavTablePillTextClass} text-inherit`
     : `min-w-0 flex-1 truncate ${lavTablePillTextClass} text-inherit`;
-  return (
-    <Tooltip content={title}><div className={`${shellClass} overflow-hidden ${widthClass}`} style={shellStyle}>
+
+  const pill = (
+    <div className={`${shellClass} overflow-hidden ${widthClass}`} style={shellStyle}>
       <div className={`relative flex ${lavTablePillMinH} w-full items-center overflow-hidden rounded-[inherit] px-2 py-0.5`}>
-        <span className={textClass}>{children}</span>
+        <span ref={textRef} className={textClass}>
+          {children}
+        </span>
       </div>
-    </div></Tooltip>
+    </div>
   );
+
+  return tooltip ? <Tooltip content={tooltip}>{pill}</Tooltip> : pill;
 }
 
 const ADDETTI_RECENTS_KEY = "selector:addetti";
@@ -344,9 +376,9 @@ export function AddettoSelectField({
 
   const widthClass = tablePillWidth ?? "w-full min-w-0";
   return (
-    <Tooltip content={title}><div className={`group overflow-visible ${widthClass} ${disabled ? "opacity-60" : ""}`}>
+    <div className={`group overflow-visible ${widthClass} ${disabled ? "opacity-60" : ""}`}>
       <GlobalFixedListPillSelect value={value} onChange={onChange} options={pillOptions} ariaLabel={ariaLabel} disabled={disabled} title={title} sheetTitle={ariaLabel} shellClass={shellClass} fallbackPillStyle={shellStyle} size={size}/>
-    </div></Tooltip>
+    </div>
   );
 }
 
@@ -401,15 +433,15 @@ export function InlineSelectField({
 
   if (tablePill) {
     return (
-      <Tooltip content={title}><div className={`group ${shellOverflow} ${widthClass} ${disabled ? "opacity-60" : ""}`}>
+      <div className={`group ${shellOverflow} ${widthClass} ${disabled ? "opacity-60" : ""}`}>
         <GlobalFixedListPillSelect value={value} onChange={onChange} options={parsedOptions} ariaLabel={ariaLabel} disabled={disabled} title={title} shellClass={shellClass} fallbackPillStyle={shellStyle}/>
-      </div></Tooltip>
+      </div>
     );
   }
 
   /** @deprecated Usare `tablePill` + GlobalFixedListPillSelect o GlobalFixedListPillSelect diretto. */
   return (
-    <Tooltip content={title}><div className={`${shellClass} group overflow-hidden ${widthClass} ${disabled ? "opacity-60" : ""}`} style={shellStyle}>
+    <div className={`${shellClass} group overflow-hidden ${widthClass} ${disabled ? "opacity-60" : ""}`} style={shellStyle}>
       <div className={`relative flex ${lavTablePillMinH} w-full items-stretch overflow-hidden rounded-[inherit]`}>
           <select className={fullWidth || wide
         ? `${selectPillInner} w-full whitespace-nowrap pr-8`
@@ -420,6 +452,6 @@ export function InlineSelectField({
             {pillChevron}
           </span>
       </div>
-    </div></Tooltip>
+    </div>
   );
 }

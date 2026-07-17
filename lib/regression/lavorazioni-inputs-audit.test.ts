@@ -59,6 +59,9 @@ assert.match(schedeModal, /GlobalDatePicker/);
 
 assert.match(filterDrawer, /CAB_MODAL_ROOT_ATTR/);
 assert.match(filterDrawer, /CAB_MODAL_SCROLL_ATTR/);
+assert.match(filterDrawer, /createPortal/);
+assert.doesNotMatch(filterDrawer, /fixed inset-0 \$\{dsZModalHigh\} touch-none/);
+assert.match(filterDrawer, /touch-pan-y/);
 
 assert.match(ingressoForm, /htmlFor=\{dataIngressoFieldId\}/);
 assert.match(ingressoForm, /id=\{dataIngressoFieldId\}/);

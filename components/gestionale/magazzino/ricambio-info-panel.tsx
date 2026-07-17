@@ -10,6 +10,8 @@ import {
 import { HubModalPanoramicaPanel, hubPanoramicaDisplayValue } from "@/components/design-system/hub-modal-panoramica";
 import { LoadingFormSkeleton } from "@/components/design-system";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
+import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
+import { MagazzinoScortaAdjustActions } from "@/components/gestionale/magazzino/magazzino-scorta-adjust-actions";
 import { RecordImageManager, type RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import {
   GestionaleLogEntryDismissButton,
@@ -87,6 +89,10 @@ export function RicambioInfoPanel({
   logTimeline,
   logLoading,
   onDismissLogEntry,
+  canAdjustScorta = false,
+  canUndoScorta = false,
+  onAdjustScorta,
+  onUndoScorta,
 }: {
   ricambio: RicambioMagazzino;
   compatDisplay: string;
@@ -97,7 +103,12 @@ export function RicambioInfoPanel({
   logTimeline: ReadonlyArray<MagazzinoLogFeedItem>;
   logLoading: boolean;
   onDismissLogEntry: (id: string) => void;
+  canAdjustScorta?: boolean;
+  canUndoScorta?: boolean;
+  onAdjustScorta?: (delta: number) => void;
+  onUndoScorta?: () => void;
 }) {
+  const low = ricambio.scorta < ricambio.scortaMinima;
   const ultimaModifica = new Date(ricambio.dataUltimaModifica).toLocaleString("it-IT", {
     day: "2-digit",
     month: "2-digit",
@@ -169,7 +180,23 @@ export function RicambioInfoPanel({
 
       <GestionaleInfoCard title="Giacenza e consumo">
         <GestionaleInfoSubgroup title="Giacenza">
-          <GestionaleInfoRow label="Scorta" value={String(ricambio.scorta)} mono />
+          <GestionaleInfoRow
+            label="Scorta"
+            value={
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <MagazzinoScortaBadge value={ricambio.scorta} low={low} variant="table" />
+                {onAdjustScorta && onUndoScorta ? (
+                  <MagazzinoScortaAdjustActions
+                    canAdjust={canAdjustScorta}
+                    canUndo={canUndoScorta}
+                    onUndo={onUndoScorta}
+                    onDecrease={() => onAdjustScorta(-1)}
+                    onIncrease={() => onAdjustScorta(1)}
+                  />
+                ) : null}
+              </div>
+            }
+          />
           <GestionaleInfoRow label="Scorta minima" value={String(ricambio.scortaMinima)} mono />
         </GestionaleInfoSubgroup>
         <GestionaleInfoSubgroup title="Consumo (log magazzino)">

@@ -95,8 +95,8 @@ assert.match(
 assert.match(behaviorSrc, /scrollGestionaleFieldIntoView/);
 assert.match(behaviorSrc, /getEffectiveVisibleBand/);
 assert.match(behaviorSrc, /findStickyObstructions/);
-assert.match(behaviorSrc, /focusScrollGeneration/);
-assert.doesNotMatch(behaviorSrc, /focusScrollChain/);
+assert.match(behaviorSrc, /resolveScrollOwner/);
+assert.match(behaviorSrc, /syncFocusVisibilityCssVars/);
 
 const formSectionSrc = readFileSync(
   join(root, "components/gestionale/schede/gestionale-form-section.tsx"),
@@ -108,12 +108,11 @@ const lavorazioniSrc = readFileSync(
   join(root, "components/gestionale/lavorazioni/lavorazioni-modals.tsx"),
   "utf8",
 );
+const modalShellSrc = readFileSync(join(root, "components/gestionale/gestionale-modal-shell.tsx"), "utf8");
 assert.match(lavorazioniSrc, /CAB_FOCUS_SCROLL_GROUP_ATTR/);
-assert.match(lavorazioniSrc, /CAB_FOCUS_SCROLL_TITLE_ATTR/);
-assert.match(lavorazioniSrc, /useMaxMdDown/);
-assert.match(lavorazioniSrc, /CAB_MODAL_SCROLL_ATTR/);
-assert.match(lavorazioniSrc, /gestionaleModalScrollBodyMobileClass/);
-assert.match(lavorazioniSrc, /max-md:flex-none max-md:overflow-visible/);
+assert.match(lavorazioniSrc, /GestionaleModalScrollBody/);
+assert.match(modalShellSrc, /CAB_MODAL_SCROLL_ATTR/);
+assert.match(modalShellSrc, /gestionaleModalScrollBodyMobileClass/);
 
 const scrollBodySrc = readFileSync(
   join(root, "components/gestionale/mobile-modal-scroll-body.tsx"),
@@ -126,15 +125,15 @@ const modalBodyClassSrc = readFileSync(join(root, "lib/ui/modal-max-width-class.
 assert.match(modalBodyClassSrc, /max-md:flex-none max-md:overflow-visible/);
 
 const dsModalSrc = readFileSync(join(root, "components/design-system/modal.tsx"), "utf8");
-assert.match(dsModalSrc, /LavorazioniModalShell/);
+assert.match(dsModalSrc, /GestionaleModalShell/);
 assert.match(dsModalSrc, /GestionaleModalScrollBody/);
 
 const dsDrawerSrc = readFileSync(join(root, "components/design-system/drawer.tsx"), "utf8");
 assert.match(dsDrawerSrc, /useMaxMdDown/);
 
-const appShellSrc = readFileSync(join(root, "components/gestionale/app-shell.tsx"), "utf8");
+const appShellSrc = readFileSync(join(root, "components/gestionale/app-shell-sidebar.tsx"), "utf8");
 const navDrawerStart = appShellSrc.indexOf("function MobileNavDrawer");
-const navDrawerEnd = appShellSrc.indexOf("export function AppShell");
+const navDrawerEnd = appShellSrc.indexOf("export type AppShellSidebarProps");
 assert.ok(navDrawerStart >= 0 && navDrawerEnd > navDrawerStart, "MobileNavDrawer block expected");
 const mobileNavDrawerBlock = appShellSrc.slice(navDrawerStart, navDrawerEnd);
 assert.match(mobileNavDrawerBlock, /fixed inset-0 \$\{dsZModalHigh\} overscroll-none/);
@@ -159,13 +158,10 @@ assert.match(ricambioSrc, /CAB_FOCUS_SCROLL_TITLE_ATTR/);
 assert.match(ricambioSrc, /CAB_FIELD_LABEL_ATTR/);
 
 const keyboardHookSrc = readFileSync(join(root, "lib/ui/use-mobile-modal-keyboard.ts"), "utf8");
-assert.match(keyboardHookSrc, /scrollGestionaleFieldIntoView\(resolveFocusScrollTarget\(focused\)/);
+assert.doesNotMatch(keyboardHookSrc, /scrollGestionaleFieldIntoView/);
 assert.match(keyboardHookSrc, /isVirtualKeyboardClosing/);
 assert.match(keyboardHookSrc, /keyboardClosing/);
 assert.match(keyboardHookSrc, /preserveModalScrollTop/);
-assert.match(keyboardHookSrc, /keyboardClosing/);
 assert.match(keyboardHookSrc, /subscribeGestionaleViewport/);
-assert.doesNotMatch(keyboardHookSrc, /KEYBOARD_SETTLE_MS/);
-assert.match(keyboardHookSrc, /resolveFocusExtraTop/);
 
 console.log("mobile-modal-behavior.test.ts OK");

@@ -200,4 +200,38 @@ test.describe("mobile focus field visibility", () => {
     await page.waitForTimeout(100);
     await assertFieldFullyVisible(page, "Cliente");
   });
+
+  test("scheda ingresso: campo gia visibile non subisce scroll aggiuntivo su keyboard inset", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loginViaUi(page, adminCredentials());
+    await page.goto("/lavorazioni");
+    await clickNuovaLavorazioneCta(page);
+
+    const modal = page.locator("[data-cab-modal-root]").first();
+    const scrollHost = modal.locator("[data-cab-modal-scroll]").first();
+    await expect(scrollHost).toBeVisible();
+
+    const cliente = modal.getByLabel(/Cliente/i);
+    await cliente.click();
+    const scrollBefore = await scrollHost.evaluate((el) => el.scrollTop);
+    await mockKeyboardInset(page, 120);
+    await page.waitForTimeout(200);
+    const scrollAfter = await scrollHost.evaluate((el) => el.scrollTop);
+    const hit = await page.evaluate(() => {
+      const modal = document.querySelector("[data-cab-modal-root]");
+      const field = modal?.querySelector("input, textarea");
+      const label = modal?.querySelector("label, [data-cab-field-label]");
+      if (!(field instanceof HTMLElement) || !(label instanceof HTMLElement)) return { ok: false };
+      const vv = window.visualViewport;
+      const bottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+      const fieldRect = field.getBoundingClientRect();
+      const labelRect = label.getBoundingClientRect();
+      return {
+        ok: labelRect.top >= 0 && fieldRect.bottom <= bottom + 4,
+        scrollDelta: 0,
+      };
+    });
+    expect(hit.ok).toBe(true);
+    expect(Math.abs(scrollAfter - scrollBefore)).toBeLessThanOrEqual(8);
+  });
 });

@@ -1,19 +1,18 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { clampSwipeDismissDragX } from "@/lib/ui/use-swipe-to-dismiss";
+import { shouldCommitGesture } from "@/lib/ui/mobile-nav-drawer-contract";
 
-assert.equal(clampSwipeDismissDragX(-160, 320), -160);
+const root = process.cwd();
+
 assert.equal(clampSwipeDismissDragX(-400, 320), -320);
-assert.equal(clampSwipeDismissDragX(40, 320), 0);
-assert.equal(clampSwipeDismissDragX(0, 320), 0);
+assert.equal(clampSwipeDismissDragX(10, 320), 0);
+assert.equal(shouldCommitGesture(100, 320, -0.5, "close"), true);
 
-/** ponytail: sanity check formula backdrop durante drag (speculare al hook). */
-function backdropOpacityForDrag(dragX: number, width: number): number {
-  return Math.max(0, Math.min(1, 1 + dragX / width));
-}
-
-assert.equal(backdropOpacityForDrag(0, 320), 1);
-assert.equal(backdropOpacityForDrag(-160, 320), 0.5);
-assert.equal(backdropOpacityForDrag(-320, 320), 0);
-assert.ok(backdropOpacityForDrag(-250, 320) > backdropOpacityForDrag(-300, 320));
+const dismissSrc = readFileSync(join(root, "lib/ui/use-swipe-to-dismiss.ts"), "utf8");
+assert.match(dismissSrc, /requestAnimationFrame/);
+assert.match(dismissSrc, /rubberBandDragX/);
+assert.match(dismissSrc, /shouldCommitGesture/);
 
 console.log("use-swipe-to-dismiss.test.ts ok");

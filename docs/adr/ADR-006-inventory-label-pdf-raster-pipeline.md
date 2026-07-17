@@ -14,8 +14,8 @@ Bulk label PDF on Vercel failed with invisible text (fontconfig/librsvg) and OOM
 2. **Concurrency:** `LABEL_PDF_RENDER_CONCURRENCY` default **4**, clamped 2–8. Log `peakHeap` per batch.
 3. **Fallback:** reduced-DPI raster (150 DPI, concurrency 1) → same jsPDF assembly.
 4. **Emergency:** ZIP of per-label PNG (or SVG if PNG fails) — never a total dead end.
-5. **Async jobs:** `label_generation_jobs` is SSOT with `progress` 0–100 and `error_code`. `waitUntil` accelerates only.
-6. **Sync cap:** `BULK_SYNC_MAX` default **20** (`LABEL_BULK_SYNC_MAX` override). Above → 202 + job poll.
+5. **Async jobs:** `label_generation_jobs` is SSOT with `progress` 0–100, `heartbeat_at`, `error_code`. Background worker uses service-role client (IL-012). `waitUntil` accelerates only.
+6. **Sync cap:** `BULK_SYNC_MAX` default **10** (`LABEL_BULK_SYNC_MAX` override). `BULK_ABSOLUTE_MAX` **500**. Above sync → 202 + job poll. No chunk+merge PDF (audit: 0% heap reduction @ 500).
 7. **Timeout:** `LABEL_PDF_GENERATION_TIMEOUT_MS` default 240s → `LABEL_PDF_TIMEOUT` / HTTP 504.
 8. **Rollback:** `INVENTORY_LABEL_PDF_PIPELINE_V2=0` restores legacy embedded-font SVG path (emergency only).
 
@@ -44,7 +44,11 @@ Target: peak heap &lt; ~70% of runtime memory budget at count=100 with default c
 
 ## Recovery
 
-Jobs stuck in `running`/`pending` after Lambda death: re-trigger bulk or admin documents manual retry (ponytail: no cron yet).
+Jobs stuck in `running`/`pending` without fresh `heartbeat_at` (default 10 min) → `LABEL_JOB_STUCK` + `POST /api/inventory-labels/bulk/jobs/[id]` retry.
+
+## IL-017 (pipeline alternatives)
+
+V2 raster pipeline resta default. Alternative (headless browser, librsvg-only) non benchmarkate — nessun cambio pipeline senza dati.
 
 ## Consequences
 

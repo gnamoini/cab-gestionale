@@ -6,5 +6,6 @@ export const siteViewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   maximumScale: 1,
+  interactiveWidget: "resizes-content",
   themeColor: THEME_CRITICAL_BG.dark,
 };

@@ -12,8 +12,13 @@ function read(rel: string): string {
 }
 
 const behavior = read("lib/ui/mobile-modal-behavior.ts");
+const pipeline = read("lib/ui/focus-visibility-pipeline.ts");
+const flags = read("lib/ui/focus-visibility-flags.ts");
+const debug = read("lib/ui/focus-visibility-debug.ts");
 const orchestrator = read("lib/ui/gestionale-viewport-orchestrator.ts");
 const keyboardHook = read("lib/ui/use-mobile-modal-keyboard.ts");
+const modalFocus = read("components/gestionale/gestionale-modal-focus.ts");
+const formField = read("components/design-system/form-field.tsx");
 const iosStability = read("src/components/ios-interaction-stability.tsx");
 const overlayBehavior = read("lib/ui/use-gestionale-overlay-behavior.ts");
 const dropdownPortal = read("lib/ui/global-dropdown-portal.ts");
@@ -47,14 +52,29 @@ assert.doesNotMatch(behavior, /\[class\*="sticky"\]/);
 
 assert.match(orchestrator, /subscribeGestionaleViewport/);
 assert.match(orchestrator, /waitForViewportStable/);
-assert.match(orchestrator, /STABLE_FRAMES_REQUIRED/);
+assert.match(orchestrator, /DEFAULT_STABLE_FRAMES/);
+
+assert.match(behavior, /resolveScrollOwner/);
+assert.match(behavior, /FocusVisibilityManager/);
+assert.match(behavior, /syncFocusVisibilityCssVars/);
+assert.match(behavior, /isMobileFocusVisibilityV2/);
+assert.match(pipeline, /FocusTransactionStatus/);
+assert.match(pipeline, /scheduleManagedFocusScroll/);
+assert.match(flags, /NEXT_PUBLIC_MOBILE_FOCUS_VISIBILITY_V2/);
+assert.match(debug, /__CAB_FOCUS_DEBUG_EVENTS/);
+assert.match(orchestrator, /quietPeriod/);
+assert.match(orchestrator, /DEFAULT_TIMEOUT_MS/);
 
 assert.match(keyboardHook, /subscribeGestionaleViewport/);
-assert.match(keyboardHook, /shouldSkipRedundantGestionaleFocusScroll/);
+assert.doesNotMatch(keyboardHook, /scrollGestionaleFieldIntoView/);
+assert.doesNotMatch(keyboardHook, /scrollFocusedFieldInModal/);
 assert.match(keyboardHook, /findModalScrollContainer/);
 assert.match(keyboardHook, /CAB_MODAL_SCROLL_ATTR/);
 assert.doesNotMatch(keyboardHook, /KEYBOARD_SETTLE_MS/);
 assert.doesNotMatch(keyboardHook, /DEBOUNCE_MS/);
+
+assert.match(modalFocus, /preventScroll: true/);
+assert.match(formField, /CAB_FIELD_LABEL_ATTR/);
 
 assert.match(iosStability, /mountGestionaleViewportOrchestrator/);
 assert.match(iosStability, /handleFocusInForMobileModal/);
@@ -75,7 +95,7 @@ assert.match(confirmDialog, /CAB_MODAL_ROOT_ATTR/);
 assert.match(confirmDialog, /CAB_MODAL_SCROLL_ATTR/);
 assert.match(confirmDialog, /useGestionaleOverlayBehavior/);
 
-assert.match(textarea, /scrollGestionaleFieldIntoView/);
+assert.match(textarea, /notifyFocusBlockLayoutChange|scrollGestionaleFieldIntoView/);
 assert.match(textarea, /registerGestionaleTextareaViewportSync/);
 assert.match(textarea, /shouldSkipRedundantGestionaleFocusScroll/);
 assert.doesNotMatch(textarea, /subscribeGestionaleViewport/);

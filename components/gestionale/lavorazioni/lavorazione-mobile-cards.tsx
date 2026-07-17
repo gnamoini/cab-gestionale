@@ -109,7 +109,8 @@ export type LavorazioneAttivaMobileCardProps = {
   ultimaModificaInfo: LavorazioneUltimaModificaInfo;
   concludiDisabled: boolean;
   concludiClassName: string;
-  concludiTooltip: string;
+  concludiTooltip?: string;
+  concludiTooltipDisabled?: boolean;
   onStatoRow: (row: LavorazioneListRow, v: string) => void;
   onPrioritaRow: (row: LavorazioneListRow, v: string) => void;
   onAddettoRow: (row: LavorazioneListRow, v: string) => void;
@@ -138,6 +139,7 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
     concludiDisabled,
     concludiClassName,
     concludiTooltip,
+    concludiTooltipDisabled,
     onStatoRow,
     onPrioritaRow,
     onAddettoRow,
@@ -171,7 +173,6 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
               onChange={(v) => onStatoRow(row, v)}
               ariaLabel={`Stato — ${macchina}`}
               disabled={loading || !canEditWorkOrders}
-              title={statoLavorazioneLabel(row.stato as StatoLavorazione, statiOpts)}
             >
               <option value={row.stato}>{statoLavorazioneLabel(row.stato as StatoLavorazione, statiOpts)}</option>
             </InlineSelectField>
@@ -198,7 +199,6 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
             onChange={(v) => onPrioritaRow(row, v)}
             ariaLabel={`Priorità — ${macchina}`}
             disabled={loading || !canEditWorkOrders}
-            title={prioritaLabel(row.priorita)}
           >
             <option value={row.priorita}>{prioritaLabel(row.priorita)}</option>
           </InlineSelectField>
@@ -214,7 +214,6 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
             onChange={(v) => onAddettoRow(row, v)}
             ariaLabel={`Addetto — ${macchina}`}
             disabled={loading || !canEditWorkOrders || addetti.length === 0}
-            title={addettoLabel}
           />
         </LavMobileInlineField>
       </LavorazioneMobileControlsPanel>
@@ -224,6 +223,7 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
           disabled={concludiDisabled}
           className={concludiClassName}
           tooltipContent={concludiTooltip}
+          tooltipDisabled={concludiTooltipDisabled}
           onClick={() => onConcludi(row)}
         >
           <IconCloseWork />
@@ -345,7 +345,7 @@ function LavorazioneArchivioMobileCardInner({
       <LavorazioneMobileCardFooter meta={<LavorazioneMobileUltimaModifica info={ultimaModificaInfo} />}>
         <IconActionButton
           label="Ripristina"
-          tooltipContent={canEditWorkOrders ? "Ripristina" : "Sola lettura"}
+          tooltipContent={canEditWorkOrders ? undefined : "Sola lettura"}
           className={lavTableActionBtnDanger}
           disabled={!canEditWorkOrders || mutPendingBlocking || loading}
           onClick={() => onRipristina(row)}

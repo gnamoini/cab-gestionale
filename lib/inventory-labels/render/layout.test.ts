@@ -38,4 +38,8 @@ assert.equal(`${mixed.slice(0, -1).join("")} ${mixed[mixed.length - 1]}`, "8FSNS
 assert.ok(mixed.some((l) => l.includes("(BTE)")), "marca presente");
 assert.ok(mixed.every((l) => !/\([^)]*$/.test(l) || l.endsWith(")")), "marca non spezzata");
 
+const overflow = wrapLines("uno due tre quattro cinque sei sette otto nove dieci", 2, 8);
+assert.ok(overflow.length <= 2);
+assert.ok(overflow[overflow.length - 1]!.includes("…"), `ellipsis su overflow: ${JSON.stringify(overflow)}`);
+
 console.log("inventory-labels/render/layout.test.ts OK");

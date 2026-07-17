@@ -49,6 +49,10 @@ export function MagazzinoRicambioInfoModal({
   onEdit,
   onImageEvent,
   onDismissLogEntry,
+  canAdjustScorta,
+  canUndoScorta,
+  onAdjustScorta,
+  onUndoScorta,
 }: {
   ricambio: RicambioMagazzino;
   compatDisplay: string;
@@ -62,6 +66,10 @@ export function MagazzinoRicambioInfoModal({
   onEdit: () => void;
   onImageEvent: (ev: RecordImageLogEvent) => void;
   onDismissLogEntry: (id: string) => void;
+  canAdjustScorta: boolean;
+  canUndoScorta: boolean;
+  onAdjustScorta: (delta: number) => void;
+  onUndoScorta: () => void;
 }) {
   return (
     <GestionaleModalShell
@@ -106,6 +114,10 @@ export function MagazzinoRicambioInfoModal({
             logTimeline={logTimeline}
             logLoading={logLoading}
             onDismissLogEntry={onDismissLogEntry}
+            canAdjustScorta={canAdjustScorta}
+            canUndoScorta={canUndoScorta}
+            onAdjustScorta={onAdjustScorta}
+            onUndoScorta={onUndoScorta}
           />
         </GestionaleModalScrollBody>
       </div>

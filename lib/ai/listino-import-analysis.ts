@@ -1,15 +1,8 @@
 import "server-only";
 
-import { generateObjectWithGeminiFailover } from "@/lib/ai/gemini-generate-object.server";
-import {
-  GEMINI_AUTH_ERROR_HINT,
-  GEMINI_FILE_ANALYSIS_TIMEOUT_MS,
-  GEMINI_NOT_CONFIGURED_MESSAGE,
-  GEMINI_QUOTA_ERROR_HINT,
-  isGeminiAuthError,
-  isGeminiConfigured,
-  isGeminiQuotaError,
-} from "@/lib/ai/gemini-client";
+import { aiService } from "@/lib/ai/runtime/service";
+import { classifyAiError, aiErrorMessage } from "@/lib/ai/runtime/errors";
+import { readRuntimeTimeoutMs } from "@/lib/ai/runtime/env-reader";
 import { getPdfPageCount, splitPdfIntoPageRangeChunks } from "@/lib/ai/pdf-page-ranges.server";
 import {
   listinoImportAiRowsSchema,
@@ -51,15 +44,10 @@ type PdfChunkOutcome =
 
 function listinoAiFailureMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.name === "TimeoutError") {
-    return "Analisi listino scaduta per timeout. Riprova più tardi.";
+    return aiErrorMessage("AI_TIMEOUT");
   }
-  if (isGeminiAuthError(error)) {
-    return GEMINI_AUTH_ERROR_HINT;
-  }
-  if (isGeminiQuotaError(error)) {
-    return GEMINI_QUOTA_ERROR_HINT;
-  }
-  return error instanceof Error ? error.message : fallback;
+  const code = classifyAiError(error);
+  return aiErrorMessage(code);
 }
 
 function isRetryableListinoChunkMessage(message: string): boolean {
@@ -133,7 +121,7 @@ async function parseListinoPdfChunkWithAi(
   totalPages: number,
 ): Promise<PdfChunkOutcome> {
   try {
-    const { object: rawObject } = await generateObjectWithGeminiFailover({
+    const aiResult = await aiService.generateObject<z.infer<typeof listinoImportAiRowsSchema>>({
       schema: listinoImportAiRowsSchema,
       system: LISTINO_PDF_SYSTEM,
       messages: [
@@ -149,9 +137,13 @@ async function parseListinoPdfChunkWithAi(
         },
       ],
       temperature: 0.2,
-      abortSignal: AbortSignal.timeout(GEMINI_FILE_ANALYSIS_TIMEOUT_MS),
+      timeoutMs: readRuntimeTimeoutMs(),
+      operation: "listino_pdf_chunk",
     });
-    const object = rawObject as z.infer<typeof listinoImportAiRowsSchema>;
+    if (!aiResult.ok) {
+      return { ok: false, timedOut: aiResult.code === "AI_TIMEOUT", message: aiResult.message };
+    }
+    const object = aiResult.data.object;
 
     const rows = object.rows
       .map((r) => normalizeListinoRow(r, marcaDefault))
@@ -159,13 +151,10 @@ async function parseListinoPdfChunkWithAi(
 
     return { ok: true, rows, warnings: object.warnings ?? [] };
   } catch (error) {
-    if (isGeminiAuthError(error)) {
-      return { ok: false, timedOut: false, message: GEMINI_AUTH_ERROR_HINT };
-    }
     return {
       ok: false,
       timedOut: isTimeoutError(error),
-      message: listinoAiFailureMessage(error, "Analisi PDF non riuscita."),
+      message: listinoAiFailureMessage(error, "Analisi listino non riuscita."),
     };
   }
 }
@@ -206,7 +195,7 @@ async function parseChunkWithSplitRetry(
 }
 
 function isFatalListinoChunkError(message: string): boolean {
-  return message === GEMINI_AUTH_ERROR_HINT || message === GEMINI_QUOTA_ERROR_HINT;
+  return message.includes("AI_KEY") || message.includes("QUOTA") || message.includes("RATE_LIMIT");
 }
 
 async function runChunksSequential(
@@ -263,11 +252,12 @@ export async function parseListinoPdfWithAi(
   bytes: Uint8Array,
   marcaDefault: string,
 ): Promise<ListinoAiParseResult> {
-  if (!isGeminiConfigured()) {
+  const status = await aiService.getConfigurationStatus();
+  if (!status.configured) {
     return {
       ok: false,
       code: "not_configured",
-      message: GEMINI_NOT_CONFIGURED_MESSAGE,
+      message: aiErrorMessage("AI_CONFIG_MISSING"),
     };
   }
 
@@ -333,7 +323,7 @@ export async function mapListinoColumnsWithAi(
   matrix: unknown[][],
   marcaDefault: string,
 ): Promise<ListinoAiParseResult> {
-  if (!isGeminiConfigured()) {
+  if (!(await aiService.getConfigurationStatus()).configured) {
     return {
       ok: false,
       code: "not_configured",
@@ -344,14 +334,18 @@ export async function mapListinoColumnsWithAi(
   const sample = JSON.stringify(matrix.slice(0, 12));
 
   try {
-    const { object: rawObject } = await generateObjectWithGeminiFailover({
+    const aiResult = await aiService.generateObject<z.infer<typeof listinoImportColumnMapSchema>>({
       schema: listinoImportColumnMapSchema,
       system: LISTINO_COLUMNS_SYSTEM,
       prompt: `Marca default: ${marcaDefault}. Sample: ${sample}`,
       temperature: 0.1,
-      abortSignal: AbortSignal.timeout(GEMINI_FILE_ANALYSIS_TIMEOUT_MS),
+      timeoutMs: readRuntimeTimeoutMs(),
+      operation: "listino_column_map",
     });
-    const object = rawObject as z.infer<typeof listinoImportColumnMapSchema>;
+    if (!aiResult.ok) {
+      return { ok: false, code: "failed", message: aiResult.message };
+    }
+    const object = aiResult.data.object;
 
     if (object.codiceColumn == null || object.descrizioneColumn == null || object.costoColumn == null) {
       return { ok: false, code: "failed", message: "IA non ha identificato colonne codice/descrizione/prezzo." };

@@ -1,6 +1,20 @@
 import type { LabelPayload, LabelTemplateDefinition, LabelTemplateElement } from "@/lib/inventory-labels/domain/types";
 import { mmToPx, fontLineHeightMm } from "@/lib/inventory-labels/domain/templates";
 
+const ELLIPSIS = "…";
+
+function withEllipsis(line: string, maxLen: number): string {
+  if (line.length <= maxLen) return line;
+  if (maxLen <= 1) return ELLIPSIS;
+  return `${line.slice(0, maxLen - 1)}${ELLIPSIS}`;
+}
+
+function markTruncated(line: string, maxLen: number): string {
+  if (line.endsWith(ELLIPSIS)) return line;
+  if (line.length + ELLIPSIS.length <= maxLen) return `${line}${ELLIPSIS}`;
+  return withEllipsis(line, maxLen);
+}
+
 /** A capo su spazi — parola intera sulla riga successiva, mai spezzata se evitabile. */
 export function wrapLines(text: string, maxLines: number, maxCharsPerLine: number): string[] {
   const words = text.trim().split(/\s+/).filter(Boolean);
@@ -10,12 +24,10 @@ export function wrapLines(text: string, maxLines: number, maxCharsPerLine: numbe
   const perLine = Math.max(1, maxCharsPerLine);
   const lines: string[] = [];
   let current = "";
+  let wordIdx = 0;
 
-  const pushLine = (line: string) => {
-    if (lines.length < maxLines && line) lines.push(line);
-  };
-
-  for (const word of words) {
+  for (wordIdx = 0; wordIdx < words.length; wordIdx++) {
+    const word = words[wordIdx]!;
     if (lines.length >= maxLines) break;
     const next = current ? `${current} ${word}` : word;
     if (next.length <= perLine) {
@@ -23,17 +35,23 @@ export function wrapLines(text: string, maxLines: number, maxCharsPerLine: numbe
       continue;
     }
     if (current) {
-      pushLine(current);
+      lines.push(current);
       current = "";
       if (lines.length >= maxLines) break;
     }
-    // ponytail: parola intera a capo anche se supera maxChars — no split mid-word
     if (lines.length < maxLines) {
       current = word;
     }
   }
 
-  if (current && lines.length < maxLines) pushLine(current);
+  let hasOverflow = wordIdx < words.length;
+  if (current && lines.length < maxLines) lines.push(current);
+  else if (current) hasOverflow = true;
+
+  if (hasOverflow && lines.length) {
+    const last = lines.length - 1;
+    lines[last] = markTruncated(lines[last]!, perLine);
+  }
   return lines.length ? lines : [""];
 }
 
@@ -46,6 +64,10 @@ export function wrapChars(text: string, maxLines: number, maxCharsPerLine: numbe
   const lines: string[] = [];
   for (let i = 0; i < t.length && lines.length < maxLines; i += perLine) {
     lines.push(t.slice(i, i + perLine));
+  }
+  if (t.length > maxLines * perLine && lines.length) {
+    const last = lines.length - 1;
+    lines[last] = markTruncated(lines[last]!, perLine);
   }
   return lines.length ? lines : [""];
 }

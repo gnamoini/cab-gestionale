@@ -526,6 +526,17 @@ export const CONTROL_REGISTRY: readonly ControlDefinition[] = [
     impact: ["developer-experience", "compliance-audit"],
   },
   {
+    id: "governance.ai.runtime",
+    implementation: { type: "test-suite", reference: "ai-runtime" },
+    domain: "governance",
+    tier: "pr",
+    severity: "blocker",
+    status: "active",
+    owner: "platform",
+    sourceOfTruth: "lib/ai/runtime/service.ts",
+    impact: ["customer-data", "operations", "compliance-audit", "developer-experience"],
+  },
+  {
     id: "governance.lifecycle.deprecated",
     implementation: { type: "test-suite", reference: "registry-lifecycle" },
     domain: "governance",

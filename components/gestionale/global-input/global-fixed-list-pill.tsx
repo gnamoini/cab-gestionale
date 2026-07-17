@@ -11,12 +11,14 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
 import { dsFocus } from "@/lib/ui/design-system";
+import { resolvePillTooltip } from "@/lib/ui/meaningful-tooltip";
 import { dsIosInputTextSize } from "@/lib/ui/ios-mobile-tokens";
 import { globalFixedListPillMenuPanel } from "@/lib/ui/global-input";
 import {
@@ -102,6 +104,26 @@ export function GlobalFixedListPillSelect({
   const selected = options.find((o) => o.value === value);
   const triggerStyle = selected?.pillStyle ?? fallbackPillStyle;
   const resolvedSheetTitle = sheetTitle ?? ariaLabel;
+  const visibleLabel = selected?.label ?? value;
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const [labelTruncated, setLabelTruncated] = useState(false);
+
+  const measureLabelTruncation = useCallback(() => {
+    const el = labelRef.current;
+    if (!el) return;
+    setLabelTruncated(el.scrollWidth > el.clientWidth + 1);
+  }, []);
+
+  useLayoutEffect(() => {
+    measureLabelTruncation();
+    const el = labelRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(measureLabelTruncation);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [visibleLabel, measureLabelTruncation]);
+
+  const pillTooltip = resolvePillTooltip(visibleLabel, title, labelTruncated);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -210,23 +232,39 @@ export function GlobalFixedListPillSelect({
       </ul>
     ) : null;
 
-  return (
-    <div ref={shellRef} className={`relative flex w-full ${sizeShellClass[size]} items-stretch`}>
-      <Tooltip content={title}><button ref={triggerRef} type="button" style={triggerStyle} className={`flex w-full min-w-0 cursor-pointer items-center justify-center gap-1 text-center ${size === "form" ? "text-sm font-medium leading-snug" : fixedListPillTextClass} ${sizeTriggerClass[size]} outline-none transition-[filter,box-shadow,background-color,border-color,color] duration-150 hover:brightness-[1.04] disabled:cursor-not-allowed disabled:opacity-60 ${dsFocus} ${shellClass ?? "rounded-lg border border-black/10 shadow-sm dark:border-white/10"}`} aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} aria-controls={listId} disabled={disabled} onClick={() => {
-        if (disabled)
-            return;
+  const triggerButton = (
+    <button
+      ref={triggerRef}
+      type="button"
+      style={triggerStyle}
+      className={`flex w-full min-w-0 cursor-pointer items-center justify-center gap-1 text-center ${size === "form" ? "text-sm font-medium leading-snug" : fixedListPillTextClass} ${sizeTriggerClass[size]} outline-none transition-[filter,box-shadow,background-color,border-color,color] duration-150 hover:brightness-[1.04] disabled:cursor-not-allowed disabled:opacity-60 ${dsFocus} ${shellClass ?? "rounded-lg border border-black/10 shadow-sm dark:border-white/10"}`}
+      aria-label={ariaLabel}
+      aria-haspopup="listbox"
+      aria-expanded={open}
+      aria-controls={listId}
+      disabled={disabled}
+      onClick={() => {
+        if (disabled) return;
         if (useMobileSheet) {
-            captureFocus();
-            setOpen(true);
-            setActiveIndex(-1);
-            return;
+          captureFocus();
+          setOpen(true);
+          setActiveIndex(-1);
+          return;
         }
         setOpen((o) => !o);
         setActiveIndex(-1);
-    }}>
-        <span className="min-w-0 truncate">{selected?.label ?? value}</span>
-        {pillChevron}
-      </button></Tooltip>
+      }}
+    >
+      <span ref={labelRef} className="min-w-0 truncate">
+        {visibleLabel}
+      </span>
+      {pillChevron}
+    </button>
+  );
+
+  return (
+    <div ref={shellRef} className={`relative flex w-full ${sizeShellClass[size]} items-stretch`}>
+      {pillTooltip ? <Tooltip content={pillTooltip}>{triggerButton}</Tooltip> : triggerButton}
       {typeof document !== "undefined" && menu ? createPortal(menu, document.body) : null}
       <GestionaleSearchableSheetSelect
         open={open && useMobileSheet}

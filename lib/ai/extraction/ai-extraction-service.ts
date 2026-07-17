@@ -1,14 +1,9 @@
 import "server-only";
 
-import type { LanguageModel } from "ai";
 import type { ZodType } from "zod";
-import {
-  GEMINI_FILE_ANALYSIS_TIMEOUT_MS,
-  GEMINI_NOT_CONFIGURED_MESSAGE,
-  isGeminiConfigured,
-  resolveGeminiReportModelId,
-} from "@/lib/ai/gemini-client";
-import { generateObjectWithGeminiFailover } from "@/lib/ai/gemini-generate-object.server";
+import { aiService } from "@/lib/ai/runtime/service";
+import { aiErrorMessage } from "@/lib/ai/runtime/errors";
+import { readRuntimeModelForProvider, readRuntimeTimeoutMs } from "@/lib/ai/runtime/env-reader";
 import { writeImportAuditEvent } from "@/lib/import-core/import-audit-events.server";
 import type { ImportExecutionFeature } from "@/lib/import-core/types";
 import { touchImportExecutionHeartbeat, updateImportExecutionStatus } from "@/lib/import-core/import-executions.server";
@@ -22,8 +17,7 @@ export type AiExtractionRequest<T> = {
   schema: ZodType<T>;
   system: string;
   prompt: string;
-  messages?: Parameters<typeof generateObjectWithGeminiFailover>[0]["messages"];
-  model?: LanguageModel;
+  messages?: Parameters<typeof import("ai").generateObject>[0]["messages"];
   timeoutMs?: number;
   temperature?: number;
   promptVersion?: string;
@@ -42,13 +36,14 @@ export type AiExtractionResult<T> = {
 };
 
 export async function runAiExtraction<T>(input: AiExtractionRequest<T>): Promise<AiExtractionResult<T>> {
-  if (!isGeminiConfigured()) {
-    throw new Error(GEMINI_NOT_CONFIGURED_MESSAGE);
+  if (!(await aiService.getConfigurationStatus()).configured) {
+    throw new Error(aiErrorMessage("AI_CONFIG_MISSING"));
   }
 
   const sb = await createSupabaseServerUserClient();
-  const timeoutMs = input.timeoutMs ?? GEMINI_FILE_ANALYSIS_TIMEOUT_MS;
+  const timeoutMs = input.timeoutMs ?? readRuntimeTimeoutMs();
   const workerId = input.workerId ?? `worker-${input.executionId.slice(0, 8)}`;
+  const modelId = readRuntimeModelForProvider("google");
 
   await updateImportExecutionStatus(sb, {
     executionId: input.executionId,
@@ -70,18 +65,28 @@ export async function runAiExtraction<T>(input: AiExtractionRequest<T>): Promise
 
   const t0 = performance.now();
   try {
-    const baseInput = {
-      model: input.model,
-      schema: input.schema,
-      system: input.system,
-      temperature: input.temperature ?? 0.2,
-      abortSignal: AbortSignal.timeout(timeoutMs),
-    };
     const result = input.messages
-      ? await generateObjectWithGeminiFailover({ ...baseInput, messages: input.messages })
-      : await generateObjectWithGeminiFailover({ ...baseInput, prompt: input.prompt });
+      ? await aiService.generateObject<T>({
+          schema: input.schema,
+          system: input.system,
+          messages: input.messages,
+          temperature: input.temperature ?? 0.2,
+          timeoutMs,
+          operation: `import_${input.feature}`,
+        })
+      : await aiService.generateObject<T>({
+          schema: input.schema,
+          system: input.system,
+          prompt: input.prompt,
+          temperature: input.temperature ?? 0.2,
+          timeoutMs,
+          operation: `import_${input.feature}`,
+        });
+
+    if (!result.ok) throw new Error(result.message);
+
     const durationMs = Math.round(performance.now() - t0);
-    const usage = result.usage ?? {};
+    const usage = result.data.usage ?? {};
     const tokens = {
       input: Number(usage.inputTokens ?? 0),
       output: Number(usage.outputTokens ?? 0),
@@ -91,13 +96,13 @@ export async function runAiExtraction<T>(input: AiExtractionRequest<T>): Promise
       .from("import_executions")
       .update({
         provider: "google_gemini",
-        model_id: resolveGeminiReportModelId(),
+        model_id: modelId,
         prompt_version: input.promptVersion ?? "1",
         tokens_input: tokens.input,
         tokens_output: tokens.output,
         duration_ms: durationMs,
         heartbeat_at: new Date().toISOString(),
-        result: result.object as Record<string, unknown>,
+        result: result.data.object as Record<string, unknown>,
       })
       .eq("id", input.executionId);
 
@@ -113,9 +118,9 @@ export async function runAiExtraction<T>(input: AiExtractionRequest<T>): Promise
     });
 
     return {
-      data: result.object as T,
+      data: result.data.object,
       provider: "google_gemini",
-      modelId: resolveGeminiReportModelId(),
+      modelId,
       promptVersion: input.promptVersion ?? "1",
       durationMs,
       tokens,

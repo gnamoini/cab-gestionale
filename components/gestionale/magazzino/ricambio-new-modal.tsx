@@ -18,10 +18,10 @@ import {
   emptyRicambioForm,
   ricambioFormHasNoUserInput,
   ricambioFormImportantWarnings,
-  ricambioFormIsDirty,
-  RICAMBIO_SAVE_EMPTY_FORM_MESSAGE,
+  ricambioFormNeedsCloseConfirm,
   ricambioFromFormLenient,
   ricambioLenientPlaceholderFlags,
+  RICAMBIO_SAVE_EMPTY_FORM_MESSAGE,
   validateRicambioListFields,
   type RicambioFormState,
 } from "@/lib/magazzino/form";
@@ -84,9 +84,12 @@ export function RicambioNewModal({
   const backResyncCleanupRef = useRef<(() => void) | null>(null);
   const [codiceScan, setCodiceScan] = useState({ primary: "", secondary: "" });
   const baselineForm = useMemo(() => emptyRicambioForm(), []);
-  const isDirty = useMemo(() => ricambioFormIsDirty(newDraft, baselineForm), [newDraft, baselineForm]);
+  const needsCloseConfirm = useMemo(
+    () => ricambioFormNeedsCloseConfirm(newDraft, baselineForm),
+    [newDraft, baselineForm],
+  );
 
-  useBeforeUnloadWhenDirty(isDirty, "Hai modifiche non salvate nel nuovo ricambio.");
+  useBeforeUnloadWhenDirty(needsCloseConfirm, "Hai modifiche non salvate nel nuovo ricambio.");
 
   useEffect(() => () => clearOverlayBackResync(backResyncCleanupRef), []);
 
@@ -132,7 +135,7 @@ export function RicambioNewModal({
         setDiscardConfirmOpen(false);
         return;
       }
-      if (isDirty) {
+      if (needsCloseConfirm) {
         setDiscardConfirmOpen(true);
         if (ctx?.fromPopstate) {
           ensureOverlayBackResync(
@@ -145,7 +148,7 @@ export function RicambioNewModal({
       }
       performClose();
     },
-    [discardConfirmOpen, isDirty, performClose, saveBusy],
+    [discardConfirmOpen, needsCloseConfirm, performClose, saveBusy],
   );
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {

@@ -1,26 +1,11 @@
 import { NextResponse } from "next/server";
-import { generateText } from "ai";
+import { aiService } from "@/lib/ai/runtime/service";
 import { buildGeminiOpsConfigurationPayload } from "@/lib/ai/gemini-env-diagnostics";
-import { classifyGeminiError } from "@/lib/ai/gemini-error-types";
-import {
-  isGeminiAuthError,
-  isGeminiUnreachableError,
-} from "@/lib/ai/gemini-api-keys";
-import {
-  GEMINI_AUTH_ERROR_HINT,
-  GEMINI_NOT_CONFIGURED_MESSAGE,
-  getGeminiReportModelForApiKey,
-  listGeminiApiKeys,
-  resolveGeminiConfigurationGate,
-  resolveGeminiReportModelId,
-} from "@/lib/ai/gemini-client";
-import { logGeminiClientCreated, logGeminiRequestFailed } from "@/lib/ai/gemini-observability.server";
+import { resolveGeminiReportModelId } from "@/lib/ai/gemini-client";
 import { requireOpsAdmin } from "@/lib/ops/ops-api-auth.server";
 
 export const runtime = "nodejs";
 export const maxDuration = 15;
-
-const HEALTH_CHECK_TIMEOUT_MS = 10_000;
 
 export async function POST() {
   const auth = await requireOpsAdmin();
@@ -28,16 +13,16 @@ export async function POST() {
 
   const modelId = resolveGeminiReportModelId();
   const base = buildGeminiOpsConfigurationPayload(modelId);
-  const configGate = resolveGeminiConfigurationGate();
+  const status = await aiService.getConfigurationStatus();
 
-  if (configGate) {
+  if (!status.configured) {
     return NextResponse.json(
       {
         ...base,
         success: false,
         latencyMs: 0,
-        errorType: configGate.errorType,
-        errorMessage: configGate.message,
+        errorType: "AI_CONFIG_MISSING",
+        errorMessage: "Servizio AI non configurato.",
         httpStatus: 503,
         reachable: false,
       },
@@ -45,69 +30,40 @@ export async function POST() {
     );
   }
 
-  const keys = listGeminiApiKeys();
-  const primary = keys[0]!;
-  const primarySource = base.primarySource;
-  const formatValid = base.formatValid;
-  const t0 = performance.now();
+  const result = await aiService.generateText({
+    prompt: "ok",
+    operation: "ops_health_check",
+    timeoutMs: 10_000,
+  });
 
-  try {
-    const model = getGeminiReportModelForApiKey(primary, modelId);
-    logGeminiClientCreated({ primarySource, model: modelId });
-    await generateText({
-      model,
-      prompt: "ok",
-      abortSignal: AbortSignal.timeout(HEALTH_CHECK_TIMEOUT_MS),
-    });
-    const latencyMs = Math.round(performance.now() - t0);
-    return NextResponse.json({
-      ...base,
-      success: true,
-      latencyMs,
-      errorType: null,
-      errorMessage: null,
-      httpStatus: 200,
-      formatValid,
-      reachable: true,
-      lastInitializationError: null,
-    });
-  } catch (error) {
-    const latencyMs = Math.round(performance.now() - t0);
-    const errorType = isGeminiAuthError(error)
-      ? "AUTH_INVALID_KEY"
-      : isGeminiUnreachableError(error)
-        ? "NETWORK_ERROR"
-        : classifyGeminiError(error);
-    const errorMessage =
-      errorType === "AUTH_INVALID_KEY"
-        ? GEMINI_AUTH_ERROR_HINT
-        : errorType === "NETWORK_ERROR"
-          ? "Chiave presente ma API Gemini non raggiungibile."
-          : error instanceof Error
-            ? error.message
-            : "Test Gemini fallito";
-    logGeminiRequestFailed({
-      model: modelId,
-      operation: "ops_health_check",
-      durationMs: latencyMs,
-      errorCode: errorType,
-      errorMessage,
-    });
-    const httpStatus =
-      errorType === "AUTH_INVALID_KEY" || errorType === "AUTH_FORBIDDEN" ? 502 : 503;
+  if (!result.ok) {
+    const httpStatus = result.code === "AI_KEY_INVALID" ? 502 : 503;
     return NextResponse.json(
       {
         ...base,
         success: false,
-        latencyMs,
-        errorType,
-        errorMessage,
+        latencyMs: result.meta?.durationMs ?? 0,
+        errorType: result.code,
+        errorMessage: result.message,
         httpStatus,
-        formatValid,
         reachable: false,
-        lastInitializationError: errorMessage,
+        degradedMode: status.degradedMode,
       },
       { status: httpStatus },
     );
   }
+
+  return NextResponse.json({
+    ...base,
+    success: true,
+    latencyMs: result.meta.durationMs,
+    errorType: null,
+    errorMessage: null,
+    httpStatus: 200,
+    formatValid: true,
+    reachable: true,
+    activeKeyCount: status.activeKeyCount,
+    degradedMode: status.degradedMode,
+    lastInitializationError: null,
+  });
 }

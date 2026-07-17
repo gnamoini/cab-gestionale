@@ -35,12 +35,12 @@ SSOT: [`lib/inventory-labels/`](../lib/inventory-labels/)
 | `/api/inventory-labels/ricambi/[id]` | GET | Metadata token + URL QR |
 | `/api/inventory-labels/ricambi/[id]/render` | GET | `?format=png\|svg\|pdf&preset=` |
 | `/api/inventory-labels/ricambi/[id]/regenerate` | POST | Revoca + nuovo token |
-| `/api/inventory-labels/bulk` | POST | Sync PDF ≤20 (default), job async oltre |
-| `/api/inventory-labels/bulk/jobs/[id]` | GET | Poll `progress` / download PDF o ZIP |
+| `/api/inventory-labels/bulk` | POST | Sync PDF ≤10 (default), job async oltre; max 500 |
+| `/api/inventory-labels/bulk/jobs/[id]` | GET / POST | Poll `progress` / download; POST retry job stuck |
 
 ## Preset etichetta
 
-40×20, 50×30, 60×40, 70×50, 80×40, 80×50 mm — definiti in `domain/templates.ts` (`computeLabelLayout`).
+40×20, 50×30, 60×40, 70×50, 80×40, 80×50, 95×40 mm — definiti in `domain/templates.ts` (`computeLabelLayout`).
 
 **Layout (v1.5.0):** QR grande a sinistra; barcode Code128 sotto il QR; a destra:
 
@@ -70,10 +70,15 @@ Esclusi: prezzo, quantità, costo, fornitore principale, note.
 |----------|---------|--------|
 | `INVENTORY_LABEL_PDF_PIPELINE_V2` | `1` | `0` = legacy font-embed path (rollback) |
 | `LABEL_PDF_RENDER_CONCURRENCY` | `4` | Parallel sharp raster (2–8) |
-| `LABEL_BULK_SYNC_MAX` | `20` | Max labels in sync HTTP response |
+| `LABEL_BULK_SYNC_MAX` | `10` | Max labels in sync HTTP response |
 | `LABEL_PDF_GENERATION_TIMEOUT_MS` | `240000` | Server generation timeout |
+| `LABEL_JOB_STUCK_THRESHOLD_MS` | `600000` | Job async marcato stuck senza heartbeat |
 
-**Bulk:** ≤ sync max → PDF/ZIP in one response; above → `202 { jobId }` + poll `progress`. UI: preparing → generating (%) → downloading.
+**Bulk:** ≤ sync max → PDF/ZIP in one response; above → `202 { jobId }` + poll `progress`. Rate limit: 3 req/min per utente. Client timeout fetch sync: 280s (server 300s).
+
+**Stampa officina:** [`inventory-labels-printing.md`](./inventory-labels-printing.md)
+
+**Storage policy:** [`inventory-labels-storage-policy.md`](./inventory-labels-storage-policy.md)
 
 **Benchmark:** `npm run benchmark:label-pdf-memory`
 

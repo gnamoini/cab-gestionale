@@ -3,7 +3,10 @@
  * keyboard pad modali, dropdown reposition e body-scroll-lock heal.
  */
 
-import { computeKeyboardInset, syncKeyboardCssVars } from "@/lib/ui/mobile-modal-behavior";
+import {
+  computeKeyboardInset,
+  syncFocusVisibilityCssVars,
+} from "@/lib/ui/mobile-modal-behavior";
 import { syncAppViewportFill } from "@/lib/ui/viewport-fill-sync";
 import { isBootInvestigationEnabled, logBoot } from "@/lib/observability/boot-investigation";
 
@@ -15,9 +18,18 @@ export type ViewportSnapshot = {
   vvOffsetTop: number;
 };
 
+export type WaitForViewportStableOptions = {
+  signal?: AbortSignal;
+  stableFrames?: number;
+  quietPeriod?: number;
+  timeout?: number;
+};
+
 type ViewportSubscriber = (snapshot: ViewportSnapshot, reason: ViewportChangeReason) => void;
 
-const STABLE_FRAMES_REQUIRED = 2;
+const DEFAULT_STABLE_FRAMES = 2;
+const DEFAULT_QUIET_PERIOD_MS = 80;
+const DEFAULT_TIMEOUT_MS = 500;
 const STABLE_MAX_FRAMES = 12;
 
 let mounted = false;
@@ -28,11 +40,21 @@ let pendingReason: ViewportChangeReason = "resize";
 let vvSyncCount = 0;
 let vvSyncWindowStart = 0;
 
+function snapshotKey(snapshot: ViewportSnapshot): string {
+  return `${snapshot.keyboardInset}:${snapshot.vvHeight}:${snapshot.vvOffsetTop}`;
+}
+
 type StableWaiter = {
   stableFrames: number;
+  stableFramesRequired: number;
   maxFrames: number;
-  lastInset: number;
+  lastKey: string;
+  quietSince: number;
+  quietPeriodMs: number;
+  timeoutAt: number;
+  signal?: AbortSignal;
   resolve: () => void;
+  reject: (err: Error) => void;
 };
 
 const stableWaiters: StableWaiter[] = [];
@@ -65,16 +87,33 @@ function notifySubscribers(reason: ViewportChangeReason): void {
 }
 
 function processStableWaiters(snapshot: ViewportSnapshot): void {
+  const now = Date.now();
+  const key = snapshotKey(snapshot);
+
   for (let i = stableWaiters.length - 1; i >= 0; i--) {
     const waiter = stableWaiters[i]!;
+    if (waiter.signal?.aborted) {
+      waiter.reject(new DOMException("Aborted", "AbortError"));
+      stableWaiters.splice(i, 1);
+      continue;
+    }
+
     waiter.maxFrames -= 1;
-    if (snapshot.keyboardInset === waiter.lastInset) {
+
+    if (key === waiter.lastKey) {
       waiter.stableFrames += 1;
     } else {
       waiter.stableFrames = 0;
-      waiter.lastInset = snapshot.keyboardInset;
+      waiter.lastKey = key;
+      waiter.quietSince = now;
     }
-    if (waiter.stableFrames >= STABLE_FRAMES_REQUIRED || waiter.maxFrames <= 0) {
+
+    const quietElapsed = now - waiter.quietSince;
+    const frameStable = waiter.stableFrames >= waiter.stableFramesRequired;
+    const quietStable = quietElapsed >= waiter.quietPeriodMs && waiter.stableFrames >= 1;
+    const timedOut = now >= waiter.timeoutAt || waiter.maxFrames <= 0;
+
+    if (frameStable || quietStable || timedOut) {
       waiter.resolve();
       stableWaiters.splice(i, 1);
     }
@@ -82,7 +121,7 @@ function processStableWaiters(snapshot: ViewportSnapshot): void {
 }
 
 function runViewportSync(reason: ViewportChangeReason): void {
-  syncKeyboardCssVars();
+  syncFocusVisibilityCssVars();
   syncAppViewportFill();
   const snapshot = getViewportSnapshot();
   notifySubscribers(reason);
@@ -145,19 +184,47 @@ export function subscribeGestionaleViewport(callback: ViewportSubscriber): () =>
 }
 
 /**
- * Attende stabilizzazione inset tastiera (2 frame consecutivi invariati, cap 12 frame).
- * Usato dopo focus scroll — non è un delay UX arbitrario.
+ * Attende stabilizzazione viewport: tuple invariata per quietPeriod OPPURE timeout.
  */
-export function waitForViewportStable(): Promise<void> {
+export function waitForViewportStable(options: WaitForViewportStableOptions = {}): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
   ensureGestionaleViewportOrchestrator();
-  return new Promise((resolve) => {
-    stableWaiters.push({
+
+  const {
+    signal,
+    stableFrames = DEFAULT_STABLE_FRAMES,
+    quietPeriod = DEFAULT_QUIET_PERIOD_MS,
+    timeout = DEFAULT_TIMEOUT_MS,
+  } = options;
+
+  if (signal?.aborted) {
+    return Promise.reject(new DOMException("Aborted", "AbortError"));
+  }
+
+  return new Promise((resolve, reject) => {
+    const now = Date.now();
+    const snapshot = getViewportSnapshot();
+    const waiter: StableWaiter = {
       stableFrames: 0,
+      stableFramesRequired: stableFrames,
       maxFrames: STABLE_MAX_FRAMES,
-      lastInset: getViewportSnapshot().keyboardInset,
+      lastKey: snapshotKey(snapshot),
+      quietSince: now,
+      quietPeriodMs: quietPeriod,
+      timeoutAt: now + timeout,
+      signal,
       resolve,
-    });
+      reject,
+    };
+
+    const onAbort = () => {
+      const idx = stableWaiters.indexOf(waiter);
+      if (idx >= 0) stableWaiters.splice(idx, 1);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+
+    stableWaiters.push(waiter);
     scheduleViewportSync("resize");
   });
 }

@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { DisabledElementTooltip } from "@/components/ui";
 import { erpBtnNeutral, erpBtnSubtleNew } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { DEFAULT_LABEL_PRESET, LABEL_PRESET_IDS } from "@/lib/inventory-labels";
-import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
+import { DEFAULT_LABEL_PRESET, LABEL_PRESET_IDS, labelPresetOptionLabel } from "@/lib/inventory-labels";
+import { normalizePdfDownloadFileName, openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
@@ -29,7 +29,12 @@ export function RicambioLabelActions({
   const [preset, setPreset] = useState(DEFAULT_LABEL_PRESET);
   const [meta, setMeta] = useState<LabelMeta | null>(null);
   const [loading, setLoading] = useState(false);
+  const [openingPdf, setOpeningPdf] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const [showQrUrl, setShowQrUrl] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const busy = loading || openingPdf || printing;
 
   const loadMeta = useCallback(async () => {
     setLoading(true);
@@ -63,6 +68,11 @@ export function RicambioLabelActions({
     return `/api/inventory-labels/ricambi/${encodeURIComponent(ricambioId)}/render?${sp.toString()}`;
   }
 
+  function pdfFileName(): string {
+    const safe = codice.replace(/[^a-zA-Z0-9_-]/g, "") || ricambioId.slice(0, 8);
+    return normalizePdfDownloadFileName(`etichetta-${safe}.pdf`);
+  }
+
   async function handlePreview() {
     await ensureExpanded();
     setLoading(true);
@@ -79,17 +89,24 @@ export function RicambioLabelActions({
     }
   }
 
-  function handleOpenPdf() {
-    void (async () => {
-      await ensureExpanded();
-      openUrlInNewTab(renderUrl("pdf"), {
-        blockedMessage: "Impossibile aprire il PDF. Consenti i pop-up per questo sito.",
-      });
-    })();
+  async function handleOpenPdf() {
+    await ensureExpanded();
+    setOpeningPdf(true);
+    try {
+      const res = await fetch(renderUrl("pdf"));
+      if (!res.ok) throw new Error("PDF non disponibile");
+      const blob = await res.blob();
+      await openPdfBlobInNewTab(blob, pdfFileName(), { showLoadingFeedback: false });
+    } catch {
+      gestToast.error("Impossibile aprire il PDF etichetta.");
+    } finally {
+      setOpeningPdf(false);
+    }
   }
 
   async function handleDownload(format: "png" | "svg") {
     await ensureExpanded();
+    setLoading(true);
     try {
       const res = await fetch(renderUrl(format));
       if (!res.ok) throw new Error("Download non riuscito");
@@ -103,38 +120,41 @@ export function RicambioLabelActions({
       gestToast.successOnce(`label-dl-${format}`, `Download ${format.toUpperCase()} avviato.`);
     } catch {
       gestToast.error(`Download ${format.toUpperCase()} non riuscito.`);
+    } finally {
+      setLoading(false);
     }
   }
 
-  function handlePrint() {
-    void (async () => {
-      await ensureExpanded();
-      try {
-        const res = await fetch(renderUrl("png"));
-        if (!res.ok) throw new Error("Stampa non riuscita");
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const frame = document.createElement("iframe");
-        frame.style.position = "fixed";
-        frame.style.right = "0";
-        frame.style.bottom = "0";
-        frame.style.width = "0";
-        frame.style.height = "0";
-        frame.style.border = "0";
-        frame.src = url;
-        document.body.appendChild(frame);
-        frame.onload = () => {
-          frame.contentWindow?.focus();
-          frame.contentWindow?.print();
-          window.setTimeout(() => {
-            document.body.removeChild(frame);
-            URL.revokeObjectURL(url);
-          }, 1000);
-        };
-      } catch {
-        gestToast.error("Stampa etichetta non riuscita.");
-      }
-    })();
+  async function handlePrint() {
+    await ensureExpanded();
+    setPrinting(true);
+    try {
+      const res = await fetch(renderUrl("png"));
+      if (!res.ok) throw new Error("Stampa non riuscita");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const frame = document.createElement("iframe");
+      frame.style.position = "fixed";
+      frame.style.right = "0";
+      frame.style.bottom = "0";
+      frame.style.width = "0";
+      frame.style.height = "0";
+      frame.style.border = "0";
+      frame.src = url;
+      document.body.appendChild(frame);
+      frame.onload = () => {
+        frame.contentWindow?.focus();
+        frame.contentWindow?.print();
+        window.setTimeout(() => {
+          document.body.removeChild(frame);
+          URL.revokeObjectURL(url);
+        }, 1000);
+      };
+    } catch {
+      gestToast.error("Stampa etichetta non riuscita.");
+    } finally {
+      setPrinting(false);
+    }
   }
 
   async function handleRegenerate() {
@@ -165,7 +185,7 @@ export function RicambioLabelActions({
         <button
           type="button"
           className={`${erpBtnSubtleNew} min-h-11 w-full justify-center disabled:opacity-45`}
-          disabled={!canRead || loading}
+          disabled={!canRead || busy}
           onClick={() => void ensureExpanded()}
         >
           {expanded ? "Etichetta" : "Genera etichetta"}
@@ -186,17 +206,29 @@ export function RicambioLabelActions({
                   setPreviewUrl(null);
                 }
               }}
+              disabled={busy}
             >
               {LABEL_PRESET_IDS.map((id) => (
                 <option key={id} value={id}>
-                  {id.replace("-default", " mm")}
+                  {labelPresetOptionLabel(id)}
                 </option>
               ))}
             </select>
           </label>
 
           {meta?.qrUrl ? (
-            <p className="break-all font-mono text-[10px] text-[color:var(--cab-text-muted)]">{meta.qrUrl}</p>
+            <div className="space-y-1">
+              <button
+                type="button"
+                className="text-[10px] text-[color:var(--cab-primary)] underline"
+                onClick={() => setShowQrUrl((v) => !v)}
+              >
+                {showQrUrl ? "Nascondi URL QR" : "Mostra URL QR"}
+              </button>
+              {showQrUrl ? (
+                <p className="break-all font-mono text-[10px] text-[color:var(--cab-text-muted)]">{meta.qrUrl}</p>
+              ) : null}
+            </div>
           ) : null}
 
           {previewUrl ? (
@@ -205,25 +237,25 @@ export function RicambioLabelActions({
           ) : null}
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <button type="button" className={erpBtnNeutral} disabled={loading} onClick={() => void handlePreview()}>
+            <button type="button" className={erpBtnNeutral} disabled={busy} onClick={() => void handlePreview()}>
               Visualizza
             </button>
-            <button type="button" className={erpBtnNeutral} disabled={loading} onClick={() => void handleDownload("png")}>
+            <button type="button" className={erpBtnNeutral} disabled={busy} onClick={() => void handleDownload("png")}>
               PNG
             </button>
-            <button type="button" className={erpBtnNeutral} disabled={loading} onClick={handleOpenPdf}>
-              PDF
+            <button type="button" className={erpBtnNeutral} disabled={busy} onClick={() => void handleOpenPdf()}>
+              {openingPdf ? "Apertura…" : "PDF"}
             </button>
-            <button type="button" className={erpBtnNeutral} disabled={loading} onClick={() => void handleDownload("svg")}>
+            <button type="button" className={erpBtnNeutral} disabled={busy} onClick={() => void handleDownload("svg")}>
               SVG
             </button>
-            <button type="button" className={erpBtnNeutral} disabled={loading} onClick={handlePrint}>
-              Stampa
+            <button type="button" className={erpBtnNeutral} disabled={busy} onClick={() => void handlePrint()}>
+              {printing ? "Stampa…" : "Stampa"}
             </button>
             <button
               type="button"
               className={erpBtnNeutral}
-              disabled={loading || !canWrite}
+              disabled={busy || !canWrite}
               onClick={() => void handleRegenerate()}
             >
               Rigenera QR

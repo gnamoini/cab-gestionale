@@ -64,10 +64,10 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
       if (!res.ok) {
         if (body.code === "not_configured") {
           const hint =
-            body.errorType === "CONFIG_INVALID_FORMAT"
-              ? "Chiave Gemini non valida. Verifica il formato (AIza...) in Vercel → Environment Variables."
-              : body.errorType === "CONFIG_NOT_FOUND"
-                ? "Chiave Gemini assente nel runtime. Verifica GOOGLE_GENERATIVE_AI_API_KEY in Vercel Production."
+            body.errorType === "CONFIG_INVALID_FORMAT" || body.errorType === "AI_KEY_INVALID"
+              ? "Chiave API non valida. Verifica in Impostazioni → AI Providers."
+              : body.errorType === "CONFIG_NOT_FOUND" || body.errorType === "AI_CONFIG_MISSING"
+                ? "Servizio AI non configurato. Aggiungi una chiave in Impostazioni → AI Providers."
                 : null;
           throw new Error(hint ?? body.error ?? "Servizio AI non configurato.");
         }

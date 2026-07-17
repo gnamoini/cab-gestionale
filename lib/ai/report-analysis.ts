@@ -1,13 +1,7 @@
 ﻿import "server-only";
 
-import { generateObjectWithGeminiFailover } from "@/lib/ai/gemini-generate-object.server";
-import {
-  GEMINI_AUTH_ERROR_HINT,
-  GEMINI_NOT_CONFIGURED_MESSAGE,
-  isGeminiAuthError,
-  isGeminiConfigured,
-  resolveGeminiReportAnalysisTimeoutMs,
-} from "@/lib/ai/gemini-client";
+import { aiService } from "@/lib/ai/runtime/service";
+import { aiErrorMessage, classifyAiError } from "@/lib/ai/runtime/errors";
 import type { GenerateReportAnalysisResult, ReportAnalysisLlmProvider } from "@/lib/ai/llm-provider.types";
 import { REPORT_ANALYSIS_SYSTEM_PROMPT } from "@/lib/ai/report-analysis-prompts";
 import {
@@ -15,69 +9,51 @@ import {
   type ReportAnalysisContext,
   type ReportAnalysisOutput,
 } from "@/lib/report/report-analysis/report-analysis-schema";
-
-function logGenerationError(error: unknown): void {
-  if (error instanceof Error) {
-    console.error("[report-analysis] generateObject failed:", error.name, error.message);
-    return;
-  }
-  console.error("[report-analysis] generateObject failed:", String(error));
-}
+import { readLegacyGoogleKeys, readRuntimeTimeoutMs } from "@/lib/ai/runtime/env-reader";
 
 export async function generateReportAnalysis(
   context: ReportAnalysisContext,
   signal?: AbortSignal,
 ): Promise<GenerateReportAnalysisResult> {
-  if (!isGeminiConfigured()) {
+  const status = await aiService.getConfigurationStatus();
+  if (!status.configured) {
     return {
       ok: false,
       code: "not_configured",
-      message: GEMINI_NOT_CONFIGURED_MESSAGE,
+      message: aiErrorMessage("AI_CONFIG_MISSING"),
     };
   }
 
-  const timeoutMs = resolveGeminiReportAnalysisTimeoutMs();
-  const timeoutSignal = AbortSignal.timeout(timeoutMs);
-  const combinedSignal = signal
-    ? AbortSignal.any([signal, timeoutSignal])
-    : timeoutSignal;
+  const timeoutMs = readRuntimeTimeoutMs() > 45_000 ? 45_000 : readRuntimeTimeoutMs();
+  if (signal?.aborted) {
+    return { ok: false, code: "timeout", message: aiErrorMessage("AI_TIMEOUT") };
+  }
 
-  try {
-    const { object: rawObject } = await generateObjectWithGeminiFailover({
-      schema: reportAnalysisOutputSchema,
-      system: REPORT_ANALYSIS_SYSTEM_PROMPT,
-      prompt: JSON.stringify(context),
-      temperature: 0.3,
-      abortSignal: combinedSignal,
-    });
-    const object = rawObject as ReportAnalysisOutput;
+  const result = await aiService.generateObject<ReportAnalysisOutput>({
+    schema: reportAnalysisOutputSchema,
+    system: REPORT_ANALYSIS_SYSTEM_PROMPT,
+    prompt: JSON.stringify(context),
+    temperature: 0.3,
+    operation: "report_analysis",
+    timeoutMs,
+  });
 
-    return { ok: true, data: object };
-  } catch (error) {
-    if (error instanceof Error && error.name === "TimeoutError") {
-      return {
-        ok: false,
-        code: "timeout",
-        message: "Analisi AI scaduta per timeout. Riprova con un periodo più corto o più tardi.",
-      };
-    }
-    logGenerationError(error);
-    if (isGeminiAuthError(error)) {
-      return {
-        ok: false,
-        code: "generation_failed",
-        message: GEMINI_AUTH_ERROR_HINT,
-      };
+  if (!result.ok) {
+    const code = classifyAiError(new Error(result.message));
+    if (code === "AI_TIMEOUT") {
+      return { ok: false, code: "timeout", message: aiErrorMessage("AI_TIMEOUT") };
     }
     return {
       ok: false,
       code: "generation_failed",
-      message: "Generazione analisi non riuscita. Verifica la chiave Gemini e riprova.",
+      message: result.message,
     };
   }
+
+  return { ok: true, data: result.data.object };
 }
 
 export const geminiReportAnalysisProvider: ReportAnalysisLlmProvider = {
-  isConfigured: isGeminiConfigured,
+  isConfigured: () => readLegacyGoogleKeys().length > 0,
   generate: generateReportAnalysis,
 };

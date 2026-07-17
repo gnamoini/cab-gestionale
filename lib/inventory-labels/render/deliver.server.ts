@@ -15,6 +15,8 @@ import {
   uploadLabelArtifactBestEffort,
 } from "@/lib/inventory-labels/storage/artifacts.server";
 import { writeInventoryLabelEvent } from "@/lib/inventory-labels/audit/events.server";
+import { buildLabelPdfMetricsPayload } from "@/lib/inventory-labels/observability/label-pdf-metrics.server";
+import { renderDedupKey, withRenderDedup } from "@/lib/inventory-labels/render/render-dedup";
 
 export type DeliverLabelInput = {
   sb: SupabaseClient;
@@ -81,15 +83,20 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
   }
 
   const qrUrl = buildInventoryQrUrl(input.token, input.origin);
+  const dedupKey = renderDedupKey(input.entityId, hash, input.format);
   let buffer: Buffer;
   if (input.format === "png") {
-    buffer = await renderLabelPng(template, input.payload, qrUrl);
+    buffer = await withRenderDedup(dedupKey, () => renderLabelPng(template, input.payload, qrUrl));
   } else if (input.format === "svg") {
-    const svg = await renderLabelSvg(template, input.payload, qrUrl);
-    buffer = Buffer.from(svg, "utf8");
+    buffer = await withRenderDedup(dedupKey, async () => {
+      const svg = await renderLabelSvg(template, input.payload, qrUrl);
+      return Buffer.from(svg, "utf8");
+    });
   } else {
-    const pdf = await renderSingleLabelPdf(template, input.payload, qrUrl);
-    buffer = Buffer.from(pdf);
+    buffer = await withRenderDedup(dedupKey, async () => {
+      const pdf = await renderSingleLabelPdf(template, input.payload, qrUrl);
+      return Buffer.from(pdf);
+    });
   }
 
   const storagePath = await uploadLabelArtifactBestEffort({
@@ -101,17 +108,20 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
   });
 
   if (storagePath) {
-    await input.sb.from("inventory_label_artifacts").insert({
-      entity_type: input.entityType,
-      entity_id: input.entityId,
-      hash,
-      format: input.format,
-      preset: input.preset,
-      template_id: template.id,
-      storage_path: storagePath,
-      generator_version: GENERATOR_VERSION,
-      template_version: template.version,
-    });
+    await input.sb.from("inventory_label_artifacts").upsert(
+      {
+        entity_type: input.entityType,
+        entity_id: input.entityId,
+        hash,
+        format: input.format,
+        preset: input.preset,
+        template_id: template.id,
+        storage_path: storagePath,
+        generator_version: GENERATOR_VERSION,
+        template_version: template.version,
+      },
+      { onConflict: "entity_type,entity_id,hash,format", ignoreDuplicates: true },
+    );
   }
 
   const downloadEvent =
@@ -123,7 +133,13 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
     entityId: input.entityId,
     userId: input.userId,
     device: input.device,
-    payload: { preset: input.preset, format: input.format, hash, cacheStatus: "MISS" },
+    payload: buildLabelPdfMetricsPayload({
+      labelCount: 1,
+      cacheHitCount: 0,
+      cacheMissCount: 1,
+      durationMs: 0,
+      outcome: "ok",
+    }),
   });
 
   await writeInventoryLabelEvent(input.sb, {

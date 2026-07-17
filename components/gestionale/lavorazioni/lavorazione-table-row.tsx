@@ -207,7 +207,6 @@ function LavorazioneAttivaTableRowInner({
             onChange={(v) => onStatoRow(row, v)}
             ariaLabel={`Stato — ${macchina}`}
             disabled={loading || !canEditWorkOrders}
-            title={statoLavorazioneLabel(row.stato as StatoLavorazione, statiOpts)}
           >
             <option value={row.stato}>{statoLavorazioneLabel(row.stato as StatoLavorazione, statiOpts)}</option>
           </InlineSelectField>
@@ -225,7 +224,6 @@ function LavorazioneAttivaTableRowInner({
             onChange={(v) => onPrioritaRow(row, v)}
             ariaLabel={`Priorità — ${macchina}`}
             disabled={loading || !canEditWorkOrders}
-            title={prioritaLabel(row.priorita)}
           >
             <option value={row.priorita}>{prioritaLabel(row.priorita)}</option>
           </InlineSelectField>
@@ -243,7 +241,6 @@ function LavorazioneAttivaTableRowInner({
             onChange={(v) => onAddettoRow(row, v)}
             ariaLabel={`Addetto — ${macchina}`}
             disabled={loading || !canEditWorkOrders || addetti.length === 0}
-            title={addettoLabel}
           />
         </div>
       </td>
@@ -253,8 +250,9 @@ function LavorazioneAttivaTableRowInner({
             label="Concludi"
             disabled={mutPendingBlocking || loading || !canEditWorkOrders || row.archived === true}
             className={`${lavTableActionBtnSecondary}${awaitingCompletata ? " opacity-50" : ""}`}
+            tooltipDisabled={row.stato === "completata"}
             tooltipContent={
-              row.stato === "completata" ? "Concludi" : "Imposta come completata per archiviarla"
+              row.stato === "completata" ? undefined : "Imposta come completata per archiviarla"
             }
             onClick={() => onConcludiAction(row)}
           >
@@ -395,7 +393,7 @@ function LavorazioneArchivioTableRowInner({
         <div className={lavTableActionsRow}>
           <IconActionButton
             label="Ripristina"
-            tooltipContent={canEditWorkOrders ? "Ripristina" : "Sola lettura"}
+            tooltipContent={canEditWorkOrders ? undefined : "Sola lettura"}
             className={lavTableActionBtnDanger}
             disabled={!canEditWorkOrders || mutPendingBlocking || loading}
             onClick={() => onRipristina(row)}

@@ -1,12 +1,13 @@
 import "server-only";
 
-import { generateObjectWithGeminiFailover } from "@/lib/ai/gemini-generate-object.server";
+import { aiService } from "@/lib/ai/runtime/service";
 import {
-  GEMINI_FILE_ANALYSIS_TIMEOUT_MS,
-  GEMINI_NOT_CONFIGURED_MESSAGE,
-  resolveGeminiConfigurationGate,
-} from "@/lib/ai/gemini-client";
-import type { GeminiErrorType } from "@/lib/ai/gemini-error-types";
+  mapAiErrorToAnalyzeCode,
+  mapAiErrorToLegacyErrorType,
+  userMessageForAiError,
+} from "@/lib/ai/runtime/map-ai-error";
+import type { AiErrorCode } from "@/lib/ai/runtime/types";
+import { readRuntimeTimeoutMs } from "@/lib/ai/runtime/env-reader";
 import type { CaptureExtractionResult } from "@/lib/document-capture/capture-extraction-schema";
 import { captureExtractionSchema, listCaptureExtractionFields } from "@/lib/document-capture/capture-extraction-schema";
 import { buildGeminiCaptureDocumentPart } from "@/lib/document-capture/gemini-capture-content";
@@ -49,8 +50,7 @@ import { runHybridExtractionWithTimeout } from "@/lib/document-capture/extractio
 import { SCHEDA_OFFICINA_EXTRACTION_USER } from "@/lib/document-capture/scheda-officina-extraction-prompt";
 import { classifyStorageDownloadError } from "@/lib/storage/storage-download-errors";
 import { resolveGeminiAnalyzeRetryDelayMs } from "@/lib/ai/gemini-retry-after";
-import { isGeminiAuthError, isGeminiUnreachableError } from "@/lib/ai/gemini-api-keys";
-import { GEMINI_AUTH_ERROR_HINT } from "@/lib/ai/gemini-client";
+import { classifyAiError } from "@/lib/ai/runtime/errors";
 import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
@@ -65,7 +65,7 @@ export type AnalyzeCaptureV41Result =
       documentModelVersionHash: string;
       fieldCount: number;
     }
-  | { ok: false; code: "not_configured" | "auth_invalid" | "unreachable" | "not_finalized" | "failed" | "no_fields"; message: string; errorType?: GeminiErrorType };
+  | { ok: false; code: "not_configured" | "auth_invalid" | "unreachable" | "not_finalized" | "failed" | "no_fields"; message: string; errorType?: string };
 
 async function countCaptureFields(captureId: string): Promise<number> {
   const sb = await createSupabaseServerUserClient();
@@ -104,8 +104,8 @@ export async function analyzeDocumentCaptureV41(
   captureId: string,
   userId: string,
 ): Promise<AnalyzeCaptureV41Result> {
-  const configGate = resolveGeminiConfigurationGate();
-  const geminiReady = configGate == null;
+  const aiStatus = await aiService.getConfigurationStatus();
+  const geminiReady = aiStatus.configured;
   const hybridEnabled = isDocumentCaptureHybridExtractionEnabled();
 
   const sb = await createSupabaseServerUserClient();
@@ -205,8 +205,8 @@ export async function analyzeDocumentCaptureV41(
     return {
       ok: false,
       code: "not_configured",
-      errorType: configGate?.errorType ?? "CONFIG_NOT_FOUND",
-      message: configGate?.message ?? GEMINI_NOT_CONFIGURED_MESSAGE,
+      errorType: "AI_CONFIG_MISSING",
+      message: userMessageForAiError("AI_CONFIG_MISSING"),
     };
   }
 
@@ -236,10 +236,10 @@ export async function analyzeDocumentCaptureV41(
           hybridResult?.geminiUserPrompt ??
           schedaOfficinaPromptContract.userPromptTemplate ??
           SCHEDA_OFFICINA_EXTRACTION_USER;
-        const { object: geminiObject, usage: u, response } = await generateObjectWithGeminiFailover({
+        const aiResult = await aiService.analyzeDocument<CaptureExtractionResult>({
           schema: captureExtractionSchema,
           system: schedaOfficinaPromptContract.systemPrompt,
-          messages: [
+          userContent: [
             {
               role: "user",
               content: [
@@ -249,9 +249,14 @@ export async function analyzeDocumentCaptureV41(
             },
           ],
           temperature: 0.2,
-          abortSignal: AbortSignal.timeout(GEMINI_FILE_ANALYSIS_TIMEOUT_MS),
+          timeoutMs: readRuntimeTimeoutMs(),
         });
-        usage = u;
+        if (!aiResult.ok) {
+          throw new Error(aiResult.message);
+        }
+        const geminiObject = aiResult.data.object;
+        usage = aiResult.data.usage;
+        const response = aiResult.data.response;
         const geminiExtraction = geminiObject as CaptureExtractionResult;
         const geminiFields = captureResultToHybridFields(listCaptureExtractionFields(geminiExtraction.fields));
         const merged = mergeWithGeminiFields(hybridResult?.mergedPrefill ?? [], geminiFields);
@@ -445,18 +450,9 @@ export async function analyzeDocumentCaptureV41(
     }
   }
 
-  const message = lastError instanceof Error ? lastError.message : "Analisi non riuscita.";
-  const code = isGeminiAuthError(lastError)
-    ? "auth_invalid"
-    : isGeminiUnreachableError(lastError)
-      ? "unreachable"
-      : "failed";
-  const userMessage =
-    code === "auth_invalid"
-      ? GEMINI_AUTH_ERROR_HINT
-      : code === "unreachable"
-        ? "Chiave presente ma API Gemini non raggiungibile. Riprova tra poco."
-        : message;
+  const aiCode = classifyAiError(lastError) as AiErrorCode;
+  const code = mapAiErrorToAnalyzeCode(aiCode);
+  const userMessage = userMessageForAiError(aiCode);
   await mutateCaptureWithEvent({
     captureId,
     eventType: "analyze_failed",

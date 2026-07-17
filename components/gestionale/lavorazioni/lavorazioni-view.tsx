@@ -1407,7 +1407,8 @@ export function LavorazioniView() {
       disabled: mutPendingBlocking || loading || !canEditWorkOrders || row.archived === true,
       className: `${lavTableActionBtnSecondary}${awaitingCompletata ? " opacity-50" : ""}`,
       tooltipContent:
-        row.stato === "completata" ? "Concludi" : "Imposta come completata per archiviarla",
+        row.stato === "completata" ? undefined : "Imposta come completata per archiviarla",
+      tooltipDisabled: row.stato === "completata",
       onClick: () => onConcludiAction(row),
     };
   }
@@ -2319,7 +2320,8 @@ export function LavorazioniView() {
                   })}
                   concludiDisabled={concludiProps.disabled ?? false}
                   concludiClassName={concludiProps.className ?? lavTableActionBtnSecondary}
-                  concludiTooltip={concludiProps.tooltipContent ?? "Concludi"}
+                  concludiTooltip={concludiProps.tooltipContent}
+                  concludiTooltipDisabled={concludiProps.tooltipDisabled}
                   onStatoRow={onStatoRow}
                   onPrioritaRow={onPrioritaRow}
                   onAddettoRow={onAddettoRow}

@@ -106,13 +106,10 @@ export const dsBtnNeutralIconForm = `${dsBtnNeutral} h-11 w-11 min-h-11 min-w-11
 /**
  * Toolbar header pagina (`PageHeader`):
  * - shell: `dsPageHeaderShell`
- * - solo icona: `dsPageToolbarIconBtn` (44×44, allineato a `dsSearchFieldInput`)
+ * - solo icona: `dsPageToolbarIconBtn` (ghost mobile, boxed 44×44 da sm+)
  * - icona + testo: `dsPageToolbarBtn`
  */
 export const dsPageToolbarBtn = `inline-flex min-h-11 min-w-0 shrink-0 items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] ${cabSurface} px-3 py-2 text-xs font-semibold ${cabText} shadow-[var(--cab-shadow-sm)] transition-[background-color,box-shadow,ring-color,border-color,color] duration-200 ease-out hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] hover:ring-1 hover:ring-[color:color-mix(in_srgb,var(--cab-border-strong)_70%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
-
-/** Solo icona in toolbar header — footprint quadrato 44×44. */
-export const dsPageToolbarIconBtn = `${dsPageToolbarBtn} h-11 w-11 min-h-11 p-0`;
 
 /** Bottone icona ghost shell — menu, indietro, chiudi (44×44). Hover: icona più luminosa/spessa, no box. */
 export const dsShellNavIconBtn = [
@@ -151,6 +148,20 @@ export const dsPageHeaderToolbarActionBtn = `${dsPageHeaderIconBtn} ${dsDisabled
 
 /** Hamburger menu mobile — alias di `dsPageHeaderIconBtn`. */
 export const dsPageHeaderNavOpenBtn = dsPageHeaderIconBtn;
+
+/** Solo icona utility toolbar — ghost in shell compatto, boxed da sm+. */
+export const dsPageToolbarIconBtn = [
+  dsShellNavIconBtn,
+  "sm:border sm:border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))]",
+  "sm:bg-[var(--cab-surface)] sm:shadow-[var(--cab-shadow-sm)]",
+  "sm:transition-[background-color,box-shadow,ring-color,border-color,color] sm:duration-200 sm:ease-out",
+  "sm:hover:bg-[var(--cab-hover)] sm:hover:shadow-[var(--cab-shadow-md)] sm:hover:ring-1 sm:hover:ring-[color:color-mix(in_srgb,var(--cab-border-strong)_70%,transparent)]",
+  "sm:hover:text-[color:var(--cab-text)] sm:focus-visible:text-[color:var(--cab-text)]",
+  "sm:hover:[&_svg]:scale-100 sm:hover:[&_svg]:drop-shadow-none sm:hover:[&_svg_path]:[stroke-width:inherit] sm:focus-visible:[&_svg]:scale-100 sm:focus-visible:[&_svg]:drop-shadow-none",
+].join(" ");
+
+/** Icona toolbar sempre boxed (eccezioni esplicite). */
+export const dsPageToolbarIconBtnBoxed = `${dsPageToolbarBtn} h-11 w-11 min-h-11 p-0`;
 
 export const dsBtnSettings = dsPageToolbarBtn;
 

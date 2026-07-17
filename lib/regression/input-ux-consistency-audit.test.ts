@@ -100,6 +100,7 @@ assert.match(inlineSelect, /GlobalFixedListPillSelect/);
 assert.match(closeButton, /dsShellNavIconBtn/);
 assert.doesNotMatch(closeButton, /hover:bg-\[var\(--cab-hover\)\]/);
 assert.match(designSystem, /hover:\[&_svg\]:scale-\[1\.08\]/);
+assert.match(designSystem, /export const dsPageToolbarIconBtn = \[[\s\S]*?dsShellNavIconBtn/);
 
 const calendarPanel = read("components/gestionale/global-input/global-calendar-panel.tsx");
 const calendarV2Grid = read("components/dashboard/calendar-v2/calendar-v2-grid.tsx");

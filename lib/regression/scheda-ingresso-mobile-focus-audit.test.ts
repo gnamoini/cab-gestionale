@@ -33,7 +33,7 @@ assert.match(anagrafica, /FormSection/);
 assert.match(anagrafica, /FormField/);
 
 assert.match(keyboardHook, /subscribeGestionaleViewport/);
-assert.match(keyboardHook, /resolveFocusExtraTop/);
+assert.doesNotMatch(keyboardHook, /scrollGestionaleFieldIntoView/);
 
 assert.match(iosStability, /handleFocusInForMobileModal/);
 assert.match(iosStability, /mountGestionaleViewportOrchestrator/);

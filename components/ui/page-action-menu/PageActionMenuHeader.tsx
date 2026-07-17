@@ -2,22 +2,17 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ShellNavIconRefresh } from "@/components/design-system";
+import { ShellNavIconBack, ShellNavIconRefresh } from "@/components/design-system";
 import {
   pageActionMenuHeaderClass,
   pageActionMenuQuickActionIconBtn,
   pageActionMenuQuickActionsBarClass,
 } from "@/lib/ui/page-action-menu-tokens";
-import { dsPageHeaderIconGlyphDense, dsPageToolbarBtn } from "@/lib/ui/design-system";
+import { dsBtnGhost, dsPageHeaderIconGlyphDense, dsPageHeaderToolbarActionBtn } from "@/lib/ui/design-system";
 import type { PageActionMenuBackConfig } from "@/components/ui/page-action-menu/page-action-menu-types";
 
-function IconBack({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-    </svg>
-  );
-}
+const pageActionMenuBackBtnClass = `${dsPageHeaderToolbarActionBtn} shrink-0 gap-1 sm:gap-1.5`;
+const pageActionMenuSubmenuBackBtnClass = `${dsBtnGhost} h-11 shrink-0 gap-1.5 px-2`;
 
 export function PageActionMenuRefreshButton({
   busy = false,
@@ -68,8 +63,8 @@ export function PageActionMenuHeader({
   if (onSubmenuBack) {
     return (
       <div className={pageActionMenuHeaderClass}>
-        <button type="button" className={`${dsPageToolbarBtn} gap-1.5`} onClick={onSubmenuBack}>
-          <IconBack />
+        <button type="button" className={pageActionMenuSubmenuBackBtnClass} onClick={onSubmenuBack}>
+          <ShellNavIconBack className={dsPageHeaderIconGlyphDense} />
           <span>Indietro</span>
         </button>
         {submenuTitle ? (
@@ -95,13 +90,13 @@ export function PageActionMenuHeader({
     <div className={pageActionMenuHeaderClass}>
       {showBack && back ? (
         onBack ? (
-          <button type="button" className={`${dsPageToolbarBtn} gap-1.5`} onClick={onBack}>
-            <IconBack />
+          <button type="button" className={pageActionMenuBackBtnClass} onClick={onBack}>
+            <ShellNavIconBack className={dsPageHeaderIconGlyphDense} />
             <span className="sr-only sm:not-sr-only sm:inline">Indietro</span>
           </button>
         ) : (
-          <Link href={back.href} className={`${dsPageToolbarBtn} gap-1.5`}>
-            <IconBack />
+          <Link href={back.href} className={pageActionMenuBackBtnClass}>
+            <ShellNavIconBack className={dsPageHeaderIconGlyphDense} />
             <span className="sr-only sm:not-sr-only sm:inline">Indietro</span>
           </Link>
         )

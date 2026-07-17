@@ -56,7 +56,7 @@ export function controlTowerDashSliceFromMetrics(
 ): ControlTowerDashSlice {
   return {
     globalOpts: dash.globalOpts,
-    lavRows: dash.lavActiveRows,
+    lavRows: dash.lavReportRows,
     ricambi: dash.magQuery.data ?? [],
     magRecentMovements: dash.magRecentMovements,
     magLogs: dash.magLogs,

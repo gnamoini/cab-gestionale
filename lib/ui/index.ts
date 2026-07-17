@@ -10,6 +10,8 @@ export {
 } from "@/lib/ui/flex-system-policy";
 export * from "@/lib/ui/responsive-layout-core";
 export * from "@/lib/ui/mobile-modal-behavior";
+export * from "@/lib/ui/focus-visibility-flags";
+export * from "@/lib/ui/focus-visibility-pipeline";
 export {
   runResponsiveLayoutAudit,
   emitResponsiveLayoutAuditWarnings,

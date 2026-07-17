@@ -9,6 +9,7 @@ import { REGRESSION_P0 } from "@/lib/control/suites/regression-p0.suite";
 import { REGRESSION_P1 } from "@/lib/control/suites/regression-p1.suite";
 import { REGRESSION_P2 } from "@/lib/control/suites/regression-p2.suite";
 import { REGRESSION_P3 } from "@/lib/control/suites/regression-p3.suite";
+import { AI_RUNTIME_SUITE } from "@/lib/control/suites/ai-runtime.suite";
 
 export type CatalogRunResult = {
   ok: boolean;
@@ -150,6 +151,7 @@ export const CONTROL_CATALOG: Record<string, CatalogEntry> = {
   "control-coverage": { resolve: () => spawnScript("lib/control/control-coverage.test.ts") },
   "control-owner": { resolve: () => spawnScript("lib/control/control-owner.test.ts") },
   "registry-lifecycle": { resolve: () => spawnScript("lib/control/registry-lifecycle.test.ts") },
+  "ai-runtime": { resolve: () => runTestFiles(AI_RUNTIME_SUITE) },
   "formux-promotion": {
     resolve: () => ({ ok: true, blockers: [], warnings: ["formux promotion deprecated — skipped"] }),
   },

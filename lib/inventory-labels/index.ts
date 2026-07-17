@@ -19,6 +19,8 @@ export {
   LABEL_PRESET_IDS,
   LABEL_TEMPLATE_REGISTRY,
   getLabelTemplate,
+  labelPresetDisplayName,
+  labelPresetOptionLabel,
 } from "@/lib/inventory-labels/domain/templates";
 
 export { computeLabelFingerprint } from "@/lib/inventory-labels/domain/fingerprints";

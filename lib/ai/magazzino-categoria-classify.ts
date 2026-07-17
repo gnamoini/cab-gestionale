@@ -1,14 +1,9 @@
 import "server-only";
 
-import { generateObjectWithGeminiFailover } from "@/lib/ai/gemini-generate-object.server";
 import { z } from "zod";
-import {
-  GEMINI_AUTH_ERROR_HINT,
-  GEMINI_FILE_ANALYSIS_TIMEOUT_MS,
-  GEMINI_NOT_CONFIGURED_MESSAGE,
-  isGeminiAuthError,
-  isGeminiConfigured,
-} from "@/lib/ai/gemini-client";
+import { aiService } from "@/lib/ai/runtime/service";
+import { aiErrorMessage } from "@/lib/ai/runtime/errors";
+import { readRuntimeTimeoutMs } from "@/lib/ai/runtime/env-reader";
 import { resolveMagazzinoCategoriaFromMaster } from "@/lib/magazzino/magazzino-categoria-infer";
 
 const BATCH_SIZE = 50;
@@ -42,35 +37,28 @@ async function classifyBatch(
   items: Array<{ rowIndex: number; descrizione: string }>,
   categories: readonly string[],
 ): Promise<MagazzinoCategoriaClassifyResult> {
-  if (!isGeminiConfigured()) {
-    return { ok: false, reason: GEMINI_NOT_CONFIGURED_MESSAGE };
+  if (!(await aiService.getConfigurationStatus()).configured) {
+    return { ok: false, reason: aiErrorMessage("AI_CONFIG_MISSING") };
   }
 
-  try {
-    const { object: rawObject } = await generateObjectWithGeminiFailover({
-      schema: magazzinoCategoriaClassifySchema,
-      system: CLASSIFY_SYSTEM,
-      prompt: buildPrompt(items, categories),
-      temperature: 0.1,
-      abortSignal: AbortSignal.timeout(GEMINI_FILE_ANALYSIS_TIMEOUT_MS),
-    });
-    const object = rawObject as z.infer<typeof magazzinoCategoriaClassifySchema>;
+  const result = await aiService.generateObject<z.infer<typeof magazzinoCategoriaClassifySchema>>({
+    schema: magazzinoCategoriaClassifySchema,
+    system: CLASSIFY_SYSTEM,
+    prompt: buildPrompt(items, categories),
+    temperature: 0.1,
+    timeoutMs: readRuntimeTimeoutMs(),
+    operation: "magazzino_categoria_classify",
+  });
 
-    const map = new Map<number, string>();
-    for (const assignment of object.assignments) {
-      map.set(
-        assignment.rowIndex,
-        resolveMagazzinoCategoriaFromMaster(assignment.categoria, categories),
-      );
-    }
-    return { ok: true, map };
-  } catch (error) {
-    if (isGeminiAuthError(error)) {
-      return { ok: false, reason: GEMINI_AUTH_ERROR_HINT };
-    }
-    const message = error instanceof Error ? error.message : "Classificazione categorie non riuscita.";
-    return { ok: false, reason: message };
+  if (!result.ok) {
+    return { ok: false, reason: result.message };
   }
+
+  const map = new Map<number, string>();
+  for (const assignment of result.data.object.assignments) {
+    map.set(assignment.rowIndex, resolveMagazzinoCategoriaFromMaster(assignment.categoria, categories));
+  }
+  return { ok: true, map };
 }
 
 export async function classifyMagazzinoCategorieWithAi(input: {

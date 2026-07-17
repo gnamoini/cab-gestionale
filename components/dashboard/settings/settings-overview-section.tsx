@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Tooltip } from "@/components/ui";
 import { useMemo } from "react";
 import {
@@ -38,6 +39,18 @@ export function SettingsOverviewSection({
                 </button></Tooltip>
               </li>
             ))}
+            {group.label === "Sistema" ? (
+              <li>
+                <Tooltip content="AI Providers">
+                  <Link href="/impostazioni/ai-providers" className={`${SETTINGS_OVERVIEW_TILE} ${dsFocus}`}>
+                    <span className={SETTINGS_OVERVIEW_TILE_ICON} aria-hidden>
+                      <SettingsSectionIcon sectionId="sys-tkb-kb" className="h-4 w-4" />
+                    </span>
+                    <span className={SETTINGS_OVERVIEW_TILE_LABEL}>AI Providers</span>
+                  </Link>
+                </Tooltip>
+              </li>
+            ) : null}
           </ul>
         </section>
       ))}

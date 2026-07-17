@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { CloseButton } from "@/components/design-system";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { dsBtnNeutral, dsBtnPrimary, dsZModalHigh } from "@/lib/ui/design-system";
@@ -57,19 +58,19 @@ export function MobileFilterDrawer({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
-    <div className={`fixed inset-0 ${dsZModalHigh} touch-none overscroll-none sm:hidden`} role="presentation">
+  return createPortal(
+    <div className={`fixed inset-0 ${dsZModalHigh} overscroll-none sm:hidden`} role="presentation">
       <button
         type="button"
-        className="absolute inset-0 bg-[var(--cab-overlay)] backdrop-blur-[1px] touch-manipulation"
+        className="absolute inset-0 touch-none bg-[var(--cab-overlay)] backdrop-blur-[1px] touch-manipulation"
         aria-label="Chiudi filtri"
         onClick={onClose}
       />
       <div
         ref={panelRef}
-        className={resolveDrawerAsideClasses("drawerFilter")}
+        className={`${resolveDrawerAsideClasses("drawerFilter")} touch-auto`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="cab-filter-drawer-title"
@@ -84,7 +85,7 @@ export function MobileFilterDrawer({
         </div>
         <div
           {...{ [CAB_MODAL_SCROLL_ATTR]: "" }}
-          className={`gestionale-scrollbar min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 [&_fieldset>div]:!grid-cols-1 ${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad}`}
+          className={`gestionale-scrollbar min-h-0 min-w-0 flex-1 touch-pan-y space-y-4 overflow-y-auto overscroll-contain p-4 [&_fieldset>div]:!grid-cols-1 ${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad}`}
           onClick={
             closeOnBodyButtonClick
               ? (e) => {
@@ -118,6 +119,7 @@ export function MobileFilterDrawer({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

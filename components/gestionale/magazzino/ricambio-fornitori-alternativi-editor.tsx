@@ -76,9 +76,6 @@ function RicambioFornitoriAlternativiEditorInner({ rows, onChange, readOnly = fa
                       onChange(patchRow(rows, row.id, { fornitore, sconto: String(sconto) }));
                     }}
                     disabled={readOnly}
-                    selectOnly
-                    minSheetOptions={0}
-                    sheetTitle="Fornitore"
                     placeholder="Cerca o seleziona fornitore…"
                     inputClassName={ricambioFormInputClass}
                     aria-label={`Fornitore alternativo ${index + 1}`}
@@ -91,9 +88,6 @@ function RicambioFornitoriAlternativiEditorInner({ rows, onChange, readOnly = fa
                     value={row.produttore}
                     onChange={(produttore) => onChange(patchRow(rows, row.id, { produttore }))}
                     disabled={readOnly}
-                    selectOnly
-                    minSheetOptions={0}
-                    sheetTitle="Produttore"
                     placeholder="Cerca o seleziona produttore…"
                     inputClassName={ricambioFormInputClass}
                     aria-label={`Produttore fornitore ${index + 1}`}

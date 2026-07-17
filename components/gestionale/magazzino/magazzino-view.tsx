@@ -17,6 +17,7 @@ import {
 } from "@/components/design-system";
 import { DisabledElementTooltip, OptionalTooltip, Tooltip } from "@/components/ui";
 import { MagazzinoBulkLabelToolbar } from "@/components/gestionale/magazzino/magazzino-bulk-label-toolbar";
+import { MagazzinoScortaAdjustActions } from "@/components/gestionale/magazzino/magazzino-scorta-adjust-actions";
 import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
 import { MagazzinoListinoAiBadge } from "@/components/gestionale/magazzino/magazzino-listino-ai-badge";
 import { MagazzinoMarcaMobileBadge } from "@/components/gestionale/magazzino/magazzino-marca-mobile-badge";
@@ -96,9 +97,6 @@ import {
   dsBtnPrimary,
   dsBtnSoftOrange,
   dsFocus,
-  dsTableActionBtnDanger,
-  dsTableActionBtnPrimary,
-  dsTableActionBtnUndo,
   dsTableActionBtnInfo,
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
@@ -447,39 +445,6 @@ function IconInfoMagazzino({ className = dsTableActionGlyph }: { className?: str
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.75" />
       <path stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" d="M12 10.5V16M12 8.2v-.1" />
-    </svg>
-  );
-}
-
-function IconUndoMagazzino({ className = dsTableActionGlyph }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
-      />
-    </svg>
-  );
-}
-
-/** Leggermente più grande dei glyph tabella standard — ± scorta. */
-const dsMagazzinoScortaAdjustGlyph = "h-[1.125rem] w-[1.125rem] shrink-0";
-
-function IconMinusMagazzino({ className = dsMagazzinoScortaAdjustGlyph }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" d="M5 12h14" />
-    </svg>
-  );
-}
-
-function IconPlusMagazzino({ className = dsMagazzinoScortaAdjustGlyph }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" d="M12 5v14M5 12h14" />
     </svg>
   );
 }
@@ -1665,33 +1630,13 @@ export function MagazzinoView() {
               <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
                 <IconInfoMagazzino />
               </IconActionButton>
-              <IconActionButton
-                label="Annulla"
-                tooltipContent={magCanCreateRicambio ? "Annulla" : "Sola lettura"}
-                className={dsTableActionBtnUndo}
-                disabled={!magCanCreateRicambio || !canUndoScortaById.get(p.id)}
-                onClick={() => void undoLastScorta(p.id)}
-              >
-                <IconUndoMagazzino />
-              </IconActionButton>
-              <IconActionButton
-                label="Diminuisci"
-                tooltipContent={magCanCreateRicambio ? "Diminuisci" : "Sola lettura"}
-                className={dsTableActionBtnDanger}
-                disabled={!magCanCreateRicambio}
-                onClick={() => adjustScorta(p.id, -1)}
-              >
-                <IconMinusMagazzino />
-              </IconActionButton>
-              <IconActionButton
-                label="Aumenta"
-                tooltipContent={magCanCreateRicambio ? "Aumenta" : "Sola lettura"}
-                className={dsTableActionBtnPrimary}
-                disabled={!magCanCreateRicambio}
-                onClick={() => adjustScorta(p.id, 1)}
-              >
-                <IconPlusMagazzino />
-              </IconActionButton>
+              <MagazzinoScortaAdjustActions
+                canAdjust={magCanCreateRicambio}
+                canUndo={Boolean(canUndoScortaById.get(p.id))}
+                onUndo={() => void undoLastScorta(p.id)}
+                onDecrease={() => adjustScorta(p.id, -1)}
+                onIncrease={() => adjustScorta(p.id, 1)}
+              />
             </div>
           </td>
         </tr>
@@ -2154,33 +2099,13 @@ export function MagazzinoView() {
                   <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
                     <IconInfoMagazzino />
                   </IconActionButton>
-                  <IconActionButton
-                    label="Annulla"
-                    tooltipContent={magCanCreateRicambio ? "Annulla" : "Sola lettura"}
-                    className={dsTableActionBtnUndo}
-                    disabled={!magCanCreateRicambio || !canUndoScortaById.get(p.id)}
-                    onClick={() => void undoLastScorta(p.id)}
-                  >
-                    <IconUndoMagazzino />
-                  </IconActionButton>
-                  <IconActionButton
-                    label="Diminuisci"
-                    tooltipContent={magCanCreateRicambio ? "Diminuisci" : "Sola lettura"}
-                    className={dsTableActionBtnDanger}
-                    disabled={!magCanCreateRicambio}
-                    onClick={() => adjustScorta(p.id, -1)}
-                  >
-                    <IconMinusMagazzino />
-                  </IconActionButton>
-                  <IconActionButton
-                    label="Aumenta"
-                    tooltipContent={magCanCreateRicambio ? "Aumenta" : "Sola lettura"}
-                    className={dsTableActionBtnPrimary}
-                    disabled={!magCanCreateRicambio}
-                    onClick={() => adjustScorta(p.id, 1)}
-                  >
-                    <IconPlusMagazzino />
-                  </IconActionButton>
+                  <MagazzinoScortaAdjustActions
+                    canAdjust={magCanCreateRicambio}
+                    canUndo={Boolean(canUndoScortaById.get(p.id))}
+                    onUndo={() => void undoLastScorta(p.id)}
+                    onDecrease={() => adjustScorta(p.id, -1)}
+                    onIncrease={() => adjustScorta(p.id, 1)}
+                  />
                   </div>
                 </div>
               </CardMobile>
@@ -2231,6 +2156,10 @@ export function MagazzinoView() {
           onEdit={startEditFromInfo}
           onImageEvent={(ev) => logImageEvent(ev, detailRicambio)}
           onDismissLogEntry={removeMagazzinoLogEntry}
+          canAdjustScorta={magCanCreateRicambio}
+          canUndoScorta={Boolean(canUndoScortaById.get(detailRicambio.id))}
+          onAdjustScorta={(delta) => adjustScorta(detailRicambio.id, delta)}
+          onUndoScorta={() => void undoLastScorta(detailRicambio.id)}
         />
       ) : null}
 

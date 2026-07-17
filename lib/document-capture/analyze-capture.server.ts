@@ -1,11 +1,8 @@
 import "server-only";
 
-import { generateObjectWithGeminiFailover } from "@/lib/ai/gemini-generate-object.server";
-import {
-  GEMINI_FILE_ANALYSIS_TIMEOUT_MS,
-  GEMINI_NOT_CONFIGURED_MESSAGE,
-  isGeminiConfigured,
-} from "@/lib/ai/gemini-client";
+import { aiService } from "@/lib/ai/runtime/service";
+import { aiErrorMessage } from "@/lib/ai/runtime/errors";
+import { readRuntimeTimeoutMs } from "@/lib/ai/runtime/env-reader";
 import { classifyStorageDownloadError } from "@/lib/storage/storage-download-errors";
 import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
 import {
@@ -36,8 +33,8 @@ async function sleep(ms: number): Promise<void> {
 }
 
 export async function analyzeDocumentCapture(captureId: string): Promise<AnalyzeCaptureResult> {
-  if (!isGeminiConfigured()) {
-    return { ok: false, code: "not_configured", message: GEMINI_NOT_CONFIGURED_MESSAGE };
+  if (!(await aiService.getConfigurationStatus()).configured) {
+    return { ok: false, code: "not_configured", message: aiErrorMessage("AI_CONFIG_MISSING") };
   }
 
   const sb = await createSupabaseServerUserClient();
@@ -90,10 +87,10 @@ export async function analyzeDocumentCapture(captureId: string): Promise<Analyze
 
   for (let attempt = 0; attempt <= RETRY_BACKOFF_MS.length; attempt += 1) {
     try {
-      const { object: rawObject, usage, response } = await generateObjectWithGeminiFailover({
+      const aiResult = await aiService.analyzeDocument<CaptureExtractionResult>({
         schema: captureExtractionSchema,
         system: SCHEDA_OFFICINA_EXTRACTION_SYSTEM,
-        messages: [
+        userContent: [
           {
             role: "user",
             content: [
@@ -103,9 +100,12 @@ export async function analyzeDocumentCapture(captureId: string): Promise<Analyze
           },
         ],
         temperature: 0.2,
-        abortSignal: AbortSignal.timeout(GEMINI_FILE_ANALYSIS_TIMEOUT_MS),
+        timeoutMs: readRuntimeTimeoutMs(),
       });
-      const object = rawObject as CaptureExtractionResult;
+      if (!aiResult.ok) throw new Error(aiResult.message);
+      const object = aiResult.data.object;
+      const usage = aiResult.data.usage;
+      const response = aiResult.data.response;
 
       const durationMs = Math.round(performance.now() - t0);
       const { count } = await sb

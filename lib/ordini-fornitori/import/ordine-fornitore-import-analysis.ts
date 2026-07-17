@@ -1,13 +1,8 @@
 import "server-only";
 
-import { generateObjectWithGeminiFailover } from "@/lib/ai/gemini-generate-object.server";
-import {
-  GEMINI_AUTH_ERROR_HINT,
-  GEMINI_FILE_ANALYSIS_TIMEOUT_MS,
-  GEMINI_NOT_CONFIGURED_MESSAGE,
-  isGeminiAuthError,
-  isGeminiConfigured,
-} from "@/lib/ai/gemini-client";
+import { aiService } from "@/lib/ai/runtime/service";
+import { aiErrorMessage } from "@/lib/ai/runtime/errors";
+import { readRuntimeTimeoutMs } from "@/lib/ai/runtime/env-reader";
 import {
   ordineFornitoreImportExtractionSchema,
   type OrdineFornitoreImportExtraction,
@@ -30,57 +25,44 @@ export async function parsePreventivoFornitoreWithAi(
   bytes: Uint8Array,
   mime: string,
 ): Promise<OrdineFornitoreAiParseResult> {
-  if (!isGeminiConfigured()) {
+  if (!(await aiService.getConfigurationStatus()).configured) {
     return {
       ok: false,
       code: "not_configured",
-      message: GEMINI_NOT_CONFIGURED_MESSAGE,
+      message: aiErrorMessage("AI_CONFIG_MISSING"),
     };
   }
 
   const mediaType = mime || "application/pdf";
 
-  try {
-    const { object } = await generateObjectWithGeminiFailover({
-      schema: ordineFornitoreImportExtractionSchema,
-      system: SYSTEM,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Estrai preventivo fornitore con confidence per campo. Tutte le pagine.",
-            },
-            { type: "file", data: Buffer.from(bytes), mediaType },
-          ],
-        },
-      ],
-      temperature: 0.2,
-      abortSignal: AbortSignal.timeout(GEMINI_FILE_ANALYSIS_TIMEOUT_MS),
-    });
-    const extraction = object as OrdineFornitoreImportExtraction;
+  const result = await aiService.generateObject<OrdineFornitoreImportExtraction>({
+    schema: ordineFornitoreImportExtractionSchema,
+    system: SYSTEM,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: "Estrai preventivo fornitore con confidence per campo. Tutte le pagine.",
+          },
+          { type: "file", data: Buffer.from(bytes), mediaType },
+        ],
+      },
+    ],
+    temperature: 0.2,
+    timeoutMs: readRuntimeTimeoutMs(),
+    operation: "ordine_fornitore_import",
+  });
 
-    return { ok: true, extraction, warnings: extraction.warnings ?? [] };
-  } catch (error) {
-    if (error instanceof Error && error.name === "TimeoutError") {
-      return {
-        ok: false,
-        code: "failed",
-        message: "Analisi documento scaduta per timeout. Riprova più tardi.",
-      };
-    }
-    if (isGeminiAuthError(error)) {
-      return {
-        ok: false,
-        code: "failed",
-        message: GEMINI_AUTH_ERROR_HINT,
-      };
-    }
+  if (!result.ok) {
     return {
       ok: false,
-      code: "failed",
-      message: error instanceof Error ? error.message : "Analisi documento non riuscita.",
+      code: result.code === "AI_CONFIG_MISSING" ? "not_configured" : "failed",
+      message: result.message,
     };
   }
+
+  const extraction = result.data.object;
+  return { ok: true, extraction, warnings: extraction.warnings ?? [] };
 }

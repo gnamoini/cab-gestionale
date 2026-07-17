@@ -42,6 +42,36 @@ const header = buildControlTowerHeaderKpiSlice({
 assert.equal(header.windowLabel, CONTROL_TOWER_KPI_WINDOW_LABEL);
 assert.ok(header.clusters.some((c) => c.id === "lavorazioni"));
 
+const activeOnlyHeader = buildControlTowerHeaderKpiSlice({
+  lavRows: [lavRow({ id: "open", stato: "in_lavorazione" })],
+  ricambi: [],
+  anchor: ANCHOR,
+  includeAdmin: false,
+});
+const withArchivedHeader = buildControlTowerHeaderKpiSlice({
+  lavRows: [
+    lavRow({ id: "open", stato: "in_lavorazione" }),
+    lavRow({
+      id: "closed-this-week",
+      stato: "completata",
+      archived: true,
+      archived_at: "2026-06-03T10:00:00.000Z",
+      data_uscita: "2026-06-03T10:00:00.000Z",
+    }),
+  ],
+  ricambi: [],
+  anchor: ANCHOR,
+  includeAdmin: false,
+});
+const activeCompleted = activeOnlyHeader.clusters
+  .find((c) => c.id === "lavorazioni")
+  ?.metrics.find((m) => m.id === "lav-completate");
+const withArchivedCompleted = withArchivedHeader.clusters
+  .find((c) => c.id === "lavorazioni")
+  ?.metrics.find((m) => m.id === "lav-completate");
+assert.equal(activeCompleted?.value, 0, "brief KPI needs archived rows for completate count");
+assert.equal(withArchivedCompleted?.value, 1, "archived closure in current week counts once");
+
 function timesheetEntry(partial: Partial<DipendenteTimesheetEntryRow> & Pick<DipendenteTimesheetEntryRow, "work_date" | "ore_ordinarie">): DipendenteTimesheetEntryRow {
   return {
     id: "t1",

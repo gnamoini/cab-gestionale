@@ -42,6 +42,7 @@ assert.match(ricambioNew, /ricambioFromFormLenient/);
 assert.match(ricambioNew, /ricambioFormImportantWarnings/);
 assert.match(ricambioNew, /ricambioLenientPlaceholderFlags/);
 assert.match(ricambioNew, /incrementHealthCounter\("ricambioSaveIncompleteFields"\)/);
+assert.match(ricambioNew, /ricambioFormNeedsCloseConfirm/);
 assert.match(ricambioNew, /GestionaleModalScrollBody/);
 assert.match(ricambioNew, /relaxHtmlValidation/);
 assert.match(ricambioNew, /footer=\{/);

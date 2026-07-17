@@ -13,7 +13,7 @@ export function useGestionaleModalDialogFocus() {
     const panel = panelRef.current;
     if (!panel) return;
     const first = panel.querySelector<HTMLElement>(FOCUSABLE);
-    first?.focus();
+    first?.focus({ preventScroll: true });
   }, []);
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -26,10 +26,10 @@ export function useGestionaleModalDialogFocus() {
     const last = nodes[nodes.length - 1]!;
     if (e.shiftKey && document.activeElement === first) {
       e.preventDefault();
-      last.focus();
+      last.focus({ preventScroll: true });
     } else if (!e.shiftKey && document.activeElement === last) {
       e.preventDefault();
-      first.focus();
+      first.focus({ preventScroll: true });
     }
   }
 

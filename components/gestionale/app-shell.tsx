@@ -13,20 +13,19 @@ import { GestionaleShellTierProvider } from "@/context/gestionale-shell-layout-c
 import { MobileNavShellProvider } from "@/context/mobile-nav-shell-context";
 import { AppShellSidebar } from "@/components/gestionale/app-shell-sidebar";
 import { AppShellMain } from "@/components/gestionale/app-shell-main";
-import {
-  isNavTargetCurrent,
-} from "@/src/lib/navigation/route-transition";
+import { isNavTargetCurrent } from "@/src/lib/navigation/route-transition";
 import { useGestionaleScrollEnd } from "@/lib/ui/use-gestionale-scroll-end";
 import { healBodyScrollLockState } from "@/lib/ui/body-scroll-lock-manager";
 import { cabAppViewportFillClass } from "@/lib/ui/viewport-fill-sync";
 import { isGestionaleOverlayActive, useSidebarHoverExpand } from "@/lib/ui/use-sidebar-collapsed";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { useSwipeFromEdgeToOpen } from "@/lib/ui/use-swipe-from-edge-to-open";
+import { useNavDrawerMachine } from "@/lib/ui/mobile-nav-drawer-machine";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   useBootInvestigationMount("AppShell");
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [edgeOpening, setEdgeOpening] = useState(false);
+  const drawer = useNavDrawerMachine();
+  const { flags, open, forceClose, onPointerCancel, onVisibilityHidden, onResize } = drawer;
   const [overlayActive, setOverlayActive] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
   const sidebarAsideRef = useRef<HTMLElement>(null);
@@ -78,22 +77,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const closeMobileNav = useCallback(() => {
-    setMobileOpen(false);
-    setEdgeOpening(false);
-  }, []);
-
   const edgeSwipe = useSwipeFromEdgeToOpen({
-    enabled: isCompactShell && !mobileOpen && !overlayActive,
-    onBegin: () => setEdgeOpening(true),
-    onCommit: () => {
-      setEdgeOpening(false);
-      setMobileOpen(true);
-    },
-    onCancel: () => setEdgeOpening(false),
+    enabled: isCompactShell && flags.canEdgeSwipe && !overlayActive,
+    drawerState: flags.state,
+    overlayActive,
+    onBegin: () => drawer.dispatch("EDGE_DRAG_START"),
+    onCommit: () => drawer.dispatch("EDGE_DRAG_END_COMMIT"),
+    onCancel: () => drawer.dispatch("EDGE_DRAG_END_CANCEL"),
+    onPointerCancel,
   });
 
-  const navDrawerVisible = mobileOpen || edgeOpening;
+  useEffect(() => {
+    if (!isCompactShell) forceClose();
+  }, [forceClose, isCompactShell]);
+
+  useEffect(() => {
+    function onVisibility() {
+      if (document.hidden) onVisibilityHidden();
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [onVisibilityHidden]);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    function onResizeDebounced() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => onResize(), 100);
+    }
+    window.addEventListener("resize", onResizeDebounced);
+    window.visualViewport?.addEventListener("resize", onResizeDebounced);
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("resize", onResizeDebounced);
+      window.visualViewport?.removeEventListener("resize", onResizeDebounced);
+    };
+  }, [onResize]);
 
   const navItems = useMemo(() => {
     if (!navAccess || !snapshot?.resolved) return [] as GestionaleNavResolvedItem[];
@@ -113,14 +132,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     [collapseSidebar],
   );
 
-  const openMobileNav = useCallback(() => {
-    setMobileOpen(true);
-  }, []);
-
   return (
     <GestionaleShellTierProvider value={shellTier}>
     <ProfileSheetProvider>
-    <MobileNavShellProvider openMobileNav={openMobileNav}>
+    <MobileNavShellProvider
+      openMobileNav={open}
+      isNavDrawerOpen={flags.navDrawerVisible}
+    >
     <div
       ref={shellRef}
       data-mobile-nav-visible={showMobileNavOpen ? "" : undefined}
@@ -143,12 +161,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         beginRouteTransition={beginRouteTransition}
         routeTransitionStartRef={routeTransitionStartRef}
         routePathnameRef={routePathnameRef}
-        mobileOpen={mobileOpen}
-        edgeOpening={edgeOpening}
+        drawer={drawer}
+        overlayActive={overlayActive}
         edgeSwipePanelProps={edgeSwipe.panelProps}
         edgeSwipeBackdropProps={edgeSwipe.backdropProps}
         edgeSwipePanelRef={edgeSwipe.panelRef}
-        closeMobileNav={closeMobileNav}
+        edgeSwipeBackdropRef={edgeSwipe.backdropRef}
       />
 
       <AppShellMain
@@ -156,7 +174,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         mainScrollRef={mainScrollRef}
         isCompactShell={isCompactShell}
         shellTier={tier}
-        navDrawerVisible={navDrawerVisible}
+        navDrawerVisible={flags.navDrawerVisible}
       >
         {children}
       </AppShellMain>

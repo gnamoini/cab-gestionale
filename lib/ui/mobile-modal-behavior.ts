@@ -4,6 +4,8 @@
  */
 
 import { waitForViewportStable } from "@/lib/ui/gestionale-viewport-orchestrator";
+import { isMobileFocusVisibilityV2 } from "@/lib/ui/focus-visibility-flags";
+import { handleFocusInV2 } from "@/lib/ui/focus-visibility-pipeline";
 import { gestionaleModalScrollBodyClass } from "@/lib/ui/modal-max-width-class";
 
 /** Finestra in cui keyboard/textarea evitano re-scroll ridondante dopo focus chain. */
@@ -56,6 +58,13 @@ export const CAB_FOCUS_SCROLL_TITLE_ATTR = "data-cab-focus-scroll-title";
 export const CAB_FIELD_LABEL_ATTR = "data-cab-field-label";
 /** Header/toolbar sticky espliciti per banda scroll focus (no query class*="sticky"). */
 export const CAB_STICKY_HEADER_ATTR = "data-cab-sticky-header";
+/** Modalità posizionamento focus mobile: above-keyboard (default) | top-pinned. */
+export const CAB_FOCUS_POSITION_ATTR = "data-cab-focus-position";
+export const CAB_FIELD_HINT_ATTR = "data-cab-field-hint";
+export const CAB_FIELD_COUNTER_ATTR = "data-cab-field-counter";
+
+export type FocusPositionMode = "aboveKeyboard" | "topPinned";
+export type ScrollContainerType = "modal" | "drawer" | "page" | "nested";
 
 export type FocusScrollRect = {
   top: number;
@@ -99,6 +108,8 @@ export const MOBILE_FOCUS_EXTRA_BOTTOM = 16;
 export const DESKTOP_FOCUS_EXTRA_BOTTOM = 12;
 /** Padding extra sotto il campo quando la tastiera virtuale è aperta in modale. */
 export const MOBILE_KEYBOARD_FOCUS_EXTRA_BOTTOM = 32;
+/** Margine sopra tastiera in modalità aboveKeyboard — allineato a --cab-mobile-keyboard-safe-area. */
+export const MOBILE_KEYBOARD_SAFE_AREA = 32;
 
 export function resolveFocusExtraTop(): number {
   return isMobileFocusScrollViewport() ? MOBILE_FOCUS_EXTRA_TOP : DESKTOP_FOCUS_EXTRA_TOP;
@@ -108,16 +119,16 @@ export function resolveFocusExtraBottom(): number {
   return isMobileFocusScrollViewport() ? MOBILE_FOCUS_EXTRA_BOTTOM : DESKTOP_FOCUS_EXTRA_BOTTOM;
 }
 
-function isModalTextEntryField(field: HTMLElement): boolean {
-  if (!field.closest(`[${CAB_MODAL_ROOT_ATTR}]`)) return false;
-  const tag = field.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || field.isContentEditable;
+
+export function resolveFocusPositionMode(field: HTMLElement): FocusPositionMode {
+  const attr = field.getAttribute(CAB_FOCUS_POSITION_ATTR);
+  if (attr === "top-pinned") return "topPinned";
+  const marked = field.closest(`[${CAB_FOCUS_POSITION_ATTR}]`);
+  if (marked?.getAttribute(CAB_FOCUS_POSITION_ATTR) === "top-pinned") return "topPinned";
+  return "aboveKeyboard";
 }
 
 function resolveFocusScrollRectForDelta(field: HTMLElement): FocusScrollRect {
-  if (computeKeyboardInset() > 0 || isModalTextEntryField(field)) {
-    return getFocusScrollBlockRect(field);
-  }
   return getFocusScrollRect(field);
 }
 
@@ -208,7 +219,10 @@ export function getEffectiveVisibleBand(options: EffectiveVisibleBandOptions): {
     ) + extraTop;
 
   const vvBottom = vv ? Math.min(containerRect.bottom, vv.bottom) : containerRect.bottom;
-  const visibleBottom = vvBottom - keyboardInset - safeBottom - extraBottom;
+  // ponytail: vv.bottom esclude già la tastiera — non sottrarre keyboardInset di nuovo
+  const visibleBottom = vv
+    ? vvBottom - safeBottom - extraBottom
+    : vvBottom - keyboardInset - safeBottom - extraBottom;
 
   return { visibleTop, visibleBottom };
 }
@@ -244,9 +258,17 @@ export function computeKeyboardInset(): number {
 
 /** Sincronizza CSS vars viewport / keyboard su documentElement. */
 export function syncKeyboardCssVars(): void {
+  syncFocusVisibilityCssVars();
+}
+
+/** SSOT CSS vars focus mobile + viewport tastiera. */
+export function syncFocusVisibilityCssVars(): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   const vv = window.visualViewport;
+  root.style.setProperty("--cab-mobile-focus-top-offset", `${MOBILE_FOCUS_EXTRA_TOP}px`);
+  root.style.setProperty("--cab-mobile-focus-bottom-gap", `${MOBILE_FOCUS_EXTRA_BOTTOM}px`);
+  root.style.setProperty("--cab-mobile-keyboard-safe-area", `${MOBILE_KEYBOARD_SAFE_AREA}px`);
   if (!vv) {
     root.style.removeProperty("--cab-vv-height");
     root.style.removeProperty("--cab-vv-offset-top");
@@ -335,29 +357,56 @@ function isFocusableField(el: EventTarget | null): el is HTMLElement {
   return isGestionaleFocusableField(el);
 }
 
-/** Risolve scroll container: modale → pagina gestionale → overflow ancestor. */
-export function findGestionaleScrollContainer(field: HTMLElement): HTMLElement | null {
-  const marked = field.closest(`[${CAB_MODAL_SCROLL_ATTR}]`);
-  if (marked instanceof HTMLElement) return marked;
+function resolveOverlayScrollType(container: HTMLElement): ScrollContainerType {
+  const root = container.closest(`[${CAB_MODAL_ROOT_ATTR}]`);
+  if (!(root instanceof HTMLElement)) return "page";
+  const role = root.getAttribute("role");
+  if (role === "dialog" && root.querySelector("aside, [data-cab-drawer]")) return "drawer";
+  if (root.tagName === "ASIDE") return "drawer";
+  return "modal";
+}
 
-  const pageMain = field.closest(GESTIONALE_PAGE_SCROLL_SELECTOR);
-  if (pageMain instanceof HTMLElement) return pageMain;
+function isScrollableElement(node: HTMLElement): boolean {
+  const style = window.getComputedStyle(node);
+  return (
+    (style.overflowY === "auto" || style.overflowY === "scroll") &&
+    node.scrollHeight > node.clientHeight + 1
+  );
+}
+
+/** SSOT scroll container: nearest nested → modal scroll host → page → overflow ancestor. */
+export function resolveScrollOwner(
+  field: HTMLElement,
+): { container: HTMLElement; type: ScrollContainerType } | null {
+  if (typeof window === "undefined") return null;
 
   let node: HTMLElement | null = field.parentElement;
   while (node) {
-    if (node.hasAttribute(CAB_MODAL_SCROLL_ATTR)) return node;
-    const style = window.getComputedStyle(node);
-    const scrollable =
-      (style.overflowY === "auto" || style.overflowY === "scroll") &&
-      node.scrollHeight > node.clientHeight + 1;
-    if (scrollable) return node;
+    if (isScrollableElement(node)) {
+      const type = node.hasAttribute(CAB_MODAL_SCROLL_ATTR)
+        ? resolveOverlayScrollType(node)
+        : node.matches(GESTIONALE_PAGE_SCROLL_SELECTOR)
+          ? "page"
+          : "nested";
+      return { container: node, type };
+    }
     node = node.parentElement;
   }
+
+  const marked = field.closest(`[${CAB_MODAL_SCROLL_ATTR}]`);
+  if (marked instanceof HTMLElement) {
+    return { container: marked, type: resolveOverlayScrollType(marked) };
+  }
+
+  const pageMain = field.closest(GESTIONALE_PAGE_SCROLL_SELECTOR);
+  if (pageMain instanceof HTMLElement) return { container: pageMain, type: "page" };
+
   return null;
 }
 
-function findModalScrollContainer(field: HTMLElement): HTMLElement | null {
-  return findGestionaleScrollContainer(field);
+/** @deprecated Usare resolveScrollOwner */
+export function findGestionaleScrollContainer(field: HTMLElement): HTMLElement | null {
+  return resolveScrollOwner(field)?.container ?? null;
 }
 
 function isBeforeInDocument(anchor: HTMLElement, field: HTMLElement): boolean {
@@ -409,7 +458,7 @@ export function findFieldLabelBlock(field: HTMLElement): HTMLElement | null {
   }
 
   const fieldParent = field.parentElement;
-  if (fieldParent?.classList.contains("mt-1")) {
+  if (fieldParent?.classList.contains("mt-1") || fieldParent?.classList.contains("mt-1.5")) {
     const block = fieldParent.parentElement;
     if (block instanceof HTMLElement) {
       if (block.tagName === "LABEL") return block;
@@ -463,22 +512,55 @@ export function computeFocusScrollDelta(
 
 const FOCUS_SCROLL_VISIBLE_TOLERANCE_PX = 2;
 
-/** Rettangolo etichetta + controllo (senza titolo sezione). */
+function collectFieldChromeBottom(field: HTMLElement, container: HTMLElement, floor: number): number {
+  let bottom = floor;
+  const chromeSel = `[role="alert"], [${CAB_FIELD_HINT_ATTR}], [${CAB_FIELD_COUNTER_ATTR}]`;
+  for (const el of container.querySelectorAll(chromeSel)) {
+    if (!(el instanceof HTMLElement)) continue;
+    if (!container.contains(field)) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.height > 0) bottom = Math.max(bottom, rect.bottom);
+  }
+  for (const child of container.children) {
+    if (!(child instanceof HTMLElement)) continue;
+    if (child.contains(field)) {
+      for (const el of child.querySelectorAll(chromeSel)) {
+        if (el instanceof HTMLElement) {
+          const rect = el.getBoundingClientRect();
+          if (rect.height > 0) bottom = Math.max(bottom, rect.bottom);
+        }
+      }
+    }
+  }
+  return bottom;
+}
+
+/** Rettangolo etichetta + controllo + helper/errore (senza titolo sezione). */
 export function getFocusScrollBlockRect(field: HTMLElement): FocusScrollRect {
   const fieldRect = field.getBoundingClientRect();
   const labelBlock = findFieldLabelBlock(field);
+  const chromeContainer =
+    labelBlock ?? findGestionaleFieldContainer(field) ?? field.parentElement;
   if (labelBlock) {
     const blockRect = labelBlock.getBoundingClientRect();
+    let bottom = Math.max(blockRect.bottom, fieldRect.bottom);
+    if (chromeContainer instanceof HTMLElement) {
+      bottom = collectFieldChromeBottom(field, chromeContainer, bottom);
+    }
     return {
       top: blockRect.top,
-      bottom: Math.max(blockRect.bottom, fieldRect.bottom),
+      bottom,
       left: Math.min(blockRect.left, fieldRect.left),
       right: Math.max(blockRect.right, fieldRect.right),
     };
   }
+  let bottom = fieldRect.bottom;
+  if (chromeContainer instanceof HTMLElement) {
+    bottom = collectFieldChromeBottom(field, chromeContainer, bottom);
+  }
   return {
     top: fieldRect.top,
-    bottom: fieldRect.bottom,
+    bottom,
     left: fieldRect.left,
     right: fieldRect.right,
   };
@@ -514,11 +596,9 @@ export function getFocusScrollRect(field: HTMLElement): FocusScrollRect {
   };
 }
 
-/** Applica padding-bottom keyboard sullo scroll body attivo (mobile). */
-export function applyKeyboardPadToScrollContainer(container: HTMLElement | null): void {
-  if (!container) return;
-  const inset = computeKeyboardInset();
-  container.style.paddingBottom = inset > 0 ? `${inset}px` : "";
+/** ponytail: pad via CSS var + cabModalScrollKeyboardPad — no inline doppio */
+export function applyKeyboardPadToScrollContainer(_container: HTMLElement | null): void {
+  /* keyboard inset applied via --cab-keyboard-inset + [data-cab-modal-scroll] scroll-padding */
 }
 
 /** Scroll controllato del campo nel container gestionale (modale o pagina). */
@@ -630,7 +710,7 @@ function completeGestionaleFocusScrollWithoutMove(field: HTMLElement): void {
   markGestionaleFocusScrollCompleted(field);
 }
 
-/** Scroll dopo layout stabile — last-wins: solo l'ultimo focus esegue retry post viewport stable. */
+/** Scroll dopo layout stabile — V1 legacy; V2 usa focus-visibility-pipeline. */
 export function scheduleGestionaleFieldScroll(
   field: HTMLElement | null | undefined,
   options: ScrollFieldIntoModalOptions = {},
@@ -650,20 +730,22 @@ export function scheduleGestionaleFieldScroll(
   const gen = ++focusScrollGeneration;
 
   void (async () => {
-    await new Promise<void>((r) => window.requestAnimationFrame(() => r()));
+    await waitForViewportStable({ timeout: 500, quietPeriod: 80 });
     if (gen !== focusScrollGeneration) return;
-    const insetBefore = computeKeyboardInset();
     scrollGestionaleFieldIntoView(target, merged);
-    await waitForViewportStable();
-    if (gen !== focusScrollGeneration) return;
-    if (computeKeyboardInset() !== insetBefore) {
-      scrollGestionaleFieldIntoView(target, merged);
-    }
   })();
+}
+
+export function isManagedMobileFocusTarget(el: EventTarget | null): el is HTMLElement {
+  return isGestionaleFocusableField(el);
 }
 
 /** Handler focusin unificato (mobile + desktop safe). */
 export function handleFocusInForMobileModal(e: FocusEvent): void {
+  if (isMobileFocusVisibilityV2()) {
+    handleFocusInV2(e);
+    return;
+  }
   const raw = e.target;
   if (raw == null || !isFocusableField(raw)) return;
   const target = resolveFocusScrollTarget(raw);
@@ -707,6 +789,15 @@ export const MobileModalBehaviorLayer = {
   getEffectiveVisibleBand,
   findStickyObstructions,
   findGestionaleScrollContainer,
+  resolveScrollOwner,
   getVisualViewportBand,
   GESTIONALE_PAGE_SCROLL_SELECTOR,
+  resolveFocusPositionMode,
+  syncFocusVisibilityCssVars,
+  isManagedMobileFocusTarget,
+  MOBILE_KEYBOARD_SAFE_AREA,
+  CAB_FOCUS_POSITION_ATTR,
 } as const;
+
+/** Alias pubblico Focus Visibility Manager */
+export const FocusVisibilityManager = MobileModalBehaviorLayer;

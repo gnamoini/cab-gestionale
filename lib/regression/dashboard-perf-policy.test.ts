@@ -28,6 +28,10 @@ assert.doesNotMatch(dashboardDeferredBlock, /lavorazioni\.list\.attive/);
 
 const dashboardMetrics = read("src/hooks/view/use-dashboard-metrics.ts");
 assert.match(dashboardMetrics, /useLavorazioniReportSlice/);
+assert.match(dashboardMetrics, /lavReportRows/);
+
+const controlTowerMetrics = read("src/hooks/view/use-control-tower-metrics.ts");
+assert.match(controlTowerMetrics, /lavReportRows/);
 
 const reportRoutes = getPrefetchRoutesForScope("lavorazioni.list.report");
 assert.ok(reportRoutes.includes("/dashboard"), "report scope must include /dashboard for SSR hydration");

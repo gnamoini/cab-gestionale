@@ -38,6 +38,7 @@ debug-929eab.log
 .env*
 !.env.smoke.example
 !.env.production.example
+.ai-prod-keys.tmp
 
 # vercel
 .vercel

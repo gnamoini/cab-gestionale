@@ -5,9 +5,9 @@ const REF_HEIGHT_MM = 30;
 
 /** Padding contenuto dal bordo etichetta (mm). */
 export function labelMarginMm(widthMm: number, heightMm: number): number {
-  if (widthMm <= 40 && heightMm <= 20) return 2;
-  if (widthMm < 55 || heightMm < 35) return 2.5;
-  return 3;
+  if (widthMm <= 40 && heightMm <= 20) return 3;
+  if (widthMm < 55 || heightMm < 35) return 3.5;
+  return 4;
 }
 
 /** Scala tipografica vs preset riferimento 50×30. */
@@ -134,7 +134,7 @@ export function computeLabelLayout(widthMm: number, heightMm: number): LabelTemp
 function buildTemplate(id: string, widthMm: number, heightMm: number): LabelTemplateDefinition {
   return {
     id,
-    version: "1.6.4",
+    version: "1.6.5",
     widthMm,
     heightMm,
     dpi: 300,
@@ -143,7 +143,7 @@ function buildTemplate(id: string, widthMm: number, heightMm: number): LabelTemp
   };
 }
 
-/** Preset registry — 40×20 … 80×50 mm (incl. 80×40). */
+/** Preset registry — 40×20 … 95×40 mm (incl. 80×40). */
 export const LABEL_TEMPLATE_REGISTRY: Record<string, LabelTemplateDefinition> = {
   "40x20-default": buildTemplate("40x20-default", 40, 20),
   "50x30-default": buildTemplate("50x30-default", 50, 30),
@@ -151,12 +151,23 @@ export const LABEL_TEMPLATE_REGISTRY: Record<string, LabelTemplateDefinition> = 
   "70x50-default": buildTemplate("70x50-default", 70, 50),
   "80x40-default": buildTemplate("80x40-default", 80, 40),
   "80x50-default": buildTemplate("80x50-default", 80, 50),
+  "95x40-default": buildTemplate("95x40-default", 95, 40),
 };
 
 /** Default 60×40 — QR scannabile e margini adeguati su stampa comune. */
 export const DEFAULT_LABEL_PRESET = "60x40-default";
 
 export const LABEL_PRESET_IDS = Object.keys(LABEL_TEMPLATE_REGISTRY);
+
+/** Es. `60x40-default` → `60 × 40 mm`. */
+export function labelPresetDisplayName(presetId: string): string {
+  return `${presetId.replace(/-default$/, "").replace(/x/g, " × ")} mm`;
+}
+
+export function labelPresetOptionLabel(presetId: string): string {
+  const name = labelPresetDisplayName(presetId);
+  return presetId === DEFAULT_LABEL_PRESET ? `${name} · consigliato` : name;
+}
 
 export function getLabelTemplate(presetId: string): LabelTemplateDefinition | null {
   return LABEL_TEMPLATE_REGISTRY[presetId] ?? null;

@@ -28,6 +28,7 @@ export async function auditBulkPdfCompleted(
     pdfBytes: number;
     pipeline: BulkPdfPipelineMode;
     jobId?: string;
+    metrics?: Record<string, unknown>;
   },
 ): Promise<void> {
   await writeInventoryLabelEvent(sb, {
@@ -41,6 +42,7 @@ export async function auditBulkPdfCompleted(
       durationMs: input.durationMs,
       pdfBytes: input.pdfBytes,
       pipeline: input.pipeline,
+      ...(input.metrics ?? {}),
     },
   });
 }
@@ -55,6 +57,7 @@ export async function auditBulkPdfFailed(
     errorCode: string;
     message: string;
     jobId?: string;
+    metrics?: Record<string, unknown>;
   },
 ): Promise<void> {
   await writeInventoryLabelEvent(sb, {
@@ -68,6 +71,7 @@ export async function auditBulkPdfFailed(
       durationMs: input.durationMs,
       errorCode: input.errorCode,
       message: input.message,
+      ...(input.metrics ?? {}),
     },
   });
 }

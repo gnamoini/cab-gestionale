@@ -6,13 +6,7 @@ import {
   applyKeyboardPadToScrollContainer,
   CAB_MODAL_ROOT_ATTR,
   CAB_MODAL_SCROLL_ATTR,
-  isGestionaleFocusableField,
   isVirtualKeyboardClosing,
-  resolveFocusExtraBottom,
-  resolveFocusExtraTop,
-  resolveFocusScrollTarget,
-  scrollGestionaleFieldIntoView,
-  shouldSkipRedundantGestionaleFocusScroll,
 } from "@/lib/ui/mobile-modal-behavior";
 
 const MOBILE_MQ = "(max-width: 767px)";
@@ -32,7 +26,6 @@ function preserveModalScrollTop(scrollEl: HTMLElement): void {
   });
 }
 
-/** Scroll body modale/sheet: focus nel corpo o ricerca in header (es. bottom sheet). */
 function findModalScrollContainer(
   root: HTMLElement,
   focused: HTMLElement | null,
@@ -45,28 +38,9 @@ function findModalScrollContainer(
   return marked instanceof HTMLElement ? marked : null;
 }
 
-function scrollFocusedFieldInModal(root: HTMLElement): void {
-  const focused = document.activeElement;
-  if (
-    !(focused instanceof HTMLElement) ||
-    !root.contains(focused) ||
-    !isGestionaleFocusableField(focused) ||
-    !focused.closest(`[${CAB_MODAL_ROOT_ATTR}]`)
-  ) {
-    return;
-  }
-  if (shouldSkipRedundantGestionaleFocusScroll(focused, "keyboard-open")) return;
-  scrollGestionaleFieldIntoView(resolveFocusScrollTarget(focused), {
-    behavior: "auto",
-    extraTop: resolveFocusExtraTop(),
-    extraBottom: resolveFocusExtraBottom(),
-  });
-}
-
 /**
  * Keyboard pad sullo scroll body del modale — attivo solo sotto 768px.
- * Focus scroll è gestito globalmente da IosInteractionStability.
- * Alla chiusura tastiera (es. tasto indietro Android) non riscrolla: mantiene scrollTop.
+ * V2: focus scroll è solo Focus Transaction; qui resta pad + preserve on close.
  */
 export function useMobileModalKeyboard(rootRef: RefObject<HTMLElement | null>): void {
   useEffect(() => {
@@ -96,7 +70,6 @@ export function useMobileModalKeyboard(rootRef: RefObject<HTMLElement | null>): 
 
       const keyboardInset = snapshot.keyboardInset;
       const keyboardClosing = isVirtualKeyboardClosing(prevKeyboardInset, keyboardInset);
-      const keyboardOpening = keyboardInset > prevKeyboardInset && keyboardInset > 48;
 
       const root = rootRef.current;
       if (!root) {
@@ -124,10 +97,6 @@ export function useMobileModalKeyboard(rootRef: RefObject<HTMLElement | null>): 
           scrollEl.scrollTop = savedTop;
           preserveModalScrollTop(scrollEl);
         }
-      }
-
-      if (!keyboardClosing && (keyboardOpening || keyboardInset > 0)) {
-        scrollFocusedFieldInModal(root);
       }
 
       prevKeyboardInset = keyboardInset;
