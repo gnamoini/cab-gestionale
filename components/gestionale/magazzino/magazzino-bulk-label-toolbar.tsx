@@ -5,6 +5,8 @@ import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-sh
 import { BULK_SYNC_MAX, DEFAULT_LABEL_PRESET, LABEL_PRESET_IDS } from "@/lib/inventory-labels";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
+type BulkLabelPhase = "idle" | "preparing" | "generating" | "downloading";
+
 function openPdfBlob(blob: Blob, filename = "etichette.pdf"): void {
   const blobUrl = URL.createObjectURL(blob);
   const opened = window.open(blobUrl, "_blank", "noopener,noreferrer");
@@ -31,16 +33,20 @@ export function MagazzinoBulkLabelToolbar({
 }) {
   const gestToast = useGestionaleToast();
   const [preset, setPreset] = useState(DEFAULT_LABEL_PRESET);
-  const [busy, setBusy] = useState(false);
+  const [phase, setPhase] = useState<BulkLabelPhase>("idle");
+  const [progress, setProgress] = useState(0);
   const count = selectedIds.size;
+  const busy = phase !== "idle";
 
   const handlePrint = useCallback(async () => {
     if (!count) return;
-    setBusy(true);
+    setPhase("preparing");
+    setProgress(0);
     try {
       const ids = [...selectedIds];
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), BULK_FETCH_TIMEOUT_MS);
+      setPhase("generating");
       const res = await fetch("/api/inventory-labels/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -56,18 +62,39 @@ export function MagazzinoBulkLabelToolbar({
           if (attempt > 120) throw new Error("Timeout job etichette");
           const jobRes = await fetch(`/api/inventory-labels/bulk/jobs/${jobId}`);
           if (jobRes.headers.get("Content-Type")?.includes("application/pdf")) {
+            setPhase("downloading");
+            setProgress(100);
             const blob = await jobRes.blob();
             openPdfBlob(blob, `etichette-${ids.length}.pdf`);
             gestToast.successOnce("bulk-labels", "PDF etichette pronto.");
             onClearSelection();
             return;
           }
-          const status = (await jobRes.json()) as { status: string; error?: string };
-          if (status.status === "failed") throw new Error(status.error ?? "Job fallito");
+          if (jobRes.headers.get("Content-Type")?.includes("application/zip")) {
+            setPhase("downloading");
+            setProgress(100);
+            const blob = await jobRes.blob();
+            openPdfBlob(blob, `etichette-${ids.length}.zip`);
+            gestToast.info("PDF non disponibile — scaricato archivio PNG emergenza.");
+            onClearSelection();
+            return;
+          }
+          const status = (await jobRes.json()) as {
+            status: string;
+            progress?: number;
+            error?: string;
+            errorCode?: string;
+          };
+          if (status.status === "failed") {
+            throw new Error(status.error ?? status.errorCode ?? "Job fallito");
+          }
+          if (typeof status.progress === "number") setProgress(status.progress);
           if (status.status === "completed") {
+            setPhase("downloading");
             const pdfRes = await fetch(`/api/inventory-labels/bulk/jobs/${jobId}`);
             const blob = await pdfRes.blob();
-            openPdfBlob(blob, `etichette-${ids.length}.pdf`);
+            const isZip = pdfRes.headers.get("Content-Type")?.includes("zip");
+            openPdfBlob(blob, `etichette-${ids.length}.${isZip ? "zip" : "pdf"}`);
             onClearSelection();
             return;
           }
@@ -78,9 +105,15 @@ export function MagazzinoBulkLabelToolbar({
         return;
       }
 
-      if (!res.ok) throw new Error("Stampa bulk non riuscita");
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error ?? "Stampa bulk non riuscita");
+      }
+      setPhase("downloading");
+      setProgress(100);
       const blob = await res.blob();
-      openPdfBlob(blob, `etichette-${ids.length}.pdf`);
+      const isZip = res.headers.get("Content-Type")?.includes("zip");
+      openPdfBlob(blob, `etichette-${ids.length}.${isZip ? "zip" : "pdf"}`);
       gestToast.successOnce("bulk-labels-sync", "PDF etichette pronto.");
       onClearSelection();
     } catch (e) {
@@ -92,11 +125,23 @@ export function MagazzinoBulkLabelToolbar({
             : "Stampa etichette non riuscita.";
       gestToast.error(msg);
     } finally {
-      setBusy(false);
+      setPhase("idle");
+      setProgress(0);
     }
   }, [count, gestToast, onClearSelection, preset, selectedIds]);
 
   if (!count) return null;
+
+  const phaseLabel =
+    phase === "preparing"
+      ? "Preparazione…"
+      : phase === "generating"
+        ? progress > 0
+          ? `Generazione ${progress}%`
+          : "Generazione…"
+        : phase === "downloading"
+          ? "Download…"
+          : null;
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_25%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-surface))] px-3 py-2">
@@ -108,6 +153,7 @@ export function MagazzinoBulkLabelToolbar({
         value={preset}
         onChange={(e) => setPreset(e.target.value)}
         aria-label="Preset etichetta"
+        disabled={busy}
       >
         {LABEL_PRESET_IDS.map((id) => (
           <option key={id} value={id}>
@@ -118,10 +164,15 @@ export function MagazzinoBulkLabelToolbar({
       <button type="button" className={erpBtnAccent} disabled={busy} onClick={() => void handlePrint()}>
         Stampa etichette
       </button>
+      {phaseLabel ? (
+        <span className="text-xs tabular-nums text-[color:var(--cab-text-muted)]" aria-live="polite">
+          {phaseLabel}
+        </span>
+      ) : null}
       {count > BULK_SYNC_MAX ? (
         <span className="text-xs text-[color:var(--cab-text-muted)]">Job async (&gt;{BULK_SYNC_MAX})</span>
       ) : null}
-      <button type="button" className="text-xs underline" onClick={onClearSelection}>
+      <button type="button" className="text-xs underline" onClick={onClearSelection} disabled={busy}>
         Deseleziona
       </button>
     </div>

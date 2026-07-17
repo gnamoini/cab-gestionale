@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import {
   geminiKeySlotForIndex,
+  getGeminiConfigurationStatus,
+  isGeminiApiKeyFormatValid,
   isGeminiFailoverError,
   isGeminiModelUnavailableError,
   normalizeGeminiReportModelId,
@@ -49,6 +51,19 @@ assert.equal(geminiKeySlotForIndex(1), "secondary");
 assert.equal(isGeminiFailoverError(new Error("429 quota exceeded")), true);
 assert.equal(isGeminiFailoverError(new Error("401 API KEY invalid")), true);
 assert.equal(isGeminiFailoverError(new Error("TimeoutError")), false);
+
+assert.equal(isGeminiApiKeyFormatValid("AIzaSyD-example-key-1234567890"), true);
+assert.equal(isGeminiApiKeyFormatValid("AQ.AbCdEf"), false);
+assert.equal(isGeminiApiKeyFormatValid("test"), false);
+
+const statusOk = getGeminiConfigurationStatus({ GOOGLE_GENERATIVE_AI_API_KEY: "AIzaSyD-example-key-1234567890" });
+assert.equal(statusOk.configured, true);
+assert.equal(statusOk.formatValid, true);
+assert.equal(statusOk.primarySource, "GOOGLE_GENERATIVE_AI_API_KEY");
+
+const statusMissing = getGeminiConfigurationStatus({});
+assert.equal(statusMissing.configured, false);
+assert.equal(statusMissing.missing.length, 3);
 
 assert.equal(
   normalizeGeminiReportModelId("gemini-2.5-flash", GEMINI_REPORT_MODEL_ID),

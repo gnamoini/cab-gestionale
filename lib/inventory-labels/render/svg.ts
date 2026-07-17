@@ -1,8 +1,6 @@
-import "server-only";
-
 import type { LabelPayload, LabelTemplateDefinition } from "@/lib/inventory-labels/domain/types";
 import { mmToPx } from "@/lib/inventory-labels/domain/templates";
-import { generateCode128SvgString } from "@/lib/inventory-labels/render/barcode";
+import { generateCode128SvgString } from "@/lib/inventory-labels/render/barcode-core";
 import { cutBorderRectSvg } from "@/lib/inventory-labels/render/cut-border";
 import { nestedSvgAt, parseSvgFragment, cropSvgFragmentToInkBounds } from "@/lib/inventory-labels/render/svg-embed";
 import { generateQrSvgString } from "@/lib/inventory-labels/qr/generator";

@@ -16,6 +16,9 @@ export const LABEL_EVENT_TYPES = [
   "DOWNLOAD_PNG",
   "DOWNLOAD_PDF",
   "DOWNLOAD_SVG",
+  "LABEL_PDF_BULK_STARTED",
+  "LABEL_PDF_BULK_COMPLETED",
+  "LABEL_PDF_BULK_FAILED",
 ] as const;
 export type LabelEventType = (typeof LABEL_EVENT_TYPES)[number];
 
@@ -86,4 +89,4 @@ export type InventoryQrTokenRow = {
   superseded_by: string | null;
 };
 
-export const GENERATOR_VERSION = "1.3.31";
+export const GENERATOR_VERSION = "1.3.32";

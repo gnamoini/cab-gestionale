@@ -76,6 +76,26 @@ export async function uploadLabelArtifactBestEffort(
   }
 }
 
+export async function uploadBulkLabelJobResult(input: {
+  jobId: string;
+  hash: string;
+  bytes: Uint8Array;
+  contentType: "application/pdf" | "application/zip";
+}): Promise<string> {
+  const sb = await createSupabaseServerUserClient();
+  const ext = input.contentType === "application/zip" ? "zip" : "pdf";
+  const path = normalizeStorageObjectPath(
+    `inventory-labels/bulk/${input.jobId}/${input.hash.replace(/[^a-f0-9]/gi, "").slice(0, 16)}.${ext}`,
+  );
+  const { error } = await sb.storage.from(STORAGE_BUCKETS.pdfArtifacts).upload(path, input.bytes, {
+    contentType: input.contentType,
+    upsert: true,
+    cacheControl: "3600",
+  });
+  if (error) throw new Error(error.message);
+  return path;
+}
+
 export async function downloadLabelArtifact(objectPath: string): Promise<Uint8Array | null> {
   const sb = await createSupabaseServerUserClient();
   const normalized = normalizeStorageObjectPath(objectPath);

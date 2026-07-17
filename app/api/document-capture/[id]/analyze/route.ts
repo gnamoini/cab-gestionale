@@ -63,7 +63,13 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (!result.ok) {
     const status =
-      result.code === "not_configured" ? 503 : result.code === "no_fields" ? 422 : 400;
+      result.code === "not_configured" || result.code === "unreachable"
+        ? 503
+        : result.code === "auth_invalid"
+          ? 502
+          : result.code === "no_fields"
+            ? 422
+            : 400;
     const headers: Record<string, string> = {
       "X-Correlation-Id": correlationId,
     };

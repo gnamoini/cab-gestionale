@@ -5,7 +5,8 @@ import {
   requestOrigin,
 } from "@/lib/inventory-labels/api-auth.server";
 import { createBulkLabelJob, renderBulkLabelPdfSync } from "@/lib/inventory-labels/jobs/bulk-label-job.server";
-import { bulkLabelRequestSchema, isBulkSyncCount } from "@/lib/inventory-labels/validation";
+import { LabelPdfTimeoutError } from "@/lib/inventory-labels/render/pdf-timeout";
+import { bulkLabelRequestSchema, BULK_SYNC_MAX, BULK_ABSOLUTE_MAX, isBulkSyncCount } from "@/lib/inventory-labels/validation";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -26,23 +27,29 @@ export async function POST(request: Request) {
 
   if (isBulkSyncCount(ids.length)) {
     try {
-      const bytes = await renderBulkLabelPdfSync({
+      const { bytes, contentType, pipeline } = await renderBulkLabelPdfSync({
         entityIds: ids,
         preset,
         userId: auth.userId,
         origin,
       });
+      const ext = contentType === "application/zip" ? "zip" : "pdf";
       return new Response(Buffer.from(bytes), {
         status: 200,
         headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="etichette-${ids.length}.pdf"`,
+          "Content-Type": contentType,
+          "Content-Disposition": `attachment; filename="etichette-${ids.length}.${ext}"`,
+          "X-Label-Pdf-Pipeline": pipeline,
         },
       });
     } catch (e) {
+      const status = e instanceof LabelPdfTimeoutError ? 504 : 500;
       return NextResponse.json(
-        { error: e instanceof Error ? e.message : "Generazione bulk fallita" },
-        { status: 500 },
+        {
+          error: e instanceof Error ? e.message : "Generazione bulk fallita",
+          errorCode: e instanceof LabelPdfTimeoutError ? e.code : "LABEL_PDF_FAILED",
+        },
+        { status },
       );
     }
   }
@@ -66,5 +73,5 @@ export async function POST(request: Request) {
 export async function GET() {
   const auth = await requireInventoryLabelsRead();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-  return NextResponse.json({ syncMax: 100, absoluteMax: 1000 });
+  return NextResponse.json({ syncMax: BULK_SYNC_MAX, absoluteMax: BULK_ABSOLUTE_MAX });
 }

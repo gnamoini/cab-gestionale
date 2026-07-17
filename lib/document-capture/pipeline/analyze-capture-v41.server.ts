@@ -48,6 +48,8 @@ import { runHybridExtractionWithTimeout } from "@/lib/document-capture/extractio
 import { SCHEDA_OFFICINA_EXTRACTION_USER } from "@/lib/document-capture/scheda-officina-extraction-prompt";
 import { classifyStorageDownloadError } from "@/lib/storage/storage-download-errors";
 import { resolveGeminiAnalyzeRetryDelayMs } from "@/lib/ai/gemini-retry-after";
+import { isGeminiAuthError, isGeminiUnreachableError } from "@/lib/ai/gemini-api-keys";
+import { GEMINI_AUTH_ERROR_HINT } from "@/lib/ai/gemini-client";
 import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
@@ -62,7 +64,7 @@ export type AnalyzeCaptureV41Result =
       documentModelVersionHash: string;
       fieldCount: number;
     }
-  | { ok: false; code: "not_configured" | "not_finalized" | "failed" | "no_fields"; message: string };
+  | { ok: false; code: "not_configured" | "auth_invalid" | "unreachable" | "not_finalized" | "failed" | "no_fields"; message: string };
 
 async function countCaptureFields(captureId: string): Promise<number> {
   const sb = await createSupabaseServerUserClient();
@@ -437,12 +439,23 @@ export async function analyzeDocumentCaptureV41(
   }
 
   const message = lastError instanceof Error ? lastError.message : "Analisi non riuscita.";
+  const code = isGeminiAuthError(lastError)
+    ? "auth_invalid"
+    : isGeminiUnreachableError(lastError)
+      ? "unreachable"
+      : "failed";
+  const userMessage =
+    code === "auth_invalid"
+      ? GEMINI_AUTH_ERROR_HINT
+      : code === "unreachable"
+        ? "Chiave presente ma API Gemini non raggiungibile. Riprova tra poco."
+        : message;
   await mutateCaptureWithEvent({
     captureId,
     eventType: "analyze_failed",
     idempotencyKey: `analyze_failed:${capture.capture_version}`,
-    payload: { errorCode: "analyze_failed", message, pipeline: "v4.1" },
+    payload: { errorCode: code, message: userMessage, pipeline: "v4.1" },
     newStatus: "failed",
   });
-  return { ok: false, code: "failed", message };
+  return { ok: false, code, message: userMessage };
 }

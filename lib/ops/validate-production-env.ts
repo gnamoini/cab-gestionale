@@ -1,4 +1,5 @@
 import { readSupabasePublicEnv } from "@/lib/env/supabase-public";
+import { checkAiConfigurationForProduction } from "@/lib/ops/ai-configuration-check";
 import type { ProductionReadinessFinding } from "@/lib/production/production-readiness-types";
 
 export type OpsEnvFinding = ProductionReadinessFinding;
@@ -108,6 +109,10 @@ export function validateProductionEnv(env: NodeJS.ProcessEnv = process.env): {
         "SUPABASE_SERVICE_ROLE_KEY presente in env runtime production (deve restare solo su GitHub Actions / server local).",
     });
   }
+
+  const aiCheck = checkAiConfigurationForProduction(env);
+  for (const finding of aiCheck.blockers) push(blockers, finding);
+  for (const finding of aiCheck.warnings) push(warnings, finding);
 
   return { blockers, warnings, productionTarget };
 }

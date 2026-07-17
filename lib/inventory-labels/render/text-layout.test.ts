@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import type { LabelTemplateDefinition, LabelTemplateElement } from "@/lib/inventory-labels/domain/types";
 import { getLabelTemplate, labelMarginMm } from "@/lib/inventory-labels/domain/templates";
 import { linesFitDisplayWidth, linesFitWrapWidth } from "@/lib/inventory-labels/render/layout";
 import { resolveLabelTextLayout } from "@/lib/inventory-labels/render/text-layout";
@@ -11,14 +12,21 @@ import {
   supplierCapBaselineMm,
 } from "@/lib/inventory-labels/render/text-metrics";
 
+type TextEl = Extract<LabelTemplateElement, { type: "text" }>;
+
+function findTextEl(template: LabelTemplateDefinition, field: TextEl["field"]): TextEl {
+  const el = template.elements.find((e) => e.type === "text" && e.field === field);
+  assert.ok(el?.type === "text", `text element ${field}`);
+  return el;
+}
+
 const template = getLabelTemplate("60x40-default")!;
-const marcaEl = template.elements.find((e) => e.type === "text" && e.field === "marca")!;
-const descEl = template.elements.find((e) => e.type === "text" && e.field === "descrizione")!;
-const codiceEl = template.elements.find((e) => e.type === "text" && e.field === "codice")!;
-const altFornEl = template.elements.find((e) => e.type === "text" && e.field === "fornitoreAlternativo")!;
+const marcaEl = findTextEl(template, "marca");
+const descEl = findTextEl(template, "descrizione");
+const codiceEl = findTextEl(template, "codice");
+const altFornEl = findTextEl(template, "fornitoreAlternativo");
 const barcode = template.elements.find((e) => e.type === "barcode")!;
-assert.ok(codiceEl && codiceEl.type === "text" && codiceEl.zoneBottomMm != null);
-assert.ok(altFornEl && altFornEl.type === "text");
+assert.ok(codiceEl.zoneBottomMm != null);
 assert.ok(barcode && barcode.type === "barcode");
 
 const labelBottom = altFornEl.zoneBottomMm!;
@@ -115,7 +123,7 @@ const widePlaced = resolveLabelTextLayout(wide, {
   codiceAlternativo: "RX-1",
 });
 const wideCodice = widePlaced.find((p) => p.field === "codice")!;
-const wideCodiceEl = wide.elements.find((e) => e.type === "text" && e.field === "codice")!;
+const wideCodiceEl = findTextEl(wide, "codice");
 assert.equal(wideCodice.fontPt, wideCodiceEl.fontPt);
 
 const small = getLabelTemplate("40x20-default")!;
@@ -129,7 +137,7 @@ const smallPayload = {
   codiceAlternativo: "RX-90812-ABCDEF",
 };
 const smallPlaced = resolveLabelTextLayout(small, smallPayload);
-const smallW = small.elements.find((e) => e.type === "text" && e.field === "marca")!.maxWidthMm!;
+const smallW = findTextEl(small, "marca").maxWidthMm!;
 for (const p of smallPlaced) {
   const fits =
     p.field === "codice" || p.field === "codiceSecondario"
@@ -141,6 +149,6 @@ const smallCodice = smallPlaced.find((p) => p.field === "codice")!;
 const smallDesc = smallPlaced.find((p) => p.field === "descrizione")!;
 assert.ok(smallCodice.lines.length >= 1);
 assert.ok(linesFitDisplayWidth(smallCodice.lines, smallW, smallCodice.fontPt, "mono"));
-assert.equal(smallDesc.fontPt, small.elements.find((e) => e.type === "text" && e.field === "descrizione")!.fontPt);
+assert.equal(smallDesc.fontPt, findTextEl(small, "descrizione").fontPt);
 
 console.log("inventory-labels/render/text-layout.test.ts OK");

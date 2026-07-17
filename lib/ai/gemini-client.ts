@@ -11,10 +11,13 @@ import {
 
 export {
   geminiKeySlotForIndex,
+  getGeminiConfigurationStatus,
+  isGeminiApiKeyFormatValid,
   isGeminiAuthError,
   isGeminiFailoverError,
   isGeminiModelUnavailableError,
   isGeminiQuotaError,
+  isGeminiUnreachableError,
   normalizeGeminiReportModelId,
   resolveGeminiApiKeysFromEnv,
   runWithGeminiApiKeysFailover,

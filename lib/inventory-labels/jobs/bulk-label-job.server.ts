@@ -6,8 +6,14 @@ import { getLabelTemplate } from "@/lib/inventory-labels/domain/templates";
 import { buildInventoryQrUrl } from "@/lib/inventory-labels/domain/tokens";
 import { ensureActiveInventoryToken } from "@/lib/inventory-labels/domain/tokens.server";
 import { labelPayloadFromMagazzinoRow, magazzinoRicambioEntityType } from "@/lib/inventory-labels/domain/ricambio-payload.server";
-import { renderMultiLabelPdf } from "@/lib/inventory-labels/render/pdf";
-import { uploadLabelArtifact } from "@/lib/inventory-labels/storage/artifacts.server";
+import { renderMultiLabelPdfWithPipeline } from "@/lib/inventory-labels/render/pdf";
+import { LabelPdfTimeoutError } from "@/lib/inventory-labels/render/pdf-timeout";
+import {
+  auditBulkPdfCompleted,
+  auditBulkPdfFailed,
+  auditBulkPdfStarted,
+} from "@/lib/inventory-labels/audit/bulk-pdf-audit.server";
+import { uploadBulkLabelJobResult } from "@/lib/inventory-labels/storage/artifacts.server";
 import { MAGAZZINO_RICAMBI_COLUMNS } from "@/lib/db/table-select-columns";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 import { createHash } from "node:crypto";
@@ -42,6 +48,10 @@ async function buildBulkLabelItems(
   return items.filter((item): item is NonNullable<typeof item> => item != null);
 }
 
+async function updateJobProgress(sb: Awaited<ReturnType<typeof createSupabaseServerUserClient>>, jobId: string, progress: number): Promise<void> {
+  await sb.from("label_generation_jobs").update({ progress }).eq("id", jobId);
+}
+
 export async function createBulkLabelJob(input: {
   entityIds: string[];
   preset: string;
@@ -53,6 +63,7 @@ export async function createBulkLabelJob(input: {
     .from("label_generation_jobs")
     .insert({
       status: "pending",
+      progress: 0,
       entity_ids: input.entityIds,
       preset: input.preset,
       format: "pdf",
@@ -71,8 +82,12 @@ async function processBulkLabelJob(
   input: { entityIds: string[]; preset: string; userId: string; origin: string },
 ): Promise<void> {
   const sb = await createSupabaseServerUserClient();
+  const t0 = performance.now();
+  const count = input.entityIds.length;
+
   try {
-    await sb.from("label_generation_jobs").update({ status: "running" }).eq("id", jobId);
+    await sb.from("label_generation_jobs").update({ status: "running", progress: 0 }).eq("id", jobId);
+    await auditBulkPdfStarted(sb, { userId: input.userId, count, mode: "async", jobId });
 
     const template = getLabelTemplate(input.preset);
     if (!template) throw new Error("Template non valido");
@@ -80,33 +95,66 @@ async function processBulkLabelJob(
     const items = await buildBulkLabelItems(sb, input.entityIds, input.userId, input.origin);
     if (!items.length) throw new Error("Nessun ricambio valido per la stampa");
 
-    const pdfBytes = await renderMultiLabelPdf(template, items);
+    await updateJobProgress(sb, jobId, 5);
+
+    const result = await renderMultiLabelPdfWithPipeline(template, items, {
+      onProgress: async (done, total) => {
+        const rasterProgress = Math.floor((done / total) * 90);
+        await updateJobProgress(sb, jobId, Math.max(5, rasterProgress));
+      },
+    });
+
     const hash = createHash("sha256").update(input.entityIds.join(",")).digest("hex").slice(0, 16);
-    const path = await uploadLabelArtifact({
-      entityType: "bulk",
-      entityId: jobId,
+    const isZip = result.kind === "zip";
+    const path = await uploadBulkLabelJobResult({
+      jobId,
       hash,
-      format: "pdf",
-      bytes: pdfBytes,
+      bytes: result.bytes,
+      contentType: isZip ? "application/zip" : "application/pdf",
     });
 
     await sb
       .from("label_generation_jobs")
       .update({
         status: "completed",
+        progress: 100,
+        format: isZip ? "zip" : "pdf",
         result_storage_path: path,
         completed_at: new Date().toISOString(),
       })
       .eq("id", jobId);
+
+    await auditBulkPdfCompleted(sb, {
+      userId: input.userId,
+      count,
+      mode: "async",
+      durationMs: Math.round(performance.now() - t0),
+      pdfBytes: result.bytes.byteLength,
+      pipeline: result.pipeline,
+      jobId,
+    });
   } catch (e) {
+    const errorCode =
+      e instanceof LabelPdfTimeoutError ? e.code : e instanceof Error && /sharp|OOM|memory/i.test(e.message) ? "LABEL_PDF_RASTER_FAILED" : "LABEL_PDF_FAILED";
+    const message = e instanceof Error ? e.message : "Generazione fallita";
     await sb
       .from("label_generation_jobs")
       .update({
         status: "failed",
-        error: e instanceof Error ? e.message : "Generazione fallita",
+        error: message,
+        error_code: errorCode,
         completed_at: new Date().toISOString(),
       })
       .eq("id", jobId);
+    await auditBulkPdfFailed(sb, {
+      userId: input.userId,
+      count,
+      mode: "async",
+      durationMs: Math.round(performance.now() - t0),
+      errorCode,
+      message,
+      jobId,
+    });
   }
 }
 
@@ -122,12 +170,41 @@ export async function renderBulkLabelPdfSync(input: {
   preset: string;
   userId: string;
   origin: string;
-}): Promise<Uint8Array> {
+}): Promise<{ bytes: Uint8Array; contentType: string; pipeline: string }> {
   const sb = await createSupabaseServerUserClient();
   const template = getLabelTemplate(input.preset);
   if (!template) throw new Error("Template non valido");
 
   const items = await buildBulkLabelItems(sb, input.entityIds, input.userId, input.origin);
   if (!items.length) throw new Error("Nessun ricambio valido");
-  return renderMultiLabelPdf(template, items);
+
+  const t0 = performance.now();
+  const count = items.length;
+  await auditBulkPdfStarted(sb, { userId: input.userId, count, mode: "sync" });
+
+  try {
+    const result = await renderMultiLabelPdfWithPipeline(template, items);
+    await auditBulkPdfCompleted(sb, {
+      userId: input.userId,
+      count,
+      mode: "sync",
+      durationMs: Math.round(performance.now() - t0),
+      pdfBytes: result.bytes.byteLength,
+      pipeline: result.pipeline,
+    });
+    const contentType = result.kind === "zip" ? "application/zip" : "application/pdf";
+    return { bytes: result.bytes, contentType, pipeline: result.pipeline };
+  } catch (e) {
+    const errorCode = e instanceof LabelPdfTimeoutError ? e.code : "LABEL_PDF_FAILED";
+    const message = e instanceof Error ? e.message : "Generazione fallita";
+    await auditBulkPdfFailed(sb, {
+      userId: input.userId,
+      count,
+      mode: "sync",
+      durationMs: Math.round(performance.now() - t0),
+      errorCode,
+      message,
+    });
+    throw e;
+  }
 }

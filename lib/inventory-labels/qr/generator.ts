@@ -1,5 +1,3 @@
-import "server-only";
-
 import QRCode from "qrcode";
 
 export async function generateQrPngBuffer(url: string, sizePx: number): Promise<Buffer> {
