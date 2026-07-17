@@ -1,5 +1,6 @@
 import "server-only";
 
+import { waitUntil } from "@vercel/functions";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { getLabelTemplate } from "@/lib/inventory-labels/domain/templates";
 import { buildInventoryQrUrl } from "@/lib/inventory-labels/domain/tokens";
@@ -10,6 +11,36 @@ import { uploadLabelArtifact } from "@/lib/inventory-labels/storage/artifacts.se
 import { MAGAZZINO_RICAMBI_COLUMNS } from "@/lib/db/table-select-columns";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 import { createHash } from "node:crypto";
+
+async function buildBulkLabelItems(
+  sb: Awaited<ReturnType<typeof createSupabaseServerUserClient>>,
+  entityIds: string[],
+  userId: string,
+  origin: string,
+): Promise<Array<{ payload: ReturnType<typeof labelPayloadFromMagazzinoRow>; qrUrl: string }>> {
+  const { data: rows, error } = await sb
+    .from("magazzino_ricambi")
+    .select(MAGAZZINO_RICAMBI_COLUMNS)
+    .in("id", entityIds);
+  if (error) throw new Error(error.message);
+
+  const byId = new Map((rows as MagazzinoRicambioRow[]).map((r) => [r.id, r]));
+  const entityType = magazzinoRicambioEntityType();
+
+  const items = await Promise.all(
+    entityIds.map(async (id) => {
+      const row = byId.get(id);
+      if (!row) return null;
+      const tokenRow = await ensureActiveInventoryToken(sb, entityType, id, userId);
+      return {
+        payload: labelPayloadFromMagazzinoRow(row),
+        qrUrl: buildInventoryQrUrl(tokenRow.token, origin),
+      };
+    }),
+  );
+
+  return items.filter((item): item is NonNullable<typeof item> => item != null);
+}
 
 export async function createBulkLabelJob(input: {
   entityIds: string[];
@@ -31,7 +62,7 @@ export async function createBulkLabelJob(input: {
     .single();
   if (error) throw new Error(error.message);
   const jobId = String(data.id);
-  void processBulkLabelJob(jobId, input);
+  waitUntil(processBulkLabelJob(jobId, input));
   return jobId;
 }
 
@@ -46,26 +77,7 @@ async function processBulkLabelJob(
     const template = getLabelTemplate(input.preset);
     if (!template) throw new Error("Template non valido");
 
-    const { data: rows, error: fetchErr } = await sb
-      .from("magazzino_ricambi")
-      .select(MAGAZZINO_RICAMBI_COLUMNS)
-      .in("id", input.entityIds);
-    if (fetchErr) throw new Error(fetchErr.message);
-
-    const byId = new Map((rows as MagazzinoRicambioRow[]).map((r) => [r.id, r]));
-    const items: Array<{ payload: ReturnType<typeof labelPayloadFromMagazzinoRow>; qrUrl: string }> = [];
-
-    for (const id of input.entityIds) {
-      const row = byId.get(id);
-      if (!row) continue;
-      const entityType = magazzinoRicambioEntityType();
-      const tokenRow = await ensureActiveInventoryToken(sb, entityType, id, input.userId);
-      items.push({
-        payload: labelPayloadFromMagazzinoRow(row),
-        qrUrl: buildInventoryQrUrl(tokenRow.token, input.origin),
-      });
-    }
-
+    const items = await buildBulkLabelItems(sb, input.entityIds, input.userId, input.origin);
     if (!items.length) throw new Error("Nessun ricambio valido per la stampa");
 
     const pdfBytes = await renderMultiLabelPdf(template, items);
@@ -115,26 +127,7 @@ export async function renderBulkLabelPdfSync(input: {
   const template = getLabelTemplate(input.preset);
   if (!template) throw new Error("Template non valido");
 
-  const { data: rows, error } = await sb
-    .from("magazzino_ricambi")
-    .select(MAGAZZINO_RICAMBI_COLUMNS)
-    .in("id", input.entityIds);
-  if (error) throw new Error(error.message);
-
-  const byId = new Map((rows as MagazzinoRicambioRow[]).map((r) => [r.id, r]));
-  const items: Array<{ payload: ReturnType<typeof labelPayloadFromMagazzinoRow>; qrUrl: string }> = [];
-
-  for (const id of input.entityIds) {
-    const row = byId.get(id);
-    if (!row) continue;
-    const entityType = magazzinoRicambioEntityType();
-    const tokenRow = await ensureActiveInventoryToken(sb, entityType, id, input.userId);
-    items.push({
-      payload: labelPayloadFromMagazzinoRow(row),
-      qrUrl: buildInventoryQrUrl(tokenRow.token, input.origin),
-    });
-  }
-
+  const items = await buildBulkLabelItems(sb, input.entityIds, input.userId, input.origin);
   if (!items.length) throw new Error("Nessun ricambio valido");
   return renderMultiLabelPdf(template, items);
 }

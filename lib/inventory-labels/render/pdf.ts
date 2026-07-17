@@ -7,6 +7,24 @@ import { computeA4Grid } from "@/lib/inventory-labels/render/print-layout";
 
 const A4_W_MM = 210;
 const A4_H_MM = 297;
+const RENDER_CONCURRENCY = 8;
+
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await fn(items[index]!, index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
 
 export async function renderSingleLabelPdf(
   template: LabelTemplateDefinition,
@@ -19,8 +37,7 @@ export async function renderSingleLabelPdf(
     unit: "mm",
     format: [template.widthMm, template.heightMm],
   });
-  const dataUrl = `data:image/png;base64,${png.toString("base64")}`;
-  doc.addImage(dataUrl, "PNG", 0, 0, template.widthMm, template.heightMm);
+  doc.addImage(new Uint8Array(png), "PNG", 0, 0, template.widthMm, template.heightMm, undefined, "FAST");
   return new Uint8Array(doc.output("arraybuffer"));
 }
 
@@ -29,22 +46,20 @@ export async function renderMultiLabelPdf(
   items: Array<{ payload: LabelPayload; qrUrl: string }>,
 ): Promise<Uint8Array> {
   const grid = computeA4Grid(template);
+  const pngs = await mapWithConcurrency(items, RENDER_CONCURRENCY, (item) =>
+    renderLabelPng(template, item.payload, item.qrUrl),
+  );
+
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   let col = 0;
   let row = 0;
-  let page = 0;
 
   for (let i = 0; i < items.length; i++) {
-    if (i > 0 && col === 0 && row === 0) {
-      doc.addPage();
-      page++;
-    }
-    const item = items[i]!;
-    const png = await renderLabelPng(template, item.payload, item.qrUrl);
-    const dataUrl = `data:image/png;base64,${png.toString("base64")}`;
+    if (i > 0 && col === 0 && row === 0) doc.addPage();
+    const png = pngs[i]!;
     const x = grid.marginMm + col * (template.widthMm + grid.gapMm);
     const y = grid.marginMm + row * (template.heightMm + grid.gapMm);
-    doc.addImage(dataUrl, "PNG", x, y, template.widthMm, template.heightMm);
+    doc.addImage(new Uint8Array(png), "PNG", x, y, template.widthMm, template.heightMm, undefined, "FAST");
 
     col++;
     if (col >= grid.cols) {
@@ -54,7 +69,6 @@ export async function renderMultiLabelPdf(
     if (row >= grid.rows) {
       row = 0;
       if (i < items.length - 1) doc.addPage();
-      page++;
     }
   }
 

@@ -5,12 +5,22 @@ import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-sh
 import { BULK_SYNC_MAX, DEFAULT_LABEL_PRESET, LABEL_PRESET_IDS } from "@/lib/inventory-labels";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
-function openPdfInNewTab(blob: Blob): boolean {
+function openPdfBlob(blob: Blob, filename = "etichette.pdf"): void {
   const blobUrl = URL.createObjectURL(blob);
   const opened = window.open(blobUrl, "_blank", "noopener,noreferrer");
+  if (!opened) {
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
   window.setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000);
-  return Boolean(opened);
 }
+
+const BULK_FETCH_TIMEOUT_MS = 240_000;
 
 export function MagazzinoBulkLabelToolbar({
   selectedIds,
@@ -29,11 +39,15 @@ export function MagazzinoBulkLabelToolbar({
     setBusy(true);
     try {
       const ids = [...selectedIds];
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), BULK_FETCH_TIMEOUT_MS);
       const res = await fetch("/api/inventory-labels/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids, preset, format: "pdf" }),
+        signal: controller.signal,
       });
+      window.clearTimeout(timeoutId);
 
       if (res.status === 202) {
         const { jobId } = (await res.json()) as { jobId: string };
@@ -43,8 +57,8 @@ export function MagazzinoBulkLabelToolbar({
           const jobRes = await fetch(`/api/inventory-labels/bulk/jobs/${jobId}`);
           if (jobRes.headers.get("Content-Type")?.includes("application/pdf")) {
             const blob = await jobRes.blob();
-            if (!openPdfInNewTab(blob)) throw new Error("Consenti i popup per aprire il PDF.");
-            gestToast.successOnce("bulk-labels", "PDF etichette aperto in una nuova scheda.");
+            openPdfBlob(blob, `etichette-${ids.length}.pdf`);
+            gestToast.successOnce("bulk-labels", "PDF etichette pronto.");
             onClearSelection();
             return;
           }
@@ -53,7 +67,7 @@ export function MagazzinoBulkLabelToolbar({
           if (status.status === "completed") {
             const pdfRes = await fetch(`/api/inventory-labels/bulk/jobs/${jobId}`);
             const blob = await pdfRes.blob();
-            if (!openPdfInNewTab(blob)) throw new Error("Consenti i popup per aprire il PDF.");
+            openPdfBlob(blob, `etichette-${ids.length}.pdf`);
             onClearSelection();
             return;
           }
@@ -66,11 +80,17 @@ export function MagazzinoBulkLabelToolbar({
 
       if (!res.ok) throw new Error("Stampa bulk non riuscita");
       const blob = await res.blob();
-      if (!openPdfInNewTab(blob)) throw new Error("Consenti i popup per aprire il PDF.");
-      gestToast.successOnce("bulk-labels-sync", "PDF etichette aperto in una nuova scheda.");
+      openPdfBlob(blob, `etichette-${ids.length}.pdf`);
+      gestToast.successOnce("bulk-labels-sync", "PDF etichette pronto.");
       onClearSelection();
     } catch (e) {
-      gestToast.error(e instanceof Error ? e.message : "Stampa etichette non riuscita.");
+      const msg =
+        e instanceof DOMException && e.name === "AbortError"
+          ? "Generazione etichette troppo lenta. Riduci la selezione o riprova."
+          : e instanceof Error
+            ? e.message
+            : "Stampa etichette non riuscita.";
+      gestToast.error(msg);
     } finally {
       setBusy(false);
     }

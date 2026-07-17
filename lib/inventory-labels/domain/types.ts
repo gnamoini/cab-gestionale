@@ -86,4 +86,4 @@ export type InventoryQrTokenRow = {
   superseded_by: string | null;
 };
 
-export const GENERATOR_VERSION = "1.3.30";
+export const GENERATOR_VERSION = "1.3.31";

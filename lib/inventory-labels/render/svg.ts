@@ -10,6 +10,7 @@ import { labelDisplayCaps } from "@/lib/inventory-labels/domain/label-display";
 import { fieldValue } from "@/lib/inventory-labels/render/layout";
 import { resolveLabelTextLayout } from "@/lib/inventory-labels/render/text-layout";
 import { labelFontFaceCss } from "@/lib/inventory-labels/render/label-fonts";
+import { textLineToSvgPath } from "@/lib/inventory-labels/render/text-paths";
 import { lineMetrics } from "@/lib/inventory-labels/render/text-metrics";
 
 function escapeXml(s: string): string {
@@ -24,11 +25,12 @@ export async function renderLabelSvg(
   template: LabelTemplateDefinition,
   payload: LabelPayload,
   qrUrl: string,
-  options?: { embedFonts?: boolean },
+  options?: { embedFonts?: boolean; textAsPaths?: boolean },
 ): Promise<string> {
   const w = mmToPx(template.widthMm, template.dpi);
   const h = mmToPx(template.heightMm, template.dpi);
-  const embedFonts = options?.embedFonts ?? true;
+  const textAsPaths = options?.textAsPaths ?? false;
+  const embedFonts = !textAsPaths && (options?.embedFonts ?? true);
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`,
     `<rect width="100%" height="100%" fill="#ffffff"/>`,
@@ -62,7 +64,7 @@ export async function renderLabelSvg(
       const x = mmToPx(placed.xMm, template.dpi);
       const y = mmToPx(placed.yMm, template.dpi);
       const { fontSizePx, lineStepPx } = lineMetrics(fontPt, template.dpi);
-      const family = placed.font === "mono" ? "LabelMono" : "LabelSans";
+      const slot = placed.font === "mono" ? "mono" : "sans";
       const baseline = placed.baseline ?? "hanging";
       placed.lines.forEach((line, i) => {
         if (!line.trim()) return;
@@ -70,9 +72,14 @@ export async function renderLabelSvg(
           baseline === "alphabetic"
             ? y - (placed.lines.length - 1 - i) * lineStepPx
             : y + i * lineStepPx;
-        parts.push(
-          `<text x="${x}" y="${dy}" dominant-baseline="${baseline}" font-family="${family}" font-size="${fontSizePx}" fill="#000000">${escapeXml(line)}</text>`,
-        );
+        if (textAsPaths) {
+          parts.push(textLineToSvgPath(line, x, dy, fontSizePx, slot, baseline));
+        } else {
+          const family = slot === "mono" ? "LabelMono" : "LabelSans";
+          parts.push(
+            `<text x="${x}" y="${dy}" dominant-baseline="${baseline}" font-family="${family}" font-size="${fontSizePx}" fill="#000000">${escapeXml(line)}</text>`,
+          );
+        }
       });
       continue;
     }
