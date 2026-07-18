@@ -85,6 +85,7 @@ export function ClientLavorazioneIngressoDialog({
       onRequestClose={onClose}
       variant="edit-scheda"
       modalSize="formSmall"
+      modalHeight="standard"
     >
       <div className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}>
         <GestionaleModalScrollBody>

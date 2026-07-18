@@ -24,16 +24,29 @@ export type OperationalHealthFactor = {
 export type OperationalHealthSectionSummary = {
   label: string;
   score: number;
+  prevScore: number | null;
+  deltaPoints: number | null;
+  deltaPct: number | null;
   contributionPoints: number;
 };
 
 export type OperationalHealthCalculation = {
   periodLabel: string;
   workshopSizeLabel: string;
+  /** Dimensione officina usata per i target (engine v2). */
+  workshopSize?: "micro" | "piccola" | "media" | "grande" | "enterprise";
   baseScore: number;
+  baseScorePrev: number | null;
+  baseScoreDeltaPoints: number | null;
+  baseScoreDeltaPct: number | null;
   riskPenalty: number;
   scoreRaw: number;
+  scoreRawPrev: number | null;
+  scoreRawDeltaPoints: number | null;
+  scoreRawDeltaPct: number | null;
   smoothedScore: number;
+  smoothedScoreDeltaPoints: number | null;
+  smoothedScoreDeltaPct: number | null;
   confidencePct: number;
   dataQualityPct: number;
   sections: OperationalHealthSectionSummary[];

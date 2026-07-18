@@ -17,6 +17,7 @@ const lazy = read("components/gestionale/lazy-route-views.tsx");
 const contract = read("src/hooks/use-client-portal-data-contract.ts");
 const view = read("components/lavorazioni-clienti/client-lavorazioni-view.tsx");
 const prefetch = read("src/lib/react-query/prefetch-gestionale-page.ts");
+const portalBff = read("lib/bff/client-portal-page-fetch-server.ts");
 
 assert.match(page, /ClientPortalDeferredHydration/);
 assert.match(page, /prefetchCriticalPage\(qc, "lavorazioni_clienti"\)/);
@@ -28,12 +29,17 @@ const prefetchDeferred = prefetch.split("export async function prefetchDeferredP
 const portalBlock = prefetchDeferred.split('case "lavorazioni_clienti":')[1]?.split("case ")[0] ?? "";
 assert.match(portalBlock, /fetchClientPortalPageDTOServer/);
 assert.match(portalBlock, /clientPortal\.lavorazioni\.inCorso/);
+assert.match(portalBff, /resolveLavorazioniStatiForServer/);
+assert.match(portalBff, /sanitizeStati/);
 
 assert.match(contract, /archivioListEnabled/);
 assert.match(contract, /archivioSchedeEnabled/);
 assert.match(contract, /schedeLavorazioneIds/);
 
 assert.match(view, /archivioExpanded/);
+assert.match(view, /useClientLavorazioniArchivioCountQuery/);
+assert.match(view, /archivioCachedCount/);
+assert.match(view, /restrictUtilizzatoriToCatalog=\{isCliente\}/);
 assert.match(view, /lsdPaginated/);
 assert.match(view, /useUndoableLog\("lavorazioni",\s*\{\s*enabled: ingressoRow/);
 

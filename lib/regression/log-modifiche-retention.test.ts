@@ -21,4 +21,7 @@ assert.match(migration, /max_keep constant int := 100/);
 const logService = fs.readFileSync(path.join(ROOT, "src/services/log.service.ts"), "utf8");
 assert.match(logService, /LOG_MODIFICHE_RETENTION_PER_ENTITA/);
 
+// ponytail: retention 100/tipo — rivalutare solo se test post-fix mostrano perdita diversità; non causa tipica per attività recenti.
+assert.match(migration, /partition by entita/i);
+
 console.log("log-modifiche-retention.test.ts OK");

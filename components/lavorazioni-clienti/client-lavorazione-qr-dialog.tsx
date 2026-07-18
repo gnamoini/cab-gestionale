@@ -110,7 +110,7 @@ export function ClientLavorazioneQrDialog({
   }
 
   return (
-    <LavorazioniModalShell modalSize="info" onRequestClose={onClose} title="QR lavorazione">
+    <LavorazioniModalShell modalSize="info" modalHeight="standard" onRequestClose={onClose} title="QR lavorazione">
       <GestionaleModalScrollBody className="flex flex-col items-center gap-4">
         {dataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

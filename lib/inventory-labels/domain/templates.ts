@@ -154,8 +154,8 @@ export const LABEL_TEMPLATE_REGISTRY: Record<string, LabelTemplateDefinition> = 
   "95x40-default": buildTemplate("95x40-default", 95, 40),
 };
 
-/** Default 60×40 — QR scannabile e margini adeguati su stampa comune. */
-export const DEFAULT_LABEL_PRESET = "60x40-default";
+/** Default 95×40 — formato etichetta magazzino preferito. */
+export const DEFAULT_LABEL_PRESET = "95x40-default";
 
 export const LABEL_PRESET_IDS = Object.keys(LABEL_TEMPLATE_REGISTRY);
 

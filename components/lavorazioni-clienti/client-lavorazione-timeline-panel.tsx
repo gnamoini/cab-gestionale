@@ -4,9 +4,11 @@ import { useCallback, useMemo } from "react";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import {
   HubModalPanoramicaFieldTile,
+  HubModalPanoramicaFieldTileShell,
   HubModalPanoramicaFieldTiles,
   hubPanoramicaDisplayValue,
 } from "@/components/design-system/hub-modal-panoramica";
+import { RichiedenteFirmaDisplay } from "@/components/gestionale/schede/richiedente-firma-display";
 import { ClientPortalStatoProgressTile } from "@/components/lavorazioni-clienti/client-portal-stato-progress";
 import { buildClientPortalRowFields } from "@/lib/lavorazioni/client-portal-row-fields";
 import {
@@ -94,6 +96,7 @@ export function ClientLavorazioneTimelinePanel({
   const noteText = useMemo(() => lavorazioneNoteOperative(row, schedeStore), [row, schedeStore]);
   const noteDisplay = noteText.trim() && noteText !== "—" ? noteText : "—";
   const noteEmpty = noteDisplay === "—";
+  const addettoFirma = bundle.ingresso?.campi.addettoFirma;
 
   const panoramicaTileClass =
     "min-w-0 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] p-3";
@@ -123,7 +126,19 @@ export function ClientLavorazioneTimelinePanel({
         />
 
         <HubModalPanoramicaFieldTiles className="sm:grid-cols-2">
-          <HubModalPanoramicaFieldTile label="Addetto" value={hubPanoramicaDisplayValue(fields.addetto)} />
+          <HubModalPanoramicaFieldTileShell label="Addetto" className={panoramicaTileClass}>
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="min-w-0 text-sm font-semibold text-[color:var(--cab-text)]">
+                {hubPanoramicaDisplayValue(fields.addetto)}
+              </span>
+              <RichiedenteFirmaDisplay
+                dataUrl={addettoFirma}
+                consultable
+                buttonOnly
+                label="addetto officina"
+              />
+            </div>
+          </HubModalPanoramicaFieldTileShell>
           <HubModalPanoramicaFieldTile
             label="Ultima modifica"
             value={hubPanoramicaDisplayValue(ultimaModificaLabel)}

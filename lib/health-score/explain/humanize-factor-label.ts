@@ -5,12 +5,33 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-function prevPhrase(current: number, previous: number | null, unit = ""): string {
-  if (previous == null) return "";
-  const cur = round1(current);
-  const prev = round1(previous);
-  if (cur === prev) return " (stabile rispetto al periodo precedente)";
-  return ` (${cur}${unit} ora, ${prev}${unit} nel periodo precedente)`;
+function formatKpiValue(id: string, value: number): string {
+  const n = round1(value);
+  switch (id) {
+    case "hours-worked":
+      return `${n} h`;
+    case "backlog-age":
+    case "close-time":
+    case "urgent-turnaround":
+      return `${n} gg`;
+    case "absence-procapite":
+    case "overtime-pct":
+    case "sla-late-pct":
+      return `${n}%`;
+    case "fatturato":
+    case "incassato":
+      return formatEuro(n);
+    case "completate":
+    case "backlog":
+    case "mag-movements":
+    case "mag-entrate":
+    case "mag-consumi":
+    case "stock-critical":
+    case "preventivi-emessi":
+      return String(n);
+    default:
+      return String(n);
+  }
 }
 
 /** Etichetta leggibile in officina — niente SLA, backlog, campione, pro-capite. */
@@ -20,91 +41,133 @@ export function humanizeKpiFactorLabel(kpi: KpiExplainNode): string {
 
   switch (kpi.id) {
     case "completate":
-      if (prev != null && cur > prev) {
-        return `Più lavori chiusi negli ultimi 30 giorni: ${cur} contro ${prev} nel periodo precedente`;
-      }
-      if (prev != null && cur < prev) {
-        return `Meno lavori chiusi del periodo precedente (${cur} contro ${prev})`;
-      }
-      return `${cur} lavori chiusi negli ultimi 30 giorni`;
+      if (prev != null && cur > prev) return "Più lavori chiusi";
+      if (prev != null && cur < prev) return "Meno lavori chiusi";
+      return "Lavori chiusi nel periodo";
 
     case "backlog":
-      return `${cur} lavori ancora aperti in officina${prevPhrase(cur, prev)}`;
+      return "Lavori aperti in officina";
 
     case "backlog-age":
-      return `Anzianità media lavori aperti: ${cur} giorni dall'ingresso${prevPhrase(cur, prev, " gg")}`;
+      return "Anzianità media lavori aperti";
 
     case "close-time":
-      return `Tempo medio per chiudere un lavoro: ${cur} giorni${prevPhrase(cur, prev, " gg")}`;
+      return "Tempo medio di chiusura";
 
     case "urgent-turnaround":
-      if (cur <= 0) return "Nessun lavoro urgente da valutare nel periodo";
-      return `Tempo medio sui lavori urgenti: ${cur} giorni${prevPhrase(cur, prev, " gg")}`;
+      if (cur <= 0) return "Nessun lavoro urgente nel periodo";
+      return "Tempo sui lavori urgenti";
 
     case "sla-late-pct":
-      if (cur <= 0) return `Nessun lavoro aperto oltre ${CONTROL_TOWER_LATE_INGRESS_DAYS} giorni dall'ingresso`;
-      return `${cur}% dei lavori aperti supera ${CONTROL_TOWER_LATE_INGRESS_DAYS} giorni dall'ingresso`;
+      if (cur <= 0) return `Nessun ritardo oltre ${CONTROL_TOWER_LATE_INGRESS_DAYS} giorni`;
+      return `Quota lavori oltre ${CONTROL_TOWER_LATE_INGRESS_DAYS} giorni`;
 
     case "stock-critical":
-      if (cur <= 0) return "Nessun ricambio sotto scorta minima";
-      return `${cur} ricambi sotto la scorta minima`;
+      if (cur <= 0) return "Nessun ricambio sotto scorta";
+      return "Ricambi sotto scorta minima";
 
     case "mag-movements":
-      return `${cur} movimenti di magazzino nel periodo${prevPhrase(cur, prev)}`;
+      return "Movimenti di magazzino";
 
     case "mag-entrate":
-      return `${cur} pezzi entrati in magazzino${prevPhrase(cur, prev)}`;
+      return "Entrate in magazzino";
 
     case "mag-consumi":
-      return `${cur} pezzi usati sui lavori${prevPhrase(cur, prev)}`;
+      return "Pezzi usati sui lavori";
 
     case "hours-worked":
-      return `${cur} ore lavorate dal team${prevPhrase(cur, prev, " h")}`;
+      if (prev != null && cur > prev) return "Più ore lavorate";
+      if (prev != null && cur < prev) return "Meno ore lavorate";
+      return "Ore lavorate dal team";
 
     case "overtime-pct":
-      if (cur <= 0) return "Nessuno straordinario registrato";
-      return `Straordinari: ${cur}% delle ore lavorate`;
+      if (cur <= 0) return "Nessuno straordinario";
+      return "Straordinari registrati";
 
     case "absence-procapite":
-      if (cur <= 0) return "Nessuna assenza registrata nel periodo";
-      return `Assenze del team: circa ${cur}% delle ore (ferie, malattia, permessi)`;
+      if (cur <= 0) return "Nessuna assenza nel periodo";
+      return "Assenze del team";
 
     case "preventivi-emessi":
-      return `${cur} preventivi preparati${prevPhrase(cur, prev)}`;
+      return "Preventivi preparati";
 
     case "fatturato":
-      return `Fatturato emesso: ${formatEuro(cur)}${prev != null ? ` (prima ${formatEuro(prev)})` : ""}`;
+      return "Fatturato emesso";
 
     case "incassato":
-      return `Incassi: ${formatEuro(cur)}${prev != null ? ` (prima ${formatEuro(prev)})` : ""}`;
+      return "Incassi registrati";
 
     default:
       return kpi.label;
   }
 }
 
+export function humanizeKpiFactorMeta(kpi: KpiExplainNode): string {
+  const cur = round1(kpi.current);
+  const prev = kpi.previous != null ? round1(kpi.previous) : null;
+  const now = formatKpiValue(kpi.id, cur);
+  const parts: string[] = [];
+
+  if (prev != null) {
+    if (cur === prev) {
+      parts.push(`${now}, uguale al periodo precedente`);
+    } else {
+      parts.push(`${now} (prima ${formatKpiValue(kpi.id, prev)})`);
+      if (kpi.trendPct != null && Number.isFinite(kpi.trendPct)) {
+        const sign = kpi.trendPct > 0 ? "+" : "";
+        parts.push(`${sign}${round1(kpi.trendPct)}%`);
+      }
+    }
+  } else {
+    parts.push(now);
+  }
+
+  parts.push(`valutazione ${round1(kpi.kpiScore)}/100`);
+
+  const weightPct = Math.round(kpi.effectiveWeight * 100);
+  if (weightPct > 0) {
+    parts.push(`peso ${weightPct}% sul totale`);
+  }
+
+  if (kpi.confidence !== "high") {
+    parts.push(`affidabilità ${kpi.confidence === "medium" ? "media" : "bassa"}`);
+  }
+
+  return parts.join(" · ");
+}
+
 export function humanizeRiskFactorLabel(risk: RiskModifierExplainNode): string {
   switch (risk.id) {
-    case "late-ingress": {
-      const match = risk.motivation.match(/^(\d+) lavorazioni in ritardo su (\d+) aperte$/);
-      if (match) {
-        const [, late, open] = match;
-        return `${late} su ${open} lavori aperti da oltre ${CONTROL_TOWER_LATE_INGRESS_DAYS} giorni dall'ingresso`;
-      }
-      return `Alcuni lavori aperti da oltre ${CONTROL_TOWER_LATE_INGRESS_DAYS} giorni dall'ingresso`;
-    }
+    case "late-ingress":
+      return `Ritardo oltre ${CONTROL_TOWER_LATE_INGRESS_DAYS} giorni dall'ingresso`;
 
-    case "stagnation": {
-      const match = risk.motivation.match(/^(\d+) lavorazioni ferme oltre la media degli stati di attesa$/);
-      if (match) {
-        return `${match[1]} lavori in attesa (ricambi, preventivo, coda) oltre la media del proprio stato`;
-      }
-      return "Lavori in attesa che non avanzano oltre la media del proprio stato";
-    }
+    case "stagnation":
+      return "Lavori in attesa oltre la media";
 
     default:
       return risk.label;
   }
+}
+
+export function humanizeRiskFactorMeta(risk: RiskModifierExplainNode): string {
+  const penalty = Math.round(risk.penalty);
+  const lateMatch = risk.motivation.match(/^(\d+) lavorazioni in ritardo su (\d+) aperte$/);
+  if (lateMatch) {
+    return `${lateMatch[1]} su ${lateMatch[2]} lavori aperti in ritardo · penalità −${penalty} pt sul totale`;
+  }
+
+  const stagnationMatch = risk.motivation.match(/^(\d+) lavorazioni ferme oltre la media degli stati di attesa$/);
+  if (stagnationMatch) {
+    const count = Number(stagnationMatch[1]);
+    const label = count === 1 ? "1 lavorazione ferma" : `${count} lavorazioni ferme`;
+    return `${label} oltre la media di attesa · penalità −${penalty} pt sul totale`;
+  }
+
+  if (penalty > 0) {
+    return `${risk.motivation} · penalità −${penalty} pt sul totale`;
+  }
+
+  return risk.motivation;
 }
 
 export function humanizeRedactedSummary(summary: string): string {

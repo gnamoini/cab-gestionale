@@ -6,15 +6,15 @@ export type CaptureSignatureBbox = {
 };
 
 const INGRESSO_CAPTURE_MARKERS =
-  /^(cliente|data_ingresso|targa|matricola|descrizione_anomalia|richiedente|addetto_accettazione|firma_)/;
+  /^(data_ingresso|descrizione_anomalia|addetto_accettazione|firma_|livello_carburante|utilizzatore|cantiere|tipo_attrezzatura|tipoattrezzatura|attrezzatura_marca|attrezzatura_modello|n_scuderia)/;
 
 export function shouldExtractCaptureSignatures(
   schedaTipo?: string | null,
   fieldKeys?: readonly string[],
 ): boolean {
-  if (schedaTipo === "lavorazioni" || schedaTipo === "ricambi") return false;
   const keys = fieldKeys?.map((k) => k.trim().toLowerCase()) ?? [];
   if (keys.some((k) => INGRESSO_CAPTURE_MARKERS.test(k))) return true;
+  if (schedaTipo === "lavorazioni" || schedaTipo === "ricambi") return false;
   if (keys.some((k) => /^riga_\d+_/.test(k))) return false;
   return true;
 }

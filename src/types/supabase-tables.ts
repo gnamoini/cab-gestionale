@@ -344,7 +344,65 @@ export type MovimentoRicambioRow = {
   quantita: number;
   /** false = rettifica inventario, esclusa da KPI/report. */
   conta_statistiche: boolean;
+  inventory_document_id?: string | null;
+  inventory_document_line_id?: string | null;
+  note?: string | null;
+  created_by?: string | null;
   created_at: string;
+};
+
+export type InventoryDocumentStatus =
+  | "UPLOADED"
+  | "ANALYZING"
+  | "REVIEW_REQUIRED"
+  | "READY_TO_APPLY"
+  | "APPLIED"
+  | "PARTIALLY_APPLIED"
+  | "FAILED";
+
+export type InventoryLineMatchStatus = "FOUND" | "SUGGESTED" | "NEW_ITEM" | "REJECTED";
+export type InventoryLineApplyStatus = "pending" | "applied" | "skipped" | "failed";
+export type InventoryMatchMethod = "CODE" | "SUPPLIER_CODE" | "DESCRIPTION_AI" | "MANUAL";
+
+export type InventoryDocumentRow = {
+  id: string;
+  company_id: string;
+  supplier_label: string | null;
+  purchase_order_id: string | null;
+  document_type: string;
+  import_file_id: string | null;
+  file_path: string | null;
+  document_number: string | null;
+  document_date: string | null;
+  content_hash: string | null;
+  document_ai_confidence: number | null;
+  status: InventoryDocumentStatus;
+  applied_at: string | null;
+  applied_by: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InventoryDocumentLineRow = {
+  id: string;
+  document_id: string;
+  line_index: number;
+  raw_code: string | null;
+  extracted_description: string;
+  extracted_quantity: number;
+  received_quantity: number;
+  unit: string | null;
+  matched_item_id: string | null;
+  match_confidence: number | null;
+  match_status: InventoryLineMatchStatus;
+  apply_status: InventoryLineApplyStatus;
+  user_action: string | null;
+  final_quantity: number | null;
+  final_item_id: string | null;
+  line_ai_confidence: number | null;
+  created_at: string;
+  updated_at: string;
 };
 
 /** Registry snapshot dipendenti timesheet. */

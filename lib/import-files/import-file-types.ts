@@ -3,6 +3,7 @@ export const IMPORT_FILE_KINDS = [
   "listino",
   "magazzino",
   "ai_input",
+  "ddt_receiving",
 ] as const;
 
 export type ImportFileKind = (typeof IMPORT_FILE_KINDS)[number];
@@ -70,4 +71,5 @@ export const IMPORT_FILE_KIND_MODULE: Record<ImportFileKind, string> = {
   listino: "magazzino",
   magazzino: "magazzino",
   ai_input: "document_capture",
+  ddt_receiving: "magazzino_carichi",
 };

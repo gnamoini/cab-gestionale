@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import { ThemeModeIcon, ThemeToggle } from "@/components/gestionale/theme-toggle";
+import { PwaInstallFooterButton } from "@/components/legal/pwa-install-footer-button";
 import { GestionaleConfirmDialogLazy } from "@/components/gestionale/gestionale-confirm-dialog-lazy";
 import { requestPasswordResetEmail } from "@/lib/auth/request-password-reset.client";
 import { dsFocusRing } from "@/lib/ui/design-system";
@@ -99,6 +100,7 @@ export function ProfileActionsSection({
             <span className="min-w-0 flex-1 truncate">Aspetto</span>
             <ThemeToggle variant="switch" />
           </div>
+          <PwaInstallFooterButton variant="profile-action" />
           <button
             type="button"
             className={`${profileActionItemClass} ${dsFocusRing}`}

@@ -27,6 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const drawer = useNavDrawerMachine();
   const { flags, open, forceClose, onPointerCancel, onVisibilityHidden, onResize } = drawer;
   const [overlayActive, setOverlayActive] = useState(false);
+  const [edgeSnapVisuallyClosed, setEdgeSnapVisuallyClosed] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
   const sidebarAsideRef = useRef<HTMLElement>(null);
   const shellColRef = useRef<HTMLDivElement>(null);
@@ -84,6 +85,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     onBegin: () => drawer.dispatch("EDGE_DRAG_START"),
     onCommit: () => drawer.dispatch("EDGE_DRAG_END_COMMIT"),
     onCancel: () => drawer.dispatch("EDGE_DRAG_END_CANCEL"),
+    onSnapClosed: () => setEdgeSnapVisuallyClosed(true),
     onPointerCancel,
   });
 
@@ -167,6 +169,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         edgeSwipeBackdropProps={edgeSwipe.backdropProps}
         edgeSwipePanelRef={edgeSwipe.panelRef}
         edgeSwipeBackdropRef={edgeSwipe.backdropRef}
+        edgeSnapVisuallyClosed={edgeSnapVisuallyClosed}
+        onEdgeSnapConsumed={() => setEdgeSnapVisuallyClosed(false)}
+        edgeResetDrag={edgeSwipe.resetDrag}
       />
 
       <AppShellMain

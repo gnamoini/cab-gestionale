@@ -16,6 +16,10 @@ const stepIndicator = fs.readFileSync(
   path.join(ROOT, "components/document-capture/document-capture-step-indicator.tsx"),
   "utf8",
 );
+const lavAdapter = fs.readFileSync(
+  path.join(ROOT, "lib/document-capture/lavorazioni-capture-adapter.ts"),
+  "utf8",
+);
 const dropOverlay = fs.readFileSync(
   path.join(ROOT, "components/document-capture/lavorazioni-capture-drop-overlay.tsx"),
   "utf8",
@@ -55,7 +59,7 @@ assert.match(launcher, /skipTableFocus/);
 assert.match(stepIndicator, /"compile"/);
 assert.doesNotMatch(stepIndicator, /"review"/);
 assert.doesNotMatch(stepIndicator, /"confirm"/);
-assert.match(stepIndicator, /Compila scheda/);
+assert.match(lavAdapter, /Compila scheda/);
 
 assert.match(wizard, /CaptureDocumentFilePreview/);
 assert.match(compileStep, /CAPTURE_REVIEW_PIN_TOP_CLASS|--capture-review-pin-top/);
@@ -73,8 +77,8 @@ assert.doesNotMatch(wizard, /DocumentCaptureWizardLauncher/);
 assert.doesNotMatch(wizard, /CaptureFieldReviewGrid/);
 
 assert.doesNotMatch(dropOverlay, />\s*Chiudi\s*</);
-assert.match(dropOverlay, /DOCUMENT_CAPTURE_UPLOAD_ACCEPT/);
-assert.match(dropOverlay, /DOCUMENT_CAPTURE_UPLOAD_FORMAT_HINT/);
+assert.match(dropOverlay, /DocumentUploadZone/);
+assert.match(dropOverlay, /lavorazioniCaptureAdapter/);
 
 assert.match(compileStep, /SchedaIngressoFormBody/);
 assert.match(compileStep, /captureHints/);

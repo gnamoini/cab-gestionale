@@ -56,8 +56,16 @@ assert.doesNotMatch(
 );
 
 assert.match(lavFilter, /Filtra marca/);
+assert.match(lavFilter, /GlobalHierarchyMarcaSelect/);
+assert.match(lavFilter, /tree="attrezzature"/);
+assert.match(lavFilter, /Filtra marca telaio/);
+assert.match(lavFilter, /tree="telai"/);
+const filterAllowAddDisabled = (lavFilter.match(/allowAdd=\{false\}/g) ?? []).length;
+assert.ok(filterAllowAddDisabled >= 7, "lav filters: list/hierarchy fields must disable add-to-settings");
+assert.match(lavFilter, /buildLavorazioniUtilizzatoreFilterItems/);
+assert.match(lavFilter, /restrictUtilizzatoriToCatalog/);
+assert.match(lavFilter, /useCatalogUtilizzatori[\s\S]{0,400}items=\{utilizzatoreFilterItems\}/);
 assert.match(lavFilter, /Filtra cantiere/);
-assert.doesNotMatch(lavFilter, /Filtra addetto/);
 assert.doesNotMatch(lavFilter, /selectorDomain="lavorazioni"/);
 
 assert.match(timesheet, /selectOnly[\s\S]{0,200}filterEmployeeId/);

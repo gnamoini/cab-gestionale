@@ -11,6 +11,7 @@ import type { ImportExecuteResult, ImportFieldDef, ImportMappingConfig, ImportPr
 import { IMPORT_EXECUTE_CHUNK, IMPORT_MAX_PREVIEW_ROWS } from "@/lib/data-import/core/types";
 import { lookupMezzoByTargaOrMatricola } from "@/lib/data-import/core/relation-resolver.server";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
+import { auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 
 export const PREVENTIVI_IMPORT_FIELDS: ImportFieldDef[] = [
   { key: "cliente", label: "Cliente", required: true, example: "Rossi S.r.l." },
@@ -198,6 +199,20 @@ export const preventiviImportPlugin: ImportEntityPlugin = {
     result.durationMs = Date.now() - started;
     result.status =
       result.stats.errors > 0 && result.stats.created === 0 ? "failed" : result.stats.errors > 0 ? "partial" : "success";
+    if (result.stats.created > 0) {
+      await writeModificaLog(sb, {
+        entita: "preventivi",
+        entita_id: input.batchId,
+        azione: "CREATE",
+        payload: auditSnapshot({
+          import: "preventivi",
+          batchId: input.batchId,
+          created: result.stats.created,
+          skipped: result.stats.skipped,
+          errors: result.stats.errors,
+        }),
+      });
+    }
     await updateImportBatchProgress(input.batchId, {
       status: result.status,
       finished_at: new Date().toISOString(),

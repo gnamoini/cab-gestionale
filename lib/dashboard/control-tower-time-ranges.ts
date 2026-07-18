@@ -4,6 +4,7 @@ import {
   resolvePresetRange,
   startOfLocalDay,
   startOfLocalWeekMonday,
+  ymdFromDate,
   type DateRange,
 } from "@/lib/report/date-ranges";
 
@@ -80,6 +81,54 @@ export function getControlTowerHealthScoreDataFetchRange(date = new Date()): Dat
   const cur = getControlTowerLast30DaysRange(date);
   const prev = getControlTowerPrevious30DaysRange(date);
   return { start: prev.start, end: cur.end };
+}
+
+export type ControlTowerWeeklyAnchor = {
+  anchor: Date;
+  weekStart: Date;
+  weekEnd: Date;
+  weekLabel: string;
+};
+
+/** Fine settimana locale (domenica 23:59) della settimana che contiene `date`. */
+export function getControlTowerWeekEndAnchor(date: Date): Date {
+  const weekStart = startOfLocalWeekMonday(date);
+  return endOfLocalDay(addLocalDays(weekStart, 6));
+}
+
+/** Ultimi `weeks` anchor settimanali (fine settimana), dal più vecchio al più recente. */
+export function getControlTowerWeeklyHealthScoreAnchors(
+  date = new Date(),
+  weeks = 26,
+): ControlTowerWeeklyAnchor[] {
+  const safeWeeks = Math.max(1, Math.min(weeks, 52));
+  const currentWeekEnd = getControlTowerWeekEndAnchor(date);
+  const points: ControlTowerWeeklyAnchor[] = [];
+
+  for (let i = safeWeeks - 1; i >= 0; i -= 1) {
+    const weekEnd = endOfLocalDay(addLocalDays(currentWeekEnd, -7 * i));
+    const weekStart = startOfLocalWeekMonday(weekEnd);
+    points.push({
+      anchor: weekEnd,
+      weekStart,
+      weekEnd,
+      weekLabel: ymdFromDate(weekStart),
+    });
+  }
+
+  return points;
+}
+
+/** Fetch dati per storico health score: buffer 30gg prima del primo anchor settimanale. */
+export function getControlTowerHealthScoreHistoryFetchRange(
+  date = new Date(),
+  weeks = 26,
+): DateRange {
+  const anchors = getControlTowerWeeklyHealthScoreAnchors(date, weeks);
+  const oldest = anchors[0]?.anchor ?? date;
+  const oldestPrev = getControlTowerPrevious30DaysRange(oldest);
+  const newestEnd = anchors[anchors.length - 1]?.anchor ?? date;
+  return { start: oldestPrev.start, end: newestEnd };
 }
 
 /** Finestra dati da precaricare per brief (giorno/settimana/mese + confronti). */

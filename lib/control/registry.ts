@@ -109,6 +109,17 @@ export const CONTROL_REGISTRY: readonly ControlDefinition[] = [
     sourceOfTruth: "scripts/audit-release-v2-db.ts",
     impact: ["compliance-audit"],
   },
+  {
+    id: "governance.audit.write-coverage",
+    implementation: { type: "npm", reference: "audit:write-coverage" },
+    domain: "data",
+    tier: "pr",
+    severity: "blocker",
+    status: "active",
+    owner: "platform",
+    sourceOfTruth: "scripts/audit-write-coverage-scan.ts",
+    impact: ["compliance-audit", "all-users"],
+  },
   // —— Design ——
   {
     id: "design.ux.enforce",

@@ -9,6 +9,7 @@ import type { ListinoImportExecuteResult } from "@/lib/magazzino/listino-import/
 import { LISTINO_IMPORT_EXECUTE_CHUNK } from "@/lib/magazzino/listino-import/listino-import-types";
 import { normalizeRicambioCodice } from "@/lib/magazzino/ricambio-codice";
 import { attachMagazzinoEntityKey } from "@/lib/validation/entity-persistence";
+import { auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 const DEFAULT_MARKUP_PERCENT = 0;
@@ -124,6 +125,22 @@ export async function executeListinoImport(input: {
       }
       result.created += 1;
     }
+  }
+
+  if (result.created > 0 || result.updated > 0) {
+    await writeModificaLog(sb, {
+      entita: "magazzino_ricambi",
+      entita_id: input.documentoId,
+      azione: "CREATE",
+      payload: auditSnapshot({
+        import: "listino",
+        batchId: input.batchId,
+        documentoNome: input.documentoNome,
+        created: result.created,
+        updated: result.updated,
+        errors: result.errors.length,
+      }),
+    });
   }
 
   return result;

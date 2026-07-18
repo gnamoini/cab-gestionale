@@ -29,19 +29,13 @@ import { mutateCaptureWithEvent } from "@/lib/document-capture/mutate-capture-wi
 import { resolveFieldsForHash } from "@/lib/document-capture/resolve-fields-for-hash";
 import { CapturePlanStaleError, hashConfirmedCaptureFields } from "@/lib/document-capture/capture-plan-staleness";
 import { executeInterventoWrite } from "@/lib/domain/intervento-context/write-contract";
-import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
+import { parseCaptureIngressoIso } from "@/lib/document-capture/capture-ingresso-iso";
 import { auditContext, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { maybePublishTagliandoDueOnInterventoCreateServer } from "@/lib/maintenance-plans/tagliando-due-notification.server";
 
 export type { CaptureApplyPlan, ApprovedCreatesJson };
 export { CaptureApplyInProgressError, CapturePlanStaleError };
-
-function parseIngressoIso(dataIngresso: string): string {
-  const iso = parseItalianDayDisplayToIso(dataIngresso);
-  if (iso) return `${iso}T12:00:00.000Z`;
-  return new Date().toISOString();
-}
 
 async function loadCaptureFields(captureId: string): Promise<CaptureFieldRow[]> {
   const sb = await createSupabaseServerUserClient();
@@ -186,6 +180,10 @@ async function runCaptureApplySaga(input: {
   });
 
   const mezzoCatalog = await fetchCaptureMezziCatalog();
+  const dataIngressoIso = parseCaptureIngressoIso(ingressoFields.dataIngresso);
+  if (!dataIngressoIso) {
+    throw new Error("Data ingresso non valida.");
+  }
 
   try {
     const { result: saga } = await executeInterventoWrite(
@@ -199,7 +197,7 @@ async function runCaptureApplySaga(input: {
           statoId: "accettazione",
           priorita: "normale",
           mezzoIdHint: capture.mezzo_id,
-          dataIngressoIso: parseIngressoIso(ingressoFields.dataIngresso),
+          dataIngressoIso,
           note: ingressoFields.noteIntervento.trim() || ingressoFields.descrizioneAnomalia.trim() || null,
           createdBy: input.userId,
         },

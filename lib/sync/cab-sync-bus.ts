@@ -12,6 +12,9 @@ export type CabSyncEntity =
   | "preventivi"
   | "documenti"
   | "scheda_lavorazione"
+  | "invoices"
+  | "invoice_payments"
+  | "ddt_documents"
   | "log_modifiche"
   | "dashboard_promemoria"
   | "workshop_schedule_events"
@@ -36,6 +39,9 @@ const TABLE_ENTITY: Record<string, CabSyncEntity> = {
   preventivi: "preventivi",
   documenti: "documenti",
   scheda_lavorazione: "scheda_lavorazione",
+  invoices: "invoices",
+  invoice_payments: "invoice_payments",
+  ddt_documents: "ddt_documents",
   log_modifiche: "log_modifiche",
   dashboard_promemoria: "dashboard_promemoria",
   workshop_schedule_events: "workshop_schedule_events",

@@ -24,6 +24,8 @@ export type LavorazioniAdvancedFilters = {
   addetto: string;
   marca: string;
   modello: string;
+  marcaTelaio: string;
+  modelloTelaio: string;
   stato: string;
   ingressoDa: string;
   ingressoA: string;
@@ -40,6 +42,8 @@ export const LAVORAZIONI_ADVANCED_FILTERS_EMPTY: LavorazioniAdvancedFilters = {
   addetto: FILTER_ALL,
   marca: FILTER_ALL,
   modello: FILTER_ALL,
+  marcaTelaio: FILTER_ALL,
+  modelloTelaio: FILTER_ALL,
   stato: FILTER_ALL,
   ingressoDa: "",
   ingressoA: "",
@@ -66,6 +70,8 @@ export type RowEntityFields = {
   addetto: string;
   marca: string;
   modello: string;
+  marcaTelaio: string;
+  modelloTelaio: string;
 };
 
 function norm(s: string): string {
@@ -89,12 +95,21 @@ function rowEntityFields(
 
   let marca = "";
   let modello = "";
+  let marcaTelaio = "";
+  let modelloTelaio = "";
   if (ing?.marcaAttrezzatura?.trim()) {
     marca = ing.marcaAttrezzatura.trim();
     modello = ing.modelloAttrezzatura?.trim() || "";
   } else if (m) {
     marca = m.marca?.trim() || "";
     modello = m.modello?.trim() || "";
+  }
+  if (ing?.marcaTelaio?.trim()) {
+    marcaTelaio = ing.marcaTelaio.trim();
+    modelloTelaio = ing.modelloTelaio?.trim() || "";
+  } else if (m) {
+    marcaTelaio = m.marca_telaio?.trim() || "";
+    modelloTelaio = m.modello_telaio?.trim() || "";
   }
 
   return {
@@ -104,6 +119,8 @@ function rowEntityFields(
     addetto: dash(addetto),
     marca,
     modello,
+    marcaTelaio,
+    modelloTelaio,
   };
 }
 
@@ -218,6 +235,8 @@ export function lavorazioniAdvancedFiltersActive(f: LavorazioniAdvancedFilters):
     (f.addetto.trim() !== "" && f.addetto !== FILTER_ALL) ||
     (f.marca.trim() !== "" && f.marca !== FILTER_ALL) ||
     (f.modello.trim() !== "" && f.modello !== FILTER_ALL) ||
+    (f.marcaTelaio.trim() !== "" && f.marcaTelaio !== FILTER_ALL) ||
+    (f.modelloTelaio.trim() !== "" && f.modelloTelaio !== FILTER_ALL) ||
     (f.stato.trim() !== "" && f.stato !== FILTER_ALL) ||
     f.ingressoDa.trim() !== "" ||
     f.ingressoA.trim() !== "" ||
@@ -244,6 +263,8 @@ export function lavRowMatchesAdvancedFilters(
   if (!listFilterMatches(f.addetto, entity.addetto)) return false;
   if (!listFilterMatches(f.marca, entity.marca)) return false;
   if (!listFilterMatches(f.modello, entity.modello)) return false;
+  if (!listFilterMatches(f.marcaTelaio, entity.marcaTelaio)) return false;
+  if (!listFilterMatches(f.modelloTelaio, entity.modelloTelaio)) return false;
   if (f.stato !== FILTER_ALL && row.stato !== f.stato && row.stato !== migrateStatoConfigId(f.stato)) return false;
 
   if (!lavRowIngressoInRange(
@@ -261,6 +282,26 @@ export function lavRowMatchesAdvancedFilters(
 export const LAVORAZIONI_ADDETTO_FILTER_ALL_LABEL = "Tutti gli addetti";
 
 /** Voce neutra + addetti da impostazioni (nome completo, allineato al filtro riga). */
+/** Elenco utilizzatori per filtro portale clienti (solo quelli presenti nelle lavorazioni visibili). */
+export function buildLavorazioniUtilizzatoreFilterItems(
+  catalog: LavorazioniFilterCatalog,
+  selectedValue?: string,
+): { value: string; label: string }[] {
+  const seen = new Set<string>();
+  const items: { value: string; label: string }[] = [];
+  const push = (raw: string) => {
+    const t = raw.trim();
+    if (!t || t === "—") return;
+    const key = norm(t);
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push({ value: t, label: t });
+  };
+  for (const u of catalog.utilizzatori) push(u);
+  push(selectedValue ?? "");
+  return items.sort((a, b) => a.label.localeCompare(b.label, "it"));
+}
+
 export function buildLavorazioniAddettoFilterItems(
   addettiRecords: readonly AddettoRecord[],
 ): { value: string; label: string }[] {

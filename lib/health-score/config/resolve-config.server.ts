@@ -6,13 +6,15 @@ import { HEALTH_SCORE_V2_DEFAULTS } from "@/lib/health-score/config/defaults";
 import { healthScoreConfigSchema, type HealthScoreConfig } from "@/lib/health-score/config/schema";
 import { fetchCabAppSettingsPayloadServer } from "@/lib/app-settings/resolve-settings-for-server";
 
-const CONFIG_MODULE = "health_score";
-const CONFIG_KEY = "v2_config";
+export const HEALTH_SCORE_CONFIG_MODULE = "health_score";
+export const HEALTH_SCORE_CONFIG_KEY = "v2_config";
 
 export const resolveHealthScoreConfigServer = cache(async (): Promise<HealthScoreConfig> => {
   try {
     const payload = await fetchCabAppSettingsPayloadServer();
-    const row = payload.rows.find((r) => r.module === CONFIG_MODULE && r.key === CONFIG_KEY);
+    const row = payload.rows.find(
+      (r) => r.module === HEALTH_SCORE_CONFIG_MODULE && r.key === HEALTH_SCORE_CONFIG_KEY,
+    );
     if (!row?.value || typeof row.value !== "object") {
       return HEALTH_SCORE_V2_DEFAULTS;
     }

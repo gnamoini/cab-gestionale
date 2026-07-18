@@ -4,7 +4,7 @@ import { auditPayload, isLogReverted } from "@/lib/gestionale-log/undo";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 
 /** Finestra aggregazione anti-spam (modifiche ravvicinate stesso oggetto). */
-export const LOG_AGGREGATION_WINDOW_MS = 30_000;
+export const LOG_AGGREGATION_WINDOW_MS = 5 * 60 * 1000;
 
 export type ReconcileLogModificaOptions = {
   windowMs?: number;

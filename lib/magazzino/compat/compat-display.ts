@@ -82,6 +82,6 @@ export function compatDisplayLabel(list: readonly string[]): string {
 
 export function compatDisplayModelsLabel(list: readonly string[]): string {
   const compat = dedupeCompatLabels(normalizeCompatList(list));
-  if (compat.length === 0) return "Universale (non tutte le macchine)";
+  if (compat.length === 0) return "Universale";
   return dedupeCompatDisplayLines(compat.map(compatLineModelDisplayText)).join(", ");
 }

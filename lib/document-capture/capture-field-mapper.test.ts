@@ -65,4 +65,10 @@ const withAnomalia = mapCaptureFieldsToIngresso([
 ]);
 assert.equal(withAnomalia.descrizioneAnomalia, MULTILINE);
 
+const withoutDate = mapCaptureFieldsToIngresso([
+  row("cliente", "Cliente Test"),
+  row("targa", "AB123CD"),
+]);
+assert.equal(withoutDate.dataIngresso, "");
+
 console.log("capture-field-mapper.test.ts OK");

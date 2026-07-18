@@ -213,8 +213,9 @@ assert.match(providers, /PwaInstallBridge/);
 assert.match(providers, /PwaDisplayModeBridge/);
 assert.doesNotMatch(providers, /useAuth/);
 
-const profileFooter = read("components/profile/profile-sheet-footer.tsx");
-assert.match(profileFooter, /PwaInstallFooterButton/);
+const profileActions = read("components/profile/profile-actions-section.tsx");
+assert.match(profileActions, /PwaInstallFooterButton/);
+assert.match(profileActions, /variant="profile-action"/);
 
 const installFooterBtn = read("components/legal/pwa-install-footer-button.tsx");
 assert.match(installFooterBtn, /Installa app/);

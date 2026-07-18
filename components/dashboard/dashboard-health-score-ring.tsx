@@ -1,13 +1,29 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type {
   OperationalHealthFactor,
   OperationalHealthScore,
+  OperationalHealthSectionSummary,
   OperationalHealthTone,
 } from "@/lib/dashboard/operational-health-score";
 import { splitHealthFactors } from "@/lib/dashboard/operational-health-score";
-import { dsSkeletonPulse } from "@/lib/ui/design-system";
+import {
+  HealthScoreWeeklyTrendChart,
+  type HealthScoreWeeklyTrendPoint,
+} from "@/components/dashboard/dashboard-health-score-trend-chart";
+import { HealthScoreRingLoading } from "@/components/dashboard/health-score-ring-loading";
+import { HealthScoreTargetsDialog } from "@/components/dashboard/health-score-targets-dialog";
+import { HubIconPencil } from "@/components/design-system/hub-table-action-icons";
+import { IconActionButton } from "@/components/design-system/icon-action-button";
+import { Tooltip } from "@/components/ui";
+import { reportMetricCardCompactClass } from "@/components/report/report-ui-tokens";
+import {
+  reportArrowAndTone,
+  reportCompareBadgeClass,
+} from "@/components/report/report-ui-tokens";
+import { dsSkeletonPulse, dsTableActionBtnSecondary, dsTableActionGlyph, dsTypoCaption } from "@/lib/ui/design-system";
+import { usePermissions } from "@/src/hooks/use-permissions";
 
 const RING_SIZE = 68;
 const RING_STROKE = 5;
@@ -163,38 +179,321 @@ function HealthScoreRingSvg({ score, tone }: { score: number; tone: OperationalH
 
 const FACTOR_LIST_MAX = 12;
 
+const FACTOR_ROW_SHELL_CLASS =
+  "rounded-md border border-[color:var(--cab-border)] px-2.5 py-2 motion-safe:shadow-[var(--cab-shadow-sm)]";
+
+const FACTOR_ROW_TONE_CLASS = {
+  up: "border-l-[3px] border-l-emerald-500 bg-[color:color-mix(in_srgb,#10b981_8%,var(--cab-card))]",
+  down: "border-l-[3px] border-l-red-500 bg-[color:color-mix(in_srgb,#ef4444_7%,var(--cab-card))]",
+} as const;
+
+const FACTOR_BADGE_CLASS = {
+  up: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
+  down: "bg-red-500/15 text-red-800 dark:text-red-300",
+} as const;
+
+const HEALTH_SCORE_CARD_GRID = "grid min-w-0 items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-4";
+
+function HealthScoreCard({
+  title,
+  children,
+  className = "",
+  headerAction,
+}: {
+  title: string;
+  children: ReactNode;
+  className?: string;
+  headerAction?: ReactNode;
+}) {
+  return (
+    <article className={`${reportMetricCardCompactClass} flex h-full min-h-0 min-w-0 flex-col ${className}`.trim()}>
+      <div className="flex min-w-0 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] pb-2">
+        <h3 className="min-w-0 text-sm font-semibold text-[color:var(--cab-text)]">{title}</h3>
+        {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
+      </div>
+      <div className="mt-2 flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+    </article>
+  );
+}
+
+function HealthScoreCardSkeleton({ title, className = "" }: { title: string; className?: string }) {
+  return (
+    <article
+      className={`${reportMetricCardCompactClass} flex min-h-0 min-w-0 flex-col ${className}`.trim()}
+      aria-hidden
+    >
+      <div className={`h-4 w-32 border-b border-[color:var(--cab-border)] pb-2 ${dsSkeletonPulse}`} />
+      <div className="mt-3 space-y-2">
+        <div className={`h-3 w-full ${dsSkeletonPulse}`} />
+        <div className={`h-3 w-5/6 ${dsSkeletonPulse}`} />
+        <div className={`h-3 w-2/3 ${dsSkeletonPulse}`} />
+      </div>
+    </article>
+  );
+}
+
 function FactorList({
   title,
   factors,
   tone,
+  hideTitle = false,
 }: {
   title: string;
   factors: OperationalHealthFactor[];
   tone: "up" | "down";
+  hideTitle?: boolean;
 }) {
   if (factors.length === 0) return null;
-  const toneClass =
-    tone === "up"
-      ? "text-[color:var(--cab-success)]"
-      : "text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]";
 
   return (
     <div className="min-w-0">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">{title}</p>
-      <ul className="mt-1.5 space-y-2">
+      {hideTitle ? null : (
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">{title}</p>
+      )}
+      <ul className={hideTitle ? "flex flex-col gap-2" : "mt-1.5 flex flex-col gap-2"}>
         {factors.slice(0, FACTOR_LIST_MAX).map((factor) => (
-          <li key={`${tone}-${factor.label}`} className="min-w-0">
-            <div className="flex min-w-0 items-start justify-between gap-2.5 text-sm leading-snug text-[color:var(--cab-text)]">
-              <span className="min-w-0 break-words">{factor.label}</span>
-              <span className={`shrink-0 font-semibold tabular-nums ${toneClass}`}>{formatImpact(factor.impact)}</span>
+          <li key={`${tone}-${factor.label}`} className="list-none min-w-0">
+            <div className={`${FACTOR_ROW_SHELL_CLASS} ${FACTOR_ROW_TONE_CLASS[tone]}`}>
+              <div className="flex min-w-0 items-stretch gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium leading-snug text-[color:var(--cab-text)]">{factor.label}</p>
+                  {factor.detail ? (
+                    <p className="mt-1.5 min-w-0 text-[10px] leading-snug tabular-nums text-[color:var(--cab-text-muted)]">
+                      {factor.detail}
+                    </p>
+                  ) : null}
+                </div>
+                <span
+                  className={`inline-flex aspect-square min-w-[2.75rem] shrink-0 items-center justify-center self-stretch rounded-[var(--ds-radius-lg)] px-1 text-base font-extrabold leading-none tabular-nums shadow-[var(--cab-shadow-sm)] ${FACTOR_BADGE_CLASS[tone]}`}
+                >
+                  {formatImpact(factor.impact)}
+                </span>
+              </div>
             </div>
-            {factor.detail ? (
-              <p className="mt-0.5 text-xs leading-snug text-[color:var(--cab-text-muted)]">{factor.detail}</p>
-            ) : null}
           </li>
         ))}
       </ul>
     </div>
+  );
+}
+
+function HealthScoreSynthesisIntro({
+  calc,
+  withTitle = false,
+}: {
+  calc: NonNullable<OperationalHealthScore["calculation"]>;
+  withTitle?: boolean;
+}) {
+  return (
+    <div className="min-w-0 flex-1">
+      {withTitle ? (
+        <h4 className="text-sm font-semibold leading-snug text-[color:var(--cab-text)]">Target di riferimento</h4>
+      ) : null}
+      <p className={dsTypoCaption}>
+        Punteggio calcolato con confronto mese precedente e target officina.
+      </p>
+      <p className={`${dsTypoCaption} mt-1`}>
+        Affidabilità {calc.confidencePct}% · qualità dati {calc.dataQualityPct}%.
+      </p>
+    </div>
+  );
+}
+
+function HealthScoreSynthesisCard({ calc }: { calc: NonNullable<OperationalHealthScore["calculation"]> }) {
+  const [targetsOpen, setTargetsOpen] = useState(false);
+  const { canManageSettings } = usePermissions();
+  const visibleAreaLabels = calc.sections.map((section) => section.label);
+  const targetsActionLabel = canManageSettings ? "Modifica target officina" : "Vedi target officina";
+
+  return (
+    <>
+      <HealthScoreCard title="Sintesi calcolo">
+        <div className="flex min-h-0 flex-1 flex-col">
+          <HealthScoreSynthesisBody calc={calc} />
+          <div className="mt-auto flex shrink-0 items-center gap-2 border-t border-[color:color-mix(in_srgb,var(--cab-border)_70%,transparent)] pt-3">
+            <HealthScoreSynthesisIntro calc={calc} withTitle />
+            <IconActionButton
+              type="button"
+              label={targetsActionLabel}
+              className={`${dsTableActionBtnSecondary} shrink-0`}
+              onClick={() => setTargetsOpen(true)}
+            >
+              <HubIconPencil className={dsTableActionGlyph} />
+            </IconActionButton>
+          </div>
+        </div>
+      </HealthScoreCard>
+      <HealthScoreTargetsDialog
+        open={targetsOpen}
+        onClose={() => setTargetsOpen(false)}
+        workshopSize={calc.workshopSize ?? "media"}
+        workshopSizeLabel={calc.workshopSizeLabel}
+        visibleAreaLabels={visibleAreaLabels}
+      />
+    </>
+  );
+}
+
+function HealthScoreBriefMetricRow({
+  label,
+  value,
+  suffix,
+  valueClassName = "text-[color:var(--cab-text)]",
+  prevScore,
+  prevSuffix,
+  deltaPoints,
+  deltaPct,
+  hint,
+}: {
+  label: string;
+  value: string | number;
+  suffix?: ReactNode;
+  valueClassName?: string;
+  prevScore?: number | null;
+  prevSuffix?: ReactNode;
+  deltaPoints?: number | null;
+  deltaPct?: number | null;
+  hint?: string;
+}) {
+  const showCompare = prevScore != null;
+
+  return (
+    <li className="min-w-0 border-b border-[color:color-mix(in_srgb,var(--cab-border)_65%,transparent)] py-2.5 first:pt-0 last:border-b-0 last:pb-0">
+      <p className="text-sm font-medium leading-snug text-[color:var(--cab-text)]">{label}</p>
+      <div className="mt-1 flex min-w-0 items-end justify-between gap-3">
+        <span
+          className={`text-2xl font-semibold leading-none tabular-nums tracking-tight ${valueClassName}`}
+        >
+          {value}
+          {suffix}
+        </span>
+        {showCompare ? <HealthScoreCompareBadge deltaPct={deltaPct ?? null} deltaPoints={deltaPoints ?? null} /> : null}
+      </div>
+      {showCompare ? (
+        <p className="mt-1.5 text-xs leading-snug text-[color:var(--cab-text-muted)]">
+          Periodo precedente:{" "}
+          <span className="font-semibold tabular-nums text-[color:var(--cab-text)]">
+            {prevScore}
+            {prevSuffix}
+          </span>
+        </p>
+      ) : hint ? (
+        <p className="mt-1.5 whitespace-nowrap text-xs leading-snug text-[color:var(--cab-text-muted)]">{hint}</p>
+      ) : null}
+    </li>
+  );
+}
+
+function HealthScoreSynthesisBody({ calc }: { calc: NonNullable<OperationalHealthScore["calculation"]> }) {
+  return (
+    <>
+      <ul className="mt-1 min-w-0 flex-1">
+        <HealthScoreBriefMetricRow
+          label="Media aree"
+          value={calc.baseScore}
+          suffix={<span className="text-xs font-semibold text-[color:var(--cab-text-muted)]">/100</span>}
+          prevScore={calc.baseScorePrev}
+          prevSuffix={<span className="text-[color:var(--cab-text-muted)]">/100</span>}
+          deltaPoints={calc.baseScoreDeltaPoints}
+          deltaPct={calc.baseScoreDeltaPct}
+        />
+        {calc.riskPenalty > 0 ? (
+          <HealthScoreBriefMetricRow
+            label="Penalità rischio"
+            value={`−${calc.riskPenalty}`}
+            valueClassName="text-[color:var(--cab-danger)]"
+            hint="Sullo stato attuale dell'officina."
+          />
+        ) : null}
+        <HealthScoreBriefMetricRow
+          label="Totale"
+          value={calc.smoothedScore}
+          suffix={<span className="text-xs font-semibold text-[color:var(--cab-text-muted)]">/100</span>}
+          prevScore={calc.scoreRawPrev}
+          prevSuffix={<span className="text-[color:var(--cab-text-muted)]">/100</span>}
+          deltaPoints={calc.smoothedScoreDeltaPoints}
+          deltaPct={calc.smoothedScoreDeltaPct}
+        />
+      </ul>
+      {calc.scoreRaw !== calc.smoothedScore ? (
+        <p className={`${dsTypoCaption} mt-2 shrink-0`}>
+          Grezzo {calc.scoreRaw}/100
+          {calc.scoreRawPrev != null ? (
+            <>
+              {" · "}
+              <span className="text-[color:var(--cab-text-muted)]">
+                precedente {calc.scoreRawPrev}/100
+              </span>
+            </>
+          ) : null}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+function fmtSectionDeltaPct(deltaPct: number | null): string | null {
+  if (deltaPct == null || !Number.isFinite(deltaPct)) return null;
+  const sign = deltaPct > 0 ? "+" : "";
+  return `${sign}${deltaPct.toLocaleString("it-IT", { maximumFractionDigits: 1 })}%`;
+}
+
+function HealthScoreCompareBadge({
+  deltaPct,
+  deltaPoints,
+}: {
+  deltaPct: number | null;
+  deltaPoints: number | null;
+}) {
+  const pctStr = fmtSectionDeltaPct(deltaPct);
+  const { arrow, tone } = reportArrowAndTone(deltaPct, false);
+  const absStr =
+    deltaPoints != null ? `${deltaPoints > 0 ? "+" : ""}${deltaPoints} pt` : null;
+  if (absStr == null && pctStr == null) return null;
+
+  return (
+    <Tooltip content="Variazione rispetto al periodo precedente">
+      <span className={reportCompareBadgeClass(tone)}>
+        <span className="text-xs leading-none" aria-hidden>
+          {arrow}
+        </span>
+        {absStr ? <span>{absStr}</span> : null}
+        {pctStr ? <span className={absStr ? "font-normal opacity-90" : undefined}>{pctStr}</span> : null}
+      </span>
+    </Tooltip>
+  );
+}
+
+/** Stesso schema righe del brief settimanale KPI header. */
+function HealthScoreSectionBriefRow({ section }: { section: OperationalHealthSectionSummary }) {
+  return (
+    <HealthScoreBriefMetricRow
+      label={section.label}
+      value={section.score}
+      suffix={<span className="text-xs font-semibold text-[color:var(--cab-text-muted)]">/100</span>}
+      prevScore={section.prevScore}
+      prevSuffix={<span className="text-[color:var(--cab-text-muted)]">/100</span>}
+      deltaPoints={section.deltaPoints}
+      deltaPct={section.deltaPct}
+    />
+  );
+}
+
+function HealthScoreSectionsBody({
+  sections,
+}: {
+  sections: NonNullable<OperationalHealthScore["calculation"]>["sections"];
+}) {
+  if (sections.length === 0) {
+    return <p className="text-sm text-[color:var(--cab-text-muted)]">Nessuna area disponibile.</p>;
+  }
+
+  return (
+    <ul className="mt-1 min-w-0 flex-1">
+      {sections.map((section) => (
+        <HealthScoreSectionBriefRow key={section.label} section={section} />
+      ))}
+    </ul>
   );
 }
 
@@ -203,58 +502,19 @@ function HealthScoreCalculationSummary({ score }: { score: OperationalHealthScor
   if (!calc) return null;
 
   return (
-    <div className="min-w-0 space-y-2">
-      <p className="text-xs leading-snug text-[color:var(--cab-text-muted)]">
-        <span className="font-medium text-[color:var(--cab-text)]">{calc.periodLabel}</span>
-        {" · "}
-        {calc.workshopSizeLabel}
-      </p>
-      <p className="text-xs leading-snug text-[color:var(--cab-text-muted)]">
-        Media aree{" "}
-        <span className="font-semibold tabular-nums text-[color:var(--cab-text)]">{calc.baseScore}/100</span>
-        {calc.riskPenalty > 0 ? (
-          <>
-            {" · "}
-            Penalità{" "}
-            <span className="font-semibold tabular-nums text-[color:var(--cab-danger)]">−{calc.riskPenalty}</span>
-          </>
-        ) : null}
-        {" · "}
-        Totale{" "}
-        <span className="font-semibold tabular-nums text-[color:var(--cab-text)]">{calc.smoothedScore}/100</span>
-        {calc.scoreRaw !== calc.smoothedScore ? (
-          <span className="text-[color:var(--cab-text-muted)]"> (grezzo {calc.scoreRaw})</span>
-        ) : null}
-      </p>
-      {calc.sections.length > 0 ? (
-        <ul className="space-y-1 border-t border-[color:var(--cab-border)] pt-2 text-xs text-[color:var(--cab-text-muted)]">
-          {calc.sections.map((section) => (
-            <li key={section.label} className="flex min-w-0 items-center justify-between gap-2">
-              <span className="min-w-0 truncate">{section.label}</span>
-              <span className="shrink-0 tabular-nums">
-                <span className="font-medium text-[color:var(--cab-text)]">{section.score}/100</span>
-                {section.contributionPoints !== 0 ? (
-                  <span className="ms-1.5 text-[color:var(--cab-text-muted)]">
-                    ({section.contributionPoints > 0 ? "+" : ""}
-                    {section.contributionPoints} pt)
-                  </span>
-                ) : null}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <p className="text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
-        Affidabilità dati {calc.confidencePct}% · Qualità dati {calc.dataQualityPct}%
-      </p>
-    </div>
+    <>
+      <HealthScoreSynthesisBody calc={calc} />
+      <div className="mt-3">
+        <HealthScoreSynthesisIntro calc={calc} withTitle />
+      </div>
+    </>
   );
 }
 
 export function HealthScoreSummarySkeleton() {
   return (
     <HealthScoreLayout
-      ring={<div className={`h-[4.25rem] w-[4.25rem] shrink-0 rounded-full ${dsSkeletonPulse}`} aria-hidden />}
+      ring={<HealthScoreRingLoading />}
       text={
         <div className="min-w-0 shrink-0 space-y-2" aria-hidden>
           <div className={`h-3 w-20 ${dsSkeletonPulse}`} />
@@ -307,18 +567,95 @@ export function HealthScoreSummary({
   );
 }
 
-export function HealthScoreBreakdownBody({ score }: { score: OperationalHealthScore }) {
+export function HealthScoreBreakdownBody({
+  score,
+  historyPoints,
+  historyLoading,
+}: {
+  score: OperationalHealthScore;
+  historyPoints?: HealthScoreWeeklyTrendPoint[] | null;
+  historyLoading?: boolean;
+}) {
+  return (
+    <HealthScoreBreakdownPanel
+      score={score}
+      historyPoints={historyPoints}
+      historyLoading={historyLoading ?? false}
+    />
+  );
+}
+
+function HealthScoreBreakdownTextColumn({ score }: { score: OperationalHealthScore }) {
+  const calc = score.calculation;
   const { positive, negative } = splitHealthFactors(score.factors.filter((f) => f.impact !== 0));
 
   return (
-    <div className="min-w-0 space-y-3.5">
-      <HealthScoreCalculationSummary score={score} />
-      <FactorList title="Ha alzato il punteggio" factors={positive} tone="up" />
-      <FactorList title="Ha abbassato il punteggio" factors={negative} tone="down" />
+    <>
+      {calc && calc.sections.length > 0 ? (
+        <HealthScoreCard title="Punteggio per area">
+          <HealthScoreSectionsBody sections={calc.sections} />
+        </HealthScoreCard>
+      ) : null}
+      {calc ? (
+        <HealthScoreSynthesisCard calc={calc} />
+      ) : null}
+      {positive.length > 0 ? (
+        <HealthScoreCard title="Ha alzato il punteggio" className="sm:col-span-2">
+          <FactorList title="Ha alzato il punteggio" factors={positive} tone="up" hideTitle />
+        </HealthScoreCard>
+      ) : null}
+      {negative.length > 0 ? (
+        <HealthScoreCard title="Ha abbassato il punteggio" className="sm:col-span-2">
+          <FactorList title="Ha abbassato il punteggio" factors={negative} tone="down" hideTitle />
+        </HealthScoreCard>
+      ) : null}
       {positive.length === 0 && negative.length === 0 ? (
-        <p className="text-sm leading-snug text-[color:var(--cab-text-muted)]">
-          Nessuna variazione rilevante rispetto al periodo precedente.
-        </p>
+        <HealthScoreCard title="Variazioni" className="sm:col-span-2">
+          <p className="text-sm leading-snug text-[color:var(--cab-text-muted)]">
+            Nessuna variazione rilevante rispetto al periodo precedente.
+          </p>
+        </HealthScoreCard>
+      ) : null}
+    </>
+  );
+}
+
+export function HealthScoreBreakdownPanel({
+  score,
+  historyPoints,
+  historyLoading,
+  insufficientMessage,
+}: {
+  score?: OperationalHealthScore | null;
+  historyPoints?: HealthScoreWeeklyTrendPoint[] | null;
+  historyLoading: boolean;
+  insufficientMessage?: ReactNode;
+}) {
+  return (
+    <div className={HEALTH_SCORE_CARD_GRID}>
+      {insufficientMessage ? (
+        <HealthScoreCard title="Stato operativo" className="sm:col-span-2">
+          {insufficientMessage}
+        </HealthScoreCard>
+      ) : null}
+
+      <HealthScoreCard title="Andamento settimanale" className="sm:col-span-2">
+        <HealthScoreWeeklyTrendChart
+          points={historyPoints}
+          isLoading={historyLoading}
+          embedded
+          hideTitle
+        />
+      </HealthScoreCard>
+
+      {score ? <HealthScoreBreakdownTextColumn score={score} /> : null}
+
+      {!score && !insufficientMessage ? (
+        <>
+          <HealthScoreCardSkeleton title="Sintesi" />
+          <HealthScoreCardSkeleton title="Aree" />
+          <HealthScoreCardSkeleton title="Fattori" className="sm:col-span-2" />
+        </>
       ) : null}
     </div>
   );

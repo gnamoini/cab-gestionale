@@ -2,6 +2,7 @@ import type { GestionalePermissionModule } from "@/src/lib/permissions/gestional
 
 export const GESTIONALE_MODULE_LABELS: Record<GestionalePermissionModule, string> = {
   magazzino: "Magazzino",
+  magazzino_carichi: "Carichi DDT",
   lavorazioni: "Lavorazioni",
   mezzi: "Mezzi",
   documenti: "Documenti",

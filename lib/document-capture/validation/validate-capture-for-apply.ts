@@ -69,7 +69,14 @@ export function validateCaptureForApply(input: ValidateCaptureInput): ValidateCa
         severity: "error",
       });
     }
-    if (ingresso.dataIngresso.trim()) {
+    if (!ingresso.dataIngresso.trim()) {
+      issues.push({
+        code: "MISSING_DATA_INGRESSO",
+        fieldKey: "data_ingresso",
+        message: "Data ingresso obbligatoria.",
+        severity: "error",
+      });
+    } else {
       const parsed = parseItalianDayDisplayToIso(ingresso.dataIngresso);
       if (!parsed.ok) {
         issues.push({

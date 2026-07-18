@@ -68,6 +68,7 @@ export function computeHealthScoreFromSnapshot(input: ComputeHealthScoreInput): 
   };
 
   const kpiNodes: KpiExplainNode[] = [];
+  const kpiPrevScores = new Map<string, number>();
 
   for (const kpi of getAllHealthKpis()) {
     const ctx: KpiContext = { ...ctxBase, kpiResults };
@@ -95,6 +96,21 @@ export function computeHealthScoreFromSnapshot(input: ComputeHealthScoreInput): 
 
     kpiResults.set(kpi.id, { kpiScore: blended.score, effectiveWeight });
 
+    let kpiScorePrev: number | null = null;
+    if (raw.previous != null) {
+      const prevRaw = { ...raw, current: raw.previous };
+      const prevTrend = kpi.normalizer.trend(prevRaw, target, ctx, kpi.invertTrend ?? false);
+      const prevLevel = kpi.normalizer.level(prevRaw, target, ctx, kpi.invertLevel ?? false);
+      const prevBlended = blendTrendLevel(
+        prevTrend.score,
+        prevLevel.score,
+        kpi.trendWeight,
+        kpi.levelWeight,
+      );
+      kpiScorePrev = prevBlended.score;
+      kpiPrevScores.set(kpi.id, prevBlended.score);
+    }
+
     const sectionWeight = config.sections[kpi.sectionId] ?? 0;
     const contributionPoints = sectionWeight > 0 ? (blended.score - 50) * (effectiveWeight / 10) : 0;
 
@@ -109,6 +125,7 @@ export function computeHealthScoreFromSnapshot(input: ComputeHealthScoreInput): 
       trendScore: trend.score,
       levelScore: level.score,
       kpiScore: blended.score,
+      kpiScorePrev,
       staticWeight,
       dynamicWeight,
       confidence: confidence.level,
@@ -135,15 +152,24 @@ export function computeHealthScoreFromSnapshot(input: ComputeHealthScoreInput): 
     let sectionScoreSum = 0;
     let sectionWeightSum = 0;
     let sectionContribution = 0;
+    let sectionPrevScoreSum = 0;
+    let sectionPrevWeightSum = 0;
 
     for (const kpi of sectionKpis) {
       if (kpi.effectiveWeight <= 0) continue;
       sectionScoreSum += kpi.kpiScore * kpi.effectiveWeight;
       sectionWeightSum += kpi.effectiveWeight;
       sectionContribution += kpi.contributionPoints;
+      const prevScore = kpiPrevScores.get(kpi.id);
+      if (prevScore != null) {
+        sectionPrevScoreSum += prevScore * kpi.effectiveWeight;
+        sectionPrevWeightSum += kpi.effectiveWeight;
+      }
     }
 
     const sectionScore = sectionWeightSum > 0 ? sectionScoreSum / sectionWeightSum : 50;
+    const sectionScorePrev =
+      sectionPrevWeightSum > 0 ? sectionPrevScoreSum / sectionPrevWeightSum : null;
     weightedSum += sectionScore * sectionWeight;
     weightTotal += sectionWeight;
 
@@ -152,6 +178,7 @@ export function computeHealthScoreFromSnapshot(input: ComputeHealthScoreInput): 
       label: section.title,
       weight: sectionWeight,
       sectionScore: Math.round(sectionScore * 10) / 10,
+      sectionScorePrev: sectionScorePrev != null ? Math.round(sectionScorePrev * 10) / 10 : null,
       contributionPoints: Math.round(sectionContribution * 10) / 10,
       kpis: sectionKpis,
     });

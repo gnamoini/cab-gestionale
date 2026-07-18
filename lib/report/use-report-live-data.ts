@@ -2,6 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { isDirtySyncEnabledForDomain } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 import { scheduleCompatBackgroundAudit } from "@/lib/magazzino/compat/compat-runtime-sanitize";
 import { scheduleReportBroadcastRefresh } from "@/lib/report/report-refresh";
@@ -29,6 +30,7 @@ export function useReportLiveData(options?: ReportLiveDataOptions) {
   const lastCompatAuditFingerprintRef = useRef<string | null>(null);
 
   const scheduleRefresh = useCallback(() => {
+    if (isDirtySyncEnabledForDomain("report")) return;
     scheduleReportBroadcastRefresh(queryClient, () => {});
   }, [queryClient]);
 

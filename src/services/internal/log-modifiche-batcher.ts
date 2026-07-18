@@ -138,16 +138,14 @@ async function flushPending(key: string, flush: FlushModificaLogFn): Promise<voi
   }
 }
 
-/** Per test, logout o pagehide: scrive subito tutti i log in coda. */
+/** Per test, logout o pagehide: scrive subito tutti i log in coda. Propaga il primo errore. */
 export async function flushAllModificaLogs(flush: FlushModificaLogFn): Promise<void> {
   const keys = [...pending.keys()];
-  await Promise.all(
-    keys.map((k) =>
-      flushPending(k, flush).catch(() => {
-        /* errori gestiti dal chiamante del flush */
-      }),
-    ),
-  );
+  const results = await Promise.allSettled(keys.map((k) => flushPending(k, flush)));
+  const firstRejection = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+  if (firstRejection) {
+    throw firstRejection.reason;
+  }
 }
 
 /** ponytail: flush su tab hide — evita perdita coda magazzino su reload/HMR. */

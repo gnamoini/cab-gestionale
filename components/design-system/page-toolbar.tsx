@@ -12,7 +12,7 @@ import {
   ToolbarGroupSearchRow,
 } from "@/components/design-system/toolbar-group";
 import { MobileFilterDrawer } from "@/components/gestionale/mobile-filter-drawer";
-import { dsPageToolbarMetaActionBtnFilterCol, dsPageToolbarMetaChip, dsPageToolbarMetaChipAccent } from "@/lib/ui/design-system";
+import { dsPageToolbarMetaActionBtn, dsPageToolbarMetaActionBtnFilterCol, dsPageToolbarMetaChip, dsPageToolbarMetaChipAccent } from "@/lib/ui/design-system";
 import { useSmUp } from "@/lib/ui/use-sm-up";
 
 export type PageToolbarProps = {
@@ -219,7 +219,7 @@ export function PageToolbarResultCount({
     <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-1.5 gap-y-1 sm:flex-wrap">
       <div className="flex min-w-0 flex-nowrap items-center gap-1.5 sm:flex-wrap">
         <span className={dsPageToolbarMetaChip}>
-          <span className="tabular-nums font-semibold text-[color:var(--cab-text)]">{count}</span>
+          <span className="tabular-nums">{count}</span>
           <span>{count === 1 ? singularLabel : pluralLabel}</span>
         </span>
         {filtersActive ? <span className={dsPageToolbarMetaChipAccent}>Filtri attivi</span> : null}
@@ -259,8 +259,8 @@ export function PageToolbarMetaToggle({
   className?: string;
 }) {
   const shell = checked
-    ? `${dsPageToolbarMetaActionBtnFilterCol} border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_24%,transparent)]`
-    : dsPageToolbarMetaActionBtnFilterCol;
+    ? `${dsPageToolbarMetaActionBtn} border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_24%,transparent)]`
+    : dsPageToolbarMetaActionBtn;
 
   return (
     <button
@@ -269,23 +269,23 @@ export function PageToolbarMetaToggle({
       aria-checked={checked}
       title={title}
       onClick={() => onChange(!checked)}
-      className={`${shell} justify-between gap-2 ${className}`.trim()}
+      className={`${shell} max-w-full justify-start gap-2 ${className}`.trim()}
     >
-      <span className="min-w-0 truncate text-left">
+      <span className="min-w-0 shrink truncate text-left whitespace-nowrap">
         <span className="sm:hidden">{shortLabel ?? label}</span>
         <span className="hidden sm:inline">{label}</span>
       </span>
       <span
         aria-hidden
-        className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${
+        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors ${
           checked
             ? "bg-[color:var(--cab-primary)]"
             : "bg-[color:color-mix(in_srgb,var(--cab-border)_80%,var(--cab-surface))]"
         }`}
       >
         <span
-          className={`inline-block h-4 w-4 translate-y-0.5 rounded-full bg-white shadow transition-transform ${
-            checked ? "translate-x-4" : "translate-x-0.5"
+          className={`block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+            checked ? "translate-x-4" : "translate-x-0"
           }`}
         />
       </span>

@@ -12,6 +12,7 @@ import {
   dsNotificationBellBadgeRailCompact,
   dsNotificationBellBadgeRailWide,
   dsNotificationBellIcon,
+  dsNotificationBellIconHeader,
   dsNotificationBellIconRail,
   dsNotificationSidebarTrailingCount,
   dsNotificationSidebarTrailingCountWide,
@@ -42,19 +43,27 @@ import {
   dsModalTitle,
   dsModalTitleBlock,
   dsPageHeaderIconBtn,
+  dsPageHeaderIconStroke,
   dsPageToolbarIconBtn,
   dsPageToolbarMetaChipAccent,
   dsScrollbar,
 } from "@/lib/ui/design-system";
 
-export function NotificationBellIcon({ variant = "default" }: { variant?: "default" | "rail" }) {
+export function NotificationBellIcon({ variant = "default" }: { variant?: "default" | "rail" | "header" }) {
+  const strokeWidth = variant === "rail" ? 2.25 : variant === "header" ? dsPageHeaderIconStroke : 2;
   return (
     <svg
-      className={variant === "rail" ? dsNotificationBellIconRail : dsNotificationBellIcon}
+      className={
+        variant === "rail"
+          ? dsNotificationBellIconRail
+          : variant === "header"
+            ? dsNotificationBellIconHeader
+            : dsNotificationBellIcon
+      }
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={variant === "rail" ? 2.25 : 2}
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
@@ -365,7 +374,7 @@ export function NotificationBellTrigger({
       aria-haspopup="dialog"
       aria-label={ariaLabel}
     >
-      <NotificationBellIcon />
+      <NotificationBellIcon variant={variant === "ghost" ? "header" : "default"} />
       {count > 0 ? <NotificationCountBadge count={count} /> : null}
       <span className="sr-only">{ariaLabel}</span>
     </button>

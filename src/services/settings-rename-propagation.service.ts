@@ -1,7 +1,7 @@
 "use client";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { getBrowserSupabase, type SupabaseClient } from "@/src/lib/supabase/browser-client";
+import { auditDiff, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 import type { SettingsRenameEntry, SettingsRenameKind, SettingsRenamePropagationResult } from "@/lib/settings/settings-rename-types";
@@ -40,6 +40,12 @@ async function runBatchedRowUpdates(
       chunk.map(async ({ id, payload }) => {
         const { error } = await c.from(table).update(payload).eq("id", id);
         if (error) throw new Error(error.message);
+        await writeModificaLog(c, {
+          entita: table,
+          entita_id: id,
+          azione: "UPDATE",
+          payload: auditDiff(null, payload, { oggetto: "Rinomina impostazioni" }),
+        });
         updated += 1;
       }),
     );

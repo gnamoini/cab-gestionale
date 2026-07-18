@@ -253,7 +253,7 @@ function PreventivoRowActions({
       ) : null}
       <IconActionButton
         label="Modifica"
-        tooltipContent={canEditWorkOrders ? "Modifica" : "Sola lettura"}
+        tooltipContent={!canEditWorkOrders ? "Sola lettura" : undefined}
         className={dsTableActionBtnPrimary}
         disabled={!canEditWorkOrders}
         onClick={() => onEdit(p)}
@@ -286,7 +286,7 @@ function PreventivoRowActions({
       </IconActionButton>
       <IconActionButton
         label="Elimina"
-        tooltipContent={canDeleteRecords ? "Elimina" : "Sola lettura"}
+        tooltipContent={!canDeleteRecords ? "Sola lettura" : undefined}
         className={dsTableActionBtnDanger}
         disabled={!canDeleteRecords}
         onClick={() => onDelete(p)}

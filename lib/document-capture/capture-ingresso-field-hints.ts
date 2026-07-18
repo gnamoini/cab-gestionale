@@ -273,6 +273,14 @@ export async function buildCaptureIngressoCompileData(input: {
   const hints: Partial<Record<keyof SchedaIngressoFields, CaptureIngressoFieldHint>> = {};
   const ambiguousCaptureKeys: string[] = [];
 
+  if (!fields.dataIngresso.trim()) {
+    hints.dataIngresso = {
+      tone: "catalog",
+      message: "Data ingresso non letta — inserire manualmente.",
+      captureFieldKey: "data_ingresso",
+    };
+  }
+
   for (const row of rows) {
     const ingressoKey = ingressoKeyFromCapture(row.field_key);
     if (!ingressoKey) continue;

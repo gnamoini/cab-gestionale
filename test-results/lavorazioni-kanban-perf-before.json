@@ -1,0 +1,21 @@
+{
+  "capturedAt": "2026-07-18T00:00:00.000Z",
+  "phase": "before-p0-fixes",
+  "route": "/lavorazioni",
+  "viewMode": "table",
+  "bundle": {
+    "firstLoadJsKb": 1763.2,
+    "source": "test-results/build-budget-snapshot.json",
+    "kanbanChunkAtBoot": false,
+    "dndKitAtBoot": false
+  },
+  "runtimeLeaks": {
+    "useKanbanViewportLayoutInParent": true,
+    "matchMediaListenerKanban": 1,
+    "loadingKanbanSkeletonStaticImportInParent": true,
+    "uiAutonomyKanbanContextInParent": true,
+    "kanbanSpecificQueries": 0
+  },
+  "sharedQueriesAtBoot": ["lavorazioni.list.attive", "schede.bundles", "mezzi.list"],
+  "notes": "Kanban UI already code-split via dynamic(); leaks are architectural hygiene (listener, skeleton import, context key)."
+}

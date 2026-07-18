@@ -1,7 +1,7 @@
 "use client";
 
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
-import { Tooltip } from "@/components/ui";
+import { OptionalTooltip, Tooltip } from "@/components/ui";
 import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -1364,10 +1364,12 @@ export function SchedeLavorazioneModal({
                 title="Anagrafica intervento"
                 actions={
                   hub.ingresso ? (
-                    <Tooltip content={!canEditWorkOrders ? READONLY_PERMISSION_HINT : "Modifica scheda ingresso"}><button type="button" className={dsTableActionTextBtnPrimary} disabled={!canEditWorkOrders} aria-label="Modifica scheda ingresso" onClick={apriSchedaIngresso}>
-                      <IconBtnEdit />
-                      Modifica
-                    </button></Tooltip>
+                    <OptionalTooltip content={!canEditWorkOrders ? READONLY_PERMISSION_HINT : undefined}>
+                      <button type="button" className={dsTableActionTextBtnPrimary} disabled={!canEditWorkOrders} aria-label="Modifica scheda ingresso" onClick={apriSchedaIngresso}>
+                        <IconBtnEdit />
+                        Modifica
+                      </button>
+                    </OptionalTooltip>
                   ) : null
                 }
               >
@@ -1380,10 +1382,10 @@ export function SchedeLavorazioneModal({
                   title="Elimina lavorazione"
                   subtitle="Operazione irreversibile: rimuove la lavorazione e i dati collegati."
                   actions={
-                    <Tooltip content={"Elimina lavorazione"}><button type="button" className={dsTableActionTextBtnDanger} disabled={deleteLavorazionePending} onClick={onDeleteLavorazione}>
+                    <button type="button" className={dsTableActionTextBtnDanger} disabled={deleteLavorazionePending} onClick={onDeleteLavorazione}>
                       <HubIconTrash />
                       Elimina
-                    </button></Tooltip>
+                    </button>
                   }
                 />
               ) : null}
@@ -1482,10 +1484,10 @@ export function SchedeLavorazioneModal({
                             <p className="mt-0.5 truncate text-sm font-medium text-[color:var(--cab-text)]">{d.nome}</p>
                           </div>
                           {canOpen ? (
-                            <Tooltip content={"Apri documento"}><button type="button" className={dsTableActionTextBtn} onClick={() => void openDocumentoFile(d)}>
+                            <button type="button" className={dsTableActionTextBtn} onClick={() => void openDocumentoFile(d)}>
                               <HubIconOpen />
                               Apri
-                            </button></Tooltip>
+                            </button>
                           ) : null}
                         </li>
                       );
@@ -1709,30 +1711,36 @@ function SchedaSectionHub({
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
           {!doc ? (
-            <Tooltip content={!canEdit ? READONLY_PERMISSION_HINT : undefined}><button type="button" className={dsTableActionTextBtnPrimary} disabled={!canEdit} onClick={onCrea}>
-              <IconBtnPlus className="h-3.5 w-3.5 shrink-0"/>
-              Crea nuova
-            </button></Tooltip>
+            <OptionalTooltip content={!canEdit ? READONLY_PERMISSION_HINT : undefined}>
+              <button type="button" className={dsTableActionTextBtnPrimary} disabled={!canEdit} onClick={onCrea}>
+                <IconBtnPlus className="h-3.5 w-3.5 shrink-0"/>
+                Crea nuova
+              </button>
+            </OptionalTooltip>
           ) : (
             <>
               {onElimina ? (
-                <Tooltip content={!canEdit ? READONLY_PERMISSION_HINT : "Elimina scheda"}><button type="button" className={dsTableActionTextBtnDanger} disabled={!canEdit} aria-label="Elimina scheda" onClick={onElimina}>
-                  <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                  </svg>
-                  <span className="max-md:sr-only">Elimina</span>
-                </button></Tooltip>
+                <OptionalTooltip content={!canEdit ? READONLY_PERMISSION_HINT : undefined}>
+                  <button type="button" className={dsTableActionTextBtnDanger} disabled={!canEdit} aria-label="Elimina scheda" onClick={onElimina}>
+                    <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    <span className="max-md:sr-only">Elimina</span>
+                  </button>
+                </OptionalTooltip>
               ) : null}
-              <Tooltip content={"Esporta PDF"}><button type="button" className={dsTableActionTextBtn} disabled={!doc} aria-label="Esporta PDF scheda" onClick={onPdf}>
+              <button type="button" className={dsTableActionTextBtn} disabled={!doc} aria-label="Esporta PDF scheda" onClick={onPdf}>
                 <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                 </svg>
                 PDF
-              </button></Tooltip>
-              <Tooltip content={!canEdit ? READONLY_PERMISSION_HINT : "Modifica scheda"}><button type="button" className={dsTableActionTextBtnPrimary} disabled={!canEdit} aria-label="Modifica scheda" onClick={onApri}>
-                <IconBtnEdit />
-                Modifica
-              </button></Tooltip>
+              </button>
+              <OptionalTooltip content={!canEdit ? READONLY_PERMISSION_HINT : undefined}>
+                <button type="button" className={dsTableActionTextBtnPrimary} disabled={!canEdit} aria-label="Modifica scheda" onClick={onApri}>
+                  <IconBtnEdit />
+                  Modifica
+                </button>
+              </OptionalTooltip>
             </>
           )}
         </div>
@@ -1927,11 +1935,10 @@ function LavorazioniPanel({
                               patchRiga(r.id, (row) => ({ ...row, addettiAssegnati: next }));
                             }}
                           />
-                          <Tooltip content="Rimuovi">
-                            <button
-                              type="button"
-                              className="shrink-0 rounded p-1 text-sm text-[color:var(--cab-text-muted)] transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
-                              aria-label="Rimuovi addetto"
+                          <button
+                            type="button"
+                            className="shrink-0 rounded p-1 text-sm text-[color:var(--cab-text-muted)] transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                            aria-label="Rimuovi addetto"
                               onClick={() => {
                                 void askConfirm({
                                   title: "Rimuovere addetto?",
@@ -1947,7 +1954,6 @@ function LavorazioniPanel({
                             >
                               ✕
                             </button>
-                          </Tooltip>
                         </div>
                       ))}
                       <button
@@ -1967,11 +1973,10 @@ function LavorazioniPanel({
                 </td>
                 {!ro ? (
                   <td className="px-2 py-2 align-top">
-                    <Tooltip content="Rimuovi">
-                      <button
-                        type="button"
-                        className="rounded p-1.5 text-sm text-[color:var(--cab-text-muted)] transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
-                        aria-label="Rimuovi riga lavorazione"
+                    <button
+                      type="button"
+                      className="rounded p-1.5 text-sm text-[color:var(--cab-text-muted)] transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                      aria-label="Rimuovi riga lavorazione"
                         onClick={() => {
                           void askConfirm({
                             title: "Eliminare riga?",
@@ -1986,7 +1991,6 @@ function LavorazioniPanel({
                     >
                       ✕
                     </button>
-                    </Tooltip>
                   </td>
                 ) : null}
               </tr>
@@ -2313,7 +2317,6 @@ function RicambiPanel({
                   ) : null}
                   {!ro ? (
                     <td className="px-2 py-2 align-top">
-                      <Tooltip content="Rimuovi">
                         <button
                           type="button"
                           className="rounded p-1.5 text-sm text-[color:var(--cab-text-muted)] transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
@@ -2332,7 +2335,6 @@ function RicambiPanel({
                         >
                           ✕
                         </button>
-                      </Tooltip>
                     </td>
                   ) : null}
                 </tr>

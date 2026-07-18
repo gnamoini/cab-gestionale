@@ -7,7 +7,10 @@ import {
   SCHEDA_OFFICINA_EXTRACTION_USER,
   SCHEDA_OFFICINA_HYBRID_PREFILL_USER_PREFIX,
 } from "@/lib/document-capture/scheda-officina-extraction-prompt";
-import { sanitizeCaptureExtractedFieldValue } from "@/lib/document-capture/capture-field-key-aliases";
+import {
+  rejectCaptureIngressoDateIfLikelyTodayFallback,
+  sanitizeCaptureExtractedFieldValue,
+} from "@/lib/document-capture/capture-field-key-aliases";
 import type { DetectedSchedaBlankTipo, HybridField, HybridFieldSource } from "@/lib/document-capture/extraction/hybrid-extraction-types";
 
 const SOURCE_PRIORITY: Record<HybridFieldSource, number> = {
@@ -52,7 +55,17 @@ export function mergeHybridFields(layers: HybridField[][]): HybridField[] {
       }
     }
   }
-  return [...byKey.values()];
+  return [...byKey.values()].map(scrubIngressoDateHybridField);
+}
+
+function scrubIngressoDateHybridField(field: HybridField): HybridField {
+  if (field.key !== "data_ingresso" || !fieldValue(field)) return field;
+  const scrubbed = rejectCaptureIngressoDateIfLikelyTodayFallback(fieldValue(field), {
+    confidence: field.confidence,
+    source: field.source,
+  });
+  if (!scrubbed) return { ...field, value: null };
+  return { ...field, value: scrubbed };
 }
 
 function hasCriticalIngressoFields(fields: HybridField[]): boolean {
@@ -110,7 +123,10 @@ export function hybridFieldsToCaptureExtraction(
       .filter((f) => isFilled(f))
       .map((f) => ({
         key: f.key,
-        value: formatHybridMultilineFieldValue(f.key, f.value),
+        value: formatHybridMultilineFieldValue(f.key, f.value, {
+          confidence: f.confidence,
+          source: f.source,
+        }),
         confidence: f.confidence,
       })),
     warnings: merged.length === 0 ? ["Nessun campo letto da OCR/PDF text"] : undefined,
@@ -126,14 +142,22 @@ export function captureResultToHybridFields(
 ): HybridField[] {
   return fields.map((f) => ({
     key: f.key,
-    value: formatHybridMultilineFieldValue(f.key, f.value),
+    value: formatHybridMultilineFieldValue(f.key, f.value, { confidence: f.confidence, source: "gemini" }),
     confidence: f.confidence,
     source: "gemini" as const,
   }));
 }
 
-function formatHybridMultilineFieldValue(key: string, value: string | null): string | null {
+function formatHybridMultilineFieldValue(
+  key: string,
+  value: string | null,
+  opts?: { confidence?: number; source?: HybridFieldSource },
+): string | null {
   if (!value?.trim()) return value;
+  if (key === "data_ingresso") {
+    const scrubbed = rejectCaptureIngressoDateIfLikelyTodayFallback(value, opts);
+    return scrubbed || null;
+  }
   const sanitized = sanitizeCaptureExtractedFieldValue(key, value);
   if (!sanitized) return null;
   if (!isCaptureMultilineFieldKey(key)) return sanitized;

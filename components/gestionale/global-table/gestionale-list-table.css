@@ -167,6 +167,17 @@
   border-bottom-right-radius: var(--ds-radius-xl);
 }
 
+/* Header: angoli superiori coerenti con il wrap `rounded-[var(--ds-radius-xl)]`. */
+.gestionale-list-table-scope thead tr:first-child > th:first-child,
+.lavorazioni-scroll-scope thead tr:first-child > th:first-child {
+  border-top-left-radius: var(--ds-radius-xl);
+}
+
+.gestionale-list-table-scope thead tr:first-child > th:last-child,
+.lavorazioni-scroll-scope thead tr:first-child > th:last-child {
+  border-top-right-radius: var(--ds-radius-xl);
+}
+
 .gestionale-list-table-scope .gestionale-list-table-actions-head,
 .lavorazioni-scroll-scope .gestionale-list-table-actions-head {
   position: sticky;

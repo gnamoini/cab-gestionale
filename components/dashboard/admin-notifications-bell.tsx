@@ -8,7 +8,6 @@ import {
   NotificationBellTrigger,
   NotificationOpenLink,
   NotificationRowShell,
-  Tooltip,
 } from "@/components/design-system";
 import {
   GestionaleLogEmpty,
@@ -271,16 +270,14 @@ export function AdminNotificationsBell() {
   return (
     <>
       <div className="relative shrink-0">
-        <Tooltip content={unreadCount > 0 ? `Notifiche (${unreadCount})` : "Notifiche"}>
-          <NotificationBellTrigger
-            count={unreadCount}
-            active={unreadCount > 0}
-            activeTone="info"
-            ariaLabel={unreadCount > 0 ? `Notifiche (${unreadCount} non lette)` : "Notifiche"}
-            ariaExpanded={open}
-            onClick={toggle}
-          />
-        </Tooltip>
+        <NotificationBellTrigger
+          count={unreadCount}
+          active={unreadCount > 0}
+          activeTone="info"
+          ariaLabel={unreadCount > 0 ? `Notifiche (${unreadCount} non lette)` : "Notifiche"}
+          ariaExpanded={open}
+          onClick={toggle}
+        />
       </div>
 
       <Drawer

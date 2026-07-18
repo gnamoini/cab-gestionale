@@ -24,6 +24,8 @@ assert.doesNotMatch(listView, /addettiGlobali\[0\]/);
 const timeline = read("components/lavorazioni-clienti/client-lavorazione-timeline-panel.tsx");
 assert.match(timeline, /useLavorazioneProfileNamesQuery/);
 assert.match(timeline, /omitUnresolvedAutore:\s*true/);
+assert.match(timeline, /addettoFirma/);
+assert.match(timeline, /RichiedenteFirmaDisplay[\s\S]{0,120}addetto officina/);
 
 const ultimaModifica = read("lib/lavorazioni/lavorazione-ultima-modifica.ts");
 assert.match(ultimaModifica, /sanitizeClientPortalAutore/);
@@ -45,9 +47,13 @@ const profileSheet = read("components/profile/profile-sheet.tsx");
 assert.match(profileSheet, /gestionaleLogDrawerFooterClass/);
 assert.match(profileSheet, /ProfileSheetFooter/);
 
+const profileActions = read("components/profile/profile-actions-section.tsx");
+assert.match(profileActions, /PwaInstallFooterButton/);
+assert.match(profileActions, /variant="profile-action"/);
+
 const profileSheetFooter = read("components/profile/profile-sheet-footer.tsx");
-assert.match(profileSheetFooter, /PwaInstallFooterButton/);
 assert.match(profileSheetFooter, /PrivacyPolicyLink/);
+assert.doesNotMatch(profileSheetFooter, /PwaInstallFooterButton/);
 assert.doesNotMatch(profileSheetFooter, /menuInstallAvailable/);
 assert.doesNotMatch(profileSheetFooter, /formatAppBuildFooterLines/);
 
@@ -57,7 +63,7 @@ assert.match(authFooter, /PrivacyPolicyLink/);
 
 const installFooterBtn = read("components/legal/pwa-install-footer-button.tsx");
 assert.match(installFooterBtn, /isAppInstalled/);
-assert.match(installFooterBtn, /disabled=\{isAppInstalled/);
+assert.match(installFooterBtn, /disabled=\{disabled\}/);
 
 const privacyPolicyLink = read("components/legal/privacy-policy-link.tsx");
 assert.match(privacyPolicyLink, /buildPrivacyPolicyHref/);

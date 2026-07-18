@@ -97,6 +97,7 @@ export const CONTROL_CATALOG: Record<string, CatalogEntry> = {
   },
   "ci:supabase:migrations": { resolve: () => spawnNpm("ci:supabase:migrations") },
   "audit:release-v2-db": { resolve: () => spawnNpm("audit:release-v2-db") },
+  "audit:write-coverage": { resolve: () => spawnNpm("audit:write-coverage") },
   "ux:enforce": { resolve: () => spawnNpm("ux:enforce") },
   "audit:ui": { resolve: () => spawnNpm("audit:ui") },
   "ux:mobile-gate": { resolve: () => spawnNpm("ux:mobile-gate") },

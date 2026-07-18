@@ -51,7 +51,7 @@ export const globalTableSortIdle =
 
 /** Contenitore scroll + card tabella (desktop liste). */
 export const globalTableWrap =
-  "min-w-0 max-w-full overflow-x-auto rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]";
+  "min-w-0 max-w-full overflow-x-auto overflow-y-clip rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]";
 
 /**
  * @deprecated Non usare sul wrap: inset solo sul body (`globalTableTbodyInset`).

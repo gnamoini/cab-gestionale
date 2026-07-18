@@ -181,6 +181,9 @@ function MobileNavDrawer({
   edgeBackdropProps,
   edgePanelRef,
   edgeBackdropRef,
+  edgeSnapVisuallyClosed,
+  onEdgeSnapConsumed,
+  edgeResetDrag,
   onClose,
   navItems,
   onNavigate,
@@ -194,6 +197,9 @@ function MobileNavDrawer({
   edgeBackdropProps?: { style?: CSSProperties; className?: string };
   edgePanelRef?: RefObject<HTMLDivElement | null>;
   edgeBackdropRef?: RefObject<HTMLElement | null>;
+  edgeSnapVisuallyClosed?: boolean;
+  onEdgeSnapConsumed?: () => void;
+  edgeResetDrag?: () => void;
   onClose: () => void;
   navItems: GestionaleNavResolvedItem[];
   onNavigate?: (href: string) => void;
@@ -208,8 +214,10 @@ function MobileNavDrawer({
   const backdropButtonRef = useRef<HTMLButtonElement | null>(null);
   const announceRef = useRef<HTMLDivElement | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  const [dismissVisuallyClosed, setDismissVisuallyClosed] = useState(false);
 
-  const panelState = flags.closing ? "closing" : "open";
+  const skipCssCloseAnim = dismissVisuallyClosed || edgeSnapVisuallyClosed === true;
+  const panelState = flags.closing && !skipCssCloseAnim ? "closing" : "open";
   const edgeOpening = flags.edgePreview;
   const committed = flags.isCommitted && !edgeOpening;
   const backHandlerActive = flags.mounted && flags.state !== "CLOSED";
@@ -227,7 +235,8 @@ function MobileNavDrawer({
   const swipeDismiss = useSwipeToDismiss({
     onDismiss: () => {
       swipeDismissedRef.current = true;
-      onClose();
+      setDismissVisuallyClosed(true);
+      dispatch("DISMISS_DRAG_END_COMMIT");
     },
     enabled: flags.canDismiss,
     drawerState: flags.state,
@@ -256,13 +265,14 @@ function MobileNavDrawer({
     const needsCloseAnim =
       flags.mounted && (flags.closing || flags.state === "LOCKED");
     if (!needsCloseAnim) return;
-    const ms = navDrawerAnimMs(
-      typeof window !== "undefined" &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    );
-    const id = window.setTimeout(() => {
+
+    const finishClose = () => {
+      swipeDismiss.resetDrag();
+      edgeResetDrag?.();
       onAnimationEnd();
       swipeDismissedRef.current = false;
+      setDismissVisuallyClosed(false);
+      onEdgeSnapConsumed?.();
       restoreFocus();
       const trigger = mobileNav?.getMobileNavTrigger();
       if (trigger && document.contains(trigger)) {
@@ -272,9 +282,31 @@ function MobileNavDrawer({
           /* non focusable */
         }
       }
-    }, ms);
+    };
+
+    if (skipCssCloseAnim) {
+      finishClose();
+      return;
+    }
+
+    const ms = navDrawerAnimMs(
+      typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    );
+    const id = window.setTimeout(finishClose, ms);
     return () => window.clearTimeout(id);
-  }, [flags.closing, flags.mounted, flags.state, mobileNav, onAnimationEnd, restoreFocus]);
+  }, [
+    edgeResetDrag,
+    flags.closing,
+    flags.mounted,
+    flags.state,
+    mobileNav,
+    onAnimationEnd,
+    onEdgeSnapConsumed,
+    restoreFocus,
+    skipCssCloseAnim,
+    swipeDismiss.resetDrag,
+  ]);
 
   useEffect(() => {
     if (flags.state === "SETTLING_OPEN" || flags.state === "OPENING") {
@@ -379,7 +411,7 @@ function MobileNavDrawer({
           className="cab-sidebar-nav gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col p-3 pb-0"
           aria-label="Sezioni principali"
         >
-          <div className="gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
+          <div className="gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden overscroll-contain border-b border-[color:var(--cab-border)] touch-pan-y [-webkit-overflow-scrolling:touch]">
             <AppShellNav
               navItems={navItems}
               collapsed={false}
@@ -421,6 +453,9 @@ export type AppShellSidebarProps = {
   edgeSwipeBackdropProps?: { style?: CSSProperties; className?: string };
   edgeSwipePanelRef?: RefObject<HTMLDivElement | null>;
   edgeSwipeBackdropRef?: RefObject<HTMLElement | null>;
+  edgeSnapVisuallyClosed?: boolean;
+  onEdgeSnapConsumed?: () => void;
+  edgeResetDrag?: () => void;
 };
 
 function AppShellSidebarInner({
@@ -446,6 +481,9 @@ function AppShellSidebarInner({
   edgeSwipeBackdropProps,
   edgeSwipePanelRef,
   edgeSwipeBackdropRef,
+  edgeSnapVisuallyClosed,
+  onEdgeSnapConsumed,
+  edgeResetDrag,
 }: AppShellSidebarProps) {
   const activePath = usePathname();
   const { routeLock } = drawer;
@@ -550,6 +588,9 @@ function AppShellSidebarInner({
         edgeBackdropProps={edgeSwipeBackdropProps}
         edgePanelRef={edgeSwipePanelRef}
         edgeBackdropRef={edgeSwipeBackdropRef}
+        edgeSnapVisuallyClosed={edgeSnapVisuallyClosed}
+        onEdgeSnapConsumed={onEdgeSnapConsumed}
+        edgeResetDrag={edgeResetDrag}
         onClose={drawer.close}
         navItems={navItems}
         onNavigate={beginRouteTransition}

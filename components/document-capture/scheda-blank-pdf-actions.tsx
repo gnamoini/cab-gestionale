@@ -11,7 +11,7 @@ const BLANK_TYPES = [
   { tipo: "scheda-ricambi-blank", label: "Scheda ricambi" },
 ] as const;
 
-function IconSchedaBlank({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
+export function IconSchedaBlank({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
       <path d="M7 4h7l3 3v13H7V4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />

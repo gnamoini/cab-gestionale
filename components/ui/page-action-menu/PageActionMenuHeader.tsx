@@ -8,11 +8,10 @@ import {
   pageActionMenuQuickActionIconBtn,
   pageActionMenuQuickActionsBarClass,
 } from "@/lib/ui/page-action-menu-tokens";
-import { dsBtnGhost, dsPageHeaderIconGlyphDense, dsPageHeaderToolbarActionBtn } from "@/lib/ui/design-system";
+import { dsPageHeaderIconBtn, dsPageHeaderIconGlyphDense } from "@/lib/ui/design-system";
 import type { PageActionMenuBackConfig } from "@/components/ui/page-action-menu/page-action-menu-types";
 
-const pageActionMenuBackBtnClass = `${dsPageHeaderToolbarActionBtn} shrink-0 gap-1 sm:gap-1.5`;
-const pageActionMenuSubmenuBackBtnClass = `${dsBtnGhost} h-11 shrink-0 gap-1.5 px-2`;
+const pageActionMenuBackBtnClass = `${dsPageHeaderIconBtn} shrink-0`;
 
 export function PageActionMenuRefreshButton({
   busy = false,
@@ -62,10 +61,15 @@ export function PageActionMenuHeader({
 }) {
   if (onSubmenuBack) {
     return (
-      <div className={pageActionMenuHeaderClass}>
-        <button type="button" className={pageActionMenuSubmenuBackBtnClass} onClick={onSubmenuBack}>
+      <div className={`${pageActionMenuHeaderClass} justify-between`}>
+        <button
+          type="button"
+          className={pageActionMenuBackBtnClass}
+          onClick={onSubmenuBack}
+          aria-label="Indietro"
+        >
           <ShellNavIconBack className={dsPageHeaderIconGlyphDense} />
-          <span>Indietro</span>
+          <span className="sr-only">Indietro</span>
         </button>
         {submenuTitle ? (
           <span className="min-w-0 flex-1 truncate text-center text-sm font-medium text-[color:var(--cab-text)]">
@@ -87,26 +91,31 @@ export function PageActionMenuHeader({
   if (!showBack && !showQuickActionsBar) return null;
 
   return (
-    <div className={pageActionMenuHeaderClass}>
+    <div className={`${pageActionMenuHeaderClass} justify-start`}>
       {showBack && back ? (
         onBack ? (
-          <button type="button" className={pageActionMenuBackBtnClass} onClick={onBack}>
+          <button
+            type="button"
+            className={pageActionMenuBackBtnClass}
+            onClick={onBack}
+            aria-label={back.label}
+          >
             <ShellNavIconBack className={dsPageHeaderIconGlyphDense} />
-            <span className="sr-only sm:not-sr-only sm:inline">Indietro</span>
+            <span className="sr-only">{back.label}</span>
           </button>
         ) : (
-          <Link href={back.href} className={pageActionMenuBackBtnClass}>
+          <Link href={back.href} className={pageActionMenuBackBtnClass} aria-label={back.label}>
             <ShellNavIconBack className={dsPageHeaderIconGlyphDense} />
-            <span className="sr-only sm:not-sr-only sm:inline">Indietro</span>
+            <span className="sr-only">{back.label}</span>
           </Link>
         )
       ) : null}
       {showQuickActionsBar ? (
         <div className={pageActionMenuQuickActionsBarClass}>
-          {headerActions}
           {showRefresh ? (
             <PageActionMenuRefreshButton busy={refreshBusy} label={refreshLabel} onClick={onRefresh!} />
           ) : null}
+          {headerActions}
         </div>
       ) : (
         <span className="flex-1" aria-hidden />

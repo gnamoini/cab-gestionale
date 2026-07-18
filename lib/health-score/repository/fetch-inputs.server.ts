@@ -20,10 +20,31 @@ import { movimentiRowsToMagazzinoChangeLog } from "@/lib/report/report-movimenti
 import { filterMovimentiForReport } from "@/lib/report/report-truth-dataset";
 import { buildInputSnapshot } from "@/lib/health-score/repository/input-snapshot.server";
 import type { InputSnapshot } from "@/lib/health-score/types";
+import type { DipendenteTimesheetEntryRow } from "@/lib/dipendenti/types";
+import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
+import type { TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
+import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
+import type { PreventivoRecord } from "@/lib/preventivi/types";
 import { resolveCabAppSettingsFromRows } from "@/src/lib/app-settings/resolve-from-rows";
 import { createSupabaseServerServiceClient } from "@/src/lib/supabase/server-service-client";
 import type { AppSettingRow } from "@/src/types/supabase-tables";
-import { ymdFromDate } from "@/lib/report/date-ranges";
+import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { InvoiceRow } from "@/src/types/supabase-tables";
+import { ymdFromDate, type DateRange } from "@/lib/report/date-ranges";
+
+export type HealthScoreRawData = {
+  lavRows: LavorazioneListRow[];
+  ricambi: RicambioMagazzino[];
+  magLog: MagazzinoChangeLogEntry[];
+  timesheetEntries: DipendenteTimesheetEntryRow[];
+  tipiAssenza: readonly TipoAssenzaConfig[];
+  statiLavorazione: StatoLavorazioneConfig[];
+  preventivi: PreventivoRecord[];
+  invoices: InvoiceRow[];
+  dipendentiAttivi: number;
+  mezziCount: number;
+};
 
 export type HealthScoreFetchResult = {
   snapshot: InputSnapshot;
@@ -32,11 +53,8 @@ export type HealthScoreFetchResult = {
   prevRange: ReturnType<typeof getControlTowerPrevious30DaysRange>;
 };
 
-export async function fetchHealthScoreInputsServer(anchor = new Date()): Promise<HealthScoreFetchResult> {
+export async function fetchHealthScoreRawDataServer(fetchRange: DateRange): Promise<HealthScoreRawData> {
   const sb = createSupabaseServerServiceClient();
-  const range = getControlTowerLast30DaysRange(anchor);
-  const prevRange = getControlTowerPrevious30DaysRange(anchor);
-  const fetchRange = getControlTowerHealthScoreDataFetchRange(anchor);
   const timesheetFrom = ymdFromDate(fetchRange.start);
   const timesheetTo = ymdFromDate(fetchRange.end);
 
@@ -79,17 +97,28 @@ export async function fetchHealthScoreInputsServer(anchor = new Date()): Promise
     : [];
   const invoices = invoicesRes.success ? (invoicesRes.data?.invoices ?? []) : [];
 
-  const snapshot = buildInputSnapshot({
+  return {
     lavRows,
     ricambi,
     magLog,
-    timesheetEntries: (timesheetRes.data ?? []) as import("@/lib/dipendenti/types").DipendenteTimesheetEntryRow[],
+    timesheetEntries: (timesheetRes.data ?? []) as DipendenteTimesheetEntryRow[],
     tipiAssenza: resolved.dipendenti.tipiAssenza,
     statiLavorazione: resolved.lavorazioni.stati,
     preventivi,
     invoices,
     dipendentiAttivi: dipendentiRes.count ?? 0,
     mezziCount: mezziRes.count ?? 0,
+  };
+}
+
+export async function fetchHealthScoreInputsServer(anchor = new Date()): Promise<HealthScoreFetchResult> {
+  const range = getControlTowerLast30DaysRange(anchor);
+  const prevRange = getControlTowerPrevious30DaysRange(anchor);
+  const fetchRange = getControlTowerHealthScoreDataFetchRange(anchor);
+  const raw = await fetchHealthScoreRawDataServer(fetchRange);
+
+  const snapshot = buildInputSnapshot({
+    ...raw,
     range,
     prevRange,
     anchor,

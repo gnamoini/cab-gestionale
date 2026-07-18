@@ -22,6 +22,7 @@ const DEFAULT_PANEL_WIDTH = 312;
 type DragState = {
   startX: number;
   startY: number;
+  prevClientX: number;
   active: boolean;
   dragging: boolean;
   lastDeltaX: number;
@@ -57,6 +58,10 @@ export function clampEdgeOpenDragX(rawDeltaX: number, panelWidth: number): numbe
   return Math.max(0, Math.min(panelWidth, rawDeltaX));
 }
 
+export function peakGestureVelocity(current: number, peak: number): number {
+  return Math.max(current, peak);
+}
+
 export { isSwipeNavGestureBlockedTarget } from "@/lib/ui/gesture-arbitration";
 
 export type UseSwipeFromEdgeToOpenOptions = {
@@ -67,6 +72,7 @@ export type UseSwipeFromEdgeToOpenOptions = {
   onBegin: () => void;
   onCommit: () => void;
   onCancel: () => void;
+  onSnapClosed?: () => void;
   onPointerCancel: () => void;
 };
 
@@ -78,11 +84,13 @@ export function useSwipeFromEdgeToOpen({
   onBegin,
   onCommit,
   onCancel,
+  onSnapClosed,
   onPointerCancel,
 }: UseSwipeFromEdgeToOpenOptions) {
   const dragRef = useRef<DragState>({
     startX: 0,
     startY: 0,
+    prevClientX: 0,
     active: false,
     dragging: false,
     lastDeltaX: 0,
@@ -93,6 +101,7 @@ export function useSwipeFromEdgeToOpen({
   const backdropRef = useRef<HTMLElement | null>(null);
   const panelWidthGestureRef = useRef(DEFAULT_PANEL_WIDTH);
   const peakDragXRef = useRef(0);
+  const peakVelocityXRef = useRef(0);
   const edgeActiveRef = useRef(false);
   const rafRef = useRef<number | null>(null);
   const pendingTransformRef = useRef({ dragX: 0, panelWidth: DEFAULT_PANEL_WIDTH });
@@ -132,6 +141,7 @@ export function useSwipeFromEdgeToOpen({
     dragRef.current = {
       startX: 0,
       startY: 0,
+      prevClientX: 0,
       active: false,
       dragging: false,
       lastDeltaX: 0,
@@ -140,6 +150,7 @@ export function useSwipeFromEdgeToOpen({
     };
     edgeActiveRef.current = false;
     peakDragXRef.current = 0;
+    peakVelocityXRef.current = 0;
     setEdgeActive(false);
     setIsDragging(false);
     setIsSnapping(false);
@@ -151,10 +162,15 @@ export function useSwipeFromEdgeToOpen({
     requestAnimationFrame(() => resetDrag());
   }, [onCommit, resetDrag]);
 
-  const finishCancel = useCallback(() => {
-    resetDrag();
-    onCancel();
-  }, [onCancel, resetDrag]);
+  const finishCancel = useCallback(
+    (visuallyClosed = false) => {
+      if (visuallyClosed) {
+        onSnapClosed?.();
+      }
+      onCancel();
+    },
+    [onCancel, onSnapClosed],
+  );
 
   const buildGestureContext = useCallback(
     (target: Element, clientX: number, clientY: number): GestureContext => ({
@@ -185,6 +201,7 @@ export function useSwipeFromEdgeToOpen({
       dragRef.current = {
         startX: e.clientX,
         startY: e.clientY,
+        prevClientX: e.clientX,
         active: true,
         dragging: false,
         lastDeltaX: 0,
@@ -192,6 +209,7 @@ export function useSwipeFromEdgeToOpen({
         velocityX: 0,
       };
       peakDragXRef.current = 0;
+      peakVelocityXRef.current = 0;
     },
     [buildGestureContext, isSnapping],
   );
@@ -203,8 +221,11 @@ export function useSwipeFromEdgeToOpen({
       const deltaX = e.clientX - dragRef.current.startX;
       const deltaY = e.clientY - dragRef.current.startY;
       const dt = Math.max(1, e.timeStamp - dragRef.current.lastTime);
+      const instantVelocity = (e.clientX - dragRef.current.prevClientX) / dt;
       dragRef.current.velocityX = (e.clientX - dragRef.current.startX) / dt;
+      dragRef.current.prevClientX = e.clientX;
       dragRef.current.lastTime = e.timeStamp;
+      peakVelocityXRef.current = peakGestureVelocity(instantVelocity, peakVelocityXRef.current);
 
       if (!dragRef.current.dragging) {
         if (Math.abs(deltaX) < ACTIVATION_PX && Math.abs(deltaY) < ACTIVATION_PX) return;
@@ -244,7 +265,7 @@ export function useSwipeFromEdgeToOpen({
       const width = panelWidthGestureRef.current;
       const currentX = dragRef.current.dragging ? dragRef.current.lastDeltaX : 0;
       const peakX = peakDragXRef.current;
-      const velocity = dragRef.current.velocityX;
+      const velocity = peakGestureVelocity(dragRef.current.velocityX, peakVelocityXRef.current);
       const shouldCommit =
         dragRef.current.dragging &&
         (shouldCommitGesture(peakX, width, velocity, "open") ||
@@ -253,6 +274,7 @@ export function useSwipeFromEdgeToOpen({
       dragRef.current = {
         startX: 0,
         startY: 0,
+        prevClientX: 0,
         active: false,
         dragging: false,
         lastDeltaX: 0,
@@ -275,7 +297,7 @@ export function useSwipeFromEdgeToOpen({
         typeof window !== "undefined" &&
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (reducedMotion) {
-        finishCancel();
+        finishCancel(true);
         return;
       }
 
@@ -285,7 +307,7 @@ export function useSwipeFromEdgeToOpen({
         return;
       }
 
-      finishCancel();
+      finishCancel(false);
     },
     [finishCancel, finishCommit, scheduleTransform],
   );
@@ -321,11 +343,11 @@ export function useSwipeFromEdgeToOpen({
 
     function onTransitionEnd(e: TransitionEvent) {
       if (e.target !== el || e.propertyName !== "transform") return;
-      finishCancel();
+      finishCancel(true);
     }
 
     el.addEventListener("transitionend", onTransitionEnd);
-    const fallback = window.setTimeout(() => finishCancel(), NAV_DRAWER_ANIMATION_MS + 80);
+    const fallback = window.setTimeout(() => finishCancel(true), NAV_DRAWER_ANIMATION_MS + 80);
 
     return () => {
       el.removeEventListener("transitionend", onTransitionEnd);

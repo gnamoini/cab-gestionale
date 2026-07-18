@@ -2,7 +2,11 @@
 
 import { useMemo } from "react";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
-import { GlobalSettingsListSelect } from "@/components/gestionale/global-input/global-settings-list-select";
+import {
+  GlobalHierarchyMarcaSelect,
+  GlobalHierarchyModelloSelect,
+  GlobalSettingsListSelect,
+} from "@/components/gestionale/global-input/global-settings-list-select";
 import { GlobalFilterDateField } from "@/components/gestionale/global-input/global-date-picker";
 import {
   LavorazioniFilterField,
@@ -12,6 +16,7 @@ import {
 import {
   FILTER_ALL,
   buildLavorazioniAddettoFilterItems,
+  buildLavorazioniUtilizzatoreFilterItems,
   normalizeAddettoFilterValue,
   type LavorazioniAdvancedFilters,
   type LavorazioniFilterCatalog,
@@ -28,6 +33,7 @@ export function LavorazioniAdvancedFilterPanel({
   statiOpts = [],
   addettiRecords = [],
   variant = "staff",
+  restrictUtilizzatoriToCatalog = false,
 }: {
   filters: LavorazioniAdvancedFilters;
   onChange: (patch: Partial<LavorazioniAdvancedFilters>) => void;
@@ -35,19 +41,16 @@ export function LavorazioniAdvancedFilterPanel({
   statiOpts?: { id: string; label: string }[];
   addettiRecords?: readonly AddettoRecord[];
   variant?: LavorazioniAdvancedFilterPanelVariant;
+  /** Portale clienti: limita utilizzatori al catalogo righe visibili (solo ruolo cliente). */
+  restrictUtilizzatoriToCatalog?: boolean;
 }) {
   const isStaff = variant === "staff";
+  const useCatalogUtilizzatori = variant === "clientPortal" && restrictUtilizzatoriToCatalog;
 
-  const modelloOptions = useMemo(() => {
-    if (filters.marca === FILTER_ALL || !filters.marca.trim()) {
-      const all = new Set<string>();
-      for (const list of Object.values(catalog.modelliByMarca)) {
-        for (const m of list) all.add(m);
-      }
-      return [...all].sort((a, b) => a.localeCompare(b, "it"));
-    }
-    return catalog.modelliByMarca[filters.marca] ?? [];
-  }, [catalog.modelliByMarca, filters.marca]);
+  const marcaFilterValue = filters.marca === FILTER_ALL ? "" : filters.marca;
+  const modelloFilterValue = filters.modello === FILTER_ALL ? "" : filters.modello;
+  const marcaTelaioFilterValue = filters.marcaTelaio === FILTER_ALL ? "" : filters.marcaTelaio;
+  const modelloTelaioFilterValue = filters.modelloTelaio === FILTER_ALL ? "" : filters.modelloTelaio;
 
   const statoItems = useMemo(
     () => [
@@ -66,6 +69,14 @@ export function LavorazioniAdvancedFilterPanel({
   );
 
   const addettoFilterValue = normalizeAddettoFilterValue(filters.addetto);
+
+  const utilizzatoreFilterItems = useMemo(
+    () =>
+      useCatalogUtilizzatori
+        ? buildLavorazioniUtilizzatoreFilterItems(catalog, filters.utilizzatore)
+        : [],
+    [useCatalogUtilizzatori, catalog, filters.utilizzatore],
+  );
 
   return (
     <div className="space-y-3" aria-label="Filtri avanzati">
@@ -114,6 +125,7 @@ export function LavorazioniAdvancedFilterPanel({
               placeholder="Cerca e seleziona…"
               inputClassName={gestionaleFilterFieldInputClass}
               variant="filter"
+              allowAdd={false}
               aria-label="Filtra cliente"
             />
           </LavorazioniFilterField>
@@ -126,20 +138,35 @@ export function LavorazioniAdvancedFilterPanel({
             placeholder="Cerca e seleziona…"
             inputClassName={gestionaleFilterFieldInputClass}
             variant="filter"
+            allowAdd={false}
             aria-label="Filtra cantiere"
           />
         </LavorazioniFilterField>
         <div className="hidden min-w-0 sm:contents">
           <LavorazioniFilterField label="Utilizzatore">
-            <GlobalSettingsListSelect
-              listKey="mezzi:utilizzatori"
-              value={filters.utilizzatore}
-              onChange={(v) => onChange({ utilizzatore: v })}
-              placeholder="Cerca e seleziona…"
-              inputClassName={gestionaleFilterFieldInputClass}
-              variant="filter"
-              aria-label="Filtra utilizzatore"
-            />
+            {useCatalogUtilizzatori ? (
+              <GlobalSelect
+                items={utilizzatoreFilterItems}
+                value={filters.utilizzatore}
+                onChange={(v) => onChange({ utilizzatore: v })}
+                inputClassName={gestionaleFilterFieldInputClass}
+                strictFromList
+                variant="filter"
+                placeholder="Cerca e seleziona…"
+                aria-label="Filtra utilizzatore"
+              />
+            ) : (
+              <GlobalSettingsListSelect
+                listKey="mezzi:utilizzatori"
+                value={filters.utilizzatore}
+                onChange={(v) => onChange({ utilizzatore: v })}
+                placeholder="Cerca e seleziona…"
+                inputClassName={gestionaleFilterFieldInputClass}
+                variant="filter"
+                allowAdd={false}
+                aria-label="Filtra utilizzatore"
+              />
+            )}
           </LavorazioniFilterField>
         </div>
         {isStaff ? (
@@ -181,31 +208,61 @@ export function LavorazioniAdvancedFilterPanel({
 
       <LavorazioniFilterGroup title="Filtri tecnici">
         <LavorazioniFilterField label="Marca">
-          <GlobalSelect
-            value={filters.marca === FILTER_ALL ? "" : filters.marca}
+          <GlobalHierarchyMarcaSelect
+            tree="attrezzature"
+            value={marcaFilterValue}
             onChange={(v) => {
               const marca = v.trim() ? v : FILTER_ALL;
               onChange({ marca, modello: FILTER_ALL });
             }}
-            options={catalog.marche}
-            placeholder="Cerca e seleziona…"
             inputClassName={gestionaleFilterFieldInputClass}
-            strictFromList
             variant="filter"
+            allowAdd={false}
+            placeholder="Cerca e seleziona…"
             aria-label="Filtra marca"
           />
         </LavorazioniFilterField>
         <LavorazioniFilterField label="Modello">
-          <GlobalSelect
-            value={filters.modello === FILTER_ALL ? "" : filters.modello}
+          <GlobalHierarchyModelloSelect
+            tree="attrezzature"
+            marcaNome={marcaFilterValue}
+            value={modelloFilterValue}
             onChange={(v) => onChange({ modello: v.trim() ? v : FILTER_ALL })}
-            options={modelloOptions}
-            placeholder={filters.marca === FILTER_ALL ? "Seleziona prima la marca" : "Cerca e seleziona…"}
             inputClassName={gestionaleFilterFieldInputClass}
-            strictFromList
-            disabled={filters.marca === FILTER_ALL}
             variant="filter"
+            allowAdd={false}
+            disabled={filters.marca === FILTER_ALL}
+            placeholder={filters.marca === FILTER_ALL ? "Seleziona prima la marca" : "Cerca e seleziona…"}
             aria-label="Filtra modello"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Marca telaio">
+          <GlobalHierarchyMarcaSelect
+            tree="telai"
+            value={marcaTelaioFilterValue}
+            onChange={(v) => {
+              const marcaTelaio = v.trim() ? v : FILTER_ALL;
+              onChange({ marcaTelaio, modelloTelaio: FILTER_ALL });
+            }}
+            inputClassName={gestionaleFilterFieldInputClass}
+            variant="filter"
+            allowAdd={false}
+            placeholder="Cerca e seleziona…"
+            aria-label="Filtra marca telaio"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Modello telaio">
+          <GlobalHierarchyModelloSelect
+            tree="telai"
+            marcaNome={marcaTelaioFilterValue}
+            value={modelloTelaioFilterValue}
+            onChange={(v) => onChange({ modelloTelaio: v.trim() ? v : FILTER_ALL })}
+            inputClassName={gestionaleFilterFieldInputClass}
+            variant="filter"
+            allowAdd={false}
+            disabled={filters.marcaTelaio === FILTER_ALL}
+            placeholder={filters.marcaTelaio === FILTER_ALL ? "Seleziona prima la marca telaio" : "Cerca e seleziona…"}
+            aria-label="Filtra modello telaio"
           />
         </LavorazioniFilterField>
       </LavorazioniFilterGroup>

@@ -10,7 +10,7 @@ import { isImageLogAction } from "@/lib/gestionale-log/view-model";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 
 /** Finestra per unire modifiche consecutive (ms). Allineata a `LOG_AGGREGATION_WINDOW_MS`. */
-export const LOG_CONSECUTIVE_MERGE_WINDOW_MS = 30_000;
+export const LOG_CONSECUTIVE_MERGE_WINDOW_MS = 5 * 60 * 1000;
 
 function safeStr(s: unknown): string {
   if (s === null || s === undefined) return "";

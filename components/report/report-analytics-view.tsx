@@ -45,6 +45,7 @@ import {
 } from "@/lib/report/report-period-persistence";
 import { isReportCompareMode } from "@/lib/report/report-compare-options";
 import { useReportLiveData } from "@/lib/report/use-report-live-data";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { LoadingErrorState, LoadingReportSkeleton } from "@/components/design-system";
 import { dsStackPage } from "@/lib/ui/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
@@ -162,6 +163,18 @@ function ReportPerformanceGateWithVisibility(
 }
 
 export function ReportAnalyticsView() {
+  useGestionaleSyncScope({
+    scopeId: "report-analytics-view",
+    domain: "report",
+    tables: [
+      "lavorazioni",
+      "magazzino_ricambi",
+      "movimenti_ricambi",
+      "mezzi",
+      "app_settings",
+    ],
+  });
+
   const searchParams = useSearchParams();
   const anchor = useMemo(() => new Date(), []);
   const [initialPrefs] = useState(() => readInitialPeriodPrefs(searchParams));

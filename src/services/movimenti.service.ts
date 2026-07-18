@@ -3,7 +3,7 @@
 import { MAGAZZINO_RICAMBI_COLUMNS, MOVIMENTI_RICAMBI_COLUMNS } from "@/lib/db/table-select-columns";
 import { fetchMovimentiListRows } from "@/lib/movimenti/movimenti-list-fetch";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
+import { auditDiff, auditSnapshot, commitCriticalMutation, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MagazzinoRicambioRow, MovimentoRicambioRow, TipoMovimentoRicambio } from "@/src/types/supabase-tables";
 import { errMessageFromSupabase, serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
@@ -95,22 +95,24 @@ export const movimentiService = {
   async create(data: MovimentoInsert): Promise<ServiceResult<MovimentoRicambioRow>> {
     try {
       const c = await sb();
-      const stock = await applyStockForMovement(c, data, false);
-      if (!stock.success) return err(stock.error ?? "Aggiornamento giacenza fallito");
+      return await commitCriticalMutation(c, async () => {
+        const stock = await applyStockForMovement(c, data, false);
+        if (!stock.success) return err(stock.error ?? "Aggiornamento giacenza fallito");
 
-      const { data: row, error } = await c.from("movimenti_ricambi").insert(data).select(MOVIMENTI_RICAMBI_COLUMNS).single();
-      if (error) {
-        await applyStockForMovement(c, data, true);
-        return err(errMessageFromSupabase(error, { module: "magazzino" }));
-      }
-      const r = row as MovimentoRicambioRow;
-      await writeModificaLog(c, {
-        entita: ENTITA,
-        entita_id: r.id,
-        azione: "CREATE",
-        payload: auditSnapshot(r),
+        const { data: row, error } = await c.from("movimenti_ricambi").insert(data).select(MOVIMENTI_RICAMBI_COLUMNS).single();
+        if (error) {
+          await applyStockForMovement(c, data, true);
+          return err(errMessageFromSupabase(error, { module: "magazzino" }));
+        }
+        const r = row as MovimentoRicambioRow;
+        await writeModificaLog(c, {
+          entita: ENTITA,
+          entita_id: r.id,
+          azione: "CREATE",
+          payload: auditSnapshot(r),
+        });
+        return success(r);
       });
-      return success(r);
     } catch (e) {
       return serviceFailFromError(e);
     }
@@ -127,16 +129,18 @@ export const movimentiService = {
       const affectsStock = data.tipo != null || data.quantita != null;
 
       if (!affectsStock) {
-        const { data: row, error } = await c.from("movimenti_ricambi").update(data).eq("id", id).select(MOVIMENTI_RICAMBI_COLUMNS).single();
-        if (error) return err(errMessageFromSupabase(error, { module: "magazzino" }));
-        const r = row as MovimentoRicambioRow;
-        await writeModificaLog(c, {
-          entita: ENTITA,
-          entita_id: id,
-          azione: "UPDATE",
-          payload: auditDiff(old, r),
+        return await commitCriticalMutation(c, async () => {
+          const { data: row, error } = await c.from("movimenti_ricambi").update(data).eq("id", id).select(MOVIMENTI_RICAMBI_COLUMNS).single();
+          if (error) return err(errMessageFromSupabase(error, { module: "magazzino" }));
+          const r = row as MovimentoRicambioRow;
+          await writeModificaLog(c, {
+            entita: ENTITA,
+            entita_id: id,
+            azione: "UPDATE",
+            payload: auditDiff(old, r),
+          });
+          return success(r);
         });
-        return success(r);
       }
 
       const revOld = await applyStockForMovement(c, old, true);
@@ -159,25 +163,27 @@ export const movimentiService = {
         return err(applyNew.error ?? "Aggiornamento giacenza fallito");
       }
 
-      const { data: row, error } = await c
-        .from("movimenti_ricambi")
-        .update(data)
-        .eq("id", id)
-        .select(MOVIMENTI_RICAMBI_COLUMNS)
-        .single();
-      if (error) {
-        await applyStockForMovement(c, next, true);
-        await applyStockForMovement(c, old, false);
-        return err(errMessageFromSupabase(error, { module: "magazzino" }));
-      }
-      const r = row as MovimentoRicambioRow;
-      await writeModificaLog(c, {
-        entita: ENTITA,
-        entita_id: id,
-        azione: "UPDATE",
-        payload: auditDiff(old, r),
+      return await commitCriticalMutation(c, async () => {
+        const { data: row, error } = await c
+          .from("movimenti_ricambi")
+          .update(data)
+          .eq("id", id)
+          .select(MOVIMENTI_RICAMBI_COLUMNS)
+          .single();
+        if (error) {
+          await applyStockForMovement(c, next, true);
+          await applyStockForMovement(c, old, false);
+          return err(errMessageFromSupabase(error, { module: "magazzino" }));
+        }
+        const r = row as MovimentoRicambioRow;
+        await writeModificaLog(c, {
+          entita: ENTITA,
+          entita_id: id,
+          azione: "UPDATE",
+          payload: auditDiff(old, r),
+        });
+        return success(r);
       });
-      return success(r);
     } catch (e) {
       return serviceFailFromError(e);
     }
@@ -186,26 +192,28 @@ export const movimentiService = {
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
       const c = await sb();
-      const { data: existing, error: e0 } = await c.from("movimenti_ricambi").select(MOVIMENTI_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
-      if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
-      if (!existing) return success(null);
-      const ex = existing as MovimentoRicambioRow;
+      return await commitCriticalMutation(c, async () => {
+        const { data: existing, error: e0 } = await c.from("movimenti_ricambi").select(MOVIMENTI_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
+        if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
+        if (!existing) return success(null);
+        const ex = existing as MovimentoRicambioRow;
 
-      const stock = await applyStockForMovement(c, ex, true);
-      if (!stock.success) return err(stock.error ?? "Impossibile stornare giacenza");
+        const stock = await applyStockForMovement(c, ex, true);
+        if (!stock.success) return err(stock.error ?? "Impossibile stornare giacenza");
 
-      const { error } = await c.from("movimenti_ricambi").delete().eq("id", id);
-      if (error) {
-        await applyStockForMovement(c, ex, false);
-        return err(errMessageFromSupabase(error, { module: "magazzino" }));
-      }
-      await writeModificaLog(c, {
-        entita: ENTITA,
-        entita_id: id,
-        azione: "DELETE",
-        payload: auditSnapshot(ex),
+        const { error } = await c.from("movimenti_ricambi").delete().eq("id", id);
+        if (error) {
+          await applyStockForMovement(c, ex, false);
+          return err(errMessageFromSupabase(error, { module: "magazzino" }));
+        }
+        await writeModificaLog(c, {
+          entita: ENTITA,
+          entita_id: id,
+          azione: "DELETE",
+          payload: auditSnapshot(ex),
+        });
+        return success(null);
       });
-      return success(null);
     } catch (e) {
       return serviceFailFromError(e);
     }

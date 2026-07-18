@@ -14,6 +14,7 @@ import {
 } from "@/lib/ui-design-system-lock/component-contracts";
 import { scanDirectDsTooltipImports } from "@/lib/lint/rules/no-direct-ds-import";
 import { scanNativeTitleInSource } from "@/lib/lint/rules/native-title-tooltip";
+import { scanTooltipRedundantInSource } from "@/lib/lint/rules/tooltip-redundant";
 import { LIST_DIVIDER_UL_FORBIDDEN_INLINE } from "@/lib/ui/list-primitives";
 
 export type UiAuditSeverity = "INFO" | "WARN" | "BLOCKER";
@@ -217,6 +218,19 @@ export function auditUiConsistencyRepo(root = process.cwd()): UiConsistencyRepor
     for (const f of scanRegexFindings(fileRel, content)) {
       fileHasIssue = true;
       findings.push(f);
+    }
+
+    for (const r of scanTooltipRedundantInSource(fileRel, content)) {
+      fileHasIssue = true;
+      findings.push({
+        file: r.file,
+        line: r.line,
+        category: "TooltipRedundant",
+        ownerTeam: UI_CONTRACT_META.ownerTeam,
+        severity: "WARN",
+        problem: `Tooltip duplicates visible text: "${r.tooltip}"`,
+        fix: "Remove tooltip or use resolveTooltipContent() / OptionalTooltip",
+      });
     }
 
     if (!fileHasIssue) passCount++;

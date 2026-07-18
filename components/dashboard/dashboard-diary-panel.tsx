@@ -19,6 +19,7 @@ import {
   OPERATIONAL_DIARY_PLACEHOLDER,
   operationalDiaryWeekDays,
   operationalDiaryWeekOffsetForYmd,
+  parseYmdLocal,
   ymdFromLocalDate,
 } from "@/lib/operational-diary/operational-diary-week";
 import { groupCellsByWeek } from "@/lib/report/calendar-report-service";
@@ -41,7 +42,7 @@ import {
 } from "@/lib/ui/global-input";
 
 const SAVE_DEBOUNCE_MS = 700;
-const DIARY_LIST_SHELL = "flex h-full min-h-0 flex-col gap-1";
+const DIARY_LIST_SHELL = "flex h-full min-h-0 flex-col gap-1 pb-px";
 const DIARY_TEXTAREA_CLASS =
   "min-h-0 min-w-0 max-h-full w-full flex-1 self-center !rounded-none !border-0 !bg-transparent !px-0 !py-0 !text-sm !leading-5 !shadow-none !outline-none !ring-0 !active:scale-100 hover:!border-transparent focus:!border-transparent focus:!ring-0 focus-visible:!ring-0 focus-visible:!ring-offset-0 placeholder:text-[color:var(--cab-text-muted)] touch-manipulation resize-none overflow-y-auto";
 const DIARY_TEXTAREA_MIN_H = "1.25rem";
@@ -49,11 +50,13 @@ const DIARY_TEXTAREA_MIN_H = "1.25rem";
 const DIARY_LAYOUT_GRID =
   "grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[calc((100%-0.75rem)/2)_minmax(0,1fr)] xl:grid-cols-[calc((100%-2.25rem)/4)_minmax(0,1fr)] lg:items-start";
 const DIARY_LIST_ROW =
-  "relative flex min-h-[3rem] min-w-0 flex-1 items-center gap-2.5 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-card)] px-2.5 py-2 motion-safe:shadow-[var(--cab-shadow-sm)] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] [-webkit-tap-highlight-color:transparent]";
+  "relative flex min-h-[3rem] min-w-0 flex-1 items-center gap-2.5 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-card)] px-2.5 py-2 motion-safe:shadow-[var(--cab-shadow-sm)] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] [-webkit-tap-highlight-color:transparent] lg:min-h-0";
 const DIARY_LIST_ROW_INTERACTIVE =
   "cursor-text touch-pan-y active:scale-[0.995] active:shadow-none active:duration-100 motion-reduce:active:scale-100";
 const DIARY_DAY_SQUARE =
-  "flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[10px] font-semibold tabular-nums transition-colors";
+  "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-xs font-semibold tabular-nums transition-colors";
+const DIARY_DAY_NAME =
+  "w-[4.75rem] shrink-0 text-sm font-medium capitalize leading-none text-[color:var(--cab-text)]";
 const DIARY_CALENDAR_DAY_BTN =
   "relative flex aspect-square h-auto w-full max-h-11 max-w-11 cursor-pointer items-center justify-center rounded-lg text-sm font-semibold tabular-nums transition-colors text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)] disabled:pointer-events-none disabled:cursor-default disabled:opacity-25";
 const DIARY_CALENDAR_WEEK_ROW =
@@ -199,6 +202,12 @@ function DiaryInlineWeekCalendar({
   );
 }
 
+function diaryWeekdayName(ymd: string, fallback: string): string {
+  const date = parseYmdLocal(ymd);
+  if (!date) return fallback;
+  return new Intl.DateTimeFormat("it-IT", { weekday: "long" }).format(date);
+}
+
 function DiaryDayField({
   ymd,
   label,
@@ -225,6 +234,7 @@ function DiaryDayField({
   const id = `diary-${ymd}`;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasValue = value.trim().length > 0;
+  const weekdayName = diaryWeekdayName(ymd, label);
 
   const focusField = useCallback(() => {
     if (readOnly) return;
@@ -242,16 +252,16 @@ function DiaryDayField({
     >
       <label
         htmlFor={id}
-        className={`flex h-full min-h-[2.25rem] w-10 shrink-0 cursor-[inherit] flex-col items-center justify-center gap-0.5 ${isWeekend ? "opacity-85" : ""}`}
+        className={`flex shrink-0 cursor-[inherit] items-center gap-2 ${isWeekend ? "opacity-85" : ""}`}
       >
-        <span
-          className={`${dsTypoTableHeader} text-[9px] leading-none ${
-            isToday ? "!text-[color:var(--cab-primary)]" : ""
-          }`}
-        >
-          {label}
+        <span className={diaryDaySquareClass(Boolean(isToday), hasValue)} aria-hidden>
+          {dayNumber}
         </span>
-        <span className={diaryDaySquareClass(Boolean(isToday), hasValue)}>{dayNumber}</span>
+        <span
+          className={`${DIARY_DAY_NAME} ${isToday ? "text-[color:var(--cab-primary)]" : ""}`}
+        >
+          {weekdayName}
+        </span>
       </label>
       <div className="flex min-w-0 flex-1 items-center self-stretch">
         <GestionaleTextarea
@@ -469,14 +479,14 @@ export function DashboardDiaryPanel() {
           </div>
         ) : null}
 
-        <div className="min-w-0 lg:h-[var(--diary-cal-h,auto)] lg:min-h-0 lg:overflow-hidden">
+        <div className="min-w-0 lg:h-[var(--diary-cal-h,auto)] lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto">
           {isLoading ? (
             <div className={DIARY_LIST_SHELL} aria-hidden>
               {Array.from({ length: 7 }, (_, index) => (
                 <div key={index} className={DIARY_LIST_ROW}>
-                  <div className="flex h-full w-8 shrink-0 flex-col items-center justify-center gap-0.5">
-                    <div className="h-2 w-5 animate-pulse rounded bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,transparent)]" />
-                    <div className="h-7 w-7 animate-pulse rounded-md bg-[color:color-mix(in_srgb,var(--cab-surface-2)_70%,transparent)]" />
+                  <div className="flex shrink-0 items-center gap-2">
+                    <div className="h-8 w-8 animate-pulse rounded-md bg-[color:color-mix(in_srgb,var(--cab-surface-2)_70%,transparent)]" />
+                    <div className="h-3.5 w-16 animate-pulse rounded bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,transparent)]" />
                   </div>
                   <div className="h-full min-w-0 flex-1 animate-pulse rounded bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,transparent)]" />
                 </div>

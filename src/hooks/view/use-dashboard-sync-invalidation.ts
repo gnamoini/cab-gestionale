@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { isDirtySyncEnabledForDomain } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
 import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { useRealtimeStatus } from "@/src/context/realtime-status-context";
@@ -25,6 +26,7 @@ export function useDashboardSyncInvalidation(opts: DashboardSyncInvalidationOpts
 
   const invalidateMag = useCallback(() => {
     if (!opts.magDomain || gestionale === "connected") return;
+    if (isDirtySyncEnabledForDomain("dashboard")) return;
     if (magDebounceRef.current) clearTimeout(magDebounceRef.current);
     magDebounceRef.current = setTimeout(() => {
       magDebounceRef.current = null;
@@ -34,6 +36,7 @@ export function useDashboardSyncInvalidation(opts: DashboardSyncInvalidationOpts
 
   const invalidateActivity = useCallback(() => {
     if (!opts.activityLogs) return;
+    if (isDirtySyncEnabledForDomain("dashboard")) return;
     if (activityDebounceRef.current) clearTimeout(activityDebounceRef.current);
     activityDebounceRef.current = setTimeout(() => {
       activityDebounceRef.current = null;
@@ -47,9 +50,16 @@ export function useDashboardSyncInvalidation(opts: DashboardSyncInvalidationOpts
   }, [invalidateMag, invalidateActivity]);
 
   useCabSyncListener("log_modifiche", onLogModifiche);
-  useCabSyncListener("magazzino_ricambi", invalidateMag);
-  useCabSyncListener("movimenti_ricambi", invalidateMag);
+  useCabSyncListener("magazzino_ricambi", () => {
+    invalidateMag();
+    invalidateActivity();
+  });
+  useCabSyncListener("movimenti_ricambi", () => {
+    invalidateMag();
+    invalidateActivity();
+  });
   useCabSyncListener(["lavorazioni", "scheda_lavorazione"], invalidateActivity);
+  useCabSyncListener(["preventivi", "ddt_documents", "invoices", "invoice_payments"], invalidateActivity);
 
   useEffect(() => {
     return () => {

@@ -40,6 +40,7 @@ const ricambioUi = read("components/gestionale/magazzino/ricambio-modal-ui.tsx")
 const dsIndex = read("components/design-system/index.ts");
 const shellCard = read("components/gestionale/shell-card.tsx");
 const preventiviModal = read("components/preventivi/preventivi-editor-modal.tsx");
+const shellGlobals = read("app/globals-gestionale-shell.css");
 
 assert.match(collapsible, /export function GestionaleCollapsibleSection/);
 assert.match(collapsible, /GestionaleCollapsiblePanel/);
@@ -77,6 +78,8 @@ assert.match(dsIndex, /GestionaleCollapsibleHeader/);
 assert.match(dsIndex, /GestionaleCollapsiblePanel/);
 
 assert.match(shellCard, /GestionaleCollapsiblePanel/);
+assert.doesNotMatch(shellGlobals, /border-top-left-radius:\s*0/);
+assert.match(shellGlobals, /cab-shell-card \[id\$="-body"\]/);
 assert.match(shellCard, /collapsePrefsHydrated/);
 assert.match(shellCard, /persistScope/);
 assert.match(shellCard, /persistKey/);

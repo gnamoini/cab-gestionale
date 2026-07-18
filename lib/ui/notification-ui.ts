@@ -22,6 +22,9 @@ export const dsNotificationOpenLink =
 
 export const dsNotificationBellIcon = "h-4 w-4 shrink-0 opacity-90";
 
+/** Campanella header PageActionMenu (allineata a refresh/back). */
+export const dsNotificationBellIconHeader = "h-5 w-5 shrink-0";
+
 /** Campanella nella rail sidebar (shell 28px). */
 export const dsNotificationBellIconRail = "h-[0.9375rem] w-[0.9375rem] shrink-0";
 

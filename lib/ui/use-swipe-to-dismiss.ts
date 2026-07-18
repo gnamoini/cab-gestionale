@@ -207,7 +207,6 @@ export function useSwipeToDismiss({
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (reducedMotion) {
         swipeDismissedRef.current = true;
-        resetDrag();
         onDismiss();
       } else {
         scheduleTransform(-width, width);
@@ -241,7 +240,6 @@ export function useSwipeToDismiss({
     function onTransitionEnd(e: TransitionEvent) {
       if (e.target !== el || e.propertyName !== "transform") return;
       swipeDismissedRef.current = true;
-      resetDrag();
       onDismiss();
     }
 
@@ -249,7 +247,6 @@ export function useSwipeToDismiss({
     const fallback = window.setTimeout(() => {
       if (!swipeDismissedRef.current) {
         swipeDismissedRef.current = true;
-        resetDrag();
         onDismiss();
       }
     }, NAV_DRAWER_ANIMATION_MS + 80);
@@ -258,7 +255,7 @@ export function useSwipeToDismiss({
       el.removeEventListener("transitionend", onTransitionEnd);
       window.clearTimeout(fallback);
     };
-  }, [isDismissing, onDismiss, resetDrag]);
+  }, [isDismissing, onDismiss]);
 
   useEffect(() => {
     if (!snapBack) return;
@@ -291,6 +288,7 @@ export function useSwipeToDismiss({
     panelRef,
     backdropRef,
     swipeDismissedRef,
+    resetDrag,
     panelProps: {
       onTouchStart,
       onTouchMove,

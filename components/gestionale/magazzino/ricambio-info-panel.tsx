@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactElement, ReactNode } from "react";
-import { Tooltip } from "@/components/ui";
+import type { ReactNode } from "react";
+import { OptionalTooltip } from "@/components/ui";
 import {
   GestionaleInfoCard,
   GestionaleInfoRow,
@@ -27,17 +27,6 @@ import {
   type RicambioConsumoDaLog,
 } from "@/lib/magazzino/ricambio-consumo-from-log";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
-
-function OptionalTooltip({
-  content,
-  children,
-}: {
-  content?: string;
-  children: ReactElement;
-}) {
-  if (!content?.trim()) return children;
-  return <Tooltip content={content}>{children}</Tooltip>;
-}
 
 function multilineValue(value: string): ReactNode {
   const t = value.trim();
@@ -89,10 +78,9 @@ export function RicambioInfoPanel({
   logTimeline,
   logLoading,
   onDismissLogEntry,
-  canAdjustScorta = false,
-  canUndoScorta = false,
+  canAdjustScorta,
+  modalitaModifica = false,
   onAdjustScorta,
-  onUndoScorta,
 }: {
   ricambio: RicambioMagazzino;
   compatDisplay: string;
@@ -104,9 +92,8 @@ export function RicambioInfoPanel({
   logLoading: boolean;
   onDismissLogEntry: (id: string) => void;
   canAdjustScorta?: boolean;
-  canUndoScorta?: boolean;
+  modalitaModifica?: boolean;
   onAdjustScorta?: (delta: number) => void;
-  onUndoScorta?: () => void;
 }) {
   const low = ricambio.scorta < ricambio.scortaMinima;
   const ultimaModifica = new Date(ricambio.dataUltimaModifica).toLocaleString("it-IT", {
@@ -185,11 +172,10 @@ export function RicambioInfoPanel({
             value={
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <MagazzinoScortaBadge value={ricambio.scorta} low={low} variant="table" />
-                {onAdjustScorta && onUndoScorta ? (
+                {onAdjustScorta ? (
                   <MagazzinoScortaAdjustActions
-                    canAdjust={canAdjustScorta}
-                    canUndo={canUndoScorta}
-                    onUndo={onUndoScorta}
+                    canAdjust={canAdjustScorta ?? false}
+                    modalitaModifica={modalitaModifica}
                     onDecrease={() => onAdjustScorta(-1)}
                     onIncrease={() => onAdjustScorta(1)}
                   />

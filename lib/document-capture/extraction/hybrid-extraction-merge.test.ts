@@ -39,4 +39,15 @@ const capture = hybridFieldsToCaptureExtraction(ingressoOk, "ingresso");
 assert.equal(capture.schedaTipo, "ingresso");
 assert.ok(capture.fields.length >= 3);
 
+const today = new Date().toLocaleDateString("it-IT");
+const todayOcr: HybridField = {
+  key: "data_ingresso",
+  value: today,
+  confidence: 0.8,
+  source: "template_ocr",
+};
+const scrubbedToday = mergeHybridFields([[todayOcr]]);
+assert.equal(scrubbedToday[0]?.value, null);
+assert.equal(needsGeminiFallback(scrubbedToday, "ingresso"), true);
+
 console.log("hybrid-extraction-merge.test.ts OK");

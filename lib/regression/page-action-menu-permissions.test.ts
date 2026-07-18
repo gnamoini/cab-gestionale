@@ -68,8 +68,24 @@ assert.equal(pageActionMenuHasAttention([{ id: "f", label: "Filtri", badge: "•
 assert.equal(pageActionMenuHasAttention([{ id: "a", label: "A" }]), false);
 
 assert.match(
-  fs.readFileSync(path.join(process.cwd(), "components/ui/page-action-menu/PageActionMenu.tsx"), "utf8"),
-  /pageActionMenuHasAttention/,
+  fs.readFileSync(path.join(process.cwd(), "lib/ui/page-action-menu-tokens.ts"), "utf8"),
+  /PAGE_ACTION_MENU_PANEL_WIDTH = 320/,
+);
+assert.match(
+  fs.readFileSync(path.join(process.cwd(), "lib/ui/page-action-menu-tokens.ts"), "utf8"),
+  /justify-start gap-1\.5/,
+);
+assert.match(
+  fs.readFileSync(path.join(process.cwd(), "components/ui/page-action-menu/PageActionMenuHeader.tsx"), "utf8"),
+  /sr-only">\{back\.label\}/,
+);
+assert.doesNotMatch(
+  fs.readFileSync(path.join(process.cwd(), "components/ui/page-action-menu/PageActionMenuHeader.tsx"), "utf8"),
+  /sm:not-sr-only/,
+);
+assert.match(
+  fs.readFileSync(path.join(process.cwd(), "components/lavorazioni-clienti/client-lavorazione-detail-view.tsx"), "utf8"),
+  /back=\{null\}/,
 );
 
 console.log("page-action-menu-permissions.test.ts OK");

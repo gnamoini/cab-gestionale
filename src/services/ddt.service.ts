@@ -147,9 +147,23 @@ export const ddtService = {
     try {
       if (!input.preventivo_id) return err("preventivo_id obbligatorio.");
       const c = await sb();
+      const { data: existingDdt } = await c
+        .from("ddt_documents")
+        .select("id")
+        .eq("preventivo_id", input.preventivo_id)
+        .neq("status", "annullato");
       const { data, error } = await c.rpc("replace_ddt_for_preventivo", { p_payload: cleanPayload(input) });
       if (error) return err(error.message);
       const id = String(data);
+      for (const doc of existingDdt ?? []) {
+        if (doc.id === id) continue;
+        await writeModificaLog(c, {
+          entita: ENTITA,
+          entita_id: doc.id,
+          azione: "UPDATE",
+          payload: { action: "replaced_for_preventivo", preventivo_id: input.preventivo_id, replaced_by: id },
+        });
+      }
       await writeModificaLog(c, {
         entita: ENTITA,
         entita_id: id,

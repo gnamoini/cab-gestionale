@@ -14,5 +14,12 @@ const dismissSrc = readFileSync(join(root, "lib/ui/use-swipe-to-dismiss.ts"), "u
 assert.match(dismissSrc, /requestAnimationFrame/);
 assert.match(dismissSrc, /rubberBandDragX/);
 assert.match(dismissSrc, /shouldCommitGesture/);
+assert.match(dismissSrc, /onDismiss\(\);\s*\n\s*\}/);
+assert.doesNotMatch(
+  dismissSrc,
+  /onTransitionEnd[\s\S]{0,200}resetDrag\(\);\s*\n\s*onDismiss\(\)/,
+  "dismiss transitionend must call onDismiss before resetDrag (no reset on dismiss path)",
+);
+assert.match(dismissSrc, /resetDrag,/);
 
 console.log("use-swipe-to-dismiss.test.ts ok");

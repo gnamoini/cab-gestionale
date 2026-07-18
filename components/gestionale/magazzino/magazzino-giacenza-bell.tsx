@@ -11,7 +11,7 @@ import {
 import {
   GestionaleLogEmpty,
   GestionaleLogList,
-  gestionaleLogDrawerPanelStackClass,
+  gestionaleLogDrawerPanelFillClass,
   gestionaleLogDrawerScrollInsetClass,
   gestionaleLogPanelAsideClass,
   gestionaleLogScrollEmbeddedClass,
@@ -102,12 +102,18 @@ export function MagazzinoGiacenzaBell({
       <Drawer
         open={open}
         onClose={close}
+        onBack={close}
         title={drawerTitle}
         ariaLabel="Avvisi giacenza magazzino"
         asideClassName={gestionaleLogPanelAsideClass}
+        contentFill
       >
-        <div className={gestionaleLogDrawerPanelStackClass}>
-          <div className={`${gestionaleLogScrollEmbeddedClass} ${gestionaleLogDrawerScrollInsetClass} min-h-0 min-w-0 flex-1`}>
+        <div className={gestionaleLogDrawerPanelFillClass}>
+          <div
+            className={`${gestionaleLogScrollEmbeddedClass} ${gestionaleLogDrawerScrollInsetClass} min-h-0 min-w-0 flex-1 ${
+              sortedItems.length === 0 ? "flex flex-col items-center justify-center" : ""
+            }`}
+          >
             {sortedItems.length === 0 ? (
               <GestionaleLogEmpty message="Nessun ricambio sotto la scorta minima impostata." />
             ) : (

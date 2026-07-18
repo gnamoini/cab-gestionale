@@ -10,18 +10,15 @@ import {
   LABEL_PRESET_IDS,
   labelPresetOptionLabel,
 } from "@/lib/inventory-labels";
-import { normalizePdfDownloadFileName } from "@/lib/pdf/open-pdf-blob-preview";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { gestionaleSelectNativePlainClass } from "@/lib/ui/design-system";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 type BulkLabelPhase = "idle" | "preparing" | "generating" | "opening";
 
-async function openLabelArtifact(blob: Blob, filename: string): Promise<void> {
-  const downloadName = normalizePdfDownloadFileName(filename);
+function openLabelArtifact(blob: Blob): void {
   const blobUrl = URL.createObjectURL(blob);
   openUrlInNewTab(blobUrl, {
-    downloadFileName: downloadName,
     revokeBlobUrlAfterMs: 120_000,
     blockedMessage: "Impossibile aprire il file in una nuova scheda. Consenti i pop-up per questo sito.",
   });
@@ -71,7 +68,7 @@ export function MagazzinoBulkLabelToolbar({
             setPhase("opening");
             setProgress(100);
             const blob = await jobRes.blob();
-            await openLabelArtifact(blob, `etichette-${ids.length}.pdf`);
+            openLabelArtifact(blob);
             gestToast.successOnce("bulk-labels", "PDF etichette pronto.");
             return;
           }
@@ -79,7 +76,7 @@ export function MagazzinoBulkLabelToolbar({
             setPhase("opening");
             setProgress(100);
             const blob = await jobRes.blob();
-            await openLabelArtifact(blob, `etichette-${ids.length}.zip`);
+            openLabelArtifact(blob);
             gestToast.info("PDF non disponibile — archivio PNG aperto in nuova scheda.");
             return;
           }
@@ -98,7 +95,7 @@ export function MagazzinoBulkLabelToolbar({
             const pdfRes = await fetch(`/api/inventory-labels/bulk/jobs/${jobId}`);
             const blob = await pdfRes.blob();
             const isZip = pdfRes.headers.get("Content-Type")?.includes("zip");
-            await openLabelArtifact(blob, `etichette-${ids.length}.${isZip ? "zip" : "pdf"}`);
+            openLabelArtifact(blob);
             return;
           }
           await new Promise((r) => window.setTimeout(r, 1500));
@@ -121,7 +118,7 @@ export function MagazzinoBulkLabelToolbar({
       setProgress(100);
       const blob = await res.blob();
       const isZip = res.headers.get("Content-Type")?.includes("zip");
-      await openLabelArtifact(blob, `etichette-${ids.length}.${isZip ? "zip" : "pdf"}`);
+      openLabelArtifact(blob);
       gestToast.successOnce("bulk-labels-sync", "PDF etichette pronto.");
     } catch (e) {
       const msg =
@@ -147,8 +144,6 @@ export function MagazzinoBulkLabelToolbar({
         : phase === "opening"
           ? "Apertura PDF…"
           : "Generazione…";
-
-  const showProgress = busy && phase === "generating" && progress > 0;
 
   return (
     <div
@@ -215,31 +210,6 @@ export function MagazzinoBulkLabelToolbar({
               ) : null}
             </div>
           </div>
-
-          {showProgress ? (
-            <div className="space-y-1" aria-live="polite">
-              <div className="flex items-center justify-between gap-2 text-xs text-[color:var(--cab-text-muted)]">
-                <span>{phaseLabel}</span>
-                <span className="tabular-nums">{progress}%</span>
-              </div>
-              <div
-                className="h-1.5 overflow-hidden rounded-full bg-[color:color-mix(in_srgb,var(--cab-border)_75%,transparent)]"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={progress}
-              >
-                <div
-                  className="h-full rounded-full bg-[color:var(--cab-primary)] transition-[width] duration-300 ease-out"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          ) : busy ? (
-            <p className="text-xs text-[color:var(--cab-text-muted)]" aria-live="polite">
-              {phaseLabel}
-            </p>
-          ) : null}
 
           {count > BULK_SYNC_MAX ? (
             <p className="text-xs leading-snug text-[color:var(--cab-text-muted)]">

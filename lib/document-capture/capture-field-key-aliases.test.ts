@@ -5,6 +5,7 @@ import {
   normalizeCaptureExtractedFieldKey,
   normalizeCaptureIngressoDateValue,
   normalizeIngressoCaptureFieldRows,
+  rejectCaptureIngressoDateIfLikelyTodayFallback,
   repairMisassignedIngressoCaptureFields,
   sanitizeCaptureExtractedFieldValue,
 } from "@/lib/document-capture/capture-field-key-aliases";
@@ -59,5 +60,15 @@ const scuderiaNoise = normalizeIngressoCaptureFieldRows([
 ]);
 assert.equal(scuderiaNoise[0]?.normalized_value, "");
 assert.equal(mapCaptureFieldsToIngresso(scuderiaNoise).nScuderia, "");
+
+const today = new Date().toLocaleDateString("it-IT");
+assert.equal(
+  rejectCaptureIngressoDateIfLikelyTodayFallback(today, { source: "gemini", confidence: 0.9 }),
+  "",
+);
+assert.equal(
+  rejectCaptureIngressoDateIfLikelyTodayFallback("18/06/2024", { source: "gemini", confidence: 0.9 }),
+  "18/06/2024",
+);
 
 console.log("capture-field-key-aliases.test.ts OK");

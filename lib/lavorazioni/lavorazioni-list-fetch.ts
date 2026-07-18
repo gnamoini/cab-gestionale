@@ -13,6 +13,7 @@ import { lazyEmbedMezziOnLavorazioniListRows } from "@/lib/lavorazioni/lavorazio
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
 import { isLazyEmbedEnabled } from "@/lib/performance/list-pagination-rollout";
 import { resolveCabAppSettingsFallback } from "@/src/lib/app-settings/settings-fallback";
+import { resolveCabAppSettingsFromRows } from "@/src/lib/app-settings/resolve-from-rows";
 import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 import { resolveRole } from "@/lib/auth/rbac";
 import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
@@ -61,6 +62,9 @@ function endOfDayIso(dateDay: string): string {
 
 function resolveStatiForSanitize(override?: StatoLavorazioneConfig[]) {
   if (override?.length) return override;
+  if (typeof window === "undefined") {
+    return resolveCabAppSettingsFromRows([], null).lavorazioni.stati;
+  }
   const resolved = getRuntimeCabAppSettings() ?? resolveCabAppSettingsFallback();
   return resolved.lavorazioni.stati;
 }

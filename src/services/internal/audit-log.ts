@@ -12,10 +12,18 @@ import {
   queueModificaLog,
   registerModificaLogPageLifecycleFlush,
 } from "@/src/services/internal/log-modifiche-batcher";
+import { errMessageFromSupabase } from "@/src/utils/supabaseErrorHandler";
 
 export type AuditAzione = "CREATE" | "UPDATE" | "DELETE" | "RESTORE";
 
 export type AuditPayload = unknown;
+
+export class AuditLogWriteError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AuditLogWriteError";
+  }
+}
 
 export function auditSnapshot(row: unknown, context?: AuditLogContext): AuditPayload {
   const base = { snapshot: row };
@@ -63,12 +71,9 @@ async function writeModificaLogImmediate(
     autore = userData.user?.id ?? null;
   }
   if (!autore) {
-    console.warn("[audit-log] autore_id assente, log saltato:", {
-      entita: input.entita,
-      entita_id: input.entita_id,
-      azione: input.azione,
-    });
-    return;
+    throw new AuditLogWriteError(
+      `autore_id assente per log ${input.entita}/${input.entita_id} (${input.azione})`,
+    );
   }
 
   const enriched = enrichPayloadWithUndoSession(input.payload);
@@ -92,12 +97,9 @@ async function writeModificaLogImmediate(
     .select("id")
     .single();
   if (error) {
-    logModificaWriteError(error, {
-      entita: input.entita,
-      entita_id: input.entita_id,
-      azione: input.azione,
-    });
-    return;
+    throw new AuditLogWriteError(
+      errMessageFromSupabase(error, { action: "create" }),
+    );
   }
   const logId = data?.id;
   if (typeof logId === "string" && logId && typeof window !== "undefined") {
@@ -136,10 +138,10 @@ const flushModificaLog = (item: {
   azione: AuditAzione;
   payload?: AuditPayload;
   autore_id?: string | null;
-}) => safeWriteModificaLogImmediate(item.client, item);
+}) => writeModificaLogImmediate(item.client, item);
 
 if (typeof window !== "undefined") {
-  registerModificaLogPageLifecycleFlush(flushModificaLog);
+  registerModificaLogPageLifecycleFlush((item) => safeWriteModificaLogImmediate(item.client, item));
 }
 
 /** Scrive su `log_modifiche`; UPDATE magazzino in batch (~3.5s), altre entità subito. */
@@ -159,7 +161,17 @@ export function writeModificaLog(
   });
 }
 
-/** Scrive subito tutti i log UPDATE in coda (es. logout). Non propaga errori al chiamante. */
+/** Mutazione feed-eligible: commit applicativo → flush audit pendenti → return. */
+export async function commitCriticalMutation<T>(
+  client: SupabaseClient,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const result = await fn();
+  await flushPendingModificaLogs(client);
+  return result;
+}
+
+/** Scrive subito tutti i log UPDATE in coda (es. logout, fine mutazione critica). */
 export async function flushPendingModificaLogs(client: SupabaseClient): Promise<void> {
   await flushAllModificaLogs(flushModificaLog);
 }

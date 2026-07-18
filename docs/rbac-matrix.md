@@ -16,7 +16,10 @@
 | I3 | `WORKFLOW_TO_PAGE` = metadata; `WORKFLOW_REGISTRY` = routing only |
 | I4 | Snapshot solo da matrice pagina |
 
-## Migrazione service → entry
+## Moduli ERP
+
+- `magazzino_carichi` — ricezione DDT / carichi magazzino (`/magazzino/carichi`)
+
 
 ```text
 UI/hooks → lib/domain/*-entry.ts [ensurePageWrite] → src/services/** (no guard)

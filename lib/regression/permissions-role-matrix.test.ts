@@ -11,6 +11,7 @@ import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
 const ROUTES = [
   "/dashboard",
   "/magazzino",
+  "/magazzino/carichi",
   "/lavorazioni",
   "/preventivi",
   "/documenti",
@@ -36,6 +37,7 @@ const cases: RoleCase[] = [
     pageExpect: {
       "/dashboard": true,
       "/magazzino": true,
+      "/magazzino/carichi": true,
       "/report": true,
       "/dipendenti": true,
       "/impostazioni": true,
@@ -48,6 +50,7 @@ const cases: RoleCase[] = [
     pageExpect: {
       "/dashboard": false,
       "/magazzino": true,
+      "/magazzino/carichi": true,
       "/lavorazioni": true,
       "/documenti": true,
       "/mezzi": true,
@@ -68,6 +71,7 @@ const cases: RoleCase[] = [
       "/fatturazione": true,
       "/report": true,
       "/magazzino": false,
+      "/magazzino/carichi": false,
       "/lavorazioni": false,
       "/dipendenti": false,
       "/impostazioni": false,
@@ -79,6 +83,7 @@ const cases: RoleCase[] = [
     pageExpect: {
       "/dashboard": true,
       "/magazzino": true,
+      "/magazzino/carichi": true,
       "/preventivi": true,
       "/dipendenti": true,
       "/report": true,
@@ -92,6 +97,7 @@ const cases: RoleCase[] = [
     pageExpect: {
       "/dashboard": false,
       "/magazzino": false,
+      "/magazzino/carichi": false,
       "/lavorazioni-clienti": true,
       "/impostazioni": false,
     },

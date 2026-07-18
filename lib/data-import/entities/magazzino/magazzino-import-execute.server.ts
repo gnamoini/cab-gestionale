@@ -7,6 +7,7 @@ import { IMPORT_EXECUTE_CHUNK } from "@/lib/data-import/core/types";
 import type { MagazzinoImportDecision } from "@/lib/data-import/entities/magazzino/magazzino-import-schema";
 import { attachMagazzinoEntityKey } from "@/lib/validation/entity-persistence";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
+import { auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 
 const DEFAULT_MARKUP = 45;
 
@@ -144,6 +145,23 @@ export async function executeMagazzinoImport(input: {
       : result.stats.errors > 0
         ? "partial"
         : "success";
+
+  if (result.stats.created > 0 || result.stats.updated > 0) {
+    await writeModificaLog(sb, {
+      entita: "magazzino_ricambi",
+      entita_id: input.batchId,
+      azione: "CREATE",
+      payload: auditSnapshot({
+        import: "magazzino",
+        batchId: input.batchId,
+        fileName: input.fileName,
+        created: result.stats.created,
+        updated: result.stats.updated,
+        errors: result.stats.errors,
+      }),
+      autore_id: input.userId,
+    });
+  }
 
   await updateImportBatchProgress(input.batchId, {
     status: result.status,

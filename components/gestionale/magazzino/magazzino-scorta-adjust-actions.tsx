@@ -1,29 +1,11 @@
 "use client";
 
 import { IconActionButton } from "@/components/design-system";
-import {
-  dsTableActionBtnDanger,
-  dsTableActionBtnPrimary,
-  dsTableActionBtnUndo,
-} from "@/lib/ui/design-system";
+import { dsTableActionBtnPrimary, dsTableActionBtnSecondary } from "@/lib/ui/design-system";
 import { gestionaleListTableActionsGroupEnd } from "@/lib/ui/gestionale-list-table";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
 const scortaGlyph = "h-[1.125rem] w-[1.125rem] shrink-0";
-
-function IconUndoScorta({ className = scortaGlyph }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
-      />
-    </svg>
-  );
-}
 
 function IconMinusScorta({ className = scortaGlyph }: { className?: string }) {
   return (
@@ -41,23 +23,23 @@ function IconPlusScorta({ className = scortaGlyph }: { className?: string }) {
   );
 }
 
-/** Annulla / − / + scorta — stesso comportamento tabella magazzino. */
+/** − / + scorta — tabella e scheda ricambio magazzino. */
 export function MagazzinoScortaAdjustActions({
   canAdjust,
-  canUndo,
-  onUndo,
+  modalitaModifica = false,
   onDecrease,
   onIncrease,
   className = "",
 }: {
   canAdjust: boolean;
-  canUndo: boolean;
-  onUndo: () => void;
+  /** Modalità modifica attiva: − e + primari; altrimenti entrambi neutri. */
+  modalitaModifica?: boolean;
   onDecrease: () => void;
   onIncrease: () => void;
   className?: string;
 }) {
   const readonlyTip = canAdjust ? undefined : READONLY_PERMISSION_HINT;
+  const actionClass = modalitaModifica ? dsTableActionBtnPrimary : dsTableActionBtnSecondary;
 
   return (
     <div
@@ -66,18 +48,9 @@ export function MagazzinoScortaAdjustActions({
       aria-label="Modifica scorta"
     >
       <IconActionButton
-        label="Annulla"
-        tooltipContent={readonlyTip ?? (canUndo ? undefined : "Nessuna modifica annullabile")}
-        className={dsTableActionBtnUndo}
-        disabled={!canAdjust || !canUndo}
-        onClick={onUndo}
-      >
-        <IconUndoScorta />
-      </IconActionButton>
-      <IconActionButton
         label="Diminuisci"
         tooltipContent={readonlyTip}
-        className={dsTableActionBtnDanger}
+        className={actionClass}
         disabled={!canAdjust}
         onClick={onDecrease}
       >
@@ -86,7 +59,7 @@ export function MagazzinoScortaAdjustActions({
       <IconActionButton
         label="Aumenta"
         tooltipContent={readonlyTip}
-        className={dsTableActionBtnPrimary}
+        className={actionClass}
         disabled={!canAdjust}
         onClick={onIncrease}
       >

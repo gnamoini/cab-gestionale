@@ -34,6 +34,7 @@ import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { useMobileModalKeyboard } from "@/lib/ui/use-mobile-modal-keyboard";
 import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
 import { CloseButton } from "@/components/design-system/close-button";
+import { ShellNavBackButton } from "@/components/design-system/shell-nav-icon-button";
 import { gestionaleLogPanelAsideClass } from "@/components/gestionale/gestionale-log-ui";
 
 const LOG_DRAWER_MS = 220;
@@ -68,6 +69,8 @@ export type DrawerProps = {
   restoreFocusRef?: RefObject<HTMLElement | null>;
   /** Elemento inline accanto al titolo (es. badge stato). */
   titleAddon?: ReactNode;
+  /** Se impostato: freccia indietro a sinistra al posto della X di chiusura. */
+  onBack?: () => void;
   /** Z-index layer (default drawer). Profilo sopra nav tablet: z-[110]. */
   layerClassName?: string;
   /** Body a tutta altezza: scroll solo nel contenuto, footer ancorato in basso (anche su mobile). */
@@ -86,6 +89,7 @@ export function Drawer({
   closeOnEscape = true,
   restoreFocusRef,
   titleAddon,
+  onBack,
   layerClassName = dsZDrawer,
   contentFill = false,
 }: DrawerProps) {
@@ -159,11 +163,12 @@ export function Drawer({
     if (didInitialFocusRef.current) return;
     didInitialFocusRef.current = true;
     const id = window.requestAnimationFrame(() => {
-      const btn = asideRef.current?.querySelector('button[aria-label="Chiudi"]');
+      const dismissLabel = onBack ? "Indietro" : "Chiudi";
+      const btn = asideRef.current?.querySelector(`button[aria-label="${dismissLabel}"]`);
       if (btn instanceof HTMLButtonElement) btn.focus({ preventScroll: true });
     });
     return () => window.cancelAnimationFrame(id);
-  }, [isActive]);
+  }, [isActive, onBack]);
 
   if (!mounted) return null;
 
@@ -171,6 +176,7 @@ export function Drawer({
     <header className={dsModalHeader}>
       <div className={dsModalHeaderInner}>
         <div className={dsModalHeaderLead}>
+          {onBack ? <ShellNavBackButton onClick={onBack} showOnFocus={false} /> : null}
           <div className={`${dsModalTitleBlock} flex min-w-0 items-center gap-2`}>
             <h2 id={titleId} className={`${dsModalTitle} min-w-0 truncate`}>
               {title}
@@ -178,7 +184,7 @@ export function Drawer({
             {titleAddon ? <div className="flex shrink-0 items-center">{titleAddon}</div> : null}
           </div>
         </div>
-        <CloseButton onClick={requestClose} className={dsModalCloseBtn} />
+        {onBack ? null : <CloseButton onClick={requestClose} className={dsModalCloseBtn} />}
       </div>
     </header>
   );

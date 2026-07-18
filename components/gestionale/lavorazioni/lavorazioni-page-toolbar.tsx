@@ -48,6 +48,7 @@ import {
   usePageActionMenu,
   type PageActionItem,
 } from "@/components/ui";
+import { IconSchedaBlank } from "@/components/document-capture/scheda-blank-pdf-actions";
 
 const BLANK_PDF_TYPES = [
   { id: "scheda-ingresso-blank", label: "Scheda ingresso" },
@@ -96,6 +97,7 @@ function LavorazioniPageMenuRegistrar({
       id: "schede-pdf",
       label: "Schede da stampare",
       description: "Scarica schede vuote in PDF",
+      icon: <IconSchedaBlank />,
       chevron: true,
       submenu: BLANK_PDF_TYPES.map((t) => ({
         id: t.id,

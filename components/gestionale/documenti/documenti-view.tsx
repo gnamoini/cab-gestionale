@@ -1,6 +1,6 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
+import { OptionalTooltip, TruncatedTextTooltip, Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
@@ -338,15 +338,15 @@ function ArchiveDocRow({
         />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-nowrap items-center gap-2 sm:flex-wrap">
-            <Tooltip content={doc.nome}><button type="button" className="truncate text-left text-sm font-semibold text-[color:var(--cab-text)] underline-offset-2 hover:underline focus-visible:outline-none" onClick={(e) => {
+            <button type="button" className="min-w-0 max-w-full text-left focus-visible:outline-none" onClick={(e) => {
         e.stopPropagation();
         if (!canOpen)
             onFileUnavailable?.(unavailableHint);
         else
             onApri();
     }}>
-              {doc.nome}
-            </button></Tooltip>
+              <TruncatedTextTooltip text={doc.nome} className="truncate text-sm font-semibold text-[color:var(--cab-text)] underline-offset-2 hover:underline" />
+            </button>
             {!canOpen && doc.urlDocumento?.trim() ? (
               <Tooltip content={unavailableHint}><span className="inline-flex shrink-0 items-center rounded-md bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-danger)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-danger)_35%,var(--cab-border))]">
                 File non collegato
@@ -909,7 +909,7 @@ export function DocumentiView() {
         <PageToolbar
           className="sm:mx-0"
           primaryAction={
-            <Tooltip content={!canUploadDocuments ? READONLY_PERMISSION_HINT : undefined}>
+            <OptionalTooltip content={!canUploadDocuments ? READONLY_PERMISSION_HINT : undefined}>
               <button
                 type="button"
                 onClick={() => setUploadOpen(true)}
@@ -934,7 +934,7 @@ export function DocumentiView() {
                   </>
                 )}
               </button>
-            </Tooltip>
+            </OptionalTooltip>
           }
           search={
             <GestionaleSearchField
@@ -970,27 +970,23 @@ export function DocumentiView() {
           overflowActions={
             hasDocumentiInLista ? (
               <>
-                <Tooltip content="Chiudi tutti i gruppi">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (searchActive) resetRicerca();
-                      collapseAllTreeGroups();
-                    }}
-                    className={`${dsPageToolbarBtn} h-9 w-full justify-center px-3 text-xs sm:w-auto`}
-                  >
-                    Comprimi tutto
-                  </button>
-                </Tooltip>
-                <Tooltip content="Apri tutti i gruppi della pagina">
-                  <button
-                    type="button"
-                    onClick={expandAllTreeGroups}
-                    className={`${dsPageToolbarBtn} h-9 w-full justify-center px-3 text-xs sm:w-auto`}
-                  >
-                    Espandi tutto
-                  </button>
-                </Tooltip>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (searchActive) resetRicerca();
+                    collapseAllTreeGroups();
+                  }}
+                  className={`${dsPageToolbarBtn} h-9 w-full justify-center px-3 text-xs sm:w-auto`}
+                >
+                  Comprimi tutto
+                </button>
+                <button
+                  type="button"
+                  onClick={expandAllTreeGroups}
+                  className={`${dsPageToolbarBtn} h-9 w-full justify-center px-3 text-xs sm:w-auto`}
+                >
+                  Espandi tutto
+                </button>
               </>
             ) : null
           }

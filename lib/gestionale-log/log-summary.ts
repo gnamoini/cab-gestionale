@@ -1,4 +1,5 @@
 import {
+  formatGestionaleLogDateTime,
   formatStatoDisplay,
   formatTitleCasePhrase,
   imageLogModificaRiga,
@@ -145,6 +146,32 @@ function humanFieldLabel(key: string): string {
 function isLogPlaceholderValue(s: string): boolean {
   const t = safeStr(s).trim();
   return !t || t === "—" || t === "–" || t === "-";
+}
+
+/** ISO date / datetime in valori log → formato italiano leggibile. */
+export function tryFormatIsoLikeForLog(raw: string): string | null {
+  const t = safeStr(raw).trim();
+  if (!t) return null;
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t);
+  if (dateOnly) return `${dateOnly[3]}/${dateOnly[2]}/${dateOnly[1]}`;
+  if (/^\d{4}-\d{2}-\d{2}[T ]/.test(t)) {
+    const formatted = formatGestionaleLogDateTime(t);
+    return formatted !== t ? formatted : null;
+  }
+  return null;
+}
+
+/** Riformatta date ISO tra virgolette nelle righe summary già persistite. */
+export function sanitizeIsoDatesInModificaLine(line: string): string {
+  return line.replace(/[“"]([^"”]+)[”"]/g, (full, inner: string) => {
+    const formatted = tryFormatIsoLikeForLog(inner);
+    if (formatted === null) return full;
+    return `${full[0]}${formatted}${full[full.length - 1]}`;
+  });
+}
+
+function prettifyModificheDates(lines: readonly string[]): string[] {
+  return lines.map((line) => sanitizeIsoDatesInModificaLine(line));
 }
 
 /** Separatore parti etichetta oggetto log (cliente · attrezzatura, …). */
@@ -376,6 +403,8 @@ function formatValueForField(key: string, value: unknown, stati?: StatoLavorazio
   if (key === "priorita" || key === "priorita_lavorazione") return formatTitleCasePhrase(String(value));
   if (typeof value === "object") return "aggiornato";
   const s = String(value).trim();
+  const iso = tryFormatIsoLikeForLog(s);
+  if (iso !== null) return iso;
   return s.length > 120 ? `${s.slice(0, 117)}…` : s || "—";
 }
 
@@ -645,7 +674,7 @@ function isGenericLavorazioneLogOggettoLabel(raw: string): boolean {
 function filterModificheForDisplay(entita: string, lines: string[]): string[] {
   let out = filterAuditMetadataModifiche(lines);
   if (entita === "magazzino_ricambi") out = filterMagazzinoAutomaticModifiche(out);
-  return out;
+  return prettifyModificheDates(out);
 }
 
 function rediffModificheFromPayload(

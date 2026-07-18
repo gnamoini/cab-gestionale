@@ -8,7 +8,10 @@ import { usePwaInstallPrompt } from "@/src/hooks/use-pwa-install-prompt";
 
 const installButtonClass = `${profileFooterActionClass} ${dsFocus}`;
 
-export function PwaInstallFooterButton({ className = "" }: { className?: string }) {
+const profileActionItemClass =
+  "group flex w-full min-h-11 items-center gap-2.5 px-3 py-2.5 text-left text-xs font-medium text-[color:var(--cab-text)] transition-colors duration-150 hover:bg-[var(--cab-hover)] active:bg-[color:color-mix(in_srgb,var(--cab-hover)_92%,var(--cab-card))] sm:min-h-10";
+
+export function usePwaInstallFooterAction() {
   const { canPrompt, promptInstall, platform, isAppInstalled } = usePwaInstallPrompt();
   const toast = useGestionaleToast();
   const [installing, setInstalling] = useState(false);
@@ -31,16 +34,60 @@ export function PwaInstallFooterButton({ className = "" }: { className?: string 
     }
   }, [canPrompt, isAppInstalled, platform, promptInstall, toast]);
 
+  const disabled = isAppInstalled || installing;
+  const label = installing ? "Installazione…" : "Installa app";
+
+  return {
+    handleInstall,
+    disabled,
+    label,
+    isAppInstalled,
+    installing,
+    title: isAppInstalled ? "App già installata" : undefined,
+    ariaLabel: isAppInstalled ? "App già installata" : "Installa app",
+  };
+}
+
+export function PwaInstallFooterButton({
+  className = "",
+  variant = "footer",
+}: {
+  className?: string;
+  variant?: "footer" | "profile-action";
+}) {
+  const { handleInstall, disabled, label, title, ariaLabel } = usePwaInstallFooterAction();
+
+  if (variant === "profile-action") {
+    return (
+      <button
+        type="button"
+        className={`${profileActionItemClass} ${dsFocus} disabled:pointer-events-none disabled:opacity-55 disabled:cursor-not-allowed ${className}`.trim()}
+        disabled={disabled}
+        title={title}
+        aria-label={ariaLabel}
+        onClick={() => void handleInstall()}
+      >
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,var(--cab-card))] text-[color:var(--cab-text-muted)] transition-colors duration-150 group-hover:bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-hover))] group-hover:text-[color:var(--cab-text)]">
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0l4-4m-4 4l-4-4" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+          </svg>
+        </span>
+        <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
       className={`${installButtonClass} ${className}`.trim()}
-      disabled={isAppInstalled || installing}
-      title={isAppInstalled ? "App già installata" : undefined}
-      aria-label={isAppInstalled ? "App già installata" : "Installa app"}
+      disabled={disabled}
+      title={title}
+      aria-label={ariaLabel}
       onClick={() => void handleInstall()}
     >
-      {installing ? "Installazione…" : "Installa app"}
+      {label}
     </button>
   );
 }

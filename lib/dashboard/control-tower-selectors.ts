@@ -5,7 +5,7 @@ import {
   isAuditMetadataFieldKey,
   modificheToModificaRiga,
 } from "@/lib/gestionale-log/log-summary";
-import { reconcileLogModificaRows } from "@/lib/gestionale-log/log-event-pipeline";
+import { LOG_AGGREGATION_WINDOW_MS, reconcileLogModificaRows } from "@/lib/gestionale-log/log-event-pipeline";
 import {
   buildLogModificheFocusHref,
   lavorazioneIdFromLogRow,
@@ -911,8 +911,33 @@ function mergeEntityActivityRows(groupAsc: readonly LogModificaRow[]): { row: Lo
   };
 }
 
+/** Spezza log ordinati ASC in burst temporali (gap > windowMs = burst separato). */
+export function splitLogsIntoTimeBursts(
+  rowsAsc: readonly LogModificaRow[],
+  windowMs: number = LOG_AGGREGATION_WINDOW_MS,
+): LogModificaRow[][] {
+  if (rowsAsc.length === 0) return [];
+  const bursts: LogModificaRow[][] = [];
+  let current: LogModificaRow[] = [rowsAsc[0]!];
+  for (let i = 1; i < rowsAsc.length; i++) {
+    const prev = rowsAsc[i - 1]!;
+    const row = rowsAsc[i]!;
+    const tPrev = new Date(prev.created_at).getTime();
+    const tRow = new Date(row.created_at).getTime();
+    if (!Number.isNaN(tPrev) && !Number.isNaN(tRow) && tRow - tPrev <= windowMs) {
+      current.push(row);
+    } else {
+      bursts.push(current);
+      current = [row];
+    }
+  }
+  bursts.push(current);
+  return bursts;
+}
+
 function groupLogsByEntity(
   rows: readonly LogModificaRow[],
+  windowMs: number = LOG_AGGREGATION_WINDOW_MS,
 ): { row: LogModificaRow; eventCount: number; sourceRows: LogModificaRow[] }[] {
   const buckets = new Map<string, LogModificaRow[]>();
   for (const row of rows) {
@@ -924,8 +949,10 @@ function groupLogsByEntity(
   const merged: { row: LogModificaRow; eventCount: number; sourceRows: LogModificaRow[] }[] = [];
   for (const list of buckets.values()) {
     const asc = [...list].sort((a, b) => a.created_at.localeCompare(b.created_at));
-    const { row, eventCount } = mergeEntityActivityRows(asc);
-    merged.push({ row, eventCount, sourceRows: asc });
+    for (const burst of splitLogsIntoTimeBursts(asc, windowMs)) {
+      const { row, eventCount } = mergeEntityActivityRows(burst);
+      merged.push({ row, eventCount, sourceRows: burst });
+    }
   }
   return merged.sort((a, b) => b.row.created_at.localeCompare(a.row.created_at));
 }
@@ -965,8 +992,9 @@ function mapLogToActivity(
       atIso: row.created_at,
       annullato: reverted,
     };
+    const groupKey = activityGroupKey(row);
     out.push({
-      id: `${domain}:${activityGroupKey(row)}`,
+      id: `${domain}:${groupKey}:${row.created_at}`,
       domain,
       at: row.created_at,
       vm,

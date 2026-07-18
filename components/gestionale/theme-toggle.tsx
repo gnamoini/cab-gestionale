@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Tooltip } from "@/components/ui";
+import { OptionalTooltip } from "@/components/ui";
+import { resolveTooltipContent } from "@/lib/ui/tooltip-value-score";
 import { useTheme } from "@/context/theme-context";
 import { suppressSidebarBlurCollapse } from "@/lib/ui/use-sidebar-collapsed";
 import { dsBtnGhost, dsFocus, dsPageToolbarBtn } from "@/lib/ui/design-system";
@@ -52,7 +53,10 @@ export function ThemeToggle({
   useEffect(() => setMounted(true), []);
 
   const label = resolved === "dark" ? "Passa a tema chiaro" : "Passa a tema scuro";
-  const tip = themeSaving ? "Salvataggio…" : resolved === "dark" ? "Chiaro" : "Scuro";
+  const tip = resolveTooltipContent("", themeSaving ? "Salvataggio…" : label, {
+    iconOnly: true,
+    ariaLabel: label,
+  });
 
   const handleToggle = () => {
     suppressSidebarBlurCollapse(480);
@@ -99,7 +103,7 @@ export function ThemeToggle({
   if (variant === "switch") {
     const checked = resolved === "dark";
     return (
-      <Tooltip content={tip} showOnFocus={false}>
+      <OptionalTooltip content={tip} showOnFocus={false}>
         <button
           type="button"
           role="switch"
@@ -123,12 +127,12 @@ export function ThemeToggle({
             aria-hidden
           />
         </button>
-      </Tooltip>
+      </OptionalTooltip>
     );
   }
 
   return (
-    <Tooltip content={tip} showOnFocus={false}>
+    <OptionalTooltip content={tip} showOnFocus={false}>
       <button
         type="button"
         onPointerDown={(event) => {
@@ -143,6 +147,6 @@ export function ThemeToggle({
       >
         {resolved === "dark" ? <IconSun className="h-[18px] w-[18px]" /> : <IconMoon className="h-[18px] w-[18px]" />}
       </button>
-    </Tooltip>
+    </OptionalTooltip>
   );
 }

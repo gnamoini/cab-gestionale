@@ -302,8 +302,6 @@ export function mapCaptureFieldsToIngresso(
   applyIngressoSlice(out, mapCaptureHeaderToIngressoSlice(fields));
   if (out.dataIngresso.trim()) {
     out.dataIngresso = normalizeCaptureIngressoDateValue(out.dataIngresso);
-  } else {
-    out.dataIngresso = new Date().toLocaleDateString("it-IT");
   }
   return out;
 }

@@ -148,6 +148,8 @@ import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { CLIENTE_HOME_PATH } from "@/lib/auth/rbac";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 import { useClientPortalPageOrchestrator } from "@/src/hooks/use-client-portal-page-orchestrator";
+import { useClientLavorazioniArchivioCountQuery } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";
+import { useRbac } from "@/src/hooks/use-rbac";
 import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
 import { useLavorazioneProfileNamesQuery } from "@/src/hooks/use-lavorazione-profile-names-query";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
@@ -672,6 +674,7 @@ export function ClientLavorazioniView() {
   const [archivioExpanded, setArchivioExpanded] = useState(false);
   const o = useClientPortalPageOrchestrator({ archivioExpanded: archivioExpanded });
   const { user, authorName } = useAuth();
+  const { isCliente } = useRbac();
   const {
     containerRef: listLayoutRef,
     layout: listLayout,
@@ -680,6 +683,7 @@ export function ClientLavorazioniView() {
     accessDenied,
     contract,
     persistence,
+    archivioListEnabled,
     refresh: refreshClientData,
     refreshBusy,
   } = o;
@@ -832,6 +836,24 @@ export function ClientLavorazioniView() {
     [archivioBundles, sortArchivioCol, sortArchivioPhase, statoOrderIds],
   );
 
+  const archivioCachedCount = contract.archivioQ.data?.length;
+  const archivioCountQuery = useClientLavorazioniArchivioCountQuery(
+    canRender && !archivioListEnabled && archivioCachedCount === undefined,
+  );
+
+  const archivioFilteredCount = archivioListEnabled
+    ? sortedArchivioBundles.length
+    : archivioCachedCount !== undefined
+      ? archivioCachedCount
+      : archivioCountQuery.isSuccess
+        ? (archivioCountQuery.data ?? 0)
+        : null;
+
+  const archivioCardTitle =
+    archivioFilteredCount === null
+      ? "Lavorazioni completate (…)"
+      : `Lavorazioni completate (${archivioFilteredCount})`;
+
   const onSortInCorso = useCallback(
     (k: ClientPortalSortKey) => {
       if (!clientPortalSortAllowed(k, lsdDegraded)) return;
@@ -852,7 +874,8 @@ export function ClientLavorazioniView() {
   const showArchivio = filters.section !== "in_corso";
 
   const totalResults =
-    (showInCorso ? inCorsoBundles.length : 0) + (showArchivio ? archivioBundles.length : 0);
+    (showInCorso ? inCorsoBundles.length : 0) +
+    (showArchivio ? (archivioListEnabled ? archivioBundles.length : (archivioFilteredCount ?? 0)) : 0);
 
   const resetRicerca = useCallback(() => {
     setSearchInput("");
@@ -937,7 +960,7 @@ export function ClientLavorazioniView() {
         ) : null}
         {showArchivio ? (
           <ShellCard
-            title={`Lavorazioni completate (${sortedArchivioBundles.length})`}
+            title={archivioCardTitle}
             collapsible
             defaultCollapsed
             persistScope="client-lavorazioni"
@@ -1026,6 +1049,7 @@ export function ClientLavorazioniView() {
                       onChange={patchFilters}
                       catalog={filterCatalog}
                       variant="clientPortal"
+                      restrictUtilizzatoriToCatalog={isCliente}
                     />
                   }
                   onFilterReset={resetFiltri}

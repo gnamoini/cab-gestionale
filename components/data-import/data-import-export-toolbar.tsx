@@ -195,7 +195,7 @@ function ToolbarSplitButton({
             {item.dividerBefore ? (
               <div role="separator" className="my-0 h-px w-full bg-[color:var(--cab-border)]" aria-hidden />
             ) : null}
-            <OptionalTooltip content={item.title}>
+            <OptionalTooltip content={item.title !== item.label ? item.title : undefined}>
               <button
                 type="button"
                 role="menuitem"
@@ -305,7 +305,7 @@ export function DataImportExportToolbar({
       <>
         <div className={`flex w-full flex-col gap-2 ${className}`.trim()}>
           {importMenuItems.map((item) => (
-            <OptionalTooltip key={item.id} content={item.title}>
+            <OptionalTooltip key={item.id} content={item.title !== item.label ? item.title : undefined}>
               <button
                 type="button"
                 disabled={item.disabled || disabled}

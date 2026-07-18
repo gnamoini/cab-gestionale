@@ -40,6 +40,7 @@ assert.match(contattaci, /min-h-11/);
 assert.match(contattaci, /data-testid="smoke-contattaci-call"/);
 
 const qr = read("components/lavorazioni-clienti/client-lavorazione-qr-dialog.tsx");
+assert.match(qr, /modalHeight="standard"/);
 assert.match(qr, /GestionaleModalScrollBody/);
 assert.doesNotMatch(qr, /footer=\{/);
 assert.match(qr, /Condividi/);
@@ -48,6 +49,7 @@ assert.match(qr, /border-\[color:var\(--cab-border\)\]/);
 assert.doesNotMatch(qr, /border-zinc-200/);
 
 const ingresso = read("components/lavorazioni-clienti/client-lavorazione-ingresso-dialog.tsx");
+assert.match(ingresso, /modalHeight="standard"/);
 assert.match(ingresso, /GestionaleModalScrollBody/);
 assert.doesNotMatch(ingresso, /footer=\{/);
 assert.doesNotMatch(ingresso, />\s*Chiudi\s*</);

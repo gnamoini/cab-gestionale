@@ -255,7 +255,12 @@ export const PageActionMenu = memo(function PageActionMenu({
   const onRefresh = onRefreshProp ?? ctx?.onRefresh;
   const refreshBusy = refreshBusyProp ?? ctx?.refreshBusy ?? false;
   const refreshLabel = refreshLabelProp ?? ctx?.refreshLabel ?? "Aggiorna";
-  const back = backProp ?? ctx?.back ?? resolveMobilePageHeaderBack(pathname);
+  const back =
+    backProp !== undefined
+      ? backProp
+      : ctx?.back !== undefined
+        ? ctx.back
+        : resolveMobilePageHeaderBack(pathname);
 
   const items = useMemo(
     () => filterPageActionItems(rawItems, { rbac, perms }),

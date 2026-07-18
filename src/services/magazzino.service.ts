@@ -1,7 +1,7 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
+import { auditContext, auditDiff, auditSnapshot, commitCriticalMutation, writeModificaLog } from "@/src/services/internal/audit-log";
 import { sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
@@ -72,13 +72,15 @@ export const magazzinoService = {
   async create(data: MagazzinoInsert): Promise<ServiceResult<MagazzinoRicambioRow>> {
     try {
       const c = await sb();
-      const payload = attachMagazzinoEntityKey(data);
-      const { data: row, error } = await c.from("magazzino_ricambi").insert(payload).select(MAGAZZINO_RICAMBI_COLUMNS).single();
-      if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
-      const r = row as MagazzinoRicambioRow;
-      await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, oggettoRicambio(r)) });
-      void fetch(`/api/inventory-labels/ricambi/${encodeURIComponent(r.id)}`).catch(() => undefined);
-      return success(r);
+      return await commitCriticalMutation(c, async () => {
+        const payload = attachMagazzinoEntityKey(data);
+        const { data: row, error } = await c.from("magazzino_ricambi").insert(payload).select(MAGAZZINO_RICAMBI_COLUMNS).single();
+        if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
+        const r = row as MagazzinoRicambioRow;
+        await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, oggettoRicambio(r)) });
+        void fetch(`/api/inventory-labels/ricambi/${encodeURIComponent(r.id)}`).catch(() => undefined);
+        return success(r);
+      });
     } catch (e) {
       return serviceFailFromError(e);
     }
@@ -87,19 +89,21 @@ export const magazzinoService = {
   async update(id: string, data: MagazzinoUpdate): Promise<ServiceResult<MagazzinoRicambioRow>> {
     try {
       const c = await sb();
-      const payload = Object.keys(data).length > 0 ? attachMagazzinoEntityKey(data) : data;
-      const { data: before, error: e0 } = await c.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
-      if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
-      const { data: row, error } = await c.from("magazzino_ricambi").update(payload).eq("id", id).select(MAGAZZINO_RICAMBI_COLUMNS).single();
-      if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
-      const r = row as MagazzinoRicambioRow;
-      await writeModificaLog(c, {
-        entita: ENTITA,
-        entita_id: id,
-        azione: "UPDATE",
-        payload: auditDiff(before, r, oggettoRicambio(r)),
+      return await commitCriticalMutation(c, async () => {
+        const payload = Object.keys(data).length > 0 ? attachMagazzinoEntityKey(data) : data;
+        const { data: before, error: e0 } = await c.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
+        if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
+        const { data: row, error } = await c.from("magazzino_ricambi").update(payload).eq("id", id).select(MAGAZZINO_RICAMBI_COLUMNS).single();
+        if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
+        const r = row as MagazzinoRicambioRow;
+        await writeModificaLog(c, {
+          entita: ENTITA,
+          entita_id: id,
+          azione: "UPDATE",
+          payload: auditDiff(before, r, oggettoRicambio(r)),
+        });
+        return success(r);
       });
-      return success(r);
     } catch (e) {
       return serviceFailFromError(e);
     }
@@ -108,15 +112,17 @@ export const magazzinoService = {
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
       const c = await sb();
-      const { data: existing, error: e0 } = await c.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
-      if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
-      if (existing) {
-        const ex = existing as MagazzinoRicambioRow;
-        await writeModificaLog(c, { entita: ENTITA, entita_id: id, azione: "DELETE", payload: auditSnapshot(ex, oggettoRicambio(ex)) });
-      }
-      const { error } = await c.from("magazzino_ricambi").delete().eq("id", id);
-      if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
-      return success(null);
+      return await commitCriticalMutation(c, async () => {
+        const { data: existing, error: e0 } = await c.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
+        if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
+        if (existing) {
+          const ex = existing as MagazzinoRicambioRow;
+          await writeModificaLog(c, { entita: ENTITA, entita_id: id, azione: "DELETE", payload: auditSnapshot(ex, oggettoRicambio(ex)) });
+        }
+        const { error } = await c.from("magazzino_ricambi").delete().eq("id", id);
+        if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
+        return success(null);
+      });
     } catch (e) {
       return serviceFailFromError(e);
     }

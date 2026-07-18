@@ -3,6 +3,7 @@ import { isCaptureSignatureFieldKey } from "@/lib/document-capture/capture-signa
 import { isoToItDisplay, ymdToItDisplay } from "@/lib/lavorazioni/date-day-only";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
+import type { HybridFieldSource } from "@/lib/document-capture/extraction/hybrid-extraction-types";
 import {
   findExactEntityInPool,
   fuzzyMatchEntity,
@@ -30,6 +31,30 @@ export function normalizeCaptureIngressoDateValue(raw: string): string {
   const fromYmd = ymdToItDisplay(trimmed.slice(0, 10));
   if (fromYmd) return fromYmd;
   return trimmed;
+}
+
+function captureIngressoDateIso(display: string): string | null {
+  const parsed = parseItalianDayDisplayToIso(display);
+  return parsed.ok ? parsed.iso : null;
+}
+
+/** Scarta data_ingresso = oggi quando probabile fallback OCR/AI (non data scritta sul foglio). */
+export function rejectCaptureIngressoDateIfLikelyTodayFallback(
+  raw: string,
+  opts?: { confidence?: number; source?: HybridFieldSource },
+): string {
+  const normalized = normalizeCaptureIngressoDateValue(raw);
+  if (!normalized) return "";
+  const todayIso = captureIngressoDateIso(new Date().toLocaleDateString("it-IT"));
+  const valueIso = captureIngressoDateIso(normalized);
+  if (!todayIso || !valueIso || todayIso !== valueIso) return normalized;
+
+  const confidence = opts?.confidence ?? 1;
+  const source = opts?.source;
+  if (confidence < 0.7) return "";
+  if (source === "template_ocr" || source === "gemini") return "";
+  if (source === "pdf_text" && confidence < 0.85) return "";
+  return normalized;
 }
 
 /** Filtra rumore OCR/Gemini su celle piccole (es. n_scuderia vuota → "7"). */

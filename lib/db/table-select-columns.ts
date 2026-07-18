@@ -92,7 +92,13 @@ export const MAGAZZINO_RICAMBI_COLUMNS =
   "id, codice, nome, marca, quantita, costo, prezzo_vendita, consumo_medio_mensile, meta, entity_key, created_at, updated_at" as const;
 
 export const MOVIMENTI_RICAMBI_COLUMNS =
-  "id, ricambio_id, lavorazione_id, tipo, quantita, conta_statistiche, created_at" as const;
+  "id, ricambio_id, lavorazione_id, tipo, quantita, conta_statistiche, inventory_document_id, inventory_document_line_id, created_at" as const;
+
+export const INVENTORY_DOCUMENTS_COLUMNS =
+  "id, company_id, supplier_label, purchase_order_id, document_type, import_file_id, file_path, document_number, document_date, content_hash, document_ai_confidence, status, applied_at, applied_by, created_by, created_at, updated_at" as const;
+
+export const INVENTORY_DOCUMENT_LINES_COLUMNS =
+  "id, document_id, line_index, raw_code, extracted_description, extracted_quantity, received_quantity, unit, matched_item_id, match_confidence, match_status, apply_status, user_action, final_quantity, final_item_id, line_ai_confidence, created_at, updated_at" as const;
 
 export const PREVENTIVI_COLUMNS =
   "id, mezzo_id, lavorazione_id, cliente, totale, dettagli, created_at, updated_at" as const;

@@ -13,6 +13,7 @@ export const PERFORMANCE_GOVERNANCE_SUITE: readonly string[] = [
   "lib/regression/fatturazione-perf-policy.test.ts",
   "lib/regression/impostazioni-perf-policy.test.ts",
   "lib/regression/lavorazioni-perf-policy.test.ts",
+  "lib/regression/lavorazioni-kanban-perf-policy.test.ts",
   "lib/regression/magazzino-perf-policy.test.ts",
   "lib/regression/mezzi-perf-policy.test.ts",
   "lib/regression/preventivi-perf-policy.test.ts",

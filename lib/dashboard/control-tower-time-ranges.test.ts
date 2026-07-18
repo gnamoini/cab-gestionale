@@ -6,10 +6,13 @@ import {
   getControlTowerCurrentWeekRange,
   getControlTowerBriefDataFetchRange,
   getControlTowerHealthScoreDataFetchRange,
+  getControlTowerHealthScoreHistoryFetchRange,
   getControlTowerLast30DaysRange,
   getControlTowerPrevious30DaysRange,
   getControlTowerPreviousMonthSameWindowRange,
   getControlTowerPreviousWeekSameWindowRange,
+  getControlTowerWeekEndAnchor,
+  getControlTowerWeeklyHealthScoreAnchors,
 } from "@/lib/dashboard/control-tower-time-ranges";
 
 function ymd(d: Date): string {
@@ -62,5 +65,17 @@ const healthFetch = getControlTowerHealthScoreDataFetchRange(WED);
 assert.equal(ymd(healthFetch.start), ymd(prev30.start));
 assert.equal(ymd(healthFetch.end), ymd(last30.end));
 assert.equal(ymd(briefFetch.end), "2026-06-03");
+
+const weekEndWed = getControlTowerWeekEndAnchor(WED);
+assert.equal(ymd(weekEndWed), "2026-06-07", "mer in week ending dom");
+
+const weeklyAnchors = getControlTowerWeeklyHealthScoreAnchors(WED, 26);
+assert.equal(weeklyAnchors.length, 26);
+assert.equal(ymd(weeklyAnchors[0]!.weekStart), "2025-12-08", "oldest week start ~26w back");
+assert.equal(ymd(weeklyAnchors[25]!.weekEnd), "2026-06-07", "newest week end = current week end");
+
+const historyFetch = getControlTowerHealthScoreHistoryFetchRange(WED, 26);
+assert.ok(historyFetch.start.getTime() < weeklyAnchors[0]!.weekStart.getTime(), "history fetch precede oldest week");
+assert.equal(ymd(historyFetch.end), ymd(weeklyAnchors[25]!.weekEnd));
 
 console.log("control-tower-time-ranges.test: OK");

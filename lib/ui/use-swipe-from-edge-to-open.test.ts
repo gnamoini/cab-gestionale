@@ -6,6 +6,7 @@ import {
   clampEdgeOpenDragX,
   panelTransformForEdgeOpen,
   peakEdgeOpenDragX,
+  peakGestureVelocity,
   resolveEdgeZonePx,
   shouldCommitEdgeOpen,
   shouldCommitEdgeOpenGesture,
@@ -29,18 +30,31 @@ assert.equal(shouldCommitEdgeOpen(96, 320), true);
 assert.equal(peakEdgeOpenDragX(40, 180), 180);
 assert.equal(shouldCommitEdgeOpenGesture(40, 180, 320), true);
 assert.equal(clampEdgeOpenDragX(400, 320), 320);
+assert.equal(peakGestureVelocity(0.2, 0.6), 0.6);
+assert.equal(peakGestureVelocity(0.8, 0.3), 0.8);
 
 const swipeOpenSrc = readFileSync(join(root, "lib/ui/use-swipe-from-edge-to-open.ts"), "utf8");
 assert.match(swipeOpenSrc, /shouldNavDrawerClaimEdgeSwipe/);
 assert.match(swipeOpenSrc, /usePointerGesture/);
 assert.match(swipeOpenSrc, /requestAnimationFrame/);
+assert.match(swipeOpenSrc, /onSnapClosed\?\.\(\)/);
+assert.doesNotMatch(
+  swipeOpenSrc,
+  /finishCancel[\s\S]{0,120}resetDrag\(\)/,
+  "finishCancel must not reset compositor before parent consumes visual close",
+);
+assert.match(swipeOpenSrc, /peakVelocityXRef/);
 
 const appShellSrc = readFileSync(join(root, "components/gestionale/app-shell.tsx"), "utf8");
 assert.match(appShellSrc, /useNavDrawerMachine/);
 assert.match(appShellSrc, /flags\.canEdgeSwipe/);
+assert.match(appShellSrc, /onSnapClosed/);
+assert.match(appShellSrc, /edgeResetDrag=\{edgeSwipe\.resetDrag\}/);
 
 const sidebarSrc = readFileSync(join(root, "components/gestionale/app-shell-sidebar.tsx"), "utf8");
 assert.match(sidebarSrc, /NAV_DRAWER_PANEL_ID/);
 assert.match(sidebarSrc, /aria-live/);
+assert.match(sidebarSrc, /DISMISS_DRAG_END_COMMIT/);
+assert.match(sidebarSrc, /skipCssCloseAnim/);
 
 console.log("use-swipe-from-edge-to-open.test.ts ok");

@@ -16,6 +16,8 @@ const hookSrc = fs.readFileSync(
   path.join(ROOT, "src/hooks/use-dipendenti-timesheet.ts"),
   "utf8",
 );
+const dispatchSrc = fs.readFileSync(path.join(ROOT, "lib/sync/gestionale-sync-dispatch.ts"), "utf8");
+const policySrc = fs.readFileSync(path.join(ROOT, "lib/sync/gestionale-sync-policy.ts"), "utf8");
 
 const syncTables = [
   "dipendenti_timesheet_employees",
@@ -31,5 +33,11 @@ for (const table of syncTables) {
 
 assert.match(hookSrc, /dispatchTimesheetEntryChanged/);
 assert.match(hookSrc, /dispatchTimesheetEmployeesChanged/);
+
+assert.match(dispatchSrc, /resolveSyncEffects/);
+assert.match(dispatchSrc, /markGestionaleDirty/);
+assert.match(policySrc, /ALWAYS_LIVE_TABLES/);
+assert.match(policySrc, /user_permissions/);
+assert.match(policySrc, /profiles/);
 
 console.log("sync-invalidation-policy.test.ts OK");

@@ -13,6 +13,7 @@ export function DashboardWidgetShell({
   headerLeadingActionsInteractive,
   title,
   subtitle,
+  onCollapsedChange,
 }: {
   def: DashboardWidgetDefinition;
   children: ReactNode;
@@ -21,6 +22,7 @@ export function DashboardWidgetShell({
   headerLeadingActionsInteractive?: boolean;
   title?: string;
   subtitle?: string;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }) {
   return (
     <ShellCard
@@ -34,6 +36,7 @@ export function DashboardWidgetShell({
       headerActions={headerActions}
       headerLeadingActions={headerLeadingActions}
       headerLeadingActionsInteractive={headerLeadingActionsInteractive}
+      onCollapsedChange={onCollapsedChange}
       className={reportZoneShellClass}
     >
       {children}
@@ -51,6 +54,7 @@ export function wrapDashboardWidget(
     headerLeadingActionsInteractive?: boolean;
     title?: string;
     subtitle?: string;
+    onCollapsedChange?: (collapsed: boolean) => void;
   },
 ): ReactNode {
   if (body == null || body === false) return null;
@@ -62,6 +66,7 @@ export function wrapDashboardWidget(
       headerLeadingActionsInteractive={options?.headerLeadingActionsInteractive}
       title={options?.title}
       subtitle={options?.subtitle}
+      onCollapsedChange={options?.onCollapsedChange}
     >
       {body}
     </DashboardWidgetShell>

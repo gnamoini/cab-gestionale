@@ -122,6 +122,17 @@ export const GESTIONALE_PAGES = [
     showInNav: true,
     routeMatch: "prefix",
     primaryModule: "magazzino",
+    expandableModules: ["magazzino_carichi"],
+  },
+  {
+    key: "magazzino_carichi",
+    href: "/magazzino/carichi",
+    label: "Carichi",
+    icon: IconNavMagazzino,
+    order: 7.5,
+    showInNav: false,
+    routeMatch: "prefix",
+    primaryModule: "magazzino_carichi",
     expandableModules: [],
   },
   {

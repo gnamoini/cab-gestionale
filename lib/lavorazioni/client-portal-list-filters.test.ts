@@ -153,6 +153,27 @@ const emptySchede: LavorazioneSchedeStore = {};
   );
 }
 
+// Filtro marca telaio da scheda ingresso
+{
+  const row = sampleRow({
+    mezzo: {
+      id: "mezzo-1",
+      marca_telaio: "Iveco",
+      modello_telaio: "Daily",
+    } as LavorazioneListRow["mezzo"],
+  });
+  const filters = {
+    ...LAVORAZIONI_ADVANCED_FILTERS_EMPTY,
+    marcaTelaio: "Iveco",
+    modelloTelaio: "Daily",
+  };
+  assert.equal(lavRowMatchesAdvancedFilters(row, filters, emptySchede, "in_corso"), true);
+  assert.equal(
+    lavRowMatchesAdvancedFilters(row, { ...filters, modelloTelaio: "Stralis" }, emptySchede, "in_corso"),
+    false,
+  );
+}
+
 // Migrazione v3→v4 reset list filters obsoleti
 {
   const sanitized = sanitizePersistedPortalFilters(

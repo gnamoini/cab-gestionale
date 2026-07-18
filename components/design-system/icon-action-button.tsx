@@ -5,7 +5,7 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "reac
 import { Tooltip } from "@/components/design-system/tooltip";
 import type { TooltipSide } from "@/lib/ui/tooltip-portal";
 import { dsPageToolbarIconBtn } from "@/lib/ui/design-system";
-import { meaningfulTooltip } from "@/lib/ui/meaningful-tooltip";
+import { resolveTooltipContent } from "@/lib/ui/tooltip-value-score";
 
 type IconActionButtonBase = {
   label: string;
@@ -49,8 +49,7 @@ export function IconActionButton(props: IconActionButtonProps) {
   } = props;
 
   const hint = tooltipContent ?? label;
-  const content =
-    tooltipContent != null ? meaningfulTooltip(label, hint) : label;
+  const content = resolveTooltipContent("", hint, { iconOnly: true, ariaLabel: label });
   const resolvedClassName = `${toolbar ? dsPageToolbarIconBtn : ""} ${className}`.trim();
   const multiline = Boolean(content?.includes("\n"));
   const tooltipDisabled = tooltipDisabledProp || !content?.trim();

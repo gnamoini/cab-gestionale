@@ -1,6 +1,6 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
+import { TruncatedTextTooltip } from "@/components/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/design-system";
 import {
@@ -118,21 +118,22 @@ function DashboardNoteRow({
           onKeyDown={(e) => handleSettingsInlineEditKeyDown(e, initialTextRef.current, () => setEditing(false))}
         />
       ) : (
-        <Tooltip content={task.text}><span className={`min-w-0 flex-1 break-words px-0.5 text-sm leading-snug ${task.done ? "text-[color:var(--cab-text-muted)] line-through" : "text-[color:var(--cab-text)]"}`}>
-          {task.text}
-        </span></Tooltip>
+        <TruncatedTextTooltip
+          text={task.text}
+          className={`min-w-0 flex-1 break-words px-0.5 text-sm leading-snug ${task.done ? "text-[color:var(--cab-text-muted)] line-through" : "text-[color:var(--cab-text)]"}`}
+        />
       )}
 
       {!readOnly ? (
         <div className="flex shrink-0 items-center gap-0.5" role="group" aria-label="Azioni nota">
           {!editing ? (
-            <Tooltip content={"Modifica"}><button type="button" className={noteActionBtnClass} aria-label={`Modifica ${task.text}`} onClick={startEdit}>
+            <button type="button" className={noteActionBtnClass} aria-label={`Modifica ${task.text}`} onClick={startEdit}>
               <IconPencil />
-            </button></Tooltip>
+            </button>
           ) : null}
-          <Tooltip content={"Elimina"}><button type="button" className={`${noteActionBtnClass} hover:text-[color:var(--cab-danger)]`} aria-label={`Elimina ${task.text}`} onClick={() => onRemove(task)}>
+          <button type="button" className={`${noteActionBtnClass} hover:text-[color:var(--cab-danger)]`} aria-label={`Elimina ${task.text}`} onClick={() => onRemove(task)}>
             <IconTrash />
-          </button></Tooltip>
+          </button>
         </div>
       ) : null}
     </li>

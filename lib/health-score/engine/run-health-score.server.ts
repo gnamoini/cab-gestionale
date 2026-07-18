@@ -29,7 +29,7 @@ function inputCacheKey(anchor: Date): string {
 }
 
 function resultCacheKey(configHash: string, inputHash: string): string {
-  return `result:v${HEALTH_SCORE_ENGINE_VERSION}:c${configHash}:i${inputHash}`;
+  return `result:v${HEALTH_SCORE_ENGINE_VERSION}:s${HEALTH_SCORE_SCHEMA_VERSION}:c${configHash}:i${inputHash}`;
 }
 
 export async function runHealthScoreServer(anchor = new Date()): Promise<HealthScoreResult> {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
+import { OptionalTooltip, Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { LoadingSpinner } from "@/components/design-system/loading";
 import { PageToolbarCtaLabel } from "@/components/design-system/page-toolbar";
@@ -35,10 +35,11 @@ export function GestionaleRefreshToolbarButton({
   onClick: () => void;
   label?: string;
 }) {
-  const tip = busy ? "Aggiornamento…" : label;
+  const smUp = useSmUp();
+  const tip = smUp ? undefined : busy ? "Aggiornamento…" : label;
   const busyLabel = "Aggiornamento…";
   return (
-    <Tooltip content={tip} showOnFocus={false} sideOffset={TOOLTIP_GAP_SHELL_NAV}>
+    <OptionalTooltip content={tip} showOnFocus={false} sideOffset={TOOLTIP_GAP_SHELL_NAV}>
       <button
         type="button"
         onClick={onClick}
@@ -55,7 +56,7 @@ export function GestionaleRefreshToolbarButton({
         </span>
         <span className="sr-only sm:hidden">{busy ? busyLabel : label}</span>
       </button>
-    </Tooltip>
+    </OptionalTooltip>
   );
 }
 
@@ -153,7 +154,6 @@ export function GestionalePageToolbarActions({
   }, [overflowOpenProp, onOverflowToggle]);
 
   const undoInactive = undoDisabled || !canUndo || undoPending;
-  void logTitle;
 
   const hasOverflowMenu = Boolean(overflowActions) || logInOverflowOnMobile;
 
@@ -164,17 +164,17 @@ export function GestionalePageToolbarActions({
   const showOverflowDrawer = !smUp && overflowOpen && hasOverflowMenu;
 
   const renderLogButton = (extraClass = "") => (
-    <Tooltip content="Log">
+    <OptionalTooltip content={logTitle}>
       <button
         type="button"
         onClick={onOpenLog}
         className={`${dsPageToolbarIconBtn} shrink-0 ${extraClass}`.trim()}
-        aria-label="Log modifiche"
+        aria-label={logTitle}
       >
         <IconGestionaleLog />
-        <span className="sr-only">Log modifiche</span>
+        <span className="sr-only">{logTitle}</span>
       </button>
-    </Tooltip>
+    </OptionalTooltip>
   );
 
   const renderLogOverflowAction = () => (
@@ -194,7 +194,7 @@ export function GestionalePageToolbarActions({
       <div className={`${gestionalePageToolbarActionsInnerClass}${className ? ` ${className}` : ""}`}>
         {leading}
         {showUndo ? (
-          <Tooltip content={canUndo && !undoDisabled && !undoPending ? "Annulla" : "Non disponibile"}>
+          <OptionalTooltip content={undoInactive ? "Non disponibile" : undefined}>
             <button
               type="button"
               onClick={onUndo}
@@ -206,7 +206,7 @@ export function GestionalePageToolbarActions({
               <IconGestionaleUndo />
               <span className="sr-only">Annulla ultima azione</span>
             </button>
-          </Tooltip>
+          </OptionalTooltip>
         ) : null}
         {logInOverflowOnMobile ? <div className="hidden sm:contents">{renderLogButton()}</div> : renderLogButton()}
         {hasOverflowMenu ? (

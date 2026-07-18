@@ -156,10 +156,11 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
                 id: "qr",
                 label: "QR lavorazione",
                 description: "Mostra il codice QR della lavorazione",
+                icon: <IconQrCode />,
                 onSelect: () => setQrOpen(true),
               },
             ]}
-            back={{ href: listPath, label: CLIENT_PORTAL_BACK_LABEL }}
+            back={null}
           />
         }
       />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import {
   Drawer,
   LogEntry,
@@ -253,6 +254,7 @@ export function NotificationCenterBell({
     snapshot?.rbacContext,
   );
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const openSignal = useSyncExternalStore(
     subscribeNotificationCenterOpen,
     getNotificationCenterOpenSnapshot,
@@ -373,19 +375,18 @@ export function NotificationCenterBell({
 
   const triggerButton = headerTrigger ? (
     <div className="relative shrink-0">
-      <Tooltip content={unreadCount > 0 ? `Notifiche (${unreadCount})` : "Notifiche"}>
-        <NotificationBellTrigger
-          count={unreadCount}
-          active={unreadCount > 0}
-          activeTone="info"
-          ariaLabel={ariaLabel}
-          ariaExpanded={open}
-          onClick={toggle}
-        />
-      </Tooltip>
+      <NotificationBellTrigger
+        count={unreadCount}
+        active={unreadCount > 0}
+        activeTone="info"
+        ariaLabel={ariaLabel}
+        ariaExpanded={open}
+        onClick={toggle}
+      />
     </div>
   ) : (
     <SidebarNavRow
+      ref={triggerRef}
       as="button"
       onClick={toggle}
       collapsed={collapsed}
@@ -406,6 +407,69 @@ export function NotificationCenterBell({
 
   const trigger = triggerButton;
 
+  const drawerPanel = (
+    <Drawer
+      open={open}
+      onClose={close}
+      title={drawerTitle}
+      layerClassName={layerAboveNav ? "z-[110]" : undefined}
+      restoreFocusRef={layerAboveNav ? triggerRef : undefined}
+      titleAddon={
+        staffInbox ? (
+          <NotificationsDesktopStatusBadge
+            permissionState={desktopPermissionState}
+            onPermissionChange={refreshDesktopPermission}
+          />
+        ) : undefined
+      }
+      ariaLabel="Centro notifiche"
+      asideClassName={gestionaleLogPanelAsideClass}
+      contentFill
+    >
+      <div className={gestionaleLogDrawerPanelFillClass}>
+        <div className={`${gestionaleLogScrollClass} ${gestionaleLogDrawerScrollInsetClass} min-h-0 min-w-0 flex-1`}>
+          {isLoading ? (
+            <GestionaleLogEmpty message="Caricamento notifiche…" />
+          ) : notifications.length === 0 ? (
+            <GestionaleLogEmpty message="Nessuna notifica al momento." />
+          ) : (
+            <GestionaleLogList>
+              {notifications.map((row) => (
+                <li key={row.id} className="list-none">
+                  <InboxNotificationMessageRow
+                    row={row}
+                    onClose={close}
+                    onDismiss={() => void dismissNotification(row)}
+                  />
+                </li>
+              ))}
+            </GestionaleLogList>
+          )}
+          {hasMore ? (
+            <div className="py-2 text-center">
+              <button
+                type="button"
+                className={dsBtnGhost}
+                disabled={isLoadingMore}
+                onClick={loadMore}
+              >
+                {isLoadingMore ? "Caricamento…" : "Carica altre"}
+              </button>
+            </div>
+          ) : null}
+        </div>
+        <NotificationsPanelFooter
+          showDesktopControls={staffInbox}
+          permissionState={desktopPermissionState}
+          onPermissionChange={refreshDesktopPermission}
+          notificationCount={notifications.length}
+          onDismissAll={handleDismissAll}
+          isDismissingAll={isDismissingAll}
+        />
+      </div>
+    </Drawer>
+  );
+
   return (
     <>
       {embedded || headerTrigger ? (
@@ -414,65 +478,9 @@ export function NotificationCenterBell({
         <div className="cab-sidebar-notifications relative shrink-0 px-1 pb-2">{trigger}</div>
       )}
 
-      <Drawer
-        open={open}
-        onClose={close}
-        title={drawerTitle}
-        layerClassName={layerAboveNav ? "z-[110]" : undefined}
-        titleAddon={
-          staffInbox ? (
-            <NotificationsDesktopStatusBadge
-              permissionState={desktopPermissionState}
-              onPermissionChange={refreshDesktopPermission}
-            />
-          ) : undefined
-        }
-        ariaLabel="Centro notifiche"
-        asideClassName={gestionaleLogPanelAsideClass}
-        contentFill
-      >
-        <div className={gestionaleLogDrawerPanelFillClass}>
-          <div className={`${gestionaleLogScrollClass} ${gestionaleLogDrawerScrollInsetClass} min-h-0 min-w-0 flex-1`}>
-            {isLoading ? (
-              <GestionaleLogEmpty message="Caricamento notifiche…" />
-            ) : notifications.length === 0 ? (
-              <GestionaleLogEmpty message="Nessuna notifica al momento." />
-            ) : (
-              <GestionaleLogList>
-                {notifications.map((row) => (
-                  <li key={row.id} className="list-none">
-                    <InboxNotificationMessageRow
-                      row={row}
-                      onClose={close}
-                      onDismiss={() => void dismissNotification(row)}
-                    />
-                  </li>
-                ))}
-              </GestionaleLogList>
-            )}
-            {hasMore ? (
-              <div className="py-2 text-center">
-                <button
-                  type="button"
-                  className={dsBtnGhost}
-                  disabled={isLoadingMore}
-                  onClick={loadMore}
-                >
-                  {isLoadingMore ? "Caricamento…" : "Carica altre"}
-                </button>
-              </div>
-            ) : null}
-          </div>
-          <NotificationsPanelFooter
-            showDesktopControls={staffInbox}
-            permissionState={desktopPermissionState}
-            onPermissionChange={refreshDesktopPermission}
-            notificationCount={notifications.length}
-            onDismissAll={handleDismissAll}
-            isDismissingAll={isDismissingAll}
-          />
-        </div>
-      </Drawer>
+      {layerAboveNav && typeof document !== "undefined"
+        ? createPortal(drawerPanel, document.body)
+        : drawerPanel}
     </>
   );
 }

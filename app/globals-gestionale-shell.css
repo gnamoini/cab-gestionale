@@ -76,12 +76,6 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
   margin-top: -1px;
 }
 
-.cab-shell-card [id$="-body"] .gestionale-list-table-scope {
-  border-top-width: 0;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-}
-
 /** Toolbar liste — blur isolato su ::before per non clipare shadow/ring dei figli. */
 .cab-page-toolbar-surface {
   position: relative;
@@ -139,10 +133,9 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
   flex-shrink: 0;
 }
 
-/** Dashboard welcome — logo, copy e data su una riga compatta. */
+/** Dashboard welcome — lead a sinistra, data ancorata a destra su desktop. */
 .cab-dashboard-welcome-layout {
   align-items: center;
-  column-gap: 0.625rem;
 }
 
 .cab-dashboard-welcome-logo {
@@ -159,8 +152,17 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
   }
 
   .cab-dashboard-welcome-date {
-    min-width: 4rem;
-    padding-left: 0.75rem;
+    min-width: 4.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .cab-dashboard-welcome-logo {
+    max-width: 6.5rem;
+  }
+
+  .cab-dashboard-welcome-date {
+    min-width: 6.5rem;
   }
 }
 

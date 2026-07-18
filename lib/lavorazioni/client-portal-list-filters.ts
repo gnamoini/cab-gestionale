@@ -65,11 +65,15 @@ export function sanitizePersistedPortalFilters(
     merged.addetto = FILTER_ALL;
     merged.marca = FILTER_ALL;
     merged.modello = FILTER_ALL;
+    merged.marcaTelaio = FILTER_ALL;
+    merged.modelloTelaio = FILTER_ALL;
     merged.stato = FILTER_ALL;
   } else {
     merged.addetto = normalizeListFilterField(merged.addetto);
     merged.marca = normalizeListFilterField(merged.marca);
     merged.modello = normalizeListFilterField(merged.modello);
+    merged.marcaTelaio = normalizeListFilterField(merged.marcaTelaio);
+    merged.modelloTelaio = normalizeListFilterField(merged.modelloTelaio);
     merged.stato = normalizeListFilterField(merged.stato);
     if (merged.stato !== FILTER_ALL) {
       merged.stato = migrateStatoConfigId(merged.stato);

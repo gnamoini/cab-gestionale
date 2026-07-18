@@ -22,9 +22,10 @@ const MASTER_SIZE = 1024;
 
 /** Tile arrotondata — full-bleed per bookmark/PWA; maskable mantiene safe zone. */
 const TILE_SIZE_RATIO = 1;
-const TILE_RADIUS_RATIO = 0.18;
-/** Logo wide (C.A.B.): riempie quasi tutta la larghezza del quadrato. */
-const MASTER_LOGO_MAX_WIDTH_RATIO = 0.94;
+/** ~22%: allineato a squircle launcher Android/iOS (0.18 era troppo stretto). */
+const TILE_RADIUS_RATIO = 0.22;
+/** Logo wide (C.A.B.) dentro la tile — margine per mask launcher. */
+const MASTER_LOGO_MAX_WIDTH_RATIO = 0.78;
 const FAVICON_LOGO_MAX_WIDTH_RATIO = 1;
 
 type Rgb = { r: number; g: number; b: number };
@@ -175,7 +176,9 @@ async function main(): Promise<void> {
   const master = await buildIconMaster({
     logoMaxWidthRatio: MASTER_LOGO_MAX_WIDTH_RATIO,
     fullBleedTile: true,
-    transparentCanvas: false,
+    // ponytail: canvas trasparente fuori dalla tile — altrimenti tile e sfondo
+    // hanno lo stesso colore e il launcher maschera un quadrato pieno (bordi tagliati).
+    transparentCanvas: true,
   });
   const faviconMaster = await buildIconMaster({
     logoMaxWidthRatio: FAVICON_LOGO_MAX_WIDTH_RATIO,

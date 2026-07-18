@@ -1,6 +1,6 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
+import { OptionalTooltip } from "@/components/ui";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -374,7 +374,7 @@ export function OrdiniFornitoriView({
           <PageToolbar
             primaryAction={
               <div className="flex flex-wrap gap-2">
-                <Tooltip content={canWrite ? "Nuovo ordine fornitore" : READONLY_PERMISSION_HINT}>
+                <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}>
                   <button
                     type="button"
                     onClick={() => {
@@ -386,7 +386,7 @@ export function OrdiniFornitoriView({
                   >
                     <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo ordine" />
                   </button>
-                </Tooltip>
+                </OptionalTooltip>
                 <GestionaleAiActionButton
                   type="button"
                   variant="primary"
@@ -568,7 +568,7 @@ export function OrdiniFornitoriView({
                         </IconActionButton>
                         <IconActionButton
                           label="Duplica"
-                          tooltipContent={canWrite ? "Duplica" : READONLY_PERMISSION_HINT}
+                          tooltipContent={!canWrite ? READONLY_PERMISSION_HINT : undefined}
                           className={dsTableActionBtnSecondary}
                           disabled={!canWrite}
                           onClick={() => openDuplicate(o)}
@@ -588,7 +588,7 @@ export function OrdiniFornitoriView({
                         </IconActionButton>
                         <IconActionButton
                           label="Elimina"
-                          tooltipContent={canWrite ? "Elimina" : READONLY_PERMISSION_HINT}
+                          tooltipContent={!canWrite ? READONLY_PERMISSION_HINT : undefined}
                           className={dsTableActionBtnDanger}
                           disabled={!canWrite}
                           onClick={() => openDeleteConfirm(o)}
@@ -598,9 +598,9 @@ export function OrdiniFornitoriView({
                           </svg>
                         </IconActionButton>
                         {o.status !== "annullato" && o.status !== "bozza" ? (
-                          <Tooltip content={canWrite ? "Annulla ordine" : READONLY_PERMISSION_HINT}><button type="button" className={dsBtnNeutral} disabled={!canWrite} onClick={() => void handleAnnulla(o)}>
+                          <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}><button type="button" className={dsBtnNeutral} disabled={!canWrite} onClick={() => void handleAnnulla(o)}>
                             Annulla
-                          </button></Tooltip>
+                          </button></OptionalTooltip>
                         ) : null}
                       </div>
                     </td>
@@ -642,12 +642,12 @@ export function OrdiniFornitoriView({
                     <button type="button" className={dsTableActionTextBtnPrimary} onClick={() => void openView(o)}>
                       Visualizza
                     </button>
-                    <Tooltip content={canWrite ? "Duplica ordine" : READONLY_PERMISSION_HINT}><button type="button" className={dsBtnNeutral} disabled={!canWrite} onClick={() => openDuplicate(o)}>
+                    <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}><button type="button" className={dsBtnNeutral} disabled={!canWrite} onClick={() => openDuplicate(o)}>
                       Duplica
-                    </button></Tooltip>
-                    <Tooltip content={canWrite ? "Elimina ordine" : READONLY_PERMISSION_HINT}><button type="button" className={dsTableActionTextBtnDanger} disabled={!canWrite} onClick={() => openDeleteConfirm(o)}>
+                    </button></OptionalTooltip>
+                    <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}><button type="button" className={dsTableActionTextBtnDanger} disabled={!canWrite} onClick={() => openDeleteConfirm(o)}>
                       Elimina
-                    </button></Tooltip>
+                    </button></OptionalTooltip>
                   </CardMobileActions>
                 </CardMobile>
               ))

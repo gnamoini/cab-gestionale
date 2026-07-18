@@ -16,10 +16,24 @@ export type TargetContext = {
   config: HealthScoreConfig;
 };
 
+export function getSizeTargetMultiplier(workshopSize: WorkshopSize, targetKey: string): number {
+  return SIZE_TARGET_MULTIPLIERS[workshopSize][targetKey] ?? 1;
+}
+
+export function effectiveTargetToBase(
+  effective: number,
+  targetKey: string,
+  workshopSize: WorkshopSize,
+): number {
+  const mult = getSizeTargetMultiplier(workshopSize, targetKey);
+  if (mult === 0) return effective;
+  return Math.round((effective / mult) * 100) / 100;
+}
+
 export function resolveTarget(targetKey: string, ctx: TargetContext): number {
   const settingsOverride = ctx.config.targets[targetKey];
   const globalDefault = HEALTH_SCORE_V2_DEFAULTS.targets[targetKey];
   const base = settingsOverride ?? globalDefault ?? 0;
-  const mult = SIZE_TARGET_MULTIPLIERS[ctx.workshopSize][targetKey] ?? 1;
+  const mult = getSizeTargetMultiplier(ctx.workshopSize, targetKey);
   return Math.round(base * mult * 100) / 100;
 }

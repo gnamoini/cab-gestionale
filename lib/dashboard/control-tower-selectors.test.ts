@@ -202,8 +202,9 @@ const activity = buildControlTowerActivityFeedSlice({
   logLavorazioni: logs,
   anchor: ANCHOR,
 });
-assert.equal(activity.byDomain.lavorazioni.length, 2, "activity groups logs by entity");
-assert.equal(activity.byDomain.lavorazioni[0]?.eventCount, 2, "merged entity keeps event count");
+assert.equal(activity.byDomain.lavorazioni.length, 3, "distant updates on same entity are separate bursts");
+assert.equal(activity.byDomain.lavorazioni[0]?.eventCount, 1, "latest burst on entity x is single event");
+assert.equal(activity.byDomain.lavorazioni[0]?.at, "2026-06-03T11:00:00.000Z");
 
 const ricambiLogs = [
   {
@@ -263,7 +264,7 @@ const mergedLavActivity = buildControlTowerActivityFeedSlice({
   logLavorazioni: [...logs, ...schedaLogs],
   anchor: ANCHOR,
 });
-assert.equal(mergedLavActivity.byDomain.lavorazioni.length, 3, "distinct lavorazioni stay separate when not same lav id");
+assert.equal(mergedLavActivity.byDomain.lavorazioni.length, 4, "x has 2 bursts + scheda burst + y");
 
 const lavSchedaMergedLogs: LogModificaRow[] = [
   {
@@ -303,8 +304,8 @@ const lavSchedaMergedActivity = buildControlTowerActivityFeedSlice({
   logLavorazioni: lavSchedaMergedLogs,
   anchor: ANCHOR,
 });
-assert.equal(lavSchedaMergedActivity.byDomain.lavorazioni.length, 1, "lavorazioni + scheda merge by lavorazione_id");
-assert.equal(lavSchedaMergedActivity.byDomain.lavorazioni[0]?.eventCount, 3, "merged lav+scheda event count");
+assert.equal(lavSchedaMergedActivity.byDomain.lavorazioni.length, 3, "lav+scheda logs split by time burst per lavorazione");
+assert.equal(lavSchedaMergedActivity.byDomain.lavorazioni[0]?.eventCount, 1, "each distant burst is one activity row");
 
 const oldLog: LogModificaRow = {
   id: "old-1",

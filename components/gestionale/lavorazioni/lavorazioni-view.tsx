@@ -6,7 +6,6 @@ import "./lavorazioni-select-theme.css";
 import dynamic from "next/dynamic";
 import { useLavorazioniPdfWarmup } from "@/lib/observability/asset-cache-warmup";
 import { useGestionaleListLayout, GESTIONALE_LIST_DESKTOP_ONLY_CLASS } from "@/lib/ui/use-gestionale-list-layout";
-import { useKanbanViewportLayout } from "@/lib/ui/use-kanban-viewport-layout";
 import { LIST_QUERY_LOADING_FAILSAFE_MS, useLoadingFailsafe } from "@/lib/ui/loading-failsafe";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
@@ -38,11 +37,10 @@ const SchedeLavorazioneModal = dynamic(
   { ssr: false },
 );
 import type { SchedeLavorazioneDialogSize } from "@/components/lavorazioni/schede/schede-lavorazione-modal";
-import { LoadingKanbanSkeleton } from "@/components/design-system";
 const LavorazioniKanbanView = dynamic(
   () =>
-    import("@/components/gestionale/lavorazioni/lavorazioni-kanban-view").then((m) => m.LavorazioniKanbanView),
-  { ssr: false, loading: () => <LoadingKanbanSkeleton /> },
+    import("@/components/gestionale/lavorazioni/lavorazioni-kanban-lazy").then((m) => m.LavorazioniKanbanViewLazy),
+  { ssr: false },
 );
 const LavorazioneCompletamentoEditModal = dynamic(
   () =>
@@ -124,6 +122,8 @@ import {
 import { clampSchedeBundle } from "@/lib/validation/clamp-free-text";
 import { applyOptimisticSchedeStore, rollbackSchedeStore, snapshotSchedeStore } from "@/lib/schede/schede-store-optimistic";
 import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
+import { flushGestionaleDirty } from "@/lib/sync/gestionale-dirty-flush";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { markRecentLocalTableBurst } from "@/lib/sync/recent-local-mutation";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import {
@@ -551,7 +551,6 @@ function navMezzoFilterBadgeLabel(m: MezzoGestito): string {
 export function LavorazioniView() {
   useLavorazioniPdfWarmup();
   const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "xl" });
-  const kanbanViewportLayout = useKanbanViewportLayout();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -709,10 +708,7 @@ export function LavorazioniView() {
   }, []);
   type LavorazioniListViewMode = "table" | "kanban";
   const [listViewMode, setListViewMode] = useState<LavorazioniListViewMode>("table");
-  useUIAutonomyFixEngine(
-    listViewMode === "kanban" ? "/lavorazioni:kanban" : "/lavorazioni",
-    [listViewMode],
-  );
+  useUIAutonomyFixEngine("/lavorazioni");
   const [schedeRow, setSchedeRow] = useState<{
     row: LavorazioneListRow;
     origine: "attiva" | "storico";
@@ -726,6 +722,18 @@ export function LavorazioniView() {
       multiSchedaLabels?: string;
     };
   } | null>(null);
+
+  const lavorazioniVisibleEntities = useMemo(
+    () => (schedeRow ? [{ table: "lavorazioni", entityId: schedeRow.row.id }] : []),
+    [schedeRow],
+  );
+
+  useGestionaleSyncScope({
+    scopeId: "lavorazioni-view",
+    domain: "lavorazioni",
+    tables: ["lavorazioni", "scheda_lavorazione", "lavorazione_documents", "log_modifiche"],
+    visibleEntities: lavorazioniVisibleEntities,
+  });
 
   type ConcurrencyConflict = Extract<PersistSchedeErrorResult, { kind: "concurrency" }>;
 
@@ -1068,6 +1076,7 @@ export function LavorazioniView() {
   const refreshLavorazioniLists = useCallback(async () => {
     setListRefreshBusy(true);
     try {
+      await flushGestionaleDirty(qc, { reason: "user_requested", domains: ["lavorazioni"] });
       await runLavorazioniToolbarRefresh([
         attiveQuery.refetch(),
         chiuseQuery.refetch(),
@@ -1080,7 +1089,7 @@ export function LavorazioniView() {
     } finally {
       setListRefreshBusy(false);
     }
-  }, [attiveQuery, chiuseQuery, lavModificheLogQuery, refetchSchedeStore, gestToast]);
+  }, [qc, attiveQuery, chiuseQuery, lavModificheLogQuery, refetchSchedeStore, gestToast]);
 
   const pageFilters = useMemo(
     (): LavPageFilters => ({
@@ -2104,11 +2113,7 @@ export function LavorazioniView() {
         />
 
         {initialListLoading ? (
-          listViewMode === "kanban" ? (
-            <LoadingKanbanSkeleton />
-          ) : (
-            <LoadingLavorazioniListSkeleton withToolbar={false} />
-          )
+          <LoadingLavorazioniListSkeleton withToolbar={false} />
         ) : (
         <ShellCard
           title={`Lavorazioni in corso (${attiveRowsFiltered.length})`}
@@ -2119,7 +2124,6 @@ export function LavorazioniView() {
         >
           {listViewMode === "kanban" ? (
             <LavorazioniKanbanView
-              layout={kanbanViewportLayout}
               rows={attiveRowsFiltered}
               columns={statiInCorsoOpts}
               statiOpts={statiOpts}

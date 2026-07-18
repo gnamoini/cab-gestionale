@@ -72,8 +72,8 @@ const operational = adaptHealthScoreToOperational(result);
 const labels = operational.factors.map((f) => f.label);
 
 assert.ok(
-  labels.some((l) => l.includes("4 su 15 lavori aperti da oltre 14 giorni")),
-  "late-ingress risk con conteggio esplicito",
+  labels.some((l) => l.includes("Ritardo oltre 14 giorni dall'ingresso")),
+  "late-ingress risk con titolo breve",
 );
 assert.ok(
   labels.some((l) => l.includes("Anzianità media lavori aperti")),
@@ -86,10 +86,26 @@ assert.ok(
 
 assert.ok(operational.calculation, "riepilogo calcolo presente");
 assert.ok(operational.calculation!.baseScore >= 0 && operational.calculation!.baseScore <= 100);
-assert.ok(operational.factors.some((f) => f.detail && f.detail.includes("indicatore")), "dettaglio KPI");
 assert.ok(
-  operational.factors.some((f) => f.impact < 0 && f.detail?.includes("Penalità")),
-  "dettaglio penalità risk",
+  operational.calculation!.sections.every((s) => s.prevScore != null || s.deltaPoints == null),
+  "sezione senza prev non ha delta",
+);
+assert.ok(
+  operational.calculation!.sections.some((s) => s.prevScore != null),
+  "almeno una sezione con confronto periodo precedente",
+);
+assert.ok(
+  operational.calculation!.baseScorePrev != null,
+  "media aree con confronto periodo precedente",
+);
+assert.ok(
+  operational.calculation!.scoreRawPrev != null,
+  "totale grezzo precedente disponibile",
+);
+assert.ok(operational.factors.some((f) => f.detail && f.detail.includes("valutazione")), "meta KPI con valutazione");
+assert.ok(
+  operational.factors.some((f) => f.impact < 0 && f.detail?.includes("penalità")),
+  "meta penalità risk",
 );
 
 console.log("adapt-to-operational-health-score.test.ts OK");

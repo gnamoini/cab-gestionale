@@ -11,6 +11,7 @@ import {
 } from "@/src/hooks/view/use-control-tower-metrics";
 import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
 import { useDashboardSyncInvalidation } from "@/src/hooks/view/use-dashboard-sync-invalidation";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import type { DashboardWidgetDefinition } from "@/lib/dashboard/dashboard-widget-registry";
 import type { composeControlTowerSlices } from "@/lib/dashboard/control-tower-selectors";
 
@@ -61,6 +62,22 @@ function ControlTowerMetricsWithoutDash({
 
 export function ControlTowerMetricsProvider({ children }: { children: ReactNode }) {
   const shell = useControlTowerShell();
+  useGestionaleSyncScope({
+    scopeId: "dashboard-control-tower",
+    domain: "dashboard",
+    tables: [
+      "log_modifiche",
+      "lavorazioni",
+      "scheda_lavorazione",
+      "magazzino_ricambi",
+      "movimenti_ricambi",
+      "preventivi",
+      "invoices",
+      "invoice_payments",
+      "ddt_documents",
+      "dashboard_promemoria",
+    ],
+  });
   useDashboardSyncInvalidation({
     magDomain: shell.visibleWidgets.length > 0,
     activityLogs: shell.activityVisible,

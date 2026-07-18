@@ -73,6 +73,7 @@ export type KpiExplainNode = {
   trendScore: number;
   levelScore: number;
   kpiScore: number;
+  kpiScorePrev: number | null;
   staticWeight: number;
   dynamicWeight: number;
   confidence: ConfidenceLevel;
@@ -93,6 +94,7 @@ export type SectionExplainNode = {
   label: string;
   weight: number;
   sectionScore: number;
+  sectionScorePrev: number | null;
   contributionPoints: number;
   kpis: KpiExplainNode[];
   redacted?: boolean;

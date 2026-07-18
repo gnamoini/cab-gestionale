@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
-import { Tooltip } from "@/components/design-system/tooltip";
+import { OptionalTooltip } from "@/components/ui";
 import { ShellNavIconBack } from "@/components/design-system/shell-nav-icons";
 import { dsShellNavIconBtn } from "@/lib/ui/design-system";
 import { TOOLTIP_GAP_SHELL_NAV } from "@/lib/ui/tooltip-portal";
-
+import { resolveTooltipContent } from "@/lib/ui/tooltip-value-score";
 type ShellNavBackBase = {
   label?: string;
   className?: string;
@@ -20,8 +20,9 @@ export function ShellNavBackButton({
   type = "button",
   ...props
 }: ShellNavBackBase & ButtonHTMLAttributes<HTMLButtonElement>) {
+  const tip = resolveTooltipContent("", label, { iconOnly: true, ariaLabel: label });
   return (
-    <Tooltip content={label} showOnFocus={showOnFocus} sideOffset={TOOLTIP_GAP_SHELL_NAV}>
+    <OptionalTooltip content={tip} showOnFocus={showOnFocus} sideOffset={TOOLTIP_GAP_SHELL_NAV}>
       <button
         type={type}
         aria-label={label}
@@ -30,7 +31,7 @@ export function ShellNavBackButton({
       >
         <ShellNavIconBack />
       </button>
-    </Tooltip>
+    </OptionalTooltip>
   );
 }
 
@@ -41,8 +42,9 @@ export function ShellNavBackLink({
   showOnFocus = false,
   ...props
 }: ShellNavBackBase & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & { href: string }) {
+  const tip = resolveTooltipContent("", label, { iconOnly: true, ariaLabel: label });
   return (
-    <Tooltip content={label} showOnFocus={showOnFocus} sideOffset={TOOLTIP_GAP_SHELL_NAV}>
+    <OptionalTooltip content={tip} showOnFocus={showOnFocus} sideOffset={TOOLTIP_GAP_SHELL_NAV}>
       <Link
         href={href}
         aria-label={label}
@@ -51,6 +53,6 @@ export function ShellNavBackLink({
       >
         <ShellNavIconBack />
       </Link>
-    </Tooltip>
+    </OptionalTooltip>
   );
 }

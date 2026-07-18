@@ -6,9 +6,12 @@ import type {
 import { OPERATIONAL_HEALTH_PERIOD_LABEL } from "@/lib/dashboard/control-tower-constants";
 import {
   humanizeKpiFactorLabel,
+  humanizeKpiFactorMeta,
   humanizeRedactedSummary,
   humanizeRiskFactorLabel,
+  humanizeRiskFactorMeta,
 } from "@/lib/health-score/explain/humanize-factor-label";
+import { resolveSectionPrevScore } from "@/lib/health-score/explain/section-prev-score";
 import type {
   HealthScoreResult,
   KpiExplainNode,
@@ -24,9 +27,6 @@ const WORKSHOP_SIZE_LABELS: Record<WorkshopSize, string> = {
   enterprise: "Officina grande",
 };
 
-function round1(n: number): number {
-  return Math.round(n * 10) / 10;
-}
 
 function kpiImpactPoints(contributionPoints: number): number | null {
   if (Math.abs(contributionPoints) < 0.25) return null;
@@ -41,29 +41,25 @@ function workshopSizeLabel(size: WorkshopSize): string {
 }
 
 function buildKpiFactorDetail(kpi: KpiExplainNode): string {
-  const parts: string[] = [];
-  if (kpi.previous != null) {
-    parts.push(`valore ${round1(kpi.current)} (prima ${round1(kpi.previous)})`);
-  } else {
-    parts.push(`valore ${round1(kpi.current)}`);
-  }
-  if (kpi.trendPct != null && Number.isFinite(kpi.trendPct)) {
-    const sign = kpi.trendPct > 0 ? "+" : "";
-    parts.push(`variazione ${sign}${round1(kpi.trendPct)}%`);
-  }
-  parts.push(`indicatore ${round1(kpi.kpiScore)}/100`);
-  const weightPct = Math.round(kpi.effectiveWeight * 100);
-  if (weightPct > 0) parts.push(`peso effettivo ${weightPct}%`);
-  if (kpi.confidence !== "high") {
-    parts.push(`affidabilità ${kpi.confidence === "medium" ? "media" : "bassa"}`);
-  }
-  return parts.join(" · ");
+  return humanizeKpiFactorMeta(kpi);
 }
 
 function buildRiskFactorDetail(risk: RiskModifierExplainNode): string {
-  const penalty = Math.round(risk.penalty);
-  if (penalty <= 0) return risk.motivation;
-  return `Penalità −${penalty} pt sul totale · ${risk.motivation}`;
+  return humanizeRiskFactorMeta(risk);
+}
+
+function metricPeriodCompare(
+  current: number,
+  prev: number | null,
+): { prevScore: number | null; deltaPoints: number | null; deltaPct: number | null } {
+  if (prev == null || !Number.isFinite(prev)) {
+    return { prevScore: null, deltaPoints: null, deltaPct: null };
+  }
+  const prevRounded = Math.round(prev);
+  const deltaPoints = current - prevRounded;
+  const deltaPct =
+    prevRounded !== 0 ? (deltaPoints / Math.abs(prevRounded)) * 100 : null;
+  return { prevScore: prevRounded, deltaPoints, deltaPct };
 }
 
 function buildCalculationSummary(result: HealthScoreResult): OperationalHealthCalculation {
@@ -75,9 +71,20 @@ function buildCalculationSummary(result: HealthScoreResult): OperationalHealthCa
     if (section.redacted) continue;
     weightedSum += section.sectionScore * section.weight;
     weightTotal += section.weight;
+    const score = Math.round(section.sectionScore);
+    const prevResolved = resolveSectionPrevScore(section);
+    const prevRounded = prevResolved != null ? Math.round(prevResolved) : null;
+    const deltaPoints = prevRounded != null ? score - prevRounded : null;
+    const deltaPct =
+      prevRounded != null && prevRounded !== 0
+        ? ((score - prevRounded) / Math.abs(prevRounded)) * 100
+        : null;
     sections.push({
       label: section.label,
-      score: Math.round(section.sectionScore),
+      score,
+      prevScore: prevRounded,
+      deltaPoints,
+      deltaPct,
       contributionPoints: Math.round(section.contributionPoints),
     });
   }
@@ -87,13 +94,40 @@ function buildCalculationSummary(result: HealthScoreResult): OperationalHealthCa
     result.breakdown.riskModifiers.reduce((sum, risk) => sum + risk.penalty, 0),
   );
 
+  let prevWeightedSum = 0;
+  let prevWeightTotal = 0;
+  for (const section of result.breakdown.sections) {
+    if (section.redacted) continue;
+    const prev = resolveSectionPrevScore(section);
+    if (prev == null) continue;
+    prevWeightedSum += prev * section.weight;
+    prevWeightTotal += section.weight;
+  }
+  const baseScorePrevRaw = prevWeightTotal > 0 ? prevWeightedSum / prevWeightTotal : null;
+  const baseCompare = metricPeriodCompare(baseScore, baseScorePrevRaw);
+  const scoreRawPrev =
+    baseScorePrevRaw != null
+      ? Math.max(0, Math.min(100, Math.round(baseScorePrevRaw - riskPenalty)))
+      : null;
+  const scoreRawCompare = metricPeriodCompare(result.scoreRaw, scoreRawPrev);
+  const smoothedCompare = metricPeriodCompare(result.score, scoreRawPrev);
+
   return {
     periodLabel: result.periodLabel || OPERATIONAL_HEALTH_PERIOD_LABEL,
     workshopSizeLabel: workshopSizeLabel(result.workshopSize),
+    workshopSize: result.workshopSize,
     baseScore,
+    baseScorePrev: baseCompare.prevScore,
+    baseScoreDeltaPoints: baseCompare.deltaPoints,
+    baseScoreDeltaPct: baseCompare.deltaPct,
     riskPenalty,
     scoreRaw: result.scoreRaw,
+    scoreRawPrev: scoreRawCompare.prevScore,
+    scoreRawDeltaPoints: scoreRawCompare.deltaPoints,
+    scoreRawDeltaPct: scoreRawCompare.deltaPct,
     smoothedScore: result.score,
+    smoothedScoreDeltaPoints: smoothedCompare.deltaPoints,
+    smoothedScoreDeltaPct: smoothedCompare.deltaPct,
     confidencePct: Math.round(result.confidenceOverall * 100),
     dataQualityPct: Math.round(result.dataQualityOverall * 100),
     sections,

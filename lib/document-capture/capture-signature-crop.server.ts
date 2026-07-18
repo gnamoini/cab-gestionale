@@ -1,13 +1,13 @@
 import "server-only";
 
+import { extractCaptureSignatureFieldsGeminiFallback } from "@/lib/document-capture/capture-signature-gemini-fallback.server";
+import { cropSignatureRegionWithInkRetry } from "@/lib/document-capture/capture-signature-region-crop.server";
 import { ingressoBlankSignatureRegionsNormalized } from "@/lib/document-capture/capture-signature-template";
-import type {
-  CaptureSignatureBbox,
-  CaptureSignatureFieldDraft,
-} from "@/lib/document-capture/capture-signature-crop";
-import { cropNormalizedBboxToPngDataUrl } from "@/lib/document-capture/capture-bbox-crop.server";
+import type { CaptureSignatureFieldDraft } from "@/lib/document-capture/capture-signature-crop";
 
-/** Ritaglio template blank CAB — nessuna chiamata AI. */
+const SIGNATURE_FIELD_KEYS = ["firma_richiedente", "firma_addetto"] as const;
+
+/** Ritaglio template blank CAB con ink check; fallback Gemini bbox se template fallisce. */
 export async function extractCaptureSignatureFields(input: {
   bytes: Uint8Array;
   mime: string;
@@ -15,7 +15,11 @@ export async function extractCaptureSignatureFields(input: {
   const regions = ingressoBlankSignatureRegionsNormalized();
   const out: CaptureSignatureFieldDraft[] = [];
 
-  const richiedente = await cropNormalizedBboxToPngDataUrl(input.bytes, regions.richiedente, input.mime);
+  const richiedente = await cropSignatureRegionWithInkRetry({
+    bytes: input.bytes,
+    mime: input.mime,
+    bbox: regions.richiedente,
+  });
   if (richiedente) {
     out.push({
       field_key: "firma_richiedente",
@@ -25,7 +29,11 @@ export async function extractCaptureSignatureFields(input: {
     });
   }
 
-  const addetto = await cropNormalizedBboxToPngDataUrl(input.bytes, regions.addetto, input.mime);
+  const addetto = await cropSignatureRegionWithInkRetry({
+    bytes: input.bytes,
+    mime: input.mime,
+    bbox: regions.addetto,
+  });
   if (addetto) {
     out.push({
       field_key: "firma_addetto",
@@ -33,6 +41,16 @@ export async function extractCaptureSignatureFields(input: {
       normalized_value: addetto,
       confidence: 0.55,
     });
+  }
+
+  const missing = SIGNATURE_FIELD_KEYS.filter((key) => !out.some((row) => row.field_key === key));
+  if (missing.length > 0) {
+    const geminiRows = await extractCaptureSignatureFieldsGeminiFallback({
+      bytes: input.bytes,
+      mime: input.mime,
+      missingKeys: missing,
+    });
+    out.push(...geminiRows);
   }
 
   return out;

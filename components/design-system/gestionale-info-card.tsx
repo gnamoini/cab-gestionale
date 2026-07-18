@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useId, useState, type ReactNode } from "react";
-import { GestionaleCollapsibleHeader } from "@/components/design-system/gestionale-collapsible-header";
+import { GestionaleCollapsiblePanel } from "@/components/design-system/gestionale-collapsible-panel";
 import { useCollapsibleAccordionOptional } from "@/lib/ui/collapsible-accordion";
 import {
   dsGestionaleInfoCard,
   dsGestionaleInfoCardCollapsibleBodyPad,
   dsGestionaleInfoCardCollapsibleBodyPadCompact,
+  dsGestionaleInfoCardCollapsibleBodyBgClass,
   dsGestionaleInfoCardCollapsibleShell,
   dsGestionaleInfoCardCompact,
   dsGestionaleInfoCardMetricRow,
@@ -19,10 +20,6 @@ import {
   dsGestionaleInfoCardSubgroupTitle,
   dsGestionaleInfoCardTitle,
 } from "@/lib/ui/design-system";
-import {
-  gestionaleCollapsiblePanelGridClass,
-  gestionaleCollapsiblePanelInnerClass,
-} from "@/lib/ui/gestionale-collapsible-toggle";
 
 /** Card info stile magazzino (scheda ricambio): titolo + righe label/valore con separatori. */
 export function GestionaleInfoCard({
@@ -86,7 +83,7 @@ export function GestionaleInfoCard({
 
     return (
       <section className={`${collapseShell}${className ? ` ${className}` : ""}`}>
-        <GestionaleCollapsibleHeader
+        <GestionaleCollapsiblePanel
           panelId={panelId}
           titleId={titleId}
           expanded={expanded}
@@ -95,23 +92,16 @@ export function GestionaleInfoCard({
           compact={compact}
           form
           formFlat
+          bodyClassName={dsGestionaleInfoCardCollapsibleBodyBgClass}
+          bodyPadClassName={bodyPad}
           titleNode={
             <h3 id={titleId} className={`${dsGestionaleInfoCardTitle} mb-0 min-w-0 text-left leading-snug`}>
               {title}
             </h3>
           }
-        />
-        <div
-          id={`${panelId}-body`}
-          role="region"
-          aria-labelledby={titleId}
-          aria-hidden={!expanded}
-          className={`${gestionaleCollapsiblePanelGridClass} ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
         >
-          <div className={gestionaleCollapsiblePanelInnerClass}>
-            <div className={`min-w-0 ${bodyPad}`}>{children}</div>
-          </div>
-        </div>
+          {children}
+        </GestionaleCollapsiblePanel>
       </section>
     );
   }

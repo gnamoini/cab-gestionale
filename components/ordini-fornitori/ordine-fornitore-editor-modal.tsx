@@ -1,6 +1,6 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
+import { OptionalTooltip } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import { IconActionButton, GestionaleCollapsibleSection } from "@/components/design-system";
@@ -154,9 +154,9 @@ function OrdineRigaUnitaMisuraCell({
       aria-label={`Unità di misura riga ${rowIndex + 1}`}
     >
       {RICAMBIO_UNITA_MISURA_VALUES.map((unita) => (
-        <Tooltip content={formatRicambioUnitaMisuraLabel(unita)}><button key={unita} type="button" disabled={disabled} className={`${value === unita ? preventivoEditorUmSegmentOn : preventivoEditorUmSegmentOff} ${dsFocus}`} aria-pressed={value === unita} aria-label={formatRicambioUnitaMisuraLabel(unita)} onClick={() => onChange(unita)}>
+        <button key={unita} type="button" disabled={disabled} className={`${value === unita ? preventivoEditorUmSegmentOn : preventivoEditorUmSegmentOff} ${dsFocus}`} aria-pressed={value === unita} aria-label={formatRicambioUnitaMisuraLabel(unita)} onClick={() => onChange(unita)}>
           {umCellLabel[unita]}
-        </button></Tooltip>
+        </button>
       ))}
     </div>
   );
@@ -557,17 +557,21 @@ export function OrdineFornitoreEditorModal({
           {viewMode ? (
             <>
               {!isNew && onDelete ? (
-                <Tooltip content={canWrite ? "Elimina ordine" : READONLY_PERMISSION_HINT}><button type="button" className={`${dsBtnDanger} min-h-11 w-full sm:w-auto`} disabled={!canWrite} onClick={onDelete}>
-                  Elimina
-                </button></Tooltip>
+                <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}>
+                  <button type="button" className={`${dsBtnDanger} min-h-11 w-full sm:w-auto`} disabled={!canWrite} onClick={onDelete}>
+                    Elimina
+                  </button>
+                </OptionalTooltip>
               ) : null}
               <button type="button" className={preventivoEditorFooterBtnNeutral} onClick={onClose}>
                 Chiudi
               </button>
               {initialRecord.status === "bozza" ? (
-                <Tooltip content={canWrite ? "Modifica ordine" : READONLY_PERMISSION_HINT}><button type="button" className={preventivoEditorFooterBtnPrimary} disabled={!canWrite} onClick={onSwitchToEdit}>
-                  Modifica
-                </button></Tooltip>
+                <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}>
+                  <button type="button" className={preventivoEditorFooterBtnPrimary} disabled={!canWrite} onClick={onSwitchToEdit}>
+                    Modifica
+                  </button>
+                </OptionalTooltip>
               ) : null}
             </>
           ) : (
@@ -575,9 +579,9 @@ export function OrdineFornitoreEditorModal({
               <button type="button" className={preventivoEditorFooterBtnNeutral} onClick={requestClose}>
                 Annulla
               </button>
-              <Tooltip content={canWrite ? undefined : READONLY_PERMISSION_HINT}><button type="button" className={preventivoEditorFooterBtnPrimary} disabled={!canWrite || !canSave || submitLock.isLocked()} onClick={() => void handleSave()}>
+              <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}><button type="button" className={preventivoEditorFooterBtnPrimary} disabled={!canWrite || !canSave || submitLock.isLocked()} onClick={() => void handleSave()}>
                 {submitLock.isLocked() ? "Salvataggio…" : "Salva"}
-              </button></Tooltip>
+              </button></OptionalTooltip>
             </>
           )}
         </div>

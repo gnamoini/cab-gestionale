@@ -1,6 +1,6 @@
 # UI Primitives — Tassonomia e Policy
 
-Riferimento tecnico per tooltip, liste, menu e overlay. Governance: [`ui-governance.md`](./ui-governance.md).
+Riferimento tecnico per tooltip, liste, menu e overlay. Governance: [`ui-governance.md`](./ui-governance.md). Policy UX tooltip: [`design-system/TOOLTIP_POLICY.md`](./design-system/TOOLTIP_POLICY.md).
 
 ## Classificazione
 

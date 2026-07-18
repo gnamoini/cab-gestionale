@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import { resolveLavorazioniStatiForServer } from "@/lib/app-settings/resolve-settings-for-server";
 import { verifyClientLavorazioniAccessServer } from "@/src/lib/auth/client-lavorazioni-access-server";
 import { loadServerCallerClienteRef } from "@/src/lib/auth/cliente-portal-scope.server";
 import {
@@ -37,7 +38,8 @@ export const fetchClientPortalPageDTOServer = cache(async (): Promise<ClientPort
 
   const sb = await createSupabaseServerUserClient();
   const clienteRefScope = await loadServerCallerClienteRef(sb);
-  const fetchOpts = { clienteRefScope, clientPortal: true as const };
+  const sanitizeStati = await resolveLavorazioniStatiForServer();
+  const fetchOpts = { clienteRefScope, clientPortal: true as const, sanitizeStati };
 
   const [inCorsoRes, archivioRes] = await Promise.all([
     fetchLavorazioniListRows(sb, CLIENT_PORTAL_INCORSO_FILTERS, fetchOpts),

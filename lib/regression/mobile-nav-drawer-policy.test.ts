@@ -33,6 +33,9 @@ assert.match(sidebarSrc, /useOverlayBackHandler/);
 assert.match(sidebarSrc, /cab-nav-drawer-backdrop[\s\S]*touch-none/);
 assert.match(sidebarSrc, /touch-pan-y/);
 assert.match(sidebarSrc, /id=\{NAV_DRAWER_PANEL_ID\}/);
+assert.match(sidebarSrc, /DISMISS_DRAG_END_COMMIT/);
+assert.match(sidebarSrc, /skipCssCloseAnim/);
+assert.match(sidebarSrc, /edgeSnapVisuallyClosed/);
 
 const openBtnSrc = readFileSync(join(root, "components/gestionale/mobile-nav-open-button.tsx"), "utf8");
 assert.match(openBtnSrc, /aria-expanded/);

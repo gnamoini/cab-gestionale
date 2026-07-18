@@ -275,6 +275,17 @@ export const invoicesService = {
       if (error) return err(error.message);
       const ncId = String(data ?? "");
       if (!ncId) return err("Creazione nota di credito non riuscita.");
+      await writeModificaLog(c, {
+        entita: ENTITA,
+        entita_id: ncId,
+        azione: "CREATE",
+        payload: auditSnapshot({
+          credit_note: true,
+          source_invoice_id: invoiceId,
+          amount: amount ?? null,
+          reason: reason ?? null,
+        }),
+      });
       return invoicesService.getDetail(ncId);
     } catch (e) {
       return serviceFailFromError(e);
@@ -296,7 +307,41 @@ export const invoicesService = {
         },
       });
       if (error) return err(error.message);
-      return success(String(data ?? ""));
+      const paymentId = String(data ?? "");
+      if (!paymentId) return err("Registrazione pagamento non riuscita.");
+      await writeModificaLog(c, {
+        entita: PAYMENT_ENTITA,
+        entita_id: paymentId,
+        azione: "CREATE",
+        payload: auditSnapshot({
+          customer_payment: true,
+          customer_id: input.customer_id,
+          importo: input.importo,
+          metodo: input.metodo,
+          allocations: input.allocations,
+        }),
+      });
+      for (const alloc of input.allocations) {
+        const { data: openItem } = await c
+          .from("customer_open_items")
+          .select("invoice_id")
+          .eq("id", alloc.open_item_id)
+          .maybeSingle();
+        const invoiceId = (openItem as { invoice_id?: string } | null)?.invoice_id;
+        if (!invoiceId) continue;
+        await writeModificaLog(c, {
+          entita: ENTITA,
+          entita_id: invoiceId,
+          azione: "UPDATE",
+          payload: auditSnapshot({
+            action: "customer_payment_multi",
+            payment_id: paymentId,
+            amount: alloc.amount,
+            open_item_id: alloc.open_item_id,
+          }),
+        });
+      }
+      return success(paymentId);
     } catch (e) {
       return serviceFailFromError(e);
     }

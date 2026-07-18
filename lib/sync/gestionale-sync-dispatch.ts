@@ -25,7 +25,31 @@ import {
 import { shouldSkipEntityRefetch } from "@/lib/sync/recent-entity-invalidation";
 import { reconcileGestionaleCabEvents, type ReconcileSource } from "@/lib/sync/gestionale-reconcile";
 import { LAVORAZIONI_SCHEDE_STORE_CHANGED } from "@/lib/schede/schede-store-events";
+import { getGestionaleDirtySyncMode } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
+import { markGestionaleDirty, clearGestionaleDirty } from "@/lib/sync/gestionale-dirty-state";
+import { resolveSyncEffects } from "@/lib/sync/gestionale-sync-policy";
+import { incrementSyncMetric } from "@/lib/sync/gestionale-sync-metrics";
+import { resolveDomainForTable } from "@/lib/sync/gestionale-sync-scope";
 import { incrementHealthCounter } from "@/lib/observability/runtime-health";
+
+function isDocumentVisible(): boolean {
+  return typeof document === "undefined" || document.visibilityState === "visible";
+}
+
+function clearDirtyForLocalMutation(
+  tables: string[],
+  entityIdByTable: ReadonlyMap<string, string>,
+): void {
+  for (const table of tables) {
+    const entityId = entityIdByTable.get(table);
+    if (entityId) {
+      clearGestionaleDirty({ table, entityId });
+      continue;
+    }
+    const domain = resolveDomainForTable(table);
+    if (domain) clearGestionaleDirty({ domain });
+  }
+}
 
 /** Origine del cambiamento — un solo entry point (`dispatchGestionaleAction`). */
 export type GestionaleActionSource = "local_mutation" | "realtime" | "broadcast" | "reconnect";
@@ -210,9 +234,43 @@ export function dispatchGestionaleAction(
   incrementHealthCounter("gestionale_dispatch_applied", 1);
 
   const entityIdByTable = buildEntityIdByTable(uniqueTables, cabEvents, options.entityIdByTable);
-  const tablesForCache = options.skipCacheInvalidation
+
+  if (options.source === "local_mutation") {
+    clearDirtyForLocalMutation(uniqueTables, entityIdByTable);
+  }
+
+  let tablesForCache = options.skipCacheInvalidation
     ? []
     : filterTablesForCacheInvalidation(uniqueTables, entityIdByTable, options.source);
+
+  if (!options.skipCacheInvalidation && tablesForCache.length > 0) {
+    const resolved = resolveSyncEffects({
+      source: options.source,
+      tables: tablesForCache,
+      entityIdByTable,
+      cabEvents,
+      flag: getGestionaleDirtySyncMode(),
+    });
+
+    if (resolved.dirtyEntries.length > 0 && isDocumentVisible()) {
+      for (const entry of resolved.dirtyEntries) {
+        markGestionaleDirty(entry);
+        incrementSyncMetric("gestionale_dirty_marked", 1, {
+          domain: entry.domain,
+          source: entry.source,
+        });
+      }
+    }
+
+    if (resolved.dirtyEntries.length > 0) {
+      incrementSyncMetric(
+        "gestionale_invalidation_skipped",
+        resolved.dirtyEntries.length,
+      );
+    }
+
+    tablesForCache = resolved.invalidateTables;
+  }
 
   if (tablesForCache.length > 0) {
     invalidateGestionaleTables(qc, tablesForCache, {

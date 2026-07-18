@@ -1,6 +1,5 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
 import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import { useMemo, useState } from "react";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
@@ -145,10 +144,10 @@ function AttivitaFilterSegmented({
         {FILTER_OPTIONS.map((opt) => {
           const active = filter === opt.id;
           return (
-            <Tooltip content={opt.label}><button key={opt.id} type="button" className={`flex min-h-10 min-w-0 flex-1 items-center justify-center px-2 text-center text-xs font-semibold sm:min-h-9 sm:px-3 sm:text-sm ${active ? dsSegmentedBtnOn : dsSegmentedBtnOff} ${dsFocus}`} aria-pressed={active} onClick={() => onChange(opt.id)}>
+            <button key={opt.id} type="button" className={`flex min-h-10 min-w-0 flex-1 items-center justify-center px-2 text-center text-xs font-semibold sm:min-h-9 sm:px-3 sm:text-sm ${active ? dsSegmentedBtnOn : dsSegmentedBtnOff} ${dsFocus}`} aria-pressed={active} onClick={() => onChange(opt.id)}>
               <span className="sm:hidden">{opt.shortLabel}</span>
               <span className="hidden sm:inline">{opt.label}</span>
-            </button></Tooltip>
+            </button>
           );
         })}
       </div>

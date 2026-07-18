@@ -4,7 +4,7 @@ import type { KeyboardEvent, ReactNode } from "react";
 import { memo } from "react";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { filterAuditMetadataModifiche, parseModificheLines, sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
+import { filterAuditMetadataModifiche, parseModificheLines, sanitizeIsoDatesInModificaLine, sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
 import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 import {
   GESTIONALE_LOG_TONE_BADGE,
@@ -89,7 +89,7 @@ function LogEntryBody({
             <p
               className={`text-xs leading-relaxed text-[color:var(--cab-text-muted)] line-clamp-3 ${voided ? "line-through" : ""}`}
             >
-              {modifiche.map((l) => l.replace(/^•\s*/, "")).join(" · ")}
+              {modifiche.map((l) => sanitizeIsoDatesInModificaLine(l.replace(/^•\s*/, ""))).join(" · ")}
             </p>
           ) : null}
 
@@ -127,7 +127,7 @@ function LogEntryBody({
                 key={`${i}-${line.slice(0, 24)}`}
                 className="text-sm leading-relaxed text-[color:var(--cab-text-muted)] before:mr-1.5 before:font-semibold before:text-[color:var(--cab-text)] before:content-['•']"
               >
-                {line}
+              {sanitizeIsoDatesInModificaLine(line)}
               </li>
             ))}
           </ul>

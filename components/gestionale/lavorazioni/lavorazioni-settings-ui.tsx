@@ -370,7 +370,6 @@ function StatiReorderControls({
     <div className="flex shrink-0 items-center gap-0.5" role="group" aria-label={`Ordine ${itemLabel}`}>
       <IconActionButton
         label={`Sposta su ${itemLabel}`}
-        tooltipContent="Sposta su"
         className={STATI_REORDER_BTN}
         disabled={!canMoveUp}
         onClick={onMoveUp}
@@ -379,7 +378,6 @@ function StatiReorderControls({
       </IconActionButton>
       <IconActionButton
         label={`Sposta giù ${itemLabel}`}
-        tooltipContent="Sposta giù"
         className={STATI_REORDER_BTN}
         disabled={!canMoveDown}
         onClick={onMoveDown}

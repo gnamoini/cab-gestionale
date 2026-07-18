@@ -633,10 +633,10 @@ export const GESTIONALE_SEARCH_PLACEHOLDER = "Cerca…";
 /** Shell toolbar pagina — unico token per liste (scorre col contenuto, no sticky). */
 export const dsPageToolbar = `cab-page-toolbar-surface relative min-w-0 max-w-full rounded-[var(--ds-radius-xl)] ${cabBorder} p-[length:var(--ds-space-md)] shadow-[var(--cab-shadow-sm)] sm:p-[length:var(--ds-space-lg)]`;
 
-/** Chip meta riga toolbar (conteggio, filtri attivi) — compatto, allineato a `dsPageToolbarBtn`. */
+/** Chip meta riga toolbar (conteggio, filtri attivi) — shell allineata a `dsPageToolbarMetaActionBtn`. */
 export const dsPageToolbarMetaChipBase =
-  "inline-flex min-h-[1.5rem] items-center gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] px-2 py-0.5 text-xs leading-none shadow-[var(--cab-shadow-sm)]";
-export const dsPageToolbarMetaChip = `${dsPageToolbarMetaChipBase} bg-[var(--cab-surface)] text-[color:var(--cab-text-muted)]`;
+  "inline-flex min-h-[1.75rem] shrink-0 items-center gap-1 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] px-2.5 py-1 text-xs font-semibold leading-none shadow-[var(--cab-shadow-sm)]";
+export const dsPageToolbarMetaChip = `${dsPageToolbarMetaChipBase} bg-[var(--cab-surface)] text-[color:var(--cab-text)]`;
 export const dsPageToolbarMetaChipAccent = `${dsPageToolbarMetaChipBase} border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] font-semibold text-[color:var(--cab-text)]`;
 
 export {
@@ -654,7 +654,7 @@ export const dsPageToolbarPrimaryBtn = `${dsBtnPrimary} inline-flex h-10 min-h-[
 export const dsPageToolbarPrimaryBtnCompact = `${dsBtnPrimary} inline-flex h-8 min-h-8 shrink-0 items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold shadow-[var(--cab-shadow-sm)] sm:px-4`;
 /** Larghezza desktop allineata al toggle Filtri (`ToolbarGroupFiltersToggle`). */
 export const dsPageToolbarFilterColWidth = "sm:min-w-[8.25rem]";
-export const dsPageToolbarMetaActionBtn = `inline-flex min-h-[1.75rem] shrink-0 items-center justify-center gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2.5 py-1 text-xs font-semibold text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow,color] duration-200 ease-out hover:border-[color:color-mix(in_srgb,var(--cab-primary)_58%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-surface))] hover:shadow-[var(--cab-shadow-md)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
+export const dsPageToolbarMetaActionBtn = `inline-flex min-h-[1.75rem] shrink-0 items-center justify-center gap-1 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-2.5 py-1 text-xs font-semibold text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow,color] duration-200 ease-out hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] hover:ring-1 hover:ring-[color:color-mix(in_srgb,var(--cab-border-strong)_70%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 /** Meta reset allineati alla colonna Filtri (Cancella ricerca, Reimposta filtri). */
 export const dsPageToolbarMetaActionBtnFilterCol = `${dsPageToolbarMetaActionBtn} ${dsPageToolbarFilterColWidth}`;
 /** @deprecated Usare `dsPageToolbarMetaActionBtn`. */
@@ -695,8 +695,13 @@ export const dsGestionaleInfoCardCompact =
 /** Shell collapsible: niente padding esterno — header button flush + corpo animato. */
 export const dsGestionaleInfoCardCollapsibleShell =
   "overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,var(--cab-card))] shadow-[var(--cab-shadow-sm)]";
-export const dsGestionaleInfoCardCollapsibleBodyPad = "px-3 pb-3 pt-2";
-export const dsGestionaleInfoCardCollapsibleBodyPadCompact = "px-2.5 pb-2 pt-2";
+/** Sfondo corpo animato — stesso mix della shell (evita flash barra chiara in collapse). */
+export const dsGestionaleInfoCardCollapsibleBodyBgClass =
+  "bg-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,var(--cab-card))]";
+export const dsGestionaleInfoCardCollapsibleBodyPad =
+  "-mt-px border-t border-[color:var(--cab-border)] px-3 pb-3 pt-2";
+export const dsGestionaleInfoCardCollapsibleBodyPadCompact =
+  "-mt-px border-t border-[color:var(--cab-border)] px-2.5 pb-2 pt-2";
 export const dsGestionaleInfoCardTitle =
   "text-xs font-bold uppercase tracking-wide text-[color:var(--cab-text)]";
 export const dsGestionaleInfoCardSubgroup =

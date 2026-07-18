@@ -4,6 +4,7 @@ import "./magazzino-scroll.css";
 
 import type { ReactElement, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -15,7 +16,7 @@ import {
   LoadingFormSkeleton,
   LoadingMagazzinoListSkeleton,
 } from "@/components/design-system";
-import { DisabledElementTooltip, OptionalTooltip, Tooltip } from "@/components/ui";
+import { OptionalTooltip, Tooltip } from "@/components/ui";
 import { MagazzinoBulkLabelToolbar } from "@/components/gestionale/magazzino/magazzino-bulk-label-toolbar";
 import { MagazzinoScortaAdjustActions } from "@/components/gestionale/magazzino/magazzino-scorta-adjust-actions";
 import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
@@ -71,8 +72,6 @@ import {
   type RicambioFormState,
 } from "@/lib/magazzino/form";
 import { readCompatDisplayForUi, readCompatLabelsForUi, readCompatModelsDisplayForUi } from "@/lib/magazzino/compat/compat-read-guard";
-import { buildLatestUndoableScortaEntryByRicambioId, latestUndoableScortaEntryForRicambio, parseScortaChange, entryMatchesMagazzinoUndoScope, type MagazzinoUndoScope } from "@/lib/magazzino/magazzino-scorta-undo";
-import { useUndoSessionId } from "@/lib/gestionale-log/use-undo-session-id";
 import { ricambioHasFornitoreAlternativo } from "@/lib/magazzino/ricambio-fornitori-alternativi";
 import {
   compareByColumn,
@@ -123,12 +122,10 @@ import { PageHeader } from "@/components/gestionale/page-header";
 import {
   PageActionMenu,
   pageActionLogItem,
-  pageActionUndoItem,
   type PageActionItem,
 } from "@/components/ui";
 import {
   PageActionIconDelete,
-  PageActionIconLabels,
 } from "@/components/ui/page-action-menu/page-action-menu-icons";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
@@ -161,7 +158,6 @@ import {
 } from "@/lib/magazzino/magazzino-log-events";
 import {
   applyScortaOptimisticDelta,
-  awaitScortaSyncDrain,
   enqueueScortaSync,
 } from "@/lib/magazzino/scorta-adjust-sync";
 import {
@@ -171,6 +167,7 @@ import {
 import { applyScortaDeltaViaMovimento } from "@/lib/magazzino/scorta-movement";
 import { revealRicambioInTableAfterSave } from "@/lib/magazzino/magazzino-table-focus";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
+import { MagazzinoCarichiCaptureLauncher } from "@/components/gestionale/magazzino/carichi/magazzino-carichi-capture-launcher";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import type { TooltipSide } from "@/lib/ui/tooltip-portal";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
@@ -362,22 +359,7 @@ const DIFF_KEYS: (keyof RicambioMagazzino)[] = [
   "scontoFornitoreNonOriginale",
 ];
 
-const CAMPO_KEY_BY_LABEL = new Map<string, keyof RicambioMagazzino>(
-  DIFF_KEYS.map((key) => [CAMPO_LABEL[key] ?? String(key), key]),
-);
-
 type CampoChange = { campo: string; prima: string; dopo: string };
-
-function parseUndoValue(key: keyof RicambioMagazzino, raw: string, current: RicambioMagazzino): RicambioMagazzino[keyof RicambioMagazzino] {
-  if (key === "compatibilitaMezzi") {
-    return raw === "—" ? [] : raw.split(",").map((x) => x.trim()).filter(Boolean);
-  }
-  if (typeof current[key] === "number") {
-    const cleaned = raw.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
-    return Number(cleaned) || 0;
-  }
-  return raw === "—" ? "" : raw;
-}
 
 function fmtForDiff(k: keyof RicambioMagazzino, r: RicambioMagazzino): string {
   if (k === "fornitoriAlternativi") return fmtFornitoriAlternativiDiff(r.fornitoriAlternativi);
@@ -478,23 +460,21 @@ function RicambioCodiceCell({ p }: { p: RicambioMagazzino }) {
 }
 
 export function MagazzinoView() {
+  useGestionaleSyncScope({
+    scopeId: "magazzino-view",
+    domain: "magazzino",
+    tables: ["magazzino_ricambi", "movimenti_ricambi", "log_modifiche", "ordini_fornitori"],
+  });
+
   const {
     containerRef: listLayoutRef,
     layout: listLayout,
     layoutClassName: listLayoutClassName,
   } = useGestionaleListLayout({ tier: "xl" });
   const { authorName, user } = useAuth();
-  const undoSessionId = useUndoSessionId();
-  const magUndoScope = useMemo((): MagazzinoUndoScope | null => {
-    if (!user?.id || !undoSessionId) return null;
-    return { userId: user.id, sessionId: undoSessionId };
-  }, [user?.id, undoSessionId]);
 
-  function magazzinoLogScopeFields(): Pick<MagazzinoLogEntry, "autoreUserId" | "undoSessionId"> {
-    return {
-      autoreUserId: user?.id,
-      undoSessionId: undoSessionId || undefined,
-    };
+  function magazzinoLogScopeFields(): Pick<MagazzinoLogEntry, "autoreUserId"> {
+    return { autoreUserId: user?.id };
   }
   const settingsPayload = useCabAppSettingsPayloadQuery({ tier: "static" });
   const appSettings = settingsPayload.data?.resolved;
@@ -639,17 +619,6 @@ export function MagazzinoView() {
   const [logEntries, setLogEntries] = useState<MagazzinoLogEntry[]>([]);
   const [logPersistReady, setLogPersistReady] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
-  const undoableMagazzinoLog = useMemo(
-    () =>
-      logEntries.find(
-        (entry) =>
-          entry.tipo === "update" &&
-          !entry.annullato &&
-          entryMatchesMagazzinoUndoScope(entry, magUndoScope) &&
-          entry.changes.some((ch) => CAMPO_KEY_BY_LABEL.has(ch.campo)),
-      ) ?? null,
-    [logEntries, magUndoScope],
-  );
 
   const listPageSize = useResponsiveListPageSize();
   listPageSizeRef.current = listPageSize;
@@ -709,10 +678,6 @@ export function MagazzinoView() {
   function removeMagazzinoLogEntry(id: string) {
     if (!isMagLogLocalId(id)) return;
     setLogEntries((prev) => prev.filter((e) => e.id !== id));
-  }
-
-  function markMagazzinoLogEntryAnnullato(id: string) {
-    setLogEntries((prev) => prev.map((e) => (e.id === id ? { ...e, annullato: true } : e)));
   }
 
   function flushPendingLog() {
@@ -1071,17 +1036,6 @@ export function MagazzinoView() {
     return m;
   }, [prodotti, consumoMap]);
 
-  const canUndoScortaById = useMemo(() => {
-    const undoableScortaByRicambioId = buildLatestUndoableScortaEntryByRicambioId(logEntries, magUndoScope);
-    const m = new Map<string, boolean>();
-    for (const p of prodotti) {
-      const e = undoableScortaByRicambioId.get(p.id);
-      const parsed = e ? parseScortaChange(e) : null;
-      m.set(p.id, Boolean(parsed && p.scorta === parsed.dopo));
-    }
-    return m;
-  }, [prodotti, logEntries, magUndoScope]);
-
   const filterCatalog = useMemo(
     () => buildMagazzinoFilterCatalog(prodotti, mezziListePrefs, categorie, masterFornitori),
     [prodotti, mezziListePrefs, categorie, masterFornitori],
@@ -1218,91 +1172,6 @@ export function MagazzinoView() {
       mezziListePrefs,
       contaStatistiche,
     );
-  }
-
-  async function undoLastScorta(id: string) {
-    if (!magCanCreateRicambio) return;
-    await awaitScortaSyncDrain(id);
-    flushPendingLog();
-    const entry = latestUndoableScortaEntryForRicambio(logEntries, id, magUndoScope);
-    if (!entry) {
-      toastValidation("Nessuna modifica di scorta annullabile per questo ricambio.");
-      return;
-    }
-    const parsed = parseScortaChange(entry);
-    if (!parsed) return;
-    const row = prodotti.find((p) => p.id === id);
-    if (!row || row.scorta !== parsed.dopo) {
-      toastValidation("La scorta non corrisponde più all’ultima registrazione: annullamento non disponibile.");
-      return;
-    }
-    const touched = touch({ ...row, scorta: parsed.prima });
-    const scortaDelta = parsed.prima - parsed.dopo;
-    if (scortaDelta !== 0) {
-      const moved = await applyScortaDeltaViaMovimento(
-        id,
-        scortaDelta,
-        entry.contaStatistiche !== false,
-      );
-      if (!moved.success) {
-        toastError(moved.error ?? "Annullamento scorta non riuscito.");
-        return;
-      }
-      const ui = touch({ ...row, scorta: moved.data! });
-      patchProdotti((prev) => prev.map((p) => (p.id === id ? ui : p)));
-    } else {
-      const updated = await magazzinoEntry.update(id, ricambioUiToMagazzinoUpdate(touched, mezziListePrefs));
-      if (!updated.success || !updated.data) {
-        toastError(updated.error ?? "Annullamento scorta non riuscito.");
-        return;
-      }
-      const ui = ricambioUiFromMagazzinoRow(updated.data, authorName, mezziListePrefs);
-      patchProdotti((prev) => prev.map((p) => (p.id === id ? touch(ui) : p)));
-    }
-    markMagazzinoLogEntryAnnullato(entry.id);
-    flashRow(id);
-    void invalidateAfterMagazzinoOrMovimenti(queryClient, [
-      cabSyncEventForEntity("movimenti_ricambi", id, "entity_created", "movimenti_ricambi"),
-      cabSyncEventForEntity("magazzino_ricambi", id, "entity_updated", "magazzino_ricambi"),
-    ]);
-  }
-
-  async function undoUltimoMagazzino() {
-    if (!magCanCreateRicambio) return;
-    flushPendingLog();
-    const entry = undoableMagazzinoLog;
-    if (!entry) return;
-    const row = prodotti.find((p) => p.id === entry.ricambioId);
-    if (!row) {
-      toastValidation("Ricambio non trovato: undo non disponibile.");
-      return;
-    }
-    const okUndo = await confirm({
-      title: "Annullare l'ultima modifica?",
-      message: "Verrà ripristinato l'ultimo cambiamento reversibile sul magazzino.",
-      confirmLabel: "Annulla modifica",
-      destructive: true,
-    });
-    if (!okUndo) return;
-    const next: RicambioMagazzino = { ...row };
-    for (const ch of entry.changes) {
-      const key = CAMPO_KEY_BY_LABEL.get(ch.campo);
-      if (!key) continue;
-      (next as unknown as Record<string, unknown>)[key] = parseUndoValue(key, ch.prima, row);
-    }
-    const touched = touch(next);
-    const updated = await magazzinoEntry.update(entry.ricambioId, ricambioUiToMagazzinoUpdate(touched, mezziListePrefs));
-    if (!updated.success || !updated.data) {
-      toastError(updated.error ?? "Undo non riuscito.");
-      return;
-    }
-    const ui = ricambioUiFromMagazzinoRow(updated.data, authorName, mezziListePrefs);
-    patchProdotti((prev) => prev.map((p) => (p.id === entry.ricambioId ? touch(ui) : p)));
-    markMagazzinoLogEntryAnnullato(entry.id);
-    flashRow(entry.ricambioId);
-    void invalidateAfterMagazzinoOrMovimenti(queryClient, [
-      cabSyncEventForEntity("magazzino_ricambi", entry.ricambioId, "entity_updated", "magazzino_ricambi"),
-    ]);
   }
 
   function openNewModal() {
@@ -1632,8 +1501,7 @@ export function MagazzinoView() {
               </IconActionButton>
               <MagazzinoScortaAdjustActions
                 canAdjust={magCanCreateRicambio}
-                canUndo={Boolean(canUndoScortaById.get(p.id))}
-                onUndo={() => void undoLastScorta(p.id)}
+                modalitaModifica={modalitaModifica}
                 onDecrease={() => adjustScorta(p.id, -1)}
                 onIncrease={() => adjustScorta(p.id, 1)}
               />
@@ -1647,7 +1515,7 @@ export function MagazzinoView() {
       consumoMap,
       compatModelsDisplayFor,
       magCanCreateRicambio,
-      canUndoScortaById,
+      modalitaModifica,
       selectedRicambioIds,
       labelMode,
     ],
@@ -1657,30 +1525,8 @@ export function MagazzinoView() {
     const items: PageActionItem[] = [
       ...importExportActions.items,
       ...(importExportActions.items.length > 0 ? [{ id: "__divider__", label: "" }] : []),
-      pageActionUndoItem({
-        canUndo: Boolean(undoableMagazzinoLog),
-        undoDisabled: !magCanCreateRicambio,
-        onUndo: () => void undoUltimoMagazzino(),
-      }),
       pageActionLogItem(() => setLogOpen(true), "Log attività"),
     ];
-    if (magPerm.canRead) {
-      items.push({
-        id: "etichette",
-        label: "Etichette",
-        description: labelMode
-          ? "Modalità selezione attiva per stampa etichette"
-          : "Seleziona ricambi per stampare etichette",
-        icon: <PageActionIconLabels />,
-        toggle: {
-          checked: labelMode,
-          onChange: (checked) => {
-            setLabelMode(checked);
-            if (!checked) setSelectedRicambioIds(new Set());
-          },
-        },
-      });
-    }
     if (magCanDeleteRicambio && generatedListinoCount > 0) {
       items.push({
         id: "delete-listino",
@@ -1694,12 +1540,8 @@ export function MagazzinoView() {
     return items;
   }, [
     importExportActions.items,
-    magCanCreateRicambio,
-    undoableMagazzinoLog,
     magCanDeleteRicambio,
     generatedListinoCount,
-    magPerm.canRead,
-    labelMode,
   ]);
 
   const magazzinoMenuHeaderActions = useMemo(
@@ -1762,10 +1604,7 @@ export function MagazzinoView() {
         <section aria-label="Azioni e filtri magazzino">
           <PageToolbar
             primaryAction={
-              <DisabledElementTooltip
-                content={magCanCreateRicambio ? "Aggiungi un ricambio" : "Sola lettura"}
-                disabled={!magCanCreateRicambio}
-              >
+              <div className="flex shrink-0 flex-nowrap items-center gap-2">
                 <button
                   type="button"
                   onClick={openNewModal}
@@ -1774,7 +1613,8 @@ export function MagazzinoView() {
                 >
                   <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo ricambio" />
                 </button>
-              </DisabledElementTooltip>
+                <MagazzinoCarichiCaptureLauncher size="md" className="h-11 shrink-0" />
+              </div>
             }
             search={
               <GestionaleListSearchField
@@ -1833,6 +1673,21 @@ export function MagazzinoView() {
                       modalitaModifica
                         ? "Attiva: le variazioni scorta contano nelle statistiche"
                         : "Disattiva: rettifica inventario senza impatto su statistiche e report"
+                    }
+                  />
+                ) : null}
+                {magPerm.canRead ? (
+                  <PageToolbarMetaToggle
+                    label="Etichette"
+                    checked={labelMode}
+                    onChange={(checked) => {
+                      setLabelMode(checked);
+                      if (!checked) setSelectedRicambioIds(new Set());
+                    }}
+                    title={
+                      labelMode
+                        ? "Modalità selezione attiva per stampa etichette"
+                        : "Seleziona ricambi per stampare etichette"
                     }
                   />
                 ) : null}
@@ -2101,8 +1956,7 @@ export function MagazzinoView() {
                   </IconActionButton>
                   <MagazzinoScortaAdjustActions
                     canAdjust={magCanCreateRicambio}
-                    canUndo={Boolean(canUndoScortaById.get(p.id))}
-                    onUndo={() => void undoLastScorta(p.id)}
+                    modalitaModifica={modalitaModifica}
                     onDecrease={() => adjustScorta(p.id, -1)}
                     onIncrease={() => adjustScorta(p.id, 1)}
                   />
@@ -2157,9 +2011,8 @@ export function MagazzinoView() {
           onImageEvent={(ev) => logImageEvent(ev, detailRicambio)}
           onDismissLogEntry={removeMagazzinoLogEntry}
           canAdjustScorta={magCanCreateRicambio}
-          canUndoScorta={Boolean(canUndoScortaById.get(detailRicambio.id))}
+          modalitaModifica={modalitaModifica}
           onAdjustScorta={(delta) => adjustScorta(detailRicambio.id, delta)}
-          onUndoScorta={() => void undoLastScorta(detailRicambio.id)}
         />
       ) : null}
 

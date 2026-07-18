@@ -45,9 +45,20 @@ const ready = validateCaptureForApply({
     field("scheda_tipo", "ingresso"),
     field("cliente", "Cliente Test"),
     field("targa", "AB123CD"),
+    field("data_ingresso", "18/06/2024"),
   ],
 });
 assert.equal(ready.status, "READY");
+
+const missingDate = validateCaptureForApply({
+  fields: [
+    field("scheda_tipo", "ingresso"),
+    field("cliente", "Cliente Test"),
+    field("targa", "AB123CD"),
+  ],
+});
+assert.equal(missingDate.status, "BLOCKED");
+assert.ok(missingDate.issues.some((i) => i.code === "MISSING_DATA_INGRESSO"));
 
 const ricambiReview = validateCaptureForApply({
   fields: [

@@ -1,6 +1,5 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
 import { useEffect, useRef, useState } from "react";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import { LoadingSpinner } from "@/components/design-system/loading/loading-spinner";
@@ -44,9 +43,9 @@ function PhotoThumb({
   const preset = px <= 48 ? "thumbPortal" : "thumb";
 
   return (
-    <Tooltip content={image.name}><button type="button" className={`${sizeClass} shrink-0 overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] ring-offset-2 transition hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)]`} aria-label={`Apri foto ${image.name}`} onClick={onOpen}>
+    <button type="button" className={`${sizeClass} shrink-0 overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] ring-offset-2 transition hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)]`} aria-label={`Apri foto ${image.name}`} onClick={onOpen}>
       <GestionaleMediaImage image={image} preset={preset} alt="" width={px} height={px}/>
-    </button></Tooltip>
+    </button>
   );
 }
 

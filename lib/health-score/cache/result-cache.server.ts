@@ -15,6 +15,13 @@ export function getHealthScoreResultCache(key: string): HealthScoreResult | null
     resultCache.delete(key);
     return null;
   }
+  const legacy = hit.value.breakdown.sections.some(
+    (section) => !section.redacted && section.sectionScorePrev === undefined,
+  );
+  if (legacy) {
+    resultCache.delete(key);
+    return null;
+  }
   return { ...hit.value, cacheHit: true };
 }
 

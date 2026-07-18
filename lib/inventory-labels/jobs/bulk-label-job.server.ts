@@ -4,7 +4,7 @@ import { waitUntil } from "@vercel/functions";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerServiceClient } from "@/src/lib/supabase/server-service-client";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
-import { getLabelTemplate } from "@/lib/inventory-labels/domain/templates";
+import { DEFAULT_LABEL_PRESET, getLabelTemplate } from "@/lib/inventory-labels/domain/templates";
 import { buildInventoryQrUrl } from "@/lib/inventory-labels/domain/tokens";
 import { ensureActiveTokensForEntities } from "@/lib/inventory-labels/domain/tokens-batch.server";
 import { labelPayloadFromMagazzinoRow, magazzinoRicambioEntityType } from "@/lib/inventory-labels/domain/ricambio-payload.server";
@@ -265,7 +265,7 @@ export async function retryBulkLabelJob(
     throw new Error("Retry consentito solo per job bloccati");
   }
   const entityIds = Array.isArray(job.entity_ids) ? (job.entity_ids as string[]) : [];
-  const preset = String(job.preset ?? "60x40-default");
+  const preset = String(job.preset ?? DEFAULT_LABEL_PRESET);
   const now = new Date().toISOString();
   await sb
     .from("label_generation_jobs")

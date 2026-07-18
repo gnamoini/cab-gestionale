@@ -2,7 +2,6 @@
 
 
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
-import { Tooltip } from "@/components/ui";
 import { HubIconAddPhoto, HubIconPhoto } from "@/components/design-system/hub-table-action-icons";
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -275,22 +274,18 @@ export function RecordImageManager({
 
   const renderImageThumb = (img: StoredImage) => (
     <div key={img.baseName} className={IMAGE_THUMB_CLASS}>
-      <Tooltip content="Apri">
-        <button type="button" className="block h-full w-full" onClick={() => setPreview(img)} aria-label="Apri foto">
-          <GestionaleMediaImage image={img} preset="thumb" alt={img.name} width={64} height={64} />
-        </button>
-      </Tooltip>
+      <button type="button" className="block h-full w-full" onClick={() => setPreview(img)} aria-label="Apri foto">
+        <GestionaleMediaImage image={img} preset="thumb" alt={img.name} width={64} height={64} />
+      </button>
       {canEdit ? (
-        <Tooltip content="Elimina">
-          <button
-            type="button"
-            className="absolute right-1 top-1 hidden rounded bg-black/60 px-1 text-[11px] font-bold text-white group-hover:block"
-            onClick={() => void removeImage(img)}
-            aria-label="Elimina foto"
-          >
-            ×
-          </button>
-        </Tooltip>
+        <button
+          type="button"
+          className="absolute right-1 top-1 hidden rounded bg-black/60 px-1 text-[11px] font-bold text-white group-hover:block"
+          onClick={() => void removeImage(img)}
+          aria-label="Elimina foto"
+        >
+          ×
+        </button>
       ) : null}
     </div>
   );

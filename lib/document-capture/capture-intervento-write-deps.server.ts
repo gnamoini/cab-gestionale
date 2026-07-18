@@ -23,7 +23,7 @@ import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { InterventoWriteDeps } from "@/lib/domain/intervento-context/intervento-write-types";
 import { pickLavorazioneCreatePayload } from "@/lib/validation/services/lavorazioni-payload";
 import { sanitizeMezzoWritePayload } from "@/lib/validation/services/mezzi-payload";
-import { auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
+import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import type { MezzoInsert, MezzoUpdate } from "@/src/services/mezzi.service";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import type { AttrezzaturaRow, LavorazioneRow, MezzoRow } from "@/src/types/supabase-tables";
@@ -71,11 +71,22 @@ async function persistCaptureBundleServer(
   for (const part of payloads) {
     const row = byTipo.get(part.tipo);
     if (row && typeof (row as { id?: string }).id === "string") {
-      const { error } = await sb
+      const schedaId = (row as { id: string }).id;
+      const updatePayload = schedaUpdateFromContenuto(part.contenuto);
+      const { data: updated, error } = await sb
         .from("scheda_lavorazione")
-        .update(schedaUpdateFromContenuto(part.contenuto))
-        .eq("id", (row as { id: string }).id);
-      if (error) return { ok: false, kind: "error", error: error.message };
+        .update(updatePayload)
+        .eq("id", schedaId)
+        .select(SCHEDA_LAVORAZIONE_COLUMNS)
+        .single();
+      if (error || !updated) return { ok: false, kind: "error", error: error?.message ?? "Aggiornamento scheda fallito" };
+      await writeModificaLog(sb, {
+        entita: "scheda_lavorazione",
+        entita_id: schedaId,
+        azione: "UPDATE",
+        payload: auditDiff(row, updated),
+        autore_id: autoreId,
+      });
     } else {
       const { data: inserted, error } = await sb
         .from("scheda_lavorazione")

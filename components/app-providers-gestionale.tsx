@@ -6,6 +6,9 @@ import { UploadFeedbackTray } from "@/components/gestionale/upload";
 import { SupabaseConfigurationBanner } from "@/components/supabase-configuration-banner";
 import { AppSettingsQueryProvider } from "@/src/context/app-settings-query-context";
 import { DeferredGestionaleBridges } from "@/src/components/deferred-gestionale-bridges";
+import { DataStaleBanner } from "@/components/gestionale/data-stale-banner";
+import { GestionaleDirtySyncModeBridge } from "@/src/components/gestionale-dirty-sync-mode-bridge";
+import { GestionaleDirtyProvider } from "@/src/context/gestionale-dirty-context";
 import { RealtimeStatusProvider } from "@/src/context/realtime-status-context";
 import { SettingsModalOpenProvider } from "@/src/context/settings-modal-open-context";
 import { DevUxEnforcementGuard } from "@/src/components/dev-ux-enforcement-guard";
@@ -35,8 +38,12 @@ export function AppProvidersGestionale({ children }: { children: React.ReactNode
                 <DevUxEnforcementGuard />
                 <SupabaseConfigurationBanner />
                 <PermissionsSnapshotMount>
-                  <DeferredGestionaleBridges />
-                  {children}
+                  <GestionaleDirtyProvider>
+                    <GestionaleDirtySyncModeBridge />
+                    <DeferredGestionaleBridges />
+                    <DataStaleBanner />
+                    {children}
+                  </GestionaleDirtyProvider>
                 </PermissionsSnapshotMount>
               </SettingsModalOpenProvider>
             </BrandingProvider>

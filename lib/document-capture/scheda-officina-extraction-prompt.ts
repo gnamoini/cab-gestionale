@@ -6,7 +6,7 @@ Per ogni campo restituisci key, value e confidence 0-1. Se incerto, confidence b
 NON restituire un elenco fields vuoto se il documento contiene testo leggibile.
 
 Scheda ingresso blank v2 — imposta schedaTipo "ingresso" e usa queste chiavi quando riconosci il template CAB:
-data_ingresso (etichetta «Data ingresso» in alto — data scritta sul foglio in GG/MM/AAAA, non la data odierna),
+data_ingresso (etichetta «Data ingresso» in alto — data scritta sul foglio in GG/MM/AAAA, non la data odierna; se illeggibile o assente ometti il campo),
 cliente, cantiere, utilizzatore (solo nome persona),
 tipo_attrezzatura (etichetta «Attrezzatura» su schede stampate — es. SPAZZATRICE, escavatore; NON è utilizzatore),
 attrezzatura_marca, attrezzatura_modello, attrezzatura_matricola, n_scuderia, ore,

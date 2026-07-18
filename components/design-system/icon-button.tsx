@@ -1,8 +1,9 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { Tooltip } from "@/components/design-system/tooltip";
-import { dsBtnIcon, dsDisabled, dsFocus, dsPageToolbarBtn, dsPageToolbarIconBtn } from "@/lib/ui/design-system";
+import { OptionalTooltip } from "@/components/ui";
+import { dsBtnIcon, dsDisabled, dsFocus, dsPageToolbarIconBtn } from "@/lib/ui/design-system";
+import { resolveTooltipContent } from "@/lib/ui/tooltip-value-score";
 
 export type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
@@ -13,16 +14,16 @@ export type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 export function IconButton({ children, toolbar, className = "", label, title, ...rest }: IconButtonProps) {
   const base = toolbar ? dsPageToolbarIconBtn : dsBtnIcon;
-  return (
-    <Tooltip content={title ?? label}>
-      <button
-        type="button"
-        className={`${base} ${dsFocus} ${dsDisabled} ${className}`.trim()}
-        aria-label={label}
-        {...rest}
-      >
-        {children}
-      </button>
-    </Tooltip>
+  const content = resolveTooltipContent("", title ?? label, { iconOnly: true, ariaLabel: label });
+  const btn = (
+    <button
+      type="button"
+      className={`${base} ${dsFocus} ${dsDisabled} ${className}`.trim()}
+      aria-label={label}
+      {...rest}
+    >
+      {children}
+    </button>
   );
+  return <OptionalTooltip content={content}>{btn}</OptionalTooltip>;
 }

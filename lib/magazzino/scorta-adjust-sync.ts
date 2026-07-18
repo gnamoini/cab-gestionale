@@ -106,23 +106,6 @@ export type ScortaSyncCallbacks = {
   invalidate?: (cabEvents: CabSyncEvent[]) => void;
 };
 
-/** Attende che la coda sync per il ricambio sia vuota (es. prima di undo scorta). */
-export function awaitScortaSyncDrain(ricambioId: string): Promise<void> {
-  const q = queues.get(ricambioId);
-  if (!q?.syncing) return Promise.resolve();
-  return new Promise((resolve) => {
-    const poll = () => {
-      const cur = queues.get(ricambioId);
-      if (!cur?.syncing) {
-        resolve();
-        return;
-      }
-      setTimeout(poll, 40);
-    };
-    poll();
-  });
-}
-
 async function revertScortaFromServer(
   qc: QueryClient,
   ricambioId: string,

@@ -1,15 +1,16 @@
 "use client";
 
-import { memo, useEffect, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  HealthScoreBreakdownBody,
+  HealthScoreBreakdownPanel,
   HealthScoreSummary,
   HealthScoreSummarySkeleton,
 } from "@/components/dashboard/dashboard-health-score-ring";
 import type { DashboardWidgetDefinition } from "@/lib/dashboard/dashboard-widget-registry";
 import { wrapDashboardWidget } from "@/components/dashboard/dashboard-widget-shell";
 import { useOperationalHealthScore } from "@/src/hooks/view/use-operational-health-score";
-import { dsSkeletonPulse, dsTypoBody } from "@/lib/ui/design-system";
+import { useOperationalHealthScoreHistory } from "@/src/hooks/view/use-operational-health-score-history";
+import { dsTypoBody } from "@/lib/ui/design-system";
 
 function InsufficientHealthScoreBody() {
   return (
@@ -20,23 +21,31 @@ function InsufficientHealthScoreBody() {
 }
 
 function DashboardHealthScoreWidgetLoaded({ def }: { def: DashboardWidgetDefinition }) {
+  const defaultExpanded = !(def.defaultCollapsed ?? false);
+  const [historyEnabled, setHistoryEnabled] = useState(defaultExpanded);
+
+  const handleCollapsedChange = useCallback((collapsed: boolean) => {
+    if (!collapsed) setHistoryEnabled(true);
+  }, []);
+
   const { score, isLoading, insufficientData } = useOperationalHealthScore();
+  const { points: historyPoints, isLoading: historyLoading } = useOperationalHealthScoreHistory(historyEnabled);
 
   let body: ReactNode;
   let subtitle: string | undefined;
   let headerLeadingActions: ReactNode;
 
   if (isLoading) {
-    body = (
-      <div className="space-y-2" aria-hidden>
-        <div className={`h-3 w-40 ${dsSkeletonPulse}`} />
-        <div className={`h-3 w-full max-w-md ${dsSkeletonPulse}`} />
-        <div className={`h-3 w-5/6 max-w-sm ${dsSkeletonPulse}`} />
-      </div>
-    );
+    body = <HealthScoreBreakdownPanel historyLoading={historyEnabled && historyLoading} />;
     headerLeadingActions = <HealthScoreSummarySkeleton />;
   } else if (insufficientData || !score) {
-    body = <InsufficientHealthScoreBody />;
+    body = (
+      <HealthScoreBreakdownPanel
+        historyPoints={historyPoints}
+        historyLoading={historyLoading}
+        insufficientMessage={<InsufficientHealthScoreBody />}
+      />
+    );
     subtitle = "Dati insufficienti";
     headerLeadingActions = (
       <HealthScoreSummary
@@ -48,16 +57,31 @@ function DashboardHealthScoreWidgetLoaded({ def }: { def: DashboardWidgetDefinit
       />
     );
   } else {
-    body = <HealthScoreBreakdownBody score={score} />;
+    body = (
+      <HealthScoreBreakdownPanel
+        score={score}
+        historyPoints={historyPoints}
+        historyLoading={historyLoading}
+      />
+    );
     headerLeadingActions = (
       <HealthScoreSummary score={score.score} label={score.label} tone={score.tone} hideTitle />
     );
   }
 
-  return wrapDashboardWidget(def, body, { subtitle, headerLeadingActions, headerLeadingActionsInteractive: false });
+  return wrapDashboardWidget(def, body, {
+    subtitle,
+    headerLeadingActions,
+    headerLeadingActionsInteractive: false,
+    onCollapsedChange: handleCollapsedChange,
+  });
 }
 
-export function DashboardHealthScoreWidget({ def }: { def: DashboardWidgetDefinition }) {
+export const DashboardHealthScoreWidget = memo(function DashboardHealthScoreWidget({
+  def,
+}: {
+  def: DashboardWidgetDefinition;
+}) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [fetchEnabled, setFetchEnabled] = useState(false);
 
@@ -82,10 +106,7 @@ export function DashboardHealthScoreWidget({ def }: { def: DashboardWidgetDefini
       <div ref={rootRef}>
         {wrapDashboardWidget(
           def,
-          <div className="space-y-2" aria-hidden>
-            <div className={`h-3 w-40 ${dsSkeletonPulse}`} />
-            <div className={`h-3 w-full max-w-md ${dsSkeletonPulse}`} />
-          </div>,
+          <HealthScoreBreakdownPanel historyLoading={false} />,
           { headerLeadingActions: <HealthScoreSummarySkeleton />, headerLeadingActionsInteractive: false },
         )}
       </div>
@@ -97,4 +118,4 @@ export function DashboardHealthScoreWidget({ def }: { def: DashboardWidgetDefini
       <DashboardHealthScoreWidgetLoaded def={def} />
     </div>
   );
-}
+});

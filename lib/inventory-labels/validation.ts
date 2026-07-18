@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LABEL_PRESET_IDS } from "@/lib/inventory-labels/domain/templates";
+import { DEFAULT_LABEL_PRESET, LABEL_PRESET_IDS } from "@/lib/inventory-labels/domain/templates";
 import { LABEL_FORMATS } from "@/lib/inventory-labels/domain/types";
 
 const BULK_SYNC_MAX_DEFAULT = 10;
@@ -26,7 +26,7 @@ export const bulkLabelRequestSchema = z.object({
 
 export const renderLabelQuerySchema = z.object({
   format: labelFormatSchema.default("png"),
-  preset: labelPresetSchema.default("60x40-default"),
+  preset: labelPresetSchema.default(DEFAULT_LABEL_PRESET),
 });
 
 export function isBulkSyncCount(count: number): boolean {

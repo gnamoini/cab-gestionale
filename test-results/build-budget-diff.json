@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-07-17T00:34:26.245Z",
+  "generatedAt": "2026-07-18T19:35:32.974Z",
   "failures": [],
   "warnings": [],
   "snapshot": {
-    "firstLoadJsKb": 1793.6,
+    "firstLoadJsKb": 1877,
     "vendorChunkKb": 443.3
   }
 }

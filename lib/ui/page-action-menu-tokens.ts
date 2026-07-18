@@ -2,9 +2,9 @@ import { GLOBAL_DROPDOWN_PORTAL_Z } from "@/lib/ui/global-dropdown-portal";
 import { globalDropdownPortalEnterClass } from "@/lib/ui/global-input";
 import { dsPageHeaderIconBtn } from "@/lib/ui/design-system";
 
-export const PAGE_ACTION_MENU_PANEL_WIDTH = 380;
-export const PAGE_ACTION_MENU_PANEL_MIN_WIDTH = 360;
-export const PAGE_ACTION_MENU_PANEL_MAX_WIDTH = 420;
+export const PAGE_ACTION_MENU_PANEL_WIDTH = 320;
+export const PAGE_ACTION_MENU_PANEL_MIN_WIDTH = 300;
+export const PAGE_ACTION_MENU_PANEL_MAX_WIDTH = 360;
 /** Altezza massima portal — menu esteso senza scroll visibile su liste tipiche. */
 export const PAGE_ACTION_MENU_PANEL_MAX_HEIGHT = 680;
 
@@ -42,13 +42,13 @@ export const pageActionMenuSectionLabelClass =
   "px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--cab-text-muted)]";
 
 export const pageActionMenuHeaderClass =
-  "flex items-center justify-between gap-2 border-b border-[color:var(--cab-border)] px-2 py-2";
+  "flex items-center gap-2 border-b border-[color:var(--cab-border)] px-2 py-2";
 
 /** Ghost icona barra azioni rapide — allineato header mobile (no bordo). */
 export const pageActionMenuQuickActionIconBtn = dsPageHeaderIconBtn;
 
 export const pageActionMenuQuickActionsBarClass =
-  "flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-1.5";
+  "flex min-w-0 flex-nowrap items-center justify-start gap-1.5";
 
 export const pageActionMenuFooterClass =
   "border-t border-[color:var(--cab-border)] px-3 py-2";

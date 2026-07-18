@@ -66,16 +66,9 @@ assert.match(view, /GestionaleListSearchField/);
 assert.match(view, /id="magazzino-search"/);
 
 assert.doesNotMatch(view, /scheduleCompatBackgroundAudit/);
-
-const canUndoScortaBlock =
-  view.match(/const canUndoScortaById = useMemo\(\(\) => \{[\s\S]*?\}, \[[^\]]*\]\);/)?.[0] ?? "";
-assert.ok(canUndoScortaBlock.length > 0, "canUndoScortaById useMemo block not found");
-assert.doesNotMatch(
-  canUndoScortaBlock,
-  /latestUndoableScortaEntryForRicambio/,
-  "canUndoScortaById must use buildLatestUndoableScortaEntryByRicambioId index, not per-product log scan",
-);
-assert.match(canUndoScortaBlock, /buildLatestUndoableScortaEntryByRicambioId/);
+assert.doesNotMatch(view, /pageActionUndoItem/);
+assert.doesNotMatch(view, /canUndoScortaById/);
+assert.doesNotMatch(view, /magazzino-scorta-undo/);
 
 const entityListQueries = read("src/hooks/gestionale/use-entity-list-queries.ts");
 assert.match(entityListQueries, /scheduleCompatBackgroundAudit/, "SSOT compat audit must remain in entity list queries");

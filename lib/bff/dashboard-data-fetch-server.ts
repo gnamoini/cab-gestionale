@@ -60,8 +60,12 @@ async function resolveDashboardLogPrefetchFilters(): Promise<LogFilters[]> {
   if (await verifyServerModuleCan("preventivi", "read")) {
     filters.push({ entita: "preventivi", limit: GESTIONALE_LOG_FEED_LIMIT });
   }
+  if (await verifyServerModuleCan("ddt", "read")) {
+    filters.push({ entita: "ddt_documents", limit: GESTIONALE_LOG_FEED_LIMIT });
+  }
   if (await verifyServerModuleCan("fatturazione", "read")) {
     filters.push({ entita: "invoices", limit: GESTIONALE_LOG_FEED_LIMIT });
+    filters.push({ entita: "invoice_payments", limit: GESTIONALE_LOG_FEED_LIMIT });
   }
   return filters;
 }

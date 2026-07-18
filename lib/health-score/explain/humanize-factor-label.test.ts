@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   humanizeKpiFactorLabel,
+  humanizeKpiFactorMeta,
   humanizeRiskFactorLabel,
 } from "@/lib/health-score/explain/humanize-factor-label";
 import type { KpiExplainNode, RiskModifierExplainNode } from "@/lib/health-score/types";
@@ -45,7 +46,7 @@ assert.doesNotMatch(assenze, /pro-capite/, assenze);
 const sla = humanizeKpiFactorLabel(
   kpi({ id: "sla-late-pct", current: 12, label: "SLA ritardo %" }),
 );
-assert.match(sla, /14 giorni dall'ingresso/, sla);
+assert.match(sla, /Quota lavori oltre 14 giorni/, sla);
 assert.doesNotMatch(sla, /SLA|tempi di consegna/, sla);
 
 const backlogAge = humanizeKpiFactorLabel(
@@ -68,8 +69,8 @@ const risk: RiskModifierExplainNode = {
   trace: [],
 };
 const riskLabel = humanizeRiskFactorLabel(risk);
-assert.match(riskLabel, /5 su 15 lavori aperti da oltre 14 giorni/, riskLabel);
-assert.doesNotMatch(riskLabel, /lavorazioni in ritardo|fermi troppo/, riskLabel);
+assert.match(riskLabel, /Ritardo oltre 14 giorni dall'ingresso/, riskLabel);
+assert.doesNotMatch(riskLabel, /lavorazioni in ritardo|5 su 15/, riskLabel);
 
 const stagnation: RiskModifierExplainNode = {
   id: "stagnation",
@@ -79,7 +80,32 @@ const stagnation: RiskModifierExplainNode = {
   trace: [],
 };
 const stagnationLabel = humanizeRiskFactorLabel(stagnation);
-assert.match(stagnationLabel, /in attesa \(ricambi, preventivo, coda\)/, stagnationLabel);
+assert.match(stagnationLabel, /Lavori in attesa oltre la media/, stagnationLabel);
 assert.doesNotMatch(stagnationLabel, /lavorazioni ferme/, stagnationLabel);
+
+const hoursMeta = humanizeKpiFactorMeta(
+  kpi({
+    id: "hours-worked",
+    current: 708,
+    previous: 480,
+    trendPct: 47.5,
+    kpiScore: 82.1,
+    effectiveWeight: 0.15,
+  }),
+);
+assert.equal(
+  hoursMeta,
+  "708 h (prima 480 h) · +47.5% · valutazione 82.1/100 · peso 15% sul totale",
+  hoursMeta,
+);
+
+const stableMeta = humanizeKpiFactorMeta(
+  kpi({ id: "backlog", current: 12, previous: 12, trendPct: 0, kpiScore: 65, effectiveWeight: 0.26 }),
+);
+assert.equal(
+  stableMeta,
+  "12, uguale al periodo precedente · valutazione 65/100 · peso 26% sul totale",
+  stableMeta,
+);
 
 console.log("humanize-factor-label.test.ts OK");

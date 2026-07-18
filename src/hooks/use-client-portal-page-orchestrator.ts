@@ -26,6 +26,7 @@ import {
   deriveBarrierState,
   type BarrierState,
 } from "@/src/hooks/client-portal-derive-barrier";
+import { clientPortalFiltersActive } from "@/lib/lavorazioni/client-portal-list-filters";
 import { useClientPortalDataContract, type ClientPortalDataContract } from "@/src/hooks/use-client-portal-data-contract";
 import { useClientPortalFiltersPersistence } from "@/src/hooks/use-client-portal-filters-persistence";
 
@@ -38,6 +39,7 @@ export type ClientPortalPageOrchestrator = {
   accessDenied: boolean;
   contract: ClientPortalDataContract;
   persistence: ReturnType<typeof useClientPortalFiltersPersistence>;
+  archivioListEnabled: boolean;
   refresh: () => Promise<void>;
   refreshBusy: boolean;
 };
@@ -53,11 +55,14 @@ export function useClientPortalPageOrchestrator(options?: {
   const syncRafRef = useRef(0);
   const persistence = useClientPortalFiltersPersistence();
   const archivioListEnabled =
-    options?.archivioExpanded === true || persistence.filters.section === "archivio";
+    options?.archivioExpanded === true ||
+    persistence.filters.section === "archivio" ||
+    clientPortalFiltersActive(persistence.filters);
   const archivioSchedeEnabled =
     options?.archivioSchedeEnabled === true ||
     options?.archivioExpanded === true ||
-    persistence.filters.section === "archivio";
+    persistence.filters.section === "archivio" ||
+    clientPortalFiltersActive(persistence.filters);
   const contract = useClientPortalDataContract(access.allowed, { archivioListEnabled, archivioSchedeEnabled });
   const qc = useQueryClient();
   const gestToast = useGestionaleToast();
@@ -141,6 +146,7 @@ export function useClientPortalPageOrchestrator(options?: {
     accessDenied: !access.allowed,
     contract,
     persistence,
+    archivioListEnabled,
     refresh,
     refreshBusy,
   };
