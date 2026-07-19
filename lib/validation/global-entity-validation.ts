@@ -13,6 +13,15 @@ const LEGAL_SUFFIX_REPLACERS: ReadonlyArray<[RegExp, string]> = [
   [/\bs\.?\s*n\.?\s*c\.?\b/gi, " snc "],
 ];
 
+/** Confusabili tastiera / codici ricambio — fold condiviso ricerca fuzzy. */
+export function foldSearchConfusables(value: string): string {
+  return value.replace(/c/g, "k");
+}
+
+function searchCharsEquivalent(a: string, b: string): boolean {
+  return a === b || (a === "c" && b === "k") || (a === "k" && b === "c");
+}
+
 /** Normalizza stringhe entità: trim, lower, accenti, spazi, punteggiatura base. */
 export function normalizeEntityString(value: string, options?: NormalizeEntityStringOptions): string {
   let s = value.trim();
@@ -27,7 +36,7 @@ export function normalizeEntityString(value: string, options?: NormalizeEntitySt
   s = s.replace(/[.,;:'"!?()[\]{}\\/|@#$%^&*+=~`<>]/g, " ");
   s = s.replace(/\s+/g, " ").trim();
   s = s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return s;
+  return foldSearchConfusables(s);
 }
 
 /** Chiave alfanumerica permissiva (ignora punteggiatura, spazi, trattini). */
@@ -62,7 +71,7 @@ function scoreLooseEntityKey(query: string, candidate: string, options?: Normali
   if (o.includes(q)) return 55 - o.indexOf(q);
   let qi = 0;
   for (const ch of o) {
-    if (ch === q[qi]) qi += 1;
+    if (searchCharsEquivalent(ch, q[qi] ?? "")) qi += 1;
     if (qi >= q.length) return 30 - Math.abs(o.length - q.length) / 10;
   }
   return 0;
@@ -85,7 +94,7 @@ export function scoreEntityMatch(
   if (o.includes(q)) return 55 - o.indexOf(q);
   let qi = 0;
   for (const ch of o) {
-    if (ch === q[qi]) qi += 1;
+    if (searchCharsEquivalent(ch, q[qi] ?? "")) qi += 1;
     if (qi >= q.length) return 30 - Math.abs(o.length - q.length) / 10;
   }
   return 0;

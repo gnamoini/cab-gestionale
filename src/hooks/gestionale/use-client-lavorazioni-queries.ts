@@ -2,7 +2,7 @@
 
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 import { useQuery } from "@tanstack/react-query";
-import { CLIENT_PORTAL_ARCHIVIO_FILTERS } from "@/lib/lavorazioni/client-portal-prefetch-filters";
+import { CLIENT_PORTAL_ARCHIVIO_COUNT_FILTERS } from "@/lib/lavorazioni/client-portal-prefetch-filters";
 import { fetchLavorazioniListCountAuthorized } from "@/lib/lavorazioni/lavorazioni-list-fetch";
 import { lavorazioniListCountQueryKey } from "@/lib/lavorazioni/lavorazioni-list-query-keys";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
@@ -10,10 +10,7 @@ import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { clientLavorazioniEntry } from "@/lib/domain/client-lavorazioni-entry";
 
-const ARCHIVIO_COUNT_FILTERS = {
-  ...CLIENT_PORTAL_ARCHIVIO_FILTERS,
-  includeProfiles: false,
-} as const;
+const ARCHIVIO_COUNT_FILTERS = CLIENT_PORTAL_ARCHIVIO_COUNT_FILTERS;
 
 /** In corso — cache dedicata portale (`clientPortal`) con eventuale filtro `cliente_ref`. */
 export function useClientLavorazioniInCorsoQuery(enabled: boolean) {

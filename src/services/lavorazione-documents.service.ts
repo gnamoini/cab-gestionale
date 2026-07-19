@@ -9,7 +9,7 @@ import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { LavorazioneDocumentRow, LavorazioneDocumentTipo } from "@/src/types/supabase-tables";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
-import { logService } from "@/src/services/log.service";
+import { writeModificaLog } from "@/src/services/internal/audit-log";
 
 const ENTITA = "lavorazioni";
 
@@ -87,7 +87,7 @@ export const lavorazioneDocumentsService = {
       const { data, error } = await sb.from("lavorazione_documents").upsert(row).select(LAVORAZIONE_DOCUMENTS_COLUMNS).single();
       if (error) return err(error.message);
 
-      await logService.create({
+      await writeModificaLog(sb, {
         entita: ENTITA,
         entita_id: id,
         azione: "UPDATE",
@@ -129,7 +129,7 @@ export const lavorazioneDocumentsService = {
       if (error) return err(error.message);
 
       const { data: userData } = await sb.auth.getUser();
-      await logService.create({
+      await writeModificaLog(sb, {
         entita: ENTITA,
         entita_id: id,
         azione: "UPDATE",

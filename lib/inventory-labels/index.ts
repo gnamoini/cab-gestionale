@@ -2,6 +2,7 @@ export { GENERATOR_VERSION, INVENTORY_ENTITY_MAGAZZINO_RICAMBIO } from "@/lib/in
 export type {
   LabelFormat,
   LabelPayload,
+  LabelRenderOptions,
   LabelTemplateDefinition,
   OpenRicambioSource,
   TokenStatus,
@@ -29,8 +30,10 @@ export {
   BULK_ABSOLUTE_MAX,
   BULK_SYNC_MAX,
   bulkLabelRequestSchema,
+  formatLabelJobPreset,
   isBulkSyncCount,
   labelFormatSchema,
   labelPresetSchema,
+  parseLabelJobPreset,
   renderLabelQuerySchema,
 } from "@/lib/inventory-labels/validation";

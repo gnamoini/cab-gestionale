@@ -24,6 +24,8 @@ type QueueEntry = {
   primaAtBurstStart: number | null;
   label: string;
   syncing: boolean;
+  /** Click durante sync: riparte worker al termine del ciclo corrente. */
+  pendingResync: boolean;
   /** ponytail: primo enqueue del burst — toggle mid-burst non splitta il flag. */
   contaStatistiche: boolean;
 };
@@ -33,7 +35,7 @@ const queues = new Map<string, QueueEntry>();
 function getQueue(ricambioId: string, contaStatistiche: boolean): QueueEntry {
   let q = queues.get(ricambioId);
   if (!q) {
-    q = { primaAtBurstStart: null, label: "", syncing: false, contaStatistiche };
+    q = { primaAtBurstStart: null, label: "", syncing: false, pendingResync: false, contaStatistiche };
     queues.set(ricambioId, q);
   }
   return q;
@@ -88,7 +90,10 @@ export function applyScortaOptimisticDelta(
 
   const q = getQueue(ricambioId, contaStatistiche);
   if (found) {
-    if (q.primaAtBurstStart === null) q.primaAtBurstStart = prima;
+    if (q.primaAtBurstStart === null) {
+      q.primaAtBurstStart = prima;
+      q.contaStatistiche = contaStatistiche;
+    }
     q.label = label;
   }
 
@@ -192,9 +197,15 @@ async function runScortaSyncWorker(
       callbacks.invalidate?.([]);
     }
   } finally {
+    const shouldResync = q.pendingResync;
     q.syncing = false;
-    q.primaAtBurstStart = null;
-    queues.delete(ricambioId);
+    q.pendingResync = false;
+    if (!shouldResync) {
+      q.primaAtBurstStart = null;
+      queues.delete(ricambioId);
+    } else {
+      void runScortaSyncWorker(qc, ricambioId, autore, callbacks, q.contaStatistiche, mezziListe);
+    }
   }
 }
 
@@ -212,7 +223,10 @@ export function enqueueScortaSync(
   contaStatistiche = false,
 ): void {
   const q = getQueue(ricambioId, contaStatistiche);
-  if (q.syncing) return;
+  if (q.syncing) {
+    q.pendingResync = true;
+    return;
+  }
   void runScortaSyncWorker(qc, ricambioId, autore, callbacks, q.contaStatistiche, mezziListe);
 }
 

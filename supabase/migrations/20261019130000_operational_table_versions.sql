@@ -15,7 +15,7 @@ AS $$
       'magazzino_ricambi',
         (SELECT EXTRACT(EPOCH FROM MAX(updated_at))::bigint FROM magazzino_ricambi),
       'movimenti_ricambi',
-        (SELECT EXTRACT(EPOCH FROM MAX(updated_at))::bigint FROM movimenti_ricambi),
+        (SELECT EXTRACT(EPOCH FROM MAX(created_at))::bigint FROM movimenti_ricambi),
       'mezzi',
         (SELECT EXTRACT(EPOCH FROM MAX(updated_at))::bigint FROM mezzi),
       'documenti',
@@ -27,7 +27,7 @@ AS $$
       'invoices',
         (SELECT EXTRACT(EPOCH FROM MAX(updated_at))::bigint FROM invoices),
       'invoice_payments',
-        (SELECT EXTRACT(EPOCH FROM MAX(updated_at))::bigint FROM invoice_payments),
+        (SELECT EXTRACT(EPOCH FROM MAX(created_at))::bigint FROM invoice_payments),
       'ddt_documents',
         (SELECT EXTRACT(EPOCH FROM MAX(updated_at))::bigint FROM ddt_documents)
     )

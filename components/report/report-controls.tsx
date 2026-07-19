@@ -211,9 +211,8 @@ export function ReportControls({
       </section>
 
       <section
-        className={`${reportPeriodPanelClass} ${periodPanelLayoutClass} ${compareActive ? "" : "opacity-[0.72]"}`}
+        className={`${reportPeriodPanelClass} ${periodPanelLayoutClass}`}
         aria-labelledby="report-panel-confronto-title"
-        aria-disabled={!compareActive}
       >
         <div className={periodPanelHeaderClass}>
           <div className="flex min-w-0 flex-wrap items-center gap-2">

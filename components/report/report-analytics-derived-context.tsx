@@ -59,6 +59,12 @@ function makeEntry<T>(data: T, rangeKey: string, version: number): DerivedEntry<
   return { data, rangeKey, generatedAt: Date.now(), version };
 }
 
+function derivedEntryDataEqual<T>(prev: DerivedEntry<T> | undefined, next: DerivedEntry<T>): boolean {
+  if (!prev) return false;
+  if (prev.rangeKey !== next.rangeKey || prev.version !== next.version) return false;
+  return JSON.stringify(prev.data) === JSON.stringify(next.data);
+}
+
 export function ReportAnalyticsDerivedProvider({
   rangeKey,
   children,
@@ -80,6 +86,14 @@ export function ReportAnalyticsDerivedProvider({
     labor: 0,
     economic: 0,
   });
+  const operationalRef = useRef(operational);
+  const warehouseRef = useRef(warehouse);
+  const laborRef = useRef(labor);
+  const economicRef = useRef(economic);
+  operationalRef.current = operational;
+  warehouseRef.current = warehouse;
+  laborRef.current = labor;
+  economicRef.current = economic;
 
   const resetForRangeChange = useCallback((nextRangeKey: string) => {
     setCurrentRangeKey(nextRangeKey);
@@ -130,9 +144,9 @@ export function ReportAnalyticsDerivedProvider({
   const publishOperationalAnalytics = useCallback(
     (input: OperationalAnalyticsBuildInput) => {
       if (!acceptPublish("operational", input.rangeKey, input.requestId)) return;
-      const dto = computeOperationalDerived(input);
-      const version = versionsRef.current.operational;
-      setOperational(makeEntry(dto, input.rangeKey, version));
+      const next = makeEntry(computeOperationalDerived(input), input.rangeKey, versionsRef.current.operational);
+      if (derivedEntryDataEqual(operationalRef.current, next)) return;
+      setOperational(next);
       setRevision((r) => r + 1);
     },
     [acceptPublish],
@@ -141,9 +155,9 @@ export function ReportAnalyticsDerivedProvider({
   const publishWarehouseAnalytics = useCallback(
     (input: WarehouseAnalyticsBuildInput) => {
       if (!acceptPublish("warehouse", input.rangeKey, input.requestId)) return;
-      const dto = computeWarehouseDerived(input);
-      const version = versionsRef.current.warehouse;
-      setWarehouse(makeEntry(dto, input.rangeKey, version));
+      const next = makeEntry(computeWarehouseDerived(input), input.rangeKey, versionsRef.current.warehouse);
+      if (derivedEntryDataEqual(warehouseRef.current, next)) return;
+      setWarehouse(next);
       setRevision((r) => r + 1);
     },
     [acceptPublish],
@@ -152,9 +166,9 @@ export function ReportAnalyticsDerivedProvider({
   const publishLaborAnalytics = useCallback(
     (input: LaborAnalyticsBuildInput) => {
       if (!acceptPublish("labor", input.rangeKey, input.requestId)) return;
-      const dto = computeLaborDerived(input);
-      const version = versionsRef.current.labor;
-      setLabor(makeEntry(dto, input.rangeKey, version));
+      const next = makeEntry(computeLaborDerived(input), input.rangeKey, versionsRef.current.labor);
+      if (derivedEntryDataEqual(laborRef.current, next)) return;
+      setLabor(next);
       setRevision((r) => r + 1);
     },
     [acceptPublish],
@@ -163,9 +177,9 @@ export function ReportAnalyticsDerivedProvider({
   const publishEconomicAnalytics = useCallback(
     (input: EconomicAnalyticsBuildInput) => {
       if (!acceptPublish("economic", input.rangeKey, input.requestId)) return;
-      const dto = computeEconomicDerived(input);
-      const version = versionsRef.current.economic;
-      setEconomic(makeEntry(dto, input.rangeKey, version));
+      const next = makeEntry(computeEconomicDerived(input), input.rangeKey, versionsRef.current.economic);
+      if (derivedEntryDataEqual(economicRef.current, next)) return;
+      setEconomic(next);
       setRevision((r) => r + 1);
     },
     [acceptPublish],

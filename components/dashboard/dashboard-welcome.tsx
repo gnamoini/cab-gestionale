@@ -9,7 +9,7 @@ import { dsSkeletonPulse } from "@/lib/ui/design-system";
 const dashboardWelcomeCardClass =
   "relative flex min-w-0 max-w-full overflow-hidden rounded-2xl border-2 border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_5%,var(--cab-card))] px-3 py-2 shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,#fff_7%,transparent)] sm:px-4 sm:py-2.5 lg:px-6 lg:py-3.5 dark:border-[color:color-mix(in_srgb,var(--cab-primary)_26%,var(--cab-border))] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_7%,var(--cab-card))] dark:shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,var(--cab-primary)_14%,transparent)]";
 
-/** Logo+copy a sinistra, data ancorata a destra su desktop. */
+/** Logo+copy a sinistra; data a destra solo da sm (nascosta su mobile). */
 const welcomeLayoutClass =
   "cab-dashboard-welcome-layout flex w-full min-w-0 max-w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 lg:gap-6";
 
@@ -17,7 +17,7 @@ const welcomeLeadClass =
   "flex min-w-0 items-center gap-2.5 sm:gap-3 lg:gap-4";
 
 const welcomeDateClass =
-  "cab-dashboard-welcome-date flex shrink-0 flex-col justify-center border-l border-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] pl-2.5 text-right sm:border-l-2 sm:pl-3 lg:pl-4";
+  "cab-dashboard-welcome-date hidden shrink-0 flex-col justify-center border-l border-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] pl-2.5 text-right sm:flex sm:border-l-2 sm:pl-3 lg:pl-4";
 
 function timeGreeting(hour: number): string {
   if (hour >= 5 && hour < 12) return "Buongiorno";

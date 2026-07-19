@@ -27,6 +27,7 @@ export type DeliverLabelInput = {
   preset: string;
   format: LabelFormat;
   origin: string;
+  includeBarcode?: boolean;
   userId?: string | null;
   device?: string | null;
 };
@@ -54,12 +55,14 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
   const template = getLabelTemplate(input.preset);
   if (!template) throw new Error("Template etichetta non valido");
 
+  const includeBarcode = input.includeBarcode !== false;
   const hash = computeLabelFingerprint({
     payload: input.payload,
     templateId: template.id,
     templateVersion: template.version,
     generatorVersion: GENERATOR_VERSION,
     preset: input.preset,
+    includeBarcode,
   });
 
   const cached = await getLabelArtifactByHash(input.sb, {
@@ -83,18 +86,21 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
   }
 
   const qrUrl = buildInventoryQrUrl(input.token, input.origin);
+  const renderOptions = { includeBarcode };
   const dedupKey = renderDedupKey(input.entityId, hash, input.format);
   let buffer: Buffer;
   if (input.format === "png") {
-    buffer = await withRenderDedup(dedupKey, () => renderLabelPng(template, input.payload, qrUrl));
+    buffer = await withRenderDedup(dedupKey, () =>
+      renderLabelPng(template, input.payload, qrUrl, renderOptions),
+    );
   } else if (input.format === "svg") {
     buffer = await withRenderDedup(dedupKey, async () => {
-      const svg = await renderLabelSvg(template, input.payload, qrUrl);
+      const svg = await renderLabelSvg(template, input.payload, qrUrl, renderOptions);
       return Buffer.from(svg, "utf8");
     });
   } else {
     buffer = await withRenderDedup(dedupKey, async () => {
-      const pdf = await renderSingleLabelPdf(template, input.payload, qrUrl);
+      const pdf = await renderSingleLabelPdf(template, input.payload, qrUrl, renderOptions);
       return Buffer.from(pdf);
     });
   }

@@ -27,10 +27,12 @@ assert.match(lazy, /ClientLavorazioneDetailViewLazy = dynamic/);
 
 const prefetchDeferred = prefetch.split("export async function prefetchDeferredPage")[1] ?? "";
 const portalBlock = prefetchDeferred.split('case "lavorazioni_clienti":')[1]?.split("case ")[0] ?? "";
-assert.match(portalBlock, /fetchClientPortalPageDTOServer/);
+assert.match(portalBlock, /archivioCountKey/);
+assert.match(prefetch, /getLavorazioniArchivioCountServer/);
 assert.match(portalBlock, /clientPortal\.lavorazioni\.inCorso/);
 assert.match(portalBff, /resolveLavorazioniStatiForServer/);
 assert.match(portalBff, /sanitizeStati/);
+assert.match(portalBff, /archivioCount/);
 assert.doesNotMatch(portalBff, /CLIENT_PORTAL_ARCHIVIO_FILTERS/);
 assert.match(portalBff, /archivio: LavorazioneListRow\[\] = \[\]/);
 
@@ -40,7 +42,9 @@ assert.match(contract, /schedeLavorazioneIds/);
 
 assert.match(view, /archivioExpanded/);
 assert.match(view, /useClientLavorazioniArchivioCountQuery/);
-assert.match(view, /archivioCachedCount/);
+assert.doesNotMatch(view, /archivioCachedCount/);
+assert.doesNotMatch(view, /archivioQ\.data\?\.length/);
+assert.match(view, /archivioCountQuery\.data !== undefined/);
 assert.match(view, /restrictUtilizzatoriToCatalog=\{isCliente\}/);
 assert.match(view, /lsdPaginated/);
 assert.match(view, /useUndoableLog\("lavorazioni",\s*\{\s*enabled: ingressoRow/);

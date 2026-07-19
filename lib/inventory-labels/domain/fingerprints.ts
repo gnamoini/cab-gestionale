@@ -19,6 +19,7 @@ export type LabelFingerprintInput = {
   templateVersion: string;
   generatorVersion: string;
   preset: string;
+  includeBarcode?: boolean;
 };
 
 export function computeLabelFingerprint(input: LabelFingerprintInput): string {
@@ -34,6 +35,7 @@ export function computeLabelFingerprint(input: LabelFingerprintInput): string {
     templateVersion: input.templateVersion,
     generatorVersion: input.generatorVersion,
     preset: input.preset,
+    includeBarcode: input.includeBarcode !== false,
   });
   return createHash("sha256").update(canonical).digest("hex").slice(0, 16);
 }

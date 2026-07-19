@@ -10,60 +10,125 @@ import {
 } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 
 const shellClass = "flex flex-col gap-0 !p-3 sm:!p-3.5";
-const sectionDivider = "border-b border-zinc-200/80 pb-2 dark:border-zinc-700/80";
 const metaDt = "text-[10px] font-medium text-zinc-500 dark:text-zinc-400";
 const metaDd = "mt-0.5 text-xs font-medium leading-snug text-zinc-800 dark:text-zinc-200";
 
 const lavMobileFieldLabelClass =
   "shrink-0 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
 
-function LavorazioneMobileCardTitle({
-  macchina,
+function lavorazioneMobileFieldHasValue(value: string): boolean {
+  const t = value.trim();
+  return Boolean(t && t !== "—");
+}
+
+function LavorazioneMobileCardField({
+  label,
+  value,
+  tabular = false,
   className = "",
+  alwaysShow = false,
 }: {
-  macchina: string;
+  label: string;
+  value: string;
+  tabular?: boolean;
   className?: string;
+  alwaysShow?: boolean;
 }) {
+  if (!alwaysShow && !lavorazioneMobileFieldHasValue(value)) return null;
+  const display = lavorazioneMobileFieldHasValue(value) ? value.trim() : "—";
   return (
-    <p
-      className={`min-w-0 break-words text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50 ${className}`.trim()}
-      title={macchina}
-    >
-      {macchina}
-    </p>
+    <div className={`min-w-0 ${className}`.trim()}>
+      <p className={metaDt}>{label}</p>
+      <p
+        className={`${metaDd} break-words${tabular ? " tabular-nums" : ""}`}
+      >
+        {display}
+      </p>
+    </div>
   );
 }
 
-function LavorazioneMobileCardIdent({ identLine }: { identLine: string | null }) {
-  if (!identLine) return null;
-  return (
-    <p
-      className="mt-1 font-medium tabular-nums text-[11px] leading-snug text-[color:var(--cab-text-muted)] break-words"
-      title={identLine}
-    >
-      {identLine}
-    </p>
-  );
-}
-
-function LavorazioneMobileCardIngressoRow({
+/** Header card mobile — layout portale clienti (oggetto + ingresso, anagrafica e identificazione a griglia). */
+export function LavorazioneMobileCardHeader({
+  oggetto,
   ingresso,
   secondaryDate,
+  cliente,
+  utilizzatore,
+  cantiere,
+  targa,
+  matricola,
+  scuderia,
 }: {
+  oggetto: string;
   ingresso: ReactNode;
   secondaryDate?: { label: string; value: ReactNode };
+  cliente: string;
+  utilizzatore: string;
+  cantiere: string;
+  targa: string;
+  matricola: string;
+  scuderia: string;
 }) {
+  const anagraficaFields = [
+    { label: "Cliente", value: cliente, tabular: false },
+    { label: "Utilizzatore", value: utilizzatore, tabular: false },
+    { label: "Cantiere", value: cantiere, tabular: false },
+  ].filter((f) => lavorazioneMobileFieldHasValue(f.value));
+
+  const identificazioneFields = [
+    { label: "Scuderia", value: scuderia, tabular: true },
+    { label: "Targa", value: targa, tabular: true },
+    { label: "Matricola", value: matricola, tabular: true },
+  ].filter((f) => lavorazioneMobileFieldHasValue(f.value));
+
   return (
-    <div className="mt-1 flex flex-nowrap gap-x-3 gap-y-1 sm:flex-wrap">
-      <div>
-        <p className={metaDt}>Ingresso</p>
-        <div className={`${metaDd} tabular-nums`}>{ingresso}</div>
-      </div>
-      {secondaryDate ? (
-        <div>
-          <p className={metaDt}>{secondaryDate.label}</p>
-          <div className={`${metaDd} tabular-nums`}>{secondaryDate.value}</div>
+    <div className="pb-1">
+      <div className="grid grid-cols-3 gap-x-2 gap-y-2">
+        {lavorazioneMobileFieldHasValue(oggetto) ? (
+          <div className="col-span-2 min-w-0">
+            <p className={metaDt}>Oggetto</p>
+            <p
+              className="mt-0.5 break-words text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50"
+            >
+              {oggetto}
+            </p>
+          </div>
+        ) : null}
+        <div className={`min-w-0${lavorazioneMobileFieldHasValue(oggetto) ? "" : " col-start-3"}`}>
+          <p className={metaDt}>Ingresso</p>
+          <div className={`${metaDd} tabular-nums`}>{ingresso}</div>
         </div>
+        {secondaryDate ? (
+          <div className="col-start-3 min-w-0">
+            <p className={metaDt}>{secondaryDate.label}</p>
+            <div className={`${metaDd} tabular-nums`}>{secondaryDate.value}</div>
+          </div>
+        ) : null}
+      </div>
+      {anagraficaFields.length > 0 ? (
+        <dl className="mt-2 grid grid-cols-3 gap-x-2 gap-y-2">
+          {anagraficaFields.map((f) => (
+            <LavorazioneMobileCardField
+              key={f.label}
+              label={f.label}
+              value={f.value}
+              tabular={f.tabular}
+            />
+          ))}
+        </dl>
+      ) : null}
+      {identificazioneFields.length > 0 ? (
+        <dl className="mt-2 grid grid-cols-3 gap-x-2 gap-y-2">
+          {identificazioneFields.map((f) => (
+            <LavorazioneMobileCardField
+              key={f.label}
+              label={f.label}
+              value={f.value}
+              tabular={f.tabular}
+            />
+          ))}
+        </dl>
       ) : null}
     </div>
   );
@@ -113,66 +178,6 @@ export function LavorazioneMobileCardShell({
   );
 }
 
-export function LavorazioneMobileCardHeader({
-  macchina,
-  identLine,
-  ingresso,
-  secondaryDate,
-  statusSlot,
-}: {
-  macchina: string;
-  identLine: string | null;
-  ingresso: ReactNode;
-  secondaryDate?: { label: string; value: ReactNode };
-  /** Pill stato in alto a destra (lavorazioni in corso). */
-  statusSlot?: ReactNode;
-}) {
-  if (statusSlot) {
-    return (
-      <div className={sectionDivider}>
-        <div className="flex items-start gap-2.5">
-          <div className="min-w-0 flex-1">
-            <LavorazioneMobileCardTitle macchina={macchina} className="pr-1" />
-          </div>
-          <div className="min-w-0 max-w-[46%] shrink self-start">{statusSlot}</div>
-        </div>
-        <LavorazioneMobileCardIngressoRow ingresso={ingresso} secondaryDate={secondaryDate} />
-        <LavorazioneMobileCardIdent identLine={identLine} />
-      </div>
-    );
-  }
-
-  return (
-    <div className={sectionDivider}>
-      <div className="flex items-start justify-between gap-3">
-        <LavorazioneMobileCardTitle macchina={macchina} className="min-w-0 flex-1" />
-        <div className="flex shrink-0 gap-3 text-right">
-          <div>
-            <p className={metaDt}>Ingresso</p>
-            <div className={`${metaDd} tabular-nums`}>{ingresso}</div>
-          </div>
-          {secondaryDate ? (
-            <div>
-              <p className={metaDt}>{secondaryDate.label}</p>
-              <div className={`${metaDd} tabular-nums`}>{secondaryDate.value}</div>
-            </div>
-          ) : null}
-        </div>
-      </div>
-      <LavorazioneMobileCardIdent identLine={identLine} />
-    </div>
-  );
-}
-
-/** Wrapper pill stato mobile (allineato al badge tabella). */
-export function LavorazioneMobileStatusSlot({ children }: { children: ReactNode }) {
-  return (
-    <div className="min-w-0 max-w-full" role="group" aria-label="Stato lavorazione">
-      {children}
-    </div>
-  );
-}
-
 export function LavorazioneMobileMetaGrid({ children }: { children: ReactNode }) {
   return (
     <dl className="mt-2.5 grid grid-cols-1 gap-x-3 gap-y-2 cab-shell-desktop:grid-cols-2">{children}</dl>
@@ -208,14 +213,14 @@ export function LavorazioneMobileNote({ text }: { text: string }) {
 
 export function LavorazioneMobileControlsPanel({
   children,
-  ariaLabel = "Priorità e addetto",
+  ariaLabel = "Stato, priorità e addetto",
 }: {
   children: ReactNode;
   ariaLabel?: string;
 }) {
   return (
     <div
-      className="mt-2.5 grid grid-cols-1 gap-x-3 gap-y-2 border-t border-zinc-200/60 pt-2.5 cab-shell-desktop:grid-cols-2 dark:border-zinc-700/60"
+      className="mt-2 grid grid-cols-1 gap-x-3 gap-y-2 cab-shell-desktop:grid-cols-2"
       role="group"
       aria-label={ariaLabel}
     >

@@ -145,15 +145,20 @@ export function GestionaleInfoSubgroup({
   title,
   children,
   dense = false,
+  borderless = false,
 }: {
   title: string;
   children: ReactNode;
   dense?: boolean;
+  /** Senza linea sopra il titolo (es. sottosezioni in collapsible ricambio). */
+  borderless?: boolean;
 }) {
   return (
     <div
       className={
-        dense
+        borderless
+          ? "mt-3 first:mt-0"
+          : dense
           ? "mt-2.5 border-t border-[color:var(--cab-border)] pt-2 first:mt-0 first:border-t-0 first:pt-0"
           : dsGestionaleInfoCardSubgroup
       }

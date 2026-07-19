@@ -14,6 +14,8 @@ function read(rel: string): string {
 const panoramica = read("components/gestionale/lavorazioni/scheda-ingresso-panoramica-view.tsx");
 const hub = read("components/lavorazioni/schede/schede-lavorazione-modal.tsx");
 const lavorazioniView = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
+const mobileCards = read("components/gestionale/lavorazioni/lavorazione-mobile-cards.tsx");
+const tableRow = read("components/gestionale/lavorazioni/lavorazione-table-row.tsx");
 const mobileCard = read("components/gestionale/lavorazioni/lavorazione-mobile-card.tsx");
 const kanban = read("components/gestionale/lavorazioni/lavorazioni-kanban-view.tsx");
 const clientDialog = read("components/lavorazioni-clienti/client-lavorazione-ingresso-dialog.tsx");
@@ -57,9 +59,9 @@ assert.match(hub, /SchedaIngressoPanoramicaAnagraficaContent/);
 assert.match(hub, /noteIntervento/);
 
 assert.match(lavorazioniView, /lavorazioneNoteOperative/);
-assert.match(lavorazioniView, /line-clamp-2/);
+assert.match(mobileCards, /lavorazioneNoteOperative/);
+assert.match(tableRow, /line-clamp-2/);
 assert.match(mobileCard, /LavorazioneMobileNote/);
-assert.match(mobileCard, /line-clamp-2/);
 assert.match(kanban, /lavorazioneNoteOperative/);
 
 assert.match(displayHelpers, /noteIntervento/, "note column uses noteIntervento not descrizioneAnomalia");

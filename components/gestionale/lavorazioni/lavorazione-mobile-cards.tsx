@@ -11,16 +11,12 @@ import {
   type TablePillOption,
 } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import {
-  formatLavorazioneMobileIdentLine,
   LavMobileInlineField,
   LavorazioneMobileCardFooter,
   LavorazioneMobileCardHeader,
   LavorazioneMobileUltimaModifica,
   LavorazioneMobileCardShell,
-  LavorazioneMobileStatusSlot,
   LavorazioneMobileControlsPanel,
-  LavorazioneMobileMetaGrid,
-  LavorazioneMobileMetaItem,
   LavorazioneMobileNote,
 } from "@/components/gestionale/lavorazioni/lavorazione-mobile-card";
 import {
@@ -39,7 +35,6 @@ import {
   lavorazioneAddettoNomeKey,
   lavorazioneCantiereLabel,
   lavorazioneClienteLabel,
-  lavorazioneMacchinaLabel,
   lavorazioneOggettoLabel,
   lavorazioneMezzoIdentParts,
   formatLavorazioneSchedeBadge,
@@ -110,7 +105,6 @@ export type LavorazioneAttivaMobileCardProps = {
   concludiDisabled: boolean;
   concludiClassName: string;
   concludiTooltip?: string;
-  concludiTooltipDisabled?: boolean;
   onStatoRow: (row: LavorazioneListRow, v: string) => void;
   onPrioritaRow: (row: LavorazioneListRow, v: string) => void;
   onAddettoRow: (row: LavorazioneListRow, v: string) => void;
@@ -139,7 +133,6 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
     concludiDisabled,
     concludiClassName,
     concludiTooltip,
-    concludiTooltipDisabled,
     onStatoRow,
     onPrioritaRow,
     onAddettoRow,
@@ -151,6 +144,7 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const utilizzatore = lavorazioneUtilizzatoreLabel(row, schedeStore);
+  const ident = lavorazioneMezzoIdentParts(row, schedeStore);
   const addettoLabel = lavorazioneAddettoLabel(row, schedeStore, undefined, addettiRecords);
   const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, undefined, addettiRecords);
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
@@ -158,36 +152,32 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
   return (
     <LavorazioneMobileCardShell>
       <LavorazioneMobileCardHeader
-        macchina={macchina}
-        identLine={formatLavorazioneMobileIdentLine(lavorazioneMezzoIdentParts(row, schedeStore))}
+        oggetto={macchina}
+        cliente={lavorazioneClienteLabel(row, schedeStore)}
+        utilizzatore={utilizzatore}
+        cantiere={lavorazioneCantiereLabel(row, schedeStore)}
+        targa={ident.targa}
+        matricola={ident.matricola}
+        scuderia={ident.scuderia}
         ingresso={<LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />}
-        statusSlot={
-          <LavorazioneMobileStatusSlot>
-            <InlineSelectField
-              tablePill
-              tablePillWidth={lavTablePillFillClass}
-              tablePillOptions={statiRapidiPillOpts}
-              shellClass={statoPillShellClass()}
-              shellStyle={statoPillStyle}
-              value={row.stato}
-              onChange={(v) => onStatoRow(row, v)}
-              ariaLabel={`Stato — ${macchina}`}
-              disabled={loading || !canEditWorkOrders}
-            >
-              <option value={row.stato}>{statoLavorazioneLabel(row.stato as StatoLavorazione, statiOpts)}</option>
-            </InlineSelectField>
-          </LavorazioneMobileStatusSlot>
-        }
       />
-      <LavorazioneMobileMetaGrid>
-        <LavorazioneMobileMetaItem label="Cliente" value={lavorazioneClienteLabel(row, schedeStore)} />
-        <LavorazioneMobileMetaItem label="Cantiere" value={lavorazioneCantiereLabel(row, schedeStore)} />
-        {utilizzatore ? (
-          <LavorazioneMobileMetaItem label="Utilizzatore" value={utilizzatore} className="cab-shell-desktop:col-span-2" />
-        ) : null}
-      </LavorazioneMobileMetaGrid>
       <LavorazioneMobileNote text={lavorazioneNoteOperative(row, schedeStore)} />
       <LavorazioneMobileControlsPanel>
+        <LavMobileInlineField label="Stato" layout="stack">
+          <InlineSelectField
+            tablePill
+            tablePillWidth={lavTablePillFillClass}
+            tablePillOptions={statiRapidiPillOpts}
+            shellClass={statoPillShellClass()}
+            shellStyle={statoPillStyle}
+            value={row.stato}
+            onChange={(v) => onStatoRow(row, v)}
+            ariaLabel={`Stato — ${macchina}`}
+            disabled={loading || !canEditWorkOrders}
+          >
+            <option value={row.stato}>{statoLavorazioneLabel(row.stato as StatoLavorazione, statiOpts)}</option>
+          </InlineSelectField>
+        </LavMobileInlineField>
         <LavMobileInlineField label="Priorità" layout="stack">
           <InlineSelectField
             tablePill
@@ -222,8 +212,8 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
           label="Concludi"
           disabled={concludiDisabled}
           className={concludiClassName}
-          tooltipContent={concludiTooltip}
-          tooltipDisabled={concludiTooltipDisabled}
+          tooltipContent={concludiTooltip ?? "Concludi"}
+          tooltipForce={!concludiTooltip}
           onClick={() => onConcludi(row)}
         >
           <IconCloseWork />
@@ -232,6 +222,7 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
           label="Informazioni"
           className={lavTableActionBtnInfo}
           disabled={mutPendingBlocking}
+          tooltipForce
           onClick={() => onOpenInfo(row)}
         >
           <IconInfo />
@@ -240,6 +231,7 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
           label="Schede"
           className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
           disabled={mutPendingBlocking}
+          tooltipForce
           onClick={() => onOpenSchede(row)}
         >
           <IconSchede />
@@ -292,6 +284,7 @@ function LavorazioneArchivioMobileCardInner({
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const utilizzatore = lavorazioneUtilizzatoreLabel(row, schedeStore);
+  const ident = lavorazioneMezzoIdentParts(row, schedeStore);
   const addettoLabel = lavorazioneAddettoLabel(row, schedeStore, addettoLogs, addettiRecords);
   const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, addettoLogs, addettiRecords);
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
@@ -299,38 +292,34 @@ function LavorazioneArchivioMobileCardInner({
   return (
     <LavorazioneMobileCardShell>
       <LavorazioneMobileCardHeader
-        macchina={macchina}
-        identLine={formatLavorazioneMobileIdentLine(lavorazioneMezzoIdentParts(row, schedeStore))}
+        oggetto={macchina}
+        cliente={lavorazioneClienteLabel(row, schedeStore)}
+        utilizzatore={utilizzatore}
+        cantiere={lavorazioneCantiereLabel(row, schedeStore)}
+        targa={ident.targa}
+        matricola={ident.matricola}
+        scuderia={ident.scuderia}
         ingresso={<LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />}
-        statusSlot={
-          <LavorazioneMobileStatusSlot>
-            <LavorazioneCompletamentoDatePill
-              iso={lavorazioneDataCompletamentoIso(row)}
-              fullWidth={false}
-              onClick={
-                canEditWorkOrders && onEditCompletamento
-                  ? () => onEditCompletamento(row)
-                  : undefined
-              }
-              disabled={
-                !canEditWorkOrders ||
-                mutPendingBlocking ||
-                loading ||
-                completamentoEditDisabled
-              }
-            />
-          </LavorazioneMobileStatusSlot>
-        }
       />
-      <LavorazioneMobileMetaGrid>
-        <LavorazioneMobileMetaItem label="Cliente" value={lavorazioneClienteLabel(row, schedeStore)} />
-        <LavorazioneMobileMetaItem label="Cantiere" value={lavorazioneCantiereLabel(row, schedeStore)} />
-        {utilizzatore ? (
-          <LavorazioneMobileMetaItem label="Utilizzatore" value={utilizzatore} className="cab-shell-desktop:col-span-2" />
-        ) : null}
-      </LavorazioneMobileMetaGrid>
       <LavorazioneMobileNote text={lavorazioneNoteOperative(row, schedeStore)} />
-      <LavorazioneMobileControlsPanel>
+      <LavorazioneMobileControlsPanel ariaLabel="Completamento, priorità e addetto">
+        <LavMobileInlineField label="Completamento" layout="stack">
+          <LavorazioneCompletamentoDatePill
+            iso={lavorazioneDataCompletamentoIso(row)}
+            fullWidth={false}
+            onClick={
+              canEditWorkOrders && onEditCompletamento
+                ? () => onEditCompletamento(row)
+                : undefined
+            }
+            disabled={
+              !canEditWorkOrders ||
+              mutPendingBlocking ||
+              loading ||
+              completamentoEditDisabled
+            }
+          />
+        </LavMobileInlineField>
         <LavMobileInlineField label="Priorità" layout="stack">
           <LavorazionePrioritaReadOnlyPill priorita={row.priorita} prioritaColors={prioritaColors} />
         </LavMobileInlineField>
@@ -345,7 +334,8 @@ function LavorazioneArchivioMobileCardInner({
       <LavorazioneMobileCardFooter meta={<LavorazioneMobileUltimaModifica info={ultimaModificaInfo} />}>
         <IconActionButton
           label="Ripristina"
-          tooltipContent={canEditWorkOrders ? undefined : "Sola lettura"}
+          tooltipContent={canEditWorkOrders ? "Ripristina" : "Sola lettura"}
+          tooltipForce={canEditWorkOrders}
           className={lavTableActionBtnDanger}
           disabled={!canEditWorkOrders || mutPendingBlocking || loading}
           onClick={() => onRipristina(row)}
@@ -355,6 +345,7 @@ function LavorazioneArchivioMobileCardInner({
         <IconActionButton
           label="Informazioni"
           className={lavTableActionBtnInfo}
+          tooltipForce
           onClick={() => onOpenInfo(row)}
         >
           <IconInfo />
@@ -362,6 +353,7 @@ function LavorazioneArchivioMobileCardInner({
         <IconActionButton
           label="Schede"
           className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
+          tooltipForce
           onClick={() => onOpenSchede(row)}
         >
           <IconSchede />

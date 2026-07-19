@@ -1,7 +1,7 @@
 "use client";
 
 import { IconActionButton } from "@/components/design-system";
-import { dsTableActionBtnPrimary, dsTableActionBtnSecondary } from "@/lib/ui/design-system";
+import { dsFocus, dsTableActionBtnPrimary, dsTableActionBtnSecondary } from "@/lib/ui/design-system";
 import { gestionaleListTableActionsGroupEnd } from "@/lib/ui/gestionale-list-table";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
@@ -65,6 +65,68 @@ export function MagazzinoScortaAdjustActions({
       >
         <IconPlusScorta />
       </IconActionButton>
+    </div>
+  );
+}
+
+const infoStepperShellClass =
+  "inline-flex max-w-full items-stretch overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] shadow-[var(--cab-shadow-sm)]";
+
+const infoStepperBtnClass = `inline-flex h-10 w-10 min-h-10 min-w-10 shrink-0 select-none items-center justify-center border-0 bg-transparent p-0 text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)] disabled:cursor-not-allowed disabled:opacity-45 ${dsFocus} touch-manipulation [-webkit-tap-highlight-color:transparent] transition-[background-color,transform] duration-150 active:scale-[0.97]`;
+
+/** Stepper compatto − | valore | + — scheda ricambio (Dati principali). */
+export function MagazzinoScortaInfoStepper({
+  value,
+  low,
+  canAdjust,
+  modalitaModifica = false,
+  onDecrease,
+  onIncrease,
+}: {
+  value: number;
+  low: boolean;
+  canAdjust: boolean;
+  modalitaModifica?: boolean;
+  onDecrease: () => void;
+  onIncrease: () => void;
+}) {
+  const valueTone = low
+    ? "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-100"
+    : "bg-[var(--cab-surface-2)] text-[color:var(--cab-text)]";
+  const btnTone =
+    modalitaModifica && canAdjust
+      ? "text-[color:var(--cab-primary)] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]"
+      : "";
+  const readonlyTitle = canAdjust ? undefined : READONLY_PERMISSION_HINT;
+
+  return (
+    <div role="group" aria-label="Scorta" className={infoStepperShellClass}>
+      <button
+        type="button"
+        className={`${infoStepperBtnClass} ${btnTone} rounded-none border-r border-[color:var(--cab-border)]`}
+        aria-label="Diminuisci scorta"
+        title={readonlyTitle}
+        disabled={!canAdjust}
+        onClick={onDecrease}
+      >
+        <IconMinusScorta />
+      </button>
+      <span
+        className={`flex h-10 min-h-10 min-w-[2.75rem] items-center justify-center px-2 font-mono text-sm font-bold tabular-nums ${valueTone}`}
+        aria-live="polite"
+      >
+        {value}
+      </span>
+      <button
+        type="button"
+        className={`${infoStepperBtnClass} ${btnTone} rounded-none border-l border-[color:var(--cab-border)]`}
+        aria-label="Aumenta scorta"
+        title={readonlyTitle}
+        disabled={!canAdjust}
+        onClick={onIncrease}
+      >
+        <IconPlusScorta />
+      </button>
     </div>
   );
 }

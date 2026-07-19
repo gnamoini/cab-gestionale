@@ -254,6 +254,7 @@ function LavorazioneAttivaTableRowInner({
             tooltipContent={
               row.stato === "completata" ? undefined : "Imposta come completata per archiviarla"
             }
+            tooltipForce={row.stato !== "completata"}
             onClick={() => onConcludiAction(row)}
           >
             <IconCloseWork />
@@ -262,6 +263,7 @@ function LavorazioneAttivaTableRowInner({
             label="Informazioni"
             className={lavTableActionBtnInfo}
             disabled={mutPendingBlocking}
+            tooltipForce
             onClick={() => onOpenInfo(row)}
           >
             <IconInfo />
@@ -270,6 +272,7 @@ function LavorazioneAttivaTableRowInner({
             label="Schede"
             className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
             disabled={mutPendingBlocking}
+            tooltipForce
             onClick={() => onOpenSchede(row)}
           >
             <IconSchede />
@@ -393,7 +396,8 @@ function LavorazioneArchivioTableRowInner({
         <div className={lavTableActionsRow}>
           <IconActionButton
             label="Ripristina"
-            tooltipContent={canEditWorkOrders ? undefined : "Sola lettura"}
+            tooltipContent={canEditWorkOrders ? "Ripristina" : "Sola lettura"}
+            tooltipForce={canEditWorkOrders}
             className={lavTableActionBtnDanger}
             disabled={!canEditWorkOrders || mutPendingBlocking || loading}
             onClick={() => onRipristina(row)}
@@ -403,6 +407,7 @@ function LavorazioneArchivioTableRowInner({
           <IconActionButton
             label="Informazioni"
             className={lavTableActionBtnInfo}
+            tooltipForce
             onClick={() => onOpenInfo(row)}
           >
             <IconInfo />
@@ -410,6 +415,7 @@ function LavorazioneArchivioTableRowInner({
           <IconActionButton
             label="Schede"
             className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
+            tooltipForce
             onClick={() => onOpenSchede(row)}
           >
             <IconSchede />

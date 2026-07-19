@@ -27,6 +27,7 @@ export function RicambioLabelActions({
   const gestToast = useGestionaleToast();
   const [expanded, setExpanded] = useState(false);
   const [preset, setPreset] = useState(DEFAULT_LABEL_PRESET);
+  const [includeBarcode, setIncludeBarcode] = useState(true);
   const [meta, setMeta] = useState<LabelMeta | null>(null);
   const [loading, setLoading] = useState(false);
   const [openingPdf, setOpeningPdf] = useState(false);
@@ -64,7 +65,11 @@ export function RicambioLabelActions({
   }
 
   function renderUrl(format: "png" | "svg" | "pdf") {
-    const sp = new URLSearchParams({ format, preset });
+    const sp = new URLSearchParams({
+      format,
+      preset,
+      includeBarcode: includeBarcode ? "true" : "false",
+    });
     return `/api/inventory-labels/ricambi/${encodeURIComponent(ricambioId)}/render?${sp.toString()}`;
   }
 
@@ -214,6 +219,23 @@ export function RicambioLabelActions({
                 </option>
               ))}
             </select>
+          </label>
+
+          <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm text-[color:var(--cab-text)]">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-[color:var(--cab-border)]"
+              checked={includeBarcode}
+              onChange={(e) => {
+                setIncludeBarcode(e.target.checked);
+                if (previewUrl) {
+                  URL.revokeObjectURL(previewUrl);
+                  setPreviewUrl(null);
+                }
+              }}
+              disabled={busy}
+            />
+            Barcode
           </label>
 
           {meta?.qrUrl ? (

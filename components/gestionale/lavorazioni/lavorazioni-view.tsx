@@ -164,7 +164,8 @@ import {
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
-import { logEntry } from "@/lib/domain/log-entry";
+import { writeModificaLog } from "@/src/services/internal/audit-log";
+import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 import {
   buildLavorazioneLogOggettoResolver,
@@ -1296,20 +1297,26 @@ export function LavorazioniView() {
         if (!persistRes.ok) return;
       }
       const logContext = lavorazioneLogContextFromListRow(row, schedeStore);
-      void logEntry.create({
-        entita: "lavorazioni",
-        entita_id: row.id,
-        azione: "UPDATE",
-        autore_id: user?.id ?? null,
-        payload: {
-          before: { addetto: beforeAddetto },
-          after: { addetto: clean },
-          ...(logContext ? { context: logContext } : {}),
-        },
-      });
+      try {
+        const sb = await getBrowserSupabase();
+        await writeModificaLog(sb, {
+          entita: "lavorazioni",
+          entita_id: row.id,
+          azione: "UPDATE",
+          autore_id: user?.id ?? null,
+          payload: {
+            before: { addetto: beforeAddetto },
+            after: { addetto: clean },
+            ...(logContext ? { context: logContext } : {}),
+          },
+        });
+      } catch (e) {
+        const detail = e instanceof Error ? e.message : String(e);
+        gestToast.warning(`Modifica salvata ma log non registrato: ${detail}`);
+      }
       flashRow(row.id);
     },
-    [authorName, canEditWorkOrders, flashRow, globalOpts.lavorazioni.addetti, addettiRecords, logsByLavorazioneId, persistSchedeAndSync, qc, schedeStore, user?.id],
+    [authorName, canEditWorkOrders, flashRow, gestToast, globalOpts.lavorazioni.addetti, addettiRecords, logsByLavorazioneId, persistSchedeAndSync, qc, schedeStore, user?.id],
   );
 
   function openEliminaConfirm(row: LavorazioneListRow) {
@@ -1854,11 +1861,14 @@ export function LavorazioniView() {
     [lavModificheLogQuery.data, user?.id, authorName, resolveLavorazioneLogOggetto, statiOpts],
   );
 
+  const archivioHeadCount =
+    archivioCountQuery.data !== undefined ? archivioCountQuery.data : null;
+
   const archivioFilteredCount = needsChiuseFetch
-    ? chiuseRowsFiltered.length
-    : archivioCountQuery.isSuccess
-      ? (archivioCountQuery.data ?? 0)
-      : null;
+    ? chiuseQuery.isPending && archivioHeadCount !== null
+      ? archivioHeadCount
+      : chiuseRowsFiltered.length
+    : archivioHeadCount;
 
   const totalFilteredCount = attiveRowsFiltered.length + (archivioFilteredCount ?? 0);
 
@@ -2333,7 +2343,6 @@ export function LavorazioniView() {
                   concludiDisabled={concludiProps.disabled ?? false}
                   concludiClassName={concludiProps.className ?? lavTableActionBtnSecondary}
                   concludiTooltip={concludiProps.tooltipContent}
-                  concludiTooltipDisabled={concludiProps.tooltipDisabled}
                   onStatoRow={onStatoRow}
                   onPrioritaRow={onPrioritaRow}
                   onAddettoRow={onAddettoRow}

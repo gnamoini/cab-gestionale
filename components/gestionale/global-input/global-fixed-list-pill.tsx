@@ -123,7 +123,9 @@ export function GlobalFixedListPillSelect({
     return () => ro.disconnect();
   }, [visibleLabel, measureLabelTruncation]);
 
-  const pillTooltip = resolvePillTooltip(visibleLabel, title, labelTruncated);
+  const pillTooltip = useMobileSheet
+    ? undefined
+    : resolvePillTooltip(visibleLabel, title, labelTruncated);
 
   const close = useCallback(() => {
     setOpen(false);

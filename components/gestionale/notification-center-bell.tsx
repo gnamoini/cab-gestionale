@@ -28,10 +28,13 @@ import {
 import type { InboxNotificationRow } from "@/lib/notifications/notification-types";
 import { publishNotification } from "@/lib/notifications/publish-notification";
 import { buildAdminDashboardTestNotification } from "@/lib/notifications/admin-dashboard-notifications";
+import { dispatchAdminDashboardTestSystemNotification } from "@/lib/notifications/admin-dashboard-test-system";
 import {
   getDesktopNotificationPermissionState,
   type DesktopNotificationPermissionState,
 } from "@/lib/lavorazioni/desktop-notifications";
+import { shouldPreferPwaPushOverDesktopPrompt } from "@/lib/pwa/push-permission-flow";
+import { usePwaPushOptIn } from "@/src/hooks/use-pwa-push-opt-in";
 import { notificationOptInDeniedMessage, notificationOptInSuccessMessage } from "@/lib/notifications/notification-opt-in-copy";
 import { useNotificationOptIn } from "@/src/hooks/use-notification-opt-in";
 import { useAuth } from "@/context/auth-context";
@@ -75,33 +78,61 @@ function NotificationsDesktopStatusBadge({
   const { user } = useAuth();
   const gestToast = useGestionaleToast();
   const { mode } = useNotificationsV2Mode();
+  const pushOptIn = usePwaPushOptIn();
+  const preferPush = shouldPreferPwaPushOverDesktopPrompt();
+  const pushActive = pushOptIn.permissionState === "granted";
   const desktopActive = permissionState === "granted";
-  const statusLabel = desktopActive ? "ATTIVE" : "NON ATTIVE";
-  const statusClass = desktopActive ? dsNotificationDesktopStatusActive : dsNotificationDesktopStatusInactive;
-  const dotClass = desktopActive ? dsNotificationDesktopStatusDotActive : dsNotificationDesktopStatusDotInactive;
+  const notificationsActive = preferPush ? pushActive : desktopActive;
+  const statusLabel = notificationsActive ? "ATTIVE" : "NON ATTIVE";
+  const statusClass = notificationsActive ? dsNotificationDesktopStatusActive : dsNotificationDesktopStatusInactive;
+  const dotClass = notificationsActive ? dsNotificationDesktopStatusDotActive : dsNotificationDesktopStatusDotInactive;
 
   const handleTest = async () => {
     const userId = user?.id;
     if (!userId) return;
-    const { added, desktop } = await publishNotification(
-      userId,
-      buildAdminDashboardTestNotification(),
-      mode,
-    );
+    const testNotification = buildAdminDashboardTestNotification();
+    const { added, desktop } = await publishNotification(userId, testNotification, mode);
     if (added) onPermissionChange();
-    if (desktop) {
-      gestToast.success("Notifica di test inviata (campanella e desktop).");
-    } else {
-      gestToast.validation("Test in campanella. Abilita le notifiche desktop per il popup di sistema.");
+
+    let system = desktop;
+    if (!system) {
+      system = await dispatchAdminDashboardTestSystemNotification({
+        notification: testNotification,
+        pushActive,
+      });
+    }
+
+    if (system) {
+      gestToast.success(
+        preferPush
+          ? "Notifica di test inviata (campanella e dispositivo)."
+          : "Notifica di test inviata (campanella e desktop).",
+      );
+      return;
+    }
+    if (added) {
+      gestToast.validation(
+        preferPush
+          ? "Test in campanella. Abilita le notifiche push dal menu o dalle impostazioni del telefono."
+          : "Test in campanella. Abilita le notifiche desktop per il popup di sistema.",
+      );
     }
   };
 
-  const statusTooltip = desktopActive
-    ? "Notifiche desktop attive.\nClic per inviare una notifica di prova."
-    : "Notifiche desktop non attive.\nClic per una prova in campanella.";
-  const statusAriaLabel = desktopActive
-    ? "Notifiche desktop attive. Invia notifica di prova"
-    : "Notifiche desktop non attive. Invia notifica di prova in campanella";
+  const statusTooltip = notificationsActive
+    ? preferPush
+      ? "Notifiche push attive.\nClic per inviare una notifica di prova."
+      : "Notifiche desktop attive.\nClic per inviare una notifica di prova."
+    : preferPush
+      ? "Notifiche push non attive.\nClic per una prova in campanella."
+      : "Notifiche desktop non attive.\nClic per una prova in campanella.";
+  const statusAriaLabel = notificationsActive
+    ? preferPush
+      ? "Notifiche push attive. Invia notifica di prova"
+      : "Notifiche desktop attive. Invia notifica di prova"
+    : preferPush
+      ? "Notifiche push non attive. Invia notifica di prova in campanella"
+      : "Notifiche desktop non attive. Invia notifica di prova in campanella";
 
   return (
     <div className="flex min-w-0 items-center gap-1.5">

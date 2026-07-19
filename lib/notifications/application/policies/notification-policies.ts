@@ -87,7 +87,12 @@ export const NOTIFICATION_POLICIES: Partial<Record<NotificationType, Notificatio
     ttlDays: 1,
     priority: "LOW",
     actions: [OPEN_ACTION],
-    presencePolicy: DEFAULT_PRESENCE,
+    presencePolicy: {
+      ONLINE: ["sidebar", "realtime", "badge", "push"],
+      AWAY: ["sidebar", "realtime", "push"],
+      BACKGROUND: ["push"],
+      OFFLINE: ["push"],
+    },
   },
 };
 

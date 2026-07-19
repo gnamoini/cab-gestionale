@@ -40,11 +40,14 @@ import {
   toAdminNotificationLogViewModel,
 } from "@/lib/notifications/admin-dashboard-notification-message";
 import { publishAdminDashboardNotification } from "@/lib/notifications/admin-dashboard-desktop";
+import { dispatchAdminDashboardTestSystemNotification } from "@/lib/notifications/admin-dashboard-test-system";
 import {
   formatDesktopNotificationPermissionStatusLabel,
   getDesktopNotificationPermissionState,
   type DesktopNotificationPermissionState,
 } from "@/lib/lavorazioni/desktop-notifications";
+import { shouldPreferPwaPushOverDesktopPrompt } from "@/lib/pwa/push-permission-flow";
+import { usePwaPushOptIn } from "@/src/hooks/use-pwa-push-opt-in";
 import { useNotificationOptIn } from "@/src/hooks/use-notification-opt-in";
 import { notificationOptInDeniedMessage, notificationOptInSuccessMessage } from "@/lib/notifications/notification-opt-in-copy";
 import { useAuth } from "@/context/auth-context";
@@ -70,9 +73,13 @@ function NotificationsPanelFooter({
   const { user } = useAuth();
   const gestToast = useGestionaleToast();
   const optIn = useNotificationOptIn();
+  const pushOptIn = usePwaPushOptIn();
+  const preferPush = shouldPreferPwaPushOverDesktopPrompt();
+  const pushActive = pushOptIn.permissionState === "granted";
   const statusLabel = formatDesktopNotificationPermissionStatusLabel(permissionState);
   const canEnable = optIn.menuEnableVisible;
-  const canSendTest = permissionState === "granted" && Boolean(user?.id);
+  const notificationsActive = preferPush ? pushActive : permissionState === "granted";
+  const canSendTest = notificationsActive && Boolean(user?.id);
   const desktopActive = permissionState === "granted";
 
   const handleEnable = async () => {
@@ -93,15 +100,32 @@ function NotificationsPanelFooter({
   const handleTest = async () => {
     const userId = user?.id;
     if (!userId) return;
-    const { added, desktop } = await publishAdminDashboardNotification(
-      userId,
-      buildAdminDashboardTestNotification(),
-    );
+    const testNotification = buildAdminDashboardTestNotification();
+    const { added, desktop } = await publishAdminDashboardNotification(userId, testNotification);
     if (added) onPermissionChange();
-    if (desktop) {
-      gestToast.success("Notifica di test inviata (campanella e desktop).");
-    } else {
-      gestToast.validation("Test in campanella. Abilita le notifiche desktop per il popup di sistema.");
+
+    let system = desktop;
+    if (!system) {
+      system = await dispatchAdminDashboardTestSystemNotification({
+        notification: testNotification,
+        pushActive,
+      });
+    }
+
+    if (system) {
+      gestToast.success(
+        preferPush
+          ? "Notifica di test inviata (campanella e dispositivo)."
+          : "Notifica di test inviata (campanella e desktop).",
+      );
+      return;
+    }
+    if (added) {
+      gestToast.validation(
+        preferPush
+          ? "Test in campanella. Abilita le notifiche push dal menu o dalle impostazioni del telefono."
+          : "Test in campanella. Abilita le notifiche desktop per il popup di sistema.",
+      );
     }
   };
 

@@ -71,6 +71,9 @@ export function navDrawerReducer(
 
   switch (event) {
     case "OPEN_REQUEST":
+      if (state === "DRAGGING" && prev.edgePreview) {
+        return { ...prev, state: "OPENING", edgePreview: false, mounted: true, closing: false };
+      }
       if (state !== "CLOSED") return prev;
       return { ...prev, state: "OPENING", mounted: true, closing: false, edgePreview: false };
 

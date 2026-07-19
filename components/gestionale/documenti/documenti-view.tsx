@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { documentiEntry } from "@/lib/domain/documenti-entry";
-import { useDocumentiListQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useDocumentiListQuery, useLogListQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { deleteDocumentoStoragePath } from "@/lib/documenti/delete-documento-fully";
 import {
@@ -33,13 +33,8 @@ import {
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import {
-  appendDocumentiChangeLog,
-  loadDocumentiChangeLog,
-  removeDocumentiChangeLogEntryById,
-  type DocumentiLogStored,
-} from "@/lib/documenti/documenti-change-log-storage";
-import { CAB_DOCUMENTI_LOG_REFRESH } from "@/lib/sistema/cab-events";
+import { appendDocumentiChangeLog } from "@/lib/documenti/documenti-change-log-storage";
+import { buildLogModificheDisplayEntries, logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
 import {
   erpBtnNeutral,
   erpBtnNuovaLavorazione,
@@ -463,23 +458,14 @@ export function DocumentiView() {
   const gestToast = useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
   const [logOpen, setLogOpen] = useState(false);
-  const [logEntries, setLogEntries] = useState<DocumentiLogStored[]>([]);
-
-  useEffect(() => {
-    setLogEntries(loadDocumentiChangeLog());
-  }, []);
-
-  useEffect(() => {
-    function onLogRefresh() {
-      setLogEntries(loadDocumentiChangeLog());
-    }
-    window.addEventListener(CAB_DOCUMENTI_LOG_REFRESH, onLogRefresh);
-    return () => window.removeEventListener(CAB_DOCUMENTI_LOG_REFRESH, onLogRefresh);
-  }, []);
-
-  useEffect(() => {
-    if (logOpen) setLogEntries(loadDocumentiChangeLog());
-  }, [logOpen]);
+  const logQuery = useLogListQuery({ entita: "documenti", limit: 100 }, { enabled: logOpen });
+  const logDisplayEntries = useMemo(
+    () =>
+      buildLogModificheDisplayEntries(logQuery.data ?? [], (row) =>
+        logAutoreLabel(row, user?.id ?? null, author),
+      ),
+    [author, logQuery.data, user?.id],
+  );
 
   useEffect(() => {
     if (urlHydratedRef.current) return;
@@ -598,11 +584,14 @@ export function DocumentiView() {
     showPager: showDocLogPager,
     label: docLogPagerLabel,
     resetPage: resetDocLogPage,
-  } = useClientPagination(logEntries.length, listPageSize);
+  } = useClientPagination(logDisplayEntries.length, listPageSize);
   useEffect(() => {
     resetDocLogPage();
-  }, [logOpen, logEntries.length, listPageSize, resetDocLogPage]);
-  const pagedDocLogEntries = useMemo(() => sliceDocLogEntries(logEntries), [logEntries, sliceDocLogEntries, docLogPage]);
+  }, [logOpen, logDisplayEntries.length, listPageSize, resetDocLogPage]);
+  const pagedDocLogEntries = useMemo(
+    () => sliceDocLogEntries(logDisplayEntries),
+    [logDisplayEntries, sliceDocLogEntries, docLogPage],
+  );
 
   const hasDocumentiInLista = totalDocs > 0;
 
@@ -1219,14 +1208,14 @@ export function DocumentiView() {
       <DocumentiLogDrawer
         open={logOpen}
         onClose={() => setLogOpen(false)}
-        entries={logEntries}
+        entries={logDisplayEntries}
         pagedEntries={pagedDocLogEntries}
         showPager={showDocLogPager}
         page={docLogPage}
         pageCount={docLogPageCount}
         pagerLabel={docLogPagerLabel}
         onPageChange={setDocLogPage}
-        onDismiss={removeDocumentiChangeLogEntryById}
+        isLoading={logQuery.isLoading}
       />
 
       <SettingsEliminaConfirmDialog

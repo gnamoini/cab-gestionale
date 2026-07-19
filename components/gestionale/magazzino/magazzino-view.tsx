@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
 import {
   CardMobile,
   CloseButton,
@@ -840,7 +841,7 @@ export function MagazzinoView() {
     if (!id) return;
     const t = window.setTimeout(() => {
       focusRicambioInTable(id);
-      router.replace(pathname, { scroll: false });
+      deferredRouterReplace(router, pathname, { scroll: false });
     }, 120);
     return () => window.clearTimeout(t);
   }, [searchParams, pathname, router, focusRicambioInTable]);
@@ -853,7 +854,7 @@ export function MagazzinoView() {
       if (ricambio) {
         setDetail({ id: ricambio.id, mode: "info" });
       }
-      router.replace(pathname, { scroll: false });
+      deferredRouterReplace(router, pathname, { scroll: false });
     }, 150);
     return () => window.clearTimeout(t);
   }, [searchParams, pathname, router, prodotti, magazzinoInitialLoading]);
@@ -1170,7 +1171,7 @@ export function MagazzinoView() {
           applyLogEntry(entry);
         },
         onError: ({ error }) => {
-          toastError(error);
+          toastError(error, { module: "magazzino", action: "update" });
         },
         invalidate: () => {
           void invalidateAfterMagazzinoOrMovimenti(queryClient, [
@@ -1661,7 +1662,7 @@ export function MagazzinoView() {
             }
             onFilterReset={resetMagazzinoFilters}
             meta={
-              <div className="flex min-w-0 w-full max-w-full flex-nowrap items-center gap-1.5 sm:flex-1 sm:gap-2">
+              <div className="flex min-w-0 w-full max-w-full flex-nowrap items-center gap-2 sm:gap-3">
                 <PageToolbarResultCount
                   className="max-sm:shrink-0 max-sm:flex-none"
                   count={filteredSorted.length}
@@ -1670,39 +1671,41 @@ export function MagazzinoView() {
                   onSearchReset={resetMagazzinoRicerca}
                   onFilterReset={resetMagazzinoFilters}
                 />
-                {magCanCreateRicambio ? (
-                  <PageToolbarMetaToggle
-                    className="min-w-0 max-sm:min-h-11 max-sm:flex-1 max-sm:justify-center max-sm:px-3 sm:shrink-0 max-sm:[&_span[aria-hidden]]:hidden"
-                    label="Modalità modifica"
-                    shortLabel="Modifica"
-                    checked={modalitaModifica}
-                    onChange={(next) => {
-                      setModalitaModifica(next);
-                      writeMagazzinoModalitaModifica(next);
-                    }}
-                    title={
-                      modalitaModifica
-                        ? "Attiva: le variazioni scorta contano nelle statistiche"
-                        : "Disattiva: rettifica inventario senza impatto su statistiche e report"
-                    }
-                  />
-                ) : null}
-                {magPerm.canRead ? (
-                  <PageToolbarMetaToggle
-                    className="min-w-0 max-sm:min-h-11 max-sm:flex-1 max-sm:justify-center max-sm:px-3 sm:shrink-0 max-sm:[&_span[aria-hidden]]:hidden"
-                    label="Etichette"
-                    checked={labelMode}
-                    onChange={(checked) => {
-                      setLabelMode(checked);
-                      if (!checked) setSelectedRicambioIds(new Set());
-                    }}
-                    title={
-                      labelMode
-                        ? "Modalità selezione attiva per stampa etichette"
-                        : "Seleziona ricambi per stampare etichette"
-                    }
-                  />
-                ) : null}
+                <div className="ms-auto flex min-w-0 shrink-0 flex-nowrap items-center gap-2">
+                  {magCanCreateRicambio ? (
+                    <PageToolbarMetaToggle
+                      className="min-h-10 shrink-0 sm:min-h-9"
+                      label="Modalità modifica"
+                      shortLabel="Modifica"
+                      checked={modalitaModifica}
+                      onChange={(next) => {
+                        setModalitaModifica(next);
+                        writeMagazzinoModalitaModifica(next);
+                      }}
+                      title={
+                        modalitaModifica
+                          ? "Attiva: le variazioni scorta contano nelle statistiche"
+                          : "Disattiva: rettifica inventario senza impatto su statistiche e report"
+                      }
+                    />
+                  ) : null}
+                  {magPerm.canRead ? (
+                    <PageToolbarMetaToggle
+                      className="min-h-10 shrink-0 sm:min-h-9"
+                      label="Etichette"
+                      checked={labelMode}
+                      onChange={(checked) => {
+                        setLabelMode(checked);
+                        if (!checked) setSelectedRicambioIds(new Set());
+                      }}
+                      title={
+                        labelMode
+                          ? "Modalità selezione attiva per stampa etichette"
+                          : "Seleziona ricambi per stampare etichette"
+                      }
+                    />
+                  ) : null}
+                </div>
               </div>
             }
           />
@@ -1841,6 +1844,7 @@ export function MagazzinoView() {
             const low = p.scorta < p.scortaMinima;
             const flash = flashRowId === p.id;
             const staleModifica = isModificaOlderThanMonths(p.dataUltimaModifica, MAGAZZINO_STALE_MODIFICA_MONTHS);
+            const compatModels = compatModelsDisplayFor(p);
             return (
               <CardMobile
                 id={`magazzino-row-${p.id}`}
@@ -1888,30 +1892,31 @@ export function MagazzinoView() {
                         {p.codiceFornitoreOriginaleSecondario}
                       </p>
                     ) : null}
+                    {compatModels ? (
+                      <p className="line-clamp-2 text-xs leading-snug text-zinc-500 dark:text-zinc-400">
+                        {compatModels}
+                      </p>
+                    ) : null}
                   </div>
-                  <Tooltip content={low ? "Sotto scorta minima" : "Giacenza"} side="top">
-                    <MagazzinoScortaBadge value={p.scorta} low={low} variant="mobile" />
-                  </Tooltip>
+                  <div className="flex shrink-0 flex-col items-center gap-1">
+                    <Tooltip content={low ? "Sotto scorta minima" : "Giacenza"} side="top">
+                      <MagazzinoScortaBadge value={p.scorta} low={low} variant="mobile" />
+                    </Tooltip>
+                    <Tooltip content="Scorta minima" side="top">
+                      <MagazzinoScortaBadge value={p.scortaMinima} kind="minima" variant="mobile" />
+                    </Tooltip>
+                  </div>
                 </div>
-                <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
-                  {compatModelsDisplayFor(p)}
-                </p>
-                <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1.5 text-[11px]">
-                  <div>
+                <dl className="mt-2 grid grid-cols-3 gap-x-2 gap-y-1.5 text-[11px]">
+                  <div className="min-w-0">
                     <dt className="text-zinc-500 dark:text-zinc-400">Categoria</dt>
-                    <dd className="font-medium text-zinc-900 dark:text-zinc-100">{p.categoria}</dd>
+                    <dd className="truncate font-medium text-zinc-900 dark:text-zinc-100">{p.categoria}</dd>
                   </div>
-                  <div>
-                    <dt className="text-zinc-500 dark:text-zinc-400">Scorta minima</dt>
-                    <dd>
-                      <MagazzinoScortaBadge value={p.scortaMinima} kind="minima" variant="table" />
-                    </dd>
-                  </div>
-                  <div>
+                  <div className="min-w-0">
                     <dt className="text-zinc-500 dark:text-zinc-400">P. vendita</dt>
-                    <dd className="font-medium tabular-nums text-zinc-900 dark:text-zinc-100">{eur(p.prezzoVendita)}</dd>
+                    <dd className="truncate font-medium tabular-nums text-zinc-900 dark:text-zinc-100">{eur(p.prezzoVendita)}</dd>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <dt className="text-zinc-500 dark:text-zinc-400">Consumo medio</dt>
                     <dd className="font-medium tabular-nums text-zinc-700 dark:text-zinc-300">
                       <OptionalTooltip content={magazzinoConsumoMedioTooltip(consumoRow, avgM)}>
@@ -1996,7 +2001,7 @@ export function MagazzinoView() {
           prodotti={prodotti}
           magCanCreateRicambio={magCanCreateRicambio}
           onClose={closeNewRicambioModal}
-          onSaveError={(message) => toastError(message)}
+          onSaveError={(message) => toastError(message, { module: "magazzino", action: "create" })}
           onVaiAlRicambioDuplicato={(id) => focusRicambioInTable(id)}
           onSaved={(ui) => {
             registerOrderIndex(ui.id);
@@ -2041,7 +2046,7 @@ export function MagazzinoView() {
           onClose={closeDetail}
           onCancel={cancelEditBackToInfo}
           onRequestDelete={requestEliminaRicambio}
-          onSaveError={(message) => toastError(message)}
+          onSaveError={(message) => toastError(message, { module: "magazzino", action: "update" })}
           modalitaModifica={modalitaModifica}
           onSaved={(ui, message) => {
             patchProdotti((prev) => prev.map((p) => (p.id === ui.id ? touch(ui) : p)));

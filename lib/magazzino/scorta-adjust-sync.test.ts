@@ -53,6 +53,14 @@ const rows = qc.getQueryData<MagazzinoRicambioRow[]>(magazzinoListQueryKey());
 assert.equal(rows?.[0]?.quantita, 14);
 
 resetScortaSyncQueuesForTest();
+const qcBurst = new QueryClient();
+qcBurst.setQueryData(magazzinoListQueryKey(), [seedRow(id, 5)]);
+const burst1 = applyScortaOptimisticDelta(qcBurst, id, -1, "Test", touchRow as never, undefined, true);
+const burst2 = applyScortaOptimisticDelta(qcBurst, id, -1, "Test", touchRow as never, undefined, false);
+assert.equal(burst1.dopo, 4);
+assert.equal(burst2.dopo, 3);
+
+resetScortaSyncQueuesForTest();
 const qcLegacy = new QueryClient();
 const legacyMeta = {
   compatibilitaMezzi: ["Bucher — CityCat 5000", "Bucher — CityCat 5006"],

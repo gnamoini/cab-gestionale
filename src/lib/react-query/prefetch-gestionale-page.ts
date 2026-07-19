@@ -4,11 +4,17 @@ import { dehydrate, QueryClient, type DehydratedState } from "@tanstack/react-qu
 import { getAppSettingsPayloadReadServer, getAppSettingsPayloadServer } from "@/lib/app-settings/app-settings-fetch-server";
 import {
   LAVORAZIONI_ATTIVE_LIGHT_FILTERS,
+  LAVORAZIONI_CHIUSE_COUNT_FILTERS,
   LAVORAZIONI_REPORT_FILTERS,
+} from "@/lib/lavorazioni/lavorazioni-prefetch-filters";
+import {
+  getLavorazioniArchivioCountServer,
   getLavorazioniReportLightServer,
 } from "@/lib/lavorazioni/lavorazioni-list-fetch-server";
 import { getPrefetchCachePolicyHint } from "@/lib/decision/prefetch-cache-hint";
 import { lavorazioniInfiniteSeedFromRows } from "@/lib/lavorazioni/lavorazioni-infinite-cache";
+import { lavorazioniListCountQueryKey } from "@/lib/lavorazioni/lavorazioni-list-query-keys";
+import { CLIENT_PORTAL_ARCHIVIO_COUNT_FILTERS } from "@/lib/lavorazioni/client-portal-prefetch-filters";
 import { isServerListPaginationEnabled } from "@/lib/performance/list-pagination-rollout";
 import { resolveInitialLoad } from "@/lib/render/render-path-orchestrator";
 import { getMagazzinoReportLightServer } from "@/lib/magazzino/magazzino-list-fetch-server";
@@ -54,6 +60,8 @@ import type { CabAppSettingsQueryPayload } from "@/src/hooks/gestionale/use-sett
 import type { ServiceResult } from "@/src/services/service-result";
 
 const LA_LIST_STALE_MS = 30_000;
+/** Conteggio archivio collassato — allineato a `archivioCountQuery` nelle view lavorazioni. */
+const LAVORAZIONI_ARCHIVIO_COUNT_STALE_MS = 30_000;
 
 export type GestionalePrefetchPage =
   | "dashboard"
@@ -128,7 +136,7 @@ export async function prefetchDeferredPage(
         seedPrefetchedData(
           qc,
           lav.queryKey,
-          isServerListPaginationEnabled() ? lavorazioniInfiniteSeedFromRows(dto.lavorazioni) : dto.lavorazioni,
+          dto.lavorazioni,
           GESTIONALE_REPORT_STALE_MS,
           GESTIONALE_REPORT_GC_MS,
         ),
@@ -177,7 +185,11 @@ export async function prefetchDeferredPage(
     }
     case "lavorazioni": {
       const lav = resolveInitialLoad({ scopeKey: "lavorazioni.list.attive" });
-      const dto = await fetchLavorazioniPageDTOServer();
+      const archivioCountKey = lavorazioniListCountQueryKey(LAVORAZIONI_CHIUSE_COUNT_FILTERS);
+      const [dto, archivioCountRes] = await Promise.all([
+        fetchLavorazioniPageDTOServer(),
+        getLavorazioniArchivioCountServer(),
+      ]);
       await Promise.all([
         seedPrefetchedData(
           qc,
@@ -188,11 +200,19 @@ export async function prefetchDeferredPage(
         ),
         seedPrefetchedData(qc, mezziListQueryKey("list", null), dto.mezzi, GESTIONALE_SEMI_STALE_MS, GESTIONALE_SEMI_GC_MS),
         seedPrefetchedData(qc, SCHEde_BUNDLES_QUERY_KEY, dto.schedeBundles, GESTIONALE_SEMI_STALE_MS, GESTIONALE_SEMI_GC_MS),
+        seedPrefetchedData(
+          qc,
+          archivioCountKey,
+          unwrap(archivioCountRes, 0),
+          LAVORAZIONI_ARCHIVIO_COUNT_STALE_MS,
+          GESTIONALE_VIEW_GC_MS,
+        ),
       ]);
       return;
     }
     case "lavorazioni_clienti": {
       const inCorso = resolveInitialLoad({ scopeKey: "clientPortal.lavorazioni.inCorso" });
+      const archivioCountKey = lavorazioniListCountQueryKey(CLIENT_PORTAL_ARCHIVIO_COUNT_FILTERS, true);
       const dto = await fetchClientPortalPageDTOServer();
       const portalPaginated = isServerListPaginationEnabled();
       await Promise.all([
@@ -204,6 +224,13 @@ export async function prefetchDeferredPage(
           GESTIONALE_VIEW_GC_MS,
         ),
         seedPrefetchedData(qc, SCHEde_BUNDLES_QUERY_KEY, dto.schedeBundles, GESTIONALE_SEMI_STALE_MS, GESTIONALE_SEMI_GC_MS),
+        seedPrefetchedData(
+          qc,
+          archivioCountKey,
+          dto.archivioCount,
+          LAVORAZIONI_ARCHIVIO_COUNT_STALE_MS,
+          GESTIONALE_VIEW_GC_MS,
+        ),
       ]);
       return;
     }

@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import {
-  GestionaleInfoCard,
   GestionaleInfoMetricRow,
   GestionaleInfoSubgroup,
 } from "@/components/design-system/gestionale-info-card";
@@ -239,8 +238,12 @@ export function MagazzinoPrezziLineari({
   }
 
   return (
-    <GestionaleInfoCard title={title}>
+    <RicambioCollapsibleSection
+      title={title}
+      defaultCollapsed={defaultCollapsed}
+      forceExpanded={forceExpanded}
+    >
       <PrezziLineariInfoBody {...bodyProps} />
-    </GestionaleInfoCard>
+    </RicambioCollapsibleSection>
   );
 }

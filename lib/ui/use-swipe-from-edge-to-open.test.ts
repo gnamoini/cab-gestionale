@@ -43,7 +43,16 @@ assert.doesNotMatch(
   /finishCancel[\s\S]{0,120}resetDrag\(\)/,
   "finishCancel must not reset compositor before parent consumes visual close",
 );
-assert.match(swipeOpenSrc, /peakVelocityXRef/);
+assert.match(swipeOpenSrc, /setPointerCapture/);
+assert.match(swipeOpenSrc, /releasePointerCapture/);
+assert.match(swipeOpenSrc, /lostpointercapture/);
+assert.match(swipeOpenSrc, /NAV_DRAWER_EDGE_DRAG_IDLE_MS/);
+assert.match(swipeOpenSrc, /useLayoutEffect[\s\S]{0,200}isSnapping/);
+assert.doesNotMatch(
+  swipeOpenSrc,
+  /if \(currentX > 0\) \{[\s\S]{0,80}scheduleTransform\(0/,
+  "snap-back transform must be deferred to useLayoutEffect, not onGestureEnd",
+);
 assert.match(swipeOpenSrc, /armSelectorGhostClickGuard/);
 assert.match(
   swipeOpenSrc,

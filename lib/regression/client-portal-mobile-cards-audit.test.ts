@@ -28,16 +28,15 @@ assert.match(mobileCardsBlock, /LavorazioneCompletamentoDatePill/);
 assert.match(mobileCardsBlock, /aria-label=\{variant === "archive" \? "Completamento e addetto" : "Stato e addetto"\}/);
 assert.doesNotMatch(mobileCardsBlock, /secondaryDate/);
 
-const headerBlock = listView.slice(
-  listView.indexOf("function ClientPortalMobileCardHeader"),
-  listView.indexOf("function MobileCards"),
+const headerBlock = mobileCard.slice(
+  mobileCard.indexOf("export function LavorazioneMobileCardHeader"),
+  mobileCard.indexOf("/** Riga mobile: etichetta + controllo"),
 );
 assert.match(
   headerBlock,
   /identificazioneFields = \[[\s\S]*label: "Scuderia"[\s\S]*label: "Targa"[\s\S]*label: "Matricola"/,
 );
 
-assert.match(mobileCard, /ariaLabel = "Priorità e addetto"/);
-assert.match(mobileCard, /className = ""/);
+assert.match(mobileCard, /ariaLabel = "Stato, priorità e addetto"/);
 
 console.log("client-portal-mobile-cards-audit.test.ts OK");

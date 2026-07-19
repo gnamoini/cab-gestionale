@@ -35,6 +35,7 @@ export function MagazzinoBulkLabelToolbar({
 }) {
   const gestToast = useGestionaleToast();
   const [preset, setPreset] = useState(DEFAULT_LABEL_PRESET);
+  const [includeBarcode, setIncludeBarcode] = useState(true);
   const [phase, setPhase] = useState<BulkLabelPhase>("idle");
   const [progress, setProgress] = useState(0);
   const count = selectedIds.size;
@@ -53,7 +54,7 @@ export function MagazzinoBulkLabelToolbar({
       const res = await fetch("/api/inventory-labels/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids, preset, format: "pdf" }),
+        body: JSON.stringify({ ids, preset, format: "pdf", includeBarcode }),
         signal: controller.signal,
       });
       window.clearTimeout(timeoutId);
@@ -132,7 +133,7 @@ export function MagazzinoBulkLabelToolbar({
       setPhase("idle");
       setProgress(0);
     }
-  }, [count, gestToast, preset, selectedIds]);
+  }, [count, gestToast, includeBarcode, preset, selectedIds]);
 
   const phaseLabel =
     phase === "preparing"
@@ -190,6 +191,18 @@ export function MagazzinoBulkLabelToolbar({
                   </option>
                 ))}
               </select>
+            </label>
+
+            <label className="flex min-h-11 shrink-0 cursor-pointer items-center gap-2 self-end px-1 text-sm text-[color:var(--cab-text)]">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-[color:var(--cab-border)]"
+                checked={includeBarcode}
+                onChange={(e) => setIncludeBarcode(e.target.checked)}
+                disabled={busy}
+                aria-label="Includi barcode"
+              />
+              Barcode
             </label>
 
             <div className="flex flex-wrap items-center gap-2 sm:shrink-0">

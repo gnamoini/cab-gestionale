@@ -3,15 +3,15 @@
 import type { ReactNode } from "react";
 import { OptionalTooltip } from "@/components/ui";
 import {
-  GestionaleInfoCard,
   GestionaleInfoRow,
   GestionaleInfoSubgroup,
 } from "@/components/design-system/gestionale-info-card";
 import { HubModalPanoramicaPanel, hubPanoramicaDisplayValue } from "@/components/design-system/hub-modal-panoramica";
 import { LoadingFormSkeleton } from "@/components/design-system";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
+import { RicambioCollapsibleSection } from "@/components/gestionale/magazzino/ricambio-modal-ui";
 import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
-import { MagazzinoScortaAdjustActions } from "@/components/gestionale/magazzino/magazzino-scorta-adjust-actions";
+import { MagazzinoScortaInfoStepper } from "@/components/gestionale/magazzino/magazzino-scorta-adjust-actions";
 import { RecordImageManager, type RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import {
   GestionaleLogEntryDismissButton,
@@ -106,8 +106,8 @@ export function RicambioInfoPanel({
   });
 
   return (
-    <HubModalPanoramicaPanel gapClass="gap-4">
-      <GestionaleInfoCard title="Dati principali">
+    <div className="space-y-3">
+      <RicambioCollapsibleSection title="Dati principali" defaultCollapsed={false}>
         {ricambio.listinoImport?.generatoAutomaticamente ? (
           <div className="mb-2 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))] px-3 py-2">
             <p className="text-[10px] font-bold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--cab-primary)_85%,var(--cab-text))]">
@@ -153,49 +153,51 @@ export function RicambioInfoPanel({
           value={formatRicambioUnitaMisuraLabel(ricambio.unitaMisura)}
         />
         <GestionaleInfoRow label="Compatibilità" value={compatDisplay} />
-      </GestionaleInfoCard>
+        <GestionaleInfoRow
+          label="Scorta"
+          value={
+            onAdjustScorta ? (
+              <MagazzinoScortaInfoStepper
+                value={ricambio.scorta}
+                low={low}
+                canAdjust={canAdjustScorta ?? false}
+                modalitaModifica={modalitaModifica}
+                onDecrease={() => onAdjustScorta(-1)}
+                onIncrease={() => onAdjustScorta(1)}
+              />
+            ) : (
+              <MagazzinoScortaBadge value={ricambio.scorta} low={low} variant="table" />
+            )
+          }
+        />
+        <GestionaleInfoRow label="Scorta minima" value={String(ricambio.scortaMinima)} mono />
+      </RicambioCollapsibleSection>
 
-      <RecordImageManager
-        scope="magazzino"
-        recordId={ricambio.id}
-        title="Foto"
-        canEdit={canEditPhotos}
-        hubCardLayout
-        hubCardShowTitle
-        onImageEvent={onImageEvent}
-      />
+      <RicambioCollapsibleSection title="Foto" defaultCollapsed>
+        <RecordImageManager
+          scope="magazzino"
+          recordId={ricambio.id}
+          canEdit={canEditPhotos}
+          hubCardLayout
+          onImageEvent={onImageEvent}
+        />
+      </RicambioCollapsibleSection>
 
-      <GestionaleInfoCard title="Giacenza e consumo">
-        <GestionaleInfoSubgroup title="Giacenza">
-          <GestionaleInfoRow
-            label="Scorta"
-            value={
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <MagazzinoScortaBadge value={ricambio.scorta} low={low} variant="table" />
-                {onAdjustScorta ? (
-                  <MagazzinoScortaAdjustActions
-                    canAdjust={canAdjustScorta ?? false}
-                    modalitaModifica={modalitaModifica}
-                    onDecrease={() => onAdjustScorta(-1)}
-                    onIncrease={() => onAdjustScorta(1)}
-                  />
-                ) : null}
-              </div>
-            }
-          />
-          <GestionaleInfoRow label="Scorta minima" value={String(ricambio.scortaMinima)} mono />
-        </GestionaleInfoSubgroup>
-        <GestionaleInfoSubgroup title="Consumo (log magazzino)">
+      <RicambioCollapsibleSection title="Giacenza e consumo" defaultCollapsed={false}>
+        <GestionaleInfoSubgroup title="Consumo (log magazzino)" borderless>
           <RicambioConsumoInfoRows consumo={consumo} scorta={ricambio.scorta} />
         </GestionaleInfoSubgroup>
         <GestionaleInfoRow label="Capitale immob." value={formatEur(capitaleImmobilizzato(ricambio))} mono />
-        <GestionaleInfoSubgroup title="Audit">
+        <GestionaleInfoSubgroup title="Audit" borderless>
           <GestionaleInfoRow label="Ultima modifica" value={ultimaModifica} />
           <GestionaleInfoRow label="Autore" value={hubPanoramicaDisplayValue(ricambio.autoreUltimaModifica)} />
         </GestionaleInfoSubgroup>
-      </GestionaleInfoCard>
+      </RicambioCollapsibleSection>
 
-      <GestionaleInfoCard title="Fornitori alternativi">
+      <RicambioCollapsibleSection
+        title="Fornitori alternativi"
+        defaultCollapsed={(ricambio.fornitoriAlternativi ?? []).length === 0}
+      >
         {(ricambio.fornitoriAlternativi ?? []).length === 0 ? (
           <p className="text-sm text-[color:var(--cab-text-muted)]">Nessun fornitore alternativo</p>
         ) : (
@@ -219,7 +221,7 @@ export function RicambioInfoPanel({
             </GestionaleInfoSubgroup>
           ))
         )}
-      </GestionaleInfoCard>
+      </RicambioCollapsibleSection>
 
       <MagazzinoPrezziLineari
         variant="info"
@@ -231,7 +233,7 @@ export function RicambioInfoPanel({
         prezzoVendita={ricambio.prezzoVendita}
       />
 
-      <GestionaleInfoCard title="Storico modifiche" collapsible defaultCollapsed>
+      <RicambioCollapsibleSection title="Storico modifiche" defaultCollapsed>
         <ul className="space-y-2">
           {logLoading ? (
             <li className="list-none">
@@ -254,7 +256,7 @@ export function RicambioInfoPanel({
             ))
           )}
         </ul>
-      </GestionaleInfoCard>
-    </HubModalPanoramicaPanel>
+      </RicambioCollapsibleSection>
+    </div>
   );
 }

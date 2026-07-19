@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Richiesta non valida", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { ids, preset } = parsed.data;
+  const { ids, preset, includeBarcode } = parsed.data;
   const origin = requestOrigin(request);
 
   if (isBulkSyncCount(ids.length)) {
@@ -40,6 +40,7 @@ export async function POST(request: Request) {
         await renderBulkLabelPdfSync({
           entityIds: ids,
           preset,
+          includeBarcode,
           userId: auth.userId,
           origin,
         });
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
     const jobId = await createBulkLabelJob({
       entityIds: ids,
       preset,
+      includeBarcode,
       userId: auth.userId,
       origin,
     });

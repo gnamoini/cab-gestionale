@@ -45,5 +45,10 @@ for (const route of MIGRATED_STRUCTURAL_ROUTES) {
 const pageSection = read("components/design-system/layout/page-section.tsx");
 assert.match(pageSection, /StructuralSkeletonRenderer/, "PageSection delega al renderer SSOT");
 assert.match(pageSection, /skeleton:/, "PageSection richiede Skeleton Contract");
+assert.match(
+  pageSection,
+  /skeleton\.kind === "stack"/,
+  "PageSection stack: niente min-height esterno in content (parity skeleton renderer)",
+);
 
 console.log("skeleton-parity.test: OK");

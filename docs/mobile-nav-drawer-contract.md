@@ -12,6 +12,7 @@ SSOT comportamentale per `MobileNavDrawer`. La state machine in `lib/ui/mobile-n
 | `EDGE_ZONE_MIN_PX` | 20 + safe-area-left |
 | `ANIMATION_MS` | 240 |
 | `WATCHDOG_MS` | 320 (240 + 80) |
+| `EDGE_DRAG_IDLE_MS` | 400 (recovery pointer perso su PWA Android) |
 | `RUBBER_BAND_MAX_PX` | 24 |
 
 ## Stati
@@ -23,6 +24,7 @@ SSOT comportamentale per `MobileNavDrawer`. La state machine in `lib/ui/mobile-n
 | Evento | Stato corrente | Stato risultante | Animazione | Scroll | Focus |
 |--------|----------------|------------------|------------|--------|-------|
 | Tap hamburger | `CLOSED` | `OPENING` → `OPEN` | slide 240ms | lock | trap drawer |
+| Tap hamburger (heal edge preview) | `DRAGGING`* | `OPENING` → `OPEN` | slide 240ms | lock | trap drawer |
 | Swipe in activation zone | `CLOSED` | `DRAGGING` | realtime transform | lock on first move | unchanged |
 | Swipe release (commit) | `DRAGGING` | `SETTLING_OPEN` → `OPEN` | settled (no re-animate) | lock | trap on `OPEN` |
 | Swipe release (cancel) | `DRAGGING` | `SETTLING_CLOSE` → `CLOSED` | snap-back 240ms | unlock on unmount | restore hamburger |
@@ -38,7 +40,7 @@ SSOT comportamentale per `MobileNavDrawer`. La state machine in `lib/ui/mobile-n
 | Tier → desktop | any | `FORCE_CLOSE` → `CLOSED` | none | unlock | unchanged |
 | `prefers-reduced-motion` | any | stessi stati | 1ms | invariato | invariato |
 
-\* Backdrop tap durante `DRAGGING` con progress > 0: chiude.
+\* Backdrop tap durante `DRAGGING` con progress > 0: chiude. Tap hamburger durante `DRAGGING` con `edgePreview`: apre (heal stato parziale).
 
 ## Invarianti
 
@@ -61,6 +63,7 @@ SSOT comportamentale per `MobileNavDrawer`. La state machine in `lib/ui/mobile-n
 ## Event ordering guarantees
 
 - `OPEN_REQUEST` durante `OPENING`/`LOCKED` → ignorato (idempotente).
+- `OPEN_REQUEST` durante `DRAGGING` con `edgePreview` → heal → `OPENING` (hamburger recovery).
 - `CLOSE_REQUEST` durante `SETTLING_CLOSE` → ignorato.
 - Watchdog scatta su `SETTLING_*` se `animationend`/`transitionend` mancante → `FORCE_CLOSE` + metric `drawer_stuck_recovered`.
 - Cleanup idempotente: doppia chiamata non double-unlock.

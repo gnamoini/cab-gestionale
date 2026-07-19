@@ -36,6 +36,7 @@ import { HubIconOpen } from "@/components/design-system/hub-table-action-icons";
 import {
   LavMobileInlineField,
   LavorazioneMobileCardFooter,
+  LavorazioneMobileCardHeader,
   LavorazioneMobileCardShell,
 } from "@/components/gestionale/lavorazioni/lavorazione-mobile-card";
 const ClientLavorazioneIngressoDialog = dynamic(
@@ -183,6 +184,7 @@ function RowActions({
     <div className={lavTableActionsRow}>
       <IconActionButton
         label="Scheda ingresso"
+        tooltipForce
         className={lavTableActionBtnSecondary}
         onClick={(e) => {
           e.stopPropagation();
@@ -193,6 +195,7 @@ function RowActions({
       </IconActionButton>
       <IconActionButton
         label="QR lavorazione"
+        tooltipForce
         className={lavTableActionBtnSecondary}
         onClick={(e) => {
           e.stopPropagation();
@@ -206,6 +209,7 @@ function RowActions({
         href={clientLavorazioniDetailPath(rowId)}
         label="Informazioni e avanzamento"
         tooltipContent="Informazioni e avanzamento"
+        tooltipForce
         className={`${lavTableActionBtnPrimary} no-underline`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -362,130 +366,6 @@ function DesktopTable({
   );
 }
 
-const clientPortalMobileMetaLabelClass =
-  "text-[10px] font-medium text-zinc-500 dark:text-zinc-400";
-const clientPortalMobileMetaValueClass =
-  "mt-0.5 text-xs font-medium leading-snug text-zinc-800 dark:text-zinc-200";
-
-function clientPortalFieldHasValue(value: string): boolean {
-  const t = value.trim();
-  return Boolean(t && t !== "—");
-}
-
-function ClientPortalMobileField({
-  label,
-  value,
-  tabular = false,
-  className = "",
-  alwaysShow = false,
-}: {
-  label: string;
-  value: string;
-  tabular?: boolean;
-  className?: string;
-  alwaysShow?: boolean;
-}) {
-  if (!alwaysShow && !clientPortalFieldHasValue(value)) return null;
-  const display = clientPortalFieldHasValue(value) ? value.trim() : "—";
-  return (
-    <div className={`min-w-0 ${className}`.trim()}>
-      <p className={clientPortalMobileMetaLabelClass}>{label}</p>
-      <p
-        className={`${clientPortalMobileMetaValueClass} break-words${tabular ? " tabular-nums" : ""}`}
-        title={display}
-      >
-        {display}
-      </p>
-    </div>
-  );
-}
-
-function ClientPortalMobileCardHeader({
-  oggetto,
-  ingresso,
-  secondaryDate,
-  cliente,
-  utilizzatore,
-  cantiere,
-  targa,
-  matricola,
-  scuderia,
-}: {
-  oggetto: string;
-  ingresso: ReactNode;
-  secondaryDate?: { label: string; value: ReactNode };
-  cliente: string;
-  utilizzatore: string;
-  cantiere: string;
-  targa: string;
-  matricola: string;
-  scuderia: string;
-}) {
-  const anagraficaFields = [
-    { label: "Cliente", value: cliente, tabular: false },
-    { label: "Utilizzatore", value: utilizzatore, tabular: false },
-    { label: "Cantiere", value: cantiere, tabular: false },
-  ].filter((f) => clientPortalFieldHasValue(f.value));
-
-  const identificazioneFields = [
-    { label: "Scuderia", value: scuderia, tabular: true },
-    { label: "Targa", value: targa, tabular: true },
-    { label: "Matricola", value: matricola, tabular: true },
-  ].filter((f) => clientPortalFieldHasValue(f.value));
-
-  return (
-    <div className="pb-1">
-      <div className="grid grid-cols-3 gap-x-2 gap-y-2">
-        {clientPortalFieldHasValue(oggetto) ? (
-          <div className="col-span-2 min-w-0">
-            <p className={clientPortalMobileMetaLabelClass}>Oggetto</p>
-            <p
-              className="mt-0.5 break-words text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50"
-              title={oggetto}
-            >
-              {oggetto}
-            </p>
-          </div>
-        ) : null}
-        <div className={`min-w-0${clientPortalFieldHasValue(oggetto) ? "" : " col-start-3"}`}>
-          <p className={clientPortalMobileMetaLabelClass}>Ingresso</p>
-          <div className={`${clientPortalMobileMetaValueClass} tabular-nums`}>{ingresso}</div>
-        </div>
-        {secondaryDate ? (
-          <div className="col-start-3 min-w-0">
-            <p className={clientPortalMobileMetaLabelClass}>{secondaryDate.label}</p>
-            <div className={`${clientPortalMobileMetaValueClass} tabular-nums`}>{secondaryDate.value}</div>
-          </div>
-        ) : null}
-      </div>
-      {anagraficaFields.length > 0 ? (
-        <dl className="mt-2 grid grid-cols-3 gap-x-2 gap-y-2">
-          {anagraficaFields.map((f) => (
-            <ClientPortalMobileField
-              key={f.label}
-              label={f.label}
-              value={f.value}
-              tabular={f.tabular}
-            />
-          ))}
-        </dl>
-      ) : null}
-      {identificazioneFields.length > 0 ? (
-        <dl className="mt-2 grid grid-cols-3 gap-x-2 gap-y-2">
-          {identificazioneFields.map((f) => (
-            <ClientPortalMobileField
-              key={f.label}
-              label={f.label}
-              value={f.value}
-              tabular={f.tabular}
-            />
-          ))}
-        </dl>
-      ) : null}
-    </div>
-  );
-}
-
 function MobileCards({
   bundles,
   variant,
@@ -518,7 +398,7 @@ function MobileCards({
       {bundles.map(({ row, fields }) => {
         return (
           <LavorazioneMobileCardShell key={row.id} className="min-w-0 h-full">
-            <ClientPortalMobileCardHeader
+            <LavorazioneMobileCardHeader
               oggetto={fields.attrezzatura}
               cliente={fields.cliente}
               utilizzatore={fields.utilizzatore}
@@ -834,18 +714,18 @@ export function ClientLavorazioniView() {
     [archivioBundles, sortArchivioCol, sortArchivioPhase, statoOrderIds],
   );
 
-  const archivioCachedCount = contract.archivioQ.data?.length;
   const archivioCountQuery = useClientLavorazioniArchivioCountQuery(
-    canRender && !archivioListEnabled && archivioCachedCount === undefined,
+    canRender && filters.section !== "in_corso" && !archivioExpanded && !archivioListEnabled,
   );
 
+  const archivioHeadCount =
+    archivioCountQuery.data !== undefined ? archivioCountQuery.data : null;
+
   const archivioFilteredCount = archivioListEnabled
-    ? sortedArchivioBundles.length
-    : archivioCachedCount !== undefined
-      ? archivioCachedCount
-      : archivioCountQuery.isSuccess
-        ? (archivioCountQuery.data ?? 0)
-        : null;
+    ? contract.archivioQ.isPending && archivioHeadCount !== null
+      ? archivioHeadCount
+      : sortedArchivioBundles.length
+    : archivioHeadCount;
 
   const archivioCardTitle =
     archivioFilteredCount === null
@@ -873,7 +753,7 @@ export function ClientLavorazioniView() {
 
   const totalResults =
     (showInCorso ? inCorsoBundles.length : 0) +
-    (showArchivio ? (archivioListEnabled ? archivioBundles.length : (archivioFilteredCount ?? 0)) : 0);
+    (showArchivio ? (archivioFilteredCount ?? 0) : 0);
 
   const resetRicerca = useCallback(() => {
     setSearchInput("");

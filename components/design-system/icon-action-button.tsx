@@ -17,6 +17,8 @@ type IconActionButtonBase = {
   tooltipDisabled?: boolean;
   /** Tooltip alternativo (es. "Sola lettura" quando disabled). Default: label. */
   tooltipContent?: string;
+  /** Icon-only: mostra tooltip anche se duplica aria-label (es. card mobile). */
+  tooltipForce?: boolean;
   /** Distanza tooltip dal trigger (px). */
   tooltipSideOffset?: number;
 };
@@ -43,13 +45,16 @@ export function IconActionButton(props: IconActionButtonProps) {
     tooltipSide,
     tooltipDisabled: tooltipDisabledProp,
     tooltipContent,
+    tooltipForce = false,
     tooltipSideOffset,
     as = "button",
     ...rest
   } = props;
 
   const hint = tooltipContent ?? label;
-  const content = resolveTooltipContent("", hint, { iconOnly: true, ariaLabel: label });
+  const content = tooltipForce
+    ? hint.trim() || undefined
+    : resolveTooltipContent("", hint, { iconOnly: true, ariaLabel: label });
   const resolvedClassName = `${toolbar ? dsPageToolbarIconBtn : ""} ${className}`.trim();
   const multiline = Boolean(content?.includes("\n"));
   const tooltipDisabled = tooltipDisabledProp || !content?.trim();

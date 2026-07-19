@@ -64,7 +64,9 @@ export {
   PageToolbarCtaLabel,
   PageToolbarOverflowAction,
   PageToolbarResultCount,
+  PageToolbarMetaSegments,
   PageToolbarMetaToggle,
+  type PageToolbarMetaSegmentOption,
   PageToolbarActions,
   type PageToolbarProps,
 } from "./page-toolbar";

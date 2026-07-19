@@ -359,6 +359,7 @@ export const REGRESSION_EXTENDED: readonly string[] = [
   "lib/regression/fatturazione-status-write-audit.test.ts",
   "lib/regression/activity-write-coverage-audit.test.ts",
   "lib/regression/audit-log-no-silent-failure.test.ts",
+  "lib/regression/audit-log-pipeline.test.ts",
   "lib/regression/rbac-log-entita-module-ssot.test.ts",
   "lib/regression/log-modifiche-retention.test.ts",
   "lib/dashboard/control-tower-activity-feed-semantics.test.ts",

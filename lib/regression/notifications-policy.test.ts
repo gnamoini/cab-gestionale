@@ -157,6 +157,22 @@ assert.match(centerBellSrc, /<Drawer[\s\S]*?gestionaleLogPanelAsideClass/);
 assert.match(centerBellSrc, /toInboxNotificationLogViewModel/);
 assert.match(centerBellSrc, /Carica altre/);
 assert.match(centerBellSrc, /useNotificationCenter/);
+assert.match(centerBellSrc, /dispatchAdminDashboardTestSystemNotification/);
+assert.match(centerBellSrc, /shouldPreferPwaPushOverDesktopPrompt/);
+assert.match(centerBellSrc, /usePwaPushOptIn/);
+
+const policySrc = fs.readFileSync(
+  path.join(ROOT, "lib/notifications/application/policies/notification-policies.ts"),
+  "utf8",
+);
+assert.match(
+  policySrc,
+  /admin_dashboard_test[\s\S]{0,500}ONLINE:\s*\[[^\]]*"push"/,
+  "admin_dashboard_test must include push while ONLINE",
+);
+
+const showLocalSrc = fs.readFileSync(path.join(ROOT, "lib/pwa/show-local-system-notification.ts"), "utf8");
+assert.match(showLocalSrc, /registration\.showNotification/);
 
 assert.doesNotMatch(
   desktopDispatchSrc,

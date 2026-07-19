@@ -3,6 +3,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { buildLavorazioniListKey } from "@/lib/react-query/build-list-keys";
 import { normalizeLavorazioniFilters } from "@/lib/domain/normalize-filters";
 import {
+  coerceLavorazioniListRowsFromCache,
   isLavorazioniInfiniteListCacheData,
   lavorazioniInfiniteSeedFromRows,
   repairLavorazioniInfiniteListCacheEntry,
@@ -37,6 +38,8 @@ function row(): LavorazioneListRow {
 const seed = lavorazioniInfiniteSeedFromRows([row()]);
 assert.equal(isLavorazioniInfiniteListCacheData(seed), true);
 assert.equal(seed.pages[0]?.rows.length, 1);
+assert.deepEqual(coerceLavorazioniListRowsFromCache(seed), [row()]);
+assert.deepEqual(coerceLavorazioniListRowsFromCache([row()]), [row()]);
 
 const qc = new QueryClient();
 qc.setQueryData(key, [row()]);

@@ -225,7 +225,7 @@ export async function processDdtReceivingAnalyze(importFileId: string, userId: s
       payload: auditContext(
         `AI_ANALYSIS_COMPLETED — confidence ${Math.round(documentAiConfidence * 100)}% — ${lineRows.length} righe — ${matchedCount} match — ${newItemCount} nuovi`,
       ),
-    }).catch(() => undefined);
+    });
 
     traceInventoryReceivingOperation({
       operation: "analyze_complete",

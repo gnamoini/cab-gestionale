@@ -4,13 +4,12 @@ import { Drawer } from "@/components/design-system";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import {
   GestionaleLogEmpty,
-  GestionaleLogEntryDismissButton,
   GestionaleLogEntryFourLines,
   GestionaleLogList,
   gestionaleLogDrawerPanelClass,
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
-import type { PreventiviLogStored } from "@/lib/preventivi/preventivi-change-log-storage";
+import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 
 export function PreventiviLogDrawer({
   open,
@@ -22,19 +21,19 @@ export function PreventiviLogDrawer({
   pageCount,
   pagerLabel,
   onPageChange,
-  onDismiss,
+  isLoading,
   lockScroll,
 }: {
   open: boolean;
   onClose: () => void;
-  entries: readonly PreventiviLogStored[];
-  pagedEntries: readonly PreventiviLogStored[];
+  entries: readonly { id: string; vm: GestionaleLogViewModel }[];
+  pagedEntries: readonly { id: string; vm: GestionaleLogViewModel }[];
   showPager: boolean;
   page: number;
   pageCount: number;
   pagerLabel: string;
   onPageChange: (page: number) => void;
-  onDismiss: (id: string) => void;
+  isLoading?: boolean;
   lockScroll?: boolean;
 }) {
   if (!open) return null;
@@ -49,23 +48,15 @@ export function PreventiviLogDrawer({
     >
       <div className={gestionaleLogDrawerPanelClass}>
         <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>
-          {entries.length === 0 ? (
+          {isLoading ? (
+            <p className="p-4 text-sm text-[color:var(--cab-text-muted)]">Caricamento…</p>
+          ) : entries.length === 0 ? (
             <GestionaleLogEmpty message="Nessuna modifica registrata." />
           ) : (
             <GestionaleLogList>
               {pagedEntries.map((entry) => (
                 <li key={entry.id} className="list-none">
-                  <GestionaleLogEntryFourLines
-                    vm={{
-                      tone: entry.tone,
-                      tipoRiga: entry.tipoRiga,
-                      oggettoRiga: entry.oggettoRiga,
-                      modificaRiga: entry.modificaRiga,
-                      autore: entry.autore,
-                      atIso: entry.atIso,
-                    }}
-                    trailing={<GestionaleLogEntryDismissButton onDismiss={() => onDismiss(entry.id)} />}
-                  />
+                  <GestionaleLogEntryFourLines vm={entry.vm} />
                 </li>
               ))}
             </GestionaleLogList>

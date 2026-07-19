@@ -21,6 +21,7 @@ export async function GET(request: Request, context: RouteContext) {
   const parsed = renderLabelQuerySchema.safeParse({
     format: url.searchParams.get("format") ?? undefined,
     preset: url.searchParams.get("preset") ?? undefined,
+    includeBarcode: url.searchParams.get("includeBarcode") ?? undefined,
   });
   if (!parsed.success) {
     return NextResponse.json({ error: "Parametri non validi" }, { status: 400 });
@@ -45,6 +46,7 @@ export async function GET(request: Request, context: RouteContext) {
       token: tokenRow.token,
       preset: parsed.data.preset,
       format: parsed.data.format,
+      includeBarcode: parsed.data.includeBarcode,
       origin: requestOrigin(request),
       userId: auth.userId,
       device: request.headers.get("user-agent"),

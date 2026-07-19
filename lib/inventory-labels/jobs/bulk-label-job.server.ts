@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseServerServiceClient } from "@/src/lib/supabase/server-service-client";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { DEFAULT_LABEL_PRESET, getLabelTemplate } from "@/lib/inventory-labels/domain/templates";
+import { parseLabelJobPreset, formatLabelJobPreset } from "@/lib/inventory-labels/validation";
 import { buildInventoryQrUrl } from "@/lib/inventory-labels/domain/tokens";
 import { ensureActiveTokensForEntities } from "@/lib/inventory-labels/domain/tokens-batch.server";
 import { labelPayloadFromMagazzinoRow, magazzinoRicambioEntityType } from "@/lib/inventory-labels/domain/ricambio-payload.server";
@@ -76,6 +77,7 @@ async function renderBulkPdf(
   template: NonNullable<ReturnType<typeof getLabelTemplate>>,
   items: BulkLabelItem[],
   preset: string,
+  includeBarcode: boolean,
   jobId: string | null,
   onProgress?: (done: number, total: number) => void | Promise<void>,
 ) {
@@ -83,6 +85,7 @@ async function renderBulkPdf(
 
   try {
     return await renderBulkLabelPdfWithCache(sb, template, items, preset, {
+      includeBarcode,
       chunkSize: 25,
       onChunkHeartbeat: heartbeat,
       onProgress: async (done, total) => {
@@ -96,6 +99,7 @@ async function renderBulkPdf(
     });
     const pipelineItems = items.map((it) => ({ payload: it.payload, qrUrl: it.qrUrl }));
     const result = await renderMultiLabelPdfWithPipeline(template, pipelineItems, {
+      includeBarcode,
       onProgress: async (done, total) => {
         await heartbeat();
         await onProgress?.(done, total);
@@ -112,18 +116,20 @@ async function renderBulkPdf(
 export async function createBulkLabelJob(input: {
   entityIds: string[];
   preset: string;
+  includeBarcode?: boolean;
   userId: string;
   origin: string;
 }): Promise<string> {
   const sb = await createSupabaseServerUserClient();
   const now = new Date().toISOString();
+  const storedPreset = formatLabelJobPreset(input.preset, input.includeBarcode !== false);
   const { data, error } = await sb
     .from("label_generation_jobs")
     .insert({
       status: "pending",
       progress: 0,
       entity_ids: input.entityIds,
-      preset: input.preset,
+      preset: storedPreset,
       format: "pdf",
       created_by: input.userId,
       started_at: now,
@@ -133,13 +139,13 @@ export async function createBulkLabelJob(input: {
     .single();
   if (error) throw new Error(error.message);
   const jobId = String(data.id);
-  waitUntil(processBulkLabelJob(jobId, input));
+  waitUntil(processBulkLabelJob(jobId, { ...input, preset: storedPreset }));
   return jobId;
 }
 
 async function processBulkLabelJob(
   jobId: string,
-  input: { entityIds: string[]; preset: string; userId: string; origin: string },
+  input: { entityIds: string[]; preset: string; includeBarcode?: boolean; userId: string; origin: string },
 ): Promise<void> {
   const sb = createSupabaseServerServiceClient();
   const t0 = performance.now();
@@ -153,17 +159,26 @@ async function processBulkLabelJob(
       .eq("id", jobId);
     await auditBulkPdfStarted(sb, { userId: input.userId, count, mode: "async", jobId });
 
-    const template = getLabelTemplate(input.preset);
+    const { preset, includeBarcode } = parseLabelJobPreset(input.preset);
+    const template = getLabelTemplate(preset);
     if (!template) throw new Error("Template non valido");
 
     const { items } = await buildBulkLabelItems(sb, input.entityIds, input.userId, input.origin);
     await touchLabelJobHeartbeat(sb, jobId, { progress: 5 });
     if (!items.length) throw new Error("Nessun ricambio valido per la stampa");
 
-    const result = await renderBulkPdf(sb, template, items, input.preset, jobId, async (done, total) => {
-      const rasterProgress = Math.floor((done / total) * 90);
-      await updateJobProgress(sb, jobId, Math.max(5, rasterProgress));
-    });
+    const result = await renderBulkPdf(
+      sb,
+      template,
+      items,
+      preset,
+      includeBarcode,
+      jobId,
+      async (done, total) => {
+        const rasterProgress = Math.floor((done / total) * 90);
+        await updateJobProgress(sb, jobId, Math.max(5, rasterProgress));
+      },
+    );
 
     await touchLabelJobHeartbeat(sb, jobId, { progress: 95 });
 
@@ -265,7 +280,7 @@ export async function retryBulkLabelJob(
     throw new Error("Retry consentito solo per job bloccati");
   }
   const entityIds = Array.isArray(job.entity_ids) ? (job.entity_ids as string[]) : [];
-  const preset = String(job.preset ?? DEFAULT_LABEL_PRESET);
+  const { preset, includeBarcode } = parseLabelJobPreset(String(job.preset ?? DEFAULT_LABEL_PRESET));
   const now = new Date().toISOString();
   await sb
     .from("label_generation_jobs")
@@ -280,12 +295,20 @@ export async function retryBulkLabelJob(
       heartbeat_at: now,
     })
     .eq("id", jobId);
-  waitUntil(processBulkLabelJob(jobId, { entityIds, preset, userId: input.userId, origin: input.origin }));
+  waitUntil(
+    processBulkLabelJob(jobId, {
+      entityIds,
+      preset: formatLabelJobPreset(preset, includeBarcode),
+      userId: input.userId,
+      origin: input.origin,
+    }),
+  );
 }
 
 export async function renderBulkLabelPdfSync(input: {
   entityIds: string[];
   preset: string;
+  includeBarcode?: boolean;
   userId: string;
   origin: string;
 }): Promise<{
@@ -300,6 +323,7 @@ export async function renderBulkLabelPdfSync(input: {
   const sb = await createSupabaseServerUserClient();
   const template = getLabelTemplate(input.preset);
   if (!template) throw new Error("Template non valido");
+  const includeBarcode = input.includeBarcode !== false;
 
   const { items, skippedIds } = await buildBulkLabelItems(sb, input.entityIds, input.userId, input.origin);
   if (!items.length) throw new Error("Nessun ricambio valido");
@@ -309,7 +333,7 @@ export async function renderBulkLabelPdfSync(input: {
   await auditBulkPdfStarted(sb, { userId: input.userId, count, mode: "sync" });
 
   try {
-    const result = await renderBulkPdf(sb, template, items, input.preset, null);
+    const result = await renderBulkPdf(sb, template, items, input.preset, includeBarcode, null);
     const durationMs = Math.round(performance.now() - t0);
     await auditBulkPdfCompleted(sb, {
       userId: input.userId,

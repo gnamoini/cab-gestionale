@@ -42,7 +42,6 @@ const CHART_VIEW_HEIGHT = 200;
 const CHART_VIEW_WIDTH_EMBEDDED = 520;
 const CHART_VIEW_HEIGHT_EMBEDDED = 300;
 const CHART_HEIGHT_DEFAULT = CHART_VIEW_HEIGHT;
-const CHART_EMBEDDED_MIN_H = "10rem";
 const PAD_LEFT = 32;
 const PAD_RIGHT = 12;
 const PAD_TOP = 16;
@@ -249,9 +248,10 @@ function HealthScoreTrendChartSvg({
   return (
     <div
       className={
-        embedded ? "flex min-h-0 w-full flex-1 basis-0 flex-col justify-center" : "relative min-w-0"
+        embedded
+          ? "flex min-h-40 w-full flex-col justify-center sm:min-h-0 sm:flex-1 sm:basis-0"
+          : "relative min-w-0"
       }
-      style={embedded ? { minHeight: CHART_EMBEDDED_MIN_H } : undefined}
     >
       <svg
         ref={svgRef}
@@ -418,8 +418,7 @@ export function HealthScoreWeeklyTrendChart({
   if (isLoading) {
     const loadingBody = (
       <div
-        className={`flex flex-col items-center justify-center gap-3 ${embedded ? "min-h-0 flex-1 py-2" : "min-h-[13rem] rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_25%,var(--cab-card))] px-4 py-6"}`}
-        style={embedded ? { minHeight: CHART_EMBEDDED_MIN_H } : undefined}
+        className={`flex flex-col items-center justify-center gap-3 ${embedded ? "min-h-40 py-2 sm:min-h-0 sm:flex-1" : "min-h-[13rem] rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_25%,var(--cab-card))] px-4 py-6"}`}
       >
         <HealthScoreRingLoading />
         <p className={`${dsTypoCaption} text-[color:var(--cab-text-muted)]`}>Caricamento andamento…</p>
@@ -431,8 +430,7 @@ export function HealthScoreWeeklyTrendChart({
   if (!points || validPoints.length === 0) {
     const emptyBody = (
       <div
-        className={`flex items-center justify-center ${embedded ? "min-h-0 flex-1 py-2" : "min-h-[13rem] rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] px-4 py-6"}`}
-        style={embedded ? { minHeight: CHART_EMBEDDED_MIN_H } : undefined}
+        className={`flex items-center justify-center ${embedded ? "min-h-40 py-2 sm:min-h-0 sm:flex-1" : "min-h-[13rem] rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] px-4 py-6"}`}
       >
         <p className={`${dsTypoBody} text-center text-[color:var(--cab-text-muted)]`}>
           Dati insufficienti per mostrare l&apos;andamento settimanale.
@@ -479,7 +477,7 @@ export function HealthScoreWeeklyTrendChart({
   );
 
   if (embedded) {
-    return <div className="flex min-h-0 flex-1 basis-0 flex-col">{chartBody}</div>;
+    return <div className="flex min-h-40 w-full flex-col sm:min-h-0 sm:flex-1 sm:basis-0">{chartBody}</div>;
   }
 
   return (

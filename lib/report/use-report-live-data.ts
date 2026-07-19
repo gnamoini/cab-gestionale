@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { isDirtySyncEnabledForDomain } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 import { scheduleCompatBackgroundAudit } from "@/lib/magazzino/compat/compat-runtime-sanitize";
+import { coerceLavorazioniListRowsFromCache } from "@/lib/lavorazioni/lavorazioni-infinite-cache";
 import { scheduleReportBroadcastRefresh } from "@/lib/report/report-refresh";
 import { subscribeReportDataRefresh } from "@/lib/report/report-broadcast";
 import { useReportLiveDataDerived } from "@/lib/report/use-report-live-data-derived";
@@ -75,7 +76,7 @@ export function useReportLiveData(options?: ReportLiveDataOptions) {
     (enableManual && manualQuery.isFetching);
 
   const { lavListRows, integrityData, integrityView, snapshotFingerprint } = useReportLiveDataDerived({
-    lavRows: lavQuery.data ?? [],
+    lavRows: coerceLavorazioniListRowsFromCache(lavQuery.data),
     lavQuery,
     magRows: magQuery.data ?? [],
     magQuery,

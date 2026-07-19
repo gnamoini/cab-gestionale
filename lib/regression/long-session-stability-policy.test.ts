@@ -35,6 +35,7 @@ assert.match(ricambioRegistry, /getRicambioStockSnapshotRegistrySize/);
 
 const scortaSync = read("lib/magazzino/scorta-adjust-sync.ts");
 assert.match(scortaSync, /queues\.delete\(ricambioId\)/);
+assert.match(scortaSync, /pendingResync/);
 
 const adminNotif = read("lib/lavorazioni/admin-notification-store.ts");
 assert.match(adminNotif, /ensureStorageBridgeListener/);

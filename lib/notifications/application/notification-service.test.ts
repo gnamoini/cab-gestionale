@@ -40,6 +40,7 @@ function mockRecord(partial: Partial<NotificationRecord> & Pick<NotificationReco
 
 assert.ok(NOTIFICATION_POLICIES.lavorazione_created);
 assert.equal(NOTIFICATION_POLICIES.magazzino_sotto_scorta?.aggregation.mode, "bundle_push");
+assert.ok(NOTIFICATION_POLICIES.admin_dashboard_test?.presencePolicy.ONLINE?.includes("push"));
 
 const magRecords = [1, 2, 3].map((i) =>
   mockRecord({ id: `id-${i}`, type: "magazzino_sotto_scorta" }),

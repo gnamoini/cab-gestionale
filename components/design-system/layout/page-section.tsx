@@ -33,8 +33,10 @@ export function PageSection({
     );
   }
 
-  const geometryClass = resolveGeometryClasses(skeleton.geometry);
-  const merged = [layoutPageRoot, geometryClass, className].filter(Boolean).join(" ");
+  const geometryClass =
+    skeleton.kind === "stack" ? "" : resolveGeometryClasses(skeleton.geometry);
+  const structureClass = skeleton.kind === "stack" ? (skeleton.className ?? "") : "";
+  const merged = [layoutPageRoot, geometryClass, structureClass, className].filter(Boolean).join(" ");
 
   return (
     <div className={merged} data-skeleton-kind={skeleton.kind}>

@@ -640,7 +640,7 @@ export function LavorazioniDigitalCaptureLauncher({
         onClick={handleOpenRequest}
       >
         <span className="hidden sm:inline">Acquisizione AI</span>
-        {!mobileIconOnly ? <span className="sm:hidden">Acquisizione</span> : null}
+        {!mobileIconOnly ? <span className="sm:hidden">AI</span> : null}
       </GestionaleAiActionButton>
       {open ? (
         <GestionaleModalShell

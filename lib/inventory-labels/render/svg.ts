@@ -1,4 +1,4 @@
-import type { LabelPayload, LabelTemplateDefinition } from "@/lib/inventory-labels/domain/types";
+import type { LabelPayload, LabelRenderOptions, LabelTemplateDefinition } from "@/lib/inventory-labels/domain/types";
 import { mmToPx } from "@/lib/inventory-labels/domain/templates";
 import { generateCode128SvgString } from "@/lib/inventory-labels/render/barcode-core";
 import { cutBorderRectSvg } from "@/lib/inventory-labels/render/cut-border";
@@ -23,12 +23,13 @@ export async function renderLabelSvg(
   template: LabelTemplateDefinition,
   payload: LabelPayload,
   qrUrl: string,
-  options?: { embedFonts?: boolean; textAsPaths?: boolean },
+  options?: LabelRenderOptions & { embedFonts?: boolean; textAsPaths?: boolean },
 ): Promise<string> {
   const w = mmToPx(template.widthMm, template.dpi);
   const h = mmToPx(template.heightMm, template.dpi);
   const textAsPaths = options?.textAsPaths ?? false;
   const embedFonts = !textAsPaths && (options?.embedFonts ?? true);
+  const includeBarcode = options?.includeBarcode ?? true;
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`,
     `<rect width="100%" height="100%" fill="#ffffff"/>`,
@@ -83,6 +84,7 @@ export async function renderLabelSvg(
     }
 
     if (el.type === "barcode") {
+      if (!includeBarcode) continue;
       const value = labelDisplayCaps(fieldValue(payload, el.field));
       if (!value) continue;
       const qrEl = template.elements.find((e) => e.type === "qr");

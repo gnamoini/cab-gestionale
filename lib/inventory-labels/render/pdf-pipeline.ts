@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { zipSync } from "fflate";
-import type { LabelPayload, LabelTemplateDefinition } from "@/lib/inventory-labels/domain/types";
+import type { LabelPayload, LabelRenderOptions, LabelTemplateDefinition } from "@/lib/inventory-labels/domain/types";
 import {
   renderLabelPng,
   renderLabelPngFallback,
@@ -73,11 +73,12 @@ export function assembleMultiLabelPdf(
 async function renderMultiLabelPdfFallback(
   template: LabelTemplateDefinition,
   items: LabelItem[],
+  renderOptions?: LabelRenderOptions,
 ): Promise<Uint8Array> {
   const pngs = await rasterizePngs(
     template,
     items,
-    (item) => renderLabelPngFallback(template, item.payload, item.qrUrl),
+    (item) => renderLabelPngFallback(template, item.payload, item.qrUrl, renderOptions),
     1,
   );
   return assembleMultiLabelPdf(template, items, pngs);
@@ -95,13 +96,20 @@ function renderEmergencyLabelZip(items: LabelItem[], entries: EmergencyZipEntry[
   return zipSync(files, { level: 1 });
 }
 
-async function renderEmergencyZip(template: LabelTemplateDefinition, items: LabelItem[]): Promise<Uint8Array> {
+async function renderEmergencyZip(
+  template: LabelTemplateDefinition,
+  items: LabelItem[],
+  renderOptions?: LabelRenderOptions,
+): Promise<Uint8Array> {
   const entries: EmergencyZipEntry[] = [];
   for (const item of items) {
     try {
-      entries.push({ ext: "png", bytes: await renderLabelPngFallback(template, item.payload, item.qrUrl) });
+      entries.push({
+        ext: "png",
+        bytes: await renderLabelPngFallback(template, item.payload, item.qrUrl, renderOptions),
+      });
     } catch {
-      const svg = await renderLabelSvgBytes(template, item.payload, item.qrUrl);
+      const svg = await renderLabelSvgBytes(template, item.payload, item.qrUrl, renderOptions);
       entries.push({ ext: "svg", bytes: svg });
     }
   }
@@ -111,10 +119,11 @@ async function renderEmergencyZip(template: LabelTemplateDefinition, items: Labe
 export async function renderMultiLabelPdfWithPipeline(
   template: LabelTemplateDefinition,
   items: LabelItem[],
-  options?: { onProgress?: (done: number, total: number) => void | Promise<void> },
+  options?: LabelRenderOptions & { onProgress?: (done: number, total: number) => void | Promise<void> },
 ): Promise<BulkPdfRenderResult> {
   const total = items.length;
   const concurrency = resolveLabelPdfRenderConcurrency();
+  const renderOptions: LabelRenderOptions = { includeBarcode: options?.includeBarcode };
   let peakHeapMb = readPeakHeapMb();
 
   const tickProgress = async (done: number) => {
@@ -126,7 +135,7 @@ export async function renderMultiLabelPdfWithPipeline(
     const pngs = await withLabelPdfTimeout(async () => {
       let done = 0;
       return mapWithConcurrency(items, concurrency, async (item) => {
-        const png = await renderLabelPng(template, item.payload, item.qrUrl);
+        const png = await renderLabelPng(template, item.payload, item.qrUrl, renderOptions);
         done += 1;
         await tickProgress(done);
         return png;
@@ -146,7 +155,7 @@ export async function renderMultiLabelPdfWithPipeline(
   }
 
   try {
-    const bytes = await withLabelPdfTimeout(() => renderMultiLabelPdfFallback(template, items));
+    const bytes = await withLabelPdfTimeout(() => renderMultiLabelPdfFallback(template, items, renderOptions));
     peakHeapMb = Math.max(peakHeapMb, readPeakHeapMb());
     console.info(`[label-pdf] count=${total} peakHeap=${peakHeapMb}MiB pipeline=fallback`);
     return { kind: "pdf", bytes, pipeline: "fallback", peakHeapMb };
@@ -156,7 +165,7 @@ export async function renderMultiLabelPdfWithPipeline(
     });
   }
 
-  const bytes = await renderEmergencyZip(template, items);
+  const bytes = await renderEmergencyZip(template, items, renderOptions);
   peakHeapMb = Math.max(peakHeapMb, readPeakHeapMb());
   console.info(`[label-pdf] count=${total} peakHeap=${peakHeapMb}MiB pipeline=emergency`);
   return { kind: "zip", bytes, pipeline: "emergency", peakHeapMb };
@@ -166,8 +175,9 @@ export async function renderSingleLabelPdf(
   template: LabelTemplateDefinition,
   payload: LabelPayload,
   qrUrl: string,
+  renderOptions?: LabelRenderOptions,
 ): Promise<Uint8Array> {
-  const result = await renderMultiLabelPdfWithPipeline(template, [{ payload, qrUrl }]);
+  const result = await renderMultiLabelPdfWithPipeline(template, [{ payload, qrUrl }], renderOptions);
   if (result.kind === "zip") throw new Error("Generazione etichetta singola fallita");
   return result.bytes;
 }
@@ -175,7 +185,7 @@ export async function renderSingleLabelPdf(
 export async function renderMultiLabelPdf(
   template: LabelTemplateDefinition,
   items: LabelItem[],
-  options?: { onProgress?: (done: number, total: number) => void | Promise<void> },
+  options?: LabelRenderOptions & { onProgress?: (done: number, total: number) => void | Promise<void> },
 ): Promise<Uint8Array> {
   const result = await renderMultiLabelPdfWithPipeline(template, items, options);
   if (result.kind === "zip") {

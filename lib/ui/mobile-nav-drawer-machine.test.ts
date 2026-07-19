@@ -45,6 +45,13 @@ assert.equal(state.state, "CLOSED");
 
 state = navDrawerReducer(
   { ...NAV_DRAWER_INITIAL, state: "DRAGGING", mounted: true, edgePreview: true },
+  "OPEN_REQUEST",
+);
+assert.equal(state.state, "OPENING");
+assert.equal(state.edgePreview, false);
+
+state = navDrawerReducer(
+  { ...NAV_DRAWER_INITIAL, state: "DRAGGING", mounted: true, edgePreview: true },
   "POINTER_CANCEL",
 );
 assert.equal(state.state, "SETTLING_CLOSE");

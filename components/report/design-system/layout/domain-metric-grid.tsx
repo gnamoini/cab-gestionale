@@ -54,14 +54,13 @@ export function ReportDomainMetricsGrid({
   compareMode?: ReportCompareMode;
 }) {
   const converted = useMemo(() => fromDomainMetrics(metrics, compareMode), [metrics, compareMode]);
+  const { metricGridCols } = useReportDensity();
   const pending = metrics.filter((m) => {
     const entry = m.state;
     return entry.status !== "available" || converted.every((c) => c.id !== m.id);
   });
 
   if (converted.length === 0 && pending.length === 0) return null;
-
-  const { metricGridCols } = useReportDensity();
 
   return (
     <div className={`${reportContentPanelClass} space-y-3`}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { coerceLavorazioniListRowsFromCache } from "@/lib/lavorazioni/lavorazioni-infinite-cache";
 import { mapMagazzinoRowsToUI } from "@/lib/magazzino/magazzino-list-cache";
 import { enrichLavorazioneListRowsWithMezzi } from "@/lib/db/dto-mappers";
 import { mezziGestitiToEmbedMap } from "@/lib/mezzi/mezzi-attrezzature-batch";
@@ -77,7 +78,7 @@ export type ReportLiveDataDerivedInput = {
 
 export function useReportLiveDataDerived(input: ReportLiveDataDerivedInput) {
   const lavListRows = useMemo(() => {
-    const rows = input.lavRows;
+    const rows = coerceLavorazioniListRowsFromCache(input.lavRows);
     const needsClientEnrich = rows.some((row) => Boolean(row.mezzo_id?.trim()) && row.mezzo == null);
     if (!needsClientEnrich) return rows;
     const mezziById = mezziGestitiToEmbedMap(input.mezziRows);

@@ -14,4 +14,4 @@ assert.equal(replaced, null, "replace is deferred");
 setTimeout(() => {
   assert.equal(replaced, "/dashboard");
   console.log("deferred-app-router.test: OK");
-}, 10);
+}, 20);

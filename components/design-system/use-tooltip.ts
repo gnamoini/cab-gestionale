@@ -115,7 +115,13 @@ export function useTooltip({
       if (!TOOLTIP_POSITION_RAF_BATCH) {
         return autoUpdate(reference, floating, update);
       }
+      let initialPass = true;
       return autoUpdate(reference, floating, () => {
+        if (initialPass) {
+          initialPass = false;
+          update();
+          return;
+        }
         if (positionRafRef.current != null) return;
         positionRafRef.current = requestAnimationFrame(() => {
           positionRafRef.current = null;
@@ -126,15 +132,17 @@ export function useTooltip({
     [],
   );
 
-  const { refs, floatingStyles, isPositioned, placement } = useFloating({
+  const { refs, floatingStyles, isPositioned, placement, update } = useFloating({
     open,
     placement: sideToPlacement(side),
     strategy: "fixed",
+    /** `top`/`left` invece di `transform` — posizione stabile al primo paint (come dropdown portal). */
+    transform: false,
     middleware: [
       offset(sideOffset ?? TOOLTIP_GAP),
       flip({
         padding: TOOLTIP_VIEWPORT_PAD,
-        fallbackPlacements: ["top", "bottom", "left", "right"],
+        fallbackPlacements: ["bottom"],
       }),
       shift({ padding: TOOLTIP_VIEWPORT_PAD, crossAxis: true }),
       size({
@@ -257,11 +265,12 @@ export function useTooltip({
       setVisible((v) => (v ? false : v));
       return;
     }
+    update();
     if (isPositioned && activeRef.current) {
       setVisible((v) => (v ? v : true));
       showTooltipPopover(contentRef.current);
     }
-  }, [open, isPositioned, content, contentRef]);
+  }, [open, isPositioned, content, contentRef, update]);
 
   useEffect(() => {
     if (!open) return;

@@ -79,11 +79,13 @@ function DiaryInlineWeekCalendar({
   weekToYmd,
   filledYmds,
   onSelectDay,
+  onViewChange,
 }: {
   weekFromYmd: string;
   weekToYmd: string;
   filledYmds: ReadonlySet<string>;
   onSelectDay: (ymd: string) => void;
+  onViewChange?: (year: number, month: number) => void;
 }) {
   const initial = initialViewFromYmd(weekFromYmd);
   const [viewYear, setViewYear] = useState(initial.year);
@@ -101,6 +103,10 @@ function DiaryInlineWeekCalendar({
     setViewYear(v.year);
     setViewMonth(v.month);
   }, [weekFromYmd]);
+
+  useEffect(() => {
+    onViewChange?.(viewYear, viewMonth);
+  }, [viewYear, viewMonth, onViewChange]);
 
   const cells = useMemo(() => buildMonthGrid(viewYear, viewMonth), [viewYear, viewMonth]);
   const weeks = useMemo(() => groupCellsByWeek(cells), [cells]);
@@ -185,7 +191,7 @@ function DiaryInlineWeekCalendar({
                     {cell.date.getDate()}
                     {hasNote ? (
                       <span
-                        className={`absolute bottom-1.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full ${
+                        className={`pointer-events-none absolute bottom-0.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full ${
                           isToday ? "bg-white" : "bg-[color:var(--cab-primary)]"
                         }`}
                         aria-hidden
@@ -309,10 +315,31 @@ export function DashboardDiaryPanel() {
   const weekDays = useMemo(() => operationalDiaryWeekDays(new Date(), weekOffset), [weekOffset]);
   const fromYmd = weekDays[0]?.ymd;
   const toYmd = weekDays[6]?.ymd;
+  const [calendarView, setCalendarView] = useState(() =>
+    initialViewFromYmd(fromYmd ?? ymdFromLocalDate(new Date())),
+  );
+
+  const calendarGridRange = useMemo(() => {
+    const cells = buildMonthGrid(calendarView.year, calendarView.month);
+    return { fromYmd: cells[0]!.ymd, toYmd: cells[cells.length - 1]!.ymd };
+  }, [calendarView]);
+
+  const handleCalendarViewChange = useCallback((year: number, month: number) => {
+    setCalendarView((prev) => (prev.year === year && prev.month === month ? prev : { year, month }));
+  }, []);
 
   const { data: weekEntries = [], isLoading } = useOperationalDiaryQuery(
     { fromYmd, toYmd },
     { enabled: !rbac.isLoading && canReadDiary && Boolean(fromYmd && toYmd) },
+  );
+  const { data: calendarEntries = [] } = useOperationalDiaryQuery(
+    { fromYmd: calendarGridRange.fromYmd, toYmd: calendarGridRange.toYmd },
+    {
+      enabled:
+        !rbac.isLoading &&
+        canReadDiary &&
+        Boolean(calendarGridRange.fromYmd && calendarGridRange.toYmd),
+    },
   );
   const upsert = useOperationalDiaryUpsertMutation(fromYmd, toYmd);
 
@@ -347,10 +374,16 @@ export function DashboardDiaryPanel() {
     [drafts, byDate],
   );
 
-  const filledYmds = useMemo(
-    () => new Set(weekDays.filter((day) => fieldValue(day.ymd).trim().length > 0).map((day) => day.ymd)),
-    [weekDays, fieldValue],
-  );
+  const filledYmds = useMemo(() => {
+    const set = new Set<string>();
+    for (const entry of calendarEntries) {
+      if (entry.body.trim()) set.add(entry.work_date);
+    }
+    for (const [ymd, body] of Object.entries(drafts)) {
+      if (body.trim()) set.add(ymd);
+    }
+    return set;
+  }, [calendarEntries, drafts]);
 
   const runPersist = useCallback(
     async (ymd: string, body: string) => {
@@ -475,6 +508,7 @@ export function DashboardDiaryPanel() {
               weekToYmd={toYmd}
               filledYmds={filledYmds}
               onSelectDay={handleJumpToWeek}
+              onViewChange={handleCalendarViewChange}
             />
           </div>
         ) : null}

@@ -50,7 +50,7 @@ export function buildMagazzinoSearchSuggestions(
   limit = 8,
   listePrefs?: MezziListePrefs,
 ): string[] {
-  const q = query.trim().toLowerCase();
+  const q = normalizeEntityString(query);
   if (!q) return [];
 
   const labels: string[] = [];
@@ -65,7 +65,7 @@ export function buildMagazzinoSearchSuggestions(
   };
 
   for (const p of prodotti) {
-    if (q && !magazzinoRowSearchHaystack(p, listePrefs).includes(q)) continue;
+    if (q && !magazzinoRowMatchesGlobalSearch(p, query, listePrefs)) continue;
     push(`${p.codiceFornitoreOriginale} · ${p.descrizione || p.marca}`);
     if (p.marca.trim()) push(p.marca);
     for (const part of [

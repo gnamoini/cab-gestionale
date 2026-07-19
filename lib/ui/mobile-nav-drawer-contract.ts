@@ -8,6 +8,7 @@ export const NAV_DRAWER_EDGE_ZONE_RATIO = 0.18;
 export const NAV_DRAWER_EDGE_ZONE_MIN_PX = 20;
 export const NAV_DRAWER_ANIMATION_MS = 240;
 export const NAV_DRAWER_WATCHDOG_MS = 320;
+export const NAV_DRAWER_EDGE_DRAG_IDLE_MS = 400;
 export const NAV_DRAWER_RUBBER_BAND_MAX_PX = 24;
 export const NAV_DRAWER_PANEL_ID = "cab-mobile-nav-drawer";
 
@@ -44,6 +45,7 @@ export const NAV_DRAWER_CONTRACT_TRANSITIONS: ReadonlyArray<{
   to: NavDrawerState;
 }> = [
   { event: "OPEN_REQUEST", from: "CLOSED", to: "OPENING" },
+  { event: "OPEN_REQUEST", from: "DRAGGING", to: "OPENING" },
   { event: "ANIMATION_END", from: "OPENING", to: "OPEN" },
   { event: "EDGE_DRAG_START", from: "CLOSED", to: "DRAGGING" },
   { event: "EDGE_DRAG_END_COMMIT", from: "DRAGGING", to: "SETTLING_OPEN" },

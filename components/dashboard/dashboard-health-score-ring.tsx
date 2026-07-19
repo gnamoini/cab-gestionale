@@ -206,12 +206,12 @@ function HealthScoreCard({
   headerAction?: ReactNode;
 }) {
   return (
-    <article className={`${reportMetricCardCompactClass} flex h-full min-h-0 min-w-0 flex-col ${className}`.trim()}>
+    <article className={`${reportMetricCardCompactClass} flex min-w-0 flex-col sm:h-full sm:min-h-0 ${className}`.trim()}>
       <div className="flex min-w-0 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] pb-2">
         <h3 className="min-w-0 text-sm font-semibold text-[color:var(--cab-text)]">{title}</h3>
         {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
       </div>
-      <div className="mt-2 flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+      <div className="mt-2 flex min-w-0 flex-1 flex-col sm:min-h-0">{children}</div>
     </article>
   );
 }
@@ -254,7 +254,7 @@ function FactorList({
         {factors.slice(0, FACTOR_LIST_MAX).map((factor) => (
           <li key={`${tone}-${factor.label}`} className="list-none min-w-0">
             <div className={`${FACTOR_ROW_SHELL_CLASS} ${FACTOR_ROW_TONE_CLASS[tone]}`}>
-              <div className="flex min-w-0 items-stretch gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium leading-snug text-[color:var(--cab-text)]">{factor.label}</p>
                   {factor.detail ? (
@@ -264,7 +264,7 @@ function FactorList({
                   ) : null}
                 </div>
                 <span
-                  className={`inline-flex aspect-square min-w-[2.75rem] shrink-0 items-center justify-center self-stretch rounded-[var(--ds-radius-lg)] px-1 text-base font-extrabold leading-none tabular-nums shadow-[var(--cab-shadow-sm)] ${FACTOR_BADGE_CLASS[tone]}`}
+                  className={`inline-flex size-[2.75rem] shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] text-base font-extrabold leading-none tabular-nums shadow-[var(--cab-shadow-sm)] ${FACTOR_BADGE_CLASS[tone]}`}
                 >
                   {formatImpact(factor.impact)}
                 </span>
@@ -639,7 +639,7 @@ export function HealthScoreBreakdownPanel({
         </HealthScoreCard>
       ) : null}
 
-      <HealthScoreCard title="Andamento settimanale" className="sm:col-span-2">
+      <HealthScoreCard title="Andamento settimanale" className="min-h-40 sm:col-span-2 sm:min-h-0">
         <HealthScoreWeeklyTrendChart
           points={historyPoints}
           isLoading={historyLoading}

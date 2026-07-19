@@ -12,6 +12,10 @@ const tooltip = fs.readFileSync(path.join(ROOT, "components/design-system/toolti
 assert.match(useTooltip, /onFocus/);
 assert.match(useTooltip, /showOnFocus/);
 assert.match(useTooltip, /hideImmediate/);
+assert.match(useTooltip, /transform:\s*false/);
+assert.match(useTooltip, /fallbackPlacements:\s*\["bottom"\]/);
+assert.match(useTooltip, /let initialPass = true/);
+assert.match(useTooltip, /update\(\)/);
 assert.match(tooltip, /role="tooltip"/);
 assert.match(tooltip, /data-cab-tooltip-portal|CAB_TOOLTIP_PORTAL_ATTR/);
 assert.doesNotMatch(tooltip, /scale-95/);

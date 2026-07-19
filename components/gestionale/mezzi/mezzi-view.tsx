@@ -5,6 +5,7 @@ import { Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
 import { MezziTableSection } from "@/components/gestionale/mezzi/mezzi-page-structure";
 import {
   PageActionMenu,
@@ -516,7 +517,7 @@ export function MezziView() {
     if (!id) return;
     const t = window.setTimeout(() => {
       focusMezzoInTable(id);
-      router.replace(pathname, { scroll: false });
+      deferredRouterReplace(router, pathname, { scroll: false });
     }, 100);
     return () => window.clearTimeout(t);
   }, [searchParams, pathname, router, focusMezzoInTable]);

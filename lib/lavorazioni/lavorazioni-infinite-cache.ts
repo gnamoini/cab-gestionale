@@ -1,4 +1,5 @@
 import type { InfiniteData, QueryClient } from "@tanstack/react-query";
+import { flattenPages } from "@/lib/domain/list-flatten";
 import type { Page } from "@/lib/domain/list-types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
@@ -37,6 +38,14 @@ export function lavorazioniInfiniteSeedFromRows(
     ],
     pageParams: [null],
   };
+}
+
+/** Legacy flat list cache — accetta array o seed infinite (dashboard SSR con flag paginazione). */
+export function coerceLavorazioniListRowsFromCache(data: unknown): LavorazioneListRow[] {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (isLavorazioniInfiniteListCacheData(data)) return [...flattenPages(data.pages)];
+  return [];
 }
 
 /** Ripara cache flat/scalar su chiavi `list-v2` prima che `InfiniteQueryObserver` legga `data.pages`. */

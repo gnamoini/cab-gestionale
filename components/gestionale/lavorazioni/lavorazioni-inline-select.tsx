@@ -22,6 +22,7 @@ import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import { LAVORAZIONE_STATO_COMPLETATA_ID } from "@/lib/lavorazioni/constants";
+import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import {
   isLavorazioneEmptyDisplay,
   LAVORAZIONE_EMPTY_DISPLAY,
@@ -222,16 +223,32 @@ export function LavorazioneCompletamentoDatePill({
 }) {
   const { date } = formatLavorazioneIngressoDisplay(iso);
   const interactive = Boolean(onClick) && !disabled;
+  const isMobile = useMaxMdDown();
   const widthClass = fullWidth ? "w-full min-w-0 max-w-full" : "w-fit min-w-0 max-w-full";
   const contentClass = fullWidth
     ? `flex ${lavTablePillMinH} w-full items-center justify-center px-2 py-0.5 ${lavTablePillTextClass} whitespace-nowrap`
     : `px-2 py-1 ${lavTablePillTextClass} whitespace-nowrap`;
 
+  const button = (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-label={interactive ? "Modifica data completamento" : undefined}
+      className={`${statoPillShellClass()} ${widthClass} inline-flex touch-manipulation justify-center overflow-hidden ${contentClass} ${dsFocus} cursor-pointer disabled:cursor-not-allowed disabled:opacity-60`}
+      style={completamentoDatePillStyle}
+    >
+      {date}
+    </button>
+  );
+
   const pill =
     interactive ? (
-      <Tooltip content={"Modifica data completamento"}><button type="button" disabled={disabled} onClick={onClick} className={`${statoPillShellClass()} ${widthClass} inline-flex touch-manipulation justify-center overflow-hidden ${contentClass} ${dsFocus} cursor-pointer disabled:cursor-not-allowed disabled:opacity-60`} style={completamentoDatePillStyle}>
-        {date}
-      </button></Tooltip>
+      isMobile ? (
+        button
+      ) : (
+        <Tooltip content="Modifica data completamento">{button}</Tooltip>
+      )
     ) : (
       <LavorazioneReadOnlyPill
         label={date}

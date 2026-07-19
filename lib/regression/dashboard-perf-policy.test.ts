@@ -24,6 +24,7 @@ const prefetchDeferred = prefetch.split("export async function prefetchDeferredP
 const dashboardDeferredBlock =
   prefetchDeferred.split('case "dashboard":')[1]?.split('case "lavorazioni":')[0] ?? "";
 assert.match(dashboardDeferredBlock, /lavorazioni\.list\.report/);
+assert.doesNotMatch(dashboardDeferredBlock, /lavorazioniInfiniteSeedFromRows\(dto\.lavorazioni\)/);
 assert.doesNotMatch(dashboardDeferredBlock, /lavorazioni\.list\.attive/);
 
 const dashboardMetrics = read("src/hooks/view/use-dashboard-metrics.ts");

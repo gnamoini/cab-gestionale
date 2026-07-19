@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import type { NavDrawerState } from "@/lib/ui/mobile-nav-drawer-contract";
 import {
   NAV_DRAWER_ANIMATION_MS,
+  NAV_DRAWER_EDGE_DRAG_IDLE_MS,
   resolveActivationZonePx,
   rubberBandDragX,
   shouldCommitGesture,
@@ -104,6 +105,9 @@ export function useSwipeFromEdgeToOpen({
   const peakDragXRef = useRef(0);
   const peakVelocityXRef = useRef(0);
   const edgeActiveRef = useRef(false);
+  const capturedPointerIdRef = useRef<number | null>(null);
+  const lastMoveAtRef = useRef(0);
+  const idleTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rafRef = useRef<number | null>(null);
   const pendingTransformRef = useRef({ dragX: 0, panelWidth: DEFAULT_PANEL_WIDTH });
   const [edgeActive, setEdgeActive] = useState(false);
@@ -134,11 +138,42 @@ export function useSwipeFromEdgeToOpen({
     [flushTransform],
   );
 
+  const releasePointer = useCallback(() => {
+    const id = capturedPointerIdRef.current;
+    if (id == null) return;
+    capturedPointerIdRef.current = null;
+    try {
+      if (document.body.hasPointerCapture(id)) {
+        document.body.releasePointerCapture(id);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const capturePointer = useCallback((e: PointerEvent) => {
+    try {
+      document.body.setPointerCapture(e.pointerId);
+      capturedPointerIdRef.current = e.pointerId;
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const clearIdleTimer = useCallback(() => {
+    if (idleTimerRef.current != null) {
+      clearInterval(idleTimerRef.current);
+      idleTimerRef.current = null;
+    }
+  }, []);
+
   const resetDrag = useCallback(() => {
     if (rafRef.current != null) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+    clearIdleTimer();
+    releasePointer();
     dragRef.current = {
       startX: 0,
       startY: 0,
@@ -156,23 +191,71 @@ export function useSwipeFromEdgeToOpen({
     setIsDragging(false);
     setIsSnapping(false);
     clearCompositorStyles(panelRef.current, backdropRef.current);
-  }, []);
+  }, [clearIdleTimer, releasePointer]);
 
   const finishCommit = useCallback(() => {
+    releasePointer();
     armSelectorGhostClickGuard();
     onCommit();
     requestAnimationFrame(() => resetDrag());
-  }, [onCommit, resetDrag]);
+  }, [onCommit, releasePointer, resetDrag]);
 
   const finishCancel = useCallback(
     (visuallyClosed = false) => {
+      releasePointer();
       if (visuallyClosed) {
         onSnapClosed?.();
       }
       onCancel();
     },
-    [onCancel, onSnapClosed],
+    [onCancel, onSnapClosed, releasePointer],
   );
+
+  const beginSnapBack = useCallback(() => {
+    releasePointer();
+    dragRef.current = {
+      startX: 0,
+      startY: 0,
+      prevClientX: 0,
+      active: false,
+      dragging: false,
+      lastDeltaX: 0,
+      lastTime: 0,
+      velocityX: 0,
+    };
+    setIsDragging(false);
+    setIsSnapping(true);
+  }, [releasePointer]);
+
+  const abortEdgeDrag = useCallback(() => {
+    if (!edgeActiveRef.current) return;
+    const width = panelWidthGestureRef.current;
+    const currentX = dragRef.current.lastDeltaX;
+    clearIdleTimer();
+
+    const reducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (currentX > 0 && !reducedMotion) {
+      beginSnapBack();
+      return;
+    }
+
+    dragRef.current = {
+      startX: 0,
+      startY: 0,
+      prevClientX: 0,
+      active: false,
+      dragging: false,
+      lastDeltaX: 0,
+      lastTime: 0,
+      velocityX: 0,
+    };
+    setIsDragging(false);
+    onPointerCancel();
+    finishCancel(currentX > 0 && reducedMotion);
+  }, [beginSnapBack, clearIdleTimer, finishCancel, onPointerCancel]);
 
   const buildGestureContext = useCallback(
     (target: Element, clientX: number, clientY: number): GestureContext => ({
@@ -212,6 +295,7 @@ export function useSwipeFromEdgeToOpen({
       };
       peakDragXRef.current = 0;
       peakVelocityXRef.current = 0;
+      lastMoveAtRef.current = Date.now();
     },
     [buildGestureContext, isSnapping],
   );
@@ -228,6 +312,7 @@ export function useSwipeFromEdgeToOpen({
       dragRef.current.prevClientX = e.clientX;
       dragRef.current.lastTime = e.timeStamp;
       peakVelocityXRef.current = peakGestureVelocity(instantVelocity, peakVelocityXRef.current);
+      lastMoveAtRef.current = Date.now();
 
       if (!dragRef.current.dragging) {
         if (Math.abs(deltaX) < ACTIVATION_PX && Math.abs(deltaY) < ACTIVATION_PX) return;
@@ -246,6 +331,7 @@ export function useSwipeFromEdgeToOpen({
           panelWidthGestureRef.current = width;
           edgeActiveRef.current = true;
           setEdgeActive(true);
+          capturePointer(e);
           onBegin();
         }
       }
@@ -258,12 +344,13 @@ export function useSwipeFromEdgeToOpen({
       peakDragXRef.current = Math.max(peakDragXRef.current, nextX);
       scheduleTransform(rubber, width);
     },
-    [getPanelWidth, onBegin, scheduleTransform],
+    [capturePointer, getPanelWidth, onBegin, scheduleTransform],
   );
 
   const onGestureEnd = useCallback(
     (_e: PointerEvent) => {
       if (!dragRef.current.active) return;
+      clearIdleTimer();
       const width = panelWidthGestureRef.current;
       const currentX = dragRef.current.dragging ? dragRef.current.lastDeltaX : 0;
       const peakX = peakDragXRef.current;
@@ -304,21 +391,26 @@ export function useSwipeFromEdgeToOpen({
       }
 
       if (currentX > 0) {
-        setIsSnapping(true);
-        scheduleTransform(0, width);
+        beginSnapBack();
         return;
       }
 
       finishCancel(false);
     },
-    [finishCancel, finishCommit, scheduleTransform],
+    [beginSnapBack, clearIdleTimer, finishCancel, finishCommit],
   );
 
   const onGestureCancel = useCallback(() => {
     if (!edgeActiveRef.current) return;
+    clearIdleTimer();
+    const currentX = dragRef.current.lastDeltaX;
+    if (currentX > 0) {
+      beginSnapBack();
+      return;
+    }
     onPointerCancel();
     finishCancel();
-  }, [finishCancel, onPointerCancel]);
+  }, [beginSnapBack, clearIdleTimer, finishCancel, onPointerCancel]);
 
   usePointerGesture({
     enabled: enabled || edgeActiveRef.current,
@@ -334,6 +426,14 @@ export function useSwipeFromEdgeToOpen({
     if (!w) return;
     panelWidthGestureRef.current = w;
   }, [edgeActive, panelWidthProp]);
+
+  useLayoutEffect(() => {
+    if (!isSnapping) return;
+    const width = panelWidthGestureRef.current;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scheduleTransform(0, width));
+    });
+  }, [isSnapping, scheduleTransform]);
 
   useEffect(() => {
     if (!isSnapping) return;
@@ -357,11 +457,52 @@ export function useSwipeFromEdgeToOpen({
     };
   }, [finishCancel, isSnapping]);
 
+  useEffect(() => {
+    if ((drawerState === "OPENING" || drawerState === "OPEN") && (edgeActiveRef.current || isSnapping)) {
+      resetDrag();
+    }
+  }, [drawerState, isSnapping, resetDrag]);
+
+  useEffect(() => {
+    if (!edgeActive || !isDragging) {
+      clearIdleTimer();
+      return;
+    }
+
+    idleTimerRef.current = setInterval(() => {
+      if (!edgeActiveRef.current || !dragRef.current.dragging) return;
+      if (Date.now() - lastMoveAtRef.current < NAV_DRAWER_EDGE_DRAG_IDLE_MS) return;
+      recordDrawerTelemetry("drawer_pointer_cancel");
+      abortEdgeDrag();
+    }, 100);
+
+    return clearIdleTimer;
+  }, [abortEdgeDrag, clearIdleTimer, edgeActive, isDragging]);
+
+  useEffect(() => {
+    if (!edgeActive) return;
+
+    function onLostPointerCapture(e: PointerEvent) {
+      if (capturedPointerIdRef.current !== e.pointerId) return;
+      capturedPointerIdRef.current = null;
+      if (!dragRef.current.active && !dragRef.current.dragging) return;
+      recordDrawerTelemetry("drawer_pointer_cancel");
+      abortEdgeDrag();
+    }
+
+    document.body.addEventListener("lostpointercapture", onLostPointerCapture);
+    return () => document.body.removeEventListener("lostpointercapture", onLostPointerCapture);
+  }, [abortEdgeDrag, edgeActive]);
+
   const panelClassName = isDragging
     ? "cab-nav-drawer-dragging cab-nav-drawer-edge-opening"
     : isSnapping
       ? "cab-nav-drawer-snap-back cab-nav-drawer-edge-opening"
       : undefined;
+
+  const panelStyle: CSSProperties | undefined = isSnapping
+    ? { transform: panelTransformForEdgeOpen(0, panelWidthGestureRef.current) }
+    : undefined;
 
   return {
     panelRef,
@@ -371,6 +512,7 @@ export function useSwipeFromEdgeToOpen({
     isSnapping,
     panelProps: {
       className: panelClassName,
+      style: panelStyle,
     },
     backdropProps: {
       className: isDragging || isSnapping ? "cab-nav-drawer-backdrop-dragging" : undefined,

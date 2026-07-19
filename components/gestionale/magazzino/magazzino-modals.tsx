@@ -5,6 +5,7 @@ import { DisabledElementTooltip } from "@/components/ui";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { RicambioInfoPanel } from "@/components/gestionale/magazzino/ricambio-info-panel";
+import { ricambioModalFormScrollClass } from "@/components/gestionale/magazzino/ricambio-modal-ui";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import type { RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import type { MagazzinoArchiveDuplicateCodeGroup } from "@/lib/magazzino/duplicates";
@@ -101,7 +102,7 @@ export function MagazzinoRicambioInfoModal({
       }
     >
       <div className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}>
-        <GestionaleModalScrollBody>
+        <GestionaleModalScrollBody className={ricambioModalFormScrollClass}>
           <RicambioInfoPanel
             ricambio={ricambio}
             compatDisplay={compatDisplay}

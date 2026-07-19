@@ -29,6 +29,7 @@ async function resolveLabelPngBytes(
   template: LabelTemplateDefinition,
   item: BulkLabelItem,
   preset: string,
+  includeBarcode: boolean,
   stats: BulkAssemblyStats,
 ): Promise<Buffer> {
   const hash = computeLabelFingerprint({
@@ -37,6 +38,7 @@ async function resolveLabelPngBytes(
     templateVersion: template.version,
     generatorVersion: GENERATOR_VERSION,
     preset,
+    includeBarcode,
   });
 
   const cached = await getLabelArtifactByHash(sb, {
@@ -55,7 +57,7 @@ async function resolveLabelPngBytes(
   }
 
   stats.cacheMissCount += 1;
-  const png = await renderLabelPng(template, item.payload, item.qrUrl);
+  const png = await renderLabelPng(template, item.payload, item.qrUrl, { includeBarcode });
   const storagePath = await uploadLabelArtifactBestEffort({
     entityType: item.entityType,
     entityId: item.entityId,
@@ -89,6 +91,7 @@ export async function renderBulkLabelPdfWithCache(
   items: BulkLabelItem[],
   preset: string,
   options?: {
+    includeBarcode?: boolean;
     onProgress?: (done: number, total: number) => void | Promise<void>;
     onChunkHeartbeat?: () => void | Promise<void>;
     chunkSize?: number;
@@ -98,11 +101,12 @@ export async function renderBulkLabelPdfWithCache(
 > {
   const stats: BulkAssemblyStats = { cacheHitCount: 0, cacheMissCount: 0 };
   const chunkSize = options?.chunkSize ?? 25;
+  const includeBarcode = options?.includeBarcode !== false;
   const pngs: Buffer[] = [];
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i]!;
-    pngs.push(await resolveLabelPngBytes(sb, template, item, preset, stats));
+    pngs.push(await resolveLabelPngBytes(sb, template, item, preset, includeBarcode, stats));
     if ((i + 1) % chunkSize === 0) await options?.onChunkHeartbeat?.();
     await options?.onProgress?.(i + 1, items.length);
   }

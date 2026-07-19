@@ -4,8 +4,8 @@ import { cache } from "react";
 import { resolveLavorazioniStatiForServer } from "@/lib/app-settings/resolve-settings-for-server";
 import { verifyClientLavorazioniAccessServer } from "@/src/lib/auth/client-lavorazioni-access-server";
 import { loadServerCallerClienteRef } from "@/src/lib/auth/cliente-portal-scope.server";
-import { CLIENT_PORTAL_INCORSO_FILTERS } from "@/lib/lavorazioni/client-portal-prefetch-filters";
-import { fetchLavorazioniListRows } from "@/lib/lavorazioni/lavorazioni-list-fetch";
+import { CLIENT_PORTAL_ARCHIVIO_COUNT_FILTERS, CLIENT_PORTAL_INCORSO_FILTERS } from "@/lib/lavorazioni/client-portal-prefetch-filters";
+import { fetchLavorazioniListCountRows, fetchLavorazioniListRows } from "@/lib/lavorazioni/lavorazioni-list-fetch";
 import {
   buildLavorazioniSchedeCodiciMap,
   pickLavorazioniInitialSchedeIds,
@@ -19,10 +19,11 @@ import type { LavorazioneSchedeStore } from "@/types/schede";
 export type ClientPortalPageDTO = {
   inCorso: LavorazioneListRow[];
   archivio: LavorazioneListRow[];
+  archivioCount: number;
   schedeBundles: LavorazioneSchedeStore;
 };
 
-const EMPTY_DTO: ClientPortalPageDTO = { inCorso: [], archivio: [], schedeBundles: {} };
+const EMPTY_DTO: ClientPortalPageDTO = { inCorso: [], archivio: [], archivioCount: 0, schedeBundles: {} };
 
 function unwrap<T>(result: ServiceResult<T>, fallback: T): T {
   return result.success ? (result.data ?? fallback) : fallback;
@@ -38,14 +39,18 @@ export const fetchClientPortalPageDTOServer = cache(async (): Promise<ClientPort
   const sanitizeStati = await resolveLavorazioniStatiForServer();
   const fetchOpts = { clienteRefScope, clientPortal: true as const, sanitizeStati };
 
-  // ponytail: archivio on-demand client-side — SSR solo inCorso (Sprint 1 perf)
-  const inCorsoRes = await fetchLavorazioniListRows(sb, CLIENT_PORTAL_INCORSO_FILTERS, fetchOpts);
+  // ponytail: archivio on-demand client-side — SSR solo inCorso + count head (Sprint 1 perf)
+  const [inCorsoRes, archivioCountRes] = await Promise.all([
+    fetchLavorazioniListRows(sb, CLIENT_PORTAL_INCORSO_FILTERS, fetchOpts),
+    fetchLavorazioniListCountRows(sb, CLIENT_PORTAL_ARCHIVIO_COUNT_FILTERS, { clienteRefScope }),
+  ]);
 
   const inCorso = unwrap(inCorsoRes, []);
+  const archivioCount = unwrap(archivioCountRes, 0);
   const archivio: LavorazioneListRow[] = [];
   const schedeIds = pickLavorazioniInitialSchedeIds(inCorso);
   if (schedeIds.length === 0) {
-    return { inCorso, archivio, schedeBundles: {} };
+    return { inCorso, archivio, archivioCount, schedeBundles: {} };
   }
 
   const codici = buildLavorazioniSchedeCodiciMap(inCorso, schedeIds);
@@ -53,6 +58,7 @@ export const fetchClientPortalPageDTOServer = cache(async (): Promise<ClientPort
   return {
     inCorso,
     archivio,
+    archivioCount,
     schedeBundles: schedeRes.success ? (schedeRes.data ?? {}) : {},
   };
 });

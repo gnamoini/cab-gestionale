@@ -26,6 +26,14 @@ export const LAVORAZIONI_REPORT_FILTERS: LavorazioneFilters = {
   fetchMode: "report",
 };
 
+/** Staff — conteggio archivio head (titolo sezione collassata). */
+export const LAVORAZIONI_CHIUSE_COUNT_FILTERS: LavorazioneFilters = {
+  includeMezzo: true,
+  fetchMode: "light",
+  includeProfiles: false,
+  archived: true,
+};
+
 /** Dashboard SSR — allineato a `useLavorazioniReportSlice` (hydration idempotente). */
 export const LAVORAZIONI_DASHBOARD_REPORT_FILTERS: LavorazioneFilters = {
   includeMezzo: false,

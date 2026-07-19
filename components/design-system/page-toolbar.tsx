@@ -12,7 +12,16 @@ import {
   ToolbarGroupSearchRow,
 } from "@/components/design-system/toolbar-group";
 import { MobileFilterDrawer } from "@/components/gestionale/mobile-filter-drawer";
-import { dsPageToolbarMetaActionBtn, dsPageToolbarMetaActionBtnFilterCol, dsPageToolbarMetaChip, dsPageToolbarMetaChipAccent } from "@/lib/ui/design-system";
+import {
+  dsFocus,
+  dsPageToolbarMetaActionBtn,
+  dsPageToolbarMetaActionBtnFilterCol,
+  dsPageToolbarMetaChip,
+  dsPageToolbarMetaChipAccent,
+  dsSegmentedBtnOff,
+  dsSegmentedBtnOn,
+  dsSegmentedWrap,
+} from "@/lib/ui/design-system";
 import { useSmUp } from "@/lib/ui/use-sm-up";
 
 export type PageToolbarProps = {
@@ -206,6 +215,7 @@ export function PageToolbarResultCount({
   onSearchReset,
   singularLabel = "risultato",
   pluralLabel = "risultati",
+  tone = "chip",
   className = "",
 }: {
   count: number;
@@ -215,20 +225,29 @@ export function PageToolbarResultCount({
   onSearchReset?: () => void;
   singularLabel?: string;
   pluralLabel?: string;
+  /** `plain`: testo leggero senza chip — accanto a controlli segmentati. */
+  tone?: "chip" | "plain";
   className?: string;
 }) {
   const showSearchReset = Boolean(searchActive && onSearchReset);
   const showFilterReset = Boolean(filtersActive && onFilterReset);
+  const countLabel = count === 1 ? singularLabel : pluralLabel;
 
   return (
     <div
       className={`flex min-w-0 flex-1 flex-nowrap items-center gap-x-1.5 gap-y-1 sm:flex-wrap ${className}`.trim()}
     >
       <div className="flex min-w-0 flex-nowrap items-center gap-1.5 sm:flex-wrap">
-        <span className={dsPageToolbarMetaChip}>
-          <span className="tabular-nums">{count}</span>
-          <span>{count === 1 ? singularLabel : pluralLabel}</span>
-        </span>
+        {tone === "plain" ? (
+          <span className="min-w-0 truncate text-xs font-medium text-[color:var(--cab-text-muted)]">
+            <span className="tabular-nums font-semibold text-[color:var(--cab-text)]">{count}</span> {countLabel}
+          </span>
+        ) : (
+          <span className={dsPageToolbarMetaChip}>
+            <span className="tabular-nums">{count}</span>
+            <span>{countLabel}</span>
+          </span>
+        )}
         {filtersActive ? <span className={dsPageToolbarMetaChipAccent}>Filtri attivi</span> : null}
       </div>
       {showSearchReset || showFilterReset ? (
@@ -245,6 +264,48 @@ export function PageToolbarResultCount({
           ) : null}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+export type PageToolbarMetaSegmentOption = {
+  id: string;
+  label: string;
+  shortLabel?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  title?: string;
+};
+
+/** Toggle meta toolbar come gruppo segmentato (es. Modifica + Etichette magazzino). */
+export function PageToolbarMetaSegments({
+  options,
+  className = "",
+}: {
+  options: readonly PageToolbarMetaSegmentOption[];
+  className?: string;
+}) {
+  if (options.length === 0) return null;
+
+  return (
+    <div className={`${dsSegmentedWrap} min-w-0 gap-0.5 p-0.5 ${className}`.trim()} role="group">
+      {options.map((opt) => (
+        // ui-contract-disable-next-line native-title-tooltip: segment uses title for compact touch hint
+        <button
+          key={opt.id}
+          type="button"
+          role="switch"
+          aria-checked={opt.checked}
+          title={opt.title}
+          onClick={() => opt.onChange(!opt.checked)}
+          className={`flex min-h-10 min-w-0 flex-1 items-center justify-center px-2.5 text-center text-xs font-semibold sm:min-h-9 sm:px-3 sm:text-sm ${
+            opt.checked ? dsSegmentedBtnOn : dsSegmentedBtnOff
+          } ${dsFocus}`}
+        >
+          <span className="truncate whitespace-nowrap sm:hidden">{opt.shortLabel ?? opt.label}</span>
+          <span className="hidden truncate whitespace-nowrap sm:inline">{opt.label}</span>
+        </button>
+      ))}
     </div>
   );
 }

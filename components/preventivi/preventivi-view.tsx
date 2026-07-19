@@ -98,12 +98,8 @@ import {
   clearEphemeralPreventivoDraft,
   readEphemeralPreventivoDraftId,
 } from "@/lib/preventivi/preventivi-session-bridge";
-import {
-  appendPreventiviChangeLog,
-  loadPreventiviChangeLog,
-  removePreventiviChangeLogEntryById,
-  type PreventiviLogStored,
-} from "@/lib/preventivi/preventivi-change-log-storage";
+import { appendPreventiviChangeLog } from "@/lib/preventivi/preventivi-change-log-storage";
+import { buildLogModificheDisplayEntries, logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { removePreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
 import { usePreventiviListDerived } from "@/lib/preventivi/use-preventivi-list-derived";
 import { ordiniFornitoriListQueryKey } from "@/lib/render/query-key-factory";
@@ -112,7 +108,7 @@ import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi
 import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
 import { ddtEntry } from "@/lib/domain/ddt-entry";
 import { usePreventiviBillingQuery } from "@/src/hooks/gestionale/use-preventivi-billing-query";
-import { useMagazzinoRicambiUIQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useLogListQuery, useMagazzinoRicambiUIQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
@@ -123,7 +119,6 @@ import {
   preventivoTipoDocumentoBadgeClass,
   preventivoTipoDocumentoLabel,
 } from "@/lib/preventivi/preventivi-tipo-documento";
-import { CAB_PREVENTIVI_LOG_REFRESH } from "@/lib/sistema/cab-events";
 import type { PreventivoLavorazioneOrigine, PreventivoRecord, PreventivoSortKey, PreventivoSortPhase } from "@/lib/preventivi/types";
 import {
   dsBtnNeutral,
@@ -471,11 +466,14 @@ export function PreventiviView() {
   const rollbackDraftIdRef = useRef<string | null>(null);
   const draftConfirmedRef = useRef(false);
   const [logOpen, setLogOpen] = useState(false);
-  const [logEntries, setLogEntries] = useState<PreventiviLogStored[]>([]);
-
-  useEffect(() => {
-    setLogEntries(loadPreventiviChangeLog());
-  }, []);
+  const logQuery = useLogListQuery({ entita: "preventivi", limit: 100 }, { enabled: logOpen });
+  const logDisplayEntries = useMemo(
+    () =>
+      buildLogModificheDisplayEntries(logQuery.data ?? [], (row) =>
+        logAutoreLabel(row, user?.id ?? null, autore),
+      ),
+    [autore, logQuery.data, user?.id],
+  );
   const [eliminaConfirmRecord, setEliminaConfirmRecord] = useState<PreventivoRecord | null>(null);
   const [eliminaPending, setEliminaPending] = useState(false);
   const [ddtDrawer, setDdtDrawer] = useState<{
@@ -488,20 +486,6 @@ export function PreventiviView() {
   const reload = useCallback(() => {
     void refetchPreventivi();
   }, [refetchPreventivi]);
-
-  useEffect(() => {
-    function onLogRefresh() {
-      setLogEntries(loadPreventiviChangeLog());
-    }
-    window.addEventListener(CAB_PREVENTIVI_LOG_REFRESH, onLogRefresh);
-    return () => window.removeEventListener(CAB_PREVENTIVI_LOG_REFRESH, onLogRefresh);
-  }, []);
-
-  useEffect(() => {
-    if (!logOpen) return;
-    const t = window.setTimeout(() => setLogEntries(loadPreventiviChangeLog()), 0);
-    return () => window.clearTimeout(t);
-  }, [logOpen]);
 
   function closeEditor() {
     const rollbackId = rollbackDraftIdRef.current;
@@ -816,11 +800,14 @@ export function PreventiviView() {
     showPager: showLogPager,
     label: logPagerLabel,
     resetPage: resetLogPage,
-  } = useClientPagination(logEntries.length, listPageSize);
+  } = useClientPagination(logDisplayEntries.length, listPageSize);
   useEffect(() => {
     resetLogPage();
-  }, [logOpen, logEntries.length, listPageSize, resetLogPage]);
-  const pagedLogEntries = useMemo(() => sliceLogEntries(logEntries), [logEntries, sliceLogEntries]);
+  }, [logOpen, logDisplayEntries.length, listPageSize, resetLogPage]);
+  const pagedLogEntries = useMemo(
+    () => sliceLogEntries(logDisplayEntries),
+    [logDisplayEntries, sliceLogEntries],
+  );
 
   function onSortMain(k: PreventivoSortKey) {
     if (sortColumn !== k) {
@@ -1399,14 +1386,14 @@ export function PreventiviView() {
         <PreventiviLogDrawer
           open
           onClose={() => setLogOpen(false)}
-          entries={logEntries}
+          entries={logDisplayEntries}
           pagedEntries={pagedLogEntries}
           showPager={showLogPager}
           page={logPage}
           pageCount={logPageCount}
           pagerLabel={logPagerLabel}
           onPageChange={setLogPage}
-          onDismiss={removePreventiviChangeLogEntryById}
+          isLoading={logQuery.isLoading}
           lockScroll={!(editor.open && canEditWorkOrders)}
         />
       ) : null}
