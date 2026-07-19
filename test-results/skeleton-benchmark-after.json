@@ -1,0 +1,66 @@
+{
+  "baseUrl": "http://localhost:3000",
+  "measuredAt": "2026-07-19T02:45:11.569Z",
+  "throttled": false,
+  "hard": [
+    {
+      "route": "/dashboard",
+      "navMode": "hard",
+      "loadingDomNodes": 4,
+      "pulseCount": 6,
+      "skeletonMountCount": 1,
+      "ttuiMs": 1484,
+      "blankDurationMs": 879,
+      "hydrationMs": 45
+    },
+    {
+      "route": "/magazzino",
+      "navMode": "hard",
+      "loadingDomNodes": 4,
+      "pulseCount": 6,
+      "skeletonMountCount": 0,
+      "ttuiMs": 1895,
+      "blankDurationMs": 1499,
+      "hydrationMs": 18
+    },
+    {
+      "route": "/lavorazioni",
+      "navMode": "hard",
+      "loadingDomNodes": 4,
+      "pulseCount": 6,
+      "skeletonMountCount": 0,
+      "ttuiMs": 2307,
+      "blankDurationMs": 2086,
+      "hydrationMs": 13
+    }
+  ],
+  "soft": [
+    {
+      "route": "/magazzino",
+      "navMode": "soft",
+      "loadingDomNodes": 0,
+      "pulseCount": 0,
+      "skeletonMountCount": 0,
+      "ttuiMs": 197,
+      "blankDurationMs": 197,
+      "hydrationMs": 21
+    },
+    {
+      "route": "/lavorazioni",
+      "navMode": "soft",
+      "loadingDomNodes": 0,
+      "pulseCount": 0,
+      "skeletonMountCount": 0,
+      "ttuiMs": 363,
+      "blankDurationMs": 363,
+      "hydrationMs": 34
+    }
+  ],
+  "failures": [
+    "/dashboard (hard): blankDurationMs 879 > 500",
+    "/magazzino (hard): pulse 6 > 5",
+    "/magazzino (hard): blankDurationMs 1499 > 500",
+    "/lavorazioni (hard): blankDurationMs 2086 > 500"
+  ],
+  "authMethod": "service-role-magiclink"
+}

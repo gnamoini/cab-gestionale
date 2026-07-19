@@ -23,6 +23,7 @@ export function useFatturazioneOpenItemsQuery(enabled = true) {
   return {
     items: q.data ?? [],
     isLoading: q.isLoading,
+    isInitialLoading: q.isLoading && q.data === undefined,
     refetch: () => void q.refetch(),
   };
 }

@@ -7,7 +7,7 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { runProductionReadinessCheckAction } from "@/src/actions/production-readiness";
 import type { ProductionReadinessResult } from "@/lib/production/production-readiness-types";
 import { SECURITY_HOME_PATH } from "@/lib/auth/rbac";
-import { LoadingProductionReadinessSkeleton } from "@/components/design-system";
+import { ProductionReadinessPageStructure } from "@/components/dashboard/security/production-readiness-page-structure";
 import {
   dsBtnPrimary,
   dsPageToolbarBtn,
@@ -136,7 +136,7 @@ export function ProductionReadinessView() {
         </>
       ) : null}
 
-      {loading && !report ? <LoadingProductionReadinessSkeleton embedded /> : null}
+      {loading && !report ? <ProductionReadinessPageStructure mode="skeleton" /> : null}
     </div>
   );
 }

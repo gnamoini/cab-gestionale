@@ -21,6 +21,7 @@ import { isGestionaleOverlayActive, useSidebarHoverExpand } from "@/lib/ui/use-s
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { useSwipeFromEdgeToOpen } from "@/lib/ui/use-swipe-from-edge-to-open";
 import { useNavDrawerMachine } from "@/lib/ui/mobile-nav-drawer-machine";
+import { usePullToRefresh } from "@/lib/ui/use-pull-to-refresh";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   useBootInvestigationMount("AppShell");
@@ -32,6 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const sidebarAsideRef = useRef<HTMLElement>(null);
   const shellColRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLElement | null>(null);
+  const pullContentRef = useRef<HTMLDivElement | null>(null);
   const shellTier = useGestionaleShellLayoutSync({
     shellRef,
     shellColRef,
@@ -40,6 +42,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const shellContentWidth = useGestionaleShellContentWidth();
   const { isCompactShell, tier } = shellTier;
   const showMobileNavOpen = isCompactShell && shellContentWidth > 0;
+  const pullToRefresh = usePullToRefresh({
+    enabled: tier === "mobile",
+    scrollRef: mainScrollRef,
+    contentRef: pullContentRef,
+    overlayActive,
+    navDrawerVisible: flags.navDrawerVisible,
+    drawerState: flags.state,
+  });
   useGestionaleScrollEnd(mainScrollRef);
   const {
     collapsed,
@@ -177,6 +187,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <AppShellMain
         shellColRef={shellColRef}
         mainScrollRef={mainScrollRef}
+        pullContentRef={pullContentRef}
+        pullToRefreshPhase={pullToRefresh.phase}
+        pullToRefreshProgress={pullToRefresh.progress}
         isCompactShell={isCompactShell}
         shellTier={tier}
         navDrawerVisible={flags.navDrawerVisible}

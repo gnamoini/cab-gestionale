@@ -526,6 +526,17 @@ export const CONTROL_REGISTRY: readonly ControlDefinition[] = [
     impact: ["compliance-audit"],
   },
   {
+    id: "governance.notification.ssot",
+    implementation: { type: "test-suite", reference: "notification-ssot" },
+    domain: "governance",
+    tier: "pr",
+    severity: "blocker",
+    status: "active",
+    owner: "platform",
+    sourceOfTruth: "lib/notifications/application/notification-service.ts",
+    impact: ["all-users", "operations"],
+  },
+  {
     id: "governance.registry.size",
     implementation: { type: "test-suite", reference: "registry-lifecycle" },
     domain: "governance",

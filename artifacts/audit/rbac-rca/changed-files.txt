@@ -1,0 +1,7 @@
+lib/regression/rbac-route-matrix.test.ts
+lib/regression/form-engine-audit.test.ts
+lib/regression/form-engine-inventory.test.ts
+lib/regression/input-security-policy.test.ts
+lib/regression/scheda-ingresso-ios-save-audit.test.ts
+lib/report/report-kpi-catalog.test.ts
+components/report/design-system/contracts/section-composition-allowlist.ts

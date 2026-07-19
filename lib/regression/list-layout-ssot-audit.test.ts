@@ -22,7 +22,7 @@ assert.match(globalsCss, /gestionale-list-layout\.css/);
 assert.match(layoutHook, /ResizeObserver/);
 assert.match(layoutHook, /resolveGestionalePageLayout/);
 assert.match(layoutHook, /useLayoutEffect/);
-assert.match(layoutHook, /useGestionaleShellLayout/);
+assert.match(layoutHook, /useGestionaleShellContentWidth/);
 assert.doesNotMatch(layoutHook, /readGestionaleShellTierFromDom/);
 assert.match(pageLayoutResolver, /GESTIONALE_LIST_MIN_VIEWPORT_XL/);
 assert.match(pageLayoutResolver, /1280/);
@@ -84,7 +84,7 @@ const lgViews: Array<{
   },
   {
     file: "components/gestionale/lavorazioni/lavorazioni-view.tsx",
-    mustHave: [/useKanbanViewportLayout/],
+    mustHave: [/useGestionaleListLayout/, /LavorazioniKanbanView/],
     mustNot: [/kanbanLayoutRef/, /useGestionaleListLayout\(\{ tier: "lg" \}\)/],
   },
   {

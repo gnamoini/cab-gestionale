@@ -1,0 +1,80 @@
+{
+  "environment": {
+    "timestamp": "2026-07-19T03:43:05.798Z",
+    "gitCommit": "91a7007",
+    "branch": "main",
+    "nodeVersion": "v24.15.0",
+    "browser": "chromium",
+    "nextMode": "production",
+    "dataset": "dev",
+    "machine": "DESKTOP-Jay",
+    "viewport": "1440x900"
+  },
+  "baseUrl": "http://localhost:3001",
+  "measuredAt": "2026-07-19T03:43:05.798Z",
+  "throttled": true,
+  "hard": [
+    {
+      "route": "/dashboard",
+      "navMode": "hard",
+      "loadingDomNodes": 8,
+      "pulseCount": 6,
+      "skeletonMountCount": 1,
+      "ttuiMs": 1755,
+      "blankDurationMs": 0,
+      "hydrationMs": 41,
+      "loadingVisibleMs": 587,
+      "loadingGoneMs": 982,
+      "clientChunkWaitMs": 0,
+      "transitionLoaderMs": 773,
+      "blankAfterLoadingMs": 0,
+      "interactiveMs": 1755,
+      "skeletonToInteractiveMs": 1168,
+      "transitionLayoutShiftPx": 147,
+      "cls": 0
+    },
+    {
+      "route": "/lavorazioni",
+      "navMode": "hard",
+      "loadingDomNodes": 8,
+      "pulseCount": 6,
+      "skeletonMountCount": 1,
+      "ttuiMs": 2033,
+      "blankDurationMs": 291,
+      "hydrationMs": 85,
+      "loadingVisibleMs": 344,
+      "loadingGoneMs": 760,
+      "clientChunkWaitMs": 0,
+      "transitionLoaderMs": 1273,
+      "blankAfterLoadingMs": 0,
+      "interactiveMs": 2033,
+      "skeletonToInteractiveMs": 1689,
+      "transitionLayoutShiftPx": 0,
+      "cls": 0
+    },
+    {
+      "route": "/report",
+      "navMode": "hard",
+      "loadingDomNodes": 8,
+      "pulseCount": 6,
+      "skeletonMountCount": 1,
+      "ttuiMs": 2364,
+      "blankDurationMs": 1947,
+      "hydrationMs": 280,
+      "loadingVisibleMs": 368,
+      "loadingGoneMs": 1331,
+      "clientChunkWaitMs": 1033,
+      "transitionLoaderMs": null,
+      "blankAfterLoadingMs": 1947,
+      "interactiveMs": 2364,
+      "skeletonToInteractiveMs": 1996,
+      "transitionLayoutShiftPx": null,
+      "cls": 0
+    }
+  ],
+  "soft": [],
+  "failures": [
+    "/dashboard (hard): transitionLayoutShiftPx 147 > 48"
+  ],
+  "authMethod": "service-role-magiclink"
+}

@@ -2,6 +2,7 @@
 
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import { formatCaptureIdentSummary, type CaptureIdent } from "@/lib/document-capture/capture-lavorazione-match";
+import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 
 export function CaptureIngressoMissingDialog({
   open,
@@ -30,7 +31,7 @@ export function CaptureIngressoMissingDialog({
       }
       confirmLabel="Crea scheda ingresso"
       cancelLabel="Torna ai dati"
-      layerClassName="z-[120]"
+      layerClassName={cabModalZConfirm}
       onCancel={onCancel}
       onConfirm={onCreateIngresso}
     />

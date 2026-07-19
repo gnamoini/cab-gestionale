@@ -69,6 +69,8 @@ test("mobile nav drawer opens via left-edge swipe", async ({ page }) => {
 
   const dialog = page.getByRole("dialog", { name: "Menu principale" });
   await expect(dialog).toBeVisible({ timeout: 5_000 });
+  await page.waitForTimeout(300);
+  await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Chiudi" }).click();
   await expect(dialog).not.toBeVisible();
   await assertGestionalePageScrollUnlocked(page);

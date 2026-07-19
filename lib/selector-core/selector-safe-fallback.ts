@@ -1,4 +1,5 @@
 import { selectorEngineConfig } from "@/lib/selector-core/selector-engine-config";
+import { trackDeprecatedUsage } from "@/lib/observability/deprecated-usage";
 import type {
   SelectorContext,
   SelectorContextMode,
@@ -79,6 +80,9 @@ export function isContextRecoverable(result: NormalizeSelectorContextResult): bo
 }
 
 export function createFallbackDecision(fallbackReasoning: string[]): SelectorSurfaceDecision {
+  trackDeprecatedUsage("selector-safe-fallback", {
+    reasons: fallbackReasoning.join(","),
+  });
   return {
     surface: selectorEngineConfig.defaultBehavior.fallbackSurface,
     reasoning: [...fallbackReasoning],

@@ -1,0 +1,85 @@
+{
+  "generatedAt": "2026-07-19T05:06:22.900Z",
+  "pass": true,
+  "initialFileCount": 6,
+  "diagnosticTargets": [
+    {
+      "module": "boot-investigation",
+      "chunkCount": 0,
+      "inInitial": false,
+      "inFirstLoadRoutes": false,
+      "removedFromFirstLoad": true,
+      "newSharedChunk": false,
+      "pass": true
+    },
+    {
+      "module": "RuntimeHealthBridge",
+      "chunkCount": 0,
+      "inInitial": false,
+      "inFirstLoadRoutes": false,
+      "removedFromFirstLoad": true,
+      "newSharedChunk": false,
+      "pass": true
+    },
+    {
+      "module": "overflow-root-cause-audit",
+      "chunkCount": 0,
+      "inInitial": false,
+      "inFirstLoadRoutes": false,
+      "removedFromFirstLoad": true,
+      "newSharedChunk": false,
+      "pass": true
+    },
+    {
+      "module": "DevUxEnforcementGuard",
+      "chunkCount": 0,
+      "inInitial": false,
+      "inFirstLoadRoutes": false,
+      "removedFromFirstLoad": true,
+      "newSharedChunk": false,
+      "pass": true
+    }
+  ],
+  "deferTargets": [
+    {
+      "module": "UploadFeedbackProvider",
+      "chunkCount": 0,
+      "inInitial": false,
+      "inFirstLoadRoutes": false,
+      "removedFromFirstLoad": true,
+      "newSharedChunk": false,
+      "pass": true,
+      "antiPlaceboPass": true
+    },
+    {
+      "module": "SupabaseConfigurationBanner",
+      "chunkCount": 2,
+      "inInitial": false,
+      "inFirstLoadRoutes": false,
+      "removedFromFirstLoad": true,
+      "newSharedChunk": false,
+      "pass": true,
+      "antiPlaceboPass": true
+    },
+    {
+      "module": "DataStaleBanner",
+      "chunkCount": 0,
+      "inInitial": false,
+      "inFirstLoadRoutes": false,
+      "removedFromFirstLoad": true,
+      "newSharedChunk": false,
+      "pass": true,
+      "antiPlaceboPass": true
+    },
+    {
+      "module": "FormUxBoundaryBootstrap",
+      "chunkCount": 0,
+      "inInitial": false,
+      "inFirstLoadRoutes": false,
+      "removedFromFirstLoad": true,
+      "newSharedChunk": false,
+      "pass": true,
+      "antiPlaceboPass": true
+    }
+  ]
+}

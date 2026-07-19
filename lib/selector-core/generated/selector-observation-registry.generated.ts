@@ -2,7 +2,7 @@
 import type { ObservationRegistrySnapshot } from "@/lib/selector-core/selector-observation-types";
 
 export const OBSERVATION_REGISTRY_SNAPSHOT: ObservationRegistrySnapshot = {
-  "builtAt": "2026-07-10T21:01:09.755Z",
+  "builtAt": "2026-07-19T06:31:08.991Z",
   "domains": {
     "runtime": {
       "modules": [
@@ -905,6 +905,7 @@ export const OBSERVATION_REGISTRY_SNAPSHOT: ObservationRegistrySnapshot = {
     "lib/regression/selector-rollout-safety-audit.test.ts",
     "lib/regression/selector-scroll-restoration-audit.test.ts",
     "lib/regression/selector-selection-atomicity.test.ts",
+    "lib/regression/selector-sheet-tap-select.test.ts",
     "lib/regression/selector-snapshot-architecture-invariants.test.ts",
     "lib/regression/selector-snapshot-consistency.test.ts",
     "lib/regression/selector-snapshot-hardening-smoke.test.ts",

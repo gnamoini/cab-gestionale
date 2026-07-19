@@ -1,8 +1,20 @@
 import assert from "node:assert/strict";
 import { dryRunInventoryReceivingApply } from "@/lib/document-capture/apply/adapters/inventory-receiving-apply-adapter";
+import type { InventoryDocumentLineRow } from "@/src/types/supabase-tables";
 
-const lines = [
+const lineBase = {
+  document_id: "doc-1",
+  unit: null,
+  final_quantity: null,
+  final_item_id: null,
+  line_ai_confidence: null,
+  created_at: "2026-01-01T00:00:00.000Z",
+  updated_at: "2026-01-01T00:00:00.000Z",
+} satisfies Partial<InventoryDocumentLineRow>;
+
+const lines: InventoryDocumentLineRow[] = [
   {
+    ...lineBase,
     id: "l1",
     line_index: 0,
     apply_status: "pending",
@@ -16,6 +28,7 @@ const lines = [
     user_action: null,
   },
   {
+    ...lineBase,
     id: "l2",
     line_index: 1,
     apply_status: "pending",
@@ -28,7 +41,7 @@ const lines = [
     raw_code: null,
     user_action: null,
   },
-] as const;
+];
 
 const result = dryRunInventoryReceivingApply({
   documentId: "doc-1",

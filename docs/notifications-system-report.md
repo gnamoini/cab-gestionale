@@ -3,6 +3,8 @@
 Report completo — implementazione v2 role-based (2026-07-01).
 
 **SSOT codice:** [`lib/notifications/notification-event-catalog.ts`](../lib/notifications/notification-event-catalog.ts)  
+**RCA architettura push:** [`docs/investigation/PUSH_NOTIFICATION_ARCHITECTURE_RCA.md`](investigation/PUSH_NOTIFICATION_ARCHITECTURE_RCA.md)  
+**ADR:** [`docs/adr/ADR-002-notification-ssot-architecture.md`](adr/ADR-002-notification-ssot-architecture.md)  
 **Migration DB:** [`supabase/migrations/20260901150000_notification_events_v2.sql`](../supabase/migrations/20260901150000_notification_events_v2.sql)
 
 ---

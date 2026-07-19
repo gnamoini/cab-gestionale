@@ -106,7 +106,7 @@ export function ReportToolbar({
 
   return (
 
-    <div className={reportCommandBarClass}>
+    <div className={reportCommandBarClass} data-testid="page-ready-toolbar">
 
       <PageHeader
 

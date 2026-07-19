@@ -523,7 +523,7 @@ export const dsTooltipPortalHidden = "invisible";
 
 /** Skeleton */
 export const dsSkeletonPulse =
-  "animate-pulse rounded-md bg-[color:color-mix(in_srgb,var(--cab-text-muted)_14%,var(--cab-surface-2))]";
+  "motion-safe:animate-pulse motion-reduce:animate-none rounded-md bg-[color:color-mix(in_srgb,var(--cab-text-muted)_14%,var(--cab-surface-2))]";
 export const dsSkeletonLine = `h-4 w-full max-w-md ${dsSkeletonPulse}`;
 export const dsSkeletonBlock = `h-24 w-full ${dsSkeletonPulse}`;
 

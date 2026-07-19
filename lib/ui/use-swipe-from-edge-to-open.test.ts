@@ -44,6 +44,12 @@ assert.doesNotMatch(
   "finishCancel must not reset compositor before parent consumes visual close",
 );
 assert.match(swipeOpenSrc, /peakVelocityXRef/);
+assert.match(swipeOpenSrc, /armSelectorGhostClickGuard/);
+assert.match(
+  swipeOpenSrc,
+  /finishCommit[\s\S]{0,120}armSelectorGhostClickGuard/,
+  "finishCommit must arm ghost-click guard before onCommit",
+);
 
 const appShellSrc = readFileSync(join(root, "components/gestionale/app-shell.tsx"), "utf8");
 assert.match(appShellSrc, /useNavDrawerMachine/);
@@ -56,5 +62,9 @@ assert.match(sidebarSrc, /NAV_DRAWER_PANEL_ID/);
 assert.match(sidebarSrc, /aria-live/);
 assert.match(sidebarSrc, /DISMISS_DRAG_END_COMMIT/);
 assert.match(sidebarSrc, /skipCssCloseAnim/);
+assert.match(
+  sidebarSrc,
+  /flags\.state === "OPEN" \|\| \(flags\.state === "DRAGGING" && edgeOpening\)/,
+);
 
 console.log("use-swipe-from-edge-to-open.test.ts ok");

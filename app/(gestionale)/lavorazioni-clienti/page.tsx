@@ -1,6 +1,5 @@
 import { dehydrate } from "@tanstack/react-query";
 import { Suspense } from "react";
-import { LoadingSuspenseFallback } from "@/components/design-system";
 import { ClientPortalDeferredHydration } from "@/components/lavorazioni-clienti/client-portal-deferred-hydration";
 import { ClientLavorazioniViewLazy } from "@/components/gestionale/lazy-route-views";
 import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";
@@ -16,7 +15,7 @@ export default async function LavorazioniClientiPage() {
 
   return (
     <GestionaleHydrationBoundary state={criticalState}>
-      <Suspense fallback={<LoadingSuspenseFallback variant="clienti" />}>
+      <Suspense fallback={null}>
         <ClientPortalDeferredHydration>
           <ClientLavorazioniViewLazy />
         </ClientPortalDeferredHydration>

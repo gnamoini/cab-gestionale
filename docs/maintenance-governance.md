@@ -11,6 +11,8 @@ Policy semplici per evitare degrado progressivo del repo. Stability-first — no
 | Mix | No cleanup + feature business nella stessa PR |
 | Priorità | Rimuovere dead code solo con 0 call site verificato (grep + tsc) |
 
+Vedi anche: [`docs/maintenance/dead-code-policy.md`](./maintenance/dead-code-policy.md) — bucket model, telemetry, knip delta gate, Technical Debt Score.
+
 ## Deprecated helper
 
 | Regola | Dettaglio |

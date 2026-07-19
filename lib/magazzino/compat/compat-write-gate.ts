@@ -18,6 +18,7 @@ import {
   type RicambioCompatRef,
 } from "@/lib/magazzino/ricambio-compat-resolver";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { trackDeprecatedUsage } from "@/lib/observability/deprecated-usage";
 
 export type CompatWriteInput = CompatInput & { ricambioId?: string };
 
@@ -52,6 +53,7 @@ export function devInvariantCompatWriteGuard(source: string, context?: CompatWri
   if (warnedSources.has(key)) return;
   warnedSources.add(key);
 
+  trackDeprecatedUsage("magazzino-compat-write", { source, risk });
   const stack = new Error("[compat-write-guard]").stack;
   console.warn(
     `[compat-write-guard] Legacy compat write blocked — use writeCompatibilitaRicambio() at "${source}"`,

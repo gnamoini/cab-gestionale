@@ -8,9 +8,17 @@ export function notificationOptInContextLabel(mode: NotificationOptInMode): stri
 
 export function notificationOptInDescription(mode: NotificationOptInMode): string {
   if (mode === "push") {
-    return "Ricevi avvisi anche con l'app chiusa o in secondo piano. Ti chiederemo il consenso una sola volta.";
+    return "Ricevi avvisi anche con l'app chiusa o in secondo piano. Puoi cambiare idea in qualsiasi momento dal menu notifiche.";
   }
-  return "Ricevi popup di sistema anche con il gestionale in un'altra scheda. Ti chiederemo il consenso una sola volta.";
+  return "Ricevi popup di sistema anche con il gestionale in un'altra scheda. Puoi cambiare idea in qualsiasi momento dal menu notifiche.";
+}
+
+export function notificationOptInAcceptLabel(): string {
+  return "Sì, attiva";
+}
+
+export function notificationOptInDeclineLabel(): string {
+  return "No, grazie";
 }
 
 export function notificationOptInSuccessMessage(): string {

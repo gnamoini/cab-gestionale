@@ -16,6 +16,12 @@ import { LAVORAZIONI_DASHBOARD_REPORT_FILTERS } from "@/lib/lavorazioni/lavorazi
 import { isLavorazioneInCorso } from "@/lib/lavorazioni/archived";
 import { resolveLavorazioniStatiForServer } from "@/lib/app-settings/resolve-settings-for-server";
 import { pickDashboardPriorityLavorazioneIds, DASHBOARD_SCHEde_PREFETCH_LIMIT } from "@/lib/view/dashboard-widgets-selectors";
+import { fetchPreventiviRecordsServer } from "@/lib/preventivi/preventivi-fetch-server";
+import { fetchInvoiceListPayloadServer } from "@/lib/fatturazione/fatturazione-fetch-server";
+import { getMovimentiListServer } from "@/lib/movimenti/movimenti-list-fetch-server";
+import type { PreventiviRecordsPayload } from "@/lib/preventivi/preventivi-list-fetch";
+import type { InvoiceListPayload } from "@/lib/fatturazione/types";
+import type { MovimentoRicambioRow } from "@/src/types/supabase-tables";
 import {
   verifyServerModuleCan,
   verifyServerPageRead,
@@ -35,6 +41,12 @@ export type DashboardLogPrefetchSlice = {
   rows: LogModificaWithProfileRow[];
 };
 
+export type DashboardHeaderKpiSeed = {
+  preventivi: PreventiviRecordsPayload | null;
+  fatturazione: InvoiceListPayload | null;
+  movimenti: MovimentoRicambioRow[] | null;
+};
+
 export type DashboardDataDTO = {
   lavorazioni: LavorazioneListRow[];
   schedeStore: LavorazioneSchedeStore;
@@ -42,6 +54,7 @@ export type DashboardDataDTO = {
   magDashboardKpi: MagazzinoDashboardKpi;
   settings: CabAppSettingsQueryPayload;
   logSlices: DashboardLogPrefetchSlice[];
+  headerKpi: DashboardHeaderKpiSeed;
 };
 
 const DASHBOARD_MEZZO_ENRICH_LIMIT = DASHBOARD_SCHEde_PREFETCH_LIMIT;
@@ -123,8 +136,20 @@ export const fetchDashboardDataDTOServer = cache(async (): Promise<DashboardData
       ? fetchSchedeBundlesStoreServer(schedeTargetIds, codiciMapFromRows(lavorazioni))
       : Promise.resolve({ success: true as const, data: {} as LavorazioneSchedeStore });
 
-  const [enrichedLavorazioni, schedeRes] = await Promise.all([mezzoEnrichPromise, schedePromise]);
+  const [enrichedLavorazioni, schedeRes, preventiviRes, invoicesRes, movimentiRes] = await Promise.all([
+    mezzoEnrichPromise,
+    schedePromise,
+    fetchPreventiviRecordsServer(),
+    fetchInvoiceListPayloadServer(),
+    getMovimentiListServer(),
+  ]);
   lavorazioni = enrichedLavorazioni;
+
+  const headerKpi: DashboardHeaderKpiSeed = {
+    preventivi: preventiviRes.success ? (preventiviRes.data ?? null) : null,
+    fatturazione: invoicesRes.success ? (invoicesRes.data ?? null) : null,
+    movimenti: movimentiRes.success ? (movimentiRes.data ?? null) : null,
+  };
 
   const logSlices: DashboardLogPrefetchSlice[] = logFilters.map((filters, index) => ({
     filters,
@@ -145,5 +170,6 @@ export const fetchDashboardDataDTOServer = cache(async (): Promise<DashboardData
     magDashboardKpi: magWidget.kpi,
     settings: settingsPayload ?? { rows: [], resolved: resolveCabAppSettingsFallbackServer() },
     logSlices,
+    headerKpi,
   };
 });

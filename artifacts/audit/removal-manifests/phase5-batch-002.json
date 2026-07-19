@@ -1,0 +1,134 @@
+{
+  "batch": "phase5-batch-002",
+  "date": "2026-07-19",
+  "items": [
+    {
+      "path": "components/design-system/loading/loading-dashboard-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/design-system/loading/loading-dipendenti-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/design-system/loading/loading-magazzino-list-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/design-system/loading/loading-mezzi-list-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/design-system/loading/loading-documenti-list-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/design-system/loading/loading-preventivi-list-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/design-system/loading/loading-report-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/design-system/loading/loading-impostazioni-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/design-system/loading/loading-agenda-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/design-system/loading/loading-fatturazione-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/design-system/loading/loading-sicurezza-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/design-system/loading/loading-production-readiness-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/design-system/loading/loading-login-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/design-system/loading/loading-client-detail-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/design-system/loading/loading-lavorazioni-list-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "components/lavorazioni-clienti/client-lavorazioni-loading-skeleton.tsx",
+      "bucket": 1,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "audit:skeleton"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    }
+  ]
+}

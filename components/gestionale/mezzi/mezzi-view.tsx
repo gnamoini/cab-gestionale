@@ -5,7 +5,7 @@ import { Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { PageHeader } from "@/components/gestionale/page-header";
+import { MezziTableSection } from "@/components/gestionale/mezzi/mezzi-page-structure";
 import {
   PageActionMenu,
   clickPageActionHiddenTrigger,
@@ -33,9 +33,9 @@ import {
 import { mezzoHaLavorazioneCollegataDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import { logModificaRowToMezziHubLogEntry } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
-import { dsPageToolbarCtaCompact, dsStackPage } from "@/lib/ui/design-system";
+import { dsPageToolbarCtaCompact } from "@/lib/ui/design-system";
 import { useGestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
-import { LoadingErrorState, LoadingMezziListSkeleton, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount } from "@/components/design-system";
+import { LoadingCardSkeleton, LoadingErrorState, PageLayout, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount, SkeletonBoundary } from "@/components/design-system";
 import { Q_FOCUS_MEZZO } from "@/lib/navigation/dashboard-log-links";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
@@ -68,7 +68,7 @@ const MezziTagliandiPanel = dynamic(
     import("@/components/gestionale/mezzi/mezzi-tagliandi-panel").then((m) => ({
       default: m.MezziTagliandiPanel,
     })),
-  { ssr: false, loading: () => <LoadingMezziListSkeleton /> },
+  { ssr: false, loading: () => <LoadingCardSkeleton minHeightClass="min-h-[12rem]" /> },
 );
 
 const MezziNewModal = dynamic(
@@ -622,7 +622,7 @@ export function MezziView() {
     </div>
     <div ref={listLayoutRef} className={`${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
-      <PageHeader
+      <PageLayout
         title="Mezzi"
         titleAddon={<MezziPageViewToggle value={pageView} onChange={setPageView} />}
         actions={
@@ -631,13 +631,12 @@ export function MezziView() {
             onRefresh={() => void refetchMezzi()}
           />
         }
-      />
-
-      <div className={dsStackPage}>
+      >
         <ShellCard>
           {pageView === "anagrafica" ? (
             <>
           <PageToolbar
+            testId="page-ready-toolbar"
             className="sm:mx-0"
             primaryAction={
               <Tooltip content={canEditVehicles ? "Registra un nuovo mezzo in anagrafica" : READONLY_PERMISSION_HINT}>
@@ -720,10 +719,8 @@ export function MezziView() {
             />
           ) : null}
 
-          <div className="mt-4">
-            {mezziInitialLoading ? (
-              <LoadingMezziListSkeleton withToolbar={false} />
-            ) : (
+          <SkeletonBoundary loading={mezziInitialLoading}>
+          <MezziTableSection mode="content" className="mt-4">
               <MezziTable
                 listLayout={listLayout}
                 rows={pagedSorted}
@@ -739,8 +736,8 @@ export function MezziView() {
                 tagliandiPendingId={tagliandiPendingId}
                 onTagliandiChange={handleTagliandiChange}
               />
-            )}
-          </div>
+          </MezziTableSection>
+          </SkeletonBoundary>
           {showPager ? (
             <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} />
           ) : null}
@@ -749,7 +746,7 @@ export function MezziView() {
             <MezziTagliandiPanel canEdit={canEditVehicles} />
           ) : null}
         </ShellCard>
-      </div>
+      </PageLayout>
 
       {hubMezzo ? (
         <MezziHubDetailModal

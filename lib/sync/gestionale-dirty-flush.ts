@@ -88,16 +88,20 @@ export async function flushGestionaleDirty(
   incrementSyncMetric("gestionale_dirty_flushed", 1, { reason: options.reason });
 }
 
-/** Segnala dirty su scope attivi quando il polling fallback rileva drift (tab visibile). */
-export function markPollingFallbackDirty(): void {
+/** Segnala dirty solo per tabelle operative con drift verificato (scope attivi). */
+export function markDirtyForOperationalTables(tables: readonly string[]): void {
+  if (tables.length === 0) return;
   if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
 
+  const tableSet = new Set(tables);
   const scopes = getActiveSyncContexts();
   const now = Date.now();
 
   for (const scope of scopes) {
     if (!isDirtySyncEnabledForDomain(scope.domain)) continue;
+    let marked = false;
     for (const table of scope.tables) {
+      if (!tableSet.has(table)) continue;
       markGestionaleDirty({
         domain: scope.domain,
         table,
@@ -106,10 +110,20 @@ export function markPollingFallbackDirty(): void {
         timestamp: now,
         source: "realtime",
       });
+      marked = true;
     }
-    incrementSyncMetric("gestionale_dirty_marked", 1, {
-      reason: "polling_fallback",
-      domain: scope.domain,
-    });
+    if (marked) {
+      incrementSyncMetric("gestionale_dirty_marked", 1, {
+        reason: "polling_fallback",
+        domain: scope.domain,
+      });
+    }
   }
+}
+
+/** @deprecated Usare markDirtyForOperationalTables con tabelle driftate. */
+export function markPollingFallbackDirty(): void {
+  const scopes = getActiveSyncContexts();
+  const tables = scopes.flatMap((scope) => [...scope.tables]);
+  markDirtyForOperationalTables(tables);
 }

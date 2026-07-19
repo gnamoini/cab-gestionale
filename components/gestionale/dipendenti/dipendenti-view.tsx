@@ -15,7 +15,8 @@ import {
 import { TimesheetEmptyState } from "@/components/gestionale/dipendenti/timesheet-empty-state";
 import { TimesheetLoadError } from "@/components/gestionale/dipendenti/timesheet-load-error";
 import { TimesheetTableView } from "@/components/gestionale/dipendenti/timesheet-table-view";
-import { LoadingDipendentiSkeleton } from "@/components/design-system";
+import { PageLayout } from "@/components/design-system";
+import { DipendentiPageStructure, DipendentiTimesheetSection } from "@/components/gestionale/dipendenti/dipendenti-page-structure";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import {
   buildDipendentiPdfContext,
@@ -303,7 +304,11 @@ export function DipendentiView() {
   }, [fillToday8hUpserts, ts, successOnce, errorOnce]);
 
   if (perm.isLoading) {
-    return <LoadingDipendentiSkeleton />;
+    return (
+      <PageLayout title="Dipendenti">
+        <DipendentiPageStructure mode="skeleton" />
+      </PageLayout>
+    );
   }
 
   const showRegistryEmpty =
@@ -369,7 +374,7 @@ export function DipendentiView() {
           />
 
           {settingsLoading || ts.isInitialLoading ? (
-            <LoadingDipendentiSkeleton embedded />
+            <DipendentiTimesheetSection mode="skeleton" />
           ) : showNoAddetti ? (
             <TimesheetEmptyState variant="no-addetti" />
           ) : showRegistryEmpty ? (

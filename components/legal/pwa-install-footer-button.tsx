@@ -59,6 +59,7 @@ export function PwaInstallFooterButton({
 
   if (variant === "profile-action") {
     return (
+      // ui-contract-disable-next-line native-title-tooltip: PWA install action mirrors aria-label on profile row
       <button
         type="button"
         className={`${profileActionItemClass} ${dsFocus} disabled:pointer-events-none disabled:opacity-55 disabled:cursor-not-allowed ${className}`.trim()}
@@ -79,6 +80,7 @@ export function PwaInstallFooterButton({
   }
 
   return (
+    // ui-contract-disable-next-line native-title-tooltip: PWA footer install button mirrors aria-label
     <button
       type="button"
       className={`${installButtonClass} ${className}`.trim()}

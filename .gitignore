@@ -69,3 +69,16 @@ shadow-cutover-report.json
 control-duration-baseline.json
 control-certification/
 control-health/
+
+# Dead-code audit artifacts (knip baseline is committed for delta gate)
+artifacts/audit/dead-code-baseline/*.txt
+artifacts/audit/dead-code-baseline/*.log
+artifacts/audit/dead-code-baseline/unused-ts.txt
+artifacts/audit/dependency-graph/
+!artifacts/audit/dead-code-baseline/knip-baseline.json
+!artifacts/audit/dead-code-baseline/debt-score.json
+!artifacts/audit/dead-code-baseline/baseline-meta.json
+!artifacts/audit/removal-manifests/
+
+.vercel
+.env*

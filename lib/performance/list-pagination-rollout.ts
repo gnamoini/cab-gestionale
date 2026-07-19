@@ -1,9 +1,9 @@
-/** PR-0 feature flag — default off; enabled on Vercel preview for staging validation. */
+/** PR-0 feature flag — default on in prod (Sprint 1); opt-out via NEXT_PUBLIC_SERVER_LIST_PAGINATION=0 */
 export function isServerListPaginationEnabled(): boolean {
-  if (process.env.NEXT_PUBLIC_SERVER_LIST_PAGINATION === "1") return true;
-  const vercelEnv =
-    process.env.NEXT_PUBLIC_VERCEL_ENV?.trim() || process.env.VERCEL_ENV?.trim() || "";
-  return vercelEnv === "preview";
+  const explicit = process.env.NEXT_PUBLIC_SERVER_LIST_PAGINATION?.trim();
+  if (explicit === "0" || explicit === "false") return false;
+  if (explicit === "1" || explicit === "true") return true;
+  return true;
 }
 
 /** Lazy mezzo/profile embed — PR-5/PR-6 rollout. */

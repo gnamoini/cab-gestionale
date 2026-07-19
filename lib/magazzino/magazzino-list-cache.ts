@@ -29,11 +29,39 @@ export function ricambioUiFromMagazzinoRow(
   return mapMagazzinoRowsToUI([row], autore, mezziListe)[0]!;
 }
 
+export type PatchMagazzinoListCacheOptions = {
+  /** ponytail: solo quantita/updated_at (+ autore in meta) — es. +/- scorta, senza riserializzare compat. */
+  quantitaOnly?: boolean;
+};
+
+function patchRowMetaAutore(
+  meta: MagazzinoRicambioRow["meta"],
+  autore?: string,
+): MagazzinoRicambioRow["meta"] {
+  const trimmed = autore?.trim();
+  if (!trimmed) return meta;
+  const base =
+    meta && typeof meta === "object" && !Array.isArray(meta)
+      ? { ...(meta as Record<string, unknown>) }
+      : {};
+  return { ...base, autoreUltimaModifica: trimmed } as MagazzinoRicambioRow["meta"];
+}
+
 function uiItemToRow(
   ui: RicambioMagazzino,
   existing?: MagazzinoRicambioRow,
   mezziListe?: MezziListePrefs,
+  options?: PatchMagazzinoListCacheOptions,
 ): MagazzinoRicambioRow {
+  if (options?.quantitaOnly && existing) {
+    return {
+      ...existing,
+      quantita: Math.max(0, Math.round(ui.scorta)),
+      meta: patchRowMetaAutore(existing.meta, ui.autoreUltimaModifica),
+      updated_at: ui.dataUltimaModifica,
+    };
+  }
+
   const patch = ricambioUiToMagazzinoInsert(ui, mezziListe);
   if (existing) {
     return {
@@ -70,12 +98,20 @@ export function patchMagazzinoListCache(
   updater: (prev: RicambioMagazzino[]) => RicambioMagazzino[],
   autore = "Sistema",
   mezziListe?: MezziListePrefs,
+  options?: PatchMagazzinoListCacheOptions,
 ): void {
   qc.setQueryData<MagazzinoRicambioRow[]>(magazzinoListQueryKey(), (old) => {
-    const ui = mapMagazzinoRowsToUI(old ?? [], autore, mezziListe);
+    const rows = old ?? [];
+    if (options?.quantitaOnly) {
+      const ui = rows.map((row) => magazzinoRowToRicambioUI(row, autore, mezziListe));
+      const next = updater(ui);
+      const rowById = new Map(rows.map((row) => [row.id, row]));
+      return next.map((item) => uiItemToRow(item, rowById.get(item.id), mezziListe, options));
+    }
+    const ui = mapMagazzinoRowsToUI(rows, autore, mezziListe);
     const next = updater(ui);
-    const rowById = new Map((old ?? []).map((row) => [row.id, row]));
-    return next.map((item) => uiItemToRow(item, rowById.get(item.id), mezziListe));
+    const rowById = new Map(rows.map((row) => [row.id, row]));
+    return next.map((item) => uiItemToRow(item, rowById.get(item.id), mezziListe, options));
   });
 }
 

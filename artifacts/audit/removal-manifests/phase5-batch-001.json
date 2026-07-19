@@ -1,0 +1,22 @@
+{
+  "batch": "phase5-batch-001",
+  "date": "2026-07-19",
+  "items": [
+    {
+      "path": "src/components/desktop-notification-permission-prompt.tsx",
+      "bucket": 2,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "tsc"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    },
+    {
+      "path": "src/components/pwa-push-opt-in-banner.tsx",
+      "bucket": 2,
+      "category": "A",
+      "staticEvidence": ["knip", "grep", "importGraph", "tsc"],
+      "runtimeEvidence": "0-hit",
+      "rollback": "git revert <commit>"
+    }
+  ]
+}

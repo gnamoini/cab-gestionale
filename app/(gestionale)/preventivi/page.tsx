@@ -1,6 +1,5 @@
 import { dehydrate } from "@tanstack/react-query";
 import { Suspense } from "react";
-import { LoadingSuspenseFallback } from "@/components/design-system";
 import { PreventiviDeferredHydration } from "@/components/preventivi/preventivi-deferred-hydration";
 import { PreventiviViewLazy } from "@/components/gestionale/lazy-route-views";
 import { Q_PREVENTIVI_TAB } from "@/lib/preventivi/preventivi-query";
@@ -25,7 +24,7 @@ export default async function PreventiviPage({ searchParams }: PreventiviPagePro
 
   return (
     <GestionaleHydrationBoundary state={criticalState}>
-      <Suspense fallback={<LoadingSuspenseFallback variant="preventivi" />}>
+      <Suspense fallback={null}>
         <PreventiviDeferredHydration includeOrdini={includeOrdini}>
           <PreventiviViewLazy />
         </PreventiviDeferredHydration>

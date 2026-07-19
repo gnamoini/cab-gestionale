@@ -37,6 +37,7 @@ export const RuntimeEvents = {
   runtimeHydrationMismatch: "runtime.hydration.mismatch",
   storageDeleteFailure: "storage.delete.failure",
   perfSlow: "perf.slow",
+  deprecatedUsage: "deprecated.usage",
 } as const;
 
 export type RuntimeEventName = (typeof RuntimeEvents)[keyof typeof RuntimeEvents];
@@ -70,6 +71,7 @@ const EVENT_LEVEL: Record<string, "debug" | "info" | "warn" | "error"> = {
   [RuntimeEvents.runtimeHydrationMismatch]: "error",
   [RuntimeEvents.storageDeleteFailure]: "warn",
   [RuntimeEvents.perfSlow]: "warn",
+  [RuntimeEvents.deprecatedUsage]: "info",
 };
 
 const EVENT_OPERATION: Partial<Record<RuntimeEventName, ObsOperation>> = {

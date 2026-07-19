@@ -9,6 +9,7 @@ import {
   PWA_PUSH_OPTIN_MIN_ENGAGEMENT_MS,
   writePushOptInDismiss,
 } from "@/lib/pwa/push-optin-state";
+import { writeNotificationOptInDeclined } from "@/lib/notifications/notification-opt-in-decision";
 import { writePwaPushDeviceState } from "@/lib/pwa/push-device-state";
 import { shouldShowPwaPushOptInUi } from "@/lib/pwa/push-permission-flow";
 import {
@@ -146,6 +147,7 @@ export function usePwaPushOptIn() {
   }, []);
 
   const dismissPushOptIn = useCallback(() => {
+    writeNotificationOptInDeclined();
     const now = Date.now();
     writePushOptInDismiss(now);
     writePwaPushDeviceState({ dismissedUntil: now + PWA_PUSH_OPTIN_DISMISS_TTL_MS });

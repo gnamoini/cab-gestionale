@@ -36,23 +36,9 @@ export {
   type LoadingPageSkeletonVariant,
 } from "./loading-page-skeleton";
 export { LoadingSuspenseFallback, type LoadingSuspenseFallbackProps } from "./loading-suspense-fallback";
-export { LoadingDashboardSkeleton } from "./loading-dashboard-skeleton";
-export { LoadingDipendentiSkeleton } from "./loading-dipendenti-skeleton";
+export { PageTransitionLoader } from "./page-transition-loader";
 export { LoadingKanbanSkeleton } from "./loading-kanban-skeleton";
-export { LoadingLavorazioniListSkeleton } from "./loading-lavorazioni-list-skeleton";
 export { LoadingLavorazioneMobileCardSkeleton } from "./loading-lavorazione-mobile-card-skeleton";
-export { LoadingMagazzinoListSkeleton } from "./loading-magazzino-list-skeleton";
-export { LoadingMezziListSkeleton } from "./loading-mezzi-list-skeleton";
-export { LoadingDocumentiListSkeleton } from "./loading-documenti-list-skeleton";
-export { LoadingPreventiviListSkeleton } from "./loading-preventivi-list-skeleton";
-export { LoadingReportSkeleton } from "./loading-report-skeleton";
-export { LoadingImpostazioniSkeleton } from "./loading-impostazioni-skeleton";
-export { LoadingAgendaSkeleton, LoadingAgendaContentSkeleton } from "./loading-agenda-skeleton";
-export { LoadingFatturazioneSkeleton, LoadingFatturazioneListSkeleton } from "./loading-fatturazione-skeleton";
-export { LoadingSicurezzaSkeleton } from "./loading-sicurezza-skeleton";
-export { LoadingProductionReadinessSkeleton } from "./loading-production-readiness-skeleton";
-export { LoadingLoginSkeleton } from "./loading-login-skeleton";
-export { LoadingClientDetailSkeleton } from "./loading-client-detail-skeleton";
 export { LoadingToolbarSkeleton } from "./loading-toolbar-skeleton";
 export { LoadingCardSkeleton, type LoadingCardSkeletonProps } from "./loading-card-skeleton";
 export {
@@ -96,6 +82,32 @@ export {
 } from "./loading-list-page-shell";
 export { resolveLoadingPageSkeletonVariant } from "./resolve-loading-page-skeleton-variant";
 export { LoadingPageShellSkeleton, type LoadingPageShellSkeletonProps } from "./loading-page-shell-skeleton";
+
+export type {
+  SkeletonKind,
+  SkeletonGeometryToken,
+  SkeletonGeometry,
+  SkeletonContract,
+  SkeletonMode,
+} from "./skeleton-contract";
+export {
+  SKELETON_GEOMETRY,
+  GESTIONALE_COMBINED_LIST_GEOMETRY_MIN,
+  resolveGeometryClasses,
+  type GeometryResolved,
+} from "./skeleton-geometry-tokens";
+export {
+  resolveSkeletonStructure,
+  resolveSkeletonStructureList,
+  type ResolvedSkeletonNode,
+} from "./skeleton-structure-resolver";
+export {
+  StructuralSkeletonRenderer,
+  type StructuralSkeletonRendererProps,
+} from "./structural-skeleton-renderer";
+export { SkeletonBoundary, type SkeletonBoundaryProps } from "./skeleton-boundary";
+export { StructuralRouteSkeleton, type StructuralRouteSkeletonProps } from "./structural-route-skeleton";
+export { skeletonPulseClass, skeletonMotionClass } from "./skeleton-tokens";
 
 /** Alias legacy — stesso componente. */
 export { LoadingSpinner as GlobalLoadingSpinner } from "./loading-spinner";

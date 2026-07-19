@@ -1,0 +1,14 @@
+{
+  "step": 1,
+  "target": "FormUxBoundaryBootstrap",
+  "generatedAt": "2026-07-19T05:06:00.000Z",
+  "firstLoadJsKbBefore": 1866.6,
+  "firstLoadJsKbAfter": 1833.3,
+  "deltaKb": -33.3,
+  "displacementPass": true,
+  "antiPlaceboPass": true,
+  "gates": {
+    "removedFromFirstLoad": true,
+    "newSharedChunk": false
+  }
+}

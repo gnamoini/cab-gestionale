@@ -1,6 +1,5 @@
 import { dehydrate } from "@tanstack/react-query";
 import { Suspense } from "react";
-import { LoadingSuspenseFallback } from "@/components/design-system";
 import { ReportDeferredHydration } from "@/components/gestionale/report/report-deferred-hydration";
 import { ReportViewLazy } from "@/components/gestionale/lazy-route-views";
 import { UIPageAdapterGate } from "@/components/gestionale/ui-page-adapter-gate";
@@ -18,7 +17,7 @@ export default async function ReportPage() {
 
   return (
     <GestionaleHydrationBoundary state={criticalState}>
-      <Suspense fallback={<LoadingSuspenseFallback variant="report" />}>
+      <Suspense fallback={null}>
         <ReportDeferredHydration>
           <UIPageAdapterGate page="/report" mode="os" fallback="legacy" schema={getSuggestedSchema("/report")}>
             <ReportViewLazy />

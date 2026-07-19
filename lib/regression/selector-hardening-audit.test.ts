@@ -13,11 +13,17 @@ function readJson<T>(name: string): T {
   return JSON.parse(fs.readFileSync(path.join(GENERATED, name), "utf8")) as T;
 }
 
-execSync("npx tsx scripts/selector-hardening-audit.ts", {
-  cwd: ROOT,
-  stdio: "pipe",
-  timeout: 600_000,
-});
+const SUMMARY_PATH = path.join(GENERATED, "selector-hardening-audit-summary.md");
+const refresh =
+  process.argv.includes("--refresh") || process.env.SELECTOR_HARDENING_AUDIT_REFRESH === "1";
+
+if (refresh || !fs.existsSync(SUMMARY_PATH)) {
+  execSync("npx tsx scripts/selector-hardening-audit.ts", {
+    cwd: ROOT,
+    stdio: "pipe",
+    timeout: 600_000,
+  });
+}
 
 type ImportGraphReport = {
   brokenImportCount: number;

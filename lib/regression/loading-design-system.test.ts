@@ -39,6 +39,10 @@ const EXPECTED_EXPORTS = [
   "SkeletonBlock",
   "SkeletonCard",
   "SkeletonTable",
+  "StructuralSkeletonRenderer",
+  "StructuralRouteSkeleton",
+  "SkeletonBoundary",
+  "SkeletonContract",
   "useDelayedLoadingMessage",
   "SKELETON_MIN_HEIGHT",
 ] as const;

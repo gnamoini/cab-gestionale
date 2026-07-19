@@ -25,9 +25,7 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
 import { lavorazioniAdvancedFiltersActive } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
-import {
-  clientPortalPageStack,
-} from "@/components/lavorazioni-clienti/client-lavorazioni-loading-skeleton";
+import { clientPortalPageStack } from "@/components/lavorazioni-clienti/client-lavorazioni-page-structure";
 import {
   IconActionButton,
   LoadingErrorState,

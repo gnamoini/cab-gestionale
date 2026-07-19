@@ -8,12 +8,12 @@ import { formatInvoiceDate, formatInvoiceMoney } from "@/components/fatturazione
 import { useFatturazioneOpenItemsQuery } from "@/src/hooks/gestionale/use-fatturazione-open-items-query";
 import { useFatturazionePaymentsQuery } from "@/src/hooks/gestionale/use-fatturazione-payments-query";
 import type { CustomerPaymentRow } from "@/src/types/supabase-tables";
-import { LoadingFatturazioneListSkeleton } from "@/components/design-system";
+import { FatturazioneTabSection } from "@/components/fatturazione/fatturazione-page-structure";
 import { dsPageToolbarBtn, dsTypoSectionTitle } from "@/lib/ui/design-system";
 import { gestionaleListTableRowClass, gestionaleListTableTd } from "@/lib/ui/gestionale-list-table";
 
 export function FatturazionePagamentiSection({ canWrite = false }: { canWrite?: boolean }) {
-  const { payments, isLoading, refetch } = useFatturazionePaymentsQuery();
+  const { payments, isInitialLoading, refetch } = useFatturazionePaymentsQuery();
   const [multiOpen, setMultiOpen] = useState(false);
   const openItemsQ = useFatturazioneOpenItemsQuery(multiOpen);
   const unallocated = useMemo(
@@ -21,7 +21,7 @@ export function FatturazionePagamentiSection({ canWrite = false }: { canWrite?: 
     [payments],
   );
 
-  if (isLoading) return <LoadingFatturazioneListSkeleton withToolbar={false} />;
+  if (isInitialLoading) return <FatturazioneTabSection mode="skeleton" />;
 
   return (
     <div className="space-y-4">

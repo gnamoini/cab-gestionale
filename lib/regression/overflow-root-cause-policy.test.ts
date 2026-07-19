@@ -22,7 +22,7 @@ function read(rel: string) {
 assert.match(read("lib/observability/overflow-root-cause-audit.ts"), /NEXT_PUBLIC_OVERFLOW_ROOT_CAUSE_AUDIT === "1"/);
 assert.match(read("lib/observability/overflow-root-cause-audit.ts"), /__cabOverflowAudit/);
 assert.match(read("components/gestionale/dev-audit-mounts.tsx"), /OverflowRootCauseAuditMount/);
-assert.match(read("components/app-providers.tsx"), /overflow-root-cause-audit/);
+assert.match(read("components/observability/observability-diagnostics-pack-inner.tsx"), /overflow-root-cause-audit/);
 assert.match(read("lib/ui/responsive-layout-audit.ts"), /intentional-horizontal-scroll/);
 
 assert.equal(parseCssLength("960px"), 960);

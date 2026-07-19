@@ -1,0 +1,5 @@
+merge-base: 91a7007fcefd6cf4547bc0e9fdaa50ef6252c825
+test: lib/regression/rbac-route-matrix.test.ts
+result: FAIL
+failure: assertRouteProtection: /dashboard expected allowed=true, got false (operatore block)
+note: HEAD === merge-base; RBAC source files unchanged since origin/main

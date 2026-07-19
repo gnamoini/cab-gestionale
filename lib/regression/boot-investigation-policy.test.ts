@@ -1,5 +1,5 @@
 /**
- * Boot investigation instrumentation policy (dev-only, no production).
+ * Boot investigation instrumentation policy (feature-flag gated, lazy shell edges).
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -22,9 +22,12 @@ assert.match(mod, /LOOP_SUSPECT/);
 assert.match(mod, /LOOP_CONFIRMED/);
 assert.match(mod, /__cabBootInvestigation/);
 
-assert.match(read("components/app-providers-gestionale.tsx"), /BootInvestigationMount/);
-assert.match(read("src/providers/query-provider.tsx"), /trackQueryEvent/);
-assert.match(read("context/auth-context.tsx"), /trackStoreUpdate\("auth.status"/);
-assert.match(read("src/middleware/proxy-handler.ts"), /logBootServer\("REDIRECT"/);
+const gate = read("lib/observability/boot-investigation-gate.ts");
+assert.doesNotMatch(gate, /from ["']@\/lib\/observability\/boot-investigation["']/);
+
+assert.match(read("components/app-providers-gestionale.tsx"), /ObservabilityDiagnosticsPack/);
+assert.match(read("src/providers/query-provider.tsx"), /loadBootInvestigationMod/);
+assert.match(read("context/auth-context.tsx"), /lazyTrackStoreUpdate\("auth\.status"/);
+assert.match(read("src/middleware/proxy-handler.ts"), /lazyLogBootServer\("REDIRECT"/);
 
 console.log("boot-investigation-policy.test.ts OK");

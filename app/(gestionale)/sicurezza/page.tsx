@@ -1,6 +1,5 @@
 import { dehydrate } from "@tanstack/react-query";
 import { Suspense } from "react";
-import { LoadingSuspenseFallback } from "@/components/design-system";
 import { SicurezzaDeferredHydration } from "@/components/gestionale/sicurezza/sicurezza-deferred-hydration";
 import { SecurityDashboardViewLazy } from "@/components/gestionale/lazy-route-views";
 import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";
@@ -16,7 +15,7 @@ export default async function SicurezzaPage() {
 
   return (
     <GestionaleHydrationBoundary state={criticalState}>
-      <Suspense fallback={<LoadingSuspenseFallback variant="sicurezza" />}>
+      <Suspense fallback={null}>
         <SicurezzaDeferredHydration>
           <SecurityDashboardViewLazy />
         </SicurezzaDeferredHydration>

@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   exportInvestigationReport,
-  isBootInvestigationEnabled,
   logBoot,
   trackRedirect,
 } from "@/lib/observability/boot-investigation";
+import { isBootInvestigationEnabled } from "@/lib/observability/boot-investigation-gate";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 
 /**

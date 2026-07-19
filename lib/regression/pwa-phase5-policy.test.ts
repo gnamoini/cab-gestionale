@@ -124,7 +124,7 @@ assert.match(syncFinal, /runPwaNotificationSync/);
 assert.doesNotMatch(syncFinal, /invalidatePwaEverything/);
 
 const reconnect = read("lib/pwa/pwa-reconnect-sync.ts");
-assert.match(reconnect, /source:\s*"reconnect"/);
+assert.match(reconnect, /consumeOperationalVersionPoll/);
 assert.match(reconnect, /claimPwaSyncCooldown/);
 
 const syncBridge = read("src/components/pwa-sync-finalization-bridge.tsx");

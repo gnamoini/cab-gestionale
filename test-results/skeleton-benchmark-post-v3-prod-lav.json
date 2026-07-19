@@ -1,0 +1,21 @@
+{
+  "environment": {
+    "timestamp": "2026-07-19T03:39:11.037Z",
+    "gitCommit": "91a7007",
+    "branch": "main",
+    "nodeVersion": "v24.15.0",
+    "browser": "chromium",
+    "nextMode": "production",
+    "dataset": "dev",
+    "machine": "DESKTOP-Jay",
+    "viewport": "1440x900"
+  },
+  "baseUrl": "http://localhost:3001",
+  "measuredAt": "2026-07-19T03:39:11.037Z",
+  "throttled": false,
+  "hard": [],
+  "soft": [],
+  "failures": [
+    "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3001/dashboard\nCall log:\n  - navigating to \"http://localhost:3001/dashboard\", waiting until \"commit\"\n"
+  ]
+}

@@ -150,8 +150,12 @@ import {
   IconActionButton,
   LoadingErrorState,
   LoadingFormSkeleton,
-  LoadingLavorazioniListSkeleton,
+  SkeletonBoundary,
 } from "@/components/design-system";
+import {
+  LavorazioniListBodySection,
+  LavorazioniTableSection,
+} from "@/components/gestionale/lavorazioni/lavorazioni-page-structure";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
@@ -926,8 +930,13 @@ export function LavorazioniView() {
       includeProfiles: false,
       ...mezzoFilterPart,
       archived: false,
+      ...(serverListPagination &&
+      searchApplied.trim() &&
+      !lavorazioniAdvancedFiltersActive(advancedFilters)
+        ? { search: searchApplied.trim() }
+        : {}),
     }),
-    [listIncludeMezzo, mezzoFilterPart],
+    [listIncludeMezzo, mezzoFilterPart, serverListPagination, searchApplied, advancedFilters],
   );
 
   const filtersChiuse = useMemo(
@@ -2112,9 +2121,8 @@ export function LavorazioniView() {
           onCapturePageDrop={handlePageCaptureDrop}
         />
 
-        {initialListLoading ? (
-          <LoadingLavorazioniListSkeleton withToolbar={false} />
-        ) : (
+        <SkeletonBoundary loading={initialListLoading}>
+        <LavorazioniListBodySection mode="content">
         <ShellCard
           title={`Lavorazioni in corso (${attiveRowsFiltered.length})`}
           collapsible
@@ -2350,7 +2358,8 @@ export function LavorazioniView() {
             </>
           )}
         </ShellCard>
-        )}
+        </LavorazioniListBodySection>
+        </SkeletonBoundary>
 
         {listViewMode === "table" && !initialListLoading ? (
         <ShellCard
@@ -2362,9 +2371,9 @@ export function LavorazioniView() {
           persist={false}
           onCollapsedChange={(collapsed) => setArchivioSectionOpen(!collapsed)}
         >
-          {!archivioSectionOpen ? null : archivioTableLoading ? (
-            <LoadingLavorazioniListSkeleton withToolbar={false} />
-          ) : (
+          {!archivioSectionOpen ? null : (
+          <SkeletonBoundary loading={archivioTableLoading}>
+          <LavorazioniTableSection mode="content">
           <>
           {listLayout === "desktop" ? (
           <GestionaleListTable
@@ -2539,6 +2548,8 @@ export function LavorazioniView() {
             />
           ) : null}
           </>
+          </LavorazioniTableSection>
+          </SkeletonBoundary>
           )}
         </ShellCard>
         ) : null}

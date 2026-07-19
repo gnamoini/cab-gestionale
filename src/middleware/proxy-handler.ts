@@ -22,7 +22,7 @@ import {
   parseOperatorGlobalSettingsDbEnabled,
 } from "@/lib/permissions/operator-global-settings";
 import { tryAuthPrecheckEdge, tryEdgeRoute } from "@/src/middleware/edge-router";
-import { logBootServer } from "@/lib/observability/boot-investigation";
+import { lazyLogBootServer } from "@/lib/observability/boot-investigation-lazy";
 
 const LOGIN_PATH = "/login";
 const RESET_PASSWORD_PATH = "/login/reset-password";
@@ -56,7 +56,7 @@ function isCronApiPath(pathname: string): boolean {
   return pathname.startsWith("/api/cron/");
 }
 function logEdgeRedirect(from: string, to: string, reason: string): void {
-  logBootServer("REDIRECT", "edge", { from, to, reason }, `${from}→${to}`);
+  lazyLogBootServer("REDIRECT", "edge", { from, to, reason }, `${from}→${to}`);
 }
 
 function redirectWithLog(request: NextRequest, pathname: string, to: URL, reason: string): NextResponse {

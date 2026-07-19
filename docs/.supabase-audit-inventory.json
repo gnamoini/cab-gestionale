@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-07T01:18:04.668Z",
-  "migrationCount": 80,
+  "generatedAt": "2026-07-19T03:28:35.427Z",
+  "migrationCount": 223,
   "migrations": [
     {
       "file": "20260211120000_officina_gestionale_core.sql",
@@ -1839,6 +1839,25 @@
       "buckets": []
     },
     {
+      "file": "20260613120000_storage_magazzino_images_read_fix.sql",
+      "timestamp": "20260613120000",
+      "slug": "storage_magazzino_images_read_fix",
+      "tags": [
+        "rbac",
+        "storage"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "rbac_storage_images_path_allowed"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
       "file": "20260629120000_dipendenti_timesheet.sql",
       "timestamp": "20260629120000",
       "slug": "dipendenti_timesheet",
@@ -1892,6 +1911,22 @@
       "indexes": [
         "idx_dipendenti_timesheet_employees_source_addetto_id"
       ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260630200000_invoices_draft_delete_rls.sql",
+      "timestamp": "20260630200000",
+      "slug": "invoices_draft_delete_rls",
+      "tags": [],
+      "tables": [],
+      "policies": [
+        "cap_invoices_delete"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
       "publications": [],
       "buckets": []
     },
@@ -2025,6 +2060,88 @@
       "buckets": []
     },
     {
+      "file": "20260704130100_clienti_anagrafiche_cliente_portal_read.sql",
+      "timestamp": "20260704130100",
+      "slug": "clienti_anagrafiche_cliente_portal_read",
+      "tags": [],
+      "tables": [],
+      "policies": [
+        "cap_clienti_anagrafiche_select_cliente_portal",
+        "cap_clienti_contatti_select_cliente_portal",
+        "cap_clienti_sedi_select_cliente_portal"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260704130200_tkb_draft_store_write_policies.sql",
+      "timestamp": "20260704130200",
+      "slug": "tkb_draft_store_write_policies",
+      "tags": [],
+      "tables": [],
+      "policies": [
+        "tkb_draft_insert_authenticated",
+        "tkb_draft_update_authenticated",
+        "tkb_snapshots_insert_security"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260705025021_rls_missing_tables_hardening.sql",
+      "timestamp": "20260705025021",
+      "slug": "rls_missing_tables_hardening",
+      "tags": [
+        "repair"
+      ],
+      "tables": [
+        "ddt_numero_counters",
+        "interventi_catalogo",
+        "interventi_catalogo_audit",
+        "interventi_categorie",
+        "interventi_componenti",
+        "interventi_procedure",
+        "interventi_sintomi",
+        "lavorazioni_codice_counters",
+        "notification_type_registry",
+        "ordini_fornitori_numero_counters",
+        "preventivi_lavorazione_numero_counters",
+        "preventivi_manuali_numero_counters",
+        "ricambi_componenti_map",
+        "tkb_version_registry"
+      ],
+      "policies": [
+        "tkb_desc_gen_lines_select",
+        "tkb_desc_gen_usage_select",
+        "tkb_desc_operator_overrides_select",
+        "tkb_interventi_catalogo_admin",
+        "tkb_interventi_catalogo_audit_admin",
+        "tkb_interventi_categorie_admin",
+        "tkb_interventi_componenti_admin",
+        "tkb_interventi_procedure_admin",
+        "tkb_interventi_sintomi_admin",
+        "tkb_preventivi_desc_suggestions_select",
+        "tkb_ricambi_componenti_map_admin",
+        "tkb_version_registry_insert",
+        "tkb_version_registry_select",
+        "tkb_version_registry_update"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
       "file": "20260705120000_gestionale_sync_realtime_gaps.sql",
       "timestamp": "20260705120000",
       "slug": "gestionale_sync_realtime_gaps",
@@ -2122,36 +2239,3460 @@
       ],
       "publications": [],
       "buckets": []
+    },
+    {
+      "file": "20260709120000_realtime_prune_deprecated_supporto.sql",
+      "timestamp": "20260709120000",
+      "slug": "realtime_prune_deprecated_supporto",
+      "tags": [
+        "deprecated",
+        "realtime"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [
+        "DROP",
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260710120000_lavorazioni_updated_by.sql",
+      "timestamp": "20260710120000",
+      "slug": "lavorazioni_updated_by",
+      "tags": [
+        "soft_delete",
+        "auth"
+      ],
+      "tables": [
+        "lavorazioni"
+      ],
+      "policies": [],
+      "functions": [
+        "archive_lavorazione_client_portal",
+        "soft_delete_lavorazione"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_lavorazioni_updated_by"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260711120000_db_performance_indexes.sql",
+      "timestamp": "20260711120000",
+      "slug": "db_performance_indexes",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "list_timesheet_employee_ids_with_entries",
+        "list_timesheet_month_keys"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_lavorazioni_codice_trgm",
+        "idx_lavorazioni_note_trgm",
+        "idx_lavorazioni_priorita",
+        "idx_lavorazioni_stato_archived_created",
+        "idx_mezzi_cliente_btree",
+        "idx_movimenti_ricambi_ricambio_created"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260714160000_operatore_dashboard_none.sql",
+      "timestamp": "20260714160000",
+      "slug": "operatore_dashboard_none",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260715120000_magazzino_listino_import_meta_index.sql",
+      "timestamp": "20260715120000",
+      "slug": "magazzino_listino_import_meta_index",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_magazzino_ricambi_meta_listino_import"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260715174629_operational_diary_soft_delete_rpc.sql",
+      "timestamp": "20260715174629",
+      "slug": "operational_diary_soft_delete_rpc",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_operational_diary_update"
+      ],
+      "functions": [
+        "soft_delete_operational_diary_entry"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260716120000_clienti_anagrafiche.sql",
+      "timestamp": "20260716120000",
+      "slug": "clienti_anagrafiche",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "clienti_anagrafiche",
+        "clienti_contatti",
+        "clienti_sedi"
+      ],
+      "policies": [
+        "cap_clienti_anagrafiche_delete",
+        "cap_clienti_anagrafiche_insert",
+        "cap_clienti_anagrafiche_select",
+        "cap_clienti_anagrafiche_update",
+        "cap_clienti_contatti_delete",
+        "cap_clienti_contatti_insert",
+        "cap_clienti_contatti_select",
+        "cap_clienti_contatti_update",
+        "cap_clienti_sedi_delete",
+        "cap_clienti_sedi_insert",
+        "cap_clienti_sedi_select",
+        "cap_clienti_sedi_update"
+      ],
+      "functions": [],
+      "triggers": [
+        "trg_clienti_anagrafiche_updated_at",
+        "trg_clienti_contatti_updated_at",
+        "trg_clienti_sedi_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_clienti_anagrafiche_entity_key",
+        "idx_clienti_anagrafiche_in_lista_settings",
+        "idx_clienti_anagrafiche_nome_display_norm",
+        "idx_clienti_contatti_cliente_ordine",
+        "idx_clienti_sedi_cliente_id"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260716130000_fatturazione_module.sql",
+      "timestamp": "20260716130000",
+      "slug": "fatturazione_module",
+      "tags": [
+        "rbac",
+        "auth"
+      ],
+      "tables": [
+        "billing_customers",
+        "invoice_links",
+        "invoice_payments",
+        "invoice_rows",
+        "invoices"
+      ],
+      "policies": [
+        "cap_billing_customers_insert",
+        "cap_billing_customers_select",
+        "cap_billing_customers_update",
+        "cap_invoice_links_delete",
+        "cap_invoice_links_insert",
+        "cap_invoice_links_select",
+        "cap_invoice_links_update",
+        "cap_invoice_payments_delete",
+        "cap_invoice_payments_insert",
+        "cap_invoice_payments_select",
+        "cap_invoice_payments_update",
+        "cap_invoice_rows_delete",
+        "cap_invoice_rows_insert",
+        "cap_invoice_rows_select",
+        "cap_invoice_rows_update",
+        "cap_invoices_delete",
+        "cap_invoices_insert",
+        "cap_invoices_select",
+        "cap_invoices_update"
+      ],
+      "functions": [
+        "assert_invoice_preventivo_allocations",
+        "cancel_invoice",
+        "create_invoice_with_rows_and_links",
+        "invoice_preventivo_allocated_total",
+        "invoice_recalculate_status",
+        "rbac_log_entita_module",
+        "rbac_resource_to_module",
+        "rbac_staff_has_any_module_read",
+        "register_invoice_payment"
+      ],
+      "triggers": [
+        "trg_billing_customers_updated_at",
+        "trg_invoices_updated_at"
+      ],
+      "views": [
+        "preventivi_billing_status"
+      ],
+      "indexes": [
+        "idx_billing_customers_cliente_label_trgm",
+        "idx_billing_customers_entity_key_uq",
+        "idx_invoice_links_invoice_id",
+        "idx_invoice_links_source",
+        "idx_invoice_payments_invoice_data",
+        "idx_invoice_rows_invoice_id",
+        "idx_invoice_rows_lavorazione_id",
+        "idx_invoice_rows_preventivo_id",
+        "idx_invoices_anno_numero_uq",
+        "idx_invoices_cliente_label_trgm",
+        "idx_invoices_customer_id",
+        "idx_invoices_data_emissione_desc",
+        "idx_invoices_data_scadenza",
+        "idx_invoices_status"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260716143000_movimenti_ricambi_conta_statistiche.sql",
+      "timestamp": "20260716143000",
+      "slug": "movimenti_ricambi_conta_statistiche",
+      "tags": [],
+      "tables": [
+        "movimenti_ricambi"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260717130000_user_permissions_fatturazione_dipendenti.sql",
+      "timestamp": "20260717130000",
+      "slug": "user_permissions_fatturazione_dipendenti",
+      "tags": [
+        "rbac",
+        "auth"
+      ],
+      "tables": [
+        "user_permissions"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260717140000_invoices_origine_column.sql",
+      "timestamp": "20260717140000",
+      "slug": "invoices_origine_column",
+      "tags": [],
+      "tables": [
+        "invoices"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_invoices_origine"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260717150000_invoices_update_draft_rpc.sql",
+      "timestamp": "20260717150000",
+      "slug": "invoices_update_draft_rpc",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "create_invoice_with_rows_and_links",
+        "update_invoice_draft_with_rows"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260717190000_label_jobs_heartbeat.sql",
+      "timestamp": "20260717190000",
+      "slug": "label_jobs_heartbeat",
+      "tags": [],
+      "tables": [
+        "label_generation_jobs"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_label_generation_jobs_stuck"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260718120000_data_import_infrastructure.sql",
+      "timestamp": "20260718120000",
+      "slug": "data_import_infrastructure",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "clienti_anagrafiche",
+        "import_batches",
+        "import_mapping_presets"
+      ],
+      "policies": [
+        "cap_import_batches_insert",
+        "cap_import_batches_select",
+        "cap_import_batches_update",
+        "cap_import_mapping_presets_all"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_import_batches_created_by",
+        "idx_import_batches_entity_created",
+        "idx_import_mapping_presets_user_entity"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260718170917_rbac_log_entita_module_ssot.sql",
+      "timestamp": "20260718170917",
+      "slug": "rbac_log_entita_module_ssot",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "rbac_log_entita_module"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260718183605_import_file_ddt_receiving_kind_module.sql",
+      "timestamp": "20260718183605",
+      "slug": "import_file_ddt_receiving_kind_module",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "import_file_kind_to_module"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260719120000_import_entity_registry_expand.sql",
+      "timestamp": "20260719120000",
+      "slug": "import_entity_registry_expand",
+      "tags": [],
+      "tables": [
+        "import_batches",
+        "import_mapping_presets"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260720120000_ddt_module.sql",
+      "timestamp": "20260720120000",
+      "slug": "ddt_module",
+      "tags": [
+        "rbac",
+        "auth"
+      ],
+      "tables": [
+        "ddt_documents",
+        "ddt_links",
+        "ddt_numero_counters",
+        "ddt_rows"
+      ],
+      "policies": [
+        "cap_ddt_documents_delete",
+        "cap_ddt_documents_insert",
+        "cap_ddt_documents_select",
+        "cap_ddt_documents_update",
+        "cap_ddt_links_delete",
+        "cap_ddt_links_insert",
+        "cap_ddt_links_select",
+        "cap_ddt_links_update",
+        "cap_ddt_rows_delete",
+        "cap_ddt_rows_insert",
+        "cap_ddt_rows_select",
+        "cap_ddt_rows_update"
+      ],
+      "functions": [
+        "assert_ddt_preventivo_row_allocations",
+        "assign_ddt_numero",
+        "cancel_ddt",
+        "confirm_ddt",
+        "create_ddt_with_rows",
+        "ddt_preventivo_row_delivered_qty",
+        "mark_ddt_consegnato",
+        "mark_ddt_stampato",
+        "rbac_log_entita_module",
+        "rbac_resource_to_module",
+        "rbac_staff_has_any_module_read",
+        "update_ddt_draft"
+      ],
+      "triggers": [
+        "trg_ddt_documents_updated_at"
+      ],
+      "views": [
+        "preventivo_ddt_fulfillment"
+      ],
+      "indexes": [
+        "idx_ddt_documents_anno_serie_numero_uq",
+        "idx_ddt_documents_cliente_label_trgm",
+        "idx_ddt_documents_data_documento_desc",
+        "idx_ddt_documents_lavorazione_id",
+        "idx_ddt_documents_mezzo_id",
+        "idx_ddt_documents_preventivo_id",
+        "idx_ddt_documents_status",
+        "idx_ddt_links_ddt_id",
+        "idx_ddt_links_source",
+        "idx_ddt_rows_ddt_id",
+        "idx_ddt_rows_preventivo_source"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260720120100_user_permissions_ddt.sql",
+      "timestamp": "20260720120100",
+      "slug": "user_permissions_ddt",
+      "tags": [
+        "rbac"
+      ],
+      "tables": [
+        "user_permissions"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260721120000_ddt_one_per_preventivo.sql",
+      "timestamp": "20260721120000",
+      "slug": "ddt_one_per_preventivo",
+      "tags": [
+        "rbac"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "replace_ddt_for_preventivo"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "uq_ddt_documents_active_preventivo"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260722120000_rbac_v31_role_module_defaults.sql",
+      "timestamp": "20260722120000",
+      "slug": "rbac_v31_role_module_defaults",
+      "tags": [
+        "rbac",
+        "auth"
+      ],
+      "tables": [],
+      "policies": [
+        "bunder_documents_delete",
+        "bunder_documents_insert",
+        "bunder_documents_select",
+        "bunder_documents_update"
+      ],
+      "functions": [
+        "handle_new_user",
+        "rbac_bunder_can",
+        "rbac_has_capability",
+        "rbac_is_valid_erp_module",
+        "rbac_normalize_role",
+        "rbac_role_module_default",
+        "user_effective_can"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260723120000_security_set_user_role_atomic.sql",
+      "timestamp": "20260723120000",
+      "slug": "security_set_user_role_atomic",
+      "tags": [
+        "rbac",
+        "repair",
+        "auth"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "security_set_user_role",
+        "trg_profiles_ruolo_guard",
+        "user_effective_can"
+      ],
+      "triggers": [
+        "trg_profiles_ruolo_guard"
+      ],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260730120000_clienti_anagrafiche_operational_read.sql",
+      "timestamp": "20260730120000",
+      "slug": "clienti_anagrafiche_operational_read",
+      "tags": [
+        "rbac"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_clienti_anagrafiche_select_operational",
+        "cap_clienti_contatti_select_operational",
+        "cap_clienti_sedi_select_operational"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260731120000_ordini_fornitori_module.sql",
+      "timestamp": "20260731120000",
+      "slug": "ordini_fornitori_module",
+      "tags": [
+        "rbac",
+        "auth"
+      ],
+      "tables": [
+        "ordini_fornitori",
+        "ordini_fornitori_links",
+        "ordini_fornitori_numero_counters",
+        "ordini_fornitori_righe"
+      ],
+      "policies": [
+        "cap_ordini_fornitori_delete",
+        "cap_ordini_fornitori_insert",
+        "cap_ordini_fornitori_links_delete",
+        "cap_ordini_fornitori_links_insert",
+        "cap_ordini_fornitori_links_select",
+        "cap_ordini_fornitori_links_update",
+        "cap_ordini_fornitori_righe_delete",
+        "cap_ordini_fornitori_righe_insert",
+        "cap_ordini_fornitori_righe_select",
+        "cap_ordini_fornitori_righe_update",
+        "cap_ordini_fornitori_select",
+        "cap_ordini_fornitori_update"
+      ],
+      "functions": [
+        "annulla_ordine_fornitore",
+        "assign_ordine_fornitore_numero",
+        "create_ordine_fornitore_with_righe",
+        "ordine_fornitore_compute_totals",
+        "ordine_fornitore_row_total",
+        "rbac_is_valid_erp_module",
+        "rbac_log_entita_module",
+        "rbac_resource_to_module",
+        "rbac_role_module_default",
+        "rbac_staff_has_any_module_read",
+        "trg_ordini_fornitori_assign_numero",
+        "update_ordine_fornitore_draft"
+      ],
+      "triggers": [
+        "trg_ordini_fornitori_assign_numero",
+        "trg_ordini_fornitori_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_ordini_fornitori_data_ordine_desc",
+        "idx_ordini_fornitori_fornitore_label_trgm",
+        "idx_ordini_fornitori_lavorazione_id",
+        "idx_ordini_fornitori_links_ordine_id",
+        "idx_ordini_fornitori_links_source",
+        "idx_ordini_fornitori_numero_uq",
+        "idx_ordini_fornitori_preventivo_id",
+        "idx_ordini_fornitori_righe_ordine_id",
+        "idx_ordini_fornitori_righe_ricambio_id",
+        "idx_ordini_fornitori_status"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260731120100_user_permissions_ordini_fornitori.sql",
+      "timestamp": "20260731120100",
+      "slug": "user_permissions_ordini_fornitori",
+      "tags": [
+        "rbac"
+      ],
+      "tables": [
+        "user_permissions"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260801120000_attrezzature_core.sql",
+      "timestamp": "20260801120000",
+      "slug": "attrezzature_core",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "attrezzature",
+        "lavorazioni",
+        "mezzi"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [
+        "attrezzature_set_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_attrezzature_marca_modello",
+        "idx_attrezzature_matricola",
+        "idx_attrezzature_mezzo_id",
+        "idx_lavorazioni_attrezzatura_id",
+        "idx_lavorazioni_target_type"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260801120100_attrezzature_backfill.sql",
+      "timestamp": "20260801120100",
+      "slug": "attrezzature_backfill",
+      "tags": [],
+      "tables": [
+        "lavorazioni"
+      ],
+      "policies": [],
+      "functions": [
+        "sync_mezzi_legacy_from_attrezzatura"
+      ],
+      "triggers": [
+        "trg_sync_mezzi_legacy_from_attrezzatura"
+      ],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260801120200_attrezzature_rls_realtime.sql",
+      "timestamp": "20260801120200",
+      "slug": "attrezzature_rls_realtime",
+      "tags": [
+        "rbac",
+        "realtime",
+        "auth"
+      ],
+      "tables": [
+        "attrezzature"
+      ],
+      "policies": [
+        "cap_attrezzature_delete",
+        "cap_attrezzature_insert",
+        "cap_attrezzature_select",
+        "cap_attrezzature_update"
+      ],
+      "functions": [
+        "rbac_can_read_row",
+        "rbac_resource_to_module",
+        "rbac_scope_cliente"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260801120300_drop_legacy_sync_trigger.sql",
+      "timestamp": "20260801120300",
+      "slug": "drop_legacy_sync_trigger",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260801120400_documenti_target.sql",
+      "timestamp": "20260801120400",
+      "slug": "documenti_target",
+      "tags": [],
+      "tables": [
+        "ddt_documents"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260801120600_mezzi_legacy_write_guard.sql",
+      "timestamp": "20260801120600",
+      "slug": "mezzi_legacy_write_guard",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "guard_mezzi_legacy_attrezzatura_write",
+        "mezzi_legacy_attrezzatura_valued",
+        "mezzo_attrezzature_v2_db_enabled"
+      ],
+      "triggers": [
+        "guard_mezzi_legacy_attrezzatura_write"
+      ],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260801120700_ddt_target_snapshot_rpc.sql",
+      "timestamp": "20260801120700",
+      "slug": "ddt_target_snapshot_rpc",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "create_ddt_with_rows"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260801130000_notifications_core.sql",
+      "timestamp": "20260801130000",
+      "slug": "notifications_core",
+      "tags": [
+        "rbac",
+        "realtime",
+        "auth"
+      ],
+      "tables": [
+        "notification_type_registry",
+        "notification_user_state",
+        "notifications"
+      ],
+      "policies": [
+        "notifications_select_visible",
+        "nus_insert_own",
+        "nus_select_own",
+        "nus_update_own"
+      ],
+      "functions": [
+        "cab_count_unread_notifications",
+        "cab_create_notification",
+        "cab_dismiss_notification",
+        "cab_list_notifications_inbox",
+        "cab_mark_all_notifications_read",
+        "cab_mark_notification_read",
+        "notification_priority_rank",
+        "notification_staff_inbox_eligible",
+        "notification_visible_to_auth_user"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "notification_user_state_user_unread_idx",
+        "notifications_dedup_key_uidx",
+        "notifications_inbox_cursor_idx"
+      ],
+      "publications": [
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260901120000_asset_lifecycle_enums.sql",
+      "timestamp": "20260901120000",
+      "slug": "asset_lifecycle_enums",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260901120100_asset_compliance_rules.sql",
+      "timestamp": "20260901120100",
+      "slug": "asset_compliance_rules",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "asset_compliance_rules"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [
+        "asset_compliance_rules_set_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_compliance_rules_attrezzatura",
+        "idx_compliance_rules_mezzo",
+        "idx_compliance_rules_next_due"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260901120200_asset_compliance_records.sql",
+      "timestamp": "20260901120200",
+      "slug": "asset_compliance_records",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "asset_compliance_records"
+      ],
+      "policies": [],
+      "functions": [
+        "recalc_compliance_rule_due",
+        "trg_compliance_record_recalc_rule"
+      ],
+      "triggers": [
+        "asset_compliance_records_recalc_rule"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_compliance_records_attrezzatura",
+        "idx_compliance_records_mezzo",
+        "idx_compliance_records_rule"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260901120300_asset_assignment_history.sql",
+      "timestamp": "20260901120300",
+      "slug": "asset_assignment_history",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "asset_assignment_history"
+      ],
+      "policies": [],
+      "functions": [
+        "close_attrezzatura_assignment",
+        "open_attrezzatura_assignment",
+        "reassign_attrezzatura_mezzo"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_assignment_attrezzatura",
+        "idx_assignment_mezzo",
+        "idx_assignment_one_open"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260901120400_asset_mileage_readings.sql",
+      "timestamp": "20260901120400",
+      "slug": "asset_mileage_readings",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "asset_mileage_readings"
+      ],
+      "policies": [],
+      "functions": [
+        "sync_mezzo_km_from_reading"
+      ],
+      "triggers": [
+        "asset_mileage_readings_sync_mezzo_km"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_mileage_mezzo_recorded"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260901120450_asset_lifecycle_rls.sql",
+      "timestamp": "20260901120450",
+      "slug": "asset_lifecycle_rls",
+      "tags": [
+        "rbac",
+        "auth"
+      ],
+      "tables": [
+        "asset_assignment_history",
+        "asset_compliance_records",
+        "asset_compliance_rules",
+        "asset_mileage_readings"
+      ],
+      "policies": [
+        "cap_asset_assignment_history_delete",
+        "cap_asset_assignment_history_insert",
+        "cap_asset_assignment_history_select",
+        "cap_asset_assignment_history_update",
+        "cap_asset_compliance_records_delete",
+        "cap_asset_compliance_records_insert",
+        "cap_asset_compliance_records_select",
+        "cap_asset_compliance_records_update",
+        "cap_asset_compliance_rules_delete",
+        "cap_asset_compliance_rules_insert",
+        "cap_asset_compliance_rules_select",
+        "cap_asset_compliance_rules_update",
+        "cap_asset_mileage_readings_delete",
+        "cap_asset_mileage_readings_insert",
+        "cap_asset_mileage_readings_select",
+        "cap_asset_mileage_readings_update"
+      ],
+      "functions": [
+        "rbac_can_read_row",
+        "rbac_lifecycle_mezzo_id",
+        "rbac_resource_to_module",
+        "rbac_scope_cliente"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260901120500_asset_lifecycle_backfill.sql",
+      "timestamp": "20260901120500",
+      "slug": "asset_lifecycle_backfill",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260901120600_asset_timeline_projection.sql",
+      "timestamp": "20260901120600",
+      "slug": "asset_timeline_projection",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [
+        "asset_timeline_projection"
+      ],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260901120700_asset_lifecycle_feature_flag.sql",
+      "timestamp": "20260901120700",
+      "slug": "asset_lifecycle_feature_flag",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "asset_lifecycle_v1_db_enabled"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260901140000_drop_bunder_module.sql",
+      "timestamp": "20260901140000",
+      "slug": "drop_bunder_module",
+      "tags": [
+        "realtime"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260901150000_notification_events_v2.sql",
+      "timestamp": "20260901150000",
+      "slug": "notification_events_v2",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902120000_profiles_cognome.sql",
+      "timestamp": "20260902120000",
+      "slug": "profiles_cognome",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "profiles"
+      ],
+      "policies": [],
+      "functions": [
+        "handle_new_user",
+        "profile_display_name"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902130000_document_capture_core.sql",
+      "timestamp": "20260902130000",
+      "slug": "document_capture_core",
+      "tags": [
+        "storage",
+        "soft_delete",
+        "auth"
+      ],
+      "tables": [
+        "companies",
+        "document_capture",
+        "document_capture_applications",
+        "document_capture_attempts",
+        "document_capture_events",
+        "document_capture_fields",
+        "profiles",
+        "scheda_pdf_generations",
+        "scheda_pdf_templates"
+      ],
+      "policies": [
+        "cap_companies_select",
+        "cap_document_capture_applications_select",
+        "cap_document_capture_attempts_select",
+        "cap_document_capture_events_insert",
+        "cap_document_capture_events_select",
+        "cap_document_capture_fields_select",
+        "cap_document_capture_insert",
+        "cap_document_capture_select",
+        "cap_document_capture_storage_insert",
+        "cap_document_capture_storage_select",
+        "cap_document_capture_update",
+        "cap_scheda_pdf_templates_select"
+      ],
+      "functions": [
+        "document_capture_create_upload_policy",
+        "document_capture_finalize",
+        "document_capture_guard_post_finalize",
+        "document_capture_patch",
+        "document_capture_storage_object_allowed",
+        "expire_pending_document_captures",
+        "rbac_log_entita_module",
+        "rbac_resource_to_module",
+        "rbac_user_company_id"
+      ],
+      "triggers": [
+        "trg_document_capture_guard_post_finalize",
+        "trg_document_capture_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_document_capture_attempts_company_started",
+        "idx_document_capture_company_status",
+        "idx_document_capture_events_capture",
+        "idx_document_capture_pending_ttl",
+        "idx_profiles_company_id",
+        "uq_document_capture_company_sha256_finalized",
+        "uq_document_capture_fields_key"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902130100_user_permissions_document_capture.sql",
+      "timestamp": "20260902130100",
+      "slug": "user_permissions_document_capture",
+      "tags": [
+        "rbac"
+      ],
+      "tables": [
+        "user_permissions"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902130200_document_capture_grants_child_rls.sql",
+      "timestamp": "20260902130200",
+      "slug": "document_capture_grants_child_rls",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_document_capture_applications_insert",
+        "cap_document_capture_applications_update",
+        "cap_document_capture_attempts_insert",
+        "cap_document_capture_fields_insert",
+        "cap_document_capture_fields_update"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902130300_profiles_company_id_new_users.sql",
+      "timestamp": "20260902130300",
+      "slug": "profiles_company_id_new_users",
+      "tags": [
+        "auth"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "handle_new_user"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902130400_document_capture_security_hardening.sql",
+      "timestamp": "20260902130400",
+      "slug": "document_capture_security_hardening",
+      "tags": [
+        "repair"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_document_capture_insert"
+      ],
+      "functions": [
+        "document_capture_events_append_only"
+      ],
+      "triggers": [
+        "trg_document_capture_events_append_only"
+      ],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902130500_document_capture_status_transitions.sql",
+      "timestamp": "20260902130500",
+      "slug": "document_capture_status_transitions",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "document_capture_assert_status_transition"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902130600_document_capture_phase2_rpc.sql",
+      "timestamp": "20260902130600",
+      "slug": "document_capture_phase2_rpc",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [
+        "document_capture_attempts",
+        "document_capture_events"
+      ],
+      "policies": [],
+      "functions": [
+        "document_capture_mutate_with_event",
+        "document_capture_patch"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902130700_scheda_pdf_rls.sql",
+      "timestamp": "20260902130700",
+      "slug": "scheda_pdf_rls",
+      "tags": [],
+      "tables": [],
+      "policies": [
+        "cap_scheda_pdf_generations_insert",
+        "cap_scheda_pdf_generations_select"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902130800_document_capture_apply_lock.sql",
+      "timestamp": "20260902130800",
+      "slug": "document_capture_apply_lock",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [
+        "document_capture"
+      ],
+      "policies": [],
+      "functions": [
+        "document_capture_abort_apply",
+        "document_capture_assert_status_transition",
+        "document_capture_begin_apply",
+        "document_capture_complete_apply"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902130900_document_capture_rate_limit.sql",
+      "timestamp": "20260902130900",
+      "slug": "document_capture_rate_limit",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "document_capture_rate_limit_buckets"
+      ],
+      "policies": [
+        "cap_document_capture_rate_limit_buckets_deny"
+      ],
+      "functions": [
+        "document_capture_rate_limit_check"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_document_capture_rate_limit_buckets_created"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902131000_scheda_pdf_renderer_hash_fix.sql",
+      "timestamp": "20260902131000",
+      "slug": "scheda_pdf_renderer_hash_fix",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902131100_profiles_company_id_nullable_signup.sql",
+      "timestamp": "20260902131100",
+      "slug": "profiles_company_id_nullable_signup",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "profiles"
+      ],
+      "policies": [],
+      "functions": [
+        "handle_new_user"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902131200_document_capture_rls_events_audit.sql",
+      "timestamp": "20260902131200",
+      "slug": "document_capture_rls_events_audit",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_document_capture_attempts_update"
+      ],
+      "functions": [
+        "document_capture_finalize",
+        "document_capture_patch"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260902150000_tkb_description_engine.sql",
+      "timestamp": "20260902150000",
+      "slug": "tkb_description_engine",
+      "tags": [
+        "deprecated"
+      ],
+      "tables": [
+        "description_generation_lines",
+        "description_generation_usage",
+        "description_operator_overrides",
+        "interventi_catalogo",
+        "interventi_catalogo_audit",
+        "interventi_categorie",
+        "interventi_componenti",
+        "interventi_procedure",
+        "interventi_sintomi",
+        "preventivi_description_suggestions",
+        "ricambi_componenti_map",
+        "tkb_published_snapshots",
+        "tkb_version_registry"
+      ],
+      "policies": [
+        "tkb_snapshots_read_authenticated"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_desc_gen_lines_activity",
+        "idx_desc_gen_lines_generation",
+        "idx_desc_gen_lines_preventivo",
+        "idx_desc_gen_usage_context",
+        "idx_desc_gen_usage_preventivo",
+        "idx_tkb_snapshots_published_at"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260903120000_dipendenti_presenze_reminder_global.sql",
+      "timestamp": "20260903120000",
+      "slug": "dipendenti_presenze_reminder_global",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260903120100_rbac_data_driven_core.sql",
+      "timestamp": "20260903120100",
+      "slug": "rbac_data_driven_core",
+      "tags": [
+        "rbac",
+        "realtime",
+        "auth"
+      ],
+      "tables": [
+        "permissions",
+        "profiles",
+        "role_permissions",
+        "roles",
+        "user_permissions",
+        "user_permissions_v2",
+        "user_roles"
+      ],
+      "policies": [
+        "permissions_select_auth",
+        "permissions_write_security",
+        "role_permissions_select_auth",
+        "role_permissions_write_security",
+        "roles_select_auth",
+        "roles_write_security",
+        "user_permissions_select_own_or_admin",
+        "user_permissions_write_admin",
+        "user_roles_select_own_or_security",
+        "user_roles_write_security"
+      ],
+      "functions": [
+        "_rbac_seed_grant",
+        "current_profile_role",
+        "handle_new_user",
+        "rbac_bunder_can",
+        "rbac_has_capability",
+        "rbac_is_valid_erp_module",
+        "rbac_normalize_role",
+        "rbac_normalized_role",
+        "rbac_role_for_user",
+        "rbac_role_has_permission",
+        "rbac_user_effective_permission",
+        "security_set_user_role",
+        "trg_profiles_role_key_guard",
+        "user_effective_can"
+      ],
+      "triggers": [
+        "trg_profiles_role_key_guard"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_role_permissions_role",
+        "idx_user_permissions_user"
+      ],
+      "publications": [
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260903140000_mezzi_legacy_attrezzatura_nullable_v2.sql",
+      "timestamp": "20260903140000",
+      "slug": "mezzi_legacy_attrezzatura_nullable_v2",
+      "tags": [],
+      "tables": [
+        "mezzi"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260904120000_tkb_draft_operative_history.sql",
+      "timestamp": "20260904120000",
+      "slug": "tkb_draft_operative_history",
+      "tags": [],
+      "tables": [
+        "operative_history_cases",
+        "operative_history_signals",
+        "tkb_draft_store",
+        "tkb_published_snapshots"
+      ],
+      "policies": [
+        "ohc_read_authenticated",
+        "ohs_read_authenticated",
+        "tkb_draft_read_authenticated"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_ohc_cliente",
+        "idx_ohc_intervenuto",
+        "idx_ohc_mezzo"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260904180000_list_lavorazioni_paginated.sql",
+      "timestamp": "20260904180000",
+      "slug": "list_lavorazioni_paginated",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "list_lavorazioni_paginated"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_lavorazioni_list_keyset"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260904180100_get_operational_data_version.sql",
+      "timestamp": "20260904180100",
+      "slug": "get_operational_data_version",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "get_operational_data_version"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260904180200_v_dashboard_lavorazioni_kpi.sql",
+      "timestamp": "20260904180200",
+      "slug": "v_dashboard_lavorazioni_kpi",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [
+        "v_dashboard_lavorazioni_kpi"
+      ],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260905120000_workshop_schedule_events.sql",
+      "timestamp": "20260905120000",
+      "slug": "workshop_schedule_events",
+      "tags": [
+        "soft_delete",
+        "realtime",
+        "auth"
+      ],
+      "tables": [
+        "workshop_schedule_events",
+        "workshop_schedule_history"
+      ],
+      "policies": [
+        "cap_wse_insert",
+        "cap_wse_select",
+        "cap_wse_update",
+        "cap_wsh_select"
+      ],
+      "functions": [
+        "cab_detect_schedule_conflicts",
+        "cab_list_workshop_schedule_by_work_order",
+        "cab_list_workshop_schedule_events",
+        "cab_migrate_dashboard_promemoria_to_schedule",
+        "cab_patch_workshop_schedule_times",
+        "cab_upsert_workshop_schedule_event",
+        "soft_delete_workshop_schedule_event",
+        "wse_write_history"
+      ],
+      "triggers": [
+        "trg_workshop_schedule_events_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_wse_created_by",
+        "idx_wse_legacy_promemoria",
+        "idx_wse_planning_status_active",
+        "idx_wse_start_end_active",
+        "idx_wse_work_order_active",
+        "idx_wsh_event_id"
+      ],
+      "publications": [
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260906120000_client_portal_notifications.sql",
+      "timestamp": "20260906120000",
+      "slug": "client_portal_notifications",
+      "tags": [
+        "rbac",
+        "soft_delete",
+        "auth"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "cab_fanout_client_portal_lavorazione_notification",
+        "notification_cliente_inbox_eligible",
+        "notification_visible_to_auth_user"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260906130000_client_portal_notifications_db_triggers.sql",
+      "timestamp": "20260906130000",
+      "slug": "client_portal_notifications_db_triggers",
+      "tags": [
+        "soft_delete",
+        "auth"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "cab_fanout_client_portal_lavorazione_notification",
+        "cab_fanout_client_portal_lavorazione_notification_core",
+        "trg_fanout_client_portal_lavorazione_completata",
+        "trg_fanout_client_portal_lavorazione_ingresso"
+      ],
+      "triggers": [
+        "trg_lavorazioni_client_portal_completata",
+        "trg_lavorazioni_client_portal_ingresso"
+      ],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260907120000_rbac_page_access_ssot.sql",
+      "timestamp": "20260907120000",
+      "slug": "rbac_page_access_ssot",
+      "tags": [
+        "rbac",
+        "auth"
+      ],
+      "tables": [
+        "rbac_page_module_expansion",
+        "role_page_access",
+        "user_page_overrides"
+      ],
+      "policies": [],
+      "functions": [
+        "rbac_module_from_page_access",
+        "rbac_user_page_access_level",
+        "user_effective_can"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "role_page_access_page_key_idx",
+        "user_page_overrides_page_key_idx"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260908120000_mezzi_telaio_num_norm_unique.sql",
+      "timestamp": "20260908120000",
+      "slug": "mezzi_telaio_num_norm_unique",
+      "tags": [],
+      "tables": [
+        "mezzi"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_mezzi_telaio_num_norm_unique"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260909120000_rbac_page_access_rls_hardening.sql",
+      "timestamp": "20260909120000",
+      "slug": "rbac_page_access_rls_hardening",
+      "tags": [],
+      "tables": [
+        "rbac_page_module_expansion",
+        "role_page_access",
+        "user_page_overrides"
+      ],
+      "policies": [
+        "rbac_page_module_expansion_select_auth",
+        "role_page_access_select_auth",
+        "role_page_access_write_security",
+        "user_page_overrides_select_own_or_security",
+        "user_page_overrides_write_security"
+      ],
+      "functions": [
+        "rbac_has_capability"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910120000_scheda_ingresso_blank_v2_renderer_hash.sql",
+      "timestamp": "20260910120000",
+      "slug": "scheda_ingresso_blank_v2_renderer_hash",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910120001_scheda_lavorazioni_blank_v2_renderer_hash.sql",
+      "timestamp": "20260910120001",
+      "slug": "scheda_lavorazioni_blank_v2_renderer_hash",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910120002_scheda_ricambi_blank_v2_renderer_hash.sql",
+      "timestamp": "20260910120002",
+      "slug": "scheda_ricambi_blank_v2_renderer_hash",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910120003_ordini_fornitori_status_spedito_ricevuto.sql",
+      "timestamp": "20260910120003",
+      "slug": "ordini_fornitori_status_spedito_ricevuto",
+      "tags": [],
+      "tables": [
+        "ordini_fornitori"
+      ],
+      "policies": [],
+      "functions": [
+        "create_ordine_fornitore_with_righe"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910120004_security_invoker_views.sql",
+      "timestamp": "20260910120004",
+      "slug": "security_invoker_views",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [
+        "asset_timeline_projection",
+        "preventivi_billing_status",
+        "preventivo_ddt_fulfillment",
+        "v_dashboard_lavorazioni_kpi"
+      ],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910120005_security_advisor_critical_hardening.sql",
+      "timestamp": "20260910120005",
+      "slug": "security_advisor_critical_hardening",
+      "tags": [
+        "repair"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910120006_ordini_fornitori_riga_iva_compute.sql",
+      "timestamp": "20260910120006",
+      "slug": "ordini_fornitori_riga_iva_compute",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "ordine_fornitore_compute_totals"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910120010_revoke_public_security_definer_execute.sql",
+      "timestamp": "20260910120010",
+      "slug": "revoke_public_security_definer_execute",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910120011_move_pg_trgm_to_extensions.sql",
+      "timestamp": "20260910120011",
+      "slug": "move_pg_trgm_to_extensions",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910120012_revoke_authenticated_internal_definer.sql",
+      "timestamp": "20260910120012",
+      "slug": "revoke_authenticated_internal_definer",
+      "tags": [
+        "auth"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910120013_ordini_fornitori_logistica_snapshot.sql",
+      "timestamp": "20260910120013",
+      "slug": "ordini_fornitori_logistica_snapshot",
+      "tags": [],
+      "tables": [
+        "ordini_fornitori"
+      ],
+      "policies": [],
+      "functions": [
+        "create_ordine_fornitore_with_righe",
+        "update_ordine_fornitore_draft"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910130000_ordini_fornitori_import_preventivo.sql",
+      "timestamp": "20260910130000",
+      "slug": "ordini_fornitori_import_preventivo",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "ordini_fornitori",
+        "ordini_fornitori_import_log",
+        "ordini_fornitori_links"
+      ],
+      "policies": [
+        "cap_ordini_fornitori_import_log_insert",
+        "cap_ordini_fornitori_import_log_select",
+        "cap_ordini_fornitori_import_log_update"
+      ],
+      "functions": [
+        "create_ordine_fornitore_with_righe"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_ordini_fornitori_import_log_content_hash_uq",
+        "idx_ordini_fornitori_import_log_ordine_id",
+        "idx_ordini_fornitori_import_log_semantic_key"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910130100_ordini_fornitori_delete_any_status.sql",
+      "timestamp": "20260910130100",
+      "slug": "ordini_fornitori_delete_any_status",
+      "tags": [],
+      "tables": [],
+      "policies": [
+        "cap_ordini_fornitori_delete"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910140000_import_files.sql",
+      "timestamp": "20260910140000",
+      "slug": "import_files",
+      "tags": [
+        "storage",
+        "auth"
+      ],
+      "tables": [
+        "import_file_results",
+        "import_files",
+        "ordini_fornitori_import_log"
+      ],
+      "policies": [
+        "cap_import_file_results_insert",
+        "cap_import_file_results_select",
+        "cap_import_files_insert",
+        "cap_import_files_select",
+        "cap_import_files_update",
+        "cap_import_sources_storage_insert",
+        "cap_import_sources_storage_select"
+      ],
+      "functions": [
+        "cleanup_import_storage",
+        "expire_import_files",
+        "import_file_begin_processing",
+        "import_file_cancel",
+        "import_file_complete_processing",
+        "import_file_create_upload_policy",
+        "import_file_finalize",
+        "import_file_kind_to_module",
+        "import_file_storage_object_allowed"
+      ],
+      "triggers": [
+        "trg_import_files_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_import_file_results_import_file",
+        "idx_import_files_company_sha256",
+        "idx_import_files_failed_reason",
+        "idx_import_files_status_expires",
+        "idx_import_files_storage_cleanup_pending",
+        "idx_import_files_uploaded_by_status",
+        "idx_ordini_fornitori_import_log_import_file"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910140100_cancel_invoice_write_permission.sql",
+      "timestamp": "20260910140100",
+      "slug": "cancel_invoice_write_permission",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "cancel_invoice"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910150000_fatturazione_erp_phase1a.sql",
+      "timestamp": "20260910150000",
+      "slug": "fatturazione_erp_phase1a",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "billing_customer_profiles",
+        "business_documents",
+        "customer_open_items",
+        "customer_payments",
+        "invoice_events",
+        "invoice_number_sequences",
+        "invoice_relations",
+        "invoices",
+        "payment_allocations"
+      ],
+      "policies": [
+        "cap_billing_customer_profiles_select",
+        "cap_billing_customer_profiles_write",
+        "cap_business_documents_select",
+        "cap_customer_open_items_select",
+        "cap_customer_open_items_write",
+        "cap_customer_payments_select",
+        "cap_customer_payments_write",
+        "cap_invoice_events_insert",
+        "cap_invoice_events_select",
+        "cap_invoice_number_sequences_select",
+        "cap_invoice_number_sequences_write",
+        "cap_invoice_relations_select",
+        "cap_invoice_relations_write",
+        "cap_payment_allocations_select",
+        "cap_payment_allocations_write"
+      ],
+      "functions": [
+        "apply_invoice_status_backfill",
+        "cancel_invoice",
+        "invoice_apply_transition",
+        "invoice_derive_legacy_status",
+        "invoice_guard_direct_status_update",
+        "invoice_init_axes_from_legacy_on_insert",
+        "invoice_insert_event",
+        "invoice_map_legacy_to_axes",
+        "invoice_status_migration_report",
+        "invoice_sync_legacy_status_from_axes",
+        "register_invoice_payment"
+      ],
+      "triggers": [
+        "trg_billing_customer_profiles_updated_at",
+        "trg_customer_open_items_updated_at",
+        "trg_customer_payments_updated_at",
+        "trg_invoices_guard_status",
+        "trg_invoices_init_axes",
+        "trg_invoices_sync_legacy_status"
+      ],
+      "views": [
+        "payment_allocations_expanded"
+      ],
+      "indexes": [
+        "idx_customer_open_items_customer",
+        "idx_customer_open_items_due_date",
+        "idx_customer_open_items_invoice",
+        "idx_customer_open_items_remaining",
+        "idx_customer_payments_allocation",
+        "idx_customer_payments_customer",
+        "idx_invoice_events_aggregate",
+        "idx_invoice_events_correlation",
+        "idx_invoice_events_invoice",
+        "idx_invoices_document_status",
+        "idx_invoices_document_type",
+        "idx_invoices_parent_invoice_id",
+        "idx_invoices_payment_status",
+        "idx_payment_allocations_open_item"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910150100_fatturazione_erp_phase1b.sql",
+      "timestamp": "20260910150100",
+      "slug": "fatturazione_erp_phase1b",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "create_credit_note_from_invoice",
+        "register_customer_payment_multi"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910150200_fatturazione_erp_phase2.sql",
+      "timestamp": "20260910150200",
+      "slug": "fatturazione_erp_phase2",
+      "tags": [],
+      "tables": [
+        "invoice_fatturapa_snapshots",
+        "invoice_public_administration_meta",
+        "invoice_sdi_submissions"
+      ],
+      "policies": [
+        "cap_invoice_fatturapa_snapshots",
+        "cap_invoice_pa_meta",
+        "cap_invoice_sdi_submissions"
+      ],
+      "functions": [],
+      "triggers": [
+        "trg_invoice_pa_meta_updated_at"
+      ],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910150300_fatturazione_erp_phase3.sql",
+      "timestamp": "20260910150300",
+      "slug": "fatturazione_erp_phase3",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "accounting_entries",
+        "accounting_entry_lines",
+        "billing_settings"
+      ],
+      "policies": [
+        "cap_accounting_entries",
+        "cap_accounting_entry_lines",
+        "cap_billing_settings"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_accounting_entries_invoice",
+        "idx_accounting_entry_lines_entry"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910150400_fatturazione_erp_completions.sql",
+      "timestamp": "20260910150400",
+      "slug": "fatturazione_erp_completions",
+      "tags": [],
+      "tables": [
+        "invoice_links"
+      ],
+      "policies": [],
+      "functions": [
+        "allocate_invoice_number"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910150500_fatturazione_status_axes_ssot.sql",
+      "timestamp": "20260910150500",
+      "slug": "fatturazione_status_axes_ssot",
+      "tags": [],
+      "tables": [
+        "invoices"
+      ],
+      "policies": [],
+      "functions": [
+        "append_billing_event",
+        "apply_invoice_status_backfill",
+        "invoice_apply_transition",
+        "invoice_events_guard_created_at",
+        "invoice_guard_direct_axes_update",
+        "invoice_write_status_axes",
+        "register_invoice_payment"
+      ],
+      "triggers": [
+        "trg_invoice_events_guard_created_at",
+        "trg_invoices_guard_axes"
+      ],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910150600_fatturazione_reconciliation_reports.sql",
+      "timestamp": "20260910150600",
+      "slug": "fatturazione_reconciliation_reports",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "customer_balance_reconciliation_report",
+        "invoice_legacy_status_audit_report",
+        "invoice_payment_reconciliation_report",
+        "invoice_status_backfill_snapshot"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910150700_customer_open_items_business_dates.sql",
+      "timestamp": "20260910150700",
+      "slug": "customer_open_items_business_dates",
+      "tags": [],
+      "tables": [
+        "customer_open_items"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910150800_fatturazione_completions_validation.sql",
+      "timestamp": "20260910150800",
+      "slug": "fatturazione_completions_validation",
+      "tags": [],
+      "tables": [
+        "accounting_entries"
+      ],
+      "policies": [],
+      "functions": [
+        "allocate_invoice_number",
+        "create_invoice_with_rows_and_links"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_invoice_events_invoice_cursor"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910150900_document_capture_finalize_storage_select.sql",
+      "timestamp": "20260910150900",
+      "slug": "document_capture_finalize_storage_select",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "document_capture_storage_object_allowed"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910151000_document_capture_v41_model.sql",
+      "timestamp": "20260910151000",
+      "slug": "document_capture_v41_model",
+      "tags": [],
+      "tables": [
+        "document_capture",
+        "document_capture_attempts",
+        "document_capture_events"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910152000_import_core_security.sql",
+      "timestamp": "20260910152000",
+      "slug": "import_core_security",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "import_batches",
+        "ordini_fornitori_import_log"
+      ],
+      "policies": [
+        "cap_import_batches_select",
+        "cap_ordini_fornitori_import_log_insert",
+        "cap_ordini_fornitori_import_log_select",
+        "cap_ordini_fornitori_import_log_update"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_import_batches_company_created",
+        "idx_ordini_fornitori_import_log_company",
+        "idx_ordini_fornitori_import_log_semantic_key_uq"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910153000_import_core_foundation.sql",
+      "timestamp": "20260910153000",
+      "slug": "import_core_foundation",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "import_audit_events",
+        "import_executions",
+        "import_files"
+      ],
+      "policies": [
+        "cap_import_audit_events_insert",
+        "cap_import_audit_events_select",
+        "cap_import_executions_insert",
+        "cap_import_executions_select",
+        "cap_import_executions_update"
+      ],
+      "functions": [],
+      "triggers": [
+        "trg_import_executions_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_import_audit_events_company_created",
+        "idx_import_audit_events_correlation",
+        "idx_import_audit_events_execution",
+        "idx_import_executions_company_file",
+        "idx_import_executions_queued",
+        "idx_import_executions_reuse",
+        "idx_import_executions_stuck"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910154000_operational_diary_entries.sql",
+      "timestamp": "20260910154000",
+      "slug": "operational_diary_entries",
+      "tags": [
+        "soft_delete",
+        "auth"
+      ],
+      "tables": [
+        "operational_diary_entries"
+      ],
+      "policies": [
+        "cap_operational_diary_insert",
+        "cap_operational_diary_select",
+        "cap_operational_diary_update"
+      ],
+      "functions": [],
+      "triggers": [
+        "trg_operational_diary_entries_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_operational_diary_active_day",
+        "idx_operational_diary_work_date"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910160000_notification_visibility_user_scope_fix.sql",
+      "timestamp": "20260910160000",
+      "slug": "notification_visibility_user_scope_fix",
+      "tags": [
+        "rbac"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "notification_visible_to_auth_user"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910170000_import_export_framework_v3.sql",
+      "timestamp": "20260910170000",
+      "slug": "import_export_framework_v3",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "export_jobs",
+        "import_batches",
+        "import_export_telemetry",
+        "import_mapping_presets"
+      ],
+      "policies": [
+        "cap_export_jobs_own",
+        "cap_import_export_telemetry_insert",
+        "cap_import_export_telemetry_select"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_export_jobs_user_created",
+        "idx_import_export_telemetry_created",
+        "import_batches_fingerprint_success_uidx"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910180000_import_export_prg_v12.sql",
+      "timestamp": "20260910180000",
+      "slug": "import_export_prg_v12",
+      "tags": [],
+      "tables": [
+        "import_batch_entities"
+      ],
+      "policies": [
+        "cap_import_batch_entities_delete",
+        "cap_import_batch_entities_insert",
+        "cap_import_batch_entities_select"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [
+        "import_export_telemetry_daily"
+      ],
+      "indexes": [
+        "idx_import_batch_entities_batch",
+        "import_batches_fingerprint_success_uidx"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910180100_report_saved_kpi_charts.sql",
+      "timestamp": "20260910180100",
+      "slug": "report_saved_kpi_charts",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "report_saved_kpi_charts"
+      ],
+      "policies": [
+        "cap_report_saved_kpi_charts_own"
+      ],
+      "functions": [],
+      "triggers": [
+        "trg_report_saved_kpi_charts_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_report_saved_kpi_charts_user_name",
+        "idx_report_saved_kpi_charts_user_updated"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910180200_document_capture_ephemeral_finalize_fix.sql",
+      "timestamp": "20260910180200",
+      "slug": "document_capture_ephemeral_finalize_fix",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "document_capture_finalize"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260910180300_document_capture_analyze_retry.sql",
+      "timestamp": "20260910180300",
+      "slug": "document_capture_analyze_retry",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "document_capture_assert_status_transition",
+        "document_capture_finalize"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260911120000_entity_resolution_platform.sql",
+      "timestamp": "20260911120000",
+      "slug": "entity_resolution_platform",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "document_capture_events",
+        "entity_resolution_cache",
+        "entity_resolution_corrections"
+      ],
+      "policies": [
+        "erc_insert",
+        "erc_select",
+        "erc_update",
+        "ercache_select",
+        "ercache_upsert"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_entity_resolution_corrections_company"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260911130100_operational_diary_dashboard_rls.sql",
+      "timestamp": "20260911130100",
+      "slug": "operational_diary_dashboard_rls",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_operational_diary_insert",
+        "cap_operational_diary_select",
+        "cap_operational_diary_update"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260913120000_health_score_runs.sql",
+      "timestamp": "20260913120000",
+      "slug": "health_score_runs",
+      "tags": [],
+      "tables": [
+        "health_score_runs"
+      ],
+      "policies": [
+        "health_score_runs_select_auth"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_health_score_runs_computed_at"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260914120000_inventory_identification_layer.sql",
+      "timestamp": "20260914120000",
+      "slug": "inventory_identification_layer",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "inventory_label_artifacts",
+        "inventory_label_events",
+        "inventory_qr_scans",
+        "inventory_qr_tokens",
+        "label_generation_jobs"
+      ],
+      "policies": [
+        "cap_inventory_label_artifacts_insert",
+        "cap_inventory_label_artifacts_select",
+        "cap_inventory_label_events_insert",
+        "cap_inventory_label_events_select",
+        "cap_inventory_qr_scans_insert",
+        "cap_inventory_qr_scans_select",
+        "cap_inventory_qr_tokens_insert",
+        "cap_inventory_qr_tokens_select",
+        "cap_inventory_qr_tokens_update",
+        "cap_label_generation_jobs_insert",
+        "cap_label_generation_jobs_select",
+        "cap_label_generation_jobs_update"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_inventory_label_artifact_hash",
+        "idx_inventory_label_events_entity",
+        "idx_inventory_qr_active_entity",
+        "idx_inventory_qr_entity",
+        "idx_inventory_qr_token",
+        "idx_inventory_scan_date",
+        "idx_inventory_scan_entity",
+        "idx_label_generation_jobs_created_by"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260915120000_maintenance_plans_core.sql",
+      "timestamp": "20260915120000",
+      "slug": "maintenance_plans_core",
+      "tags": [
+        "soft_delete",
+        "auth"
+      ],
+      "tables": [
+        "maintenance_plan_equipment_types",
+        "maintenance_plan_parts",
+        "maintenance_plans",
+        "tipi_attrezzatura_catalog",
+        "vehicle_maintenance_service_parts",
+        "vehicle_maintenance_services"
+      ],
+      "policies": [],
+      "functions": [
+        "maintenance_plans_v1_db_enabled"
+      ],
+      "triggers": [
+        "maintenance_plan_parts_set_updated_at",
+        "maintenance_plans_set_updated_at",
+        "tipi_attrezzatura_catalog_set_updated_at",
+        "vehicle_maintenance_services_set_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_maintenance_plan_parts_plan",
+        "idx_maintenance_plans_active",
+        "idx_mp_equipment_types_plan",
+        "idx_mp_equipment_types_tipo",
+        "idx_vms_mezzo_performed",
+        "idx_vms_mezzo_plan_ore",
+        "idx_vmsp_service",
+        "uq_tipi_attrezzatura_catalog_label_norm"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260915120100_maintenance_plans_rls.sql",
+      "timestamp": "20260915120100",
+      "slug": "maintenance_plans_rls",
+      "tags": [
+        "rbac",
+        "auth"
+      ],
+      "tables": [
+        "maintenance_plan_equipment_types",
+        "maintenance_plan_parts",
+        "maintenance_plans",
+        "tipi_attrezzatura_catalog",
+        "vehicle_maintenance_service_parts",
+        "vehicle_maintenance_services"
+      ],
+      "policies": [
+        "cap_mp_et_delete",
+        "cap_mp_et_insert",
+        "cap_mp_et_select",
+        "cap_mp_et_update",
+        "cap_mplan_delete",
+        "cap_mplan_insert",
+        "cap_mplan_parts_delete",
+        "cap_mplan_parts_insert",
+        "cap_mplan_parts_select",
+        "cap_mplan_parts_update",
+        "cap_mplan_select",
+        "cap_mplan_update",
+        "cap_tipo_att_cat_delete",
+        "cap_tipo_att_cat_insert",
+        "cap_tipo_att_cat_select",
+        "cap_tipo_att_cat_update",
+        "cap_vms_delete",
+        "cap_vms_insert",
+        "cap_vms_select",
+        "cap_vms_update",
+        "cap_vmsp_delete",
+        "cap_vmsp_insert",
+        "cap_vmsp_select",
+        "cap_vmsp_update"
+      ],
+      "functions": [
+        "rbac_can_read_row",
+        "rbac_lifecycle_mezzo_id",
+        "rbac_maintenance_plans_settings_write",
+        "rbac_resource_to_module",
+        "rbac_scope_cliente"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260915120200_fatturazione_write_rls_alignment.sql",
+      "timestamp": "20260915120200",
+      "slug": "fatturazione_write_rls_alignment",
+      "tags": [],
+      "tables": [],
+      "policies": [
+        "cap_billing_settings",
+        "cap_invoice_number_sequences_write",
+        "cap_invoice_payments_delete",
+        "cap_invoices_delete"
+      ],
+      "functions": [
+        "cancel_invoice"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260915120300_maintenance_plans_v1_always_on.sql",
+      "timestamp": "20260915120300",
+      "slug": "maintenance_plans_v1_always_on",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "maintenance_plans_v1_db_enabled"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260915120400_maintenance_matrix_delete_write.sql",
+      "timestamp": "20260915120400",
+      "slug": "maintenance_matrix_delete_write",
+      "tags": [],
+      "tables": [],
+      "policies": [
+        "cap_vms_delete"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260915120500_handle_new_user_cognome.sql",
+      "timestamp": "20260915120500",
+      "slug": "handle_new_user_cognome",
+      "tags": [
+        "auth"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "handle_new_user"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260915120600_tagliando_da_eseguire_notification.sql",
+      "timestamp": "20260915120600",
+      "slug": "tagliando_da_eseguire_notification",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260915120700_notification_policy_scope_update.sql",
+      "timestamp": "20260915120700",
+      "slug": "notification_policy_scope_update",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260915120800_client_portal_nuova_lavorazione_title.sql",
+      "timestamp": "20260915120800",
+      "slug": "client_portal_nuova_lavorazione_title",
+      "tags": [
+        "soft_delete",
+        "auth"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "cab_fanout_client_portal_lavorazione_notification_core"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260915120900_push_subscriptions_delivery.sql",
+      "timestamp": "20260915120900",
+      "slug": "push_subscriptions_delivery",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "push_delivery_queue",
+        "push_subscriptions"
+      ],
+      "policies": [],
+      "functions": [
+        "cab_claim_push_delivery_batch",
+        "cab_complete_push_delivery",
+        "cab_enqueue_push_delivery",
+        "cab_revoke_push_subscription",
+        "cab_upsert_push_subscription",
+        "trg_notifications_enqueue_push_delivery"
+      ],
+      "triggers": [
+        "notifications_enqueue_push_delivery"
+      ],
+      "views": [],
+      "indexes": [
+        "push_delivery_queue_claim_idx",
+        "push_subscriptions_user_active_idx"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260915121000_push_delivery_pg_cron.sql",
+      "timestamp": "20260915121000",
+      "slug": "push_delivery_pg_cron",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "cab_invoke_push_delivery_worker",
+        "trg_push_delivery_queue_invoke_worker"
+      ],
+      "triggers": [
+        "push_delivery_queue_invoke_worker"
+      ],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260915122000_operational_diary_rls_exec_fix.sql",
+      "timestamp": "20260915122000",
+      "slug": "operational_diary_rls_exec_fix",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_operational_diary_insert",
+        "cap_operational_diary_select",
+        "cap_operational_diary_update"
+      ],
+      "functions": [
+        "rbac_operational_diary_dashboard_read",
+        "rbac_operational_diary_dashboard_write"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260917120000_rbac_page_access_rls_exec_fix.sql",
+      "timestamp": "20260917120000",
+      "slug": "rbac_page_access_rls_exec_fix",
+      "tags": [],
+      "tables": [],
+      "policies": [
+        "role_page_access_write_security",
+        "user_page_overrides_select_own_or_security",
+        "user_page_overrides_write_security"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260917120100_pdf_artifacts_storage_bucket.sql",
+      "timestamp": "20260917120100",
+      "slug": "pdf_artifacts_storage_bucket",
+      "tags": [
+        "storage"
+      ],
+      "tables": [],
+      "policies": [
+        "rbac_storage_pdf_artifacts_delete",
+        "rbac_storage_pdf_artifacts_insert",
+        "rbac_storage_pdf_artifacts_select",
+        "rbac_storage_pdf_artifacts_update"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260917120200_pdf_artifacts_inventory_label_mime_types.sql",
+      "timestamp": "20260917120200",
+      "slug": "pdf_artifacts_inventory_label_mime_types",
+      "tags": [
+        "storage"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260917130000_document_capture_apply_jobs_links.sql",
+      "timestamp": "20260917130000",
+      "slug": "document_capture_apply_jobs_links",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "document_capture_apply_jobs",
+        "document_capture_links"
+      ],
+      "policies": [
+        "cap_document_capture_apply_jobs_insert",
+        "cap_document_capture_apply_jobs_select",
+        "cap_document_capture_apply_jobs_update",
+        "cap_document_capture_links_insert",
+        "cap_document_capture_links_select"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_document_capture_apply_jobs_capture",
+        "idx_document_capture_apply_jobs_recovery",
+        "idx_document_capture_links_capture",
+        "idx_document_capture_links_entity"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260917140000_document_capture_duplicate_override_event.sql",
+      "timestamp": "20260917140000",
+      "slug": "document_capture_duplicate_override_event",
+      "tags": [],
+      "tables": [
+        "document_capture_events"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260917150000_document_capture_links_unique.sql",
+      "timestamp": "20260917150000",
+      "slug": "document_capture_links_unique",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "uq_document_capture_links_entity"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260917160000_label_generation_jobs_progress.sql",
+      "timestamp": "20260917160000",
+      "slug": "label_generation_jobs_progress",
+      "tags": [
+        "repair"
+      ],
+      "tables": [
+        "label_generation_jobs"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260917180000_ai_provider_keys.sql",
+      "timestamp": "20260917180000",
+      "slug": "ai_provider_keys",
+      "tags": [],
+      "tables": [
+        "ai_provider_key_audit",
+        "ai_provider_keys"
+      ],
+      "policies": [
+        "ai_provider_key_audit_deny_all",
+        "ai_provider_keys_deny_all"
+      ],
+      "functions": [
+        "ai_provider_key_record_failure",
+        "ai_provider_key_record_success"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "ai_provider_key_audit_key_id_idx",
+        "ai_provider_keys_provider_enabled_priority_idx"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260917190000_ai_provider_keys_ownership.sql",
+      "timestamp": "20260917190000",
+      "slug": "ai_provider_keys_ownership",
+      "tags": [],
+      "tables": [
+        "ai_provider_keys"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "ai_provider_keys_fingerprint_idx",
+        "ai_provider_keys_managed_by_idx"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260919120000_inventory_receiving.sql",
+      "timestamp": "20260919120000",
+      "slug": "inventory_receiving",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "import_files",
+        "inventory_document_lines",
+        "inventory_documents",
+        "inventory_item_matches",
+        "movimenti_ricambi"
+      ],
+      "policies": [
+        "inventory_document_lines_insert",
+        "inventory_document_lines_select",
+        "inventory_document_lines_update",
+        "inventory_documents_insert",
+        "inventory_documents_select",
+        "inventory_documents_update",
+        "inventory_item_matches_insert",
+        "inventory_item_matches_select"
+      ],
+      "functions": [
+        "inventory_receiving_apply",
+        "rbac_is_valid_erp_module"
+      ],
+      "triggers": [
+        "trg_inventory_document_lines_updated_at",
+        "trg_inventory_documents_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_inventory_document_lines_document",
+        "idx_inventory_documents_company_status",
+        "idx_inventory_documents_content_hash",
+        "idx_inventory_item_matches_line",
+        "idx_movimenti_ricambi_inventory_document",
+        "uq_inventory_documents_semantic"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260919120100_rbac_log_entita_inventory_receiving.sql",
+      "timestamp": "20260919120100",
+      "slug": "rbac_log_entita_inventory_receiving",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "rbac_log_entita_module"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20261019120000_notification_ssot_v4.sql",
+      "timestamp": "20261019120000",
+      "slug": "notification_ssot_v4",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "delivery_queue",
+        "notification_aggregation_buffer",
+        "notification_capture_log",
+        "notification_delivery",
+        "notification_preferences",
+        "notification_type_registry",
+        "notifications",
+        "push_subscriptions"
+      ],
+      "policies": [
+        "notification_preferences_select_own",
+        "notification_preferences_upsert_own"
+      ],
+      "functions": [
+        "cab_claim_delivery_queue_batch",
+        "cab_complete_delivery_queue",
+        "cab_enqueue_raw_delivery",
+        "cab_fanout_enqueue_raw_after_notification",
+        "cab_publish_notification",
+        "cab_touch_push_presence"
+      ],
+      "triggers": [
+        "trg_notifications_enqueue_raw_delivery"
+      ],
+      "views": [],
+      "indexes": [
+        "delivery_queue_claim_idx",
+        "delivery_queue_raw_notification_uidx",
+        "notification_aggregation_buffer_expires_idx",
+        "notification_delivery_notification_idx",
+        "notifications_idempotency_key_uidx"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20261019120100_delivery_queue_invoke_worker.sql",
+      "timestamp": "20261019120100",
+      "slug": "delivery_queue_invoke_worker",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "trg_delivery_queue_invoke_worker"
+      ],
+      "triggers": [
+        "delivery_queue_invoke_worker"
+      ],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20261019120200_fix_push_delivery_worker_url.sql",
+      "timestamp": "20261019120200",
+      "slug": "fix_push_delivery_worker_url",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "cab_invoke_push_delivery_worker"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20261019130000_operational_table_versions.sql",
+      "timestamp": "20261019130000",
+      "slug": "operational_table_versions",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "get_operational_data_version",
+        "get_operational_table_versions"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
     }
   ],
   "aggregates": {
     "tables": [
+      "accounting_entries",
+      "accounting_entry_lines",
+      "ai_provider_key_audit",
+      "ai_provider_keys",
       "app_settings",
       "app_settings_audit",
+      "asset_assignment_history",
+      "asset_compliance_records",
+      "asset_compliance_rules",
+      "asset_mileage_readings",
+      "attrezzature",
       "auth_logs",
+      "billing_customer_profiles",
+      "billing_customers",
+      "billing_settings",
       "bunder_documents",
+      "business_documents",
+      "clienti_anagrafiche",
+      "clienti_contatti",
+      "clienti_sedi",
+      "companies",
+      "customer_open_items",
+      "customer_payments",
       "dashboard_promemoria",
+      "ddt_documents",
+      "ddt_links",
+      "ddt_numero_counters",
+      "ddt_rows",
+      "delivery_queue",
+      "description_generation_lines",
+      "description_generation_usage",
+      "description_operator_overrides",
       "dipendenti_timesheet_employees",
       "dipendenti_timesheet_entries",
+      "document_capture",
+      "document_capture_applications",
+      "document_capture_apply_jobs",
+      "document_capture_attempts",
+      "document_capture_events",
+      "document_capture_fields",
+      "document_capture_links",
+      "document_capture_rate_limit_buckets",
       "documenti",
+      "entity_resolution_cache",
+      "entity_resolution_corrections",
+      "export_jobs",
+      "health_score_runs",
+      "import_audit_events",
+      "import_batch_entities",
+      "import_batches",
+      "import_executions",
+      "import_export_telemetry",
+      "import_file_results",
+      "import_files",
+      "import_mapping_presets",
+      "interventi_catalogo",
+      "interventi_catalogo_audit",
+      "interventi_categorie",
+      "interventi_componenti",
+      "interventi_procedure",
+      "interventi_sintomi",
+      "inventory_document_lines",
+      "inventory_documents",
+      "inventory_item_matches",
+      "inventory_label_artifacts",
+      "inventory_label_events",
+      "inventory_qr_scans",
+      "inventory_qr_tokens",
+      "invoice_events",
+      "invoice_fatturapa_snapshots",
+      "invoice_links",
+      "invoice_number_sequences",
+      "invoice_payments",
+      "invoice_public_administration_meta",
+      "invoice_relations",
+      "invoice_rows",
+      "invoice_sdi_submissions",
+      "invoices",
+      "label_generation_jobs",
       "lavorazione_documents",
       "lavorazioni",
       "lavorazioni_codice_counters",
       "log_modifiche",
       "magazzino_ricambi",
+      "maintenance_plan_equipment_types",
+      "maintenance_plan_parts",
+      "maintenance_plans",
       "mezzi",
       "movimenti_ricambi",
+      "notification_aggregation_buffer",
+      "notification_capture_log",
+      "notification_delivery",
+      "notification_preferences",
+      "notification_type_registry",
+      "notification_user_state",
+      "notifications",
+      "operational_diary_entries",
+      "operative_history_cases",
+      "operative_history_signals",
+      "ordini_fornitori",
+      "ordini_fornitori_import_log",
+      "ordini_fornitori_links",
+      "ordini_fornitori_numero_counters",
+      "ordini_fornitori_righe",
+      "payment_allocations",
+      "permissions",
       "preventivi",
+      "preventivi_description_suggestions",
       "preventivi_lavorazione_numero_counters",
       "preventivi_manuali_numero_counters",
       "profiles",
+      "push_delivery_queue",
+      "push_subscriptions",
+      "rbac_page_module_expansion",
       "report_manual_entries",
+      "report_saved_kpi_charts",
+      "ricambi_componenti_map",
+      "role_page_access",
+      "role_permissions",
+      "roles",
       "scheda_lavorazione",
+      "scheda_pdf_generations",
+      "scheda_pdf_templates",
       "segnalazioni",
       "support_notes",
-      "user_permissions"
+      "tipi_attrezzatura_catalog",
+      "tkb_draft_store",
+      "tkb_published_snapshots",
+      "tkb_version_registry",
+      "user_page_overrides",
+      "user_permissions",
+      "user_permissions_v2",
+      "user_roles",
+      "vehicle_maintenance_service_parts",
+      "vehicle_maintenance_services",
+      "workshop_schedule_events",
+      "workshop_schedule_history"
     ],
     "policies": [
+      "ai_provider_key_audit_deny_all",
+      "ai_provider_keys_deny_all",
       "app_settings_audit_select_admin",
       "app_settings_delete_admin",
       "app_settings_insert_admin",
@@ -2174,6 +5715,8 @@
       "cab_images_insert",
       "cab_images_select",
       "cab_images_update",
+      "cap_accounting_entries",
+      "cap_accounting_entry_lines",
       "cap_app_settings_audit_select",
       "cap_app_settings_branding_auth_select",
       "cap_app_settings_branding_public_select",
@@ -2181,10 +5724,72 @@
       "cap_app_settings_insert",
       "cap_app_settings_select",
       "cap_app_settings_update",
+      "cap_asset_assignment_history_delete",
+      "cap_asset_assignment_history_insert",
+      "cap_asset_assignment_history_select",
+      "cap_asset_assignment_history_update",
+      "cap_asset_compliance_records_delete",
+      "cap_asset_compliance_records_insert",
+      "cap_asset_compliance_records_select",
+      "cap_asset_compliance_records_update",
+      "cap_asset_compliance_rules_delete",
+      "cap_asset_compliance_rules_insert",
+      "cap_asset_compliance_rules_select",
+      "cap_asset_compliance_rules_update",
+      "cap_asset_mileage_readings_delete",
+      "cap_asset_mileage_readings_insert",
+      "cap_asset_mileage_readings_select",
+      "cap_asset_mileage_readings_update",
+      "cap_attrezzature_delete",
+      "cap_attrezzature_insert",
+      "cap_attrezzature_select",
+      "cap_attrezzature_update",
       "cap_auth_logs_select",
+      "cap_billing_customer_profiles_select",
+      "cap_billing_customer_profiles_write",
+      "cap_billing_customers_insert",
+      "cap_billing_customers_select",
+      "cap_billing_customers_update",
+      "cap_billing_settings",
+      "cap_business_documents_select",
+      "cap_clienti_anagrafiche_delete",
+      "cap_clienti_anagrafiche_insert",
+      "cap_clienti_anagrafiche_select",
+      "cap_clienti_anagrafiche_select_cliente_portal",
+      "cap_clienti_anagrafiche_select_operational",
+      "cap_clienti_anagrafiche_update",
+      "cap_clienti_contatti_delete",
+      "cap_clienti_contatti_insert",
+      "cap_clienti_contatti_select",
+      "cap_clienti_contatti_select_cliente_portal",
+      "cap_clienti_contatti_select_operational",
+      "cap_clienti_contatti_update",
+      "cap_clienti_sedi_delete",
+      "cap_clienti_sedi_insert",
+      "cap_clienti_sedi_select",
+      "cap_clienti_sedi_select_cliente_portal",
+      "cap_clienti_sedi_select_operational",
+      "cap_clienti_sedi_update",
+      "cap_companies_select",
+      "cap_customer_open_items_select",
+      "cap_customer_open_items_write",
+      "cap_customer_payments_select",
+      "cap_customer_payments_write",
       "cap_dashboard_promemoria_insert",
       "cap_dashboard_promemoria_select",
       "cap_dashboard_promemoria_update",
+      "cap_ddt_documents_delete",
+      "cap_ddt_documents_insert",
+      "cap_ddt_documents_select",
+      "cap_ddt_documents_update",
+      "cap_ddt_links_delete",
+      "cap_ddt_links_insert",
+      "cap_ddt_links_select",
+      "cap_ddt_links_update",
+      "cap_ddt_rows_delete",
+      "cap_ddt_rows_insert",
+      "cap_ddt_rows_select",
+      "cap_ddt_rows_update",
       "cap_dipendenti_timesheet_employees_insert",
       "cap_dipendenti_timesheet_employees_select",
       "cap_dipendenti_timesheet_employees_update",
@@ -2192,10 +5797,91 @@
       "cap_dipendenti_timesheet_entries_insert",
       "cap_dipendenti_timesheet_entries_select",
       "cap_dipendenti_timesheet_entries_update",
+      "cap_document_capture_applications_insert",
+      "cap_document_capture_applications_select",
+      "cap_document_capture_applications_update",
+      "cap_document_capture_apply_jobs_insert",
+      "cap_document_capture_apply_jobs_select",
+      "cap_document_capture_apply_jobs_update",
+      "cap_document_capture_attempts_insert",
+      "cap_document_capture_attempts_select",
+      "cap_document_capture_attempts_update",
+      "cap_document_capture_events_insert",
+      "cap_document_capture_events_select",
+      "cap_document_capture_fields_insert",
+      "cap_document_capture_fields_select",
+      "cap_document_capture_fields_update",
+      "cap_document_capture_insert",
+      "cap_document_capture_links_insert",
+      "cap_document_capture_links_select",
+      "cap_document_capture_rate_limit_buckets_deny",
+      "cap_document_capture_select",
+      "cap_document_capture_storage_insert",
+      "cap_document_capture_storage_select",
+      "cap_document_capture_update",
       "cap_documenti_delete",
       "cap_documenti_insert",
       "cap_documenti_select",
       "cap_documenti_update",
+      "cap_export_jobs_own",
+      "cap_import_audit_events_insert",
+      "cap_import_audit_events_select",
+      "cap_import_batch_entities_delete",
+      "cap_import_batch_entities_insert",
+      "cap_import_batch_entities_select",
+      "cap_import_batches_insert",
+      "cap_import_batches_select",
+      "cap_import_batches_update",
+      "cap_import_executions_insert",
+      "cap_import_executions_select",
+      "cap_import_executions_update",
+      "cap_import_export_telemetry_insert",
+      "cap_import_export_telemetry_select",
+      "cap_import_file_results_insert",
+      "cap_import_file_results_select",
+      "cap_import_files_insert",
+      "cap_import_files_select",
+      "cap_import_files_update",
+      "cap_import_mapping_presets_all",
+      "cap_import_sources_storage_insert",
+      "cap_import_sources_storage_select",
+      "cap_inventory_label_artifacts_insert",
+      "cap_inventory_label_artifacts_select",
+      "cap_inventory_label_events_insert",
+      "cap_inventory_label_events_select",
+      "cap_inventory_qr_scans_insert",
+      "cap_inventory_qr_scans_select",
+      "cap_inventory_qr_tokens_insert",
+      "cap_inventory_qr_tokens_select",
+      "cap_inventory_qr_tokens_update",
+      "cap_invoice_events_insert",
+      "cap_invoice_events_select",
+      "cap_invoice_fatturapa_snapshots",
+      "cap_invoice_links_delete",
+      "cap_invoice_links_insert",
+      "cap_invoice_links_select",
+      "cap_invoice_links_update",
+      "cap_invoice_number_sequences_select",
+      "cap_invoice_number_sequences_write",
+      "cap_invoice_pa_meta",
+      "cap_invoice_payments_delete",
+      "cap_invoice_payments_insert",
+      "cap_invoice_payments_select",
+      "cap_invoice_payments_update",
+      "cap_invoice_relations_select",
+      "cap_invoice_relations_write",
+      "cap_invoice_rows_delete",
+      "cap_invoice_rows_insert",
+      "cap_invoice_rows_select",
+      "cap_invoice_rows_update",
+      "cap_invoice_sdi_submissions",
+      "cap_invoices_delete",
+      "cap_invoices_insert",
+      "cap_invoices_select",
+      "cap_invoices_update",
+      "cap_label_generation_jobs_insert",
+      "cap_label_generation_jobs_select",
+      "cap_label_generation_jobs_update",
       "cap_lavorazione_documents_delete",
       "cap_lavorazione_documents_insert",
       "cap_lavorazione_documents_select",
@@ -2219,6 +5905,38 @@
       "cap_movimenti_insert",
       "cap_movimenti_select",
       "cap_movimenti_update",
+      "cap_mp_et_delete",
+      "cap_mp_et_insert",
+      "cap_mp_et_select",
+      "cap_mp_et_update",
+      "cap_mplan_delete",
+      "cap_mplan_insert",
+      "cap_mplan_parts_delete",
+      "cap_mplan_parts_insert",
+      "cap_mplan_parts_select",
+      "cap_mplan_parts_update",
+      "cap_mplan_select",
+      "cap_mplan_update",
+      "cap_operational_diary_insert",
+      "cap_operational_diary_select",
+      "cap_operational_diary_update",
+      "cap_ordini_fornitori_delete",
+      "cap_ordini_fornitori_import_log_insert",
+      "cap_ordini_fornitori_import_log_select",
+      "cap_ordini_fornitori_import_log_update",
+      "cap_ordini_fornitori_insert",
+      "cap_ordini_fornitori_links_delete",
+      "cap_ordini_fornitori_links_insert",
+      "cap_ordini_fornitori_links_select",
+      "cap_ordini_fornitori_links_update",
+      "cap_ordini_fornitori_righe_delete",
+      "cap_ordini_fornitori_righe_insert",
+      "cap_ordini_fornitori_righe_select",
+      "cap_ordini_fornitori_righe_update",
+      "cap_ordini_fornitori_select",
+      "cap_ordini_fornitori_update",
+      "cap_payment_allocations_select",
+      "cap_payment_allocations_write",
       "cap_preventivi_delete",
       "cap_preventivi_insert",
       "cap_preventivi_select",
@@ -2230,8 +5948,12 @@
       "cap_report_manual_entries_insert",
       "cap_report_manual_entries_select",
       "cap_report_manual_entries_update",
+      "cap_report_saved_kpi_charts_own",
       "cap_scheda_delete",
       "cap_scheda_insert",
+      "cap_scheda_pdf_generations_insert",
+      "cap_scheda_pdf_generations_select",
+      "cap_scheda_pdf_templates_select",
       "cap_scheda_select",
       "cap_scheda_update",
       "cap_segnalazioni_insert",
@@ -2252,16 +5974,46 @@
       "cap_support_notes_insert",
       "cap_support_notes_select",
       "cap_support_notes_update",
+      "cap_tipo_att_cat_delete",
+      "cap_tipo_att_cat_insert",
+      "cap_tipo_att_cat_select",
+      "cap_tipo_att_cat_update",
       "cap_user_permissions",
       "cap_user_permissions_select",
       "cap_user_permissions_write",
       "cap_user_prefs_insert_own",
       "cap_user_prefs_select_own",
       "cap_user_prefs_update_own",
+      "cap_vms_delete",
+      "cap_vms_insert",
+      "cap_vms_select",
+      "cap_vms_update",
+      "cap_vmsp_delete",
+      "cap_vmsp_insert",
+      "cap_vmsp_select",
+      "cap_vmsp_update",
+      "cap_wse_insert",
+      "cap_wse_select",
+      "cap_wse_update",
+      "cap_wsh_select",
       "documenti_delete_priv",
       "documenti_insert_priv",
       "documenti_select_role",
       "documenti_update_priv",
+      "erc_insert",
+      "erc_select",
+      "erc_update",
+      "ercache_select",
+      "ercache_upsert",
+      "health_score_runs_select_auth",
+      "inventory_document_lines_insert",
+      "inventory_document_lines_select",
+      "inventory_document_lines_update",
+      "inventory_documents_insert",
+      "inventory_documents_select",
+      "inventory_documents_update",
+      "inventory_item_matches_insert",
+      "inventory_item_matches_select",
       "lavorazioni_delete_priv",
       "lavorazioni_insert_priv",
       "lavorazioni_select_role",
@@ -2282,6 +6034,16 @@
       "movimenti_ricambi_insert_priv",
       "movimenti_ricambi_select_role",
       "movimenti_ricambi_update_priv",
+      "notification_preferences_select_own",
+      "notification_preferences_upsert_own",
+      "notifications_select_visible",
+      "nus_insert_own",
+      "nus_select_own",
+      "nus_update_own",
+      "ohc_read_authenticated",
+      "ohs_read_authenticated",
+      "permissions_select_auth",
+      "permissions_write_security",
       "preventivi_delete_priv",
       "preventivi_insert_priv",
       "preventivi_select_role",
@@ -2323,6 +6085,7 @@
       "rbac_movimenti_ricambi_insert",
       "rbac_movimenti_ricambi_select",
       "rbac_movimenti_ricambi_update",
+      "rbac_page_module_expansion_select_auth",
       "rbac_preventivi_delete",
       "rbac_preventivi_insert",
       "rbac_preventivi_select",
@@ -2349,7 +6112,17 @@
       "rbac_storage_images_insert",
       "rbac_storage_images_select",
       "rbac_storage_images_update",
+      "rbac_storage_pdf_artifacts_delete",
+      "rbac_storage_pdf_artifacts_insert",
+      "rbac_storage_pdf_artifacts_select",
+      "rbac_storage_pdf_artifacts_update",
       "rbac_user_permissions_admin",
+      "role_page_access_select_auth",
+      "role_page_access_write_security",
+      "role_permissions_select_auth",
+      "role_permissions_write_security",
+      "roles_select_auth",
+      "roles_write_security",
       "scheda_lavorazione_delete_priv",
       "scheda_lavorazione_insert_priv",
       "scheda_lavorazione_select_role",
@@ -2359,24 +6132,154 @@
       "segnalazioni_select_role",
       "segnalazioni_update_role",
       "support_notes_select_admin",
+      "tkb_desc_gen_lines_select",
+      "tkb_desc_gen_usage_select",
+      "tkb_desc_operator_overrides_select",
+      "tkb_draft_insert_authenticated",
+      "tkb_draft_read_authenticated",
+      "tkb_draft_update_authenticated",
+      "tkb_interventi_catalogo_admin",
+      "tkb_interventi_catalogo_audit_admin",
+      "tkb_interventi_categorie_admin",
+      "tkb_interventi_componenti_admin",
+      "tkb_interventi_procedure_admin",
+      "tkb_interventi_sintomi_admin",
+      "tkb_preventivi_desc_suggestions_select",
+      "tkb_ricambi_componenti_map_admin",
+      "tkb_snapshots_insert_security",
+      "tkb_snapshots_read_authenticated",
+      "tkb_version_registry_insert",
+      "tkb_version_registry_select",
+      "tkb_version_registry_update",
+      "user_page_overrides_select_own_or_security",
+      "user_page_overrides_write_security",
       "user_permissions_select_admin",
       "user_permissions_select_own_or_admin",
-      "user_permissions_write_admin"
+      "user_permissions_write_admin",
+      "user_roles_select_own_or_security",
+      "user_roles_write_security"
     ],
     "functions": [
+      "_rbac_seed_grant",
+      "ai_provider_key_record_failure",
+      "ai_provider_key_record_success",
+      "allocate_invoice_number",
+      "annulla_ordine_fornitore",
+      "append_billing_event",
+      "apply_invoice_status_backfill",
       "archive_lavorazione_client_portal",
+      "assert_ddt_preventivo_row_allocations",
+      "assert_invoice_preventivo_allocations",
+      "asset_lifecycle_v1_db_enabled",
+      "assign_ddt_numero",
       "assign_lavorazione_codice",
+      "assign_ordine_fornitore_numero",
       "assign_preventivo_numero_lavorazione",
       "assign_preventivo_numero_manuale",
       "bulk_upsert_app_settings",
+      "cab_claim_delivery_queue_batch",
+      "cab_claim_push_delivery_batch",
+      "cab_complete_delivery_queue",
+      "cab_complete_push_delivery",
+      "cab_count_unread_notifications",
+      "cab_create_notification",
+      "cab_detect_schedule_conflicts",
+      "cab_dismiss_notification",
+      "cab_enqueue_push_delivery",
+      "cab_enqueue_raw_delivery",
+      "cab_fanout_client_portal_lavorazione_notification",
+      "cab_fanout_client_portal_lavorazione_notification_core",
+      "cab_fanout_enqueue_raw_after_notification",
+      "cab_invoke_push_delivery_worker",
+      "cab_list_notifications_inbox",
+      "cab_list_workshop_schedule_by_work_order",
+      "cab_list_workshop_schedule_events",
+      "cab_mark_all_notifications_read",
+      "cab_mark_notification_read",
+      "cab_migrate_dashboard_promemoria_to_schedule",
+      "cab_patch_workshop_schedule_times",
+      "cab_publish_notification",
+      "cab_revoke_push_subscription",
+      "cab_touch_push_presence",
+      "cab_upsert_push_subscription",
+      "cab_upsert_workshop_schedule_event",
+      "cancel_ddt",
+      "cancel_invoice",
       "check_username_available",
+      "cleanup_import_storage",
+      "close_attrezzatura_assignment",
+      "confirm_ddt",
       "count_mezzo_dependencies",
+      "create_credit_note_from_invoice",
+      "create_ddt_with_rows",
+      "create_invoice_with_rows_and_links",
+      "create_ordine_fornitore_with_righe",
       "current_profile_role",
+      "customer_balance_reconciliation_report",
+      "ddt_preventivo_row_delivered_qty",
       "delete_mezzo",
+      "document_capture_abort_apply",
+      "document_capture_assert_status_transition",
+      "document_capture_begin_apply",
+      "document_capture_complete_apply",
+      "document_capture_create_upload_policy",
+      "document_capture_events_append_only",
+      "document_capture_finalize",
+      "document_capture_guard_post_finalize",
+      "document_capture_mutate_with_event",
+      "document_capture_patch",
+      "document_capture_rate_limit_check",
+      "document_capture_storage_object_allowed",
+      "expire_import_files",
+      "expire_pending_document_captures",
+      "get_operational_data_version",
+      "get_operational_table_versions",
+      "guard_mezzi_legacy_attrezzatura_write",
       "handle_new_user",
+      "import_file_begin_processing",
+      "import_file_cancel",
+      "import_file_complete_processing",
+      "import_file_create_upload_policy",
+      "import_file_finalize",
+      "import_file_kind_to_module",
+      "import_file_storage_object_allowed",
+      "inventory_receiving_apply",
+      "invoice_apply_transition",
+      "invoice_derive_legacy_status",
+      "invoice_events_guard_created_at",
+      "invoice_guard_direct_axes_update",
+      "invoice_guard_direct_status_update",
+      "invoice_init_axes_from_legacy_on_insert",
+      "invoice_insert_event",
+      "invoice_legacy_status_audit_report",
+      "invoice_map_legacy_to_axes",
+      "invoice_payment_reconciliation_report",
+      "invoice_preventivo_allocated_total",
+      "invoice_recalculate_status",
+      "invoice_status_backfill_snapshot",
+      "invoice_status_migration_report",
+      "invoice_sync_legacy_status_from_axes",
+      "invoice_write_status_axes",
+      "list_lavorazioni_paginated",
+      "list_timesheet_employee_ids_with_entries",
+      "list_timesheet_month_keys",
       "log_app_settings_update_audit",
+      "maintenance_plans_v1_db_enabled",
+      "mark_ddt_consegnato",
+      "mark_ddt_stampato",
+      "mezzi_legacy_attrezzatura_valued",
+      "mezzo_attrezzature_v2_db_enabled",
+      "notification_cliente_inbox_eligible",
+      "notification_priority_rank",
+      "notification_staff_inbox_eligible",
+      "notification_visible_to_auth_user",
+      "open_attrezzatura_assignment",
+      "ordine_fornitore_compute_totals",
+      "ordine_fornitore_row_total",
+      "profile_display_name",
       "prune_log_modifiche_retention",
       "rbac_auth_uid",
+      "rbac_bunder_can",
       "rbac_can_delete",
       "rbac_can_read",
       "rbac_can_read_app_settings",
@@ -2398,12 +6301,18 @@
       "rbac_is_operatore_or_admin",
       "rbac_is_ospite",
       "rbac_is_restricted_app_settings_row",
+      "rbac_is_valid_erp_module",
       "rbac_lavorazione_visible_to_cliente",
+      "rbac_lifecycle_mezzo_id",
       "rbac_log_entita_module",
+      "rbac_maintenance_plans_settings_write",
       "rbac_mezzo_visible_to_cliente",
       "rbac_module_can",
+      "rbac_module_from_page_access",
       "rbac_normalize_role",
       "rbac_normalized_role",
+      "rbac_operational_diary_dashboard_read",
+      "rbac_operational_diary_dashboard_write",
       "rbac_operator_global_settings_db_enabled",
       "rbac_pilot_operator_global_settings_enabled",
       "rbac_resource_allows_delete",
@@ -2413,6 +6322,8 @@
       "rbac_resource_to_module",
       "rbac_role",
       "rbac_role_for_user",
+      "rbac_role_has_permission",
+      "rbac_role_module_default",
       "rbac_scope_cliente",
       "rbac_scope_cliente_lavorazioni_mezzo",
       "rbac_scope_log_modifiche",
@@ -2420,74 +6331,273 @@
       "rbac_staff_has_any_module_write",
       "rbac_storage_documenti_path_allowed",
       "rbac_storage_images_path_allowed",
+      "rbac_user_company_id",
+      "rbac_user_effective_permission",
+      "rbac_user_page_access_level",
+      "reassign_attrezzatura_mezzo",
+      "recalc_compliance_rule_due",
+      "register_customer_payment_multi",
+      "register_invoice_payment",
+      "replace_ddt_for_preventivo",
       "resolve_auth_email_for_login",
+      "security_set_user_role",
       "set_updated_at",
       "soft_delete_dashboard_promemoria",
       "soft_delete_lavorazione",
+      "soft_delete_operational_diary_entry",
+      "soft_delete_workshop_schedule_event",
+      "sync_mezzi_legacy_from_attrezzatura",
+      "sync_mezzo_km_from_reading",
+      "trg_compliance_record_recalc_rule",
+      "trg_delivery_queue_invoke_worker",
+      "trg_fanout_client_portal_lavorazione_completata",
+      "trg_fanout_client_portal_lavorazione_ingresso",
       "trg_lavorazioni_assign_codice",
+      "trg_notifications_enqueue_push_delivery",
+      "trg_ordini_fornitori_assign_numero",
       "trg_preventivi_assign_numero",
-      "user_effective_can"
+      "trg_profiles_role_key_guard",
+      "trg_profiles_ruolo_guard",
+      "trg_push_delivery_queue_invoke_worker",
+      "update_ddt_draft",
+      "update_invoice_draft_with_rows",
+      "update_ordine_fornitore_draft",
+      "user_effective_can",
+      "wse_write_history"
     ],
     "triggers": [
+      "asset_compliance_records_recalc_rule",
+      "asset_compliance_rules_set_updated_at",
+      "asset_mileage_readings_sync_mezzo_km",
+      "attrezzature_set_updated_at",
+      "delivery_queue_invoke_worker",
       "documenti_set_updated_at",
+      "guard_mezzi_legacy_attrezzatura_write",
       "lavorazioni_set_updated_at",
       "magazzino_ricambi_set_updated_at",
+      "maintenance_plan_parts_set_updated_at",
+      "maintenance_plans_set_updated_at",
       "mezzi_set_updated_at",
+      "notifications_enqueue_push_delivery",
       "on_auth_user_created",
       "preventivi_set_updated_at",
       "profiles_set_updated_at",
+      "push_delivery_queue_invoke_worker",
+      "tipi_attrezzatura_catalog_set_updated_at",
       "trg_app_settings_audit_update",
       "trg_app_settings_updated_at",
+      "trg_billing_customer_profiles_updated_at",
+      "trg_billing_customers_updated_at",
+      "trg_clienti_anagrafiche_updated_at",
+      "trg_clienti_contatti_updated_at",
+      "trg_clienti_sedi_updated_at",
+      "trg_customer_open_items_updated_at",
+      "trg_customer_payments_updated_at",
       "trg_dashboard_promemoria_updated_at",
+      "trg_ddt_documents_updated_at",
       "trg_dipendenti_timesheet_employees_updated_at",
       "trg_dipendenti_timesheet_entries_updated_at",
+      "trg_document_capture_events_append_only",
+      "trg_document_capture_guard_post_finalize",
+      "trg_document_capture_updated_at",
+      "trg_import_executions_updated_at",
+      "trg_import_files_updated_at",
+      "trg_inventory_document_lines_updated_at",
+      "trg_inventory_documents_updated_at",
+      "trg_invoice_events_guard_created_at",
+      "trg_invoice_pa_meta_updated_at",
+      "trg_invoices_guard_axes",
+      "trg_invoices_guard_status",
+      "trg_invoices_init_axes",
+      "trg_invoices_sync_legacy_status",
+      "trg_invoices_updated_at",
       "trg_lavorazioni_assign_codice",
+      "trg_lavorazioni_client_portal_completata",
+      "trg_lavorazioni_client_portal_ingresso",
       "trg_lavorazioni_updated_at",
       "trg_log_modifiche_retention",
       "trg_magazzino_ricambi_updated_at",
       "trg_mezzi_updated_at",
+      "trg_notifications_enqueue_raw_delivery",
+      "trg_operational_diary_entries_updated_at",
+      "trg_ordini_fornitori_assign_numero",
+      "trg_ordini_fornitori_updated_at",
       "trg_preventivi_assign_numero",
       "trg_preventivi_updated_at",
+      "trg_profiles_role_key_guard",
+      "trg_profiles_ruolo_guard",
       "trg_profiles_updated_at",
       "trg_report_manual_entries_updated_at",
+      "trg_report_saved_kpi_charts_updated_at",
       "trg_scheda_lavorazione_updated_at",
-      "trg_support_notes_updated_at"
+      "trg_support_notes_updated_at",
+      "trg_sync_mezzi_legacy_from_attrezzatura",
+      "trg_workshop_schedule_events_updated_at",
+      "vehicle_maintenance_services_set_updated_at"
     ],
     "views": [
-      "lavorazioni_clienti"
+      "asset_timeline_projection",
+      "import_export_telemetry_daily",
+      "lavorazioni_clienti",
+      "payment_allocations_expanded",
+      "preventivi_billing_status",
+      "preventivo_ddt_fulfillment",
+      "v_dashboard_lavorazioni_kpi"
     ],
     "indexes": [
+      "ai_provider_key_audit_key_id_idx",
+      "ai_provider_keys_fingerprint_idx",
+      "ai_provider_keys_managed_by_idx",
+      "ai_provider_keys_provider_enabled_priority_idx",
       "bunder_documents_data_documento_idx",
       "bunder_documents_kind_idx",
       "bunder_documents_updated_at_idx",
+      "delivery_queue_claim_idx",
+      "delivery_queue_raw_notification_uidx",
+      "idx_accounting_entries_invoice",
+      "idx_accounting_entry_lines_entry",
       "idx_app_settings_audit_module_key_at",
       "idx_app_settings_audit_updated_at",
       "idx_app_settings_module",
+      "idx_assignment_attrezzatura",
+      "idx_assignment_mezzo",
+      "idx_assignment_one_open",
+      "idx_attrezzature_marca_modello",
+      "idx_attrezzature_matricola",
+      "idx_attrezzature_mezzo_id",
       "idx_auth_logs_created",
       "idx_auth_logs_user_created",
+      "idx_billing_customers_cliente_label_trgm",
+      "idx_billing_customers_entity_key_uq",
+      "idx_clienti_anagrafiche_entity_key",
+      "idx_clienti_anagrafiche_in_lista_settings",
+      "idx_clienti_anagrafiche_nome_display_norm",
+      "idx_clienti_contatti_cliente_ordine",
+      "idx_clienti_sedi_cliente_id",
+      "idx_compliance_records_attrezzatura",
+      "idx_compliance_records_mezzo",
+      "idx_compliance_records_rule",
+      "idx_compliance_rules_attrezzatura",
+      "idx_compliance_rules_mezzo",
+      "idx_compliance_rules_next_due",
+      "idx_customer_open_items_customer",
+      "idx_customer_open_items_due_date",
+      "idx_customer_open_items_invoice",
+      "idx_customer_open_items_remaining",
+      "idx_customer_payments_allocation",
+      "idx_customer_payments_customer",
       "idx_dashboard_promemoria_created_at",
       "idx_dashboard_promemoria_event_date",
       "idx_dashboard_promemoria_series_id",
+      "idx_ddt_documents_anno_serie_numero_uq",
+      "idx_ddt_documents_cliente_label_trgm",
+      "idx_ddt_documents_data_documento_desc",
+      "idx_ddt_documents_lavorazione_id",
+      "idx_ddt_documents_mezzo_id",
+      "idx_ddt_documents_preventivo_id",
+      "idx_ddt_documents_status",
+      "idx_ddt_links_ddt_id",
+      "idx_ddt_links_source",
+      "idx_ddt_rows_ddt_id",
+      "idx_ddt_rows_preventivo_source",
+      "idx_desc_gen_lines_activity",
+      "idx_desc_gen_lines_generation",
+      "idx_desc_gen_lines_preventivo",
+      "idx_desc_gen_usage_context",
+      "idx_desc_gen_usage_preventivo",
       "idx_dipendenti_timesheet_employees_in_settings",
       "idx_dipendenti_timesheet_employees_name_norm",
       "idx_dipendenti_timesheet_employees_source_addetto_id",
       "idx_dipendenti_timesheet_entries_dipendente_date",
       "idx_dipendenti_timesheet_entries_work_date",
+      "idx_document_capture_apply_jobs_capture",
+      "idx_document_capture_apply_jobs_recovery",
+      "idx_document_capture_attempts_company_started",
+      "idx_document_capture_company_status",
+      "idx_document_capture_events_capture",
+      "idx_document_capture_links_capture",
+      "idx_document_capture_links_entity",
+      "idx_document_capture_pending_ttl",
+      "idx_document_capture_rate_limit_buckets_created",
       "idx_documenti_categoria",
       "idx_documenti_created_at",
       "idx_documenti_marca_modello",
       "idx_documenti_mezzo_id",
+      "idx_entity_resolution_corrections_company",
+      "idx_export_jobs_user_created",
+      "idx_health_score_runs_computed_at",
+      "idx_import_audit_events_company_created",
+      "idx_import_audit_events_correlation",
+      "idx_import_audit_events_execution",
+      "idx_import_batch_entities_batch",
+      "idx_import_batches_company_created",
+      "idx_import_batches_created_by",
+      "idx_import_batches_entity_created",
+      "idx_import_executions_company_file",
+      "idx_import_executions_queued",
+      "idx_import_executions_reuse",
+      "idx_import_executions_stuck",
+      "idx_import_export_telemetry_created",
+      "idx_import_file_results_import_file",
+      "idx_import_files_company_sha256",
+      "idx_import_files_failed_reason",
+      "idx_import_files_status_expires",
+      "idx_import_files_storage_cleanup_pending",
+      "idx_import_files_uploaded_by_status",
+      "idx_import_mapping_presets_user_entity",
+      "idx_inventory_document_lines_document",
+      "idx_inventory_documents_company_status",
+      "idx_inventory_documents_content_hash",
+      "idx_inventory_item_matches_line",
+      "idx_inventory_label_artifact_hash",
+      "idx_inventory_label_events_entity",
+      "idx_inventory_qr_active_entity",
+      "idx_inventory_qr_entity",
+      "idx_inventory_qr_token",
+      "idx_inventory_scan_date",
+      "idx_inventory_scan_entity",
+      "idx_invoice_events_aggregate",
+      "idx_invoice_events_correlation",
+      "idx_invoice_events_invoice",
+      "idx_invoice_events_invoice_cursor",
+      "idx_invoice_links_invoice_id",
+      "idx_invoice_links_source",
+      "idx_invoice_payments_invoice_data",
+      "idx_invoice_rows_invoice_id",
+      "idx_invoice_rows_lavorazione_id",
+      "idx_invoice_rows_preventivo_id",
+      "idx_invoices_anno_numero_uq",
+      "idx_invoices_cliente_label_trgm",
+      "idx_invoices_customer_id",
+      "idx_invoices_data_emissione_desc",
+      "idx_invoices_data_scadenza",
+      "idx_invoices_document_status",
+      "idx_invoices_document_type",
+      "idx_invoices_origine",
+      "idx_invoices_parent_invoice_id",
+      "idx_invoices_payment_status",
+      "idx_invoices_status",
+      "idx_label_generation_jobs_created_by",
+      "idx_label_generation_jobs_stuck",
       "idx_lavorazione_documents_lavorazione",
       "idx_lavorazioni_active_archived_created",
       "idx_lavorazioni_active_archived_uscita",
       "idx_lavorazioni_active_deleted_at",
+      "idx_lavorazioni_attrezzatura_id",
       "idx_lavorazioni_client_portal_archived",
       "idx_lavorazioni_codice_active",
       "idx_lavorazioni_codice_lookup",
+      "idx_lavorazioni_codice_trgm",
       "idx_lavorazioni_created_by",
       "idx_lavorazioni_data_ingresso",
+      "idx_lavorazioni_list_keyset",
       "idx_lavorazioni_mezzo_id",
+      "idx_lavorazioni_note_trgm",
+      "idx_lavorazioni_priorita",
       "idx_lavorazioni_stato",
+      "idx_lavorazioni_stato_archived_created",
+      "idx_lavorazioni_target_type",
+      "idx_lavorazioni_updated_by",
       "idx_log_modifiche_autore_id",
       "idx_log_modifiche_created_at",
       "idx_log_modifiche_entita",
@@ -2496,26 +6606,62 @@
       "idx_magazzino_ricambi_entity_key",
       "idx_magazzino_ricambi_marca",
       "idx_magazzino_ricambi_meta_gin",
+      "idx_magazzino_ricambi_meta_listino_import",
       "idx_magazzino_ricambi_nome_trgm",
+      "idx_maintenance_plan_parts_plan",
+      "idx_maintenance_plans_active",
       "idx_mezzi_cliente",
+      "idx_mezzi_cliente_btree",
       "idx_mezzi_cliente_trgm",
       "idx_mezzi_created_by",
       "idx_mezzi_entity_key",
       "idx_mezzi_marca_modello",
       "idx_mezzi_matricola",
       "idx_mezzi_targa",
+      "idx_mezzi_telaio_num_norm_unique",
+      "idx_mileage_mezzo_recorded",
       "idx_movimenti_ricambi_created_at",
+      "idx_movimenti_ricambi_inventory_document",
       "idx_movimenti_ricambi_lavorazione_id",
+      "idx_movimenti_ricambi_ricambio_created",
       "idx_movimenti_ricambi_ricambio_id",
       "idx_movimenti_ricambi_tipo",
+      "idx_mp_equipment_types_plan",
+      "idx_mp_equipment_types_tipo",
+      "idx_ohc_cliente",
+      "idx_ohc_intervenuto",
+      "idx_ohc_mezzo",
+      "idx_operational_diary_active_day",
+      "idx_operational_diary_work_date",
+      "idx_ordini_fornitori_data_ordine_desc",
+      "idx_ordini_fornitori_fornitore_label_trgm",
+      "idx_ordini_fornitori_import_log_company",
+      "idx_ordini_fornitori_import_log_content_hash_uq",
+      "idx_ordini_fornitori_import_log_import_file",
+      "idx_ordini_fornitori_import_log_ordine_id",
+      "idx_ordini_fornitori_import_log_semantic_key",
+      "idx_ordini_fornitori_import_log_semantic_key_uq",
+      "idx_ordini_fornitori_lavorazione_id",
+      "idx_ordini_fornitori_links_ordine_id",
+      "idx_ordini_fornitori_links_source",
+      "idx_ordini_fornitori_numero_uq",
+      "idx_ordini_fornitori_preventivo_id",
+      "idx_ordini_fornitori_righe_ordine_id",
+      "idx_ordini_fornitori_righe_ricambio_id",
+      "idx_ordini_fornitori_status",
+      "idx_payment_allocations_open_item",
       "idx_preventivi_cliente",
       "idx_preventivi_created_at",
       "idx_preventivi_lavorazione_id",
       "idx_preventivi_mezzo_id",
       "idx_profiles_cliente_ref",
+      "idx_profiles_company_id",
       "idx_profiles_ruolo",
       "idx_report_manual_entries_active_month",
       "idx_report_manual_entries_period",
+      "idx_report_saved_kpi_charts_user_name",
+      "idx_report_saved_kpi_charts_user_updated",
+      "idx_role_permissions_role",
       "idx_scheda_lavorazione_contenuto_gin",
       "idx_scheda_lavorazione_created_at",
       "idx_scheda_lavorazione_lavorazione_id",
@@ -2525,10 +6671,38 @@
       "idx_segnalazioni_stato",
       "idx_support_notes_active",
       "idx_support_notes_created_at",
+      "idx_tkb_snapshots_published_at",
       "idx_user_permissions_user",
-      "profiles_username_lower_unique"
+      "idx_vms_mezzo_performed",
+      "idx_vms_mezzo_plan_ore",
+      "idx_vmsp_service",
+      "idx_wse_created_by",
+      "idx_wse_legacy_promemoria",
+      "idx_wse_planning_status_active",
+      "idx_wse_start_end_active",
+      "idx_wse_work_order_active",
+      "idx_wsh_event_id",
+      "import_batches_fingerprint_success_uidx",
+      "notification_aggregation_buffer_expires_idx",
+      "notification_delivery_notification_idx",
+      "notification_user_state_user_unread_idx",
+      "notifications_dedup_key_uidx",
+      "notifications_idempotency_key_uidx",
+      "notifications_inbox_cursor_idx",
+      "profiles_username_lower_unique",
+      "push_delivery_queue_claim_idx",
+      "push_subscriptions_user_active_idx",
+      "role_page_access_page_key_idx",
+      "uq_ddt_documents_active_preventivo",
+      "uq_document_capture_company_sha256_finalized",
+      "uq_document_capture_fields_key",
+      "uq_document_capture_links_entity",
+      "uq_inventory_documents_semantic",
+      "uq_tipi_attrezzatura_catalog_label_norm",
+      "user_page_overrides_page_key_idx"
     ],
     "publications": [
+      "DROP",
       "supabase_realtime"
     ],
     "buckets": [
@@ -2600,87 +6774,264 @@
   },
   "config": {
     "seedPaths": [
-      "./seed.sql"
+      "./seeds/*.sql"
     ],
     "seedFilesExist": [
       {
-        "path": "./seed.sql",
-        "exists": false
+        "path": "./seeds/*.sql",
+        "exists": true
       }
     ],
-    "edgeFunctionsDir": false,
+    "edgeFunctionsDir": true,
     "postgresMajor": "17"
   },
   "frontend": {
     "serviceTables": [
       "app_settings",
       "app_settings_audit",
+      "asset_compliance_records",
+      "asset_compliance_rules",
+      "asset_mileage_readings",
+      "asset_timeline_projection",
+      "attrezzature",
       "auth_logs",
-      "bunder_documents",
+      "billing_customers",
+      "clienti_anagrafiche",
+      "clienti_contatti",
+      "clienti_sedi",
+      "customer_open_items",
+      "dashboard_promemoria",
+      "ddt_documents",
+      "ddt_links",
+      "ddt_rows",
       "dipendenti_timesheet_employees",
       "dipendenti_timesheet_entries",
       "documenti",
+      "invoice_links",
+      "invoice_payments",
+      "invoice_rows",
+      "invoices",
       "lavorazione_documents",
       "lavorazioni",
       "log_modifiche",
       "magazzino_ricambi",
+      "maintenance_plan_equipment_types",
+      "maintenance_plan_parts",
+      "maintenance_plans",
       "mezzi",
       "movimenti_ricambi",
+      "operational_diary_entries",
+      "ordini_fornitori",
+      "ordini_fornitori_righe",
       "preventivi",
       "profiles",
       "report_manual_entries",
       "scheda_lavorazione",
-      "user_permissions"
+      "tipi_attrezzatura_catalog",
+      "vehicle_maintenance_service_parts",
+      "vehicle_maintenance_services"
     ],
     "allTables": [
+      "accounting_entries",
+      "ai_provider_key_audit",
+      "ai_provider_keys",
       "app_settings",
       "app_settings_audit",
+      "asset_compliance_records",
+      "asset_compliance_rules",
+      "asset_mileage_readings",
+      "asset_timeline_projection",
+      "attrezzature",
       "auth_logs",
-      "bunder_documents",
+      "billing_customers",
+      "clienti_anagrafiche",
+      "clienti_contatti",
+      "clienti_sedi",
+      "customer_open_items",
+      "customer_payments",
+      "ddt_documents",
+      "ddt_links",
+      "ddt_rows",
+      "description_generation_lines",
       "dipendenti_timesheet_employees",
       "dipendenti_timesheet_entries",
+      "document_capture",
+      "document_capture_applications",
+      "document_capture_apply_jobs",
+      "document_capture_attempts",
+      "document_capture_events",
+      "document_capture_fields",
+      "document_capture_links",
       "documenti",
+      "entity_resolution_cache",
+      "entity_resolution_corrections",
+      "export_jobs",
+      "health_score_runs",
+      "import_audit_events",
+      "import_batch_entities",
+      "import_batches",
+      "import_executions",
+      "import_export_telemetry",
+      "import_file_results",
+      "import_files",
+      "import_mapping_presets",
+      "inventory_document_lines",
+      "inventory_documents",
+      "inventory_label_artifacts",
+      "inventory_label_events",
+      "inventory_qr_scans",
+      "inventory_qr_tokens",
+      "invoice_events",
+      "invoice_links",
+      "invoice_payments",
+      "invoice_rows",
+      "invoices",
+      "label_generation_jobs",
       "lavorazione_documents",
       "lavorazioni",
       "log_modifiche",
       "magazzino_ricambi",
+      "maintenance_plan_equipment_types",
+      "maintenance_plan_parts",
+      "maintenance_plans",
       "mezzi",
       "movimenti_ricambi",
+      "notification_capture_log",
+      "notification_delivery",
+      "notification_preferences",
+      "notifications",
+      "operational_diary_entries",
+      "operative_history_cases",
+      "operative_history_signals",
+      "ordini_fornitori",
+      "ordini_fornitori_import_log",
+      "ordini_fornitori_righe",
       "preventivi",
+      "preventivi_billing_status",
+      "preventivi_description_suggestions",
+      "preventivo_ddt_fulfillment",
       "profiles",
+      "push_subscriptions",
       "report_manual_entries",
+      "ricambi_componenti_map",
+      "role_page_access",
+      "roles",
       "scheda_lavorazione",
-      "user_permissions"
+      "scheda_pdf_generations",
+      "scheda_pdf_templates",
+      "tipi_attrezzatura_catalog",
+      "tkb_draft_store",
+      "tkb_published_snapshots",
+      "tkb_version_registry",
+      "user_page_overrides",
+      "user_permissions",
+      "user_roles",
+      "vehicle_maintenance_service_parts",
+      "vehicle_maintenance_services"
     ],
     "rpcs": [
+      "ai_provider_key_record_failure",
+      "ai_provider_key_record_success",
+      "annulla_ordine_fornitore",
+      "append_billing_event",
       "bulk_upsert_app_settings",
+      "cab_claim_delivery_queue_batch",
+      "cab_claim_push_delivery_batch",
+      "cab_complete_delivery_queue",
+      "cab_complete_push_delivery",
+      "cab_count_unread_notifications",
+      "cab_create_notification",
+      "cab_detect_schedule_conflicts",
+      "cab_dismiss_notification",
+      "cab_enqueue_raw_delivery",
+      "cab_list_notifications_inbox",
+      "cab_list_workshop_schedule_by_work_order",
+      "cab_list_workshop_schedule_events",
+      "cab_mark_all_notifications_read",
+      "cab_mark_notification_read",
+      "cab_migrate_dashboard_promemoria_to_schedule",
+      "cab_patch_workshop_schedule_times",
+      "cab_publish_notification",
+      "cab_revoke_push_subscription",
+      "cab_touch_push_presence",
+      "cab_upsert_push_subscription",
+      "cab_upsert_workshop_schedule_event",
+      "cancel_ddt",
+      "cancel_invoice",
       "check_username_available",
+      "cleanup_import_storage",
+      "close_attrezzatura_assignment",
+      "confirm_ddt",
       "count_mezzo_dependencies",
+      "create_credit_note_from_invoice",
+      "create_ddt_with_rows",
+      "create_intervento_atomic",
+      "create_invoice_with_rows_and_links",
+      "create_ordine_fornitore_with_righe",
       "delete_mezzo",
+      "document_capture_abort_apply",
+      "document_capture_begin_apply",
+      "document_capture_complete_apply",
+      "document_capture_create_upload_policy",
+      "document_capture_finalize",
+      "document_capture_mutate_with_event",
+      "document_capture_patch",
+      "document_capture_rate_limit_check",
+      "expire_import_files",
+      "expire_pending_document_captures",
+      "get_operational_table_versions",
+      "import_file_begin_processing",
+      "import_file_cancel",
+      "import_file_complete_processing",
+      "import_file_create_upload_policy",
+      "import_file_finalize",
+      "inventory_receiving_apply",
+      "invoice_apply_transition",
+      "list_lavorazioni_paginated",
+      "list_timesheet_employee_ids_with_entries",
+      "list_timesheet_month_keys",
+      "mark_ddt_consegnato",
+      "mark_ddt_stampato",
+      "open_attrezzatura_assignment",
+      "reassign_attrezzatura_mezzo",
+      "register_customer_payment_multi",
+      "register_invoice_payment",
+      "replace_ddt_for_preventivo",
       "resolve_auth_email_for_login",
+      "security_set_user_role",
       "soft_delete_dashboard_promemoria",
-      "soft_delete_lavorazione"
+      "soft_delete_lavorazione",
+      "soft_delete_operational_diary_entry",
+      "soft_delete_workshop_schedule_event",
+      "update_invoice_draft_with_rows",
+      "update_ordine_fornitore_draft"
     ],
     "storageBuckets": [
       "documenti"
     ],
     "realtimeTables": [
       "app_settings",
-      "bunder_documents",
+      "attrezzature",
       "dashboard_promemoria",
+      "ddt_documents",
       "dipendenti_timesheet_employees",
       "dipendenti_timesheet_entries",
       "documenti",
+      "invoice_payments",
+      "invoices",
       "lavorazione_documents",
       "lavorazioni",
       "log_modifiche",
       "magazzino_ricambi",
       "mezzi",
       "movimenti_ricambi",
+      "ordini_fornitori",
+      "ordini_fornitori_righe",
       "preventivi",
       "profiles",
       "scheda_lavorazione",
-      "user_permissions"
+      "user_permissions",
+      "workshop_schedule_events"
     ],
     "typeTables": [
       "app_settings",
@@ -2693,20 +7044,121 @@
   "gaps": {
     "serviceTablesWithoutRlsInMigrations": [],
     "migrationTablesWithoutFrontendRef": [
-      "dashboard_promemoria",
+      "accounting_entry_lines",
+      "asset_assignment_history",
+      "billing_customer_profiles",
+      "billing_settings",
+      "bunder_documents",
+      "business_documents",
+      "companies",
+      "ddt_numero_counters",
+      "delivery_queue",
+      "description_generation_usage",
+      "description_operator_overrides",
+      "document_capture_rate_limit_buckets",
+      "interventi_catalogo",
+      "interventi_catalogo_audit",
+      "interventi_categorie",
+      "interventi_componenti",
+      "interventi_procedure",
+      "interventi_sintomi",
+      "inventory_item_matches",
+      "invoice_fatturapa_snapshots",
+      "invoice_number_sequences",
+      "invoice_public_administration_meta",
+      "invoice_relations",
+      "invoice_sdi_submissions",
+      "notification_aggregation_buffer",
+      "notification_type_registry",
+      "notification_user_state",
+      "ordini_fornitori_links",
+      "ordini_fornitori_numero_counters",
+      "payment_allocations",
+      "permissions",
+      "push_delivery_queue",
+      "rbac_page_module_expansion",
+      "report_saved_kpi_charts",
+      "role_permissions",
       "segnalazioni",
-      "support_notes"
+      "support_notes",
+      "user_permissions_v2",
+      "workshop_schedule_events",
+      "workshop_schedule_history"
     ],
     "frontendTablesWithoutMigration": [],
     "rpcsInDbNotInFrontend": [
+      "_rbac_seed_grant",
+      "allocate_invoice_number",
+      "apply_invoice_status_backfill",
+      "assert_ddt_preventivo_row_allocations",
+      "assert_invoice_preventivo_allocations",
+      "asset_lifecycle_v1_db_enabled",
+      "assign_ddt_numero",
       "assign_lavorazione_codice",
+      "assign_ordine_fornitore_numero",
       "assign_preventivo_numero_lavorazione",
       "assign_preventivo_numero_manuale",
+      "cab_enqueue_push_delivery",
+      "cab_fanout_client_portal_lavorazione_notification",
+      "cab_fanout_client_portal_lavorazione_notification_core",
+      "cab_fanout_enqueue_raw_after_notification",
+      "cab_invoke_push_delivery_worker",
+      "customer_balance_reconciliation_report",
+      "ddt_preventivo_row_delivered_qty",
+      "document_capture_assert_status_transition",
+      "document_capture_events_append_only",
+      "document_capture_guard_post_finalize",
+      "document_capture_storage_object_allowed",
+      "get_operational_data_version",
+      "guard_mezzi_legacy_attrezzatura_write",
+      "import_file_kind_to_module",
+      "import_file_storage_object_allowed",
+      "invoice_derive_legacy_status",
+      "invoice_events_guard_created_at",
+      "invoice_guard_direct_axes_update",
+      "invoice_guard_direct_status_update",
+      "invoice_init_axes_from_legacy_on_insert",
+      "invoice_insert_event",
+      "invoice_legacy_status_audit_report",
+      "invoice_map_legacy_to_axes",
+      "invoice_payment_reconciliation_report",
+      "invoice_preventivo_allocated_total",
+      "invoice_recalculate_status",
+      "invoice_status_backfill_snapshot",
+      "invoice_status_migration_report",
+      "invoice_sync_legacy_status_from_axes",
+      "invoice_write_status_axes",
+      "maintenance_plans_v1_db_enabled",
+      "mezzi_legacy_attrezzatura_valued",
+      "mezzo_attrezzature_v2_db_enabled",
+      "notification_cliente_inbox_eligible",
+      "notification_priority_rank",
+      "notification_staff_inbox_eligible",
+      "notification_visible_to_auth_user",
+      "ordine_fornitore_compute_totals",
+      "ordine_fornitore_row_total",
+      "profile_display_name",
       "prune_log_modifiche_retention",
+      "recalc_compliance_rule_due",
+      "sync_mezzi_legacy_from_attrezzatura",
+      "sync_mezzo_km_from_reading",
+      "trg_compliance_record_recalc_rule",
+      "trg_delivery_queue_invoke_worker",
+      "trg_fanout_client_portal_lavorazione_completata",
+      "trg_fanout_client_portal_lavorazione_ingresso",
       "trg_lavorazioni_assign_codice",
+      "trg_notifications_enqueue_push_delivery",
+      "trg_ordini_fornitori_assign_numero",
       "trg_preventivi_assign_numero",
-      "user_effective_can"
+      "trg_profiles_role_key_guard",
+      "trg_profiles_ruolo_guard",
+      "trg_push_delivery_queue_invoke_worker",
+      "update_ddt_draft",
+      "user_effective_can",
+      "wse_write_history"
     ],
-    "rpcsInFrontendNotInMigrations": []
+    "rpcsInFrontendNotInMigrations": [
+      "create_intervento_atomic"
+    ]
   }
 }

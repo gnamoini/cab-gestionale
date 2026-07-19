@@ -429,33 +429,32 @@ export function LavorazioneDocumentsManager({
     a.click();
   }
 
-  const rowsContent = (
-    <>
-      {docsQ.isLoading ? <LoadingFormSkeleton fields={onlyTipo ? 1 : 2} className="py-1" /> : null}
-      {LAVORAZIONE_DOCUMENT_SLOTS.filter((slot) => !onlyTipo || slot.tipo === onlyTipo).map((slot) => {
-        const doc = lavorazioneDocumentByTipo(rows, slot.tipo);
-        const busy = uploadingTipo === slot.tipo;
-        return (
-          <DocumentSlotRow
-            key={slot.tipo}
-            label={slot.label}
-            uploadLabel={slot.uploadLabel}
-            doc={doc}
-            canEdit={canEdit}
-            uploading={busy}
-            uploadError={uploadErrorByTipo[slot.tipo]}
-            flatInInfoCard={flatInInfoCard}
-            hideSlotLabel={hideSlotLabel}
-            hubCardLayout={hubCardLayout}
-            onUpload={(file) => void handleUpload(slot.tipo, file)}
-            onRetryUpload={() => retryUpload(slot.tipo)}
-            onRemove={() => void handleRemove(slot.tipo)}
-            onOpen={() => doc && void openDoc(doc)}
-            onDownload={() => doc && void downloadDoc(doc)}
-          />
-        );
-      })}
-    </>
+  const rowsContent = docsQ.isLoading ? (
+    <LoadingFormSkeleton fields={onlyTipo ? 1 : 2} className="py-1" />
+  ) : (
+    LAVORAZIONE_DOCUMENT_SLOTS.filter((slot) => !onlyTipo || slot.tipo === onlyTipo).map((slot) => {
+      const doc = lavorazioneDocumentByTipo(rows, slot.tipo);
+      const busy = uploadingTipo === slot.tipo;
+      return (
+        <DocumentSlotRow
+          key={slot.tipo}
+          label={slot.label}
+          uploadLabel={slot.uploadLabel}
+          doc={doc}
+          canEdit={canEdit}
+          uploading={busy}
+          uploadError={uploadErrorByTipo[slot.tipo]}
+          flatInInfoCard={flatInInfoCard}
+          hideSlotLabel={hideSlotLabel}
+          hubCardLayout={hubCardLayout}
+          onUpload={(file) => void handleUpload(slot.tipo, file)}
+          onRetryUpload={() => retryUpload(slot.tipo)}
+          onRemove={() => void handleRemove(slot.tipo)}
+          onOpen={() => doc && void openDoc(doc)}
+          onDownload={() => doc && void downloadDoc(doc)}
+        />
+      );
+    })
   );
 
   if (hubCardLayout) {

@@ -1,6 +1,5 @@
 
 import { memo } from "react";
-import { ClientLavorazioniPageSkeleton } from "@/components/lavorazioni-clienti/client-lavorazioni-loading-skeleton";
 import { LoadingPageSkeleton, type LoadingPageSkeletonVariant } from "./loading-page-skeleton";
 import { SKELETON_MIN_HEIGHT } from "./skeleton-layout-presets";
 
@@ -41,8 +40,5 @@ export const LoadingSuspenseFallback = memo(function LoadingSuspenseFallback({
 }: LoadingSuspenseFallbackProps) {
   const minHeight = SUSPENSE_VARIANT_MIN_HEIGHT[variant];
   const mergedClass = [minHeight, className].filter(Boolean).join(" ");
-  if (variant === "clienti") {
-    return <ClientLavorazioniPageSkeleton />;
-  }
   return <LoadingPageSkeleton variant={variant} className={mergedClass} />;
 });

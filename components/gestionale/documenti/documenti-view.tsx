@@ -24,7 +24,7 @@ import { cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
 import { warmupDocumentPreview } from "@/lib/observability/asset-cache-warmup";
 import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifecycle";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
-import { PageHeader } from "@/components/gestionale/page-header";
+import { DocumentiTableSection } from "@/components/gestionale/documenti/documenti-page-structure";
 import {
   PageActionMenu,
   pageActionLogItem,
@@ -48,7 +48,6 @@ import {
 import {
   dsPageToolbarBtn,
   dsPageToolbarCtaCompact,
-  dsStackPage,
   GESTIONALE_SEARCH_PLACEHOLDER,
   dsTableActionsGroupEnd,
   dsTableActionBtnPrimary,
@@ -61,10 +60,11 @@ import {
   LoadingButton,
   LoadingErrorState,
   LoadingSkeletonBlock,
-  LoadingTableSkeleton,
+  PageLayout,
   PageToolbar,
   PageToolbarCtaLabel,
   PageToolbarResultCount,
+  SkeletonBoundary,
 } from "@/components/design-system";
 import { buildModificaRigaFromChanges, type CampoChangeLike } from "@/lib/gestionale-log/view-model";
 import { useAuth } from "@/context/auth-context";
@@ -884,7 +884,7 @@ export function DocumentiView() {
     <GestionaleSectionGate module="documenti">
     <div className={layoutPageRoot}>
     <>
-      <PageHeader
+      <PageLayout
         title="Documenti"
         actions={
           <PageActionMenu
@@ -892,9 +892,7 @@ export function DocumentiView() {
             onRefresh={() => void refreshDocumenti()}
           />
         }
-      />
-
-      <div className={dsStackPage}>
+      >
         <GestionaleUploadDropExpand
           overlay
           accept={DOCUMENTO_UPLOAD_ACCEPT}
@@ -907,6 +905,7 @@ export function DocumentiView() {
         >
         <ShellCard>
         <PageToolbar
+          testId="page-ready-toolbar"
           className="sm:mx-0"
           primaryAction={
             <OptionalTooltip content={!canUploadDocuments ? READONLY_PERMISSION_HINT : undefined}>
@@ -1002,15 +1001,9 @@ export function DocumentiView() {
         />
         </ShellCard>
 
-        {documentiInitialLoading ? (
-          <div aria-busy="true" role="status" aria-label="Caricamento documenti">
-            <ShellCard>
-              <div className="p-4">
-                <LoadingTableSkeleton preset="documenti" rows={6} />
-              </div>
-            </ShellCard>
-          </div>
-        ) : documentiQuery.isError ? (
+        <SkeletonBoundary loading={documentiInitialLoading}>
+        <DocumentiTableSection mode="content" geometry="table-documenti" className="mt-4">
+        {documentiQuery.isError ? (
           <ShellCard>
             <LoadingErrorState
               title="Impossibile caricare i documenti"
@@ -1172,8 +1165,10 @@ export function DocumentiView() {
             ) : null}
           </div>
         )}
+        </DocumentiTableSection>
+        </SkeletonBoundary>
         </GestionaleUploadDropExpand>
-      </div>
+      </PageLayout>
 
       {uploadOpen && canUploadDocuments ? (
         <UploadDocumentoModal

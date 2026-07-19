@@ -24,6 +24,7 @@ export function useFatturazionePaymentsQuery(enabled = true) {
   return {
     payments: (q.data ?? []) as CustomerPaymentRow[],
     isLoading: q.isLoading,
+    isInitialLoading: q.isLoading && q.data === undefined,
     refetch: () => void q.refetch(),
   };
 }

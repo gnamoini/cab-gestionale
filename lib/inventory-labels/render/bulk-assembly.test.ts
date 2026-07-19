@@ -6,12 +6,12 @@ const item: BulkLabelItem = {
   entityType: "magazzino_ricambio",
   payload: {
     marca: "BTE",
-    marcaSecondaria: null,
+    marcaSecondaria: "",
     descrizione: "Test",
     codice: "ABC",
-    codiceSecondario: null,
-    fornitoreAlternativo: null,
-    codiceAlternativo: null,
+    codiceSecondario: "",
+    fornitoreAlternativo: "",
+    codiceAlternativo: "",
   },
   qrUrl: "https://example.test/r/abc",
 };

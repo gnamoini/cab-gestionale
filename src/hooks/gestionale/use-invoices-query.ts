@@ -22,6 +22,7 @@ export function useInvoicesQuery(enabled = true) {
   });
 
   const payload = q.data;
+  const isInitialLoading = q.isLoading && payload === undefined;
   return {
     payload,
     invoices: payload?.invoices ?? [],
@@ -31,6 +32,7 @@ export function useInvoicesQuery(enabled = true) {
     customers: payload?.customers ?? [],
     preventiviBilling: payload?.preventiviBilling ?? [],
     isLoading: q.isLoading,
+    isInitialLoading,
     isError: q.isError,
     error: q.error,
     refetch: () => void q.refetch(),

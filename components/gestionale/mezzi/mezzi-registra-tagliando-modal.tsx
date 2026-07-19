@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { LoadingButton } from "@/components/design-system";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
 import { dsBtnNeutral, dsBtnPrimary, dsFormField, dsFormInput, dsFormLabel } from "@/lib/ui/design-system";
@@ -183,12 +184,12 @@ export function MezziRegistraTagliandoModal({
               <label className={dsFormLabel} htmlFor="rt-note">
                 Note
               </label>
-              <textarea
+              <GestionaleTextarea
                 id="rt-note"
                 className={dsFormInput}
                 rows={3}
                 value={note}
-                onChange={(e) => setNote(e.target.value)}
+                onChange={setNote}
               />
             </div>
             {selectedPlan && selectedPlan.parts.length > 0 ? (

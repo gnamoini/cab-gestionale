@@ -28,7 +28,8 @@ const adminUsers = read("src/actions/admin-users.ts");
 assert.doesNotMatch(adminUsers, /password\.length < 6/);
 
 const loginForm = read("app/login/login-form.tsx");
-assert.match(loginForm, /request-password-reset\.client/);
+const forgotModal = read("app/login/login-forgot-password-modal.tsx");
+assert.match(forgotModal, /request-password-reset\.client/);
 assert.match(loginForm, /AuthStandalonePageFooter/);
 assert.match(loginForm, /showThemeToggle=\{false\}/);
 

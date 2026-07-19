@@ -14,7 +14,8 @@ import {
   IconActionButton,
   LoadingButton,
   LoadingFormSkeleton,
-  LoadingMagazzinoListSkeleton,
+  PageLayout,
+  SkeletonBoundary,
 } from "@/components/design-system";
 import { OptionalTooltip, Tooltip } from "@/components/ui";
 import { MagazzinoBulkLabelToolbar } from "@/components/gestionale/magazzino/magazzino-bulk-label-toolbar";
@@ -89,7 +90,6 @@ import type { RicambioMagazzino, SortKeyMagazzino } from "@/lib/magazzino/types"
 import { formatRicambioUnitaMisuraLabel } from "@/lib/magazzino/ricambio-unita-misura";
 import {
   dsPageToolbarCtaCompact,
-  dsStackPage,
   GESTIONALE_SEARCH_PLACEHOLDER,
   dsBtnNeutral,
   dsBtnDanger,
@@ -118,7 +118,7 @@ import {
   gestionaleListTableActionsGroupEnd,
 } from "@/lib/ui/gestionale-list-table";
 import { MagazzinoDescrizioneSortTh } from "@/components/gestionale/magazzino/magazzino-descrizione-sort-th";
-import { PageHeader } from "@/components/gestionale/page-header";
+import { MagazzinoTableSection } from "@/components/gestionale/magazzino/magazzino-page-structure";
 import {
   PageActionMenu,
   pageActionLogItem,
@@ -148,8 +148,11 @@ import {
   type MagazzinoAdvancedFilters,
 } from "@/lib/magazzino/magazzino-advanced-filters";
 import {
+  buildMagazzinoHaystackIndex,
+  magazzinoRowMatchesPageFiltersIndexed,
+} from "@/lib/magazzino/magazzino-filter-search-index";
+import {
   buildMagazzinoSearchSuggestions,
-  magazzinoRowMatchesPageFilters,
   type MagazzinoPageFilters,
 } from "@/lib/magazzino/magazzino-list-ui-filters";
 import {
@@ -1072,9 +1075,16 @@ export function MagazzinoView() {
     return buildMagazzinoSearchSuggestions(prodotti, searchSuggestionsApplied, 8, mezziListePrefs);
   }, [searchFieldFocused, searchSuggestionsApplied, prodotti, mezziListePrefs]);
 
+  const haystackIndex = useMemo(
+    () => buildMagazzinoHaystackIndex(prodotti, mezziListePrefs),
+    [prodotti, mezziListePrefs],
+  );
+
   const filteredSorted = useMemo(() => {
     const orderMap = orderMapRef.current!;
-    let rows = prodotti.filter((p) => magazzinoRowMatchesPageFilters(p, pageFilters, mezziListePrefs));
+    let rows = prodotti.filter((p) =>
+      magazzinoRowMatchesPageFiltersIndexed(p, pageFilters, haystackIndex, mezziListePrefs),
+    );
 
     rows = [...rows].sort((a, b) => {
       if (sortPhase === "natural" || sortColumn === null) {
@@ -1086,7 +1096,7 @@ export function MagazzinoView() {
     });
 
     return rows;
-  }, [prodotti, pageFilters, sortColumn, sortPhase, consumoAvgById, mezziListePrefs]);
+  }, [prodotti, pageFilters, sortColumn, sortPhase, consumoAvgById, mezziListePrefs, haystackIndex]);
 
   filteredSortedRef.current = filteredSorted;
 
@@ -1563,7 +1573,7 @@ export function MagazzinoView() {
       ref={listLayoutRef}
       className={`magazzino-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}
     >
-      <PageHeader
+      <PageLayout
         title="Magazzino ricambi"
         actions={
           <PageActionMenu
@@ -1573,9 +1583,7 @@ export function MagazzinoView() {
             refreshBusy={magazzinoListQ.isFetching}
           />
         }
-      />
-
-      <div className={dsStackPage}>
+      >
       <ShellCard>
         {archivioDupCodeCount > 0 ? (
           <div className="mb-3 flex flex-col gap-2 rounded-lg border border-amber-200/80 bg-amber-50/50 px-3 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/45 dark:bg-amber-950/25">
@@ -1603,6 +1611,7 @@ export function MagazzinoView() {
 
         <section aria-label="Azioni e filtri magazzino">
           <PageToolbar
+            testId="page-ready-toolbar"
             primaryAction={
               <div className="flex shrink-0 flex-nowrap items-center gap-2">
                 <button
@@ -1652,8 +1661,9 @@ export function MagazzinoView() {
             }
             onFilterReset={resetMagazzinoFilters}
             meta={
-              <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2">
+              <div className="flex min-w-0 w-full max-w-full flex-nowrap items-center gap-1.5 sm:flex-1 sm:gap-2">
                 <PageToolbarResultCount
+                  className="max-sm:shrink-0 max-sm:flex-none"
                   count={filteredSorted.length}
                   filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
                   searchActive={searchApplied.trim().length > 0 || searchInput.trim().length > 0}
@@ -1662,6 +1672,7 @@ export function MagazzinoView() {
                 />
                 {magCanCreateRicambio ? (
                   <PageToolbarMetaToggle
+                    className="min-w-0 max-sm:min-h-11 max-sm:flex-1 max-sm:justify-center max-sm:px-3 sm:shrink-0 max-sm:[&_span[aria-hidden]]:hidden"
                     label="Modalità modifica"
                     shortLabel="Modifica"
                     checked={modalitaModifica}
@@ -1678,6 +1689,7 @@ export function MagazzinoView() {
                 ) : null}
                 {magPerm.canRead ? (
                   <PageToolbarMetaToggle
+                    className="min-w-0 max-sm:min-h-11 max-sm:flex-1 max-sm:justify-center max-sm:px-3 sm:shrink-0 max-sm:[&_span[aria-hidden]]:hidden"
                     label="Etichette"
                     checked={labelMode}
                     onChange={(checked) => {
@@ -1703,10 +1715,8 @@ export function MagazzinoView() {
           />
         ) : null}
 
-        {magazzinoInitialLoading ? (
-          <LoadingMagazzinoListSkeleton withToolbar={false} />
-        ) : (
-        <>
+        <SkeletonBoundary loading={magazzinoInitialLoading}>
+        <MagazzinoTableSection mode="content">
         {listLayout === "desktop" ? (
         <GestionaleListTable
           visibilityClass={`mt-4 ${GESTIONALE_LIST_DESKTOP_ONLY_CLASS}`}
@@ -1970,10 +1980,10 @@ export function MagazzinoView() {
         {showPager ? (
           <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} />
         ) : null}
-        </>
-        )}
+        </MagazzinoTableSection>
+        </SkeletonBoundary>
       </ShellCard>
-      </div>
+      </PageLayout>
 
       {newOpen ? (
         <RicambioNewModal

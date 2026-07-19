@@ -1,10 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { LoadingLoginSkeleton } from "@/components/design-system";
+import { LoginPageStructure } from "@/components/auth/login-page-structure";
 
 function loginLoading() {
-  return <LoadingLoginSkeleton />;
+  return <LoginPageStructure mode="skeleton" />;
 }
 
 export const LoginFormLazy = dynamic(

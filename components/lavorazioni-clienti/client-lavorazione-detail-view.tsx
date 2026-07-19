@@ -23,7 +23,8 @@ import {
   resolveClientPortalStatoId,
 } from "@/lib/lavorazioni/client-portal-stati";
 import { lavorazioneRefLabel } from "@/lib/lavorazioni/client-portal-ui";
-import { HubModalPanoramicaPanel, IconActionButton, LoadingClientDetailSkeleton } from "@/components/design-system";
+import { ClientDetailBodySection } from "@/components/lavorazioni-clienti/client-lavorazione-detail-page-structure";
+import { HubModalPanoramicaPanel, IconActionButton } from "@/components/design-system";
 import { dsBtnNeutral, dsGapMd, dsGapXl, dsStackPage } from "@/lib/ui/design-system";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { useClientLavorazioneDetailQuery } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";
@@ -115,7 +116,7 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
     return (
       <>
         <PageHeader title={PORTALE_CLIENTI_LABEL} leading={backToListButton} />
-        <LoadingClientDetailSkeleton />
+        <ClientDetailBodySection mode="skeleton" />
       </>
     );
   }

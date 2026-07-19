@@ -27,6 +27,8 @@ export const SKELETON_MIN_HEIGHT = {
   sicurezzaPanel: "min-h-[32rem]",
   productionReadinessOutcome: "min-h-[5rem]",
   productionReadinessCard: "min-h-[16rem]",
+  /** PageTransitionLoader — geometry parity body slot Suspense */
+  transitionBody: "min-h-16",
 } as const;
 
 export const SKELETON_GRID = {

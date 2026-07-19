@@ -18,6 +18,6 @@ assert.doesNotMatch(tooltip, /scale-95/);
 assert.match(tooltip, /title:\s*undefined/);
 
 const disabled = fs.readFileSync(path.join(ROOT, "components/design-system/disabled-element-tooltip.tsx"), "utf8");
-assert.match(disabled, /inline-flex/);
+assert.match(disabled, /flex w-full min-w-0/);
 
 console.log("tooltip-keyboard-a11y.test OK");

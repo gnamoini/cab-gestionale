@@ -4,10 +4,7 @@ import { cache } from "react";
 import { resolveLavorazioniStatiForServer } from "@/lib/app-settings/resolve-settings-for-server";
 import { verifyClientLavorazioniAccessServer } from "@/src/lib/auth/client-lavorazioni-access-server";
 import { loadServerCallerClienteRef } from "@/src/lib/auth/cliente-portal-scope.server";
-import {
-  CLIENT_PORTAL_ARCHIVIO_FILTERS,
-  CLIENT_PORTAL_INCORSO_FILTERS,
-} from "@/lib/lavorazioni/client-portal-prefetch-filters";
+import { CLIENT_PORTAL_INCORSO_FILTERS } from "@/lib/lavorazioni/client-portal-prefetch-filters";
 import { fetchLavorazioniListRows } from "@/lib/lavorazioni/lavorazioni-list-fetch";
 import {
   buildLavorazioniSchedeCodiciMap,
@@ -41,13 +38,11 @@ export const fetchClientPortalPageDTOServer = cache(async (): Promise<ClientPort
   const sanitizeStati = await resolveLavorazioniStatiForServer();
   const fetchOpts = { clienteRefScope, clientPortal: true as const, sanitizeStati };
 
-  const [inCorsoRes, archivioRes] = await Promise.all([
-    fetchLavorazioniListRows(sb, CLIENT_PORTAL_INCORSO_FILTERS, fetchOpts),
-    fetchLavorazioniListRows(sb, CLIENT_PORTAL_ARCHIVIO_FILTERS, fetchOpts),
-  ]);
+  // ponytail: archivio on-demand client-side — SSR solo inCorso (Sprint 1 perf)
+  const inCorsoRes = await fetchLavorazioniListRows(sb, CLIENT_PORTAL_INCORSO_FILTERS, fetchOpts);
 
   const inCorso = unwrap(inCorsoRes, []);
-  const archivio = unwrap(archivioRes, []);
+  const archivio: LavorazioneListRow[] = [];
   const schedeIds = pickLavorazioniInitialSchedeIds(inCorso);
   if (schedeIds.length === 0) {
     return { inCorso, archivio, schedeBundles: {} };

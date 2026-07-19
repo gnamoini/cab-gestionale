@@ -19,21 +19,23 @@ function read(rel: string): string {
   return fs.readFileSync(path.join(ROOT, rel), "utf8");
 }
 
+const lavCreateHook = read("src/hooks/use-lavorazione-create-submit.ts");
 const lavCreate = read("components/gestionale/lavorazioni/lavorazione-create-modal.tsx");
 const ricambioNew = read("components/gestionale/magazzino/ricambio-new-modal.tsx");
 const ricambioEdit = read("components/gestionale/magazzino/ricambio-edit-modal.tsx");
 const schedaBody = read("components/gestionale/lavorazioni/scheda-ingresso-form-modal.tsx");
 
-// Nuova Lavorazione — Form Engine sections + scheda persist chain
-assert.match(lavCreate, /useFormEngineSections/);
-assert.match(lavCreate, /runSubmit/);
-assert.match(lavCreate, /upsertMezzoFromSchedaIngresso/);
-assert.match(lavCreate, /persistSchedeStore/);
-assert.match(lavCreate, /createdLavorazioneIdRef/);
-assert.match(lavCreate, /partialSuccessRef/);
-assert.match(lavCreate, /incrementHealthCounter\("lavCreateSchedaSyncFail"\)/);
-assert.match(lavCreate, /incrementHealthCounter\("lavCreatePartialRetry"\)/);
-assert.match(lavCreate, /noteIntervento\.trim\(\)/);
+// Nuova Lavorazione — Form Engine sections + scheda persist chain (hook SSOT)
+assert.match(lavCreateHook, /useFormEngineSections/);
+assert.match(lavCreateHook, /runSubmit/);
+assert.match(lavCreateHook, /upsertMezzoFromSchedaIngresso/);
+assert.match(lavCreateHook, /persistSchedeStore/);
+assert.match(lavCreateHook, /createdLavorazioneIdRef/);
+assert.match(lavCreateHook, /partialSuccessRef/);
+assert.match(lavCreateHook, /incrementHealthCounter\("lavCreateSchedaSyncFail"\)/);
+assert.match(lavCreateHook, /incrementHealthCounter\("lavCreatePartialRetry"\)/);
+assert.match(lavCreateHook, /noteIntervento\.trim\(\)/);
+assert.match(lavCreate, /useLavorazioneCreateSubmit/);
 
 // Nuovo Ricambio — Form Engine + lenient save
 assert.match(ricambioNew, /useFormEngine/);

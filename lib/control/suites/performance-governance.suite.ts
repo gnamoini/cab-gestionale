@@ -22,4 +22,9 @@ export const PERFORMANCE_GOVERNANCE_SUITE: readonly string[] = [
   "lib/regression/sicurezza-perf-policy.test.ts",
   "lib/regression/shared-components-perf-policy.test.ts",
   "lib/regression/performance-closure-audit.test.ts",
+  "lib/regression/performance-regression-matrix-policy.test.ts",
+  "lib/regression/memory-regression-policy.test.ts",
+  "lib/regression/boot-investigation-policy.test.ts",
+  "lib/regression/shell-bundle-sprint25-policy.test.ts",
+  "lib/regression/shell-bundle-sprint26-policy.test.ts",
 ];

@@ -12,6 +12,18 @@ const bridgesSrc = fs.readFileSync(
   path.join(ROOT, "src/components/deferred-gestionale-bridges.tsx"),
   "utf8",
 );
+const realtimePackSrc = fs.readFileSync(
+  path.join(ROOT, "src/components/gestionale-realtime-bridge-pack.tsx"),
+  "utf8",
+);
+const adminNotifPackSrc = fs.readFileSync(
+  path.join(ROOT, "src/components/admin-notification-bridge-pack.tsx"),
+  "utf8",
+);
+const pwaBridgePackSrc = fs.readFileSync(
+  path.join(ROOT, "src/components/pwa-bridge-pack.tsx"),
+  "utf8",
+);
 const bellSrc = fs.readFileSync(
   path.join(ROOT, "components/dashboard/admin-notifications-bell.tsx"),
   "utf8",
@@ -47,14 +59,19 @@ const bridgesPromptSrc = fs.readFileSync(
 
 assert.ok(ADMIN_NOTIFICATION_STORE_MAX_ITEMS >= 50 && ADMIN_NOTIFICATION_STORE_MAX_ITEMS <= 500);
 
+assert.match(bridgesSrc, /PwaBridgePack/);
+assert.match(bridgesSrc, /RealtimePack/);
+assert.match(bridgesSrc, /AdminNotifPack/);
+
+assert.match(realtimePackSrc, /GestionaleNotificationsBridge/);
+
 for (const bridge of [
-  "GestionaleNotificationsBridge",
   "AdminLavorazioniNotificationBridge",
   "AdminMagazzinoNotificationBridge",
   "AdminScheduledDigestNotificationBridge",
   "AdminDipendentiPresenzeReminderBridge",
 ]) {
-  assert.match(bridgesSrc, new RegExp(bridge), `missing bridge: ${bridge}`);
+  assert.match(adminNotifPackSrc, new RegExp(bridge), `missing bridge: ${bridge}`);
 }
 
 const catalogSrc = fs.readFileSync(
@@ -158,13 +175,25 @@ assert.match(
   desktopNotifSrc.slice(interactiveFnStart),
   /Notification\.requestPermission/,
 );
-assert.match(bridgesSrc, /NotificationOptInBanner/);
-assert.match(bridgesPromptSrc, /requestDesktopNotificationPermissionInteractive/);
-assert.match(bridgesPromptSrc, /enablePush/);
-assert.match(bridgesPromptSrc, /Attiva le notifiche/);
+assert.match(pwaBridgePackSrc, /NotificationOptInBanner/);
+const optInHookSrc = fs.readFileSync(
+  path.join(ROOT, "src/hooks/use-notification-opt-in.ts"),
+  "utf8",
+);
+assert.match(optInHookSrc, /requestDesktopNotificationPermissionInteractive/);
+assert.match(optInHookSrc, /enablePush/);
+assert.match(bridgesPromptSrc, /useNotificationOptIn/);
+const optInCopySrc = fs.readFileSync(
+  path.join(ROOT, "lib/notifications/notification-opt-in-copy.ts"),
+  "utf8",
+);
+assert.match(optInCopySrc, /Sì, attiva/);
+assert.match(optInCopySrc, /No, grazie/);
+assert.match(bridgesPromptSrc, /notificationOptInAcceptLabel/);
+assert.match(bridgesPromptSrc, /notificationOptInDeclineLabel/);
 assert.match(bridgesPromptSrc, /notificationOptInContextLabel/);
 assert.match(bellSrc, /NotificationsPanelFooter/);
-assert.match(bellSrc, />\s*Abilita\s*</);
+assert.match(bellSrc, /Abilita notifiche/);
 assert.match(bellSrc, />\s*Test\s*</);
 assert.match(bellSrc, /buildAdminDashboardTestNotification/);
 

@@ -31,6 +31,7 @@ export type PwaPushOpenMessage = {
   type: typeof PWA_PUSH_OPEN_MESSAGE_TYPE;
   notificationId?: string;
   href: string;
+  clickedAction?: string;
 };
 
 /** Allinea href push a inboxNotificationHref — pure, no React. */

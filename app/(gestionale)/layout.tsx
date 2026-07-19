@@ -1,6 +1,6 @@
 import "../globals-gestionale-shell.css";
 
-import { FormUxBoundaryBootstrap } from "@/components/form-ux-migration/form-ux-boundary-bootstrap";
+import { DeferredFormUxBoundaryBootstrap } from "@/components/form-ux-migration/deferred-form-ux-boundary-bootstrap";
 
 import { AppProvidersGestionale } from "@/components/app-providers-gestionale";
 
@@ -26,7 +26,7 @@ export default async function GestionaleLayout({ children }: { children: React.R
 
       <AppShell>
 
-        <FormUxBoundaryBootstrap />
+        <DeferredFormUxBoundaryBootstrap />
 
         <GestionaleTopNoticeProvider>
 

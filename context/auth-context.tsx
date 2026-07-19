@@ -25,11 +25,8 @@ import { flushPendingModificaLogs } from "@/src/services/internal/audit-log";
 import { notifyUndoSessionChanged } from "@/lib/gestionale-log/use-undo-session-id";
 import { registerGestionaleVisibilityHandler } from "@/lib/ui/gestionale-visibility-coordinator";
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
-import {
-  isBootInvestigationEnabled,
-  logBoot,
-  trackStoreUpdate,
-} from "@/lib/observability/boot-investigation";
+import { isBootInvestigationEnabled } from "@/lib/observability/boot-investigation-gate";
+import { lazyLogBoot, lazyTrackStoreUpdate } from "@/lib/observability/boot-investigation-lazy";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { invalidateRbacTruthClient } from "@/src/lib/rbac/invalidate-rbac-truth";
 import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
@@ -184,8 +181,8 @@ export function AuthProvider({
   useEffect(() => {
     if (!isBootInvestigationEnabled()) return;
     if (prevStatusRef.current === status) return;
-    trackStoreUpdate("auth.status", prevStatusRef.current, status);
-    logBoot("AUTH", "AuthProvider", { from: prevStatusRef.current, to: status }, `${prevStatusRef.current}→${status}`);
+    lazyTrackStoreUpdate("auth.status", prevStatusRef.current, status);
+    lazyLogBoot("AUTH", "AuthProvider", { from: prevStatusRef.current, to: status }, `${prevStatusRef.current}→${status}`);
     prevStatusRef.current = status;
   }, [status]);
 
@@ -274,7 +271,7 @@ export function AuthProvider({
       source: AuthInvalidSessionSource,
     ) => {
       if (isBootInvestigationEnabled()) {
-        logBoot("AUTH", "reconcile_verdict", {
+        lazyLogBoot("AUTH", "reconcile_verdict", {
           verdict: result.verdict,
           debugId: result.debugId,
           source,
@@ -315,7 +312,7 @@ export function AuthProvider({
 
       if (mySeq !== reconcileSeqRef.current) {
         if (isBootInvestigationEnabled()) {
-          logBoot("AUTH", "reconcile_stale", { mySeq, current: reconcileSeqRef.current, debugId: result.debugId });
+          lazyLogBoot("AUTH", "reconcile_stale", { mySeq, current: reconcileSeqRef.current, debugId: result.debugId });
         }
         return null;
       }
@@ -387,7 +384,7 @@ export function AuthProvider({
       const currentStatus = statusRef.current;
       if (currentStatus !== "authenticated" && currentStatus !== "degraded") return;
       if (isBootInvestigationEnabled()) {
-        logBoot("AUTH", "visibility_refresh", { status: currentStatus });
+        lazyLogBoot("AUTH", "visibility_refresh", { status: currentStatus });
       }
       void refresh();
     });
@@ -414,7 +411,7 @@ export function AuthProvider({
         const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
           if (cancelled) return;
           if (isBootInvestigationEnabled()) {
-            logBoot("AUTH", "onAuthStateChange", { event, hasSession: Boolean(session?.user?.id) });
+            lazyLogBoot("AUTH", "onAuthStateChange", { event, hasSession: Boolean(session?.user?.id) });
           }
 
           if (event === "SIGNED_OUT") {

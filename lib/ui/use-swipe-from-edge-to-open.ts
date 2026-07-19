@@ -10,6 +10,7 @@ import {
 } from "@/lib/ui/mobile-nav-drawer-contract";
 import { shouldNavDrawerClaimEdgeSwipe, type GestureContext } from "@/lib/ui/gesture-arbitration";
 import { recordDrawerTelemetry } from "@/lib/ui/mobile-nav-drawer-telemetry";
+import { armSelectorGhostClickGuard } from "@/lib/selector-interaction/suppress-selector-ghost-click";
 import {
   applyCompositorTransform,
   clearCompositorStyles,
@@ -158,6 +159,7 @@ export function useSwipeFromEdgeToOpen({
   }, []);
 
   const finishCommit = useCallback(() => {
+    armSelectorGhostClickGuard();
     onCommit();
     requestAnimationFrame(() => resetDrag());
   }, [onCommit, resetDrag]);

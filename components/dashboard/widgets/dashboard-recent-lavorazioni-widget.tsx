@@ -92,7 +92,7 @@ export function DashboardRecentLavorazioniWidget() {
     <section className={`flex min-h-[280px] min-w-0 max-w-full flex-col overflow-hidden ${dsSurfaceCard} p-4 sm:p-5`}>
       <h2 className={dsDashboardWidgetTitle}>Ultime modifiche lavorazioni</h2>
       <div className={`${dashboardFeedScrollClass} mt-3 max-h-[min(360px,52vh)] min-h-0 min-w-0 flex-1 pr-1`}>
-        {lavLogsQ.isLoading ? (
+        {lavLogsQ.isLoading && lavLogsQ.data === undefined ? (
           <LoadingFormSkeleton fields={2} className="py-1" />
         ) : lavSlice.length === 0 ? (
           <GestionaleLogEmpty message="Nessuna modifica registrata. Le operazioni su Lavorazioni compaiono qui automaticamente." />

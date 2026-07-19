@@ -12,7 +12,6 @@ import {
   GestionaleListTableActionsHead,
   GlobalTableSortTh,
 } from "@/components/gestionale/global-table";
-import { PageHeader } from "@/components/gestionale/page-header";
 import { IconNavLavorazioni } from "@/components/gestionale/gestionale-nav-config";
 import {
   PageActionMenu,
@@ -25,19 +24,20 @@ import {
 import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { LoadingPreventiviListSkeleton } from "@/components/design-system";
+import { LoadingCardSkeleton, PageLayout, SkeletonBoundary } from "@/components/design-system";
+import { PreventiviTableSection } from "@/components/preventivi/preventivi-page-structure";
 const PreventiviEditorModal = dynamic(
   () => import("@/components/preventivi/preventivi-editor-modal").then((m) => m.PreventiviEditorModal),
   { ssr: false },
 );
 const OrdiniFornitoriView = dynamic(
   () => import("@/components/ordini-fornitori/ordini-fornitori-view").then((m) => m.OrdiniFornitoriView),
-  { ssr: false, loading: () => <LoadingPreventiviListSkeleton /> },
+  { ssr: false, loading: () => <LoadingCardSkeleton minHeightClass="min-h-[12rem]" /> },
 );
 const PreventiviAdvancedFilterPanel = dynamic(
   () =>
     import("@/components/preventivi/preventivi-advanced-filter-panel").then((m) => m.PreventiviAdvancedFilterPanel),
-  { ssr: false, loading: () => <LoadingPreventiviListSkeleton /> },
+  { ssr: false, loading: () => <LoadingCardSkeleton minHeightClass="min-h-[8rem]" /> },
 );
 const DdtDetailDrawer = dynamic(
   () => import("@/components/ddt/ddt-detail-drawer").then((m) => m.DdtDetailDrawer),
@@ -129,7 +129,6 @@ import {
   dsBtnNeutral,
   dsPageToolbarBtn,
   dsPageToolbarCtaCompact,
-  dsStackPage,
   dsSegmentedBtnOff,
   dsSegmentedBtnOn,
   dsSegmentedWrap,
@@ -1050,13 +1049,7 @@ export function PreventiviView() {
     </div>
     <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
-      <PageHeader
-        title="Preventivi"
-        titleAddon={documentSectionTabs}
-        actions={<PageActionMenu />}
-      />
-
-      <div className={dsStackPage}>
+      <PageLayout title="Preventivi" titleAddon={documentSectionTabs} actions={<PageActionMenu />}>
 
       {pageTab === "ordini" ? (
         <OrdiniFornitoriView canRead={canReadPreventivi} canWrite={canWritePreventivi} />
@@ -1068,6 +1061,7 @@ export function PreventiviView() {
       <ShellCard>
         <section aria-label="Azioni e filtri preventivi">
           <PageToolbar
+            testId="page-ready-toolbar"
             primaryAction={
               <Tooltip content={canEditWorkOrders ? "Crea un preventivo senza collegamento a lavorazione" : READONLY_PERMISSION_HINT}>
                 <button
@@ -1130,10 +1124,8 @@ export function PreventiviView() {
           />
         </section>
 
-        {preventiviInitialLoading ? (
-          <LoadingPreventiviListSkeleton withToolbar={false} className="mt-4" />
-        ) : (
-        <>
+        <SkeletonBoundary loading={preventiviInitialLoading}>
+        <PreventiviTableSection mode="content" className="mt-4">
         {listLayout === "desktop" ? (
         <GestionaleListTable
           wrapClassName="mt-4"
@@ -1353,8 +1345,8 @@ export function PreventiviView() {
         ) : null}
 
         {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} /> : null}
-        </>
-        )}
+        </PreventiviTableSection>
+        </SkeletonBoundary>
       </ShellCard>
 
       {editor.open && canEditWorkOrders ? (
@@ -1375,7 +1367,7 @@ export function PreventiviView() {
       ) : null}
         </>
       )}
-      </div>
+      </PageLayout>
 
       <PreventivoEliminaConfirmDialog
         open={eliminaConfirmRecord != null}

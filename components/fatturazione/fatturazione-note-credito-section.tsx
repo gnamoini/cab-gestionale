@@ -10,7 +10,7 @@ import {
 } from "@/components/fatturazione/fattura-status-badge";
 import { invoiceDisplayNumber } from "@/lib/fatturazione/fatturazione-list-ui-filters";
 import type { InvoiceRow } from "@/src/types/supabase-tables";
-import { LoadingFatturazioneListSkeleton } from "@/components/design-system";
+import { FatturazioneTabSection } from "@/components/fatturazione/fatturazione-page-structure";
 import { dsTableActionBtnPrimary, dsTableActionsGroup, dsTypoSectionTitle } from "@/lib/ui/design-system";
 import {
   gestionaleListTableRowClass,
@@ -33,7 +33,7 @@ export function FatturazioneNoteCreditoSection({
     [invoices],
   );
 
-  if (isLoading) return <LoadingFatturazioneListSkeleton withToolbar={false} />;
+  if (isLoading) return <FatturazioneTabSection mode="skeleton" />;
 
   return (
     <ShellCard>

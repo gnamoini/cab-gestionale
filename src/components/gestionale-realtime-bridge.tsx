@@ -35,8 +35,12 @@ import { shouldSuppressSettingsRemoteNotify } from "@/lib/sistema/settings-remot
 import { subscribeGestionaleBroadcast } from "@/lib/sync/cab-realtime-broadcast";
 import { cabSyncEventFromPostgresChange } from "@/lib/sync/cab-sync-bus";
 import { dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
-import { markPollingFallbackDirty } from "@/lib/sync/gestionale-dirty-flush";
+import { markDirtyForOperationalTables } from "@/lib/sync/gestionale-dirty-flush";
 import { isGestionaleDirtySyncEnabled } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
+import {
+  consumeOperationalVersionPoll,
+  resetOperationalVersionBaseline,
+} from "@/lib/sync/operational-data-version";
 import { refetchActiveOperationalSnapshot } from "@/lib/sync/gestionale-snapshot-recovery";
 import { SyncTransportController } from "@/src/lib/runtime/sync/sync-transport-controller";
 import { invalidateRbacTruthClient } from "@/src/lib/rbac/invalidate-rbac-truth";
@@ -100,11 +104,21 @@ export function GestionaleRealtimeBridge() {
       onPoll: () => {
         if (cancelled) return;
         if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-        if (isGestionaleDirtySyncEnabled()) {
-          markPollingFallbackDirty();
-          return;
-        }
-        refetchActiveOperationalSnapshot(qc, { onlyActive: true });
+        void (async () => {
+          let drifted: string[];
+          try {
+            drifted = await consumeOperationalVersionPoll();
+          } catch {
+            return;
+          }
+          if (drifted.length === 0) return;
+
+          if (isGestionaleDirtySyncEnabled()) {
+            markDirtyForOperationalTables(drifted);
+            return;
+          }
+          refetchActiveOperationalSnapshot(qc, { onlyActive: true });
+        })();
       },
       onModeChange: (mode) => {
         const next = mode === "realtime" ? "connected" : mode === "polling" ? "polling" : "idle";
@@ -313,6 +327,7 @@ export function GestionaleRealtimeBridge() {
               rtConnectedRef.current = true;
               reconnectExhausted = false;
               transport.activateRealtime();
+              resetOperationalVersionBaseline();
               if (wasPolling) {
                 wasPolling = false;
                 refetchActiveOperationalSnapshot(qc, { onlyActive: true });
@@ -363,6 +378,7 @@ export function GestionaleRealtimeBridge() {
           reconnectExhausted = false;
           rtConnectedRef.current = true;
           transport.activateRealtime();
+          resetOperationalVersionBaseline();
           if (wasPolling) {
             wasPolling = false;
             refetchActiveOperationalSnapshot(qc, { onlyActive: true });

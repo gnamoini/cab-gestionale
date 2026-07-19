@@ -8,7 +8,8 @@ import {
   syncFocusVisibilityCssVars,
 } from "@/lib/ui/mobile-modal-behavior";
 import { syncAppViewportFill } from "@/lib/ui/viewport-fill-sync";
-import { isBootInvestigationEnabled, logBoot } from "@/lib/observability/boot-investigation";
+import { isBootInvestigationEnabled } from "@/lib/observability/boot-investigation-gate";
+import { lazyLogBoot } from "@/lib/observability/boot-investigation-lazy";
 
 export type ViewportChangeReason = "resize" | "scroll" | "orientation" | "window-resize";
 
@@ -133,12 +134,12 @@ function runViewportSync(reason: ViewportChangeReason): void {
     if (vvSyncWindowStart === 0) vvSyncWindowStart = now;
     if (now - vvSyncWindowStart >= 1000) {
       if (vvSyncCount > 5) {
-        logBoot("RENDER", "vv_sync", { syncPerSec: vvSyncCount, reason: pendingReason }, "high_sync_rate");
+        lazyLogBoot("RENDER", "vv_sync", { syncPerSec: vvSyncCount, reason: pendingReason }, "high_sync_rate");
       }
       vvSyncCount = 0;
       vvSyncWindowStart = now;
     } else if (vvSyncCount === 1) {
-      logBoot("RENDER", "vv_sync", { reason, ...snapshot });
+      lazyLogBoot("RENDER", "vv_sync", { reason, ...snapshot });
     }
   }
 }

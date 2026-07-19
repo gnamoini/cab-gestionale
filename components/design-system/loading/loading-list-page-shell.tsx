@@ -18,7 +18,7 @@ export type LoadingListPageShellProps = {
 export const LoadingListPageShell = memo(function LoadingListPageShell({
   children,
   className = "",
-  withPageHeader = true,
+  withPageHeader = false,
   ariaLabel = "Caricamento pagina",
 }: LoadingListPageShellProps) {
   return (

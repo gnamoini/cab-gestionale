@@ -1,0 +1,16 @@
+{
+  "admin": {
+    "dashboard": true,
+    "rbacResolved": true
+  },
+  "operatore": {
+    "dashboard": false,
+    "dashboardLevel": {
+      "level": "none",
+      "canRead": false,
+      "canWrite": false,
+      "visible": false
+    },
+    "rbacResolved": true
+  }
+}

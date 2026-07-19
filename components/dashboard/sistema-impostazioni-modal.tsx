@@ -5,7 +5,8 @@ import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { SistemaImpostazioniWorkspace } from "@/components/dashboard/settings/settings-workspace-shell";
 import { OperatorGlobalSettingsPilotBadge } from "@/components/gestionale/operator-global-settings-pilot-badge";
-import { LoadingImpostazioniSkeleton } from "@/components/design-system";
+import { PageLayout } from "@/components/design-system";
+import { ImpostazioniPageStructure } from "@/components/dashboard/impostazioni-page-structure";
 import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { dsStackPage } from "@/lib/ui/design-system";
@@ -22,7 +23,11 @@ export function SistemaImpostazioniPageView() {
   const permissions = usePermissions();
 
   if (permissions.isLoading) {
-    return <LoadingImpostazioniSkeleton />;
+    return (
+      <PageLayout title="Configurazione">
+        <ImpostazioniPageStructure mode="skeleton" />
+      </PageLayout>
+    );
   }
 
   if (!permissions.canManageSettings) {

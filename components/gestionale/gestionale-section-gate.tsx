@@ -5,7 +5,8 @@ import { GestionaleAccessLimited } from "@/components/gestionale/gestionale-acce
 import { LoadingErrorState, LoadingPageSkeleton } from "@/components/design-system";
 import { dsStackPage } from "@/lib/ui/design-system";
 import { SECTION_LOADING_FAILSAFE_MS, useLoadingFailsafe } from "@/lib/ui/loading-failsafe";
-import { isBootInvestigationEnabled, logBoot } from "@/lib/observability/boot-investigation";
+import { isBootInvestigationEnabled } from "@/lib/observability/boot-investigation-gate";
+import { lazyLogBoot } from "@/lib/observability/boot-investigation-lazy";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { usePermissions, useUserPermissionsQuery } from "@/src/hooks/use-permissions";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
@@ -36,7 +37,7 @@ export function GestionaleSectionGate({
 
   useEffect(() => {
     if (!isBootInvestigationEnabled()) return;
-    logBoot("RENDER", "GestionaleSectionGate", {
+    lazyLogBoot("RENDER", "GestionaleSectionGate", {
       module,
       isLoading: perm.isLoading,
       loadingFailsafe,

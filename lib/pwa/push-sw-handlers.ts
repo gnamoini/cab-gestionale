@@ -51,6 +51,7 @@ export function registerPushSwHandlers(sw: ServiceWorkerGlobalScope): void {
 
   sw.addEventListener("notificationclick", (event) => {
     event.notification.close();
+    const action = event.action?.trim() || "open";
     const raw = event.notification.data as
       | { href?: string; notificationId?: string; type?: string }
       | undefined;
@@ -62,6 +63,7 @@ export function registerPushSwHandlers(sw: ServiceWorkerGlobalScope): void {
       type: PWA_PUSH_OPEN_MESSAGE_TYPE,
       notificationId,
       href: targetHref,
+      clickedAction: action,
     };
 
     event.waitUntil(
@@ -81,6 +83,34 @@ export function registerPushSwHandlers(sw: ServiceWorkerGlobalScope): void {
           }
         }
         await sw.clients.openWindow(targetHref);
+      })(),
+    );
+  });
+
+  sw.addEventListener("notificationclose", (event) => {
+    const raw = event.notification.data as { notificationId?: string } | undefined;
+    const notificationId = raw?.notificationId?.trim();
+    if (!notificationId) return;
+    event.waitUntil(
+      (async () => {
+        const clients = await sw.clients.matchAll({ type: "window", includeUncontrolled: true });
+        for (const client of clients) {
+          client.postMessage({
+            type: "PWA_PUSH_DISMISSED",
+            notificationId,
+          });
+        }
+      })(),
+    );
+  });
+
+  sw.addEventListener("pushsubscriptionchange", (event) => {
+    event.waitUntil(
+      (async () => {
+        const clients = await sw.clients.matchAll({ type: "window", includeUncontrolled: true });
+        for (const client of clients) {
+          client.postMessage({ type: "PWA_PUSH_SUBSCRIPTION_CHANGE" });
+        }
       })(),
     );
   });

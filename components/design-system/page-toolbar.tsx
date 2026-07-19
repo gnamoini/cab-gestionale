@@ -33,6 +33,8 @@ export type PageToolbarProps = {
   onFilterApply?: () => void;
   filterApplyLabel?: string;
   className?: string;
+  /** Marker benchmark TTUI — es. page-ready-toolbar */
+  testId?: string;
 };
 
 /** Toolbar liste: search + filtri + azioni inline; scorre col contenuto pagina. */
@@ -52,6 +54,7 @@ export function PageToolbar({
   onFilterApply,
   filterApplyLabel,
   className = "",
+  testId,
 }: PageToolbarProps) {
   const smUp = useSmUp();
   const showFilterDrawer = !smUp && filtersExpanded;
@@ -87,7 +90,7 @@ export function PageToolbar({
 
   return (
     <>
-      <ToolbarGroup className={className}>
+      <ToolbarGroup className={className} testId={testId}>
         <ToolbarGroupBody>
           {hasPrimaryAction ? (
             <>
@@ -203,6 +206,7 @@ export function PageToolbarResultCount({
   onSearchReset,
   singularLabel = "risultato",
   pluralLabel = "risultati",
+  className = "",
 }: {
   count: number;
   filtersActive?: boolean;
@@ -211,12 +215,15 @@ export function PageToolbarResultCount({
   onSearchReset?: () => void;
   singularLabel?: string;
   pluralLabel?: string;
+  className?: string;
 }) {
   const showSearchReset = Boolean(searchActive && onSearchReset);
   const showFilterReset = Boolean(filtersActive && onFilterReset);
 
   return (
-    <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-1.5 gap-y-1 sm:flex-wrap">
+    <div
+      className={`flex min-w-0 flex-1 flex-nowrap items-center gap-x-1.5 gap-y-1 sm:flex-wrap ${className}`.trim()}
+    >
       <div className="flex min-w-0 flex-nowrap items-center gap-1.5 sm:flex-wrap">
         <span className={dsPageToolbarMetaChip}>
           <span className="tabular-nums">{count}</span>
@@ -263,6 +270,7 @@ export function PageToolbarMetaToggle({
     : dsPageToolbarMetaActionBtn;
 
   return (
+    // ui-contract-disable-next-line native-title-tooltip: toolbar switch uses title for compact touch hint
     <button
       type="button"
       role="switch"

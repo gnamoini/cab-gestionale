@@ -13,7 +13,7 @@ import {
 } from "@/lib/theme/theme-boot-inline-script";
 import { CAB_BRANDING_BOOT_INLINE_SCRIPT } from "@/lib/theme/branding-boot-inline-script";
 import { CAB_CURSOR_AUTOMATION_DOM_SHIELD_INLINE_SCRIPT } from "@/lib/theme/cursor-automation-dom-shield-inline-script";
-import { logBootServer } from "@/lib/observability/boot-investigation";
+import { lazyLogBootServer } from "@/lib/observability/boot-investigation-lazy";
 import "./globals-core.css";
 
 export { siteMetadata as metadata } from "@/lib/site/site-metadata";
@@ -38,7 +38,7 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const serverTheme = resolveServerThemeMode(cookieStore.get(CAB_THEME_STORAGE_KEY)?.value);
 
-  logBootServer("BOOT", "rsc_root_layout", {
+  lazyLogBootServer("BOOT", "rsc_root_layout", {
     hasUser: Boolean(initialAuthSnapshot?.user?.id),
     userId: initialAuthSnapshot?.user?.id ?? null,
     sessionExpiresAt: initialAuthSnapshot?.session?.expiresAt ?? null,

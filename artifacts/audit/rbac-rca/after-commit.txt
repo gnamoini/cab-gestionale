@@ -1,0 +1,4 @@
+commit: pending (Phase 9 PR-1)
+test: lib/regression/rbac-route-matrix.test.ts
+result: PASS (expected after fix)
+fix: align operatore /dashboard expectation with seed (dashboard: none)

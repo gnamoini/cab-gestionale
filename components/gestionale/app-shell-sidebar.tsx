@@ -48,7 +48,7 @@ import {
 import type { useNavDrawerMachine } from "@/lib/ui/mobile-nav-drawer-machine";
 
 const shellTopBarClass =
-  "flex h-14 shrink-0 items-center border-b border-[color:var(--cab-border)]";
+  "flex min-h-16 shrink-0 items-center border-b border-[color:var(--cab-border)] py-3 pt-[max(0.75rem,env(safe-area-inset-top))]";
 
 type DrawerController = ReturnType<typeof useNavDrawerMachine>;
 
@@ -350,7 +350,8 @@ function MobileNavDrawer({
   const backdropClassExtra = edgeOpening
     ? edgeBackdropProps?.className
     : swipeDismiss.backdropProps.className;
-  const canBackdropClose = committed || edgeOpening;
+  const canBackdropClose =
+    flags.state === "OPEN" || (flags.state === "DRAGGING" && edgeOpening);
 
   const handleBackdropClick = () => {
     if (!canBackdropClose) return;

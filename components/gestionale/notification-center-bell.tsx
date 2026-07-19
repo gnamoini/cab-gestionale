@@ -30,9 +30,10 @@ import { publishNotification } from "@/lib/notifications/publish-notification";
 import { buildAdminDashboardTestNotification } from "@/lib/notifications/admin-dashboard-notifications";
 import {
   getDesktopNotificationPermissionState,
-  requestDesktopNotificationPermissionInteractive,
   type DesktopNotificationPermissionState,
 } from "@/lib/lavorazioni/desktop-notifications";
+import { notificationOptInDeniedMessage, notificationOptInSuccessMessage } from "@/lib/notifications/notification-opt-in-copy";
+import { useNotificationOptIn } from "@/src/hooks/use-notification-opt-in";
 import { useAuth } from "@/context/auth-context";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { dsBtnGhost, dsFocus } from "@/lib/ui/design-system";
@@ -136,24 +137,25 @@ function NotificationsPanelFooter({
   showDesktopControls?: boolean;
 }) {
   const gestToast = useGestionaleToast();
-  const canEnable =
-    showDesktopControls && (permissionState === "default" || permissionState === "denied");
+  const optIn = useNotificationOptIn();
+  const canEnable = optIn.menuEnableVisible;
   const showDeniedHint = showDesktopControls && permissionState === "denied";
   const showDismissAll = notificationCount > 0;
 
   if (!canEnable && !showDeniedHint && !showDismissAll) return null;
 
   const handleEnable = async () => {
-    const result = await requestDesktopNotificationPermissionInteractive();
+    const result = await optIn.enableOptIn();
     onPermissionChange();
     if (result === "granted") {
-      gestToast.success("Notifiche desktop attivate.");
+      gestToast.success(notificationOptInSuccessMessage());
       return;
     }
     if (result === "denied") {
-      gestToast.validation(
-        "Notifiche bloccate dal browser. Apri le impostazioni del sito (lucchetto) e consenti le notifiche.",
-      );
+      gestToast.validation(notificationOptInDeniedMessage(optIn.mode));
+    }
+    if (result === "error") {
+      gestToast.error("Impossibile attivare le notifiche. Riprova tra poco.");
     }
   };
 
@@ -171,7 +173,7 @@ function NotificationsPanelFooter({
         >
           {canEnable ? (
             <button type="button" className={notificationFooterBtnClass} onClick={() => void handleEnable()}>
-              Abilita notifiche desktop
+              Abilita notifiche
             </button>
           ) : null}
           {showDismissAll ? (

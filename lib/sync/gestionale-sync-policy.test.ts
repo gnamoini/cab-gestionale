@@ -71,6 +71,26 @@ try {
   });
   assert.equal(noop.dirtyEntries.length, 0);
 
+  const reconnect = resolveSyncEffects({
+    source: "reconnect",
+    tables: ["magazzino_ricambi", "lavorazioni"],
+    entityIdByTable: new Map(),
+    cabEvents: [],
+    flag: "pilot_heavy",
+  });
+  assert.deepEqual(reconnect.invalidateTables, ["magazzino_ricambi", "lavorazioni"]);
+  assert.equal(reconnect.dirtyEntries.length, 0);
+
+  const logLive = resolveSyncEffects({
+    source: "realtime",
+    tables: ["log_modifiche"],
+    entityIdByTable: new Map([["log_modifiche", "log-1"]]),
+    cabEvents: [],
+    flag: "pilot_heavy",
+  });
+  assert.deepEqual(logLive.invalidateTables, ["log_modifiche"]);
+  assert.equal(logLive.dirtyEntries.length, 0);
+
   assert.ok(ALWAYS_LIVE_TABLES.has("profiles"));
 } finally {
   clearGestionaleSyncScopesForTests();

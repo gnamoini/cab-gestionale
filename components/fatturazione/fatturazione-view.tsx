@@ -124,7 +124,7 @@ export function FatturazioneView() {
   const { modules: permModules } = usePermissionsSnapshot();
   const perms = permModules.fatturazione;
   const { containerRef, layoutClassName } = useGestionaleListLayout();
-  const { invoices, links, customers, preventiviBilling, isLoading, refetch } = useInvoicesQuery();
+  const { invoices, links, customers, preventiviBilling, isInitialLoading, refetch } = useInvoicesQuery();
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
@@ -218,7 +218,7 @@ export function FatturazioneView() {
         return (
           <FatturazioneNoteCreditoSection
             invoices={invoices}
-            isLoading={isLoading}
+            isLoading={isInitialLoading}
             onOpenDetail={(id) => void openDetail(id)}
           />
         );
@@ -237,7 +237,7 @@ export function FatturazioneView() {
           <FatturazioneFattureSection
             invoices={invoices}
             links={links}
-            isLoading={isLoading}
+            isLoading={isInitialLoading}
             canWrite={perms.canWrite}
             onOpenDetail={(id) => void openDetail(id)}
             onNewManuale={() => {

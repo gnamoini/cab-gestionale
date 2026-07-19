@@ -1,7 +1,7 @@
 "use client";
 
 import { LoadingSpinner } from "@/components/design-system/loading";
-import { dsHubModalSection } from "@/lib/ui/design-system";
+import { dsHubModalSection, dsSkeletonPulse } from "@/lib/ui/design-system";
 import type { ReactNode } from "react";
 
 /** Offset sticky anteprima review — sotto step indicator (nav ~5.5rem). */
@@ -35,7 +35,7 @@ function CaptureReviewPanelSkeleton({ rows = 4 }: { rows?: number }) {
       {Array.from({ length: rows }, (_, i) => (
         <div
           key={i}
-          className="h-10 animate-pulse rounded-[var(--ds-radius-md)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,var(--cab-border))]"
+          className={`h-10 rounded-[var(--ds-radius-md)] ${dsSkeletonPulse}`}
           style={{ width: i % 3 === 2 ? "72%" : "100%" }}
         />
       ))}
@@ -59,7 +59,7 @@ export function CaptureReviewPanelLoading({
         <p className="text-center text-sm text-[color:var(--cab-muted-fg)]">{message}</p>
         {skeleton === "preview" ? (
           <div
-            className="mt-1 w-full max-w-full animate-pulse rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,var(--cab-border))]"
+            className={`mt-1 w-full max-w-full rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] ${dsSkeletonPulse}`}
             style={{ aspectRatio: "210 / 297", maxHeight: "min(28rem, 50vh)" }}
             aria-hidden
           />

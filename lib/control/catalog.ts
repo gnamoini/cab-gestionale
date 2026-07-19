@@ -103,6 +103,7 @@ export const CONTROL_CATALOG: Record<string, CatalogEntry> = {
   "ux:mobile-gate": { resolve: () => spawnNpm("ux:mobile-gate") },
   "ios:check": { resolve: () => spawnNpm("ios:check") },
   "flex:eslint:gate": { resolve: () => spawnNpm("flex:eslint:gate") },
+  "audit:dead-code:delta": { resolve: () => spawnNpm("audit:dead-code:delta") },
   "flex:freeze:gate": { resolve: () => spawnNpm("flex:freeze:gate") },
   "smoke:structural": { resolve: () => spawnNpm("smoke:structural") },
   "smoke:playwright": { resolve: () => spawnNpm("smoke:playwright") },
@@ -152,6 +153,7 @@ export const CONTROL_CATALOG: Record<string, CatalogEntry> = {
   "control-coverage": { resolve: () => spawnScript("lib/control/control-coverage.test.ts") },
   "control-owner": { resolve: () => spawnScript("lib/control/control-owner.test.ts") },
   "registry-lifecycle": { resolve: () => spawnScript("lib/control/registry-lifecycle.test.ts") },
+  "notification-ssot": { resolve: () => spawnScript("lib/regression/notification-ssot-policy.test.ts") },
   "ai-runtime": { resolve: () => runTestFiles(AI_RUNTIME_SUITE) },
   "formux-promotion": {
     resolve: () => ({ ok: true, blockers: [], warnings: ["formux promotion deprecated — skipped"] }),

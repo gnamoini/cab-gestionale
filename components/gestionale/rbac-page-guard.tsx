@@ -12,12 +12,12 @@ import {
 } from "@/lib/auth/rbac";
 import { canAccessRoute } from "@/src/lib/auth/can-access-route";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
-import { LoadingSuspenseFallback } from "@/components/design-system/loading/loading-suspense-fallback";
-import { resolveLoadingPageSkeletonVariant } from "@/components/design-system/loading/resolve-loading-page-skeleton-variant";
+import { LoadingSpinner } from "@/components/design-system/loading/loading-spinner";
 import { useLoadingClaim } from "@/context/global-loading-context";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
-import { isBootInvestigationEnabled, logBoot, trackRedirect } from "@/lib/observability/boot-investigation";
+import { isBootInvestigationEnabled } from "@/lib/observability/boot-investigation-gate";
+import { lazyLogBoot, lazyTrackRedirect } from "@/lib/observability/boot-investigation-lazy";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
 
@@ -60,7 +60,7 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isBootInvestigationEnabled()) return;
-    logBoot("RENDER", "RbacPageGuard", {
+    lazyLogBoot("RENDER", "RbacPageGuard", {
       status,
       showLoadingGate,
       loadingFailsafe,
@@ -87,7 +87,7 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isBootInvestigationEnabled()) return;
     if (loadingFailsafe && showLoadingGate) {
-      logBoot("AUTH", "RbacPageGuard", { event: "failsafe_fired", pathname }, "loading_failsafe_8s");
+      lazyLogBoot("AUTH", "RbacPageGuard", { event: "failsafe_fired", pathname }, "loading_failsafe_8s");
     }
   }, [loadingFailsafe, showLoadingGate, pathname]);
 
@@ -104,16 +104,15 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
     if (pathname === ACCESS_DENIED_PATH) return;
     if (!allowed) {
       const to = `${ACCESS_DENIED_PATH}?from=${encodeURIComponent(pathname)}`;
-      trackRedirect(pathname, to, "rbac_denied", "rbac");
+      lazyTrackRedirect(pathname, to, "rbac_denied", "rbac");
       deferredRouterReplace(router, to);
     }
   }, [allowed, checkingPerms, pathname, router, sessionReady]);
 
   if (showLoadingGate && !loadingFailsafe) {
-    const skeletonVariant = resolveLoadingPageSkeletonVariant(pathname);
     return (
-      <div className="min-w-0" aria-busy="true" aria-label={GLOBAL_LOADING_MESSAGES.permessi}>
-        <LoadingSuspenseFallback variant={skeletonVariant} />
+      <div className="flex min-w-0 min-h-[40vh] items-center justify-center" aria-busy="true" aria-label={GLOBAL_LOADING_MESSAGES.permessi}>
+        <LoadingSpinner size="md" label={GLOBAL_LOADING_MESSAGES.permessi} />
       </div>
     );
   }

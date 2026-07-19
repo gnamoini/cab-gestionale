@@ -90,3 +90,72 @@ Ultimo aggiornamento: LoadingManager — mutua esclusione overlay / skeleton / b
 1. Cold load ogni route ERP: un solo `aria-busy` principale nel main.
 2. Nessun salto evidente header/toolbar dopo hydrate.
 3. `npm run smoke:regression` e `npm run ci:tsc`.
+
+---
+
+## Structural Skeleton System v3
+
+Route migrate al sistema **descriptor-driven** (stesso `*PageStructure` per `loading.tsx` e view).
+
+### Architettura
+
+```
+PageLayout (PageHeader reale — mai skeletonizzato)
+ └── PageContent
+      └── SkeletonBoundary (client — solo if loading → skeleton)
+            └── PageSection + SkeletonContract
+```
+
+### SSOT
+
+| File | Ruolo |
+|------|--------|
+| `lib/ui/structural-route-skeleton-contracts.ts` | Contratti skeleton per route migrate |
+| `lib/ui/migrated-structural-routes.ts` | Elenco route migrate |
+| `components/design-system/layout/page-section.tsx` | API pubblica sezione |
+| `components/design-system/loading/structural-skeleton-renderer.tsx` | Renderer RSC-safe |
+| `components/design-system/loading/structural-route-skeleton.tsx` | Body skeleton Suspense (senza header) |
+| `components/design-system/loading/skeleton-boundary.tsx` | Boundary client minimo |
+
+### Route migrate (v3) — tutte
+
+| Route | PageStructure |
+|-------|---------------|
+| `/magazzino` | `MagazzinoPageStructure` |
+| `/mezzi` | `MezziPageStructure` |
+| `/documenti` | `DocumentiPageStructure` |
+| `/preventivi` | `PreventiviPageStructure` |
+| `/dashboard` | `DashboardPageStructure` |
+| `/lavorazioni` | `LavorazioniPageStructure` |
+| `/report` | `ReportPageStructure` |
+| `/agenda` | `AgendaPageStructure` |
+| `/dipendenti` | `DipendentiPageStructure` |
+| `/fatturazione` | `FatturazionePageStructure` |
+| `/impostazioni` | `ImpostazioniPageStructure` |
+| `/sicurezza` | `SicurezzaPageStructure` |
+| `/sicurezza/production-readiness` | `ProductionReadinessPageStructure` |
+| `/lavorazioni-clienti` | `ClientiPageStructure` |
+| `/lavorazioni-clienti/[id]` | `ClientDetailPageStructure` |
+| `/login`, `/login/reset-password` | `LoginPageStructure` (senza PageLayout) |
+
+`LoadingPageSkeleton` delega tutte le varianti strutturali a `StructuralRouteSkeleton`.
+
+### Route legacy residue
+
+Solo fallback generici: `default`, `compact`, `kanban` (`LoadingPageShellSkeleton` / `LoadingKanbanSkeleton`).
+
+### Governance
+
+- `npm run audit:skeleton` — mappa copertura route migrate
+- `lib/regression/structural-skeleton-policy.test.ts` — policy layer loading
+- `lib/regression/skeleton-parity.test.ts` — parità loading ↔ PageStructure
+- `lib/regression/loading-page-skeleton-coverage.test.ts` — structural vs legacy
+
+### Regole v3
+
+- Nessun DOM cloning / parsing
+- Nessun `SkeletonProvider` nel path RSC — `mode` via props
+- PageHeader sempre reale in `PageLayout`
+- Primo fetch liste: toolbar visibile (`SkeletonBoundary` + `ErpTableSection` dove applicabile)
+- Marker TTUI `testId="page-ready-toolbar"` su toolbar route migrate
+

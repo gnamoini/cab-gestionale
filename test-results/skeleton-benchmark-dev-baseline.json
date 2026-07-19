@@ -1,0 +1,54 @@
+{
+  "environment": {
+    "timestamp": "2026-07-19T00:00:00.000Z",
+    "gitCommit": "pre-v3-frozen",
+    "branch": "baseline",
+    "nodeVersion": "frozen",
+    "browser": "chromium",
+    "nextMode": "dev",
+    "dataset": "dev",
+    "machine": "frozen-dev-baseline",
+    "viewport": "1440x900"
+  },
+  "baseUrl": "http://localhost:3000",
+  "measuredAt": "2026-07-19T00:00:00.000Z",
+  "throttled": false,
+  "hard": [
+    {
+      "route": "/dashboard",
+      "navMode": "hard",
+      "ttuiMs": 1394,
+      "blankAfterLoadingMs": 0,
+      "skeletonToInteractiveMs": null,
+      "cls": 0
+    },
+    {
+      "route": "/magazzino",
+      "navMode": "hard",
+      "ttuiMs": 1960,
+      "blankAfterLoadingMs": 0,
+      "skeletonToInteractiveMs": null,
+      "cls": 0
+    },
+    {
+      "route": "/lavorazioni",
+      "navMode": "hard",
+      "ttuiMs": 4594,
+      "blankAfterLoadingMs": 0,
+      "skeletonToInteractiveMs": null,
+      "cls": 0
+    }
+  ],
+  "soft": [
+    {
+      "route": "/lavorazioni",
+      "navMode": "soft",
+      "ttuiMs": 256,
+      "blankAfterLoadingMs": 0,
+      "skeletonToInteractiveMs": null,
+      "cls": 0
+    }
+  ],
+  "failures": [],
+  "_note": "Frozen pre-v3 dev baseline from docs/performance-regression-matrix.md — UX gate reference only"
+}

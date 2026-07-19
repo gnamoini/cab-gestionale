@@ -48,7 +48,24 @@ Disattivazione emergenza: impostare `PWA_PUSH_ENABLED=false` su Vercel **e** su 
 4. Redeploy app Vercel (per inline della public key nel bundle)
 5. Gli utenti con subscription vecchia dovranno ri-abilitare il push (opt-in UI); subscription invalide vengono revocate automaticamente su `410 Gone`
 
-## Pipeline delivery
+## Pipeline delivery (SSOT v4)
+
+```
+NotificationService.publish()
+  → cab_publish_notification + cab_enqueue_raw_delivery
+  → delivery_queue (job_phase=raw)
+  → GET/POST `/api/cron/push-delivery` → runDeliveryWorker()
+  → Aggregator → DeliveryPlanner → Dispatcher → Providers
+```
+
+| Flag | Valori |
+|------|--------|
+| `NEXT_PUBLIC_NOTIFICATIONS_SSOT_V2` | `off` \| `shadow` \| `on` |
+| `DELIVERY_PROVIDER` | `webpush` \| `noop` \| `capture` |
+
+Health: `GET /api/admin/notifications/health`. Rollback: `DELIVERY_PROVIDER=noop`.
+
+## Pipeline delivery (legacy, pre-migration)
 
 ```
 notifications INSERT

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarV2Grid } from "@/components/dashboard/calendar-v2/calendar-v2-grid";
 import type { CalendarSelection } from "@/components/dashboard/calendar-v2/calendar-v2-types";
 import { PageHeader } from "@/components/gestionale/page-header";
-import { LoadingAgendaContentSkeleton } from "@/components/design-system";
+import { AgendaContentSection } from "@/components/workshop-schedule/agenda-page-structure";
 import { AgendaFiltersBar } from "@/components/workshop-schedule/agenda-filters-bar";
 import { AgendaDayTimeline } from "@/components/workshop-schedule/agenda-day-timeline";
 import { AgendaSessionFormModal, type AgendaSessionFormValues } from "@/components/workshop-schedule/agenda-session-form-modal";
@@ -281,7 +281,7 @@ export function AgendaOfficinaView() {
             {isError ? (
               <p className="text-sm text-red-600">{error?.message ?? "Errore caricamento agenda."}</p>
             ) : isLoading ? (
-              <LoadingAgendaContentSkeleton />
+              <AgendaContentSection mode="skeleton" />
             ) : viewMode === "gantt" ? (
               <AgendaGanttViewLazy
                 rows={intelligence.gantt.rows}

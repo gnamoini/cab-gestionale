@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "app/**/*.{ts,tsx}",
+    "proxy.ts",
+    "scripts/**/*.ts",
+    "lib/regression/**/*.test.ts"
+  ],
+  "project": ["**/*.{ts,tsx}"],
+  "ignore": ["supabase/functions/**", "docs/**", ".next/**"],
+  "ignoreBinaries": ["supabase", "playwright", "tsx"],
+  "ignoreWorkspaces": [".next"],
+  "ignoreDependencies": ["@next/bundle-analyzer"],
+  "rules": {
+    "files": "error",
+    "exports": "warn",
+    "dependencies": "warn",
+    "unlisted": "warn"
+  }
+}

@@ -56,4 +56,9 @@ assert.match(provider, /useDashboardSyncInvalidation/);
 assert.match(read("lib/dashboard/use-dashboard-header-kpi-queries.ts"), /useDashboardHeaderKpiQueries/);
 assert.match(read("src/hooks/view/use-control-tower-metrics.ts"), /useDashboardHeaderKpiQueries/);
 
+assert.match(bff, /headerKpi/);
+assert.match(bff, /fetchPreventiviRecordsServer/);
+assert.match(dashboardDeferredBlock, /headerKpi\.preventivi/);
+assert.match(dashboardDeferredBlock, /fatturazioneListQueryKey/);
+
 console.log("dashboard-perf-policy.test.ts OK");

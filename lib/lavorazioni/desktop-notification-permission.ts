@@ -34,9 +34,15 @@ export function formatDesktopNotificationPermissionStatusLabel(
   }
 }
 
+import { readNotificationOptInDecision } from "@/lib/notifications/notification-opt-in-decision";
+
 export function shouldShowDesktopNotificationPermissionBanner(
   state: DesktopNotificationPermissionState,
   promptDismissed: boolean,
 ): boolean {
-  return state === "default" && !promptDismissed;
+  return (
+    state === "default" &&
+    !promptDismissed &&
+    readNotificationOptInDecision() === "pending"
+  );
 }

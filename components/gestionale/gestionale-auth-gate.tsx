@@ -9,7 +9,8 @@ import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/l
 import { useGestionaleTopNotice } from "@/components/gestionale/gestionale-top-notice";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
-import { isBootInvestigationEnabled, logBoot, trackRedirect } from "@/lib/observability/boot-investigation";
+import { isBootInvestigationEnabled } from "@/lib/observability/boot-investigation-gate";
+import { lazyLogBoot, lazyTrackRedirect } from "@/lib/observability/boot-investigation-lazy";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
 
@@ -69,9 +70,9 @@ export function GestionaleAuthGate({ children }: { children: React.ReactNode }) 
         params.set("reason", "session_expired");
       }
       const to = `/login?${params.toString()}`;
-      trackRedirect(pathname, to, hadEstablishedSessionRef.current ? "session_expired" : "anonymous", "auth_gate");
+      lazyTrackRedirect(pathname, to, hadEstablishedSessionRef.current ? "session_expired" : "anonymous", "auth_gate");
       if (isBootInvestigationEnabled()) {
-        logBoot("AUTH", "auth_gate_redirect", { to, hadSession: hadEstablishedSessionRef.current });
+        lazyLogBoot("AUTH", "auth_gate_redirect", { to, hadSession: hadEstablishedSessionRef.current });
       }
       deferredRouterReplace(router, to);
     })();

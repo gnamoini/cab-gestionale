@@ -86,9 +86,9 @@ const ricambioNew = read("components/gestionale/magazzino/ricambio-new-modal.tsx
 assert.match(ricambioNew, /useFormEngine/);
 assert.match(ricambioNew, /runSubmit/);
 
-const lavCreate = read("components/gestionale/lavorazioni/lavorazione-create-modal.tsx");
-assert.match(lavCreate, /useFormEngineSections/);
-assert.match(lavCreate, /runSubmit/);
+const lavCreateHook = read("src/hooks/use-lavorazione-create-submit.ts");
+assert.match(lavCreateHook, /useFormEngineSections/);
+assert.match(lavCreateHook, /runSubmit/);
 
 // prepareGestionaleModalSave delega (runtime no-op senza DOM)
 prepareGestionaleModalSave(null);

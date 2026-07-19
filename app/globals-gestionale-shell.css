@@ -566,6 +566,7 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
 
 .cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav > .gestionale-scrollbar {
   padding-inline: 0.75rem;
+  padding-bottom: var(--cab-scroll-end-pad);
 }
 
 .cab-nav-drawer-panel.cab-sidebar .cab-sidebar-nav-row:not(.cab-sidebar-nav-row--active):not(:disabled) {

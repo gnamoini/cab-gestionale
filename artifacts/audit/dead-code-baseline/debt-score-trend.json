@@ -1,0 +1,23 @@
+{
+  "history": [
+    {
+      "phase": "baseline",
+      "score": 6003,
+      "date": "2026-07-01"
+    },
+    {
+      "phase": "phase5",
+      "score": 5926,
+      "date": "2026-07-15"
+    },
+    {
+      "phase": "phase9",
+      "score": 5973,
+      "date": "2026-07-19"
+    }
+  ],
+  "deltas": {
+    "phase5": -1.3,
+    "phase9": -0.5
+  }
+}

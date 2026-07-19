@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { LoadingSpinner } from "@/components/design-system/loading";
 
 export type CaptureDuplicateContext = {
@@ -107,10 +108,10 @@ export function CaptureDuplicateDialog({
         message={
           <div className="space-y-3 text-sm">
             <p>Spiega perché serve una nuova lavorazione nonostante il documento duplicato.</p>
-            <textarea
+            <GestionaleTextarea
               className="min-h-[5rem] w-full rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-3 py-2 text-sm"
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={setReason}
               placeholder="Es. secondo intervento sullo stesso mezzo in data diversa…"
               minLength={8}
             />

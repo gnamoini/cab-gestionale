@@ -45,6 +45,7 @@ import {
 import { LavorazioniCaptureDropOverlay } from "@/components/document-capture/lavorazioni-capture-drop-overlay";
 import { GestionaleModalShell, GestionaleModalScrollBody } from "@/components/gestionale/gestionale-modal";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
+import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 import {
   captureAcquisitionDraftStillValid,
   clearCaptureAcquisitionDraft,
@@ -743,7 +744,7 @@ export function LavorazioniDigitalCaptureLauncher({
         confirmLabel="Riprendi"
         cancelLabel="Ricomincia"
         pending={resumeBusy}
-        layerClassName="z-[120]"
+        layerClassName={cabModalZConfirm}
         onCancel={handleResumeDiscard}
         onConfirm={() => void handleResumeConfirm()}
       />
@@ -754,7 +755,7 @@ export function LavorazioniDigitalCaptureLauncher({
         message={`Sono state lette più schede insieme (${formatCaptureMultiSchedaLabels(detectedSchedaTipos)}). Procederemo in sequenza: prima la scheda ingresso, poi le altre schede sulla stessa lavorazione.`}
         confirmLabel="Procedi"
         cancelLabel="Annulla acquisizione"
-        layerClassName="z-[120]"
+        layerClassName={cabModalZConfirm}
         onCancel={goBack}
         onConfirm={() => setMultiSchedaPromptOpen(false)}
       />
@@ -778,7 +779,7 @@ export function LavorazioniDigitalCaptureLauncher({
         }
         confirmLabel="Procedi comunque"
         cancelLabel="Torna al form"
-        layerClassName="z-[120]"
+        layerClassName={cabModalZConfirm}
         onCancel={() => {
           setIdentMismatchConfirmOpen(false);
           setPendingHandoffLavorazioneId(null);

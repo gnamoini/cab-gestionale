@@ -5,6 +5,7 @@ import {
   formatCaptureIdentSummary,
   type CaptureIdent,
 } from "@/lib/document-capture/capture-lavorazione-match";
+import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 
 export function CaptureLavorazioneAssignConfirmDialog({
   open,
@@ -38,7 +39,7 @@ export function CaptureLavorazioneAssignConfirmDialog({
       }
       confirmLabel="Sì, assegna"
       cancelLabel="Torna ai dati"
-      layerClassName="z-[120]"
+      layerClassName={cabModalZConfirm}
       onCancel={onCancel}
       onConfirm={onConfirm}
     />

@@ -1,9 +1,10 @@
 
 import { memo, type ReactNode } from "react";
-import { ShellCard } from "@/components/gestionale/shell-card";
+import { dsCardTitle, dsSurfaceCard } from "@/lib/ui/design-system";
+import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { loadingSkeletonPulseClass } from "./loading-tokens";
 
-/** Corpo pulse dentro ShellCard — nessun dettaglio interno simulato. */
+/** Corpo pulse — nessun dettaglio interno simulato. */
 export const skeletonShellCardPulseBodyClass = `${loadingSkeletonPulseClass} w-full`;
 
 export type SkeletonShellCardPulseBodyProps = {
@@ -25,7 +26,9 @@ export const SkeletonShellCardPulseBody = memo(function SkeletonShellCardPulseBo
 
 export type SkeletonShellCardProps = {
   title?: string;
+  /** @deprecated Ignorato — shell statica senza collapsible client. */
   collapsible?: boolean;
+  /** @deprecated Ignorato. */
   defaultCollapsed?: boolean;
   bodyMinHeightClass: string;
   sectionLabel?: string;
@@ -33,11 +36,9 @@ export type SkeletonShellCardProps = {
   className?: string;
 };
 
-/** ShellCard reale con corpo skeleton pulse — stesso contenitore della pagina caricata. */
+/** Shell statica RSC-safe — stesso contenitore visivo di ShellCard senza hook client. */
 export const SkeletonShellCard = memo(function SkeletonShellCard({
   title,
-  collapsible,
-  defaultCollapsed,
   bodyMinHeightClass,
   sectionLabel,
   children,
@@ -53,13 +54,17 @@ export const SkeletonShellCard = memo(function SkeletonShellCard({
   );
 
   return (
-    <ShellCard
-      title={title}
-      collapsible={collapsible}
-      defaultCollapsed={defaultCollapsed}
-      className={className}
+    <section
+      className={`${dsSurfaceCard} ${layoutPageRoot} cab-shell-card min-w-0 ${className}`.trim()}
+      aria-busy="true"
+      aria-hidden={sectionLabel ? true : undefined}
     >
-      {inner}
-    </ShellCard>
+      {title ? (
+        <div className="flex min-h-12 min-w-0 max-w-full border-b border-[color:var(--cab-border)] px-4 py-3 sm:min-h-[3.25rem] sm:px-5">
+          <h2 className={`${dsCardTitle} leading-snug`}>{title}</h2>
+        </div>
+      ) : null}
+      <div className="min-w-0 max-w-full p-4 sm:p-5">{inner}</div>
+    </section>
   );
 });

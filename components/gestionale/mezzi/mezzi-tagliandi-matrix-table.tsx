@@ -146,6 +146,7 @@ const MatrixCell = memo(function MatrixCell({
   return (
     <td className={oreTdClass}>
       <div className={matrixCellCenterClass}>
+        {/* ui-contract-disable-next-line native-title-tooltip: matrix cell uses aria-label and title for state */}
         <button
           type="button"
           className={`${matrixCellCenterClass} p-0 ${dsFocus} rounded-[6px] disabled:opacity-60`}

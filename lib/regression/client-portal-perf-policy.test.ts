@@ -31,6 +31,8 @@ assert.match(portalBlock, /fetchClientPortalPageDTOServer/);
 assert.match(portalBlock, /clientPortal\.lavorazioni\.inCorso/);
 assert.match(portalBff, /resolveLavorazioniStatiForServer/);
 assert.match(portalBff, /sanitizeStati/);
+assert.doesNotMatch(portalBff, /CLIENT_PORTAL_ARCHIVIO_FILTERS/);
+assert.match(portalBff, /archivio: LavorazioneListRow\[\] = \[\]/);
 
 assert.match(contract, /archivioListEnabled/);
 assert.match(contract, /archivioSchedeEnabled/);

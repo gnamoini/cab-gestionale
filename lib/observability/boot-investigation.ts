@@ -42,8 +42,10 @@ const STORE_BURST_WINDOW_MS = 2_000;
 
 function isEnabled(): boolean {
   if (typeof process === "undefined") return false;
-  if (process.env.NODE_ENV === "production") return false;
-  return process.env.NEXT_PUBLIC_BOOT_INVESTIGATION === "1";
+  return (
+    process.env.NEXT_PUBLIC_BOOT_INVESTIGATION === "1" ||
+    process.env.NEXT_PUBLIC_PERF_DIAGNOSTICS === "1"
+  );
 }
 
 const events: BootInvestigationEvent[] = [];
@@ -88,9 +90,7 @@ function maybeConsoleLog(event: BootInvestigationEvent): void {
   }
 }
 
-export function isBootInvestigationEnabled(): boolean {
-  return isEnabled();
-}
+export { isBootInvestigationEnabled } from "@/lib/observability/boot-investigation-gate";
 
 export function logBoot(
   tag: BootInvestigationTag,

@@ -28,8 +28,8 @@ assert.match(sectionGate, /LoadingErrorState/);
 
 assert.match(rbacGuard, /RBAC_LOADING_FAILSAFE_MS = 8_000/);
 
-assert.match(fatturazionePage, /LoadingSuspenseFallback/);
-assert.doesNotMatch(fatturazionePage, /fallback=\{null\}/);
+assert.match(fatturazionePage, /Suspense fallback=\{null\}/);
+assert.doesNotMatch(fatturazionePage, /LoadingSuspenseFallback/);
 
 assert.match(shellSync, /useState<GestionaleShellLayoutState>\(SSR_SAFE_SHELL_LAYOUT_STATE\)/);
 assert.match(shellSync, /SSR_SAFE_SHELL_LAYOUT_STATE/);

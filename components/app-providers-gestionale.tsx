@@ -1,55 +1,80 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { BrandingProvider } from "@/context/branding-context";
-import { UploadFeedbackProvider } from "@/context/upload-feedback-context";
-import { UploadFeedbackTray } from "@/components/gestionale/upload";
-import { SupabaseConfigurationBanner } from "@/components/supabase-configuration-banner";
 import { AppSettingsQueryProvider } from "@/src/context/app-settings-query-context";
 import { DeferredGestionaleBridges } from "@/src/components/deferred-gestionale-bridges";
-import { DataStaleBanner } from "@/components/gestionale/data-stale-banner";
 import { GestionaleDirtySyncModeBridge } from "@/src/components/gestionale-dirty-sync-mode-bridge";
 import { GestionaleDirtyProvider } from "@/src/context/gestionale-dirty-context";
 import { RealtimeStatusProvider } from "@/src/context/realtime-status-context";
 import { SettingsModalOpenProvider } from "@/src/context/settings-modal-open-context";
-import { DevUxEnforcementGuard } from "@/src/components/dev-ux-enforcement-guard";
 import { PermissionsSnapshotMount } from "@/components/gestionale/permissions-snapshot-mount";
 import { ObservabilityProvider } from "@/components/observability/observability-provider";
-import { RuntimeHealthBridge } from "@/components/observability/runtime-health-bridge";
-import { BootInvestigationMount } from "@/components/observability/boot-investigation-mount";
+import { ObservabilityDiagnosticsPack } from "@/components/observability/observability-diagnostics-pack";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
+import { DeferredUploadFeedbackShell } from "@/components/gestionale/deferred-upload-feedback-shell";
+import { DeferredSupabaseConfigurationBanner } from "@/components/gestionale/deferred-supabase-configuration-banner";
+import { DeferredDataStaleBanner } from "@/components/gestionale/deferred-data-stale-banner";
+import {
+  markProviderMountEnd,
+  markProviderMountStart,
+  exposeProviderMountProfile,
+} from "@/lib/performance/provider-mount-instrumentation";
+import { useEffect } from "react";
 
-if (process.env.NODE_ENV === "development") {
-  void import("@/lib/observability/overflow-root-cause-audit");
+const DevUxEnforcementGuard = dynamic(
+  () =>
+    import("@/src/components/dev-ux-enforcement-guard").then((m) => ({
+      default: m.DevUxEnforcementGuard,
+    })),
+  { ssr: false },
+);
+
+function ProviderMountMarker({ id, children }: { id: string; children: React.ReactNode }) {
+  useEffect(() => {
+    markProviderMountStart(id);
+    markProviderMountEnd(id);
+    exposeProviderMountProfile();
+  }, [id]);
+  return <>{children}</>;
 }
 
 /** Provider operativi gestionale — montati solo sotto `(gestionale)/`. */
 export function AppProvidersGestionale({ children }: { children: React.ReactNode }) {
   useBootInvestigationMount("AppProvidersGestionale");
   return (
-    <UploadFeedbackProvider>
-      <UploadFeedbackTray />
-      <AppSettingsQueryProvider>
-        <RealtimeStatusProvider>
-          <ObservabilityProvider>
-            <BootInvestigationMount />
-            <RuntimeHealthBridge />
-            <BrandingProvider>
-              <SettingsModalOpenProvider>
-                <DevUxEnforcementGuard />
-                <SupabaseConfigurationBanner />
-                <PermissionsSnapshotMount>
-                  <GestionaleDirtyProvider>
-                    <GestionaleDirtySyncModeBridge />
-                    <DeferredGestionaleBridges />
-                    <DataStaleBanner />
-                    {children}
-                  </GestionaleDirtyProvider>
-                </PermissionsSnapshotMount>
-              </SettingsModalOpenProvider>
-            </BrandingProvider>
-          </ObservabilityProvider>
-        </RealtimeStatusProvider>
-      </AppSettingsQueryProvider>
-    </UploadFeedbackProvider>
+    <ProviderMountMarker id="AppProvidersGestionale">
+      <DeferredUploadFeedbackShell>
+        <ProviderMountMarker id="AppSettingsQueryProvider">
+          <AppSettingsQueryProvider>
+            <ProviderMountMarker id="RealtimeStatusProvider">
+              <RealtimeStatusProvider>
+                <ProviderMountMarker id="ObservabilityProvider">
+                  <ObservabilityProvider>
+                    <ObservabilityDiagnosticsPack />
+                    <ProviderMountMarker id="BrandingProvider">
+                      <BrandingProvider>
+                        <SettingsModalOpenProvider>
+                          {process.env.NODE_ENV === "development" ? <DevUxEnforcementGuard /> : null}
+                          <DeferredSupabaseConfigurationBanner />
+                          <PermissionsSnapshotMount>
+                            <GestionaleDirtyProvider>
+                              <GestionaleDirtySyncModeBridge />
+                              <DeferredGestionaleBridges />
+                              <DeferredDataStaleBanner />
+                              {children}
+                            </GestionaleDirtyProvider>
+                          </PermissionsSnapshotMount>
+                        </SettingsModalOpenProvider>
+                      </BrandingProvider>
+                    </ProviderMountMarker>
+                  </ObservabilityProvider>
+                </ProviderMountMarker>
+              </RealtimeStatusProvider>
+            </ProviderMountMarker>
+          </AppSettingsQueryProvider>
+        </ProviderMountMarker>
+      </DeferredUploadFeedbackShell>
+    </ProviderMountMarker>
   );
 }

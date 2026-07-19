@@ -1,138 +1,149 @@
 {
-  "generatedAt": "2026-07-18T19:35:32.974Z",
-  "firstLoadJsKb": 1877,
+  "environment": {
+    "timestamp": "2026-07-19T05:06:02.903Z",
+    "gitCommit": "91a7007",
+    "branch": "main",
+    "nodeVersion": "v24.15.0",
+    "browser": "n/a",
+    "nextMode": "production",
+    "dataset": "dev",
+    "machine": "DESKTOP-Jay",
+    "viewport": "build"
+  },
+  "generatedAt": "2026-07-19T05:06:02.909Z",
+  "firstLoadJsKb": 1833.3,
   "vendorChunkKb": 443.3,
-  "sharedChunksKb": 1877,
+  "sharedChunksKb": 1833.3,
   "routeChunks": {
     "/magazzino/carichi/nuovo": {
-      "jsKb": 1877,
+      "jsKb": 1833.3,
       "cssKb": 0,
-      "chunkCount": 34
+      "chunkCount": 33
     },
     "/magazzino/carichi": {
-      "jsKb": 1875.6,
+      "jsKb": 1832,
       "cssKb": 0,
-      "chunkCount": 34
+      "chunkCount": 33
     },
     "/report/design-system-preview": {
-      "jsKb": 1872.2,
-      "cssKb": 0,
-      "chunkCount": 34
-    },
-    "/lavorazioni": {
-      "jsKb": 1841.8,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/magazzino": {
-      "jsKb": 1841.8,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/report": {
-      "jsKb": 1841.8,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/agenda": {
-      "jsKb": 1841.4,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/dashboard": {
-      "jsKb": 1841.4,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/dipendenti": {
-      "jsKb": 1841.4,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/documenti": {
-      "jsKb": 1841.4,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/fatturazione": {
-      "jsKb": 1841.4,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/impostazioni": {
-      "jsKb": 1841.4,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/lavorazioni-clienti": {
-      "jsKb": 1841.4,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/mezzi": {
-      "jsKb": 1841.4,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/preventivi": {
-      "jsKb": 1841.4,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/sicurezza": {
-      "jsKb": 1841.4,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/lavorazioni-clienti/[id]": {
-      "jsKb": 1838.6,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/sicurezza/production-readiness": {
-      "jsKb": 1838.6,
+      "jsKb": 1803.8,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/impostazioni/ai-providers": {
-      "jsKb": 1834.2,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/acesso-negato": {
-      "jsKb": 1826.8,
+      "jsKb": 1765.8,
       "cssKb": 0,
       "chunkCount": 32
     },
+    "/lavorazioni": {
+      "jsKb": 1762.6,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/magazzino": {
+      "jsKb": 1762.6,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/dashboard": {
+      "jsKb": 1762.1,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/report": {
+      "jsKb": 1761.2,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/agenda": {
+      "jsKb": 1760.8,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/dipendenti": {
+      "jsKb": 1760.8,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/documenti": {
+      "jsKb": 1760.8,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/fatturazione": {
+      "jsKb": 1760.8,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/impostazioni": {
+      "jsKb": 1760.8,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/lavorazioni-clienti": {
+      "jsKb": 1760.8,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/mezzi": {
+      "jsKb": 1760.8,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/preventivi": {
+      "jsKb": 1760.8,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/sicurezza": {
+      "jsKb": 1760.8,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/lavorazioni-clienti/[id]": {
+      "jsKb": 1760,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/sicurezza/production-readiness": {
+      "jsKb": 1758,
+      "cssKb": 0,
+      "chunkCount": 32
+    },
+    "/acesso-negato": {
+      "jsKb": 1752.5,
+      "cssKb": 0,
+      "chunkCount": 31
+    },
     "/privacy-policy": {
-      "jsKb": 1660.7,
+      "jsKb": 1622.9,
       "cssKb": 0,
-      "chunkCount": 28
-    },
-    "/login": {
-      "jsKb": 1660.2,
-      "cssKb": 0,
-      "chunkCount": 27
-    },
-    "/login/reset-password": {
-      "jsKb": 1660.2,
-      "cssKb": 0,
-      "chunkCount": 27
-    },
-    "/offline": {
-      "jsKb": 1658.6,
-      "cssKb": 0,
-      "chunkCount": 27
+      "chunkCount": 26
     },
     "/": {
-      "jsKb": 1653,
+      "jsKb": 1620.8,
       "cssKb": 0,
-      "chunkCount": 26
+      "chunkCount": 25
     },
     "/_not-found": {
-      "jsKb": 1653,
+      "jsKb": 1620.8,
       "cssKb": 0,
-      "chunkCount": 26
+      "chunkCount": 25
+    },
+    "/login": {
+      "jsKb": 1620.8,
+      "cssKb": 0,
+      "chunkCount": 25
+    },
+    "/login/reset-password": {
+      "jsKb": 1620.8,
+      "cssKb": 0,
+      "chunkCount": 25
+    },
+    "/offline": {
+      "jsKb": 1620.8,
+      "cssKb": 0,
+      "chunkCount": 25
     }
   },
   "source": "E:\\Projects\\gestionale-cab\\.next\\diagnostics\\route-bundle-stats.json"

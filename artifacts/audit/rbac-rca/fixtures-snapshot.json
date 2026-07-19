@@ -1,0 +1,180 @@
+{
+  "admin": {
+    "roleKey": "admin",
+    "pages": {
+      "dashboard": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "agenda": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "lavorazioni": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "lavorazioni_clienti": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "preventivi": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "fatturazione": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "documenti": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "magazzino": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "magazzino_carichi": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "mezzi": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "dipendenti": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "report": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "impostazioni": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "sicurezza": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      }
+    }
+  },
+  "operatore": {
+    "roleKey": "operatore",
+    "pages": {
+      "dashboard": {
+        "level": "none",
+        "canRead": false,
+        "canWrite": false,
+        "visible": false
+      },
+      "agenda": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "lavorazioni": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "lavorazioni_clienti": {
+        "level": "none",
+        "canRead": false,
+        "canWrite": false,
+        "visible": false
+      },
+      "preventivi": {
+        "level": "none",
+        "canRead": false,
+        "canWrite": false,
+        "visible": false
+      },
+      "fatturazione": {
+        "level": "none",
+        "canRead": false,
+        "canWrite": false,
+        "visible": false
+      },
+      "documenti": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "magazzino": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "magazzino_carichi": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "mezzi": {
+        "level": "write",
+        "canRead": true,
+        "canWrite": true,
+        "visible": true
+      },
+      "dipendenti": {
+        "level": "none",
+        "canRead": false,
+        "canWrite": false,
+        "visible": false
+      },
+      "report": {
+        "level": "none",
+        "canRead": false,
+        "canWrite": false,
+        "visible": false
+      },
+      "impostazioni": {
+        "level": "none",
+        "canRead": false,
+        "canWrite": false,
+        "visible": false
+      },
+      "sicurezza": {
+        "level": "none",
+        "canRead": false,
+        "canWrite": false,
+        "visible": false
+      }
+    }
+  }
+}

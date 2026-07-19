@@ -15,7 +15,8 @@ import {
 } from "react";
 import { GlobalLoadingOverlay } from "@/components/design-system/loading";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
-import { isBootInvestigationEnabled, trackStoreUpdate } from "@/lib/observability/boot-investigation";
+import { isBootInvestigationEnabled } from "@/lib/observability/boot-investigation-gate";
+import { lazyTrackStoreUpdate } from "@/lib/observability/boot-investigation-lazy";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import {
   claimKey,
@@ -160,7 +161,7 @@ export function LoadingManagerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isBootInvestigationEnabled()) return;
     if (prevActiveRef.current === overlayActive) return;
-    trackStoreUpdate("globalLoading", prevActiveRef.current, overlayActive, {
+    lazyTrackStoreUpdate("globalLoading", prevActiveRef.current, overlayActive, {
       message,
       stackDepth: stack.length,
       winningSurface,

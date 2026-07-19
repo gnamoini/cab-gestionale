@@ -1,0 +1,89 @@
+import "server-only";
+
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
+import { assertSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
+
+export const runtime = "nodejs";
+
+export async function GET() {
+  const serviceKey = assertSupabaseServiceRoleKey();
+  const { url } = assertSupabasePublicEnv();
+  const client = createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const now = Date.now();
+
+  const { count: rawPending } = await client
+    .from("delivery_queue")
+    .select("*", { count: "exact", head: true })
+    .eq("job_phase", "raw")
+    .in("status", ["pending", "failed"]);
+
+  const { count: execPending } = await client
+    .from("delivery_queue")
+    .select("*", { count: "exact", head: true })
+    .eq("job_phase", "executive")
+    .in("status", ["pending", "failed"]);
+
+  const { data: oldestRaw } = await client
+    .from("delivery_queue")
+    .select("created_at")
+    .eq("job_phase", "raw")
+    .in("status", ["pending", "failed"])
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  const queueAgeMs = oldestRaw?.[0]?.created_at
+    ? now - new Date(String(oldestRaw[0].created_at)).getTime()
+    : 0;
+
+  const { count: activeSubs } = await client
+    .from("push_subscriptions")
+    .select("*", { count: "exact", head: true })
+    .is("revoked_at", null);
+
+  const { count: captureCount } = await client
+    .from("notification_capture_log")
+    .select("*", { count: "exact", head: true });
+
+  const { data: deliveryStats } = await client
+    .from("notification_delivery")
+    .select("status, provider_ms, dispatch_ms, render_ms")
+    .gte("created_at", new Date(now - 24 * 60 * 60 * 1000).toISOString())
+    .limit(5000);
+
+  const rows = deliveryStats ?? [];
+  const delivered = rows.filter((r) => r.status === "delivered").length;
+  const failed = rows.filter((r) => r.status === "failed").length;
+  const avgProviderMs =
+    rows.reduce((s, r) => s + (Number(r.provider_ms) || 0), 0) / Math.max(rows.length, 1);
+  const avgDispatchMs =
+    rows.reduce((s, r) => s + (Number(r.dispatch_ms) || 0), 0) / Math.max(rows.length, 1);
+  const avgRenderMs =
+    rows.reduce((s, r) => s + (Number(r.render_ms) || 0), 0) / Math.max(rows.length, 1);
+
+  return NextResponse.json({
+    ok: true,
+    queue: {
+      rawPending: rawPending ?? 0,
+      executivePending: execPending ?? 0,
+      queueAgeMs,
+    },
+    devices: { activeSubscriptions: activeSubs ?? 0 },
+    delivery24h: {
+      sampleSize: rows.length,
+      delivered,
+      failed,
+      deliveryRate: rows.length ? delivered / rows.length : null,
+      avgProviderMs: Math.round(avgProviderMs),
+      avgDispatchMs: Math.round(avgDispatchMs),
+      avgRenderMs: Math.round(avgRenderMs),
+    },
+    captureLogTotal: captureCount ?? 0,
+    workerSaturation: null,
+    generatedAt: new Date().toISOString(),
+  });
+}

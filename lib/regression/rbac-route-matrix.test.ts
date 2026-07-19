@@ -21,7 +21,7 @@ assertRouteProtection(
 assertRouteProtection(
   "operatore",
   [
-    { pathname: "/dashboard", allowed: true },
+    { pathname: "/dashboard", allowed: false },
     { pathname: "/report", allowed: false },
     { pathname: "/magazzino", allowed: true },
     { pathname: "/preventivi", allowed: false },

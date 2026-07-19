@@ -16,7 +16,7 @@ const tableRow = read("components/gestionale/lavorazioni/lavorazione-table-row.t
 const mobileCards = read("components/gestionale/lavorazioni/lavorazione-mobile-cards.tsx");
 const lavorazioniView = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
 assert.match(lavorazioniView, /GestionaleListTable/);
-const listSkeleton = read("components/design-system/loading/loading-lavorazioni-list-skeleton.tsx");
+const listSkeleton = read("components/gestionale/lavorazioni/lavorazioni-page-structure.tsx");
 const scrollCss = read("components/gestionale/global-table/gestionale-list-layout.css");
 const listLayoutHook = read("lib/ui/use-gestionale-list-layout.ts");
 const filters = read("components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel.tsx");
@@ -75,9 +75,10 @@ assert.match(
 );
 
 const modals = read("components/gestionale/lavorazioni/lavorazioni-modals.tsx");
+const modalShell = read("components/gestionale/gestionale-modal-shell.tsx");
 assert.match(ingressoForm, /GestionaleModalScrollBody/);
-assert.match(modals, /useMobileModalKeyboard/);
-assert.match(modals, /createPortal/);
+assert.match(modalShell, /useMobileModalKeyboard/);
+assert.match(modalShell, /createPortal/);
 assert.match(modals, /GlobalFixedListPillSelect/);
 assert.doesNotMatch(modals, /<select\b/);
 
@@ -105,6 +106,6 @@ assert.doesNotMatch(view, /hidden xl:block/);
 assert.match(mobileCards, /GESTIONALE_LIST_MOBILE_ONLY_CLASS/);
 assert.doesNotMatch(mobileCards, /xl:hidden/);
 assert.match(view, /GestionaleListTable/);
-assert.match(listSkeleton, /SkeletonShellCard/);
+assert.match(listSkeleton, /mode = "skeleton"/);
 
 console.log("lavorazioni-inputs-audit.test.ts OK");

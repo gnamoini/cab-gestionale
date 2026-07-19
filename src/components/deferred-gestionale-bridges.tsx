@@ -29,9 +29,22 @@ export function DeferredGestionaleBridges() {
       setMounted(false);
       return;
     }
-    const id = requestAnimationFrame(() => setMounted(true));
+    let cancelled = false;
+    const scheduleMount = () => {
+      if (!cancelled) setMounted(true);
+    };
+    if (typeof requestIdleCallback === "function") {
+      const idleId = requestIdleCallback(scheduleMount, { timeout: 2000 });
+      return () => {
+        cancelled = true;
+        cancelIdleCallback(idleId);
+        setMounted(false);
+      };
+    }
+    const rafId = requestAnimationFrame(scheduleMount);
     return () => {
-      cancelAnimationFrame(id);
+      cancelled = true;
+      cancelAnimationFrame(rafId);
       setMounted(false);
     };
   }, [authReady]);

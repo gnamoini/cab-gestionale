@@ -209,6 +209,7 @@ function ReportLavorazioniSectionInner({
                     Anno
                   </th>
                   {monthLabels.map((lab, mi) => (
+                    // ui-contract-disable-next-line native-title-tooltip: month header full label on hover for narrow columns
                     <th
                       key={`h-${mi}-${lab}`}
                       scope="col"

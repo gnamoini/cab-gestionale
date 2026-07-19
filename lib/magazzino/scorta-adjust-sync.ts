@@ -79,6 +79,7 @@ export function applyScortaOptimisticDelta(
     },
     autore,
     mezziListe,
+    { quantitaOnly: true },
   );
 
   if (found) {
@@ -120,6 +121,7 @@ async function revertScortaFromServer(
     (prev) => prev.map((p) => (p.id === ricambioId ? { ...p, scorta: q } : p)),
     autore,
     mezziListe,
+    { quantitaOnly: true },
   );
 }
 
@@ -165,6 +167,7 @@ async function runScortaSyncWorker(
         (prev) => prev.map((p) => (p.id === ricambioId ? { ...p, scorta: serverQ2 } : p)),
         autore,
         mezziListe,
+        { quantitaOnly: true },
       );
 
       const cacheAfter = readScortaFromCache(qc, ricambioId, autore, mezziListe);

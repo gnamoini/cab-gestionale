@@ -7,6 +7,7 @@ import {
   KanbanDndDropZone,
 } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-dnd";
 import { KanbanColumnScroll } from "@/components/gestionale/lavorazioni/kanban-column-scroll";
+import { KanbanVirtualColumnScroll } from "@/components/gestionale/kanban/kanban-virtual-column-scroll";
 import { LAVORAZIONE_EMPTY_DISPLAY } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { KANBAN_UNMAPPED_COLUMN_ID } from "@/lib/lavorazioni/kanban-operational";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
@@ -101,6 +102,27 @@ export function LavorazioniKanbanDesktopBoard({
       renderKanbanCard(row, onOpenRow, flashRowId === row.id || navBulkFlashIds.has(row.id)),
     [renderKanbanCard, onOpenRow, flashRowId, navBulkFlashIds],
   );
+
+const KANBAN_VIRTUAL_MIN = 24;
+
+  const renderColumnScroll = (
+    columnId: string,
+    items: readonly LavorazioneListRow[],
+    content: (visible: readonly LavorazioneListRow[]) => ReactNode,
+  ) => {
+    if (items.length >= KANBAN_VIRTUAL_MIN) {
+      return (
+        <KanbanVirtualColumnScroll columnId={columnId} items={items} className={KANBAN_COLUMN_SCROLL_CLASS}>
+          {(visible) => content(visible as readonly LavorazioneListRow[])}
+        </KanbanVirtualColumnScroll>
+      );
+    }
+    return (
+      <KanbanColumnScroll columnId={columnId} className={KANBAN_COLUMN_SCROLL_CLASS}>
+        {content(items)}
+      </KanbanColumnScroll>
+    );
+  };
 
   const renderKanbanCards = (
     items: readonly LavorazioneListRow[],
@@ -204,13 +226,13 @@ export function LavorazioniKanbanDesktopBoard({
         {wrapColumnDrop(
           col.id,
           "flex flex-col",
-          <KanbanColumnScroll columnId={col.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
-            {items.length === 0 ? (
+          renderColumnScroll(col.id, items, (visible) =>
+            visible.length === 0 ? (
               <p className="py-6 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
             ) : (
-              renderKanbanCards(items)
-            )}
-          </KanbanColumnScroll>,
+              renderKanbanCards(visible)
+            ),
+          ),
         )}
       </section>
     );
@@ -226,13 +248,13 @@ export function LavorazioniKanbanDesktopBoard({
       {wrapColumnDrop(
         completateColumn.id,
         "flex flex-col",
-        <KanbanColumnScroll columnId={completateColumn.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
-          {completateItems.length === 0 ? (
+        renderColumnScroll(completateColumn.id, completateItems, (visible) =>
+          visible.length === 0 ? (
             <p className="py-6 text-center text-[11px] text-zinc-400 dark:text-zinc-500">{closedEmptyMessage}</p>
           ) : (
-            renderKanbanCards(completateItems, openClosedRow)
-          )}
-        </KanbanColumnScroll>,
+            renderKanbanCards(visible, openClosedRow)
+          ),
+        ),
       )}
     </section>
   );
@@ -249,9 +271,7 @@ export function LavorazioniKanbanDesktopBoard({
         {wrapColumnDrop(
           UNMAPPED_COLUMN_CONFIG.id,
           "flex flex-col",
-          <KanbanColumnScroll columnId={UNMAPPED_COLUMN_CONFIG.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
-            {renderKanbanCards(unmapped)}
-          </KanbanColumnScroll>,
+          renderColumnScroll(UNMAPPED_COLUMN_CONFIG.id, unmapped, (visible) => renderKanbanCards(visible)),
           false,
         )}
       </section>

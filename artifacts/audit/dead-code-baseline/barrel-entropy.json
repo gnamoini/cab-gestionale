@@ -1,0 +1,2651 @@
+{
+  "generatedAt": "2026-07-19T06:13:12.537Z",
+  "barrels": [
+    {
+      "barrel": "components/design-system/index.ts",
+      "owner": "design-system",
+      "apiStability": "public",
+      "visibility": "public-barrel",
+      "risk": "high",
+      "exports": [
+        {
+          "export": "Button",
+          "file": "components/design-system/Button.tsx",
+          "directImports": 0,
+          "barrelImports": 136,
+          "status": "active-via-barrel",
+          "apiStability": "public"
+        },
+        {
+          "export": "PrimaryActionButton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type DsButtonProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type DsButtonVariant",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GestionaleAiActionButton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type GestionaleAiActionButtonProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type GestionaleAiActionButtonSize",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type GestionaleAiActionButtonVariant",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GeminiSparkIcon",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "IconButton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type IconButtonProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "IconActionButton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type IconActionButtonProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "Tooltip",
+          "file": "components/design-system/Tooltip.tsx",
+          "directImports": 0,
+          "barrelImports": 136,
+          "status": "active-via-barrel",
+          "apiStability": "public"
+        },
+        {
+          "export": "type TooltipProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "TruncatedTextTooltip",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "DisabledElementTooltip",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type DisabledElementTooltipProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "OptionalTooltip",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type OptionalTooltipProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "TooltipList",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type TooltipListProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "TooltipStatus",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type TooltipStatusProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type TooltipStatusLine",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "MAX_TOOLTIP_STATUS_LINES",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "clampTooltipStatusLines",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "CloseButton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type CloseButtonProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SystemBannerChips",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SystemBannerDismiss",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SystemBannerLayout",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SystemBannerShell",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ShellNavBackButton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ShellNavBackLink",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ShellNavIconBack",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ShellNavIconClose",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ShellNavIconMenu",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ShellNavIconRefresh",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type ShellNavIconProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "Badge",
+          "file": "components/design-system/Badge.tsx",
+          "directImports": 0,
+          "barrelImports": 136,
+          "status": "active-via-barrel",
+          "apiStability": "public"
+        },
+        {
+          "export": "type BadgeTone",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "EntitySimilarWarning",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "useEntitySimilarWarning",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SearchBar",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GESTIONALE_SEARCH_PLACEHOLDER",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SearchBarProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "FormField",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "formInputClass",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "formTextareaClass",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GestionaleTextarea",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type GestionaleTextareaProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type GestionaleTextareaSize",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageLayout",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type PageLayoutProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageContent",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageSection",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "CombinedListSection",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ErpTableSection",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "combinedListSkeletonContract",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type PageContentProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type PageSectionProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type CombinedListSectionProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageToolbar",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageToolbarCtaLabel",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageToolbarOverflowAction",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageToolbarResultCount",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageToolbarMetaToggle",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageToolbarActions",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type PageToolbarProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ToolbarGroup",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ToolbarGroupBody",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ToolbarGroupSearchRow",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ToolbarGroupPrimaryRow",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ToolbarGroupFiltersToggle",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ToolbarGroupOverflowToggle",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ToolbarGroupMetaRow",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ToolbarGroupUtilityRow",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ToolbarGroupFiltersCollapse",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type ToolbarGroupProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "FiltersBar",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type FiltersBarProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GlobalTable",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GlobalTableSortTh",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GlobalTableHeadLabel",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GlobalTableHead",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type GlobalTableProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type GlobalTableSortPhase",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "CardMobile",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "CardMobileActions",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "dsCardMobileShell",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GestionaleInfoCard",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GestionaleInfoMetricRow",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GestionaleInfoRow",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GestionaleInfoSubgroup",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GestionaleCollapsibleChevronBox",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GestionaleCollapsibleChevronIcon",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GestionaleCollapsibleHeader",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GestionaleCollapsiblePanel",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GestionaleCollapsibleSection",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "gestionaleCollapsibleSectionDefaultClass",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "gestionaleCollapsibleSectionFormClass",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "gestionaleCollapsibleSectionTitleClass",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "gestionaleCollapsibleSectionTitleClassName",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type GestionaleCollapsibleSectionTitleTone",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type GestionaleCollapsibleSectionVariant",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "Modal",
+          "file": "components/design-system/Modal.tsx",
+          "directImports": 0,
+          "barrelImports": 136,
+          "status": "active-via-barrel",
+          "apiStability": "public"
+        },
+        {
+          "export": "type ModalProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "Drawer",
+          "file": "components/design-system/Drawer.tsx",
+          "directImports": 0,
+          "barrelImports": 136,
+          "status": "active-via-barrel",
+          "apiStability": "public"
+        },
+        {
+          "export": "type DrawerProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalTab",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalTabBar",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type HubModalTabBarProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type HubModalTabProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaField",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaFieldGrid",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaFieldGroup",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaFieldTile",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaFieldTileShell",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaFieldTiles",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaInlineCell",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaInlineGrid",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaKpiCell",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaKpiGrid",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaNoteEditor",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaPanel",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaSection",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaStatusPill",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaSubsection",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaSummary",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "HubModalPanoramicaSummaryItem",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "hubPanoramicaDisplayValue",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LogEntry",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LogEntryRenderer",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LogEntryProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "useBodyScrollLock",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GlobalLoadingSpinner",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GlobalLoadingView",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GlobalLoadingOverlay",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GlobalLoadingPageFallback",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type GlobalLoadingSpinnerSize",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingSpinner",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageLoadingOverlay",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingSkeletonLine",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingSkeletonBlock",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingProgressBar",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingView",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingOverlay",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingPageFallback",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingStateMessage",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingErrorState",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingPageSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingSuspenseFallback",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageTransitionLoader",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingKanbanSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingCardSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingTableSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingFormSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingUploadProgress",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingButton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "useDelayedLoadingMessage",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "StructuralSkeletonRenderer",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonBoundary",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "resolveSkeletonStructure",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonContract",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonMode",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonGeometry",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonGeometryToken",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonKind",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingTablePreset",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingPageSkeletonVariant",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingButtonPreset",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationBellIcon",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationBellTrigger",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationCountBadge",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationDangerDetail",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationEmptyState",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationList",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationMetaLine",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationOpenLink",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationPanelHeader",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationPanelHint",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationPanelShell",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationQtyChip",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationRowBody",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationRowDismiss",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationRowHeader",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationRowShell",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationRowSurface",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "NotificationSottoScortaRow",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type NotificationBellActiveTone",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        }
+      ]
+    },
+    {
+      "barrel": "components/design-system/loading/index.ts",
+      "owner": "design-system",
+      "apiStability": "public",
+      "visibility": "public-barrel",
+      "risk": "high",
+      "exports": [
+        {
+          "export": "LOADING_SPINNER_DURATION_MS",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LOADING_DELAYED_MESSAGE_MS",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "loadingSpinnerSizeClass",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "loadingSpinnerRingClass",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "loadingSkeletonPulseClass",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "loadingMessageClass",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "loadingCaptionClass",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingSpinnerSize",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingSpinner",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingSpinnerProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingSkeletonLine",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingSkeletonBlock",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingProgressBar",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingProgressBarProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingView",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingOverlay",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingPageFallback",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingViewProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingOverlayProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingPageFallbackProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingStateMessage",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingStateMessageProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingErrorState",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingErrorStateProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingPageSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingPageSkeletonProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingPageSkeletonVariant",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingSuspenseFallback",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingSuspenseFallbackProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageTransitionLoader",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingKanbanSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingLavorazioneMobileCardSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingToolbarSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingCardSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingCardSkeletonProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingTableSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingTableSkeletonProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingTablePreset",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingFormSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingFormSkeletonProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingUploadProgress",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingUploadProgressProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingButton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingButtonProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingButtonPreset",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "useDelayedLoadingMessage",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SKELETON_MIN_HEIGHT",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SKELETON_GRID",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonBlock",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonCard",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonTable",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonChart",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonForm",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonModal",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonDashboardWidget",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonBlockProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonCardProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonTableProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonChartProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonFormProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonModalProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonDashboardWidgetProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonDashboardWidgetVariant",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonShellCard",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonShellCardPulseBody",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "skeletonShellCardPulseBodyClass",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonShellCardProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonShellCardPulseBodyProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingListPageShell",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "gestionaleListPageStackClass",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingListPageShellProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "resolveLoadingPageSkeletonVariant",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingPageShellSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type LoadingPageShellSkeletonProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonKind",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonGeometryToken",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonGeometry",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonContract",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonMode",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SKELETON_GEOMETRY",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "GESTIONALE_COMBINED_LIST_GEOMETRY_MIN",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "resolveGeometryClasses",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type GeometryResolved",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "resolveSkeletonStructure",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "resolveSkeletonStructureList",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type ResolvedSkeletonNode",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "StructuralSkeletonRenderer",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type StructuralSkeletonRendererProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "SkeletonBoundary",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type SkeletonBoundaryProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "StructuralRouteSkeleton",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type StructuralRouteSkeletonProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "skeletonPulseClass",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "skeletonMotionClass",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "LoadingSpinnerSize",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        }
+      ]
+    },
+    {
+      "barrel": "components/design-system/layout/index.ts",
+      "owner": "design-system",
+      "apiStability": "public",
+      "visibility": "internal-barrel",
+      "risk": "medium",
+      "exports": [
+        {
+          "export": "PageLayout",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageContent",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageSection",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type PageLayoutProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type PageSectionProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "PageContentProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "CombinedListSection",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "combinedListSkeletonContract",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "ErpTableSection",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type CombinedListSectionProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        },
+        {
+          "export": "type ErpTableSectionProps",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "public"
+        }
+      ]
+    },
+    {
+      "barrel": "components/design-system/global-input/index.ts",
+      "owner": "design-system",
+      "apiStability": "public",
+      "missing": true,
+      "visibility": "internal-barrel",
+      "risk": "low",
+      "exports": []
+    },
+    {
+      "barrel": "components/report/design-system/index.ts",
+      "owner": "report",
+      "apiStability": "internal",
+      "visibility": "public-barrel",
+      "risk": "high",
+      "exports": [
+        {
+          "export": "ReportSection",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportSectionHeader",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportMetricGrid",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportDomainMetricsGrid",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportMetricRenderer",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportDataTable",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportLineChart",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportBarChart",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportMultiSeriesLineChart",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportMatrix",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportNarrativeBlock",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "StatusBadge",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportEmbeddedModule",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportVisualization",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportDensityProvider",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "REPORT_DEFAULT_DENSITY",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "REPORT_PANORAMICA_DENSITY",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportUnifiedKpiGrid",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        },
+        {
+          "export": "ReportExecutiveKpiSection",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "internal"
+        }
+      ]
+    },
+    {
+      "barrel": "components/form-ux-migration/index.ts",
+      "owner": "forms",
+      "apiStability": "unknown",
+      "visibility": "internal-barrel",
+      "risk": "medium",
+      "exports": [
+        {
+          "export": "FormUxMigrationProvider",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "unknown"
+        },
+        {
+          "export": "useFormUxMigrationContext",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "unknown"
+        },
+        {
+          "export": "MigratedNumberInput",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "unknown"
+        },
+        {
+          "export": "MigratedTextInput",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "unknown"
+        },
+        {
+          "export": "useShadowFieldEvaluation",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "unknown"
+        },
+        {
+          "export": "useFormUxFieldEvaluation",
+          "file": null,
+          "directImports": 0,
+          "barrelImports": 0,
+          "status": "unused",
+          "apiStability": "unknown"
+        }
+      ]
+    }
+  ]
+}

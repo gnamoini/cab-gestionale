@@ -267,9 +267,12 @@ const editModal = read("components/gestionale/lavorazioni/scheda-ingresso-form-m
 assert.match(editModal, /useFormEngine/);
 assert.match(editModal, /runSubmit/);
 
+const createHook = read("src/hooks/use-lavorazione-create-submit.ts");
+assert.match(createHook, /useFormEngineSections/);
+assert.match(createHook, /runSubmit/);
+
 const createModal = read("components/gestionale/lavorazioni/lavorazione-create-modal.tsx");
-assert.match(createModal, /useFormEngineSections/);
-assert.match(createModal, /runSubmit/);
+assert.match(createModal, /useLavorazioneCreateSubmit/);
 assert.doesNotMatch(createModal, /domCliente/);
 assert.doesNotMatch(createModal, /prepareFormSubmit/);
 

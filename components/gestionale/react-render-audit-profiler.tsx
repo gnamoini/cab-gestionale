@@ -1,10 +1,8 @@
 "use client";
 
 import { Profiler, type ProfilerOnRenderCallback, type ReactNode } from "react";
-import {
-  countRender,
-  isBootInvestigationEnabled,
-} from "@/lib/observability/boot-investigation";
+import { isBootInvestigationEnabled } from "@/lib/observability/boot-investigation-gate";
+import { lazyCountRender } from "@/lib/observability/boot-investigation-lazy";
 import { isReactRenderAuditEnabled, recordProfilerRender } from "@/lib/observability/react-render-audit";
 
 type Props = {
@@ -25,7 +23,7 @@ function makeOnRender(id: string): ProfilerOnRenderCallback {
       recordProfilerRender(profilerId || id, phaseNorm, actualDuration);
     }
     if (isBootInvestigationEnabled()) {
-      countRender(profilerId || id, phaseNorm);
+      lazyCountRender(profilerId || id, phaseNorm);
     }
   };
 }

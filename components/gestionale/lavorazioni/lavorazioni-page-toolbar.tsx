@@ -263,6 +263,7 @@ export function LavorazioniListToolbar({
     <ShellCard>
       <section aria-label="Azioni e filtri lavorazioni (in corso e archivio)">
         <PageToolbar
+          testId="page-ready-toolbar"
           primaryAction={
             <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-2">
               <Tooltip

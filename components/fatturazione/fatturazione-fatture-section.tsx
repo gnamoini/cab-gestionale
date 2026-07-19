@@ -32,10 +32,10 @@ import {
 } from "@/lib/fatturazione/fatturazione-list-ui-filters";
 import { useFatturazioneListDerived } from "@/lib/fatturazione/use-fatturazione-list-derived";
 import type { InvoiceLinkRow, InvoiceRow } from "@/src/types/supabase-tables";
+import { FatturazioneTabSection } from "@/components/fatturazione/fatturazione-page-structure";
 import {
   CardMobile,
   CardMobileActions,
-  LoadingFatturazioneListSkeleton,
   PageToolbar,
   PageToolbarCtaLabel,
   PageToolbarResultCount,
@@ -225,7 +225,7 @@ export function FatturazioneFattureSection({
         />
       </section>
       {isLoading ? (
-        <LoadingFatturazioneListSkeleton withToolbar={false} />
+        <FatturazioneTabSection mode="skeleton" />
       ) : layout === "desktop" ? (
         <GestionaleListTable
           wrapClassName="mt-4"

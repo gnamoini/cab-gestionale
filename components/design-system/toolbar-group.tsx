@@ -2,7 +2,7 @@
 
 import { Tooltip } from "@/components/ui";
 import type { ReactNode } from "react";
-import { dsPageToolbar, dsPageToolbarFilterColWidth, dsPageToolbarIconBtn } from "@/lib/ui/design-system";
+import { dsPageToolbar, dsPageToolbarFilterColWidth, dsPageToolbarIconBtn, dsPageToolbarIconBtnBoxed } from "@/lib/ui/design-system";
 
 /**
  * ToolbarGroup — shell strutturale liste gestionale (search + filtri + azioni).
@@ -19,11 +19,17 @@ import { dsPageToolbar, dsPageToolbarFilterColWidth, dsPageToolbarIconBtn } from
 export type ToolbarGroupProps = {
   children: ReactNode;
   className?: string;
+  testId?: string;
 };
 
-export function ToolbarGroup({ children, className = "" }: ToolbarGroupProps) {
+export function ToolbarGroup({ children, className = "", testId }: ToolbarGroupProps) {
   return (
-    <div className={`${dsPageToolbar} min-w-0 w-full max-w-full ${className}`.trim()}>{children}</div>
+    <div
+      className={`${dsPageToolbar} min-w-0 w-full max-w-full ${className}`.trim()}
+      data-testid={testId}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -99,7 +105,7 @@ export function ToolbarGroupFiltersToggle({
     <button
       type="button"
       onClick={onToggle}
-      className={`${dsPageToolbarIconBtn} relative sm:h-11 sm:min-h-11 sm:w-auto ${dsPageToolbarFilterColWidth} sm:gap-2 sm:px-3 sm:py-0 sm:text-sm`}
+      className={`${dsPageToolbarIconBtnBoxed} relative ${dsPageToolbarFilterColWidth} sm:w-auto sm:gap-2 sm:px-3 sm:py-0 sm:text-sm`}
       aria-expanded={expanded}
       aria-label="Filtri"
     >

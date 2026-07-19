@@ -7,7 +7,7 @@ import { formatInvoiceMoney } from "@/components/fatturazione/fattura-status-bad
 import { buildAgingSummary, openItemDaysOverdue, scadenziarioDebitItems } from "@/lib/fatturazione/aging-analytics";
 import { openItemAbsRemaining } from "@/lib/fatturazione/open-items";
 import { useFatturazioneOpenItemsQuery } from "@/src/hooks/gestionale/use-fatturazione-open-items-query";
-import { LoadingFatturazioneListSkeleton } from "@/components/design-system";
+import { FatturazioneTabSection } from "@/components/fatturazione/fatturazione-page-structure";
 import { dsTypoSectionTitle, dsTypoSmall } from "@/lib/ui/design-system";
 import {
   gestionaleListTableRowClass,
@@ -17,11 +17,11 @@ import {
 import { dsTableActionBtnPrimary } from "@/lib/ui/design-system";
 
 export function FatturazioneScadenziarioSection({ onOpenInvoice }: { onOpenInvoice: (id: string) => void }) {
-  const { items, isLoading } = useFatturazioneOpenItemsQuery();
+  const { items, isInitialLoading } = useFatturazioneOpenItemsQuery();
   const debitItems = useMemo(() => scadenziarioDebitItems(items), [items]);
   const aging = useMemo(() => buildAgingSummary(items), [items]);
 
-  if (isLoading) return <LoadingFatturazioneListSkeleton withToolbar={false} />;
+  if (isInitialLoading) return <FatturazioneTabSection mode="skeleton" />;
 
   return (
     <div className="space-y-4">

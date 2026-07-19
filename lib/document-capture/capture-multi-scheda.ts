@@ -124,7 +124,8 @@ function normTarga(v: string): string {
 }
 
 function normMatricola(v: string): string {
-  return v.trim().toUpperCase();
+  const t = v.trim();
+  return t.toUpperCase();
 }
 
 function normScuderia(v: string): string {

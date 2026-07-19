@@ -3,6 +3,7 @@
 import { GestionaleConfirmDialog, gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
+import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 
 export function CaptureUnsavedChangesDialog({
   open,
@@ -23,7 +24,7 @@ export function CaptureUnsavedChangesDialog({
       title="Modifiche non salvate"
       subtitle="Hai modificato alcuni campi nella revisione dati."
       message="Vuoi salvarle prima di proseguire? Se continui senza salvare, le modifiche non verranno applicate."
-      layerClassName="z-[120]"
+      layerClassName={cabModalZConfirm}
       onCancel={onCancel}
       footer={
         <div className={gestionaleConfirmActionsClass}>

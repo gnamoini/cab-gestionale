@@ -126,7 +126,7 @@ function main(): void {
     path.join(ROOT, "components/design-system/loading/loading-suspense-fallback.tsx"),
     "utf8",
   );
-  assert.match(suspense, /LoadingPageSkeleton|ClientLavorazioniPageSkeleton/);
+  assert.match(suspense, /LoadingPageSkeleton/);
 
   console.log("loading-single-representation-policy.test: OK");
 }

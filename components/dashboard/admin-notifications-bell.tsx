@@ -43,9 +43,10 @@ import { publishAdminDashboardNotification } from "@/lib/notifications/admin-das
 import {
   formatDesktopNotificationPermissionStatusLabel,
   getDesktopNotificationPermissionState,
-  requestDesktopNotificationPermissionInteractive,
   type DesktopNotificationPermissionState,
 } from "@/lib/lavorazioni/desktop-notifications";
+import { useNotificationOptIn } from "@/src/hooks/use-notification-opt-in";
+import { notificationOptInDeniedMessage, notificationOptInSuccessMessage } from "@/lib/notifications/notification-opt-in-copy";
 import { useAuth } from "@/context/auth-context";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { dsBtnGhost } from "@/lib/ui/design-system";
@@ -68,22 +69,24 @@ function NotificationsPanelFooter({
 }) {
   const { user } = useAuth();
   const gestToast = useGestionaleToast();
+  const optIn = useNotificationOptIn();
   const statusLabel = formatDesktopNotificationPermissionStatusLabel(permissionState);
-  const canEnable = permissionState === "default" || permissionState === "denied";
+  const canEnable = optIn.menuEnableVisible;
   const canSendTest = permissionState === "granted" && Boolean(user?.id);
   const desktopActive = permissionState === "granted";
 
   const handleEnable = async () => {
-    const result = await requestDesktopNotificationPermissionInteractive();
+    const result = await optIn.enableOptIn();
     onPermissionChange();
     if (result === "granted") {
-      gestToast.success("Notifiche desktop attivate.");
+      gestToast.success(notificationOptInSuccessMessage());
       return;
     }
     if (result === "denied") {
-      gestToast.validation(
-        "Notifiche bloccate dal browser. Apri le impostazioni del sito (lucchetto) e consenti le notifiche.",
-      );
+      gestToast.validation(notificationOptInDeniedMessage(optIn.mode));
+    }
+    if (result === "error") {
+      gestToast.error("Impossibile attivare le notifiche. Riprova tra poco.");
     }
   };
 
@@ -120,7 +123,7 @@ function NotificationsPanelFooter({
         <div className="flex-safe-row min-w-0 max-w-full flex-nowrap items-center gap-1 sm:flex-wrap">
           {canEnable ? (
             <button type="button" className={dsBtnGhost} onClick={() => void handleEnable()}>
-              Abilita
+              Abilita notifiche
             </button>
           ) : null}
           {canSendTest ? (

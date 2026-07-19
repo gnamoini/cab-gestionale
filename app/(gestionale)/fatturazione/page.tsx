@@ -1,6 +1,5 @@
 import { dehydrate } from "@tanstack/react-query";
 import { Suspense } from "react";
-import { LoadingSuspenseFallback } from "@/components/design-system";
 import { FatturazioneDeferredHydration } from "@/components/fatturazione/fatturazione-deferred-hydration";
 import { FatturazioneViewLazy } from "@/components/gestionale/lazy-route-views";
 import { parseFatturazioneTab } from "@/lib/fatturazione/fatturazione-sections-config";
@@ -27,7 +26,7 @@ export default async function FatturazionePage({ searchParams }: FatturazionePag
 
   return (
     <GestionaleHydrationBoundary state={criticalState}>
-      <Suspense fallback={<LoadingSuspenseFallback variant="fatturazione" />}>
+      <Suspense fallback={null}>
         <FatturazioneDeferredHydration includeOpenItems={includeOpenItems} includePayments={includePayments}>
           <FatturazioneViewLazy />
         </FatturazioneDeferredHydration>

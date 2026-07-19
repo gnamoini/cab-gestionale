@@ -27,8 +27,10 @@ assert.doesNotMatch(reconnectBridge, /reconnect-cache-manager/);
 assert.doesNotMatch(reconnectBridge, /invalidatePwaEverything/);
 
 const reconnectSync = read("lib/pwa/pwa-reconnect-sync.ts");
-assert.match(reconnectSync, /source:\s*"reconnect"/);
+assert.match(reconnectSync, /consumeOperationalVersionPoll/);
+assert.match(reconnectSync, /markDirtyForOperationalTables/);
 assert.match(reconnectSync, /refetchActiveOperationalSnapshot/);
+assert.doesNotMatch(reconnectSync, /dispatchGestionaleAction/);
 
 const queryPolicy = read("lib/pwa/pwa-query-policy.ts");
 assert.match(queryPolicy, /data-cache-tiers/);

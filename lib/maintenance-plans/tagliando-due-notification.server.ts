@@ -13,10 +13,11 @@ import {
   evaluateTagliandoDueForMezzo,
   parseSchedaOreLavoro,
 } from "@/lib/maintenance-plans/tagliando-due-eval";
-import { buildTagliandoDueNotificationPayload } from "@/lib/maintenance-plans/tagliando-due-notification-mapper";
+import { buildTagliandoDaEseguireNotification } from "@/lib/maintenance-plans/tagliando-due-notification-mapper";
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
 import type { MaintenanceServiceLite } from "@/lib/maintenance-plans/tagliandi-matrix";
-import { createNotificationRpc } from "@/lib/notifications/create-notification-rpc";
+import { publishNotification } from "@/lib/notifications/application/notification-service";
+import { legacyNotificationToCommand } from "@/lib/notifications/adapters/legacy-admin-dashboard";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
 import type {
@@ -144,12 +145,13 @@ export async function maybePublishTagliandoDueOnInterventoCreateServer(
     });
     if (!evalResult) return;
 
-    const payload = buildTagliandoDueNotificationPayload({
+    const legacy = buildTagliandoDaEseguireNotification({
       lavorazioneId: input.lavorazioneId,
       mezzoId,
       evalResult,
     });
-    await createNotificationRpc(sb, payload);
+    const cmd = legacyNotificationToCommand("server", legacy);
+    if (cmd) await publishNotification(sb, cmd);
   } catch (e) {
     console.warn("[tagliando-due] server publish failed:", e);
   }

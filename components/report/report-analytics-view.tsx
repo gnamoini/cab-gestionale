@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
-import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import {
   ReportPerformanceGate,
@@ -46,7 +45,8 @@ import {
 import { isReportCompareMode } from "@/lib/report/report-compare-options";
 import { useReportLiveData } from "@/lib/report/use-report-live-data";
 import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
-import { LoadingErrorState, LoadingReportSkeleton } from "@/components/design-system";
+import { LoadingErrorState, PageLayout } from "@/components/design-system";
+import { ReportPageStructure } from "@/components/report/report-page-structure";
 import { dsStackPage } from "@/lib/ui/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
@@ -364,10 +364,17 @@ export function ReportAnalyticsView() {
     : null;
 
   if (live.isLoading || !tops || !filterRange || !toolbarProps) {
+    if (!toolbarProps) {
+      return (
+        <PageLayout title="Report" titleAddon={integrityBadge}>
+          <ReportPageStructure mode="skeleton" />
+        </PageLayout>
+      );
+    }
     return (
       <div className={`${dsStackPage} ${layoutPageRoot} min-w-0 max-w-full`}>
-        {toolbarProps ? <ReportToolbar {...toolbarProps} /> : <PageHeader title="Report" titleAddon={integrityBadge} />}
-        <LoadingReportSkeleton />
+        <ReportToolbar {...toolbarProps} />
+        <ReportPageStructure mode="skeleton" />
       </div>
     );
   }

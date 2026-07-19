@@ -1,6 +1,5 @@
 import { dehydrate } from "@tanstack/react-query";
 import { Suspense } from "react";
-import { LoadingSuspenseFallback } from "@/components/design-system";
 import { DocumentiDeferredHydration } from "@/components/gestionale/documenti/documenti-deferred-hydration";
 import { DocumentiViewLazy } from "@/components/gestionale/lazy-route-views";
 import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";
@@ -16,7 +15,7 @@ export default async function DocumentiPage() {
 
   return (
     <GestionaleHydrationBoundary state={criticalState}>
-      <Suspense fallback={<LoadingSuspenseFallback variant="documenti" />}>
+      <Suspense fallback={null}>
         <DocumentiDeferredHydration>
           <DocumentiViewLazy />
         </DocumentiDeferredHydration>

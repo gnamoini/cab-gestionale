@@ -5,6 +5,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, normalize } from "node:path";
+import os from "node:os";
 
 const ROOT = process.cwd();
 const NEXT_DIR = join(ROOT, ".next");
@@ -108,6 +109,28 @@ function largestChunkKb() {
   return Math.round((max / 1024) * 10) / 10;
 }
 
+function buildEnvironment() {
+  let gitCommit = "unknown";
+  let branch = "unknown";
+  try {
+    gitCommit = execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim();
+    branch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], { encoding: "utf8" }).trim();
+  } catch {
+    /* no git */
+  }
+  return {
+    timestamp: new Date().toISOString(),
+    gitCommit,
+    branch,
+    nodeVersion: process.version,
+    browser: "n/a",
+    nextMode: "production",
+    dataset: "dev",
+    machine: os.hostname(),
+    viewport: "build",
+  };
+}
+
 function main() {
   if (!existsSync(ROUTE_STATS)) {
     console.error("extract-build-budgets: missing route-bundle-stats — run npm run build first");
@@ -119,6 +142,7 @@ function main() {
     Object.values(routeChunks).reduce((m, r) => Math.max(m, r.jsKb), 0) || extractGlobalFirstLoad();
   const vendorChunkKb = largestChunkKb();
   const snapshot = {
+    environment: buildEnvironment(),
     generatedAt: new Date().toISOString(),
     firstLoadJsKb,
     vendorChunkKb,

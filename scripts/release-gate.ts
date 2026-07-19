@@ -57,6 +57,7 @@ const STEPS: { label: string; cmd: string; args: string[]; env?: NodeJS.ProcessE
   { label: "smoke:structural", cmd: "npm", args: ["run", "smoke:structural"] },
   { label: "smoke:regression:core", cmd: "npm", args: ["run", "smoke:regression:core"] },
   { label: "flex:eslint:gate", cmd: "npm", args: ["run", "flex:eslint:gate"] },
+  { label: "audit:dead-code:delta", cmd: "npm", args: ["run", "audit:dead-code:delta"] },
   { label: "flex:freeze:gate", cmd: "npm", args: ["run", "flex:freeze:gate"] },
 ];
 

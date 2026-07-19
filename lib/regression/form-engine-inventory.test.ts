@@ -30,6 +30,12 @@ const INVENTORY: MigrationExpect[] = [
     rel: "components/gestionale/lavorazioni/lavorazione-create-modal.tsx",
     category: "A",
     migrated: true,
+    patterns: [/useLavorazioneCreateSubmit/],
+  },
+  {
+    rel: "src/hooks/use-lavorazione-create-submit.ts",
+    category: "A",
+    migrated: true,
     patterns: [/useFormEngineSections/, /runSubmit/],
   },
   {

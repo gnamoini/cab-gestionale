@@ -26,7 +26,11 @@ export type ResolvedSyncEffects = {
 };
 
 /** Tabelle sempre invalidate — nessun dirty signal. */
-export const ALWAYS_LIVE_TABLES = new Set(["user_permissions", "profiles"]);
+export const ALWAYS_LIVE_TABLES = new Set([
+  "user_permissions",
+  "profiles",
+  "log_modifiche",
+]);
 
 export function cabEventToDirtyType(ev: CabSyncEvent): DirtyEntryType | null {
   if (ev.type === "settings_updated") return null;
@@ -117,6 +121,14 @@ export function resolveSyncEffects(input: ResolveSyncEffectInput): ResolvedSyncE
   const dirtyKeys = new Set<string>();
 
   if (source === "local_mutation" || flag === "off") {
+    return {
+      invalidateTables: [...tables],
+      invalidateEntityIdByTable: new Map(entityIdByTable),
+      dirtyEntries: [],
+    };
+  }
+
+  if (source === "reconnect") {
     return {
       invalidateTables: [...tables],
       invalidateEntityIdByTable: new Map(entityIdByTable),

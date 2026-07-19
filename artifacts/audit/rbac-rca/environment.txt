@@ -1,0 +1,6 @@
+node: v24.15.0
+npm: 11.12.1
+next: v16.2.6
+supabase-cli: 2.109.1
+database-schema-version: n/a (test uses seed fixtures, no live DB)
+seed-version: lib/rbac-page-seed.ts RBAC_PAGE_SEED_MATRIX

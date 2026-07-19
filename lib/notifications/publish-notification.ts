@@ -24,22 +24,13 @@ import {
 } from "@/lib/lavorazioni/desktop-notifications";
 import { createNotification } from "@/lib/notifications/create-notification";
 import type { CreateNotificationInput } from "@/lib/notifications/notification-types";
-import {
-  adminDashboardTestDedupKey,
-  dipendentiPresenzeReminderDedupKey,
-  fattureScaduteDigestDedupKey,
-  lavorazioneCompletataDedupKey,
-  lavorazioneCreatedDedupKey,
-  magazzinoSottoScortaDedupKey,
-  tagliandoDaEseguireDedupKey,
-} from "@/lib/notifications/notification-dedup-keys";
+import { adminDashboardTestDedupKey } from "@/lib/notifications/notification-dedup-keys";
 import {
   notificationsV2WritesDb,
   notificationsV2WritesLegacy,
   resolveNotificationsV2Mode,
   type NotificationsV2Mode,
 } from "@/lib/notifications/notifications-v2-flag";
-import { formatTagliandoDaEseguireBody } from "@/lib/maintenance-plans/tagliando-due-notification-mapper";
 import {
   isAdminDashboardTestNotification,
   isDipendentiPresenzeReminderNotification,
@@ -51,85 +42,26 @@ import {
   notificationStoreKey,
   type AdminDashboardNotification,
 } from "@/lib/notifications/admin-dashboard-notifications";
+import { legacyNotificationToCommand } from "@/lib/notifications/adapters/legacy-admin-dashboard";
+import { publishNotificationCommand } from "@/lib/notifications/application/notification-service.client";
+import { notificationsSsotV2Enabled } from "@/lib/notifications/notifications-ssot-v2-flag";
+import { trackDeprecatedUsage } from "@/lib/observability/deprecated-usage";
+import { formatTagliandoDaEseguireBody } from "@/lib/maintenance-plans/tagliando-due-notification-mapper";
 
 export type PublishNotificationResult = { added: boolean; desktop: boolean };
 
 function legacyToCreateInput(notification: AdminDashboardNotification): CreateNotificationInput {
-  if (isLavorazioneDashboardNotification(notification)) {
-    return {
-      type: "lavorazione_created",
-      title: notification.cliente?.trim() || notification.titolo?.trim() || "Nuova lavorazione",
-      body: formatAdminNotificationDesktopBody(notification),
-      href: buildAdminNotificationLavorazioneHref(notification.lavorazioneId),
-      entity_type: "lavorazioni",
-      entity_id: notification.lavorazioneId,
-      dedup_key: lavorazioneCreatedDedupKey(notification.lavorazioneId),
-    };
-  }
-  if (isLavorazioneCompletataNotification(notification)) {
-    return {
-      type: "lavorazione_completata",
-      title: notification.cliente?.trim() || notification.titolo?.trim() || "Lavorazione completata",
-      body: formatLavorazioneCompletataToastMessage(notification),
-      href: buildAdminNotificationLavorazioneHref(notification.lavorazioneId),
-      entity_type: "lavorazioni",
-      entity_id: notification.lavorazioneId,
-      dedup_key: lavorazioneCompletataDedupKey(notification.lavorazioneId),
-    };
-  }
-  if (isMagazzinoDashboardNotification(notification)) {
-    return {
-      type: "magazzino_sotto_scorta",
-      title: notification.esaurito
-        ? notification.descrizione?.trim() || "Ricambio esaurito"
-        : notification.descrizione?.trim() || "Sotto scorta minima",
-      body: formatMagazzinoSottoScortaToastMessage(notification),
-      href: buildAdminNotificationMagazzinoHref(notification.ricambioId),
-      entity_type: "magazzino_ricambi",
-      entity_id: notification.ricambioId,
-      dedup_key: magazzinoSottoScortaDedupKey(notification.ricambioId),
-    };
-  }
-  if (isFattureScaduteDigestNotification(notification)) {
-    return {
-      type: "fatture_scadute_digest",
-      title: `${notification.count} fatture scadute`,
-      body: formatFattureScaduteDigestBody(notification),
-      href: buildAdminNotificationFatturazioneHref(),
-      dedup_key: fattureScaduteDigestDedupKey(notification.dateYmd),
-    };
-  }
-  if (isDipendentiPresenzeReminderNotification(notification)) {
-    return {
-      type: "dipendenti_presenze_reminder",
-      title: formatDipendentiPresenzeReminderTitle(notification.count),
-      body: formatDipendentiPresenzeReminderDesktopBody(notification),
-      href: buildAdminNotificationDipendentiHref(),
-      dedup_key: dipendentiPresenzeReminderDedupKey(notification.dateYmd),
-    };
-  }
-  if (isTagliandoDaEseguireNotification(notification)) {
-    return {
-      type: "tagliando_da_eseguire",
-      title: "Tagliando da eseguire",
-      body: formatTagliandoDaEseguireBody(notification),
-      href: "/mezzi",
-      entity_type: "lavorazioni",
-      entity_id: notification.lavorazioneId,
-      dedup_key: tagliandoDaEseguireDedupKey(notification.lavorazioneId),
-    };
-  }
-  if (isAdminDashboardTestNotification(notification)) {
-    return {
-      type: "admin_dashboard_test",
-      title: "Test notifiche",
-      body: notification.message,
-      href: "/dashboard",
-      dedup_key: adminDashboardTestDedupKey(notification.id.split(":")[1] ?? "anon"),
-    };
-  }
-  const _exhaustive: never = notification;
-  return _exhaustive;
+  const cmd = legacyNotificationToCommand("legacy", notification);
+  if (!cmd) throw new Error("unsupported_notification");
+  return {
+    type: cmd.notificationType,
+    title: cmd.title,
+    body: cmd.body,
+    href: cmd.deepLink,
+    entity_type: cmd.entityType ?? null,
+    entity_id: cmd.entityId ?? null,
+    dedup_key: cmd.dedupKey,
+  };
 }
 
 function desktopPayloadFromLegacy(notification: AdminDashboardNotification) {
@@ -201,7 +133,7 @@ function dispatchDesktop(notification: AdminDashboardNotification): boolean {
   return true;
 }
 
-/** Entry point unificato: rispetta flag v2 (off | create-only | on). */
+/** Facade — delegates to NotificationService when SSOT v4 enabled. */
 export async function publishNotification(
   userId: string,
   notification: AdminDashboardNotification,
@@ -211,6 +143,7 @@ export async function publishNotification(
   let desktop = false;
 
   if (notificationsV2WritesLegacy(mode)) {
+    trackDeprecatedUsage("notification-localstorage-fallback", { mode });
     const key = notificationStoreKey(notification);
     const existed = Boolean(loadAdminNotificationStore(userId).items[key]);
     upsertAdminNotification(userId, notification);
@@ -219,23 +152,39 @@ export async function publishNotification(
   }
 
   if (notificationsV2WritesDb(mode)) {
-    const input = legacyToCreateInput(notification);
-    if (isAdminDashboardTestNotification(notification)) {
-      input.dedup_key = adminDashboardTestDedupKey(userId);
-    }
-    const result = await createNotification(input);
-    if (result.inserted) {
-      added = true;
-      desktop = dispatchDesktop(notification);
-    } else if (!notificationsV2WritesLegacy(mode)) {
-      added = false;
+    if (notificationsSsotV2Enabled()) {
+      const cmd = legacyNotificationToCommand(userId, notification);
+      if (cmd) {
+        if (isAdminDashboardTestNotification(notification)) {
+          cmd.dedupKey = adminDashboardTestDedupKey(userId);
+          cmd.idempotencyKey = `idem:${cmd.dedupKey}`;
+        }
+        const result = await publishNotificationCommand(cmd);
+        if (result.created) {
+          added = true;
+        } else if (!notificationsV2WritesLegacy(mode)) {
+          added = false;
+        }
+      }
+    } else {
+      const input = legacyToCreateInput(notification);
+      if (isAdminDashboardTestNotification(notification)) {
+        input.dedup_key = adminDashboardTestDedupKey(userId);
+      }
+      const result = await createNotification(input);
+      if (result.inserted) {
+        added = true;
+        desktop = dispatchDesktop(notification);
+      } else if (!notificationsV2WritesLegacy(mode)) {
+        added = false;
+      }
     }
   }
 
   return { added, desktop };
 }
 
-/** @deprecated Usare publishNotification con mode. Mantenuto per compat interna. */
+/** @deprecated Usare publishNotification con mode. */
 export async function publishAdminDashboardNotification(
   userId: string,
   notification: AdminDashboardNotification,

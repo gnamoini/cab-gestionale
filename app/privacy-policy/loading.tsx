@@ -1,5 +1,5 @@
-import { LoadingLoginSkeleton } from "@/components/design-system";
+import { LoginPageStructure } from "@/components/auth/login-page-structure";
 
 export default function PrivacyPolicyLoading() {
-  return <LoadingLoginSkeleton />;
+  return <LoginPageStructure mode="skeleton" />;
 }

@@ -36,6 +36,7 @@ import {
   fatturazioneOpenItemsQueryKey,
   fatturazionePaymentsQueryKey,
   mezziListQueryKey,
+  movimentiListQueryKey,
   ordiniFornitoriListQueryKey,
   preventiviBillingQueryKey,
   preventiviRecordsQueryKey,
@@ -138,6 +139,39 @@ export async function prefetchDeferredPage(
         ...dto.logSlices.map((slice) =>
           seedPrefetchedData(qc, [...QK.log, slice.filters] as const, slice.rows, LA_LIST_STALE_MS, GESTIONALE_VIEW_GC_MS),
         ),
+        ...(dto.headerKpi.preventivi
+          ? [
+              seedPrefetchedData(
+                qc,
+                preventiviRecordsQueryKey(),
+                dto.headerKpi.preventivi,
+                GESTIONALE_SEMI_STALE_MS,
+                GESTIONALE_SEMI_GC_MS,
+              ),
+            ]
+          : []),
+        ...(dto.headerKpi.fatturazione
+          ? [
+              seedPrefetchedData(
+                qc,
+                fatturazioneListQueryKey(),
+                dto.headerKpi.fatturazione,
+                GESTIONALE_SEMI_STALE_MS,
+                GESTIONALE_SEMI_GC_MS,
+              ),
+            ]
+          : []),
+        ...(dto.headerKpi.movimenti
+          ? [
+              seedPrefetchedData(
+                qc,
+                movimentiListQueryKey(null),
+                dto.headerKpi.movimenti,
+                GESTIONALE_SEMI_STALE_MS,
+                GESTIONALE_SEMI_GC_MS,
+              ),
+            ]
+          : []),
       ]);
       return;
     }
@@ -159,7 +193,6 @@ export async function prefetchDeferredPage(
     }
     case "lavorazioni_clienti": {
       const inCorso = resolveInitialLoad({ scopeKey: "clientPortal.lavorazioni.inCorso" });
-      const archivio = resolveInitialLoad({ scopeKey: "clientPortal.lavorazioni.archivio" });
       const dto = await fetchClientPortalPageDTOServer();
       const portalPaginated = isServerListPaginationEnabled();
       await Promise.all([
@@ -167,13 +200,6 @@ export async function prefetchDeferredPage(
           qc,
           inCorso.queryKey,
           portalPaginated ? lavorazioniInfiniteSeedFromRows(dto.inCorso) : dto.inCorso,
-          LA_LIST_STALE_MS,
-          GESTIONALE_VIEW_GC_MS,
-        ),
-        seedPrefetchedData(
-          qc,
-          archivio.queryKey,
-          portalPaginated ? lavorazioniInfiniteSeedFromRows(dto.archivio) : dto.archivio,
           LA_LIST_STALE_MS,
           GESTIONALE_VIEW_GC_MS,
         ),

@@ -10,7 +10,8 @@ import {
   syncHostLayoutWidthCssVars,
   type GestionaleShellTier,
 } from "./gestionale-shell-layout";
-import { isBootInvestigationEnabled, logBoot, trackStoreUpdate } from "@/lib/observability/boot-investigation";
+import { isBootInvestigationEnabled } from "@/lib/observability/boot-investigation-gate";
+import { lazyLogBoot, lazyTrackStoreUpdate } from "@/lib/observability/boot-investigation-lazy";
 
 export type GestionaleShellTierState = {
   tier: GestionaleShellTier;
@@ -99,14 +100,14 @@ export function useGestionaleShellLayoutSync(
       if (syncWindowStartRef.current === 0) syncWindowStartRef.current = now;
       const prevTier = prevTierRef.current;
       if (prevTier !== next.tier) {
-        trackStoreUpdate("shellLayout", prevTier ?? null, { tier: next.tier, contentWidth });
-        logBoot("RENDER", "shell_sync", { tier: next.tier, contentWidth }, "layout_change");
+        lazyTrackStoreUpdate("shellLayout", prevTier ?? null, { tier: next.tier, contentWidth });
+        lazyLogBoot("RENDER", "shell_sync", { tier: next.tier, contentWidth }, "layout_change");
         prevTierRef.current = next.tier;
       }
       if (now - syncWindowStartRef.current >= 1000) {
         const rate = syncCountRef.current;
         if (rate > 5) {
-          logBoot("RENDER", "shell_sync", { syncPerSec: rate }, "high_sync_rate");
+          lazyLogBoot("RENDER", "shell_sync", { syncPerSec: rate }, "high_sync_rate");
         }
         syncCountRef.current = 0;
         syncWindowStartRef.current = now;

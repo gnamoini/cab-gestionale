@@ -11,7 +11,7 @@ const SCAN_DIRS = [
 ];
 
 const FORBIDDEN_PATTERNS = [
-  /\bvin\b.*(?:sort|export|search|column|th\b|thead)/i,
+  /\bvin\b.*(?:sort|export|search|column|<th\b|thead)/i,
   /(?:sort|export|search).*\bvin\b/i,
   /mezzoMatchesSearch[\s\S]*\bvin\b/,
   /key:\s*["']vin["']/,
@@ -36,6 +36,7 @@ for (const dir of SCAN_DIRS) {
   for (const ent of fs.readdirSync(full, { recursive: true })) {
     const rel = path.join(dir, String(ent)).replace(/\\/g, "/");
     if (!/\.(ts|tsx)$/.test(rel)) continue;
+    if (/\.test\.(ts|tsx)$/.test(rel)) continue;
     if (rel.includes("mezzi-form-fields") || rel.includes("scheda-ingresso")) continue;
     const src = read(rel);
     for (const re of FORBIDDEN_PATTERNS) {

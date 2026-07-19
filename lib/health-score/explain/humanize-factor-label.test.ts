@@ -16,6 +16,7 @@ function kpi(partial: Partial<KpiExplainNode> & Pick<KpiExplainNode, "id" | "cur
     trendScore: 50,
     levelScore: 50,
     kpiScore: 55,
+    kpiScorePrev: null,
     staticWeight: 1,
     dynamicWeight: 1,
     confidence: "high",
