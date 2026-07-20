@@ -25,7 +25,8 @@ import { usePullToRefresh } from "@/lib/ui/use-pull-to-refresh";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   useBootInvestigationMount("AppShell");
-  const drawer = useNavDrawerMachine();
+  const edgeDragAtRef = useRef(0);
+  const drawer = useNavDrawerMachine(edgeDragAtRef);
   const { flags, open, forceClose, onPointerCancel, onVisibilityHidden, onResize } = drawer;
   const [overlayActive, setOverlayActive] = useState(false);
   const [edgeSnapVisuallyClosed, setEdgeSnapVisuallyClosed] = useState(false);
@@ -92,11 +93,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     enabled: isCompactShell && flags.canEdgeSwipe && !overlayActive,
     drawerState: flags.state,
     overlayActive,
-    onBegin: () => drawer.dispatch("EDGE_DRAG_START"),
+    onBegin: () => {
+      edgeDragAtRef.current = Date.now();
+      drawer.dispatch("EDGE_DRAG_START");
+    },
     onCommit: () => drawer.dispatch("EDGE_DRAG_END_COMMIT"),
     onCancel: () => drawer.dispatch("EDGE_DRAG_END_CANCEL"),
     onSnapClosed: () => setEdgeSnapVisuallyClosed(true),
     onPointerCancel,
+    onDragProgress: () => {
+      edgeDragAtRef.current = Date.now();
+    },
   });
 
   useEffect(() => {

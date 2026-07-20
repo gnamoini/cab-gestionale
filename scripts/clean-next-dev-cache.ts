@@ -43,5 +43,5 @@ if (!fs.existsSync(target)) {
   process.exit(0);
 }
 
-fs.rmSync(target, { recursive: true, force: true });
+fs.rmSync(target, { recursive: true, force: true, maxRetries: 12, retryDelay: 300 });
 console.info(`[clean:next] Rimosso ${path.relative(ROOT, target)}.`);

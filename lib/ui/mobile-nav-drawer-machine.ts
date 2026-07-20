@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, type RefObject } from "react";
 import {
+  NAV_DRAWER_EDGE_DRAG_IDLE_MS,
   NAV_DRAWER_WATCHDOG_MS,
   type NavDrawerEvent,
   type NavDrawerState,
@@ -44,6 +45,8 @@ const INITIAL = NAV_DRAWER_INITIAL;
 function isSettling(state: NavDrawerState): boolean {
   return state === "SETTLING_OPEN" || state === "SETTLING_CLOSE" || state === "OPENING";
 }
+
+const EDGE_PREVIEW_STUCK_MS = NAV_DRAWER_EDGE_DRAG_IDLE_MS + 200;
 
 export function deriveDrawerFlags(s: NavDrawerMachineState): NavDrawerFlags {
   const { state, mounted, edgePreview, edgeSettledOpen, closing } = s;
@@ -173,7 +176,7 @@ export function navDrawerReducer(
   }
 }
 
-export function useNavDrawerMachine() {
+export function useNavDrawerMachine(edgeDragActivityRef?: RefObject<number>) {
   const [machine, dispatch] = useReducer(navDrawerReducer, INITIAL);
   const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flags = deriveDrawerFlags(machine);
@@ -208,6 +211,18 @@ export function useNavDrawerMachine() {
     }
     return clearWatchdog;
   }, [machine.state, scheduleWatchdog, clearWatchdog]);
+
+  useEffect(() => {
+    if (machine.state !== "DRAGGING" || !machine.edgePreview) return;
+    const enteredAt = Date.now();
+    const id = setInterval(() => {
+      const lastAt = edgeDragActivityRef?.current ?? 0;
+      const idleMs = lastAt > enteredAt ? Date.now() - lastAt : Date.now() - enteredAt;
+      if (idleMs < EDGE_PREVIEW_STUCK_MS) return;
+      dispatch("POINTER_CANCEL");
+    }, 100);
+    return () => clearInterval(id);
+  }, [edgeDragActivityRef, machine.edgePreview, machine.state]);
 
   const open = useCallback(() => dispatch("OPEN_REQUEST"), []);
   const close = useCallback(() => dispatch("CLOSE_REQUEST"), []);

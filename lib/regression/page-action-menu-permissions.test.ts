@@ -60,6 +60,17 @@ assert.equal(
 assert.equal(isRefreshOnlyPageActionMenu([], { onRefresh: () => {} }), true);
 assert.equal(isRefreshOnlyPageActionMenu([{ id: "log", label: "Log" }], { onRefresh: () => {} }), false);
 assert.equal(shouldUsePageActionMenuDropdown([], { onRefresh: () => {} }), false);
+assert.equal(shouldUsePageActionMenuDropdown([{ id: "log", label: "Log" }], { onRefresh: () => {} }), false);
+assert.equal(
+  shouldUsePageActionMenuDropdown(
+    [
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
+    ],
+    { onRefresh: () => {} },
+  ),
+  true,
+);
 assert.equal(shouldUsePageActionMenuDropdown([], { onRefresh: () => {}, backHref: "/x" }), true);
 
 assert.equal(pageActionMenuHasAttention([{ id: "n", label: "Novità", attention: true }]), true);

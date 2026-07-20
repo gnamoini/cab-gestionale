@@ -1,6 +1,5 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
 import {
   buildLayerCellDisplayContent,
   cellDisplayKindForLayer,
@@ -28,7 +27,7 @@ export function DipendentiTimesheetCompactCell({
   isWeekend = false,
   disabled,
   onClick,
-  tooltipLabel,
+  ariaLabel,
 }: {
   value: TimesheetCellValue;
   tipiAssenza: readonly TipoAssenzaConfig[];
@@ -36,7 +35,7 @@ export function DipendentiTimesheetCompactCell({
   isWeekend?: boolean;
   disabled?: boolean;
   onClick: () => void;
-  tooltipLabel: string;
+  ariaLabel: string;
 }) {
   const content = buildLayerCellDisplayContent(value, tipiAssenza, layer);
   const kind = cellDisplayKindForLayer(value, layer);
@@ -45,23 +44,21 @@ export function DipendentiTimesheetCompactCell({
   const kindClass = isEmpty
     ? `${isWeekend ? CELL_EMPTY_WEEKEND_CLASS : CELL_EMPTY_BASE_CLASS} ${emptyHover}`
     : CELL_KIND_CLASS[kind];
-  const ariaLabel = tooltipLabel.replace(/\n/g, " — ");
   const secondaryClass = content.secondaryTone
     ? CELL_SECONDARY_TONE_CLASS[content.secondaryTone]
     : CELL_SECONDARY_TONE_CLASS.neutral;
 
   return (
-    <Tooltip content={tooltipLabel} multiline side="top" showOnFocus={false} delayMs={220}>
-      <button
-        type="button"
-        data-timesheet-cell=""
-        disabled={disabled}
-        aria-label={ariaLabel}
-        onClick={onClick}
-        data-timesheet-cell-empty={isEmpty ? "" : undefined}
-        data-timesheet-cell-kind={isEmpty ? undefined : kind}
-        className={`group/cell flex ${CELL_BUTTON_LAYOUT} min-w-0 items-center justify-center px-0 py-0 text-[11px] font-semibold tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_40%,transparent)] ${CELL_INTERACTION} ${kindClass}`}
-      >
+    <button
+      type="button"
+      data-timesheet-cell=""
+      disabled={disabled}
+      aria-label={ariaLabel}
+      onClick={onClick}
+      data-timesheet-cell-empty={isEmpty ? "" : undefined}
+      data-timesheet-cell-kind={isEmpty ? undefined : kind}
+      className={`group/cell flex ${CELL_BUTTON_LAYOUT} min-w-0 items-center justify-center px-0 py-0 text-[11px] font-semibold tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_40%,transparent)] ${CELL_INTERACTION} ${kindClass}`}
+    >
       {isEmpty ? (
         <span
           className="pointer-events-none flex size-[1.125rem] items-center justify-center rounded-none text-[11px] font-medium leading-none text-[color:var(--cab-text-muted)] opacity-[0.2] transition-opacity duration-150 group-hover/cell:opacity-65 group-focus-visible/cell:opacity-65"
@@ -83,7 +80,6 @@ export function DipendentiTimesheetCompactCell({
           <span className="truncate">{content.primary}</span>
         )
       ) : null}
-      </button>
-    </Tooltip>
+    </button>
   );
 }

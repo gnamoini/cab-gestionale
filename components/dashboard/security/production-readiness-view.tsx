@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PageHeader } from "@/components/gestionale/page-header";
-import { PageActionMenu } from "@/components/ui";
+import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { runProductionReadinessCheckAction } from "@/src/actions/production-readiness";
 import type { ProductionReadinessResult } from "@/lib/production/production-readiness-types";
@@ -75,24 +74,18 @@ export function ProductionReadinessView() {
 
   return (
     <div className={dsStackPage}>
-      <PageHeader
-        title="Production Readiness"
-        description="Gate automatico pilot → production: verifica flag, storage, RBAC e coerenza codice prima del deploy."
-        actions={
-          <PageActionMenu
-            items={[
-              {
-                id: "rerun",
-                label: loading ? "Verifica…" : "Riesegui check",
-                description: "Esegue nuovamente il controllo production readiness",
-                onSelect: () => void runCheck(),
-                loading,
-                disabled: loading,
-              },
-            ]}
-            back={{ href: SECURITY_HOME_PATH, label: "Sicurezza" }}
-          />
-        }
+      <PageHeaderPageActionMenu
+        items={[
+          {
+            id: "rerun",
+            label: loading ? "Verifica…" : "Riesegui check",
+            description: "Esegue nuovamente il controllo production readiness",
+            onSelect: () => void runCheck(),
+            loading,
+            disabled: loading,
+          },
+        ]}
+        back={{ href: SECURITY_HOME_PATH, label: "Sicurezza" }}
       />
 
       {error ? (
@@ -136,7 +129,7 @@ export function ProductionReadinessView() {
         </>
       ) : null}
 
-      {loading && !report ? <ProductionReadinessPageStructure mode="skeleton" /> : null}
+      {loading && !report ? <ProductionReadinessPageStructure mode="skeleton" scope="content" /> : null}
     </div>
   );
 }

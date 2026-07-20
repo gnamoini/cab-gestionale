@@ -54,7 +54,7 @@ function countDbCompletedByMonth(completate: LavorazioneArchiviata[]): Map<strin
 export { monthKeysOverlappingRange } from "@/lib/report/month-keys";
 
 function countCompletateInMonthWithinRange(
-  completate: LavorazioneArchiviata[],
+  completate: readonly LavorazioneArchiviata[],
   monthKey: string,
   range: DateRange,
 ): number {
@@ -78,7 +78,7 @@ export function countCompletedByMonth(
 
 /** Completate nel periodo: per mesi con override manuale usa il valore manuale. */
 export function countCompletedInRange(
-  completate: LavorazioneArchiviata[],
+  completate: readonly LavorazioneArchiviata[],
   range: DateRange,
   manualByMonth?: ReportManualByMonth,
 ): number {
@@ -109,19 +109,40 @@ export function countOpenedInRange(
   return n;
 }
 
-export function avgCloseDays(completate: LavorazioneArchiviata[], range: DateRange): number {
+function closeDaysBetween(ingresso: string, chiusura: string): number {
+  const t0 = new Date(ingresso).getTime();
+  const t1 = new Date(chiusura).getTime();
+  if (Number.isNaN(t0) || Number.isNaN(t1)) return 0;
+  return Math.max(0, (t1 - t0) / 86400000);
+}
+
+/** Giorni chiusura per ogni archiviata nel periodo (per mediana/P90). */
+export function closeDaysValuesInRange(
+  completate: readonly LavorazioneArchiviata[],
+  range: DateRange,
+): number[] {
   const vals: number[] = [];
-  const ms = (a: string, b: string) => {
-    const t0 = new Date(a).getTime();
-    const t1 = new Date(b).getTime();
-    if (Number.isNaN(t0) || Number.isNaN(t1)) return 0;
-    return Math.max(0, (t1 - t0) / 86400000);
-  };
   for (const x of completate) {
     if (!x.dataCompletamento || !isoInRange(x.dataCompletamento, range)) continue;
-    const g = ms(x.dataIngresso, x.dataCompletamento);
+    const g = closeDaysBetween(x.dataIngresso, x.dataCompletamento);
     if (g > 0) vals.push(g);
   }
+  return vals;
+}
+
+export function closeDaysPercentiles(vals: readonly number[]): { median: number; p90: number } {
+  if (vals.length === 0) return { median: 0, p90: 0 };
+  const sorted = [...vals].sort((a, b) => a - b);
+  const median = sorted[Math.floor((sorted.length - 1) / 2)] ?? 0;
+  const p90 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.9))] ?? median;
+  return {
+    median: Math.round(median * 10) / 10,
+    p90: Math.round(p90 * 10) / 10,
+  };
+}
+
+export function avgCloseDays(completate: LavorazioneArchiviata[], range: DateRange): number {
+  const vals = closeDaysValuesInRange(completate, range);
   if (vals.length === 0) return 0;
   return Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 10) / 10;
 }

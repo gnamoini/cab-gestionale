@@ -1,33 +1,28 @@
 import type { ReactNode } from "react";
-import { CombinedListSection, ErpTableSection } from "@/components/design-system/layout/combined-list-section";
 import type { SkeletonMode } from "@/components/design-system/loading/skeleton-contract";
-import { STRUCTURAL_ROUTE_SKELETON_CONTRACTS } from "@/lib/ui/structural-route-skeleton-contracts";
-
-const MAGAZZINO_CONTRACT = STRUCTURAL_ROUTE_SKELETON_CONTRACTS.magazzino;
+import { ListPageRouteSkeleton } from "@/components/design-system/loading/route-skeletons";
+import type { RouteSkeletonScope } from "@/lib/ui/route-skeleton-scope";
+import { ErpTableSection } from "@/components/design-system/layout/combined-list-section";
 
 /** SSOT struttura pagina — route loading + view (toolbar + tabella in ShellCard). */
 export function MagazzinoPageStructure({
   mode = "content",
+  scope = "full",
   children,
 }: {
   mode?: SkeletonMode;
+  scope?: RouteSkeletonScope;
   children?: ReactNode;
 }) {
-  return (
-    <CombinedListSection
-      mode={mode}
-      sectionLabel={MAGAZZINO_CONTRACT.sectionLabel}
-      ariaLabel="Caricamento magazzino"
-      skeleton={MAGAZZINO_CONTRACT}
-    >
-      {children}
-    </CombinedListSection>
-  );
+  if (mode === "skeleton") {
+    return <ListPageRouteSkeleton scope={scope} sectionLabel="Azioni e filtri magazzino" />;
+  }
+  return <>{children}</>;
 }
 
 /** @deprecated Usare MagazzinoPageStructure */
-export const MagazzinoRouteStructure = ({ mode = "skeleton" }: { mode?: SkeletonMode }) => (
-  <MagazzinoPageStructure mode={mode} />
+export const MagazzinoRouteStructure = ({ mode = "skeleton", scope = "full" }: { mode?: SkeletonMode; scope?: RouteSkeletonScope }) => (
+  <MagazzinoPageStructure mode={mode} scope={scope} />
 );
 
 /** Primo fetch dati — solo area tabella (toolbar già montata). */

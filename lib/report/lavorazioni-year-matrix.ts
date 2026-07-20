@@ -180,8 +180,9 @@ export function yearlyForecastLineModel(
 
   const dashed: YearForecastLinePoint[] = [];
   if (forecastYearEnd != null) {
-    dashed.push(ytdPoint, {
-      x: xi + 0.42,
+    const prevYearPoint = solid.find((p) => p.kind === "history" && p.year === yEnd - 1);
+    dashed.push(prevYearPoint ?? ytdPoint, {
+      x: xi,
       label: `${yEnd} (stima)`,
       year: yEnd,
       value: forecastYearEnd,

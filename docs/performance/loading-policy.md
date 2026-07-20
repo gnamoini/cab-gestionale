@@ -26,9 +26,9 @@ Non rimuovere `Suspense` usati per streaming RSC o prefetch deferred.
 // ❌ Duplicato — loading.tsx già mostra lo skeleton
 <Suspense fallback={<LoadingSuspenseFallback variant="magazzino" />}>
 
-// ✅ LEVEL 2 — transition minimale (no skeleton duplicato)
+// ✅ LEVEL 2 — structural skeleton body + PageLayout fuori Suspense
 <PageLayout title="Magazzino ricambi">
-  <Suspense fallback={<PageTransitionLoader />}>
+  <Suspense fallback={<PageTransitionLoader variant="magazzino" />}>
     <MagazzinoDeferredHydration>...</MagazzinoDeferredHydration>
   </Suspense>
 </PageLayout>
@@ -41,12 +41,12 @@ Tre livelli separati:
 | Level | Meccanismo | Responsabilità |
 |-------|------------|----------------|
 | 1 | `loading.tsx` + structural skeleton | percezione iniziale cold nav |
-| 2 | `PageTransitionLoader` in Suspense | gap chunk/hydration (solo body) |
+| 2 | `PageTransitionLoader` structural skeleton in Suspense | gap chunk/hydration (body continuo con LEVEL 1) |
 | 3 | bundle/hydration audit | velocità reale (ticket separato) |
 
 Regole:
 - `PageLayout` con titolo reale **fuori** Suspense
-- `PageTransitionLoader` **non** è skeleton full-page
+- `PageTransitionLoader` usa `StructuralRouteSkeleton` (variant route) — **non** spinner su sfondo vuoto
 - `fallback={null}` vietato su route rollout (`loading-transition-fallback-allowlist.ts`)
 - deny-by-default su altre route lazy+loading; eccezioni esplicite in allowlist
 

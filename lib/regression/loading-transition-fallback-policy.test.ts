@@ -9,6 +9,7 @@ import {
   ALLOW_NULL_SUSPENSE_ROUTES,
   FALLBACK_NULL_LEGACY_PENDING_ROUTES,
   PAGE_TRANSITION_LOADER_ROUTES,
+  PAGE_TRANSITION_LOADER_VARIANTS,
 } from "./loading-transition-fallback-allowlist";
 
 const ROOT = process.cwd();
@@ -49,13 +50,21 @@ function main(): void {
     "PageTransitionLoader: no import gestionale",
   );
   assert.match(loaderSrc, /data-testid="page-transition-loader"/);
+  assert.match(loaderSrc, /StructuralRouteSkeleton/, "PageTransitionLoader: structural skeleton, no spinner");
+  assert.doesNotMatch(loaderSrc, /loadingSpinnerRingClass/, "PageTransitionLoader: no spinner ring");
 
   for (const pageRel of PAGE_TRANSITION_LOADER_ROUTES) {
     const text = read(pageRel);
+    const variant = PAGE_TRANSITION_LOADER_VARIANTS[pageRel];
     assert.match(
       text,
       /PageTransitionLoader/,
       `${pageRel}: deve usare PageTransitionLoader`,
+    );
+    assert.match(
+      text,
+      new RegExp(`variant="${variant}"`),
+      `${pageRel}: variant atteso "${variant}"`,
     );
     assert.doesNotMatch(
       text,

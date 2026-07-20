@@ -76,6 +76,7 @@ export type UseSwipeFromEdgeToOpenOptions = {
   onCancel: () => void;
   onSnapClosed?: () => void;
   onPointerCancel: () => void;
+  onDragProgress?: () => void;
 };
 
 export function useSwipeFromEdgeToOpen({
@@ -88,6 +89,7 @@ export function useSwipeFromEdgeToOpen({
   onCancel,
   onSnapClosed,
   onPointerCancel,
+  onDragProgress,
 }: UseSwipeFromEdgeToOpenOptions) {
   const dragRef = useRef<DragState>({
     startX: 0,
@@ -342,9 +344,10 @@ export function useSwipeFromEdgeToOpen({
       const rubber = rubberBandDragX(nextX, width);
       dragRef.current.lastDeltaX = nextX;
       peakDragXRef.current = Math.max(peakDragXRef.current, nextX);
+      onDragProgress?.();
       scheduleTransform(rubber, width);
     },
-    [capturePointer, getPanelWidth, onBegin, scheduleTransform],
+    [capturePointer, getPanelWidth, onBegin, onDragProgress, scheduleTransform],
   );
 
   const onGestureEnd = useCallback(
@@ -413,7 +416,7 @@ export function useSwipeFromEdgeToOpen({
   }, [beginSnapBack, clearIdleTimer, finishCancel, onPointerCancel]);
 
   usePointerGesture({
-    enabled: enabled || edgeActiveRef.current,
+    enabled: enabled || edgeActive,
     onGestureStart,
     onGestureMove,
     onGestureEnd,
@@ -483,6 +486,8 @@ export function useSwipeFromEdgeToOpen({
     if (!edgeActive) return;
 
     function onLostPointerCapture(e: PointerEvent) {
+      // ponytail: ignora bubble dai figli quando body acquisisce capture al drag start
+      if (e.target !== document.body) return;
       if (capturedPointerIdRef.current !== e.pointerId) return;
       capturedPointerIdRef.current = null;
       if (!dragRef.current.active && !dragRef.current.dragging) return;

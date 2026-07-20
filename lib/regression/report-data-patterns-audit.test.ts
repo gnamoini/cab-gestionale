@@ -12,30 +12,61 @@ const SECTION_PATTERN_EXPECTATIONS: Record<
   "report-lavorazioni-section.tsx": {
     patterns: ["card", "chart", "matrix", "table"],
     mustInclude: [
-      "ReportDomainMetricsGrid",
       "ReportBarChart",
       "ReportMatrix",
       "ReportDataTable",
       "ReportExecutiveSummaryContent",
-      "ReportExecutiveAlertSections",
+      "ReportLavorazioniBacklogAlerts",
       "ReportExecutiveKpiSection",
+      "ReportIngressiChiusureChart",
+      "ReportAgingBacklogStackedChart",
+      "ReportLavorazioniFilters",
+      "ReportLavorazioniFunnelChart",
+      "ReportCloseTimePrioritaChart",
     ],
   },
   "report-magazzino-section.tsx": {
     patterns: ["card", "table", "chart", "matrix"],
-    mustInclude: ["ReportDomainMetricsGrid", "ReportBarChart", "ReportDataTable", "ReportMatrix", "ReportUnifiedKpiGrid"],
+    mustInclude: [
+      "ReportDomainMetricsGrid",
+      "ReportBarChart",
+      "ReportDataTable",
+      "ReportMatrix",
+      "ReportUnifiedKpiGrid",
+      "ReportMagazzinoStockAlerts",
+    ],
   },
   "report-ore-section.tsx": {
-    patterns: ["card"],
-    mustInclude: ["ReportDomainMetricsGrid", "ReportEmbeddedModule"],
+    patterns: ["card", "table"],
+    mustInclude: ["ReportDomainMetricsGrid", "ReportEmbeddedModule", "ReportDataTable", "ReportSectionTrendWidget"],
   },
   "report-economici-section.tsx": {
     patterns: ["card", "chart", "table"],
-    mustInclude: ["ReportDomainMetricsGrid", "ReportLineChart", "ReportDataTable", "ReportUnifiedKpiGrid"],
+    mustInclude: [
+      "ReportEconomicMetricsLayout",
+      "ReportRevenueCollectionChart",
+      "ReportDataTable",
+      "KpiPerformanceEconomic",
+      "ReportArAgingChart",
+      "ReportMarginWaterfallChart",
+      "ReportPreventiviFunnelChart",
+      "ReportRevenueMixDonut",
+      "ReportEconomicTabs",
+      "ReportClienteAgingHeatmap",
+    ],
   },
   "report-clienti-mezzi-section.tsx": {
-    patterns: ["card", "table"],
-    mustInclude: ["ReportUnifiedKpiGrid", "ReportDataTable"],
+    patterns: ["card", "chart", "table"],
+    mustInclude: [
+      "ReportUnifiedKpiGrid",
+      "ReportTopMezzi",
+      "ReportFleetAlerts",
+      "DisponibilitaClienteBarChart",
+      "GuastiTipoDonutChart",
+      "ClientiParetoChart",
+      "KpiPerformanceCompliance",
+      "ReportClientiMezziDettaglioTabs",
+    ],
   },
   "report-cross-section.tsx": {
     patterns: ["card"],
@@ -44,10 +75,6 @@ const SECTION_PATTERN_EXPECTATIONS: Record<
   "report-ai-section.tsx": {
     patterns: [],
     mustInclude: ["ReportNarrativeBlock", "ReportEmbeddedModule"],
-  },
-  "report-kpi-charts-section.tsx": {
-    patterns: ["chart"],
-    mustInclude: ["ReportMultiSeriesLineChart", "KpiChartConfigPanel"],
   },
 };
 

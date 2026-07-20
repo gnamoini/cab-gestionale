@@ -1,29 +1,26 @@
 import type { ReactNode } from "react";
-import { CombinedListSection, ErpTableSection } from "@/components/design-system/layout/combined-list-section";
 import type { SkeletonMode } from "@/components/design-system/loading/skeleton-contract";
-import { STRUCTURAL_ROUTE_SKELETON_CONTRACTS } from "@/lib/ui/structural-route-skeleton-contracts";
+import { ListPageRouteSkeleton } from "@/components/design-system/loading/route-skeletons";
+import type { RouteSkeletonScope } from "@/lib/ui/route-skeleton-scope";
+import { ErpTableSection } from "@/components/design-system/layout/combined-list-section";
 
 export function PreventiviPageStructure({
   mode = "content",
+  scope = "full",
   children,
 }: {
   mode?: SkeletonMode;
+  scope?: RouteSkeletonScope;
   children?: ReactNode;
 }) {
-  return (
-    <CombinedListSection
-      mode={mode}
-      skeleton={STRUCTURAL_ROUTE_SKELETON_CONTRACTS.preventivi}
-      sectionLabel={STRUCTURAL_ROUTE_SKELETON_CONTRACTS.preventivi.sectionLabel}
-      ariaLabel="Caricamento preventivi"
-    >
-      {children}
-    </CombinedListSection>
-  );
+  if (mode === "skeleton") {
+    return <ListPageRouteSkeleton scope={scope} sectionLabel="Azioni e filtri preventivi" />;
+  }
+  return <>{children}</>;
 }
 
-export const PreventiviRouteStructure = ({ mode = "skeleton" }: { mode?: SkeletonMode }) => (
-  <PreventiviPageStructure mode={mode} />
+export const PreventiviRouteStructure = ({ mode = "skeleton", scope = "full" }: { mode?: SkeletonMode; scope?: RouteSkeletonScope }) => (
+  <PreventiviPageStructure mode={mode} scope={scope} />
 );
 
 export const PreventiviTableSection = ErpTableSection;

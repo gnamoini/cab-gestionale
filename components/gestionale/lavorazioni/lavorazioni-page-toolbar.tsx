@@ -4,7 +4,7 @@ import { Tooltip } from "@/components/ui";
 import type { ChangeEvent, MutableRefObject, ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useMemo } from "react";
-import { PageHeader } from "@/components/gestionale/page-header";
+import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
@@ -42,7 +42,6 @@ import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 import {
-  PageActionMenu,
   PageActionMenuProvider,
   pageActionLogItem,
   usePageActionMenu,
@@ -155,14 +154,9 @@ export type LavorazioniPageHeaderToolbarProps = {
   listRefreshBusy?: boolean;
 };
 
-/** Header Lavorazioni — solo menu overflow ⋮. */
+/** Azioni header Lavorazioni — portal nella riga PageHeader (hamburger + titolo). */
 export function LavorazioniPageHeaderToolbar(_props: LavorazioniPageHeaderToolbarProps = {}) {
-  return (
-    <PageHeader
-      title="Lavorazioni"
-      actions={<PageActionMenu />}
-    />
-  );
+  return <PageHeaderPageActionMenu />;
 }
 
 export type LavorazioniListToolbarProps = {

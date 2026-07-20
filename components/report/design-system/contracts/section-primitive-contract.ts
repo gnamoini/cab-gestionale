@@ -6,10 +6,9 @@ export const REPORT_SECTION_PRIMITIVE_CONTRACT = {
   dati_economici: ["metric-card", "chart", "data-table"] as const,
   analisi_incrociate: ["metric-card"] as const,
   magazzino_ricambi: ["metric-card", "chart", "data-table", "matrix"] as const,
-  clienti_mezzi: ["metric-card", "data-table"] as const,
+  clienti_mezzi: ["metric-card", "chart", "data-table"] as const,
   ore_lavorate: ["metric-card", "embedded"] as const,
   analisi_ai: ["narrative", "embedded"] as const,
-  grafici_kpi: ["chart"] as const,
 } as const satisfies Record<string, readonly ReportDataPrimitiveKind[] | readonly ("metric-card" | "narrative" | "embedded")[]>;
 
 export type ReportSectionPrimitiveContractKey = keyof typeof REPORT_SECTION_PRIMITIVE_CONTRACT;
@@ -23,7 +22,6 @@ export const REPORT_SECTION_FILE_TO_CONTRACT_KEY: Record<string, ReportSectionPr
   "report-clienti-mezzi-section.tsx": "clienti_mezzi",
   "report-ore-section.tsx": "ore_lavorate",
   "report-ai-section.tsx": "analisi_ai",
-  "report-kpi-charts-section.tsx": "grafici_kpi",
 };
 
 /**

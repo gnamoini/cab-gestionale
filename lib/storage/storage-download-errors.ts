@@ -18,12 +18,14 @@ export type StorageDownloadError = {
 export type StorageDownloadContext =
   | "finalizzazione"
   | "analisi documento"
-  | "import ordine";
+  | "import ordine"
+  | "estrazione firme";
 
 const PERMISSION_MESSAGES: Record<StorageDownloadContext, string> = {
   finalizzazione: "Permesso storage negato durante finalizzazione.",
   "analisi documento": "Permesso storage negato durante l'accesso al documento.",
   "import ordine": "Permesso storage negato durante l'import ordine fornitore.",
+  "estrazione firme": "Permesso storage negato durante l'estrazione firme.",
 };
 
 export function classifyStorageDownloadError(

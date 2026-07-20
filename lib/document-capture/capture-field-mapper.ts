@@ -1,7 +1,11 @@
 import { resolveRicambiRowsFromCaptureFields } from "@/lib/document-capture/ricambi-resolution";
 import { formatCaptureMultilineText, isCaptureMultilineFieldKey } from "@/lib/document-capture/capture-field-display-value";
 import { normalizeCaptureIngressoDateValue, sanitizeCaptureExtractedFieldValue } from "@/lib/document-capture/capture-field-key-aliases";
-import { isCaptureSignatureFieldKey } from "@/lib/document-capture/capture-signature-field-keys";
+import {
+  isCaptureSignatureFieldKey,
+  pickCaptureSignatureDataUrl,
+} from "@/lib/document-capture/capture-signature-field-keys";
+import { isCaptureAiSignatureExtractionEnabled } from "@/lib/document-capture/capture-signature-crop";
 import { emptySchedaIngressoFields } from "@/lib/domain/intervento-context/build-intervento-context";
 import { findAddettoByStoredName, addettoDisplayName, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { findDuplicateByCodici } from "@/lib/magazzino/duplicates";
@@ -95,8 +99,7 @@ export type CaptureFieldRow = {
 
 export function resolveCaptureFieldValue(row: CaptureFieldRow): string {
   if (isCaptureSignatureFieldKey(row.field_key)) {
-    const v = row.confirmed_value ?? row.raw_value ?? row.normalized_value ?? "";
-    return typeof v === "string" ? v.trim() : "";
+    return pickCaptureSignatureDataUrl(row.raw_value, row.confirmed_value, row.normalized_value);
   }
   const v = isCaptureMultilineFieldKey(row.field_key)
     ? (row.confirmed_value ?? row.raw_value ?? row.normalized_value ?? "")
@@ -414,6 +417,47 @@ export async function fetchCaptureFieldRows(captureId: string): Promise<CaptureF
     normalized_value: f.normalized_value,
     raw_value: f.raw_value ?? null,
   }));
+}
+
+function captureRowHasSignature(row: CaptureFieldRow): boolean {
+  return Boolean(
+    pickCaptureSignatureDataUrl(row.raw_value, row.confirmed_value, row.normalized_value),
+  );
+}
+
+/** Ritenta estrazione firme se mancanti (catture analizzate prima del fix crop). */
+export async function ensureCaptureSignatureFieldRows(
+  captureId: string,
+  rows: readonly CaptureFieldRow[],
+): Promise<CaptureFieldRow[]> {
+  if (!isCaptureAiSignatureExtractionEnabled()) return [...rows];
+
+  const hasRichiedente = rows.some(
+    (row) => row.field_key === "firma_richiedente" && captureRowHasSignature(row),
+  );
+  const hasAddetto = rows.some(
+    (row) => row.field_key === "firma_addetto" && captureRowHasSignature(row),
+  );
+  if (hasRichiedente && hasAddetto) return [...rows];
+
+  try {
+    const res = await fetch(`/api/document-capture/${captureId}/extract-signatures`, {
+      method: "POST",
+    });
+    if (!res.ok) return [...rows];
+    const body = (await res.json()) as { fields?: CaptureFieldRow[] };
+    const sigRows = body.fields ?? [];
+    if (sigRows.length === 0) return [...rows];
+
+    const byKey = new Map(rows.map((row) => [row.field_key, { ...row }]));
+    for (const sig of sigRows) {
+      const prev = byKey.get(sig.field_key);
+      byKey.set(sig.field_key, prev ? { ...prev, ...sig } : sig);
+    }
+    return [...byKey.values()];
+  } catch {
+    return [...rows];
+  }
 }
 
 export async function fetchCaptureIngressoFields(captureId: string): Promise<SchedaIngressoFields> {

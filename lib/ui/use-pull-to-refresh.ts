@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import type { NavDrawerState } from "@/lib/ui/mobile-nav-drawer-contract";
 import { resolveActivationZonePx } from "@/lib/ui/mobile-nav-drawer-contract";
-import { resolveGestureOwner, type GestureContext } from "@/lib/ui/gesture-arbitration";
+import { canPullToRefreshClaimGesture, type GestureContext } from "@/lib/ui/gesture-arbitration";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import {
   isScrollAtTop,
@@ -164,7 +164,7 @@ export function usePullToRefresh({
         0,
       );
       if (clientX <= edgeZone) return false;
-      if (resolveGestureOwner(buildGestureContext(target, clientX, clientY)) !== "pageScroll") {
+      if (!canPullToRefreshClaimGesture(buildGestureContext(target, clientX, clientY))) {
         return false;
       }
       return true;
@@ -211,6 +211,8 @@ export function usePullToRefresh({
         resetPull();
         return;
       }
+
+      e.preventDefault();
 
       const banded = rubberBandPullY(deltaY);
       pullPxRef.current = banded;

@@ -7,6 +7,10 @@ export const gestionaleCollapsiblePanelGridClass = `grid transition-[grid-templa
 /** Corpo pannello collapsible — sfondo opaco su tutti i livelli (evita flash barra bianca in animazione). */
 export const gestionaleCollapsiblePanelBodyClass = "bg-[var(--cab-card)]";
 
+/** Corpo pannello collapsible inset (sottosezioni report) — opaco, allineato alla shell inset. */
+export const gestionaleCollapsibleInsetPanelBodyClass =
+  "bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))]";
+
 /** Padding corpo ShellCard collapsible — simmetrico con bordo superiore come separatore header/contenuto. */
 export const gestionaleCollapsibleShellBodyPadClass =
   "-mt-px border-t border-[color:var(--cab-border)] px-4 pt-4 pb-4 sm:px-5 sm:pt-5 sm:pb-5";

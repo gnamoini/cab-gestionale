@@ -1,11 +1,6 @@
-import { PageLayout } from "@/components/design-system";
 import { ClientDetailPageStructure } from "@/components/lavorazioni-clienti/client-lavorazione-detail-page-structure";
-import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
 
+/** ponytail: header dinamico in view — qui solo body skeleton. */
 export default function LavorazioneClienteDetailLoading() {
-  return (
-    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES["client-detail"]}>
-      <ClientDetailPageStructure mode="skeleton" />
-    </PageLayout>
-  );
+  return <ClientDetailPageStructure mode="skeleton" />;
 }

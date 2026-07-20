@@ -14,10 +14,53 @@ const LOCK_PATH = path.join(DEV_DIR, "lock");
 
 type DevLock = { pid?: number; port?: number };
 
+function sleepSync(ms: number): void {
+  if (ms <= 0) return;
+  try {
+    execSync(
+      `node -e "const { Atomics, SharedArrayBuffer } = globalThis; Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ${ms});"`,
+      { stdio: "ignore", timeout: ms + 1000 },
+    );
+  } catch {
+    /* timeout expected */
+  }
+}
+
+function waitForPidExit(pid: number, timeoutMs = 8000): void {
+  const deadline = Date.now() + timeoutMs;
+  while (pidAlive(pid) && Date.now() < deadline) {
+    sleepSync(250);
+  }
+}
+
 function removeDevCacheAfterCrash(reason: string): void {
   if (!fs.existsSync(DEV_DIR)) return;
-  fs.rmSync(DEV_DIR, { recursive: true, force: true });
-  console.warn(`[dev] Removed .next/dev after crash (${reason}).`);
+  try {
+    fs.rmSync(DEV_DIR, { recursive: true, force: true, maxRetries: 12, retryDelay: 300 });
+    console.warn(`[dev] Removed .next/dev after crash (${reason}).`);
+    return;
+  } catch (err) {
+    if (process.platform === "win32") {
+      try {
+        execSync(`cmd /c rmdir /s /q "${DEV_DIR}"`, { stdio: "ignore" });
+        if (!fs.existsSync(DEV_DIR)) {
+          console.warn(`[dev] Removed .next/dev after crash (${reason}, rmdir fallback).`);
+          return;
+        }
+      } catch {
+        /* continue */
+      }
+    }
+    console.warn(
+      `[dev] Could not remove .next/dev (${reason}): ${err instanceof Error ? err.message : String(err)}`,
+    );
+    console.warn("[dev] Run: npm run clean:next -- --force && npm run dev");
+    try {
+      if (fs.existsSync(LOCK_PATH)) fs.rmSync(LOCK_PATH, { force: true });
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 function pidAlive(pid: number): boolean {
@@ -62,6 +105,7 @@ function recoverCorruptedDevServer(pid: number, port: number, reason: string, lo
     `[dev] Dev server unhealthy on port ${port} (GET /login → ${loginStatus ?? "unreachable"}). Recovering…`,
   );
   killDevPid(pid);
+  waitForPidExit(pid);
   removeDevCacheAfterCrash(reason);
 }
 
@@ -76,10 +120,11 @@ function failDevAlreadyRunning(pid: number, port: number, reason: string): never
     );
     process.exit(0);
   }
-  console.error(`[dev] Next.js dev server already running (${reason}, PID ${pid}, port ${port}).`);
-  console.error(`[dev] Stop it first: taskkill /PID ${pid} /F`);
-  console.error("[dev] Then: npm run clean:next -- --force && npm run dev");
-  console.error("[dev] Or use: npm run dev:webpack while editing proxy.ts / proxy-handler.ts");
+  console.info(`[dev] Dev server già attivo (${reason}, PID ${pid}, http://127.0.0.1:${port}/ — GET /login → ${loginStatus}).`);
+  console.info("[dev] Apri il browser. Per riavviare:");
+  console.info(`[dev]   taskkill /PID ${pid} /F`);
+  console.info("[dev]   npm run clean:next -- --force && npm run dev");
+  console.info("[dev] Oppure: npm run dev:webpack (solo mentre modifichi proxy.ts)");
   process.exit(1);
 }
 

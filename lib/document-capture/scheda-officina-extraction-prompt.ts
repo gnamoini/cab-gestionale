@@ -12,7 +12,7 @@ tipo_attrezzatura (etichetta «Attrezzatura» su schede stampate — es. SPAZZAT
 attrezzatura_marca, attrezzatura_modello, attrezzatura_matricola, n_scuderia, ore,
 telaio_marca, telaio_modello, targa, km,
 descrizione_anomalia, nome, cognome, telefono, note.
-Per descrizione_anomalia e note: conserva gli a capo del foglio usando \\n tra le righe (non appiattire in una sola riga).
+Per descrizione_anomalia e note: conserva gli a capo del foglio (una riga per ogni riga visibile sulla scheda; non appiattire in una sola riga).
 Correggi refusi OCR evidenti nel testo (es. aspirae→aspirazione, cor→per, supp→supporto) senza inventare interventi non presenti.
 Ometti n_scuderia, ore e km se la casella sul foglio è vuota (non inventare cifre).
 Le firme (autista/richiedente e addetto officina) vengono ritagliate automaticamente dalle caselle fisse del template blank: non estrarle in fields.

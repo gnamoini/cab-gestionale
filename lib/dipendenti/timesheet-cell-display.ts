@@ -279,6 +279,16 @@ export function cellDisplayKindForLayer(
   return "absence";
 }
 
+/** SSOT attr su `<td>` — tinte CSS senza `:has()` (compat WebView / hover riga). */
+export function timesheetDayCellKindDataAttrs(
+  value: TimesheetCellValue,
+  layer: TimesheetCellLayer,
+): { "data-timesheet-cell-kind"?: Exclude<CellDisplayKind, "empty"> } {
+  const kind = cellDisplayKindForLayer(value, layer);
+  if (kind === "empty") return {};
+  return { "data-timesheet-cell-kind": kind };
+}
+
 /** Etichetta compatta riga presenze (PDF griglia mensile). */
 export function formatWorkCellShortLabel(value: TimesheetCellValue): string {
   const content = buildWorkCellDisplayContent(value);

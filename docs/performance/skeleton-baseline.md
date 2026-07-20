@@ -8,7 +8,7 @@ Artefatti: `test-results/skeleton-benchmark-transition-loader.json`, `test-resul
 | Layer | Meccanismo | Stato |
 |-------|------------|-------|
 | LEVEL 1 | `loading.tsx` + structural skeleton | OK (v3) |
-| LEVEL 2 | `PageTransitionLoader` in Suspense (body async) | Rollout: dashboard, magazzino, lavorazioni |
+| LEVEL 2 | `PageTransitionLoader` structural skeleton in Suspense (body async) | Rollout: dashboard, magazzino, lavorazioni |
 | LEVEL 3 | bundle/hydration audit | ticket separato |
 
 `PageLayout` con titolo reale **fuori** Suspense. Prefetch critico + deferred hydration **dentro** Suspense così il loader copre il gap.
@@ -33,7 +33,7 @@ npx tsx lib/regression/client-loading-boundary-policy.test.ts
 \*lavorazioni interactive alto in dev (compile/HMR) — non gate skeleton.
 
 **Prima:** `fallback={null}` → gap bianco post-`loading.tsx`.  
-**Dopo:** `PageTransitionLoader` visibile, `transitionLayoutShiftPx ≈ 0`, `blankAfterLoadingMs < 500` su tutte e tre le route rollout.
+**Dopo:** structural skeleton + `PageLayout` fuori Suspense — continuità visiva LEVEL 1→2, `transitionLayoutShiftPx ≈ 0`, `blankAfterLoadingMs < 500` su tutte e tre le route rollout.
 
 ## Soft navigation — PASS
 

@@ -11,7 +11,7 @@ import {
   resolveDashboardSectionOrder,
 } from "@/lib/dashboard/dashboard-widget-registry";
 import { useGestionaleShellTier } from "@/context/gestionale-shell-layout-context";
-import { LoadingCardSkeleton } from "@/components/design-system";
+import { DashboardPageStructure } from "@/components/dashboard/dashboard-page-structure";
 import { dsStackPage } from "@/lib/ui/design-system";
 
 const DashboardControlTowerLayoutInner = memo(function DashboardControlTowerLayoutInner() {
@@ -24,7 +24,7 @@ const DashboardControlTowerLayoutInner = memo(function DashboardControlTowerLayo
   );
 
   if (isLoading && visibleWidgets.length === 0) {
-    return <LoadingCardSkeleton minHeightClass="min-h-[12rem]" />;
+    return <DashboardPageStructure mode="skeleton" scope="content" />;
   }
 
   return (

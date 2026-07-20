@@ -10,6 +10,28 @@ import { REGRESSION_P1 } from "@/lib/control/suites/regression-p1.suite";
 import { REGRESSION_P2 } from "@/lib/control/suites/regression-p2.suite";
 import { REGRESSION_P3 } from "@/lib/control/suites/regression-p3.suite";
 import { AI_RUNTIME_SUITE } from "@/lib/control/suites/ai-runtime.suite";
+import { REPORT_V2_CONTRACTS_SUITE } from "@/lib/control/suites/report-v2-contracts.suite";
+import { REPORT_V2_DATASETS_SUITE } from "@/lib/control/suites/report-v2-datasets.suite";
+import { REPORT_V2_SEMANTIC_CONTRACT_SUITE } from "@/lib/control/suites/report-v2-semantic-contract.suite";
+import { REPORT_V2_EXECUTIVE_CONTRACT_SUITE } from "@/lib/control/suites/report-v2-executive-contract.suite";
+import { REPORT_V2_EXECUTIVE_BOUNDARY_SUITE } from "@/lib/control/suites/report-v2-executive-boundary.suite";
+import { REPORT_V2_EXECUTIVE_SUITE } from "@/lib/control/suites/report-v2-executive.suite";
+import { REPORT_V2_EXECUTIVE_HARDENING_SUITE } from "@/lib/control/suites/report-v2-executive-hardening.suite";
+import { REPORT_V2_CROSS_CONTRACT_SUITE } from "@/lib/control/suites/report-v2-cross-contract.suite";
+import { REPORT_V2_CROSS_PARITY_SUITE } from "@/lib/control/suites/report-v2-cross-parity.suite";
+import { REPORT_V2_CROSS_ANALYSIS_SUITE } from "@/lib/control/suites/report-v2-cross-analysis.suite";
+import { REPORT_V2_INSIGHT_CONTRACT_SUITE } from "@/lib/control/suites/report-v2-insight-contract.suite";
+import { REPORT_V2_INSIGHT_RULES_SUITE } from "@/lib/control/suites/report-v2-insight-rules.suite";
+import { REPORT_V2_INSIGHT_ENGINE_SUITE } from "@/lib/control/suites/report-v2-insight-engine.suite";
+import { REPORT_V2_INSIGHT_ANALYSIS_SUITE } from "@/lib/control/suites/report-v2-insight-analysis.suite";
+import { REPORT_V2_INSIGHT_HARDENING_SUITE } from "@/lib/control/suites/report-v2-insight-hardening.suite";
+import { REPORT_V2_AI_CONTEXT_SUITE } from "@/lib/control/suites/report-v2-ai-context.suite";
+import { REPORT_V2_NARRATIVE_CONTRACT_SUITE } from "@/lib/control/suites/report-v2-narrative-contract.suite";
+import { REPORT_V2_NARRATIVE_PROVIDER_SUITE } from "@/lib/control/suites/report-v2-narrative-provider.suite";
+import { REPORT_V2_NARRATIVE_QUALITY_SUITE } from "@/lib/control/suites/report-v2-narrative-quality.suite";
+import { REPORT_V2_NARRATIVE_CONSUMER_SUITE } from "@/lib/control/suites/report-v2-narrative-consumer.suite";
+import { REPORT_V2_NARRATIVE_PREFLIGHT_SUITE } from "@/lib/control/suites/report-v2-narrative-preflight.suite";
+import { REPORT_V2_NARRATIVE_ROLLOUT_SUITE } from "@/lib/control/suites/report-v2-narrative-rollout.suite";
 
 export type CatalogRunResult = {
   ok: boolean;
@@ -153,6 +175,28 @@ export const CONTROL_CATALOG: Record<string, CatalogEntry> = {
   "control-coverage": { resolve: () => spawnScript("lib/control/control-coverage.test.ts") },
   "control-owner": { resolve: () => spawnScript("lib/control/control-owner.test.ts") },
   "registry-lifecycle": { resolve: () => spawnScript("lib/control/registry-lifecycle.test.ts") },
+  "report-v2-contracts": { resolve: () => runTestFiles(REPORT_V2_CONTRACTS_SUITE) },
+  "report-v2-datasets": { resolve: () => runTestFiles(REPORT_V2_DATASETS_SUITE) },
+  "report-v2-semantic-contract": { resolve: () => runTestFiles(REPORT_V2_SEMANTIC_CONTRACT_SUITE) },
+  "report-v2-executive-contract": { resolve: () => runTestFiles(REPORT_V2_EXECUTIVE_CONTRACT_SUITE) },
+  "report-v2-executive-boundary": { resolve: () => runTestFiles(REPORT_V2_EXECUTIVE_BOUNDARY_SUITE) },
+  "report-v2-executive-hardening": { resolve: () => runTestFiles(REPORT_V2_EXECUTIVE_HARDENING_SUITE) },
+  "report-v2-executive": { resolve: () => runTestFiles(REPORT_V2_EXECUTIVE_SUITE) },
+  "report-v2-cross-contract": { resolve: () => runTestFiles(REPORT_V2_CROSS_CONTRACT_SUITE) },
+  "report-v2-cross-parity": { resolve: () => runTestFiles(REPORT_V2_CROSS_PARITY_SUITE) },
+  "report-v2-cross-analysis": { resolve: () => runTestFiles(REPORT_V2_CROSS_ANALYSIS_SUITE) },
+  "report-v2-insight-contract": { resolve: () => runTestFiles(REPORT_V2_INSIGHT_CONTRACT_SUITE) },
+  "report-v2-insight-rules": { resolve: () => runTestFiles(REPORT_V2_INSIGHT_RULES_SUITE) },
+  "report-v2-insight-engine": { resolve: () => runTestFiles(REPORT_V2_INSIGHT_ENGINE_SUITE) },
+  "report-v2-insight-analysis": { resolve: () => runTestFiles(REPORT_V2_INSIGHT_ANALYSIS_SUITE) },
+  "report-v2-insight-hardening": { resolve: () => runTestFiles(REPORT_V2_INSIGHT_HARDENING_SUITE) },
+  "report-v2-ai-context": { resolve: () => runTestFiles(REPORT_V2_AI_CONTEXT_SUITE) },
+  "report-v2-narrative-contract": { resolve: () => runTestFiles(REPORT_V2_NARRATIVE_CONTRACT_SUITE) },
+  "report-v2-narrative-provider": { resolve: () => runTestFiles(REPORT_V2_NARRATIVE_PROVIDER_SUITE) },
+  "report-v2-narrative-quality": { resolve: () => runTestFiles(REPORT_V2_NARRATIVE_QUALITY_SUITE) },
+  "report-v2-narrative-consumer": { resolve: () => runTestFiles(REPORT_V2_NARRATIVE_CONSUMER_SUITE) },
+  "report-v2-narrative-preflight": { resolve: () => runTestFiles(REPORT_V2_NARRATIVE_PREFLIGHT_SUITE) },
+  "report-v2-narrative-rollout": { resolve: () => runTestFiles(REPORT_V2_NARRATIVE_ROLLOUT_SUITE) },
   "notification-ssot": { resolve: () => spawnScript("lib/regression/notification-ssot-policy.test.ts") },
   "ai-runtime": { resolve: () => runTestFiles(AI_RUNTIME_SUITE) },
   "formux-promotion": {

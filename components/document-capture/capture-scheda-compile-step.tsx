@@ -24,8 +24,10 @@ import {
 } from "@/lib/document-capture/capture-ingresso-field-hints";
 import type { CaptureCatalogValidationInput } from "@/lib/document-capture/capture-catalog-validation";
 import type { CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
+import type { CaptureIngressoCompileDraft } from "@/lib/document-capture/capture-acquisition-draft";
+import { mergeSchedaIngressoFields } from "@/lib/schede/scheda-ingresso-reuse";
+import type { LavorazioneArchiviata, LavorazioneAttiva, PrioritaLav } from "@/lib/lavorazioni/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -65,6 +67,7 @@ function CaptureValidationIssuesBanner({ validation }: { validation: ValidateCap
 }
 
 const HINT_RECONCILE_MS = 250;
+const COMPILE_DRAFT_DEBOUNCE_MS = 400;
 
 /** Anteprima isolata — evita reload iframe PDF a ogni keystroke del form. */
 const CaptureCompileDocumentPreview = memo(function CaptureCompileDocumentPreview({
@@ -94,6 +97,8 @@ export function CaptureSchedaCompileStep({
   onCompileError,
   applyMode = false,
   onApplySuccess,
+  resumeIngressoCompile = null,
+  onIngressoCompileChange,
 }: {
   captureId: string;
   fieldRows: readonly CaptureFieldRow[];
@@ -110,6 +115,8 @@ export function CaptureSchedaCompileStep({
   /** Single Apply Engine — dry-run → apply invece di create diretto. */
   applyMode?: boolean;
   onApplySuccess?: (lavorazioneId: string) => void;
+  resumeIngressoCompile?: CaptureIngressoCompileDraft | null;
+  onIngressoCompileChange?: (snapshot: CaptureIngressoCompileDraft) => void;
 }) {
   const [compileData, setCompileData] = useState<CaptureIngressoCompileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -125,10 +132,28 @@ export function CaptureSchedaCompileStep({
 
   const applyFlow = useCaptureApplyFlow(applyMode ? captureId : null);
 
+  const initialCompileFields = useMemo(() => {
+    if (!compileData?.fields) return null;
+    if (!resumeIngressoCompile?.fields) return compileData.fields;
+    return mergeSchedaIngressoFields(compileData.fields, resumeIngressoCompile.fields, {
+      copySignatures: true,
+    });
+  }, [compileData?.fields, resumeIngressoCompile]);
+
+  const initialCompileMeta = useMemo(() => {
+    if (!resumeIngressoCompile?.meta) return undefined;
+    return {
+      stato: resumeIngressoCompile.meta.stato,
+      priorita: resumeIngressoCompile.meta.priorita as PrioritaLav,
+      mezzoId: resumeIngressoCompile.meta.mezzoId,
+    };
+  }, [resumeIngressoCompile]);
+
   const create = useLavorazioneCreateSubmit({
     enabled: Boolean(compileData) && !loading,
     createdBy,
-    initialFields: compileData?.fields ?? null,
+    initialFields: initialCompileFields,
+    initialMeta: initialCompileMeta,
     mezzi,
     schedeStore,
     attive,
@@ -168,6 +193,29 @@ export function CaptureSchedaCompileStep({
       cancelled = true;
     };
   }, [captureId, fieldRows, magazzino, mezzi, onCompileError, sharedGlobalOpts]);
+
+  useEffect(() => {
+    if (!onIngressoCompileChange || loading || !compileData) return;
+    const timer = window.setTimeout(() => {
+      onIngressoCompileChange({
+        fields: create.fields,
+        meta: {
+          stato: create.stato,
+          priorita: create.priorita,
+          mezzoId: create.mezzoId,
+        },
+      });
+    }, COMPILE_DRAFT_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [
+    compileData,
+    create.fields,
+    create.mezzoId,
+    create.priorita,
+    create.stato,
+    loading,
+    onIngressoCompileChange,
+  ]);
 
   const reviewCount = useMemo(() => countCaptureHintsNeedingReview(captureHints), [captureHints]);
 

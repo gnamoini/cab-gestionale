@@ -7,7 +7,7 @@ export type MagazzinoProductQtyAgg = { entrate: number; uscite: number };
 
 /** Aggregazione per ricambio nel periodo — stesse regole di `aggregateMagazzinoMonthFromLogs` (no annullati). */
 export function aggregateMagazzinoQtyByProductInRange(
-  magLog: MagazzinoChangeLogEntry[],
+  magLog: readonly MagazzinoChangeLogEntry[],
   range: DateRange,
 ): Map<string, MagazzinoProductQtyAgg> {
   const byId = new Map<string, MagazzinoProductQtyAgg>();
@@ -22,9 +22,17 @@ export function aggregateMagazzinoQtyByProductInRange(
 }
 
 /** Somma uscite (Δ scorta negativo) nel periodo — KPI report «Ricambi movimentati». */
-export function sumMagazzinoUsciteQtyInRange(magLog: MagazzinoChangeLogEntry[], range: DateRange): number {
+export function sumMagazzinoUsciteQtyInRange(magLog: readonly MagazzinoChangeLogEntry[], range: DateRange): number {
   const byProduct = aggregateMagazzinoQtyByProductInRange(magLog, range);
   let q = 0;
   for (const agg of byProduct.values()) q += agg.uscite;
+  return Math.round(q * 10) / 10;
+}
+
+/** Somma entrate nel periodo — KPI report «Pezzi in ingresso». */
+export function sumMagazzinoEntrateQtyInRange(magLog: readonly MagazzinoChangeLogEntry[], range: DateRange): number {
+  const byProduct = aggregateMagazzinoQtyByProductInRange(magLog, range);
+  let q = 0;
+  for (const agg of byProduct.values()) q += agg.entrate;
   return Math.round(q * 10) / 10;
 }

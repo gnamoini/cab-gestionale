@@ -11,6 +11,7 @@ import {
   useCollapsiblePreference,
 } from "@/lib/ui/collapsible-prefs";
 import {
+  gestionaleCollapsibleInsetPanelBodyClass,
   gestionaleCollapsiblePanelBodyClass,
   gestionaleCollapsibleShellBodyPadClass,
   gestionaleCollapsibleShellBodyPadCompactClass,
@@ -109,7 +110,9 @@ export function ShellCard({
     : compactContent
       ? gestionaleCollapsibleShellBodyPadCompactClass
       : gestionaleCollapsibleShellBodyPadClass;
-  const collapseBodyBg = collapsibleInset ? "bg-transparent" : gestionaleCollapsiblePanelBodyClass;
+  const collapseBodyBg = collapsibleInset
+    ? gestionaleCollapsibleInsetPanelBodyClass
+    : gestionaleCollapsiblePanelBodyClass;
   const titleId = hasHeader ? `${panelId}-title` : undefined;
   const toggleLabel = title
     ? `${expanded ? "Nascondi" : "Mostra"} ${title}`

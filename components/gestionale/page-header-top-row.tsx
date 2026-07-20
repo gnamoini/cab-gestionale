@@ -3,6 +3,7 @@
 import { memo, type MouseEvent, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { PageHeaderMobileNav } from "@/components/gestionale/page-header-mobile-nav";
+import { PageHeaderActionsSlot } from "@/components/gestionale/page-header-actions-portal";
 import { gestionalePageToolbarActionsClass } from "@/components/gestionale/page-header-toolbar";
 import {
   useGestionaleShellContentWidth,
@@ -54,9 +55,10 @@ function PageHeaderTopRowInner({
         <h1 className={`${dsPageTitle} ${dsPageTitleToolbarAlign} min-w-0 break-words`}>{displayTitle}</h1>
         {titleAddon ? <div className="flex shrink-0 items-center">{titleAddon}</div> : null}
       </div>
-      {actions ? (
-        <div className={`${gestionalePageToolbarActionsClass} ms-auto min-w-0 max-w-full`}>{actions}</div>
-      ) : null}
+      <div className={`${gestionalePageToolbarActionsClass} ms-auto min-w-0 max-w-full`}>
+        {actions}
+        <PageHeaderActionsSlot />
+      </div>
     </div>
   );
 }

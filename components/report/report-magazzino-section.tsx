@@ -78,6 +78,7 @@ export function ReportMagazzinoSection({
   histRev,
   onHistRev,
   embed = false,
+  chartsInParent = false,
 }: {
   derivedBundle: ReportDerivedBundle;
   prodotti: RicambioMagazzino[];
@@ -87,6 +88,7 @@ export function ReportMagazzinoSection({
   histRev: number;
   onHistRev: () => void;
   embed?: boolean;
+  chartsInParent?: boolean;
 }) {
   const magLogSorted = derivedBundle.magLogSorted;
   const [manualMap, setManualMap] = useState<MagazzinoManualMonthMap>(() => loadMagazzinoManualMonthMap());
@@ -322,7 +324,8 @@ export function ReportMagazzinoSection({
         </table>
       </div>
 
-      <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-1 xl:grid-cols-2">
+      {chartsInParent ? null : (
+        <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-1 xl:grid-cols-2">
         <div className={`min-w-0 ${reportChartShellClass}`}>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Entrate vs uscite</p>
           {rows.length === 0 ? (
@@ -342,6 +345,7 @@ export function ReportMagazzinoSection({
           )}
         </div>
       </div>
+      )}
     </>
   );
 

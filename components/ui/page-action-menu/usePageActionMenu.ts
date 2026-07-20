@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { usePageActionMenuContextRequired } from "@/components/ui/page-action-menu/PageActionMenuProvider";
 import type {
   PageActionItem,
@@ -14,7 +14,7 @@ export function usePageActionMenu(
 ): void {
   const { registerGroup } = usePageActionMenuContextRequired();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     return registerGroup(group, order, items);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deps controllati dal caller
   }, [registerGroup, group, order, items, ...deps]);

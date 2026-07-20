@@ -17,7 +17,7 @@ import {
   uniqueClientiNelPeriodo,
   type ReportManualByMonth,
 } from "@/lib/report/lavorazioni-report-selectors";
-import { sumMagazzinoUsciteQtyInRange } from "@/lib/report/magazzino-period-aggregate";
+import { sumMagazzinoEntrateQtyInRange, sumMagazzinoUsciteQtyInRange } from "@/lib/report/magazzino-period-aggregate";
 import type { ReportDerivedBundle } from "@/lib/report/report-derived-cache";
 import { getMagPeriodAgg } from "@/lib/report/report-derived-cache";
 import type { ReportSemanticIndex } from "@/lib/report/report-semantic-index";
@@ -113,6 +113,7 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
   const tempoMedio = semanticIndex.tempoMedio(range);
   const cap = totalCapitale(magazzino);
   const ricambi = sumMagazzinoUsciteQtyInRange(magLogResolved, range);
+  const entrate = sumMagazzinoEntrateQtyInRange(magLogResolved, range);
   const clienti = uniqueClientiNelPeriodo(attive, storico, completate, range);
   const mezziN = mezzi.length;
 
@@ -123,6 +124,7 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
   const completedPRaw = compareRange ? semanticIndex.completateTotal(compareRange) : null;
   const tempoP = compareRange ? semanticIndex.tempoMedio(compareRange) : null;
   const ricambiPRaw = compareRange ? sumMagazzinoUsciteQtyInRange(magLogResolved, compareRange) : null;
+  const entratePRaw = compareRange ? sumMagazzinoEntrateQtyInRange(magLogResolved, compareRange) : null;
   const clientiPRaw = compareRange ? uniqueClientiNelPeriodo(attive, storico, completate, compareRange) : null;
 
   const scale = (raw: number | null): number | null =>
@@ -131,6 +133,7 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
   const openedP = scale(openedPRaw);
   const completedP = scale(completedPRaw);
   const ricambiP = scale(ricambiPRaw);
+  const entrateP = scale(entratePRaw);
   const clientiP = scale(clientiPRaw);
   const magDeltaCapPrev =
     compareRange && magPrev != null
@@ -157,6 +160,10 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
   const dRicambi =
     compareRange && ricambiP != null
       ? { abs: `${ricambi - ricambiP > 0 ? "+" : ""}${Math.round((ricambi - ricambiP) * 10) / 10}`, pct: deltaPct(ricambi, ricambiP) }
+      : { abs: null, pct: null };
+  const dEntrate =
+    compareRange && entrateP != null
+      ? { abs: `${entrate - entrateP > 0 ? "+" : ""}${Math.round((entrate - entrateP) * 10) / 10}`, pct: deltaPct(entrate, entrateP) }
       : { abs: null, pct: null };
   const dClienti =
     compareRange && clientiP != null
@@ -205,12 +212,22 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
     },
     {
       id: "ric-usati",
-      label: "Ricambi movimentati",
+      label: "Pezzi in uscita",
       value: String(ricambi),
       sub: "Somma uscite (Δ scorta) nel periodo dai log",
       compareRows:
         compareRange != null
           ? [{ label: "Uscite nel periodo", deltaAbs: dRicambi.abs, deltaPct: dRicambi.pct }]
+          : null,
+    },
+    {
+      id: "mag-entrate",
+      label: "Pezzi in ingresso",
+      value: String(entrate),
+      sub: "Somma entrate nel periodo dai log",
+      compareRows:
+        compareRange != null
+          ? [{ label: "Entrate nel periodo", deltaAbs: dEntrate.abs, deltaPct: dEntrate.pct }]
           : null,
     },
     {

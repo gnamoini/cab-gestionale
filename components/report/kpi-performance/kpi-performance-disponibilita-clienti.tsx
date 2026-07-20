@@ -28,6 +28,7 @@ export function KpiPerformanceDisponibilitaClienti({
             <tr className="border-b border-[color:var(--cab-border)] text-left text-xs text-[color:var(--cab-text-muted)]">
               <th className={`${dsTableTd} font-medium`}>Cliente</th>
               <th className={`${dsTableTd} w-16 text-right font-medium`}>Mezzi</th>
+              <th className={`${dsTableTd} w-20 text-right font-medium`}>Operativi</th>
               <th className={`${dsTableTd} w-24 text-right font-medium`}>In officina</th>
               <th className={`${dsTableTd} w-20 text-right font-medium`}>Disp.</th>
             </tr>
@@ -35,7 +36,7 @@ export function KpiPerformanceDisponibilitaClienti({
           <tbody>
             {rows.length === 0 ? (
               <tr className={dsTableRow}>
-                <td colSpan={4} className={`${dsTableTd} text-[color:var(--cab-text-muted)]`}>
+                <td colSpan={5} className={`${dsTableTd} text-[color:var(--cab-text-muted)]`}>
                   Nessun mezzo in anagrafica.
                 </td>
               </tr>
@@ -49,6 +50,9 @@ export function KpiPerformanceDisponibilitaClienti({
                     </td>
                     <td className={`${dsTableTd} text-right tabular-nums text-[color:var(--cab-text)]`}>
                       {row.totalMezzi}
+                    </td>
+                    <td className={`${dsTableTd} text-right tabular-nums text-[color:var(--cab-text-muted)]`}>
+                      {row.mezziOperativi}
                     </td>
                     <td className={`${dsTableTd} text-right tabular-nums text-[color:var(--cab-text-muted)]`}>
                       {row.mezziInOfficina}

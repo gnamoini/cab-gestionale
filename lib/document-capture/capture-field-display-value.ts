@@ -3,7 +3,10 @@ import {
   findAddettoByStoredName,
   type AddettoRecord,
 } from "@/lib/lavorazioni/addetto-model";
-import { isCaptureSignatureFieldKey } from "@/lib/document-capture/capture-signature-field-keys";
+import {
+  isCaptureSignatureFieldKey,
+  pickCaptureSignatureDataUrl,
+} from "@/lib/document-capture/capture-signature-field-keys";
 import type { EntityResolutionResult } from "@/lib/entity-resolution/entity-resolution-types";
 import { hasSignatureDataUrl } from "@/lib/media/signature-pad";
 
@@ -149,9 +152,14 @@ export function matchCapturePersonNameFromAddetti(
   return null;
 }
 
+/** AI/JSON a volte restituisce a capo come sequenza letterale \\n invece di LF. */
+export function unescapeCaptureLiteralNewlines(value: string): string {
+  return value.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n").replace(/\\r/g, "\r");
+}
+
 /** Ripristina a capo quando l'estrazione ha appiattito righe separate sulla scheda. */
 export function inferCaptureMultilineBreaks(value: string): string {
-  const trimmed = value.trim();
+  const trimmed = unescapeCaptureLiteralNewlines(value).trim();
   if (!trimmed || /\n/.test(trimmed)) return trimmed;
   // ponytail: euristica — nuova riga dopo .!? se segue maiuscola o bullet (non cifra: evita "n. 1")
   return trimmed.replace(/([.!?])\s+(?=[A-ZÀ-ÖØ-Þ*•\-])/g, "$1\n");
@@ -160,6 +168,7 @@ export function inferCaptureMultilineBreaks(value: string): string {
 /** Correzioni refuso OCR frequenti su note officina — nessuna chiamata AI aggiuntiva. */
 export function polishCaptureWorkshopOcrText(value: string): string {
   let text = value.replace(/\r\n/g, "\n");
+  text = text.replace(/\*\*/g, "");
   // Frammenti spezzati su due righe (es. "di supp" + "Da.")
   text = text.replace(/\bdi supp\s*\n\s*Da\.\s*/gi, "di supporto da. ");
   text = text.replace(/\bCompleta di supp\s*\n\s*Da\.\s*/gi, "Completa di supporto da. ");
@@ -220,7 +229,7 @@ function capitalizeMultilineFragment(fragment: string): string {
 
 /** Testo multilinea da OCR: conserva a capo, corregge refusi officina, normalizza maiuscole. */
 export function formatCaptureMultilineText(value: string): string {
-  const withBreaks = inferCaptureMultilineBreaks(value);
+  const withBreaks = inferCaptureMultilineBreaks(unescapeCaptureLiteralNewlines(value));
   const polished = polishCaptureWorkshopOcrText(withBreaks);
   const trimmed = polished.trim();
   if (!trimmed) return "";
@@ -268,8 +277,7 @@ export function formatCaptureReviewDisplayValue(
     return formatCaptureMultilineText(picked);
   }
   if (isCaptureSignatureFieldKey(key)) {
-    const v = safeTrim(input.confirmed) || safeTrim(input.normalized) || safeTrim(input.raw);
-    return hasSignatureDataUrl(v) ? v : "";
+    return pickCaptureSignatureDataUrl(input.raw, input.confirmed, input.normalized);
   }
   const raw = safeTrim(input.raw);
   const confirmed = safeTrim(input.confirmed);

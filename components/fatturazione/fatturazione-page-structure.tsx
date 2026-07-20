@@ -1,19 +1,17 @@
 import type { ReactNode } from "react";
-import { PageSection } from "@/components/design-system/layout/page-section";
 import type { SkeletonMode } from "@/components/design-system/loading/skeleton-contract";
-import {
-  FATTURAZIONE_TAB_BODY_SKELETON_CONTRACT,
-  STRUCTURAL_ROUTE_SKELETON_CONTRACTS,
-} from "@/lib/ui/structural-route-skeleton-contracts";
+import { FatturazioneRouteSkeleton } from "@/components/design-system/loading/route-skeletons";
+import type { RouteSkeletonScope } from "@/lib/ui/route-skeleton-scope";
 
-export function FatturazionePageStructure({ mode = "skeleton" }: { mode?: SkeletonMode }) {
-  return (
-    <PageSection
-      mode={mode}
-      ariaLabel="Caricamento fatturazione"
-      skeleton={STRUCTURAL_ROUTE_SKELETON_CONTRACTS.fatturazione}
-    />
-  );
+export function FatturazionePageStructure({
+  mode = "skeleton",
+  scope = "full",
+}: {
+  mode?: SkeletonMode;
+  scope?: RouteSkeletonScope;
+}) {
+  if (mode !== "skeleton") return null;
+  return <FatturazioneRouteSkeleton scope={scope} />;
 }
 
 export function FatturazioneTabSection({
@@ -23,13 +21,8 @@ export function FatturazioneTabSection({
   mode?: SkeletonMode;
   children?: ReactNode;
 }) {
-  return (
-    <PageSection
-      mode={mode}
-      ariaLabel="Caricamento sezione fatturazione"
-      skeleton={FATTURAZIONE_TAB_BODY_SKELETON_CONTRACT}
-    >
-      {children}
-    </PageSection>
-  );
+  if (mode === "skeleton") {
+    return <FatturazioneRouteSkeleton scope="content" />;
+  }
+  return <>{children}</>;
 }

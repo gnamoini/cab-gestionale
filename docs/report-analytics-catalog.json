@@ -1,0 +1,3054 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-07-19",
+  "source": "docs/report-analytics-audit.md",
+  "schema": {
+    "availability": [
+      "existing",
+      "derivable",
+      "requires_pipeline"
+    ],
+    "calculationLayer": [
+      "client",
+      "rpc",
+      "view",
+      "materialized_view",
+      "background_job"
+    ],
+    "priority": [
+      "P0",
+      "P1",
+      "P2",
+      "P3"
+    ],
+    "visualizationTypes": [
+      "card",
+      "sparkline",
+      "line_chart",
+      "bar_chart",
+      "stacked_bar",
+      "heatmap",
+      "matrix",
+      "table",
+      "donut",
+      "gauge",
+      "box_plot",
+      "treemap",
+      "timeline",
+      "area_chart",
+      "scatter",
+      "sankey",
+      "funnel",
+      "text",
+      "badge"
+    ]
+  },
+  "summary": {
+    "total": 78,
+    "byAvailability": {
+      "existing": 42,
+      "derivable": 34,
+      "requires_pipeline": 2
+    },
+    "byPriority": {
+      "P0": 20,
+      "P1": 33,
+      "P2": 24,
+      "P3": 1
+    },
+    "bySection": {
+      "LAVORAZIONI": 17,
+      "CLIENTI E MEZZI": 14,
+      "MAGAZZINO E RICAMBI": 10,
+      "ORE LAVORATE": 8,
+      "DATI ECONOMICI": 19,
+      "ANALISI TRASVERSALI": 10
+    }
+  },
+  "metrics": [
+    {
+      "id": "lav-periodo",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "KPI unificati",
+      "name": "Carico periodo",
+      "description": "Lavorazioni con data ingresso nel periodo selezionato.",
+      "businessMeaning": "Misura domanda e carico officina nel periodo.",
+      "formula": "COUNT(lavorazioni WHERE data_ingresso IN range AND deleted_at IS NULL)",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "data_ingresso",
+            "stato",
+            "archived",
+            "deleted_at"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI singolo con micro-trend sparkline"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct",
+      "priority": "P0",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": "Sparkline usa solo completate DB senza manual override."
+    },
+    {
+      "id": "lav-chiusi",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "KPI unificati",
+      "name": "Chiusure periodo",
+      "description": "Lavorazioni completate archiviate nel periodo.",
+      "businessMeaning": "Throughput officina: chiusure nel periodo.",
+      "formula": "semanticIndex.completateTotal(range) = COUNT(archived=true AND dataCompletamento IN range) + report_manual_entries override mensile",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "archived",
+            "data_uscita",
+            "archived_at"
+          ]
+        },
+        {
+          "table": "report_manual_entries",
+          "fields": [
+            "completed_count",
+            "month"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI principale con confronto periodo"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct",
+      "priority": "P0",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": "Override manuale sostituisce mese intero."
+    },
+    {
+      "id": "lav-aperti",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "KPI unificati",
+      "name": "Interventi aperti",
+      "description": "Snapshot WIP: lavorazioni non archiviate.",
+      "businessMeaning": "Backlog corrente in officina.",
+      "formula": "COUNT(lavorazioni WHERE archived=false AND deleted_at IS NULL)",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "archived",
+            "deleted_at"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "Snapshot istantaneo WIP"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P0",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": "Non filtrato per periodo."
+    },
+    {
+      "id": "lav-tempo",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "KPI unificati",
+      "name": "Tempo medio chiusura",
+      "description": "Media giorni tra ingresso e completamento per chiuse nel periodo.",
+      "businessMeaning": "Efficienza ciclo riparazione.",
+      "formula": "AVG(days(data_ingresso -> dataCompletamento)) per completate IN range; dataCompletamento = data_uscita OR archived_at",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "data_ingresso",
+            "data_uscita",
+            "archived_at",
+            "archived"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI con delta compare invert"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct_invert",
+      "priority": "P0",
+      "performanceRisk": "medium",
+      "implementationComplexity": "low",
+      "notes": "Sensibile a outlier."
+    },
+    {
+      "id": "lav-media-settimanale",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "KPI unificati",
+      "name": "Media chiusure settimanali",
+      "description": "Completate per settimana calendario, media nel range.",
+      "businessMeaning": "Capacity planning e ritmo operativo.",
+      "formula": "SUM(completate settimanali) / N settimane calendario nel range",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "data_uscita",
+            "archived_at",
+            "archived"
+          ]
+        },
+        {
+          "table": "report_manual_entries",
+          "fields": [
+            "completed_count"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI capacity planning"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct",
+      "priority": "P1",
+      "performanceRisk": "low",
+      "implementationComplexity": "medium",
+      "notes": "Settimane parziali distorcono media."
+    },
+    {
+      "id": "lav_cancelled",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "KPI dominio",
+      "name": "Annullate nel periodo",
+      "description": "Lavorazioni con stato annullata nel periodo.",
+      "businessMeaning": "Tasso abbandono interventi.",
+      "formula": "COUNT(stato=annullata AND (data_ingresso OR created_at) IN range)",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "stato",
+            "data_ingresso",
+            "created_at"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI qualità processo"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct_invert",
+      "priority": "P2",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "lav_late_sla",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "Alert operativi",
+      "name": "Oltre SLA",
+      "description": "Aperte con giorni da ingresso oltre soglia fissa 14 giorni.",
+      "businessMeaning": "Alert ritardi gestione officina.",
+      "formula": "COUNT(aperte WHERE days_since(data_ingresso) > KPI_OPEN_LATE_DAYS_THRESHOLD)",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "data_ingresso",
+            "archived",
+            "stato"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "Alert count con tabella dettaglio"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P0",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": "Soglia fissa 14 giorni."
+    },
+    {
+      "id": "lav_recidiva",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "Alert operativi",
+      "name": "Recidiva mezzi",
+      "description": "Mezzi con >=2 chiusure in finestra 30 giorni.",
+      "businessMeaning": "Mezzi con guasti ripetuti.",
+      "formula": "COUNT(mezzi WHERE chiusure_in_window >= 2); KPI_RECIDIVA_WINDOW_DAYS=30",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "mezzo_id",
+            "archived",
+            "data_uscita",
+            "archived_at"
+          ]
+        },
+        {
+          "table": "mezzi",
+          "fields": [
+            "id",
+            "targa"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "table",
+        "reason": "Lista mezzi con count"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": ""
+    },
+    {
+      "id": "lav_heatmap_annuale",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "Grafici temporali",
+      "name": "Heatmap annuale completate",
+      "description": "Matrice 12 mesi x anni con forecast euristico.",
+      "businessMeaning": "Stagionalità chiusure multi-anno.",
+      "formula": "yearMatrix[anno][mese] = COUNT(completate mese)",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "data_uscita",
+            "archived_at",
+            "archived"
+          ]
+        },
+        {
+          "table": "report_manual_entries",
+          "fields": [
+            "completed_count",
+            "month"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "heatmap",
+        "reason": "Intensità mese x anno"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": "Forecast euristico, non ML."
+    },
+    {
+      "id": "top_mezzi_interventi",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "Classifiche",
+      "name": "Top mezzi per interventi",
+      "description": "Ranking mezzi per completate nel periodo.",
+      "businessMeaning": "Mezzi ad alto utilizzo/manutenzione.",
+      "formula": "GROUP BY mezzo_id COUNT(completate IN range) ORDER BY count DESC",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "mezzo_id",
+            "archived",
+            "data_uscita",
+            "archived_at"
+          ]
+        },
+        {
+          "table": "mezzi",
+          "fields": [
+            "id",
+            "targa",
+            "cliente",
+            "marca",
+            "modello"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "table",
+        "reason": "Ranking con row delta compare"
+      },
+      "supportsComparison": true,
+      "comparisonType": "row_delta",
+      "priority": "P1",
+      "performanceRisk": "medium",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "lav_andamento_mensile",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "Trend",
+      "name": "Andamento mensile ingressi/chiusure",
+      "description": "Serie mensile dual ingressi e chiusure.",
+      "businessMeaning": "Confronto carico vs throughput.",
+      "formula": "GROUP BY month: COUNT(data_ingresso), COUNT(completate)",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "data_ingresso",
+            "data_uscita",
+            "archived_at",
+            "archived"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "line_chart",
+        "reason": "Dual series temporale"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "lav_aging_backlog",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "Backlog",
+      "name": "Aging backlog aperte",
+      "description": "Distribuzione aperte per fascia giorni da ingresso.",
+      "businessMeaning": "Composizione WIP per urgenza.",
+      "formula": "BUCKET COUNT(aperte) BY days_since(data_ingresso): 0-7, 8-14, 15-30, 30+",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "data_ingresso",
+            "archived"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "stacked_bar",
+        "reason": "Composizione fasce aging"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "lav_median_close",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "Efficienza",
+      "name": "Mediana tempo chiusura",
+      "description": "Mediana giorni chiusura, robusta agli outlier.",
+      "businessMeaning": "Ciclo tipico senza distorsione outlier.",
+      "formula": "MEDIAN(days(data_ingresso -> dataCompletamento)) per completate IN range",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "data_ingresso",
+            "data_uscita",
+            "archived_at"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI robusto complementare alla media"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_invert",
+      "priority": "P2",
+      "performanceRisk": "medium",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "lav_by_priorita",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "Segmentazione",
+      "name": "Volume per priorità",
+      "description": "Distribuzione lavorazioni per priorità nel periodo.",
+      "businessMeaning": "Mix urgenze e carico per criticità.",
+      "formula": "GROUP BY priorita COUNT(lavorazioni IN range)",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "priorita",
+            "data_ingresso",
+            "archived"
+          ]
+        },
+        {
+          "table": "app_settings",
+          "fields": [
+            "priorita_lavorazione"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "stacked_bar",
+        "reason": "Volume per livello priorità"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "lav_by_stato",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "Segmentazione",
+      "name": "Distribuzione per stato",
+      "description": "Composizione percentuale stati workflow.",
+      "businessMeaning": "Funnel operativo e colli bottiglia.",
+      "formula": "GROUP BY stato COUNT(lavorazioni)",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "stato",
+            "archived",
+            "data_ingresso"
+          ]
+        },
+        {
+          "table": "app_settings",
+          "fields": [
+            "stato_lavorazione"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "donut",
+        "reason": "Composizione percentuale stati"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "lav_mttr",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "Affidabilità",
+      "name": "MTTR tempo riparazione",
+      "description": "Tempo medio riparazione per mezzo o globale.",
+      "businessMeaning": "Velocità riparazione post-guasto.",
+      "formula": "AVG(days(data_ingresso -> dataCompletamento)) per completate",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "data_ingresso",
+            "data_uscita",
+            "archived_at",
+            "mezzo_id"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI affidabilità riparazione"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_invert",
+      "priority": "P2",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": "Globale equivale concettualmente a lav-tempo."
+    },
+    {
+      "id": "lav_mtbf",
+      "domain": "lavorazioni",
+      "section": "LAVORAZIONI",
+      "subsection": "Affidabilità",
+      "name": "MTBF tra interventi",
+      "description": "Giorni medi tra chiusure consecutive per mezzo.",
+      "businessMeaning": "Affidabilità mezzo: frequenza interventi.",
+      "formula": "AVG(days tra dataCompletamento[i] e data_ingresso[i+1]) per mezzo",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "mezzo_id",
+            "data_ingresso",
+            "data_uscita",
+            "archived_at",
+            "archived"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "table",
+        "reason": "Ranking affidabilità per mezzo"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "Richiede storico sufficiente per mezzo."
+    },
+    {
+      "id": "clienti",
+      "domain": "clienti_mezzi",
+      "section": "CLIENTI E MEZZI",
+      "subsection": "KPI unificati",
+      "name": "Clienti nel periodo",
+      "description": "Clienti distinti con ingresso o chiusura nel periodo.",
+      "businessMeaning": "Base clienti attiva nel periodo.",
+      "formula": "DISTINCT mezzi.cliente WHERE ingresso OR chiusura IN range",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "data_ingresso",
+            "data_uscita",
+            "archived_at",
+            "mezzo_id"
+          ]
+        },
+        {
+          "table": "mezzi",
+          "fields": [
+            "cliente"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI count clienti attivi"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct",
+      "priority": "P0",
+      "performanceRisk": "medium",
+      "implementationComplexity": "low",
+      "notes": "Cliente è testo libero, non FK anagrafica."
+    },
+    {
+      "id": "flotta-officina",
+      "domain": "clienti_mezzi",
+      "section": "CLIENTI E MEZZI",
+      "subsection": "KPI unificati",
+      "name": "Mezzi in officina",
+      "description": "Mezzi con almeno una lavorazione non archiviata.",
+      "businessMeaning": "Proxy mezzi attualmente in sosta officina.",
+      "formula": "COUNT(DISTINCT mezzo_id WHERE EXISTS lav non archiviata)",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "mezzo_id",
+            "archived"
+          ]
+        },
+        {
+          "table": "mezzi",
+          "fields": [
+            "id"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "Snapshot proxy flotta in officina"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "medium",
+      "implementationComplexity": "low",
+      "notes": "Proxy, non distingue attrezzatura target."
+    },
+    {
+      "id": "mezzi",
+      "domain": "clienti_mezzi",
+      "section": "CLIENTI E MEZZI",
+      "subsection": "KPI unificati",
+      "name": "Mezzi in anagrafica",
+      "description": "Conteggio totale mezzi registrati.",
+      "businessMeaning": "Dimensione parco mezzi.",
+      "formula": "COUNT(mezzi)",
+      "dataSources": [
+        {
+          "table": "mezzi",
+          "fields": [
+            "id"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "Snapshot parco mezzi"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P3",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": "Non correlato al periodo."
+    },
+    {
+      "id": "cap",
+      "domain": "clienti_mezzi",
+      "section": "CLIENTI E MEZZI",
+      "subsection": "KPI unificati",
+      "name": "Capitale immobilizzato",
+      "description": "Valore stock ricambi a costo acquisto.",
+      "businessMeaning": "Capitale legato a giacenza magazzino.",
+      "formula": "SUM(prezzoFornitoreOriginale × quantita)",
+      "dataSources": [
+        {
+          "table": "magazzino_ricambi",
+          "fields": [
+            "quantita",
+            "costo",
+            "prezzo_fornitore_originale"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "Snapshot valorizzazione stock"
+      },
+      "supportsComparison": false,
+      "comparisonType": "delta_capital_period",
+      "priority": "P1",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": "Posizionato in UI clienti_mezzi per partition."
+    },
+    {
+      "id": "fleet_disponibilita_cliente",
+      "domain": "clienti_mezzi",
+      "section": "CLIENTI E MEZZI",
+      "subsection": "Fleet panel",
+      "name": "Disponibilità per cliente",
+      "description": "Percentuale mezzi operativi per cliente.",
+      "businessMeaning": "Affidabilità flotta cliente.",
+      "formula": "(mezziOperativi / totalMezzi) × 100 per cliente; operativo = no lav aperta",
+      "dataSources": [
+        {
+          "table": "mezzi",
+          "fields": [
+            "id",
+            "cliente"
+          ]
+        },
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "mezzo_id",
+            "archived"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "bar_chart",
+        "reason": "Confronto orizzontale tra clienti"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P0",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "O(mezzi × lavorazioni) nested loops."
+    },
+    {
+      "id": "guasti_per_tipo_attrezzatura",
+      "domain": "clienti_mezzi",
+      "section": "CLIENTI E MEZZI",
+      "subsection": "Fleet panel",
+      "name": "Guasti per tipo attrezzatura",
+      "description": "Interventi match regex guasto/avaria/fermo per tipo.",
+      "businessMeaning": "Composizione tipologie guasto.",
+      "formula": "COUNT interventi WHERE descrizione match regex guasto GROUP BY tipo_attrezzatura",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "attrezzatura_id",
+            "mezzo_id"
+          ]
+        },
+        {
+          "table": "attrezzature",
+          "fields": [
+            "tipo_attrezzatura"
+          ]
+        },
+        {
+          "table": "scheda_lavorazione",
+          "fields": [
+            "contenuto"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "donut",
+        "reason": "Composizione tipi guasto"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": "Regex fragile su testo libero."
+    },
+    {
+      "id": "tempo_fermo_medio",
+      "domain": "clienti_mezzi",
+      "section": "CLIENTI E MEZZI",
+      "subsection": "Fleet panel",
+      "name": "Tempo medio fermo",
+      "description": "Media giorni fermo per mezzo su completate in range.",
+      "businessMeaning": "Durata media sosta officina.",
+      "formula": "AVG(days(data_ingresso -> dataCompletamento)) per mezzo",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "mezzo_id",
+            "data_ingresso",
+            "data_uscita",
+            "archived_at"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI durata sosta"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": ""
+    },
+    {
+      "id": "frequenza_guasti_alta",
+      "domain": "clienti_mezzi",
+      "section": "CLIENTI E MEZZI",
+      "subsection": "Fleet panel",
+      "name": "Mezzi frequenza guasti alta",
+      "description": "Mezzi classificati ALTA da euristica interventi.",
+      "businessMeaning": "Mezzi critici per affidabilità.",
+      "formula": "frequenzaGuastiDaInterventi = ALTA via regex/heuristic",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "mezzo_id",
+            "archived",
+            "data_ingresso"
+          ]
+        },
+        {
+          "table": "mezzi",
+          "fields": [
+            "id",
+            "targa",
+            "cliente"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "table",
+        "reason": "Ranking con semaforo severity"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": "Non usa km/ore."
+    },
+    {
+      "id": "top_clienti_interventi",
+      "domain": "clienti_mezzi",
+      "section": "CLIENTI E MEZZI",
+      "subsection": "Classifiche",
+      "name": "Top clienti per interventi",
+      "description": "Ranking clienti per completate nel periodo.",
+      "businessMeaning": "Clienti con maggior volume manutenzione.",
+      "formula": "GROUP BY mezzi.cliente COUNT(completate IN range) ORDER BY count DESC",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "mezzo_id",
+            "archived",
+            "data_uscita",
+            "archived_at"
+          ]
+        },
+        {
+          "table": "mezzi",
+          "fields": [
+            "cliente"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "table",
+        "reason": "Ranking con row delta compare"
+      },
+      "supportsComparison": true,
+      "comparisonType": "row_delta",
+      "priority": "P1",
+      "performanceRisk": "medium",
+      "implementationComplexity": "low",
+      "notes": "Label simile a top clienti fatturato ma metrica diversa."
+    },
+    {
+      "id": "clienti_redditivita",
+      "domain": "clienti_mezzi",
+      "section": "CLIENTI E MEZZI",
+      "subsection": "Redditività",
+      "name": "Redditività per cliente",
+      "description": "Fatturato meno costi diretti per cliente.",
+      "businessMeaning": "Margine cliente stimato.",
+      "formula": "SUM(invoices.totale per cliente) - SUM(ricambi + manodopera per cliente)",
+      "dataSources": [
+        {
+          "table": "invoices",
+          "fields": [
+            "totale",
+            "cliente_label",
+            "data_emissione"
+          ]
+        },
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "lavorazione_id",
+            "quantita"
+          ]
+        },
+        {
+          "table": "scheda_lavorazione",
+          "fields": [
+            "contenuto",
+            "lavorazione_id"
+          ]
+        },
+        {
+          "table": "mezzi",
+          "fields": [
+            "cliente"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "table",
+        "reason": "Ranking redditività cliente"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "Join cliente_label vs mezzi.cliente fragile."
+    },
+    {
+      "id": "compliance_scadenze",
+      "domain": "clienti_mezzi",
+      "section": "CLIENTI E MEZZI",
+      "subsection": "Compliance",
+      "name": "Compliance scadenze asset",
+      "description": "Scadenze revisione/tagliando/assicurazione imminenti o scadute.",
+      "businessMeaning": "Rischio non conformità flotta.",
+      "formula": "COUNT(asset_compliance_rules WHERE next_due_at <= threshold OR scaduto)",
+      "dataSources": [
+        {
+          "table": "asset_compliance_rules",
+          "fields": [
+            "asset_id",
+            "rule_kind",
+            "next_due_at"
+          ]
+        },
+        {
+          "table": "asset_compliance_records",
+          "fields": [
+            "esito",
+            "completed_at",
+            "km"
+          ]
+        },
+        {
+          "table": "mezzi",
+          "fields": [
+            "id",
+            "cliente"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "view",
+      "recommendedVisualization": {
+        "type": "timeline",
+        "reason": "Eventi compliance passati e futuri"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "low",
+      "implementationComplexity": "medium",
+      "notes": "Dati esistono, non in report oggi."
+    },
+    {
+      "id": "pareto_clienti_interventi",
+      "domain": "clienti_mezzi",
+      "section": "CLIENTI E MEZZI",
+      "subsection": "Classifiche",
+      "name": "Pareto clienti interventi",
+      "description": "Concentrazione interventi: cumulata 80/20.",
+      "businessMeaning": "Identifica clienti che assorbono maggior carico.",
+      "formula": "ORDER BY interventi DESC; cumulative_pct fino a 80%",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "mezzo_id",
+            "archived",
+            "data_uscita"
+          ]
+        },
+        {
+          "table": "mezzi",
+          "fields": [
+            "cliente"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "bar_chart",
+        "reason": "Barre + linea cumulativa Pareto"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": ""
+    },
+    {
+      "id": "km_trend",
+      "domain": "clienti_mezzi",
+      "section": "CLIENTI E MEZZI",
+      "subsection": "Lifecycle",
+      "name": "Trend chilometri mezzo",
+      "description": "Serie km da letture storiche per mezzo.",
+      "businessMeaning": "Utilizzo e usura mezzo nel tempo.",
+      "formula": "ORDER BY read_at: asset_mileage_readings.km per mezzo_id",
+      "dataSources": [
+        {
+          "table": "asset_mileage_readings",
+          "fields": [
+            "mezzo_id",
+            "km",
+            "read_at",
+            "source"
+          ]
+        },
+        {
+          "table": "mezzi",
+          "fields": [
+            "id",
+            "km"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "rpc",
+      "recommendedVisualization": {
+        "type": "line_chart",
+        "reason": "Serie km nel tempo"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "low",
+      "implementationComplexity": "medium",
+      "notes": "Fonte alternativa: scheda ingresso.campi.km."
+    },
+    {
+      "id": "fleet_disponibilita_trend",
+      "domain": "clienti_mezzi",
+      "section": "CLIENTI E MEZZI",
+      "subsection": "Fleet panel",
+      "name": "Trend disponibilità flotta",
+      "description": "Serie storica disponibilità per cliente nel tempo.",
+      "businessMeaning": "Evoluzione affidabilità flotta.",
+      "formula": "daily_snapshot: (mezziOperativi/totalMezzi)×100 per cliente per date",
+      "dataSources": [
+        {
+          "table": "mezzi",
+          "fields": [
+            "id",
+            "cliente"
+          ]
+        },
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "mezzo_id",
+            "archived",
+            "data_ingresso",
+            "data_uscita"
+          ]
+        }
+      ],
+      "availability": "requires_pipeline",
+      "calculationLayer": "background_job",
+      "recommendedVisualization": {
+        "type": "line_chart",
+        "reason": "Trend multi-cliente nel tempo"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "Richiede snapshot giornaliero persistito; oggi solo snapshot corrente."
+    },
+    {
+      "id": "scorta",
+      "domain": "magazzino",
+      "section": "MAGAZZINO E RICAMBI",
+      "subsection": "KPI unificati",
+      "name": "Ricambi sotto scorta",
+      "description": "SKU con quantita inferiore a scortaMinima.",
+      "businessMeaning": "Alert rischio stockout.",
+      "formula": "COUNT(quantita < meta.scortaMinima AND scortaMinima > 0)",
+      "dataSources": [
+        {
+          "table": "magazzino_ricambi",
+          "fields": [
+            "quantita",
+            "meta"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "Alert count sotto scorta"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P0",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": "Duplicato come mag_critical."
+    },
+    {
+      "id": "ric-usati",
+      "domain": "magazzino",
+      "section": "MAGAZZINO E RICAMBI",
+      "subsection": "KPI unificati",
+      "name": "Ricambi utilizzati",
+      "description": "Quantità uscite da magazzino nel periodo.",
+      "businessMeaning": "Volume consumo ricambi.",
+      "formula": "SUM(movimenti_uscita.qty WHERE conta_statistiche=true AND created_at IN range)",
+      "dataSources": [
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "tipo",
+            "quantita",
+            "conta_statistiche",
+            "created_at"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI volume uscite"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct",
+      "priority": "P0",
+      "performanceRisk": "medium",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "mag_movement_value",
+      "domain": "magazzino",
+      "section": "MAGAZZINO E RICAMBI",
+      "subsection": "KPI dominio",
+      "name": "Valore movimentato",
+      "description": "Valore uscite a costo acquisto nel periodo.",
+      "businessMeaning": "Costo ricambi consumati.",
+      "formula": "SUM(uscite.qty × prezzoFornitoreOriginale)",
+      "dataSources": [
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "tipo",
+            "quantita",
+            "ricambio_id",
+            "created_at"
+          ]
+        },
+        {
+          "table": "magazzino_ricambi",
+          "fields": [
+            "costo",
+            "prezzo_fornitore_originale"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI valore uscite"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct_invert",
+      "priority": "P0",
+      "performanceRisk": "medium",
+      "implementationComplexity": "low",
+      "notes": "Usa costo acquisto, non prezzo vendita."
+    },
+    {
+      "id": "mag_orders",
+      "domain": "magazzino",
+      "section": "MAGAZZINO E RICAMBI",
+      "subsection": "KPI dominio",
+      "name": "Ordini fornitori",
+      "description": "Ordini con data_ordine nel periodo, non annullati.",
+      "businessMeaning": "Volume approvvigionamento.",
+      "formula": "COUNT(ordini WHERE data_ordine IN range AND status != annullato)",
+      "dataSources": [
+        {
+          "table": "ordini_fornitori",
+          "fields": [
+            "data_ordine",
+            "status"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI count ordini"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct",
+      "priority": "P2",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "mag_movimenti_mensili",
+      "domain": "magazzino",
+      "section": "MAGAZZINO E RICAMBI",
+      "subsection": "Grafici",
+      "name": "Movimenti netti mensili",
+      "description": "Entrate e uscite per mese nel periodo.",
+      "businessMeaning": "Flussi magazzino e variazione stock.",
+      "formula": "GROUP BY month: SUM(entrate.qty), SUM(uscite.qty), delta capitale",
+      "dataSources": [
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "tipo",
+            "quantita",
+            "created_at",
+            "conta_statistiche"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "stacked_bar",
+        "reason": "Composizione entrate+uscite mensili"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": "Esiste anche come matrice mensile."
+    },
+    {
+      "id": "mag_top_ricambi",
+      "domain": "magazzino",
+      "section": "MAGAZZINO E RICAMBI",
+      "subsection": "Classifiche",
+      "name": "Top ricambi consumo",
+      "description": "Ranking ricambi per uscite qty nel periodo.",
+      "businessMeaning": "SKU più consumati.",
+      "formula": "GROUP BY ricambio_id SUM(uscite.qty) ORDER BY qty DESC",
+      "dataSources": [
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "ricambio_id",
+            "quantita",
+            "tipo",
+            "created_at"
+          ]
+        },
+        {
+          "table": "magazzino_ricambi",
+          "fields": [
+            "codice",
+            "nome"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "table",
+        "reason": "Ranking con delta uscite compare"
+      },
+      "supportsComparison": true,
+      "comparisonType": "row_delta",
+      "priority": "P1",
+      "performanceRisk": "medium",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "giorni_copertura",
+      "domain": "magazzino",
+      "section": "MAGAZZINO E RICAMBI",
+      "subsection": "Scorte",
+      "name": "Giorni copertura stock",
+      "description": "Giorni copertura stimata per SKU.",
+      "businessMeaning": "Rischio stockout per tempo.",
+      "formula": "quantita / (consumo_medio_mensile / 30) per ricambio",
+      "dataSources": [
+        {
+          "table": "magazzino_ricambi",
+          "fields": [
+            "quantita",
+            "consumo_medio_mensile"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "heatmap",
+        "reason": "Intensità rischio ricambio×periodo"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": "consumo_medio_mensile già su tabella."
+    },
+    {
+      "id": "margine_ricambio",
+      "domain": "magazzino",
+      "section": "MAGAZZINO E RICAMBI",
+      "subsection": "Pricing",
+      "name": "Margine per ricambio",
+      "description": "Differenza prezzo vendita e costo acquisto.",
+      "businessMeaning": "Margine unitario SKU.",
+      "formula": "(prezzo_vendita - costo) / prezzo_vendita × 100 per ricambio",
+      "dataSources": [
+        {
+          "table": "magazzino_ricambi",
+          "fields": [
+            "costo",
+            "prezzo_vendita",
+            "codice",
+            "nome"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "scatter",
+        "reason": "Outlier pricing costo vs vendita"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "lead_time_ordini",
+      "domain": "magazzino",
+      "section": "MAGAZZINO E RICAMBI",
+      "subsection": "Approvvigionamento",
+      "name": "Lead time ordini fornitore",
+      "description": "Giorni medi ordine a ricevimento.",
+      "businessMeaning": "Velocità approvvigionamento.",
+      "formula": "AVG(days(data_ordine -> status=ricevuto)) per ordini IN range",
+      "dataSources": [
+        {
+          "table": "ordini_fornitori",
+          "fields": [
+            "data_ordine",
+            "status",
+            "updated_at",
+            "created_at"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "rpc",
+      "recommendedVisualization": {
+        "type": "bar_chart",
+        "reason": "Lead time per fornitore o mese"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_invert",
+      "priority": "P2",
+      "performanceRisk": "low",
+      "implementationComplexity": "medium",
+      "notes": "Da timeline status ordine."
+    },
+    {
+      "id": "rotazione_stock",
+      "domain": "magazzino",
+      "section": "MAGAZZINO E RICAMBI",
+      "subsection": "Efficienza stock",
+      "name": "Rotazione stock",
+      "description": "Indice rotazione: COGS / giacenza media.",
+      "businessMeaning": "Efficienza capitale immobilizzato.",
+      "formula": "SUM(valore_uscite periodo) / AVG(capitale_immobilizzato) per periodo",
+      "dataSources": [
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "quantita",
+            "tipo",
+            "created_at"
+          ]
+        },
+        {
+          "table": "magazzino_ricambi",
+          "fields": [
+            "quantita",
+            "costo"
+          ]
+        }
+      ],
+      "availability": "requires_pipeline",
+      "calculationLayer": "materialized_view",
+      "recommendedVisualization": {
+        "type": "line_chart",
+        "reason": "Trend rotazione mensile"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs",
+      "priority": "P2",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "Richiede snapshot giacenza storica non persistito oggi."
+    },
+    {
+      "id": "ore_total",
+      "domain": "ore",
+      "section": "ORE LAVORATE",
+      "subsection": "KPI",
+      "name": "Ore totali",
+      "description": "Somma ore ordinarie e straordinarie nel periodo.",
+      "businessMeaning": "Carico lavoro team.",
+      "formula": "SUM(ore_ordinarie + ore_straordinarie) WHERE work_date IN range",
+      "dataSources": [
+        {
+          "table": "dipendenti_timesheet_entries",
+          "fields": [
+            "work_date",
+            "ore_ordinarie",
+            "ore_straordinarie"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI ore team"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct",
+      "priority": "P0",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": "Hook lazy useReportTimesheetKpi."
+    },
+    {
+      "id": "ore_per_job",
+      "domain": "ore",
+      "section": "ORE LAVORATE",
+      "subsection": "KPI",
+      "name": "Media ore per intervento",
+      "description": "Ore totali diviso chiusure periodo.",
+      "businessMeaning": "Intensità lavoro per intervento chiuso.",
+      "formula": "totalHours / completedInPeriod",
+      "dataSources": [
+        {
+          "table": "dipendenti_timesheet_entries",
+          "fields": [
+            "ore_ordinarie",
+            "ore_straordinarie",
+            "work_date"
+          ]
+        },
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "archived",
+            "data_uscita",
+            "archived_at"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI ratio ore/int"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct",
+      "priority": "P1",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": "Mismatch: numeratore timesheet globale, denominatore chiusure."
+    },
+    {
+      "id": "ore_per_dipendente",
+      "domain": "ore",
+      "section": "ORE LAVORATE",
+      "subsection": "Team",
+      "name": "Ore per dipendente",
+      "description": "Ore totali aggregate per dipendente nel periodo.",
+      "businessMeaning": "Distribuzione carico team.",
+      "formula": "GROUP BY dipendente_id SUM(ore_ordinarie + ore_straordinarie)",
+      "dataSources": [
+        {
+          "table": "dipendenti_timesheet_entries",
+          "fields": [
+            "dipendente_id",
+            "ore_ordinarie",
+            "ore_straordinarie",
+            "work_date"
+          ]
+        },
+        {
+          "table": "dipendenti_timesheet_employees",
+          "fields": [
+            "id",
+            "nome"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "rpc",
+      "recommendedVisualization": {
+        "type": "bar_chart",
+        "reason": "Confronto ore tra dipendenti"
+      },
+      "supportsComparison": true,
+      "comparisonType": "row_delta",
+      "priority": "P1",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "ore_straordinari",
+      "domain": "ore",
+      "section": "ORE LAVORATE",
+      "subsection": "Team",
+      "name": "Ore straordinarie",
+      "description": "Totale e percentuale straordinario sul periodo.",
+      "businessMeaning": "Pressione extra su capacity.",
+      "formula": "SUM(ore_straordinarie); pct = straord / totalHours × 100",
+      "dataSources": [
+        {
+          "table": "dipendenti_timesheet_entries",
+          "fields": [
+            "ore_straordinarie",
+            "ore_ordinarie",
+            "work_date"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "stacked_bar",
+        "reason": "Ordinario vs straordinario"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct_invert",
+      "priority": "P1",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "ore_assenze",
+      "domain": "ore",
+      "section": "ORE LAVORATE",
+      "subsection": "Team",
+      "name": "Assenze team",
+      "description": "Giorni e ore assenza per tipo nel periodo.",
+      "businessMeaning": "Disponibilità effettiva team.",
+      "formula": "COUNT(assenza=true); SUM(ore_assenza) GROUP BY tipo_assenza",
+      "dataSources": [
+        {
+          "table": "dipendenti_timesheet_entries",
+          "fields": [
+            "assenza",
+            "ore_assenza",
+            "tipo_assenza_id",
+            "tipo_assenza_label",
+            "work_date"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "donut",
+        "reason": "Composizione tipi assenza"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct_invert",
+      "priority": "P2",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": "Parziale nel modulo timesheet embed."
+    },
+    {
+      "id": "manodopera_cost",
+      "domain": "ore",
+      "section": "ORE LAVORATE",
+      "subsection": "Costi",
+      "name": "Costo manodopera",
+      "description": "Costo ore da schede lavorazione × costo orario settings.",
+      "businessMeaning": "Costo diretto manodopera officina.",
+      "formula": "SUM(schede.addetti.ore × app_settings.costo_orario)",
+      "dataSources": [
+        {
+          "table": "scheda_lavorazione",
+          "fields": [
+            "contenuto",
+            "lavorazione_id",
+            "tipo"
+          ]
+        },
+        {
+          "table": "app_settings",
+          "fields": [
+            "costo_orario"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI costo manodopera"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct_invert",
+      "priority": "P1",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "Usato in economici/cross, non mostrato in sezione ore; trust partial se schede non caricate."
+    },
+    {
+      "id": "gap_schede_timesheet",
+      "domain": "ore",
+      "section": "ORE LAVORATE",
+      "subsection": "Reconciliazione",
+      "name": "Gap schede vs timesheet",
+      "description": "Differenza ore schede lavorazione vs timesheet.",
+      "businessMeaning": "Allineamento registrazione ore.",
+      "formula": "SUM(ore schede per range) - SUM(ore timesheet per range)",
+      "dataSources": [
+        {
+          "table": "scheda_lavorazione",
+          "fields": [
+            "contenuto",
+            "lavorazione_id"
+          ]
+        },
+        {
+          "table": "dipendenti_timesheet_entries",
+          "fields": [
+            "ore_ordinarie",
+            "ore_straordinarie",
+            "work_date"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "bar_chart",
+        "reason": "Confronto due fonti ore"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "Fonti concettualmente diverse."
+    },
+    {
+      "id": "saturazione_team",
+      "domain": "ore",
+      "section": "ORE LAVORATE",
+      "subsection": "Capacity",
+      "name": "Saturazione team",
+      "description": "Ore registrate vs ore disponibili teoriche.",
+      "businessMeaning": "Utilizzo capacity team.",
+      "formula": "(SUM(ore_total) / ore_disponibili_teoriche) × 100 per dipendente×settimana",
+      "dataSources": [
+        {
+          "table": "dipendenti_timesheet_entries",
+          "fields": [
+            "dipendente_id",
+            "work_date",
+            "ore_ordinarie",
+            "ore_straordinarie"
+          ]
+        },
+        {
+          "table": "app_settings",
+          "fields": [
+            "ore_settimanali_standard"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "heatmap",
+        "reason": "Intensità dipendente×settimana"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": "ore_settimanali da settings se configurato."
+    },
+    {
+      "id": "cost-tot",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "KPI",
+      "name": "Costi manutenzione",
+      "description": "Ricambi da movimenti + manodopera da schede.",
+      "businessMeaning": "Costo diretto manutenzione periodo.",
+      "formula": "sumRicambiCostFromMagLog + sumManodoperaCostFromSchede",
+      "dataSources": [
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "quantita",
+            "tipo",
+            "created_at",
+            "ricambio_id"
+          ]
+        },
+        {
+          "table": "magazzino_ricambi",
+          "fields": [
+            "costo"
+          ]
+        },
+        {
+          "table": "scheda_lavorazione",
+          "fields": [
+            "contenuto"
+          ]
+        },
+        {
+          "table": "app_settings",
+          "fields": [
+            "costo_orario"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI costi con compare invert"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct_invert",
+      "priority": "P0",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "Trust partial se schede non caricate."
+    },
+    {
+      "id": "eco_preventivi",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Preventivi",
+      "name": "Preventivi periodo",
+      "description": "Count e valore preventivi non bozza nel periodo.",
+      "businessMeaning": "Pipeline commerciale.",
+      "formula": "COUNT + SUM(totale) WHERE stato != bozza AND (dataCreazione OR aggiornatoAt) IN range",
+      "dataSources": [
+        {
+          "table": "preventivi",
+          "fields": [
+            "totale",
+            "dettagli",
+            "created_at",
+            "updated_at"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "Doppio valore count·€"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct",
+      "priority": "P0",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "eco_preventivi_approvati",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Preventivi",
+      "name": "Preventivi approvati",
+      "description": "Preventivi approvati o convertiti nel periodo.",
+      "businessMeaning": "Conversione commerciale positiva.",
+      "formula": "COUNT(stato IN {approvato, convertito})",
+      "dataSources": [
+        {
+          "table": "preventivi",
+          "fields": [
+            "dettagli",
+            "created_at",
+            "updated_at"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI approvazioni"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct",
+      "priority": "P1",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "eco_invoices",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Fatturazione",
+      "name": "Fatturato periodo",
+      "description": "Fatture emesse nel periodo escluse bozza/da_verificare/annullata.",
+      "businessMeaning": "Ricavi fatturati nel periodo.",
+      "formula": "COUNT + SUM(totale) WHERE status NOT IN (bozza, da_verificare, annullata) AND data_emissione IN range",
+      "dataSources": [
+        {
+          "table": "invoices",
+          "fields": [
+            "totale",
+            "status",
+            "data_emissione",
+            "document_status"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI revenue principale"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct",
+      "priority": "P0",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "eco_ddt",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Documenti",
+      "name": "DDT periodo",
+      "description": "Documenti di trasporto nel periodo.",
+      "businessMeaning": "Volume consegne/documentazione.",
+      "formula": "COUNT(ddt_documents WHERE data IN range)",
+      "dataSources": [
+        {
+          "table": "ddt_documents",
+          "fields": [
+            "created_at",
+            "data_documento",
+            "status"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI count DDT"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct",
+      "priority": "P2",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "eco_valore_medio_intervento",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "KPI derivati",
+      "name": "Valore medio intervento",
+      "description": "Fatturato periodo diviso chiusure periodo.",
+      "businessMeaning": "Ticket medio per intervento chiuso.",
+      "formula": "fatturato_periodo / completedInPeriod",
+      "dataSources": [
+        {
+          "table": "invoices",
+          "fields": [
+            "totale",
+            "data_emissione",
+            "status"
+          ]
+        },
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "archived",
+            "data_uscita",
+            "archived_at"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI ticket medio"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_pct",
+      "priority": "P1",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": "Date mismatch: emissione fattura vs completamento."
+    },
+    {
+      "id": "eco_margine_operativo_stimato",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "KPI derivati",
+      "name": "Margine operativo stimato",
+      "description": "Fatturato meno manodopera e valore movimentato.",
+      "businessMeaning": "Margine operativo lordo stimato.",
+      "formula": "fatturato - (manodoperaCost + movementValue)",
+      "dataSources": [
+        {
+          "table": "invoices",
+          "fields": [
+            "totale",
+            "data_emissione"
+          ]
+        },
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "quantita",
+            "tipo",
+            "created_at"
+          ]
+        },
+        {
+          "table": "scheda_lavorazione",
+          "fields": [
+            "contenuto"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI margine stimato"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "Stima grossolana, no costi indiretti."
+    },
+    {
+      "id": "eco_da_incassare",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Fatturazione",
+      "name": "Da incassare",
+      "description": "Residuo fatture emesse non pagate.",
+      "businessMeaning": "Crediti verso clienti.",
+      "formula": "SUM(residuo) WHERE payment_status != pagata AND status emessa",
+      "dataSources": [
+        {
+          "table": "invoices",
+          "fields": [
+            "residuo",
+            "pagato",
+            "payment_status",
+            "status",
+            "data_emissione"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI crediti aperti"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P0",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": "Da buildInvoicePeriodKpi."
+    },
+    {
+      "id": "eco_scadute",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Fatturazione",
+      "name": "Fatture scadute",
+      "description": "Fatture scadute non incassate nel periodo.",
+      "businessMeaning": "Rischio insoluti.",
+      "formula": "COUNT + SUM(residuo) WHERE payment_status=scaduta OR data_scadenza < today",
+      "dataSources": [
+        {
+          "table": "invoices",
+          "fields": [
+            "payment_status",
+            "data_scadenza",
+            "residuo",
+            "totale"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "Alert crediti scaduti"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_invert",
+      "priority": "P0",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "fatturato_mensile",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Grafici",
+      "name": "Fatturato mensile",
+      "description": "Serie mensile fatturato emesso.",
+      "businessMeaning": "Trend revenue.",
+      "formula": "GROUP BY month SUM(invoices.totale) WHERE emessa IN month",
+      "dataSources": [
+        {
+          "table": "invoices",
+          "fields": [
+            "totale",
+            "data_emissione",
+            "status"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "line_chart",
+        "reason": "Trend revenue mensile"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "top_clienti_fatturato",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Classifiche",
+      "name": "Top clienti per fatturato",
+      "description": "Ranking clienti per fatturato nel periodo.",
+      "businessMeaning": "Clienti top revenue.",
+      "formula": "GROUP BY cliente_label SUM(totale) ORDER BY totale DESC",
+      "dataSources": [
+        {
+          "table": "invoices",
+          "fields": [
+            "totale",
+            "cliente_label",
+            "data_emissione",
+            "status"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "table",
+        "reason": "Ranking fatturato cliente"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "win_rate_preventivi",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Preventivi",
+      "name": "Win rate preventivi",
+      "description": "Percentuale preventivi approvati sul totale.",
+      "businessMeaning": "Efficacia commerciale.",
+      "formula": "COUNT(approvati) / COUNT(non_bozza) × 100",
+      "dataSources": [
+        {
+          "table": "preventivi",
+          "fields": [
+            "dettagli",
+            "created_at",
+            "updated_at"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI percentuale conversione"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs",
+      "priority": "P1",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "funnel_preventivi",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Preventivi",
+      "name": "Funnel preventivi",
+      "description": "Flusso bozza → approvato → convertito → fatturato.",
+      "businessMeaning": "Pipeline commerciale end-to-end.",
+      "formula": "COUNT per stato/stadio: bozza, approvato, convertito, fatturato (view billing)",
+      "dataSources": [
+        {
+          "table": "preventivi",
+          "fields": [
+            "dettagli",
+            "totale",
+            "lavorazione_id"
+          ]
+        },
+        {
+          "table": "preventivi_billing_status",
+          "fields": [
+            "stato_fatturazione",
+            "fatturato",
+            "residuo"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "view",
+      "recommendedVisualization": {
+        "type": "funnel",
+        "reason": "Flusso stadi preventivo"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "low",
+      "implementationComplexity": "medium",
+      "notes": "View preventivi_billing_status esiste."
+    },
+    {
+      "id": "ar_aging",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Crediti",
+      "name": "AR aging",
+      "description": "Crediti per fascia giorni scaduto.",
+      "businessMeaning": "Composizione rischio crediti.",
+      "formula": "BUCKET SUM(residuo) BY days_overdue: 0-30, 31-60, 61-90, 90+",
+      "dataSources": [
+        {
+          "table": "invoices",
+          "fields": [
+            "residuo",
+            "data_scadenza",
+            "payment_status"
+          ]
+        },
+        {
+          "table": "customer_open_items",
+          "fields": [
+            "amount",
+            "due_date",
+            "customer_id"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "view",
+      "recommendedVisualization": {
+        "type": "stacked_bar",
+        "reason": "Composizione fasce crediti"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": "Open items non in report oggi."
+    },
+    {
+      "id": "dso",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Crediti",
+      "name": "DSO giorni medi incasso",
+      "description": "Days Sales Outstanding stimato.",
+      "businessMeaning": "Velocità incasso crediti.",
+      "formula": "(SUM(residuo) / SUM(fatturato_periodo)) × giorni_periodo",
+      "dataSources": [
+        {
+          "table": "invoices",
+          "fields": [
+            "residuo",
+            "totale",
+            "data_emissione",
+            "pagato"
+          ]
+        },
+        {
+          "table": "invoice_payments",
+          "fields": [
+            "amount",
+            "paid_at"
+          ]
+        },
+        {
+          "table": "payment_allocations",
+          "fields": [
+            "amount",
+            "invoice_id"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "rpc",
+      "recommendedVisualization": {
+        "type": "line_chart",
+        "reason": "Trend DSO nel tempo"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_invert",
+      "priority": "P1",
+      "performanceRisk": "medium",
+      "implementationComplexity": "high",
+      "notes": "Pagamenti e allocazioni disponibili in DB."
+    },
+    {
+      "id": "preventivo_vs_consuntivo",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Controllo",
+      "name": "Preventivo vs consuntivo",
+      "description": "Delta valore preventivo vs fattura/movimenti per lavorazione.",
+      "businessMeaning": "Scostamento stima vs reale.",
+      "formula": "preventivo.totale - (SUM(invoices) OR SUM(movimenti+manodopera)) per lavorazione_id",
+      "dataSources": [
+        {
+          "table": "preventivi",
+          "fields": [
+            "totale",
+            "lavorazione_id"
+          ]
+        },
+        {
+          "table": "invoices",
+          "fields": [
+            "totale"
+          ]
+        },
+        {
+          "table": "invoice_links",
+          "fields": [
+            "lavorazione_id",
+            "preventivo_id"
+          ]
+        },
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "lavorazione_id",
+            "quantita"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "scatter",
+        "reason": "Scostamento per lavorazione"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "Join via lavorazione_id."
+    },
+    {
+      "id": "mix_righe_fattura",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Mix ricavi",
+      "name": "Mix righe fattura per tipo",
+      "description": "Composizione ricavi per tipo riga fattura.",
+      "businessMeaning": "Mix ricavi manodopera/ricambi/servizi.",
+      "formula": "GROUP BY invoice_rows.tipo SUM(importo)",
+      "dataSources": [
+        {
+          "table": "invoice_rows",
+          "fields": [
+            "tipo",
+            "importo",
+            "invoice_id"
+          ]
+        },
+        {
+          "table": "invoices",
+          "fields": [
+            "data_emissione",
+            "status"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "rpc",
+      "recommendedVisualization": {
+        "type": "donut",
+        "reason": "Composizione mix ricavi"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": ""
+    },
+    {
+      "id": "top_mezzi_costo",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Classifiche",
+      "name": "Top mezzi per costo",
+      "description": "Ranking mezzi per costo manutenzione nel periodo.",
+      "businessMeaning": "Mezzi più costosi da mantenere.",
+      "formula": "GROUP BY mezzo_id SUM(ricambiCost + manodoperaCost) ORDER BY cost DESC",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "mezzo_id",
+            "id"
+          ]
+        },
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "lavorazione_id",
+            "quantita"
+          ]
+        },
+        {
+          "table": "scheda_lavorazione",
+          "fields": [
+            "contenuto",
+            "lavorazione_id"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "table",
+        "reason": "Ranking costi per mezzo"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "Calcolato in KpiPerformanceEconomic, non renderizzato in UI."
+    },
+    {
+      "id": "preventivi_billing_residuo",
+      "domain": "economici",
+      "section": "DATI ECONOMICI",
+      "subsection": "Preventivi",
+      "name": "Residuo fatturazione preventivi",
+      "description": "Valore preventivi non ancora fatturato.",
+      "businessMeaning": "Pipeline fatturabile residua.",
+      "formula": "SUM(residuo) FROM preventivi_billing_status WHERE stato != fatturato_completo",
+      "dataSources": [
+        {
+          "table": "preventivi_billing_status",
+          "fields": [
+            "residuo",
+            "fatturato",
+            "stato_fatturazione",
+            "preventivo_id"
+          ]
+        },
+        {
+          "table": "preventivi",
+          "fields": [
+            "totale",
+            "dettagli"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "view",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI pipeline residua"
+      },
+      "supportsComparison": true,
+      "comparisonType": "delta_abs_invert",
+      "priority": "P1",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": "View DB esistente."
+    },
+    {
+      "id": "cross_efficiency",
+      "domain": "cross",
+      "section": "ANALISI TRASVERSALI",
+      "subsection": "Cross KPI",
+      "name": "Efficienza officina",
+      "description": "Interventi chiusi per ora lavorata.",
+      "businessMeaning": "Produttività officina aggregata.",
+      "formula": "completedInPeriod / totalHours",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "archived",
+            "data_uscita",
+            "archived_at"
+          ]
+        },
+        {
+          "table": "dipendenti_timesheet_entries",
+          "fields": [
+            "ore_ordinarie",
+            "ore_straordinarie",
+            "work_date"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI ratio produttività"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P0",
+      "performanceRisk": "low",
+      "implementationComplexity": "medium",
+      "notes": "Mismatch timesheet vs schede; richiede sezioni caricate."
+    },
+    {
+      "id": "cross_parts_job",
+      "domain": "cross",
+      "section": "ANALISI TRASVERSALI",
+      "subsection": "Cross KPI",
+      "name": "Ricambi per intervento",
+      "description": "Quantità ricambi usati diviso chiusure.",
+      "businessMeaning": "Intensità consumo ricambi per job.",
+      "formula": "partsUsedQty / completedInPeriod",
+      "dataSources": [
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "quantita",
+            "tipo",
+            "created_at",
+            "conta_statistiche"
+          ]
+        },
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "archived",
+            "data_uscita",
+            "archived_at"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI ratio ricambi/int"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P0",
+      "performanceRisk": "low",
+      "implementationComplexity": "low",
+      "notes": ""
+    },
+    {
+      "id": "cross_cost_job",
+      "domain": "cross",
+      "section": "ANALISI TRASVERSALI",
+      "subsection": "Cross KPI",
+      "name": "Costo medio lavorazione",
+      "description": "Costo totale manutenzione diviso chiusure.",
+      "businessMeaning": "Costo medio per intervento chiuso.",
+      "formula": "(movementValue + manodoperaCost) / completedInPeriod",
+      "dataSources": [
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "quantita",
+            "tipo",
+            "created_at"
+          ]
+        },
+        {
+          "table": "scheda_lavorazione",
+          "fields": [
+            "contenuto"
+          ]
+        },
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "archived",
+            "data_uscita"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI € per lavorazione"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P0",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": "Trust partial su manodopera."
+    },
+    {
+      "id": "cross_value_hour",
+      "domain": "cross",
+      "section": "ANALISI TRASVERSALI",
+      "subsection": "Cross KPI",
+      "name": "Valore per ora",
+      "description": "Fatturato periodo diviso ore totali.",
+      "businessMeaning": "Valore economico generato per ora.",
+      "formula": "invoicesBilled / totalHours",
+      "dataSources": [
+        {
+          "table": "invoices",
+          "fields": [
+            "totale",
+            "data_emissione",
+            "status"
+          ]
+        },
+        {
+          "table": "dipendenti_timesheet_entries",
+          "fields": [
+            "ore_ordinarie",
+            "ore_straordinarie",
+            "work_date"
+          ]
+        }
+      ],
+      "availability": "existing",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "card",
+        "reason": "KPI €/h"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P0",
+      "performanceRisk": "low",
+      "implementationComplexity": "medium",
+      "notes": "Date mismatch fatture vs ore."
+    },
+    {
+      "id": "cross_matrix_ore_ricambi",
+      "domain": "cross",
+      "section": "ANALISI TRASVERSALI",
+      "subsection": "Matrici",
+      "name": "Matrice ore vs ricambi",
+      "description": "Matrice correlazione ore e ricambi per intervento o mese.",
+      "businessMeaning": "Relazione intensità lavoro e consumo parti.",
+      "formula": "MATRIX[periodo]: ore_per_job, parts_per_job, cost_per_job",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "id",
+            "archived",
+            "data_uscita"
+          ]
+        },
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "lavorazione_id",
+            "quantita"
+          ]
+        },
+        {
+          "table": "scheda_lavorazione",
+          "fields": [
+            "contenuto"
+          ]
+        },
+        {
+          "table": "dipendenti_timesheet_entries",
+          "fields": [
+            "work_date",
+            "ore_ordinarie",
+            "ore_straordinarie"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "matrix",
+        "reason": "Correlazione multi-metrica temporale"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "Estensione cross metrics per dimensione."
+    },
+    {
+      "id": "cross_sankey_preventivo_incasso",
+      "domain": "cross",
+      "section": "ANALISI TRASVERSALI",
+      "subsection": "Catene valore",
+      "name": "Sankey preventivo a incasso",
+      "description": "Flusso valore preventivo → lavorazione → DDT → fattura → incasso.",
+      "businessMeaning": "Catena valore end-to-end.",
+      "formula": "FLOW SUM(totale) per stadio: preventivo, lav, ddt, invoice, payment",
+      "dataSources": [
+        {
+          "table": "preventivi",
+          "fields": [
+            "totale",
+            "lavorazione_id",
+            "dettagli"
+          ]
+        },
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "id",
+            "archived"
+          ]
+        },
+        {
+          "table": "ddt_documents",
+          "fields": [
+            "preventivo_id",
+            "lavorazione_id"
+          ]
+        },
+        {
+          "table": "invoices",
+          "fields": [
+            "totale",
+            "pagato",
+            "residuo"
+          ]
+        },
+        {
+          "table": "payment_allocations",
+          "fields": [
+            "amount",
+            "invoice_id"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "sankey",
+        "reason": "Flusso valore multi-step"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "Join path documentato in audit FASE 7."
+    },
+    {
+      "id": "cross_scatter_costo_fatturato_cliente",
+      "domain": "cross",
+      "section": "ANALISI TRASVERSALI",
+      "subsection": "Redditività",
+      "name": "Scatter costo vs fatturato cliente",
+      "description": "Per cliente: costi diretti vs fatturato periodo.",
+      "businessMeaning": "Identifica clienti non redditizi.",
+      "formula": "POINT(cliente): x=SUM(costi_diretti), y=SUM(fatturato)",
+      "dataSources": [
+        {
+          "table": "invoices",
+          "fields": [
+            "totale",
+            "cliente_label"
+          ]
+        },
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "lavorazione_id",
+            "quantita"
+          ]
+        },
+        {
+          "table": "scheda_lavorazione",
+          "fields": [
+            "contenuto"
+          ]
+        },
+        {
+          "table": "mezzi",
+          "fields": [
+            "cliente"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "scatter",
+        "reason": "Quadrante redditività cliente"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P1",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "Insight: costi_cliente > fatturato_cliente."
+    },
+    {
+      "id": "cross_scatter_ore_ricambi",
+      "domain": "cross",
+      "section": "ANALISI TRASVERSALI",
+      "subsection": "Correlazioni",
+      "name": "Scatter ore vs ricambi per intervento",
+      "description": "Punti per intervento: ore impiegate vs qty ricambi.",
+      "businessMeaning": "Correlazione complessità lavoro e parti.",
+      "formula": "POINT(lavorazione_id): x=ore_scheda, y=qty_ricambi",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "id",
+            "mezzo_id"
+          ]
+        },
+        {
+          "table": "scheda_lavorazione",
+          "fields": [
+            "contenuto"
+          ]
+        },
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "lavorazione_id",
+            "quantita",
+            "tipo"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "scatter",
+        "reason": "Correlazione per intervento"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "medium",
+      "implementationComplexity": "medium",
+      "notes": ""
+    },
+    {
+      "id": "cross_anomaly_volume",
+      "domain": "cross",
+      "section": "ANALISI TRASVERSALI",
+      "subsection": "Anomaly",
+      "name": "Anomalie volume mensile",
+      "description": "Mesi con volume ingressi/chiusure fuori norma (z-score).",
+      "businessMeaning": "Early warning su picchi o cali anomali.",
+      "formula": "z-score(completate_mese) WHERE |z| > 2 su serie >=12 mesi",
+      "dataSources": [
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "data_ingresso",
+            "data_uscita",
+            "archived_at",
+            "archived"
+          ]
+        },
+        {
+          "table": "report_manual_entries",
+          "fields": [
+            "completed_count",
+            "month"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "background_job",
+      "recommendedVisualization": {
+        "type": "badge",
+        "reason": "Evidenzia mesi anomali su matrice/card"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "medium",
+      "implementationComplexity": "high",
+      "notes": "Richiede >=12 mesi storici; candidato BG job."
+    },
+    {
+      "id": "cross_matrix_cliente_metriche",
+      "domain": "cross",
+      "section": "ANALISI TRASVERSALI",
+      "subsection": "Matrici",
+      "name": "Matrice cliente × metriche",
+      "description": "Matrice multi-KPI per cliente: interventi, fatturato, costi, disponibilità.",
+      "businessMeaning": "Vista consolidata performance cliente.",
+      "formula": "MATRIX[cliente]: interventi, fatturato, costi, disponibilita_pct, margine_stimato",
+      "dataSources": [
+        {
+          "table": "mezzi",
+          "fields": [
+            "cliente"
+          ]
+        },
+        {
+          "table": "lavorazioni",
+          "fields": [
+            "mezzo_id",
+            "archived",
+            "data_uscita"
+          ]
+        },
+        {
+          "table": "invoices",
+          "fields": [
+            "totale",
+            "cliente_label"
+          ]
+        },
+        {
+          "table": "movimenti_ricambi",
+          "fields": [
+            "lavorazione_id",
+            "quantita"
+          ]
+        }
+      ],
+      "availability": "derivable",
+      "calculationLayer": "client",
+      "recommendedVisualization": {
+        "type": "matrix",
+        "reason": "Heatmap cliente×KPI"
+      },
+      "supportsComparison": false,
+      "comparisonType": "none",
+      "priority": "P2",
+      "performanceRisk": "high",
+      "implementationComplexity": "high",
+      "notes": "Join cliente_label vs mezzi.cliente fragile."
+    }
+  ]
+}

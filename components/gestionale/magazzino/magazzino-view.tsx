@@ -15,9 +15,9 @@ import {
   IconActionButton,
   LoadingButton,
   LoadingFormSkeleton,
-  PageLayout,
   SkeletonBoundary,
 } from "@/components/design-system";
+import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 import { OptionalTooltip, Tooltip } from "@/components/ui";
 import { MagazzinoBulkLabelToolbar } from "@/components/gestionale/magazzino/magazzino-bulk-label-toolbar";
 import { MagazzinoScortaAdjustActions } from "@/components/gestionale/magazzino/magazzino-scorta-adjust-actions";
@@ -121,12 +121,12 @@ import {
 import { MagazzinoDescrizioneSortTh } from "@/components/gestionale/magazzino/magazzino-descrizione-sort-th";
 import { MagazzinoTableSection } from "@/components/gestionale/magazzino/magazzino-page-structure";
 import {
-  PageActionMenu,
   pageActionLogItem,
   type PageActionItem,
 } from "@/components/ui";
 import {
   PageActionIconDelete,
+  PageActionIconLabels,
 } from "@/components/ui/page-action-menu/page-action-menu-icons";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
@@ -1538,6 +1538,23 @@ export function MagazzinoView() {
       ...(importExportActions.items.length > 0 ? [{ id: "__divider__", label: "" }] : []),
       pageActionLogItem(() => setLogOpen(true), "Log attività"),
     ];
+    if (magPerm.canRead) {
+      items.push({
+        id: "label-mode",
+        label: "Etichette",
+        description: labelMode
+          ? "Modalità selezione attiva per stampa etichette"
+          : "Seleziona ricambi per stampare etichette",
+        icon: <PageActionIconLabels />,
+        toggle: {
+          checked: labelMode,
+          onChange: (checked) => {
+            setLabelMode(checked);
+            if (!checked) setSelectedRicambioIds(new Set());
+          },
+        },
+      });
+    }
     if (magCanDeleteRicambio && generatedListinoCount > 0) {
       items.push({
         id: "delete-listino",
@@ -1551,6 +1568,8 @@ export function MagazzinoView() {
     return items;
   }, [
     importExportActions.items,
+    magPerm.canRead,
+    labelMode,
     magCanDeleteRicambio,
     generatedListinoCount,
   ]);
@@ -1574,17 +1593,12 @@ export function MagazzinoView() {
       ref={listLayoutRef}
       className={`magazzino-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}
     >
-      <PageLayout
-        title="Magazzino ricambi"
-        actions={
-          <PageActionMenu
-            items={magazzinoMenuItems}
-            headerActions={magazzinoMenuHeaderActions}
-            onRefresh={() => void magazzinoListQ.refetch()}
-            refreshBusy={magazzinoListQ.isFetching}
-          />
-        }
-      >
+      <PageHeaderPageActionMenu
+        items={magazzinoMenuItems}
+        headerActions={magazzinoMenuHeaderActions}
+        onRefresh={() => void magazzinoListQ.refetch()}
+        refreshBusy={magazzinoListQ.isFetching}
+      />
       <ShellCard>
         {archivioDupCodeCount > 0 ? (
           <div className="mb-3 flex flex-col gap-2 rounded-lg border border-amber-200/80 bg-amber-50/50 px-3 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/45 dark:bg-amber-950/25">
@@ -1664,7 +1678,6 @@ export function MagazzinoView() {
             meta={
               <div className="flex min-w-0 w-full max-w-full flex-nowrap items-center gap-2 sm:gap-3">
                 <PageToolbarResultCount
-                  className="max-sm:shrink-0 max-sm:flex-none"
                   count={filteredSorted.length}
                   filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
                   searchActive={searchApplied.trim().length > 0 || searchInput.trim().length > 0}
@@ -1686,22 +1699,6 @@ export function MagazzinoView() {
                         modalitaModifica
                           ? "Attiva: le variazioni scorta contano nelle statistiche"
                           : "Disattiva: rettifica inventario senza impatto su statistiche e report"
-                      }
-                    />
-                  ) : null}
-                  {magPerm.canRead ? (
-                    <PageToolbarMetaToggle
-                      className="min-h-10 shrink-0 sm:min-h-9"
-                      label="Etichette"
-                      checked={labelMode}
-                      onChange={(checked) => {
-                        setLabelMode(checked);
-                        if (!checked) setSelectedRicambioIds(new Set());
-                      }}
-                      title={
-                        labelMode
-                          ? "Modalità selezione attiva per stampa etichette"
-                          : "Seleziona ricambi per stampare etichette"
                       }
                     />
                   ) : null}
@@ -1988,7 +1985,6 @@ export function MagazzinoView() {
         </MagazzinoTableSection>
         </SkeletonBoundary>
       </ShellCard>
-      </PageLayout>
 
       {newOpen ? (
         <RicambioNewModal

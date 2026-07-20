@@ -80,9 +80,9 @@ function main(): void {
   );
 
   for (const rel of [
+    "app/(gestionale)/dashboard/page.tsx",
     "components/gestionale/magazzino/magazzino-view.tsx",
     "components/gestionale/lavorazioni/lavorazioni-page-toolbar.tsx",
-    "components/dashboard/dashboard-view.tsx",
     "components/report/layout/report-toolbar.tsx",
     "components/gestionale/documenti/documenti-view.tsx",
     "components/gestionale/mezzi/mezzi-view.tsx",

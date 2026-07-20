@@ -83,6 +83,8 @@ assert.match(shellGlobals, /cab-shell-card \[id\$="-body"\]/);
 assert.match(shellCard, /collapsePrefsHydrated/);
 assert.match(shellCard, /persistScope/);
 assert.match(shellCard, /persistKey/);
+assert.match(shellCard, /gestionaleCollapsibleInsetPanelBodyClass/);
+assert.doesNotMatch(shellCard, /collapsibleInset \? "bg-transparent"/);
 assert.doesNotMatch(shellCard, /GestionaleCollapsibleChevronBox/);
 
 assert.match(preventiviModal, /GestionaleCollapsibleSection/);

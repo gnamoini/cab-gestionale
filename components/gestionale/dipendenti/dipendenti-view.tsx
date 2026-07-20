@@ -3,8 +3,8 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { PageHeader } from "@/components/gestionale/page-header";
-import { PageActionMenu, type PageActionItem } from "@/components/ui";
+import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
+import type { PageActionItem } from "@/components/ui";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import {
@@ -15,7 +15,6 @@ import {
 import { TimesheetEmptyState } from "@/components/gestionale/dipendenti/timesheet-empty-state";
 import { TimesheetLoadError } from "@/components/gestionale/dipendenti/timesheet-load-error";
 import { TimesheetTableView } from "@/components/gestionale/dipendenti/timesheet-table-view";
-import { PageLayout } from "@/components/design-system";
 import { DipendentiPageStructure, DipendentiTimesheetSection } from "@/components/gestionale/dipendenti/dipendenti-page-structure";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import {
@@ -304,11 +303,7 @@ export function DipendentiView() {
   }, [fillToday8hUpserts, ts, successOnce, errorOnce]);
 
   if (perm.isLoading) {
-    return (
-      <PageLayout title="Dipendenti">
-        <DipendentiPageStructure mode="skeleton" />
-      </PageLayout>
-    );
+    return <DipendentiPageStructure mode="skeleton" />;
   }
 
   const showRegistryEmpty =
@@ -337,10 +332,7 @@ export function DipendentiView() {
   return (
     <GestionaleSectionGate module="dipendenti">
       <div ref={listLayoutRef} className={`${layoutPageRoot} ${listLayoutClassName}`.trim()}>
-        <PageHeader
-          title="Dipendenti"
-          actions={<PageActionMenu items={dipendentiMenuItems} />}
-        />
+        <PageHeaderPageActionMenu items={dipendentiMenuItems} />
         <div className={`${dsStackPage} flex-safe-col min-w-0 max-w-full`}>
           <TimesheetHeader
             periodMode={periodMode}

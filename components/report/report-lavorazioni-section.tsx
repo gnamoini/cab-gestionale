@@ -65,6 +65,7 @@ function ReportLavorazioniSectionInner({
   compareDetail,
   semanticIndex,
   embed = false,
+  showManualImport = false,
 }: {
   attive: LavorazioneAttiva[];
   completate: LavorazioneArchiviata[];
@@ -73,6 +74,8 @@ function ReportLavorazioniSectionInner({
   compareDetail: ReportCompareDetail | null;
   semanticIndex: ReportSemanticIndex;
   embed?: boolean;
+  /** Mostra pulsanti import Excel (solo sezione admin). */
+  showManualImport?: boolean;
 }) {
   const gestToast = useGestionaleToast();
   const queryClient = useQueryClient();
@@ -324,7 +327,7 @@ function ReportLavorazioniSectionInner({
   if (embed) {
     return (
       <div className="min-w-0">
-        <div className="mb-3 flex justify-end">{manualBtn}</div>
+        {showManualImport ? <div className="mb-3 flex justify-end">{manualBtn}</div> : null}
         {panel}
         {importResultModal}
       </div>

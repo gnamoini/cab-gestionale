@@ -9,8 +9,7 @@ export type ReportSectionId =
   | "magazzino_ricambi"
   | "ore_lavorate"
   | "dati_economici"
-  | "analisi_incrociate"
-  | "grafici_kpi";
+  | "analisi_incrociate";
 
 export type ReportSectionConfig = {
   id: ReportSectionId;
@@ -81,7 +80,7 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     id: "dati_economici",
     title: "DATI ECONOMICI",
     subtitle: "Preventivi, fatture e DDT",
-    defaultCollapsed: true,
+    defaultCollapsed: false,
     permission: "fatturazione",
     order: 6,
     participatesInDerived: true,
@@ -95,16 +94,6 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     permission: null,
     order: 7,
     participatesInDerived: true,
-    writableDerivedKeys: [],
-  },
-  {
-    id: "grafici_kpi",
-    title: "GRAFICI KPI",
-    subtitle: "Confronto trend personalizzato tra indicatori",
-    defaultCollapsed: true,
-    permission: null,
-    order: 8,
-    participatesInDerived: false,
     writableDerivedKeys: [],
   },
 ] as const;

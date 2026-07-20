@@ -10,5 +10,4 @@ export const REPORT_SECTION_UI: Record<ReportSectionId, { lazyMode: ReportSectio
   ore_lavorate: { lazyMode: "unmount-on-close" },
   dati_economici: { lazyMode: "keep-mounted" },
   analisi_incrociate: { lazyMode: "keep-mounted" },
-  grafici_kpi: { lazyMode: "unmount-on-close" },
 };

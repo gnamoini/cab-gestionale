@@ -7,7 +7,25 @@ export const topClientiTableConfig = {
     { id: "rank", label: "#", align: "right" as const },
     { id: "cliente", label: "Cliente" },
     { id: "fatturato", label: "Fatturato", align: "right" as const, formatter: "currency" as const },
+    { id: "pct", label: "%", align: "right" as const, formatter: "percentage" as const },
+    { id: "crediti", label: "Crediti", align: "right" as const, formatter: "currency" as const },
     { id: "fatture", label: "Fatture", align: "right" as const, formatter: "integer" as const },
+  ],
+} satisfies ReportTableConfig;
+
+export const ricambiUnifiedTableConfig = {
+  id: "ricambi-unified",
+  label: "Ranking ricambi",
+  columns: [
+    { id: "rank", label: "#", align: "right" as const },
+    { id: "codice", label: "Codice" },
+    { id: "marca", label: "Marca" },
+    { id: "nome", label: "Descrizione" },
+    { id: "qtaEntrata", label: "Entrate", align: "right" as const, formatter: "integer" as const },
+    { id: "qtaUscita", label: "Uscite", align: "right" as const, formatter: "integer" as const },
+    { id: "consumoMedio", label: "Cons. medio", align: "right" as const },
+    { id: "giorniCopertura", label: "Copertura gg", align: "right" as const },
+    { id: "valoreUscite", label: "Valore uscite", align: "right" as const, formatter: "currency" as const },
   ],
 } satisfies ReportTableConfig;
 

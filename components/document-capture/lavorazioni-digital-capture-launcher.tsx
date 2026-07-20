@@ -48,10 +48,13 @@ import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-conf
 import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 import {
   captureAcquisitionDraftStillValid,
+  captureAcquisitionResumeTargetStep,
   clearCaptureAcquisitionDraft,
   readCaptureAcquisitionDraft,
+  readCaptureAcquisitionStatus,
   saveCaptureAcquisitionDraft,
   type CaptureAcquisitionDraft,
+  type CaptureIngressoCompileDraft,
 } from "@/lib/document-capture/capture-acquisition-draft";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
@@ -143,6 +146,10 @@ export function LavorazioniDigitalCaptureLauncher({
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [pendingDuplicateOf, setPendingDuplicateOf] = useState<string | null>(null);
   const [pendingUploadCaptureId, setPendingUploadCaptureId] = useState<string | null>(null);
+  const [resumeIngressoCompile, setResumeIngressoCompile] = useState<CaptureIngressoCompileDraft | null>(
+    null,
+  );
+  const compileDraftRef = useRef<CaptureIngressoCompileDraft | null>(null);
   const applyV1 = isDocumentCaptureLauncherApplyV1ClientEnabled();
   const assignApplyFlow = useCaptureApplyFlow(applyV1 ? captureId : null);
   const analyzeTriggeredRef = useRef<string | null>(null);
@@ -173,6 +180,8 @@ export function LavorazioniDigitalCaptureLauncher({
     setIdentMismatchWarnings([]);
     setIdentMismatchConfirmOpen(false);
     setPendingHandoffLavorazioneId(null);
+    setResumeIngressoCompile(null);
+    compileDraftRef.current = null;
     resetWizardApi();
     resetUpload();
     analyzeTriggeredRef.current = null;
@@ -182,18 +191,34 @@ export function LavorazioniDigitalCaptureLauncher({
     if (captureId) discardEphemeralCaptureClient(captureId);
   }, [captureId]);
 
-  const handleClose = useCallback(() => {
-    if (captureId && step !== "hub") {
+  const persistAcquisitionDraft = useCallback(
+    (overrides?: Partial<Omit<CaptureAcquisitionDraft, "savedAt" | "captureId">> & {
+      ingressoCompile?: CaptureIngressoCompileDraft;
+    }) => {
+      if (!captureId || step === "hub") return;
       saveCaptureAcquisitionDraft({
         captureId,
         step,
         compileView,
         pendingSchedaTipo,
+        ingressoCompile: overrides?.ingressoCompile ?? compileDraftRef.current ?? undefined,
+        pendingMultiSchedaQueue:
+          overrides?.pendingMultiSchedaQueue ??
+          (pendingMultiSchedaQueue.length > 0 ? [...pendingMultiSchedaQueue] : undefined),
+        multiSchedaPromptDismissed:
+          overrides?.multiSchedaPromptDismissed ??
+          (pendingMultiSchedaQueue.length > 0 ? !multiSchedaPromptOpen : undefined),
+        ...overrides,
       });
-    }
+    },
+    [captureId, compileView, multiSchedaPromptOpen, pendingMultiSchedaQueue, pendingSchedaTipo, step],
+  );
+
+  const handleClose = useCallback(() => {
+    persistAcquisitionDraft();
     setOpen(false);
     resetFlow();
-  }, [captureId, compileView, pendingSchedaTipo, resetFlow, step]);
+  }, [persistAcquisitionDraft, resetFlow]);
 
   const handleOpenRequest = useCallback(() => {
     const draft = readCaptureAcquisitionDraft();
@@ -289,21 +314,40 @@ export function LavorazioniDigitalCaptureLauncher({
     [detectedSchedaTipos, fieldRows, onLavorazioneCreated, openSchedeEditor, pendingMultiSchedaQueue],
   );
 
+  const handleIngressoCompileChange = useCallback(
+    (snapshot: CaptureIngressoCompileDraft) => {
+      compileDraftRef.current = snapshot;
+      persistAcquisitionDraft({ ingressoCompile: snapshot });
+    },
+    [persistAcquisitionDraft],
+  );
+
+  const applyDraftNavigation = useCallback((draft: CaptureAcquisitionDraft) => {
+    setCompileView(draft.compileView);
+    setPendingSchedaTipo(draft.pendingSchedaTipo);
+    if (draft.pendingMultiSchedaQueue?.length) {
+      setPendingMultiSchedaQueue(draft.pendingMultiSchedaQueue);
+      setMultiSchedaPromptOpen(!draft.multiSchedaPromptDismissed);
+    }
+    setResumeIngressoCompile(draft.ingressoCompile ?? null);
+    compileDraftRef.current = draft.ingressoCompile ?? null;
+  }, []);
+
   const restoreFromDraft = useCallback(
     async (draft: CaptureAcquisitionDraft) => {
       setCaptureId(draft.captureId);
-      if (draft.step === "compile") {
+      const captureStatus = await readCaptureAcquisitionStatus(draft.captureId);
+      const targetStep = captureAcquisitionResumeTargetStep(draft.step, captureStatus);
+
+      if (targetStep === "compile") {
         await enterCompileStep(draft.captureId);
-        if (draft.compileView === "ingresso" && draft.pendingSchedaTipo) {
-          setCompileView("ingresso");
-          setPendingSchedaTipo(draft.pendingSchedaTipo);
-        }
+        applyDraftNavigation(draft);
       } else {
         setStep("analyze");
+        applyDraftNavigation(draft);
       }
-      clearCaptureAcquisitionDraft();
     },
-    [enterCompileStep],
+    [applyDraftNavigation, enterCompileStep],
   );
 
   const handleResumeConfirm = useCallback(async () => {
@@ -712,6 +756,8 @@ export function LavorazioniDigitalCaptureLauncher({
                   onApplySuccess={handleApplySuccess}
                   onCreated={applyV1 ? undefined : handleCaptureLavorazioneCreated}
                   onCompileError={setCompileError}
+                  resumeIngressoCompile={resumeIngressoCompile}
+                  onIngressoCompileChange={handleIngressoCompileChange}
                 />
                   ) : pendingSchedaTipo ? (
                     <CaptureMezzoMatchStep

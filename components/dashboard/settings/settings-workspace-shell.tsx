@@ -9,14 +9,13 @@ import { useBranding } from "@/context/branding-context";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { Drawer } from "@/components/design-system";
-import { PageHeader } from "@/components/gestionale/page-header";
+import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 import {
-  PageActionMenu,
   pageActionLogItem,
   pageActionUndoItem,
   type PageActionItem,
 } from "@/components/ui";
-import { GestionaleDirtySaveActions } from "@/components/gestionale/page-header-toolbar";
+import { GestionaleDirtySaveActions, gestionalePageToolbarActionsClass } from "@/components/gestionale/page-header-toolbar";
 import { LavorazioniModalHeader, LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import {
   ConfigurazioneLogListEmbeddedLazy,
@@ -61,7 +60,6 @@ import {
   SETTINGS_SIDEBAR_SHELL,
 } from "@/components/dashboard/settings-list-ui";
 import { useSettingsSimilarGate } from "@/components/dashboard/use-settings-similar-gate";
-import { OperatorGlobalSettingsPilotBadge } from "@/components/gestionale/operator-global-settings-pilot-badge";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import { CloseButton } from "@/components/design-system";
 import {
@@ -804,25 +802,19 @@ export function SistemaImpostazioniWorkspace({
   ], [undoableConfigSave, isDirty, bulkSave.isPending]);
 
   const settingsPageHeader = pageMode ? (
-    <div className={SETTINGS_PAGE_HEADER_WRAP}>
-      <PageHeader
-        title="Configurazione"
-        titleAddon={<OperatorGlobalSettingsPilotBadge />}
-        actions={
-          <>
-            {isDirty ? (
-              <GestionaleDirtySaveActions
-                isDirty={isDirty}
-                saving={bulkSave.isPending}
-                onCancel={handleCancelChanges}
-                onSave={handleSaveNow}
-                saveTitle="Salva tutte le modifiche alla configurazione globale"
-              />
-            ) : null}
-            <PageActionMenu items={settingsMenuItems} />
-          </>
-        }
-      />
+    <div className={`${SETTINGS_PAGE_HEADER_WRAP} flex flex-wrap items-center justify-end gap-2`}>
+      <div className={gestionalePageToolbarActionsClass}>
+        {isDirty ? (
+          <GestionaleDirtySaveActions
+            isDirty={isDirty}
+            saving={bulkSave.isPending}
+            onCancel={handleCancelChanges}
+            onSave={handleSaveNow}
+            saveTitle="Salva tutte le modifiche alla configurazione globale"
+          />
+        ) : null}
+        <PageHeaderPageActionMenu items={settingsMenuItems} />
+      </div>
     </div>
   ) : null;
 

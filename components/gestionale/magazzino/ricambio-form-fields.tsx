@@ -281,7 +281,7 @@ export function RicambioFormFields({
     <div {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }} className="flex flex-col gap-3">
       <RicambioCollapsibleSection title="Identificazione" defaultCollapsed={false}>
         <div className="grid gap-3">
-      <RicambioField label="Marca" tone="required" required={!fieldsOptional} htmlFor="magazzino-ricambio-marca">
+      <RicambioField label="Marca" tone="optional" htmlFor="magazzino-ricambio-marca">
         <GlobalSettingsListSelect
           listKey="magazzino:marche"
           id="magazzino-ricambio-marca"
@@ -294,7 +294,6 @@ export function RicambioFormFields({
               scontoFornitoreOriginale: String(sconto),
             }));
           }}
-          required={!fieldsOptional}
           excludeValues={[RICAMBIO_LENIENT_PLACEHOLDER_MARCA]}
           placeholder={RICAMBIO_MARCA_PLACEHOLDER}
           inputClassName={ricambioFormInputClass}
@@ -446,13 +445,11 @@ export function RicambioFormFields({
       </RicambioField>
       <RicambioField
         label="Descrizione"
-        tone="required"
-        required={!fieldsOptional}
+        tone="optional"
         htmlFor="magazzino-ricambio-descrizione"
       >
         <input
           id="magazzino-ricambio-descrizione"
-          required={!relaxHtmlValidation}
           value={form.descrizione}
           onChange={(e) => setForm((f) => ({ ...f, descrizione: e.target.value }))}
           className={ricambioFormInputClass}

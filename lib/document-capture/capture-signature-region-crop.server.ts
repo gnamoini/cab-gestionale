@@ -1,7 +1,6 @@
 import "server-only";
 
 import { cropNormalizedBboxToPngBuffer } from "@/lib/document-capture/capture-bbox-crop.server";
-import { pngBufferHasSignatureInk } from "@/lib/document-capture/capture-signature-ink";
 import type { CaptureSignatureBbox } from "@/lib/document-capture/capture-signature-crop";
 
 const SIGNATURE_BBOX_Y_OFFSETS = [0, -30, 30, -60, 60] as const;
@@ -15,6 +14,7 @@ function shiftBboxY(bbox: CaptureSignatureBbox, delta: number): CaptureSignature
   };
 }
 
+/** Ritaglio bbox firma → PNG data URL (senza filtro inchiostro: preview + salvataggio box). */
 export async function cropSignatureRegionWithInkRetry(input: {
   bytes: Uint8Array;
   mime: string;
@@ -28,10 +28,8 @@ export async function cropSignatureRegionWithInkRetry(input: {
       input.mime,
       input.page ?? 0,
     );
-    if (!png) continue;
-    if (await pngBufferHasSignatureInk(png)) {
-      return `data:image/png;base64,${png.toString("base64")}`;
-    }
+    if (!png?.length) continue;
+    return `data:image/png;base64,${png.toString("base64")}`;
   }
   return null;
 }

@@ -46,8 +46,10 @@ assert.doesNotMatch(
 assert.match(swipeOpenSrc, /setPointerCapture/);
 assert.match(swipeOpenSrc, /releasePointerCapture/);
 assert.match(swipeOpenSrc, /lostpointercapture/);
+assert.match(swipeOpenSrc, /e\.target\s*!==\s*document\.body/);
 assert.match(swipeOpenSrc, /NAV_DRAWER_EDGE_DRAG_IDLE_MS/);
 assert.match(swipeOpenSrc, /useLayoutEffect[\s\S]{0,200}isSnapping/);
+assert.match(swipeOpenSrc, /enabled:\s*enabled\s*\|\|\s*edgeActive/);
 assert.doesNotMatch(
   swipeOpenSrc,
   /if \(currentX > 0\) \{[\s\S]{0,80}scheduleTransform\(0/,

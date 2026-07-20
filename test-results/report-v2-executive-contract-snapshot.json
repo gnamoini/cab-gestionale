@@ -1,0 +1,107 @@
+{
+  "contractVersion": "1",
+  "cards": [
+    {
+      "contractVersion": "1",
+      "metricId": "lav-chiusi",
+      "dataset": "lavorazioni",
+      "priority": 1,
+      "displayKey": "report.executive.closed",
+      "label": "Chiusure periodo",
+      "trust": "GREEN",
+      "drillDown": {
+        "metricId": "lav-chiusi",
+        "targetSection": "lavorazioni"
+      },
+      "warnings": null
+    },
+    {
+      "contractVersion": "1",
+      "metricId": "lav-aperti",
+      "dataset": "lavorazioni",
+      "priority": 2,
+      "displayKey": "report.executive.open",
+      "label": "Interventi aperti",
+      "trust": "GREEN",
+      "drillDown": {
+        "metricId": "lav-aperti",
+        "targetSection": "lavorazioni"
+      },
+      "warnings": null
+    },
+    {
+      "contractVersion": "1",
+      "metricId": "lav_late_sla",
+      "dataset": "lavorazioni",
+      "priority": 3,
+      "displayKey": "report.executive.sla",
+      "label": "Oltre SLA",
+      "trust": "GREEN",
+      "drillDown": {
+        "metricId": "lav_late_sla",
+        "targetSection": "lavorazioni",
+        "targetTab": "sla"
+      },
+      "warnings": null
+    },
+    {
+      "contractVersion": "1",
+      "metricId": "eco_fatturato",
+      "dataset": "economico",
+      "priority": 4,
+      "displayKey": "report.executive.revenue",
+      "label": "Fatturato periodo",
+      "trust": "AMBER",
+      "drillDown": {
+        "metricId": "eco_fatturato",
+        "targetSection": "dati_economici",
+        "targetTab": "fatture"
+      },
+      "warnings": [
+        "eco_fatturato_source_pending"
+      ]
+    },
+    {
+      "contractVersion": "1",
+      "metricId": "eco_da_incassare",
+      "dataset": "economico",
+      "priority": 5,
+      "displayKey": "report.executive.receivables",
+      "label": "Da incassare",
+      "trust": "AMBER",
+      "drillDown": {
+        "metricId": "eco_da_incassare",
+        "targetSection": "dati_economici",
+        "targetTab": "crediti"
+      },
+      "warnings": [
+        "eco_da_incassare_source_pending"
+      ]
+    },
+    {
+      "contractVersion": "1",
+      "metricId": "scorta",
+      "dataset": "magazzino",
+      "priority": 6,
+      "displayKey": "report.executive.stock",
+      "label": "Ricambi sotto scorta",
+      "trust": "GREEN",
+      "drillDown": {
+        "metricId": "scorta",
+        "targetSection": "magazzino_ricambi",
+        "targetTab": "scorta"
+      },
+      "warnings": null
+    }
+  ],
+  "metadata": {
+    "contractVersion": "2.0",
+    "trustStatus": "AMBER",
+    "sourceFreshness": "LIVE",
+    "generatedAt": "<dynamic>",
+    "dataWarnings": [
+      "eco_da_incassare_source_pending",
+      "eco_fatturato_source_pending"
+    ]
+  }
+}

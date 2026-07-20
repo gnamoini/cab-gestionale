@@ -99,7 +99,8 @@ export function shouldUsePageActionMenuDropdown(
 ): boolean {
   if (options?.backHref) return true;
   if (isRefreshOnlyPageActionMenu(items, options)) return false;
-  return getSingletonPageActionListItem(items) === null;
+  if (getSingletonPageActionListItem(items) !== null) return false;
+  return true;
 }
 
 /** True se il menu ha almeno un'azione visibile (item, refresh header o back). */

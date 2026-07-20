@@ -1,11 +1,6 @@
-import { PageLayout } from "@/components/design-system";
 import { DashboardPageStructure } from "@/components/dashboard/dashboard-page-structure";
-import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
 
+/** ponytail: PageLayout in page.tsx LEVEL 2 — qui solo body skeleton. */
 export default function DashboardLoading() {
-  return (
-    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.dashboard}>
-      <DashboardPageStructure mode="skeleton" />
-    </PageLayout>
-  );
+  return <DashboardPageStructure mode="skeleton" />;
 }

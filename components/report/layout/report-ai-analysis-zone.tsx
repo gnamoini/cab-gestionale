@@ -9,7 +9,9 @@ import { useReportPerformanceContext } from "@/components/report/layout/report-p
 import { ReportSubsection } from "@/components/report/sections/report-subsection";
 import { reportZoneShellClass } from "@/components/report/report-ui-tokens";
 import { formatReportAnalysisPlainText } from "@/lib/report/report-analysis/format-report-analysis-plain-text";
-import { useReportAnalysis } from "@/lib/report/report-analysis/use-report-analysis";
+import { useReportAiAnalysisSource } from "@/lib/report/narrative/use-report-ai-analysis-source";
+import { insightRuleLabel } from "@/lib/report/insights/insight-rule-labels";
+import { OperationalBriefShell } from "@/components/report/operational-brief/operational-brief-shell";
 import type { ReportAnalysisConfidenza, ReportAnalysisGravita } from "@/lib/report/report-analysis/report-analysis-schema";
 import type { ReportModel } from "@/lib/report/build-report-model";
 import type { ReportCompareMode, ReportPeriodPreset } from "@/lib/report/date-ranges";
@@ -112,7 +114,7 @@ export function ReportAiAnalysisZone({
     [diaryRows],
   );
 
-  const analysis = useReportAnalysis({
+  const source = useReportAiAnalysisSource({
     preset,
     compareMode,
     filterRange,
@@ -125,6 +127,182 @@ export function ReportAiAnalysisZone({
     snapshotFingerprint,
     perfReady: !perfLoading && perf != null,
   });
+
+  if (source.type === "operational-brief") {
+    const showEmpty = !source.data && !source.loading;
+    const showLoading = source.loading && !source.data;
+
+    const briefBody = (
+      <>
+        {showLoading ? (
+          <div className="min-w-0 space-y-3" aria-busy="true">
+            <LoadingSkeletonBlock className="min-h-[3rem]" />
+            <LoadingSkeletonBlock className="min-h-[6rem]" />
+            <LoadingSkeletonBlock className="min-h-[8rem]" />
+          </div>
+        ) : null}
+
+        {showEmpty ? (
+          <div className="min-w-0 space-y-4">
+            <p className="text-sm leading-relaxed text-[color:var(--cab-text-muted)]">
+              Brief operativo per il responsabile officina: stato, priorità, problemi e azioni del periodo.
+            </p>
+            {source.error ? (
+              <div className="min-w-0 space-y-3">
+                <p className="text-sm text-[color:var(--cab-danger)]" role="alert">
+                  {source.error}
+                </p>
+                <GestionaleAiActionButton variant="secondary" size="sm" onClick={() => source.refetch()}>
+                  Riprova
+                </GestionaleAiActionButton>
+              </div>
+            ) : null}
+            <GestionaleAiActionButton onClick={() => source.refetch()} loading={source.loading}>
+              Genera brief
+            </GestionaleAiActionButton>
+          </div>
+        ) : null}
+
+        {source.data ? (
+          <div className="min-w-0 space-y-4">
+            {source.error ? (
+              <p className="text-sm text-[color:var(--cab-danger)]" role="alert">
+                {source.error}
+              </p>
+            ) : null}
+            <p className="text-xs text-[color:var(--cab-text-muted)]">
+              Ultima generazione: {formatGeneratedAt(source.data.generatedAt)}
+            </p>
+            <OperationalBriefShell brief={source.data} />
+            <p className="text-[10px] leading-snug text-[color:var(--cab-text-muted)]">{source.data.disclaimer}</p>
+          </div>
+        ) : null}
+      </>
+    );
+
+    const briefActions = source.data ? (
+      <GestionaleAiActionButton variant="secondary" size="sm" onClick={() => source.refetch()} loading={source.loading}>
+        Rigenera
+      </GestionaleAiActionButton>
+    ) : null;
+
+    if (embed) {
+      return (
+        <div className="min-w-0 space-y-4">
+          {briefActions ? <div className="flex justify-end">{briefActions}</div> : null}
+          {briefBody}
+        </div>
+      );
+    }
+
+    return (
+      <ShellCard
+        id="report-ai-analysis"
+        title="Brief operativo"
+        subtitle="Operational Intelligence — stato, priorità e azioni del periodo"
+        className={reportZoneShellClass}
+        headerActions={briefActions}
+      >
+        {briefBody}
+      </ShellCard>
+    );
+  }
+
+  if (source.type === "narrative-v2") {
+    const showEmpty = !source.data && !source.loading;
+    const showLoading = source.loading && !source.data;
+
+    const narrativeBody = (
+      <>
+        {showLoading ? (
+          <div className="min-w-0 space-y-3" aria-busy="true">
+            <LoadingSkeletonBlock className="min-h-[3rem]" />
+            <LoadingSkeletonBlock className="min-h-[6rem]" />
+            <LoadingSkeletonBlock className="min-h-[8rem]" />
+          </div>
+        ) : null}
+
+        {showEmpty ? (
+          <div className="min-w-0 space-y-4">
+            <p className="text-sm leading-relaxed text-[color:var(--cab-text-muted)]">
+              Spiegazione narrativa dei segnali decisionali del periodo. La generazione avviene su richiesta.
+            </p>
+            {source.error ? (
+              <div className="min-w-0 space-y-3">
+                <p className="text-sm text-[color:var(--cab-danger)]" role="alert">
+                  {source.error}
+                </p>
+                <GestionaleAiActionButton variant="secondary" size="sm" onClick={() => source.refetch()}>
+                  Riprova
+                </GestionaleAiActionButton>
+              </div>
+            ) : null}
+            <GestionaleAiActionButton onClick={() => source.refetch()} loading={source.loading}>
+              Genera analisi
+            </GestionaleAiActionButton>
+          </div>
+        ) : null}
+
+        {source.data ? (
+          <div className="min-w-0 space-y-4">
+            {source.error ? (
+              <p className="text-sm text-[color:var(--cab-danger)]" role="alert">
+                {source.error}
+              </p>
+            ) : null}
+            <p className="text-xs text-[color:var(--cab-text-muted)]">
+              Ultima generazione: {formatGeneratedAt(source.data.generatedAt)}
+            </p>
+            {source.data.sections.map((section) => (
+              <ReportSubsection
+                key={section.ruleKey}
+                id={`report-narrative-${section.ruleKey}`}
+                title={insightRuleLabel(section.ruleKey)}
+              >
+                <p className="text-sm leading-relaxed text-[color:var(--cab-text)]">{section.explanation}</p>
+              </ReportSubsection>
+            ))}
+            {source.data.disclaimer ? (
+              <p className="text-[10px] leading-snug text-[color:var(--cab-text-muted)]">{source.data.disclaimer}</p>
+            ) : (
+              <p className="text-[10px] leading-snug text-[color:var(--cab-text-muted)]">
+                Spiegazione generativa basata sui segnali del periodo — verificare sempre i dati operativi.
+              </p>
+            )}
+          </div>
+        ) : null}
+      </>
+    );
+
+    const narrativeActions = source.data ? (
+      <GestionaleAiActionButton variant="secondary" size="sm" onClick={() => source.refetch()} loading={source.loading}>
+        Rigenera
+      </GestionaleAiActionButton>
+    ) : null;
+
+    if (embed) {
+      return (
+        <div className="min-w-0 space-y-4">
+          {narrativeActions ? <div className="flex justify-end">{narrativeActions}</div> : null}
+          {narrativeBody}
+        </div>
+      );
+    }
+
+    return (
+      <ShellCard
+        id="report-ai-analysis"
+        title="Analisi AI"
+        subtitle="Spiegazione narrativa dei segnali decisionali del periodo"
+        className={reportZoneShellClass}
+        headerActions={narrativeActions}
+      >
+        {narrativeBody}
+      </ShellCard>
+    );
+  }
+
+  const analysis = source.legacy;
 
   const copyAnalysis = useCallback(async () => {
     if (!analysis.data) return;

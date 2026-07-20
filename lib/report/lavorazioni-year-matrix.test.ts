@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
-import { buildLavorazioniYearMatrix } from "@/lib/report/lavorazioni-year-matrix";
+import { buildLavorazioniYearMatrix, yearlyForecastLineModel } from "@/lib/report/lavorazioni-year-matrix";
 
 function mockArchived(dataCompletamento: string): LavorazioneArchiviata {
   return {
@@ -44,5 +44,39 @@ assert.equal(
   99,
   "manual overrides automatic for same month",
 );
+
+const forecastRows = [
+  {
+    year: 2024,
+    months: Array.from({ length: 12 }, () => 0),
+    total: 500,
+    growthVsPrevPct: null,
+    bestMonthIdx: null,
+    worstMonthIdx: null,
+  },
+  {
+    year: 2025,
+    months: Array.from({ length: 12 }, () => 0),
+    total: 400,
+    growthVsPrevPct: null,
+    bestMonthIdx: null,
+    worstMonthIdx: null,
+  },
+  {
+    year: 2026,
+    months: Array.from({ length: 12 }, () => 0),
+    total: 312,
+    growthVsPrevPct: null,
+    bestMonthIdx: null,
+    worstMonthIdx: null,
+  },
+];
+const forecast = yearlyForecastLineModel(forecastRows, new Date(2026, 6, 20));
+assert.equal(forecast.dashed.length, 2);
+assert.equal(forecast.dashed[0]?.year, 2025);
+assert.equal(forecast.dashed[0]?.kind, "history");
+assert.equal(forecast.dashed[1]?.year, 2026);
+assert.equal(forecast.dashed[1]?.kind, "forecast");
+assert.equal(forecast.dashed[1]?.x, forecast.dashed[0]!.x + 1, "forecast spans prev year → current year");
 
 console.log("lavorazioni-year-matrix.test.ts OK");

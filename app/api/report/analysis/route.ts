@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { emitReportAnalysisTelemetry } from "@/lib/report/report-analysis/emit-report-analysis-observability";
 import { REPORT_ANALYSIS_CONTEXT_MAX_BYTES } from "@/lib/report/report-analysis/report-analysis-config";
 import { isReportAnalysisRateLimited } from "@/lib/report/report-analysis/report-analysis-rate-limit.server";
 import { AIReportService } from "@/lib/report/report-analysis/report-analysis-service.server";
@@ -9,6 +10,7 @@ import { verifyServerPageRead } from "@/src/lib/auth/server-permission-guards";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const t0 = Date.now();
   const allowed = await verifyServerPageRead("report");
   if (!allowed) {
     return NextResponse.json({ error: "Permesso negato" }, { status: 403 });
@@ -46,6 +48,7 @@ export async function POST(request: Request) {
       ? "Parametri analisi non validi (snapshot troppo lungo)"
       : "Dati report non validi per l'analisi AI";
 
+    emitReportAnalysisTelemetry({ outcome: "empty", latencyMs: Date.now() - t0, code: "validation_failed" });
     return NextResponse.json(
       {
         error: errorMessage,
@@ -57,15 +60,22 @@ export async function POST(request: Request) {
 
   const contextBytes = new TextEncoder().encode(JSON.stringify(parsed.data.context)).length;
   if (contextBytes > REPORT_ANALYSIS_CONTEXT_MAX_BYTES) {
+    emitReportAnalysisTelemetry({ outcome: "empty", latencyMs: Date.now() - t0, code: "context_too_large" });
     return NextResponse.json({ error: "Context troppo grande" }, { status: 413 });
   }
 
   const result = await AIReportService.generateReportAnalysis(parsed.data.context);
   if (!result.ok) {
+    emitReportAnalysisTelemetry({
+      outcome: "failed",
+      latencyMs: Date.now() - t0,
+      code: result.code,
+    });
     const status =
       result.code === "not_configured" ? 503 : result.code === "timeout" ? 504 : 502;
     return NextResponse.json({ error: result.message, code: result.code }, { status });
   }
 
+  emitReportAnalysisTelemetry({ outcome: "completed", latencyMs: Date.now() - t0 });
   return NextResponse.json(result.data);
 }

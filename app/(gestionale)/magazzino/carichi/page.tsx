@@ -1,11 +1,13 @@
 import { Suspense } from "react";
-import { LoadingSuspenseFallback } from "@/components/design-system";
+import { PageLayout, PageTransitionLoader } from "@/components/design-system";
 import { ReceivingListView } from "@/components/gestionale/magazzino/carichi/receiving-list-view";
 
 export default function MagazzinoCarichiPage() {
   return (
-    <Suspense fallback={<LoadingSuspenseFallback variant="magazzino" />}>
-      <ReceivingListView />
-    </Suspense>
+    <PageLayout title="Carichi da DDT">
+      <Suspense fallback={<PageTransitionLoader variant="magazzino" />}>
+        <ReceivingListView />
+      </Suspense>
+    </PageLayout>
   );
 }

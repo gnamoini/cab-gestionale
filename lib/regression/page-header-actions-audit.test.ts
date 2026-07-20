@@ -23,9 +23,17 @@ const TARGETS = [
   "components/dashboard/security/production-readiness-view.tsx",
   "components/dashboard/dashboard-view.tsx",
   "components/gestionale/lavorazioni/lavorazioni-page-toolbar.tsx",
+  "components/workshop-schedule/agenda-officina-view.tsx",
 ];
 
+const DIRECT_HEADER_ACTIONS = new Set([
+  "components/lavorazioni-clienti/client-lavorazione-detail-view.tsx",
+]);
+
 const offenders: string[] = [];
+
+const bodyMenuPattern = /<PageActionMenu[\s/>]/;
+const headerMenuPattern = /page-header-actions-portal|gestionale-page-header-menu/;
 
 for (const rel of TARGETS) {
   const file = path.join(ROOT, rel);
@@ -33,6 +41,13 @@ for (const rel of TARGETS) {
   const src = fs.readFileSync(file, "utf8");
   if (src.includes("GestionalePageToolbarActions")) {
     offenders.push(`${rel}: GestionalePageToolbarActions`);
+  }
+  if (
+    bodyMenuPattern.test(src) &&
+    !headerMenuPattern.test(src) &&
+    !DIRECT_HEADER_ACTIONS.has(rel)
+  ) {
+    offenders.push(`${rel}: PageActionMenu senza PageHeaderPageActionMenu portal`);
   }
 }
 

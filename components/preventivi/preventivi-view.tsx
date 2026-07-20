@@ -14,17 +14,17 @@ import {
 } from "@/components/gestionale/global-table";
 import { IconNavLavorazioni } from "@/components/gestionale/gestionale-nav-config";
 import {
-  PageActionMenu,
   PageActionMenuProvider,
   clickPageActionHiddenTrigger,
   pageActionLogItem,
   usePageActionMenu,
   type PageActionItem,
 } from "@/components/ui";
+import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { LoadingCardSkeleton, PageLayout, SkeletonBoundary } from "@/components/design-system";
+import { LoadingCardSkeleton, SkeletonBoundary } from "@/components/design-system";
 import { PreventiviTableSection } from "@/components/preventivi/preventivi-page-structure";
 const PreventiviEditorModal = dynamic(
   () => import("@/components/preventivi/preventivi-editor-modal").then((m) => m.PreventiviEditorModal),
@@ -1031,12 +1031,15 @@ export function PreventiviView() {
     <GestionaleSectionGate module="preventivi">
     <PageActionMenuProvider>
     <PreventiviPageMenuRegistrar items={preventiviMenuItems} />
+    <PageHeaderPageActionMenu />
     <div ref={importTriggerRef} className="sr-only" aria-hidden>
       <ModuleImportEntry entity="preventivi" module="preventivi" />
     </div>
     <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
-      <PageLayout title="Preventivi" titleAddon={documentSectionTabs} actions={<PageActionMenu />}>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        {documentSectionTabs}
+      </div>
 
       {pageTab === "ordini" ? (
         <OrdiniFornitoriView canRead={canReadPreventivi} canWrite={canWritePreventivi} />
@@ -1354,7 +1357,6 @@ export function PreventiviView() {
       ) : null}
         </>
       )}
-      </PageLayout>
 
       <PreventivoEliminaConfirmDialog
         open={eliminaConfirmRecord != null}

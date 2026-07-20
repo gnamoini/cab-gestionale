@@ -36,6 +36,7 @@ assert.match(grid, /timesheetDayColumnClass/, "day cells must use layout-driven 
 assert.match(grid, /data-timesheet-fixed="name"/, "colgroup must pin name column width via CSS");
 
 assert.match(compactCell, /data-timesheet-cell-kind/, "filled cells expose kind for square td paint");
+assert.match(grid, /timesheetDayCellKindDataAttrs/, "day td must expose cell kind for CSS paint without :has()");
 assert.match(compactCell, /rounded-none/, "timesheet cell button must have zero radius");
 assert.doesNotMatch(compactCell, /active:scale/, "timesheet cell must not scale on press");
 assert.doesNotMatch(compactCell, /shrink-0/, "compact cell must not block column shrink");
@@ -52,8 +53,13 @@ assert.match(css, /th\[data-timesheet-weekend-compact="true"\][\s\S]*padding-lef
 assert.match(css, /data-timesheet-cell-kind="absence"/, "CSS must paint filled cells on td via cell kind");
 assert.match(
   css,
-  /:not\(:has\(> button\[data-timesheet-cell-kind\]\)\)/,
+  /:not\(\[data-timesheet-cell-kind\]\)/,
   "crosshair must not gray-out filled day cells",
+);
+assert.doesNotMatch(
+  css,
+  /timesheet-presenze-grid[\s\S]*:has\(/,
+  "timesheet grid CSS must not rely on :has() for cell paint",
 );
 assert.match(css, /border-radius:\s*0 !important/, "CSS must force square day cells");
 assert.doesNotMatch(

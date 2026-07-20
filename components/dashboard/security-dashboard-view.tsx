@@ -7,7 +7,6 @@ import { useAuth } from "@/context/auth-context";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { roleLabel } from "@/src/lib/auth/permissions";
 import { logSecurityPageAccessAction } from "@/src/actions/security-read";
-import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import {
   SecurityMonitoringSectionLazy,
@@ -222,7 +221,6 @@ export function SecurityDashboardView() {
   if (!isAdmin) {
     return (
       <div className={dsStackPage}>
-        <PageHeader title="Sicurezza" />
         <ShellCard title="Accesso negato">
           <p className="text-sm text-[color:var(--cab-text-muted)]">
             Questa area è riservata agli amministratori. Operatore e altri ruoli non possono accedere alla gestione sicurezza.
@@ -242,8 +240,6 @@ export function SecurityDashboardView() {
 
   return (
     <div className={dsStackPage}>
-      <PageHeader title="Sicurezza" />
-
       <HubModalTabBar aria-label="Sezioni sicurezza" className="mb-1">
         <HubModalTab
           id="security-tab-users"

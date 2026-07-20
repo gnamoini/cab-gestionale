@@ -104,6 +104,50 @@ function ReportYearlyForecastLineChartInner({
   );
 }
 
+function MagazzinoEntrateUsciteStackedBarsInner({
+  rows,
+}: {
+  rows: { label: string; entrate: number; uscite: number }[];
+}) {
+  const W = 720;
+  const H = 220;
+  const padL = 36;
+  const padR = 12;
+  const padT = 12;
+  const padB = 48;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  const n = Math.max(rows.length, 1);
+  const maxY = Math.max(1, ...rows.map((r) => r.entrate + r.uscite));
+  const bw = innerW / n;
+  const w = Math.min(28, bw * 0.55);
+  const base = padT + innerH;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-56 w-full max-w-full" role="img" aria-label="Entrate e uscite mensili">
+      <line x1={padL} y1={base} x2={W - padR} y2={base} stroke="currentColor" className="text-[color:var(--cab-border)]" />
+      {rows.map((r, i) => {
+        const cx = padL + bw * i + bw / 2;
+        const he = (r.entrate / maxY) * innerH;
+        const hu = (r.uscite / maxY) * innerH;
+        return (
+          <g key={r.label}>
+            <rect x={cx - w / 2} y={base - he - hu} width={w} height={he} fill={EMERALD} rx={2}>
+              <title>{`Entrate: ${r.entrate}`}</title>
+            </rect>
+            <rect x={cx - w / 2} y={base - hu} width={w} height={hu} fill={ORANGE} rx={2}>
+              <title>{`Uscite: ${r.uscite}`}</title>
+            </rect>
+            <text x={cx} y={H - 10} textAnchor="middle" className="fill-[color:var(--cab-text-muted)]" style={{ fontSize: 9 }}>
+              {r.label}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 function MagazzinoEntrateUsciteBarsInner({
   rows,
 }: {
@@ -193,8 +237,12 @@ function MagazzinoCapitalLineChartInner({ rows }: { rows: { label: string; capit
 
 function ReportTemporalMonthlyBarsInner({
   rows,
+  ariaLabel = "Lavorazioni completate per mese",
+  valueLabel = "lavorazioni",
 }: {
   rows: { label: string; count: number; muted?: boolean }[];
+  ariaLabel?: string;
+  valueLabel?: string;
 }) {
   const W = 720;
   const H = 220;
@@ -211,7 +259,7 @@ function ReportTemporalMonthlyBarsInner({
   const base = padT + innerH;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-56 w-full max-w-full" role="img" aria-label="Lavorazioni completate per mese">
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-56 w-full max-w-full" role="img" aria-label={ariaLabel}>
       <line x1={padL} y1={base} x2={W - padR} y2={base} stroke="currentColor" className="text-[color:var(--cab-border)]" />
       {rows.map((r, i) => {
         const cx = padL + bw * i + bw / 2;
@@ -228,7 +276,7 @@ function ReportTemporalMonthlyBarsInner({
               rx={3}
               opacity={r.muted ? 0.45 : 1}
             >
-              <title>{`${r.label}: ${r.count} lavorazioni`}</title>
+              <title>{`${r.label}: ${r.count} ${valueLabel}`}</title>
             </rect>
             <text x={cx} y={H - 10} textAnchor="middle" className="fill-[color:var(--cab-text-muted)]" style={{ fontSize: 9 }}>
               {r.label}
@@ -241,6 +289,7 @@ function ReportTemporalMonthlyBarsInner({
 }
 
 export const ReportYearlyForecastLineChart = memo(ReportYearlyForecastLineChartInner);
+export const MagazzinoEntrateUsciteStackedBars = memo(MagazzinoEntrateUsciteStackedBarsInner);
 export const MagazzinoEntrateUsciteBars = memo(MagazzinoEntrateUsciteBarsInner);
 export const MagazzinoCapitalLineChart = memo(MagazzinoCapitalLineChartInner);
 export const ReportTemporalMonthlyBars = memo(ReportTemporalMonthlyBarsInner);

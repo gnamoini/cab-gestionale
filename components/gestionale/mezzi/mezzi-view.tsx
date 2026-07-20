@@ -7,8 +7,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
 import { MezziTableSection } from "@/components/gestionale/mezzi/mezzi-page-structure";
+import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 import {
-  PageActionMenu,
   clickPageActionHiddenTrigger,
   pageActionLogItem,
   pageActionUndoItem,
@@ -36,7 +36,7 @@ import { logModificaRowToMezziHubLogEntry } from "@/lib/mezzi/mezzi-db-ui-adapte
 import type { MezzoGestito, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 import { dsPageToolbarCtaCompact } from "@/lib/ui/design-system";
 import { useGestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
-import { LoadingCardSkeleton, LoadingErrorState, PageLayout, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount, SkeletonBoundary } from "@/components/design-system";
+import { LoadingCardSkeleton, LoadingErrorState, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount, SkeletonBoundary } from "@/components/design-system";
 import { Q_FOCUS_MEZZO } from "@/lib/navigation/dashboard-log-links";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
@@ -623,16 +623,13 @@ export function MezziView() {
     </div>
     <div ref={listLayoutRef} className={`${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
-      <PageLayout
-        title="Mezzi"
-        titleAddon={<MezziPageViewToggle value={pageView} onChange={setPageView} />}
-        actions={
-          <PageActionMenu
-            items={mezziPageMenuItems}
-            onRefresh={() => void refetchMezzi()}
-          />
-        }
-      >
+      <PageHeaderPageActionMenu
+        items={mezziPageMenuItems}
+        onRefresh={() => void refetchMezzi()}
+      />
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <MezziPageViewToggle value={pageView} onChange={setPageView} />
+      </div>
         <ShellCard>
           {pageView === "anagrafica" ? (
             <>
@@ -747,7 +744,6 @@ export function MezziView() {
             <MezziTagliandiPanel canEdit={canEditVehicles} />
           ) : null}
         </ShellCard>
-      </PageLayout>
 
       {hubMezzo ? (
         <MezziHubDetailModal

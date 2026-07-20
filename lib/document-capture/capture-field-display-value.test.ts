@@ -142,4 +142,12 @@ assert.equal(
   "Perdita olio\nRiga 2",
 );
 
+const literalNewlines =
+  "* Già sostituita una ruota bocca aspiraz.\\nCompleta di supporto.**\\n\\n**DA sostituire**\\nN.** 1 pompa acqua elettrica OK";
+const unescaped = formatCaptureMultilineText(literalNewlines);
+assert.doesNotMatch(unescaped, /\\n/);
+assert.match(unescaped, /\n/);
+assert.match(unescaped, /da sostituire/i);
+assert.match(unescaped, /1 pompa acqua elettrica OK/i);
+
 console.log("capture-field-display-value.test.ts OK");

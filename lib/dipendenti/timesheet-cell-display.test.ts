@@ -16,6 +16,7 @@ import {
   formatTimesheetDayHeaderGrid,
   formatTimesheetDayLabelPdf,
   cellDisplayKind,
+  timesheetDayCellKindDataAttrs,
 } from "@/lib/dipendenti/timesheet-cell-display";
 import type { DipendenteTimesheetEmployeeRow } from "@/lib/dipendenti/types";
 import { defaultTipiAssenza } from "@/lib/dipendenti/tipi-assenza-model";
@@ -187,5 +188,13 @@ assert.equal(
   }),
   "Rossi\nLun 09/06\nSola lettura",
 );
+
+assert.deepEqual(timesheetDayCellKindDataAttrs(cell({ oreOrdinarie: 8 }), "work"), {
+  "data-timesheet-cell-kind": "work",
+});
+assert.deepEqual(timesheetDayCellKindDataAttrs(cell({}), "work"), {});
+assert.deepEqual(timesheetDayCellKindDataAttrs(cell({ oreAssenza: 8 }), "absence"), {
+  "data-timesheet-cell-kind": "absence",
+});
 
 console.log("timesheet-cell-display.test.ts OK");

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
+import { gestionalePageToolbarActionsClass } from "@/components/gestionale/page-header-toolbar";
 import { abandonInventoryReceivingImport } from "@/lib/inventory-receiving/inventory-receiving-import-client";
 import { InventoryReceivingPendingBanner } from "@/components/gestionale/magazzino/carichi/inventory-receiving-pending-banner";
 import { inventoryDocumentStatusLabel } from "@/lib/inventory-receiving/documents/inventory-receiving-status";
@@ -42,14 +42,13 @@ export function ReceivingListView() {
   return (
     <GestionaleSectionGate module="magazzino_carichi">
       <div className={layoutPageRoot}>
-        <PageHeader
-          title="Carichi da DDT"
-          actions={
-            perm.canWrite ? (
+        {perm.canWrite ? (
+          <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
+            <div className={gestionalePageToolbarActionsClass}>
               <MagazzinoCarichiCaptureLauncher size="md" className="h-11 shrink-0" />
-            ) : null
-          }
-        />
+            </div>
+          </div>
+        ) : null}
         <div className={dsStackPage}>
           <InventoryReceivingPendingBanner
             items={pending}

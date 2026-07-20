@@ -12,12 +12,19 @@ import type { KpiPerformanceAlert } from "@/lib/report/kpi-performance/kpi-perfo
 import { countClientiSottoSogliaDisponibilita } from "@/lib/report/kpi-performance/kpi-performance-formulas";
 import { LoadingSkeletonBlock } from "@/components/design-system/loading/loading-skeleton";
 
-export function ReportExecutiveSummaryContent({ compareMode }: { compareMode: ReportCompareMode }) {
+export function ReportExecutiveSummaryContent({
+  compareMode,
+  variant = "full",
+}: {
+  compareMode: ReportCompareMode;
+  /** `operations` — solo sintesi lavorazioni, senza chip flotta. */
+  variant?: "full" | "operations";
+}) {
   const { perf, perfLoading } = useReportPerformanceContext();
 
   const summaryLine = useMemo(() => {
     if (!perf) return "Caricamento sintesi…";
-    const alertN = perf.alerts.length;
+    const alertN = perf.alerts.filter((a) => a.id !== "sotto-scorta").length;
     const alertPart = alertN > 0 ? `${alertN} alert attivi` : "nessun alert critico";
     return `${perf.operational.closedInPeriod} chiusure · ${perf.operational.openCount} aperti · ${alertPart}`;
   }, [perf]);
@@ -30,14 +37,18 @@ export function ReportExecutiveSummaryContent({ compareMode }: { compareMode: Re
     <ReportExecutiveStrip
       summaryLine={summaryLine}
       compareActive={compareMode !== "none"}
-      health={{
-        peggiorDisponibilita: perf.fleet.peggiorDisponibilita,
-        clientiSottoSoglia: countClientiSottoSogliaDisponibilita(perf.fleet.disponibilitaPerCliente),
-        mezziInOfficina: perf.fleet.mezziInOfficina,
-        totalMezzi: perf.fleet.totalMezzi,
-        alertCount: perf.alerts.length,
-        criticalAlertCount: perf.alerts.filter((a) => a.severity === "critical").length,
-      }}
+      health={
+        variant === "operations"
+          ? undefined
+          : {
+              peggiorDisponibilita: perf.fleet.peggiorDisponibilita,
+              clientiSottoSoglia: countClientiSottoSogliaDisponibilita(perf.fleet.disponibilitaPerCliente),
+              mezziInOfficina: perf.fleet.mezziInOfficina,
+              totalMezzi: perf.fleet.totalMezzi,
+              alertCount: perf.alerts.length,
+              criticalAlertCount: perf.alerts.filter((a) => a.severity === "critical").length,
+            }
+      }
     />
   );
 }

@@ -1,15 +1,25 @@
-import { PageSection } from "@/components/design-system/layout/page-section";
 import type { SkeletonMode } from "@/components/design-system/loading/skeleton-contract";
-import { STRUCTURAL_ROUTE_SKELETON_CONTRACTS } from "@/lib/ui/structural-route-skeleton-contracts";
+import type { RouteSkeletonScope } from "@/lib/ui/route-skeleton-scope";
+import {
+  ReportV2RouteSkeleton,
+} from "@/components/report/report-v2-route-skeleton";
 
-export function ReportPageStructure({ mode = "skeleton" }: { mode?: SkeletonMode }) {
-  return (
-    <PageSection
-      mode={mode}
-      ariaLabel="Caricamento report"
-      skeleton={STRUCTURAL_ROUTE_SKELETON_CONTRACTS.report}
-    />
-  );
+export type ReportPageStructureProps = {
+  mode?: SkeletonMode;
+  /** full: route/Suspense (con command bar). content: solo body sotto toolbar live. */
+  scope?: RouteSkeletonScope;
+  className?: string;
+};
+
+export function ReportPageStructure({
+  mode = "skeleton",
+  scope = "full",
+  className = "",
+}: ReportPageStructureProps) {
+  if (mode !== "skeleton") {
+    return null;
+  }
+  return <ReportV2RouteSkeleton scope={scope} className={className} />;
 }
 
 export const ReportRouteStructure = ReportPageStructure;

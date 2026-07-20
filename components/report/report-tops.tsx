@@ -325,7 +325,15 @@ export function ReportTopClientiFatturato({ rows }: { rows: TopClienteFatturatoR
   );
 }
 
-export function ReportTopClienti({ rows, showCompare }: { rows: TopClienteReportRow[]; showCompare: boolean }) {
+export function ReportTopClienti({
+  rows,
+  showCompare,
+  showPctTotale = false,
+}: {
+  rows: TopClienteReportRow[];
+  showCompare: boolean;
+  showPctTotale?: boolean;
+}) {
   const [sortColumn, setSortColumn] = useState<CliKey | null>(null);
   const [sortPhase, setSortPhase] = useState<ReportSortPhase>("natural");
 
@@ -360,8 +368,9 @@ export function ReportTopClienti({ rows, showCompare }: { rows: TopClienteReport
   const paged = useMemo(() => sliceItems(data), [data, sliceItems, page]);
 
   const maxInterventi = useMemo(() => Math.max(1, ...data.map((r) => r.interventi)), [data]);
+  const totalInterventi = useMemo(() => data.reduce((s, r) => s + r.interventi, 0), [data]);
 
-  const colSpan = showCompare ? 5 : 4;
+  const colSpan = (showCompare ? 1 : 0) + (showPctTotale ? 1 : 0) + 4;
 
   return (
     <div className={wrap}>
@@ -370,13 +379,15 @@ export function ReportTopClienti({ rows, showCompare }: { rows: TopClienteReport
           <col className="w-6 min-w-[1.5rem] max-w-[1.75rem]" />
           <col style={{ width: "38%" }} />
           <col style={{ width: "14%" }} />
-          <col style={{ width: "20%" }} />
+          {showPctTotale ? <col style={{ width: "10%" }} /> : null}
+          <col style={{ width: showPctTotale ? "18%" : "20%" }} />
           {showCompare ? <col style={{ width: "26%" }} /> : null}
         </colgroup>
         <GlobalTableHead>
           <GlobalTableHeadLabel label="#" thClassName="w-6 min-w-[1.5rem] max-w-[1.75rem] px-0.5 text-center" align="center" />
           <ReportSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
           <ReportSortTh label="N° interventi" columnKey="interventi" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} align="right" />
+          {showPctTotale ? <GlobalTableHeadLabel label="% totale" align="right" /> : null}
           <ReportSortTh label="Ultimo" columnKey="ultimoIso" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} align="right" />
           {showCompare ? <GlobalTableHeadLabel label="Δ vs confronto" align="right" /> : null}
         </GlobalTableHead>
@@ -399,6 +410,13 @@ export function ReportTopClienti({ rows, showCompare }: { rows: TopClienteReport
                 <td className={`${tdBase} text-right`}>
                   <ReportRankMetricCell value={r.interventi} max={maxInterventi} />
                 </td>
+                {showPctTotale ? (
+                  <td className={`${tdBase} text-right text-xs tabular-nums text-[color:var(--cab-text-muted)]`}>
+                    {totalInterventi > 0
+                      ? `${((r.interventi / totalInterventi) * 100).toLocaleString("it-IT", { maximumFractionDigits: 1 })}%`
+                      : "—"}
+                  </td>
+                ) : null}
                 <td className={`${tdBase} whitespace-nowrap text-right text-xs tabular-nums text-[color:color-mix(in_srgb,var(--cab-text-muted)_92%,var(--cab-text))]`}>
                   {r.ultimoIso ? new Date(r.ultimoIso).toLocaleDateString("it-IT") : "—"}
                 </td>

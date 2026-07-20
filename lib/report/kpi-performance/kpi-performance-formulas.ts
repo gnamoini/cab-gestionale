@@ -16,6 +16,7 @@ import { aggregateMagazzinoQtyByProductInRange } from "@/lib/report/magazzino-pe
 import { isoInRange, type DateRange } from "@/lib/report/date-ranges";
 import { monthKeysOverlappingRange } from "@/lib/report/lavorazioni-report-selectors";
 import { computeReportMagazzinoKpiFromUi } from "@/lib/report/report-kpi-selectors";
+import { sumValoreStockARischio } from "@/lib/report/magazzino-analytics";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore } from "@/types/schede";
@@ -297,16 +298,35 @@ export function guastiByTipoAttrezzatura(
     .sort((a, b) => b.count - a.count);
 }
 
+export type MezzoAltaFrequenzaGuastiRow = {
+  mezzoId: string;
+  label: string;
+  cliente: string;
+  tipoAttrezzatura: string;
+  ultimoInterventoIso: string | null;
+};
+
 export function mezziConFrequenzaGuastiAlta(
   mezzi: readonly MezzoGestito[],
   lavRows: readonly LavorazioneListRow[],
-): { mezzoId: string; label: string }[] {
-  const out: { mezzoId: string; label: string }[] = [];
+): MezzoAltaFrequenzaGuastiRow[] {
+  const out: MezzoAltaFrequenzaGuastiRow[] = [];
   for (const m of mezzi) {
     const interventi = interventiMezzoDaLavorazioniDb(m, lavRows);
-    if (frequenzaGuastiDaInterventi(interventi) === "ALTA") {
-      out.push({ mezzoId: m.id, label: mezzoLabel(m) });
+    if (frequenzaGuastiDaInterventi(interventi) !== "ALTA") continue;
+    let ultimo: string | null = null;
+    for (const i of interventi) {
+      const at = i.dataCompletamento ?? i.dataIngresso;
+      if (!at) continue;
+      if (!ultimo || at > ultimo) ultimo = at;
     }
+    out.push({
+      mezzoId: m.id,
+      label: mezzoLabel(m),
+      cliente: m.cliente?.trim() || "—",
+      tipoAttrezzatura: m.tipoAttrezzatura?.trim() || "—",
+      ultimoInterventoIso: ultimo,
+    });
   }
   return out;
 }
@@ -351,6 +371,7 @@ export function buildAlerts(input: {
   mezzi: readonly MezzoGestito[];
   completate: readonly LavorazioneArchiviata[];
   lavRows: readonly LavorazioneListRow[];
+  range: DateRange;
 }): import("@/lib/report/kpi-performance/kpi-performance-types").KpiPerformanceAlert[] {
   const alerts: import("@/lib/report/kpi-performance/kpi-performance-types").KpiPerformanceAlert[] = [];
 
@@ -366,11 +387,15 @@ export function buildAlerts(input: {
 
   const sotto = sottoScortaCount(input.prodotti);
   if (sotto > 0) {
+    const valoreRischio = sumValoreStockARischio(input.prodotti);
+    const eur = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(
+      valoreRischio,
+    );
     alerts.push({
       id: "sotto-scorta",
       severity: "critical",
       title: `${sotto} ricambi sotto scorta minima`,
-      detail: "Quantità in magazzino inferiore alla scorta minima impostata.",
+      detail: `Quantità in magazzino inferiore alla scorta minima. Valore stimato da riordinare: ${eur}.`,
     });
   }
 
@@ -406,9 +431,58 @@ export function buildAlerts(input: {
     alerts.push({
       id: "guasti-alta",
       severity: "warning",
-      title: `${alta.length} mezzi con frequenza guasti elevata (euristica)`,
-      detail: alta.map((x) => x.label).slice(0, 5).join(", ") + (alta.length > 5 ? "…" : ""),
+      title: `${alta.length} mezzi con frequenza guasti elevata`,
+      detail: "Euristica su interventi: verificare tabella mezzi critici.",
     });
+  }
+
+  const dispRows = disponibilitaFlottaPerCliente(input.mezzi, input.lavRows);
+  const sottoSoglia = countClientiSottoSogliaDisponibilita(dispRows);
+  if (sottoSoglia > 0) {
+    alerts.push({
+      id: "clienti-sotto-soglia",
+      severity: "warning",
+      title: `${sottoSoglia} clienti sotto il 75% di disponibilità`,
+      detail: "Flotta con mezzi in officina oltre la soglia SLA implicita.",
+    });
+  }
+
+  const totalMezzi = input.mezzi.length;
+  const inOfficina = countMezziInOfficinaProxy(input.mezzi, input.lavRows);
+  if (totalMezzi > 0) {
+    const dispGlob = Math.round(((totalMezzi - inOfficina) / totalMezzi) * 1000) / 10;
+    if (dispGlob < 80) {
+      alerts.push({
+        id: "fleet-disponibilita-bassa",
+        severity: "critical",
+        title: `Disponibilità flotta al ${dispGlob}%`,
+        detail: "Sotto la soglia dell'80% — revisionare carico officina.",
+      });
+    }
+  }
+
+  const clienteCounts = new Map<string, number>();
+  let chiusureTot = 0;
+  for (const c of input.completate) {
+    if (!c.dataCompletamento || !isoInRange(c.dataCompletamento, input.range)) continue;
+    const cl = c.cliente.trim();
+    if (!cl) continue;
+    chiusureTot += 1;
+    clienteCounts.set(cl, (clienteCounts.get(cl) ?? 0) + 1);
+  }
+  if (chiusureTot > 0) {
+    const top = [...clienteCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (top) {
+      const pct = Math.round((top[1] / chiusureTot) * 1000) / 10;
+      if (pct > 30) {
+        alerts.push({
+          id: "top-cliente-concentrazione",
+          severity: "info",
+          title: `${top[0]} assorbe il ${pct}% delle chiusure`,
+          detail: "Concentrazione elevata del carico su un singolo cliente.",
+        });
+      }
+    }
   }
 
   return alerts;

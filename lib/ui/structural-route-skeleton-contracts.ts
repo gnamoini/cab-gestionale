@@ -142,14 +142,11 @@ export const STRUCTURAL_ROUTE_SKELETON_CONTRACTS: Record<MigratedStructuralRoute
     kind: "stack",
     geometry: { height: "toolbar" },
     className: "flex min-w-0 flex-col gap-4",
+    sectionLabel: "Report V2 — delegato a ReportV2RouteSkeleton",
     children: [
-      { kind: "block", geometry: { height: "toolbar" } },
+      { kind: "toolbar", geometry: { height: "toolbar" } },
       { kind: "block", geometry: { height: "kpi-row" } },
-      { kind: "tab-bar", geometry: { height: "tab-bar" } },
-      { kind: "card", geometry: { height: "card-sm" } },
-      { kind: "chart", geometry: { height: "chart-wide", aspectRatio: "video" } },
-      { kind: "chart", geometry: { height: "chart" } },
-      { kind: "table", geometry: { height: "table" } },
+      { kind: "card", geometry: { height: "table" } },
     ],
   },
   agenda: {

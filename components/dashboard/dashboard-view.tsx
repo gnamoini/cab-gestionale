@@ -3,12 +3,13 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LoadingCardSkeleton, PageLayout } from "@/components/design-system";
+import { LoadingCardSkeleton } from "@/components/design-system";
 import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
 import { useCalendarV2Enabled } from "@/src/hooks/use-calendar-v2-enabled";
 import { erpBtnNeutral } from "@/lib/ui/erp-tokens";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
+import { GestionalePageHeaderMenu } from "@/components/gestionale/gestionale-page-header-menu";
 
 const DashboardControlTowerLayout = dynamic(
   () =>
@@ -39,8 +40,8 @@ export function DashboardView() {
 
   return (
     <>
-      <PageLayout title="Dashboard" contentTestId="page-ready-toolbar">
-        {stagingRouteHint ? (
+      <GestionalePageHeaderMenu onRefresh={() => router.refresh()} />
+      {stagingRouteHint ? (
           <div className="flex max-w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/35 dark:text-amber-50">
             <p className="min-w-0 flex-1 leading-relaxed">
               Il modulo richiesto non è ancora disponibile in questo ambiente di staging (solo sezioni principali attive).
@@ -75,7 +76,6 @@ export function DashboardView() {
           )
         ) : null}
         <DashboardControlTowerLayout />
-      </PageLayout>
     </>
   );
 }

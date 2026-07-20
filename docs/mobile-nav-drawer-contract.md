@@ -13,6 +13,7 @@ SSOT comportamentale per `MobileNavDrawer`. La state machine in `lib/ui/mobile-n
 | `ANIMATION_MS` | 240 |
 | `WATCHDOG_MS` | 320 (240 + 80) |
 | `EDGE_DRAG_IDLE_MS` | 400 (recovery pointer perso su PWA Android) |
+| `EDGE_PREVIEW_STUCK_MS` | 600 (`EDGE_DRAG_IDLE_MS` + 200 — recovery macchina se `DRAGGING`+`edgePreview` resta bloccato) |
 | `RUBBER_BAND_MAX_PX` | 24 |
 
 ## Stati
@@ -66,6 +67,8 @@ SSOT comportamentale per `MobileNavDrawer`. La state machine in `lib/ui/mobile-n
 - `OPEN_REQUEST` durante `DRAGGING` con `edgePreview` → heal → `OPENING` (hamburger recovery).
 - `CLOSE_REQUEST` durante `SETTLING_CLOSE` → ignorato.
 - Watchdog scatta su `SETTLING_*` se `animationend`/`transitionend` mancante → `FORCE_CLOSE` + metric `drawer_stuck_recovered`.
+- `DRAGGING` + `edgePreview` senza transizione entro `EDGE_PREVIEW_STUCK_MS` → `POINTER_CANCEL` (recovery stato bloccato).
+- `setPointerCapture` su `document.body`: `lostpointercapture` sui figli (bubble) va ignorato; abort solo se `event.target === document.body`.
 - Cleanup idempotente: doppia chiamata non double-unlock.
 
 ## Telemetry

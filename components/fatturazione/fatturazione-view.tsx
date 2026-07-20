@@ -7,9 +7,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
-import { PageHeader } from "@/components/gestionale/page-header";
+import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 import {
-  PageActionMenu,
   PageActionMenuProvider,
   pageActionLogItem,
   usePageActionMenu,
@@ -264,7 +263,7 @@ export function FatturazioneView() {
       <PageActionMenuProvider onRefresh={() => void refetch()}>
         <FatturazionePageMenuRegistrar items={fatturazioneBaseMenuItems} />
         <div ref={containerRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${layoutClassName}`}>
-          <PageHeader title="Fatturazione" actions={<PageActionMenu />} />
+          <PageHeaderPageActionMenu />
           <div className={dsStackPage}>
             <FatturazioneKpiGrid
               kpi={kpi}

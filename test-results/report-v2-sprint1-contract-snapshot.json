@@ -1,0 +1,161 @@
+{
+  "lavorazioni": {
+    "metadata": {
+      "contractVersion": "2.0",
+      "generatedAt": "<dynamic>",
+      "requestedPeriod": {
+        "preset": "questo_mese",
+        "start": "2026-07-01",
+        "end": "2026-07-19",
+        "compareMode": "none"
+      },
+      "sourceFreshness": "LIVE",
+      "trustStatus": "GREEN",
+      "calculationDurationMs": "<dynamic>"
+    },
+    "data": {
+      "metrics": [
+        {
+          "id": "lav-periodo",
+          "value": 0,
+          "label": "Carico periodo"
+        },
+        {
+          "id": "lav-chiusi",
+          "value": 0,
+          "label": "Chiusure periodo"
+        },
+        {
+          "id": "lav-aperti",
+          "value": 0,
+          "label": "Interventi aperti"
+        },
+        {
+          "id": "lav-tempo",
+          "value": 0,
+          "label": "Tempo medio chiusura"
+        },
+        {
+          "id": "lav_late_sla",
+          "value": 0,
+          "label": "Oltre SLA"
+        }
+      ]
+    }
+  },
+  "magazzino": {
+    "metadata": {
+      "contractVersion": "2.0",
+      "generatedAt": "<dynamic>",
+      "requestedPeriod": {
+        "preset": "questo_mese",
+        "start": "2026-07-01",
+        "end": "2026-07-19",
+        "compareMode": "none"
+      },
+      "sourceFreshness": "LIVE",
+      "trustStatus": "GREEN",
+      "calculationDurationMs": "<dynamic>"
+    },
+    "data": {
+      "metrics": [
+        {
+          "id": "scorta",
+          "value": 0,
+          "label": "Ricambi sotto scorta"
+        },
+        {
+          "id": "ric-usati",
+          "value": 0,
+          "label": "Ricambi movimentati"
+        },
+        {
+          "id": "mag_movement_value",
+          "value": 0,
+          "label": "Valore movimentato"
+        }
+      ]
+    }
+  },
+  "economico": {
+    "metadata": {
+      "contractVersion": "2.0",
+      "generatedAt": "<dynamic>",
+      "requestedPeriod": {
+        "preset": "questo_mese",
+        "start": "2026-07-01",
+        "end": "2026-07-19",
+        "compareMode": "none"
+      },
+      "sourceFreshness": "LIVE",
+      "trustStatus": "AMBER",
+      "dataWarnings": [
+        "eco_fatturato_source_pending",
+        "eco_da_incassare_source_pending"
+      ],
+      "calculationDurationMs": "<dynamic>"
+    },
+    "data": {
+      "metrics": [
+        {
+          "id": "eco_preventivi",
+          "value": 0,
+          "label": "Preventivi"
+        },
+        {
+          "id": "eco_fatturato",
+          "value": 0,
+          "label": "Fatturato periodo"
+        },
+        {
+          "id": "eco_da_incassare",
+          "value": 0,
+          "label": "Da incassare"
+        }
+      ],
+      "metricHealth": {
+        "eco_fatturato": {
+          "status": "partial"
+        },
+        "eco_da_incassare": {
+          "status": "partial"
+        }
+      },
+      "invoicesAvailable": false
+    }
+  },
+  "clienti": {
+    "metadata": {
+      "contractVersion": "2.0",
+      "generatedAt": "<dynamic>",
+      "requestedPeriod": {
+        "preset": "questo_mese",
+        "start": "2026-07-01",
+        "end": "2026-07-19",
+        "compareMode": "none"
+      },
+      "sourceFreshness": "LIVE",
+      "trustStatus": "GREEN",
+      "calculationDurationMs": "<dynamic>"
+    },
+    "data": {
+      "metrics": [
+        {
+          "id": "clienti",
+          "value": 0,
+          "label": "Clienti nel periodo"
+        },
+        {
+          "id": "flotta-officina",
+          "value": 0,
+          "label": "Mezzi in officina"
+        },
+        {
+          "id": "mezzi",
+          "value": 0,
+          "label": "Mezzi in anagrafica"
+        }
+      ]
+    }
+  }
+}

@@ -1,11 +1,6 @@
-import { PageLayout } from "@/components/design-system";
 import { PreventiviPageStructure } from "@/components/preventivi/preventivi-page-structure";
-import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
 
+/** ponytail: PageLayout in page.tsx LEVEL 2 — qui solo body skeleton. */
 export default function PreventiviLoading() {
-  return (
-    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.preventivi}>
-      <PreventiviPageStructure mode="skeleton" />
-    </PageLayout>
-  );
+  return <PreventiviPageStructure mode="skeleton" />;
 }

@@ -1,6 +1,6 @@
 import { dehydrate } from "@tanstack/react-query";
 import { Suspense } from "react";
-import { PageTransitionLoader } from "@/components/design-system";
+import { PageLayout, PageTransitionLoader } from "@/components/design-system";
 import { LavorazioniDeferredHydration } from "@/components/gestionale/lavorazioni/lavorazioni-deferred-hydration";
 import { LavorazioniViewLazy } from "@/components/gestionale/lazy-route-views";
 import { UIPageAdapterGate } from "@/components/gestionale/ui-page-adapter-gate";
@@ -10,6 +10,7 @@ import {
   createServerQueryClient,
   prefetchCriticalPage,
 } from "@/src/lib/react-query/prefetch-gestionale-page";
+import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
 
 async function LavorazioniPageBody() {
   const qc = createServerQueryClient();
@@ -34,8 +35,10 @@ async function LavorazioniPageBody() {
 
 export default function LavorazioniPage() {
   return (
-    <Suspense fallback={<PageTransitionLoader />}>
-      <LavorazioniPageBody />
-    </Suspense>
+    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.lavorazioni}>
+      <Suspense fallback={<PageTransitionLoader variant="lavorazioni" />}>
+        <LavorazioniPageBody />
+      </Suspense>
+    </PageLayout>
   );
 }

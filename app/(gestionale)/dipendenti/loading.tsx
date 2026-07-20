@@ -1,11 +1,6 @@
-import { PageLayout } from "@/components/design-system";
 import { DipendentiPageStructure } from "@/components/gestionale/dipendenti/dipendenti-page-structure";
-import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
 
+/** ponytail: PageLayout in page.tsx LEVEL 2 — qui solo body skeleton. */
 export default function DipendentiLoading() {
-  return (
-    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.dipendenti}>
-      <DipendentiPageStructure mode="skeleton" />
-    </PageLayout>
-  );
+  return <DipendentiPageStructure mode="skeleton" />;
 }

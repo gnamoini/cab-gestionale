@@ -8,9 +8,12 @@ import {
   formatCaptureReviewDraftValue,
 } from "@/lib/document-capture/capture-field-display-value";
 import { isCaptureSignatureFieldKey } from "@/lib/document-capture/capture-signature-field-keys";
-import type { CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
 import { normalizeIngressoCaptureFieldRows } from "@/lib/document-capture/capture-field-key-aliases";
-import { mapCaptureFieldsToIngresso } from "@/lib/document-capture/capture-field-mapper";
+import {
+  ensureCaptureSignatureFieldRows,
+  mapCaptureFieldsToIngresso,
+  type CaptureFieldRow,
+} from "@/lib/document-capture/capture-field-mapper";
 import { sortCaptureReviewFields } from "@/lib/document-capture/capture-field-review-order";
 import { buildClientResolutionContext } from "@/lib/entity-resolution/build-client-resolution-context";
 import type { EntityResolutionResult } from "@/lib/entity-resolution/entity-resolution-types";
@@ -192,8 +195,12 @@ export async function buildCaptureIngressoCompileData(input: {
   mezzi?: readonly MezzoGestito[];
   addettiRecords?: readonly AddettoRecord[];
 }): Promise<CaptureIngressoCompileData> {
+  const normalizedRows = normalizeIngressoCaptureFieldRows(
+    input.fieldRows,
+    input.sharedGlobalOpts.mezziListe,
+  );
   const rows = sortCaptureReviewFields(
-    normalizeIngressoCaptureFieldRows(input.fieldRows, input.sharedGlobalOpts.mezziListe),
+    await ensureCaptureSignatureFieldRows(input.captureId, normalizedRows),
   );
   const addettiRecords =
     input.addettiRecords ?? input.sharedGlobalOpts.lavorazioni.addettiRecords ?? [];

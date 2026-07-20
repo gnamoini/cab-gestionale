@@ -47,10 +47,6 @@ export async function loadReportSection(id: ReportSectionId): Promise<ReportSect
           const mod = await import("@/components/report/sections/report-cross-section");
           return { status: "loaded", component: mod.default as AnySectionComponent };
         }
-        case "grafici_kpi": {
-          const mod = await import("@/components/report/sections/report-kpi-charts-section");
-          return { status: "loaded", component: mod.default as AnySectionComponent };
-        }
         default:
           return { status: "error", error: new Error(`Unknown section ${id}`), retry: () => loaderCache.delete(id) };
       }

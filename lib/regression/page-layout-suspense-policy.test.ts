@@ -1,10 +1,14 @@
 /**
- * LEVEL 2: PageTransitionLoader in Suspense; PageLayout solo in loading.tsx / view (mai duplicato in page.tsx).
+ * LEVEL 2: PageLayout fuori Suspense + PageTransitionLoader structural skeleton in fallback.
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { PAGE_TRANSITION_LOADER_ROUTES } from "./loading-transition-fallback-allowlist";
+import {
+  PAGE_LAYOUT_OUTSIDE_SUSPENSE_ROUTES,
+  PAGE_TRANSITION_LOADER_ROUTES,
+  PAGE_TRANSITION_LOADER_VARIANTS,
+} from "./loading-transition-fallback-allowlist";
 
 const ROOT = process.cwd();
 
@@ -17,17 +21,21 @@ function main(): void {
 
   for (const pageRel of PAGE_TRANSITION_LOADER_ROUTES) {
     const text = read(pageRel);
+    const variant = PAGE_TRANSITION_LOADER_VARIANTS[pageRel];
+
     if (!/<Suspense/.test(text)) {
       violations.push(`${pageRel}: manca <Suspense`);
       continue;
     }
 
-    if (/<PageLayout/.test(text)) {
-      violations.push(`${pageRel}: PageLayout in page.tsx duplica header view/loading`);
+    if (!new RegExp(`fallback=\\{<PageTransitionLoader\\s+variant="${variant}"\\s*/>\\}`).test(text)) {
+      violations.push(`${pageRel}: atteso fallback={<PageTransitionLoader variant="${variant}" />}`);
     }
 
-    if (!/fallback=\{<PageTransitionLoader\s*\/>\}/.test(text)) {
-      violations.push(`${pageRel}: atteso fallback={<PageTransitionLoader />}`);
+    if (PAGE_LAYOUT_OUTSIDE_SUSPENSE_ROUTES.includes(pageRel as (typeof PAGE_LAYOUT_OUTSIDE_SUSPENSE_ROUTES)[number])) {
+      if (!/<PageLayout/.test(text)) {
+        violations.push(`${pageRel}: PageLayout fuori Suspense richiesto per continuità header`);
+      }
     }
   }
 

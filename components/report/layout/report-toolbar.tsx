@@ -3,8 +3,7 @@
 import { Tooltip } from "@/components/ui";
 import type { ReactNode } from "react";
 
-import { PageHeader } from "@/components/gestionale/page-header";
-import { PageActionMenu, type PageActionItem } from "@/components/ui";
+import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 
 import { ReportControls } from "@/components/report/report-controls";
 
@@ -107,27 +106,21 @@ export function ReportToolbar({
   return (
 
     <div className={reportCommandBarClass} data-testid="page-ready-toolbar">
-
-      <PageHeader
-
-        title="Report"
-
-        titleAddon={titleAddon}
-
-        actions={
-          <PageActionMenu
-            items={[
-              {
-                id: "export-pdf",
-                label: "Esporta PDF",
-                description: "Esporta il report gestionale in PDF",
-                onSelect: () => void openPdfArtifact("report-bundle"),
-              },
-            ]}
-          />
-        }
-
+      <PageHeaderPageActionMenu
+        items={[
+          {
+            id: "export-pdf",
+            label: "Esporta PDF",
+            description: "Esporta il report gestionale in PDF",
+            onSelect: () => void openPdfArtifact("report-bundle"),
+          },
+        ]}
       />
+      {titleAddon ? (
+        <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
+          {titleAddon}
+        </div>
+      ) : null}
 
       <div className={`min-w-0 ${reportCommandFiltersShellClass} p-3 sm:p-4`}>
 

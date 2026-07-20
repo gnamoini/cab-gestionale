@@ -72,9 +72,9 @@ assert.doesNotMatch(view, /ssr:\s*false/);
 
 assert.match(loaders, /loadReportSection/);
 
-assert.match(derivedPrefetch, /economicEnabled/);
-assert.match(derivedPrefetch, /dati_economici/);
-assert.match(derivedPrefetch, /grafici_kpi/);
+assert.match(derivedPrefetch, /publishOperationalAnalytics/);
+assert.match(derivedPrefetch, /publishEconomicAnalytics/);
+assert.match(derivedPrefetch, /prefetchReportEconomicQueries/);
 
 assert.match(lavSection, /ReportLavorazioniImportResultModal = dynamic/);
 assert.match(magSection, /ReportMagazzinoManualHistoryModal = dynamic/);

@@ -168,7 +168,7 @@ function ReportSectionShell({
       if (!collapsed) {
         setLazyEnabled(true);
         setMounted(true);
-        if (section.id === "dati_economici" || section.id === "grafici_kpi") {
+        if (section.id === "dati_economici") {
           void prefetchReportEconomicQueries(queryClient);
         }
       } else if (ui.lazyMode === "unmount-on-close") {

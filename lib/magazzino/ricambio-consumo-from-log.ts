@@ -89,7 +89,7 @@ export function computeConsumoDaLogPerRicambio(
 
 /** Una passata su tutto il log: consumi per ogni ricambio (range `null` = intero log). */
 export function buildConsumoMapFromMagLog(
-  magLog: MagazzinoChangeLogEntry[],
+  magLog: readonly MagazzinoChangeLogEntry[],
   range: DateRange | null,
 ): Map<string, RicambioConsumoDaLog> {
   const acc = new Map<string, { total: number; months: Set<string> }>();
@@ -129,8 +129,8 @@ export type RicambioConsumoRankingRow = {
  * Classifica ricambi per consumo medio nel periodo (solo dati log).
  */
 export function buildRicambiConsumoRanking(
-  magLog: MagazzinoChangeLogEntry[],
-  prodotti: RicambioMagazzino[],
+  magLog: readonly MagazzinoChangeLogEntry[],
+  prodotti: readonly RicambioMagazzino[],
   range: DateRange,
   opts?: { minTotalUscite?: number; limit?: number },
 ): RicambioConsumoRankingRow[] {

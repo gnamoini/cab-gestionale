@@ -1,23 +1,26 @@
 import type { ReactNode } from "react";
-import { CombinedListSection, ErpTableSection } from "@/components/design-system/layout/combined-list-section";
 import type { SkeletonMode } from "@/components/design-system/loading/skeleton-contract";
-import { STRUCTURAL_ROUTE_SKELETON_CONTRACTS } from "@/lib/ui/structural-route-skeleton-contracts";
+import { ListPageRouteSkeleton } from "@/components/design-system/loading/route-skeletons";
+import type { RouteSkeletonScope } from "@/lib/ui/route-skeleton-scope";
+import { ErpTableSection } from "@/components/design-system/layout/combined-list-section";
 
-export function MezziPageStructure({ mode = "content", children }: { mode?: SkeletonMode; children?: ReactNode }) {
-  return (
-    <CombinedListSection
-      mode={mode}
-      skeleton={STRUCTURAL_ROUTE_SKELETON_CONTRACTS.mezzi}
-      sectionLabel={STRUCTURAL_ROUTE_SKELETON_CONTRACTS.mezzi.sectionLabel}
-      ariaLabel="Caricamento mezzi"
-    >
-      {children}
-    </CombinedListSection>
-  );
+export function MezziPageStructure({
+  mode = "content",
+  scope = "full",
+  children,
+}: {
+  mode?: SkeletonMode;
+  scope?: RouteSkeletonScope;
+  children?: ReactNode;
+}) {
+  if (mode === "skeleton") {
+    return <ListPageRouteSkeleton scope={scope} sectionLabel="Azioni e filtri mezzi" />;
+  }
+  return <>{children}</>;
 }
 
-export const MezziRouteStructure = ({ mode = "skeleton" }: { mode?: SkeletonMode }) => (
-  <MezziPageStructure mode={mode} />
+export const MezziRouteStructure = ({ mode = "skeleton", scope = "full" }: { mode?: SkeletonMode; scope?: RouteSkeletonScope }) => (
+  <MezziPageStructure mode={mode} scope={scope} />
 );
 
 export const MezziTableSection = ErpTableSection;

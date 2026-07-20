@@ -1,19 +1,17 @@
 import type { ReactNode } from "react";
-import { PageSection } from "@/components/design-system/layout/page-section";
 import type { SkeletonMode } from "@/components/design-system/loading/skeleton-contract";
-import {
-  DIPENDENTI_TIMESHEET_BODY_SKELETON_CONTRACT,
-  STRUCTURAL_ROUTE_SKELETON_CONTRACTS,
-} from "@/lib/ui/structural-route-skeleton-contracts";
+import { DipendentiRouteSkeleton } from "@/components/design-system/loading/route-skeletons";
+import type { RouteSkeletonScope } from "@/lib/ui/route-skeleton-scope";
 
-export function DipendentiPageStructure({ mode = "skeleton" }: { mode?: SkeletonMode }) {
-  return (
-    <PageSection
-      mode={mode}
-      ariaLabel="Caricamento dipendenti"
-      skeleton={STRUCTURAL_ROUTE_SKELETON_CONTRACTS.dipendenti}
-    />
-  );
+export function DipendentiPageStructure({
+  mode = "skeleton",
+  scope = "full",
+}: {
+  mode?: SkeletonMode;
+  scope?: RouteSkeletonScope;
+}) {
+  if (mode !== "skeleton") return null;
+  return <DipendentiRouteSkeleton scope={scope} />;
 }
 
 export function DipendentiTimesheetSection({
@@ -23,13 +21,8 @@ export function DipendentiTimesheetSection({
   mode?: SkeletonMode;
   children?: ReactNode;
 }) {
-  return (
-    <PageSection
-      mode={mode}
-      ariaLabel="Caricamento tabella presenze"
-      skeleton={DIPENDENTI_TIMESHEET_BODY_SKELETON_CONTRACT}
-    >
-      {children}
-    </PageSection>
-  );
+  if (mode === "skeleton") {
+    return <DipendentiRouteSkeleton scope="content" />;
+  }
+  return <>{children}</>;
 }

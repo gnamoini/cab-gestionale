@@ -1,4 +1,5 @@
 import type { DateRange } from "@/lib/report/date-ranges";
+import type { ClienteDisponibilitaRow, MezzoAltaFrequenzaGuastiRow } from "@/lib/report/kpi-performance/kpi-performance-formulas";
 
 export type KpiPerformanceMetricKind = "exact" | "proxy" | "partial" | "unavailable";
 
@@ -21,8 +22,11 @@ export type KpiPerformanceMonthPoint = {
 export type KpiPerformanceOperational = {
   closedInPeriod: number;
   openCount: number;
+  lateSlaCount: number;
   avgCloseDays: number | null;
   avgCloseDaysCompare: number | null;
+  closeDaysMedian: number | null;
+  closeDaysP90: number | null;
   monthlyClosed: KpiPerformanceMonthPoint[];
   heuristicFaultsMonthly: KpiPerformanceMonthPoint[];
 };
@@ -36,17 +40,19 @@ export type KpiPerformanceEconomic = {
   topComponents: { id: string; nome: string; totalUscite: number }[];
 };
 
-import type { ClienteDisponibilitaRow } from "@/lib/report/kpi-performance/kpi-performance-formulas";
-
 export type KpiPerformanceFleet = {
   totalMezzi: number;
   mezziInOfficina: number;
   mezziOperativiProxy: number;
+  disponibilitaGlobalePct: number | null;
+  clientiSottoSoglia: number;
   disponibilitaPerCliente: ClienteDisponibilitaRow[];
   peggiorDisponibilita: { cliente: string; disponibilitaPct: number } | null;
   avgDowntimeDays: number | null;
   guastiByTipo: { tipo: string; count: number }[];
-  mezziAltaFrequenzaGuasti: { mezzoId: string; label: string }[];
+  mezziAltaFrequenzaGuasti: MezzoAltaFrequenzaGuastiRow[];
+  heuristicFaultsMonthly: KpiPerformanceMonthPoint[];
+  disponibilitaTrendMonthly: KpiPerformanceMonthPoint[];
 };
 
 export type KpiPerformanceAlert = {

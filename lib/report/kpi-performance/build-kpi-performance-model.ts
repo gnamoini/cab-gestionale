@@ -7,10 +7,12 @@ import {
   avgDowntimeDaysInPeriod,
   buildAlerts,
   buildRicambiConsumoRanking,
+  countClientiSottoSogliaDisponibilita,
   countInterventiAperti,
   countInterventiInRitardo,
   countMezziInOfficinaProxy,
   countMezziTotal,
+  disponibilitaFlottaPctProxy,
   disponibilitaFlottaPerCliente,
   guastiByTipoAttrezzatura,
   heuristicFaultsByMonth,
@@ -22,6 +24,7 @@ import {
   sumRicambiCostFromMagLog,
   topMezziByEstimatedCost,
 } from "@/lib/report/kpi-performance/kpi-performance-formulas";
+import { buildFleetDisponibilitaTrendProxy } from "@/lib/report/kpi-performance/fleet-report-helpers";
 import type {
   KpiPerformanceExecutiveCard,
   KpiPerformanceModel,
@@ -32,6 +35,10 @@ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 import { KPI_TOP_N } from "@/lib/report/kpi-performance/kpi-performance-constants";
+import {
+  closeDaysPercentiles,
+  closeDaysValuesInRange,
+} from "@/lib/report/lavorazioni-report-selectors";
 
 export type KpiPerformanceBuildInput = {
   anchor: Date;
@@ -174,8 +181,12 @@ export function buildKpiPerformanceModel(input: KpiPerformanceBuildInput): KpiPe
 
   const avgClose = semanticIndex.tempoMedio(range);
   const avgClosePrev = compareRange ? semanticIndex.tempoMedio(compareRange) : null;
+  const closeVals = closeDaysValuesInRange(completate, range);
+  const { median: closeMedian, p90: closeP90 } = closeDaysPercentiles(closeVals);
 
   const ranking = buildRicambiConsumoRanking(magLog, magazzino, range, { limit: KPI_TOP_N });
+
+  const faultsByMonth = heuristicFaultsByMonth(mezzi, lavRows, range);
 
   return {
     range,
@@ -184,8 +195,11 @@ export function buildKpiPerformanceModel(input: KpiPerformanceBuildInput): KpiPe
     operational: {
       closedInPeriod: closedCur,
       openCount: openCur,
+      lateSlaCount: late,
       avgCloseDays: avgClose > 0 ? avgClose : null,
       avgCloseDaysCompare: avgClosePrev != null && avgClosePrev > 0 ? avgClosePrev : null,
+      closeDaysMedian: closeMedian > 0 ? closeMedian : null,
+      closeDaysP90: closeP90 > 0 ? closeP90 : null,
       monthlyClosed: mapMonthly(semanticIndex.completateByMonth, range),
       heuristicFaultsMonthly: monthKeysOverlappingRange(range).map((monthKey) => ({
         monthKey,
@@ -212,13 +226,21 @@ export function buildKpiPerformanceModel(input: KpiPerformanceBuildInput): KpiPe
       totalMezzi: mezzi.length,
       mezziInOfficina: inOfficina,
       mezziOperativiProxy: countMezziTotal(mezzi) - inOfficina,
+      disponibilitaGlobalePct: disponibilitaFlottaPctProxy(mezzi, lavRows),
+      clientiSottoSoglia: countClientiSottoSogliaDisponibilita(disponibilitaPerCliente),
       disponibilitaPerCliente,
       peggiorDisponibilita,
       avgDowntimeDays: avgDowntimeDaysInPeriod(mezzi, lavRows, range),
       guastiByTipo: guastiByTipoAttrezzatura(mezzi, lavRows, range),
       mezziAltaFrequenzaGuasti: mezziConFrequenzaGuastiAlta(mezzi, lavRows),
+      heuristicFaultsMonthly: monthKeysOverlappingRange(range).map((monthKey) => ({
+        monthKey,
+        label: monthLabel(monthKey),
+        value: faultsByMonth.get(monthKey) ?? 0,
+      })),
+      disponibilitaTrendMonthly: buildFleetDisponibilitaTrendProxy(mezzi, lavRows, range),
     },
-    alerts: buildAlerts({ attive, anchor, prodotti: magazzino, mezzi, completate, lavRows }),
+    alerts: buildAlerts({ attive, anchor, prodotti: magazzino, mezzi, completate, lavRows, range }),
     complianceAvailable: false,
   };
 }

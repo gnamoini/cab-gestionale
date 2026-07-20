@@ -1,6 +1,7 @@
 "use client";
 
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
+import { CaptureDocumentZoomPanViewport } from "@/components/document-capture/capture-document-zoom-pan-viewport";
 import {
   CaptureReviewPanelError,
   CaptureReviewPanelFrame,
@@ -40,6 +41,23 @@ function CaptureDocumentFilePreviewInner({
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const pdfShellRef = useRef<HTMLDivElement>(null);
   const [pdfViewportWidth, setPdfViewportWidth] = useState(0);
+  const [measuredDocHeight, setMeasuredDocHeight] = useState(0);
+
+  const syncPdfFrameHeight = useCallback((frame: HTMLIFrameElement) => {
+    try {
+      const inner = frame.contentDocument?.querySelector("iframe") as HTMLIFrameElement | null;
+      const body = frame.contentDocument?.body;
+      const measured = inner?.offsetHeight ?? body?.scrollHeight ?? 0;
+      if (measured > 0) setMeasuredDocHeight(Math.ceil(measured));
+    } catch {
+      /* cross-origin — non atteso su preview-frame same-origin */
+    }
+  }, []);
+
+  const onImageMeasured = useCallback((img: HTMLImageElement) => {
+    const h = img.offsetHeight;
+    if (h > 0) setMeasuredDocHeight(h);
+  }, []);
 
   const openFullscreen = useCallback(() => {
     setFullscreenOpen(true);
@@ -74,7 +92,11 @@ function CaptureDocumentFilePreviewInner({
   useEffect(() => {
     const el = pdfShellRef.current;
     if (!el) return;
-    const sync = () => setPdfViewportWidth(Math.max(1, Math.round(el.clientWidth)));
+    const sync = () => {
+      const w = Math.max(1, Math.round(el.clientWidth));
+      setPdfViewportWidth(w);
+      setMeasuredDocHeight(0);
+    };
     sync();
     const ro = new ResizeObserver(sync);
     ro.observe(el);
@@ -99,6 +121,10 @@ function CaptureDocumentFilePreviewInner({
       : "h-[min(50vh,28rem)]";
   const canFullscreen = meta ? isImageMime(meta.mime) || isPdfMime(meta.mime) : false;
   const panelTitle = "Documento caricato";
+  const enableZoomPan = !compact;
+  const docNaturalWidth = Math.max(1, pdfViewportWidth);
+  const docNaturalHeight =
+    measuredDocHeight > 0 ? measuredDocHeight : Math.max(1, Math.round(docNaturalWidth * 1.414));
 
   if (loading) {
     return (
@@ -130,34 +156,84 @@ function CaptureDocumentFilePreviewInner({
     <>
       <CaptureReviewPanelFrame title={panelTitle} action={fullscreenAction}>
         {isImageMime(meta.mime) ? (
-          <div
-            className={`overflow-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)] ${frameClass}`}
-          >
-            <button
-              type="button"
-              className="block w-full cursor-zoom-in transition-shadow hover:shadow-[var(--cab-shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cab-primary)]"
-              aria-label={`Apri ${meta.file_name} a schermo intero`}
-              onClick={openFullscreen}
+          enableZoomPan ? (
+            <div ref={pdfShellRef} className={`min-h-0 ${pdfShellClass}`}>
+              {pdfViewportWidth > 0 ? (
+                <CaptureDocumentZoomPanViewport
+                  shellClassName="h-full min-h-0"
+                  naturalWidth={docNaturalWidth}
+                  naturalHeight={docNaturalHeight}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- authenticated capture file route */}
+                  <img
+                    src={fileUrl}
+                    alt={meta.file_name}
+                    className="pointer-events-none block h-auto w-full max-w-full select-none"
+                    draggable={false}
+                    onLoad={(e) => onImageMeasured(e.currentTarget)}
+                  />
+                </CaptureDocumentZoomPanViewport>
+              ) : (
+                <div
+                  className={`rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)] ${pdfShellClass}`}
+                  aria-hidden
+                />
+              )}
+            </div>
+          ) : (
+            <div
+              className={`overflow-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)] ${frameClass}`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- authenticated capture file route */}
-              <img
-                src={fileUrl}
-                alt={meta.file_name}
-                className="mx-auto block h-auto w-full max-w-full"
-              />
-            </button>
-          </div>
+              <button
+                type="button"
+                className="block w-full cursor-zoom-in transition-shadow hover:shadow-[var(--cab-shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cab-primary)]"
+                aria-label={`Apri ${meta.file_name} a schermo intero`}
+                onClick={openFullscreen}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- authenticated capture file route */}
+                <img
+                  src={fileUrl}
+                  alt={meta.file_name}
+                  className="mx-auto block h-auto w-full max-w-full"
+                />
+              </button>
+            </div>
+          )
         ) : isPdfMime(meta.mime) ? (
-          <div
-            ref={pdfShellRef}
-            className={`overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)] ${pdfShellClass}`}
-          >
-            <iframe
-              key={pdfViewportWidth > 0 ? `pdf-${pdfViewportWidth}` : "pdf-default"}
-              title={meta.file_name}
-              src={pdfPreviewUrl}
-              className="block h-full w-full border-0 bg-[color:var(--cab-surface-muted)]"
-            />
+          <div ref={pdfShellRef} className={`min-h-0 ${pdfShellClass}`}>
+            {enableZoomPan ? (
+              pdfViewportWidth > 0 ? (
+                <CaptureDocumentZoomPanViewport
+                  shellClassName="h-full min-h-0"
+                  naturalWidth={docNaturalWidth}
+                  naturalHeight={docNaturalHeight}
+                >
+                  <iframe
+                    key={pdfViewportWidth > 0 ? `pdf-${pdfViewportWidth}` : "pdf-default"}
+                    title={meta.file_name}
+                    src={pdfPreviewUrl}
+                    className="pointer-events-none block h-full w-full border-0 bg-[color:var(--cab-surface-muted)]"
+                    onLoad={(e) => syncPdfFrameHeight(e.currentTarget)}
+                  />
+                </CaptureDocumentZoomPanViewport>
+              ) : (
+                <div
+                  className={`rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)] ${pdfShellClass}`}
+                  aria-hidden
+                />
+              )
+            ) : (
+              <div
+                className={`overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)] ${pdfShellClass}`}
+              >
+                <iframe
+                  key={pdfViewportWidth > 0 ? `pdf-${pdfViewportWidth}` : "pdf-default"}
+                  title={meta.file_name}
+                  src={pdfPreviewUrl}
+                  className="block h-full w-full border-0 bg-[color:var(--cab-surface-muted)]"
+                />
+              </div>
+            )}
           </div>
         ) : (
           <div

@@ -22,14 +22,15 @@ export const captureSignatureBboxSchema = z.object({
 type CaptureSignatureBboxResult = z.infer<typeof captureSignatureBboxSchema>;
 
 const SIGNATURE_BBOX_SYSTEM = `Scheda ingresso officina meccanica (foto o PDF).
-Individua le caselle firma manoscritte:
+Individua le caselle firma manoscritte in fondo alla scheda:
 - richiedente/autista (etichetta «Firma autista/richiedente»)
 - addetto officina (etichetta «Firma addetto officina»)
-Restituisci bbox normalizzate 0–1000 (ymin, xmin, ymax, xmax) attorno al tratto di firma, non all'intera pagina.
-Se una firma è assente o illeggibile, ometti quel campo (null).`;
+Restituisci bbox normalizzate 0–1000 (ymin, xmin, ymax, xmax) attorno all'intera casella firma (bordo del riquadro + tratto manoscritto), non all'intera pagina.
+Includi un piccolo margine attorno al riquadro. Se la casella è vuota, restituisci comunque la bbox del riquadro.
+Se la casella non è visibile, ometti quel campo (null).`;
 
 const SIGNATURE_BBOX_USER =
-  "Trova le bbox delle firme richiedente e addetto. Coordinate normalizzate 0–1000 sulla pagina.";
+  "Trova le bbox delle caselle firma richiedente e addetto. Coordinate normalizzate 0–1000 sulla pagina.";
 
 function isValidGeminiBbox(bbox: CaptureSignatureBbox | null | undefined): bbox is CaptureSignatureBbox {
   if (!bbox) return false;
@@ -38,7 +39,7 @@ function isValidGeminiBbox(bbox: CaptureSignatureBbox | null | undefined): bbox 
   return w >= 8 && h >= 8 && bbox.xmax > bbox.xmin && bbox.ymax > bbox.ymin;
 }
 
-/** ponytail: fallback solo se ritaglio template senza inchiostro — upgrade: page detect */
+/** ponytail: fallback solo se ritaglio template fallisce — upgrade: page detect */
 export async function extractCaptureSignatureFieldsGeminiFallback(input: {
   bytes: Uint8Array;
   mime: string;

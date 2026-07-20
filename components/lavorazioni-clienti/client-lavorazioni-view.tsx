@@ -4,10 +4,7 @@ import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { PageHeader } from "@/components/gestionale/page-header";
-import {
-  PageActionMenu,
-} from "@/components/ui";
+import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 import { useAuth } from "@/context/auth-context";
 import {
   collapsibleExpandedBoolPref,
@@ -767,9 +764,7 @@ export function ClientLavorazioniView() {
 
   if (accessDenied) {
     return (
-      <>
-        <PageHeader title={PORTALE_CLIENTI_LABEL} />
-        <div className={dsStackPage}>
+      <div className={dsStackPage}>
           <ShellCard>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Non hai permesso per consultare il portale clienti. Contatta un amministratore per assegnare il ruolo Cliente.
@@ -779,7 +774,6 @@ export function ClientLavorazioniView() {
             </Link>
           </ShellCard>
         </div>
-      </>
     );
   }
 
@@ -872,17 +866,10 @@ export function ClientLavorazioniView() {
   return (
     <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
-      <div className="[&_header]:mb-2 sm:[&_header]:mb-3">
-        <PageHeader
-          title={PORTALE_CLIENTI_LABEL}
-          actions={
-            <PageActionMenu
-              onRefresh={() => void refreshClientData()}
-              refreshBusy={refreshBusy}
-            />
-          }
-        />
-      </div>
+      <PageHeaderPageActionMenu
+        onRefresh={() => void refreshClientData()}
+        refreshBusy={refreshBusy}
+      />
 
       <div className={clientPortalPageStack}>
         {!canRender ? (

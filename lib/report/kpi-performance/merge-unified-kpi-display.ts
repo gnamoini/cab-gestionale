@@ -83,10 +83,25 @@ export function mergeUnifiedKpiDisplay(
     const saldo = opened - closed;
     items.push({
       id: "lav-saldo-periodo",
-      label: "Saldo backlog periodo",
-      value: String(saldo),
+      label: "Accumulo periodo",
+      value: saldo > 0 ? `+${saldo}` : String(saldo),
       compareRows: null,
       description: UNIFIED_KPI_DISPLAY["lav-saldo-periodo"]!.description,
+      compact: true,
+    });
+  }
+
+  if (perf) {
+    const late = perf.operational.lateSlaCount;
+    const open = perf.operational.openCount;
+    const pct = open > 0 ? Math.round((late / open) * 1000) / 10 : null;
+    items.push({
+      id: "lav_late_sla",
+      label: "Oltre SLA",
+      value: String(late),
+      sub: pct != null ? `${pct}% del backlog` : undefined,
+      compareRows: null,
+      description: UNIFIED_KPI_DISPLAY["lav_late_sla"]!.description,
       hero: true,
     });
   }
@@ -112,10 +127,11 @@ export function mergeUnifiedKpiDisplay(
       value: avgCur.toLocaleString("it-IT", { maximumFractionDigits: 1 }),
       sub:
         weeksN > 0
-          ? `${weeksN} settimane nel periodo · media su tutte le settimane del filtro`
+          ? `${weeksN} sett. nel periodo${weeksN < 4 ? " · stima su settimane parziali" : ""}`
           : "Nessuna settimana nel periodo selezionato",
       compareRows: avgCompare,
       description: UNIFIED_KPI_DISPLAY["lav-media-settimanale"]!.description,
+      compact: true,
     });
   }
 
@@ -132,15 +148,17 @@ export function mergeUnifiedKpiDisplay(
     const openExec = execById(exec, "open");
     items.push({
       id: "lav-aperti",
-      label: "Interventi aperti",
+      label: "Backlog attuale",
       value: String(perf.operational.openCount),
       sub: openExec?.sub,
       compareRows: null,
       description: UNIFIED_KPI_DISPLAY["lav-aperti"]!.description,
+      hero: true,
     });
 
-    const tempo = perf.operational.avgCloseDays;
+    const tempo = perf.operational.closeDaysMedian ?? perf.operational.avgCloseDays;
     const tempoPrev = perf.operational.avgCloseDaysCompare;
+    const p90 = perf.operational.closeDaysP90;
     let tempoCompare: KpiCompareRow[] | null = null;
     if (tempo != null && tempoPrev != null && tempoPrev > 0) {
       const delta = Math.round((tempo - tempoPrev) * 10) / 10;
@@ -155,19 +173,67 @@ export function mergeUnifiedKpiDisplay(
     }
     items.push({
       id: "lav-tempo",
-      label: "Tempo medio chiusura",
+      label: "Tempo mediano chiusura",
       value: tempo != null && tempo > 0 ? `${tempo.toLocaleString("it-IT", { maximumFractionDigits: 1 })} gg` : "—",
+      sub: p90 != null && p90 > 0 ? `P90: ${p90} gg` : undefined,
       compareRows: tempoCompare,
       description: UNIFIED_KPI_DISPLAY["lav-tempo"]!.description,
+      compact: true,
     });
 
     items.push({
       id: "flotta-officina",
       label: "Mezzi in officina",
       value: String(perf.fleet.mezziInOfficina),
-      sub: `Su ${perf.fleet.totalMezzi} in anagrafica`,
+      sub:
+        perf.fleet.totalMezzi > 0
+          ? `${Math.round((perf.fleet.mezziInOfficina / perf.fleet.totalMezzi) * 1000) / 10}% del parco (${perf.fleet.totalMezzi} mezzi)`
+          : undefined,
       compareRows: null,
       description: UNIFIED_KPI_DISPLAY["flotta-officina"]!.description,
+    });
+
+    items.push({
+      id: "fleet-disponibilita",
+      label: "Disponibilità flotta",
+      value:
+        perf.fleet.disponibilitaGlobalePct != null
+          ? `${perf.fleet.disponibilitaGlobalePct.toLocaleString("it-IT", { maximumFractionDigits: 1 })}%`
+          : "—",
+      sub: "Mezzi senza lavorazione aperta",
+      compareRows: null,
+      description: UNIFIED_KPI_DISPLAY["fleet-disponibilita"]!.description,
+      hero: true,
+    });
+
+    items.push({
+      id: "clienti-sotto-soglia",
+      label: "Clienti sotto soglia",
+      value: String(perf.fleet.clientiSottoSoglia),
+      sub: "Disponibilità < 75%",
+      compareRows: null,
+      description: UNIFIED_KPI_DISPLAY["clienti-sotto-soglia"]!.description,
+      hero: true,
+    });
+
+    items.push({
+      id: "fleet-tempo-fermo",
+      label: "Tempo medio fermo",
+      value:
+        perf.fleet.avgDowntimeDays != null
+          ? `${perf.fleet.avgDowntimeDays.toLocaleString("it-IT", { maximumFractionDigits: 1 })} gg`
+          : "—",
+      compareRows: null,
+      description: UNIFIED_KPI_DISPLAY["fleet-tempo-fermo"]!.description,
+    });
+
+    items.push({
+      id: "fleet-mezzi-critici",
+      label: "Mezzi critici",
+      value: String(perf.fleet.mezziAltaFrequenzaGuasti.length),
+      sub: "Frequenza guasti elevata",
+      compareRows: null,
+      description: UNIFIED_KPI_DISPLAY["fleet-mezzi-critici"]!.description,
     });
 
     const costExec = execById(exec, "cost");
@@ -191,7 +257,7 @@ export function mergeUnifiedKpiDisplay(
     });
   }
 
-  for (const id of ["cap", "ric-usati", "clienti", "mezzi"] as const) {
+  for (const id of ["cap", "ric-usati", "mag-entrate", "clienti"] as const) {
     const k = byId.get(id);
     if (!k) continue;
     const m = withMeta(k);

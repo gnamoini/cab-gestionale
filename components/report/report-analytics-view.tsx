@@ -45,8 +45,10 @@ import {
 import { isReportCompareMode } from "@/lib/report/report-compare-options";
 import { useReportLiveData } from "@/lib/report/use-report-live-data";
 import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
-import { LoadingErrorState, PageLayout } from "@/components/design-system";
+import { LoadingErrorState } from "@/components/design-system";
 import { ReportPageStructure } from "@/components/report/report-page-structure";
+import { ReportV2ExecutiveBoundary } from "@/components/report/executive/ReportV2ExecutiveBoundary";
+import { ReportV2InsightBoundary } from "@/components/report/insight-strip/ReportV2InsightBoundary";
 import { dsStackPage } from "@/lib/ui/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
@@ -148,11 +150,11 @@ function ReportSectionsWithContext({
   const domainProps: DomainReportSectionProps = {
     ...domainBase,
     sectionId: "lavorazioni",
-    fetchEnabled: false,
+    fetchEnabled: true,
     analyticsContext: { perf, perfLoading, partitioned, compareMode },
   };
   useReportDerivedPrefetch(domainProps);
-  return <ReportSections domainProps={domainProps} aiProps={aiProps} />;
+  return <ReportSections domainProps={{ ...domainProps, fetchEnabled: false }} aiProps={aiProps} />;
 }
 
 function ReportPerformanceGateWithVisibility(
@@ -365,16 +367,12 @@ export function ReportAnalyticsView() {
 
   if (live.isLoading || !tops || !filterRange || !toolbarProps) {
     if (!toolbarProps) {
-      return (
-        <PageLayout title="Report" titleAddon={integrityBadge}>
-          <ReportPageStructure mode="skeleton" />
-        </PageLayout>
-      );
+      return <ReportPageStructure mode="skeleton" />;
     }
     return (
       <div className={`${dsStackPage} ${layoutPageRoot} min-w-0 max-w-full`}>
         <ReportToolbar {...toolbarProps} />
-        <ReportPageStructure mode="skeleton" />
+        <ReportPageStructure mode="skeleton" scope="content" />
       </div>
     );
   }
@@ -437,8 +435,12 @@ export function ReportAnalyticsView() {
     <div className={`${dsStackPage} ${layoutPageRoot} min-w-0 max-w-full`}>
       <ReportToolbar {...toolbarProps} />
 
+      <ReportV2ExecutiveBoundary range={filterRange} compareMode={compareMode} />
+
       <ReportAnalyticsDerivedProvider rangeKey={rangeKey}>
         <ReportSectionVisibilityProvider>
+          <ReportV2InsightBoundary range={filterRange} compareMode={compareMode} />
+
           <ReportPerformanceGateWithVisibility
             anchor={anchor}
             filterRange={filterRange}

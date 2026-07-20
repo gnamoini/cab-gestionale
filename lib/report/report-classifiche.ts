@@ -122,8 +122,8 @@ export function mergeTopClientiCompare(
 }
 
 export function buildTopRicambiPeriodo(
-  magLog: MagazzinoChangeLogEntry[],
-  prodotti: RicambioMagazzino[],
+  magLog: readonly MagazzinoChangeLogEntry[],
+  prodotti: readonly RicambioMagazzino[],
   range: DateRange,
 ): TopRicambioReportRow[] {
   const byId = aggregateMagazzinoQtyByProductInRange(magLog, range);

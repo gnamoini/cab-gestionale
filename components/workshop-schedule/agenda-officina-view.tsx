@@ -5,7 +5,6 @@ import { Tooltip } from "@/components/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarV2Grid } from "@/components/dashboard/calendar-v2/calendar-v2-grid";
 import type { CalendarSelection } from "@/components/dashboard/calendar-v2/calendar-v2-types";
-import { PageHeader } from "@/components/gestionale/page-header";
 import { AgendaContentSection } from "@/components/workshop-schedule/agenda-page-structure";
 import { AgendaFiltersBar } from "@/components/workshop-schedule/agenda-filters-bar";
 import { AgendaDayTimeline } from "@/components/workshop-schedule/agenda-day-timeline";
@@ -43,6 +42,7 @@ import {
 } from "@/lib/ui/design-system";
 import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
 import { GestionaleModalGate } from "@/components/gestionale/gestionale-modal-gate";
+import { GestionalePageHeaderMenu } from "@/components/gestionale/gestionale-page-header-menu";
 
 function todayYmd() {
   const d = new Date();
@@ -90,7 +90,7 @@ export function AgendaOfficinaView() {
     return bounds.end;
   }, [viewMode, monthKey, selectedYmd]);
 
-  const { sessions, isLoading, isError, error } = useWorkshopScheduleRange(rangeStart, rangeEnd, filters);
+  const { sessions, isLoading, isError, error, refetch, isFetching } = useWorkshopScheduleRange(rangeStart, rangeEnd, filters);
   const dayCapacity = useWorkshopScheduleDayCapacity(selectedYmd, sessions);
   const { upsertMutation, patchTimesMutation, deleteMutation } = useWorkshopScheduleMutations();
 
@@ -221,7 +221,7 @@ export function AgendaOfficinaView() {
 
   return (
     <>
-      <PageHeader title="Agenda" description="Pianificazione sessioni di lavoro" />
+      <GestionalePageHeaderMenu onRefresh={() => void refetch()} refreshBusy={isFetching} />
       <div className={dsStackPage}>
         <AgendaToolbarShell>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">

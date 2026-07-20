@@ -61,6 +61,7 @@ export function useLavorazioneCreateSubmit({
   createdBy,
   defaultMezzoId,
   initialFields,
+  initialMeta,
   mezzi = [],
   schedeStore = {},
   attive = [],
@@ -74,6 +75,7 @@ export function useLavorazioneCreateSubmit({
   createdBy: string | null;
   defaultMezzoId?: string | null;
   initialFields?: SchedaIngressoFields | null;
+  initialMeta?: Partial<{ stato: string; priorita: PrioritaLavorazione; mezzoId: string }>;
   mezzi?: readonly MezzoGestito[];
   schedeStore?: LavorazioneSchedeStore;
   attive?: readonly LavorazioneAttiva[];
@@ -263,9 +265,14 @@ export function useLavorazioneCreateSubmit({
     resetSections({
       fields: fieldsInit,
       meta: {
-        mezzoId: (defaultMezzoId ?? "").trim(),
-        stato: defaultAccettazioneStatoId,
-        priorita: prioritaOpts.includes("media") ? "media" : (prioritaOpts[0] ?? "media"),
+        mezzoId: (initialMeta?.mezzoId ?? defaultMezzoId ?? "").trim(),
+        stato: initialMeta?.stato?.trim() || defaultAccettazioneStatoId,
+        priorita:
+          initialMeta?.priorita && prioritaOpts.includes(initialMeta.priorita)
+            ? initialMeta.priorita
+            : prioritaOpts.includes("media")
+              ? "media"
+              : (prioritaOpts[0] ?? "media"),
       },
     });
     setMezzoHint(null);
@@ -278,6 +285,7 @@ export function useLavorazioneCreateSubmit({
     enabled,
     defaultMezzoId,
     initialFields,
+    initialMeta,
     prioritaOpts,
     addettiOpts,
     defaultAccettazioneStatoId,

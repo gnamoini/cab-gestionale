@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   NAV_DRAWER_CONTRACT_TRANSITIONS,
   resolveActivationZonePx,
@@ -61,5 +63,11 @@ assert.equal(flags.isActive, true);
 assert.equal(flags.canDismiss, true);
 
 assert.ok(NAV_DRAWER_CONTRACT_TRANSITIONS.length >= 10);
+
+const machineSrc = readFileSync(join(process.cwd(), "lib/ui/mobile-nav-drawer-machine.ts"), "utf8");
+assert.match(machineSrc, /EDGE_PREVIEW_STUCK_MS/);
+assert.match(machineSrc, /machine\.state !== "DRAGGING" \|\| !machine\.edgePreview/);
+assert.match(machineSrc, /dispatch\("POINTER_CANCEL"\)/);
+assert.match(machineSrc, /edgeDragActivityRef/);
 
 console.log("mobile-nav-drawer-machine.test.ts ok");

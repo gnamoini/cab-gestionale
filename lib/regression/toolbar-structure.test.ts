@@ -27,6 +27,8 @@ assert.match(pageToolbar, /primaryAction/);
 assert.match(pageToolbar, /overflowActions/);
 assert.match(pageToolbar, /MobileFilterDrawer/);
 assert.match(pageToolbar, /PageToolbarCtaLabel/);
+assert.match(pageToolbar, /aria-label=\{countAriaLabel\}/);
+assert.match(pageToolbar, /dsPageToolbarMetaChip.*sm:hidden/);
 
 assert.match(toolbarGroup, /export function ToolbarGroup/);
 assert.match(toolbarGroup, /dsPageToolbar/);

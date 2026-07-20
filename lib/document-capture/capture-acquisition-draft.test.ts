@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import {
+  captureAcquisitionResumeTargetStep,
+} from "@/lib/document-capture/capture-acquisition-draft";
 
 const ROOT = process.cwd();
 
@@ -18,14 +21,22 @@ assert.match(draft, /readCaptureAcquisitionDraft/);
 assert.match(draft, /saveCaptureAcquisitionDraft/);
 assert.match(draft, /clearCaptureAcquisitionDraft/);
 assert.match(draft, /captureAcquisitionDraftStillValid/);
+assert.match(draft, /ingressoCompile/);
+assert.match(draft, /captureAcquisitionResumeTargetStep/);
 
 assert.match(launcher, /readCaptureAcquisitionDraft/);
 assert.match(launcher, /saveCaptureAcquisitionDraft/);
-assert.match(launcher, /clearCaptureAcquisitionDraft/);
-assert.match(launcher, /captureAcquisitionDraftStillValid/);
+assert.match(launcher, /persistAcquisitionDraft/);
+assert.match(launcher, /resumeIngressoCompile/);
+assert.match(launcher, /onIngressoCompileChange/);
 assert.match(launcher, /Riprendere l'acquisizione/);
 assert.match(launcher, /Riprendi/);
 assert.match(launcher, /Ricomincia/);
+assert.match(launcher, /applyDraftNavigation\(draft\)/);
 assert.doesNotMatch(launcher, /discardCurrentCapture\(\);\s*setOpen\(false\)/);
+
+assert.equal(captureAcquisitionResumeTargetStep("compile", "analyzing"), "compile");
+assert.equal(captureAcquisitionResumeTargetStep("analyze", "review"), "compile");
+assert.equal(captureAcquisitionResumeTargetStep("analyze", "analyzing"), "analyze");
 
 console.log("capture-acquisition-draft.test.ts OK");

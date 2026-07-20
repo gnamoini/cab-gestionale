@@ -1,11 +1,6 @@
-import { PageLayout } from "@/components/design-system";
 import { LavorazioniPageStructure } from "@/components/gestionale/lavorazioni/lavorazioni-page-structure";
-import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
 
+/** ponytail: PageLayout in page.tsx LEVEL 2 — qui solo body skeleton. */
 export default function LavorazioniLoading() {
-  return (
-    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.lavorazioni}>
-      <LavorazioniPageStructure mode="skeleton" />
-    </PageLayout>
-  );
+  return <LavorazioniPageStructure mode="skeleton" />;
 }

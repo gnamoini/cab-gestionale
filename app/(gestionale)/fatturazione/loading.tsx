@@ -1,11 +1,6 @@
-import { PageLayout } from "@/components/design-system";
 import { FatturazionePageStructure } from "@/components/fatturazione/fatturazione-page-structure";
-import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
 
+/** ponytail: PageLayout in page.tsx LEVEL 2 — qui solo body skeleton. */
 export default function FatturazioneLoading() {
-  return (
-    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.fatturazione}>
-      <FatturazionePageStructure mode="skeleton" />
-    </PageLayout>
-  );
+  return <FatturazionePageStructure mode="skeleton" />;
 }

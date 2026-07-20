@@ -1,11 +1,6 @@
-import { PageLayout } from "@/components/design-system";
 import { ReportPageStructure } from "@/components/report/report-page-structure";
-import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
 
+/** ponytail: PageLayout in page.tsx LEVEL 2 — qui solo body skeleton. */
 export default function ReportLoading() {
-  return (
-    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.report}>
-      <ReportPageStructure mode="skeleton" />
-    </PageLayout>
-  );
+  return <ReportPageStructure mode="skeleton" />;
 }

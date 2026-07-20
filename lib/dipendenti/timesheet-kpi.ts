@@ -64,7 +64,7 @@ export function computePanoramaKpi(
   }
 
   return {
-    dipendentiAttivi: employees.filter((e) => e.in_settings).length,
+    dipendentiAttivi: withHours.length,
     oreOrdinarie: global.oreOrdinarie,
     oreStraordinarie: global.oreStraordinarie,
     oreAssenza: global.oreAssenza,

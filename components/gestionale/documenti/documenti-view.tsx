@@ -26,7 +26,6 @@ import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifec
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { DocumentiTableSection } from "@/components/gestionale/documenti/documenti-page-structure";
 import {
-  PageActionMenu,
   pageActionLogItem,
   type PageActionItem,
 } from "@/components/ui";
@@ -50,12 +49,12 @@ import {
   dsTableActionBtnSecondary,
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
+import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 import {
   IconActionButton,
   LoadingButton,
   LoadingErrorState,
   LoadingSkeletonBlock,
-  PageLayout,
   PageToolbar,
   PageToolbarCtaLabel,
   PageToolbarResultCount,
@@ -873,15 +872,10 @@ export function DocumentiView() {
     <GestionaleSectionGate module="documenti">
     <div className={layoutPageRoot}>
     <>
-      <PageLayout
-        title="Documenti"
-        actions={
-          <PageActionMenu
-            items={documentiMenuItems}
-            onRefresh={() => void refreshDocumenti()}
-          />
-        }
-      >
+      <PageHeaderPageActionMenu
+        items={documentiMenuItems}
+        onRefresh={() => void refreshDocumenti()}
+      />
         <GestionaleUploadDropExpand
           overlay
           accept={DOCUMENTO_UPLOAD_ACCEPT}
@@ -1157,7 +1151,6 @@ export function DocumentiView() {
         </DocumentiTableSection>
         </SkeletonBoundary>
         </GestionaleUploadDropExpand>
-      </PageLayout>
 
       {uploadOpen && canUploadDocuments ? (
         <UploadDocumentoModal

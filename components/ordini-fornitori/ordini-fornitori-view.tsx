@@ -78,6 +78,7 @@ import {
 } from "@/lib/ui/gestionale-list-table";
 import { useOrdiniFornitoriQuery } from "@/src/hooks/gestionale/use-ordini-fornitori-query";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
+import { GestionalePageHeaderMenu } from "@/components/gestionale/gestionale-page-header-menu";
 import { ordiniFornitoriEntry } from "@/lib/domain/ordini-fornitori-entry";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import {
@@ -369,6 +370,7 @@ export function OrdiniFornitoriView({
 
   return (
     <>
+      <GestionalePageHeaderMenu onRefresh={() => void refetch()} refreshBusy={isLoading} />
       <ShellCard>
         <section aria-label="Azioni e filtri ordini fornitori">
           <PageToolbar

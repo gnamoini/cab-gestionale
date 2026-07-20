@@ -59,6 +59,16 @@ const withFirmeRawOnly = mapCaptureFieldsToIngresso([
 assert.equal(withFirmeRawOnly.richiedenteFirma, FIRMA);
 assert.equal(withFirmeRawOnly.addettoFirma, FIRMA);
 
+const withFirmeJunkConfirmed = mapCaptureFieldsToIngresso([
+  {
+    field_key: "firma_addetto",
+    confirmed_value: "presente",
+    normalized_value: "presente",
+    raw_value: FIRMA,
+  },
+]);
+assert.equal(withFirmeJunkConfirmed.addettoFirma, FIRMA);
+
 const MULTILINE = "Riga 1\nRiga 2\nRiga 3";
 const withAnomalia = mapCaptureFieldsToIngresso([
   rowMultiline("descrizione_anomalia", MULTILINE, "Riga 1 Riga 2 Riga 3"),

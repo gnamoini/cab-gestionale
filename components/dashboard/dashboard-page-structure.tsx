@@ -1,16 +1,16 @@
-import type { ReactNode } from "react";
-import { PageSection } from "@/components/design-system/layout/page-section";
 import type { SkeletonMode } from "@/components/design-system/loading/skeleton-contract";
-import { STRUCTURAL_ROUTE_SKELETON_CONTRACTS } from "@/lib/ui/structural-route-skeleton-contracts";
+import { DashboardRouteSkeleton } from "@/components/design-system/loading/route-skeletons";
+import type { RouteSkeletonScope } from "@/lib/ui/route-skeleton-scope";
 
-export function DashboardPageStructure({ mode = "skeleton" }: { mode?: SkeletonMode }) {
-  return (
-    <PageSection
-      mode={mode}
-      ariaLabel="Caricamento dashboard"
-      skeleton={STRUCTURAL_ROUTE_SKELETON_CONTRACTS.dashboard}
-    />
-  );
+export function DashboardPageStructure({
+  mode = "skeleton",
+  scope = "full",
+}: {
+  mode?: SkeletonMode;
+  scope?: RouteSkeletonScope;
+}) {
+  if (mode !== "skeleton") return null;
+  return <DashboardRouteSkeleton scope={scope} />;
 }
 
 /** @deprecated Usare DashboardPageStructure */

@@ -4,6 +4,7 @@ import type {
   ReportMetricApplicability,
   ReportMetricAggregation,
   ReportMetricCategory,
+  ReportMetricContractImpact,
   ReportMetricKind,
   ReportMetricLifecycleStatus,
   ReportMetricRegistryEntry,
@@ -34,10 +35,25 @@ const SERIES_MONTH = (provider: ReportMetricSeriesConfig["provider"]): ReportMet
   supportedModes: CHART_MODES,
 });
 
+const EXECUTIVE_P0_IDS = new Set([
+  "lav-chiusi",
+  "lav-aperti",
+  "lav_late_sla",
+  "eco_fatturato",
+  "scorta",
+]);
+
 function entry(
   e: {
     id: string;
     status?: ReportMetricLifecycleStatus;
+    replacementId?: string;
+    technicalOwner?: string;
+    businessOwner?: string;
+    freshnessSLA?: number;
+    observabilityEnabled?: boolean;
+    contractImpact?: ReportMetricContractImpact;
+    validation?: { status: import("@/lib/report/metrics/report-metric-types").ReportMetricValidationStatus };
     owner: ReportSectionId;
     category: ReportMetricCategory;
     label: string;
@@ -58,6 +74,9 @@ function entry(
   const { series, ...rest } = e;
   return {
     status,
+    technicalOwner: e.technicalOwner ?? "Report Platform",
+    observabilityEnabled: e.observabilityEnabled ?? EXECUTIVE_P0_IDS.has(e.id),
+    contractImpact: e.contractImpact ?? "none",
     rendererKind: e.rendererKind ?? "kpi",
     formatter: unitToReportFormatter(e.unit),
     valueCapability: series ? "series" : "scalar",
@@ -98,6 +117,9 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
   }),
   entry({
     id: "lav-saldo-periodo",
+    status: "deprecated",
+    replacementId: "lav_aging_backlog",
+    contractImpact: "major",
     owner: "lavorazioni",
     category: "operational",
     label: "Saldo backlog periodo",
@@ -109,6 +131,21 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     sourceModule: "build-report-model",
     formula: "openedInPeriod - completedInPeriod",
     trust: "exact",
+  }),
+  entry({
+    id: "lav_aging_backlog",
+    owner: "lavorazioni",
+    category: "operational",
+    label: "Aging backlog aperte",
+    description: "Distribuzione aperte per fascia giorni da ingresso.",
+    unit: "count",
+    aggregation: "count",
+    applicability: "snapshot",
+    trendSemantics: "lower_is_better",
+    rendererKind: "temporal",
+    sourceModule: "report-work-orders",
+    trust: "exact",
+    contractImpact: "major",
   }),
   entry({
     id: "lav-media-settimanale",
@@ -247,6 +284,8 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
   // — Lavorazioni domain —
   entry({
     id: "lav_open",
+    status: "deprecated",
+    replacementId: "lav-aperti",
     owner: "lavorazioni",
     category: "operational",
     label: "Aperte",
@@ -261,6 +300,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
   entry({
     id: "lav_completed",
     status: "deprecated",
+    replacementId: "lav-chiusi",
     owner: "lavorazioni",
     category: "operational",
     label: "Completate",
@@ -274,6 +314,8 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
   }),
   entry({
     id: "lav_archived",
+    status: "deprecated",
+    replacementId: "lav_cancelled",
     owner: "lavorazioni",
     category: "operational",
     label: "Archiviate",
@@ -300,6 +342,8 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
   }),
   entry({
     id: "lav_backlog",
+    status: "deprecated",
+    replacementId: "lav-aperti",
     owner: "lavorazioni",
     category: "operational",
     label: "Backlog",
@@ -314,6 +358,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
   entry({
     id: "lav_avg_close",
     status: "deprecated",
+    replacementId: "lav-tempo",
     owner: "lavorazioni",
     category: "operational",
     label: "Tempo medio chiusura",
@@ -341,6 +386,7 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
   entry({
     id: "lav_clients",
     status: "deprecated",
+    replacementId: "clienti",
     owner: "lavorazioni",
     category: "customer",
     label: "Clienti serviti",
@@ -355,6 +401,8 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
   // — Magazzino —
   entry({
     id: "mag_parts_qty",
+    status: "deprecated",
+    replacementId: "ric-usati",
     owner: "magazzino_ricambi",
     category: "warehouse",
     label: "Ricambi utilizzati",
@@ -381,6 +429,8 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
   }),
   entry({
     id: "mag_critical",
+    status: "deprecated",
+    replacementId: "scorta",
     owner: "magazzino_ricambi",
     category: "warehouse",
     label: "Sotto scorta",
@@ -434,6 +484,85 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     formula: "totalHours / completedJobs",
     trust: "partial",
   }),
+  entry({
+    id: "ore_straordinari",
+    owner: "ore_lavorate",
+    category: "operational",
+    label: "Ore straordinarie",
+    description: "Somma ore straordinarie nel periodo.",
+    unit: "hours",
+    aggregation: "sum",
+    applicability: "period",
+    trendSemantics: "lower_is_better",
+    sourceModule: "timesheet-totals",
+    trust: "exact",
+  }),
+  entry({
+    id: "ore_straordinari_pct",
+    owner: "ore_lavorate",
+    category: "operational",
+    label: "% Straordinari",
+    description: "Ore straordinarie sul totale lavorato.",
+    unit: "percentage",
+    aggregation: "derived",
+    applicability: "derived",
+    trendSemantics: "lower_is_better",
+    sourceModule: "labor-analytics",
+    formula: "oreStraordinarie / totaleLavorato × 100",
+    trust: "exact",
+  }),
+  entry({
+    id: "ore_assenze",
+    owner: "ore_lavorate",
+    category: "operational",
+    label: "Ore assenza",
+    description: "Somma ore di assenza nel periodo.",
+    unit: "hours",
+    aggregation: "sum",
+    applicability: "period",
+    trendSemantics: "lower_is_better",
+    sourceModule: "timesheet-totals",
+    trust: "exact",
+  }),
+  entry({
+    id: "manodopera_cost",
+    owner: "ore_lavorate",
+    category: "economic",
+    label: "Costo manodopera",
+    description: "Costo manodopera da schede lavorazione nel periodo.",
+    unit: "currency",
+    aggregation: "sum",
+    applicability: "period",
+    trendSemantics: "neutral",
+    sourceModule: "kpi-performance-formulas",
+    trust: "partial",
+  }),
+  entry({
+    id: "saturazione_team",
+    owner: "ore_lavorate",
+    category: "operational",
+    label: "Saturazione team",
+    description: "Ore lavorate vs capacità teorica (8h × giorni feriali × dipendenti attivi).",
+    unit: "percentage",
+    aggregation: "derived",
+    applicability: "derived",
+    trendSemantics: "neutral",
+    sourceModule: "labor-analytics",
+    trust: "partial",
+  }),
+  entry({
+    id: "gap_schede_timesheet",
+    owner: "ore_lavorate",
+    category: "operational",
+    label: "Gap schede/timesheet",
+    description: "Scostamento % tra ore schede e ore timesheet.",
+    unit: "percentage",
+    aggregation: "derived",
+    applicability: "derived",
+    trendSemantics: "lower_is_better",
+    sourceModule: "labor-analytics",
+    trust: "partial",
+  }),
   // — Economici —
   entry({
     id: "eco_preventivi",
@@ -462,7 +591,42 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     trust: "exact",
   }),
   entry({
+    id: "eco_fatturato",
+    owner: "dati_economici",
+    category: "economic",
+    label: "Fatturato periodo",
+    description: "Fatture emesse nel periodo (escl. bozza/da verificare). Canonico V2.",
+    unit: "currency",
+    aggregation: "sum",
+    applicability: "period",
+    trendSemantics: "higher_is_better",
+    sourceModule: "invoice-calculations",
+    trust: "exact",
+    freshnessSLA: 60,
+    contractImpact: "major",
+    series: SERIES_MONTH("economici"),
+  }),
+  entry({
+    id: "eco_da_incassare",
+    owner: "dati_economici",
+    category: "economic",
+    label: "Da incassare",
+    description: "Residuo fatture attive da incassare.",
+    unit: "currency",
+    aggregation: "sum",
+    applicability: "snapshot",
+    trendSemantics: "lower_is_better",
+    sourceModule: "invoice-calculations",
+    trust: "partial",
+    contractImpact: "major",
+    observabilityEnabled: true,
+    validation: { status: "pending_validation" },
+  }),
+  entry({
     id: "eco_invoices",
+    status: "deprecated",
+    replacementId: "eco_fatturato",
+    contractImpact: "major",
     owner: "dati_economici",
     category: "economic",
     label: "Fatturato periodo",
@@ -580,6 +744,8 @@ export const REPORT_METRIC_REGISTRY: readonly ReportMetricRegistryEntry[] = [
     trust: "exact",
   }),
 ] as const;
+
+export type CanonicalMetricId = (typeof REPORT_METRIC_REGISTRY)[number]["id"];
 
 const REGISTRY_BY_ID = new Map(REPORT_METRIC_REGISTRY.map((e) => [e.id, e]));
 

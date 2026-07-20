@@ -20,7 +20,12 @@ import {
   sumManodoperaCostFromSchede,
   sumRicambiCostFromMagLog,
 } from "@/lib/report/kpi-performance/kpi-performance-formulas";
+import {
+  buildInvoicePeriodKpiExtended,
+  buildResiduoDaFatturare,
+} from "@/lib/report/economic-analytics-extended";
 import { aggregateMagazzinoQtyByProductInRange } from "@/lib/report/magazzino-period-aggregate";
+import { crossDtoToLegacyCrossAnalytics } from "@/lib/report/cross-analysis/cross-legacy-adapter";
 import type {
   AnalyticsPublishBase,
   CrossAnalyticsDto,
@@ -33,8 +38,22 @@ import type {
   WarehouseAnalyticsDto,
 } from "@/lib/report/report-domain-types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import type { DdtDocumentRow, InvoiceRow, MagazzinoRicambioRow } from "@/src/types/supabase-tables";
+import type { DdtDocumentRow, InvoicePaymentRow, InvoiceRow, MagazzinoRicambioRow, PreventivoBillingStatusRow } from "@/src/types/supabase-tables";
+import { aggregateOrePerDipendente } from "@/lib/report/timesheet-ore-ranking";
+import type { DipendenteTimesheetEmployeeRow, DipendenteTimesheetEntryRow } from "@/lib/dipendenti/types";
 import type { LavorazioneSchedeStore } from "@/types/schede";
+import {
+  computeGapSchedeTimesheetPct,
+  computeLaborComposition,
+  computeTeamSaturation,
+  countEmployeesWithoutHours,
+  sumOreFromSchedeInRange,
+} from "@/lib/report/labor-analytics";
+import {
+  computeCrossEfficiency,
+  computeCrossValueHour,
+} from "@/lib/report/cross-analysis/build-report-cross-dto";
+import type { CrossFormulaInput } from "@/lib/report/cross-analysis/types";
 
 function fmtN(n: number): string {
   return n.toLocaleString("it-IT");
@@ -91,24 +110,16 @@ export function countAnnullateInRange(rows: readonly LavorazioneListRow[], range
 export function buildInvoicePeriodKpi(
   invoices: readonly InvoiceRow[],
   range: DateRange,
-): { emesse: number; fatturato: number; scadute: number; daIncassare: number } {
-  const todayYmd = new Date().toISOString().slice(0, 10);
-  let emesse = 0;
-  let fatturato = 0;
-  let scadute = 0;
-  let daIncassare = 0;
-  for (const inv of invoices) {
-    if (inv.status === "annullata") continue;
-    if (inv.status !== "bozza" && inv.status !== "da_verificare" && isoInRange(inv.data_emissione, range)) {
-      emesse += 1;
-      fatturato = roundMoney(fatturato + inv.totale);
-    }
-    if (inv.residuo > 0) {
-      daIncassare = roundMoney(daIncassare + inv.residuo);
-      if (inv.data_scadenza != null && inv.data_scadenza < todayYmd) scadute += 1;
-    }
-  }
-  return { emesse, fatturato, scadute, daIncassare };
+  payments: readonly InvoicePaymentRow[] = [],
+): {
+  emesse: number;
+  fatturato: number;
+  incassato: number;
+  scadute: number;
+  importoScaduto: number;
+  daIncassare: number;
+} {
+  return buildInvoicePeriodKpiExtended(invoices, payments, range);
 }
 
 export type OperationalAnalyticsBuildInput = AnalyticsPublishBase & {
@@ -141,26 +152,25 @@ export function buildOperationalAnalytics(input: OperationalAnalyticsBuildInput)
   const avgClosePrev = prevRange ? avgCloseDays(completate, prevRange) : null;
 
   const metrics: ReportDomainMetric[] = [
-    availableMetric("lav_open", "Aperte", fmtN(countInterventiAperti(attive))),
-    comparedN("lav_completed", "Completate", completed, completedPrev, fmtN, cmpCtx),
-    availableMetric("lav_archived", "Archiviate", fmtN(storico.length)),
-    comparedN("lav_cancelled", "Annullate", cancelled, cancelledPrev, fmtN, cmpCtx),
-    availableMetric("lav_backlog", "Backlog", fmtN(backlog)),
+    comparedN("lav-chiusi", "Chiusure periodo", completed, completedPrev, fmtN, cmpCtx),
+    comparedN("lav-periodo", "Carico periodo (ingressi)", opened, openedPrev, fmtN, cmpCtx),
+    availableMetric("lav-aperti", "Interventi aperti", fmtN(backlog)),
     avgClose > 0
       ? comparedN(
-          "lav_avg_close",
+          "lav-tempo",
           "Tempo medio chiusura",
           avgClose,
           avgClosePrev != null && avgClosePrev > 0 ? avgClosePrev : null,
           (n) => `${n} gg`,
           cmpCtx,
         )
-      : metric("lav_avg_close", "Tempo medio chiusura", {
+      : metric("lav-tempo", "Tempo medio chiusura", {
           status: "not_available",
           reason: "Non disponibile nel periodo selezionato",
         }),
     availableMetric("lav_late_sla", "Oltre SLA", fmtN(late)),
-    comparedN("lav_clients", "Clienti serviti", clients, clientsPrev, fmtN, cmpCtx),
+    comparedN("clienti", "Clienti nel periodo", clients, clientsPrev, fmtN, cmpCtx),
+    comparedN("lav_cancelled", "Annullate", cancelled, cancelledPrev, fmtN, cmpCtx),
   ];
 
   return {
@@ -215,9 +225,7 @@ export function buildWarehouseAnalytics(input: WarehouseAnalyticsBuildInput): Wa
   }
 
   const metrics: ReportDomainMetric[] = [
-    comparedN("mag_parts_qty", "Ricambi utilizzati", partsUsedQty, partsUsedQtyPrev, fmtN, cmpCtx),
     comparedN("mag_movement_value", "Valore movimentato", movementValue, movementValuePrev, fmtEur, cmpCtx),
-    availableMetric("mag_critical", "Sotto scorta", fmtN(critical)),
     comparedN("mag_orders", "Ordini fornitori", ordersCount, ordersCountPrev, fmtN, cmpCtx),
   ];
 
@@ -234,6 +242,11 @@ export type LaborAnalyticsBuildInput = AnalyticsPublishBase & {
   compareTotalHours?: number | null;
   costoOrario: number;
   magazzinoRows: readonly MagazzinoRicambioRow[];
+  timesheetEntries?: readonly DipendenteTimesheetEntryRow[];
+  timesheetEmployees?: readonly DipendenteTimesheetEmployeeRow[];
+  invoicesBilled?: number;
+  partsUsedQty?: number;
+  movementValue?: number;
 };
 
 export function buildLaborAnalytics(input: LaborAnalyticsBuildInput): LaborAnalyticsDto {
@@ -247,10 +260,21 @@ export function buildLaborAnalytics(input: LaborAnalyticsBuildInput): LaborAnaly
     compareTotalHours,
     costoOrario,
     magazzinoRows,
+    timesheetEntries = [],
+    timesheetEmployees = [],
+    invoicesBilled = 0,
+    partsUsedQty = 0,
+    movementValue = 0,
   } = input;
   const cmpCtx: CompareCtx = { range, compareRange, compareMode };
   const completed = countCompletedInRange(completate, range);
   const avgHours = completed > 0 && totalHours > 0 ? Math.round((totalHours / completed) * 10) / 10 : null;
+  const composition = computeLaborComposition(timesheetEntries);
+  const employeesWithHours = aggregateOrePerDipendente(timesheetEntries, timesheetEmployees).length;
+  const saturation = computeTeamSaturation(totalHours, employeesWithHours, range);
+  const schedeHours = sumOreFromSchedeInRange(completate, range, schedeStore);
+  const gapPct = computeGapSchedeTimesheetPct(totalHours, schedeHours);
+  const missingEmployees = countEmployeesWithoutHours(timesheetEmployees, timesheetEntries);
   const { manodopera } = sumManodoperaCostFromSchede(
     completate,
     range,
@@ -293,6 +317,70 @@ export function buildLaborAnalytics(input: LaborAnalyticsBuildInput): LaborAnaly
         }),
   ];
 
+  if (composition.oreStraordinarie > 0) {
+    metrics.push(
+      availableMetric(
+        "ore_straordinari",
+        "Ore straordinarie",
+        `${composition.oreStraordinarie.toLocaleString("it-IT", { maximumFractionDigits: 1 })} h`,
+      ),
+    );
+  }
+  if (composition.overtimePct != null) {
+    metrics.push(availableMetric("ore_straordinari_pct", "% Straordinari", `${composition.overtimePct}%`));
+  }
+  if (composition.oreAssenza > 0) {
+    metrics.push(
+      availableMetric(
+        "ore_assenze",
+        "Ore assenza",
+        `${composition.oreAssenza.toLocaleString("it-IT", { maximumFractionDigits: 1 })} h`,
+      ),
+    );
+  }
+
+  if (manodopera > 0) {
+    metrics.push(availableMetric("manodopera_cost", "Costo manodopera", fmtEur(manodopera)));
+  } else if (!schedeStore) {
+    metrics.push(
+      metric("manodopera_cost", "Costo manodopera", {
+        status: "not_loaded",
+        hint: "Schede in caricamento",
+      }),
+    );
+  } else {
+    metrics.push(
+      metric("manodopera_cost", "Costo manodopera", {
+        status: "not_available",
+        reason: "Non disponibile nel periodo selezionato",
+      }),
+    );
+  }
+
+  if (saturation != null) {
+    metrics.push(availableMetric("saturazione_team", "Saturazione team", `${saturation}%`));
+  }
+  if (gapPct != null) {
+    metrics.push(availableMetric("gap_schede_timesheet", "Gap schede/timesheet", `${gapPct}%`));
+  }
+
+  const crossInput: CrossFormulaInput = {
+    operational: { completedInPeriod: completed },
+    warehouse: { partsUsedQty, movementValue },
+    labor: { totalHours, manodoperaCost: manodopera },
+    economic: { invoicesBilled },
+  };
+  const efficiencyResult = computeCrossEfficiency(crossInput);
+  const valueHourResult = computeCrossValueHour(crossInput);
+  if (efficiencyResult.status === "available" && efficiencyResult.value > 0) {
+    metrics.push(availableMetric("cross_efficiency", "Efficienza officina", fmtN(efficiencyResult.value)));
+  }
+  if (valueHourResult.status === "available" && valueHourResult.value > 0) {
+    metrics.push(availableMetric("cross_value_hour", "Valore per ora", fmtEur(valueHourResult.value)));
+  }
+
+  void missingEmployees;
+
   return { metrics, totalHours, completedJobs: completed, avgHoursPerJob: avgHours, manodoperaCost: manodopera };
 }
 
@@ -301,6 +389,7 @@ export type EconomicDerivedHints = {
   completedInPeriodPrev?: number | null;
   manodoperaCost?: number | null;
   movementValue?: number | null;
+  billingResiduo?: number | null;
 };
 
 export type EconomicAnalyticsBuildInput = AnalyticsPublishBase & {
@@ -309,6 +398,8 @@ export type EconomicAnalyticsBuildInput = AnalyticsPublishBase & {
   compareMode?: ReportCompareMode;
   preventivi: readonly PreventivoRecord[];
   invoices: readonly InvoiceRow[];
+  invoicePayments?: readonly InvoicePaymentRow[];
+  preventiviBilling?: readonly PreventivoBillingStatusRow[];
   ddtDocuments: readonly DdtDocumentRow[];
   derivedHints?: EconomicDerivedHints;
 };
@@ -341,75 +432,169 @@ function countPreventiviApprovatiInRange(
 }
 
 export function buildEconomicAnalytics(input: EconomicAnalyticsBuildInput): EconomicAnalyticsDto {
-  const { range, compareRange, compareMode, preventivi, invoices, ddtDocuments, derivedHints } = input;
+  const {
+    range,
+    compareRange,
+    compareMode,
+    preventivi,
+    invoices,
+    invoicePayments = [],
+    preventiviBilling = [],
+    ddtDocuments,
+    derivedHints,
+  } = input;
   const cmpCtx: CompareCtx = { range, compareRange, compareMode };
   const prev = compareRange ? countPreventiviInRange(preventivi, compareRange) : null;
   const curPrev = countPreventiviInRange(preventivi, range);
   const preventiviCount = curPrev.count;
   const preventiviValue = curPrev.value;
-  const inv = buildInvoicePeriodKpi(invoices, range);
+  const inv = buildInvoicePeriodKpi(invoices, range, invoicePayments);
+  const invPrev = compareRange ? buildInvoicePeriodKpi(invoices, compareRange, invoicePayments) : null;
   const ddtInRange = ddtDocuments.filter((d) => isoInRange(d.data_documento, range));
   const ddtKpi = buildDdtKpi(ddtInRange);
-  const invPrev = compareRange ? buildInvoicePeriodKpi(invoices, compareRange) : null;
-  const ddtPrev = compareRange
-    ? buildDdtKpi(ddtDocuments.filter((d) => isoInRange(d.data_documento, compareRange)))
-    : null;
-  const approvati = countPreventiviApprovatiInRange(preventivi, range);
-  const approvatiPrev = compareRange ? countPreventiviApprovatiInRange(preventivi, compareRange) : null;
 
-  const metrics: ReportDomainMetric[] = [
-    preventiviCount > 0
-      ? (() => {
-          const value = `${fmtN(preventiviCount)} · ${fmtEur(preventiviValue)}`;
-          if (!prev || !compareRange || !compareMode || compareMode === "none") {
-            return metric("eco_preventivi", "Preventivi", { status: "available", value });
-          }
-          const base = buildReportMetricCompare(
-            preventiviCount,
-            prev.count,
-            range,
-            compareRange,
-            compareMode,
-            fmtN,
-          );
-          return metric("eco_preventivi", "Preventivi", {
-            status: "available",
-            value,
-            compare: { ...base, value: `${fmtN(prev.count)} · ${fmtEur(prev.value)}` },
-          });
-        })()
-      : metric("eco_preventivi", "Preventivi", { status: "not_available", reason: "Non disponibile nel periodo selezionato" }),
-    inv.fatturato > 0 || inv.emesse > 0
-      ? (() => {
-          const value = `${fmtN(inv.emesse)} · ${fmtEur(inv.fatturato)}`;
-          if (!invPrev || !compareRange || !compareMode || compareMode === "none") {
-            return metric("eco_invoices", "Fatturato", { status: "available", value });
-          }
-          const base = buildReportMetricCompare(
-            inv.fatturato,
-            invPrev.fatturato,
-            range,
-            compareRange,
-            compareMode,
-            fmtEur,
-          );
-          return metric("eco_invoices", "Fatturato", {
-            status: "available",
-            value,
-            compare: { ...base, value: `${fmtN(invPrev.emesse)} · ${fmtEur(invPrev.fatturato)}` },
-          });
-        })()
-      : metric("eco_invoices", "Fatturato", { status: "not_available", reason: "Non disponibile nel periodo selezionato" }),
-    ddtKpi.totale > 0
-      ? comparedN("eco_ddt", "DDT", ddtKpi.totale, ddtPrev?.totale ?? null, fmtN, cmpCtx)
-      : metric("eco_ddt", "DDT", { status: "not_available", reason: "Non disponibile nel periodo selezionato" }),
-    approvati > 0
-      ? comparedN("eco_preventivi_approvati", "Preventivi approvati", approvati, approvatiPrev, fmtN, cmpCtx)
-      : metric("eco_preventivi_approvati", "Preventivi approvati", {
-          status: "not_available",
-          reason: "Non disponibile nel periodo selezionato",
+  const tassoIncasso =
+    inv.fatturato > 0 ? Math.round((inv.incassato / inv.fatturato) * 1000) / 10 : null;
+  const tassoIncassoPrev =
+    invPrev && invPrev.fatturato > 0
+      ? Math.round((invPrev.incassato / invPrev.fatturato) * 1000) / 10
+      : null;
+
+  const manodopera = derivedHints?.manodoperaCost ?? null;
+  const movement = derivedHints?.movementValue ?? null;
+  const marginePct =
+    inv.fatturato > 0 && manodopera != null && movement != null
+      ? Math.round(((inv.fatturato - (manodopera + movement)) / inv.fatturato) * 1000) / 10
+      : null;
+
+  const billingResiduo =
+    derivedHints?.billingResiduo ?? (preventiviBilling.length > 0 ? buildResiduoDaFatturare(preventiviBilling) : null);
+
+  const metrics: ReportDomainMetric[] = [];
+
+  if (inv.fatturato > 0 || inv.emesse > 0) {
+    const value = fmtEur(inv.fatturato);
+    if (!invPrev || !compareRange || !compareMode || compareMode === "none") {
+      metrics.push(metric("eco_invoices", "Fatturato", { status: "available", value }));
+    } else {
+      const base = buildReportMetricCompare(
+        inv.fatturato,
+        invPrev.fatturato,
+        range,
+        compareRange,
+        compareMode,
+        fmtEur,
+      );
+      metrics.push(
+        metric("eco_invoices", "Fatturato", {
+          status: "available",
+          value,
+          compare: { ...base, value: fmtEur(invPrev.fatturato) },
         }),
-  ];
+      );
+    }
+  } else {
+    metrics.push(
+      metric("eco_invoices", "Fatturato", {
+        status: "not_available",
+        reason: "Non disponibile nel periodo selezionato",
+      }),
+    );
+  }
+
+  if (inv.incassato > 0) {
+    metrics.push(
+      invPrev
+        ? comparedN("eco_incassato", "Incassato", inv.incassato, invPrev.incassato, fmtEur, cmpCtx)
+        : availableMetric("eco_incassato", "Incassato", fmtEur(inv.incassato)),
+    );
+  } else {
+    metrics.push(availableMetric("eco_incassato", "Incassato", fmtEur(0)));
+  }
+
+  metrics.push(
+    inv.daIncassare > 0
+      ? availableMetric("eco_da_incassare", "Da incassare", fmtEur(inv.daIncassare))
+      : metric("eco_da_incassare", "Da incassare", { status: "available", value: fmtEur(0) }),
+  );
+
+  if (marginePct != null) {
+    metrics.push(availableMetric("eco_margine_pct", "Margine %", `${marginePct}%`));
+  } else if (manodopera == null || movement == null) {
+    metrics.push(
+      metric("eco_margine_pct", "Margine %", {
+        status: "not_loaded",
+        hint: "Calcolo costi in corso…",
+      }),
+    );
+  } else {
+    metrics.push(
+      metric("eco_margine_pct", "Margine %", {
+        status: "not_available",
+        reason: "Non disponibile nel periodo selezionato",
+      }),
+    );
+  }
+
+  if (tassoIncasso != null) {
+    metrics.push(
+      comparedN(
+        "eco_tasso_incasso",
+        "Tasso incasso",
+        tassoIncasso,
+        tassoIncassoPrev,
+        (n) => `${n}%`,
+        cmpCtx,
+      ),
+    );
+  }
+
+  if (preventiviCount > 0) {
+    const value = `${fmtN(preventiviCount)} · ${fmtEur(preventiviValue)}`;
+    if (!prev || !compareRange || !compareMode || compareMode === "none") {
+      metrics.push(metric("eco_preventivi", "Preventivi", { status: "available", value }));
+    } else {
+      const base = buildReportMetricCompare(
+        preventiviCount,
+        prev.count,
+        range,
+        compareRange,
+        compareMode,
+        fmtN,
+      );
+      metrics.push(
+        metric("eco_preventivi", "Preventivi", {
+          status: "available",
+          value,
+          compare: { ...base, value: `${fmtN(prev.count)} · ${fmtEur(prev.value)}` },
+        }),
+      );
+    }
+  } else {
+    metrics.push(
+      metric("eco_preventivi", "Preventivi", {
+        status: "not_available",
+        reason: "Non disponibile nel periodo selezionato",
+      }),
+    );
+  }
+
+  const scaduteValue =
+    inv.scadute > 0 ? `${fmtN(inv.scadute)} · ${fmtEur(inv.importoScaduto)}` : "0";
+  metrics.push(availableMetric("eco_scadute", "Fatture scadute", scaduteValue));
+
+  if (billingResiduo != null && billingResiduo > 0) {
+    metrics.push(availableMetric("eco_residuo_da_fatturare", "Residuo da fatturare", fmtEur(billingResiduo)));
+  } else if (billingResiduo === null) {
+    metrics.push(
+      metric("eco_residuo_da_fatturare", "Residuo da fatturare", {
+        status: "not_loaded",
+        hint: "Caricamento pipeline fatturazione…",
+      }),
+    );
+  } else {
+    metrics.push(availableMetric("eco_residuo_da_fatturare", "Residuo da fatturare", fmtEur(0)));
+  }
 
   const completed = derivedHints?.completedInPeriod ?? null;
   const completedPrev = derivedHints?.completedInPeriodPrev ?? null;
@@ -426,7 +611,7 @@ export function buildEconomicAnalytics(input: EconomicAnalyticsBuildInput): Econ
     metrics.push(
       metric("eco_valore_medio_intervento", "Valore medio intervento", {
         status: "not_loaded",
-        hint: "Apri Lavorazioni per calcolare",
+        hint: "Calcolo in corso…",
       }),
     );
   } else {
@@ -438,8 +623,6 @@ export function buildEconomicAnalytics(input: EconomicAnalyticsBuildInput): Econ
     );
   }
 
-  const manodopera = derivedHints?.manodoperaCost ?? null;
-  const movement = derivedHints?.movementValue ?? null;
   if (inv.fatturato > 0 && manodopera != null && movement != null) {
     const margine = roundMoney(inv.fatturato - (manodopera + movement));
     metrics.push(availableMetric("eco_margine_operativo_stimato", "Margine operativo stimato", fmtEur(margine)));
@@ -447,7 +630,7 @@ export function buildEconomicAnalytics(input: EconomicAnalyticsBuildInput): Econ
     metrics.push(
       metric("eco_margine_operativo_stimato", "Margine operativo stimato", {
         status: "not_loaded",
-        hint: "Apri Lavorazioni, Ore e Magazzino per calcolare",
+        hint: "Calcolo costi in corso…",
       }),
     );
   } else {
@@ -468,83 +651,9 @@ export function buildEconomicAnalytics(input: EconomicAnalyticsBuildInput): Econ
   };
 }
 
+/**
+ * @deprecated Use buildReportCrossDto via analytics bundle. Removal Sprint 4+.
+ */
 export function buildCrossAnalytics(derived: ReportAnalyticsDerivedSnapshot): CrossAnalyticsDto {
-  const op = derived.operational?.data;
-  const wh = derived.warehouse?.data;
-  const lab = derived.labor?.data;
-  const eco = derived.economic?.data;
-
-  const metrics: ReportDomainMetric[] = [];
-
-  if (!op || !lab) {
-    metrics.push(
-      metric("cross_efficiency", "Efficienza", {
-        status: "not_loaded",
-        hint: "Apri Lavorazioni e Ore lavorate per calcolare",
-      }),
-    );
-  } else if (lab.totalHours <= 0 || op.completedInPeriod <= 0) {
-    metrics.push(
-      metric("cross_efficiency", "Efficienza", {
-        status: "not_available",
-        reason: "Dati insufficienti per il calcolo",
-      }),
-    );
-  } else {
-    const eff = Math.round((op.completedInPeriod / lab.totalHours) * 100) / 100;
-    metrics.push(availableMetric("cross_efficiency", "Efficienza (interventi/ore)", fmtN(eff)));
-  }
-
-  if (!wh || !op) {
-    metrics.push(
-      metric("cross_parts_job", "Ricambi/intervento", {
-        status: "not_loaded",
-        hint: "Apri Magazzino e Lavorazioni per calcolare",
-      }),
-    );
-  } else if (op.completedInPeriod <= 0) {
-    metrics.push(
-      metric("cross_parts_job", "Ricambi/intervento", {
-        status: "not_available",
-        reason: "Nessuna lavorazione completata nel periodo",
-      }),
-    );
-  } else {
-    const perJob = Math.round((wh.partsUsedQty / op.completedInPeriod) * 10) / 10;
-    metrics.push(availableMetric("cross_parts_job", "Ricambi/intervento", fmtN(perJob)));
-  }
-
-  const ricambiCost = wh?.movementValue ?? 0;
-  const manodoperaCost = lab?.manodoperaCost ?? 0;
-  if (!op || op.completedInPeriod <= 0) {
-    metrics.push(
-      metric("cross_cost_job", "Costo medio lavorazione", op
-        ? { status: "not_available", reason: "Nessuna lavorazione completata nel periodo" }
-        : { status: "not_loaded", hint: "Apri Lavorazioni per calcolare" }),
-    );
-  } else {
-    const costPerJob = Math.round(((ricambiCost + manodoperaCost) / op.completedInPeriod) * 100) / 100;
-    metrics.push(availableMetric("cross_cost_job", "Costo medio lavorazione", fmtEur(costPerJob)));
-  }
-
-  if (!eco || !lab) {
-    metrics.push(
-      metric("cross_value_hour", "Valore/ora", {
-        status: "not_loaded",
-        hint: "Apri Dati economici e Ore lavorate per calcolare",
-      }),
-    );
-  } else if (lab.totalHours <= 0 || eco.invoicesBilled <= 0) {
-    metrics.push(
-      metric("cross_value_hour", "Valore/ora", {
-        status: "not_available",
-        reason: "Non disponibile nel periodo selezionato",
-      }),
-    );
-  } else {
-    const vph = Math.round((eco.invoicesBilled / lab.totalHours) * 100) / 100;
-    metrics.push(availableMetric("cross_value_hour", "Valore/ora", fmtEur(vph)));
-  }
-
-  return { metrics };
+  return crossDtoToLegacyCrossAnalytics(derived);
 }

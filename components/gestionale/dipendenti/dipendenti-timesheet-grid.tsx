@@ -2,7 +2,6 @@
 
 import "@/components/gestionale/global-table/gestionale-list-table.css";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Tooltip } from "@/components/ui";
 import {
   useCallback,
   useEffect,
@@ -29,11 +28,8 @@ import type {
 import { DipendentiTimesheetCompactCell } from "@/components/gestionale/dipendenti/dipendenti-timesheet-compact-cell";
 import {
   buildTimesheetCellTooltip,
-  buildTimesheetEmployeeNameTooltip,
   cellHasData,
-  formatTimesheetDayColumnTooltip,
-  formatTimesheetFooterDayTooltip,
-  formatTimesheetFooterMonthTooltip,
+  timesheetDayCellKindDataAttrs,
 } from "@/lib/dipendenti/timesheet-cell-display";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import {
@@ -529,46 +525,32 @@ export function DipendentiTimesheetGrid({
                   className={dayHeaderClass(layout)}
                   aria-current={isTodayAccentColumn(d.dateYmd) ? "date" : undefined}
                 >
-                  <Tooltip
-                    content={formatTimesheetDayColumnTooltip(d, monthKey)}
-                    side="bottom"
-                    showOnFocus={false}
-                    delayMs={220}
-                  >
-                    <span className="block w-full min-w-0 text-center">
-                      {layout.compactWeekend ? (
-                        <span className="gestionale-timesheet-day-accent-day block text-[10px] font-semibold tabular-nums leading-none">
+                  <span className="block w-full min-w-0 text-center">
+                    {layout.compactWeekend ? (
+                      <span className="gestionale-timesheet-day-accent-day block text-[10px] font-semibold tabular-nums leading-none">
+                        {d.day}
+                      </span>
+                    ) : (
+                      <>
+                        <span className="gestionale-timesheet-day-accent-day block text-xs font-semibold tabular-nums">
                           {d.day}
                         </span>
-                      ) : (
-                        <>
-                          <span className="gestionale-timesheet-day-accent-day block text-xs font-semibold tabular-nums">
-                            {d.day}
-                          </span>
-                          <span className="mt-0.5 block whitespace-nowrap text-[10px] font-normal normal-case opacity-80">
-                            {d.weekdayShort}
-                          </span>
-                        </>
-                      )}
-                    </span>
-                  </Tooltip>
+                        <span className="mt-0.5 block whitespace-nowrap text-[10px] font-normal normal-case opacity-80">
+                          {d.weekdayShort}
+                        </span>
+                      </>
+                    )}
+                  </span>
                 </th>
               );
             })}
             <th
               className={`${timesheetHeaderThBase} ${timesheetTotalsColBorder} ${TIMESHEET_UI_TOTAL_COL_CLASS} ${TIMESHEET_UI_CELL_OVERFLOW_CLASS} whitespace-nowrap px-1 text-center`}
             >
-              <Tooltip
-                content="Totali ore del mese (presenze in riga sopra, assenze in riga sotto)"
-                side="bottom"
-                showOnFocus={false}
-                delayMs={220}
-              >
-                <span className="block w-full min-w-0 text-center">
-                  <span className="block normal-case">Tot.</span>
-                  <span className="mt-0.5 block text-[10px] font-normal normal-case opacity-80">ore</span>
-                </span>
-              </Tooltip>
+              <span className="block w-full min-w-0 text-center">
+                <span className="block normal-case">Tot.</span>
+                <span className="mt-0.5 block text-[10px] font-normal normal-case opacity-80">ore</span>
+              </span>
             </th>
           </GlobalTableHead>
           {virtualEmployeeRows.map((emp) => {
@@ -584,19 +566,12 @@ export function DipendentiTimesheetGrid({
                       className={`${stickyNameTd} ${stickyNameShadow}`}
                       rowSpan={2}
                     >
-                      <Tooltip
-                        content={buildTimesheetEmployeeNameTooltip(emp.display_name, {
-                          inSettings: emp.in_settings,
-                        })}
-                        side="right"
-                        showOnFocus={false}
-                        delayMs={220}
+                      <button
+                        type="button"
+                        className="w-full overflow-hidden rounded-sm text-left transition-colors hover:text-[color:var(--cab-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_40%,transparent)]"
+                        onClick={() => onEmployeeClick(emp)}
+                        aria-label={emp.display_name}
                       >
-                        <button
-                          type="button"
-                          className="w-full overflow-hidden rounded-sm text-left transition-colors hover:text-[color:var(--cab-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_40%,transparent)]"
-                          onClick={() => onEmployeeClick(emp)}
-                        >
                         <span className="block truncate text-xs font-semibold leading-snug text-[color:var(--cab-text)]">
                           {nome}
                         </span>
@@ -605,8 +580,7 @@ export function DipendentiTimesheetGrid({
                             {cognome}
                           </span>
                         ) : null}
-                        </button>
-                      </Tooltip>
+                      </button>
                       {!emp.in_settings ? (
                         <span className="mt-0.5 block text-[9px] leading-snug text-[color:var(--cab-text-muted)]">
                           Storico
@@ -615,28 +589,30 @@ export function DipendentiTimesheetGrid({
                     </td>
                     {days.map((d, dayIndex) => {
                       const layout = dayColumnLayouts[dayIndex]!;
+                      const cellValue = getCellValue(emp.id, d.dateYmd);
                       return (
                       <td
                         key={d.dateYmd}
                         data-timesheet-day={d.dateYmd}
                         {...dayAccentProps(d.dateYmd)}
                         {...dayColumnDataAttrs(layout)}
+                        {...timesheetDayCellKindDataAttrs(cellValue, "work")}
                         className={dayTd(layout)}
                       >
                         <DipendentiTimesheetCompactCell
                           layer="work"
-                          value={getCellValue(emp.id, d.dateYmd)}
+                          value={cellValue}
                           tipiAssenza={tipiAssenza}
                           isWeekend={d.isWeekend}
                           disabled={readOnly}
-                          tooltipLabel={buildTimesheetCellTooltip({
+                          ariaLabel={buildTimesheetCellTooltip({
                             employee: emp,
                             addetto: emp.source_addetto_id
                               ? addettiById.get(emp.source_addetto_id)
                               : undefined,
                             day: d,
                             readOnly,
-                          })}
+                          }).replace(/\n/g, " — ")}
                           onClick={() => onCellClick(emp.id, d.dateYmd)}
                         />
                       </td>
@@ -647,43 +623,38 @@ export function DipendentiTimesheetGrid({
                       data-timesheet-total=""
                       className={`${timesheetTotalsColBorder} ${totalTd}`}
                     >
-                      <Tooltip
-                        content={`${emp.display_name} · Totale presenze mese: ${totals.totaleLavorato > 0 ? `${totals.totaleLavorato}h` : "—"}`}
-                        side="left"
-                        showOnFocus={false}
-                        delayMs={220}
-                      >
-                        <span className="block w-full text-center tabular-nums">
-                          {totals.totaleLavorato || "—"}
-                        </span>
-                      </Tooltip>
+                      <span className="block w-full text-center tabular-nums">
+                        {totals.totaleLavorato || "—"}
+                      </span>
                     </td>
                   </tr>
                   <tr className={empBodyRowClass} data-timesheet-employee-row={emp.id}>
                     {days.map((d, dayIndex) => {
                       const layout = dayColumnLayouts[dayIndex]!;
+                      const cellValue = getCellValue(emp.id, d.dateYmd);
                       return (
                       <td
                         key={d.dateYmd}
                         data-timesheet-day={d.dateYmd}
                         {...dayAccentProps(d.dateYmd)}
                         {...dayColumnDataAttrs(layout)}
+                        {...timesheetDayCellKindDataAttrs(cellValue, "absence")}
                         className={dayTd(layout)}
                       >
                         <DipendentiTimesheetCompactCell
                           layer="absence"
-                          value={getCellValue(emp.id, d.dateYmd)}
+                          value={cellValue}
                           tipiAssenza={tipiAssenza}
                           isWeekend={d.isWeekend}
                           disabled={readOnly}
-                          tooltipLabel={buildTimesheetCellTooltip({
+                          ariaLabel={buildTimesheetCellTooltip({
                             employee: emp,
                             addetto: emp.source_addetto_id
                               ? addettiById.get(emp.source_addetto_id)
                               : undefined,
                             day: d,
                             readOnly,
-                          })}
+                          }).replace(/\n/g, " — ")}
                           onClick={() => onCellClick(emp.id, d.dateYmd)}
                         />
                       </td>
@@ -694,16 +665,9 @@ export function DipendentiTimesheetGrid({
                       data-timesheet-total=""
                       className={`${timesheetTotalsColBorder} ${totalTd} text-[color:var(--cab-text-muted)]`}
                     >
-                      <Tooltip
-                        content={`${emp.display_name} · Totale assenze mese: ${totals.oreAssenza > 0 ? `${totals.oreAssenza}h` : "—"}`}
-                        side="left"
-                        showOnFocus={false}
-                        delayMs={220}
-                      >
-                        <span className="block w-full text-center tabular-nums">
-                          {totals.oreAssenza || "—"}
-                        </span>
-                      </Tooltip>
+                      <span className="block w-full text-center tabular-nums">
+                        {totals.oreAssenza || "—"}
+                      </span>
                     </td>
                   </tr>
               </tbody>
@@ -734,37 +698,18 @@ export function DipendentiTimesheetGrid({
                       "text-center text-xs font-semibold tabular-nums",
                     ].join(" ")}
                   >
-                    <Tooltip
-                      content={formatTimesheetFooterDayTooltip(
-                        d,
-                        monthKey,
-                        "work",
-                        dayTotal.totaleLavorato,
-                      )}
-                      side="top"
-                      showOnFocus={false}
-                      delayMs={220}
-                    >
-                      <span className="block w-full text-center tabular-nums">
-                        {formatDayWorkFooter(dayTotal)}
-                      </span>
-                    </Tooltip>
+                    <span className="block w-full text-center tabular-nums">
+                      {formatDayWorkFooter(dayTotal)}
+                    </span>
                   </td>
                 );
               })}
               <td
                 className={`${timesheetFooterTdBase} ${timesheetTotalsColBorder} ${TIMESHEET_UI_TOTAL_COL_CLASS} ${TIMESHEET_UI_CELL_OVERFLOW_CLASS} px-1 text-center text-xs font-semibold tabular-nums`}
               >
-                <Tooltip
-                  content={formatTimesheetFooterMonthTooltip(monthKey, "work", globalTotals.totaleLavorato)}
-                  side="left"
-                  showOnFocus={false}
-                  delayMs={220}
-                >
-                  <span className="block w-full text-center tabular-nums">
-                    {globalTotals.totaleLavorato || "—"}
-                  </span>
-                </Tooltip>
+                <span className="block w-full text-center tabular-nums">
+                  {globalTotals.totaleLavorato || "—"}
+                </span>
               </td>
             </tr>
             <tr>
@@ -785,37 +730,18 @@ export function DipendentiTimesheetGrid({
                       "text-center text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]",
                     ].join(" ")}
                   >
-                    <Tooltip
-                      content={formatTimesheetFooterDayTooltip(
-                        d,
-                        monthKey,
-                        "absence",
-                        dayTotal.oreAssenza,
-                      )}
-                      side="top"
-                      showOnFocus={false}
-                      delayMs={220}
-                    >
-                      <span className="block w-full text-center tabular-nums">
-                        {formatDayAbsenceFooter(dayTotal)}
-                      </span>
-                    </Tooltip>
+                    <span className="block w-full text-center tabular-nums">
+                      {formatDayAbsenceFooter(dayTotal)}
+                    </span>
                   </td>
                 );
               })}
               <td
                 className={`${timesheetFooterTdBase} ${timesheetTotalsColBorder} ${TIMESHEET_UI_TOTAL_COL_CLASS} ${TIMESHEET_UI_CELL_OVERFLOW_CLASS} px-1 text-center text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]`}
               >
-                <Tooltip
-                  content={formatTimesheetFooterMonthTooltip(monthKey, "absence", globalTotals.oreAssenza)}
-                  side="left"
-                  showOnFocus={false}
-                  delayMs={220}
-                >
-                  <span className="block w-full text-center tabular-nums">
-                    {globalTotals.oreAssenza || "—"}
-                  </span>
-                </Tooltip>
+                <span className="block w-full text-center tabular-nums">
+                  {globalTotals.oreAssenza || "—"}
+                </span>
               </td>
             </tr>
           </tfoot>

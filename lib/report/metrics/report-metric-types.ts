@@ -40,7 +40,17 @@ export type ReportMetricKind = "kpi" | "ranking" | "temporal" | "matrix";
 
 export type ReportMetricIcon = "trend" | "currency" | "clock" | "box" | "users" | "fleet";
 
-export type ReportMetricLifecycleStatus = "active" | "deprecated" | "internal";
+export type ReportMetricLifecycleStatus =
+  | "draft"
+  | "active"
+  | "deprecated"
+  | "blocked"
+  | "archived"
+  | "internal";
+
+export type ReportMetricContractImpact = "none" | "minor" | "major";
+
+export type ReportMetricValidationStatus = "pending_validation" | "validated";
 
 export type ReportCompareUnavailableReason =
   | "snapshot"
@@ -109,6 +119,16 @@ import type { ReportValueFormatter } from "@/lib/report/metrics/report-value-for
 export type ReportMetricRegistryEntry = {
   id: string;
   status: ReportMetricLifecycleStatus;
+  /** Obbligatorio se status deprecated — supporta catene (resolver MAX_RESOLUTION_DEPTH). */
+  replacementId?: string;
+  technicalOwner: string;
+  businessOwner?: string;
+  freshnessSLA?: number;
+  observabilityEnabled: boolean;
+  contractImpact: ReportMetricContractImpact;
+  validation?: {
+    status: ReportMetricValidationStatus;
+  };
   owner: import("@/components/report/report-sections-config").ReportSectionId;
   category: ReportMetricCategory;
   label: string;

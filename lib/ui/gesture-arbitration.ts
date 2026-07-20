@@ -83,4 +83,13 @@ export function shouldNavDrawerClaimDismiss(ctx: GestureContext): boolean {
   return resolveGestureOwner(ctx) === "navDrawer";
 }
 
+/** PTR può partire sopra tabelle (`overflow-x-auto`); blocca solo overlay/drawer/drag. */
+export function canPullToRefreshClaimGesture(ctx: GestureContext): boolean {
+  if (ctx.overlayActive) return false;
+  if (ctx.drawerState === "OPEN" || ctx.drawerState === "DRAGGING") return false;
+  if (isFilterDrawerOpen()) return false;
+  if (ctx.target.closest("[data-cab-draggable]")) return false;
+  return true;
+}
+
 export { isSwipeNavGestureBlockedTarget };
