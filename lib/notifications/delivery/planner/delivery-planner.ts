@@ -76,7 +76,7 @@ export async function buildDeliveryPlans(
       const { data: subs } = await client
         .from("push_subscriptions")
         .select(
-          "id, endpoint, user_agent, presence_status, supports_actions, supports_badge, supports_image, supports_require_interaction, supports_vibrate",
+          "id, endpoint, user_agent, presence_status, presence_updated_at, supports_actions, supports_badge, supports_image, supports_require_interaction, supports_vibrate",
         )
         .eq("user_id", recipientId)
         .is("revoked_at", null);

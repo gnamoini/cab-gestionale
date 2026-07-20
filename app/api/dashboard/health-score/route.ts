@@ -15,15 +15,9 @@ export async function GET() {
   try {
     const fullResult = await runHealthScoreServer();
     const moduleAccess = await loadServerModuleAccessMap();
-    const filteredBreakdown = filterBreakdownForViewer(
-      fullResult.breakdown,
-      moduleAccess ?? {},
-    );
-
-    const score = adaptHealthScoreToOperational({
-      ...fullResult,
-      breakdown: filteredBreakdown,
-    });
+    const access = moduleAccess ?? {};
+    const filteredBreakdown = filterBreakdownForViewer(fullResult.breakdown, access);
+    const score = adaptHealthScoreToOperational(fullResult, access);
 
     return NextResponse.json({
       status: fullResult.status,

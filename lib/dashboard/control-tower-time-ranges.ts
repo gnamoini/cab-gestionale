@@ -103,15 +103,17 @@ export function getControlTowerWeeklyHealthScoreAnchors(
 ): ControlTowerWeeklyAnchor[] {
   const safeWeeks = Math.max(1, Math.min(weeks, 52));
   const currentWeekEnd = getControlTowerWeekEndAnchor(date);
+  const todayEnd = endOfLocalDay(date);
   const points: ControlTowerWeeklyAnchor[] = [];
 
   for (let i = safeWeeks - 1; i >= 0; i -= 1) {
     const weekEnd = endOfLocalDay(addLocalDays(currentWeekEnd, -7 * i));
-    const weekStart = startOfLocalWeekMonday(weekEnd);
+    const anchor = weekEnd.getTime() > todayEnd.getTime() ? todayEnd : weekEnd;
+    const weekStart = startOfLocalWeekMonday(anchor);
     points.push({
-      anchor: weekEnd,
+      anchor,
       weekStart,
-      weekEnd,
+      weekEnd: anchor,
       weekLabel: ymdFromDate(weekStart),
     });
   }

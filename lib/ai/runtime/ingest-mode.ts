@@ -18,3 +18,11 @@ export function resolveIngestMode(
   }
   return "NEW";
 }
+
+/** Prefer fingerprint match; fall back to provider+slot for env rotation on fixed slots. */
+export function pickExistingKeyRow(
+  byFingerprint: AiProviderKeyRow | null | undefined,
+  bySlot: AiProviderKeyRow | null | undefined,
+): AiProviderKeyRow | undefined {
+  return byFingerprint ?? bySlot ?? undefined;
+}

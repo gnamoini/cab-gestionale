@@ -11,6 +11,7 @@ import {
 } from "@/lib/db/table-select-columns";
 import {
   evaluateTagliandoDueForMezzo,
+  isMezzoEligibleForTagliandoNotification,
   parseSchedaOreLavoro,
 } from "@/lib/maintenance-plans/tagliando-due-eval";
 import { buildTagliandoDaEseguireNotification } from "@/lib/maintenance-plans/tagliando-due-notification-mapper";
@@ -18,6 +19,7 @@ import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
 import type { MaintenanceServiceLite } from "@/lib/maintenance-plans/tagliandi-matrix";
 import { publishNotification } from "@/lib/notifications/application/notification-service";
 import { legacyNotificationToCommand } from "@/lib/notifications/adapters/legacy-admin-dashboard";
+import { fetchMezzoGestitoById } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
 import type {
@@ -134,10 +136,13 @@ export async function maybePublishTagliandoDueOnInterventoCreateServer(
     const mezzoId = input.mezzoId?.trim();
     if (!mezzoId || !input.lavorazioneId?.trim()) return;
 
+    const mezzo = await fetchMezzoGestitoById(sb, mezzoId);
+    if (!isMezzoEligibleForTagliandoNotification(mezzo)) return;
+
     const currentOre = parseSchedaOreLavoro(input.fields.oreLavoro);
     const { plans, catalog, services } = await loadEvalContextServer(sb, mezzoId);
     const evalResult = evaluateTagliandoDueForMezzo({
-      mezzo: input.mezzo,
+      mezzo,
       currentOre,
       plans,
       catalog,

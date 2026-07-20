@@ -12,12 +12,16 @@ type SubscriptionRow = {
   endpoint: string;
   user_agent: string | null;
   presence_status?: string | null;
+  presence_updated_at?: string | null;
   supports_actions?: boolean | null;
   supports_badge?: boolean | null;
   supports_image?: boolean | null;
   supports_require_interaction?: boolean | null;
   supports_vibrate?: boolean | null;
 };
+
+/** ponytail: 3× heartbeat client (30s) — upgrade: parametro DB o env */
+export const PRESENCE_STALE_ONLINE_MS = 90_000;
 
 type ProfileRow = {
   id: string;
@@ -31,6 +35,17 @@ function parsePresence(value: string | null | undefined): PresenceStatus {
   const u = (value ?? "OFFLINE").toUpperCase();
   if (PRESENCE_VALUES.includes(u as PresenceStatus)) return u as PresenceStatus;
   return "OFFLINE";
+}
+
+export function resolveDevicePresence(
+  row: Pick<SubscriptionRow, "presence_status" | "presence_updated_at">,
+  now = Date.now(),
+): PresenceStatus {
+  const raw = parsePresence(row.presence_status);
+  if (raw !== "ONLINE") return raw;
+  const updatedAt = row.presence_updated_at ? Date.parse(row.presence_updated_at) : NaN;
+  if (!Number.isFinite(updatedAt) || now - updatedAt > PRESENCE_STALE_ONLINE_MS) return "BACKGROUND";
+  return "ONLINE";
 }
 
 function mapCapabilities(row: SubscriptionRow): DeviceCapabilities {
@@ -48,13 +63,14 @@ export function buildUserDeliveryContext(
   subscriptions: SubscriptionRow[],
   preferences: NotificationPreferences,
   locale = "it",
+  now = Date.now(),
 ): UserDeliveryContext {
   const devices: DeviceContext[] = subscriptions.map((s) => ({
     deviceId: s.id,
     endpoint: s.endpoint,
     userAgent: s.user_agent,
     capabilities: mapCapabilities(s),
-    presence: parsePresence(s.presence_status),
+    presence: resolveDevicePresence(s, now),
   }));
 
   const presence: PresenceStatus =
@@ -88,4 +104,5 @@ export function defaultPreferences(): NotificationPreferences {
 export const PresenceResolver = {
   buildUserDeliveryContext,
   defaultPreferences,
+  resolveDevicePresence,
 };

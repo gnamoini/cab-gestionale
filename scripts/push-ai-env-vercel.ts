@@ -57,8 +57,8 @@ function vercelEnvAdd(name: string, value: string, target: "production" | "previ
 const keys = loadEnvFile(path.join(process.cwd(), ".ai-prod-keys.tmp"));
 const local = loadEnvFile(path.join(process.cwd(), ".env.local"));
 const master = local.AI_MASTER_KEY_ENCRYPTION_KEY?.trim();
-if (!keys.KEY_01 || !keys.KEY_02 || !keys.KEY_03) {
-  console.error("Missing KEY_01/02/03 in .ai-prod-keys.tmp");
+if (!keys.KEY_01 || !keys.KEY_02 || !keys.KEY_03 || !keys.KEY_04) {
+  console.error("Missing KEY_01/02/03/04 in .ai-prod-keys.tmp");
   process.exit(1);
 }
 if (!master) {
@@ -70,6 +70,7 @@ const pairs: [string, string][] = [
   ["AI_PROVIDER_GOOGLE_KEY_01", keys.KEY_01],
   ["AI_PROVIDER_GOOGLE_KEY_02", keys.KEY_02],
   ["AI_PROVIDER_GOOGLE_KEY_03", keys.KEY_03],
+  ["AI_PROVIDER_GOOGLE_KEY_04", keys.KEY_04],
   ["GOOGLE_GENERATIVE_AI_API_KEY", keys.KEY_01],
   ["GEMINI_API_KEY_SECONDARY", keys.KEY_02],
   ["AI_MASTER_KEY_ENCRYPTION_KEY", master],

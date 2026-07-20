@@ -2,7 +2,7 @@ import type { NotificationType } from "@/lib/notifications/notification-types";
 import type { NotificationPolicyConfig } from "@/lib/notifications/application/policies/notification-policy-config";
 
 const DEFAULT_PRESENCE: NotificationPolicyConfig["presencePolicy"] = {
-  ONLINE: ["sidebar", "realtime", "badge"],
+  ONLINE: ["sidebar", "realtime", "badge", "push"],
   AWAY: ["sidebar", "realtime", "push"],
   BACKGROUND: ["push"],
   OFFLINE: ["push"],
@@ -67,7 +67,7 @@ export const NOTIFICATION_POLICIES: Partial<Record<NotificationType, Notificatio
     priority: "HIGH",
     actions: [OPEN_ACTION],
     presencePolicy: {
-      ONLINE: ["sidebar", "realtime", "badge"],
+      ONLINE: ["sidebar", "realtime", "badge", "push"],
       AWAY: ["sidebar", "realtime", "push"],
       BACKGROUND: ["push"],
       OFFLINE: ["push"],

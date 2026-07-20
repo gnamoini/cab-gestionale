@@ -158,6 +158,7 @@ assert.match(centerBellSrc, /toInboxNotificationLogViewModel/);
 assert.match(centerBellSrc, /Carica altre/);
 assert.match(centerBellSrc, /useNotificationCenter/);
 assert.match(centerBellSrc, /dispatchAdminDashboardTestSystemNotification/);
+assert.match(centerBellSrc, /dispatchInboxSystemNotification/);
 assert.match(centerBellSrc, /shouldPreferPwaPushOverDesktopPrompt/);
 assert.match(centerBellSrc, /usePwaPushOptIn/);
 
@@ -169,6 +170,11 @@ assert.match(
   policySrc,
   /admin_dashboard_test[\s\S]{0,500}ONLINE:\s*\[[^\]]*"push"/,
   "admin_dashboard_test must include push while ONLINE",
+);
+assert.match(
+  policySrc,
+  /DEFAULT_PRESENCE[\s\S]{0,200}ONLINE:\s*\[[^\]]*"push"/,
+  "DEFAULT_PRESENCE must include push while ONLINE",
 );
 
 const showLocalSrc = fs.readFileSync(path.join(ROOT, "lib/pwa/show-local-system-notification.ts"), "utf8");

@@ -72,7 +72,13 @@ assert.equal(ymd(weekEndWed), "2026-06-07", "mer in week ending dom");
 const weeklyAnchors = getControlTowerWeeklyHealthScoreAnchors(WED, 26);
 assert.equal(weeklyAnchors.length, 26);
 assert.equal(ymd(weeklyAnchors[0]!.weekStart), "2025-12-08", "oldest week start ~26w back");
-assert.equal(ymd(weeklyAnchors[25]!.weekEnd), "2026-06-07", "newest week end = current week end");
+assert.equal(ymd(weeklyAnchors[25]!.weekEnd), "2026-06-03", "mid-week newest anchor clamps to today");
+assert.equal(ymd(weeklyAnchors[25]!.anchor), "2026-06-03");
+assert.equal(ymd(weeklyAnchors[24]!.weekEnd), "2026-05-31", "prior week still ends on Sunday");
+
+const SUN = new Date(2026, 5, 7, 12, 0, 0, 0);
+const weeklySunday = getControlTowerWeeklyHealthScoreAnchors(SUN, 2);
+assert.equal(ymd(weeklySunday[1]!.weekEnd), "2026-06-07", "Sunday anchor uses full week end");
 
 const historyFetch = getControlTowerHealthScoreHistoryFetchRange(WED, 26);
 assert.ok(historyFetch.start.getTime() < weeklyAnchors[0]!.weekStart.getTime(), "history fetch precede oldest week");

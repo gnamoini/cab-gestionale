@@ -425,6 +425,29 @@ export async function buildCaptureDryRunApplication(captureId: string): Promise<
     newStatus: "dry_run",
   });
 
+  // ponytail: mutate bumps capture_version/updated_at — snapshot must be post-mutate or apply hits PLAN_STALE
+  const { data: captureAfter, error: captureAfterError } = await sb
+    .from("document_capture")
+    .select("capture_version, updated_at")
+    .eq("id", captureId)
+    .single();
+
+  if (captureAfterError || !captureAfter) {
+    throw new Error(captureAfterError?.message ?? "Capture non trovato dopo dry-run");
+  }
+
+  const { error: snapshotError } = await sb
+    .from("document_capture_applications")
+    .update({
+      capture_version: captureAfter.capture_version,
+      capture_updated_at: captureAfter.updated_at,
+    })
+    .eq("id", app.id);
+
+  if (snapshotError) {
+    throw new Error(snapshotError.message);
+  }
+
   return { applicationId: app.id, plan, validation };
 }
 

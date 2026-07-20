@@ -27,6 +27,7 @@ import {
 } from "@/lib/notifications/inbox-notification-message";
 import type { InboxNotificationRow } from "@/lib/notifications/notification-types";
 import { publishNotification } from "@/lib/notifications/publish-notification";
+import { dispatchInboxSystemNotification } from "@/lib/notifications/inbox-system-notification";
 import { buildAdminDashboardTestNotification } from "@/lib/notifications/admin-dashboard-notifications";
 import { dispatchAdminDashboardTestSystemNotification } from "@/lib/notifications/admin-dashboard-test-system";
 import {
@@ -341,6 +342,8 @@ export function NotificationCenterBell({
   const prevUnreadRef = useRef<number | null>(null);
   const [bellArrive, setBellArrive] = useState(false);
   const clientToastSeenRef = useRef<Map<string, number>>(new Map());
+  const inboxSystemSeenRef = useRef<Map<string, number>>(new Map());
+  const inboxEligible = staffInbox || clientInbox;
 
   useEffect(() => {
     if (!clientInbox || isLoading || open) return;
@@ -356,6 +359,20 @@ export function NotificationCenterBell({
       gestToast.info(message, 6000);
     }
   }, [clientInbox, gestToast, isLoading, notifications, open]);
+
+  useEffect(() => {
+    if (!inboxEligible || isLoading || open) return;
+    const now = Date.now();
+    pruneClientToastSeen(inboxSystemSeenRef.current, now);
+    for (const row of notifications) {
+      if (!row.is_unread) continue;
+      if (row.type === "admin_dashboard_test") continue;
+      const seenAt = inboxSystemSeenRef.current.get(row.id);
+      if (seenAt != null && now - seenAt <= CLIENT_TOAST_SEEN_TTL_MS) continue;
+      inboxSystemSeenRef.current.set(row.id, now);
+      void dispatchInboxSystemNotification(row);
+    }
+  }, [inboxEligible, isLoading, notifications, open]);
 
   useEffect(() => {
     if (prevUnreadRef.current === null) {

@@ -3,11 +3,13 @@
 import { maintenancePlansEntry } from "@/lib/domain/maintenance-plans-entry";
 import {
   evaluateTagliandoDueForMezzo,
+  isMezzoEligibleForTagliandoNotification,
   parseSchedaOreLavoro,
 } from "@/lib/maintenance-plans/tagliando-due-eval";
 import { buildTagliandoDaEseguireNotification } from "@/lib/maintenance-plans/tagliando-due-notification-mapper";
 import { publishNotification } from "@/lib/notifications/publish-notification";
 import { resolveNotificationsV2Mode } from "@/lib/notifications/notifications-v2-flag";
+import { mezziService } from "@/src/services/mezzi.service";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
 
@@ -38,10 +40,14 @@ export function maybePublishTagliandoDueOnInterventoCreate(input: MaybePublishTa
       const mezzoId = input.mezzoId?.trim();
       if (!mezzoId || !input.lavorazioneId?.trim()) return;
 
+      const mezzoRes = await mezziService.getGestitoById(mezzoId);
+      const mezzo = mezzoRes.success ? mezzoRes.data : null;
+      if (!isMezzoEligibleForTagliandoNotification(mezzo)) return;
+
       const currentOre = parseSchedaOreLavoro(input.fields.oreLavoro);
       const { plans, catalog, services } = await loadEvalContext(mezzoId);
       const evalResult = evaluateTagliandoDueForMezzo({
-        mezzo: input.mezzo,
+        mezzo,
         currentOre,
         plans,
         catalog,

@@ -14,9 +14,11 @@ import {
   setHealthScoreHistoryCache,
 } from "@/lib/health-score/cache/history-cache.server";
 import { computeHealthScoreFromSnapshot } from "@/lib/health-score/engine/pipeline";
+import { runHealthScoreServer } from "@/lib/health-score/engine/run-health-score.server";
 import { buildInputSnapshot } from "@/lib/health-score/repository/input-snapshot.server";
 import { fetchHealthScoreRawDataServer } from "@/lib/health-score/repository/fetch-inputs.server";
 import { HEALTH_SCORE_ENGINE_VERSION } from "@/lib/health-score/versions";
+import { ymdFromDate } from "@/lib/report/date-ranges";
 
 export type HealthScoreWeeklyPoint = {
   weekStart: string;
@@ -27,8 +29,26 @@ export type HealthScoreWeeklyPoint = {
   label: string;
 };
 
-function historyCacheKey(weeks: number): string {
-  return `history:${HEALTH_SCORE_ENGINE_VERSION}:${weeks}`;
+function historyCacheKey(weeks: number, anchor: Date): string {
+  return `history:${HEALTH_SCORE_ENGINE_VERSION}:${weeks}:${ymdFromDate(anchor)}`;
+}
+
+async function syncLastPointWithLiveScore(
+  points: HealthScoreWeeklyPoint[],
+  anchor: Date,
+): Promise<HealthScoreWeeklyPoint[]> {
+  if (points.length === 0) return points;
+
+  const live = await runHealthScoreServer(anchor);
+  const last = points[points.length - 1]!;
+  const synced = [...points];
+  synced[synced.length - 1] = {
+    ...last,
+    score: live.status === "READY" ? live.score : last.score,
+    tone: live.tone,
+    label: live.label,
+  };
+  return synced;
 }
 
 export async function runHealthScoreWeeklyHistoryServer(
@@ -36,9 +56,11 @@ export async function runHealthScoreWeeklyHistoryServer(
   anchor = new Date(),
 ): Promise<HealthScoreWeeklyPoint[]> {
   const safeWeeks = Math.max(1, Math.min(weeks, 52));
-  const cacheKey = historyCacheKey(safeWeeks);
+  const cacheKey = historyCacheKey(safeWeeks, anchor);
   const cached = getHealthScoreHistoryCache(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    return syncLastPointWithLiveScore(cached, anchor);
+  }
 
   ensureHealthScoreRegistry();
   const config = await resolveHealthScoreConfigServer();
@@ -83,5 +105,5 @@ export async function runHealthScoreWeeklyHistoryServer(
   }
 
   setHealthScoreHistoryCache(cacheKey, points);
-  return points;
+  return syncLastPointWithLiveScore(points, anchor);
 }

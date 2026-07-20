@@ -46,4 +46,24 @@ assert.throws(
   CapturePlanStaleError,
 );
 
+const sharedHash = "fields-hash-abc";
+const preMutateSnapshot = {
+  applicationCaptureVersion: 3,
+  applicationCaptureUpdatedAt: "2026-07-20T10:00:00.000Z",
+  applicationSourceFieldsHash: sharedHash,
+  captureCaptureVersion: 4,
+  captureUpdatedAt: "2026-07-20T10:00:01.000Z",
+  currentFieldsHash: sharedHash,
+};
+
+assert.throws(() => assertCapturePlanFresh(preMutateSnapshot), CapturePlanStaleError);
+
+const postMutateSnapshot = {
+  ...preMutateSnapshot,
+  applicationCaptureVersion: 4,
+  applicationCaptureUpdatedAt: "2026-07-20T10:00:01.000Z",
+};
+
+assert.doesNotThrow(() => assertCapturePlanFresh(postMutateSnapshot));
+
 console.log("capture-apply-plan.test.ts OK");

@@ -11,10 +11,13 @@ import {
   humanizeRiskFactorLabel,
   humanizeRiskFactorMeta,
 } from "@/lib/health-score/explain/humanize-factor-label";
+import { filterBreakdownForViewer } from "@/lib/health-score/explain/filter-breakdown-for-viewer";
 import { resolveSectionPrevScore } from "@/lib/health-score/explain/section-prev-score";
 import type {
+  HealthScoreBreakdown,
   HealthScoreResult,
   KpiExplainNode,
+  ModuleAccessMap,
   RiskModifierExplainNode,
   WorkshopSize,
 } from "@/lib/health-score/types";
@@ -68,7 +71,6 @@ function buildCalculationSummary(result: HealthScoreResult): OperationalHealthCa
   const sections: OperationalHealthCalculation["sections"] = [];
 
   for (const section of result.breakdown.sections) {
-    if (section.redacted) continue;
     weightedSum += section.sectionScore * section.weight;
     weightTotal += section.weight;
     const score = Math.round(section.sectionScore);
@@ -97,7 +99,6 @@ function buildCalculationSummary(result: HealthScoreResult): OperationalHealthCa
   let prevWeightedSum = 0;
   let prevWeightTotal = 0;
   for (const section of result.breakdown.sections) {
-    if (section.redacted) continue;
     const prev = resolveSectionPrevScore(section);
     if (prev == null) continue;
     prevWeightedSum += prev * section.weight;
@@ -134,15 +135,13 @@ function buildCalculationSummary(result: HealthScoreResult): OperationalHealthCa
   };
 }
 
-export function adaptHealthScoreToOperational(
-  result: HealthScoreResult,
-): OperationalHealthScore {
+function buildFactorsFromBreakdown(breakdown: HealthScoreBreakdown): OperationalHealthFactor[] {
   const factors: OperationalHealthFactor[] = [];
   const activeRiskIds = new Set(
-    result.breakdown.riskModifiers.filter((risk) => risk.penalty > 0).map((risk) => risk.id),
+    breakdown.riskModifiers.filter((risk) => risk.penalty > 0).map((risk) => risk.id),
   );
 
-  for (const section of result.breakdown.sections) {
+  for (const section of breakdown.sections) {
     if (section.redacted) continue;
     for (const kpi of section.kpis) {
       if (kpi.redacted) continue;
@@ -158,7 +157,7 @@ export function adaptHealthScoreToOperational(
     }
   }
 
-  for (const risk of result.breakdown.riskModifiers) {
+  for (const risk of breakdown.riskModifiers) {
     if (risk.penalty > 0) {
       factors.push({
         label: humanizeRiskFactorLabel(risk),
@@ -168,9 +167,9 @@ export function adaptHealthScoreToOperational(
     }
   }
 
-  if (result.breakdown.redactedSummary) {
+  if (breakdown.redactedSummary) {
     factors.push({
-      label: humanizeRedactedSummary(result.breakdown.redactedSummary),
+      label: humanizeRedactedSummary(breakdown.redactedSummary),
       impact: 0,
       detail: "Alcune aree non sono incluse nel dettaglio per i tuoi permessi di lettura.",
     });
@@ -184,10 +183,18 @@ export function adaptHealthScoreToOperational(
     });
   }
 
-  const metricCount = result.breakdown.sections.reduce(
-    (n, s) => n + (s.redacted ? 0 : s.kpis.length),
-    0,
-  );
+  return factors;
+}
+
+export function adaptHealthScoreToOperational(
+  result: HealthScoreResult,
+  access?: ModuleAccessMap,
+): OperationalHealthScore {
+  const breakdownForFactors =
+    access != null ? filterBreakdownForViewer(result.breakdown, access) : result.breakdown;
+  const factors = buildFactorsFromBreakdown(breakdownForFactors);
+
+  const metricCount = result.breakdown.sections.reduce((n, s) => n + s.kpis.length, 0);
 
   const calculation = buildCalculationSummary(result);
 

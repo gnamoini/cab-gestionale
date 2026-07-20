@@ -58,7 +58,7 @@ if (!master || !url || !serviceKey) {
 
 const keysFile = path.join(process.cwd(), ".ai-prod-keys.tmp");
 if (!fs.existsSync(keysFile)) {
-  console.error("Missing .ai-prod-keys.tmp (KEY_01=... KEY_02=... KEY_03=...)");
+  console.error("Missing .ai-prod-keys.tmp (KEY_01=... KEY_02=... KEY_03=... KEY_04=...)");
   process.exit(1);
 }
 const keyEnv = loadEnvFile(keysFile);
@@ -66,6 +66,7 @@ const keys = [
   { slot: "google-01", apiKey: keyEnv.KEY_01, priority: 11 },
   { slot: "google-02", apiKey: keyEnv.KEY_02, priority: 12 },
   { slot: "google-03", apiKey: keyEnv.KEY_03, priority: 13 },
+  { slot: "google-04", apiKey: keyEnv.KEY_04, priority: 14 },
 ].filter((k) => k.apiKey?.trim());
 
 async function main(): Promise<void> {
@@ -87,11 +88,18 @@ async function main(): Promise<void> {
       disabled_reason: null,
       updated_at: new Date().toISOString(),
     };
-    const { data: existing } = await sb
+    const { data: existingByFp } = await sb
       .from("ai_provider_keys")
       .select("id")
       .eq("key_fingerprint", fp)
       .maybeSingle();
+    const { data: existingBySlot } = await sb
+      .from("ai_provider_keys")
+      .select("id")
+      .eq("provider", "google")
+      .eq("slot", c.slot)
+      .maybeSingle();
+    const existing = existingByFp ?? existingBySlot;
     if (existing) {
       await sb.from("ai_provider_keys").update(row).eq("id", existing.id);
       console.log("updated", c.slot);

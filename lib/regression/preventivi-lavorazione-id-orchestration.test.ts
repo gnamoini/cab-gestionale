@@ -12,6 +12,8 @@ assert.match(
 assert.doesNotMatch(viewSrc, /appendPreventivoSynced\(rec, mezzi/);
 assert.doesNotMatch(viewSrc, /sp\.set\(Q_PREVENTIVI_OPEN, rec\.id\)/);
 assert.match(viewSrc, /peekPendingPreventivoPayload/);
+assert.match(viewSrc, /schedeHandoffLoading/);
+assert.match(viewSrc, /Importazione dati dalle schede/);
 assert.match(viewSrc, /editor\.open && editor\.isRollbackDraft/);
 
 console.log("preventivi-lavorazione-id-orchestration.test.ts OK");

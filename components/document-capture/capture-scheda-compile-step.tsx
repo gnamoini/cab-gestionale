@@ -323,7 +323,7 @@ export function CaptureSchedaCompileStep({
         e.preventDefault();
         void (async () => {
           try {
-            const result = await applyFlow.applyFromIngresso(create.fields);
+            const result = await applyFlow.applyFromIngresso(fieldsRef.current);
             onApplySuccess?.(result.lavorazioneId);
           } catch (err) {
             if (err instanceof Error && err.message === "REVIEW_REQUIRED") return;
@@ -445,7 +445,7 @@ export function CaptureSchedaCompileStep({
                 onClick={() => {
                   void (async () => {
                     try {
-                      const result = await applyFlow.applyFromIngresso(create.fields, { forceReview: true });
+                      const result = await applyFlow.applyFromIngresso(fieldsRef.current, { forceReview: true });
                       onApplySuccess?.(result.lavorazioneId);
                     } catch (err) {
                       onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");

@@ -25,6 +25,8 @@ import { ModuleImportEntry } from "@/components/data-import/module-import-entry"
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { LoadingCardSkeleton, SkeletonBoundary } from "@/components/design-system";
+import { LoadingSpinner } from "@/components/design-system/loading";
+import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { PreventiviTableSection } from "@/components/preventivi/preventivi-page-structure";
 const PreventiviEditorModal = dynamic(
   () => import("@/components/preventivi/preventivi-editor-modal").then((m) => m.PreventiviEditorModal),
@@ -841,6 +843,18 @@ export function PreventiviView() {
     router.replace(q ? `/preventivi?${q}` : "/preventivi", { scroll: false });
   }
 
+  const clearNuovoHandoffQuery = useCallback(() => {
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.delete(Q_PREVENTIVI_NUOVO);
+    const q = sp.toString();
+    router.replace(q ? `/preventivi?${q}` : "/preventivi", { scroll: false });
+  }, [router, searchParams]);
+
+  const cancelSchedeHandoff = useCallback(() => {
+    clearPendingPreventivoPayload();
+    clearNuovoHandoffQuery();
+  }, [clearNuovoHandoffQuery]);
+
   const hasAdvancedPanelFilters = preventiviAdvancedFiltersActive(advancedFilters);
 
   const hasPreventiviListFilters =
@@ -866,6 +880,8 @@ export function PreventiviView() {
   }
 
   const nuovoHandoff = searchParams.get(Q_PREVENTIVI_NUOVO);
+  const schedeHandoffLoading =
+    nuovoHandoff === "1" && peekPendingPreventivoPayload() != null && !editor.open;
 
   useEffect(() => {
     if (nuovoHandoff !== "1") return;
@@ -901,13 +917,24 @@ export function PreventiviView() {
         router.replace(q ? `/preventivi?${q}` : "/preventivi", { scroll: false });
       })
       .catch((err: unknown) => {
+        clearPendingPreventivoPayload();
+        clearNuovoHandoffQuery();
         const msg =
           err instanceof Error && err.message.trim()
             ? err.message.trim()
             : "Impossibile creare il preventivo dalle schede.";
         gestToast.error(msg, { module: "preventivi", action: "create" });
       });
-  }, [nuovoHandoff, queryClient, router, reload, gestToast, mezziListQ.isLoading, mezziSnap]);
+  }, [
+    nuovoHandoff,
+    queryClient,
+    router,
+    reload,
+    gestToast,
+    mezziListQ.isLoading,
+    mezziSnap,
+    clearNuovoHandoffQuery,
+  ]);
 
   useEffect(() => {
     if (!focusPreventivoId) return;
@@ -1338,6 +1365,26 @@ export function PreventiviView() {
         </PreventiviTableSection>
         </SkeletonBoundary>
       </ShellCard>
+
+      {schedeHandoffLoading ? (
+        <LavorazioniModalShell
+          modalSize="analytics"
+          title="Nuovo preventivo"
+          onRequestClose={cancelSchedeHandoff}
+        >
+          <div
+            className="flex min-h-[12rem] flex-col items-center justify-center gap-3 px-4 py-8"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <LoadingSpinner size="md" label="Importazione dati dalle schede…" />
+            <p className="text-center text-sm text-[color:var(--cab-text-muted)]">
+              Attendere, preparazione in corso.
+            </p>
+          </div>
+        </LavorazioniModalShell>
+      ) : null}
 
       {editor.open && canEditWorkOrders ? (
         <PreventiviEditorModal

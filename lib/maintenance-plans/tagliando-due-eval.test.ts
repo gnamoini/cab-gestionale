@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   evaluateTagliandoDueForMezzo,
+  isMezzoEligibleForTagliandoNotification,
   listNotifyTagliandiMilestonesForRow,
   listOverdueTagliandiMilestonesForRow,
   parseSchedaOreLavoro,
@@ -128,6 +129,10 @@ assert.equal(
   }),
   null,
 );
+
+assert.equal(isMezzoEligibleForTagliandoNotification({ ...baseMezzo, tagliandi: true }), true);
+assert.equal(isMezzoEligibleForTagliandoNotification({ ...baseMezzo, tagliandi: false }), false);
+assert.equal(isMezzoEligibleForTagliandoNotification(null), false);
 
 assert.equal(
   evaluateTagliandoDueForMezzo({

@@ -80,6 +80,11 @@ export type TagliandoDueEvalResult = {
   cliente: string;
 };
 
+export function isMezzoEligibleForTagliandoNotification(mezzo: MezzoGestito | null | undefined): boolean {
+  if (!mezzo || mezzo.hubSynthetic) return false;
+  return mezzoTagliandiEnabled(mezzo);
+}
+
 export function evaluateTagliandoDueForMezzo(input: {
   mezzo: MezzoGestito | null;
   currentOre: number;
@@ -88,8 +93,7 @@ export function evaluateTagliandoDueForMezzo(input: {
   services: MaintenanceServiceLite[];
 }): TagliandoDueEvalResult | null {
   const { mezzo, currentOre, plans, catalog, services } = input;
-  if (!mezzo || mezzo.hubSynthetic) return null;
-  if (!mezzoTagliandiEnabled(mezzo)) return null;
+  if (!mezzo || !isMezzoEligibleForTagliandoNotification(mezzo)) return null;
   if (currentOre <= 0) return null;
 
   const mezzoForRows: MezzoGestito = { ...mezzo, oreKm: currentOre };

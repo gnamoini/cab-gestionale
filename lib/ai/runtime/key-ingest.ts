@@ -33,7 +33,7 @@ export type IngestKeyResult =
   | { ok: true; id: string; mode: IngestMode; action: "created" | "updated" | "skipped" }
   | { ok: false; reason: string; warning?: boolean };
 
-import { resolveIngestMode } from "@/lib/ai/runtime/ingest-mode";
+import { resolveIngestMode, pickExistingKeyRow } from "@/lib/ai/runtime/ingest-mode";
 
 export { resolveIngestMode };
 
@@ -79,10 +79,22 @@ export async function ingestProviderKey(input: IngestKeyInput): Promise<IngestKe
     .eq("key_fingerprint", fingerprint)
     .maybeSingle();
 
+  const { data: existingBySlot } = await sb
+    .from("ai_provider_keys")
+    .select("*")
+    .eq("provider", input.provider)
+    .eq("slot", input.slot)
+    .maybeSingle();
+
+  const existing = pickExistingKeyRow(
+    existingByFp as AiProviderKeyRow | null,
+    existingBySlot as AiProviderKeyRow | null,
+  );
+
   const mode =
     input.mode === "NEW" || input.mode === "EXISTING" || input.mode === "RECOVERY"
       ? input.mode
-      : resolveIngestMode(fingerprint, existingByFp as AiProviderKeyRow | undefined);
+      : resolveIngestMode(fingerprint, existing);
 
   const shouldTest =
     input.requireProviderTest !== false &&
@@ -94,7 +106,7 @@ export async function ingestProviderKey(input: IngestKeyInput): Promise<IngestKe
     if (!test.ok) {
       if (test.unreachable) {
         if (!input.dryRun) {
-          await audit(existingByFp?.id ?? null, "sync_warning", input.actorId, {
+          await audit(existing?.id ?? null, "sync_warning", input.actorId, {
             reason: "provider_unreachable",
             envName: input.envName,
             errorCode: test.errorCode,
@@ -120,9 +132,9 @@ export async function ingestProviderKey(input: IngestKeyInput): Promise<IngestKe
   if (input.dryRun) {
     return {
       ok: true,
-      id: existingByFp?.id ?? "dry-run",
+      id: existing?.id ?? "dry-run",
       mode,
-      action: existingByFp ? "updated" : "created",
+      action: existing ? "updated" : "created",
     };
   }
 
@@ -142,14 +154,14 @@ export async function ingestProviderKey(input: IngestKeyInput): Promise<IngestKe
     updated_at: new Date().toISOString(),
   };
 
-  if (existingByFp) {
+  if (existing) {
     const { data, error } = await sb
       .from("ai_provider_keys")
       .update({
         ...row,
-        cooldown_until: mode === "RECOVERY" ? null : existingByFp.cooldown_until,
+        cooldown_until: mode === "RECOVERY" ? null : existing.cooldown_until,
       })
-      .eq("id", existingByFp.id)
+      .eq("id", existing.id)
       .select("id")
       .single();
     if (error) return { ok: false, reason: error.message };

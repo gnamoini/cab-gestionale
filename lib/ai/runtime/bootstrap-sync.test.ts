@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { inspectApiKeyFormat } from "@/lib/ai/runtime/key-validation";
-import { resolveIngestMode } from "@/lib/ai/runtime/ingest-mode";
+import { resolveIngestMode, pickExistingKeyRow } from "@/lib/ai/runtime/ingest-mode";
 import type { AiProviderKeyRow } from "@/lib/ai/runtime/types";
 
 assert.equal(inspectApiKeyFormat("").valid, false);
@@ -33,5 +33,13 @@ const existing: AiProviderKeyRow = {
 assert.equal(resolveIngestMode("fp1", existing), "EXISTING");
 assert.equal(resolveIngestMode("fp-new", undefined), "NEW");
 assert.equal(resolveIngestMode("fp1", { ...existing, status: "invalid" }), "RECOVERY");
+
+assert.equal(pickExistingKeyRow(existing, undefined), existing);
+assert.equal(pickExistingKeyRow(undefined, existing), existing);
+assert.equal(
+  pickExistingKeyRow({ ...existing, id: "fp-row" }, { ...existing, id: "slot-row" })?.id,
+  "fp-row",
+);
+assert.equal(resolveIngestMode("fp-new", { ...existing, key_fingerprint: "fp-old" }), "NEW");
 
 console.log("bootstrap-sync.test.ts OK");

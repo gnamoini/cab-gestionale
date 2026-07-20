@@ -50,14 +50,32 @@ assert.equal(batches.length, 1);
 assert.equal(batches[0]?.bundled, true);
 assert.equal(batches[0]?.notificationIds.length, 3);
 
-const ctx = PresenceResolver.buildUserDeliveryContext(
+const freshOnline = new Date().toISOString();
+const ctxOnline = PresenceResolver.buildUserDeliveryContext(
+  { id: "u1", company_id: "c1", role_key: "admin" },
+  [
+    {
+      id: "d1",
+      endpoint: "https://example.com",
+      user_agent: null,
+      presence_status: "ONLINE",
+      presence_updated_at: freshOnline,
+    },
+  ],
+  PresenceResolver.defaultPreferences(),
+);
+const resolvedOnline = ChannelPolicyResolver.resolveChannels("lavorazione_created", ctxOnline, "HIGH");
+assert.ok(resolvedOnline.channels.includes("realtime"));
+assert.ok(resolvedOnline.channels.includes("push"));
+
+const ctxStale = PresenceResolver.buildUserDeliveryContext(
   { id: "u1", company_id: "c1", role_key: "admin" },
   [{ id: "d1", endpoint: "https://example.com", user_agent: null, presence_status: "ONLINE" }],
   PresenceResolver.defaultPreferences(),
 );
-const resolved = ChannelPolicyResolver.resolveChannels("lavorazione_created", ctx, "HIGH");
-assert.ok(resolved.channels.includes("realtime"));
-assert.ok(!resolved.channels.includes("push"));
+const resolvedStale = ChannelPolicyResolver.resolveChannels("lavorazione_created", ctxStale, "HIGH");
+assert.ok(!resolvedStale.channels.includes("realtime"));
+assert.ok(resolvedStale.channels.includes("push"));
 
 const serviceSrc = fs.readFileSync(
   path.join(ROOT, "lib/notifications/application/notification-service.ts"),
