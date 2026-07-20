@@ -1,13 +1,9 @@
 import "server-only";
 
-import { generateText } from "ai";
 import type { AiProviderId, ProviderTestResult } from "@/lib/ai/runtime/types";
 import { classifyAiError } from "@/lib/ai/runtime/errors";
-import { createLanguageModel } from "@/lib/ai/runtime/providers/google";
+import { runGoogleProviderHealthCheck } from "@/lib/ai/runtime/providers/google";
 import { isProviderImplemented } from "@/lib/ai/runtime/client-factory";
-import { readRuntimeModelForProvider } from "@/lib/ai/runtime/env-reader";
-
-const TEST_TIMEOUT_MS = 10_000;
 
 function isProviderUnreachable(code: string, message: string): boolean {
   const upper = message.toUpperCase();
@@ -25,12 +21,7 @@ function isProviderUnreachable(code: string, message: string): boolean {
 async function testGoogleProviderKey(apiKey: string): Promise<ProviderTestResult> {
   const t0 = performance.now();
   try {
-    const model = createLanguageModel("google", apiKey, readRuntimeModelForProvider("google"));
-    await generateText({
-      model,
-      prompt: "ok",
-      abortSignal: AbortSignal.timeout(TEST_TIMEOUT_MS),
-    });
+    await runGoogleProviderHealthCheck(apiKey);
     return { ok: true, latencyMs: Math.round(performance.now() - t0) };
   } catch (e) {
     const latencyMs = Math.round(performance.now() - t0);

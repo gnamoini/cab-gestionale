@@ -1,9 +1,13 @@
 import "server-only";
 
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import type { LanguageModel } from "ai";
+import { generateText, type LanguageModel } from "ai";
 import type { AiProviderId } from "@/lib/ai/runtime/types";
 import { readRuntimeModelForProvider } from "@/lib/ai/runtime/env-reader";
+import {
+  GOOGLE_HEALTH_CHECK_TIMEOUT_MS,
+  resolveGoogleHealthCheckModelId,
+} from "@/lib/ai/runtime/google-health-check-config";
 
 const DEPRECATED_GOOGLE_MODELS = new Set([
   "gemini-2.5-flash",
@@ -29,4 +33,21 @@ export function createLanguageModel(
     return google(normalizeGoogleModelId(resolvedModel));
   }
   throw new Error(`Provider non supportato: ${provider}`);
+}
+
+/** Ping leggero — modello lite, output minimo, thinking off. SSOT per test chiavi. */
+export async function runGoogleProviderHealthCheck(apiKey: string): Promise<void> {
+  const google = createGoogleGenerativeAI({ apiKey });
+  const model = google(resolveGoogleHealthCheckModelId());
+  await generateText({
+    model,
+    prompt: "ok",
+    maxOutputTokens: 1,
+    providerOptions: {
+      google: {
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    },
+    abortSignal: AbortSignal.timeout(GOOGLE_HEALTH_CHECK_TIMEOUT_MS),
+  });
 }

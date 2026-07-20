@@ -2,14 +2,12 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerServiceClient } from "@/src/lib/supabase/server-service-client";
 import { decryptApiKey, canEncryptApiKeys } from "@/lib/ai/runtime/key-crypto";
 import { MASTER_KEY_ENV_NAME, runtimeSecretPresence } from "@/lib/ai/runtime/env-reader";
-import { createLanguageModel } from "@/lib/ai/runtime/client-factory";
-import { generateText } from "ai";
-import { classifyAiError } from "@/lib/ai/runtime/errors";
+import { testProviderKey } from "@/lib/ai/runtime/providers/registry";
 import { requireOpsAdmin } from "@/lib/ops/ops-api-auth.server";
 import type { AiProviderId } from "@/lib/ai/runtime/types";
 
 export const runtime = "nodejs";
-export const maxDuration = 15;
+export const maxDuration = 30;
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -43,32 +41,35 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json({ success: false, error: "Chiave non trovata" }, { status: 404 });
   }
 
-  const t0 = performance.now();
-  try {
-    const apiKey = decryptApiKey(data.encrypted_key as string);
-    const provider = data.provider as AiProviderId;
-    const model = createLanguageModel(provider, apiKey);
-    await generateText({ model, prompt: "ok", abortSignal: AbortSignal.timeout(10_000) });
-    const latencyMs = Math.round(performance.now() - t0);
-    await sb.rpc("ai_provider_key_record_success", { p_key_id: id, p_latency_ms: latencyMs });
+  const apiKey = decryptApiKey(data.encrypted_key as string);
+  const provider = data.provider as AiProviderId;
+  const test = await testProviderKey(provider, apiKey);
+
+  if (test.ok) {
+    await sb.rpc("ai_provider_key_record_success", { p_key_id: id, p_latency_ms: test.latencyMs });
     await sb.from("ai_provider_key_audit").insert({
       key_id: id,
       action: "tested",
       actor_id: auth.userId,
-      metadata: { success: true, latencyMs },
+      metadata: { success: true, latencyMs: test.latencyMs },
     });
-    return NextResponse.json({ success: true, latencyMs });
-  } catch (e) {
-    const latencyMs = Math.round(performance.now() - t0);
-    const code = classifyAiError(e);
+    return NextResponse.json({ success: true, latencyMs: test.latencyMs });
+  }
+
+  if (test.errorCode) {
     await sb.rpc("ai_provider_key_record_failure", {
       p_key_id: id,
-      p_error_code: code,
+      p_error_code: test.errorCode,
       p_cooldown_seconds: null,
     });
-    return NextResponse.json(
-      { success: false, latencyMs, errorType: code, errorMessage: e instanceof Error ? e.message : "Test fallito" },
-      { status: 502 },
-    );
   }
+  return NextResponse.json(
+    {
+      success: false,
+      latencyMs: test.latencyMs,
+      errorType: test.errorCode,
+      errorMessage: test.errorMessage ?? "Test fallito",
+    },
+    { status: 502 },
+  );
 }

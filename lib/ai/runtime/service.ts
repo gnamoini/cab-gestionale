@@ -15,6 +15,8 @@ import {
 } from "@/lib/ai/runtime/config-store";
 import { isBootstrapFallbackEnabled } from "@/lib/ai/runtime/env-reader";
 import { createLanguageModel } from "@/lib/ai/runtime/client-factory";
+import { resolveGoogleHealthCheckModelId } from "@/lib/ai/runtime/google-health-check-config";
+import { testProviderKey } from "@/lib/ai/runtime/providers/registry";
 import { syncRuntimeConfigToDatabase } from "@/lib/ai/runtime/sync-runtime-config";
 import {
   cooldownSecondsForError,
@@ -176,6 +178,70 @@ export const aiService = {
     if (!status.configured) {
       throw new AiRuntimeError("AI_CONFIG_MISSING", aiErrorMessage("AI_CONFIG_MISSING"));
     }
+  },
+
+  async runHealthCheck(): Promise<AiServiceResult<{ latencyMs: number }>> {
+    const provider = readRuntimeProviderDefault() as AiProviderId;
+    const { keys } = await resolveKeys(provider);
+    const first = selectBestKey(keys);
+    if (!first) {
+      return { ok: false, code: "AI_CONFIG_MISSING", message: aiErrorMessage("AI_CONFIG_MISSING") };
+    }
+
+    const ordered = orderKeysForFailover(keys, first);
+    let failoverCount = 0;
+    let lastCode: AiErrorCode = "AI_UNKNOWN_ERROR";
+    let lastMessage = aiErrorMessage("AI_UNKNOWN_ERROR");
+
+    for (const key of ordered) {
+      logAiObs("AI_REQUEST", {
+        operation: "ops_health_check",
+        provider: key.provider,
+        modelId: resolveGoogleHealthCheckModelId(),
+        keyId: key.id,
+        keySlot: key.slot,
+        keySource: key.source,
+      });
+      const test = await testProviderKey(key.provider, key.apiKey);
+      if (test.ok) {
+        await recordKeySuccess(key, test.latencyMs).catch(() => undefined);
+        logAiObs("AI_RESPONSE", {
+          operation: "ops_health_check",
+          provider: key.provider,
+          modelId: resolveGoogleHealthCheckModelId(),
+          keyId: key.id,
+          durationMs: test.latencyMs,
+          failoverCount,
+        });
+        return {
+          ok: true,
+          data: { latencyMs: test.latencyMs },
+          meta: {
+            provider: key.provider,
+            modelId: resolveGoogleHealthCheckModelId(),
+            keyId: key.id,
+            keySlot: key.slot,
+            keySource: key.source,
+            durationMs: test.latencyMs,
+            failoverCount,
+            operation: "ops_health_check",
+          },
+        };
+      }
+
+      lastCode = (test.errorCode as AiErrorCode | undefined) ?? "AI_UNKNOWN_ERROR";
+      lastMessage = test.errorMessage ?? aiErrorMessage(lastCode);
+      if (test.errorCode && isFailoverEligible(lastCode)) {
+        await recordKeyFailure(key, test.errorCode, {
+          cooldownSeconds: cooldownSecondsForError(test.errorCode),
+        }).catch(() => undefined);
+        failoverCount += 1;
+        continue;
+      }
+      break;
+    }
+
+    return { ok: false, code: lastCode, message: lastMessage };
   },
 
   async generateText(input: {

@@ -3,7 +3,7 @@ import { aiService } from "@/lib/ai/runtime/service";
 import { requireOpsAdmin } from "@/lib/ops/ops-api-auth.server";
 
 export const runtime = "nodejs";
-export const maxDuration = 15;
+export const maxDuration = 30;
 
 export async function POST() {
   const auth = await requireOpsAdmin();
@@ -17,7 +17,7 @@ export async function POST() {
     );
   }
 
-  const result = await aiService.generateText({ prompt: "ok", operation: "ops_health_check", timeoutMs: 10_000 });
+  const result = await aiService.runHealthCheck();
   if (!result.ok) {
     return NextResponse.json(
       {
@@ -34,7 +34,7 @@ export async function POST() {
 
   return NextResponse.json({
     success: true,
-    latencyMs: result.meta.durationMs,
+    latencyMs: result.data.latencyMs,
     configured: true,
     reachable: true,
     model: status.modelId,

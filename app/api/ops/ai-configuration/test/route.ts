@@ -5,7 +5,7 @@ import { resolveGeminiReportModelId } from "@/lib/ai/gemini-client";
 import { requireOpsAdmin } from "@/lib/ops/ops-api-auth.server";
 
 export const runtime = "nodejs";
-export const maxDuration = 15;
+export const maxDuration = 30;
 
 export async function POST() {
   const auth = await requireOpsAdmin();
@@ -30,11 +30,7 @@ export async function POST() {
     );
   }
 
-  const result = await aiService.generateText({
-    prompt: "ok",
-    operation: "ops_health_check",
-    timeoutMs: 10_000,
-  });
+  const result = await aiService.runHealthCheck();
 
   if (!result.ok) {
     const httpStatus = result.code === "AI_KEY_INVALID" ? 502 : 503;
@@ -56,7 +52,7 @@ export async function POST() {
   return NextResponse.json({
     ...base,
     success: true,
-    latencyMs: result.meta.durationMs,
+    latencyMs: result.data.latencyMs,
     errorType: null,
     errorMessage: null,
     httpStatus: 200,
