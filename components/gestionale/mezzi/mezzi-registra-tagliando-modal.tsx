@@ -5,9 +5,14 @@ import { LoadingButton } from "@/components/design-system";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
+import { isPartDue } from "@/lib/maintenance-plans/part-replacement-condition";
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
 import { dsBtnNeutral, dsBtnPrimary, dsFormField, dsFormInput, dsFormLabel } from "@/lib/ui/design-system";
 import { useRegisterMaintenanceServiceMutation } from "@/src/hooks/gestionale/use-maintenance-plan-mutations";
+import {
+  useEffectivePresetForConfigQuery,
+  useRegisterExecutionV2Mutation,
+} from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useMaintenancePlansCatalogQuery, useMaintenancePlansListQuery } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
 import { resolvePlansForMezzo } from "@/lib/maintenance-plans/resolve-plans-for-mezzo";
 
@@ -21,6 +26,7 @@ export function MezziRegistraTagliandoModal({
   tipoAttrezzatura,
   currentOreMezzo,
   defaultPlanId,
+  configId,
   onClose,
   onSaved,
 }: {
@@ -29,12 +35,15 @@ export function MezziRegistraTagliandoModal({
   tipoAttrezzatura: string;
   currentOreMezzo: number;
   defaultPlanId?: string;
+  configId?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const plansQ = useMaintenancePlansListQuery(open);
   const catalogQ = useMaintenancePlansCatalogQuery(open);
   const registerMut = useRegisterMaintenanceServiceMutation();
+  const registerV2Mut = useRegisterExecutionV2Mutation();
+  const effectivePresetQ = useEffectivePresetForConfigQuery(configId, open && Boolean(configId));
 
   const applicablePlans = useMemo(() => {
     if (!plansQ.data) return [] as MaintenancePlanView[];
@@ -53,6 +62,18 @@ export function MezziRegistraTagliandoModal({
 
   const selectedPlan = applicablePlans.find((p) => p.id === planId) ?? applicablePlans[0] ?? null;
 
+  const effectiveParts = effectivePresetQ.data?.parts ?? [];
+  const partsForUi =
+    configId && effectiveParts.length > 0
+      ? effectiveParts.map((p) => ({
+          ricambioId: p.ricambioId,
+          descrizione: p.descrizione,
+          quantita: p.quantita,
+          replacementCondition: p.replacementCondition,
+          isRequired: p.isRequired,
+        }))
+      : (selectedPlan?.parts ?? []);
+
   useEffect(() => {
     if (!open) return;
     const pid = defaultPlanId ?? applicablePlans[0]?.id ?? "";
@@ -62,18 +83,28 @@ export function MezziRegistraTagliandoModal({
     setNote("");
     const plan = applicablePlans.find((p) => p.id === pid) ?? applicablePlans[0];
     const parts: Record<string, boolean> = {};
-    for (const part of plan?.parts ?? []) parts[part.ricambioId] = true;
+    const uiParts =
+      configId && effectivePresetQ.data?.parts?.length
+        ? effectivePresetQ.data.parts
+        : (plan?.parts ?? []).map((p) => ({
+            ricambioId: p.ricambioId,
+            descrizione: p.descrizione,
+            quantita: p.quantita,
+            replacementCondition: "sempre" as const,
+            isRequired: true,
+          }));
+    for (const part of uiParts) parts[part.ricambioId] = true;
     setSelectedParts(parts);
-  }, [open, defaultPlanId, applicablePlans, currentOreMezzo]);
+  }, [open, defaultPlanId, applicablePlans, currentOreMezzo, configId, effectivePresetQ.data]);
 
   useEffect(() => {
-    if (!selectedPlan) return;
+    if (partsForUi.length === 0) return;
     setSelectedParts((prev) => {
       const next: Record<string, boolean> = {};
-      for (const part of selectedPlan.parts) next[part.ricambioId] = prev[part.ricambioId] ?? true;
+      for (const part of partsForUi) next[part.ricambioId] = prev[part.ricambioId] ?? true;
       return next;
     });
-  }, [selectedPlan?.id]);
+  }, [partsForUi]);
 
   const oreMismatch =
     Number(oreAtService) !== currentOreMezzo && Number.isFinite(Number(oreAtService));
@@ -84,21 +115,60 @@ export function MezziRegistraTagliandoModal({
     const ore = Number(oreAtService);
     if (!Number.isFinite(ore) || ore < 0) return;
 
-    await registerMut.mutateAsync({
-      mezzoId,
-      planId: selectedPlan.id,
-      performedAt,
-      oreAtService: ore,
-      mezzoOreSnapshot: currentOreMezzo,
-      note,
-      parts: selectedPlan.parts
-        .filter((p) => selectedParts[p.ricambioId])
-        .map((p) => ({
-          ricambioId: p.ricambioId,
-          quantita: p.quantita,
-          descrizioneSnapshot: p.descrizione,
-        })),
-    });
+    if (configId) {
+      const planIdForSave = effectivePresetQ.data?.presetId ?? selectedPlan?.id;
+      if (!planIdForSave) return;
+      await registerV2Mut.mutateAsync({
+        configId,
+        mezzoId,
+        planId: planIdForSave,
+        performedAt,
+        oreAtService: ore,
+        mezzoOreSnapshot: currentOreMezzo,
+        note,
+        parts: effectiveParts.length > 0
+          ? effectiveParts.map((p) => ({
+              ricambioId: p.ricambioId,
+              quantita: p.quantita,
+              descrizioneSnapshot: p.descrizione,
+              wasReplaced: selectedParts[p.ricambioId] ?? false,
+              wasDue: isPartDue({
+                condition: p.replacementCondition,
+                conditionParams: p.conditionParams,
+                executionCount: 1,
+                oreSinceLastReplace: null,
+                kmSinceLastReplace: null,
+              }),
+              replacementCondition: p.replacementCondition,
+              isRequired: p.isRequired,
+            }))
+          : partsForUi.map((p) => ({
+              ricambioId: p.ricambioId,
+              quantita: p.quantita,
+              descrizioneSnapshot: p.descrizione,
+              wasReplaced: selectedParts[p.ricambioId] ?? false,
+              wasDue: true,
+              replacementCondition: "sempre" as const,
+              isRequired: true,
+            })),
+      });
+    } else {
+      await registerMut.mutateAsync({
+        mezzoId,
+        planId: selectedPlan.id,
+        performedAt,
+        oreAtService: ore,
+        mezzoOreSnapshot: currentOreMezzo,
+        note,
+        parts: selectedPlan.parts
+          .filter((p) => selectedParts[p.ricambioId])
+          .map((p) => ({
+            ricambioId: p.ricambioId,
+            quantita: p.quantita,
+            descrizioneSnapshot: p.descrizione,
+          })),
+      });
+    }
     onSaved();
     onClose();
   }
@@ -116,7 +186,7 @@ export function MezziRegistraTagliandoModal({
           <button type="button" className={dsBtnNeutral} onClick={onClose}>
             Annulla
           </button>
-          <LoadingButton type="submit" form="registra-tagliando-form" className={dsBtnPrimary} loading={registerMut.isPending}>
+          <LoadingButton type="submit" form="registra-tagliando-form" className={dsBtnPrimary} loading={registerMut.isPending || registerV2Mut.isPending}>
             Salva
           </LoadingButton>
         </div>
@@ -192,11 +262,11 @@ export function MezziRegistraTagliandoModal({
                 onChange={setNote}
               />
             </div>
-            {selectedPlan && selectedPlan.parts.length > 0 ? (
+            {partsForUi.length > 0 ? (
               <div className={dsFormField}>
-                <span className={dsFormLabel}>Ricambi utilizzati</span>
+                <span className={dsFormLabel}>Ricambi previsti — indica sostituiti</span>
                 <ul className="space-y-2">
-                  {selectedPlan.parts.map((p) => (
+                  {partsForUi.map((p) => (
                     <li key={p.ricambioId}>
                       <label className="inline-flex items-center gap-2 text-sm">
                         <input

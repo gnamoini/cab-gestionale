@@ -162,7 +162,8 @@ export function LavorazioneIngressoDateCell({
     schedeStore?.[row.id]?.ingresso?.campi.dataIngresso,
   );
   const { date } = formatLavorazioneIngressoDisplay(iso);
-  const permanenza = lavorazionePermanenzaGiorniLabel(row);
+  const schedaDataIngresso = schedeStore?.[row.id]?.ingresso?.campi.dataIngresso;
+  const permanenza = lavorazionePermanenzaGiorniLabel(row, schedaDataIngresso);
   const inline = layout === "inline";
   return (
     <div
@@ -387,7 +388,10 @@ export function LavorazioneOrePermanenzaCell({
   align?: "center" | "start";
 }) {
   const ore = lavorazioneOreTotaliSchedaLabel(row, schedeStore);
-  const permanenza = lavorazionePermanenzaGiorniLabel(row);
+  const permanenza = lavorazionePermanenzaGiorniLabel(
+    row,
+    schedeStore[row.id]?.ingresso?.campi.dataIngresso,
+  );
   const alignClass = align === "start" ? "items-start text-left" : "items-center text-center";
   return (
     <div className={`flex flex-col gap-0.5 ${alignClass}`}>

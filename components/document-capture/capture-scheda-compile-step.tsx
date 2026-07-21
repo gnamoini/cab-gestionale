@@ -2,21 +2,13 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CaptureDocumentFilePreview } from "@/components/document-capture/capture-document-file-preview";
-import {
-  CaptureIngressoHintsBanner,
-} from "@/components/document-capture/capture-ingresso-field-hint";
 import { CAPTURE_REVIEW_PIN_TOP_CLASS } from "@/components/document-capture/capture-review-panel";
 import { CaptureReviewPanelLoading } from "@/components/document-capture/capture-review-panel";
-import {
-  CaptureEntityAmbiguityDialog,
-  type AmbiguityPick,
-} from "@/components/document-capture/capture-entity-ambiguity-dialog";
 import {
   SchedaIngressoFormBody,
 } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
 import {
   buildCaptureIngressoCompileData,
-  captureAmbiguousItemsFromCompileData,
   countCaptureHintsNeedingReview,
   reconcileCaptureIngressoHintAfterEdit,
   type CaptureIngressoCompileData,
@@ -32,6 +24,8 @@ import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/sched
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { useLavorazioneCreateSubmit } from "@/src/hooks/use-lavorazione-create-submit";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { LoadingSpinner } from "@/components/design-system/loading";
 import { CaptureApplyRecoveryBanner } from "@/components/document-capture/capture-apply-recovery-banner";
 import { useCaptureApplyFlow } from "@/lib/document-capture/use-capture-apply-flow";
 import {
@@ -99,6 +93,7 @@ export function CaptureSchedaCompileStep({
   onApplySuccess,
   resumeIngressoCompile = null,
   onIngressoCompileChange,
+  onSubmitBusyChange,
 }: {
   captureId: string;
   fieldRows: readonly CaptureFieldRow[];
@@ -117,6 +112,7 @@ export function CaptureSchedaCompileStep({
   onApplySuccess?: (lavorazioneId: string) => void;
   resumeIngressoCompile?: CaptureIngressoCompileDraft | null;
   onIngressoCompileChange?: (snapshot: CaptureIngressoCompileDraft) => void;
+  onSubmitBusyChange?: (busy: boolean) => void;
 }) {
   const [compileData, setCompileData] = useState<CaptureIngressoCompileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,20 +120,19 @@ export function CaptureSchedaCompileStep({
   const [captureHints, setCaptureHints] = useState<
     Partial<Record<keyof SchedaIngressoFields, CaptureIngressoFieldHint>>
   >({});
-  const [ambiguityOpen, setAmbiguityOpen] = useState(false);
-  const [ambiguityItems, setAmbiguityItems] = useState<
-    Array<{ fieldKey: string; original: string; resolution: import("@/lib/entity-resolution/entity-resolution-types").EntityResolutionResult }>
-  >([]);
-  const [ambiguityBusy, setAmbiguityBusy] = useState(false);
 
   const applyFlow = useCaptureApplyFlow(applyMode ? captureId : null);
+  const gestToast = useGestionaleToast();
 
   const initialCompileFields = useMemo(() => {
     if (!compileData?.fields) return null;
     if (!resumeIngressoCompile?.fields) return compileData.fields;
-    return mergeSchedaIngressoFields(compileData.fields, resumeIngressoCompile.fields, {
+    let fields = mergeSchedaIngressoFields(compileData.fields, resumeIngressoCompile.fields, {
       copySignatures: true,
     });
+    const resumeDate = resumeIngressoCompile.fields.dataIngresso.trim();
+    if (resumeDate) fields = { ...fields, dataIngresso: resumeDate };
+    return fields;
   }, [compileData?.fields, resumeIngressoCompile]);
 
   const initialCompileMeta = useMemo(() => {
@@ -162,6 +157,13 @@ export function CaptureSchedaCompileStep({
     sharedMezziCatalog,
     onCreated,
   });
+
+  const submitBusy = applyMode ? applyFlow.busy : create.pending;
+
+  useEffect(() => {
+    onSubmitBusyChange?.(submitBusy);
+    return () => onSubmitBusyChange?.(false);
+  }, [onSubmitBusyChange, submitBusy]);
 
   useEffect(() => {
     if (!sharedGlobalOpts || sharedGlobalOpts.isLoading) return;
@@ -307,16 +309,12 @@ export function CaptureSchedaCompileStep({
   const handleSubmitAttempt = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       if (!compileData) return;
-      const ambiguous = captureAmbiguousItemsFromCompileData({
-        ...compileData,
-        hints: captureHints,
-      });
-      if (ambiguous.length > 0) {
+      if (captureHints.dataIngresso) {
         e.preventDefault();
-        setAmbiguityItems(ambiguous);
-        setAmbiguityOpen(true);
-        const first = document.querySelector(`[data-capture-hint]`);
-        first?.scrollIntoView({ behavior: "smooth", block: "center" });
+        gestToast.validation("Data ingresso non letta dalla scansione — inserirla manualmente.");
+        document
+          .querySelector('[data-capture-hint="dataIngresso"]')
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
         return;
       }
       if (applyMode) {
@@ -334,62 +332,7 @@ export function CaptureSchedaCompileStep({
       }
       void create.onSubmit(e);
     },
-    [applyFlow, applyMode, captureHints, compileData, create, onApplySuccess, onCompileError],
-  );
-
-  const confirmAmbiguityPicks = useCallback(
-    async (picks: AmbiguityPick[]) => {
-      if (!captureId) return;
-      setAmbiguityBusy(true);
-      try {
-        const payload = picks.map((p) => ({
-          fieldKey: p.fieldKey,
-          label: p.label === "__keep__" ? p.original : p.label,
-          id: p.id,
-          original: p.original,
-        }));
-        const res = await fetch(`/api/document-capture/${captureId}/entity-resolution`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ picks: payload }),
-        });
-        if (!res.ok) throw new Error("Conferma riconciliazione non riuscita");
-        for (const pick of picks) {
-          const ingressoKey = Object.entries(captureHints).find(
-            ([, h]) => h.captureFieldKey === pick.fieldKey,
-          )?.[0] as keyof SchedaIngressoFields | undefined;
-          if (ingressoKey && pick.label !== "__keep__") {
-            patchFieldsRef.current({ [ingressoKey]: pick.label } as Partial<SchedaIngressoFields>);
-          }
-        }
-        setCaptureHints((prev) => {
-          const next = { ...prev };
-          for (const pick of picks) {
-            const key = Object.entries(next).find(([, h]) => h.captureFieldKey === pick.fieldKey)?.[0];
-            if (key) delete next[key as keyof SchedaIngressoFields];
-          }
-          return next;
-        });
-        setAmbiguityOpen(false);
-        setAmbiguityItems([]);
-        if (applyMode) {
-          try {
-            const result = await applyFlow.applyFromIngresso(fieldsRef.current);
-            onApplySuccess?.(result.lavorazioneId);
-          } catch (err) {
-            if (err instanceof Error && err.message === "REVIEW_REQUIRED") return;
-            onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");
-          }
-        } else {
-          create.formRef.current?.requestSubmit();
-        }
-      } catch (e) {
-        onCompileError?.(e instanceof Error ? e.message : "Conferma non riuscita");
-      } finally {
-        setAmbiguityBusy(false);
-      }
-    },
-    [applyMode, applyFlow, captureHints, captureId, create, onApplySuccess, onCompileError],
+    [applyFlow, applyMode, captureHints, compileData, create, gestToast, onApplySuccess, onCompileError],
   );
 
   if (loading || !sharedGlobalOpts) {
@@ -407,7 +350,20 @@ export function CaptureSchedaCompileStep({
 
   return (
     <>
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
+      <div className="relative grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
+        {submitBusy ? (
+          <div
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-lg bg-[color:var(--cab-bg)]/80 backdrop-blur-[1px]"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <LoadingSpinner size="md" />
+            <p className="text-sm font-medium text-[color:var(--cab-fg)]">
+              {applyMode ? "Import in corso…" : "Salvataggio in corso…"}
+            </p>
+          </div>
+        ) : null}
         <CaptureCompileDocumentPreview captureId={captureId} />
         <form
           ref={create.formRef}
@@ -478,7 +434,7 @@ export function CaptureSchedaCompileStep({
             fields={create.fields}
             setFields={create.setFields}
             onPatch={onPatchCaptureAware}
-            pending={applyMode ? applyFlow.busy : create.pending}
+            pending={submitBusy}
             mezzi={mezzi}
             schedeStore={schedeStore}
             attive={attive}
@@ -504,16 +460,6 @@ export function CaptureSchedaCompileStep({
         </form>
       </div>
       {create.unknownSettingsDialog}
-      <CaptureEntityAmbiguityDialog
-        open={ambiguityOpen}
-        items={ambiguityItems}
-        pending={ambiguityBusy}
-        onCancel={() => {
-          setAmbiguityOpen(false);
-          setAmbiguityItems([]);
-        }}
-        onConfirm={(picks) => void confirmAmbiguityPicks(picks)}
-      />
     </>
   );
 }

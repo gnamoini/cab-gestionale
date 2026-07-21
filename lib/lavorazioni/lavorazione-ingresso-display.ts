@@ -1,5 +1,7 @@
 /** Data + ora ingresso per celle tabella lavorazioni (formato condiviso gestionale / portale clienti). */
 
+import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
+
 export type LavorazioneIngressoDisplay = {
   date: string;
   time: string;
@@ -11,6 +13,14 @@ export function lavorazioneIngressoIso(
 ): string {
   const fromScheda = schedaDataIngresso?.trim();
   if (fromScheda) {
+    const parsedIt = parseItalianDayDisplayToIso(fromScheda);
+    if (parsedIt.ok) {
+      const ymd = parsedIt.iso.slice(0, 10);
+      return `${ymd}T12:00:00.000Z`;
+    }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(fromScheda)) {
+      return fromScheda;
+    }
     const d = new Date(fromScheda);
     if (!Number.isNaN(d.getTime()) && /T|\d{1,2}:\d{2}/.test(fromScheda)) {
       return d.toISOString();

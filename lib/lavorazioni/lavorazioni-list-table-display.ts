@@ -1,4 +1,5 @@
 import { durataMsStorico } from "@/lib/lavorazioni/duration";
+import { lavorazioneIngressoIso } from "@/lib/lavorazioni/lavorazione-ingresso-display";
 import { oreTotaliFromBundleLavorazioni } from "@/lib/lavorazioni/ore-totali-scheda";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
@@ -45,8 +46,11 @@ export function lavorazionePermanenzaFineIso(row: LavorazioneListRow): string {
 }
 
 /** Permanenza tra ingresso e completamento/archivio. */
-export function lavorazionePermanenzaGiorniLabel(row: LavorazioneListRow): string {
-  const ingresso = (row.data_ingresso ?? row.created_at) as string;
+export function lavorazionePermanenzaGiorniLabel(
+  row: LavorazioneListRow,
+  schedaDataIngresso?: string | null,
+): string {
+  const ingresso = lavorazioneIngressoIso(row, schedaDataIngresso);
   const fine = lavorazionePermanenzaFineIso(row);
   const ms = durataMsStorico(ingresso, fine);
   if (ms <= 0) return "—";

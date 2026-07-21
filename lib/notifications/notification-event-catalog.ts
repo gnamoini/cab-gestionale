@@ -56,6 +56,18 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     description: "Milestone tagliando entro 50 h o non segnata fatta in matrice",
   },
   {
+    type: "tagliando_previsto_7g",
+    module: "mezzi",
+    scopeType: "role",
+    scopeValue: "admin",
+    priority: "high",
+    recipients: { admin: true, ufficio: false, officina: false, cliente: false },
+    trigger: "scheduled",
+    dedupKeyPattern: "tagliando-forecast:{configId}:{dateBucket}",
+    titleTemplate: "Tagliando previsto entro 7 giorni",
+    description: "Previsione EMA — scadenza tagliando imminente",
+  },
+  {
     type: "magazzino_sotto_scorta",
     module: "magazzino",
     scopeType: "role",

@@ -80,7 +80,28 @@ export const VEHICLE_MAINTENANCE_SERVICES_COLUMNS =
   "id, mezzo_id, plan_id, performed_at, ore_at_service, mezzo_ore_snapshot, note, performed_by, created_at, updated_at, created_by" as const;
 
 export const VEHICLE_MAINTENANCE_SERVICE_PARTS_COLUMNS =
-  "id, service_id, ricambio_id, quantita, descrizione_snapshot, created_at" as const;
+  "id, service_id, ricambio_id, quantita, descrizione_snapshot, created_at, was_replaced, was_due, replacement_condition, is_required_snapshot, note, warehouse_status" as const;
+
+export const VEHICLE_MAINTENANCE_CONFIGS_COLUMNS =
+  "id, mezzo_id, preset_id, preset_version_id, maintenance_kind, is_active, interval_type, interval_value, label, activated_at, deactivated_at, planned_lavorazione_id, created_at, updated_at, created_by, deleted_at" as const;
+
+export const VEHICLE_MAINTENANCE_FORECASTS_COLUMNS =
+  "config_id, computed_at, next_date_estimated, next_milestone_value, remaining_value, confidence_level, confidence_pct, confidence_reason, ema_rate_per_day, observation_count, variance, stddev, engine_version" as const;
+
+export const MAINTENANCE_PRESET_VERSIONS_COLUMNS =
+  "id, preset_id, version_number, snapshot_json, manual_name, manufacturer_ref, revision, page_ref, document_id, change_note, created_at, created_by" as const;
+
+export const MAINTENANCE_PRESET_CATEGORIES_COLUMNS =
+  "id, label, sort_order, is_active, created_at, updated_at" as const;
+
+export const MAINTENANCE_PLANS_V2_COLUMNS =
+  "id, nome, interval_ore, is_active, created_at, updated_at, created_by, deleted_at, description, category_id, manufacturer_id, model_id, parent_preset_id, override_scope, interval_type, interval_value, current_version_id, sort_order, maintenance_kind" as const;
+
+export const MAINTENANCE_PLAN_PARTS_V2_COLUMNS =
+  "id, plan_id, ricambio_id, quantita, created_at, updated_at, is_required, replacement_condition, condition_params, sort_order, note, preset_version_id" as const;
+
+export const VEHICLE_MAINTENANCE_SERVICES_V2_COLUMNS =
+  "id, mezzo_id, plan_id, performed_at, ore_at_service, mezzo_ore_snapshot, note, performed_by, created_at, updated_at, created_by, config_id, preset_version_id, interval_type, interval_value_at_execution, km_at_service, milestone_reached, lavorazione_id, scheda_lavorazione_id, anomaly_note, confidence_at_execution, total_cost" as const;
 
 export const ASSET_TIMELINE_PROJECTION_COLUMNS =
   "event_category, event_domain, source_id, asset_kind, mezzo_id, attrezzatura_id, event_at, event_subtype, priority, label" as const;

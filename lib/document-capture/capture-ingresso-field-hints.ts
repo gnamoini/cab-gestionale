@@ -411,8 +411,7 @@ export function reconcileCaptureIngressoHintAfterEdit(
   const trimmed = newValue.trim();
 
   if (hint.tone === "ambiguous") {
-    const picked = hint.candidates?.some((c) => c.label.trim().toLowerCase() === trimmed.toLowerCase());
-    return picked ? undefined : hint;
+    return isCaptureAmbiguousHintResolved(key, trimmed, hint) ? undefined : hint;
   }
 
   const catalogWarnings = catalogWarningsForIngressoValue(key, trimmed, hint, catalogInput);
@@ -439,19 +438,17 @@ export function reconcileCaptureIngressoHintAfterEdit(
   return hint;
 }
 
-export function captureAmbiguousItemsFromCompileData(data: CaptureIngressoCompileData): Array<{
-  fieldKey: string;
-  original: string;
-  resolution: EntityResolutionResult;
-}> {
-  return data.ambiguousCaptureKeys
-    .map((fieldKey) => {
-      const resolution = data.resolutionByCaptureKey[fieldKey];
-      if (!resolution || resolution.status !== "ambiguous") return null;
-      const row = data.fieldRows.find((r) => r.field_key === fieldKey);
-      if (!row) return null;
-      const original = fieldRawValue(row);
-      return { fieldKey, original, resolution };
-    })
-    .filter((x): x is NonNullable<typeof x> => x !== null);
+/** Ambiguità risolta: candidato scelto o valore diverso dall'OCR (revisione manuale). */
+export function isCaptureAmbiguousHintResolved(
+  ingressoKey: keyof SchedaIngressoFields,
+  value: string,
+  hint: CaptureIngressoFieldHint,
+): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  const equivOpts = ingressoKey === "cliente" ? ({ standardizeLegalSuffix: true } as const) : undefined;
+  if (hint.candidates?.some((c) => captureFieldValuesEquivalent(c.label, trimmed, equivOpts))) return true;
+  const raw = hint.rawOcr?.trim() ?? "";
+  if (raw && !captureFieldValuesEquivalent(raw, trimmed, equivOpts)) return true;
+  return false;
 }

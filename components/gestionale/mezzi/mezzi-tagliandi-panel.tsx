@@ -1,7 +1,6 @@
 "use client";
 
-import { MezziTagliandiMatrixTable } from "@/components/gestionale/mezzi/mezzi-tagliandi-matrix-table";
+import { MezziTagliandiOverview, MezziTagliandiPanel } from "@/components/gestionale/mezzi/mezzi-tagliandi-overview";
 
-export function MezziTagliandiPanel({ canEdit }: { canEdit: boolean }) {
-  return <MezziTagliandiMatrixTable enabled canEdit={canEdit} />;
-}
+export { MezziTagliandiPanel };
+export { MezziTagliandiOverview };

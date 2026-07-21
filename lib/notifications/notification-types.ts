@@ -10,6 +10,7 @@ export const NOTIFICATION_TYPES = [
   "dipendenti_presenze_reminder",
   "admin_dashboard_test",
   "tagliando_da_eseguire",
+  "tagliando_previsto_7g",
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];

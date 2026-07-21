@@ -131,6 +131,7 @@ export function LavorazioniDigitalCaptureLauncher({
   );
   const [compileError, setCompileError] = useState<string | null>(null);
   const [compileFieldsLoading, setCompileFieldsLoading] = useState(false);
+  const [compileSubmitBusy, setCompileSubmitBusy] = useState(false);
   const [schedeHandoffBusy, setSchedeHandoffBusy] = useState(false);
   const [resumePromptOpen, setResumePromptOpen] = useState(false);
   const [resumeDraft, setResumeDraft] = useState<CaptureAcquisitionDraft | null>(null);
@@ -173,6 +174,7 @@ export function LavorazioniDigitalCaptureLauncher({
     setPendingSchedaTipo(null);
     setCompileError(null);
     setCompileFieldsLoading(false);
+    setCompileSubmitBusy(false);
     setSchedeHandoffBusy(false);
     setDetectedSchedaTipos([]);
     setMultiSchedaPromptOpen(false);
@@ -666,7 +668,7 @@ export function LavorazioniDigitalCaptureLauncher({
     (uploadPhase === "uploading" || uploadPhase === "finalizing" || wizardBusy);
 
   const stepCopy = DOCUMENT_CAPTURE_STEP_COPY[step];
-  const footerBusy = wizardBusy || pipelineBusy || compileFieldsLoading || schedeHandoffBusy;
+  const footerBusy = wizardBusy || pipelineBusy || compileFieldsLoading || compileSubmitBusy || schedeHandoffBusy;
 
   const showCompileIngressoFooter = step === "compile" && compileView === "ingresso" && fieldRows && captureId;
   const isMultiSchedaFlow = isCaptureMultiSchedaBundle(detectedSchedaTipos);
@@ -704,7 +706,7 @@ export function LavorazioniDigitalCaptureLauncher({
                   className={`${erpBtnAccent} min-h-11 sm:min-w-[10rem]`}
                   loading={footerBusy}
                   loadingLabel={applyV1 ? "Import…" : "Salvataggio…"}
-                  disabled={!createdBy}
+                  disabled={!createdBy || footerBusy}
                 >
                   {applyV1 ? "Conferma import" : "Crea lavorazione"}
                 </LoadingButton>
@@ -758,6 +760,7 @@ export function LavorazioniDigitalCaptureLauncher({
                   onCompileError={setCompileError}
                   resumeIngressoCompile={resumeIngressoCompile}
                   onIngressoCompileChange={handleIngressoCompileChange}
+                  onSubmitBusyChange={setCompileSubmitBusy}
                 />
                   ) : pendingSchedaTipo ? (
                     <CaptureMezzoMatchStep

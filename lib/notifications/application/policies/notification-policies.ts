@@ -60,6 +60,14 @@ export const NOTIFICATION_POLICIES: Partial<Record<NotificationType, Notificatio
     actions: [OPEN_ACTION],
     presencePolicy: DEFAULT_PRESENCE,
   },
+  tagliando_previsto_7g: {
+    channels: ["sidebar", "realtime", "push"],
+    aggregation: { mode: "none" },
+    ttlDays: null,
+    priority: "HIGH",
+    actions: [OPEN_ACTION],
+    presencePolicy: DEFAULT_PRESENCE,
+  },
   client_portal_ingresso: {
     channels: ["sidebar", "realtime", "push"],
     aggregation: { mode: "none" },

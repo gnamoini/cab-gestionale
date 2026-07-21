@@ -19,7 +19,11 @@ import { newSchedaMeta } from "@/lib/schede/schede-ui";
 import { isStatoInConfig, resolveDefaultLavorazioneStatoId } from "@/src/shared/selectors";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
-import { mergeSchedaIngressoFields } from "@/lib/schede/scheda-ingresso-reuse";
+import {
+  initSchedaIngressoFieldsForCreate,
+  mergeSchedaIngressoFields,
+} from "@/lib/schede/scheda-ingresso-reuse";
+import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import { useFormEngineSections } from "@/lib/forms/form-engine";
@@ -38,15 +42,6 @@ type LavorazioneCreateFormSections = {
   fields: SchedaIngressoFields;
   meta: { stato: string; priorita: PrioritaLavorazione; mezzoId: string };
 };
-
-function itDateToYmd(it: string): string {
-  const p = it.trim().split(/[/.-]/);
-  if (p.length !== 3) return "";
-  const [d, m, y] = p;
-  if (!d || !m || !y) return "";
-  const yy = y.length === 2 ? `20${y}` : y;
-  return `${yy}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-}
 
 function ymdToIsoMidUtc(ymd: string): string {
   const p = ymd.trim();
@@ -256,9 +251,9 @@ export function useLavorazioneCreateSubmit({
     formInitRef.current = true;
     const addetto0 = addettiOpts[0] ?? "";
     const emptyFields = emptySchedaIngressoFields(addetto0);
-    const fieldsInit = initialFields
-      ? mergeSchedaIngressoFields(emptyFields, initialFields, { copySignatures: true })
-      : emptyFields;
+    const fieldsInit = initSchedaIngressoFieldsForCreate(emptyFields, initialFields, {
+      copySignatures: true,
+    });
     if (!fieldsInit.addettoAccettazione.trim()) {
       fieldsInit.addettoAccettazione = addetto0;
     }
@@ -347,7 +342,17 @@ export function useLavorazioneCreateSubmit({
             return;
           }
 
-          const ymd = itDateToYmd(currentFields.dataIngresso) || new Date().toISOString().slice(0, 10);
+          const dataIngressoTrimmed = currentFields.dataIngresso.trim();
+          if (!dataIngressoTrimmed) {
+            gestToast.validation("Data ingresso obbligatoria.");
+            return;
+          }
+          const parsedDataIngresso = parseItalianDayDisplayToIso(dataIngressoTrimmed);
+          if (!parsedDataIngresso.ok) {
+            gestToast.validation("Data ingresso: usa il formato GG/MM/AAAA.");
+            return;
+          }
+          const ymd = parsedDataIngresso.iso.slice(0, 10);
           const noteBlob = currentFields.noteIntervento.trim() || null;
           setSubmitError(null);
           setSchedaSyncError(null);

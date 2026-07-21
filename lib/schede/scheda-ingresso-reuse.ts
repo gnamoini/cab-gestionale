@@ -125,6 +125,19 @@ export function mergeSchedaIngressoFields(
   return next;
 }
 
+/** Init form creazione: merge campi + data ingresso esplicita da initial (capture/prefill). */
+export function initSchedaIngressoFieldsForCreate(
+  empty: SchedaIngressoFields,
+  initial?: SchedaIngressoFields | null,
+  options?: { copySignatures?: boolean },
+): SchedaIngressoFields {
+  if (!initial) return empty;
+  const merged = mergeSchedaIngressoFields(empty, initial, options);
+  // ponytail: merge non copia dataIngresso (guard riuso scheda); init esplicito sì
+  merged.dataIngresso = initial.dataIngresso.trim();
+  return merged;
+}
+
 export function formatLastSchedaIngressoHint(iso: string): string {
   try {
     return new Date(iso).toLocaleString("it-IT", {

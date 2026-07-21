@@ -23,6 +23,7 @@ const TYPE_LABEL: Partial<Record<NotificationType, string>> = {
   dipendenti_presenze_reminder: "PRESENZE",
   admin_dashboard_test: "TEST",
   tagliando_da_eseguire: "TAGLIANDO",
+  tagliando_previsto_7g: "TAGLIANDO PREVISTO",
 };
 
 const TYPE_TONE: Partial<Record<NotificationType, GestionaleLogViewModel["tone"]>> = {
@@ -35,6 +36,7 @@ const TYPE_TONE: Partial<Record<NotificationType, GestionaleLogViewModel["tone"]
   dipendenti_presenze_reminder: "reopen",
   admin_dashboard_test: "neutral",
   tagliando_da_eseguire: "delete",
+  tagliando_previsto_7g: "delete",
 };
 
 const OPEN_LINK_LABEL: Partial<Record<NotificationType, string>> = {
@@ -46,6 +48,7 @@ const OPEN_LINK_LABEL: Partial<Record<NotificationType, string>> = {
   fatture_scadute_digest: "Apri fatturazione",
   dipendenti_presenze_reminder: "Apri Dipendenti",
   tagliando_da_eseguire: "Apri tagliandi",
+  tagliando_previsto_7g: "Apri tagliandi",
 };
 
 export function getInboxNotificationOpenLinkLabel(row: InboxNotificationRow): string | null {
@@ -88,7 +91,7 @@ function inboxNotificationHrefFromType(row: InboxNotificationRow): string | null
   }
   if (type === "fatture_scadute_digest") return buildAdminNotificationFatturazioneHref();
   if (type === "dipendenti_presenze_reminder") return buildAdminNotificationDipendentiHref();
-  if (type === "tagliando_da_eseguire") return "/mezzi";
+  if (type === "tagliando_da_eseguire" || type === "tagliando_previsto_7g") return "/mezzi";
   if (type === "admin_dashboard_test") return null;
   return null;
 }

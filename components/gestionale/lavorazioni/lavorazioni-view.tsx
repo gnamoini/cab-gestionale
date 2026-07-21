@@ -191,7 +191,7 @@ import { useLavorazioneConcludeMutation, useLavorazioneRemoveMutation, useLavora
 import { useLavorazioneStatoMoveMutation } from "@/src/hooks/gestionale/use-lavorazione-stato-move-mutation";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { mezziListQueryKey } from "@/lib/render/query-key-factory";
-import { QK } from "@/src/lib/react-query/invalidate-related";
+import { QK, commitLavorazioneCreateSuccess } from "@/src/lib/react-query/invalidate-related";
 import { mezziEntry } from "@/lib/domain/mezzi-entry";
 import {
   runLavorazioniToolbarRefresh,
@@ -2115,8 +2115,12 @@ export function LavorazioniView() {
           onPrimeCreate={primeCreateModal}
           onCaptureLavorazioneCreated={(id, opts) => {
             if (!opts?.skipTableFocus) {
-              invalidateSchedeStore();
-              focusLavorazioneInTable(id);
+              void (async () => {
+                await commitLavorazioneCreateSuccess(qc, id);
+                invalidateSchedeStore();
+                await ensureSchedeBundlesInCache(qc, [id]);
+                focusLavorazioneInTable(id);
+              })();
             }
           }}
           onOpenSchedeFromCapture={onOpenSchedeFromCapture}

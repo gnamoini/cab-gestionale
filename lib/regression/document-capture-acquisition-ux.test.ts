@@ -32,6 +32,10 @@ const matchStep = fs.readFileSync(
   path.join(ROOT, "components/document-capture/capture-mezzo-match-step.tsx"),
   "utf8",
 );
+const lavorazioniView = fs.readFileSync(
+  path.join(ROOT, "components/gestionale/lavorazioni/lavorazioni-view.tsx"),
+  "utf8",
+);
 
 assert.doesNotMatch(launcher, /DocumentCaptureHistoryPanel/);
 assert.match(launcher, /DocumentCaptureStepIndicator/);
@@ -83,5 +87,9 @@ assert.match(dropOverlay, /lavorazioniCaptureAdapter/);
 assert.match(compileStep, /SchedaIngressoFormBody/);
 assert.match(compileStep, /captureHints/);
 assert.match(compileStep, /useLavorazioneCreateSubmit/);
+
+assert.match(lavorazioniView, /onCaptureLavorazioneCreated/);
+assert.match(lavorazioniView, /commitLavorazioneCreateSuccess/);
+assert.match(lavorazioniView, /ensureSchedeBundlesInCache\(qc, \[id\]\)/);
 
 console.log("document-capture-acquisition-ux.test.ts OK");

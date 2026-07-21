@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   captureFieldValuesEquivalent,
   countCaptureHintsNeedingReview,
+  isCaptureAmbiguousHintResolved,
   reconcileCaptureIngressoHintAfterEdit,
 } from "@/lib/document-capture/capture-ingresso-field-hints";
 
@@ -55,5 +56,19 @@ const clearedCliente = reconcileCaptureIngressoHintAfterEdit(
   catalogInput,
 );
 assert.equal(clearedCliente, undefined);
+
+const ambiguousHint = {
+  tone: "ambiguous" as const,
+  rawOcr: "MARIO",
+  captureFieldKey: "cliente",
+  candidates: [
+    { id: "1", label: "Mario Rossi" },
+    { id: "2", label: "Mario Bianchi" },
+  ],
+};
+
+assert.equal(isCaptureAmbiguousHintResolved("cliente", "Mario Rossi", ambiguousHint), true);
+assert.equal(isCaptureAmbiguousHintResolved("cliente", "Mario Verdi", ambiguousHint), true);
+assert.equal(isCaptureAmbiguousHintResolved("cliente", "MARIO", ambiguousHint), false);
 
 console.log("capture-ingresso-field-hints.test.ts OK");
