@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { resolvePlansForMezzo } from "@/lib/maintenance-plans/resolve-plans-for-mezzo";
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
+import { mockMaintenancePlanView } from "@/lib/maintenance-plans/test-fixtures";
 
 const catalog = [
   { id: "t1", label: "Spazzatrice stradale" },
@@ -8,24 +9,20 @@ const catalog = [
 ];
 
 const plans: MaintenancePlanView[] = [
-  {
+  mockMaintenancePlanView({
     id: "p1",
     nome: "Tagliando 500h",
     intervalOre: 500,
-    isActive: true,
     tipoLabels: ["Spazzatrice stradale"],
     tipoIds: ["t1"],
-    parts: [],
-  },
-  {
+  }),
+  mockMaintenancePlanView({
     id: "p2",
     nome: "Altro",
     intervalOre: 1000,
-    isActive: true,
     tipoLabels: ["Compattatore rifiuti"],
     tipoIds: ["t2"],
-    parts: [],
-  },
+  }),
 ];
 
 const hit = resolvePlansForMezzo({ tipoAttrezzatura: "Spazzatrice stradale", catalog, plans });

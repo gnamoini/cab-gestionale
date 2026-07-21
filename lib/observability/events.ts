@@ -38,6 +38,7 @@ export const RuntimeEvents = {
   storageDeleteFailure: "storage.delete.failure",
   perfSlow: "perf.slow",
   deprecatedUsage: "deprecated.usage",
+  stockMerge: "stock.merge",
 } as const;
 
 export type RuntimeEventName = (typeof RuntimeEvents)[keyof typeof RuntimeEvents];
@@ -72,6 +73,7 @@ const EVENT_LEVEL: Record<string, "debug" | "info" | "warn" | "error"> = {
   [RuntimeEvents.storageDeleteFailure]: "warn",
   [RuntimeEvents.perfSlow]: "warn",
   [RuntimeEvents.deprecatedUsage]: "info",
+  [RuntimeEvents.stockMerge]: "debug",
 };
 
 const EVENT_OPERATION: Partial<Record<RuntimeEventName, ObsOperation>> = {

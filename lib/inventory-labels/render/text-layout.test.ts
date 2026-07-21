@@ -86,12 +86,15 @@ const dual = resolveLabelTextLayout(template, {
   codiceAlternativo: "ALT-1",
 });
 const dualMarca = dual.find((p) => p.field === "marca")!;
+const dualMarca2 = dual.find((p) => p.field === "marcaSecondaria")!;
 const dualCodice = dual.find((p) => p.field === "codice")!;
 const dualCodice2 = dual.find((p) => p.field === "codiceSecondario")!;
-assert.ok(dualMarca.lines.join(" ").replace(/\s+/g, " ").includes("BTE / OMB"));
+assert.equal(dualMarca.lines.join(" "), "BTE");
+assert.equal(dualMarca2.lines.join(" "), "OMB");
 assert.ok(dualCodice.lines.join("").includes("XXXX"));
 assert.ok(dualCodice2.lines.join("").includes("YYYY"));
-assert.ok(dualCodice2.yMm > dualCodice.yMm, "codice secondario sotto principale");
+assert.ok(dualMarca2.yMm > dualCodice.yMm, "marca secondaria sotto codice principale");
+assert.ok(dualCodice2.yMm > dualMarca2.yMm, "codice secondario sotto marca secondaria");
 
 const m12 = resolveLabelTextLayout(template, {
   marca: "BTE",

@@ -20,7 +20,8 @@ import {
 import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 import { OptionalTooltip, Tooltip } from "@/components/ui";
 import { MagazzinoBulkLabelToolbar } from "@/components/gestionale/magazzino/magazzino-bulk-label-toolbar";
-import { MagazzinoScortaAdjustActions } from "@/components/gestionale/magazzino/magazzino-scorta-adjust-actions";
+import { MagazzinoScortaDisplayBadge } from "@/components/gestionale/magazzino/magazzino-scorta-display-cell";
+import { MagazzinoScortaAdjustActionsCell } from "@/components/gestionale/magazzino/magazzino-scorta-adjust-actions-cell";
 import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
 import { MagazzinoListinoAiBadge } from "@/components/gestionale/magazzino/magazzino-listino-ai-badge";
 import { MagazzinoMarcaMobileBadge } from "@/components/gestionale/magazzino/magazzino-marca-mobile-badge";
@@ -60,7 +61,7 @@ import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-li
 import { useQueryClient } from "@tanstack/react-query";
 import { QK, invalidateAfterMagazzinoOrMovimenti } from "@/src/lib/react-query/invalidate-related";
 import { cabSyncEventForEntity, dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
-import { patchMagazzinoListCache, ricambioUiFromMagazzinoRow } from "@/lib/magazzino/magazzino-list-cache";
+import { patchMagazzinoListCache, ricambioUiFromMagazzinoRow, magazzinoListQueryKey } from "@/lib/magazzino/magazzino-list-cache";
 import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { flattenCompatDaAttrezzature, migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
@@ -161,18 +162,19 @@ import {
   buildMagazzinoLocalLogEntry,
   buildMagazzinoScortaPersistedLogEntry,
 } from "@/lib/magazzino/magazzino-log-events";
+import { getStockEntity, seedStockEntitiesFromRows } from "@/lib/magazzino/stock-entity-cache";
+import { getStockDisplayState, hydrateJournalFromSession } from "@/lib/magazzino/stock-client-store";
+import { useDeterministicStockPipeline } from "@/lib/feature-flags/stock-pipeline";
+import { resolveScortaAdjustTarget } from "@/lib/magazzino/resolve-scorta-adjust-target";
+import { useStockAdjustMutation } from "@/src/hooks/gestionale/use-stock-adjust-mutation";
+import { mergeStockEntity } from "@/lib/magazzino/stock-entity-cache";
+import { stockVoidMovementFetch } from "@/lib/magazzino/stock-void-movement-client";
+import { invalidateReportUniverse } from "@/lib/report/invalidate-report-universe";
 import {
-  applyScortaOptimisticDelta,
-  applyScortaOptimisticTarget,
-  enqueueScortaSync,
-  type ApplyScortaDeltaResult,
-  type ScortaSyncCallbacks,
-} from "@/lib/magazzino/scorta-adjust-sync";
-import {
+  migrateMagazzinoModalitaModificaPreferenceV2,
   readMagazzinoModalitaModifica,
   writeMagazzinoModalitaModifica,
 } from "@/lib/magazzino/magazzino-modalita-modifica-storage";
-import { applyScortaDeltaViaMovimento } from "@/lib/magazzino/scorta-movement";
 import { revealRicambioInTableAfterSave } from "@/lib/magazzino/magazzino-table-focus";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { MagazzinoCarichiCaptureLauncher } from "@/components/gestionale/magazzino/carichi/magazzino-carichi-capture-launcher";
@@ -517,8 +519,18 @@ export function MagazzinoView() {
   }
 
   const queryClient = useQueryClient();
+  const { adjustDelta } = useStockAdjustMutation();
+  const [undoStockPending, setUndoStockPending] = useState(false);
   const magazzinoListQ = useMagazzinoRicambiUIQuery();
   const prodotti = magazzinoListQ.data ?? [];
+
+  useEffect(() => {
+    hydrateJournalFromSession();
+    const rows = queryClient.getQueryData<import("@/src/types/supabase-tables").MagazzinoRicambioRow[]>(
+      magazzinoListQueryKey(),
+    );
+    if (rows?.length) seedStockEntitiesFromRows(queryClient, rows);
+  }, [prodotti, queryClient]);
   const [deleteGeneratedOpen, setDeleteGeneratedOpen] = useState(false);
   const [deleteGeneratedLoading, setDeleteGeneratedLoading] = useState(false);
   const magazzinoInitialLoading = magazzinoListQ.isLoading && magazzinoListQ.data === undefined;
@@ -605,8 +617,9 @@ export function MagazzinoView() {
   const [detail, setDetail] = useState<{ id: string; mode: "info" | "edit" } | null>(null);
   const [selectedRicambioIds, setSelectedRicambioIds] = useState<Set<string>>(() => new Set());
   const [labelMode, setLabelMode] = useState(false);
-  const [modalitaModifica, setModalitaModifica] = useState(false);
+  const [modalitaModifica, setModalitaModifica] = useState(true);
   useEffect(() => {
+    migrateMagazzinoModalitaModificaPreferenceV2();
     setModalitaModifica(readMagazzinoModalitaModifica());
   }, []);
   useUIAutonomyFixEngine("/magazzino", [newOpen, detail, dupCheckModalOpen]);
@@ -1149,72 +1162,107 @@ export function MagazzinoView() {
     };
   }
 
-  function buildScortaSyncCallbacks(ricambioId: string): ScortaSyncCallbacks {
-    return {
-      onPersisted: ({ ricambioId: id, label, prima, dopo, contaStatistiche: conta }) => {
-        const entry = buildMagazzinoScortaPersistedLogEntry({
-          id: `log-${Date.now()}-${++logSeqRef.current}`,
-          ricambioId: id,
-          ricambioLabel: label,
-          autore: authorName,
-          prima,
-          dopo,
-          contaStatistiche: conta,
-          ...magazzinoLogScopeFields(),
-        });
-        applyLogEntry(entry);
-      },
-      onError: ({ error }) => {
-        toastError(error, { module: "magazzino", action: "update" });
-      },
-      invalidate: () => {
-        void invalidateAfterMagazzinoOrMovimenti(queryClient, [
-          cabSyncEventForEntity("movimenti_ricambi", ricambioId, "entity_created", "movimenti_ricambi"),
-          cabSyncEventForEntity("magazzino_ricambi", ricambioId, "entity_updated", "magazzino_ricambi"),
-        ]);
-      },
-    };
+  async function persistScortaLog(id: string, label: string, prima: number, dopo: number, logId?: string) {
+    const entry = buildMagazzinoScortaPersistedLogEntry({
+      id: logId ?? `log-${Date.now()}-${++logSeqRef.current}`,
+      ricambioId: id,
+      ricambioLabel: label,
+      autore: authorName,
+      prima,
+      dopo,
+      contaStatistiche: modalitaModifica,
+      ...magazzinoLogScopeFields(),
+    });
+    applyLogEntry(entry);
+    return entry.id;
   }
 
-  function enqueueScortaForRicambio(id: string, applied: ApplyScortaDeltaResult) {
-    if (!applied.found || applied.prima === applied.dopo) return;
+  const pipelineV4 = useDeterministicStockPipeline();
+
+  function resolveCurrentScorta(id: string, fallback = 0): number {
+    const row = prodotti.find((p) => p.id === id);
+    if (pipelineV4) {
+      const display = getStockDisplayState(queryClient, id);
+      if (display.isPending || display.certifiedQuantita > 0) return display.displayQuantita;
+    }
+    return getStockEntity(queryClient, id)?.quantita ?? Math.round(row?.scorta ?? fallback);
+  }
+
+  async function runScortaAdjust(id: string, delta: number, label: string) {
+    const target = resolveScortaAdjustTarget(resolveCurrentScorta(id), delta);
+    if (!target) return;
+
+    const { prima, dopo, appliedDelta } = target;
+    const stats = modalitaModifica;
+    const logId = `log-${Date.now()}-${++logSeqRef.current}`;
+    persistScortaLog(id, label, prima, dopo, logId);
+    const outcome = await adjustDelta({
+      ricambioId: id,
+      delta: appliedDelta,
+      contaStatistiche: stats,
+      origine: stats ? "manual_adjustment" : "inventario",
+      causale: stats
+        ? appliedDelta > 0
+          ? "carico_manuale"
+          : "scarico_manuale"
+        : "rettifica_inventario",
+    });
+    if (!outcome.ok) {
+      removeMagazzinoLogEntry(logId);
+      toastError(outcome.error, {
+        module: "magazzino",
+        action: "update",
+      });
+      return;
+    }
     flashRow(id);
-    enqueueScortaSync(
-      queryClient,
-      id,
-      authorName,
-      buildScortaSyncCallbacks(id),
-      mezziListePrefs,
-      modalitaModifica,
-    );
   }
 
   function adjustScorta(id: string, delta: number) {
     if (!magCanCreateRicambio) return;
-    const applied = applyScortaOptimisticDelta(
-      queryClient,
-      id,
-      delta,
-      authorName,
-      touch,
-      mezziListePrefs,
-      modalitaModifica,
-    );
-    enqueueScortaForRicambio(id, applied);
+    const row = prodotti.find((p) => p.id === id);
+    if (!row) return;
+    void runScortaAdjust(id, delta, row.descrizione);
   }
 
   function setScortaTarget(id: string, target: number) {
     if (!magCanCreateRicambio) return;
-    const applied = applyScortaOptimisticTarget(
-      queryClient,
-      id,
-      target,
-      authorName,
-      touch,
-      mezziListePrefs,
-      modalitaModifica,
-    );
-    enqueueScortaForRicambio(id, applied);
+    const row = prodotti.find((p) => p.id === id);
+    if (!row) return;
+    const current = resolveCurrentScorta(id);
+    const targetQ = Math.max(0, Math.round(target));
+    const delta = targetQ - current;
+    if (delta === 0) return;
+    void runScortaAdjust(id, delta, row.descrizione);
+  }
+
+  async function undoStockMovement(movimentoId: string) {
+    if (!magCanCreateRicambio) return;
+    setUndoStockPending(true);
+    try {
+      const result = await stockVoidMovementFetch(movimentoId);
+      if (!result.ok) {
+        toastError(result.error, { module: "magazzino", action: "update" });
+        return;
+      }
+      mergeStockEntity(
+        queryClient,
+        {
+          ricambioId: result.data.ricambioId,
+          quantita: result.data.quantita,
+          stockVersion: result.data.stockVersion,
+          lastOperationId: null,
+        },
+        "mutation",
+      );
+      void queryClient.invalidateQueries({ queryKey: QK.log, refetchType: "active" });
+      void queryClient.invalidateQueries({ queryKey: QK.movimenti, refetchType: "active" });
+      void queryClient.invalidateQueries({ queryKey: QK.magazzino, refetchType: "active" });
+      void invalidateReportUniverse(queryClient);
+      toastSuccess("Movimento annullato. Giacenza ripristinata.");
+    } finally {
+      setUndoStockPending(false);
+    }
   }
 
   function openNewModal() {
@@ -1497,7 +1545,7 @@ export function MagazzinoView() {
             <span className="block truncate text-[13px] leading-snug">{p.categoria}</span>
           </td>
           <td className={gestionaleListTableTdCenter}>
-            <MagazzinoScortaBadge value={p.scorta} low={low} variant="table" />
+            <MagazzinoScortaDisplayBadge ricambioId={p.id} fallbackScorta={p.scorta} low={low} variant="table" />
           </td>
           <td className={`${gestionaleListTableTdCenter} !text-inherit`}>
             <div className="flex justify-center">
@@ -1542,7 +1590,8 @@ export function MagazzinoView() {
               <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
                 <IconInfoMagazzino />
               </IconActionButton>
-              <MagazzinoScortaAdjustActions
+              <MagazzinoScortaAdjustActionsCell
+                ricambioId={p.id}
                 canAdjust={magCanCreateRicambio}
                 modalitaModifica={modalitaModifica}
                 onDecrease={() => adjustScorta(p.id, -1)}
@@ -1665,9 +1714,9 @@ export function MagazzinoView() {
                   type="button"
                   onClick={openNewModal}
                   disabled={!magCanCreateRicambio}
-                  className={`${dsPageToolbarCtaCompact} disabled:cursor-not-allowed disabled:opacity-50`}
+                  className={`${dsPageToolbarCtaCompact} max-sm:w-auto max-sm:shrink-0 max-sm:overflow-visible disabled:cursor-not-allowed disabled:opacity-50`}
                 >
-                  <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo ricambio" />
+                  <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo ricambio" mobileNoTruncate />
                 </button>
                 <MagazzinoCarichiCaptureLauncher size="md" className="h-11 shrink-0" />
               </div>
@@ -1929,7 +1978,7 @@ export function MagazzinoView() {
                   </div>
                   <div className="flex shrink-0 flex-col items-center gap-1">
                     <Tooltip content={low ? "Sotto scorta minima" : "Giacenza"} side="top">
-                      <MagazzinoScortaBadge value={p.scorta} low={low} variant="mobile" />
+                      <MagazzinoScortaDisplayBadge ricambioId={p.id} fallbackScorta={p.scorta} low={low} variant="mobile" />
                     </Tooltip>
                     <Tooltip content="Scorta minima" side="top">
                       <MagazzinoScortaBadge value={p.scortaMinima} kind="minima" variant="mobile" />
@@ -1998,7 +2047,8 @@ export function MagazzinoView() {
                   <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
                     <IconInfoMagazzino />
                   </IconActionButton>
-                  <MagazzinoScortaAdjustActions
+                  <MagazzinoScortaAdjustActionsCell
+                    ricambioId={p.id}
                     canAdjust={magCanCreateRicambio}
                     modalitaModifica={modalitaModifica}
                     onDecrease={() => adjustScorta(p.id, -1)}
@@ -2055,9 +2105,12 @@ export function MagazzinoView() {
           onDismissLogEntry={removeMagazzinoLogEntry}
           canAdjustScorta={magCanCreateRicambio}
           modalitaModifica={modalitaModifica}
+          scortaFlash={flashRowId === detailRicambio.id}
           onAdjustScorta={(delta) => adjustScorta(detailRicambio.id, delta)}
           onSetScorta={(target) => setScortaTarget(detailRicambio.id, target)}
           stockPolicyRaw={stockPolicyRaw}
+          onUndoStockMovement={undoStockMovement}
+          undoStockPending={undoStockPending}
         />
       ) : null}
 

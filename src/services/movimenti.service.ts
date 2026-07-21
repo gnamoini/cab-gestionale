@@ -3,6 +3,10 @@
 import { MAGAZZINO_RICAMBI_COLUMNS, MOVIMENTI_RICAMBI_COLUMNS } from "@/lib/db/table-select-columns";
 import { fetchMovimentiListRows } from "@/lib/movimenti/movimenti-list-fetch";
 import { buildStockMovementAuditPayload } from "@/lib/magazzino/stock-audit-payload";
+import {
+  applyStockViaPipelineApi,
+  shouldUseStockPipelineForMovimenti,
+} from "@/lib/magazzino/movimenti-stock-pipeline";
 import type { StockMovementOrigin } from "@/lib/magazzino/stock-movement-origin";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { auditDiff, auditSnapshot, commitCriticalMutation, writeModificaLog } from "@/src/services/internal/audit-log";
@@ -133,13 +137,23 @@ export const movimentiService = {
   async create(data: MovimentoInsert, options?: MovimentoCreateOptions): Promise<ServiceResult<MovimentoRicambioRow>> {
     try {
       const c = await sb();
-      const operationId = options?.operationId?.trim() || data.operation_id?.trim() || null;
+      const operationId = options?.operationId?.trim() || data.operation_id?.trim() || crypto.randomUUID();
       const origine = options?.origine ?? (data.meta?.origine as StockMovementOrigin | undefined) ?? "manual_adjustment";
       const causale = options?.causale ?? data.meta?.causale ?? (data.tipo === "entrata" ? "carico" : "scarico");
 
       if (operationId) {
         const existing = await findByOperationId(c, operationId);
         if (existing) return success(existing);
+      }
+
+      if (shouldUseStockPipelineForMovimenti()) {
+        const piped = await applyStockViaPipelineApi(c, data, {
+          operationId,
+          origine,
+          causale,
+        });
+        if (!piped.success || !piped.data) return err(piped.error ?? "Aggiornamento stock non riuscito");
+        return success(piped.data.movimento);
       }
 
       return await commitCriticalMutation(c, async () => {

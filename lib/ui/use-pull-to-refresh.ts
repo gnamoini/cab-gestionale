@@ -5,18 +5,19 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import type { NavDrawerState } from "@/lib/ui/mobile-nav-drawer-contract";
 import { resolveActivationZonePx } from "@/lib/ui/mobile-nav-drawer-contract";
+import { isBlockingOverlayVisible } from "@/lib/ui/overlay-back-stack";
 import { canPullToRefreshClaimGesture, type GestureContext } from "@/lib/ui/gesture-arbitration";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import {
   isScrollAtTop,
   isVerticalPullGesture,
   pullProgress,
+  resolvePullScrollport,
   rubberBandPullY,
   shouldCommitPullToRefresh,
   type PullToRefreshPhase,
 } from "@/lib/ui/pull-to-refresh-contract";
 import { runGestionalePageRefresh } from "@/lib/ui/run-gestionale-page-refresh";
-import { BODY_LOCK_ATTR } from "@/lib/ui/scroll-lock-attrs";
 import { usePointerGesture } from "@/lib/ui/use-pointer-gesture";
 
 const ACTIVATION_PX = 8;
@@ -26,6 +27,7 @@ type DragState = {
   startY: number;
   active: boolean;
   pulling: boolean;
+  scrollport: HTMLElement | null;
 };
 
 function isEditableFocused(): boolean {
@@ -34,12 +36,6 @@ function isEditableFocused(): boolean {
   if (!(el instanceof HTMLElement)) return false;
   const tag = el.tagName;
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
-}
-
-function isBodyScrollLocked(): boolean {
-  if (typeof document === "undefined") return false;
-  const count = document.body.getAttribute(BODY_LOCK_ATTR);
-  return count != null && count !== "0";
 }
 
 function prefersReducedMotion(): boolean {
@@ -80,6 +76,7 @@ export function usePullToRefresh({
     startY: 0,
     active: false,
     pulling: false,
+    scrollport: null,
   });
   const phaseRef = useRef<PullToRefreshPhase>("idle");
   const refreshingRef = useRef(false);
@@ -106,7 +103,7 @@ export function usePullToRefresh({
   );
 
   const resetPull = useCallback(() => {
-    dragRef.current = { startX: 0, startY: 0, active: false, pulling: false };
+    dragRef.current = { startX: 0, startY: 0, active: false, pulling: false, scrollport: null };
     setPullPx(0);
     pullPxRef.current = 0;
     applyTransform(0);
@@ -123,7 +120,7 @@ export function usePullToRefresh({
     try {
       await runGestionalePageRefresh(qc, router);
     } catch (e) {
-      errorOnce("ptr-refresh", e, { module: "magazzino", action: "read" });
+      errorOnce("ptr-refresh", e, { module: "lavorazioni", action: "read" });
     } finally {
       refreshingRef.current = false;
       setPhaseSafe("idle");
@@ -132,8 +129,7 @@ export function usePullToRefresh({
 
   const guardsBlock = useCallback((): boolean => {
     if (!enabled) return true;
-    if (overlayActive || navDrawerVisible) return true;
-    if (isBodyScrollLocked()) return true;
+    if (overlayActive || navDrawerVisible || isBlockingOverlayVisible()) return true;
     if (isEditableFocused()) return true;
     if (refreshingRef.current || phaseRef.current === "refreshing") return true;
     return false;
@@ -158,7 +154,8 @@ export function usePullToRefresh({
       const scrollEl = scrollRef.current;
       if (!scrollEl) return false;
       if (!scrollEl.contains(target)) return false;
-      if (!isScrollAtTop(scrollEl.scrollTop)) return false;
+      const scrollport = resolvePullScrollport(target, scrollEl);
+      if (!isScrollAtTop(scrollport.scrollTop)) return false;
       const edgeZone = resolveActivationZonePx(
         typeof window !== "undefined" ? window.innerWidth : 390,
         0,
@@ -178,11 +175,15 @@ export function usePullToRefresh({
       const target = e.target;
       if (!(target instanceof Element)) return;
       if (!canStartPull(target, e.clientX, e.clientY)) return;
+      const scrollEl = scrollRef.current;
+      const scrollport =
+        scrollEl != null ? resolvePullScrollport(target, scrollEl) : null;
       dragRef.current = {
         startX: e.clientX,
         startY: e.clientY,
         active: true,
         pulling: false,
+        scrollport,
       };
     },
     [canStartPull, guardsBlock],
@@ -192,8 +193,8 @@ export function usePullToRefresh({
     (e: PointerEvent) => {
       const drag = dragRef.current;
       if (!drag.active) return;
-      const scrollEl = scrollRef.current;
-      if (!scrollEl || !isScrollAtTop(scrollEl.scrollTop)) {
+      const scrollport = drag.scrollport ?? scrollRef.current;
+      if (!scrollport || !isScrollAtTop(scrollport.scrollTop)) {
         resetPull();
         return;
       }
@@ -229,7 +230,7 @@ export function usePullToRefresh({
     const currentPull = pullPxRef.current;
     const shouldRefresh = drag.pulling && shouldCommitPullToRefresh(currentPull);
 
-    dragRef.current = { startX: 0, startY: 0, active: false, pulling: false };
+    dragRef.current = { startX: 0, startY: 0, active: false, pulling: false, scrollport: null };
 
     if (!shouldRefresh) {
       resetPull();

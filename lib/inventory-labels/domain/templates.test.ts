@@ -8,12 +8,13 @@ import { labelsPerA4Page } from "@/lib/inventory-labels/render/print-layout";
 
 const t = getLabelTemplate("60x40-default");
 assert.ok(t);
-assert.equal(t!.version, "1.6.5");
+assert.equal(t!.version, "1.6.6");
 
 const qr = t!.elements.find((e) => e.type === "qr");
 const marca = t!.elements.find((e) => e.type === "text" && e.field === "marca");
 const desc = t!.elements.find((e) => e.type === "text" && e.field === "descrizione");
 const codice = t!.elements.find((e) => e.type === "text" && e.field === "codice");
+const marca2 = t!.elements.find((e) => e.type === "text" && e.field === "marcaSecondaria");
 const codice2 = t!.elements.find((e) => e.type === "text" && e.field === "codiceSecondario");
 const altForn = t!.elements.find((e) => e.type === "text" && e.field === "fornitoreAlternativo");
 const barcode = t!.elements.find((e) => e.type === "barcode");
@@ -21,6 +22,7 @@ assert.ok(qr && qr.type === "qr");
 assert.ok(marca && marca.type === "text");
 assert.ok(desc && desc.type === "text" && desc.zoneBottomMm != null);
 assert.ok(codice && codice.type === "text" && codice.zoneBottomMm != null);
+assert.ok(marca2 && marca2.type === "text");
 assert.ok(codice2 && codice2.type === "text");
 assert.ok(altForn && altForn.type === "text" && altForn.zoneBottomMm != null);
 assert.ok(barcode && barcode.type === "barcode");

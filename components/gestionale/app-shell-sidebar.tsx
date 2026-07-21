@@ -36,6 +36,7 @@ import {
 } from "@/src/lib/navigation/route-transition";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useSwipeToDismiss } from "@/lib/ui/use-swipe-to-dismiss";
+import { OverlayLayerPriority } from "@/lib/ui/overlay-back-stack";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { useDialogFocusTrap } from "@/lib/ui/use-dialog-focus-trap";
 import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
@@ -246,7 +247,10 @@ function MobileNavDrawer({
   });
 
   useDialogFocusTrap(panelContainerRef, focusTrapActive);
-  useOverlayBackHandler(backHandlerActive, onClose, "MobileNavDrawer");
+  useOverlayBackHandler(backHandlerActive, onClose, "MobileNavDrawer", {
+    layer: "navigation",
+    priority: OverlayLayerPriority.navigation,
+  });
 
   useLayoutEffect(() => {
     const node = panelContainerRef.current;

@@ -40,6 +40,7 @@ import {
   isGestionaleFocusableField,
 } from "@/lib/ui/mobile-modal-behavior";
 import { gestionaleFieldLabelClass } from "@/lib/ui/gestionale-field-label";
+import { scheduleFocusNextGestionaleFieldById } from "@/lib/ui/gestionale-focus-navigation";
 
 const ricambioFormInputClass = dsInput;
 
@@ -308,6 +309,7 @@ export function RicambioFormFields({
               marca,
               scontoFornitoreOriginale: String(sconto),
             }));
+            scheduleFocusNextGestionaleFieldById("magazzino-ricambio-marca");
           }}
           excludeValues={[RICAMBIO_LENIENT_PLACEHOLDER_MARCA]}
           placeholder={RICAMBIO_MARCA_PLACEHOLDER}
@@ -553,7 +555,13 @@ export function RicambioFormFields({
         </div>
       </RicambioCollapsibleSection>
 
-      <RicambioFormCompatSection form={form} setForm={setForm} formResetKey={formResetKey} />
+      <RicambioFormCompatSection
+        key={`compat-${formMode}-${formResetKey ?? "new"}`}
+        form={form}
+        setForm={setForm}
+        formResetKey={formResetKey}
+        formMode={formMode}
+      />
 
       <RicambioCollapsibleSection title="Giacenza" defaultCollapsed={false}>
         <div className="grid grid-cols-2 gap-3">

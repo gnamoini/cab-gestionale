@@ -71,6 +71,15 @@ export function scheduleFocusNextGestionaleField(
   window.setTimeout(() => focusNextGestionaleField(from), delayMs);
 }
 
+/** Come `scheduleFocusNextGestionaleField`, risolvendo l'elemento di partenza da id. */
+export function scheduleFocusNextGestionaleFieldById(
+  elementId: string,
+  delayMs = DEFAULT_FOCUS_DELAY_MS,
+): void {
+  if (typeof document === "undefined") return;
+  scheduleFocusNextGestionaleField(document.getElementById(elementId), delayMs);
+}
+
 export function shouldSkipGestionaleEnterAdvance(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return true;
   if (target.closest("[data-gestionale-enter-ignore]")) return true;

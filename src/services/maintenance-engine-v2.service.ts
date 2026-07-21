@@ -8,6 +8,11 @@ import {
   VEHICLE_MAINTENANCE_SERVICES_V2_COLUMNS,
 } from "@/lib/db/table-select-columns";
 import { resolveCurrentMezzoMetering, resolveCurrentMezzoMeteringBatch } from "@/lib/maintenance-plans/fetch-mezzo-metering";
+import {
+  MAINTENANCE_AUDIT_ACTIONS,
+  writeMaintenanceAuditEvent,
+} from "@/lib/maintenance-plans/maintenance-audit";
+import { processMaintenanceWarehouseDischarge } from "@/lib/maintenance-plans/process-maintenance-warehouse";
 import { loadEffectivePresetForConfig } from "@/lib/maintenance-plans/load-effective-preset-for-config";
 import type { MaintenanceIntervalType } from "@/lib/maintenance-plans/maintenance-enums";
 import type { EffectivePreset } from "@/lib/maintenance-plans/resolve-effective-preset";
@@ -61,6 +66,8 @@ type ForecastRow = {
   confidence_level: string | null;
   confidence_pct: number | null;
   confidence_reason: string | null;
+  trigger_reason: string | null;
+  explainability_json: import("@/lib/maintenance-plans/forecast/trigger-group-forecast").ForecastExplainability | null;
 };
 
 type LastServiceRow = {
@@ -131,6 +138,8 @@ function mapConfigToViewFromBatch(input: {
     confidenceLevel: (forecast?.confidence_level as VehicleMaintenanceConfigView["confidenceLevel"]) ?? null,
     confidencePct: forecast?.confidence_pct ?? null,
     confidenceReason: forecast?.confidence_reason ?? null,
+    triggerReason: forecast?.trigger_reason ?? null,
+    explainability: forecast?.explainability_json ?? null,
     urgency,
     partsCount,
   };
@@ -464,8 +473,16 @@ export const maintenanceEngineV2Service = {
         p_preset_version_id: c.preset_version_id,
         p_interval_type: c.interval_type,
         p_interval_value_at_execution: c.interval_value,
+        p_execution_type: input.executionType,
+        p_preset_snapshot: input.presetSnapshot,
         p_parts: partsPayload,
         p_forecast: forecastRowToRpcJson(forecastRow),
+        p_checklist: (input.checklist ?? []).map((item) => ({
+          item_label: item.itemLabel,
+          checked: item.checked,
+          note: item.note ?? "",
+          sort_order: item.sortOrder,
+        })),
       });
 
       if (rpcErr || !serviceId) {
@@ -479,7 +496,23 @@ export const maintenanceEngineV2Service = {
         .single();
       if (readErr || !row) return err("Tagliando registrato ma lettura fallita.");
 
-      void uid;
+      await writeMaintenanceAuditEvent(client, {
+        entity: "execution",
+        entityId: serviceId as string,
+        action: MAINTENANCE_AUDIT_ACTIONS.EXECUTION_REGISTERED,
+        newValue: {
+          configId: input.configId,
+          executionType: input.executionType,
+          presetSnapshot: input.presetSnapshot,
+        },
+        createdBy: uid,
+      });
+
+      void processMaintenanceWarehouseDischarge({
+        executionId: serviceId as string,
+        parts: input.parts.filter((p) => p.wasReplaced).map((p) => ({ ricambioId: p.ricambioId, quantita: p.quantita })),
+      });
+
       return success(row as VehicleMaintenanceServiceRow);
     } catch (e) {
       return serviceFailFromError<VehicleMaintenanceServiceRow>(e, null as never, { entity: "mezzo", action: "create" });
@@ -565,6 +598,8 @@ export const maintenanceEngineV2Service = {
           confidenceLevel: (forecast?.confidence_level as TagliandiOverviewRow["confidenceLevel"]) ?? null,
           confidencePct: forecast?.confidence_pct ?? null,
           confidenceReason: forecast?.confidence_reason ?? null,
+          triggerReason: forecast?.trigger_reason ?? null,
+          explainability: forecast?.explainability_json ?? null,
           partsCount: c.preset_id ? (partsCountByPreset.get(c.preset_id) ?? 0) : 0,
           urgency,
           canPlanWorkshop: urgency === "arancione" || urgency === "rosso",

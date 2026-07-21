@@ -6,7 +6,8 @@ import {
   GestionaleInfoRow,
   GestionaleInfoSubgroup,
 } from "@/components/design-system/gestionale-info-card";
-import { HubModalPanoramicaPanel, hubPanoramicaDisplayValue } from "@/components/design-system/hub-modal-panoramica";
+import { hubPanoramicaDisplayValue } from "@/components/design-system/hub-modal-panoramica";
+import { RicambioInfoRiepilogoSection, RicambioCodiceIdentitaBlock } from "@/components/gestionale/magazzino/ricambio-info-riepilogo-section";
 import { LoadingFormSkeleton } from "@/components/design-system";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import { RicambioCollapsibleSection } from "@/components/gestionale/magazzino/ricambio-modal-ui";
@@ -15,6 +16,7 @@ import { RecordImageManager, type RecordImageLogEvent } from "@/components/gesti
 import {
   GestionaleLogEntryDismissButton,
   GestionaleLogEntryFourLines,
+  GestionaleLogEntryUndoButton,
 } from "@/components/gestionale/gestionale-log-ui";
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
 import type { MagazzinoLogFeedItem } from "@/lib/magazzino/use-magazzino-log-feed";
@@ -27,7 +29,6 @@ import {
 } from "@/lib/magazzino/ricambio-consumo-from-log";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { RicambioOperationalStatusCard } from "@/components/gestionale/magazzino/ricambio-operational-status-card";
-import { RicambioMovimentiSection } from "@/components/gestionale/magazzino/ricambio-movimenti-section";
 import { RicambioOrdiniSection } from "@/components/gestionale/magazzino/ricambio-ordini-section";
 
 function multilineValue(value: string): ReactNode {
@@ -94,9 +95,12 @@ export function RicambioInfoPanel({
   onDismissLogEntry,
   canAdjustScorta,
   modalitaModifica = false,
+  scortaFlash = false,
   onAdjustScorta,
   onSetScorta,
   stockPolicyRaw,
+  onUndoStockMovement,
+  undoStockPending = false,
 }: {
   ricambio: RicambioMagazzino;
   compatDisplay: string;
@@ -109,9 +113,12 @@ export function RicambioInfoPanel({
   onDismissLogEntry: (id: string) => void;
   canAdjustScorta?: boolean;
   modalitaModifica?: boolean;
+  scortaFlash?: boolean;
   onAdjustScorta?: (delta: number) => void;
   onSetScorta?: (target: number) => void;
   stockPolicyRaw?: unknown;
+  onUndoStockMovement?: (movimentoId: string) => void | Promise<void>;
+  undoStockPending?: boolean;
 }) {
   const low = ricambio.scorta < ricambio.scortaMinima;
   const ultimaModifica = new Date(ricambio.dataUltimaModifica).toLocaleString("it-IT", {
@@ -125,6 +132,19 @@ export function RicambioInfoPanel({
 
   return (
     <div className="space-y-3">
+      <RicambioInfoRiepilogoSection
+        ricambio={ricambio}
+        compatDisplay={compatDisplay}
+        ultimaModificaLabel={ultimaModifica}
+        canAdjustScorta={canAdjustScorta}
+        modalitaModifica={modalitaModifica}
+        scortaFlash={scortaFlash}
+        onAdjustScorta={onAdjustScorta}
+        onSetScorta={onSetScorta}
+        consumo={consumo}
+        stockPolicyRaw={stockPolicyRaw}
+      />
+
       <RicambioCollapsibleSection title="Giacenza e consumo" defaultCollapsed={false}>
         <RicambioOperationalStatusCard
           embedded
@@ -143,6 +163,7 @@ export function RicambioInfoPanel({
                 low={low}
                 canAdjust={canAdjustScorta ?? false}
                 modalitaModifica={modalitaModifica}
+                successFlash={scortaFlash}
                 onDecrease={() => onAdjustScorta(-1)}
                 onIncrease={() => onAdjustScorta(1)}
                 onSetValue={(target) => onSetScorta?.(target)}
@@ -177,21 +198,7 @@ export function RicambioInfoPanel({
         <GestionaleInfoRow label="Marca" value={hubPanoramicaDisplayValue(ricambio.marca)} />
         <GestionaleInfoRow
           label="Cod. OE"
-          value={
-            <div className="space-y-0.5">
-              <span className="font-mono text-[13px] font-semibold tracking-wide">
-                {hubPanoramicaDisplayValue(ricambio.codiceFornitoreOriginale)}
-              </span>
-              {ricambio.codiceFornitoreOriginaleSecondario.trim() ? (
-                <span className="block font-mono text-[11px] font-medium tracking-wide text-[color:var(--cab-text-muted)]">
-                  {ricambio.codiceFornitoreOriginaleSecondario}
-                  {ricambio.marcaOriginaleSecondaria.trim()
-                    ? ` · ${ricambio.marcaOriginaleSecondaria}`
-                    : ""}
-                </span>
-              ) : null}
-            </div>
-          }
+          value={<RicambioCodiceIdentitaBlock ricambio={ricambio} />}
           strong
         />
         <GestionaleInfoRow label="Descrizione" value={hubPanoramicaDisplayValue(ricambio.descrizione)} strong />
@@ -257,26 +264,37 @@ export function RicambioInfoPanel({
         prezzoVendita={ricambio.prezzoVendita}
       />
 
-      <RicambioMovimentiSection ricambioId={ricambio.id} />
       <RicambioOrdiniSection ricambioId={ricambio.id} />
 
-      <RicambioCollapsibleSection title="Storico modifiche" defaultCollapsed>
+      <RicambioCollapsibleSection title="Storico e movimenti" defaultCollapsed>
         <ul className="space-y-2">
           {logLoading ? (
             <li className="list-none">
               <LoadingFormSkeleton fields={1} className="py-1" />
             </li>
           ) : logTimeline.length === 0 ? (
-            <li className="list-none text-sm text-[color:var(--cab-text-muted)]">Nessuna modifica registrata.</li>
+            <li className="list-none text-sm text-[color:var(--cab-text-muted)]">Nessuna attività registrata.</li>
           ) : (
             logTimeline.map((ev) => (
               <li key={ev.id} className="list-none">
                 <GestionaleLogEntryFourLines
                   vm={ev.vm}
                   trailing={
-                    ev.source === "local" ? (
-                      <GestionaleLogEntryDismissButton onDismiss={() => onDismissLogEntry(ev.id)} />
-                    ) : undefined
+                    <div className="flex items-center gap-0.5">
+                      {ev.source === "server" &&
+                      canAdjustScorta &&
+                      ev.movimentoId &&
+                      !ev.vm.annullato &&
+                      onUndoStockMovement ? (
+                        <GestionaleLogEntryUndoButton
+                          pending={undoStockPending}
+                          onUndo={() => onUndoStockMovement(ev.movimentoId!)}
+                        />
+                      ) : null}
+                      {ev.source === "local" ? (
+                        <GestionaleLogEntryDismissButton onDismiss={() => onDismissLogEntry(ev.id)} />
+                      ) : null}
+                    </div>
                   }
                 />
               </li>

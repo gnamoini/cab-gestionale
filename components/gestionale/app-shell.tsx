@@ -44,7 +44,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { isCompactShell, tier } = shellTier;
   const showMobileNavOpen = isCompactShell && shellContentWidth > 0;
   const pullToRefresh = usePullToRefresh({
-    enabled: tier === "mobile",
+    enabled: isCompactShell,
     scrollRef: mainScrollRef,
     contentRef: pullContentRef,
     overlayActive,

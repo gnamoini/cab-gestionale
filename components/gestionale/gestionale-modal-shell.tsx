@@ -35,6 +35,11 @@ import { cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
 import { flexShrinkSafe } from "@/lib/ui/global-flex-system";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { useMobileModalKeyboard } from "@/lib/ui/use-mobile-modal-keyboard";
+import {
+  OverlayLayerPriority,
+  type BeforeBackHandler,
+  type OverlayCloseContext,
+} from "@/lib/ui/overlay-back-stack";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 
 const GESTIONALE_MODAL_TITLE_ID = "gestionale-modal-title";
@@ -139,6 +144,7 @@ export function GestionaleModalShell({
   title,
   subtitle,
   onBack,
+  beforeBack,
   header,
   actions,
   titleId,
@@ -152,10 +158,11 @@ export function GestionaleModalShell({
   dialogSize?: GestionaleModalDialogSize;
   alignTop?: boolean;
   layerClassName?: string;
-  onRequestClose: () => void;
+  onRequestClose: (ctx?: OverlayCloseContext) => void;
   title?: string;
   subtitle?: string;
   onBack?: () => void;
+  beforeBack?: BeforeBackHandler;
   header?: ReactNode;
   actions?: ReactNode;
   titleId?: string;
@@ -163,7 +170,19 @@ export function GestionaleModalShell({
   modalRootRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   useBodyScrollLock(true, "GestionaleModalShell");
-  useOverlayBackHandler(true, onRequestClose, "GestionaleModalShell", { layer: "modal" });
+  useOverlayBackHandler(
+    true,
+    (ctx) => {
+      if (onBack) onBack();
+      else onRequestClose(ctx);
+    },
+    "GestionaleModalShell",
+    {
+      layer: "modal",
+      priority: OverlayLayerPriority.modal,
+      beforeBack,
+    },
+  );
   useDevModalLayoutLint(true, "gestionale-modal-shell");
   const dialogFocus = useGestionaleModalDialogFocus();
   useMobileModalKeyboard(dialogFocus.ref);

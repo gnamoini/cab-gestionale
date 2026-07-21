@@ -2,6 +2,8 @@ import type { LabelPayload, LabelTemplateDefinition, LabelTemplateElement } from
 import {
   formatLabelCodiceLine,
   formatLabelMarcaLine,
+  formatLabelMarcaSecondariaLine,
+  shouldRenderMarcaSecondaria,
 } from "@/lib/inventory-labels/domain/label-display";
 import { fieldValue, maxCharsForWrap, maxCharsForWidth, wrapLabelLines } from "@/lib/inventory-labels/render/layout";
 import { labelDisplayCaps } from "@/lib/inventory-labels/domain/label-display";
@@ -17,6 +19,7 @@ import {
 
 const DESC_CODICE_EXTRA_GAP_MM = 0.4;
 const CODICE_SECONDARIO_EXTRA_GAP_MM = 0.3;
+const MARCA_SECONDARIA_EXTRA_GAP_MM = 0.25;
 
 export type PlacedLabelText = {
   field: keyof LabelPayload;
@@ -140,7 +143,10 @@ function supplierInkTopMm(blocks: StackBlock[], anchorBottomMm: number, dpi: num
 }
 
 function buildTopBlocks(payload: LabelPayload): Array<{ field: keyof LabelPayload; text: string; font?: "sans" | "mono" }> {
-  const marcaLine = formatLabelMarcaLine(payload.marca, payload.marcaSecondaria);
+  const marcaLine = formatLabelMarcaLine(payload.marca);
+  const marcaSecondariaLine = shouldRenderMarcaSecondaria(payload)
+    ? formatLabelMarcaSecondariaLine(payload.marcaSecondaria)
+    : "";
   const codiceLine = formatLabelCodiceLine(fieldValue(payload, "codice"), payload.marca);
   const codiceSecondarioLine = formatLabelCodiceLine(
     fieldValue(payload, "codiceSecondario"),
@@ -153,6 +159,9 @@ function buildTopBlocks(payload: LabelPayload): Array<{ field: keyof LabelPayloa
     blocks.push({ field: "descrizione", text: labelDisplayCaps(fieldValue(payload, "descrizione")) });
   }
   if (codiceLine) blocks.push({ field: "codice", text: codiceLine, font: "mono" });
+  if (marcaSecondariaLine) {
+    blocks.push({ field: "marcaSecondaria", text: marcaSecondariaLine });
+  }
   if (codiceSecondarioLine) {
     blocks.push({ field: "codiceSecondario", text: codiceSecondarioLine, font: "mono" });
   }
@@ -161,12 +170,14 @@ function buildTopBlocks(payload: LabelPayload): Array<{ field: keyof LabelPayloa
 
 function topGapAfter(field: keyof LabelPayload, next?: keyof LabelPayload): number {
   if (field === "descrizione" && next === "codice") return DESC_CODICE_EXTRA_GAP_MM;
+  if (field === "codice" && next === "marcaSecondaria") return MARCA_SECONDARIA_EXTRA_GAP_MM;
+  if (field === "marcaSecondaria" && next === "codiceSecondario") return CODICE_SECONDARIO_EXTRA_GAP_MM;
   if (field === "codice" && next === "codiceSecondario") return CODICE_SECONDARIO_EXTRA_GAP_MM;
   return 0;
 }
 
 /**
- * Alto: marche unite → descrizione → codici OE con (marca).
+ * Alto: marca principale → descrizione → codice → marca secondaria → codice secondario.
  * Basso: fornitore/codice alt ancorati al bordo inferiore barcode.
  * Font fisso dal template — solo wrap, nessuno shrink.
  */
@@ -226,7 +237,9 @@ export function resolveLabelTextLayout(
     : supplierAnchorBottom;
 
   const topSpec = buildTopBlocks(payload);
-  const codiceSpecs = topSpec.filter((s) => s.field === "codice" || s.field === "codiceSecondario");
+  const codiceSpecs = topSpec.filter(
+    (s) => s.field === "codice" || s.field === "marcaSecondaria" || s.field === "codiceSecondario",
+  );
   const descSpec = topSpec.find((s) => s.field === "descrizione");
   const marcaSpec = topSpec.find((s) => s.field === "marca");
 
@@ -269,11 +282,18 @@ export function resolveLabelTextLayout(
       (remaining - 1) * (lineMetrics(primaryPt, dpi).lineStepMm + CODICE_SECONDARIO_EXTRA_GAP_MM);
     const zoneH = Math.max(0, codiceBottom - codiceCursor - minRest);
     const maxLines = Math.max(1, maxLinesForZoneMm(zoneH, primaryPt, dpi));
-    const res = wrapBlock(spec.text, primaryPt, textW, maxLines, "mono", "codice");
+    const res = wrapBlock(
+      spec.text,
+      primaryPt,
+      textW,
+      maxLines,
+      spec.font,
+      spec.field === "codice" || spec.field === "codiceSecondario" ? "codice" : "words",
+    );
     resolvedCodici.push({
       field: spec.field,
       fontPt: primaryPt,
-      font: "mono",
+      font: spec.font,
       lines: res.lines,
     });
     codiceCursor =

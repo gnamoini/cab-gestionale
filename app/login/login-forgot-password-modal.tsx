@@ -14,7 +14,8 @@ import {
   dsTypoCaption,
 } from "@/lib/ui/design-system";
 import { resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
-import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import { OverlayLayerPriority } from "@/lib/ui/overlay-back-stack";
+import { useGestionaleOverlayBehavior } from "@/lib/ui/use-gestionale-overlay-behavior";
 import { isValidEmailFormat } from "@/src/lib/auth/username";
 
 const iconInset = "pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-[color:var(--cab-text-muted)]";
@@ -34,7 +35,12 @@ export type LoginForgotPasswordModalProps = {
 };
 
 export function LoginForgotPasswordModal({ formId, initialEmail, onClose }: LoginForgotPasswordModalProps) {
-  useBodyScrollLock(true, "login-forgot-password");
+  useGestionaleOverlayBehavior({
+    open: true,
+    onRequestClose: onClose,
+    source: "login-forgot-password",
+    overlayBack: { layer: "modal", priority: OverlayLayerPriority.modal },
+  });
 
   const [resetEmail, setResetEmail] = useState(initialEmail);
   const [resetPending, setResetPending] = useState(false);

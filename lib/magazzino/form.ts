@@ -35,6 +35,7 @@ import {
   RICAMBIO_COMPAT_LEGACY_PLACEHOLDER,
 } from "@/lib/magazzino/compat/compat-normalize";
 import { isAllowedCompatLine } from "@/lib/magazzino/ricambio-compat-resolver";
+import { buildRicambioCompatExpandOptions } from "@/lib/magazzino/resolve-mezzi-liste-for-compat";
 import { isValueInListOptions } from "@/lib/ui/list-select-utils";
 
 const MAGAZZINO_DEFAULT_AUTHOR = "Operatore";
@@ -518,6 +519,8 @@ export type RicambioListFieldOptions = {
   produttori: readonly string[];
   /** Albero attrezzature da `app_settings.mezziListe` — unica fonte compatibilità mezzi. */
   mezziListe: MezziListePrefs;
+  /** Flotta V2: merge via `buildRicambioCompatExpandOptions` se non già incluso in `mezziListe`. */
+  fleetAttrezzatureTree?: import("@/lib/mezzi/attrezzature-prefs").AttrezzaturaMarca[];
 };
 
 /** Etichette «Marca — Modello» ammesse per compatibilità ricambio (attrezzature + telai). */
@@ -548,10 +551,14 @@ export function validateRicambioListFields(
       return "Seleziona un produttore dalle impostazioni globali.";
     }
   }
-  const fForCompat = applyCompatExpansionToFormState(f, opts.mezziListe);
+  const compatMezziListe = buildRicambioCompatExpandOptions({
+    mezziListe: opts.mezziListe,
+    fleetAttrezzatureTree: opts.fleetAttrezzatureTree,
+  }).mezziListe;
+  const fForCompat = applyCompatExpansionToFormState(f, compatMezziListe);
   const compat = parseCompatInput(fForCompat.compatibilitaMezzi);
   if (compat.length > 0) {
-    const invalid = compat.filter((x) => !isAllowedCompatLine(x, opts.mezziListe));
+    const invalid = compat.filter((x) => !isAllowedCompatLine(x, compatMezziListe));
     if (invalid.length > 0) {
       return `Compatibilità non valida: seleziona solo valori dall'elenco (${invalid[0]}).`;
     }

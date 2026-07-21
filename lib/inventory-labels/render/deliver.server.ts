@@ -56,6 +56,7 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
   if (!template) throw new Error("Template etichetta non valido");
 
   const includeBarcode = input.includeBarcode !== false;
+  const canonicalOrigin = input.origin.replace(/\/+$/, "");
   const hash = computeLabelFingerprint({
     payload: input.payload,
     templateId: template.id,
@@ -63,6 +64,7 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
     generatorVersion: GENERATOR_VERSION,
     preset: input.preset,
     includeBarcode,
+    canonicalOrigin,
   });
 
   const cached = await getLabelArtifactByHash(input.sb, {

@@ -1,16 +1,56 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  MAINTENANCE_PRESET_TRIGGER_GROUPS_COLUMNS,
+  MAINTENANCE_PRESET_TRIGGERS_COLUMNS,
+} from "@/lib/db/table-select-columns";
 import { buildForecastDbRow } from "@/lib/maintenance-plans/build-forecast-row";
 import { resolveCurrentMezzoMetering } from "@/lib/maintenance-plans/fetch-mezzo-metering";
-import { computeEmaForecast, type ExecutionPoint } from "@/lib/maintenance-plans/forecast/ema-forecast";
+import type { ExecutionPoint } from "@/lib/maintenance-plans/forecast/ema-forecast";
+import {
+  computeTriggerGroupForecast,
+  type PresetTriggerGroupDef,
+} from "@/lib/maintenance-plans/forecast/trigger-group-forecast";
 import type { MaintenanceIntervalType } from "@/lib/maintenance-plans/maintenance-enums";
 import { currentValueForInterval } from "@/lib/maintenance-plans/resolve-mezzo-metering";
 
 export type ConfigForecastInput = {
   id: string;
   mezzo_id: string;
+  preset_id?: string | null;
   interval_type: MaintenanceIntervalType;
   interval_value: number;
 };
+
+async function loadTriggerGroupsForPreset(
+  client: SupabaseClient,
+  presetId: string | null | undefined,
+): Promise<PresetTriggerGroupDef[]> {
+  if (!presetId) return [];
+  const { data: groups } = await client
+    .from("maintenance_preset_trigger_groups")
+    .select(MAINTENANCE_PRESET_TRIGGER_GROUPS_COLUMNS)
+    .eq("preset_id", presetId)
+    .order("sort_order", { ascending: true });
+  if (!groups?.length) return [];
+
+  const groupIds = groups.map((g) => g.id as string);
+  const { data: triggers } = await client
+    .from("maintenance_preset_triggers")
+    .select(MAINTENANCE_PRESET_TRIGGERS_COLUMNS)
+    .in("group_id", groupIds);
+
+  return groups.map((g) => ({
+    operator: g.operator as PresetTriggerGroupDef["operator"],
+    sortOrder: g.sort_order as number,
+    triggers: (triggers ?? [])
+      .filter((t) => t.group_id === g.id)
+      .map((t) => ({
+        triggerType: t.trigger_type as MaintenanceIntervalType,
+        threshold: Number(t.threshold),
+        priority: t.priority as number,
+      })),
+  }));
+}
 
 export async function computeForecastForConfig(
   client: SupabaseClient,
@@ -38,16 +78,19 @@ export async function computeForecastForConfig(
     executions.sort((a, b) => a.performedAt.localeCompare(b.performedAt));
   }
 
-  const forecast = computeEmaForecast({
+  const groups = await loadTriggerGroupsForPreset(client, config.preset_id);
+  const { forecast, explainability } = computeTriggerGroupForecast({
+    groups,
     intervalType: config.interval_type,
     intervalValue: Number(config.interval_value),
     currentValue,
+    currentKm: metering.km,
     executions,
   });
 
   const computedAt = new Date().toISOString();
   return {
-    row: buildForecastDbRow(config.id, forecast, computedAt),
+    row: buildForecastDbRow(config.id, forecast, computedAt, explainability),
     trigger,
   };
 }
@@ -84,5 +127,7 @@ export function forecastRowToRpcJson(row: ReturnType<typeof buildForecastDbRow>)
     variance: row.variance,
     stddev: row.stddev,
     engine_version: row.engine_version,
+    trigger_reason: row.trigger_reason,
+    explainability_json: row.explainability_json,
   };
 }

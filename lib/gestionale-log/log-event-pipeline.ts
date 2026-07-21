@@ -1,6 +1,7 @@
 import { consolidateLogModificaRows, isNetNoOpUpdateRow } from "@/lib/gestionale-log/log-consolidate";
 import { buildLogModificaSummary, mergePayloadWithSummary } from "@/lib/gestionale-log/log-summary";
 import { auditPayload, isLogReverted } from "@/lib/gestionale-log/undo";
+import { parseStockMovementAuditPayload } from "@/lib/magazzino/stock-audit-payload";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 
 /** Finestra aggregazione anti-spam (modifiche ravvicinate stesso oggetto). */
@@ -64,6 +65,18 @@ function cancelCreateDeletePairs(rowsAsc: LogModificaRow[], windowMs: number): L
 }
 
 function snapshotRecord(row: LogModificaRow): Record<string, unknown> | null {
+  const stock = parseStockMovementAuditPayload(row.payload);
+  if (stock) {
+    return {
+      ricambio_id: stock.ricambioId,
+      tipo: stock.delta > 0 ? "entrata" : "uscita",
+      quantita: Math.abs(stock.delta),
+      quantita_before: stock.before,
+      quantita_after: stock.after,
+      delta: stock.delta,
+      movimento_id: stock.movimentoId,
+    };
+  }
   const base = auditPayload(row);
   const raw = base.after ?? base.before;
   if (raw && typeof raw === "object" && !Array.isArray(raw)) return raw as Record<string, unknown>;

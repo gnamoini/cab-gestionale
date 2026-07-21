@@ -11,6 +11,7 @@ import {
 } from "@/lib/maintenance-plans/tagliandi-matrix";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
+import { mockMaintenancePlanView } from "@/lib/maintenance-plans/test-fixtures";
 
 assert.equal(isMilestoneApplicable(500, 500), true);
 assert.equal(isMilestoneApplicable(500, 1000), true);
@@ -105,15 +106,13 @@ const baseMezzo = {
   priorita: "normale",
 } satisfies MezzoGestito;
 
-const plan: MaintenancePlanView = {
+const plan: MaintenancePlanView = mockMaintenancePlanView({
   id: "p1",
   nome: "Tagliando 500h",
   intervalOre: 500,
-  isActive: true,
   tipoLabels: ["Escavatore"],
   tipoIds: ["tipo-esc"],
-  parts: [],
-};
+});
 
 const rowsEnabled = buildTagliandiMatrixRows({
   mezzi: [{ ...baseMezzo, tagliandi: true }],

@@ -33,6 +33,7 @@ import { resolveSyncEffects } from "@/lib/sync/gestionale-sync-policy";
 import { incrementSyncMetric } from "@/lib/sync/gestionale-sync-metrics";
 import { resolveDomainForTable } from "@/lib/sync/gestionale-sync-scope";
 import { incrementHealthCounter } from "@/lib/observability/runtime-health";
+import { recordStockInvalidateTelemetry } from "@/lib/magazzino/stock-merge-telemetry";
 
 function isDocumentVisible(): boolean {
   return typeof document === "undefined" || document.visibilityState === "visible";
@@ -279,6 +280,11 @@ export function dispatchGestionaleAction(
   }
 
   if (tablesForCache.length > 0) {
+    if (uniqueTables.some((t) => t === "magazzino_ricambi" || t === "movimenti_ricambi")) {
+      recordStockInvalidateTelemetry(
+        options.source === "local_mutation" ? "adjust" : "other",
+      );
+    }
     invalidateGestionaleTables(qc, tablesForCache, {
       entityIdByTable,
       cabSyncEvents: cabEvents,

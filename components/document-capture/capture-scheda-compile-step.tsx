@@ -27,11 +27,9 @@ import { useLavorazioneCreateSubmit } from "@/src/hooks/use-lavorazione-create-s
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { LoadingSpinner } from "@/components/design-system/loading";
 import { CaptureApplyRecoveryBanner } from "@/components/document-capture/capture-apply-recovery-banner";
+import { CaptureApplyReviewBanner } from "@/components/document-capture/capture-apply-review-banner";
 import { useCaptureApplyFlow } from "@/lib/document-capture/use-capture-apply-flow";
-import {
-  captureReviewAllowsForceApply,
-  type ValidateCaptureResult,
-} from "@/lib/document-capture/validation/validate-capture-for-apply";
+import type { ValidateCaptureResult } from "@/lib/document-capture/validation/validate-capture-for-apply";
 
 export const CAPTURE_COMPILE_FORM_ID = "capture-scheda-compile-form";
 
@@ -389,30 +387,20 @@ export function CaptureSchedaCompileStep({
             />
           ) : null}
           {validationPanel}
-          {applyMode &&
-          applyFlow.validation?.status === "REVIEW" &&
-          captureReviewAllowsForceApply(applyFlow.validation) ? (
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm dark:border-amber-900/50 dark:bg-amber-950/40">
-              <span>Alcuni campi richiedono conferma prima del salvataggio.</span>
-              <button
-                type="button"
-                className="erp-btn erp-btn-secondary min-h-9 text-xs"
-                disabled={applyFlow.busy}
-                onClick={() => {
-                  void (async () => {
-                    try {
-                      const result = await applyFlow.applyFromIngresso(fieldsRef.current, { forceReview: true });
-                      onApplySuccess?.(result.lavorazioneId);
-                    } catch (err) {
-                      onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");
-                    }
-                  })();
-                }}
-              >
-                Procedi comunque
-              </button>
-            </div>
-          ) : null}
+          <CaptureApplyReviewBanner
+            validation={applyFlow.validation}
+            busy={applyFlow.busy}
+            onForceReview={() => {
+              void (async () => {
+                try {
+                  const result = await applyFlow.applyFromIngresso(fieldsRef.current, { forceReview: true });
+                  onApplySuccess?.(result.lavorazioneId);
+                } catch (err) {
+                  onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");
+                }
+              })();
+            }}
+          />
           {applyMode && applyFlow.error ? (
             <div
               role="alert"

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { canonicalSiteOriginString } from "@/lib/core/site-origin";
 
 export type PasswordResetResult = { ok: true } | { ok: false; message: string };
 
@@ -36,9 +37,11 @@ export async function sendPasswordResetEmail(
 
 /** Origin per server action admin (env obbligatorio in prod). */
 export function resolvePasswordResetOriginFromEnv(): string | null {
-  const site = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (site) return site.replace(/\/+$/, "");
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
-  return null;
+  const hasEnv =
+    Boolean(process.env.NEXT_PUBLIC_SITE_URL?.trim()) ||
+    Boolean(process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim()) ||
+    Boolean(process.env.VERCEL_URL?.trim());
+  const origin = canonicalSiteOriginString();
+  if (!hasEnv && origin.startsWith("http://localhost")) return null;
+  return origin;
 }

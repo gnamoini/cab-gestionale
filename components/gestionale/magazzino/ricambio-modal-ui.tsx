@@ -30,6 +30,9 @@ export function RicambioCollapsibleSection({
   forceExpanded = false,
   className = "",
   action,
+  persistScope,
+  persistKey,
+  persist = true,
   children,
 }: {
   title: string;
@@ -39,6 +42,9 @@ export function RicambioCollapsibleSection({
   className?: string;
   /** Azioni header (es. unità di misura in Giacenza). */
   action?: ReactNode;
+  persistScope?: string;
+  persistKey?: string;
+  persist?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -50,6 +56,9 @@ export function RicambioCollapsibleSection({
       variant="form"
       className={className}
       action={action}
+      persistScope={persistScope}
+      persistKey={persistKey}
+      persist={persist}
     >
       {children}
     </GestionaleCollapsibleSection>

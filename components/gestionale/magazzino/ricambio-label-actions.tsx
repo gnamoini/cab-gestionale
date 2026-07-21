@@ -186,7 +186,7 @@ export function RicambioLabelActions({
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-2">
-      <DisabledElementTooltip content={canRead ? "Etichetta QR" : READONLY_PERMISSION_HINT} disabled={!canRead}>
+      <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!canRead}>
         <button
           type="button"
           className={`${erpBtnSubtleNew} min-h-11 w-full justify-center disabled:opacity-45`}

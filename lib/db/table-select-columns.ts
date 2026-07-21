@@ -41,7 +41,7 @@ export const MEZZI_REPORT_LIGHT_COLUMNS =
 
 /** Report widget magazzino — subset KPI (meta per mapping UI). */
 export const MAGAZZINO_REPORT_LIGHT_COLUMNS =
-  "id, codice, nome, marca, quantita, costo, prezzo_vendita, consumo_medio_mensile, meta, entity_key, created_at, updated_at" as const;
+  "id, codice, nome, marca, quantita, stock_version, costo, prezzo_vendita, consumo_medio_mensile, meta, entity_key, created_at, updated_at" as const;
 
 export const MEZZI_COLUMNS =
   "id, cliente, utilizzatore, targa, numero_scuderia, anno, meta, entity_key, marca_telaio, modello_telaio, tipo_telaio, telaio_num, km, note, created_at, updated_at" as const;
@@ -67,17 +67,17 @@ export const ASSET_MILEAGE_READINGS_COLUMNS =
 export const TIPI_ATTREZZATURA_CATALOG_COLUMNS =
   "id, label, label_norm, created_at, updated_at" as const;
 
-export const MAINTENANCE_PLANS_COLUMNS =
-  "id, nome, interval_ore, is_active, created_at, updated_at, created_by, deleted_at" as const;
-
 export const MAINTENANCE_PLAN_EQUIPMENT_TYPES_COLUMNS =
   "id, plan_id, tipo_attrezzatura_id, created_at" as const;
 
 export const MAINTENANCE_PLAN_PARTS_COLUMNS =
-  "id, plan_id, ricambio_id, quantita, created_at, updated_at" as const;
+  "id, plan_id, ricambio_id, quantita, created_at, updated_at, is_required, replacement_condition, condition_params, sort_order, note, preset_version_id" as const;
+
+export const MAINTENANCE_PLANS_COLUMNS =
+  "id, nome, interval_ore, is_active, created_at, updated_at, created_by, deleted_at, description, category_id, manufacturer_id, model_id, parent_preset_id, override_scope, interval_type, interval_value, current_version_id, sort_order, maintenance_kind, status, tempo_previsto_minuti, manodopera_costo_orario" as const;
 
 export const VEHICLE_MAINTENANCE_SERVICES_COLUMNS =
-  "id, mezzo_id, plan_id, performed_at, ore_at_service, mezzo_ore_snapshot, note, performed_by, created_at, updated_at, created_by" as const;
+  "id, mezzo_id, plan_id, performed_at, ore_at_service, mezzo_ore_snapshot, note, performed_by, created_at, updated_at, created_by, execution_type, preset_snapshot, km_at_service" as const;
 
 export const VEHICLE_MAINTENANCE_SERVICE_PARTS_COLUMNS =
   "id, service_id, ricambio_id, quantita, descrizione_snapshot, created_at, was_replaced, was_due, replacement_condition, is_required_snapshot, note, warehouse_status" as const;
@@ -86,7 +86,7 @@ export const VEHICLE_MAINTENANCE_CONFIGS_COLUMNS =
   "id, mezzo_id, preset_id, preset_version_id, maintenance_kind, is_active, interval_type, interval_value, label, activated_at, deactivated_at, planned_lavorazione_id, created_at, updated_at, created_by, deleted_at" as const;
 
 export const VEHICLE_MAINTENANCE_FORECASTS_COLUMNS =
-  "config_id, computed_at, next_date_estimated, next_milestone_value, remaining_value, confidence_level, confidence_pct, confidence_reason, ema_rate_per_day, observation_count, variance, stddev, engine_version" as const;
+  "config_id, computed_at, next_date_estimated, next_milestone_value, remaining_value, confidence_level, confidence_pct, confidence_reason, ema_rate_per_day, observation_count, variance, stddev, engine_version, trigger_reason, explainability_json" as const;
 
 export const MAINTENANCE_PRESET_VERSIONS_COLUMNS =
   "id, preset_id, version_number, snapshot_json, manual_name, manufacturer_ref, revision, page_ref, document_id, change_note, created_at, created_by" as const;
@@ -94,14 +94,21 @@ export const MAINTENANCE_PRESET_VERSIONS_COLUMNS =
 export const MAINTENANCE_PRESET_CATEGORIES_COLUMNS =
   "id, label, sort_order, is_active, created_at, updated_at" as const;
 
-export const MAINTENANCE_PLANS_V2_COLUMNS =
-  "id, nome, interval_ore, is_active, created_at, updated_at, created_by, deleted_at, description, category_id, manufacturer_id, model_id, parent_preset_id, override_scope, interval_type, interval_value, current_version_id, sort_order, maintenance_kind" as const;
+export const MAINTENANCE_PLANS_V2_COLUMNS = MAINTENANCE_PLANS_COLUMNS;
 
-export const MAINTENANCE_PLAN_PARTS_V2_COLUMNS =
-  "id, plan_id, ricambio_id, quantita, created_at, updated_at, is_required, replacement_condition, condition_params, sort_order, note, preset_version_id" as const;
+export const MAINTENANCE_PLAN_PARTS_V2_COLUMNS = MAINTENANCE_PLAN_PARTS_COLUMNS;
+
+export const MAINTENANCE_PRESET_TRIGGER_GROUPS_COLUMNS =
+  "id, preset_id, operator, sort_order, label, created_at, updated_at" as const;
+
+export const MAINTENANCE_PRESET_TRIGGERS_COLUMNS =
+  "id, group_id, trigger_type, threshold, priority, created_at" as const;
+
+export const MAINTENANCE_PRESET_CHECKLIST_COLUMNS =
+  "id, preset_id, label, sort_order, is_required, created_at" as const;
 
 export const VEHICLE_MAINTENANCE_SERVICES_V2_COLUMNS =
-  "id, mezzo_id, plan_id, performed_at, ore_at_service, mezzo_ore_snapshot, note, performed_by, created_at, updated_at, created_by, config_id, preset_version_id, interval_type, interval_value_at_execution, km_at_service, milestone_reached, lavorazione_id, scheda_lavorazione_id, anomaly_note, confidence_at_execution, total_cost" as const;
+  "id, mezzo_id, plan_id, performed_at, ore_at_service, mezzo_ore_snapshot, note, performed_by, created_at, updated_at, created_by, config_id, preset_version_id, interval_type, interval_value_at_execution, km_at_service, milestone_reached, lavorazione_id, scheda_lavorazione_id, anomaly_note, confidence_at_execution, total_cost, execution_type, preset_snapshot" as const;
 
 export const ASSET_TIMELINE_PROJECTION_COLUMNS =
   "event_category, event_domain, source_id, asset_kind, mezzo_id, attrezzatura_id, event_at, event_subtype, priority, label" as const;
@@ -110,7 +117,7 @@ export const SCHEDA_LAVORAZIONE_COLUMNS =
   "id, lavorazione_id, tipo, contenuto, created_at, updated_at" as const;
 
 export const MAGAZZINO_RICAMBI_COLUMNS =
-  "id, codice, nome, marca, quantita, costo, prezzo_vendita, consumo_medio_mensile, meta, entity_key, created_at, updated_at" as const;
+  "id, codice, nome, marca, quantita, stock_version, costo, prezzo_vendita, consumo_medio_mensile, meta, entity_key, created_at, updated_at" as const;
 
 export const MOVIMENTI_RICAMBI_COLUMNS =
   "id, ricambio_id, lavorazione_id, tipo, quantita, conta_statistiche, inventory_document_id, inventory_document_line_id, operation_id, meta, created_at" as const;

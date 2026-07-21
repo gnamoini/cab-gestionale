@@ -143,7 +143,54 @@ export const logEntryDismissBtnClass =
 
 export const gestionaleLogDismissTooltip = "Rimuovi";
 
-/** Pulsante × per rimuovere una voce dal log (tooltip globale + aria-label). */
+/** Annulla movimento scorta server-side (Stock Engine append-only). */
+export function GestionaleLogEntryUndoButton({
+  onUndo,
+  pending = false,
+  disabled = false,
+  confirmMessage = "Annullare questo movimento? La giacenza verrà ripristinata.",
+}: {
+  onUndo: () => void | Promise<void>;
+  pending?: boolean;
+  disabled?: boolean;
+  confirmMessage?: string;
+}) {
+  const { confirm, confirmDialog } = useGestionaleConfirm();
+
+  const handleClick = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation();
+      if (pending || disabled) return;
+      void confirm({
+        title: "Annullare movimento?",
+        message: confirmMessage,
+        destructive: true,
+        confirmLabel: "Annulla movimento",
+      }).then((ok) => {
+        if (ok) void onUndo();
+      });
+    },
+    [confirm, confirmMessage, disabled, onUndo, pending],
+  );
+
+  return (
+    <>
+      <Tooltip content="Annulla movimento">
+        <button
+          type="button"
+          className={logEntryDismissBtnClass}
+          aria-label="Annulla movimento"
+          disabled={pending || disabled}
+          onClick={handleClick}
+        >
+          <IconGestionaleUndo className="h-3.5 w-3.5" />
+        </button>
+      </Tooltip>
+      {confirmDialog}
+    </>
+  );
+}
+
 export function GestionaleLogEntryDismissButton({
   onDismiss,
   confirmMessage = "Rimuovere questa voce dal log?",

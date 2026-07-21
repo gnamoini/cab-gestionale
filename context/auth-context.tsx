@@ -48,7 +48,7 @@ import {
 } from "@/src/lib/auth/auth-session-coordinator.client";
 import { clearRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 import { clearRicambioStockSnapshotRegistry } from "@/lib/magazzino/ricambio-stock-snapshot-registry";
-import { clearScortaSyncQueues } from "@/lib/magazzino/scorta-adjust-sync";
+import { clearStockEntityRegistryForTest } from "@/lib/magazzino/stock-entity-cache";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { fetchRbacRoleKeyForUser } from "@/lib/rbac/fetch-rbac-role-key";
 import { authLogsEntry } from "@/lib/domain/auth-logs-entry";
@@ -241,7 +241,7 @@ export function AuthProvider({
     setStatus("anonymous");
     clearRuntimeCabAppSettings();
     clearRicambioStockSnapshotRegistry();
-    clearScortaSyncQueues();
+    clearStockEntityRegistryForTest();
     queryClient.clear();
     clearGestionaleToasts();
   }, [queryClient]);

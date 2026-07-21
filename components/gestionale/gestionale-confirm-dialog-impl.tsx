@@ -17,6 +17,7 @@ import {
 } from "@/lib/ui/mobile-modal-behavior";
 import { cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
 import { gestionaleModalWidthConfirmation } from "@/lib/ui/modal-max-width-class";
+import { OverlayLayerPriority } from "@/lib/ui/overlay-back-stack";
 import { useGestionaleOverlayBehavior } from "@/lib/ui/use-gestionale-overlay-behavior";
 
 import { gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog-styles";
@@ -62,8 +63,15 @@ export function GestionaleConfirmDialog({
 }) {
   const dialogRef = useGestionaleOverlayBehavior({
     open,
-    onRequestClose: onCancel,
+    onRequestClose: () => {
+      if (pending) return;
+      onCancel();
+    },
     source: "GestionaleConfirmDialog",
+    overlayBack: {
+      layer: "confirm",
+      priority: OverlayLayerPriority.confirm,
+    },
   });
 
   const handleConfirm = useCallback(() => {

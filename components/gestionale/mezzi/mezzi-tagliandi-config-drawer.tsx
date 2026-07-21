@@ -9,6 +9,8 @@ import {
 } from "@/lib/maintenance-plans/maintenance-enums";
 import type { UpsertVehicleMaintenanceConfigInput, VehicleMaintenanceConfigView } from "@/lib/maintenance-plans/v2-types";
 import { resolveDrawerAsideClasses } from "@/lib/ui/modal-size-system";
+import { OverlayLayerPriority } from "@/lib/ui/overlay-back-stack";
+import { useGestionaleOverlayBehavior } from "@/lib/ui/use-gestionale-overlay-behavior";
 import { dsBtnNeutral, dsBtnPrimary, dsFormField, dsFormInput, dsFormLabel, dsScrollbar } from "@/lib/ui/design-system";
 import { useMaintenancePlansListQuery } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
 import { useUpsertMezzoConfigMutation } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
@@ -53,6 +55,13 @@ export function MezziTagliandiConfigDrawer({
       setLabel(plan.nome);
     }
   }, [presetId, plansQ.data, config]);
+
+  useGestionaleOverlayBehavior({
+    open,
+    onRequestClose: onClose,
+    source: "MezziTagliandiConfigDrawer",
+    overlayBack: { layer: "drawer", priority: OverlayLayerPriority.drawer },
+  });
 
   if (!open) return null;
 

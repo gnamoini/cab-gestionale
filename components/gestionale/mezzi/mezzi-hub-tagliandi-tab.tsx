@@ -274,6 +274,8 @@ function HubTagliandiV2({
           currentOreMezzo={mezzo.oreKm ?? 0}
           defaultPlanId={registerConfig.presetId ?? undefined}
           configId={registerConfig.id}
+          configIntervalType={registerConfig.intervalType}
+          currentKmMezzo={mezzo.km != null ? Number(mezzo.km) : null}
           onClose={() => setRegisterConfig(null)}
           onSaved={() => {
             void configsQ.refetch();

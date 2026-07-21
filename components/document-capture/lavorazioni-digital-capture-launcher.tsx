@@ -70,6 +70,9 @@ import {
   type CaptureDuplicateContext,
 } from "@/components/document-capture/capture-duplicate-dialog";
 import { useCaptureApplyFlow } from "@/lib/document-capture/use-capture-apply-flow";
+import { mapCaptureApplyErrorMessage } from "@/lib/document-capture/capture-apply-error-copy";
+import { patchCaptureLavorazioneLink } from "@/lib/document-capture/patch-capture-lavorazione-link.client";
+import { CaptureApplyReviewBanner } from "@/components/document-capture/capture-apply-review-banner";
 
 export type CaptureSchedeOpenRequest = {
   lavorazioneId: string;
@@ -133,6 +136,7 @@ export function LavorazioniDigitalCaptureLauncher({
   const [compileFieldsLoading, setCompileFieldsLoading] = useState(false);
   const [compileSubmitBusy, setCompileSubmitBusy] = useState(false);
   const [schedeHandoffBusy, setSchedeHandoffBusy] = useState(false);
+  const [pendingAssignLavorazioneId, setPendingAssignLavorazioneId] = useState<string | null>(null);
   const [resumePromptOpen, setResumePromptOpen] = useState(false);
   const [resumeDraft, setResumeDraft] = useState<CaptureAcquisitionDraft | null>(null);
   const [resumeBusy, setResumeBusy] = useState(false);
@@ -455,17 +459,19 @@ export function LavorazioniDigitalCaptureLauncher({
   }, [discardCurrentCapture, resetFlow, step]);
 
   const handleAssignToLavorazione = useCallback(
-    async (lavorazioneId: string) => {
+    async (lavorazioneId: string, opts?: { forceReview?: boolean; skipPatch?: boolean }) => {
       if (!fieldRows || !pendingSchedaTipo || !captureId) return;
       if (applyV1) {
         setSchedeHandoffBusy(true);
         try {
-          await fetch(`/api/document-capture/${captureId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lavorazioneId }),
-          });
-          const result = await assignApplyFlow.applyAssignOnly();
+          if (!opts?.skipPatch && !opts?.forceReview) {
+            await patchCaptureLavorazioneLink(captureId, lavorazioneId);
+            setPendingAssignLavorazioneId(lavorazioneId);
+          }
+          const result = await assignApplyFlow.applyAssignOnly(
+            opts?.forceReview ? { forceReview: true } : undefined,
+          );
+          setPendingAssignLavorazioneId(null);
           gestToast.success(
             `Scheda applicata a ${describeCaptureLavorazioneAssignTarget(lavorazioneId, attive, schedeStore)}`,
           );
@@ -473,7 +479,12 @@ export function LavorazioniDigitalCaptureLauncher({
           setOpen(false);
           resetFlow();
         } catch (e) {
-          gestToast.error(e instanceof Error ? e.message : "Apply non riuscito");
+          if (e instanceof Error && e.message === "REVIEW_REQUIRED") {
+            setPendingAssignLavorazioneId(lavorazioneId);
+            return;
+          }
+          const msg = mapCaptureApplyErrorMessage(e instanceof Error ? e.message : "Apply non riuscito");
+          gestToast.error(msg || "Apply non riuscito");
         } finally {
           setSchedeHandoffBusy(false);
         }
@@ -763,18 +774,29 @@ export function LavorazioniDigitalCaptureLauncher({
                   onSubmitBusyChange={setCompileSubmitBusy}
                 />
                   ) : pendingSchedaTipo ? (
-                    <CaptureMezzoMatchStep
-                      captureId={captureId}
-                      fieldRows={fieldRows}
-                      schedaTipo={pendingSchedaTipo}
-                      mezzi={mezzi}
-                      schedeStore={schedeStore}
-                      attive={attive}
-                      onAssign={(id) => void handleAssignToLavorazione(id)}
-                      onCreateNew={handleCreateNewFromMatch}
-                      onCancel={goBack}
-                      assignBusy={schedeHandoffBusy}
-                    />
+                    <div className="space-y-3">
+                      <CaptureApplyReviewBanner
+                        validation={assignApplyFlow.validation}
+                        busy={schedeHandoffBusy}
+                        onForceReview={() => {
+                          const lavId = pendingAssignLavorazioneId;
+                          if (!lavId) return;
+                          void handleAssignToLavorazione(lavId, { forceReview: true, skipPatch: true });
+                        }}
+                      />
+                      <CaptureMezzoMatchStep
+                        captureId={captureId}
+                        fieldRows={fieldRows}
+                        schedaTipo={pendingSchedaTipo}
+                        mezzi={mezzi}
+                        schedeStore={schedeStore}
+                        attive={attive}
+                        onAssign={(id) => void handleAssignToLavorazione(id)}
+                        onCreateNew={handleCreateNewFromMatch}
+                        onCancel={goBack}
+                        assignBusy={schedeHandoffBusy}
+                      />
+                    </div>
                   ) : null}
                 </>
               )

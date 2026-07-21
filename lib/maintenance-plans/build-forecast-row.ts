@@ -1,4 +1,5 @@
 import type { ForecastResult } from "@/lib/maintenance-plans/forecast/ema-forecast";
+import type { ForecastExplainability } from "@/lib/maintenance-plans/forecast/trigger-group-forecast";
 import { FORECAST_ENGINE_VERSION } from "@/lib/maintenance-plans/maintenance-enums";
 
 export type ForecastDbRow = {
@@ -15,12 +16,15 @@ export type ForecastDbRow = {
   variance: number | null;
   stddev: number | null;
   engine_version: string;
+  trigger_reason: string | null;
+  explainability_json: ForecastExplainability | null;
 };
 
 export function buildForecastDbRow(
   configId: string,
   forecast: ForecastResult,
   computedAt = new Date().toISOString(),
+  explainability?: ForecastExplainability | null,
 ): ForecastDbRow {
   return {
     config_id: configId,
@@ -36,5 +40,7 @@ export function buildForecastDbRow(
     variance: forecast.variance,
     stddev: forecast.stddev,
     engine_version: forecast.engineVersion || FORECAST_ENGINE_VERSION,
+    trigger_reason: explainability?.trigger_reason ?? null,
+    explainability_json: explainability ?? null,
   };
 }

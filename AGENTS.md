@@ -354,6 +354,8 @@ Per ogni modifica verificare:
 - accessi diretti
 - manipolazione parametri
 
+**URL pubblici (SSOT):** è vietato costruire URL pubblici utilizzando `request.url.origin` direttamente. Tutti gli URL pubblici (QR, email, webhook, notifiche, export PDF, deep link) devono usare esclusivamente `resolveCanonicalSiteOrigin()` da [`lib/core/site-origin.ts`](../lib/core/site-origin.ts).
+
 ---
 
 # Audit Richiesti Prima del Merge

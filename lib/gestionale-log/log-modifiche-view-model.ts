@@ -89,6 +89,8 @@ export type BuildLogModificheDisplayOptions = {
   resolveOggetto?: (row: LogModificaAutoreSource) => string | undefined;
   /** Etichette stati da impostazioni (lavorazioni). */
   statiLavorazione?: StatoLavorazioneConfig[];
+  /** Default true — magazzino scheda mantiene originali annullati visibili. */
+  suppressRevertedOriginals?: boolean;
 };
 
 export function buildLogModificheDisplayEntries(
@@ -96,7 +98,9 @@ export function buildLogModificheDisplayEntries(
   resolveAutore: (row: LogModificaAutoreSource) => string,
   options?: BuildLogModificheDisplayOptions,
 ): { id: string; row: LogModificaRow; vm: GestionaleLogViewModel }[] {
-  const consolidated = reconcileLogModificaRows(rows);
+  const consolidated = reconcileLogModificaRows(rows, {
+    suppressRevertedOriginals: options?.suppressRevertedOriginals,
+  });
   return consolidated.map((row) => {
     let vm = buildLogModificheGestionaleViewModel(row, resolveAutore(row), options?.statiLavorazione);
     const oggetto =

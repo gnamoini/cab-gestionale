@@ -53,6 +53,7 @@ export async function buildBulkLabelItems(
   const skippedIds = entityIds.filter((id) => !byId.has(id));
 
   const tokens = await ensureActiveTokensForEntities(sb, entityType, foundIds, userId);
+  const canonicalOrigin = origin.replace(/\/+$/, "");
   const items: BulkLabelItem[] = foundIds.map((id) => {
     const row = byId.get(id)!;
     const token = tokens.get(id);
@@ -61,7 +62,8 @@ export async function buildBulkLabelItems(
       entityId: id,
       entityType,
       payload: labelPayloadFromMagazzinoRow(row),
-      qrUrl: buildInventoryQrUrl(token, origin),
+      qrUrl: buildInventoryQrUrl(token, canonicalOrigin),
+      canonicalOrigin,
     };
   });
 

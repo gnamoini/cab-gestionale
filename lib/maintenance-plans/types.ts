@@ -1,7 +1,17 @@
 /**
  * ponytail: dominio separato da asset_compliance (revisioni/assicurazioni/calendario).
- * Qui: tagliandi operativi ore-based con piani centralizzati per tipo attrezzatura.
+ * Qui: tagliandi operativi con piani centralizzati per tipo attrezzatura.
  */
+
+import type {
+  MaintenanceExecutionType,
+  MaintenanceIntervalType,
+  MaintenanceKind,
+  MaintenancePresetStatus,
+  MaintenanceTriggerGroupOperator,
+  ReplacementCondition,
+} from "@/lib/maintenance-plans/maintenance-enums";
+import type { PresetSnapshot } from "@/lib/maintenance-plans/preset-snapshot";
 
 export type MaintenancePlanStatus = {
   planId: string;
@@ -18,16 +28,52 @@ export type MaintenancePlanPartView = {
   codice: string;
   descrizione: string;
   quantita: number;
+  isRequired: boolean;
+  replacementCondition: ReplacementCondition;
+  conditionParams: Record<string, number> | null;
+  sortOrder: number;
+  note: string;
+};
+
+export type MaintenancePresetTriggerView = {
+  id?: string;
+  triggerType: MaintenanceIntervalType;
+  threshold: number;
+  priority: number;
+};
+
+export type MaintenancePresetTriggerGroupView = {
+  id?: string;
+  operator: MaintenanceTriggerGroupOperator;
+  sortOrder: number;
+  label: string;
+  triggers: MaintenancePresetTriggerView[];
+};
+
+export type MaintenanceChecklistItemView = {
+  id?: string;
+  label: string;
+  sortOrder: number;
+  isRequired: boolean;
 };
 
 export type MaintenancePlanView = {
   id: string;
   nome: string;
   intervalOre: number;
+  intervalType: MaintenanceIntervalType;
+  intervalValue: number;
+  maintenanceKind: MaintenanceKind;
+  status: MaintenancePresetStatus;
   isActive: boolean;
+  tempoPrevistoMinuti: number | null;
+  manodoperaCostoOrario: number | null;
   tipoLabels: string[];
   tipoIds: string[];
   parts: MaintenancePlanPartView[];
+  triggerGroups: MaintenancePresetTriggerGroupView[];
+  checklist: MaintenanceChecklistItemView[];
+  currentVersionId: string | null;
 };
 
 export type MaintenanceServicePartView = {
@@ -42,9 +88,12 @@ export type MaintenanceServiceHistoryView = {
   planNome: string;
   performedAt: string;
   oreAtService: number;
+  kmAtService: number | null;
   mezzoOreSnapshot: number | null;
   note: string;
   performedByName: string;
+  executionType: MaintenanceExecutionType;
+  presetSnapshot: PresetSnapshot | null;
   parts: MaintenanceServicePartView[];
 };
 
@@ -53,16 +102,38 @@ export type RegisterMaintenanceServiceInput = {
   planId: string;
   performedAt: string;
   oreAtService: number;
+  kmAtService?: number | null;
   mezzoOreSnapshot: number | null;
   note: string;
+  executionType: MaintenanceExecutionType;
+  presetSnapshot: PresetSnapshot;
+  checklist?: { itemLabel: string; checked: boolean; note?: string; sortOrder: number }[];
   parts: { ricambioId: string; quantita: number; descrizioneSnapshot?: string }[];
+};
+
+export type UpsertMaintenancePlanPartInput = {
+  ricambioId: string;
+  quantita: number;
+  isRequired?: boolean;
+  replacementCondition?: ReplacementCondition;
+  conditionParams?: Record<string, number> | null;
+  sortOrder?: number;
+  note?: string;
 };
 
 export type UpsertMaintenancePlanInput = {
   id?: string;
   nome: string;
   intervalOre: number;
+  intervalType?: MaintenanceIntervalType;
+  intervalValue?: number;
+  maintenanceKind?: MaintenanceKind;
+  status?: MaintenancePresetStatus;
   isActive: boolean;
+  tempoPrevistoMinuti?: number | null;
+  manodoperaCostoOrario?: number | null;
   tipoAttrezzaturaIds: string[];
-  parts: { ricambioId: string; quantita: number }[];
+  parts: UpsertMaintenancePlanPartInput[];
+  triggerGroups?: MaintenancePresetTriggerGroupView[];
+  checklist?: MaintenanceChecklistItemView[];
 };

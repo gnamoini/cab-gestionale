@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { registerOverlayBack } from "@/lib/ui/overlay-back-stack";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import { OverlayLayerPriority, registerOverlayBack } from "@/lib/ui/overlay-back-stack";
+
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 export type UseSelectorOverlayBackOptions = {
   open: boolean;
@@ -23,12 +26,14 @@ export function useSelectorOverlayBack({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (!open) return;
     return registerOverlayBack(
       () => onCloseRef.current(),
       source,
-      layer ? { layer } : undefined,
+      layer
+        ? { layer, priority: OverlayLayerPriority.selector, blocksGestures: false }
+        : undefined,
     );
   }, [open, source, layer]);
 }

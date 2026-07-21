@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useBeforeUnloadWhenDirty } from "@/lib/forms/use-before-unload-when-dirty";
 import { LoadingButton } from "@/components/design-system";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
@@ -39,11 +39,8 @@ import {
   gateBeginSubmit,
   gateFormSubmit,
 } from "@/lib/form-ux-migration/form-ux-boundary-gate";
-import {
-  clearOverlayBackResync,
-  ensureOverlayBackResync,
-  type OverlayCloseContext,
-} from "@/lib/ui/overlay-back-stack";
+import { buildRicambioCompatExpandOptions } from "@/lib/magazzino/resolve-mezzi-liste-for-compat";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 
 const RICAMBIO_NEW_FORM_ID = "ricambio-new-form";
@@ -81,17 +78,19 @@ export function RicambioNewModal({
   const [listFieldInvalid, setListFieldInvalid] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
-  const backResyncCleanupRef = useRef<(() => void) | null>(null);
   const [codiceScan, setCodiceScan] = useState({ primary: "", secondary: "" });
   const baselineForm = useMemo(() => emptyRicambioForm(), []);
+  const { mezziListe: mergedMezziListe } = useGlobalOptions({ debugTag: "RicambioNewModal" });
+  const compatExpand = useMemo(
+    () => buildRicambioCompatExpandOptions({ mezziListe: mergedMezziListe }),
+    [mergedMezziListe],
+  );
   const needsCloseConfirm = useMemo(
     () => ricambioFormNeedsCloseConfirm(newDraft, baselineForm),
     [newDraft, baselineForm],
   );
 
   useBeforeUnloadWhenDirty(needsCloseConfirm, "Hai modifiche non salvate nel nuovo ricambio.");
-
-  useEffect(() => () => clearOverlayBackResync(backResyncCleanupRef), []);
 
   const setNewForm = useCallback(
     (action: React.SetStateAction<RicambioFormState>) => {
@@ -119,7 +118,6 @@ export function RicambioNewModal({
   }, [newDraft.codiceFornitoreOriginale, newDraft.codiceFornitoreOriginaleSecondario]);
 
   const performClose = useCallback(() => {
-    clearOverlayBackResync(backResyncCleanupRef);
     if (draftId) purgeMagazzinoLogEntriesForRicambioId(draftId);
     setDraftId(null);
     reset(emptyRicambioForm());
@@ -128,28 +126,31 @@ export function RicambioNewModal({
     onClose();
   }, [draftId, onClose, reset]);
 
-  const requestClose = useCallback(
-    (ctx?: OverlayCloseContext) => {
-      if (saveBusy) return;
-      if (discardConfirmOpen) {
-        setDiscardConfirmOpen(false);
-        return;
-      }
-      if (needsCloseConfirm) {
-        setDiscardConfirmOpen(true);
-        if (ctx?.fromPopstate) {
-          ensureOverlayBackResync(
-            backResyncCleanupRef,
-            (nextCtx) => requestClose(nextCtx),
-            "RicambioNewModal-back-resync",
-          );
-        }
-        return;
-      }
-      performClose();
-    },
-    [discardConfirmOpen, needsCloseConfirm, performClose, saveBusy],
-  );
+  const beforeBack = useCallback(async () => {
+    if (saveBusy) return false;
+    if (discardConfirmOpen) {
+      setDiscardConfirmOpen(false);
+      return false;
+    }
+    if (needsCloseConfirm) {
+      setDiscardConfirmOpen(true);
+      return false;
+    }
+    return true;
+  }, [discardConfirmOpen, needsCloseConfirm, saveBusy]);
+
+  const requestClose = useCallback(() => {
+    if (saveBusy) return;
+    if (discardConfirmOpen) {
+      setDiscardConfirmOpen(false);
+      return;
+    }
+    if (needsCloseConfirm) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
+    performClose();
+  }, [discardConfirmOpen, needsCloseConfirm, performClose, saveBusy]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -166,7 +167,7 @@ export function RicambioNewModal({
         categorie,
         fornitori,
         produttori,
-        mezziListe: mezziListePrefs,
+        mezziListe: compatExpand.mezziListe,
       });
       if (listErr) {
         setListFieldInvalid(true);
@@ -179,9 +180,7 @@ export function RicambioNewModal({
         const submitToken = gateBeginSubmit("ricambio");
         const reconciledDraft = gateFormSubmit("ricambio", currentDraft, submitToken);
 
-        const r = ricambioFromFormLenient(reconciledDraft, draftId ?? undefined, authorName, {
-          mezziListe: mezziListePrefs,
-        });
+        const r = ricambioFromFormLenient(reconciledDraft, draftId ?? undefined, authorName, compatExpand);
         const incompleteWarnings = ricambioFormImportantWarnings(reconciledDraft);
         if (incompleteWarnings.length > 0) {
           incrementHealthCounter("ricambioSaveIncompleteFields");
@@ -213,6 +212,7 @@ export function RicambioNewModal({
     <>
       <GestionaleModalShell
         modalSize="formMedium"
+        beforeBack={beforeBack}
         onRequestClose={requestClose}
       title="Nuovo ricambio"
       titleId="new-ricambio-title"

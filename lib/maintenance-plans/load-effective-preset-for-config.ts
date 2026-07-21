@@ -68,6 +68,33 @@ async function loadVehicleOverrideParts(
   return loadPlanParts(client, override.child_preset_id as string);
 }
 
+async function loadModelOverrideParts(
+  client: SupabaseClient,
+  parentPresetId: string,
+  mezzoId: string,
+): Promise<PresetPartSource[]> {
+  const { data: mezzo } = await client.from("mezzi").select("modello_telaio, marca_telaio").eq("id", mezzoId).maybeSingle();
+  if (!mezzo) return [];
+
+  const { data: models } = await client
+    .from("maintenance_preset_models")
+    .select("id, label")
+    .eq("is_active", true);
+  const modelLabel = [mezzo.marca_telaio, mezzo.modello_telaio].filter(Boolean).join(" ").trim().toLowerCase();
+  const model = (models ?? []).find((m) => (m.label as string).toLowerCase() === modelLabel);
+  if (!model) return [];
+
+  const { data: override } = await client
+    .from("maintenance_preset_overrides")
+    .select("child_preset_id")
+    .eq("parent_preset_id", parentPresetId)
+    .eq("model_id", model.id)
+    .eq("scope", "model")
+    .maybeSingle();
+  if (!override?.child_preset_id) return [];
+  return loadPlanParts(client, override.child_preset_id as string);
+}
+
 export async function loadEffectivePresetForConfig(
   client: SupabaseClient,
   config: ConfigLike,
@@ -89,9 +116,10 @@ export async function loadEffectivePresetForConfig(
     .maybeSingle();
   if (!plan) return null;
 
-  const [baseParts, vehicleOverrideParts] = await Promise.all([
+  const [baseParts, vehicleOverrideParts, modelOverrideParts] = await Promise.all([
     loadPlanParts(client, config.preset_id),
     loadVehicleOverrideParts(client, config.preset_id, config.mezzo_id),
+    loadModelOverrideParts(client, config.preset_id, config.mezzo_id),
   ]);
 
   return resolveEffectivePreset({
@@ -101,6 +129,7 @@ export async function loadEffectivePresetForConfig(
     intervalValue: Number(config.interval_value),
     baseParts,
     vehicleOverrideParts,
+    modelOverrideParts,
   });
 }
 

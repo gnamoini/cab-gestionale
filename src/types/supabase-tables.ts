@@ -219,6 +219,13 @@ export type MaintenancePlanRow = {
   updated_at: string;
   created_by: string | null;
   deleted_at: string | null;
+  interval_type?: string | null;
+  interval_value?: number | null;
+  maintenance_kind?: string | null;
+  status?: string | null;
+  tempo_previsto_minuti?: number | null;
+  manodopera_costo_orario?: number | null;
+  current_version_id?: string | null;
 };
 
 export type MaintenancePlanEquipmentTypeRow = {
@@ -235,6 +242,11 @@ export type MaintenancePlanPartRow = {
   quantita: number;
   created_at: string;
   updated_at: string;
+  is_required?: boolean;
+  replacement_condition?: string;
+  condition_params?: Record<string, number> | null;
+  sort_order?: number;
+  note?: string | null;
 };
 
 export type VehicleMaintenanceServiceRow = {
@@ -249,6 +261,9 @@ export type VehicleMaintenanceServiceRow = {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  execution_type?: string;
+  preset_snapshot?: Record<string, unknown> | null;
+  km_at_service?: number | null;
 };
 
 export type VehicleMaintenanceServicePartRow = {
@@ -326,6 +341,7 @@ export type MagazzinoRicambioRow = {
   nome: string;
   marca: string | null;
   quantita: number;
+  stock_version?: number;
   costo: number | null;
   prezzo_vendita: number | null;
   consumo_medio_mensile: number | null;
@@ -340,6 +356,11 @@ export type MovimentoRicambioMeta = {
   origine?: string;
   storno_di?: string;
   causale?: string;
+  voided?: boolean;
+  voided_at?: string;
+  voided_by?: string;
+  hidden_from_timeline?: boolean;
+  voids_movimento_id?: string;
 };
 
 export type MovimentoRicambioRow = {

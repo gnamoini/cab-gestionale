@@ -5,6 +5,7 @@ import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system"
 import { gestionaleModalWidthStandard } from "@/lib/ui/modal-max-width-class";
 import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
+import { OverlayLayerPriority } from "@/lib/ui/overlay-back-stack";
 
 export type GestionaleUnsavedPlacement = "nested" | "stacked";
 
@@ -42,6 +43,7 @@ export function GestionaleUnsavedChangesDialog({
     placement === "nested" && open && !pending,
     onStay,
     "GestionaleUnsavedChangesDialog-nested",
+    { layer: "confirm", priority: OverlayLayerPriority.confirm },
   );
 
   const actions = (

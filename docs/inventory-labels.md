@@ -44,7 +44,7 @@ SSOT: [`lib/inventory-labels/`](../lib/inventory-labels/)
 
 **Layout (v1.5.0):** QR grande a sinistra; barcode Code128 sotto il QR; a destra:
 
-1. **Alto:** marche unite (`BTE / OMB`), descrizione, codice OE principale `XXXX (BTE)`, codice OE secondario `YYYY (OMB)` se presente
+1. **Alto:** marca principale, descrizione, codice OE principale `XXXX (BTE)`, marca secondaria (se distinta da principale e fornitore alt), codice OE secondario `YYYY (OMB)` se presente
 2. **Basso (fascia barcode):** fornitore alternativo + codice fornitore ancorati al bordo inferiore etichetta, accanto al barcode
 
 Font DejaVu (`LabelSans` / `LabelMono`): testo rasterizzato come path SVG (opentype + TTF) per PNG/PDF — niente fontconfig su Vercel. Download SVG browser usa ancora `@font-face` WOFF2.
@@ -68,6 +68,7 @@ Esclusi: prezzo, quantità, costo, fornitore principale, note.
 
 | Variable | Default | Effect |
 |----------|---------|--------|
+| `NEXT_PUBLIC_SITE_URL` | — | **Obbligatorio in produzione** per QR etichette stampate e URL pubblici. SSOT: [`lib/core/site-origin.ts`](../lib/core/site-origin.ts) (`resolveCanonicalSiteOrigin`). |
 | `INVENTORY_LABEL_PDF_PIPELINE_V2` | `1` | `0` = legacy font-embed path (rollback) |
 | `LABEL_PDF_RENDER_CONCURRENCY` | `4` | Parallel sharp raster (2–8) |
 | `LABEL_BULK_SYNC_MAX` | `10` | Max labels in sync HTTP response |

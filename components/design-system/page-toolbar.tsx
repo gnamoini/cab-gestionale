@@ -194,13 +194,21 @@ function splitPlusShortLabel(short: string): { hasPlus: boolean; label: string }
   return { hasPlus: false, label: short };
 }
 
-export function PageToolbarCtaLabel({ short, full }: { short: string; full: string }) {
+export function PageToolbarCtaLabel({
+  short,
+  full,
+  mobileNoTruncate = false,
+}: {
+  short: string;
+  full: string;
+  mobileNoTruncate?: boolean;
+}) {
   const mobile = splitPlusShortLabel(short);
   return (
     <>
       <span className="inline-flex w-full min-w-0 items-center justify-center gap-1.5 leading-none sm:hidden">
         {mobile.hasPlus ? <PageToolbarPlusIcon /> : null}
-        <span className="min-w-0 truncate">{mobile.label}</span>
+        <span className={mobileNoTruncate ? "shrink-0" : "min-w-0 truncate"}>{mobile.label}</span>
       </span>
       <span className="hidden sm:inline">{full}</span>
     </>

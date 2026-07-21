@@ -12,6 +12,7 @@ import {
 } from "@/lib/ui/mobile-modal-behavior";
 import { cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
 import { resolveDrawerAsideClasses } from "@/lib/ui/modal-max-width-class";
+import { OverlayLayerPriority } from "@/lib/ui/overlay-back-stack";
 import { useGestionaleOverlayBehavior } from "@/lib/ui/use-gestionale-overlay-behavior";
 
 type MobileFilterDrawerProps = {
@@ -41,6 +42,7 @@ export function MobileFilterDrawer({
     open,
     onRequestClose: onClose,
     source: "MobileFilterDrawer",
+    overlayBack: { layer: "drawer", priority: OverlayLayerPriority.drawer },
   });
 
   useEffect(() => {

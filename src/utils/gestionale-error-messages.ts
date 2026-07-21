@@ -14,7 +14,9 @@ export const GESTIONALE_RESERVED_ACTION =
   "Questa operazione è riservata agli utenti autorizzati.";
 
 const PERMISSION_PATTERN =
-  /\b(401|403)\b|permesso|negat|\brls\b|row-level|unauthor|forbidden|jwt|sessione|non autenticat|not authorized|policy|insufficient|42501|PGRST301|permission denied|new row violates|violates row-level/i;
+  /\b(401|403)\b|permesso|negat|\brls\b|row-level|unauthor|forbidden|jwt|sessione|non autenticat|not authorized|policy|insufficient privilege|insufficient_privilege|42501|PGRST301|permission denied|new row violates|violates row-level/i;
+
+const STOCK_INSUFFICIENT_PATTERN = /giacenza insufficiente/i;
 
 const NETWORK_PATTERN = /failed to fetch|networkerror|network error|load failed|econnreset|etimedout/i;
 
@@ -71,6 +73,10 @@ export function humanizeGestionaleError(raw: string, ctx?: GestionaleErrorContex
 
   if (NETWORK_PATTERN.test(message)) {
     return "Connessione non disponibile. Riprova tra poco.";
+  }
+
+  if (STOCK_INSUFFICIENT_PATTERN.test(message)) {
+    return "Giacenza insufficiente per il movimento richiesto.";
   }
 
   if (PERMISSION_PATTERN.test(message)) {

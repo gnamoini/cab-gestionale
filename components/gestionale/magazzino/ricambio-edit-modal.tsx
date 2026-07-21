@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactElement } from "react";
 import { useBeforeUnloadWhenDirty } from "@/lib/forms/use-before-unload-when-dirty";
 import { LoadingButton } from "@/components/design-system";
 import { DisabledElementTooltip } from "@/components/ui";
@@ -29,14 +29,13 @@ import { dsBtnDanger, dsBtnNeutral } from "@/lib/ui/design-system";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { incrementHealthCounter } from "@/lib/observability/runtime-health";
 import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
-import { applyScortaDeltaViaMovimento } from "@/lib/magazzino/scorta-movement";
+import { stockAdjustFetch } from "@/lib/magazzino/stock-adjust-client";
+import { getStockEntity, mergeStockEntity } from "@/lib/magazzino/stock-entity-cache";
 import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
 import { ricambioUiFromMagazzinoRow } from "@/lib/magazzino/magazzino-list-cache";
-import {
-  clearOverlayBackResync,
-  ensureOverlayBackResync,
-  type OverlayCloseContext,
-} from "@/lib/ui/overlay-back-stack";
+import { useQueryClient } from "@tanstack/react-query";
+import { buildRicambioCompatExpandOptions } from "@/lib/magazzino/resolve-mezzi-liste-for-compat";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 
 const RICAMBIO_EDIT_FORM_ID = "ricambio-edit-form";
@@ -79,6 +78,12 @@ export function RicambioEditModal({
   /** Se true, variazioni scorta contano nelle statistiche. */
   modalitaModifica?: boolean;
 }) {
+  const queryClient = useQueryClient();
+  const { mezziListe: mergedMezziListe } = useGlobalOptions({ debugTag: "RicambioEditModal" });
+  const compatExpand = useMemo(
+    () => buildRicambioCompatExpandOptions({ mezziListe: mergedMezziListe }),
+    [mergedMezziListe],
+  );
   const baselineForm = useMemo(() => toFormDraft(ricambio, mezziListePrefs), [ricambio, mezziListePrefs]);
   const formEngine = useFormEngine<RicambioFormState>({
     initial: baselineForm,
@@ -88,7 +93,6 @@ export function RicambioEditModal({
   const [saveBusy, setSaveBusy] = useState(false);
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [pendingExit, setPendingExit] = useState<"close" | "cancel" | null>(null);
-  const backResyncCleanupRef = useRef<(() => void) | null>(null);
   const isDirty = useMemo(() => ricambioFormIsDirty(editDraft, baselineForm), [editDraft, baselineForm]);
 
   useEffect(() => {
@@ -100,8 +104,6 @@ export function RicambioEditModal({
 
   useBeforeUnloadWhenDirty(isDirty, "Hai modifiche non salvate nel ricambio.");
 
-  useEffect(() => () => clearOverlayBackResync(backResyncCleanupRef), []);
-
   const setEditForm = useCallback(
     (action: React.SetStateAction<RicambioFormState>) => {
       setValue(action);
@@ -111,7 +113,6 @@ export function RicambioEditModal({
 
   const performExit = useCallback(
     (kind: "close" | "cancel") => {
-      clearOverlayBackResync(backResyncCleanupRef);
       setDiscardConfirmOpen(false);
       setPendingExit(null);
       reset(baselineForm);
@@ -122,8 +123,23 @@ export function RicambioEditModal({
     [baselineForm, onCancel, onClose, reset],
   );
 
+  const beforeBack = useCallback(async () => {
+    if (saveBusy) return false;
+    if (discardConfirmOpen) {
+      setDiscardConfirmOpen(false);
+      setPendingExit(null);
+      return false;
+    }
+    if (isDirty) {
+      setPendingExit("close");
+      setDiscardConfirmOpen(true);
+      return false;
+    }
+    return true;
+  }, [discardConfirmOpen, isDirty, saveBusy]);
+
   const requestExit = useCallback(
-    (kind: "close" | "cancel", ctx?: OverlayCloseContext) => {
+    (kind: "close" | "cancel") => {
       if (saveBusy) return;
       if (discardConfirmOpen) {
         setDiscardConfirmOpen(false);
@@ -133,13 +149,6 @@ export function RicambioEditModal({
       if (isDirty) {
         setPendingExit(kind);
         setDiscardConfirmOpen(true);
-        if (ctx?.fromPopstate) {
-          ensureOverlayBackResync(
-            backResyncCleanupRef,
-            (nextCtx) => requestExit("close", nextCtx),
-            "RicambioEditModal-back-resync",
-          );
-        }
         return;
       }
       performExit(kind);
@@ -147,12 +156,9 @@ export function RicambioEditModal({
     [discardConfirmOpen, isDirty, performExit, saveBusy],
   );
 
-  const handleRequestClose = useCallback(
-    (ctx?: OverlayCloseContext) => {
-      requestExit("close", ctx);
-    },
-    [requestExit],
-  );
+  const handleRequestClose = useCallback(() => {
+    requestExit("close");
+  }, [requestExit]);
 
   async function saveEdit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -164,7 +170,7 @@ export function RicambioEditModal({
         categorie,
         fornitori,
         produttori,
-        mezziListe: mezziListePrefs,
+        mezziListe: compatExpand.mezziListe,
       });
       if (listErr) {
         setListFieldInvalid(true);
@@ -172,9 +178,7 @@ export function RicambioEditModal({
         return;
       }
       setListFieldInvalid(false);
-      const next = ricambioFromFormLenient(currentDraft, ricambioId, authorName, {
-        mezziListe: mezziListePrefs,
-      });
+      const next = ricambioFromFormLenient(currentDraft, ricambioId, authorName, compatExpand);
       const incompleteWarnings = ricambioFormImportantWarnings(currentDraft);
       if (incompleteWarnings.length > 0) incrementHealthCounter("ricambioSaveIncompleteFields");
       const placeholderFlags = ricambioLenientPlaceholderFlags(next);
@@ -186,17 +190,43 @@ export function RicambioEditModal({
       setSaveBusy(true);
       try {
         if (scortaDelta !== 0) {
-          const moved = await applyScortaDeltaViaMovimento(ricambioId, scortaDelta, modalitaModifica);
-          if (!moved.success) {
+          const entity = getStockEntity(queryClient, ricambioId);
+          const expectedVersion = entity?.stockVersion ?? 0;
+          const operationId = crypto.randomUUID();
+          const stats = modalitaModifica;
+          const moved = await stockAdjustFetch({
+            ricambioId,
+            delta: scortaDelta,
+            expectedVersion,
+            operationId,
+            contaStatistiche: stats,
+            origine: stats ? "manual_adjustment" : "inventario",
+            causale: stats
+              ? scortaDelta > 0
+                ? "carico_manuale"
+                : "scarico_manuale"
+              : "rettifica_inventario",
+          });
+          if (!moved.ok) {
             onSaveError(moved.error ?? "Aggiornamento scorta non riuscito.");
             return;
           }
-          next.scorta = moved.data!;
+          mergeStockEntity(
+            queryClient,
+            {
+              ricambioId,
+              quantita: moved.data.quantita,
+              stockVersion: moved.data.stockVersion,
+              lastOperationId: moved.data.operationId,
+            },
+            "mutation",
+            { operationId: moved.data.operationId, receivedVersion: moved.data.stockVersion },
+          );
+          next.scorta = moved.data.quantita;
         }
-        const updated = await magazzinoEntry.update(
-          ricambioId,
-          ricambioUiToMagazzinoUpdate(next, mezziListePrefs),
-        );
+        const patch = ricambioUiToMagazzinoUpdate(next, mezziListePrefs);
+        const { quantita: _omitQuantita, ...patchWithoutQuantita } = patch;
+        const updated = await magazzinoEntry.update(ricambioId, patchWithoutQuantita);
         if (!updated.success || !updated.data) {
           onSaveError(updated.error ?? "Salvataggio non riuscito.");
           return;
@@ -220,6 +250,7 @@ export function RicambioEditModal({
     <>
       <GestionaleModalShell
         modalSize="formMedium"
+        beforeBack={beforeBack}
         onRequestClose={handleRequestClose}
       title="Modifica ricambio"
       titleId="detail-ricambio-title"
@@ -245,10 +276,7 @@ export function RicambioEditModal({
             </button>
           </div>
           <div className="min-w-0 sm:order-1">
-            <DisabledElementTooltip
-              content={magCanDeleteRicambio ? "Elimina ricambio" : READONLY_PERMISSION_HINT}
-              disabled={!magCanDeleteRicambio}
-            >
+            <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!magCanDeleteRicambio}>
               <button
                 type="button"
                 onClick={onRequestDelete}

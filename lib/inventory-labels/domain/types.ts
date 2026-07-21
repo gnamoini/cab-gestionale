@@ -89,7 +89,7 @@ export type InventoryQrTokenRow = {
   superseded_by: string | null;
 };
 
-export const GENERATOR_VERSION = "1.3.33";
+export const GENERATOR_VERSION = "1.3.35";
 
 export type LabelRenderOptions = {
   /** Default true — se false il layout resta invariato, area barcode bianca. */

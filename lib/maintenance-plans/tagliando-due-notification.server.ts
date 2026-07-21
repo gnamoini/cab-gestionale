@@ -54,6 +54,11 @@ function mapPlanView(
         codice: r?.codice ?? "—",
         descrizione: r?.nome ?? "—",
         quantita: Number(p.quantita),
+        isRequired: p.is_required ?? true,
+        replacementCondition: (p.replacement_condition as MaintenancePlanView["parts"][0]["replacementCondition"]) ?? "sempre",
+        conditionParams: p.condition_params ?? null,
+        sortOrder: p.sort_order ?? 0,
+        note: p.note?.trim() ?? "",
       };
     });
 
@@ -61,10 +66,19 @@ function mapPlanView(
     id: plan.id,
     nome: plan.nome,
     intervalOre: plan.interval_ore,
+    intervalType: (plan.interval_type as MaintenancePlanView["intervalType"]) ?? "ore",
+    intervalValue: Number(plan.interval_value ?? plan.interval_ore),
+    maintenanceKind: (plan.maintenance_kind as MaintenancePlanView["maintenanceKind"]) ?? "tagliando_ore",
+    status: (plan.status as MaintenancePlanView["status"]) ?? "active",
     isActive: plan.is_active && plan.deleted_at == null,
+    tempoPrevistoMinuti: plan.tempo_previsto_minuti != null ? Number(plan.tempo_previsto_minuti) : null,
+    manodoperaCostoOrario: plan.manodopera_costo_orario != null ? Number(plan.manodopera_costo_orario) : null,
     tipoLabels,
     tipoIds,
     parts: planParts,
+    triggerGroups: [],
+    checklist: [],
+    currentVersionId: plan.current_version_id ?? null,
   };
 }
 

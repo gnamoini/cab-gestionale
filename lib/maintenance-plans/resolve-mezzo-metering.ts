@@ -46,6 +46,7 @@ export function currentValueForInterval(
     case "km":
       return metering.km ?? 0;
     case "giorni":
+    case "mesi":
       return 0;
     case "ore":
     default:
@@ -59,6 +60,8 @@ export function formatIntervalLabel(intervalType: MaintenanceIntervalType, inter
       return `${intervalValue} km`;
     case "giorni":
       return `${intervalValue} giorni`;
+    case "mesi":
+      return `${intervalValue} mesi`;
     case "ore":
     default:
       return `${intervalValue} ore`;

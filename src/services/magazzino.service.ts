@@ -88,6 +88,11 @@ export const magazzinoService = {
 
   async update(id: string, data: MagazzinoUpdate): Promise<ServiceResult<MagazzinoRicambioRow>> {
     try {
+      if ("quantita" in data && data.quantita !== undefined) {
+        return err(
+          "La quantità non può essere aggiornata direttamente. Usare Stock Engine (movimento).",
+        );
+      }
       const c = await sb();
       return await commitCriticalMutation(c, async () => {
         const payload = Object.keys(data).length > 0 ? attachMagazzinoEntityKey(data) : data;

@@ -32,6 +32,7 @@ import {
   marcaUniversalCompatLabel,
 } from "@/lib/magazzino/ricambio-compat-resolver";
 import { parseCompatMarcaModello } from "@/lib/mezzi/attrezzature-prefs";
+import { parseStockMovementAuditPayload } from "@/lib/magazzino/stock-audit-payload";
 
 /** Summary persistito in `log_modifiche.payload.summary` (generato al write). */
 export type LogModificaSummary = {
@@ -218,6 +219,18 @@ function nestedMezzo(obj: Record<string, unknown>): Record<string, unknown> | nu
 function recordFromPayload(payload: unknown): Record<string, unknown> | null {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
   const p = payload as Record<string, unknown>;
+  const stock = parseStockMovementAuditPayload(p);
+  if (stock) {
+    return {
+      ricambio_id: stock.ricambioId,
+      quantita_before: stock.before,
+      quantita_after: stock.after,
+      delta: stock.delta,
+      movimento_id: stock.movimentoId,
+      tipo: stock.delta > 0 ? "entrata" : "uscita",
+      quantita: Math.abs(stock.delta),
+    };
+  }
   const ctx = p.context;
   if (ctx && typeof ctx === "object" && !Array.isArray(ctx)) {
     const oggetto = (ctx as Record<string, unknown>).oggetto;
@@ -273,6 +286,10 @@ export function entityKindLabel(entita: string): string {
 
 export function tipoRigaFromAzione(entita: string, azione: string, payload?: unknown): string {
   if (isImageLogAction(azione)) return "CARICAMENTO FILE";
+  const stock = payload ? parseStockMovementAuditPayload(payload) : null;
+  if (stock) {
+    return stock.tipo === "CARICO_MAGAZZINO" ? "CARICO MAGAZZINO" : "SCARICO MAGAZZINO";
+  }
   if (entita === "movimenti_ricambi" && safeStr(azione).toUpperCase() === "CREATE") {
     const rec = payload ? recordFromPayload(payload as Record<string, unknown>) : null;
     const tipo = rec && typeof rec.tipo === "string" ? rec.tipo : "";
@@ -410,8 +427,12 @@ function formatValueForField(key: string, value: unknown, stati?: StatoLavorazio
 
 export type PayloadFieldChange = { key: string; before: unknown; after: unknown };
 
-/** Campi modificati da payload audit `{ before, after }`. */
+/** Campi modificati da payload audit `{ before, after }` o R-19 stock movement. */
 export function extractPayloadFieldChanges(payload: unknown): PayloadFieldChange[] {
+  const stock = parseStockMovementAuditPayload(payload);
+  if (stock) {
+    return [{ key: "scorta", before: stock.before, after: stock.after }];
+  }
   if (payload == null || typeof payload !== "object" || Array.isArray(payload)) return [];
   const p = payload as Record<string, unknown>;
   const before = p.before;
@@ -447,7 +468,16 @@ function humanChangeSentence(
   const p = formatValueForField(key, before, stati);
   const d = formatValueForField(key, after, stati);
 
-  if (key === "quantita" || key === "scorta") {
+  if (key === "scorta") {
+    const a = Number(before);
+    const b = Number(after);
+    if (!Number.isNaN(a) && !Number.isNaN(b)) {
+      if (b > a) return `Scorta aumentata da ${a} a ${b}`;
+      if (b < a) return `Scorta diminuita da ${a} a ${b}`;
+    }
+    return `Scorta aggiornata da ${p} a ${d}`;
+  }
+  if (key === "quantita") {
     const a = Number(before);
     const b = Number(after);
     if (!Number.isNaN(a) && !Number.isNaN(b)) {
@@ -755,6 +785,18 @@ function remapLavorazioneStatoInModifiche(
   });
 }
 
+function stockModificheFromRecord(record: Record<string, unknown> | null): string[] | null {
+  if (!record) return null;
+  const before = Number(record.quantita_before);
+  const after = Number(record.quantita_after);
+  const delta = Number(record.delta);
+  if (!Number.isFinite(before) || !Number.isFinite(after) || !Number.isFinite(delta) || delta === 0) {
+    return null;
+  }
+  if (delta > 0) return [`Scorta aumentata da ${before} a ${after}`];
+  return [`Scorta diminuita da ${before} a ${after}`];
+}
+
 function defaultModificheForCreate(
   entita: string,
   azione: string,
@@ -775,12 +817,16 @@ function defaultModificheForCreate(
         return lines;
       }
       case "magazzino_ricambi": {
+        const stockLines = stockModificheFromRecord(record);
+        if (stockLines) return stockLines;
         const nome = pickStr(record ?? {}, ["nome", "descrizione", "codice"]);
         const marca = pickStr(record ?? {}, ["marca"]);
         const label = joinOggetto([formatTitleCasePhrase(marca), formatTitleCasePhrase(nome)]);
         return label !== "—" ? [`Creato il ricambio ${label}`] : ["Nuovo ricambio creato in magazzino"];
       }
       case "movimenti_ricambi": {
+        const stockLines = stockModificheFromRecord(record);
+        if (stockLines) return stockLines;
         const tipo = pickStr(record ?? {}, ["tipo"]);
         const q = Number(record?.quantita);
         const qty = Number.isFinite(q) && q > 0 ? String(Math.round(q)) : "—";

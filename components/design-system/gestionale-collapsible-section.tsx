@@ -2,8 +2,10 @@
 
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { GestionaleCollapsiblePanel } from "@/components/design-system/gestionale-collapsible-panel";
+import { useAuthUserId } from "@/context/auth-context";
 import { dsCardTitle } from "@/lib/ui/design-system";
 import { CAB_FOCUS_SCROLL_GROUP_ATTR } from "@/lib/ui/mobile-modal-behavior";
+import { collapsibleCollapsedBoolPref, useCollapsiblePreference } from "@/lib/ui/collapsible-prefs";
 
 /** Sfondo shell sezione form collapsible — anche sul corpo animato (evita flash in dark). */
 export const gestionaleCollapsibleSectionFormShellBgClass =
@@ -59,6 +61,9 @@ export function GestionaleCollapsibleSection({
   variant = "form",
   className = "",
   action,
+  persistScope,
+  persistKey,
+  persist = true,
   children,
 }: {
   title: string;
@@ -71,21 +76,43 @@ export function GestionaleCollapsibleSection({
   className?: string;
   /** Azioni header (es. Aggiungi riga) — colonna separata, non toggla. */
   action?: ReactNode;
+  /** Scope persistenza localStorage (`gestionale-collapse-prefs:v1`). */
+  persistScope?: string;
+  /** Chiave sezione nello scope — se assente, stato solo in memoria. */
+  persistKey?: string;
+  /** `false` disabilita la persistenza anche con `persistKey`. */
+  persist?: boolean;
   children: ReactNode;
 }) {
   const panelId = useId();
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const userId = useAuthUserId();
+  const usePersistence = Boolean(persistScope && persistKey && persist !== false && !forceExpanded);
+  const [localCollapsed, setLocalCollapsed] = useState(defaultCollapsed);
+  const [persistedCollapsed, setPersistedCollapsed, collapsePrefsHydrated] = useCollapsiblePreference(
+    collapsibleCollapsedBoolPref(defaultCollapsed, {
+      scope: persistScope ?? "__noop",
+      key: persistKey ?? "__noop",
+      userId,
+      persist: usePersistence,
+    }),
+  );
+  const collapsed = usePersistence ? persistedCollapsed : localCollapsed;
   const expanded = forceExpanded || !collapsed;
   const titleId = `${panelId}-title`;
   const toggleLabel = `${expanded ? "Nascondi" : "Mostra"} ${title}`;
 
   useEffect(() => {
-    if (forceExpanded) setCollapsed(false);
-  }, [forceExpanded]);
+    if (forceExpanded) {
+      if (usePersistence) setPersistedCollapsed(false);
+      else setLocalCollapsed(false);
+    }
+  }, [forceExpanded, usePersistence, setPersistedCollapsed]);
 
   const toggle = () => {
     if (forceExpanded) return;
-    setCollapsed((c) => !c);
+    const next = !collapsed;
+    if (usePersistence) setPersistedCollapsed(next);
+    else setLocalCollapsed(next);
   };
 
   const bodyBgClass = sectionBodyBgClass(variant);
@@ -106,6 +133,7 @@ export function GestionaleCollapsibleSection({
         formFlat={variant === "flat"}
         bodyClassName={bodyBgClass}
         bodyPadClassName={sectionBodyPadClass(variant)}
+        collapseAnimated={!usePersistence || collapsePrefsHydrated}
         titleNode={
           <h2 id={titleId} className={`${dsCardTitle} leading-snug`}>
             {title}

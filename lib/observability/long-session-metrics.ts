@@ -2,7 +2,7 @@ import { getCabSyncListenerCount } from "@/lib/sync/cab-sync-bus";
 import { getGestionaleDispatchAppliedTotal } from "@/lib/sync/gestionale-sync-dispatch";
 import { getGestionaleRealtimeRuntimeMode } from "@/lib/realtime/gestionale-realtime-runtime";
 import { getRicambioStockSnapshotRegistrySize } from "@/lib/magazzino/ricambio-stock-snapshot-registry";
-import { getScortaSyncQueueSize } from "@/lib/magazzino/scorta-adjust-sync";
+import { getStockEntityRegistrySize } from "@/lib/magazzino/stock-entity-cache";
 import { getRuntimeHealthSnapshot } from "@/lib/observability/runtime-health";
 
 export type LongSessionMetricsSnapshot = {
@@ -32,7 +32,7 @@ export function collectLongSessionMetrics(queryCacheCount?: number): LongSession
     at: new Date().toISOString(),
     cabSyncListeners: getCabSyncListenerCount(),
     ricambioSnapshotRegistrySize: getRicambioStockSnapshotRegistrySize(),
-    scortaSyncQueueSize: getScortaSyncQueueSize(),
+    scortaSyncQueueSize: getStockEntityRegistrySize(),
     runtimeHealth: getRuntimeHealthSnapshot(),
     gestionaleRealtimeMode: getGestionaleRealtimeRuntimeMode(),
     gestionaleDispatchAppliedTotal: getGestionaleDispatchAppliedTotal(),

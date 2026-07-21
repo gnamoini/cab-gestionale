@@ -1,11 +1,10 @@
 "use client";
 
 import type { QueryClient } from "@tanstack/react-query";
-import {
-  cabSyncEventForEntity,
-  dispatchGestionaleLocalMutation,
-} from "@/lib/sync/gestionale-sync-dispatch";
-import { movimentiService } from "@/src/services/movimenti.service";
+import { stockAdjustFetch } from "@/lib/magazzino/stock-adjust-client";
+import { getStockEntity, mergeStockEntity } from "@/lib/magazzino/stock-entity-cache";
+import { scheduleReportBroadcastRefresh } from "@/lib/report/report-refresh";
+import { movimentiListQueryKey } from "@/lib/render/query-key-factory";
 
 export async function applyMagazzinoScaricoDaScheda(opts: {
   ricambioId: string;
@@ -20,31 +19,39 @@ export async function applyMagazzinoScaricoDaScheda(opts: {
   const qty = Math.round(Number(opts.quantita));
   if (!Number.isFinite(qty) || qty <= 0) return { ok: false, error: "Quantità non valida" };
 
-  const res = await movimentiService.create(
-    {
-      ricambio_id: opts.ricambioId,
-      lavorazione_id: opts.lavorazioneId,
-      tipo: "uscita",
-      quantita: qty,
-      conta_statistiche: true,
-      meta: { origine: "lavorazione", causale: "scarico_lavorazione" },
-    },
-    {
-      operationId: crypto.randomUUID(),
-      origine: "lavorazione",
-      causale: "scarico_lavorazione",
-    },
-  );
+  const entity = getStockEntity(opts.qc, opts.ricambioId);
+  const operationId = crypto.randomUUID();
+  const res = await stockAdjustFetch({
+    ricambioId: opts.ricambioId,
+    delta: -qty,
+    expectedVersion: entity?.stockVersion ?? 0,
+    operationId,
+    origine: "lavorazione",
+    causale: "scarico_lavorazione",
+    contaStatistiche: true,
+    lavorazioneId: opts.lavorazioneId,
+  });
 
-  if (!res.success || !res.data) {
+  if (!res.ok) {
     return { ok: false, error: res.error ?? "Movimento magazzino non riuscito." };
   }
 
-  const mov = res.data;
-  dispatchGestionaleLocalMutation(opts.qc, ["movimenti_ricambi", "magazzino_ricambi", "lavorazioni"], [
-    cabSyncEventForEntity("movimenti_ricambi", mov.id, "entity_created", "movimenti_ricambi"),
-    cabSyncEventForEntity("magazzino_ricambi", opts.ricambioId, "entity_updated", "magazzino_ricambi"),
-  ]);
+  mergeStockEntity(
+    opts.qc,
+    {
+      ricambioId: opts.ricambioId,
+      quantita: res.data.quantita,
+      stockVersion: res.data.stockVersion,
+      lastOperationId: res.data.operationId,
+    },
+    "mutation",
+    { operationId: res.data.operationId, receivedVersion: res.data.stockVersion },
+  );
+
+  void opts.qc.invalidateQueries({ queryKey: movimentiListQueryKey({ ricambio_id: opts.ricambioId }) });
+  void opts.qc.invalidateQueries({ queryKey: ["movimenti", "ricambio", opts.ricambioId] });
+  scheduleReportBroadcastRefresh(opts.qc);
+  void opts.qc.invalidateQueries({ queryKey: ["dashboard", "health-score"] });
 
   return { ok: true };
 }

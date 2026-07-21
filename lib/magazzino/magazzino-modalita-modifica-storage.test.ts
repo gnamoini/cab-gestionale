@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import {
+  MAGAZZINO_MODALITA_MODIFICA_KEY,
+  MAGAZZINO_MODALITA_MODIFICA_VERSION_KEY,
+  migrateMagazzinoModalitaModificaPreferenceV2,
   readMagazzinoModalitaModifica,
   writeMagazzinoModalitaModifica,
 } from "@/lib/magazzino/magazzino-modalita-modifica-storage";
@@ -20,10 +23,26 @@ g.localStorage = {
 };
 g.window = g as unknown as Window & typeof globalThis;
 
-assert.equal(readMagazzinoModalitaModifica(), false);
+store.clear();
+assert.equal(readMagazzinoModalitaModifica(), true, "missing key defaults ON");
+
+store.clear();
 writeMagazzinoModalitaModifica(true);
 assert.equal(readMagazzinoModalitaModifica(), true);
 writeMagazzinoModalitaModifica(false);
 assert.equal(readMagazzinoModalitaModifica(), false);
+
+store.clear();
+store.set(MAGAZZINO_MODALITA_MODIFICA_KEY, "0");
+assert.equal(readMagazzinoModalitaModifica(), false);
+migrateMagazzinoModalitaModificaPreferenceV2();
+assert.equal(readMagazzinoModalitaModifica(), true, "v1 OFF migrates to ON");
+assert.equal(store.get(MAGAZZINO_MODALITA_MODIFICA_VERSION_KEY), "2");
+
+store.clear();
+migrateMagazzinoModalitaModificaPreferenceV2();
+writeMagazzinoModalitaModifica(false);
+migrateMagazzinoModalitaModificaPreferenceV2();
+assert.equal(readMagazzinoModalitaModifica(), false, "post-v2 user OFF preserved");
 
 console.log("magazzino-modalita-modifica-storage.test.ts OK");

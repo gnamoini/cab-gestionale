@@ -22,6 +22,93 @@ function searchCharsEquivalent(a: string, b: string): boolean {
   return a === b || (a === "c" && b === "k") || (a === "k" && b === "c");
 }
 
+const QWERTY_ROWS = ["1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm"] as const;
+
+function buildQwertyNeighbors(): ReadonlyMap<string, ReadonlySet<string>> {
+  const neighbors = new Map<string, Set<string>>();
+
+  const link = (from: string, to: string) => {
+    let set = neighbors.get(from);
+    if (!set) {
+      set = new Set();
+      neighbors.set(from, set);
+    }
+    set.add(to);
+  };
+
+  for (let rowIdx = 0; rowIdx < QWERTY_ROWS.length; rowIdx += 1) {
+    const row = QWERTY_ROWS[rowIdx]!;
+    for (let col = 0; col < row.length; col += 1) {
+      const ch = row[col]!;
+      if (col > 0) link(ch, row[col - 1]!);
+      if (col < row.length - 1) link(ch, row[col + 1]!);
+
+      if (rowIdx > 0) {
+        const above = QWERTY_ROWS[rowIdx - 1]!;
+        for (const dc of [-1, 0, 1]) {
+          const acol = col + dc;
+          if (acol >= 0 && acol < above.length) link(ch, above[acol]!);
+        }
+      }
+
+      if (rowIdx < QWERTY_ROWS.length - 1) {
+        const below = QWERTY_ROWS[rowIdx + 1]!;
+        for (const dc of [-1, 0, 1]) {
+          const bcol = col + dc;
+          if (bcol >= 0 && bcol < below.length) link(ch, below[bcol]!);
+        }
+      }
+    }
+  }
+
+  return neighbors;
+}
+
+let qwertyNeighborsCache: ReadonlyMap<string, ReadonlySet<string>> | null = null;
+
+function getQwertyNeighbors(): ReadonlyMap<string, ReadonlySet<string>> {
+  qwertyNeighborsCache ??= buildQwertyNeighbors();
+  return qwertyNeighborsCache;
+}
+
+/** Adiacenza tasti QWERTY (simmetrica). */
+export function areQwertyAdjacent(a: string, b: string): boolean {
+  if (a === b) return true;
+  const map = getQwertyNeighbors();
+  return (map.get(a)?.has(b) ?? false) || (map.get(b)?.has(a) ?? false);
+}
+
+/** Equivalenza per typo fisici — solo prefix scoring, non subsequence/dedupe. */
+export function searchCharsKeyboardEquivalent(a: string, b: string): boolean {
+  return searchCharsEquivalent(a, b) || areQwertyAdjacent(a, b);
+}
+
+function maxKeyboardTyposForQuery(queryLength: number): number {
+  return Math.max(1, Math.floor(queryLength * 0.25));
+}
+
+function scorePrefixWithTypos(query: string, candidate: string): number {
+  if (!query) return 0;
+  if (candidate.startsWith(query)) return 80 - Math.abs(candidate.length - query.length) / 10;
+  if (query.length > candidate.length) return 0;
+
+  let typoCount = 0;
+  const maxTypos = maxKeyboardTyposForQuery(query.length);
+  for (let i = 0; i < query.length; i += 1) {
+    const qc = query[i]!;
+    const cc = candidate[i]!;
+    if (qc === cc) continue;
+    if (!searchCharsKeyboardEquivalent(qc, cc)) return 0;
+    typoCount += 1;
+    if (typoCount > maxTypos) return 0;
+  }
+
+  if (typoCount === 0) return 0;
+
+  const penalty = query.length <= 2 ? 20 : 10;
+  return 80 - typoCount * penalty - Math.abs(candidate.length - query.length) / 10;
+}
+
 /** Normalizza stringhe entità: trim, lower, accenti, spazi, punteggiatura base. */
 export function normalizeEntityString(value: string, options?: NormalizeEntityStringOptions): string {
   let s = value.trim();
@@ -68,6 +155,8 @@ function scoreLooseEntityKey(query: string, candidate: string, options?: Normali
   if (!q) return 1;
   if (o === q) return 100;
   if (o.startsWith(q)) return 80 - Math.abs(o.length - q.length) / 10;
+  const loosePrefixTypos = scorePrefixWithTypos(q, o);
+  if (loosePrefixTypos > 0) return loosePrefixTypos;
   if (o.includes(q)) return 55 - o.indexOf(q);
   let qi = 0;
   for (const ch of o) {
@@ -91,6 +180,8 @@ export function scoreEntityMatch(
   if (!q) return 1;
   if (o === q) return 100;
   if (o.startsWith(q)) return 80 - Math.abs(o.length - q.length) / 10;
+  const prefixTypos = scorePrefixWithTypos(q, o);
+  if (prefixTypos > 0) return prefixTypos;
   if (o.includes(q)) return 55 - o.indexOf(q);
   let qi = 0;
   for (const ch of o) {

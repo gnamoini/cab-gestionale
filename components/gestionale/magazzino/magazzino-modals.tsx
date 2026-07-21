@@ -53,9 +53,12 @@ export function MagazzinoRicambioInfoModal({
   onDismissLogEntry,
   canAdjustScorta,
   modalitaModifica = false,
+  scortaFlash = false,
   onAdjustScorta,
   onSetScorta,
   stockPolicyRaw,
+  onUndoStockMovement,
+  undoStockPending,
 }: {
   ricambio: RicambioMagazzino;
   compatDisplay: string;
@@ -71,9 +74,12 @@ export function MagazzinoRicambioInfoModal({
   onDismissLogEntry: (id: string) => void;
   canAdjustScorta: boolean;
   modalitaModifica?: boolean;
+  scortaFlash?: boolean;
   onAdjustScorta: (delta: number) => void;
   onSetScorta: (target: number) => void;
   stockPolicyRaw?: unknown;
+  onUndoStockMovement?: (movimentoId: string) => void | Promise<void>;
+  undoStockPending?: boolean;
 }) {
   const low = ricambio.scorta < ricambio.scortaMinima;
 
@@ -87,10 +93,7 @@ export function MagazzinoRicambioInfoModal({
       footer={
         <div className="flex w-full min-w-0 flex-col gap-2">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-            <DisabledElementTooltip
-              content={canAdjustScorta ? "Carico +1" : READONLY_PERMISSION_HINT}
-              disabled={!canAdjustScorta}
-            >
+            <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!canAdjustScorta}>
               <button
                 type="button"
                 className={`${erpBtnAccent} min-h-10 w-full justify-center text-sm disabled:opacity-45`}
@@ -108,10 +111,7 @@ export function MagazzinoRicambioInfoModal({
             >
               {ricambio.scorta}
             </span>
-            <DisabledElementTooltip
-              content={canAdjustScorta ? "Scarico −1" : READONLY_PERMISSION_HINT}
-              disabled={!canAdjustScorta}
-            >
+            <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!canAdjustScorta}>
               <button
                 type="button"
                 className={`${erpBtnAccent} min-h-10 w-full justify-center text-sm disabled:opacity-45`}
@@ -142,10 +142,7 @@ export function MagazzinoRicambioInfoModal({
             canRead={magCanReadRicambio}
             canWrite={magCanCreateRicambio}
           />
-          <DisabledElementTooltip
-            content={magCanCreateRicambio ? "Modifica" : READONLY_PERMISSION_HINT}
-            disabled={!magCanCreateRicambio}
-          >
+          <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!magCanCreateRicambio}>
             <button
               type="button"
               onClick={onEdit}
@@ -172,9 +169,12 @@ export function MagazzinoRicambioInfoModal({
             onDismissLogEntry={onDismissLogEntry}
             canAdjustScorta={canAdjustScorta}
             modalitaModifica={modalitaModifica}
+            scortaFlash={scortaFlash}
             onAdjustScorta={onAdjustScorta}
             onSetScorta={onSetScorta}
             stockPolicyRaw={stockPolicyRaw}
+            onUndoStockMovement={onUndoStockMovement}
+            undoStockPending={undoStockPending}
           />
         </GestionaleModalScrollBody>
       </div>

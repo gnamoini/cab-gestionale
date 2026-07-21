@@ -1,5 +1,6 @@
 import "server-only";
 
+import { canonicalSiteOriginString } from "@/lib/core/site-origin";
 import { verifyServerPageRead, verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
@@ -28,6 +29,5 @@ export async function requireInventoryLabelsWrite(): Promise<
 }
 
 export function requestOrigin(request: Request): string {
-  const url = new URL(request.url);
-  return url.origin;
+  return canonicalSiteOriginString(request);
 }

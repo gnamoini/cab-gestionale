@@ -9,19 +9,47 @@ import {
 import { formatAvgMonthlyMagazzinoIt } from "@/lib/magazzino/ricambio-consumo-from-log";
 import type { RicambioConsumoDaLog } from "@/lib/magazzino/ricambio-consumo-from-log";
 
-const STATUS_LABEL: Record<ReturnType<typeof resolveStockOperationalStatus>, string> = {
+export const RICAMBIO_STOCK_STATUS_LABEL: Record<ReturnType<typeof resolveStockOperationalStatus>, string> = {
   normale: "Normale",
   riordino: "Riordino necessario",
   critico: "Critico",
   sconosciuto: "—",
 };
 
-const STATUS_CLASS: Record<ReturnType<typeof resolveStockOperationalStatus>, string> = {
+export const RICAMBIO_STOCK_STATUS_CLASS: Record<ReturnType<typeof resolveStockOperationalStatus>, string> = {
   normale: "text-emerald-700 dark:text-emerald-400",
   riordino: "text-amber-700 dark:text-amber-400",
   critico: "text-red-700 dark:text-red-400",
   sconosciuto: "text-[color:var(--cab-text-muted)]",
 };
+
+/** Riga compatta stato operativo giacenza (SSOT: resolveStockOperationalStatus). */
+export function RicambioStockStatusLabel({
+  quantita,
+  scortaMinima,
+  consumo,
+  stockPolicyRaw,
+  className = "text-xs",
+}: {
+  quantita: number;
+  scortaMinima: number;
+  consumo: RicambioConsumoDaLog | undefined;
+  stockPolicyRaw?: unknown;
+  className?: string;
+}) {
+  const policy = parseMagazzinoStockPolicy(stockPolicyRaw);
+  const status = resolveStockOperationalStatus({
+    scorta: quantita,
+    scortaMinima,
+    avgMonthlyConsumption: consumo?.avgMonthly ?? null,
+    policy,
+  });
+  return (
+    <p className={`font-semibold ${RICAMBIO_STOCK_STATUS_CLASS[status]} ${className}`}>
+      Stato: {RICAMBIO_STOCK_STATUS_LABEL[status]}
+    </p>
+  );
+}
 
 export function RicambioOperationalStatusCard({
   descrizione,
@@ -75,7 +103,9 @@ export function RicambioOperationalStatusCard({
           <p className="font-medium">{formatCoverageLabel(scorta, avg)}</p>
         </div>
       </div>
-      <p className={`mt-2 text-xs font-semibold ${STATUS_CLASS[status]}`}>Stato: {STATUS_LABEL[status]}</p>
+      <p className={`mt-2 text-xs font-semibold ${RICAMBIO_STOCK_STATUS_CLASS[status]}`}>
+        Stato: {RICAMBIO_STOCK_STATUS_LABEL[status]}
+      </p>
     </div>
   );
 }

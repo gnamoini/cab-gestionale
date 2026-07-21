@@ -9,6 +9,7 @@ import { attachMagazzinoEntityKey } from "@/lib/validation/entity-persistence";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { buildStockMovementAuditPayload } from "@/lib/magazzino/stock-audit-payload";
+import { stockApplyMovement } from "@/lib/magazzino/stock-engine.server";
 
 const DEFAULT_MARKUP = 45;
 
@@ -77,7 +78,7 @@ export async function executeMagazzinoImport(input: {
         }
         const { data: existing, error: readErr } = await sb
           .from("magazzino_ricambi")
-          .select("id, meta, nome, quantita, costo, prezzo_vendita, marca")
+          .select("id, meta, nome, quantita, stock_version, costo, prezzo_vendita, marca")
           .eq("id", targetId)
           .maybeSingle();
         if (readErr || !existing) {
@@ -90,12 +91,13 @@ export async function executeMagazzinoImport(input: {
             ? { ...(existing.meta as Record<string, unknown>) }
             : {};
         const patch: Record<string, unknown> = {};
+        let targetQuantita: number | null = null;
         if (decision.action === "replace" || !input.updateFields?.length) {
           patch.nome = row.descrizione.trim() || existing.nome;
           patch.marca = row.marca?.trim() || existing.marca;
           patch.costo = costo;
           patch.prezzo_vendita = prezzoVendita > 0 ? prezzoVendita : existing.prezzo_vendita;
-          patch.quantita = row.quantita ?? existing.quantita;
+          if (row.quantita != null) targetQuantita = row.quantita;
           patch.meta = buildMeta(row, { ...prevMeta, ...importMeta });
         } else {
           const fields = new Set(input.updateFields);
@@ -103,21 +105,50 @@ export async function executeMagazzinoImport(input: {
           if (fields.has("marca")) patch.marca = row.marca?.trim() || null;
           if (fields.has("costo")) patch.costo = costo;
           if (fields.has("prezzo_vendita")) patch.prezzo_vendita = prezzoVendita > 0 ? prezzoVendita : null;
-          if (fields.has("quantita") && row.quantita != null) patch.quantita = row.quantita;
+          if (fields.has("quantita") && row.quantita != null) targetQuantita = row.quantita;
           if (fields.has("categoria") || fields.has("note")) {
             patch.meta = buildMeta(row, { ...prevMeta, ...importMeta });
           }
         }
+
+        const existingQ = Number(existing.quantita) || 0;
+        const existingVersion = Number(existing.stock_version) || 0;
+        if (targetQuantita != null) {
+          const delta = Math.round(targetQuantita) - Math.round(existingQ);
+          if (delta !== 0) {
+            try {
+              await stockApplyMovement({
+                ricambioId: targetId,
+                delta,
+                expectedVersion: existingVersion,
+                operationId: crypto.randomUUID(),
+                origine: "import",
+                causale: "import_rettifica",
+                contaStatistiche: false,
+              });
+            } catch (e) {
+              result.stats.errors += 1;
+              result.errors.push({
+                rowIndex: row.rowIndex,
+                message: e instanceof Error ? e.message : "Rettifica stock import fallita.",
+              });
+              continue;
+            }
+          }
+        }
+
         const updatePayload = attachMagazzinoEntityKey(patch);
-        const { error: updErr } = await sb.from("magazzino_ricambi").update(updatePayload).eq("id", targetId);
-        if (updErr) {
-          result.stats.errors += 1;
-          result.errors.push({ rowIndex: row.rowIndex, message: updErr.message });
-          continue;
+        if (Object.keys(patch).length > 0) {
+          const { error: updErr } = await sb.from("magazzino_ricambi").update(updatePayload).eq("id", targetId);
+          if (updErr) {
+            result.stats.errors += 1;
+            result.errors.push({ rowIndex: row.rowIndex, message: updErr.message });
+            continue;
+          }
         }
         const { data: afterRow } = await sb
           .from("magazzino_ricambi")
-          .select("id, meta, nome, quantita, costo, prezzo_vendita, marca")
+          .select("id, meta, nome, quantita, stock_version, costo, prezzo_vendita, marca")
           .eq("id", targetId)
           .maybeSingle();
         await writeModificaLog(sb, {
@@ -130,14 +161,16 @@ export async function executeMagazzinoImport(input: {
             batchId: input.batchId,
             fileName: input.fileName,
             diff: auditDiff(existing, afterRow ?? existing),
-            ...(patch.quantita != null &&
-            Number(patch.quantita) !== Number(existing.quantita)
+            ...(targetQuantita != null &&
+            Math.round(targetQuantita) !== Math.round(existingQ)
               ? buildStockMovementAuditPayload({
                   ricambioId: targetId,
-                  quantitaBefore: Number(existing.quantita) || 0,
-                  quantitaAfter: Number(patch.quantita) || 0,
+                  quantitaBefore: existingQ,
+                  quantitaAfter: Number(afterRow?.quantita) || 0,
                   origine: "import",
-                  causale: "import_overwrite",
+                  causale: "import_rettifica",
+                  stockVersionBefore: existingVersion,
+                  stockVersionAfter: Number(afterRow?.stock_version) || existingVersion,
                   extra: { source: "IMPORT_UPDATE", batchId: input.batchId, fileName: input.fileName },
                 })
               : {}),
@@ -151,17 +184,42 @@ export async function executeMagazzinoImport(input: {
         codice: row.codice.trim(),
         nome: row.descrizione.trim() || "Senza descrizione",
         marca: row.marca?.trim() || null,
-        quantita: row.quantita ?? 0,
+        quantita: 0,
         costo: costo > 0 ? costo : null,
         prezzo_vendita: prezzoVendita > 0 ? prezzoVendita : null,
         consumo_medio_mensile: null,
         meta: buildMeta(row, { categoria: row.categoria?.trim() || "Generale", ...importMeta }),
       });
-      const { error: insErr } = await sb.from("magazzino_ricambi").insert(insertPayload);
-      if (insErr) {
+      const { data: inserted, error: insErr } = await sb
+        .from("magazzino_ricambi")
+        .insert(insertPayload)
+        .select("id, stock_version")
+        .single();
+      if (insErr || !inserted) {
         result.stats.errors += 1;
-        result.errors.push({ rowIndex: row.rowIndex, message: insErr.message });
+        result.errors.push({ rowIndex: row.rowIndex, message: insErr?.message ?? "Inserimento fallito." });
         continue;
+      }
+      const initialQ = Math.round(row.quantita ?? 0);
+      if (initialQ > 0) {
+        try {
+          await stockApplyMovement({
+            ricambioId: inserted.id,
+            delta: initialQ,
+            expectedVersion: Number(inserted.stock_version) || 0,
+            operationId: crypto.randomUUID(),
+            origine: "import",
+            causale: "giacenza_iniziale",
+            contaStatistiche: false,
+          });
+        } catch (e) {
+          result.stats.errors += 1;
+          result.errors.push({
+            rowIndex: row.rowIndex,
+            message: e instanceof Error ? e.message : "Giacenza iniziale import fallita.",
+          });
+          continue;
+        }
       }
       result.stats.created += 1;
     }

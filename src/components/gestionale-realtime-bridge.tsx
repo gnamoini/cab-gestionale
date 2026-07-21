@@ -35,6 +35,7 @@ import { shouldSuppressSettingsRemoteNotify } from "@/lib/sistema/settings-remot
 import { subscribeGestionaleBroadcast } from "@/lib/sync/cab-realtime-broadcast";
 import { cabSyncEventFromPostgresChange } from "@/lib/sync/cab-sync-bus";
 import { dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
+import { tryMergeStockFromRealtime, shouldSuppressStockRealtimeForTable } from "@/lib/magazzino/stock-realtime-merge";
 import { markDirtyForOperationalTables } from "@/lib/sync/gestionale-dirty-flush";
 import { isGestionaleDirtySyncEnabled } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
 import {
@@ -276,6 +277,24 @@ export function GestionaleRealtimeBridge() {
       recentFingerprints.set(fp, now);
 
       const cabEvent = cabSyncEventFromPostgresChange(table, payload);
+
+      const stockRecord = payload.new as {
+        id?: string;
+        quantita?: number;
+        stock_version?: number;
+        operation_id?: string | null;
+        ricambio_id?: string;
+      } | null;
+
+      if (table === "magazzino_ricambi" && stockRecord) {
+        const merged = tryMergeStockFromRealtime(qc, table, stockRecord);
+        if (merged) return;
+      }
+
+      if (table === "movimenti_ricambi" && stockRecord) {
+        if (shouldSuppressStockRealtimeForTable(table, stockRecord)) return;
+      }
+
       scheduleInvalidate(table, cabEvent ?? undefined);
       if (table === "user_permissions" || table === "profiles") {
         onAuthCriticalChange(table);

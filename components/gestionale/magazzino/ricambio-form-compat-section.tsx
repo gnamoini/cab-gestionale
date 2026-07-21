@@ -104,10 +104,12 @@ function RicambioFormCompatSectionInner({
   form,
   setForm,
   formResetKey,
+  formMode = "create",
 }: {
   form: RicambioFormState;
   setForm: SetForm;
   formResetKey?: string;
+  formMode?: "create" | "edit";
 }) {
   const globalOpts = useRicambioFormOptions();
   const prefsTree = useMemo(() => migrateMezziListePrefs(globalOpts.mezziListe), [globalOpts.mezziListe]);
@@ -369,7 +371,10 @@ function RicambioFormCompatSectionInner({
   );
 
   return (
-    <RicambioCollapsibleSection title="Compatibilità mezzi" defaultCollapsed={!hasCompatSelection}>
+    <RicambioCollapsibleSection
+      title="Compatibilità mezzi"
+      defaultCollapsed={formMode !== "create" && !hasCompatSelection}
+    >
       <div className="grid gap-3">
         {globalOpts.isLoading ? (
           <p className={dsTypoSmall}>Caricamento elenchi attrezzature e telai…</p>
@@ -529,14 +534,25 @@ function RicambioFormCompatSectionInner({
 }
 
 function compatSectionPropsEqual(
-  prev: { form: RicambioFormState; setForm: SetForm; formResetKey?: string },
-  next: { form: RicambioFormState; setForm: SetForm; formResetKey?: string },
+  prev: {
+    form: RicambioFormState;
+    setForm: SetForm;
+    formResetKey?: string;
+    formMode?: "create" | "edit";
+  },
+  next: {
+    form: RicambioFormState;
+    setForm: SetForm;
+    formResetKey?: string;
+    formMode?: "create" | "edit";
+  },
 ): boolean {
   const equal =
     prev.form.compatibilitaMezzi === next.form.compatibilitaMezzi &&
     prev.form.compatMarcheAttrezzaturaFiltro === next.form.compatMarcheAttrezzaturaFiltro &&
     prev.form.compatMarcheTelaioFiltro === next.form.compatMarcheTelaioFiltro &&
     prev.formResetKey === next.formResetKey &&
+    prev.formMode === next.formMode &&
     prev.setForm === next.setForm;
   return equal;
 }

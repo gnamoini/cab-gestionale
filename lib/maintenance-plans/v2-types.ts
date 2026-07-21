@@ -1,10 +1,13 @@
 import type {
   ConfidenceLevel,
+  MaintenanceExecutionType,
   MaintenanceIntervalType,
   MaintenanceKind,
   MaintenanceUrgency,
   ReplacementCondition,
 } from "@/lib/maintenance-plans/maintenance-enums";
+import type { PresetSnapshot } from "@/lib/maintenance-plans/preset-snapshot";
+import type { ForecastExplainability } from "@/lib/maintenance-plans/forecast/trigger-group-forecast";
 import type { EffectivePart } from "@/lib/maintenance-plans/resolve-effective-preset";
 
 export type VehicleMaintenanceConfigView = {
@@ -29,6 +32,8 @@ export type VehicleMaintenanceConfigView = {
   confidenceLevel: ConfidenceLevel | null;
   confidencePct: number | null;
   confidenceReason: string | null;
+  triggerReason: string | null;
+  explainability: ForecastExplainability | null;
   urgency: MaintenanceUrgency;
   partsCount: number;
 };
@@ -60,6 +65,9 @@ export type RegisterMaintenanceExecutionInput = {
   lavorazioneId?: string | null;
   schedaLavorazioneId?: string | null;
   performedById?: string | null;
+  executionType: MaintenanceExecutionType;
+  presetSnapshot: PresetSnapshot;
+  checklist?: { itemLabel: string; checked: boolean; note?: string; sortOrder: number }[];
   parts: {
     ricambioId: string;
     quantita: number;
@@ -90,6 +98,8 @@ export type TagliandiOverviewRow = {
   confidenceLevel: ConfidenceLevel | null;
   confidencePct: number | null;
   confidenceReason: string | null;
+  triggerReason: string | null;
+  explainability: ForecastExplainability | null;
   partsCount: number;
   urgency: MaintenanceUrgency;
   canPlanWorkshop: boolean;

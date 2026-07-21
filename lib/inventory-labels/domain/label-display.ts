@@ -1,3 +1,5 @@
+import type { LabelPayload } from "@/lib/inventory-labels/domain/types";
+
 const PLACEHOLDER_MARCA = new Set(["—", "-", "–", "nessuna marca"]);
 
 function normMarcaToken(value: string | undefined | null): string {
@@ -16,12 +18,24 @@ export function labelDisplayCaps(text: string): string {
   return t ? t.toLocaleUpperCase("it-IT") : "";
 }
 
-/** Riga marche: `BTE / OMB` se entrambe, altrimenti la presente. */
-export function formatLabelMarcaLine(marca: string, marcaSecondaria?: string): string {
-  const primary = labelMarcaToken(marca);
-  const secondary = labelMarcaToken(marcaSecondaria ?? "");
-  if (primary && secondary) return labelDisplayCaps(`${primary} / ${secondary}`);
-  return labelDisplayCaps(primary || secondary);
+/** Riga marca principale (senza secondaria). */
+export function formatLabelMarcaLine(marca: string, _marcaSecondaria?: string): string {
+  return labelDisplayCaps(labelMarcaToken(marca));
+}
+
+/** Riga marca secondaria / alternativa commerciale. */
+export function formatLabelMarcaSecondariaLine(marcaSecondaria?: string): string {
+  return labelDisplayCaps(labelMarcaToken(marcaSecondaria ?? ""));
+}
+
+export function shouldRenderMarcaSecondaria(
+  payload: Pick<LabelPayload, "marca" | "marcaSecondaria" | "fornitoreAlternativo">,
+): boolean {
+  const sec = labelMarcaToken(payload.marcaSecondaria);
+  if (!sec) return false;
+  const primary = labelMarcaToken(payload.marca);
+  const fornitore = labelMarcaToken(payload.fornitoreAlternativo);
+  return sec !== primary && sec !== fornitore;
 }
 
 /** Riga codice: `XXXX (BTE)` se marca presente. */

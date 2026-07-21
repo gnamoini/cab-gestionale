@@ -16,6 +16,7 @@ const base = {
   templateVersion: "1.2.0",
   generatorVersion: GENERATOR_VERSION,
   preset: "50x30-default",
+  canonicalOrigin: "https://cab-gestionale.vercel.app",
 };
 
 const h1 = computeLabelFingerprint(base);
@@ -27,5 +28,11 @@ const h3 = computeLabelFingerprint({
   payload: { ...base.payload, marca: "MANN" },
 });
 assert.notEqual(h1, h3);
+
+const h4 = computeLabelFingerprint({
+  ...base,
+  canonicalOrigin: "https://staging.example.com",
+});
+assert.notEqual(h1, h4);
 
 console.log("inventory-labels/domain/fingerprints.test.ts OK");

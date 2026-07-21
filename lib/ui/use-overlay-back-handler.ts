@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import {
+  clearOverlayBackResync,
+  ensureOverlayBackResync,
   registerOverlayBack,
   type OverlayCloseContext,
   type RegisterOverlayBackOptions,
 } from "@/lib/ui/overlay-back-stack";
+
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 /**
  * Collega un overlay aperto allo stack Indietro (History API).
@@ -19,16 +24,54 @@ export function useOverlayBackHandler(
 ): void {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const beforeBackRef = useRef(opts?.beforeBack);
+  beforeBackRef.current = opts?.beforeBack;
+  const resyncCleanupRef = useRef<(() => void) | null>(null);
+  const optsRef = useRef(opts);
+  optsRef.current = opts;
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (!active) return;
-    let cleanup: (() => void) | undefined;
-    const timer = window.setTimeout(() => {
-      cleanup = registerOverlayBack((ctx) => onCloseRef.current(ctx), source, opts);
-    }, 0);
-    return () => {
-      window.clearTimeout(timer);
-      cleanup?.();
+
+    const handleClose = (ctx?: OverlayCloseContext) => {
+      const beforeBack = beforeBackRef.current;
+      if (!beforeBack) {
+        onCloseRef.current(ctx);
+        return;
+      }
+
+      void (async () => {
+        let proceed = false;
+        try {
+          proceed = await beforeBack(ctx);
+        } catch {
+          proceed = false;
+        }
+        if (!proceed) {
+          if (ctx?.fromPopstate) {
+            ensureOverlayBackResync(
+              resyncCleanupRef,
+              handleClose,
+              source ?? "overlay",
+              {
+                layer: optsRef.current?.layer,
+                priority: optsRef.current?.priority,
+                blocksGestures: optsRef.current?.blocksGestures,
+              },
+            );
+          }
+          return;
+        }
+        clearOverlayBackResync(resyncCleanupRef);
+        onCloseRef.current(ctx);
+      })();
     };
-  }, [active, source, opts?.layer]);
+
+    const cleanup = registerOverlayBack(handleClose, source, optsRef.current);
+
+    return () => {
+      clearOverlayBackResync(resyncCleanupRef);
+      cleanup();
+    };
+  }, [active, source, opts?.layer, opts?.priority, opts?.blocksGestures]);
 }

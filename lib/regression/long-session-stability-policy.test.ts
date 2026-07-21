@@ -33,9 +33,10 @@ const ricambioRegistry = read("lib/magazzino/ricambio-stock-snapshot-registry.ts
 assert.match(ricambioRegistry, /RICAMBIO_STOCK_SNAPSHOT_REGISTRY_MAX/);
 assert.match(ricambioRegistry, /getRicambioStockSnapshotRegistrySize/);
 
-const scortaSync = read("lib/magazzino/scorta-adjust-sync.ts");
-assert.match(scortaSync, /queues\.delete\(ricambioId\)/);
-assert.match(scortaSync, /pendingResync/);
+const stockEntityCache = read("lib/magazzino/stock-entity-cache.ts");
+assert.match(stockEntityCache, /mergeStockEntity/);
+assert.match(stockEntityCache, /evaluateStockMerge/);
+assert.match(stockEntityCache, /getStockEntityRegistrySize/);
 
 const adminNotif = read("lib/lavorazioni/admin-notification-store.ts");
 assert.match(adminNotif, /ensureStorageBridgeListener/);

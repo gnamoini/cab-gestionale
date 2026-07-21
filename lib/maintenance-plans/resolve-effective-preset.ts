@@ -1,4 +1,4 @@
-import type { ReplacementCondition } from "@/lib/maintenance-plans/maintenance-enums";
+import type { MaintenanceIntervalType, ReplacementCondition } from "@/lib/maintenance-plans/maintenance-enums";
 
 export type EffectivePart = {
   ricambioId: string;
@@ -56,7 +56,7 @@ function toEffective(p: PresetPartSource): EffectivePart {
 export type ResolveEffectivePresetInput = {
   presetId: string;
   presetNome: string;
-  intervalType: "ore" | "km" | "giorni";
+  intervalType: MaintenanceIntervalType;
   intervalValue: number;
   baseParts: PresetPartSource[];
   vehicleOverrideParts?: PresetPartSource[];
@@ -66,7 +66,7 @@ export type ResolveEffectivePresetInput = {
 export type EffectivePreset = {
   presetId: string;
   nome: string;
-  intervalType: "ore" | "km" | "giorni";
+  intervalType: MaintenanceIntervalType;
   intervalValue: number;
   parts: EffectivePart[];
 };

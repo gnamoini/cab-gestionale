@@ -6,6 +6,7 @@ import {
   type CaptureFieldRow,
 } from "@/lib/document-capture/capture-field-mapper";
 import { emptySchedaIngressoFields } from "@/lib/domain/intervento-context/build-intervento-context";
+import { normalizeVehicleIdentifier } from "@/lib/schede/normalize-vehicle-identifier";
 import type { SchedaIngressoFields, SchedaTipo } from "@/types/schede";
 
 const MAX_LAVORAZIONI_RIGHE = 24;
@@ -119,19 +120,6 @@ function normCliente(v: string): string {
   return v.trim().toLowerCase();
 }
 
-function normTarga(v: string): string {
-  return v.replace(/\s/g, "").toUpperCase();
-}
-
-function normMatricola(v: string): string {
-  const t = v.trim();
-  return t.toUpperCase();
-}
-
-function normScuderia(v: string): string {
-  return v.trim();
-}
-
 function ingressoIdentSlice(fields: readonly CaptureFieldRow[]): IdentSlice {
   const out = emptySchedaIngressoFields();
   for (const row of fields) {
@@ -172,9 +160,9 @@ const IDENT_CHECKS: Array<{
   norm: (v: string) => string;
 }> = [
   { label: "Cliente", key: "cliente", norm: normCliente },
-  { label: "Targa", key: "targa", norm: normTarga },
-  { label: "Matricola", key: "matricola", norm: normMatricola },
-  { label: "N. scuderia", key: "nScuderia", norm: normScuderia },
+  { label: "Targa", key: "targa", norm: (v) => normalizeVehicleIdentifier("targa", v) },
+  { label: "Matricola", key: "matricola", norm: (v) => normalizeVehicleIdentifier("matricola", v) },
+  { label: "N. scuderia", key: "nScuderia", norm: (v) => normalizeVehicleIdentifier("scuderia", v) },
 ];
 
 function collectDistinctLabels(

@@ -20,7 +20,7 @@ export function filterPlansForTipoId(
 ): MaintenancePlanView[] {
   if (!tipoAttrezzaturaId) return [];
   return plans.filter(
-    (p) => p.isActive && p.tipoIds.includes(tipoAttrezzaturaId),
+    (p) => p.isActive && p.status === "active" && p.tipoIds.includes(tipoAttrezzaturaId),
   );
 }
 

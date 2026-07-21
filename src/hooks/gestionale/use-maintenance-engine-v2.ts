@@ -64,6 +64,7 @@ export function useMaintenancePresetHierarchyQuery(enabled = true) {
 
 async function invalidateV2(qc: ReturnType<typeof useQueryClient>, mezzoId?: string) {
   await qc.invalidateQueries({ queryKey: maintenancePlansQueryKeys.root });
+  await qc.invalidateQueries({ queryKey: maintenanceEngineV2QueryKeys.overview() });
   if (mezzoId) {
     await qc.invalidateQueries({ queryKey: maintenanceEngineV2QueryKeys.mezzoConfigs(mezzoId) });
   }

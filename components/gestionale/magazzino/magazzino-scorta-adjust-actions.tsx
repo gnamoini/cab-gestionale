@@ -28,6 +28,7 @@ function IconPlusScorta({ className = scortaGlyph }: { className?: string }) {
 export function MagazzinoScortaAdjustActions({
   canAdjust,
   modalitaModifica = false,
+  pending = false,
   onDecrease,
   onIncrease,
   className = "",
@@ -35,14 +36,17 @@ export function MagazzinoScortaAdjustActions({
   canAdjust: boolean;
   /** Modalità modifica attiva: − e + primari; altrimenti entrambi neutri. */
   modalitaModifica?: boolean;
+  /** Mutation o journal in corso per la riga. */
+  pending?: boolean;
   onDecrease: () => void;
   onIncrease: () => void;
   className?: string;
 }) {
-  const readonlyTip = canAdjust ? undefined : READONLY_PERMISSION_HINT;
+  const readonlyTip = canAdjust ? (pending ? "Aggiornamento in corso…" : undefined) : READONLY_PERMISSION_HINT;
   const actionClass = modalitaModifica ? dsTableActionBtnPrimary : dsTableActionBtnSecondary;
   const decreaseLabel = modalitaModifica ? "Scarico" : "Rettifica −";
   const increaseLabel = modalitaModifica ? "Carico" : "Rettifica +";
+  const busy = pending && canAdjust;
 
   return (
     <div
@@ -54,7 +58,7 @@ export function MagazzinoScortaAdjustActions({
         label={decreaseLabel}
         tooltipContent={readonlyTip}
         className={actionClass}
-        disabled={!canAdjust}
+        disabled={!canAdjust || busy}
         onClick={onDecrease}
       >
         <IconMinusScorta />
@@ -63,7 +67,7 @@ export function MagazzinoScortaAdjustActions({
         label={increaseLabel}
         tooltipContent={readonlyTip}
         className={actionClass}
-        disabled={!canAdjust}
+        disabled={!canAdjust || busy}
         onClick={onIncrease}
       >
         <IconPlusScorta />
@@ -73,7 +77,10 @@ export function MagazzinoScortaAdjustActions({
 }
 
 const infoStepperShellClass =
-  "inline-flex max-w-full items-stretch overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] shadow-[var(--cab-shadow-sm)] transition-[border-color,box-shadow] duration-150 focus-within:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]";
+  "inline-flex max-w-full items-stretch overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] shadow-[var(--cab-shadow-sm)] transition-[border-color,box-shadow] duration-300";
+
+const infoStepperSuccessClass =
+  "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]";
 
 const infoStepperBtnClass = `inline-flex h-10 w-10 min-h-10 min-w-10 shrink-0 select-none items-center justify-center border-0 bg-transparent p-0 text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)] disabled:cursor-not-allowed disabled:opacity-45 ${dsFocus} touch-manipulation [-webkit-tap-highlight-color:transparent] transition-[background-color,transform] duration-150 active:scale-[0.97]`;
 
@@ -89,6 +96,7 @@ export function MagazzinoScortaInfoStepper({
   low,
   canAdjust,
   modalitaModifica = false,
+  successFlash = false,
   onDecrease,
   onIncrease,
   onSetValue,
@@ -97,6 +105,8 @@ export function MagazzinoScortaInfoStepper({
   low: boolean;
   canAdjust: boolean;
   modalitaModifica?: boolean;
+  /** Feedback visivo breve dopo modifica scorta riuscita. */
+  successFlash?: boolean;
   onDecrease: () => void;
   onIncrease: () => void;
   onSetValue: (target: number) => void;
@@ -136,14 +146,21 @@ export function MagazzinoScortaInfoStepper({
   return (
     <div className="space-y-1">
       <p className="text-[10px] font-medium uppercase tracking-wide text-[color:var(--cab-text-muted)]">{modeHint}</p>
-      <div role="group" aria-label="Scorta" className={infoStepperShellClass}>
+      <div
+        role="group"
+        aria-label="Scorta"
+        className={`${infoStepperShellClass}${successFlash ? ` ${infoStepperSuccessClass}` : ""}`}
+      >
       <button
         type="button"
         className={`${infoStepperBtnClass} ${btnTone} rounded-none border-r border-[color:var(--cab-border)]`}
         aria-label={decreaseAria}
         title={readonlyTitle}
         disabled={!canAdjust}
-        onClick={onDecrease}
+        onClick={() => {
+          onDecrease();
+          (document.activeElement as HTMLElement | null)?.blur();
+        }}
       >
         <IconMinusScorta />
       </button>
@@ -174,7 +191,10 @@ export function MagazzinoScortaInfoStepper({
         aria-label={increaseAria}
         title={readonlyTitle}
         disabled={!canAdjust}
-        onClick={onIncrease}
+        onClick={() => {
+          onIncrease();
+          (document.activeElement as HTMLElement | null)?.blur();
+        }}
       >
         <IconPlusScorta />
       </button>

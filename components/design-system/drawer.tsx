@@ -29,6 +29,7 @@ import {
   gestionaleModalScrollBodyMobileClass,
 } from "@/lib/ui/mobile-modal-behavior";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import { OverlayLayerPriority } from "@/lib/ui/overlay-back-stack";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { useMobileModalKeyboard } from "@/lib/ui/use-mobile-modal-keyboard";
@@ -141,7 +142,13 @@ export function Drawer({
     onClose();
   }, [onClose]);
 
-  useOverlayBackHandler(isActive, requestClose, "design-system-Drawer");
+  useOverlayBackHandler(isActive, () => {
+    if (onBack) onBack();
+    else requestClose();
+  }, "design-system-Drawer", {
+    layer: "drawer",
+    priority: OverlayLayerPriority.drawer,
+  });
   useMobileModalKeyboard(asideRef);
 
   useEffect(() => {

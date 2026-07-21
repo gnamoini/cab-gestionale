@@ -9,21 +9,18 @@ export type DisabledElementTooltipProps = Omit<TooltipProps, "children"> & {
   disabled?: boolean;
 };
 
-/** Tooltip su controlli disabled — wrap span per eventi pointer. */
+/** Tooltip su controlli disabled — nessun tooltip se il controllo è attivo (evita duplicati sul label). */
 export function DisabledElementTooltip({
   content,
   disabled = false,
   children,
   ...rest
 }: DisabledElementTooltipProps) {
-  const wrapped = disabled ? (
-    <span className="flex w-full min-w-0 [&>button]:w-full">{children}</span>
-  ) : (
-    children
-  );
+  if (!disabled) return children;
+
   return (
     <Tooltip content={content} {...rest}>
-      {wrapped}
+      <span className="flex w-full min-w-0 [&>button]:w-full">{children}</span>
     </Tooltip>
   );
 }

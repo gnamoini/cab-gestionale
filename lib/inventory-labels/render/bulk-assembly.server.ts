@@ -17,6 +17,7 @@ export type BulkLabelItem = {
   entityType: string;
   payload: LabelPayload;
   qrUrl: string;
+  canonicalOrigin: string;
 };
 
 export type BulkAssemblyStats = {
@@ -39,6 +40,7 @@ async function resolveLabelPngBytes(
     generatorVersion: GENERATOR_VERSION,
     preset,
     includeBarcode,
+    canonicalOrigin: item.canonicalOrigin.replace(/\/+$/, ""),
   });
 
   const cached = await getLabelArtifactByHash(sb, {

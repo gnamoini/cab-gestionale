@@ -14,6 +14,7 @@ const item: BulkLabelItem = {
     codiceAlternativo: "",
   },
   qrUrl: "https://example.test/r/abc",
+  canonicalOrigin: "https://example.test",
 };
 
 assert.equal(item.entityId.length, 36);

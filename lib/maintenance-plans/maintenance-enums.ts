@@ -2,8 +2,20 @@
  * SSOT enums — Maintenance Planning Engine v2
  */
 
-export const MAINTENANCE_INTERVAL_TYPES = ["ore", "km", "giorni"] as const;
+export const MAINTENANCE_INTERVAL_TYPES = ["ore", "km", "giorni", "mesi"] as const;
 export type MaintenanceIntervalType = (typeof MAINTENANCE_INTERVAL_TYPES)[number];
+
+export const MAINTENANCE_PRESET_STATUSES = ["active", "draft", "archived"] as const;
+export type MaintenancePresetStatus = (typeof MAINTENANCE_PRESET_STATUSES)[number];
+
+export const MAINTENANCE_EXECUTION_TYPES = ["scheduled", "corrective", "manual", "emergency"] as const;
+export type MaintenanceExecutionType = (typeof MAINTENANCE_EXECUTION_TYPES)[number];
+
+export const MAINTENANCE_TRIGGER_GROUP_OPERATORS = ["OR", "AND"] as const;
+export type MaintenanceTriggerGroupOperator = (typeof MAINTENANCE_TRIGGER_GROUP_OPERATORS)[number];
+
+export const MAINTENANCE_WAREHOUSE_STATUSES = ["pending", "reserved", "issued", "skipped", "completed", "failed", "ignored"] as const;
+export type MaintenanceWarehouseStatus = (typeof MAINTENANCE_WAREHOUSE_STATUSES)[number];
 
 export const MAINTENANCE_KINDS = [
   "tagliando_ore",
@@ -40,6 +52,26 @@ export const MAINTENANCE_KIND_LABELS: Record<MaintenanceKind, string> = {
   controllo_idraulico: "Controllo idraulico",
   filtri: "Filtri",
   custom: "Personalizzato",
+};
+
+export const MAINTENANCE_PRESET_STATUS_LABELS: Record<MaintenancePresetStatus, string> = {
+  active: "Attivo",
+  draft: "Bozza",
+  archived: "Archiviato",
+};
+
+export const MAINTENANCE_EXECUTION_TYPE_LABELS: Record<MaintenanceExecutionType, string> = {
+  scheduled: "Pianificato",
+  corrective: "Correttivo",
+  manual: "Manuale",
+  emergency: "Emergenza",
+};
+
+export const MAINTENANCE_INTERVAL_TYPE_LABELS: Record<MaintenanceIntervalType, string> = {
+  ore: "ore",
+  km: "km",
+  giorni: "giorni",
+  mesi: "mesi",
 };
 
 export const REPLACEMENT_CONDITION_LABELS: Record<ReplacementCondition, string> = {

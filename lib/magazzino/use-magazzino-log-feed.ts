@@ -7,6 +7,7 @@ import {
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import {
   mergeMagazzinoLogFeed,
+  movimentoIdFromLogRow,
   ricambioIdFromMovimentoRow,
   type MagazzinoLogFeedItem,
 } from "@/lib/magazzino/magazzino-log-feed-merge";
@@ -62,7 +63,10 @@ export function useMagazzinoLogFeed(opts: {
       return undefined;
     };
 
-    return buildLogModificheDisplayEntries(serverRows, resolveAutore, { resolveOggetto }).map((entry) => ({
+    return buildLogModificheDisplayEntries(serverRows, resolveAutore, {
+      resolveOggetto,
+      suppressRevertedOriginals: false,
+    }).map((entry) => ({
       id: entry.id,
       source: "server" as const,
       ricambioId:
@@ -70,6 +74,8 @@ export function useMagazzinoLogFeed(opts: {
           ? entry.row.entita_id
           : ricambioIdFromMovimentoRow(entry.row) ?? entry.row.entita_id,
       vm: entry.vm,
+      serverRow: entry.row,
+      movimentoId: movimentoIdFromLogRow(entry.row),
       atMs: new Date(entry.row.created_at).getTime(),
     }));
   }, [enabled, serverRows, opts.authorName, opts.userId, prodottiById]);

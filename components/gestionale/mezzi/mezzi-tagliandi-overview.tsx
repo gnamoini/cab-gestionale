@@ -6,6 +6,7 @@ import { GestionaleListTable, GlobalTableHeadLabel } from "@/components/gestiona
 import { URGENCY_LABELS, URGENCY_ROW_CLASS } from "@/lib/maintenance-plans/compute-maintenance-urgency";
 import { isMaintenanceEngineV2Enabled } from "@/lib/officina/maintenance-engine-v2-flag";
 import { groupOverviewByInterval } from "@/lib/maintenance-plans/resolve-mezzo-metering";
+import { selectDashboardMaintenanceCards } from "@/lib/maintenance-plans/kpi/maintenance-kpi-selectors";
 import type { TagliandiOverviewRow } from "@/lib/maintenance-plans/v2-types";
 import { gestionaleListTableRowBaseClass, gestionaleListTableTd } from "@/lib/ui/gestionale-list-table";
 import { useTagliandiOverviewQuery } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
@@ -64,9 +65,10 @@ function OverviewTable({
               {row.remainingValue != null ? Math.round(row.remainingValue) : "—"}
             </td>
             <td className={gestionaleListTableTd}>{fmtDate(row.nextDateEstimated)}</td>
-            <td className={gestionaleListTableTd} title={row.confidenceReason ?? undefined}>
+            <td className={gestionaleListTableTd} title={row.explainability?.trigger_reason ? JSON.stringify(row.explainability) : row.confidenceReason ?? undefined}>
               {row.confidenceLevel ?? "—"}
-              {row.confidencePct != null ? ` (${row.confidencePct}%)` : ""}
+              {row.triggerReason ? ` (${row.triggerReason})` : ""}
+              {row.confidencePct != null ? ` ${row.confidencePct}%` : ""}
             </td>
             <td className={gestionaleListTableTd}>{URGENCY_LABELS[row.urgency]}</td>
             <td className={gestionaleListTableTd}>
@@ -108,6 +110,7 @@ export function MezziTagliandiOverview({ canEdit }: { canEdit: boolean }) {
   }, [overviewQ.data, search]);
 
   const groups = useMemo(() => groupOverviewByInterval(filtered), [filtered]);
+  const kpi = useMemo(() => selectDashboardMaintenanceCards(filtered), [filtered]);
 
   if (overviewQ.isLoading) {
     return <div className="p-4 text-sm text-[color:var(--cab-text-muted)]">Caricamento overview tagliandi…</div>;
@@ -132,6 +135,24 @@ export function MezziTagliandiOverview({ canEdit }: { canEdit: boolean }) {
 
   return (
     <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-3 text-sm">
+          <div className="text-[color:var(--cab-text-muted)]">Prossimi 7 giorni</div>
+          <div className="text-lg font-semibold">{kpi.prossimi7g}</div>
+        </div>
+        <div className="rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-3 text-sm">
+          <div className="text-[color:var(--cab-text-muted)]">Prossimi 30 giorni</div>
+          <div className="text-lg font-semibold">{kpi.prossimi30g}</div>
+        </div>
+        <div className="rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-3 text-sm">
+          <div className="text-[color:var(--cab-text-muted)]">Scaduti</div>
+          <div className="text-lg font-semibold text-red-700 dark:text-red-300">{kpi.scaduti}</div>
+        </div>
+        <div className="rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-3 text-sm">
+          <div className="text-[color:var(--cab-text-muted)]">Mezzi critici</div>
+          <div className="text-lg font-semibold">{kpi.mezziCritici}</div>
+        </div>
+      </div>
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="search"
@@ -145,7 +166,7 @@ export function MezziTagliandiOverview({ canEdit }: { canEdit: boolean }) {
       {groups.map((g) => (
         <OverviewTable
           key={g.key}
-          title={`${g.intervalType === "ore" ? "Ore" : g.intervalType === "km" ? "Km" : "Giorni"} — ${g.intervalValue}`}
+          title={`${g.intervalType} — ${g.intervalValue}`}
           rows={g.rows}
           canEdit={canEdit}
         />

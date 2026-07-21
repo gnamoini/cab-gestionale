@@ -8,6 +8,7 @@ import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 
 async function invalidateMaintenancePlans(qc: ReturnType<typeof useQueryClient>, mezzoId?: string) {
   await qc.invalidateQueries({ queryKey: maintenancePlansQueryKeys.root });
+  await qc.invalidateQueries({ queryKey: [...maintenancePlansQueryKeys.root, "overview"] });
   if (mezzoId) {
     await qc.invalidateQueries({ queryKey: [...maintenancePlansQueryKeys.root, "statuses", mezzoId] });
     await qc.invalidateQueries({ queryKey: maintenancePlansQueryKeys.mezzoHistory(mezzoId) });

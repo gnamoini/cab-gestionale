@@ -3,7 +3,7 @@
  */
 import { getCabSyncListenerCount } from "@/lib/sync/cab-sync-bus";
 import { getRicambioStockSnapshotRegistrySize } from "@/lib/magazzino/ricambio-stock-snapshot-registry";
-import { getScortaSyncQueueSize } from "@/lib/magazzino/scorta-adjust-sync";
+import { getStockEntityRegistrySize } from "@/lib/magazzino/stock-entity-cache";
 import { getRuntimeHealthSnapshot } from "@/lib/observability/runtime-health";
 import { getGestionaleRealtimeRuntimeMode } from "@/lib/realtime/gestionale-realtime-runtime";
 import type { LongSessionMetricsSnapshot } from "@/lib/observability/long-session-metrics";
@@ -14,7 +14,7 @@ export function collectLongSessionMetricsNode(): LongSessionMetricsSnapshot {
     at: new Date().toISOString(),
     cabSyncListeners: getCabSyncListenerCount(),
     ricambioSnapshotRegistrySize: getRicambioStockSnapshotRegistrySize(),
-    scortaSyncQueueSize: getScortaSyncQueueSize(),
+    scortaSyncQueueSize: getStockEntityRegistrySize(),
     runtimeHealth: getRuntimeHealthSnapshot(),
     gestionaleRealtimeMode: getGestionaleRealtimeRuntimeMode(),
     gestionaleDispatchAppliedTotal: 0,

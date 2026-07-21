@@ -9,6 +9,7 @@ import {
 } from "@/lib/maintenance-plans/tagliando-due-eval";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
+import { mockMaintenancePlanView } from "@/lib/maintenance-plans/test-fixtures";
 
 const baseMezzo = {
   id: "m1",
@@ -28,15 +29,13 @@ const baseMezzo = {
   tagliandi: true,
 } satisfies MezzoGestito;
 
-const plan: MaintenancePlanView = {
+const plan: MaintenancePlanView = mockMaintenancePlanView({
   id: "p1",
   nome: "Tagliando 500h",
   intervalOre: 500,
-  isActive: true,
   tipoLabels: ["Escavatore"],
   tipoIds: ["tipo-esc"],
-  parts: [],
-};
+});
 
 const catalog = [{ id: "tipo-esc", label: "Escavatore" }];
 

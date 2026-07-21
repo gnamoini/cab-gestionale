@@ -57,6 +57,7 @@ function uiItemToRow(
     return {
       ...existing,
       quantita: Math.max(0, Math.round(ui.scorta)),
+      stock_version: existing.stock_version ?? 0,
       meta: patchRowMetaAutore(existing.meta, ui.autoreUltimaModifica),
       updated_at: ui.dataUltimaModifica,
     };

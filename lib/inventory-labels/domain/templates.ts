@@ -92,6 +92,15 @@ export function computeLabelLayout(widthMm: number, heightMm: number): LabelTemp
     },
     {
       type: "text",
+      field: "marcaSecondaria",
+      xMm: textX,
+      yMm: m,
+      fontPt: primaryPt,
+      maxWidthMm: textW,
+      zoneBottomMm: topGroupBottomMm,
+    },
+    {
+      type: "text",
       field: "codiceSecondario",
       xMm: textX,
       yMm: m,
@@ -134,7 +143,7 @@ export function computeLabelLayout(widthMm: number, heightMm: number): LabelTemp
 function buildTemplate(id: string, widthMm: number, heightMm: number): LabelTemplateDefinition {
   return {
     id,
-    version: "1.6.5",
+    version: "1.6.6",
     widthMm,
     heightMm,
     dpi: 300,
