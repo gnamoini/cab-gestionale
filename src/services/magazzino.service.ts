@@ -119,6 +119,15 @@ export const magazzinoService = {
           const ex = existing as MagazzinoRicambioRow;
           await writeModificaLog(c, { entita: ENTITA, entita_id: id, azione: "DELETE", payload: auditSnapshot(ex, oggettoRicambio(ex)) });
         }
+        await c
+          .from("inventory_qr_tokens")
+          .update({
+            status: "revoked",
+            revoked_at: new Date().toISOString(),
+          })
+          .eq("entity_type", "magazzino_ricambio")
+          .eq("entity_id", id)
+          .eq("status", "active");
         const { error } = await c.from("magazzino_ricambi").delete().eq("id", id);
         if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
         return success(null);

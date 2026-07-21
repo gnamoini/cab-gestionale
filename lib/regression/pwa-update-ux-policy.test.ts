@@ -20,10 +20,14 @@ const swUpdate = read("lib/pwa/sw-update.ts");
 assert.doesNotMatch(swUpdate, /if\s*\(\s*registration\.waiting\s*\)\s*\{\s*onUpdateAvailable\(\)/);
 assert.match(swUpdate, /shouldNotifyServiceWorkerUpdateAfterBootstrap/);
 assert.match(swUpdate, /refreshServiceWorkerUpdateCheck/);
+assert.match(swUpdate, /tryAutoApplyOnColdStart/);
+assert.match(swUpdate, /markPwaSessionActive/);
+assert.match(swUpdate, /bootstrapServiceWorkerUpdateFlow/);
 
 const bridge = read("src/components/pwa-service-worker-bridge.tsx");
 assert.match(bridge, /subscribedAtMs/);
 assert.match(bridge, /visibilitychange/);
+assert.match(bridge, /bootstrapServiceWorkerUpdateFlow/);
 assert.doesNotMatch(bridge, /requestAnimationFrame/);
 
 const banner = read("src/components/pwa-update-banner.tsx");

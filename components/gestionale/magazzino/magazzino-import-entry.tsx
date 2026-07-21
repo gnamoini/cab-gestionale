@@ -35,7 +35,7 @@ export function MagazzinoImportMenu({
   const perm = usePermissions("magazzino");
   const permissionCtx = {
     magazzinoWrite: perm.canWrite,
-    magazzinoAdmin: false,
+    magazzinoAdmin: perm.canWrite,
     manageSettings: false,
     moduleWrite: { magazzino: perm.canWrite },
   };

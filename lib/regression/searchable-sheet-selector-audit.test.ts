@@ -76,6 +76,7 @@ assert.match(resolveSuggestions, /if \(selectOnly \|\| useSheet\)/);
 const ghostGuard = read("lib/selector-interaction/suppress-selector-ghost-click.ts");
 assert.match(ghostGuard, /armSelectorGhostClickGuard/);
 assert.match(ghostGuard, /blockOnce/);
+assert.match(ghostGuard, /if \(armed\)/);
 assert.match(sheet, /armSelectorGhostClickGuard/);
 assert.match(sheet, /cab-app-shell/);
 assert.match(sheet, /healBodyScrollLockState\("sheet-close"\)/);

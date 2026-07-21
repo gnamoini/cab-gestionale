@@ -27,6 +27,9 @@ import {
   type RicambioConsumoDaLog,
 } from "@/lib/magazzino/ricambio-consumo-from-log";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { RicambioOperationalStatusCard } from "@/components/gestionale/magazzino/ricambio-operational-status-card";
+import { RicambioMovimentiSection } from "@/components/gestionale/magazzino/ricambio-movimenti-section";
+import { RicambioOrdiniSection } from "@/components/gestionale/magazzino/ricambio-ordini-section";
 
 function multilineValue(value: string): ReactNode {
   const t = value.trim();
@@ -81,6 +84,8 @@ export function RicambioInfoPanel({
   canAdjustScorta,
   modalitaModifica = false,
   onAdjustScorta,
+  onSetScorta,
+  stockPolicyRaw,
 }: {
   ricambio: RicambioMagazzino;
   compatDisplay: string;
@@ -94,6 +99,8 @@ export function RicambioInfoPanel({
   canAdjustScorta?: boolean;
   modalitaModifica?: boolean;
   onAdjustScorta?: (delta: number) => void;
+  onSetScorta?: (target: number) => void;
+  stockPolicyRaw?: unknown;
 }) {
   const low = ricambio.scorta < ricambio.scortaMinima;
   const ultimaModifica = new Date(ricambio.dataUltimaModifica).toLocaleString("it-IT", {
@@ -107,6 +114,13 @@ export function RicambioInfoPanel({
 
   return (
     <div className="space-y-3">
+      <RicambioOperationalStatusCard
+        descrizione={ricambio.descrizione}
+        scorta={ricambio.scorta}
+        scortaMinima={ricambio.scortaMinima}
+        consumo={consumo}
+        stockPolicyRaw={stockPolicyRaw}
+      />
       <RicambioCollapsibleSection title="Dati principali" defaultCollapsed={false}>
         {ricambio.listinoImport?.generatoAutomaticamente ? (
           <div className="mb-2 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))] px-3 py-2">
@@ -164,6 +178,7 @@ export function RicambioInfoPanel({
                 modalitaModifica={modalitaModifica}
                 onDecrease={() => onAdjustScorta(-1)}
                 onIncrease={() => onAdjustScorta(1)}
+                onSetValue={(target) => onSetScorta?.(target)}
               />
             ) : (
               <MagazzinoScortaBadge value={ricambio.scorta} low={low} variant="table" />
@@ -232,6 +247,9 @@ export function RicambioInfoPanel({
         markupPct={ricambio.markupPercentuale}
         prezzoVendita={ricambio.prezzoVendita}
       />
+
+      <RicambioMovimentiSection ricambioId={ricambio.id} />
+      <RicambioOrdiniSection ricambioId={ricambio.id} />
 
       <RicambioCollapsibleSection title="Storico modifiche" defaultCollapsed>
         <ul className="space-y-2">

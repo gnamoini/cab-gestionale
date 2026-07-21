@@ -11,14 +11,14 @@ const RISK_MODIFIERS: RiskModifierDefinition[] = [
       if (inactive <= 0) {
         return { penalty: 0, motivation: "Nessuna stagnazione rilevata", trace: [] };
       }
-      const penalty = Math.min(excess * 4 + inactive * 1.5, 15);
+      const penalty = Math.min(inactive, 15);
       return {
         penalty,
         motivation: `${inactive} lavorazioni ferme oltre la media degli stati di attesa`,
         trace: [
           {
             step: "stagnation_penalty",
-            formula: "min(15, weightedExcessDays * 4 + count * 1.5)",
+            formula: "min(15, count * 1)",
             input: { count: inactive, weightedExcessDays: excess },
             output: penalty,
           },

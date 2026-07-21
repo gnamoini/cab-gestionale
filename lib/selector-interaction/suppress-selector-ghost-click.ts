@@ -22,7 +22,11 @@ function disarm(): void {
 export function armSelectorGhostClickGuard(): void {
   if (typeof document === "undefined") return;
 
-  disarm();
+  if (armed) {
+    if (disarmTimer) clearTimeout(disarmTimer);
+    disarmTimer = setTimeout(disarm, SELECTOR_GHOST_CLICK_GUARD_MS);
+    return;
+  }
 
   armed = true;
 

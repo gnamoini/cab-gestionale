@@ -2,6 +2,8 @@
 
 import { MAGAZZINO_RICAMBI_COLUMNS, MOVIMENTI_RICAMBI_COLUMNS } from "@/lib/db/table-select-columns";
 import { fetchMovimentiListRows } from "@/lib/movimenti/movimenti-list-fetch";
+import { buildStockMovementAuditPayload } from "@/lib/magazzino/stock-audit-payload";
+import type { StockMovementOrigin } from "@/lib/magazzino/stock-movement-origin";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { auditDiff, auditSnapshot, commitCriticalMutation, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -11,12 +13,19 @@ import { errMessageFromSupabase, serviceFailFromError } from "@/src/utils/supaba
 const ENTITA = "movimenti_ricambi";
 const ENT_MAG = "magazzino_ricambi";
 
+export type MovimentoCreateOptions = {
+  operationId?: string | null;
+  origine?: StockMovementOrigin;
+  causale?: string;
+  meta?: MovimentoRicambioRow["meta"];
+};
+
 function num(v: unknown): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Segno applicazione movimento su giacenza: entrata +, uscita −. reverse inverte (per delete / rollback). */
+/** Segno applicazione movimento su giacenza. reverse = rollback tecnico intra-mutation (R-18). */
 function stockDelta(tipo: TipoMovimentoRicambio, quantita: number, reverse: boolean): number {
   const base = tipo === "entrata" ? 1 : -1;
   const s = reverse ? -base : base;
@@ -27,8 +36,13 @@ async function applyStockForMovement(
   c: Awaited<ReturnType<typeof getBrowserSupabase>>,
   mov: Pick<MovimentoRicambioRow, "ricambio_id" | "tipo" | "quantita">,
   reverse: boolean,
+  audit?: { origine: StockMovementOrigin; causale: string; operationId?: string | null },
 ): Promise<ServiceResult<MagazzinoRicambioRow>> {
-  const { data: ric, error: e1 } = await c.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS).eq("id", mov.ricambio_id).maybeSingle();
+  const { data: ric, error: e1 } = await c
+    .from("magazzino_ricambi")
+    .select(MAGAZZINO_RICAMBI_COLUMNS)
+    .eq("id", mov.ricambio_id)
+    .maybeSingle();
   if (e1) return err(errMessageFromSupabase(e1, { module: "magazzino" }));
   if (!ric) return err("Ricambio non trovato");
   const before = ric as MagazzinoRicambioRow;
@@ -36,19 +50,32 @@ async function applyStockForMovement(
   const dq = stockDelta(mov.tipo, num(mov.quantita), reverse);
   const q1 = q0 + dq;
   if (q1 < 0) return err("Giacenza insufficiente per il movimento richiesto");
-  const { data: after, error: e2 } = await c
-    .from("magazzino_ricambi")
-    .update({ quantita: q1 })
-    .eq("id", mov.ricambio_id)
-    .select(MAGAZZINO_RICAMBI_COLUMNS)
-    .single();
+
+  let updateQuery = c.from("magazzino_ricambi").update({ quantita: q1 }).eq("id", mov.ricambio_id);
+  if (q1 < q0) {
+    updateQuery = updateQuery.gte("quantita", q0 - q1);
+  }
+  const { data: after, error: e2 } = await updateQuery.select(MAGAZZINO_RICAMBI_COLUMNS).maybeSingle();
   if (e2) return err(errMessageFromSupabase(e2, { module: "magazzino" }));
+  if (!after) return err("Giacenza insufficiente per il movimento richiesto");
   const updated = after as MagazzinoRicambioRow;
+
+  const stockPayload = audit
+    ? buildStockMovementAuditPayload({
+        ricambioId: mov.ricambio_id,
+        quantitaBefore: q0,
+        quantitaAfter: num(updated.quantita),
+        origine: audit.origine,
+        causale: audit.causale,
+        operationId: audit.operationId,
+      })
+    : auditDiff(before, updated);
+
   await writeModificaLog(c, {
     entita: ENT_MAG,
     entita_id: mov.ricambio_id,
     azione: "UPDATE",
-    payload: auditDiff(before, updated),
+    payload: stockPayload,
   });
   return success(updated);
 }
@@ -56,9 +83,7 @@ async function applyStockForMovement(
 export type MovimentiFilters = {
   ricambio_id?: string;
   lavorazione_id?: string;
-  /** Filtro OR su più lavorazioni (es. tutte le lavorazioni di un mezzo). */
   lavorazione_ids?: string[];
-  /** Join lavorazioni!inner — movimenti di tutte le lavorazioni del mezzo (1 query). */
   mezzo_id?: string;
   tipo?: TipoMovimentoRicambio;
 };
@@ -68,6 +93,19 @@ export type MovimentoUpdate = Partial<Pick<MovimentoRicambioRow, "tipo" | "quant
 
 async function sb() {
   return getBrowserSupabase();
+}
+
+async function findByOperationId(
+  c: Awaited<ReturnType<typeof getBrowserSupabase>>,
+  operationId: string,
+): Promise<MovimentoRicambioRow | null> {
+  const { data, error } = await c
+    .from("movimenti_ricambi")
+    .select(MOVIMENTI_RICAMBI_COLUMNS)
+    .eq("operation_id", operationId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as MovimentoRicambioRow;
 }
 
 export const movimentiService = {
@@ -92,16 +130,46 @@ export const movimentiService = {
     }
   },
 
-  async create(data: MovimentoInsert): Promise<ServiceResult<MovimentoRicambioRow>> {
+  async create(data: MovimentoInsert, options?: MovimentoCreateOptions): Promise<ServiceResult<MovimentoRicambioRow>> {
     try {
       const c = await sb();
-      return await commitCriticalMutation(c, async () => {
-        const stock = await applyStockForMovement(c, data, false);
-        if (!stock.success) return err(stock.error ?? "Aggiornamento giacenza fallito");
+      const operationId = options?.operationId?.trim() || data.operation_id?.trim() || null;
+      const origine = options?.origine ?? (data.meta?.origine as StockMovementOrigin | undefined) ?? "manual_adjustment";
+      const causale = options?.causale ?? data.meta?.causale ?? (data.tipo === "entrata" ? "carico" : "scarico");
 
-        const { data: row, error } = await c.from("movimenti_ricambi").insert(data).select(MOVIMENTI_RICAMBI_COLUMNS).single();
+      if (operationId) {
+        const existing = await findByOperationId(c, operationId);
+        if (existing) return success(existing);
+      }
+
+      return await commitCriticalMutation(c, async () => {
+        const stock = await applyStockForMovement(c, data, false, {
+          origine,
+          causale,
+          operationId,
+        });
+        if (!stock.success || !stock.data) return err(stock.error ?? "Aggiornamento giacenza fallito");
+        const quantitaAfter = num(stock.data.quantita);
+        const quantitaBefore = quantitaAfter - stockDelta(data.tipo, num(data.quantita), false);
+
+        const insertPayload: MovimentoInsert = {
+          ...data,
+          operation_id: operationId,
+          meta: {
+            ...(data.meta ?? {}),
+            ...(options?.meta ?? {}),
+            origine,
+            causale,
+          },
+        };
+
+        const { data: row, error } = await c.from("movimenti_ricambi").insert(insertPayload).select(MOVIMENTI_RICAMBI_COLUMNS).single();
         if (error) {
           await applyStockForMovement(c, data, true);
+          if (operationId) {
+            const raced = await findByOperationId(c, operationId);
+            if (raced) return success(raced);
+          }
           return err(errMessageFromSupabase(error, { module: "magazzino" }));
         }
         const r = row as MovimentoRicambioRow;
@@ -109,7 +177,15 @@ export const movimentiService = {
           entita: ENTITA,
           entita_id: r.id,
           azione: "CREATE",
-          payload: auditSnapshot(r),
+          payload: buildStockMovementAuditPayload({
+            ricambioId: r.ricambio_id,
+            quantitaBefore,
+            quantitaAfter,
+            origine,
+            causale,
+            movimentoId: r.id,
+            operationId,
+          }),
         });
         return success(r);
       });
@@ -118,7 +194,33 @@ export const movimentiService = {
     }
   },
 
+  /** R-18: storno operativo — nuovo movimento inverso, nessun DELETE. */
+  async storno(id: string, options?: { operationId?: string; causale?: string }): Promise<ServiceResult<MovimentoRicambioRow>> {
+    const got = await this.getById(id);
+    if (!got.success || !got.data) return err(got.error ?? "Movimento non trovato");
+    const original = got.data;
+    const inverse: TipoMovimentoRicambio = original.tipo === "entrata" ? "uscita" : "entrata";
+    return this.create(
+      {
+        ricambio_id: original.ricambio_id,
+        lavorazione_id: original.lavorazione_id,
+        tipo: inverse,
+        quantita: original.quantita,
+        conta_statistiche: original.conta_statistiche,
+        meta: { storno_di: original.id, causale: options?.causale ?? "storno_operativo", origine: "storno" },
+      },
+      {
+        operationId: options?.operationId,
+        origine: "storno",
+        causale: options?.causale ?? "storno_operativo",
+      },
+    );
+  },
+
   async update(id: string, data: MovimentoUpdate): Promise<ServiceResult<MovimentoRicambioRow>> {
+    if (data.tipo != null || data.quantita != null) {
+      return err("Modifica movimento contabilizzato non consentita. Usa storno.");
+    }
     try {
       const c = await sb();
       const { data: oldRow, error: e0 } = await c.from("movimenti_ricambi").select(MOVIMENTI_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
@@ -126,55 +228,9 @@ export const movimentiService = {
       if (!oldRow) return err("Movimento non trovato");
       const old = oldRow as MovimentoRicambioRow;
 
-      const affectsStock = data.tipo != null || data.quantita != null;
-
-      if (!affectsStock) {
-        return await commitCriticalMutation(c, async () => {
-          const { data: row, error } = await c.from("movimenti_ricambi").update(data).eq("id", id).select(MOVIMENTI_RICAMBI_COLUMNS).single();
-          if (error) return err(errMessageFromSupabase(error, { module: "magazzino" }));
-          const r = row as MovimentoRicambioRow;
-          await writeModificaLog(c, {
-            entita: ENTITA,
-            entita_id: id,
-            azione: "UPDATE",
-            payload: auditDiff(old, r),
-          });
-          return success(r);
-        });
-      }
-
-      const revOld = await applyStockForMovement(c, old, true);
-      if (!revOld.success) return err(revOld.error ?? "Rollback stock fallito");
-
-      const next: MovimentoRicambioRow = {
-        ...old,
-        tipo: (data.tipo ?? old.tipo) as TipoMovimentoRicambio,
-        quantita: data.quantita != null ? num(data.quantita) : old.quantita,
-        lavorazione_id: data.lavorazione_id !== undefined ? data.lavorazione_id : old.lavorazione_id,
-      };
-
-      const applyNew = await applyStockForMovement(
-        c,
-        { ricambio_id: next.ricambio_id, tipo: next.tipo, quantita: next.quantita },
-        false,
-      );
-      if (!applyNew.success) {
-        await applyStockForMovement(c, old, false);
-        return err(applyNew.error ?? "Aggiornamento giacenza fallito");
-      }
-
       return await commitCriticalMutation(c, async () => {
-        const { data: row, error } = await c
-          .from("movimenti_ricambi")
-          .update(data)
-          .eq("id", id)
-          .select(MOVIMENTI_RICAMBI_COLUMNS)
-          .single();
-        if (error) {
-          await applyStockForMovement(c, next, true);
-          await applyStockForMovement(c, old, false);
-          return err(errMessageFromSupabase(error, { module: "magazzino" }));
-        }
+        const { data: row, error } = await c.from("movimenti_ricambi").update(data).eq("id", id).select(MOVIMENTI_RICAMBI_COLUMNS).single();
+        if (error) return err(errMessageFromSupabase(error, { module: "magazzino" }));
         const r = row as MovimentoRicambioRow;
         await writeModificaLog(c, {
           entita: ENTITA,
@@ -189,33 +245,8 @@ export const movimentiService = {
     }
   },
 
+  /** @deprecated R-18: solo rollback tecnico — non esporre in UI. */
   async remove(id: string): Promise<ServiceResult<null>> {
-    try {
-      const c = await sb();
-      return await commitCriticalMutation(c, async () => {
-        const { data: existing, error: e0 } = await c.from("movimenti_ricambi").select(MOVIMENTI_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
-        if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
-        if (!existing) return success(null);
-        const ex = existing as MovimentoRicambioRow;
-
-        const stock = await applyStockForMovement(c, ex, true);
-        if (!stock.success) return err(stock.error ?? "Impossibile stornare giacenza");
-
-        const { error } = await c.from("movimenti_ricambi").delete().eq("id", id);
-        if (error) {
-          await applyStockForMovement(c, ex, false);
-          return err(errMessageFromSupabase(error, { module: "magazzino" }));
-        }
-        await writeModificaLog(c, {
-          entita: ENTITA,
-          entita_id: id,
-          azione: "DELETE",
-          payload: auditSnapshot(ex),
-        });
-        return success(null);
-      });
-    } catch (e) {
-      return serviceFailFromError(e);
-    }
+    return err("Eliminazione movimento non consentita. Usa storno.");
   },
 };

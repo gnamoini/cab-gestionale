@@ -27,6 +27,7 @@
     "production:check": "npx tsx scripts/production-check.ts",
     "audit:release-v2-db": "npx tsx scripts/audit-release-v2-db.ts",
     "audit:write-coverage": "npx tsx scripts/audit-write-coverage-scan.ts",
+    "verify-stock-integrity": "npx tsx scripts/verify-stock-integrity.ts",
     "test:production-readiness": "npx tsx lib/production/production-readiness.test.ts",
     "test:tde": "npx tsx lib/preventivi/trasforma-descrizione.test.ts && npx tsx lib/domain/technical-knowledge-base/contracts/tkb-snapshot.contract.test.ts && npx tsx lib/preventivi/description-engine/contracts/provenance.contract.test.ts && npx tsx lib/preventivi/description-engine/contracts/overrides.contract.test.ts && npx tsx lib/preventivi/description-engine/contracts/confidence.contract.test.ts && npx tsx lib/domain/technical-knowledge-base/benchmark/benchmark.test.ts && npx tsx lib/preventivi/description-engine/description-engine.test.ts && npx tsx lib/preventivi/description-engine/ai-polish.test.ts && npx tsx lib/preventivi/generate-preventivo-from-lavorazione.test.ts",
     "ux:enforce": "npx tsx scripts/ux-enforcement-check.ts",

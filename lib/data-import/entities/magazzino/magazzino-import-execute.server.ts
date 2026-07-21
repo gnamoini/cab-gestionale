@@ -7,7 +7,8 @@ import { IMPORT_EXECUTE_CHUNK } from "@/lib/data-import/core/types";
 import type { MagazzinoImportDecision } from "@/lib/data-import/entities/magazzino/magazzino-import-schema";
 import { attachMagazzinoEntityKey } from "@/lib/validation/entity-persistence";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
-import { auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
+import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
+import { buildStockMovementAuditPayload } from "@/lib/magazzino/stock-audit-payload";
 
 const DEFAULT_MARKUP = 45;
 
@@ -114,6 +115,34 @@ export async function executeMagazzinoImport(input: {
           result.errors.push({ rowIndex: row.rowIndex, message: updErr.message });
           continue;
         }
+        const { data: afterRow } = await sb
+          .from("magazzino_ricambi")
+          .select("id, meta, nome, quantita, costo, prezzo_vendita, marca")
+          .eq("id", targetId)
+          .maybeSingle();
+        await writeModificaLog(sb, {
+          entita: "magazzino_ricambi",
+          entita_id: targetId,
+          azione: "UPDATE",
+          autore_id: input.userId,
+          payload: {
+            source: "IMPORT_UPDATE",
+            batchId: input.batchId,
+            fileName: input.fileName,
+            diff: auditDiff(existing, afterRow ?? existing),
+            ...(patch.quantita != null &&
+            Number(patch.quantita) !== Number(existing.quantita)
+              ? buildStockMovementAuditPayload({
+                  ricambioId: targetId,
+                  quantitaBefore: Number(existing.quantita) || 0,
+                  quantitaAfter: Number(patch.quantita) || 0,
+                  origine: "import",
+                  causale: "import_overwrite",
+                  extra: { source: "IMPORT_UPDATE", batchId: input.batchId, fileName: input.fileName },
+                })
+              : {}),
+          },
+        });
         result.stats.updated += 1;
         continue;
       }

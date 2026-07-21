@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactElement } from "react";
 import { DisabledElementTooltip } from "@/components/ui";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
@@ -53,6 +54,8 @@ export function MagazzinoRicambioInfoModal({
   canAdjustScorta,
   modalitaModifica = false,
   onAdjustScorta,
+  onSetScorta,
+  stockPolicyRaw,
 }: {
   ricambio: RicambioMagazzino;
   compatDisplay: string;
@@ -69,6 +72,8 @@ export function MagazzinoRicambioInfoModal({
   canAdjustScorta: boolean;
   modalitaModifica?: boolean;
   onAdjustScorta: (delta: number) => void;
+  onSetScorta: (target: number) => void;
+  stockPolicyRaw?: unknown;
 }) {
   return (
     <GestionaleModalShell
@@ -79,6 +84,48 @@ export function MagazzinoRicambioInfoModal({
       titleId="detail-ricambio-title"
       footer={
         <div className="flex w-full min-w-0 flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            <DisabledElementTooltip
+              content={canAdjustScorta ? "Carico +1" : READONLY_PERMISSION_HINT}
+              disabled={!canAdjustScorta}
+            >
+              <button
+                type="button"
+                className={`${erpBtnAccent} min-h-10 w-full justify-center text-sm disabled:opacity-45`}
+                disabled={!canAdjustScorta}
+                onClick={() => onAdjustScorta(1)}
+              >
+                Carica +1
+              </button>
+            </DisabledElementTooltip>
+            <DisabledElementTooltip
+              content={canAdjustScorta ? "Scarico −1" : READONLY_PERMISSION_HINT}
+              disabled={!canAdjustScorta}
+            >
+              <button
+                type="button"
+                className={`${erpBtnAccent} min-h-10 w-full justify-center text-sm disabled:opacity-45`}
+                disabled={!canAdjustScorta}
+                onClick={() => onAdjustScorta(-1)}
+              >
+                Scarica −1
+              </button>
+            </DisabledElementTooltip>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <Link
+              href="/lavorazioni"
+              className="inline-flex min-h-10 items-center justify-center rounded-md border border-[color:var(--cab-border)] px-2 text-center hover:bg-[color:var(--cab-surface-elevated)]"
+            >
+              Lavorazioni
+            </Link>
+            <Link
+              href="/ordini-fornitori"
+              className="inline-flex min-h-10 items-center justify-center rounded-md border border-[color:var(--cab-border)] px-2 text-center hover:bg-[color:var(--cab-surface-elevated)]"
+            >
+              Ordini
+            </Link>
+          </div>
           <RicambioLabelActions
             ricambioId={ricambio.id}
             codice={ricambio.codiceFornitoreOriginale}
@@ -116,6 +163,8 @@ export function MagazzinoRicambioInfoModal({
             canAdjustScorta={canAdjustScorta}
             modalitaModifica={modalitaModifica}
             onAdjustScorta={onAdjustScorta}
+            onSetScorta={onSetScorta}
+            stockPolicyRaw={stockPolicyRaw}
           />
         </GestionaleModalScrollBody>
       </div>

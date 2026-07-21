@@ -7,8 +7,8 @@ import {
 } from "@/lib/pwa/sw-client";
 import { registerPwaServiceWorker } from "@/lib/pwa/sw-register";
 import {
+  bootstrapServiceWorkerUpdateFlow,
   refreshServiceWorkerUpdateCheck,
-  subscribeToServiceWorkerUpdates,
 } from "@/lib/pwa/sw-update";
 
 const PWA_UPDATE_EVENT = "cab-pwa-update-available";
@@ -26,13 +26,16 @@ export function PwaServiceWorkerBridge() {
     let removeUpdateListener: (() => void) | undefined;
     let registration: ServiceWorkerRegistration | null = null;
 
-    void registerPwaServiceWorker().then((nextRegistration) => {
+    void registerPwaServiceWorker().then(async (nextRegistration) => {
       if (!nextRegistration) return;
       registration = nextRegistration;
       setPwaServiceWorkerRegistration(nextRegistration);
-      removeUpdateListener = subscribeToServiceWorkerUpdates(nextRegistration, dispatchPwaUpdateAvailable, {
+      const unsubscribe = await bootstrapServiceWorkerUpdateFlow(
+        nextRegistration,
+        dispatchPwaUpdateAvailable,
         subscribedAtMs,
-      });
+      );
+      if (unsubscribe) removeUpdateListener = unsubscribe;
     });
 
     const onVisible = () => {

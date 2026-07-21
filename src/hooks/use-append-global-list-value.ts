@@ -12,6 +12,7 @@ import {
 import {
   fetchCabAppSettingsPayload,
   mergeAppSettingsUpsertWithVersions,
+  useMagazzinoSettingsUpsertMutation,
   useSettingsUpsertMutation,
 } from "@/src/hooks/gestionale/use-settings-queries";
 import { usePermissions } from "@/src/hooks/use-permissions";
@@ -29,15 +30,24 @@ function isSettingsConcurrencyConflict(e: unknown): boolean {
   return e instanceof Error && e.message === SETTINGS_CONCURRENCY_CONFLICT;
 }
 
+function isMagazzinoSettingsListKey(listKey: GlobalSettingsListKey): boolean {
+  return listKey.startsWith("magazzino:");
+}
+
 export function useAppendGlobalListValue(listKey: GlobalSettingsListKey, ctx?: GlobalSettingsListContext) {
   const { canManageSettings } = usePermissions();
+  const magPerm = usePermissions("magazzino");
   const gestToast = useGestionaleToast();
   const queryClient = useQueryClient();
-  const upsert = useSettingsUpsertMutation();
+  const settingsUpsert = useSettingsUpsertMutation();
+  const magazzinoUpsert = useMagazzinoSettingsUpsertMutation();
+  const magazzinoList = isMagazzinoSettingsListKey(listKey);
+  const canAppend = magazzinoList ? magPerm.canWrite : canManageSettings;
+  const upsert = magazzinoList ? magazzinoUpsert : settingsUpsert;
 
   const append = useCallback(
     async (rawValue: string): Promise<string | null> => {
-      if (!canManageSettings) {
+      if (!canAppend) {
         gestToast.validation("Non hai permesso di modificare gli elenchi globali.");
         return null;
       }
@@ -99,8 +109,8 @@ export function useAppendGlobalListValue(listKey: GlobalSettingsListKey, ctx?: G
 
       return null;
     },
-    [canManageSettings, ctx, gestToast, listKey, queryClient, upsert],
+    [canAppend, ctx, gestToast, listKey, queryClient, upsert],
   );
 
-  return { append, canAppend: canManageSettings, isPending: upsert.isPending };
+  return { append, canAppend, isPending: upsert.isPending };
 }

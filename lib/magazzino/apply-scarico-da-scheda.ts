@@ -20,13 +20,21 @@ export async function applyMagazzinoScaricoDaScheda(opts: {
   const qty = Math.round(Number(opts.quantita));
   if (!Number.isFinite(qty) || qty <= 0) return { ok: false, error: "Quantità non valida" };
 
-  const res = await movimentiService.create({
-    ricambio_id: opts.ricambioId,
-    lavorazione_id: opts.lavorazioneId,
-    tipo: "uscita",
-    quantita: qty,
-    conta_statistiche: true,
-  });
+  const res = await movimentiService.create(
+    {
+      ricambio_id: opts.ricambioId,
+      lavorazione_id: opts.lavorazioneId,
+      tipo: "uscita",
+      quantita: qty,
+      conta_statistiche: true,
+      meta: { origine: "lavorazione", causale: "scarico_lavorazione" },
+    },
+    {
+      operationId: crypto.randomUUID(),
+      origine: "lavorazione",
+      causale: "scarico_lavorazione",
+    },
+  );
 
   if (!res.success || !res.data) {
     return { ok: false, error: res.error ?? "Movimento magazzino non riuscito." };

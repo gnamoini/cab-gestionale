@@ -336,6 +336,12 @@ export type MagazzinoRicambioRow = {
   updated_at: string;
 };
 
+export type MovimentoRicambioMeta = {
+  origine?: string;
+  storno_di?: string;
+  causale?: string;
+};
+
 export type MovimentoRicambioRow = {
   id: string;
   ricambio_id: string;
@@ -346,6 +352,8 @@ export type MovimentoRicambioRow = {
   conta_statistiche: boolean;
   inventory_document_id?: string | null;
   inventory_document_line_id?: string | null;
+  operation_id?: string | null;
+  meta?: MovimentoRicambioMeta;
   note?: string | null;
   created_by?: string | null;
   created_at: string;

@@ -83,6 +83,11 @@ assert.match(behaviorSrc, /isGestionaleListTriggerButton/);
 assert.match(behaviorSrc, /isGestionaleStepperGroupButton/);
 assert.match(
   behaviorSrc,
+  /isGestionaleStepperGroupButton[\s\S]*CAB_STEPPER_ACTION_ATTR/,
+  "stepper ± action buttons excluded from focus scroll",
+);
+assert.match(
+  behaviorSrc,
   /isGestionaleStepperGroupButton[\s\S]*input:not\(\[type="hidden"\]\)/,
   "stepper group requires input; segmented toggles excluded",
 );

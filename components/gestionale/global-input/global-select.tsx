@@ -1030,13 +1030,11 @@ export function GlobalSelect(props: GlobalSelectProps) {
     (e: React.PointerEvent, select: () => void) => {
       e.preventDefault();
       e.stopPropagation();
-      if (sheetOpen) {
-        armSelectorGhostClickGuard();
-      }
+      armSelectorGhostClickGuard();
       cancelPendingBlur();
       select();
     },
-    [cancelPendingBlur, sheetOpen],
+    [cancelPendingBlur],
   );
 
   const stringRenderOption = useMemo(
@@ -1087,6 +1085,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
                 className="rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-2 py-1 text-xs font-medium text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)]"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
+                  armSelectorGhostClickGuard();
                   if (itemsMode) {
                     const item = items.find((i) => i.value === recent);
                     if (item) selectItem(item);

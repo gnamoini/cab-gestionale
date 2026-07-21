@@ -32,19 +32,23 @@ export function isLocalMagazzinoLogDuplicate(
 ): boolean {
   const tLocal = new Date(local.at).getTime();
   if (Number.isNaN(tLocal)) return false;
+  const isScortaUpdate =
+    local.tipo === "update" && local.changes.some((c) => c.campo === "Scorta");
 
   for (const row of serverRows) {
-    if (row.entita !== "magazzino_ricambi") continue;
-    if (row.entita_id !== local.ricambioId) continue;
     const tServer = new Date(row.created_at).getTime();
     if (Number.isNaN(tServer) || Math.abs(tServer - tLocal) > DEDUPE_WINDOW_MS) continue;
-
     const az = row.azione.toUpperCase();
-    if (local.tipo === "aggiunta" && az === "CREATE") return true;
-    if (local.tipo === "rimozione" && az === "DELETE") return true;
-    if (local.tipo === "update" && az === "UPDATE") {
-      const changes = local.changes;
-      if (changes.length === 1 && changes[0]?.campo === "Scorta") return true;
+
+    if (row.entita === "magazzino_ricambi" && row.entita_id === local.ricambioId) {
+      if (local.tipo === "aggiunta" && az === "CREATE") return true;
+      if (local.tipo === "rimozione" && az === "DELETE") return true;
+      if (isScortaUpdate && az === "UPDATE") return true;
+    }
+
+    if (isScortaUpdate && row.entita === "movimenti_ricambi" && az === "CREATE") {
+      const rid = ricambioIdFromMovimentoRow(row);
+      if (rid === local.ricambioId) return true;
     }
   }
   return false;

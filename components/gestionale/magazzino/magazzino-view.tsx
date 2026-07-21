@@ -59,7 +59,7 @@ import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useQueryClient } from "@tanstack/react-query";
 import { QK, invalidateAfterMagazzinoOrMovimenti } from "@/src/lib/react-query/invalidate-related";
-import { cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
+import { cabSyncEventForEntity, dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
 import { patchMagazzinoListCache, ricambioUiFromMagazzinoRow } from "@/lib/magazzino/magazzino-list-cache";
 import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { flattenCompatDaAttrezzature, migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
@@ -162,7 +162,10 @@ import {
 } from "@/lib/magazzino/magazzino-log-events";
 import {
   applyScortaOptimisticDelta,
+  applyScortaOptimisticTarget,
   enqueueScortaSync,
+  type ApplyScortaDeltaResult,
+  type ScortaSyncCallbacks,
 } from "@/lib/magazzino/scorta-adjust-sync";
 import {
   readMagazzinoModalitaModifica,
@@ -193,7 +196,7 @@ import {
 } from "@/lib/ui/use-gestionale-list-layout";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
-import { useCabAppSettingsPayloadQuery, useSettingsUpsertMutation } from "@/src/hooks/gestionale/use-settings-queries";
+import { useCabAppSettingsPayloadQuery, useMagazzinoSettingsUpsertMutation } from "@/src/hooks/gestionale/use-settings-queries";
 import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { Q_FOCUS_RICAMBIO, Q_OPEN_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
@@ -483,13 +486,17 @@ export function MagazzinoView() {
   const settingsPayload = useCabAppSettingsPayloadQuery({ tier: "static" });
   const appSettings = settingsPayload.data?.resolved;
   const settingsRows = settingsPayload.data?.rows ?? [];
+  const stockPolicyRaw = useMemo(
+    () => settingsRows.find((r) => r.module === "magazzino" && r.key === "stock_policy")?.value,
+    [settingsRows],
+  );
   const { global: globalPerm, modules: permModules } = usePermissionsSnapshot();
   const magPerm = permModules.magazzino;
   const { clearMagazzinoNotifications } = useAdminNotificationStore();
   /** Creazione ricambio: `can_write` o `can_admin` sul modulo (viewer resta escluso). */
   const magCanCreateRicambio = magPerm.canWrite || globalPerm.isAdmin;
   const magCanDeleteRicambio = magPerm.canWrite;
-  const upsertMagazzinoMaster = useSettingsUpsertMutation();
+  const upsertMagazzinoMaster = useMagazzinoSettingsUpsertMutation();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -1138,9 +1145,48 @@ export function MagazzinoView() {
     };
   }
 
+  function buildScortaSyncCallbacks(ricambioId: string): ScortaSyncCallbacks {
+    return {
+      onPersisted: ({ ricambioId: id, label, prima, dopo, contaStatistiche: conta }) => {
+        const entry = buildMagazzinoScortaPersistedLogEntry({
+          id: `log-${Date.now()}-${++logSeqRef.current}`,
+          ricambioId: id,
+          ricambioLabel: label,
+          autore: authorName,
+          prima,
+          dopo,
+          contaStatistiche: conta,
+          ...magazzinoLogScopeFields(),
+        });
+        applyLogEntry(entry);
+      },
+      onError: ({ error }) => {
+        toastError(error, { module: "magazzino", action: "update" });
+      },
+      invalidate: () => {
+        void invalidateAfterMagazzinoOrMovimenti(queryClient, [
+          cabSyncEventForEntity("movimenti_ricambi", ricambioId, "entity_created", "movimenti_ricambi"),
+          cabSyncEventForEntity("magazzino_ricambi", ricambioId, "entity_updated", "magazzino_ricambi"),
+        ]);
+      },
+    };
+  }
+
+  function enqueueScortaForRicambio(id: string, applied: ApplyScortaDeltaResult) {
+    if (!applied.found || applied.prima === applied.dopo) return;
+    flashRow(id);
+    enqueueScortaSync(
+      queryClient,
+      id,
+      authorName,
+      buildScortaSyncCallbacks(id),
+      mezziListePrefs,
+      modalitaModifica,
+    );
+  }
+
   function adjustScorta(id: string, delta: number) {
     if (!magCanCreateRicambio) return;
-    const contaStatistiche = modalitaModifica;
     const applied = applyScortaOptimisticDelta(
       queryClient,
       id,
@@ -1148,41 +1194,23 @@ export function MagazzinoView() {
       authorName,
       touch,
       mezziListePrefs,
-      contaStatistiche,
+      modalitaModifica,
     );
-    if (!applied.found) return;
-    flashRow(id);
-    enqueueScortaSync(
+    enqueueScortaForRicambio(id, applied);
+  }
+
+  function setScortaTarget(id: string, target: number) {
+    if (!magCanCreateRicambio) return;
+    const applied = applyScortaOptimisticTarget(
       queryClient,
       id,
+      target,
       authorName,
-      {
-        onPersisted: ({ ricambioId, label, prima, dopo, contaStatistiche: conta }) => {
-          const entry = buildMagazzinoScortaPersistedLogEntry({
-            id: `log-${Date.now()}-${++logSeqRef.current}`,
-            ricambioId,
-            ricambioLabel: label,
-            autore: authorName,
-            prima,
-            dopo,
-            contaStatistiche: conta,
-            ...magazzinoLogScopeFields(),
-          });
-          applyLogEntry(entry);
-        },
-        onError: ({ error }) => {
-          toastError(error, { module: "magazzino", action: "update" });
-        },
-        invalidate: () => {
-          void invalidateAfterMagazzinoOrMovimenti(queryClient, [
-            cabSyncEventForEntity("movimenti_ricambi", id, "entity_created", "movimenti_ricambi"),
-            cabSyncEventForEntity("magazzino_ricambi", id, "entity_updated", "magazzino_ricambi"),
-          ]);
-        },
-      },
+      touch,
       mezziListePrefs,
-      contaStatistiche,
+      modalitaModifica,
     );
+    enqueueScortaForRicambio(id, applied);
   }
 
   function openNewModal() {
@@ -2024,6 +2052,8 @@ export function MagazzinoView() {
           canAdjustScorta={magCanCreateRicambio}
           modalitaModifica={modalitaModifica}
           onAdjustScorta={(delta) => adjustScorta(detailRicambio.id, delta)}
+          onSetScorta={(target) => setScortaTarget(detailRicambio.id, target)}
+          stockPolicyRaw={stockPolicyRaw}
         />
       ) : null}
 

@@ -14,6 +14,7 @@ export const CAB_SETTINGS_KEY = {
   prefs: "prefs",
   liste: "liste",
   master: "master",
+  stockPolicy: "stock_policy",
   defaults: "defaults",
   branding: "branding",
   aliases: "aliases",

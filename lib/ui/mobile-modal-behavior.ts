@@ -62,6 +62,8 @@ export const CAB_STICKY_HEADER_ATTR = "data-cab-sticky-header";
 export const CAB_FOCUS_POSITION_ATTR = "data-cab-focus-position";
 export const CAB_FIELD_HINT_ATTR = "data-cab-field-hint";
 export const CAB_FIELD_COUNTER_ATTR = "data-cab-field-counter";
+/** Bottoni ± stepper: non devono attivare focus-scroll verso l'input numerico. */
+export const CAB_STEPPER_ACTION_ATTR = "data-cab-stepper-action";
 
 export type FocusPositionMode = "aboveKeyboard" | "topPinned";
 export type ScrollContainerType = "modal" | "drawer" | "page" | "nested";
@@ -320,9 +322,10 @@ function isGestionaleListTriggerButton(el: HTMLElement): boolean {
   return popup === "listbox" || popup === "combobox";
 }
 
-/** Bottoni ± in stepper (role=group + input): meritano scroll al focus. Esclude toggle segmented (solo bottoni). */
+/** Bottoni ± in stepper (role=group + input): meritano scroll al focus. Esclude toggle segmented e ± con CAB_STEPPER_ACTION_ATTR. */
 function isGestionaleStepperGroupButton(el: HTMLElement): boolean {
   if (el.tagName !== "BUTTON") return false;
+  if (el.hasAttribute(CAB_STEPPER_ACTION_ATTR)) return false;
   const group = el.closest('[role="group"]');
   if (!group) return false;
   return Boolean(group.querySelector('input:not([type="hidden"]), textarea, select'));
@@ -345,7 +348,7 @@ export function isGestionaleFocusableField(el: EventTarget | null): el is HTMLEl
 
 /** Normalizza il target focus (stepper ± → input, ecc.). */
 export function resolveFocusScrollTarget(el: HTMLElement): HTMLElement {
-  if (el.tagName === "BUTTON") {
+  if (el.tagName === "BUTTON" && !el.hasAttribute(CAB_STEPPER_ACTION_ATTR)) {
     const group = el.closest('[role="group"]');
     const input = group?.querySelector('input:not([type="hidden"])');
     if (input instanceof HTMLElement) return input;

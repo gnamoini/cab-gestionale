@@ -97,6 +97,7 @@ export async function commitLavorazioneCreateSuccess(
 export async function invalidateAfterMagazzinoOrMovimenti(qc: QueryClient, cabSyncEvents?: CabSyncEvent[]) {
   await invalidateOperationalTruth({ queryClient: qc, domain: "magazzino", cabSyncEvents, skipReportBroadcast: true });
   scheduleReportBroadcastRefresh(qc);
+  void qc.invalidateQueries({ queryKey: ["dashboard", "health-score"] });
 }
 
 export function invalidateAfterPreventiviMutations(

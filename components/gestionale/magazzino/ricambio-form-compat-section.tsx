@@ -24,6 +24,7 @@ import {
 } from "@/lib/mezzi/hierarchy-list-prefs";
 import { compatLineDisplayText } from "@/lib/magazzino/form";
 import { useRicambioFormOptions } from "@/components/gestionale/magazzino/ricambio-form-options-context";
+import { createSelectorSheetTapSelectHandlers } from "@/lib/selector-interaction/selector-sheet-tap-select";
 import { CAB_FIELD_LABEL_ATTR } from "@/lib/ui/mobile-modal-behavior";
 import { dsLabel, dsTypoSmall } from "@/lib/ui/design-system";
 type SetForm = React.Dispatch<React.SetStateAction<RicambioFormState>>;
@@ -38,7 +39,7 @@ const COMPAT_PREREQ_HINT_TEXT =
   "text-[11px] font-medium leading-snug text-[color:color-mix(in_srgb,var(--cab-warning)_92%,var(--cab-text))]";
 
 const COMPAT_BLOCKED_OVERLAY_BTN =
-  "absolute inset-0 z-[1] cursor-not-allowed rounded-[var(--ds-radius-lg)] bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-warning)_38%,transparent)] focus-visible:ring-offset-0";
+  "absolute inset-0 z-[1] cursor-not-allowed touch-pan-y rounded-[var(--ds-radius-lg)] bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-warning)_38%,transparent)] focus-visible:ring-offset-0";
 
 function compatBlockedFieldWrapClass(blocked: boolean, hintActive: boolean): string {
   const base = "relative rounded-[var(--ds-radius-lg)]";
@@ -119,6 +120,15 @@ function RicambioFormCompatSectionInner({
   );
   const [showAttModelloMarcaHint, setShowAttModelloMarcaHint] = useState(false);
   const [showTelModelloMarcaHint, setShowTelModelloMarcaHint] = useState(false);
+
+  const showAttModelloMarcaHintTap = useMemo(
+    () => createSelectorSheetTapSelectHandlers(() => setShowAttModelloMarcaHint(true)),
+    [],
+  );
+  const showTelModelloMarcaHintTap = useMemo(
+    () => createSelectorSheetTapSelectHandlers(() => setShowTelModelloMarcaHint(true)),
+    [],
+  );
 
   useEffect(() => {
     setMarcheFiltroAtt(new Set(parseCompatInput(form.compatMarcheAttrezzaturaFiltro)));
@@ -413,10 +423,10 @@ function RicambioFormCompatSectionInner({
                   aria-describedby={showAttModelloMarcaHint ? HINT_ATT_MODELLO_ID : undefined}
                   aria-label="Modello attrezzatura non disponibile finché non selezioni una marca attrezzatura"
                   className={COMPAT_BLOCKED_OVERLAY_BTN}
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    setShowAttModelloMarcaHint(true);
-                  }}
+                  onPointerDown={showAttModelloMarcaHintTap.onPointerDown}
+                  onPointerMove={showAttModelloMarcaHintTap.onPointerMove}
+                  onPointerUp={showAttModelloMarcaHintTap.onPointerUp}
+                  onPointerCancel={showAttModelloMarcaHintTap.onPointerCancel}
                 />
               ) : null}
             </div>
@@ -473,10 +483,10 @@ function RicambioFormCompatSectionInner({
                   aria-describedby={showTelModelloMarcaHint ? HINT_TEL_MODELLO_ID : undefined}
                   aria-label="Modello telaio non disponibile finché non selezioni una marca telaio"
                   className={COMPAT_BLOCKED_OVERLAY_BTN}
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    setShowTelModelloMarcaHint(true);
-                  }}
+                  onPointerDown={showTelModelloMarcaHintTap.onPointerDown}
+                  onPointerMove={showTelModelloMarcaHintTap.onPointerMove}
+                  onPointerUp={showTelModelloMarcaHintTap.onPointerUp}
+                  onPointerCancel={showTelModelloMarcaHintTap.onPointerCancel}
                 />
               ) : null}
             </div>

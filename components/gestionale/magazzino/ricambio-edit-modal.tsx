@@ -14,7 +14,9 @@ import { RicambioCollapsibleSection, ricambioModalFormScrollClass } from "@/comp
 import { RecordImageManager, type RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import {
   ricambioFormIsDirty,
+  ricambioFormImportantWarnings,
   ricambioFromFormLenient,
+  ricambioLenientPlaceholderFlags,
   toFormDraft,
   validateRicambioListFields,
   type RicambioFormState,
@@ -25,6 +27,7 @@ import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-sh
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { dsBtnDanger, dsBtnNeutral } from "@/lib/ui/design-system";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
+import { incrementHealthCounter } from "@/lib/observability/runtime-health";
 import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
 import { applyScortaDeltaViaMovimento } from "@/lib/magazzino/scorta-movement";
 import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
@@ -172,6 +175,12 @@ export function RicambioEditModal({
       const next = ricambioFromFormLenient(currentDraft, ricambioId, authorName, {
         mezziListe: mezziListePrefs,
       });
+      const incompleteWarnings = ricambioFormImportantWarnings(currentDraft);
+      if (incompleteWarnings.length > 0) incrementHealthCounter("ricambioSaveIncompleteFields");
+      const placeholderFlags = ricambioLenientPlaceholderFlags(next);
+      if (placeholderFlags.marcaPlaceholder) incrementHealthCounter("ricambioSavePlaceholderMarca");
+      if (placeholderFlags.descrizionePlaceholder) incrementHealthCounter("ricambioSavePlaceholderDescrizione");
+      if (placeholderFlags.categoriaPlaceholder) incrementHealthCounter("ricambioSavePlaceholderCategoria");
       const scortaPrima = Math.round(ricambio.scorta);
       const scortaDelta = Math.round(next.scorta) - scortaPrima;
       setSaveBusy(true);
@@ -194,7 +203,13 @@ export function RicambioEditModal({
         }
         const ui = ricambioUiFromMagazzinoRow(updated.data, authorName, mezziListePrefs);
         reset(toFormDraft(ui, mezziListePrefs));
-        onSaved(ui, "Modifiche salvate.");
+        const lenientHint =
+          placeholderFlags.marcaPlaceholder ||
+          placeholderFlags.descrizionePlaceholder ||
+          placeholderFlags.categoriaPlaceholder
+            ? " Salvato con campi segnaposto — completa l'anagrafica quando possibile."
+            : "";
+        onSaved(ui, `Modifiche salvate.${lenientHint}`);
       } finally {
         setSaveBusy(false);
       }

@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { QueryClient } from "@tanstack/react-query";
+import { commitScortaInputDraft } from "@/lib/magazzino/scorta-input-commit";
 import { magazzinoListQueryKey } from "@/lib/magazzino/magazzino-list-cache";
 import {
   applyScortaOptimisticDelta,
+  applyScortaOptimisticTarget,
   resetScortaSyncQueuesForTest,
 } from "@/lib/magazzino/scorta-adjust-sync";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
@@ -74,6 +76,34 @@ assert.deepEqual(legacyRows?.[0]?.meta, {
   autoreUltimaModifica: "Test",
 });
 assert.equal((legacyRows?.[0]?.meta as { compatibilitaRefs?: unknown }).compatibilitaRefs, undefined);
+
+resetScortaSyncQueuesForTest();
+const qcTarget = new QueryClient();
+qcTarget.setQueryData(magazzinoListQueryKey(), [seedRow(id, 7)]);
+const targetSet = applyScortaOptimisticTarget(qcTarget, id, 25, "Test", touchRow as never);
+assert.equal(targetSet.prima, 7);
+assert.equal(targetSet.dopo, 25);
+assert.equal(qcTarget.getQueryData<MagazzinoRicambioRow[]>(magazzinoListQueryKey())?.[0]?.quantita, 25);
+
+const targetNoop = applyScortaOptimisticTarget(qcTarget, id, 25, "Test", touchRow as never);
+assert.equal(targetNoop.prima, 25);
+assert.equal(targetNoop.dopo, 25);
+assert.equal(targetNoop.found, true);
+
+resetScortaSyncQueuesForTest();
+const qcBurstTarget = new QueryClient();
+qcBurstTarget.setQueryData(magazzinoListQueryKey(), [seedRow(id, 10)]);
+applyScortaOptimisticDelta(qcBurstTarget, id, 2, "Test", touchRow as never);
+applyScortaOptimisticTarget(qcBurstTarget, id, 5, "Test", touchRow as never);
+assert.equal(
+  qcBurstTarget.getQueryData<MagazzinoRicambioRow[]>(magazzinoListQueryKey())?.[0]?.quantita,
+  5,
+);
+
+assert.equal(commitScortaInputDraft("25", 10), 25);
+assert.equal(commitScortaInputDraft("", 10), 10);
+assert.equal(commitScortaInputDraft("abc", 10), 10);
+assert.equal(commitScortaInputDraft("-3", 10), 0);
 
 resetScortaSyncQueuesForTest();
 console.log("scorta-adjust-sync.test.ts OK");

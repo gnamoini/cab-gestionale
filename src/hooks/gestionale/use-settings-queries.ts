@@ -183,6 +183,35 @@ export function useSettingsBulkMutation() {
   );
 }
 
+async function persistMagazzinoSettingsUpsertWithOccRetry(
+  qc: QueryClient,
+  input: AppSettingsUpsertInput,
+): Promise<ServiceResult<AppSettingRow>> {
+  const { module, key, value } = input;
+  for (let attempt = 0; attempt < APP_SETTINGS_OCC_MAX_ATTEMPTS; attempt += 1) {
+    const rows = await fetchFreshSettingsRows(qc);
+    const resolved = mergeAppSettingsUpsertWithVersions([{ module, key, value }], rows)[0];
+    if (!resolved) return err("Aggiornamento impostazioni fallito.");
+    const result = await persistSettingsRecord(qc, () => settingsEntry.upsertMagazzinoSetting(resolved));
+    if (result.success) return result;
+    if (result.error !== SETTINGS_CONCURRENCY_CONFLICT) return result;
+  }
+  return err(SETTINGS_CONCURRENCY_CONFLICT);
+}
+
+export function useMagazzinoSettingsUpsertMutation() {
+  const qc = useQueryClient();
+  const onConflict = useSettingsConflictToast();
+  return useServiceMutation(
+    (input: AppSettingsUpsertInput) => persistMagazzinoSettingsUpsertWithOccRetry(qc, input),
+    {
+      onError: (e) => {
+        onConflict(e.message);
+      },
+    },
+  );
+}
+
 export function useSettingsUpsertMutation() {
   const qc = useQueryClient();
   const onConflict = useSettingsConflictToast();

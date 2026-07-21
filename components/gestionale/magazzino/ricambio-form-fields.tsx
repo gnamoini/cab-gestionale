@@ -36,6 +36,8 @@ import {
   CAB_FIELD_LABEL_ATTR,
   CAB_FOCUS_SCROLL_GROUP_ATTR,
   CAB_FOCUS_SCROLL_TITLE_ATTR,
+  CAB_STEPPER_ACTION_ATTR,
+  isGestionaleFocusableField,
 } from "@/lib/ui/mobile-modal-behavior";
 import { gestionaleFieldLabelClass } from "@/lib/ui/gestionale-field-label";
 
@@ -87,6 +89,14 @@ function formatEurIt(n: number): string {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
 }
 
+function blurActiveFieldOutsideStepper(stepperInput: HTMLInputElement | null): void {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement)) return;
+  if (active === stepperInput) return;
+  if (!isGestionaleFocusableField(active)) return;
+  active.blur();
+}
+
 function StockStepper({
   value,
   onChange,
@@ -109,16 +119,22 @@ function StockStepper({
   inputId?: string;
   wrapClassName?: string;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const onStepperActionPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    blurActiveFieldOutsideStepper(inputRef.current);
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   return (
     <div role="group" aria-label={groupLabel} className={wrapClassName}>
       <button
         type="button"
+        {...{ [CAB_STEPPER_ACTION_ATTR]: "" }}
         className={stepperBtnMinusClass}
         aria-label={ariaDecrease}
-        onPointerDown={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
+        onPointerDown={onStepperActionPointerDown}
         onClick={(e) => {
           e.stopPropagation();
           onDelta(-1);
@@ -127,6 +143,7 @@ function StockStepper({
         −
       </button>
       <input
+        ref={inputRef}
         id={inputId}
         type="number"
         min={0}
@@ -139,12 +156,10 @@ function StockStepper({
       />
       <button
         type="button"
+        {...{ [CAB_STEPPER_ACTION_ATTR]: "" }}
         className={stepperBtnPlusClass}
         aria-label={ariaIncrease}
-        onPointerDown={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
+        onPointerDown={onStepperActionPointerDown}
         onClick={(e) => {
           e.stopPropagation();
           onDelta(1);

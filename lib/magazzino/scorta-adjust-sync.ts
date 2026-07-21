@@ -31,6 +31,7 @@ type QueueEntry = {
 };
 
 const queues = new Map<string, QueueEntry>();
+const SCORTA_SYNC_RETRY_MS = 400;
 
 function getQueue(ricambioId: string, contaStatistiche: boolean): QueueEntry {
   let q = queues.get(ricambioId);
@@ -51,6 +52,10 @@ function readScortaFromCache(
   if (!rows) return null;
   const row = mapMagazzinoRowsToUI(rows, autore, mezziListe).find((p) => p.id === ricambioId);
   return row ? Math.max(0, Math.round(row.scorta)) : null;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /** Patch ottimistico scorta — usa sempre l’updater funzionale sulla cache. */
@@ -100,6 +105,46 @@ export function applyScortaOptimisticDelta(
   return { ricambioId, prima, dopo, label, found };
 }
 
+/** Imposta scorta assoluta in cache (delta da valore corrente). */
+export function applyScortaOptimisticTarget(
+  qc: QueryClient,
+  ricambioId: string,
+  targetQuantita: number,
+  autore: string,
+  touch: ScortaOptimisticTouch,
+  mezziListe?: MezziListePrefs,
+  contaStatistiche = false,
+): ApplyScortaDeltaResult {
+  const current = readScortaFromCache(qc, ricambioId, autore, mezziListe);
+  if (current === null) {
+    return { ricambioId, prima: 0, dopo: 0, label: "", found: false };
+  }
+  const target = Math.max(0, Math.round(targetQuantita));
+  const delta = target - current;
+  if (delta === 0) {
+    const rows = qc.getQueryData<MagazzinoRicambioRow[]>(magazzinoListQueryKey());
+    const row = rows
+      ? mapMagazzinoRowsToUI(rows, autore, mezziListe).find((p) => p.id === ricambioId)
+      : undefined;
+    return {
+      ricambioId,
+      prima: current,
+      dopo: current,
+      label: row?.descrizione ?? "",
+      found: true,
+    };
+  }
+  return applyScortaOptimisticDelta(
+    qc,
+    ricambioId,
+    delta,
+    autore,
+    touch,
+    mezziListe,
+    contaStatistiche,
+  );
+}
+
 export type ScortaSyncCallbacks = {
   onPersisted?: (input: {
     ricambioId: string;
@@ -130,6 +175,18 @@ async function revertScortaFromServer(
   );
 }
 
+async function revertScortaFromServerIfNeeded(
+  qc: QueryClient,
+  ricambioId: string,
+  autore: string,
+  failedTarget: number | null,
+  mezziListe?: MezziListePrefs,
+): Promise<void> {
+  const cacheNow = readScortaFromCache(qc, ricambioId, autore, mezziListe);
+  if (cacheNow !== null && failedTarget !== null && cacheNow !== failedTarget) return;
+  await revertScortaFromServer(qc, ricambioId, autore, mezziListe);
+}
+
 async function runScortaSyncWorker(
   qc: QueryClient,
   ricambioId: string,
@@ -147,22 +204,35 @@ async function runScortaSyncWorker(
       const targetQuantita = readScortaFromCache(qc, ricambioId, autore, mezziListe);
       if (targetQuantita === null) break;
 
-      const before = await magazzinoService.getById(ricambioId);
+      let before = await magazzinoService.getById(ricambioId);
+      if (!before.success || !before.data) {
+        await sleep(SCORTA_SYNC_RETRY_MS);
+        before = await magazzinoService.getById(ricambioId);
+      }
       if (!before.success || !before.data) {
         hadError = true;
         callbacks.onError?.({ ricambioId, error: before.error ?? "Ricambio non trovato." });
-        await revertScortaFromServer(qc, ricambioId, autore, mezziListe);
+        await revertScortaFromServerIfNeeded(qc, ricambioId, autore, targetQuantita, mezziListe);
         break;
       }
       const serverQ = Math.max(0, Math.round(Number(before.data.quantita) || 0));
       const delta = targetQuantita - serverQ;
       if (delta === 0) break;
 
-      const moved = await applyScortaDeltaViaMovimento(ricambioId, delta, contaStatistiche);
+      const operationId = crypto.randomUUID();
+      let moved = await applyScortaDeltaViaMovimento(ricambioId, delta, contaStatistiche, {
+        operationId,
+      });
+      if (!moved.success) {
+        await sleep(SCORTA_SYNC_RETRY_MS);
+        moved = await applyScortaDeltaViaMovimento(ricambioId, delta, contaStatistiche, {
+          operationId,
+        });
+      }
       if (!moved.success) {
         hadError = true;
         callbacks.onError?.({ ricambioId, error: moved.error ?? "Aggiornamento scorta non riuscito." });
-        await revertScortaFromServer(qc, ricambioId, autore, mezziListe);
+        await revertScortaFromServerIfNeeded(qc, ricambioId, autore, targetQuantita, mezziListe);
         break;
       }
 
@@ -174,6 +244,7 @@ async function runScortaSyncWorker(
         mezziListe,
         { quantitaOnly: true },
       );
+      markRecentLocalGestionaleMutation(["magazzino_ricambi"], ricambioId);
 
       const cacheAfter = readScortaFromCache(qc, ricambioId, autore, mezziListe);
       if (cacheAfter === serverQ2) break;

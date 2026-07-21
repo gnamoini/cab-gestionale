@@ -32,4 +32,11 @@ assert.equal(second.defaultPrevented, false, "intentional follow-up click must p
 
 __resetSelectorGhostClickGuardForTests();
 
+armSelectorGhostClickGuard();
+armSelectorGhostClickGuard();
+const afterRearm = dispatch("click");
+assert.equal(afterRearm.defaultPrevented, true, "re-arm must not disarm before first ghost click");
+
+__resetSelectorGhostClickGuardForTests();
+
 console.log("selector-ghost-click-guard.test.ts OK");

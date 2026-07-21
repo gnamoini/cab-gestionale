@@ -61,6 +61,16 @@ const ricambioFields = read("components/gestionale/magazzino/ricambio-form-field
 assert.doesNotMatch(ricambioFields, /GestionaleFormFocusScope/);
 assert.match(ricambioFields, /GestionaleTextarea/);
 assert.match(ricambioFields, /CAB_FOCUS_SCROLL_GROUP_ATTR/);
+assert.match(ricambioFields, /CAB_STEPPER_ACTION_ATTR/);
+assert.match(ricambioFields, /blurActiveFieldOutsideStepper/);
+
+const ricambioCompat = read("components/gestionale/magazzino/ricambio-form-compat-section.tsx");
+assert.match(ricambioCompat, /createSelectorSheetTapSelectHandlers/);
+assert.match(ricambioCompat, /touch-pan-y/);
+
+const globalSelect = read("components/gestionale/global-input/global-select.tsx");
+assert.match(globalSelect, /armSelectorGhostClickGuard\(\)/);
+assert.doesNotMatch(globalSelect, /if \(sheetOpen\)[\s\S]{0,80}armSelectorGhostClickGuard/);
 
 // Scheda ingresso create variant — optional anagrafica + multiline Enter
 assert.match(schedaBody, /variant === "create-lavorazione"/);
