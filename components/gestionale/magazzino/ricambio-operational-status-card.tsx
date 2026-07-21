@@ -29,12 +29,15 @@ export function RicambioOperationalStatusCard({
   scortaMinima,
   consumo,
   stockPolicyRaw,
+  embedded = false,
 }: {
   descrizione: string;
   scorta: number;
   scortaMinima: number;
   consumo: RicambioConsumoDaLog | undefined;
   stockPolicyRaw?: unknown;
+  /** In sezione collapsible: senza titolo descrizione e senza doppio bordo. */
+  embedded?: boolean;
 }) {
   const policy: MagazzinoStockPolicy = parseMagazzinoStockPolicy(stockPolicyRaw);
   const avg = consumo?.avgMonthly ?? null;
@@ -45,10 +48,16 @@ export function RicambioOperationalStatusCard({
     policy,
   });
 
+  const shellClass = embedded
+    ? "pb-1"
+    : "rounded-lg border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-elevated)_92%,var(--cab-primary)_8%)] px-3 py-2.5";
+
   return (
-    <div className="rounded-lg border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-elevated)_92%,var(--cab-primary)_8%)] px-3 py-2.5">
-      <p className="text-sm font-semibold text-[color:var(--cab-text)]">{descrizione.trim() || "Ricambio"}</p>
-      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+    <div className={shellClass}>
+      {!embedded ? (
+        <p className="text-sm font-semibold text-[color:var(--cab-text)]">{descrizione.trim() || "Ricambio"}</p>
+      ) : null}
+      <div className={`grid grid-cols-2 gap-x-3 gap-y-1 text-xs ${embedded ? "" : "mt-2"}`}>
         <div>
           <span className="text-[color:var(--cab-text-muted)]">Disponibilità</span>
           <p className="font-mono font-semibold tabular-nums">{scorta}</p>

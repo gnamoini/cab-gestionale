@@ -75,6 +75,8 @@ export function MagazzinoRicambioInfoModal({
   onSetScorta: (target: number) => void;
   stockPolicyRaw?: unknown;
 }) {
+  const low = ricambio.scorta < ricambio.scortaMinima;
+
   return (
     <GestionaleModalShell
       modalSize="info"
@@ -84,7 +86,7 @@ export function MagazzinoRicambioInfoModal({
       titleId="detail-ricambio-title"
       footer={
         <div className="flex w-full min-w-0 flex-col gap-2">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
             <DisabledElementTooltip
               content={canAdjustScorta ? "Carico +1" : READONLY_PERMISSION_HINT}
               disabled={!canAdjustScorta}
@@ -98,6 +100,14 @@ export function MagazzinoRicambioInfoModal({
                 Carica +1
               </button>
             </DisabledElementTooltip>
+            <span
+              className={`min-w-[2.5rem] px-1 text-center font-mono text-lg font-bold tabular-nums ${
+                low ? "text-red-600 dark:text-red-400" : "text-[color:var(--cab-text)]"
+              }`}
+              aria-label={`Scorta attuale: ${ricambio.scorta}`}
+            >
+              {ricambio.scorta}
+            </span>
             <DisabledElementTooltip
               content={canAdjustScorta ? "Scarico −1" : READONLY_PERMISSION_HINT}
               disabled={!canAdjustScorta}
@@ -112,7 +122,7 @@ export function MagazzinoRicambioInfoModal({
               </button>
             </DisabledElementTooltip>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="hidden grid-cols-2 gap-2 text-sm sm:grid">
             <Link
               href="/lavorazioni"
               className="inline-flex min-h-10 items-center justify-center rounded-md border border-[color:var(--cab-border)] px-2 text-center hover:bg-[color:var(--cab-surface-elevated)]"

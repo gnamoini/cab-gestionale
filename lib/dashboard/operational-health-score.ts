@@ -19,6 +19,8 @@ export type OperationalHealthFactor = {
   impact: number;
   /** Dettaglio calcolo (peso, trend, penalità). */
   detail?: string;
+  /** Deep-link alla fonte del messaggio (lavorazione, ricambio, sezione). */
+  href?: string;
 };
 
 export type OperationalHealthSectionSummary = {

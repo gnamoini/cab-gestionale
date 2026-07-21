@@ -66,6 +66,9 @@ const snapshot: InputSnapshot = {
   openCount: 20,
   mezziCount: 8,
   dataQualityFlags: [],
+  lateIngressLavorazioneIds: [],
+  inactiveLavorazioneIds: [],
+  stockCriticalRicambioIds: [],
 };
 
 const scoreA = computeFor(snapshot);

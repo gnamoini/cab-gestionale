@@ -10,7 +10,6 @@ import { HubModalPanoramicaPanel, hubPanoramicaDisplayValue } from "@/components
 import { LoadingFormSkeleton } from "@/components/design-system";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import { RicambioCollapsibleSection } from "@/components/gestionale/magazzino/ricambio-modal-ui";
-import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
 import { MagazzinoScortaInfoStepper } from "@/components/gestionale/magazzino/magazzino-scorta-adjust-actions";
 import { RecordImageManager, type RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import {
@@ -35,6 +34,18 @@ function multilineValue(value: string): ReactNode {
   const t = value.trim();
   if (!t) return hubPanoramicaDisplayValue("");
   return <span className="whitespace-pre-wrap text-[color:var(--cab-text)]">{t}</span>;
+}
+
+export function RicambioConsumoDetailRows({ consumo }: { consumo: RicambioConsumoDaLog | undefined }) {
+  return (
+    <>
+      <GestionaleInfoRow label="Ultimo mese consumato" value={formatMonthKeyIt(consumo?.lastExitMonthKey ?? null)} />
+      <GestionaleInfoRow
+        label="Mesi osservati"
+        value={consumo && consumo.monthsObserved > 0 ? String(consumo.monthsObserved) : "—"}
+      />
+    </>
+  );
 }
 
 export function RicambioConsumoInfoRows({
@@ -114,13 +125,41 @@ export function RicambioInfoPanel({
 
   return (
     <div className="space-y-3">
-      <RicambioOperationalStatusCard
-        descrizione={ricambio.descrizione}
-        scorta={ricambio.scorta}
-        scortaMinima={ricambio.scortaMinima}
-        consumo={consumo}
-        stockPolicyRaw={stockPolicyRaw}
-      />
+      <RicambioCollapsibleSection title="Giacenza e consumo" defaultCollapsed={false}>
+        <RicambioOperationalStatusCard
+          embedded
+          descrizione={ricambio.descrizione}
+          scorta={ricambio.scorta}
+          scortaMinima={ricambio.scortaMinima}
+          consumo={consumo}
+          stockPolicyRaw={stockPolicyRaw}
+        />
+        {onAdjustScorta ? (
+          <GestionaleInfoRow
+            label="Scorta"
+            value={
+              <MagazzinoScortaInfoStepper
+                value={ricambio.scorta}
+                low={low}
+                canAdjust={canAdjustScorta ?? false}
+                modalitaModifica={modalitaModifica}
+                onDecrease={() => onAdjustScorta(-1)}
+                onIncrease={() => onAdjustScorta(1)}
+                onSetValue={(target) => onSetScorta?.(target)}
+              />
+            }
+          />
+        ) : null}
+        <GestionaleInfoSubgroup title="Consumo (log magazzino)" borderless>
+          <RicambioConsumoDetailRows consumo={consumo} />
+        </GestionaleInfoSubgroup>
+        <GestionaleInfoRow label="Capitale immob." value={formatEur(capitaleImmobilizzato(ricambio))} mono />
+        <GestionaleInfoSubgroup title="Audit" borderless>
+          <GestionaleInfoRow label="Ultima modifica" value={ultimaModifica} />
+          <GestionaleInfoRow label="Autore" value={hubPanoramicaDisplayValue(ricambio.autoreUltimaModifica)} />
+        </GestionaleInfoSubgroup>
+      </RicambioCollapsibleSection>
+
       <RicambioCollapsibleSection title="Dati principali" defaultCollapsed={false}>
         {ricambio.listinoImport?.generatoAutomaticamente ? (
           <div className="mb-2 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))] px-3 py-2">
@@ -167,25 +206,6 @@ export function RicambioInfoPanel({
           value={formatRicambioUnitaMisuraLabel(ricambio.unitaMisura)}
         />
         <GestionaleInfoRow label="Compatibilità" value={compatDisplay} />
-        <GestionaleInfoRow
-          label="Scorta"
-          value={
-            onAdjustScorta ? (
-              <MagazzinoScortaInfoStepper
-                value={ricambio.scorta}
-                low={low}
-                canAdjust={canAdjustScorta ?? false}
-                modalitaModifica={modalitaModifica}
-                onDecrease={() => onAdjustScorta(-1)}
-                onIncrease={() => onAdjustScorta(1)}
-                onSetValue={(target) => onSetScorta?.(target)}
-              />
-            ) : (
-              <MagazzinoScortaBadge value={ricambio.scorta} low={low} variant="table" />
-            )
-          }
-        />
-        <GestionaleInfoRow label="Scorta minima" value={String(ricambio.scortaMinima)} mono />
       </RicambioCollapsibleSection>
 
       <RicambioCollapsibleSection title="Foto" defaultCollapsed>
@@ -196,17 +216,6 @@ export function RicambioInfoPanel({
           hubCardLayout
           onImageEvent={onImageEvent}
         />
-      </RicambioCollapsibleSection>
-
-      <RicambioCollapsibleSection title="Giacenza e consumo" defaultCollapsed={false}>
-        <GestionaleInfoSubgroup title="Consumo (log magazzino)" borderless>
-          <RicambioConsumoInfoRows consumo={consumo} scorta={ricambio.scorta} />
-        </GestionaleInfoSubgroup>
-        <GestionaleInfoRow label="Capitale immob." value={formatEur(capitaleImmobilizzato(ricambio))} mono />
-        <GestionaleInfoSubgroup title="Audit" borderless>
-          <GestionaleInfoRow label="Ultima modifica" value={ultimaModifica} />
-          <GestionaleInfoRow label="Autore" value={hubPanoramicaDisplayValue(ricambio.autoreUltimaModifica)} />
-        </GestionaleInfoSubgroup>
       </RicambioCollapsibleSection>
 
       <RicambioCollapsibleSection

@@ -53,6 +53,18 @@ export function markRecentLocalGestionaleFromCabEvents(cabSyncEvents?: CabSyncEv
   }
 }
 
+/** Segna da mappa tabella→entity id (dispatch local_mutation senza cab events). */
+export function markRecentLocalGestionaleFromEntityIdByTable(
+  entityIdByTable?: ReadonlyMap<string, string> | Record<string, string>,
+): void {
+  if (!entityIdByTable) return;
+  const entries =
+    entityIdByTable instanceof Map ? [...entityIdByTable.entries()] : Object.entries(entityIdByTable);
+  for (const [table, entityId] of entries) {
+    if (table && entityId) markRecentLocalGestionaleMutation([table], entityId);
+  }
+}
+
 export function shouldSuppressRemoteCacheInvalidation(table: string, entityId?: string): boolean {
   const now = Date.now();
   prune(now);

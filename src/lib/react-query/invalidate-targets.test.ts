@@ -14,6 +14,7 @@ import {
   clearRecentLocalGestionaleMutations,
   filterTablesForRemoteCacheInvalidation,
   markRecentLocalGestionaleMutation,
+  markRecentLocalGestionaleFromEntityIdByTable,
   markRecentLocalTableBurst,
   shouldSuppressRemoteCacheInvalidation,
 } from "@/lib/sync/recent-local-mutation";
@@ -81,6 +82,16 @@ clearRecentLocalGestionaleMutations();
 markRecentLocalGestionaleMutation(["lavorazioni"], "lav-1");
 assert.equal(shouldSuppressRemoteCacheInvalidation("lavorazioni", "lav-1"), true);
 assert.equal(shouldSuppressRemoteCacheInvalidation("lavorazioni", "lav-2"), false);
+
+clearRecentLocalGestionaleMutations();
+markRecentLocalGestionaleFromEntityIdByTable(
+  new Map([
+    ["lavorazioni", "lav-map"],
+    ["scheda_lavorazione", "sch-map"],
+  ]),
+);
+assert.equal(shouldSuppressRemoteCacheInvalidation("lavorazioni", "lav-map"), true);
+assert.equal(shouldSuppressRemoteCacheInvalidation("scheda_lavorazione", "sch-map"), true);
 
 clearRecentLocalGestionaleMutations();
 markRecentLocalTableBurst(["scheda_lavorazione"]);

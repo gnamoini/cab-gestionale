@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { compareMagazzinoDefaultOrder } from "@/lib/magazzino/sort-order";
+import {
+  compareMagazzinoDefaultOrder,
+  compareMagazzinoMobileDefaultOrder,
+} from "@/lib/magazzino/sort-order";
 import { defaultRicambioMagazzinoFields } from "@/lib/magazzino/ricambio-magazzino-defaults";
 
 const order = new Map<string, number>([
@@ -20,6 +23,29 @@ assert.deepEqual(
   sorted.map((r) => r.id),
   ["a", "m", "z"],
   "default order: marca asc, then natural tie-break",
+);
+
+const mobileRows = [
+  defaultRicambioMagazzinoFields({
+    id: "old",
+    dataUltimaModifica: "2024-01-01T00:00:00.000Z",
+  }),
+  defaultRicambioMagazzinoFields({
+    id: "new",
+    dataUltimaModifica: "2025-06-01T00:00:00.000Z",
+  }),
+  defaultRicambioMagazzinoFields({
+    id: "mid",
+    dataUltimaModifica: "2024-06-01T00:00:00.000Z",
+  }),
+];
+
+const mobileSorted = [...mobileRows].sort((a, b) => compareMagazzinoMobileDefaultOrder(a, b, order));
+
+assert.deepEqual(
+  mobileSorted.map((r) => r.id),
+  ["new", "mid", "old"],
+  "mobile default: dataUltimaModifica desc",
 );
 
 console.log("sort-order.test.ts OK");

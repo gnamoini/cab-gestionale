@@ -54,6 +54,9 @@ const snapshot: InputSnapshot = {
   openCount: 15,
   mezziCount: 10,
   dataQualityFlags: [],
+  lateIngressLavorazioneIds: ["lav-late-1"],
+  inactiveLavorazioneIds: [],
+  stockCriticalRicambioIds: [],
 };
 
 resetHealthScoreRegistry();
@@ -106,6 +109,10 @@ assert.ok(operational.factors.some((f) => f.detail && f.detail.includes("valutaz
 assert.ok(
   operational.factors.some((f) => f.impact < 0 && f.detail?.includes("penalità")),
   "meta penalità risk",
+);
+assert.ok(
+  operational.factors.some((f) => f.href === "/lavorazioni?focusLav=lav-late-1"),
+  "late-ingress link alla lavorazione più in ritardo",
 );
 
 console.log("adapt-to-operational-health-score.test.ts OK");

@@ -53,6 +53,10 @@ export type InputSnapshot = {
   openCount: number;
   mezziCount: number;
   dataQualityFlags: string[];
+  /** Id per deep-link UI (più grave per primo). */
+  lateIngressLavorazioneIds: string[];
+  inactiveLavorazioneIds: string[];
+  stockCriticalRicambioIds: string[];
 };
 
 export type FormulaTraceStep = {
@@ -108,6 +112,12 @@ export type RiskModifierExplainNode = {
   trace: FormulaTraceStep[];
 };
 
+export type HealthScoreFactorSources = {
+  lateIngressLavorazioneIds: readonly string[];
+  inactiveLavorazioneIds: readonly string[];
+  stockCriticalRicambioIds: readonly string[];
+};
+
 export type HealthScoreBreakdown = {
   sections: SectionExplainNode[];
   riskModifiers: RiskModifierExplainNode[];
@@ -133,6 +143,7 @@ export type HealthScoreResult = {
   period: DateRange;
   prevPeriod: DateRange;
   cacheHit: boolean;
+  factorSources: HealthScoreFactorSources;
 };
 
 export type ModuleAccessMap = Partial<

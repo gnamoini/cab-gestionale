@@ -54,6 +54,9 @@ const snapshot: InputSnapshot = {
   openCount: 18,
   mezziCount: 12,
   dataQualityFlags: [],
+  lateIngressLavorazioneIds: [],
+  inactiveLavorazioneIds: [],
+  stockCriticalRicambioIds: [],
 };
 
 const adminAccess: ModuleAccessMap = {

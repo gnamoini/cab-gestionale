@@ -34,6 +34,18 @@ export function compareMagazzinoDefaultOrder(
   return compareNaturalOrder(a, b, orderIndex);
 }
 
+/** Card mobile: ultima modifica ↓ (più recente in alto), poi ordine naturale. */
+export function compareMagazzinoMobileDefaultOrder(
+  a: RicambioMagazzino,
+  b: RicambioMagazzino,
+  orderIndex: Map<string, number>,
+  mezziListe?: MezziListePrefs,
+): number {
+  const byModifica = compareByColumn(a, b, "dataUltimaModifica", "desc", undefined, mezziListe);
+  if (byModifica !== 0) return byModifica;
+  return compareNaturalOrder(a, b, orderIndex);
+}
+
 export function sortValueForKey(
   r: RicambioMagazzino,
   key: SortKeyMagazzino,

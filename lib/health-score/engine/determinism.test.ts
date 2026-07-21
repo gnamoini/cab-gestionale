@@ -53,6 +53,9 @@ const baseSnapshot: InputSnapshot = {
   openCount: 25,
   mezziCount: 15,
   dataQualityFlags: [],
+  lateIngressLavorazioneIds: [],
+  inactiveLavorazioneIds: [],
+  stockCriticalRicambioIds: [],
 };
 
 resetHealthScoreRegistry();

@@ -36,6 +36,8 @@ assert.match(hookSrc, /dispatchTimesheetEmployeesChanged/);
 
 assert.match(dispatchSrc, /resolveSyncEffects/);
 assert.match(dispatchSrc, /markGestionaleDirty/);
+assert.match(dispatchSrc, /shouldSuppressRemoteCacheInvalidation/);
+assert.match(dispatchSrc, /markRecentLocalGestionaleFromEntityIdByTable/);
 assert.match(policySrc, /ALWAYS_LIVE_TABLES/);
 assert.match(policySrc, /user_permissions/);
 assert.match(policySrc, /profiles/);

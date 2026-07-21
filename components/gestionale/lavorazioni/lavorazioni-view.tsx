@@ -121,7 +121,7 @@ import {
 } from "@/lib/schede/schede-sync-adapter";
 import { clampSchedeBundle } from "@/lib/validation/clamp-free-text";
 import { applyOptimisticSchedeStore, rollbackSchedeStore, snapshotSchedeStore } from "@/lib/schede/schede-store-optimistic";
-import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
+import { dispatchGestionaleLocalMutation, cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
 import { flushGestionaleDirty } from "@/lib/sync/gestionale-dirty-flush";
 import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { markRecentLocalTableBurst } from "@/lib/sync/recent-local-mutation";
@@ -786,11 +786,16 @@ export function LavorazioniView() {
           });
         }
         if (options?.syncAfter !== false) {
+          const lavorazioneId = options?.savedBundle?.lavorazioneId?.trim() ?? "";
           const ingressoRowId = (options?.savedBundle?.ingresso as { id?: string } | null | undefined)?.id?.trim();
-          const entityIdByTable = ingressoRowId
-            ? new Map<string, string>([["scheda_lavorazione", ingressoRowId]])
+          const entityIdByTable = new Map<string, string>();
+          if (ingressoRowId) entityIdByTable.set("scheda_lavorazione", ingressoRowId);
+          if (lavorazioneId) entityIdByTable.set("lavorazioni", lavorazioneId);
+          const tables = lavorazioneId ? ["scheda_lavorazione", "lavorazioni"] : ["scheda_lavorazione"];
+          const cabSyncEvents = lavorazioneId
+            ? [cabSyncEventForEntity("lavorazioni", lavorazioneId, "entity_updated", "lavorazioni")]
             : undefined;
-          dispatchGestionaleLocalMutation(qc, ["scheda_lavorazione"], undefined, entityIdByTable);
+          dispatchGestionaleLocalMutation(qc, tables, cabSyncEvents, entityIdByTable);
         } else {
           markRecentLocalTableBurst(["scheda_lavorazione"]);
         }

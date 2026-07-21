@@ -45,6 +45,9 @@ const microSnap: InputSnapshot = {
   openCount: 2,
   mezziCount: 2,
   dataQualityFlags: [],
+  lateIngressLavorazioneIds: [],
+  inactiveLavorazioneIds: [],
+  stockCriticalRicambioIds: [],
 };
 
 const size = classifyWorkshopSize(microSnap);

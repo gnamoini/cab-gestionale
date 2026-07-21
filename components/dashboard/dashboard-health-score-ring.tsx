@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import type {
   OperationalHealthFactor,
   OperationalHealthScore,
@@ -251,8 +252,8 @@ function FactorList({
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">{title}</p>
       )}
       <ul className={hideTitle ? "flex flex-col gap-2" : "mt-1.5 flex flex-col gap-2"}>
-        {factors.slice(0, FACTOR_LIST_MAX).map((factor) => (
-          <li key={`${tone}-${factor.label}`} className="list-none min-w-0">
+        {factors.slice(0, FACTOR_LIST_MAX).map((factor) => {
+          const row = (
             <div className={`${FACTOR_ROW_SHELL_CLASS} ${FACTOR_ROW_TONE_CLASS[tone]}`}>
               <div className="flex min-w-0 items-center gap-2">
                 <div className="min-w-0 flex-1">
@@ -270,8 +271,24 @@ function FactorList({
                 </span>
               </div>
             </div>
-          </li>
-        ))}
+          );
+
+          return (
+            <li key={`${tone}-${factor.label}`} className="list-none min-w-0">
+              {factor.href ? (
+                <Link
+                  href={factor.href}
+                  className="block min-w-0 rounded-md transition-colors hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--cab-primary)]"
+                  aria-label={`Vai alla fonte: ${factor.label}`}
+                >
+                  {row}
+                </Link>
+              ) : (
+                row
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

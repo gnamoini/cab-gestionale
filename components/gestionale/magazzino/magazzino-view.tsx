@@ -78,6 +78,7 @@ import { ricambioHasFornitoreAlternativo } from "@/lib/magazzino/ricambio-fornit
 import {
   compareByColumn,
   compareMagazzinoDefaultOrder,
+  compareMagazzinoMobileDefaultOrder,
   compareNaturalOrder,
   type SortPhaseMagazzino,
 } from "@/lib/magazzino/sort-order";
@@ -1096,6 +1097,9 @@ export function MagazzinoView() {
 
     rows = [...rows].sort((a, b) => {
       if (sortPhase === "natural" || sortColumn === null) {
+        if (listLayout === "mobile") {
+          return compareMagazzinoMobileDefaultOrder(a, b, orderMap, mezziListePrefs);
+        }
         return compareMagazzinoDefaultOrder(a, b, orderMap, mezziListePrefs);
       }
       const primary = compareByColumn(a, b, sortColumn, sortPhase, consumoAvgById, mezziListePrefs);
@@ -1104,7 +1108,7 @@ export function MagazzinoView() {
     });
 
     return rows;
-  }, [prodotti, pageFilters, sortColumn, sortPhase, consumoAvgById, mezziListePrefs, haystackIndex]);
+  }, [prodotti, pageFilters, sortColumn, sortPhase, consumoAvgById, mezziListePrefs, haystackIndex, listLayout]);
 
   filteredSortedRef.current = filteredSorted;
 

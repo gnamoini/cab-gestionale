@@ -12,9 +12,11 @@ import {
   humanizeRiskFactorMeta,
 } from "@/lib/health-score/explain/humanize-factor-label";
 import { filterBreakdownForViewer } from "@/lib/health-score/explain/filter-breakdown-for-viewer";
+import { resolveHealthScoreFactorHref } from "@/lib/health-score/explain/health-score-factor-nav";
 import { resolveSectionPrevScore } from "@/lib/health-score/explain/section-prev-score";
 import type {
   HealthScoreBreakdown,
+  HealthScoreFactorSources,
   HealthScoreResult,
   KpiExplainNode,
   ModuleAccessMap,
@@ -135,7 +137,10 @@ function buildCalculationSummary(result: HealthScoreResult): OperationalHealthCa
   };
 }
 
-function buildFactorsFromBreakdown(breakdown: HealthScoreBreakdown): OperationalHealthFactor[] {
+function buildFactorsFromBreakdown(
+  breakdown: HealthScoreBreakdown,
+  factorSources: HealthScoreFactorSources,
+): OperationalHealthFactor[] {
   const factors: OperationalHealthFactor[] = [];
   const activeRiskIds = new Set(
     breakdown.riskModifiers.filter((risk) => risk.penalty > 0).map((risk) => risk.id),
@@ -153,6 +158,7 @@ function buildFactorsFromBreakdown(breakdown: HealthScoreBreakdown): Operational
         label: humanizeKpiFactorLabel(kpi),
         impact,
         detail: buildKpiFactorDetail(kpi),
+        href: resolveHealthScoreFactorHref(factorSources, { kind: "kpi", id: kpi.id }),
       });
     }
   }
@@ -163,6 +169,7 @@ function buildFactorsFromBreakdown(breakdown: HealthScoreBreakdown): Operational
         label: humanizeRiskFactorLabel(risk),
         impact: -Math.round(risk.penalty),
         detail: buildRiskFactorDetail(risk),
+        href: resolveHealthScoreFactorHref(factorSources, { kind: "risk", id: risk.id }),
       });
     }
   }
@@ -192,7 +199,7 @@ export function adaptHealthScoreToOperational(
 ): OperationalHealthScore {
   const breakdownForFactors =
     access != null ? filterBreakdownForViewer(result.breakdown, access) : result.breakdown;
-  const factors = buildFactorsFromBreakdown(breakdownForFactors);
+  const factors = buildFactorsFromBreakdown(breakdownForFactors, result.factorSources);
 
   const metricCount = result.breakdown.sections.reduce((n, s) => n + s.kpis.length, 0);
 

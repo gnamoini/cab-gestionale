@@ -245,5 +245,10 @@ export function computeHealthScoreFromSnapshot(input: ComputeHealthScoreInput): 
     period: range,
     prevPeriod: prevRange,
     cacheHit,
+    factorSources: {
+      lateIngressLavorazioneIds: snapshot.lateIngressLavorazioneIds,
+      inactiveLavorazioneIds: snapshot.inactiveLavorazioneIds,
+      stockCriticalRicambioIds: snapshot.stockCriticalRicambioIds,
+    },
   };
 }

@@ -22,6 +22,11 @@ import {
 import { sottoScortaCount } from "@/lib/report/kpi-performance/kpi-performance-formulas";
 import { isoInRange, ymdFromDate, type DateRange } from "@/lib/report/date-ranges";
 import { computeUrgentFulfillmentStats } from "@/lib/health-score/lavorazioni-urgent-fulfillment";
+import {
+  collectInactiveLavorazioneIds,
+  collectLateIngressLavorazioneIds,
+  collectStockCriticalRicambioIds,
+} from "@/lib/health-score/explain/collect-factor-source-ids";
 import type { InputSnapshot } from "@/lib/health-score/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { InvoiceRow } from "@/src/types/supabase-tables";
@@ -225,5 +230,16 @@ export function buildInputSnapshot(input: {
     openCount,
     mezziCount: input.mezziCount,
     dataQualityFlags: flags,
+    lateIngressLavorazioneIds: collectLateIngressLavorazioneIds(attive, input.anchor),
+    inactiveLavorazioneIds: collectInactiveLavorazioneIds(
+      input.lavRows,
+      input.anchor,
+      input.statiLavorazione,
+    ),
+    stockCriticalRicambioIds: collectStockCriticalRicambioIds(
+      input.ricambi,
+      input.magLog,
+      input.anchor,
+    ),
   };
 }

@@ -21,6 +21,8 @@ import { shouldDispatchNotificaForGestionaleAction } from "@/lib/sync/gestionale
 import {
   filterTablesForRemoteCacheInvalidation,
   markRecentLocalGestionaleFromCabEvents,
+  markRecentLocalGestionaleFromEntityIdByTable,
+  shouldSuppressRemoteCacheInvalidation,
 } from "@/lib/sync/recent-local-mutation";
 import { shouldSkipEntityRefetch } from "@/lib/sync/recent-entity-invalidation";
 import { reconcileGestionaleCabEvents, type ReconcileSource } from "@/lib/sync/gestionale-reconcile";
@@ -225,6 +227,7 @@ export function dispatchGestionaleAction(
 
   if (options.source === "local_mutation") {
     markRecentLocalGestionaleFromCabEvents(options.cabSyncEvents);
+    markRecentLocalGestionaleFromEntityIdByTable(options.entityIdByTable);
   }
 
   const fp = gestionaleDispatchFingerprint(uniqueTables, cabEvents);
@@ -254,6 +257,9 @@ export function dispatchGestionaleAction(
 
     if (resolved.dirtyEntries.length > 0 && isDocumentVisible()) {
       for (const entry of resolved.dirtyEntries) {
+        if (shouldSuppressRemoteCacheInvalidation(entry.table, entry.entityId ?? undefined)) {
+          continue;
+        }
         markGestionaleDirty(entry);
         incrementSyncMetric("gestionale_dirty_marked", 1, {
           domain: entry.domain,
