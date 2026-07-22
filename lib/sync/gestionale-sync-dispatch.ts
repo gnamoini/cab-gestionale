@@ -34,6 +34,7 @@ import { incrementSyncMetric } from "@/lib/sync/gestionale-sync-metrics";
 import { resolveDomainForTable } from "@/lib/sync/gestionale-sync-scope";
 import { incrementHealthCounter } from "@/lib/observability/runtime-health";
 import { recordStockInvalidateTelemetry } from "@/lib/magazzino/stock-merge-telemetry";
+import { acknowledgeOperationalTableVersions } from "@/lib/sync/operational-data-version";
 
 function isDocumentVisible(): boolean {
   return typeof document === "undefined" || document.visibilityState === "visible";
@@ -229,6 +230,7 @@ export function dispatchGestionaleAction(
   if (options.source === "local_mutation") {
     markRecentLocalGestionaleFromCabEvents(options.cabSyncEvents);
     markRecentLocalGestionaleFromEntityIdByTable(options.entityIdByTable);
+    acknowledgeOperationalTableVersions(uniqueTables);
   }
 
   const fp = gestionaleDispatchFingerprint(uniqueTables, cabEvents);

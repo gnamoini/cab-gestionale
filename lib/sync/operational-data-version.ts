@@ -12,7 +12,14 @@ export const NO_DIRTY_SIGNAL_TABLES = new Set([
   "app_settings",
 ]);
 
+const ACK_DEBOUNCE_MS = 400;
+
 let lastTableVersions: OperationalTableVersions | null = null;
+const pendingBaselineAck = new Set<string>();
+let pendingAckTables = new Set<string>();
+let ackDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let ackInFlight: Promise<void> | null = null;
+let fetchVersionsOverride: (() => Promise<OperationalTableVersions>) | null = null;
 
 function normalizeTableVersions(raw: unknown): OperationalTableVersions {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
@@ -22,6 +29,69 @@ function normalizeTableVersions(raw: unknown): OperationalTableVersions {
     if (Number.isFinite(n) && n > 0) out[table] = n;
   }
   return out;
+}
+
+function mergeTableVersionsMonotone(
+  tables: readonly string[],
+  fetched: OperationalTableVersions,
+): void {
+  const base: Record<string, number> = { ...(lastTableVersions ?? {}) };
+  for (const table of tables) {
+    const fetchedVersion = fetched[table];
+    if (fetchedVersion == null || !Number.isFinite(fetchedVersion)) continue;
+    base[table] = Math.max(base[table] ?? 0, fetchedVersion);
+  }
+  lastTableVersions = base;
+}
+
+async function resolveFetchOperationalTableVersions(): Promise<OperationalTableVersions> {
+  if (fetchVersionsOverride) return fetchVersionsOverride();
+  return fetchOperationalTableVersions();
+}
+
+function flushAckBatch(): void {
+  if (ackInFlight) return;
+  const batch = [...pendingAckTables];
+  pendingAckTables.clear();
+  if (batch.length === 0) return;
+
+  ackInFlight = (async () => {
+    try {
+      const fetched = await resolveFetchOperationalTableVersions();
+      mergeTableVersionsMonotone(batch, fetched);
+    } catch {
+      // ponytail: ack fallito — poll può ancora rilevare drift legittimo
+    } finally {
+      for (const table of batch) pendingBaselineAck.delete(table);
+      ackInFlight = null;
+      if (pendingAckTables.size > 0) flushAckBatch();
+    }
+  })();
+}
+
+/**
+ * Aggiorna baseline versioni dopo mutazione locale confermata.
+ * Debounce condiviso, single in-flight, merge monotono solo tabelle richieste.
+ */
+export function acknowledgeOperationalTableVersions(tables: readonly string[]): void {
+  const unique = [...new Set(tables.filter(Boolean))];
+  if (unique.length === 0) return;
+
+  for (const table of unique) {
+    pendingAckTables.add(table);
+    pendingBaselineAck.add(table);
+  }
+
+  if (ackDebounceTimer) clearTimeout(ackDebounceTimer);
+  ackDebounceTimer = setTimeout(() => {
+    ackDebounceTimer = null;
+    flushAckBatch();
+  }, ACK_DEBOUNCE_MS);
+}
+
+/** True mentre ack debounced/in-flight per la tabella — evita dirty spurio poll/ack race. */
+export function isOperationalBaselineAckPending(table: string): boolean {
+  return pendingBaselineAck.has(table);
 }
 
 export async function fetchOperationalTableVersions(): Promise<OperationalTableVersions> {
@@ -56,7 +126,7 @@ export function filterDirtySignalTables(tables: readonly string[]): string[] {
 
 /** Poll versione: aggiorna baseline e restituisce tabelle con drift reale (vuoto al primo poll). */
 export async function consumeOperationalVersionPoll(): Promise<string[]> {
-  const next = await fetchOperationalTableVersions();
+  const next = await resolveFetchOperationalTableVersions();
   const drifted = diffOperationalTableVersions(lastTableVersions, next);
   lastTableVersions = next;
   return filterDirtySignalTables(drifted);
@@ -72,4 +142,40 @@ export function hasOperationalDataVersionDrift(
   next: number,
 ): boolean {
   return previous != null && previous !== next;
+}
+
+/** Test: imposta baseline e resetta stato ack. */
+export function resetOperationalVersionStateForTests(
+  baseline?: OperationalTableVersions | null,
+): void {
+  lastTableVersions = baseline ?? null;
+  pendingBaselineAck.clear();
+  pendingAckTables.clear();
+  if (ackDebounceTimer) {
+    clearTimeout(ackDebounceTimer);
+    ackDebounceTimer = null;
+  }
+  ackInFlight = null;
+  fetchVersionsOverride = null;
+}
+
+/** Test: mock fetch versioni RPC. */
+export function setFetchOperationalTableVersionsForTests(
+  fn: (() => Promise<OperationalTableVersions>) | null,
+): void {
+  fetchVersionsOverride = fn;
+}
+
+/** Test: esegue ack senza debounce timer. */
+export async function flushAcknowledgeOperationalTableVersionsForTests(): Promise<void> {
+  if (ackDebounceTimer) {
+    clearTimeout(ackDebounceTimer);
+    ackDebounceTimer = null;
+  }
+  flushAckBatch();
+  if (ackInFlight) await ackInFlight;
+  if (pendingAckTables.size > 0) {
+    flushAckBatch();
+    if (ackInFlight) await ackInFlight;
+  }
 }

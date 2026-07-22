@@ -69,7 +69,7 @@ const MezziTagliandiPanel = dynamic(
     import("@/components/gestionale/mezzi/mezzi-tagliandi-panel").then((m) => ({
       default: m.MezziTagliandiPanel,
     })),
-  { ssr: false, loading: () => <LoadingCardSkeleton minHeightClass="min-h-[12rem]" /> },
+  { ssr: false },
 );
 
 const MezziNewModal = dynamic(
@@ -501,8 +501,11 @@ export function MezziView() {
 
   useEffect(() => {
     if (pageView !== "tagliandi") return;
-    void prefetchMezziTagliandiQueries(queryClient);
-  }, [pageView, queryClient]);
+    void prefetchMezziTagliandiQueries(queryClient, {
+      userId: user?.id,
+      userRole: user?.roleKey ?? user?.ruolo,
+    });
+  }, [pageView, queryClient, user?.id, user?.roleKey, user?.ruolo]);
 
   useEffect(() => {
     return () => {

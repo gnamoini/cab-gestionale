@@ -34,6 +34,9 @@ assert.match(read("components/gestionale/global-input/global-select-option-row.t
 assert.match(globalSelectTypes, /GlobalSelectProps/);
 
 assert.match(globalTable, /memo\(function VirtualTableBody/);
+assert.match(globalTable, /forceFullRender/);
+assert.match(globalTable, /globalTableScrollElementAllowsVerticalVirtualPadding/);
+assert.match(globalTable, /globalTableVirtualSpacerRow/);
 assert.match(virtualRowsHelper, /useGestionaleListVirtualRows/);
 
 assert.doesNotMatch(kanban, /useLayoutEffect\(\(\) => \{[\s\S]*syncMetrics\(\);[\s\S]*\}\);/);

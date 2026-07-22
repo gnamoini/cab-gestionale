@@ -451,7 +451,7 @@ function SchedaIngressoAnagraficaFieldsInner({
               <GestionaleNumberInput
                 id={fieldId("km")}
                 min={0}
-                inputMode="numeric"
+                inputMode="decimal"
                 value={value.km}
                 onChange={(v) => onPatch({ km: v })}
                 disabled={disabled}

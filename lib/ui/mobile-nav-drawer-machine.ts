@@ -48,6 +48,11 @@ function isSettling(state: NavDrawerState): boolean {
 
 const EDGE_PREVIEW_STUCK_MS = NAV_DRAWER_EDGE_DRAG_IDLE_MS + 200;
 
+/** Main content inert iff drawer is committed open or settling open — never during edge preview drag. */
+export function deriveMainInert(state: NavDrawerState): boolean {
+  return state === "OPEN" || state === "OPENING" || state === "SETTLING_OPEN";
+}
+
 export function deriveDrawerFlags(s: NavDrawerMachineState): NavDrawerFlags {
   const { state, mounted, edgePreview, edgeSettledOpen, closing } = s;
   const isCommitted = state === "OPEN" || (state === "DRAGGING" && !edgePreview);

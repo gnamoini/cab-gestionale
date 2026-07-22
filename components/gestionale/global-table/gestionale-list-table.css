@@ -51,9 +51,19 @@
   background-color: transparent !important;
 }
 
+.gestionale-list-table-scope tbody tr[aria-hidden],
+.lavorazioni-scroll-scope tbody tr[aria-hidden] {
+  pointer-events: none;
+}
+
 .gestionale-list-table-scope tbody tr:hover > td,
 .lavorazioni-scroll-scope tbody tr:hover > td {
   background-color: var(--gestionale-table-row-hover) !important;
+}
+
+.gestionale-list-table-scope tbody tr[aria-hidden]:hover > td,
+.lavorazioni-scroll-scope tbody tr[aria-hidden]:hover > td {
+  background-color: var(--gestionale-table-row-base) !important;
 }
 
 /* Evidenziazione riga: ring solo sul perimetro esterno (no divisori verticali tra celle). */

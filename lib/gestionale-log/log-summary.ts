@@ -33,6 +33,12 @@ import {
 } from "@/lib/magazzino/ricambio-compat-resolver";
 import { parseCompatMarcaModello } from "@/lib/mezzi/attrezzature-prefs";
 import { parseStockMovementAuditPayload } from "@/lib/magazzino/stock-audit-payload";
+import {
+  entityLabelFromPayload,
+  formatRicambioLogLabel,
+  isMagazzinoLogEntita,
+  ricambioIdFromLogRow,
+} from "@/lib/magazzino/ricambio-log-label";
 
 /** Summary persistito in `log_modifiche.payload.summary` (generato al write). */
 export type LogModificaSummary = {
@@ -43,7 +49,9 @@ export type LogModificaSummary = {
 };
 
 export type AuditLogContext = {
-  /** Etichetta oggetto pre-calcolata (es. "Mario Rossi — Bobcat E35"). */
+  /** Snapshot immutabile preferito (es. label ricambio al momento del movimento). */
+  entityLabel?: string;
+  /** Etichetta oggetto pre-calcolata legacy (es. "Mario Rossi — Bobcat E35"). */
   oggetto?: string;
 };
 
@@ -521,6 +529,8 @@ function isGenericModificaLines(modifiche: readonly string[]): boolean {
 
 function oggettoFromPayloadContext(payload: Record<string, unknown> | null): string {
   if (!payload) return "";
+  const fromLabel = entityLabelFromPayload(payload);
+  if (fromLabel && fromLabel !== "—") return fromLabel;
   const ctx = payload.context;
   if (!ctx || typeof ctx !== "object" || Array.isArray(ctx)) return "";
   return safeStr((ctx as Record<string, unknown>).oggetto).trim();
@@ -673,6 +683,7 @@ function resolveOggettoRiga(
   entita: string,
   oggettoRiga: string,
   payload: Record<string, unknown> | null,
+  entitaId?: string,
 ): string {
   let resolved = oggettoRiga;
   const ctxOggetto = oggettoFromPayloadContext(payload);
@@ -692,6 +703,20 @@ function resolveOggettoRiga(
       const rebuilt = buildOggettoFromRecord(entita, record);
       if (!isGenericLavorazioneLogOggettoLabel(rebuilt)) resolved = rebuilt;
     }
+  }
+  if (isMagazzinoLogEntita(entita) && (!resolved || resolved === "—")) {
+    const pseudoRow = {
+      entita,
+      entita_id: entitaId?.trim() || "",
+      azione: "",
+      created_at: "",
+      autore_id: null,
+      id: "",
+      payload,
+    };
+    const rid = ricambioIdFromLogRow(pseudoRow);
+    if (rid) resolved = formatRicambioLogLabel(null, rid);
+    else if (!resolved || resolved === "—") resolved = "Ricambio sconosciuto";
   }
   return sanitizeLogOggettoRiga(resolved);
 }
@@ -871,7 +896,7 @@ export function buildLogModificaSummary(input: {
     const oggettoRiga = typeof s.oggettoRiga === "string" ? s.oggettoRiga : "";
     const modifiche = Array.isArray(s.modifiche) ? s.modifiche.filter((x) => typeof x === "string") : [];
     if (tipoRiga && oggettoRiga && modifiche.length) {
-      const resolvedOggetto = resolveOggettoRiga(input.entita, oggettoRiga, payload);
+      const resolvedOggetto = resolveOggettoRiga(input.entita, oggettoRiga, payload, input.entita_id);
       let resolvedModifiche =
         input.entita === "lavorazioni"
           ? remapLavorazioneStatoInModifiche(modifiche as string[], payload, stati)
@@ -925,7 +950,12 @@ export function buildLogModificaSummary(input: {
   }
 
   const record = payload ? recordFromPayload(payload) : null;
-  const oggettoRiga = resolveOggettoRiga(input.entita, record ? buildOggettoFromRecord(input.entita, record) : "—", payload);
+  const oggettoRiga = resolveOggettoRiga(
+    input.entita,
+    record ? buildOggettoFromRecord(input.entita, record) : "—",
+    payload,
+    input.entita_id,
+  );
   let modifiche = payload ? diffToModifiche(payload, stati, input.entita) : [];
   modifiche = filterModificheForDisplay(input.entita, modifiche);
 
@@ -967,7 +997,14 @@ export function sanitizeModificaRigaText(modificaRiga: string): string {
 export { parseModificheLines };
 
 export function auditContext(oggetto: string): AuditLogContext {
-  return { oggetto: oggetto.trim() };
+  const label = oggetto.trim();
+  return { entityLabel: label, oggetto: label };
+}
+
+/** Snapshot immutabile per audit stock/CRUD magazzino. */
+export function auditContextWithEntityLabel(label: string): AuditLogContext {
+  const trimmed = label.trim();
+  return { entityLabel: trimmed, oggetto: trimmed };
 }
 
 export function mergePayloadWithSummary(

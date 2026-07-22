@@ -124,7 +124,7 @@ export async function createBulkLabelJob(input: {
 }): Promise<string> {
   const sb = await createSupabaseServerUserClient();
   const now = new Date().toISOString();
-  const storedPreset = formatLabelJobPreset(input.preset, input.includeBarcode !== false);
+  const storedPreset = formatLabelJobPreset(input.preset, input.includeBarcode === true);
   const { data, error } = await sb
     .from("label_generation_jobs")
     .insert({
@@ -325,7 +325,7 @@ export async function renderBulkLabelPdfSync(input: {
   const sb = await createSupabaseServerUserClient();
   const template = getLabelTemplate(input.preset);
   if (!template) throw new Error("Template non valido");
-  const includeBarcode = input.includeBarcode !== false;
+  const includeBarcode = input.includeBarcode === true;
 
   const { items, skippedIds } = await buildBulkLabelItems(sb, input.entityIds, input.userId, input.origin);
   if (!items.length) throw new Error("Nessun ricambio valido");

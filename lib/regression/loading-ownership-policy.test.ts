@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { LOADING_OWNERSHIP_SUSPENSE_FALLBACK_ALLOWED } from "./loading-ownership-exceptions";
+import { MIGRATED_LOADING_OWNER_ROUTES } from "./loading-transition-fallback-allowlist";
 
 const ROOT = process.cwd();
 const GESTIONALE_APP = path.join(ROOT, "app/(gestionale)");
@@ -59,6 +60,17 @@ function main(): void {
     if (LOADING_OWNERSHIP_SUSPENSE_FALLBACK_ALLOWED.includes(pageRel)) continue;
     if (hasRouteLoading(pageRel)) {
       violations.push(`${pageRel}: Suspense skeleton duplica loading.tsx`);
+    }
+  }
+
+  for (const pageRel of MIGRATED_LOADING_OWNER_ROUTES) {
+    if (!hasRouteLoading(pageRel)) continue;
+    const text = read(pageRel);
+    if (/PageTransitionLoader/.test(text)) {
+      violations.push(`${pageRel}: PageTransitionLoader duplica loading.tsx`);
+    }
+    if (/Suspense[^>]*fallback=\{/.test(text) && /Skeleton|PageTransitionLoader|LoadingSuspenseFallback/.test(text)) {
+      violations.push(`${pageRel}: Suspense fallback skeleton duplica loading.tsx`);
     }
   }
 

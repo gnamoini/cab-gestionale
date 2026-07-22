@@ -14,6 +14,7 @@ import {
   type GestionaleSyncDomain,
 } from "@/lib/sync/gestionale-sync-scope";
 import { isDirtySyncEnabledForDomain } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
+import { shouldSkipOperationalDirtyMark } from "@/lib/sync/operational-dirty-mark-gate";
 
 export type GestionaleFlushReason =
   | "user_requested"
@@ -102,6 +103,7 @@ export function markDirtyForOperationalTables(tables: readonly string[]): void {
     let marked = false;
     for (const table of scope.tables) {
       if (!tableSet.has(table)) continue;
+      if (shouldSkipOperationalDirtyMark(table)) continue;
       markGestionaleDirty({
         domain: scope.domain,
         table,

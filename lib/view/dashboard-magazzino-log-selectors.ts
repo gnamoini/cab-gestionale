@@ -2,6 +2,10 @@ import { extractPayloadFieldChanges } from "@/lib/gestionale-log/log-summary";
 import { isImageLogAction } from "@/lib/gestionale-log/view-model";
 import { isLogReverted } from "@/lib/gestionale-log/undo";
 import { parseMagazzinoRicambioMeta } from "@/lib/magazzino/magazzino-meta";
+import {
+  formatRicambioLogLabel,
+  ricambioIdFromLogRow,
+} from "@/lib/magazzino/ricambio-log-label";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { isoInRange, todayUntilNowRange, type DateRange } from "@/lib/report/date-ranges";
 import type {
@@ -28,18 +32,7 @@ function recordFromLogPayload(payload: unknown): Record<string, unknown> | null 
   return null;
 }
 
-export function ricambioIdFromMagazzinoLogRow(row: LogModificaRow): string | null {
-  if (row.entita === "magazzino_ricambi") {
-    const id = row.entita_id?.trim();
-    return id || null;
-  }
-  if (row.entita === "movimenti_ricambi") {
-    const rec = recordFromLogPayload(row.payload);
-    const rid = rec?.ricambio_id;
-    if (typeof rid === "string" && rid.trim()) return rid.trim();
-  }
-  return null;
-}
+export { ricambioIdFromLogRow as ricambioIdFromMagazzinoLogRow };
 
 function metaHasMeaningfulChange(before: unknown, after: unknown): boolean {
   const b = parseMagazzinoRicambioMeta(before);
@@ -113,10 +106,10 @@ function logRowToMovement(
   row: LogModificaRow,
   ricambiById: ReadonlyMap<string, RicambioMagazzino>,
 ): DashboardMagMovementRow | null {
-  const ricambioId = ricambioIdFromMagazzinoLogRow(row);
+  const ricambioId = ricambioIdFromLogRow(row);
   if (!ricambioId) return null;
   const ric = ricambiById.get(ricambioId);
-  const label = ric?.descrizione?.trim() || ric?.codiceFornitoreOriginale || "—";
+  const label = formatRicambioLogLabel(ric, ricambioId);
 
   if (row.entita === "movimenti_ricambi") {
     const rec = recordFromLogPayload(row.payload);
@@ -170,7 +163,7 @@ export function computeDashboardMagFeedFromLogs(
   for (const row of sorted) {
     const kind = classifyDashboardMagazzinoLog(row);
     if (kind !== "stock" || movements.length >= movementLimit) continue;
-    const ricambioId = ricambioIdFromMagazzinoLogRow(row);
+    const ricambioId = ricambioIdFromLogRow(row);
     if (!ricambioId || stockRicambioIds.has(ricambioId)) continue;
     const movement = logRowToMovement(row, ricambiById);
     if (!movement) continue;
@@ -182,7 +175,7 @@ export function computeDashboardMagFeedFromLogs(
   for (const row of sorted) {
     const kind = classifyDashboardMagazzinoLog(row);
     if (kind !== "data" || modified.length >= modifiedLimit) continue;
-    const ricambioId = ricambioIdFromMagazzinoLogRow(row);
+    const ricambioId = ricambioIdFromLogRow(row);
     if (!ricambioId || stockRicambioIds.has(ricambioId) || modifiedRicambioIds.has(ricambioId)) continue;
     const ric = ricambiById.get(ricambioId);
     if (!ric || isRicambioSottoScorta(ric)) continue;

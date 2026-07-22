@@ -91,7 +91,10 @@ export type InventoryQrTokenRow = {
 
 export const GENERATOR_VERSION = "1.3.35";
 
+/** Default generazione etichette — opt-in via checkbox/API. */
+export const DEFAULT_INCLUDE_BARCODE = false;
+
 export type LabelRenderOptions = {
-  /** Default true — se false il layout resta invariato, area barcode bianca. */
+  /** Default false — se false il layout resta invariato, area barcode bianca. */
   includeBarcode?: boolean;
 };

@@ -210,7 +210,7 @@ export const maintenanceEngineV2Service = {
       if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "read" }));
 
       let configs = (data ?? []) as ConfigRow[];
-      if (configs.length === 0 && input.tagliandiEnabled) {
+      if (configs.length === 0) {
         await maintenanceEngineV2Service.ensureMezzoConfigsFromLegacy({
           mezzoId: input.mezzoId,
           tipoAttrezzatura: input.tipoAttrezzatura,

@@ -15,7 +15,7 @@ import {
 import { TimesheetEmptyState } from "@/components/gestionale/dipendenti/timesheet-empty-state";
 import { TimesheetLoadError } from "@/components/gestionale/dipendenti/timesheet-load-error";
 import { TimesheetTableView } from "@/components/gestionale/dipendenti/timesheet-table-view";
-import { DipendentiPageStructure, DipendentiTimesheetSection } from "@/components/gestionale/dipendenti/dipendenti-page-structure";
+import { DipendentiTimesheetSection } from "@/components/gestionale/dipendenti/dipendenti-page-structure";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import {
   buildDipendentiPdfContext,
@@ -301,10 +301,6 @@ export function DipendentiView() {
       setFillToday8hPending(false);
     }
   }, [fillToday8hUpserts, ts, successOnce, errorOnce]);
-
-  if (perm.isLoading) {
-    return <DipendentiPageStructure mode="skeleton" />;
-  }
 
   const showRegistryEmpty =
     ts.loadPhase !== "error" && ts.hasRealAddetti && ts.displayEmployees.length === 0 && !ts.isSyncing;

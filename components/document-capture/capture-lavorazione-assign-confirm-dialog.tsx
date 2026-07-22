@@ -12,6 +12,7 @@ export function CaptureLavorazioneAssignConfirmDialog({
   schedaLabel,
   targetLabel,
   captureIdent,
+  replaceExisting = false,
   onCancel,
   onConfirm,
 }: {
@@ -19,25 +20,31 @@ export function CaptureLavorazioneAssignConfirmDialog({
   schedaLabel: string;
   targetLabel: string;
   captureIdent: CaptureIdent;
+  /** Capture già collegata a un'altra lavorazione. */
+  replaceExisting?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
   return (
     <GestionaleConfirmDialog
       open={open}
-      title="Conferma lavorazione"
-      subtitle={`Verifica che la ${schedaLabel} vada associata alla lavorazione corretta.`}
+      title={replaceExisting ? "Conferma sostituzione" : "Conferma lavorazione"}
+      subtitle={
+        replaceExisting
+          ? `La ${schedaLabel} è già collegata a un'altra lavorazione.`
+          : `Verifica che la ${schedaLabel} vada associata alla lavorazione corretta.`
+      }
       message={
         <>
           Dati letti dalla scheda:{" "}
           <span className="font-medium text-[color:var(--cab-fg)]">{formatCaptureIdentSummary(captureIdent)}</span>
           <br />
           <br />
-          Lavorazione trovata:{" "}
+          {replaceExisting ? "Nuova lavorazione: " : "Lavorazione trovata: "}
           <span className="font-medium text-[color:var(--cab-fg)]">{targetLabel}</span>. Confermi?
         </>
       }
-      confirmLabel="Sì, assegna"
+      confirmLabel={replaceExisting ? "Conferma sostituzione" : "Sì, assegna"}
       cancelLabel="Torna ai dati"
       layerClassName={cabModalZConfirm}
       onCancel={onCancel}

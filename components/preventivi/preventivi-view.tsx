@@ -34,12 +34,12 @@ const PreventiviEditorModal = dynamic(
 );
 const OrdiniFornitoriView = dynamic(
   () => import("@/components/ordini-fornitori/ordini-fornitori-view").then((m) => m.OrdiniFornitoriView),
-  { ssr: false, loading: () => <LoadingCardSkeleton minHeightClass="min-h-[12rem]" /> },
+  { ssr: false },
 );
 const PreventiviAdvancedFilterPanel = dynamic(
   () =>
     import("@/components/preventivi/preventivi-advanced-filter-panel").then((m) => m.PreventiviAdvancedFilterPanel),
-  { ssr: false, loading: () => <LoadingCardSkeleton minHeightClass="min-h-[8rem]" /> },
+  { ssr: false },
 );
 const DdtDetailDrawer = dynamic(
   () => import("@/components/ddt/ddt-detail-drawer").then((m) => m.DdtDetailDrawer),

@@ -17,6 +17,7 @@ import {
 import { normalizeSchedaTipoDb } from "@/lib/schede/scheda-tipo-db-mapper";
 import type { PersistSchedeResult } from "@/lib/schede/schede-sync-adapter";
 import { buildCaptureSchedeBundle, inferCaptureSchedaTipo, type CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
+import type { CaptureApprovedCreates } from "@/lib/document-capture/capture-approved-creates";
 import { fetchMagazzinoListAuthorizedServer } from "@/lib/magazzino/magazzino-list-fetch-server";
 import { mapMagazzinoRowsToUI } from "@/lib/magazzino/magazzino-list-cache";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -110,7 +111,7 @@ async function persistCaptureBundleServer(
 export function createCaptureInterventoWriteDeps(input: {
   userId: string;
   captureFields: readonly CaptureFieldRow[];
-  approvedCreates: { lavorazioni?: boolean; ricambi?: boolean; mezzo?: boolean };
+  approvedCreates: CaptureApprovedCreates;
   magazzino?: readonly RicambioMagazzino[];
   existingLavorazioneId?: string | null;
 }): InterventoWriteDeps {
@@ -143,7 +144,7 @@ export function createCaptureInterventoWriteDeps(input: {
         return row as MezzoRow;
       };
 
-      if (!(input.approvedCreates.mezzo ?? true)) {
+      if (!input.approvedCreates.mezzo) {
         throw new MezzoSchedaValidationError("Creazione mezzo non approvata nel piano capture.");
       }
 
@@ -209,8 +210,8 @@ export function createCaptureInterventoWriteDeps(input: {
         lavorazioneId,
         fields: input.captureFields,
         createdBy,
-        includeLavorazioni: input.approvedCreates.lavorazioni ?? true,
-        includeRicambi: input.approvedCreates.ricambi ?? true,
+        includeLavorazioni: input.approvedCreates.lavorazioni,
+        includeRicambi: input.approvedCreates.ricambi,
         schedaTipo,
         magazzino,
       });

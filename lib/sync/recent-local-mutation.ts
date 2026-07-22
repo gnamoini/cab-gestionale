@@ -1,6 +1,6 @@
 /** Soppressione eco Realtime sulla stessa tab dopo mutazione locale / optimistic update. */
 
-const RECENT_ENTITY_MS = 8_000;
+export const RECENT_ENTITY_MS = 8_000;
 /** Burst breve per mutazioni bulk senza id row (es. store schede ottimistico). */
 const RECENT_TABLE_BURST_MS = 3_000;
 
@@ -65,6 +65,15 @@ export function markRecentLocalGestionaleFromEntityIdByTable(
   }
 }
 
+function hasRecentEntityOnTable(table: string, now: number): boolean {
+  const prefix = `${table}:`;
+  for (const [key, timestamp] of recentEntityKeys) {
+    if (!key.startsWith(prefix)) continue;
+    if (now - timestamp <= RECENT_ENTITY_MS) return true;
+  }
+  return false;
+}
+
 export function shouldSuppressRemoteCacheInvalidation(table: string, entityId?: string): boolean {
   const now = Date.now();
   prune(now);
@@ -72,6 +81,7 @@ export function shouldSuppressRemoteCacheInvalidation(table: string, entityId?: 
     const key = recentEntityKeys.get(entityKey(table, entityId));
     if (key != null && now - key <= RECENT_ENTITY_MS) return true;
   }
+  if (!entityId && hasRecentEntityOnTable(table, now)) return true;
   const burst = recentTableBursts.get(table);
   if (burst != null && now - burst <= RECENT_TABLE_BURST_MS) return true;
   return false;
@@ -91,4 +101,16 @@ export function filterTablesForRemoteCacheInvalidation(
 export function clearRecentLocalGestionaleMutations(): void {
   recentEntityKeys.clear();
   recentTableBursts.clear();
+}
+
+/** Test: segna entity con timestamp arbitrario (verifica finestra RECENT_ENTITY_MS). */
+export function markRecentLocalGestionaleMutationAt(
+  tables: string[],
+  entityId: string,
+  timestamp: number,
+): void {
+  for (const table of tables) {
+    if (!table) continue;
+    recentEntityKeys.set(entityKey(table, entityId), timestamp);
+  }
 }

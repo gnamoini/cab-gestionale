@@ -42,7 +42,7 @@ export type AppShellMainProps = {
   pullToRefreshProgress?: number;
   isCompactShell: boolean;
   shellTier: GestionaleShellTier;
-  navDrawerVisible: boolean;
+  mainInert: boolean;
 };
 
 function AppShellMainInner({
@@ -54,7 +54,7 @@ function AppShellMainInner({
   pullToRefreshProgress = 0,
   isCompactShell,
   shellTier,
-  navDrawerVisible,
+  mainInert,
 }: AppShellMainProps) {
   const pathname = usePathname();
   const suppressGlobalScrollEndPad = pathname.startsWith("/impostazioni");
@@ -71,7 +71,7 @@ function AppShellMainInner({
 
       <div
         className={dsGestionaleContentRail}
-        {...(navDrawerVisible ? { inert: true as boolean, "aria-hidden": true } : {})}
+        {...(mainInert ? { inert: true as boolean, "aria-hidden": true } : {})}
       >
         <main
           ref={mainScrollRef}

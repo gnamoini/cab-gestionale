@@ -2,7 +2,8 @@
 
 import { MAGAZZINO_RICAMBI_COLUMNS, MOVIMENTI_RICAMBI_COLUMNS } from "@/lib/db/table-select-columns";
 import { fetchMovimentiListRows } from "@/lib/movimenti/movimenti-list-fetch";
-import { buildStockMovementAuditPayload } from "@/lib/magazzino/stock-audit-payload";
+import { buildStockMovementAuditPayloadWithContext } from "@/lib/magazzino/stock-audit-payload";
+import { formatRicambioLogLabelFromDbRow } from "@/lib/magazzino/ricambio-log-label";
 import {
   applyStockViaPipelineApi,
   shouldUseStockPipelineForMovimenti,
@@ -64,15 +65,20 @@ async function applyStockForMovement(
   if (!after) return err("Giacenza insufficiente per il movimento richiesto");
   const updated = after as MagazzinoRicambioRow;
 
+  const entityLabel = formatRicambioLogLabelFromDbRow(before);
+
   const stockPayload = audit
-    ? buildStockMovementAuditPayload({
-        ricambioId: mov.ricambio_id,
-        quantitaBefore: q0,
-        quantitaAfter: num(updated.quantita),
-        origine: audit.origine,
-        causale: audit.causale,
-        operationId: audit.operationId,
-      })
+    ? buildStockMovementAuditPayloadWithContext(
+        {
+          ricambioId: mov.ricambio_id,
+          quantitaBefore: q0,
+          quantitaAfter: num(updated.quantita),
+          origine: audit.origine,
+          causale: audit.causale,
+          operationId: audit.operationId,
+        },
+        entityLabel,
+      )
     : auditDiff(before, updated);
 
   await writeModificaLog(c, {
@@ -187,19 +193,23 @@ export const movimentiService = {
           return err(errMessageFromSupabase(error, { module: "magazzino" }));
         }
         const r = row as MovimentoRicambioRow;
+        const entityLabel = formatRicambioLogLabelFromDbRow(stock.data);
         await writeModificaLog(c, {
           entita: ENTITA,
           entita_id: r.id,
           azione: "CREATE",
-          payload: buildStockMovementAuditPayload({
-            ricambioId: r.ricambio_id,
-            quantitaBefore,
-            quantitaAfter,
-            origine,
-            causale,
-            movimentoId: r.id,
-            operationId,
-          }),
+          payload: buildStockMovementAuditPayloadWithContext(
+            {
+              ricambioId: r.ricambio_id,
+              quantitaBefore,
+              quantitaAfter,
+              origine,
+              causale,
+              movimentoId: r.id,
+              operationId,
+            },
+            entityLabel,
+          ),
         });
         return success(r);
       });

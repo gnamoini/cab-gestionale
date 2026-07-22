@@ -1,3 +1,4 @@
+import { parseDecimalInput } from "@/lib/core/decimal-input";
 import { resolvePlansForMezzo } from "@/lib/maintenance-plans/resolve-plans-for-mezzo";
 import {
   buildTagliandiMatrixRows,
@@ -17,8 +18,8 @@ import type { MezzoGestito } from "@/lib/mezzi/types";
 export const TAGLIANDO_NOTIFICATION_LEAD_ORE = 50;
 
 export function parseSchedaOreLavoro(oreLavoro: string): number {
-  const n = Number(oreLavoro.trim());
-  return Number.isFinite(n) && n >= 0 ? n : 0;
+  const n = parseDecimalInput(oreLavoro);
+  return n != null && n >= 0 ? n : 0;
 }
 
 export function listOverdueTagliandiMilestonesForRow(input: {

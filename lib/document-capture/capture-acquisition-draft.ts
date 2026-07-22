@@ -1,4 +1,5 @@
 import type { DocumentCaptureFlowStep } from "@/components/document-capture/document-capture-step-indicator";
+import type { CaptureSchedaCompilePayload, CaptureFieldPatch } from "@/lib/document-capture/capture-scheda-compile-payload";
 import type { SchedaTipo, SchedaIngressoFields } from "@/types/schede";
 
 const STORAGE_KEY = "gestionale:capture-acquisition-draft";
@@ -12,13 +13,28 @@ export type CaptureIngressoCompileDraft = {
   };
 };
 
+export type CaptureSchedaCompileDraft = {
+  payload: CaptureSchedaCompilePayload;
+  baseline: CaptureFieldPatch[];
+};
+
+export type CaptureCompileDraft = {
+  captureId: string;
+  mode: "ingresso" | "sheet";
+  payload: CaptureIngressoCompileDraft | CaptureSchedaCompilePayload;
+  baseline: CaptureFieldPatch[];
+  updatedAt: string;
+};
+
 export type CaptureAcquisitionDraft = {
   captureId: string;
   step: Exclude<DocumentCaptureFlowStep, "hub">;
-  compileView: "ingresso" | "mezzo-match";
+  compileView: "ingresso" | "mezzo-match" | "sheet-compile";
   pendingSchedaTipo: Extract<SchedaTipo, "lavorazioni" | "ricambi"> | null;
   /** Bozza form scheda ingresso (modifiche manuali in compilazione). */
   ingressoCompile?: CaptureIngressoCompileDraft;
+  /** Bozza compile scheda lavorazioni/ricambi. */
+  sheetCompile?: CaptureSchedaCompileDraft;
   pendingMultiSchedaQueue?: Array<Extract<SchedaTipo, "lavorazioni" | "ricambi">>;
   multiSchedaPromptDismissed?: boolean;
   savedAt: number;
@@ -34,6 +50,18 @@ function isIngressoCompileDraft(value: unknown): value is CaptureIngressoCompile
   return Boolean(d.fields && typeof d.fields === "object" && d.meta && typeof d.meta === "object");
 }
 
+function isSchedaCompileDraft(value: unknown): value is CaptureSchedaCompileDraft {
+  if (!value || typeof value !== "object") return false;
+  const d = value as Record<string, unknown>;
+  if (!d.payload || typeof d.payload !== "object") return false;
+  const p = d.payload as Record<string, unknown>;
+  if (p.schemaVersion !== 1 || typeof p.captureId !== "string" || (p.tipo !== "lavorazioni" && p.tipo !== "ricambi")) {
+    return false;
+  }
+  if (!Array.isArray(d.baseline)) return false;
+  return true;
+}
+
 function isDraftShape(value: unknown): value is CaptureAcquisitionDraft {
   if (!value || typeof value !== "object") return false;
   const d = value as Record<string, unknown>;
@@ -41,12 +69,13 @@ function isDraftShape(value: unknown): value is CaptureAcquisitionDraft {
     typeof d.captureId !== "string" ||
     d.captureId.length === 0 ||
     (d.step !== "analyze" && d.step !== "compile") ||
-    (d.compileView !== "ingresso" && d.compileView !== "mezzo-match") ||
+    (d.compileView !== "ingresso" && d.compileView !== "mezzo-match" && d.compileView !== "sheet-compile") ||
     (d.pendingSchedaTipo !== null && !isSchedaTipo(d.pendingSchedaTipo))
   ) {
     return false;
   }
   if (d.ingressoCompile !== undefined && !isIngressoCompileDraft(d.ingressoCompile)) return false;
+  if (d.sheetCompile !== undefined && !isSchedaCompileDraft(d.sheetCompile)) return false;
   if (d.pendingMultiSchedaQueue !== undefined) {
     if (!Array.isArray(d.pendingMultiSchedaQueue)) return false;
     if (!d.pendingMultiSchedaQueue.every(isSchedaTipo)) return false;

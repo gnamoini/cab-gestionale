@@ -13,6 +13,7 @@ import {
 } from "@/lib/theme/theme-boot-inline-script";
 import { CAB_BRANDING_BOOT_INLINE_SCRIPT } from "@/lib/theme/branding-boot-inline-script";
 import { CAB_CURSOR_AUTOMATION_DOM_SHIELD_INLINE_SCRIPT } from "@/lib/theme/cursor-automation-dom-shield-inline-script";
+import { CAB_TURBOPACK_CSS_HMR_RECOVERY_INLINE_SCRIPT } from "@/lib/theme/turbopack-css-hmr-recovery-inline-script";
 import { lazyLogBootServer } from "@/lib/observability/boot-investigation-lazy";
 import "./globals-core.css";
 
@@ -68,11 +69,18 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: CAB_BRANDING_BOOT_INLINE_SCRIPT }}
         />
         {process.env.NODE_ENV === "development" ? (
-          <Script
-            id="cab-cursor-automation-dom-shield"
-            strategy="beforeInteractive"
-            dangerouslySetInnerHTML={{ __html: CAB_CURSOR_AUTOMATION_DOM_SHIELD_INLINE_SCRIPT }}
-          />
+          <>
+            <Script
+              id="cab-turbopack-css-hmr-recovery"
+              strategy="beforeInteractive"
+              dangerouslySetInnerHTML={{ __html: CAB_TURBOPACK_CSS_HMR_RECOVERY_INLINE_SCRIPT }}
+            />
+            <Script
+              id="cab-cursor-automation-dom-shield"
+              strategy="beforeInteractive"
+              dangerouslySetInnerHTML={{ __html: CAB_CURSOR_AUTOMATION_DOM_SHIELD_INLINE_SCRIPT }}
+            />
+          </>
         ) : null}
       </head>
       <body

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { LoadingErrorState } from "@/components/design-system";
 import { GestionaleListTable, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { URGENCY_LABELS, URGENCY_ROW_CLASS } from "@/lib/maintenance-plans/compute-maintenance-urgency";
-import { isMaintenanceEngineV2Enabled } from "@/lib/officina/maintenance-engine-v2-flag";
+import { useMaintenanceEngineV2Enabled } from "@/lib/officina/use-maintenance-engine-v2-enabled";
 import { groupOverviewByInterval } from "@/lib/maintenance-plans/resolve-mezzo-metering";
 import { selectDashboardMaintenanceCards } from "@/lib/maintenance-plans/kpi/maintenance-kpi-selectors";
 import type { TagliandiOverviewRow } from "@/lib/maintenance-plans/v2-types";
@@ -176,7 +176,8 @@ export function MezziTagliandiOverview({ canEdit }: { canEdit: boolean }) {
 }
 
 export function MezziTagliandiPanel({ canEdit }: { canEdit: boolean }) {
-  if (isMaintenanceEngineV2Enabled()) {
+  const v2Enabled = useMaintenanceEngineV2Enabled();
+  if (v2Enabled) {
     return <MezziTagliandiOverview canEdit={canEdit} />;
   }
   return <MezziTagliandiMatrixTable enabled canEdit={canEdit} />;

@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-07-21T04:04:04.562Z",
+  "generatedAt": "2026-07-22T01:43:20.813Z",
   "failures": [
     {
       "route": "/lavorazioni-clienti",
       "metric": "maxFirstLoadJsKb",
-      "value": 1793.2,
+      "value": 1810.9,
       "max": 1400,
-      "message": "/lavorazioni-clienti first load 1793.2KB > 1400KB"
+      "message": "/lavorazioni-clienti first load 1810.9KB > 1400KB"
     }
   ],
   "warnings": [],
   "snapshot": {
-    "firstLoadJsKb": 1864.4,
-    "vendorChunkKb": 443.3
+    "firstLoadJsKb": 1877.4,
+    "vendorChunkKb": 449.1
   }
 }

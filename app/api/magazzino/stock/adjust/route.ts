@@ -7,7 +7,9 @@ import {
   StockVersionConflictError,
 } from "@/lib/magazzino/stock-engine.server";
 import { isStockPipelineServerEnabled } from "@/lib/feature-flags/stock-pipeline";
-import { buildStockMovementAuditPayload } from "@/lib/magazzino/stock-audit-payload";
+import { buildStockMovementAuditPayloadWithContext } from "@/lib/magazzino/stock-audit-payload";
+import { logMagazzinoAuditWriteFailed } from "@/lib/magazzino/stock-audit-log-telemetry";
+import { formatRicambioLogLabel, formatRicambioLogLabelFromDbRow } from "@/lib/magazzino/ricambio-log-label";
 import { logStockPipelineEvent } from "@/lib/magazzino/stock-pipeline-telemetry";
 import { getServerSession } from "@/src/lib/auth/get-server-session";
 import { verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
@@ -30,10 +32,20 @@ const bodySchema = z.object({
 async function writeStockAdjustAuditLogs(
   input: z.infer<typeof bodySchema>,
   result: Awaited<ReturnType<typeof stockApplyMovement>>,
+  userId: string,
 ): Promise<void> {
   if (result.idempotent || result.noop || !result.movimentoId) return;
 
   const sb = await createSupabaseServerUserClient();
+  const { data: ricRow } = await sb
+    .from("magazzino_ricambi")
+    .select("id,nome,marca,codice")
+    .eq("id", result.ricambioId)
+    .maybeSingle();
+  const entityLabel = ricRow
+    ? formatRicambioLogLabelFromDbRow(ricRow)
+    : formatRicambioLogLabel(null, result.ricambioId);
+
   const before = result.quantitaBefore ?? result.quantita - (result.delta ?? 0);
   const auditBase = {
     ricambioId: result.ricambioId,
@@ -46,18 +58,21 @@ async function writeStockAdjustAuditLogs(
     stockVersionBefore: input.expectedVersion,
     stockVersionAfter: result.stockVersion,
   };
+  const payload = buildStockMovementAuditPayloadWithContext(auditBase, entityLabel);
 
   await writeModificaLog(sb, {
     entita: "magazzino_ricambi",
     entita_id: result.ricambioId,
     azione: "UPDATE",
-    payload: buildStockMovementAuditPayload(auditBase),
+    payload,
+    autore_id: userId,
   });
   await writeModificaLog(sb, {
     entita: "movimenti_ricambi",
     entita_id: result.movimentoId,
     azione: "CREATE",
-    payload: buildStockMovementAuditPayload(auditBase),
+    payload,
+    autore_id: userId,
   });
 }
 
@@ -99,8 +114,17 @@ export async function POST(request: Request) {
     });
 
     if (!result.idempotent && !result.noop && result.movimentoId) {
-      // ponytail: audit dopo la risposta — la giacenza è già committata dal RPC.
-      void writeStockAdjustAuditLogs(input, result).catch(() => undefined);
+      try {
+        await writeStockAdjustAuditLogs(input, result, session.user.id);
+      } catch (error) {
+        logMagazzinoAuditWriteFailed({
+          error,
+          movementId: result.movimentoId,
+          ricambioId: result.ricambioId,
+          userId: session.user.id,
+          source: "api_stock_adjust",
+        });
+      }
     }
 
     if (isStockPipelineServerEnabled()) {

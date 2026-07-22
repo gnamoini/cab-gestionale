@@ -36,7 +36,7 @@ export function computeLabelFingerprint(input: LabelFingerprintInput): string {
     templateVersion: input.templateVersion,
     generatorVersion: input.generatorVersion,
     preset: input.preset,
-    includeBarcode: input.includeBarcode !== false,
+    includeBarcode: input.includeBarcode === true,
     canonicalOrigin: input.canonicalOrigin.replace(/\/+$/, ""),
   });
   return createHash("sha256").update(canonical).digest("hex").slice(0, 16);

@@ -83,7 +83,7 @@ export function resolveMaintenanceEngineV2Enabled(input: {
   return maintenanceEngineV2UserBucket(input.userId) < flags.percentage;
 }
 
-/** @deprecated Usare resolveMaintenanceEngineV2Enabled — env kill switch only */
+/** @deprecated Usare useMaintenanceEngineV2Enabled / resolveMaintenanceEngineV2EnabledClient */
 export function isMaintenanceEngineV2Enabled(): boolean {
-  return !isMaintenanceEngineV2EnvDisabled();
+  return resolveMaintenanceEngineV2Enabled({});
 }

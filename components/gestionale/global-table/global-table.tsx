@@ -18,6 +18,8 @@ import {
   globalTableRow,
   globalTableWrap,
   globalTableTbodyInset,
+  globalTableScrollElementAllowsVerticalVirtualPadding,
+  globalTableVirtualSpacerRow,
 } from "@/lib/ui/global-table";
 import { GlobalTableHead } from "@/components/gestionale/global-table/global-table-header";
 
@@ -65,6 +67,8 @@ const VirtualTableBody = memo(function VirtualTableBody({
 }) {
   const [, setMeasureTick] = useState(0);
   const [renderFallback, setRenderFallback] = useState(false);
+  // ponytail: wrap liste usa overflow-y-clip — padding virtuali = spazio vuoto hoverabile
+  const [forceFullRender, setForceFullRender] = useState(true);
 
   const virtualizer = useVirtualizer({
     count: virtualRows.rowCount,
@@ -88,6 +92,10 @@ const VirtualTableBody = memo(function VirtualTableBody({
 
     const remeasure = () => {
       if (cancelled) return;
+      const el = scrollRef.current;
+      if (el) {
+        setForceFullRender(!globalTableScrollElementAllowsVerticalVirtualPadding(el));
+      }
       const before = virtualizer.getVirtualItems().length;
       virtualizer.measure();
       if (virtualizer.getVirtualItems().length !== before) {
@@ -115,6 +123,7 @@ const VirtualTableBody = memo(function VirtualTableBody({
         rafId = requestAnimationFrame(bind);
         return;
       }
+      setForceFullRender(!globalTableScrollElementAllowsVerticalVirtualPadding(el));
       if (!ro) {
         ro = new ResizeObserver(remeasure);
         ro.observe(el);
@@ -136,7 +145,7 @@ const VirtualTableBody = memo(function VirtualTableBody({
 
   const items = virtualizer.getVirtualItems();
 
-  if (renderFallback && virtualRows.rowCount > 0) {
+  if ((renderFallback || forceFullRender) && virtualRows.rowCount > 0) {
     return (
       <tbody className={globalTableTbodyInset}>
         {Array.from({ length: virtualRows.rowCount }, (_, index) => virtualRows.renderRow(index))}
@@ -151,13 +160,13 @@ const VirtualTableBody = memo(function VirtualTableBody({
   return (
     <tbody className={globalTableTbodyInset}>
       {paddingTop > 0 ? (
-        <tr className={globalTableRow} aria-hidden>
+        <tr className={globalTableVirtualSpacerRow} aria-hidden>
           <td colSpan={colSpan} style={{ height: paddingTop, padding: 0, border: 0 }} />
         </tr>
       ) : null}
       {items.map((item) => virtualRows.renderRow(item.index))}
       {paddingBottom > 0 ? (
-        <tr className={globalTableRow} aria-hidden>
+        <tr className={globalTableVirtualSpacerRow} aria-hidden>
           <td colSpan={colSpan} style={{ height: paddingBottom, padding: 0, border: 0 }} />
         </tr>
       ) : null}

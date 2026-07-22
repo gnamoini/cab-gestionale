@@ -6,6 +6,7 @@ import { PageActionIconLabels } from "@/components/ui/page-action-menu/page-acti
 import { dsBtnGhost } from "@/lib/ui/design-system";
 import {
   BULK_SYNC_MAX,
+  DEFAULT_INCLUDE_BARCODE,
   DEFAULT_LABEL_PRESET,
   LABEL_PRESET_IDS,
   labelPresetOptionLabel,
@@ -35,7 +36,7 @@ export function MagazzinoBulkLabelToolbar({
 }) {
   const gestToast = useGestionaleToast();
   const [preset, setPreset] = useState(DEFAULT_LABEL_PRESET);
-  const [includeBarcode, setIncludeBarcode] = useState(true);
+  const [includeBarcode, setIncludeBarcode] = useState(DEFAULT_INCLUDE_BARCODE);
   const [phase, setPhase] = useState<BulkLabelPhase>("idle");
   const [progress, setProgress] = useState(0);
   const count = selectedIds.size;

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { LoadingButton } from "@/components/design-system";
+import { LoadingSpinner } from "@/components/design-system/loading";
 import { CaptureDocumentFilePreview } from "@/components/document-capture/capture-document-file-preview";
 import { CAPTURE_REVIEW_PIN_TOP_CLASS } from "@/components/document-capture/capture-review-panel";
 import {
@@ -11,11 +12,261 @@ import {
   resolveCaptureIdentFromFields,
   type CaptureIdent,
 } from "@/lib/document-capture/capture-lavorazione-match";
+import {
+  clearManualAssignSelection,
+  completeManualAssignReview,
+  describeLavorazioneAssignRowParts,
+  filterAttiveForManualAssign,
+  manualAssignSelectedId,
+  resolveInitialManualAssignState,
+  revertManualAssigning,
+  selectManualAssignLavorazione,
+  startManualAssign,
+  type ManualAssignState,
+} from "@/lib/document-capture/capture-manual-assign-state";
 import type { CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
+import { useSelectorListboxKeyboard } from "@/lib/selector-interaction/use-selector-listbox-keyboard";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioneSchedeStore, SchedaTipo } from "@/types/schede";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { globalAutocompleteOptionClass } from "@/lib/ui/global-input";
+import { dsSearchFieldInput } from "@/lib/ui/design-system";
+
+const SEARCH_DEBOUNCE_MS = 180;
+
+function ManualAssignRowBadge({
+  state,
+  lavorazioneId,
+  attive,
+  schedeStore,
+}: {
+  state: ManualAssignState;
+  lavorazioneId: string;
+  attive: readonly LavorazioneAttiva[];
+  schedeStore: LavorazioneSchedeStore;
+}) {
+  const parts = describeLavorazioneAssignRowParts(lavorazioneId, attive, schedeStore);
+  const codice = parts.codice || "lavorazione in corso";
+
+  if (state.status === "assigning" && state.id === lavorazioneId) {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[color:var(--cab-primary)]">
+        <LoadingSpinner size="sm" />
+        Collegamento…
+      </span>
+    );
+  }
+  if (state.status === "review" && state.id === lavorazioneId) {
+    return (
+      <span className="shrink-0 rounded-full bg-[color:color-mix(in_srgb,var(--cab-accent)_14%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-accent-fg)]">
+        ✓ Collegata · {codice}
+      </span>
+    );
+  }
+  if (state.status === "selected" && state.id === lavorazioneId) {
+    return (
+      <span className="shrink-0 text-xs font-semibold text-[color:var(--cab-primary)]">✓ Selezionata</span>
+    );
+  }
+  return null;
+}
+
+function CaptureManualAssignPicker({
+  attive,
+  schedeStore,
+  assignState,
+  onSelect,
+  onConfirmAssign,
+  onEscape,
+  assignBusy,
+  reviewPending,
+  listboxId,
+}: {
+  attive: readonly LavorazioneAttiva[];
+  schedeStore: LavorazioneSchedeStore;
+  assignState: ManualAssignState;
+  onSelect: (id: string) => void;
+  onConfirmAssign: (id: string) => void;
+  onEscape: () => void;
+  assignBusy: boolean;
+  reviewPending: boolean;
+  listboxId: string;
+}) {
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchInput), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const labelFor = useCallback(
+    (id: string) => describeCaptureLavorazioneAssignTarget(id, attive, schedeStore),
+    [attive, schedeStore],
+  );
+
+  const filteredAttive = useMemo(
+    () => filterAttiveForManualAssign(attive, debouncedSearch, labelFor) as LavorazioneAttiva[],
+    [attive, debouncedSearch, labelFor],
+  );
+
+  const selectedId = manualAssignSelectedId(assignState);
+  const canConfirm =
+    assignState.status === "selected" && selectedId !== null && !assignBusy;
+
+  const handleEnter = useCallback(() => {
+    if (activeIndex >= 0 && activeIndex < filteredAttive.length) {
+      const id = filteredAttive[activeIndex]!.id;
+      if (assignState.status === "selected" && assignState.id === id) {
+        onConfirmAssign(id);
+      } else {
+        onSelect(id);
+      }
+      return;
+    }
+    if (canConfirm && selectedId) {
+      onConfirmAssign(selectedId);
+    }
+  }, [
+    activeIndex,
+    assignState,
+    canConfirm,
+    filteredAttive,
+    onConfirmAssign,
+    onSelect,
+    selectedId,
+  ]);
+
+  const handleListKeyDown = useSelectorListboxKeyboard({
+    open: true,
+    totalNavigableOptions: filteredAttive.length,
+    activeIndex,
+    setOpen: () => {},
+    setActiveIndex,
+    onEscape,
+    onEnter: handleEnter,
+  });
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const idx = filteredAttive.findIndex((lav) => lav.id === selectedId);
+    if (idx >= 0) setActiveIndex(idx);
+  }, [filteredAttive, selectedId]);
+
+  const selectedParts =
+    selectedId !== null
+      ? describeLavorazioneAssignRowParts(selectedId, attive, schedeStore)
+      : null;
+
+  return (
+    <div className="space-y-3 rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold text-[color:var(--cab-fg)]">Scegli lavorazione</h4>
+        <span className="text-xs text-[color:var(--cab-text-muted)]">
+          {attive.length} lavorazioni in corso
+        </span>
+      </div>
+      <label className="block text-xs font-medium text-[color:var(--cab-fg)]">
+        Cerca
+        <input
+          type="search"
+          className={`${dsSearchFieldInput} mt-1 block w-full`}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={handleListKeyDown}
+          placeholder="Cliente, codice, targa…"
+          aria-controls={listboxId}
+        />
+      </label>
+      <ul
+        ref={listRef}
+        id={listboxId}
+        role="listbox"
+        aria-label="Lavorazioni in corso"
+        className="gestionale-scrollbar max-h-56 space-y-1 overflow-y-auto"
+        onKeyDown={handleListKeyDown}
+      >
+        {filteredAttive.length === 0 ? (
+          <li className="px-2 py-3 text-xs text-[color:var(--cab-text-muted)]">
+            Nessuna lavorazione in corso. Prova a modificare la ricerca.
+          </li>
+        ) : (
+          filteredAttive.map((lav, idx) => {
+            const parts = describeLavorazioneAssignRowParts(lav.id, attive, schedeStore);
+            const isSelected =
+              manualAssignSelectedId(assignState) === lav.id ||
+              (assignState.status === "review" && assignState.id === lav.id);
+            const isActive = idx === activeIndex;
+            const primary = [parts.codice, parts.cliente].filter(Boolean).join(" — ") || labelFor(lav.id);
+            return (
+              <li key={lav.id} role="presentation">
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  disabled={assignState.status === "assigning"}
+                  className={`${globalAutocompleteOptionClass(isActive, isSelected)} !min-h-11 !text-left`}
+                  onClick={() => onSelect(lav.id)}
+                  onMouseEnter={() => setActiveIndex(idx)}
+                >
+                  <span className="flex w-full items-start justify-between gap-2">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{primary}</span>
+                      {parts.identLine ? (
+                        <span className="mt-0.5 block truncate text-xs font-normal text-[color:var(--cab-text-muted)]">
+                          {parts.identLine}
+                        </span>
+                      ) : null}
+                    </span>
+                    <ManualAssignRowBadge
+                      state={assignState}
+                      lavorazioneId={lav.id}
+                      attive={attive}
+                      schedeStore={schedeStore}
+                    />
+                  </span>
+                </button>
+              </li>
+            );
+          })
+        )}
+      </ul>
+      {selectedId && selectedParts ? (
+        <div className="space-y-2 rounded-md border border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-surface))] p-3">
+          <p className="text-xs font-medium text-[color:var(--cab-fg)]">Riepilogo selezione</p>
+          <p className="text-sm text-[color:var(--cab-fg)]">
+            {[selectedParts.codice, selectedParts.cliente].filter(Boolean).join(" — ") ||
+              labelFor(selectedId)}
+          </p>
+          {selectedParts.identLine ? (
+            <p className="text-xs text-[color:var(--cab-text-muted)]">{selectedParts.identLine}</p>
+          ) : null}
+          {assignState.status === "review" && reviewPending ? (
+            <p className="text-xs text-[color:var(--cab-text-muted)]">
+              Lavorazione collegata. Verifica i campi evidenziati e usa &quot;Procedi comunque&quot; per
+              completare l&apos;importazione.
+            </p>
+          ) : null}
+          {assignState.status === "selected" ? (
+            <LoadingButton
+              type="button"
+              variant="primary"
+              className={`${erpBtnAccent} w-full sm:w-auto`}
+              loading={assignBusy}
+              loadingLabel="Collegamento…"
+              onClick={() => onConfirmAssign(selectedId)}
+            >
+              Conferma assegnazione
+            </LoadingButton>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function CaptureMezzoMatchStep({
   captureId,
@@ -28,6 +279,8 @@ export function CaptureMezzoMatchStep({
   onCreateNew,
   onCancel,
   assignBusy = false,
+  pendingAssignLavorazioneId = null,
+  reviewPending = false,
 }: {
   captureId: string;
   fieldRows: readonly CaptureFieldRow[];
@@ -39,26 +292,77 @@ export function CaptureMezzoMatchStep({
   onCreateNew: () => void;
   onCancel: () => void;
   assignBusy?: boolean;
+  pendingAssignLavorazioneId?: string | null;
+  reviewPending?: boolean;
 }) {
-  const [manualPickOpen, setManualPickOpen] = useState(false);
-  const [identSearch, setIdentSearch] = useState("");
-
+  const listboxId = useId();
   const ident = useMemo(() => resolveCaptureIdentFromFields(fieldRows), [fieldRows]);
   const match = useMemo(
     () => findActiveLavorazioneWithIngressoForCaptureIdent(ident, mezzi, schedeStore, attive),
     [attive, ident, mezzi, schedeStore],
   );
 
+  const [manualPickOpen, setManualPickOpen] = useState(!match);
+  const [assignState, setAssignState] = useState<ManualAssignState>(() =>
+    resolveInitialManualAssignState(pendingAssignLavorazioneId),
+  );
+  const prevAssignBusy = useRef(assignBusy);
+
   const schedaLabel = schedaTipo === "ricambi" ? "scheda ricambi" : "scheda lavorazioni";
 
-  const filteredAttive = useMemo(() => {
-    const q = identSearch.trim().toLowerCase();
-    if (!q) return [...attive];
-    return attive.filter((lav) => {
-      const label = describeCaptureLavorazioneAssignTarget(lav.id, attive, schedeStore).toLowerCase();
-      return label.includes(q) || lav.id.includes(q);
-    });
-  }, [attive, identSearch, schedeStore]);
+  useEffect(() => {
+    if (pendingAssignLavorazioneId) {
+      setAssignState(completeManualAssignReview(pendingAssignLavorazioneId));
+      setManualPickOpen(true);
+    }
+  }, [pendingAssignLavorazioneId]);
+
+  useEffect(() => {
+    if (assignBusy && !prevAssignBusy.current) {
+      setAssignState((prev) => {
+        const id = manualAssignSelectedId(prev);
+        if (id) return startManualAssign(prev, id);
+        return prev;
+      });
+    }
+    if (!assignBusy && prevAssignBusy.current) {
+      setAssignState((prev) => {
+        if (prev.status === "assigning" && !pendingAssignLavorazioneId) {
+          return revertManualAssigning(prev);
+        }
+        return prev;
+      });
+    }
+    prevAssignBusy.current = assignBusy;
+  }, [assignBusy, pendingAssignLavorazioneId]);
+
+  const handleSelect = useCallback((id: string) => {
+    setAssignState((prev) => selectManualAssignLavorazione(prev, id));
+  }, []);
+
+  const handleConfirmAssign = useCallback(
+    (id: string) => {
+      setAssignState(startManualAssign(assignState, id));
+      onAssign(id);
+    },
+    [assignState, onAssign],
+  );
+
+  const handleManualEscape = useCallback(() => {
+    if (assignState.status === "review") return;
+    if (match && manualPickOpen) {
+      setManualPickOpen(false);
+      setAssignState((prev) => clearManualAssignSelection(prev));
+      return;
+    }
+    setAssignState((prev) => clearManualAssignSelection(prev));
+  }, [assignState.status, manualPickOpen, match]);
+
+  const suggestedLabel = match
+    ? describeCaptureLavorazioneAssignTarget(match.lavorazioneId, attive, schedeStore)
+    : "";
+  const suggestedAssigning =
+    assignBusy && match !== null && manualAssignSelectedId(assignState) === match.lavorazioneId;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
@@ -75,23 +379,53 @@ export function CaptureMezzoMatchStep({
         </div>
 
         {match ? (
-          <div className="space-y-3 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-accent)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-accent)_8%,var(--cab-surface))] p-3">
-            <p className="text-sm text-[color:var(--cab-fg)]">
-              Trovata lavorazione in corso con scheda ingresso corrispondente:
-            </p>
-            <p className="text-sm font-medium text-[color:var(--cab-fg)]">
-              {describeCaptureLavorazioneAssignTarget(match.lavorazioneId, attive, schedeStore)}
-            </p>
-            <LoadingButton
-              type="button"
-              variant="primary"
-              className={`${erpBtnAccent} w-full sm:w-auto`}
-              loading={assignBusy}
-              loadingLabel="Assegnazione…"
-              onClick={() => onAssign(match.lavorazioneId)}
-            >
-              Assegna a questa lavorazione
-            </LoadingButton>
+          <div className="space-y-4">
+            <div className="space-y-3 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-accent)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-accent)_8%,var(--cab-surface))] p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-accent-fg)]">
+                ✓ Lavorazione suggerita
+              </p>
+              <p className="text-sm font-medium text-[color:var(--cab-fg)]">{suggestedLabel}</p>
+              <LoadingButton
+                type="button"
+                variant="primary"
+                className={`${erpBtnAccent} w-full sm:w-auto`}
+                loading={suggestedAssigning}
+                loadingLabel="Collegamento…"
+                disabled={assignBusy && !suggestedAssigning}
+                onClick={() => {
+                  setAssignState(startManualAssign(assignState, match.lavorazioneId));
+                  onAssign(match.lavorazioneId);
+                }}
+              >
+                Usa questa
+              </LoadingButton>
+            </div>
+            <div className="relative flex items-center gap-3 py-1">
+              <div className="h-px flex-1 bg-[color:var(--cab-border)]" aria-hidden />
+              <span className="shrink-0 text-xs text-[color:var(--cab-text-muted)]">oppure</span>
+              <div className="h-px flex-1 bg-[color:var(--cab-border)]" aria-hidden />
+            </div>
+            {!manualPickOpen ? (
+              <button
+                type="button"
+                className={`${erpBtnNeutral} min-h-10 w-full`}
+                onClick={() => setManualPickOpen(true)}
+              >
+                Scegli una lavorazione diversa
+              </button>
+            ) : (
+              <CaptureManualAssignPicker
+                attive={attive}
+                schedeStore={schedeStore}
+                assignState={assignState}
+                onSelect={handleSelect}
+                onConfirmAssign={handleConfirmAssign}
+                onEscape={handleManualEscape}
+                assignBusy={assignBusy}
+                reviewPending={reviewPending}
+                listboxId={listboxId}
+              />
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -105,46 +439,18 @@ export function CaptureMezzoMatchStep({
               <button type="button" className={`${erpBtnAccent} min-h-10`} onClick={onCreateNew}>
                 Crea nuova lavorazione
               </button>
-              <button
-                type="button"
-                className={`${erpBtnNeutral} min-h-10`}
-                onClick={() => setManualPickOpen((v) => !v)}
-              >
-                Assegna manualmente
-              </button>
             </div>
-            {manualPickOpen ? (
-              <div className="space-y-2 rounded-lg border border-[color:var(--cab-border)] p-3">
-                <label className="block text-xs font-medium text-[color:var(--cab-fg)]">
-                  Cerca lavorazione in corso
-                  <input
-                    type="search"
-                    className="mt-1 block w-full rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-2 py-1.5 text-sm"
-                    value={identSearch}
-                    onChange={(e) => setIdentSearch(e.target.value)}
-                    placeholder="Cliente, codice, targa…"
-                  />
-                </label>
-                <ul className="max-h-48 space-y-1 overflow-y-auto text-sm">
-                  {filteredAttive.length === 0 ? (
-                    <li className="text-xs text-[color:var(--cab-text-muted)]">Nessuna lavorazione in corso.</li>
-                  ) : (
-                    filteredAttive.map((lav) => (
-                      <li key={lav.id}>
-                        <button
-                          type="button"
-                          className="w-full rounded-md px-2 py-1.5 text-left hover:bg-[var(--cab-surface-2)]"
-                          disabled={assignBusy}
-                          onClick={() => onAssign(lav.id)}
-                        >
-                          {describeCaptureLavorazioneAssignTarget(lav.id, attive, schedeStore)}
-                        </button>
-                      </li>
-                    ))
-                  )}
-                </ul>
-              </div>
-            ) : null}
+            <CaptureManualAssignPicker
+              attive={attive}
+              schedeStore={schedeStore}
+              assignState={assignState}
+              onSelect={handleSelect}
+              onConfirmAssign={handleConfirmAssign}
+              onEscape={handleManualEscape}
+              assignBusy={assignBusy}
+              reviewPending={reviewPending}
+              listboxId={listboxId}
+            />
           </div>
         )}
       </div>
@@ -152,4 +458,4 @@ export function CaptureMezzoMatchStep({
   );
 }
 
-export type { CaptureIdent };
+export type { CaptureIdent, ManualAssignState };

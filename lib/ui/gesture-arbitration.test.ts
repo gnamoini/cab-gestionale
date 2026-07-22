@@ -90,5 +90,38 @@ assert.equal(
   false,
 );
 
+assert.equal(
+  shouldNavDrawerClaimEdgeSwipe({
+    ...baseCtx,
+    clientX: 5,
+    target: tableCell,
+  }),
+  true,
+  "edge zone swipe must claim over horizontal-scroll table cell",
+);
+
+assert.equal(
+  shouldNavDrawerClaimEdgeSwipe({
+    ...baseCtx,
+    clientX: 200,
+    target: tableCell,
+  }),
+  false,
+  "center swipe over table must not claim nav drawer",
+);
+
+const ignored = document.createElement("div");
+ignored.setAttribute("data-cab-swipe-nav-ignore", "");
+tableWrap.appendChild(ignored);
+assert.equal(
+  shouldNavDrawerClaimEdgeSwipe({
+    ...baseCtx,
+    clientX: 5,
+    target: ignored,
+  }),
+  false,
+  "explicit opt-out in edge zone must block",
+);
+
 console.log("gesture-arbitration.test.ts ok");
 

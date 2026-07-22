@@ -367,7 +367,7 @@ export function ReportAnalyticsView() {
 
   if (live.isLoading || !tops || !filterRange || !toolbarProps) {
     if (!toolbarProps) {
-      return <ReportPageStructure mode="skeleton" />;
+      return <ReportPageStructure mode="skeleton" scope="content" />;
     }
     return (
       <div className={`${dsStackPage} ${layoutPageRoot} min-w-0 max-w-full`}>

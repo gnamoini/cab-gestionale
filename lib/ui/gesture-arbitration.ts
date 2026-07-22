@@ -28,6 +28,17 @@ function isEditableFocused(): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
 }
 
+function hasExplicitGestureOptOut(el: Element | null): boolean {
+  if (el == null) return false;
+  let node: Element | null = el;
+  while (node != null) {
+    if (node.hasAttribute("data-cab-swipe-nav-ignore")) return true;
+    if (node.hasAttribute("data-cab-draggable")) return true;
+    node = node.parentElement;
+  }
+  return false;
+}
+
 function isSwipeNavGestureBlockedTarget(el: Element | null): boolean {
   if (el == null || typeof HTMLElement === "undefined") return false;
   let node: Element | null = el;
@@ -70,11 +81,24 @@ export function shouldNavDrawerClaimEdgeSwipe(ctx: GestureContext): boolean {
   if (ctx.drawerState !== "CLOSED") return false;
   if (ctx.overlayActive) return false;
   if (ctx.keyboardOpen || isEditableFocused()) return false;
-  if (isSwipeNavGestureBlockedTarget(ctx.target)) return false;
+
   const zone = resolveActivationZonePx(ctx.viewportWidth, ctx.safeAreaLeftPx ?? 0);
   if (ctx.clientX > zone) return false;
-  const owner = resolveGestureOwner(ctx);
-  return owner === "pageScroll" || owner === "navDrawer";
+
+  return !hasExplicitGestureOptOut(ctx.target);
+}
+
+/** Dev/debug: reason edge swipe was rejected, or null if claim allowed. */
+export function getNavDrawerEdgeSwipeBlockReason(ctx: GestureContext): string | null {
+  if (shouldNavDrawerClaimEdgeSwipe(ctx)) return null;
+  if (ctx.drawerState !== "CLOSED") return "drawer_not_closed";
+  if (ctx.overlayActive) return "overlay_active";
+  if (ctx.keyboardOpen || isEditableFocused()) return "input_focused";
+  const zone = resolveActivationZonePx(ctx.viewportWidth, ctx.safeAreaLeftPx ?? 0);
+  if (ctx.clientX > zone) return "outside_edge_zone";
+  if (hasExplicitGestureOptOut(ctx.target)) return "explicit_opt_out";
+  if (isSwipeNavGestureBlockedTarget(ctx.target)) return "horizontal_scroll";
+  return "gesture_owner";
 }
 
 export function shouldNavDrawerClaimDismiss(ctx: GestureContext): boolean {
@@ -92,4 +116,4 @@ export function canPullToRefreshClaimGesture(ctx: GestureContext): boolean {
   return true;
 }
 
-export { isSwipeNavGestureBlockedTarget };
+export { hasExplicitGestureOptOut, isSwipeNavGestureBlockedTarget };

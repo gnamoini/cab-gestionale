@@ -5,10 +5,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import {
-  PAGE_LAYOUT_OUTSIDE_SUSPENSE_ROUTES,
-  PAGE_TRANSITION_LOADER_VARIANTS,
-} from "./loading-transition-fallback-allowlist";
+import { PAGE_LAYOUT_OUTSIDE_SUSPENSE_ROUTES } from "./loading-transition-fallback-allowlist";
 import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
 
 const ROOT = process.cwd();
@@ -33,6 +30,24 @@ const ROUTE_VIEW_OWNERSHIP: Record<string, string> = {
   "app/(gestionale)/impostazioni/page.tsx": "components/dashboard/settings/settings-workspace-shell.tsx",
 };
 
+const PAGE_TITLE_VARIANT: Record<string, keyof typeof STRUCTURAL_ROUTE_PAGE_TITLES> = {
+  "app/(gestionale)/dashboard/page.tsx": "dashboard",
+  "app/(gestionale)/magazzino/page.tsx": "magazzino",
+  "app/(gestionale)/magazzino/carichi/page.tsx": "magazzino",
+  "app/(gestionale)/mezzi/page.tsx": "mezzi",
+  "app/(gestionale)/documenti/page.tsx": "documenti",
+  "app/(gestionale)/preventivi/page.tsx": "preventivi",
+  "app/(gestionale)/dipendenti/page.tsx": "dipendenti",
+  "app/(gestionale)/fatturazione/page.tsx": "fatturazione",
+  "app/(gestionale)/agenda/page.tsx": "agenda",
+  "app/(gestionale)/lavorazioni/page.tsx": "lavorazioni",
+  "app/(gestionale)/lavorazioni-clienti/page.tsx": "clienti",
+  "app/(gestionale)/report/page.tsx": "report",
+  "app/(gestionale)/sicurezza/page.tsx": "sicurezza",
+  "app/(gestionale)/sicurezza/production-readiness/page.tsx": "production-readiness",
+  "app/(gestionale)/impostazioni/page.tsx": "impostazioni",
+};
+
 function read(rel: string): string {
   return fs.readFileSync(path.join(ROOT, rel), "utf8");
 }
@@ -47,8 +62,8 @@ for (const pageRel of PAGE_LAYOUT_OUTSIDE_SUSPENSE_ROUTES) {
   const viewRel = ROUTE_VIEW_OWNERSHIP[pageRel];
   if (!viewRel || !fs.existsSync(path.join(ROOT, viewRel))) continue;
 
-  const variant = PAGE_TRANSITION_LOADER_VARIANTS[pageRel as keyof typeof PAGE_TRANSITION_LOADER_VARIANTS];
-  const title = STRUCTURAL_ROUTE_PAGE_TITLES[variant];
+  const variant = PAGE_TITLE_VARIANT[pageRel];
+  const title = variant ? STRUCTURAL_ROUTE_PAGE_TITLES[variant] : null;
   if (!title) continue;
 
   const viewSrc = read(viewRel);

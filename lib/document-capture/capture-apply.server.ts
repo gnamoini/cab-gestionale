@@ -6,7 +6,12 @@ import {
   hashCaptureFieldsRows,
   type ApprovedCreatesJson,
   type CaptureApplyPlan,
+  type CaptureApprovedCreates,
 } from "@/lib/document-capture/capture-apply-plan";
+import {
+  approvedCreatesFromCaptureFields,
+  resolveApprovedCreatesForApply,
+} from "@/lib/document-capture/capture-approved-creates";
 import { inferCaptureSchedaTipo, mapCaptureFieldsToIngresso, type CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
 import {
   beginCaptureApplyRpc,
@@ -38,7 +43,7 @@ import { auditContext, auditSnapshot, writeModificaLog } from "@/src/services/in
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { maybePublishTagliandoDueOnInterventoCreateServer } from "@/lib/maintenance-plans/tagliando-due-notification.server";
 
-export type { CaptureApplyPlan, ApprovedCreatesJson };
+export type { CaptureApplyPlan, ApprovedCreatesJson, CaptureApprovedCreates };
 export { CaptureApplyInProgressError, CapturePlanStaleError };
 
 async function loadCaptureFields(captureId: string): Promise<CaptureFieldRow[]> {
@@ -105,7 +110,10 @@ async function runCaptureApplySaga(input: {
     currentFieldsHash: currentHash,
   });
 
-  const approvedCreates = (application.approved_creates_json ?? {}) as ApprovedCreatesJson;
+  const approvedCreates = resolveApprovedCreatesForApply(
+    application.approved_creates_json as ApprovedCreatesJson | null,
+    fields,
+  );
   const ingressoFields = mapCaptureFieldsToIngresso(fields);
   const idempotencyKey = `document-capture-apply:${input.applicationId}`;
   const existingLavorazioneId = input.existingLavorazioneId ?? capture.lavorazione_id;
@@ -225,7 +233,7 @@ type SagaSharedContext = {
   applyJob: { id: string };
   fields: CaptureFieldRow[];
   ingressoFields: ReturnType<typeof mapCaptureFieldsToIngresso>;
-  approvedCreates: ApprovedCreatesJson;
+  approvedCreates: CaptureApprovedCreates;
   existingLavorazioneId: string | null;
   idempotencyKey: string;
   userId: string;
@@ -253,11 +261,7 @@ async function runCaptureApplyWrite(
   const deps = createCaptureInterventoWriteDeps({
     userId,
     captureFields: fields,
-    approvedCreates: {
-      mezzo: approvedCreates.mezzo !== false,
-      lavorazioni: approvedCreates.lavorazioni !== false,
-      ricambi: approvedCreates.ricambi !== false,
-    },
+    approvedCreates,
     magazzino: await fetchCaptureMagazzinoCatalog(),
     existingLavorazioneId,
   });
@@ -494,7 +498,7 @@ export async function buildCaptureDryRunApplication(captureId: string): Promise<
     magazzino,
     lavorazioneId: capture.lavorazione_id,
   });
-  const approvedCreates = { mezzo: true, lavorazioni: true, ricambi: true } satisfies ApprovedCreatesJson;
+  const approvedCreates = approvedCreatesFromCaptureFields(fields);
 
   const plan = buildCaptureApplyPlanFromFields({
     fields,

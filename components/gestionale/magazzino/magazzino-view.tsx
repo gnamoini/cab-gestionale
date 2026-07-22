@@ -49,7 +49,7 @@ const MagazzinoAdvancedFilterPanel = dynamic(
     import("@/components/gestionale/magazzino/magazzino-advanced-filter-panel").then(
       (m) => m.MagazzinoAdvancedFilterPanel,
     ),
-  { ssr: false, loading: () => <LoadingFormSkeleton fields={3} className="px-1 py-2" /> },
+  { ssr: false },
 );
 const MagazzinoLogDrawer = dynamic(
   () => import("@/components/gestionale/magazzino/magazzino-log-drawer").then((m) => m.MagazzinoLogDrawer),
@@ -648,7 +648,7 @@ export function MagazzinoView() {
   const listPageSize = useResponsiveListPageSize();
   listPageSizeRef.current = listPageSize;
 
-  const logFeedEnabled = logOpen || detail?.mode === "info";
+  const logFeedEnabled = true;
 
   const {
     feed: magLogFeed,

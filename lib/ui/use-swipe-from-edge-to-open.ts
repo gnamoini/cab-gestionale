@@ -9,8 +9,9 @@ import {
   rubberBandDragX,
   shouldCommitGesture,
 } from "@/lib/ui/mobile-nav-drawer-contract";
-import { shouldNavDrawerClaimEdgeSwipe, type GestureContext } from "@/lib/ui/gesture-arbitration";
-import { recordDrawerTelemetry } from "@/lib/ui/mobile-nav-drawer-telemetry";
+import { getNavDrawerEdgeSwipeBlockReason, type GestureContext } from "@/lib/ui/gesture-arbitration";
+import { deriveMainInert } from "@/lib/ui/mobile-nav-drawer-machine";
+import { logDrawerGestureDebug, recordDrawerTelemetry } from "@/lib/ui/mobile-nav-drawer-telemetry";
 import { armSelectorGhostClickGuard } from "@/lib/selector-interaction/suppress-selector-ghost-click";
 import {
   applyCompositorTransform,
@@ -19,6 +20,7 @@ import {
 } from "@/lib/ui/use-pointer-gesture";
 
 const ACTIVATION_PX = 8;
+const EDGE_ZONE_VERTICAL_SLOP_FACTOR = 0.75;
 const DEFAULT_PANEL_WIDTH = 312;
 
 type DragState = {
@@ -64,11 +66,27 @@ export function peakGestureVelocity(current: number, peak: number): number {
   return Math.max(current, peak);
 }
 
+/** Edge zone: 25% vertical tolerance. Outside edge zone: horizontal must dominate. */
+export function shouldActivateEdgeOpenDrag(
+  inEdgeZone: boolean,
+  deltaX: number,
+  deltaY: number,
+  activationPx = ACTIVATION_PX,
+): boolean {
+  if (Math.abs(deltaX) < activationPx && Math.abs(deltaY) < activationPx) return false;
+  if (inEdgeZone) {
+    return deltaX > activationPx && deltaX > Math.abs(deltaY) * EDGE_ZONE_VERTICAL_SLOP_FACTOR;
+  }
+  if (Math.abs(deltaY) > Math.abs(deltaX)) return false;
+  return deltaX > activationPx;
+}
+
 export { isSwipeNavGestureBlockedTarget } from "@/lib/ui/gesture-arbitration";
 
 export type UseSwipeFromEdgeToOpenOptions = {
   enabled: boolean;
   drawerState: NavDrawerState;
+  drawerMounted?: boolean;
   overlayActive: boolean;
   panelWidth?: number;
   onBegin: () => void;
@@ -82,6 +100,7 @@ export type UseSwipeFromEdgeToOpenOptions = {
 export function useSwipeFromEdgeToOpen({
   enabled,
   drawerState,
+  drawerMounted = false,
   overlayActive,
   panelWidth: panelWidthProp,
   onBegin,
@@ -107,6 +126,7 @@ export function useSwipeFromEdgeToOpen({
   const peakDragXRef = useRef(0);
   const peakVelocityXRef = useRef(0);
   const edgeActiveRef = useRef(false);
+  const pointerDownInEdgeZoneRef = useRef(false);
   const capturedPointerIdRef = useRef<number | null>(null);
   const lastMoveAtRef = useRef(0);
   const idleTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -189,6 +209,7 @@ export function useSwipeFromEdgeToOpen({
     edgeActiveRef.current = false;
     peakDragXRef.current = 0;
     peakVelocityXRef.current = 0;
+    pointerDownInEdgeZoneRef.current = false;
     setEdgeActive(false);
     setIsDragging(false);
     setIsSnapping(false);
@@ -272,18 +293,44 @@ export function useSwipeFromEdgeToOpen({
     [drawerState, overlayActive],
   );
 
+  const logGestureDebug = useCallback(
+    (phase: string, extra?: Partial<Parameters<typeof logDrawerGestureDebug>[0]>) => {
+      logDrawerGestureDebug({
+        state: drawerState,
+        mounted: drawerMounted,
+        mainInert: deriveMainInert(drawerState),
+        phase,
+        ...extra,
+      });
+    },
+    [drawerMounted, drawerState],
+  );
+
   const onGestureStart = useCallback(
     (e: PointerEvent) => {
       if (edgeActiveRef.current || isSnapping) return;
       const target = e.target;
       if (!(target instanceof Element)) return;
-      if (
-        !shouldNavDrawerClaimEdgeSwipe(
-          buildGestureContext(target, e.clientX, e.clientY),
-        )
-      ) {
+      const ctx = buildGestureContext(target, e.clientX, e.clientY);
+      const blockedReason = getNavDrawerEdgeSwipeBlockReason(ctx);
+      if (blockedReason != null) {
+        if (e.clientX <= resolveActivationZonePx(ctx.viewportWidth, ctx.safeAreaLeftPx ?? 0)) {
+          logGestureDebug("pointerdown_blocked", {
+            pointerId: e.pointerId,
+            edgeStart: e.clientX,
+            target: target.tagName,
+            blockedReason,
+          });
+        }
         return;
       }
+
+      pointerDownInEdgeZoneRef.current = true;
+      logGestureDebug("pointerdown_edge", {
+        pointerId: e.pointerId,
+        edgeStart: e.clientX,
+        target: target.tagName,
+      });
 
       dragRef.current = {
         startX: e.clientX,
@@ -299,7 +346,7 @@ export function useSwipeFromEdgeToOpen({
       peakVelocityXRef.current = 0;
       lastMoveAtRef.current = Date.now();
     },
-    [buildGestureContext, isSnapping],
+    [buildGestureContext, isSnapping, logGestureDebug],
   );
 
   const onGestureMove = useCallback(
@@ -317,13 +364,14 @@ export function useSwipeFromEdgeToOpen({
       lastMoveAtRef.current = Date.now();
 
       if (!dragRef.current.dragging) {
-        if (Math.abs(deltaX) < ACTIVATION_PX && Math.abs(deltaY) < ACTIVATION_PX) return;
-        if (Math.abs(deltaY) > Math.abs(deltaX)) {
-          dragRef.current.active = false;
-          return;
-        }
-        if (deltaX <= 0) {
-          dragRef.current.active = false;
+        if (!shouldActivateEdgeOpenDrag(pointerDownInEdgeZoneRef.current, deltaX, deltaY)) {
+          if (
+            Math.abs(deltaX) >= ACTIVATION_PX ||
+            Math.abs(deltaY) >= ACTIVATION_PX
+          ) {
+            dragRef.current.active = false;
+            pointerDownInEdgeZoneRef.current = false;
+          }
           return;
         }
         dragRef.current.dragging = true;
@@ -334,6 +382,7 @@ export function useSwipeFromEdgeToOpen({
           edgeActiveRef.current = true;
           setEdgeActive(true);
           capturePointer(e);
+          logGestureDebug("edge_drag_start", { pointerId: e.pointerId });
           onBegin();
         }
       }
@@ -347,7 +396,7 @@ export function useSwipeFromEdgeToOpen({
       onDragProgress?.();
       scheduleTransform(rubber, width);
     },
-    [capturePointer, getPanelWidth, onBegin, onDragProgress, scheduleTransform],
+    [capturePointer, getPanelWidth, logGestureDebug, onBegin, onDragProgress, scheduleTransform],
   );
 
   const onGestureEnd = useCallback(
@@ -374,6 +423,7 @@ export function useSwipeFromEdgeToOpen({
         velocityX: 0,
       };
       setIsDragging(false);
+      pointerDownInEdgeZoneRef.current = false;
 
       if (!edgeActiveRef.current) return;
 
@@ -381,6 +431,7 @@ export function useSwipeFromEdgeToOpen({
         if (shouldCommitGesture(peakX, width, velocity, "open") && !shouldCommitEdgeOpen(peakX, width)) {
           recordDrawerTelemetry("drawer_velocity_commit", { dir: "open" });
         }
+        logGestureDebug("edge_drag_commit", { pointerId: _e.pointerId });
         finishCommit();
         return;
       }
@@ -394,18 +445,21 @@ export function useSwipeFromEdgeToOpen({
       }
 
       if (currentX > 0) {
+        logGestureDebug("edge_drag_snap_back", { pointerId: _e.pointerId });
         beginSnapBack();
         return;
       }
 
+      logGestureDebug("edge_drag_cancel", { pointerId: _e.pointerId });
       finishCancel(false);
     },
-    [beginSnapBack, clearIdleTimer, finishCancel, finishCommit],
+    [beginSnapBack, clearIdleTimer, finishCancel, finishCommit, logGestureDebug],
   );
 
   const onGestureCancel = useCallback(() => {
     if (!edgeActiveRef.current) return;
     clearIdleTimer();
+    logGestureDebug("pointercancel");
     const currentX = dragRef.current.lastDeltaX;
     if (currentX > 0) {
       beginSnapBack();
@@ -413,7 +467,7 @@ export function useSwipeFromEdgeToOpen({
     }
     onPointerCancel();
     finishCancel();
-  }, [beginSnapBack, clearIdleTimer, finishCancel, onPointerCancel]);
+  }, [beginSnapBack, clearIdleTimer, finishCancel, logGestureDebug, onPointerCancel]);
 
   usePointerGesture({
     enabled: enabled || edgeActive,
@@ -428,7 +482,8 @@ export function useSwipeFromEdgeToOpen({
     const w = panelRef.current?.offsetWidth ?? panelWidthProp;
     if (!w) return;
     panelWidthGestureRef.current = w;
-  }, [edgeActive, panelWidthProp]);
+    flushTransform();
+  }, [edgeActive, flushTransform, panelWidthProp]);
 
   useLayoutEffect(() => {
     if (!isSnapping) return;

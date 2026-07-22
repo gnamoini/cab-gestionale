@@ -273,6 +273,12 @@ export type VehicleMaintenanceServicePartRow = {
   quantita: number;
   descrizione_snapshot: string | null;
   created_at: string;
+  was_replaced?: boolean | null;
+  was_due?: boolean | null;
+  replacement_condition?: string | null;
+  is_required_snapshot?: boolean | null;
+  note?: string | null;
+  warehouse_status?: string | null;
 };
 
 export type AssetTimelineProjectionRow = {

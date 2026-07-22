@@ -18,6 +18,11 @@ const hookSrc = fs.readFileSync(
 );
 const dispatchSrc = fs.readFileSync(path.join(ROOT, "lib/sync/gestionale-sync-dispatch.ts"), "utf8");
 const policySrc = fs.readFileSync(path.join(ROOT, "lib/sync/gestionale-sync-policy.ts"), "utf8");
+const dirtyFlushSrc = fs.readFileSync(path.join(ROOT, "lib/sync/gestionale-dirty-flush.ts"), "utf8");
+const invalidateRelatedSrc = fs.readFileSync(
+  path.join(ROOT, "src/lib/react-query/invalidate-related.ts"),
+  "utf8",
+);
 
 const syncTables = [
   "dipendenti_timesheet_employees",
@@ -38,6 +43,9 @@ assert.match(dispatchSrc, /resolveSyncEffects/);
 assert.match(dispatchSrc, /markGestionaleDirty/);
 assert.match(dispatchSrc, /shouldSuppressRemoteCacheInvalidation/);
 assert.match(dispatchSrc, /markRecentLocalGestionaleFromEntityIdByTable/);
+assert.match(dispatchSrc, /acknowledgeOperationalTableVersions/);
+assert.match(dirtyFlushSrc, /shouldSkipOperationalDirtyMark/);
+assert.match(invalidateRelatedSrc, /cabSyncEventForEntity\("scheda_lavorazione"/);
 assert.match(policySrc, /ALWAYS_LIVE_TABLES/);
 assert.match(policySrc, /user_permissions/);
 assert.match(policySrc, /profiles/);

@@ -1,24 +1,18 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
+import { DashboardControlTowerLayout } from "@/components/dashboard/dashboard-control-tower-layout";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LoadingCardSkeleton } from "@/components/design-system";
-import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
 import { useCalendarV2Enabled } from "@/src/hooks/use-calendar-v2-enabled";
 import { erpBtnNeutral } from "@/lib/ui/erp-tokens";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
 import { GestionalePageHeaderMenu } from "@/components/gestionale/gestionale-page-header-menu";
 
-const DashboardControlTowerLayout = dynamic(
-  () =>
-    import("@/components/dashboard/dashboard-control-tower-layout").then((m) => m.DashboardControlTowerLayout),
-  { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[12rem]" /> },
-);
 const CalendarV2Section = dynamic(
   () => import("@/components/dashboard/calendar-v2/calendar-v2-section").then((m) => m.CalendarV2Section),
-  { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[8rem]" /> },
 );
 
 export function DashboardView() {

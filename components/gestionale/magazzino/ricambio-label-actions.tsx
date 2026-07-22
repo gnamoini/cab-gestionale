@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { DisabledElementTooltip } from "@/components/ui";
 import { erpBtnNeutral, erpBtnSubtleNew } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { DEFAULT_LABEL_PRESET, LABEL_PRESET_IDS, labelPresetOptionLabel } from "@/lib/inventory-labels";
+import {
+  DEFAULT_INCLUDE_BARCODE,
+  DEFAULT_LABEL_PRESET,
+  LABEL_PRESET_IDS,
+  labelPresetOptionLabel,
+} from "@/lib/inventory-labels";
 import { normalizePdfDownloadFileName, openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
@@ -27,7 +32,7 @@ export function RicambioLabelActions({
   const gestToast = useGestionaleToast();
   const [expanded, setExpanded] = useState(false);
   const [preset, setPreset] = useState(DEFAULT_LABEL_PRESET);
-  const [includeBarcode, setIncludeBarcode] = useState(true);
+  const [includeBarcode, setIncludeBarcode] = useState(DEFAULT_INCLUDE_BARCODE);
   const [meta, setMeta] = useState<LabelMeta | null>(null);
   const [loading, setLoading] = useState(false);
   const [openingPdf, setOpeningPdf] = useState(false);

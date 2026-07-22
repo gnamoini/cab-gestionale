@@ -1,13 +1,12 @@
-import { resolveAssetLifecycleV1EnabledClient } from "@/lib/officina/resolve-asset-lifecycle-v1-client";
+import { parseDecimalInput } from "@/lib/core/decimal-input";
 import { isAssetLifecycleSubFlagActive } from "@/lib/officina/asset-lifecycle-v1-flag";
+import { resolveAssetLifecycleV1EnabledClient } from "@/lib/officina/resolve-asset-lifecycle-v1-client";
 import { assetMileageService } from "@/src/services/asset-mileage.service";
 
 export function parseKmFromScheda(kmText: string | undefined | null): number | null {
-  const raw = kmText?.trim().replace(",", ".");
-  if (!raw) return null;
-  const km = Number.parseFloat(raw);
-  if (!Number.isFinite(km) || km < 0) return null;
-  return km;
+  const n = parseDecimalInput(kmText?.trim() ?? "");
+  if (n == null || n < 0) return null;
+  return n;
 }
 
 /** Append mileage reading da scheda ingresso se sub-flag mileage_history attivo. */

@@ -1,17 +1,19 @@
-# Skeleton loading — baseline (post LEVEL 2 transition loader)
+# Skeleton loading — baseline (post L1-only migration)
 
-Data: 2026-07-19  
-Artefatti: `test-results/skeleton-benchmark-transition-loader.json`, `test-results/skeleton-benchmark-throttled.json`
+Data: 2026-07-22  
+Artefatti storici: `test-results/skeleton-benchmark-transition-loader.json`
 
-## Architettura LEVEL 1 + 2
+## Architettura L1 → L3
 
 | Layer | Meccanismo | Stato |
 |-------|------------|-------|
-| LEVEL 1 | `loading.tsx` + structural skeleton | OK (v3) |
-| LEVEL 2 | `PageTransitionLoader` structural skeleton in Suspense (body async) | Rollout: dashboard, magazzino, lavorazioni |
-| LEVEL 3 | bundle/hydration audit | ticket separato |
+| LEVEL 1 | `loading.tsx` + structural skeleton | owner unico full-page |
+| LEVEL 2 | `HydrationBoundary` + `prefetchGestionalePage` in page async | zero skeleton |
+| LEVEL 3 | skeleton locali (widget, tabella, sezione) | layout stabile |
 
-`PageLayout` con titolo reale **fuori** Suspense. Prefetch critico + deferred hydration **dentro** Suspense così il loader copre il gap.
+`PageTransitionLoader` (legacy LEVEL 2) ritirato — niente doppio skeleton route.
+
+Prefetch deferred configurabile via `PAGE_PREFETCH_CONFIG` (es. `report: false`).
 
 ## Static gate — PASS
 

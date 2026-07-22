@@ -91,6 +91,15 @@ export const globalTableFixed = `${globalTableBase} table-auto xl:table-fixed`;
 export const globalTableRow =
   "group border-b border-[color:var(--cab-border)] transition-colors duration-150 ease-out hover:bg-[var(--cab-hover)] data-[selected=true]:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-card))]";
 
+/** Righe spacer virtual scroll — niente hover né bordo. */
+export const globalTableVirtualSpacerRow = "pointer-events-none border-0";
+
+/** Padding virtuali TanStack solo se il wrap ha scroll verticale reale (`overflow-y` scroll/auto). */
+export function globalTableScrollElementAllowsVerticalVirtualPadding(el: HTMLElement): boolean {
+  const oy = getComputedStyle(el).overflowY;
+  return oy === "auto" || oy === "scroll" || oy === "overlay";
+}
+
 /** Cella vuota / empty state (con inset laterale come il body). */
 export const globalTableEmptyCell =
   "px-4 py-8 text-center text-sm text-[color:var(--cab-text-muted)] sm:px-5";

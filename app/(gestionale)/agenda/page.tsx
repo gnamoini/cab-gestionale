@@ -1,5 +1,5 @@
-import { Suspense } from "react";
-import { PageLayout, PageTransitionLoader } from "@/components/design-system";
+import { dehydrate } from "@tanstack/react-query";
+import { PageLayout } from "@/components/design-system";
 import { AgendaOfficinaViewLazy } from "@/components/gestionale/lazy-route-views";
 import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";
 import { prefetchAgendaPage } from "@/src/lib/react-query/prefetch-gestionale-page";
@@ -12,11 +12,9 @@ export default async function AgendaPage() {
       title={STRUCTURAL_ROUTE_PAGE_TITLES.agenda}
       description="Pianificazione sessioni di lavoro"
     >
-      <Suspense fallback={<PageTransitionLoader variant="agenda" />}>
-        <GestionaleHydrationBoundary state={dehydratedState}>
-          <AgendaOfficinaViewLazy />
-        </GestionaleHydrationBoundary>
-      </Suspense>
+      <GestionaleHydrationBoundary state={dehydratedState}>
+        <AgendaOfficinaViewLazy />
+      </GestionaleHydrationBoundary>
     </PageLayout>
   );
 }

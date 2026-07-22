@@ -11,6 +11,8 @@ import {
 } from "@/lib/maintenance-plans/maintenance-enums";
 import type { MaintenanceExecutionType } from "@/lib/maintenance-plans/maintenance-enums";
 import { isPartDue } from "@/lib/maintenance-plans/part-replacement-condition";
+import { REPLACEMENT_CONDITION_LABELS } from "@/lib/maintenance-plans/maintenance-enums";
+import { suggestPartReplacedAtRegistration } from "@/lib/maintenance-plans/suggest-part-replaced";
 import { buildPresetSnapshot } from "@/lib/maintenance-plans/preset-snapshot";
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
 import { dsBtnNeutral, dsBtnPrimary, dsFormField, dsFormInput, dsFormLabel } from "@/lib/ui/design-system";
@@ -27,6 +29,11 @@ import {
 } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { resolvePlansForMezzo } from "@/lib/maintenance-plans/resolve-plans-for-mezzo";
+import {
+  triggersNeedKm,
+  triggersNeedOre,
+} from "@/lib/maintenance-plans/maintenance-trigger-helpers";
+import type { MaintenancePresetTriggerView } from "@/lib/maintenance-plans/types";
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -43,6 +50,7 @@ export function MezziRegistraTagliandoModal({
   defaultPlanId,
   configId,
   configIntervalType,
+  planTriggers,
   onClose,
   onSaved,
 }: {
@@ -54,6 +62,7 @@ export function MezziRegistraTagliandoModal({
   defaultPlanId?: string;
   configId?: string;
   configIntervalType?: "ore" | "km" | "giorni" | "mesi";
+  planTriggers?: MaintenancePresetTriggerView[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -139,26 +148,32 @@ export function MezziRegistraTagliandoModal({
     setExtraParts([]);
     setRicSearch("");
     const plan = applicablePlans.find((p) => p.id === pid) ?? applicablePlans[0];
-    const parts: Record<string, boolean> = {};
-    for (const part of plan?.parts ?? []) parts[part.ricambioId] = true;
-    setSelectedParts(parts);
     const checklist: Record<string, boolean> = {};
-    for (const item of plan?.checklist ?? []) checklist[item.label] = true;
+    for (const item of plan?.checklist ?? []) checklist[item.label] = false;
     setChecklistState(checklist);
   }, [open, defaultPlanId, applicablePlans, currentOreMezzo, currentKmMezzo]);
 
   useEffect(() => {
-    if (partsForUi.length === 0) return;
-    setSelectedParts((prev) => {
+    if (!open || partsForUi.length === 0) return;
+    setSelectedParts(() => {
       const next: Record<string, boolean> = {};
-      for (const part of partsForUi) next[part.ricambioId] = prev[part.ricambioId] ?? true;
+      for (const part of partsForUi) {
+        next[part.ricambioId] = suggestPartReplacedAtRegistration({
+          replacementCondition: part.replacementCondition,
+          conditionParams: part.conditionParams,
+          isRequired: part.isRequired,
+          executionCount,
+        });
+      }
       return next;
     });
-  }, [partsForUi]);
+  }, [open, partsForUi, executionCount]);
 
   const oreMismatch =
     Number(oreAtService) !== currentOreMezzo && Number.isFinite(Number(oreAtService));
-  const showKm = configIntervalType === "km";
+  const meterTriggers = planTriggers ?? (selectedPlan?.triggerGroups[0]?.triggers ?? []);
+  const showKm = triggersNeedKm(meterTriggers) || configIntervalType === "km";
+  const showOre = triggersNeedOre(meterTriggers);
   const submitBlocked =
     configId && (effectivePresetQ.isLoading || (effectivePresetQ.isError && !effectivePresetQ.data));
 
@@ -169,7 +184,7 @@ export function MezziRegistraTagliandoModal({
       return;
     }
     const ore = Number(oreAtService);
-    if (!Number.isFinite(ore) || ore < 0) {
+    if (showOre && (!Number.isFinite(ore) || ore < 0)) {
       toastValidation("Inserisci ore esecuzione valide.");
       return;
     }
@@ -233,7 +248,7 @@ export function MezziRegistraTagliandoModal({
           mezzoId,
           planId: planIdForSave,
           performedAt,
-          oreAtService: ore,
+          oreAtService: showOre ? ore : 0,
           kmAtService: showKm ? km : null,
           mezzoOreSnapshot: currentOreMezzo,
           note,
@@ -261,20 +276,28 @@ export function MezziRegistraTagliandoModal({
           mezzoId,
           planId: selectedPlan.id,
           performedAt,
-          oreAtService: ore,
+          oreAtService: showOre ? ore : 0,
           kmAtService: showKm ? km : null,
           mezzoOreSnapshot: currentOreMezzo,
           note,
           executionType,
           presetSnapshot: snapshot,
           checklist: checklistPayload,
-          parts: partsForUi
-            .filter((p) => selectedParts[p.ricambioId])
-            .map((p) => ({
-              ricambioId: p.ricambioId,
-              quantita: p.quantita,
-              descrizioneSnapshot: p.descrizione,
-            })),
+          parts: partsForUi.map((p) => ({
+            ricambioId: p.ricambioId,
+            quantita: p.quantita,
+            descrizioneSnapshot: p.descrizione,
+            wasReplaced: selectedParts[p.ricambioId] ?? false,
+            wasDue: isPartDue({
+              condition: p.replacementCondition,
+              conditionParams: p.conditionParams,
+              executionCount,
+              oreSinceLastReplace: null,
+              kmSinceLastReplace: null,
+            }),
+            replacementCondition: p.replacementCondition,
+            isRequired: p.isRequired,
+          })),
         });
       }
       successSaved();
@@ -369,7 +392,13 @@ export function MezziRegistraTagliandoModal({
                 onChange={(e) => setPerformedAt(e.target.value)}
                 required
               />
+              {meterTriggers.some((t) => t.triggerType === "mesi" || t.triggerType === "giorni") ? (
+                <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
+                  Obbligatoria per intervalli a calendario (mesi/giorni).
+                </p>
+              ) : null}
             </div>
+            {showOre ? (
             <div className={dsFormField}>
               <label className={dsFormLabel} htmlFor="rt-ore">
                 Ore veicolo
@@ -382,7 +411,7 @@ export function MezziRegistraTagliandoModal({
                 className={dsFormInput}
                 value={oreAtService}
                 onChange={(e) => setOreAtService(e.target.value)}
-                required
+                required={showOre}
               />
               {oreMismatch ? (
                 <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">
@@ -390,6 +419,7 @@ export function MezziRegistraTagliandoModal({
                 </p>
               ) : null}
             </div>
+            ) : null}
             {showKm ? (
               <div className={dsFormField}>
                 <label className={dsFormLabel} htmlFor="rt-km">
@@ -437,25 +467,40 @@ export function MezziRegistraTagliandoModal({
             ) : null}
             {partsForUi.length > 0 ? (
               <div className={dsFormField}>
-                <span className={dsFormLabel}>Ricambi — indica sostituiti</span>
-                <ul className="space-y-2">
+                <span className={dsFormLabel}>Ricambi — cosa hai sostituito?</span>
+                <p className="mb-2 text-xs text-[color:var(--cab-text-muted)]">
+                  Dal preset: spunta solo i componenti effettivamente montati. I suggeriti sono preselezionati in base alla regola del piano.
+                </p>
+                <ul className="space-y-2 rounded-lg border border-[color:var(--cab-border)] p-2">
                   {partsForUi.map((p) => (
                     <li key={p.ricambioId}>
-                      <label className="inline-flex items-center gap-2 text-sm">
+                      <label className="flex items-start gap-2 text-sm">
                         <input
                           type="checkbox"
+                          className="mt-0.5"
                           checked={selectedParts[p.ricambioId] ?? false}
                           onChange={(e) =>
                             setSelectedParts((prev) => ({ ...prev, [p.ricambioId]: e.target.checked }))
                           }
                         />
-                        {p.descrizione} ({p.quantita})
+                        <span>
+                          <span className="font-medium">{p.descrizione}</span>
+                          <span className="text-[color:var(--cab-text-muted)]"> × {p.quantita}</span>
+                          {p.isRequired ? <span className="text-amber-700 dark:text-amber-300"> *</span> : null}
+                          <span className="mt-0.5 block text-xs text-[color:var(--cab-text-muted)]">
+                            {REPLACEMENT_CONDITION_LABELS[p.replacementCondition]}
+                          </span>
+                        </span>
                       </label>
                     </li>
                   ))}
                 </ul>
               </div>
-            ) : null}
+            ) : (
+              <p className="text-sm text-[color:var(--cab-text-muted)]">
+                Nessun ricambio nel preset. Aggiungine uno sotto o configura il piano in Impostazioni.
+              </p>
+            )}
             <div className={dsFormField}>
               <span className={dsFormLabel}>Aggiungi ricambio extra</span>
               <input

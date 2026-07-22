@@ -6,6 +6,7 @@ import {
 } from "@/lib/gestionale-log/log-summary";
 import {
   buildStockMovementAuditPayload,
+  buildStockMovementAuditPayloadWithContext,
   parseStockMovementAuditPayload,
 } from "@/lib/magazzino/stock-audit-payload";
 import { ricambioIdFromMovimentoRow } from "@/lib/magazzino/magazzino-log-feed-merge";
@@ -83,6 +84,28 @@ const scaricoPayload = buildStockMovementAuditPayload({
     payload: caricoPayload,
   };
   assert.equal(ricambioIdFromMovimentoRow(row), RICAMBIO_ID);
+}
+
+{
+  const contextual = buildStockMovementAuditPayloadWithContext(
+    {
+      ricambioId: RICAMBIO_ID,
+      quantitaBefore: 10,
+      quantitaAfter: 15,
+      origine: "manual_adjustment",
+      causale: "carico_manuale",
+      movimentoId: MOVIMENTO_ID,
+    },
+    "Mann — Filtro olio",
+  );
+  const summary = buildLogModificaSummary({
+    entita: "movimenti_ricambi",
+    entita_id: MOVIMENTO_ID,
+    azione: "CREATE",
+    payload: contextual,
+  });
+  assert.match(summary.oggettoRiga, /Filtro olio/i);
+  assert.notEqual(summary.oggettoRiga, "—");
 }
 
 console.log("stock-audit-log-summary.test.ts OK");

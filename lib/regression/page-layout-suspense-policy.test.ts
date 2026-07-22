@@ -1,14 +1,10 @@
 /**
- * LEVEL 2: PageLayout fuori Suspense + PageTransitionLoader structural skeleton in fallback.
+ * Route migrate: PageLayout + prefetch server-side, niente Suspense skeleton.
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import {
-  PAGE_LAYOUT_OUTSIDE_SUSPENSE_ROUTES,
-  PAGE_TRANSITION_LOADER_ROUTES,
-  PAGE_TRANSITION_LOADER_VARIANTS,
-} from "./loading-transition-fallback-allowlist";
+import { PAGE_LAYOUT_OUTSIDE_SUSPENSE_ROUTES } from "./loading-transition-fallback-allowlist";
 
 const ROOT = process.cwd();
 
@@ -19,22 +15,27 @@ function read(rel: string): string {
 function main(): void {
   const violations: string[] = [];
 
-  for (const pageRel of PAGE_TRANSITION_LOADER_ROUTES) {
+  for (const pageRel of PAGE_LAYOUT_OUTSIDE_SUSPENSE_ROUTES) {
     const text = read(pageRel);
-    const variant = PAGE_TRANSITION_LOADER_VARIANTS[pageRel];
 
-    if (!/<Suspense/.test(text)) {
-      violations.push(`${pageRel}: manca <Suspense`);
-      continue;
+    if (!/<PageLayout/.test(text)) {
+      violations.push(`${pageRel}: PageLayout richiesto`);
     }
 
-    if (!new RegExp(`fallback=\\{<PageTransitionLoader\\s+variant="${variant}"\\s*/>\\}`).test(text)) {
-      violations.push(`${pageRel}: atteso fallback={<PageTransitionLoader variant="${variant}" />}`);
+    if (/PageTransitionLoader/.test(text)) {
+      violations.push(`${pageRel}: PageTransitionLoader vietato`);
     }
 
-    if (PAGE_LAYOUT_OUTSIDE_SUSPENSE_ROUTES.includes(pageRel as (typeof PAGE_LAYOUT_OUTSIDE_SUSPENSE_ROUTES)[number])) {
-      if (!/<PageLayout/.test(text)) {
-        violations.push(`${pageRel}: PageLayout fuori Suspense richiesto per continuità header`);
+    if (/Suspense[^>]*fallback=\{<PageTransitionLoader/.test(text)) {
+      violations.push(`${pageRel}: Suspense skeleton fallback vietato`);
+    }
+
+    if (!/export default async function/.test(text) && !/async function \w+Page/.test(text)) {
+      if (
+        pageRel !== "app/(gestionale)/magazzino/carichi/page.tsx" &&
+        pageRel !== "app/(gestionale)/sicurezza/production-readiness/page.tsx"
+      ) {
+        violations.push(`${pageRel}: page async con prefetch atteso`);
       }
     }
   }

@@ -40,6 +40,7 @@ const plan: MaintenancePlanView = mockMaintenancePlanView({
 const catalog = [{ id: "tipo-esc", label: "Escavatore" }];
 
 assert.equal(parseSchedaOreLavoro("600"), 600);
+assert.equal(parseSchedaOreLavoro("600,5"), 600.5);
 assert.equal(parseSchedaOreLavoro(""), 0);
 assert.equal(parseSchedaOreLavoro("abc"), 0);
 

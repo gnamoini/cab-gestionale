@@ -31,7 +31,7 @@ const resolved = resolveSyncEffects({
   tables: ["lavorazioni", "scheda_lavorazione"],
   entityIdByTable,
   cabEvents: [],
-  flag: "lavorazioni",
+  flag: "pilot_lavorazioni",
 });
 
 const visibleDirty = resolved.dirtyEntries.filter(

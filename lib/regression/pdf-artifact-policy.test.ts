@@ -42,6 +42,11 @@ assert.match(labelMimeMigration, /image\/svg\+xml/);
 const deliverLabel = read("lib/inventory-labels/render/deliver.server.ts");
 assert.match(deliverLabel, /uploadLabelArtifactBestEffort/);
 
+const preventiviPdf = read("lib/preventivi/preventivi-pdf.ts");
+assert.match(preventiviPdf, /openPreventivoPdfPreviewFromRecord/);
+assert.match(preventiviPdf, /preventivo-pdf-generate/);
+assert.match(preventiviPdf, /openPdfBlobInNewTab/);
+
 const migratedOpeners = [
   "lib/lavorazioni/lavorazioni-list-pdf.ts",
   "lib/preventivi/preventivi-pdf.ts",

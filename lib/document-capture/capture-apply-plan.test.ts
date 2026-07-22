@@ -66,4 +66,71 @@ const postMutateSnapshot = {
 
 assert.doesNotThrow(() => assertCapturePlanFresh(postMutateSnapshot));
 
+const ingressoOnly = [
+  { field_key: "cliente", confirmed_value: "ACME", normalized_value: "ACME" },
+  { field_key: "data_ingresso", confirmed_value: "01/01/2024", normalized_value: "01/01/2024" },
+  { field_key: "descrizione_anomalia", confirmed_value: "Guasto", normalized_value: "Guasto" },
+];
+
+const ingressoPlan = buildCaptureApplyPlanFromFields({
+  fields: ingressoOnly,
+  lavorazioneId: null,
+  mezzoId: null,
+  attrezzaturaId: null,
+  createdBy: "test",
+});
+assert.equal(ingressoPlan.creates.lavorazioniScheda, false);
+assert.equal(ingressoPlan.creates.ricambiScheda, false);
+assert.equal(ingressoPlan.bundlePreview?.lavorazioni, null);
+assert.equal(ingressoPlan.bundlePreview?.ricambi, null);
+
+const ingressoLavPlan = buildCaptureApplyPlanFromFields({
+  fields: [...ingressoOnly, { field_key: "riga_1_lavorazione", confirmed_value: "Rip", normalized_value: "Rip" }],
+  lavorazioneId: null,
+  mezzoId: null,
+  attrezzaturaId: null,
+  createdBy: "test",
+});
+assert.equal(ingressoLavPlan.creates.lavorazioniScheda, true);
+assert.equal(ingressoLavPlan.creates.ricambiScheda, false);
+
+const allThreePlan = buildCaptureApplyPlanFromFields({
+  fields: [
+    ...ingressoOnly,
+    { field_key: "riga_1_lavorazione", confirmed_value: "Rip", normalized_value: "Rip" },
+    { field_key: "riga_1_codice", confirmed_value: "ABC", normalized_value: "ABC" },
+  ],
+  lavorazioneId: null,
+  mezzoId: null,
+  attrezzaturaId: null,
+  createdBy: "test",
+});
+assert.equal(allThreePlan.creates.lavorazioniScheda, true);
+assert.equal(allThreePlan.creates.ricambiScheda, true);
+
+const ricambiOnlyPlan = buildCaptureApplyPlanFromFields({
+  fields: [
+    { field_key: "scheda_tipo", confirmed_value: "ricambi", normalized_value: "ricambi" },
+    { field_key: "riga_1_codice", confirmed_value: "X", normalized_value: "X" },
+  ],
+  lavorazioneId: "lav-1",
+  mezzoId: null,
+  attrezzaturaId: null,
+  createdBy: "test",
+});
+assert.equal(ricambiOnlyPlan.creates.mezzo, true);
+assert.equal(ricambiOnlyPlan.creates.lavorazioniScheda, false);
+assert.equal(ricambiOnlyPlan.creates.ricambiScheda, true);
+
+const partialJsonPlan = buildCaptureApplyPlanFromFields({
+  fields: ingressoOnly,
+  lavorazioneId: null,
+  mezzoId: null,
+  attrezzaturaId: null,
+  approvedCreates: { mezzo: true },
+  createdBy: "test",
+});
+assert.equal(partialJsonPlan.creates.lavorazioniScheda, false);
+assert.equal(partialJsonPlan.creates.ricambiScheda, false);
+
 console.log("capture-apply-plan.test.ts OK");

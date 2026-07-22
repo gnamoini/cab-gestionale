@@ -582,8 +582,8 @@ export function PreventiviEditorModal({
             type="button"
             className={preventivoEditorFooterBtnNeutral}
             onClick={() =>
-              void importPreventiviPdf().then(({ openPreventivoPdfInNewTab }) =>
-                openPreventivoPdfInNewTab(applyTotals(draft), autore),
+              void importPreventiviPdf().then(({ openPreventivoPdfPreviewFromRecord }) =>
+                openPreventivoPdfPreviewFromRecord(applyTotals(draft), autore),
               )
             }
           >

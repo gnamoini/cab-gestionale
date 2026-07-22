@@ -1,13 +1,11 @@
 import { dehydrate } from "@tanstack/react-query";
-import { Suspense } from "react";
-import { PageLayout, PageTransitionLoader } from "@/components/design-system";
-import { FatturazioneDeferredHydration } from "@/components/fatturazione/fatturazione-deferred-hydration";
+import { PageLayout } from "@/components/design-system";
 import { FatturazioneViewLazy } from "@/components/gestionale/lazy-route-views";
 import { parseFatturazioneTab } from "@/lib/fatturazione/fatturazione-sections-config";
 import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";
 import {
   createServerQueryClient,
-  prefetchCriticalPage,
+  prefetchGestionalePage,
 } from "@/src/lib/react-query/prefetch-gestionale-page";
 import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
 
@@ -23,17 +21,11 @@ export default async function FatturazionePage({ searchParams }: FatturazionePag
   const includePayments = tab === "pagamenti";
 
   const qc = createServerQueryClient();
-  await prefetchCriticalPage(qc, "fatturazione");
-  const criticalState = dehydrate(qc);
-
+  await prefetchGestionalePage(qc, "fatturazione", { includeOpenItems, includePayments });
   return (
     <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.fatturazione}>
-      <GestionaleHydrationBoundary state={criticalState}>
-        <Suspense fallback={<PageTransitionLoader variant="fatturazione" />}>
-          <FatturazioneDeferredHydration includeOpenItems={includeOpenItems} includePayments={includePayments}>
-            <FatturazioneViewLazy />
-          </FatturazioneDeferredHydration>
-        </Suspense>
+      <GestionaleHydrationBoundary state={dehydrate(qc)}>
+        <FatturazioneViewLazy />
       </GestionaleHydrationBoundary>
     </PageLayout>
   );

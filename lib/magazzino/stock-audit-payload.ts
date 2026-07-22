@@ -1,3 +1,4 @@
+import { auditContextWithEntityLabel } from "@/lib/gestionale-log/log-summary";
 import type { StockMovementOrigin } from "@/lib/magazzino/stock-movement-origin";
 
 /** Payload audit standard per variazioni quantità (R-19). */
@@ -110,5 +111,16 @@ export function buildStockMovementAuditPayload(input: {
     operation_id: input.operationId ?? null,
     storno_di: input.stornoDi,
     ...input.extra,
+  };
+}
+
+/** Payload R-19 + snapshot `context.entityLabel` / `context.oggetto`. */
+export function buildStockMovementAuditPayloadWithContext(
+  input: Parameters<typeof buildStockMovementAuditPayload>[0],
+  entityLabel: string,
+): Record<string, unknown> {
+  return {
+    ...buildStockMovementAuditPayload(input),
+    context: auditContextWithEntityLabel(entityLabel),
   };
 }

@@ -1,31 +1,55 @@
 "use client";
 
 import { memo, useMemo } from "react";
+import { LoadingCardSkeleton } from "@/components/design-system";
 import { DashboardWidgetRenderer } from "@/components/dashboard/dashboard-widget-renderer";
 import {
   ControlTowerMetricsProvider,
   useControlTowerContext,
 } from "@/components/dashboard/control-tower-metrics-provider";
 import {
+  DASHBOARD_WIDGET_REGISTRY,
   groupVisibleWidgetsBySection,
   resolveDashboardSectionOrder,
+  type DashboardWidgetDefinition,
+  type DashboardWidgetId,
 } from "@/lib/dashboard/dashboard-widget-registry";
 import { useGestionaleShellTier } from "@/context/gestionale-shell-layout-context";
-import { DashboardPageStructure } from "@/components/dashboard/dashboard-page-structure";
 import { dsStackPage } from "@/lib/ui/design-system";
 
+const WIDGET_SKELETON_MIN_HEIGHT: Partial<Record<DashboardWidgetId, string>> = {
+  "operational-kpi-header": "min-h-[8rem]",
+  "health-score": "min-h-[12rem]",
+  "recent-activity": "min-h-[14rem]",
+  "local-notes": "min-h-[12rem]",
+  "recent-lavorazioni": "min-h-[10rem]",
+  "recent-ricambi": "min-h-[10rem]",
+};
+
+function widgetSkeletonMinHeight(id: DashboardWidgetId): string {
+  return WIDGET_SKELETON_MIN_HEIGHT[id] ?? "min-h-[10rem]";
+}
+
+function layoutWidgetsWhileLoading(
+  visibleWidgets: readonly DashboardWidgetDefinition[],
+  staging: boolean,
+): DashboardWidgetDefinition[] {
+  if (visibleWidgets.length > 0) return [...visibleWidgets];
+  return DASHBOARD_WIDGET_REGISTRY.filter((w) => !(w.hideInStaging && staging));
+}
+
 const DashboardControlTowerLayoutInner = memo(function DashboardControlTowerLayoutInner() {
-  const { visibleWidgets, isLoading } = useControlTowerContext();
+  const { visibleWidgets, isLoading, staging } = useControlTowerContext();
   const { isCompactShell } = useGestionaleShellTier();
   const sectionOrder = resolveDashboardSectionOrder(isCompactShell);
-  const bySection = useMemo(
-    () => groupVisibleWidgetsBySection(visibleWidgets, sectionOrder),
-    [visibleWidgets, sectionOrder],
+  const widgetsForLayout = useMemo(
+    () => layoutWidgetsWhileLoading(visibleWidgets, staging),
+    [visibleWidgets, staging],
   );
-
-  if (isLoading && visibleWidgets.length === 0) {
-    return <DashboardPageStructure mode="skeleton" scope="content" />;
-  }
+  const bySection = useMemo(
+    () => groupVisibleWidgetsBySection(widgetsForLayout, sectionOrder),
+    [widgetsForLayout, sectionOrder],
+  );
 
   return (
     <div className={`${dsStackPage} min-w-0`}>
@@ -39,7 +63,11 @@ const DashboardControlTowerLayoutInner = memo(function DashboardControlTowerLayo
                 key={w.id}
                 className={w.layout === "full" ? "min-w-0 cab-shell-desktop:col-span-2" : "min-w-0"}
               >
-                <DashboardWidgetRenderer id={w.id} />
+                {isLoading ? (
+                  <LoadingCardSkeleton minHeightClass={widgetSkeletonMinHeight(w.id)} />
+                ) : (
+                  <DashboardWidgetRenderer id={w.id} />
+                )}
               </div>
             ))}
           </div>

@@ -1,6 +1,10 @@
 "use client";
 
-import type { ChangeEvent, InputHTMLAttributes } from "react";
+import type { ChangeEvent, FocusEvent, InputHTMLAttributes } from "react";
+import {
+  isDecimalInputDraft,
+  normalizeDecimalInput,
+} from "@/lib/core/decimal-input";
 import { dsInput, dsInputNoSpinner } from "@/lib/ui/design-system";
 import { resolveGestionaleInputClassName } from "@/lib/ui/global-input";
 
@@ -21,18 +25,31 @@ export function GestionaleNumberInput({
   className = "",
   invalid = false,
   inputMode = "decimal",
+  min,
+  onBlur,
   ...rest
 }: GestionaleNumberInputProps) {
+  const allowNegative = min === undefined || Number(min) < 0;
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value);
+    const next = e.target.value;
+    if (!isDecimalInputDraft(next, { allowNegative })) return;
+    onChange(next);
+  };
+
+  const handleBlur = (e: FocusEvent<HTMLInputElement>) => {
+    const normalized = normalizeDecimalInput(e.target.value);
+    if (normalized !== e.target.value) onChange(normalized);
+    onBlur?.(e);
   };
 
   return (
     <input
-      type="number"
+      type="text"
       inputMode={inputMode}
       value={value}
       onChange={handleChange}
+      onBlur={handleBlur}
       aria-invalid={invalid || undefined}
       className={resolveGestionaleInputClassName(`${dsInput} ${dsInputNoSpinner} tabular-nums ${className}`.trim(), invalid)}
       {...rest}

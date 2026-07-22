@@ -15,6 +15,15 @@ const machineSrc = readFileSync(join(root, "lib/ui/mobile-nav-drawer-machine.ts"
 for (const row of NAV_DRAWER_CONTRACT_TRANSITIONS.slice(0, 8)) {
   assert.match(machineSrc, new RegExp(`"${row.event}"`));
 }
+assert.match(machineSrc, /deriveMainInert/);
+
+const appShellSrc = readFileSync(join(root, "components/gestionale/app-shell.tsx"), "utf8");
+assert.match(appShellSrc, /deriveMainInert/);
+assert.match(appShellSrc, /mainInert=\{deriveMainInert\(flags\.state\)\}/);
+
+const mainSrc = readFileSync(join(root, "components/gestionale/app-shell-main.tsx"), "utf8");
+assert.match(mainSrc, /mainInert/);
+assert.doesNotMatch(mainSrc, /navDrawerVisible/);
 
 const sidebarSrc = readFileSync(join(root, "components/gestionale/app-shell-sidebar.tsx"), "utf8");
 assert.doesNotMatch(
@@ -41,7 +50,13 @@ const openBtnSrc = readFileSync(join(root, "components/gestionale/mobile-nav-ope
 assert.match(openBtnSrc, /aria-expanded/);
 assert.match(openBtnSrc, /aria-controls/);
 
+const pointerGestureSrc = readFileSync(join(root, "lib/ui/use-pointer-gesture.ts"), "utf8");
+assert.match(pointerGestureSrc, /enabledRef/);
+assert.doesNotMatch(pointerGestureSrc, /abortRef/);
+
 const cssSrc = readFileSync(join(root, "app/globals-core.css"), "utf8");
+assert.match(cssSrc, /cab-nav-drawer-edge-opening[\s\S]*translate3d\(-100%/);
+assert.match(cssSrc, /backface-visibility:\s*hidden/);
 assert.match(cssSrc, /cab-nav-drawer-locked/);
 assert.match(cssSrc, /will-change: transform/);
 

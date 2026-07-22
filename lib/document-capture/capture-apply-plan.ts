@@ -1,4 +1,10 @@
 import {
+  approvedCreatesFromCaptureFields,
+  normalizeApprovedCreates,
+  type ApprovedCreatesJson,
+  type CaptureApprovedCreates,
+} from "@/lib/document-capture/capture-approved-creates";
+import {
   buildCaptureSchedeBundle,
   inferCaptureSchedaTipo,
   mapCaptureFieldsToIngresso,
@@ -10,6 +16,8 @@ import {
   hashConfirmedCaptureFields,
 } from "@/lib/document-capture/capture-plan-staleness";
 import { resolveFieldsForHash } from "@/lib/document-capture/resolve-fields-for-hash";
+
+export type { ApprovedCreatesJson, CaptureApprovedCreates };
 
 export type CaptureApplyPlan = {
   creates: {
@@ -27,13 +35,6 @@ export type CaptureApplyPlan = {
   bundlePreview: ReturnType<typeof buildCaptureSchedeBundle> | null;
 };
 
-export type ApprovedCreatesJson = {
-  mezzo?: boolean;
-  lavorazioni?: boolean;
-  ricambi?: boolean;
-  magazzinoScarico?: boolean;
-};
-
 export function buildCaptureApplyPlanFromFields(input: {
   fields: readonly CaptureFieldRow[];
   lavorazioneId: string | null;
@@ -43,7 +44,9 @@ export function buildCaptureApplyPlanFromFields(input: {
   createdBy: string;
   magazzino?: readonly RicambioMagazzino[];
 }): CaptureApplyPlan {
-  const approved = input.approvedCreates ?? { mezzo: true, lavorazioni: true, ricambi: true };
+  const approved = input.approvedCreates
+    ? normalizeApprovedCreates(input.approvedCreates)
+    : approvedCreatesFromCaptureFields(input.fields);
   const schedaTipo = inferCaptureSchedaTipo(input.fields);
   const ingressoFields = mapCaptureFieldsToIngresso(input.fields);
   const previewLavId = input.lavorazioneId ?? "00000000-0000-4000-8000-000000000099";
@@ -51,9 +54,9 @@ export function buildCaptureApplyPlanFromFields(input: {
 
   return {
     creates: {
-      mezzo: approved.mezzo !== false,
-      lavorazioniScheda: approved.lavorazioni !== false,
-      ricambiScheda: approved.ricambi !== false,
+      mezzo: approved.mezzo,
+      lavorazioniScheda: approved.lavorazioni,
+      ricambiScheda: approved.ricambi,
     },
     updates: {
       ingressoFields: ingressoFields as unknown as Record<string, string>,
@@ -65,15 +68,15 @@ export function buildCaptureApplyPlanFromFields(input: {
     },
     magazzino: {
       movimentiPrevisti: [],
-      approvedMagazzinoScarico: approved.magazzinoScarico === true,
+      approvedMagazzinoScarico: input.approvedCreates?.magazzinoScarico === true,
     },
     bundlePreview: (() => {
       const bundle = buildCaptureSchedeBundle({
         lavorazioneId: previewLavId,
         fields: input.fields,
         createdBy: input.createdBy,
-        includeLavorazioni: approved.lavorazioni !== false,
-        includeRicambi: approved.ricambi !== false,
+        includeLavorazioni: approved.lavorazioni,
+        includeRicambi: approved.ricambi,
         schedaTipo,
         magazzino: input.magazzino,
       });

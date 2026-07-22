@@ -70,7 +70,15 @@ assert.match(compileStep, /CAPTURE_REVIEW_PIN_TOP_CLASS|--capture-review-pin-top
 assert.match(compileStep, /pinned/);
 assert.match(matchStep, /pinned/);
 assert.match(matchStep, /Crea nuova lavorazione/);
-assert.match(matchStep, /Assegna manualmente/);
+assert.match(matchStep, /Conferma assegnazione/);
+assert.match(matchStep, /Usa questa/);
+assert.match(matchStep, /Scegli una lavorazione diversa/);
+assert.match(matchStep, /ManualAssignState/);
+assert.doesNotMatch(launcher, /fixed inset-0 z-\[115\][\s\S]*schedeHandoffBusy/);
+assert.match(launcher, /requestAssignToLavorazione/);
+assert.match(launcher, /CaptureLavorazioneAssignConfirmDialog/);
+assert.match(launcher, /Lavorazione collegata correttamente/);
+assert.match(launcher, /pendingAssignLavorazioneId/);
 assert.match(wizard, /DocumentCaptureAcquisitionProgress/);
 assert.match(launcher, /deriveCaptureAcquisitionProgress/);
 assert.doesNotMatch(wizard, /CaptureApplyPlanPreview/);

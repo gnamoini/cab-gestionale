@@ -103,7 +103,7 @@ export async function renderBulkLabelPdfWithCache(
 > {
   const stats: BulkAssemblyStats = { cacheHitCount: 0, cacheMissCount: 0 };
   const chunkSize = options?.chunkSize ?? 25;
-  const includeBarcode = options?.includeBarcode !== false;
+  const includeBarcode = options?.includeBarcode === true;
   const pngs: Buffer[] = [];
 
   for (let i = 0; i < items.length; i++) {

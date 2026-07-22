@@ -29,7 +29,7 @@ export async function renderLabelSvg(
   const h = mmToPx(template.heightMm, template.dpi);
   const textAsPaths = options?.textAsPaths ?? false;
   const embedFonts = !textAsPaths && (options?.embedFonts ?? true);
-  const includeBarcode = options?.includeBarcode ?? true;
+  const includeBarcode = options?.includeBarcode === true;
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`,
     `<rect width="100%" height="100%" fill="#ffffff"/>`,

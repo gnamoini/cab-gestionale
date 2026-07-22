@@ -7,9 +7,10 @@ import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-c
 import { MezziHubTabEmpty } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 import { MezziRegistraTagliandoModal } from "@/components/gestionale/mezzi/mezzi-registra-tagliando-modal";
 import { MezziTagliandiConfigDrawer } from "@/components/gestionale/mezzi/mezzi-tagliandi-config-drawer";
+import { MezziTagliandoHistoryRow } from "@/components/gestionale/mezzi/mezzi-tagliando-history-row";
 import { URGENCY_LABELS } from "@/lib/maintenance-plans/compute-maintenance-urgency";
-import { isMaintenanceEngineV2Enabled } from "@/lib/officina/maintenance-engine-v2-flag";
-import { mezzoTagliandiEnabled } from "@/lib/mezzi/mezzi-meta";
+import { useMaintenanceEngineV2Enabled } from "@/lib/officina/use-maintenance-engine-v2-enabled";
+import { formatTriggerSummary } from "@/lib/maintenance-plans/maintenance-trigger-helpers";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { VehicleMaintenanceConfigView } from "@/lib/maintenance-plans/v2-types";
 import { dsBtnPrimary, dsBtnNeutral, dsScrollbar, dsTable, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
@@ -18,6 +19,7 @@ import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-siz
 import {
   useMezzoMaintenanceHistoryQuery,
   useMezzoMaintenanceStatusesQuery,
+  useMaintenancePlansListQuery,
 } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
 import { useMezzoMaintenanceConfigsQuery } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 
@@ -99,19 +101,16 @@ function HubTagliandiV1({
           <MezziHubTabEmpty message="Nessun tagliando registrato." />
         ) : (
           <div className={`${dsTableWrap} ${dsScrollbar}`}>
-            <table className={`${dsTable} min-w-[640px] text-xs`}>
+            <table className={`${dsTable} min-w-[720px] text-xs`}>
               <GlobalTableHead>
                 <GlobalTableHeadLabel label="Data" />
                 <GlobalTableHeadLabel label="Ore" />
                 <GlobalTableHeadLabel label="Piano" />
+                <GlobalTableHeadLabel label="Ricambi" />
               </GlobalTableHead>
               <tbody>
                 {pagedHistory.map((row) => (
-                  <tr key={row.id} className={dsTableRow}>
-                    <td className="px-2 py-2">{fmtDateIt(row.performedAt)}</td>
-                    <td className="px-2 py-2 font-mono">{row.oreAtService} h</td>
-                    <td className="px-2 py-2">{row.planNome}</td>
-                  </tr>
+                  <MezziTagliandoHistoryRow key={row.id} row={row} />
                 ))}
               </tbody>
             </table>
@@ -148,9 +147,9 @@ function HubTagliandiV2({
     oreKm: mezzo.oreKm ?? 0,
     kmFromMeta: mezzo.km != null ? Number(mezzo.km) : null,
     tipoAttrezzatura: mezzo.tipoAttrezzatura,
-    tagliandiEnabled: mezzoTagliandiEnabled(mezzo),
     enabled: active,
   });
+  const plansQ = useMaintenancePlansListQuery(active);
   const historyQ = useMezzoMaintenanceHistoryQuery(mezzo.id, active);
 
   const [registerConfig, setRegisterConfig] = useState<VehicleMaintenanceConfigView | null>(null);
@@ -174,7 +173,26 @@ function HubTagliandiV2({
     <>
       <GestionaleInfoCard title="Piani attivi" subtitle={`${configs.length} configurazione/i`} collapsible defaultCollapsed={false}>
         {configs.length === 0 ? (
-          <MezziHubTabEmpty message="Nessun piano configurato. Aggiungi un piano manutentivo." />
+          <div className="space-y-3 px-1 py-2 text-sm text-[color:var(--cab-text-muted)]">
+            <p>Nessun piano sul mezzo. Per registrare un tagliando serve prima un piano attivo.</p>
+            <ol className="list-decimal space-y-1 pl-5">
+              <li>Clicca <strong>+ Aggiungi piano manutentivo</strong></li>
+              <li>Scegli un preset o creane uno (es. modello ore + mesi)</li>
+              <li>Salva, poi usa <strong>Registra</strong> sulla riga del piano</li>
+            </ol>
+            {canEdit ? (
+              <button
+                type="button"
+                className={dsBtnPrimary}
+                onClick={() => {
+                  setEditConfig(null);
+                  setDrawerOpen(true);
+                }}
+              >
+                + Aggiungi piano manutentivo
+              </button>
+            ) : null}
+          </div>
         ) : (
           <div className={`${dsTableWrap} ${dsScrollbar}`}>
             <table className={`${dsTable} min-w-[720px] text-xs`}>
@@ -190,8 +208,12 @@ function HubTagliandiV2({
                 {configs.map((c) => (
                   <tr key={c.id} className={dsTableRow}>
                     <td className="px-2 py-2 font-medium">{c.label}</td>
-                    <td className="px-2 py-2 font-mono">
-                      {c.intervalValue} {c.intervalType}
+                    <td className="px-2 py-2 font-mono" title={c.triggerReason ?? undefined}>
+                      {formatTriggerSummary(
+                        (plansQ.data ?? []).find((p) => p.id === c.presetId)?.triggerGroups[0]?.triggers ?? [
+                          { triggerType: c.intervalType, threshold: c.intervalValue, priority: 0 },
+                        ],
+                      )}
                     </td>
                     <td className="px-2 py-2">{c.nextDateEstimated ? fmtDateIt(c.nextDateEstimated) : "—"}</td>
                     <td className="px-2 py-2" title={c.confidenceReason ?? undefined}>
@@ -237,19 +259,16 @@ function HubTagliandiV2({
           <MezziHubTabEmpty message="Nessun tagliando registrato." />
         ) : (
           <div className={`${dsTableWrap} ${dsScrollbar}`}>
-            <table className={`${dsTable} min-w-[640px] text-xs`}>
+            <table className={`${dsTable} min-w-[720px] text-xs`}>
               <GlobalTableHead>
                 <GlobalTableHeadLabel label="Data" />
                 <GlobalTableHeadLabel label="Ore" />
                 <GlobalTableHeadLabel label="Piano" />
+                <GlobalTableHeadLabel label="Ricambi" />
               </GlobalTableHead>
               <tbody>
                 {pagedHistory.map((row) => (
-                  <tr key={row.id} className={dsTableRow}>
-                    <td className="px-2 py-2">{fmtDateIt(row.performedAt)}</td>
-                    <td className="px-2 py-2 font-mono">{row.oreAtService} h</td>
-                    <td className="px-2 py-2">{row.planNome}</td>
-                  </tr>
+                  <MezziTagliandoHistoryRow key={row.id} row={row} />
                 ))}
               </tbody>
             </table>
@@ -261,6 +280,7 @@ function HubTagliandiV2({
       <MezziTagliandiConfigDrawer
         open={drawerOpen}
         mezzoId={mezzo.id}
+        tipoAttrezzatura={mezzo.tipoAttrezzatura}
         config={editConfig}
         onClose={() => setDrawerOpen(false)}
         onSaved={() => void configsQ.refetch()}
@@ -275,6 +295,9 @@ function HubTagliandiV2({
           defaultPlanId={registerConfig.presetId ?? undefined}
           configId={registerConfig.id}
           configIntervalType={registerConfig.intervalType}
+          planTriggers={
+            (plansQ.data ?? []).find((p) => p.id === registerConfig.presetId)?.triggerGroups[0]?.triggers
+          }
           currentKmMezzo={mezzo.km != null ? Number(mezzo.km) : null}
           onClose={() => setRegisterConfig(null)}
           onSaved={() => {
@@ -296,7 +319,8 @@ export function MezziHubTagliandiTab({
   canEdit: boolean;
   active: boolean;
 }) {
-  if (isMaintenanceEngineV2Enabled()) {
+  const v2Enabled = useMaintenanceEngineV2Enabled();
+  if (v2Enabled) {
     return <HubTagliandiV2 mezzo={mezzo} canEdit={canEdit} active={active} />;
   }
   return <HubTagliandiV1 mezzo={mezzo} canEdit={canEdit} active={active} />;

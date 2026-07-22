@@ -23,7 +23,6 @@ const DashboardPromemoriaSection = dynamic(
     import("@/components/dashboard/promemoria/dashboard-promemoria-section").then(
       (m) => m.DashboardPromemoriaSection,
     ),
-  { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[8rem]" /> },
 );
 
 function initialMonthKey(): string {

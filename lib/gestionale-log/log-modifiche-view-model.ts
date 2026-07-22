@@ -13,6 +13,12 @@ import { isLogReverted } from "@/lib/gestionale-log/undo";
 import { Q_FOCUS_LAV_ROW, Q_FOCUS_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
 import { lavorazioneLogOggettoFromListRow } from "@/lib/lavorazioni/lavorazione-log-oggetto";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
+import {
+  entityLabelFromPayload,
+  isMagazzinoLogEntita,
+  resolveRicambioOggettoForLogRow,
+  type RicambioLogLabelSource,
+} from "@/lib/magazzino/ricambio-log-label";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow, LogModificaWithProfileRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore } from "@/types/schede";
@@ -22,6 +28,11 @@ export type LogModificaAutoreSource = LogModificaRow | LogModificaWithProfileRow
 export function isGenericLavorazioneLogOggetto(oggetto: string): boolean {
   const t = oggetto.trim();
   return !t || t === "—" || t === "Lavorazione" || /^Scheda\s·\s/i.test(t);
+}
+
+function shouldOverrideMagazzinoOggetto(oggettoRiga: string): boolean {
+  const t = oggettoRiga.trim();
+  return !t || t === "—";
 }
 
 /** Risolve titolo log lavorazioni da payload.context o catalogo locale. */
@@ -87,6 +98,8 @@ export function buildLogModificheGestionaleViewModel(
 export type BuildLogModificheDisplayOptions = {
   /** Sostituisce titoli generici (es. «Lavorazione») con etichetta contestuale. */
   resolveOggetto?: (row: LogModificaAutoreSource) => string | undefined;
+  /** Catalogo ricambi per risoluzione label magazzino. */
+  ricambiById?: ReadonlyMap<string, RicambioLogLabelSource>;
   /** Etichette stati da impostazioni (lavorazioni). */
   statiLavorazione?: StatoLavorazioneConfig[];
   /** Default true — magazzino scheda mantiene originali annullati visibili. */
@@ -103,9 +116,24 @@ export function buildLogModificheDisplayEntries(
   });
   return consolidated.map((row) => {
     let vm = buildLogModificheGestionaleViewModel(row, resolveAutore(row), options?.statiLavorazione);
-    const oggetto =
-      options?.resolveOggetto?.(row)?.trim() ?? logModificaOggettoFromPayload(row)?.trim();
-    if (oggetto && oggetto !== "—" && isGenericLavorazioneLogOggetto(vm.oggettoRiga)) {
+    const logRow = row as LogModificaRow;
+    let oggetto =
+      options?.resolveOggetto?.(row)?.trim() ?? logModificaOggettoFromPayload(logRow)?.trim();
+    if (
+      !oggetto &&
+      isMagazzinoLogEntita(logRow.entita) &&
+      options?.ricambiById &&
+      shouldOverrideMagazzinoOggetto(vm.oggettoRiga)
+    ) {
+      oggetto = resolveRicambioOggettoForLogRow(logRow, options.ricambiById);
+    }
+    const magazzinoOverride =
+      isMagazzinoLogEntita(logRow.entita) && shouldOverrideMagazzinoOggetto(vm.oggettoRiga);
+    if (
+      oggetto &&
+      oggetto !== "—" &&
+      (isGenericLavorazioneLogOggetto(vm.oggettoRiga) || magazzinoOverride)
+    ) {
       vm = { ...vm, oggettoRiga: oggetto };
     }
     return { id: row.id, row, vm };
@@ -121,6 +149,8 @@ export function buildLogModificheDisplayList(
 }
 
 export function logModificaOggettoFromPayload(row: LogModificaRow): string | undefined {
+  const fromLabel = entityLabelFromPayload(row.payload);
+  if (fromLabel && fromLabel !== "—") return fromLabel;
   const p = row.payload;
   if (!p || typeof p !== "object" || Array.isArray(p)) return undefined;
   const ctx = (p as Record<string, unknown>).context;

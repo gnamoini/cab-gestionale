@@ -1,11 +1,5 @@
-import { Suspense } from "react";
-import { LoginPageStructure } from "@/components/auth/login-page-structure";
-import { ResetPasswordFormLazy } from "@/components/public-surfaces/public-surface-loaders";
+import { ResetPasswordForm } from "@/app/login/reset-password/reset-password-form";
 
 export default function ResetPasswordPage() {
-  return (
-    <Suspense fallback={<LoginPageStructure mode="skeleton" />}>
-      <ResetPasswordFormLazy />
-    </Suspense>
-  );
+  return <ResetPasswordForm />;
 }

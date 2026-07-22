@@ -163,14 +163,6 @@ function normalizeHubTab(tab: HubTabInput | undefined): HubTab {
 
 export type SchedeLavorazioneDialogSize = LavorazioniModalDialogSize;
 
-function resolveSchedeDialogSize(
-  dialogSize: SchedeLavorazioneDialogSize | undefined,
-  initialTab: HubTab,
-): SchedeLavorazioneDialogSize {
-  if (dialogSize) return dialogSize;
-  return initialTab === "panoramica" ? "compact" : "hub";
-}
-
 function IconCopiaIngressoPrecedente({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -326,7 +318,6 @@ export function SchedeLavorazioneModal({
   lav,
   origine,
   initialTab: initialTabProp = "schede",
-  dialogSize: dialogSizeProp,
   initialSchedaStage,
   captureHandoff,
   bundle,
@@ -348,7 +339,7 @@ export function SchedeLavorazioneModal({
   lav: LavRow;
   origine?: PreventivoLavorazioneOrigine;
   initialTab?: HubTabInput;
-  /** Fissato all'apertura: `compact` per Informazioni, `hub` per Schede. */
+  /** @deprecated Ignorato — shell hub sempre `formLarge` + `standard` (allineato a mezzi hub). */
   dialogSize?: SchedeLavorazioneDialogSize;
   /** Apre direttamente l'editor scheda lavorazioni/ricambi (es. acquisizione AI). */
   initialSchedaStage?: "lavorazioni" | "ricambi";
@@ -393,7 +384,6 @@ export function SchedeLavorazioneModal({
   const qc = useQueryClient();
   const hubData = hubQuery.data;
   const initialTab = normalizeHubTab(initialTabProp);
-  const [frozenDialogSize] = useState(() => resolveSchedeDialogSize(dialogSizeProp, initialTab));
   const [frozenCaptureHandoff] = useState(() => captureHandoff);
   const captureNextStageRef = useRef(captureHandoff?.sequentialStages[0] ?? null);
   const mezzo = useMemo(() => findMezzoForLavorazione(mezzi, lav), [mezzi, lav]);
@@ -1208,7 +1198,7 @@ export function SchedeLavorazioneModal({
     <>
       <LavorazioniModalShell
         modalSize="formLarge"
-        modalHeight={frozenDialogSize === "compact" ? "compact" : "standard"}
+        modalHeight="standard"
         modalRootRef={modalRootRef}
         onRequestClose={onClose}
         titleId="schede-lav-detail-title"

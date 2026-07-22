@@ -3,6 +3,10 @@
 import { useCallback, useState } from "react";
 import type { SchedaIngressoFields } from "@/types/schede";
 import { schedaIngressoFieldsToCapturePatches } from "@/lib/document-capture/capture-ingresso-form-to-fields";
+import {
+  compilePayloadToCapturePatches,
+  type CaptureSchedaCompilePayload,
+} from "@/lib/document-capture/capture-scheda-compile-payload";
 import { mapCaptureApplyErrorMessage } from "@/lib/document-capture/capture-apply-error-copy";
 import {
   captureReviewAllowsForceApply,
@@ -35,6 +39,31 @@ export function useCaptureApplyFlow(captureId: string | null) {
             fieldKey: p.fieldKey,
             confirmedValue: p.confirmedValue,
             valueSource: "manual" as const,
+          })),
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? "Sincronizzazione campi non riuscita");
+      }
+    },
+    [captureId],
+  );
+
+  const syncSchedaFields = useCallback(
+    async (payload: CaptureSchedaCompilePayload) => {
+      if (!captureId) throw new Error("Capture assente");
+      if (payload.captureId !== captureId) throw new Error("Capture non corrispondente al draft");
+      const patches = compilePayloadToCapturePatches(payload);
+      if (patches.length === 0) return;
+      const res = await fetch(`/api/document-capture/${captureId}/fields`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fields: patches.map((p) => ({
+            fieldKey: p.fieldKey,
+            confirmedValue: p.confirmedValue,
+            valueSource: p.valueSource,
           })),
         }),
       });
@@ -205,6 +234,41 @@ export function useCaptureApplyFlow(captureId: string | null) {
     [captureId, runApply, runDryRun],
   );
 
+  const applyFromScheda = useCallback(
+    async (
+      payload: CaptureSchedaCompilePayload,
+      opts?: { forceReview?: boolean },
+    ): Promise<CaptureApplyFlowResult> => {
+      if (!captureId) throw new Error("Capture assente");
+      setBusy(true);
+      setError(null);
+      try {
+        await syncSchedaFields(payload);
+        const { applicationId, validation: v } = await runDryRun();
+        if (v?.status === "BLOCKED") {
+          setValidation(v);
+          throw new Error(v.issues.find((i) => i.severity === "error")?.message ?? "Validazione bloccata");
+        }
+        if (v?.status === "REVIEW" && !opts?.forceReview) {
+          setValidation(v);
+          throw new Error("REVIEW_REQUIRED");
+        }
+        if (opts?.forceReview && v && !captureReviewAllowsForceApply(v)) {
+          throw new Error("Ricambi non trovati in magazzino: correggi o rimuovi le righe prima dell'import.");
+        }
+        const lavorazioneId = await runApply(applicationId, opts);
+        return { ok: true, lavorazioneId, applicationId };
+      } catch (e) {
+        const raw = e instanceof Error ? e.message : "Apply non riuscito";
+        if (raw !== "REVIEW_REQUIRED") setError(mapCaptureApplyErrorMessage(raw));
+        throw e;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [captureId, runApply, runDryRun, syncSchedaFields],
+  );
+
   return {
     busy,
     error,
@@ -213,11 +277,13 @@ export function useCaptureApplyFlow(captureId: string | null) {
     lastApplicationId,
     recoveryAvailable,
     applyFromIngresso,
+    applyFromScheda,
     applyAssignOnly,
     resumeApply,
     runDryRun,
     runApply,
     syncIngressoFields,
+    syncSchedaFields,
     refreshCaptureRecoveryState,
   };
 }

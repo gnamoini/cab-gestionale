@@ -8,6 +8,8 @@ import {
 } from "@/components/gestionale/global-input";
 import { modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
 import { marcheFromHierarchyTree, modelliVisibiliPerMarcaHierarchy } from "@/lib/mezzi/hierarchy-list-prefs";
+import { GestionaleNumberInput } from "@/components/gestionale/gestionale-number-input";
+import { parseDecimalInput } from "@/lib/core/decimal-input";
 import { mezzoFormToMeta, metaToMezzoFormFields } from "@/lib/mezzi/mezzi-meta";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { CAB_FOCUS_SCROLL_GROUP_ATTR } from "@/lib/ui/mobile-modal-behavior";
@@ -70,7 +72,7 @@ export function gestitoToMezzoForm(m: MezzoGestito): MezzoFormState {
 export function formToMezzoInsert(f: MezzoFormState): MezzoInsert {
   const annoParsed = parseInt(f.anno, 10);
   const anno = Math.max(1980, Math.min(2035, Number.isFinite(annoParsed) ? annoParsed : new Date().getFullYear()));
-  const kmParsed = parseInt(f.km, 10);
+  const kmParsed = parseDecimalInput(f.km);
   return {
     cliente: f.cliente.trim(),
     utilizzatore: f.utilizzatore.trim() || null,
@@ -83,7 +85,7 @@ export function formToMezzoInsert(f: MezzoFormState): MezzoInsert {
     modello_telaio: f.modelloTelaio.trim() || null,
     tipo_telaio: f.tipoTelaio.trim() || null,
     telaio_num: canonicalTelaioNumForWrite(f.vin, { clearWhenEmpty: true }) ?? null,
-    km: Number.isFinite(kmParsed) ? kmParsed : null,
+    km: kmParsed != null && kmParsed >= 0 ? kmParsed : null,
     note: null,
   };
 }
@@ -251,15 +253,13 @@ export function MezzoFormFields({
         <EntitySimilarWarning similarTo={similarMezzoIdent} />
         <label htmlFor="mezzo-form-ore-lavoro" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Ore lavoro
-          <input
+          <GestionaleNumberInput
             id="mezzo-form-ore-lavoro"
-            type="number"
             min={0}
-            step={1}
-            inputMode="numeric"
+            inputMode="decimal"
+            className="mt-1"
             value={form.oreLavoro}
-            onChange={(e) => setForm((f) => ({ ...f, oreLavoro: e.target.value }))}
-            className={`${dsInput} mt-1`}
+            onChange={(v) => setForm((f) => ({ ...f, oreLavoro: v }))}
           />
         </label>
       </MezzoFormSection>
@@ -324,15 +324,13 @@ export function MezzoFormFields({
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label htmlFor="mezzo-form-km" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             KM
-            <input
+            <GestionaleNumberInput
               id="mezzo-form-km"
-              type="number"
               min={0}
-              step={1}
-              inputMode="numeric"
+              inputMode="decimal"
+              className="mt-1"
               value={form.km}
-              onChange={(e) => setForm((f) => ({ ...f, km: e.target.value }))}
-              className={`${dsInput} mt-1`}
+              onChange={(v) => setForm((f) => ({ ...f, km: v }))}
             />
           </label>
         </div>

@@ -22,7 +22,9 @@ export type UsePointerGestureOptions = {
 };
 
 /**
- * Document-level pointer gesture with touch/pointer dedup and AbortController cleanup.
+ * Document-level pointer gesture with touch/pointer dedup.
+ * Listeners stay registered for the hook lifetime; `enabled` is read via ref so
+ * an active pointer is not dropped when enabled flips mid-gesture.
  */
 export function usePointerGesture({
   enabled,
@@ -34,7 +36,8 @@ export function usePointerGesture({
 }: UsePointerGestureOptions) {
   const activePointerIdRef = useRef<number | null>(null);
   const lastTouchTimeRef = useRef(0);
-  const abortRef = useRef<AbortController | null>(null);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
   const callbacksRef = useRef({
     onGestureStart,
     onGestureMove,
@@ -53,13 +56,7 @@ export function usePointerGesture({
   }, []);
 
   useEffect(() => {
-    const keepListening = enabled || activePointerIdRef.current != null;
-    if (!keepListening || typeof document === "undefined") return;
-
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-    const { signal } = ac;
+    if (typeof document === "undefined") return;
 
     function acceptsPointer(e: PointerEvent): boolean {
       if (!pointerTypes.includes(e.pointerType)) return false;
@@ -70,6 +67,7 @@ export function usePointerGesture({
     }
 
     function onPointerDown(e: PointerEvent) {
+      if (!enabledRef.current && activePointerIdRef.current === null) return;
       if (!acceptsPointer(e)) return;
       if (e.pointerType === "touch") {
         const now = Date.now();
@@ -103,17 +101,20 @@ export function usePointerGesture({
       lastTouchTimeRef.current = now;
     }
 
-    document.addEventListener("pointerdown", onPointerDown, { signal, passive: true });
-    document.addEventListener("pointermove", onPointerMove, { signal, passive: false });
-    document.addEventListener("pointerup", onPointerUp, { signal });
-    document.addEventListener("pointercancel", onPointerCancel, { signal });
-    document.addEventListener("touchstart", onTouchStart, { signal, passive: true });
+    document.addEventListener("pointerdown", onPointerDown, { passive: true });
+    document.addEventListener("pointermove", onPointerMove, { passive: false });
+    document.addEventListener("pointerup", onPointerUp);
+    document.addEventListener("pointercancel", onPointerCancel);
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
 
     return () => {
-      ac.abort();
-      if (abortRef.current === ac) abortRef.current = null;
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerup", onPointerUp);
+      document.removeEventListener("pointercancel", onPointerCancel);
+      document.removeEventListener("touchstart", onTouchStart);
     };
-  }, [enabled, pointerTypes, resetGesture]);
+  }, [pointerTypes, resetGesture]);
 
   return { resetGesture, activePointerIdRef };
 }

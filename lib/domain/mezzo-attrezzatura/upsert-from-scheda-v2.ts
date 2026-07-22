@@ -1,3 +1,4 @@
+import { parseDecimalInput } from "@/lib/core/decimal-input";
 import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
 import { resolveTargetTypeFromScheda } from "@/lib/domain/mezzo-attrezzatura/intervento-target";
 import { trimOrNull } from "@/lib/domain/mezzo-attrezzatura/backfill-rules";
@@ -42,7 +43,7 @@ function schedaToMezzoPayload(fields: SchedaIngressoFields, anno?: number): Mezz
     modello_telaio: trimOrNull(fields.modelloTelaio),
     tipo_telaio: trimOrNull(fields.tipoTelaio),
     telaio_num: normalizeVin(fields.vin),
-    km: trimOrNull(fields.km) ? Number(fields.km) : null,
+    km: trimOrNull(fields.km) ? parseDecimalInput(fields.km) : null,
     note: null,
   };
 }

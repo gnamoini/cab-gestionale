@@ -8,6 +8,7 @@ import {
   peakEdgeOpenDragX,
   peakGestureVelocity,
   resolveEdgeZonePx,
+  shouldActivateEdgeOpenDrag,
   shouldCommitEdgeOpen,
   shouldCommitEdgeOpenGesture,
 } from "@/lib/ui/use-swipe-from-edge-to-open";
@@ -33,8 +34,17 @@ assert.equal(clampEdgeOpenDragX(400, 320), 320);
 assert.equal(peakGestureVelocity(0.2, 0.6), 0.6);
 assert.equal(peakGestureVelocity(0.8, 0.3), 0.8);
 
+assert.equal(shouldActivateEdgeOpenDrag(true, 80, 10), true);
+assert.equal(shouldActivateEdgeOpenDrag(true, 80, 120), false);
+assert.equal(shouldActivateEdgeOpenDrag(false, 80, 10), true);
+assert.equal(shouldActivateEdgeOpenDrag(false, 10, 80), false);
+
 const swipeOpenSrc = readFileSync(join(root, "lib/ui/use-swipe-from-edge-to-open.ts"), "utf8");
-assert.match(swipeOpenSrc, /shouldNavDrawerClaimEdgeSwipe/);
+assert.match(swipeOpenSrc, /getNavDrawerEdgeSwipeBlockReason/);
+assert.match(swipeOpenSrc, /shouldActivateEdgeOpenDrag/);
+assert.match(swipeOpenSrc, /useLayoutEffect[\s\S]{0,300}flushTransform/);
+assert.match(swipeOpenSrc, /logDrawerGestureDebug/);
+assert.match(swipeOpenSrc, /getNavDrawerEdgeSwipeBlockReason/);
 assert.match(swipeOpenSrc, /usePointerGesture/);
 assert.match(swipeOpenSrc, /requestAnimationFrame/);
 assert.match(swipeOpenSrc, /onSnapClosed\?\.\(\)/);
@@ -64,9 +74,16 @@ assert.match(
 
 const appShellSrc = readFileSync(join(root, "components/gestionale/app-shell.tsx"), "utf8");
 assert.match(appShellSrc, /useNavDrawerMachine/);
+assert.match(appShellSrc, /deriveMainInert/);
+assert.match(appShellSrc, /mainInert=\{deriveMainInert\(flags\.state\)\}/);
 assert.match(appShellSrc, /flags\.canEdgeSwipe/);
 assert.match(appShellSrc, /onSnapClosed/);
 assert.match(appShellSrc, /edgeResetDrag=\{edgeSwipe\.resetDrag\}/);
+assert.doesNotMatch(appShellSrc, /mainInert=\{flags\.navDrawerVisible\}/);
+
+const mainSrc = readFileSync(join(root, "components/gestionale/app-shell-main.tsx"), "utf8");
+assert.match(mainSrc, /mainInert/);
+assert.doesNotMatch(mainSrc, /navDrawerVisible/);
 
 const sidebarSrc = readFileSync(join(root, "components/gestionale/app-shell-sidebar.tsx"), "utf8");
 assert.match(sidebarSrc, /NAV_DRAWER_PANEL_ID/);

@@ -14,6 +14,9 @@ import { forkPresetVersionIfUsed } from "@/lib/maintenance-plans/preset-version-
 import { processMaintenanceWarehouseDischarge } from "@/lib/maintenance-plans/process-maintenance-warehouse";
 import type { PresetSnapshot } from "@/lib/maintenance-plans/preset-snapshot";
 import { resolvePlansForMezzo } from "@/lib/maintenance-plans/resolve-plans-for-mezzo";
+import type { MaintenanceExecutionType } from "@/lib/maintenance-plans/maintenance-enums";
+import type { ReplacementCondition } from "@/lib/maintenance-plans/maintenance-enums";
+import type { MaintenanceServiceLite } from "@/lib/maintenance-plans/tagliandi-matrix";
 import type {
   MaintenancePlanStatus,
   MaintenancePlanView,
@@ -21,11 +24,11 @@ import type {
   RegisterMaintenanceServiceInput,
   UpsertMaintenancePlanInput,
 } from "@/lib/maintenance-plans/types";
-import type { MaintenanceServiceLite } from "@/lib/maintenance-plans/tagliandi-matrix";
 import {
   MAINTENANCE_PLANS_COLUMNS,
   TIPI_ATTREZZATURA_CATALOG_COLUMNS,
   VEHICLE_MAINTENANCE_SERVICE_PARTS_COLUMNS,
+  VEHICLE_MAINTENANCE_SERVICE_CHECKLIST_COLUMNS,
   VEHICLE_MAINTENANCE_SERVICES_COLUMNS,
 } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
@@ -317,11 +320,15 @@ export const maintenancePlansService = {
       const serviceIds = services.map((s) => s.id);
       const performerIds = [...new Set(services.map((s) => s.performed_by).filter(Boolean))] as string[];
 
-      const [plansRes, partsRes, profilesRes] = await Promise.all([
+      const [plansRes, partsRes, checklistRes, profilesRes] = await Promise.all([
         client.from("maintenance_plans").select("id, nome").in("id", planIds),
         client
           .from("vehicle_maintenance_service_parts")
           .select(VEHICLE_MAINTENANCE_SERVICE_PARTS_COLUMNS)
+          .in("service_id", serviceIds),
+        client
+          .from("vehicle_maintenance_service_checklist")
+          .select(VEHICLE_MAINTENANCE_SERVICE_CHECKLIST_COLUMNS)
           .in("service_id", serviceIds),
         performerIds.length > 0
           ? client.from("profiles").select("id, nome, cognome").in("id", performerIds)
@@ -330,10 +337,20 @@ export const maintenancePlansService = {
 
       if (plansRes.error) return err(humanizeGestionaleError(plansRes.error.message, { entity: "mezzo", action: "read" }));
       if (partsRes.error) return err(humanizeGestionaleError(partsRes.error.message, { entity: "mezzo", action: "read" }));
+      if (checklistRes.error) {
+        return err(humanizeGestionaleError(checklistRes.error.message, { entity: "mezzo", action: "read" }));
+      }
       if (profilesRes.error) return err(humanizeGestionaleError(profilesRes.error.message, { entity: "mezzo", action: "read" }));
 
       const planMap = new Map((plansRes.data ?? []).map((p) => [p.id as string, p.nome as string]));
       const partRows = (partsRes.data ?? []) as VehicleMaintenanceServicePartRow[];
+      const checklistRows = (checklistRes.data ?? []) as {
+        service_id: string;
+        item_label: string;
+        checked: boolean;
+        note: string | null;
+        sort_order: number;
+      }[];
       const ricambioIds = [...new Set(partRows.map((p) => p.ricambio_id))];
       let ricambi: RicambioLite[] = [];
       if (ricambioIds.length > 0) {
@@ -372,8 +389,20 @@ export const maintenancePlansService = {
               ricambioId: p.ricambio_id,
               descrizione: p.descrizione_snapshot?.trim() || r?.nome || "—",
               quantita: Number(p.quantita),
+              wasReplaced: Boolean(p.was_replaced),
+              wasDue: Boolean(p.was_due),
+              isRequired: Boolean(p.is_required_snapshot),
+              replacementCondition: (p.replacement_condition as ReplacementCondition) ?? "sempre",
             };
           }),
+        checklist: checklistRows
+          .filter((c) => c.service_id === s.id)
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map((c) => ({
+            itemLabel: c.item_label,
+            checked: Boolean(c.checked),
+            note: c.note?.trim() ?? "",
+          })),
       }));
 
       return success(views);
@@ -416,8 +445,11 @@ export const maintenancePlansService = {
             ricambio_id: p.ricambioId,
             quantita: p.quantita,
             descrizione_snapshot: p.descrizioneSnapshot?.trim() || null,
-            was_replaced: true,
-            warehouse_status: "pending",
+            was_replaced: p.wasReplaced ?? true,
+            was_due: p.wasDue ?? false,
+            replacement_condition: p.replacementCondition ?? "sempre",
+            is_required_snapshot: p.isRequired ?? true,
+            warehouse_status: p.wasReplaced ? "pending" : "skipped",
           })),
         );
         if (partsErr) return err(humanizeGestionaleError(partsErr.message, { entity: "mezzo", action: "create" }));
@@ -456,7 +488,9 @@ export const maintenancePlansService = {
 
       void processMaintenanceWarehouseDischarge({
         executionId: service.id,
-        parts: input.parts.map((p) => ({ ricambioId: p.ricambioId, quantita: p.quantita })),
+        parts: input.parts
+          .filter((p) => p.wasReplaced !== false)
+          .map((p) => ({ ricambioId: p.ricambioId, quantita: p.quantita })),
       });
 
       return success(service);

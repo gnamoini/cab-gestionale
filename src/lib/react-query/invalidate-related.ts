@@ -8,6 +8,7 @@ import {
   cabSyncEventForEntity,
   dispatchGestionaleAction,
 } from "@/lib/sync/gestionale-sync-dispatch";
+import { markRecentLocalTableBurst } from "@/lib/sync/recent-local-mutation";
 import { invalidateEntity } from "@/lib/cache/minimal-invalidation-contract";
 import { refreshSchedeBundlesForMezzoId } from "@/lib/schede/schede-bundle-cache-patch";
 import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-operational-truth";
@@ -82,6 +83,7 @@ export async function commitLavorazioneCreateSuccess(
   qc: QueryClient,
   lavorazioneId: string,
   dbVersion?: string,
+  schedaRowId?: string,
 ): Promise<void> {
   const id = lavorazioneId.trim();
   if (!id) return;
@@ -91,7 +93,20 @@ export async function commitLavorazioneCreateSuccess(
     id,
     dbVersion,
   );
-  dispatchGestionaleAction(qc, ["scheda_lavorazione"], { source: "local_mutation" });
+
+  const ingressoRowId = schedaRowId?.trim() || "";
+  const entityIdByTable = new Map<string, string>();
+  if (ingressoRowId) entityIdByTable.set("scheda_lavorazione", ingressoRowId);
+  const cabSyncEvents = ingressoRowId
+    ? [cabSyncEventForEntity("scheda_lavorazione", ingressoRowId, "entity_created", "scheda_lavorazione")]
+    : undefined;
+  if (!ingressoRowId) markRecentLocalTableBurst(["scheda_lavorazione"]);
+
+  dispatchGestionaleAction(qc, ["scheda_lavorazione"], {
+    source: "local_mutation",
+    cabSyncEvents,
+    entityIdByTable: entityIdByTable.size > 0 ? entityIdByTable : undefined,
+  });
 }
 
 export async function invalidateAfterMagazzinoOrMovimenti(qc: QueryClient, cabSyncEvents?: CabSyncEvent[]) {

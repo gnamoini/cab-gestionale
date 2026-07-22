@@ -32,6 +32,12 @@ import {
 import { splitLavorazioniListRowsForReport } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import { entrateQtyFromMagazzinoEntry } from "@/lib/magazzino/ricambio-consumo-from-log";
 import {
+  entityLabelFromPayload,
+  isMagazzinoLogEntita,
+  resolveRicambioOggettoForLogRow,
+  ricambioIdFromLogRow,
+} from "@/lib/magazzino/ricambio-log-label";
+import {
   sottoScortaCount,
 } from "@/lib/report/kpi-performance/kpi-performance-formulas";
 import { filterEntriesForReportTimesheetKpi } from "@/lib/dipendenti/timesheet-report-kpi-filter";
@@ -792,6 +798,8 @@ export function buildControlTowerMagazzinoOpsSlice(input: ControlTowerBaseInput)
 }
 
 function logOggettoFromPayload(payload: unknown): string | undefined {
+  const fromLabel = entityLabelFromPayload(payload);
+  if (fromLabel && fromLabel !== "—") return fromLabel;
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return undefined;
   const ctx = (payload as Record<string, unknown>).context;
   if (ctx && typeof ctx === "object" && !Array.isArray(ctx)) {
@@ -833,16 +841,18 @@ function briefActivityModificaRiga(modificaRiga: string, maxLines = 2): string {
 function resolveActivityOggetto(
   row: LogModificaRow,
   summaryOggetto: string,
-  lavById: ReadonlyMap<string, LavorazioneListRow>,
-  schedeStore?: LavorazioneSchedeStore,
+  ctx: ActivityMapContext,
 ): string {
   const fromPayload = logOggettoFromPayload(row.payload);
   if (fromPayload && fromPayload !== "—") return fromPayload;
+  if (isMagazzinoLogEntita(row.entita)) {
+    return resolveRicambioOggettoForLogRow(row, ctx.ricambiById);
+  }
   const lavId = lavorazioneIdFromLogRow(row);
   if (lavId) {
-    const lav = lavById.get(lavId);
+    const lav = ctx.lavById.get(lavId);
     if (lav) {
-      const label = lavorazioneLogOggettoFromListRow(lav, schedeStore);
+      const label = lavorazioneLogOggettoFromListRow(lav, ctx.schedeStore);
       if (label !== "—") return label;
     }
   }
@@ -853,22 +863,9 @@ function resolveActivityOggetto(
 type ActivityMapContext = {
   statiLavorazione?: readonly StatoLavorazioneConfig[];
   lavById: ReadonlyMap<string, LavorazioneListRow>;
+  ricambiById: ReadonlyMap<string, RicambioMagazzino>;
   schedeStore?: LavorazioneSchedeStore;
 };
-
-function ricambioIdFromLogRow(row: LogModificaRow): string | null {
-  if (row.entita === "magazzino_ricambi" && row.entita_id?.trim()) return row.entita_id.trim();
-  if (row.entita !== "movimenti_ricambi") return null;
-  const payload = row.payload;
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
-  const record = payload as Record<string, unknown>;
-  for (const rec of [record.after, record.snapshot, record.before]) {
-    if (!rec || typeof rec !== "object" || Array.isArray(rec)) continue;
-    const ricambioId = (rec as Record<string, unknown>).ricambio_id;
-    if (typeof ricambioId === "string" && ricambioId.trim()) return ricambioId.trim();
-  }
-  return null;
-}
 
 /** Chiave di raggruppamento feed — stessa lavorazione/ricambio anche con entità log diverse. */
 function activityGroupKey(row: LogModificaRow): string {
@@ -977,7 +974,7 @@ function mapLogToActivity(
       annullato: reverted,
       statiLavorazione: row.entita === "lavorazioni" ? [...(ctx.statiLavorazione ?? [])] : undefined,
     });
-    const oggetto = resolveActivityOggetto(row, summary.oggettoRiga, ctx.lavById, ctx.schedeStore);
+    const oggetto = resolveActivityOggetto(row, summary.oggettoRiga, ctx);
     const modificaBase = briefActivityModificaRiga(modificheToModificaRiga(summary.modifiche));
     const modificaRiga =
       eventCount > 1 && modificaBase !== "—"
@@ -1029,6 +1026,7 @@ export function buildControlTowerActivityFeedSlice(input: ControlTowerBaseInput)
   const ctx: ActivityMapContext = {
     statiLavorazione: input.statiLavorazione,
     lavById: new Map(input.lavRows.map((r) => [r.id, r])),
+    ricambiById: new Map(input.ricambi.map((r) => [r.id, r])),
     schedeStore: input.schedeStore,
   };
   const limit = CONTROL_TOWER_ACTIVITY_PER_CARD;

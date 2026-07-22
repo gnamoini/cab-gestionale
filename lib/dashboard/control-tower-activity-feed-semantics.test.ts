@@ -4,6 +4,8 @@ import {
   splitLogsIntoTimeBursts,
 } from "@/lib/dashboard/control-tower-selectors";
 import { LOG_AGGREGATION_WINDOW_MS } from "@/lib/gestionale-log/log-event-pipeline";
+import { buildStockMovementAuditPayload } from "@/lib/magazzino/stock-audit-payload";
+import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 
 function lavLog(
@@ -97,6 +99,63 @@ function lavLog(
     logPreventivi: prevLogs,
   });
   assert.equal(feed.byDomain.preventiviDdt.length, 1);
+}
+
+{
+  const ricId = "11111111-1111-4111-8111-111111111111";
+  const magLogs: LogModificaRow[] = [
+    {
+      id: "m-r19",
+      entita: "movimenti_ricambi",
+      entita_id: "mov-1",
+      azione: "CREATE",
+      created_at: "2026-06-03T11:00:00.000Z",
+      payload: buildStockMovementAuditPayload({
+        ricambioId: ricId,
+        quantitaBefore: 4,
+        quantitaAfter: 6,
+        origine: "manual_adjustment",
+        causale: "carico",
+        movimentoId: "mov-1",
+      }),
+      autore_id: null,
+    },
+  ];
+  const ricambi: RicambioMagazzino[] = [
+    {
+      id: ricId,
+      marca: "Mann",
+      codiceFornitoreOriginale: "W712",
+      codiceFornitoreOriginaleSecondario: "",
+      marcaOriginaleSecondaria: "",
+      usatoInTagliandi: false,
+      unitaMisura: "pz",
+      descrizione: "Filtro olio",
+      note: "",
+      categoria: "Filtri",
+      compatibilitaMezzi: [],
+      scorta: 6,
+      scortaMinima: 1,
+      dataUltimaModifica: "2026-06-03T11:00:00.000Z",
+      autoreUltimaModifica: "Test",
+      prezzoFornitoreOriginale: 1,
+      scontoFornitoreOriginale: 0,
+      markupPercentuale: 0,
+      prezzoVendita: 1,
+      fornitoriAlternativi: [],
+      fornitoreNonOriginale: "",
+      codiceFornitoreNonOriginale: "",
+      prezzoFornitoreNonOriginale: 0,
+      scontoFornitoreNonOriginale: 0,
+    },
+  ];
+  const feed = buildControlTowerActivityFeedSlice({
+    lavRows: [],
+    ricambi,
+    logMagazzino: magLogs,
+  });
+  assert.equal(feed.byDomain.magazzino.length, 1);
+  assert.match(feed.byDomain.magazzino[0]!.vm.oggettoRiga, /Filtro olio/i);
 }
 
 console.log("control-tower-activity-feed-semantics.test: OK");

@@ -19,7 +19,7 @@ type CaptureHintChrome = {
   standalone: string;
 };
 
-function captureHintChrome(hint: CaptureIngressoFieldHint): CaptureHintChrome | null {
+export function captureHintChrome(hint: { tone: CaptureIngressoFieldHint["tone"] }): CaptureHintChrome | null {
   if (hint.tone === "ok") return null;
   if (hint.tone === "ambiguous") {
     return {

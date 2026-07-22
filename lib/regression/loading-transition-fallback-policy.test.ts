@@ -1,5 +1,5 @@
 /**
- * LEVEL 2 transition fallback — deny fallback=null su route lazy con loading.tsx.
+ * Route migrate — deny PageTransitionLoader e Suspense skeleton se esiste loading.tsx.
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -8,8 +8,7 @@ import { LOADING_OWNERSHIP_SUSPENSE_FALLBACK_ALLOWED } from "./loading-ownership
 import {
   ALLOW_NULL_SUSPENSE_ROUTES,
   FALLBACK_NULL_LEGACY_PENDING_ROUTES,
-  PAGE_TRANSITION_LOADER_ROUTES,
-  PAGE_TRANSITION_LOADER_VARIANTS,
+  MIGRATED_LOADING_OWNER_ROUTES,
 } from "./loading-transition-fallback-allowlist";
 
 const ROOT = process.cwd();
@@ -42,51 +41,38 @@ function usesLazyView(text: string): boolean {
 }
 
 function main(): void {
-  const loaderSrc = read("components/design-system/loading/page-transition-loader.tsx");
-  assert.doesNotMatch(loaderSrc, /"use client"/, "PageTransitionLoader: no use client");
-  assert.doesNotMatch(
-    loaderSrc,
-    /from\s+["']@\/components\/gestionale/,
-    "PageTransitionLoader: no import gestionale",
-  );
-  assert.match(loaderSrc, /data-testid="page-transition-loader"/);
-  assert.match(loaderSrc, /StructuralRouteSkeleton/, "PageTransitionLoader: structural skeleton, no spinner");
-  assert.doesNotMatch(loaderSrc, /loadingSpinnerRingClass/, "PageTransitionLoader: no spinner ring");
+  const violations: string[] = [];
 
-  for (const pageRel of PAGE_TRANSITION_LOADER_ROUTES) {
+  for (const pageRel of MIGRATED_LOADING_OWNER_ROUTES) {
     const text = read(pageRel);
-    const variant = PAGE_TRANSITION_LOADER_VARIANTS[pageRel];
-    assert.match(
-      text,
-      /PageTransitionLoader/,
-      `${pageRel}: deve usare PageTransitionLoader`,
-    );
-    assert.match(
-      text,
-      new RegExp(`variant="${variant}"`),
-      `${pageRel}: variant atteso "${variant}"`,
-    );
-    assert.doesNotMatch(
-      text,
-      /Suspense[^>]*fallback=\{null\}/,
-      `${pageRel}: fallback=null vietato su rollout LEVEL 2`,
-    );
-    assert.doesNotMatch(
-      text,
-      /Suspense[^>]*fallback=\{<LoadingSuspenseFallback/,
-      `${pageRel}: no LoadingSuspenseFallback in Suspense`,
-    );
+    if (/PageTransitionLoader/.test(text)) {
+      violations.push(`${pageRel}: PageTransitionLoader vietato — loading.tsx è l'unico owner`);
+    }
+    if (/Suspense[^>]*fallback=\{<PageTransitionLoader/.test(text)) {
+      violations.push(`${pageRel}: Suspense+PageTransitionLoader vietato`);
+    }
+    if (/Suspense[^>]*fallback=\{<LoadingSuspenseFallback/.test(text)) {
+      violations.push(`${pageRel}: LoadingSuspenseFallback in Suspense vietato con loading.tsx`);
+    }
+    if (!/prefetchGestionalePage|prefetch\w+Page|fetchClientPortalDetailDTOServer/.test(text)) {
+      if (
+        pageRel !== "app/(gestionale)/magazzino/carichi/page.tsx" &&
+        pageRel !== "app/(gestionale)/magazzino/carichi/nuovo/page.tsx" &&
+        pageRel !== "app/(gestionale)/sicurezza/production-readiness/page.tsx"
+      ) {
+        violations.push(`${pageRel}: atteso prefetch server-side o fetch critico nel page async`);
+      }
+    }
   }
 
   const exempt = new Set<string>([
     ...ALLOW_NULL_SUSPENSE_ROUTES,
     ...FALLBACK_NULL_LEGACY_PENDING_ROUTES,
-    ...PAGE_TRANSITION_LOADER_ROUTES,
+    ...MIGRATED_LOADING_OWNER_ROUTES,
     ...LOADING_OWNERSHIP_SUSPENSE_FALLBACK_ALLOWED,
   ]);
   const pages: string[] = [];
   walkPages(GESTIONALE_APP, pages);
-  const violations: string[] = [];
 
   for (const pageRel of pages) {
     if (exempt.has(pageRel)) continue;
@@ -98,7 +84,7 @@ function main(): void {
 
     if (/Suspense[^>]*fallback=\{null\}/.test(text)) {
       violations.push(
-        `${pageRel}: fallback=null su route lazy+loading — usare PageTransitionLoader o aggiungere eccezione`,
+        `${pageRel}: fallback=null su route lazy+loading — aggiungere eccezione o rimuovere Suspense`,
       );
     }
   }

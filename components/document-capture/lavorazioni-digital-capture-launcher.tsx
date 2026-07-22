@@ -10,10 +10,17 @@ import {
 import {
   CaptureMezzoMatchStep,
 } from "@/components/document-capture/capture-mezzo-match-step";
+import { CaptureLavorazioneAssignConfirmDialog } from "@/components/document-capture/capture-lavorazione-assign-confirm-dialog";
 import {
   CAPTURE_COMPILE_FORM_ID,
   CaptureSchedaCompileStep,
 } from "@/components/document-capture/capture-scheda-compile-step";
+import {
+  CAPTURE_SHEET_COMPILE_FORM_ID,
+  CaptureSchedaSheetCompileStep,
+  isSheetCompileImportEnabled,
+  type CompileStatus,
+} from "@/components/document-capture/capture-scheda-sheet-compile-step";
 import {
   DocumentCaptureWizardBody,
   useDocumentCaptureWizardApi,
@@ -31,7 +38,7 @@ import {
   inferCaptureSchedaTipo,
   type CaptureFieldRow,
 } from "@/lib/document-capture/capture-field-mapper";
-import { describeCaptureLavorazioneAssignTarget } from "@/lib/document-capture/capture-lavorazione-match";
+import { describeCaptureLavorazioneAssignTarget, resolveCaptureIdentFromFields } from "@/lib/document-capture/capture-lavorazione-match";
 import { CaptureMultiSchedaNotice } from "@/components/document-capture/capture-multi-scheda-notice";
 import {
   captureMultiSchedaPostIngressoQueue,
@@ -55,6 +62,7 @@ import {
   saveCaptureAcquisitionDraft,
   type CaptureAcquisitionDraft,
   type CaptureIngressoCompileDraft,
+  type CaptureSchedaCompileDraft,
 } from "@/lib/document-capture/capture-acquisition-draft";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
@@ -73,6 +81,7 @@ import { useCaptureApplyFlow } from "@/lib/document-capture/use-capture-apply-fl
 import { mapCaptureApplyErrorMessage } from "@/lib/document-capture/capture-apply-error-copy";
 import { patchCaptureLavorazioneLink } from "@/lib/document-capture/patch-capture-lavorazione-link.client";
 import { CaptureApplyReviewBanner } from "@/components/document-capture/capture-apply-review-banner";
+import { captureReviewAllowsForceApply } from "@/lib/document-capture/validation/validate-capture-for-apply";
 
 export type CaptureSchedeOpenRequest = {
   lavorazioneId: string;
@@ -84,7 +93,7 @@ export type CaptureSchedeOpenRequest = {
   multiSchedaLabels?: string;
 };
 
-type CompileView = "ingresso" | "mezzo-match";
+type CompileView = "ingresso" | "mezzo-match" | "sheet-compile";
 
 export type LavorazioniCapturePageDropHandle = {
   openWithFile: (file: File) => void;
@@ -137,6 +146,8 @@ export function LavorazioniDigitalCaptureLauncher({
   const [compileSubmitBusy, setCompileSubmitBusy] = useState(false);
   const [schedeHandoffBusy, setSchedeHandoffBusy] = useState(false);
   const [pendingAssignLavorazioneId, setPendingAssignLavorazioneId] = useState<string | null>(null);
+  const [linkedLavorazioneId, setLinkedLavorazioneId] = useState<string | null>(null);
+  const [assignOverwriteTargetId, setAssignOverwriteTargetId] = useState<string | null>(null);
   const [resumePromptOpen, setResumePromptOpen] = useState(false);
   const [resumeDraft, setResumeDraft] = useState<CaptureAcquisitionDraft | null>(null);
   const [resumeBusy, setResumeBusy] = useState(false);
@@ -154,7 +165,10 @@ export function LavorazioniDigitalCaptureLauncher({
   const [resumeIngressoCompile, setResumeIngressoCompile] = useState<CaptureIngressoCompileDraft | null>(
     null,
   );
+  const [resumeSheetCompile, setResumeSheetCompile] = useState<CaptureSchedaCompileDraft | null>(null);
+  const [sheetCompileStatus, setSheetCompileStatus] = useState<CompileStatus>("loading");
   const compileDraftRef = useRef<CaptureIngressoCompileDraft | null>(null);
+  const sheetCompileDraftRef = useRef<CaptureSchedaCompileDraft | null>(null);
   const applyV1 = isDocumentCaptureLauncherApplyV1ClientEnabled();
   const assignApplyFlow = useCaptureApplyFlow(applyV1 ? captureId : null);
   const analyzeTriggeredRef = useRef<string | null>(null);
@@ -170,6 +184,24 @@ export function LavorazioniDigitalCaptureLauncher({
   } = useDocumentCaptureUpload();
   const magazzinoQuery = useMagazzinoRicambiUIQuery(undefined, { enabled: open });
 
+  useEffect(() => {
+    if (!captureId || !open) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/document-capture/${captureId}`);
+        if (!res.ok || cancelled) return;
+        const body = (await res.json()) as { capture?: { lavorazione_id?: string | null } };
+        setLinkedLavorazioneId(body.capture?.lavorazione_id?.trim() || null);
+      } catch {
+        /* anteprima opzionale */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [captureId, open]);
+
   const resetFlow = useCallback(() => {
     setStep("hub");
     setCaptureId(null);
@@ -180,6 +212,9 @@ export function LavorazioniDigitalCaptureLauncher({
     setCompileFieldsLoading(false);
     setCompileSubmitBusy(false);
     setSchedeHandoffBusy(false);
+    setPendingAssignLavorazioneId(null);
+    setLinkedLavorazioneId(null);
+    setAssignOverwriteTargetId(null);
     setDetectedSchedaTipos([]);
     setMultiSchedaPromptOpen(false);
     setPendingMultiSchedaQueue([]);
@@ -187,7 +222,10 @@ export function LavorazioniDigitalCaptureLauncher({
     setIdentMismatchConfirmOpen(false);
     setPendingHandoffLavorazioneId(null);
     setResumeIngressoCompile(null);
+    setResumeSheetCompile(null);
+    setSheetCompileStatus("loading");
     compileDraftRef.current = null;
+    sheetCompileDraftRef.current = null;
     resetWizardApi();
     resetUpload();
     analyzeTriggeredRef.current = null;
@@ -200,6 +238,7 @@ export function LavorazioniDigitalCaptureLauncher({
   const persistAcquisitionDraft = useCallback(
     (overrides?: Partial<Omit<CaptureAcquisitionDraft, "savedAt" | "captureId">> & {
       ingressoCompile?: CaptureIngressoCompileDraft;
+      sheetCompile?: CaptureSchedaCompileDraft;
     }) => {
       if (!captureId || step === "hub") return;
       saveCaptureAcquisitionDraft({
@@ -208,6 +247,7 @@ export function LavorazioniDigitalCaptureLauncher({
         compileView,
         pendingSchedaTipo,
         ingressoCompile: overrides?.ingressoCompile ?? compileDraftRef.current ?? undefined,
+        sheetCompile: overrides?.sheetCompile ?? sheetCompileDraftRef.current ?? undefined,
         pendingMultiSchedaQueue:
           overrides?.pendingMultiSchedaQueue ??
           (pendingMultiSchedaQueue.length > 0 ? [...pendingMultiSchedaQueue] : undefined),
@@ -328,6 +368,15 @@ export function LavorazioniDigitalCaptureLauncher({
     [persistAcquisitionDraft],
   );
 
+  const handleSheetCompileChange = useCallback(
+    (snapshot: CaptureSchedaCompileDraft) => {
+      if (snapshot.payload.captureId !== captureId) return;
+      sheetCompileDraftRef.current = snapshot;
+      persistAcquisitionDraft({ sheetCompile: snapshot });
+    },
+    [captureId, persistAcquisitionDraft],
+  );
+
   const applyDraftNavigation = useCallback((draft: CaptureAcquisitionDraft) => {
     setCompileView(draft.compileView);
     setPendingSchedaTipo(draft.pendingSchedaTipo);
@@ -337,6 +386,8 @@ export function LavorazioniDigitalCaptureLauncher({
     }
     setResumeIngressoCompile(draft.ingressoCompile ?? null);
     compileDraftRef.current = draft.ingressoCompile ?? null;
+    setResumeSheetCompile(draft.sheetCompile ?? null);
+    sheetCompileDraftRef.current = draft.sheetCompile ?? null;
   }, []);
 
   const restoreFromDraft = useCallback(
@@ -458,16 +509,39 @@ export function LavorazioniDigitalCaptureLauncher({
     }
   }, [discardCurrentCapture, resetFlow, step]);
 
+  const linkCaptureToLavorazione = useCallback(
+    async (lavorazioneId: string) => {
+      if (!captureId || !pendingSchedaTipo) return;
+      setSchedeHandoffBusy(true);
+      try {
+        await patchCaptureLavorazioneLink(captureId, lavorazioneId);
+        setLinkedLavorazioneId(lavorazioneId);
+        setPendingAssignLavorazioneId(lavorazioneId);
+        setCompileView("sheet-compile");
+        persistAcquisitionDraft({ compileView: "sheet-compile" });
+        gestToast.success(
+          `Lavorazione collegata a ${describeCaptureLavorazioneAssignTarget(lavorazioneId, attive, schedeStore)} — verifica i dati letti`,
+        );
+      } catch (e) {
+        const msg = mapCaptureApplyErrorMessage(e instanceof Error ? e.message : "Collegamento non riuscito");
+        gestToast.error(msg || "Collegamento non riuscito");
+      } finally {
+        setSchedeHandoffBusy(false);
+      }
+    },
+    [attive, captureId, gestToast, pendingSchedaTipo, persistAcquisitionDraft, schedeStore],
+  );
+
   const handleAssignToLavorazione = useCallback(
     async (lavorazioneId: string, opts?: { forceReview?: boolean; skipPatch?: boolean }) => {
       if (!fieldRows || !pendingSchedaTipo || !captureId) return;
       if (applyV1) {
+        if (!opts?.forceReview && !opts?.skipPatch) {
+          await linkCaptureToLavorazione(lavorazioneId);
+          return;
+        }
         setSchedeHandoffBusy(true);
         try {
-          if (!opts?.skipPatch && !opts?.forceReview) {
-            await patchCaptureLavorazioneLink(captureId, lavorazioneId);
-            setPendingAssignLavorazioneId(lavorazioneId);
-          }
           const result = await assignApplyFlow.applyAssignOnly(
             opts?.forceReview ? { forceReview: true } : undefined,
           );
@@ -481,6 +555,11 @@ export function LavorazioniDigitalCaptureLauncher({
         } catch (e) {
           if (e instanceof Error && e.message === "REVIEW_REQUIRED") {
             setPendingAssignLavorazioneId(lavorazioneId);
+            setLinkedLavorazioneId(lavorazioneId);
+            setCompileView("sheet-compile");
+            gestToast.success(
+              "Lavorazione collegata correttamente. Verifica i campi evidenziati prima di completare l'importazione.",
+            );
             return;
           }
           const msg = mapCaptureApplyErrorMessage(e instanceof Error ? e.message : "Apply non riuscito");
@@ -509,12 +588,42 @@ export function LavorazioniDigitalCaptureLauncher({
       captureId,
       fieldRows,
       gestToast,
+      linkCaptureToLavorazione,
       onLavorazioneCreated,
       openSchedeEditor,
       pendingSchedaTipo,
       resetFlow,
       schedeStore,
     ],
+  );
+
+  const requestAssignToLavorazione = useCallback(
+    (lavorazioneId: string) => {
+      if (
+        linkedLavorazioneId &&
+        linkedLavorazioneId !== lavorazioneId &&
+        pendingAssignLavorazioneId !== lavorazioneId
+      ) {
+        setAssignOverwriteTargetId(lavorazioneId);
+        return;
+      }
+      if (applyV1) {
+        void linkCaptureToLavorazione(lavorazioneId);
+        return;
+      }
+      void handleAssignToLavorazione(lavorazioneId);
+    },
+    [applyV1, handleAssignToLavorazione, linkCaptureToLavorazione, linkedLavorazioneId, pendingAssignLavorazioneId],
+  );
+
+  const captureIdentForAssign = useMemo(
+    () => (fieldRows ? resolveCaptureIdentFromFields(fieldRows) : null),
+    [fieldRows],
+  );
+
+  const assignReviewPending = Boolean(
+    assignApplyFlow.validation?.status === "REVIEW" &&
+      captureReviewAllowsForceApply(assignApplyFlow.validation),
   );
 
   const handleCreateNewFromMatch = useCallback(() => {
@@ -589,6 +698,17 @@ export function LavorazioniDigitalCaptureLauncher({
       handleCaptureLavorazioneCreated(id);
     },
     [applyV1, gestToast, handleCaptureLavorazioneCreated, onLavorazioneCreated, resetFlow],
+  );
+
+  const handleSheetApplySuccess = useCallback(
+    (id: string) => {
+      clearCaptureAcquisitionDraft();
+      onLavorazioneCreated?.(id);
+      setOpen(false);
+      resetFlow();
+      gestToast.success("Scheda importata da acquisizione AI.");
+    },
+    [gestToast, onLavorazioneCreated, resetFlow],
   );
 
   const handleDuplicateCancel = useCallback(() => {
@@ -682,6 +802,13 @@ export function LavorazioniDigitalCaptureLauncher({
   const footerBusy = wizardBusy || pipelineBusy || compileFieldsLoading || compileSubmitBusy || schedeHandoffBusy;
 
   const showCompileIngressoFooter = step === "compile" && compileView === "ingresso" && fieldRows && captureId;
+  const showCompileSheetFooter =
+    step === "compile" &&
+    compileView === "sheet-compile" &&
+    fieldRows &&
+    captureId &&
+    pendingSchedaTipo &&
+    applyV1;
   const isMultiSchedaFlow = isCaptureMultiSchedaBundle(detectedSchedaTipos);
 
   if (!enabled) return null;
@@ -720,6 +847,20 @@ export function LavorazioniDigitalCaptureLauncher({
                   disabled={!createdBy || footerBusy}
                 >
                   {applyV1 ? "Conferma import" : "Crea lavorazione"}
+                </LoadingButton>
+              </div>
+            ) : showCompileSheetFooter ? (
+              <div className="flex min-w-0 w-full justify-end gap-2">
+                <LoadingButton
+                  type="submit"
+                  form={CAPTURE_SHEET_COMPILE_FORM_ID}
+                  variant="primary"
+                  className={`${erpBtnAccent} min-h-11 sm:min-w-[10rem]`}
+                  loading={footerBusy}
+                  loadingLabel="Import…"
+                  disabled={!createdBy || footerBusy || !isSheetCompileImportEnabled(sheetCompileStatus)}
+                >
+                  Conferma import
                 </LoadingButton>
               </div>
             ) : undefined
@@ -773,6 +914,20 @@ export function LavorazioniDigitalCaptureLauncher({
                   onIngressoCompileChange={handleIngressoCompileChange}
                   onSubmitBusyChange={setCompileSubmitBusy}
                 />
+                  ) : compileView === "sheet-compile" && pendingSchedaTipo ? (
+                    <CaptureSchedaSheetCompileStep
+                      captureId={captureId}
+                      tipo={pendingSchedaTipo}
+                      fieldRows={fieldRows}
+                      sharedGlobalOpts={sharedGlobalOpts}
+                      magazzino={magazzinoQuery.data ?? []}
+                      resumeSheetCompile={resumeSheetCompile}
+                      onSheetCompileChange={handleSheetCompileChange}
+                      onApplySuccess={handleSheetApplySuccess}
+                      onCompileError={setCompileError}
+                      onSubmitBusyChange={setCompileSubmitBusy}
+                      onCompileStatusChange={setSheetCompileStatus}
+                    />
                   ) : pendingSchedaTipo ? (
                     <div className="space-y-3">
                       <CaptureApplyReviewBanner
@@ -791,10 +946,12 @@ export function LavorazioniDigitalCaptureLauncher({
                         mezzi={mezzi}
                         schedeStore={schedeStore}
                         attive={attive}
-                        onAssign={(id) => void handleAssignToLavorazione(id)}
+                        onAssign={requestAssignToLavorazione}
                         onCreateNew={handleCreateNewFromMatch}
                         onCancel={goBack}
                         assignBusy={schedeHandoffBusy}
+                        pendingAssignLavorazioneId={pendingAssignLavorazioneId}
+                        reviewPending={assignReviewPending}
                       />
                     </div>
                   ) : null}
@@ -865,16 +1022,28 @@ export function LavorazioniDigitalCaptureLauncher({
         onAttach={handleDuplicateAttach}
         onForceNew={handleDuplicateForceNew}
       />
-      {schedeHandoffBusy ? (
-        <div
-          className="fixed inset-0 z-[115] flex flex-col items-center justify-center gap-3 bg-[var(--cab-overlay)] backdrop-blur-[2px]"
-          role="status"
-          aria-live="polite"
-          aria-busy="true"
-        >
-          <LoadingSpinner size="md" />
-          <p className="text-sm text-[color:var(--cab-fg)]">Apertura scheda in corso…</p>
-        </div>
+      {assignOverwriteTargetId && captureIdentForAssign && pendingSchedaTipo ? (
+        <CaptureLavorazioneAssignConfirmDialog
+          open
+          schedaLabel={pendingSchedaTipo === "ricambi" ? "scheda ricambi" : "scheda lavorazioni"}
+          targetLabel={describeCaptureLavorazioneAssignTarget(
+            assignOverwriteTargetId,
+            attive,
+            schedeStore,
+          )}
+          captureIdent={captureIdentForAssign}
+          replaceExisting
+          onCancel={() => setAssignOverwriteTargetId(null)}
+          onConfirm={() => {
+            const id = assignOverwriteTargetId;
+            setAssignOverwriteTargetId(null);
+            if (applyV1) {
+              void linkCaptureToLavorazione(id);
+              return;
+            }
+            void handleAssignToLavorazione(id);
+          }}
+        />
       ) : null}
     </>
   );

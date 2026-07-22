@@ -28,9 +28,10 @@ const ROUTE_LOADING: Record<string, string> = {
   login: "app/login/loading.tsx",
 };
 
-/** loading.tsx extra fuori MIGRATED_STRUCTURAL_ROUTES ma LEVEL 2 body-only. */
+/** loading.tsx extra fuori MIGRATED_STRUCTURAL_ROUTES ma body-only. */
 const EXTRA_BODY_ONLY_LOADING = [
   "app/(gestionale)/magazzino/carichi/loading.tsx",
+  "app/(gestionale)/magazzino/carichi/nuovo/loading.tsx",
   "app/(gestionale)/lavorazioni-clienti/[id]/loading.tsx",
 ];
 
@@ -65,7 +66,7 @@ for (const route of MIGRATED_STRUCTURAL_ROUTES) {
     assert.doesNotMatch(
       src,
       /<PageLayout/,
-      `${loadingPath}: PageLayout solo in page.tsx LEVEL 2 (evita doppio header)`,
+      `${loadingPath}: PageLayout solo in page.tsx (evita doppio header)`,
     );
     assert.match(
       src,

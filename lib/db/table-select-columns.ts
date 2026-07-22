@@ -107,6 +107,9 @@ export const MAINTENANCE_PRESET_TRIGGERS_COLUMNS =
 export const MAINTENANCE_PRESET_CHECKLIST_COLUMNS =
   "id, preset_id, label, sort_order, is_required, created_at" as const;
 
+export const VEHICLE_MAINTENANCE_SERVICE_CHECKLIST_COLUMNS =
+  "id, service_id, item_label, checked, note, sort_order, created_at" as const;
+
 export const VEHICLE_MAINTENANCE_SERVICES_V2_COLUMNS =
   "id, mezzo_id, plan_id, performed_at, ore_at_service, mezzo_ore_snapshot, note, performed_by, created_at, updated_at, created_by, config_id, preset_version_id, interval_type, interval_value_at_execution, km_at_service, milestone_reached, lavorazione_id, scheda_lavorazione_id, anomaly_note, confidence_at_execution, total_cost, execution_type, preset_snapshot" as const;
 

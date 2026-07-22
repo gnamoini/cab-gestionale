@@ -6,6 +6,33 @@ SSOT per orchestrazione stati di caricamento nel gestionale Next.js App Router.
 
 > Il loading iniziale appartiene alla route. Il loading dati appartiene al componente. Il refetch non deve mai sostituire contenuto esistente con skeleton.
 
+## Gerarchia loading (L1 → L3)
+
+```
+LEVEL 1 — loading.tsx
+  owner unico full-page skeleton
+
+        ↓
+
+LEVEL 2 — HydrationBoundary
+  prefetch server-side in page async, zero skeleton
+
+        ↓
+
+LEVEL 3 — skeleton locali
+  card, widget, tabella, sezione (layout stabile)
+
+        ↓
+
+Contenuto
+```
+
+| Livello | Meccanismo | Skeleton? |
+|---------|------------|-----------|
+| L1 | `app/**/loading.tsx` | Sì — unico full-page |
+| L2 | `GestionaleHydrationBoundary` + `prefetchGestionalePage` | No |
+| L3 | `LoadingCardSkeleton`, `SkeletonBoundary`, slot widget | Sì — solo sezione |
+
 ## Full-page loading ownership
 
 **Un solo owner** per il placeholder full-page di una route:
@@ -13,42 +40,36 @@ SSOT per orchestrazione stati di caricamento nel gestionale Next.js App Router.
 | Owner | Quando usarlo |
 |-------|----------------|
 | `app/**/loading.tsx` | **Preferito** — navigazione cold, RSC, zero JS extra |
-| `Suspense fallback` con skeleton | Solo se **non** esiste `loading.tsx` (vedi eccezioni in `lib/regression/loading-ownership-exceptions.ts`) |
-| `dynamic()` `loading:` | **Vietato** se `loading.tsx` copre la route |
+| `Suspense fallback` con skeleton | Solo se **non** esiste `loading.tsx` (vedi `lib/regression/loading-ownership-exceptions.ts`) |
+| `dynamic()` `loading:` full-section | **Vietato** se `loading.tsx` copre la route |
 | RBAC guard full-page skeleton | **Vietato** — usare spinner minimale |
 | `if (isLoading) return <BigSkeleton />` in view | **Vietato** come secondo owner full-page |
 
-### Suspense e streaming
-
-Non rimuovere `Suspense` usati per streaming RSC o prefetch deferred.
+### Page async + prefetch
 
 ```tsx
-// ❌ Duplicato — loading.tsx già mostra lo skeleton
-<Suspense fallback={<LoadingSuspenseFallback variant="magazzino" />}>
+// ✅ L1 loading.tsx + page async — un solo skeleton route
+export default async function MagazzinoPage() {
+  const qc = createServerQueryClient();
+  await prefetchGestionalePage(qc, "magazzino");
+  return (
+    <PageLayout title="Magazzino ricambi">
+      <GestionaleHydrationBoundary state={dehydrate(qc)}>
+        <MagazzinoViewLazy />
+      </GestionaleHydrationBoundary>
+    </PageLayout>
+  );
+}
 
-// ✅ LEVEL 2 — structural skeleton body + PageLayout fuori Suspense
-<PageLayout title="Magazzino ricambi">
-  <Suspense fallback={<PageTransitionLoader variant="magazzino" />}>
-    <MagazzinoDeferredHydration>...</MagazzinoDeferredHydration>
-  </Suspense>
-</PageLayout>
+// ❌ Duplicato — loading.tsx + PageTransitionLoader
+<Suspense fallback={<PageTransitionLoader variant="magazzino" />}>
 ```
 
-## LEVEL 2 — PageTransitionLoader (post Skeleton v3)
+Prefetch configurabile in `src/lib/react-query/prefetch-gestionale-page.ts`:
 
-Tre livelli separati:
-
-| Level | Meccanismo | Responsabilità |
-|-------|------------|----------------|
-| 1 | `loading.tsx` + structural skeleton | percezione iniziale cold nav |
-| 2 | `PageTransitionLoader` structural skeleton in Suspense | gap chunk/hydration (body continuo con LEVEL 1) |
-| 3 | bundle/hydration audit | velocità reale (ticket separato) |
-
-Regole:
-- `PageLayout` con titolo reale **fuori** Suspense
-- `PageTransitionLoader` usa `StructuralRouteSkeleton` (variant route) — **non** spinner su sfondo vuoto
-- `fallback={null}` vietato su route rollout (`loading-transition-fallback-allowlist.ts`)
-- deny-by-default su altre route lazy+loading; eccezioni esplicite in allowlist
+- `prefetchCriticalPage` — sempre nel page async
+- `prefetchDeferredPage` — solo se `PAGE_PREFETCH_CONFIG[page].prefetchDeferredOnServer === true` o override `includeDeferred`
+- Query below-the-fold (es. analytics report) → `prefetchDeferredOnServer: false`, skeleton L3 in view
 
 ## Component (inline) loading ownership
 
@@ -56,7 +77,7 @@ Consentito in parallelo al full-page owner:
 
 | Contesto | Regola |
 |----------|--------|
-| Widget dashboard | `isLoading && data === undefined` |
+| Widget dashboard | skeleton nello slot widget, layout griglia stabile |
 | Sezione tabella | skeleton locale nella sezione |
 | Drawer / modale | `LoadingFormSkeleton` esclusivo (ternario, non `&&` + contenuto) |
 | Sidebar nav | skeleton inline in `AppShell` |
@@ -67,8 +88,8 @@ Consentito in parallelo al full-page owner:
 {isLoading && <Skeleton />}
 {items.map(...)}
 
-// ✅ Stato esclusivo
-{isInitialLoading ? <Skeleton /> : <Items />}
+// ✅ Stato esclusivo nello slot
+{isLoading ? <LoadingCardSkeleton /> : <Widget />}
 ```
 
 ## Skeleton statici
@@ -112,16 +133,11 @@ PageLayout
 ```
 
 - **Nessun Context RSC** — `mode="content" | "skeleton"` via prop
-- **Nessun parsing DOM** — descriptor dichiarativi (`SkeletonContract`)
-- **Geometry parity** — token semantici (`inventory-table`, `table`, …) in `skeleton-geometry-tokens.ts`; vietato `min-h-[*]` nei consumer
-- **Route loading**: `loading.tsx` importa lo stesso `*PageStructure` / `*RouteStructure` della view con `mode="skeleton"`
+- **Route loading**: `loading.tsx` importa lo stesso `*PageStructure` della view con `mode="skeleton"`
 - **SkeletonBoundary**: solo `if loading → skeleton else children` — no overlay, auth, LoadingManager
 
 ### Route migrate (structural)
 
-| Route | Route structure | Note |
-|-------|---------------|------|
-| `/magazzino` | `MagazzinoRouteStructure` | pilota |
+Tutte le route in `MIGRATED_LOADING_OWNER_ROUTES` (`lib/regression/loading-transition-fallback-allowlist.ts`).
 
 Le route non migrate restano su `LoadingSuspenseFallback` / skeleton manuali fino a migrazione.
-

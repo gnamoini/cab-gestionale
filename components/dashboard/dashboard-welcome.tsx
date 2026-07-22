@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { CabLogo } from "@/components/gestionale/cab-logo";
 import { welcomeFirstName } from "@/src/lib/auth/resolve-user-display-name";
-import { dsSkeletonPulse } from "@/lib/ui/design-system";
 
 const dashboardWelcomeCardClass =
   "relative flex min-w-0 max-w-full overflow-hidden rounded-2xl border-2 border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_5%,var(--cab-card))] px-3 py-2 shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,#fff_7%,transparent)] sm:px-4 sm:py-2.5 lg:px-6 lg:py-3.5 dark:border-[color:color-mix(in_srgb,var(--cab-primary)_26%,var(--cab-border))] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_7%,var(--cab-card))] dark:shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,var(--cab-primary)_14%,transparent)]";
@@ -50,49 +49,10 @@ function formatWelcomeDate(d: Date): {
   return { iso, day, weekday, weekdayShort, month, monthShort, year };
 }
 
-function WelcomeSkeleton() {
-  return (
-    <div className={dashboardWelcomeCardClass} aria-hidden>
-      <div className={welcomeLayoutClass}>
-        <div className={welcomeLeadClass}>
-          <div className="cab-dashboard-welcome-logo shrink-0">
-            <div className={`h-7 w-[4.5rem] ${dsSkeletonPulse}`} />
-          </div>
-          <div className="cab-dashboard-welcome-copy min-w-0 space-y-1">
-            <div className={`h-4 w-full max-w-[12rem] ${dsSkeletonPulse}`} />
-            <div className={`h-3 w-full max-w-[9rem] ${dsSkeletonPulse} opacity-70`} />
-          </div>
-        </div>
-        <div className={`${welcomeDateClass} h-9 w-12 ${dsSkeletonPulse} opacity-50`} />
-      </div>
-    </div>
-  );
-}
-
 export function DashboardWelcome() {
   const { status, authorName, user } = useAuth();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const { greeting, who, welcomeDate } = useMemo(() => {
-    if (!mounted) {
-      return {
-        greeting: "Buongiorno",
-        who: "",
-        welcomeDate: {
-          iso: "",
-          day: "",
-          weekday: "",
-          weekdayShort: "",
-          month: "",
-          monthShort: "",
-          year: "",
-        },
-      };
-    }
     const now = new Date();
     const w = isAuthSessionEstablished(status)
       ? welcomeFirstName({ givenName: user?.givenName, displayName: authorName.trim() || "Team CAB" })
@@ -102,11 +62,7 @@ export function DashboardWelcome() {
       who: w,
       welcomeDate: formatWelcomeDate(now),
     };
-  }, [mounted, status, authorName, user?.givenName]);
-
-  if (!mounted) {
-    return <WelcomeSkeleton />;
-  }
+  }, [status, authorName, user?.givenName]);
 
   return (
     <div className={dashboardWelcomeCardClass}>
@@ -122,9 +78,14 @@ export function DashboardWelcome() {
           </div>
 
           <div className="cab-dashboard-welcome-copy min-w-0">
-            <h2 className="truncate text-sm font-semibold leading-tight tracking-tight text-[color:var(--cab-text)] sm:text-base lg:text-lg lg:tracking-tight">
+            <h2
+              className="truncate text-sm font-semibold leading-tight tracking-tight text-[color:var(--cab-text)] sm:text-base lg:text-lg lg:tracking-tight"
+              suppressHydrationWarning
+            >
               {greeting},{" "}
-              <span className="font-bold text-[color:var(--cab-primary)]">{who}</span>
+              <span className="font-bold text-[color:var(--cab-primary)]" suppressHydrationWarning>
+                {who}
+              </span>
             </h2>
             <p className="mt-0.5 text-balance text-[11px] leading-snug text-[color:var(--cab-text-muted)] sm:text-xs lg:mt-1 lg:text-sm">
               Benvenuto nel gestionale officina.
@@ -136,6 +97,7 @@ export function DashboardWelcome() {
           dateTime={welcomeDate.iso}
           className={welcomeDateClass}
           aria-label={`${welcomeDate.weekday}, ${welcomeDate.day} ${welcomeDate.month} ${welcomeDate.year}`}
+          suppressHydrationWarning
         >
           <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-[color:var(--cab-text-muted)] sm:text-[10px] lg:text-[11px] lg:tracking-[0.16em]">
             <span className="sm:hidden">{welcomeDate.weekdayShort}</span>

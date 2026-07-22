@@ -80,6 +80,16 @@ export type MaintenanceServicePartView = {
   ricambioId: string;
   descrizione: string;
   quantita: number;
+  wasReplaced: boolean;
+  wasDue: boolean;
+  isRequired: boolean;
+  replacementCondition: ReplacementCondition;
+};
+
+export type MaintenanceServiceChecklistItemView = {
+  itemLabel: string;
+  checked: boolean;
+  note: string;
 };
 
 export type MaintenanceServiceHistoryView = {
@@ -95,6 +105,7 @@ export type MaintenanceServiceHistoryView = {
   executionType: MaintenanceExecutionType;
   presetSnapshot: PresetSnapshot | null;
   parts: MaintenanceServicePartView[];
+  checklist: MaintenanceServiceChecklistItemView[];
 };
 
 export type RegisterMaintenanceServiceInput = {
@@ -108,7 +119,15 @@ export type RegisterMaintenanceServiceInput = {
   executionType: MaintenanceExecutionType;
   presetSnapshot: PresetSnapshot;
   checklist?: { itemLabel: string; checked: boolean; note?: string; sortOrder: number }[];
-  parts: { ricambioId: string; quantita: number; descrizioneSnapshot?: string }[];
+  parts: {
+    ricambioId: string;
+    quantita: number;
+    descrizioneSnapshot?: string;
+    wasReplaced?: boolean;
+    wasDue?: boolean;
+    replacementCondition?: ReplacementCondition;
+    isRequired?: boolean;
+  }[];
 };
 
 export type UpsertMaintenancePlanPartInput = {

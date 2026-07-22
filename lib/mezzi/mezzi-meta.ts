@@ -1,3 +1,5 @@
+import { parseDecimalInput } from "@/lib/core/decimal-input";
+
 export type MezzoAnagraficaMeta = {
   cantiere?: string;
   tipoTelaio?: string;
@@ -62,8 +64,8 @@ export function mezzoFormToMeta(f: {
   oreLavoro: string;
   km: string;
 }): MezzoAnagraficaMeta {
-  const ore = num(f.oreLavoro.trim());
-  const kmN = num(f.km.trim());
+  const ore = parseDecimalInput(f.oreLavoro);
+  const kmN = parseDecimalInput(f.km);
   return {
     cantiere: f.cantiere.trim() || undefined,
     tipoTelaio: f.tipoTelaio.trim() || undefined,

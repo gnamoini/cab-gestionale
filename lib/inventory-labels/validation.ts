@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { DEFAULT_LABEL_PRESET, LABEL_PRESET_IDS } from "@/lib/inventory-labels/domain/templates";
-import { LABEL_FORMATS } from "@/lib/inventory-labels/domain/types";
+import { DEFAULT_INCLUDE_BARCODE, LABEL_FORMATS } from "@/lib/inventory-labels/domain/types";
 
 const BULK_SYNC_MAX_DEFAULT = 10;
 
@@ -39,7 +39,7 @@ export const bulkLabelRequestSchema = z.object({
   ids: z.array(z.string().uuid()).min(1).max(BULK_ABSOLUTE_MAX),
   preset: labelPresetSchema,
   format: labelFormatSchema.default("pdf"),
-  includeBarcode: z.boolean().default(true),
+  includeBarcode: z.boolean().default(DEFAULT_INCLUDE_BARCODE),
 });
 
 export const renderLabelQuerySchema = z.object({
@@ -48,8 +48,8 @@ export const renderLabelQuerySchema = z.object({
   includeBarcode: z
     .enum(["true", "false"])
     .optional()
-    .default("true")
-    .transform((v) => v !== "false"),
+    .default(DEFAULT_INCLUDE_BARCODE ? "true" : "false")
+    .transform((v) => v === "true"),
 });
 
 export function isBulkSyncCount(count: number): boolean {

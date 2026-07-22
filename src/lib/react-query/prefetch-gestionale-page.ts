@@ -87,6 +87,42 @@ export type PrefetchDeferredOptions = {
   includePayments?: boolean;
 };
 
+/** SSOT: deferred on-server solo se necessario al first paint (tabella/KPI/lista). */
+export const PAGE_PREFETCH_CONFIG: Record<GestionalePrefetchPage, { prefetchDeferredOnServer: boolean }> = {
+  dashboard: { prefetchDeferredOnServer: true },
+  magazzino: { prefetchDeferredOnServer: true },
+  lavorazioni: { prefetchDeferredOnServer: true },
+  documenti: { prefetchDeferredOnServer: true },
+  preventivi: { prefetchDeferredOnServer: true },
+  fatturazione: { prefetchDeferredOnServer: true },
+  impostazioni: { prefetchDeferredOnServer: true },
+  agenda: { prefetchDeferredOnServer: true },
+  dipendenti: { prefetchDeferredOnServer: true },
+  sicurezza: { prefetchDeferredOnServer: true },
+  mezzi: { prefetchDeferredOnServer: true },
+  lavorazioni_clienti: { prefetchDeferredOnServer: true },
+  report: { prefetchDeferredOnServer: false },
+};
+
+export type PrefetchGestionalePageOptions = PrefetchDeferredOptions & {
+  includeDeferred?: boolean;
+};
+
+/** Critical sempre; deferred solo se config o override esplicito. */
+export async function prefetchGestionalePage(
+  qc: QueryClient,
+  page: GestionalePrefetchPage,
+  options?: PrefetchGestionalePageOptions,
+): Promise<void> {
+  await prefetchCriticalPage(qc, page);
+  const includeDeferred =
+    options?.includeDeferred ?? PAGE_PREFETCH_CONFIG[page]?.prefetchDeferredOnServer ?? false;
+  if (includeDeferred) {
+    const { includeDeferred: _omit, ...deferredOpts } = options ?? {};
+    await prefetchDeferredPage(qc, page, deferredOpts);
+  }
+}
+
 /** Settings + gate minimo — await prima del first byte su route pesanti. */
 export async function prefetchCriticalPage(qc: QueryClient, page: GestionalePrefetchPage): Promise<void> {
   switch (page) {
@@ -471,88 +507,65 @@ async function prefetchSettingsPayload(
   });
 }
 
-export async function prefetchDashboardPage(): Promise<DehydratedState> {
+async function prefetchGestionalePageDehydrated(
+  page: GestionalePrefetchPage,
+  options?: PrefetchGestionalePageOptions,
+): Promise<DehydratedState> {
   const qc = createServerQueryClient();
-  await prefetchCriticalPage(qc, "dashboard");
-  await prefetchDeferredPage(qc, "dashboard");
+  await prefetchGestionalePage(qc, page, options);
   return dehydrate(qc);
+}
+
+export async function prefetchDashboardPage(): Promise<DehydratedState> {
+  return prefetchGestionalePageDehydrated("dashboard");
 }
 
 export async function prefetchMezziPage(): Promise<DehydratedState> {
-  const qc = createServerQueryClient();
-  await prefetchCriticalPage(qc, "mezzi");
-  await prefetchDeferredPage(qc, "mezzi");
-  return dehydrate(qc);
+  return prefetchGestionalePageDehydrated("mezzi");
 }
 
 export async function prefetchLavorazioniPage(): Promise<DehydratedState> {
-  const qc = createServerQueryClient();
-  await prefetchCriticalPage(qc, "lavorazioni");
-  await prefetchDeferredPage(qc, "lavorazioni");
-  return dehydrate(qc);
+  return prefetchGestionalePageDehydrated("lavorazioni");
 }
 
 export async function prefetchDocumentiPage(): Promise<DehydratedState> {
-  const qc = createServerQueryClient();
-  await prefetchCriticalPage(qc, "documenti");
-  await prefetchDeferredPage(qc, "documenti");
-  return dehydrate(qc);
+  return prefetchGestionalePageDehydrated("documenti");
 }
 
 export async function prefetchMagazzinoPage(): Promise<DehydratedState> {
-  const qc = createServerQueryClient();
-  await prefetchCriticalPage(qc, "magazzino");
-  await prefetchDeferredPage(qc, "magazzino");
-  return dehydrate(qc);
+  return prefetchGestionalePageDehydrated("magazzino");
 }
 
 export async function prefetchReportPage(): Promise<DehydratedState> {
-  const qc = createServerQueryClient();
-  await prefetchCriticalPage(qc, "report");
-  await prefetchDeferredPage(qc, "report");
-  return dehydrate(qc);
+  return prefetchGestionalePageDehydrated("report");
 }
 
-export async function prefetchPreventiviPage(): Promise<DehydratedState> {
-  const qc = createServerQueryClient();
-  await prefetchCriticalPage(qc, "preventivi");
-  await prefetchDeferredPage(qc, "preventivi");
-  return dehydrate(qc);
+export async function prefetchPreventiviPage(
+  options?: Pick<PrefetchGestionalePageOptions, "includeOrdini">,
+): Promise<DehydratedState> {
+  return prefetchGestionalePageDehydrated("preventivi", options);
 }
 
-export async function prefetchFatturazionePage(): Promise<DehydratedState> {
-  const qc = createServerQueryClient();
-  await prefetchCriticalPage(qc, "fatturazione");
-  await prefetchDeferredPage(qc, "fatturazione");
-  return dehydrate(qc);
+export async function prefetchFatturazionePage(
+  options?: Pick<PrefetchGestionalePageOptions, "includeOpenItems" | "includePayments">,
+): Promise<DehydratedState> {
+  return prefetchGestionalePageDehydrated("fatturazione", options);
 }
 
 export async function prefetchImpostazioniPage(): Promise<DehydratedState> {
-  const qc = createServerQueryClient();
-  await prefetchCriticalPage(qc, "impostazioni");
-  await prefetchDeferredPage(qc, "impostazioni");
-  return dehydrate(qc);
+  return prefetchGestionalePageDehydrated("impostazioni");
 }
 
 export async function prefetchAgendaPage(): Promise<DehydratedState> {
-  const qc = createServerQueryClient();
-  await prefetchCriticalPage(qc, "agenda");
-  await prefetchDeferredPage(qc, "agenda");
-  return dehydrate(qc);
+  return prefetchGestionalePageDehydrated("agenda");
 }
 
 export async function prefetchDipendentiPage(): Promise<DehydratedState> {
-  const qc = createServerQueryClient();
-  await prefetchCriticalPage(qc, "dipendenti");
-  await prefetchDeferredPage(qc, "dipendenti");
-  return dehydrate(qc);
+  return prefetchGestionalePageDehydrated("dipendenti");
 }
 
 export async function prefetchSicurezzaPage(): Promise<DehydratedState> {
-  const qc = createServerQueryClient();
-  await prefetchCriticalPage(qc, "sicurezza");
-  await prefetchDeferredPage(qc, "sicurezza");
-  return dehydrate(qc);
+  return prefetchGestionalePageDehydrated("sicurezza");
 }
 
 // Re-export for server modules that import filter presets from fetch-server
