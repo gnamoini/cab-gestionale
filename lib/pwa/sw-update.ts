@@ -20,6 +20,12 @@ export function isColdStartSession(storage?: Storage | null): boolean {
   return !s.getItem(PWA_SESSION_ACTIVE_KEY);
 }
 
+export function isNavigationReload(): boolean {
+  if (typeof performance === "undefined") return false;
+  const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+  return nav?.type === "reload";
+}
+
 export function markPwaSessionActive(storage?: Storage | null): void {
   resolveSessionStorage(storage)?.setItem(PWA_SESSION_ACTIVE_KEY, "1");
 }
@@ -42,12 +48,12 @@ export function applyServiceWorkerUpdate(registration: ServiceWorkerRegistration
   waiting?.postMessage(PWA_SKIP_WAITING_MESSAGE);
 }
 
-/** Cold start: applica subito se c'è un SW in attesa. */
+/** Cold start o reload: applica subito se c'è un SW in attesa. */
 export function tryAutoApplyOnColdStart(
   registration: ServiceWorkerRegistration,
   storage?: Storage | null,
 ): boolean {
-  if (!isColdStartSession(storage)) return false;
+  if (!isColdStartSession(storage) && !isNavigationReload()) return false;
   if (!getWaitingServiceWorker(registration)) return false;
   applyServiceWorkerUpdate(registration);
   return true;

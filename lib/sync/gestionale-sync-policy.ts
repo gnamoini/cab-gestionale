@@ -2,6 +2,7 @@ import type { GestionaleDirtySyncMode } from "@/lib/feature-flags/gestionale-dir
 import {
   isDirtySyncEnabledForDomain,
 } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
+import { isOperationalSessionWarmingUp } from "@/lib/sync/operational-session-warmup";
 import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
 import type { GestionaleActionSource } from "@/lib/sync/gestionale-sync-dispatch";
 import type { DirtyEntry, DirtyEntryType } from "@/lib/sync/gestionale-dirty-state";
@@ -129,6 +130,14 @@ export function resolveSyncEffects(input: ResolveSyncEffectInput): ResolvedSyncE
   }
 
   if (source === "reconnect") {
+    return {
+      invalidateTables: [...tables],
+      invalidateEntityIdByTable: new Map(entityIdByTable),
+      dirtyEntries: [],
+    };
+  }
+
+  if (isOperationalSessionWarmingUp()) {
     return {
       invalidateTables: [...tables],
       invalidateEntityIdByTable: new Map(entityIdByTable),

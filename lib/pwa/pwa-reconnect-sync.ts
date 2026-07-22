@@ -3,6 +3,7 @@ import { claimPwaSyncCooldown, resetPwaSyncCooldownForTests } from "@/lib/pwa/pw
 import { GESTIONALE_DISPATCH_DEDUP_MS } from "@/lib/sync/gestionale-sync-dispatch";
 import { markDirtyForOperationalTables } from "@/lib/sync/gestionale-dirty-flush";
 import { isGestionaleDirtySyncEnabled } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
+import { isOperationalSessionWarmingUp } from "@/lib/sync/operational-session-warmup";
 import { consumeOperationalVersionPoll } from "@/lib/sync/operational-data-version";
 import { refetchActiveOperationalSnapshot } from "@/lib/sync/gestionale-snapshot-recovery";
 import { QK } from "@/src/lib/react-query/query-keys";
@@ -28,7 +29,7 @@ async function applyPwaReconnectSync(qc: QueryClient): Promise<void> {
 
   try {
     const drifted = await consumeOperationalVersionPoll();
-    if (drifted.length > 0 && isGestionaleDirtySyncEnabled()) {
+    if (drifted.length > 0 && isGestionaleDirtySyncEnabled() && !isOperationalSessionWarmingUp()) {
       markDirtyForOperationalTables(drifted);
     }
   } catch {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   isColdStartSession,
+  isNavigationReload,
   markPwaSessionActive,
   PWA_SESSION_ACTIVE_KEY,
   tryAutoApplyOnColdStart,
@@ -59,5 +60,21 @@ assert.equal(messages.length, 0);
 
 storage.clear();
 assert.equal(tryAutoApplyOnColdStart(mockRegistration(null), storage), false);
+
+const originalGetEntriesByType = performance.getEntriesByType.bind(performance);
+performance.getEntriesByType = ((type: string) => {
+  if (type === "navigation") {
+    return [{ type: "reload" }] as unknown as PerformanceEntryList;
+  }
+  return originalGetEntriesByType(type);
+}) as typeof performance.getEntriesByType;
+
+markPwaSessionActive(storage);
+messages.length = 0;
+assert.equal(isNavigationReload(), true);
+assert.equal(tryAutoApplyOnColdStart(reg, storage), true);
+assert.equal(messages.length, 1);
+
+performance.getEntriesByType = originalGetEntriesByType;
 
 console.log("sw-update.test.ts OK");

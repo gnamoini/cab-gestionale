@@ -41,12 +41,12 @@ assert.match(hookSrc, /dispatchTimesheetEmployeesChanged/);
 
 assert.match(dispatchSrc, /resolveSyncEffects/);
 assert.match(dispatchSrc, /markGestionaleDirty/);
-assert.match(dispatchSrc, /shouldSuppressRemoteCacheInvalidation/);
+assert.match(dispatchSrc, /shouldSkipOperationalDirtyMark/);
 assert.match(dispatchSrc, /markRecentLocalGestionaleFromEntityIdByTable/);
 assert.match(dispatchSrc, /acknowledgeOperationalTableVersions/);
 assert.match(dirtyFlushSrc, /shouldSkipOperationalDirtyMark/);
 assert.match(invalidateRelatedSrc, /cabSyncEventForEntity\("scheda_lavorazione"/);
-assert.match(policySrc, /ALWAYS_LIVE_TABLES/);
+assert.match(policySrc, /isOperationalSessionWarmingUp/);
 assert.match(policySrc, /user_permissions/);
 assert.match(policySrc, /profiles/);
 

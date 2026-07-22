@@ -9,10 +9,15 @@ import {
 } from "@/lib/sync/gestionale-sync-scope";
 import { resolveSyncEffects, ALWAYS_LIVE_TABLES } from "@/lib/sync/gestionale-sync-policy";
 import { resetGestionaleDirtyStateForTests } from "@/lib/sync/gestionale-dirty-state";
+import {
+  beginOperationalSessionWarmup,
+  resetOperationalSessionWarmupForTests,
+} from "@/lib/sync/operational-session-warmup";
 
 const prev = process.env.NEXT_PUBLIC_GESTIONALE_DIRTY_SYNC;
 clearGestionaleSyncScopesForTests();
 resetGestionaleDirtyStateForTests();
+resetOperationalSessionWarmupForTests();
 
 registerGestionaleSyncScope({
   scopeId: "lav",
@@ -54,7 +59,20 @@ try {
   assert.equal(dirty.dirtyEntries.length, 1);
   assert.equal(dirty.dirtyEntries[0]?.entityId, "42");
 
+  beginOperationalSessionWarmup();
+  const warmup = resolveSyncEffects({
+    source: "realtime",
+    tables: ["lavorazioni"],
+    entityIdByTable: new Map([["lavorazioni", "42"]]),
+    cabEvents: [],
+    flag: "pilot_lavorazioni",
+  });
+  assert.deepEqual(warmup.invalidateTables, ["lavorazioni"]);
+  assert.equal(warmup.dirtyEntries.length, 0);
+  resetOperationalSessionWarmupForTests();
+
   clearGestionaleSyncScopesForTests();
+  resetOperationalSessionWarmupForTests();
   registerGestionaleSyncScope({
     scopeId: "lav-detail",
     domain: "lavorazioni",
@@ -94,6 +112,7 @@ try {
   assert.ok(ALWAYS_LIVE_TABLES.has("profiles"));
 } finally {
   clearGestionaleSyncScopesForTests();
+  resetOperationalSessionWarmupForTests();
   if (prev === undefined) delete process.env.NEXT_PUBLIC_GESTIONALE_DIRTY_SYNC;
   else process.env.NEXT_PUBLIC_GESTIONALE_DIRTY_SYNC = prev;
   setGestionaleDirtySyncModeRuntime(resolveGestionaleDirtySyncMode());

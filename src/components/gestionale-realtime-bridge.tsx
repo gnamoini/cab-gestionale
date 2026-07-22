@@ -42,6 +42,10 @@ import {
   consumeOperationalVersionPoll,
   resetOperationalVersionBaseline,
 } from "@/lib/sync/operational-data-version";
+import {
+  beginOperationalSessionWarmup,
+  isOperationalSessionWarmingUp,
+} from "@/lib/sync/operational-session-warmup";
 import { refetchActiveOperationalSnapshot } from "@/lib/sync/gestionale-snapshot-recovery";
 import { SyncTransportController } from "@/src/lib/runtime/sync/sync-transport-controller";
 import { invalidateRbacTruthClient } from "@/src/lib/rbac/invalidate-rbac-truth";
@@ -89,6 +93,8 @@ export function GestionaleRealtimeBridge() {
   useEffect(() => {
     if (!authReady || !isSupabasePublicEnvConfigured()) return;
 
+    beginOperationalSessionWarmup();
+
     let cancelled = false;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     let remoteSettingsNotifyTimer: ReturnType<typeof setTimeout> | null = null;
@@ -113,6 +119,11 @@ export function GestionaleRealtimeBridge() {
             return;
           }
           if (drifted.length === 0) return;
+
+          if (isOperationalSessionWarmingUp()) {
+            refetchActiveOperationalSnapshot(qc, { onlyActive: true });
+            return;
+          }
 
           if (isGestionaleDirtySyncEnabled()) {
             markDirtyForOperationalTables(drifted);

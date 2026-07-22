@@ -29,6 +29,7 @@ import { reconcileGestionaleCabEvents, type ReconcileSource } from "@/lib/sync/g
 import { LAVORAZIONI_SCHEDE_STORE_CHANGED } from "@/lib/schede/schede-store-events";
 import { getGestionaleDirtySyncMode } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
 import { markGestionaleDirty, clearGestionaleDirty } from "@/lib/sync/gestionale-dirty-state";
+import { shouldSkipOperationalDirtyMark } from "@/lib/sync/operational-dirty-mark-gate";
 import { resolveSyncEffects } from "@/lib/sync/gestionale-sync-policy";
 import { incrementSyncMetric } from "@/lib/sync/gestionale-sync-metrics";
 import { resolveDomainForTable } from "@/lib/sync/gestionale-sync-scope";
@@ -260,7 +261,10 @@ export function dispatchGestionaleAction(
 
     if (resolved.dirtyEntries.length > 0 && isDocumentVisible()) {
       for (const entry of resolved.dirtyEntries) {
-        if (shouldSuppressRemoteCacheInvalidation(entry.table, entry.entityId ?? undefined)) {
+        if (
+          shouldSkipOperationalDirtyMark(entry.table, entry.entityId ?? undefined) ||
+          shouldSuppressRemoteCacheInvalidation(entry.table, entry.entityId ?? undefined)
+        ) {
           continue;
         }
         markGestionaleDirty(entry);
