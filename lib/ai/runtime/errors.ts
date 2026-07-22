@@ -20,6 +20,11 @@ const MESSAGES: Record<AiErrorCode, string> = {
   AI_QUOTA_EXCEEDED: "Quota provider esaurita. Riprova più tardi o usa una chiave alternativa.",
   AI_PROVIDER_DOWN: "Provider AI temporaneamente non raggiungibile. Riprova tra poco.",
   AI_TIMEOUT: "Timeout durante l'analisi AI. Riduci il documento o riprova.",
+  AI_SCHEMA_VALIDATION: "Risposta AI non conforme allo schema atteso. Riprova con un documento più nitido.",
+  AI_STORAGE_ERROR: "Accesso al file in storage non riuscito durante l'analisi.",
+  AI_DATABASE_ERROR: "Salvataggio dati analisi non riuscito.",
+  AI_MODEL_UNAVAILABLE: "Modello Gemini non disponibile per questa chiave API.",
+  AI_PAYLOAD_TOO_LARGE: "Documento troppo grande per l'analisi AI.",
   AI_UNKNOWN_ERROR: "Errore imprevisto durante l'elaborazione AI.",
 };
 
@@ -27,14 +32,109 @@ export function aiErrorMessage(code: AiErrorCode): string {
   return MESSAGES[code];
 }
 
-export function classifyAiError(error: unknown): AiErrorCode {
-  const text = error instanceof Error ? error.message : String(error);
+function readErrorText(error: unknown): { text: string; upper: string; name: string; status?: number } {
+  const text =
+    error instanceof Error
+      ? error.message
+      : error && typeof error === "object" && "message" in error
+        ? String((error as { message?: unknown }).message ?? "")
+        : String(error);
   const upper = text.toUpperCase();
-  const name = error instanceof Error ? error.name : "";
+  const name =
+    error instanceof Error
+      ? error.name
+      : error && typeof error === "object" && "name" in error
+        ? String((error as { name?: unknown }).name ?? "")
+        : "";
+  const status =
+    error && typeof error === "object" && "status" in error && typeof (error as { status?: unknown }).status === "number"
+      ? (error as { status: number }).status
+      : error && typeof error === "object" && "statusCode" in error && typeof (error as { statusCode?: unknown }).statusCode === "number"
+        ? (error as { statusCode: number }).statusCode
+        : undefined;
+  return { text, upper, name, status };
+}
 
-  if (name === "TimeoutError" || upper.includes("TIMEOUT") || upper.includes("ABORT")) {
+function classifyHttpStatus(status: number | undefined): AiErrorCode | null {
+  if (status == null) return null;
+  if (status === 401 || status === 403) return "AI_KEY_INVALID";
+  if (status === 429) return "AI_QUOTA_EXCEEDED";
+  if (status === 404) return "AI_MODEL_UNAVAILABLE";
+  if (status === 413) return "AI_PAYLOAD_TOO_LARGE";
+  if (status >= 500) return "AI_PROVIDER_DOWN";
+  return null;
+}
+
+function isPostgrestError(error: unknown): boolean {
+  return Boolean(error && typeof error === "object" && "code" in error && "message" in error && "details" in error);
+}
+
+export function classifyAiError(error: unknown): AiErrorCode {
+  if (error instanceof AiRuntimeError) return error.code;
+
+  const { text, upper, name, status } = readErrorText(error);
+  const fromStatus = classifyHttpStatus(status);
+  if (fromStatus) return fromStatus;
+
+  if (
+    name === "AbortError" ||
+    name === "TimeoutError" ||
+    upper.includes("TIMEOUT") ||
+    upper.includes("ABORT") ||
+    upper.includes("FUNCTION_INVOCATION_TIMEOUT") ||
+    upper.includes("GATEWAY TIMEOUT")
+  ) {
     return "AI_TIMEOUT";
   }
+
+  if (
+    name === "NoObjectGeneratedError" ||
+    name === "AI_TypeValidationError" ||
+    name === "TypeValidationError" ||
+    upper.includes("NO OBJECT GENERATED") ||
+    upper.includes("TYPE VALIDATION") ||
+    upper.includes("FAILED TO PARSE") ||
+    (upper.includes("JSON") && upper.includes("SCHEMA"))
+  ) {
+    return "AI_SCHEMA_VALIDATION";
+  }
+
+  if (
+    name === "AI_APICallError" ||
+    name === "GoogleGenerativeAIFetchError" ||
+    name === "GoogleApiError" ||
+    name === "FetchError" ||
+    upper.includes("FETCH FAILED")
+  ) {
+    if (upper.includes("401") || upper.includes("INVALID API KEY") || upper.includes("UNAUTHENTICATED")) {
+      return "AI_KEY_INVALID";
+    }
+    if (upper.includes("403") || upper.includes("PERMISSION_DENIED") || upper.includes("FORBIDDEN")) {
+      return "AI_KEY_INVALID";
+    }
+    if (upper.includes("429") || upper.includes("RESOURCE_EXHAUSTED") || upper.includes("QUOTA")) {
+      return "AI_QUOTA_EXCEEDED";
+    }
+    if (upper.includes("RATE LIMIT") || upper.includes("TOO MANY REQUESTS")) {
+      return "AI_RATE_LIMIT";
+    }
+    if (upper.includes("NO LONGER AVAILABLE") || upper.includes("MODELS/GEMINI")) {
+      return "AI_MODEL_UNAVAILABLE";
+    }
+    if (upper.includes("PAYLOAD TOO LARGE") || upper.includes("REQUEST ENTITY TOO LARGE")) {
+      return "AI_PAYLOAD_TOO_LARGE";
+    }
+    return "AI_PROVIDER_DOWN";
+  }
+
+  if (name === "StorageError" || upper.includes("STORAGE") && (upper.includes("NOT FOUND") || upper.includes("PERMISSION"))) {
+    return "AI_STORAGE_ERROR";
+  }
+
+  if (isPostgrestError(error) || name === "PostgrestError" || upper.includes("PGRST")) {
+    return "AI_DATABASE_ERROR";
+  }
+
   if (upper.includes("401") || upper.includes("INVALID API KEY") || upper.includes("UNAUTHENTICATED")) {
     return "AI_KEY_INVALID";
   }
@@ -47,16 +147,29 @@ export function classifyAiError(error: unknown): AiErrorCode {
   if (upper.includes("RATE LIMIT") || upper.includes("TOO MANY REQUESTS")) {
     return "AI_RATE_LIMIT";
   }
+  if (upper.includes("NO LONGER AVAILABLE") || upper.includes("MODEL NOT FOUND")) {
+    return "AI_MODEL_UNAVAILABLE";
+  }
+  if (upper.includes("PAYLOAD TOO LARGE") || upper.includes("TOO LARGE")) {
+    return "AI_PAYLOAD_TOO_LARGE";
+  }
   if (
     upper.includes("ECONNREFUSED") ||
     upper.includes("ENOTFOUND") ||
     upper.includes("ETIMEDOUT") ||
-    upper.includes("FETCH FAILED") ||
     upper.includes("NETWORK") ||
     upper.includes("UNAVAILABLE")
   ) {
     return "AI_PROVIDER_DOWN";
   }
+
+  console.warn(
+    JSON.stringify({
+      event: "UNCLASSIFIED_ERROR",
+      errorName: name || null,
+      errorMessage: text.slice(0, 500),
+    }),
+  );
   return "AI_UNKNOWN_ERROR";
 }
 
@@ -67,5 +180,18 @@ export function isFailoverEligible(code: AiErrorCode): boolean {
     code === "AI_KEY_INVALID" ||
     code === "AI_PROVIDER_DOWN" ||
     code === "AI_TIMEOUT"
+  );
+}
+
+export function logUnclassifiedAiError(error: unknown, context: Record<string, string | number | null | undefined>): void {
+  const { text, name } = readErrorText(error);
+  console.warn(
+    JSON.stringify({
+      event: "UNCLASSIFIED_ERROR",
+      errorName: name || null,
+      errorMessage: text.slice(0, 500),
+      stack: error instanceof Error ? (error.stack?.slice(0, 800) ?? null) : null,
+      ...context,
+    }),
   );
 }

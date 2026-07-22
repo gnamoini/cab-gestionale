@@ -808,6 +808,11 @@ export function GlobalSelect(props: GlobalSelectProps) {
         return;
       }
     }
+    if (activeIndex < 0 && !editSessionRef.current.modified) {
+      closeAndReset();
+      scheduleFocusNextGestionaleField(inputRef.current);
+      return;
+    }
     if (suggestions.length > 0) {
       const idx = activeIndex >= 0 && activeIndex < suggestions.length ? activeIndex : 0;
       if (itemsMode) selectItem(suggestions[idx] as ListSelectItem);
@@ -838,6 +843,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
     items,
     strictFromList,
     runAtomicSelect,
+    closeAndReset,
   ]);
 
   const listboxKeyboard = useSelectorListboxKeyboard({

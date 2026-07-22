@@ -22,12 +22,15 @@ import {
   persistForecastForConfig,
 } from "@/lib/maintenance-plans/recompute-forecast-for-config";
 import { resolvePlansForMezzo } from "@/lib/maintenance-plans/resolve-plans-for-mezzo";
+import { primaryIntervalFromTriggers } from "@/lib/maintenance-plans/maintenance-trigger-helpers";
 import {
   currentValueForInterval,
   formatIntervalLabel,
   type MezzoMetering,
 } from "@/lib/maintenance-plans/resolve-mezzo-metering";
 import type {
+  BulkAssignPresetResult,
+  MezzoWithoutPresetRow,
   RegisterMaintenanceExecutionInput,
   TagliandiOverviewRow,
   UpsertVehicleMaintenanceConfigInput,
@@ -580,6 +583,7 @@ export const maintenanceEngineV2Service = {
         return {
           configId: c.id,
           mezzoId: c.mezzo_id,
+          presetId: c.preset_id,
           numeroScuderia: (mezzo?.numero_scuderia as string | null) ?? null,
           targa: (mezzo?.targa as string | null) ?? null,
           attrezzaturaLabel: [mezzo?.marca_telaio, mezzo?.modello_telaio].filter(Boolean).join(" ") || "—",
@@ -690,6 +694,174 @@ export const maintenanceEngineV2Service = {
       );
     } catch (e) {
       return serviceFailFromError(e, [], { entity: "mezzo", action: "read" });
+    }
+  },
+
+  async listMezziWithoutPreset(): Promise<ServiceResult<MezzoWithoutPresetRow[]>> {
+    try {
+      const client = await sb();
+      const [mezziRes, configsRes] = await Promise.all([
+        client
+          .from("mezzi")
+          .select("id, targa, numero_scuderia, marca_telaio, modello_telaio, tipo_attrezzatura, meta")
+          .is("deleted_at", null),
+        client
+          .from("vehicle_maintenance_configs")
+          .select("mezzo_id")
+          .eq("is_active", true)
+          .is("deleted_at", null),
+      ]);
+      if (mezziRes.error) return err(humanizeGestionaleError(mezziRes.error.message, { entity: "mezzo", action: "read" }));
+      if (configsRes.error) return err(humanizeGestionaleError(configsRes.error.message, { entity: "mezzo", action: "read" }));
+
+      const withConfig = new Set((configsRes.data ?? []).map((c) => c.mezzo_id as string));
+      const rows: MezzoWithoutPresetRow[] = (mezziRes.data ?? [])
+        .filter((m) => !withConfig.has(m.id as string))
+        .map((m) => ({
+          mezzoId: m.id as string,
+          numeroScuderia: (m.numero_scuderia as string | null) ?? null,
+          targa: (m.targa as string | null) ?? null,
+          attrezzaturaLabel: [m.marca_telaio, m.modello_telaio].filter(Boolean).join(" ") || "—",
+          tipoAttrezzatura: (m.tipo_attrezzatura as string) ?? "",
+        }))
+        .sort((a, b) => (a.numeroScuderia ?? "").localeCompare(b.numeroScuderia ?? "", "it", { numeric: true }));
+
+      return success(rows);
+    } catch (e) {
+      return serviceFailFromError<MezzoWithoutPresetRow[]>(e, [], { entity: "mezzo", action: "read" });
+    }
+  },
+
+  async bulkAssignPresetToMezzi(input: {
+    presetId: string;
+    mezzoIds: string[];
+    replaceExisting?: boolean;
+  }): Promise<ServiceResult<BulkAssignPresetResult>> {
+    const replaceExisting = input.replaceExisting !== false;
+    const skipped: BulkAssignPresetResult["skipped"] = [];
+    let assigned = 0;
+
+    try {
+      const [plansRes, catalogRes] = await Promise.all([
+        maintenancePlansService.listPlans(),
+        maintenancePlansService.listTipoCatalog(),
+      ]);
+      if (!plansRes.success) return err(plansRes.error ?? "Errore piani.");
+      const plan = (plansRes.data ?? []).find((p) => p.id === input.presetId);
+      if (!plan) return err("Preset non trovato.");
+      if (plan.status !== "active") return err("Il preset non è attivo.");
+
+      const catalog = catalogRes.data ?? [];
+      const triggers = plan.triggerGroups[0]?.triggers ?? [
+        { triggerType: plan.intervalType, threshold: plan.intervalValue, priority: 0 },
+      ];
+      const primary = primaryIntervalFromTriggers(triggers);
+      const client = await sb();
+      const { data: user } = await client.auth.getUser();
+      const uid = user.user?.id ?? null;
+
+      for (const mezzoId of input.mezzoIds) {
+        const { data: mezzo, error: mezzoErr } = await client
+          .from("mezzi")
+          .select("id, tipo_attrezzatura, meta, marca_telaio, modello_telaio")
+          .eq("id", mezzoId)
+          .maybeSingle();
+        if (mezzoErr || !mezzo) {
+          skipped.push({ mezzoId, reason: "Mezzo non trovato" });
+          continue;
+        }
+
+        const tipo = (mezzo.tipo_attrezzatura as string) ?? "";
+        const applicable = resolvePlansForMezzo({ tipoAttrezzatura: tipo, catalog, plans: [plan] });
+        if (applicable.length === 0) {
+          skipped.push({ mezzoId, reason: "Tipo attrezzatura non compatibile" });
+          continue;
+        }
+
+        if (replaceExisting) {
+          const { data: existing } = await client
+            .from("vehicle_maintenance_configs")
+            .select("id, preset_id")
+            .eq("mezzo_id", mezzoId)
+            .eq("maintenance_kind", plan.maintenanceKind)
+            .eq("is_active", true)
+            .is("deleted_at", null);
+          for (const cfg of existing ?? []) {
+            if (cfg.preset_id === input.presetId) continue;
+            await client
+              .from("vehicle_maintenance_configs")
+              .update({ deleted_at: new Date().toISOString(), is_active: false })
+              .eq("id", cfg.id as string);
+            await writeMaintenanceAuditEvent(client, {
+              entity: "config",
+              entityId: cfg.id as string,
+              action: MAINTENANCE_AUDIT_ACTIONS.PRESET_REPLACED_ON_MEZZO,
+              oldValue: { preset_id: cfg.preset_id },
+              newValue: { preset_id: input.presetId },
+              createdBy: uid,
+            });
+          }
+        }
+
+        const { data: existingSame } = await client
+          .from("vehicle_maintenance_configs")
+          .select("id")
+          .eq("mezzo_id", mezzoId)
+          .eq("preset_id", input.presetId)
+          .eq("is_active", true)
+          .is("deleted_at", null)
+          .maybeSingle();
+        if (existingSame) {
+          skipped.push({ mezzoId, reason: "Preset già assegnato" });
+          continue;
+        }
+
+        const upsertRes = await maintenanceEngineV2Service.upsertMezzoConfig({
+          mezzoId,
+          presetId: input.presetId,
+          maintenanceKind: plan.maintenanceKind,
+          isActive: true,
+          intervalType: primary.intervalType,
+          intervalValue: primary.intervalValue,
+          label: plan.nome,
+          activatedAt: new Date().toISOString().slice(0, 10),
+        });
+        if (!upsertRes.success) {
+          skipped.push({ mezzoId, reason: upsertRes.error ?? "Assegnazione fallita" });
+          continue;
+        }
+
+        const meta = (mezzo.meta as Record<string, unknown>) ?? {};
+        if (meta.tagliandi !== true) {
+          await client
+            .from("mezzi")
+            .update({ meta: { ...meta, tagliandi: true } })
+            .eq("id", mezzoId);
+        }
+
+        assigned++;
+      }
+
+      await writeModificaLog(client, {
+        entita: "maintenance_plans",
+        entita_id: input.presetId,
+        azione: "UPDATE",
+        payload: auditSnapshot(
+          { assigned, skipped: skipped.length, mezzo_ids: input.mezzoIds },
+          auditContext("bulk assign preset"),
+        ),
+      });
+      await writeMaintenanceAuditEvent(client, {
+        entity: "preset",
+        entityId: input.presetId,
+        action: MAINTENANCE_AUDIT_ACTIONS.PRESET_BULK_ASSIGNED,
+        newValue: { assigned, skipped, mezzoIds: input.mezzoIds },
+        createdBy: uid,
+      });
+
+      return success({ assigned, skipped });
+    } catch (e) {
+      return serviceFailFromError<BulkAssignPresetResult>(e, { assigned: 0, skipped: [] }, { entity: "mezzo", action: "update" });
     }
   },
 };

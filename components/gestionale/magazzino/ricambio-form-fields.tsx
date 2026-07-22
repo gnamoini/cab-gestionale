@@ -17,7 +17,10 @@ import {
   normalizeMarkupInputString,
   syncPrezzoVenditaInForm,
 } from "@/lib/magazzino/form";
-import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
+import {
+  prezzoVenditaDaListinoEMarkup,
+  resolveListinoMarkupBase,
+} from "@/lib/magazzino/calculations";
 import { applyRicambioCodiceInputChange } from "@/lib/magazzino/ricambio-codice";
 import {
   formatRicambioUnitaMisuraLabel,
@@ -259,8 +262,9 @@ export function RicambioFormFields({
     const scontoOE = Math.min(100, Math.max(0, parseFloat(form.scontoFornitoreOriginale) || 0));
     const markupPct = clampMarkupPercentuale(parseFloat(String(form.markupPercentuale).replace(",", ".")) || 0);
     const prezzoVendita = Math.max(0, parseFloat(String(form.prezzoVendita).replace(",", ".")) || 0);
-    const prezzoVenditaPrevisto = prezzoVenditaDaListinoEMarkup(listinoOE, markupPct);
     const fornitoriAlternativi = fornitoriAlternativiFromFormRows(form.fornitoriAlternativi);
+    const markupBase = resolveListinoMarkupBase(listinoOE, fornitoriAlternativi);
+    const prezzoVenditaPrevisto = prezzoVenditaDaListinoEMarkup(markupBase, markupPct);
     return { listinoOE, scontoOE, markupPct, prezzoVendita, prezzoVenditaPrevisto, fornitoriAlternativi };
   }, [
     form.prezzoFornitoreOriginale,
@@ -289,7 +293,7 @@ export function RicambioFormFields({
 
   const onFornitoriAlternativiChange = useCallback(
     (fornitoriAlternativi: RicambioFormState["fornitoriAlternativi"]) =>
-      setForm((f) => ({ ...f, fornitoriAlternativi })),
+      setForm((f) => syncPrezzoVenditaInForm({ ...f, fornitoriAlternativi })),
     [setForm],
   );
 

@@ -5,6 +5,7 @@ import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import { nextPreventivoNumeroForLavorazione } from "@/lib/preventivi/preventivo-numero-lavorazione";
 import { nextPreventivoId } from "@/lib/preventivi/preventivi-records-from-cache";
 import { RICAMBIO_UNITA_MISURA_DEFAULT } from "@/lib/magazzino/ricambio-unita-misura";
+import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
 import { PREVENTIVO_TIPO_DOCUMENTO_DEFAULT } from "@/lib/preventivi/preventivi-tipo-documento";
 import {
@@ -109,7 +110,7 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
     return {
       ricambioId: r.ricambioId,
       descrizione: mag?.descrizione?.trim() || r.ricambioNome.trim(),
-      codice: mag?.codiceFornitoreOriginale?.trim() || r.codice.trim(),
+      codice: ricambioCodiceForUi(mag?.codiceFornitoreOriginale) || r.codice.trim(),
     };
   });
 

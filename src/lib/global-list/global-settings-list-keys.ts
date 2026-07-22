@@ -17,6 +17,7 @@ import type { CSSProperties } from "react";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import { mergeFornitoriOrdineOptions } from "@/lib/magazzino/fornitori-ordine-options";
+import { registerMarcaInMagazzinoMaster } from "@/lib/magazzino/marca-fornitore-sconto";
 import type { CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
 import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
 import type { AppSettingsUpsertInput } from "@/src/services/settings.service";
@@ -291,6 +292,32 @@ export function buildAppendGlobalListUpsert(
             module: CAB_SETTINGS_MODULE.magazzino,
             key: CAB_SETTINGS_KEY.master,
             value: { ...resolved.magazzinoMaster, fornitori: next },
+          },
+        };
+      }
+      if (listKey === "magazzino:marche") {
+        const hit = resolved.magazzinoMaster.marche.find((x) => normKey(x) === normKey(value));
+        if (hit) {
+          return {
+            ok: true,
+            canonicalValue: hit,
+            upsert: {
+              module: CAB_SETTINGS_MODULE.magazzino,
+              key: CAB_SETTINGS_KEY.master,
+              value: { ...resolved.magazzinoMaster },
+            },
+          };
+        }
+        const nextMaster = registerMarcaInMagazzinoMaster(resolved.magazzinoMaster, value);
+        const canonical =
+          nextMaster.marche.find((x) => normKey(x) === normKey(value)) ?? value.trim();
+        return {
+          ok: true,
+          canonicalValue: canonical,
+          upsert: {
+            module: CAB_SETTINGS_MODULE.magazzino,
+            key: CAB_SETTINGS_KEY.master,
+            value: nextMaster,
           },
         };
       }

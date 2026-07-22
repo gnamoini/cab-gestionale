@@ -12,6 +12,7 @@ import { isGeminiQuotaErrorMessage, parseGeminiRetryAfterSec } from "@/lib/ai/ge
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -45,7 +46,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   const t0 = performance.now();
   const result = isDocumentCaptureV41Enabled()
-    ? await analyzeDocumentCaptureV41(id, userId ?? "system")
+    ? await analyzeDocumentCaptureV41(id, userId ?? "system", { correlationId })
     : await analyzeDocumentCapture(id);
   traceDocumentCaptureOperation({
     operation: "analyze",
@@ -82,6 +83,9 @@ export async function POST(request: Request, context: RouteContext) {
         error: result.message,
         code: result.code,
         errorType: "errorType" in result ? result.errorType : undefined,
+        phase: "phase" in result ? result.phase : undefined,
+        detail: "detail" in result ? result.detail : undefined,
+        traceId: "traceId" in result ? result.traceId : undefined,
       }),
       { status, headers },
     );

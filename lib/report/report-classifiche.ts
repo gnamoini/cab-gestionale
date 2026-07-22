@@ -1,6 +1,7 @@
 import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { displayRicambioCodice } from "@/lib/magazzino/ricambio-codice";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import { compareBaselineValue, deltaPct, isoInRange, type DateRange, type ReportCompareMode } from "@/lib/report/date-ranges";
@@ -136,7 +137,7 @@ export function buildTopRicambiPeriodo(
     if (v.entrate === 0 && v.uscite === 0) continue;
     out.push({
       id,
-      codice: p.codiceFornitoreOriginale ?? "—",
+      codice: displayRicambioCodice(p.codiceFornitoreOriginale),
       nome: p.descrizione ?? "—",
       marca: p.marca ?? "—",
       qtaEntrata: Math.round(v.entrate * 100) / 100,

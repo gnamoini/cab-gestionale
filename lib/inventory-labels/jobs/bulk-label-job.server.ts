@@ -11,9 +11,16 @@ import { ensureActiveTokensForEntities } from "@/lib/inventory-labels/domain/tok
 import { labelPayloadFromMagazzinoRow, magazzinoRicambioEntityType } from "@/lib/inventory-labels/domain/ricambio-payload.server";
 import { renderMultiLabelPdfWithPipeline } from "@/lib/inventory-labels/render/pdf";
 import {
+  buildExpandedPdfSlots,
   renderBulkLabelPdfWithCache,
+  uniqueBulkEntityIds,
   type BulkLabelItem,
 } from "@/lib/inventory-labels/render/bulk-assembly.server";
+import {
+  parseJobBulkItems,
+  totalBulkLabelCount,
+  type BulkLabelCompactItem,
+} from "@/lib/inventory-labels/domain/bulk-items";
 import { LabelPdfTimeoutError } from "@/lib/inventory-labels/render/pdf-timeout";
 import {
   auditBulkPdfCompleted,
@@ -37,10 +44,11 @@ export type BuildBulkLabelItemsResult = {
 
 export async function buildBulkLabelItems(
   sb: SupabaseClient,
-  entityIds: string[],
+  compact: readonly BulkLabelCompactItem[],
   userId: string,
   origin: string,
 ): Promise<BuildBulkLabelItemsResult> {
+  const entityIds = uniqueBulkEntityIds(compact);
   const { data: rows, error } = await sb
     .from("magazzino_ricambi")
     .select(MAGAZZINO_RICAMBI_COLUMNS)
@@ -77,7 +85,8 @@ async function updateJobProgress(sb: SupabaseClient, jobId: string, progress: nu
 async function renderBulkPdf(
   sb: SupabaseClient,
   template: NonNullable<ReturnType<typeof getLabelTemplate>>,
-  items: BulkLabelItem[],
+  compact: BulkLabelCompactItem[],
+  uniqueItems: BulkLabelItem[],
   preset: string,
   includeBarcode: boolean,
   jobId: string | null,
@@ -86,7 +95,7 @@ async function renderBulkPdf(
   const heartbeat = jobId ? () => touchLabelJobHeartbeat(sb, jobId) : async () => {};
 
   try {
-    return await renderBulkLabelPdfWithCache(sb, template, items, preset, {
+    return await renderBulkLabelPdfWithCache(sb, template, compact, uniqueItems, preset, {
       includeBarcode,
       chunkSize: 25,
       onChunkHeartbeat: heartbeat,
@@ -99,8 +108,8 @@ async function renderBulkPdf(
     console.warn("[label-pdf] cache assembly failed, fallback pipeline", {
       message: cacheError instanceof Error ? cacheError.message : String(cacheError),
     });
-    const pipelineItems = items.map((it) => ({ payload: it.payload, qrUrl: it.qrUrl }));
-    const result = await renderMultiLabelPdfWithPipeline(template, pipelineItems, {
+    const slots = buildExpandedPdfSlots(compact, uniqueItems, template, preset, includeBarcode);
+    const result = await renderMultiLabelPdfWithPipeline(template, slots, {
       includeBarcode,
       onProgress: async (done, total) => {
         await heartbeat();
@@ -110,13 +119,14 @@ async function renderBulkPdf(
     return {
       ...result,
       cacheHitCount: 0,
-      cacheMissCount: items.length,
+      cacheMissCount: uniqueItems.length,
+      uniqueRenderCount: uniqueItems.length,
     };
   }
 }
 
 export async function createBulkLabelJob(input: {
-  entityIds: string[];
+  items: BulkLabelCompactItem[];
   preset: string;
   includeBarcode?: boolean;
   userId: string;
@@ -125,12 +135,14 @@ export async function createBulkLabelJob(input: {
   const sb = await createSupabaseServerUserClient();
   const now = new Date().toISOString();
   const storedPreset = formatLabelJobPreset(input.preset, input.includeBarcode === true);
+  const entityIds = uniqueBulkEntityIds(input.items);
   const { data, error } = await sb
     .from("label_generation_jobs")
     .insert({
       status: "pending",
       progress: 0,
-      entity_ids: input.entityIds,
+      entity_ids: entityIds,
+      bulk_items: input.items,
       preset: storedPreset,
       format: "pdf",
       created_by: input.userId,
@@ -147,11 +159,11 @@ export async function createBulkLabelJob(input: {
 
 async function processBulkLabelJob(
   jobId: string,
-  input: { entityIds: string[]; preset: string; includeBarcode?: boolean; userId: string; origin: string },
+  input: { items: BulkLabelCompactItem[]; preset: string; includeBarcode?: boolean; userId: string; origin: string },
 ): Promise<void> {
   const sb = createSupabaseServerServiceClient();
   const t0 = performance.now();
-  const count = input.entityIds.length;
+  const totalLabels = totalBulkLabelCount(input.items);
 
   try {
     const now = new Date().toISOString();
@@ -159,20 +171,21 @@ async function processBulkLabelJob(
       .from("label_generation_jobs")
       .update({ status: "running", progress: 0, started_at: now, heartbeat_at: now })
       .eq("id", jobId);
-    await auditBulkPdfStarted(sb, { userId: input.userId, count, mode: "async", jobId });
+    await auditBulkPdfStarted(sb, { userId: input.userId, count: totalLabels, mode: "async", jobId });
 
     const { preset, includeBarcode } = parseLabelJobPreset(input.preset);
     const template = getLabelTemplate(preset);
     if (!template) throw new Error("Template non valido");
 
-    const { items } = await buildBulkLabelItems(sb, input.entityIds, input.userId, input.origin);
+    const { items: uniqueItems } = await buildBulkLabelItems(sb, input.items, input.userId, input.origin);
     await touchLabelJobHeartbeat(sb, jobId, { progress: 5 });
-    if (!items.length) throw new Error("Nessun ricambio valido per la stampa");
+    if (!uniqueItems.length) throw new Error("Nessun ricambio valido per la stampa");
 
     const result = await renderBulkPdf(
       sb,
       template,
-      items,
+      input.items,
+      uniqueItems,
       preset,
       includeBarcode,
       jobId,
@@ -184,7 +197,10 @@ async function processBulkLabelJob(
 
     await touchLabelJobHeartbeat(sb, jobId, { progress: 95 });
 
-    const hash = createHash("sha256").update(input.entityIds.join(",")).digest("hex").slice(0, 16);
+    const hash = createHash("sha256")
+      .update(JSON.stringify(input.items))
+      .digest("hex")
+      .slice(0, 16);
     const isZip = result.kind === "zip";
     const path = await uploadBulkLabelJobResult({
       jobId,
@@ -209,14 +225,14 @@ async function processBulkLabelJob(
 
     await auditBulkPdfCompleted(sb, {
       userId: input.userId,
-      count,
+      count: totalLabels,
       mode: "async",
       durationMs,
       pdfBytes: result.bytes.byteLength,
       pipeline: result.pipeline,
       jobId,
       metrics: buildLabelPdfMetricsPayload({
-        labelCount: items.length,
+        labelCount: totalLabels,
         cacheHitCount: result.cacheHitCount,
         cacheMissCount: result.cacheMissCount,
         durationMs,
@@ -243,14 +259,14 @@ async function processBulkLabelJob(
     const durationMs = Math.round(performance.now() - t0);
     await auditBulkPdfFailed(sb, {
       userId: input.userId,
-      count,
+      count: totalLabels,
       mode: "async",
       durationMs,
       errorCode,
       message,
       jobId,
       metrics: buildLabelPdfMetricsPayload({
-        labelCount: count,
+        labelCount: totalLabels,
         cacheHitCount: 0,
         cacheMissCount: 0,
         durationMs,
@@ -281,7 +297,10 @@ export async function retryBulkLabelJob(
   if (job.status !== "failed" || job.error_code !== "LABEL_JOB_STUCK") {
     throw new Error("Retry consentito solo per job bloccati");
   }
-  const entityIds = Array.isArray(job.entity_ids) ? (job.entity_ids as string[]) : [];
+  const items =
+    parseJobBulkItems(job.bulk_items).length > 0
+      ? parseJobBulkItems(job.bulk_items)
+      : parseJobBulkItems(job.entity_ids);
   const { preset, includeBarcode } = parseLabelJobPreset(String(job.preset ?? DEFAULT_LABEL_PRESET));
   const now = new Date().toISOString();
   await sb
@@ -299,7 +318,7 @@ export async function retryBulkLabelJob(
     .eq("id", jobId);
   waitUntil(
     processBulkLabelJob(jobId, {
-      entityIds,
+      items,
       preset: formatLabelJobPreset(preset, includeBarcode),
       userId: input.userId,
       origin: input.origin,
@@ -308,7 +327,7 @@ export async function retryBulkLabelJob(
 }
 
 export async function renderBulkLabelPdfSync(input: {
-  entityIds: string[];
+  items: BulkLabelCompactItem[];
   preset: string;
   includeBarcode?: boolean;
   userId: string;
@@ -321,31 +340,32 @@ export async function renderBulkLabelPdfSync(input: {
   cacheHitCount: number;
   cacheMissCount: number;
   durationMs: number;
+  totalLabels: number;
 }> {
   const sb = await createSupabaseServerUserClient();
   const template = getLabelTemplate(input.preset);
   if (!template) throw new Error("Template non valido");
   const includeBarcode = input.includeBarcode === true;
+  const totalLabels = totalBulkLabelCount(input.items);
 
-  const { items, skippedIds } = await buildBulkLabelItems(sb, input.entityIds, input.userId, input.origin);
-  if (!items.length) throw new Error("Nessun ricambio valido");
+  const { items: uniqueItems, skippedIds } = await buildBulkLabelItems(sb, input.items, input.userId, input.origin);
+  if (!uniqueItems.length) throw new Error("Nessun ricambio valido");
 
   const t0 = performance.now();
-  const count = items.length;
-  await auditBulkPdfStarted(sb, { userId: input.userId, count, mode: "sync" });
+  await auditBulkPdfStarted(sb, { userId: input.userId, count: totalLabels, mode: "sync" });
 
   try {
-    const result = await renderBulkPdf(sb, template, items, input.preset, includeBarcode, null);
+    const result = await renderBulkPdf(sb, template, input.items, uniqueItems, input.preset, includeBarcode, null);
     const durationMs = Math.round(performance.now() - t0);
     await auditBulkPdfCompleted(sb, {
       userId: input.userId,
-      count,
+      count: totalLabels,
       mode: "sync",
       durationMs,
       pdfBytes: result.bytes.byteLength,
       pipeline: result.pipeline,
       metrics: buildLabelPdfMetricsPayload({
-        labelCount: count,
+        labelCount: totalLabels,
         cacheHitCount: result.cacheHitCount,
         cacheMissCount: result.cacheMissCount,
         durationMs,
@@ -363,6 +383,7 @@ export async function renderBulkLabelPdfSync(input: {
       cacheHitCount: result.cacheHitCount,
       cacheMissCount: result.cacheMissCount,
       durationMs,
+      totalLabels,
     };
   } catch (e) {
     const errorCode = e instanceof LabelPdfTimeoutError ? e.code : "LABEL_PDF_FAILED";
@@ -370,13 +391,13 @@ export async function renderBulkLabelPdfSync(input: {
     const durationMs = Math.round(performance.now() - t0);
     await auditBulkPdfFailed(sb, {
       userId: input.userId,
-      count,
+      count: totalLabels,
       mode: "sync",
       durationMs,
       errorCode,
       message,
       metrics: buildLabelPdfMetricsPayload({
-        labelCount: count,
+        labelCount: totalLabels,
         cacheHitCount: 0,
         cacheMissCount: 0,
         durationMs,

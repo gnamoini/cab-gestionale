@@ -1,14 +1,23 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { copyLastSchedaIngresso } from "@/lib/domain/scheda-ingresso/copy-last-scheda";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
-import { mergeSchedaIngressoFields } from "@/lib/schede/scheda-ingresso-reuse";
+import { mergeSchedaIngressoWithMezzoPriority } from "@/lib/schede/merge-scheda-ingresso-with-mezzo-priority";
+import {
+  createLinkedMezzoSnapshot,
+  emptySchedaIngressoMezzoLinkState,
+  hasLinkedMezzoFieldConflict,
+  resolvePreferredMezzoIdForSave,
+  type LinkedMezzoSnapshot,
+  type SchedaIngressoMezzoLinkState,
+} from "@/lib/schede/scheda-ingresso-mezzo-link-state";
+import type { SchedaIngressoIdentField } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 
-export function useSchedaIngressoMezzoPrompt({
+export function useSchedaIngressoMezzoLink({
   fields,
   setFields,
   mezzi,
@@ -25,51 +34,118 @@ export function useSchedaIngressoMezzoPrompt({
   storico?: readonly LavorazioneArchiviata[];
   excludeLavorazioneId?: string;
 }) {
-  const [promptMezzo, setPromptMezzo] = useState<MezzoGestito | null>(null);
-  const dismissedIds = useRef(new Set<string>());
-  const promptedIdRef = useRef<string | null>(null);
+  const [linkState, setLinkState] = useState<SchedaIngressoMezzoLinkState>(
+    emptySchedaIngressoMezzoLinkState,
+  );
+  const [activeMatchField, setActiveMatchField] = useState<SchedaIngressoIdentField | null>(null);
+  const [dismissedMezzoIds, setDismissedMezzoIds] = useState<Set<string>>(() => new Set());
 
-  const requestPrompt = useCallback((mezzo: MezzoGestito) => {
-    if (dismissedIds.current.has(mezzo.id)) return;
-    if (promptedIdRef.current === mezzo.id) return;
-    promptedIdRef.current = mezzo.id;
-    setPromptMezzo(mezzo);
+  const onExactMezzoMatch = useCallback(
+    (mezzo: MezzoGestito, field: SchedaIngressoIdentField) => {
+      if (dismissedMezzoIds.has(mezzo.id)) return;
+      if (linkState.status === "linked" && linkState.linkedSnapshot?.id === mezzo.id) return;
+      setActiveMatchField(field);
+      setLinkState({
+        status: "unconfirmed_match",
+        pendingMezzo: mezzo,
+        linkedSnapshot: linkState.linkedSnapshot,
+      });
+    },
+    [dismissedMezzoIds, linkState.linkedSnapshot, linkState.status],
+  );
+
+  const dismissPendingMatch = useCallback(() => {
+    const id = linkState.pendingMezzo?.id;
+    if (id) setDismissedMezzoIds((prev) => new Set(prev).add(id));
+    setActiveMatchField(null);
+    setLinkState((prev) => ({
+      ...prev,
+      status: prev.linkedSnapshot ? "linked" : "new",
+      pendingMezzo: null,
+    }));
+  }, [linkState.pendingMezzo?.id]);
+
+  const acceptLinkMezzo = useCallback(
+    (field: SchedaIngressoIdentField = activeMatchField ?? "matricola") => {
+      const mezzo = linkState.pendingMezzo;
+      if (!mezzo) return;
+      const snapshot = createLinkedMezzoSnapshot(mezzo, field);
+      const fromMezzo = buildSchedaIngressoFieldsFromMezzo(mezzo);
+      let next = mergeSchedaIngressoWithMezzoPriority(fields, { linkedMezzo: mezzo });
+      if (schedeStore) {
+        const copyResult = copyLastSchedaIngresso({
+          ident: { targa: next.targa, matricola: next.matricola, nScuderia: next.nScuderia },
+          mode: "merge-empty",
+          currentFields: next,
+          mezzi,
+          schedeStore,
+          attive,
+          storico,
+          excludeLavorazioneId,
+          linkedMezzo: mezzo,
+        });
+        if (copyResult.kind === "single") next = copyResult.fields;
+      } else {
+        next = mergeSchedaIngressoWithMezzoPriority(next, { linkedMezzo: mezzo });
+        void fromMezzo;
+      }
+      setFields(next);
+      setLinkState({
+        status: "linked",
+        pendingMezzo: null,
+        linkedSnapshot: snapshot,
+      });
+      setActiveMatchField(null);
+    },
+    [
+      activeMatchField,
+      attive,
+      excludeLavorazioneId,
+      fields,
+      linkState.pendingMezzo,
+      mezzi,
+      schedeStore,
+      setFields,
+      storico,
+    ],
+  );
+
+  const clearLink = useCallback(() => {
+    setLinkState(emptySchedaIngressoMezzoLinkState());
+    setActiveMatchField(null);
   }, []);
 
-  const dismissPrompt = useCallback(() => {
-    if (promptMezzo) dismissedIds.current.add(promptMezzo.id);
-    promptedIdRef.current = null;
-    setPromptMezzo(null);
-  }, [promptMezzo]);
-
-  const acceptAutofill = useCallback(() => {
-    if (!promptMezzo) return;
-    const fromMezzo = buildSchedaIngressoFieldsFromMezzo(promptMezzo);
-    let next = mergeSchedaIngressoFields(fields, fromMezzo);
-    if (schedeStore) {
-      const copyResult = copyLastSchedaIngresso({
-        ident: { targa: next.targa, matricola: next.matricola, nScuderia: next.nScuderia },
-        mode: "merge-empty",
-        currentFields: next,
-        mezzi,
-        schedeStore,
-        attive,
-        storico,
-        excludeLavorazioneId,
-      });
-      if (copyResult.kind === "single") next = copyResult.fields;
-    }
-    setFields(next);
-    promptedIdRef.current = null;
-    setPromptMezzo(null);
-  }, [attive, excludeLavorazioneId, fields, mezzi, promptMezzo, schedeStore, setFields, storico]);
+  const hasConflict = hasLinkedMezzoFieldConflict(fields, linkState.linkedSnapshot);
+  const preferredMezzoId = resolvePreferredMezzoIdForSave(linkState);
 
   return {
-    promptMezzo,
-    promptOpen: promptMezzo != null,
-    requestPrompt,
-    dismissPrompt,
-    acceptAutofill,
+    linkState,
+    activeMatchField,
+    onExactMezzoMatch,
+    dismissPendingMatch,
+    acceptLinkMezzo,
+    clearLink,
+    hasConflict,
+    preferredMezzoId,
+    linkedSnapshot: linkState.linkedSnapshot as LinkedMezzoSnapshot | null,
+    pendingMezzo: linkState.pendingMezzo,
+  };
+}
+
+export type UseSchedaIngressoMezzoLinkResult = ReturnType<typeof useSchedaIngressoMezzoLink>;
+
+/** @deprecated Usare useSchedaIngressoMezzoLink */
+export function useSchedaIngressoMezzoPrompt(
+  args: Parameters<typeof useSchedaIngressoMezzoLink>[0],
+) {
+  const link = useSchedaIngressoMezzoLink(args);
+  return {
+    promptMezzo: link.pendingMezzo,
+    promptOpen: link.linkState.status === "unconfirmed_match" && link.pendingMezzo != null,
+    requestPrompt: (mezzo: MezzoGestito) => link.onExactMezzoMatch(mezzo, "matricola"),
+    dismissPrompt: link.dismissPendingMatch,
+    acceptAutofill: () => link.acceptLinkMezzo("matricola"),
+    ...link,
   };
 }
 

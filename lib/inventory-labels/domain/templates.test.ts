@@ -8,7 +8,7 @@ import { labelsPerA4Page } from "@/lib/inventory-labels/render/print-layout";
 
 const t = getLabelTemplate("60x40-default");
 assert.ok(t);
-assert.equal(t!.version, "1.6.6");
+assert.equal(t!.version, "1.7.0");
 
 const qr = t!.elements.find((e) => e.type === "qr");
 const marca = t!.elements.find((e) => e.type === "text" && e.field === "marca");
@@ -59,5 +59,10 @@ assert.ok(xl);
 assert.equal(xl!.widthMm, 95);
 assert.equal(xl!.heightMm, 40);
 assert.ok(labelsPerA4Page(xl!) >= 6);
+
+const a4 = getLabelTemplate("a4-pagina-intera");
+assert.ok(a4);
+assert.equal(labelsPerA4Page(a4!), 1);
+assert.equal(a4!.layoutMode, "vertical-stack");
 
 console.log("inventory-labels/domain/templates.test.ts OK");

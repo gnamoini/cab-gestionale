@@ -124,10 +124,8 @@ export function LavorazioneCreateModal({
             mezzoHint={create.mezzoHint}
             errorMessage={create.inlineError}
             mezzoPrompt={create.mezzoPrompt}
-            onMezzoDialogAccept={create.acceptMezzoPrompt}
-            onMezzoDialogDismiss={create.dismissMezzoPrompt}
-            mezzoLinked={Boolean(create.mezzoId.trim())}
-            mezzoId={create.mezzoId}
+            mezzoLinked={Boolean(create.mezzoId.trim()) || create.mezzoPrompt.linkState.status === "linked"}
+            mezzoId={create.mezzoId || create.mezzoPrompt.preferredMezzoId || ""}
             sharedGlobalOpts={create.globalOpts}
             sharedMezziCatalog={create.mezziCatalog}
           />
@@ -163,6 +161,7 @@ export function LavorazioneCreateModal({
         }}
       />
       {create.unknownSettingsDialog}
+      {create.saveGateDialog}
     </>
   );
 }

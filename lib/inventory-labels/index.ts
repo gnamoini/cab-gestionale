@@ -34,6 +34,7 @@ export {
   isBulkSyncCount,
   labelFormatSchema,
   labelPresetSchema,
+  normalizeBulkLabelRequest,
   parseLabelJobPreset,
   renderLabelQuerySchema,
 } from "@/lib/inventory-labels/validation";

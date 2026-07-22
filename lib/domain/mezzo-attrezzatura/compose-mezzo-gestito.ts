@@ -51,6 +51,11 @@ export function composeMezzoGestitoFromRows(
     priorita: "normale",
     hubSynthetic: false,
     ultimaModifica: mezzo.updated_at?.trim() || mezzo.created_at?.trim() || undefined,
+    ultimoKmRilevato: mezzo.ultimo_km_rilevato ?? null,
+    ultimoKmData: mezzo.ultimo_km_data ?? null,
+    ultimoOreRilevate: mezzo.ultimo_ore_rilevate ?? null,
+    ultimoOreData: mezzo.ultimo_ore_data ?? null,
+    ultimoAggiornamentoDaLavorazioneId: mezzo.ultimo_aggiornamento_da_lavorazione_id ?? null,
   };
 }
 

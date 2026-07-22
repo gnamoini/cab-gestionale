@@ -80,6 +80,7 @@ import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import { executeInterventoWriteEntry } from "@/lib/domain/intervento-entry";
 import { logInterventoTelemetry } from "@/lib/domain/intervento-context/intervento-telemetry";
+import { logMezzoSchedaConflictTelemetry } from "@/lib/domain/mezzo/mezzo-scheda-conflict-telemetry";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
 import {
@@ -1774,7 +1775,11 @@ export function LavorazioniView() {
    * 2. refetch mezzi + row lavorazione (W5)
    * 3. executeInterventoWrite — unico entry point; sync interno a write-contract
    */
-  async function syncIngressoToBackend(staleRow: LavorazioneListRow, campi: SchedaIngressoFields) {
+  async function syncIngressoToBackend(
+    staleRow: LavorazioneListRow,
+    campi: SchedaIngressoFields,
+    mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan,
+  ) {
     await qc.refetchQueries({ queryKey: QK.mezzi });
     const freshRows =
       qc.getQueryData<MezzoGestito[]>(mezziListQueryKey("list", null)) ??
@@ -1794,11 +1799,23 @@ export function LavorazioniView() {
       staleRow;
 
     const writeDeps = {
-      upsertMezzo: ({ fields, preferredMezzoId }: { fields: SchedaIngressoFields; preferredMezzoId?: string | null }) =>
+      upsertMezzo: ({
+        fields,
+        preferredMezzoId,
+        updatePlan,
+        lavorazioneId,
+      }: {
+        fields: SchedaIngressoFields;
+        preferredMezzoId?: string | null;
+        updatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
+        lavorazioneId?: string | null;
+      }) =>
         upsertMezzoFromSchedaIngresso({
           fields,
           mezziCatalog: catalog,
           preferredMezzoId,
+          updatePlan,
+          lavorazioneId,
           create: (data) => createMezzo.mutateAsync(data),
           update: (id, data) => updateMezzo.mutateAsync({ id, data }),
         }),
@@ -1813,12 +1830,22 @@ export function LavorazioniView() {
         idempotencyKey: `edit-${freshRow.id}`,
         fields: campi,
         mezziCatalog: catalog,
-        meta: { row: freshRow },
+        meta: {
+          row: freshRow,
+          writeContext: { source: "manual", mezzoUpdatePlan },
+        },
       },
       writeDeps,
     );
 
     if (!result.ok) {
+      if (result.error === "MEZZO_STALE_CONFLICT") {
+        logMezzoSchedaConflictTelemetry({
+          event: "MEZZO_STALE_CONFLICT",
+          mezzoId: freshRow.mezzo_id,
+          lavorazioneId: freshRow.id,
+        });
+      }
       logInterventoTelemetry("intervento_sync_drift_detected", {
         lavorazioneId: freshRow.id,
         stage: result.stage,
@@ -2644,10 +2671,10 @@ export function LavorazioniView() {
             getOrCreateBundle(schedeStore, schedeRow.row.id, schedeRow.row.codice)
           }
           onPersist={onPersistSchedeBundle}
-          onIngressoCommitted={async (campi) => {
+          onIngressoCommitted={async (campi, options) => {
             if (!schedeRow) return;
             try {
-              await syncIngressoToBackend(schedeRow.row, campi);
+              await syncIngressoToBackend(schedeRow.row, campi, options?.mezzoUpdatePlan);
             } catch (err) {
               gestToast.error(err, { module: "lavorazioni", action: "update" });
             }

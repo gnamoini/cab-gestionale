@@ -86,7 +86,8 @@ if (mergeResult.kind === "single") {
 }
 
 const full = applyCopyLastSchedaMatch("full-snapshot", baseFields(), mergeResult.kind === "single" ? mergeResult.match : (null as never));
-assert.equal(full.dataIngresso, "10/10/2020");
-assert.equal(full.cliente, "Da copia");
+assert.equal(full.dataIngresso, "01/01/2026");
+assert.equal(full.cliente, "Già qui");
+assert.equal(full.marcaAttrezzatura, "Bobcat");
 
 console.log("copy-last-scheda.test.ts: ok");

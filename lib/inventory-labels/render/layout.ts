@@ -1,4 +1,4 @@
-import type { LabelPayload, LabelTemplateDefinition, LabelTemplateElement } from "@/lib/inventory-labels/domain/types";
+import type { LabelPayload, LabelTemplateDefinition, LabelTemplateElement, LabelTextField } from "@/lib/inventory-labels/domain/types";
 import { mmToPx, fontLineHeightMm } from "@/lib/inventory-labels/domain/templates";
 
 const ELLIPSIS = "…";
@@ -140,7 +140,7 @@ export function isFullyWrapped(
   return norm(full) === norm(lines);
 }
 
-export function fieldValue(payload: LabelPayload, field: keyof LabelPayload): string {
+export function fieldValue(payload: LabelPayload, field: LabelTextField): string {
   return (payload[field] ?? "").trim();
 }
 

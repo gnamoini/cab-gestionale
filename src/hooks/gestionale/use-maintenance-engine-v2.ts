@@ -106,3 +106,36 @@ export function useRegisterExecutionV2Mutation() {
     },
   );
 }
+
+export function useBulkAssignPresetMutation() {
+  const qc = useQueryClient();
+  return useServiceMutation(
+    (input: { presetId: string; mezzoIds: string[]; replaceExisting?: boolean }) =>
+      maintenancePlansEntry.bulkAssignPresetToMezzi(input),
+    {
+      onSettled: async () => {
+        await invalidateV2(qc);
+      },
+    },
+  );
+}
+
+export function useRecomputeForecastMutation() {
+  const qc = useQueryClient();
+  return useServiceMutation(
+    (input: { configId: string; mezzoId: string }) => maintenancePlansEntry.recomputeForecast(input.configId),
+    {
+      onSettled: async (_d, _e, vars) => {
+        await invalidateV2(qc, vars.mezzoId);
+      },
+    },
+  );
+}
+
+export function useMezziWithoutPresetQuery(enabled = true) {
+  return useServiceQuery(
+    [...maintenancePlansQueryKeys.root, "without-preset"] as const,
+    () => maintenancePlansEntry.listMezziWithoutPreset(),
+    { enabled },
+  );
+}

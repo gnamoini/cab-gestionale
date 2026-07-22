@@ -90,3 +90,45 @@ export function groupOverviewByInterval<T extends { intervalType: MaintenanceInt
       return a.intervalValue - b.intervalValue;
     });
 }
+
+const NO_PRESET_GROUP_KEY = "__no_preset__";
+
+export function groupOverviewByPreset<T extends { presetId: string | null; presetNome: string }>(
+  rows: T[],
+): { key: string; presetId: string | null; presetNome: string; rows: T[] }[] {
+  const map = new Map<string, T[]>();
+  for (const row of rows) {
+    const key = row.presetId ?? NO_PRESET_GROUP_KEY;
+    const list = map.get(key) ?? [];
+    list.push(row);
+    map.set(key, list);
+  }
+  return [...map.entries()]
+    .map(([key, groupRows]) => ({
+      key,
+      presetId: key === NO_PRESET_GROUP_KEY ? null : key,
+      presetNome: groupRows[0]?.presetNome ?? "Senza preset",
+      rows: groupRows,
+    }))
+    .sort((a, b) => {
+      if (a.presetId === null) return 1;
+      if (b.presetId === null) return -1;
+      return a.presetNome.localeCompare(b.presetNome, "it");
+    });
+}
+
+export function sortOverviewByNextDue<T extends {
+  nextDateEstimated: string | null;
+  remainingValue: number | null;
+}>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => {
+    const dateA = a.nextDateEstimated;
+    const dateB = b.nextDateEstimated;
+    if (dateA && dateB) return dateA.localeCompare(dateB);
+    if (dateA) return -1;
+    if (dateB) return 1;
+    const remA = a.remainingValue ?? Number.POSITIVE_INFINITY;
+    const remB = b.remainingValue ?? Number.POSITIVE_INFINITY;
+    return remA - remB;
+  });
+}

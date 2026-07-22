@@ -25,14 +25,43 @@ export type LabelEventType = (typeof LABEL_EVENT_TYPES)[number];
 export const OPEN_RICAMBIO_SOURCES = ["qr", "manual", "dashboard", "report"] as const;
 export type OpenRicambioSource = (typeof OPEN_RICAMBIO_SOURCES)[number];
 
+export type LabelSupplier = {
+  name: string;
+  code: string | null;
+};
+
 export type LabelPayload = {
   marca: string;
   marcaSecondaria: string;
   descrizione: string;
   codice: string;
   codiceSecondario: string;
+  /** SSOT fornitori alternativi — layout decide resa grafica. */
+  fornitoriAlternativi: LabelSupplier[];
+  /** @deprecated Usare fornitoriAlternativi — mantenuto per transizione fingerprint. */
   fornitoreAlternativo: string;
+  /** @deprecated Usare fornitoriAlternativi — mantenuto per transizione fingerprint. */
   codiceAlternativo: string;
+};
+
+export type LabelTextField = keyof Omit<LabelPayload, "fornitoriAlternativi">;
+
+export type LabelTypography = {
+  scale: number;
+  weight: "normal" | "bold";
+  tracking: number;
+  lineHeight: number;
+};
+
+export type LabelLayoutMode = "horizontal-qr-left" | "vertical-stack";
+
+export type SupplierLayoutMode = "inline-slash" | "stacked-pairs";
+
+export const DEFAULT_LABEL_TYPOGRAPHY: LabelTypography = {
+  scale: 1,
+  weight: "normal",
+  tracking: 0,
+  lineHeight: 1.2,
 };
 
 export type LabelTemplateElement =
@@ -44,7 +73,7 @@ export type LabelTemplateElement =
     }
   | {
       type: "text";
-      field: keyof LabelPayload;
+      field: LabelTextField;
       xMm: number;
       yMm: number;
       fontPt: number;
@@ -57,7 +86,7 @@ export type LabelTemplateElement =
     }
   | {
       type: "barcode";
-      field: keyof LabelPayload;
+      field: LabelTextField;
       format: "code128";
       xMm: number;
       yMm: number;
@@ -71,8 +100,14 @@ export type LabelTemplateDefinition = {
   widthMm: number;
   heightMm: number;
   dpi: number;
+  marginsMm: number;
   /** Bordo taglio visibile (mm). */
   cutBorderMm?: number;
+  typography: LabelTypography;
+  layoutMode: LabelLayoutMode;
+  supplierLayout: SupplierLayoutMode;
+  qr: { maxSizeMm: number; position: "top-left" | "top-center" };
+  barcode: { heightMm: number };
   elements: LabelTemplateElement[];
 };
 
@@ -89,7 +124,7 @@ export type InventoryQrTokenRow = {
   superseded_by: string | null;
 };
 
-export const GENERATOR_VERSION = "1.3.35";
+export const GENERATOR_VERSION = "1.4.0";
 
 /** Default generazione etichette — opt-in via checkbox/API. */
 export const DEFAULT_INCLUDE_BARCODE = false;

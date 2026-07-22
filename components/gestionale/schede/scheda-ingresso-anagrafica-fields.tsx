@@ -4,6 +4,10 @@ import { memo, useEffect, useId, useMemo, useState } from "react";
 import { Tooltip } from "@/components/ui";
 
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
+import {
+  MezzoRegistratoIngressoInlineHint,
+  type MezzoIngressoInlineHintVariant,
+} from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-inline-hint";
 import { InterventoTargetSelect } from "@/components/gestionale/intervento/intervento-target-select";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { LivelloCarburanteSegmentedSelect } from "@/components/gestionale/schede/livello-carburante-segmented-select";
@@ -28,6 +32,7 @@ import type { MezzoGestito } from "@/lib/mezzi/types";
 import { attrezzatureEntry } from "@/lib/domain/attrezzature-entry";
 import type { AttrezzaturaRow } from "@/src/types/supabase-tables";
 import type { SchedaIngressoFields } from "@/types/schede";
+import type { SchedaIngressoIdentField } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import type { CaptureIngressoFieldHint } from "@/lib/document-capture/capture-ingresso-field-hints";
 import {
   SCHEDA_INGRESSO_ANAGRAFICA_FIELD_KEYS,
@@ -52,6 +57,10 @@ function SchedaIngressoAnagraficaFieldsInner({
   disabled = false,
   sections = ALL_SECTIONS,
   onExactMezzoMatch,
+  mezzoInlineHint = null,
+  onUseMezzoFromHint,
+  onDismissMezzoHint,
+  onVerifyMezzoConflict,
   lastIngressoMatch,
   lastIngressoMatchCount = 0,
   mezzoInAnagraficaOnly = false,
@@ -68,7 +77,15 @@ function SchedaIngressoAnagraficaFieldsInner({
   mezzi: readonly MezzoGestito[];
   disabled?: boolean;
   sections?: readonly SchedaIngressoAnagraficaSection[];
-  onExactMezzoMatch?: (mezzo: MezzoGestito) => void;
+  onExactMezzoMatch?: (mezzo: MezzoGestito, field: SchedaIngressoIdentField) => void;
+  mezzoInlineHint?: {
+    variant: MezzoIngressoInlineHintVariant;
+    mezzo: MezzoGestito;
+    matchField: SchedaIngressoIdentField;
+  } | null;
+  onUseMezzoFromHint?: (field: SchedaIngressoIdentField) => void;
+  onDismissMezzoHint?: () => void;
+  onVerifyMezzoConflict?: () => void;
   lastIngressoMatch?: { updatedAt?: string } | null;
   lastIngressoMatchCount?: number;
   mezzoInAnagraficaOnly?: boolean;
@@ -121,6 +138,26 @@ function SchedaIngressoAnagraficaFieldsInner({
   const inputFieldClass = `block w-full ${dsInput}`;
   const listSelectWrapClass = "w-full";
   const mezzoMatchHandler = onExactMezzoMatch ?? (() => {});
+
+  const renderIdentHint = (field: SchedaIngressoIdentField) => {
+    if (!mezzoInlineHint || mezzoInlineHint.matchField !== field) return null;
+    return (
+      <MezzoRegistratoIngressoInlineHint
+        variant={mezzoInlineHint.variant}
+        mezzo={mezzoInlineHint.mezzo}
+        matchField={field}
+        onUseMezzo={
+          mezzoInlineHint.variant === "trovato" && onUseMezzoFromHint
+            ? () => onUseMezzoFromHint(field)
+            : undefined
+        }
+        onDismiss={mezzoInlineHint.variant === "trovato" ? onDismissMezzoHint : undefined}
+        onVerifyConflict={
+          mezzoInlineHint.variant === "conflitto" ? onVerifyMezzoConflict : undefined
+        }
+      />
+    );
+  };
   const identSibling = {
     targa: value.targa,
     matricola: value.matricola,
@@ -323,8 +360,9 @@ function SchedaIngressoAnagraficaFieldsInner({
                 disabled={disabled}
                 exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
                 onChange={(v) => onPatch({ matricola: v })}
-                onExactMezzoMatch={mezzoMatchHandler}
+                onExactMezzoMatch={(m) => mezzoMatchHandler(m, "matricola")}
               />
+              {renderIdentHint("matricola")}
               {hintAfter("matricola")}
             </div>
             <div>
@@ -338,8 +376,9 @@ function SchedaIngressoAnagraficaFieldsInner({
                 disabled={disabled}
                 exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
                 onChange={(v) => onPatch({ nScuderia: v })}
-                onExactMezzoMatch={mezzoMatchHandler}
+                onExactMezzoMatch={(m) => mezzoMatchHandler(m, "nScuderia")}
               />
+              {renderIdentHint("nScuderia")}
               {hintAfter("nScuderia")}
             </div>
           </div>
@@ -354,7 +393,7 @@ function SchedaIngressoAnagraficaFieldsInner({
               onCopy={onCopyLastIngresso}
             />
           ) : null}
-          {mezzoLinked ? (
+          {mezzoLinked && !mezzoInlineHint ? (
             <p className="text-xs text-[color:var(--cab-text-muted)]">Mezzo collegato in anagrafica.</p>
           ) : null}
         </FormSection>
@@ -403,6 +442,21 @@ function SchedaIngressoAnagraficaFieldsInner({
               />
             </FormField>
           </div>
+          <div>
+            <SchedaIngressoIdentAutocompleteField
+              field="targa"
+              label="Targa"
+              value={value.targa}
+              siblingIdent={identSibling}
+              mezzi={mezzi}
+              disabled={disabled}
+              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
+              onChange={(v) => onPatch({ targa: v })}
+              onExactMezzoMatch={(m) => mezzoMatchHandler(m, "targa")}
+            />
+            {renderIdentHint("targa")}
+            {hintAfter("targa")}
+          </div>
           <FormField label="VIN" htmlFor={fieldId("vin")}>
             <CaptureAwareFormField hint={captureHints?.vin} footer={hintAfter("vin", true)}>
             <input
@@ -416,20 +470,6 @@ function SchedaIngressoAnagraficaFieldsInner({
             />
             </CaptureAwareFormField>
           </FormField>
-          <div>
-            <SchedaIngressoIdentAutocompleteField
-              field="targa"
-              label="Targa"
-              value={value.targa}
-              siblingIdent={identSibling}
-              mezzi={mezzi}
-              disabled={disabled}
-              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
-              onChange={(v) => onPatch({ targa: v })}
-              onExactMezzoMatch={mezzoMatchHandler}
-            />
-            {hintAfter("targa")}
-          </div>
         </FormSection>
       ) : null}
 
@@ -482,6 +522,10 @@ export const SchedaIngressoAnagraficaFields = memo(
     if (prev.mezzi !== next.mezzi) return false;
     if (prev.sections !== next.sections) return false;
     if (prev.onExactMezzoMatch !== next.onExactMezzoMatch) return false;
+    if (prev.mezzoInlineHint !== next.mezzoInlineHint) return false;
+    if (prev.onUseMezzoFromHint !== next.onUseMezzoFromHint) return false;
+    if (prev.onDismissMezzoHint !== next.onDismissMezzoHint) return false;
+    if (prev.onVerifyMezzoConflict !== next.onVerifyMezzoConflict) return false;
     if (prev.lastIngressoMatch !== next.lastIngressoMatch) return false;
     if (prev.lastIngressoMatchCount !== next.lastIngressoMatchCount) return false;
     if (prev.mezzoInAnagraficaOnly !== next.mezzoInAnagraficaOnly) return false;

@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import {
   buildAppendGlobalListUpsert,
+  isHierarchyListContext,
   resolveGlobalListOptions,
   type GlobalSettingsListContext,
   type GlobalSettingsListKey,
@@ -34,6 +35,10 @@ function isMagazzinoSettingsListKey(listKey: GlobalSettingsListKey): boolean {
   return listKey.startsWith("magazzino:");
 }
 
+function isMagazzinoScopedListAppend(listKey: GlobalSettingsListKey, ctx?: GlobalSettingsListContext): boolean {
+  return isMagazzinoSettingsListKey(listKey) || isHierarchyListContext(ctx);
+}
+
 export function useAppendGlobalListValue(listKey: GlobalSettingsListKey, ctx?: GlobalSettingsListContext) {
   const { canManageSettings } = usePermissions();
   const magPerm = usePermissions("magazzino");
@@ -41,9 +46,9 @@ export function useAppendGlobalListValue(listKey: GlobalSettingsListKey, ctx?: G
   const queryClient = useQueryClient();
   const settingsUpsert = useSettingsUpsertMutation();
   const magazzinoUpsert = useMagazzinoSettingsUpsertMutation();
-  const magazzinoList = isMagazzinoSettingsListKey(listKey);
-  const canAppend = magazzinoList ? magPerm.canWrite : canManageSettings;
-  const upsert = magazzinoList ? magazzinoUpsert : settingsUpsert;
+  const magazzinoScoped = isMagazzinoScopedListAppend(listKey, ctx);
+  const canAppend = magazzinoScoped ? magPerm.canWrite : canManageSettings;
+  const upsert = magazzinoScoped ? magazzinoUpsert : settingsUpsert;
 
   const append = useCallback(
     async (rawValue: string): Promise<string | null> => {

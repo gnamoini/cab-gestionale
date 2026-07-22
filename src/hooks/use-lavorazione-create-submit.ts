@@ -11,6 +11,7 @@ import { commitLavorazioneCreateSuccess } from "@/src/lib/react-query/invalidate
 import { executeInterventoWriteEntry } from "@/lib/domain/intervento-entry";
 import { useLavorazioneCreateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
+import { logMezzoSchedaConflictTelemetry } from "@/lib/domain/mezzo/mezzo-scheda-conflict-telemetry";
 import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { loadLavorazioneSchedeStore } from "@/lib/schede/lavorazioni-schede-storage";
@@ -36,6 +37,7 @@ import { QK } from "@/src/lib/react-query/invalidate-related";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { incrementHealthCounter } from "@/lib/observability/runtime-health";
 import { useSchedaIngressoUnknownSettingsGate } from "@/src/hooks/use-scheda-ingresso-unknown-settings-gate";
+import { useSchedaIngressoSaveGate } from "@/src/hooks/use-scheda-ingresso-save-gate";
 import { maybePublishTagliandoDueOnInterventoCreate } from "@/lib/maintenance-plans/tagliando-due-notification.client";
 
 type LavorazioneCreateFormSections = {
@@ -188,6 +190,11 @@ export function useLavorazioneCreateSubmit({
     storico,
   });
 
+  const saveGate = useSchedaIngressoSaveGate({
+    mezziCatalog,
+    linkedSnapshot: mezzoPrompt.linkedSnapshot,
+  });
+
   const applyMezzo = useCallback(
     (m: MezzoGestito) => {
       const fromMezzo = buildSchedaIngressoFieldsFromMezzo(m);
@@ -208,8 +215,8 @@ export function useLavorazioneCreateSubmit({
   );
 
   const acceptMezzoPrompt = useCallback(() => {
-    const m = mezzoPrompt.promptMezzo;
-    mezzoPrompt.acceptAutofill();
+    const m = mezzoPrompt.pendingMezzo;
+    mezzoPrompt.acceptLinkMezzo(mezzoPrompt.activeMatchField ?? "matricola");
     if (!m) return;
     setMezzoId(m.id);
     setMezzoHint(`Mezzo collegato: ${m.marca} ${m.modello !== "—" ? m.modello : ""}`.trim());
@@ -358,6 +365,13 @@ export function useLavorazioneCreateSubmit({
           setSchedaSyncError(null);
 
           await gateSubmit(currentFields, async (gatedFields) => {
+          let mezzoUpdatePlan: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan | undefined;
+          try {
+            mezzoUpdatePlan = await saveGate.gateSave(gatedFields);
+          } catch (gateErr) {
+            if (gateErr instanceof Error && gateErr.message === "SAVE_CANCELLED") return;
+            throw gateErr;
+          }
           try {
             const existingLavId = createdLavorazioneIdRef.current;
             if (existingLavId) {
@@ -365,7 +379,7 @@ export function useLavorazioneCreateSubmit({
             }
 
             const catalog = await resolveFreshCatalog();
-            const mezzoHintVal = metaMezzoId.trim() || null;
+            const mezzoHintVal = mezzoPrompt.preferredMezzoId ?? null;
             const resolvedMezzo = resolveMezzoFromScheda({
               scheda: gatedFields,
               existingMezzi: catalog,
@@ -391,14 +405,18 @@ export function useLavorazioneCreateSubmit({
                   dataIngressoIso: ymdToIsoMidUtc(ymd),
                   note: noteBlob,
                   createdBy,
+                  writeContext: { source: "manual", mezzoUpdatePlan },
                 },
               },
               {
-                upsertMezzo: ({ fields: f, preferredMezzoId }) =>
+                upsertMezzo: ({ fields: f, preferredMezzoId, updatePlan, lavorazioneId, writeContext }) =>
                   upsertMezzoFromSchedaIngresso({
                     fields: f,
                     mezziCatalog: catalog,
                     preferredMezzoId,
+                    updatePlan: updatePlan ?? mezzoUpdatePlan,
+                    lavorazioneId,
+                    writeContext: writeContext ?? { source: "manual", mezzoUpdatePlan },
                     create: (data) => createMezzo.mutateAsync(data),
                     update: (id, data) => updateMezzo.mutateAsync({ id, data }),
                   }),
@@ -489,6 +507,12 @@ export function useLavorazioneCreateSubmit({
             onClose?.();
           } catch (err) {
             const msg = err instanceof Error ? err.message : "Salvataggio fallito.";
+            if (msg === "MEZZO_STALE_CONFLICT") {
+              logMezzoSchedaConflictTelemetry({
+                event: "MEZZO_STALE_CONFLICT",
+                mezzoId: mezzoPrompt.preferredMezzoId,
+              });
+            }
             setSubmitError(msg);
             gestToast.error(err, { module: "lavorazioni", action: "create" });
           }
@@ -501,6 +525,8 @@ export function useLavorazioneCreateSubmit({
     [
       runSubmit,
       gateSubmit,
+      saveGate,
+      mezzoPrompt.preferredMezzoId,
       createdBy,
       defaultAccettazioneStatoId,
       stati,
@@ -558,5 +584,7 @@ export function useLavorazioneCreateSubmit({
     partialSuccessRef,
     createdLavorazioneIdRef,
     unknownSettingsDialog,
+    saveGateDialog: saveGate.dialog,
+    gateSave: saveGate.gateSave,
   };
 }

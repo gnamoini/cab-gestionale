@@ -1,5 +1,6 @@
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { displayRicambioCodice } from "@/lib/magazzino/ricambio-codice";
 import type { DateRange } from "@/lib/report/date-ranges";
 import { endOfLocalDay, isoInRange, startOfLocalDay } from "@/lib/report/date-ranges";
 import { extractScortaDelta, monthKeyFromIso } from "@/lib/report/magazzino-log-parse";
@@ -142,7 +143,7 @@ export function buildRicambiConsumoRanking(
     rows.push({
       rank: 0,
       id: p.id,
-      codice: p.codiceFornitoreOriginale ?? "—",
+      codice: displayRicambioCodice(p.codiceFornitoreOriginale),
       nome: p.descrizione ?? "—",
       marca: p.marca ?? "—",
       avgMonthly: c.avgMonthly,

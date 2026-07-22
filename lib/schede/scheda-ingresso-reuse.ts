@@ -33,6 +33,7 @@ import {
   copySchedaIngressoFieldFromClient,
   isSchedaIngressoFieldEmpty,
 } from "@/lib/schede/scheda-ingresso-typed-fields";
+import { isLavorazioneOnlyField } from "@/lib/schede/scheda-ingresso-field-roles";
 const INGRESSO_FIELDS_NEVER_COPY: ReadonlySet<keyof SchedaIngressoFields> = new Set([
   "dataIngresso",
   "richiedenteFirma",
@@ -117,7 +118,7 @@ export function mergeSchedaIngressoFields(
   }
   const next = { ...current };
   for (const key of Object.keys(source) as (keyof SchedaIngressoFields)[]) {
-    if (skipKeys.has(key)) continue;
+    if (skipKeys.has(key) || isLavorazioneOnlyField(key)) continue;
     if (isSchedaIngressoFieldEmpty(key, next[key])) {
       copySchedaIngressoFieldFromClient(next, source, key);
     }

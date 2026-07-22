@@ -8,6 +8,7 @@ import { RicambioStockStatusLabel } from "@/components/gestionale/magazzino/rica
 import { RicambioCollapsibleSection } from "@/components/gestionale/magazzino/ricambio-modal-ui";
 import type { RicambioConsumoDaLog } from "@/lib/magazzino/ricambio-consumo-from-log";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { displayRicambioCodice } from "@/lib/magazzino/ricambio-codice";
 
 export const RICAMBIO_SCHEDA_RIEPILOGO_COLLAPSE_SCOPE = "magazzino";
 export const RICAMBIO_SCHEDA_RIEPILOGO_COLLAPSE_KEY = "scheda-ricambio-riepilogo";
@@ -16,7 +17,7 @@ export function RicambioCodiceIdentitaBlock({ ricambio }: { ricambio: RicambioMa
   return (
     <div className="space-y-0.5">
       <span className="font-mono text-[13px] font-semibold tracking-wide">
-        {hubPanoramicaDisplayValue(ricambio.codiceFornitoreOriginale)}
+        {displayRicambioCodice(ricambio.codiceFornitoreOriginale)}
       </span>
       {ricambio.codiceFornitoreOriginaleSecondario.trim() ? (
         <span className="block font-mono text-[11px] font-medium tracking-wide text-[color:var(--cab-text-muted)]">

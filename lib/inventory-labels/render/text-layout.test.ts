@@ -41,6 +41,7 @@ const payload = {
   codiceSecondario: "",
   fornitoreAlternativo: "Ricambi Express",
   codiceAlternativo: "RX-90812",
+  fornitoriAlternativi: [{ name: "Ricambi Express", code: "RX-90812" }],
 };
 
 const placed = resolveLabelTextLayout(template, payload);
@@ -84,6 +85,7 @@ const dual = resolveLabelTextLayout(template, {
   codiceSecondario: "YYYY",
   fornitoreAlternativo: "Forn",
   codiceAlternativo: "ALT-1",
+  fornitoriAlternativi: [{ name: "Forn", code: "ALT-1" }],
 });
 const dualMarca = dual.find((p) => p.field === "marca")!;
 const dualMarca2 = dual.find((p) => p.field === "marcaSecondaria")!;
@@ -104,6 +106,7 @@ const m12 = resolveLabelTextLayout(template, {
   codiceSecondario: "",
   fornitoreAlternativo: "",
   codiceAlternativo: "",
+  fornitoriAlternativi: [],
 });
 const m12desc = m12.find((p) => p.field === "descrizione")!;
 const textW = marcaEl.maxWidthMm ?? 24.5;
@@ -124,6 +127,7 @@ const widePlaced = resolveLabelTextLayout(wide, {
   codiceSecondario: "",
   fornitoreAlternativo: "Ricambi",
   codiceAlternativo: "RX-1",
+  fornitoriAlternativi: [{ name: "Ricambi", code: "RX-1" }],
 });
 const wideCodice = widePlaced.find((p) => p.field === "codice")!;
 const wideCodiceEl = findTextEl(wide, "codice");
@@ -138,6 +142,7 @@ const smallPayload = {
   codiceSecondario: "YYYYYYYYYY",
   fornitoreAlternativo: "Ricambi Express SRL",
   codiceAlternativo: "RX-90812-ABCDEF",
+  fornitoriAlternativi: [{ name: "Ricambi Express SRL", code: "RX-90812-ABCDEF" }],
 };
 const smallPlaced = resolveLabelTextLayout(small, smallPayload);
 const smallW = findTextEl(small, "marca").maxWidthMm!;

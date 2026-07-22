@@ -1,4 +1,5 @@
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { displayRicambioCodice } from "@/lib/magazzino/ricambio-codice";
 import { aggregateMagazzinoQtyByProductInRange } from "@/lib/report/magazzino-period-aggregate";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import { isoInRange, type DateRange } from "@/lib/report/date-ranges";
@@ -33,7 +34,7 @@ export function buildGiorniCoperturaRicambi(
     if (p.scorta <= 0 && uscite <= 0) continue;
     rows.push({
       id: p.id,
-      codice: p.codiceFornitoreOriginale,
+      codice: displayRicambioCodice(p.codiceFornitoreOriginale),
       nome: p.descrizione,
       qty: p.scorta,
       uscitePeriodo: uscite,
@@ -52,7 +53,7 @@ export function countSottoScortaDettaglio(magazzino: readonly RicambioMagazzino[
     .filter((p) => p.scortaMinima > 0 && p.scorta < p.scortaMinima)
     .map((p) => ({
       id: p.id,
-      codice: p.codiceFornitoreOriginale,
+      codice: displayRicambioCodice(p.codiceFornitoreOriginale),
       nome: p.descrizione,
       qty: p.scorta,
       uscitePeriodo: 0,

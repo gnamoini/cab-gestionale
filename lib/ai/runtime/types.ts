@@ -47,6 +47,11 @@ export type AiErrorCode =
   | "AI_QUOTA_EXCEEDED"
   | "AI_PROVIDER_DOWN"
   | "AI_TIMEOUT"
+  | "AI_SCHEMA_VALIDATION"
+  | "AI_STORAGE_ERROR"
+  | "AI_DATABASE_ERROR"
+  | "AI_MODEL_UNAVAILABLE"
+  | "AI_PAYLOAD_TOO_LARGE"
   | "AI_UNKNOWN_ERROR";
 
 export type ResolvedAiKey = {

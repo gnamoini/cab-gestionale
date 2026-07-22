@@ -52,6 +52,12 @@ import type { LavorazioneUpdate } from "@/src/services/lavorazioni.service";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { SchedaIngressoFields } from "@/types/schede";
 import type { PrioritaLavorazione, StatoLavorazione, InterventoTargetType } from "@/src/types/supabase-tables";
+import {
+  resolveInterventoWriteContext,
+  resolveMezzoUpdatePlanFromContext,
+  splitMezzoUpdatePlanForCreate,
+} from "@/lib/domain/intervento-context/intervento-write-context";
+import { MEZZO_UPDATE_SCHEDA_ONLY } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
 
 export type CreateInterventoStage = "upsert-mezzo" | "create-lavorazione" | "persist-scheda";
 
@@ -61,6 +67,8 @@ export type CreateInterventoTransactionPlan = {
     statoId: StatoLavorazione;
     priorita: PrioritaLavorazione;
     mezzoIdHint?: string | null;
+    mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
+    writeContext?: import("@/lib/domain/intervento-context/intervento-write-context").InterventoWriteContext;
     dataIngressoIso: string;
     note: string | null;
     createdBy: string;
@@ -72,6 +80,9 @@ export type CreateInterventoTransactionPlan = {
     upsertMezzo: (input: {
       fields: SchedaIngressoFields;
       preferredMezzoId?: string | null;
+      updatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
+      lavorazioneId?: string | null;
+      writeContext?: import("@/lib/domain/intervento-context/intervento-write-context").InterventoWriteContext;
     }) => Promise<UpsertMezzoFromSchedaResult>;
     createLavorazione: (input: {
       mezzo_id: string | null;
@@ -100,6 +111,9 @@ export async function createInterventoTransaction(
   trace?: WriteExecutionTrace,
 ): Promise<CreateInterventoTransactionResult> {
   const { fields, meta, deps, mezziCatalog } = plan;
+  const writeCtx = resolveInterventoWriteContext(meta.writeContext, meta.mezzoUpdatePlan);
+  const fullPlan = resolveMezzoUpdatePlanFromContext(writeCtx);
+  const { anagraficaPlan, meteringPlan } = splitMezzoUpdatePlanForCreate(fullPlan);
   const idempotencyKey = plan.idempotencyKey?.trim() || "";
   const ledgerEntry = idempotencyKey ? getInterventoWriteLedgerEntry(idempotencyKey) : undefined;
   let lavorazioneId =
@@ -167,6 +181,9 @@ export async function createInterventoTransaction(
       const upsert = await deps.upsertMezzo({
         fields,
         preferredMezzoId: meta.mezzoIdHint,
+        updatePlan: anagraficaPlan,
+        lavorazioneId: lavorazioneId ?? undefined,
+        writeContext: writeCtx,
       });
       mezzoId = upsert.mezzoId?.trim() || null;
       if (upsert.skipped) {
@@ -205,6 +222,20 @@ export async function createInterventoTransaction(
       if (idempotencyKey) {
         upsertInterventoWriteLedger(idempotencyKey, { lavorazioneId, mezzoId: mezzoId ?? "" });
       }
+      if (meteringPlan && mezzoId) {
+        try {
+          await deps.upsertMezzo({
+            fields,
+            preferredMezzoId: mezzoId,
+            updatePlan: meteringPlan,
+            lavorazioneId,
+            writeContext: writeCtx,
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Errore aggiornamento metering mezzo.";
+          return { ok: false, stage: "upsert-mezzo", error: message, lavorazioneId };
+        }
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Errore creazione lavorazione.";
       recordTraceStep(trace, "v1_create", "failed");
@@ -214,6 +245,20 @@ export async function createInterventoTransaction(
     recordTraceStep(trace, "v1_create", "completed");
   } else {
     recordTraceStep(trace, "v1_create", "skipped");
+    if (meteringPlan && mezzoId && lavorazioneId) {
+      try {
+        await deps.upsertMezzo({
+          fields,
+          preferredMezzoId: mezzoId,
+          updatePlan: meteringPlan,
+          lavorazioneId,
+          writeContext: writeCtx,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Errore aggiornamento metering mezzo.";
+        return { ok: false, stage: "upsert-mezzo", error: message, lavorazioneId: lavorazioneId ?? undefined };
+      }
+    }
   }
 
   if (
@@ -288,10 +333,15 @@ type SyncIngressoAfterSavePlan = {
   row: LavorazioneListRow;
   campi: SchedaIngressoFields;
   mezziCatalog: readonly MezzoGestito[];
+  mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
+  writeContext?: import("@/lib/domain/intervento-context/intervento-write-context").InterventoWriteContext;
   deps: {
     upsertMezzo: (input: {
       fields: SchedaIngressoFields;
       preferredMezzoId?: string | null;
+      updatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
+      lavorazioneId?: string | null;
+      writeContext?: import("@/lib/domain/intervento-context/intervento-write-context").InterventoWriteContext;
     }) => Promise<UpsertMezzoFromSchedaResult>;
     updateLavorazione: (id: string, patch: LavorazioneUpdate) => Promise<void>;
   };
@@ -325,9 +375,13 @@ async function syncIngressoAfterSave(plan: SyncIngressoAfterSavePlan): Promise<v
     identDelta: buildIdentDeltaFromContext(ctx),
   });
 
+  const writeCtx = resolveInterventoWriteContext(plan.writeContext, plan.mezzoUpdatePlan);
   const { mezzoId } = await deps.upsertMezzo({
     fields: campi,
     preferredMezzoId: row.mezzo_id,
+    updatePlan: resolveMezzoUpdatePlanFromContext(writeCtx),
+    lavorazioneId: row.id,
+    writeContext: writeCtx,
   });
 
   const note = campi.noteIntervento?.trim() || null;
@@ -407,6 +461,8 @@ export async function executeInterventoWrite(
         row: plan.meta.row,
         campi: plan.fields,
         mezziCatalog: plan.mezziCatalog,
+        mezzoUpdatePlan: plan.meta.mezzoUpdatePlan,
+        writeContext: plan.meta.writeContext,
         deps: {
           upsertMezzo: async (input) => {
             const res = await deps.upsertMezzo(input);

@@ -6,6 +6,7 @@ import {
 import { readCompatLabelsForUi } from "@/lib/magazzino/compat/compat-read-guard";
 import { normalizedSearchIndex } from "@/lib/magazzino/compat/compat-search-index";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { normalizeEntityString, scoreEntityMatch } from "@/lib/validation/global-entity-validation";
 import { filterListSelectSuggestions } from "@/lib/ui/list-select-utils";
@@ -66,11 +67,12 @@ export function buildMagazzinoSearchSuggestions(
 
   for (const p of prodotti) {
     if (q && !magazzinoRowMatchesGlobalSearch(p, query, listePrefs)) continue;
-    push(`${p.codiceFornitoreOriginale} · ${p.descrizione || p.marca}`);
+    const codiceUi = ricambioCodiceForUi(p.codiceFornitoreOriginale);
+    push(codiceUi ? `${codiceUi} · ${p.descrizione || p.marca}` : `${p.descrizione || p.marca}`);
     if (p.marca.trim()) push(p.marca);
     for (const part of [
       p.marca,
-      p.codiceFornitoreOriginale,
+      codiceUi,
       p.codiceFornitoreOriginaleSecondario,
       p.descrizione,
       p.categoria,

@@ -10,9 +10,10 @@ export const maintenancePlansEntry = {
   listMezzoPlanStatuses: maintenancePlansService.listMezzoPlanStatuses.bind(maintenancePlansService),
   listServicesByMezzo: maintenancePlansService.listServicesByMezzo.bind(maintenancePlansService),
   searchRicambiForPlan: maintenancePlansService.searchRicambiForPlan.bind(maintenancePlansService),
-  ensureCatalogLabels: withPageWriteGuard("impostazioni", maintenancePlansService.ensureCatalogLabels.bind(maintenancePlansService)),
-  upsertPlan: withPageWriteGuard("impostazioni", maintenancePlansService.upsertPlan.bind(maintenancePlansService)),
-  softDeletePlan: withPageWriteGuard("impostazioni", maintenancePlansService.softDeletePlan.bind(maintenancePlansService)),
+  listPresetSummaries: maintenancePlansService.listPresetSummaries.bind(maintenancePlansService),
+  ensureCatalogLabels: withPageWriteGuard("mezzi", maintenancePlansService.ensureCatalogLabels.bind(maintenancePlansService)),
+  upsertPlan: withPageWriteGuard("mezzi", maintenancePlansService.upsertPlan.bind(maintenancePlansService)),
+  softDeletePlan: withPageWriteGuard("mezzi", maintenancePlansService.softDeletePlan.bind(maintenancePlansService)),
   registerService: withPageWriteGuard("mezzi", maintenancePlansService.registerService.bind(maintenancePlansService)),
   listServicesLite: maintenancePlansService.listServicesLite.bind(maintenancePlansService),
   deleteService: withPageWriteGuard("mezzi", maintenancePlansService.deleteService.bind(maintenancePlansService)),
@@ -26,4 +27,9 @@ export const maintenancePlansEntry = {
   listTagliandiOverview: maintenanceEngineV2Service.listTagliandiOverview.bind(maintenanceEngineV2Service),
   recomputeForecast: withPageWriteGuard("mezzi", maintenanceEngineV2Service.recomputeForecast.bind(maintenanceEngineV2Service)),
   listPresetHierarchy: maintenanceEngineV2Service.listPresetHierarchy.bind(maintenanceEngineV2Service),
+  bulkAssignPresetToMezzi: withPageWriteGuard(
+    "mezzi",
+    maintenanceEngineV2Service.bulkAssignPresetToMezzi.bind(maintenanceEngineV2Service),
+  ),
+  listMezziWithoutPreset: maintenanceEngineV2Service.listMezziWithoutPreset.bind(maintenanceEngineV2Service),
 };

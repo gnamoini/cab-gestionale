@@ -2,6 +2,7 @@ import type { CaptureFieldRow } from "@/lib/document-capture/capture-field-mappe
 import { resolveRawFieldValue } from "@/lib/document-capture/capture-field-mapper";
 import type { RicambiRowResolution } from "@/lib/document-capture/capture-field-resolution-types";
 import { findDuplicateByCodici } from "@/lib/magazzino/duplicates";
+import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { shouldAutoApply } from "@/lib/entity-resolution/entity-resolution-confidence";
 
@@ -21,17 +22,20 @@ function fuzzyRicambioCandidates(
   const out: Array<{ id: string; label: string; score: number }> = [];
   for (const r of magazzino) {
     const codes = [r.codiceFornitoreOriginale, r.codiceFornitoreOriginaleSecondario, r.codiceFornitoreNonOriginale]
+      .map((c) => ricambioCodiceForUi(String(c)))
       .filter(Boolean)
-      .map((c) => normCodice(String(c)));
+      .map((c) => normCodice(c));
     const desc = [r.descrizione, r.marca].filter(Boolean).join(" ").toLowerCase();
     let score = 0;
     if (codes.some((c) => c === needle)) score = 1;
     else if (codes.some((c) => c.includes(needle) || needle.includes(c))) score = 0.85;
     else if (desc && desc.includes(nome.toLowerCase().trim())) score = 0.7;
     if (score > 0) {
+      const codiceUi = ricambioCodiceForUi(r.codiceFornitoreOriginale);
+      const labelParts = [codiceUi, r.descrizione].filter(Boolean);
       out.push({
         id: r.id,
-        label: [r.codiceFornitoreOriginale, r.descrizione].filter(Boolean).join(" — "),
+        label: labelParts.join(" — "),
         score,
       });
     }
@@ -59,7 +63,7 @@ export function resolveRicambiRowsFromCaptureFields(
         fieldKey,
         status: "MATCHED",
         ricambioId: dup.id,
-        label: dup.descrizione || dup.codiceFornitoreOriginale || codice,
+        label: dup.descrizione || ricambioCodiceForUi(dup.codiceFornitoreOriginale) || codice,
         confidence: 1,
       });
       continue;

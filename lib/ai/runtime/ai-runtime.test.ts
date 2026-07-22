@@ -46,6 +46,12 @@ assert.equal(selectBestKey([invalid]), null);
 assert.equal(classifyAiError(new Error("401 API KEY invalid")), "AI_KEY_INVALID");
 assert.equal(classifyAiError(new Error("429 quota")), "AI_QUOTA_EXCEEDED");
 assert.equal(classifyAiError(new Error("TimeoutError")), "AI_TIMEOUT");
+assert.equal(classifyAiError({ name: "AbortError", message: "aborted" }), "AI_TIMEOUT");
+assert.equal(classifyAiError({ name: "NoObjectGeneratedError", message: "no object" }), "AI_SCHEMA_VALIDATION");
+assert.equal(classifyAiError({ name: "AI_TypeValidationError", message: "invalid" }), "AI_SCHEMA_VALIDATION");
+assert.equal(classifyAiError({ name: "GoogleGenerativeAIFetchError", message: "404 model not found", status: 404 }), "AI_MODEL_UNAVAILABLE");
+assert.equal(classifyAiError({ name: "PostgrestError", message: "db", code: "PGRST", details: "" }), "AI_DATABASE_ERROR");
+assert.equal(classifyAiError({ name: "StorageError", message: "storage permission denied" }), "AI_STORAGE_ERROR");
 assert.equal(isFailoverEligible("AI_RATE_LIMIT"), true);
 assert.equal(cooldownSecondsForError("AI_RATE_LIMIT"), 120);
 

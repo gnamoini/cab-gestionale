@@ -1,4 +1,12 @@
-import type { LabelTemplateDefinition, LabelTemplateElement } from "@/lib/inventory-labels/domain/types";
+import type {
+  LabelLayoutMode,
+  LabelTemplateDefinition,
+  LabelTemplateElement,
+  LabelTypography,
+  SupplierLayoutMode,
+} from "@/lib/inventory-labels/domain/types";
+import { DEFAULT_LABEL_TYPOGRAPHY } from "@/lib/inventory-labels/domain/types";
+import { computeVerticalStackLayout } from "@/lib/inventory-labels/render/vertical-layout";
 
 const REF_WIDTH_MM = 50;
 const REF_HEIGHT_MM = 30;
@@ -20,7 +28,6 @@ function scaledFontPt(basePt: number, scale: number, minPt: number, maxPt: numbe
 }
 
 const GAP_MM = 1.5;
-const TEXT_GAP_MM = 0.1;
 const BARCODE_GAP_MM = 0.6;
 /** Inset inferiore QR — spazio bianco sopra il barcode senza muovere i bordi esterni. */
 const QR_BOTTOM_INSET_MM = 1.5;
@@ -37,25 +44,36 @@ function barcodeHeightMm(widthMm: number, heightMm: number): number {
 }
 
 /** QR quadrato: top/left al margine; lascia `QR_BOTTOM_INSET_MM` sopra il barcode. */
-function qrSizeMm(contentBottomMm: number, marginMm: number): number {
-  return Math.max(6, contentBottomMm - marginMm - QR_BOTTOM_INSET_MM);
+function qrSizeMm(contentBottomMm: number, marginMm: number, maxSizeMm?: number): number {
+  const computed = Math.max(6, contentBottomMm - marginMm - QR_BOTTOM_INSET_MM);
+  if (maxSizeMm != null) return Math.min(computed, maxSizeMm);
+  return computed;
+}
+
+function applyTypographyPt(basePt: number, typography: LabelTypography): number {
+  return Math.round(basePt * typography.scale * 2) / 2;
 }
 
 /**
  * QR sinistra · colonna destra: marche, desc, codici OE · fornitore alt in fascia barcode · barcode sotto QR.
  */
-export function computeLabelLayout(widthMm: number, heightMm: number): LabelTemplateElement[] {
+export function computeLabelLayout(
+  widthMm: number,
+  heightMm: number,
+  typography: LabelTypography = DEFAULT_LABEL_TYPOGRAPHY,
+  qrMaxSizeMm?: number,
+): LabelTemplateElement[] {
   const m = labelMarginMm(widthMm, heightMm);
   const innerW = widthMm - m * 2;
-  const scale = labelFontScale(widthMm, heightMm);
-  const primaryPt = scaledFontPt(7, scale, 7, 16);
-  const altPt = scaledFontPt(7, scale, 5.5, 10);
+  const scale = labelFontScale(widthMm, heightMm) * typography.scale;
+  const primaryPt = applyTypographyPt(scaledFontPt(7, scale / typography.scale, 7, 16), typography);
+  const altPt = applyTypographyPt(scaledFontPt(7, scale / typography.scale, 5.5, 10), typography);
   const barcodeH = barcodeHeightMm(widthMm, heightMm);
   const barcodeY = heightMm - m - barcodeH;
   const labelBottomMm = heightMm - m;
   const topGroupBottomMm = barcodeY - BARCODE_GAP_MM;
 
-  const qr = qrSizeMm(topGroupBottomMm, m);
+  const qr = qrSizeMm(topGroupBottomMm, m, qrMaxSizeMm);
   const textX = m + qr + GAP_MM;
   const textW = Math.max(10, innerW - qr - GAP_MM);
 
@@ -140,19 +158,50 @@ export function computeLabelLayout(widthMm: number, heightMm: number): LabelTemp
   ];
 }
 
-function buildTemplate(id: string, widthMm: number, heightMm: number): LabelTemplateDefinition {
+type BuildTemplateOptions = {
+  typography?: LabelTypography;
+  layoutMode?: LabelLayoutMode;
+  supplierLayout?: SupplierLayoutMode;
+  qrMaxSizeMm?: number;
+  version?: string;
+};
+
+function buildTemplate(
+  id: string,
+  widthMm: number,
+  heightMm: number,
+  options?: BuildTemplateOptions,
+): LabelTemplateDefinition {
+  const marginsMm = labelMarginMm(widthMm, heightMm);
+  const typography = options?.typography ?? DEFAULT_LABEL_TYPOGRAPHY;
+  const layoutMode = options?.layoutMode ?? "horizontal-qr-left";
+  const supplierLayout = options?.supplierLayout ?? "inline-slash";
+  const qrMaxSizeMm = options?.qrMaxSizeMm ?? 999;
+  const elements =
+    layoutMode === "vertical-stack"
+      ? computeVerticalStackLayout(widthMm, heightMm, marginsMm, typography, qrMaxSizeMm)
+      : computeLabelLayout(widthMm, heightMm, typography, qrMaxSizeMm);
+  const barcodeEl = elements.find((e) => e.type === "barcode");
+  const barcodeH = barcodeEl?.type === "barcode" ? barcodeEl.heightMm : barcodeHeightMm(widthMm, heightMm);
+
   return {
     id,
-    version: "1.6.6",
+    version: options?.version ?? "1.7.0",
     widthMm,
     heightMm,
     dpi: 300,
+    marginsMm,
     cutBorderMm: CUT_BORDER_MM,
-    elements: computeLabelLayout(widthMm, heightMm),
+    typography,
+    layoutMode,
+    supplierLayout,
+    qr: { maxSizeMm: qrMaxSizeMm, position: layoutMode === "vertical-stack" ? "top-center" : "top-left" },
+    barcode: { heightMm: barcodeH },
+    elements,
   };
 }
 
-/** Preset registry — 40×20 … 95×40 mm (incl. 80×40). */
+/** Preset registry — 40×20 … 95×40 mm + A4 pagina intera. */
 export const LABEL_TEMPLATE_REGISTRY: Record<string, LabelTemplateDefinition> = {
   "40x20-default": buildTemplate("40x20-default", 40, 20),
   "50x30-default": buildTemplate("50x30-default", 50, 30),
@@ -161,6 +210,13 @@ export const LABEL_TEMPLATE_REGISTRY: Record<string, LabelTemplateDefinition> = 
   "80x40-default": buildTemplate("80x40-default", 80, 40),
   "80x50-default": buildTemplate("80x50-default", 80, 50),
   "95x40-default": buildTemplate("95x40-default", 95, 40),
+  "a4-pagina-intera": buildTemplate("a4-pagina-intera", 190, 277, {
+    typography: { scale: 2.3, weight: "bold", tracking: 0, lineHeight: 1.15 },
+    layoutMode: "vertical-stack",
+    supplierLayout: "inline-slash",
+    qrMaxSizeMm: 38,
+    version: "1.0.0",
+  }),
 };
 
 /** Default 95×40 — formato etichetta magazzino preferito. */
@@ -170,11 +226,13 @@ export const LABEL_PRESET_IDS = Object.keys(LABEL_TEMPLATE_REGISTRY);
 
 /** Es. `60x40-default` → `60 × 40 mm`. */
 export function labelPresetDisplayName(presetId: string): string {
+  if (presetId === "a4-pagina-intera") return "A4 · pagina intera";
   return `${presetId.replace(/-default$/, "").replace(/x/g, " × ")} mm`;
 }
 
 export function labelPresetOptionLabel(presetId: string): string {
   const name = labelPresetDisplayName(presetId);
+  if (presetId === "a4-pagina-intera") return `${name} · lettura da lontano`;
   return presetId === DEFAULT_LABEL_PRESET ? `${name} · consigliato` : name;
 }
 

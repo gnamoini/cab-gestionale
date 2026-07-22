@@ -44,7 +44,7 @@ export const MAGAZZINO_REPORT_LIGHT_COLUMNS =
   "id, codice, nome, marca, quantita, stock_version, costo, prezzo_vendita, consumo_medio_mensile, meta, entity_key, created_at, updated_at" as const;
 
 export const MEZZI_COLUMNS =
-  "id, cliente, utilizzatore, targa, numero_scuderia, anno, meta, entity_key, marca_telaio, modello_telaio, tipo_telaio, telaio_num, km, note, created_at, updated_at" as const;
+  "id, cliente, utilizzatore, targa, numero_scuderia, anno, meta, entity_key, marca_telaio, modello_telaio, tipo_telaio, telaio_num, km, note, ultimo_km_rilevato, ultimo_km_data, ultimo_ore_rilevate, ultimo_ore_data, ultimo_aggiornamento_da_lavorazione_id, created_at, updated_at" as const;
 
 export const ATTREZZATURE_COLUMNS =
   "id, mezzo_id, marca, modello, tipo_attrezzatura, matricola, portata, anno, note, created_at, updated_at, created_by" as const;

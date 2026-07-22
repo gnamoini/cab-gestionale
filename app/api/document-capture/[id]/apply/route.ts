@@ -4,6 +4,7 @@ import {
   CaptureApplyInProgressError,
 } from "@/lib/document-capture/capture-apply.server";
 import { CapturePlanStaleError } from "@/lib/document-capture/capture-plan-staleness";
+import type { CaptureApplyMeta } from "@/lib/document-capture/capture-apply-meta";
 import { getCompanyIdForUserOrNull } from "@/lib/document-capture/company-id.server";
 import { requireDocumentCaptureAuth } from "@/lib/document-capture/document-capture-route-auth.server";
 import { checkDocumentCaptureRateLimit } from "@/lib/document-capture/document-capture-rate-limit.server";
@@ -19,9 +20,13 @@ export async function POST(request: Request, context: RouteContext) {
   if (authError) return authError;
 
   const { id } = await context.params;
-  let body: { applicationId?: string; forceReview?: boolean };
+  let body: { applicationId?: string; forceReview?: boolean; applyMeta?: CaptureApplyMeta };
   try {
-    body = (await request.json()) as { applicationId?: string; forceReview?: boolean };
+    body = (await request.json()) as {
+      applicationId?: string;
+      forceReview?: boolean;
+      applyMeta?: CaptureApplyMeta;
+    };
   } catch {
     return NextResponse.json({ error: "Body JSON non valido" }, { status: 400 });
   }
@@ -50,6 +55,7 @@ export async function POST(request: Request, context: RouteContext) {
       captureId: id,
       applicationId: body.applicationId,
       forceReview: body.forceReview,
+      applyMeta: body.applyMeta,
     });
     traceDocumentCaptureOperation({
       operation: "apply",

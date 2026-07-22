@@ -12,6 +12,7 @@ import {
   captureReviewAllowsForceApply,
   type ValidateCaptureResult,
 } from "@/lib/document-capture/validation/validate-capture-for-apply";
+import type { CaptureApplyMeta } from "@/lib/document-capture/capture-apply-meta";
 
 export type CaptureApplyFlowResult = {
   ok: true;
@@ -101,7 +102,10 @@ export function useCaptureApplyFlow(captureId: string | null) {
   }, [captureId]);
 
   const runApply = useCallback(
-    async (applicationId: string, opts?: { forceReview?: boolean }) => {
+    async (
+      applicationId: string,
+      opts?: { forceReview?: boolean; applyMeta?: CaptureApplyMeta },
+    ) => {
       if (!captureId) throw new Error("Capture assente");
       if (validation?.status === "REVIEW" && !opts?.forceReview) {
         throw new Error("REVIEW_REQUIRED");
@@ -112,7 +116,11 @@ export function useCaptureApplyFlow(captureId: string | null) {
       const res = await fetch(`/api/document-capture/${captureId}/apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ applicationId, forceReview: opts?.forceReview ?? false }),
+        body: JSON.stringify({
+          applicationId,
+          forceReview: opts?.forceReview ?? false,
+          applyMeta: opts?.applyMeta,
+        }),
       });
       const body = (await res.json().catch(() => ({}))) as {
         lavorazioneId?: string;
@@ -170,7 +178,10 @@ export function useCaptureApplyFlow(captureId: string | null) {
   }, [captureId, lastApplicationId]);
 
   const applyFromIngresso = useCallback(
-    async (fields: SchedaIngressoFields, opts?: { forceReview?: boolean }): Promise<CaptureApplyFlowResult> => {
+    async (
+      fields: SchedaIngressoFields,
+      opts?: { forceReview?: boolean; meta?: CaptureApplyMeta },
+    ): Promise<CaptureApplyFlowResult> => {
       if (!captureId) throw new Error("Capture assente");
       setBusy(true);
       setError(null);
@@ -188,7 +199,10 @@ export function useCaptureApplyFlow(captureId: string | null) {
         if (opts?.forceReview && v && !captureReviewAllowsForceApply(v)) {
           throw new Error("Ricambi non trovati in magazzino: correggi o rimuovi le righe prima dell'import.");
         }
-        const lavorazioneId = await runApply(applicationId, opts);
+        const lavorazioneId = await runApply(applicationId, {
+          forceReview: opts?.forceReview,
+          applyMeta: opts?.meta,
+        });
         return { ok: true, lavorazioneId, applicationId };
       } catch (e) {
         const raw = e instanceof Error ? e.message : "Apply non riuscito";

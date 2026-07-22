@@ -20,6 +20,8 @@ import {
 import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 import { OptionalTooltip, Tooltip } from "@/components/ui";
 import { MagazzinoBulkLabelToolbar } from "@/components/gestionale/magazzino/magazzino-bulk-label-toolbar";
+import { MagazzinoLabelQtyStepper } from "@/components/gestionale/magazzino/magazzino-label-qty-stepper";
+import { useLabelSelection } from "@/lib/inventory-labels/client/label-selection";
 import { MagazzinoScortaDisplayBadge } from "@/components/gestionale/magazzino/magazzino-scorta-display-cell";
 import { MagazzinoScortaAdjustActionsCell } from "@/components/gestionale/magazzino/magazzino-scorta-adjust-actions-cell";
 import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
@@ -90,6 +92,7 @@ import {
 } from "@/lib/magazzino/ricambio-consumo-from-log";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import type { RicambioMagazzino, SortKeyMagazzino } from "@/lib/magazzino/types";
+import { displayRicambioCodice, ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import { formatRicambioUnitaMisuraLabel } from "@/lib/magazzino/ricambio-unita-misura";
 import {
   dsPageToolbarCtaCompact,
@@ -451,12 +454,13 @@ function magazzinoConsumoMedioTooltip(
 }
 
 function RicambioCodiceCell({ p }: { p: RicambioMagazzino }) {
+  const primary = displayRicambioCodice(p.codiceFornitoreOriginale);
   const secondary = p.codiceFornitoreOriginaleSecondario.trim();
   return (
     <div className="flex items-start gap-1">
       <div className="min-w-0 flex-1 space-y-0.5">
         <span className="inline-block max-w-full break-all rounded-md bg-zinc-100 px-2 py-1 font-mono text-xs font-semibold leading-snug tracking-wide dark:bg-zinc-800">
-          {p.codiceFornitoreOriginale}
+          {primary}
         </span>
         {secondary ? (
           <div className="break-all pl-0.5 font-mono text-[11px] font-medium leading-snug tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -615,7 +619,8 @@ export function MagazzinoView() {
   const [dupCheckModalOpen, setDupCheckModalOpen] = useState(false);
 
   const [detail, setDetail] = useState<{ id: string; mode: "info" | "edit" } | null>(null);
-  const [selectedRicambioIds, setSelectedRicambioIds] = useState<Set<string>>(() => new Set());
+  const { selection: labelSelection, setQuantity: setLabelQuantity, clearAll: clearLabelQuantities } =
+    useLabelSelection();
   const [labelMode, setLabelMode] = useState(false);
   const [modalitaModifica, setModalitaModifica] = useState(true);
   useEffect(() => {
@@ -961,13 +966,23 @@ export function MagazzinoView() {
         (r) => r.module === CAB_SETTINGS_MODULE.magazzino && r.key === CAB_SETTINGS_KEY.master,
       );
       const serverVal = (masterRow?.value ?? {}) as MagazzinoMasterPrefs;
+      const mergedMarche = mergeMasterWithRows(serverVal.marche ?? [], masterMarche);
+      const mergedCategorie = mergeMasterWithRows(serverVal.categorie ?? [], masterCategorie);
+      const mergedMezzi = mergeMasterWithRows(serverVal.mezziCompatibili ?? [], masterMezzi);
+      const mergedFornitori = mergeMasterWithRows(serverVal.fornitori ?? [], masterFornitori);
       const serverSig = JSON.stringify({
         marche: serverVal.marche ?? [],
         categorie: serverVal.categorie ?? [],
         mezziCompatibili: serverVal.mezziCompatibili ?? [],
         fornitori: serverVal.fornitori ?? [],
       });
-      if (sig === serverSig) {
+      const mergedSig = JSON.stringify({
+        marche: mergedMarche,
+        categorie: mergedCategorie,
+        mezziCompatibili: mergedMezzi,
+        fornitori: mergedFornitori,
+      });
+      if (mergedSig === serverSig) {
         lastSyncedMagMasterSigRef.current = sig;
         return;
       }
@@ -978,14 +993,14 @@ export function MagazzinoView() {
           key: CAB_SETTINGS_KEY.master,
           value: {
             ...serverVal,
-            marche: masterMarche,
-            categorie: masterCategorie,
-            mezziCompatibili: masterMezzi,
-            fornitori: masterFornitori,
+            marche: mergedMarche,
+            categorie: mergedCategorie,
+            mezziCompatibili: mergedMezzi,
+            fornitori: mergedFornitori,
           },
         })
         .then(() => {
-          lastSyncedMagMasterSigRef.current = sig;
+          lastSyncedMagMasterSigRef.current = mergedSig;
         })
         .catch(() => {
           /* toast OCC già in useSettingsUpsertMutation */
@@ -1010,17 +1025,15 @@ export function MagazzinoView() {
     saveMagazzinoChangeLog(logEntries);
   }, [logEntries, logPersistReady]);
 
-  const marche = useMemo(
-    () => mergeMasterWithRows(masterMarche, marcheFromRows),
-    [masterMarche, marcheFromRows],
-  );
-
-  const categorie = useMemo(
-    () => mergeMasterWithRows(masterCategorie, categorieFromRows),
-    [masterCategorie, categorieFromRows],
-  );
-
   /** Elenchi globali puri (`Impostazioni → Magazzino`) — SSOT per selettori e validazione form. */
+  const marcheGlobal = useMemo(
+    () => appSettings?.magazzinoMaster?.marche ?? [],
+    [appSettings?.magazzinoMaster?.marche],
+  );
+  const categorieGlobal = useMemo(
+    () => appSettings?.magazzinoMaster?.categorie ?? [],
+    [appSettings?.magazzinoMaster?.categorie],
+  );
   const fornitoriGlobal = useMemo(
     () => appSettings?.magazzinoMaster?.fornitori ?? [],
     [appSettings?.magazzinoMaster?.fornitori],
@@ -1028,6 +1041,16 @@ export function MagazzinoView() {
   const produttoriGlobal = useMemo(
     () => appSettings?.magazzinoMaster?.produttori ?? [],
     [appSettings?.magazzinoMaster?.produttori],
+  );
+
+  const marche = useMemo(
+    () => mergeMasterWithRows(mergeMasterWithRows(marcheGlobal, masterMarche), marcheFromRows),
+    [marcheGlobal, masterMarche, marcheFromRows],
+  );
+
+  const categorie = useMemo(
+    () => mergeMasterWithRows(mergeMasterWithRows(categorieGlobal, masterCategorie), categorieFromRows),
+    [categorieGlobal, masterCategorie, categorieFromRows],
   );
 
   const fornitori = useMemo(
@@ -1305,28 +1328,9 @@ export function MagazzinoView() {
     setDetail({ id: p.id, mode: "info" });
   }
 
-  function toggleRicambioSelected(id: string) {
+  function setLabelQtyForRicambio(id: string, qty: number) {
     if (!labelMode) return;
-    setSelectedRicambioIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleSelectAllVisible() {
-    if (!labelMode) return;
-    const visibleIds = pagedMagazzino.map((p) => p.id);
-    setSelectedRicambioIds((prev) => {
-      const allSelected = visibleIds.length > 0 && visibleIds.every((id) => prev.has(id));
-      if (allSelected) {
-        const next = new Set(prev);
-        for (const id of visibleIds) next.delete(id);
-        return next;
-      }
-      return new Set([...prev, ...visibleIds]);
-    });
+    setLabelQuantity(id, qty);
   }
 
   function startEditFromInfo() {
@@ -1508,7 +1512,8 @@ export function MagazzinoView() {
       const avgM = consumoRow?.avgMonthly ?? null;
       const low = p.scorta < p.scortaMinima;
       const stale = isModificaOlderThanMonths(p.dataUltimaModifica, MAGAZZINO_STALE_MODIFICA_MONTHS);
-      const selected = selectedRicambioIds.has(p.id);
+      const qty = labelSelection.quantities[p.id] ?? 0;
+      const selected = qty > 0;
       return (
         <tr
           id={`magazzino-row-${p.id}`}
@@ -1521,13 +1526,11 @@ export function MagazzinoView() {
           className={gestionaleListTableRowClass}
         >
           {labelMode ? (
-            <td className={`${gestionaleListTableTdCenter} w-10`}>
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-zinc-300"
-                checked={selected}
-                onChange={() => toggleRicambioSelected(p.id)}
-                aria-label={`Seleziona ${p.codiceFornitoreOriginale}`}
+            <td className={`${gestionaleListTableTdCenter} w-[7.25rem]`}>
+              <MagazzinoLabelQtyStepper
+                value={qty}
+                onChange={(next) => setLabelQtyForRicambio(p.id, next)}
+                ariaLabel={ricambioCodiceForUi(p.codiceFornitoreOriginale) || p.descrizione}
               />
             </td>
           ) : null}
@@ -1608,8 +1611,9 @@ export function MagazzinoView() {
       compatModelsDisplayFor,
       magCanCreateRicambio,
       modalitaModifica,
-      selectedRicambioIds,
+      labelSelection.quantities,
       labelMode,
+      setLabelQtyForRicambio,
     ],
   );
 
@@ -1624,14 +1628,14 @@ export function MagazzinoView() {
         id: "label-mode",
         label: "Etichette",
         description: labelMode
-          ? "Modalità selezione attiva per stampa etichette"
-          : "Seleziona ricambi per stampare etichette",
+          ? "Imposta quantità per ricambio e genera le etichette"
+          : "Stampa etichette con quantità per ricambio",
         icon: <PageActionIconLabels />,
         toggle: {
           checked: labelMode,
           onChange: (checked) => {
             setLabelMode(checked);
-            if (!checked) setSelectedRicambioIds(new Set());
+            if (!checked) clearLabelQuantities();
           },
         },
       });
@@ -1791,8 +1795,8 @@ export function MagazzinoView() {
 
         {labelMode ? (
           <MagazzinoBulkLabelToolbar
-            selectedIds={selectedRicambioIds}
-            onClearSelection={() => setSelectedRicambioIds(new Set())}
+            selection={labelSelection}
+            onClearSelection={clearLabelQuantities}
           />
         ) : null}
 
@@ -1803,7 +1807,7 @@ export function MagazzinoView() {
           visibilityClass={`mt-4 ${GESTIONALE_LIST_DESKTOP_ONLY_CLASS}`}
           colgroup={
             <>
-              {labelMode ? <col className="w-10" /> : null}
+              {labelMode ? <col className="w-[7.25rem]" /> : null}
               <col style={{ width: "7.75rem" }} />
               <col className="w-[7%]" />
               <col className="w-[20%]" />
@@ -1819,16 +1823,8 @@ export function MagazzinoView() {
           headRow={
             <>
               {labelMode ? (
-                <th className="w-10 px-2 text-center" scope="col">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-zinc-300"
-                    checked={
-                      pagedMagazzino.length > 0 && pagedMagazzino.every((p) => selectedRicambioIds.has(p.id))
-                    }
-                    onChange={toggleSelectAllVisible}
-                    aria-label="Seleziona tutti in pagina"
-                  />
+                <th className="w-[7.25rem] px-2 text-center text-xs font-medium text-[color:var(--cab-text-muted)]" scope="col">
+                  Qtà
                 </th>
               ) : null}
               <GlobalTableSortTh
@@ -1934,17 +1930,15 @@ export function MagazzinoView() {
                 }
               >
                 {labelMode ? (
-                  <div className="mb-2 flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 shrink-0 rounded border-zinc-300"
-                      checked={selectedRicambioIds.has(p.id)}
-                      onChange={() => toggleRicambioSelected(p.id)}
-                      aria-label={`Seleziona ${p.codiceFornitoreOriginale}`}
-                    />
+                  <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
-                      Etichetta
+                      Etichette
                     </span>
+                    <MagazzinoLabelQtyStepper
+                      value={labelSelection.quantities[p.id] ?? 0}
+                      onChange={(next) => setLabelQtyForRicambio(p.id, next)}
+                      ariaLabel={ricambioCodiceForUi(p.codiceFornitoreOriginale) || p.descrizione}
+                    />
                   </div>
                 ) : null}
                 <div className="flex items-start justify-between gap-2">

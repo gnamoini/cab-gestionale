@@ -2,6 +2,7 @@ import {
   validateLavorazioneTargetForInsert,
   type InterventoTargetType,
 } from "@/lib/domain/mezzo-attrezzatura/intervento-target";
+import { assertValidPriorita } from "@/lib/lavorazioni/priorita-order";
 import { TEXT_LONG } from "@/lib/validation/text-field-limits";
 import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
 
@@ -104,7 +105,7 @@ export function pickLavorazioneCreatePayload(data: Record<string, unknown>): Lav
     ...picked,
     mezzo_id: mezzoId,
     stato: picked.stato,
-    priorita: picked.priorita,
+    priorita: assertValidPriorita(picked.priorita),
     target_type: target.target_type,
     attrezzatura_id: target.attrezzatura_id,
   };

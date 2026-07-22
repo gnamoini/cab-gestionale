@@ -38,6 +38,19 @@ import { dsPageToolbarCtaCompact } from "@/lib/ui/design-system";
 import { useGestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
 import { LoadingCardSkeleton, LoadingErrorState, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount, SkeletonBoundary } from "@/components/design-system";
 import { Q_FOCUS_MEZZO } from "@/lib/navigation/dashboard-log-links";
+import {
+  Q_MEZZI_HUB,
+  Q_MEZZI_HUB_TAB,
+  Q_MEZZI_VIEW,
+  Q_TAGLIANDI_HIGHLIGHT,
+  Q_TAGLIANDI_PRESET,
+  Q_TAGLIANDI_SECTION,
+  Q_TAGLIANDI_STATO,
+  parseMezziViewFromSearchParam,
+  parseTagliandiSectionFromSearchParam,
+  parseTagliandoStatoFilter,
+  type TagliandiSectionParam,
+} from "@/lib/navigation/mezzi-tagliandi-links";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import type { MezzoFilters, MezzoUpdate } from "@/lib/domain/mezzi-entry";
@@ -125,6 +138,10 @@ export function MezziView() {
   const pathname = usePathname();
 
   const [pageView, setPageView] = useState<MezziPageView>("anagrafica");
+  const [tagliandiSection, setTagliandiSection] = useState<TagliandiSectionParam>("panoramica");
+  const [tagliandiHighlight, setTagliandiHighlight] = useState<string | null>(null);
+  const [tagliandiPresetFilter, setTagliandiPresetFilter] = useState("");
+  const [tagliandiStatoFilter, setTagliandiStatoFilter] = useState<ReturnType<typeof parseTagliandoStatoFilter>>("");
   const isAnagrafica = pageView === "anagrafica";
 
   const [search, setSearch] = useState("");
@@ -301,6 +318,61 @@ export function MezziView() {
     setHubInitialTab(tab);
     setHubMezzo(m);
   }, []);
+
+  const syncMezziUrl = useCallback(
+    (patch: {
+      view?: MezziPageView;
+      tagliandiSection?: TagliandiSectionParam;
+      hubMezzo?: string | null;
+      hubTab?: MezziHubTabId | null;
+      preset?: string | null;
+      stato?: string | null;
+      highlight?: string | null;
+      clearHub?: boolean;
+    }) => {
+      const sp = new URLSearchParams(searchParams.toString());
+      if (patch.view) sp.set(Q_MEZZI_VIEW, patch.view);
+      if (patch.tagliandiSection) sp.set(Q_TAGLIANDI_SECTION, patch.tagliandiSection);
+      if (patch.preset !== undefined) {
+        if (patch.preset) sp.set(Q_TAGLIANDI_PRESET, patch.preset);
+        else sp.delete(Q_TAGLIANDI_PRESET);
+      }
+      if (patch.stato !== undefined) {
+        if (patch.stato) sp.set(Q_TAGLIANDI_STATO, patch.stato);
+        else sp.delete(Q_TAGLIANDI_STATO);
+      }
+      if (patch.highlight !== undefined) {
+        if (patch.highlight) sp.set(Q_TAGLIANDI_HIGHLIGHT, patch.highlight);
+        else sp.delete(Q_TAGLIANDI_HIGHLIGHT);
+      }
+      if (patch.clearHub || patch.hubMezzo === null) {
+        sp.delete(Q_MEZZI_HUB);
+        sp.delete(Q_MEZZI_HUB_TAB);
+      } else if (patch.hubMezzo) {
+        sp.set(Q_MEZZI_HUB, patch.hubMezzo);
+        sp.set(Q_MEZZI_HUB_TAB, patch.hubTab ?? "tagliandi");
+      }
+      const qs = sp.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const handlePageViewChange = useCallback(
+    (next: MezziPageView) => {
+      setPageView(next);
+      syncMezziUrl({ view: next, tagliandiSection: next === "tagliandi" ? tagliandiSection : undefined });
+    },
+    [syncMezziUrl, tagliandiSection],
+  );
+
+  const handleTagliandiSectionChange = useCallback(
+    (next: TagliandiSectionParam) => {
+      setTagliandiSection(next);
+      syncMezziUrl({ view: "tagliandi", tagliandiSection: next });
+    },
+    [syncMezziUrl],
+  );
   const { undoable: undoableMezziLog, logQuery } = useUndoableLog("mezzi", {
     enabled: isAnagrafica || logOpen,
   });
@@ -516,6 +588,26 @@ export function MezziView() {
   const scrollLockActive = Boolean(hubMezzo || nuovoOpen || editMezzo || logOpen);
   const anyOverlay = scrollLockActive || Boolean(eliminaConfirmMezzo);
   useEffect(() => {
+    const view = parseMezziViewFromSearchParam(searchParams.get(Q_MEZZI_VIEW));
+    if (view) setPageView(view);
+    const section = parseTagliandiSectionFromSearchParam(searchParams.get(Q_TAGLIANDI_SECTION));
+    if (section) setTagliandiSection(section);
+    setTagliandiPresetFilter(searchParams.get(Q_TAGLIANDI_PRESET)?.trim() ?? "");
+    setTagliandiStatoFilter(parseTagliandoStatoFilter(searchParams.get(Q_TAGLIANDI_STATO)));
+    setTagliandiHighlight(searchParams.get(Q_TAGLIANDI_HIGHLIGHT)?.trim() ?? null);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const hubId = searchParams.get(Q_MEZZI_HUB)?.trim();
+    const hubTab = (searchParams.get(Q_MEZZI_HUB_TAB)?.trim() as MezziHubTabId) || "tagliandi";
+    if (!hubId || mezziUi.length === 0) return;
+    const mezzo = mezziUi.find((m) => m.id === hubId);
+    if (!mezzo) return;
+    setHubInitialTab(hubTab);
+    setHubMezzo(mezzo);
+  }, [searchParams, mezziUi]);
+
+  useEffect(() => {
     const id = searchParams.get(Q_FOCUS_MEZZO)?.trim();
     if (!id) return;
     const t = window.setTimeout(() => {
@@ -631,7 +723,7 @@ export function MezziView() {
         onRefresh={() => void refetchMezzi()}
       />
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <MezziPageViewToggle value={pageView} onChange={setPageView} />
+        <MezziPageViewToggle value={pageView} onChange={handlePageViewChange} />
       </div>
         <ShellCard>
           {pageView === "anagrafica" ? (
@@ -744,7 +836,14 @@ export function MezziView() {
           ) : null}
             </>
           ) : pageView === "tagliandi" ? (
-            <MezziTagliandiPanel canEdit={canEditVehicles} />
+            <MezziTagliandiPanel
+              canEdit={canEditVehicles}
+              tagliandiSection={tagliandiSection}
+              onTagliandiSectionChange={handleTagliandiSectionChange}
+              presetFilter={tagliandiPresetFilter}
+              statoFilter={tagliandiStatoFilter}
+              highlightConfigId={tagliandiHighlight}
+            />
           ) : null}
         </ShellCard>
 
@@ -755,6 +854,7 @@ export function MezziView() {
           onClose={() => {
             setHubMezzo(null);
             setHubInitialTab("panoramica");
+            syncMezziUrl({ clearHub: true });
           }}
           onEdit={() => {
             if (!canEditVehicles) return;

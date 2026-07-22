@@ -7,7 +7,13 @@ import {
 import { isInventoryLabelsBulkRateLimited } from "@/lib/inventory-labels/api-rate-limit.server";
 import { createBulkLabelJob, renderBulkLabelPdfSync } from "@/lib/inventory-labels/jobs/bulk-label-job.server";
 import { LabelPdfTimeoutError } from "@/lib/inventory-labels/render/pdf-timeout";
-import { bulkLabelRequestSchema, BULK_SYNC_MAX, BULK_ABSOLUTE_MAX, isBulkSyncCount } from "@/lib/inventory-labels/validation";
+import {
+  bulkLabelRequestSchema,
+  BULK_SYNC_MAX,
+  BULK_ABSOLUTE_MAX,
+  isBulkSyncCount,
+  normalizeBulkLabelRequest,
+} from "@/lib/inventory-labels/validation";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -31,14 +37,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Richiesta non valida", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { ids, preset, includeBarcode } = parsed.data;
+  const normalized = normalizeBulkLabelRequest(parsed.data);
+  const { items, preset, includeBarcode, totalLabels } = normalized;
   const origin = requestOrigin(request);
 
-  if (isBulkSyncCount(ids.length)) {
+  if (isBulkSyncCount(totalLabels)) {
     try {
       const { bytes, contentType, pipeline, skippedIds, cacheHitCount, cacheMissCount, durationMs } =
         await renderBulkLabelPdfSync({
-          entityIds: ids,
+          items,
           preset,
           includeBarcode,
           userId: auth.userId,
@@ -49,11 +56,12 @@ export async function POST(request: Request) {
         status: 200,
         headers: {
           "Content-Type": contentType,
-          "Content-Disposition": `inline; filename="${bulkFilename(ids.length, ext)}"`,
+          "Content-Disposition": `inline; filename="${bulkFilename(totalLabels, ext)}"`,
           "X-Label-Pdf-Pipeline": pipeline,
           "X-Label-Duration-Ms": String(durationMs),
           "X-Label-Cache": `HIT:${cacheHitCount},MISS:${cacheMissCount}`,
           "X-Label-Skipped-Count": String(skippedIds.length),
+          "X-Label-Total-Count": String(totalLabels),
         },
       });
     } catch (e) {
@@ -70,13 +78,13 @@ export async function POST(request: Request) {
 
   try {
     const jobId = await createBulkLabelJob({
-      entityIds: ids,
+      items,
       preset,
       includeBarcode,
       userId: auth.userId,
       origin,
     });
-    return NextResponse.json({ jobId, async: true }, { status: 202 });
+    return NextResponse.json({ jobId, async: true, totalLabels }, { status: 202 });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Creazione job fallita" },

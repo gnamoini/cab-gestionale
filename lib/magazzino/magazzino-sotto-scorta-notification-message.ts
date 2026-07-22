@@ -1,5 +1,6 @@
 import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 
 function toBulletModificaRiga(lines: string[]): string {
   const filtered = lines.map((l) => l.trim()).filter(Boolean);
@@ -13,7 +14,7 @@ export function toMagazzinoSottoScortaLogViewModel(item: RicambioMagazzino): Ges
   const marca = item.marca?.trim();
   const oggetto = marca ? `${marca} ${descrizione}` : descrizione;
   const lines: string[] = [];
-  const codice = item.codiceFornitoreOriginale?.trim();
+  const codice = ricambioCodiceForUi(item.codiceFornitoreOriginale);
   if (codice) lines.push(`Codice: ${codice}`);
   lines.push(`Scorta: ${item.scorta} (min. ${item.scortaMinima})`);
 

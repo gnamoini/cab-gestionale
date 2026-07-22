@@ -5,7 +5,14 @@ import { aiErrorMessage } from "@/lib/ai/runtime/errors";
 export function mapAiErrorToAnalyzeCode(code: AiErrorCode): "not_configured" | "auth_invalid" | "unreachable" | "failed" {
   if (code === "AI_CONFIG_MISSING") return "not_configured";
   if (code === "AI_KEY_INVALID") return "auth_invalid";
-  if (code === "AI_PROVIDER_DOWN" || code === "AI_TIMEOUT") return "unreachable";
+  if (
+    code === "AI_PROVIDER_DOWN" ||
+    code === "AI_TIMEOUT" ||
+    code === "AI_MODEL_UNAVAILABLE" ||
+    code === "AI_PAYLOAD_TOO_LARGE"
+  ) {
+    return "unreachable";
+  }
   return "failed";
 }
 

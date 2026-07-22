@@ -27,6 +27,7 @@ import { createSelectorSheetTapSelectHandlers } from "@/lib/selector-interaction
 import { useSelectorExclusiveGroup } from "@/lib/selector-interaction/use-selector-exclusive-group";
 import { useSelectorFocusChain } from "@/lib/selector-interaction/use-selector-focus-chain";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
+import { scheduleFocusNextGestionaleField } from "@/lib/ui/gestionale-focus-navigation";
 
 function identPlaceholder(field: SchedaIngressoIdentField): string {
   if (field === "targa") return "Cerca targa…";
@@ -284,10 +285,17 @@ export function SchedaIngressoIdentAutocompleteField({
       setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
       return;
     }
-    if (e.key === "Enter" && open && suggestions.length) {
+    if (e.key === "Enter" && open) {
       e.preventDefault();
-      const idx = activeIndex >= 0 ? activeIndex : 0;
-      pickMezzo(suggestions[idx]!);
+      if (activeIndex < 0 && !value.trim()) {
+        resetUi();
+        scheduleFocusNextGestionaleField(inputRef.current);
+        return;
+      }
+      if (suggestions.length) {
+        const idx = activeIndex >= 0 ? activeIndex : 0;
+        pickMezzo(suggestions[idx]!);
+      }
     }
   };
 
@@ -310,6 +318,11 @@ export function SchedaIngressoIdentAutocompleteField({
     if (e.key === "Enter") {
       e.preventDefault();
       const q = sheetQuery.trim();
+      if (activeIndex < 0 && !q) {
+        closeSheetWithCommit();
+        scheduleFocusNextGestionaleField(inputRef.current);
+        return;
+      }
       if (activeIndex >= 0 && activeIndex < suggestions.length) {
         pickMezzo(suggestions[activeIndex]!);
         return;

@@ -5,6 +5,7 @@ import {
   formatLabelMarcaSecondariaLine,
   shouldRenderMarcaSecondaria,
 } from "@/lib/inventory-labels/domain/label-display";
+import { resolveSupplierBlock } from "@/lib/inventory-labels/domain/label-suppliers";
 import { fieldValue, maxCharsForWrap, maxCharsForWidth, wrapLabelLines } from "@/lib/inventory-labels/render/layout";
 import { labelDisplayCaps } from "@/lib/inventory-labels/domain/label-display";
 import {
@@ -30,6 +31,7 @@ export type PlacedLabelText = {
   lines: string[];
   /** `alphabetic` = yMm è la baseline (gruppo fornitore, caps). */
   baseline?: "hanging" | "alphabetic";
+  bold?: boolean;
 };
 
 function textEl(
@@ -70,6 +72,7 @@ type StackBlock = {
   fontPt: number;
   font?: "sans" | "mono";
   lines: string[];
+  bold?: boolean;
 };
 
 function assignPositions(
@@ -84,7 +87,7 @@ function assignPositions(
   let y = topMm;
   for (let i = 0; i < blocks.length; i++) {
     const b = blocks[i]!;
-    placed.push({ field: b.field, xMm: textX, yMm: y, fontPt: b.fontPt, font: b.font, lines: b.lines });
+    placed.push({ field: b.field, xMm: textX, yMm: y, fontPt: b.fontPt, font: b.font, lines: b.lines, bold: b.bold });
     if (i < blocks.length - 1) {
       const next = blocks[i + 1]!;
       const gap = extraGapAfter?.(b.field, next.field) ?? 0;
@@ -114,6 +117,7 @@ function assignBottomBaselines(
       font: b.font,
       lines: b.lines,
       baseline: "alphabetic",
+      bold: b.bold,
     });
     if (i > 0) {
       const { lineStepMm } = lineMetrics(b.fontPt, dpi);
@@ -192,6 +196,8 @@ export function resolveLabelTextLayout(
   const altCodEl = textEl(template.elements, "codiceAlternativo");
   const barcode = barcodeEl(template.elements);
   const dpi = template.dpi;
+  const supplierLayout = template.supplierLayout ?? "inline-slash";
+  const typographyBold = template.typography?.weight === "bold";
 
   const textX = marcaEl.xMm;
   const textW = marcaEl.maxWidthMm ?? template.widthMm - textX - 2;
@@ -200,8 +206,9 @@ export function resolveLabelTextLayout(
   const topGroupBottom = marcaEl.zoneBottomMm ?? barcode.yMm;
   const supplierTop = altFornEl.yMm ?? barcode.yMm;
 
-  const altFornitore = fieldValue(payload, "fornitoreAlternativo");
-  const altCodice = fieldValue(payload, "codiceAlternativo");
+  const supplierBlock = resolveSupplierBlock(payload.fornitoriAlternativi ?? [], supplierLayout);
+  const altFornitore = supplierBlock.fornitoreLines.join("\n") || fieldValue(payload, "fornitoreAlternativo");
+  const altCodice = supplierBlock.codiceLines.join("\n") || fieldValue(payload, "codiceAlternativo");
 
   const primaryPt = Math.max(marcaEl.fontPt, descEl.fontPt, codiceEl.fontPt);
   const rowStepMm = lineMetrics(primaryPt, dpi).lineStepMm;
@@ -214,7 +221,13 @@ export function resolveLabelTextLayout(
   if (altCodice) {
     const maxLines = Math.max(1, maxLinesForZoneMm(supplierBandH * 0.55, altCodPt, dpi));
     const res = wrapBlock(altCodice, altCodPt, textW, maxLines, "mono", "chars");
-    bottomBlocks.push({ field: "codiceAlternativo", fontPt: altCodPt, font: "mono", lines: res.lines });
+    bottomBlocks.push({
+      field: "codiceAlternativo",
+      fontPt: altCodPt,
+      font: "mono",
+      lines: res.lines,
+      bold: typographyBold,
+    });
   }
   if (altFornitore) {
     const codiceAltH = bottomBlocks.length
@@ -223,7 +236,12 @@ export function resolveLabelTextLayout(
     const fornZoneH = Math.max(lineMetrics(altFornPt, dpi).lineStepMm, supplierBandH - codiceAltH);
     const maxLines = Math.max(1, maxLinesForZoneMm(fornZoneH, altFornPt, dpi));
     const res = wrapBlock(altFornitore, altFornPt, textW, maxLines, "sans", "words");
-    bottomBlocks.unshift({ field: "fornitoreAlternativo", fontPt: altFornPt, lines: res.lines });
+    bottomBlocks.unshift({
+      field: "fornitoreAlternativo",
+      fontPt: altFornPt,
+      lines: res.lines,
+      bold: typographyBold,
+    });
   }
 
   const supplierAnchorBottom = altCodice
@@ -302,9 +320,15 @@ export function resolveLabelTextLayout(
   }
 
   const topBlocks: StackBlock[] = [];
-  if (marcaBlock) topBlocks.push(marcaBlock);
+  if (marcaBlock) {
+    marcaBlock.bold = typographyBold;
+    topBlocks.push(marcaBlock);
+  }
   if (descSpec && descLines.length) {
-    topBlocks.push({ field: "descrizione", fontPt: primaryPt, lines: descLines });
+    topBlocks.push({ field: "descrizione", fontPt: primaryPt, lines: descLines, bold: typographyBold });
+  }
+  for (const block of resolvedCodici) {
+    block.bold = typographyBold;
   }
   topBlocks.push(...resolvedCodici);
 

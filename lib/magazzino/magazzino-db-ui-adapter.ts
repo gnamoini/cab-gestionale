@@ -1,4 +1,8 @@
-import { normalizeRicambioCodice } from "@/lib/magazzino/ricambio-codice";
+import { resolveListinoMarkupBase } from "@/lib/magazzino/calculations";
+import {
+  resolveRicambioCodiceForPersist,
+  ricambioCodiceForUi,
+} from "@/lib/magazzino/ricambio-codice";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import {
   metaFieldsToRicambioUi,
@@ -28,12 +32,13 @@ export function magazzinoRowToRicambioUI(
   autore = "Sistema",
   mezziListe?: MezziListePrefs,
 ): RicambioMagazzino {
-  const listino = num(row.costo, 0);
-  const vendita = num(row.prezzo_vendita, listino);
-  const markup =
-    listino > 0 ? Math.round(((vendita - listino) / listino) * 1000) / 10 : 0;
   const meta = parseMagazzinoRicambioMeta(row.meta ?? {});
   const fromMeta = metaFieldsToRicambioUi(meta);
+  const listino = num(row.costo, 0);
+  const vendita = num(row.prezzo_vendita, listino);
+  const markupBase = resolveListinoMarkupBase(listino, fromMeta.fornitoriAlternativi ?? []);
+  const markup =
+    markupBase > 0 ? Math.round(((vendita - markupBase) / markupBase) * 1000) / 10 : 0;
   const autoreSalvato = meta.autoreUltimaModifica?.trim();
 
   const compatibilitaMezzi = readCompatLabelsForUi(
@@ -45,7 +50,7 @@ export function magazzinoRowToRicambioUI(
   return {
     id: row.id,
     marca: row.marca?.trim() || "—",
-    codiceFornitoreOriginale: normalizeRicambioCodice(row.codice?.trim() ?? ""),
+    codiceFornitoreOriginale: ricambioCodiceForUi(row.codice),
     codiceFornitoreOriginaleSecondario: fromMeta.codiceFornitoreOriginaleSecondario,
     marcaOriginaleSecondaria: fromMeta.marcaOriginaleSecondaria,
     usatoInTagliandi: fromMeta.usatoInTagliandi,
@@ -78,7 +83,7 @@ export function ricambioUiToMagazzinoInsert(
   mezziListe?: MezziListePrefs,
 ): MagazzinoInsert {
   const row: MagazzinoInsert = {
-    codice: normalizeRicambioCodice(r.codiceFornitoreOriginale.trim()),
+    codice: resolveRicambioCodiceForPersist(r.codiceFornitoreOriginale),
     nome: r.descrizione.trim(),
     marca: r.marca.trim() || null,
     quantita: Math.max(0, Math.round(r.scorta)),

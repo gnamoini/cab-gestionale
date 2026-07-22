@@ -83,6 +83,7 @@ export type RegisterMaintenanceExecutionInput = {
 export type TagliandiOverviewRow = {
   configId: string;
   mezzoId: string;
+  presetId: string | null;
   numeroScuderia: string | null;
   targa: string | null;
   attrezzaturaLabel: string;
@@ -103,6 +104,19 @@ export type TagliandiOverviewRow = {
   partsCount: number;
   urgency: MaintenanceUrgency;
   canPlanWorkshop: boolean;
+};
+
+export type MezzoWithoutPresetRow = {
+  mezzoId: string;
+  numeroScuderia: string | null;
+  targa: string | null;
+  attrezzaturaLabel: string;
+  tipoAttrezzatura: string;
+};
+
+export type BulkAssignPresetResult = {
+  assigned: number;
+  skipped: { mezzoId: string; reason: string }[];
 };
 
 export type PresetHierarchyCategory = {

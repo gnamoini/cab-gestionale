@@ -75,7 +75,8 @@ export function MezziEditModal({
   return (
     <GestionaleModalShell
       modalSize="formMedium"
-      title="Modifica mezzo"
+      title="Modifica anagrafica mezzo"
+      subtitle="Le modifiche aggiornano l'anagrafica permanente. Lo storico campo-per-campo è nel tab Log dell'hub mezzo."
       titleId="mezzo-edit-title"
       onRequestClose={onClose}
       footer={

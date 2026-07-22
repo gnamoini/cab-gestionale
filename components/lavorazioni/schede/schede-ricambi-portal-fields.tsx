@@ -10,6 +10,7 @@ import {
 import { globalAutocompleteDropdownPortalPanel } from "@/lib/ui/global-input";
 import { dsInput } from "@/lib/ui/design-system";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 
 type RicambiMagSearchPortalProps = {
   value: string;
@@ -71,7 +72,11 @@ export function RicambiMagSearchPortal({
                 >
                   <span className="font-medium text-[color:var(--cab-text)]">{p.descrizione || "—"}</span>
                   <span className="text-[color:var(--cab-text-muted)]">
-                    {p.codiceFornitoreOriginale || "—"} · {p.marca || "—"}
+                    {(() => {
+                      const codiceUi = ricambioCodiceForUi(p.codiceFornitoreOriginale);
+                      const marca = p.marca?.trim() || "—";
+                      return codiceUi ? `${codiceUi} · ${marca}` : marca;
+                    })()}
                   </span>
                 </button>
               </li>
@@ -168,7 +173,11 @@ export function RicambioRowAutocompletePortal({
             >
               <span className="font-medium text-[color:var(--cab-text)]">{p.descrizione}</span>
               <span className="text-[color:var(--cab-text-muted)]">
-                {p.marca} · {p.codiceFornitoreOriginale}
+                {(() => {
+                  const codiceUi = ricambioCodiceForUi(p.codiceFornitoreOriginale);
+                  const marca = p.marca?.trim() || "—";
+                  return codiceUi ? `${marca} · ${codiceUi}` : marca;
+                })()}
               </span>
             </button>
           </li>

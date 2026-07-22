@@ -22,10 +22,12 @@ export async function GET(request: Request, context: RouteContext) {
     format: url.searchParams.get("format") ?? undefined,
     preset: url.searchParams.get("preset") ?? undefined,
     includeBarcode: url.searchParams.get("includeBarcode") ?? undefined,
+    quantity: url.searchParams.get("quantity") ?? undefined,
   });
   if (!parsed.success) {
     return NextResponse.json({ error: "Parametri non validi" }, { status: 400 });
   }
+  const { format, preset, includeBarcode, quantity } = parsed.data;
 
   const { data: row, error } = await auth.sb
     .from("magazzino_ricambi")
@@ -44,9 +46,10 @@ export async function GET(request: Request, context: RouteContext) {
       entityId: id,
       payload: labelPayloadFromMagazzinoRow(row as MagazzinoRicambioRow),
       token: tokenRow.token,
-      preset: parsed.data.preset,
-      format: parsed.data.format,
-      includeBarcode: parsed.data.includeBarcode,
+      preset,
+      format,
+      includeBarcode,
+      quantity: format === "pdf" ? quantity : 1,
       origin: requestOrigin(request),
       userId: auth.userId,
       device: request.headers.get("user-agent"),

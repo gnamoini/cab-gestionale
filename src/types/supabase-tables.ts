@@ -90,6 +90,11 @@ export type MezzoRow = {
   telaio_num_norm?: string | null;
   km?: number | null;
   note?: string | null;
+  ultimo_km_rilevato?: number | null;
+  ultimo_km_data?: string | null;
+  ultimo_ore_rilevate?: number | null;
+  ultimo_ore_data?: string | null;
+  ultimo_aggiornamento_da_lavorazione_id?: string | null;
   created_at: string;
   updated_at: string;
 };

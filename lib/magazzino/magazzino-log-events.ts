@@ -1,6 +1,7 @@
 import type { CampoChangeLike } from "@/lib/gestionale-log/view-model";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 
 export type MagazzinoLogTipo = "aggiunta" | "update" | "rimozione";
 
@@ -141,7 +142,7 @@ export function buildMagazzinoScortaPersistedLogEntry(input: {
 
 export function magazzinoRicambioDisplayLabel(r: RicambioMagazzino): string {
   const desc = r.descrizione.trim();
-  const cod = r.codiceFornitoreOriginale.trim();
+  const cod = ricambioCodiceForUi(r.codiceFornitoreOriginale);
   if (desc && cod) return `${desc} (${cod})`;
   return desc || cod || "Ricambio";
 }

@@ -10,6 +10,8 @@ import { err, success, type ServiceResult } from "@/src/services/service-result"
 import type { MezzoRow } from "@/src/types/supabase-tables";
 import { logAttrezzatureV2WritePath } from "@/lib/observability/attrezzature-v2-telemetry";
 import { attachMezzoEntityKey } from "@/lib/validation/entity-persistence";
+import { mezzoRowToAnagraficaSnapshot } from "@/lib/domain/mezzo/mezzo-anagrafica-snapshot";
+import { recordMezzoAnagraficaDiff } from "@/src/services/mezzo-anagrafica-history.service";
 import { sanitizeMezzoWritePayload } from "@/lib/validation/services/mezzi-payload";
 import { mergeMezzoMetaPatch } from "@/lib/mezzi/mezzi-meta";
 import { normalizeVin } from "@/lib/mezzi/vin-normalize";
@@ -246,6 +248,16 @@ export const mezziService = {
         azione: "UPDATE",
         payload: auditDiff(before, r, oggettoMezzo(r)),
       });
+      if (before) {
+        const oldSnap = mezzoRowToAnagraficaSnapshot(before as MezzoRow);
+        const newSnap = mezzoRowToAnagraficaSnapshot(r);
+        void recordMezzoAnagraficaDiff({
+          mezzoId: id,
+          origine: "modifica_manuale",
+          oldValues: oldSnap,
+          newValues: newSnap,
+        });
+      }
       return success(r);
     } catch (e) {
       return serviceFailFromError(e);

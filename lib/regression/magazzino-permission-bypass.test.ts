@@ -12,6 +12,7 @@ assert.match(movimentiEntry, /storno/);
 assert.match(movimentiEntry, /Eliminazione movimento non consentita/);
 assert.match(settingsEntry, /upsertMagazzinoSetting/);
 assert.match(settingsEntry, /withPageWriteGuard\("magazzino"/);
+assert.match(settingsEntry, /CAB_SETTINGS_MODULE\.mezzi.*CAB_SETTINGS_KEY\.liste/s);
 assert.match(magazzinoView, /useMagazzinoSettingsUpsertMutation/);
 
 console.log("magazzino-permission-bypass.test.ts OK");

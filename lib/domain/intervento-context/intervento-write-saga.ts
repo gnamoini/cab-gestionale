@@ -29,6 +29,11 @@ import { canUpsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-
 import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
 import type { LavorazioneUpdate } from "@/src/services/lavorazioni.service";
 import { interventoWriteService } from "@/src/services/intervento-write.service";
+import {
+  resolveInterventoWriteContext,
+  resolveMezzoUpdatePlanFromContext,
+  splitMezzoUpdatePlanForCreate,
+} from "@/lib/domain/intervento-context/intervento-write-context";
 
 function isCreateMeta(meta: InterventoWritePlan["meta"]): meta is InterventoWriteCreateMeta {
   return "createdBy" in meta;
@@ -177,11 +182,21 @@ export async function runInterventoWriteSaga(
   }
 
   if (createMode && !lavorazioneId) {
+    const createMeta = isCreateMeta(plan.meta) ? plan.meta : null;
+    const writeCtx = createMeta
+      ? resolveInterventoWriteContext(createMeta.writeContext, createMeta.mezzoUpdatePlan)
+      : { source: "manual" as const };
+    const { anagraficaPlan, meteringPlan } = splitMezzoUpdatePlanForCreate(
+      resolveMezzoUpdatePlanFromContext(writeCtx),
+    );
+
     if (!shouldSkipInterventoWriteStage(idempotencyKey, "prepare-mezzo", true)) {
       try {
         const upsert = await deps.upsertMezzo({
           fields,
-          preferredMezzoId: isCreateMeta(plan.meta) ? plan.meta.mezzoIdHint : null,
+          preferredMezzoId: createMeta?.mezzoIdHint ?? null,
+          updatePlan: anagraficaPlan,
+          writeContext: writeCtx,
         });
         mezzoId = upsert.mezzoId?.trim() || null;
         if (upsert.skipped) {
@@ -192,7 +207,7 @@ export async function runInterventoWriteSaga(
           targetType = upsert.targetType ?? "telaio";
         }
         auditInterventoContext(null, "write-mezzo", {
-          preferredMezzoId: isCreateMeta(plan.meta) ? plan.meta.mezzoIdHint : null,
+          preferredMezzoId: createMeta?.mezzoIdHint ?? null,
           resolvedMezzoId: resolved.mezzoId,
           matchKind: resolved.matchKind,
           extra: { phase: "v2-create-pre-upsert" },
@@ -220,9 +235,38 @@ export async function runInterventoWriteSaga(
         });
         lavorazioneId = row.id;
         upsertInterventoWriteLedger(idempotencyKey, { lavorazioneId, mezzoId: mezzoId ?? "" });
+        if (meteringPlan && mezzoId) {
+          await deps.upsertMezzo({
+            fields,
+            preferredMezzoId: mezzoId,
+            updatePlan: meteringPlan,
+            lavorazioneId,
+            writeContext: writeCtx,
+          });
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Errore creazione lavorazione.";
         return finishSagaTrace(trace, { ok: false, stage: "prepare-lavorazione", error: message });
+      }
+    }
+  } else if (createMode && lavorazioneId) {
+    const createMeta = isCreateMeta(plan.meta) ? plan.meta : null;
+    const writeCtx = createMeta
+      ? resolveInterventoWriteContext(createMeta.writeContext, createMeta.mezzoUpdatePlan)
+      : { source: "manual" as const };
+    const { meteringPlan } = splitMezzoUpdatePlanForCreate(resolveMezzoUpdatePlanFromContext(writeCtx));
+    if (meteringPlan && mezzoId) {
+      try {
+        await deps.upsertMezzo({
+          fields,
+          preferredMezzoId: mezzoId,
+          updatePlan: meteringPlan,
+          lavorazioneId,
+          writeContext: writeCtx,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Errore aggiornamento metering mezzo.";
+        return finishSagaTrace(trace, { ok: false, stage: "prepare-mezzo", error: message, lavorazioneId });
       }
     }
   }
@@ -258,9 +302,16 @@ export async function runInterventoWriteSaga(
 
     recordTraceStep(trace, "v1_persist", "started");
     try {
+      const editWriteCtx = resolveInterventoWriteContext(
+        editMeta.writeContext,
+        editMeta.mezzoUpdatePlan,
+      );
       const upsert = await deps.upsertMezzo({
         fields,
         preferredMezzoId: row.mezzo_id,
+        updatePlan: resolveMezzoUpdatePlanFromContext(editWriteCtx),
+        lavorazioneId: row.id,
+        writeContext: editWriteCtx,
       });
       mezzoId = upsert.mezzoId?.trim() || null;
       attrezzaturaId = upsert.attrezzaturaId ?? null;

@@ -209,27 +209,35 @@ begin
 end;
 $$;
 
--- BUNDER: hard gate (non user_permissions, non rbac_module_can)
-drop policy if exists bunder_documents_select on public.bunder_documents;
-create policy bunder_documents_select on public.bunder_documents
-  for select to authenticated
-  using (public.rbac_bunder_can('read'));
+-- BUNDER: hard gate — skip se modulo rimosso (20260901140000_drop_bunder_module)
+DO $policy$
+BEGIN
+  IF to_regclass('public.bunder_documents') IS NOT NULL THEN
+    EXECUTE $sql$
+      drop policy if exists bunder_documents_select on public.bunder_documents;
+      create policy bunder_documents_select on public.bunder_documents
+        for select to authenticated
+        using (public.rbac_bunder_can('read'));
 
-drop policy if exists bunder_documents_insert on public.bunder_documents;
-create policy bunder_documents_insert on public.bunder_documents
-  for insert to authenticated
-  with check (public.rbac_bunder_can('write'));
+      drop policy if exists bunder_documents_insert on public.bunder_documents;
+      create policy bunder_documents_insert on public.bunder_documents
+        for insert to authenticated
+        with check (public.rbac_bunder_can('write'));
 
-drop policy if exists bunder_documents_update on public.bunder_documents;
-create policy bunder_documents_update on public.bunder_documents
-  for update to authenticated
-  using (public.rbac_bunder_can('write'))
-  with check (public.rbac_bunder_can('write'));
+      drop policy if exists bunder_documents_update on public.bunder_documents;
+      create policy bunder_documents_update on public.bunder_documents
+        for update to authenticated
+        using (public.rbac_bunder_can('write'))
+        with check (public.rbac_bunder_can('write'));
 
-drop policy if exists bunder_documents_delete on public.bunder_documents;
-create policy bunder_documents_delete on public.bunder_documents
-  for delete to authenticated
-  using (public.rbac_bunder_can('write'));
+      drop policy if exists bunder_documents_delete on public.bunder_documents;
+      create policy bunder_documents_delete on public.bunder_documents
+        for delete to authenticated
+        using (public.rbac_bunder_can('write'));
+    $sql$;
+  END IF;
+END
+$policy$;
 
 -- handle_new_user: ruoli canonici v3.1
 create or replace function public.handle_new_user()

@@ -11,6 +11,15 @@ import type { AttrezzaturaRow, MezzoRow } from "@/src/types/supabase-tables";
 import type { SchedaIngressoFields } from "@/types/schede";
 import { logAttrezzatureV2WritePath } from "@/lib/observability/attrezzature-v2-telemetry";
 import type { UpsertFromSchedaV2Result } from "@/lib/attrezzature/types";
+import type { MezzoUpdateFromSchedaPlan } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
+import { MEZZO_UPDATE_SCHEDA_ONLY, mezzoUpdatePlanAllowsMezzoWrite } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
+import {
+  buildMezzoUpdatePatchFromSchedaPlan,
+  schedaFieldsToAttrezzaturaPatch,
+} from "@/lib/domain/mezzo/apply-mezzo-patch-from-scheda-fields";
+import { isMezzoUpdatedAtStale } from "@/lib/domain/mezzo/mezzo-occ";
+import { logMezzoSchedaConflictTelemetry } from "@/lib/domain/mezzo/mezzo-scheda-conflict-telemetry";
+import { MezzoSchedaValidationError } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 
 export type UpsertFromSchedaV2Deps = {
   createMezzo: (data: MezzoInsert) => Promise<MezzoRow>;
@@ -84,10 +93,19 @@ export async function upsertFromSchedaV2(
     mezziCatalog: readonly MezzoGestito[];
     preferredMezzoId?: string | null;
     attrezzaturaIdHint?: string | null;
+    updatePlan?: MezzoUpdateFromSchedaPlan;
+    lavorazioneId?: string | null;
   },
   deps: UpsertFromSchedaV2Deps,
 ): Promise<UpsertFromSchedaV2Result> {
-  const { fields, mezziCatalog, preferredMezzoId, attrezzaturaIdHint } = params;
+  const {
+    fields,
+    mezziCatalog,
+    preferredMezzoId,
+    attrezzaturaIdHint,
+    updatePlan = MEZZO_UPDATE_SCHEDA_ONLY,
+    lavorazioneId,
+  } = params;
   const targetType = resolveTargetTypeFromScheda({
     targetType: fields.targetType,
     marcaAttrezzatura: fields.marcaAttrezzatura,
@@ -106,26 +124,29 @@ export async function upsertFromSchedaV2(
 
   if (resolved.mezzoId) {
     mezzoId = resolved.mezzoId;
-    const patch = mergeMezzoPatch(
-      {
-        id: mezzoId,
-        cliente: resolved.mezzo!.cliente,
-        utilizzatore: resolved.mezzo!.utilizzatore === "—" ? null : resolved.mezzo!.utilizzatore,
-        marca: resolved.mezzo!.marca,
-        modello: resolved.mezzo!.modello,
-        targa: resolved.mezzo!.targa === "—" ? null : resolved.mezzo!.targa,
-        matricola: resolved.mezzo!.matricola === "Non assegnata" ? null : resolved.mezzo!.matricola,
-        numero_scuderia: resolved.mezzo!.numeroScuderia ?? null,
-        tipo_attrezzatura: resolved.mezzo!.tipoAttrezzatura === "—" ? null : resolved.mezzo!.tipoAttrezzatura,
-        anno: resolved.mezzo!.anno,
-        meta: {},
-        created_at: "",
-        updated_at: "",
-      },
-      incomingMezzo,
-    );
-    if (Object.keys(patch).length > 0) {
-      await deps.updateMezzo(mezzoId, patch);
+    if (updatePlan.updateAnagrafica || updatePlan.updateMetering) {
+      if (
+        mezzoUpdatePlanAllowsMezzoWrite(updatePlan) &&
+        updatePlan.mezzoOCC?.updatedAtAtLinkTime &&
+        resolved.mezzo?.ultimaModifica &&
+        isMezzoUpdatedAtStale(updatePlan.mezzoOCC.updatedAtAtLinkTime, resolved.mezzo.ultimaModifica) &&
+        !updatePlan.forceDespiteStale
+      ) {
+        logMezzoSchedaConflictTelemetry({
+          event: "MEZZO_STALE_CONFLICT",
+          mezzoId,
+        });
+        throw new MezzoSchedaValidationError("MEZZO_STALE_CONFLICT");
+      }
+      const patch = buildMezzoUpdatePatchFromSchedaPlan(
+        fields,
+        resolved.mezzo,
+        updatePlan,
+        lavorazioneId,
+      );
+      if (Object.keys(patch).length > 0) {
+        await deps.updateMezzo(mezzoId, patch);
+      }
     }
   } else {
     const row = await deps.createMezzo(incomingMezzo);
@@ -153,11 +174,12 @@ export async function upsertFromSchedaV2(
   let createdAttrezzatura = false;
 
   if (attrezzaturaId) {
+    const attPatch = schedaFieldsToAttrezzaturaPatch(fields, updatePlan.fieldsToUpdate);
     await deps.updateAttrezzatura(attrezzaturaId, {
-      marca: fields.marcaAttrezzatura.trim() || undefined,
-      modello: fields.modelloAttrezzatura.trim() || undefined,
-      tipo_attrezzatura: trimOrNull(fields.tipoAttrezzatura),
-      matricola,
+      marca: attPatch.marca ?? (fields.marcaAttrezzatura.trim() || undefined),
+      modello: attPatch.modello ?? (fields.modelloAttrezzatura.trim() || undefined),
+      tipo_attrezzatura: attPatch.tipo_attrezzatura ?? trimOrNull(fields.tipoAttrezzatura),
+      matricola: attPatch.matricola ?? matricola,
     });
   } else if (matricola) {
     const existing = await deps.findAttrezzaturaByMatricola(mezzoId, matricola);

@@ -156,3 +156,9 @@ export type UpsertMaintenancePlanInput = {
   triggerGroups?: MaintenancePresetTriggerGroupView[];
   checklist?: MaintenanceChecklistItemView[];
 };
+
+export type MaintenancePresetSummary = MaintenancePlanView & {
+  triggerSummary: string;
+  assignedMezziCount: number;
+  executionsCount: number;
+};

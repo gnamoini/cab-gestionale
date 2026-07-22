@@ -5,12 +5,16 @@ import type { LabelPayload, LabelTemplateDefinition } from "@/lib/inventory-labe
 import { GENERATOR_VERSION } from "@/lib/inventory-labels/domain/types";
 import { computeLabelFingerprint } from "@/lib/inventory-labels/domain/fingerprints";
 import {
+  uniqueBulkEntityIds,
+  type BulkLabelCompactItem,
+} from "@/lib/inventory-labels/domain/bulk-items";
+import {
   downloadLabelArtifact,
   getLabelArtifactByHash,
   uploadLabelArtifactBestEffort,
 } from "@/lib/inventory-labels/storage/artifacts.server";
 import { renderLabelPng } from "@/lib/inventory-labels/render/png";
-import { assembleMultiLabelPdf } from "@/lib/inventory-labels/render/pdf-pipeline";
+import { assembleMultiLabelPdf, type LabelPdfSlot } from "@/lib/inventory-labels/render/pdf-pipeline";
 
 export type BulkLabelItem = {
   entityId: string;
@@ -23,7 +27,25 @@ export type BulkLabelItem = {
 export type BulkAssemblyStats = {
   cacheHitCount: number;
   cacheMissCount: number;
+  uniqueRenderCount: number;
 };
+
+function fingerprintForItem(
+  item: BulkLabelItem,
+  template: LabelTemplateDefinition,
+  preset: string,
+  includeBarcode: boolean,
+): string {
+  return computeLabelFingerprint({
+    payload: item.payload,
+    templateId: template.id,
+    templateVersion: template.version,
+    generatorVersion: GENERATOR_VERSION,
+    preset,
+    includeBarcode,
+    canonicalOrigin: item.canonicalOrigin.replace(/\/+$/, ""),
+  });
+}
 
 async function resolveLabelPngBytes(
   sb: SupabaseClient,
@@ -33,15 +55,7 @@ async function resolveLabelPngBytes(
   includeBarcode: boolean,
   stats: BulkAssemblyStats,
 ): Promise<Buffer> {
-  const hash = computeLabelFingerprint({
-    payload: item.payload,
-    templateId: template.id,
-    templateVersion: template.version,
-    generatorVersion: GENERATOR_VERSION,
-    preset,
-    includeBarcode,
-    canonicalOrigin: item.canonicalOrigin.replace(/\/+$/, ""),
-  });
+  const hash = fingerprintForItem(item, template, preset, includeBarcode);
 
   const cached = await getLabelArtifactByHash(sb, {
     entityType: item.entityType,
@@ -86,11 +100,33 @@ async function resolveLabelPngBytes(
   return png;
 }
 
-/** IL-002: per-label PNG cache before PDF assembly. */
+export function buildExpandedPdfSlots(
+  compact: readonly BulkLabelCompactItem[],
+  uniqueItems: readonly BulkLabelItem[],
+  template: LabelTemplateDefinition,
+  preset: string,
+  includeBarcode: boolean,
+): LabelPdfSlot[] {
+  const byId = new Map(uniqueItems.map((item) => [item.entityId, item]));
+  const expanded: BulkLabelItem[] = [];
+  for (const item of compact) {
+    const resolved = byId.get(item.id);
+    if (!resolved) continue;
+    for (let i = 0; i < item.quantity; i++) expanded.push(resolved);
+  }
+  return expanded.map((item) => ({
+    payload: item.payload,
+    qrUrl: item.qrUrl,
+    cacheKey: fingerprintForItem(item, template, preset, includeBarcode),
+  }));
+}
+
+/** IL-002: per-label PNG cache before PDF assembly with quantity expansion. */
 export async function renderBulkLabelPdfWithCache(
   sb: SupabaseClient,
   template: LabelTemplateDefinition,
-  items: BulkLabelItem[],
+  compact: BulkLabelCompactItem[],
+  uniqueItems: BulkLabelItem[],
   preset: string,
   options?: {
     includeBarcode?: boolean;
@@ -101,20 +137,27 @@ export async function renderBulkLabelPdfWithCache(
 ): Promise<
   import("@/lib/inventory-labels/render/pdf-pipeline").BulkPdfRenderResult & BulkAssemblyStats
 > {
-  const stats: BulkAssemblyStats = { cacheHitCount: 0, cacheMissCount: 0 };
+  const stats: BulkAssemblyStats = { cacheHitCount: 0, cacheMissCount: 0, uniqueRenderCount: 0 };
   const chunkSize = options?.chunkSize ?? 25;
   const includeBarcode = options?.includeBarcode === true;
-  const pngs: Buffer[] = [];
+  const slots = buildExpandedPdfSlots(compact, uniqueItems, template, preset, includeBarcode);
 
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i]!;
-    pngs.push(await resolveLabelPngBytes(sb, template, item, preset, includeBarcode, stats));
+  const pngByCacheKey = new Map<string, Buffer>();
+  for (let i = 0; i < uniqueItems.length; i++) {
+    const item = uniqueItems[i]!;
+    const cacheKey = fingerprintForItem(item, template, preset, includeBarcode);
+    if (pngByCacheKey.has(cacheKey)) continue;
+    pngByCacheKey.set(
+      cacheKey,
+      await resolveLabelPngBytes(sb, template, item, preset, includeBarcode, stats),
+    );
+    stats.uniqueRenderCount += 1;
     if ((i + 1) % chunkSize === 0) await options?.onChunkHeartbeat?.();
-    await options?.onProgress?.(i + 1, items.length);
+    await options?.onProgress?.(i + 1, uniqueItems.length);
   }
 
-  const pipelineItems = items.map((it) => ({ payload: it.payload, qrUrl: it.qrUrl }));
-  const bytes = assembleMultiLabelPdf(template, pipelineItems, pngs);
+  const pngs = slots.map((slot) => pngByCacheKey.get(slot.cacheKey!)!);
+  const bytes = assembleMultiLabelPdf(template, slots, pngs);
   return {
     kind: "pdf",
     bytes,
@@ -123,3 +166,5 @@ export async function renderBulkLabelPdfWithCache(
     ...stats,
   };
 }
+
+export { uniqueBulkEntityIds };

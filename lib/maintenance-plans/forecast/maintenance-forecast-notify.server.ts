@@ -1,4 +1,4 @@
-import "server-only";
+import { buildMezziTagliandiHubHref } from "@/lib/navigation/mezzi-tagliandi-links";
 
 import { createClient } from "@supabase/supabase-js";
 import { createNotificationRpc } from "@/lib/notifications/create-notification-rpc";
@@ -52,7 +52,7 @@ export async function runMaintenanceForecastNotify(): Promise<{
       type: "tagliando_previsto_7g",
       title,
       body,
-      href: `/mezzi?view=tagliandi&highlight=${config.mezzo_id}`,
+      href: buildMezziTagliandiHubHref({ mezzoId: config.mezzo_id as string, hubTab: "tagliandi", highlight: f.config_id }),
       entity_type: "vehicle_maintenance_config",
       entity_id: f.config_id,
       dedup_key: dedupKey,

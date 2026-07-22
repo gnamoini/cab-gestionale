@@ -13,6 +13,7 @@ import type { CaptureSheetRowHint } from "@/components/lavorazioni/schede/scheda
 import { SchedaDayField, todayItDate } from "@/components/lavorazioni/schede/scheda-form-utils";
 import { newRigaId } from "@/lib/schede/schede-ui";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import { dsBtnNeutral, dsInput, dsTable, dsTableRow, dsTableWrap, dsScrollbar } from "@/lib/ui/design-system";
 import type { RigaRicambioScheda, SchedaRicambiFields } from "@/types/schede";
 
@@ -33,7 +34,7 @@ function suggestionsForRow(r: RigaRicambioScheda, prodotti: readonly RicambioMag
   return prodotti
     .filter((p) => {
       const d = (p.descrizione ?? "").toLowerCase();
-      const c = [p.codiceFornitoreOriginale, p.codiceFornitoreOriginaleSecondario]
+      const c = [ricambioCodiceForUi(p.codiceFornitoreOriginale), p.codiceFornitoreOriginaleSecondario]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -130,7 +131,7 @@ export function SchedaRicambiFormBody({
                                                 ...x,
                                                 ricambioId: p.id,
                                                 ricambioNome: p.descrizione ?? "",
-                                                codice: p.codiceFornitoreOriginale ?? "",
+                                                codice: ricambioCodiceForUi(p.codiceFornitoreOriginale),
                                               }
                                             : x,
                                         ),
@@ -138,7 +139,10 @@ export function SchedaRicambiFormBody({
                                       setAcRowId(null);
                                     }}
                                   >
-                                    {p.descrizione} — {p.codiceFornitoreOriginale}
+                                    {(() => {
+                                      const codiceUi = ricambioCodiceForUi(p.codiceFornitoreOriginale);
+                                      return codiceUi ? `${p.descrizione} — ${codiceUi}` : p.descrizione;
+                                    })()}
                                   </button>
                                 </li>
                               ))}

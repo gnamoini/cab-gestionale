@@ -11,6 +11,8 @@ import {
   writeMaintenanceAuditEvent,
 } from "@/lib/maintenance-plans/maintenance-audit";
 import { forkPresetVersionIfUsed } from "@/lib/maintenance-plans/preset-version-fork";
+import { formatTriggerSummary } from "@/lib/maintenance-plans/maintenance-trigger-helpers";
+import { MAINTENANCE_INTERVAL_TYPE_LABELS } from "@/lib/maintenance-plans/maintenance-enums";
 import { processMaintenanceWarehouseDischarge } from "@/lib/maintenance-plans/process-maintenance-warehouse";
 import type { PresetSnapshot } from "@/lib/maintenance-plans/preset-snapshot";
 import { resolvePlansForMezzo } from "@/lib/maintenance-plans/resolve-plans-for-mezzo";
@@ -20,6 +22,7 @@ import type { MaintenanceServiceLite } from "@/lib/maintenance-plans/tagliandi-m
 import type {
   MaintenancePlanStatus,
   MaintenancePlanView,
+  MaintenancePresetSummary,
   MaintenanceServiceHistoryView,
   RegisterMaintenanceServiceInput,
   UpsertMaintenancePlanInput,
@@ -81,6 +84,61 @@ export const maintenancePlansService = {
       return success(views);
     } catch (e) {
       return serviceFailFromError<MaintenancePlanView[]>(e, [], { entity: "mezzo", action: "read" });
+    }
+  },
+
+  async listPresetSummaries(): Promise<ServiceResult<MaintenancePresetSummary[]>> {
+    try {
+      const plansRes = await maintenancePlansService.listPlans();
+      if (!plansRes.success) return err(plansRes.error ?? "Errore piani.");
+      const plans = plansRes.data ?? [];
+      if (plans.length === 0) return success([]);
+
+      const client = await sb();
+      const [configsRes, servicesRes] = await Promise.all([
+        client
+          .from("vehicle_maintenance_configs")
+          .select("preset_id")
+          .eq("is_active", true)
+          .is("deleted_at", null)
+          .not("preset_id", "is", null),
+        client.from("vehicle_maintenance_services").select("plan_id"),
+      ]);
+      if (configsRes.error) {
+        return err(humanizeGestionaleError(configsRes.error.message, { entity: "mezzo", action: "read" }));
+      }
+      if (servicesRes.error) {
+        return err(humanizeGestionaleError(servicesRes.error.message, { entity: "mezzo", action: "read" }));
+      }
+
+      const assignedByPreset = new Map<string, number>();
+      for (const row of configsRes.data ?? []) {
+        const pid = row.preset_id as string;
+        assignedByPreset.set(pid, (assignedByPreset.get(pid) ?? 0) + 1);
+      }
+      const execByPlan = new Map<string, number>();
+      for (const row of servicesRes.data ?? []) {
+        const pid = row.plan_id as string;
+        execByPlan.set(pid, (execByPlan.get(pid) ?? 0) + 1);
+      }
+
+      const summaries: MaintenancePresetSummary[] = plans.map((p) => {
+        const triggers = p.triggerGroups[0]?.triggers ?? [];
+        const triggerSummary =
+          triggers.length > 0
+            ? formatTriggerSummary(triggers)
+            : `${p.intervalValue} ${MAINTENANCE_INTERVAL_TYPE_LABELS[p.intervalType]}`;
+        return {
+          ...p,
+          triggerSummary,
+          assignedMezziCount: assignedByPreset.get(p.id) ?? 0,
+          executionsCount: execByPlan.get(p.id) ?? 0,
+        };
+      });
+
+      return success(summaries);
+    } catch (e) {
+      return serviceFailFromError<MaintenancePresetSummary[]>(e, [], { entity: "mezzo", action: "read" });
     }
   },
 
@@ -252,6 +310,12 @@ export const maintenancePlansService = {
         })
         .eq("id", planId);
       if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "delete" }));
+      await writeModificaLog(client, {
+        entita: ENTITA_PLAN,
+        entita_id: planId,
+        azione: "UPDATE",
+        payload: auditSnapshot({ status: "archived", is_active: false }, auditContext("archivia preset")),
+      });
       await writeMaintenanceAuditEvent(client, {
         entity: "preset",
         entityId: planId,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 import { useBeforeUnloadWhenDirty } from "@/lib/forms/use-before-unload-when-dirty";
 import { LoadingButton } from "@/components/design-system";
 import { DisabledElementTooltip } from "@/components/ui";
@@ -17,10 +17,15 @@ import {
   ricambioFormImportantWarnings,
   ricambioFromFormLenient,
   ricambioLenientPlaceholderFlags,
+  ricambioScortaDeltaFromBaseline,
   toFormDraft,
   validateRicambioListFields,
   type RicambioFormState,
 } from "@/lib/magazzino/form";
+import {
+  gateBeginSubmit,
+  gateFormSubmit,
+} from "@/lib/form-ux-migration/form-ux-boundary-gate";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -94,13 +99,17 @@ export function RicambioEditModal({
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [pendingExit, setPendingExit] = useState<"close" | "cancel" | null>(null);
   const isDirty = useMemo(() => ricambioFormIsDirty(editDraft, baselineForm), [editDraft, baselineForm]);
+  const prevRicambioIdRef = useRef(ricambioId);
 
   useEffect(() => {
+    const ricambioChanged = prevRicambioIdRef.current !== ricambioId;
+    prevRicambioIdRef.current = ricambioId;
+    if (!ricambioChanged && isDirty) return;
     reset(baselineForm);
     setListFieldInvalid(false);
     setDiscardConfirmOpen(false);
     setPendingExit(null);
-  }, [ricambioId, reset, baselineForm]);
+  }, [ricambioId, baselineForm, isDirty, reset]);
 
   useBeforeUnloadWhenDirty(isDirty, "Hai modifiche non salvate nel ricambio.");
 
@@ -165,7 +174,9 @@ export function RicambioEditModal({
     if (!magCanCreateRicambio || saveBusy) return;
 
     await runSubmit(e.currentTarget, async (currentDraft) => {
-      const listErr = validateRicambioListFields(currentDraft, {
+      const submitToken = gateBeginSubmit("ricambio");
+      const reconciledDraft = gateFormSubmit("ricambio", currentDraft, submitToken);
+      const listErr = validateRicambioListFields(reconciledDraft, {
         marche,
         categorie,
         fornitori,
@@ -178,15 +189,14 @@ export function RicambioEditModal({
         return;
       }
       setListFieldInvalid(false);
-      const next = ricambioFromFormLenient(currentDraft, ricambioId, authorName, compatExpand);
-      const incompleteWarnings = ricambioFormImportantWarnings(currentDraft);
+      const next = ricambioFromFormLenient(reconciledDraft, ricambioId, authorName, compatExpand);
+      const incompleteWarnings = ricambioFormImportantWarnings(reconciledDraft);
       if (incompleteWarnings.length > 0) incrementHealthCounter("ricambioSaveIncompleteFields");
       const placeholderFlags = ricambioLenientPlaceholderFlags(next);
       if (placeholderFlags.marcaPlaceholder) incrementHealthCounter("ricambioSavePlaceholderMarca");
       if (placeholderFlags.descrizionePlaceholder) incrementHealthCounter("ricambioSavePlaceholderDescrizione");
       if (placeholderFlags.categoriaPlaceholder) incrementHealthCounter("ricambioSavePlaceholderCategoria");
-      const scortaPrima = Math.round(ricambio.scorta);
-      const scortaDelta = Math.round(next.scorta) - scortaPrima;
+      const scortaDelta = ricambioScortaDeltaFromBaseline(baselineForm, reconciledDraft);
       setSaveBusy(true);
       try {
         if (scortaDelta !== 0) {
@@ -255,37 +265,66 @@ export function RicambioEditModal({
       title="Modifica ricambio"
       titleId="detail-ricambio-title"
       footer={
-        <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-between">
-          <div className="contents sm:flex sm:order-2 sm:items-center sm:gap-2">
+        <div className="w-full min-w-0">
+          <div className="grid grid-cols-2 gap-2 sm:hidden">
             <LoadingButton
               type="submit"
               form={RICAMBIO_EDIT_FORM_ID}
               loading={saveBusy}
               preset="salva"
               loadingLabel="Salvataggio…"
-              className={`${erpBtnAccent} col-span-2 min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 sm:order-2 sm:col-auto sm:min-w-[6.5rem] sm:flex-none`}
+              className={`${erpBtnAccent} col-span-2 min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
             >
               Salva
             </LoadingButton>
             <button
               type="button"
               onClick={() => requestExit("cancel")}
-              className={`${dsBtnNeutral} min-h-11 w-full justify-center sm:order-1 sm:min-w-[6.5rem] sm:flex-none`}
+              className={`${dsBtnNeutral} min-h-11 w-full justify-center`}
             >
               Annulla
             </button>
-          </div>
-          <div className="min-w-0 sm:order-1">
             <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!magCanDeleteRicambio}>
               <button
                 type="button"
                 onClick={onRequestDelete}
                 disabled={!magCanDeleteRicambio}
-                className={`${dsBtnDanger} min-h-11 w-full justify-center sm:w-auto`}
+                className={`${dsBtnDanger} min-h-11 w-full justify-center`}
               >
                 Elimina ricambio
               </button>
             </DisabledElementTooltip>
+          </div>
+          <div className="hidden min-w-0 items-center justify-between gap-2 sm:flex">
+            <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!magCanDeleteRicambio}>
+              <button
+                type="button"
+                onClick={onRequestDelete}
+                disabled={!magCanDeleteRicambio}
+                className={`${dsBtnDanger} min-h-11 shrink-0 justify-center`}
+              >
+                Elimina ricambio
+              </button>
+            </DisabledElementTooltip>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => requestExit("cancel")}
+                className={`${dsBtnNeutral} min-h-11 justify-center`}
+              >
+                Annulla
+              </button>
+              <LoadingButton
+                type="submit"
+                form={RICAMBIO_EDIT_FORM_ID}
+                loading={saveBusy}
+                preset="salva"
+                loadingLabel="Salvataggio…"
+                className={`${erpBtnAccent} min-h-11 shrink-0 justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
+              >
+                Salva
+              </LoadingButton>
+            </div>
           </div>
         </div>
       }
@@ -294,6 +333,7 @@ export function RicambioEditModal({
         <form
           {...formProps}
           id={RICAMBIO_EDIT_FORM_ID}
+          data-form-ux-id="ricambio"
           onSubmit={saveEdit}
           className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}
         >

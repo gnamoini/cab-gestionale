@@ -13,6 +13,7 @@ import type { MagazzinoArchiveDuplicateCodeGroup } from "@/lib/magazzino/duplica
 import type { MagazzinoLogFeedItem } from "@/lib/magazzino/use-magazzino-log-feed";
 import type { RicambioConsumoDaLog } from "@/lib/magazzino/ricambio-consumo-from-log";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { displayRicambioCodice, ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import { RicambioLabelActions } from "@/components/gestionale/magazzino/ricambio-label-actions";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
@@ -31,7 +32,7 @@ function ArchiveDupRicambioRow({
       className="w-full rounded-lg border border-zinc-200/90 bg-white px-2.5 py-2 text-left text-xs transition-colors hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] dark:border-zinc-700 dark:bg-zinc-900/50"
     >
       <div className="font-semibold text-zinc-800 dark:text-zinc-100">{p.marca}</div>
-      <div className="mt-0.5 font-mono text-[11px] font-medium text-zinc-700 dark:text-zinc-200">{p.codiceFornitoreOriginale}</div>
+      <div className="mt-0.5 font-mono text-[11px] font-medium text-zinc-700 dark:text-zinc-200">{displayRicambioCodice(p.codiceFornitoreOriginale)}</div>
       <div className="mt-0.5 min-w-0 text-[11px] leading-snug text-zinc-600 dark:text-zinc-300">{p.descrizione}</div>
       <div className="mt-1 font-mono text-[11px] tabular-nums text-zinc-500 dark:text-zinc-400">Scorta {p.scorta}</div>
     </button>
@@ -138,7 +139,7 @@ export function MagazzinoRicambioInfoModal({
           </div>
           <RicambioLabelActions
             ricambioId={ricambio.id}
-            codice={ricambio.codiceFornitoreOriginale}
+            codice={ricambioCodiceForUi(ricambio.codiceFornitoreOriginale)}
             canRead={magCanReadRicambio}
             canWrite={magCanCreateRicambio}
           />

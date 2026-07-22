@@ -55,6 +55,12 @@ import {
 } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 import { MezziHubAttrezzaturePanel } from "@/components/gestionale/mezzi/mezzi-hub-attrezzature-panel";
 import { MezziHubTagliandiTab } from "@/components/gestionale/mezzi/mezzi-hub-tagliandi-tab";
+import { MezzoMeteringOriginLink } from "@/components/gestionale/mezzi/mezzo-metering-origin-link";
+import { MezzoAnagraficaHistoryEntry } from "@/components/gestionale/mezzi/mezzo-anagrafica-history-entry";
+import { MezzoSchedaReadOnlyDrawer } from "@/components/gestionale/mezzi/mezzo-scheda-readonly-drawer";
+import { useMezzoSchedeHistory } from "@/src/hooks/gestionale/use-mezzo-schede-history";
+import { schedeHistoryBadges } from "@/src/services/domain/mezzo-schede-history.service";
+import { useMezzoAnagraficaHistory } from "@/src/hooks/gestionale/use-mezzo-anagrafica-history";
 import {
   dsScrollbar,
   dsTable,
@@ -66,6 +72,7 @@ import {
 } from "@/lib/ui/design-system";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import type { CSSProperties } from "react";
+import type { SchedaTipo } from "@/types/schede";
 
 const lavorazioneAttivaPillStyle = (active: boolean): CSSProperties | undefined =>
   active
@@ -94,12 +101,16 @@ export function MezziHubDetailModal({
   canEdit?: boolean;
 }) {
   const [tab, setTab] = useState<MezziHubTabId>(initialTab);
+  const [schedaDrawer, setSchedaDrawer] = useState<{ lavorazioneId: string; tipo: SchedaTipo } | null>(null);
 
   useEffect(() => {
     setTab(initialTab);
   }, [mezzo.id, initialTab]);
 
   const hubQuery = useMezzoHub(mezzo.id);
+  const schedeHistoryQ = useMezzoSchedeHistory(mezzo.id);
+  const anagraficaHistoryQ = useMezzoAnagraficaHistory(mezzo.id);
+  const schedeHistory = schedeHistoryQ.data ?? [];
   const hubData = hubQuery.data;
   const interventi = hubData?.interventi ?? [];
   const preventivi = hubData?.preventivi ?? [];
@@ -138,6 +149,12 @@ export function MezziHubDetailModal({
     resetLavPage();
   }, [mezzo.id, sortedLav.length, listPageSize, resetLavPage]);
   const pagedLav = useMemo(() => sliceLav(sortedLav), [sortedLav, sliceLav, lavPage]);
+
+  const meteringOriginLavorazione = useMemo(() => {
+    const id = mezzo.ultimoAggiornamentoDaLavorazioneId?.trim();
+    if (!id) return null;
+    return sortedLav.find((r) => r.id === id) ?? null;
+  }, [mezzo.ultimoAggiornamentoDaLavorazioneId, sortedLav]);
 
   const {
     page: pvPage,
@@ -315,6 +332,32 @@ export function MezziHubDetailModal({
               </HubModalPanoramicaSummary>
             ) : null}
 
+            <HubModalPanoramicaFieldGroup title="Metering (cache)">
+              <HubModalPanoramicaFieldGrid>
+                <HubModalPanoramicaField
+                  label="Ultimo km"
+                  value={hubPanoramicaDisplayValue(
+                    mezzo.ultimoKmRilevato != null
+                      ? `${mezzo.ultimoKmRilevato.toLocaleString("it-IT")}${mezzo.ultimoKmData ? ` (${fmtMezziHubDt(mezzo.ultimoKmData)})` : ""}`
+                      : undefined,
+                  )}
+                />
+                <HubModalPanoramicaField
+                  label="Ultime ore"
+                  value={hubPanoramicaDisplayValue(
+                    mezzo.ultimoOreRilevate != null
+                      ? `${mezzo.ultimoOreRilevate.toLocaleString("it-IT")}${mezzo.ultimoOreData ? ` (${fmtMezziHubDt(mezzo.ultimoOreData)})` : ""}`
+                      : undefined,
+                  )}
+                />
+              </HubModalPanoramicaFieldGrid>
+              <MezzoMeteringOriginLink
+                lavorazioneId={mezzo.ultimoAggiornamentoDaLavorazioneId}
+                origine={meteringOriginLavorazione?.origine ?? "attiva"}
+                onNavigate={onClose}
+              />
+            </HubModalPanoramicaFieldGroup>
+
             <HubModalPanoramicaFieldGroup title="Anagrafica">
               <HubModalPanoramicaFieldGrid>
                 <HubModalPanoramicaField label="Cliente" value={hubPanoramicaDisplayValue(mezzo.cliente)} />
@@ -380,23 +423,58 @@ export function MezziHubDetailModal({
                 <GlobalTableHead>
                   <GlobalTableHeadLabel label="Ingresso" />
                   <GlobalTableHeadLabel label="Stato" />
+                  <GlobalTableHeadLabel label="Schede" />
                   <GlobalTableHeadLabel label="Descrizione" />
                   <GlobalTableHeadLabel label="" thClassName="w-28" align="right" />
                 </GlobalTableHead>
                 <tbody>
                   {sortedLav.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-2 py-6 text-center text-[color:var(--cab-text-muted)]">
+                      <td colSpan={5} className="px-2 py-6 text-center text-[color:var(--cab-text-muted)]">
                         Nessuna lavorazione collegata.
                       </td>
                     </tr>
                   ) : (
-                    pagedLav.map((r) => (
+                    pagedLav.map((r) => {
+                      const badges = schedeHistoryBadges(schedeHistory, r.id);
+                      return (
                       <tr key={r.id} className={dsTableRow}>
                         <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] text-[color:var(--cab-text-muted)]">
                           {fmtMezziHubDt(r.dataIngresso)}
                         </td>
                         <td className="px-2 py-2 text-[color:var(--cab-text)]">{r.statoFinale}</td>
+                        <td className="px-2 py-2 text-[color:var(--cab-text-muted)]">
+                          <span className="inline-flex flex-wrap gap-1">
+                            {badges.ingresso ? (
+                              <button
+                                type="button"
+                                className="rounded bg-[color:var(--cab-surface-2)] px-1.5 py-0.5 text-[10px] hover:bg-[color:var(--cab-surface-2)]/80"
+                                onClick={() => setSchedaDrawer({ lavorazioneId: r.id, tipo: "ingresso" })}
+                              >
+                                Ingresso
+                              </button>
+                            ) : null}
+                            {badges.lavorazioni ? (
+                              <button
+                                type="button"
+                                className="rounded bg-[color:var(--cab-surface-2)] px-1.5 py-0.5 text-[10px] hover:bg-[color:var(--cab-surface-2)]/80"
+                                onClick={() => setSchedaDrawer({ lavorazioneId: r.id, tipo: "lavorazioni" })}
+                              >
+                                Lav.
+                              </button>
+                            ) : null}
+                            {badges.ricambi ? (
+                              <button
+                                type="button"
+                                className="rounded bg-[color:var(--cab-surface-2)] px-1.5 py-0.5 text-[10px] hover:bg-[color:var(--cab-surface-2)]/80"
+                                onClick={() => setSchedaDrawer({ lavorazioneId: r.id, tipo: "ricambi" })}
+                              >
+                                Ric.
+                              </button>
+                            ) : null}
+                            {!badges.ingresso && !badges.lavorazioni && !badges.ricambi ? "—" : null}
+                          </span>
+                        </td>
                         <td className="max-w-[280px] px-2 py-2 text-[color:var(--cab-text-muted)]">{r.descrizione || "—"}</td>
                         <td className="whitespace-nowrap px-2 py-2 text-right">
                           <div className="flex flex-nowrap justify-end gap-1">
@@ -417,7 +495,8 @@ export function MezziHubDetailModal({
                           </div>
                         </td>
                       </tr>
-                    ))
+                    );
+                    })
                   )}
                 </tbody>
               </table>
@@ -589,6 +668,25 @@ export function MezziHubDetailModal({
         ) : null}
 
         {tab === "log" ? (
+          <>
+          <GestionaleInfoCard
+            title="Storico anagrafica (campo per campo)"
+            subtitle={`${anagraficaHistoryQ.data?.length ?? 0} eventi recenti`}
+            collapsible
+            defaultCollapsed={!(anagraficaHistoryQ.data?.length)}
+          >
+            {anagraficaHistoryQ.isLoading ? (
+              <p className="text-sm text-[color:var(--cab-text-muted)]">Caricamento storico…</p>
+            ) : (anagraficaHistoryQ.data?.length ?? 0) === 0 ? (
+              <GestionaleLogEmpty message="Nessuna variazione anagrafica tracciata (complementare a log_modifiche)." />
+            ) : (
+              <GestionaleLogList>
+                {(anagraficaHistoryQ.data ?? []).map((h) => (
+                  <MezzoAnagraficaHistoryEntry key={h.id} entry={h} onNavigate={onClose} />
+                ))}
+              </GestionaleLogList>
+            )}
+          </GestionaleInfoCard>
           <GestionaleInfoCard
             title="Log anagrafica"
             subtitle={`${hubLogEntries.length} eventi`}
@@ -629,8 +727,15 @@ export function MezziHubDetailModal({
               </>
             )}
           </GestionaleInfoCard>
+          </>
         ) : null}
       </GestionaleModalScrollBody>
+      <MezzoSchedaReadOnlyDrawer
+        open={schedaDrawer != null}
+        lavorazioneId={schedaDrawer?.lavorazioneId ?? null}
+        schedaTipo={schedaDrawer?.tipo ?? null}
+        onClose={() => setSchedaDrawer(null)}
+      />
     </LavorazioniModalShell>
   );
 }

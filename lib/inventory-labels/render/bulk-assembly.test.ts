@@ -12,6 +12,7 @@ const item: BulkLabelItem = {
     codiceSecondario: "",
     fornitoreAlternativo: "",
     codiceAlternativo: "",
+    fornitoriAlternativi: [],
   },
   qrUrl: "https://example.test/r/abc",
   canonicalOrigin: "https://example.test",

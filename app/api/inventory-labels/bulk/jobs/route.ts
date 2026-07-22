@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireInventoryLabelsWrite, requestOrigin } from "@/lib/inventory-labels/api-auth.server";
 import { createBulkLabelJob } from "@/lib/inventory-labels/jobs/bulk-label-job.server";
-import { bulkLabelRequestSchema } from "@/lib/inventory-labels/validation";
+import { bulkLabelRequestSchema, normalizeBulkLabelRequest } from "@/lib/inventory-labels/validation";
 
 export const runtime = "nodejs";
 
@@ -17,9 +17,11 @@ export async function POST(request: Request) {
   }
 
   try {
+    const normalized = normalizeBulkLabelRequest(parsed.data);
     const jobId = await createBulkLabelJob({
-      entityIds: parsed.data.ids,
-      preset: parsed.data.preset,
+      items: normalized.items,
+      preset: normalized.preset,
+      includeBarcode: normalized.includeBarcode,
       userId: auth.userId,
       origin: requestOrigin(request),
     });

@@ -12,6 +12,7 @@ const MOCK_ITEM = {
     codiceSecondario: "OE999",
     fornitoreAlternativo: "RICAMBI",
     codiceAlternativo: "ALT42",
+    fornitoriAlternativi: [{ name: "RICAMBI", code: "ALT42" }],
   },
   qrUrl: "https://example.test/r/CAB-TESTTOKEN01",
 };

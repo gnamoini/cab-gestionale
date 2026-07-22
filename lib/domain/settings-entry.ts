@@ -15,9 +15,13 @@ import type { AppSettingRow } from "@/src/types/supabase-tables";
 const MAGAZZINO_SCOPED_KEYS = new Set<string>([CAB_SETTINGS_KEY.master, CAB_SETTINGS_KEY.stockPolicy]);
 
 function assertMagazzinoScopedSetting(input: AppSettingsUpsertInput): string | null {
-  if (input.module !== CAB_SETTINGS_MODULE.magazzino) return "Impostazione non valida per magazzino.";
-  if (!MAGAZZINO_SCOPED_KEYS.has(input.key)) return "Chiave impostazione magazzino non consentita.";
-  return null;
+  if (input.module === CAB_SETTINGS_MODULE.magazzino && MAGAZZINO_SCOPED_KEYS.has(input.key)) {
+    return null;
+  }
+  if (input.module === CAB_SETTINGS_MODULE.mezzi && input.key === CAB_SETTINGS_KEY.liste) {
+    return null;
+  }
+  return "Impostazione non valida per magazzino.";
 }
 
 async function upsertMagazzinoScopedSetting(input: AppSettingsUpsertInput): Promise<ServiceResult<AppSettingRow>> {

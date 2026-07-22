@@ -1,4 +1,5 @@
 import { formatTitleCasePhrase } from "@/lib/gestionale-log/view-model";
+import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import { parseStockMovementAuditPayload } from "@/lib/magazzino/stock-audit-payload";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
@@ -84,7 +85,7 @@ export function formatRicambioLogLabel(
       if (joined && joined !== "—") return joined;
       return cleanLabel(formatTitleCasePhrase(desc));
     }
-    const codice = ricambio.codiceFornitoreOriginale?.trim();
+    const codice = ricambioCodiceForUi(ricambio.codiceFornitoreOriginale);
     if (codice) {
       const joined = joinMarcaDescrizione(ricambio.marca?.trim() ?? "", codice);
       if (joined && joined !== "—") return joined;
@@ -104,7 +105,7 @@ export function formatRicambioLogLabelFromDbRow(
       id: row.id,
       marca: row.marca ?? "",
       descrizione: row.nome ?? "",
-      codiceFornitoreOriginale: row.codice ?? "",
+      codiceFornitoreOriginale: ricambioCodiceForUi(row.codice),
     },
     row.id,
   );

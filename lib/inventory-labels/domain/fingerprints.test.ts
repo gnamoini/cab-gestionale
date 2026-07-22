@@ -11,6 +11,7 @@ const base = {
     codiceSecondario: "",
     fornitoreAlternativo: "",
     codiceAlternativo: "",
+    fornitoriAlternativi: [],
   },
   templateId: "50x30-default",
   templateVersion: "1.2.0",

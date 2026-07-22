@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { DEFAULT_LABEL_PRESET, LABEL_PRESET_IDS } from "@/lib/inventory-labels/domain/templates";
 import { DEFAULT_INCLUDE_BARCODE, LABEL_FORMATS } from "@/lib/inventory-labels/domain/types";
+import {
+  BULK_QUANTITY_MAX,
+  BULK_QUANTITY_MIN,
+  BULK_UNIQUE_MAX,
+  totalBulkLabelCount,
+  type BulkLabelCompactItem,
+} from "@/lib/inventory-labels/domain/bulk-items";
 
 const BULK_SYNC_MAX_DEFAULT = 10;
 
@@ -20,6 +27,23 @@ export const labelFormatSchema = z.enum(LABEL_FORMATS);
 
 const LABEL_JOB_NO_BARCODE_SUFFIX = "::no-barcode";
 
+export const bulkLabelItemSchema = z.object({
+  id: z.string().uuid(),
+  quantity: z.number().int().min(BULK_QUANTITY_MIN).max(BULK_QUANTITY_MAX),
+  preset: labelPresetSchema.optional(),
+});
+
+export type BulkLabelRequestItem = z.infer<typeof bulkLabelItemSchema>;
+
+export type NormalizedBulkLabelRequest = {
+  items: BulkLabelCompactItem[];
+  preset: string;
+  format: z.infer<typeof labelFormatSchema>;
+  includeBarcode: boolean;
+  labelOptions?: Record<string, unknown>;
+  totalLabels: number;
+};
+
 /** ponytail: persistenza includeBarcode su job async senza migration — upgrade path: colonna dedicata. */
 export function formatLabelJobPreset(preset: string, includeBarcode: boolean): string {
   return includeBarcode ? preset : `${preset}${LABEL_JOB_NO_BARCODE_SUFFIX}`;
@@ -35,7 +59,69 @@ export function parseLabelJobPreset(stored: string): { preset: string; includeBa
   return { preset: stored, includeBarcode: true };
 }
 
-export const bulkLabelRequestSchema = z.object({
+const bulkLabelRequestBaseSchema = z.object({
+  preset: labelPresetSchema,
+  format: labelFormatSchema.default("pdf"),
+  includeBarcode: z.boolean().default(DEFAULT_INCLUDE_BARCODE),
+  labelOptions: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const bulkLabelRequestSchema = bulkLabelRequestBaseSchema
+  .extend({
+    items: z.array(bulkLabelItemSchema).min(1).max(BULK_UNIQUE_MAX).optional(),
+    ids: z.array(z.string().uuid()).min(1).max(BULK_UNIQUE_MAX).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasItems = Array.isArray(data.items) && data.items.length > 0;
+    const hasIds = Array.isArray(data.ids) && data.ids.length > 0;
+    if (!hasItems && !hasIds) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Specificare items o ids",
+        path: ["items"],
+      });
+      return;
+    }
+    if (hasItems && hasIds) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Non usare items e ids insieme",
+        path: ["ids"],
+      });
+      return;
+    }
+    const items: BulkLabelCompactItem[] = hasItems
+      ? data.items!
+      : data.ids!.map((id) => ({ id, quantity: 1 }));
+    const total = totalBulkLabelCount(items);
+    if (total > BULK_ABSOLUTE_MAX) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Massimo ${BULK_ABSOLUTE_MAX} etichette totali`,
+        path: ["items"],
+      });
+    }
+  });
+
+export function normalizeBulkLabelRequest(
+  parsed: z.infer<typeof bulkLabelRequestSchema>,
+): NormalizedBulkLabelRequest {
+  const items: BulkLabelCompactItem[] =
+    parsed.items && parsed.items.length > 0
+      ? parsed.items
+      : (parsed.ids ?? []).map((id) => ({ id, quantity: 1 }));
+  return {
+    items,
+    preset: parsed.preset,
+    format: parsed.format,
+    includeBarcode: parsed.includeBarcode,
+    labelOptions: parsed.labelOptions,
+    totalLabels: totalBulkLabelCount(items),
+  };
+}
+
+/** @deprecated Usare bulkLabelRequestSchema — mantenuto per test legacy. */
+export const legacyBulkLabelIdsSchema = z.object({
   ids: z.array(z.string().uuid()).min(1).max(BULK_ABSOLUTE_MAX),
   preset: labelPresetSchema,
   format: labelFormatSchema.default("pdf"),
@@ -50,8 +136,9 @@ export const renderLabelQuerySchema = z.object({
     .optional()
     .default(DEFAULT_INCLUDE_BARCODE ? "true" : "false")
     .transform((v) => v === "true"),
+  quantity: z.coerce.number().int().min(BULK_QUANTITY_MIN).max(BULK_QUANTITY_MAX).default(1),
 });
 
-export function isBulkSyncCount(count: number): boolean {
-  return count <= BULK_SYNC_MAX;
+export function isBulkSyncCount(totalLabelCount: number): boolean {
+  return totalLabelCount <= BULK_SYNC_MAX;
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ImportEntity } from "@/lib/data-import/core/types";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { buildMezziTagliandiPresetsHref } from "@/lib/navigation/mezzi-tagliandi-links";
 import { useAuth } from "@/context/auth-context";
 import { useBranding } from "@/context/branding-context";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -194,6 +195,11 @@ export function SistemaImpostazioniWorkspace({
   );
 
   const section = pageMode ? urlSection : modalSection;
+
+  useEffect(() => {
+    if (!pageMode || section !== "att-piani-tagliando") return;
+    router.replace(buildMezziTagliandiPresetsHref());
+  }, [pageMode, section, router]);
 
   const needsStatiInUso = open && section === "op-stati";
   const needsAddettiInUso = open && section === "op-addetti";
@@ -1310,8 +1316,6 @@ export function SistemaImpostazioniWorkspace({
             ) : null}
 
             {section === "sys-tkb-kb" ? <SettingsTkbAdminSectionLazy /> : null}
-
-            {section === "att-piani-tagliando" ? <SettingsMaintenancePlansSectionLazy /> : null}
 
             {pageMode ? <div aria-hidden className={dsGestionaleScrollEndPad} /> : null}
           </SettingsMainPanel>

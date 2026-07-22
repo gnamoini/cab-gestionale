@@ -72,7 +72,12 @@ export async function renderLabelSvg(
             ? y - (placed.lines.length - 1 - i) * lineStepPx
             : y + i * lineStepPx;
         if (textAsPaths) {
-          parts.push(textLineToSvgPath(line, x, dy, fontSizePx, slot, baseline));
+          const path = textLineToSvgPath(line, x, dy, fontSizePx, slot, baseline);
+          if (placed.bold || template.typography?.weight === "bold") {
+            parts.push(path.replace('fill="#000000"', 'fill="#000000" stroke="#000000" stroke-width="0.6"'));
+          } else {
+            parts.push(path);
+          }
         } else {
           const family = slot === "mono" ? "LabelMono" : "LabelSans";
           parts.push(

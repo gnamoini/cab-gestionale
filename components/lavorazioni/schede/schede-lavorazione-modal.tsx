@@ -48,6 +48,7 @@ import {
 } from "@/lib/selector-core/legacy-selector-adapters";
 import { applyMagazzinoScaricoDaScheda } from "@/lib/magazzino/apply-scarico-da-scheda";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import {
@@ -364,7 +365,10 @@ export function SchedeLavorazioneModal({
   schedeStore: Record<string, LavorazioneSchedeBundle>;
   onSchedaLog?: (ev: SchedaLogEv) => void;
   /** Post-persist scheda: il parent deve chiamare executeInterventoWrite — mai syncIngressoAfterSave diretto. */
-  onIngressoCommitted?: (campi: SchedaIngressoFields) => void | Promise<void>;
+  onIngressoCommitted?: (
+    campi: SchedaIngressoFields,
+    options?: { mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan },
+  ) => void | Promise<void>;
   canDeleteLavorazione?: boolean;
   onDeleteLavorazione?: () => void;
   deleteLavorazionePending?: boolean;
@@ -960,6 +964,7 @@ export function SchedeLavorazioneModal({
   async function applyIngressoCommitAsync(snap: {
     ig: SchedaIngressoFields | null;
     base: SchedaIngressoDoc | null | undefined;
+    mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
   }): Promise<boolean> {
     const ig = snap.ig;
     const base = snap.base;
@@ -998,7 +1003,7 @@ export function SchedeLavorazioneModal({
       return false;
     }
     baselineIngressoJson.current = JSON.stringify(ig);
-    await onIngressoCommitted?.(ig);
+    await onIngressoCommitted?.(ig, { mezzoUpdatePlan: snap.mezzoUpdatePlan });
     return true;
   }
 
@@ -1591,11 +1596,12 @@ export function SchedeLavorazioneModal({
           open={ingressoFormOpen}
           initialFields={ingressoEditorInitial}
           onRequestClose={tryIngressoBack}
-          onSave={async (draft) => {
+          onSave={async (draft, mezzoUpdatePlan) => {
             ingressoDraftRef.current = draft;
             const ok = await applyIngressoCommitAsync({
               ig: ingressoDraftRef.current,
               base: draftRef.current.ingresso,
+              mezzoUpdatePlan,
             });
             if (!ok) return;
             closeIngressoEditor();
@@ -2054,7 +2060,7 @@ function RicambiPanel({
     return prodotti
       .filter((p) => {
         const d = (p.descrizione ?? "").toLowerCase();
-        const c = [p.codiceFornitoreOriginale, p.codiceFornitoreOriginaleSecondario]
+        const c = [ricambioCodiceForUi(p.codiceFornitoreOriginale), p.codiceFornitoreOriginaleSecondario]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
@@ -2074,7 +2080,7 @@ function RicambiPanel({
         id: newRigaId(),
         ricambioId: p.id,
         ricambioNome: p.descrizione ?? "",
-        codice: p.codiceFornitoreOriginale ?? "",
+        codice: ricambioCodiceForUi(p.codiceFornitoreOriginale),
         quantita: 1,
         addetto: lav.addetto,
         dataUtilizzo: todayItDate(),
@@ -2094,7 +2100,7 @@ function RicambiPanel({
     return prodotti
       .filter((p) => {
         const d = (p.descrizione ?? "").toLowerCase();
-        const c = [p.codiceFornitoreOriginale, p.codiceFornitoreOriginaleSecondario]
+        const c = [ricambioCodiceForUi(p.codiceFornitoreOriginale), p.codiceFornitoreOriginaleSecondario]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
@@ -2214,7 +2220,7 @@ function RicambiPanel({
                           id: p.id,
                           descrizione: p.descrizione ?? "",
                           marca: p.marca ?? "",
-                          codiceFornitoreOriginale: p.codiceFornitoreOriginale ?? "",
+                          codiceFornitoreOriginale: ricambioCodiceForUi(p.codiceFornitoreOriginale),
                         }))}
                         onSelect={(p) => {
                           patchRighe(
@@ -2224,7 +2230,7 @@ function RicambiPanel({
                                     ...x,
                                     ricambioId: p.id,
                                     ricambioNome: p.descrizione,
-                                    codice: p.codiceFornitoreOriginale,
+                                    codice: ricambioCodiceForUi(p.codiceFornitoreOriginale),
                                   }
                                 : x,
                             ),

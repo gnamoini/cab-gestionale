@@ -7,6 +7,7 @@ import {
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { comparePrioritaLavorazione } from "@/lib/lavorazioni/priorita-order";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { displayRicambioCodice, ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import { isoInRange, todayUntilNowRange, type DateRange } from "@/lib/report/date-ranges";
 import type { MovimentoRicambioRow } from "@/src/types/supabase-tables";
@@ -181,9 +182,9 @@ function magScortaDeficit(r: RicambioMagazzino): number {
 function toDashboardMagRicambioRow(r: RicambioMagazzino): DashboardMagRecentRicambioRow {
   return {
     id: r.id,
-    label: r.descrizione.trim() || r.codiceFornitoreOriginale,
+    label: r.descrizione.trim() || displayRicambioCodice(r.codiceFornitoreOriginale),
     marca: r.marca.trim() || "—",
-    codice: r.codiceFornitoreOriginale,
+    codice: ricambioCodiceForUi(r.codiceFornitoreOriginale) || "—",
     updatedAt: r.dataUltimaModifica,
     sottoScorta: isRicambioSottoScorta(r),
     scorta: r.scorta,
@@ -244,7 +245,7 @@ export function computeDashboardMagRecentMovements(
     .slice(0, limit)
     .map((m) => {
       const ric = ricambiById.get(m.ricambio_id);
-      const label = ric?.descrizione?.trim() || ric?.codiceFornitoreOriginale || "—";
+      const label = ric?.descrizione?.trim() || displayRicambioCodice(ric?.codiceFornitoreOriginale ?? "");
       return {
         id: m.id,
         tipo: m.tipo,

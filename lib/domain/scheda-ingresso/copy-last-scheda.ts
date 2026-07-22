@@ -4,9 +4,13 @@ import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import {
   listSchedaIngressoMatchesForIdent,
-  mergeSchedaIngressoFields,
   type LastSchedaIngressoMatch,
 } from "@/lib/schede/scheda-ingresso-reuse";
+import {
+  copyPermanentFieldsFromScheda,
+  mergeSchedaIngressoWithMezzoPriority,
+} from "@/lib/schede/merge-scheda-ingresso-with-mezzo-priority";
+import { findMezzoByIngressoIdent } from "@/lib/mezzi/find-mezzo-by-ident";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 
 export type CopyLastMode = "merge-empty" | "full-snapshot";
@@ -23,6 +27,8 @@ export type CopyLastLookupParams = {
 export type CopyLastSchedaIngressoParams = CopyLastLookupParams & {
   mode: CopyLastMode;
   currentFields?: SchedaIngressoFields;
+  /** Mezzo linkato: priorità anagrafica su scheda storica */
+  linkedMezzo?: MezzoGestito | null;
 };
 
 export type CopyLastResult =
@@ -30,18 +36,37 @@ export type CopyLastResult =
   | { kind: "single"; match: LastSchedaIngressoMatch; fields: SchedaIngressoFields }
   | { kind: "pick"; candidates: LastSchedaIngressoMatch[] };
 
+function resolveLinkedMezzo(
+  params: CopyLastLookupParams,
+  explicit?: MezzoGestito | null,
+): MezzoGestito | null {
+  if (explicit) return explicit;
+  return (
+    findMezzoByIngressoIdent(params.mezzi, {
+      targa: params.ident.targa,
+      matricola: params.ident.matricola,
+      nScuderia: params.ident.nScuderia,
+    }) ?? null
+  );
+}
+
 function applyCopyStrategy(
   mode: CopyLastMode,
   currentFields: SchedaIngressoFields | undefined,
   match: LastSchedaIngressoMatch,
+  linkedMezzo: MezzoGestito | null,
 ): SchedaIngressoFields {
   if (mode === "full-snapshot") {
-    return { ...match.campi };
+    const base = currentFields ?? match.campi;
+    return copyPermanentFieldsFromScheda(base, match.campi, linkedMezzo);
   }
   if (!currentFields) {
     throw new Error("copyLastSchedaIngresso: currentFields richiesto per mode merge-empty");
   }
-  return mergeSchedaIngressoFields(currentFields, match.campi);
+  return mergeSchedaIngressoWithMezzoPriority(currentFields, {
+    fromScheda: match.campi,
+    linkedMezzo,
+  });
 }
 
 /** Elenco candidati per banner / pick dialog. */
@@ -77,10 +102,11 @@ export function copyLastSchedaIngresso(params: CopyLastSchedaIngressoParams): Co
   if (candidates.length > 1) return { kind: "pick", candidates };
 
   const match = candidates[0]!;
+  const linkedMezzo = resolveLinkedMezzo(params, params.linkedMezzo);
   return {
     kind: "single",
     match,
-    fields: applyCopyStrategy(params.mode, params.currentFields, match),
+    fields: applyCopyStrategy(params.mode, params.currentFields, match, linkedMezzo),
   };
 }
 
@@ -89,6 +115,10 @@ export function applyCopyLastSchedaMatch(
   mode: CopyLastMode,
   currentFields: SchedaIngressoFields | undefined,
   match: LastSchedaIngressoMatch,
+  options?: { linkedMezzo?: MezzoGestito | null; lookup?: CopyLastLookupParams },
 ): SchedaIngressoFields {
-  return applyCopyStrategy(mode, currentFields, match);
+  const linkedMezzo =
+    options?.linkedMezzo ??
+    (options?.lookup ? resolveLinkedMezzo(options.lookup) : null);
+  return applyCopyStrategy(mode, currentFields, match, linkedMezzo);
 }

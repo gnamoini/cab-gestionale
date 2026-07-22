@@ -8,7 +8,11 @@ import { MezziHubTabEmpty } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 import { MezziRegistraTagliandoModal } from "@/components/gestionale/mezzi/mezzi-registra-tagliando-modal";
 import { MezziTagliandiConfigDrawer } from "@/components/gestionale/mezzi/mezzi-tagliandi-config-drawer";
 import { MezziTagliandoHistoryRow } from "@/components/gestionale/mezzi/mezzi-tagliando-history-row";
-import { URGENCY_LABELS } from "@/lib/maintenance-plans/compute-maintenance-urgency";
+import {
+  TAGLIANDO_STATO_BADGE_CLASS,
+  TAGLIANDO_STATO_LABELS,
+  mapUrgencyToTagliandoStato,
+} from "@/lib/maintenance-plans/tagliando-stato-labels";
 import { useMaintenanceEngineV2Enabled } from "@/lib/officina/use-maintenance-engine-v2-enabled";
 import { formatTriggerSummary } from "@/lib/maintenance-plans/maintenance-trigger-helpers";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -21,7 +25,11 @@ import {
   useMezzoMaintenanceStatusesQuery,
   useMaintenancePlansListQuery,
 } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
-import { useMezzoMaintenanceConfigsQuery } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
+import {
+  useMezzoMaintenanceConfigsQuery,
+  useRecomputeForecastMutation,
+} from "@/src/hooks/gestionale/use-maintenance-engine-v2";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 function fmtDateIt(ymd: string): string {
   try {
@@ -151,6 +159,8 @@ function HubTagliandiV2({
   });
   const plansQ = useMaintenancePlansListQuery(active);
   const historyQ = useMezzoMaintenanceHistoryQuery(mezzo.id, active);
+  const recomputeMut = useRecomputeForecastMutation();
+  const gestToast = useGestionaleToast();
 
   const [registerConfig, setRegisterConfig] = useState<VehicleMaintenanceConfigView | null>(null);
   const [editConfig, setEditConfig] = useState<VehicleMaintenanceConfigView | null>(null);
@@ -177,7 +187,7 @@ function HubTagliandiV2({
             <p>Nessun piano sul mezzo. Per registrare un tagliando serve prima un piano attivo.</p>
             <ol className="list-decimal space-y-1 pl-5">
               <li>Clicca <strong>+ Aggiungi piano manutentivo</strong></li>
-              <li>Scegli un preset o creane uno (es. modello ore + mesi)</li>
+              <li>Scegli un preset da Mezzi → Tagliandi → Preset</li>
               <li>Salva, poi usa <strong>Registra</strong> sulla riga del piano</li>
             </ol>
             {canEdit ? (
@@ -205,26 +215,52 @@ function HubTagliandiV2({
                 {canEdit ? <GlobalTableHeadLabel label="Azioni" /> : null}
               </GlobalTableHead>
               <tbody>
-                {configs.map((c) => (
-                  <tr key={c.id} className={dsTableRow}>
+                {configs.map((c) => {
+                  const stato = mapUrgencyToTagliandoStato(c.urgency);
+                  const plan = (plansQ.data ?? []).find((p) => p.id === c.presetId);
+                  const isUrgent = stato === "imminente" || stato === "scaduto";
+                  return (
+                  <tr key={c.id} className={`${dsTableRow} ${isUrgent ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}`}>
                     <td className="px-2 py-2 font-medium">{c.label}</td>
                     <td className="px-2 py-2 font-mono" title={c.triggerReason ?? undefined}>
                       {formatTriggerSummary(
-                        (plansQ.data ?? []).find((p) => p.id === c.presetId)?.triggerGroups[0]?.triggers ?? [
+                        plan?.triggerGroups[0]?.triggers ?? [
                           { triggerType: c.intervalType, threshold: c.intervalValue, priority: 0 },
                         ],
                       )}
                     </td>
-                    <td className="px-2 py-2">{c.nextDateEstimated ? fmtDateIt(c.nextDateEstimated) : "—"}</td>
+                    <td className="px-2 py-2">
+                      {c.nextDateEstimated ? fmtDateIt(c.nextDateEstimated) : c.remainingValue != null ? `${Math.round(c.remainingValue)} rim.` : "—"}
+                    </td>
                     <td className="px-2 py-2" title={c.confidenceReason ?? undefined}>
                       {c.confidenceLevel ?? "—"}
                     </td>
-                    <td className="px-2 py-2">{URGENCY_LABELS[c.urgency]}</td>
+                    <td className="px-2 py-2">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${TAGLIANDO_STATO_BADGE_CLASS[stato]}`}>
+                        {TAGLIANDO_STATO_LABELS[stato]}
+                      </span>
+                    </td>
                     {canEdit ? (
                       <td className="px-2 py-2">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <button type="button" className={dsBtnNeutral} onClick={() => { setEditConfig(c); setDrawerOpen(true); }}>
                             Configura
+                          </button>
+                          <button
+                            type="button"
+                            className={dsBtnNeutral}
+                            disabled={recomputeMut.isPending}
+                            onClick={() => {
+                              recomputeMut.mutate(
+                                { configId: c.id, mezzoId: mezzo.id },
+                                {
+                                  onSuccess: () => gestToast.successOnce(`recompute-${c.id}`, "Pianificazione aggiornata."),
+                                  onError: (err) => gestToast.error(err, { entity: "mezzo", action: "update" }),
+                                },
+                              );
+                            }}
+                          >
+                            Ricalcola
                           </button>
                           <button type="button" className={dsBtnPrimary} onClick={() => setRegisterConfig(c)}>
                             Registra
@@ -233,7 +269,8 @@ function HubTagliandiV2({
                       </td>
                     ) : null}
                   </tr>
-                ))}
+                );
+                })}
               </tbody>
             </table>
           </div>

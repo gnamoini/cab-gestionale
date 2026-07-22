@@ -19,6 +19,7 @@ function mockItems(count: number) {
       codiceSecondario: `OE${i + 1}`,
       fornitoreAlternativo: "FORN",
       codiceAlternativo: `ALT${i + 1}`,
+      fornitoriAlternativi: [{ name: "FORN", code: `ALT${i + 1}` }],
     },
     qrUrl: `https://example.test/r/CAB-BENCH${i}`,
   }));

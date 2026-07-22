@@ -28,6 +28,7 @@ export type DeliverLabelInput = {
   format: LabelFormat;
   origin: string;
   includeBarcode?: boolean;
+  quantity?: number;
   userId?: string | null;
   device?: string | null;
 };
@@ -56,6 +57,7 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
   if (!template) throw new Error("Template etichetta non valido");
 
   const includeBarcode = input.includeBarcode === true;
+  const quantity = Math.max(1, Math.min(99, input.quantity ?? 1));
   const canonicalOrigin = input.origin.replace(/\/+$/, "");
   const hash = computeLabelFingerprint({
     payload: input.payload,
@@ -66,13 +68,17 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
     includeBarcode,
     canonicalOrigin,
   });
+  const effectiveHash = input.format === "pdf" && quantity > 1 ? `${hash}-q${quantity}` : hash;
 
-  const cached = await getLabelArtifactByHash(input.sb, {
-    entityType: input.entityType,
-    entityId: input.entityId,
-    hash,
-    format: input.format,
-  });
+  const cached =
+    quantity === 1
+      ? await getLabelArtifactByHash(input.sb, {
+          entityType: input.entityType,
+          entityId: input.entityId,
+          hash: effectiveHash,
+          format: input.format,
+        })
+      : null;
 
   if (cached) {
     const bytes = await downloadLabelArtifact(cached.storage_path);
@@ -80,7 +86,7 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
       return {
         bytes,
         cacheStatus: "HIT",
-        hash,
+        hash: effectiveHash,
         fileName: fileNameFor(input.entityId, input.payload.codice, input.format),
         contentType: contentTypeFor(input.format),
       };
@@ -89,7 +95,7 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
 
   const qrUrl = buildInventoryQrUrl(input.token, input.origin);
   const renderOptions = { includeBarcode };
-  const dedupKey = renderDedupKey(input.entityId, hash, input.format);
+  const dedupKey = renderDedupKey(input.entityId, effectiveHash, input.format);
   let buffer: Buffer;
   if (input.format === "png") {
     buffer = await withRenderDedup(dedupKey, () =>
@@ -102,25 +108,28 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
     });
   } else {
     buffer = await withRenderDedup(dedupKey, async () => {
-      const pdf = await renderSingleLabelPdf(template, input.payload, qrUrl, renderOptions);
+      const pdf = await renderSingleLabelPdf(template, input.payload, qrUrl, renderOptions, quantity);
       return Buffer.from(pdf);
     });
   }
 
-  const storagePath = await uploadLabelArtifactBestEffort({
-    entityType: input.entityType,
-    entityId: input.entityId,
-    hash,
-    format: input.format,
-    bytes: new Uint8Array(buffer),
-  });
+  const storagePath =
+    quantity === 1
+      ? await uploadLabelArtifactBestEffort({
+          entityType: input.entityType,
+          entityId: input.entityId,
+          hash: effectiveHash,
+          format: input.format,
+          bytes: new Uint8Array(buffer),
+        })
+      : null;
 
   if (storagePath) {
     await input.sb.from("inventory_label_artifacts").upsert(
       {
         entity_type: input.entityType,
         entity_id: input.entityId,
-        hash,
+        hash: effectiveHash,
         format: input.format,
         preset: input.preset,
         template_id: template.id,
@@ -142,7 +151,7 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
     userId: input.userId,
     device: input.device,
     payload: buildLabelPdfMetricsPayload({
-      labelCount: 1,
+      labelCount: quantity,
       cacheHitCount: 0,
       cacheMissCount: 1,
       durationMs: 0,
@@ -156,13 +165,13 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
     entityId: input.entityId,
     userId: input.userId,
     device: input.device,
-    payload: { preset: input.preset, hash },
+    payload: { preset: input.preset, hash: effectiveHash, quantity },
   });
 
   return {
     bytes: new Uint8Array(buffer),
     cacheStatus: "MISS",
-    hash,
+    hash: effectiveHash,
     fileName: fileNameFor(input.entityId, input.payload.codice, input.format),
     contentType: contentTypeFor(input.format),
   };

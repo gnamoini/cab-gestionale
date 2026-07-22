@@ -14,12 +14,19 @@ import {
 } from "@/lib/document-capture/extraction/template-ocr-extractor.server";
 import type { PageObject } from "@/lib/document-capture/model/page-object";
 
+export type HybridExtractionRunResult =
+  | { status: "ok"; data: HybridExtractionResult }
+  | { status: "skip"; reason: string }
+  | { status: "fail"; error: string };
+
 export async function runHybridExtraction(input: {
   bytes: Uint8Array;
   mime: string;
   pageObjects: PageObject[];
-}): Promise<HybridExtractionResult | null> {
-  if (!isDocumentCaptureHybridExtractionEnabled()) return null;
+}): Promise<HybridExtractionRunResult> {
+  if (!isDocumentCaptureHybridExtractionEnabled()) {
+    return { status: "skip", reason: "hybrid_disabled" };
+  }
 
   try {
     const { pages, fields: pdfTextFields, hasTextLayer } = await extractNativePdfTextFields(
@@ -50,15 +57,19 @@ export async function runHybridExtraction(input: {
     const needsGemini = needsGeminiFallback(mergedPrefill, schedaTipo);
 
     return {
-      schedaTipo,
-      pdfTextFields,
-      templateOcrFields,
-      mergedPrefill,
-      needsGemini,
-      geminiUserPrompt: needsGemini ? buildGeminiPrefillPrompt(mergedPrefill) : undefined,
+      status: "ok",
+      data: {
+        schedaTipo,
+        pdfTextFields,
+        templateOcrFields,
+        mergedPrefill,
+        needsGemini,
+        geminiUserPrompt: needsGemini ? buildGeminiPrefillPrompt(mergedPrefill) : undefined,
+      },
     };
-  } catch {
-    return null;
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { status: "fail", error: message };
   }
 }
 
@@ -71,11 +82,14 @@ export async function runHybridExtractionWithTimeout(input: {
   bytes: Uint8Array;
   mime: string;
   pageObjects: PageObject[];
-}): Promise<HybridExtractionResult | null> {
-  return Promise.race([
+  timeoutMs?: number;
+}): Promise<HybridExtractionRunResult> {
+  const timeoutMs = input.timeoutMs ?? HYBRID_EXTRACTION_TIMEOUT_MS;
+  const result = await Promise.race([
     runHybridExtraction(input),
-    new Promise<null>((resolve) => {
-      setTimeout(() => resolve(null), HYBRID_EXTRACTION_TIMEOUT_MS);
+    new Promise<HybridExtractionRunResult>((resolve) => {
+      setTimeout(() => resolve({ status: "skip", reason: "hybrid_timeout" }), timeoutMs);
     }),
   ]);
+  return result;
 }

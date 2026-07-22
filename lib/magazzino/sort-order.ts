@@ -1,3 +1,4 @@
+import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { RicambioMagazzino, SortKeyMagazzino } from "@/lib/magazzino/types";
 import { readCompatSortKeyForUi } from "@/lib/magazzino/compat/compat-read-guard";
@@ -63,7 +64,7 @@ export function sortValueForKey(
     case "categoria":
       return r.categoria.toLowerCase();
     case "codiceFornitoreOriginale": {
-      const primary = r.codiceFornitoreOriginale.toLowerCase();
+      const primary = ricambioCodiceForUi(r.codiceFornitoreOriginale).toLowerCase() || "~";
       const secondary = r.codiceFornitoreOriginaleSecondario.toLowerCase();
       return secondary ? `${primary}\0${secondary}` : primary;
     }

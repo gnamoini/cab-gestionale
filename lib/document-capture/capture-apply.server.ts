@@ -33,6 +33,7 @@ import { validateCaptureForApply, captureReviewAllowsForceApply } from "@/lib/do
 import { mutateCaptureWithEvent } from "@/lib/document-capture/mutate-capture-with-event.server";
 import { resolveFieldsForHash } from "@/lib/document-capture/resolve-fields-for-hash";
 import { CapturePlanStaleError, hashConfirmedCaptureFields } from "@/lib/document-capture/capture-plan-staleness";
+import { assertValidPriorita } from "@/lib/lavorazioni/priorita-order";
 import { executeInterventoWrite } from "@/lib/domain/intervento-context/write-contract";
 import { parseCaptureIngressoIso } from "@/lib/document-capture/capture-ingresso-iso";
 import {
@@ -42,8 +43,9 @@ import {
 import { auditContext, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { maybePublishTagliandoDueOnInterventoCreateServer } from "@/lib/maintenance-plans/tagliando-due-notification.server";
+import type { CaptureApplyMeta } from "@/lib/document-capture/capture-apply-meta";
 
-export type { CaptureApplyPlan, ApprovedCreatesJson, CaptureApprovedCreates };
+export type { CaptureApplyMeta };
 export { CaptureApplyInProgressError, CapturePlanStaleError };
 
 async function loadCaptureFields(captureId: string): Promise<CaptureFieldRow[]> {
@@ -71,6 +73,9 @@ async function findCommittedApply(captureId: string, dryRunApplicationId: string
   );
 }
 
+
+export type { CaptureApplyPlan, ApprovedCreatesJson, CaptureApprovedCreates };
+
 async function runCaptureApplySaga(input: {
   captureId: string;
   applicationId: string;
@@ -78,6 +83,7 @@ async function runCaptureApplySaga(input: {
   resume?: boolean;
   existingLavorazioneId?: string | null;
   forceReview?: boolean;
+  applyMeta?: CaptureApplyMeta;
 }): Promise<{ ok: true; lavorazioneId: string; mezzoId: string }> {
   const sb = await createSupabaseServerUserClient();
 
@@ -212,6 +218,7 @@ async function runCaptureApplySaga(input: {
         userId: input.userId,
         applicationId: input.applicationId,
         currentHash,
+        applyMeta: input.applyMeta,
       });
 }
 
@@ -239,6 +246,7 @@ type SagaSharedContext = {
   userId: string;
   applicationId: string;
   currentHash: string;
+  applyMeta?: CaptureApplyMeta;
 };
 
 async function loadLavorazioneDataIngressoIso(
@@ -287,12 +295,17 @@ async function runCaptureApplyWrite(
       lavorazioneId: existingLavorazioneId,
       mezziCatalog: mezzoCatalog,
       meta: {
-        statoId: "accettazione",
-        priorita: "normale",
+        statoId: ctx.applyMeta?.statoId?.trim() || "accettazione",
+        priorita: assertValidPriorita(ctx.applyMeta?.priorita),
         mezzoIdHint: capture.mezzo_id,
         dataIngressoIso,
         note: ingressoFields.noteIntervento.trim() || ingressoFields.descrizioneAnomalia.trim() || null,
         createdBy: userId,
+        writeContext:
+          ctx.applyMeta?.writeContext ?? {
+            source: "import_ai",
+            mezzoUpdatePlan: undefined,
+          },
       },
     },
     deps,
@@ -569,6 +582,7 @@ export async function applyDocumentCapturePlan(input: {
   captureId: string;
   applicationId: string;
   forceReview?: boolean;
+  applyMeta?: CaptureApplyMeta;
 }): Promise<{ ok: true; lavorazioneId: string }> {
   const sb = await createSupabaseServerUserClient();
   const { data: auth } = await sb.auth.getUser();
@@ -598,6 +612,7 @@ export async function applyDocumentCapturePlan(input: {
     applicationId: input.applicationId,
     userId,
     forceReview: input.forceReview,
+    applyMeta: input.applyMeta,
   });
 
   // ponytail: apply v1 keeps capture linked — no ephemeral discard after success

@@ -33,14 +33,20 @@ SSOT: [`lib/inventory-labels/`](../lib/inventory-labels/)
 | Route | Metodo | Descrizione |
 |-------|--------|-------------|
 | `/api/inventory-labels/ricambi/[id]` | GET | Metadata token + URL QR |
-| `/api/inventory-labels/ricambi/[id]/render` | GET | `?format=png\|svg\|pdf&preset=` |
+| `/api/inventory-labels/ricambi/[id]/render` | GET | `?format=png\|svg\|pdf&preset=&quantity=` (PDF multi-copia) |
 | `/api/inventory-labels/ricambi/[id]/regenerate` | POST | Revoca + nuovo token |
-| `/api/inventory-labels/bulk` | POST | Sync PDF ≤10 (default), job async oltre; max 500 |
+| `/api/inventory-labels/bulk` | POST | Body `{ items: [{ id, quantity }], preset }` — sync ≤10 etichette totali (default), job async oltre; max 500 etichette totali |
 | `/api/inventory-labels/bulk/jobs/[id]` | GET / POST | Poll `progress` / download; POST retry job stuck |
 
 ## Preset etichetta
 
-40×20, 50×30, 60×40, 70×50, 80×40, 80×50, 95×40 mm — definiti in `domain/templates.ts` (`computeLabelLayout`).
+40×20, 50×30, 60×40, 70×50, 80×40, 80×50, 95×40 mm e **A4 pagina intera** (`a4-pagina-intera`) — definiti in `domain/templates.ts`.
+
+**Quantità:** in magazzino (modalità Etichette) ogni ricambio ha stepper `− n +` (0–99). Il PDF ripete l'etichetta dello stesso ricambio N volte. Job async salvano `[{ id, quantity }]` compatti in `bulk_items` (espansione solo al render).
+
+**Fornitori alternativi:** tutti i fornitori del ricambio compaiono sull'etichetta (`STIS / LINEA STRADALE` con codici sotto).
+
+**A4 pagina intera:** layout verticale, testo bold ingrandito, QR capped (~38 mm), 1 etichetta per foglio A4.
 
 **Layout (v1.5.0):** QR grande a sinistra; barcode Code128 sotto il QR; a destra:
 

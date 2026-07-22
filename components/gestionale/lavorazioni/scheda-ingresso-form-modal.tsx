@@ -41,11 +41,12 @@ import {
 } from "@/lib/schede/scheda-ingresso-typed-fields";
 import { sliceInputValue, TEXT_EXTRA, TEXT_LONG } from "@/lib/validation/text-field-limits";
 import type { LavorazioneArchiviata, LavorazioneAttiva, PrioritaLav } from "@/lib/lavorazioni/types";
-import { MezzoRegistratoIngressoDialog } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-dialog";
+import type { SchedaIngressoIdentField } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import {
   useSchedaIngressoMezzoPrompt,
   type UseSchedaIngressoMezzoPromptResult,
 } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
+import { useSchedaIngressoSaveGate } from "@/src/hooks/use-scheda-ingresso-save-gate";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { useFormEngine } from "@/lib/forms/form-engine";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
@@ -554,8 +555,6 @@ export function SchedaIngressoFormBody({
   errorMessage,
   updatedByHint,
   mezzoPrompt,
-  onMezzoDialogAccept,
-  onMezzoDialogDismiss,
   mezzoLinked = false,
   mezzoId = "",
   prependContent,
@@ -585,8 +584,6 @@ export function SchedaIngressoFormBody({
   errorMessage?: string | null;
   updatedByHint?: string | null;
   mezzoPrompt: UseSchedaIngressoMezzoPromptResult;
-  onMezzoDialogAccept?: () => void;
-  onMezzoDialogDismiss?: () => void;
   mezzoLinked?: boolean;
   mezzoId?: string;
   /** Contenuto opzionale in cima allo scroll (banner, avvisi). */
@@ -698,25 +695,96 @@ export function SchedaIngressoFormBody({
       ),
     [identScan.matricola, identScan.nScuderia, identScan.targa, mezziCatalog],
   );
-  const ingressoReuseBannerVisible =
-    Boolean(lastIngressoMatch) ||
-    (lastIngressoCandidates.length === 0 && lastIngressoMezzoInAnagrafica);
+  const linkedMezzoCatalog = useMemo(() => {
+    const id = mezzoPrompt.linkedSnapshot?.id ?? mezzoPrompt.preferredMezzoId;
+    if (!id) return null;
+    return mezziCatalog.find((m) => m.id === id) ?? null;
+  }, [mezziCatalog, mezzoPrompt.linkedSnapshot?.id, mezzoPrompt.preferredMezzoId]);
+
   const [copyPickOpen, setCopyPickOpen] = useState(false);
   const [addettoFirmaModalOpen, setAddettoFirmaModalOpen] = useState(false);
 
+  const mezzoInlineHint = useMemo(() => {
+    if (mezzoPrompt.hasConflict && mezzoPrompt.linkedSnapshot) {
+      const mezzo =
+        linkedMezzoCatalog ??
+        mezziCatalog.find((m) => m.id === mezzoPrompt.linkedSnapshot!.id) ??
+        mezzoPrompt.pendingMezzo;
+      if (!mezzo) return null;
+      return {
+        variant: "conflitto" as const,
+        mezzo,
+        matchField: (mezzoPrompt.activeMatchField ?? "matricola") as SchedaIngressoIdentField,
+      };
+    }
+    if (mezzoPrompt.linkState.status === "linked" && linkedMezzoCatalog) {
+      return {
+        variant: "collegato" as const,
+        mezzo: linkedMezzoCatalog,
+        matchField: (mezzoPrompt.activeMatchField ??
+          mezzoPrompt.linkedSnapshot?.linkedViaField ??
+          "matricola") as SchedaIngressoIdentField,
+      };
+    }
+    if (mezzoPrompt.linkState.status === "unconfirmed_match" && mezzoPrompt.pendingMezzo) {
+      return {
+        variant: "trovato" as const,
+        mezzo: mezzoPrompt.pendingMezzo,
+        matchField: (mezzoPrompt.activeMatchField ?? "matricola") as SchedaIngressoIdentField,
+      };
+    }
+    return null;
+  }, [
+    linkedMezzoCatalog,
+    mezziCatalog,
+    mezzoPrompt.activeMatchField,
+    mezzoPrompt.hasConflict,
+    mezzoPrompt.linkState.status,
+    mezzoPrompt.linkedSnapshot,
+    mezzoPrompt.pendingMezzo,
+  ]);
+
   const onMezzoPromptMatch = useCallback(
-    (m: MezzoGestito) => {
-      if (!readOnly) mezzoPrompt.requestPrompt(m);
+    (m: MezzoGestito, field: SchedaIngressoIdentField) => {
+      if (!readOnly) mezzoPrompt.onExactMezzoMatch(m, field);
     },
     [mezzoPrompt, readOnly],
   );
 
   const applyCopyFromMatch = useCallback(
     (match: LastSchedaIngressoMatch) => {
-      setFields(applyCopyLastSchedaMatch("merge-empty", fields, match));
+      setFields(
+        applyCopyLastSchedaMatch("merge-empty", fields, match, {
+          linkedMezzo: linkedMezzoCatalog,
+          lookup: {
+            ident: {
+              targa: identScan.targa,
+              matricola: identScan.matricola,
+              nScuderia: identScan.nScuderia,
+            },
+            mezzi: mezziCatalog,
+            schedeStore,
+            attive,
+            storico,
+            excludeLavorazioneId,
+          },
+        }),
+      );
       setCopyPickOpen(false);
     },
-    [fields, setFields],
+    [
+      attive,
+      excludeLavorazioneId,
+      fields,
+      identScan.matricola,
+      identScan.nScuderia,
+      identScan.targa,
+      linkedMezzoCatalog,
+      mezziCatalog,
+      schedeStore,
+      setFields,
+      storico,
+    ],
   );
 
   const copyLastIngresso = useCallback(() => {
@@ -734,6 +802,7 @@ export function SchedaIngressoFormBody({
       attive,
       storico,
       excludeLavorazioneId,
+      linkedMezzo: linkedMezzoCatalog,
     });
     if (result.kind === "none") return;
     if (result.kind === "pick") {
@@ -748,6 +817,7 @@ export function SchedaIngressoFormBody({
     identScan.matricola,
     identScan.nScuderia,
     identScan.targa,
+    linkedMezzoCatalog,
     mezziCatalog,
     readOnly,
     schedeStore,
@@ -799,12 +869,6 @@ export function SchedaIngressoFormBody({
 
   return (
     <>
-      <MezzoRegistratoIngressoDialog
-        open={mezzoPrompt.promptOpen && !readOnly && !ingressoReuseBannerVisible}
-        mezzo={mezzoPrompt.promptMezzo}
-        onAccept={onMezzoDialogAccept ?? mezzoPrompt.acceptAutofill}
-        onDismiss={onMezzoDialogDismiss ?? mezzoPrompt.dismissPrompt}
-      />
       <SchedaIngressoCopyPickDialog
         open={copyPickOpen}
         candidates={lastIngressoCandidates}
@@ -908,6 +972,9 @@ export function SchedaIngressoFormBody({
           disabled={disabled}
           sections={heavySectionsReady ? undefined : ["cliente"]}
           onExactMezzoMatch={onMezzoPromptMatch}
+          mezzoInlineHint={mezzoInlineHint}
+          onUseMezzoFromHint={(field) => mezzoPrompt.acceptLinkMezzo(field)}
+          onDismissMezzoHint={mezzoPrompt.dismissPendingMatch}
           lastIngressoMatch={lastIngressoMatch}
           lastIngressoMatchCount={lastIngressoCandidates.length}
           mezzoInAnagraficaOnly={
@@ -916,8 +983,8 @@ export function SchedaIngressoFormBody({
           onCopyLastIngresso={readOnly ? undefined : copyLastIngresso}
           clienteRequired={false}
           marcaAttrezzaturaRequired={false}
-          mezzoLinked={mezzoLinked}
-          mezzoId={mezzoId}
+          mezzoLinked={mezzoLinked || mezzoPrompt.linkState.status === "linked"}
+          mezzoId={mezzoId || mezzoPrompt.preferredMezzoId || ""}
           captureHints={captureHints}
           onApplyCaptureHint={onApplyCaptureHint}
         />
@@ -957,7 +1024,7 @@ export function SchedaIngressoEditModal({
   initialFields: SchedaIngressoFields;
   /** Chiusura (Annulla / ESC): riceve il draft corrente per dirty-check nel parent. */
   onRequestClose: (draft: SchedaIngressoFields) => void;
-  onSave: (draft: SchedaIngressoFields) => void | Promise<void>;
+  onSave: (draft: SchedaIngressoFields, mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan) => void | Promise<void>;
   onDelete?: () => void;
   readOnly?: boolean;
   canEdit?: boolean;
@@ -1002,6 +1069,10 @@ export function SchedaIngressoEditModal({
     storico,
     excludeLavorazioneId,
   });
+  const saveGate = useSchedaIngressoSaveGate({
+    mezziCatalog,
+    linkedSnapshot: mezzoPrompt.linkedSnapshot,
+  });
 
   const globalOpts = useGlobalOptions({ enabled: open, debugTag: "SchedaIngressoEditModal" });
   const { gateSubmit, dialog: unknownSettingsDialog } = useSchedaIngressoUnknownSettingsGate(globalOpts);
@@ -1013,7 +1084,14 @@ export function SchedaIngressoEditModal({
       await gateSubmit(snap, async (gatedFields) => {
         setSaving(true);
         try {
-          await onSave(gatedFields);
+          let mezzoUpdatePlan;
+          try {
+            mezzoUpdatePlan = await saveGate.gateSave(gatedFields);
+          } catch (err) {
+            if (err instanceof Error && err.message === "SAVE_CANCELLED") return;
+            throw err;
+          }
+          await onSave(gatedFields, mezzoUpdatePlan);
         } finally {
           setSaving(false);
         }
@@ -1081,6 +1159,7 @@ export function SchedaIngressoEditModal({
         />
       </form>
       {unknownSettingsDialog}
+      {saveGate.dialog}
     </SchedaIngressoFormModalShell>
   );
 }

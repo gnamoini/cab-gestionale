@@ -37,6 +37,12 @@ export type MezzoGestito = {
   hubSynthetic?: boolean;
   /** ISO timestamp ultimo aggiornamento anagrafica mezzo (DB `updated_at`). */
   ultimaModifica?: string;
+  /** Cache metering V1 — ultimo km rilevato da scheda/intervento. */
+  ultimoKmRilevato?: number | null;
+  ultimoKmData?: string | null;
+  ultimoOreRilevate?: number | null;
+  ultimoOreData?: string | null;
+  ultimoAggiornamentoDaLavorazioneId?: string | null;
 };
 
 export type MezziSortKey =

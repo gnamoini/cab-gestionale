@@ -7,6 +7,7 @@ import {
   ricambioIdFromLogRow,
 } from "@/lib/magazzino/ricambio-log-label";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { displayRicambioCodice, ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import { isoInRange, todayUntilNowRange, type DateRange } from "@/lib/report/date-ranges";
 import type {
   DashboardMagDailyMovements,
@@ -92,9 +93,9 @@ function isRicambioSottoScorta(r: RicambioMagazzino): boolean {
 function toDashboardMagRicambioRow(r: RicambioMagazzino, atIso: string): DashboardMagRecentRicambioRow {
   return {
     id: r.id,
-    label: r.descrizione.trim() || r.codiceFornitoreOriginale,
+    label: r.descrizione.trim() || displayRicambioCodice(r.codiceFornitoreOriginale),
     marca: r.marca.trim() || "—",
-    codice: r.codiceFornitoreOriginale,
+    codice: ricambioCodiceForUi(r.codiceFornitoreOriginale) || "—",
     updatedAt: atIso,
     sottoScorta: isRicambioSottoScorta(r),
     scorta: r.scorta,

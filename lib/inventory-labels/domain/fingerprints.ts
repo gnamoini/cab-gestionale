@@ -24,14 +24,17 @@ export type LabelFingerprintInput = {
 };
 
 export function computeLabelFingerprint(input: LabelFingerprintInput): string {
+  const suppliers = (input.payload.fornitoriAlternativi ?? []).map((s) => ({
+    name: s.name.trim(),
+    code: (s.code ?? "").trim(),
+  }));
   const canonical = canonicalizeJson({
     marca: input.payload.marca.trim(),
     marcaSecondaria: input.payload.marcaSecondaria.trim(),
     descrizione: input.payload.descrizione.trim(),
     codice: input.payload.codice.trim(),
     codiceSecondario: input.payload.codiceSecondario.trim(),
-    fornitoreAlternativo: input.payload.fornitoreAlternativo.trim(),
-    codiceAlternativo: input.payload.codiceAlternativo.trim(),
+    fornitoriAlternativi: suppliers,
     templateId: input.templateId,
     templateVersion: input.templateVersion,
     generatorVersion: input.generatorVersion,

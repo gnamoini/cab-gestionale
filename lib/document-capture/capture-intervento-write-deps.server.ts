@@ -1,5 +1,8 @@
 import "server-only";
 
+import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
+import { recordMezzoAnagraficaHistoryServer } from "@/lib/domain/mezzo/record-mezzo-anagrafica-history.server";
+import { resolveMezzoUpdatePlanFromContext } from "@/lib/domain/intervento-context/intervento-write-context";
 import {
   ATTREZZATURE_COLUMNS,
   LAVORAZIONI_COLUMNS,
@@ -121,9 +124,21 @@ export function createCaptureInterventoWriteDeps(input: {
   const magazzino = input.magazzino ?? [];
 
   return {
-    upsertMezzo: async ({ fields, preferredMezzoId }) => {
+    upsertMezzo: async ({ fields, preferredMezzoId, updatePlan, lavorazioneId, writeContext }) => {
       const sb = await createSupabaseServerUserClient();
       const catalog = await fetchCaptureMezziCatalog();
+      const resolved = resolveMezzoFromScheda({
+        scheda: fields,
+        existingMezzi: catalog,
+        preferredMezzoId,
+      });
+      const needsNewMezzo = !resolved.mezzoId && Boolean(fields.cliente.trim());
+      if (needsNewMezzo && !input.approvedCreates.mezzo) {
+        throw new MezzoSchedaValidationError("Creazione mezzo non approvata nel piano capture.");
+      }
+
+      const plan = updatePlan ?? resolveMezzoUpdatePlanFromContext(writeContext ?? { source: "import_ai" });
+
       const createMezzo = async (data: MezzoInsert) => {
         const payload = sanitizeMezzoWritePayload(data, { v2Enabled: true, source: "document-capture-apply" });
         const { data: row, error } = await sb.from("mezzi").insert(payload).select(MEZZI_COLUMNS).single();
@@ -144,16 +159,21 @@ export function createCaptureInterventoWriteDeps(input: {
         return row as MezzoRow;
       };
 
-      if (!input.approvedCreates.mezzo) {
-        throw new MezzoSchedaValidationError("Creazione mezzo non approvata nel piano capture.");
-      }
-
       return upsertMezzoFromSchedaIngresso({
         fields,
         mezziCatalog: catalog,
         preferredMezzoId,
+        updatePlan: plan,
+        lavorazioneId,
+        writeContext: writeContext ?? { source: "import_ai", mezzoUpdatePlan: plan },
         create: createMezzo,
         update: updateMezzo,
+        recordHistory: async (historyInput) => {
+          await recordMezzoAnagraficaHistoryServer(sb, {
+            ...historyInput,
+            userId: input.userId,
+          });
+        },
         attrezzaturaPort: {
           createAttrezzatura: async (data) => {
             const { data: row, error } = await sb

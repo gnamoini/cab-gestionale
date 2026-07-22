@@ -25,6 +25,7 @@ const payload = {
   codiceSecondario: "",
   fornitoreAlternativo: "ALT FORN",
   codiceAlternativo: "ALT-99",
+  fornitoriAlternativi: [{ name: "ALT FORN", code: "ALT-99" }],
 };
 const qrUrl = "https://example.test/r/CAB-TESTTOKEN1";
 const renderOpts = { embedFonts: false, textAsPaths: true } as const;

@@ -5,6 +5,7 @@ import {
   ricambioFormHasNoUserInput,
   ricambioFormIsDirty,
   ricambioFormNeedsCloseConfirm,
+  syncPrezzoVenditaInForm,
   RICAMBIO_SAVE_EMPTY_FORM_MESSAGE,
 } from "@/lib/magazzino/form";
 
@@ -30,9 +31,13 @@ assert.equal(ricambioFormHasMeaningfulUserInput(empty), false);
 assert.equal(ricambioFormHasMeaningfulUserInput({ ...empty, descrizione: "Filtro olio" }), true);
 assert.equal(ricambioFormNeedsCloseConfirm(empty, empty), false);
 
-const driftOnly = { ...empty, prezzoVendita: "1" };
-assert.equal(ricambioFormIsDirty(driftOnly, empty), true, "internal prezzo drift marks dirty snapshot");
-assert.equal(ricambioFormHasMeaningfulUserInput(driftOnly), false);
-assert.equal(ricambioFormNeedsCloseConfirm(driftOnly, empty), false, "no confirm without user input");
+const markupOnly = syncPrezzoVenditaInForm({ ...empty, markupPercentuale: "50" });
+assert.equal(ricambioFormIsDirty(markupOnly, empty), true);
+assert.equal(
+  ricambioFormIsDirty(markupOnly, syncPrezzoVenditaInForm({ ...empty, markupPercentuale: "50" })),
+  false,
+);
+assert.equal(ricambioFormHasMeaningfulUserInput(markupOnly), true);
+assert.equal(ricambioFormNeedsCloseConfirm(markupOnly, empty), true);
 
 console.log("ricambio-form-dirty.test.ts OK");

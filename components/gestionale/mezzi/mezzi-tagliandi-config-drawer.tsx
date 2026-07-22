@@ -58,7 +58,8 @@ export function MezziTagliandiConfigDrawer({
   onSaved: () => void;
 }) {
   const { validation: toastValidation, error: toastError, successSaved } = useGestionaleToast();
-  const { canManageSettings } = usePermissions();
+  const mezziPerm = usePermissions("mezzi");
+  const canEditPreset = mezziPerm.canWrite;
   const plansQ = useMaintenancePlansListQuery(open);
   const catalogQ = useMaintenancePlansCatalogQuery(open);
   const upsertMut = useUpsertMezzoConfigMutation();
@@ -127,9 +128,9 @@ export function MezziTagliandiConfigDrawer({
       toastValidation("Configura almeno un intervallo con soglia maggiore di zero.");
       return;
     }
-    if (triggersDraft.length > 1 && (!savePresetToo || !canManageSettings)) {
+    if (triggersDraft.length > 1 && (!savePresetToo || !canEditPreset)) {
       toastValidation(
-        "Per ore+mesi o km+mesi salva anche il preset globale (serve permesso Impostazioni).",
+        "Per ore+mesi o km+mesi salva anche il preset globale (serve permesso scrittura Mezzi).",
       );
       return;
     }
@@ -138,7 +139,7 @@ export function MezziTagliandiConfigDrawer({
     try {
       let linkedPresetId = presetId || null;
 
-      if (savePresetToo && canManageSettings) {
+      if (savePresetToo && canEditPreset) {
         if (selectedPlan) {
           await presetUpsertMut.mutateAsync({
             id: selectedPlan.id,
@@ -174,7 +175,7 @@ export function MezziTagliandiConfigDrawer({
           const nome = label.trim() || `Piano ${tipoAttrezzatura}`;
           const tipoAttrezzaturaId = resolveTipoCatalogId(tipoAttrezzatura, catalogQ.data ?? []);
           if (!tipoAttrezzaturaId) {
-            toastValidation("Tipo attrezzatura non presente nel catalogo. Sincronizza da Impostazioni.");
+            toastValidation("Tipo attrezzatura non presente nel catalogo. Verrà sincronizzato automaticamente al salvataggio.");
             return;
           }
           const created = await presetUpsertMut.mutateAsync({
@@ -245,7 +246,7 @@ export function MezziTagliandiConfigDrawer({
         <form id="tagliandi-config-form" onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
           {applicablePlans.length === 0 && !plansQ.isLoading ? (
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
-              Nessun preset per «{tipoAttrezzatura}». Crea un piano qui sotto oppure in Impostazioni → Piani tagliando.
+              Nessun preset per «{tipoAttrezzatura}». Crea un piano qui sotto o in Mezzi → Tagliandi → Preset.
             </p>
           ) : null}
           <label className={dsFormField}>
@@ -279,14 +280,14 @@ export function MezziTagliandiConfigDrawer({
           </label>
           <MaintenancePresetTriggersField triggers={triggersDraft} onChange={setTriggersDraft} compact />
           <MaintenancePresetPartsField parts={partsDraft} onChange={setPartsDraft} enabled={open} />
-          {canManageSettings ? (
+          {canEditPreset ? (
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={savePresetToo} onChange={(e) => setSavePresetToo(e.target.checked)} />
               Salva intervalli anche nel preset globale (riutilizzabile su altri mezzi)
             </label>
           ) : (
             <p className="text-xs text-[color:var(--cab-text-muted)]">
-              Le modifiche agli intervalli si applicano solo a questo mezzo. Per preset globali servono permessi Impostazioni.
+              Le modifiche agli intervalli si applicano solo a questo mezzo.
             </p>
           )}
           <label className="flex items-center gap-2 text-sm">

@@ -225,7 +225,7 @@ export function MezziTagliandiMatrixTable({
       if (!canEdit) return;
       const planId = resolveMatrixTogglePlanId(row, plans);
       if (!planId) {
-        toastError("Configura almeno un piano tagliando in Impostazioni.", { entity: "mezzo", action: "create" });
+        toastError("Crea un preset in Mezzi → Tagliandi → Preset.", { entity: "mezzo", action: "create" });
         return;
       }
       const cellKey = `${row.mezzoId}:${row.planId}:${milestoneOre}`;

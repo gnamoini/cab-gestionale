@@ -12,6 +12,7 @@ import {
 import { normalizePdfDownloadFileName, openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
+import { MagazzinoLabelQtyStepper } from "@/components/gestionale/magazzino/magazzino-label-qty-stepper";
 
 type LabelMeta = {
   token: string;
@@ -38,6 +39,7 @@ export function RicambioLabelActions({
   const [openingPdf, setOpeningPdf] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [showQrUrl, setShowQrUrl] = useState(false);
+  const [quantity, setQuantity] = useState(1);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const busy = loading || openingPdf || printing;
@@ -75,6 +77,7 @@ export function RicambioLabelActions({
       preset,
       includeBarcode: includeBarcode ? "true" : "false",
     });
+    if (format === "pdf" && quantity > 1) sp.set("quantity", String(quantity));
     return `/api/inventory-labels/ricambi/${encodeURIComponent(ricambioId)}/render?${sp.toString()}`;
   }
 
@@ -224,6 +227,16 @@ export function RicambioLabelActions({
                 </option>
               ))}
             </select>
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs text-[color:var(--cab-text-muted)]">
+            Quantità etichette
+            <MagazzinoLabelQtyStepper
+              value={quantity}
+              onChange={(next) => setQuantity(Math.max(1, next))}
+              disabled={busy}
+              ariaLabel={`Quantità etichette ${codice}`}
+            />
           </label>
 
           <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm text-[color:var(--cab-text)]">

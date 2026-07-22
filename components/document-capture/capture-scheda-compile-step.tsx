@@ -304,6 +304,28 @@ export function CaptureSchedaCompileStep({
       <CaptureValidationIssuesBanner validation={applyFlow.validation} />
     ) : null;
 
+  const applyFromIngressoWithGate = useCallback(
+    async (opts?: { forceReview?: boolean }) => {
+      let mezzoUpdatePlan: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
+      try {
+        mezzoUpdatePlan = await create.gateSave(fieldsRef.current);
+      } catch (gateErr) {
+        if (gateErr instanceof Error && gateErr.message === "SAVE_CANCELLED") return;
+        throw gateErr;
+      }
+      const result = await applyFlow.applyFromIngresso(fieldsRef.current, {
+        forceReview: opts?.forceReview,
+        meta: {
+          priorita: create.priorita,
+          statoId: create.stato,
+          writeContext: { source: "import_ai", mezzoUpdatePlan },
+        },
+      });
+      onApplySuccess?.(result.lavorazioneId);
+    },
+    [applyFlow, create.gateSave, create.priorita, create.stato, onApplySuccess],
+  );
+
   const handleSubmitAttempt = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       if (!compileData) return;
@@ -319,8 +341,7 @@ export function CaptureSchedaCompileStep({
         e.preventDefault();
         void (async () => {
           try {
-            const result = await applyFlow.applyFromIngresso(fieldsRef.current);
-            onApplySuccess?.(result.lavorazioneId);
+            await applyFromIngressoWithGate();
           } catch (err) {
             if (err instanceof Error && err.message === "REVIEW_REQUIRED") return;
             onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");
@@ -330,7 +351,7 @@ export function CaptureSchedaCompileStep({
       }
       void create.onSubmit(e);
     },
-    [applyFlow, applyMode, captureHints, compileData, create, gestToast, onApplySuccess, onCompileError],
+    [applyFromIngressoWithGate, applyMode, captureHints, compileData, create, gestToast, onCompileError],
   );
 
   if (loading || !sharedGlobalOpts) {
@@ -393,8 +414,7 @@ export function CaptureSchedaCompileStep({
             onForceReview={() => {
               void (async () => {
                 try {
-                  const result = await applyFlow.applyFromIngresso(fieldsRef.current, { forceReview: true });
-                  onApplySuccess?.(result.lavorazioneId);
+                  await applyFromIngressoWithGate({ forceReview: true });
                 } catch (err) {
                   onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");
                 }
@@ -434,10 +454,8 @@ export function CaptureSchedaCompileStep({
             mezzoHint={create.mezzoHint}
             errorMessage={create.inlineError}
             mezzoPrompt={create.mezzoPrompt}
-            onMezzoDialogAccept={create.acceptMezzoPrompt}
-            onMezzoDialogDismiss={create.dismissMezzoPrompt}
-            mezzoLinked={Boolean(create.mezzoId.trim())}
-            mezzoId={create.mezzoId}
+            mezzoLinked={Boolean(create.mezzoId.trim()) || create.mezzoPrompt.linkState.status === "linked"}
+            mezzoId={create.mezzoId || create.mezzoPrompt.preferredMezzoId || ""}
             sharedGlobalOpts={create.globalOpts}
             sharedMezziCatalog={create.mezziCatalog}
             captureHints={captureHints}
@@ -448,6 +466,7 @@ export function CaptureSchedaCompileStep({
         </form>
       </div>
       {create.unknownSettingsDialog}
+      {create.saveGateDialog}
     </>
   );
 }

@@ -15,10 +15,16 @@ export type InterventoWriteStage =
   | "persist-scheda"
   | "finalize";
 
+import type { MezzoUpdateFromSchedaPlan } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
+import type { InterventoWriteContext } from "@/lib/domain/intervento-context/intervento-write-context";
+
 export type InterventoWriteCreateMeta = {
   statoId: StatoLavorazione;
   priorita: PrioritaLavorazione;
   mezzoIdHint?: string | null;
+  /** @deprecated preferire writeContext.mezzoUpdatePlan */
+  mezzoUpdatePlan?: MezzoUpdateFromSchedaPlan;
+  writeContext?: InterventoWriteContext;
   dataIngressoIso: string;
   note: string | null;
   createdBy: string;
@@ -26,6 +32,9 @@ export type InterventoWriteCreateMeta = {
 
 export type InterventoWriteEditMeta = {
   row: LavorazioneListRow;
+  /** @deprecated preferire writeContext.mezzoUpdatePlan */
+  mezzoUpdatePlan?: MezzoUpdateFromSchedaPlan;
+  writeContext?: InterventoWriteContext;
 };
 
 export type InterventoWritePlan = {
@@ -41,6 +50,9 @@ export type InterventoWriteDeps = {
   upsertMezzo: (input: {
     fields: SchedaIngressoFields;
     preferredMezzoId?: string | null;
+    updatePlan?: MezzoUpdateFromSchedaPlan;
+    lavorazioneId?: string | null;
+    writeContext?: import("@/lib/domain/intervento-context/intervento-write-context").InterventoWriteContext;
   }) => Promise<UpsertMezzoFromSchedaResult>;
   createLavorazione?: (input: {
     mezzo_id: string | null;

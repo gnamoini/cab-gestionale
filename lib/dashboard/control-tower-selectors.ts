@@ -47,6 +47,7 @@ import type { TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { displayRicambioCodice } from "@/lib/magazzino/ricambio-codice";
 import { buildRicambiConsumoRanking } from "@/lib/magazzino/ricambio-consumo-from-log";
 import {
   CONTROL_TOWER_ACTIVITY_PER_CARD,
@@ -473,7 +474,7 @@ function topConsumoFromMovimentiLogs(
   return [...qtyByRic.entries()]
     .map(([id, totalUscite]) => {
       const r = ricambiById.get(id);
-      const label = r?.descrizione?.trim() || r?.codiceFornitoreOriginale || id;
+      const label = r?.descrizione?.trim() || displayRicambioCodice(r?.codiceFornitoreOriginale ?? "") || id;
       return { id, label, totalUscite };
     })
     .sort((a, b) => b.totalUscite - a.totalUscite)
