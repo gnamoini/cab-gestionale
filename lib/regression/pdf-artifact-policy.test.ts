@@ -42,6 +42,9 @@ assert.match(labelMimeMigration, /image\/svg\+xml/);
 const deliverLabel = read("lib/inventory-labels/render/deliver.server.ts");
 assert.match(deliverLabel, /uploadLabelArtifactBestEffort/);
 
+const bulkLabelToolbar = read("components/gestionale/magazzino/magazzino-bulk-label-toolbar.tsx");
+assert.match(bulkLabelToolbar, /openPdfBlobInNewTab/);
+
 const preventiviPdf = read("lib/preventivi/preventivi-pdf.ts");
 assert.match(preventiviPdf, /openPreventivoPdfPreviewFromRecord/);
 assert.match(preventiviPdf, /preventivo-pdf-generate/);

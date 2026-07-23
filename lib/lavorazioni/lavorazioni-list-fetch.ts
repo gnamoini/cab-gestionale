@@ -6,6 +6,7 @@ import {
   MEZZI_EMBED_CLIENT_PORTAL_COLUMNS,
   MEZZI_EMBED_LIGHT_COLUMNS,
   MEZZI_LIST_EMBED_COLUMNS,
+  lavorazioniMezziEmbedSelect,
 } from "@/lib/db/table-select-columns";
 import { mapLavorazioneLightToListRow } from "@/lib/db/dto-mappers";
 import { sanitizeClientLavorazioneRow } from "@/lib/lavorazioni/client-portal-stati";
@@ -233,7 +234,7 @@ export async function fetchLavorazioniListRows(
   const includeProfiles =
     filters?.includeProfiles === true || (fetchMode === "detail" && filters?.includeProfiles !== false);
   const mezziCols = mezziEmbedColumnsForMode(fetchMode, options?.clientPortal);
-  const mezziSelect = clienteRefScope ? `mezzi!inner(${mezziCols})` : `mezzi(${mezziCols})`;
+  const mezziSelect = lavorazioniMezziEmbedSelect(mezziCols, { inner: !!clienteRefScope });
   const baseOpts = { clienteRefScope, fetchMode, includeMezzo, mezziSelect, includeProfiles };
 
   let profileJoinFallback = false;
@@ -331,7 +332,10 @@ export async function fetchLavorazioniListCountRows(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- evita TS2589 su PostgrestFilterBuilder
     let q: any = needsMezziInner
       ? applyLavorazioniNotDeletedFilter(
-          sb.from("lavorazioni").select("id, mezzi!inner(cliente)", { count: "exact", head: true }),
+          sb.from("lavorazioni").select(`id, ${lavorazioniMezziEmbedSelect("cliente", { inner: true })}`, {
+            count: "exact",
+            head: true,
+          }),
         )
       : applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("id", { count: "exact", head: true }));
     q = applyLavorazioniListFilters(q, filters);
@@ -393,7 +397,7 @@ export async function fetchLavorazioniListRowsByIds(
   const fetchMode = resolveFetchMode(filters);
   const includeMezzo = fetchMode !== "report" && (filters.includeMezzo === true || !!clienteRefScope);
   const mezziCols = mezziEmbedColumnsForMode(fetchMode);
-  const mezziSelect = clienteRefScope ? `mezzi!inner(${mezziCols})` : `mezzi(${mezziCols})`;
+  const mezziSelect = lavorazioniMezziEmbedSelect(mezziCols, { inner: !!clienteRefScope });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q: any = applyLavorazioniNotDeletedFilter(

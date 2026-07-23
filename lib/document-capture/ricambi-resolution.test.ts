@@ -56,6 +56,6 @@ assert.equal(matched[0]?.ricambioId, "a");
 
 const notFound = resolveRicambiRowsFromCaptureFields([field("riga_1_codice", "X1")], []);
 assert.equal(notFound[0]?.status, "NOT_FOUND");
-assert.equal(ricambiResolutionBlocksApply(notFound), true);
+assert.equal(ricambiResolutionBlocksApply(notFound), false);
 
 console.log("ricambi-resolution.test.ts OK");

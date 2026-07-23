@@ -1,42 +1,40 @@
 import type { CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
 import { resolveRawFieldValue } from "@/lib/document-capture/capture-field-mapper";
+import {
+  findExactRicambioByCodice,
+  suggestRicambiCodiciForCapture,
+} from "@/lib/document-capture/capture-ricambi-codice-suggest";
 import type { RicambiRowResolution } from "@/lib/document-capture/capture-field-resolution-types";
-import { findDuplicateByCodici } from "@/lib/magazzino/duplicates";
 import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { shouldAutoApply } from "@/lib/entity-resolution/entity-resolution-confidence";
 
 const MAX_RICAMBI_RIGHE = 34;
 
-function normCodice(v: string): string {
-  return v.trim().toUpperCase();
-}
-
 function fuzzyRicambioCandidates(
   codice: string,
-  nome: string,
+  descrizione: string,
   magazzino: readonly RicambioMagazzino[],
 ): Array<{ id: string; label: string; score: number }> {
-  const needle = normCodice(codice || nome);
+  const fromCodice = suggestRicambiCodiciForCapture(codice, magazzino, 8);
+  if (fromCodice.length > 0) {
+    return fromCodice.map((s) => ({
+      id: s.item.id,
+      label: s.label,
+      score: s.score / 100,
+    }));
+  }
+  const needle = descrizione.trim().toLowerCase();
   if (!needle) return [];
   const out: Array<{ id: string; label: string; score: number }> = [];
   for (const r of magazzino) {
-    const codes = [r.codiceFornitoreOriginale, r.codiceFornitoreOriginaleSecondario, r.codiceFornitoreNonOriginale]
-      .map((c) => ricambioCodiceForUi(String(c)))
-      .filter(Boolean)
-      .map((c) => normCodice(c));
     const desc = [r.descrizione, r.marca].filter(Boolean).join(" ").toLowerCase();
-    let score = 0;
-    if (codes.some((c) => c === needle)) score = 1;
-    else if (codes.some((c) => c.includes(needle) || needle.includes(c))) score = 0.85;
-    else if (desc && desc.includes(nome.toLowerCase().trim())) score = 0.7;
-    if (score > 0) {
+    if (desc && desc.includes(needle)) {
       const codiceUi = ricambioCodiceForUi(r.codiceFornitoreOriginale);
-      const labelParts = [codiceUi, r.descrizione].filter(Boolean);
       out.push({
         id: r.id,
-        label: labelParts.join(" — "),
-        score,
+        label: [codiceUi, r.descrizione].filter(Boolean).join(" — "),
+        score: 0.7,
       });
     }
   }
@@ -56,7 +54,7 @@ export function resolveRicambiRowsFromCaptureFields(
     if (!codice && !nome && !descrizione) continue;
 
     const fieldKey = `riga_${n}_codice`;
-    const dup = codice && magazzino.length ? findDuplicateByCodici([...magazzino], codice) : null;
+    const dup = codice && magazzino.length ? findExactRicambioByCodice(codice, magazzino) : null;
     if (dup) {
       out.push({
         rowIndex: n,
@@ -69,7 +67,7 @@ export function resolveRicambiRowsFromCaptureFields(
       continue;
     }
 
-    const candidates = fuzzyRicambioCandidates(codice, nome || descrizione, magazzino);
+    const candidates = fuzzyRicambioCandidates(codice, descrizione, magazzino);
     const top = candidates[0];
     const second = candidates[1]?.score ?? 0;
     if (
@@ -114,7 +112,7 @@ export function resolveRicambiRowsFromCaptureFields(
 }
 
 export function ricambiResolutionBlocksApply(rows: readonly RicambiRowResolution[]): boolean {
-  return rows.some((r) => r.status === "AMBIGUOUS" || r.status === "NOT_FOUND");
+  return rows.some((r) => r.status === "AMBIGUOUS");
 }
 
 /** NOT_FOUND non può essere bypassato con forceReview — operatore deve correggere o escludere la riga. */

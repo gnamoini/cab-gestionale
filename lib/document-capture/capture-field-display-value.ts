@@ -7,6 +7,10 @@ import {
   isCaptureSignatureFieldKey,
   pickCaptureSignatureDataUrl,
 } from "@/lib/document-capture/capture-signature-field-keys";
+import {
+  formatCaptureLavorazioniText,
+  isCaptureLavorazioneFieldKey,
+} from "@/lib/document-capture/capture-lavorazioni-text";
 import type { EntityResolutionResult } from "@/lib/entity-resolution/entity-resolution-types";
 import { hasSignatureDataUrl } from "@/lib/media/signature-pad";
 
@@ -157,17 +161,45 @@ export function unescapeCaptureLiteralNewlines(value: string): string {
   return value.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n").replace(/\\r/g, "\r");
 }
 
+const WORKSHOP_LINE_CONJUNCTION =
+  "(?:E|O|ED|Ma|MA|Però|PERÒ|PERO|Quindi|QUINDI|Inoltre|INOLTRE|Poi|POI|Oppure|OPPURE)";
+
+const WORKSHOP_ABBREV_BEFORE_PERIOD_RE = /\b(?:IMP|N|NR|COD|QT|CC|CV|CAB|PTO|OK)\.$/i;
+
+/** Unisce a capo OCR spurii prima di congiunzioni coordinate (es. «…\nE nel vano» → «… e nel vano»). */
+export function joinSpuriousWorkshopLineBreaks(text: string): string {
+  let out = text.replace(/\r\n/g, "\n");
+  out = out.replace(
+    new RegExp(`(\\S)\\s*\\n\\s*(${WORKSHOP_LINE_CONJUNCTION})\\s+`, "gi"),
+    (_, before: string, conj: string) => `${before} ${conj.toLocaleLowerCase("it-IT")} `,
+  );
+  out = out.replace(/(?<=\S)\s+\bE\b\s+(?=\S)/g, " e ");
+  out = out.replace(/(?<=\S)\s+\bO\b\s+(?=\S)/g, " o ");
+  out = out.replace(/(?<=\S)\s+\bED\b\s+(?=[AEIOUÀÈÉÌÒÙaeiouàèéìòù])/g, " ed ");
+  return out;
+}
+
+function shouldKeepFlatAfterPunctuation(headThroughPunct: string, tail: string): boolean {
+  if (/^E\s+\S/i.test(tail) || /^O\s+\S/i.test(tail)) return true;
+  return WORKSHOP_ABBREV_BEFORE_PERIOD_RE.test(headThroughPunct.trimEnd());
+}
+
 /** Ripristina a capo quando l'estrazione ha appiattito righe separate sulla scheda. */
 export function inferCaptureMultilineBreaks(value: string): string {
-  const trimmed = unescapeCaptureLiteralNewlines(value).trim();
-  if (!trimmed || /\n/.test(trimmed)) return trimmed;
-  // ponytail: euristica — nuova riga dopo .!? se segue maiuscola o bullet (non cifra: evita "n. 1")
-  return trimmed.replace(/([.!?])\s+(?=[A-ZÀ-ÖØ-Þ*•\-])/g, "$1\n");
+  const joined = joinSpuriousWorkshopLineBreaks(unescapeCaptureLiteralNewlines(value).trim());
+  if (!joined) return "";
+  if (/\n/.test(joined)) return joined;
+  return joined.replace(/([.!?])\s+(?=[A-ZÀ-ÖØ-Þ*•\-])/g, (full, punct, offset, str) => {
+    const head = str.slice(0, offset + 1);
+    const tail = str.slice(offset + full.length);
+    if (shouldKeepFlatAfterPunctuation(head, tail)) return `${punct} `;
+    return `${punct}\n`;
+  });
 }
 
 /** Correzioni refuso OCR frequenti su note officina — nessuna chiamata AI aggiuntiva. */
 export function polishCaptureWorkshopOcrText(value: string): string {
-  let text = value.replace(/\r\n/g, "\n");
+  let text = joinSpuriousWorkshopLineBreaks(value.replace(/\r\n/g, "\n"));
   text = text.replace(/\*\*/g, "");
   // Frammenti spezzati su due righe (es. "di supp" + "Da.")
   text = text.replace(/\bdi supp\s*\n\s*Da\.\s*/gi, "di supporto da. ");
@@ -203,11 +235,19 @@ const WORKSHOP_ALL_CAPS_WORD_ALLOWLIST = new Set(["OK", "N"]);
 /** Parole OCR tutte maiuscole nel mezzo di una frase mista → minuscole (es. «Già SOSTITUITA»). */
 function lowerWorkshopAllCapsWords(text: string): string {
   return text.replace(/\b([A-ZÀ-ÖØ-Þ]+)([.,;:!?]?)\b/g, (full, letters, punct) => {
-    if (letters.length < 2 || WORKSHOP_ALL_CAPS_WORD_ALLOWLIST.has(letters)) return full;
+    if (WORKSHOP_ALL_CAPS_WORD_ALLOWLIST.has(letters)) return full;
+    if ((letters === "E" || letters === "O") && letters.length === 1) {
+      return letters.toLocaleLowerCase("it-IT") + punct;
+    }
+    if (letters.length < 2) return full;
     if (letters !== letters.toUpperCase()) return full;
     return letters.toLocaleLowerCase("it-IT") + punct;
   });
 }
+
+/** Nuova frase solo se dopo il punto segue parola con maiuscola + minuscole (evita «IMP. ELETTRICO»). */
+const WORKSHOP_SENTENCE_SPLIT_RE =
+  /(?<=[.!?])(?<!\b(?:IMP|N|NR|COD|QT|CC|CV|CAB|PTO|OK)\.)\s+(?=[A-ZÀ-ÖØ-Þ][a-zà-ö])/u;
 
 function capitalizeMultilineToken(text: string): string {
   const t = lowerWorkshopAllCapsWords(text.trim());
@@ -242,7 +282,7 @@ function formatCaptureMultilineLine(line: string): string {
   const collapsed = line.replace(/[^\S\n]+/g, " ").trim();
   if (!collapsed) return "";
   return collapsed
-    .split(/(?<=[.!?])\s+/)
+    .split(WORKSHOP_SENTENCE_SPLIT_RE)
     .map((sentence) => capitalizeMultilineFragment(sentence))
     .filter(Boolean)
     .join(" ");
@@ -274,7 +314,9 @@ export function formatCaptureReviewDisplayValue(
       if (fromRaw) picked = fromRaw;
       else picked = raw || normalized || resolved;
     }
-    return formatCaptureMultilineText(picked);
+    return isCaptureLavorazioneFieldKey(key)
+      ? formatCaptureLavorazioniText(picked)
+      : formatCaptureMultilineText(picked);
   }
   if (isCaptureSignatureFieldKey(key)) {
     return pickCaptureSignatureDataUrl(input.raw, input.confirmed, input.normalized);
@@ -330,7 +372,9 @@ export function formatCaptureReviewDraftValue(
     return hasSignatureDataUrl(value) ? value.trim() : "";
   }
   if (isCaptureMultilineFieldKey(fieldKey)) {
-    return formatCaptureMultilineText(value.trim());
+    return isCaptureLavorazioneFieldKey(fieldKey)
+      ? formatCaptureLavorazioniText(value.trim())
+      : formatCaptureMultilineText(value.trim());
   }
   const trimmed = value.trim();
   if (!trimmed) return "";
@@ -381,5 +425,7 @@ const MULTILINE_CAPTURE_FIELD_KEYS = new Set([
 ]);
 
 export function isCaptureMultilineFieldKey(fieldKey: string): boolean {
-  return MULTILINE_CAPTURE_FIELD_KEYS.has(normFieldKey(fieldKey));
+  const key = normFieldKey(fieldKey);
+  if (MULTILINE_CAPTURE_FIELD_KEYS.has(key)) return true;
+  return /^riga_\d+_lavorazione$/.test(key);
 }

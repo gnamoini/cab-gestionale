@@ -242,6 +242,7 @@ function PreventivoRowActions({
           as="link"
           href={hrefLav}
           label="Lavorazione"
+          tooltipForce
           className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
         >
           <IconNavLavorazioni className={dsTableActionGlyph} strokeWidth={2} />
@@ -250,6 +251,7 @@ function PreventivoRowActions({
       <IconActionButton
         label="Modifica"
         tooltipContent={!canEditWorkOrders ? "Sola lettura" : undefined}
+        tooltipForce
         className={dsTableActionBtnPrimary}
         disabled={!canEditWorkOrders}
         onClick={() => onEdit(p)}
@@ -259,6 +261,7 @@ function PreventivoRowActions({
       {showDdt ? (
         <IconActionButton
           label={activeDdt ? "Apri DDT" : "Genera DDT"}
+          tooltipForce
           className={dsTableActionBtnSecondary}
           disabled={ddtBusy || (!canWritePreventivi && !activeDdt)}
           onClick={() => onDdtAction(p)}
@@ -271,6 +274,7 @@ function PreventivoRowActions({
       ) : null}
       <IconActionButton
         label="PDF"
+        tooltipForce
         className={dsTableActionBtnSecondary}
         onClick={() =>
           void importPreventiviPdf().then(({ openPreventivoPdfInNewTab }) =>
@@ -283,6 +287,7 @@ function PreventivoRowActions({
       <IconActionButton
         label="Elimina"
         tooltipContent={!canDeleteRecords ? "Sola lettura" : undefined}
+        tooltipForce
         className={dsTableActionBtnDanger}
         disabled={!canDeleteRecords}
         onClick={() => onDelete(p)}

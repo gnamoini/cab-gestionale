@@ -1,5 +1,6 @@
 import "server-only";
 
+import { nullIfBlankUuid } from "@/lib/document-capture/null-if-blank-uuid";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 export class CaptureApplyInProgressError extends Error {
@@ -45,8 +46,8 @@ export async function completeCaptureApplyRpc(input: {
     p_application_id: input.applicationId,
     p_success: input.success,
     p_event_type: input.eventType,
-    p_lavorazione_id: input.lavorazioneId ?? null,
-    p_mezzo_id: input.mezzoId ?? null,
+    p_lavorazione_id: nullIfBlankUuid(input.lavorazioneId),
+    p_mezzo_id: nullIfBlankUuid(input.mezzoId),
     p_payload: input.payload ?? {},
   });
   if (error) throw new Error(error.message);

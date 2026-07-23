@@ -256,13 +256,13 @@ export function findExactEntityInPool(
   return null;
 }
 
-/** Trova entità simile (fuzzy o esatta) per warning UI non bloccante. */
+/** Trova entità simile (solo fuzzy) per warning UI non bloccante. Match esatti nel pool → null. */
 export function findSimilarEntityInPool(
   candidate: string,
   pool: readonly string[],
   options?: FuzzyMatchEntityOptions,
 ): string | null {
-  const exact = findExactEntityInPool(candidate, pool, options);
-  if (exact) return exact;
+  const { exclude: _exclude, ...matchOptions } = options ?? {};
+  if (findExactEntityInPool(candidate, pool, matchOptions)) return null;
   return fuzzyMatchEntity(candidate, pool, options)?.entity ?? null;
 }

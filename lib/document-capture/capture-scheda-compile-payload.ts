@@ -59,7 +59,7 @@ export function captureFieldRowsToSchedaFields(
   if (tipo === "lavorazioni") {
     return mapCaptureFieldsToLavorazioni(rows, opts?.addettiRecords);
   }
-  return mapCaptureFieldsToRicambi(rows, opts?.magazzino);
+  return mapCaptureFieldsToRicambi(rows, opts?.magazzino, opts?.addettiRecords);
 }
 
 function formatOreForCapture(n: number): string {
@@ -85,17 +85,20 @@ export function schedaLavorazioniFieldsToCapturePatches(
       out.push({ fieldKey: `riga_${n}_lavorazione`, value: null, source, action: "clear" });
       out.push({ fieldKey: `riga_${n}_nome`, value: null, source, action: "clear" });
       out.push({ fieldKey: `riga_${n}_ore`, value: null, source, action: "clear" });
+      out.push({ fieldKey: `riga_${n}_data`, value: null, source, action: "clear" });
       continue;
     }
     const lav = row.lavorazioniEffettuate.trim();
     const addetto = row.addettiAssegnati?.[0]?.addetto?.trim() ?? "";
     const ore = row.addettiAssegnati?.[0]?.oreImpiegate ?? 0;
     const oreStr = formatOreForCapture(ore);
-    const hasContent = lav || addetto || oreStr;
+    const data = row.dataLavorazione.trim();
+    const hasContent = lav || addetto || oreStr || data;
     if (!hasContent) {
       out.push({ fieldKey: `riga_${n}_lavorazione`, value: null, source, action: "clear" });
       out.push({ fieldKey: `riga_${n}_nome`, value: null, source, action: "clear" });
       out.push({ fieldKey: `riga_${n}_ore`, value: null, source, action: "clear" });
+      out.push({ fieldKey: `riga_${n}_data`, value: null, source, action: "clear" });
       continue;
     }
     out.push({
@@ -115,6 +118,12 @@ export function schedaLavorazioniFieldsToCapturePatches(
       value: oreStr || null,
       source,
       action: oreStr ? "set" : "clear",
+    });
+    out.push({
+      fieldKey: `riga_${n}_data`,
+      value: data || null,
+      source,
+      action: data ? "set" : "clear",
     });
   }
   return out;
@@ -139,20 +148,26 @@ export function schedaRicambiFieldsToCapturePatches(
       }
       continue;
     }
-    const nome = row.ricambioNome.trim();
+    const descrizione = row.ricambioNome.trim();
+    const addetto = row.addetto.trim();
     const codice = row.codice.trim();
     const qt = row.quantita > 0 ? String(row.quantita) : "";
     const data = row.dataUtilizzo.trim();
-    const hasContent = nome || codice || qt || data;
+    const hasContent = descrizione || addetto || codice || qt || data;
     if (!hasContent) {
       for (const suffix of ["nome", "codice", "descrizione", "qt", "data"] as const) {
         out.push({ fieldKey: `riga_${n}_${suffix}`, value: null, source, action: "clear" });
       }
       continue;
     }
-    out.push({ fieldKey: `riga_${n}_nome`, value: nome || null, source, action: nome ? "set" : "clear" });
+    out.push({ fieldKey: `riga_${n}_nome`, value: addetto || null, source, action: addetto ? "set" : "clear" });
     out.push({ fieldKey: `riga_${n}_codice`, value: codice || null, source, action: codice ? "set" : "clear" });
-    out.push({ fieldKey: `riga_${n}_descrizione`, value: null, source, action: "clear" });
+    out.push({
+      fieldKey: `riga_${n}_descrizione`,
+      value: descrizione || null,
+      source,
+      action: descrizione ? "set" : "clear",
+    });
     out.push({ fieldKey: `riga_${n}_qt`, value: qt || null, source, action: qt ? "set" : "clear" });
     out.push({ fieldKey: `riga_${n}_data`, value: data || null, source, action: data ? "set" : "clear" });
   }

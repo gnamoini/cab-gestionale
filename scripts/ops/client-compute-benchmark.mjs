@@ -54,7 +54,7 @@ let rows = [];
 if (url && serviceKey) {
   const client = createClient(url, serviceKey);
   const select =
-    "id, mezzo_id, stato, priorita, data_ingresso, note, codice, archived, created_at, mezzi(id, cliente, utilizzatore, marca, modello, targa)";
+    `id, mezzo_id, stato, priorita, data_ingresso, note, codice, archived, created_at, mezzi!lavorazioni_mezzo_id_fkey(id, cliente, utilizzatore, marca, modello, targa)`;
   const { data } = await client
     .from("lavorazioni")
     .select(select)

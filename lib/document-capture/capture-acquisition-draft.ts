@@ -35,6 +35,8 @@ export type CaptureAcquisitionDraft = {
   ingressoCompile?: CaptureIngressoCompileDraft;
   /** Bozza compile scheda lavorazioni/ricambi. */
   sheetCompile?: CaptureSchedaCompileDraft;
+  linkedLavorazioneId?: string | null;
+  pendingAssignLavorazioneId?: string | null;
   pendingMultiSchedaQueue?: Array<Extract<SchedaTipo, "lavorazioni" | "ricambi">>;
   multiSchedaPromptDismissed?: boolean;
   savedAt: number;
@@ -76,6 +78,16 @@ function isDraftShape(value: unknown): value is CaptureAcquisitionDraft {
   }
   if (d.ingressoCompile !== undefined && !isIngressoCompileDraft(d.ingressoCompile)) return false;
   if (d.sheetCompile !== undefined && !isSchedaCompileDraft(d.sheetCompile)) return false;
+  if (d.linkedLavorazioneId !== undefined && d.linkedLavorazioneId !== null && typeof d.linkedLavorazioneId !== "string") {
+    return false;
+  }
+  if (
+    d.pendingAssignLavorazioneId !== undefined &&
+    d.pendingAssignLavorazioneId !== null &&
+    typeof d.pendingAssignLavorazioneId !== "string"
+  ) {
+    return false;
+  }
   if (d.pendingMultiSchedaQueue !== undefined) {
     if (!Array.isArray(d.pendingMultiSchedaQueue)) return false;
     if (!d.pendingMultiSchedaQueue.every(isSchedaTipo)) return false;
@@ -147,8 +159,14 @@ export async function captureAcquisitionDraftStillValid(captureId: string): Prom
   try {
     const res = await fetch(`/api/document-capture/${captureId}`);
     if (!res.ok) return false;
-    const body = (await res.json()) as { capture?: { finalized_at?: string | null } };
-    return Boolean(body.capture?.finalized_at);
+    const body = (await res.json()) as {
+      capture?: { finalized_at?: string | null; status?: string | null };
+    };
+    const capture = body.capture;
+    if (!capture?.finalized_at) return false;
+    if (capture.status === "applied") return false;
+    const fieldsRes = await fetch(`/api/document-capture/${captureId}/fields`);
+    return fieldsRes.ok;
   } catch {
     return false;
   }

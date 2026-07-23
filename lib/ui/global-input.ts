@@ -339,6 +339,9 @@ export function extractDatePickerShellLayoutClass(className: string): string {
     .join(" ");
 }
 
+/** 7×36px celle + gap + padding — popup non segue anchor stretti (es. colonna data capture). */
+export const GLOBAL_DATE_PICKER_CALENDAR_PANEL_WIDTH = 300;
+
 const globalInputCalendarChrome = [
   "w-full min-w-0",
   "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)]",

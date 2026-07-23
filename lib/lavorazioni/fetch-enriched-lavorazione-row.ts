@@ -1,4 +1,4 @@
-import { LAVORAZIONI_COLUMNS, MEZZI_LIST_EMBED_COLUMNS } from "@/lib/db/table-select-columns";
+import { LAVORAZIONI_COLUMNS, MEZZI_LIST_EMBED_COLUMNS, lavorazioniMezziEmbedSelect } from "@/lib/db/table-select-columns";
 import { mapLavorazioneLightToListRow } from "@/lib/db/dto-mappers";
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
 import { enrichLavorazioniListRowsWithAttrezzature } from "@/lib/mezzi/mezzi-attrezzature-batch";
@@ -20,13 +20,13 @@ export async function fetchEnrichedLavorazioneListRow(
   const { data, error } = await applyLavorazioniNotDeletedFilter(
     sb
       .from("lavorazioni")
-      .select(`${LAVORAZIONI_COLUMNS}, ${LAVORAZIONI_DETAIL_PROFILE_SELECT}, mezzi(${MEZZI_LIST_EMBED_COLUMNS})`)
+      .select(`${LAVORAZIONI_COLUMNS}, ${LAVORAZIONI_DETAIL_PROFILE_SELECT}, ${lavorazioniMezziEmbedSelect(MEZZI_LIST_EMBED_COLUMNS)}`)
       .eq("id", id),
   ).maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return null;
 
-  const row = mapLavorazioneLightToListRow(data as LavorazioneRow & { mezzi?: unknown }, { includeMezzo: true });
+  const row = mapLavorazioneLightToListRow(data as unknown as LavorazioneRow & { mezzi?: unknown }, { includeMezzo: true });
 
   const enriched = await enrichLavorazioniListRowsWithAttrezzature(sb, [row]);
   return enriched[0] ?? null;

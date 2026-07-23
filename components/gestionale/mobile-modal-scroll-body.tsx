@@ -10,6 +10,8 @@ import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 
 export type GestionaleModalScrollBodyProps = HTMLAttributes<HTMLDivElement> & {
   children: ReactNode;
+  /** Desktop: niente scroll sul corpo — i pannelli interni (es. colonne capture) scrollano da soli. */
+  containScroll?: boolean;
 };
 
 /** Padding sul contenuto interno — il corpo scroll resta edge-to-edge (scrollbar a destra). */
@@ -20,21 +22,28 @@ export const gestionaleModalScrollContentPad =
 export function GestionaleModalScrollBody({
   className = "",
   children,
+  containScroll = false,
   ...rest
 }: GestionaleModalScrollBodyProps) {
   const maxMdDown = useMaxMdDown();
 
+  const bodyClass = maxMdDown
+    ? "min-w-0"
+    : containScroll
+      ? `min-h-0 min-w-0 flex-1 overflow-hidden ${cabModalScrollKeyboardPad}`.trim()
+      : `${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad} [scrollbar-gutter:auto]`.trim();
+
+  const contentClass = containScroll
+    ? `${gestionaleModalScrollContentPad} flex min-h-0 flex-1 flex-col ${className}`.trim()
+    : `${gestionaleModalScrollContentPad} ${className}`.trim();
+
   return (
     <div
       {...rest}
-      {...(!maxMdDown ? { [CAB_MODAL_SCROLL_ATTR]: "" } : {})}
-      className={
-        maxMdDown
-          ? "min-w-0"
-          : `${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad} [scrollbar-gutter:auto]`.trim()
-      }
+      {...(!maxMdDown && !containScroll ? { [CAB_MODAL_SCROLL_ATTR]: "" } : {})}
+      className={bodyClass}
     >
-      <div className={`${gestionaleModalScrollContentPad} ${className}`.trim()}>{children}</div>
+      <div className={contentClass}>{children}</div>
     </div>
   );
 }

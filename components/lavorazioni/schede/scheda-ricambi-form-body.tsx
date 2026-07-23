@@ -1,20 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
-import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { CaptureRicambioCodiceField } from "@/components/document-capture/capture-ricambio-codice-field";
+import { RicambioMagazzinoInlineHint } from "@/components/document-capture/ricambio-magazzino-inline-hint";
 import {
   CaptureSheetAwareField,
   CaptureSheetFieldHintInline,
   CaptureSheetHintsBanner,
 } from "@/components/document-capture/capture-sheet-field-hint";
+import { CaptureSheetLavorazioneIdentBanner } from "@/components/document-capture/capture-sheet-lavorazione-ident-banner";
+import type { LavorazioneAssignRowParts } from "@/lib/document-capture/capture-manual-assign-state";
+import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
+import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import type { SchedaRicambiFormOpts } from "@/components/lavorazioni/schede/scheda-fields-types";
 import type { CaptureSheetRowHint } from "@/components/lavorazioni/schede/scheda-fields-types";
 import { SchedaDayField, todayItDate } from "@/components/lavorazioni/schede/scheda-form-utils";
 import { newRigaId } from "@/lib/schede/schede-ui";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
-import { dsBtnNeutral, dsInput, dsTable, dsTableRow, dsTableWrap, dsScrollbar } from "@/lib/ui/design-system";
+import { formatRicambioDescrizioneForUi } from "@/lib/magazzino/ricambio-descrizione-display";
+import { dsBtnNeutral, dsFormField, dsInput, dsTable, dsTableRow, dsTableWrap, dsScrollbar } from "@/lib/ui/design-system";
+import { gestionaleFieldLabelClass } from "@/lib/ui/gestionale-field-label";
 import type { RigaRicambioScheda, SchedaRicambiFields } from "@/types/schede";
 
 export type SchedaRicambiFormBodyProps = {
@@ -24,9 +30,275 @@ export type SchedaRicambiFormBodyProps = {
   globalOpts: SchedaRicambiFormOpts;
   rowHints?: Record<string, CaptureSheetRowHint>;
   reviewCount?: number;
-  /** Capture compile: no colonna scarico magazzino. */
   variant?: "editor" | "capture";
+  /** Banner read-only cliente/cantiere/mezzo quando la scheda è collegata a una lavorazione. */
+  captureIdentParts?: LavorazioneAssignRowParts | null;
 };
+
+const CAPTURE_CODICE_W = "w-full min-w-0 sm:w-[9.5rem] sm:shrink-0";
+const CAPTURE_QTY_W = "w-[5.5rem] shrink-0";
+const CAPTURE_DESCRIZIONE_W = "min-w-0 flex-1 basis-[10rem]";
+const CAPTURE_DATE_W = "w-full min-w-0 sm:w-[11rem] sm:shrink-0";
+const CAPTURE_ADDETTO_W = "min-w-0 flex-1 basis-[8rem]";
+const CAPTURE_FIELD_STACK = `${dsFormField} min-w-0`;
+const CAPTURE_DESCRIZIONE_INPUT = `${dsInput} w-full min-w-0 resize-none overflow-hidden leading-snug py-1.5`;
+
+function CaptureRicambiFieldLabel({ children }: { children: string }) {
+  return <span className={gestionaleFieldLabelClass}>{children}</span>;
+}
+
+function CaptureRicambioDescrizioneField({
+  value,
+  onChange,
+  readOnly,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  readOnly?: boolean;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const syncHeight = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "0px";
+    const styles = getComputedStyle(el);
+    const lineHeight = Number.parseFloat(styles.lineHeight) || 20;
+    const padding =
+      Number.parseFloat(styles.paddingTop) + Number.parseFloat(styles.paddingBottom);
+    const border =
+      Number.parseFloat(styles.borderTopWidth) + Number.parseFloat(styles.borderBottomWidth);
+    const singleLine = lineHeight + padding + border;
+    const maxHeight = singleLine * 2;
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, singleLine), maxHeight)}px`;
+  }, []);
+
+  useLayoutEffect(() => {
+    syncHeight();
+  }, [value, syncHeight]);
+
+  if (readOnly) {
+    return <span className="text-sm leading-snug text-[color:var(--cab-fg)]">{value || "—"}</span>;
+  }
+
+  return (
+    <textarea
+      ref={ref}
+      className={CAPTURE_DESCRIZIONE_INPUT}
+      rows={1}
+      spellCheck={false}
+      autoComplete="off"
+      autoCorrect="off"
+      value={value}
+      onChange={(e) => {
+        onChange(e.target.value);
+        syncHeight();
+      }}
+      placeholder="Descrizione ricambio"
+      aria-label="Descrizione ricambio"
+    />
+  );
+}
+
+function applyRicambioFromMagazzino(row: RigaRicambioScheda, item: RicambioMagazzino): RigaRicambioScheda {
+  const codice = ricambioCodiceForUi(item.codiceFornitoreOriginale);
+  const descrizione = formatRicambioDescrizioneForUi(item.descrizione ?? "");
+  return {
+    ...row,
+    ricambioId: item.id,
+    codice: codice || row.codice,
+    ricambioNome: row.ricambioNome.trim() || descrizione || row.ricambioNome,
+  };
+}
+
+function CaptureRicambiRigaCard({
+  r,
+  rowNum,
+  ro,
+  prodotti,
+  rowHints,
+  onPatch,
+  onRemove,
+}: {
+  r: RigaRicambioScheda;
+  rowNum: number;
+  ro: boolean;
+  prodotti: readonly RicambioMagazzino[];
+  rowHints?: Record<string, CaptureSheetRowHint>;
+  onPatch: (patch: Partial<RigaRicambioScheda>) => void;
+  onRemove: () => void;
+}) {
+  const codiceKey = `riga_${rowNum}_codice`;
+  const descrizioneKey = `riga_${rowNum}_descrizione`;
+  const nomeKey = `riga_${rowNum}_nome`;
+  const dataKey = `riga_${rowNum}_data`;
+  const [pendingMag, setPendingMag] = useState<RicambioMagazzino | null>(null);
+  const [dismissedMagId, setDismissedMagId] = useState<string | null>(null);
+
+  const codiceHint = rowHints?.[codiceKey];
+  const descrizioneHint = rowHints?.[descrizioneKey];
+  const nomeHint = rowHints?.[nomeKey];
+  const dataHint = rowHints?.[dataKey];
+
+  const rowMetaHintFooter = (key: string, hint?: CaptureSheetRowHint) =>
+    hint?.message ? <CaptureSheetFieldHintInline fieldKey={key} hint={hint} embedded /> : undefined;
+
+  const handleExactMatch = (item: RicambioMagazzino) => {
+    if (dismissedMagId === item.id || r.ricambioId === item.id) return;
+    setPendingMag(item);
+  };
+
+  const showMagHint =
+    pendingMag && pendingMag.id !== dismissedMagId && pendingMag.id !== r.ricambioId;
+
+  return (
+    <div className="min-w-0 overflow-x-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface)]">
+      <div className="flex flex-col gap-2 p-2.5">
+        <div className="flex w-full min-w-0 flex-wrap items-start gap-2">
+          <div className={`${CAPTURE_FIELD_STACK} ${CAPTURE_CODICE_W}`}>
+            <CaptureRicambiFieldLabel>Codice</CaptureRicambiFieldLabel>
+            <CaptureSheetAwareField hint={codiceHint}>
+              <CaptureRicambioCodiceField
+                value={r.codice}
+                magazzino={prodotti}
+                readOnly={ro}
+                inputClassName={`${dsInput} w-full min-w-0`}
+                onChange={(v) => {
+                  onPatch({ codice: v, ricambioId: null });
+                  setPendingMag(null);
+                }}
+                onPick={(item, codiceUi) => {
+                  onPatch({ ...applyRicambioFromMagazzino(r, item), codice: codiceUi });
+                  setPendingMag(null);
+                }}
+                onBlurExactMatch={handleExactMatch}
+              />
+            </CaptureSheetAwareField>
+          </div>
+
+          <div className={`${CAPTURE_FIELD_STACK} ${CAPTURE_DESCRIZIONE_W}`}>
+            <CaptureRicambiFieldLabel>Descrizione</CaptureRicambiFieldLabel>
+            <CaptureSheetAwareField hint={descrizioneHint}>
+              {ro ? (
+                <span className="text-sm leading-snug text-[color:var(--cab-fg)]">{r.ricambioNome || "—"}</span>
+              ) : (
+                <CaptureRicambioDescrizioneField
+                  value={r.ricambioNome}
+                  onChange={(v) => onPatch({ ricambioNome: v })}
+                />
+              )}
+            </CaptureSheetAwareField>
+          </div>
+
+          <div className={`${CAPTURE_FIELD_STACK} ${CAPTURE_QTY_W}`}>
+            <CaptureRicambiFieldLabel>Qtà</CaptureRicambiFieldLabel>
+            <input
+              type="number"
+              min={1}
+              className={`${dsInput} w-full tabular-nums`}
+              readOnly={ro}
+              value={r.quantita}
+              aria-label="Quantità"
+              onChange={(e) =>
+                onPatch({ quantita: Math.max(1, Math.round(Number(e.target.value) || 1)) })
+              }
+            />
+          </div>
+          {codiceHint?.message ? (
+            <span className="sr-only" data-capture-hint={codiceKey}>
+              {codiceHint.message}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="flex w-full min-w-0 flex-wrap items-start gap-2">
+          <div className={`${CAPTURE_FIELD_STACK} ${CAPTURE_DATE_W}`}>
+            <CaptureRicambiFieldLabel>Data</CaptureRicambiFieldLabel>
+            {ro ? (
+              <span className={`${dsInput} flex items-center`}>{r.dataUtilizzo || "—"}</span>
+            ) : (
+              <CaptureSheetAwareField hint={dataHint} footer={rowMetaHintFooter(dataKey, dataHint)}>
+                <SchedaDayField
+                  label="Data"
+                  showLabel={false}
+                  showTodayButton={false}
+                  className="w-full"
+                  inputClassName={dsInput}
+                  value={r.dataUtilizzo}
+                  onChange={(v) => onPatch({ dataUtilizzo: v })}
+                />
+              </CaptureSheetAwareField>
+            )}
+          </div>
+
+          <div className={`${CAPTURE_FIELD_STACK} ${CAPTURE_ADDETTO_W}`}>
+            <CaptureRicambiFieldLabel>Addetto</CaptureRicambiFieldLabel>
+            {ro ? (
+              <span className={`${dsInput} flex items-center`}>{r.addetto || "—"}</span>
+            ) : (
+              <CaptureSheetAwareField hint={nomeHint} footer={rowMetaHintFooter(nomeKey, nomeHint)}>
+                <GlobalSettingsListSelect
+                  listKey="lavorazioni:addetti"
+                  className="w-full min-w-0"
+                  inputClassName={`${dsInput} !pr-7`}
+                  value={r.addetto}
+                  onChange={(v) => onPatch({ addetto: v })}
+                  placeholder="Addetto"
+                  selectOnly
+                  allowAdd={false}
+                  disableRecents
+                  mobileSheetMode="selectOnly"
+                  showSimilarWarning={false}
+                  aria-label="Addetto riga ricambio"
+                />
+              </CaptureSheetAwareField>
+            )}
+          </div>
+
+          {r.ricambioId && !ro ? (
+            <label className="flex shrink-0 cursor-pointer items-center gap-1.5 self-end pb-1 text-xs text-[color:var(--cab-text-muted)]">
+              <input
+                type="checkbox"
+                className="rounded border-[color:var(--cab-border)]"
+                checked={Boolean(r.scaricoMagazzinoRichiesto)}
+                disabled={Boolean(r.scaricoMagazzinoApplicato)}
+                onChange={(e) => onPatch({ scaricoMagazzinoRichiesto: e.target.checked })}
+              />
+              Scarica
+            </label>
+          ) : null}
+
+          {!ro ? (
+            <button
+              type="button"
+              className="ml-auto shrink-0 self-end rounded p-1.5 text-sm text-[color:var(--cab-text-muted)] transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+              aria-label="Rimuovi riga ricambio"
+              onClick={onRemove}
+            >
+              ✕
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {showMagHint ? (
+        <div className="px-2.5 pb-2">
+          <RicambioMagazzinoInlineHint
+            item={pendingMag}
+            onUseRicambio={() => {
+              onPatch(applyRicambioFromMagazzino(r, pendingMag));
+              setPendingMag(null);
+            }}
+            onDismiss={() => {
+              setDismissedMagId(pendingMag.id);
+              setPendingMag(null);
+            }}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function suggestionsForRow(r: RigaRicambioScheda, prodotti: readonly RicambioMagazzino[]) {
   const q = `${r.ricambioNome} ${r.codice}`.trim().toLowerCase();
@@ -52,11 +324,12 @@ export function SchedaRicambiFormBody({
   rowHints,
   reviewCount = 0,
   variant = "capture",
+  captureIdentParts = null,
 }: SchedaRicambiFormBodyProps) {
   const ro = readonly;
   const prodotti = globalOpts.magazzino ?? [];
   const [acRowId, setAcRowId] = useState<string | null>(null);
-  const showMagazzinoColumn = variant === "editor";
+  const isCapture = variant === "capture";
 
   function patchRighe(righe: RigaRicambioScheda[]) {
     onChange({ ...value, righe });
@@ -66,6 +339,56 @@ export function SchedaRicambiFormBody({
     () => value.identificazioneMacchina.trim() || "—",
     [value.identificazioneMacchina],
   );
+
+  if (isCapture) {
+    return (
+      <div className="min-w-0 space-y-4 overflow-x-hidden">
+        {reviewCount > 0 ? <CaptureSheetHintsBanner reviewCount={reviewCount} /> : null}
+        <CaptureSheetLavorazioneIdentBanner parts={captureIdentParts} fallbackIdent={identLine} />
+        <div className="min-w-0 space-y-3">
+          {value.righe.map((r, rowIdx) => {
+            const rowNum = rowIdx + 1;
+            return (
+              <CaptureRicambiRigaCard
+                key={r.id}
+                r={r}
+                rowNum={rowNum}
+                ro={ro}
+                prodotti={prodotti}
+                rowHints={rowHints}
+                onPatch={(patch) =>
+                  patchRighe(value.righe.map((x) => (x.id === r.id ? { ...x, ...patch } : x)))
+                }
+                onRemove={() => patchRighe(value.righe.filter((x) => x.id !== r.id))}
+              />
+            );
+          })}
+        </div>
+        {!ro ? (
+          <button
+            type="button"
+            className={dsBtnNeutral}
+            onClick={() =>
+              patchRighe([
+                ...value.righe,
+                {
+                  id: newRigaId(),
+                  ricambioId: null,
+                  ricambioNome: "",
+                  codice: "",
+                  quantita: 1,
+                  addetto: globalOpts.defaultAddetto ?? "",
+                  dataUtilizzo: todayItDate(),
+                },
+              ])
+            }
+          >
+            + Aggiungi riga ricambio
+          </button>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -81,7 +404,6 @@ export function SchedaRicambiFormBody({
             <GlobalTableHeadLabel label="Qtà" />
             <GlobalTableHeadLabel label="Addetto" />
             <GlobalTableHeadLabel label="Data" />
-            {showMagazzinoColumn && !ro ? <GlobalTableHeadLabel label="Magazzino" /> : null}
             {!ro ? <GlobalTableHeadLabel label="" thClassName="w-24" /> : null}
           </GlobalTableHead>
           <tbody>
@@ -126,14 +448,7 @@ export function SchedaRicambiFormBody({
                                     onClick={() => {
                                       patchRighe(
                                         value.righe.map((x) =>
-                                          x.id === r.id
-                                            ? {
-                                                ...x,
-                                                ricambioId: p.id,
-                                                ricambioNome: p.descrizione ?? "",
-                                                codice: ricambioCodiceForUi(p.codiceFornitoreOriginale),
-                                              }
-                                            : x,
+                                          x.id === r.id ? applyRicambioFromMagazzino(x, p) : x,
                                         ),
                                       );
                                       setAcRowId(null);
@@ -201,6 +516,7 @@ export function SchedaRicambiFormBody({
                         value={r.addetto}
                         onChange={(v) => patchRighe(value.righe.map((x) => (x.id === r.id ? { ...x, addetto: v } : x)))}
                         placeholder="Addetto…"
+                        allowAdd
                         aria-label="Addetto riga ricambio"
                       />
                     )}

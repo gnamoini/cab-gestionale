@@ -4,6 +4,7 @@ import {
   useCallback,
   useRef,
   useState,
+  type DragEvent,
   type PointerEvent,
   type ReactNode,
 } from "react";
@@ -11,6 +12,11 @@ import {
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3;
 const ZOOM_STEP = 5;
+
+/** ponytail: soglia oltre la quale il pan ha priorità su drag/selezione browser */
+export function captureDocZoomEnablesPan(zoomPercent: number): boolean {
+  return zoomPercent > 100;
+}
 
 export function CaptureDocumentZoomPanViewport({
   children,
@@ -36,25 +42,31 @@ export function CaptureDocumentZoomPanViewport({
   const zoomFactor = zoom / 100;
   const contentW = Math.max(1, Math.round(naturalWidth * zoomFactor));
   const contentH = Math.max(1, Math.round(naturalHeight * zoomFactor));
+  const panEnabled = captureDocZoomEnablesPan(zoom);
 
-  const onPointerDown = useCallback((e: PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
-    const el = scrollRef.current;
-    if (!el) return;
-    dragRef.current = {
-      pointerId: e.pointerId,
-      startX: e.clientX,
-      startY: e.clientY,
-      scrollLeft: el.scrollLeft,
-      scrollTop: el.scrollTop,
-    };
-    el.setPointerCapture(e.pointerId);
-  }, []);
+  const onPointerDown = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      if (e.button !== 0 || !panEnabled) return;
+      const el = scrollRef.current;
+      if (!el) return;
+      e.preventDefault();
+      dragRef.current = {
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        scrollLeft: el.scrollLeft,
+        scrollTop: el.scrollTop,
+      };
+      el.setPointerCapture(e.pointerId);
+    },
+    [panEnabled],
+  );
 
   const onPointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     const el = scrollRef.current;
     if (!drag || drag.pointerId !== e.pointerId || !el) return;
+    e.preventDefault();
     el.scrollLeft = drag.scrollLeft - (e.clientX - drag.startX);
     el.scrollTop = drag.scrollTop - (e.clientY - drag.startY);
   }, []);
@@ -67,6 +79,10 @@ export function CaptureDocumentZoomPanViewport({
     } catch {
       /* già rilasciato */
     }
+  }, []);
+
+  const blockNativeDrag = useCallback((e: DragEvent) => {
+    e.preventDefault();
   }, []);
 
   return (
@@ -95,20 +111,28 @@ export function CaptureDocumentZoomPanViewport({
       </div>
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)] gestionale-scrollbar cursor-grab touch-none active:cursor-grabbing"
+        className={`min-h-0 flex-1 overflow-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)] gestionale-scrollbar touch-none select-none ${
+          panEnabled ? "cursor-grab active:cursor-grabbing" : "cursor-default"
+        }`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        onDragStart={blockNativeDrag}
       >
-        <div className="relative" style={{ width: contentW, height: contentH }}>
+        <div
+          className="relative select-none"
+          style={{ width: contentW, height: contentH }}
+          onDragStart={blockNativeDrag}
+        >
           <div
-            className="absolute left-0 top-0 origin-top-left"
+            className="absolute left-0 top-0 origin-top-left select-none [&_*]:!select-none [&_img]:pointer-events-none [&_iframe]:pointer-events-none"
             style={{
               width: naturalWidth,
               height: naturalHeight,
               transform: `scale(${zoomFactor})`,
             }}
+            onDragStart={blockNativeDrag}
           >
             {children}
           </div>

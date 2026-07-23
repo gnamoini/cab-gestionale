@@ -29,11 +29,17 @@ export function CaptureSheetFieldHintInline({
   embedded?: boolean;
 }) {
   if (!hint || hint.tone === "ok") return null;
-  const content = hint.message ? <p>{hint.message}</p> : null;
+  const toneClass =
+    hint.tone === "catalog"
+      ? "text-[color:color-mix(in_srgb,var(--cab-danger)_78%,var(--cab-text))]"
+      : hint.tone === "ambiguous"
+        ? "text-[color:color-mix(in_srgb,var(--cab-warning)_78%,var(--cab-text))]"
+        : "text-[color:var(--cab-text-muted)]";
+  const content = hint.message ? <p className={`${toneClass} break-words leading-snug`}>{hint.message}</p> : null;
   if (!content) return null;
   if (embedded) {
     return (
-      <div className="space-y-1 text-xs text-[color:var(--cab-text-muted)]" data-capture-hint={fieldKey}>
+      <div className="min-w-0 space-y-1 text-xs text-[color:var(--cab-text-muted)]" data-capture-hint={fieldKey}>
         {content}
       </div>
     );
@@ -59,18 +65,14 @@ export function CaptureSheetAwareField({
   footer?: ReactNode;
 }) {
   const chrome = hint && hint.tone !== "ok" ? captureHintChrome(hint) : null;
-  if (!chrome) {
-    return (
-      <>
-        {children}
-        {footer}
-      </>
-    );
-  }
   return (
-    <div className={chrome.shell}>
+    <div className={chrome?.shell ?? "min-w-0 max-w-full"}>
       {children}
-      {footer ? <div className={chrome.footer}>{footer}</div> : null}
+      {footer ? (
+        <div className={chrome ? `${chrome.footer} min-w-0 break-words` : "min-w-0 break-words"}>
+          {footer}
+        </div>
+      ) : null}
     </div>
   );
 }

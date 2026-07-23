@@ -33,11 +33,14 @@ const MOVIMENTI_RICAMBI_COLUMNS = "id, ricambio_id, lavorazione_id, tipo, quanti
 const DASHBOARD_PROMEMORIA_COLUMNS =
   "id, created_at, updated_at, created_by, event_date, event_time, title, description, deleted_at, notified_on, entity_type, entity_id, series_id, recurrence_frequency, recurrence_interval, recurrence_until";
 
+const LAVORAZIONI_MEZZO_ID_FKEY = "lavorazioni_mezzo_id_fkey";
+const lavorazioniMezziEmbed = (columns) => `mezzi!${LAVORAZIONI_MEZZO_ID_FKEY}(${columns})`;
+
 const PROFILE_PART =
   "updated_by_profile:profiles!lavorazioni_updated_by_fkey(nome), created_by_profile:profiles!lavorazioni_created_by_fkey(nome)";
-const MEZZI_EMBED = `mezzi(${MEZZI_LIST_EMBED_COLUMNS})`;
+const MEZZI_EMBED = lavorazioniMezziEmbed(MEZZI_LIST_EMBED_COLUMNS);
 
-const MEZZI_EMBED_LIGHT = `mezzi(${MEZZI_EMBED_LIGHT_COLUMNS})`;
+const MEZZI_EMBED_LIGHT = lavorazioniMezziEmbed(MEZZI_EMBED_LIGHT_COLUMNS);
 
 const SELECT_VARIANTS = {
   lavorazioni_A_columns_only: LAVORAZIONI_COLUMNS,

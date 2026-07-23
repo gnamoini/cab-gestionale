@@ -62,7 +62,16 @@ assert.ok(labelsPerA4Page(xl!) >= 6);
 
 const a4 = getLabelTemplate("a4-pagina-intera");
 assert.ok(a4);
+assert.equal(a4!.widthMm, 287);
+assert.equal(a4!.heightMm, 200);
 assert.equal(labelsPerA4Page(a4!), 1);
-assert.equal(a4!.layoutMode, "vertical-stack");
+assert.equal(a4!.layoutMode, "horizontal-qr-left");
+const a4Qr = a4!.elements.find((e) => e.type === "qr");
+const a4Barcode = a4!.elements.find((e) => e.type === "barcode");
+assert.ok(a4Qr && a4Qr.type === "qr");
+assert.ok(a4Barcode && a4Barcode.type === "barcode");
+assert.equal(a4Qr.xMm, a4!.marginsMm, "A4 orizzontale: QR top-left");
+assert.equal(a4Qr.yMm, a4!.marginsMm, "A4 orizzontale: QR top-left");
+assert.equal(a4Barcode.xMm, a4!.marginsMm, "A4 orizzontale: barcode sotto QR");
 
 console.log("inventory-labels/domain/templates.test.ts OK");

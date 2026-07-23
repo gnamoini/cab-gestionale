@@ -30,10 +30,13 @@ function CaptureDocumentFilePreviewInner({
   compact = false,
   /** Anteprima fissa durante scroll review (colonna sinistra desktop). */
   pinned = false,
+  /** Riempie l'altezza della colonna scroll (variant panel). */
+  columnFill = false,
 }: {
   captureId: string;
   compact?: boolean;
   pinned?: boolean;
+  columnFill?: boolean;
 }) {
   const [meta, setMeta] = useState<CaptureMeta | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,7 +104,7 @@ function CaptureDocumentFilePreviewInner({
     const ro = new ResizeObserver(sync);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [meta?.mime, compact, pinned]);
+  }, [meta?.mime, compact, pinned, columnFill]);
 
   const fileUrl = `/api/document-capture/${captureId}/file`;
   const pdfPreviewUrl = capturePdfPreviewFrameUrl(
@@ -111,14 +114,18 @@ function CaptureDocumentFilePreviewInner({
   const pdfFullscreenUrl = capturePdfFullscreenUrl(fileUrl);
   const frameClass = compact
     ? "max-h-48"
-    : pinned
-      ? "max-h-[min(calc(100dvh-16rem),32rem)]"
-      : "max-h-[min(50vh,28rem)]";
+    : columnFill
+      ? "min-h-[12rem] flex-1"
+      : pinned
+        ? "max-h-[min(calc(100dvh-13rem),40rem)]"
+        : "max-h-[min(50vh,28rem)]";
   const pdfShellClass = compact
     ? "h-48"
-    : pinned
-      ? "h-[min(calc(100dvh-16rem),32rem)]"
-      : "h-[min(50vh,28rem)]";
+    : columnFill
+      ? "min-h-[12rem] flex-1"
+      : pinned
+        ? "h-[min(calc(100dvh-13rem),40rem)]"
+        : "h-[min(50vh,28rem)]";
   const canFullscreen = meta ? isImageMime(meta.mime) || isPdfMime(meta.mime) : false;
   const panelTitle = "Documento caricato";
   const enableZoomPan = !compact;
@@ -154,7 +161,11 @@ function CaptureDocumentFilePreviewInner({
 
   return (
     <>
-      <CaptureReviewPanelFrame title={panelTitle} action={fullscreenAction}>
+      <CaptureReviewPanelFrame
+        title={panelTitle}
+        action={fullscreenAction}
+        className={columnFill ? "flex min-h-0 h-full flex-col" : ""}
+      >
         {isImageMime(meta.mime) ? (
           enableZoomPan ? (
             <div ref={pdfShellRef} className={`min-h-0 ${pdfShellClass}`}>

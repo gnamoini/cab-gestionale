@@ -22,6 +22,7 @@ import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import type {
   CaptureSchedeOpenRequest,
+  CaptureViewExistingSchedaRequest,
   LavorazioniCapturePageDropHandle,
 } from "@/components/document-capture/lavorazioni-digital-capture-launcher";
 
@@ -185,6 +186,7 @@ export type LavorazioniListToolbarProps = {
   onPrimeCreate: () => void;
   onCaptureLavorazioneCreated?: (id: string, opts?: { skipTableFocus?: boolean }) => void;
   onOpenSchedeFromCapture?: (request: CaptureSchedeOpenRequest) => void | Promise<boolean>;
+  onViewExistingScheda?: (request: CaptureViewExistingSchedaRequest) => void | Promise<boolean>;
   captureMezzi?: readonly MezzoGestito[];
   captureSchedeStore?: LavorazioneSchedeStore;
   captureAttive?: readonly LavorazioneAttiva[];
@@ -223,6 +225,7 @@ export function LavorazioniListToolbar({
   onPrimeCreate,
   onCaptureLavorazioneCreated,
   onOpenSchedeFromCapture,
+  onViewExistingScheda,
   captureMezzi,
   captureSchedeStore,
   captureAttive,
@@ -290,6 +293,7 @@ export function LavorazioniListToolbar({
                 sharedMezziCatalog={captureSharedMezziCatalog}
                 onLavorazioneCreated={onCaptureLavorazioneCreated}
                 onOpenSchedeFromCapture={onOpenSchedeFromCapture}
+                onViewExistingScheda={onViewExistingScheda}
                 pageDropRef={capturePageDropRef}
                 size="md"
                 className="h-11 shrink-0"

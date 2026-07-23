@@ -32,6 +32,14 @@ const matchStep = fs.readFileSync(
   path.join(ROOT, "components/document-capture/capture-mezzo-match-step.tsx"),
   "utf8",
 );
+const sheetCompileStep = fs.readFileSync(
+  path.join(ROOT, "components/document-capture/capture-scheda-sheet-compile-step.tsx"),
+  "utf8",
+);
+const reviewPanel = fs.readFileSync(
+  path.join(ROOT, "components/document-capture/capture-review-panel.tsx"),
+  "utf8",
+);
 const lavorazioniView = fs.readFileSync(
   path.join(ROOT, "components/gestionale/lavorazioni/lavorazioni-view.tsx"),
   "utf8",
@@ -66,9 +74,23 @@ assert.doesNotMatch(stepIndicator, /"confirm"/);
 assert.match(lavAdapter, /Compila scheda/);
 
 assert.match(wizard, /CaptureDocumentFilePreview/);
-assert.match(compileStep, /CAPTURE_REVIEW_PIN_TOP_CLASS|--capture-review-pin-top/);
+assert.match(compileStep, /CaptureReviewSplitLayout/);
+assert.match(reviewPanel, /CAPTURE_REVIEW_FORM_COLUMN_CLASS/);
+assert.match(reviewPanel, /CAPTURE_REVIEW_PIN_TOP_CLASS/);
+assert.match(reviewPanel, /lg:sticky/);
 assert.match(compileStep, /pinned/);
+assert.match(sheetCompileStep, /CaptureReviewSplitLayout/);
+assert.match(
+  fs.readFileSync(path.join(ROOT, "components/lavorazioni/schede/scheda-lavorazioni-form-body.tsx"), "utf8"),
+  /disableRecents/,
+);
+assert.match(
+  fs.readFileSync(path.join(ROOT, "lib/document-capture/capture-sheet-field-hints.ts"), "utf8"),
+  /Data non letta dalla scansione/,
+);
+assert.match(matchStep, /CaptureReviewSplitLayout/);
 assert.match(matchStep, /pinned/);
+assert.match(reviewPanel, /CAPTURE_REVIEW_PIN_TOP_CLASS/);
 assert.match(matchStep, /Crea nuova lavorazione/);
 assert.match(matchStep, /Conferma assegnazione/);
 assert.match(matchStep, /Usa questa/);
@@ -81,6 +103,8 @@ assert.match(launcher, /Lavorazione collegata correttamente/);
 assert.match(launcher, /pendingAssignLavorazioneId/);
 assert.match(wizard, /DocumentCaptureAcquisitionProgress/);
 assert.match(launcher, /deriveCaptureAcquisitionProgress/);
+assert.match(launcher, /modalSize="analytics"/);
+assert.match(launcher, /modalHeight="tall"/);
 assert.doesNotMatch(wizard, /CaptureApplyPlanPreview/);
 assert.doesNotMatch(wizard, /dry-run/);
 assert.doesNotMatch(wizard, /GestionaleModalShell/);

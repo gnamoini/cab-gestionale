@@ -210,12 +210,11 @@ export const LABEL_TEMPLATE_REGISTRY: Record<string, LabelTemplateDefinition> = 
   "80x40-default": buildTemplate("80x40-default", 80, 40),
   "80x50-default": buildTemplate("80x50-default", 80, 50),
   "95x40-default": buildTemplate("95x40-default", 95, 40),
-  "a4-pagina-intera": buildTemplate("a4-pagina-intera", 190, 277, {
+  "a4-pagina-intera": buildTemplate("a4-pagina-intera", 287, 200, {
     typography: { scale: 2.3, weight: "bold", tracking: 0, lineHeight: 1.15 },
-    layoutMode: "vertical-stack",
     supplierLayout: "inline-slash",
-    qrMaxSizeMm: 38,
-    version: "1.0.0",
+    qrMaxSizeMm: 72,
+    version: "2.0.0",
   }),
 };
 
@@ -226,7 +225,7 @@ export const LABEL_PRESET_IDS = Object.keys(LABEL_TEMPLATE_REGISTRY);
 
 /** Es. `60x40-default` → `60 × 40 mm`. */
 export function labelPresetDisplayName(presetId: string): string {
-  if (presetId === "a4-pagina-intera") return "A4 · pagina intera";
+  if (presetId === "a4-pagina-intera") return "A4 · orizzontale";
   return `${presetId.replace(/-default$/, "").replace(/x/g, " × ")} mm`;
 }
 

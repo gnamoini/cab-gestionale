@@ -6,6 +6,7 @@ import {
   markOverridesObsolete,
   persistGenerationClient,
 } from "@/lib/preventivi/description-engine";
+import { schemaInputFromPreventivoRecord } from "@/lib/preventivi/description-engine/resolve-schema-input";
 
 /** Rigenera descrizione da testo tecnico sorgente (solo bozze). */
 export function regeneratePreventivoDescription(
@@ -25,6 +26,8 @@ export function regeneratePreventivoDescription(
     tipoAttrezzatura: record.tipoAttrezzatura,
     marcaModello: [record.marcaAttrezzatura, record.modelloAttrezzatura].filter(Boolean).join(" "),
     generationSequence: opts?.generationSequence,
+    lavorazioneId: record.lavorazioneId,
+    ...schemaInputFromPreventivoRecord(record),
   });
 
   persistGenerationClient(

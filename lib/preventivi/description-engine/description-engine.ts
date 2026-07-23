@@ -14,7 +14,6 @@ import {
   getLatestMemorySnapshot,
 } from "@/lib/domain/technical-knowledge-base";
 import { pulisciDescrizioneLavorazioniSpecifiche } from "@/lib/preventivi/preventivi-struttura";
-import { trasformaDescrizioneLavorazioni } from "@/lib/preventivi/trasforma-descrizione";
 import { enrichFromRicambiMap } from "./ricambi-enricher";
 import { legacyPrimaryLines, enrichWithLegacyLines, legacyChunksFromBlob } from "./legacy-enrichment";
 import {
@@ -29,6 +28,8 @@ import {
 } from "./generation-identity";
 import { resolveDetailLevel, DEFAULT_STYLE_PROFILE } from "./style-profile";
 import { applyAiPolishToLines, DEFAULT_AI_POLISH_CONSTRAINTS, polishDescriptionWithAi } from "./ai-polish";
+import { composeClienteDescriptionSchema } from "./client-description-schema";
+import { mergeDescriptionEngineSchemaInput } from "./resolve-schema-input";
 import { fuseWithOperativeHistory } from "./operative-history/fusion-ranker";
 import { rankOperativeHistoryFromContext } from "./operative-history/history-ranker";
 import type {
@@ -264,28 +265,19 @@ export function generatePreventivoDescription(input: DescriptionEngineInput): Co
     operativeHistory: fused.historyMeta,
   };
 
+  const schemaOut = composeClienteDescriptionSchema(mergeDescriptionEngineSchemaInput(input));
+  lines = schemaOut.lines;
+  clienteText = schemaOut.clienteText;
+
   return { lines, meta, clienteText };
 }
 
 /** Fallback legacy-only (compat storico). */
 export function generateLegacyOnlyDescription(input: DescriptionEngineInput): ComposedDescription {
-  const text = trasformaDescrizioneLavorazioni(input.technicalBlob, input.ctx);
-  const clienteText = pulisciDescrizioneLavorazioniSpecifiche(text);
-  const lines: GeneratedDescriptionLine[] = clienteText
-    .split("\n")
-    .map((l) => l.replace(/^-\s*/, "").trim())
-    .filter(Boolean)
-    .map((line, idx) => ({
-      activityId: null,
-      text: line,
-      sourceType: "legacy_heuristic" as const,
-      sourceId: `legacy-fallback:${idx}`,
-      confidence: 0.25,
-      isVerifiedTechnical: false,
-      sort: idx + 1,
-    }));
-
+  const schemaOut = composeClienteDescriptionSchema(mergeDescriptionEngineSchemaInput(input));
+  const lines = schemaOut.lines;
   validateNoAnonymousLines(lines);
+  const clienteText = schemaOut.clienteText;
 
   const generationId = newGenerationId();
   const contextHash = buildGenerationContextHash({

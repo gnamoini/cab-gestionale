@@ -1,6 +1,14 @@
 import { resolveRicambiRowsFromCaptureFields } from "@/lib/document-capture/ricambi-resolution";
 import { formatCaptureMultilineText, isCaptureMultilineFieldKey } from "@/lib/document-capture/capture-field-display-value";
-import { normalizeCaptureIngressoDateValue, sanitizeCaptureExtractedFieldValue } from "@/lib/document-capture/capture-field-key-aliases";
+import {
+  formatCaptureLavorazioniText,
+  isCaptureLavorazioneFieldKey,
+} from "@/lib/document-capture/capture-lavorazioni-text";
+import {
+  normalizeCaptureIngressoDateValue,
+  sanitizeCaptureExtractedFieldValue,
+} from "@/lib/document-capture/capture-field-key-aliases";
+import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
 import {
   isCaptureSignatureFieldKey,
   pickCaptureSignatureDataUrl,
@@ -9,6 +17,7 @@ import { isCaptureAiSignatureExtractionEnabled } from "@/lib/document-capture/ca
 import { emptySchedaIngressoFields } from "@/lib/domain/intervento-context/build-intervento-context";
 import { findAddettoByStoredName, addettoDisplayName, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { findDuplicateByCodici } from "@/lib/magazzino/duplicates";
+import { formatRicambioDescrizioneForUi } from "@/lib/magazzino/ricambio-descrizione-display";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { newRigaId, newSchedaMeta } from "@/lib/schede/schede-ui";
 import type {
@@ -106,7 +115,9 @@ export function resolveCaptureFieldValue(row: CaptureFieldRow): string {
     : (row.confirmed_value ?? row.normalized_value ?? "");
   const trimmed = typeof v === "string" ? v.trim() : "";
   if (isCaptureMultilineFieldKey(row.field_key) && trimmed) {
-    return formatCaptureMultilineText(trimmed);
+    return isCaptureLavorazioneFieldKey(row.field_key)
+      ? formatCaptureLavorazioniText(trimmed)
+      : formatCaptureMultilineText(trimmed);
   }
   return sanitizeCaptureExtractedFieldValue(row.field_key, trimmed);
 }
@@ -147,11 +158,80 @@ function parseCaptureQuantita(value: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function composeCaptureRicambioNome(nome: string, descrizione: string): string {
-  const n = nome.trim();
-  const d = descrizione.trim();
-  if (n && d) return `${n} — ${d}`;
-  return n || d;
+/** Colonna NOME = addetto; DESCRIZIONE = ricambio. Fallback legacy se solo nome (non addetto). */
+const LEGACY_RICAMBIO_MERGE_RE = /^(.+?)\s*[—–-]\s+(.+)$/;
+
+function splitLegacyRicambioMergedCell(value: string): { head: string; tail: string } | null {
+  const m = value.trim().match(LEGACY_RICAMBIO_MERGE_RE);
+  if (!m) return null;
+  const head = m[1]!.trim();
+  const tail = m[2]!.trim();
+  if (!head || !tail || head.length > 32) return null;
+  return { head, tail };
+}
+
+function resolveCaptureRicambioAddettoLabel(
+  raw: string,
+  addettiRecords?: readonly AddettoRecord[],
+): string {
+  const t = raw.trim();
+  if (!t) return "";
+  const rec = addettiRecords?.length ? findAddettoByStoredName(addettiRecords, t) : undefined;
+  return rec ? addettoDisplayName(rec) : t;
+}
+
+function formatRicambioNomeFromOcr(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return formatRicambioDescrizioneForUi(trimmed) || trimmed;
+}
+
+export function resolveCaptureRicambioRowText(
+  nomeOcr: string,
+  descrizioneOcr: string,
+  addettiRecords?: readonly AddettoRecord[],
+): { ricambioNome: string; addetto: string } {
+  let nome = nomeOcr.trim();
+  let desc = descrizioneOcr.trim();
+
+  if (!desc && nome) {
+    const split = splitLegacyRicambioMergedCell(nome);
+    if (split) {
+      return {
+        ricambioNome: formatRicambioNomeFromOcr(split.tail),
+        addetto: resolveCaptureRicambioAddettoLabel(split.head, addettiRecords),
+      };
+    }
+  }
+
+  if (!nome && desc) {
+    const split = splitLegacyRicambioMergedCell(desc);
+    if (split) {
+      return {
+        ricambioNome: formatRicambioNomeFromOcr(split.tail),
+        addetto: resolveCaptureRicambioAddettoLabel(split.head, addettiRecords),
+      };
+    }
+  }
+
+  if (nome && desc) {
+    const splitDesc = splitLegacyRicambioMergedCell(desc);
+    if (splitDesc && splitDesc.head.toLowerCase() === nome.toLowerCase()) {
+      desc = splitDesc.tail;
+    }
+  }
+
+  const addettoRec = nome && addettiRecords?.length ? findAddettoByStoredName(addettiRecords, nome) : undefined;
+  if (addettoRec) {
+    return { ricambioNome: formatRicambioNomeFromOcr(desc), addetto: addettoDisplayName(addettoRec) };
+  }
+  if (desc) {
+    return {
+      ricambioNome: formatRicambioNomeFromOcr(desc),
+      addetto: resolveCaptureRicambioAddettoLabel(nome, addettiRecords),
+    };
+  }
+  return { ricambioNome: formatRicambioNomeFromOcr(nome), addetto: "" };
 }
 
 export function inferCaptureSchedaTipo(fields: readonly CaptureFieldRow[]): SchedaTipo | null {
@@ -197,27 +277,262 @@ export function mapCaptureHeaderToIngressoSlice(fields: readonly CaptureFieldRow
   return patch;
 }
 
+type LavBlockAcc = {
+  works: string[];
+  date: string;
+  nome: string;
+  oreRaw: string;
+};
+
+type LavPendingMeta = {
+  date: string;
+  nome: string;
+  oreRaw: string;
+};
+
+function emptyLavBlockAcc(): LavBlockAcc {
+  return { works: [], date: "", nome: "", oreRaw: "" };
+}
+
+function applyPendingLavMeta(acc: LavBlockAcc, pending: LavPendingMeta | null): LavPendingMeta | null {
+  if (!pending) return null;
+  if (pending.date && !acc.date) acc.date = pending.date;
+  if (pending.nome && !acc.nome) acc.nome = pending.nome;
+  if (pending.oreRaw && !acc.oreRaw) acc.oreRaw = pending.oreRaw;
+  return null;
+}
+
+function resolveLavRowDateValue(
+  dataIsDate: boolean,
+  lavIsDate: boolean,
+  oreIsDate: boolean,
+  dataRaw: string,
+  lav: string,
+  oreRaw: string,
+): string {
+  if (dataIsDate) return dataRaw.trim();
+  if (lavIsDate) return lav;
+  if (oreIsDate) return oreRaw.trim();
+  return "";
+}
+
+function looksLikeCaptureDateValue(raw: string): boolean {
+  const t = raw.trim();
+  if (!t) return false;
+  if (parseItalianDayDisplayToIso(t).ok) return true;
+  return parseItalianDayDisplayToIso(normalizeCaptureIngressoDateValue(t)).ok;
+}
+
+/** Normalizza una data OCR scheda lavorazioni; stringa vuota se non riconosciuta (mai fallback a oggi). */
+export function parseCaptureLavorazioneDateValue(raw: string): string {
+  const normalized = normalizeCaptureIngressoDateValue(raw.trim());
+  if (!normalized || !looksLikeCaptureDateValue(normalized)) return "";
+  return normalized;
+}
+
+function isCaptureOreValue(raw: string): boolean {
+  const t = raw.trim();
+  if (!t || looksLikeCaptureDateValue(t)) return false;
+  return Number.isFinite(parseFloat(t.replace(",", ".")));
+}
+
+function resolveCaptureLavorazioneAddetto(
+  nomeRaw: string,
+  addettiRecords?: readonly AddettoRecord[],
+): string {
+  const addettoRec = addettiRecords?.length ? findAddettoByStoredName(addettiRecords, nomeRaw) : undefined;
+  return addettoRec ? addettoDisplayName(addettoRec) : nomeRaw;
+}
+
+function lavBlockAccToRiga(
+  acc: LavBlockAcc,
+  addettiRecords?: readonly AddettoRecord[],
+): RigaLavorazioneScheda | null {
+  const lavorazioni = acc.works
+    .map((w) => formatCaptureLavorazioniText(w.trim()))
+    .filter(Boolean)
+    .join("\n");
+  const nomeRaw = acc.nome.trim();
+  const oreRaw = acc.oreRaw.trim();
+  if (!lavorazioni) return null;
+
+  const nome = resolveCaptureLavorazioneAddetto(nomeRaw, addettiRecords);
+  const date = acc.date ? parseCaptureLavorazioneDateValue(acc.date) : "";
+
+  return {
+    id: newRigaId(),
+    dataLavorazione: date,
+    lavorazioniEffettuate: lavorazioni,
+    addettiAssegnati: nome || oreRaw ? [{ addetto: nome, oreImpiegate: parseCaptureOre(oreRaw) }] : [],
+  };
+}
+
+function flushLavBlock(
+  acc: LavBlockAcc,
+  out: RigaLavorazioneScheda[],
+  addettiRecords?: readonly AddettoRecord[],
+): void {
+  const row = lavBlockAccToRiga(acc, addettiRecords);
+  if (row) out.push(row);
+}
+
+function lineCountLavorazione(text: string): number {
+  const t = text.trim();
+  if (!t) return 0;
+  return t.split(/\n/).filter((line) => line.trim()).length;
+}
+
+/** Unisce righe OCR con una sola lavorazione e stessa data (tipico output AI riga-per-riga). */
+function mergeSameDateSingleLineLavorazioni(righe: RigaLavorazioneScheda[]): RigaLavorazioneScheda[] {
+  if (righe.length < 2) return righe;
+  const out: RigaLavorazioneScheda[] = [];
+  let idx = 0;
+  while (idx < righe.length) {
+    const first = righe[idx]!;
+    if (lineCountLavorazione(first.lavorazioniEffettuate) !== 1) {
+      out.push(first);
+      idx += 1;
+      continue;
+    }
+    const works = [first.lavorazioniEffettuate.trim()].filter(Boolean);
+    let addetti = first.addettiAssegnati?.filter((a) => a.addetto || a.oreImpiegate) ?? [];
+    let j = idx + 1;
+    while (j < righe.length) {
+      const next = righe[j]!;
+      if (next.dataLavorazione !== first.dataLavorazione) break;
+      if (lineCountLavorazione(next.lavorazioniEffettuate) !== 1) break;
+      const nextAddetti = next.addettiAssegnati?.filter((a) => a.addetto || a.oreImpiegate) ?? [];
+      if (addetti.length > 0 && nextAddetti.length > 0) break;
+      works.push(next.lavorazioniEffettuate.trim());
+      if (nextAddetti.length > 0) addetti = nextAddetti;
+      j += 1;
+    }
+    if (j > idx + 1) {
+      out.push({
+        ...first,
+        lavorazioniEffettuate: works.filter(Boolean).join("\n"),
+        addettiAssegnati: addetti,
+      });
+      idx = j;
+    } else {
+      out.push(first);
+      idx += 1;
+    }
+  }
+  return out;
+}
+
+function coalesceCaptureLavorazioniOcrRows(
+  fields: readonly CaptureFieldRow[],
+  addettiRecords?: readonly AddettoRecord[],
+): RigaLavorazioneScheda[] {
+  const out: RigaLavorazioneScheda[] = [];
+  let acc = emptyLavBlockAcc();
+  let pending: LavPendingMeta | null = null;
+
+  for (let n = 1; n <= MAX_LAVORAZIONI_RIGHE; n += 1) {
+    const lavorazione = resolveRawFieldValue(fields, `riga_${n}_lavorazione`);
+    const nomeRaw = resolveRawFieldValue(fields, `riga_${n}_nome`);
+    const oreRaw = resolveRawFieldValue(fields, `riga_${n}_ore`);
+    const dataRaw = resolveRawFieldValue(fields, `riga_${n}_data`);
+    if (!lavorazione && !nomeRaw && !oreRaw && !dataRaw) continue;
+
+    const lav = lavorazione.trim();
+    const rowHasAddetti = Boolean(nomeRaw.trim()) || isCaptureOreValue(oreRaw);
+    const lavIsDate = lav.length > 0 && looksLikeCaptureDateValue(lav);
+    const dataIsDate = dataRaw.trim().length > 0 && looksLikeCaptureDateValue(dataRaw);
+    const oreIsDate = !lav && oreRaw.trim().length > 0 && looksLikeCaptureDateValue(oreRaw);
+    const rowHasDate = dataIsDate || lavIsDate || oreIsDate;
+
+    if (lav && dataIsDate && !lavIsDate && acc.works.length === 0) {
+      pending = applyPendingLavMeta(acc, pending);
+      flushLavBlock(acc, out, addettiRecords);
+      acc = emptyLavBlockAcc();
+      const row = lavBlockAccToRiga({ works: [lav], date: dataRaw, nome: nomeRaw, oreRaw }, addettiRecords);
+      if (row) out.push(row);
+      continue;
+    }
+
+    if (rowHasDate) {
+      if (lav && !lavIsDate) {
+        pending = applyPendingLavMeta(acc, pending);
+        acc.works.push(lav);
+      }
+      if (acc.works.length > 0) {
+        const dateVal = resolveLavRowDateValue(dataIsDate, lavIsDate, oreIsDate, dataRaw, lav, oreRaw);
+        if (dateVal) acc.date = dateVal;
+        if (nomeRaw) acc.nome = nomeRaw;
+        if (isCaptureOreValue(oreRaw)) acc.oreRaw = oreRaw;
+        flushLavBlock(acc, out, addettiRecords);
+        acc = emptyLavBlockAcc();
+        pending = null;
+        continue;
+      }
+
+      const dateVal = resolveLavRowDateValue(dataIsDate, lavIsDate, oreIsDate, dataRaw, lav, oreRaw);
+      pending = {
+        date: dateVal || pending?.date || "",
+        nome: nomeRaw || pending?.nome || "",
+        oreRaw: isCaptureOreValue(oreRaw) ? oreRaw : pending?.oreRaw || "",
+      };
+      continue;
+    }
+
+    if (lav && rowHasAddetti && acc.works.length === 0) {
+      pending = applyPendingLavMeta(acc, pending);
+      const row = lavBlockAccToRiga(
+        {
+          works: [lav],
+          date: acc.date,
+          nome: nomeRaw || acc.nome,
+          oreRaw: isCaptureOreValue(oreRaw) ? oreRaw : acc.oreRaw,
+        },
+        addettiRecords,
+      );
+      acc = emptyLavBlockAcc();
+      pending = null;
+      if (row) out.push(row);
+      continue;
+    }
+
+    if (lav && rowHasAddetti && acc.works.length > 0) {
+      pending = applyPendingLavMeta(acc, pending);
+      acc.works.push(lav);
+      acc.nome = nomeRaw;
+      if (isCaptureOreValue(oreRaw)) acc.oreRaw = oreRaw;
+      flushLavBlock(acc, out, addettiRecords);
+      acc = emptyLavBlockAcc();
+      pending = null;
+      continue;
+    }
+
+    if (lav) {
+      pending = applyPendingLavMeta(acc, pending);
+      acc.works.push(lav);
+      continue;
+    }
+
+    if (rowHasAddetti && acc.works.length > 0) {
+      pending = applyPendingLavMeta(acc, pending);
+      acc.nome = nomeRaw;
+      if (isCaptureOreValue(oreRaw)) acc.oreRaw = oreRaw;
+      if (dataRaw.trim()) acc.date = dataRaw.trim();
+      flushLavBlock(acc, out, addettiRecords);
+      acc = emptyLavBlockAcc();
+      pending = null;
+    }
+  }
+
+  pending = applyPendingLavMeta(acc, pending);
+  flushLavBlock(acc, out, addettiRecords);
+  return mergeSameDateSingleLineLavorazioni(out);
+}
+
 export function parseCaptureLavorazioniRighe(
   fields: readonly CaptureFieldRow[],
   addettiRecords?: readonly AddettoRecord[],
 ): RigaLavorazioneScheda[] {
-  const today = new Date().toLocaleDateString("it-IT");
-  const out: RigaLavorazioneScheda[] = [];
-  for (let n = 1; n <= MAX_LAVORAZIONI_RIGHE; n += 1) {
-    const lavorazione = resolveRawFieldValue(fields, `riga_${n}_lavorazione`);
-    const nomeRaw = resolveRawFieldValue(fields, `riga_${n}_nome`);
-    const addettoRec = addettiRecords?.length ? findAddettoByStoredName(addettiRecords, nomeRaw) : undefined;
-    const nome = addettoRec ? addettoDisplayName(addettoRec) : nomeRaw;
-    const oreRaw = resolveRawFieldValue(fields, `riga_${n}_ore`);
-    if (!lavorazione && !nome && !oreRaw) continue;
-    out.push({
-      id: newRigaId(),
-      dataLavorazione: today,
-      lavorazioniEffettuate: lavorazione,
-      addettiAssegnati: nome || oreRaw ? [{ addetto: nome, oreImpiegate: parseCaptureOre(oreRaw) }] : [],
-    });
-  }
-  return out;
+  return coalesceCaptureLavorazioniOcrRows(fields, addettiRecords);
 }
 
 export function mapCaptureFieldsToLavorazioni(
@@ -234,8 +549,8 @@ export function mapCaptureFieldsToLavorazioni(
 export function parseCaptureRicambiRighe(
   fields: readonly CaptureFieldRow[],
   magazzino?: readonly RicambioMagazzino[],
+  addettiRecords?: readonly AddettoRecord[],
 ): RigaRicambioScheda[] {
-  const today = new Date().toLocaleDateString("it-IT");
   const resolutions =
     magazzino && magazzino.length > 0 ? resolveRicambiRowsFromCaptureFields(fields, magazzino) : [];
   const byRow = new Map(resolutions.map((r) => [r.rowIndex, r]));
@@ -263,14 +578,15 @@ export function parseCaptureRicambiRighe(
       if (dup?.codiceFornitoreOriginale) codiceOut = dup.codiceFornitoreOriginale;
     }
 
+    const { ricambioNome, addetto } = resolveCaptureRicambioRowText(nome, descrizione, addettiRecords);
     out.push({
       id: newRigaId(),
       ricambioId,
-      ricambioNome: composeCaptureRicambioNome(nome, descrizione),
+      ricambioNome,
       codice: codiceOut,
       quantita: parseCaptureQuantita(qtRaw),
-      addetto: "",
-      dataUtilizzo: data || today,
+      addetto,
+      dataUtilizzo: data.trim() ? parseCaptureLavorazioneDateValue(data) : "",
     });
   }
   return out;
@@ -279,11 +595,12 @@ export function parseCaptureRicambiRighe(
 export function mapCaptureFieldsToRicambi(
   fields: readonly CaptureFieldRow[],
   magazzino?: readonly RicambioMagazzino[],
+  addettiRecords?: readonly AddettoRecord[],
 ): SchedaRicambiFields {
   const targaMatricola = resolveRawFieldValue(fields, "targa_matricola", "targamatricola", "targa/matricola");
   return {
     identificazioneMacchina: targaMatricola,
-    righe: parseCaptureRicambiRighe(fields, magazzino),
+    righe: parseCaptureRicambiRighe(fields, magazzino, addettiRecords),
   };
 }
 
@@ -388,7 +705,7 @@ export function buildCaptureSchedeBundle(input: {
   if (input.includeRicambi) {
     const ricCampi =
       schedaTipo === "ricambi"
-        ? mapCaptureFieldsToRicambi(input.fields, input.magazzino)
+        ? mapCaptureFieldsToRicambi(input.fields, input.magazzino, input.addettiRecords)
         : buildRicambiFromIngresso(ingressoFields);
     bundle.ricambi = {
       ...newSchedaMeta("ricambi", user),

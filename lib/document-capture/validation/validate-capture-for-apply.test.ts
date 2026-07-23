@@ -69,8 +69,9 @@ const ricambiReview = validateCaptureForApply({
   ],
   magazzino,
 });
-assert.equal(ricambiReview.status, "REVIEW");
+assert.equal(ricambiReview.status, "READY");
 assert.equal(ricambiReview.ricambiRows?.[0]?.status, "NOT_FOUND");
+assert.ok(ricambiReview.issues.some((i) => i.code === "RICAMBIO_NOT_FOUND"));
 
 const ricambiMatched = validateCaptureForApply({
   fields: [
@@ -91,8 +92,8 @@ const notFoundReview = validateCaptureForApply({
   ],
   magazzino,
 });
-assert.equal(notFoundReview.status, "REVIEW");
-assert.equal(captureReviewAllowsForceApply(notFoundReview), false);
+assert.equal(notFoundReview.status, "READY");
+assert.equal(captureReviewAllowsForceApply(notFoundReview), true);
 
 const ambiguousOnly = validateCaptureForApply({
   fields: [
@@ -103,5 +104,21 @@ const ambiguousOnly = validateCaptureForApply({
   magazzino,
 });
 assert.equal(captureReviewAllowsForceApply(ambiguousOnly), true);
+
+const lavorazioniNoRicambiWarning = validateCaptureForApply({
+  fields: [
+    field("scheda_tipo", "lavorazioni"),
+    field("riga_1_lavorazione", "Cambio olio"),
+    field("riga_1_nome", "Mario"),
+    field("riga_1_ore", "2"),
+    field("riga_5_nome", "Luigi"),
+    field("riga_5_ore", "1"),
+    field("riga_12_nome", "Anna"),
+    field("riga_12_ore", "3"),
+  ],
+  magazzino,
+});
+assert.ok(!lavorazioniNoRicambiWarning.issues.some((i) => i.code === "RICAMBIO_NOT_FOUND"));
+assert.equal(lavorazioniNoRicambiWarning.ricambiRows, undefined);
 
 console.log("validate-capture-for-apply.test.ts OK");

@@ -41,7 +41,7 @@ assert.equal(suppliers.codiceLines[0], "ABC / XYZ");
 
 const a4 = getLabelTemplate("a4-pagina-intera")!;
 assert.equal(labelsPerA4Page(a4), 1);
-assert.equal(a4.layoutMode, "vertical-stack");
+assert.equal(a4.layoutMode, "horizontal-qr-left");
 assert.equal(a4.typography.weight, "bold");
 
 const template = getLabelTemplate("95x40-default")!;

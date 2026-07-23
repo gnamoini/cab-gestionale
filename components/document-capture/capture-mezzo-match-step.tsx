@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { LoadingButton } from "@/components/design-system";
 import { LoadingSpinner } from "@/components/design-system/loading";
 import { CaptureDocumentFilePreview } from "@/components/document-capture/capture-document-file-preview";
-import { CAPTURE_REVIEW_PIN_TOP_CLASS } from "@/components/document-capture/capture-review-panel";
+import { CaptureReviewSplitLayout } from "@/components/document-capture/capture-review-panel";
 import {
   describeCaptureLavorazioneAssignTarget,
   findActiveLavorazioneWithIngressoForCaptureIdent,
@@ -24,6 +24,10 @@ import {
   startManualAssign,
   type ManualAssignState,
 } from "@/lib/document-capture/capture-manual-assign-state";
+import {
+  CAPTURE_ASSIGN_CALLOUT_CLASS,
+  LavorazioneAssignLabelLines,
+} from "@/components/document-capture/capture-lavorazione-assign-label";
 import type { CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
 import { useSelectorListboxKeyboard } from "@/lib/selector-interaction/use-selector-listbox-keyboard";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -34,6 +38,9 @@ import { globalAutocompleteOptionClass } from "@/lib/ui/global-input";
 import { dsSearchFieldInput } from "@/lib/ui/design-system";
 
 const SEARCH_DEBOUNCE_MS = 180;
+
+const CAPTURE_CALLOUT_ACCENT =
+  "rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-accent)_25%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-accent)_6%,var(--cab-surface))]";
 
 function ManualAssignRowBadge({
   state,
@@ -162,7 +169,7 @@ function CaptureManualAssignPicker({
       : null;
 
   return (
-    <div className="space-y-3 rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="text-sm font-semibold text-[color:var(--cab-fg)]">Scegli lavorazione</h4>
         <span className="text-xs text-[color:var(--cab-text-muted)]">
@@ -200,7 +207,7 @@ function CaptureManualAssignPicker({
               manualAssignSelectedId(assignState) === lav.id ||
               (assignState.status === "review" && assignState.id === lav.id);
             const isActive = idx === activeIndex;
-            const primary = [parts.codice, parts.cliente].filter(Boolean).join(" — ") || labelFor(lav.id);
+            const primary = parts.headlineLine || labelFor(lav.id);
             return (
               <li key={lav.id} role="presentation">
                 <button
@@ -235,15 +242,9 @@ function CaptureManualAssignPicker({
         )}
       </ul>
       {selectedId && selectedParts ? (
-        <div className="space-y-2 rounded-md border border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-surface))] p-3">
+        <div className={`space-y-2 p-3 ${CAPTURE_ASSIGN_CALLOUT_CLASS}`}>
           <p className="text-xs font-medium text-[color:var(--cab-fg)]">Riepilogo selezione</p>
-          <p className="text-sm text-[color:var(--cab-fg)]">
-            {[selectedParts.codice, selectedParts.cliente].filter(Boolean).join(" — ") ||
-              labelFor(selectedId)}
-          </p>
-          {selectedParts.identLine ? (
-            <p className="text-xs text-[color:var(--cab-text-muted)]">{selectedParts.identLine}</p>
-          ) : null}
+          <LavorazioneAssignLabelLines parts={selectedParts} fallback={labelFor(selectedId)} />
           {assignState.status === "review" && reviewPending ? (
             <p className="text-xs text-[color:var(--cab-text-muted)]">
               Lavorazione collegata. Verifica i campi evidenziati e usa &quot;Procedi comunque&quot; per
@@ -358,18 +359,17 @@ export function CaptureMezzoMatchStep({
     setAssignState((prev) => clearManualAssignSelection(prev));
   }, [assignState.status, manualPickOpen, match]);
 
-  const suggestedLabel = match
-    ? describeCaptureLavorazioneAssignTarget(match.lavorazioneId, attive, schedeStore)
-    : "";
+  const suggestedParts = match
+    ? describeLavorazioneAssignRowParts(match.lavorazioneId, attive, schedeStore)
+    : null;
   const suggestedAssigning =
     assignBusy && match !== null && manualAssignSelectedId(assignState) === match.lavorazioneId;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
-      <div className={`lg:sticky ${CAPTURE_REVIEW_PIN_TOP_CLASS} lg:z-[1] lg:self-start`}>
-        <CaptureDocumentFilePreview captureId={captureId} pinned />
-      </div>
-      <div className="space-y-4 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-4">
+    <CaptureReviewSplitLayout
+      preview={<CaptureDocumentFilePreview captureId={captureId} pinned />}
+      review={
+        <div className="min-w-0 space-y-4">
         <div>
           <h3 className="text-sm font-semibold text-[color:var(--cab-fg)]">Conferma mezzo</h3>
           <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
@@ -380,11 +380,19 @@ export function CaptureMezzoMatchStep({
 
         {match ? (
           <div className="space-y-4">
-            <div className="space-y-3 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-accent)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-accent)_8%,var(--cab-surface))] p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-accent-fg)]">
-                ✓ Lavorazione suggerita
+            <div role="status" className={`space-y-3 p-3 sm:p-3.5 ${CAPTURE_CALLOUT_ACCENT}`}>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-accent-fg)]">
+                <span aria-hidden>✓ </span>
+                Lavorazione suggerita
               </p>
-              <p className="text-sm font-medium text-[color:var(--cab-fg)]">{suggestedLabel}</p>
+              <LavorazioneAssignLabelLines
+                parts={suggestedParts}
+                fallback={describeCaptureLavorazioneAssignTarget(match.lavorazioneId, attive, schedeStore)}
+                headlineClassName="text-sm font-medium leading-snug text-[color:var(--cab-fg)]"
+              />
+              <p className="text-xs text-[color:var(--cab-text-muted)]">
+                Identificativi coincidenti con la scheda letta.
+              </p>
               <LoadingButton
                 type="button"
                 variant="primary"
@@ -453,8 +461,9 @@ export function CaptureMezzoMatchStep({
             />
           </div>
         )}
-      </div>
-    </div>
+        </div>
+      }
+    />
   );
 }
 

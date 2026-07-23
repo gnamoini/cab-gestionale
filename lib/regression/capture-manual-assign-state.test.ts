@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   clearManualAssignSelection,
   completeManualAssignReview,
+  describeLavorazioneAssignRowParts,
   filterAttiveForManualAssign,
   manualAssignSelectedId,
   resolveInitialManualAssignState,
@@ -52,5 +53,41 @@ const stillVisible = filterAttiveForManualAssign(attive, "beta", (id) =>
 );
 assert.equal(stillVisible.length, 1);
 assert.equal(stillVisible[0]!.id, "lav-b");
+
+const parts = describeLavorazioneAssignRowParts(
+  "lav-1",
+  [
+    {
+      id: "lav-1",
+      codice: "26-0239",
+      cliente: "SI.ECO",
+      cantiere: "Tecno Industrie Urbis",
+      macchina: "CAT 320",
+      nScuderia: "TIS272312/14",
+      targa: "ZA065YX",
+      matricola: "M-001",
+    },
+  ],
+  {
+    "lav-1": {
+      ingresso: {
+        campi: {
+          cliente: "SI.ECO",
+          cantiere: "Tecno Industrie Urbis",
+          marcaAttrezzatura: "CAT",
+          modelloAttrezzatura: "320",
+          nScuderia: "TIS272312/14",
+          targa: "ZA065YX",
+          matricola: "M-001",
+        },
+      },
+    },
+  } as never,
+);
+assert.equal(parts.codice, "26-0239");
+assert.equal(parts.headlineLine, "SI.ECO · Tecno Industrie Urbis · CAT 320");
+assert.equal(parts.identLine, "TIS272312/14 · ZA065YX · M-001");
+assert.doesNotMatch(parts.headlineLine, /—/);
+assert.doesNotMatch(parts.identLine, /—/);
 
 console.log("capture-manual-assign-state.test.ts OK");

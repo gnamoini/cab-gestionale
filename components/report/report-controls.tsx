@@ -16,7 +16,7 @@ import {
   reportCompareQuickChipLabel,
 } from "@/lib/report/report-compare-options";
 import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/global-input";
-import { globalInputFieldFilter } from "@/lib/ui/global-input";
+import { GLOBAL_DATE_PICKER_CALENDAR_PANEL_WIDTH, globalInputFieldFilter } from "@/lib/ui/global-input";
 import {
   reportPeriodPanelClass,
   reportPeriodPanelHintClass,
@@ -34,9 +34,6 @@ import {
 const OVERFLOW_SELECT_ITEMS = reportPeriodPresetSelectItemsForOverflow();
 const fieldLabelClass = `${dsTypoSmall} text-[color:var(--cab-text-muted)]`;
 const reportDateInputClass = `${globalInputFieldFilter} h-10 w-full min-w-0`;
-/** 7 colonne × 36px + padding — calendario non schiacciato in toolbar stretta. */
-const REPORT_DATE_CALENDAR_PANEL_WIDTH = 300;
-
 function DateField({
   id,
   label,
@@ -56,7 +53,7 @@ function DateField({
         valueYmd={valueYmd}
         onChangeYmd={onChangeYmd}
         inputClassName={reportDateInputClass}
-        calendarPanelWidth={REPORT_DATE_CALENDAR_PANEL_WIDTH}
+        calendarPanelWidth={GLOBAL_DATE_PICKER_CALENDAR_PANEL_WIDTH}
       />
     </label>
   );

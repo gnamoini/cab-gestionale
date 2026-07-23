@@ -7,6 +7,7 @@ import {
   formatCaptureReviewDraftValue,
   formatCaptureTargaValue,
   inferCaptureMultilineBreaks,
+  joinSpuriousWorkshopLineBreaks,
   isCaptureMultilineFieldKey,
   isCapturePersonNameFieldKey,
   isCaptureTargaFieldKey,
@@ -84,6 +85,7 @@ assert.equal(
 assert.equal(formatCaptureReviewDraftValue("targa", "xy 999 zz"), "XY999ZZ");
 assert.equal(formatCaptureReviewDraftValue("riga_1_nome", "mario b.", { addettiRecords: addetti }), "Mario Bianchi");
 assert.equal(isCaptureMultilineFieldKey("descrizione_anomalia"), true);
+assert.equal(isCaptureMultilineFieldKey("riga_1_lavorazione"), true);
 assert.equal(isCaptureMultilineFieldKey("cliente"), false);
 
 assert.equal(
@@ -132,6 +134,31 @@ assert.match(polishCaptureWorkshopOcrText("xn. 2 valvole"), /n\. 2 valvole/);
 assert.equal(
   inferCaptureMultilineBreaks("riga uno. Riga due"),
   "riga uno.\nRiga due",
+);
+
+assert.equal(
+  joinSpuriousWorkshopLineBreaks("SOSTITUZIONE PORTAFUSIBILI\nE NEL VANO BATTERIE"),
+  "SOSTITUZIONE PORTAFUSIBILI e NEL VANO BATTERIE",
+);
+
+assert.equal(
+  formatCaptureMultilineText("SOSTITUZIONE N° 2 PORTAFUSIBILI + 2 FUSIBILI 40 AMP.\nE NEL VANO BATTERIE"),
+  "Sostituzione N° 2 portafusibili + 2 fusibili 40 amp. e nel vano batterie",
+);
+
+assert.equal(
+  formatCaptureMultilineText("RICERCO GUASTO SU IMP. ELETTRICO INNESTO PTO"),
+  "Ricerco guasto su imp. elettrico innesto pto",
+);
+
+assert.equal(
+  formatCaptureMultilineText("APERTURA CENTRALINA E QUADRO IN CABINA"),
+  "Apertura centralina e quadro in cabina",
+);
+
+assert.equal(
+  inferCaptureMultilineBreaks("IMP. ELETTRICO INNESTO PTO"),
+  "IMP. ELETTRICO INNESTO PTO",
 );
 
 assert.equal(

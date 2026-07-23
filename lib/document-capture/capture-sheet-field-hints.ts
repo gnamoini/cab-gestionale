@@ -1,5 +1,9 @@
-import type { CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
-import { resolveRawFieldValue } from "@/lib/document-capture/capture-field-mapper";
+import {
+  parseCaptureLavorazioneDateValue,
+  resolveCaptureRicambioRowText,
+  resolveRawFieldValue,
+  type CaptureFieldRow,
+} from "@/lib/document-capture/capture-field-mapper";
 import {
   captureFieldRowsToOcrBaseline,
   type CaptureFieldPatch,
@@ -20,6 +24,13 @@ function fieldConfidence(rows: readonly CaptureFieldRow[], fieldKey: string): nu
   return typeof c === "number" ? c : undefined;
 }
 
+function isCaptureOreOcrReadable(raw: string): boolean {
+  const t = raw.trim();
+  if (!t) return false;
+  const n = Number.parseFloat(t.replace(",", "."));
+  return Number.isFinite(n) && n >= 0;
+}
+
 export function buildCaptureLavorazioniCompileData(input: {
   fieldRows: readonly CaptureFieldRow[];
   fields: SchedaLavorazioniFields;
@@ -37,8 +48,33 @@ export function buildCaptureLavorazioniCompileData(input: {
   input.fields.righe.forEach((row, idx) => {
     const n = idx + 1;
     const nomeKey = `riga_${n}_nome`;
+    const dataKey = `riga_${n}_data`;
+    const oreKey = `riga_${n}_ore`;
+    const hasRowContent = Boolean(row.lavorazioniEffettuate.trim());
+    const dataOcrRaw = resolveRawFieldValue(input.fieldRows, dataKey).trim();
+    const nomeOcrRaw = resolveRawFieldValue(input.fieldRows, nomeKey).trim();
+    const oreOcrRaw = resolveRawFieldValue(input.fieldRows, oreKey).trim();
     const nomeRaw = row.addettiAssegnati?.[0]?.addetto?.trim() ?? "";
-    if (nomeRaw && input.addettiRecords?.length) {
+    const oreValue = row.addettiAssegnati?.[0]?.oreImpiegate ?? 0;
+    const rowHasAddettoMeta = Boolean(nomeOcrRaw || nomeRaw || oreOcrRaw);
+
+    if (hasRowContent && !row.dataLavorazione.trim()) {
+      hints[dataKey] = {
+        tone: "catalog",
+        message: dataOcrRaw
+          ? "Data non riconosciuta dalla scansione."
+          : "Data non letta dalla scansione.",
+        meta: { fieldKey: dataKey, source: "ocr", status: "WARNING" },
+      };
+    }
+
+    if (hasRowContent && nomeOcrRaw && !nomeRaw) {
+      hints[nomeKey] = {
+        tone: "catalog",
+        message: "Addetto non riconosciuto dalla scansione.",
+        meta: { fieldKey: nomeKey, source: "ocr", status: "WARNING" },
+      };
+    } else if (nomeRaw && input.addettiRecords?.length) {
       const rec = findAddettoByStoredName(input.addettiRecords, nomeRaw);
       if (!rec) {
         hints[nomeKey] = {
@@ -47,7 +83,32 @@ export function buildCaptureLavorazioniCompileData(input: {
           meta: { fieldKey: nomeKey, source: "ocr", status: "WARNING" },
         };
       }
+    } else if (hasRowContent && rowHasAddettoMeta && !nomeRaw && !nomeOcrRaw) {
+      hints[nomeKey] = {
+        tone: "catalog",
+        message: "Addetto non letto dalla scansione.",
+        meta: { fieldKey: nomeKey, source: "ocr", status: "WARNING" },
+      };
     }
+
+    if (hasRowContent && rowHasAddettoMeta) {
+      if (oreOcrRaw && !isCaptureOreOcrReadable(oreOcrRaw)) {
+        hints[oreKey] = {
+          tone: "catalog",
+          message: "Ore non riconosciute dalla scansione.",
+          meta: { fieldKey: oreKey, source: "ocr", status: "WARNING" },
+        };
+      } else if (oreValue <= 0) {
+        hints[oreKey] = {
+          tone: "catalog",
+          message: oreOcrRaw
+            ? "Ore non riconosciute dalla scansione."
+            : "Ore non lette dalla scansione.",
+          meta: { fieldKey: oreKey, source: "ocr", status: "WARNING" },
+        };
+      }
+    }
+
     const conf = fieldConfidence(input.fieldRows, `riga_${n}_lavorazione`);
     if (conf !== undefined && conf < minConf && row.lavorazioniEffettuate.trim()) {
       hints[`riga_${n}_lavorazione`] = {
@@ -65,6 +126,7 @@ export function buildCaptureRicambiCompileData(input: {
   fieldRows: readonly CaptureFieldRow[];
   fields: SchedaRicambiFields;
   magazzino?: readonly RicambioMagazzino[];
+  addettiRecords?: readonly AddettoRecord[];
   minConfidence?: number;
 }): {
   fields: SchedaRicambiFields;
@@ -76,10 +138,55 @@ export function buildCaptureRicambiCompileData(input: {
   const ocrBaseline = captureFieldRowsToOcrBaseline(input.fieldRows);
   const resolutions =
     input.magazzino?.length ? resolveRicambiRowsFromCaptureFields(input.fieldRows, input.magazzino) : [];
+  const magById = new Map((input.magazzino ?? []).map((m) => [m.id, m]));
 
   input.fields.righe.forEach((row, idx) => {
     const n = idx + 1;
     const codiceKey = `riga_${n}_codice`;
+    const descrizioneKey = `riga_${n}_descrizione`;
+    const nomeKey = `riga_${n}_nome`;
+    const dataKey = `riga_${n}_data`;
+    const hasRowContent = Boolean(
+      row.ricambioNome.trim() || row.codice.trim() || row.addetto.trim() || row.quantita > 0,
+    );
+    const dataOcrRaw = resolveRawFieldValue(input.fieldRows, dataKey).trim();
+    const nomeOcrRaw = resolveRawFieldValue(input.fieldRows, nomeKey).trim();
+    const descrizioneOcrRaw = resolveRawFieldValue(input.fieldRows, descrizioneKey).trim();
+    const addettoRaw = row.addetto.trim();
+    const parsedAddetto = resolveCaptureRicambioRowText(
+      nomeOcrRaw,
+      descrizioneOcrRaw,
+      input.addettiRecords,
+    ).addetto.trim();
+    const effectiveAddetto = addettoRaw || parsedAddetto;
+
+    if (hasRowContent && !row.dataUtilizzo.trim()) {
+      hints[dataKey] = {
+        tone: "catalog",
+        message: dataOcrRaw
+          ? "Data non riconosciuta dalla scansione."
+          : "Data non letta dalla scansione.",
+        meta: { fieldKey: dataKey, source: "ocr", status: "WARNING" },
+      };
+    }
+
+    if (hasRowContent && !effectiveAddetto) {
+      hints[nomeKey] = {
+        tone: "catalog",
+        message: "Addetto non letto dalla scansione.",
+        meta: { fieldKey: nomeKey, source: "ocr", status: "WARNING" },
+      };
+    } else if (effectiveAddetto && input.addettiRecords?.length) {
+      const rec = findAddettoByStoredName(input.addettiRecords, effectiveAddetto);
+      if (!rec) {
+        hints[nomeKey] = {
+          tone: "catalog",
+          message: "Addetto non trovato in anagrafica",
+          meta: { fieldKey: nomeKey, source: "ocr", status: "WARNING" },
+        };
+      }
+    }
+
     const resolved = resolutions.find((r) => r.rowIndex === n);
     if (resolved?.status === "NOT_FOUND" && row.codice.trim()) {
       hints[codiceKey] = {
@@ -94,12 +201,34 @@ export function buildCaptureRicambiCompileData(input: {
         meta: { fieldKey: codiceKey, source: "ocr", status: "WARNING" },
       };
     }
-    const conf = fieldConfidence(input.fieldRows, codiceKey);
-    if (conf !== undefined && conf < minConf && row.codice.trim()) {
+
+    if (resolved?.status === "MATCHED" && resolved.ricambioId && row.ricambioNome.trim()) {
+      const magItem = magById.get(resolved.ricambioId);
+      const magDesc = (magItem?.descrizione ?? "").trim().toLowerCase();
+      const rowDesc = row.ricambioNome.trim().toLowerCase();
+      if (magDesc && rowDesc && magDesc !== rowDesc) {
+        hints[descrizioneKey] = {
+          tone: "catalog",
+          message: "Descrizione diversa da magazzino",
+          meta: { fieldKey: descrizioneKey, source: "ocr", status: "WARNING" },
+        };
+      }
+    }
+
+    const codiceConf = fieldConfidence(input.fieldRows, codiceKey);
+    if (codiceConf !== undefined && codiceConf < minConf && row.codice.trim()) {
       hints[codiceKey] = {
         tone: "suggested",
-        message: `Confidence bassa (${Math.round(conf * 100)}%)`,
-        meta: { fieldKey: codiceKey, source: "ocr", confidence: conf, status: "WARNING" },
+        message: `Confidence bassa (${Math.round(codiceConf * 100)}%)`,
+        meta: { fieldKey: codiceKey, source: "ocr", confidence: codiceConf, status: "WARNING" },
+      };
+    }
+    const descConf = fieldConfidence(input.fieldRows, descrizioneKey);
+    if (descConf !== undefined && descConf < minConf && row.ricambioNome.trim()) {
+      hints[descrizioneKey] = {
+        tone: "suggested",
+        message: `Confidence bassa (${Math.round(descConf * 100)}%)`,
+        meta: { fieldKey: descrizioneKey, source: "ocr", confidence: descConf, status: "WARNING" },
       };
     }
   });
@@ -132,6 +261,26 @@ export function reconcileCaptureSheetHintAfterEdit(
   if (hint.tone === "catalog" && fieldKey.includes("_nome") && opts?.addettiRecords?.length && trimmed) {
     if (findAddettoByStoredName(opts.addettiRecords, trimmed)) return null;
   }
+  if (hint.tone === "catalog" && fieldKey.includes("_descrizione") && opts?.magazzino?.length) {
+    const rowIndex = Number.parseInt(fieldKey.match(/riga_(\d+)_/)?.[1] ?? "0", 10);
+    if (rowIndex > 0 && trimmed) {
+      const fakeRows: CaptureFieldRow[] = [
+        { field_key: `riga_${rowIndex}_descrizione`, confirmed_value: trimmed, normalized_value: trimmed },
+      ];
+      const res = resolveRicambiRowsFromCaptureFields(fakeRows, opts.magazzino);
+      const mag = res[0]?.ricambioId ? opts.magazzino.find((m) => m.id === res[0]!.ricambioId) : null;
+      if (mag?.descrizione?.trim().toLowerCase() === trimmed.toLowerCase()) return null;
+    }
+  }
+  if (hint.tone === "catalog" && fieldKey.includes("_data")) {
+    if (trimmed && parseCaptureLavorazioneDateValue(trimmed)) return null;
+    return { ...hint, meta: { ...hint.meta, source: trimmed ? "user" : hint.meta.source, status: "WARNING" } };
+  }
+  if (hint.tone === "catalog" && fieldKey.includes("_ore")) {
+    const n = Number.parseFloat(trimmed.replace(",", "."));
+    if (Number.isFinite(n) && n > 0) return null;
+    return { ...hint, meta: { ...hint.meta, source: trimmed ? "user" : hint.meta.source, status: "WARNING" } };
+  }
   if (!trimmed && hint.meta.status === "WARNING") return null;
   return {
     ...hint,
@@ -162,6 +311,7 @@ export function captureSheetHintsFromRows(
     fieldRows,
     fields: fields as SchedaRicambiFields,
     magazzino: opts?.magazzino,
+    addettiRecords: opts?.addettiRecords,
   }).hints;
 }
 

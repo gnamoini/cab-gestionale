@@ -85,6 +85,12 @@ withEnv({}, () => {
   );
 });
 
+withEnv({ VERCEL_URL: "cab-gestionale.vercel.app" }, () => {
+  const origin = canonicalSiteOriginString(requestWith("http://localhost:3000/foo"));
+  assert.equal(origin, "https://cab-gestionale.vercel.app");
+  assert.ok(!origin.includes("localhost"));
+});
+
 withEnv(
   {
     VERCEL_PROJECT_PRODUCTION_URL: "cab-gestionale.vercel.app",

@@ -3,6 +3,7 @@ import {
   mapCaptureFieldsToIngresso,
   mapCaptureHeaderToIngressoSlice,
 } from "@/lib/document-capture/capture-field-mapper";
+import { describeLavorazioneAssignLabel } from "@/lib/document-capture/capture-manual-assign-state";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { hasSchedaIngressoIdentLookup } from "@/lib/schede/scheda-ingresso-reuse";
@@ -258,19 +259,7 @@ export function describeCaptureLavorazioneAssignTarget(
   attive: readonly LavorazioneAttiva[],
   schedeStore: LavorazioneSchedeStore,
 ): string {
-  const lav = attive.find((row) => row.id === lavorazioneId);
-  const campi = schedeStore[lavorazioneId]?.ingresso?.campi;
-  const parts: string[] = [];
-  if (lav?.codice?.trim()) parts.push(`lavorazione ${lav.codice.trim()}`);
-  const cliente = safeStr(campi?.cliente) || safeStr(lav?.cliente);
-  if (cliente) parts.push(cliente);
-  const macchina = safeStr(lav?.macchina);
-  if (macchina) parts.push(macchina);
-  const identBits = [campi?.targa, campi?.matricola, campi?.nScuderia, campi?.vin]
-    .map((v) => safeStr(v))
-    .filter((v) => v && v !== "—");
-  if (identBits.length) parts.push(identBits.join(" · "));
-  return parts.length > 0 ? parts.join(" — ") : "lavorazione in corso";
+  return describeLavorazioneAssignLabel(lavorazioneId, attive, schedeStore);
 }
 
 /** Lavorazione in corso con identificativi corrispondenti (scoring multi-sorgente). */

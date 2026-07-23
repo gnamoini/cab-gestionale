@@ -102,6 +102,8 @@ export type RigaRicambioScheda = {
   dataUtilizzo: string;
   /** Se è stato applicato scarico magazzino da questa riga. */
   scaricoMagazzinoApplicato?: boolean;
+  /** Intento scarico in capture: applicato solo dopo Conferma import. */
+  scaricoMagazzinoRichiesto?: boolean;
 };
 
 export type SchedaRicambiFields = {

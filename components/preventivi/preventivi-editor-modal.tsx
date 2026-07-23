@@ -64,7 +64,13 @@ import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-me
 import type { SchedaIngressoFields } from "@/types/schede";
 import { GlobalDatePickerYmd } from "@/components/gestionale/global-input";
 import { PDF_PREVENTIVO_IVA_PERCENT } from "@/lib/pdf/preventivo-pdf-layout";
+import { LavorazioneAssignLabelLines } from "@/components/document-capture/capture-lavorazione-assign-label";
+import {
+  describeLavorazioneAssignRowParts,
+  describeLavorazioneAssignRowPartsFromCampi,
+} from "@/lib/document-capture/capture-manual-assign-state";
 import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
+import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
 import { DdtDetailDrawer } from "@/components/ddt/ddt-detail-drawer";
 import { DdtPreventivoPanel } from "@/components/ddt/ddt-preventivo-panel";
 import { buildDdtDraftFromPreventivoAuto } from "@/lib/ddt/preventivo-to-ddt-draft";
@@ -246,11 +252,28 @@ export function PreventiviEditorModal({
 
   const mezziListQ = useMezziListQuery(undefined, { enabled: open, staleTime: 30_000 });
   const mezziCatalog = mezziListQ.data ?? [];
+  const linkedLavorazioneId = draft?.lavorazioneId?.trim() ?? "";
+  const lavorazioniListQ = useLavorazioniReportSlice({
+    mezziRows: mezziCatalog,
+    enabled: open && Boolean(linkedLavorazioneId),
+    staleTime: 30_000,
+  });
 
   const anagraficaFields = useMemo(
     () => (draft ? preventivoToSchedaIngressoSlice(draft) : null),
     [draft],
   );
+
+  const linkedLavorazioneParts = useMemo(() => {
+    if (!linkedLavorazioneId) return null;
+    const rows = lavorazioniListQ.data ?? [];
+    const lav = rows.find((row) => row.id === linkedLavorazioneId);
+    if (lav) {
+      return describeLavorazioneAssignRowParts(linkedLavorazioneId, rows, {});
+    }
+    const codice = lavorazioneDisplayCodice({ id: linkedLavorazioneId });
+    return describeLavorazioneAssignRowPartsFromCampi(codice, anagraficaFields ?? undefined);
+  }, [anagraficaFields, linkedLavorazioneId, lavorazioniListQ.data]);
 
   const setAnagraficaFields = useCallback(
     (next: SchedaIngressoFields) => {
@@ -654,17 +677,15 @@ export function PreventiviEditorModal({
                 {draft.lavorazioneId.trim() ? (
                   <div className="space-y-1.5">
                     <h3 className={preventivoEditorSubsectionTitle}>Lavorazione collegata</h3>
-                    <p className={preventivoEditorBody}>
-                      <span className="font-medium tabular-nums">
-                        {lavorazioneDisplayCodice({ id: draft.lavorazioneId })}
-                      </span>
-                      {draft.lavorazioneOrigine === "storico" ? (
-                        <span className={`ml-2 ${preventivoEditorHint}`}>(archivio)</span>
-                      ) : null}
-                      {draft.macchinaRiassunto.trim() ? (
-                        <span className={`mt-1 block ${preventivoEditorHint}`}>{draft.macchinaRiassunto.trim()}</span>
-                      ) : null}
-                    </p>
+                    <LavorazioneAssignLabelLines
+                      parts={linkedLavorazioneParts}
+                      fallback={draft.macchinaRiassunto.trim() || undefined}
+                      headlineClassName={`${preventivoEditorBody} font-medium leading-snug`}
+                      identClassName={preventivoEditorHint}
+                    />
+                    {draft.lavorazioneOrigine === "storico" ? (
+                      <p className={preventivoEditorHint}>(archivio)</p>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

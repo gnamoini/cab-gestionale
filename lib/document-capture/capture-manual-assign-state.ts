@@ -1,4 +1,4 @@
-import type { LavorazioneSchedeStore } from "@/types/schede";
+import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 
 /** SSOT transizioni assegnazione manuale lavorazione (capture modal). */
 export type ManualAssignState =
@@ -50,27 +50,80 @@ export function clearManualAssignSelection(state: ManualAssignState): ManualAssi
 
 export type LavorazioneAssignRowParts = {
   codice: string;
-  cliente: string;
+  /** Cliente · cantiere · marca modello attrezzatura */
+  headlineLine: string;
+  /** N. scuderia · targa · matricola */
   identLine: string;
 };
 
+const ASSIGN_LABEL_SEP = " · ";
+
+function assignLabelSegment(value: string | null | undefined): string {
+  const t = (value ?? "").trim();
+  return t && t !== "—" ? t : "";
+}
+
+function joinAssignLabelParts(...parts: string[]): string {
+  return parts.map(assignLabelSegment).filter(Boolean).join(ASSIGN_LABEL_SEP);
+}
+
+function resolveMarcaModelloAttrezzatura(
+  campi: SchedaIngressoFields | undefined,
+  lav: { macchina?: string | null } | undefined,
+): string {
+  const marca = assignLabelSegment(campi?.marcaAttrezzatura);
+  const modello = assignLabelSegment(campi?.modelloAttrezzatura);
+  const mm = [marca, modello].filter(Boolean).join(" ").trim();
+  return mm || assignLabelSegment(lav?.macchina);
+}
+
+type LavorazioneAssignLavFallback = {
+  cliente?: string | null;
+  macchina?: string | null;
+  cantiere?: string | null;
+  targa?: string | null;
+  matricola?: string | null;
+  nScuderia?: string | null;
+};
+
+export function describeLavorazioneAssignRowPartsFromCampi(
+  codice: string,
+  campi: SchedaIngressoFields | undefined,
+  lav?: LavorazioneAssignLavFallback | null,
+): LavorazioneAssignRowParts {
+  const cliente = assignLabelSegment(campi?.cliente) || assignLabelSegment(lav?.cliente);
+  const cantiere = assignLabelSegment(campi?.cantiere) || assignLabelSegment(lav?.cantiere);
+  const marcaModello = resolveMarcaModelloAttrezzatura(campi, lav ?? undefined);
+  const scuderia = assignLabelSegment(campi?.nScuderia) || assignLabelSegment(lav?.nScuderia);
+  const targa = assignLabelSegment(campi?.targa) || assignLabelSegment(lav?.targa);
+  const matricola = assignLabelSegment(campi?.matricola) || assignLabelSegment(lav?.matricola);
+  return {
+    codice: codice.trim(),
+    headlineLine: joinAssignLabelParts(cliente, cantiere, marcaModello),
+    identLine: joinAssignLabelParts(scuderia, targa, matricola),
+  };
+}
+
 export function describeLavorazioneAssignRowParts(
   lavorazioneId: string,
-  attive: readonly { id: string; codice?: string | null; cliente?: string | null; macchina?: string | null }[],
+  attive: readonly ({ id: string; codice?: string | null } & LavorazioneAssignLavFallback)[],
   schedeStore: LavorazioneSchedeStore,
 ): LavorazioneAssignRowParts {
   const lav = attive.find((row) => row.id === lavorazioneId);
   const campi = schedeStore[lavorazioneId]?.ingresso?.campi;
   const codice = lav?.codice?.trim() ?? "";
-  const cliente = (campi?.cliente?.trim() || lav?.cliente?.trim()) ?? "";
-  const identBits = [campi?.targa, campi?.matricola, campi?.nScuderia, lav?.macchina]
-    .map((v) => (typeof v === "string" ? v.trim() : ""))
-    .filter((v) => v && v !== "—");
-  return {
-    codice,
-    cliente,
-    identLine: identBits.join(" · "),
-  };
+  return describeLavorazioneAssignRowPartsFromCampi(codice, campi, lav);
+}
+
+/** Etichetta piatta per ricerca, toast e conferme (segmenti uniti con ·). */
+export function describeLavorazioneAssignLabel(
+  lavorazioneId: string,
+  attive: Parameters<typeof describeLavorazioneAssignRowParts>[1],
+  schedeStore: LavorazioneSchedeStore,
+): string {
+  const parts = describeLavorazioneAssignRowParts(lavorazioneId, attive, schedeStore);
+  const flat = [parts.headlineLine, parts.identLine].filter(Boolean).join(ASSIGN_LABEL_SEP);
+  return flat || "lavorazione in corso";
 }
 
 export function filterAttiveForManualAssign(

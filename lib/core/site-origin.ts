@@ -40,6 +40,15 @@ function originFromForwardedHeaders(request: Request): string | null {
   return new URL(`${proto}://${host}`).origin;
 }
 
+function isLoopbackOrigin(origin: string): boolean {
+  try {
+    const host = new URL(origin).hostname;
+    return host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host.endsWith(".localhost");
+  } catch {
+    return false;
+  }
+}
+
 /** SSOT per origin pubblico dell'app (QR, email, webhook, deep link, metadata). */
 export function resolveCanonicalSiteOrigin(request?: Request): URL {
   const fromEnv = originFromEnv();
@@ -50,7 +59,10 @@ export function resolveCanonicalSiteOrigin(request?: Request): URL {
     if (fromForwarded) return new URL(fromForwarded);
 
     try {
-      return new URL(new URL(request.url).origin);
+      const reqOrigin = new URL(request.url).origin;
+      if (!isLoopbackOrigin(reqOrigin)) {
+        return new URL(reqOrigin);
+      }
     } catch {
       // ponytail: malformed request.url — fall through to localhost
     }

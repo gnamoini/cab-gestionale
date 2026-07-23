@@ -105,6 +105,7 @@ import {
 import { resolveLavorazioneListRowForSchedeOpen } from "@/lib/document-capture/resolve-lavorazione-list-row-for-schede.client";
 import type {
   CaptureSchedeOpenRequest,
+  CaptureViewExistingSchedaRequest,
   LavorazioniCapturePageDropHandle,
 } from "@/components/document-capture/lavorazioni-digital-capture-launcher";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
@@ -1416,6 +1417,31 @@ export function LavorazioniView() {
     [attiveQuery, attiveRows, authorName, createdBy, gestToast, globalOpts.lavorazioni.addettiRecords, magazzinoQuery.data, schedeStore],
   );
 
+  const onViewExistingScheda = useCallback(
+    async (req: CaptureViewExistingSchedaRequest): Promise<boolean> => {
+      const row = await resolveLavorazioneListRowForSchedeOpen(
+        req.lavorazioneId,
+        attiveRows,
+        () =>
+          attiveQuery.refetch() as Promise<{ data?: readonly LavorazioneListRow[] } | void>,
+      );
+      if (!row) {
+        gestToast.error("Lavorazione in corso non trovata. Aggiorna l'elenco e riprova.");
+        return false;
+      }
+      setSchedeRow({
+        row,
+        origine: "attiva",
+        initialTab: "schede",
+        dialogSize: "hub",
+        initialSchedaStage:
+          req.schedaTipo === "ingresso" ? undefined : req.schedaTipo,
+      });
+      return true;
+    },
+    [attiveQuery, attiveRows, gestToast],
+  );
+
   const onOpenArchivioInfo = useCallback((row: LavorazioneListRow) => {
     setSchedeRow({ row, origine: "storico", initialTab: "panoramica", dialogSize: "compact" });
   }, []);
@@ -2156,6 +2182,7 @@ export function LavorazioniView() {
             }
           }}
           onOpenSchedeFromCapture={onOpenSchedeFromCapture}
+          onViewExistingScheda={onViewExistingScheda}
           captureMezzi={mezziCatalog}
           captureSchedeStore={schedeStore}
           captureAttive={attiveLegacyRows}

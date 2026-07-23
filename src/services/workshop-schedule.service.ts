@@ -9,6 +9,7 @@ import { enrichedViewFromRows } from "@/lib/workshop-schedule/workshop-schedule-
 import type { WorkshopScheduleDbRow } from "@/lib/workshop-schedule/workshop-schedule-db-mapper";
 import { mapDbRowToSession } from "@/lib/workshop-schedule/workshop-schedule-db-mapper";
 import { enrichSessionView, type LavorazioneProjectionRow } from "@/lib/workshop-schedule/workshop-schedule-projection";
+import { lavorazioniMezziEmbedSelect } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import { serviceFailFromError, errMessageFromSupabase } from "@/src/utils/supabaseErrorHandler";
@@ -60,14 +61,14 @@ async function fetchWorkOrderProjections(ids: string[]): Promise<Map<string, Lav
   const c = await sb();
   const { data, error } = await c
     .from("lavorazioni")
-    .select("id, codice, stato, addetto, mezzi(targa, marca, modello, cliente)")
+    .select(`id, codice, stato, addetto, ${lavorazioniMezziEmbedSelect("targa, marca, modello, cliente")}`)
     .in("id", unique)
     .is("deleted_at", null);
   if (error || !data) {
     console.warn("[workshop-schedule] fetchWorkOrderProjections failed:", error?.message ?? "no data");
     return map;
   }
-  for (const row of data as Array<{
+  for (const row of data as unknown as Array<{
     id: string;
     codice?: string | null;
     stato?: string | null;

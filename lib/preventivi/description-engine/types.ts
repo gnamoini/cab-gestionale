@@ -124,6 +124,8 @@ export type DescriptionEngineInput = {
   autore?: string;
   /** Snapshot pubblicato (da API server); evita seed in-memory. */
   publishedSnapshot?: import("@/lib/domain/technical-knowledge-base").TkbPublishedSnapshot;
+  /** Righe grezze scheda lavorazioni (prioritarie sul technicalBlob). */
+  lavorazioniLines?: readonly string[];
   /** ponytail: opt-in via NEXT_PUBLIC_TDE_AI_POLISH=1 + polishFn esplicito */
   aiPolishFn?: (texts: string[]) => string[];
 };

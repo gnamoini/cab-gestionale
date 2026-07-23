@@ -117,6 +117,8 @@ export const dsShellNavIconBtn = [
   "border border-transparent bg-transparent p-0 text-[color:var(--cab-text)]",
   "transition-[color,transform] duration-200 ease-out",
   "hover:text-[color:color-mix(in_srgb,var(--cab-primary)_82%,var(--cab-text))]",
+  "focus:outline-none focus:ring-0 focus:text-[color:var(--cab-text)]",
+  "focus:[&_svg]:scale-100 focus:[&_svg]:drop-shadow-none",
   "focus-visible:text-[color:color-mix(in_srgb,var(--cab-primary)_82%,var(--cab-text))]",
   "active:scale-[0.97]",
   "[&_svg]:transition-[transform,filter,opacity] [&_svg]:duration-200 [&_svg]:ease-out",
@@ -125,7 +127,7 @@ export const dsShellNavIconBtn = [
   "hover:[&_svg_path]:[stroke-width:2.25] focus-visible:[&_svg_path]:[stroke-width:2.25]",
   "motion-reduce:hover:[&_svg]:scale-100 motion-reduce:hover:[&_svg]:drop-shadow-none motion-reduce:focus-visible:[&_svg]:scale-100",
   dsBtnCursor,
-  dsFocus,
+  dsFocusRing,
 ].join(" ");
 
 /** Icona ghost header mobile — alias `dsShellNavIconBtn`. */

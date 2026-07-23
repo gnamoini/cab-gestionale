@@ -2,8 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CaptureDocumentFilePreview } from "@/components/document-capture/capture-document-file-preview";
-import { CAPTURE_REVIEW_PIN_TOP_CLASS } from "@/components/document-capture/capture-review-panel";
-import { CaptureReviewPanelLoading } from "@/components/document-capture/capture-review-panel";
+import { CaptureReviewPanelLoading, CaptureReviewSplitLayout } from "@/components/document-capture/capture-review-panel";
 import {
   SchedaIngressoFormBody,
 } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
@@ -20,7 +19,7 @@ import type { CaptureIngressoCompileDraft } from "@/lib/document-capture/capture
 import { mergeSchedaIngressoFields } from "@/lib/schede/scheda-ingresso-reuse";
 import type { LavorazioneArchiviata, LavorazioneAttiva, PrioritaLav } from "@/lib/lavorazioni/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
+import type { LavorazioneSchedeStore, SchedaIngressoFields, SchedaTipo } from "@/types/schede";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { useLavorazioneCreateSubmit } from "@/src/hooks/use-lavorazione-create-submit";
@@ -28,6 +27,9 @@ import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { LoadingSpinner } from "@/components/design-system/loading";
 import { CaptureApplyRecoveryBanner } from "@/components/document-capture/capture-apply-recovery-banner";
 import { CaptureApplyReviewBanner } from "@/components/document-capture/capture-apply-review-banner";
+import { CaptureExistingSchedaConfirmDialog } from "@/components/document-capture/capture-existing-scheda-confirm-dialog";
+import { describeCaptureLavorazioneAssignTarget } from "@/lib/document-capture/capture-lavorazione-match";
+import { lavorazioneHasExistingScheda } from "@/lib/document-capture/capture-existing-scheda-presence";
 import { useCaptureApplyFlow } from "@/lib/document-capture/use-capture-apply-flow";
 import type { ValidateCaptureResult } from "@/lib/document-capture/validation/validate-capture-for-apply";
 
@@ -67,11 +69,7 @@ const CaptureCompileDocumentPreview = memo(function CaptureCompileDocumentPrevie
 }: {
   captureId: string;
 }) {
-  return (
-    <div className={`lg:sticky ${CAPTURE_REVIEW_PIN_TOP_CLASS} lg:z-[1] lg:self-start`}>
-      <CaptureDocumentFilePreview captureId={captureId} pinned />
-    </div>
-  );
+  return <CaptureDocumentFilePreview captureId={captureId} pinned />;
 });
 
 export function CaptureSchedaCompileStep({
@@ -88,7 +86,9 @@ export function CaptureSchedaCompileStep({
   onCreated,
   onCompileError,
   applyMode = false,
+  assignLavorazioneId = null,
   onApplySuccess,
+  onViewExistingScheda,
   resumeIngressoCompile = null,
   onIngressoCompileChange,
   onSubmitBusyChange,
@@ -107,7 +107,9 @@ export function CaptureSchedaCompileStep({
   onCompileError?: (message: string) => void;
   /** Single Apply Engine — dry-run → apply invece di create diretto. */
   applyMode?: boolean;
+  assignLavorazioneId?: string | null;
   onApplySuccess?: (lavorazioneId: string) => void;
+  onViewExistingScheda?: (lavorazioneId: string, schedaTipo: SchedaTipo) => void | Promise<boolean>;
   resumeIngressoCompile?: CaptureIngressoCompileDraft | null;
   onIngressoCompileChange?: (snapshot: CaptureIngressoCompileDraft) => void;
   onSubmitBusyChange?: (busy: boolean) => void;
@@ -118,6 +120,8 @@ export function CaptureSchedaCompileStep({
   const [captureHints, setCaptureHints] = useState<
     Partial<Record<keyof SchedaIngressoFields, CaptureIngressoFieldHint>>
   >({});
+  const [existingSchedaPromptOpen, setExistingSchedaPromptOpen] = useState(false);
+  const pendingApplyRef = useRef<(() => Promise<void>) | null>(null);
 
   const applyFlow = useCaptureApplyFlow(applyMode ? captureId : null);
   const gestToast = useGestionaleToast();
@@ -155,6 +159,21 @@ export function CaptureSchedaCompileStep({
     sharedMezziCatalog,
     onCreated,
   });
+
+  const createFieldsRef = useRef(create.fields);
+  createFieldsRef.current = create.fields;
+  const createMetaRef = useRef({
+    stato: create.stato,
+    priorita: create.priorita,
+    mezzoId: create.mezzoId,
+  });
+  createMetaRef.current = {
+    stato: create.stato,
+    priorita: create.priorita,
+    mezzoId: create.mezzoId,
+  };
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
 
   const submitBusy = applyMode ? applyFlow.busy : create.pending;
 
@@ -206,7 +225,14 @@ export function CaptureSchedaCompileStep({
         },
       });
     }, COMPILE_DRAFT_DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      if (!onIngressoCompileChange || loadingRef.current || !compileData) return;
+      onIngressoCompileChange({
+        fields: createFieldsRef.current,
+        meta: createMetaRef.current,
+      });
+    };
   }, [
     compileData,
     create.fields,
@@ -326,6 +352,36 @@ export function CaptureSchedaCompileStep({
     [applyFlow, create.gateSave, create.priorita, create.stato, onApplySuccess],
   );
 
+  const requestIngressoApply = useCallback(
+    (opts?: { forceReview?: boolean }) => {
+      const linkedLavorazioneId = assignLavorazioneId?.trim();
+      const run = async () => {
+        try {
+          await applyFromIngressoWithGate(opts);
+        } catch (err) {
+          if (err instanceof Error && err.message === "REVIEW_REQUIRED") return;
+          onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");
+        }
+      };
+      if (
+        linkedLavorazioneId &&
+        lavorazioneHasExistingScheda(schedeStore, linkedLavorazioneId, "ingresso")
+      ) {
+        pendingApplyRef.current = run;
+        setExistingSchedaPromptOpen(true);
+        return;
+      }
+      void run();
+    },
+    [applyFromIngressoWithGate, assignLavorazioneId, onCompileError, schedeStore],
+  );
+
+  const existingSchedaTargetLabel = useMemo(() => {
+    const lavId = assignLavorazioneId?.trim();
+    if (!lavId) return "";
+    return describeCaptureLavorazioneAssignTarget(lavId, attive, schedeStore);
+  }, [assignLavorazioneId, attive, schedeStore]);
+
   const handleSubmitAttempt = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       if (!compileData) return;
@@ -339,27 +395,22 @@ export function CaptureSchedaCompileStep({
       }
       if (applyMode) {
         e.preventDefault();
-        void (async () => {
-          try {
-            await applyFromIngressoWithGate();
-          } catch (err) {
-            if (err instanceof Error && err.message === "REVIEW_REQUIRED") return;
-            onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");
-          }
-        })();
+        requestIngressoApply();
         return;
       }
       void create.onSubmit(e);
     },
-    [applyFromIngressoWithGate, applyMode, captureHints, compileData, create, gestToast, onCompileError],
+    [applyMode, captureHints, compileData, create, gestToast, onCompileError, requestIngressoApply],
   );
 
   if (loading || !sharedGlobalOpts) {
     return (
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <CaptureReviewPanelLoading title="Anteprima documento" message="Caricamento anteprima…" skeleton="preview" />
-        <CaptureReviewPanelLoading title="Scheda ingresso" message="Preparazione campi…" skeleton="fields" />
-      </div>
+      <CaptureReviewSplitLayout
+        preview={
+          <CaptureReviewPanelLoading title="Anteprima documento" message="Caricamento anteprima…" skeleton="preview" />
+        }
+        review={<CaptureReviewPanelLoading title="Scheda ingresso" message="Preparazione campi…" skeleton="fields" />}
+      />
     );
   }
 
@@ -369,104 +420,124 @@ export function CaptureSchedaCompileStep({
 
   return (
     <>
-      <div className="relative grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
-        {submitBusy ? (
-          <div
-            className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-lg bg-[color:var(--cab-bg)]/80 backdrop-blur-[1px]"
-            role="status"
-            aria-live="polite"
-            aria-busy="true"
+      <CaptureReviewSplitLayout
+        preview={<CaptureCompileDocumentPreview captureId={captureId} />}
+        busyOverlay={
+          submitBusy ? (
+            <div
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-lg bg-[color:var(--cab-bg)]/80 backdrop-blur-[1px]"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <LoadingSpinner size="md" />
+              <p className="text-sm font-medium text-[color:var(--cab-fg)]">
+                {applyMode ? "Import in corso…" : "Salvataggio in corso…"}
+              </p>
+            </div>
+          ) : null
+        }
+        review={
+          <form
+            ref={create.formRef}
+            id={CAPTURE_COMPILE_FORM_ID}
+            {...create.formProps}
+            onSubmit={handleSubmitAttempt}
+            className="min-w-0 space-y-3"
           >
-            <LoadingSpinner size="md" />
-            <p className="text-sm font-medium text-[color:var(--cab-fg)]">
-              {applyMode ? "Import in corso…" : "Salvataggio in corso…"}
-            </p>
-          </div>
-        ) : null}
-        <CaptureCompileDocumentPreview captureId={captureId} />
-        <form
-          ref={create.formRef}
-          id={CAPTURE_COMPILE_FORM_ID}
-          {...create.formProps}
-          onSubmit={handleSubmitAttempt}
-          className="min-w-0"
-        >
-          {applyMode ? (
-            <CaptureApplyRecoveryBanner
-              visible={applyFlow.recoveryAvailable}
+            {applyMode ? (
+              <CaptureApplyRecoveryBanner
+                visible={applyFlow.recoveryAvailable}
+                busy={applyFlow.busy}
+                onResume={() => {
+                  void (async () => {
+                    try {
+                      const result = await applyFlow.resumeApply();
+                      onApplySuccess?.(result.lavorazioneId);
+                    } catch (err) {
+                      onCompileError?.(err instanceof Error ? err.message : "Ripresa non riuscita");
+                    }
+                  })();
+                }}
+              />
+            ) : null}
+            {validationPanel}
+            <CaptureApplyReviewBanner
+              validation={applyFlow.validation}
               busy={applyFlow.busy}
-              onResume={() => {
-                void (async () => {
-                  try {
-                    const result = await applyFlow.resumeApply();
-                    onApplySuccess?.(result.lavorazioneId);
-                  } catch (err) {
-                    onCompileError?.(err instanceof Error ? err.message : "Ripresa non riuscita");
-                  }
-                })();
+              onForceReview={() => {
+                requestIngressoApply({ forceReview: true });
               }}
             />
-          ) : null}
-          {validationPanel}
-          <CaptureApplyReviewBanner
-            validation={applyFlow.validation}
-            busy={applyFlow.busy}
-            onForceReview={() => {
-              void (async () => {
-                try {
-                  await applyFromIngressoWithGate({ forceReview: true });
-                } catch (err) {
-                  onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");
-                }
-              })();
-            }}
-          />
-          {applyMode && applyFlow.error ? (
-            <div
-              role="alert"
-              className="mb-2 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
-            >
-              {applyFlow.error}
-            </div>
-          ) : null}
-          {!applyMode && create.schedaSyncError ? (
-            <div
-              role="alert"
-              className="mb-2 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
-            >
-              {create.schedaSyncError}
-            </div>
-          ) : null}
-          <SchedaIngressoFormBody
-            variant="create-lavorazione"
-            fields={create.fields}
-            setFields={create.setFields}
-            onPatch={onPatchCaptureAware}
-            pending={submitBusy}
-            mezzi={mezzi}
-            schedeStore={schedeStore}
-            attive={attive}
-            storico={storico}
-            stato={create.stato}
-            onStatoChange={create.setStato}
-            priorita={create.priorita}
-            onPrioritaChange={create.setPriorita}
-            mezzoHint={create.mezzoHint}
-            errorMessage={create.inlineError}
-            mezzoPrompt={create.mezzoPrompt}
-            mezzoLinked={Boolean(create.mezzoId.trim()) || create.mezzoPrompt.linkState.status === "linked"}
-            mezzoId={create.mezzoId || create.mezzoPrompt.preferredMezzoId || ""}
-            sharedGlobalOpts={create.globalOpts}
-            sharedMezziCatalog={create.mezziCatalog}
-            captureHints={captureHints}
-            onApplyCaptureHint={onApplyCaptureHint}
-            captureReviewCount={reviewCount}
-            embedInParentScroll
-          />
-        </form>
-      </div>
+            {applyMode && applyFlow.error ? (
+              <div
+                role="alert"
+                className="mb-2 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+              >
+                {applyFlow.error}
+              </div>
+            ) : null}
+            {!applyMode && create.schedaSyncError ? (
+              <div
+                role="alert"
+                className="mb-2 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+              >
+                {create.schedaSyncError}
+              </div>
+            ) : null}
+            <SchedaIngressoFormBody
+              variant="create-lavorazione"
+              fields={create.fields}
+              setFields={create.setFields}
+              onPatch={onPatchCaptureAware}
+              pending={submitBusy}
+              mezzi={mezzi}
+              schedeStore={schedeStore}
+              attive={attive}
+              storico={storico}
+              stato={create.stato}
+              onStatoChange={create.setStato}
+              priorita={create.priorita}
+              onPrioritaChange={create.setPriorita}
+              mezzoHint={create.mezzoHint}
+              errorMessage={create.inlineError}
+              mezzoPrompt={create.mezzoPrompt}
+              mezzoLinked={Boolean(create.mezzoId.trim()) || create.mezzoPrompt.linkState.status === "linked"}
+              mezzoId={create.mezzoId || create.mezzoPrompt.preferredMezzoId || ""}
+              sharedGlobalOpts={create.globalOpts}
+              sharedMezziCatalog={create.mezziCatalog}
+              captureHints={captureHints}
+              onApplyCaptureHint={onApplyCaptureHint}
+              captureReviewCount={reviewCount}
+              embedInParentScroll
+            />
+          </form>
+        }
+      />
       {create.unknownSettingsDialog}
       {create.saveGateDialog}
+      <CaptureExistingSchedaConfirmDialog
+        open={existingSchedaPromptOpen}
+        schedaTipo="ingresso"
+        targetLabel={existingSchedaTargetLabel}
+        onBack={() => {
+          pendingApplyRef.current = null;
+          setExistingSchedaPromptOpen(false);
+        }}
+        onViewExisting={() => {
+          const lavId = assignLavorazioneId?.trim();
+          pendingApplyRef.current = null;
+          setExistingSchedaPromptOpen(false);
+          if (!lavId || !onViewExistingScheda) return;
+          void onViewExistingScheda(lavId, "ingresso");
+        }}
+        onOverwrite={() => {
+          setExistingSchedaPromptOpen(false);
+          const run = pendingApplyRef.current;
+          pendingApplyRef.current = null;
+          void run?.();
+        }}
+      />
     </>
   );
 }

@@ -249,10 +249,11 @@ export function GestionaleModalShell({
               if (modalRootRef) modalRootRef.current = el;
             }}
             {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
-            className={`${dialogSurfaceClass} ${flexShrinkSafe} flex-safe-col touch-auto cursor-default ${dialogMaxWidth} ${alignTop ? "md:mt-3 md:self-start" : ""}`}
+            className={`${dialogSurfaceClass} ${flexShrinkSafe} flex-safe-col touch-auto cursor-default outline-none focus:outline-none ${dialogMaxWidth} ${alignTop ? "md:mt-3 md:self-start" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby={labelledBy}
+            tabIndex={-1}
             onKeyDown={dialogFocus.onKeyDown}
             onMouseDown={(e) => e.stopPropagation()}
           >

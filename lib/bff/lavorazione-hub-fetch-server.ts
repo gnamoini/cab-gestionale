@@ -8,6 +8,7 @@ import {
   PREVENTIVI_COLUMNS,
   SCHEDA_LAVORAZIONE_COLUMNS,
   MEZZI_LIST_LIGHT_COLUMNS,
+  lavorazioniMezziEmbedSelect,
 } from "@/lib/db/table-select-columns";
 import { documentoMatchesMarcaModello } from "@/lib/documenti/documenti-match";
 import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
@@ -61,7 +62,7 @@ export async function fetchLavorazioneDetailDTOServer(
 
   const sb = await createSupabaseServerUserClient();
 
-  const lavSelect = `${LAVORAZIONI_DETAIL_COLUMNS}, mezzi(${MEZZI_LIST_LIGHT_COLUMNS})`;
+  const lavSelect = `${LAVORAZIONI_DETAIL_COLUMNS}, ${lavorazioniMezziEmbedSelect(MEZZI_LIST_LIGHT_COLUMNS)}`;
 
   const [lavRes, schedeRes, movRes, pvRes, logRes] = await Promise.all([
     applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select(lavSelect).eq("id", id)).maybeSingle(),

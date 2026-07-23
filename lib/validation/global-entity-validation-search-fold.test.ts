@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   areQwertyAdjacent,
   entityAutocompleteKey,
+  findSimilarEntityInPool,
   foldSearchConfusables,
   normalizeEntityString,
   scoreEntityMatch,
@@ -37,5 +38,9 @@ assert.ok(scoreEntityMatch("ac", "Scala") >= 59 && scoreEntityMatch("ac", "Scala
 // Keyboard typo prefix — negative
 assert.equal(scoreEntityMatch("aaaa", "Scala"), 0);
 assert.ok(scoreEntityMatch("qqqq", "Scala") <= 5);
+
+assert.equal(findSimilarEntityInPool("L35", ["L35", "C35"]), null);
+assert.equal(findSimilarEntityInPool("L35", ["C35"]), "C35");
+assert.equal(findSimilarEntityInPool("L35", ["L35", "C35"], { exclude: "L35" }), null);
 
 console.log("global-entity-validation-search-fold.test.ts ok");

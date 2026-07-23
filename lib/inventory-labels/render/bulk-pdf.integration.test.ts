@@ -54,6 +54,7 @@ async function main() {
     console.log(`bulk ${count}: ${result.bytes.byteLength} bytes, pipeline=${result.pipeline}, ${Math.round(performance.now() - t0)}ms`);
   }
   await assertLabelRasterText("60x40-default");
+  await assertLabelRasterText("a4-pagina-intera");
   console.log("bulk-pdf.integration.test.ts OK");
 }
 

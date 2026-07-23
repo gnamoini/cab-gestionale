@@ -109,7 +109,10 @@ export function validateCaptureForApply(input: ValidateCaptureInput): ValidateCa
   }
 
   let ricambiRows: ReturnType<typeof resolveRicambiRowsFromCaptureFields> | undefined;
-  const hasRicambi = input.fields.some((f) => /^riga_\d+_(codice|nome|descrizione|qt)/i.test(f.field_key));
+  const hasRicambi =
+    schedaTipo === "ricambi" ||
+    (schedaTipo !== "lavorazioni" &&
+      input.fields.some((f) => /^riga_\d+_(codice|descrizione|qt)/i.test(f.field_key)));
   if (hasRicambi && input.magazzino?.length) {
     ricambiRows = resolveRicambiRowsFromCaptureFields(input.fields, input.magazzino);
     for (const row of ricambiRows) {
@@ -165,16 +168,19 @@ export function validateCaptureForApply(input: ValidateCaptureInput): ValidateCa
   }
 
   const hasErrors = issues.some((i) => i.severity === "error");
-  const hasWarnings = issues.some((i) => i.severity === "warning");
   const ricambiBlock = ricambiRows ? ricambiResolutionBlocksApply(ricambiRows) : false;
+  const hasBlockingWarnings = issues.some(
+    (i) => i.severity === "warning" && i.code !== "RICAMBIO_NOT_FOUND",
+  );
 
   if (hasErrors) return { status: "BLOCKED", issues, ricambiRows };
-  if (hasWarnings || ricambiBlock) return { status: "REVIEW", issues, ricambiRows };
+  if (ricambiBlock || hasBlockingWarnings) return { status: "REVIEW", issues, ricambiRows };
   return { status: "READY", issues, ricambiRows };
 }
 
-/** Consente "Procedi comunque" solo per warning/ambiguità — mai con ricambi NOT_FOUND. */
+/** Consente "Procedi comunque" solo per warning/ambiguità — mai con ricambi NOT_FOUND in stato REVIEW. */
 export function captureReviewAllowsForceApply(validation: ValidateCaptureResult): boolean {
+  if (validation.status === "READY") return true;
   if (validation.ricambiRows && ricambiNotFoundBlocksForceReview(validation.ricambiRows)) return false;
   return true;
 }

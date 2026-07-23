@@ -1,13 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
 import { mergedEnv } from "./loadEnv.mjs";
 
+const LAVORAZIONI_MEZZO_ID_FKEY = "lavorazioni_mezzo_id_fkey";
+const lavorazioniMezziEmbed = (columns) => `mezzi!${LAVORAZIONI_MEZZO_ID_FKEY}(${columns})`;
+
 const SUBSET_QUERIES = [
   {
     id: "rest-lav-light-attive",
     area: "Lavorazioni",
     table: "lavorazioni",
     select:
-      "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, codice, mezzi(cliente, utilizzatore, marca, modello, targa, matricola, numero_scuderia)",
+      `id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, codice, ${lavorazioniMezziEmbed("cliente, utilizzatore, marca, modello, targa, matricola, numero_scuderia")}`,
     filters: (q) => q.is("deleted_at", null).eq("archived", false).order("created_at", { ascending: false }),
   },
   {

@@ -1,14 +1,10 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { CaptureDocumentFilePreview } from "@/components/document-capture/capture-document-file-preview";
-import { CAPTURE_REVIEW_PIN_TOP_CLASS } from "@/components/document-capture/capture-review-panel";
-import { CaptureReviewPanelLoading } from "@/components/document-capture/capture-review-panel";
+import { CaptureReviewPanelLoading, CaptureReviewSplitLayout } from "@/components/document-capture/capture-review-panel";
 import { CaptureApplyRecoveryBanner } from "@/components/document-capture/capture-apply-recovery-banner";
-import { CaptureApplyReviewBanner } from "@/components/document-capture/capture-apply-review-banner";
-import {
-  CaptureSheetCompileStatusBanner,
-} from "@/components/document-capture/capture-sheet-field-hint";
 import { SchedaLavorazioniFormBody } from "@/components/lavorazioni/schede/scheda-lavorazioni-form-body";
 import { SchedaRicambiFormBody } from "@/components/lavorazioni/schede/scheda-ricambi-form-body";
 import type { CaptureSchedaCompileDraft } from "@/lib/document-capture/capture-acquisition-draft";
@@ -17,7 +13,6 @@ import {
   buildCaptureLavorazioniCompileData,
   buildCaptureRicambiCompileData,
   countCaptureSheetHintsNeedingReview,
-  reconcileCaptureSheetHintAfterEdit,
 } from "@/lib/document-capture/capture-sheet-field-hints";
 import {
   captureFieldRowsToSchedaFields,
@@ -35,6 +30,15 @@ import type { SchedaLavorazioniFields, SchedaRicambiFields } from "@/types/sched
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { LoadingSpinner } from "@/components/design-system/loading";
+import { CaptureExistingSchedaConfirmDialog } from "@/components/document-capture/capture-existing-scheda-confirm-dialog";
+import { describeCaptureLavorazioneAssignTarget } from "@/lib/document-capture/capture-lavorazione-match";
+import { describeLavorazioneAssignRowParts } from "@/lib/document-capture/capture-manual-assign-state";
+import { lavorazioneHasExistingScheda } from "@/lib/document-capture/capture-existing-scheda-presence";
+import { patchCaptureLavorazioneLink } from "@/lib/document-capture/patch-capture-lavorazione-link.client";
+import { applyCaptureRicambiScarichiAfterImport } from "@/lib/document-capture/capture-ricambi-scarico-after-import";
+import type { LavorazioneAttiva } from "@/lib/lavorazioni/types";
+import type { LavorazioneSchedeStore, SchedaTipo } from "@/types/schede";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 export const CAPTURE_SHEET_COMPILE_FORM_ID = "capture-sheet-compile-form";
 
@@ -47,41 +51,49 @@ export type CompileStatus =
   | "applying"
   | "error";
 
-const HINT_RECONCILE_MS = 250;
 const DRY_RUN_DEBOUNCE_MS = 500;
 const COMPILE_DRAFT_DEBOUNCE_MS = 400;
+const HINT_REBUILD_DEBOUNCE_MS = 250;
 
 function CaptureValidationIssuesBanner({ validation }: { validation: ValidateCaptureResult }) {
-  if (validation.status === "READY" && validation.issues.length === 0) return null;
-  return (
-    <div
-      role="status"
-      className={`mb-2 rounded-lg border px-3 py-2 text-sm ${
-        validation.status === "BLOCKED"
-          ? "border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-950/40"
-          : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40"
-      }`}
-    >
-      <p className="font-medium">
-        {validation.status === "BLOCKED"
-          ? "Import bloccato — correggi gli errori"
-          : "Revisione consigliata prima dell'import"}
-      </p>
-      <ul className="mt-1 list-disc pl-4 text-xs">
-        {validation.issues.map((issue) => (
-          <li key={`${issue.code}-${issue.fieldKey ?? ""}`}>{issue.message}</li>
-        ))}
-      </ul>
-    </div>
-  );
+  if (validation.issues.length === 0) return null;
+  if (validation.status === "BLOCKED") {
+    return (
+      <div
+        role="status"
+        className="mb-2 rounded-lg border px-3 py-2 text-sm border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-950/40"
+      >
+        <p className="font-medium">Import bloccato — correggi gli errori</p>
+        <ul className="mt-1 list-disc pl-4 text-xs">
+          {validation.issues.map((issue) => (
+            <li key={`${issue.code}-${issue.fieldKey ?? ""}`}>{issue.message}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+  if (validation.status === "REVIEW") {
+    return (
+      <div
+        role="status"
+        className="mb-2 rounded-lg border px-3 py-2 text-sm border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40"
+      >
+        <p className="font-medium">Revisione richiesta prima dell&apos;import</p>
+        <ul className="mt-1 list-disc pl-4 text-xs">
+          {validation.issues
+            .filter((issue) => issue.severity === "warning" && issue.code !== "RICAMBIO_NOT_FOUND")
+            .map((issue) => (
+              <li key={`${issue.code}-${issue.fieldKey ?? ""}`}>{issue.message}</li>
+            ))}
+        </ul>
+      </div>
+    );
+  }
+  return null;
 }
 
 const CaptureSheetCompilePreview = memo(function CaptureSheetCompilePreview({ captureId }: { captureId: string }) {
-  return (
-    <div className={`lg:sticky ${CAPTURE_REVIEW_PIN_TOP_CLASS} lg:z-[1] lg:self-start`}>
-      <CaptureDocumentFilePreview captureId={captureId} pinned />
-    </div>
-  );
+  return <CaptureDocumentFilePreview captureId={captureId} pinned />;
 });
 
 export function CaptureSchedaSheetCompileStep({
@@ -90,9 +102,13 @@ export function CaptureSchedaSheetCompileStep({
   fieldRows,
   sharedGlobalOpts,
   magazzino = [],
+  assignLavorazioneId = null,
+  attive = [],
+  schedeStore = {},
   resumeSheetCompile = null,
   onSheetCompileChange,
   onApplySuccess,
+  onViewExistingScheda,
   onCompileError,
   onSubmitBusyChange,
   onCompileStatusChange,
@@ -102,31 +118,42 @@ export function CaptureSchedaSheetCompileStep({
   fieldRows: readonly CaptureFieldRow[];
   sharedGlobalOpts?: GlobalOptionsSlice;
   magazzino?: readonly RicambioMagazzino[];
+  assignLavorazioneId?: string | null;
+  attive?: readonly LavorazioneAttiva[];
+  schedeStore?: LavorazioneSchedeStore;
   resumeSheetCompile?: CaptureSchedaCompileDraft | null;
   onSheetCompileChange?: (snapshot: CaptureSchedaCompileDraft) => void;
   onApplySuccess?: (lavorazioneId: string) => void;
+  onViewExistingScheda?: (lavorazioneId: string, schedaTipo: SchedaTipo) => void | Promise<boolean>;
   onCompileError?: (message: string) => void;
   onSubmitBusyChange?: (busy: boolean) => void;
   onCompileStatusChange?: (status: CompileStatus) => void;
 }) {
   const applyFlow = useCaptureApplyFlow(captureId);
+  const gestToast = useGestionaleToast();
+  const qc = useQueryClient();
   const [compileStatus, setCompileStatus] = useState<CompileStatus>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [fields, setFields] = useState<SchedaLavorazioniFields | SchedaRicambiFields | null>(null);
   const [rowHints, setRowHints] = useState<Record<string, CaptureSheetRowHint>>({});
   const [ocrBaseline, setOcrBaseline] = useState<CaptureFieldPatch[]>([]);
   const [operationId, setOperationId] = useState<string | null>(null);
+  const [existingSchedaPromptOpen, setExistingSchedaPromptOpen] = useState(false);
 
   const submittingRef = useRef(false);
+  const pendingApplyRef = useRef<(() => Promise<void>) | null>(null);
   const dryRunTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hintReconcileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingHintKeysRef = useRef(new Set<string>());
+  const hintRebuildTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fieldsRef = useRef(fields);
   fieldsRef.current = fields;
   const rowHintsRef = useRef(rowHints);
   rowHintsRef.current = rowHints;
   const operationIdRef = useRef(operationId);
   operationIdRef.current = operationId;
+  const ocrBaselineRef = useRef(ocrBaseline);
+  ocrBaselineRef.current = ocrBaseline;
+  const compileStatusRef = useRef(compileStatus);
+  compileStatusRef.current = compileStatus;
 
   const addettiRecords = sharedGlobalOpts?.lavorazioni.addettiRecords ?? [];
   const addettiLista = sharedGlobalOpts?.lavorazioni.addetti ?? [];
@@ -160,13 +187,27 @@ export function CaptureSchedaSheetCompileStep({
               fieldRows,
               fields: mapped as SchedaRicambiFields,
               magazzino,
+              addettiRecords,
             });
       if (cancelled) return;
       const resumedFields = resumeSheetCompile?.payload
         ? schedaFieldsFromResume(resumeSheetCompile, tipo, { addettiRecords, magazzino })
         : compileData.fields;
       setFields(resumedFields);
-      setRowHints(compileData.hints);
+      const hintsSource =
+        tipo === "lavorazioni"
+          ? buildCaptureLavorazioniCompileData({
+              fieldRows,
+              fields: resumedFields as SchedaLavorazioniFields,
+              addettiRecords,
+            })
+          : buildCaptureRicambiCompileData({
+              fieldRows,
+              fields: resumedFields as SchedaRicambiFields,
+              magazzino,
+              addettiRecords,
+            });
+      setRowHints(hintsSource.hints);
       setOcrBaseline(resumeSheetCompile?.baseline ?? compileData.ocrBaseline);
       setOperationId(resumeSheetCompile?.payload.operationId ?? null);
       setStatus("editing");
@@ -220,8 +261,9 @@ export function CaptureSchedaSheetCompileStep({
       void applyFlow
         .runDryRun()
         .then(({ validation }) => {
-          if (validation?.status === "BLOCKED") {
-            setStatus("error");
+          if (validation) applyFlow.setValidation(validation);
+          if (validation?.status === "BLOCKED" || validation?.status === "REVIEW") {
+            setStatus("editing");
             return;
           }
           setStatus("ready");
@@ -243,49 +285,50 @@ export function CaptureSchedaSheetCompileStep({
 
   useEffect(
     () => () => {
-      if (hintReconcileTimerRef.current) clearTimeout(hintReconcileTimerRef.current);
       if (dryRunTimerRef.current) clearTimeout(dryRunTimerRef.current);
+      if (hintRebuildTimerRef.current) clearTimeout(hintRebuildTimerRef.current);
     },
     [],
   );
 
-  const flushHintReconcile = useCallback(() => {
-    hintReconcileTimerRef.current = null;
-    if (pendingHintKeysRef.current.size === 0) return;
-    const keys = [...pendingHintKeysRef.current];
-    pendingHintKeysRef.current.clear();
-    const catalogOpts = { magazzino, addettiRecords };
-    setRowHints((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      for (const key of keys) {
-        const hint = prev[key];
-        if (!hint) continue;
-        const value = resolveFieldValueForHint(key, fieldsRef.current, tipo);
-        const reconciled = reconcileCaptureSheetHintAfterEdit(key, value, hint, catalogOpts);
-        if (reconciled) next[key] = reconciled;
-        else delete next[key];
-        changed = true;
-      }
-      return changed ? next : prev;
-    });
-  }, [addettiRecords, magazzino, tipo]);
+  const scheduleRowHintsRebuild = useCallback(() => {
+      if (hintRebuildTimerRef.current) clearTimeout(hintRebuildTimerRef.current);
+      hintRebuildTimerRef.current = setTimeout(() => {
+        hintRebuildTimerRef.current = null;
+        const current = fieldsRef.current;
+        if (!current) return;
+        if (tipo === "lavorazioni") {
+          setRowHints(
+            buildCaptureLavorazioniCompileData({
+              fieldRows,
+              fields: current as SchedaLavorazioniFields,
+              addettiRecords,
+            }).hints,
+          );
+        } else {
+          setRowHints(
+            buildCaptureRicambiCompileData({
+              fieldRows,
+              fields: current as SchedaRicambiFields,
+              magazzino,
+              addettiRecords,
+            }).hints,
+          );
+        }
+      }, HINT_REBUILD_DEBOUNCE_MS);
+  }, [addettiRecords, fieldRows, magazzino, tipo]);
 
   const handleFieldsChange = useCallback(
     (next: SchedaLavorazioniFields | SchedaRicambiFields) => {
+      fieldsRef.current = next;
       setFields(next);
-      const prevKeys = Object.keys(rowHintsRef.current);
-      for (const key of prevKeys) pendingHintKeysRef.current.add(key);
-      if (pendingHintKeysRef.current.size > 0) {
-        if (hintReconcileTimerRef.current) clearTimeout(hintReconcileTimerRef.current);
-        hintReconcileTimerRef.current = setTimeout(flushHintReconcile, HINT_RECONCILE_MS);
-      }
-      if (compileStatus === "ready") {
+      scheduleRowHintsRebuild();
+      if (compileStatus === "ready" || compileStatus === "error") {
         invalidateDryRun();
         setStatus("dirty");
       }
     },
-    [compileStatus, flushHintReconcile, invalidateDryRun, setStatus],
+    [compileStatus, invalidateDryRun, scheduleRowHintsRebuild, setStatus],
   );
 
   useEffect(() => {
@@ -300,10 +343,93 @@ export function CaptureSchedaSheetCompileStep({
         baseline: ocrBaseline,
       });
     }, COMPILE_DRAFT_DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      if (!onSheetCompileChange || !fieldsRef.current || compileStatusRef.current === "loading") return;
+      const payload = schedaFieldsToCompilePayload(tipo, captureId, fieldsRef.current, {
+        operationId: operationIdRef.current ?? undefined,
+      });
+      onSheetCompileChange({
+        payload,
+        baseline: ocrBaselineRef.current,
+      });
+    };
   }, [captureId, fields, ocrBaseline, onSheetCompileChange, compileStatus, tipo]);
 
   const reviewCount = useMemo(() => countCaptureSheetHintsNeedingReview(rowHints), [rowHints]);
+
+  const existingSchedaTargetLabel = useMemo(() => {
+    const lavId = assignLavorazioneId?.trim();
+    if (!lavId) return "";
+    return describeCaptureLavorazioneAssignTarget(lavId, attive, schedeStore);
+  }, [assignLavorazioneId, attive, schedeStore]);
+
+  const captureIdentParts = useMemo(() => {
+    const lavId = assignLavorazioneId?.trim();
+    if (!lavId) return null;
+    return describeLavorazioneAssignRowParts(lavId, attive, schedeStore);
+  }, [assignLavorazioneId, attive, schedeStore]);
+
+  const executeApply = useCallback(async () => {
+    if (!fields || submittingRef.current) return;
+    submittingRef.current = true;
+    setStatus("applying");
+    const payload = schedaFieldsToCompilePayload(tipo, captureId, fields, {
+      operationId: operationIdRef.current ?? undefined,
+    });
+    setOperationId(payload.operationId);
+    try {
+      const linkedLavorazioneId = assignLavorazioneId?.trim();
+      if (linkedLavorazioneId) {
+        await patchCaptureLavorazioneLink(captureId, linkedLavorazioneId);
+      }
+      const result = await applyFlow.applyFromScheda(payload);
+      if (tipo === "ricambi") {
+        const ricFields = fields as SchedaRicambiFields;
+        const scarico = await applyCaptureRicambiScarichiAfterImport({
+          fields: ricFields,
+          lavorazioneId: result.lavorazioneId,
+          identLine: ricFields.identificazioneMacchina.trim() || "scheda ricambi",
+          autore: "Operatore",
+          qc,
+        });
+        if (scarico.applied > 0) {
+          gestToast.success(`Scarico magazzino: ${scarico.applied} riga/e`);
+        }
+        if (scarico.failed.length > 0) {
+          gestToast.error(
+            `Scarico non riuscito per: ${scarico.failed.map((f) => f.label).join(", ")}`,
+            { module: "magazzino" },
+          );
+        }
+      }
+      setStatus("ready");
+      onApplySuccess?.(result.lavorazioneId);
+    } catch (err) {
+      if (err instanceof Error && err.message === "REVIEW_REQUIRED") {
+        setStatus("editing");
+        gestToast.validation(
+          "Alcuni campi richiedono revisione prima dell'import. Controlla i messaggi evidenziati.",
+        );
+        return;
+      }
+      setStatus("dirty");
+      onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");
+    } finally {
+      submittingRef.current = false;
+    }
+  }, [
+    applyFlow,
+    assignLavorazioneId,
+    captureId,
+    fields,
+    gestToast,
+    onApplySuccess,
+    onCompileError,
+    qc,
+    setStatus,
+    tipo,
+  ]);
 
   const submitBusy = applyFlow.busy || compileStatus === "applying";
   useEffect(() => {
@@ -311,60 +437,66 @@ export function CaptureSchedaSheetCompileStep({
     return () => onSubmitBusyChange?.(false);
   }, [onSubmitBusyChange, submitBusy]);
 
-  const statusBanner = useMemo(() => {
-    switch (compileStatus) {
-      case "editing":
-        return <CaptureSheetCompileStatusBanner tone="info" message="Completa la verifica prima di importare" />;
-      case "validating":
-        return <CaptureSheetCompileStatusBanner tone="busy" message="Controllo dati…" />;
-      case "ready":
-        return <CaptureSheetCompileStatusBanner tone="success" message="Import pronto" />;
-      case "dirty":
-        return (
-          <CaptureSheetCompileStatusBanner tone="warning" message="Dati modificati — verifica in corso…" />
-        );
-      case "applying":
-        return <CaptureSheetCompileStatusBanner tone="busy" message="Import in corso…" />;
-      default:
-        return null;
-    }
-  }, [compileStatus]);
-
   const handleSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       if (!fields || compileStatus !== "ready" || submittingRef.current) return;
-      submittingRef.current = true;
-      setStatus("applying");
-      const payload = schedaFieldsToCompilePayload(tipo, captureId, fields, {
-        operationId: operationIdRef.current ?? undefined,
-      });
-      setOperationId(payload.operationId);
-      void (async () => {
-        try {
-          const result = await applyFlow.applyFromScheda(payload);
-          onApplySuccess?.(result.lavorazioneId);
-        } catch (err) {
-          if (err instanceof Error && err.message === "REVIEW_REQUIRED") {
-            setStatus("ready");
-            return;
-          }
-          setStatus("error");
-          onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");
-        } finally {
-          submittingRef.current = false;
+
+      if (tipo === "lavorazioni") {
+        const missingDateIdx = (fields as SchedaLavorazioniFields).righe.findIndex(
+          (row) => row.lavorazioniEffettuate.trim() && !row.dataLavorazione.trim(),
+        );
+        if (missingDateIdx >= 0) {
+          const rowNum = missingDateIdx + 1;
+          const dataKey = `riga_${rowNum}_data`;
+          const hint = rowHintsRef.current[dataKey];
+          gestToast.validation(
+            hint?.message ?? `Data riga ${rowNum} non letta dalla scansione.`,
+          );
+          document.querySelector(`[data-capture-hint="${dataKey}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
         }
-      })();
+      } else {
+        const missingDateIdx = (fields as SchedaRicambiFields).righe.findIndex(
+          (row) =>
+            (row.ricambioNome.trim() || row.codice.trim() || row.addetto.trim() || row.quantita > 0) &&
+            !row.dataUtilizzo.trim(),
+        );
+        if (missingDateIdx >= 0) {
+          const rowNum = missingDateIdx + 1;
+          const dataKey = `riga_${rowNum}_data`;
+          const hint = rowHintsRef.current[dataKey];
+          gestToast.validation(
+            hint?.message ?? `Data riga ${rowNum} non letta dalla scansione.`,
+          );
+          document.querySelector(`[data-capture-hint="${dataKey}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+      }
+
+      const linkedLavorazioneId = assignLavorazioneId?.trim();
+      if (
+        linkedLavorazioneId &&
+        lavorazioneHasExistingScheda(schedeStore, linkedLavorazioneId, tipo)
+      ) {
+        pendingApplyRef.current = () => executeApply();
+        setExistingSchedaPromptOpen(true);
+        return;
+      }
+
+      void executeApply();
     },
-    [applyFlow, captureId, compileStatus, fields, onApplySuccess, onCompileError, setStatus, tipo],
+    [assignLavorazioneId, compileStatus, executeApply, fields, gestToast, schedeStore, setStatus, tipo],
   );
 
   if (compileStatus === "loading" || !sharedGlobalOpts || !fields) {
     return (
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <CaptureReviewPanelLoading title="Anteprima documento" message="Caricamento anteprima…" skeleton="preview" />
-        <CaptureReviewPanelLoading title="Verifica i dati letti" message="Preparazione campi…" skeleton="fields" />
-      </div>
+      <CaptureReviewSplitLayout
+        preview={
+          <CaptureReviewPanelLoading title="Anteprima documento" message="Caricamento anteprima…" skeleton="preview" />
+        }
+        review={<CaptureReviewPanelLoading title="Scheda" message="Preparazione campi…" skeleton="fields" />}
+      />
     );
   }
 
@@ -377,82 +509,93 @@ export function CaptureSchedaSheetCompileStep({
   ) : null;
 
   return (
-    <div className="relative grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
-      {submitBusy ? (
-        <div
-          className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-lg bg-[color:var(--cab-bg)]/80 backdrop-blur-[1px]"
-          role="status"
-          aria-live="polite"
-          aria-busy="true"
-        >
-          <LoadingSpinner size="md" />
-        </div>
-      ) : null}
-      <CaptureSheetCompilePreview captureId={captureId} />
-      <form id={CAPTURE_SHEET_COMPILE_FORM_ID} onSubmit={handleSubmit} className="min-w-0 space-y-2">
-        <h3 className="text-sm font-semibold text-[color:var(--cab-fg)]">Verifica i dati letti</h3>
-        {statusBanner}
-        <CaptureApplyRecoveryBanner
-          visible={applyFlow.recoveryAvailable}
-          busy={applyFlow.busy}
-          onResume={() => {
-            void (async () => {
-              try {
-                const result = await applyFlow.resumeApply();
-                onApplySuccess?.(result.lavorazioneId);
-              } catch (err) {
-                onCompileError?.(err instanceof Error ? err.message : "Ripresa non riuscita");
-              }
-            })();
-          }}
-        />
-        {validationPanel}
-        <CaptureApplyReviewBanner
-          validation={applyFlow.validation}
-          busy={applyFlow.busy}
-          onForceReview={() => {
-            if (!fields) return;
-            const payload = schedaFieldsToCompilePayload(tipo, captureId, fields, {
-              operationId: operationIdRef.current ?? undefined,
-            });
-            void (async () => {
-              try {
-                const result = await applyFlow.applyFromScheda(payload, { forceReview: true });
-                onApplySuccess?.(result.lavorazioneId);
-              } catch (err) {
-                onCompileError?.(err instanceof Error ? err.message : "Apply non riuscito");
-              }
-            })();
-          }}
-        />
-        {applyFlow.error ? (
+    <>
+      <CaptureReviewSplitLayout
+      preview={<CaptureSheetCompilePreview captureId={captureId} />}
+      busyOverlay={
+        submitBusy ? (
           <div
-            role="alert"
-            className="mb-2 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-lg bg-[color:var(--cab-bg)]/80 backdrop-blur-[1px]"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
           >
-            {applyFlow.error}
+            <LoadingSpinner size="md" />
           </div>
-        ) : null}
-        {tipo === "lavorazioni" ? (
-          <SchedaLavorazioniFormBody
-            value={fields as SchedaLavorazioniFields}
-            onChange={handleFieldsChange}
-            globalOpts={{ addettiLista }}
-            rowHints={rowHints}
-            reviewCount={reviewCount}
+        ) : null
+      }
+      review={
+        <form id={CAPTURE_SHEET_COMPILE_FORM_ID} onSubmit={handleSubmit} className="min-w-0 space-y-3">
+          <CaptureApplyRecoveryBanner
+            visible={applyFlow.recoveryAvailable}
+            busy={applyFlow.busy}
+            onResume={() => {
+              void (async () => {
+                try {
+                  const result = await applyFlow.resumeApply();
+                  onApplySuccess?.(result.lavorazioneId);
+                } catch (err) {
+                  onCompileError?.(err instanceof Error ? err.message : "Ripresa non riuscita");
+                }
+              })();
+            }}
           />
-        ) : (
-          <SchedaRicambiFormBody
-            value={fields as SchedaRicambiFields}
-            onChange={handleFieldsChange}
-            globalOpts={{ addettiLista, magazzino }}
-            rowHints={rowHints}
-            reviewCount={reviewCount}
-            variant="capture"
-          />
-        )}
-      </form>
-    </div>
+          {validationPanel}
+          {applyFlow.error ? (
+            <div
+              role="alert"
+              className="mb-2 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+            >
+              {applyFlow.error}
+            </div>
+          ) : null}
+          {tipo === "lavorazioni" ? (
+            <SchedaLavorazioniFormBody
+              value={fields as SchedaLavorazioniFields}
+              onChange={handleFieldsChange}
+              globalOpts={{ addettiLista }}
+              rowHints={rowHints}
+              reviewCount={reviewCount}
+              variant="capture"
+              captureIdentParts={captureIdentParts}
+            />
+          ) : (
+            <SchedaRicambiFormBody
+              value={fields as SchedaRicambiFields}
+              onChange={handleFieldsChange}
+              globalOpts={{ addettiLista, magazzino }}
+              rowHints={rowHints}
+              reviewCount={reviewCount}
+              variant="capture"
+              captureIdentParts={captureIdentParts}
+            />
+          )}
+        </form>
+      }
+    />
+      <CaptureExistingSchedaConfirmDialog
+        open={existingSchedaPromptOpen}
+        schedaTipo={tipo}
+        targetLabel={existingSchedaTargetLabel}
+        onBack={() => {
+          pendingApplyRef.current = null;
+          setExistingSchedaPromptOpen(false);
+        }}
+        onViewExisting={() => {
+          const lavId = assignLavorazioneId?.trim();
+          pendingApplyRef.current = null;
+          setExistingSchedaPromptOpen(false);
+          if (!lavId || !onViewExistingScheda) return;
+          void onViewExistingScheda(lavId, tipo);
+        }}
+        onOverwrite={() => {
+          setExistingSchedaPromptOpen(false);
+          const run = pendingApplyRef.current;
+          pendingApplyRef.current = null;
+          void run?.();
+        }}
+      />
+    </>
   );
 }
 
@@ -475,6 +618,7 @@ function resolveFieldValueForHint(
     if (suffix === "lavorazione") return row.lavorazioniEffettuate;
     if (suffix === "nome") return row.addettiAssegnati?.[0]?.addetto ?? "";
     if (suffix === "ore") return String(row.addettiAssegnati?.[0]?.oreImpiegate ?? "");
+    if (suffix === "data") return row.dataLavorazione;
     return "";
   }
   const row = (fields as SchedaRicambiFields).righe[rowNum - 1];

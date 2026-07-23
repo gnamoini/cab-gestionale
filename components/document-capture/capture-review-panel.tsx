@@ -7,6 +7,56 @@ import type { ReactNode } from "react";
 /** Offset sticky anteprima review — sotto step indicator (nav ~5.5rem). */
 export const CAPTURE_REVIEW_PIN_TOP_CLASS = "top-[var(--capture-review-pin-top,5.5rem)]";
 
+/** Colonna form review capture — scroll annidato (solo variant `panel`). */
+export const CAPTURE_REVIEW_PANEL_SCROLL_CLASS =
+  "min-h-0 min-w-0 overflow-y-auto overscroll-y-contain gestionale-scrollbar [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]";
+
+export const CAPTURE_REVIEW_SCROLL_PANEL_CLASS =
+  `${CAPTURE_REVIEW_PANEL_SCROLL_CLASS} max-lg:max-h-[min(50dvh,28rem)] lg:max-h-[calc(92dvh-14rem)]`;
+
+/** Colonna form default — flusso naturale, scroll solo sul corpo modale. */
+export const CAPTURE_REVIEW_FORM_COLUMN_CLASS = "min-w-0";
+
+/** Altezza pannelli split quando il corpo modale non scrolla (compile capture). */
+export const CAPTURE_REVIEW_PANEL_HEIGHT_CLASS = "lg:max-h-[calc(92dvh-14rem)]";
+
+export function CaptureReviewSplitLayout({
+  preview,
+  review,
+  busyOverlay,
+  className = "",
+  variant = "default",
+}: {
+  preview: ReactNode;
+  review: ReactNode;
+  busyOverlay?: ReactNode;
+  className?: string;
+  /** `panel`: scroll per colonna (PDF sx, form dx), corpo modale bloccato. */
+  variant?: "default" | "panel";
+}) {
+  if (variant === "panel") {
+    return (
+      <div
+        className={`relative grid min-h-0 min-w-0 flex-1 gap-4 max-lg:grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-stretch ${CAPTURE_REVIEW_PANEL_HEIGHT_CLASS} ${className}`.trim()}
+      >
+        {busyOverlay}
+        <div className={`${CAPTURE_REVIEW_PANEL_SCROLL_CLASS} max-lg:max-h-[min(50dvh,28rem)]`}>{preview}</div>
+        <div className={CAPTURE_REVIEW_PANEL_SCROLL_CLASS}>{review}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`relative grid min-w-0 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start ${className}`.trim()}
+    >
+      {busyOverlay}
+      <div className={`lg:sticky ${CAPTURE_REVIEW_PIN_TOP_CLASS} lg:z-[1] lg:self-start`}>{preview}</div>
+      <div className={CAPTURE_REVIEW_FORM_COLUMN_CLASS}>{review}</div>
+    </div>
+  );
+}
+
 export function CaptureReviewPanelFrame({
   title,
   action,

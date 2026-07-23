@@ -13,6 +13,7 @@ import {
 } from "@/lib/ui/italian-date-input-mask";
 import {
   extractDatePickerShellLayoutClass,
+  GLOBAL_DATE_PICKER_CALENDAR_PANEL_WIDTH,
   globalInputDatePickerCalendarBtn,
   globalInputDatePickerShellFilter,
   stripDatePickerFieldChrome,
@@ -79,5 +80,7 @@ const pickerSrc = readFileSync(
 );
 assert.match(pickerSrc, /globalInputDatePickerShellFilter/);
 assert.match(pickerSrc, /globalInputDatePickerCalendarBtn/);
+assert.match(pickerSrc, /matchAnchorWidth:\s*false/);
+assert.equal(GLOBAL_DATE_PICKER_CALENDAR_PANEL_WIDTH, 300);
 
 console.log("global-date-picker-ymd.test.ts: ok");

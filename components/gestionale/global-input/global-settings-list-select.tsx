@@ -85,6 +85,12 @@ export type GlobalSettingsListSelectProps = {
   /** Chiude gli altri GlobalSelect con lo stesso groupId all'apertura. */
   exclusiveGroup?: string;
 
+  /** Niente sezione «Recenti» nel dropdown/sheet (es. capture scheda come ingresso). */
+  disableRecents?: boolean;
+
+  /** Warning «entità simile» sotto il campo (default true). */
+  showSimilarWarning?: boolean;
+
   "aria-label"?: string;
 
 };
@@ -172,6 +178,10 @@ function GlobalSettingsListSelectInner({
   excludeValues,
 
   exclusiveGroup,
+
+  disableRecents,
+
+  showSimilarWarning = true,
 
   "aria-label": ariaLabel,
 
@@ -351,7 +361,7 @@ function GlobalSettingsListSelectInner({
 
     operationalFilter: operationalFilter ?? variant === "filter",
 
-    recentsKey: isMagazzinoListKey ? undefined : listKey,
+    recentsKey: disableRecents || isMagazzinoListKey ? undefined : listKey,
 
     alphabeticalBrowse: isMagazzinoListKey,
 
@@ -362,6 +372,8 @@ function GlobalSettingsListSelectInner({
       listKey === "magazzino:fornitoriOrdine",
 
     exclusiveGroup,
+
+    showSimilarWarning,
 
   };
 

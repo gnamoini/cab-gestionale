@@ -105,12 +105,14 @@ export function useCaptureApplyFlow(captureId: string | null) {
     async (
       applicationId: string,
       opts?: { forceReview?: boolean; applyMeta?: CaptureApplyMeta },
+      validationSnapshot?: ValidateCaptureResult | null,
     ) => {
       if (!captureId) throw new Error("Capture assente");
-      if (validation?.status === "REVIEW" && !opts?.forceReview) {
+      const v = validationSnapshot ?? validation;
+      if (v?.status === "REVIEW" && !opts?.forceReview) {
         throw new Error("REVIEW_REQUIRED");
       }
-      if (opts?.forceReview && validation && !captureReviewAllowsForceApply(validation)) {
+      if (opts?.forceReview && v && !captureReviewAllowsForceApply(v)) {
         throw new Error("Ricambi non trovati in magazzino: correggi o rimuovi le righe prima dell'import.");
       }
       const res = await fetch(`/api/document-capture/${captureId}/apply`, {
@@ -199,10 +201,14 @@ export function useCaptureApplyFlow(captureId: string | null) {
         if (opts?.forceReview && v && !captureReviewAllowsForceApply(v)) {
           throw new Error("Ricambi non trovati in magazzino: correggi o rimuovi le righe prima dell'import.");
         }
-        const lavorazioneId = await runApply(applicationId, {
-          forceReview: opts?.forceReview,
-          applyMeta: opts?.meta,
-        });
+        const lavorazioneId = await runApply(
+          applicationId,
+          {
+            forceReview: opts?.forceReview,
+            applyMeta: opts?.meta,
+          },
+          v,
+        );
         return { ok: true, lavorazioneId, applicationId };
       } catch (e) {
         const raw = e instanceof Error ? e.message : "Apply non riuscito";
@@ -235,7 +241,7 @@ export function useCaptureApplyFlow(captureId: string | null) {
         if (opts?.forceReview && v && !captureReviewAllowsForceApply(v)) {
           throw new Error("Ricambi non trovati in magazzino: correggi o rimuovi le righe prima dell'import.");
         }
-        const lavorazioneId = await runApply(applicationId, opts);
+        const lavorazioneId = await runApply(applicationId, opts, v);
         return { ok: true, lavorazioneId, applicationId };
       } catch (e) {
         const raw = e instanceof Error ? e.message : "Apply non riuscito";
@@ -270,7 +276,7 @@ export function useCaptureApplyFlow(captureId: string | null) {
         if (opts?.forceReview && v && !captureReviewAllowsForceApply(v)) {
           throw new Error("Ricambi non trovati in magazzino: correggi o rimuovi le righe prima dell'import.");
         }
-        const lavorazioneId = await runApply(applicationId, opts);
+        const lavorazioneId = await runApply(applicationId, opts, v);
         return { ok: true, lavorazioneId, applicationId };
       } catch (e) {
         const raw = e instanceof Error ? e.message : "Apply non riuscito";

@@ -24,15 +24,22 @@ assert.match(draft, /captureAcquisitionDraftStillValid/);
 assert.match(draft, /ingressoCompile/);
 assert.match(draft, /captureAcquisitionResumeTargetStep/);
 
+assert.match(draft, /linkedLavorazioneId/);
+assert.match(draft, /pendingAssignLavorazioneId/);
+assert.match(draft, /fieldsRes\.ok/);
+
 assert.match(launcher, /readCaptureAcquisitionDraft/);
 assert.match(launcher, /saveCaptureAcquisitionDraft/);
 assert.match(launcher, /persistAcquisitionDraft/);
 assert.match(launcher, /resumeIngressoCompile/);
 assert.match(launcher, /onIngressoCompileChange/);
+assert.match(launcher, /loadCompileFieldRows/);
+assert.match(launcher, /const goBack = useCallback\(\(\) => \{[\s\S]*handleClose\(\)/);
 assert.match(launcher, /Riprendere l'acquisizione/);
 assert.match(launcher, /Riprendi/);
 assert.match(launcher, /Ricomincia/);
-assert.match(launcher, /applyDraftNavigation\(draft\)/);
+assert.match(launcher, /skipAcquisitionDraftPersistRef/);
+assert.match(launcher, /finalizeCaptureImportSuccess/);
 assert.doesNotMatch(launcher, /discardCurrentCapture\(\);\s*setOpen\(false\)/);
 
 assert.equal(captureAcquisitionResumeTargetStep("compile", "analyzing"), "compile");

@@ -3,6 +3,7 @@
  * Uso: npx tsx scripts/debug-lavorazioni-list-fetch.ts
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { lavorazioniMezziEmbedSelect } from "@/lib/db/table-select-columns";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -89,8 +90,9 @@ async function main() {
   await adminCount("archivio (archived=true)", { archived: true });
 
   const anon = createClient(url, anonKey);
+  const mezziEmbedAll = lavorazioniMezziEmbedSelect("*");
   await testSelect(anon, "anon-minimal", "id,archived,deleted_at");
-  await testSelect(anon, "anon-mezzi", "id, mezzi(*)");
+  await testSelect(anon, "anon-mezzi", `id, ${mezziEmbedAll}`);
   await testSelect(
     anon,
     "anon-profiles-join",
@@ -99,14 +101,14 @@ async function main() {
   await testSelect(
     anon,
     "anon-full",
-    "*, updated_by_profile:profiles!lavorazioni_updated_by_fkey(nome), created_by_profile:profiles!lavorazioni_created_by_fkey(nome), mezzi(*)",
+    `*, updated_by_profile:profiles!lavorazioni_updated_by_fkey(nome), created_by_profile:profiles!lavorazioni_created_by_fkey(nome), ${mezziEmbedAll}`,
   );
 
   if (admin) {
     await testSelect(
       admin,
       "admin-full-join",
-      "*, updated_by_profile:profiles!lavorazioni_updated_by_fkey(nome), created_by_profile:profiles!lavorazioni_created_by_fkey(nome), mezzi(*)",
+      `*, updated_by_profile:profiles!lavorazioni_updated_by_fkey(nome), created_by_profile:profiles!lavorazioni_created_by_fkey(nome), ${mezziEmbedAll}`,
     );
   }
 }

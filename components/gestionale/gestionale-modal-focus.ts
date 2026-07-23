@@ -12,8 +12,7 @@ export function useGestionaleModalDialogFocus() {
   useEffect(() => {
     const panel = panelRef.current;
     if (!panel) return;
-    const first = panel.querySelector<HTMLElement>(FOCUSABLE);
-    first?.focus({ preventScroll: true });
+    panel.focus({ preventScroll: true });
   }, []);
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {

@@ -1,3 +1,4 @@
+import { lavorazioniMezziEmbedSelect } from "@/lib/db/table-select-columns";
 import "server-only";
 
 import { cache } from "react";
@@ -45,11 +46,11 @@ async function fetchWorkOrderProjectionsServer(
   if (unique.length === 0) return map;
   const { data, error } = await sb
     .from("lavorazioni")
-    .select("id, codice, stato, addetto, mezzi(targa, marca, modello, cliente)")
+    .select(`id, codice, stato, addetto, ${lavorazioniMezziEmbedSelect("targa, marca, modello, cliente")}`)
     .in("id", unique)
     .is("deleted_at", null);
   if (error || !data) return map;
-  for (const row of data as Array<{
+  for (const row of data as unknown as Array<{
     id: string;
     codice?: string | null;
     stato?: string | null;

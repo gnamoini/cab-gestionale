@@ -85,6 +85,7 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
 
   const techParts =
     lavScheda?.campi?.righe?.map((r) => r.lavorazioniEffettuate?.trim()).filter(Boolean) ?? ([] as string[]);
+  const lavorazioniLines = [...techParts];
   const anomaliaIngresso = ing?.descrizioneAnomalia?.trim() ?? "";
   if (anomaliaIngresso && !techParts.some((p) => p.toLowerCase().includes(anomaliaIngresso.toLowerCase().slice(0, 24)))) {
     techParts.unshift(anomaliaIngresso);
@@ -119,6 +120,8 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
     technicalBlob,
     anomaliaText: anomaliaIngresso || undefined,
     noteIntervento: ing?.noteIntervento?.trim() || undefined,
+    lavorazioniLines,
+    lavorazioneId: lav.id,
     targetType: targetType === "attrezzatura" ? "attrezzatura" : "telaio",
     tipoAttrezzatura,
     marcaModello: [marcaAttrezzatura, modelloAttrezzatura].filter(Boolean).join(" "),

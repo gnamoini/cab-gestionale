@@ -6,13 +6,20 @@ import {
   renderLabelPngFallback,
   renderLabelSvgBytes,
 } from "@/lib/inventory-labels/render/png";
-import { computeA4Grid } from "@/lib/inventory-labels/render/print-layout";
+import { computeA4Grid, labelPdfPageSizeMm } from "@/lib/inventory-labels/render/print-layout";
 import {
   mapWithConcurrency,
   readPeakHeapMb,
   resolveLabelPdfRenderConcurrency,
 } from "@/lib/inventory-labels/render/pdf-concurrency";
 import { withLabelPdfTimeout } from "@/lib/inventory-labels/render/pdf-timeout";
+
+/** jsPDF 4.x su Node: addImage può toccare loadFile — etichette usano solo PNG in memoria. */
+type JsPdfApiWithFs = typeof jsPDF.API & { allowFsRead?: string[] };
+const jsPdfApi = jsPDF.API as JsPdfApiWithFs;
+if (!Array.isArray(jsPdfApi.allowFsRead)) {
+  jsPdfApi.allowFsRead = ["**"];
+}
 
 const A4_W_MM = 210;
 const A4_H_MM = 297;
@@ -38,32 +45,25 @@ async function rasterizePngs(
   return mapWithConcurrency(items, concurrency, (item) => renderOne(item));
 }
 
-/** Register PNG once per cacheKey and reuse XObject alias for repeated draws. */
+/** Registra ogni etichetta come PNG in-memory (jsPDF 4.x: alias XObject non riusabili). */
 export function assembleMultiLabelPdf(
   template: LabelTemplateDefinition,
   slots: LabelPdfSlot[],
   pngs: Buffer[],
 ): Uint8Array {
   const grid = computeA4Grid(template);
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const xObjectByKey = new Map<string, string>();
+  const page = labelPdfPageSizeMm(template);
+  const doc = new jsPDF({ orientation: page.orientation, unit: "mm", format: "a4" });
   let col = 0;
   let row = 0;
 
   for (let i = 0; i < slots.length; i++) {
-    if (i > 0 && col === 0 && row === 0) doc.addPage();
+    if (i > 0 && col === 0 && row === 0) doc.addPage("a4", page.orientation);
     const png = pngs[i]!;
-    const cacheKey = slots[i]?.cacheKey ?? `slot-${i}`;
-    let alias = xObjectByKey.get(cacheKey);
-    if (!alias) {
-      alias = `label-img-${xObjectByKey.size}`;
-      doc.addImage(new Uint8Array(png), "PNG", 0, 0, template.widthMm, template.heightMm, alias, "FAST");
-      xObjectByKey.set(cacheKey, alias);
-    }
 
     const x = grid.marginMm + col * (template.widthMm + grid.gapMm);
     const y = grid.marginMm + row * (template.heightMm + grid.gapMm);
-    doc.addImage(alias, "PNG", x, y, template.widthMm, template.heightMm, undefined, "FAST");
+    doc.addImage(new Uint8Array(png), "PNG", x, y, template.widthMm, template.heightMm, undefined, "FAST");
 
     col++;
     if (col >= grid.cols) {
@@ -72,7 +72,7 @@ export function assembleMultiLabelPdf(
     }
     if (row >= grid.rows) {
       row = 0;
-      if (i < slots.length - 1) doc.addPage();
+      if (i < slots.length - 1) doc.addPage("a4", page.orientation);
     }
   }
 

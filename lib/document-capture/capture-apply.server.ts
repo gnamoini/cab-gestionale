@@ -31,6 +31,7 @@ import { insertCaptureLinks } from "@/lib/document-capture/capture-links.server"
 import { fetchCaptureMagazzinoCatalog } from "@/lib/document-capture/capture-intervento-write-deps.server";
 import { validateCaptureForApply, captureReviewAllowsForceApply } from "@/lib/document-capture/validation/validate-capture-for-apply";
 import { mutateCaptureWithEvent } from "@/lib/document-capture/mutate-capture-with-event.server";
+import { nullIfBlankUuid } from "@/lib/document-capture/null-if-blank-uuid";
 import { resolveFieldsForHash } from "@/lib/document-capture/resolve-fields-for-hash";
 import { CapturePlanStaleError, hashConfirmedCaptureFields } from "@/lib/document-capture/capture-plan-staleness";
 import { assertValidPriorita } from "@/lib/lavorazioni/priorita-order";
@@ -122,7 +123,8 @@ async function runCaptureApplySaga(input: {
   );
   const ingressoFields = mapCaptureFieldsToIngresso(fields);
   const idempotencyKey = `document-capture-apply:${input.applicationId}`;
-  const existingLavorazioneId = input.existingLavorazioneId ?? capture.lavorazione_id;
+  const existingLavorazioneId =
+    nullIfBlankUuid(input.existingLavorazioneId) ?? nullIfBlankUuid(capture.lavorazione_id);
 
   let applyJob = await findRecoveryApplyJob(input.captureId);
   if (!applyJob) {
@@ -146,7 +148,7 @@ async function runCaptureApplySaga(input: {
   const validation = validateCaptureForApply({
     fields,
     magazzino,
-    lavorazioneId: capture.lavorazione_id,
+    lavorazioneId: nullIfBlankUuid(capture.lavorazione_id),
   });
   if (validation.status === "BLOCKED") {
     await updateCaptureApplyJob(applyJob.id, {
@@ -297,7 +299,7 @@ async function runCaptureApplyWrite(
       meta: {
         statoId: ctx.applyMeta?.statoId?.trim() || "accettazione",
         priorita: assertValidPriorita(ctx.applyMeta?.priorita),
-        mezzoIdHint: capture.mezzo_id,
+        mezzoIdHint: nullIfBlankUuid(capture.mezzo_id),
         dataIngressoIso,
         note: ingressoFields.noteIntervento.trim() || ingressoFields.descrizioneAnomalia.trim() || null,
         createdBy: userId,
@@ -347,7 +349,7 @@ async function runCaptureApplyWrite(
       applicationId,
       success: false,
       eventType,
-      lavorazioneId: saga.lavorazioneId ?? null,
+      lavorazioneId: nullIfBlankUuid(saga.lavorazioneId),
       payload: failPlan,
     });
 
@@ -424,8 +426,8 @@ async function runCaptureApplyWrite(
     applicationId,
     success: true,
     eventType: "apply_committed",
-    lavorazioneId: saga.lavorazioneId,
-    mezzoId: saga.mezzoId,
+    lavorazioneId: nullIfBlankUuid(saga.lavorazioneId),
+    mezzoId: nullIfBlankUuid(saga.mezzoId),
     payload: applyPlan,
   });
 
@@ -509,15 +511,15 @@ export async function buildCaptureDryRunApplication(captureId: string): Promise<
   const validation = validateCaptureForApply({
     fields,
     magazzino,
-    lavorazioneId: capture.lavorazione_id,
+    lavorazioneId: nullIfBlankUuid(capture.lavorazione_id),
   });
   const approvedCreates = approvedCreatesFromCaptureFields(fields);
 
   const plan = buildCaptureApplyPlanFromFields({
     fields,
-    lavorazioneId: capture.lavorazione_id,
-    mezzoId: capture.mezzo_id,
-    attrezzaturaId: capture.attrezzatura_id,
+    lavorazioneId: nullIfBlankUuid(capture.lavorazione_id),
+    mezzoId: nullIfBlankUuid(capture.mezzo_id),
+    attrezzaturaId: nullIfBlankUuid(capture.attrezzatura_id),
     approvedCreates,
     createdBy: userId ?? "Document Capture",
     magazzino,

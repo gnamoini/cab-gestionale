@@ -31,6 +31,16 @@ export const MEZZI_EMBED_LIGHT_COLUMNS =
 export const MEZZI_EMBED_CLIENT_PORTAL_COLUMNS =
   `${MEZZI_EMBED_LIGHT_COLUMNS},meta` as const;
 
+/** FK PostgREST `lavorazioni.mezzo_id` → `mezzi` (disambiguation da `mezzi.ultimo_aggiornamento_da_lavorazione_id`). */
+export const LAVORAZIONI_MEZZO_ID_FKEY = "lavorazioni_mezzo_id_fkey" as const;
+
+/** Embed mezzo da query su `lavorazioni` — hint FK obbligatorio. */
+export function lavorazioniMezziEmbedSelect(columns: string, options?: { inner?: boolean }): string {
+  const fk = LAVORAZIONI_MEZZO_ID_FKEY;
+  if (options?.inner) return `mezzi!${fk}!inner(${columns})`;
+  return `mezzi!${fk}(${columns})`;
+}
+
 /** Lista mezzi — telaio + ident (attrezzatura via tabella dedicata). */
 export const MEZZI_LIST_LIGHT_COLUMNS =
   "id, cliente, utilizzatore, targa, numero_scuderia, anno, meta, entity_key, created_at, updated_at, marca_telaio, modello_telaio, tipo_telaio, telaio_num, km, note" as const;

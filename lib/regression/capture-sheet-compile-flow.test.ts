@@ -12,8 +12,8 @@ const sheetStep = fs.readFileSync(
   path.join(ROOT, "components/document-capture/capture-scheda-sheet-compile-step.tsx"),
   "utf8",
 );
-const matchStep = fs.readFileSync(
-  path.join(ROOT, "components/document-capture/capture-mezzo-match-step.tsx"),
+const lavorazioniForm = fs.readFileSync(
+  path.join(ROOT, "components/lavorazioni/schede/scheda-lavorazioni-form-body.tsx"),
   "utf8",
 );
 
@@ -27,10 +27,13 @@ assert.match(launcher, /sheet-compile/);
 assert.match(launcher, /CaptureSchedaSheetCompileStep/);
 assert.match(launcher, /CAPTURE_SHEET_COMPILE_FORM_ID/);
 assert.match(launcher, /Conferma import/);
-assert.match(sheetStep, /Verifica i dati letti/);
-assert.match(sheetStep, /Completa la verifica prima di importare/);
-assert.match(sheetStep, /Import pronto/);
+assert.match(sheetStep, /variant="capture"/);
+assert.match(sheetStep, /reviewCount=\{reviewCount\}/);
+assert.match(lavorazioniForm, /Identificazione:/);
 assert.match(sheetStep, /submittingRef/);
-assert.match(matchStep, /Conferma assegnazione/);
+assert.match(
+  fs.readFileSync(path.join(ROOT, "components/document-capture/capture-mezzo-match-step.tsx"), "utf8"),
+  /Conferma assegnazione/,
+);
 
 console.log("capture-sheet-compile-flow.test.ts OK");

@@ -23,6 +23,8 @@ assert.match(swUpdate, /refreshServiceWorkerUpdateCheck/);
 assert.match(swUpdate, /tryAutoApplyOnColdStart/);
 assert.match(swUpdate, /markPwaSessionActive/);
 assert.match(swUpdate, /bootstrapServiceWorkerUpdateFlow/);
+assert.match(swUpdate, /settlePendingServiceWorkerInstall/);
+assert.match(swUpdate, /beginPwaBootstrap/);
 
 const bridge = read("src/components/pwa-service-worker-bridge.tsx");
 assert.match(bridge, /subscribedAtMs/);

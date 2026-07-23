@@ -5,6 +5,7 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
 import { OptionalTooltip } from "@/components/ui";
 import { ShellNavIconBack } from "@/components/design-system/shell-nav-icons";
 import { dsShellNavIconBtn } from "@/lib/ui/design-system";
+import { blurShellNavAfterPointer } from "@/lib/ui/shell-nav-button-focus";
 import { TOOLTIP_GAP_SHELL_NAV } from "@/lib/ui/tooltip-portal";
 import { resolveTooltipContent } from "@/lib/ui/tooltip-value-score";
 type ShellNavBackBase = {
@@ -18,6 +19,7 @@ export function ShellNavBackButton({
   className = "",
   showOnFocus = false,
   type = "button",
+  onPointerUp,
   ...props
 }: ShellNavBackBase & ButtonHTMLAttributes<HTMLButtonElement>) {
   const tip = resolveTooltipContent("", label, { iconOnly: true, ariaLabel: label });
@@ -27,6 +29,10 @@ export function ShellNavBackButton({
         type={type}
         aria-label={label}
         className={`${dsShellNavIconBtn} shrink-0 disabled:pointer-events-none disabled:opacity-55 ${className}`.trim()}
+        onPointerUp={(e) => {
+          blurShellNavAfterPointer(e);
+          onPointerUp?.(e);
+        }}
         {...props}
       >
         <ShellNavIconBack />

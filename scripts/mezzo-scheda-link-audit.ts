@@ -2,6 +2,7 @@
  * Audit link mezzo ↔ scheda ingresso (report only).
  * Uso: npx tsx scripts/mezzo-scheda-link-audit.ts [--out report.json]
  */
+import { lavorazioniMezziEmbedSelect } from "@/lib/db/table-select-columns";
 import { createClient } from "@supabase/supabase-js";
 import { writeFileSync } from "node:fs";
 
@@ -27,6 +28,20 @@ function identKey(targa: string, matricola: string, scuderia: string): string {
   return [norm(targa), norm(matricola), norm(scuderia)].filter(Boolean).join("|");
 }
 
+type SchedaIngressoAuditRow = {
+  id: string;
+  lavorazione_id: string;
+  campi?: Record<string, unknown> | null;
+  lavorazioni?: {
+    mezzo_id?: string | null;
+    mezzi?: {
+      targa?: string | null;
+      numero_scuderia?: string | null;
+      attrezzature?: { matricola?: string | null }[];
+    } | null;
+  } | null;
+};
+
 async function main() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
@@ -38,22 +53,17 @@ async function main() {
   const sb = createClient(url, key);
   const { data: schede, error } = await sb
     .from("scheda_lavorazione")
-    .select("id, lavorazione_id, campi, lavorazioni(mezzo_id, mezzi(targa, numero_scuderia, attrezzature(matricola)))")
+    .select(
+      `id, lavorazione_id, campi, lavorazioni(mezzo_id, ${lavorazioniMezziEmbedSelect("targa, numero_scuderia, attrezzature(matricola)")})`,
+    )
     .eq("tipo", "ingresso")
     .limit(5000);
   if (error) throw error;
 
   const rows: AuditRow[] = [];
-  for (const s of schede ?? []) {
+  for (const s of (schede ?? []) as unknown as SchedaIngressoAuditRow[]) {
     const campi = (s.campi ?? {}) as Record<string, string>;
-    const lav = s.lavorazioni as {
-      mezzo_id?: string | null;
-      mezzi?: {
-        targa?: string | null;
-        numero_scuderia?: string | null;
-        attrezzature?: { matricola?: string | null }[];
-      } | null;
-    } | null;
+    const lav = s.lavorazioni;
     const mezzoId = lav?.mezzo_id ?? null;
     const mezzo = lav?.mezzi;
     const attMat = mezzo?.attrezzature?.[0]?.matricola ?? "";

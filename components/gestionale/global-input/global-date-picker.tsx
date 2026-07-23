@@ -35,6 +35,7 @@ import {
 } from "@/lib/ui/italian-date-input-mask";
 import {
   extractDatePickerShellLayoutClass,
+  GLOBAL_DATE_PICKER_CALENDAR_PANEL_WIDTH,
   globalInputCalendarPortalPanel,
   globalInputDatePickerCalendarBtn,
   globalInputDatePickerInput,
@@ -126,12 +127,14 @@ export function GlobalDatePicker({
 
   const closeCalendar = useCallback(() => setOpen(false), []);
 
+  const resolvedCalendarPanelWidth = calendarPanelWidth ?? GLOBAL_DATE_PICKER_CALENDAR_PANEL_WIDTH;
+
   const { style: portalStyle, placementOriginClass } = useGlobalDropdownPortal({
     open,
     anchorRef: wrapRef,
     contentRef: panelRef,
-    matchAnchorWidth: calendarPanelWidth == null,
-    panelWidth: calendarPanelWidth,
+    matchAnchorWidth: false,
+    panelWidth: resolvedCalendarPanelWidth,
     maxHeight: 420,
     repositionDeps: [viewYear, viewMonth, selectedYmd],
   });
