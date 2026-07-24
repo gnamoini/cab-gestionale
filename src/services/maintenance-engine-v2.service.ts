@@ -1,6 +1,7 @@
 "use client";
 
 import { computeMaintenanceUrgency } from "@/lib/maintenance-plans/compute-maintenance-urgency";
+import { formatDueReason } from "@/lib/maintenance-plans/maintenance-due-engine";
 import {
   MAINTENANCE_PRESET_CATEGORIES_COLUMNS,
   VEHICLE_MAINTENANCE_CONFIGS_COLUMNS,
@@ -21,7 +22,7 @@ import {
   forecastRowToRpcJson,
   persistForecastForConfig,
 } from "@/lib/maintenance-plans/recompute-forecast-for-config";
-import { resolvePlansForMezzo } from "@/lib/maintenance-plans/resolve-plans-for-mezzo";
+import { isPresetAssignable } from "@/lib/maintenance-plans/maintenance-domain-contract";
 import { primaryIntervalFromTriggers } from "@/lib/maintenance-plans/maintenance-trigger-helpers";
 import {
   currentValueForInterval,
@@ -199,8 +200,6 @@ export const maintenanceEngineV2Service = {
     mezzoId: string;
     oreKm?: number;
     kmFromMeta?: number | null;
-    tipoAttrezzatura: string;
-    tagliandiEnabled?: boolean;
   }): Promise<ServiceResult<VehicleMaintenanceConfigView[]>> {
     try {
       const client = await sb();
@@ -212,21 +211,7 @@ export const maintenanceEngineV2Service = {
         .order("created_at", { ascending: true });
       if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "read" }));
 
-      let configs = (data ?? []) as ConfigRow[];
-      if (configs.length === 0) {
-        await maintenanceEngineV2Service.ensureMezzoConfigsFromLegacy({
-          mezzoId: input.mezzoId,
-          tipoAttrezzatura: input.tipoAttrezzatura,
-        });
-        const retry = await client
-          .from("vehicle_maintenance_configs")
-          .select(VEHICLE_MAINTENANCE_CONFIGS_COLUMNS)
-          .eq("mezzo_id", input.mezzoId)
-          .is("deleted_at", null);
-        if (retry.error) return err(humanizeGestionaleError(retry.error.message, { entity: "mezzo", action: "read" }));
-        configs = (retry.data ?? []) as ConfigRow[];
-      }
-
+      const configs = (data ?? []) as ConfigRow[];
       const metering = await resolveCurrentMezzoMetering(client, input.mezzoId);
       const views = await loadConfigViewBatch(client, configs, input.mezzoId, metering);
       return success(views);
@@ -252,79 +237,6 @@ export const maintenanceEngineV2Service = {
     }
   },
 
-  async ensureMezzoConfigsFromLegacy(input: {
-    mezzoId: string;
-    tipoAttrezzatura: string;
-  }): Promise<ServiceResult<number>> {
-    try {
-      const [plansRes, catalogRes] = await Promise.all([
-        maintenancePlansService.listPlans(),
-        maintenancePlansService.listTipoCatalog(),
-      ]);
-      if (!plansRes.success) return err(plansRes.error ?? "Errore piani.");
-      const catalog = catalogRes.data ?? [];
-      const applicable = resolvePlansForMezzo({
-        tipoAttrezzatura: input.tipoAttrezzatura,
-        catalog,
-        plans: plansRes.data ?? [],
-      });
-      if (applicable.length === 0) return success(0);
-
-      const client = await sb();
-      const { data: user } = await client.auth.getUser();
-      const uid = user.user?.id ?? null;
-      let created = 0;
-
-      for (const plan of applicable) {
-        const { data: existing } = await client
-          .from("vehicle_maintenance_configs")
-          .select("id")
-          .eq("mezzo_id", input.mezzoId)
-          .eq("preset_id", plan.id)
-          .is("deleted_at", null)
-          .maybeSingle();
-        if (existing) continue;
-
-        const { data: version } = await client
-          .from("maintenance_preset_versions")
-          .select("id")
-          .eq("preset_id", plan.id)
-          .order("version_number", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        const { data: inserted, error } = await client
-          .from("vehicle_maintenance_configs")
-          .insert({
-            mezzo_id: input.mezzoId,
-            preset_id: plan.id,
-            preset_version_id: version?.id ?? null,
-            maintenance_kind: "tagliando_ore",
-            is_active: true,
-            interval_type: "ore",
-            interval_value: plan.intervalOre,
-            label: plan.nome,
-            activated_at: new Date().toISOString().slice(0, 10),
-            created_by: uid,
-          })
-          .select("id")
-          .maybeSingle();
-        if (!error && inserted) {
-          created++;
-          await client
-            .from("vehicle_maintenance_services")
-            .update({ config_id: inserted.id })
-            .eq("mezzo_id", input.mezzoId)
-            .eq("plan_id", plan.id)
-            .is("config_id", null);
-        }
-      }
-      return success(created);
-    } catch (e) {
-      return serviceFailFromError<number>(e, 0, { entity: "mezzo", action: "create" });
-    }
-  },
-
   async upsertMezzoConfig(input: UpsertVehicleMaintenanceConfigInput): Promise<ServiceResult<VehicleMaintenanceConfigView>> {
     try {
       const client = await sb();
@@ -334,7 +246,6 @@ export const maintenanceEngineV2Service = {
       const payload = {
         mezzo_id: input.mezzoId,
         preset_id: input.presetId ?? null,
-        maintenance_kind: input.maintenanceKind,
         is_active: input.isActive,
         interval_type: input.intervalType,
         interval_value: input.intervalValue,
@@ -380,7 +291,6 @@ export const maintenanceEngineV2Service = {
 
       const listed = await maintenanceEngineV2Service.listMezzoConfigs({
         mezzoId: input.mezzoId,
-        tipoAttrezzatura: "",
       });
       if (!listed.success) return err(listed.error ?? "Errore ricaricamento.");
       const view = (listed.data ?? []).find((c) => c.id === configId);
@@ -579,6 +489,7 @@ export const maintenanceEngineV2Service = {
           nextDateEstimated: forecast?.next_date_estimated ?? null,
           remainingValue: forecast?.remaining_value ?? 0,
         });
+        const presetNome = c.label?.trim() || (c.preset_id ? presetMap.get(c.preset_id) ?? "—" : "Custom");
 
         return {
           configId: c.id,
@@ -587,7 +498,7 @@ export const maintenanceEngineV2Service = {
           numeroScuderia: (mezzo?.numero_scuderia as string | null) ?? null,
           targa: (mezzo?.targa as string | null) ?? null,
           attrezzaturaLabel: [mezzo?.marca_telaio, mezzo?.modello_telaio].filter(Boolean).join(" ") || "—",
-          presetNome: c.label?.trim() || (c.preset_id ? presetMap.get(c.preset_id) ?? "—" : "Custom"),
+          presetNome,
           intervalType: c.interval_type,
           intervalValue: Number(c.interval_value),
           intervalLabel: formatIntervalLabel(c.interval_type, Number(c.interval_value)),
@@ -607,6 +518,13 @@ export const maintenanceEngineV2Service = {
           partsCount: c.preset_id ? (partsCountByPreset.get(c.preset_id) ?? 0) : 0,
           urgency,
           canPlanWorkshop: urgency === "arancione" || urgency === "rosso",
+          dueReasonLabel: formatDueReason({
+            presetNome,
+            explainability: forecast?.explainability_json ?? null,
+            currentValue,
+            remainingValue: forecast?.remaining_value ?? null,
+            isOverdue: urgency === "rosso" || (forecast?.remaining_value != null && forecast.remaining_value <= 0),
+          }),
         };
       });
 
@@ -737,21 +655,16 @@ export const maintenanceEngineV2Service = {
     mezzoIds: string[];
     replaceExisting?: boolean;
   }): Promise<ServiceResult<BulkAssignPresetResult>> {
-    const replaceExisting = input.replaceExisting !== false;
     const skipped: BulkAssignPresetResult["skipped"] = [];
     let assigned = 0;
 
     try {
-      const [plansRes, catalogRes] = await Promise.all([
-        maintenancePlansService.listPlans(),
-        maintenancePlansService.listTipoCatalog(),
-      ]);
+      const plansRes = await maintenancePlansService.listPlans();
       if (!plansRes.success) return err(plansRes.error ?? "Errore piani.");
       const plan = (plansRes.data ?? []).find((p) => p.id === input.presetId);
       if (!plan) return err("Preset non trovato.");
-      if (plan.status !== "active") return err("Il preset non è attivo.");
+      if (!isPresetAssignable(plan.status)) return err("Il preset non è attivo o non è assegnabile.");
 
-      const catalog = catalogRes.data ?? [];
       const triggers = plan.triggerGroups[0]?.triggers ?? [
         { triggerType: plan.intervalType, threshold: plan.intervalValue, priority: 0 },
       ];
@@ -763,44 +676,12 @@ export const maintenanceEngineV2Service = {
       for (const mezzoId of input.mezzoIds) {
         const { data: mezzo, error: mezzoErr } = await client
           .from("mezzi")
-          .select("id, tipo_attrezzatura, meta, marca_telaio, modello_telaio")
+          .select("id")
           .eq("id", mezzoId)
           .maybeSingle();
         if (mezzoErr || !mezzo) {
           skipped.push({ mezzoId, reason: "Mezzo non trovato" });
           continue;
-        }
-
-        const tipo = (mezzo.tipo_attrezzatura as string) ?? "";
-        const applicable = resolvePlansForMezzo({ tipoAttrezzatura: tipo, catalog, plans: [plan] });
-        if (applicable.length === 0) {
-          skipped.push({ mezzoId, reason: "Tipo attrezzatura non compatibile" });
-          continue;
-        }
-
-        if (replaceExisting) {
-          const { data: existing } = await client
-            .from("vehicle_maintenance_configs")
-            .select("id, preset_id")
-            .eq("mezzo_id", mezzoId)
-            .eq("maintenance_kind", plan.maintenanceKind)
-            .eq("is_active", true)
-            .is("deleted_at", null);
-          for (const cfg of existing ?? []) {
-            if (cfg.preset_id === input.presetId) continue;
-            await client
-              .from("vehicle_maintenance_configs")
-              .update({ deleted_at: new Date().toISOString(), is_active: false })
-              .eq("id", cfg.id as string);
-            await writeMaintenanceAuditEvent(client, {
-              entity: "config",
-              entityId: cfg.id as string,
-              action: MAINTENANCE_AUDIT_ACTIONS.PRESET_REPLACED_ON_MEZZO,
-              oldValue: { preset_id: cfg.preset_id },
-              newValue: { preset_id: input.presetId },
-              createdBy: uid,
-            });
-          }
         }
 
         const { data: existingSame } = await client
@@ -819,7 +700,6 @@ export const maintenanceEngineV2Service = {
         const upsertRes = await maintenanceEngineV2Service.upsertMezzoConfig({
           mezzoId,
           presetId: input.presetId,
-          maintenanceKind: plan.maintenanceKind,
           isActive: true,
           intervalType: primary.intervalType,
           intervalValue: primary.intervalValue,
@@ -829,14 +709,6 @@ export const maintenanceEngineV2Service = {
         if (!upsertRes.success) {
           skipped.push({ mezzoId, reason: upsertRes.error ?? "Assegnazione fallita" });
           continue;
-        }
-
-        const meta = (mezzo.meta as Record<string, unknown>) ?? {};
-        if (meta.tagliandi !== true) {
-          await client
-            .from("mezzi")
-            .update({ meta: { ...meta, tagliandi: true } })
-            .eq("id", mezzoId);
         }
 
         assigned++;

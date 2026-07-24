@@ -15,6 +15,13 @@ export type ClientPagination = {
   resetPage: () => void;
 };
 
+/** Pagina 1-based che contiene `itemIndex` (0-based) nella lista filtrata. */
+export function clientPaginationPageForIndex(itemIndex: number, pageSize: number): number {
+  const size = Math.max(1, pageSize);
+  if (itemIndex < 0) return 1;
+  return Math.floor(itemIndex / size) + 1;
+}
+
 export function useClientPagination(total: number, pageSize: number = CLIENT_PAGE_SIZE): ClientPagination {
   const size = Math.max(1, pageSize);
   const pageCount = useMemo(() => Math.max(1, Math.ceil(Math.max(0, total) / size)), [total, size]);

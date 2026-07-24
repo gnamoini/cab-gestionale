@@ -8,8 +8,10 @@ export type ReportSectionId =
   | "clienti_mezzi"
   | "magazzino_ricambi"
   | "ore_lavorate"
+  | "analisi_ore_officina"
   | "dati_economici"
-  | "analisi_incrociate";
+  | "analisi_incrociate"
+  | "recidivita_mezzi";
 
 export type ReportSectionConfig = {
   id: ReportSectionId;
@@ -57,24 +59,46 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     writableDerivedKeys: [],
   },
   {
+    id: "recidivita_mezzi",
+    title: "ANALISI RECIDIVITÀ MEZZI",
+    subtitle: "Ritorni ravvicinati, score qualità e correlazioni operative",
+    defaultCollapsed: true,
+    permission: null,
+    permissionAny: ["lavorazioni", "mezzi"],
+    order: 4,
+    participatesInDerived: false,
+    writableDerivedKeys: [],
+  },
+  {
     id: "magazzino_ricambi",
     title: "MAGAZZINO E RICAMBI",
     subtitle: "Consumi, stock e ordini fornitori",
     defaultCollapsed: true,
     permission: "magazzino",
-    order: 4,
+    order: 5,
     participatesInDerived: true,
     writableDerivedKeys: ["warehouse"],
   },
   {
     id: "ore_lavorate",
-    title: "ORE LAVORATE",
-    subtitle: "Timesheet e produttività del team",
+    title: "PRESENZE TEAM",
+    subtitle: "Cartellino presenze — ore ordinarie, straordinarie e assenze",
     defaultCollapsed: true,
     permission: "dipendenti",
-    order: 5,
+    order: 6,
     participatesInDerived: true,
     writableDerivedKeys: ["labor"],
+  },
+  {
+    id: "analisi_ore_officina",
+    title: "ANALISI ORE OFFICINA",
+    subtitle: "Produttività reale, utilizzo tecnici e qualità dati consuntivo",
+    defaultCollapsed: true,
+    permission: null,
+    permissionAny: ["dipendenti", "lavorazioni"],
+    order: 7,
+    participatesInDerived: false,
+    writableDerivedKeys: [],
   },
   {
     id: "dati_economici",
@@ -82,7 +106,7 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     subtitle: "Preventivi, fatture e DDT",
     defaultCollapsed: false,
     permission: "fatturazione",
-    order: 6,
+    order: 8,
     participatesInDerived: true,
     writableDerivedKeys: ["economic"],
   },
@@ -92,7 +116,7 @@ export const REPORT_SECTIONS: readonly ReportSectionConfig[] = [
     subtitle: "Indicatori trasversali tra aree",
     defaultCollapsed: true,
     permission: null,
-    order: 7,
+    order: 9,
     participatesInDerived: true,
     writableDerivedKeys: [],
   },

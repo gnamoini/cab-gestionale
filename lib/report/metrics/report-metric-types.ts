@@ -147,4 +147,10 @@ export type ReportMetricRegistryEntry = {
   confidence?: ReportMetricConfidence;
   valueCapability: ReportMetricValueCapability;
   series?: ReportMetricSeriesConfig;
+  /** SSOT ore: tipo dato usato dalla metrica. */
+  hourKind?: import("@/lib/analytics/hours/types").HourKind;
+  /** Tabelle sorgente dichiarate (guard CI). */
+  sourceTables?: readonly string[];
+  /** Se false, vietato in metriche produttività con ore stimate. */
+  allowEstimate?: boolean;
 };

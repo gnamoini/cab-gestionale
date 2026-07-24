@@ -1,6 +1,5 @@
 import { documentoRelevantePerMezzo, preventivoMatchesMezzo } from "@/lib/mezzi/mezzi-hub-merge";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
-import { mezzoTagliandiEnabled } from "@/lib/mezzi/mezzi-meta";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { Q_LAVORAZIONI_MEZZO_ID } from "@/lib/navigation/dashboard-log-links";
@@ -132,9 +131,6 @@ export function compareMezzi(
     case "numeroLavorazioni":
       cmp = (numeroLavorazioniSortValue?.(a) ?? 0) - (numeroLavorazioniSortValue?.(b) ?? 0);
       break;
-    case "tagliandi":
-      cmp = Number(mezzoTagliandiEnabled(a)) - Number(mezzoTagliandiEnabled(b));
-      break;
     default:
       cmp = 0;
   }
@@ -174,8 +170,6 @@ export function ultimoInterventoIso(rows: MezzoInterventoLavorazione[]): string 
 export type UltimaLavorazioneFilter = "" | "con" | "senza" | "recenti12m" | "oltre12m";
 
 export type NumeroLavorazioniFilter = "" | "con" | "senza";
-
-export type TagliandiFilter = "" | "si" | "no";
 
 export function mezzoMatchesNumeroLavorazioniFilter(
   count: number,
@@ -255,7 +249,6 @@ const MEZZO_LOG_FIELDS: { key: keyof MezzoGestito; label: string }[] = [
   { key: "modelloTelaio", label: "Modello telaio" },
   { key: "targa", label: "Targa" },
   { key: "anno", label: "Anno" },
-  { key: "tagliandi", label: "Tagliandi" },
   { key: "oreKm", label: "Ore lavoro" },
   { key: "km", label: "KM" },
   { key: "dataUltimaUscita", label: "Ultima uscita" },

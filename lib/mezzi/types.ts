@@ -54,8 +54,7 @@ export type MezziSortKey =
   | "matricola"
   | "numeroScuderia"
   | "ultimaLavorazione"
-  | "numeroLavorazioni"
-  | "tagliandi";
+  | "numeroLavorazioni";
 
 export type MezziSortPhase = "natural" | "asc" | "desc";
 
@@ -63,6 +62,8 @@ export type MezziSortPhase = "natural" | "asc" | "desc";
 export type MezzoInterventoLavorazione = {
   id: string;
   origine: "storico" | "attiva";
+  /** Codice umano lavorazione (es. 26-0001). */
+  codice?: string | null;
   dataIngresso: string;
   dataCompletamento: string | null;
   durataGiorniLabel: string;
@@ -71,4 +72,13 @@ export type MezzoInterventoLavorazione = {
   descrizione: string;
   prioritaLabel: string;
   statoFinale: string;
+  statoId?: string;
+  /** Target intervento (telaio / attrezzatura). */
+  targetType?: "telaio" | "attrezzatura";
+  operatorePrincipale?: string | null;
+  oreTotali?: number | null;
+  ricambiCount?: number;
+  hasSchede?: boolean;
+  /** FK mezzo assente — collegamento fuzzy o debole. */
+  weakMezzoLink?: boolean;
 };

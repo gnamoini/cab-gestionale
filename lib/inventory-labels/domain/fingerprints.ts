@@ -20,6 +20,8 @@ export type LabelFingerprintInput = {
   generatorVersion: string;
   preset: string;
   includeBarcode?: boolean;
+  labelKind?: "internal" | "cliente";
+  clienteQrUrl?: string;
   canonicalOrigin: string;
 };
 
@@ -40,6 +42,8 @@ export function computeLabelFingerprint(input: LabelFingerprintInput): string {
     generatorVersion: input.generatorVersion,
     preset: input.preset,
     includeBarcode: input.includeBarcode === true,
+    labelKind: input.labelKind ?? "internal",
+    clienteQrUrl: (input.clienteQrUrl ?? "").trim(),
     canonicalOrigin: input.canonicalOrigin.replace(/\/+$/, ""),
   });
   return createHash("sha256").update(canonical).digest("hex").slice(0, 16);

@@ -25,6 +25,8 @@ export type ReportSectionId =
   | "clienti_mezzi"
   | "magazzino_ricambi"
   | "ore_lavorate"
+  | "analisi_ore_officina"
+  | "recidivita_mezzi"
   | "dati_economici"
   | "analisi_incrociate";
 

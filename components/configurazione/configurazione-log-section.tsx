@@ -8,143 +8,104 @@ import {
   GestionaleLogList,
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
-import {
-  CONFIGURAZIONE_LOG_STORAGE_KEY,
-  loadConfigurazioneLog,
-  migrateLegacyDashboardSettingsLogsToConfigurazione,
-  type ConfigurazioneLogStored,
-} from "@/lib/configurazione/configurazione-log-storage";
-import { CAB_CONFIGURAZIONE_LOG_REFRESH } from "@/lib/sistema/cab-events";
+import { appSettingsAuditService } from "@/src/services/app-settings-audit.service";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
-import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
+import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
+import type { AppSettingsAuditRow } from "@/src/types/supabase-tables";
 
-function vmFromStored(e: ConfigurazioneLogStored) {
-  const { id: _id, ...vm } = e;
-  return vm;
+function vmFromAuditRow(row: AppSettingsAuditRow): GestionaleLogViewModel {
+  const at = row.updated_at;
+  return {
+    tone: "update",
+    tipoRiga: `IMPOSTAZIONI · ${row.module}`,
+    oggettoRiga: row.key,
+    modificaRiga: "Modifica configurazione amministrativa",
+    autore: row.updated_by ? `Utente ${row.updated_by.slice(0, 8)}…` : "Sistema",
+    atIso: at,
+  };
 }
 
-const GROUP_WINDOW_MS = 120_000;
-
-function groupConfigurazioneEntries(entries: ConfigurazioneLogStored[]): ConfigurazioneLogStored[] {
-  if (entries.length === 0) return [];
-  const out: ConfigurazioneLogStored[] = [];
-  let buf: ConfigurazioneLogStored[] = [];
-
-  function flush() {
-    if (buf.length === 0) return;
-    if (buf.length === 1) {
-      out.push(buf[0]);
-    } else {
-      const first = buf[0];
-      const last = buf[buf.length - 1];
-      const base = first.modificaRiga.replace(/\s*\(\d+\s+cambi\)\s*$/i, "").trim();
-      out.push({
-        ...last,
-        id: `grp-${first.id}-${buf.length}-${last.atIso}`,
-        modificaRiga: `${base} (${buf.length} sezioni)`,
-      });
-    }
-    buf = [];
-  }
-
-  for (const e of entries) {
-    const prev = buf[buf.length - 1];
-    if (
-      prev &&
-      prev.tipoRiga === e.tipoRiga &&
-      prev.autore === e.autore &&
-      Math.abs(new Date(e.atIso).getTime() - new Date(prev.atIso).getTime()) <= GROUP_WINDOW_MS
-    ) {
-      buf.push(e);
-    } else {
-      flush();
-      buf = [e];
-    }
-  }
-  flush();
-  return out;
-}
-
-function useConfigurazioneLogEntries(): ConfigurazioneLogStored[] {
-  const [entries, setEntries] = useState<ConfigurazioneLogStored[]>([]);
-
-  useEffect(() => {
-    function refresh() {
-      migrateLegacyDashboardSettingsLogsToConfigurazione();
-      setEntries(loadConfigurazioneLog());
-    }
-    refresh();
-    const onVis = () => {
-      if (document.visibilityState === "visible") refresh();
-    };
-    const onStorage = (ev: StorageEvent) => {
-      if (ev.key === CONFIGURAZIONE_LOG_STORAGE_KEY) refresh();
-    };
-    window.addEventListener(CAB_CONFIGURAZIONE_LOG_REFRESH, refresh);
-    document.addEventListener("visibilitychange", onVis);
-    window.addEventListener("storage", onStorage);
-    return () => {
-      window.removeEventListener(CAB_CONFIGURAZIONE_LOG_REFRESH, refresh);
-      document.removeEventListener("visibilitychange", onVis);
-      window.removeEventListener("storage", onStorage);
-    };
-  }, []);
-
-  return entries;
-}
-
-export function ConfigurazioneLogListEmbedded({
-  max = 40,
-  className,
-  paged = false,
-}: {
+type ConfigurazioneLogSectionProps = {
   max?: number;
   className?: string;
   paged?: boolean;
-}) {
-  const entries = useConfigurazioneLogEntries();
-  const grouped = useMemo(() => groupConfigurazioneEntries(entries), [entries]);
+};
 
-  const pageSize = useResponsiveListPageSize();
-  const { page, setPage, pageCount, sliceItems, showPager, label, resetPage } = useClientPagination(
-    grouped.length,
-    pageSize,
-  );
+export function ConfigurazioneLogSection({
+  max = 40,
+  className,
+  paged = false,
+}: ConfigurazioneLogSectionProps = {}) {
+  const [rows, setRows] = useState<AppSettingsAuditRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    void appSettingsAuditService.list({ limit: 500 }).then((res) => {
+      if (cancelled) return;
+      setRows(res.success ? (res.data ?? []) : []);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const entries = useMemo(() => rows.map(vmFromAuditRow), [rows]);
+  const pageSize = 12;
+  const pagination = useClientPagination(entries.length, pageSize);
+  const { resetPage } = pagination;
 
   useEffect(() => {
     if (!paged) return;
     resetPage();
-  }, [paged, grouped.length, pageSize, resetPage]);
+  }, [paged, entries.length, pageSize, resetPage]);
 
-  const slice = useMemo(() => {
-    if (paged) return sliceItems(grouped);
-    return grouped.slice(0, max);
-  }, [paged, grouped, max, sliceItems, page]);
+  const visibleEntries = useMemo(() => {
+    if (paged) return pagination.sliceItems(entries);
+    return entries.slice(0, max);
+  }, [paged, entries, max, pagination]);
 
   const list = (
-    <>
-      {slice.length === 0 ? (
-        <GestionaleLogEmpty message="Nessuna modifica registrata. Ogni salvataggio in Configurazione viene tracciato qui." />
+    <div className={gestionaleLogScrollEmbeddedClass}>
+      {loading ? (
+        <p className="text-muted-foreground px-3 py-4 text-sm">Caricamento storico…</p>
+      ) : visibleEntries.length === 0 ? (
+        <GestionaleLogEmpty message="Nessuna modifica configurazione registrata." />
       ) : (
         <GestionaleLogList>
-          {slice.map((e) => (
-            <li key={e.id} className="list-none">
-              <GestionaleLogEntryFourLines vm={vmFromStored(e)} />
-            </li>
+          {visibleEntries.map((vm, i) => (
+            <GestionaleLogEntryFourLines key={`${vm.atIso}-${i}`} vm={vm} />
           ))}
         </GestionaleLogList>
       )}
-    </>
+    </div>
   );
 
   if (paged) {
     return (
       <div className={`flex min-h-0 min-w-0 flex-1 flex-col gap-2 ${className ?? ""}`}>
-        <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1 pr-1`}>{list}</div>
-        {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} /> : null}
+        {list}
+        {pagination.showPager ? (
+          <TablePagination
+            page={pagination.page}
+            pageCount={pagination.pageCount}
+            onPageChange={pagination.setPage}
+            label={pagination.label}
+          />
+        ) : null}
       </div>
     );
   }
 
-  return <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1 pr-1 ${className ?? ""}`}>{list}</div>;
+  return (
+    <section
+      className={`flex min-h-0 flex-1 flex-col gap-2 ${className ?? ""}`}
+      aria-label="Storico configurazione"
+    >
+      {list}
+    </section>
+  );
 }
+
+export const ConfigurazioneLogListEmbedded = ConfigurazioneLogSection;

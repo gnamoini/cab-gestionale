@@ -18,7 +18,6 @@ import {
   type PlanDraft,
 } from "@/lib/maintenance-plans/preset-editor-draft";
 import { dsBtnNeutral, dsBtnPrimary, dsFormField, dsFormInput, dsFormLabel } from "@/lib/ui/design-system";
-import { useMaintenancePlansCatalogQuery } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
 import { useMaintenancePlanUpsertMutation } from "@/src/hooks/gestionale/use-maintenance-plan-mutations";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
@@ -35,14 +34,12 @@ export function MaintenancePresetEditorModal({
   const [draft, setDraft] = useState(() => initial ?? emptyPlanDraft());
   const [checklistLabel, setChecklistLabel] = useState("");
   const [forkConfirmOpen, setForkConfirmOpen] = useState(false);
-  const catalogQ = useMaintenancePlansCatalogQuery(open);
   const upsertMut = useMaintenancePlanUpsertMutation();
 
   useEffect(() => {
     if (open) setDraft(initial ?? emptyPlanDraft());
   }, [open, initial]);
 
-  const catalog = catalogQ.data ?? [];
   const inUseCount = draft.assignedMezziCount ?? 0;
   const showVersionBanner = Boolean(draft.id && inUseCount > 0);
 
@@ -65,10 +62,6 @@ export function MaintenancePresetEditorModal({
     }
     if (draft.triggersDraft.length === 0 || draft.triggersDraft.some((t) => t.threshold <= 0)) {
       toastValidation("Configura almeno un trigger con soglia valida.");
-      return;
-    }
-    if (draft.tipoAttrezzaturaIds.length === 0) {
-      toastValidation("Seleziona almeno un tipo attrezzatura.");
       return;
     }
     if (draft.id && inUseCount > 0) {
@@ -174,37 +167,7 @@ export function MaintenancePresetEditorModal({
               enabled={open}
             />
             <div className={dsFormField}>
-              <span className={dsFormLabel}>Tipi attrezzatura</span>
-              {catalog.length === 0 ? (
-                <p className="text-sm text-amber-700 dark:text-amber-300">
-                  Catalogo tipi vuoto: i tipi verranno sincronizzati automaticamente al salvataggio.
-                </p>
-              ) : null}
-              <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] p-2">
-                {catalog.map((t) => {
-                  const checked = draft.tipoAttrezzaturaIds.includes(t.id);
-                  return (
-                    <label key={t.id} className="inline-flex items-center gap-1.5 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() =>
-                          setDraft((d) => ({
-                            ...d,
-                            tipoAttrezzaturaIds: checked
-                              ? d.tipoAttrezzaturaIds.filter((id) => id !== t.id)
-                              : [...d.tipoAttrezzaturaIds, t.id],
-                          }))
-                        }
-                      />
-                      {t.label}
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-            <div className={dsFormField}>
-              <span className={dsFormLabel}>Checklist operativa</span>
+              <span className={dsFormLabel}>Checklist operativa (opzionale)</span>
               <div className="flex gap-2">
                 <input
                   className={dsFormInput}

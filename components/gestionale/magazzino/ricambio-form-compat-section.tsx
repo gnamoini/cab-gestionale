@@ -65,6 +65,32 @@ function normCompatMarca(m: string): string {
   return m.trim().toLowerCase();
 }
 
+function compatLineMatchesMarcaFiltro(line: string, marcheFiltro: readonly string[]): boolean {
+  const { marca, modello } = parseCompatMarcaModello(line);
+  if (!marca || !modello) return false;
+  return marcheFiltro.some((m) => normCompatMarca(m) === normCompatMarca(marca));
+}
+
+function isAttrezzatureCompatChipLine(
+  line: string,
+  prefsTree: ReturnType<typeof migrateMezziListePrefs>,
+  marcheFiltro: readonly string[],
+): boolean {
+  if (isCompatMarcaUniversalLine(line)) return false;
+  if (lineBelongsToHierarchyTree(line, "attrezzature", prefsTree)) return true;
+  return compatLineMatchesMarcaFiltro(line, marcheFiltro);
+}
+
+function isTelaioCompatChipLine(
+  line: string,
+  prefsTree: ReturnType<typeof migrateMezziListePrefs>,
+  marcheFiltro: readonly string[],
+): boolean {
+  if (isCompatMarcaUniversalLine(line)) return false;
+  if (lineBelongsToHierarchyTree(line, "telai", prefsTree)) return true;
+  return compatLineMatchesMarcaFiltro(line, marcheFiltro);
+}
+
 function joinCompatLines(lines: Iterable<string>): string {
   return Array.from(lines)
     .sort((a, b) => a.localeCompare(b, "it"))
@@ -231,10 +257,7 @@ function RicambioFormCompatSectionInner({
   const selectedAttrezzature = useMemo(
     () =>
       Array.from(mezziSel)
-        .filter(
-          (x) =>
-            lineBelongsToHierarchyTree(x, "attrezzature", prefsTree) && !isCompatMarcaUniversalLine(x),
-        )
+        .filter((x) => isAttrezzatureCompatChipLine(x, prefsTree, marcheFiltroAttList))
         .sort((a, b) => a.localeCompare(b, "it"))
         .map((value) => {
           const full = compatLineDisplayText(value);
@@ -245,12 +268,12 @@ function RicambioFormCompatSectionInner({
             title: full,
           };
         }),
-    [mezziSel, prefsTree],
+    [mezziSel, prefsTree, marcheFiltroAttList],
   );
   const selectedTelai = useMemo(
     () =>
       Array.from(mezziSel)
-        .filter((x) => lineBelongsToHierarchyTree(x, "telai", prefsTree) && !isCompatMarcaUniversalLine(x))
+        .filter((x) => isTelaioCompatChipLine(x, prefsTree, marcheFiltroTelList))
         .sort((a, b) => a.localeCompare(b, "it"))
         .map((value) => {
           const full = compatLineDisplayText(value);
@@ -261,7 +284,7 @@ function RicambioFormCompatSectionInner({
             title: full,
           };
         }),
-    [mezziSel, prefsTree],
+    [mezziSel, prefsTree, marcheFiltroTelList],
   );
 
   const attrezzatureOpts = useMemo(

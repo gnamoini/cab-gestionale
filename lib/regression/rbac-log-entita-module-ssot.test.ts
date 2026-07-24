@@ -17,13 +17,14 @@ const REQUIRED_ENTITA = [
   "preventivi",
   "documenti",
   "dipendenti",
+  "clienti_anagrafica",
   "invoices",
   "invoice_payments",
   "ddt_documents",
   "ordini_fornitori",
 ] as const;
 
-const SSOT_MIGRATION = "20260919120100_rbac_log_entita_inventory_receiving.sql";
+const SSOT_MIGRATION = "20261026120400_audit_clienti_rbac_log_entita.sql";
 
 function read(rel: string): string {
   return fs.readFileSync(path.join(ROOT, rel), "utf8");
@@ -39,7 +40,6 @@ for (const entita of REQUIRED_ENTITA) {
   );
 }
 
-/** L'ultima migration che ridefinisce rbac_log_entita_module deve essere la SSOT. */
 const migrationsDir = path.join(ROOT, "supabase/migrations");
 const defining: string[] = [];
 for (const name of fs.readdirSync(migrationsDir)) {

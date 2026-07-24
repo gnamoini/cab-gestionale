@@ -39,8 +39,16 @@ export async function loadReportSection(id: ReportSectionId): Promise<ReportSect
           const mod = await import("@/components/report/sections/report-ore-section");
           return { status: "loaded", component: mod.default as AnySectionComponent };
         }
+        case "analisi_ore_officina": {
+          const mod = await import("@/components/report/sections/report-analisi-ore-officina-section");
+          return { status: "loaded", component: mod.default as AnySectionComponent };
+        }
         case "dati_economici": {
           const mod = await import("@/components/report/sections/report-economici-section");
+          return { status: "loaded", component: mod.default as AnySectionComponent };
+        }
+        case "recidivita_mezzi": {
+          const mod = await import("@/components/report/sections/report-recidivita-mezzi-section");
           return { status: "loaded", component: mod.default as AnySectionComponent };
         }
         case "analisi_incrociate": {

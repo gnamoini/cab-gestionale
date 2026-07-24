@@ -33,8 +33,8 @@ export function documentiListQueryKey(filters: DocumentiFilters | null | undefin
   return [...QK.documenti, filters ?? null] as const;
 }
 
-export function preventiviRecordsQueryKey() {
-  return [...QK.preventivi, null] as const;
+export function preventiviRecordsQueryKey(filters?: import("@/src/services/preventivi.service").PreventiviFilters | null) {
+  return [...QK.preventivi, filters ?? null] as const;
 }
 
 export function preventiviBillingQueryKey() {

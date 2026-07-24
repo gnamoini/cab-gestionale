@@ -81,12 +81,11 @@ export function planDraftToUpsertInput(draft: PlanDraft): UpsertMaintenancePlanI
     intervalOre: primary.intervalOre,
     intervalType: primary.intervalType,
     intervalValue: primary.intervalValue,
-    maintenanceKind: draft.maintenanceKind,
     status: draft.status,
     isActive: draft.status === "active",
     tempoPrevistoMinuti: draft.tempoPrevistoMinuti,
     manodoperaCostoOrario: draft.manodoperaCostoOrario,
-    tipoAttrezzaturaIds: draft.tipoAttrezzaturaIds,
+    ...(draft.tipoAttrezzaturaIds?.length ? { tipoAttrezzaturaIds: draft.tipoAttrezzaturaIds } : {}),
     parts: draft.partsDraft.map((p) => ({
       ricambioId: p.ricambioId,
       quantita: p.quantita,

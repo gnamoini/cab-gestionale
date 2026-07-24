@@ -82,8 +82,12 @@ export function RicambioNewModal({
   const baselineForm = useMemo(() => emptyRicambioForm(), []);
   const { mezziListe: mergedMezziListe } = useGlobalOptions({ debugTag: "RicambioNewModal" });
   const compatExpand = useMemo(
-    () => buildRicambioCompatExpandOptions({ mezziListe: mergedMezziListe }),
-    [mergedMezziListe],
+    () =>
+      buildRicambioCompatExpandOptions({
+        mezziListe: mezziListePrefs,
+        mezziListeMerged: mergedMezziListe,
+      }),
+    [mergedMezziListe, mezziListePrefs],
   );
   const needsCloseConfirm = useMemo(
     () => ricambioFormNeedsCloseConfirm(newDraft, baselineForm),
@@ -198,7 +202,7 @@ export function RicambioNewModal({
           onSaveError(created.error ?? "Creazione ricambio non riuscita.");
           return;
         }
-        const ui = ricambioUiFromMagazzinoRow(created.data, authorName, mezziListePrefs);
+        const ui = ricambioUiFromMagazzinoRow(created.data, authorName, mergedMezziListe);
         setDraftId(null);
         reset(emptyRicambioForm());
         onSaved(ui);

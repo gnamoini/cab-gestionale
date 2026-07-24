@@ -1,6 +1,10 @@
 import "server-only";
 
 import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
+import {
+  logMezzoResolutionEvent,
+  resolutionEventFromResult,
+} from "@/lib/domain/mezzo/log-mezzo-resolution-event.server";
 import { recordMezzoAnagraficaHistoryServer } from "@/lib/domain/mezzo/record-mezzo-anagrafica-history.server";
 import { resolveMezzoUpdatePlanFromContext } from "@/lib/domain/intervento-context/intervento-write-context";
 import {
@@ -132,6 +136,22 @@ export function createCaptureInterventoWriteDeps(input: {
         existingMezzi: catalog,
         preferredMezzoId,
       });
+      if (resolved.resolution) {
+        await logMezzoResolutionEvent(sb, {
+          ...resolutionEventFromResult(
+            "capture",
+            resolved.resolution,
+            {
+              targa: fields.targa,
+              matricola: fields.matricola,
+              nScuderia: fields.nScuderia,
+              vin: fields.vin,
+            },
+            { captureUserId: input.userId },
+          ),
+          createdBy: input.userId,
+        });
+      }
       const needsNewMezzo = !resolved.mezzoId && Boolean(fields.cliente.trim());
       if (needsNewMezzo && !input.approvedCreates.mezzo) {
         throw new MezzoSchedaValidationError("Creazione mezzo non approvata nel piano capture.");

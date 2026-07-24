@@ -56,6 +56,38 @@ export function partitionRigheRicambi(righe: readonly PreventivoRigaRicambio[]):
   return { standard, materialiConsumo };
 }
 
+/** Prima riga visibile nell'editor lavorazioni (sanificazione obbligatoria, fuori dal testo persistito). */
+export function preventivoSanificazioneClienteEditorLine(): string {
+  return `- ${PREVENTIVO_SANIFICAZIONE_DESCRIZIONE};`;
+}
+
+/** Testo editor = sanificazione + specifiche persistite (SSOT con PDF). */
+export function composePreventivoLavorazioniClienteEditorText(specifiche: string): string {
+  const line = preventivoSanificazioneClienteEditorLine();
+  const rest = specifiche.trim();
+  if (!rest) return line;
+  return `${line}\n${rest}`;
+}
+
+/** Estrae solo le specifiche dal testo composto editor. */
+export function extractPreventivoLavorazioniClienteSpecifiche(composed: string): string {
+  return pulisciDescrizioneLavorazioniSpecifiche(composed);
+}
+
+/**
+ * Righe sezione «Lavorazioni effettuate» nel PDF — stesso contenuto dell'editor
+ * (sanificazione + specifiche pulite). Non usa righe strutturali né sorgente tecnica.
+ */
+export function parsePreventivoLavorazioniClientePdfLines(specifiche: string): string[] {
+  const composed = composePreventivoLavorazioniClienteEditorText(
+    pulisciDescrizioneLavorazioniSpecifiche(specifiche),
+  );
+  return composed
+    .split(/\n+/)
+    .map((l) => l.replace(/^-\s*/, "").replace(/;\s*$/, "").trim())
+    .filter((l) => l.length > 0 && !isDescrizioneCollaudo(l));
+}
+
 /** Rimuove voci strutturali duplicate dal testo lavorazioni (sanificazione, collaudo). */
 export function pulisciDescrizioneLavorazioniSpecifiche(testo: string): string {
   const lines = testo

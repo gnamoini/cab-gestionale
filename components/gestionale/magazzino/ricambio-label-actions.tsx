@@ -34,6 +34,7 @@ export function RicambioLabelActions({
   const [expanded, setExpanded] = useState(false);
   const [preset, setPreset] = useState(DEFAULT_LABEL_PRESET);
   const [includeBarcode, setIncludeBarcode] = useState(DEFAULT_INCLUDE_BARCODE);
+  const [clienteLabel, setClienteLabel] = useState(false);
   const [meta, setMeta] = useState<LabelMeta | null>(null);
   const [loading, setLoading] = useState(false);
   const [openingPdf, setOpeningPdf] = useState(false);
@@ -76,6 +77,7 @@ export function RicambioLabelActions({
       format,
       preset,
       includeBarcode: includeBarcode ? "true" : "false",
+      clienteLabel: clienteLabel ? "true" : "false",
     });
     if (format === "pdf" && quantity > 1) sp.set("quantity", String(quantity));
     return `/api/inventory-labels/ricambi/${encodeURIComponent(ricambioId)}/render?${sp.toString()}`;
@@ -251,9 +253,29 @@ export function RicambioLabelActions({
                   setPreviewUrl(null);
                 }
               }}
-              disabled={busy}
+              disabled={busy || clienteLabel}
             />
             Barcode
+          </label>
+
+          <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm text-[color:var(--cab-text)]">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-[color:var(--cab-border)]"
+              checked={clienteLabel}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setClienteLabel(next);
+                if (next) setIncludeBarcode(false);
+                if (previewUrl) {
+                  URL.revokeObjectURL(previewUrl);
+                  setPreviewUrl(null);
+                }
+              }}
+              disabled={busy}
+              aria-label="Etichetta cliente"
+            />
+            Etichetta cliente
           </label>
 
           {meta?.qrUrl ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { LoadingErrorState } from "@/components/design-system";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
@@ -20,12 +20,8 @@ import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { useMaintenancePlanDeleteMutation } from "@/src/hooks/gestionale/use-maintenance-plan-mutations";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { maintenancePlansQueryKeys } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
-import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
-import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 export function MezziTagliandiPresetsSection({ canEdit }: { canEdit: boolean }) {
-  const { validation: toastValidation } = useGestionaleToast();
-  const settingsPayload = useCabAppSettingsPayloadQuery({ enabled: canEdit });
   const presetsQ = useServiceQuery(
     [...maintenancePlansQueryKeys.plans(), "summaries"] as const,
     () => maintenancePlansEntry.listPresetSummaries(),
@@ -39,16 +35,6 @@ export function MezziTagliandiPresetsSection({ canEdit }: { canEdit: boolean }) 
   const [deleteTarget, setDeleteTarget] = useState<MaintenancePresetSummary | null>(null);
   const [assignPreset, setAssignPreset] = useState<MaintenancePresetSummary | null>(null);
 
-  useEffect(() => {
-    const labels = settingsPayload.data?.resolved?.mezziListe?.tipiAttrezzatura;
-    if (!canEdit || !labels?.length) return;
-    void maintenancePlansEntry.ensureCatalogLabels(labels).then((res) => {
-      if (res.success && (res.data ?? 0) > 0) {
-        toastValidation(`${res.data} tipo/i attrezzatura sincronizzati nel catalogo.`);
-      }
-    });
-  }, [canEdit, settingsPayload.data?.resolved?.mezziListe?.tipiAttrezzatura, toastValidation]);
-
   const filtered = useMemo(() => {
     let rows = presetsQ.data ?? [];
     const q = search.trim().toLowerCase();
@@ -56,7 +42,6 @@ export function MezziTagliandiPresetsSection({ canEdit }: { canEdit: boolean }) 
       rows = rows.filter(
         (p) =>
           p.nome.toLowerCase().includes(q) ||
-          p.tipoLabels.some((t) => t.toLowerCase().includes(q)) ||
           p.triggerSummary.toLowerCase().includes(q),
       );
     }
@@ -137,8 +122,8 @@ export function MezziTagliandiPresetsSection({ canEdit }: { canEdit: boolean }) 
           headRow={
             <>
               <GlobalTableHeadLabel label="Nome" />
-              <GlobalTableHeadLabel label="Trigger" />
-              <GlobalTableHeadLabel label="Tipi" />
+              <GlobalTableHeadLabel label="Intervalli" />
+              <GlobalTableHeadLabel label="Ricambi" />
               <GlobalTableHeadLabel label="Mezzi" />
               <GlobalTableHeadLabel label="Esecuzioni" />
               <GlobalTableHeadLabel label="Stato" />
@@ -150,9 +135,7 @@ export function MezziTagliandiPresetsSection({ canEdit }: { canEdit: boolean }) 
             <tr key={p.id} className={gestionaleListTableRowBaseClass}>
               <td className={`${gestionaleListTableTd} font-medium`}>{p.nome}</td>
               <td className={`${gestionaleListTableTd} text-xs`}>{p.triggerSummary}</td>
-              <td className={`${gestionaleListTableTd} text-[color:var(--cab-text-muted)]`}>
-                {p.tipoLabels.join(", ") || "—"}
-              </td>
+              <td className={gestionaleListTableTd}>{p.parts.length}</td>
               <td className={gestionaleListTableTd}>
                 <span className="rounded-full bg-[var(--cab-surface-2)] px-2 py-0.5 text-xs font-medium">
                   {p.assignedMezziCount}

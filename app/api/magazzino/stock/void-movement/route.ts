@@ -193,7 +193,7 @@ export async function POST(request: Request) {
         hidden_from_timeline: true,
         voids_movimento_id: movimentoId,
       };
-      void writeModificaLog(sb, {
+      await writeModificaLog(sb, {
         entita: "movimenti_ricambi",
         entita_id: result.movimentoId,
         azione: "CREATE",

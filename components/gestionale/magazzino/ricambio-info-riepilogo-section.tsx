@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { GestionaleInfoRow } from "@/components/design-system/gestionale-info-card";
 import { hubPanoramicaDisplayValue } from "@/components/design-system/hub-modal-panoramica";
-import { MagazzinoScortaInfoStepper } from "@/components/gestionale/magazzino/magazzino-scorta-adjust-actions";
+import { MagazzinoScortaDebouncedInfoStepper } from "@/components/gestionale/magazzino/magazzino-scorta-debounced-stepper";
 import { RicambioStockStatusLabel } from "@/components/gestionale/magazzino/ricambio-operational-status-card";
 import { RicambioCollapsibleSection } from "@/components/gestionale/magazzino/ricambio-modal-ui";
 import type { RicambioConsumoDaLog } from "@/lib/magazzino/ricambio-consumo-from-log";
@@ -42,8 +42,6 @@ export function RicambioInfoRiepilogoSection({
   canAdjustScorta,
   modalitaModifica = false,
   scortaFlash = false,
-  onAdjustScorta,
-  onSetScorta,
   consumo,
   stockPolicyRaw,
 }: {
@@ -53,8 +51,6 @@ export function RicambioInfoRiepilogoSection({
   canAdjustScorta?: boolean;
   modalitaModifica?: boolean;
   scortaFlash?: boolean;
-  onAdjustScorta?: (delta: number) => void;
-  onSetScorta?: (target: number) => void;
   consumo?: RicambioConsumoDaLog;
   stockPolicyRaw?: unknown;
 }) {
@@ -90,20 +86,19 @@ export function RicambioInfoRiepilogoSection({
       <GestionaleInfoRow label="Note" value={riepilogoMultilineValue(ricambio.note)} />
       <GestionaleInfoRow label="Compatibilità" value={riepilogoMultilineValue(compatDisplay)} />
 
-      {onAdjustScorta ? (
+      {canAdjustScorta ? (
         <GestionaleInfoRow
           label="Scorta attuale"
           value={
             <div className="space-y-1">
-              <MagazzinoScortaInfoStepper
-                value={ricambio.scorta}
+              <MagazzinoScortaDebouncedInfoStepper
+                ricambioId={ricambio.id}
+                ricambioLabel={ricambio.descrizione}
+                fallbackScorta={ricambio.scorta}
                 low={low}
-                canAdjust={canAdjustScorta ?? false}
+                canAdjust={canAdjustScorta}
                 modalitaModifica={modalitaModifica}
                 successFlash={scortaFlash}
-                onDecrease={() => onAdjustScorta(-1)}
-                onIncrease={() => onAdjustScorta(1)}
-                onSetValue={(target) => onSetScorta?.(target)}
               />
               <RicambioStockStatusLabel
                 quantita={ricambio.scorta}

@@ -207,6 +207,37 @@ export function buildPreventivoTelaioMezzoPdfFields(p: PreventivoRecord): PdfFie
   return legacy;
 }
 
+function mergePdfFieldsWithLabelCollisionPrefix(
+  primary: readonly PdfField[],
+  secondary: readonly PdfField[],
+  secondaryPrefix: string,
+): PdfField[] {
+  const usedLabels = new Set(primary.map((f) => f.label));
+  const out: PdfField[] = [...primary];
+  for (const field of secondary) {
+    if (usedLabels.has(field.label)) {
+      out.push({ label: `${secondaryPrefix} ${field.label}`, value: field.value });
+    } else {
+      out.push(field);
+      usedLabels.add(field.label);
+    }
+  }
+  return out;
+}
+
+/** Campi oggetto intervento per PDF preventivo (attrezzatura + telaio, label collision prefissate). */
+export function buildPreventivoOggettoInterventoPdfFields(p: PreventivoRecord): PdfField[] {
+  const targetType = p.targetType ?? (p.marcaAttrezzatura.trim() ? "attrezzatura" : "telaio");
+  if (targetType === "telaio") {
+    return buildPreventivoTelaioMezzoPdfFields(p);
+  }
+  const attrezzatura = buildPreventivoAttrezzaturaPdfFields(p);
+  const telaio = buildPreventivoTelaioMezzoPdfFields(p);
+  if (!attrezzatura.length) return telaio;
+  if (!telaio.length) return attrezzatura;
+  return mergePdfFieldsWithLabelCollisionPrefix(attrezzatura, telaio, "Telaio");
+}
+
 /** @deprecated Usare buildPreventivoTelaioMezzoPdfFields */
 export function buildPreventivoMezzoPdfFields(p: PreventivoRecord): PdfField[] {
   return buildPreventivoTelaioMezzoPdfFields(p);

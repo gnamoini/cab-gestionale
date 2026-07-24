@@ -1,11 +1,13 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { LabelFormat, LabelPayload } from "@/lib/inventory-labels/domain/types";
+import type { LabelFormat, LabelKind, LabelPayload } from "@/lib/inventory-labels/domain/types";
 import { GENERATOR_VERSION } from "@/lib/inventory-labels/domain/types";
 import { computeLabelFingerprint } from "@/lib/inventory-labels/domain/fingerprints";
 import { getLabelTemplate } from "@/lib/inventory-labels/domain/templates";
 import { buildInventoryQrUrl } from "@/lib/inventory-labels/domain/tokens";
+import { fetchBrandingSettingsFromDb } from "@/lib/branding/get-branding-from-server";
+import { resolveClienteLabelQrUrl } from "@/lib/branding/branding-settings-model";
 import { renderLabelPng } from "@/lib/inventory-labels/render/png";
 import { renderSingleLabelPdf } from "@/lib/inventory-labels/render/pdf";
 import { renderLabelSvg } from "@/lib/inventory-labels/render/svg";
@@ -28,6 +30,7 @@ export type DeliverLabelInput = {
   format: LabelFormat;
   origin: string;
   includeBarcode?: boolean;
+  clienteLabel?: boolean;
   quantity?: number;
   userId?: string | null;
   device?: string | null;
@@ -53,12 +56,16 @@ function fileNameFor(entityId: string, codice: string, format: LabelFormat): str
 }
 
 export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<DeliverLabelResult> {
-  const template = getLabelTemplate(input.preset);
+  const clienteLabel = input.clienteLabel === true;
+  const labelKind: LabelKind = clienteLabel ? "cliente" : "internal";
+  const template = getLabelTemplate(input.preset, labelKind);
   if (!template) throw new Error("Template etichetta non valido");
 
-  const includeBarcode = input.includeBarcode === true;
+  const includeBarcode = clienteLabel ? false : input.includeBarcode === true;
   const quantity = Math.max(1, Math.min(99, input.quantity ?? 1));
   const canonicalOrigin = input.origin.replace(/\/+$/, "");
+  const branding = clienteLabel ? await fetchBrandingSettingsFromDb() : null;
+  const clienteQrUrl = clienteLabel ? resolveClienteLabelQrUrl(branding) : "";
   const hash = computeLabelFingerprint({
     payload: input.payload,
     templateId: template.id,
@@ -66,6 +73,8 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
     generatorVersion: GENERATOR_VERSION,
     preset: input.preset,
     includeBarcode,
+    labelKind,
+    clienteQrUrl,
     canonicalOrigin,
   });
   const effectiveHash = input.format === "pdf" && quantity > 1 ? `${hash}-q${quantity}` : hash;
@@ -93,8 +102,8 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
     }
   }
 
-  const qrUrl = buildInventoryQrUrl(input.token, input.origin);
-  const renderOptions = { includeBarcode };
+  const qrUrl = clienteLabel ? clienteQrUrl : buildInventoryQrUrl(input.token, input.origin);
+  const renderOptions = { includeBarcode, labelKind };
   const dedupKey = renderDedupKey(input.entityId, effectiveHash, input.format);
   let buffer: Buffer;
   if (input.format === "png") {

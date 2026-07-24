@@ -29,6 +29,8 @@ import {
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { GestionaleNumberInput } from "@/components/gestionale/gestionale-number-input";
 import { MigratedNumberInput } from "@/components/form-ux-migration/migrated-number-input";
+import { isDecimalInputDraft } from "@/lib/core/decimal-input";
+import { commitScortaDraft } from "@/lib/core/numeric-input-commit";
 import { GestionaleRequiredMark } from "@/components/gestionale/schede/gestionale-form-section";
 import { CloseButton } from "@/components/design-system";
 import { dsBtnNeutralForm, dsBtnPrimary, dsFocus, dsInput, dsLabel, dsSegmentedBtnOff, dsSegmentedBtnOn, dsSegmentedWrap, dsTypoSmall } from "@/lib/ui/design-system";
@@ -149,12 +151,19 @@ function StockStepper({
       <input
         ref={inputRef}
         id={inputId}
-        type="number"
-        min={0}
-        step={1}
+        type="text"
         inputMode="numeric"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          const next = e.target.value;
+          if (!isDecimalInputDraft(next, { allowNegative: false })) return;
+          onChange(next);
+        }}
+        onBlur={() => {
+          const committed = Math.max(0, Math.round(Number.parseFloat(value) || 0));
+          onChange(String(commitScortaDraft(value, committed)));
+        }}
+        onFocus={(e) => e.target.select()}
         className={inputClass}
         aria-label={groupLabel}
       />
@@ -645,14 +654,10 @@ export function RicambioFormFields({
               inputMode="decimal"
               value={form.markupPercentuale}
               onChange={(v) => setForm((f) => syncPrezzoVenditaInForm({ ...f, markupPercentuale: v }))}
-              onBlur={(e) =>
-                setForm((f) =>
-                  syncPrezzoVenditaInForm({
-                    ...f,
-                    markupPercentuale: normalizeMarkupInputString(e.currentTarget.value),
-                  }),
-                )
-              }
+              onBlur={(e) => {
+                const markup = normalizeMarkupInputString(e.target.value);
+                setForm((f) => syncPrezzoVenditaInForm({ ...f, markupPercentuale: markup }));
+              }}
               className={`${ricambioFormInputClass} ${noSpinner}`}
             />
             <div

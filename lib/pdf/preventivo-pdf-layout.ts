@@ -11,6 +11,7 @@ export {
   buildPreventivoAttrezzaturaPdfFields,
   buildPreventivoClientePdfFields as buildAnagraficaPdfFields,
   buildPreventivoMezzoPdfFields,
+  buildPreventivoOggettoInterventoPdfFields,
   buildPreventivoTelaioMezzoPdfFields,
   inferTipoAttrezzaturaPdfLegacy as inferTipoAttrezzaturaPdf,
 } from "@/lib/pdf/anagrafica-pdf-fields";

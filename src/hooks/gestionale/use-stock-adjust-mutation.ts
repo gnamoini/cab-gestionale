@@ -22,7 +22,7 @@ import type {
 
 export type { StockAdjustMutationInput, StockAdjustMutationOutcome } from "@/src/hooks/gestionale/use-stock-adjust-mutation-types";
 
-function useStockJournalVersion(): number {
+export function useStockJournalVersion(): number {
   return useSyncExternalStore(subscribeStockJournal, getStockJournalVersion, () => 0);
 }
 

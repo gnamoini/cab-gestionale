@@ -20,6 +20,7 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { ServerListLoadMore } from "@/components/gestionale/server-list-load-more";
 import { isServerListPaginationEnabled } from "@/lib/performance/list-pagination-rollout";
+import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
 import { enrichLavorazioneListRowsWithMezzi } from "@/lib/db/dto-mappers";
 import { mezziGestitiToEmbedMap } from "@/lib/mezzi/mezzi-attrezzature-batch";
 const LavorazioneCreateModal = dynamic(
@@ -863,21 +864,13 @@ export function LavorazioniView() {
     setConcurrencyDialog(null);
   }, [concurrencyDialog]);
 
-  const SEARCH_DEBOUNCE_MS = 320;
-
-  const [searchInput, setSearchInput] = useState("");
-  const [searchApplied, setSearchApplied] = useState("");
-  const searchInputRef = useRef(searchInput);
-  searchInputRef.current = searchInput;
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearchApplied(searchInput.trim()), SEARCH_DEBOUNCE_MS);
-    return () => window.clearTimeout(t);
-  }, [searchInput]);
-
-  const flushPageSearch = useCallback(() => {
-    setSearchApplied(searchInputRef.current.trim());
-  }, []);
+  const {
+    searchInput,
+    setSearchInput,
+    searchApplied,
+    flushSearch: flushPageSearch,
+    clearSearch,
+  } = useGestionaleListSearch({ domain: "lavorazioni" });
 
   const [filtriAttiviEspansi, setFiltriAttiviEspansi] = useCollapsiblePreference(
     collapsibleExpandedBoolPref(false, {
@@ -1882,8 +1875,7 @@ export function LavorazioniView() {
   }
 
   function resetRicercaPagina() {
-    setSearchInput("");
-    setSearchApplied("");
+    clearSearch();
   }
 
   function resetFiltriPagina() {

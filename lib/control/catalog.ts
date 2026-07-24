@@ -149,6 +149,9 @@ export const CONTROL_CATALOG: Record<string, CatalogEntry> = {
   "verify-supabase-ci-env": {
     resolve: () => spawnScript("scripts/verify-supabase-ci-env.ts"),
   },
+  "verify-audit-log-pipeline": {
+    resolve: () => spawnScript("scripts/verify-audit-log-pipeline.ts"),
+  },
   "check-production-config": {
     resolve: () => spawnScript("scripts/check-production-config.ts", ["--skip-vercel-pull"]),
   },

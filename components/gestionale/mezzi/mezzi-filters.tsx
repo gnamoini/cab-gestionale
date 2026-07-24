@@ -12,7 +12,6 @@ import { dsInput, dsPageToolbar, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/
 import { gestionaleFilterFieldLabelClass } from "@/lib/ui/gestionale-field-label";
 import type {
   NumeroLavorazioniFilter,
-  TagliandiFilter,
   UltimaLavorazioneFilter,
 } from "@/lib/mezzi/mezzi-helpers";
 import type { GlobalSettingsListKey } from "@/src/lib/global-list/global-settings-list-keys";
@@ -95,8 +94,6 @@ export type MezziFilterFieldsProps = {
   onFiltroTipoTelaio: (v: string) => void;
   filtroVin: string;
   onFiltroVin: (v: string) => void;
-  filtroTagliandi: TagliandiFilter;
-  onFiltroTagliandi: (v: TagliandiFilter) => void;
   filtroNumeroLav: NumeroLavorazioniFilter;
   onFiltroNumeroLav: (v: NumeroLavorazioniFilter) => void;
   filtroUltimaLav: UltimaLavorazioneFilter;
@@ -290,23 +287,6 @@ export function MezziFilterFields(props: MezziFilterFieldsProps) {
         <MezziFieldWrap label="N. telaio (VIN)" htmlFor="mezzi-filter-vin">
           <MezziFilterTextInput id="mezzi-filter-vin" value={props.filtroVin} onChange={props.onFiltroVin} mono />
         </MezziFieldWrap>
-        <MezziFieldWrap label="Tagliandi" htmlFor="mezzi-filter-tagliandi">
-          <GlobalSelect
-            id="mezzi-filter-tagliandi"
-            variant="filter"
-            inputClassName={mezziFieldInputClass}
-            items={[
-              { value: "", label: "Tutti" },
-              { value: "si", label: "Sì" },
-              { value: "no", label: "No" },
-            ]}
-            value={props.filtroTagliandi}
-            onChange={(v) => props.onFiltroTagliandi(v as TagliandiFilter)}
-            strictFromList
-            selectOnly
-            aria-label="Filtra per tagliandi"
-          />
-        </MezziFieldWrap>
         <MezziFieldWrap label="N. lavorazioni" htmlFor="mezzi-filter-numero-lav">
           <GlobalSelect
             id="mezzi-filter-numero-lav"
@@ -378,7 +358,6 @@ export function mezziFieldFiltersActive(input: {
   filtroModelloTelaio: string;
   filtroTipoTelaio: string;
   filtroVin: string;
-  filtroTagliandi: TagliandiFilter;
   filtroNumeroLav: NumeroLavorazioniFilter;
   filtroUltimaLav: UltimaLavorazioneFilter;
 }): boolean {
@@ -396,7 +375,6 @@ export function mezziFieldFiltersActive(input: {
     input.filtroModelloTelaio.trim().length > 0 ||
     input.filtroTipoTelaio.trim().length > 0 ||
     input.filtroVin.trim().length > 0 ||
-    Boolean(input.filtroTagliandi) ||
     Boolean(input.filtroNumeroLav) ||
     Boolean(input.filtroUltimaLav)
   );

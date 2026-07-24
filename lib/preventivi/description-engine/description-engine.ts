@@ -27,7 +27,6 @@ import {
   nextGenerationSequence,
 } from "./generation-identity";
 import { resolveDetailLevel, DEFAULT_STYLE_PROFILE } from "./style-profile";
-import { applyAiPolishToLines, DEFAULT_AI_POLISH_CONSTRAINTS, polishDescriptionWithAi } from "./ai-polish";
 import { composeClienteDescriptionSchema } from "./client-description-schema";
 import { mergeDescriptionEngineSchemaInput } from "./resolve-schema-input";
 import { fuseWithOperativeHistory } from "./operative-history/fusion-ranker";
@@ -40,10 +39,6 @@ import type {
 } from "./types";
 
 let seedBootstrapped = false;
-
-function isAiPolishEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_TDE_AI_POLISH === "1";
-}
 
 export function ensureTkbSeedPublished(): number {
   if (!seedBootstrapped) {
@@ -93,7 +88,10 @@ function activitiesToLines(
   }));
 }
 
-/** Genera descrizione preventivo via TKB + storico operativo + legacy controllato. */
+/**
+ * Core TKB sync — uso interno e test unitari.
+ * Produzione: usare `generatePreventivoDescriptionAsync` (include AI Polish obbligatorio).
+ */
 export function generatePreventivoDescription(input: DescriptionEngineInput): ComposedDescription {
   const snapshot =
     input.publishedSnapshot ??
@@ -222,13 +220,6 @@ export function generatePreventivoDescription(input: DescriptionEngineInput): Co
   const generationSequence = nextGenerationSequence(contextHash, input.generationSequence);
 
   const semanticFingerprintPre = aggregateSemanticFingerprint(lines);
-  let aiPolishResult: ReturnType<typeof polishDescriptionWithAi> | null = null;
-  if (isAiPolishEnabled() && input.aiPolishFn) {
-    aiPolishResult = polishDescriptionWithAi(lines, DEFAULT_AI_POLISH_CONSTRAINTS, input.aiPolishFn);
-    if (aiPolishResult.applied) {
-      lines = applyAiPolishToLines(lines, aiPolishResult);
-    }
-  }
 
   let clienteText = linesToClienteText(lines);
   clienteText = pulisciDescrizioneLavorazioniSpecifiche(clienteText);
@@ -258,10 +249,8 @@ export function generatePreventivoDescription(input: DescriptionEngineInput): Co
       : tier === "low"
         ? { used: true, reason: "low_confidence", legacyEngine: true as const }
         : undefined,
-    aiPolishApplied: Boolean(aiPolishResult?.applied),
-    aiRejectReason: aiPolishResult && !aiPolishResult.applied ? aiPolishResult.rejectReason : undefined,
+    aiPolishApplied: false,
     semanticFingerprintPre,
-    semanticFingerprintPost: aiPolishResult?.applied ? aggregateSemanticFingerprint(lines) : undefined,
     operativeHistory: fused.historyMeta,
   };
 

@@ -118,13 +118,17 @@ export function detectLegacyWriteRisk(
   return { risk: "ok" };
 }
 
-function resolveRefs(normalized: CompatWriteInput, liste?: MezziListePrefs): RicambioCompatRef[] {
+function resolveRefs(
+  normalized: CompatWriteInput,
+  liste?: MezziListePrefs,
+  prefsListe?: MezziListePrefs,
+): RicambioCompatRef[] {
   if (normalized.compatibilitaRefs && normalized.compatibilitaRefs.length > 0) {
     return dedupeCompatRefs(normalized.compatibilitaRefs);
   }
   const legacy = normalizeCompatList(normalized.compatibilitaMezzi ?? []);
   if (legacy.length > 0 && liste) {
-    return compatRefsFromExpandedLabels(legacy, liste);
+    return compatRefsFromExpandedLabels(legacy, liste, { prefsListe });
   }
   return [];
 }
@@ -132,6 +136,8 @@ function resolveRefs(normalized: CompatWriteInput, liste?: MezziListePrefs): Ric
 export type CompatWriteOptions = {
   /** Audit preview (suggestedFix): calcola meta senza warn dev write-guard. */
   auditPreview?: boolean;
+  /** Albero settings per ID stabili nei refs (priorità su `liste` merged). */
+  prefsListe?: MezziListePrefs;
 };
 
 /**
@@ -155,7 +161,7 @@ export function writeCompatibilitaRicambio(
   }
 
   const legacy = normalizeCompatList(normalized.compatibilitaMezzi ?? []);
-  const refs = resolveRefs(normalized, liste);
+  const refs = resolveRefs(normalized, liste, options?.prefsListe);
 
   if (refs.length > 0 && liste) {
     return buildCompatMetaForSave(refs, liste);

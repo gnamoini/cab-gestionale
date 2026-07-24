@@ -16,10 +16,6 @@ export const maintenanceEngineV2QueryKeys = {
 
 export function useMezzoMaintenanceConfigsQuery(input: {
   mezzoId: string | undefined;
-  oreKm: number;
-  kmFromMeta?: number | null;
-  tipoAttrezzatura: string;
-  tagliandiEnabled?: boolean;
   enabled?: boolean;
 }) {
   const id = input.mezzoId?.trim() ?? "";
@@ -28,10 +24,6 @@ export function useMezzoMaintenanceConfigsQuery(input: {
     () =>
       maintenancePlansEntry.listMezzoConfigs({
         mezzoId: id,
-        oreKm: input.oreKm,
-        kmFromMeta: input.kmFromMeta,
-        tipoAttrezzatura: input.tipoAttrezzatura,
-        tagliandiEnabled: input.tagliandiEnabled,
       }),
     { enabled: Boolean(input.enabled !== false && id) },
   );

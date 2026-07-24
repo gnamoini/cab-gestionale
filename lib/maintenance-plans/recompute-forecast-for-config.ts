@@ -6,10 +6,8 @@ import {
 import { buildForecastDbRow } from "@/lib/maintenance-plans/build-forecast-row";
 import { resolveCurrentMezzoMetering } from "@/lib/maintenance-plans/fetch-mezzo-metering";
 import type { ExecutionPoint } from "@/lib/maintenance-plans/forecast/ema-forecast";
-import {
-  computeTriggerGroupForecast,
-  type PresetTriggerGroupDef,
-} from "@/lib/maintenance-plans/forecast/trigger-group-forecast";
+import type { PresetTriggerGroupDef } from "@/lib/maintenance-plans/forecast/trigger-group-forecast";
+import { evaluateConfigDue } from "@/lib/maintenance-plans/maintenance-due-engine";
 import type { MaintenanceIntervalType } from "@/lib/maintenance-plans/maintenance-enums";
 import { currentValueForInterval } from "@/lib/maintenance-plans/resolve-mezzo-metering";
 
@@ -79,7 +77,7 @@ export async function computeForecastForConfig(
   }
 
   const groups = await loadTriggerGroupsForPreset(client, config.preset_id);
-  const { forecast, explainability } = computeTriggerGroupForecast({
+  const { forecast, explainability } = evaluateConfigDue({
     groups,
     intervalType: config.interval_type,
     intervalValue: Number(config.interval_value),

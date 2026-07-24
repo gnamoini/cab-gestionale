@@ -1,6 +1,5 @@
 import { resolvePlansForMezzo } from "@/lib/maintenance-plans/resolve-plans-for-mezzo";
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
-import { mezzoTagliandiEnabled } from "@/lib/mezzi/mezzi-meta";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 
 /** Step colonne matrice (es. 500 h, 1000 h, …). */
@@ -200,7 +199,6 @@ export function buildTagliandiMatrixRows(input: {
   const rows: TagliandiMatrixRow[] = [];
   for (const m of input.mezzi) {
     if (m.hubSynthetic) continue;
-    if (!mezzoTagliandiEnabled(m)) continue;
     const applicable = resolvePlansForMezzo({
       tipoAttrezzatura: m.tipoAttrezzatura,
       catalog: input.catalog,

@@ -79,6 +79,7 @@ import {
   formatDashboardLavWidgetMezzoIdent,
   type DashboardMagMovementRow,
 } from "@/lib/view/dashboard-widgets-selectors";
+import { scoreActivity } from "@/lib/audit/score-activity";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { InvoiceRow, LogModificaRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore } from "@/types/schede";
@@ -1032,18 +1033,27 @@ export function buildControlTowerActivityFeedSlice(input: ControlTowerBaseInput)
   };
   const limit = CONTROL_TOWER_ACTIVITY_PER_CARD;
 
-  const lavorazioni = mapLogToActivity(input.logLavorazioni, "lavorazioni", ctx).slice(0, limit);
+  const sortByScore = (rows: readonly LogModificaRow[] | undefined) =>
+    [...(rows ?? [])].sort((a, b) => scoreActivity(b) - scoreActivity(a));
+
+  const lavorazioni = mapLogToActivity(sortByScore(input.logLavorazioni), "lavorazioni", ctx).slice(
+    0,
+    limit,
+  );
   const magazzino = mapLogToActivity(
-    [...(input.logMagazzino ?? []), ...(input.logMovimenti ?? [])],
+    sortByScore([...(input.logMagazzino ?? []), ...(input.logMovimenti ?? [])]),
     "magazzino",
     ctx,
   ).slice(0, limit);
   const preventiviDdt = mapLogToActivity(
-    [...(input.logPreventivi ?? []), ...(input.logDdt ?? [])],
+    sortByScore([...(input.logPreventivi ?? []), ...(input.logDdt ?? [])]),
     "preventiviDdt",
     ctx,
   ).slice(0, limit);
-  const fatturazione = mapLogToActivity(input.logFatturazione, "fatturazione", ctx).slice(0, limit);
+  const fatturazione = mapLogToActivity(sortByScore(input.logFatturazione), "fatturazione", ctx).slice(
+    0,
+    limit,
+  );
 
   return {
     byDomain: {

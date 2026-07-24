@@ -89,13 +89,13 @@ const lavDeleted = lavRow({ id: "lav-4", mezzo_id: "mezzo-a", deleted_at: "2025-
 assert.equal(lavorazioneCollegataMezzoDb(mezzoA, lavDeleted), false);
 assert.equal(interventiMezzoDaLavorazioniDb(mezzoA, [lavDeleted]).length, 0);
 
-// Legacy senza mezzo_id — fuzzy match su targa
+// Orfana senza mezzo_id — non collegata (no fuzzy attach automatico)
 const lavLegacy = lavRow({
   id: "lav-5",
   mezzo_id: "",
   mezzo: { ...mezzoEmbed, targa: "AB123CD", matricola: "MAT-001" },
 });
-assert.equal(lavorazioneCollegataMezzoDb(mezzoA, lavLegacy), true);
+assert.equal(lavorazioneCollegataMezzoDb(mezzoA, lavLegacy), false);
 
 // Legacy senza match
 const lavNoMatch = lavRow({

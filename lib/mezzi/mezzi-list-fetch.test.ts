@@ -39,14 +39,6 @@ assert.equal(
   1,
 );
 assert.equal(
-  filterMezziGestiti([base], { tagliandi: "si" }).length,
-  1,
-);
-assert.equal(
-  filterMezziGestiti([base], { tagliandi: "no" }).length,
-  0,
-);
-assert.equal(
   filterMezziGestiti([base], { search: "escavatore s-7" }).length,
   1,
 );

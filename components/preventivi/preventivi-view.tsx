@@ -100,7 +100,6 @@ import {
   clearEphemeralPreventivoDraft,
   readEphemeralPreventivoDraftId,
 } from "@/lib/preventivi/preventivi-session-bridge";
-import { appendPreventiviChangeLog } from "@/lib/preventivi/preventivi-change-log-storage";
 import { buildLogModificheDisplayEntries, logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { removePreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
 import { usePreventiviListDerived } from "@/lib/preventivi/use-preventivi-list-derived";
@@ -110,6 +109,7 @@ import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi
 import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
 import { ddtEntry } from "@/lib/domain/ddt-entry";
 import { usePreventiviBillingQuery } from "@/src/hooks/gestionale/use-preventivi-billing-query";
+import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
 import { useLogListQuery, useMagazzinoRicambiUIQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
@@ -161,8 +161,6 @@ import {
   gestionaleListTableTdAzioni,
   gestionaleListTableTdPill,
 } from "@/lib/ui/gestionale-list-table";
-
-const SEARCH_DEBOUNCE_MS = 320;
 
 function fmtDataCreazioneTabella(iso: string): string {
   try {
@@ -371,6 +369,7 @@ export function PreventiviView() {
     isNew: false,
     isRollbackDraft: false,
   });
+  const [handoffDescProgress, setHandoffDescProgress] = useState<string | null>(null);
   const filterMezzoNeedsCatalog =
     Boolean(
       filterMezzoRawEarly &&
@@ -387,8 +386,15 @@ export function PreventiviView() {
   const gestToast = useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
   const queryClient = useQueryClient();
+  const {
+    searchInput,
+    setSearchInput,
+    searchApplied,
+    flushSearch: flushPageSearch,
+    clearSearch,
+  } = useGestionaleListSearch({ domain: "preventivi" });
   const { records: rows, refetch: refetchPreventivi, isLoading: preventiviQueryLoading } =
-    usePreventiviRecordsQuery(isPreventiviTab);
+    usePreventiviRecordsQuery(isPreventiviTab, { search: searchApplied });
   const { byPreventivoId: preventiviBillingById } = usePreventiviBillingQuery(isPreventiviTab);
   const preventiviReadyMarked = useRef(false);
   useEffect(() => {
@@ -442,10 +448,6 @@ export function PreventiviView() {
   );
   const [sortColumn, setSortColumn] = useState<PreventivoSortKey | null>(null);
   const [sortPhase, setSortPhase] = useState<PreventivoSortPhase>("natural");
-  const [searchInput, setSearchInput] = useState("");
-  const [searchApplied, setSearchApplied] = useState("");
-  const searchInputRef = useRef(searchInput);
-  searchInputRef.current = searchInput;
   const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
     collapsibleExpandedBoolPref(false, { scope: "preventivi", key: "filters", userId: user?.id ?? null }),
   );
@@ -462,14 +464,6 @@ export function PreventiviView() {
     });
   }, []);
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearchApplied(searchInput.trim()), SEARCH_DEBOUNCE_MS);
-    return () => window.clearTimeout(t);
-  }, [searchInput]);
-
-  const flushPageSearch = useCallback(() => {
-    setSearchApplied(searchInputRef.current.trim());
-  }, []);
   const rollbackDraftIdRef = useRef<string | null>(null);
   const draftConfirmedRef = useRef(false);
   const [logOpen, setLogOpen] = useState(false);
@@ -873,8 +867,7 @@ export function PreventiviView() {
     : "Nessun preventivo in archivio.";
 
   function resetPreventiviRicerca() {
-    setSearchInput("");
-    setSearchApplied("");
+    clearSearch();
   }
 
   function resetPreventiviFiltriPagina() {
@@ -902,6 +895,7 @@ export function PreventiviView() {
       const aut = autoreRef.current.trim() || "Operatore";
       const mezzo = resolveMezzoForPendingPreventivo(mezzi, pending);
       if (!mezzo) throw new Error("Mezzo non trovato per il cliente/lavorazione indicati.");
+      setHandoffDescProgress("Generazione descrizione tecnica…");
       return buildNewPreventivoFromLavorazioneContext({
         lav: pending.lav,
         origine: pending.origine,
@@ -910,10 +904,12 @@ export function PreventiviView() {
         magazzino: mag,
         autore: aut,
         existingRecords: existing,
+        onDescriptionProgress: (p) => setHandoffDescProgress(p.label),
       });
     })
       .then((draft) => {
         if (!draft) return;
+        setHandoffDescProgress(null);
         clearPendingPreventivoPayload();
         setEditor({ open: true, record: draft, isNew: true, isRollbackDraft: false });
         const sp = new URLSearchParams(window.location.search);
@@ -922,6 +918,7 @@ export function PreventiviView() {
         router.replace(q ? `/preventivi?${q}` : "/preventivi", { scroll: false });
       })
       .catch((err: unknown) => {
+        setHandoffDescProgress(null);
         clearPendingPreventivoPayload();
         clearNuovoHandoffQuery();
         const msg =
@@ -978,15 +975,6 @@ export function PreventiviView() {
     const p = eliminaConfirmRecord;
     if (!p || !canDeleteRecords || eliminaPending) return;
     setEliminaPending(true);
-    const u = autore.trim() || "Operatore";
-    appendPreventiviChangeLog({
-      tone: "delete",
-      tipoRiga: "ELIMINAZIONE PREVENTIVO",
-      oggettoRiga: `Preventivo ${p.numero}`,
-      modificaRiga: `Cliente: ${p.cliente || "—"}. Totale ${p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €.`,
-      autore: u,
-      atIso: new Date().toISOString(),
-    });
     const res = await removePreventivoRecord(p.id, { queryClient });
     setEliminaPending(false);
     if (!res.ok) {
@@ -1385,7 +1373,7 @@ export function PreventiviView() {
           >
             <LoadingSpinner size="md" label="Importazione dati dalle schede…" />
             <p className="text-center text-sm text-[color:var(--cab-text-muted)]">
-              Attendere, preparazione in corso.
+              {handoffDescProgress ?? "Attendere, preparazione in corso."}
             </p>
           </div>
         </LavorazioniModalShell>

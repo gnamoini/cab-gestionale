@@ -29,45 +29,52 @@ export function MaintenancePresetTriggersField({
         ) : null}
       </div>
       {triggers.map((t, idx) => (
-        <div key={idx} className="flex flex-wrap items-center gap-2">
-          <select
-            className={dsFormInput}
-            value={t.triggerType}
-            onChange={(e) =>
-              onChange(
-                triggers.map((x, i) =>
-                  i === idx ? { ...x, triggerType: e.target.value as MaintenanceIntervalType } : x,
-                ),
-              )
-            }
-          >
-            {MAINTENANCE_INTERVAL_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {MAINTENANCE_INTERVAL_TYPE_LABELS[type]}
-              </option>
-            ))}
-          </select>
-          <input
-            type="number"
-            min={1}
-            className={`${dsFormInput} w-28`}
-            value={t.threshold}
-            onChange={(e) =>
-              onChange(
-                triggers.map((x, i) =>
-                  i === idx ? { ...x, threshold: Number(e.target.value) || 0 } : x,
-                ),
-              )
-            }
-          />
-          <button
-            type="button"
-            className={dsBtnNeutral}
-            disabled={triggers.length <= 1}
-            onClick={() => onChange(triggers.filter((_, i) => i !== idx))}
-          >
-            Rimuovi
-          </button>
+        <div key={idx}>
+          {idx > 0 ? (
+            <p className="mb-1 text-center text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+              Oppure
+            </p>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              className={dsFormInput}
+              value={t.triggerType}
+              onChange={(e) =>
+                onChange(
+                  triggers.map((x, i) =>
+                    i === idx ? { ...x, triggerType: e.target.value as MaintenanceIntervalType } : x,
+                  ),
+                )
+              }
+            >
+              {MAINTENANCE_INTERVAL_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {MAINTENANCE_INTERVAL_TYPE_LABELS[type]}
+                </option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min={1}
+              className={`${dsFormInput} w-28`}
+              value={t.threshold}
+              onChange={(e) =>
+                onChange(
+                  triggers.map((x, i) =>
+                    i === idx ? { ...x, threshold: Number(e.target.value) || 0 } : x,
+                  ),
+                )
+              }
+            />
+            <button
+              type="button"
+              className={dsBtnNeutral}
+              disabled={triggers.length <= 1}
+              onClick={() => onChange(triggers.filter((_, i) => i !== idx))}
+            >
+              Rimuovi
+            </button>
+          </div>
         </div>
       ))}
       <div className="flex flex-wrap gap-2">
@@ -78,7 +85,7 @@ export function MaintenancePresetTriggersField({
             onChange([...triggers, { triggerType: "mesi", threshold: 12, priority: triggers.length }])
           }
         >
-          + Trigger
+          + Aggiungi condizione
         </button>
         <button
           type="button"

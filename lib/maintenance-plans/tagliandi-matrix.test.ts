@@ -143,7 +143,7 @@ const rowsDisabled = buildTagliandiMatrixRows({
   plans: [plan],
   catalog: [{ id: "tipo-esc", label: "Escavatore" }],
 });
-assert.equal(rowsDisabled.length, 0);
+assert.equal(rowsDisabled.length, 1);
 
 const rowsNoPlan = buildTagliandiMatrixRows({
   mezzi: [{ ...baseMezzo, tagliandi: true, tipoAttrezzatura: "Spazzatrice" }],

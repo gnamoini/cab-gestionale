@@ -9,12 +9,14 @@ export function normMezzoKey(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-/** Match per identità mezzo: priorità matricola → targa → n. scuderia → marca+modello (campo macchina). */
-export function lavorazioneMatchesMezzo(
+/**
+ * Match forte ident (matricola / targa / scuderia esatti).
+ * Per riconciliazione proposta — non usare per attach automatico senza disambiguazione.
+ */
+export function lavorazioneStrongIdentMatchesMezzo(
   m: MezzoGestito,
-  lav: { id: string; targa: string; matricola: string; macchina: string; nScuderia?: string },
+  lav: { targa: string; matricola: string; nScuderia?: string },
 ): boolean {
-  if (m.lavorazioneMezzoId && lav.id === m.lavorazioneMezzoId) return true;
   const nm = normMezzoKey(m.matricola);
   const lm = normMezzoKey(lav.matricola);
   if (nm && lm && nm === lm) return true;
@@ -23,7 +25,13 @@ export function lavorazioneMatchesMezzo(
   if (nt && lt && nt === lt) return true;
   const nsM = normMezzoKey(m.numeroScuderia ?? "");
   const nsL = normMezzoKey(lav.nScuderia ?? "");
-  if (nsM && nsL && nsM === nsL) return true;
+  return Boolean(nsM && nsL && nsM === nsL);
+}
+
+function lavorazioneFuzzyMarcaModelloMatchesMezzo(
+  m: MezzoGestito,
+  lav: { macchina: string },
+): boolean {
   const ml = normMezzoKey(`${m.marca} ${m.modello}`).replace(/mercedes-benz/g, "mercedes");
   const mac = normMezzoKey(lav.macchina).replace(/mercedes-benz/g, "mercedes");
   if (!ml || !mac) return false;
@@ -32,8 +40,20 @@ export function lavorazioneMatchesMezzo(
   if (ml.length >= 4 && mac.includes(ml)) return true;
   const mlAlnum = ml.replace(/[^a-z0-9]/g, "");
   const macAlnum = mac.replace(/[^a-z0-9]/g, "");
-  if (mlAlnum.length >= 6 && (macAlnum.includes(mlAlnum) || mlAlnum.includes(macAlnum))) return true;
-  return false;
+  return mlAlnum.length >= 6 && (macAlnum.includes(mlAlnum) || mlAlnum.includes(macAlnum));
+}
+
+/**
+ * Match display/hint (include fuzzy marca+modello).
+ * Non usare per collegamento persistente — vedi lavorazioneCollegataMezzoDb.
+ */
+export function lavorazioneMatchesMezzo(
+  m: MezzoGestito,
+  lav: { id: string; targa: string; matricola: string; macchina: string; nScuderia?: string },
+): boolean {
+  if (m.lavorazioneMezzoId && lav.id === m.lavorazioneMezzoId) return true;
+  if (lavorazioneStrongIdentMatchesMezzo(m, lav)) return true;
+  return lavorazioneFuzzyMarcaModelloMatchesMezzo(m, lav);
 }
 
 function labelStato(statoId: string): string {

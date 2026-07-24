@@ -1,4 +1,5 @@
 import type {
+  LabelKind,
   LabelLayoutMode,
   LabelTemplateDefinition,
   LabelTemplateElement,
@@ -7,6 +8,7 @@ import type {
 } from "@/lib/inventory-labels/domain/types";
 import { DEFAULT_LABEL_TYPOGRAPHY } from "@/lib/inventory-labels/domain/types";
 import { computeVerticalStackLayout } from "@/lib/inventory-labels/render/vertical-layout";
+import { CAB_LOGO_PDF_ASPECT } from "@/lib/branding/branding-logo-for-pdf";
 
 const REF_WIDTH_MM = 50;
 const REF_HEIGHT_MM = 30;
@@ -32,6 +34,10 @@ const BARCODE_GAP_MM = 0.6;
 /** Inset inferiore QR — spazio bianco sopra il barcode senza muovere i bordi esterni. */
 const QR_BOTTOM_INSET_MM = 1.5;
 const CUT_BORDER_MM = 0.25;
+
+const A4_QR_SIZE_MM = 58;
+const A4_LOGO_QR_GAP_MM = 1.5;
+const A4_TEXT_BOTTOM_GAP_MM = 2.5;
 
 /** Altezza riga testo in mm (allineata al rendering SVG `dominant-baseline=hanging`). */
 export function fontLineHeightMm(fontPt: number, factor = 1.2): number {
@@ -158,6 +164,180 @@ export function computeLabelLayout(
   ];
 }
 
+/**
+ * A4 pagina intera: testi a tutta larghezza in alto · logo+QR in basso a sinistra · barcode/fornitore a destra.
+ */
+export function computeA4PaginaInteraLayout(
+  widthMm: number,
+  heightMm: number,
+  typography: LabelTypography = DEFAULT_LABEL_TYPOGRAPHY,
+): LabelTemplateElement[] {
+  const m = labelMarginMm(widthMm, heightMm);
+  const innerW = widthMm - m * 2;
+  const fontScale = labelFontScale(widthMm, heightMm);
+  const primaryPt =
+    Math.round(Math.min(48, Math.max(38, fontScale * 7.6 * typography.scale)) * 2) / 2;
+  const altPt = Math.round(Math.min(34, Math.max(22, fontScale * 4.2 * typography.scale)) * 2) / 2;
+  const barcodeH = barcodeHeightMm(widthMm, heightMm);
+  const barcodeY = heightMm - m - barcodeH;
+  const labelBottomMm = heightMm - m;
+
+  const qr = A4_QR_SIZE_MM;
+  const qrY = labelBottomMm - qr;
+  const logoW = qr;
+  const logoH = logoW / CAB_LOGO_PDF_ASPECT;
+  const logoY = qrY - A4_LOGO_QR_GAP_MM - logoH;
+  const bottomBandTopMm = Math.min(logoY, barcodeY) - A4_TEXT_BOTTOM_GAP_MM;
+  const supplierX = m + qr + GAP_MM;
+  const supplierW = Math.max(10, innerW - qr - GAP_MM);
+
+  return [
+    { type: "logo", xMm: m, yMm: logoY, widthMm: logoW, heightMm: logoH },
+    { type: "qr", xMm: m, yMm: qrY, sizeMm: qr },
+    {
+      type: "text",
+      field: "marca",
+      xMm: m,
+      yMm: m,
+      fontPt: primaryPt,
+      maxLines: 3,
+      maxWidthMm: innerW,
+      zoneBottomMm: bottomBandTopMm,
+    },
+    {
+      type: "text",
+      field: "descrizione",
+      xMm: m,
+      yMm: m,
+      fontPt: primaryPt,
+      maxWidthMm: innerW,
+      zoneBottomMm: bottomBandTopMm,
+    },
+    {
+      type: "text",
+      field: "codice",
+      xMm: m,
+      yMm: m,
+      fontPt: primaryPt,
+      font: "mono",
+      maxWidthMm: innerW,
+      zoneBottomMm: bottomBandTopMm,
+    },
+    {
+      type: "text",
+      field: "marcaSecondaria",
+      xMm: m,
+      yMm: m,
+      fontPt: primaryPt,
+      maxWidthMm: innerW,
+      zoneBottomMm: bottomBandTopMm,
+    },
+    {
+      type: "text",
+      field: "codiceSecondario",
+      xMm: m,
+      yMm: m,
+      fontPt: primaryPt,
+      font: "mono",
+      maxWidthMm: innerW,
+      zoneBottomMm: bottomBandTopMm,
+    },
+    {
+      type: "text",
+      field: "fornitoreAlternativo",
+      xMm: supplierX,
+      yMm: barcodeY,
+      fontPt: altPt,
+      maxWidthMm: supplierW,
+      zoneBottomMm: labelBottomMm,
+    },
+    {
+      type: "text",
+      field: "codiceAlternativo",
+      xMm: supplierX,
+      yMm: barcodeY,
+      fontPt: altPt,
+      font: "mono",
+      maxWidthMm: supplierW,
+      zoneBottomMm: labelBottomMm,
+    },
+    {
+      type: "barcode",
+      field: "codice",
+      format: "code128",
+      xMm: supplierX,
+      yMm: barcodeY,
+      heightMm: barcodeH,
+      widthMm: supplierW,
+    },
+  ];
+}
+
+const CLIENTE_LOGO_MAX_HEIGHT_MM = 7;
+const CLIENTE_LOGO_TEXT_GAP_MM = 1;
+
+function clienteLogoHeightMm(widthMm: number, heightMm: number): number {
+  const s = labelFontScale(widthMm, heightMm);
+  return Math.min(CLIENTE_LOGO_MAX_HEIGHT_MM, Math.max(4.5, 5.5 * s));
+}
+
+/**
+ * QR sinistra · logo + marca/desc/codice a destra — etichetta cliente (no barcode, no secondari).
+ */
+export function computeClienteLabelLayout(
+  widthMm: number,
+  heightMm: number,
+  typography: LabelTypography = DEFAULT_LABEL_TYPOGRAPHY,
+  qrMaxSizeMm?: number,
+): LabelTemplateElement[] {
+  const m = labelMarginMm(widthMm, heightMm);
+  const innerW = widthMm - m * 2;
+  const scale = labelFontScale(widthMm, heightMm) * typography.scale;
+  const primaryPt = applyTypographyPt(scaledFontPt(7, scale / typography.scale, 7, 16), typography);
+  const labelBottomMm = heightMm - m;
+
+  const qr = qrMaxSizeMm != null ? Math.min(heightMm - m * 2, qrMaxSizeMm) : heightMm - m * 2;
+  const textX = m + qr + GAP_MM;
+  const textW = Math.max(10, innerW - qr - GAP_MM);
+  const logoH = clienteLogoHeightMm(widthMm, heightMm);
+  const logoW = Math.min(textW, logoH * CAB_LOGO_PDF_ASPECT);
+  const textTopMm = m + logoH + CLIENTE_LOGO_TEXT_GAP_MM;
+
+  return [
+    { type: "qr", xMm: m, yMm: m, sizeMm: qr },
+    { type: "logo", xMm: textX, yMm: m, widthMm: logoW, heightMm: logoH },
+    {
+      type: "text",
+      field: "marca",
+      xMm: textX,
+      yMm: textTopMm,
+      fontPt: primaryPt,
+      maxLines: 3,
+      maxWidthMm: textW,
+      zoneBottomMm: labelBottomMm,
+    },
+    {
+      type: "text",
+      field: "descrizione",
+      xMm: textX,
+      yMm: textTopMm,
+      fontPt: primaryPt,
+      maxWidthMm: textW,
+      zoneBottomMm: labelBottomMm,
+    },
+    {
+      type: "text",
+      field: "codice",
+      xMm: textX,
+      yMm: textTopMm,
+      fontPt: primaryPt,
+      font: "mono",
+      maxWidthMm: textW,
+      zoneBottomMm: labelBottomMm,
+    },
+  ];
+}
+
 type BuildTemplateOptions = {
   typography?: LabelTypography;
   layoutMode?: LabelLayoutMode;
@@ -201,6 +381,21 @@ function buildTemplate(
   };
 }
 
+function buildClienteTemplate(base: LabelTemplateDefinition): LabelTemplateDefinition {
+  const { widthMm, heightMm, typography, qr } = base;
+  const marginsMm = labelMarginMm(widthMm, heightMm);
+  const elements = computeClienteLabelLayout(widthMm, heightMm, typography, qr.maxSizeMm);
+  return {
+    ...base,
+    id: `${base.id}-cliente`,
+    version: "1.8.0-cliente",
+    marginsMm,
+    layoutMode: "horizontal-qr-left",
+    elements,
+    barcode: { heightMm: 0 },
+  };
+}
+
 /** Preset registry — 40×20 … 95×40 mm + A4 pagina intera. */
 export const LABEL_TEMPLATE_REGISTRY: Record<string, LabelTemplateDefinition> = {
   "40x20-default": buildTemplate("40x20-default", 40, 20),
@@ -210,12 +405,30 @@ export const LABEL_TEMPLATE_REGISTRY: Record<string, LabelTemplateDefinition> = 
   "80x40-default": buildTemplate("80x40-default", 80, 40),
   "80x50-default": buildTemplate("80x50-default", 80, 50),
   "95x40-default": buildTemplate("95x40-default", 95, 40),
-  "a4-pagina-intera": buildTemplate("a4-pagina-intera", 287, 200, {
-    typography: { scale: 2.3, weight: "bold", tracking: 0, lineHeight: 1.15 },
-    supplierLayout: "inline-slash",
-    qrMaxSizeMm: 72,
-    version: "2.0.0",
-  }),
+  "a4-pagina-intera": (() => {
+    const widthMm = 287;
+    const heightMm = 200;
+    const marginsMm = labelMarginMm(widthMm, heightMm);
+    const typography: LabelTypography = { scale: 1, weight: "bold", tracking: 0, lineHeight: 1.1 };
+    const elements = computeA4PaginaInteraLayout(widthMm, heightMm, typography);
+    const barcodeEl = elements.find((e) => e.type === "barcode");
+    const barcodeH = barcodeEl?.type === "barcode" ? barcodeEl.heightMm : barcodeHeightMm(widthMm, heightMm);
+    return {
+      id: "a4-pagina-intera",
+      version: "2.1.0",
+      widthMm,
+      heightMm,
+      dpi: 300,
+      marginsMm,
+      cutBorderMm: CUT_BORDER_MM,
+      typography,
+      layoutMode: "horizontal-qr-left" as const,
+      supplierLayout: "inline-slash" as const,
+      qr: { maxSizeMm: A4_QR_SIZE_MM, position: "top-left" as const },
+      barcode: { heightMm: barcodeH },
+      elements,
+    };
+  })(),
 };
 
 /** Default 95×40 — formato etichetta magazzino preferito. */
@@ -235,8 +448,11 @@ export function labelPresetOptionLabel(presetId: string): string {
   return presetId === DEFAULT_LABEL_PRESET ? `${name} · consigliato` : name;
 }
 
-export function getLabelTemplate(presetId: string): LabelTemplateDefinition | null {
-  return LABEL_TEMPLATE_REGISTRY[presetId] ?? null;
+export function getLabelTemplate(presetId: string, kind: LabelKind = "internal"): LabelTemplateDefinition | null {
+  const base = LABEL_TEMPLATE_REGISTRY[presetId];
+  if (!base) return null;
+  if (kind === "cliente") return buildClienteTemplate(base);
+  return base;
 }
 
 export function mmToPx(mm: number, dpi: number): number {

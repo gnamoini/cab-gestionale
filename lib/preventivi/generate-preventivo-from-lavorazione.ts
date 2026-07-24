@@ -10,8 +10,9 @@ import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura
 import { PREVENTIVO_TIPO_DOCUMENTO_DEFAULT } from "@/lib/preventivi/preventivi-tipo-documento";
 import {
   buildPersistGenerationPayload,
-  generatePreventivoDescription,
+  generatePreventivoDescriptionAsync,
   persistGenerationClient,
+  type DescriptionGenerationProgress,
 } from "@/lib/preventivi/description-engine";
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
 import type { PreventivoManodopera, PreventivoRecord, PreventivoRigaRicambio } from "@/lib/preventivi/types";
@@ -32,7 +33,7 @@ import {
 import { createAttrezzaturaSnapshot } from "@/lib/domain/mezzo-attrezzatura/create-attrezzatura-snapshot";
 import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 
-export function buildNewPreventivoFromLavorazioneContext(opts: {
+export async function buildNewPreventivoFromLavorazioneContext(opts: {
   lav: LavorazioneAttiva | LavorazioneArchiviata;
   origine: "attiva" | "storico";
   bundle: LavorazioneSchedeBundle;
@@ -40,10 +41,11 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
   magazzino: RicambioMagazzino[];
   autore: string;
   existingRecords: readonly PreventivoRecord[];
-}): PreventivoRecord {
+  onDescriptionProgress?: (progress: DescriptionGenerationProgress) => void;
+  descriptionDeps?: import("@/lib/preventivi/description-engine/generate-preventivo-description-async").GeneratePreventivoDescriptionAsyncDeps;
+}): Promise<PreventivoRecord> {
   const { lav, origine, bundle, magazzino, autore, existingRecords } = opts;
   const now = new Date().toISOString();
-  const ing = bundle.ingresso?.campi ?? null;
   const lavScheda = bundle.lavorazioni?.tipo === "lavorazioni" ? bundle.lavorazioni : null;
   const ricScheda = bundle.ricambi?.tipo === "ricambi" ? bundle.ricambi : null;
 
@@ -83,16 +85,6 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
     richiedente,
   } = anag;
 
-  const techParts =
-    lavScheda?.campi?.righe?.map((r) => r.lavorazioniEffettuate?.trim()).filter(Boolean) ?? ([] as string[]);
-  const lavorazioniLines = [...techParts];
-  const anomaliaIngresso = ing?.descrizioneAnomalia?.trim() ?? "";
-  if (anomaliaIngresso && !techParts.some((p) => p.toLowerCase().includes(anomaliaIngresso.toLowerCase().slice(0, 24)))) {
-    techParts.unshift(anomaliaIngresso);
-  }
-  const technicalBlob =
-    techParts.join("\n").trim() || lav.noteInterne.trim() || "Intervento di manutenzione e controllo generale.";
-
   const codiciRicambi = (ricScheda?.campi.righe ?? []).map((r) => r.codice.trim()).filter(Boolean);
   const descCtx = {
     lavorazioneId: lav.id,
@@ -106,30 +98,22 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
     existingPreventiviRecords: existingRecords,
   };
 
-  const ricambiForDesc = (ricScheda?.campi.righe ?? []).map((r) => {
-    const mag = r.ricambioId ? magazzino.find((x) => x.id === r.ricambioId) : undefined;
-    return {
-      ricambioId: r.ricambioId,
-      descrizione: mag?.descrizione?.trim() || r.ricambioNome.trim(),
-      codice: ricambioCodiceForUi(mag?.codiceFornitoreOriginale) || r.codice.trim(),
-    };
-  });
-
   const preventivoIdPreview = nextPreventivoId();
-  const composed = generatePreventivoDescription({
-    technicalBlob,
-    anomaliaText: anomaliaIngresso || undefined,
-    noteIntervento: ing?.noteIntervento?.trim() || undefined,
-    lavorazioniLines,
+  const generated = await generatePreventivoDescriptionAsync({
     lavorazioneId: lav.id,
+    magazzino,
+    noteInterneFallback: lav.noteInterne.trim() || undefined,
+    ctx: descCtx,
     targetType: targetType === "attrezzatura" ? "attrezzatura" : "telaio",
     tipoAttrezzatura,
     marcaModello: [marcaAttrezzatura, modelloAttrezzatura].filter(Boolean).join(" "),
-    ricambi: ricambiForDesc,
-    ctx: descCtx,
+    onProgress: opts.onDescriptionProgress,
+    deps: opts.descriptionDeps,
   });
 
-  const autoCliente = composed.clienteText;
+  const composed = generated.composed;
+  const autoCliente = generated.description;
+  const technicalBlob = generated.technicalBlob;
   const descriptionGenerationId = composed.meta.generationId;
   const descriptionEngineMeta = composed.meta;
 

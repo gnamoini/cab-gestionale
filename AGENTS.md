@@ -441,6 +441,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Shell: `GestionaleModalShell` con prop `modalSize` / `modalHeight`; conferme: `GestionaleConfirmDialog` (larghezza `confirmation`).
 - Drawer: `resolveDrawerAsideClasses("drawerLog" | "drawerFilter" | "drawerNav")`.
 - Documentazione: `docs/modal-system.md`. Audit: `lib/regression/modal-width-audit.test.ts`.
+- Input numerici: `docs/ui/numeric-input-contract.md`. Audit: `lib/regression/numeric-input-anti-patterns.test.ts`.
 
 ## Tabelle gestionale (design master)
 

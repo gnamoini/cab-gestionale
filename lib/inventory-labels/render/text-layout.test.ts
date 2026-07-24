@@ -159,4 +159,19 @@ assert.ok(smallCodice.lines.length >= 1);
 assert.ok(linesFitDisplayWidth(smallCodice.lines, smallW, smallCodice.fontPt, "mono"));
 assert.equal(smallDesc.fontPt, findTextEl(small, "descrizione").fontPt);
 
+const a4 = getLabelTemplate("a4-pagina-intera")!;
+const a4Placed = resolveLabelTextLayout(a4, {
+  marca: "BTE",
+  marcaSecondaria: "OMB",
+  descrizione: "Sensore",
+  codice: "XXXX",
+  codiceSecondario: "YYYY",
+  fornitoreAlternativo: "Forn",
+  codiceAlternativo: "ALT-1",
+  fornitoriAlternativi: [{ name: "Forn", code: "ALT-1" }],
+});
+const a4Codice = a4Placed.find((p) => p.field === "codice")!;
+const a4Marca2 = a4Placed.find((p) => p.field === "marcaSecondaria")!;
+assert.ok(a4Marca2.yMm - a4Codice.yMm >= 5.5, "A4: gap ampio tra codice e marca secondaria");
+
 console.log("inventory-labels/render/text-layout.test.ts OK");

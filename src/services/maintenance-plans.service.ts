@@ -15,7 +15,7 @@ import { formatTriggerSummary } from "@/lib/maintenance-plans/maintenance-trigge
 import { MAINTENANCE_INTERVAL_TYPE_LABELS } from "@/lib/maintenance-plans/maintenance-enums";
 import { processMaintenanceWarehouseDischarge } from "@/lib/maintenance-plans/process-maintenance-warehouse";
 import type { PresetSnapshot } from "@/lib/maintenance-plans/preset-snapshot";
-import { resolvePlansForMezzo } from "@/lib/maintenance-plans/resolve-plans-for-mezzo";
+import { isPresetAssignable } from "@/lib/maintenance-plans/maintenance-domain-contract";
 import type { MaintenanceExecutionType } from "@/lib/maintenance-plans/maintenance-enums";
 import type { ReplacementCondition } from "@/lib/maintenance-plans/maintenance-enums";
 import type { MaintenanceServiceLite } from "@/lib/maintenance-plans/tagliandi-matrix";
@@ -158,7 +158,7 @@ export const maintenancePlansService = {
         interval_ore: input.intervalOre,
         interval_type: intervalType,
         interval_value: intervalValue,
-        maintenance_kind: input.maintenanceKind ?? "tagliando_ore",
+        maintenance_kind: null,
         status,
         is_active: isActive,
         tempo_previsto_minuti: input.tempoPrevistoMinuti ?? null,
@@ -195,14 +195,6 @@ export const maintenancePlansService = {
       }
 
       if (!planId) return err("Piano non creato.");
-
-      await client.from("maintenance_plan_equipment_types").delete().eq("plan_id", planId);
-      if (input.tipoAttrezzaturaIds.length > 0) {
-        const { error: eqErr } = await client.from("maintenance_plan_equipment_types").insert(
-          input.tipoAttrezzaturaIds.map((tipo_attrezzatura_id) => ({ plan_id: planId, tipo_attrezzatura_id })),
-        );
-        if (eqErr) return err(humanizeGestionaleError(eqErr.message, { entity: "mezzo", action: "update" }));
-      }
 
       await client.from("maintenance_plan_parts").delete().eq("plan_id", planId);
       if (input.parts.length > 0) {
@@ -330,24 +322,32 @@ export const maintenancePlansService = {
 
   async listMezzoPlanStatuses(input: {
     mezzoId: string;
-    tipoAttrezzatura: string;
     currentOreMezzo: number;
   }): Promise<ServiceResult<MaintenancePlanStatus[]>> {
     try {
-      const [plansRes, servicesRes] = await Promise.all([
+      const client = await sb();
+      const [configsRes, plansRes, servicesRes] = await Promise.all([
+        client
+          .from("vehicle_maintenance_configs")
+          .select("preset_id")
+          .eq("mezzo_id", input.mezzoId)
+          .eq("is_active", true)
+          .is("deleted_at", null),
         maintenancePlansService.listPlans(),
         maintenancePlansService.listServicesByMezzo(input.mezzoId),
       ]);
+      if (configsRes.error) {
+        return err(humanizeGestionaleError(configsRes.error.message, { entity: "mezzo", action: "read" }));
+      }
       if (!plansRes.success) return err(plansRes.error ?? "Errore piani.");
       if (!servicesRes.success) return err(servicesRes.error ?? "Errore storico.");
 
-      const catalogRes = await maintenancePlansService.listTipoCatalog();
-      const catalog = catalogRes.data ?? [];
-      const applicable = resolvePlansForMezzo({
-        tipoAttrezzatura: input.tipoAttrezzatura,
-        catalog,
-        plans: plansRes.data ?? [],
-      });
+      const presetIds = new Set(
+        (configsRes.data ?? [])
+          .map((c) => c.preset_id as string | null)
+          .filter((id): id is string => Boolean(id)),
+      );
+      const applicable = (plansRes.data ?? []).filter((p) => presetIds.has(p.id));
 
       const serviceOres = (servicesRes.data ?? []).map((s) => ({
         planId: s.planId,

@@ -54,6 +54,7 @@ import {
   type MezziHubTabId,
 } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 import { MezziHubAttrezzaturePanel } from "@/components/gestionale/mezzi/mezzi-hub-attrezzature-panel";
+import { MezziHubLavorazioniPanel } from "@/components/gestionale/mezzi/mezzi-hub-lavorazioni-panel";
 import { MezziHubTagliandiTab } from "@/components/gestionale/mezzi/mezzi-hub-tagliandi-tab";
 import { MezzoMeteringOriginLink } from "@/components/gestionale/mezzi/mezzo-metering-origin-link";
 import { MezzoAnagraficaHistoryEntry } from "@/components/gestionale/mezzi/mezzo-anagrafica-history-entry";
@@ -135,20 +136,6 @@ export function MezziHubDetailModal({
   }, [preventivi]);
 
   const listPageSize = useResponsiveListPageSize();
-
-  const {
-    page: lavPage,
-    setPage: setLavPage,
-    pageCount: lavPageCount,
-    sliceItems: sliceLav,
-    showPager: showLavPager,
-    label: lavPagerLabel,
-    resetPage: resetLavPage,
-  } = useClientPagination(sortedLav.length, listPageSize);
-  useEffect(() => {
-    resetLavPage();
-  }, [mezzo.id, sortedLav.length, listPageSize, resetLavPage]);
-  const pagedLav = useMemo(() => sliceLav(sortedLav), [sortedLav, sliceLav, lavPage]);
 
   const meteringOriginLavorazione = useMemo(() => {
     const id = mezzo.ultimoAggiornamentoDaLavorazioneId?.trim();
@@ -401,110 +388,13 @@ export function MezziHubDetailModal({
         ) : null}
 
         {tab === "lavorazioni" ? (
-          <GestionaleInfoCard
-            title="Lavorazioni collegate"
-            subtitle={`${sortedLav.length} ${sortedLav.length === 1 ? "record" : "record"}`}
-            collapsible
-            defaultCollapsed={sortedLav.length === 0}
-            actions={
-              sortedLav.length > 0 ? (
-                <Link
-                  href={buildPreventiviLavorazioneFocusHref(sortedLav[0]!.id, sortedLav[0]!.origine)}
-                  className={dsTableActionTextBtn}
-                  onClick={onClose}
-                >
-                  Ultima lavorazione
-                </Link>
-              ) : null
-            }
-          >
-            <div className={`${dsTableWrap} ${dsScrollbar}`}>
-              <table className={`${dsTable} min-w-[640px] text-xs`}>
-                <GlobalTableHead>
-                  <GlobalTableHeadLabel label="Ingresso" />
-                  <GlobalTableHeadLabel label="Stato" />
-                  <GlobalTableHeadLabel label="Schede" />
-                  <GlobalTableHeadLabel label="Descrizione" />
-                  <GlobalTableHeadLabel label="" thClassName="w-28" align="right" />
-                </GlobalTableHead>
-                <tbody>
-                  {sortedLav.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-2 py-6 text-center text-[color:var(--cab-text-muted)]">
-                        Nessuna lavorazione collegata.
-                      </td>
-                    </tr>
-                  ) : (
-                    pagedLav.map((r) => {
-                      const badges = schedeHistoryBadges(schedeHistory, r.id);
-                      return (
-                      <tr key={r.id} className={dsTableRow}>
-                        <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] text-[color:var(--cab-text-muted)]">
-                          {fmtMezziHubDt(r.dataIngresso)}
-                        </td>
-                        <td className="px-2 py-2 text-[color:var(--cab-text)]">{r.statoFinale}</td>
-                        <td className="px-2 py-2 text-[color:var(--cab-text-muted)]">
-                          <span className="inline-flex flex-wrap gap-1">
-                            {badges.ingresso ? (
-                              <button
-                                type="button"
-                                className="rounded bg-[color:var(--cab-surface-2)] px-1.5 py-0.5 text-[10px] hover:bg-[color:var(--cab-surface-2)]/80"
-                                onClick={() => setSchedaDrawer({ lavorazioneId: r.id, tipo: "ingresso" })}
-                              >
-                                Ingresso
-                              </button>
-                            ) : null}
-                            {badges.lavorazioni ? (
-                              <button
-                                type="button"
-                                className="rounded bg-[color:var(--cab-surface-2)] px-1.5 py-0.5 text-[10px] hover:bg-[color:var(--cab-surface-2)]/80"
-                                onClick={() => setSchedaDrawer({ lavorazioneId: r.id, tipo: "lavorazioni" })}
-                              >
-                                Lav.
-                              </button>
-                            ) : null}
-                            {badges.ricambi ? (
-                              <button
-                                type="button"
-                                className="rounded bg-[color:var(--cab-surface-2)] px-1.5 py-0.5 text-[10px] hover:bg-[color:var(--cab-surface-2)]/80"
-                                onClick={() => setSchedaDrawer({ lavorazioneId: r.id, tipo: "ricambi" })}
-                              >
-                                Ric.
-                              </button>
-                            ) : null}
-                            {!badges.ingresso && !badges.lavorazioni && !badges.ricambi ? "—" : null}
-                          </span>
-                        </td>
-                        <td className="max-w-[280px] px-2 py-2 text-[color:var(--cab-text-muted)]">{r.descrizione || "—"}</td>
-                        <td className="whitespace-nowrap px-2 py-2 text-right">
-                          <div className="flex flex-nowrap justify-end gap-1">
-                            <Link
-                              href={buildPreventiviLavorazioneFocusHref(r.id, r.origine)}
-                              className={dsTableActionTextBtnPrimary}
-                              onClick={onClose}
-                            >
-                              Apri
-                            </Link>
-                            <Link
-                              href={buildPreventiviArchivioFilterHref(r.id, r.origine)}
-                              className={dsTableActionTextBtn}
-                              onClick={onClose}
-                            >
-                              Preventivi
-                            </Link>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                    })
-                  )}
-                </tbody>
-              </table>
-              {showLavPager ? (
-                <TablePagination page={lavPage} pageCount={lavPageCount} onPageChange={setLavPage} label={lavPagerLabel} />
-              ) : null}
-            </div>
-          </GestionaleInfoCard>
+          <MezziHubLavorazioniPanel
+            interventi={sortedLav}
+            schedeHistory={schedeHistory}
+            listPageSize={listPageSize}
+            onClose={onClose}
+            onOpenScheda={(lavorazioneId, tipo) => setSchedaDrawer({ lavorazioneId, tipo })}
+          />
         ) : null}
 
         {tab === "tagliandi" ? (

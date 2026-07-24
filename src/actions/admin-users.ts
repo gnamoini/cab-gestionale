@@ -18,7 +18,7 @@ import {
   resolvePasswordResetRedirectUrl,
   sendPasswordResetEmail,
 } from "@/lib/auth/password-reset";
-import { writeSecurityAuditLog } from "@/lib/security/security-audit-log";
+import { writeSecurityAuditLog, SecurityAuditLogError } from "@/lib/security/security-audit-log";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { normalizeUsername, usernameFieldError } from "@/src/lib/auth/username";
 import { normalizeClienteRef, validateClienteAssociationForRole } from "@/src/lib/auth/cliente-portal-scope";
@@ -88,7 +88,7 @@ async function writeSecurityLog(
         : undefined,
     },
   });
-  if (error) console.warn("[security] log utente:", error.message);
+  if (error) throw new SecurityAuditLogError(error.message);
 }
 
 async function writeSecurityDeleteLog(
@@ -108,7 +108,7 @@ async function writeSecurityDeleteLog(
       compact: `(ELIMINAZIONE UTENTE, ${input.nome}, ${input.role}, ${input.actorName ?? "Admin"}, ${new Date().toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })})`,
     },
   });
-  if (error) console.warn("[security] log eliminazione utente:", error.message);
+  if (error) throw new SecurityAuditLogError(error.message);
 }
 
 function userRowFrom(

@@ -40,6 +40,7 @@ import { seedPageAccessForRole } from "@/lib/rbac-page-seed";
 import { canReadPage } from "@/src/lib/rbac/resolve-page-access";
 import { resolvePageAccess } from "@/src/lib/rbac/resolve-page-access";
 import type { ProfileRow, RoleRow } from "@/src/types/supabase-tables";
+import { SecurityAuditLogError } from "@/lib/security/security-audit-log";
 
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 
@@ -247,7 +248,7 @@ async function writeSecurityBatchLog(
       compact: `(AGGIORNAMENTO UTENTI, ${input.patches.length} modifiche, ${input.actorName})`,
     },
   });
-  if (error) console.warn("[security] batch log:", error.message);
+  if (error) throw new SecurityAuditLogError(error.message);
 }
 
 export async function batchUpdateSecurityUsersAction(

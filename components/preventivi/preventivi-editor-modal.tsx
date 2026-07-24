@@ -20,7 +20,6 @@ import {
   PREVENTIVO_RIGA_MATERIALI_ID,
 } from "@/lib/preventivi/preventivi-voci-standard";
 import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
-import { appendPreventiviChangeLog } from "@/lib/preventivi/preventivi-change-log-storage";
 import { persistPreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { maybeRecordLearningOnSave } from "@/lib/preventivi/trasforma-descrizione";
@@ -173,6 +172,7 @@ export function PreventiviEditorModal({
   const [ddtDrawer, setDdtDrawer] = useState<{ open: boolean; detail: DdtDetail | null }>({ open: false, detail: null });
   const [ddtBusy, setDdtBusy] = useState(false);
   const [descRegenBusy, setDescRegenBusy] = useState(false);
+  const [descProgressLabel, setDescProgressLabel] = useState<string | null>(null);
   const prevPerms = usePermissions("preventivi");
   const profilo = useOfficinaProfiloOperativo();
   const toast = useGestionaleToast();
@@ -325,23 +325,32 @@ export function PreventiviEditorModal({
   }, [draft, getDdtForPreventivo, openDdtDrawer, preventivoId, prevPerms.canWrite, refetchDdtIndex, toast]);
 
   const canRegenerateDescription =
-    Boolean(draft?.stato === "bozza" && draft.descrizioneLavorazioniTecnicaSorgente.trim() && prevPerms.canWrite);
+    Boolean(draft?.stato === "bozza" && draft.lavorazioneId?.trim() && prevPerms.canWrite);
 
-  const regenerateDescription = useCallback(() => {
+  const regenerateDescription = useCallback(async () => {
     if (!draft || !canRegenerateDescription) return;
     setDescRegenBusy(true);
+    setDescProgressLabel("Generazione descrizione tecnica…");
     try {
       const ctx = buildDescCtxFromPreventivo(draft, allRecords);
       const seq = (draft.descriptionEngineMeta?.generationSequence ?? 0) + 1;
-      const next = regeneratePreventivoDescription(draft, ctx, {
+      const next = await regeneratePreventivoDescription(draft, ctx, {
         autore: autore.trim() || "Operatore",
         generationSequence: seq,
+        onProgress: (p) => setDescProgressLabel(p.label),
       });
       setDraft(applyTotals(next));
+      if (next.descriptionEngineMeta?.polish?.fallback && process.env.NODE_ENV !== "production") {
+        console.info(
+          "AI Polish non disponibile, utilizzata descrizione tecnica originale",
+          next.descriptionEngineMeta.polish,
+        );
+      }
       toast.successOnce("desc-regen", "Descrizione rigenerata dalla scheda tecnica.");
     } catch (e) {
       toast.errorOnce("desc-regen", e);
     } finally {
+      setDescProgressLabel(null);
       setDescRegenBusy(false);
     }
   }, [allRecords, applyTotals, autore, canRegenerateDescription, draft, toast]);
@@ -543,43 +552,7 @@ export function PreventiviEditorModal({
     }
 
     const saved = res.record;
-    if (isNew) {
-      appendPreventiviChangeLog({
-        tone: "create",
-        tipoRiga: "CREAZIONE PREVENTIVO",
-        oggettoRiga: `Preventivo ${saved.numero}`,
-        modificaRiga: `Cliente: ${saved.cliente || "—"}. Totale ${saved.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €. ${
-          saved.lavorazioneId.trim()
-            ? `Lavorazione ${saved.lavorazioneId} (${saved.lavorazioneOrigine}).`
-            : "Preventivo manuale (nessuna lavorazione collegata)."
-        }`,
-        autore: u,
-        atIso: now,
-      });
-    } else if (isRollbackDraft) {
-      appendPreventiviChangeLog({
-        tone: "create",
-        tipoRiga: "CREAZIONE PREVENTIVO",
-        oggettoRiga: `Preventivo ${saved.numero}`,
-        modificaRiga: `Generato da lavorazione ${saved.lavorazioneId} con ${saved.righeRicambi.length} ricambi e ${saved.manodopera.oreTotali} ore manodopera. Cliente: ${saved.cliente || "—"}.`,
-        autore: u,
-        atIso: now,
-      });
-    } else {
-      const base = baseline;
-      const changed =
-        !base || JSON.stringify(applyTotals(cloneRecord(base))) !== JSON.stringify(applyTotals(cloneRecord(saved)));
-      if (changed) {
-        appendPreventiviChangeLog({
-          tone: "update",
-          tipoRiga: "AGGIORNAMENTO PREVENTIVO",
-          oggettoRiga: `Preventivo ${saved.numero}`,
-          modificaRiga: "Salvate modifiche a intestazione, righe ricambi/manodopera, totali o note.",
-          autore: u,
-          atIso: now,
-        });
-      }
-    }
+    void saved;
     baselineRef.current = cloneRecord(saved);
     setUnsavedExitOpen(false);
     onSaved();
@@ -715,7 +688,7 @@ export function PreventiviEditorModal({
                     disabled={descRegenBusy}
                     onClick={regenerateDescription}
                   >
-                    {descRegenBusy ? "Rigenerazione…" : "Rigenera da scheda"}
+                    {descRegenBusy ? (descProgressLabel ?? "Rigenerazione…") : "Rigenera da scheda"}
                   </button>
                 ) : null
               }

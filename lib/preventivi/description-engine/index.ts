@@ -16,7 +16,18 @@ export type {
 } from "./types";
 
 export {
-  generatePreventivoDescription,
+  generatePreventivoDescriptionAsync,
+  type DescriptionGenerationProgress,
+  type DescriptionGenerationProgressStep,
+  type GeneratePreventivoDescriptionAsyncInput,
+  type GeneratePreventivoDescriptionResult,
+  type PreventivoPolishOutcome,
+} from "./generate-preventivo-description-async";
+
+export { buildDescriptionInputFromBundle, buildTechnicalFingerprint } from "./resolve-description-input";
+export { resolveDescriptionInputFromDb } from "./resolve-description-input.client";
+
+export {
   generateLegacyOnlyDescription,
   ensureTkbSeedPublished,
   resetDescriptionEngineDevState,

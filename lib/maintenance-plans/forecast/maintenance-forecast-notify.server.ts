@@ -4,6 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 import { createNotificationRpc } from "@/lib/notifications/create-notification-rpc";
 import { readSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
 import { readSupabasePublicEnv } from "@/lib/env/supabase-public";
+import { formatDueReason } from "@/lib/maintenance-plans/maintenance-due-engine";
+import type { ForecastExplainability } from "@/lib/maintenance-plans/forecast/trigger-group-forecast";
 
 export function addDaysIso(ymd: string, days: number): string {
   const d = new Date(`${ymd}T12:00:00`);
@@ -27,7 +29,9 @@ export async function runMaintenanceForecastNotify(): Promise<{
 
   const { data: forecasts, error } = await supabase
     .from("vehicle_maintenance_forecasts")
-    .select("config_id, next_date_estimated, confidence_level, confidence_pct")
+    .select(
+      "config_id, next_date_estimated, confidence_level, confidence_pct, remaining_value, trigger_reason, explainability_json",
+    )
     .not("next_date_estimated", "is", null)
     .lte("next_date_estimated", in7)
     .gte("next_date_estimated", today);
@@ -39,14 +43,33 @@ export async function runMaintenanceForecastNotify(): Promise<{
 
     const { data: config } = await supabase
       .from("vehicle_maintenance_configs")
-      .select("mezzo_id, label")
+      .select("mezzo_id, label, preset_id, interval_type")
       .eq("id", f.config_id)
       .maybeSingle();
     if (!config) continue;
 
+    let presetNome = (config.label as string | null)?.trim() || "mezzo";
+    if (config.preset_id) {
+      const { data: preset } = await supabase
+        .from("maintenance_plans")
+        .select("nome")
+        .eq("id", config.preset_id)
+        .maybeSingle();
+      if (preset?.nome) presetNome = preset.nome as string;
+    }
+
+    const explainability = (f.explainability_json ?? null) as ForecastExplainability | null;
+    const remainingValue = f.remaining_value != null ? Number(f.remaining_value) : null;
+    const dueBody = formatDueReason({
+      presetNome,
+      explainability,
+      remainingValue,
+      isOverdue: remainingValue != null && remainingValue <= 0,
+    });
+    const body = dueBody || `Scadenza stimata ${f.next_date_estimated}`;
+
     const dedupKey = `tagliando-forecast:${f.config_id}:${dateBucket}`;
-    const title = `Tagliando previsto: ${config.label ?? "mezzo"}`;
-    const body = `Scadenza stimata ${f.next_date_estimated}`;
+    const title = `Tagliando previsto: ${presetNome}`;
 
     const result = await createNotificationRpc(supabase, {
       type: "tagliando_previsto_7g",

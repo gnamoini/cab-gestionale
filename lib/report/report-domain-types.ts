@@ -56,9 +56,13 @@ export type WarehouseAnalyticsDto = {
 
 export type LaborAnalyticsDto = {
   metrics: ReportDomainMetric[];
+  /** Ore presenza (timesheet) — non usare per produttività reale. */
   totalHours: number;
+  /** Ore consuntive (actual_labor_hours). */
+  actualLaborHours: number;
   completedJobs: number;
   avgHoursPerJob: number | null;
+  actualHoursPerJob: number | null;
   manodoperaCost: number;
 };
 

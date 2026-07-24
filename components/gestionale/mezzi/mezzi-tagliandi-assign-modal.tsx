@@ -6,14 +6,10 @@ import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-conf
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { maintenancePlansEntry } from "@/lib/domain/maintenance-plans-entry";
-import { resolvePlansForMezzo } from "@/lib/maintenance-plans/resolve-plans-for-mezzo";
 import type { MaintenancePresetSummary } from "@/lib/maintenance-plans/types";
 import type { MezzoWithoutPresetRow } from "@/lib/maintenance-plans/v2-types";
 import { dsBtnNeutral, dsBtnPrimary, dsFormField, dsFormInput, dsFormLabel, dsScrollbar } from "@/lib/ui/design-system";
-import {
-  useMaintenancePlansCatalogQuery,
-  useMaintenancePlansListQuery,
-} from "@/src/hooks/gestionale/use-maintenance-plans-queries";
+import { useMaintenancePlansListQuery } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
 import { useBulkAssignPresetMutation } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { maintenancePlansQueryKeys } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
@@ -36,7 +32,6 @@ export function MezziTagliandiAssignModal({
   const [replaceConfirm, setReplaceConfirm] = useState(false);
 
   const presetsQ = useMaintenancePlansListQuery(open);
-  const catalogQ = useMaintenancePlansCatalogQuery(open);
   const withoutQ = useServiceQuery(
     [...maintenancePlansQueryKeys.root, "without-preset"] as const,
     () => maintenancePlansEntry.listMezziWithoutPreset(),
@@ -54,19 +49,8 @@ export function MezziTagliandiAssignModal({
     () => (presetsQ.data ?? []).filter((p) => p.status === "active"),
     [presetsQ.data],
   );
-  const selectedPreset = activePresets.find((p) => p.id === presetId) ?? presetProp;
 
-  const compatibleMezzi = useMemo(() => {
-    const rows = withoutQ.data ?? [];
-    if (!selectedPreset || !catalogQ.data) return rows;
-    return rows.filter((m) =>
-      resolvePlansForMezzo({
-        tipoAttrezzatura: m.tipoAttrezzatura,
-        catalog: catalogQ.data ?? [],
-        plans: [selectedPreset],
-      }).length > 0,
-    );
-  }, [withoutQ.data, selectedPreset, catalogQ.data]);
+  const availableMezzi = withoutQ.data ?? [];
 
   const toggleMezzo = (id: string) => {
     setSelected((prev) => {
@@ -147,16 +131,16 @@ export function MezziTagliandiAssignModal({
             </select>
           </div>
           <p className="mb-2 text-xs text-[color:var(--cab-text-muted)]">
-            {compatibleMezzi.length} mezzi compatibili senza piano attivo
+            {availableMezzi.length} mezzi senza piano attivo
           </p>
           <div className={`max-h-64 overflow-y-auto rounded-md border border-[color:var(--cab-border)] ${dsScrollbar}`}>
             {withoutQ.isLoading ? (
               <p className="p-3 text-sm text-[color:var(--cab-text-muted)]">Caricamento mezzi…</p>
-            ) : compatibleMezzi.length === 0 ? (
-              <p className="p-3 text-sm text-[color:var(--cab-text-muted)]">Nessun mezzo compatibile disponibile.</p>
+            ) : availableMezzi.length === 0 ? (
+              <p className="p-3 text-sm text-[color:var(--cab-text-muted)]">Nessun mezzo disponibile.</p>
             ) : (
               <ul className="divide-y divide-[color:var(--cab-border)]">
-                {compatibleMezzi.map((m: MezzoWithoutPresetRow) => (
+                {availableMezzi.map((m: MezzoWithoutPresetRow) => (
                   <li key={m.mezzoId}>
                     <label className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--cab-hover)]">
                       <input
@@ -180,7 +164,7 @@ export function MezziTagliandiAssignModal({
       <GestionaleConfirmDialog
         open={replaceConfirm}
         title="Conferma assegnazione"
-        message={`Assegnare il preset a ${selected.size} mezzo/i? Se esiste già un piano dello stesso tipo, verrà sostituito e la pianificazione ricalcolata.`}
+        message={`Assegnare il preset a ${selected.size} mezzo/i? I piani attivi esistenti sullo stesso mezzo verranno sostituiti e la pianificazione ricalcolata.`}
         confirmLabel="Assegna"
         onCancel={() => setReplaceConfirm(false)}
         onConfirm={async () => {

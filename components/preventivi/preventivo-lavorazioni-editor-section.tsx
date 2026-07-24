@@ -2,6 +2,7 @@
 
 import { IconActionButton } from "@/components/design-system";
 import { HubIconPlus } from "@/components/design-system/hub-table-action-icons";
+import { GestionaleNumericField } from "@/components/gestionale/gestionale-numeric-field";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { FormField, FormFieldBlock } from "@/components/gestionale/schede/gestionale-form-section";
 import {
@@ -18,12 +19,15 @@ import {
   preventivoEditorSubsectionTitle,
   preventivoEditorTableHeader,
 } from "@/components/preventivi/preventivo-editor-ui";
+import { NUMERIC_PRESETS, ORE_PREVENTIVO_ADDETTO_PRESET } from "@/lib/core/numeric-input-policy";
 import { CAB_FOCUS_SCROLL_GROUP_ATTR } from "@/lib/ui/mobile-modal-behavior";
 import {
   PREVENTIVO_COLLAUDO_DESCRIZIONE,
-  PREVENTIVO_SANIFICAZIONE_DESCRIZIONE,
 } from "@/lib/preventivi/preventivi-voci-standard";
-import { pulisciDescrizioneLavorazioniSpecifiche } from "@/lib/preventivi/preventivi-struttura";
+import {
+  composePreventivoLavorazioniClienteEditorText,
+  extractPreventivoLavorazioniClienteSpecifiche,
+} from "@/lib/preventivi/preventivi-struttura";
 import type { PreventivoManodopera, PreventivoRecord } from "@/lib/preventivi/types";
 import {
   dsInput,
@@ -37,31 +41,8 @@ import {
   PreventivoEditorTotalBar,
 } from "@/components/preventivi/preventivo-editor-totals";
 
-const ORE_MIN = 0.01;
-
 const manodoperaRowGrid =
   "grid grid-cols-1 gap-2.5 sm:grid-cols-[minmax(0,1fr)_6.5rem_2.25rem] sm:items-center sm:gap-3";
-
-function preventivoSanificazioneEditorLine(): string {
-  return `- ${PREVENTIVO_SANIFICAZIONE_DESCRIZIONE};`;
-}
-
-function parseOreManodoperaInput(raw: string): number {
-  const v = parseFloat(raw.replace(",", "."));
-  if (!Number.isFinite(v)) return ORE_MIN;
-  return Math.max(ORE_MIN, Math.round(v * 100) / 100);
-}
-
-function composeLavorazioniClienteEditorText(specifiche: string): string {
-  const line = preventivoSanificazioneEditorLine();
-  const rest = specifiche.trim();
-  if (!rest) return line;
-  return `${line}\n${rest}`;
-}
-
-function extractLavorazioniClienteSpecifiche(composed: string): string {
-  return pulisciDescrizioneLavorazioniSpecifiche(composed);
-}
 
 export function PreventivoLavorazioniEditorSection({
   draft,
@@ -105,9 +86,9 @@ export function PreventivoLavorazioniEditorSection({
             id={lavorazioniFieldId}
             className="min-h-[5.5rem]"
             size="md"
-            value={composeLavorazioniClienteEditorText(draft.descrizioneLavorazioniCliente)}
+            value={composePreventivoLavorazioniClienteEditorText(draft.descrizioneLavorazioniCliente)}
             onChange={(v) =>
-              onDescrizioneChange(extractLavorazioniClienteSpecifiche(sliceInputValue(v, TEXT_EXTRA)))
+              onDescrizioneChange(extractPreventivoLavorazioniClienteSpecifiche(sliceInputValue(v, TEXT_EXTRA)))
             }
             maxLength={TEXT_EXTRA}
             aria-label="Descrizione lavorazioni per il cliente"
@@ -138,15 +119,13 @@ export function PreventivoLavorazioniEditorSection({
               <label htmlFor={costoOrarioFieldId} className={`${preventivoEditorKpiLabel} whitespace-nowrap`}>
                 Costo orario (€/h)
               </label>
-              <input
+              <GestionaleNumericField
                 id={costoOrarioFieldId}
                 className={preventivoEditorKpiInput}
-                type="number"
-                min={0}
-                step={0.5}
-                inputMode="decimal"
                 value={draft.manodopera.costoOrario}
-                onChange={(e) => onCostoOrarioChange(Math.max(0, parseFloat(e.target.value) || 0))}
+                preset={NUMERIC_PRESETS.prezzo}
+                onCommit={onCostoOrarioChange}
+                aria-label="Costo orario"
               />
             </div>
             <div className={preventivoEditorKpiMetricCell}>
@@ -184,14 +163,11 @@ export function PreventivoLavorazioniEditorSection({
                 />
               </FormField>
               <FormField label="Ore" className="sm:[&>div]:mt-0 sm:[&>span]:sr-only">
-                <input
+                <GestionaleNumericField
                   className={`${dsInput} ${dsInputNoSpinner} text-right tabular-nums`}
-                  type="number"
-                  min={ORE_MIN}
-                  step={0.01}
-                  inputMode="decimal"
                   value={a.ore}
-                  onChange={(e) => onPatchAddettoRow(idx, { ore: parseOreManodoperaInput(e.target.value) })}
+                  preset={ORE_PREVENTIVO_ADDETTO_PRESET}
+                  onCommit={(ore) => onPatchAddettoRow(idx, { ore })}
                   aria-label={`Ore addetto riga ${idx + 1}`}
                 />
               </FormField>
@@ -236,16 +212,13 @@ export function PreventivoLavorazioniEditorSection({
               htmlFor="preventivo-collaudo-prezzo"
               className="w-full shrink-0 sm:w-auto sm:[&>div]:mt-0"
             >
-              <input
+              <GestionaleNumericField
                 id="preventivo-collaudo-prezzo"
                 className={`${dsInput} ${dsInputNoSpinner} w-full text-right tabular-nums sm:w-28`}
-                type="number"
-                min={0}
-                step={0.01}
-                inputMode="decimal"
-                aria-label="Prezzo collaudo"
                 value={collaudoPrezzo}
-                onChange={(e) => onCollaudoPrezzoChange(Math.max(0, parseFloat(e.target.value) || 0))}
+                preset={NUMERIC_PRESETS.prezzo}
+                onCommit={onCollaudoPrezzoChange}
+                aria-label="Prezzo collaudo"
               />
             </FormField>
           </div>

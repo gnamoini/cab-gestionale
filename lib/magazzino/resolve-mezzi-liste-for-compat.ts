@@ -16,7 +16,11 @@ export function resolveMezziListeForCompat(input: RicambioCompatMezziListeInput)
 
 /** Unico builder per `ricambioFromFormLenient` / `validateRicambioListFields` compat. */
 export function buildRicambioCompatExpandOptions(
-  input: RicambioCompatMezziListeInput,
+  input: RicambioCompatMezziListeInput & { mezziListeMerged?: MezziListePrefs },
 ): RicambioCompatExpandOptions {
-  return { mezziListe: resolveMezziListeForCompat(input) };
+  const mezziListePrefs = migrateMezziListePrefs(input.mezziListe);
+  return {
+    mezziListe: input.mezziListeMerged ?? resolveMezziListeForCompat(input),
+    mezziListePrefs,
+  };
 }

@@ -15,7 +15,7 @@ assert.deepEqual(flags.allowedRoles, ["admin"]);
 
 assert.equal(
   resolveMaintenanceEngineV2Enabled({
-    dbFlags: { enabled: true, percentage: 100, allowedRoles: [] },
+    dbFlags: { enabled: false, percentage: 0, allowedRoles: [] },
     userId: "user-a",
     userRole: "operatore",
   }),
@@ -28,7 +28,7 @@ assert.equal(
     userId: "user-a",
     userRole: "operatore",
   }),
-  false,
+  true,
 );
 
 const bucket = maintenanceEngineV2UserBucket("stable-user-id");

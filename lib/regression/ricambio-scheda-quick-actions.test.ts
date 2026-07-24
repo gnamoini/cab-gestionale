@@ -11,15 +11,20 @@ const panel = fs.readFileSync(
   path.join(ROOT, "components/gestionale/magazzino/ricambio-info-panel.tsx"),
   "utf8",
 );
+const stepper = fs.readFileSync(
+  path.join(ROOT, "components/gestionale/magazzino/magazzino-scorta-debounced-stepper.tsx"),
+  "utf8",
+);
 const riepilogo = fs.readFileSync(
   path.join(ROOT, "components/gestionale/magazzino/ricambio-info-riepilogo-section.tsx"),
   "utf8",
 );
 
-assert.match(modals, /Carica \+1/);
-assert.match(modals, /Scarica −1/);
-assert.match(modals, /grid-cols-\[1fr_auto_1fr\]/);
-assert.match(modals, /ricambio\.scorta/);
+assert.match(stepper, /Carica \+1/);
+assert.match(stepper, /Scarica −1/);
+assert.match(stepper, /grid-cols-\[1fr_auto_1fr\]/);
+assert.match(modals, /MagazzinoScortaModalQuickAdjust/);
+assert.match(modals, /fallbackScorta=\{ricambio\.scorta\}/);
 assert.match(modals, /hidden grid-cols-2 gap-2 text-sm sm:grid/);
 assert.match(modals, /Lavorazioni/);
 assert.match(modals, /Ordini/);
@@ -34,8 +39,8 @@ assert.ok(
   riepilogoComponentIdx >= 0 && giacenzaIdx >= 0 && datiIdx >= 0 && riepilogoComponentIdx < giacenzaIdx && giacenzaIdx < datiIdx,
   "Riepilogo prima di Giacenza e consumo, poi Dati principali",
 );
-assert.match(panel, /MagazzinoScortaInfoStepper/);
-assert.match(riepilogo, /MagazzinoScortaInfoStepper/);
+assert.match(panel, /MagazzinoScortaDebouncedInfoStepper/);
+assert.match(riepilogo, /MagazzinoScortaDebouncedInfoStepper/);
 assert.match(riepilogo, /RicambioStockStatusLabel/);
 assert.match(panel, /RicambioOperationalStatusCard[\s\S]*embedded/);
 assert.match(panel, /RicambioConsumoDetailRows/);

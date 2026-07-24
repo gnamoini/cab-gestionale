@@ -42,11 +42,12 @@ function computeCrossEfficiency(input: CrossFormulaInput): MetricComputeResult {
   if (!op || !lab) {
     return { status: "not_loaded", trust: "AMBER", warnings: [CROSS_SOURCE_PENDING] };
   }
-  if (lab.totalHours <= 0 || op.completedInPeriod <= 0) {
+  const hours = lab.actualLaborHours && lab.actualLaborHours > 0 ? lab.actualLaborHours : lab.totalHours;
+  if (hours <= 0 || op.completedInPeriod <= 0) {
     return { status: "not_available", trust: "GREEN" };
   }
-  const value = Math.round((op.completedInPeriod / lab.totalHours) * 100) / 100;
-  return { status: "available", value, trust: "GREEN" };
+  const value = Math.round((op.completedInPeriod / hours) * 100) / 100;
+  return { status: "available", value, trust: lab.actualLaborHours ? "GREEN" : "AMBER" };
 }
 
 function computeCrossPartsJob(input: CrossFormulaInput): MetricComputeResult {

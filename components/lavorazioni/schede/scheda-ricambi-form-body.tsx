@@ -14,7 +14,8 @@ import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import type { SchedaRicambiFormOpts } from "@/components/lavorazioni/schede/scheda-fields-types";
 import type { CaptureSheetRowHint } from "@/components/lavorazioni/schede/scheda-fields-types";
-import { SchedaDayField, todayItDate } from "@/components/lavorazioni/schede/scheda-form-utils";
+import { SchedaDayField, SchedaOreNumberInput, todayItDate } from "@/components/lavorazioni/schede/scheda-form-utils";
+import { GestionaleQuantityField } from "@/components/gestionale/gestionale-quantity-field";
 import { newRigaId } from "@/lib/schede/schede-ui";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
@@ -192,16 +193,12 @@ function CaptureRicambiRigaCard({
 
           <div className={`${CAPTURE_FIELD_STACK} ${CAPTURE_QTY_W}`}>
             <CaptureRicambiFieldLabel>Qtà</CaptureRicambiFieldLabel>
-            <input
-              type="number"
-              min={1}
+            <GestionaleQuantityField
               className={`${dsInput} w-full tabular-nums`}
               readOnly={ro}
               value={r.quantita}
               aria-label="Quantità"
-              onChange={(e) =>
-                onPatch({ quantita: Math.max(1, Math.round(Number(e.target.value) || 1)) })
-              }
+              onCommit={(quantita) => onPatch({ quantita })}
             />
           </div>
           {codiceHint?.message ? (
@@ -490,17 +487,13 @@ export function SchedaRicambiFormBody({
                     </CaptureSheetAwareField>
                   </td>
                   <td className="px-2 py-2 align-top">
-                    <input
-                      type="number"
-                      min={1}
+                    <GestionaleQuantityField
                       className={`${dsInput} !py-1.5 !text-xs w-20`}
                       readOnly={ro}
                       value={r.quantita}
-                      onChange={(e) =>
+                      onCommit={(quantita) =>
                         patchRighe(
-                          value.righe.map((x) =>
-                            x.id === r.id ? { ...x, quantita: Math.max(1, Math.round(Number(e.target.value) || 1)) } : x,
-                          ),
+                          value.righe.map((x) => (x.id === r.id ? { ...x, quantita } : x)),
                         )
                       }
                     />

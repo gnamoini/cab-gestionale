@@ -264,14 +264,14 @@ export const mezziService = {
     }
   },
 
-  async setTagliandiEnabled(id: string, enabled: boolean): Promise<ServiceResult<MezzoRow>> {
+  /** @deprecated ponytail: v1 matrice tagliandi disabilitata — no-op. */
+  async setTagliandiEnabled(id: string, _enabled: boolean): Promise<ServiceResult<MezzoRow>> {
     try {
       const c = await sb();
       const { data: before, error: e0 } = await c.from("mezzi").select(MEZZI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
       if (!before) return err(humanizeGestionaleError("Mezzo non trovato.", { entity: "mezzo", action: "update" }));
-      const meta = mergeMezzoMetaPatch(before.meta, { tagliandi: enabled });
-      return mezziService.update(id, { meta });
+      return success(before as MezzoRow);
     } catch (e) {
       return serviceFailFromError(e);
     }

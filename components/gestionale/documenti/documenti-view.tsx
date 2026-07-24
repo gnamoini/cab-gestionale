@@ -23,6 +23,7 @@ import { invalidateAfterMagazzinoOrMovimenti } from "@/src/lib/react-query/inval
 import { cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
 import { warmupDocumentPreview } from "@/lib/observability/asset-cache-warmup";
 import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifecycle";
+import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { DocumentiTableSection } from "@/components/gestionale/documenti/documenti-page-structure";
 import {
@@ -32,7 +33,6 @@ import {
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { appendDocumentiChangeLog } from "@/lib/documenti/documenti-change-log-storage";
 import { buildLogModificheDisplayEntries, logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
 import {
   erpBtnNeutral,
@@ -159,8 +159,6 @@ const DocumentiLogDrawer = dynamic(
   { ssr: false },
 );
 
-/** Preferenza ricerca — debounce applicato. */
-const SEARCH_DEBOUNCE_MS = 320;
 
 function fmtDocVal(v: unknown): string {
   if (v === null || v === undefined) return "—";
@@ -410,8 +408,15 @@ export function DocumentiView() {
     [documentiQuery.data],
   );
 
-  const [searchInput, setSearchInput] = useState("");
-  const [searchApplied, setSearchApplied] = useState("");
+  const {
+    searchInput,
+    setSearchInput,
+    searchApplied,
+    flushSearch: flushPageSearch,
+    clearSearch,
+    applySearchImmediate,
+  } = useGestionaleListSearch({ domain: "documenti" });
+
   const [advancedFilters, setAdvancedFilters] = useState<DocumentiAdvancedFilters>(
     () => loadDocumentiAdvancedFiltersPersisted() ?? DOCUMENTI_ADVANCED_FILTERS_EMPTY,
   );
@@ -436,15 +441,6 @@ export function DocumentiView() {
       return next;
     });
   }, []);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearchApplied(searchInput.trim()), SEARCH_DEBOUNCE_MS);
-    return () => window.clearTimeout(t);
-  }, [searchInput]);
-
-  const flushPageSearch = useCallback(() => {
-    setSearchApplied(searchInput.trim());
-  }, [searchInput]);
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadInitialFile, setUploadInitialFile] = useState<File | null>(null);
@@ -473,8 +469,7 @@ export function DocumentiView() {
     const rawQ = searchParams.get("q");
     if (rawQ?.trim()) {
       const q = decodeURIComponent(rawQ.trim());
-      setSearchInput(q);
-      setSearchApplied(q);
+      applySearchImmediate(q);
     }
 
     const marcaQ = searchParams.get("marca")?.trim();
@@ -688,14 +683,6 @@ export function DocumentiView() {
           }
           void fetch(buildDocumentPreviewUrl(res.data.id), { credentials: "include" }).catch(() => {});
           const row = resolveDocumentoApplicazione(documentoRowToGestionale(res.data));
-          appendDocumentiChangeLog({
-            tone: "create",
-            tipoRiga: "CARICAMENTO",
-            oggettoRiga: `Documento: ${row.nome}`,
-            modificaRiga: `Upload in archivio. Categoria: ${labelCategoria(row.categoria)}.`,
-            autore: authorTrim,
-            atIso: new Date().toISOString(),
-          });
           const uploadedAt =
             typeof res.data.meta === "object" && res.data.meta && "uploadedAt" in res.data.meta
               ? String((res.data.meta as { uploadedAt?: string }).uploadedAt ?? "")
@@ -733,14 +720,7 @@ export function DocumentiView() {
           const saved = resolveDocumentoApplicazione(documentoRowToGestionale(res.data));
           const changes = diffDocumentiMetadati(old, saved);
           if (changes.length > 0) {
-            appendDocumentiChangeLog({
-              tone: "update",
-              tipoRiga: "MODIFICA",
-              oggettoRiga: `Documento: ${saved.nome}`,
-              modificaRiga: buildModificaRigaFromChanges(changes),
-              autore: authorTrim,
-              atIso: new Date().toISOString(),
-            });
+            void changes;
           }
         }
         refreshDocumenti();
@@ -764,14 +744,6 @@ export function DocumentiView() {
           });
           return;
         }
-        appendDocumentiChangeLog({
-          tone: "delete",
-          tipoRiga: "ELIMINAZIONE",
-          oggettoRiga: `Documento: ${victim.nome}`,
-          modificaRiga: `Rimosso dall’archivio. Categoria: ${labelCategoria(victim.categoria)}.`,
-          autore: authorTrim,
-          atIso: new Date().toISOString(),
-        });
         const blob = victim.urlBlob;
         if (blob) {
           try {
@@ -828,9 +800,8 @@ export function DocumentiView() {
   }
 
   const resetRicerca = useCallback(() => {
-    setSearchInput("");
-    setSearchApplied("");
-  }, []);
+    clearSearch();
+  }, [clearSearch]);
 
   const resetFiltri = useCallback(() => {
     setAdvancedFilters(DOCUMENTI_ADVANCED_FILTERS_EMPTY);

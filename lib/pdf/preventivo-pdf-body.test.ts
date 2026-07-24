@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import {
   buildPreventivoAttrezzaturaPdfFields,
+  buildPreventivoOggettoInterventoPdfFields,
   buildPreventivoTelaioMezzoPdfFields,
 } from "@/lib/pdf/preventivo-pdf-layout";
-import { padPdfFieldsToEqualRows } from "@/lib/pdf/gestionale-section-table";
+import { compactFieldRowCount, padPdfFieldsToEqualRows } from "@/lib/pdf/gestionale-section-table";
 import {
   buildLavorazioniEffettuatePdfRows,
   buildManodoperaPdfRows,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/pdf/preventivo-pdf-body";
 import type { PreventivoRigaOutput } from "@/lib/preventivi/preventivi-struttura";
 import {
+  PREVENTIVO_SANIFICAZIONE_DESCRIZIONE,
   PREVENTIVO_SMALTIMENTO_DESCRIZIONE,
   PREVENTIVO_SMALTIMENTO_PERCENT,
 } from "@/lib/preventivi/preventivi-voci-standard";
@@ -49,6 +51,18 @@ const fullTelaio = buildPreventivoTelaioMezzoPdfFields({
 assert.ok(fullTelaio.some((f) => f.label === "Marca" && f.value === "Iveco"));
 assert.ok(fullTelaio.some((f) => f.label === "KM" && f.value === "12000"));
 
+const oggettoMerged = buildPreventivoOggettoInterventoPdfFields({
+  ...basePreventivo,
+  tipoTelaio: "Gomma",
+  marcaTelaio: "Iveco",
+} as PreventivoRecord);
+assert.ok(oggettoMerged.some((f) => f.label === "Marca" && f.value === "CAT"));
+assert.ok(oggettoMerged.some((f) => f.label === "Telaio Marca" && f.value === "Iveco"));
+assert.ok(
+  compactFieldRowCount(oggettoMerged.length) < oggettoMerged.length,
+  "griglia compatta usa meno righe del layout 2 colonne",
+);
+
 const padded = padPdfFieldsToEqualRows(
   [{ label: "A", value: "1" }],
   [
@@ -60,26 +74,30 @@ assert.equal(padded.left.length, 2);
 assert.equal(padded.right.length, 2);
 assert.equal(padded.left[1]?.label, "");
 
-const lavFromCliente = buildLavorazioniEffettuatePdfRows(
-  {
-    descrizioneLavorazioniCliente: "- Sostituzione filtro\n- Controllo idraulico",
-  } as PreventivoRecord,
-  [],
-);
-assert.deepEqual(lavFromCliente, [["Sostituzione filtro"], ["Controllo idraulico"]]);
+const lavFromCliente = buildLavorazioniEffettuatePdfRows({
+  descrizioneLavorazioniCliente: "- Sostituzione filtro\n- Controllo idraulico",
+} as PreventivoRecord);
+assert.deepEqual(lavFromCliente, [
+  [PREVENTIVO_SANIFICAZIONE_DESCRIZIONE],
+  ["Sostituzione filtro"],
+  ["Controllo idraulico"],
+]);
 
-const lavFallback: PreventivoRigaOutput[] = [
-  {
-    sezione: "lavorazioni",
-    ordine: 1,
-    descrizione: "Revisione generale",
-    quantita: 1,
-    prezzoUnitario: 0,
-    totale: 0,
-  },
-];
-const lavFromRighe = buildLavorazioniEffettuatePdfRows({ descrizioneLavorazioniCliente: "" } as PreventivoRecord, lavFallback);
-assert.deepEqual(lavFromRighe, [["Revisione generale"]]);
+const lavOnlySanificazione = buildLavorazioniEffettuatePdfRows({
+  descrizioneLavorazioniCliente: "",
+} as PreventivoRecord);
+assert.deepEqual(lavOnlySanificazione, [[PREVENTIVO_SANIFICAZIONE_DESCRIZIONE]]);
+
+const lavIgnoresTechnicalResidue = buildLavorazioniEffettuatePdfRows({
+  descrizioneLavorazioniCliente: "- Sostituzione filtro",
+  descrizioneLavorazioniTecnicaSorgente:
+    "Smontaggio motore\nSostituzione guarnizioni\nRimontaggio motore",
+} as PreventivoRecord);
+assert.deepEqual(lavIgnoresTechnicalResidue, [
+  [PREVENTIVO_SANIFICAZIONE_DESCRIZIONE],
+  ["Sostituzione filtro"],
+]);
+assert.equal(lavIgnoresTechnicalResidue.some((row) => row[0] === "Smontaggio motore"), false);
 
 const manodoperaRighe: PreventivoRigaOutput[] = [
   {

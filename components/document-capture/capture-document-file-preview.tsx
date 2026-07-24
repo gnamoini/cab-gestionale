@@ -8,6 +8,7 @@ import {
   CaptureReviewPanelLoading,
 } from "@/components/document-capture/capture-review-panel";
 import { cabModalZStacked } from "@/lib/ui/mobile-modal-behavior";
+import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { capturePdfFullscreenUrl, capturePdfPreviewFrameUrl } from "@/lib/document-capture/capture-pdf-preview-url";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
@@ -58,9 +59,13 @@ function CaptureDocumentFilePreviewInner({
   }, []);
 
   const onImageMeasured = useCallback((img: HTMLImageElement) => {
-    const h = img.offsetHeight;
+    const shell = pdfShellRef.current;
+    const containerW = Math.max(1, shell?.clientWidth ?? pdfViewportWidth);
+    const scale =
+      img.naturalWidth > 0 ? Math.min(1, containerW / img.naturalWidth) : 1;
+    const h = Math.round(img.naturalHeight * scale);
     if (h > 0) setMeasuredDocHeight(h);
-  }, []);
+  }, [pdfViewportWidth]);
 
   const openFullscreen = useCallback(() => {
     setFullscreenOpen(true);
@@ -128,7 +133,9 @@ function CaptureDocumentFilePreviewInner({
         : "h-[min(50vh,28rem)]";
   const canFullscreen = meta ? isImageMime(meta.mime) || isPdfMime(meta.mime) : false;
   const panelTitle = "Documento caricato";
-  const enableZoomPan = !compact;
+  const isMobile = useMaxMdDown();
+  const enableZoomPan = !compact && !isMobile;
+  const previewShellClass = "min-w-0 max-w-full overflow-x-hidden";
   const docNaturalWidth = Math.max(1, pdfViewportWidth);
   const docNaturalHeight =
     measuredDocHeight > 0 ? measuredDocHeight : Math.max(1, Math.round(docNaturalWidth * 1.414));
@@ -168,7 +175,7 @@ function CaptureDocumentFilePreviewInner({
       >
         {isImageMime(meta.mime) ? (
           enableZoomPan ? (
-            <div ref={pdfShellRef} className={`min-h-0 ${pdfShellClass}`}>
+            <div ref={pdfShellRef} className={`${previewShellClass} min-h-0 ${pdfShellClass}`}>
               {pdfViewportWidth > 0 ? (
                 <CaptureDocumentZoomPanViewport
                   shellClassName="h-full min-h-0"
@@ -179,7 +186,7 @@ function CaptureDocumentFilePreviewInner({
                   <img
                     src={fileUrl}
                     alt={meta.file_name}
-                    className="pointer-events-none block h-auto w-full max-w-full select-none"
+                    className="pointer-events-none block h-auto w-full max-w-full select-none object-contain"
                     draggable={false}
                     onLoad={(e) => onImageMeasured(e.currentTarget)}
                   />
@@ -193,7 +200,7 @@ function CaptureDocumentFilePreviewInner({
             </div>
           ) : (
             <div
-              className={`overflow-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)] ${frameClass}`}
+              className={`${previewShellClass} overflow-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)] ${frameClass}`}
             >
               <button
                 type="button"
@@ -205,13 +212,13 @@ function CaptureDocumentFilePreviewInner({
                 <img
                   src={fileUrl}
                   alt={meta.file_name}
-                  className="mx-auto block h-auto w-full max-w-full"
+                  className="mx-auto block h-auto w-full max-w-full object-contain"
                 />
               </button>
             </div>
           )
         ) : isPdfMime(meta.mime) ? (
-          <div ref={pdfShellRef} className={`min-h-0 ${pdfShellClass}`}>
+          <div ref={pdfShellRef} className={`${previewShellClass} min-h-0 ${pdfShellClass}`}>
             {enableZoomPan ? (
               pdfViewportWidth > 0 ? (
                 <CaptureDocumentZoomPanViewport

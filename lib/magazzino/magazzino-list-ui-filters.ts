@@ -4,11 +4,11 @@ import {
   type MagazzinoAdvancedFilters,
 } from "@/lib/magazzino/magazzino-advanced-filters";
 import { readCompatLabelsForUi } from "@/lib/magazzino/compat/compat-read-guard";
-import { normalizedSearchIndex } from "@/lib/magazzino/compat/compat-search-index";
+import { buildSearchDocumentMagazzino } from "@/lib/search/builders/build-search-document-magazzino";
+import { matchSearchString } from "@/lib/search/match";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-import { normalizeEntityString, scoreEntityMatch } from "@/lib/validation/global-entity-validation";
 import { filterListSelectSuggestions } from "@/lib/ui/list-select-utils";
 
 export type MagazzinoPageFilters = MagazzinoAdvancedFilters & {
@@ -18,7 +18,7 @@ export type MagazzinoPageFilters = MagazzinoAdvancedFilters & {
 };
 
 export function magazzinoRowSearchHaystack(row: RicambioMagazzino, listePrefs?: MezziListePrefs): string {
-  return normalizedSearchIndex(row, listePrefs);
+  return buildSearchDocumentMagazzino(row, listePrefs);
 }
 
 export function magazzinoRowMatchesGlobalSearch(
@@ -26,11 +26,7 @@ export function magazzinoRowMatchesGlobalSearch(
   query: string,
   listePrefs?: MezziListePrefs,
 ): boolean {
-  const q = normalizeEntityString(query);
-  if (!q) return true;
-  const hay = magazzinoRowSearchHaystack(row, listePrefs);
-  if (hay.includes(q)) return true;
-  return q.split(/\s+/).filter(Boolean).every((w) => hay.includes(w) || scoreEntityMatch(w, hay) > 0);
+  return matchSearchString(query, magazzinoRowSearchHaystack(row, listePrefs)).matches;
 }
 
 export function magazzinoRowMatchesPageFilters(
@@ -51,8 +47,7 @@ export function buildMagazzinoSearchSuggestions(
   limit = 8,
   listePrefs?: MezziListePrefs,
 ): string[] {
-  const q = normalizeEntityString(query);
-  if (!q) return [];
+  if (!query.trim()) return [];
 
   const labels: string[] = [];
   const seen = new Set<string>();
@@ -66,7 +61,7 @@ export function buildMagazzinoSearchSuggestions(
   };
 
   for (const p of prodotti) {
-    if (q && !magazzinoRowMatchesGlobalSearch(p, query, listePrefs)) continue;
+    if (!magazzinoRowMatchesGlobalSearch(p, query, listePrefs)) continue;
     const codiceUi = ricambioCodiceForUi(p.codiceFornitoreOriginale);
     push(codiceUi ? `${codiceUi} · ${p.descrizione || p.marca}` : `${p.descrizione || p.marca}`);
     if (p.marca.trim()) push(p.marca);

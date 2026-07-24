@@ -7,6 +7,7 @@ import {
   StockVersionConflictError,
 } from "@/lib/magazzino/stock-engine.server";
 import { isStockPipelineServerEnabled } from "@/lib/feature-flags/stock-pipeline";
+import { withAuditTransaction } from "@/lib/audit/transactional-record.server";
 import { buildStockMovementAuditPayloadWithContext } from "@/lib/magazzino/stock-audit-payload";
 import { logMagazzinoAuditWriteFailed } from "@/lib/magazzino/stock-audit-log-telemetry";
 import { formatRicambioLogLabel, formatRicambioLogLabelFromDbRow } from "@/lib/magazzino/ricambio-log-label";
@@ -33,6 +34,7 @@ async function writeStockAdjustAuditLogs(
   input: z.infer<typeof bodySchema>,
   result: Awaited<ReturnType<typeof stockApplyMovement>>,
   userId: string,
+  ctx?: { recordAudit: (input: import("@/lib/audit/types").AuditEventInput) => Promise<void> },
 ): Promise<void> {
   if (result.idempotent || result.noop || !result.movimentoId) return;
 
@@ -60,14 +62,29 @@ async function writeStockAdjustAuditLogs(
   };
   const payload = buildStockMovementAuditPayloadWithContext(auditBase, entityLabel);
 
-  await writeModificaLog(sb, {
+  const write = async (row: Parameters<typeof writeModificaLog>[1]) => {
+    if (ctx?.recordAudit) {
+      await ctx.recordAudit({
+        entityType: row.entita,
+        entityId: row.entita_id,
+        action: row.azione as "CREATE" | "UPDATE",
+        payload: row.payload,
+        autoreId: row.autore_id,
+        eventType: "DATA_CHANGE",
+      });
+      return;
+    }
+    await writeModificaLog(sb, row);
+  };
+
+  await write({
     entita: "magazzino_ricambi",
     entita_id: result.ricambioId,
     azione: "UPDATE",
     payload,
     autore_id: userId,
   });
-  await writeModificaLog(sb, {
+  await write({
     entita: "movimenti_ricambi",
     entita_id: result.movimentoId,
     azione: "CREATE",
@@ -83,7 +100,8 @@ export async function POST(request: Request) {
   }
 
   const session = await getServerSession();
-  if (!session.user?.id) {
+  const userId = session.user?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Sessione non valida" }, { status: 401 });
   }
 
@@ -114,16 +132,28 @@ export async function POST(request: Request) {
     });
 
     if (!result.idempotent && !result.noop && result.movimentoId) {
+      const sb = await createSupabaseServerUserClient();
       try {
-        await writeStockAdjustAuditLogs(input, result, session.user.id);
+        await withAuditTransaction(sb, "STOCK_ADJUST", async (ctx) => {
+          await writeStockAdjustAuditLogs(input, result, userId, ctx);
+        });
       } catch (error) {
         logMagazzinoAuditWriteFailed({
           error,
           movementId: result.movimentoId,
           ricambioId: result.ricambioId,
-          userId: session.user.id,
+          userId,
           source: "api_stock_adjust",
         });
+        const message = error instanceof Error ? error.message : "Scrittura audit fallita";
+        return NextResponse.json(
+          {
+            error: message,
+            code: "AUDIT_WRITE_FAILED",
+            stock: result,
+          },
+          { status: 500 },
+        );
       }
     }
 

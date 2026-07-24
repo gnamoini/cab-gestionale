@@ -5,7 +5,7 @@ import {
 } from "@/components/report/report-sections-config";
 
 const all = [...REPORT_SECTIONS];
-assert.equal(all.length, 7);
+assert.equal(all.length, 8);
 
 const noMagazzino = filterReportSectionsByPermission(all, (m) => m !== "magazzino");
 assert.ok(!noMagazzino.some((s) => s.id === "magazzino_ricambi"));
@@ -28,6 +28,6 @@ assert.deepEqual(
 );
 
 const admin = filterReportSectionsByPermission(all, () => true);
-assert.equal(admin.length, 7);
+assert.equal(admin.length, 8);
 
 console.log("report-sections-visibility.test.ts OK");

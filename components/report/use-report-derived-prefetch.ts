@@ -123,6 +123,7 @@ export function useReportDerivedPrefetch(props: PrefetchProps) {
         ...compareInput,
         completate: props.completate,
         schedeStore: props.schedeStore,
+        lavListRows: props.lavListRows,
         totalHours,
         compareTotalHours,
         costoOrario: props.costoOrario,

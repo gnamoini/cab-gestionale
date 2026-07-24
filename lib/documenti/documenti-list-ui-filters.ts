@@ -25,6 +25,8 @@ import {
 } from "@/lib/documenti/documenti-advanced-filters";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import { buildSearchDocumentFromParts } from "@/lib/search/build-document";
+import { matchSearchString } from "@/lib/search/match";
 
 export type DocumentiPageFilters = DocumentiAdvancedFilters & {
   search: string;
@@ -54,7 +56,7 @@ export function buildDocumentiSearchHaystackById(
     const assocText = getDocAssocRefs(doc, catalog)
       .map((ref) => assocPairLabel(catalog, ref))
       .join(" ");
-    const hay = [
+    const hay = buildSearchDocumentFromParts([
       doc.nome,
       r.marcaKey ?? r.marca,
       r.modelloKey ?? r.macchina,
@@ -65,18 +67,14 @@ export function buildDocumentiSearchHaystackById(
       formatDocumentoRigaSintetica(doc),
       doc.note ?? "",
       assocText,
-    ]
-      .join(" ")
-      .toLowerCase();
+    ]);
     map.set(doc.id, hay);
   }
   return map;
 }
 
 function docRowMatchesGlobalSearchHaystack(haystack: string, query: string): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return haystack.includes(q);
+  return matchSearchString(query, haystack).matches;
 }
 
 export function docRowMatchesGlobalSearch(
@@ -84,13 +82,11 @@ export function docRowMatchesGlobalSearch(
   catalog: CatalogMarca[],
   query: string,
 ): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
   const r = resolveDocumentoApplicazione(doc);
   const assocText = getDocAssocRefs(doc, catalog)
     .map((ref) => assocPairLabel(catalog, ref))
     .join(" ");
-  const hay = [
+  const hay = buildSearchDocumentFromParts([
     doc.nome,
     r.marcaKey ?? r.marca,
     r.modelloKey ?? r.macchina,
@@ -101,10 +97,8 @@ export function docRowMatchesGlobalSearch(
     formatDocumentoRigaSintetica(doc),
     doc.note ?? "",
     assocText,
-  ]
-    .join(" ")
-    .toLowerCase();
-  return hay.includes(q);
+  ]);
+  return matchSearchString(query, hay).matches;
 }
 
 export function docRowMatchesPageFilters(

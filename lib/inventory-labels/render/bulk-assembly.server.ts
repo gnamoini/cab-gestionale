@@ -35,6 +35,7 @@ function fingerprintForItem(
   template: LabelTemplateDefinition,
   preset: string,
   includeBarcode: boolean,
+  clienteLabel: boolean,
 ): string {
   return computeLabelFingerprint({
     payload: item.payload,
@@ -42,7 +43,9 @@ function fingerprintForItem(
     templateVersion: template.version,
     generatorVersion: GENERATOR_VERSION,
     preset,
-    includeBarcode,
+    includeBarcode: clienteLabel ? false : includeBarcode,
+    labelKind: clienteLabel ? "cliente" : "internal",
+    clienteQrUrl: clienteLabel ? item.qrUrl : "",
     canonicalOrigin: item.canonicalOrigin.replace(/\/+$/, ""),
   });
 }
@@ -53,9 +56,10 @@ async function resolveLabelPngBytes(
   item: BulkLabelItem,
   preset: string,
   includeBarcode: boolean,
+  clienteLabel: boolean,
   stats: BulkAssemblyStats,
 ): Promise<Buffer> {
-  const hash = fingerprintForItem(item, template, preset, includeBarcode);
+  const hash = fingerprintForItem(item, template, preset, includeBarcode, clienteLabel);
 
   const cached = await getLabelArtifactByHash(sb, {
     entityType: item.entityType,
@@ -73,7 +77,10 @@ async function resolveLabelPngBytes(
   }
 
   stats.cacheMissCount += 1;
-  const png = await renderLabelPng(template, item.payload, item.qrUrl, { includeBarcode });
+  const png = await renderLabelPng(template, item.payload, item.qrUrl, {
+    includeBarcode: clienteLabel ? false : includeBarcode,
+    labelKind: clienteLabel ? "cliente" : "internal",
+  });
   const storagePath = await uploadLabelArtifactBestEffort({
     entityType: item.entityType,
     entityId: item.entityId,
@@ -106,6 +113,7 @@ export function buildExpandedPdfSlots(
   template: LabelTemplateDefinition,
   preset: string,
   includeBarcode: boolean,
+  clienteLabel: boolean,
 ): LabelPdfSlot[] {
   const byId = new Map(uniqueItems.map((item) => [item.entityId, item]));
   const expanded: BulkLabelItem[] = [];
@@ -117,7 +125,7 @@ export function buildExpandedPdfSlots(
   return expanded.map((item) => ({
     payload: item.payload,
     qrUrl: item.qrUrl,
-    cacheKey: fingerprintForItem(item, template, preset, includeBarcode),
+    cacheKey: fingerprintForItem(item, template, preset, includeBarcode, clienteLabel),
   }));
 }
 
@@ -130,6 +138,7 @@ export async function renderBulkLabelPdfWithCache(
   preset: string,
   options?: {
     includeBarcode?: boolean;
+    clienteLabel?: boolean;
     onProgress?: (done: number, total: number) => void | Promise<void>;
     onChunkHeartbeat?: () => void | Promise<void>;
     chunkSize?: number;
@@ -139,17 +148,18 @@ export async function renderBulkLabelPdfWithCache(
 > {
   const stats: BulkAssemblyStats = { cacheHitCount: 0, cacheMissCount: 0, uniqueRenderCount: 0 };
   const chunkSize = options?.chunkSize ?? 25;
-  const includeBarcode = options?.includeBarcode === true;
-  const slots = buildExpandedPdfSlots(compact, uniqueItems, template, preset, includeBarcode);
+  const clienteLabel = options?.clienteLabel === true;
+  const includeBarcode = clienteLabel ? false : options?.includeBarcode === true;
+  const slots = buildExpandedPdfSlots(compact, uniqueItems, template, preset, includeBarcode, clienteLabel);
 
   const pngByCacheKey = new Map<string, Buffer>();
   for (let i = 0; i < uniqueItems.length; i++) {
     const item = uniqueItems[i]!;
-    const cacheKey = fingerprintForItem(item, template, preset, includeBarcode);
+    const cacheKey = fingerprintForItem(item, template, preset, includeBarcode, clienteLabel);
     if (pngByCacheKey.has(cacheKey)) continue;
     pngByCacheKey.set(
       cacheKey,
-      await resolveLabelPngBytes(sb, template, item, preset, includeBarcode, stats),
+      await resolveLabelPngBytes(sb, template, item, preset, includeBarcode, clienteLabel, stats),
     );
     stats.uniqueRenderCount += 1;
     if ((i + 1) % chunkSize === 0) await options?.onChunkHeartbeat?.();

@@ -151,7 +151,7 @@ export type UpsertMaintenancePlanInput = {
   isActive: boolean;
   tempoPrevistoMinuti?: number | null;
   manodoperaCostoOrario?: number | null;
-  tipoAttrezzaturaIds: string[];
+  tipoAttrezzaturaIds?: string[];
   parts: UpsertMaintenancePlanPartInput[];
   triggerGroups?: MaintenancePresetTriggerGroupView[];
   checklist?: MaintenanceChecklistItemView[];

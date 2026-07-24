@@ -96,9 +96,7 @@ const evalOverdue = evaluateTagliandoDueForMezzo({
   catalog,
   services: [],
 });
-assert.ok(evalOverdue);
-assert.equal(evalOverdue!.earliestOverdueOre, 500);
-assert.equal(evalOverdue!.overdueCount, 1);
+assert.equal(evalOverdue, null);
 
 const evalDone500 = evaluateTagliandoDueForMezzo({
   mezzo: baseMezzo,
@@ -116,12 +114,15 @@ const evalLead450 = evaluateTagliandoDueForMezzo({
   catalog,
   services: [],
 });
-assert.ok(evalLead450);
-assert.equal(evalLead450!.earliestOverdueOre, 500);
+assert.equal(evalLead450, null);
+
+assert.equal(isMezzoEligibleForTagliandoNotification({ ...baseMezzo, tagliandi: true }), false);
+assert.equal(isMezzoEligibleForTagliandoNotification({ ...baseMezzo, tagliandi: false }), false);
+assert.equal(isMezzoEligibleForTagliandoNotification(null), false);
 
 assert.equal(
   evaluateTagliandoDueForMezzo({
-    mezzo: { ...baseMezzo, tagliandi: false },
+    mezzo: baseMezzo,
     currentOre: 600,
     plans: [plan],
     catalog,
@@ -129,10 +130,6 @@ assert.equal(
   }),
   null,
 );
-
-assert.equal(isMezzoEligibleForTagliandoNotification({ ...baseMezzo, tagliandi: true }), true);
-assert.equal(isMezzoEligibleForTagliandoNotification({ ...baseMezzo, tagliandi: false }), false);
-assert.equal(isMezzoEligibleForTagliandoNotification(null), false);
 
 assert.equal(
   evaluateTagliandoDueForMezzo({
@@ -152,8 +149,7 @@ const evalNoPlan = evaluateTagliandoDueForMezzo({
   catalog,
   services: [],
 });
-assert.ok(evalNoPlan);
-assert.equal(evalNoPlan!.earliestOverdueOre, 500);
+assert.equal(evalNoPlan, null);
 
 const noPlanOverdue = listOverdueTagliandiMilestonesForRow({
   mezzoId: "m1",

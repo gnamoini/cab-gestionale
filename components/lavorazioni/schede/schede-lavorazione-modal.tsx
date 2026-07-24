@@ -40,6 +40,8 @@ import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { FileEsternoBadge, SchedaStatoBadge } from "@/components/lavorazioni/schede/schede-badges";
+import { SchedaOreNumberInput } from "@/components/lavorazioni/schede/scheda-form-utils";
+import { GestionaleQuantityField } from "@/components/gestionale/gestionale-quantity-field";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import {
@@ -221,89 +223,6 @@ function assertItalianDay(label: string, value: string, notify: (message: string
     return false;
   }
   return true;
-}
-
-function normalizeOreText(raw: string): string {
-  const t = raw.trim().replace(",", ".");
-  if (!t) return "";
-  const n = Number.parseFloat(t);
-  if (!Number.isFinite(n) || n < 0) return raw.trim();
-  return String(Math.round(n * 1000) / 1000);
-}
-
-/** Ore decimali libere da tastiera; frecce native con step 1. */
-function SchedaOreTextInput({
-  label,
-  value,
-  onChange,
-  readOnly = false,
-  className = "",
-}: {
-  label?: string;
-  value: string;
-  onChange: (next: string) => void;
-  readOnly?: boolean;
-  className?: string;
-}) {
-  const field = (
-    <input
-      type="number"
-      step={1}
-      min={0}
-      inputMode="decimal"
-      className={`${dsInput} mt-1 ${className}`.trim()}
-      readOnly={readOnly}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      onBlur={(e) => onChange(normalizeOreText(e.target.value))}
-    />
-  );
-  if (!label) return field;
-  return (
-    <label className="block text-xs">
-      <span className={dsLabel}>{label}</span>
-      {field}
-    </label>
-  );
-}
-
-function SchedaOreNumberInput({
-  value,
-  onChange,
-  readOnly = false,
-  className = "",
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  readOnly?: boolean;
-  className?: string;
-}) {
-  const [text, setText] = useState(() => (Number.isFinite(value) ? String(value) : "0"));
-  useEffect(() => {
-    setText(Number.isFinite(value) ? String(value) : "0");
-  }, [value]);
-  return (
-    <input
-      type="number"
-      step={1}
-      min={0}
-      inputMode="decimal"
-      readOnly={readOnly}
-      className={className}
-      value={text}
-      onChange={(e) => {
-        setText(e.target.value);
-        const n = Number.parseFloat(e.target.value.replace(",", "."));
-        if (Number.isFinite(n) && n >= 0) onChange(Math.round(n * 1000) / 1000);
-      }}
-      onBlur={() => {
-        const n = Number.parseFloat(text.replace(",", "."));
-        const next = Number.isFinite(n) && n >= 0 ? Math.round(n * 1000) / 1000 : 0;
-        setText(String(next));
-        onChange(next);
-      }}
-    />
-  );
 }
 
 type SchedaLogEv = {
@@ -739,7 +658,7 @@ export function SchedeLavorazioneModal({
     return (hubData?.documenti ?? []).map(documentoRowToGestionale);
   }, [hubData?.documenti]);
 
-  function generaPreventivoDaHub() {
+  async function generaPreventivoDaHub() {
     if (!canEditWorkOrders || !preventiviPerm.canWrite) {
       gestToast.warning(
         !preventiviPerm.canWrite
@@ -780,19 +699,25 @@ export function SchedeLavorazioneModal({
       matricola: mezzoForPreventivo.matricola?.trim() || ident.matricola?.trim() || "",
       nScuderia: mezzoForPreventivo.numeroScuderia?.trim() || ident.nScuderia?.trim() || "",
     };
+    const bundleToPersist: LavorazioneSchedeBundle = {
+      ...snap,
+      lavorazioneId: lav.id,
+      ingresso: snap.ingresso ?? draft.ingresso ?? null,
+      lavorazioni: lavDoc ?? snap.lavorazioni ?? draft.lavorazioni ?? null,
+      ricambi: ricDoc ?? snap.ricambi ?? draft.ricambi ?? null,
+    };
+    const persistRes = await persistBundle(bundleToPersist);
+    if (!persistRes.ok) {
+      gestToast.error(persistRes.error ?? "Salvataggio schede non riuscito prima del preventivo.");
+      return;
+    }
     writePendingPreventivoPayload({
       lav,
       origine: lavOrigine,
       mezzoId: mezzoForPreventivo.id,
       mezzo: mezzoForPreventivo,
       ident: identCanon,
-      bundle: {
-        ...snap,
-        lavorazioneId: lav.id,
-        ingresso: snap.ingresso ?? draft.ingresso ?? null,
-        lavorazioni: lavDoc ?? snap.lavorazioni ?? draft.lavorazioni ?? null,
-        ricambi: ricDoc ?? snap.ricambi ?? draft.ricambi ?? null,
-      },
+      bundle: bundleToPersist,
     });
     navigateToPendingPreventivoCreate();
   }
@@ -2254,17 +2179,13 @@ function RicambiPanel({
                     />
                   </td>
                   <td className="px-2 py-2 align-top">
-                    <input
-                      type="number"
-                      min={1}
+                    <GestionaleQuantityField
                       className={`${dsInput} !py-1.5 !text-xs w-20`}
                       readOnly={ro}
                       value={r.quantita}
-                      onChange={(e) =>
+                      onCommit={(quantita) =>
                         patchRighe(
-                          doc.campi.righe.map((x) =>
-                            x.id === r.id ? { ...x, quantita: Math.max(1, Math.round(Number(e.target.value) || 1)) } : x,
-                          ),
+                          doc.campi.righe.map((x) => (x.id === r.id ? { ...x, quantita } : x)),
                         )
                       }
                     />

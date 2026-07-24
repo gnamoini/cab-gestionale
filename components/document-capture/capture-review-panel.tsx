@@ -40,8 +40,8 @@ export function CaptureReviewSplitLayout({
         className={`relative grid min-h-0 min-w-0 flex-1 gap-4 max-lg:grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-stretch ${CAPTURE_REVIEW_PANEL_HEIGHT_CLASS} ${className}`.trim()}
       >
         {busyOverlay}
-        <div className={`${CAPTURE_REVIEW_PANEL_SCROLL_CLASS} max-lg:max-h-[min(50dvh,28rem)]`}>{preview}</div>
-        <div className={CAPTURE_REVIEW_PANEL_SCROLL_CLASS}>{review}</div>
+        <div className={`${CAPTURE_REVIEW_PANEL_SCROLL_CLASS} min-w-0 max-w-full overflow-x-hidden max-lg:max-h-[min(50dvh,28rem)]`}>{preview}</div>
+        <div className={`${CAPTURE_REVIEW_PANEL_SCROLL_CLASS} min-w-0 max-w-full overflow-x-hidden`}>{review}</div>
       </div>
     );
   }
@@ -51,8 +51,8 @@ export function CaptureReviewSplitLayout({
       className={`relative grid min-w-0 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start ${className}`.trim()}
     >
       {busyOverlay}
-      <div className={`lg:sticky ${CAPTURE_REVIEW_PIN_TOP_CLASS} lg:z-[1] lg:self-start`}>{preview}</div>
-      <div className={CAPTURE_REVIEW_FORM_COLUMN_CLASS}>{review}</div>
+      <div className={`min-w-0 max-w-full overflow-x-hidden lg:sticky ${CAPTURE_REVIEW_PIN_TOP_CLASS} lg:z-[1] lg:self-start`}>{preview}</div>
+      <div className={`${CAPTURE_REVIEW_FORM_COLUMN_CLASS} max-w-full overflow-x-hidden`}>{review}</div>
     </div>
   );
 }
@@ -69,12 +69,12 @@ export function CaptureReviewPanelFrame({
   className?: string;
 }) {
   return (
-    <section className={`${dsHubModalSection} flex min-h-[14rem] flex-col space-y-2 p-3 ${className}`.trim()}>
+    <section className={`${dsHubModalSection} flex min-h-[14rem] min-w-0 max-w-full flex-col overflow-x-hidden space-y-2 p-3 ${className}`.trim()}>
       <div className="flex min-w-0 items-center justify-between gap-2">
         <h3 className="text-sm font-medium text-[color:var(--cab-fg)]">{title}</h3>
         {action}
       </div>
-      {children}
+      <div className="min-h-0 min-w-0 max-w-full flex-1 overflow-x-hidden">{children}</div>
     </section>
   );
 }

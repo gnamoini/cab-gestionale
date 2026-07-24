@@ -43,7 +43,9 @@ const view = read("components/preventivi/preventivi-view.tsx");
 
 assert.match(preventiviSources, /aria-label=\{`Codice OE riga \$\{idx \+ 1\}`\}/);
 assert.match(preventiviSources, /aria-label=\{`Unità di misura riga \$\{rowIndex \+ 1\}`\}/);
-assert.match(preventiviSources, /inputMode="decimal"/);
+assert.match(preventivoEditorSources, /GestionaleNumericField/);
+assert.match(preventivoEditorSources, /GestionaleQuantityField/);
+assert.doesNotMatch(preventivoEditorSources, /type="number"/);
 assert.match(preventiviSources, /preventivo-collaudo-prezzo/);
 assert.match(preventiviSources, /PreventivoEditorTotalBar/);
 assert.match(preventiviSources, /role="region"/);
@@ -69,6 +71,7 @@ assert.doesNotMatch(ricambi, /dsSegmentedWrap/);
 const lavorazioni = read("components/preventivi/preventivo-lavorazioni-editor-section.tsx");
 assert.match(lavorazioni, /preventivoEditorAddRowBtn/);
 assert.match(lavorazioni, /Aggiungi addetto/);
+assert.match(lavorazioni, /ORE_PREVENTIVO_ADDETTO_PRESET/);
 assert.doesNotMatch(lavorazioni, /preventivoEditorActionBtn/);
 
 assert.match(filters, /htmlFor="prev-filter-data-da"/);

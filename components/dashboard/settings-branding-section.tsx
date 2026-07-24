@@ -5,7 +5,10 @@ import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Button } from "@/components/design-system/button";
 import {
+  DEFAULT_COMPANY_WEBSITE_URL,
   effectivePrimaryColor,
+  isValidCompanyWebsiteUrl,
+  normalizeCompanyWebsiteUrl,
   type CabBrandingSettings,
 } from "@/lib/branding/branding-settings-model";
 import type { BrandingLogoUploadDraft } from "@/lib/branding/branding-logo-upload";
@@ -26,6 +29,7 @@ import {
   SETTINGS_SECTION_HINT,
   SETTINGS_SECTION_TITLE,
   SETTINGS_WARNING_BANNER,
+  SETTINGS_ADD_INPUT,
   SettingsListFrame,
   SettingsListSection,
   type SettingsSectionLayout,
@@ -132,6 +136,7 @@ export function SettingsBrandingSection({
   const [aspectWarning, setAspectWarning] = useState<string | null>(null);
   const [extractingLogoColor, setExtractingLogoColor] = useState(false);
   const [logoColorExtractError, setLogoColorExtractError] = useState<string | null>(null);
+  const [websiteUrlError, setWebsiteUrlError] = useState<string | null>(null);
 
   const previewPrimary = effectivePrimaryColor(branding);
   const contrastWarnings = useMemo(
@@ -209,6 +214,32 @@ export function SettingsBrandingSection({
       setExtractingLogoColor(false);
     }
   }, [displayLogoSrc, handlePrimaryChange]);
+
+  const handleWebsiteUrlChange = useCallback(
+    (raw: string) => {
+      setWebsiteUrlError(null);
+      onBrandingChange({ ...branding, companyWebsiteUrl: raw });
+    },
+    [branding, onBrandingChange],
+  );
+
+  const handleWebsiteUrlBlur = useCallback(() => {
+    const before = branding.companyWebsiteUrl.trim();
+    if (!before) {
+      setWebsiteUrlError(null);
+      onBrandingChange({ ...branding, companyWebsiteUrl: DEFAULT_COMPANY_WEBSITE_URL });
+      return;
+    }
+    if (!isValidCompanyWebsiteUrl(before)) {
+      setWebsiteUrlError("Inserisci un URL valido (es. https://www.example.it).");
+      return;
+    }
+    setWebsiteUrlError(null);
+    const normalized = normalizeCompanyWebsiteUrl(before);
+    if (normalized !== branding.companyWebsiteUrl) {
+      onBrandingChange({ ...branding, companyWebsiteUrl: normalized });
+    }
+  }, [branding, onBrandingChange]);
 
   const controls = (
     <SettingsListSection
@@ -345,6 +376,27 @@ export function SettingsBrandingSection({
             ) : null}
             {aspectWarning ? (
               <p className="mt-2 text-xs text-[color:var(--cab-warning)]">{aspectWarning}</p>
+            ) : null}
+          </section>
+
+          <section className={BRANDING_SUBSECTION_CLASS}>
+            <h3 className={SETTINGS_SECTION_TITLE}>Sito aziendale</h3>
+            <p className={SETTINGS_SECTION_HINT}>
+              Usato dal QR sulle etichette cliente in magazzino.
+            </p>
+            <input
+              type="url"
+              inputMode="url"
+              autoComplete="url"
+              className={`${SETTINGS_ADD_INPUT} mt-3 max-w-xl`}
+              value={branding.companyWebsiteUrl}
+              placeholder={DEFAULT_COMPANY_WEBSITE_URL}
+              aria-label="Sito aziendale"
+              onChange={(e) => handleWebsiteUrlChange(e.target.value)}
+              onBlur={handleWebsiteUrlBlur}
+            />
+            {websiteUrlError ? (
+              <p className="mt-2 text-xs text-[color:var(--cab-danger)]">{websiteUrlError}</p>
             ) : null}
           </section>
 

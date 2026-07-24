@@ -22,10 +22,9 @@ import { MezzoEliminaConfirmDialog } from "@/components/gestionale/mezzi/mezzo-e
 import { MezziPageViewToggle, type MezziPageView } from "@/components/gestionale/mezzi/mezzi-page-view-toggle";
 import { MezziTable } from "@/components/gestionale/mezzi/mezzi-table";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { type NumeroLavorazioniFilter, type TagliandiFilter, type UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
+import { type NumeroLavorazioniFilter, type UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
 import { prefetchMezziTagliandiQueries } from "@/lib/mezzi/prefetch-mezzi-tagliandi-queries";
 import { useMezziListDerived } from "@/lib/mezzi/use-mezzi-list-derived";
-import { mezzoTagliandiEnabled } from "@/lib/mezzi/mezzi-meta";
 import {
   buildUltimaModificaByMezzoIdFromLogs,
   resolveMezzoUltimaModificaInfo,
@@ -61,7 +60,7 @@ import {
 import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
 import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
 import { useMezzoRemoveMutation } from "@/src/hooks/gestionale/use-mezzo-remove-mutation";
-import { useMezzoSetTagliandiMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
+import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
@@ -163,7 +162,6 @@ export function MezziView() {
   const [filtroModelloTelaio, setFiltroModelloTelaio] = useState("");
   const [filtroTipoTelaio, setFiltroTipoTelaio] = useState("");
   const [filtroVin, setFiltroVin] = useState("");
-  const [filtroTagliandi, setFiltroTagliandi] = useState<TagliandiFilter>("");
   const [filtroNumeroLav, setFiltroNumeroLav] = useState<NumeroLavorazioniFilter>("");
   const [filtroUltimaLav, setFiltroUltimaLav] = useState<UltimaLavorazioneFilter>("");
   const [logOpen, setLogOpen] = useState(false);
@@ -193,7 +191,6 @@ export function MezziView() {
       filtroModelloTelaio,
       filtroTipoTelaio,
       filtroVin,
-      filtroTagliandi,
       filtroNumeroLav,
       filtroUltimaLav,
     }),
@@ -211,7 +208,6 @@ export function MezziView() {
       filtroModelloTelaio,
       filtroTipoTelaio,
       filtroVin,
-      filtroTagliandi,
       filtroNumeroLav,
       filtroUltimaLav,
     ],
@@ -233,7 +229,6 @@ export function MezziView() {
       modello_telaio: filtroModelloTelaio.trim() || undefined,
       tipo_telaio: filtroTipoTelaio.trim() || undefined,
       vin: filtroVin.trim() || undefined,
-      tagliandi: filtroTagliandi || undefined,
     };
   }, [
     searchApplied,
@@ -250,7 +245,6 @@ export function MezziView() {
     filtroModelloTelaio,
     filtroTipoTelaio,
     filtroVin,
-    filtroTagliandi,
   ]);
 
   const {
@@ -418,10 +412,7 @@ export function MezziView() {
 
   const [flashRowId, setFlashRowId] = useState<string | null>(null);
   const flashClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [tagliandiPendingId, setTagliandiPendingId] = useState<string | null>(null);
-
   const updateMut = useMezzoUpdateMutation();
-  const tagliandiMut = useMezzoSetTagliandiMutation();
   const removeMut = useMezzoRemoveMutation();
   const { success: toastSuccess, error: toastError, validation: toastValidation, successOnce, errorOnce } =
     useGestionaleToast();
@@ -438,31 +429,6 @@ export function MezziView() {
       flashClearRef.current = null;
     }, 820);
   }, []);
-
-  const handleTagliandiChange = useCallback(
-    async (m: MezzoGestito, enabled: boolean) => {
-      if (!canEditVehicles || m.hubSynthetic) return;
-      if (mezzoTagliandiEnabled(m) === enabled) return;
-      setTagliandiPendingId(m.id);
-      try {
-        await tagliandiMut.mutateAsync({ id: m.id, enabled });
-        setHubMezzo((prev) =>
-          prev?.id === m.id ? { ...prev, tagliandi: enabled ? true : undefined } : prev,
-        );
-        flashRow(m.id);
-        toastSuccess(
-          enabled
-            ? "Mezzo incluso nella matrice tagliandi."
-            : "Mezzo escluso dalla matrice tagliandi. Le registrazioni già inserite restano in archivio.",
-        );
-      } catch {
-        toastError("Aggiornamento tagliandi non riuscito.", { entity: "mezzo", action: "update" });
-      } finally {
-        setTagliandiPendingId(null);
-      }
-    },
-    [canEditVehicles, flashRow, tagliandiMut, toastError, toastSuccess],
-  );
 
   const focusMezzoInTable = useCallback(
     (id: string) => {
@@ -482,7 +448,6 @@ export function MezziView() {
       setFiltroModelloTelaio("");
       setFiltroTipoTelaio("");
       setFiltroVin("");
-      setFiltroTagliandi("");
       setFiltroNumeroLav("");
       setFiltroUltimaLav("");
       setSearch("");
@@ -513,7 +478,6 @@ export function MezziView() {
     setFiltroModelloTelaio("");
     setFiltroTipoTelaio("");
     setFiltroVin("");
-    setFiltroTagliandi("");
     setFiltroNumeroLav("");
     setFiltroUltimaLav("");
     setFiltriEspansi(false);
@@ -782,8 +746,6 @@ export function MezziView() {
                 onFiltroTipoTelaio={setFiltroTipoTelaio}
                 filtroVin={filtroVin}
                 onFiltroVin={setFiltroVin}
-                filtroTagliandi={filtroTagliandi}
-                onFiltroTagliandi={setFiltroTagliandi}
                 filtroNumeroLav={filtroNumeroLav}
                 onFiltroNumeroLav={setFiltroNumeroLav}
                 filtroUltimaLav={filtroUltimaLav}
@@ -825,9 +787,6 @@ export function MezziView() {
                 onSort={onSort}
                 flashRowId={flashRowId}
                 onHub={openMezzoHub}
-                canEditTagliandi={canEditVehicles}
-                tagliandiPendingId={tagliandiPendingId}
-                onTagliandiChange={handleTagliandiChange}
               />
           </MezziTableSection>
           </SkeletonBoundary>

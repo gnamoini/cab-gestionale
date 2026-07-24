@@ -19,10 +19,6 @@ import {
   dsTableActionBtnInfo,
   dsTableActionBtnSecondary,
   dsTableActionGlyph,
-  dsFocus,
-  dsSegmentedBtnOff,
-  dsSegmentedBtnOn,
-  dsSegmentedWrap,
 } from "@/lib/ui/design-system";
 import {
   GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
@@ -45,14 +41,11 @@ import {
   gestionaleListTableActionsGroupEnd,
 } from "@/lib/ui/gestionale-list-table";
 import { hrefDocumentiPerMezzo, hrefLavorazioniPerMezzo, hrefPreventiviPerMezzo, ultimaLavorazioneLabel } from "@/lib/mezzi/mezzi-helpers";
-import { mezzoTagliandiEnabled } from "@/lib/mezzi/mezzi-meta";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 import type { MezziHubTabId } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 
 /** 4 icone × 36px + gap — larghezza fissa per non assorbire slack in `table-fixed`. */
 const mezziTableActionsColClass = "w-[11.5rem] min-w-[11.5rem]";
-const mezziTableTagliandiColClass = "w-[6.5rem] min-w-[6.5rem]";
-const mezzoTagliandiToggleBtnClass = "min-w-[2rem] flex-1 px-1.5 py-1 text-[11px] font-semibold sm:text-xs";
 
 /** Righe multi-riga: min-height + sfondo come Lavorazioni/Magazzino (hover via scroll scope). */
 const mezziTableRowClass = `${gestionaleListTableRowBaseClass} min-h-14 bg-white dark:bg-zinc-900/40`;
@@ -99,46 +92,6 @@ function IconClipboardList({ className = dsTableActionGlyph }: { className?: str
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6" />
     </svg>
-  );
-}
-
-function MezzoTagliandiToggle({
-  enabled,
-  disabled,
-  pending,
-  onChange,
-}: {
-  enabled: boolean;
-  disabled?: boolean;
-  pending?: boolean;
-  onChange: (next: boolean) => void;
-}) {
-  const off = disabled || pending;
-  return (
-    <div className={`${dsSegmentedWrap} w-full min-w-0 gap-0 p-0.5`} role="group" aria-label="Tagliandi">
-      <button
-        type="button"
-        disabled={off}
-        className={`${mezzoTagliandiToggleBtnClass} ${enabled ? dsSegmentedBtnOn : dsSegmentedBtnOff} ${dsFocus}`}
-        aria-pressed={enabled}
-        onClick={() => {
-          if (!enabled) onChange(true);
-        }}
-      >
-        Sì
-      </button>
-      <button
-        type="button"
-        disabled={off}
-        className={`${mezzoTagliandiToggleBtnClass} ${!enabled ? dsSegmentedBtnOn : dsSegmentedBtnOff} ${dsFocus}`}
-        aria-pressed={!enabled}
-        onClick={() => {
-          if (enabled) onChange(false);
-        }}
-      >
-        No
-      </button>
-    </div>
   );
 }
 
@@ -208,9 +161,6 @@ export type MezziTableProps = {
   onSort: (k: MezziSortKey) => void;
   flashRowId: string | null;
   onHub: (m: MezzoGestito, tab?: MezziHubTabId) => void;
-  canEditTagliandi: boolean;
-  tagliandiPendingId: string | null;
-  onTagliandiChange: (m: MezzoGestito, enabled: boolean) => void;
 };
 
 function MezzoRowActions({
@@ -259,18 +209,12 @@ function MezzoRowInner({
   inOff: _inOff,
   flash,
   onHub,
-  canEditTagliandi,
-  tagliandiPendingId,
-  onTagliandiChange,
 }: {
   m: MezzoGestito;
   interventi: MezzoInterventoLavorazione[];
   inOff: boolean;
   flash: boolean;
   onHub: (m: MezzoGestito, tab?: MezziHubTabId) => void;
-  canEditTagliandi: boolean;
-  tagliandiPendingId: string | null;
-  onTagliandiChange: (m: MezzoGestito, enabled: boolean) => void;
 }) {
   const ultima = ultimaLavorazioneLabel(interventi);
   const nLavorazioni = interventi.length;
@@ -319,18 +263,6 @@ function MezzoRowInner({
       <td className={`${gestionaleListTableTdCenter} py-2`}>
         <span className={`${mezziCellPrimaryClass} tabular-nums`}>{nLavorazioni}</span>
       </td>
-      <td className={`${gestionaleListTableTdCenter} py-2`}>
-        {m.hubSynthetic ? (
-          <span className="text-xs text-zinc-400">—</span>
-        ) : (
-          <MezzoTagliandiToggle
-            enabled={mezzoTagliandiEnabled(m)}
-            disabled={!canEditTagliandi}
-            pending={tagliandiPendingId === m.id}
-            onChange={(next) => onTagliandiChange(m, next)}
-          />
-        )}
-      </td>
       <td className={gestionaleListTableTdAzioni}>
         <div className={gestionaleListTableActionsGroupEnd}>
           <MezzoRowActions m={m} onHub={onHub} />
@@ -369,9 +301,6 @@ function MezzoMobileCard({
   inOff: _inOff,
   flash,
   onHub,
-  canEditTagliandi,
-  tagliandiPendingId,
-  onTagliandiChange,
 }: {
   m: MezzoGestito;
   interventi: MezzoInterventoLavorazione[];
@@ -379,9 +308,6 @@ function MezzoMobileCard({
   inOff: boolean;
   flash: boolean;
   onHub: (m: MezzoGestito, tab?: MezziHubTabId) => void;
-  canEditTagliandi: boolean;
-  tagliandiPendingId: string | null;
-  onTagliandiChange: (m: MezzoGestito, enabled: boolean) => void;
 }) {
   const ultimaLav = ultimaLavorazioneLabel(interventi);
   const { date: ultimaModifica, autore: ultimaModificaAutore } =
@@ -439,17 +365,6 @@ function MezzoMobileCard({
         <LavorazioneMobileMetaItem label="Cantiere" value={displayScalar(m.cantiere)} />
         <LavorazioneMobileMetaItem label="Telaio" value={mezzoTelaioMobileValue(m)} />
         <LavorazioneMobileMetaItem label="Ultima lavorazione" value={ultimaLav} className="col-span-2" />
-        {!m.hubSynthetic ? (
-          <div className="col-span-2 space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Tagliandi</p>
-            <MezzoTagliandiToggle
-              enabled={mezzoTagliandiEnabled(m)}
-              disabled={!canEditTagliandi}
-              pending={tagliandiPendingId === m.id}
-              onChange={(next) => onTagliandiChange(m, next)}
-            />
-          </div>
-        ) : null}
       </LavorazioneMobileMetaGrid>
 
       <LavorazioneMobileCardFooter
@@ -488,9 +403,6 @@ export function MezziTable({
   onSort,
   flashRowId,
   onHub,
-  canEditTagliandi,
-  tagliandiPendingId,
-  onTagliandiChange,
 }: MezziTableProps) {
   const renderMezzoRow = useCallback(
     (index: number) => {
@@ -504,22 +416,10 @@ export function MezziTable({
           inOff={inOfficina(m)}
           flash={flashRowId === m.id}
           onHub={onHub}
-          canEditTagliandi={canEditTagliandi}
-          tagliandiPendingId={tagliandiPendingId}
-          onTagliandiChange={onTagliandiChange}
         />
       );
     },
-    [
-      rows,
-      interventiByMezzoId,
-      inOfficina,
-      flashRowId,
-      onHub,
-      canEditTagliandi,
-      tagliandiPendingId,
-      onTagliandiChange,
-    ],
+    [rows, interventiByMezzoId, inOfficina, flashRowId, onHub],
   );
 
   return (
@@ -537,7 +437,6 @@ export function MezziTable({
             <col className="w-[14%]" />
             <col className="w-[12%]" />
             <col className="w-[9%]" />
-            <col className={mezziTableTagliandiColClass} />
             <col className={mezziTableActionsColClass} />
           </>
         }
@@ -563,20 +462,12 @@ export function MezziTable({
               onSort={onSort}
               align="center"
             />
-            <GlobalTableSortTh
-              label="Tagliandi"
-              columnKey="tagliandi"
-              sortColumn={sortColumn}
-              sortPhase={sortPhase}
-              onSort={onSort}
-              align="center"
-            />
             <GestionaleListTableActionsHead />
           </>
         }
         empty={rows.length === 0}
         emptyMessage="Nessun mezzo corrisponde ai criteri."
-        colSpan={9}
+        colSpan={8}
         virtualRows={{
           rowCount: rows.length,
           renderRow: renderMezzoRow,
@@ -610,9 +501,6 @@ export function MezziTable({
               inOff={inOfficina(m)}
               flash={flashRowId === m.id}
               onHub={onHub}
-              canEditTagliandi={canEditTagliandi}
-              tagliandiPendingId={tagliandiPendingId}
-              onTagliandiChange={onTagliandiChange}
             />
           ))
         )}

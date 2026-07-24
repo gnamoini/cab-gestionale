@@ -59,28 +59,13 @@ export function maintenanceEngineV2UserBucket(userId: string): number {
   return Math.abs(h) % 100;
 }
 
-export function resolveMaintenanceEngineV2Enabled(input: {
+export function resolveMaintenanceEngineV2Enabled(_input?: {
   dbFlags?: MaintenanceEngineV2Flags | null;
   userId?: string | null;
   userRole?: string | null;
 }): boolean {
-  if (isMaintenanceEngineV2EnvDisabled()) return false;
-
-  const flags = input.dbFlags ?? MAINTENANCE_ENGINE_V2_DEFAULT;
-  if (!flags.enabled) return false;
-
-  if (flags.allowedRoles.length > 0) {
-    const role = input.userRole?.trim().toLowerCase() ?? "";
-    if (!role || !flags.allowedRoles.map((r) => r.toLowerCase()).includes(role)) {
-      return false;
-    }
-  }
-
-  if (flags.percentage >= 100) return true;
-  if (flags.percentage <= 0) return false;
-  if (!input.userId?.trim()) return flags.percentage > 50;
-
-  return maintenanceEngineV2UserBucket(input.userId) < flags.percentage;
+  // ponytail: v2 always on post-rollout; only env kill switch can disable.
+  return !isMaintenanceEngineV2EnvDisabled();
 }
 
 /** @deprecated Usare useMaintenanceEngineV2Enabled / resolveMaintenanceEngineV2EnabledClient */

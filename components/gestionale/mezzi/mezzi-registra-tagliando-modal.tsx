@@ -22,13 +22,11 @@ import {
   useRegisterExecutionV2Mutation,
 } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import {
-  useMaintenancePlansCatalogQuery,
   useMaintenancePlansListQuery,
   useMaintenanceRicambiSearchQuery,
   useMezzoMaintenanceHistoryQuery,
 } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import { resolvePlansForMezzo } from "@/lib/maintenance-plans/resolve-plans-for-mezzo";
 import {
   triggersNeedKm,
   triggersNeedOre,
@@ -68,7 +66,6 @@ export function MezziRegistraTagliandoModal({
 }) {
   const { validation: toastValidation, error: toastError, successSaved } = useGestionaleToast();
   const plansQ = useMaintenancePlansListQuery(open);
-  const catalogQ = useMaintenancePlansCatalogQuery(open);
   const historyQ = useMezzoMaintenanceHistoryQuery(mezzoId, open);
   const registerMut = useRegisterMaintenanceServiceMutation();
   const registerV2Mut = useRegisterExecutionV2Mutation();
@@ -76,12 +73,13 @@ export function MezziRegistraTagliandoModal({
 
   const applicablePlans = useMemo(() => {
     if (!plansQ.data) return [] as MaintenancePlanView[];
-    return resolvePlansForMezzo({
-      tipoAttrezzatura,
-      catalog: catalogQ.data ?? [],
-      plans: plansQ.data,
-    });
-  }, [plansQ.data, catalogQ.data, tipoAttrezzatura]);
+    const active = plansQ.data.filter((p) => p.status === "active");
+    if (defaultPlanId) {
+      const picked = active.find((p) => p.id === defaultPlanId);
+      return picked ? [picked] : active;
+    }
+    return active;
+  }, [plansQ.data, defaultPlanId]);
 
   const [planId, setPlanId] = useState(defaultPlanId ?? "");
   const [performedAt, setPerformedAt] = useState(todayIsoDate());

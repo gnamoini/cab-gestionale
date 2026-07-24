@@ -408,7 +408,10 @@ export function ricambioLenientPlaceholderFlags(r: RicambioMagazzino): RicambioL
 
 /** Crea sempre un record: valori vuoti diventano segnaposto coerenti (salvataggio “incompleto”). */
 export type RicambioCompatExpandOptions = {
+  /** Albero merged (settings + flotta) per validazione/espansione. */
   mezziListe: MezziListePrefs;
+  /** Albero settings-only per refs stabili al save. */
+  mezziListePrefs?: MezziListePrefs;
 };
 
 function resolveCompatibilitaMezziForSave(
@@ -454,6 +457,7 @@ export function ricambioFromFormLenient(
     { compatibilitaMezzi: expanded, compatibilitaRefs: undefined, ricambioId: id },
     compatExpand?.mezziListe,
     "form.ricambioFromFormLenient",
+    { prefsListe: compatExpand?.mezziListePrefs },
   );
   compat = built.compatibilitaMezzi ?? [];
   compatRefs = built.compatibilitaRefs;

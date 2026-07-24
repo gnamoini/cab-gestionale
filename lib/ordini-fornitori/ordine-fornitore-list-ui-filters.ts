@@ -1,6 +1,8 @@
 import type { OrdineFornitoreRecord, OrdineFornitoreStatus } from "@/lib/ordini-fornitori/types";
 import { parseOrdineFornitoreDestinatarioSnapshot } from "@/lib/ordini-fornitori/destinatario-snapshot";
 import { readOrdineOggetto } from "@/lib/ordini-fornitori/ordine-fornitore-oggetto";
+import { buildSearchDocumentFromParts } from "@/lib/search/build-document";
+import { matchSearchString } from "@/lib/search/match";
 import type { OrdineFornitoreDestinazioneTipo } from "@/lib/ordini-fornitori/ordine-fornitore-destinazione";
 
 const DESTINAZIONE_TIPO_LIST_LABEL: Record<OrdineFornitoreDestinazioneTipo, string> = {
@@ -49,20 +51,19 @@ export function ordiniFornitoriFiltersActive(f: OrdiniFornitoriPageFilters): boo
   );
 }
 
-function matchesSearch(o: OrdineFornitoreRecord, q: string): boolean {
-  const needle = q.trim().toLowerCase();
-  if (!needle) return true;
-  const hay = [
+function ordineSearchDocument(o: OrdineFornitoreRecord): string {
+  return buildSearchDocumentFromParts([
     o.numero,
     o.fornitoreLabel,
     ordineFornitoreListOggetto(o),
     ordineFornitoreListDestinazioneTipo(o),
     o.note,
-    ...o.righe.map((r) => `${r.codice} ${r.descrizione}`),
-  ]
-    .join(" ")
-    .toLowerCase();
-  return hay.includes(needle);
+    ...o.righe.flatMap((r) => [r.codice, r.descrizione]),
+  ]);
+}
+
+function matchesSearch(o: OrdineFornitoreRecord, q: string): boolean {
+  return matchSearchString(q, ordineSearchDocument(o)).matches;
 }
 
 export function ordineFornitoreRowMatchesPageFilters(

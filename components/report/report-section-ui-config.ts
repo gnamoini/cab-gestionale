@@ -8,6 +8,8 @@ export const REPORT_SECTION_UI: Record<ReportSectionId, { lazyMode: ReportSectio
   clienti_mezzi: { lazyMode: "unmount-on-close" },
   magazzino_ricambi: { lazyMode: "unmount-on-close" },
   ore_lavorate: { lazyMode: "unmount-on-close" },
+  analisi_ore_officina: { lazyMode: "unmount-on-close" },
   dati_economici: { lazyMode: "keep-mounted" },
+  recidivita_mezzi: { lazyMode: "unmount-on-close" },
   analisi_incrociate: { lazyMode: "keep-mounted" },
 };

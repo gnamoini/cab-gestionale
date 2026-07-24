@@ -22,12 +22,13 @@ export async function GET(request: Request, context: RouteContext) {
     format: url.searchParams.get("format") ?? undefined,
     preset: url.searchParams.get("preset") ?? undefined,
     includeBarcode: url.searchParams.get("includeBarcode") ?? undefined,
+    clienteLabel: url.searchParams.get("clienteLabel") ?? undefined,
     quantity: url.searchParams.get("quantity") ?? undefined,
   });
   if (!parsed.success) {
     return NextResponse.json({ error: "Parametri non validi" }, { status: 400 });
   }
-  const { format, preset, includeBarcode, quantity } = parsed.data;
+  const { format, preset, includeBarcode, clienteLabel, quantity } = parsed.data;
 
   const { data: row, error } = await auth.sb
     .from("magazzino_ricambi")
@@ -49,6 +50,7 @@ export async function GET(request: Request, context: RouteContext) {
       preset,
       format,
       includeBarcode,
+      clienteLabel,
       quantity: format === "pdf" ? quantity : 1,
       origin: requestOrigin(request),
       userId: auth.userId,

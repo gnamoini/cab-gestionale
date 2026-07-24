@@ -1,25 +1,33 @@
 "use client";
 
 import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
-import { useStockDisplayState } from "@/src/hooks/gestionale/use-stock-adjust-mutation";
+import { useMagazzinoDebouncedScortaQuantity } from "@/components/gestionale/magazzino/magazzino-debounced-scorta-context";
+import { MagazzinoScortaStatusIndicator } from "@/components/gestionale/magazzino/magazzino-scorta-status-indicator";
 
-/** Giacenza riga — certified + pending journal (v4). */
+/** Giacenza riga — display debounced ottimistico. */
 export function MagazzinoScortaDisplayBadge({
   ricambioId,
+  ricambioLabel,
   fallbackScorta,
   low,
   variant = "table",
 }: {
   ricambioId: string;
+  ricambioLabel: string;
   fallbackScorta: number;
   low: boolean;
   variant?: "mobile" | "table";
 }) {
-  const display = useStockDisplayState(ricambioId);
-  const value = display.certifiedQuantita > 0 || display.isPending ? display.displayQuantita : fallbackScorta;
+  const { displayQuantity, isCommitting, showSuccess } = useMagazzinoDebouncedScortaQuantity({
+    ricambioId,
+    ricambioLabel,
+    fallbackScorta,
+  });
+
   return (
-    <span className={display.isPending ? "opacity-80" : undefined} title={display.isPending ? "Aggiornamento in corso" : undefined}>
-      <MagazzinoScortaBadge value={value} low={low} variant={variant} />
+    <span className="inline-flex items-center justify-center gap-1">
+      <MagazzinoScortaBadge value={displayQuantity} low={low} variant={variant} />
+      <MagazzinoScortaStatusIndicator isCommitting={isCommitting} showSuccess={showSuccess} />
     </span>
   );
 }

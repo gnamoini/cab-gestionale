@@ -22,6 +22,7 @@ export async function POST(request: Request) {
       items: normalized.items,
       preset: normalized.preset,
       includeBarcode: normalized.includeBarcode,
+      clienteLabel: normalized.clienteLabel,
       userId: auth.userId,
       origin: requestOrigin(request),
     });

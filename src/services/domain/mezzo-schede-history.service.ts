@@ -39,7 +39,7 @@ export async function fetchMezzoSchedeHistory(mezzoId: string): Promise<MezzoSch
   }));
 }
 
-export function schedeHistoryBadges(rows: MezzoSchedaHistoryRow[], lavorazioneId: string) {
+export function schedeHistoryBadges(rows: readonly MezzoSchedaHistoryRow[], lavorazioneId: string) {
   const forLav = rows.filter((r) => r.lavorazioneId === lavorazioneId);
   return {
     ingresso: forLav.some((r) => r.tipo === "ingresso"),

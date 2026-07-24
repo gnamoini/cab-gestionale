@@ -1,4 +1,5 @@
 import type { MutableRefObject } from "react";
+import { clientPaginationPageForIndex } from "@/lib/ui/use-client-pagination";
 
 export type RevealRicambioInTableOpts = {
   ricambioId: string;
@@ -20,7 +21,7 @@ export function revealRicambioInTableAfterSave(opts: RevealRicambioInTableOpts):
   const inView = idx >= 0;
 
   if (inView) {
-    opts.setMagazzinoPage(Math.floor(idx / ps));
+    opts.setMagazzinoPage(clientPaginationPageForIndex(idx, ps));
   }
 
   requestAnimationFrame(() => {

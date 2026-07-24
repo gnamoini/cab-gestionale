@@ -16,7 +16,7 @@ export type VehicleMaintenanceConfigView = {
   presetId: string | null;
   presetVersionId: string | null;
   presetNome: string;
-  maintenanceKind: MaintenanceKind;
+  maintenanceKind?: MaintenanceKind;
   isActive: boolean;
   intervalType: MaintenanceIntervalType;
   intervalValue: number;
@@ -42,7 +42,7 @@ export type UpsertVehicleMaintenanceConfigInput = {
   id?: string;
   mezzoId: string;
   presetId?: string | null;
-  maintenanceKind: MaintenanceKind;
+  maintenanceKind?: MaintenanceKind;
   isActive: boolean;
   intervalType: MaintenanceIntervalType;
   intervalValue: number;
@@ -104,6 +104,7 @@ export type TagliandiOverviewRow = {
   partsCount: number;
   urgency: MaintenanceUrgency;
   canPlanWorkshop: boolean;
+  dueReasonLabel: string;
 };
 
 export type MezzoWithoutPresetRow = {

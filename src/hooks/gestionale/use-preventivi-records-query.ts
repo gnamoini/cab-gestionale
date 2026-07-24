@@ -5,18 +5,27 @@ import {
   type PreventiviRecordsPayload,
 } from "@/lib/preventivi/preventivi-list-fetch-authorized";
 import { preventiviRecordsQueryKey } from "@/lib/render/query-key-factory";
+import { usesServerSearch } from "@/lib/search/registry";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
 import { useSharedEntityQuery } from "@/src/hooks/use-shared-entity-query";
+import type { PreventiviFilters } from "@/src/services/preventivi.service";
 
 const PREVENTIVI_LIST_SCOPE = "preventivi.list" as const;
 
 /** Lista preventivi — 1 query Supabase con embed mezzi (no join client). */
-export function usePreventiviRecordsQuery(enabled = true) {
+export function usePreventiviRecordsQuery(
+  enabled = true,
+  searchFilters?: Pick<PreventiviFilters, "search">,
+) {
   const gestOpts = useGestionaleQueryOpts();
-  const queryKey = preventiviRecordsQueryKey();
+  const serverFilters: PreventiviFilters | undefined =
+    usesServerSearch("preventivi") && searchFilters?.search?.trim()
+      ? { search: searchFilters.search.trim() }
+      : undefined;
+  const queryKey = preventiviRecordsQueryKey(serverFilters ?? null);
   const q = useSharedEntityQuery({
     queryKey,
-    queryFn: () => fetchPreventiviRecordsAuthorized(),
+    queryFn: () => fetchPreventiviRecordsAuthorized(serverFilters),
     entityType: "preventivi",
     scope: "list",
     ownershipScopeKey: PREVENTIVI_LIST_SCOPE,

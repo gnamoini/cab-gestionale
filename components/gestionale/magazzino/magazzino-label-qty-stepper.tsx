@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import {
+  commitNumericDraft,
+  resolveCommittedNumber,
+} from "@/lib/core/numeric-input-commit";
+import { NUMERIC_PRESETS } from "@/lib/core/numeric-input-policy";
+import { isDecimalInputDraft } from "@/lib/core/decimal-input";
 import { BULK_QUANTITY_MAX } from "@/lib/inventory-labels/client/label-selection";
+
+const labelQtyPreset = NUMERIC_PRESETS.labelQty;
 
 export function MagazzinoLabelQtyStepper({
   value,
@@ -21,18 +29,9 @@ export function MagazzinoLabelQtyStepper({
   }, [value]);
 
   const commitDraft = useCallback(() => {
-    const trimmed = draft.trim();
-    if (!trimmed) {
-      onChange(0);
-      setDraft("0");
-      return;
-    }
-    const parsed = Number(trimmed);
-    if (!Number.isFinite(parsed)) {
-      setDraft(String(value));
-      return;
-    }
-    const clamped = Math.max(0, Math.min(BULK_QUANTITY_MAX, Math.floor(parsed)));
+    const result = commitNumericDraft(draft, labelQtyPreset, value);
+    const next = resolveCommittedNumber(result, value);
+    const clamped = Math.max(0, Math.min(BULK_QUANTITY_MAX, next));
     onChange(clamped);
     setDraft(String(clamped));
   }, [draft, onChange, value]);
@@ -60,8 +59,13 @@ export function MagazzinoLabelQtyStepper({
         value={draft}
         disabled={disabled}
         aria-label={`Quantità ${ariaLabel}`}
-        onChange={(e) => setDraft(e.target.value.replace(/[^\d]/g, ""))}
+        onChange={(e) => {
+          const next = e.target.value.replace(/[^\d]/g, "");
+          if (!isDecimalInputDraft(next, { allowNegative: false })) return;
+          setDraft(next);
+        }}
         onBlur={commitDraft}
+        onFocus={(e) => e.target.select()}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();

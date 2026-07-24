@@ -322,6 +322,26 @@ export type LavorazioneRow = {
   /** Target intervento: telaio (mezzo) o attrezzatura installata. */
   target_type?: InterventoTargetType;
   attrezzatura_id?: string | null;
+  /** Ore consuntive denormalizzate da scheda interventi (SSOT lettura analytics). */
+  actual_labor_hours?: number;
+  actual_labor_hours_source?:
+    | "scheda_save"
+    | "backfill"
+    | "manual_adjustment"
+    | "migration"
+    | "safety_net_trigger"
+    | null;
+  actual_labor_hours_updated_at?: string | null;
+};
+
+export type AddettiEmployeeMappingRow = {
+  id: string;
+  addetto_nome: string;
+  employee_id: string;
+  confirmed_at: string;
+  confirmed_by: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 /** PDF allegato lavorazione (`lavorazione_documents`). */
@@ -790,6 +810,16 @@ export type LogModificaRow = {
   autore_id: string | null;
   payload: unknown;
   created_at: string;
+  company_id?: string | null;
+  event_type?: string | null;
+  actor_type?: string | null;
+  correlation_id?: string | null;
+  request_id?: string | null;
+  module?: string | null;
+  title?: string | null;
+  description?: string | null;
+  severity?: string | null;
+  category?: string | null;
 };
 
 /** `log_modifiche` con join autore (`profiles`). */

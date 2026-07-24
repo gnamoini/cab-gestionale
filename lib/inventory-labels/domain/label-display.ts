@@ -38,6 +38,11 @@ export function shouldRenderMarcaSecondaria(
   return sec !== primary && sec !== fornitore;
 }
 
+/** Riga codice cliente: solo codice OE, senza suffisso marca. */
+export function formatLabelCodiceCliente(codice: string): string {
+  return labelDisplayCaps(codice.trim());
+}
+
 /** Riga codice: `XXXX (BTE)` se marca presente. */
 export function formatLabelCodiceLine(codice: string, marca?: string): string {
   const c = codice.trim();

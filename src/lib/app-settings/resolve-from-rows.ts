@@ -277,6 +277,7 @@ export function buildBulkRowsFromResolved(r: CabAppSettingsResolved): { module: 
       value: {
         primaryColor: r.branding.primaryColor,
         logoStoragePath: r.branding.logoStoragePath,
+        companyWebsiteUrl: r.branding.companyWebsiteUrl,
         updatedAt: r.branding.updatedAt ?? new Date().toISOString(),
       },
     },

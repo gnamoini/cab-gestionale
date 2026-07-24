@@ -44,12 +44,13 @@ const baseFields: SchedaIngressoFields = {
   modelloTelaio: "",
   vin: "",
   targa: "AA111BB",
+  targetType: "telaio",
   km: "",
   descrizioneAnomalia: "",
   livelloCarburante: "",
   addettoAccettazione: "Angelo",
   richiedente: "",
-    richiedenteTelefono: "",
+  richiedenteTelefono: "",
   noteIntervento: "",
 };
 
@@ -71,8 +72,8 @@ async function run() {
       return { id } as never;
     },
   });
-  assert.equal(result.mezzoId, "m-by-plate", "ident match must win over preferredMezzoId");
-  assert.equal(updatedId, "m-by-plate");
+  assert.equal(result.mezzoId, "m-linked", "preferredMezzoId must win over ident match");
+  assert.notEqual(updatedId, "m-by-plate", "must not update ident-matched mezzo when preferred is set");
   console.log("upsert-mezzo-from-scheda.test.ts OK");
 }
 

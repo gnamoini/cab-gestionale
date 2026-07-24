@@ -5,6 +5,8 @@ import {
   type FatturazioneAdvancedFilters,
 } from "@/lib/fatturazione/fatturazione-advanced-filters";
 import type { InvoiceLinkRow, InvoiceRow } from "@/src/types/supabase-tables";
+import { buildSearchDocumentFromParts } from "@/lib/search/build-document";
+import { matchSearchString } from "@/lib/search/match";
 
 export type FatturazionePageFilters = FatturazioneAdvancedFilters & {
   search: string;
@@ -28,25 +30,20 @@ export function invoiceDisplayNumber(row: InvoiceRow): string {
 export function invoiceRowSearchHaystack(row: InvoiceRow, ctx: FatturazioneListRowContext): string {
   const snap = row.customer_snapshot && typeof row.customer_snapshot === "object" ? row.customer_snapshot : {};
   const piva = typeof (snap as Record<string, unknown>).partita_iva === "string" ? (snap as Record<string, unknown>).partita_iva : ctx.snapshotPiva;
-  return [
+  return buildSearchDocumentFromParts([
     invoiceDisplayNumber(row),
     row.cliente_label,
-    piva,
+    typeof piva === "string" ? piva : "",
     row.status,
     row.note,
     ctx.preventivoNums,
     String(row.totale),
     String(row.imponibile),
-  ]
-    .filter((s) => typeof s === "string" && s.trim().length > 0)
-    .join(" ")
-    .toLowerCase();
+  ]);
 }
 
 export function invoiceRowMatchesGlobalSearch(row: InvoiceRow, ctx: FatturazioneListRowContext, query: string): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return invoiceRowSearchHaystack(row, ctx).includes(q);
+  return matchSearchString(query, invoiceRowSearchHaystack(row, ctx)).matches;
 }
 
 export function invoiceRowMatchesPageFilters(

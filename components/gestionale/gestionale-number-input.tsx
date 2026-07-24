@@ -27,6 +27,7 @@ export function GestionaleNumberInput({
   inputMode = "decimal",
   min,
   onBlur,
+  onFocus: onFocusProp,
   ...rest
 }: GestionaleNumberInputProps) {
   const allowNegative = min === undefined || Number(min) < 0;
@@ -43,6 +44,11 @@ export function GestionaleNumberInput({
     onBlur?.(e);
   };
 
+  const handleFocus = (e: FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+    onFocusProp?.(e);
+  };
+
   return (
     <input
       type="text"
@@ -50,6 +56,7 @@ export function GestionaleNumberInput({
       value={value}
       onChange={handleChange}
       onBlur={handleBlur}
+      onFocus={handleFocus}
       aria-invalid={invalid || undefined}
       className={resolveGestionaleInputClassName(`${dsInput} ${dsInputNoSpinner} tabular-nums ${className}`.trim(), invalid)}
       {...rest}

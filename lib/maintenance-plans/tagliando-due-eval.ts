@@ -11,7 +11,6 @@ import {
   type MaintenanceServiceLite,
 } from "@/lib/maintenance-plans/tagliandi-matrix";
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
-import { mezzoTagliandiEnabled } from "@/lib/mezzi/mezzi-meta";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 
 /** Anticipo notifica rispetto alla milestone (ore) se non segnata fatta in matrice. */
@@ -81,9 +80,9 @@ export type TagliandoDueEvalResult = {
   cliente: string;
 };
 
-export function isMezzoEligibleForTagliandoNotification(mezzo: MezzoGestito | null | undefined): boolean {
-  if (!mezzo || mezzo.hubSynthetic) return false;
-  return mezzoTagliandiEnabled(mezzo);
+export function isMezzoEligibleForTagliandoNotification(_mezzo: MezzoGestito | null | undefined): boolean {
+  // ponytail: v1 matrice/notifiche milestone disabilitate.
+  return false;
 }
 
 export function evaluateTagliandoDueForMezzo(input: {

@@ -24,6 +24,7 @@ import { MagazzinoLabelQtyStepper } from "@/components/gestionale/magazzino/maga
 import { useLabelSelection } from "@/lib/inventory-labels/client/label-selection";
 import { MagazzinoScortaDisplayBadge } from "@/components/gestionale/magazzino/magazzino-scorta-display-cell";
 import { MagazzinoScortaAdjustActionsCell } from "@/components/gestionale/magazzino/magazzino-scorta-adjust-actions-cell";
+import { MagazzinoDebouncedScortaProvider } from "@/components/gestionale/magazzino/magazzino-debounced-scorta-context";
 import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
 import { MagazzinoListinoAiBadge } from "@/components/gestionale/magazzino/magazzino-listino-ai-badge";
 import { MagazzinoMarcaMobileBadge } from "@/components/gestionale/magazzino/magazzino-marca-mobile-badge";
@@ -60,6 +61,9 @@ const MagazzinoLogDrawer = dynamic(
 import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
 import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
+import { usesServerSearch } from "@/lib/search/registry";
+import type { MagazzinoFilters } from "@/src/services/magazzino.service";
 import { useQueryClient } from "@tanstack/react-query";
 import { QK, invalidateAfterMagazzinoOrMovimenti } from "@/src/lib/react-query/invalidate-related";
 import { cabSyncEventForEntity, dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
@@ -67,11 +71,7 @@ import { patchMagazzinoListCache, ricambioUiFromMagazzinoRow, magazzinoListQuery
 import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { flattenCompatDaAttrezzature, migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-import {
-  loadMagazzinoChangeLog,
-  saveMagazzinoChangeLog,
-  type MagazzinoChangeLogEntry,
-} from "@/lib/magazzino/magazzino-change-log-storage";
+import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import {
   formatMarkupDisplay,
   type RicambioFormState,
@@ -166,10 +166,7 @@ import {
   buildMagazzinoScortaPersistedLogEntry,
 } from "@/lib/magazzino/magazzino-log-events";
 import { getStockEntity, seedStockEntitiesFromRows } from "@/lib/magazzino/stock-entity-cache";
-import { getStockDisplayState, hydrateJournalFromSession } from "@/lib/magazzino/stock-client-store";
-import { useDeterministicStockPipeline } from "@/lib/feature-flags/stock-pipeline";
-import { resolveScortaAdjustTarget } from "@/lib/magazzino/resolve-scorta-adjust-target";
-import { useStockAdjustMutation } from "@/src/hooks/gestionale/use-stock-adjust-mutation";
+import { hydrateJournalFromSession } from "@/lib/magazzino/stock-client-store";
 import { mergeStockEntity } from "@/lib/magazzino/stock-entity-cache";
 import { stockVoidMovementFetch } from "@/lib/magazzino/stock-void-movement-client";
 import { invalidateReportUniverse } from "@/lib/report/invalidate-report-universe";
@@ -194,7 +191,7 @@ import {
   collapsibleExpandedBoolPref,
   useCollapsiblePreference,
 } from "@/lib/ui/collapsible-prefs";
-import { useClientPagination } from "@/lib/ui/use-client-pagination";
+import { clientPaginationPageForIndex, useClientPagination } from "@/lib/ui/use-client-pagination";
 import {
   GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
   GESTIONALE_LIST_MOBILE_ONLY_CLASS,
@@ -202,6 +199,7 @@ import {
 } from "@/lib/ui/use-gestionale-list-layout";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
+import { useCompatMezziListe } from "@/src/hooks/use-compat-mezzi-liste";
 import { useCabAppSettingsPayloadQuery, useMagazzinoSettingsUpsertMutation } from "@/src/hooks/gestionale/use-settings-queries";
 import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
@@ -444,8 +442,6 @@ function IconInfoMagazzino({ className = dsTableActionGlyph }: { className?: str
   );
 }
 
-const SEARCH_DEBOUNCE_MS = 320;
-
 function magazzinoConsumoMedioTooltip(
   consumoRow: { insufficientReason?: string | null } | undefined,
   avgM: number | null,
@@ -453,20 +449,17 @@ function magazzinoConsumoMedioTooltip(
   return consumoRow?.insufficientReason ?? (avgM != null ? "Da log magazzino (uscite Δ scorta)" : undefined);
 }
 
+const RICAMBIO_CODICE_BADGE_CLASS =
+  "inline-block max-w-full break-all rounded-md bg-zinc-100 px-2 py-1 font-mono text-xs font-semibold leading-snug tracking-wide dark:bg-zinc-800";
+
 function RicambioCodiceCell({ p }: { p: RicambioMagazzino }) {
   const primary = displayRicambioCodice(p.codiceFornitoreOriginale);
   const secondary = p.codiceFornitoreOriginaleSecondario.trim();
   return (
     <div className="flex items-start gap-1">
       <div className="min-w-0 flex-1 space-y-0.5">
-        <span className="inline-block max-w-full break-all rounded-md bg-zinc-100 px-2 py-1 font-mono text-xs font-semibold leading-snug tracking-wide dark:bg-zinc-800">
-          {primary}
-        </span>
-        {secondary ? (
-          <div className="break-all pl-0.5 font-mono text-[11px] font-medium leading-snug tracking-wide text-zinc-500 dark:text-zinc-400">
-            {secondary}
-          </div>
-        ) : null}
+        <span className={RICAMBIO_CODICE_BADGE_CLASS}>{primary}</span>
+        {secondary ? <span className={RICAMBIO_CODICE_BADGE_CLASS}>{secondary}</span> : null}
       </div>
       <MagazzinoListinoAiBadge listinoImport={p.listinoImport} />
     </div>
@@ -523,9 +516,19 @@ export function MagazzinoView() {
   }
 
   const queryClient = useQueryClient();
-  const { adjustDelta } = useStockAdjustMutation();
   const [undoStockPending, setUndoStockPending] = useState(false);
-  const magazzinoListQ = useMagazzinoRicambiUIQuery();
+  const {
+    searchInput,
+    setSearchInput,
+    searchApplied,
+    flushSearch: flushPageSearch,
+    clearSearch,
+  } = useGestionaleListSearch({ domain: "magazzino" });
+  const magazzinoFetchFilters = useMemo((): MagazzinoFilters | undefined => {
+    if (!usesServerSearch("magazzino") || !searchApplied.trim()) return undefined;
+    return { search: searchApplied.trim() };
+  }, [searchApplied]);
+  const magazzinoListQ = useMagazzinoRicambiUIQuery(magazzinoFetchFilters);
   const prodotti = magazzinoListQ.data ?? [];
 
   useEffect(() => {
@@ -538,12 +541,8 @@ export function MagazzinoView() {
   const [deleteGeneratedOpen, setDeleteGeneratedOpen] = useState(false);
   const [deleteGeneratedLoading, setDeleteGeneratedLoading] = useState(false);
   const magazzinoInitialLoading = magazzinoListQ.isLoading && magazzinoListQ.data === undefined;
-  const [searchInput, setSearchInput] = useState("");
-  const [searchApplied, setSearchApplied] = useState("");
   const [searchSuggestionsApplied, setSearchSuggestionsApplied] = useState("");
   const [searchFieldFocused, setSearchFieldFocused] = useState(false);
-  const searchInputRef = useRef(searchInput);
-  searchInputRef.current = searchInput;
   const [sortColumn, setSortColumn] = useState<SortKeyMagazzino | null>(null);
   const [sortPhase, setSortPhase] = useState<SortPhaseMagazzino>("natural");
   const [advancedFilters, setAdvancedFilters] = useState<MagazzinoAdvancedFilters>(
@@ -571,19 +570,14 @@ export function MagazzinoView() {
   }, []);
 
   useEffect(() => {
-    const trimmed = searchInput.trim();
-    const t = window.setTimeout(() => {
-      setSearchApplied(trimmed);
-      setSearchSuggestionsApplied(trimmed);
-    }, SEARCH_DEBOUNCE_MS);
+    const t = window.setTimeout(() => setSearchSuggestionsApplied(searchInput.trim()), 320);
     return () => window.clearTimeout(t);
   }, [searchInput]);
 
-  const flushPageSearch = useCallback(() => {
-    const trimmed = searchInputRef.current.trim();
-    setSearchApplied(trimmed);
-    setSearchSuggestionsApplied(trimmed);
-  }, []);
+  const onSearchEnter = useCallback(() => {
+    flushPageSearch();
+    setSearchSuggestionsApplied(searchInput.trim());
+  }, [flushPageSearch, searchInput]);
 
   const [masterMarche, setMasterMarche] = useState<string[]>([]);
   const [masterCategorie, setMasterCategorie] = useState<string[]>([]);
@@ -594,10 +588,7 @@ export function MagazzinoView() {
   const [nuovoFornitore, setNuovoFornitore] = useState("");
   const [masterPrefsHydrated, setMasterPrefsHydrated] = useState(false);
   const lastMergedSigRef = useRef<string>("");
-  const mezziListePrefs = useMemo(
-    () => migrateMezziListePrefs(appSettings?.mezziListe ?? createMezziListePrefsDefault()),
-    [appSettings?.mezziListe],
-  );
+  const { mezziListe: mezziListePrefs } = useCompatMezziListe("MagazzinoView");
   const listDerived = useMagazzinoListDerived(prodotti, mezziListePrefs);
   const {
     sottoScortaList,
@@ -834,7 +825,8 @@ export function MagazzinoView() {
       saveMagazzinoAdvancedFiltersPersisted(MAGAZZINO_ADVANCED_FILTERS_EMPTY);
       setSoloSottoScorta(Boolean(opts?.applySottoScorta));
       setSearchInput("");
-      setSearchApplied("");
+      clearSearch();
+      setSearchSuggestionsApplied("");
       setLogOpen(false);
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -843,9 +835,9 @@ export function MagazzinoView() {
             const ps = Math.max(1, listPageSizeRef.current);
             const idx = rows.findIndex((p) => p.id === ricambioId);
             if (idx >= 0) {
-              setMagazzinoPageRef.current(Math.floor(idx / ps));
+              setMagazzinoPageRef.current(clientPaginationPageForIndex(idx, ps));
             } else {
-              setMagazzinoPageRef.current(0);
+              setMagazzinoPageRef.current(1);
             }
             flashRow(ricambioId, { durationMs: opts?.flashMs ?? 1400 });
             window.setTimeout(() => {
@@ -1014,16 +1006,8 @@ export function MagazzinoView() {
   const lastPersistedLogRef = useRef<MagazzinoLogEntry[] | null>(null);
 
   useEffect(() => {
-    setLogEntries(loadMagazzinoChangeLog());
     setLogPersistReady(true);
   }, []);
-
-  useEffect(() => {
-    if (!logPersistReady) return;
-    if (logEntries === lastPersistedLogRef.current) return;
-    lastPersistedLogRef.current = logEntries;
-    saveMagazzinoChangeLog(logEntries);
-  }, [logEntries, logPersistReady]);
 
   /** Elenchi globali puri (`Impostazioni → Magazzino`) — SSOT per selettori e validazione form. */
   const marcheGlobal = useMemo(
@@ -1185,79 +1169,54 @@ export function MagazzinoView() {
     };
   }
 
-  async function persistScortaLog(id: string, label: string, prima: number, dopo: number, logId?: string) {
-    const entry = buildMagazzinoScortaPersistedLogEntry({
-      id: logId ?? `log-${Date.now()}-${++logSeqRef.current}`,
-      ricambioId: id,
-      ricambioLabel: label,
-      autore: authorName,
-      prima,
-      dopo,
-      contaStatistiche: modalitaModifica,
-      ...magazzinoLogScopeFields(),
-    });
-    applyLogEntry(entry);
-    return entry.id;
-  }
-
-  const pipelineV4 = useDeterministicStockPipeline();
-
-  function resolveCurrentScorta(id: string, fallback = 0): number {
-    const row = prodotti.find((p) => p.id === id);
-    if (pipelineV4) {
-      const display = getStockDisplayState(queryClient, id);
-      if (display.isPending || display.certifiedQuantita > 0) return display.displayQuantita;
-    }
-    return getStockEntity(queryClient, id)?.quantita ?? Math.round(row?.scorta ?? fallback);
-  }
-
-  async function runScortaAdjust(id: string, delta: number, label: string) {
-    const target = resolveScortaAdjustTarget(resolveCurrentScorta(id), delta);
-    if (!target) return;
-
-    const { prima, dopo, appliedDelta } = target;
-    const stats = modalitaModifica;
-    const logId = `log-${Date.now()}-${++logSeqRef.current}`;
-    persistScortaLog(id, label, prima, dopo, logId);
-    const outcome = await adjustDelta({
-      ricambioId: id,
-      delta: appliedDelta,
-      contaStatistiche: stats,
-      origine: stats ? "manual_adjustment" : "inventario",
-      causale: stats
-        ? appliedDelta > 0
-          ? "carico_manuale"
-          : "scarico_manuale"
-        : "rettifica_inventario",
-    });
-    if (!outcome.ok) {
-      removeMagazzinoLogEntry(logId);
-      toastError(outcome.error, {
-        module: "magazzino",
-        action: "update",
+  const handleDebouncedScortaPersistLog = useCallback(
+    (logId: string, ricambioId: string, ricambioLabel: string, prima: number, dopo: number) => {
+      const entry = buildMagazzinoScortaPersistedLogEntry({
+        id: logId,
+        ricambioId,
+        ricambioLabel,
+        autore: authorName,
+        prima,
+        dopo,
+        contaStatistiche: modalitaModifica,
+        ...magazzinoLogScopeFields(),
       });
-      return;
-    }
-    flashRow(id);
-  }
+      applyLogEntry(entry);
+    },
+    [authorName, modalitaModifica],
+  );
 
-  function adjustScorta(id: string, delta: number) {
-    if (!magCanCreateRicambio) return;
-    const row = prodotti.find((p) => p.id === id);
-    if (!row) return;
-    void runScortaAdjust(id, delta, row.descrizione);
-  }
+  const handleDebouncedScortaCommitSuccess = useCallback(
+    (ricambioId: string) => {
+      flashRow(ricambioId);
+    },
+    [flashRow],
+  );
 
-  function setScortaTarget(id: string, target: number) {
-    if (!magCanCreateRicambio) return;
-    const row = prodotti.find((p) => p.id === id);
-    if (!row) return;
-    const current = resolveCurrentScorta(id);
-    const targetQ = Math.max(0, Math.round(target));
-    const delta = targetQ - current;
-    if (delta === 0) return;
-    void runScortaAdjust(id, delta, row.descrizione);
-  }
+  const handleDebouncedScortaCommitError = useCallback(
+    (error: string) => {
+      toastError(error, { module: "magazzino", action: "update" });
+    },
+    [toastError],
+  );
+
+  const debouncedScortaContextValue = useMemo(
+    () => ({
+      contaStatistiche: modalitaModifica,
+      canAdjust: magCanCreateRicambio,
+      onPersistLog: handleDebouncedScortaPersistLog,
+      onRemoveLog: removeMagazzinoLogEntry,
+      onCommitSuccess: handleDebouncedScortaCommitSuccess,
+      onCommitError: handleDebouncedScortaCommitError,
+    }),
+    [
+      modalitaModifica,
+      magCanCreateRicambio,
+      handleDebouncedScortaPersistLog,
+      handleDebouncedScortaCommitSuccess,
+      handleDebouncedScortaCommitError,
+    ],
+  );
 
   async function undoStockMovement(movimentoId: string) {
     if (!magCanCreateRicambio) return;
@@ -1297,7 +1256,6 @@ export function MagazzinoView() {
 
   function closeNewRicambioModal() {
     setNewOpen(false);
-    setLogEntries(loadMagazzinoChangeLog());
   }
 
   function completeMagazzinoSave(
@@ -1486,8 +1444,8 @@ export function MagazzinoView() {
   }
 
   function resetMagazzinoRicerca() {
-    setSearchInput("");
-    setSearchApplied("");
+    clearSearch();
+    setSearchSuggestionsApplied("");
   }
 
   function resetMagazzinoFilters() {
@@ -1548,7 +1506,13 @@ export function MagazzinoView() {
             <span className="block truncate text-[13px] leading-snug">{p.categoria}</span>
           </td>
           <td className={gestionaleListTableTdCenter}>
-            <MagazzinoScortaDisplayBadge ricambioId={p.id} fallbackScorta={p.scorta} low={low} variant="table" />
+            <MagazzinoScortaDisplayBadge
+              ricambioId={p.id}
+              ricambioLabel={p.descrizione}
+              fallbackScorta={p.scorta}
+              low={low}
+              variant="table"
+            />
           </td>
           <td className={`${gestionaleListTableTdCenter} !text-inherit`}>
             <div className="flex justify-center">
@@ -1595,10 +1559,10 @@ export function MagazzinoView() {
               </IconActionButton>
               <MagazzinoScortaAdjustActionsCell
                 ricambioId={p.id}
+                ricambioLabel={p.descrizione}
+                fallbackScorta={p.scorta}
                 canAdjust={magCanCreateRicambio}
                 modalitaModifica={modalitaModifica}
-                onDecrease={() => adjustScorta(p.id, -1)}
-                onIncrease={() => adjustScorta(p.id, 1)}
               />
             </div>
           </td>
@@ -1673,6 +1637,7 @@ export function MagazzinoView() {
 
   return (
     <GestionaleSectionGate module="magazzino">
+    <MagazzinoDebouncedScortaProvider value={debouncedScortaContextValue}>
     {importExportActions.modal}
     <div
       ref={listLayoutRef}
@@ -1734,7 +1699,7 @@ export function MagazzinoView() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    flushPageSearch();
+                    onSearchEnter();
                   }
                 }}
                 onFocusChange={setSearchFieldFocused}
@@ -1972,7 +1937,13 @@ export function MagazzinoView() {
                   </div>
                   <div className="flex shrink-0 flex-col items-center gap-1">
                     <Tooltip content={low ? "Sotto scorta minima" : "Giacenza"} side="top">
-                      <MagazzinoScortaDisplayBadge ricambioId={p.id} fallbackScorta={p.scorta} low={low} variant="mobile" />
+                      <MagazzinoScortaDisplayBadge
+                        ricambioId={p.id}
+                        ricambioLabel={p.descrizione}
+                        fallbackScorta={p.scorta}
+                        low={low}
+                        variant="mobile"
+                      />
                     </Tooltip>
                     <Tooltip content="Scorta minima" side="top">
                       <MagazzinoScortaBadge value={p.scortaMinima} kind="minima" variant="mobile" />
@@ -2043,10 +2014,10 @@ export function MagazzinoView() {
                   </IconActionButton>
                   <MagazzinoScortaAdjustActionsCell
                     ricambioId={p.id}
+                    ricambioLabel={p.descrizione}
+                    fallbackScorta={p.scorta}
                     canAdjust={magCanCreateRicambio}
                     modalitaModifica={modalitaModifica}
-                    onDecrease={() => adjustScorta(p.id, -1)}
-                    onIncrease={() => adjustScorta(p.id, 1)}
                   />
                   </div>
                 </div>
@@ -2100,8 +2071,6 @@ export function MagazzinoView() {
           canAdjustScorta={magCanCreateRicambio}
           modalitaModifica={modalitaModifica}
           scortaFlash={flashRowId === detailRicambio.id}
-          onAdjustScorta={(delta) => adjustScorta(detailRicambio.id, delta)}
-          onSetScorta={(target) => setScortaTarget(detailRicambio.id, target)}
           stockPolicyRaw={stockPolicyRaw}
           onUndoStockMovement={undoStockMovement}
           undoStockPending={undoStockPending}
@@ -2174,6 +2143,7 @@ export function MagazzinoView() {
       />
       {confirmDialog}
     </div>
+    </MagazzinoDebouncedScortaProvider>
     </GestionaleSectionGate>
   );
 }

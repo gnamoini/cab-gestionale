@@ -81,6 +81,7 @@ import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { GestionalePageHeaderMenu } from "@/components/gestionale/gestionale-page-header-menu";
 import { ordiniFornitoriEntry } from "@/lib/domain/ordini-fornitori-entry";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
 import {
   CardMobile,
   CardMobileActions,
@@ -116,7 +117,6 @@ const OrdineFornitoreEliminaConfirmDialog = dynamic(
   { ssr: false },
 );
 
-const SEARCH_DEBOUNCE_MS = 320;
 
 function compareCreatedDesc(a: OrdineFornitoreRecord, b: OrdineFornitoreRecord): number {
   return b.createdAt.localeCompare(a.createdAt);
@@ -158,12 +158,13 @@ export function OrdiniFornitoriView({
   const { records, isLoading, isError, refetch } = useOrdiniFornitoriQuery(canRead);
   const { searchHaystackById, searchSuggestionPool } = useOrdiniFornitoriListDerived(records);
 
-  const [searchInput, setSearchInput] = useState("");
-  const [searchApplied, setSearchApplied] = useState("");
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearchApplied(searchInput.trim()), SEARCH_DEBOUNCE_MS);
-    return () => window.clearTimeout(t);
-  }, [searchInput]);
+  const {
+    searchInput,
+    setSearchInput,
+    searchApplied,
+    flushSearch: flushPageSearch,
+    clearSearch,
+  } = useGestionaleListSearch({ domain: "ordini-fornitori" });
   const [filters, setFilters] = useState<OrdiniFornitoriPageFilters>(ORDINI_FORNITORI_FILTERS_EMPTY);
   const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
     collapsibleExpandedBoolPref(false, { scope: "ordini-fornitori", key: "filters", userId }),

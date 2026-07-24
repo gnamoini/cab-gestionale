@@ -29,7 +29,7 @@ export function crossFormulaInputFromDerived(
     warehouse: wh
       ? { partsUsedQty: wh.partsUsedQty, movementValue: wh.movementValue }
       : undefined,
-    labor: lab ? { totalHours: lab.totalHours, manodoperaCost: lab.manodoperaCost } : undefined,
+    labor: lab ? { totalHours: lab.totalHours, actualLaborHours: lab.actualLaborHours, manodoperaCost: lab.manodoperaCost } : undefined,
     economic: eco ? { invoicesBilled: eco.invoicesBilled } : undefined,
   };
 }

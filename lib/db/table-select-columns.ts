@@ -7,7 +7,11 @@ export const PROFILES_COLUMNS =
   "id, nome, cognome, username, role_key, cliente_ref, created_at, updated_at" as const;
 
 export const LAVORAZIONI_COLUMNS =
-  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, deleted_at, codice, target_type, attrezzatura_id" as const;
+  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, deleted_at, codice, target_type, attrezzatura_id, actual_labor_hours, actual_labor_hours_source, actual_labor_hours_updated_at" as const;
+
+/** Sync ore consuntive denormalizzate (subset minimo). */
+export const LAVORAZIONI_ACTUAL_HOURS_COLUMNS =
+  "id, actual_labor_hours, actual_labor_hours_source, actual_labor_hours_updated_at" as const;
 
 /** Lista gestionale — senza `deleted_at` (filtro server); profili esclusi (lazy). */
 export const LAVORAZIONI_LIST_LIGHT_COLUMNS =
@@ -17,7 +21,7 @@ export const LAVORAZIONI_DETAIL_COLUMNS = LAVORAZIONI_COLUMNS;
 
 /** Report / KPI — niente embed mezzo (join client da anagrafica). */
 export const LAVORAZIONI_REPORT_LIGHT_COLUMNS =
-  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, deleted_at, codice" as const;
+  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, deleted_at, codice, actual_labor_hours, actual_labor_hours_source, actual_labor_hours_updated_at" as const;
 
 /** Colonne mezzo usate da liste lavorazioni / lookup leggeri (telaio + ident; attrezzatura via join). */
 export const MEZZI_LIST_EMBED_COLUMNS =
@@ -205,7 +209,7 @@ export const DOCUMENTI_COLUMNS =
   "id, mezzo_id, marca, modello, categoria, url_file, meta, created_at" as const;
 
 export const LOG_MODIFICHE_COLUMNS =
-  "id, entita, entita_id, azione, autore_id, payload, created_at" as const;
+  "id, entita, entita_id, azione, autore_id, payload, created_at, company_id, event_type, actor_type, correlation_id, request_id, module, title, description, severity, category" as const;
 
 export const LOG_MODIFICHE_WITH_PROFILE_SELECT =
   `${LOG_MODIFICHE_COLUMNS}, profiles!log_modifiche_autore_id_fkey(id, nome)` as const;

@@ -1,21 +1,20 @@
 import type { jsPDF } from "jspdf";
 import {
+  drawGestionaleCompactFieldSectionTable,
   drawGestionaleDataSectionTable,
   drawGestionaleFieldSectionTable,
-  drawGestionaleSideBySideFieldSections,
   drawGestionaleSideBySideMetricBoxes,
   pdfFieldFromValue,
 } from "@/lib/pdf/gestionale-section-table";
 import {
   buildAnagraficaPdfFields,
-  buildPreventivoAttrezzaturaPdfFields,
-  buildPreventivoTelaioMezzoPdfFields,
+  buildPreventivoOggettoInterventoPdfFields,
   fmtEuroPdf,
   pdfPreventivoVoceTableColumns,
   type PdfField,
 } from "@/lib/pdf/core/pdf-base-template";
 import {
-  parseLavorazioniSpecificheLines,
+  parsePreventivoLavorazioniClientePdfLines,
   type PreventivoRigaOutput,
 } from "@/lib/preventivi/preventivi-struttura";
 import { totaleNettoRigaRicambio } from "@/lib/preventivi/preventivi-totals";
@@ -51,19 +50,8 @@ const LAVORAZIONI_COLUMN_STYLES = {
   0: { cellWidth: "auto" as const },
 };
 
-export function buildLavorazioniEffettuatePdfRows(
-  p: PreventivoRecord,
-  righe: readonly PreventivoRigaOutput[],
-): string[][] {
-  const fromCliente = parseLavorazioniSpecificheLines(p.descrizioneLavorazioniCliente);
-  if (fromCliente.length > 0) {
-    return fromCliente.map((line) => [line]);
-  }
-
-  return righe
-    .filter((r) => r.sezione === "lavorazioni")
-    .map((r) => [r.descrizione.trim()])
-    .filter((row) => row[0]!.length > 0);
+export function buildLavorazioniEffettuatePdfRows(p: PreventivoRecord): string[][] {
+  return parsePreventivoLavorazioniClientePdfLines(p.descrizioneLavorazioniCliente).map((line) => [line]);
 }
 
 export function computeManodoperaSectionTotal(righe: readonly PreventivoRigaOutput[]): number {
@@ -173,29 +161,15 @@ export function drawPreventivoPdfBody(
 ): number {
   let y = startY;
 
-  const anagrafica = buildAnagraficaPdfFields(p, clientePdf);
-  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Dati anagrafici", anagrafica);
+  const destinatario = buildAnagraficaPdfFields(p, clientePdf);
+  y = drawGestionaleCompactFieldSectionTable(doc, y, pageW, "Destinatario", destinatario);
 
-  const targetType = p.targetType ?? (p.marcaAttrezzatura.trim() ? "attrezzatura" : "telaio");
-  if (targetType === "telaio") {
-    y = drawGestionaleFieldSectionTable(
-      doc,
-      y,
-      pageW,
-      "Oggetto intervento — Telaio",
-      buildPreventivoTelaioMezzoPdfFields(p),
-    );
-  } else {
-    y = drawGestionaleSideBySideFieldSections(
-      doc,
-      y,
-      pageW,
-      { title: "Oggetto intervento — Attrezzatura", fields: buildPreventivoAttrezzaturaPdfFields(p) },
-      { title: "Telaio (identificazione)", fields: buildPreventivoTelaioMezzoPdfFields(p) },
-    );
+  const oggetto = buildPreventivoOggettoInterventoPdfFields(p);
+  if (oggetto.length > 0) {
+    y = drawGestionaleCompactFieldSectionTable(doc, y, pageW, "Oggetto intervento", oggetto);
   }
 
-  const lavBody = buildLavorazioniEffettuatePdfRows(p, righe);
+  const lavBody = buildLavorazioniEffettuatePdfRows(p);
   if (lavBody.length > 0) {
     y = drawGestionaleDataSectionTable(
       doc,

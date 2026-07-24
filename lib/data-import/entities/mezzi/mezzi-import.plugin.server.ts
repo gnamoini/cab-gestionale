@@ -11,6 +11,12 @@ import type { FieldPatternSet } from "@/lib/data-import/core/column-mapper";
 import type { ImportExecuteResult, ImportFieldDef, ImportMappingConfig, ImportPreviewRowBase } from "@/lib/data-import/core/types";
 import { IMPORT_EXECUTE_CHUNK, IMPORT_MAX_PREVIEW_ROWS } from "@/lib/data-import/core/types";
 import { lookupClienteByNameOrPiva } from "@/lib/data-import/core/relation-resolver.server";
+import { matchMezziImportRow } from "@/lib/data-import/entities/mezzi/mezzi-import-match-score";
+import {
+  logMezzoResolutionEvent,
+  resolutionEventFromResult,
+} from "@/lib/domain/mezzo/log-mezzo-resolution-event.server";
+import { resolveMezzoRelationFromDb } from "@/lib/data-import/core/relation-resolver.server";
 import { attachMezzoEntityKey } from "@/lib/validation/entity-persistence";
 import { sanitizeMezzoWritePayload } from "@/lib/validation/services/mezzi-payload";
 import { upsertAttrezzaturaForMezzoImport } from "@/lib/data-import/entities/mezzi/mezzi-import-attrezzatura.server";
@@ -120,9 +126,6 @@ function mapMezziRows(matrix: unknown[][], mapping: ImportMappingConfig): MezziI
   return out;
 }
 
-function norm(v: string): string {
-  return v.trim().toLowerCase();
-}
 
 export const mezziImportPlugin: ImportEntityPlugin = {
   id: "mezzi",
@@ -159,7 +162,7 @@ export const mezziImportPlugin: ImportEntityPlugin = {
 
     const sb = await createSupabaseServerUserClient();
     const [{ data: existingMezzi }, { data: existingAtt }] = await Promise.all([
-      sb.from("mezzi").select("id, targa, matricola, cliente"),
+      sb.from("mezzi").select("id, targa, matricola, cliente, numero_scuderia, telaio_num, marca, modello"),
       sb.from("attrezzature").select("id, mezzo_id, matricola"),
     ]);
 
@@ -181,24 +184,22 @@ export const mezziImportPlugin: ImportEntityPlugin = {
         issues.push({ field: "cliente", message: clienteLookup.message, severity: "warning" });
       }
       let dup: { id: string; label?: string } | undefined;
-      if (r.targa) {
-        const targa = r.targa;
-        const byTarga = (existingMezzi ?? []).find(
-          (m) => m.targa && norm(m.targa) === norm(targa),
-        );
-        if (byTarga) dup = { id: byTarga.id, label: byTarga.targa ?? undefined };
-      }
-      if (!dup && r.matricola) {
-        const matricola = r.matricola;
-        const byAttMat = (existingAtt ?? []).find(
-          (a) => a.matricola && norm(a.matricola) === norm(matricola),
-        );
-        if (byAttMat) dup = { id: byAttMat.mezzo_id, label: matricola };
-        else {
-          const legacy = (existingMezzi ?? []).find(
-            (m) => m.matricola && norm(m.matricola) === norm(matricola),
-          );
-          if (legacy) dup = { id: legacy.id, label: legacy.matricola ?? matricola };
+      const match = matchMezziImportRow(r, existingMezzi ?? [], existingAtt ?? []);
+      if (match.kind === "suggest_update") {
+        dup = { id: match.candidate.mezzoId, label: match.candidate.label };
+        issues.push({
+          field: "targa",
+          message: `Possibile duplicato (score ${match.candidate.score}: ${match.candidate.signals.join(", ")})`,
+          severity: "warning",
+        });
+      } else if (match.kind === "manual_review") {
+        issues.push({
+          field: "targa",
+          message: `Match ambiguo (${match.candidates.length} candidati) — revisione manuale`,
+          severity: "warning",
+        });
+        if (match.candidates[0]) {
+          dup = { id: match.candidates[0].mezzoId, label: match.candidates[0].label };
         }
       }
       const severity = issues.some((i) => i.severity === "error") ? "error" : issues.length ? "warning" : "valid";
@@ -290,6 +291,16 @@ export const mezziImportPlugin: ImportEntityPlugin = {
         );
 
         if ((d.action === "update" || d.action === "replace") && d.duplicateId) {
+          const resolution = await resolveMezzoRelationFromDb(sb, { targa: d.targa, matricola: d.matricola });
+          await logMezzoResolutionEvent(
+            sb,
+            resolutionEventFromResult("import", resolution, {
+              targa: d.targa,
+              matricola: d.matricola,
+              nScuderia: d.numero_scuderia,
+              vin: d.telaio,
+            }, { batchId: input.batchId, rowIndex: d.rowIndex, action: d.action }),
+          );
           const { error } = await sb.from("mezzi").update(payload).eq("id", d.duplicateId);
           if (error) {
             result.stats.errors += 1;
@@ -304,6 +315,16 @@ export const mezziImportPlugin: ImportEntityPlugin = {
             }
           }
         } else if (d.action === "create") {
+          const resolution = await resolveMezzoRelationFromDb(sb, { targa: d.targa, matricola: d.matricola });
+          await logMezzoResolutionEvent(
+            sb,
+            resolutionEventFromResult("import", resolution, {
+              targa: d.targa,
+              matricola: d.matricola,
+              nScuderia: d.numero_scuderia,
+              vin: d.telaio,
+            }, { batchId: input.batchId, rowIndex: d.rowIndex, action: "create" }),
+          );
           const { data: inserted, error } = await sb.from("mezzi").insert(payload).select("id").single();
           if (error) {
             result.stats.errors += 1;

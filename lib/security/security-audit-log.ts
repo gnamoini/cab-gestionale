@@ -1,10 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { recordAuditEvent } from "@/lib/audit/record";
 
 export type SecurityAuditAction =
   | "RESET_PASSWORD_ADMIN"
   | "DISATTIVAZIONE UTENTE"
   | "RIATTIVAZIONE UTENTE"
   | "ACCESS_SECURITY";
+
+export class SecurityAuditLogError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SecurityAuditLogError";
+  }
+}
 
 type SecurityAuditPayload = {
   actor_id: string;
@@ -33,12 +41,21 @@ export async function writeSecurityAuditLog(
     result: input.result,
   };
 
-  const { error } = await admin.from("log_modifiche").insert({
-    entita: "security",
-    entita_id: input.targetUserId,
-    azione: input.entitaAzione ?? input.action,
-    autore_id: input.actorUserId,
-    payload,
-  });
-  if (error) console.warn("[security] audit log:", error.message);
+  try {
+    await recordAuditEvent(admin as never, {
+      entityType: "security",
+      entityId: input.targetUserId,
+      action: input.entitaAzione ?? input.action,
+      eventType: "SECURITY_ACTION",
+      actorType: "USER",
+      autoreId: input.actorUserId,
+      severity: input.result === "failure" ? "warning" : "info",
+      module: "security",
+      title: input.action,
+      payload,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new SecurityAuditLogError(message);
+  }
 }

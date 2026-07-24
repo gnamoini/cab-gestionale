@@ -86,8 +86,12 @@ export function RicambioEditModal({
   const queryClient = useQueryClient();
   const { mezziListe: mergedMezziListe } = useGlobalOptions({ debugTag: "RicambioEditModal" });
   const compatExpand = useMemo(
-    () => buildRicambioCompatExpandOptions({ mezziListe: mergedMezziListe }),
-    [mergedMezziListe],
+    () =>
+      buildRicambioCompatExpandOptions({
+        mezziListe: mezziListePrefs,
+        mezziListeMerged: mergedMezziListe,
+      }),
+    [mergedMezziListe, mezziListePrefs],
   );
   const baselineForm = useMemo(() => toFormDraft(ricambio, mezziListePrefs), [ricambio, mezziListePrefs]);
   const formEngine = useFormEngine<RicambioFormState>({
@@ -241,7 +245,7 @@ export function RicambioEditModal({
           onSaveError(updated.error ?? "Salvataggio non riuscito.");
           return;
         }
-        const ui = ricambioUiFromMagazzinoRow(updated.data, authorName, mezziListePrefs);
+        const ui = ricambioUiFromMagazzinoRow(updated.data, authorName, mergedMezziListe);
         reset(toFormDraft(ui, mezziListePrefs));
         const lenientHint =
           placeholderFlags.marcaPlaceholder ||

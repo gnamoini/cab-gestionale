@@ -3,6 +3,8 @@ import { cutBorderRectSvg } from "@/lib/inventory-labels/render/cut-border";
 import { labelFontFaceCss } from "@/lib/inventory-labels/render/label-fonts";
 import { renderLabelSvg } from "@/lib/inventory-labels/render/svg";
 import { getLabelTemplate, mmToPx } from "@/lib/inventory-labels/domain/templates";
+import { DEFAULT_COMPANY_WEBSITE_URL } from "@/lib/branding/branding-settings-model";
+import { formatLabelJobPreset, parseLabelJobPreset } from "@/lib/inventory-labels/validation";
 
 const template = getLabelTemplate("60x40-default")!;
 const w = mmToPx(template.widthMm, template.dpi);
@@ -40,6 +42,27 @@ async function main() {
     withoutBarcode.match(/viewBox="0 0 (\d+) (\d+)"/)?.[0],
     "layout dimensions unchanged without barcode",
   );
+
+  const clienteTemplate = getLabelTemplate("60x40-default", "cliente")!;
+  const clienteSvg = await renderLabelSvg(clienteTemplate, payload, DEFAULT_COMPANY_WEBSITE_URL, {
+    ...renderOpts,
+    includeBarcode: false,
+    labelKind: "cliente",
+  });
+  assert.ok(clienteSvg.includes("<image"), "cliente label embeds logo");
+  assert.ok(!clienteSvg.includes("ALT-99"), "cliente label omits supplier alt text");
+
+  const a4Template = getLabelTemplate("a4-pagina-intera")!;
+  const a4Svg = await renderLabelSvg(a4Template, payload, qrUrl, { ...renderOpts, includeBarcode: false });
+  const a4Paths = a4Svg.match(/<path d="/g)?.length ?? 0;
+  assert.ok(a4Paths >= 8, "A4 bold: multi-layer ink paths");
+
+  assert.equal(formatLabelJobPreset("95x40-default", false, true), "95x40-default::no-barcode::cliente");
+  assert.deepEqual(parseLabelJobPreset("95x40-default::no-barcode::cliente"), {
+    preset: "95x40-default",
+    includeBarcode: false,
+    clienteLabel: true,
+  });
 
   console.log("inventory-labels/render/svg.test.ts OK");
 }

@@ -6,6 +6,8 @@ import {
   type PreventiviAdvancedFilters,
 } from "@/lib/preventivi/preventivi-advanced-filters";
 import { preventivoTipoDocumentoLabel } from "@/lib/preventivi/preventivi-tipo-documento";
+import { buildSearchDocumentPreventivo } from "@/lib/search/builders/build-search-document-preventivo";
+import { matchSearchString } from "@/lib/search/match";
 import { filterListSelectSuggestions } from "@/lib/ui/list-select-utils";
 
 export type PreventiviPageFilters = PreventiviAdvancedFilters & {
@@ -14,34 +16,11 @@ export type PreventiviPageFilters = PreventiviAdvancedFilters & {
 
 /** Testo indicizzato per ricerca globale preventivi. */
 export function preventivoRowSearchHaystack(row: PreventivoRecord): string {
-  return [
-    row.numero,
-    row.cliente,
-    row.cantiere,
-    row.utilizzatore,
-    row.macchinaRiassunto,
-    row.targa,
-    row.matricola,
-    row.nScuderia,
-    row.marcaAttrezzatura,
-    row.modelloAttrezzatura,
-    row.lavorazioneId,
-    row.stato,
-    preventivoStatoLabel(row.stato),
-    row.tipoDocumento,
-    preventivoTipoDocumentoLabel(row.tipoDocumento),
-    preventivoTipoDocumentoLabel(row.tipoDocumento, "short"),
-    row.descrizioneLavorazioniCliente,
-  ]
-    .filter((s) => typeof s === "string" && s.trim().length > 0)
-    .join(" ")
-    .toLowerCase();
+  return buildSearchDocumentPreventivo(row);
 }
 
 export function preventivoRowMatchesGlobalSearch(row: PreventivoRecord, query: string): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return preventivoRowSearchHaystack(row).includes(q);
+  return matchSearchString(query, preventivoRowSearchHaystack(row)).matches;
 }
 
 export function preventivoRowMatchesPageFilters(row: PreventivoRecord, filters: PreventiviPageFilters): boolean {
@@ -56,7 +35,6 @@ export function buildPreventiviSearchSuggestions(
   query: string,
   limit = 8,
 ): string[] {
-  const q = query.trim().toLowerCase();
   const labels: string[] = [];
   const seen = new Set<string>();
 
@@ -68,7 +46,7 @@ export function buildPreventiviSearchSuggestions(
   };
 
   for (const r of rows) {
-    if (q && !preventivoRowSearchHaystack(r).includes(q)) continue;
+    if (query.trim() && !preventivoRowMatchesGlobalSearch(r, query)) continue;
     push(`${r.numero} · ${preventivoTipoDocumentoLabel(r.tipoDocumento, "short")} · ${r.cliente || "—"}`);
     if (r.macchinaRiassunto.trim()) push(`${r.numero} · ${r.macchinaRiassunto.trim()}`);
     if (labels.length >= limit * 2) break;

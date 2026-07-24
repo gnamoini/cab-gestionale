@@ -8,19 +8,16 @@ import {
   preventivoRowToRecord,
 } from "@/lib/preventivi/preventivi-db-mapper";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
-import { lavorazioneListRowToAttiva } from "@/lib/lavorazioni/lavorazioni-report-adapter";
-import { lavorazioneMatchesMezzo, normMezzoKey } from "@/lib/mezzi/lavorazioni-sync";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { mezzoGestitoToEmbedRow } from "@/lib/mezzi/mezzi-attrezzature-batch";
-import { findMezzoForLavorazione } from "@/lib/schede/schede-autofill";
-import { findMezzoByIngressoIdent } from "@/lib/mezzi/find-mezzo-by-ident";
+import { resolveMezzoByIdentFromCatalog } from "@/lib/mezzi/find-mezzo-by-ident";
 import {
   cabSyncEventForEntity,
   dispatchGestionaleLocalMutation,
 } from "@/lib/sync/gestionale-sync-dispatch";
 import { preventiviService } from "@/src/services/preventivi.service";
 import type { PreventiviFilters } from "@/src/services/preventivi.service";
-import { lavorazioniService, type LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import { lavorazioniService } from "@/src/services/lavorazioni.service";
 import type { PreventivoRow } from "@/src/types/supabase-tables";
 
 export const PREVENTIVI_CONCURRENCY_CONFLICT =
@@ -57,33 +54,21 @@ async function resolveMezzoIdForRecord(
   const stored = (record as unknown as { mezzoId?: string }).mezzoId;
   if (typeof stored === "string" && isPreventivoUuid(stored)) return stored;
 
-  const byRecordIdent = findMezzoByIngressoIdent(mezziGestiti, {
+  const byRecordIdent = resolveMezzoByIdentFromCatalog(mezziGestiti, {
     targa: record.targa,
     matricola: record.matricola,
     nScuderia: record.nScuderia,
   });
-  if (byRecordIdent?.id && isPreventivoUuid(byRecordIdent.id)) return byRecordIdent.id;
+  if (byRecordIdent.status === "resolved" && isPreventivoUuid(byRecordIdent.mezzoId)) {
+    return byRecordIdent.mezzoId;
+  }
 
   if (isPreventivoUuid(record.lavorazioneId)) {
     const lavRes = await lavorazioniService.getById(record.lavorazioneId);
     if (lavRes.success && lavRes.data) {
       const row = lavRes.data;
       if (row.mezzo_id && isPreventivoUuid(row.mezzo_id)) return row.mezzo_id;
-      const mezzoEmbed = mezziGestiti.find((m) => m.id === row.mezzo_id);
-      const mezzoRow = mezzoEmbed ? mezzoGestitoToEmbedRow(mezzoEmbed) : null;
-      const listRow = { ...row, mezzo: mezzoRow } as LavorazioneListRow;
-      const lav = lavorazioneListRowToAttiva(listRow);
-      const m = findMezzoForLavorazione([...mezziGestiti], lav);
-      if (m?.id && isPreventivoUuid(m.id)) return m.id;
-      const hit = mezziGestiti.find((g) => lavorazioneMatchesMezzo(g, lav));
-      if (hit?.id && isPreventivoUuid(hit.id)) return hit.id;
     }
-  }
-
-  const clienteKey = normMezzoKey(record.cliente);
-  if (clienteKey) {
-    const byCliente = mezziGestiti.find((m) => normMezzoKey(m.cliente) === clienteKey);
-    if (byCliente?.id) return byCliente.id;
   }
 
   return null;

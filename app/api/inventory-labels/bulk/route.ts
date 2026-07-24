@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   }
 
   const normalized = normalizeBulkLabelRequest(parsed.data);
-  const { items, preset, includeBarcode, totalLabels } = normalized;
+  const { items, preset, includeBarcode, clienteLabel, totalLabels } = normalized;
   const origin = requestOrigin(request);
 
   if (isBulkSyncCount(totalLabels)) {
@@ -48,6 +48,7 @@ export async function POST(request: Request) {
           items,
           preset,
           includeBarcode,
+          clienteLabel,
           userId: auth.userId,
           origin,
         });
@@ -78,11 +79,12 @@ export async function POST(request: Request) {
 
   try {
     const jobId = await createBulkLabelJob({
-      items,
-      preset,
-      includeBarcode,
+      items: normalized.items,
+      preset: normalized.preset,
+      includeBarcode: normalized.includeBarcode,
+      clienteLabel: normalized.clienteLabel,
       userId: auth.userId,
-      origin,
+      origin: requestOrigin(request),
     });
     return NextResponse.json({ jobId, async: true, totalLabels }, { status: 202 });
   } catch (e) {

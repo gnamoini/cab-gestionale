@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { GestionaleNumericField } from "@/components/gestionale/gestionale-numeric-field";
 import { GestionaleTextarea, type GestionaleTextareaProps } from "@/components/gestionale/gestionale-textarea";
 import { GlobalDatePicker } from "@/components/gestionale/global-input";
 import {
   insertCaptureLavorazioniBulletNewline,
   normalizeCaptureLavorazioniTextDraft,
 } from "@/lib/document-capture/capture-lavorazioni-text";
+import { NUMERIC_PRESETS } from "@/lib/core/numeric-input-policy";
 import { dsBtnNeutral, dsInput, dsLabel } from "@/lib/ui/design-system";
 
 export function todayItDate(): string {
@@ -144,30 +146,14 @@ export function SchedaOreNumberInput({
   readOnly?: boolean;
   className?: string;
 }) {
-  const [text, setText] = useState(() => (Number.isFinite(value) ? String(value) : "0"));
-  useEffect(() => {
-    setText(Number.isFinite(value) ? String(value) : "0");
-  }, [value]);
   return (
-    <input
-      type="number"
-      step={1}
-      min={0}
-      inputMode="decimal"
+    <GestionaleNumericField
+      value={Number.isFinite(value) ? value : 0}
+      preset={NUMERIC_PRESETS.oreLavorazione}
+      onCommit={onChange}
       readOnly={readOnly}
       className={className}
-      value={text}
-      onChange={(e) => {
-        setText(e.target.value);
-        const n = Number.parseFloat(e.target.value.replace(",", "."));
-        if (Number.isFinite(n) && n >= 0) onChange(Math.round(n * 1000) / 1000);
-      }}
-      onBlur={() => {
-        const n = Number.parseFloat(text.replace(",", "."));
-        const next = Number.isFinite(n) && n >= 0 ? Math.round(n * 1000) / 1000 : 0;
-        setText(String(next));
-        onChange(next);
-      }}
+      aria-label="Ore impiegate"
     />
   );
 }

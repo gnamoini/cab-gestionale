@@ -17,6 +17,14 @@ import {
   sottoScortaMinTableConfig,
   sottoScortaTableConfig,
 } from "@/lib/report/design-system/table-configs/lavorazioni";
+import {
+  analisiOreProduttivitaTableConfig,
+  analisiOreStimaConsuntivoTableConfig,
+} from "@/lib/report/design-system/table-configs/analisi-ore";
+import {
+  qualitaInterventiTableConfig,
+  recidivaMezziTableConfig,
+} from "@/lib/report/design-system/table-configs/recidivita";
 import type { ReportTableConfig } from "@/lib/report/design-system/table-configs/types";
 
 export const REPORT_TABLE_CONFIGS: Record<string, ReportTableConfig> = {
@@ -39,6 +47,10 @@ export const REPORT_TABLE_CONFIGS: Record<string, ReportTableConfig> = {
   [crossOutlierTableConfig.id]: crossOutlierTableConfig,
   [crossClienteTableConfig.id]: crossClienteTableConfig,
   [crossMezzoCostTableConfig.id]: crossMezzoCostTableConfig,
+  [analisiOreProduttivitaTableConfig.id]: analisiOreProduttivitaTableConfig,
+  [analisiOreStimaConsuntivoTableConfig.id]: analisiOreStimaConsuntivoTableConfig,
+  [recidivaMezziTableConfig.id]: recidivaMezziTableConfig,
+  [qualitaInterventiTableConfig.id]: qualitaInterventiTableConfig,
 };
 
 export function getReportTableConfig(configId: string): ReportTableConfig {

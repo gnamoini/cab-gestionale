@@ -2,6 +2,8 @@
 
 import { IconActionButton } from "@/components/design-system";
 import { HubIconPlus } from "@/components/design-system/hub-table-action-icons";
+import { GestionaleNumericField } from "@/components/gestionale/gestionale-numeric-field";
+import { GestionaleQuantityField } from "@/components/gestionale/gestionale-quantity-field";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import {
   preventivoEditorAddRowBtn,
@@ -16,6 +18,7 @@ import {
   preventivoEditorUmSegmentOn,
   preventivoEditorUmSegmentWrap,
 } from "@/components/preventivi/preventivo-editor-ui";
+import { NUMERIC_PRESETS } from "@/lib/core/numeric-input-policy";
 import { CAB_FOCUS_SCROLL_GROUP_ATTR } from "@/lib/ui/mobile-modal-behavior";
 import {
   formatRicambioUnitaMisuraLabel,
@@ -116,14 +119,11 @@ function RicambioRigaRow({
         />
       </td>
       <td className={preventivoEditorTableTdClass}>
-        <input
+        <GestionaleQuantityField
           className={preventivoEditorTableInputNumber}
-          type="number"
-          min={0.01}
-          step={0.01}
-          inputMode="decimal"
           value={r.quantita}
-          onChange={(e) => onPatchRiga(r.id, { quantita: Math.max(0.01, parseFloat(e.target.value) || 0) })}
+          unitaMisura={unita}
+          onCommit={(quantita) => onPatchRiga(r.id, { quantita })}
           aria-label={`Quantità riga ${idx + 1}`}
         />
       </td>
@@ -135,33 +135,20 @@ function RicambioRigaRow({
         />
       </td>
       <td className={preventivoEditorTableTdClass}>
-        <input
+        <GestionaleNumericField
           className={preventivoEditorTableInputNumber}
-          type="number"
-          min={0}
-          step={0.01}
-          inputMode="decimal"
           value={r.prezzoUnitario}
-          onChange={(e) =>
-            onPatchRiga(r.id, { prezzoUnitario: Math.max(0, parseFloat(e.target.value) || 0) })
-          }
+          preset={NUMERIC_PRESETS.prezzo}
+          onCommit={(prezzoUnitario) => onPatchRiga(r.id, { prezzoUnitario })}
           aria-label={`Prezzo unitario riga ${idx + 1}`}
         />
       </td>
       <td className={preventivoEditorTableTdClass}>
-        <input
+        <GestionaleNumericField
           className={preventivoEditorTableInputNumber}
-          type="number"
-          min={0}
-          max={100}
-          step={0.5}
-          inputMode="decimal"
           value={r.scontoPercent ?? 0}
-          onChange={(e) =>
-            onPatchRiga(r.id, {
-              scontoPercent: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)),
-            })
-          }
+          preset={NUMERIC_PRESETS.percentuale}
+          onCommit={(scontoPercent) => onPatchRiga(r.id, { scontoPercent })}
           aria-label={`Sconto percentuale riga ${idx + 1}`}
         />
       </td>
@@ -218,20 +205,13 @@ function MaterialiConsumoRigaRow({
         —
       </td>
       <td className={preventivoEditorTableTdClass}>
-        <input
+        <GestionaleNumericField
           id="preventivo-materiali-prezzo"
           className={preventivoEditorTableInputNumber}
-          type="number"
-          min={0}
-          step={0.01}
-          inputMode="decimal"
-          aria-label="Prezzo materiali di consumo"
           value={r.prezzoUnitario}
-          onChange={(e) =>
-            onPatchRiga(r.id, {
-              prezzoUnitario: Math.max(0, parseFloat(e.target.value) || 0),
-            })
-          }
+          preset={NUMERIC_PRESETS.prezzo}
+          onCommit={(prezzoUnitario) => onPatchRiga(r.id, { prezzoUnitario })}
+          aria-label="Prezzo materiali di consumo"
         />
       </td>
       <td className={`${preventivoEditorTableTdClass} text-right tabular-nums ${preventivoEditorBody} text-[color:var(--cab-text-muted)]`}>

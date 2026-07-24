@@ -32,6 +32,6 @@ export type CrossPayloadData = {
 export type CrossFormulaInput = {
   operational?: { completedInPeriod: number };
   warehouse?: { partsUsedQty: number; movementValue: number };
-  labor?: { totalHours: number; manodoperaCost: number };
+  labor?: { totalHours: number; actualLaborHours?: number; manodoperaCost: number };
   economic?: { invoicesBilled: number };
 };

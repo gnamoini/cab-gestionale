@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { GestionaleNumberInput } from "@/components/gestionale/gestionale-number-input";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { CloseButton } from "@/components/design-system";
 import { useRicambioFormOptions } from "@/components/gestionale/magazzino/ricambio-form-options-context";
@@ -13,9 +14,6 @@ import { getScontoFornitoreAlternativo } from "@/lib/magazzino/fornitore-alterna
 import { dsBtnNeutralForm, dsInput } from "@/lib/ui/design-system";
 
 const ricambioFormInputClass = dsInput;
-
-const noSpinner =
-  "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
 type Props = {
   rows: RicambioFornitoreAlternativoFormRow[];
@@ -107,29 +105,26 @@ function RicambioFornitoriAlternativiEditorInner({ rows, onChange, readOnly = fa
                 <div className="grid grid-cols-2 gap-3">
                   <label className="block min-w-0">
                     <span className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]">Prezzo €</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
+                    <GestionaleNumberInput
                       inputMode="decimal"
                       value={row.prezzo}
-                      onChange={(e) => onChange(patchRow(rows, row.id, { prezzo: e.target.value }))}
+                      onChange={(prezzo) => onChange(patchRow(rows, row.id, { prezzo }))}
                       disabled={readOnly}
-                      className={`${ricambioFormInputClass} ${noSpinner} tabular-nums`}
+                      className={`${ricambioFormInputClass} tabular-nums`}
+                      aria-label={`Prezzo fornitore alternativo ${index + 1}`}
                     />
                   </label>
                   <label className="block min-w-0">
                     <span className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]">Sconto %</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step={0.01}
+                    <GestionaleNumberInput
                       inputMode="decimal"
                       value={row.sconto}
-                      onChange={(e) => onChange(patchRow(rows, row.id, { sconto: e.target.value }))}
+                      onChange={(sconto) => onChange(patchRow(rows, row.id, { sconto }))}
                       disabled={readOnly}
-                      className={`${ricambioFormInputClass} ${noSpinner} tabular-nums`}
+                      min={0}
+                      max={100}
+                      className={`${ricambioFormInputClass} tabular-nums`}
+                      aria-label={`Sconto fornitore alternativo ${index + 1}`}
                     />
                   </label>
                 </div>

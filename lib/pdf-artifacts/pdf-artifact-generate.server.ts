@@ -186,6 +186,10 @@ async function deliverPdfArtifactInner(
         totale: p.totaleFinale,
         righeCount: p.righeRicambi.length,
         anagUpdatedAt: clienteAnag?.updatedAt ?? null,
+        descrizioneLavorazioniCliente: p.descrizioneLavorazioniCliente,
+        noteFinali: p.noteFinali,
+        collaudoPrezzo: p.collaudoPrezzo,
+        manodopera: p.manodopera,
       });
       scopeId = id;
       fileName = preventivoPdfFileName(p);

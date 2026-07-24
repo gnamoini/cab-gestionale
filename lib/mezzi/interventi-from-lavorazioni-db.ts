@@ -1,7 +1,5 @@
 import { isLavorazioneArchived } from "@/lib/lavorazioni/archived";
 import { durataMsStorico } from "@/lib/lavorazioni/duration";
-import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
-import { lavRowToMatchShape } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito, MezzoInterventoLavorazione } from "@/lib/mezzi/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
@@ -31,45 +29,47 @@ export function isLavorazioneStoricoDb(_stato: string): boolean {
   return false;
 }
 
-/** Collegamento mezzo–lavorazione: FK `mezzo_id` stretto, fuzzy solo senza FK, esclude soft-deleted. */
+/** Collegamento mezzo–lavorazione: solo FK `mezzo_id` (no fuzzy attach su orfani). */
 export function lavorazioneCollegataMezzoDb(m: MezzoGestito, row: LavorazioneListRow): boolean {
   if (row.deleted_at) return false;
   const mezzoId = row.mezzo_id?.trim();
-  if (mezzoId) return mezzoId === m.id;
-  return lavorazioneMatchesMezzo(m, lavRowToMatchShape(row));
+  return Boolean(mezzoId && mezzoId === m.id);
 }
 
-function lavRowToIntervento(row: LavorazioneListRow): MezzoInterventoLavorazione {
+function lavRowToIntervento(row: LavorazioneListRow, weakMezzoLink = false): MezzoInterventoLavorazione {
   const ing = row.data_ingresso?.trim() ? row.data_ingresso : row.created_at;
   const fin = row.data_uscita;
   const statoLabel = labelLavorazioneStatoDb(row.stato);
+  const base = {
+    id: row.id,
+    codice: row.codice ?? null,
+    dataIngresso: ing,
+    dataCompletamento: fin,
+    tipoIntervento: statoLabel,
+    descrizione: (row.note ?? "").trim() || "—",
+    prioritaLabel: prioritaIt(row.priorita),
+    statoId: row.stato,
+    targetType:
+      row.target_type === "telaio" || row.target_type === "attrezzatura" ? row.target_type : undefined,
+    weakMezzoLink,
+  };
   if (isLavorazioneArchived(row)) {
     const { label, num } = giorniTra(ing, fin);
     return {
-      id: row.id,
+      ...base,
       origine: "storico",
-      dataIngresso: ing,
-      dataCompletamento: fin,
       durataGiorniLabel: label,
       durataGiorniNum: num,
-      tipoIntervento: statoLabel,
-      descrizione: (row.note ?? "").trim() || "—",
-      prioritaLabel: prioritaIt(row.priorita),
       statoFinale: statoLabel,
     };
   }
   const completed = fin;
   const dur = completed ? giorniTra(ing, completed) : { label: "In corso", num: 0 };
   return {
-    id: row.id,
+    ...base,
     origine: "attiva",
-    dataIngresso: ing,
-    dataCompletamento: completed,
     durataGiorniLabel: dur.label,
     durataGiorniNum: dur.num,
-    tipoIntervento: statoLabel,
-    descrizione: (row.note ?? "").trim() || "—",
-    prioritaLabel: prioritaIt(row.priorita),
     statoFinale: completed ? statoLabel : "In officina",
   };
 }
@@ -102,28 +102,19 @@ export function buildInterventiByMezzoIdFromLavorazioni(
   rows: readonly LavorazioneListRow[],
 ): Map<string, MezzoInterventoLavorazione[]> {
   const fkByMezzoId = new Map<string, LavorazioneListRow[]>();
-  const orphans: LavorazioneListRow[] = [];
   for (const row of rows) {
     if (row.deleted_at) continue;
     const mezzoId = row.mezzo_id?.trim();
-    if (mezzoId) {
-      const list = fkByMezzoId.get(mezzoId);
-      if (list) list.push(row);
-      else fkByMezzoId.set(mezzoId, [row]);
-    } else {
-      orphans.push(row);
-    }
+    if (!mezzoId) continue;
+    const list = fkByMezzoId.get(mezzoId);
+    if (list) list.push(row);
+    else fkByMezzoId.set(mezzoId, [row]);
   }
 
   const map = new Map<string, MezzoInterventoLavorazione[]>();
   for (const m of mezzi) {
     const matched: LavorazioneListRow[] = [...(fkByMezzoId.get(m.id) ?? [])];
-    if (orphans.length > 0) {
-      for (const row of orphans) {
-        if (lavorazioneMatchesMezzo(m, lavRowToMatchShape(row))) matched.push(row);
-      }
-    }
-    map.set(m.id, sortInterventi(matched.map(lavRowToIntervento)));
+    map.set(m.id, sortInterventi(matched.map((row) => lavRowToIntervento(row, !row.mezzo_id?.trim()))));
   }
   return map;
 }

@@ -26,6 +26,44 @@ export const labelPresetSchema = z.enum(LABEL_PRESET_IDS as [string, ...string[]
 export const labelFormatSchema = z.enum(LABEL_FORMATS);
 
 const LABEL_JOB_NO_BARCODE_SUFFIX = "::no-barcode";
+const LABEL_JOB_CLIENTE_SUFFIX = "::cliente";
+
+export type ParsedLabelJobPreset = {
+  preset: string;
+  includeBarcode: boolean;
+  clienteLabel: boolean;
+};
+
+export type NormalizedBulkLabelRequest = {
+  items: BulkLabelCompactItem[];
+  preset: string;
+  format: z.infer<typeof labelFormatSchema>;
+  includeBarcode: boolean;
+  clienteLabel: boolean;
+  labelOptions?: Record<string, unknown>;
+  totalLabels: number;
+};
+
+/** ponytail: persistenza flag job async senza migration — upgrade path: colonna dedicata. */
+export function formatLabelJobPreset(
+  preset: string,
+  includeBarcode: boolean,
+  clienteLabel = false,
+): string {
+  let stored = preset;
+  if (!includeBarcode) stored += LABEL_JOB_NO_BARCODE_SUFFIX;
+  if (clienteLabel) stored += LABEL_JOB_CLIENTE_SUFFIX;
+  return stored;
+}
+
+export function parseLabelJobPreset(stored: string): ParsedLabelJobPreset {
+  let value = stored;
+  const clienteLabel = value.endsWith(LABEL_JOB_CLIENTE_SUFFIX);
+  if (clienteLabel) value = value.slice(0, -LABEL_JOB_CLIENTE_SUFFIX.length);
+  const includeBarcode = !value.endsWith(LABEL_JOB_NO_BARCODE_SUFFIX);
+  const preset = includeBarcode ? value : value.slice(0, -LABEL_JOB_NO_BARCODE_SUFFIX.length);
+  return { preset, includeBarcode, clienteLabel };
+}
 
 export const bulkLabelItemSchema = z.object({
   id: z.string().uuid(),
@@ -35,34 +73,11 @@ export const bulkLabelItemSchema = z.object({
 
 export type BulkLabelRequestItem = z.infer<typeof bulkLabelItemSchema>;
 
-export type NormalizedBulkLabelRequest = {
-  items: BulkLabelCompactItem[];
-  preset: string;
-  format: z.infer<typeof labelFormatSchema>;
-  includeBarcode: boolean;
-  labelOptions?: Record<string, unknown>;
-  totalLabels: number;
-};
-
-/** ponytail: persistenza includeBarcode su job async senza migration — upgrade path: colonna dedicata. */
-export function formatLabelJobPreset(preset: string, includeBarcode: boolean): string {
-  return includeBarcode ? preset : `${preset}${LABEL_JOB_NO_BARCODE_SUFFIX}`;
-}
-
-export function parseLabelJobPreset(stored: string): { preset: string; includeBarcode: boolean } {
-  if (stored.endsWith(LABEL_JOB_NO_BARCODE_SUFFIX)) {
-    return {
-      preset: stored.slice(0, -LABEL_JOB_NO_BARCODE_SUFFIX.length),
-      includeBarcode: false,
-    };
-  }
-  return { preset: stored, includeBarcode: true };
-}
-
 const bulkLabelRequestBaseSchema = z.object({
   preset: labelPresetSchema,
   format: labelFormatSchema.default("pdf"),
   includeBarcode: z.boolean().default(DEFAULT_INCLUDE_BARCODE),
+  clienteLabel: z.boolean().default(false),
   labelOptions: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -115,6 +130,7 @@ export function normalizeBulkLabelRequest(
     preset: parsed.preset,
     format: parsed.format,
     includeBarcode: parsed.includeBarcode,
+    clienteLabel: parsed.clienteLabel,
     labelOptions: parsed.labelOptions,
     totalLabels: totalBulkLabelCount(items),
   };
@@ -135,6 +151,11 @@ export const renderLabelQuerySchema = z.object({
     .enum(["true", "false"])
     .optional()
     .default(DEFAULT_INCLUDE_BARCODE ? "true" : "false")
+    .transform((v) => v === "true"),
+  clienteLabel: z
+    .enum(["true", "false"])
+    .optional()
+    .default("false")
     .transform((v) => v === "true"),
   quantity: z.coerce.number().int().min(BULK_QUANTITY_MIN).max(BULK_QUANTITY_MAX).default(1),
 });

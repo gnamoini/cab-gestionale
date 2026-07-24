@@ -1,40 +1,31 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { matchMezziImportRow, MEZZI_IMPORT_UPDATE_THRESHOLD } from "@/lib/data-import/entities/mezzi/mezzi-import-match-score";
 
-const norm = (s: string) => s.trim().toLowerCase();
-
-function findImportDup(
-  r: { targa?: string; matricola?: string },
-  existingMezzi: Array<{ id: string; targa?: string | null; matricola?: string | null }>,
-  existingAtt: Array<{ id: string; mezzo_id: string; matricola?: string | null }>,
-): { id: string } | undefined {
-  let dup: { id: string } | undefined;
-  if (r.targa) {
-    const byTarga = existingMezzi.find((m) => m.targa && norm(m.targa) === norm(r.targa!));
-    if (byTarga) dup = { id: byTarga.id };
-  }
-  if (!dup && r.matricola) {
-    const byAttMat = existingAtt.find((a) => a.matricola && norm(a.matricola) === norm(r.matricola!));
-    if (byAttMat) dup = { id: byAttMat.mezzo_id };
-  }
-  return dup;
+// Scoring: solo scuderia non supera soglia update
+const scuderiaOnly = matchMezziImportRow(
+  { numero_scuderia: "99" },
+  [{ id: "x", numero_scuderia: "99" }],
+  [],
+);
+assert.equal(scuderiaOnly.kind, "manual_review");
+if (scuderiaOnly.kind === "manual_review") {
+  assert.ok(scuderiaOnly.candidates[0]!.score < MEZZI_IMPORT_UPDATE_THRESHOLD);
 }
 
-assert.deepEqual(
-  findImportDup({ matricola: "M1" }, [], [{ id: "a1", mezzo_id: "mezzo-1", matricola: "M1" }]),
-  { id: "mezzo-1" },
+// VIN → suggest update
+const vin = matchMezziImportRow(
+  { telaio: "1HGBH41JXMN109186" },
+  [{ id: "v", telaio_num: "1HGBH41JXMN109186" }],
+  [],
 );
-
-assert.deepEqual(
-  findImportDup({ targa: "AB123" }, [{ id: "m2", targa: "AB123" }], []),
-  { id: "m2" },
-);
+assert.equal(vin.kind, "suggest_update");
 
 const plugin = fs.readFileSync(
   path.join(process.cwd(), "lib/data-import/entities/mezzi/mezzi-import.plugin.server.ts"),
   "utf8",
 );
-assert.match(plugin, /from\("attrezzature"\)\.select\("id, mezzo_id, matricola"\)/);
+assert.match(plugin, /matchMezziImportRow/);
 
 console.log("mezzi-import-dedup-preview.test.ts OK");

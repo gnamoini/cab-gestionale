@@ -30,7 +30,7 @@ import {
   type MezziListVariant,
 } from "@/lib/render/query-key-factory";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
-import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
+import { useCompatMezziListe } from "@/src/hooks/use-compat-mezzi-liste";
 import { useSharedEntityQuery } from "@/src/hooks/use-shared-entity-query";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/invalidate-related";
@@ -107,8 +107,7 @@ export function useMagazzinoRicambiUIQuery(
   },
 ) {
   const q = useMagazzinoListQuery(filters, options);
-  const { data: settingsPayload } = useCabAppSettingsPayloadQuery({ tier: "static" });
-  const mezziListe = settingsPayload?.resolved?.mezziListe;
+  const { mezziListe } = useCompatMezziListe("useMagazzinoRicambiUIQuery");
   const data = useMemo(
     (): RicambioMagazzino[] => mapMagazzinoRowsToUI(q.data ?? [], "Sistema", mezziListe),
     [q.data, mezziListe],

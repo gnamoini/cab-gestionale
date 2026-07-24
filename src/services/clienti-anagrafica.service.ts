@@ -19,6 +19,7 @@ import { buildClienteEntityKey } from "@/lib/validation/entity-keys";
 import { loadCallerClienteRef } from "@/src/lib/auth/permission-guards";
 import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
 import { RBAC_DENIED_MESSAGE } from "@/lib/rbac";
+import { writeModificaLog, auditDiff, auditSnapshot } from "@/src/services/internal/audit-log";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
@@ -101,7 +102,14 @@ export const clientiAnagraficaService = {
       const insert = clienteAnagraficaUiToHeaderInsert(stub, entityKey);
       const { data, error } = await c.from("clienti_anagrafiche").insert(insert).select(CLIENTI_ANAGRAFICHE_COLUMNS).single();
       if (error) return err(error.message);
-      return success(clienteAnagraficaRowsToUi(data as ClienteAnagraficaRow, [], []));
+      const row = data as ClienteAnagraficaRow;
+      await writeModificaLog(c, {
+        entita: "clienti_anagrafica",
+        entita_id: row.id,
+        azione: "CREATE",
+        payload: auditSnapshot(row, { oggetto: trimmed }),
+      });
+      return success(clienteAnagraficaRowsToUi(row, [], []));
     } catch (e) {
       return serviceFailFromError(e);
     }
@@ -132,6 +140,11 @@ export const clientiAnagraficaService = {
       const headerPayload = clienteAnagraficaUiToHeaderInsert({ ...model, inListaSettings: true }, entityKey);
 
       if (clienteId) {
+        const { data: beforeRow } = await c
+          .from("clienti_anagrafiche")
+          .select(CLIENTI_ANAGRAFICHE_COLUMNS)
+          .eq("id", clienteId)
+          .maybeSingle();
         const { error: updErr } = await c
           .from("clienti_anagrafiche")
           .update({
@@ -144,6 +157,19 @@ export const clientiAnagraficaService = {
           })
           .eq("id", clienteId);
         if (updErr) return err(updErr.message);
+        const { data: afterRow } = await c
+          .from("clienti_anagrafiche")
+          .select(CLIENTI_ANAGRAFICHE_COLUMNS)
+          .eq("id", clienteId)
+          .maybeSingle();
+        if (afterRow) {
+          await writeModificaLog(c, {
+            entita: "clienti_anagrafica",
+            entita_id: clienteId,
+            azione: "UPDATE",
+            payload: auditDiff(beforeRow, afterRow, { oggetto: model.nomeDisplay }),
+          });
+        }
       } else {
         const { data, error: insErr } = await c
           .from("clienti_anagrafiche")
@@ -152,6 +178,12 @@ export const clientiAnagraficaService = {
           .single();
         if (insErr) return err(insErr.message);
         clienteId = (data as ClienteAnagraficaRow).id;
+        await writeModificaLog(c, {
+          entita: "clienti_anagrafica",
+          entita_id: clienteId,
+          azione: "CREATE",
+          payload: auditSnapshot(data, { oggetto: model.nomeDisplay }),
+        });
       }
 
       const legaleFields = model.sedeLegaleUgualeOperativa
@@ -211,7 +243,19 @@ export const clientiAnagraficaService = {
       const entityKey = buildClienteEntityKey(nomeDisplay);
       if (!entityKey) return success(undefined);
       const c = await sb();
+      const { data: beforeRows } = await c
+        .from("clienti_anagrafiche")
+        .select("id")
+        .eq("entity_key", entityKey);
       await c.from("clienti_anagrafiche").update({ in_lista_settings: false }).eq("entity_key", entityKey);
+      for (const row of beforeRows ?? []) {
+        await writeModificaLog(c, {
+          entita: "clienti_anagrafica",
+          entita_id: row.id,
+          azione: "UPDATE",
+          payload: { before: { in_lista_settings: true }, after: { in_lista_settings: false } },
+        });
+      }
       return success(undefined);
     } catch (e) {
       return serviceFailFromError(e);

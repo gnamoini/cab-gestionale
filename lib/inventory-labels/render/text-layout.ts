@@ -1,5 +1,6 @@
 import type { LabelPayload, LabelTemplateDefinition, LabelTemplateElement } from "@/lib/inventory-labels/domain/types";
 import {
+  formatLabelCodiceCliente,
   formatLabelCodiceLine,
   formatLabelMarcaLine,
   formatLabelMarcaSecondariaLine,
@@ -21,6 +22,7 @@ import {
 const DESC_CODICE_EXTRA_GAP_MM = 0.4;
 const CODICE_SECONDARIO_EXTRA_GAP_MM = 0.3;
 const MARCA_SECONDARIA_EXTRA_GAP_MM = 0.25;
+const A4_CODICE_MARCA_SECONDARIA_GAP_MM = 6;
 
 export type PlacedLabelText = {
   field: keyof LabelPayload;
@@ -172,6 +174,97 @@ function buildTopBlocks(payload: LabelPayload): Array<{ field: keyof LabelPayloa
   return blocks;
 }
 
+function buildClienteTopBlocks(payload: LabelPayload): Array<{ field: keyof LabelPayload; text: string; font?: "sans" | "mono" }> {
+  const blocks: Array<{ field: keyof LabelPayload; text: string; font?: "sans" | "mono" }> = [];
+  const marcaLine = formatLabelMarcaLine(payload.marca);
+  if (marcaLine) blocks.push({ field: "marca", text: marcaLine });
+  if (fieldValue(payload, "descrizione")) {
+    blocks.push({ field: "descrizione", text: labelDisplayCaps(fieldValue(payload, "descrizione")) });
+  }
+  const codiceLine = formatLabelCodiceCliente(fieldValue(payload, "codice"));
+  if (codiceLine) blocks.push({ field: "codice", text: codiceLine, font: "mono" });
+  return blocks;
+}
+
+function resolveClienteLabelTextLayout(
+  template: LabelTemplateDefinition,
+  payload: LabelPayload,
+): PlacedLabelText[] {
+  const marcaEl = textEl(template.elements, "marca");
+  const descEl = textEl(template.elements, "descrizione");
+  const codiceEl = textEl(template.elements, "codice");
+  const dpi = template.dpi;
+  const typographyBold = template.typography?.weight === "bold";
+  const textX = marcaEl.xMm;
+  const textW = marcaEl.maxWidthMm ?? template.widthMm - textX - 2;
+  const top = marcaEl.yMm;
+  const topGroupBottom = marcaEl.zoneBottomMm ?? template.heightMm - template.marginsMm;
+  const primaryPt = Math.max(marcaEl.fontPt, descEl.fontPt, codiceEl.fontPt);
+  const rowStepMm = lineMetrics(primaryPt, dpi).lineStepMm;
+  const topSpec = buildClienteTopBlocks(payload);
+  const descSpec = topSpec.find((s) => s.field === "descrizione");
+  const marcaSpec = topSpec.find((s) => s.field === "marca");
+  const codiceSpec = topSpec.find((s) => s.field === "codice");
+
+  let marcaBlock: StackBlock | null = null;
+  if (marcaSpec) {
+    const marcaZoneH = Math.max(lineMetrics(primaryPt, dpi).lineStepMm, topGroupBottom - top);
+    const marcaMaxLines = Math.max(1, Math.min(3, maxLinesForZoneMm(marcaZoneH * 0.45, primaryPt, dpi)));
+    const res = wrapBlock(marcaSpec.text, primaryPt, textW, marcaMaxLines, undefined, "words");
+    marcaBlock = { field: "marca", fontPt: primaryPt, lines: res.lines };
+  }
+
+  const marcaLines = marcaBlock?.lines ?? [];
+  const descTop = marcaBlock?.lines.some((l) => l.trim())
+    ? nextRowBaselineMm(top, marcaLines.length, primaryPt, rowStepMm, dpi)
+    : top;
+  const descZoneBottom = topGroupBottom - (codiceSpec ? DESC_CODICE_EXTRA_GAP_MM : 0);
+
+  let descLines: string[] = [];
+  if (descSpec) {
+    const descMaxLines =
+      descZoneBottom > descTop ? maxLinesForZoneMm(descZoneBottom - descTop, primaryPt, dpi) : 1;
+    descLines = wrapBlock(descSpec.text, primaryPt, textW, Math.max(1, descMaxLines), undefined, "words").lines;
+  }
+
+  const codiceStart =
+    descSpec && descLines.length
+      ? nextRowBaselineMm(descTop, descLines.length, primaryPt, rowStepMm, dpi) + DESC_CODICE_EXTRA_GAP_MM
+      : descTop;
+
+  const topBlocks: StackBlock[] = [];
+  if (marcaBlock) {
+    marcaBlock.bold = typographyBold;
+    topBlocks.push(marcaBlock);
+  }
+  if (descSpec && descLines.length) {
+    topBlocks.push({ field: "descrizione", fontPt: primaryPt, lines: descLines, bold: typographyBold });
+  }
+  if (codiceSpec) {
+    const zoneH = Math.max(0, topGroupBottom - codiceStart);
+    const maxLines = Math.max(1, maxLinesForZoneMm(zoneH, primaryPt, dpi));
+    const res = wrapBlock(codiceSpec.text, primaryPt, textW, maxLines, "mono", "codice");
+    topBlocks.push({
+      field: "codice",
+      fontPt: primaryPt,
+      font: "mono",
+      lines: res.lines,
+      bold: typographyBold,
+    });
+  }
+
+  return assignPositions(textX, top, topBlocks, rowStepMm, dpi, makeTopGapAfter(template));
+}
+
+function makeTopGapAfter(template: LabelTemplateDefinition) {
+  return (field: keyof LabelPayload, next?: keyof LabelPayload): number => {
+    if (template.id === "a4-pagina-intera" && field === "codice" && next === "marcaSecondaria") {
+      return A4_CODICE_MARCA_SECONDARIA_GAP_MM;
+    }
+    return topGapAfter(field, next);
+  };
+}
+
 function topGapAfter(field: keyof LabelPayload, next?: keyof LabelPayload): number {
   if (field === "descrizione" && next === "codice") return DESC_CODICE_EXTRA_GAP_MM;
   if (field === "codice" && next === "marcaSecondaria") return MARCA_SECONDARIA_EXTRA_GAP_MM;
@@ -189,6 +282,10 @@ export function resolveLabelTextLayout(
   template: LabelTemplateDefinition,
   payload: LabelPayload,
 ): PlacedLabelText[] {
+  if (!template.elements.some((e) => e.type === "barcode")) {
+    return resolveClienteLabelTextLayout(template, payload);
+  }
+
   const marcaEl = textEl(template.elements, "marca");
   const descEl = textEl(template.elements, "descrizione");
   const codiceEl = textEl(template.elements, "codice");
@@ -332,7 +429,7 @@ export function resolveLabelTextLayout(
   }
   topBlocks.push(...resolvedCodici);
 
-  const topPlaced = assignPositions(textX, top, topBlocks, rowStepMm, dpi, topGapAfter);
+  const topPlaced = assignPositions(textX, top, topBlocks, rowStepMm, dpi, makeTopGapAfter(template));
   const bottomPlaced =
     bottomBlocks.length > 0 ? assignBottomBaselines(textX, supplierAnchorBottom, bottomBlocks, dpi) : [];
 

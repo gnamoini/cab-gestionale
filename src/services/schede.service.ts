@@ -1,6 +1,7 @@
 "use client";
 
 import { SCHEDA_LAVORAZIONE_COLUMNS } from "@/lib/db/table-select-columns";
+import { syncActualLaborHoursForLavorazione } from "@/lib/lavorazioni/sync-actual-labor-hours";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { lavorazioneLogOggettoFromSchedaContenuto } from "@/lib/lavorazioni/lavorazione-log-oggetto";
@@ -31,6 +32,32 @@ function oggettoContextForScheda(row: SchedaLavorazioneRow) {
   const oggetto = lavorazioneLogOggettoFromSchedaContenuto(row.contenuto);
   if (oggetto === "—") return undefined;
   return auditContext(oggetto);
+}
+
+async function syncInterventiActualHours(
+  client: Awaited<ReturnType<typeof sb>>,
+  row: Pick<SchedaLavorazioneRow, "lavorazione_id" | "tipo" | "contenuto"> | null,
+): Promise<void> {
+  if (!row || row.tipo !== "interventi") return;
+  const sync = await syncActualLaborHoursForLavorazione(
+    client,
+    row.lavorazione_id,
+    row.contenuto,
+    "scheda_save",
+  );
+  if (!sync.ok) {
+    console.warn("[schede] sync actual_labor_hours fallito:", sync.error);
+  }
+}
+
+async function zeroInterventiActualHours(
+  client: Awaited<ReturnType<typeof sb>>,
+  lavorazioneId: string,
+): Promise<void> {
+  const sync = await syncActualLaborHoursForLavorazione(client, lavorazioneId, null, "scheda_save");
+  if (!sync.ok) {
+    console.warn("[schede] azzeramento actual_labor_hours fallito:", sync.error);
+  }
 }
 
 export const schedeService = {
@@ -68,6 +95,7 @@ export const schedeService = {
       const r = row as SchedaLavorazioneRow;
       const ctx = oggettoContextForScheda(r);
       await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, ctx) });
+      await syncInterventiActualHours(c, r);
       return success(r);
     } catch (e) {
       return serviceFailFromError(e);
@@ -94,6 +122,7 @@ export const schedeService = {
         azione: "UPDATE",
         payload: auditDiff(before, r, ctx),
       });
+      await syncInterventiActualHours(c, r);
       return success(r);
     } catch (e) {
       return serviceFailFromError(e);
@@ -108,6 +137,9 @@ export const schedeService = {
       if (existing) await writeModificaLog(c, { entita: ENTITA, entita_id: id, azione: "DELETE", payload: auditSnapshot(existing) });
       const { error } = await c.from("scheda_lavorazione").delete().eq("id", id);
       if (error) return err(error.message);
+      if (existing?.tipo === "interventi") {
+        await zeroInterventiActualHours(c, existing.lavorazione_id);
+      }
       return success(null);
     } catch (e) {
       return serviceFailFromError(e);

@@ -16,11 +16,10 @@ const prefetch = read("src/lib/react-query/prefetch-gestionale-page.ts");
 const listHooks = read("src/hooks/gestionale/use-entity-list-queries.ts");
 const view = read("components/gestionale/mezzi/mezzi-view.tsx");
 const derived = read("lib/mezzi/use-mezzi-list-derived.ts");
-const matrix = read("components/gestionale/mezzi/mezzi-tagliandi-matrix-table.tsx");
 
-assert.match(page, /prefetchCriticalPage\(qc, "mezzi"\)/);
-assert.match(page, /MezziDeferredHydration/);
-assert.match(page, /Suspense/);
+assert.match(page, /prefetchGestionalePage\(qc, "mezzi"\)/);
+assert.match(page, /MezziViewLazy/);
+assert.match(page, /GestionaleHydrationBoundary/);
 
 assert.match(deferred, /prefetchDeferredPage\(qc, "mezzi"\)/);
 
@@ -47,9 +46,6 @@ assert.match(view, /prefetchMezziTagliandiQueries/);
 assert.match(derived, /useMezziListDerived/);
 assert.match(derived, /buildInterventiByMezzoIdFromLavorazioni/);
 assert.match(derived, /filterMezziGestiti/);
-
-assert.match(matrix, /virtualRows/);
-assert.match(matrix, /mezzoTagliandiEnabled/);
 
 const mezziRoutes = getPrefetchRoutesForScope("mezzi.list");
 assert.ok(mezziRoutes.includes("/mezzi"));

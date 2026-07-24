@@ -40,6 +40,7 @@ import type {
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { DdtDocumentRow, InvoicePaymentRow, InvoiceRow, MagazzinoRicambioRow, PreventivoBillingStatusRow } from "@/src/types/supabase-tables";
 import { aggregateOrePerDipendente } from "@/lib/report/timesheet-ore-ranking";
+import { sumActualLaborHoursInRange } from "@/lib/analytics/hours/sum-actual-labor-hours-in-range";
 import type { DipendenteTimesheetEmployeeRow, DipendenteTimesheetEntryRow } from "@/lib/dipendenti/types";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 import {
@@ -238,6 +239,7 @@ export type LaborAnalyticsBuildInput = AnalyticsPublishBase & {
   compareMode?: ReportCompareMode;
   completate: LavorazioneArchiviata[];
   schedeStore: LavorazioneSchedeStore | null;
+  lavListRows?: readonly LavorazioneListRow[];
   totalHours: number;
   compareTotalHours?: number | null;
   costoOrario: number;
@@ -256,6 +258,7 @@ export function buildLaborAnalytics(input: LaborAnalyticsBuildInput): LaborAnaly
     compareMode,
     completate,
     schedeStore,
+    lavListRows = [],
     totalHours,
     compareTotalHours,
     costoOrario,
@@ -273,7 +276,8 @@ export function buildLaborAnalytics(input: LaborAnalyticsBuildInput): LaborAnaly
   const employeesWithHours = aggregateOrePerDipendente(timesheetEntries, timesheetEmployees).length;
   const saturation = computeTeamSaturation(totalHours, employeesWithHours, range);
   const schedeHours = sumOreFromSchedeInRange(completate, range, schedeStore);
-  const gapPct = computeGapSchedeTimesheetPct(totalHours, schedeHours);
+  const actualLaborHours = sumActualLaborHoursInRange(completate, range, lavListRows);
+  const gapPct = computeGapSchedeTimesheetPct(totalHours, actualLaborHours > 0 ? actualLaborHours : schedeHours);
   const missingEmployees = countEmployeesWithoutHours(timesheetEmployees, timesheetEntries);
   const { manodopera } = sumManodoperaCostFromSchede(
     completate,
@@ -291,17 +295,35 @@ export function buildLaborAnalytics(input: LaborAnalyticsBuildInput): LaborAnaly
       ? Math.round((hoursPrev / completedPrev) * 10) / 10
       : null;
 
+  const avgActualHours =
+    completed > 0 && actualLaborHours > 0
+      ? Math.round((actualLaborHours / completed) * 10) / 10
+      : null;
+
   const metrics: ReportDomainMetric[] = [
     totalHours > 0
       ? comparedN(
-          "ore_total",
-          "Ore totali",
+          "presence_hours_total",
+          "Ore presenza",
           totalHours,
           hoursPrev,
           (n) => `${n.toLocaleString("it-IT", { maximumFractionDigits: 1 })} h`,
           cmpCtx,
         )
-      : metric("ore_total", "Ore totali", { status: "not_available", reason: "Non disponibile nel periodo selezionato" }),
+      : metric("presence_hours_total", "Ore presenza", {
+          status: "not_available",
+          reason: "Non disponibile nel periodo selezionato",
+        }),
+    actualLaborHours > 0
+      ? availableMetric(
+          "actual_labor_hours_total",
+          "Ore consuntive",
+          `${actualLaborHours.toLocaleString("it-IT", { maximumFractionDigits: 1 })} h`,
+        )
+      : metric("actual_labor_hours_total", "Ore consuntive", {
+          status: "not_available",
+          reason: "Nessun consuntivo nel periodo",
+        }),
     avgHours != null
       ? comparedN(
           "ore_per_job",
@@ -312,6 +334,16 @@ export function buildLaborAnalytics(input: LaborAnalyticsBuildInput): LaborAnaly
           cmpCtx,
         )
       : metric("ore_per_job", "Media ore/intervento", {
+          status: "not_available",
+          reason: "Dati insufficienti per il calcolo",
+        }),
+    avgActualHours != null
+      ? availableMetric(
+          "actual_hours_per_job",
+          "Media ore consuntive/intervento",
+          `${avgActualHours} h`,
+        )
+      : metric("actual_hours_per_job", "Media ore consuntive/intervento", {
           status: "not_available",
           reason: "Dati insufficienti per il calcolo",
         }),
@@ -361,13 +393,13 @@ export function buildLaborAnalytics(input: LaborAnalyticsBuildInput): LaborAnaly
     metrics.push(availableMetric("saturazione_team", "Saturazione team", `${saturation}%`));
   }
   if (gapPct != null) {
-    metrics.push(availableMetric("gap_schede_timesheet", "Gap schede/timesheet", `${gapPct}%`));
+    metrics.push(availableMetric("gap_schede_timesheet", "Gap consuntivo/presenza", `${gapPct}%`));
   }
 
   const crossInput: CrossFormulaInput = {
     operational: { completedInPeriod: completed },
     warehouse: { partsUsedQty, movementValue },
-    labor: { totalHours, manodoperaCost: manodopera },
+    labor: { totalHours, actualLaborHours, manodoperaCost: manodopera },
     economic: { invoicesBilled },
   };
   const efficiencyResult = computeCrossEfficiency(crossInput);
@@ -381,7 +413,15 @@ export function buildLaborAnalytics(input: LaborAnalyticsBuildInput): LaborAnaly
 
   void missingEmployees;
 
-  return { metrics, totalHours, completedJobs: completed, avgHoursPerJob: avgHours, manodoperaCost: manodopera };
+  return {
+    metrics,
+    totalHours,
+    actualLaborHours,
+    completedJobs: completed,
+    avgHoursPerJob: avgHours,
+    actualHoursPerJob: avgActualHours,
+    manodoperaCost: manodopera,
+  };
 }
 
 export type EconomicDerivedHints = {

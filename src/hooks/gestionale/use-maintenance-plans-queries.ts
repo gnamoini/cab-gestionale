@@ -8,8 +8,8 @@ export const maintenancePlansQueryKeys = {
   root: ["maintenance-plans"] as const,
   catalog: () => [...maintenancePlansQueryKeys.root, "catalog"] as const,
   plans: () => [...maintenancePlansQueryKeys.root, "plans"] as const,
-  mezzoStatuses: (mezzoId: string, tipo: string, ore: number) =>
-    [...maintenancePlansQueryKeys.root, "statuses", mezzoId, tipo, ore] as const,
+  mezzoStatuses: (mezzoId: string, ore: number) =>
+    [...maintenancePlansQueryKeys.root, "statuses", mezzoId, ore] as const,
   mezzoHistory: (mezzoId: string) => [...maintenancePlansQueryKeys.root, "history", mezzoId] as const,
   servicesLite: () => [...maintenancePlansQueryKeys.root, "services-lite"] as const,
 };
@@ -28,18 +28,16 @@ export function useMaintenancePlansListQuery(enabled = true) {
 
 export function useMezzoMaintenanceStatusesQuery(input: {
   mezzoId: string | undefined;
-  tipoAttrezzatura: string;
   currentOreMezzo: number;
   enabled?: boolean;
 }) {
   const id = input.mezzoId?.trim() ?? "";
   const enabled = Boolean(input.enabled && id);
   return useServiceQuery(
-    maintenancePlansQueryKeys.mezzoStatuses(id, input.tipoAttrezzatura, input.currentOreMezzo),
+    maintenancePlansQueryKeys.mezzoStatuses(id, input.currentOreMezzo),
     () =>
       maintenancePlansEntry.listMezzoPlanStatuses({
         mezzoId: id,
-        tipoAttrezzatura: input.tipoAttrezzatura,
         currentOreMezzo: input.currentOreMezzo,
       }),
     { enabled },

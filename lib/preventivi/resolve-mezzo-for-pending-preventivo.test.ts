@@ -3,6 +3,7 @@ import { test } from "node:test";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { buildNewPreventivoFromLavorazioneContext } from "@/lib/preventivi/generate-preventivo-from-lavorazione";
+import { buildDescriptionInputFromBundle } from "@/lib/preventivi/description-engine/resolve-description-input";
 import {
   resolveMezzoForPendingPreventivo,
   resolveMezzoForPreventivoHandoff,
@@ -102,9 +103,9 @@ test("resolveMezzoForPendingPreventivo usa ident nel payload", () => {
   assert.equal(hit?.id, mezzi[0].id);
 });
 
-test("build con mezzo risolto imposta mezzoId sul record", () => {
+test("build con mezzo risolto imposta mezzoId sul record", async () => {
   const mezzo = mezzi[0];
-  const rec = buildNewPreventivoFromLavorazioneContext({
+  const rec = await buildNewPreventivoFromLavorazioneContext({
     lav,
     origine: "attiva",
     bundle,
@@ -112,6 +113,18 @@ test("build con mezzo risolto imposta mezzoId sul record", () => {
     magazzino: [],
     autore: "Test",
     existingRecords: [],
+    descriptionDeps: {
+      resolveInput: async () => buildDescriptionInputFromBundle(bundle),
+      polish: async (input) => ({
+        attempted: true,
+        applied: true,
+        fallback: false,
+        text: input.description,
+        cacheHit: false,
+        durationMs: 1,
+        model: "gemini-3.5-flash",
+      }),
+    },
   });
   assert.equal((rec as { mezzoId?: string }).mezzoId, mezzo.id);
 });

@@ -28,7 +28,6 @@ function IconPlusScorta({ className = scortaGlyph }: { className?: string }) {
 export function MagazzinoScortaAdjustActions({
   canAdjust,
   modalitaModifica = false,
-  pending = false,
   onDecrease,
   onIncrease,
   className = "",
@@ -36,17 +35,14 @@ export function MagazzinoScortaAdjustActions({
   canAdjust: boolean;
   /** Modalità modifica attiva: − e + primari; altrimenti entrambi neutri. */
   modalitaModifica?: boolean;
-  /** Mutation o journal in corso per la riga. */
-  pending?: boolean;
   onDecrease: () => void;
   onIncrease: () => void;
   className?: string;
 }) {
-  const readonlyTip = canAdjust ? (pending ? "Aggiornamento in corso…" : undefined) : READONLY_PERMISSION_HINT;
+  const readonlyTip = canAdjust ? undefined : READONLY_PERMISSION_HINT;
   const actionClass = modalitaModifica ? dsTableActionBtnPrimary : dsTableActionBtnSecondary;
   const decreaseLabel = modalitaModifica ? "Scarico" : "Rettifica −";
   const increaseLabel = modalitaModifica ? "Carico" : "Rettifica +";
-  const busy = pending && canAdjust;
 
   return (
     <div
@@ -58,7 +54,7 @@ export function MagazzinoScortaAdjustActions({
         label={decreaseLabel}
         tooltipContent={readonlyTip}
         className={actionClass}
-        disabled={!canAdjust || busy}
+        disabled={!canAdjust}
         onClick={onDecrease}
       >
         <IconMinusScorta />
@@ -67,7 +63,7 @@ export function MagazzinoScortaAdjustActions({
         label={increaseLabel}
         tooltipContent={readonlyTip}
         className={actionClass}
-        disabled={!canAdjust || busy}
+        disabled={!canAdjust}
         onClick={onIncrease}
       >
         <IconPlusScorta />

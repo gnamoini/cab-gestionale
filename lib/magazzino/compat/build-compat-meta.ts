@@ -3,6 +3,7 @@ import {
   dedupeCompatRefsPreferExplicitModels,
   labelsToCompatRefs,
   refsToCompatLabels,
+  type LabelToCompatRefOptions,
   type RicambioCompatRef,
 } from "@/lib/magazzino/ricambio-compat-resolver";
 import { normalizeCompatList } from "@/lib/magazzino/compat/compat-normalize";
@@ -34,8 +35,9 @@ export function buildCompatMetaForSave(
 export function compatRefsFromExpandedLabels(
   labels: readonly string[],
   liste: MezziListePrefs,
+  opts?: LabelToCompatRefOptions,
 ): RicambioCompatRef[] {
-  return labelsToCompatRefs(normalizeCompatList(labels), liste);
+  return labelsToCompatRefs(normalizeCompatList(labels), liste, opts);
 }
 
 export function diffCompatLegacy(

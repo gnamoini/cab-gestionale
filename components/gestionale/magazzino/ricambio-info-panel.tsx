@@ -11,7 +11,7 @@ import { RicambioInfoRiepilogoSection, RicambioCodiceIdentitaBlock } from "@/com
 import { LoadingFormSkeleton } from "@/components/design-system";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import { RicambioCollapsibleSection } from "@/components/gestionale/magazzino/ricambio-modal-ui";
-import { MagazzinoScortaInfoStepper } from "@/components/gestionale/magazzino/magazzino-scorta-adjust-actions";
+import { MagazzinoScortaDebouncedInfoStepper } from "@/components/gestionale/magazzino/magazzino-scorta-debounced-stepper";
 import { RecordImageManager, type RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import {
   GestionaleLogEntryDismissButton,
@@ -96,8 +96,6 @@ export function RicambioInfoPanel({
   canAdjustScorta,
   modalitaModifica = false,
   scortaFlash = false,
-  onAdjustScorta,
-  onSetScorta,
   stockPolicyRaw,
   onUndoStockMovement,
   undoStockPending = false,
@@ -114,8 +112,6 @@ export function RicambioInfoPanel({
   canAdjustScorta?: boolean;
   modalitaModifica?: boolean;
   scortaFlash?: boolean;
-  onAdjustScorta?: (delta: number) => void;
-  onSetScorta?: (target: number) => void;
   stockPolicyRaw?: unknown;
   onUndoStockMovement?: (movimentoId: string) => void | Promise<void>;
   undoStockPending?: boolean;
@@ -139,8 +135,6 @@ export function RicambioInfoPanel({
         canAdjustScorta={canAdjustScorta}
         modalitaModifica={modalitaModifica}
         scortaFlash={scortaFlash}
-        onAdjustScorta={onAdjustScorta}
-        onSetScorta={onSetScorta}
         consumo={consumo}
         stockPolicyRaw={stockPolicyRaw}
       />
@@ -154,19 +148,18 @@ export function RicambioInfoPanel({
           consumo={consumo}
           stockPolicyRaw={stockPolicyRaw}
         />
-        {onAdjustScorta ? (
+        {canAdjustScorta ? (
           <GestionaleInfoRow
             label="Scorta"
             value={
-              <MagazzinoScortaInfoStepper
-                value={ricambio.scorta}
+              <MagazzinoScortaDebouncedInfoStepper
+                ricambioId={ricambio.id}
+                ricambioLabel={ricambio.descrizione}
+                fallbackScorta={ricambio.scorta}
                 low={low}
-                canAdjust={canAdjustScorta ?? false}
+                canAdjust={canAdjustScorta}
                 modalitaModifica={modalitaModifica}
                 successFlash={scortaFlash}
-                onDecrease={() => onAdjustScorta(-1)}
-                onIncrease={() => onAdjustScorta(1)}
-                onSetValue={(target) => onSetScorta?.(target)}
               />
             }
           />

@@ -63,6 +63,14 @@ export {
   type GestionaleNumberInputProps,
 } from "@/components/gestionale/gestionale-number-input";
 export {
+  GestionaleNumericField,
+  type GestionaleNumericFieldProps,
+} from "@/components/gestionale/gestionale-numeric-field";
+export {
+  GestionaleQuantityField,
+  type GestionaleQuantityFieldProps,
+} from "@/components/gestionale/gestionale-quantity-field";
+export {
   gestionaleTextareaMaxHeightCompact,
   gestionaleTextareaMaxHeightDefault,
 } from "@/lib/ui/design-system";

@@ -14,6 +14,7 @@ import {
   mapUrgencyToTagliandoStato,
 } from "@/lib/maintenance-plans/tagliando-stato-labels";
 import { useMaintenanceEngineV2Enabled } from "@/lib/officina/use-maintenance-engine-v2-enabled";
+import { isPresetAssignable } from "@/lib/maintenance-plans/maintenance-domain-contract";
 import { formatTriggerSummary } from "@/lib/maintenance-plans/maintenance-trigger-helpers";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { VehicleMaintenanceConfigView } from "@/lib/maintenance-plans/v2-types";
@@ -50,7 +51,6 @@ function HubTagliandiV1({
 }) {
   const statusesQ = useMezzoMaintenanceStatusesQuery({
     mezzoId: mezzo.id,
-    tipoAttrezzatura: mezzo.tipoAttrezzatura,
     currentOreMezzo: mezzo.oreKm ?? 0,
     enabled: active,
   });
@@ -70,7 +70,7 @@ function HubTagliandiV1({
     return <MezziHubTabEmpty message="Errore caricamento dati tagliandi." />;
   }
   if (statuses.length === 0) {
-    return <MezziHubTabEmpty message="Nessun piano tagliando applicabile per questo tipo attrezzatura." />;
+    return <MezziHubTabEmpty message="Nessun piano manutentivo attivo su questo mezzo." />;
   }
 
   return (
@@ -152,9 +152,6 @@ function HubTagliandiV2({
 }) {
   const configsQ = useMezzoMaintenanceConfigsQuery({
     mezzoId: mezzo.id,
-    oreKm: mezzo.oreKm ?? 0,
-    kmFromMeta: mezzo.km != null ? Number(mezzo.km) : null,
-    tipoAttrezzatura: mezzo.tipoAttrezzatura,
     enabled: active,
   });
   const plansQ = useMaintenancePlansListQuery(active);
@@ -218,10 +215,18 @@ function HubTagliandiV2({
                 {configs.map((c) => {
                   const stato = mapUrgencyToTagliandoStato(c.urgency);
                   const plan = (plansQ.data ?? []).find((p) => p.id === c.presetId);
+                  const archivedPreset = c.presetId && plan && !isPresetAssignable(plan.status);
                   const isUrgent = stato === "imminente" || stato === "scaduto";
                   return (
                   <tr key={c.id} className={`${dsTableRow} ${isUrgent ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}`}>
-                    <td className="px-2 py-2 font-medium">{c.label}</td>
+                    <td className="px-2 py-2 font-medium">
+                      {c.label}
+                      {archivedPreset ? (
+                        <span className="mt-0.5 block text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                          Preset archiviato
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="px-2 py-2 font-mono" title={c.triggerReason ?? undefined}>
                       {formatTriggerSummary(
                         plan?.triggerGroups[0]?.triggers ?? [
@@ -317,7 +322,6 @@ function HubTagliandiV2({
       <MezziTagliandiConfigDrawer
         open={drawerOpen}
         mezzoId={mezzo.id}
-        tipoAttrezzatura={mezzo.tipoAttrezzatura}
         config={editConfig}
         onClose={() => setDrawerOpen(false)}
         onSaved={() => void configsQ.refetch()}

@@ -14,6 +14,7 @@ export type PreventiviFilters = {
   mezzo_id?: string;
   cliente?: string;
   lavorazione_id?: string;
+  search?: string;
 };
 
 export type PreventivoInsert = Omit<PreventivoRow, "id" | "created_at" | "updated_at">;

@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { MezzoCandidate, MezzoResolutionResult } from "@/lib/domain/mezzo/mezzo-resolution";
 
 function norm(v: string): string {
   return v.trim().toLowerCase();
@@ -9,6 +10,100 @@ function norm(v: string): string {
 export type RelationLookupResult =
   | { ok: true; id?: string; canonical: string }
   | { ok: false; message: string };
+
+export type MezzoRelationLookupResult =
+  | { ok: true; id: string; mezzoId: string; canonical: string }
+  | { ok: false; message: string; ambiguous?: MezzoCandidate[] };
+
+function rowToCandidate(row: {
+  id: string;
+  cliente?: string | null;
+  targa?: string | null;
+  matricola?: string | null;
+  numero_scuderia?: string | null;
+}, signals: string[]): MezzoCandidate {
+  return {
+    mezzoId: row.id,
+    cliente: row.cliente ?? "",
+    targa: row.targa,
+    matricola: row.matricola,
+    numeroScuderia: row.numero_scuderia,
+    matchSignals: signals,
+  };
+}
+
+async function lookupMezziByField(
+  sb: SupabaseClient,
+  field: "targa" | "matricola",
+  value: string,
+): Promise<Array<{ id: string; targa?: string | null; matricola?: string | null; cliente?: string | null; numero_scuderia?: string | null }>> {
+  const { data, error } = await sb
+    .from("mezzi")
+    .select("id, targa, matricola, cliente, numero_scuderia")
+    .eq(field, value)
+    .limit(3);
+  if (error || !data) return [];
+  return data;
+}
+
+export async function lookupMezzoByTargaOrMatricola(
+  sb: SupabaseClient,
+  input: { targa?: string; matricola?: string },
+): Promise<MezzoRelationLookupResult> {
+  const targa = input.targa?.trim();
+  const matricola = input.matricola?.trim();
+
+  if (targa) {
+    const rows = await lookupMezziByField(sb, "targa", targa);
+    if (rows.length === 1) {
+      const data = rows[0]!;
+      return { ok: true, id: data.id, mezzoId: data.id, canonical: data.targa ?? targa };
+    }
+    if (rows.length > 1) {
+      return {
+        ok: false,
+        message: `Più mezzi con targa «${targa}».`,
+        ambiguous: rows.map((r) => rowToCandidate(r, ["targa:exact"])),
+      };
+    }
+  }
+
+  if (matricola) {
+    const rows = await lookupMezziByField(sb, "matricola", matricola);
+    if (rows.length === 1) {
+      const data = rows[0]!;
+      return { ok: true, id: data.id, mezzoId: data.id, canonical: data.matricola ?? matricola };
+    }
+    if (rows.length > 1) {
+      return {
+        ok: false,
+        message: `Più mezzi con matricola «${matricola}».`,
+        ambiguous: rows.map((r) => rowToCandidate(r, ["matricola:exact"])),
+      };
+    }
+  }
+
+  return { ok: false, message: "Mezzo non trovato (targa o matricola)." };
+}
+
+/** Contract unificato per import server-side. */
+export async function resolveMezzoRelationFromDb(
+  sb: SupabaseClient,
+  input: { targa?: string; matricola?: string },
+): Promise<MezzoResolutionResult> {
+  const lookup = await lookupMezzoByTargaOrMatricola(sb, input);
+  if (lookup.ok) {
+    return { status: "resolved", mezzoId: lookup.mezzoId, source: "ident" };
+  }
+  if (lookup.ambiguous?.length) {
+    return {
+      status: "ambiguous",
+      candidates: lookup.ambiguous,
+      identUsed: { targa: input.targa, matricola: input.matricola },
+    };
+  }
+  return { status: "not_found", identUsed: { targa: input.targa, matricola: input.matricola } };
+}
 
 export async function lookupClienteByNameOrPiva(
   sb: SupabaseClient,
@@ -39,23 +134,6 @@ export async function lookupClienteByNameOrPiva(
   const settingsHit = clienti.find((c) => norm(c) === norm(nome));
   if (settingsHit) return { ok: true, canonical: settingsHit };
   return { ok: false, message: `Cliente «${nome}» non trovato.` };
-}
-
-export async function lookupMezzoByTargaOrMatricola(
-  sb: SupabaseClient,
-  input: { targa?: string; matricola?: string },
-): Promise<RelationLookupResult & { mezzoId?: string }> {
-  const targa = input.targa?.trim();
-  const matricola = input.matricola?.trim();
-  if (targa) {
-    const { data } = await sb.from("mezzi").select("id, targa, matricola, cliente").eq("targa", targa).maybeSingle();
-    if (data) return { ok: true, id: data.id, mezzoId: data.id, canonical: data.targa ?? targa };
-  }
-  if (matricola) {
-    const { data } = await sb.from("mezzi").select("id, targa, matricola, cliente").eq("matricola", matricola).maybeSingle();
-    if (data) return { ok: true, id: data.id, mezzoId: data.id, canonical: data.matricola ?? matricola };
-  }
-  return { ok: false, message: "Mezzo non trovato (targa o matricola)." };
 }
 
 export async function ensureSettingsListValue(

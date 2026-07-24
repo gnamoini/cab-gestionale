@@ -97,6 +97,7 @@ export function useAppendGlobalListValue(listKey: GlobalSettingsListKey, ctx?: G
         suppressSettingsRemoteNotify(6000);
         try {
           await upsert.mutateAsync(withVersions);
+          await queryClient.refetchQueries({ queryKey: SETTINGS_PAYLOAD_QK });
           gestToast.success(appendGlobalListSuccessMessage(listKey, ctx));
           return built.canonicalValue;
         } catch (e) {

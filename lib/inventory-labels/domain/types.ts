@@ -55,6 +55,8 @@ export type LabelTypography = {
 
 export type LabelLayoutMode = "horizontal-qr-left" | "vertical-stack";
 
+export type LabelKind = "internal" | "cliente";
+
 export type SupplierLayoutMode = "inline-slash" | "stacked-pairs";
 
 export const DEFAULT_LABEL_TYPOGRAPHY: LabelTypography = {
@@ -70,6 +72,13 @@ export type LabelTemplateElement =
       xMm: number;
       yMm: number;
       sizeMm: number;
+    }
+  | {
+      type: "logo";
+      xMm: number;
+      yMm: number;
+      widthMm: number;
+      heightMm: number;
     }
   | {
       type: "text";
@@ -124,7 +133,7 @@ export type InventoryQrTokenRow = {
   superseded_by: string | null;
 };
 
-export const GENERATOR_VERSION = "1.4.0";
+export const GENERATOR_VERSION = "1.5.0";
 
 /** Default generazione etichette — opt-in via checkbox/API. */
 export const DEFAULT_INCLUDE_BARCODE = false;
@@ -132,4 +141,5 @@ export const DEFAULT_INCLUDE_BARCODE = false;
 export type LabelRenderOptions = {
   /** Default false — se false il layout resta invariato, area barcode bianca. */
   includeBarcode?: boolean;
+  labelKind?: LabelKind;
 };

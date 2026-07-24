@@ -18,6 +18,7 @@ import { LoadingFormSkeleton } from "@/components/design-system";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { EntitySimilarWarning } from "@/components/design-system/entity-similar-warning";
+import { findMezziByScuderia } from "@/lib/mezzi/find-mezzo-by-ident";
 import { findMezzoBySimilarIdent } from "@/lib/validation/services/mezzi-validation";
 import { canonicalTelaioNumForWrite } from "@/lib/mezzi/vin-normalize";
 import type { MezzoInsert, MezzoUpdate } from "@/lib/domain/mezzi-entry";
@@ -151,6 +152,16 @@ export function MezzoFormFields({
     return `${ident} (${hit.cliente} — ${hit.marca} ${hit.modello})`.trim();
   }, [mezziListQ.data, form.targa, form.matricola, excludeMezzoId]);
 
+  const similarMezzoScuderia = useMemo(() => {
+    const ns = form.numeroScuderia.trim();
+    if (!ns) return null;
+    const rows = (mezziListQ.data ?? []).filter((m) => !excludeMezzoId || m.id !== excludeMezzoId);
+    const hits = findMezziByScuderia(rows, ns);
+    if (hits.length === 0) return null;
+    const labels = hits.map((m) => `scuderia ${m.numeroScuderia} (${m.cliente} — ${m.marca} ${m.modello})`.trim());
+    return labels.join("; ");
+  }, [mezziListQ.data, form.numeroScuderia, excludeMezzoId]);
+
   if (globalOpts.isLoading) {
     return <LoadingFormSkeleton fields={3} className="py-2" />;
   }
@@ -251,6 +262,7 @@ export function MezzoFormFields({
           </label>
         </div>
         <EntitySimilarWarning similarTo={similarMezzoIdent} />
+        <EntitySimilarWarning similarTo={similarMezzoScuderia} />
         <label htmlFor="mezzo-form-ore-lavoro" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Ore lavoro
           <GestionaleNumberInput

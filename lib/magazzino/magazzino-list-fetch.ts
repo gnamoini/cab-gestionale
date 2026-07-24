@@ -3,6 +3,7 @@ import {
   MAGAZZINO_RICAMBI_COLUMNS,
 } from "@/lib/db/table-select-columns";
 import type { MagazzinoFilters } from "@/src/services/magazzino.service";
+import { normalizedSearchIlikePattern } from "@/lib/search/server-search-filter";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -17,6 +18,8 @@ function applyMagazzinoFilters<T extends { ilike: (col: string, pat: string) => 
   if (filters?.codice?.trim()) query = query.ilike("codice", `%${filters.codice.trim()}%`);
   if (filters?.nome?.trim()) query = query.ilike("nome", `%${filters.nome.trim()}%`);
   if (filters?.marca?.trim()) query = query.ilike("marca", `%${filters.marca.trim()}%`);
+  const searchPat = filters?.search?.trim() ? normalizedSearchIlikePattern(filters.search) : null;
+  if (searchPat) query = query.ilike("search_document", searchPat);
   return query;
 }
 

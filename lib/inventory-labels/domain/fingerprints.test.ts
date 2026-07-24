@@ -36,4 +36,18 @@ const h4 = computeLabelFingerprint({
 });
 assert.notEqual(h1, h4);
 
+const hCliente = computeLabelFingerprint({
+  ...base,
+  labelKind: "cliente",
+  clienteQrUrl: "https://www.autocompattatori.it",
+});
+assert.notEqual(h1, hCliente);
+
+const h5 = computeLabelFingerprint({
+  ...base,
+  labelKind: "cliente",
+  clienteQrUrl: "https://www.other.example",
+});
+assert.notEqual(hCliente, h5);
+
 console.log("inventory-labels/domain/fingerprints.test.ts OK");

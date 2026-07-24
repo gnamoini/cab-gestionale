@@ -41,6 +41,7 @@ export function MagazzinoBulkLabelToolbar({
   const gestToast = useGestionaleToast();
   const [preset, setPreset] = useState(DEFAULT_LABEL_PRESET);
   const [includeBarcode, setIncludeBarcode] = useState(DEFAULT_INCLUDE_BARCODE);
+  const [clienteLabel, setClienteLabel] = useState(false);
   const [phase, setPhase] = useState<BulkLabelPhase>("idle");
   const [progress, setProgress] = useState(0);
   const { totalLabels, totalItems, hasSelection } = selection;
@@ -59,7 +60,7 @@ export function MagazzinoBulkLabelToolbar({
       const res = await fetch("/api/inventory-labels/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, preset, format: "pdf", includeBarcode }),
+        body: JSON.stringify({ items, preset, format: "pdf", includeBarcode, clienteLabel }),
         signal: controller.signal,
       });
       window.clearTimeout(timeoutId);
@@ -138,7 +139,7 @@ export function MagazzinoBulkLabelToolbar({
       setPhase("idle");
       setProgress(0);
     }
-  }, [gestToast, hasSelection, includeBarcode, preset, selection.quantities, totalLabels]);
+  }, [gestToast, hasSelection, includeBarcode, clienteLabel, preset, selection.quantities, totalLabels]);
 
   const phaseLabel =
     phase === "preparing"
@@ -204,10 +205,26 @@ export function MagazzinoBulkLabelToolbar({
               className="h-4 w-4 rounded border-[color:var(--cab-border)]"
               checked={includeBarcode}
               onChange={(e) => setIncludeBarcode(e.target.checked)}
-              disabled={busy}
+              disabled={busy || clienteLabel}
               aria-label="Includi barcode"
             />
             Barcode
+          </label>
+
+          <label className="flex min-h-11 shrink-0 cursor-pointer items-center gap-2 self-end px-1 text-sm text-[color:var(--cab-text)]">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-[color:var(--cab-border)]"
+              checked={clienteLabel}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setClienteLabel(next);
+                if (next) setIncludeBarcode(false);
+              }}
+              disabled={busy}
+              aria-label="Etichetta cliente"
+            />
+            Etichetta cliente
           </label>
 
           <div className="flex flex-wrap items-center gap-2 sm:shrink-0">

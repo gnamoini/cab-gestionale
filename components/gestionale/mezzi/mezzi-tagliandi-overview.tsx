@@ -80,6 +80,7 @@ function OverviewGroupTable({
             <GlobalTableHeadLabel label="Targa / codice" />
             <GlobalTableHeadLabel label="Ultimo" />
             <GlobalTableHeadLabel label="Prossimo" />
+            <GlobalTableHeadLabel label="Motivo scadenza" />
             <GlobalTableHeadLabel label="Ore/km attuali" />
             <GlobalTableHeadLabel label="Stato" />
           </>
@@ -101,6 +102,9 @@ function OverviewGroupTable({
               </td>
               <td className={`${gestionaleListTableTd} font-mono text-xs`}>{fmtUltimo(row)}</td>
               <td className={`${gestionaleListTableTd} font-mono text-xs`}>{fmtProssimo(row)}</td>
+              <td className={`${gestionaleListTableTd} text-xs`} title={row.dueReasonLabel}>
+                {row.dueReasonLabel}
+              </td>
               <td className={`${gestionaleListTableTd} font-mono text-xs`}>{row.currentValue}</td>
               <td className={gestionaleListTableTd}>
                 <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${TAGLIANDO_STATO_BADGE_CLASS[stato]}`}>

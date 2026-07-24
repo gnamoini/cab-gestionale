@@ -1,4 +1,5 @@
 import { parseDecimalInput } from "@/lib/core/decimal-input";
+import { PreferredMezzoInvalidError } from "@/lib/domain/mezzo/mezzo-resolution";
 import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
 import { resolveTargetTypeFromScheda } from "@/lib/domain/mezzo-attrezzatura/intervento-target";
 import { trimOrNull } from "@/lib/domain/mezzo-attrezzatura/backfill-rules";
@@ -117,6 +118,17 @@ export async function upsertFromSchedaV2(
     existingMezzi: mezziCatalog,
     preferredMezzoId,
   });
+
+  if (resolved.matchKind === "error") {
+    throw new PreferredMezzoInvalidError(
+      (resolved.errorCode as "preferred_mezzo_not_found" | "preferred_mezzo_forbidden") ??
+        "preferred_mezzo_not_found",
+      resolved.errorMessage ?? "Mezzo selezionato non valido.",
+    );
+  }
+  if (resolved.matchKind === "ambiguous") {
+    throw new MezzoSchedaValidationError("MEZZO_IDENT_AMBIGUOUS");
+  }
 
   const incomingMezzo = schedaToMezzoPayload(fields, resolved.mezzo?.anno);
   let mezzoId: string;

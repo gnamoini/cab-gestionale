@@ -10,8 +10,10 @@ function read(rel: string): string {
 
 // --- Write SSOT ---
 const auditLog = read("src/services/internal/audit-log.ts");
-assert.match(auditLog, /emitCabSyncEvent/);
-assert.match(auditLog, /from\("log_modifiche"\)/);
+const auditRecord = read("lib/audit/record.ts");
+assert.match(auditRecord, /emitCabSyncEvent/);
+assert.match(auditRecord, /from\("log_modifiche"\)/);
+assert.match(auditLog, /recordAuditEvent/);
 assert.match(auditLog, /AuditLogWriteError/);
 
 // --- Read SSOT: drawer pages use useLogListQuery ---

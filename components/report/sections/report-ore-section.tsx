@@ -58,6 +58,7 @@ export default function ReportOreSectionView(props: DomainReportSectionProps) {
         compareMode: props.analyticsContext.compareMode,
         completate: props.completate,
         schedeStore: props.schedeStore,
+        lavListRows: props.lavListRows,
         totalHours,
         compareTotalHours,
         costoOrario: props.costoOrario,

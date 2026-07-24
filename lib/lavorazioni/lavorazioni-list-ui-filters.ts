@@ -5,11 +5,8 @@ import {
   type LavorazioniAdvancedFilters,
   type LavorazioniListFilterVariant,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
-import {
-  lavorazioneClienteLabel,
-  lavorazioneMacchinaLabel,
-  lavorazioneMezzoIdentParts,
-} from "@/lib/lavorazioni/lavorazioni-list-row-labels";
+import { buildSearchDocumentLavorazione } from "@/lib/search/builders/build-search-document-lavorazione";
+import { matchSearchString } from "@/lib/search/match";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
@@ -21,47 +18,7 @@ export type LavPageFilters = LavorazioniAdvancedFilters & {
 
 /** Testo indicizzato per ricerca globale (DB + schede ingresso/lavorazioni). */
 export function lavRowSearchHaystack(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  const ing = schedeStore?.[row.id]?.ingresso?.campi;
-  const lav = schedeStore?.[row.id]?.lavorazioni?.campi;
-  const ident = lavorazioneMezzoIdentParts(row, schedeStore);
-
-  const lavRigheText =
-    lav?.righe
-      .flatMap((r) => [r.lavorazioniEffettuate, ...r.addettiAssegnati.map((a) => a.addetto)])
-      .join(" ") ?? "";
-
-  return [
-    (row.note ?? "").trim(),
-    lavorazioneMacchinaLabel(row, schedeStore),
-    lavorazioneClienteLabel(row, schedeStore),
-    ing?.utilizzatore?.trim() || row.mezzo?.utilizzatore?.trim() || "",
-    ing?.cantiere?.trim() || "",
-    ident.targa,
-    ident.matricola,
-    ident.scuderia,
-    ing?.marcaAttrezzatura,
-    ing?.modelloAttrezzatura,
-    ing?.descrizioneAnomalia,
-    ing?.noteIntervento,
-    ing?.addettoAccettazione,
-    ing?.richiedente,
-    ing?.tipoTelaio,
-    ing?.marcaTelaio,
-    ing?.modelloTelaio,
-    lavRigheText,
-    row.codice?.trim() || "",
-    row.id,
-    row.stato,
-    labelLavorazioneStatoDb(row.stato),
-    row.priorita ?? "",
-    row.mezzo_id ?? "",
-    row.data_ingresso ?? "",
-    row.data_uscita ?? "",
-    row.created_at,
-  ]
-    .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
-    .join(" ")
-    .toLowerCase();
+  return buildSearchDocumentLavorazione(row, schedeStore);
 }
 
 export function lavRowMatchesGlobalSearch(
@@ -69,9 +26,7 @@ export function lavRowMatchesGlobalSearch(
   query: string,
   schedeStore?: LavorazioneSchedeStore,
 ): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return lavRowSearchHaystack(row, schedeStore).includes(q);
+  return matchSearchString(query, lavRowSearchHaystack(row, schedeStore)).matches;
 }
 
 function dayStartMs(ymd: string): number {

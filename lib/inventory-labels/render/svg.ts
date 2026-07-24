@@ -10,6 +10,75 @@ import { resolveLabelTextLayout } from "@/lib/inventory-labels/render/text-layou
 import { labelFontFaceCss } from "@/lib/inventory-labels/render/label-fonts";
 import { textLineToSvgPath } from "@/lib/inventory-labels/render/text-paths";
 import { lineMetrics } from "@/lib/inventory-labels/render/text-metrics";
+import { loadLabelLogoDataUrl } from "@/lib/inventory-labels/render/label-logo.server";
+
+let cachedLabelLogoDataUrl: string | null | undefined;
+
+async function resolveLabelLogoDataUrl(): Promise<string | null> {
+  if (cachedLabelLogoDataUrl !== undefined) return cachedLabelLogoDataUrl;
+  cachedLabelLogoDataUrl = await loadLabelLogoDataUrl();
+  return cachedLabelLogoDataUrl;
+}
+
+function labelBoldStrokeWidthPx(template: LabelTemplateDefinition, fontSizePx: number): number {
+  const ratio = template.id === "a4-pagina-intera" ? 0.3 : 0.11;
+  return Math.max(2, Math.round(fontSizePx * ratio * 10) / 10);
+}
+
+function labelBoldInkOffsetPx(template: LabelTemplateDefinition, fontSizePx: number): number {
+  if (template.id !== "a4-pagina-intera") return 0;
+  return Math.max(2.5, Math.round(fontSizePx * 0.018 * 10) / 10);
+}
+
+function renderBoldPathSvg(
+  pathSvg: string,
+  fontSizePx: number,
+  template: LabelTemplateDefinition,
+): string {
+  const d = pathSvg.match(/d="([^"]+)"/)?.[1];
+  if (!d) return pathSvg;
+  const strokeW = labelBoldStrokeWidthPx(template, fontSizePx);
+  const offset = labelBoldInkOffsetPx(template, fontSizePx);
+  const inkAttrs = `fill="#000000" stroke="#000000" stroke-width="${strokeW}" stroke-linejoin="round" stroke-linecap="round" paint-order="stroke fill"`;
+  const layers = [`<path d="${d}" ${inkAttrs}/>`];
+  if (offset > 0) {
+    layers.unshift(`<path d="${d}" fill="#000000"/>`);
+    layers.push(`<path d="${d}" fill="#000000" transform="translate(${offset}, 0)"/>`);
+    layers.push(`<path d="${d}" fill="#000000" transform="translate(${-offset}, 0)"/>`);
+  }
+  return layers.join("");
+}
+
+function renderBoldTextSvg(
+  line: string,
+  x: number,
+  dy: number,
+  baseline: "hanging" | "alphabetic",
+  family: string,
+  fontSizePx: number,
+  template: LabelTemplateDefinition,
+): string {
+  const strokeW = labelBoldStrokeWidthPx(template, fontSizePx);
+  const offset = labelBoldInkOffsetPx(template, fontSizePx);
+  const baseAttrs = `dominant-baseline="${baseline}" font-family="${family}" font-size="${fontSizePx}" fill="#000000"`;
+  const inkAttrs = `${baseAttrs} stroke="#000000" stroke-width="${strokeW}" stroke-linejoin="round" stroke-linecap="round" paint-order="stroke fill"`;
+  const layers = [
+    `<text x="${x}" y="${dy}" ${inkAttrs}>${escapeXml(line)}</text>`,
+  ];
+  if (offset > 0) {
+    layers.unshift(`<text x="${x}" y="${dy}" ${baseAttrs}>${escapeXml(line)}</text>`);
+    layers.push(`<text x="${x + offset}" y="${dy}" ${baseAttrs}>${escapeXml(line)}</text>`);
+    layers.push(`<text x="${x - offset}" y="${dy}" ${baseAttrs}>${escapeXml(line)}</text>`);
+  }
+  return layers.join("");
+}
+
+function isBoldPlaced(
+  placed: { bold?: boolean },
+  template: LabelTemplateDefinition,
+): boolean {
+  return Boolean(placed.bold || template.typography?.weight === "bold");
+}
 
 function escapeXml(s: string): string {
   return s
@@ -42,6 +111,7 @@ export async function renderLabelSvg(
   if (cutBorder) parts.push(cutBorder);
 
   const placedTexts = resolveLabelTextLayout(template, payload);
+  const logoDataUrl = template.elements.some((e) => e.type === "logo") ? await resolveLabelLogoDataUrl() : null;
 
   for (const el of template.elements) {
     const x = mmToPx(el.xMm, template.dpi);
@@ -52,6 +122,16 @@ export async function renderLabelSvg(
       const qrInner = await generateQrSvgString(qrUrl, size);
       const frag = parseSvgFragment(qrInner);
       parts.push(nestedSvgAt(x, y, size, size, frag, "xMidYMid slice"));
+      continue;
+    }
+
+    if (el.type === "logo") {
+      if (!logoDataUrl) continue;
+      const w = mmToPx(el.widthMm, template.dpi);
+      const h = mmToPx(el.heightMm, template.dpi);
+      parts.push(
+        `<image x="${x}" y="${y}" width="${w}" height="${h}" href="${escapeXml(logoDataUrl)}" preserveAspectRatio="xMidYMid meet"/>`,
+      );
       continue;
     }
 
@@ -73,16 +153,20 @@ export async function renderLabelSvg(
             : y + i * lineStepPx;
         if (textAsPaths) {
           const path = textLineToSvgPath(line, x, dy, fontSizePx, slot, baseline);
-          if (placed.bold || template.typography?.weight === "bold") {
-            parts.push(path.replace('fill="#000000"', 'fill="#000000" stroke="#000000" stroke-width="0.6"'));
+          if (isBoldPlaced(placed, template)) {
+            parts.push(renderBoldPathSvg(path, fontSizePx, template));
           } else {
             parts.push(path);
           }
         } else {
           const family = slot === "mono" ? "LabelMono" : "LabelSans";
-          parts.push(
-            `<text x="${x}" y="${dy}" dominant-baseline="${baseline}" font-family="${family}" font-size="${fontSizePx}" fill="#000000">${escapeXml(line)}</text>`,
-          );
+          if (isBoldPlaced(placed, template)) {
+            parts.push(renderBoldTextSvg(line, x, dy, baseline, family, fontSizePx, template));
+          } else {
+            parts.push(
+              `<text x="${x}" y="${dy}" dominant-baseline="${baseline}" font-family="${family}" font-size="${fontSizePx}" fill="#000000">${escapeXml(line)}</text>`,
+            );
+          }
         }
       });
       continue;
@@ -93,7 +177,8 @@ export async function renderLabelSvg(
       const value = labelDisplayCaps(fieldValue(payload, el.field));
       if (!value) continue;
       const qrEl = template.elements.find((e) => e.type === "qr");
-      const barcodeWidthMm = qrEl?.type === "qr" ? qrEl.sizeMm : (el.widthMm ?? template.widthMm - el.xMm - 2);
+      const barcodeWidthMm =
+        el.widthMm ?? (qrEl?.type === "qr" ? qrEl.sizeMm : template.widthMm - el.xMm - 2);
       const bw = mmToPx(barcodeWidthMm, template.dpi);
       const bh = mmToPx(el.heightMm, template.dpi);
       const barcodeSvg = generateCode128SvgString(value, barcodeWidthMm, el.heightMm);

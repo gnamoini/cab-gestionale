@@ -86,7 +86,7 @@ export function CaptureDocumentZoomPanViewport({
   }, []);
 
   return (
-    <div className={`flex min-h-0 flex-col gap-2 ${shellClassName}`.trim()}>
+    <div className={`flex min-h-0 min-w-0 max-w-full flex-col gap-2 overflow-x-hidden ${shellClassName}`.trim()}>
       <div className="flex min-w-0 items-center gap-2">
         <label htmlFor="capture-doc-zoom" className="shrink-0 text-xs text-[color:var(--cab-text-muted)]">
           Zoom
@@ -111,7 +111,7 @@ export function CaptureDocumentZoomPanViewport({
       </div>
       <div
         ref={scrollRef}
-        className={`min-h-0 flex-1 overflow-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)] gestionale-scrollbar touch-none select-none ${
+        className={`min-h-0 min-w-0 max-w-full flex-1 overflow-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)] gestionale-scrollbar touch-none select-none ${
           panEnabled ? "cursor-grab active:cursor-grabbing" : "cursor-default"
         }`}
         onPointerDown={onPointerDown}

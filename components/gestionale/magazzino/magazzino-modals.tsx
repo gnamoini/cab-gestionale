@@ -15,6 +15,7 @@ import type { RicambioConsumoDaLog } from "@/lib/magazzino/ricambio-consumo-from
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { displayRicambioCodice, ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import { RicambioLabelActions } from "@/components/gestionale/magazzino/ricambio-label-actions";
+import { MagazzinoScortaModalQuickAdjust } from "@/components/gestionale/magazzino/magazzino-scorta-debounced-stepper";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
@@ -55,8 +56,6 @@ export function MagazzinoRicambioInfoModal({
   canAdjustScorta,
   modalitaModifica = false,
   scortaFlash = false,
-  onAdjustScorta,
-  onSetScorta,
   stockPolicyRaw,
   onUndoStockMovement,
   undoStockPending,
@@ -76,8 +75,6 @@ export function MagazzinoRicambioInfoModal({
   canAdjustScorta: boolean;
   modalitaModifica?: boolean;
   scortaFlash?: boolean;
-  onAdjustScorta: (delta: number) => void;
-  onSetScorta: (target: number) => void;
   stockPolicyRaw?: unknown;
   onUndoStockMovement?: (movimentoId: string) => void | Promise<void>;
   undoStockPending?: boolean;
@@ -93,36 +90,13 @@ export function MagazzinoRicambioInfoModal({
       titleId="detail-ricambio-title"
       footer={
         <div className="flex w-full min-w-0 flex-col gap-2">
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-            <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!canAdjustScorta}>
-              <button
-                type="button"
-                className={`${erpBtnAccent} min-h-10 w-full justify-center text-sm disabled:opacity-45`}
-                disabled={!canAdjustScorta}
-                onClick={() => onAdjustScorta(1)}
-              >
-                Carica +1
-              </button>
-            </DisabledElementTooltip>
-            <span
-              className={`min-w-[2.5rem] px-1 text-center font-mono text-lg font-bold tabular-nums ${
-                low ? "text-red-600 dark:text-red-400" : "text-[color:var(--cab-text)]"
-              }`}
-              aria-label={`Scorta attuale: ${ricambio.scorta}`}
-            >
-              {ricambio.scorta}
-            </span>
-            <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!canAdjustScorta}>
-              <button
-                type="button"
-                className={`${erpBtnAccent} min-h-10 w-full justify-center text-sm disabled:opacity-45`}
-                disabled={!canAdjustScorta}
-                onClick={() => onAdjustScorta(-1)}
-              >
-                Scarica −1
-              </button>
-            </DisabledElementTooltip>
-          </div>
+          <MagazzinoScortaModalQuickAdjust
+            ricambioId={ricambio.id}
+            ricambioLabel={ricambio.descrizione}
+            fallbackScorta={ricambio.scorta}
+            low={low}
+            canAdjust={canAdjustScorta}
+          />
           <div className="hidden grid-cols-2 gap-2 text-sm sm:grid">
             <Link
               href="/lavorazioni"
@@ -171,8 +145,6 @@ export function MagazzinoRicambioInfoModal({
             canAdjustScorta={canAdjustScorta}
             modalitaModifica={modalitaModifica}
             scortaFlash={scortaFlash}
-            onAdjustScorta={onAdjustScorta}
-            onSetScorta={onSetScorta}
             stockPolicyRaw={stockPolicyRaw}
             onUndoStockMovement={onUndoStockMovement}
             undoStockPending={undoStockPending}

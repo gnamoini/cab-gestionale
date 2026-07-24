@@ -1,29 +1,33 @@
 "use client";
 
 import { MagazzinoScortaAdjustActions } from "@/components/gestionale/magazzino/magazzino-scorta-adjust-actions";
-import { useStockRicambioPending } from "@/src/hooks/gestionale/use-stock-adjust-mutation";
+import { useMagazzinoDebouncedScortaQuantity } from "@/components/gestionale/magazzino/magazzino-debounced-scorta-context";
 
 export function MagazzinoScortaAdjustActionsCell({
   ricambioId,
+  ricambioLabel,
+  fallbackScorta,
   canAdjust,
   modalitaModifica,
-  onDecrease,
-  onIncrease,
 }: {
   ricambioId: string;
+  ricambioLabel: string;
+  fallbackScorta: number;
   canAdjust: boolean;
   modalitaModifica?: boolean;
-  onDecrease: () => void;
-  onIncrease: () => void;
 }) {
-  const pending = useStockRicambioPending(ricambioId);
+  const { increment, decrement } = useMagazzinoDebouncedScortaQuantity({
+    ricambioId,
+    ricambioLabel,
+    fallbackScorta,
+  });
+
   return (
     <MagazzinoScortaAdjustActions
       canAdjust={canAdjust}
       modalitaModifica={modalitaModifica}
-      pending={pending}
-      onDecrease={onDecrease}
-      onIncrease={onIncrease}
+      onDecrease={decrement}
+      onIncrease={increment}
     />
   );
 }

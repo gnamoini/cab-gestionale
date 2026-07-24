@@ -42,9 +42,9 @@ export function parseMezzoMeta(raw: unknown): MezzoAnagraficaMeta {
   };
 }
 
-/** Mezzo incluso nella matrice tagliandi solo con flag esplicito Sì. */
-export function mezzoTagliandiEnabled(m: { tagliandi?: boolean }): boolean {
-  return m.tagliandi === true;
+/** @deprecated ponytail: v1 matrice tagliandi disabilitata — sempre false. */
+export function mezzoTagliandiEnabled(_m: { tagliandi?: boolean }): boolean {
+  return false;
 }
 
 export function mergeMezzoMetaPatch(

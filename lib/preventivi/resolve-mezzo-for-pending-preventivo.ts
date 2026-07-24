@@ -1,8 +1,7 @@
-import { findMezzoByIngressoIdent } from "@/lib/mezzi/find-mezzo-by-ident";
+import { proposeMezzoReconciliation } from "@/lib/mezzi/mezzo-reconciliation";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { PendingPreventivoPayload } from "@/lib/preventivi/preventivi-session-bridge";
-import { findMezzoForLavorazione } from "@/lib/schede/schede-autofill";
 
 export type PreventivoHandoffIdent = {
   targa: string;
@@ -20,21 +19,19 @@ export function resolveMezzoForPreventivoHandoff(
 ): MezzoGestito | null {
   const mezzoId = opts.mezzoId?.trim();
   if (mezzoId) {
-    const byId = mezzi.find((m) => m.id === mezzoId);
-    if (byId) return byId;
-  }
-
-  const fromLav = findMezzoForLavorazione([...mezzi], opts.lav);
-  if (fromLav) return fromLav;
-
-  if (opts.ident) {
-    const byIdent = findMezzoByIngressoIdent(mezzi, opts.ident);
-    if (byIdent) return byIdent;
+    return mezzi.find((m) => m.id === mezzoId) ?? null;
   }
 
   const archMezzoId = "mezzoId" in opts.lav ? opts.lav.mezzoId?.trim() : "";
   if (archMezzoId) {
     return mezzi.find((m) => m.id === archMezzoId) ?? null;
+  }
+
+  if (opts.ident) {
+    const recon = proposeMezzoReconciliation(mezzi, opts.ident);
+    if (recon.status === "resolved") {
+      return mezzi.find((m) => m.id === recon.mezzoId) ?? null;
+    }
   }
 
   return null;

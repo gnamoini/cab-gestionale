@@ -59,24 +59,24 @@ const fields: SchedaIngressoFields = {
   livelloCarburante: "",
   addettoAccettazione: "",
   richiedente: "",
-    richiedenteTelefono: "",
+  richiedenteTelefono: "",
   noteIntervento: "",
 };
 
-const byIdent = resolveMezzoFromScheda({
+const byPreferredOverIdent = resolveMezzoFromScheda({
   scheda: fields,
   existingMezzi: catalog,
   preferredMezzoId: "m-linked",
 });
-assert.equal(byIdent.matchKind, "ident");
-assert.equal(byIdent.mezzoId, "m-by-plate");
+assert.equal(byPreferredOverIdent.matchKind, "explicit");
+assert.equal(byPreferredOverIdent.mezzoId, "m-linked");
 
 const byPreferred = resolveMezzoFromScheda({
   scheda: { ...fields, targa: "NEW" },
   existingMezzi: catalog,
   preferredMezzoId: "m-linked",
 });
-assert.equal(byPreferred.matchKind, "preferred");
+assert.equal(byPreferred.matchKind, "explicit");
 assert.equal(byPreferred.mezzoId, "m-linked");
 
 console.log("resolve-mezzo-from-scheda.test.ts: ok");

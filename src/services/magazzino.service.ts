@@ -23,6 +23,8 @@ export type MagazzinoFilters = {
   codice?: string;
   nome?: string;
   marca?: string;
+  /** Ricerca globale su search_document (server). */
+  search?: string;
 };
 
 export type MagazzinoInsert = Omit<MagazzinoRicambioRow, "id" | "created_at" | "updated_at">;

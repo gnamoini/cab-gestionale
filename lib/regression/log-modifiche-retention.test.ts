@@ -2,33 +2,35 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
-import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
+import { LOG_MODIFICHE_ENTITY_RETENTION_DEFAULT } from "@/lib/audit/retention-config";
 
 const ROOT = process.cwd();
-const migration = fs.readFileSync(
-  path.join(ROOT, "supabase/migrations/20260603120000_log_modifiche_retention_100.sql"),
+
+assert.equal(LOG_MODIFICHE_RETENTION_PER_ENTITA, 500);
+assert.equal(LOG_MODIFICHE_ENTITY_RETENTION_DEFAULT, 500);
+
+const retentionMigration = fs.readFileSync(
+  path.join(ROOT, "supabase/migrations/20261026120100_audit_subsystem_retention_config.sql"),
   "utf8",
 );
-
-assert.equal(LOG_MODIFICHE_RETENTION_PER_ENTITA, 100);
-assert.equal(GESTIONALE_LOG_FEED_LIMIT, 100);
-
-assert.match(migration, /prune_log_modifiche_retention/);
-assert.match(migration, /partition by entita/i);
-assert.match(migration, /trg_log_modifiche_retention/);
-assert.match(migration, /max_keep constant int := 100/);
+assert.match(retentionMigration, /prune_log_modifiche_per_entity/);
+assert.match(retentionMigration, /entity_retention_default.*500/);
+assert.match(retentionMigration, /dashboard_days.*90/);
+assert.match(retentionMigration, /audit_entity_retention_limit/);
 
 const fixMigration = fs.readFileSync(
   path.join(ROOT, "supabase/migrations/20261019140000_fix_prune_log_modifiche_retention_old_alias.sql"),
   "utf8",
 );
-assert.doesNotMatch(fixMigration, /delete from public\.log_modifiche old\b/);
 assert.match(fixMigration, /prune_row\.entita = new\.entita/);
 
-const logService = fs.readFileSync(path.join(ROOT, "src/services/log.service.ts"), "utf8");
-assert.match(logService, /LOG_MODIFICHE_RETENTION_PER_ENTITA/);
-
-// ponytail: retention 100/tipo — rivalutare solo se test post-fix mostrano perdita diversità; non causa tipica per attività recenti.
-assert.match(migration, /partition by entita/i);
+const p1cols = fs.readFileSync(
+  path.join(ROOT, "supabase/migrations/20261026120000_audit_subsystem_p1_columns.sql"),
+  "utf8",
+);
+assert.match(p1cols, /event_type text/);
+assert.match(p1cols, /actor_type text/);
+assert.match(p1cols, /request_id uuid/);
+assert.match(p1cols, /correlation_id uuid/);
 
 console.log("log-modifiche-retention.test.ts OK");

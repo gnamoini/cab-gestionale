@@ -12,8 +12,10 @@ import {
 
 export const PDF_DS_SECTION_GAP = 2;
 export const PDF_DS_ROW_PAD = 1.5;
+export const PDF_DS_ROW_PAD_COMPACT = 1.0;
 export const PDF_DS_ROW_PAD_MULTILINE = 2;
 export const PDF_DS_HEAD_PAD_V = 1.4;
+export const PDF_DS_HEAD_PAD_V_COMPACT = 1.0;
 export const PDF_DS_HEAD_PAD_H = 2.5;
 export const PDF_DS_MULTILINE_MIN_H = 6;
 export const PDF_DS_COL_LABEL_RATIO = 0.35;
@@ -73,6 +75,17 @@ function isSectionTitleHeadRow(data: CellHookData): boolean {
   return data.section === "head" && data.row.index === 0;
 }
 
+function isEmptyBodyCell(data: CellHookData): boolean {
+  return data.section === "body" && !String(data.cell.raw ?? "").trim();
+}
+
+function suppressEmptyBodyCellBorders(data: CellHookData): void {
+  if (!isEmptyBodyCell(data)) return;
+  data.cell.styles.lineWidth = 0;
+  data.cell.styles.fillColor = 255;
+  data.cell.styles.textColor = C_PRIMARY;
+}
+
 function drawHeadBottomRule(doc: jsPDF, x: number, y: number, width: number, height: number): void {
   doc.setDrawColor(...C_RULE);
   doc.setLineWidth(0.1);
@@ -100,6 +113,9 @@ export function drawGestionaleTableHeadBorders(doc: jsPDF, data: CellHookData): 
     doc.setLineWidth(0.35);
     doc.line(x, y, x, y + height);
     drawHeadBottomRule(doc, x, y, width, height);
+    doc.setDrawColor(...C_RULE);
+    doc.setLineWidth(0.1);
+    doc.line(x + width, y, x + width, y + height);
     return;
   }
 
@@ -162,6 +178,22 @@ export function pdfFieldsToBody(fields: PdfField[]): string[][] {
   return fields.map((f) => [f.label, f.value]);
 }
 
+/** Griglia 4 colonne: label|value|label|value (2 coppie per riga). */
+export function pdfFieldsToCompactBody(fields: PdfField[]): string[][] {
+  const rows: string[][] = [];
+  for (let i = 0; i < fields.length; i += 2) {
+    const left = fields[i]!;
+    const right = fields[i + 1];
+    rows.push([left.label, left.value, right?.label ?? "", right?.value ?? ""]);
+  }
+  return rows;
+}
+
+/** Righe griglia compatta necessarie per N campi. */
+export function compactFieldRowCount(fieldCount: number): number {
+  return Math.ceil(Math.max(fieldCount, 0) / 2);
+}
+
 /** Allinea due liste campi alla stessa lunghezza (righe vuote per altezza uniforme). */
 export function padPdfFieldsToEqualRows(
   left: readonly PdfField[],
@@ -213,9 +245,7 @@ function drawPanelFieldSectionTable(
     columnStyles: panelFieldColumnStyles(panelW, multiline),
     didParseCell: (data: CellHookData) => {
       hooks.didParseCell(data);
-      if (data.section === "body" && !String(data.cell.raw ?? "").trim()) {
-        data.cell.styles.textColor = C_PRIMARY;
-      }
+      suppressEmptyBodyCellBorders(data);
     },
     didDrawCell: hooks.didDrawCell,
   });
@@ -299,6 +329,33 @@ function fieldColumnStyles(contentW: number, multiline: boolean) {
   };
 }
 
+function compactFieldColumnStyles(contentW: number) {
+  const halfW = contentW / 2;
+  const labelW = halfW * PDF_DS_COL_LABEL_RATIO;
+  const valueW = halfW * (1 - PDF_DS_COL_LABEL_RATIO);
+  const cellPadding = PDF_DS_ROW_PAD_COMPACT;
+  const labelStyle = {
+    fontSize: 8.5,
+    textColor: C_LABEL,
+    fontStyle: "normal" as const,
+    valign: "top" as const,
+    cellPadding,
+  };
+  const valueStyle = {
+    fontSize: 9,
+    textColor: C_PRIMARY,
+    fontStyle: "normal" as const,
+    valign: "top" as const,
+    cellPadding,
+  };
+
+  return {
+    0: { cellWidth: labelW, ...labelStyle },
+    1: { cellWidth: valueW, ...valueStyle },
+    2: { cellWidth: labelW, ...labelStyle },
+    3: { cellWidth: valueW, ...valueStyle },
+  };
+}
 function baseTableStyles() {
   return {
     theme: "grid" as const,
@@ -316,7 +373,8 @@ function baseTableStyles() {
   };
 }
 
-export function gestionaleSectionTableHooks(doc: jsPDF) {
+export function gestionaleSectionTableHooks(doc: jsPDF, opts?: { compactHead?: boolean }) {
+  const headPadV = opts?.compactHead ? PDF_DS_HEAD_PAD_V_COMPACT : PDF_DS_HEAD_PAD_V;
   return {
     didParseCell: (data: CellHookData) => {
       if (isSectionTitleHeadRow(data)) {
@@ -325,13 +383,15 @@ export function gestionaleSectionTableHooks(doc: jsPDF) {
         data.cell.styles.fontStyle = "bold";
         data.cell.styles.fontSize = 9.5;
         data.cell.styles.cellPadding = {
-          top: PDF_DS_HEAD_PAD_V,
+          top: headPadV,
           right: PDF_DS_HEAD_PAD_H,
-          bottom: PDF_DS_HEAD_PAD_V,
+          bottom: headPadV,
           left: PDF_DS_HEAD_PAD_H,
         };
+        data.cell.styles.lineWidth = 0;
         return;
       }
+      suppressEmptyBodyCellBorders(data);
       if (data.section === "head") {
         data.cell.styles.fillColor = 255;
         data.cell.styles.textColor = C_PRIMARY;
@@ -367,6 +427,8 @@ export function drawGestionaleFieldSectionTable(
     head: [[{ content: title.toUpperCase(), colSpan: 2 }]],
     body: pdfFieldsToBody(fields),
     ...baseTableStyles(),
+    tableWidth: contentW,
+    margin: { left: PDF_MARGIN_L, right: PDF_MARGIN_R },
     headStyles: {
       fillColor: C_HEAD_ACCENT_FILL,
       textColor: C_PRIMARY,
@@ -376,7 +438,55 @@ export function drawGestionaleFieldSectionTable(
       halign: "left",
     },
     columnStyles: fieldColumnStyles(contentW, multiline),
-    didParseCell: hooks.didParseCell,
+    didParseCell: (data: CellHookData) => {
+      hooks.didParseCell(data);
+      suppressEmptyBodyCellBorders(data);
+    },
+    didDrawCell: hooks.didDrawCell,
+  });
+
+  return getAutoTableFinalY(doc, y) + PDF_DS_SECTION_GAP;
+}
+
+/** Sezione compatta 4 colonne (2 coppie label|value per riga) con header arancione. */
+export function drawGestionaleCompactFieldSectionTable(
+  doc: jsPDF,
+  startY: number,
+  pageW: number,
+  title: string,
+  fields: PdfField[],
+): number {
+  if (!fields.length) return startY;
+
+  const contentW = pdfContentWidth(pageW);
+  const y = ensurePdfSpace(doc, startY, 18);
+  const hooks = gestionaleSectionTableHooks(doc, { compactHead: true });
+
+  autoTable(doc, {
+    startY: y,
+    head: [[{ content: title.toUpperCase(), colSpan: 4 }]],
+    body: pdfFieldsToCompactBody(fields),
+    ...baseTableStyles(),
+    tableWidth: contentW,
+    margin: { left: PDF_MARGIN_L, right: PDF_MARGIN_R },
+    headStyles: {
+      fillColor: C_HEAD_ACCENT_FILL,
+      textColor: C_PRIMARY,
+      fontStyle: "bold",
+      fontSize: 9.5,
+      cellPadding: {
+        top: PDF_DS_HEAD_PAD_V_COMPACT,
+        right: PDF_DS_HEAD_PAD_H,
+        bottom: PDF_DS_HEAD_PAD_V_COMPACT,
+        left: PDF_DS_HEAD_PAD_H,
+      },
+      halign: "left",
+    },
+    columnStyles: compactFieldColumnStyles(contentW),
+    didParseCell: (data: CellHookData) => {
+      hooks.didParseCell(data);
+      suppressEmptyBodyCellBorders(data);
+    },
     didDrawCell: hooks.didDrawCell,
   });
 

@@ -87,6 +87,15 @@ export type DescriptionEngineMeta = {
   aiRejectReason?: AiRejectReason;
   semanticFingerprintPre?: string;
   semanticFingerprintPost?: string;
+  polish?: {
+    attempted: boolean;
+    applied: boolean;
+    fallback: boolean;
+    reason?: string;
+    cacheHit?: boolean;
+    durationMs?: number;
+    model?: string;
+  };
   suggestionIdsApplied?: string[];
   operativeHistory?: {
     candidatesEvaluated: number;
@@ -126,8 +135,6 @@ export type DescriptionEngineInput = {
   publishedSnapshot?: import("@/lib/domain/technical-knowledge-base").TkbPublishedSnapshot;
   /** Righe grezze scheda lavorazioni (prioritarie sul technicalBlob). */
   lavorazioniLines?: readonly string[];
-  /** ponytail: opt-in via NEXT_PUBLIC_TDE_AI_POLISH=1 + polishFn esplicito */
-  aiPolishFn?: (texts: string[]) => string[];
 };
 
 export type AiPolishConstraints = {

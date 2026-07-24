@@ -29,7 +29,7 @@ const base = (): ConfigurazioneSettingsSnapshot => ({
   },
   eco: { costoOrarioDefault: 40 },
   tipiAssenza: [],
-  branding: { primaryColor: null, logoStoragePath: null, updatedAt: null },
+  branding: { primaryColor: null, logoStoragePath: null, companyWebsiteUrl: "https://www.autocompattatori.it", updatedAt: null },
 });
 
 {

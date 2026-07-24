@@ -82,7 +82,12 @@ function findModelloByNome(marca: { modelli: { id: string; nome: string }[] }, n
   return marca.modelli.find((m) => normCompact(m.nome) === compact);
 }
 
-export function labelToCompatRef(line: string, liste: MezziListePrefs): RicambioCompatRef | null {
+export type LabelToCompatRefOptions = {
+  /** Albero settings (ID stabili) — ha priorità su `liste` merged/flotta. */
+  prefsListe?: MezziListePrefs;
+};
+
+function labelToCompatRefInListe(line: string, liste: MezziListePrefs): RicambioCompatRef | null {
   const { marca, modello } = parseCompatMarcaModello(line.trim());
   if (!marca) return null;
 
@@ -96,10 +101,26 @@ export function labelToCompatRef(line: string, liste: MezziListePrefs): Ricambio
   return null;
 }
 
-export function labelsToCompatRefs(lines: readonly string[], liste: MezziListePrefs): RicambioCompatRef[] {
+export function labelToCompatRef(
+  line: string,
+  liste: MezziListePrefs,
+  opts?: LabelToCompatRefOptions,
+): RicambioCompatRef | null {
+  if (opts?.prefsListe) {
+    const fromPrefs = labelToCompatRefInListe(line, opts.prefsListe);
+    if (fromPrefs) return fromPrefs;
+  }
+  return labelToCompatRefInListe(line, liste);
+}
+
+export function labelsToCompatRefs(
+  lines: readonly string[],
+  liste: MezziListePrefs,
+  opts?: LabelToCompatRefOptions,
+): RicambioCompatRef[] {
   const refs: RicambioCompatRef[] = [];
   for (const line of normalizeCompatList(lines)) {
-    const ref = labelToCompatRef(line, liste);
+    const ref = labelToCompatRef(line, liste, opts);
     if (ref) refs.push(ref);
   }
   return dedupeCompatRefs(refs);

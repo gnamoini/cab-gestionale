@@ -11,6 +11,7 @@ import {
   refsToCompatLabels,
   resolveRicambioCompatLabels,
 } from "@/lib/magazzino/ricambio-compat-resolver";
+import { resolveMezziListeWithFleetCatalog } from "@/lib/attrezzature/attrezzature-catalog";
 
 const mezziListe: MezziListePrefs = {
   clienti: [],
@@ -65,5 +66,34 @@ assert.equal(
   compatDisplayLabel([cleangoE6c, cleangoEtSpaced, cleangoEtCompact]),
   "Schmidt Cleango 500 E6C, Schmidt Cleango 500 ET",
 );
+
+const fleetTree = [
+  {
+    id: "fleet-schmidt",
+    nome: "Schmidt",
+    modelli: [{ id: "fleet-cleango", nome: "Cleango 400" }],
+  },
+];
+const mergedListe = resolveMezziListeWithFleetCatalog(mezziListe, fleetTree);
+const cleango400 = compatLabelMarcaModello("Schmidt", "Cleango 400");
+const refMergedOnly = labelToCompatRef(cleango400, mergedListe);
+assert.equal(refMergedOnly?.marcaId, "fleet-schmidt");
+
+const prefsListe: MezziListePrefs = {
+  ...mezziListe,
+  attrezzature: [
+    {
+      id: "m-schmidt",
+      nome: "Schmidt",
+      modelli: [{ id: "mod-cleango", nome: "Cleango 400" }],
+    },
+  ],
+};
+const refWithPrefs = labelToCompatRef(cleango400, mergedListe, { prefsListe });
+assert.equal(refWithPrefs?.marcaId, "m-schmidt", "prefs IDs hanno priorità su fleet");
+assert.equal(refWithPrefs?.modelloId, "mod-cleango");
+
+const refsFromLabels = labelsToCompatRefs([cleango400], mergedListe, { prefsListe });
+assert.equal(refsFromLabels[0]?.marcaId, "m-schmidt");
 
 console.log("ricambio-compat-resolver.test.ts OK");

@@ -8,7 +8,8 @@ import {
   mapMezziRowsWithAttrezzature,
 } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import { mezzoTagliandiEnabled } from "@/lib/mezzi/mezzi-meta";
+import { buildSearchDocumentMezzo } from "@/lib/search/builders/build-search-document-mezzo";
+import { matchSearchString } from "@/lib/search/match";
 import type { MezzoFilters } from "@/src/services/mezzi.service";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MezzoRow } from "@/src/types/supabase-tables";
@@ -18,26 +19,6 @@ export type MezziListVariant = "list" | "report";
 
 function norm(s: string): string {
   return s.trim().toLowerCase();
-}
-
-function gestitoSearchHaystack(g: MezzoGestito): string {
-  return [
-    g.cliente,
-    g.utilizzatore,
-    g.cantiere ?? "",
-    g.tipoAttrezzatura,
-    g.marca,
-    g.modello,
-    g.matricola,
-    g.targa,
-    g.numeroScuderia ?? "",
-    g.marcaTelaio ?? "",
-    g.modelloTelaio ?? "",
-    g.tipoTelaio ?? "",
-    g.vin ?? "",
-  ]
-    .map(norm)
-    .join(" ");
 }
 
 /** Filtri identità mezzo (telaio/cliente) — query DB. */
@@ -114,19 +95,8 @@ export function filterMezziGestiti(gestiti: MezzoGestito[], filters?: MezzoFilte
     const m = norm(filters.vin);
     out = out.filter((g) => norm(g.vin ?? "").includes(m));
   }
-  if (filters.tagliandi === "si") {
-    out = out.filter((g) => mezzoTagliandiEnabled(g));
-  } else if (filters.tagliandi === "no") {
-    out = out.filter((g) => !mezzoTagliandiEnabled(g));
-  }
   if (filters.search?.trim()) {
-    const tokens = norm(filters.search)
-      .split(/\s+/)
-      .filter(Boolean);
-    out = out.filter((g) => {
-      const hay = gestitoSearchHaystack(g);
-      return tokens.every((t) => hay.includes(t));
-    });
+    out = out.filter((g) => matchSearchString(filters.search!, buildSearchDocumentMezzo(g)).matches);
   }
   return out;
 }
