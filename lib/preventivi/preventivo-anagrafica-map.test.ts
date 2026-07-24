@@ -35,7 +35,6 @@ test("anagraficaFromSchedaIngresso mappa tutti i campi ingresso", () => {
     livelloCarburante: "1/2",
     addettoAccettazione: "",
     richiedente: "Mario Rossi",
-    noteIntervento: "",
   });
   assert.equal(patch.cliente, "AMIU");
   assert.equal(patch.tipoAttrezzatura, "Escavatore");
@@ -117,7 +116,7 @@ test("PDF attrezzatura e telaio completi da record esteso", () => {
 test("mergeAnagraficaPreventivo priorità ingresso su mezzo", () => {
   const merged = mergeAnagraficaPreventivo(
     { cliente: "Da ingresso", targa: "ING1", matricola: "", cantiere: "", utilizzatore: "", tipoAttrezzatura: "", marcaAttrezzatura: "", modelloAttrezzatura: "", nScuderia: "", oreLavoro: "", tipoTelaio: "", marcaTelaio: "", modelloTelaio: "", km: "", descrizioneAnomalia: "", livelloCarburante: "", addettoAccettazione: "", richiedente: "",
-    richiedenteTelefono: "", noteIntervento: "", dataIngresso: "" },
+    richiedenteTelefono: "", dataIngresso: "" },
     {
       id: "m1",
       cliente: "Da mezzo",

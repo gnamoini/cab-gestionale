@@ -19,7 +19,7 @@ const lav = {
   macchina: "CAT 320",
   dataIngresso: "2026-01-15",
   dataCompletamento: "",
-  noteInterne: "Nota lav",
+  note: "Nota lav",
   addetto: "Mario",
   statoId: "in_lavorazione",
   priorita: "media",

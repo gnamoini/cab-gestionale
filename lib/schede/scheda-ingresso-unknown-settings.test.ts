@@ -64,7 +64,6 @@ const fields: SchedaIngressoFields = {
   addettoAccettazione: "Nuovo Addetto",
   richiedente: "",
   richiedenteTelefono: "",
-  noteIntervento: "",
 };
 
 const unknown = listSchedaIngressoUnknownSettings(fields, opts as unknown as GlobalOptionsSlice);

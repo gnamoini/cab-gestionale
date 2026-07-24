@@ -1,5 +1,4 @@
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import type { LavorazioneSchedeStore } from "@/types/schede";
 
 export const LAVORAZIONE_EMPTY_DISPLAY = "—";
 
@@ -13,15 +12,12 @@ export function utilizzatoreDisplayLabel(raw: string | null | undefined): string
   return isLavorazioneEmptyDisplay(raw) ? "" : raw!.trim();
 }
 
-/**
- * Note operative mostrate in colonna Note: solo note intervento / manuali,
- * mai la descrizione anomalia (resta in scheda ingresso).
- */
-export function lavorazioneNoteOperative(
-  row: { id: string; note?: string | null },
-  schedeStore?: LavorazioneSchedeStore,
-): string {
-  const fromScheda = schedeStore?.[row.id]?.ingresso?.campi.noteIntervento?.trim();
-  if (fromScheda) return fromScheda;
+/** SSOT: note lavorazione da `lavorazioni.note` (mai descrizione anomalia). */
+export function resolveLavorazioneNote(row: { note?: string | null }): string {
   return (row.note ?? "").trim();
+}
+
+/** Lista tabella/kanban — alias di resolveLavorazioneNote. */
+export function lavorazioneNoteDisplay(row: Pick<LavorazioneListRow, "note">): string {
+  return resolveLavorazioneNote(row);
 }

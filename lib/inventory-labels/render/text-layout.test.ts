@@ -174,4 +174,40 @@ const a4Codice = a4Placed.find((p) => p.field === "codice")!;
 const a4Marca2 = a4Placed.find((p) => p.field === "marcaSecondaria")!;
 assert.ok(a4Marca2.yMm - a4Codice.yMm >= 5.5, "A4: gap ampio tra codice e marca secondaria");
 
+const manualTemplate = getLabelTemplate("60x40-default", "manual")!;
+const manualPlaced = resolveLabelTextLayout(manualTemplate, {
+  marca: "BTE",
+  marcaSecondaria: "",
+  descrizione: "Filtro olio",
+  codice: "FO-123",
+  codiceSecondario: "",
+  fornitoreAlternativo: "",
+  codiceAlternativo: "",
+  fornitoriAlternativi: [],
+});
+assert.equal(manualPlaced.length, 3);
+for (const p of manualPlaced) {
+  assert.equal(p.anchor, "middle");
+  assert.equal(p.xMm, manualTemplate.widthMm / 2);
+}
+const manualMarca = manualPlaced.find((p) => p.field === "marca")!;
+const manualDesc = manualPlaced.find((p) => p.field === "descrizione")!;
+const manualCodice = manualPlaced.find((p) => p.field === "codice")!;
+assert.ok(manualDesc.yMm > manualMarca.yMm);
+assert.ok(manualCodice.yMm > manualDesc.yMm);
+assert.equal(manualCodice.lines[0], "FO-123");
+
+const manualPartial = resolveLabelTextLayout(manualTemplate, {
+  marca: "",
+  marcaSecondaria: "",
+  descrizione: "",
+  codice: "SOLO-COD",
+  codiceSecondario: "",
+  fornitoreAlternativo: "",
+  codiceAlternativo: "",
+  fornitoriAlternativi: [],
+});
+assert.equal(manualPartial.length, 1);
+assert.equal(manualPartial[0]!.field, "codice");
+
 console.log("inventory-labels/render/text-layout.test.ts OK");

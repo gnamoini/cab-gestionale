@@ -34,7 +34,7 @@ assert.match(lavCreateHook, /createdLavorazioneIdRef/);
 assert.match(lavCreateHook, /partialSuccessRef/);
 assert.match(lavCreateHook, /incrementHealthCounter\("lavCreateSchedaSyncFail"\)/);
 assert.match(lavCreateHook, /incrementHealthCounter\("lavCreatePartialRetry"\)/);
-assert.match(lavCreateHook, /noteIntervento\.trim\(\)/);
+assert.match(lavCreateHook, /noteBlob/);
 assert.match(lavCreate, /useLavorazioneCreateSubmit/);
 
 // Nuovo Ricambio — Form Engine + lenient save

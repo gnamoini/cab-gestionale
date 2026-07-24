@@ -193,7 +193,6 @@ export function preventivoToSchedaIngressoSlice(p: PreventivoRecord): SchedaIngr
     addettoAccettazione: "",
     richiedente: p.richiedente,
     richiedenteTelefono: "",
-    noteIntervento: "",
   };
 }
 

@@ -28,7 +28,6 @@ const base = {
   addettoAccettazione: "",
   richiedente: "",
   richiedenteTelefono: "",
-  noteIntervento: "",
 } satisfies SchedaIngressoFields;
 
 assert.ok(

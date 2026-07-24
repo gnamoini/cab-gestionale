@@ -128,6 +128,8 @@ export function LavorazioneCreateModal({
             mezzoId={create.mezzoId || create.mezzoPrompt.preferredMezzoId || ""}
             sharedGlobalOpts={create.globalOpts}
             sharedMezziCatalog={create.mezziCatalog}
+            lavorazioneNote={create.lavorazioneNote}
+            onLavorazioneNoteChange={create.setLavorazioneNote}
           />
         </form>
       </SchedaIngressoFormModalShell>

@@ -2,6 +2,7 @@ import "server-only";
 
 import { aiService } from "@/lib/ai/runtime/service";
 import { aiErrorMessage } from "@/lib/ai/runtime/errors";
+import { GeminiAnalyzeError } from "@/lib/document-capture/analyze-errors";
 import { readRuntimeTimeoutMs } from "@/lib/ai/runtime/env-reader";
 import { classifyStorageDownloadError } from "@/lib/storage/storage-download-errors";
 import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
@@ -102,7 +103,7 @@ export async function analyzeDocumentCapture(captureId: string): Promise<Analyze
         temperature: 0.2,
         timeoutMs: readRuntimeTimeoutMs(),
       });
-      if (!aiResult.ok) throw new Error(aiResult.message);
+      if (!aiResult.ok) throw new GeminiAnalyzeError(aiResult.code, aiResult.message);
       const object = aiResult.data.object;
       const usage = aiResult.data.usage;
       const response = aiResult.data.response;

@@ -1,4 +1,5 @@
 import { formatTitleCasePhrase } from "@/lib/gestionale-log/view-model";
+import { isTechnicalAuditOggetto } from "@/lib/gestionale-log/log-summary";
 import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import { parseStockMovementAuditPayload } from "@/lib/magazzino/stock-audit-payload";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -41,9 +42,9 @@ export function entityLabelFromPayload(payload: unknown): string | null {
   if (!ctx || typeof ctx !== "object" || Array.isArray(ctx)) return null;
   const record = ctx as Record<string, unknown>;
   const entityLabel = readStr(record.entityLabel);
-  if (entityLabel) return cleanLabel(entityLabel);
+  if (entityLabel && !isTechnicalAuditOggetto(entityLabel)) return cleanLabel(entityLabel);
   const oggetto = readStr(record.oggetto);
-  if (oggetto) return cleanLabel(oggetto);
+  if (oggetto && !isTechnicalAuditOggetto(oggetto)) return cleanLabel(oggetto);
   return null;
 }
 

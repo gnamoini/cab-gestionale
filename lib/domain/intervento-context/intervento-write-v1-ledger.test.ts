@@ -31,7 +31,6 @@ const fields: SchedaIngressoFields = {
   addettoAccettazione: "",
   richiedente: "",
     richiedenteTelefono: "",
-  noteIntervento: "",
 };
 
 async function testLedgerSkip(): Promise<void> {

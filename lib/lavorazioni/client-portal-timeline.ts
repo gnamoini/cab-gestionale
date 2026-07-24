@@ -74,7 +74,6 @@ const INGRESSO_LABELS: { key: keyof SchedaIngressoFields; label: string; multili
   { key: "addettoAccettazione", label: "Addetto accettazione" },
   { key: "richiedente", label: "Richiedente" },
   { key: "richiedenteTelefono", label: "Telefono richiedente" },
-  { key: "noteIntervento", label: "Note intervento", multiline: true },
 ];
 
 function resolveTimelineStatoId(
@@ -342,7 +341,6 @@ export function resolveClientPortalSchedaIngressoFields(
     addettoAccettazione: vm.addetto === "—" ? "" : vm.addetto,
     richiedente: "",
     richiedenteTelefono: "",
-    noteIntervento: "",
   };
 }
 

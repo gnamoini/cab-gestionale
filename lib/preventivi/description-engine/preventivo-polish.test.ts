@@ -51,7 +51,6 @@ function bundleWithLavorazioni(lines: string[]): LavorazioneSchedeBundle {
         addettoAccettazione: "",
         richiedente: "",
         richiedenteTelefono: "",
-        noteIntervento: "",
       },
     },
     lavorazioni: {

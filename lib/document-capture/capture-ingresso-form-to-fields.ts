@@ -22,7 +22,6 @@ const INGRESSO_TO_CAPTURE: Partial<Record<keyof SchedaIngressoFields, string>> =
   addettoAccettazione: "addetto_accettazione",
   richiedente: "richiedente",
   richiedenteTelefono: "telefono",
-  noteIntervento: "note",
 };
 
 /** Maps scheda ingresso form → document_capture_fields patches for apply. */

@@ -46,7 +46,6 @@ const fields: SchedaIngressoFields = {
   addettoAccettazione: "",
   richiedente: "",
     richiedenteTelefono: "",
-  noteIntervento: "",
 };
 
 const row = {

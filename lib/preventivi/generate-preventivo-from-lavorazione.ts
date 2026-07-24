@@ -102,7 +102,7 @@ export async function buildNewPreventivoFromLavorazioneContext(opts: {
   const generated = await generatePreventivoDescriptionAsync({
     lavorazioneId: lav.id,
     magazzino,
-    noteInterneFallback: lav.noteInterne.trim() || undefined,
+    lavorazioneNote: lav.note.trim() || undefined,
     ctx: descCtx,
     targetType: targetType === "attrezzatura" ? "attrezzatura" : "telaio",
     tipoAttrezzatura,

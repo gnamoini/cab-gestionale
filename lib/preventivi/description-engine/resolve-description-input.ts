@@ -8,7 +8,7 @@ export type ResolvedDescriptionInput = {
   technicalBlob: string;
   lavorazioniLines: string[];
   anomaliaText?: string;
-  noteIntervento?: string;
+  lavorazioneNote?: string;
   ricambi: { ricambioId: string | null; descrizione: string; codice: string; quantita: number }[];
   technicalFingerprint: string;
   guardContext: PolishGuardContext;
@@ -30,7 +30,7 @@ export function buildTechnicalFingerprint(parts: {
 /** Costruisce input DE da bundle persistito (puro — nessun OCR/capture/localStorage). */
 export function buildDescriptionInputFromBundle(
   bundle: LavorazioneSchedeBundle,
-  opts?: { magazzino?: RicambioMagazzino[]; noteInterneFallback?: string },
+  opts?: { magazzino?: RicambioMagazzino[]; lavorazioneNote?: string },
 ): ResolvedDescriptionInput {
   const ing = bundle.ingresso?.campi ?? null;
   const lavScheda = bundle.lavorazioni?.tipo === "lavorazioni" ? bundle.lavorazioni : null;
@@ -51,7 +51,7 @@ export function buildDescriptionInputFromBundle(
 
   const technicalBlob =
     techParts.join("\n").trim() ||
-    opts?.noteInterneFallback?.trim() ||
+    opts?.lavorazioneNote?.trim() ||
     "Intervento di manutenzione e controllo generale.";
 
   const ricambi = (ricScheda?.campi.righe ?? []).map((r) => {
@@ -81,7 +81,7 @@ export function buildDescriptionInputFromBundle(
     technicalBlob,
     lavorazioniLines,
     anomaliaText: anomaliaIngresso || undefined,
-    noteIntervento: ing?.noteIntervento?.trim() || undefined,
+    lavorazioneNote: opts?.lavorazioneNote?.trim() || undefined,
     ricambi,
     technicalFingerprint,
     guardContext,

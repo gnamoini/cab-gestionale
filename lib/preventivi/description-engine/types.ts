@@ -117,7 +117,7 @@ export type ComposedDescription = {
 export type DescriptionEngineInput = {
   technicalBlob: string;
   anomaliaText?: string;
-  noteIntervento?: string;
+  lavorazioneNote?: string;
   detailLevel?: DetailLevel;
   targetType?: "telaio" | "attrezzatura";
   tipoAttrezzatura?: string;

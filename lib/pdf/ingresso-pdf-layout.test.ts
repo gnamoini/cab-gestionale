@@ -24,10 +24,9 @@ const fullCampi: SchedaIngressoFields = {
   addettoAccettazione: "Angelo",
   richiedente: "Capo cantiere",
   richiedenteTelefono: "3331234567",
-  noteIntervento: "Verificare anche filtri",
 };
 
-const sections = buildIngressoPdfSections(fullCampi);
+const sections = buildIngressoPdfSections(fullCampi, "Verificare anche filtri");
 
 assert.equal(sections.data.length, 2);
 assert.equal(sections.cliente.length, 5);
@@ -38,18 +37,20 @@ assert.equal(sections.altreInformazioni.length, 2);
 assert.equal(sections.attrezzatura[0]?.label, "Tipo");
 assert.equal(sections.telaio.find((f) => f.label === "Carburante")?.value, "75%");
 
-const sparse = buildIngressoPdfSections({
-  ...fullCampi,
-  cliente: "",
-  cantiere: "  ",
-  descrizioneAnomalia: "",
-  noteIntervento: "Solo note",
-});
+const sparse = buildIngressoPdfSections(
+  {
+    ...fullCampi,
+    cliente: "",
+    cantiere: "  ",
+    descrizioneAnomalia: "",
+  },
+  "Solo note",
+);
 
 assert.equal(sparse.cliente.length, 3);
 assert.deepEqual(
   sparse.altreInformazioni.map((f) => f.label),
-  ["Note intervento"],
+  ["Note"],
 );
 
 console.log("ingresso-pdf-layout.test.ts OK");

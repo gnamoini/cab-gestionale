@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { mutateCaptureWithEvent } from "@/lib/document-capture/mutate-capture-with-event.server";
 import { hashCaptureFieldsRows } from "@/lib/document-capture/capture-apply-plan";
+import { isCaptureSignatureFieldKey } from "@/lib/document-capture/capture-signature-field-keys";
 import { getCompanyIdForUserOrNull } from "@/lib/document-capture/company-id.server";
 import { requireDocumentCaptureAuth } from "@/lib/document-capture/document-capture-route-auth.server";
 import { traceDocumentCaptureOperation } from "@/lib/document-capture/document-capture-telemetry.server";
@@ -60,18 +61,21 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   for (const field of body.fields ?? []) {
-    await sb.from("document_capture_fields").upsert(
-      {
-        company_id: capture.company_id,
-        document_capture_id: id,
-        field_key: field.fieldKey,
-        confirmed_value: field.confirmedValue,
-        value_source: field.valueSource ?? "manual",
-        confirmed_at: new Date().toISOString(),
-        confirmed_by: userId,
-      },
-      { onConflict: "document_capture_id,field_key" },
-    );
+    const valueSource = field.valueSource ?? "manual";
+    const patchRow: Record<string, unknown> = {
+      company_id: capture.company_id,
+      document_capture_id: id,
+      field_key: field.fieldKey,
+      confirmed_value: field.confirmedValue,
+      value_source: valueSource,
+      confirmed_at: new Date().toISOString(),
+      confirmed_by: userId,
+    };
+    if (valueSource === "manual" && !isCaptureSignatureFieldKey(field.fieldKey)) {
+      patchRow.normalized_value = field.confirmedValue;
+      patchRow.raw_value = field.confirmedValue;
+    }
+    await sb.from("document_capture_fields").upsert(patchRow, { onConflict: "document_capture_id,field_key" });
   }
 
   if ((body.fields?.length ?? 0) > 0) {

@@ -197,7 +197,7 @@ export type TkbKbStats = {
 export type TkbMatchInput = {
   lavorazioniText: string;
   anomaliaText?: string;
-  noteIntervento?: string;
+  lavorazioneNote?: string;
   targetType?: "telaio" | "attrezzatura";
   tipoAttrezzatura?: string;
   marcaModello?: string;

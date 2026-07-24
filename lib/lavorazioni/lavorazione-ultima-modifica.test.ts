@@ -55,7 +55,6 @@ function ingressoBundle(overrides: {
         addettoAccettazione: overrides.addetto ?? "Angelo",
         richiedente: "",
     richiedenteTelefono: "",
-        noteIntervento: "",
       },
     },
   };

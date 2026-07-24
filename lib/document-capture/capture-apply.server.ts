@@ -12,7 +12,7 @@ import {
   approvedCreatesFromCaptureFields,
   resolveApprovedCreatesForApply,
 } from "@/lib/document-capture/capture-approved-creates";
-import { inferCaptureSchedaTipo, mapCaptureFieldsToIngresso, type CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
+import { inferCaptureSchedaTipo, mapCaptureFieldsToIngresso, resolveCaptureLavorazioneNote, type CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
 import {
   beginCaptureApplyRpc,
   CaptureApplyInProgressError,
@@ -53,7 +53,7 @@ async function loadCaptureFields(captureId: string): Promise<CaptureFieldRow[]> 
   const sb = await createSupabaseServerUserClient();
   const { data } = await sb
     .from("document_capture_fields")
-    .select("field_key, confirmed_value, normalized_value, confidence")
+    .select("field_key, confirmed_value, normalized_value, raw_value, confidence, value_source")
     .eq("document_capture_id", captureId);
   return (data ?? []) as CaptureFieldRow[];
 }
@@ -301,7 +301,7 @@ async function runCaptureApplyWrite(
         priorita: assertValidPriorita(ctx.applyMeta?.priorita),
         mezzoIdHint: nullIfBlankUuid(capture.mezzo_id),
         dataIngressoIso,
-        note: ingressoFields.noteIntervento.trim() || ingressoFields.descrizioneAnomalia.trim() || null,
+        note: resolveCaptureLavorazioneNote(fields).trim() || null,
         createdBy: userId,
         writeContext:
           ctx.applyMeta?.writeContext ?? {

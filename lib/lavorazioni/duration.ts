@@ -1,4 +1,49 @@
+import { parseItalianDayToIso } from "@/lib/lavorazioni/date-day-only";
 import type { LavorazioneAttiva } from "@/lib/lavorazioni/types";
+import { ymdFromIso } from "@/lib/workshop-schedule/datetime";
+
+function ymdFromLavorazioneDate(value: string): string | null {
+  const t = value.trim();
+  if (!t) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+  const it = parseItalianDayToIso(t);
+  if (it.ok) return ymdFromIso(it.iso);
+  if (!Number.isNaN(Date.parse(t))) return ymdFromIso(t);
+  return null;
+}
+
+function ymdToUtcDay(ymd: string): number {
+  const [y, m, d] = ymd.split("-").map((part) => parseInt(part, 10));
+  return Date.UTC(y, m - 1, d) / 86_400_000;
+}
+
+/** Giorni di calendario inclusivi (Europe/Rome): stesso giorno ingresso/uscita = 1. */
+export function permanenzaGiorniInteri(
+  dataIngresso: string | null | undefined,
+  dataCompletamento: string | null | undefined,
+): number {
+  if (!dataIngresso?.trim() || !dataCompletamento?.trim()) return 0;
+  const startYmd = ymdFromLavorazioneDate(dataIngresso);
+  const endYmd = ymdFromLavorazioneDate(dataCompletamento);
+  if (!startYmd || !endYmd) return 0;
+  const diff = ymdToUtcDay(endYmd) - ymdToUtcDay(startYmd);
+  return diff >= 0 ? diff + 1 : 0;
+}
+
+export function formatPermanenzaGiorniInteriLabel(giorni: number): string {
+  if (giorni <= 0) return "—";
+  if (giorni === 1) return "1 giorno";
+  return `${giorni} giorni`;
+}
+
+export function permanenzaGiorniTra(
+  isoIn: string,
+  isoOut: string | null | undefined,
+): { label: string; num: number } {
+  if (!isoOut?.trim()) return { label: "—", num: 0 };
+  const num = permanenzaGiorniInteri(isoIn, isoOut);
+  return { label: formatPermanenzaGiorniInteriLabel(num), num };
+}
 
 export function formatDurataMs(ms: number): string {
   if (ms <= 0) return "—";

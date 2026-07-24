@@ -8,7 +8,7 @@ import {
 /** SSOT produzione client: fetch bundle da DB (mai localStorage/capture). */
 export async function resolveDescriptionInputFromDb(
   lavorazioneId: string,
-  opts?: { magazzino?: RicambioMagazzino[]; noteInterneFallback?: string },
+  opts?: { magazzino?: RicambioMagazzino[]; lavorazioneNote?: string },
 ): Promise<ResolvedDescriptionInput> {
   const id = lavorazioneId.trim();
   if (!id) {

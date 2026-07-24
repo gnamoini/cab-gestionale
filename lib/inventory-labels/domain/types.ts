@@ -53,9 +53,9 @@ export type LabelTypography = {
   lineHeight: number;
 };
 
-export type LabelLayoutMode = "horizontal-qr-left" | "vertical-stack";
+export type LabelLayoutMode = "horizontal-qr-left" | "vertical-stack" | "manual-centered";
 
-export type LabelKind = "internal" | "cliente";
+export type LabelKind = "internal" | "cliente" | "manual";
 
 export type SupplierLayoutMode = "inline-slash" | "stacked-pairs";
 
@@ -92,6 +92,7 @@ export type LabelTemplateElement =
       /** Limite inferiore zona testo (mm) — `maxLines` derivato a render. */
       zoneBottomMm?: number;
       vAlign?: "top" | "center";
+      hAlign?: "left" | "center";
     }
   | {
       type: "barcode";

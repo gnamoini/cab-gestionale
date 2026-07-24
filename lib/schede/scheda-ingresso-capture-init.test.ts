@@ -27,7 +27,6 @@ function emptyFields(dataIngresso = "21/07/2026"): SchedaIngressoFields {
     addettoAccettazione: "",
     richiedente: "",
     richiedenteTelefono: "",
-    noteIntervento: "",
   };
 }
 

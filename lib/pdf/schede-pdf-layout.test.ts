@@ -56,7 +56,6 @@ const ingresso: SchedaIngressoDoc = {
     addettoAccettazione: "Angelo",
     richiedente: "",
     richiedenteTelefono: "",
-    noteIntervento: "",
   },
 };
 

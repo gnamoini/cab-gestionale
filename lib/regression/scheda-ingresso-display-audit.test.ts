@@ -42,7 +42,6 @@ const SCHEDA_FIELDS = [
   "km",
   "livelloCarburante",
   "descrizioneAnomalia",
-  "noteIntervento",
   "addettoAccettazione",
 ] as const;
 
@@ -52,23 +51,26 @@ for (const key of SCHEDA_FIELDS) {
 
 assert.match(panoramica, /whitespace-pre-wrap/, "panoramica multiline fields use pre-wrap");
 assert.match(panoramica, /multilineValue\(fields\.descrizioneAnomalia\)/);
-assert.match(panoramica, /multilineValue\(fields\.noteIntervento\)/);
+assert.match(panoramica, /multilineValue\(lavorazioneNote \?\? ""\)/);
 
 assert.match(clientDialog, /SchedaIngressoPanoramicaView/);
+assert.match(clientDialog, /lavorazioneNote=/);
 assert.match(hub, /SchedaIngressoPanoramicaAnagraficaContent/);
-assert.match(hub, /noteIntervento/);
 
-assert.match(lavorazioniView, /lavorazioneNoteOperative/);
-assert.match(mobileCards, /lavorazioneNoteOperative/);
+assert.match(tableRow, /resolveLavorazioneNote/);
+assert.match(mobileCards, /resolveLavorazioneNote/);
 assert.match(tableRow, /line-clamp-2/);
 assert.match(mobileCard, /LavorazioneMobileNote/);
-assert.match(kanban, /lavorazioneNoteOperative/);
+assert.match(kanban, /resolveLavorazioneNote/);
+assert.doesNotMatch(lavorazioniView, /lavorazioneNoteOperative/);
+assert.doesNotMatch(displayHelpers, /noteIntervento/);
+assert.match(displayHelpers, /resolveLavorazioneNote/);
 
-assert.match(displayHelpers, /noteIntervento/, "note column uses noteIntervento not descrizioneAnomalia");
+assert.match(displayHelpers, /resolveLavorazioneNote/, "note column uses lavorazioni.note SSOT");
 assert.doesNotMatch(displayHelpers, /descrizioneAnomalia/);
 
 assert.match(pdfLayout, /multiline: true/);
 assert.match(pdfLayout, /descrizioneAnomalia/);
-assert.match(pdfLayout, /noteIntervento/);
+assert.match(pdfLayout, /lavorazioneNote/);
 
 console.log("scheda-ingresso-display-audit.test.ts OK");

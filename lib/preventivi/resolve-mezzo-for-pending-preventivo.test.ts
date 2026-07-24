@@ -48,7 +48,7 @@ const lav = {
   statoId: "accettazione",
   priorita: "media",
   addetto: "Mario B.",
-  noteInterne: "",
+  note: "",
   dataIngresso: "2026-07-11",
   dataCompletamento: null,
 } as LavorazioneAttiva;

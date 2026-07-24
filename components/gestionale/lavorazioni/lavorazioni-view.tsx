@@ -82,7 +82,6 @@ import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import { executeInterventoWriteEntry } from "@/lib/domain/intervento-entry";
 import { logInterventoTelemetry } from "@/lib/domain/intervento-context/intervento-telemetry";
 import { logMezzoSchedaConflictTelemetry } from "@/lib/domain/mezzo/mezzo-scheda-conflict-telemetry";
-import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
 import {
   buildLavorazioneRowProfileResolver,
@@ -347,7 +346,7 @@ function legacyLavBase(row: LavorazioneListRow) {
     cliente: mezzo?.cliente?.trim() || "—",
     utilizzatore: mezzo?.utilizzatore?.trim() || "",
     cantiere: "",
-    noteInterne: row.note?.trim() || "",
+    note: row.note?.trim() || "",
     dataIngresso: row.data_ingresso ?? row.created_at,
   };
 }
@@ -1267,8 +1266,7 @@ export function LavorazioniView() {
             livelloCarburante: "",
             addettoAccettazione: clean,
             richiedente: "",
-    richiedenteTelefono: "",
-            noteIntervento: "",
+            richiedenteTelefono: "",
           },
         };
         const updated = {
@@ -1283,7 +1281,6 @@ export function LavorazioniView() {
                 ...ingresso.campi,
                 addettoAccettazione: clean,
                 richiedente: (ingresso.campi as Partial<SchedaIngressoFields>).richiedente ?? "",
-                noteIntervento: (ingresso.campi as Partial<SchedaIngressoFields>).noteIntervento ?? "",
               },
             },
           },
@@ -1798,6 +1795,7 @@ export function LavorazioniView() {
     staleRow: LavorazioneListRow,
     campi: SchedaIngressoFields,
     mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan,
+    lavorazioneNote?: string,
   ) {
     await qc.refetchQueries({ queryKey: QK.mezzi });
     const freshRows =
@@ -1871,6 +1869,15 @@ export function LavorazioniView() {
         mismatch: true,
       });
       throw new Error(result.error);
+    }
+
+    const nextNote = lavorazioneNote?.trim() ?? "";
+    const currentNote = (freshRow.note ?? "").trim();
+    if (nextNote !== currentNote) {
+      await updateLav.mutateAsync({
+        id: freshRow.id,
+        data: { note: nextNote || null },
+      });
     }
   }
 
@@ -2693,7 +2700,12 @@ export function LavorazioniView() {
           onIngressoCommitted={async (campi, options) => {
             if (!schedeRow) return;
             try {
-              await syncIngressoToBackend(schedeRow.row, campi, options?.mezzoUpdatePlan);
+              await syncIngressoToBackend(
+                schedeRow.row,
+                campi,
+                options?.mezzoUpdatePlan,
+                options?.lavorazioneNote,
+              );
             } catch (err) {
               gestToast.error(err, { module: "lavorazioni", action: "update" });
             }

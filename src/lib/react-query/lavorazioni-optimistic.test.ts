@@ -112,6 +112,21 @@ async function runConcludeThenParallelUpdateRollback() {
   assert.ok(!attiveRows.some((r) => r.id === ID), "T0-T1-T2 race: archived row must not return to attive");
 }
 
+// note patch: lista + base query
+{
+  const q = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const attive = listKey(false);
+  const baseKey = [...QK.lavorazioniQueries, "base", ID] as const;
+  q.setQueryData(attive, [seedRow({ note: "vecchia" })]);
+  q.setQueryData(baseKey, seedRow({ note: "vecchia" }) as LavorazioneRow);
+  void snapshotLavorazioneUpdateQueries(q, ID);
+  applyOptimisticLavorazioneUpdate(q, ID, { note: "nuova nota" });
+  const listRows = q.getQueryData<LavorazioneListRow[]>(attive);
+  const baseRow = q.getQueryData<LavorazioneRow>(baseKey);
+  assert.equal(listRows?.[0]?.note, "nuova nota");
+  assert.equal(baseRow?.note, "nuova nota");
+}
+
 void Promise.all([runRollbackTest(), runConcludeThenParallelUpdateRollback()]).then(() => {
   console.log("lavorazioni-optimistic.test.ts OK");
 });

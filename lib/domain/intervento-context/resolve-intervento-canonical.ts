@@ -42,7 +42,6 @@ export type InterventoCanonicalResult = {
 const SCHEDA_ONLY_KEYS: (keyof SchedaIngressoFields)[] = [
   "dataIngresso",
   "descrizioneAnomalia",
-  "noteIntervento",
   "addettoAccettazione",
   "livelloCarburante",
   "tipoAttrezzatura",
@@ -187,7 +186,7 @@ export function canonicalInputsFromPreventivoContext(opts: {
     stato: statoId as StatoLavorazione,
     priorita: priorita as PrioritaLavorazione,
     data_ingresso: lav.dataIngresso || null,
-    note: lav.noteInterne || null,
+    note: lav.note || null,
     mezzo: mezzo ? ({ id: mezzo.id } as MezzoRow) : null,
   } as LavorazioneListRow;
 

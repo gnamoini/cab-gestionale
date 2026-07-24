@@ -26,7 +26,6 @@ const empty = (): SchedaIngressoFields => ({
   addettoAccettazione: "",
   richiedente: "",
   richiedenteTelefono: "",
-  noteIntervento: "",
 });
 
 const mezzo: MezzoGestito = {

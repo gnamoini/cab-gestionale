@@ -67,7 +67,7 @@ function fakeLavFromPreventivo(pv: PreventivoRecord): LavorazioneAttiva {
     statoId: "",
     priorita: "media",
     addetto: "",
-    noteInterne: "",
+    note: "",
     dataIngresso: pv.dataCreazione,
     dataCompletamento: null,
   };

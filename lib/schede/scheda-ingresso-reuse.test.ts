@@ -28,7 +28,6 @@ const baseFields = (): SchedaIngressoFields => ({
   addettoAccettazione: "",
   richiedente: "",
     richiedenteTelefono: "",
-  noteIntervento: "",
 });
 
 assert.equal(hasSchedaIngressoIdentLookup("AA111BB", ""), true);
@@ -102,7 +101,7 @@ const attive = [
     cantiere: "",
     utilizzatore: "",
     addetto: "",
-    noteInterne: "",
+    note: "",
     priorita: "media",
     statoId: "accettazione",
     dataCompletamento: null,
@@ -118,7 +117,7 @@ const attive = [
     cantiere: "",
     utilizzatore: "",
     addetto: "",
-    noteInterne: "",
+    note: "",
     priorita: "media",
     statoId: "accettazione",
     dataCompletamento: null,

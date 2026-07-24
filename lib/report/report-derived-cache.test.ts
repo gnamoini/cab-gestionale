@@ -21,7 +21,7 @@ function mockArchived(id: string, dataCompletamento: string): LavorazioneArchivi
     utilizzatore: "—",
     cantiere: "",
     addetto: "—",
-    noteInterne: "",
+    note: "",
     statoFinaleId: "completata",
     prioritaFinale: "media",
     dataIngresso: "2024-12-01T10:00:00.000Z",

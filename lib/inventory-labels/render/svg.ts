@@ -8,7 +8,7 @@ import { labelDisplayCaps } from "@/lib/inventory-labels/domain/label-display";
 import { fieldValue } from "@/lib/inventory-labels/render/layout";
 import { resolveLabelTextLayout } from "@/lib/inventory-labels/render/text-layout";
 import { labelFontFaceCss } from "@/lib/inventory-labels/render/label-fonts";
-import { textLineToSvgPath } from "@/lib/inventory-labels/render/text-paths";
+import { textLineToSvgPath, measureTextLineWidthPx } from "@/lib/inventory-labels/render/text-paths";
 import { lineMetrics } from "@/lib/inventory-labels/render/text-metrics";
 import { loadLabelLogoDataUrl } from "@/lib/inventory-labels/render/label-logo.server";
 
@@ -57,10 +57,12 @@ function renderBoldTextSvg(
   family: string,
   fontSizePx: number,
   template: LabelTemplateDefinition,
+  textAnchor?: "start" | "middle",
 ): string {
   const strokeW = labelBoldStrokeWidthPx(template, fontSizePx);
   const offset = labelBoldInkOffsetPx(template, fontSizePx);
-  const baseAttrs = `dominant-baseline="${baseline}" font-family="${family}" font-size="${fontSizePx}" fill="#000000"`;
+  const anchorAttr = textAnchor === "middle" ? ' text-anchor="middle"' : "";
+  const baseAttrs = `dominant-baseline="${baseline}" font-family="${family}" font-size="${fontSizePx}" fill="#000000"${anchorAttr}`;
   const inkAttrs = `${baseAttrs} stroke="#000000" stroke-width="${strokeW}" stroke-linejoin="round" stroke-linecap="round" paint-order="stroke fill"`;
   const layers = [
     `<text x="${x}" y="${dy}" ${inkAttrs}>${escapeXml(line)}</text>`,
@@ -118,6 +120,7 @@ export async function renderLabelSvg(
     const y = mmToPx(el.yMm, template.dpi);
 
     if (el.type === "qr") {
+      if (!qrUrl) continue;
       const size = mmToPx(el.sizeMm, template.dpi);
       const qrInner = await generateQrSvgString(qrUrl, size);
       const frag = parseSvgFragment(qrInner);
@@ -145,14 +148,18 @@ export async function renderLabelSvg(
       const { fontSizePx, lineStepPx } = lineMetrics(fontPt, template.dpi);
       const slot = placed.font === "mono" ? "mono" : "sans";
       const baseline = placed.baseline ?? "hanging";
+      const textAnchor = placed.anchor === "middle" ? "middle" : undefined;
+      const anchorAttr = textAnchor === "middle" ? ' text-anchor="middle"' : "";
       placed.lines.forEach((line, i) => {
         if (!line.trim()) return;
         const dy =
           baseline === "alphabetic"
             ? y - (placed.lines.length - 1 - i) * lineStepPx
             : y + i * lineStepPx;
+        const lineX =
+          textAnchor === "middle" ? x - measureTextLineWidthPx(line, fontSizePx, slot) / 2 : x;
         if (textAsPaths) {
-          const path = textLineToSvgPath(line, x, dy, fontSizePx, slot, baseline);
+          const path = textLineToSvgPath(line, lineX, dy, fontSizePx, slot, baseline);
           if (isBoldPlaced(placed, template)) {
             parts.push(renderBoldPathSvg(path, fontSizePx, template));
           } else {
@@ -161,10 +168,10 @@ export async function renderLabelSvg(
         } else {
           const family = slot === "mono" ? "LabelMono" : "LabelSans";
           if (isBoldPlaced(placed, template)) {
-            parts.push(renderBoldTextSvg(line, x, dy, baseline, family, fontSizePx, template));
+            parts.push(renderBoldTextSvg(line, x, dy, baseline, family, fontSizePx, template, textAnchor));
           } else {
             parts.push(
-              `<text x="${x}" y="${dy}" dominant-baseline="${baseline}" font-family="${family}" font-size="${fontSizePx}" fill="#000000">${escapeXml(line)}</text>`,
+              `<text x="${x}" y="${dy}" dominant-baseline="${baseline}" font-family="${family}" font-size="${fontSizePx}" fill="#000000"${anchorAttr}>${escapeXml(line)}</text>`,
             );
           }
         }

@@ -318,7 +318,7 @@ export function HubModalPanoramicaNoteEditor({
             : "text-[color:var(--cab-text)]"
         }`}
       >
-        {empty ? "Nessuna nota operativa." : value}
+        {empty ? "Nessuna nota." : value}
       </p>
     );
   }
@@ -334,9 +334,9 @@ export function HubModalPanoramicaNoteEditor({
           setDirty(true);
         }}
         rows={3}
-        aria-label="Note operative"
+        aria-label="Note"
         disabled={saving}
-        placeholder="Note intervento visibili in elenco lavorazioni…"
+        placeholder="Note visibili in elenco lavorazioni…"
       />
       {dirty ? (
         <div className="flex flex-nowrap justify-end gap-2 sm:flex-wrap">

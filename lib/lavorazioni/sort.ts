@@ -31,7 +31,7 @@ export function sortValueAttiva(
     case "cliente":
       return `${row.cliente}\t${row.utilizzatore}\t${row.cantiere ?? ""}`.toLowerCase();
     case "note":
-      return row.noteInterne.toLowerCase();
+      return row.note.toLowerCase();
     case "stato":
       return statoWorkflowOrderIndex(row.statoId, statoOrderIds);
     case "priorita": {

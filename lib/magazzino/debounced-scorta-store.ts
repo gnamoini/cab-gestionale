@@ -57,6 +57,8 @@ export type DebouncedScortaSnapshot = {
 
 const rows = new Map<string, DebouncedScortaRow>();
 const listeners = new Map<string, Set<() => void>>();
+/** ponytail: cache per useSyncExternalStore — stesso ref finché i valori non cambiano. */
+const snapshotCache = new Map<string, DebouncedScortaSnapshot>();
 let storeVersion = 0;
 let logSeq = 0;
 let onlineListenerAttached = false;
@@ -90,20 +92,36 @@ function isRowDirty(row: DebouncedScortaRow): boolean {
   return row.displayQuantity !== row.serverQuantity;
 }
 
-function snapshotFor(row: DebouncedScortaRow): DebouncedScortaSnapshot {
-  return {
+function snapshotFor(id: string, row: DebouncedScortaRow): DebouncedScortaSnapshot {
+  const isDirty = isRowDirty(row);
+  const showSuccess = Date.now() < row.showSuccessUntil;
+  const cached = snapshotCache.get(id);
+  if (
+    cached &&
+    cached.displayQuantity === row.displayQuantity &&
+    cached.serverQuantity === row.serverQuantity &&
+    cached.isDirty === isDirty &&
+    cached.isCommitting === row.isCommitting &&
+    cached.showSuccess === showSuccess
+  ) {
+    return cached;
+  }
+  const snap: DebouncedScortaSnapshot = {
     displayQuantity: row.displayQuantity,
     serverQuantity: row.serverQuantity,
-    isDirty: isRowDirty(row),
+    isDirty,
     isCommitting: row.isCommitting,
-    showSuccess: Date.now() < row.showSuccessUntil,
+    showSuccess,
   };
+  snapshotCache.set(id, snap);
+  return snap;
 }
 
 export function getDebouncedScortaSnapshot(ricambioId: string): DebouncedScortaSnapshot | null {
-  const row = rows.get(ricambioId.trim());
+  const id = ricambioId.trim();
+  const row = rows.get(id);
   if (!row) return null;
-  return snapshotFor(row);
+  return snapshotFor(id, row);
 }
 
 function clearDebounceTimer(row: DebouncedScortaRow): void {
@@ -393,13 +411,14 @@ export function initDebouncedScortaRow(
     enabled?: boolean;
   },
 ): DebouncedScortaSnapshot {
+  const id = ricambioId.trim();
   const row = ensureRow(ricambioId, serverQuantity, {
     ricambioLabel: opts.ricambioLabel,
     contaStatistiche: opts.contaStatistiche,
     debounceMs: opts.debounceMs ?? DEBOUNCED_SCORTA_MS,
     enabled: opts.enabled ?? true,
   });
-  return snapshotFor(row);
+  return snapshotFor(id, row);
 }
 
 function flushAllDirtyOnline(): void {
@@ -424,6 +443,7 @@ export function clearDebouncedScortaStoreForTest(): void {
   }
   rows.clear();
   listeners.clear();
+  snapshotCache.clear();
   storeVersion = 0;
   logSeq = 0;
 }

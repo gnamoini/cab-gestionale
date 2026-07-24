@@ -51,7 +51,6 @@ const baseFields: SchedaIngressoFields = {
   addettoAccettazione: "Angelo",
   richiedente: "",
   richiedenteTelefono: "",
-  noteIntervento: "",
 };
 
 async function run() {

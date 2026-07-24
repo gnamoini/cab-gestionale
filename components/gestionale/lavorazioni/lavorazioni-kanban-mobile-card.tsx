@@ -10,7 +10,7 @@ import {
   prioritaPillShellClassDynamic,
   prioritaPillShellStyle,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import { resolveLavorazioneNote } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { lavorazioneAddettoNomeKey } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { kanbanCardPriorityVisual } from "@/lib/lavorazioni/kanban-card-priority-style";
 import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
@@ -46,7 +46,7 @@ export const KanbanCardMobile = memo(function KanbanCardMobile({
   const prioHex = prioritaDisplayColor(prioLav, prioritaColors);
   const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, undefined, addettiRecords);
   const addettoPillStyle = addettoPillShellStyleForName(addettoKey, addettoColors);
-  const note = lavorazioneNoteOperative(row, schedeStore);
+  const note = resolveLavorazioneNote(row);
 
   return (
     <div

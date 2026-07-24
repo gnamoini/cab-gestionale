@@ -53,7 +53,6 @@ const withIngresso: LavorazioneSchedeBundle = {
       addettoAccettazione: "",
       richiedente: "",
     richiedenteTelefono: "",
-      noteIntervento: "",
     },
   },
 };

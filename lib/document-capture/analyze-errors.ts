@@ -1,4 +1,5 @@
 import type { AiErrorCode } from "@/lib/ai/runtime/types";
+import { aiErrorMessage } from "@/lib/ai/runtime/errors";
 import type { AnalyzeTracePhase } from "@/lib/document-capture/pipeline/analyze-trace.server";
 
 export type CaptureAnalyzeErrorCode =
@@ -52,7 +53,7 @@ export class GeminiAnalyzeError extends CaptureAnalyzeError {
     super({
       code,
       phase,
-      userMessage: detail,
+      userMessage: aiErrorMessage(code),
       detail,
     });
     this.name = "GeminiAnalyzeError";

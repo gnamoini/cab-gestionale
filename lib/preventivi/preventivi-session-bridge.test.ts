@@ -24,7 +24,7 @@ Object.defineProperty(globalThis, "sessionStorage", {
   configurable: true,
 });
 
-const lav = { id: "lav-1", noteInterne: "" } as LavorazioneAttiva;
+const lav = { id: "lav-1", note: "" } as LavorazioneAttiva;
 const payload: PendingPreventivoPayload = {
   lav,
   origine: "attiva",

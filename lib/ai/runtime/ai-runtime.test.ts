@@ -52,6 +52,21 @@ assert.equal(classifyAiError({ name: "AI_TypeValidationError", message: "invalid
 assert.equal(classifyAiError({ name: "GoogleGenerativeAIFetchError", message: "404 model not found", status: 404 }), "AI_MODEL_UNAVAILABLE");
 assert.equal(classifyAiError({ name: "PostgrestError", message: "db", code: "PGRST", details: "" }), "AI_DATABASE_ERROR");
 assert.equal(classifyAiError({ name: "StorageError", message: "storage permission denied" }), "AI_STORAGE_ERROR");
+assert.equal(
+  classifyAiError({
+    name: "AI_RetryError",
+    message:
+      "Failed after 3 attempts. Last error: This model is currently experiencing high demand. Please try again later.",
+  }),
+  "AI_PROVIDER_DOWN",
+);
+assert.equal(
+  classifyAiError({ name: "AI_NoSuchModelError", message: "No such languageModel: gemini-3.5-flash" }),
+  "AI_MODEL_UNAVAILABLE",
+);
+assert.equal(classifyAiError({ name: "AI_InvalidPromptError", message: "Invalid data content" }), "AI_SCHEMA_VALIDATION");
+assert.equal(classifyAiError({ name: "AI_LoadAPIKeyError", message: "missing" }), "AI_KEY_INVALID");
+assert.equal(classifyAiError(new Error("Budget esaurito alla fase: gemini")), "AI_TIMEOUT");
 assert.equal(isFailoverEligible("AI_RATE_LIMIT"), true);
 assert.equal(cooldownSecondsForError("AI_RATE_LIMIT"), 120);
 

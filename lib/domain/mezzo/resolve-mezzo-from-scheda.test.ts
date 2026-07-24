@@ -60,7 +60,6 @@ const fields: SchedaIngressoFields = {
   addettoAccettazione: "",
   richiedente: "",
   richiedenteTelefono: "",
-  noteIntervento: "",
 };
 
 const byPreferredOverIdent = resolveMezzoFromScheda({

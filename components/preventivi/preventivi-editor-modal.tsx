@@ -116,7 +116,6 @@ const emptySchedaIngressoFields: SchedaIngressoFields = {
   addettoAccettazione: "",
   richiedente: "",
     richiedenteTelefono: "",
-  noteIntervento: "",
 };
 
 function sumOreRigheAddetti(righe: readonly { ore: number }[]): number {

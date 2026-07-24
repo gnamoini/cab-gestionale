@@ -43,6 +43,13 @@ const MagazzinoRicambioInfoModal = dynamic(
   () => import("@/components/gestionale/magazzino/magazzino-modals").then((m) => m.MagazzinoRicambioInfoModal),
   { ssr: false },
 );
+const MagazzinoManualLabelModal = dynamic(
+  () =>
+    import("@/components/gestionale/magazzino/magazzino-manual-label-modal").then(
+      (m) => m.MagazzinoManualLabelModal,
+    ),
+  { ssr: false },
+);
 const MagazzinoDupCodesModal = dynamic(
   () => import("@/components/gestionale/magazzino/magazzino-modals").then((m) => m.MagazzinoDupCodesModal),
   { ssr: false },
@@ -613,6 +620,7 @@ export function MagazzinoView() {
   const { selection: labelSelection, setQuantity: setLabelQuantity, clearAll: clearLabelQuantities } =
     useLabelSelection();
   const [labelMode, setLabelMode] = useState(false);
+  const [manualLabelOpen, setManualLabelOpen] = useState(false);
   const [modalitaModifica, setModalitaModifica] = useState(true);
   useEffect(() => {
     migrateMagazzinoModalitaModificaPreferenceV2();
@@ -1603,6 +1611,13 @@ export function MagazzinoView() {
           },
         },
       });
+      items.push({
+        id: "manual-label",
+        label: "Etichetta manuale",
+        description: "Crea un'etichetta senza ricambio in magazzino",
+        icon: <PageActionIconLabels />,
+        onSelect: () => setManualLabelOpen(true),
+      });
     }
     if (magCanDeleteRicambio && generatedListinoCount > 0) {
       items.push({
@@ -2101,6 +2116,8 @@ export function MagazzinoView() {
           onImageEvent={(ev) => logImageEvent(ev, detailRicambio)}
         />
       ) : null}
+
+      {manualLabelOpen ? <MagazzinoManualLabelModal onClose={() => setManualLabelOpen(false)} /> : null}
 
       <GestionaleModalGate open={logOpen}>
         <MagazzinoLogDrawer

@@ -1,4 +1,4 @@
-import { durataMsStorico } from "@/lib/lavorazioni/duration";
+import { permanenzaGiorniTra } from "@/lib/lavorazioni/duration";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { labelLavorazioneStatoDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import type { MezzoGestito, MezzoInterventoLavorazione } from "@/lib/mezzi/types";
@@ -72,15 +72,6 @@ export function mezzoHaLavorazioneAttiva(m: MezzoGestito, attive: LavorazioneAtt
   return attive.some((lav) => lavorazioneMatchesMezzo(m, lav));
 }
 
-function giorniTra(isoIn: string, isoOut: string | null): { label: string; num: number } {
-  if (!isoOut?.trim()) return { label: "—", num: 0 };
-  const ms = durataMsStorico(isoIn, isoOut);
-  const g = ms / 86400000;
-  const rounded = Math.round(g * 10) / 10;
-  if (rounded === 0) return { label: "< 1 giorno", num: g };
-  return { label: `${rounded} giorni`, num: g };
-}
-
 /** Interventi da tabella storico + lavorazioni attive collegate (in corso). */
 export function interventiMezzoDaLavorazioni(
   m: MezzoGestito,
@@ -91,7 +82,7 @@ export function interventiMezzoDaLavorazioni(
 
   for (const lav of storico) {
     if (!lavorazioneMatchesMezzo(m, lav)) continue;
-    const { label, num } = giorniTra(lav.dataIngresso, lav.dataCompletamento);
+    const { label, num } = permanenzaGiorniTra(lav.dataIngresso, lav.dataCompletamento);
     out.push({
       id: lav.id,
       origine: "storico",
@@ -100,7 +91,7 @@ export function interventiMezzoDaLavorazioni(
       durataGiorniLabel: label,
       durataGiorniNum: num,
       tipoIntervento: labelStato(lav.statoFinaleId),
-      descrizione: lav.noteInterne.trim() || "—",
+      descrizione: lav.note.trim() || "—",
       prioritaLabel: prioritaIt(lav.prioritaFinale),
       statoFinale: labelStato(lav.statoFinaleId),
     });
@@ -109,7 +100,7 @@ export function interventiMezzoDaLavorazioni(
   for (const lav of attive) {
     if (!lavorazioneMatchesMezzo(m, lav)) continue;
     const completed = lav.dataCompletamento;
-    const dur = completed ? giorniTra(lav.dataIngresso, completed) : { label: "In corso", num: 0 };
+    const dur = completed ? permanenzaGiorniTra(lav.dataIngresso, completed) : { label: "In corso", num: 0 };
     out.push({
       id: lav.id,
       origine: "attiva",
@@ -118,7 +109,7 @@ export function interventiMezzoDaLavorazioni(
       durataGiorniLabel: dur.label,
       durataGiorniNum: dur.num,
       tipoIntervento: labelStato(lav.statoId),
-      descrizione: lav.noteInterne.trim() || "—",
+      descrizione: lav.note.trim() || "—",
       prioritaLabel: prioritaIt(lav.priorita),
       statoFinale: completed ? labelStato(lav.statoId) : "In officina",
     });

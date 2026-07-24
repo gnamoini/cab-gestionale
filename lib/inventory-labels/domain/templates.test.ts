@@ -96,4 +96,17 @@ const clienteQr = cliente!.elements.find((e) => e.type === "qr");
 assert.ok(clienteQr && clienteQr.type === "qr");
 assert.ok(clienteQr.sizeMm >= cliente!.heightMm - cliente!.marginsMm * 2 - 0.5);
 
+const manual = getLabelTemplate("95x40-default", "manual");
+assert.ok(manual);
+assert.equal(manual!.id, "95x40-default-manual");
+assert.equal(manual!.layoutMode, "manual-centered");
+assert.ok(!manual!.elements.some((e) => e.type === "qr"));
+assert.ok(!manual!.elements.some((e) => e.type === "barcode"));
+assert.ok(manual!.elements.some((e) => e.type === "logo"));
+const manualMarca = manual!.elements.find((e) => e.type === "text" && e.field === "marca");
+assert.ok(manualMarca && manualMarca.type === "text");
+assert.equal(manualMarca.hAlign, "center");
+assert.equal(manualMarca.vAlign, "center");
+assert.equal(getLabelTemplate("a4-pagina-intera", "manual"), null);
+
 console.log("inventory-labels/domain/templates.test.ts OK");

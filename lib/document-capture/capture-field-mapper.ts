@@ -76,9 +76,6 @@ const INGRESSO_KEY_MAP: Record<string, keyof SchedaIngressoFields> = {
   telefono: "richiedenteTelefono",
   telefono_richiedente: "richiedenteTelefono",
   richiedentetelefono: "richiedenteTelefono",
-  noteintervento: "noteIntervento",
-  note_intervento: "noteIntervento",
-  note: "noteIntervento",
   richiedentefirma: "richiedenteFirma",
   richiedente_firma: "richiedenteFirma",
   firma_richiedente: "richiedenteFirma",
@@ -94,6 +91,8 @@ const MAX_RICAMBI_RIGHE = 34;
 /** ponytail: pattern targa IT semplificato — upgrade se servono formati storici/estero */
 const IT_TARGA_RE = /^[A-Z]{2}\s?\d{3}\s?[A-Z]{2}$/i;
 
+const LAVORAZIONE_NOTE_CAPTURE_KEYS = new Set(["note", "note_intervento", "noteintervento"]);
+
 function normKey(key: string): string {
   return key.trim().toLowerCase().replace(/^ingresso\./, "");
 }
@@ -104,22 +103,32 @@ export type CaptureFieldRow = {
   normalized_value: string | null;
   raw_value?: string | null;
   confidence?: number | null;
+  value_source?: "ai" | "manual" | "existing";
 };
+
+function formatResolvedCaptureFieldValue(fieldKey: string, trimmed: string): string {
+  if (!trimmed) return "";
+  if (isCaptureMultilineFieldKey(fieldKey)) {
+    return isCaptureLavorazioneFieldKey(fieldKey)
+      ? formatCaptureLavorazioniText(trimmed)
+      : formatCaptureMultilineText(trimmed);
+  }
+  return sanitizeCaptureExtractedFieldValue(fieldKey, trimmed);
+}
 
 export function resolveCaptureFieldValue(row: CaptureFieldRow): string {
   if (isCaptureSignatureFieldKey(row.field_key)) {
     return pickCaptureSignatureDataUrl(row.raw_value, row.confirmed_value, row.normalized_value);
   }
+  if (row.value_source === "manual") {
+    const manual = row.confirmed_value?.trim() ?? "";
+    return formatResolvedCaptureFieldValue(row.field_key, manual);
+  }
   const v = isCaptureMultilineFieldKey(row.field_key)
     ? (row.confirmed_value ?? row.raw_value ?? row.normalized_value ?? "")
     : (row.confirmed_value ?? row.normalized_value ?? "");
   const trimmed = typeof v === "string" ? v.trim() : "";
-  if (isCaptureMultilineFieldKey(row.field_key) && trimmed) {
-    return isCaptureLavorazioneFieldKey(row.field_key)
-      ? formatCaptureLavorazioniText(trimmed)
-      : formatCaptureMultilineText(trimmed);
-  }
-  return sanitizeCaptureExtractedFieldValue(row.field_key, trimmed);
+  return formatResolvedCaptureFieldValue(row.field_key, trimmed);
 }
 
 export function resolveRawFieldValue(fields: readonly CaptureFieldRow[], ...keys: string[]): string {
@@ -128,6 +137,17 @@ export function resolveRawFieldValue(fields: readonly CaptureFieldRow[], ...keys
     if (!hit) continue;
     const v = resolveCaptureFieldValue(hit);
     if (v) return v;
+  }
+  return "";
+}
+
+/** SSOT: note lavorazione da capture OCR → `lavorazioni.note` (non scheda ingresso). */
+export function resolveCaptureLavorazioneNote(fields: readonly CaptureFieldRow[]): string {
+  for (const row of fields) {
+    const key = normKey(row.field_key);
+    if (!LAVORAZIONE_NOTE_CAPTURE_KEYS.has(key)) continue;
+    const value = resolveCaptureFieldValue(row).trim();
+    if (value) return value;
   }
   return "";
 }
@@ -646,7 +666,7 @@ function buildLavorazioniFromIngresso(ingressoFields: SchedaIngressoFields): Sch
       {
         id: newRigaId(),
         dataLavorazione: ingressoFields.dataIngresso,
-        lavorazioniEffettuate: ingressoFields.descrizioneAnomalia || ingressoFields.noteIntervento,
+        lavorazioniEffettuate: ingressoFields.descrizioneAnomalia,
         addettiAssegnati: ingressoFields.addettoAccettazione
           ? [{ addetto: ingressoFields.addettoAccettazione, oreImpiegate: 0 }]
           : [],
@@ -733,6 +753,7 @@ export async function fetchCaptureFieldRows(captureId: string): Promise<CaptureF
     confirmed_value: f.confirmed_value,
     normalized_value: f.normalized_value,
     raw_value: f.raw_value ?? null,
+    value_source: (f as { value_source?: CaptureFieldRow["value_source"] }).value_source,
   }));
 }
 

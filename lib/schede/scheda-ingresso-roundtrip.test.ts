@@ -4,8 +4,8 @@
 import assert from "node:assert/strict";
 import { bundleToSchedaPayloads } from "@/lib/schede/schede-db-mapper";
 import { clampSchedeBundle } from "@/lib/validation/clamp-free-text";
-import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
-import { TEXT_EXTRA, TEXT_LONG } from "@/lib/validation/text-field-limits";
+import { resolveLavorazioneNote } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import { TEXT_EXTRA } from "@/lib/validation/text-field-limits";
 import {
   applySchedaIngressoTypedFields,
   copySchedaIngressoFieldFromClient,
@@ -15,7 +15,6 @@ import {
 import type { LavorazioneSchedeBundle, SchedaIngressoFields } from "@/types/schede";
 
 const MULTILINE_ANOMALIA = "Riga 1\nRiga 2\n\nRiga 4 àèù & < > \" '";
-const MULTILINE_NOTE = "Nota\nseconda riga\temoji 🛠";
 
 function emptySchedaIngressoFields(addettoDefault = ""): SchedaIngressoFields {
   return {
@@ -40,7 +39,6 @@ function emptySchedaIngressoFields(addettoDefault = ""): SchedaIngressoFields {
     addettoAccettazione: addettoDefault,
     richiedente: "",
     richiedenteTelefono: "",
-    noteIntervento: "",
   };
 }
 
@@ -81,7 +79,6 @@ function fullCampi(overrides: Partial<SchedaIngressoFields> = {}): SchedaIngress
     km: "12000",
     livelloCarburante: "3/4",
     descrizioneAnomalia: MULTILINE_ANOMALIA,
-    noteIntervento: MULTILINE_NOTE,
     ...overrides,
   };
 }
@@ -123,26 +120,22 @@ const clamped = clampSchedeBundle(bundle);
 assert.ok(clamped.ingresso);
 assert.equal(clamped.ingresso!.campi.livelloCarburante, "75%");
 assert.equal(clamped.ingresso!.campi.descrizioneAnomalia, MULTILINE_ANOMALIA);
-assert.equal(clamped.ingresso!.campi.noteIntervento, MULTILINE_NOTE);
 
 const longAnomalia = "x".repeat(TEXT_EXTRA + 50);
-const longNote = "n".repeat(TEXT_LONG + 50);
 const clampedLong = clampSchedeBundle({
   ...bundle,
   ingresso: {
     ...bundle.ingresso!,
-    campi: { ...campi, descrizioneAnomalia: longAnomalia, noteIntervento: longNote },
+    campi: { ...campi, descrizioneAnomalia: longAnomalia },
   },
 });
 assert.equal(clampedLong.ingresso!.campi.descrizioneAnomalia.length, TEXT_EXTRA);
-assert.equal(clampedLong.ingresso!.campi.noteIntervento.length, TEXT_LONG);
 
 const payloads = bundleToSchedaPayloads(clamped);
 assert.equal(payloads.length, 1);
 assert.equal(payloads[0]!.tipo, "ingresso");
 const doc = (payloads[0]!.contenuto as { doc: { campi: SchedaIngressoFields } }).doc;
 assert.equal(doc.campi.descrizioneAnomalia, MULTILINE_ANOMALIA);
-assert.equal(doc.campi.noteIntervento, MULTILINE_NOTE);
 assert.equal(doc.campi.cliente, "Cliente Audit");
 
 const FIRMA_DATA_URL = "data:image/png;base64,iVBORw0KGgo=";
@@ -159,14 +152,6 @@ const firmaPayload = bundleToSchedaPayloads(clampedFirma)[0]!;
 const firmaDoc = (firmaPayload.contenuto as { doc: { campi: SchedaIngressoFields } }).doc;
 assert.equal(firmaDoc.campi.richiedenteFirma, FIRMA_DATA_URL);
 
-const noteFromScheda = lavorazioneNoteOperative(
-  { id: "lav-audit-1", note: "fallback row note" },
-  { "lav-audit-1": clamped },
-);
-assert.equal(noteFromScheda, MULTILINE_NOTE);
-assert.equal(
-  lavorazioneNoteOperative({ id: "lav-audit-1", note: "solo row" }, {}),
-  "solo row",
-);
+assert.equal(resolveLavorazioneNote({ note: "solo row" }), "solo row");
 
 console.log("scheda-ingresso-roundtrip.test.ts OK");

@@ -44,7 +44,7 @@ const attiva: LavorazioneAttiva = {
   statoId: "in_lavorazione",
   priorita: "media",
   addetto: "—",
-  noteInterne: "",
+  note: "",
   dataIngresso: "2025-01-01T10:00:00.000Z",
   dataCompletamento: null,
 };
@@ -60,7 +60,7 @@ const completata: LavorazioneArchiviata = {
   utilizzatore: "—",
   cantiere: "",
   addetto: "—",
-  noteInterne: "",
+  note: "",
   statoFinaleId: "completata",
   prioritaFinale: "media",
   dataIngresso: "2025-03-05T10:00:00.000Z",

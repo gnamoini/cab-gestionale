@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LAVORAZIONI_ACTUAL_HOURS_COLUMNS } from "@/lib/db/table-select-columns";
 import { computeActualLaborHoursFromContenuto } from "@/lib/lavorazioni/compute-actual-labor-hours-from-contenuto";
-import { auditContext, auditDiff, writeModificaLog } from "@/src/services/internal/audit-log";
+import { auditDiff, writeModificaLog } from "@/src/services/internal/audit-log";
 
 export type ActualLaborHoursSource =
   | "scheda_save"
@@ -83,7 +83,6 @@ export async function syncActualLaborHoursForLavorazione(
         actual_labor_hours: afterRow.actual_labor_hours,
         actual_labor_hours_source: afterRow.actual_labor_hours_source,
       },
-      auditContext("actual_labor_hours"),
     ),
   });
 

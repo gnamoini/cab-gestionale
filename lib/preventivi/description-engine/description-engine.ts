@@ -111,7 +111,6 @@ export function generatePreventivoDescription(input: DescriptionEngineInput): Co
   const matches = matchInterventi(snapshot, {
     lavorazioniText: input.technicalBlob,
     anomaliaText: input.anomaliaText,
-    noteIntervento: input.noteIntervento,
     targetType: input.targetType,
     tipoAttrezzatura: input.tipoAttrezzatura,
     marcaModello: input.marcaModello,

@@ -16,7 +16,6 @@ function ingressoRows(campi: SchedaIngressoFields): Array<[string, string]> {
     ["Targa", campi.targa],
     ["Km", campi.km],
     ["Anomalia", campi.descrizioneAnomalia],
-    ["Note", campi.noteIntervento],
   ].filter((row): row is [string, string] => row[1].trim().length > 0);
 }
 

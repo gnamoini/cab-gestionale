@@ -69,6 +69,24 @@ function isPostgrestError(error: unknown): boolean {
   return Boolean(error && typeof error === "object" && "code" in error && "message" in error && "details" in error);
 }
 
+function extractRetryLastErrorMessage(text: string): string | null {
+  const match = text.match(/Last error:\s*([\s\S]+)$/i);
+  return match?.[1]?.trim() || null;
+}
+
+function classifyProviderPressureMessage(upper: string): AiErrorCode | null {
+  if (
+    upper.includes("HIGH DEMAND") ||
+    upper.includes("TRY AGAIN LATER") ||
+    upper.includes("OVERLOADED") ||
+    upper.includes("TEMPORARILY UNAVAILABLE") ||
+    upper.includes("SERVICE UNAVAILABLE")
+  ) {
+    return "AI_PROVIDER_DOWN";
+  }
+  return null;
+}
+
 export function classifyAiError(error: unknown): AiErrorCode {
   if (error instanceof AiRuntimeError) return error.code;
 
@@ -82,13 +100,15 @@ export function classifyAiError(error: unknown): AiErrorCode {
     upper.includes("TIMEOUT") ||
     upper.includes("ABORT") ||
     upper.includes("FUNCTION_INVOCATION_TIMEOUT") ||
-    upper.includes("GATEWAY TIMEOUT")
+    upper.includes("GATEWAY TIMEOUT") ||
+    upper.includes("BUDGET ESAURITO")
   ) {
     return "AI_TIMEOUT";
   }
 
   if (
     name === "NoObjectGeneratedError" ||
+    name === "AI_NoObjectGeneratedError" ||
     name === "AI_TypeValidationError" ||
     name === "TypeValidationError" ||
     upper.includes("NO OBJECT GENERATED") ||
@@ -100,7 +120,50 @@ export function classifyAiError(error: unknown): AiErrorCode {
   }
 
   if (
+    name === "AI_NoSuchModelError" ||
+    name === "NoSuchModelError" ||
+    upper.includes("NO SUCH LANGUAGEMODEL")
+  ) {
+    return "AI_MODEL_UNAVAILABLE";
+  }
+
+  if (name === "AI_LoadAPIKeyError" || name === "LoadAPIKeyError") {
+    return "AI_KEY_INVALID";
+  }
+
+  if (
+    name === "AI_InvalidPromptError" ||
+    name === "InvalidPromptError" ||
+    name === "AI_InvalidDataContentError" ||
+    name === "InvalidDataContentError"
+  ) {
+    return "AI_SCHEMA_VALIDATION";
+  }
+
+  if (name === "AI_JSONParseError" || name === "JSONParseError") {
+    return "AI_SCHEMA_VALIDATION";
+  }
+
+  if (
+    name === "AI_RetryError" ||
+    name === "RetryError" ||
+    (upper.includes("FAILED AFTER") && upper.includes("LAST ERROR"))
+  ) {
+    const last = extractRetryLastErrorMessage(text);
+    if (last) {
+      const nested = classifyAiError(new Error(last));
+      if (nested !== "AI_UNKNOWN_ERROR") return nested;
+      const nestedPressure = classifyProviderPressureMessage(last.toUpperCase());
+      if (nestedPressure) return nestedPressure;
+    }
+    const pressure = classifyProviderPressureMessage(upper);
+    if (pressure) return pressure;
+    return "AI_PROVIDER_DOWN";
+  }
+
+  if (
     name === "AI_APICallError" ||
+    name === "APICallError" ||
     name === "GoogleGenerativeAIFetchError" ||
     name === "GoogleApiError" ||
     name === "FetchError" ||
@@ -162,6 +225,9 @@ export function classifyAiError(error: unknown): AiErrorCode {
   ) {
     return "AI_PROVIDER_DOWN";
   }
+
+  const providerPressure = classifyProviderPressureMessage(upper);
+  if (providerPressure) return providerPressure;
 
   console.warn(
     JSON.stringify({

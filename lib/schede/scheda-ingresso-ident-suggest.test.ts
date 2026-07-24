@@ -68,7 +68,6 @@ const mezzoB: MezzoGestito = {
     addettoAccettazione: "",
     richiedente: "",
     richiedenteTelefono: "",
-    noteIntervento: "",
   };
   const merged = mergeSchedaIngressoFields(current, buildSchedaIngressoFieldsFromMezzo(mezzoA));
   assert.equal(merged.cliente, "Già compilato");

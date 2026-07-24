@@ -44,7 +44,7 @@ import {
   lavorazioneClienteLabel,
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
-import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import { resolveLavorazioneNote } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { gestionaleListTableIsLastRow, gestionaleListTableLastRowAttr, gestionaleListTableRowClass, gestionaleListTableRowTone } from "@/lib/ui/gestionale-list-table";
 import { dsTableActionGlyph } from "@/lib/ui/design-system";
 import { IconActionButton } from "@/components/design-system";
@@ -193,7 +193,7 @@ function LavorazioneAttivaTableRowInner({
       </td>
       <MezzoIdentCells row={row} bundle={bundle} />
       <td className={`${lavTableTd} gestionale-list-table-col-note min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
-        <span className="line-clamp-2">{lavorazioneNoteOperative(row, schedeStore) || "—"}</span>
+        <span className="line-clamp-2">{resolveLavorazioneNote(row) || "—"}</span>
       </td>
       <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
@@ -360,7 +360,7 @@ function LavorazioneArchivioTableRowInner({
       </td>
       <MezzoIdentCells row={row} bundle={bundle} />
       <td className={`${lavTableTd} gestionale-list-table-col-note min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
-        <span className="line-clamp-2">{lavorazioneNoteOperative(row, schedeStore) || "—"}</span>
+        <span className="line-clamp-2">{resolveLavorazioneNote(row) || "—"}</span>
       </td>
       <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>

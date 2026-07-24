@@ -76,7 +76,6 @@ const store: LavorazioneSchedeStore = {
         addettoAccettazione: "",
         richiedente: "",
     richiedenteTelefono: "",
-        noteIntervento: "",
       },
     },
     lavorazioni: null,

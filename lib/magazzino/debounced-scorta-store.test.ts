@@ -8,6 +8,7 @@ import {
   DEBOUNCED_SCORTA_MS,
   decrementDebouncedScorta,
   incrementDebouncedScorta,
+  getDebouncedScortaSnapshot,
   initDebouncedScortaRow,
   releaseDebouncedScortaSubscriber,
   setDebouncedScortaQuantity,
@@ -56,6 +57,8 @@ async function run(): Promise<void> {
   });
   assert.equal(snap.displayQuantity, 10);
   assert.equal(snap.isDirty, false);
+  const snapAgain = getDebouncedScortaSnapshot(RICAMBIO_ID);
+  assert.equal(snapAgain, snap, "snapshot ref stable when values unchanged");
   clearDebouncedScortaStoreForTest();
 
   {

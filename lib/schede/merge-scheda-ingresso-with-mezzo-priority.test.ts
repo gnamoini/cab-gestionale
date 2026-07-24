@@ -26,7 +26,6 @@ const empty = (): SchedaIngressoFields => ({
   addettoAccettazione: "",
   richiedente: "",
   richiedenteTelefono: "",
-  noteIntervento: "",
 });
 
 const mezzo: MezzoGestito = {
@@ -52,7 +51,6 @@ const mezzo: MezzoGestito = {
 const fromMezzo = buildSchedaIngressoFieldsFromMezzo(mezzo);
 assert.equal(fromMezzo.km, "");
 assert.equal(fromMezzo.oreLavoro, "");
-assert.equal(fromMezzo.noteIntervento, "");
 assert.equal(fromMezzo.marcaAttrezzatura, "Ravo");
 
 const oldScheda: SchedaIngressoFields = {

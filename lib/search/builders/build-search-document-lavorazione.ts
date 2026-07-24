@@ -47,7 +47,6 @@ export function buildSearchDocumentLavorazione(
     row.mezzo?.numero_scuderia,
     row.mezzo?.telaio_num,
     ing?.descrizioneAnomalia,
-    ing?.noteIntervento,
     ing?.addettoAccettazione,
     ing?.richiedente,
     lavRigheText,

@@ -21,7 +21,7 @@ function lav(partial: Partial<LavorazioneAttiva> & Pick<LavorazioneAttiva, "id" 
     statoId: "in_lavorazione",
     priorita: "media",
     addetto: "",
-    noteInterne: "",
+    note: "",
     dataCompletamento: null,
     ...partial,
   };

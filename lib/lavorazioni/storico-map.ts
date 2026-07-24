@@ -14,7 +14,7 @@ export function storicoToAttiva(s: LavorazioneArchiviata): LavorazioneAttiva {
     statoId: s.statoFinaleId,
     priorita: s.prioritaFinale,
     addetto: s.addetto,
-    noteInterne: s.noteInterne,
+    note: s.note,
     dataIngresso: s.dataIngresso,
     dataCompletamento: s.dataCompletamento,
   };
@@ -32,7 +32,7 @@ export function attivaToStoricoFromEdit(a: LavorazioneAttiva, prev: LavorazioneA
     utilizzatore: a.utilizzatore,
     cantiere: a.cantiere,
     addetto: a.addetto,
-    noteInterne: a.noteInterne,
+    note: a.note,
     statoFinaleId: a.statoId,
     prioritaFinale: a.priorita,
     dataIngresso: a.dataIngresso,

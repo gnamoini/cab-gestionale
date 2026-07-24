@@ -137,6 +137,7 @@ export function useLavorazioneCreateSubmit({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [schedaSyncError, setSchedaSyncError] = useState<string | null>(null);
   const [submitPending, setSubmitPending] = useState(false);
+  const [lavorazioneNote, setLavorazioneNote] = useState("");
   const formInitRef = useRef(false);
   const defaultMezzoAppliedRef = useRef<string | null>(null);
   const createdLavorazioneIdRef = useRef<string | null>(null);
@@ -360,7 +361,7 @@ export function useLavorazioneCreateSubmit({
             return;
           }
           const ymd = parsedDataIngresso.iso.slice(0, 10);
-          const noteBlob = currentFields.noteIntervento.trim() || null;
+          const noteBlob = lavorazioneNote.trim() || null;
           setSubmitError(null);
           setSchedaSyncError(null);
 
@@ -586,5 +587,7 @@ export function useLavorazioneCreateSubmit({
     unknownSettingsDialog,
     saveGateDialog: saveGate.dialog,
     gateSave: saveGate.gateSave,
+    lavorazioneNote,
+    setLavorazioneNote,
   };
 }

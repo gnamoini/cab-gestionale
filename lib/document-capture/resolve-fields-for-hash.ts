@@ -4,9 +4,13 @@ export type CaptureFieldHashRow = {
   field_key: string;
   confirmed_value?: string | null;
   normalized_value?: string | null;
+  value_source?: "ai" | "manual" | "existing";
 };
 
 export function resolveFieldValueForHash(row: CaptureFieldHashRow): string | null {
+  if (row.value_source === "manual") {
+    return row.confirmed_value ?? null;
+  }
   if (row.confirmed_value != null && row.confirmed_value !== "") {
     return row.confirmed_value;
   }

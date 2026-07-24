@@ -68,7 +68,18 @@ const SKIP_DIFF_KEYS = new Set([
   "autore_ultima_modifica",
   "dataUltimaModifica",
   "data_ultima_modifica",
+  "actual_labor_hours_source",
+  "actual_labor_hours_updated_at",
 ]);
+
+const TECHNICAL_AUDIT_OGGETTO_KEYS = new Set(["actual_labor_hours"]);
+
+/** Oggetto audit tecnico (nome colonna) — non mostrare in feed. */
+export function isTechnicalAuditOggetto(label: string): boolean {
+  const t = safeStr(label).trim().toLowerCase();
+  if (!t) return true;
+  return TECHNICAL_AUDIT_OGGETTO_KEYS.has(t);
+}
 
 /** Righe summary legacy con metadati audit — non mostrare in feed log. */
 const AUDIT_METADATA_MODIFICA_LINE_RE =
@@ -119,6 +130,7 @@ const FIELD_LABELS: Record<string, string> = {
   data_uscita: "Data uscita",
   archived: "Archivio",
   archived_at: "Data archivio",
+  actual_labor_hours: "Ore lavorate",
   mezzo_id: "Mezzo collegato",
   lavorazione_id: "Lavorazione collegata",
   totale: "Totale",
@@ -242,7 +254,7 @@ function recordFromPayload(payload: unknown): Record<string, unknown> | null {
   const ctx = p.context;
   if (ctx && typeof ctx === "object" && !Array.isArray(ctx)) {
     const oggetto = (ctx as Record<string, unknown>).oggetto;
-    if (typeof oggetto === "string" && oggetto.trim()) {
+    if (typeof oggetto === "string" && oggetto.trim() && !isTechnicalAuditOggetto(oggetto)) {
       return { __oggetto: oggetto.trim() };
     }
   }
@@ -330,7 +342,7 @@ export function toneFromAzione(azione: string, annullato?: boolean): GestionaleL
 }
 
 function buildOggettoFromRecord(entita: string, raw: Record<string, unknown>): string {
-  if (typeof raw.__oggetto === "string") return raw.__oggetto;
+  if (typeof raw.__oggetto === "string" && !isTechnicalAuditOggetto(raw.__oggetto)) return raw.__oggetto;
 
   const mezzo = nestedMezzo(raw);
 
@@ -496,6 +508,14 @@ function humanChangeSentence(
   }
   if (key === "stato" || key === "status") return `Stato modificato da “${p}” a “${d}”`;
   if (key === "priorita" || key === "priorita_lavorazione") return `Priorità modificata da “${p}” a “${d}”`;
+  if (key === "actual_labor_hours") {
+    const a = Number(before);
+    const b = Number(after);
+    if (!Number.isNaN(a) && !Number.isNaN(b)) {
+      return `Ore lavorate modificate da ${a}h a ${b}h`;
+    }
+    return `Ore lavorate aggiornate da “${p}” a “${d}”`;
+  }
   if (key === "archived") return after ? "Spostata in archivio" : "Ripristinata tra le attive";
   if (before == null || before === "" || before === "—") return `${label} impostato a “${d}”`;
   if (after == null || after === "" || after === "—") return `${label} rimosso`;
@@ -515,11 +535,79 @@ const SCHEDA_CAMPO_LABELS: Record<string, string> = {
   nScuderia: "N. scuderia",
   targa: "Targa",
   dataIngresso: "Data ingresso",
-  noteIntervento: "Note intervento",
   descrizioneAnomalia: "Descrizione anomalia",
   richiedente: "Richiedente",
   richiedenteTelefono: "Telefono richiedente",
+  righe: "Righe lavorazione",
+  identificazioneMacchina: "Identificazione macchina",
+  oreImpiegate: "Ore impiegate",
+  addettiAssegnati: "Addetti assegnati",
+  dataLavorazione: "Data lavorazione",
+  lavorazioniEffettuate: "Lavorazioni effettuate",
 };
+
+type SchedaRigaLavorazioneLite = {
+  id?: string;
+  dataLavorazione?: string;
+  lavorazioniEffettuate?: string;
+  addettiAssegnati?: { addetto?: string; oreImpiegate?: number }[];
+};
+
+function parseSchedaRigheLavorazione(raw: unknown): SchedaRigaLavorazioneLite[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((row): row is SchedaRigaLavorazioneLite => !!row && typeof row === "object");
+}
+
+function formatOreLavorateLogValue(value: unknown): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "—";
+  return `${n}h`;
+}
+
+function diffSchedaRigheLavorazioniModifiche(before: unknown, after: unknown): string[] {
+  const bRows = parseSchedaRigheLavorazione(before);
+  const aRows = parseSchedaRigheLavorazione(after);
+  const lines: string[] = [];
+  const byId = (rows: SchedaRigaLavorazioneLite[]) =>
+    new Map(rows.map((row) => [row.id?.trim() || "", row]));
+  const ids = new Set([
+    ...bRows.map((row) => row.id?.trim()).filter(Boolean),
+    ...aRows.map((row) => row.id?.trim()).filter(Boolean),
+  ] as string[]);
+
+  for (const id of ids) {
+    const b = byId(bRows).get(id);
+    const a = byId(aRows).get(id);
+    if (!b && a) {
+      lines.push(`Riga lavorazione aggiunta${a.dataLavorazione ? ` (${a.dataLavorazione})` : ""}`);
+      continue;
+    }
+    if (b && !a) {
+      lines.push(`Riga lavorazione rimossa${b.dataLavorazione ? ` (${b.dataLavorazione})` : ""}`);
+      continue;
+    }
+    if (!b || !a) continue;
+
+    const bAddetti = b.addettiAssegnati ?? [];
+    const aAddetti = a.addettiAssegnati ?? [];
+    const addettoKeys = new Set(
+      [...bAddetti, ...aAddetti].map((entry) => entry.addetto?.trim() || "").filter(Boolean),
+    );
+    for (const addetto of addettoKeys) {
+      const bo = bAddetti.find((entry) => entry.addetto?.trim() === addetto)?.oreImpiegate;
+      const ao = aAddetti.find((entry) => entry.addetto?.trim() === addetto)?.oreImpiegate;
+      if (bo === ao) continue;
+      if (bo == null || bo === 0) lines.push(`Ore di ${addetto} impostate a ${formatOreLavorateLogValue(ao)}`);
+      else lines.push(`Ore di ${addetto} modificate da ${formatOreLavorateLogValue(bo)} a ${formatOreLavorateLogValue(ao)}`);
+    }
+
+    if (b.lavorazioniEffettuate !== a.lavorazioniEffettuate && a.lavorazioniEffettuate?.trim()) {
+      lines.push("Descrizione lavorazioni aggiornata");
+    }
+  }
+
+  return lines.slice(0, 8);
+}
 
 const GENERIC_MODIFICA_LINES = new Set(["Modifica registrata", "Record aggiornato", "Dati aggiornati"]);
 
@@ -530,10 +618,12 @@ function isGenericModificaLines(modifiche: readonly string[]): boolean {
 function oggettoFromPayloadContext(payload: Record<string, unknown> | null): string {
   if (!payload) return "";
   const fromLabel = entityLabelFromPayload(payload);
-  if (fromLabel && fromLabel !== "—") return fromLabel;
+  if (fromLabel && fromLabel !== "—" && !isTechnicalAuditOggetto(fromLabel)) return fromLabel;
   const ctx = payload.context;
   if (!ctx || typeof ctx !== "object" || Array.isArray(ctx)) return "";
-  return safeStr((ctx as Record<string, unknown>).oggetto).trim();
+  const oggetto = safeStr((ctx as Record<string, unknown>).oggetto).trim();
+  if (oggetto && !isTechnicalAuditOggetto(oggetto)) return oggetto;
+  return "";
 }
 
 function unwrapSchedaContenutoCampi(raw: unknown): Record<string, unknown> {
@@ -658,6 +748,13 @@ function diffContenutoSchedaModifiche(before: unknown, after: unknown): string[]
   const lines: string[] = [];
   for (const key of keys) {
     if (JSON.stringify(b[key]) === JSON.stringify(a[key])) continue;
+    if (key === "righe") {
+      const righeLines = diffSchedaRigheLavorazioniModifiche(b[key], a[key]);
+      if (righeLines.length) {
+        lines.push(...righeLines);
+        continue;
+      }
+    }
     const label = SCHEDA_CAMPO_LABELS[key] ?? humanFieldLabel(key);
     const p = formatValueForField(key, b[key]);
     const d = formatValueForField(key, a[key]);

@@ -138,7 +138,6 @@ export function emptySchedaIngressoFields(addettoDefault = ""): SchedaIngressoFi
     richiedenteTelefono: "",
     richiedenteFirma: "",
     addettoFirma: "",
-    noteIntervento: "",
   };
 }
 
@@ -286,15 +285,17 @@ function AddettoAccettazioneWithFirma({
 
 const SchedaIngressoInterventoSection = memo(function SchedaIngressoInterventoSection({
   descrizioneAnomalia,
-  noteIntervento,
+  lavorazioneNote,
   onPatch,
+  onLavorazioneNoteChange,
   disabled,
   anomaliaFieldId,
   noteFieldId,
 }: {
   descrizioneAnomalia: string;
-  noteIntervento: string;
+  lavorazioneNote: string;
   onPatch: (patch: Partial<SchedaIngressoFields>) => void;
+  onLavorazioneNoteChange: (value: string) => void;
   disabled: boolean;
   anomaliaFieldId: string;
   noteFieldId: string;
@@ -318,8 +319,8 @@ const SchedaIngressoInterventoSection = memo(function SchedaIngressoInterventoSe
           id={noteFieldId}
           className="min-h-[3.5rem]"
           size="sm"
-          value={noteIntervento}
-          onChange={(v) => onPatch({ noteIntervento: sliceInputValue(v, TEXT_LONG) })}
+          value={lavorazioneNote}
+          onChange={(v) => onLavorazioneNoteChange(sliceInputValue(v, TEXT_LONG))}
           disabled={disabled}
           rows={2}
           maxLength={TEXT_LONG}
@@ -330,12 +331,10 @@ const SchedaIngressoInterventoSection = memo(function SchedaIngressoInterventoSe
 }, (prev, next) => {
   if (prev.disabled !== next.disabled) return false;
   if (prev.onPatch !== next.onPatch) return false;
+  if (prev.onLavorazioneNoteChange !== next.onLavorazioneNoteChange) return false;
   if (prev.anomaliaFieldId !== next.anomaliaFieldId) return false;
   if (prev.noteFieldId !== next.noteFieldId) return false;
-  return (
-    prev.descrizioneAnomalia === next.descrizioneAnomalia &&
-    prev.noteIntervento === next.noteIntervento
-  );
+  return prev.descrizioneAnomalia === next.descrizioneAnomalia && prev.lavorazioneNote === next.lavorazioneNote;
 });
 
 type SchedaIngressoCreateIngressoSectionProps = {
@@ -564,6 +563,8 @@ export function SchedaIngressoFormBody({
   onApplyCaptureHint,
   captureReviewCount,
   embedInParentScroll = false,
+  lavorazioneNote = "",
+  onLavorazioneNoteChange,
 }: {
   variant: SchedaIngressoFormVariant;
   fields: SchedaIngressoFields;
@@ -595,6 +596,9 @@ export function SchedaIngressoFormBody({
   captureReviewCount?: number;
   /** Wizard capture: scroll delegato al GestionaleModalScrollBody del launcher. */
   embedInParentScroll?: boolean;
+  /** SSOT note su `lavorazioni.note` (non in scheda JSON). */
+  lavorazioneNote?: string;
+  onLavorazioneNoteChange?: (value: string) => void;
 }) {
   const disabled = pending || readOnly;
   const dataIngressoFieldId = useId();
@@ -992,8 +996,9 @@ export function SchedaIngressoFormBody({
         {heavySectionsReady ? (
           <SchedaIngressoInterventoSection
             descrizioneAnomalia={fields.descrizioneAnomalia}
-            noteIntervento={fields.noteIntervento ?? ""}
+            lavorazioneNote={lavorazioneNote}
             onPatch={onPatch}
+            onLavorazioneNoteChange={onLavorazioneNoteChange ?? (() => {})}
             disabled={disabled}
             anomaliaFieldId={anomaliaFieldId}
             noteFieldId={noteFieldId}
@@ -1007,6 +1012,7 @@ export function SchedaIngressoFormBody({
 export function SchedaIngressoEditModal({
   open,
   initialFields,
+  initialLavorazioneNote = "",
   onRequestClose,
   onSave,
   onDelete,
@@ -1022,9 +1028,14 @@ export function SchedaIngressoEditModal({
 }: {
   open: boolean;
   initialFields: SchedaIngressoFields;
+  initialLavorazioneNote?: string;
   /** Chiusura (Annulla / ESC): riceve il draft corrente per dirty-check nel parent. */
   onRequestClose: (draft: SchedaIngressoFields) => void;
-  onSave: (draft: SchedaIngressoFields, mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan) => void | Promise<void>;
+  onSave: (
+    draft: SchedaIngressoFields,
+    mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan,
+    lavorazioneNote?: string,
+  ) => void | Promise<void>;
   onDelete?: () => void;
   readOnly?: boolean;
   canEdit?: boolean;
@@ -1038,14 +1049,18 @@ export function SchedaIngressoEditModal({
 }) {
   const ro = readOnly || !canEdit;
   const [saving, setSaving] = useState(false);
+  const [lavorazioneNote, setLavorazioneNote] = useState(initialLavorazioneNote);
   const formEngine = useFormEngine<SchedaIngressoFields>({ initial: initialFields });
   const { value: draft, reset, setValue, patch: onPatch, runSubmit, formProps, ref: draftRef } =
     formEngine;
   const savePending = pending || saving;
 
   useEffect(() => {
-    if (open) reset(initialFields);
-  }, [open, initialFields, reset]);
+    if (open) {
+      reset(initialFields);
+      setLavorazioneNote(initialLavorazioneNote);
+    }
+  }, [open, initialFields, initialLavorazioneNote, reset]);
 
   const setFields = useCallback(
     (fields: SchedaIngressoFields) => {
@@ -1091,7 +1106,7 @@ export function SchedaIngressoEditModal({
             if (err instanceof Error && err.message === "SAVE_CANCELLED") return;
             throw err;
           }
-          await onSave(gatedFields, mezzoUpdatePlan);
+          await onSave(gatedFields, mezzoUpdatePlan, lavorazioneNote);
         } finally {
           setSaving(false);
         }
@@ -1156,6 +1171,8 @@ export function SchedaIngressoEditModal({
           excludeLavorazioneId={excludeLavorazioneId}
           updatedByHint={updatedBy?.trim() || null}
           mezzoPrompt={mezzoPrompt}
+          lavorazioneNote={lavorazioneNote}
+          onLavorazioneNoteChange={setLavorazioneNote}
         />
       </form>
       {unknownSettingsDialog}

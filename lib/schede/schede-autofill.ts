@@ -65,12 +65,11 @@ export function buildSchedaIngressoFieldsFromContext(
             ? String(mezzo.oreKm)
             : ""
         : "",
-    descrizioneAnomalia: lav.noteInterne?.trim() ?? "",
+    descrizioneAnomalia: lav.note?.trim() ?? "",
     livelloCarburante: "",
     addettoAccettazione: lav.addetto?.trim() || addettiDefault,
     richiedente: "",
     richiedenteTelefono: "",
-    noteIntervento: "",
   };
 }
 

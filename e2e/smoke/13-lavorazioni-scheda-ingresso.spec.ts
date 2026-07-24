@@ -50,7 +50,7 @@ test("create → save → hub panoramica → edit ingresso → scheda lavorazion
   test.setTimeout(900_000);
   const fixture = buildSchedaIngressoAuditFixture();
   const capture = attachSchedaPayloadCapture(page);
-  const { ingresso, ingressoEdit, lavorazioni, token } = fixture;
+  const { ingresso, ingressoEdit, lavorazioni, lavorazioneNote, lavorazioneNoteEdit, token } = fixture;
 
   await loginViaUi(page, adminCredentials());
   await page.goto("/lavorazioni");
@@ -66,7 +66,10 @@ test("create → save → hub panoramica → edit ingresso → scheda lavorazion
   await hub.getByRole("tab", { name: /Panoramica/i }).click();
   await expect(hub.getByText(ingresso.cliente)).toBeVisible();
   await expect(hub.getByText(ingresso.richiedente)).toBeVisible();
-  await expect(hub.getByText(ingresso.noteIntervento.split("\n")[0]!)).toBeVisible();
+  const noteArea = hub.getByLabel("Note");
+  await noteArea.fill(lavorazioneNote);
+  await hub.getByRole("button", { name: "Salva note" }).click();
+  await expect(hub.getByText(lavorazioneNote.split("\n")[0]!)).toBeVisible();
 
   await openIngressoEditorFromHub(page);
   const editModal = page.getByRole("dialog").filter({ hasText: "Scheda di ingresso" });
@@ -82,8 +85,6 @@ test("create → save → hub panoramica → edit ingresso → scheda lavorazion
       );
     } else if (key === "richiedente") {
       await editModal.getByLabel("Richiedente").fill(val);
-    } else if (key === "noteIntervento") {
-      await editModal.getByLabel("Note").fill(val);
     } else if (key === "descrizioneAnomalia") {
       await editModal.getByLabel("Descrizione anomalia").fill(val);
     } else if (key === "km") {

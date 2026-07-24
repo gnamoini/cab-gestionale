@@ -13,7 +13,7 @@ function mockArchived(dataCompletamento: string): LavorazioneArchiviata {
     utilizzatore: "—",
     cantiere: "",
     addetto: "—",
-    noteInterne: "",
+    note: "",
     statoFinaleId: "completata",
     prioritaFinale: "media",
     dataIngresso: "2024-12-01T10:00:00.000Z",

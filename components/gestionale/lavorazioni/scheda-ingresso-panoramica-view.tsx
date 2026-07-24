@@ -394,6 +394,7 @@ export function SchedaIngressoPanoramicaAnagraficaContent({
 /** Vista read-only stile tab Panoramica — riusabile in hub e portale clienti. */
 export function SchedaIngressoPanoramicaView({
   fields,
+  lavorazioneNote,
   sections = { ingresso: true, anagrafica: true, intervento: true },
   addettoPillStyle: addettoPillStyleProp,
   showAddettoAccettazione = true,
@@ -406,6 +407,8 @@ export function SchedaIngressoPanoramicaView({
   portalIngressoLayout = false,
 }: {
   fields: SchedaIngressoFields;
+  /** Note lavorazione (`lavorazioni.note`) — non più su scheda ingresso. */
+  lavorazioneNote?: string;
   sections?: SchedaIngressoPanoramicaSections;
   addettoPillStyle?: CSSProperties;
   /** Portale clienti: nasconde l'addetto officina. */
@@ -502,7 +505,7 @@ export function SchedaIngressoPanoramicaView({
         </div>
         {showNoteIntervento ? (
           <HubModalPanoramicaInlineCell label="Note">
-            <div className="text-sm leading-relaxed">{multilineValue(fields.noteIntervento)}</div>
+            <div className="text-sm leading-relaxed">{multilineValue(lavorazioneNote ?? "")}</div>
           </HubModalPanoramicaInlineCell>
         ) : null}
       </div>
@@ -624,12 +627,12 @@ export function SchedaIngressoPanoramicaView({
             {!anomaliaInIntervento ? null : descrizioneAnomaliaField()}
             {showNoteIntervento && !portalIngressoLayout ? (
               <PanoramicaCustomField
-                label="Note intervento"
+                label="Note"
                 fieldLayout={fieldLayout}
                 rowLayout={rowLayout}
                 spanFull
               >
-                {multilineValue(fields.noteIntervento)}
+                {multilineValue(lavorazioneNote ?? "")}
               </PanoramicaCustomField>
             ) : null}
           </PanoramicaFieldsShell>

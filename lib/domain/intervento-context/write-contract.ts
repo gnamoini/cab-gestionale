@@ -384,10 +384,8 @@ async function syncIngressoAfterSave(plan: SyncIngressoAfterSavePlan): Promise<v
     writeContext: writeCtx,
   });
 
-  const note = campi.noteIntervento?.trim() || null;
   const parsedIngresso = parseItalianDayDisplayToIso(campi.dataIngresso.trim());
   const lavPatch: LavorazioneUpdate = {};
-  if (note !== (row.note ?? "").trim()) lavPatch.note = note;
   if (parsedIngresso.ok) lavPatch.data_ingresso = parsedIngresso.iso;
   const currentFk = row.mezzo_id?.trim() || "";
   if (mezzoId && mezzoId !== currentFk) lavPatch.mezzo_id = mezzoId;

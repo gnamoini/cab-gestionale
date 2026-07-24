@@ -27,7 +27,6 @@ const baseFields = (): SchedaIngressoFields => ({
   addettoAccettazione: "",
   richiedente: "",
     richiedenteTelefono: "",
-  noteIntervento: "",
 });
 
 const store = {
@@ -60,7 +59,7 @@ const attive = [
     cantiere: "",
     utilizzatore: "",
     addetto: "",
-    noteInterne: "",
+    note: "",
     priorita: "media",
     statoId: "accettazione",
     dataCompletamento: null,

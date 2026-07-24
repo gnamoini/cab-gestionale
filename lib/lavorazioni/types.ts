@@ -28,7 +28,7 @@ export interface LavorazioneAttiva {
   statoId: string;
   priorita: PrioritaLav;
   addetto: string;
-  noteInterne: string;
+  note: string;
   dataIngresso: string;
   /** Impostata quando si passa a stato Completata (o in fase di archiviazione). */
   dataCompletamento: string | null;
@@ -49,7 +49,7 @@ export interface LavorazioneArchiviata {
   utilizzatore: string;
   cantiere: string;
   addetto: string;
-  noteInterne: string;
+  note: string;
   statoFinaleId: string;
   prioritaFinale: PrioritaLav;
   dataIngresso: string;

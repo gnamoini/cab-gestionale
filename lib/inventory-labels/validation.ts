@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DEFAULT_LABEL_PRESET, LABEL_PRESET_IDS } from "@/lib/inventory-labels/domain/templates";
+import { DEFAULT_LABEL_PRESET, LABEL_PRESET_IDS, MANUAL_LABEL_PRESET_IDS } from "@/lib/inventory-labels/domain/templates";
 import { DEFAULT_INCLUDE_BARCODE, LABEL_FORMATS } from "@/lib/inventory-labels/domain/types";
 import {
   BULK_QUANTITY_MAX,
@@ -24,6 +24,31 @@ export const BULK_ABSOLUTE_MAX = 500;
 export const labelPresetSchema = z.enum(LABEL_PRESET_IDS as [string, ...string[]]);
 
 export const labelFormatSchema = z.enum(LABEL_FORMATS);
+
+export const manualLabelPresetSchema = z.enum(MANUAL_LABEL_PRESET_IDS as [string, ...string[]]);
+
+const manualLabelFieldSchema = z.string().trim().max(120).optional().default("");
+
+export const manualLabelRenderSchema = z
+  .object({
+    marca: manualLabelFieldSchema,
+    descrizione: manualLabelFieldSchema,
+    codice: manualLabelFieldSchema,
+    preset: manualLabelPresetSchema.default(DEFAULT_LABEL_PRESET),
+    format: labelFormatSchema.default("png"),
+    quantity: z.number().int().min(BULK_QUANTITY_MIN).max(BULK_QUANTITY_MAX).default(1),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.marca && !data.descrizione && !data.codice) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Compilare almeno un campo",
+        path: ["marca"],
+      });
+    }
+  });
+
+export type ManualLabelRenderRequest = z.infer<typeof manualLabelRenderSchema>;
 
 const LABEL_JOB_NO_BARCODE_SUFFIX = "::no-barcode";
 const LABEL_JOB_CLIENTE_SUFFIX = "::cliente";

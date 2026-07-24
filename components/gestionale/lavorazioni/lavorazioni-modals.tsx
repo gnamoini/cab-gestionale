@@ -401,8 +401,8 @@ export function EditLavorazioneModal({
             <GestionaleTextarea
               className="min-h-[5.5rem]"
               size="lg"
-              value={local.noteInterne}
-              onChange={(noteInterne) => setLocal({ ...local, noteInterne })}
+              value={local.note}
+              onChange={(note) => setLocal({ ...local, note })}
               rows={4}
             />
           </div>

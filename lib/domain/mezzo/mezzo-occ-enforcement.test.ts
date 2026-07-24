@@ -27,7 +27,6 @@ const baseFields: SchedaIngressoFields = {
   addettoAccettazione: "",
   richiedente: "",
   richiedenteTelefono: "",
-  noteIntervento: "",
   targetType: "telaio",
   attrezzaturaId: "",
 };

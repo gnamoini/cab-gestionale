@@ -92,6 +92,7 @@ export function ClientLavorazioneIngressoDialog({
           <HubModalPanoramicaPanel gapClass="gap-6">
             <SchedaIngressoPanoramicaView
               fields={fields}
+              lavorazioneNote={row.note ?? ""}
               showAddettoAccettazione={false}
               showNoteIntervento
               fieldLayout="rows"

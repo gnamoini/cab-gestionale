@@ -36,6 +36,7 @@ import { LavorazioneCostoDiscreto } from "@/components/gestionale/lavorazioni/la
 import { LavorazioneMediaPanel } from "@/components/gestionale/media/lavorazione-media-panel";
 import { useInterventoContext } from "@/src/hooks/gestionale/use-intervento-context";
 import { useLavorazioneCosto } from "@/src/hooks/gestionale/use-lavorazione-costo";
+import { useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
@@ -286,7 +287,10 @@ export function SchedeLavorazioneModal({
   /** Post-persist scheda: il parent deve chiamare executeInterventoWrite — mai syncIngressoAfterSave diretto. */
   onIngressoCommitted?: (
     campi: SchedaIngressoFields,
-    options?: { mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan },
+    options?: {
+      mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
+      lavorazioneNote?: string;
+    },
   ) => void | Promise<void>;
   canDeleteLavorazione?: boolean;
   onDeleteLavorazione?: () => void;
@@ -304,6 +308,7 @@ export function SchedeLavorazioneModal({
     [globalOpts.lavorazioni.stati],
   );
   const hubQuery = useLavorazioneHub(lav.id);
+  const updateLavorazione = useLavorazioneUpdateMutation();
   const qc = useQueryClient();
   const hubData = hubQuery.data;
   const initialTab = normalizeHubTab(initialTabProp);
@@ -762,9 +767,34 @@ export function SchedeLavorazioneModal({
     [panoramicaCampi, lav],
   );
 
-  const panoramicaNoteValue = useMemo(
-    () => panoramicaCampi.noteIntervento?.trim() || lav.noteInterne?.trim() || "",
-    [panoramicaCampi.noteIntervento, lav.noteInterne],
+  const panoramicaNoteValue = useMemo(() => {
+    const fromHub = hubData?.lavorazione?.note?.trim();
+    if (fromHub) return fromHub;
+    return lav.note?.trim() || "";
+  }, [hubData?.lavorazione?.note, lav.note]);
+
+  const commitPanoramicaNote = useCallback(
+    async (note: string) => {
+      if (!canEditWorkOrders) return;
+      const trimmed = note.trim();
+      if (trimmed === panoramicaNoteValue) return;
+
+      setPanoramicaNoteSaving(true);
+      try {
+        await updateLavorazione.mutateAsync({
+          id: lav.id,
+          data: { note: trimmed || null },
+        });
+      } catch {
+        gestToast.errorOnce("schede-note-save", "Salvataggio note non riuscito. Riprova.", {
+          module: "lavorazioni",
+          action: "update",
+        });
+      } finally {
+        setPanoramicaNoteSaving(false);
+      }
+    },
+    [canEditWorkOrders, panoramicaNoteValue, updateLavorazione, lav.id, gestToast],
   );
 
   const costoLavorazione = useLavorazioneCosto(lav.id, draft, {
@@ -811,85 +841,12 @@ export function SchedeLavorazioneModal({
   const showHubCopiaIngressoBanner =
     hubLastIngressoCandidates.length > 0 || hubIngressoMezzoInAnagrafica;
 
-  const commitPanoramicaNote = useCallback(
-    async (noteIntervento: string) => {
-      if (!canEditWorkOrders) return;
-      const trimmed = noteIntervento.trim();
-      if (trimmed === panoramicaNoteValue) return;
-
-      setPanoramicaNoteSaving(true);
-      try {
-        const campi: SchedaIngressoFields = { ...panoramicaCampi, noteIntervento: trimmed };
-        const now = new Date().toISOString();
-        const u = currentUser.trim() || "Operatore";
-        const base = draftRef.current.ingresso;
-
-        if (base?.sorgente === "file_esterno") {
-          await onIngressoCommitted?.(campi);
-          return;
-        }
-
-        if (base) {
-          const changes = diffSchedaIngressoCampi(base.campi, campi);
-          if (changes.length) {
-            emitLog({
-              tipo: "aggiornamento",
-              schedaOggetto: SCHEDA_INGRESSO_LABEL,
-              riepilogo: "Note operative aggiornate",
-              changes,
-            });
-          }
-          const nextDoc: SchedaIngressoDoc = {
-            ...base,
-            campi,
-            updatedAt: now,
-            updatedBy: u,
-          };
-          const persistRes = await persistBundle({ ...draftRef.current, ingresso: nextDoc });
-          if (!persistRes.ok) return;
-        } else {
-          const nextDoc: SchedaIngressoDoc = {
-            ...newSchedaMeta("ingresso", u),
-            tipo: "ingresso",
-            campi,
-          };
-          emitLog({
-            tipo: "creazione",
-            schedaOggetto: SCHEDA_INGRESSO_LABEL,
-            riepilogo: "Scheda ingresso creata (note operative)",
-            changes: [],
-          });
-          const persistRes = await persistBundle({ ...draftRef.current, ingresso: nextDoc });
-          if (!persistRes.ok) return;
-        }
-
-        await onIngressoCommitted?.(campi);
-      } catch {
-        gestToast.errorOnce("schede-note-save", "Salvataggio note non riuscito. Riprova.", {
-          module: "lavorazioni",
-          action: "update",
-        });
-      } finally {
-        setPanoramicaNoteSaving(false);
-      }
-    },
-    [
-      canEditWorkOrders,
-      panoramicaNoteValue,
-      panoramicaCampi,
-      currentUser,
-      persistBundle,
-      emitLog,
-      onIngressoCommitted,
-      gestToast,
-    ],
-  );
-
   /** EDIT_INGRESSO_ORDER step 1: persist scheda; step 2: onIngressoCommitted → parent executeInterventoWrite. */
   async function applyIngressoCommitAsync(snap: {
     ig: SchedaIngressoFields | null;
     base: SchedaIngressoDoc | null | undefined;
     mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
+    lavorazioneNote?: string;
   }): Promise<boolean> {
     const ig = snap.ig;
     const base = snap.base;
@@ -928,7 +885,10 @@ export function SchedeLavorazioneModal({
       return false;
     }
     baselineIngressoJson.current = JSON.stringify(ig);
-    await onIngressoCommitted?.(ig, { mezzoUpdatePlan: snap.mezzoUpdatePlan });
+    await onIngressoCommitted?.(ig, {
+      mezzoUpdatePlan: snap.mezzoUpdatePlan,
+      lavorazioneNote: snap.lavorazioneNote,
+    });
     return true;
   }
 
@@ -1270,7 +1230,7 @@ export function SchedeLavorazioneModal({
               {hubQuery.isLoading && !hubData ? (
                 <p className="text-sm text-[color:var(--cab-text-muted)]">Caricamento dettaglio…</p>
               ) : null}
-              <GestionaleInfoCard title="Note operative">
+              <GestionaleInfoCard title="Note">
                 <HubModalPanoramicaNoteEditor
                   value={panoramicaNoteValue}
                   canEdit={canEditWorkOrders}
@@ -1520,13 +1480,15 @@ export function SchedeLavorazioneModal({
         <SchedaIngressoEditModal
           open={ingressoFormOpen}
           initialFields={ingressoEditorInitial}
+          initialLavorazioneNote={lav.note?.trim() || ""}
           onRequestClose={tryIngressoBack}
-          onSave={async (draft, mezzoUpdatePlan) => {
+          onSave={async (draft, mezzoUpdatePlan, noteDraft) => {
             ingressoDraftRef.current = draft;
             const ok = await applyIngressoCommitAsync({
               ig: ingressoDraftRef.current,
               base: draftRef.current.ingresso,
               mezzoUpdatePlan,
+              lavorazioneNote: noteDraft,
             });
             if (!ok) return;
             closeIngressoEditor();

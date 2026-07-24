@@ -37,7 +37,6 @@ function clampIngressoCampi(campi: SchedaIngressoFields): SchedaIngressoFields {
   }
   out.livelloCarburante = normalizeLivelloCarburanteStored(out.livelloCarburante);
   out.descrizioneAnomalia = clampField(out.descrizioneAnomalia, TEXT_EXTRA);
-  out.noteIntervento = clampField(out.noteIntervento, TEXT_LONG);
   out.oreLavoro = clampField(out.oreLavoro, TEXT_SHORT);
   out.km = clampField(out.km, TEXT_SHORT);
   out.dataIngresso = clampField(out.dataIngresso, TEXT_SHORT);

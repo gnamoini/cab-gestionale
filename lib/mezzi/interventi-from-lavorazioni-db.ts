@@ -1,5 +1,5 @@
 import { isLavorazioneArchived } from "@/lib/lavorazioni/archived";
-import { durataMsStorico } from "@/lib/lavorazioni/duration";
+import { permanenzaGiorniTra } from "@/lib/lavorazioni/duration";
 import type { MezzoGestito, MezzoInterventoLavorazione } from "@/lib/mezzi/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
@@ -9,15 +9,6 @@ function prioritaIt(p: string): string {
   if (p === "bassa") return "Bassa";
   if (p === "urgente") return "Urgente";
   return p;
-}
-
-function giorniTra(isoIn: string, isoOut: string | null): { label: string; num: number } {
-  if (!isoOut?.trim()) return { label: "—", num: 0 };
-  const ms = durataMsStorico(isoIn, isoOut);
-  const g = ms / 86400000;
-  const rounded = Math.round(g * 10) / 10;
-  if (rounded === 0) return { label: "< 1 giorno", num: g };
-  return { label: `${rounded} giorni`, num: g };
 }
 
 export function labelLavorazioneStatoDb(stato: string): string {
@@ -54,7 +45,7 @@ function lavRowToIntervento(row: LavorazioneListRow, weakMezzoLink = false): Mez
     weakMezzoLink,
   };
   if (isLavorazioneArchived(row)) {
-    const { label, num } = giorniTra(ing, fin);
+    const { label, num } = permanenzaGiorniTra(ing, fin);
     return {
       ...base,
       origine: "storico",
@@ -64,7 +55,7 @@ function lavRowToIntervento(row: LavorazioneListRow, weakMezzoLink = false): Mez
     };
   }
   const completed = fin;
-  const dur = completed ? giorniTra(ing, completed) : { label: "In corso", num: 0 };
+  const dur = completed ? permanenzaGiorniTra(ing, completed) : { label: "In corso", num: 0 };
   return {
     ...base,
     origine: "attiva",

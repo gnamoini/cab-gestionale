@@ -1,4 +1,8 @@
-import { durataMsStorico } from "@/lib/lavorazioni/duration";
+import { localCalendarDayIsoFromDate } from "@/lib/lavorazioni/date-day-only";
+import {
+  formatPermanenzaGiorniInteriLabel,
+  permanenzaGiorniInteri,
+} from "@/lib/lavorazioni/duration";
 import { lavorazioneIngressoIso } from "@/lib/lavorazioni/lavorazione-ingresso-display";
 import { oreTotaliFromBundleLavorazioni } from "@/lib/lavorazioni/ore-totali-scheda";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
@@ -38,27 +42,21 @@ export function lavorazioneOreTotaliSchedaLabel(
   return formatOreSchedaTotali(ore);
 }
 
-/** Permanenza tra ingresso e completamento/archivio. */
+/** Data fine permanenza: uscita/completamento, oppure oggi (solo giorno) se ancora in officina. */
 export function lavorazionePermanenzaFineIso(row: LavorazioneListRow): string {
-  const closed = row.archived_at?.trim() || row.data_uscita?.trim();
+  const closed = row.data_uscita?.trim() || row.archived_at?.trim();
   if (closed) return closed;
-  return new Date().toISOString();
+  return localCalendarDayIsoFromDate();
 }
 
-/** Permanenza tra ingresso e completamento/archivio. */
+/** Permanenza tra ingresso e completamento/archivio (giorni interi di calendario). */
 export function lavorazionePermanenzaGiorniLabel(
   row: LavorazioneListRow,
   schedaDataIngresso?: string | null,
 ): string {
   const ingresso = lavorazioneIngressoIso(row, schedaDataIngresso);
   const fine = lavorazionePermanenzaFineIso(row);
-  const ms = durataMsStorico(ingresso, fine);
-  if (ms <= 0) return "—";
-  const g = ms / 86400000;
-  const rounded = Math.round(g * 10) / 10;
-  if (rounded === 0) return "< 1 giorno";
-  if (rounded === 1) return "1 giorno";
-  return `${rounded} giorni`;
+  return formatPermanenzaGiorniInteriLabel(permanenzaGiorniInteri(ingresso, fine));
 }
 
 export function lavorazioneOreLavoroSortValue(

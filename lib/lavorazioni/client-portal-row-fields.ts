@@ -40,8 +40,8 @@ export type ClientPortalRowFields = {
   addetto: string;
   /** Descrizione anomalia (scheda ingresso) — ricerca/filtri. */
   descrizioneProblema: string;
-  /** Note intervento — colonna tabella (come lavorazioni principali). */
-  noteIntervento: string;
+  /** Note lavorazione — colonna tabella (come lavorazioni principali). */
+  note: string;
 };
 
 export function clientPortalClienteLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
@@ -116,9 +116,7 @@ export function clientPortalDescrizioneProblema(row: LavorazioneListRow, schedeS
   return dash(fromScheda);
 }
 
-export function clientPortalNoteIntervento(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  const fromScheda = schedeStore?.[row.id]?.ingresso?.campi.noteIntervento?.trim();
-  if (fromScheda) return fromScheda;
+export function clientPortalNote(row: LavorazioneListRow): string {
   const fromRow = row.note?.trim();
   return fromRow && fromRow !== "—" ? fromRow : "";
 }
@@ -176,7 +174,7 @@ export function buildClientPortalRowFields(
     addettoNome,
     addetto,
     descrizioneProblema: clientPortalDescrizioneProblema(row, schedeStore),
-    noteIntervento: clientPortalNoteIntervento(row, schedeStore),
+    note: clientPortalNote(row),
   };
 }
 
@@ -209,7 +207,7 @@ export function clientPortalRowSearchHaystack(fields: ClientPortalRowFields): st
     fields.addetto,
     fields.addettoNome,
     fields.descrizioneProblema,
-    fields.noteIntervento,
+    fields.note,
   ]
     .join(" ")
     .toLowerCase();

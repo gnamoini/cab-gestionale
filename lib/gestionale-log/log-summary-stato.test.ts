@@ -257,4 +257,74 @@ assert.equal(ordineStatus.tipoRiga, "AGGIORNAMENTO ORDINE FORNITORE");
 assert.equal(ordineStatus.oggettoRiga, "OF-001 · Ricambi SRL");
 assert.equal(ordineStatus.modifiche[0], "Stato modificato da “Bozza” a “Inviato”");
 
+const actualLaborHoursLog = buildLogModificaSummary({
+  entita: "lavorazioni",
+  entita_id: "lav-ore",
+  azione: "UPDATE",
+  payload: {
+    before: { actual_labor_hours: 2, actual_labor_hours_source: "scheda_save" },
+    after: { actual_labor_hours: 5, actual_labor_hours_source: "scheda_save" },
+    context: { oggetto: "actual_labor_hours", entityLabel: "actual_labor_hours" },
+  },
+});
+
+assert.equal(actualLaborHoursLog.oggettoRiga, "Lavorazione", "technical audit oggetto must not leak to summary");
+assert.equal(
+  actualLaborHoursLog.modifiche[0],
+  "Ore lavorate modificate da 2h a 5h",
+  "actual labor hours diff must be human readable",
+);
+assert.ok(
+  !actualLaborHoursLog.modifiche.some((line) => /actual_labor_hours_source/i.test(line)),
+  "labor hours source metadata must be hidden",
+);
+
+const schedaOre = buildLogModificaSummary({
+  entita: "scheda_lavorazione",
+  entita_id: "sch-ore",
+  azione: "UPDATE",
+  payload: {
+    before: {
+      lavorazione_id: "lav-9",
+      contenuto: {
+        doc: {
+          campi: {
+            righe: [
+              {
+                id: "r1",
+                dataLavorazione: "24/07/2026",
+                lavorazioniEffettuate: "Manutenzione",
+                addettiAssegnati: [{ addetto: "Mario", oreImpiegate: 2 }],
+              },
+            ],
+          },
+        },
+      },
+    },
+    after: {
+      lavorazione_id: "lav-9",
+      contenuto: {
+        doc: {
+          campi: {
+            righe: [
+              {
+                id: "r1",
+                dataLavorazione: "24/07/2026",
+                lavorazioniEffettuate: "Manutenzione",
+                addettiAssegnati: [{ addetto: "Mario", oreImpiegate: 5 }],
+              },
+            ],
+          },
+        },
+      },
+    },
+  },
+});
+
+assert.equal(
+  schedaOre.modifiche[0],
+  "Ore di Mario modificate da 2h a 5h",
+  "scheda righe ore diff must be human readable",
+);
+
 console.log("log-summary-stato.test.ts OK");

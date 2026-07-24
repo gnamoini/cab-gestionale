@@ -32,7 +32,7 @@ const completata: LavorazioneArchiviata = {
   utilizzatore: "",
   cantiere: "",
   addetto: "Mario",
-  noteInterne: "",
+  note: "",
   statoFinaleId: "completata",
   prioritaFinale: "media",
   dataIngresso: "2025-03-01",

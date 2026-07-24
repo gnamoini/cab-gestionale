@@ -21,7 +21,7 @@ import {
   mergeLazyProfileNamesIntoResolver,
   resolveLavorazioneUltimaModifica,
 } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
-import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import { resolveLavorazioneNote } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
 import { dsHubModalFieldLabel } from "@/lib/ui/design-system";
 import { useAuth } from "@/context/auth-context";
@@ -93,7 +93,7 @@ export function ClientLavorazioneTimelinePanel({
       }),
     [statiOpts, row.created_at, row.data_ingresso, row.stato, row.updated_at],
   );
-  const noteText = useMemo(() => lavorazioneNoteOperative(row, schedeStore), [row, schedeStore]);
+  const noteText = useMemo(() => resolveLavorazioneNote(row), [row]);
   const noteDisplay = noteText.trim() && noteText !== "—" ? noteText : "—";
   const noteEmpty = noteDisplay === "—";
   const addettoFirma = bundle.ingresso?.campi.addettoFirma;

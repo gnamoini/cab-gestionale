@@ -39,14 +39,8 @@ export function computeRecidivitaScore(
 ): RecidivitaScoreBreakdown {
   const temporal = temporalRecidivitaScore(prev, next, windowDays);
 
-  const prevSymptom =
-    prev.bundle?.ingresso?.campi.descrizioneAnomalia?.trim() ||
-    prev.bundle?.ingresso?.campi.noteIntervento?.trim() ||
-    "";
-  const nextSymptom =
-    next.bundle?.ingresso?.campi.descrizioneAnomalia?.trim() ||
-    next.bundle?.ingresso?.campi.noteIntervento?.trim() ||
-    "";
+  const prevSymptom = prev.bundle?.ingresso?.campi.descrizioneAnomalia?.trim() || "";
+  const nextSymptom = next.bundle?.ingresso?.campi.descrizioneAnomalia?.trim() || "";
   const symptom = temporal > 0 ? symptomMatchScore(prevSymptom, nextSymptom) : 0;
 
   const prevComponents = extractComponentsFromBundle(prev.bundle);

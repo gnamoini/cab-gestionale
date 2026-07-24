@@ -19,7 +19,7 @@ function mockArchived(overrides: Partial<LavorazioneArchiviata> = {}): Lavorazio
     utilizzatore: "—",
     cantiere: "",
     addetto: "—",
-    noteInterne: "",
+    note: "",
     statoFinaleId: "completata",
     prioritaFinale: "media",
     dataIngresso: "2025-01-05T10:00:00.000Z",

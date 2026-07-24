@@ -35,7 +35,6 @@ const INGRESSO_LABELS: Record<keyof SchedaIngressoFields, string> = {
   richiedenteTelefono: "Telefono richiedente",
   richiedenteFirma: "Firma richiedente",
   addettoFirma: "Firma addetto officina",
-  noteIntervento: "Note",
 };
 
 export function diffSchedaIngressoCampi(

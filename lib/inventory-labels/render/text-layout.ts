@@ -34,6 +34,7 @@ export type PlacedLabelText = {
   /** `alphabetic` = yMm è la baseline (gruppo fornitore, caps). */
   baseline?: "hanging" | "alphabetic";
   bold?: boolean;
+  anchor?: "start" | "middle";
 };
 
 function textEl(
@@ -186,6 +187,85 @@ function buildClienteTopBlocks(payload: LabelPayload): Array<{ field: keyof Labe
   return blocks;
 }
 
+function buildManualTopBlocks(payload: LabelPayload): Array<{ field: keyof LabelPayload; text: string; font?: "sans" | "mono" }> {
+  return buildClienteTopBlocks(payload);
+}
+
+function stackHeightMm(blocks: StackBlock[], rowStepMm: number, dpi: number): number {
+  if (!blocks.length) return 0;
+  let total = 0;
+  for (let i = 0; i < blocks.length; i++) {
+    total += blockHeightMm(blocks[i]!.lines.length, blocks[i]!.fontPt, dpi);
+    if (i < blocks.length - 1) {
+      total += topGapAfter(blocks[i]!.field, blocks[i + 1]!.field);
+    }
+  }
+  return total;
+}
+
+function resolveManualLabelTextLayout(
+  template: LabelTemplateDefinition,
+  payload: LabelPayload,
+): PlacedLabelText[] {
+  const marcaEl = textEl(template.elements, "marca");
+  const descEl = textEl(template.elements, "descrizione");
+  const codiceEl = textEl(template.elements, "codice");
+  const dpi = template.dpi;
+  const textW = marcaEl.maxWidthMm ?? template.widthMm - template.marginsMm * 2;
+  const textTop = marcaEl.yMm;
+  const textBottom = marcaEl.zoneBottomMm ?? template.heightMm - template.marginsMm;
+  const centerX = template.widthMm / 2;
+  const primaryPt = Math.max(marcaEl.fontPt, descEl.fontPt, codiceEl.fontPt);
+  const rowStepMm = lineMetrics(primaryPt, dpi).lineStepMm;
+  const zoneH = Math.max(lineMetrics(primaryPt, dpi).lineStepMm, textBottom - textTop);
+  const topSpec = buildManualTopBlocks(payload);
+
+  const wrappedBlocks: StackBlock[] = [];
+  for (let i = 0; i < topSpec.length; i++) {
+    const spec = topSpec[i]!;
+    const remaining = topSpec.length - i;
+    const minRest =
+      (remaining - 1) * (lineMetrics(primaryPt, dpi).lineStepMm + DESC_CODICE_EXTRA_GAP_MM);
+    const blockZoneH = Math.max(lineMetrics(primaryPt, dpi).lineStepMm, zoneH - minRest);
+    const maxLines = Math.max(1, maxLinesForZoneMm(blockZoneH, primaryPt, dpi));
+    const res = wrapBlock(
+      spec.text,
+      primaryPt,
+      textW,
+      maxLines,
+      spec.font,
+      spec.field === "codice" ? "codice" : "words",
+    );
+    wrappedBlocks.push({
+      field: spec.field,
+      fontPt: primaryPt,
+      font: spec.font,
+      lines: res.lines,
+    });
+  }
+
+  const totalH = stackHeightMm(wrappedBlocks, rowStepMm, dpi);
+  let y = textTop + Math.max(0, (zoneH - totalH) / 2);
+  const placed: PlacedLabelText[] = [];
+  for (let i = 0; i < wrappedBlocks.length; i++) {
+    const b = wrappedBlocks[i]!;
+    placed.push({
+      field: b.field,
+      xMm: centerX,
+      yMm: y,
+      fontPt: b.fontPt,
+      font: b.font,
+      lines: b.lines,
+      anchor: "middle",
+    });
+    if (i < wrappedBlocks.length - 1) {
+      const gap = topGapAfter(b.field, wrappedBlocks[i + 1]!.field);
+      y = nextRowBaselineMm(y, b.lines.length, b.fontPt, rowStepMm, dpi) + gap;
+    }
+  }
+  return placed;
+}
+
 function resolveClienteLabelTextLayout(
   template: LabelTemplateDefinition,
   payload: LabelPayload,
@@ -282,6 +362,9 @@ export function resolveLabelTextLayout(
   template: LabelTemplateDefinition,
   payload: LabelPayload,
 ): PlacedLabelText[] {
+  if (template.layoutMode === "manual-centered") {
+    return resolveManualLabelTextLayout(template, payload);
+  }
   if (!template.elements.some((e) => e.type === "barcode")) {
     return resolveClienteLabelTextLayout(template, payload);
   }

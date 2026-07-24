@@ -65,7 +65,6 @@ function fieldsFromEditForm(input: {
     addettoAccettazione: "",
     richiedente: "",
     richiedenteTelefono: "",
-    noteIntervento: input.note,
   };
 }
 

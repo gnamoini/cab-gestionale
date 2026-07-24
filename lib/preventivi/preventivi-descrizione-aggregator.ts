@@ -178,8 +178,6 @@ function snippetsFromLavorazioniSchede(ctx: DescrizionePreventivoContext): Score
     }
     const anomalia = ing?.descrizioneAnomalia?.trim();
     if (anomalia && score >= 48) texts.push(anomalia);
-    const note = ing?.noteIntervento?.trim();
-    if (note && score >= 72) texts.push(note);
 
     for (const text of texts) {
       out.push({ text, score, sourceKey: `lav:${lavId}:${normPhrase(text).slice(0, 64)}` });

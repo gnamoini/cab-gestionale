@@ -26,7 +26,6 @@ export type MezzoPermanentFieldKey = (typeof MEZZO_PERMANENT_FIELDS)[number];
 /** Campi legati alla singola lavorazione — mai copiati da mezzo né salvati in anagrafica mezzo. */
 export const LAVORAZIONE_ONLY_FIELDS = [
   "descrizioneAnomalia",
-  "noteIntervento",
   "km",
   "oreLavoro",
   "livelloCarburante",

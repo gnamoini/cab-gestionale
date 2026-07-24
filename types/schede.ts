@@ -60,8 +60,6 @@ export type SchedaIngressoFields = {
   richiedenteFirma?: string;
   /** Firma addetto officina (PNG data URL). */
   addettoFirma?: string;
-  /** Note operative aggiuntive (distinte da descrizione anomalia). */
-  noteIntervento: string;
 };
 
 export type SchedaIngressoDoc = SchedaMeta & {

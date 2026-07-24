@@ -12,6 +12,7 @@ import {
   CaptureAnalyzeError,
   CompileAnalyzeError,
   errorDetailFromUnknown,
+  GeminiAnalyzeError,
   isCaptureAnalyzeError,
   PrerequisitesAnalyzeError,
   ValidationAnalyzeError,
@@ -418,7 +419,7 @@ export async function analyzeDocumentCaptureV41(
           timeoutMs: geminiTimeoutMs,
         });
         if (!aiResult.ok) {
-          throw new Error(aiResult.message);
+          throw new GeminiAnalyzeError(aiResult.code, aiResult.message);
         }
 
         const parsed = captureExtractionSchema.safeParse(aiResult.data.object);

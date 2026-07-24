@@ -130,10 +130,11 @@ async function main(): Promise<void> {
   const campi = ingressoScheda ? campiFromContenuto(ingressoScheda.contenuto) : null;
   const rows = compareCampi(expectedIngresso, campi, SCHEDA_INGRESSO_DB_KEYS);
 
-  const noteOk = (lav.note ?? "") === (expectedIngresso.noteIntervento ?? "");
+  const expectedNote = edit ? fixture.lavorazioneNoteEdit : fixture.lavorazioneNote;
+  const noteOk = (lav.note ?? "") === expectedNote;
   rows.push({
     field: "lavorazioni.note (sync)",
-    expected: expectedIngresso.noteIntervento,
+    expected: expectedNote,
     actual: lav.note ?? "",
     ok: noteOk,
   });

@@ -8,7 +8,6 @@ import {
   getDebouncedScortaSnapshot,
   getDebouncedScortaStoreVersion,
   incrementDebouncedScorta,
-  initDebouncedScortaRow,
   releaseDebouncedScortaSubscriber,
   setDebouncedScortaQuantity,
   subscribeDebouncedScorta,
@@ -16,6 +15,7 @@ import {
   updateDebouncedScortaBindings,
   type DebouncedScortaCallbacks,
   type DebouncedScortaCommitDeps,
+  type DebouncedScortaSnapshot,
 } from "@/lib/magazzino/debounced-scorta-store";
 import { getStockEntity } from "@/lib/magazzino/stock-entity-cache";
 import { useStockAdjustMutation, useStockJournalVersion } from "@/src/hooks/gestionale/use-stock-adjust-mutation";
@@ -92,6 +92,8 @@ export function useDebouncedInventoryQuantity(
     [qc, adjustDelta],
   );
 
+  const fallbackSnapshotRef = useRef<DebouncedScortaSnapshot | null>(null);
+
   const subscribe = useCallback(
     (cb: () => void) => subscribeDebouncedScorta(id, cb),
     [id],
@@ -101,13 +103,28 @@ export function useDebouncedInventoryQuantity(
     void getDebouncedScortaStoreVersion();
     const snap = getDebouncedScortaSnapshot(id);
     if (snap) return snap;
-    return initDebouncedScortaRow(id, serverQuantity, {
-      ricambioLabel,
-      contaStatistiche,
-      debounceMs,
-      enabled,
-    });
-  }, [id, serverQuantity, ricambioLabel, contaStatistiche, debounceMs, enabled]);
+    const q = serverQuantity;
+    const cached = fallbackSnapshotRef.current;
+    if (
+      cached &&
+      cached.displayQuantity === q &&
+      cached.serverQuantity === q &&
+      !cached.isDirty &&
+      !cached.isCommitting &&
+      !cached.showSuccess
+    ) {
+      return cached;
+    }
+    const next: DebouncedScortaSnapshot = {
+      displayQuantity: q,
+      serverQuantity: q,
+      isDirty: false,
+      isCommitting: false,
+      showSuccess: false,
+    };
+    fallbackSnapshotRef.current = next;
+    return next;
+  }, [id, serverQuantity]);
 
   const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 

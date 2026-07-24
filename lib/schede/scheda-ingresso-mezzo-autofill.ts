@@ -33,6 +33,5 @@ export function buildSchedaIngressoFieldsFromMezzo(mezzo: MezzoGestito): SchedaI
     addettoAccettazione: "",
     richiedente: "",
     richiedenteTelefono: "",
-    noteIntervento: "",
   };
 }

@@ -56,7 +56,6 @@ function emptySchedaIngressoFields(): SchedaIngressoFields {
     addettoAccettazione: "",
     richiedente: "",
     richiedenteTelefono: "",
-    noteIntervento: "",
   };
 }
 
@@ -108,7 +107,7 @@ function lavorazioneSnapshotFromInputs(
       (legacy && "mezzoId" in legacy ? legacy.mezzoId?.trim() : null) ||
       null,
     dataIngresso: row?.data_ingresso ?? legacy?.dataIngresso ?? null,
-    note: row?.note ?? legacy?.noteInterne ?? null,
+    note: row?.note ?? legacy?.note ?? null,
     targa: legacy?.targa?.trim() ?? "",
     matricola: legacy?.matricola?.trim() ?? "",
     nScuderia: legacy?.nScuderia?.trim() ?? "",

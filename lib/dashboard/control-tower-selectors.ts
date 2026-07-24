@@ -3,6 +3,7 @@ import {
   extractPayloadFieldChanges,
   filterAuditMetadataModifiche,
   isAuditMetadataFieldKey,
+  isTechnicalAuditOggetto,
   modificheToModificaRiga,
 } from "@/lib/gestionale-log/log-summary";
 import { LOG_AGGREGATION_WINDOW_MS, reconcileLogModificaRows } from "@/lib/gestionale-log/log-event-pipeline";
@@ -801,12 +802,12 @@ export function buildControlTowerMagazzinoOpsSlice(input: ControlTowerBaseInput)
 
 function logOggettoFromPayload(payload: unknown): string | undefined {
   const fromLabel = entityLabelFromPayload(payload);
-  if (fromLabel && fromLabel !== "—") return fromLabel;
+  if (fromLabel && fromLabel !== "—" && !isTechnicalAuditOggetto(fromLabel)) return fromLabel;
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return undefined;
   const ctx = (payload as Record<string, unknown>).context;
   if (ctx && typeof ctx === "object" && !Array.isArray(ctx)) {
     const oggetto = (ctx as Record<string, unknown>).oggetto;
-    if (typeof oggetto === "string" && oggetto.trim()) return oggetto.trim();
+    if (typeof oggetto === "string" && oggetto.trim() && !isTechnicalAuditOggetto(oggetto)) return oggetto.trim();
   }
   return undefined;
 }

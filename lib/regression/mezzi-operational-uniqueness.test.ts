@@ -57,7 +57,6 @@ const fields: SchedaIngressoFields = {
   addettoAccettazione: "",
   richiedente: "",
   richiedenteTelefono: "",
-  noteIntervento: "",
 };
 
 // Duplicati scuderia → ambiguous

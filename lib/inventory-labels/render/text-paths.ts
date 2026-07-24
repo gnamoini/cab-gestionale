@@ -31,6 +31,22 @@ function loadFont(slot: LabelFontSlot): LabelFont {
   return sansFont;
 }
 
+/** Larghezza ink di una riga in px — per centratura orizzontale path. */
+export function measureTextLineWidthPx(
+  text: string,
+  fontSizePx: number,
+  slot: LabelFontSlot,
+): number {
+  const font = loadFont(slot);
+  const scale = fontSizePx / font.unitsPerEm;
+  let width = 0;
+  for (const char of text) {
+    const glyph = font.charToGlyph(char);
+    width += (glyph.advanceWidth ?? font.unitsPerEm * 0.5) * scale;
+  }
+  return width;
+}
+
 /** Converte una riga in `<path>` — librsvg non richiede fontconfig. */
 export function textLineToSvgPath(
   text: string,

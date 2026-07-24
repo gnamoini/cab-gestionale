@@ -28,7 +28,6 @@ const base: SchedaIngressoFields = {
   addettoAccettazione: "",
   richiedente: "",
   richiedenteTelefono: "",
-  noteIntervento: "",
   targetType: "telaio",
   attrezzaturaId: "",
 };

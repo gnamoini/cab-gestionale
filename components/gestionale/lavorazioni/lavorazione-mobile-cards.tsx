@@ -28,7 +28,7 @@ import {
   dsTableActionBtnWithBadge,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import type { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
-import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import { resolveLavorazioneNote } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
 import {
   lavorazioneAddettoLabel,
@@ -161,7 +161,7 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
         scuderia={ident.scuderia}
         ingresso={<LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />}
       />
-      <LavorazioneMobileNote text={lavorazioneNoteOperative(row, schedeStore)} />
+      <LavorazioneMobileNote text={resolveLavorazioneNote(row)} />
       <LavorazioneMobileControlsPanel>
         <LavMobileInlineField label="Stato" layout="stack">
           <InlineSelectField
@@ -301,7 +301,7 @@ function LavorazioneArchivioMobileCardInner({
         scuderia={ident.scuderia}
         ingresso={<LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />}
       />
-      <LavorazioneMobileNote text={lavorazioneNoteOperative(row, schedeStore)} />
+      <LavorazioneMobileNote text={resolveLavorazioneNote(row)} />
       <LavorazioneMobileControlsPanel ariaLabel="Completamento, priorità e addetto">
         <LavMobileInlineField label="Completamento" layout="stack">
           <LavorazioneCompletamentoDatePill

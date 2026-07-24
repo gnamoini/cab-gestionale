@@ -17,7 +17,10 @@ import type { LavorazioneSchedeStore, SchedaIngressoDoc, SchedaIngressoFields } 
 
 export type { SchedaIngressoFields };
 
-export function buildIngressoPdfSections(c: SchedaIngressoFields): {
+export function buildIngressoPdfSections(
+  c: SchedaIngressoFields,
+  lavorazioneNote?: string,
+): {
   data: PdfField[];
   cliente: PdfField[];
   attrezzatura: PdfField[];
@@ -37,7 +40,7 @@ export function buildIngressoPdfSections(c: SchedaIngressoFields): {
     telaio: buildTelaioAnagraficaPdfFields(c),
     altreInformazioni: [
       field("Descrizione anomalia", c.descrizioneAnomalia),
-      field("Note intervento", c.noteIntervento),
+      field("Note", lavorazioneNote ?? ""),
     ].filter((f): f is PdfField => f !== null),
   };
 }
@@ -65,7 +68,7 @@ export function drawIngressoPdfBody(
   ].filter((f): f is PdfField => f !== null);
   const altreInformazioni = [
     field("Descrizione anomalia", ctxFields.descrizioneAnomalia),
-    field("Note intervento", ctxFields.noteIntervento),
+    field("Note", row.note?.trim() ?? ""),
   ].filter((f): f is PdfField => f !== null);
 
   let y = startY;

@@ -81,7 +81,7 @@ export function lavorazioneListRowToAttiva(
     statoId: row.stato,
     priorita: prioritaToLav(row.priorita),
     addetto: resolveReportAddetto(row, ctx),
-    noteInterne: str(row.note, ""),
+    note: str(row.note, ""),
     dataIngresso: ing,
     dataCompletamento: null,
   };
@@ -106,7 +106,7 @@ export function lavorazioneListRowToArchiviata(
     utilizzatore: a.utilizzatore,
     cantiere: "",
     addetto: a.addetto,
-    noteInterne: a.noteInterne,
+    note: a.note,
     statoFinaleId: row.stato,
     prioritaFinale: a.priorita,
     dataIngresso: a.dataIngresso,

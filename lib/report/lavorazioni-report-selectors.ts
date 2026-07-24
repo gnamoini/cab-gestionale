@@ -3,6 +3,7 @@ import {
   lavorazioneListRowToArchiviata,
   splitLavorazioniListRowsForReport,
 } from "@/lib/lavorazioni/lavorazioni-report-adapter";
+import { permanenzaGiorniInteri } from "@/lib/lavorazioni/duration";
 import { isLavorazioneArchived } from "@/lib/lavorazioni/archived";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import {
@@ -110,10 +111,7 @@ export function countOpenedInRange(
 }
 
 function closeDaysBetween(ingresso: string, chiusura: string): number {
-  const t0 = new Date(ingresso).getTime();
-  const t1 = new Date(chiusura).getTime();
-  if (Number.isNaN(t0) || Number.isNaN(t1)) return 0;
-  return Math.max(0, (t1 - t0) / 86400000);
+  return permanenzaGiorniInteri(ingresso, chiusura);
 }
 
 /** Giorni chiusura per ogni archiviata nel periodo (per mediana/P90). */

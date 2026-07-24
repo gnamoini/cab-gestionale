@@ -42,18 +42,18 @@ export type GeneratePreventivoDescriptionResult = {
 export type GeneratePreventivoDescriptionAsyncDeps = {
   resolveInput?: (
     lavorazioneId: string,
-    opts?: { magazzino?: RicambioMagazzino[]; noteInterneFallback?: string },
+    opts?: { magazzino?: RicambioMagazzino[]; lavorazioneNote?: string },
   ) => Promise<ResolvedDescriptionInput>;
   polish?: (input: PreventivoPolishClientInput) => ReturnType<typeof polishPreventivoDescriptionClient>;
 };
 
 export type GeneratePreventivoDescriptionAsyncInput = Omit<
   DescriptionEngineInput,
-  "technicalBlob" | "lavorazioniLines" | "anomaliaText" | "noteIntervento" | "ricambi" | "aiPolishFn"
+  "technicalBlob" | "lavorazioniLines" | "anomaliaText" | "lavorazioneNote" | "ricambi" | "aiPolishFn"
 > & {
   lavorazioneId: string;
   magazzino?: RicambioMagazzino[];
-  noteInterneFallback?: string;
+  lavorazioneNote?: string;
   onProgress?: (progress: DescriptionGenerationProgress) => void;
   deps?: GeneratePreventivoDescriptionAsyncDeps;
 };
@@ -62,7 +62,7 @@ export type GeneratePreventivoDescriptionAsyncInput = Omit<
 export async function generatePreventivoDescriptionAsync(
   input: GeneratePreventivoDescriptionAsyncInput,
 ): Promise<GeneratePreventivoDescriptionResult> {
-  const { onProgress, magazzino, noteInterneFallback, lavorazioneId, deps, ...engineBase } = input;
+  const { onProgress, magazzino, lavorazioneNote, lavorazioneId, deps, ...engineBase } = input;
   const resolveInput = deps?.resolveInput ?? resolveDescriptionInputFromDb;
   const polishFn = deps?.polish ?? polishPreventivoDescriptionClient;
 
@@ -70,7 +70,7 @@ export async function generatePreventivoDescriptionAsync(
 
   const resolved = await resolveInput(lavorazioneId, {
     magazzino,
-    noteInterneFallback,
+    lavorazioneNote,
   });
 
   onProgress?.({ step: "generating", label: "Generazione testo cliente" });
@@ -81,7 +81,7 @@ export async function generatePreventivoDescriptionAsync(
     technicalBlob: resolved.technicalBlob,
     lavorazioniLines: resolved.lavorazioniLines,
     anomaliaText: resolved.anomaliaText,
-    noteIntervento: resolved.noteIntervento,
+    lavorazioneNote: resolved.lavorazioneNote,
     ricambi: resolved.ricambi.map((r) => ({
       ricambioId: r.ricambioId,
       descrizione: r.descrizione,

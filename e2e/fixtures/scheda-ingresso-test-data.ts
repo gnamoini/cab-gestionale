@@ -11,6 +11,9 @@ export type SchedaIngressoAuditFixture = {
   token: string;
   ingresso: SchedaIngressoFields;
   ingressoEdit: Partial<SchedaIngressoFields>;
+  /** Note lavorazione (`lavorazioni.note`) — SSOT fuori scheda ingresso. */
+  lavorazioneNote: string;
+  lavorazioneNoteEdit: string;
   lavorazioni: Pick<SchedaLavorazioniFields, "identificazioneMacchina"> & {
     riga: {
       dataLavorazione: string;
@@ -43,7 +46,6 @@ export function buildSchedaIngressoAuditFixture(token = uniqueAuditToken()): Sch
     addettoAccettazione: "",
     richiedente: `Richiedente ${token}`,
     richiedenteTelefono: "",
-    noteIntervento: `Nota ${token}\nseconda riga\temoji 🛠`,
   };
 
   const ingressoEdit: Partial<SchedaIngressoFields> = {
@@ -51,7 +53,6 @@ export function buildSchedaIngressoAuditFixture(token = uniqueAuditToken()): Sch
     cantiere: `Cantiere ${token}-EDIT`,
     utilizzatore: `Util ${token}-EDIT`,
     richiedente: `Richiedente ${token}-EDIT`,
-    noteIntervento: `Nota ${token}-EDIT\nedit riga 2`,
     descrizioneAnomalia: `Anomalia ${token}-EDIT\nriga 2`,
     km: "99999",
     oreLavoro: "2000",
@@ -61,6 +62,8 @@ export function buildSchedaIngressoAuditFixture(token = uniqueAuditToken()): Sch
     token,
     ingresso,
     ingressoEdit,
+    lavorazioneNote: `Nota ${token}\nseconda riga\temoji 🛠`,
+    lavorazioneNoteEdit: `Nota ${token}-EDIT\nedit riga 2`,
     lavorazioni: {
       identificazioneMacchina: `ID-MAC-${token}`,
       riga: {
@@ -94,5 +97,4 @@ export const SCHEDA_INGRESSO_DB_KEYS = [
   "addettoAccettazione",
   "richiedente",
   "richiedenteTelefono",
-  "noteIntervento",
 ] as const satisfies readonly (keyof SchedaIngressoFields)[];

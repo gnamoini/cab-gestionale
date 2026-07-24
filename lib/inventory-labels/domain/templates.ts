@@ -281,6 +281,68 @@ function clienteLogoHeightMm(widthMm: number, heightMm: number): number {
   return Math.min(CLIENTE_LOGO_MAX_HEIGHT_MM, Math.max(4.5, 5.5 * s));
 }
 
+const MANUAL_LOGO_TEXT_GAP_MM = 1;
+
+/**
+ * Logo centrato in alto · testo marca/desc/codice centrato (no QR, no barcode).
+ */
+export function computeManualLabelLayout(
+  widthMm: number,
+  heightMm: number,
+  typography: LabelTypography = DEFAULT_LABEL_TYPOGRAPHY,
+): LabelTemplateElement[] {
+  const m = labelMarginMm(widthMm, heightMm);
+  const innerW = widthMm - m * 2;
+  const scale = labelFontScale(widthMm, heightMm) * typography.scale;
+  const primaryPt = applyTypographyPt(scaledFontPt(7, scale / typography.scale, 7, 16), typography);
+  const labelBottomMm = heightMm - m;
+  const centerX = widthMm / 2;
+
+  const logoH = clienteLogoHeightMm(widthMm, heightMm);
+  const logoW = Math.min(innerW * 0.4, logoH * CAB_LOGO_PDF_ASPECT);
+  const logoX = (widthMm - logoW) / 2;
+  const textTopMm = m + logoH + MANUAL_LOGO_TEXT_GAP_MM;
+
+  return [
+    { type: "logo", xMm: logoX, yMm: m, widthMm: logoW, heightMm: logoH },
+    {
+      type: "text",
+      field: "marca",
+      xMm: centerX,
+      yMm: textTopMm,
+      fontPt: primaryPt,
+      maxLines: 3,
+      maxWidthMm: innerW,
+      zoneBottomMm: labelBottomMm,
+      vAlign: "center",
+      hAlign: "center",
+    },
+    {
+      type: "text",
+      field: "descrizione",
+      xMm: centerX,
+      yMm: textTopMm,
+      fontPt: primaryPt,
+      maxWidthMm: innerW,
+      zoneBottomMm: labelBottomMm,
+      vAlign: "center",
+      hAlign: "center",
+    },
+    {
+      type: "text",
+      field: "codice",
+      xMm: centerX,
+      yMm: textTopMm,
+      fontPt: primaryPt,
+      font: "mono",
+      maxWidthMm: innerW,
+      zoneBottomMm: labelBottomMm,
+      vAlign: "center",
+      hAlign: "center",
+    },
+  ];
+}
+
 /**
  * QR sinistra · logo + marca/desc/codice a destra — etichetta cliente (no barcode, no secondari).
  */
@@ -396,6 +458,22 @@ function buildClienteTemplate(base: LabelTemplateDefinition): LabelTemplateDefin
   };
 }
 
+function buildManualTemplate(base: LabelTemplateDefinition): LabelTemplateDefinition {
+  const { widthMm, heightMm, typography } = base;
+  const marginsMm = labelMarginMm(widthMm, heightMm);
+  const elements = computeManualLabelLayout(widthMm, heightMm, typography);
+  return {
+    ...base,
+    id: `${base.id}-manual`,
+    version: "1.9.0-manual",
+    marginsMm,
+    layoutMode: "manual-centered",
+    elements,
+    barcode: { heightMm: 0 },
+    qr: { maxSizeMm: 0, position: "top-left" },
+  };
+}
+
 /** Preset registry — 40×20 … 95×40 mm + A4 pagina intera. */
 export const LABEL_TEMPLATE_REGISTRY: Record<string, LabelTemplateDefinition> = {
   "40x20-default": buildTemplate("40x20-default", 40, 20),
@@ -436,6 +514,9 @@ export const DEFAULT_LABEL_PRESET = "95x40-default";
 
 export const LABEL_PRESET_IDS = Object.keys(LABEL_TEMPLATE_REGISTRY);
 
+/** Preset etichetta manuale — esclude A4 pagina intera. */
+export const MANUAL_LABEL_PRESET_IDS = LABEL_PRESET_IDS.filter((id) => id !== "a4-pagina-intera");
+
 /** Es. `60x40-default` → `60 × 40 mm`. */
 export function labelPresetDisplayName(presetId: string): string {
   if (presetId === "a4-pagina-intera") return "A4 · orizzontale";
@@ -451,6 +532,10 @@ export function labelPresetOptionLabel(presetId: string): string {
 export function getLabelTemplate(presetId: string, kind: LabelKind = "internal"): LabelTemplateDefinition | null {
   const base = LABEL_TEMPLATE_REGISTRY[presetId];
   if (!base) return null;
+  if (kind === "manual") {
+    if (presetId === "a4-pagina-intera") return null;
+    return buildManualTemplate(base);
+  }
   if (kind === "cliente") return buildClienteTemplate(base);
   return base;
 }

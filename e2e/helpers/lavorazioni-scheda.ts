@@ -251,7 +251,6 @@ export async function fillSchedaIngressoCreateForm(
   }
 
   await modal.getByLabel("Descrizione anomalia").fill(data.descrizioneAnomalia);
-  await modal.getByLabel("Note").fill(data.noteIntervento);
 
   await expect(modal.getByRole("combobox", { name: "Cliente", exact: true })).toHaveValue(data.cliente, {
     timeout: 15_000,

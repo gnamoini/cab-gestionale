@@ -24,7 +24,7 @@ function mockArchived(overrides: Partial<LavorazioneArchiviata> = {}): Lavorazio
     utilizzatore: "—",
     cantiere: "",
     addetto: "—",
-    noteInterne: "",
+    note: "",
     statoFinaleId: "completata",
     prioritaFinale: "media",
     dataIngresso: "2025-01-05T10:00:00.000Z",
@@ -132,7 +132,7 @@ const attivaIngress: LavorazioneAttiva = {
   statoId: "in_lavorazione",
   priorita: "media",
   addetto: "—",
-  noteInterne: "",
+  note: "",
   dataIngresso: "2025-03-05T10:00:00.000Z",
   dataCompletamento: null,
 };

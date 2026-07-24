@@ -18,6 +18,7 @@ export {
 export {
   DEFAULT_LABEL_PRESET,
   LABEL_PRESET_IDS,
+  MANUAL_LABEL_PRESET_IDS,
   LABEL_TEMPLATE_REGISTRY,
   getLabelTemplate,
   labelPresetDisplayName,
@@ -37,4 +38,5 @@ export {
   normalizeBulkLabelRequest,
   parseLabelJobPreset,
   renderLabelQuerySchema,
+  manualLabelRenderSchema,
 } from "@/lib/inventory-labels/validation";

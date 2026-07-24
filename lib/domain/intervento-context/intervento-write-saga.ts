@@ -317,10 +317,8 @@ export async function runInterventoWriteSaga(
       attrezzaturaId = upsert.attrezzaturaId ?? null;
       targetType = upsert.targetType ?? targetType;
 
-      const note = fields.noteIntervento?.trim() || null;
       const parsedIngresso = parseItalianDayDisplayToIso(fields.dataIngresso.trim());
       const lavPatch: LavorazioneUpdate = {};
-      if (note !== (row.note ?? "").trim()) lavPatch.note = note;
       if (parsedIngresso.ok) lavPatch.data_ingresso = parsedIngresso.iso;
       const currentFk = row.mezzo_id?.trim() || "";
       if (mezzoId && mezzoId !== currentFk) lavPatch.mezzo_id = mezzoId;
