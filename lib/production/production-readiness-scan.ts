@@ -1,9 +1,18 @@
+import "server-only";
+
 import fs from "node:fs";
 import path from "node:path";
 import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
 import type { ProductionReadinessCodeScan } from "@/lib/production/production-readiness-types";
 
-const SCAN_ROOTS = ["app", "components", "lib", "src", "context", "scripts"] as const;
+const SCAN_ROOT_PATHS = (repoRoot: string): readonly string[] => [
+  path.join(/* turbopackIgnore: true */ repoRoot, "app"),
+  path.join(/* turbopackIgnore: true */ repoRoot, "components"),
+  path.join(/* turbopackIgnore: true */ repoRoot, "lib"),
+  path.join(/* turbopackIgnore: true */ repoRoot, "src"),
+  path.join(/* turbopackIgnore: true */ repoRoot, "context"),
+  path.join(/* turbopackIgnore: true */ repoRoot, "scripts"),
+];
 const SCAN_EXT = new Set([".ts", ".tsx"]);
 const SKIP_DIRS = new Set(["node_modules", ".next", ".git", "dist", "build"]);
 
@@ -80,7 +89,7 @@ function scanMigrationsSql(repoRoot: string): {
   rbacPilot: boolean;
   permissionModulesInSql: string[];
 } {
-  const migDir = path.join(repoRoot, "supabase", "migrations");
+  const migDir = path.join(/* turbopackIgnore: true */ repoRoot, "supabase", "migrations");
   if (!fs.existsSync(migDir)) {
     return { portalSecurity: false, userPermissionsRls: false, rbacPilot: false, permissionModulesInSql: [] };
   }
@@ -114,11 +123,13 @@ function lineHits(content: string, pattern: RegExp): number[] {
 /** Scansione statica repository (senza DB). */
 export function scanProductionReadinessCode(repoRoot = process.cwd()): ProductionReadinessCodeScan {
   const files: { rel: string; content: string }[] = [];
-  for (const root of SCAN_ROOTS) {
-    const abs = path.join(repoRoot, root);
-    for (const rel of walkSourceFiles(abs, repoRoot)) {
+  for (const root of SCAN_ROOT_PATHS(repoRoot)) {
+    for (const rel of walkSourceFiles(root, repoRoot)) {
       if (SKIP_SCAN_PREFIXES.some((p) => rel.startsWith(p))) continue;
-      files.push({ rel, content: fs.readFileSync(path.join(repoRoot, rel), "utf8") });
+      files.push({
+        rel,
+        content: fs.readFileSync(path.join(/* turbopackIgnore: true */ repoRoot, rel), "utf8"),
+      });
     }
   }
 
@@ -241,7 +252,12 @@ export function scanProductionReadinessCode(repoRoot = process.cwd()): Productio
   }
 
   const r4DropMigrationInAutoPath = fs.existsSync(
-    path.join(repoRoot, "supabase", "migrations", "20260801120500_drop_mezzi_legacy_attrezzatura.sql"),
+    path.join(
+      /* turbopackIgnore: true */ repoRoot,
+      "supabase",
+      "migrations",
+      "20260801120500_drop_mezzi_legacy_attrezzatura.sql",
+    ),
   );
 
   return {

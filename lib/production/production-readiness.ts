@@ -1,13 +1,41 @@
 import { isOperatorGlobalSettingsEnabled } from "@/lib/permissions/operator-global-settings";
 import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
 import { validateProductionEnv } from "@/lib/ops/validate-production-env";
-import { scanProductionReadinessCode, scanProductionReadinessMigrations } from "@/lib/production/production-readiness-scan";
 import type {
+  ProductionReadinessCodeScan,
   ProductionReadinessDbSnapshot,
   ProductionReadinessFinding,
   ProductionReadinessInput,
   ProductionReadinessResult,
 } from "@/lib/production/production-readiness-types";
+
+const EMPTY_CODE_SCAN: ProductionReadinessCodeScan = {
+  legacyResolveDocumentoFileUrlHits: [],
+  legacySupabasePublicUrlInCodeHits: [],
+  pilotEnvImportOutsideAllowlist: [],
+  rbacBypassOutsideCentralFunction: [],
+  directUseToastHits: [],
+  legacyDialogHits: [],
+  legacyMezziColumnWriteHits: [],
+  legacyAdapterImportOutsideAllowlist: [],
+  r4DropMigrationInAutoPath: false,
+  realtimePollingFallbackPresent: false,
+  logBatcherPresent: false,
+  isOperatorGlobalSettingsUsedInRbac: true,
+};
+
+const EMPTY_DB_SNAPSHOT: ProductionReadinessDbSnapshot = {
+  connected: false,
+  operatorGlobalSettingsDbEnabled: false,
+  mezzoAttrezzatureV2DbEnabled: false,
+  documentiBucketPublic: null,
+  legacyPublicDocumentUrlCount: 0,
+  storageOrphanObjectCount: null,
+  rbacOperatorPilotSqlPresent: false,
+  portalSecurityGuardSqlPresent: false,
+  userPermissionsRlsPresent: false,
+  permissionModulesInSql: [],
+};
 
 function isOperatorSettingsEnvEnabled(env: NodeJS.ProcessEnv): boolean {
   return env.NEXT_PUBLIC_ENABLE_OPERATOR_GLOBAL_SETTINGS?.trim() === "1";
@@ -46,18 +74,13 @@ function formatHits(hits: { file: string; line: number }[], max = 5): string {
  */
 export function validateProductionReadiness(input: ProductionReadinessInput = {}): ProductionReadinessResult {
   const env = input.env ?? process.env;
-  const codeScan = input.codeScan ?? scanProductionReadinessCode();
-  const migSql = scanProductionReadinessMigrations();
-  const db: ProductionReadinessDbSnapshot = input.db ?? {
-    connected: false,
-    operatorGlobalSettingsDbEnabled: false,
-    mezzoAttrezzatureV2DbEnabled: false,
-    documentiBucketPublic: null,
-    legacyPublicDocumentUrlCount: 0,
-    storageOrphanObjectCount: null,
-    rbacOperatorPilotSqlPresent: migSql.rbacPilot,
-    portalSecurityGuardSqlPresent: migSql.portalSecurity,
-    userPermissionsRlsPresent: migSql.userPermissionsRls,
+  const codeScan = input.codeScan ?? EMPTY_CODE_SCAN;
+  const db: ProductionReadinessDbSnapshot = input.db ?? EMPTY_DB_SNAPSHOT;
+  const migSql = {
+    portalSecurity: db.portalSecurityGuardSqlPresent,
+    userPermissionsRls: db.userPermissionsRlsPresent,
+    rbacPilot: db.rbacOperatorPilotSqlPresent,
+    permissionModulesInSql: db.permissionModulesInSql,
   };
 
   const blockers: ProductionReadinessFinding[] = [];
@@ -333,7 +356,7 @@ export function validateProductionReadiness(input: ProductionReadinessInput = {}
     checkedAt: new Date().toISOString(),
     meta: {
       dbChecked: db.connected,
-      codeScanned: true,
+      codeScanned: Boolean(input.codeScan),
       productionTarget,
     },
   };

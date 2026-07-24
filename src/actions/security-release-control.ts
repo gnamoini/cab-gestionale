@@ -9,7 +9,6 @@ import {
 } from "@/lib/permissions/operator-global-settings";
 import { fetchProductionReadinessDbSnapshot } from "@/lib/production/fetch-production-readiness-db";
 import { validateProductionReadiness } from "@/lib/production/production-readiness";
-import { scanProductionReadinessCode } from "@/lib/production/production-readiness-scan";
 import type { ProductionReadinessCategory, ProductionReadinessResult } from "@/lib/production/production-readiness-types";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
@@ -168,6 +167,7 @@ export async function runSecurityReleaseControlAction(
   const pilot = resolvePilotSettingsState(dbEnabled);
 
   const dbSnapshot = await fetchProductionReadinessDbSnapshot();
+  const { scanProductionReadinessCode } = await import("@/lib/production/production-readiness-scan");
   const readiness = validateProductionReadiness({
     db: dbSnapshot,
     codeScan: scanProductionReadinessCode(),

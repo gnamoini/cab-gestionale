@@ -2,7 +2,6 @@
 
 import { fetchProductionReadinessDbSnapshot } from "@/lib/production/fetch-production-readiness-db";
 import { validateProductionReadiness } from "@/lib/production/production-readiness";
-import { scanProductionReadinessCode } from "@/lib/production/production-readiness-scan";
 import type { ProductionReadinessResult } from "@/lib/production/production-readiness-types";
 import { verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
 
@@ -18,6 +17,7 @@ export async function runProductionReadinessCheckAction(): Promise<RunProduction
   }
 
   const db = await fetchProductionReadinessDbSnapshot();
+  const { scanProductionReadinessCode } = await import("@/lib/production/production-readiness-scan");
   const report = validateProductionReadiness({
     codeScan: scanProductionReadinessCode(),
     db,

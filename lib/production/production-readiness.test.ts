@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
 import { validateProductionReadiness } from "@/lib/production/production-readiness";
 import { scanProductionReadinessCode } from "@/lib/production/production-readiness-scan";
 import type { ProductionReadinessCodeScan } from "@/lib/production/production-readiness-types";
@@ -28,6 +29,7 @@ const cleanDb = {
   rbacOperatorPilotSqlPresent: true,
   portalSecurityGuardSqlPresent: true,
   userPermissionsRlsPresent: true,
+  permissionModulesInSql: [...GESTIONALE_PERMISSION_MODULES],
 };
 
 const envClean = { ...process.env };

@@ -25,6 +25,7 @@ export type ProductionReadinessDbSnapshot = {
   rbacOperatorPilotSqlPresent: boolean;
   portalSecurityGuardSqlPresent: boolean;
   userPermissionsRlsPresent: boolean;
+  permissionModulesInSql: string[];
 };
 
 export type ProductionReadinessCodeScan = {

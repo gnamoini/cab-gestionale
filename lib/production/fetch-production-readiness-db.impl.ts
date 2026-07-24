@@ -12,11 +12,13 @@ import {
   parseOperatorGlobalSettingsDbEnabled,
 } from "@/lib/permissions/operator-global-settings";
 import { runStorageConsistencyDiagnostics } from "@/lib/ops/storage-consistency-diagnostics";
-import { scanProductionReadinessMigrations } from "@/lib/production/production-readiness-scan";
 import type { ProductionReadinessDbSnapshot } from "@/lib/production/production-readiness-types";
 
 /** Snapshot DB per validateProductionReadiness (service role, solo server). */
 export async function fetchProductionReadinessDbSnapshot(): Promise<ProductionReadinessDbSnapshot> {
+  const { scanProductionReadinessMigrations } = await import(
+    "@/lib/production/production-readiness-scan"
+  );
   const mig = scanProductionReadinessMigrations();
   const base: ProductionReadinessDbSnapshot = {
     connected: false,
@@ -28,6 +30,7 @@ export async function fetchProductionReadinessDbSnapshot(): Promise<ProductionRe
     rbacOperatorPilotSqlPresent: mig.rbacPilot,
     portalSecurityGuardSqlPresent: mig.portalSecurity,
     userPermissionsRlsPresent: mig.userPermissionsRls,
+    permissionModulesInSql: mig.permissionModulesInSql,
   };
 
   const serviceKey = readSupabaseServiceRoleKey();
@@ -80,6 +83,7 @@ export async function fetchProductionReadinessDbSnapshot(): Promise<ProductionRe
       rbacOperatorPilotSqlPresent: mig.rbacPilot,
       portalSecurityGuardSqlPresent: mig.portalSecurity,
       userPermissionsRlsPresent: mig.userPermissionsRls,
+      permissionModulesInSql: mig.permissionModulesInSql,
     };
   } catch (err) {
     if (process.env.CI === "true" || process.env.CI === "1") {
