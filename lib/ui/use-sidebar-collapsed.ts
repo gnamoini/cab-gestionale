@@ -31,7 +31,17 @@ let gestionaleOverlayOpenCount = 0;
 export function isGestionaleOverlayActive(): boolean {
   if (gestionaleOverlayOpenCount > 0) return true;
   if (typeof document === "undefined") return false;
-  return document.querySelector('.cab-log-drawer-backdrop[data-state="open"]') != null;
+  return document.querySelector(
+    '.cab-log-drawer-backdrop[data-state="open"], .cab-log-drawer-backdrop[data-state="closing"]',
+  ) != null;
+}
+
+/** Focus/pointer dentro un drawer log/notifiche aperto — non deve espandere la sidebar. */
+export function isGestionaleDrawerElement(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return target.closest(
+    '.cab-log-drawer-backdrop[data-state="open"], .cab-log-drawer-backdrop[data-state="closing"]',
+  ) != null;
 }
 
 /** Evita collapse sidebar su blur da controlli nel drawer profilo (es. toggle tema). */

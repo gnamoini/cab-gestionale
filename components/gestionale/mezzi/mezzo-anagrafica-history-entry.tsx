@@ -11,14 +11,18 @@ import { fmtMezziHubDt } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 export function MezzoAnagraficaHistoryEntry({
   entry,
   onNavigate,
+  asDiv = false,
 }: {
   entry: MezzoAnagraficaHistoryRow;
   onNavigate?: () => void;
+  /** In blocchi timeline annidati (evita li dentro li). */
+  asDiv?: boolean;
 }) {
   const fields = entry.changed_fields as MezzoPermanentFieldKey[];
+  const className = "space-y-2 border-b border-[color:var(--cab-border)] pb-3 last:border-0 last:pb-0";
 
-  return (
-    <li className="space-y-2 border-b border-[color:var(--cab-border)] pb-3 last:border-0 last:pb-0">
+  const content = (
+    <>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[color:var(--cab-text-muted)]">
         <span>{fmtMezziHubDt(entry.created_at)}</span>
         <span aria-hidden>·</span>
@@ -53,6 +57,12 @@ export function MezzoAnagraficaHistoryEntry({
           </li>
         ))}
       </ul>
-    </li>
+    </>
   );
+
+  if (asDiv) {
+    return <div className={className}>{content}</div>;
+  }
+
+  return <li className={className}>{content}</li>;
 }

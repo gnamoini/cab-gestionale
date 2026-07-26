@@ -19,11 +19,16 @@ export function preventivoRecordToApprovatoIntent(record: PreventivoRecord): Pre
   };
 }
 
-export function didTransitionToApprovato(prevStato: string | undefined, currStato: PreventivoStato): boolean {
-  if (currStato !== "approvato") return false;
+export function didTransitionToConfermato(prevStato: string | undefined, currStato: PreventivoStato): boolean {
+  if (currStato !== "confermato") return false;
   const prev = prevStato?.trim();
   if (!prev) return false;
-  return prev !== "approvato" && prev !== "convertito";
+  return prev !== "confermato";
+}
+
+/** @deprecated use didTransitionToConfermato */
+export function didTransitionToApprovato(prevStato: string | undefined, currStato: PreventivoStato): boolean {
+  return didTransitionToConfermato(prevStato, currStato);
 }
 
 export function preventivoApprovatoEventToIntent(input: {
@@ -37,6 +42,6 @@ export function preventivoApprovatoEventToIntent(input: {
   if (isLocalUpdate) return null;
   if (isPreventiviNotificationsPath(pathname)) return null;
   if (!currRecord || currRecord.id !== preventivoId) return null;
-  if (!didTransitionToApprovato(prevStato, currRecord.stato)) return null;
+  if (!didTransitionToConfermato(prevStato, currRecord.stato)) return null;
   return preventivoRecordToApprovatoIntent(currRecord);
 }

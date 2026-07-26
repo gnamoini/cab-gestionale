@@ -154,23 +154,33 @@ export async function buildNewPreventivoFromLavorazioneContext(opts: {
   }));
 
   const addMap = new Map<string, number>();
+  const addettiRecords = getRuntimeCabAppSettings()?.lavorazioni.addettiRecords ?? [];
   for (const row of lavScheda?.campi.righe ?? []) {
     for (const a of row.addettiAssegnati ?? []) {
-      const nom = a.addetto?.trim();
-      if (!nom) continue;
-      addMap.set(nom, (addMap.get(nom) ?? 0) + (Number.isFinite(a.oreImpiegate) ? a.oreImpiegate : 0));
+      const id = a.addettoId?.trim();
+      const key = id || a.addetto?.trim();
+      if (!key) continue;
+      addMap.set(key, (addMap.get(key) ?? 0) + (Number.isFinite(a.oreImpiegate) ? a.oreImpiegate : 0));
     }
   }
-  const righeAddetti: { addetto: string; ore: number }[] = [];
-  for (const [addetto, ore] of addMap) {
-    righeAddetti.push({ addetto, ore: Math.round(ore * 100) / 100 });
-  }
-  if (righeAddetti.length === 0 && lav.addetto?.trim()) {
-    const guess = Math.max(1, Math.min(8, lavScheda?.campi.righe?.length ?? 2));
-    righeAddetti.push({ addetto: lav.addetto.trim(), ore: guess });
-  }
-  if (righeAddetti.length === 0) {
-    righeAddetti.push({ addetto: "Officina", ore: 1 });
+  const righeAddetti: PreventivoManodopera["righeAddetti"] = [];
+  for (const [key, ore] of addMap) {
+    const isId = addettiRecords.some((r) => r.id === key);
+    if (isId) {
+      righeAddetti.push({ addettoId: key, ore: Math.round(ore * 100) / 100 });
+    } else {
+      const rec = addettiRecords.find((r) => r.nome === key || `${r.nome} ${r.cognome ?? ""}`.trim() === key);
+      if (rec) {
+        righeAddetti.push({ addettoId: rec.id, ore: Math.round(ore * 100) / 100 });
+      } else {
+        righeAddetti.push({
+          addettoId: null,
+          ore: Math.round(ore * 100) / 100,
+          addettoLegacy: key,
+          legacyWarning: `Addetto storico non convertibile: ${key}`,
+        });
+      }
+    }
   }
   const oreTotali = Math.max(0.25, Math.round(righeAddetti.reduce((s, x) => s + x.ore, 0) * 100) / 100);
 

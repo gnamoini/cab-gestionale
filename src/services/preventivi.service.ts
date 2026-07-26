@@ -17,7 +17,24 @@ export type PreventiviFilters = {
   search?: string;
 };
 
-export type PreventivoInsert = Omit<PreventivoRow, "id" | "created_at" | "updated_at">;
+export type PreventivoInsert = Omit<
+  PreventivoRow,
+  | "id"
+  | "created_at"
+  | "updated_at"
+  | "stato"
+  | "current_pdf_artifact_id"
+  | "inviato_at"
+  | "confermato_at"
+  | "confermato_by"
+  | "annullato_at"
+> &
+  Partial<
+    Pick<
+      PreventivoRow,
+      "stato" | "current_pdf_artifact_id" | "inviato_at" | "confermato_at" | "confermato_by" | "annullato_at"
+    >
+  >;
 export type PreventivoUpdate = Partial<PreventivoInsert>;
 
 function num(v: unknown): number {
@@ -142,6 +159,27 @@ export const preventiviService = {
       const { error } = await c.from("preventivi").delete().eq("id", id);
       if (error) return err(error.message);
       return success(null);
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
+  async transitionStatus(
+    id: string,
+    to: import("@/lib/preventivi/types").PreventivoStato,
+    autore?: string,
+  ): Promise<ServiceResult<PreventivoRow>> {
+    try {
+      const res = await fetch(`/api/preventivi/${encodeURIComponent(id)}/transition-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ to, autore }),
+      });
+      const body = (await res.json()) as { error?: string; row?: PreventivoRow };
+      if (!res.ok) return err(body.error?.trim() || "Transizione stato non riuscita");
+      if (!body.row) return err("Risposta transizione non valida");
+      return success(body.row);
     } catch (e) {
       return serviceFailFromError(e);
     }

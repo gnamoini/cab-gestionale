@@ -21,14 +21,14 @@ const preventivi = [
   {
     id: "pv-1",
     numero: "P-001",
-    stato: "approvato",
+    stato: "confermato",
     totaleFinale: 500,
     lavorazioneId: "lav-1",
   } as PreventivoRecord,
   {
     id: "pv-2",
     numero: "P-002",
-    stato: "rifiutato",
+    stato: "annullato",
     totaleFinale: 300,
     lavorazioneId: "lav-2",
   } as PreventivoRecord,
@@ -61,7 +61,7 @@ const detail = buildInterventoDetailFromBundle({
 
 assert.equal(detail.oreTotali, 4);
 assert.equal(detail.ricambiCount, 2);
-assert.equal(detail.preventivo?.stato, "rifiutato");
-assert.equal(detail.preventivoPrecedente?.stato, "approvato");
+assert.equal(detail.preventivo?.stato, "annullato");
+assert.equal(detail.preventivoPrecedente?.stato, "confermato");
 
 console.log("mezzo-intervento-detail: ok");

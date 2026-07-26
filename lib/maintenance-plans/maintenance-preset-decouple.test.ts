@@ -20,4 +20,14 @@ assert.equal(upsert.nome, "Test preset");
 assert.equal("maintenanceKind" in upsert, false);
 assert.equal("tipoAttrezzaturaIds" in upsert, false);
 
+const withNullChecklist = planDraftToUpsertInput({
+  ...draft,
+  nome: "Checklist legacy",
+  checklistDraft: [
+    { label: "Voce ok", sortOrder: 0, isRequired: true },
+    { label: undefined as unknown as string, sortOrder: 1, isRequired: false },
+  ],
+});
+assert.deepEqual(withNullChecklist.checklist, [{ label: "Voce ok", sortOrder: 0, isRequired: true }]);
+
 console.log("maintenance-preset-decouple.test.ts OK");

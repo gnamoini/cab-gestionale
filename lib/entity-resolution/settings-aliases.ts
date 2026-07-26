@@ -55,3 +55,17 @@ export function lookupAlias(
   if (!key) return null;
   return aliasMap.get(`${entityType}:${key}`) ?? null;
 }
+
+export function appendAliasForCanonical(
+  aliases: EntityAliasesMap,
+  entityType: EntityType,
+  canonicalLabel: string,
+  aliasLabel: string,
+): EntityAliasesMap {
+  const trimmed = aliasLabel.trim();
+  if (!trimmed || trimmed === canonicalLabel.trim()) return aliases;
+  const key = entityAliasRegistryKey(entityType, canonicalLabel);
+  const existing = aliases[key] ?? [];
+  if (existing.some((a) => a.trim().toLowerCase() === trimmed.toLowerCase())) return aliases;
+  return { ...aliases, [key]: [...existing, trimmed] };
+}

@@ -47,8 +47,25 @@ import { publishNotificationCommand } from "@/lib/notifications/application/noti
 import { notificationsSsotV2Enabled } from "@/lib/notifications/notifications-ssot-v2-flag";
 import { trackDeprecatedUsage } from "@/lib/observability/deprecated-usage";
 import { formatTagliandoDaEseguireBody } from "@/lib/maintenance-plans/tagliando-due-notification-mapper";
+import { dispatchNotificationViaApi } from "@/lib/notifications/dispatch/dispatch-notification.client";
+import { getNotificationRegistryEntry } from "@/lib/notifications/notification-event-catalog";
 
 export type PublishNotificationResult = { added: boolean; desktop: boolean };
+
+function notificationEventIdFromLegacy(notification: AdminDashboardNotification): string | null {
+  if (isLavorazioneDashboardNotification(notification)) return "lavorazioni.created";
+  if (isLavorazioneCompletataNotification(notification)) return "lavorazioni.completed";
+  if (isMagazzinoDashboardNotification(notification)) return "magazzino.below_minimum";
+  if (isFattureScaduteDigestNotification(notification)) return "fatturazione.overdue_digest";
+  if (isDipendentiPresenzeReminderNotification(notification)) return "dipendenti.presence_reminder";
+  if (isTagliandoDaEseguireNotification(notification)) return "lavorazioni.tagliando_due";
+  return null;
+}
+
+function dispatchIdempotencyKeyFromLegacy(notification: AdminDashboardNotification, userId: string): string {
+  const key = notificationStoreKey(notification);
+  return `${key}:${userId}`;
+}
 
 function legacyToCreateInput(notification: AdminDashboardNotification): CreateNotificationInput {
   const cmd = legacyNotificationToCommand("legacy", notification);
@@ -152,7 +169,18 @@ export async function publishNotification(
   }
 
   if (notificationsV2WritesDb(mode)) {
-    if (notificationsSsotV2Enabled()) {
+    const fanoutEventId = notificationEventIdFromLegacy(notification);
+    if (notificationsSsotV2Enabled() && fanoutEventId && getNotificationRegistryEntry(fanoutEventId)) {
+      const dispatchResult = await dispatchNotificationViaApi({
+        notificationEventId: fanoutEventId,
+        dispatchIdempotencyKey: dispatchIdempotencyKeyFromLegacy(notification, userId),
+        actorId: userId,
+        legacyNotification: notification,
+      });
+      if (dispatchResult.created > 0) {
+        added = true;
+      }
+    } else if (notificationsSsotV2Enabled()) {
       const cmd = legacyNotificationToCommand(userId, notification);
       if (cmd) {
         if (isAdminDashboardTestNotification(notification)) {

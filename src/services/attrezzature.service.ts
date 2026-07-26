@@ -1,5 +1,6 @@
 "use client";
 
+import { normMatricola, pickCanonicalAttrezzatura, matricolaRowsForNorm } from "@/lib/domain/mezzo-attrezzatura/attrezzatura-identity";
 import { ATTREZZATURE_COLUMNS } from "@/lib/db/table-select-columns";
 import { resolveAssetLifecycleV1EnabledClient } from "@/lib/officina/resolve-asset-lifecycle-v1-client";
 import { isAssetLifecycleSubFlagActive } from "@/lib/officina/asset-lifecycle-v1-flag";
@@ -77,41 +78,16 @@ export const attrezzatureService = {
   },
 
   async findByMatricola(mezzoId: string, matricola: string): Promise<ServiceResult<AttrezzaturaRow | null>> {
-    const m = matricola.trim();
-    if (!m) return success(null);
+    const norm = normMatricola(matricola);
+    if (!norm) return success(null);
     try {
-      const client = await sb();
-      const { data, error } = await client
-        .from("attrezzature")
-        .select(ATTREZZATURE_COLUMNS)
-        .eq("mezzo_id", mezzoId)
-        .eq("matricola", m)
-        .maybeSingle();
-      if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "read" }));
-      return success((data as AttrezzaturaRow | null) ?? null);
+      const listRes = await this.listByMezzo(mezzoId);
+      if (!listRes.success) return err(listRes.error ?? "Errore lettura attrezzature.");
+      const hits = matricolaRowsForNorm(listRes.data ?? [], mezzoId, norm);
+      if (hits.length === 0) return success(null);
+      return success(pickCanonicalAttrezzatura(hits));
     } catch (e) {
       return serviceFailFromError<AttrezzaturaRow | null>(e, null, { entity: "mezzo", action: "read" });
-    }
-  },
-
-  async create(data: AttrezzaturaInsert): Promise<ServiceResult<AttrezzaturaRow>> {
-    try {
-      const client = await sb();
-      const { data: user } = await client.auth.getUser();
-      const payload = { ...data, created_by: user.user?.id ?? null };
-      const { data: row, error } = await client.from("attrezzature").insert(payload).select(ATTREZZATURE_COLUMNS).single();
-      if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "create" }));
-      const r = row as AttrezzaturaRow;
-      await openAssignmentIfEnabled(client, r.id, r.mezzo_id, "installazione");
-      await writeModificaLog(client, {
-        entita: ENTITA,
-        entita_id: r.id,
-        azione: "CREATE",
-        payload: auditSnapshot(r, oggettoAttrezzatura(r)),
-      });
-      return success(r);
-    } catch (e) {
-      return serviceFailFromError<AttrezzaturaRow>(e, null as never, { entity: "mezzo", action: "create" });
     }
   },
 

@@ -2,11 +2,7 @@
 
 import { OptionalTooltip } from "@/components/ui";
 import { CardMobile, CardMobileActions, IconActionButton } from "@/components/design-system";
-import {
-  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
-  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
-  useGestionaleListLayout,
-} from "@/lib/ui/use-gestionale-list-layout";
+import type { ListSurface } from "@/lib/ui/resolve-list-surface";
 import {
   GestionaleListTable,
   GestionaleListTableActionsHead,
@@ -35,6 +31,7 @@ const prevTableTd = gestionaleListTableTd;
 const prevTableTdText = `${gestionaleListTableTd} min-w-0 text-sm text-zinc-800 dark:text-zinc-100`;
 
 type LavorazionePreventiviHubListProps = {
+  listSurface: ListSurface;
   rows: PreventivoRecord[];
   /** Evidenzia i preventivi collegati a questa lavorazione. */
   lavorazioneId?: string;
@@ -123,24 +120,22 @@ export function CreaPreventivoDaSchedeCta({
 }
 
 export function LavorazionePreventiviHubList({
+  listSurface,
   rows,
   lavorazioneId,
   onApriNeiPreventivi,
   onCreaPreventivo,
 }: LavorazionePreventiviHubListProps) {
-  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "xl" });
-
   if (rows.length === 0) {
     return <PreventiviHubEmptyState onCreaPreventivo={onCreaPreventivo} />;
   }
 
   return (
-    <div ref={listLayoutRef} className={`min-w-0 max-w-full ${listLayoutClassName}`.trim()}>
+    <div className="min-w-0 max-w-full">
     <>
-      {listLayout === "desktop" ? (
+      {listSurface === "table" ? (
       <GestionaleListTable
         masterScrollScope={false}
-        visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
         className="w-full min-w-0 text-sm text-zinc-900 dark:text-zinc-100"
         colgroup={
           <>
@@ -213,9 +208,7 @@ export function LavorazionePreventiviHubList({
           </tr>
         ))}
       </GestionaleListTable>
-      ) : null}
-
-      {listLayout === "mobile" ? (
+      ) : (
       <div className={`space-y-3 ${dsScrollbar}`}>
         {rows.map((p) => (
           <CardMobile key={p.id}>
@@ -260,7 +253,7 @@ export function LavorazionePreventiviHubList({
           </CardMobile>
         ))}
       </div>
-      ) : null}
+      )}
     </>
     </div>
   );

@@ -4,7 +4,14 @@ export type AddettoRecord = {
   id: string;
   nome: string;
   cognome?: string | null;
+  /** Chiave stabile colore pill; default = id. */
+  colorKey?: string | null;
 };
+
+export function addettoColorKey(rec: Pick<AddettoRecord, "id" | "colorKey">): string {
+  const ck = rec.colorKey?.trim();
+  return ck || rec.id;
+}
 
 export function createAddettoId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -31,7 +38,9 @@ export function normalizeAddettoRecord(raw: unknown, fallbackNome?: string): Add
     if (!nome) return null;
     const cognome =
       typeof o.cognome === "string" ? o.cognome.trim() || null : o.cognome === null ? null : null;
-    return { id, nome, cognome };
+    const colorKey =
+      typeof o.colorKey === "string" ? o.colorKey.trim() || null : o.colorKey === null ? null : null;
+    return { id, nome, cognome, colorKey: colorKey ?? id };
   }
   if (typeof raw === "string") {
     const nome = raw.trim();
@@ -85,6 +94,7 @@ export function syncLavorazioniAddettiFromRecords(records: readonly AddettoRecor
     id: r.id,
     nome: r.nome.trim(),
     cognome: r.cognome?.trim() ? r.cognome.trim() : null,
+    colorKey: addettoColorKey(r),
   }));
   return { addettiRecords, addetti: addettiLegacyNomi(addettiRecords) };
 }

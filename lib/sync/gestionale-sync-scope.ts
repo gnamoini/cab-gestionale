@@ -51,7 +51,8 @@ export function clearGestionaleSyncScopesForTests(): void {
 /** Mappa tabella operativa → dominio primario (fallback se scope assente). */
 export const TABLE_TO_SYNC_DOMAIN: Partial<Record<string, GestionaleSyncDomain>> = {
   lavorazioni: "lavorazioni",
-  lavorazione_documents: "lavorazioni",
+  pdf_artifacts: "lavorazioni",
+  document_access_tokens: "lavorazioni",
   scheda_lavorazione: "lavorazioni",
   magazzino_ricambi: "magazzino",
   movimenti_ricambi: "magazzino",

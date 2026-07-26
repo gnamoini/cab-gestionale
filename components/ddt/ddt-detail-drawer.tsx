@@ -2,9 +2,9 @@
 
 import { useCallback, useState } from "react";
 import { Drawer, LoadingButton } from "@/components/design-system";
-import { DdtStatusBadge, formatDdtDate } from "@/components/ddt/ddt-status-badge";
+import { formatDdtDate } from "@/components/ddt/ddt-status-badge";
+import { buildStaffOfficialDocumentPreviewPath } from "@/lib/official-documents/preview-url";
 import { resolveDrawerAsideClasses } from "@/lib/ui/modal-size-system";
-import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { dsBtnNeutralForm } from "@/lib/ui/design-system";
 import type { DdtDetail } from "@/lib/ddt/types";
@@ -44,17 +44,13 @@ export function DdtDetailDrawer({
     if (!doc || busy) return;
     setBusy(true);
     try {
-      const opened = await openPdfArtifact("ddt", { id: doc.id });
-      if (opened) {
-        await ddtEntry.markStampato(doc.id);
-        onChanged();
-      }
+      window.location.assign(buildStaffOfficialDocumentPreviewPath("ddt", doc.id));
     } catch (e) {
       toast.errorOnce("ddt-print", e);
     } finally {
       setBusy(false);
     }
-  }, [busy, doc, onChanged, toast]);
+  }, [busy, doc, toast]);
 
   const markDelivered = useCallback(async () => {
     if (!doc || busy || !canWrite) return;
@@ -108,7 +104,6 @@ export function DdtDetailDrawer({
           <h3 className="text-lg font-semibold text-[color:var(--cab-text)]">{ddtDisplayNumber(doc)}</h3>
           <p className="text-sm text-[color:var(--cab-text-muted)]">{doc.cliente_label}</p>
         </div>
-        <DdtStatusBadge status={doc.status} />
       </div>
       <dl className="grid gap-2 text-sm sm:grid-cols-2">
         <div>

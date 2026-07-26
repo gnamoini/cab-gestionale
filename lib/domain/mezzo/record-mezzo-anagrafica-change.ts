@@ -6,6 +6,9 @@ export type MezzoAnagraficaHistoryOrigine =
   | "import_ai"
   | "migrazione";
 
+/** Solo rendering, filtri e audit — non usare per logica di business. */
+export type MezzoAnagraficaHistoryEventKind = "anagrafica_change" | "association_change";
+
 export type MezzoAnagraficaHistoryInsert = {
   mezzo_id: string;
   lavorazione_id?: string | null;
@@ -15,6 +18,8 @@ export type MezzoAnagraficaHistoryInsert = {
   changed_fields: MezzoPermanentFieldKey[];
   old_values: Record<string, string>;
   new_values: Record<string, string>;
+  event_kind?: MezzoAnagraficaHistoryEventKind;
+  reason?: string | null;
 };
 
 export function diffMezzoAnagraficaHistory(

@@ -65,7 +65,7 @@ export function preventivoRowToRecord(row: PreventivoRow, mezzo: MezzoRow | null
   const merged: PreventivoRecord = {
     ...stub,
     numero: typeof det.numero === "string" && det.numero.trim() ? det.numero : stub.numero,
-    stato: (typeof det.stato === "string" ? det.stato : stub.stato) as PreventivoStato,
+    stato: (row.stato ?? (typeof det.stato === "string" ? det.stato : stub.stato)) as PreventivoStato,
     tipoDocumento: normalizePreventivoTipoDocumento(det.tipoDocumento ?? stub.tipoDocumento),
     lavorazioneOrigine: det.lavorazioneOrigine === "storico" ? "storico" : stub.lavorazioneOrigine,
     lavorazioneTimestamp:

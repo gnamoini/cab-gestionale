@@ -13,9 +13,9 @@ import {
   LavorazioniFilterGroup,
   gestionaleFilterFieldInputClass,
 } from "@/components/gestionale/lavorazioni/lavorazioni-filter-fields";
+import { AddettoPicker } from "@/components/domain/addetti";
 import {
   FILTER_ALL,
-  buildLavorazioniAddettoFilterItems,
   buildLavorazioniUtilizzatoreFilterItems,
   normalizeAddettoFilterValue,
   type LavorazioniAdvancedFilters,
@@ -61,11 +61,6 @@ export function LavorazioniAdvancedFilterPanel({
       })),
     ],
     [statiOpts],
-  );
-
-  const addettoItems = useMemo(
-    () => buildLavorazioniAddettoFilterItems(addettiRecords),
-    [addettiRecords],
   );
 
   const addettoFilterValue = normalizeAddettoFilterValue(filters.addetto);
@@ -171,21 +166,12 @@ export function LavorazioniAdvancedFilterPanel({
         </div>
         {isStaff ? (
           <LavorazioniFilterField label="Addetto">
-            <GlobalSelect
-              items={addettoItems}
-              value={addettoFilterValue}
-              onChange={(v) => onChange({ addetto: normalizeAddettoFilterValue(v) })}
-              inputClassName={gestionaleFilterFieldInputClass}
-              strictFromList
-              selectOnly
+            <AddettoPicker
               variant="filter"
-              filterNeutralValues={[FILTER_ALL]}
-              preserveItemOrder
-              alphabeticalBrowse={false}
-              selectorDomain="addetti"
-              dynamicList
-              operationalFilter
-              aria-label="Filtra addetto"
+              value={addettoFilterValue === FILTER_ALL ? "" : addettoFilterValue}
+              onChange={(v) => onChange({ addetto: normalizeAddettoFilterValue(v) })}
+              ariaLabel="Filtra addetto"
+              inputClassName={gestionaleFilterFieldInputClass}
             />
           </LavorazioniFilterField>
         ) : null}

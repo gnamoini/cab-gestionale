@@ -86,7 +86,9 @@ export function planDraftToUpsertInput(draft: PlanDraft): UpsertMaintenancePlanI
     tempoPrevistoMinuti: draft.tempoPrevistoMinuti,
     manodoperaCostoOrario: draft.manodoperaCostoOrario,
     ...(draft.tipoAttrezzaturaIds?.length ? { tipoAttrezzaturaIds: draft.tipoAttrezzaturaIds } : {}),
-    parts: draft.partsDraft.map((p) => ({
+    parts: draft.partsDraft
+      .filter((p) => p.ricambioId?.trim())
+      .map((p) => ({
       ricambioId: p.ricambioId,
       quantita: p.quantita,
       isRequired: p.isRequired,
@@ -101,6 +103,8 @@ export function planDraftToUpsertInput(draft: PlanDraft): UpsertMaintenancePlanI
         triggers: draft.triggersDraft,
       },
     ],
-    checklist: draft.checklistDraft,
+    checklist: draft.checklistDraft
+      .map((item) => ({ ...item, label: (item.label ?? "").trim() }))
+      .filter((item) => item.label.length > 0),
   };
 }

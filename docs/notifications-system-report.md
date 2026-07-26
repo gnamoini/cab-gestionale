@@ -184,3 +184,13 @@ Eventi cab-sync / timer
 **Bridge attivi:** lavorazioni, magazzino, preventivi, digest schedulato, promemoria, presenze.
 
 **Test:** `notification-dedup-keys.test.ts`, `notification-event-catalog.test.ts`, `notification-transition-mappers.test.ts`, `ricambio-stock-crossing.test.ts`, `notifications-policy.test.ts`, `verify-notifications-rbac.ts`.
+
+---
+
+## Preferenze utente (SSOT eventi, 2026-07)
+
+- **Registry:** `notificationEventId` in [`notification-event-catalog.ts`](../lib/notifications/notification-event-catalog.ts) — distinto da `domainEvent`.
+- **DB:** `notification_event_preferences (user_id, company_id, notification_event_id, enabled)` — lazy write; assenza riga = `defaultEnabled` dal registry.
+- **Lifecycle:** le preferenze influenzano solo notifiche future; lo storico inbox non viene modificato.
+- **Dispatch:** `POST /api/notifications/dispatch` → `dispatchNotificationEvent` (RBAC batch + preferenze + fanout `scope_type=user` atomico via `cab_dispatch_notifications_bulk`).
+- **UI:** modal "Impostazioni notifiche" nel drawer campanella — view-model filtrato server-side (`GET /api/notifications/preferences`).

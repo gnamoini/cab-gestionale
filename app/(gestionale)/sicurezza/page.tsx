@@ -7,14 +7,16 @@ import {
   prefetchGestionalePage,
 } from "@/src/lib/react-query/prefetch-gestionale-page";
 import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
+import { resolveListSurfaceForPage } from "@/lib/ui/resolve-list-surface.server";
 
 export default async function SicurezzaPage() {
   const qc = createServerQueryClient();
+  const listSurface = await resolveListSurfaceForPage();
   await prefetchGestionalePage(qc, "sicurezza");
   return (
     <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.sicurezza}>
       <GestionaleHydrationBoundary state={dehydrate(qc)}>
-        <SecurityDashboardViewLazy />
+        <SecurityDashboardViewLazy listSurface={listSurface} listTier="lg" />
       </GestionaleHydrationBoundary>
     </PageLayout>
   );

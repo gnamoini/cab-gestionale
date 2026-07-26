@@ -3,19 +3,28 @@ import {
   captureSchedaTipoLabel,
   lavorazioneHasExistingScheda,
 } from "@/lib/document-capture/capture-existing-scheda-presence";
-import type { LavorazioneSchedeStore } from "@/types/schede";
+import type { LavorazioneSchedeStore, SchedaIngressoDoc, SchedaLavorazioniDoc } from "@/types/schede";
+
+const meta = {
+  createdAt: "",
+  updatedAt: "",
+  createdBy: "",
+  updatedBy: "",
+  sorgente: "generata" as const,
+  fileEsterno: null,
+};
 
 const store: LavorazioneSchedeStore = {
   "lav-1": {
     lavorazioneId: "lav-1",
-    ingresso: { id: "s1", tipo: "ingresso", campi: {} as never, updatedAt: "" },
+    ingresso: { ...meta, tipo: "ingresso", campi: {} as SchedaIngressoDoc["campi"] },
     lavorazioni: null,
     ricambi: null,
   },
   "lav-2": {
     lavorazioneId: "lav-2",
     ingresso: null,
-    lavorazioni: { id: "s2", tipo: "lavorazioni", campi: {} as never, updatedAt: "" },
+    lavorazioni: { ...meta, tipo: "lavorazioni", campi: {} as SchedaLavorazioniDoc["campi"] },
     ricambi: null,
   },
 };

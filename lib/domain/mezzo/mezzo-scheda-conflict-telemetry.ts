@@ -4,7 +4,10 @@ export type MezzoSchedaConflictTelemetryEvent =
   | "MEZZO_ANAGRAFICA_CONFLICT_SHOWN"
   | "MEZZO_UPDATE_CONFIRMED"
   | "MEZZO_UPDATE_REJECTED"
-  | "MEZZO_STALE_CONFLICT";
+  | "MEZZO_STALE_CONFLICT"
+  | "MEZZO_ASSOCIATION_CHANGE_SHOWN"
+  | "MEZZO_ASSOCIATION_CHANGE_CONFIRMED"
+  | "MEZZO_ASSOCIATION_CHANGE_REJECTED";
 
 export type MezzoSchedaConflictTelemetryPayload = {
   event: MezzoSchedaConflictTelemetryEvent;

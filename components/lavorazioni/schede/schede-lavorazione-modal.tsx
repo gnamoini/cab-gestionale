@@ -6,7 +6,7 @@ import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { flushSync } from "react-dom";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { gestionaleTextareaMaxHeightCompact } from "@/lib/ui/design-system";
@@ -31,7 +31,10 @@ import { SchedaIngressoEditModal } from "@/components/gestionale/lavorazioni/lav
 import { SchedaEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/scheda-elimina-confirm-dialog";
 import { normalizeSchedaIngressoFields } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
 import { CaptureMultiSchedaNotice } from "@/components/document-capture/capture-multi-scheda-notice";
-import { GlobalDatePicker, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
+import { GlobalDatePicker } from "@/components/gestionale/global-input";
+import { AddettoPicker, AddettoDisplayPill, addettoRefFromFields } from "@/components/domain/addetti";
+import { SCHEDA_RIGA_ADDETTO_WRITE_RULES, stripAddettoLegacyFieldsOnWrite } from "@/lib/lavorazioni/addetto-write-freeze";
+import { backfillAddettoIdFromLegacyString } from "@/lib/schede/schede-addetto-id-migrate";
 import { LavorazioneCostoDiscreto } from "@/components/gestionale/lavorazioni/lavorazione-costo-discreto";
 import { LavorazioneMediaPanel } from "@/components/gestionale/media/lavorazione-media-panel";
 import { useInterventoContext } from "@/src/hooks/gestionale/use-intervento-context";
@@ -134,9 +137,23 @@ import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { LavorazioneAttivitaPanel } from "@/components/lavorazioni/lavorazione-attivita-panel";
 import { buildLavorazioneAttivitaFeed } from "@/lib/lavorazioni/lavorazione-attivita-feed";
 import { logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
+import {
+  buildLavorazioneRowProfileResolver,
+  buildLogAutoreByUserId,
+  displayLavorazioneAutore,
+} from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import { useAuth } from "@/context/auth-context";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useLavorazioneHub } from "@/src/hooks/gestionale/use-lavorazione-hub";
+import {
+  lavorazioneRowToTagliandoFields,
+  type TagliandoLavorazioneFields,
+} from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
+import {
+  useEffectivePresetForConfigQuery,
+  useMezzoMaintenanceConfigsQuery,
+} from "@/src/hooks/gestionale/use-maintenance-engine-v2";
+import { useLavorazioneTagliandoRicambiAutofill } from "@/src/hooks/use-lavorazione-tagliando-ricambi-autofill";
 import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { reconcileGestionaleEntity } from "@/lib/sync/gestionale-reconcile";
 import { useQueryClient } from "@tanstack/react-query";
@@ -153,6 +170,22 @@ import type {
   SchedaRicambiDoc,
   SchedaTipo,
 } from "@/types/schede";
+
+function writeSchedaRigaAddetto(addettoId: string, oreImpiegate: number): RigaAddettoOreScheda {
+  const id = addettoId.trim();
+  return stripAddettoLegacyFieldsOnWrite(
+    { addettoId: id || null, oreImpiegate, addetto: "" },
+    SCHEDA_RIGA_ADDETTO_WRITE_RULES,
+  ) as RigaAddettoOreScheda;
+}
+
+function writeSchedaRicambioAddetto(row: RigaRicambioScheda, addettoId: string): RigaRicambioScheda {
+  const id = addettoId.trim();
+  return stripAddettoLegacyFieldsOnWrite(
+    { ...row, addettoId: id || null, addetto: "" },
+    SCHEDA_RIGA_ADDETTO_WRITE_RULES,
+  ) as RigaRicambioScheda;
+}
 
 type LavRow = LavorazioneAttiva | LavorazioneArchiviata;
 
@@ -237,6 +270,7 @@ export function SchedeLavorazioneModal({
   open,
   onClose,
   lav,
+  listSurface = "table",
   origine,
   initialTab: initialTabProp = "schede",
   initialSchedaStage,
@@ -258,6 +292,7 @@ export function SchedeLavorazioneModal({
   open: boolean;
   onClose: () => void;
   lav: LavRow;
+  listSurface?: import("@/lib/ui/resolve-list-surface").ListSurface;
   origine?: PreventivoLavorazioneOrigine;
   initialTab?: HubTabInput;
   /** @deprecated Ignorato — shell hub sempre `formLarge` + `standard` (allineato a mezzi hub). */
@@ -290,6 +325,7 @@ export function SchedeLavorazioneModal({
     options?: {
       mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
       lavorazioneNote?: string;
+      tagliandoFields?: import("@/lib/maintenance-plans/tagliando-lavorazione-fields").TagliandoLavorazioneFields;
     },
   ) => void | Promise<void>;
   canDeleteLavorazione?: boolean;
@@ -336,8 +372,32 @@ export function SchedeLavorazioneModal({
   const ingressoDraftRef = useRef<SchedaIngressoFields | null>(null);
   const [ingressoFormOpen, setIngressoFormOpen] = useState(false);
   const [ingressoEditorInitial, setIngressoEditorInitial] = useState<SchedaIngressoFields | null>(null);
+  const [ingressoTagliandoInitial, setIngressoTagliandoInitial] =
+    useState<TagliandoLavorazioneFields | null>(null);
+  const [ingressoNoteInitial, setIngressoNoteInitial] = useState("");
   const [lavDoc, setLavDoc] = useState<SchedaLavorazioniDoc | null>(null);
   const [ricDoc, setRicDoc] = useState<SchedaRicambiDoc | null>(null);
+  const isTagliando = Boolean(hubData?.lavorazione?.is_tagliando);
+  const configsQ = useMezzoMaintenanceConfigsQuery({
+    mezzoId: mezzo?.id,
+    enabled: open && isTagliando,
+  });
+  const primaryConfig = configsQ.data?.[0];
+  const presetQ = useEffectivePresetForConfigQuery(
+    primaryConfig?.id,
+    open && isTagliando && Boolean(primaryConfig?.id),
+  );
+  const tagliandoAutofill = useLavorazioneTagliandoRicambiAutofill({
+    enabled: open && stage.kind === "ricambi",
+    isTagliando,
+    preset: presetQ.data ?? null,
+    presetVersionRef:
+      hubData?.lavorazione?.tagliando_preset_version_ref ?? primaryConfig?.presetVersionId ?? null,
+    righe: ricDoc?.campi.righe ?? [],
+    onApplyRighe: (next) => {
+      setRicDoc((d) => (d ? { ...d, campi: { ...d.campi, righe: next } } : d));
+    },
+  });
   const [eliminaConfirmTipo, setEliminaConfirmTipo] = useState<SchedaTipo | null>(null);
   const [ingressoCopyPickOpen, setIngressoCopyPickOpen] = useState(false);
   const baselineIngressoJson = useRef<string | null>(null);
@@ -370,6 +430,19 @@ export function SchedeLavorazioneModal({
     [attivitaFeedInput],
   );
 
+  const resolveSchedaAutore = useMemo(() => {
+    const row = hubData?.lavorazione;
+    const resolveUserId = row
+      ? buildLavorazioneRowProfileResolver(row, user?.id ?? null, authorName)
+      : () => undefined;
+    const logByUserId =
+      hubData?.log != null
+        ? buildLogAutoreByUserId(hubData.log, (r) => logAutoreLabel(r, user?.id ?? null, authorName))
+        : new Map<string, string>();
+    return (raw: string) =>
+      displayLavorazioneAutore(raw, "", (id) => resolveUserId(id) ?? logByUserId.get(id));
+  }, [hubData?.lavorazione, hubData?.log, user?.id, authorName]);
+
   useEffect(() => {
     if (!open) {
       setEliminaConfirmTipo(null);
@@ -379,6 +452,8 @@ export function SchedeLavorazioneModal({
       setHubTab(initialTab);
       setIngressoFormOpen(false);
       setIngressoEditorInitial(null);
+      setIngressoTagliandoInitial(null);
+      setIngressoNoteInitial("");
       ingressoDraftRef.current = null;
       const cloned = JSON.parse(JSON.stringify(bundle)) as LavorazioneSchedeBundle;
       if (!cloned.codice?.trim() && lav.codice?.trim()) {
@@ -421,7 +496,7 @@ export function SchedeLavorazioneModal({
     syncedBundleJsonRef.current = incoming;
   }, [bundle, open, unsavedPanel, stage.kind]);
 
-  useCabSyncListener(["scheda_lavorazione", "lavorazione_documents", "documenti"], (event) => {
+  useCabSyncListener(["scheda_lavorazione", "pdf_artifacts", "document_access_tokens", "documenti"], (event) => {
     const r = reconcileGestionaleEntity(qc, event, "cab_sync", { skipInvalidation: true });
     if (r.needsRefetch) void hubQuery.refetch();
   });
@@ -468,12 +543,16 @@ export function SchedeLavorazioneModal({
     baselineIngressoJson.current = JSON.stringify(normalized);
     ingressoDraftRef.current = normalized;
     setIngressoEditorInitial(normalized);
+    setIngressoTagliandoInitial(lavorazioneRowToTagliandoFields(hubData?.lavorazione ?? {}));
+    setIngressoNoteInitial(hubData?.lavorazione?.note?.trim() || lav.note?.trim() || "");
     setIngressoFormOpen(true);
   }
 
   function closeIngressoEditor() {
     setIngressoFormOpen(false);
     setIngressoEditorInitial(null);
+    setIngressoTagliandoInitial(null);
+    setIngressoNoteInitial("");
     ingressoDraftRef.current = null;
   }
 
@@ -847,6 +926,7 @@ export function SchedeLavorazioneModal({
     base: SchedaIngressoDoc | null | undefined;
     mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
     lavorazioneNote?: string;
+    tagliandoFields?: import("@/lib/maintenance-plans/tagliando-lavorazione-fields").TagliandoLavorazioneFields;
   }): Promise<boolean> {
     const ig = snap.ig;
     const base = snap.base;
@@ -888,6 +968,7 @@ export function SchedeLavorazioneModal({
     await onIngressoCommitted?.(ig, {
       mezzoUpdatePlan: snap.mezzoUpdatePlan,
       lavorazioneNote: snap.lavorazioneNote,
+      tagliandoFields: snap.tagliandoFields,
     });
     return true;
   }
@@ -1155,6 +1236,7 @@ export function SchedeLavorazioneModal({
                 stato={statoUiSchedaIngresso(hub)}
                 doc={hub.ingresso}
                 canEdit={canEditWorkOrders}
+                formatAutore={resolveSchedaAutore}
                 onApri={apriSchedaIngresso}
                 onCrea={() => startCreate("ingresso")}
                 onPdf={() => {
@@ -1175,6 +1257,7 @@ export function SchedeLavorazioneModal({
                 stato={statoUiSchedaLavorazioni(hub)}
                 doc={hub.lavorazioni}
                 canEdit={canEditWorkOrders}
+                formatAutore={resolveSchedaAutore}
                 onApri={apriSchedaLavorazioni}
                 onCrea={() => startCreate("lavorazioni")}
                 onPdf={() => {
@@ -1194,6 +1277,7 @@ export function SchedeLavorazioneModal({
                 stato={statoUiSchedaRicambi(hub)}
                 doc={hub.ricambi}
                 canEdit={canEditWorkOrders}
+                formatAutore={resolveSchedaAutore}
                 onApri={apriSchedaRicambi}
                 onCrea={() => startCreate("ricambi")}
                 onPdf={() => {
@@ -1312,6 +1396,7 @@ export function SchedeLavorazioneModal({
                   Preventivi con gli stessi identificativi del mezzo (targa, matricola o scuderia).
                 </p>
                 <LavorazionePreventiviHubList
+                  listSurface={listSurface}
                   rows={preventiviPerMacchina}
                   lavorazioneId={lav.id}
                   onApriNeiPreventivi={apriPreventivoNeiPreventivi}
@@ -1381,7 +1466,7 @@ export function SchedeLavorazioneModal({
           {stage.kind === "lavorazioni" && hub.lavorazioni && lavDoc ? (
             <LavorazioniPanel
               doc={lavDoc}
-              setDoc={setLavDoc}
+              setDoc={setLavDoc as Dispatch<SetStateAction<SchedaLavorazioniDoc>>}
               addettiLista={addetti}
               onBack={tryLavorazioniBack}
               onDelete={() => requestDeleteSchedaTipo("lavorazioni")}
@@ -1416,7 +1501,7 @@ export function SchedeLavorazioneModal({
           {stage.kind === "ricambi" && hub.ricambi && ricDoc ? (
             <RicambiPanel
               doc={ricDoc}
-              setDoc={setRicDoc}
+              setDoc={setRicDoc as Dispatch<SetStateAction<SchedaRicambiDoc>>}
               lav={lav}
               identLine={identSubtitle}
               currentUser={currentUser}
@@ -1480,15 +1565,17 @@ export function SchedeLavorazioneModal({
         <SchedaIngressoEditModal
           open={ingressoFormOpen}
           initialFields={ingressoEditorInitial}
-          initialLavorazioneNote={lav.note?.trim() || ""}
+          initialLavorazioneNote={ingressoNoteInitial}
+          initialTagliandoFields={ingressoTagliandoInitial ?? undefined}
           onRequestClose={tryIngressoBack}
-          onSave={async (draft, mezzoUpdatePlan, noteDraft) => {
+          onSave={async (draft, mezzoUpdatePlan, noteDraft, tagliandoDraft) => {
             ingressoDraftRef.current = draft;
             const ok = await applyIngressoCommitAsync({
               ig: ingressoDraftRef.current,
               base: draftRef.current.ingresso,
               mezzoUpdatePlan,
               lavorazioneNote: noteDraft,
+              tagliandoFields: tagliandoDraft,
             });
             if (!ok) return;
             closeIngressoEditor();
@@ -1498,7 +1585,11 @@ export function SchedeLavorazioneModal({
           }
           readOnly={hub.ingresso.sorgente === "file_esterno"}
           canEdit={canEditWorkOrders}
-          updatedBy={hub.ingresso.updatedBy}
+          updatedBy={
+            hub.ingresso.updatedBy
+              ? resolveSchedaAutore(hub.ingresso.updatedBy)
+              : hub.ingresso.updatedBy
+          }
           mezzi={mezzi}
           schedeStore={schedeStore}
           attive={attive}
@@ -1521,6 +1612,25 @@ export function SchedeLavorazioneModal({
         onConfirm={applyDuplicateIngressoFromMatch}
       />
       {confirmDialog}
+
+      {tagliandoAutofill.promptOpen ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4">
+          <div className="max-w-md rounded-lg border border-[var(--erp-border)] bg-[var(--erp-surface)] p-4 text-sm shadow-lg">
+            <p className="font-semibold">Il preset è cambiato dall&apos;ultimo caricamento.</p>
+            <p className="mt-2 text-[var(--erp-text-muted)]">
+              Aggiornare la scheda ricambi con le voci del preset corrente?
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" className="rounded border px-3 py-1.5" onClick={tagliandoAutofill.keepCurrent}>
+                Mantieni attuale
+              </button>
+              <button type="button" className="rounded bg-[var(--cab-primary)] px-3 py-1.5 text-white" onClick={tagliandoAutofill.acceptResync}>
+                Aggiorna automaticamente
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -1563,6 +1673,7 @@ function SchedaSectionHub({
   stato,
   doc,
   canEdit = true,
+  formatAutore,
   onApri,
   onCrea,
   onPdf,
@@ -1572,11 +1683,18 @@ function SchedaSectionHub({
   stato: ReturnType<typeof statoUiSchedaIngresso>;
   doc: SchedaIngressoDoc | SchedaLavorazioniDoc | SchedaRicambiDoc | null;
   canEdit?: boolean;
+  formatAutore?: (raw: string) => string;
   onApri: () => void;
   onCrea: () => void;
   onPdf: () => void;
   onElimina?: () => void;
 }) {
+  const autoreLabel =
+    doc?.updatedBy?.trim() && formatAutore
+      ? formatAutore(doc.updatedBy).trim()
+      : doc?.updatedBy?.trim() ?? "";
+  const autoreDisplay = autoreLabel && autoreLabel !== "—" ? autoreLabel : "";
+
   return (
     <section className={dsGestionaleInfoCardCompact}>
       <div className="flex min-w-0 items-start gap-2.5">
@@ -1587,7 +1705,8 @@ function SchedaSectionHub({
             {doc?.sorgente === "file_esterno" ? <FileEsternoBadge /> : null}
             {doc ? (
               <span className="text-[10px] leading-snug text-[color:var(--cab-text-muted)]">
-                Agg. {fmtItShort(doc.updatedAt)} · {doc.updatedBy}
+                Agg. {fmtItShort(doc.updatedAt)}
+                {autoreDisplay ? ` · ${autoreDisplay}` : null}
               </span>
             ) : null}
           </div>
@@ -1703,7 +1822,7 @@ function LavorazioniPanel({
   onSave,
 }: {
   doc: SchedaLavorazioniDoc;
-  setDoc: (d: SchedaLavorazioniDoc) => void;
+  setDoc: Dispatch<SetStateAction<SchedaLavorazioniDoc>>;
   addettiLista: string[];
   onBack: () => void;
   onDelete: () => void;
@@ -1711,12 +1830,29 @@ function LavorazioniPanel({
   onSave: () => void;
 }) {
   const { confirm: askConfirm, confirmDialog: lavorazioniConfirmDialog } = useGestionaleConfirm();
+  const global = useGlobalOptions();
   const ro = doc.sorgente === "file_esterno";
+  const resolveAddettoPickerId = (a: RigaAddettoOreScheda) =>
+    a.addettoId?.trim() ||
+    backfillAddettoIdFromLegacyString(global.lavorazioni.addettiRecords, a.addetto) ||
+    "";
+  const patchRigaAddetto = (row: RigaLavorazioneScheda, idx: number, patch: { addettoId?: string; oreImpiegate?: number }) => {
+    const next = [...(row.addettiAssegnati ?? [])];
+    const current = next[idx]!;
+    next[idx] = writeSchedaRigaAddetto(
+      patch.addettoId ?? resolveAddettoPickerId(current),
+      patch.oreImpiegate ?? current.oreImpiegate,
+    );
+    return next;
+  };
   function patchRighe(righe: RigaLavorazioneScheda[]) {
-    setDoc({ ...doc, campi: { ...doc.campi, righe } });
+    setDoc((d) => ({ ...d, campi: { ...d.campi, righe } }));
   }
   function patchRiga(rid: string, fn: (r: RigaLavorazioneScheda) => RigaLavorazioneScheda) {
-    patchRighe(doc.campi.righe.map((x) => (x.id === rid ? fn(x) : x)));
+    setDoc((d) => ({
+      ...d,
+      campi: { ...d.campi, righe: d.campi.righe.map((x) => (x.id === rid ? fn(x) : x)) },
+    }));
   }
   return (
     <div className="space-y-4">
@@ -1741,7 +1877,12 @@ function LavorazioniPanel({
           className={`${dsInput} mt-1`}
           readOnly={ro}
           value={doc.campi.identificazioneMacchina}
-          onChange={(e) => setDoc({ ...doc, campi: { ...doc.campi, identificazioneMacchina: e.target.value } })}
+          onChange={(e) =>
+            setDoc((d) => ({
+              ...d,
+              campi: { ...d.campi, identificazioneMacchina: e.target.value },
+            }))
+          }
         />
       </label>
       <div className={`${dsTableWrap} ${dsScrollbar}`}>
@@ -1782,8 +1923,12 @@ function LavorazioniPanel({
                     <div className="space-y-0.5 text-[color:var(--cab-text)]">
                       {(r.addettiAssegnati ?? []).length ? (
                         r.addettiAssegnati!.map((a, i) => (
-                          <div key={i}>
-                            {a.addetto || "—"} — {a.oreImpiegate}h
+                          <div key={i} className="flex items-center gap-1">
+                            <AddettoDisplayPill
+                              ref={addettoRefFromFields({ addettoId: a.addettoId, addettoLegacy: a.addetto })}
+                              fullWidth={false}
+                            />
+                            <span>— {a.oreImpiegate}h</span>
                           </div>
                         ))
                       ) : (
@@ -1795,28 +1940,29 @@ function LavorazioniPanel({
                       {(r.addettiAssegnati ?? []).map((a, idx) => (
                         <div key={`${r.id}-a-${idx}`} className="flex flex-nowrap items-end gap-1 sm:flex-wrap">
                           <div className="min-w-0 flex-1">
-                            <GlobalSettingsListSelect
-                              listKey="lavorazioni:addetti"
+                            <AddettoPicker
+                              value={resolveAddettoPickerId(a) || null}
+                              onChange={(id) =>
+                                patchRiga(r.id, (row) => ({
+                                  ...row,
+                                  addettiAssegnati: patchRigaAddetto(row, idx, { addettoId: id }),
+                                }))
+                              }
+                              ariaLabel="Addetto riga lavorazione"
                               className="w-full"
                               inputClassName={`${dsInput} !py-1.5 !text-xs`}
-                              value={a.addetto}
-                              onChange={(v) => {
-                                const next = [...(r.addettiAssegnati ?? [])];
-                                next[idx] = { ...next[idx]!, addetto: v };
-                                patchRiga(r.id, (row) => ({ ...row, addettiAssegnati: next }));
-                              }}
-                              placeholder="Seleziona addetto…"
-                              aria-label="Addetto riga lavorazione"
+                              size="compact"
                             />
                           </div>
                           <SchedaOreNumberInput
                             className={`${dsInput} !py-1.5 !text-xs w-20`}
                             value={Number.isFinite(a.oreImpiegate) ? a.oreImpiegate : 0}
-                            onChange={(v) => {
-                              const next = [...(r.addettiAssegnati ?? [])];
-                              next[idx] = { ...next[idx]!, oreImpiegate: v };
-                              patchRiga(r.id, (row) => ({ ...row, addettiAssegnati: next }));
-                            }}
+                            onChange={(v) =>
+                              patchRiga(r.id, (row) => ({
+                                ...row,
+                                addettiAssegnati: patchRigaAddetto(row, idx, { oreImpiegate: v }),
+                              }))
+                            }
                           />
                           <button
                             type="button"
@@ -1845,7 +1991,7 @@ function LavorazioniPanel({
                         onClick={() =>
                           patchRiga(r.id, (row) => ({
                             ...row,
-                            addettiAssegnati: [...(row.addettiAssegnati ?? []), { addetto: "", oreImpiegate: 0 }],
+                            addettiAssegnati: [...(row.addettiAssegnati ?? []), writeSchedaRigaAddetto("", 0)],
                           }))
                         }
                       >
@@ -1920,7 +2066,7 @@ function RicambiPanel({
   saving = false,
 }: {
   doc: SchedaRicambiDoc;
-  setDoc: (d: SchedaRicambiDoc) => void;
+  setDoc: Dispatch<SetStateAction<SchedaRicambiDoc>>;
   lav: LavRow;
   identLine: string;
   currentUser: string;
@@ -1932,6 +2078,7 @@ function RicambiPanel({
   saving?: boolean;
 }) {
   const gestToast = useGestionaleToast();
+  const global = useGlobalOptions();
   const { confirm: askConfirm, confirmDialog: ricambiConfirmDialog } = useGestionaleConfirm();
   const ro = doc.sorgente === "file_esterno";
   const qc = useQueryClient();
@@ -1940,6 +2087,11 @@ function RicambiPanel({
   const [acRowId, setAcRowId] = useState<string | null>(null);
   const [magSearch, setMagSearch] = useState("");
   const [magSearchOpen, setMagSearchOpen] = useState(false);
+
+  const resolveAddettoPickerId = (row: RigaRicambioScheda) =>
+    row.addettoId?.trim() ||
+    backfillAddettoIdFromLegacyString(global.lavorazioni.addettiRecords, row.addetto) ||
+    "";
 
   const magSearchHits = useMemo(() => {
     const q = magSearch.trim().toLowerCase();
@@ -1978,7 +2130,7 @@ function RicambiPanel({
   }
 
   function patchRighe(righe: RigaRicambioScheda[]) {
-    setDoc({ ...doc, campi: { ...doc.campi, righe } });
+    setDoc((d) => ({ ...d, campi: { ...d.campi, righe } }));
   }
 
   function suggestionsForRow(r: RigaRicambioScheda) {
@@ -2154,16 +2306,22 @@ function RicambiPanel({
                   </td>
                   <td className="px-2 py-2 align-top">
                     {ro ? (
-                      <span>{r.addetto}</span>
+                      <AddettoDisplayPill
+                        ref={addettoRefFromFields({ addettoId: r.addettoId, addettoLegacy: r.addetto })}
+                        fullWidth={false}
+                      />
                     ) : (
-                      <GlobalSettingsListSelect
-                        listKey="lavorazioni:addetti"
+                      <AddettoPicker
+                        value={resolveAddettoPickerId(r) || null}
+                        onChange={(id) =>
+                          patchRighe(
+                            doc.campi.righe.map((x) => (x.id === r.id ? writeSchedaRicambioAddetto(x, id) : x)),
+                          )
+                        }
+                        ariaLabel="Addetto riga ricambio"
                         className="w-full min-w-[8rem]"
                         inputClassName={`${dsInput} !py-1.5 !text-xs`}
-                        value={r.addetto}
-                        onChange={(v) => patchRighe(doc.campi.righe.map((x) => (x.id === r.id ? { ...x, addetto: v } : x)))}
-                        placeholder="Addetto…"
-                        aria-label="Addetto riga ricambio"
+                        size="compact"
                       />
                     )}
                   </td>

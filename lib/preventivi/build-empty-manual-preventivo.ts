@@ -4,8 +4,9 @@ import { nextPreventivoNumeroManualeFromRecords } from "@/lib/preventivi/prevent
 import { nextPreventivoId } from "@/lib/preventivi/preventivi-records-from-cache";
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
 import { PREVENTIVO_TIPO_DOCUMENTO_DEFAULT } from "@/lib/preventivi/preventivi-tipo-documento";
+import { normalizePreventivoRigaAddettoWrite } from "@/lib/lavorazioni/addetto-write-freeze";
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
-import type { PreventivoRecord } from "@/lib/preventivi/types";
+import type { PreventivoRecord, PreventivoRigaAddetto } from "@/lib/preventivi/types";
 import { getScontoRicambiCliente } from "@/lib/mezzi/cliente-commerciale";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
@@ -65,7 +66,14 @@ export function buildEmptyManualPreventivo(
     collaudoPrezzo: 0,
     manodopera: {
       oreTotali: 1,
-      righeAddetti: [{ addetto: "Officina", ore: 1 }],
+      righeAddetti: [
+        normalizePreventivoRigaAddettoWrite({
+          addettoId: null,
+          ore: 1,
+          addettoLegacy: "Officina",
+          legacyWarning: "Addetto storico non convertibile: Officina",
+        }) as PreventivoRigaAddetto,
+      ],
       costoOrario: infer.costoOrario,
       scontoPercent: infer.manodoperaScontoPercent,
     },

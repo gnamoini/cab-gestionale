@@ -1,9 +1,17 @@
+import { buildBrowserAttrezzaturaResolveDeps } from "@/lib/domain/mezzo-attrezzatura/build-browser-attrezzatura-resolve-deps";
+import { buildBrowserMezzoResolveDeps } from "@/lib/domain/mezzo/build-browser-mezzo-resolve-deps";
 import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
+import {
+  resolveOrCreateAttrezzatura,
+  type ResolveOrCreateAttrezzaturaDeps,
+} from "@/lib/domain/mezzo-attrezzatura/resolve-or-create-attrezzatura";
+import {
+  resolveOrCreateMezzo,
+  type ResolveOrCreateMezzoDeps,
+} from "@/lib/domain/mezzo/resolve-or-create-mezzo";
 import { upsertFromSchedaV2 } from "@/lib/domain/mezzo-attrezzatura/upsert-from-scheda-v2";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import { attrezzatureService } from "@/src/services/attrezzature.service";
-import type { AttrezzaturaInsert } from "@/src/services/attrezzature.service";
-import type { MezzoInsert, MezzoUpdate } from "@/src/services/mezzi.service";
+import type { MezzoInsert, MezzoUpdate, ApplyAssociationChangeInput } from "@/src/services/mezzi.service";
 import { schedaFieldsToAnagraficaSnapshot, mezzoGestitoToAnagraficaSnapshot } from "@/lib/domain/mezzo/mezzo-anagrafica-snapshot";
 import {
   anagraficaHistoryOrigineFromWriteContext,
@@ -11,7 +19,7 @@ import {
   resolveMezzoUpdatePlanFromContext,
 } from "@/lib/domain/intervento-context/intervento-write-context";
 import { recordMezzoAnagraficaDiff } from "@/src/services/mezzo-anagrafica-history.service";
-import type { MezzoRow, AttrezzaturaRow, InterventoTargetType } from "@/src/types/supabase-tables";
+import type { MezzoRow, InterventoTargetType } from "@/src/types/supabase-tables";
 import type { SchedaIngressoFields } from "@/types/schede";
 
 export class MezzoSchedaValidationError extends Error {
@@ -20,12 +28,6 @@ export class MezzoSchedaValidationError extends Error {
     this.name = "MezzoSchedaValidationError";
   }
 }
-
-export type UpsertMezzoAttrezzaturaPort = {
-  createAttrezzatura: (data: AttrezzaturaInsert) => Promise<AttrezzaturaRow>;
-  updateAttrezzatura: (id: string, patch: Partial<AttrezzaturaInsert>) => Promise<AttrezzaturaRow>;
-  findAttrezzaturaByMatricola: (mezzoId: string, matricola: string) => Promise<AttrezzaturaRow | null>;
-};
 
 export type UpsertMezzoFromSchedaParams = {
   fields: SchedaIngressoFields;
@@ -36,7 +38,9 @@ export type UpsertMezzoFromSchedaParams = {
   writeContext?: import("@/lib/domain/intervento-context/intervento-write-context").InterventoWriteContext;
   create: (data: MezzoInsert) => Promise<MezzoRow>;
   update: (id: string, data: MezzoUpdate) => Promise<MezzoRow>;
-  attrezzaturaPort?: UpsertMezzoAttrezzaturaPort;
+  applyAssociationChange?: (input: ApplyAssociationChangeInput) => Promise<MezzoRow>;
+  attrezzaturaResolveDeps?: ResolveOrCreateAttrezzaturaDeps;
+  mezzoResolveDeps?: ResolveOrCreateMezzoDeps;
   recordHistory?: (input: {
     mezzoId: string;
     origine: import("@/lib/domain/mezzo/record-mezzo-anagrafica-change").MezzoAnagraficaHistoryOrigine;
@@ -76,8 +80,20 @@ export function canUpsertMezzoFromSchedaIngresso(
 export async function upsertMezzoFromSchedaIngresso(
   params: UpsertMezzoFromSchedaParams,
 ): Promise<UpsertMezzoFromSchedaResult> {
-  const { fields, mezziCatalog, create, update, preferredMezzoId, attrezzaturaPort, updatePlan, lavorazioneId, writeContext, recordHistory } =
-    params;
+  const {
+    fields,
+    mezziCatalog,
+    create,
+    update,
+    applyAssociationChange,
+    preferredMezzoId,
+    attrezzaturaResolveDeps,
+    mezzoResolveDeps,
+    updatePlan,
+    lavorazioneId,
+    writeContext,
+    recordHistory,
+  } = params;
   const resolvedCtx = resolveInterventoWriteContext(writeContext);
   const effectivePlan = updatePlan ?? resolveMezzoUpdatePlanFromContext(resolvedCtx);
   const historyOrigine = anagraficaHistoryOrigineFromWriteContext(resolvedCtx.source, "scheda");
@@ -93,30 +109,13 @@ export async function upsertMezzoFromSchedaIngresso(
     };
   }
 
-  const attPort =
-    attrezzaturaPort ??
-    ({
-      createAttrezzatura: async (data) => {
-        const res = await attrezzatureService.create(data);
-        if (!res.success || !res.data) throw new MezzoSchedaValidationError(res.error ?? "Errore attrezzatura");
-        return res.data;
-      },
-      updateAttrezzatura: async (id, patch) => {
-        const res = await attrezzatureService.update(id, patch);
-        if (!res.success || !res.data) throw new MezzoSchedaValidationError(res.error ?? "Errore attrezzatura");
-        return res.data;
-      },
-      findAttrezzaturaByMatricola: async (mezzoId, matricola) => {
-        const res = await attrezzatureService.findByMatricola(mezzoId, matricola);
-        if (!res.success) throw new MezzoSchedaValidationError(res.error ?? "Errore attrezzatura");
-        return res.data;
-      },
-    } satisfies UpsertMezzoAttrezzaturaPort);
+  const resolveDeps = attrezzaturaResolveDeps ?? (await buildBrowserAttrezzaturaResolveDeps());
+  const mezzoDeps = mezzoResolveDeps ?? (await buildBrowserMezzoResolveDeps());
 
   const v2 = await upsertFromSchedaV2(
     { fields, mezziCatalog, preferredMezzoId, updatePlan: effectivePlan, lavorazioneId },
     {
-      createMezzo: create,
+      resolveMezzo: (input) => resolveOrCreateMezzo(input, mezzoDeps),
       updateMezzo: async (id, data) => {
         const before = mezziCatalog.find((m) => m.id === id);
         const row = await update(id, data);
@@ -142,9 +141,13 @@ export async function upsertMezzoFromSchedaIngresso(
         }
         return row;
       },
-      createAttrezzatura: attPort.createAttrezzatura,
-      updateAttrezzatura: attPort.updateAttrezzatura,
-      findAttrezzaturaByMatricola: attPort.findAttrezzaturaByMatricola,
+      applyAssociationChange: applyAssociationChange
+        ? async (input) => {
+            const row = await applyAssociationChange(input);
+            return row;
+          }
+        : undefined,
+      resolveAttrezzatura: (input) => resolveOrCreateAttrezzatura(input, resolveDeps),
     },
   );
   return {

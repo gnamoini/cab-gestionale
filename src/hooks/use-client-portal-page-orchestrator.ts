@@ -1,18 +1,8 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGestionaleShellContentWidth } from "@/lib/ui/use-gestionale-shell-content-width";
-import {
-  gestionaleListLayoutClassName,
-  resolveGestionaleListContainerWidth,
-  type GestionaleListLayout,
-} from "@/lib/ui/use-gestionale-list-layout";
-import {
-  gestionalePageLayoutSsrHint,
-  resolveGestionalePageLayout,
-} from "@/lib/ui/resolve-gestionale-page-layout";
-import { resolveGestionaleShellViewportWidth } from "@/lib/ui/gestionale-shell-layout";
+import type { ListSurface } from "@/lib/ui/resolve-list-surface";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
@@ -29,11 +19,10 @@ import {
 import { clientPortalFiltersActive } from "@/lib/lavorazioni/client-portal-list-filters";
 import { useClientPortalDataContract, type ClientPortalDataContract } from "@/src/hooks/use-client-portal-data-contract";
 import { useClientPortalFiltersPersistence } from "@/src/hooks/use-client-portal-filters-persistence";
+import { useGestionaleShellContentWidth } from "@/lib/ui/use-gestionale-shell-content-width";
 
 export type ClientPortalPageOrchestrator = {
-  containerRef: React.RefObject<HTMLDivElement | null>;
-  layout: GestionaleListLayout;
-  layoutClassName: string;
+  listSurface: ListSurface;
   barrier: BarrierState;
   canRender: boolean;
   accessDenied: boolean;
@@ -44,23 +33,21 @@ export type ClientPortalPageOrchestrator = {
   refreshBusy: boolean;
 };
 
-export function useClientPortalPageOrchestrator(options?: {
+export function useClientPortalPageOrchestrator(options: {
+  listSurface: ListSurface;
   archivioExpanded?: boolean;
   archivioSchedeEnabled?: boolean;
 }): ClientPortalPageOrchestrator {
   const access = useClientLavorazioniAccess();
   const shellContentWidth = useGestionaleShellContentWidth();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
-  const syncRafRef = useRef(0);
   const persistence = useClientPortalFiltersPersistence();
   const archivioListEnabled =
-    options?.archivioExpanded === true ||
+    options.archivioExpanded === true ||
     persistence.filters.section === "archivio" ||
     clientPortalFiltersActive(persistence.filters);
   const archivioSchedeEnabled =
-    options?.archivioSchedeEnabled === true ||
-    options?.archivioExpanded === true ||
+    options.archivioSchedeEnabled === true ||
+    options.archivioExpanded === true ||
     persistence.filters.section === "archivio" ||
     clientPortalFiltersActive(persistence.filters);
   const contract = useClientPortalDataContract(access.allowed, { archivioListEnabled, archivioSchedeEnabled });
@@ -68,45 +55,6 @@ export function useClientPortalPageOrchestrator(options?: {
   const gestToast = useGestionaleToast();
   const [refreshBusy, setRefreshBusy] = useState(false);
   const [forceRefreshing, setForceRefreshing] = useState(false);
-
-  const measureContainer = useCallback(() => {
-    const el = containerRef.current;
-    if (!el || typeof window === "undefined") return 0;
-    return resolveGestionaleListContainerWidth(el);
-  }, []);
-
-  const scheduleMeasure = useCallback(() => {
-    if (syncRafRef.current) return;
-    syncRafRef.current = requestAnimationFrame(() => {
-      syncRafRef.current = 0;
-      const w = measureContainer();
-      setContainerWidth((prev) => (prev === w ? prev : w));
-    });
-  }, [measureContainer]);
-
-  useLayoutEffect(() => {
-    scheduleMeasure();
-    const el = containerRef.current;
-    const ro =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => scheduleMeasure())
-        : null;
-    if (el && ro) ro.observe(el);
-    window.addEventListener("resize", scheduleMeasure);
-    return () => {
-      ro?.disconnect();
-      window.removeEventListener("resize", scheduleMeasure);
-    };
-  }, [scheduleMeasure]);
-
-  const viewportWidth = typeof window !== "undefined" ? resolveGestionaleShellViewportWidth() : 0;
-  const layout = resolveGestionalePageLayout({
-    viewportWidth,
-    containerWidth,
-    shellContentWidth,
-    ssrHint: gestionalePageLayoutSsrHint(shellContentWidth),
-    listTier: "xl",
-  });
 
   const barrier = deriveBarrierState({
     accessAllowed: access.allowed,
@@ -138,9 +86,7 @@ export function useClientPortalPageOrchestrator(options?: {
   }, [contract.archivioQ, contract.inCorsoQ, gestToast, qc]);
 
   return {
-    containerRef,
-    layout,
-    layoutClassName: gestionaleListLayoutClassName(layout),
+    listSurface: options.listSurface,
     barrier,
     canRender,
     accessDenied: !access.allowed,

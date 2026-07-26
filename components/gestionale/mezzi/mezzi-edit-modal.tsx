@@ -1,19 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { LoadingButton } from "@/components/design-system";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
+import { MezzoAssociationChangeDialog } from "@/components/lavorazioni/schede/mezzo-association-change-dialog";
 import { useFormEngine } from "@/lib/forms/form-engine";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   gestitoToMezzoForm,
   MezzoFormFields,
+  type MezzoFormState,
 } from "@/components/gestionale/mezzi/mezzi-form-fields";
+import {
+  associationFromForm,
+  checkAssociationChange,
+  type AssociationChange,
+} from "@/lib/domain/mezzo/mezzo-association";
 import { persistMezzoFormUpdate } from "@/lib/mezzi/persist-mezzo-form";
+import { applyMezzoAssociationChangeOrThrow } from "@/lib/mezzi/mezzo-association-write-bridge";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
+import { invalidateAfterMezzoAssociationChange } from "@/src/lib/react-query/invalidate-related";
+import { useQueryClient } from "@tanstack/react-query";
 
 const MEZZO_EDIT_FORM_ID = "mezzo-edit-form";
 
@@ -32,9 +42,14 @@ export function MezziEditModal({
   onValidationError: (message: string) => void;
   onSaveError: (err: unknown) => void;
 }) {
+  const queryClient = useQueryClient();
   const formEngine = useFormEngine({ initial: gestitoToMezzoForm(mezzo) });
   const { value: form, setValue, reset, runSubmit, formProps } = formEngine;
   const updateMut = useMezzoUpdateMutation();
+  const [associationOpen, setAssociationOpen] = useState(false);
+  const [associationChange, setAssociationChange] = useState<AssociationChange | null>(null);
+  const [associationReason, setAssociationReason] = useState("");
+  const pendingFormRef = useRef<MezzoFormState | null>(null);
 
   useEffect(() => {
     reset(gestitoToMezzoForm(mezzo));
@@ -47,6 +62,47 @@ export function MezziEditModal({
     [setValue],
   );
 
+  const persistForm = useCallback(
+    async (currentForm: MezzoFormState, associationConfirmed: boolean) => {
+      const change = checkAssociationChange({
+        existingMezzo: mezzo,
+        incoming: associationFromForm(currentForm),
+      });
+
+      if (change.requiresConfirmation && !associationConfirmed) {
+        pendingFormRef.current = currentForm;
+        setAssociationChange(change);
+        setAssociationOpen(true);
+        return;
+      }
+
+      const id = mezzo.id;
+      let dbVersion = mezzo.ultimaModifica;
+
+      if (change.hasChanges && associationConfirmed) {
+        const updated = await applyMezzoAssociationChangeOrThrow({
+          mezzoId: id,
+          existingMezzo: mezzo,
+          newAssociation: associationFromForm(currentForm),
+          origin: "modifica_manuale",
+          reason: associationReason.trim() || null,
+          expectedUpdatedAt: mezzo.ultimaModifica?.trim() || "",
+        });
+        dbVersion = updated.updated_at;
+      }
+
+      await persistMezzoFormUpdate({
+        mezzoId: id,
+        form: currentForm,
+        updateMezzo: (mezzoId, data) => updateMut.mutateAsync({ id: mezzoId, data }),
+      });
+
+      await invalidateAfterMezzoAssociationChange(queryClient, id, dbVersion);
+      onSaved(id);
+    },
+    [associationReason, mezzo, onSaved, queryClient, updateMut],
+  );
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!canEdit || updateMut.isPending) return;
@@ -57,15 +113,8 @@ export function MezziEditModal({
         onValidationError("Compila almeno cliente e marca attrezzatura.");
         return;
       }
-      const id = mezzo.id;
       try {
-        await persistMezzoFormUpdate({
-          mezzoId: id,
-          attrezzaturaId: null,
-          form: currentForm,
-          updateMezzo: (mezzoId, data) => updateMut.mutateAsync({ id: mezzoId, data }),
-        });
-        onSaved(id);
+        await persistForm(currentForm, false);
       } catch (err) {
         onSaveError(err);
       }
@@ -73,35 +122,56 @@ export function MezziEditModal({
   }
 
   return (
-    <GestionaleModalShell
-      modalSize="formMedium"
-      title="Modifica anagrafica mezzo"
-      subtitle="Le modifiche aggiornano l'anagrafica permanente. Lo storico campo-per-campo è nel tab Log dell'hub mezzo."
-      titleId="mezzo-edit-title"
-      onRequestClose={onClose}
-      footer={
-        <LoadingButton
-          type="submit"
-          form={MEZZO_EDIT_FORM_ID}
-          loading={updateMut.isPending}
-          preset="salva"
-          loadingLabel="Salvataggio…"
-          className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:opacity-60`}
-        >
-          Salva modifiche
-        </LoadingButton>
-      }
-    >
-      <form
-        {...formProps}
-        id={MEZZO_EDIT_FORM_ID}
-        onSubmit={handleSubmit}
-        className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}
+    <>
+      <GestionaleModalShell
+        modalSize="formMedium"
+        title="Modifica anagrafica mezzo"
+        subtitle="Le modifiche aggiornano l'anagrafica permanente. Lo storico campo-per-campo è nel tab Log dell'hub mezzo."
+        titleId="mezzo-edit-title"
+        onRequestClose={onClose}
+        footer={
+          <LoadingButton
+            type="submit"
+            form={MEZZO_EDIT_FORM_ID}
+            loading={updateMut.isPending}
+            preset="salva"
+            loadingLabel="Salvataggio…"
+            className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:opacity-60`}
+          >
+            Salva modifiche
+          </LoadingButton>
+        }
       >
-        <GestionaleModalScrollBody className="space-y-3">
-          <MezzoFormFields form={form} setForm={setFormStable} excludeMezzoId={mezzo.id} />
-        </GestionaleModalScrollBody>
-      </form>
-    </GestionaleModalShell>
+        <form
+          {...formProps}
+          id={MEZZO_EDIT_FORM_ID}
+          onSubmit={handleSubmit}
+          className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}
+        >
+          <GestionaleModalScrollBody className="space-y-3">
+            <MezzoFormFields form={form} setForm={setFormStable} excludeMezzoId={mezzo.id} />
+          </GestionaleModalScrollBody>
+        </form>
+      </GestionaleModalShell>
+      <MezzoAssociationChangeDialog
+        open={associationOpen}
+        change={associationChange}
+        showReasonField
+        reason={associationReason}
+        onReasonChange={setAssociationReason}
+        onConfirm={() => {
+          setAssociationOpen(false);
+          const pending = pendingFormRef.current;
+          pendingFormRef.current = null;
+          if (!pending) return;
+          void persistForm(pending, true).catch(onSaveError);
+        }}
+        onCancel={() => {
+          setAssociationOpen(false);
+          pendingFormRef.current = null;
+          setAssociationChange(null);
+        }}
+      />
+    </>
   );
 }

@@ -1,11 +1,12 @@
+import type { ListSurface } from "@/lib/ui/resolve-list-surface";
 import type { RouteSkeletonScope } from "@/lib/ui/route-skeleton-scope";
 import { SKELETON_GRID } from "./skeleton-layout-presets";
 import { SKELETON_MIN_HEIGHT } from "./skeleton-layout-presets";
 import { SkeletonBlock } from "./skeleton-primitives";
 import { SkeletonShellCard } from "./skeleton-shell-card";
-import { GESTIONALE_LIST_MOBILE_ONLY_CLASS } from "@/lib/ui/use-gestionale-list-layout";
 import {
   RouteSkeletonActionsRow,
+  RouteSkeletonCardsStack,
   RouteSkeletonCombinedList,
   RouteSkeletonKpiRow,
   RouteSkeletonRoot,
@@ -20,11 +21,29 @@ export function ListPageRouteSkeleton({
   scope = "full",
   sectionLabel,
   className = "",
+  listSurface = "table",
 }: {
   scope?: RouteSkeletonScope;
   sectionLabel?: string;
   className?: string;
+  listSurface?: ListSurface;
 }) {
+  if (listSurface === "cards") {
+    if (scope === "content") {
+      return (
+        <RouteSkeletonRoot ariaLabel="Caricamento elenco" testId="list-page-route-skeleton" scope={scope} className={className}>
+          <RouteSkeletonCardsStack count={4} />
+        </RouteSkeletonRoot>
+      );
+    }
+    return (
+      <RouteSkeletonRoot ariaLabel="Caricamento lista" testId="list-page-route-skeleton" scope={scope} className={className}>
+        <RouteSkeletonActionsRow />
+        <RouteSkeletonCombinedList sectionLabel={sectionLabel} />
+        <RouteSkeletonCardsStack count={4} className="mt-4" />
+      </RouteSkeletonRoot>
+    );
+  }
   if (scope === "content") {
     return (
       <RouteSkeletonRoot ariaLabel="Caricamento tabella" testId="list-page-route-skeleton" scope={scope} className={className}>
@@ -88,15 +107,36 @@ export function DashboardRouteSkeleton({
 export function LavorazioniRouteSkeleton({
   scope = "full",
   className = "",
+  listSurface = "table",
 }: {
   scope?: RouteSkeletonScope;
   className?: string;
+  listSurface?: ListSurface;
 }) {
+  if (listSurface === "cards") {
+    if (scope === "content") {
+      return (
+        <RouteSkeletonRoot ariaLabel="Caricamento lavorazioni" testId="lavorazioni-route-skeleton" scope={scope} className={className}>
+          <RouteSkeletonCardsStack count={5} />
+        </RouteSkeletonRoot>
+      );
+    }
+    return (
+      <RouteSkeletonRoot ariaLabel="Caricamento lavorazioni" testId="lavorazioni-route-skeleton" scope={scope} className={className}>
+        <RouteSkeletonActionsRow />
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <SkeletonBlock minHeightClass="min-h-10" className="w-40" />
+          <SkeletonBlock minHeightClass="min-h-10" className="w-24" />
+        </div>
+        <SkeletonBlock minHeightClass={SKELETON_MIN_HEIGHT.toolbar} className="w-full" />
+        <RouteSkeletonCardsStack count={5} />
+      </RouteSkeletonRoot>
+    );
+  }
   if (scope === "content") {
     return (
       <RouteSkeletonRoot ariaLabel="Caricamento lavorazioni" testId="lavorazioni-route-skeleton" scope={scope} className={className}>
         <SkeletonShellCard bodyMinHeightClass={SKELETON_MIN_HEIGHT.tableDesktop} />
-        <SkeletonBlock minHeightClass={SKELETON_MIN_HEIGHT.toolbar} className={`min-h-0 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`} />
       </RouteSkeletonRoot>
     );
   }
@@ -109,7 +149,6 @@ export function LavorazioniRouteSkeleton({
       </div>
       <SkeletonBlock minHeightClass={SKELETON_MIN_HEIGHT.toolbar} className="w-full" />
       <SkeletonShellCard bodyMinHeightClass={SKELETON_MIN_HEIGHT.tableDesktop} />
-      <SkeletonBlock minHeightClass={SKELETON_MIN_HEIGHT.toolbar} className={`min-h-0 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`} />
     </RouteSkeletonRoot>
   );
 }
@@ -117,10 +156,30 @@ export function LavorazioniRouteSkeleton({
 export function DipendentiRouteSkeleton({
   scope = "full",
   className = "",
+  listSurface = "table",
 }: {
   scope?: RouteSkeletonScope;
   className?: string;
+  listSurface?: ListSurface;
 }) {
+  if (listSurface === "cards") {
+    if (scope === "content") {
+      return (
+        <RouteSkeletonRoot ariaLabel="Caricamento tabella presenze" testId="dipendenti-route-skeleton" scope={scope} className={className}>
+          <RouteSkeletonKpiRow count={4} />
+          <RouteSkeletonCardsStack count={4} />
+        </RouteSkeletonRoot>
+      );
+    }
+    return (
+      <RouteSkeletonRoot ariaLabel="Caricamento dipendenti" testId="dipendenti-route-skeleton" scope={scope} className={className}>
+        <RouteSkeletonActionsRow />
+        <SkeletonBlock minHeightClass={SKELETON_MIN_HEIGHT.toolbar} className="w-full" />
+        <RouteSkeletonKpiRow count={4} />
+        <RouteSkeletonCardsStack count={4} />
+      </RouteSkeletonRoot>
+    );
+  }
   if (scope === "content") {
     return (
       <RouteSkeletonRoot ariaLabel="Caricamento tabella presenze" testId="dipendenti-route-skeleton" scope={scope} className={className}>
@@ -142,19 +201,33 @@ export function DipendentiRouteSkeleton({
 export function FatturazioneRouteSkeleton({
   scope = "full",
   className = "",
+  listSurface = "table",
 }: {
   scope?: RouteSkeletonScope;
   className?: string;
+  listSurface?: ListSurface;
 }) {
+  if (listSurface === "cards") {
+    if (scope === "content") {
+      return (
+        <RouteSkeletonRoot ariaLabel="Caricamento sezione fatturazione" testId="fatturazione-route-skeleton" scope={scope} className={className}>
+          <RouteSkeletonCardsStack count={4} />
+        </RouteSkeletonRoot>
+      );
+    }
+    return (
+      <RouteSkeletonRoot ariaLabel="Caricamento fatturazione" testId="fatturazione-route-skeleton" scope={scope} className={className}>
+        <RouteSkeletonActionsRow />
+        <RouteSkeletonKpiRow count={4} />
+        <RouteSkeletonTabBar />
+        <RouteSkeletonCardsStack count={4} />
+      </RouteSkeletonRoot>
+    );
+  }
   if (scope === "content") {
     return (
       <RouteSkeletonRoot ariaLabel="Caricamento sezione fatturazione" testId="fatturazione-route-skeleton" scope={scope} className={className}>
         <SkeletonShellCard bodyMinHeightClass={SKELETON_MIN_HEIGHT.tableDesktop} />
-        <div className={`mt-4 space-y-2 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <SkeletonBlock key={i} minHeightClass={SKELETON_MIN_HEIGHT.cardMobile} className="w-full" />
-          ))}
-        </div>
       </RouteSkeletonRoot>
     );
   }
@@ -196,10 +269,20 @@ export function ImpostazioniRouteSkeleton({
 export function SicurezzaRouteSkeleton({
   scope = "full",
   className = "",
+  listSurface = "table",
 }: {
   scope?: RouteSkeletonScope;
   className?: string;
+  listSurface?: ListSurface;
 }) {
+  if (listSurface === "cards") {
+    return (
+      <RouteSkeletonRoot ariaLabel="Caricamento sicurezza" testId="sicurezza-route-skeleton" scope={scope} className={className}>
+        <RouteSkeletonTabBar />
+        <RouteSkeletonCardsStack count={4} />
+      </RouteSkeletonRoot>
+    );
+  }
   return (
     <RouteSkeletonRoot ariaLabel="Caricamento sicurezza" testId="sicurezza-route-skeleton" scope={scope} className={className}>
       <RouteSkeletonTabBar />
@@ -238,10 +321,28 @@ export function AgendaRouteSkeleton({
 export function ClientiRouteSkeleton({
   scope = "full",
   className = "",
+  listSurface = "table",
 }: {
   scope?: RouteSkeletonScope;
   className?: string;
+  listSurface?: ListSurface;
 }) {
+  if (listSurface === "cards") {
+    if (scope === "content") {
+      return (
+        <RouteSkeletonRoot ariaLabel="Caricamento lavorazioni clienti" testId="clienti-route-skeleton" scope={scope} className={className}>
+          <RouteSkeletonCardsStack count={4} />
+        </RouteSkeletonRoot>
+      );
+    }
+    return (
+      <RouteSkeletonRoot ariaLabel="Caricamento portale clienti" testId="clienti-route-skeleton" scope={scope} className={className}>
+        <RouteSkeletonActionsRow />
+        <RouteSkeletonCombinedList sectionLabel="Azioni e filtri lavorazioni clienti" />
+        <RouteSkeletonCardsStack count={4} />
+      </RouteSkeletonRoot>
+    );
+  }
   if (scope === "content") {
     return (
       <RouteSkeletonRoot ariaLabel="Caricamento lavorazioni clienti" testId="clienti-route-skeleton" scope={scope} className={className}>

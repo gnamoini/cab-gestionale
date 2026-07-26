@@ -54,11 +54,18 @@ export function resolveTargetTypeFromScheda(input: {
   targetType?: InterventoTargetType | null;
   marcaAttrezzatura?: string;
   attrezzaturaId?: string | null;
+  matricola?: string;
+  tipoAttrezzatura?: string;
 }): InterventoTargetType {
   if (input.targetType === "telaio" || input.targetType === "attrezzatura") {
     return input.targetType;
   }
-  const hasAttrezzatura = Boolean(input.marcaAttrezzatura?.trim() || input.attrezzaturaId?.trim());
+  const hasAttrezzatura = Boolean(
+    input.marcaAttrezzatura?.trim() ||
+      input.attrezzaturaId?.trim() ||
+      input.matricola?.trim() ||
+      input.tipoAttrezzatura?.trim(),
+  );
   return hasAttrezzatura ? "attrezzatura" : "telaio";
 }
 

@@ -9,6 +9,7 @@ import {
   useMezzoUpdateMutation,
 } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
+import { applyMezzoAssociationChangeOrThrow } from "@/lib/mezzi/mezzo-association-write-bridge";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
@@ -128,6 +129,7 @@ export function LavorazioneEditModal({
             preferredMezzoId: row.mezzo_id,
             create: (data) => createMezzo.mutateAsync(data),
             update: (id, data) => updateMezzo.mutateAsync({ id, data }),
+            applyAssociationChange: applyMezzoAssociationChangeOrThrow,
           });
 
           const lavPatch: Parameters<typeof update.mutateAsync>[0]["data"] = {

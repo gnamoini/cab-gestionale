@@ -168,6 +168,17 @@ html.pwa-standalone [data-pwa-standalone-offset] {
   }
 }
 
+@keyframes cab-drawer-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0.6;
+  }
+}
+
 @keyframes cab-nav-drawer-in {
   from {
     transform: translateX(-100%);
@@ -185,6 +196,15 @@ html.pwa-standalone [data-pwa-standalone-offset] {
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes cab-nav-backdrop-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
 
@@ -410,7 +430,7 @@ html.pwa-standalone [data-pwa-standalone-offset] {
 }
 
 .cab-nav-drawer-backdrop[data-state="closing"] {
-  animation: cab-nav-backdrop-in var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) reverse both;
+  animation: cab-nav-backdrop-out var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) forwards;
 }
 
 .cab-log-drawer-panel,
@@ -419,20 +439,20 @@ html.pwa-standalone [data-pwa-standalone-offset] {
   --cab-log-drawer-ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.cab-log-drawer-panel {
+.cab-log-drawer-panel[data-state="open"] {
   animation: cab-drawer-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) both;
 }
 
 .cab-log-drawer-panel[data-state="closing"] {
-  animation: cab-drawer-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) reverse both;
+  animation: cab-drawer-out var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) forwards;
 }
 
-.cab-log-drawer-backdrop {
+.cab-log-drawer-backdrop[data-state="open"] {
   animation: cab-nav-backdrop-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) both;
 }
 
 .cab-log-drawer-backdrop[data-state="closing"] {
-  animation: cab-nav-backdrop-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) reverse both;
+  animation: cab-nav-backdrop-out var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {

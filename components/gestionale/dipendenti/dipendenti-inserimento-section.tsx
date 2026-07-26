@@ -19,7 +19,7 @@ import type {
 } from "@/lib/dipendenti/types";
 import { gestionaleListTableTd } from "@/lib/ui/gestionale-list-table";
 import { dsSurfaceCard, dsTypoSmall } from "@/lib/ui/design-system";
-import { useGestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
+import type { ListSurface } from "@/lib/ui/resolve-list-surface";
 
 function DayInserimentoRow({
   dateYmd,
@@ -70,6 +70,7 @@ function DayInserimentoRow({
 }
 
 export function DipendentiInserimentoSection({
+  listSurface,
   monthKey,
   employees,
   filterEmployeeId,
@@ -80,6 +81,7 @@ export function DipendentiInserimentoSection({
   onScheduleSave,
   onSaveNow,
 }: {
+  listSurface: ListSurface;
   monthKey: TimesheetMonthKey;
   employees: readonly DipendenteTimesheetEmployeeRow[];
   filterEmployeeId: string;
@@ -90,8 +92,6 @@ export function DipendentiInserimentoSection({
   onScheduleSave: (input: TimesheetEntryUpsert) => void;
   onSaveNow: (input: TimesheetEntryUpsert) => void | Promise<void>;
 }) {
-  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } =
-    useGestionaleListLayout({ tier: "md" });
   const days = useMemo(() => buildMonthDays(monthKey), [monthKey]);
 
   const targetEmployee = useMemo(() => {
@@ -160,7 +160,7 @@ export function DipendentiInserimentoSection({
   }
 
   return (
-    <div ref={listLayoutRef} className={`space-y-4 min-w-0 max-w-full ${listLayoutClassName}`.trim()}>
+    <div className="space-y-4 min-w-0 max-w-full">
       <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-[color:var(--cab-text)]">
           Dipendente: <strong>{targetEmployee.display_name}</strong>
@@ -173,7 +173,7 @@ export function DipendentiInserimentoSection({
         </p>
       </div>
 
-      {listLayout === "desktop" ? (
+      {listSurface === "table" ? (
       <div>
         <GestionaleListTable
           masterScrollScope
@@ -201,9 +201,7 @@ export function DipendentiInserimentoSection({
           ))}
         </GestionaleListTable>
       </div>
-      ) : null}
-
-      {listLayout === "mobile" ? (
+      ) : (
       <ul className="max-h-[min(60vh,32rem)] space-y-2 overflow-y-auto gestionale-scrollbar">
         {days.map((d) => (
           <li key={d.dateYmd}>
@@ -231,7 +229,7 @@ export function DipendentiInserimentoSection({
           </li>
         ))}
       </ul>
-      ) : null}
+      )}
     </div>
   );
 }

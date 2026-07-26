@@ -8,6 +8,7 @@ import {
   prefetchGestionalePage,
 } from "@/src/lib/react-query/prefetch-gestionale-page";
 import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
+import { resolveListSurfaceForPage } from "@/lib/ui/resolve-list-surface.server";
 
 type PreventiviPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -19,11 +20,12 @@ export default async function PreventiviPage({ searchParams }: PreventiviPagePro
   const includeOrdini = tabRaw === "ordini";
 
   const qc = createServerQueryClient();
+  const listSurface = await resolveListSurfaceForPage();
   await prefetchGestionalePage(qc, "preventivi", { includeOrdini });
   return (
     <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.preventivi}>
       <GestionaleHydrationBoundary state={dehydrate(qc)}>
-        <PreventiviViewLazy />
+        <PreventiviViewLazy listSurface={listSurface} listTier="xl" />
       </GestionaleHydrationBoundary>
     </PageLayout>
   );

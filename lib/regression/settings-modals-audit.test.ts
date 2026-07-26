@@ -50,7 +50,10 @@ for (const [name, src] of [
 assert.match(eliminaDlg, /destructive/);
 assert.match(eliminaDlg, /cancelLabel="Annulla"/);
 assert.match(propagaDlg, /Solo configurazione/);
-assert.match(propagaDlg, /Propaga ovunque/);
+assert.match(propagaDlg, /Propaga dati live/);
+assert.match(propagaDlg, /impactSummaries/);
+assert.match(shell, /settingsRenameEngineEntry/);
+assert.match(shell, /propagaImpacts/);
 assert.match(simileDlg, /Inserisci comunque/);
 assert.match(unsavedDlg, /Salva ed esci/);
 

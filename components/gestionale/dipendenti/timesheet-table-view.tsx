@@ -11,10 +11,10 @@ import type {
 } from "@/lib/dipendenti/types";
 import { DipendentiMobileDayList } from "@/components/gestionale/dipendenti/dipendenti-mobile-day-list";
 import { DipendentiTimesheetGrid } from "@/components/gestionale/dipendenti/dipendenti-timesheet-grid";
-import type { GestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
+import type { ListSurface } from "@/lib/ui/resolve-list-surface";
 
 export function TimesheetTableView({
-  listLayout,
+  listSurface,
   monthKey,
   periodDays,
   employees,
@@ -29,7 +29,7 @@ export function TimesheetTableView({
   accentDateYmd = null,
   accentFadingOut = false,
 }: {
-  listLayout: GestionaleListLayout;
+  listSurface: ListSurface;
   monthKey: TimesheetMonthKey;
   periodDays: readonly TimesheetDayInfo[];
   employees: readonly DipendenteTimesheetEmployeeRow[];
@@ -46,35 +46,34 @@ export function TimesheetTableView({
 }) {
   return (
     <div className="flex-safe-col min-w-0 max-w-full gap-3">
-      {listLayout === "desktop" ? (
-      <DipendentiTimesheetGrid
-        monthKey={monthKey}
-        days={periodDays}
-        employees={employees}
-        filterEmployeeId={filterEmployeeId}
-        getCellValue={getCellValue}
-        onCellClick={onCellClick}
-        onEmployeeClick={onEmployeeClick}
-        tipiAssenza={tipiAssenza}
-        addettiRecords={addettiRecords}
-        readOnly={readOnly}
-        accentDateYmd={accentDateYmd}
-        accentFadingOut={accentFadingOut}
-      />
-      ) : null}
-      {listLayout === "mobile" ? (
-      <DipendentiMobileDayList
-        periodDays={periodDays}
-        employees={employees}
-        filterEmployeeId={filterEmployeeId}
-        getCellValue={getCellValue}
-        onDayClick={onCellClick}
-        onEmployeeClick={onEmployeeClick}
-        entries={entries}
-        tipiAssenza={tipiAssenza}
-        readOnly={readOnly}
-      />
-      ) : null}
+      {listSurface === "table" ? (
+        <DipendentiTimesheetGrid
+          monthKey={monthKey}
+          days={periodDays}
+          employees={employees}
+          filterEmployeeId={filterEmployeeId}
+          getCellValue={getCellValue}
+          onCellClick={onCellClick}
+          onEmployeeClick={onEmployeeClick}
+          tipiAssenza={tipiAssenza}
+          addettiRecords={addettiRecords}
+          readOnly={readOnly}
+          accentDateYmd={accentDateYmd}
+          accentFadingOut={accentFadingOut}
+        />
+      ) : (
+        <DipendentiMobileDayList
+          periodDays={periodDays}
+          employees={employees}
+          filterEmployeeId={filterEmployeeId}
+          getCellValue={getCellValue}
+          onDayClick={onCellClick}
+          onEmployeeClick={onEmployeeClick}
+          entries={entries}
+          tipiAssenza={tipiAssenza}
+          readOnly={readOnly}
+        />
+      )}
     </div>
   );
 }

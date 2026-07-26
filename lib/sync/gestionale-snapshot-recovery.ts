@@ -8,7 +8,7 @@ export const OPERATIONAL_DOMAINS = {
   lavorazioni: ["lavorazioni"],
   schede: ["scheda_lavorazione"],
   ricambi: ["magazzino_ricambi", "movimenti_ricambi"],
-  documenti: ["documenti", "lavorazione_documents"],
+  documenti: ["documenti", "pdf_artifacts", "document_access_tokens"],
 } as const;
 
 export type OperationalDomain = keyof typeof OPERATIONAL_DOMAINS;

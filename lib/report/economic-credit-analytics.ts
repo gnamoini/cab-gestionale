@@ -58,7 +58,7 @@ export function computePreventiviWinRate(preventivi: readonly PreventivoRecord[]
     const at = p.dataCreazione || p.aggiornatoAt;
     if (!isoInRange(at, range)) continue;
     total += 1;
-    if (p.stato === "approvato" || p.stato === "convertito") won += 1;
+    if (p.stato === "confermato") won += 1;
   }
   if (total === 0) return null;
   return Math.round((won / total) * 1000) / 10;

@@ -168,9 +168,8 @@ export function buildRevenueCollectionMonthlySeries(
 
 const PREVENTIVO_STATE_LABELS: Record<string, string> = {
   inviato: "Inviati",
-  approvato: "Approvati",
-  convertito: "Convertiti",
-  rifiutato: "Rifiutati",
+  confermato: "Confermati",
+  annullato: "Annullati",
   scaduto: "Scaduti",
 };
 
@@ -189,7 +188,7 @@ export function buildPreventiviFunnel(
     cur.value = roundMoney(cur.value + (p.totaleFinale ?? 0));
     buckets.set(key, cur);
   }
-  const order = ["inviato", "approvato", "convertito", "rifiutato", "scaduto"];
+  const order = ["inviato", "confermato", "annullato", "scaduto"];
   return order
     .filter((id) => buckets.has(id))
     .map((id) => {

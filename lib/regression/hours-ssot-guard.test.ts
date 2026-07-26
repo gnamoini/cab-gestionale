@@ -74,7 +74,12 @@ const prevOnly: PreventivoRecord = {
   manodopera: { oreTotali: 10, righeAddetti: [], costoOrario: 50, scontoPercent: 0 },
   collaudoPrezzo: 0,
   sanificazionePrezzo: 0,
+  noteFinali: "",
+  totaleRicambi: 0,
+  totaleManodopera: 500,
   totaleFinale: 500,
+  createdBy: "test",
+  lastEditedBy: "test",
 };
 
 assert.equal(

@@ -4,11 +4,13 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
+import { reportMetricCardCompactClass } from "@/components/report/report-ui-tokens";
 import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
 import { resolveGestionaleModalRoot } from "@/lib/ui/gestionale-modal-save-prep";
 import {
   dsBtnNeutral,
   dsBtnPrimary,
+  dsFocus,
   dsHubModalFieldLabel,
   dsHubModalFieldValue,
   dsHubModalFieldValueEmpty,
@@ -20,11 +22,10 @@ import {
   dsHubModalPanoramicaReadonlyPillInner,
   dsHubModalPanoramicaSubsection,
   dsHubModalPanoramicaSubsectionTitle,
-  dsHubModalPanoramicaSummary,
-  dsHubModalPanoramicaSummaryItem,
   dsHubModalSection,
   dsHubModalSectionTitle,
   dsInput,
+  dsTypoCaption,
 } from "@/lib/ui/design-system";
 
 export function hubPanoramicaDisplayValue(value: string | undefined | null): string {
@@ -150,9 +151,21 @@ export function HubModalPanoramicaStatusPill({
   return <span className={empty ? dsHubModalFieldValueEmpty : dsHubModalFieldValue}>{empty ? "—" : value}</span>;
 }
 
-export function HubModalPanoramicaSummary({ children }: { children: ReactNode }) {
+function panoramicaSummaryTileClass(interactive: boolean): string {
+  const base = `${reportMetricCardCompactClass} min-h-[6.5rem]`;
+  if (!interactive) return base;
+  return `${base} cursor-pointer text-left transition-[box-shadow,border-color,transform] duration-200 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-border))] hover:shadow-[var(--cab-shadow-md)] active:scale-[0.98] motion-reduce:active:scale-100 ${dsFocus}`;
+}
+
+export function HubModalPanoramicaSummary({
+  children,
+  ariaLabel = "Riepilogo",
+}: {
+  children: ReactNode;
+  ariaLabel?: string;
+}) {
   return (
-    <div className={dsHubModalPanoramicaSummary} role="group" aria-label="Riepilogo lavorazione">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="group" aria-label={ariaLabel}>
       {children}
     </div>
   );
@@ -163,26 +176,51 @@ export function HubModalPanoramicaSummaryItem({
   value,
   pillStyle,
   className = "",
+  onClick,
+  footer,
 }: {
   label: string;
   value: string;
   /** Omit for valori vuoti o testuali senza pill colorata. */
   pillStyle?: CSSProperties;
   className?: string;
+  onClick?: () => void;
+  footer?: ReactNode;
 }) {
   const empty = value === "—" || !value.trim();
-  return (
-    <div className={`${dsHubModalPanoramicaSummaryItem}${className ? ` ${className}` : ""}`}>
-      <span className={dsHubModalFieldLabel}>{label}</span>
-      {pillStyle && !empty ? (
-        <span className={dsHubModalPanoramicaReadonlyPill} style={pillStyle}>
-          <span className={dsHubModalPanoramicaReadonlyPillInner}>{value}</span>
-        </span>
-      ) : (
-        <span className={empty ? dsHubModalFieldValueEmpty : dsHubModalFieldValue}>{value}</span>
-      )}
-    </div>
+  const content = (
+    <>
+      <p className="min-w-0 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+        {label}
+      </p>
+      <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        {pillStyle && !empty ? (
+          <HubModalPanoramicaStatusPill value={value} pillStyle={pillStyle} />
+        ) : (
+          <p
+            className={`text-xl font-semibold leading-none tracking-tight tabular-nums ${
+              empty ? "text-[color:var(--cab-text-muted)]" : "text-[color:var(--cab-text)]"
+            }`}
+          >
+            {empty ? "—" : value}
+          </p>
+        )}
+        {footer ? <div className="min-w-0 shrink">{footer}</div> : null}
+      </div>
+      <div className="mt-auto pt-2" aria-hidden />
+    </>
   );
+  const tileClass = `${panoramicaSummaryTileClass(Boolean(onClick))}${className ? ` ${className}` : ""}`;
+
+  if (onClick) {
+    return (
+      <button type="button" className={tileClass} onClick={onClick}>
+        {content}
+      </button>
+    );
+  }
+
+  return <article className={tileClass}>{content}</article>;
 }
 
 export function HubModalPanoramicaFieldGroup({
@@ -250,20 +288,32 @@ export function HubModalPanoramicaSection({
 export function HubModalPanoramicaSubsection({
   title,
   children,
+  actions,
+  nested = false,
 }: {
   title: string;
   children: ReactNode;
+  actions?: ReactNode;
+  /** Sottosezione annidata (es. singola attrezzatura dentro blocco Attrezzatura). */
+  nested?: boolean;
 }) {
+  const shellClass = nested
+    ? "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))] p-3"
+    : dsHubModalPanoramicaSubsection;
+
   return (
-    <div className={dsHubModalPanoramicaSubsection}>
-      <h4 className={dsHubModalPanoramicaSubsectionTitle}>{title}</h4>
-      <dl className={dsHubModalPanoramicaFieldGrid}>{children}</dl>
+    <div className={shellClass}>
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <h4 className={`${dsHubModalPanoramicaSubsectionTitle}${nested ? " mb-0" : ""}`}>{title}</h4>
+        {actions ? <div className="flex shrink-0 items-start">{actions}</div> : null}
+      </div>
+      <div className={nested ? "mt-2 space-y-2" : "mt-1.5 space-y-2"}>{children}</div>
     </div>
   );
 }
 
 export function HubModalPanoramicaFieldGrid({ children }: { children: ReactNode }) {
-  return <dl className={dsHubModalPanoramicaFieldGrid}>{children}</dl>;
+  return <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{children}</div>;
 }
 
 export function HubModalPanoramicaField({
@@ -277,13 +327,13 @@ export function HubModalPanoramicaField({
 }) {
   const empty = value === "—" || !value.trim();
   return (
-    <div className="min-w-0">
-      <dt className={dsHubModalFieldLabel}>{label}</dt>
-      <dd
-        className={`${empty ? dsHubModalFieldValueEmpty : dsHubModalFieldValue}${mono ? " font-mono tabular-nums" : ""}`}
+    <div className={dsHubModalPanoramicaFieldTile}>
+      <p className={dsHubModalFieldLabel}>{label}</p>
+      <p
+        className={`mt-0.5 min-w-0 ${empty ? dsHubModalFieldValueEmpty : dsHubModalFieldValue}${mono ? " font-mono tabular-nums" : ""}`}
       >
         {empty ? "—" : value}
-      </dd>
+      </p>
     </div>
   );
 }

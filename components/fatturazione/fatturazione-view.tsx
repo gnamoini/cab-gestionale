@@ -41,7 +41,9 @@ import {
   logAutoreLabel,
 } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
-import { useGestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
+import { gestionaleListTierClass } from "@/lib/ui/gestionale-list-responsive";
+import type { GestionaleListPageProps } from "@/lib/ui/gestionale-list-page-props";
+import { useListSurface } from "@/lib/ui/use-list-surface";
 import { dsStackPage } from "@/lib/ui/design-system";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 
@@ -112,7 +114,8 @@ function FatturazionePageMenuRegistrar({ items }: { items: PageActionItem[] }) {
   return null;
 }
 
-export function FatturazioneView() {
+export function FatturazioneView({ listSurface: serverListSurface, listTier = "xl" }: GestionaleListPageProps) {
+  const listSurface = useListSurface(serverListSurface);
   const searchParams = useSearchParams();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -122,7 +125,6 @@ export function FatturazioneView() {
   const authorName = user?.nome?.trim() || user?.email?.split("@")[0]?.trim() || "Operatore";
   const { modules: permModules } = usePermissionsSnapshot();
   const perms = permModules.fatturazione;
-  const { containerRef, layoutClassName } = useGestionaleListLayout();
   const { invoices, links, customers, preventiviBilling, isInitialLoading, refetch } = useInvoicesQuery();
 
   const [detailOpen, setDetailOpen] = useState(false);
@@ -234,6 +236,7 @@ export function FatturazioneView() {
       default:
         return (
           <FatturazioneFattureSection
+            listSurface={listSurface}
             invoices={invoices}
             links={links}
             isLoading={isInitialLoading}
@@ -262,7 +265,7 @@ export function FatturazioneView() {
     <GestionaleSectionGate module="fatturazione">
       <PageActionMenuProvider onRefresh={() => void refetch()}>
         <FatturazionePageMenuRegistrar items={fatturazioneBaseMenuItems} />
-        <div ref={containerRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${layoutClassName}`}>
+        <div className={`lavorazioni-scroll-scope ${layoutPageRoot} ${gestionaleListTierClass(listTier)}`.trim()}>
           <PageHeaderPageActionMenu />
           <div className={dsStackPage}>
             <FatturazioneKpiGrid

@@ -10,7 +10,6 @@ import {
 import {
   buildDocumentBlobStoragePath,
   buildDocumentoStoragePath,
-  buildLavorazioneDocumentStoragePath,
 } from "@/src/lib/storage/storage-paths";
 import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
 import { verifyServerPageWrite } from "@/src/lib/auth/server-permission-guards";
@@ -67,11 +66,12 @@ export async function POST(request: Request) {
     });
   }
 
-  if (!(await verifyServerPageWrite("lavorazioni"))) {
-    return NextResponse.json({ error: "Permesso richiesto" }, { status: 403 });
+  if (source === "lavorazione") {
+    return NextResponse.json(
+      { error: "Upload documenti lavorazione disabilitato. Usare preventivi/DDT ufficiali." },
+      { status: 410 },
+    );
   }
-  const lavorazioneId = body.lavorazioneId?.trim() ?? "";
-  const tipo = body.tipo!;
-  const path = buildLavorazioneDocumentStoragePath(lavorazioneId, tipo);
-  return NextResponse.json({ bucket: STORAGE_BUCKETS.documenti, path });
+
+  return NextResponse.json({ error: "Sorgente upload non supportata" }, { status: 400 });
 }

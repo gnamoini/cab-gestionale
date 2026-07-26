@@ -25,7 +25,7 @@ function mag(id: string, codice: string, descrizione: string): RicambioMagazzino
     note: "",
     createdAt: "",
     updatedAt: "",
-  } as RicambioMagazzino;
+  } as unknown as RicambioMagazzino;
 }
 
 const pool = [mag("r1", "ABC0", "Filtro A"), mag("r2", "XYZ99", "Guarnizione")];

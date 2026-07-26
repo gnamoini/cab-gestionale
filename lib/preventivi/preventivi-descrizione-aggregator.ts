@@ -107,7 +107,7 @@ function scorePreventivoMatch(p: PreventivoRecord, ctx: DescrizionePreventivoCon
     if (a.includes(b) || b.includes(a)) score += 12;
   }
 
-  if (p.stato === "approvato" || p.stato === "convertito") score += 5;
+  if (p.stato === "confermato") score += 5;
   return score;
 }
 

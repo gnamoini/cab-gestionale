@@ -12,6 +12,7 @@ import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import {
   resolveAddettoDisplayLabel,
   resolveAddettoNomeKey,
+  resolveAddettoSnapshotRef,
   type ResolveAddettoDisplayContext,
 } from "@/lib/lavorazioni/resolve-addetto-display";
 import { countSchedePresenti } from "@/lib/schede/schede-ui";
@@ -75,7 +76,19 @@ export function lavorazioneAddettoLabel(
   return resolveAddettoDisplayLabel(row, ctx);
 }
 
-/** Chiave nome per select tabella e lookup colori (non etichetta UI). */
+/** Id addetto per picker tabella (o legacy string se id assente). */
+export function lavorazioneAddettoId(
+  row: LavorazioneListRow,
+  schedeStore: LavorazioneSchedeStore,
+  logs?: readonly LogModificaRow[],
+  addettiRecords?: readonly AddettoRecord[],
+): string {
+  const ctx: ResolveAddettoDisplayContext = { schedeStore, logs, addettiRecords };
+  const ref = resolveAddettoSnapshotRef(row, ctx.schedeStore, ctx.logs);
+  return ref.addettoId?.trim() || ref.addettoLegacy?.trim() || "";
+}
+
+/** @deprecated Usare lavorazioneAddettoId o getAddettoColorKey */
 export function lavorazioneAddettoNomeKey(
   row: LavorazioneListRow,
   schedeStore: LavorazioneSchedeStore,

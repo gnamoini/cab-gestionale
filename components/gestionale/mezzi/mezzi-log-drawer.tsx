@@ -55,6 +55,9 @@ export function MezziLogDrawer({
                   autore: e.autore,
                   at: e.at,
                   changes: e.changes,
+                  azione: e.azione,
+                  tipoRiga: e.tipoRiga,
+                  modifiche: e.modifiche,
                 });
                 return (
                   <li key={e.id}>

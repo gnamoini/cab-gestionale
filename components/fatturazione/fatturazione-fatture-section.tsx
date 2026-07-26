@@ -40,11 +40,7 @@ import {
   PageToolbarCtaLabel,
   PageToolbarResultCount,
 } from "@/components/design-system";
-import {
-  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
-  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
-  useGestionaleListLayout,
-} from "@/lib/ui/use-gestionale-list-layout";
+import type { ListSurface } from "@/lib/ui/resolve-list-surface";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import {
@@ -70,6 +66,7 @@ const FatturazioneAdvancedFilterPanel = dynamic(
 );
 
 export type FatturazioneFattureSectionProps = {
+  listSurface: ListSurface;
   invoices: InvoiceRow[];
   links: InvoiceLinkRow[];
   isLoading: boolean;
@@ -81,6 +78,7 @@ export type FatturazioneFattureSectionProps = {
 };
 
 export function FatturazioneFattureSection({
+  listSurface,
   invoices,
   links,
   isLoading,
@@ -91,7 +89,6 @@ export function FatturazioneFattureSection({
   externalFilters,
 }: FatturazioneFattureSectionProps) {
   const userId = useAuthUserId();
-  const { layout } = useGestionaleListLayout();
   const pageSize = useResponsiveListPageSize();
   const [filters, setFilters] = useState(FATTURAZIONE_PAGE_FILTERS_EMPTY);
   const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
@@ -226,10 +223,9 @@ export function FatturazioneFattureSection({
       </section>
       {isLoading ? (
         <FatturazioneTabSection mode="skeleton" />
-      ) : layout === "desktop" ? (
+      ) : listSurface === "table" ? (
         <GestionaleListTable
           wrapClassName="mt-4"
-          visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
           headRow={
             <>
               <GlobalTableSortTh label="N." columnKey="numero" sortColumn={sortCol} sortPhase={sortPhase} onSort={() => onSort("numero")} />
@@ -253,9 +249,8 @@ export function FatturazioneFattureSection({
         >
           {null}
         </GestionaleListTable>
-      ) : null}
-      {!isLoading && layout === "mobile" ? (
-        <div className={`mt-4 space-y-3 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
+      ) : (
+        <div className="mt-4 space-y-3">
           {pagedRows.length === 0 ? (
             <p className={gestionaleListTableMobileEmptyClass}>Nessuna fattura corrisponde ai criteri selezionati.</p>
           ) : (
@@ -281,7 +276,7 @@ export function FatturazioneFattureSection({
             ))
           )}
         </div>
-      ) : null}
+      )}
       {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} /> : null}
     </ShellCard>
   );

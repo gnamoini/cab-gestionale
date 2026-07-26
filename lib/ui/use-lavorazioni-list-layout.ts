@@ -1,31 +1,18 @@
-"use client";
-
-import {
-  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
-  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
-  gestionaleListLayoutClassName,
-  gestionaleListLayoutViewportMq,
-  resolveGestionaleListLayout,
-  type GestionaleListLayout,
-  useGestionaleListLayout,
-} from "@/lib/ui/use-gestionale-list-layout";
-
+/**
+ * @deprecated Usare tier statico + listSurface. Re-export costanti tier xl.
+ */
 export {
+  gestionaleListLayoutViewportMq,
+  gestionaleListTierClass,
   GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
   GESTIONALE_LIST_MOBILE_ONLY_CLASS,
-  gestionaleListLayoutClassName as lavorazioniListLayoutClassName,
-};
+} from "@/lib/ui/gestionale-list-responsive";
 
-export const LAVORAZIONI_LIST_DESKTOP_MIN_VIEWPORT = 1280;
-export const LAVORAZIONI_LIST_DESKTOP_MIN_CONTAINER = 1024;
+import { gestionaleListLayoutViewportMq } from "@/lib/ui/gestionale-list-responsive";
+
 export const LAVORAZIONI_LIST_DESKTOP_VIEWPORT_MQ = gestionaleListLayoutViewportMq("xl");
 
-export type LavorazioniListLayout = GestionaleListLayout;
-
-export function resolveLavorazioniListLayout(viewportWidth: number, containerWidth: number): LavorazioniListLayout {
-  return resolveGestionaleListLayout("xl", viewportWidth, containerWidth);
-}
-
-export function useLavorazioniListLayout() {
-  return useGestionaleListLayout({ tier: "xl" });
+/** @deprecated Non usare — layout da listSurface server-side. */
+export function useLavorazioniListLayout(): never {
+  throw new Error("useLavorazioniListLayout is removed — pass listSurface from page props");
 }

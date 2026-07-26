@@ -3,6 +3,7 @@ import {
   type MezzoIngressoIdent,
   type MezzoResolutionResult,
 } from "@/lib/domain/mezzo/mezzo-resolution";
+import { normalizeTarga, normalizeVinIdentity } from "@/lib/domain/mezzo/mezzo-identity";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 
 function normIdent(v: string): string {
@@ -21,13 +22,23 @@ function matricolaComparable(v: string | null | undefined): string {
   return normIdent(m);
 }
 
-/** Tutti i mezzi con targa esatta (case-insensitive). */
+/** Tutti i mezzi con targa normalizzata (SSOT normalizeVehicleIdentifier). */
 export function findMezziByTarga(mezzi: readonly MezzoGestito[], targa: string): MezzoGestito[] {
-  const t = normIdent(targa);
+  const t = normalizeTarga(targa);
   if (!t) return [];
   return mezzi.filter((x) => {
-    const xt = x.targa?.trim();
-    return xt && xt !== "—" && normIdent(xt) === t;
+    const xt = normalizeTarga(x.targa);
+    return xt && xt === t;
+  });
+}
+
+/** Tutti i mezzi con VIN normalizzato. */
+export function findMezziByVin(mezzi: readonly MezzoGestito[], vin: string): MezzoGestito[] {
+  const v = normalizeVinIdentity(vin);
+  if (!v) return [];
+  return mezzi.filter((x) => {
+    const xv = normalizeVinIdentity(x.vin);
+    return xv && xv === v;
   });
 }
 
@@ -87,6 +98,18 @@ export function resolveMezzoByIdentFromCatalog(
     nScuderia: ident.nScuderia?.trim() || undefined,
     vin: ident.vin?.trim() || undefined,
   };
+
+  const byVin = findMezziByVin(mezzi, ident.vin ?? "");
+  if (byVin.length === 1) {
+    return { status: "resolved", mezzoId: byVin[0]!.id, source: "ident" };
+  }
+  if (byVin.length > 1) {
+    return {
+      status: "ambiguous",
+      candidates: buildCandidatesFromMatches(byVin, ["vin:exact"]),
+      identUsed,
+    };
+  }
 
   const byTarga = findMezziByTarga(mezzi, ident.targa ?? "");
   if (byTarga.length === 1) {

@@ -62,6 +62,17 @@ function cleanPayload(input: DdtCreateInput): Record<string, unknown> {
   };
 }
 
+async function persistDdtOfficialPdf(ddtId: string): Promise<void> {
+  try {
+    await fetch(`/api/ddt/${encodeURIComponent(ddtId)}/official-pdf`, {
+      method: "POST",
+      credentials: "same-origin",
+    });
+  } catch {
+    // ponytail: best-effort; preview fallback rigenera on-demand
+  }
+}
+
 export const ddtService = {
   async getList() {
     try {
@@ -137,6 +148,7 @@ export const ddtService = {
         azione: "CREATE",
         payload: auditSnapshot({ cliente: input.cliente_label, origine: input.origine }),
       });
+      void persistDdtOfficialPdf(id);
       return success({ id });
     } catch (e) {
       return serviceFailFromError(e);
@@ -175,6 +187,7 @@ export const ddtService = {
           preventivo_id: input.preventivo_id,
         }),
       });
+      void persistDdtOfficialPdf(id);
       return success({ id });
     } catch (e) {
       return serviceFailFromError(e);

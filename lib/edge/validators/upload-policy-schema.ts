@@ -1,5 +1,4 @@
 import { STORAGE_LIMITS } from "@/src/lib/storage/storage-config";
-import type { LavorazioneDocumentStorageTipo } from "@/src/lib/storage/storage-paths";
 
 export const ALLOWED_ARCHIVE_MIME = new Set([
   "application/pdf",
@@ -16,8 +15,6 @@ export const ALLOWED_ARCHIVE_MIME = new Set([
   "application/octet-stream",
 ]);
 
-const LAVORAZIONE_TIPI = new Set<LavorazioneDocumentStorageTipo>(["preventivo_upload", "ddt"]);
-
 export type UploadPolicyBody = {
   source?: "archive" | "lavorazione";
   fileName?: string;
@@ -26,12 +23,12 @@ export type UploadPolicyBody = {
   contentHash?: string;
   categoria?: string;
   lavorazioneId?: string;
-  tipo?: LavorazioneDocumentStorageTipo;
+  tipo?: string;
 };
 
 export type UploadPolicyValidationResult =
   | { ok: true; normalized: { source: "archive" | "lavorazione"; fileName: string; fileSize: number; mimeType: string } }
-  | { ok: false; status: 400 | 413; error: string };
+  | { ok: false; status: 400 | 410 | 413; error: string };
 
 export function validateUploadPolicyBody(body: UploadPolicyBody): UploadPolicyValidationResult {
   const source = body.source === "lavorazione" ? "lavorazione" : "archive";
@@ -54,15 +51,11 @@ export function validateUploadPolicyBody(body: UploadPolicyBody): UploadPolicyVa
     return { ok: true, normalized: { source, fileName, fileSize, mimeType } };
   }
 
-  if (mimeType !== "application/pdf") {
-    return { ok: false, status: 400, error: "Solo PDF consentiti per documenti lavorazione" };
+  if (source === "lavorazione") {
+    return { ok: false, status: 410, error: "Upload documenti lavorazione disabilitato" };
   }
-  const lavorazioneId = body.lavorazioneId?.trim() ?? "";
-  const tipo = body.tipo;
-  if (!lavorazioneId || !tipo || !LAVORAZIONE_TIPI.has(tipo)) {
-    return { ok: false, status: 400, error: "lavorazioneId e tipo richiesti" };
-  }
-  return { ok: true, normalized: { source, fileName, fileSize, mimeType } };
+
+  return { ok: false, status: 400, error: "Sorgente upload non supportata" };
 }
 
 export function parseContentHash(raw: string | undefined): string | null {

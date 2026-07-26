@@ -63,10 +63,8 @@ import {
   gestionaleListTableActionsGroupEnd,
 } from "@/lib/ui/gestionale-list-table";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
-import {
-  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
-  useGestionaleListLayout,
-} from "@/lib/ui/use-gestionale-list-layout";
+import { gestionaleListTierClass } from "@/lib/ui/gestionale-list-responsive";
+import type { GestionaleListPageProps } from "@/lib/ui/gestionale-list-page-props";
 
 export type SecurityUserSortKey = "nome" | "username" | "email" | "ruolo" | "clienteRef" | "clientAccess" | "stato";
 
@@ -454,18 +452,26 @@ function SecurityUserMobileCard({
   );
 }
 
-function SecurityUsersTableSkeleton() {
+function SecurityUsersTableSkeleton({ listSurface }: { listSurface: GestionaleListPageProps["listSurface"] }) {
+  if (listSurface === "cards") {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="min-h-[8rem] animate-pulse rounded-xl border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-2)]" />
+        ))}
+      </div>
+    );
+  }
   return (
     <LoadingTableSkeleton
       preset="generic"
-      visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
       wrapClassName={dsScrollbar}
       className="min-h-[24rem]"
     />
   );
 }
 
-type Props = {
+type Props = GestionaleListPageProps & {
   rows: EditableSecurityUser[];
   loading: boolean;
   readOnly: boolean;
@@ -478,6 +484,8 @@ type Props = {
 };
 
 export function SecurityUsersTable({
+  listSurface,
+  listTier = "lg",
   rows,
   loading,
   readOnly,
@@ -489,7 +497,6 @@ export function SecurityUsersTable({
   onRoleChange,
 }: Props) {
   const userId = useAuthUserId();
-  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "lg" });
   const queryClient = useQueryClient();
   const gestToast = useGestionaleToast();
   const [search, setSearch] = useState("");
@@ -600,8 +607,8 @@ export function SecurityUsersTable({
 
   if (loading) {
     return (
-      <div ref={listLayoutRef} className={`min-w-0 max-w-full ${listLayoutClassName}`.trim()}>
-        <SecurityUsersTableSkeleton />
+      <div className={`min-w-0 max-w-full ${gestionaleListTierClass(listTier)}`.trim()}>
+        <SecurityUsersTableSkeleton listSurface={listSurface} />
       </div>
     );
   }
@@ -617,7 +624,7 @@ export function SecurityUsersTable({
   };
 
   return (
-    <div ref={listLayoutRef} className={`min-w-0 max-w-full ${listLayoutClassName}`.trim()}>
+    <div className={`min-w-0 max-w-full ${gestionaleListTierClass(listTier)}`.trim()}>
     <>
       <PageToolbar
         className="mb-3"
@@ -692,10 +699,8 @@ export function SecurityUsersTable({
       />
 
       {filtered.length === 0 ? (
-        <>
-          {listLayout === "desktop" ? (
+        listSurface === "table" ? (
           <GestionaleListTable
-            visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
             className={securityUsersTableClass}
             colSpan={SECURITY_USERS_COL_COUNT}
             empty
@@ -714,15 +719,13 @@ export function SecurityUsersTable({
           >
             {null}
           </GestionaleListTable>
-          ) : (
+        ) : (
           <p className={gestionaleListTableMobileEmptyClass}>Nessun utente corrisponde ai filtri.</p>
-          )}
-        </>
+        )
       ) : (
         <>
-          {listLayout === "desktop" ? (
+          {listSurface === "table" ? (
           <GestionaleListTable
-            visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
             className={securityUsersTableClass}
             colSpan={SECURITY_USERS_COL_COUNT}
             colgroup={
@@ -764,15 +767,13 @@ export function SecurityUsersTable({
               <SecurityUserTableRow key={row.id} row={row} {...rowProps} />
             ))}
           </GestionaleListTable>
-          ) : null}
-
-          {listLayout === "mobile" ? (
+          ) : (
           <div className="space-y-3">
             {paged.map((row) => (
               <SecurityUserMobileCard key={row.id} row={row} {...rowProps} />
             ))}
           </div>
-          ) : null}
+          )}
 
           {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={pagerLabel} /> : null}
         </>

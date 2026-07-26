@@ -50,4 +50,32 @@ function mezzoRow(partial: Partial<MezzoRow> & Pick<MezzoRow, "id">): MezzoRow {
   assert.match(vm.oggettoRiga, /Bucher/i);
 }
 
+{
+  const entry = logModificaRowToMezziHubLogEntry(
+    {
+      id: "log-mezzo-resolved",
+      entita: "mezzi",
+      entita_id: "96edd259-0000-0000-0000-000000000001",
+      azione: "MEZZO_RESOLVED_EXISTING",
+      autore_id: "5d421a15-0000-0000-0000-000000000000",
+      created_at: "2026-07-25T18:37:00Z",
+      payload: {
+        mezzo_id: "96edd259-0000-0000-0000-000000000001",
+        matched_by: "targa_norm",
+        incoming_ident: { targa: "GF004AT", vin: null },
+        conflicts: [],
+      },
+      profiles: { id: "5d421a15-0000-0000-0000-000000000000", nome: "Giorgio" },
+    },
+    { currentUserId: null, currentDisplayName: "" },
+  );
+  assert.equal(entry.autore, "Giorgio");
+  assert.equal(entry.mezzo, "GF004AT");
+  assert.equal(entry.tipoRiga, "COLLEGAMENTO MEZZO");
+  const vm = buildMezziGestionaleLogViewModel(entry);
+  assert.match(vm.modificaRiga, /Collegato al mezzo già presente/i);
+  assert.doesNotMatch(vm.modificaRiga, /MEZZO_RESOLVED_EXISTING/);
+  assert.equal(vm.tipoRiga, "COLLEGAMENTO MEZZO");
+}
+
 console.log("mezzi-log-label.test.ts OK");

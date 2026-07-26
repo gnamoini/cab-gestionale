@@ -1,25 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-
-export type NotificationPreferenceRow = {
-  category: string;
-  push_enabled: boolean;
-  quiet_hours_start: string | null;
-  quiet_hours_end: string | null;
-};
+import type { NotificationSettingsViewModel } from "@/lib/notifications/preferences/notification-preferences-api";
 
 export function useNotificationPreferences() {
-  const [rows, setRows] = useState<NotificationPreferenceRow[]>([]);
+  const [vm, setVm] = useState<NotificationSettingsViewModel>({ pages: [] });
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const client = await getBrowserSupabase();
-      const { data } = await client.from("notification_preferences").select("*");
-      setRows((data ?? []) as NotificationPreferenceRow[]);
+      const res = await fetch("/api/notifications/preferences");
+      if (res.ok) {
+        setVm((await res.json()) as NotificationSettingsViewModel);
+      }
     } finally {
       setLoading(false);
     }
@@ -29,29 +23,35 @@ export function useNotificationPreferences() {
     void reload();
   }, [reload]);
 
-  const upsert = useCallback(
-    async (category: string, patch: Partial<NotificationPreferenceRow>) => {
-      const client = await getBrowserSupabase();
-      const { data: auth } = await client.auth.getUser();
-      const userId = auth.user?.id;
-      if (!userId) return false;
-      const { data: profile } = await client.from("profiles").select("company_id").eq("id", userId).maybeSingle();
-      const companyId = (profile as { company_id?: string } | null)?.company_id;
-      if (!companyId) return false;
-      const { error } = await client.from("notification_preferences").upsert({
-        user_id: userId,
-        category,
-        company_id: companyId,
-        push_enabled: patch.push_enabled ?? true,
-        quiet_hours_start: patch.quiet_hours_start ?? "22:00",
-        quiet_hours_end: patch.quiet_hours_end ?? "07:00",
-        updated_at: new Date().toISOString(),
+  const setEnabled = useCallback(
+    async (notificationEventId: string, enabled: boolean) => {
+      const res = await fetch(`/api/notifications/preferences/${encodeURIComponent(notificationEventId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
       });
-      if (!error) await reload();
-      return !error;
+      if (res.ok) await reload();
+      return res.ok;
     },
     [reload],
   );
 
-  return { rows, loading, reload, upsert };
+  const restoreDefault = useCallback(
+    async (notificationEventId: string) => {
+      const res = await fetch(`/api/notifications/preferences/${encodeURIComponent(notificationEventId)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) await reload();
+      return res.ok;
+    },
+    [reload],
+  );
+
+  const restoreAllDefaults = useCallback(async () => {
+    const res = await fetch("/api/notifications/preferences/restore-all", { method: "DELETE" });
+    if (res.ok) await reload();
+    return res.ok;
+  }, [reload]);
+
+  return { vm, loading, reload, setEnabled, restoreDefault, restoreAllDefaults };
 }

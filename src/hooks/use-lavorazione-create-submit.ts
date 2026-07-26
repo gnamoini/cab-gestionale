@@ -13,6 +13,7 @@ import { useLavorazioneCreateMutation } from "@/src/hooks/gestionale/use-lavoraz
 import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
 import { logMezzoSchedaConflictTelemetry } from "@/lib/domain/mezzo/mezzo-scheda-conflict-telemetry";
 import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
+import { applyMezzoAssociationChangeOrThrow } from "@/lib/mezzi/mezzo-association-write-bridge";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { loadLavorazioneSchedeStore } from "@/lib/schede/lavorazioni-schede-storage";
 import { persistSchedeStore } from "@/lib/schede/schede-sync-adapter";
@@ -39,6 +40,12 @@ import { incrementHealthCounter } from "@/lib/observability/runtime-health";
 import { useSchedaIngressoUnknownSettingsGate } from "@/src/hooks/use-scheda-ingresso-unknown-settings-gate";
 import { useSchedaIngressoSaveGate } from "@/src/hooks/use-scheda-ingresso-save-gate";
 import { maybePublishTagliandoDueOnInterventoCreate } from "@/lib/maintenance-plans/tagliando-due-notification.client";
+import { assignTagliandoPresetToMezzoOnSave } from "@/lib/maintenance-plans/assign-tagliando-preset-to-mezzo.client";
+import {
+  DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS,
+  tagliandoFieldsToLavorazionePatch,
+  type TagliandoLavorazioneFields,
+} from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
 
 type LavorazioneCreateFormSections = {
   fields: SchedaIngressoFields;
@@ -117,6 +124,10 @@ export function useLavorazioneCreateSubmit({
   const mezziCatalog = useMemo(
     () => sharedMezziCatalog ?? (mezziUi.length > 0 ? mezziUi : [...mezzi]),
     [sharedMezziCatalog, mezziUi, mezzi],
+  );
+
+  const [tagliandoFields, setTagliandoFields] = useState<TagliandoLavorazioneFields>(
+    DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS,
   );
 
   const formEngine = useFormEngineSections<LavorazioneCreateFormSections>({
@@ -420,6 +431,7 @@ export function useLavorazioneCreateSubmit({
                     writeContext: writeContext ?? { source: "manual", mezzoUpdatePlan },
                     create: (data) => createMezzo.mutateAsync(data),
                     update: (id, data) => updateMezzo.mutateAsync({ id, data }),
+                    applyAssociationChange: applyMezzoAssociationChangeOrThrow,
                   }),
                 createLavorazione: async (input) => {
                   if (!input.mezzo_id) {
@@ -435,6 +447,7 @@ export function useLavorazioneCreateSubmit({
                     created_by: input.created_by,
                     target_type: input.target_type,
                     attrezzatura_id: input.attrezzatura_id,
+                    ...tagliandoFieldsToLavorazionePatch(tagliandoFields),
                   });
                 },
                 persistScheda: async ({ lavorazioneId, fields: f, createdBy: by }) => {
@@ -487,6 +500,18 @@ export function useLavorazioneCreateSubmit({
             }
 
             await commitLavorazioneCreateSuccess(qc, tx.lavorazioneId);
+            const assignRes = await assignTagliandoPresetToMezzoOnSave({
+              mezzoId: tx.mezzoId,
+              tagliandoFields,
+            });
+            if (!assignRes.ok) {
+              gestToast.warning(assignRes.error);
+            } else if (assignRes.assigned) {
+              gestToast.successOnce(
+                `tagliando-preset-assigned-${tx.lavorazioneId}`,
+                "Preset assegnato al mezzo nella sezione tagliandi.",
+              );
+            }
             if (createdBy) {
               maybePublishTagliandoDueOnInterventoCreate({
                 userId: createdBy,
@@ -540,6 +565,7 @@ export function useLavorazioneCreateSubmit({
       qc,
       onCreated,
       onClose,
+      tagliandoFields,
     ],
   );
 
@@ -589,5 +615,7 @@ export function useLavorazioneCreateSubmit({
     gateSave: saveGate.gateSave,
     lavorazioneNote,
     setLavorazioneNote,
+    tagliandoFields,
+    setTagliandoFields,
   };
 }

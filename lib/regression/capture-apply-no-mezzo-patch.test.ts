@@ -68,16 +68,22 @@ async function run() {
       updatePlan: MEZZO_UPDATE_SCHEDA_ONLY,
     },
     {
-      createMezzo: async () => {
-        throw new Error("no create");
-      },
+      resolveMezzo: async () => ({
+        row: { id: "m1" } as never,
+        created: false,
+        matchedBy: "targa_norm" as const,
+        conflicts: [],
+      }),
       updateMezzo: async () => {
         updateCalls += 1;
         return { id: "m1" } as never;
       },
-      createAttrezzatura: async () => ({ id: "a1" }) as never,
-      updateAttrezzatura: async () => ({ id: "a1" }) as never,
-      findAttrezzaturaByMatricola: async () => null,
+      resolveAttrezzatura: async () => ({
+        row: { id: "a1", mezzo_id: "m1" } as never,
+        created: false,
+        matchedBy: "hint_id" as const,
+        conflicts: [],
+      }),
     },
   );
   assert.equal(updateCalls, 0, "MEZZO_UPDATE_SCHEDA_ONLY non deve patchare mezzo esistente");

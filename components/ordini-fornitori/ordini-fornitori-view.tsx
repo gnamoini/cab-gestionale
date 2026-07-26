@@ -48,10 +48,7 @@ import type { OrdineFornitoreEditorImportMeta, OrdineFornitoreImportAnalyzeResul
 import type { OrdineFornitoreRecord, OrdineFornitoreSortKey, OrdineFornitoreStatus } from "@/lib/ordini-fornitori/types";
 import { ordiniFornitoriListQueryKey } from "@/lib/render/query-key-factory";
 import { clearDedupForQueryKey } from "@/lib/query/query-dedup-registry";
-import {
-  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
-  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
-} from "@/lib/ui/use-gestionale-list-layout";
+import type { ListSurface } from "@/lib/ui/resolve-list-surface";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import {
@@ -145,9 +142,11 @@ function compareOrdini(a: OrdineFornitoreRecord, b: OrdineFornitoreRecord, key: 
 }
 
 export function OrdiniFornitoriView({
+  listSurface,
   canRead,
   canWrite,
 }: {
+  listSurface: ListSurface;
   /** Permessi pagina Preventivi (read = visualizza, write = modifica). */
   canRead: boolean;
   canWrite: boolean;
@@ -497,23 +496,19 @@ export function OrdiniFornitoriView({
             </button>
           </div>
         ) : isLoading ? (
-          <>
-            <LoadingTableSkeleton
-              preset="generic"
-              wrapClassName={`mt-4 ${GESTIONALE_LIST_DESKTOP_ONLY_CLASS}`}
-              actionButtonCount={5}
-            />
-            <div className={`mt-4 space-y-3 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
+          listSurface === "table" ? (
+            <LoadingTableSkeleton preset="generic" wrapClassName="mt-4" actionButtonCount={5} />
+          ) : (
+            <div className="mt-4 space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
                 <LoadingCardSkeleton key={i} minHeightClass="min-h-[120px]" rows={3} />
               ))}
             </div>
-          </>
-        ) : (
-          <>
-            <GestionaleListTable
+          )
+        ) : listSurface === "table" ? (
+          <GestionaleListTable
               masterScrollScope={false}
-              wrapClassName={`mt-4 ${GESTIONALE_LIST_DESKTOP_ONLY_CLASS}`}
+              wrapClassName="mt-4"
               headRow={
                 <>
                   <GlobalTableSortTh label="Numero" columnKey="numero" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
@@ -610,8 +605,8 @@ export function OrdiniFornitoriView({
                   </tr>
                 ))}
             </GestionaleListTable>
-
-            <div className={`mt-4 space-y-3 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
+        ) : (
+            <div className="mt-4 space-y-3">
               {pageRows.length === 0 ? (
                 <p className={gestionaleListTableMobileEmptyClass}>{tableEmptyMessage}</p>
               ) : (
@@ -656,7 +651,6 @@ export function OrdiniFornitoriView({
               ))
             )}
             </div>
-          </>
         )}
 
         {showPager ? (

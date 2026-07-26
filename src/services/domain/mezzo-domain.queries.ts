@@ -25,6 +25,8 @@ export const mezzoDomainQueryKeys = {
   preventivi: (mezzoId: string) => [...mezzoDomainQueryKeys.root, "preventivi", mezzoId] as const,
   documenti: (mezzoId: string, marca: string) => [...mezzoDomainQueryKeys.root, "documenti", mezzoId, marca] as const,
   log: (mezzoId: string) => [...mezzoDomainQueryKeys.root, "log", mezzoId] as const,
+  anagraficaHistory: (mezzoId: string, limit = 20) =>
+    [...mezzoDomainQueryKeys.root, "anagraficaHistory", mezzoId, limit] as const,
   movimenti: (mezzoId: string, lavorazioneIdsKey: string) =>
     [...mezzoDomainQueryKeys.root, "movimenti", mezzoId, lavorazioneIdsKey] as const,
 };

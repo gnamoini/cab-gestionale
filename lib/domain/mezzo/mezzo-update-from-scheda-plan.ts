@@ -8,6 +8,8 @@ export type MezzoUpdateFromSchedaPlan = {
   meteringFields: MezzoMeteringFieldKey[];
   forceDespiteStale?: boolean;
   mezzoOCC?: { updatedAtAtLinkTime: string };
+  /** Utente ha confermato aggiornamento associazione (cliente/cantiere/utilizzatore). */
+  associationChangeConfirmed?: boolean;
 };
 
 export const MEZZO_UPDATE_SCHEDA_ONLY: MezzoUpdateFromSchedaPlan = {

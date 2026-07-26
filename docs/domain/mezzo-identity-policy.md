@@ -20,7 +20,8 @@
 |-------|-----------------|
 | `mezzi.id` | Sì (PK) |
 | `telaio_num` / VIN normalizzato | Sì (indice parziale) |
-| `targa`, `matricola`, `numero_scuderia` | **No** |
+| `targa` (normalizzata) | **Sì** (indice parziale globale) |
+| `matricola`, `numero_scuderia` | **No** |
 
 ## Esempi validi / non validi
 
@@ -65,9 +66,39 @@ const explicit = resolveExplicitMezzo(preferredMezzoId, catalog);
 if (explicit.status === "error") throw new PreferredMezzoInvalidError(...);
 ```
 
+## Association lifecycle
+
+### SSOT
+
+| Responsabilità | Dove |
+|---|---|
+| Stato corrente associazione | `mezzi.cliente`, `mezzi.utilizzatore`, `mezzi.meta.cantiere` |
+| Snapshot per lavorazione | `scheda_lavorazione.contenuto` (immutabile per quella lavorazione) |
+| Check unificato | `checkAssociationChange()` in `lib/domain/mezzo/mezzo-association.ts` |
+| Write path | `mezziService.applyAssociationChange()` — **vietato** `mezziService.update` con campi associazione |
+
+### Campi associazione
+
+Definiti in `MEZZO_ASSOCIATION_FIELD_DEFS`: cliente, cantiere, utilizzatore.
+
+### Regole
+
+1. **Warning** solo se mezzo **già esistente** e almeno un campo associazione differisce (mai in creazione primo mezzo).
+2. **Conferma esplicita** obbligatoria prima di aggiornare l'associazione sul mezzo.
+3. **Annulla** = abort del salvataggio (scheda ingresso / edit hub).
+4. **Storico lavorazioni** = snapshot scheda ingresso; non retroattivo.
+5. **Legacy** senza scheda ingresso: nessuna migrazione automatica; fallback su mezzo live invariato.
+6. **`event_kind`** in `mezzo_anagrafica_history` è solo per rendering/filtri — la logica deriva da `changed_fields` e valori.
+7. **OCC** su `mezzi.updated_at` (esistente) — conflitto esplicito, no last-writer silenzioso.
+
+### Legacy lavorazioni
+
+Lavorazioni senza scheda ingresso persistita: comportamento attuale invariato. Eventuale migrazione dati futura dovrà popolare snapshot in `scheda_lavorazione`.
+
 ## Riferimenti codice
 
 - Contract: `lib/domain/mezzo/mezzo-resolution.ts`
 - Scheda ingresso: `lib/domain/mezzo/resolve-mezzo-from-scheda.ts`
 - Import scoring: `lib/data-import/entities/mezzi/mezzi-import-match-score.ts`
 - Audit runtime: tabella `mezzo_resolution_events`
+- Associazione: `lib/domain/mezzo/mezzo-association.ts`, `mezziService.applyAssociationChange`

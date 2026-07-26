@@ -16,17 +16,31 @@ import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { MezzoInterventoLavorazione } from "@/lib/mezzi/types";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
+import type { MaintenanceServiceHistoryView } from "@/lib/maintenance-plans/types";
+import type { MaintenanceTimelineExtraEvent } from "@/lib/maintenance-plans/v2-types";
+import { parseFullPresetSnapshot } from "@/lib/maintenance-plans/build-full-preset-snapshot";
+import { resolveCompliancePct, parseComplianceReview } from "@/lib/maintenance-plans/resolve-compliance-pct";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { DocumentoRow, LogModificaRow, MezzoRow, MovimentoRicambioRow, PreventivoRow, AssetTimelineProjectionRow } from "@/src/types/supabase-tables";
 
 export type MezzoHubKpi = {
   totaleLavorazioni: number;
   lavorazioneAttiva: boolean;
+  tagliandiEffettuati: number;
   documentiCount: number;
   preventiviCount: number;
 };
 
-export type MezzoTimelineKind = "lavorazione" | "log" | "movimento" | "lifecycle";
+export type MezzoTimelineKind =
+  | "lavorazione"
+  | "log"
+  | "movimento"
+  | "lifecycle"
+  | "tagliando"
+  | "preset_assigned"
+  | "preset_changed"
+  | "compliance_reviewed"
+  | "forecast_recomputed";
 
 export type MezzoTimelineItem = {
   id: string;
@@ -60,6 +74,8 @@ export type MezzoQueriesSnapshot = {
   logRows: LogModificaRow[];
   movimentiRows: MovimentoRicambioRow[];
   lifecycleRows?: AssetTimelineProjectionRow[];
+  maintenanceHistory?: MaintenanceServiceHistoryView[];
+  maintenanceTimelineExtras?: MaintenanceTimelineExtraEvent[];
 };
 
 type MezzoHubCore = {
@@ -70,6 +86,8 @@ type MezzoHubCore = {
   logRows: LogModificaRow[];
   movimentiRows: MovimentoRicambioRow[];
   lifecycleRows?: AssetTimelineProjectionRow[];
+  maintenanceHistory?: MaintenanceServiceHistoryView[];
+  maintenanceTimelineExtras?: MaintenanceTimelineExtraEvent[];
 };
 
 function toCore(snapshot: MezzoQueriesSnapshot): MezzoHubCore | null {
@@ -82,6 +100,8 @@ function toCore(snapshot: MezzoQueriesSnapshot): MezzoHubCore | null {
     logRows: snapshot.logRows,
     movimentiRows: snapshot.movimentiRows,
     lifecycleRows: snapshot.lifecycleRows,
+    maintenanceHistory: snapshot.maintenanceHistory,
+    maintenanceTimelineExtras: snapshot.maintenanceTimelineExtras,
   };
 }
 
@@ -89,6 +109,7 @@ function deriveKpi(core: MezzoHubCore): MezzoHubKpi {
   return {
     totaleLavorazioni: core.lavorazioni.length,
     lavorazioneAttiva: mezzoHaLavorazioneAttivaDb(core.mezzoGestito, core.lavorazioni),
+    tagliandiEffettuati: core.maintenanceHistory?.length ?? 0,
     documentiCount: core.documentiRows.length,
     preventiviCount: core.preventiviRows.length,
   };
@@ -150,6 +171,29 @@ function buildTimeline(core: MezzoHubCore): MezzoTimelineItem[] {
       at: row.event_at,
       title: row.label,
       subtitle: row.event_subtype,
+    });
+  }
+
+  for (const svc of core.maintenanceHistory ?? []) {
+    const snap = parseFullPresetSnapshot(svc.presetSnapshot);
+    const pct = resolveCompliancePct(svc.complianceAuto, parseComplianceReview(svc.complianceReview));
+    items.push({
+      id: `tag-${svc.id}`,
+      kind: "tagliando",
+      at: `${svc.performedAt}T12:00:00`,
+      title: `Tagliando · ${snap?.versionLabel ?? svc.versionLabel ?? "—"}${pct != null ? ` · ${pct}%` : ""}`,
+      subtitle: svc.planNome,
+      ref: svc.lavorazioneId ? { lavorazioneId: svc.lavorazioneId, origine: "storico" } : undefined,
+    });
+  }
+
+  for (const extra of core.maintenanceTimelineExtras ?? []) {
+    items.push({
+      id: extra.id,
+      kind: extra.kind,
+      at: extra.at,
+      title: extra.title,
+      subtitle: extra.subtitle,
     });
   }
 

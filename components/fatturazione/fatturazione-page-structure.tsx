@@ -6,12 +6,14 @@ import type { RouteSkeletonScope } from "@/lib/ui/route-skeleton-scope";
 export function FatturazionePageStructure({
   mode = "skeleton",
   scope = "full",
+  listSurface = "table",
 }: {
   mode?: SkeletonMode;
   scope?: RouteSkeletonScope;
+  listSurface?: import("@/lib/ui/resolve-list-surface").ListSurface;
 }) {
   if (mode !== "skeleton") return null;
-  return <FatturazioneRouteSkeleton scope={scope} />;
+  return <FatturazioneRouteSkeleton scope={scope} listSurface={listSurface} />;
 }
 
 export function FatturazioneTabSection({

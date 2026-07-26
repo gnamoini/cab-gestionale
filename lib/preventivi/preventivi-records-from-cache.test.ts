@@ -6,6 +6,7 @@ import {
   nextPreventivoNumeroFromRecords,
 } from "@/lib/preventivi/preventivi-records-from-cache";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
+import type { PreventivoRow } from "@/src/types/supabase-tables";
 import { QueryClient } from "@tanstack/react-query";
 import { QK } from "@/src/lib/react-query/query-keys";
 
@@ -47,11 +48,17 @@ const rawRows = [
     cliente: "Cliente A",
     totale: 100,
     dettagli: { numero: `${y}-010` },
+    stato: "bozza",
+    current_pdf_artifact_id: null,
+    inviato_at: null,
+    confermato_at: null,
+    confermato_by: null,
+    annullato_at: null,
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-02T00:00:00.000Z",
     mezzi: mezzoRow,
   },
-];
+] as unknown as PreventivoRow[];
 
 qc.setQueryData([...QK.preventivi, null], {
   records: mapPreventiviRowsToRecords(rawRows, [mezzoRow as never]),

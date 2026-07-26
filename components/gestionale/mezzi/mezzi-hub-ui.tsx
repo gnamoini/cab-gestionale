@@ -1,38 +1,42 @@
 "use client";
 
-import Link from "next/link";
 import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import type { ReactNode } from "react";
-import {
-  hrefDocumentiPerMezzo,
-  hrefLavorazioniPerMezzo,
-  hrefPreventiviPerMezzo,
-} from "@/lib/mezzi/mezzi-helpers";
-import type { MezzoGestito } from "@/lib/mezzi/types";
-import { dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
 
 export type MezziHubTabId =
   | "panoramica"
-  | "attrezzature"
-  | "foto"
   | "lavorazioni"
   | "tagliandi"
   | "timeline"
   | "preventivi"
-  | "documenti"
-  | "log";
+  | "documenti";
 
 export const MEZZI_HUB_TAB_ORDER: readonly MezziHubTabId[] = [
   "panoramica",
-  "attrezzature",
-  "foto",
   "lavorazioni",
   "tagliandi",
-  "timeline",
   "preventivi",
   "documenti",
-  "log",
+  "timeline",
 ];
+
+/** Deep link legacy: hubTab=log → timeline. */
+export function normalizeMezziHubTabId(raw: string | null | undefined): MezziHubTabId {
+  const v = raw?.trim();
+  if (v === "log") return "timeline";
+  if (v === "attrezzature" || v === "foto") return "panoramica";
+  if (
+    v === "panoramica" ||
+    v === "lavorazioni" ||
+    v === "tagliandi" ||
+    v === "timeline" ||
+    v === "preventivi" ||
+    v === "documenti"
+  ) {
+    return v;
+  }
+  return "panoramica";
+}
 
 export function fmtMezziHubDt(iso: string) {
   try {
@@ -110,15 +114,23 @@ export function MezziHubListSubtitle({ children }: { children: ReactNode }) {
 export function MezziHubTimelineKindBadge({
   kind,
 }: {
-  kind: "lavorazione" | "log" | "movimento" | "lifecycle";
+  kind: "lavorazione" | "log" | "movimento" | "lifecycle" | "tagliando" | "preset_assigned" | "preset_changed" | "compliance_reviewed" | "forecast_recomputed";
 }) {
   const label =
     kind === "lavorazione"
       ? "Lavorazione"
+      : kind === "tagliando"
+        ? "Tagliando"
       : kind === "movimento"
         ? "Magazzino"
         : kind === "lifecycle"
           ? "Asset"
+          : kind === "preset_assigned" || kind === "preset_changed"
+            ? "Preset"
+            : kind === "compliance_reviewed"
+              ? "Compliance"
+              : kind === "forecast_recomputed"
+                ? "Forecast"
           : "Anagrafica";
   const tone =
     kind === "lavorazione"
@@ -132,131 +144,5 @@ export function MezziHubTimelineKindBadge({
     >
       {label}
     </span>
-  );
-}
-
-/** Pulsante che porta a un’altra tab dello stesso hub (es. KPI in Panoramica). */
-export function MezziHubTabJumpButton({
-  children,
-  onJump,
-  className = "",
-}: {
-  children: ReactNode;
-  onJump: () => void;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onJump}
-      className={`min-w-0 rounded-[var(--ds-radius-lg)] border border-transparent bg-transparent p-1.5 text-left transition-colors hover:border-[color:var(--cab-border)] hover:bg-[var(--cab-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_42%,transparent)] ${className}`}
-    >
-      {children}
-    </button>
-  );
-}
-
-export function MezziHubQuickLinks({
-  mezzo,
-  onClose,
-  onGoTab,
-}: {
-  mezzo: MezzoGestito;
-  onClose: () => void;
-  onGoTab: (tab: MezziHubTabId) => void;
-}) {
-  const linkClass = `${dsBtnNeutral} inline-flex no-underline`;
-  return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Collegamenti rapidi</p>
-      <div className="flex min-w-0 flex-wrap gap-2">
-        <button type="button" className={dsBtnNeutral} onClick={() => onGoTab("lavorazioni")}>
-          Lavorazioni in hub
-        </button>
-        <button type="button" className={dsBtnNeutral} onClick={() => onGoTab("preventivi")}>
-          Preventivi in hub
-        </button>
-        <button type="button" className={dsBtnNeutral} onClick={() => onGoTab("documenti")}>
-          Documenti in hub
-        </button>
-        <Link href={hrefLavorazioniPerMezzo(mezzo)} className={linkClass} onClick={onClose}>
-          Pagina lavorazioni
-        </Link>
-        <Link href={hrefPreventiviPerMezzo(mezzo)} className={linkClass} onClick={onClose}>
-          Pagina preventivi
-        </Link>
-        <Link href={hrefDocumentiPerMezzo(mezzo)} className={linkClass} onClick={onClose}>
-          Pagina documenti
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-export function MezziHubFooter({
-  tab,
-  mezzo,
-  onClose,
-}: {
-  tab: MezziHubTabId;
-  mezzo: MezzoGestito;
-  onClose: () => void;
-}) {
-  const linkPrimary = `${dsBtnPrimary} inline-flex w-full justify-center no-underline sm:w-auto`;
-  const linkNeutral = `${dsBtnNeutral} inline-flex w-full justify-center no-underline sm:w-auto`;
-
-  if (tab === "foto" || tab === "log" || tab === "tagliandi") {
-    return null;
-  }
-
-  if (tab === "lavorazioni") {
-    return (
-      <Link href={hrefLavorazioniPerMezzo(mezzo)} className={linkPrimary} onClick={onClose}>
-        Apri tutte le lavorazioni del mezzo
-      </Link>
-    );
-  }
-
-  if (tab === "preventivi") {
-    return (
-      <Link href={hrefPreventiviPerMezzo(mezzo)} className={linkPrimary} onClick={onClose}>
-        Apri archivio preventivi
-      </Link>
-    );
-  }
-
-  if (tab === "documenti") {
-    return (
-      <Link href={hrefDocumentiPerMezzo(mezzo)} className={linkPrimary} onClick={onClose}>
-        Documenti (pagina completa)
-      </Link>
-    );
-  }
-
-  if (tab === "timeline") {
-    return (
-      <div className="flex min-w-0 flex-wrap justify-end gap-2">
-        <Link href={hrefLavorazioniPerMezzo(mezzo)} className={linkNeutral} onClick={onClose}>
-          Lavorazioni
-        </Link>
-        <Link href={hrefDocumentiPerMezzo(mezzo)} className={linkNeutral} onClick={onClose}>
-          Documenti
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex min-w-0 flex-wrap justify-end gap-2">
-      <Link href={hrefLavorazioniPerMezzo(mezzo)} className={linkNeutral} onClick={onClose}>
-        Lavorazioni
-      </Link>
-      <Link href={hrefPreventiviPerMezzo(mezzo)} className={linkNeutral} onClick={onClose}>
-        Preventivi
-      </Link>
-      <Link href={hrefDocumentiPerMezzo(mezzo)} className={linkPrimary} onClick={onClose}>
-        Documenti
-      </Link>
-    </div>
   );
 }

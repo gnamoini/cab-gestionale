@@ -49,10 +49,10 @@ const PreventiviLogDrawer = dynamic(
   () => import("@/components/preventivi/preventivi-log-drawer").then((m) => m.PreventiviLogDrawer),
   { ssr: false },
 );
-import { DdtStatusBadge } from "@/components/ddt/ddt-status-badge";
 import { buildDdtDraftFromPreventivoAuto } from "@/lib/ddt/preventivo-to-ddt-draft";
 import type { DdtDetail } from "@/lib/ddt/types";
 import { PreventivoEliminaConfirmDialog } from "@/components/preventivi/preventivo-elimina-confirm-dialog";
+import { PreventivoStatusCell } from "@/components/preventivi/preventivo-status-cell";
 import { PreventivoBillingBadge } from "@/components/fatturazione/preventivo-billing-badge";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { useAuth } from "@/context/auth-context";
@@ -103,8 +103,9 @@ import {
 import { buildLogModificheDisplayEntries, logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { removePreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
 import { usePreventiviListDerived } from "@/lib/preventivi/use-preventivi-list-derived";
-import { ordiniFornitoriListQueryKey } from "@/lib/render/query-key-factory";
+import { preventiviRecordsQueryKey, ordiniFornitoriListQueryKey } from "@/lib/render/query-key-factory";
 import { ordiniFornitoriEntry } from "@/lib/domain/ordini-fornitori-entry";
+import { preventiviEntry } from "@/lib/domain/preventivi-entry";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
 import { ddtEntry } from "@/lib/domain/ddt-entry";
@@ -121,7 +122,8 @@ import {
   preventivoTipoDocumentoBadgeClass,
   preventivoTipoDocumentoLabel,
 } from "@/lib/preventivi/preventivi-tipo-documento";
-import type { PreventivoLavorazioneOrigine, PreventivoRecord, PreventivoSortKey, PreventivoSortPhase } from "@/lib/preventivi/types";
+import type { PreventivoLavorazioneOrigine, PreventivoRecord, PreventivoSortKey, PreventivoSortPhase, PreventivoStato } from "@/lib/preventivi/types";
+import { preventivoOfficialPreviewPath } from "@/lib/preventivi/preventivi-pdf";
 import {
   dsBtnNeutral,
   dsPageToolbarBtn,
@@ -139,11 +141,9 @@ import {
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
-import {
-  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
-  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
-  useGestionaleListLayout,
-} from "@/lib/ui/use-gestionale-list-layout";
+import { gestionaleListTierClass } from "@/lib/ui/gestionale-list-responsive";
+import type { GestionaleListPageProps } from "@/lib/ui/gestionale-list-page-props";
+import { useListSurface } from "@/lib/ui/use-list-surface";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import {
@@ -264,21 +264,18 @@ function PreventivoRowActions({
           disabled={ddtBusy || (!canWritePreventivi && !activeDdt)}
           onClick={() => onDdtAction(p)}
         >
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase">
-            DDT
-            {activeDdt ? <DdtStatusBadge status={activeDdt.status} /> : null}
-          </span>
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase">DDT</span>
         </IconActionButton>
       ) : null}
       <IconActionButton
         label="PDF"
         tooltipForce
         className={dsTableActionBtnSecondary}
-        onClick={() =>
-          void importPreventiviPdf().then(({ openPreventivoPdfInNewTab }) =>
-            openPreventivoPdfInNewTab(p, autore.trim() || "Operatore"),
-          )
-        }
+        onClick={() => {
+          if (typeof window !== "undefined") {
+            window.location.assign(preventivoOfficialPreviewPath(p.id));
+          }
+        }}
       >
         <IconPreventivoPdf />
       </IconActionButton>
@@ -332,8 +329,8 @@ function comparePreventivo(a: PreventivoRecord, b: PreventivoRecord, key: Preven
   }
 }
 
-export function PreventiviView() {
-  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "xl" });
+export function PreventiviView({ listSurface: serverListSurface, listTier = "xl" }: GestionaleListPageProps) {
+  const listSurface = useListSurface(serverListSurface);
   const { global: globalPerm, modules: permModules } = usePermissionsSnapshot();
   const prevPerm = permModules.preventivi;
   const ordiniPerm = permModules.ordini_fornitori;
@@ -483,10 +480,54 @@ export function PreventiviView() {
     preventivo: PreventivoRecord | null;
   }>({ open: false, detail: null, preventivo: null });
   const [ddtBusyId, setDdtBusyId] = useState<string | null>(null);
+  const pendingStatusRef = useRef(new Set<string>());
 
   const reload = useCallback(() => {
     void refetchPreventivi();
   }, [refetchPreventivi]);
+
+  const onStatoRow = useCallback(
+    (record: PreventivoRecord, next: PreventivoStato) => {
+      if (!canWritePreventivi || record.stato === "annullato" || next === record.stato) return;
+      if (pendingStatusRef.current.has(record.id)) return;
+      pendingStatusRef.current.add(record.id);
+
+      const previous = record.stato;
+      queryClient.setQueryData<{ records: PreventivoRecord[]; mezziRows: unknown[] } | undefined>(
+        preventiviRecordsQueryKey(null),
+        (old) =>
+          old
+            ? {
+                ...old,
+                records: old.records.map((r) => (r.id === record.id ? { ...r, stato: next } : r)),
+              }
+            : old,
+      );
+
+      void (async () => {
+        const res = await preventiviEntry.transitionStatus(record.id, next, autore.trim() || "Operatore");
+        pendingStatusRef.current.delete(record.id);
+        if (!res.success) {
+          queryClient.setQueryData<{ records: PreventivoRecord[]; mezziRows: unknown[] } | undefined>(
+            preventiviRecordsQueryKey(null),
+            (old) =>
+              old
+                ? {
+                    ...old,
+                    records: old.records.map((r) => (r.id === record.id ? { ...r, stato: previous } : r)),
+                  }
+                : old,
+          );
+          gestToast.errorOnce(`preventivo-stato-${record.id}`, res.error ?? "Errore aggiornamento stato.");
+          void refetchPreventivi();
+          return;
+        }
+        gestToast.successOnce(`preventivo-stato-${record.id}`, "Stato preventivo aggiornato.");
+        void refetchPreventivi();
+      })();
+    },
+    [autore, canWritePreventivi, gestToast, queryClient, refetchPreventivi],
+  );
 
   function closeEditor() {
     const rollbackId = rollbackDraftIdRef.current;
@@ -728,6 +769,14 @@ export function PreventiviView() {
               {preventivoTipoDocumentoLabel(p.tipoDocumento, "short")}
             </span></Tooltip>
           </td>
+          <td className={`whitespace-nowrap ${gestionaleListTableTdPill}`}>
+            <PreventivoStatusCell
+              record={p}
+              canWrite={canWritePreventivi}
+              disabled={pendingStatusRef.current.has(p.id)}
+              onStatusChange={onStatoRow}
+            />
+          </td>
           <td className={`whitespace-nowrap ${gestionaleListTableTd} text-xs tabular-nums text-zinc-600 dark:text-zinc-300`}>
             {fmtDataCreazioneTabella(p.dataCreazione)}
           </td>
@@ -787,6 +836,7 @@ export function PreventiviView() {
       focusPreventivoId,
       getDdtForPreventivo,
       handleDdtAction,
+      onStatoRow,
       openEliminaConfirm,
       pagedRows,
       preventiviBillingById,
@@ -1055,14 +1105,14 @@ export function PreventiviView() {
     <div ref={importTriggerRef} className="sr-only" aria-hidden>
       <ModuleImportEntry entity="preventivi" module="preventivi" />
     </div>
-    <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
+    <div className={`lavorazioni-scroll-scope ${layoutPageRoot} ${gestionaleListTierClass(listTier)}`.trim()}>
     <>
       <div className="mb-2 flex flex-wrap items-center gap-2">
         {documentSectionTabs}
       </div>
 
       {pageTab === "ordini" ? (
-        <OrdiniFornitoriView canRead={canReadPreventivi} canWrite={canWritePreventivi} />
+        <OrdiniFornitoriView listSurface={listSurface} canRead={canReadPreventivi} canWrite={canWritePreventivi} />
       ) : (
         <>
       {bannerFilter}
@@ -1136,10 +1186,9 @@ export function PreventiviView() {
 
         <SkeletonBoundary loading={preventiviInitialLoading}>
         <PreventiviTableSection mode="content" className="mt-4">
-        {listLayout === "desktop" ? (
+        {listSurface === "table" ? (
         <GestionaleListTable
           wrapClassName="mt-4"
-          visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
           colgroup={
             <>
               <col className="w-[5.25rem]" />
@@ -1175,6 +1224,9 @@ export function PreventiviView() {
                   contentChipInset
                   thClassName="w-[5rem]"
                 />
+                <th className={`whitespace-nowrap ${gestionaleListTableTdPill} text-left text-xs font-medium text-zinc-600 dark:text-zinc-300`}>
+                  Stato
+                </th>
                 <GlobalTableSortTh
                   label="Data"
                   columnKey="dataCreazione"
@@ -1252,7 +1304,7 @@ export function PreventiviView() {
           }
           empty={pagedRows.length === 0}
           emptyMessage={tableEmptyMessage}
-          colSpan={12}
+          colSpan={13}
           virtualRows={{
             rowCount: pagedRows.length,
             renderRow: renderPreventivoDesktopRow,
@@ -1261,9 +1313,7 @@ export function PreventiviView() {
         >
               {null}
         </GestionaleListTable>
-        ) : null}
-
-        {listLayout === "mobile" ? (
+        ) : (
         <div className="mt-4 space-y-3">
           {pagedRows.length === 0 ? (
             <p className={gestionaleListTableMobileEmptyClass}>{tableEmptyMessage}</p>
@@ -1352,7 +1402,7 @@ export function PreventiviView() {
             })
           )}
         </div>
-        ) : null}
+        )}
 
         {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} /> : null}
         </PreventiviTableSection>

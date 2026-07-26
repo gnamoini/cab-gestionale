@@ -73,10 +73,11 @@ export function gestionaleCabSyncToastMessage(event: CabSyncEvent): string | nul
       const verb = entityVerb(event);
       return verb ? `Mezzo ${verb}${REMOTE_SUFFIX}` : null;
     }
-    case "lavorazione_documents":
-      if (event.type === "entity_created") return `Documento lavorazione caricato${REMOTE_SUFFIX}`;
-      if (event.type === "entity_updated") return `Documento lavorazione aggiornato${REMOTE_SUFFIX}`;
-      if (event.type === "entity_deleted") return `Documento lavorazione eliminato${REMOTE_SUFFIX}`;
+    case "pdf_artifacts":
+    case "document_access_tokens":
+      if (event.type === "entity_created") return `Documento ufficiale generato${REMOTE_SUFFIX}`;
+      if (event.type === "entity_updated") return `Documento ufficiale aggiornato${REMOTE_SUFFIX}`;
+      if (event.type === "entity_deleted") return `Documento ufficiale eliminato${REMOTE_SUFFIX}`;
       return null;
     case "documenti": {
       const verb = entityVerb(event);

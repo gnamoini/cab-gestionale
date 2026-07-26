@@ -113,7 +113,7 @@ function splitClienteLines(raw: string): string[] {
 }
 
 export function recordApprovedPreventivoVersion(p: PreventivoRecord): void {
-  if (p.stato !== "approvato" && p.stato !== "convertito") return;
+  if (p.stato !== "confermato") return;
   const fromNorm = normPhrase(p.descrizioneLavorazioniTecnicaSorgente).slice(0, 400);
   const to = p.descrizioneLavorazioniCliente.trim();
   if (!fromNorm || !to) return;

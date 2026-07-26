@@ -7,14 +7,16 @@ import {
   prefetchGestionalePage,
 } from "@/src/lib/react-query/prefetch-gestionale-page";
 import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
+import { resolveListSurfaceForPage } from "@/lib/ui/resolve-list-surface.server";
 
 export default async function DipendentiPage() {
   const qc = createServerQueryClient();
+  const listSurface = await resolveListSurfaceForPage();
   await prefetchGestionalePage(qc, "dipendenti");
   return (
     <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.dipendenti}>
       <GestionaleHydrationBoundary state={dehydrate(qc)}>
-        <DipendentiViewLazy />
+        <DipendentiViewLazy listSurface={listSurface} listTier="md" />
       </GestionaleHydrationBoundary>
     </PageLayout>
   );

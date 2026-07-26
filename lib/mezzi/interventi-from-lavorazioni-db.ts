@@ -1,5 +1,9 @@
 import { isLavorazioneArchived } from "@/lib/lavorazioni/archived";
 import { permanenzaGiorniTra } from "@/lib/lavorazioni/duration";
+import {
+  interventionTypeFromTagliandoFields,
+  lavorazioneRowToTagliandoFields,
+} from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
 import type { MezzoGestito, MezzoInterventoLavorazione } from "@/lib/mezzi/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
@@ -31,12 +35,14 @@ function lavRowToIntervento(row: LavorazioneListRow, weakMezzoLink = false): Mez
   const ing = row.data_ingresso?.trim() ? row.data_ingresso : row.created_at;
   const fin = row.data_uscita;
   const statoLabel = labelLavorazioneStatoDb(row.stato);
+  const tagliandoFields = lavorazioneRowToTagliandoFields(row);
   const base = {
     id: row.id,
     codice: row.codice ?? null,
     dataIngresso: ing,
     dataCompletamento: fin,
     tipoIntervento: statoLabel,
+    interventionType: interventionTypeFromTagliandoFields(tagliandoFields),
     descrizione: (row.note ?? "").trim() || "—",
     prioritaLabel: prioritaIt(row.priorita),
     statoId: row.stato,

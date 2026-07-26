@@ -1,28 +1,56 @@
-/* Lista tabella vs card — layout da hook (viewport + container, preview IDE) */
+/* Lista gestionale — tier + container per densità/micro-layout (non per branch React). */
 
-.gestionale-list-layout-mobile .gestionale-list-desktop-only,
-.gestionale-list-desktop-only {
-  display: none;
+.gestionale-list-container {
+  container-type: inline-size;
+  container-name: gestionale-list;
 }
 
-.gestionale-list-layout-desktop .gestionale-list-desktop-only {
-  display: block;
+.gestionale-list-tier-xl {
+  --gestionale-list-min-viewport: 1280px;
+  --gestionale-list-min-container: 1024px;
 }
 
-.gestionale-list-layout-desktop .gestionale-list-mobile-only {
-  display: none;
+.gestionale-list-tier-lg {
+  --gestionale-list-min-viewport: 1024px;
+  --gestionale-list-min-container: 896px;
 }
 
-/* Alias legacy Lavorazioni — rimuovere quando tutti i consumer usano gestionale-list-* */
-.lavorazioni-list-layout-mobile .lavorazioni-list-desktop-only,
-.lavorazioni-list-desktop-only {
-  display: none;
+.gestionale-list-tier-md {
+  --gestionale-list-min-viewport: 768px;
+  --gestionale-list-min-container: 640px;
 }
 
-.lavorazioni-list-layout-desktop .lavorazioni-list-desktop-only {
-  display: block;
+/* Overflow tabella su container stretto (IDE preview) — singolo mount table. */
+@container gestionale-list (max-width: 1023px) {
+  .gestionale-list-tier-xl .gestionale-list-table-scope {
+    overflow-x: auto;
+  }
 }
 
-.lavorazioni-list-layout-desktop .lavorazioni-list-mobile-only {
-  display: none;
+@container gestionale-list (max-width: 895px) {
+  .gestionale-list-tier-lg .gestionale-list-table-scope {
+    overflow-x: auto;
+  }
+}
+
+@container gestionale-list (max-width: 639px) {
+  .gestionale-list-tier-md .gestionale-list-table-scope {
+    overflow-x: auto;
+  }
+}
+
+/* Legacy visibility classes — deprecate; non usare per branch React. */
+.gestionale-list-desktop-only,
+.gestionale-list-mobile-only,
+.lavorazioni-list-desktop-only,
+.lavorazioni-list-mobile-only {
+  display: contents;
+}
+
+/* Alias legacy Lavorazioni layout class — no-op, rimuovere consumer gradualmente. */
+.lavorazioni-list-layout-desktop,
+.lavorazioni-list-layout-mobile,
+.gestionale-list-layout-desktop,
+.gestionale-list-layout-mobile {
+  /* ponytail: tier class sul root, non layout JS-driven */
 }

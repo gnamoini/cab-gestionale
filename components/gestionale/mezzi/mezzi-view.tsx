@@ -17,7 +17,7 @@ import {
 import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { MezziSearchBar, mezziFieldFiltersActive } from "@/components/gestionale/mezzi/mezzi-filters";
-import type { MezziHubTabId } from "@/components/gestionale/mezzi/mezzi-hub-ui";
+import { normalizeMezziHubTabId, type MezziHubTabId } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 import { MezzoEliminaConfirmDialog } from "@/components/gestionale/mezzi/mezzo-elimina-confirm-dialog";
 import { MezziPageViewToggle, type MezziPageView } from "@/components/gestionale/mezzi/mezzi-page-view-toggle";
 import { MezziTable } from "@/components/gestionale/mezzi/mezzi-table";
@@ -34,7 +34,9 @@ import { mezzoHaLavorazioneCollegataDb } from "@/lib/mezzi/interventi-from-lavor
 import { logModificaRowToMezziHubLogEntry } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 import { dsPageToolbarCtaCompact } from "@/lib/ui/design-system";
-import { useGestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
+import { gestionaleListTierClass } from "@/lib/ui/gestionale-list-responsive";
+import type { GestionaleListPageProps } from "@/lib/ui/gestionale-list-page-props";
+import { useListSurface } from "@/lib/ui/use-list-surface";
 import { LoadingCardSkeleton, LoadingErrorState, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount, SkeletonBoundary } from "@/components/design-system";
 import { Q_FOCUS_MEZZO } from "@/lib/navigation/dashboard-log-links";
 import {
@@ -126,9 +128,9 @@ const MezziLogDrawer = dynamic(
 
 const MEZZI_SEARCH_DEBOUNCE_MS = 300;
 
-export function MezziView() {
+export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: GestionaleListPageProps) {
+  const listSurface = useListSurface(serverListSurface);
   const queryClient = useQueryClient();
-  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "xl" });
   const mezziPerm = usePermissions("mezzi");
   const { user } = useAuth();
   const canEditVehicles = mezziPerm.canWrite;
@@ -367,6 +369,18 @@ export function MezziView() {
     },
     [syncMezziUrl],
   );
+
+  const openMezzoHubFromTagliandiOverview = useCallback(
+    (mezzoId: string) => {
+      const mezzo = mezziUi.find((m) => m.id === mezzoId);
+      if (!mezzo) return;
+      setPageView("anagrafica");
+      openMezzoHub(mezzo, "panoramica");
+      syncMezziUrl({ view: "anagrafica", hubMezzo: mezzoId, hubTab: "panoramica" });
+    },
+    [mezziUi, openMezzoHub, syncMezziUrl],
+  );
+
   const { undoable: undoableMezziLog, logQuery } = useUndoableLog("mezzi", {
     enabled: isAnagrafica || logOpen,
   });
@@ -563,7 +577,8 @@ export function MezziView() {
 
   useEffect(() => {
     const hubId = searchParams.get(Q_MEZZI_HUB)?.trim();
-    const hubTab = (searchParams.get(Q_MEZZI_HUB_TAB)?.trim() as MezziHubTabId) || "tagliandi";
+    const rawHubTab = searchParams.get(Q_MEZZI_HUB_TAB);
+    const hubTab = rawHubTab?.trim() ? normalizeMezziHubTabId(rawHubTab) : "tagliandi";
     if (!hubId || mezziUi.length === 0) return;
     const mezzo = mezziUi.find((m) => m.id === hubId);
     if (!mezzo) return;
@@ -680,7 +695,7 @@ export function MezziView() {
     <div ref={importTriggerRef} className="sr-only" aria-hidden>
       <ModuleImportEntry entity="mezzi" module="mezzi" onCompleted={() => void refetchMezzi()} />
     </div>
-    <div ref={listLayoutRef} className={`${layoutPageRoot} ${listLayoutClassName}`.trim()}>
+    <div className={`${layoutPageRoot} ${gestionaleListTierClass(listTier)}`.trim()}>
     <>
       <PageHeaderPageActionMenu
         items={mezziPageMenuItems}
@@ -777,7 +792,7 @@ export function MezziView() {
           <SkeletonBoundary loading={mezziInitialLoading}>
           <MezziTableSection mode="content" className="mt-4">
               <MezziTable
-                listLayout={listLayout}
+                listSurface={listSurface}
                 rows={pagedSorted}
                 interventiByMezzoId={interventiByMezzoId}
                 ultimaModificaInfoByMezzoId={ultimaModificaInfoByMezzoId}
@@ -802,6 +817,7 @@ export function MezziView() {
               presetFilter={tagliandiPresetFilter}
               statoFilter={tagliandiStatoFilter}
               highlightConfigId={tagliandiHighlight}
+              onOpenMezzoHub={openMezzoHubFromTagliandiOverview}
             />
           ) : null}
         </ShellCard>

@@ -15,9 +15,11 @@ import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura
 import { parseRicambioUnitaMisura } from "@/lib/magazzino/ricambio-unita-misura";
 import { normalizePreventivoTipoDocumento } from "@/lib/preventivi/preventivi-tipo-documento";
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
+import { normalizePreventivoRigaAddettoWrite } from "@/lib/lavorazioni/addetto-write-freeze";
 import type {
   PreventivoManodopera,
   PreventivoRecord,
+  PreventivoRigaAddetto,
   PreventivoRigaRicambio,
   PreventivoRigaRicambioTipo,
   PreventivoStato,
@@ -56,16 +58,46 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
 
   const m = (o.manodopera as Record<string, unknown>) || {};
   const addettiArr = Array.isArray(m.righeAddetti) ? m.righeAddetti : [];
-  const righeAddetti = addettiArr
+  const righeAddetti: PreventivoRigaAddetto[] = addettiArr
     .map((a: unknown) => {
       const x = a as Record<string, unknown>;
-      return { addetto: String(x.addetto ?? "").trim(), ore: Number(x.ore) || 0 };
+      const legacy = String(x.addetto ?? x.addettoLegacy ?? "").trim();
+      const existingId = typeof x.addettoId === "string" ? x.addettoId.trim() : "";
+      if (existingId) {
+        return normalizePreventivoRigaAddettoWrite({
+          addettoId: existingId,
+          ore: Number(x.ore) || 0,
+        }) as PreventivoRigaAddetto;
+      }
+      if (legacy === "Officina") {
+        return normalizePreventivoRigaAddettoWrite({
+          addettoId: null,
+          ore: Number(x.ore) || 0,
+          addettoLegacy: "Officina",
+          legacyWarning: "Addetto storico non convertibile: Officina",
+        }) as PreventivoRigaAddetto;
+      }
+      return normalizePreventivoRigaAddettoWrite({
+        addettoId: null,
+        ore: Number(x.ore) || 0,
+        addettoLegacy: legacy || undefined,
+        legacyWarning: legacy ? `Addetto storico non convertibile: ${legacy}` : undefined,
+      }) as PreventivoRigaAddetto;
     })
-    .filter((x) => x.addetto.length > 0);
+    .filter((x) => x.addettoId || x.addettoLegacy || x.ore > 0);
 
   const manodopera: PreventivoManodopera = {
     oreTotali: Math.max(0, Number(m.oreTotali) || 0),
-    righeAddetti: righeAddetti.length ? righeAddetti : [{ addetto: "Officina", ore: 1 }],
+    righeAddetti: righeAddetti.length
+      ? righeAddetti
+      : [
+          normalizePreventivoRigaAddettoWrite({
+            addettoId: null,
+            ore: 1,
+            addettoLegacy: "Officina",
+            legacyWarning: "Addetto storico non convertibile: Officina",
+          }) as PreventivoRigaAddetto,
+        ],
     costoOrario: Math.max(0, Number(m.costoOrario) || 0),
     scontoPercent: Math.min(100, Math.max(0, Number(m.scontoPercent) || 0)),
   };
@@ -77,7 +109,7 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
   }
 
   const statoRaw = String(o.stato ?? "bozza");
-  const statiValidi: PreventivoStato[] = ["bozza", "inviato", "approvato", "rifiutato", "convertito"];
+  const statiValidi: PreventivoStato[] = ["bozza", "inviato", "confermato", "annullato"];
   const stato = (statiValidi.includes(statoRaw as PreventivoStato) ? statoRaw : "bozza") as PreventivoStato;
 
   const base: PreventivoRecord = {

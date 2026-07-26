@@ -99,6 +99,9 @@ export function shouldUsePageActionMenuDropdown(
 ): boolean {
   if (options?.backHref) return true;
   if (isRefreshOnlyPageActionMenu(items, options)) return false;
+  const listItems = items.filter((item) => item.id !== "__divider__");
+  // Refresh + voci menu → ⋮ (Aggiorna resta nel pannello, non icona separata).
+  if (options?.onRefresh && listItems.length > 0) return true;
   if (getSingletonPageActionListItem(items) !== null) return false;
   return true;
 }

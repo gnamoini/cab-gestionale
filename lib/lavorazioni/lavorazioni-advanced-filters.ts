@@ -1,5 +1,5 @@
 import { clientPortalIngressoIso } from "@/lib/lavorazioni/client-portal-row-fields";
-import { lavorazioneAddettoLabel } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
+import { lavorazioneAddettoId } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { isoToDateInputValue, normalizeYmdRangeBounds } from "@/lib/lavorazioni/date-day-only";
 import { migrateStatoConfigId } from "@/lib/lavorazioni/stati-dynamic";
 import { lavRowIngressoInRange } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
@@ -91,7 +91,7 @@ function rowEntityFields(
 ): RowEntityFields {
   const ing = schedeStore?.[row.id]?.ingresso?.campi;
   const m = row.mezzo;
-  const addetto = lavorazioneAddettoLabel(row, schedeStore ?? {}, logs, addettiRecords);
+  const addetto = lavorazioneAddettoId(row, schedeStore ?? {}, logs, addettiRecords);
 
   let marca = "";
   let modello = "";
@@ -312,7 +312,7 @@ export function buildLavorazioniAddettoFilterItems(
     const key = norm(label);
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    items.push({ value: label, label });
+    items.push({ value: rec.id, label });
   }
   return items;
 }

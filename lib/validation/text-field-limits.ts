@@ -12,8 +12,8 @@ export function clampText(value: string, max: number): string {
   return value.length <= max ? value : value.slice(0, max);
 }
 
-export function clampTextTrimmed(value: string, max: number): string {
-  return clampText(value.trim(), max);
+export function clampTextTrimmed(value: string | null | undefined, max: number): string {
+  return clampText((value ?? "").trim(), max);
 }
 
 export function clampTextOrNull(value: string | null | undefined, max: number): string | null {

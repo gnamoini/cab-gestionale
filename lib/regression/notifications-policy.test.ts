@@ -68,7 +68,6 @@ assert.match(realtimePackSrc, /GestionaleNotificationsBridge/);
 for (const bridge of [
   "AdminLavorazioniNotificationBridge",
   "AdminMagazzinoNotificationBridge",
-  "AdminScheduledDigestNotificationBridge",
   "AdminDipendentiPresenzeReminderBridge",
 ]) {
   assert.match(adminNotifPackSrc, new RegExp(bridge), `missing bridge: ${bridge}`);
@@ -161,6 +160,8 @@ assert.match(centerBellSrc, /dispatchAdminDashboardTestSystemNotification/);
 assert.match(centerBellSrc, /dispatchInboxSystemNotification/);
 assert.match(centerBellSrc, /shouldPreferPwaPushOverDesktopPrompt/);
 assert.match(centerBellSrc, /usePwaPushOptIn/);
+assert.match(centerBellSrc, /NotificationSettingsModal/);
+assert.match(centerBellSrc, /Impostazioni notifiche/);
 
 const policySrc = fs.readFileSync(
   path.join(ROOT, "lib/notifications/application/policies/notification-policies.ts"),

@@ -391,6 +391,9 @@ export type MezziLogEntryLike = {
   autore: string;
   at: string;
   changes: CampoChangeLike[];
+  azione?: string;
+  tipoRiga?: string;
+  modifiche?: string[];
 };
 
 function mezziTipoRiga(tipo: MezziLogEntryLike["tipo"]): string {
@@ -413,7 +416,7 @@ function mezziLeadLine(entry: MezziLogEntryLike): string | null {
 
 export function buildMezziGestionaleLogViewModel(entry: MezziLogEntryLike): GestionaleLogViewModel {
   const tone = gestionaleLogToneMagazzino(entry.tipo);
-  const tipoRiga = mezziTipoRiga(entry.tipo);
+  const tipoRiga = entry.tipoRiga ?? mezziTipoRiga(entry.tipo);
   const oggettoRiga = formatTitleCasePhrase(entry.mezzo);
   let modificaRiga: string;
   if (entry.tipo === "aggiunta") {
@@ -422,6 +425,8 @@ export function buildMezziGestionaleLogViewModel(entry: MezziLogEntryLike): Gest
   } else if (entry.tipo === "rimozione") {
     const lead = mezziLeadLine(entry);
     modificaRiga = toBulletModificaRiga([lead ?? "Mezzo rimosso dall'anagrafica"]);
+  } else if (entry.modifiche?.length) {
+    modificaRiga = toBulletModificaRiga(entry.modifiche);
   } else if (entry.changes.length) {
     modificaRiga = buildModificaRigaFromChanges(entry.changes);
   } else {

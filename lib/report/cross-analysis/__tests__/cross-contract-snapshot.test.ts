@@ -57,8 +57,10 @@ const bundle = bundleFromDomainDtos({
   labor: {
     metrics: [],
     totalHours: 40,
+    actualLaborHours: 32,
     completedJobs: 10,
     avgHoursPerJob: 4,
+    actualHoursPerJob: 3.2,
     manodoperaCost: 800,
   },
   economic: {

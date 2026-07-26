@@ -304,7 +304,138 @@ export function entityKindLabel(entita: string): string {
   }
 }
 
+const SYSTEM_LOG_AZIONI = new Set([
+  "MEZZO_RESOLVED_EXISTING",
+  "MEZZO_CONFLICT_KEPT",
+  "MEZZO_DUPLICATE_PREVENTED",
+  "ATTREZZATURA_RESOLVED_EXISTING",
+  "ATTREZZATURA_CONFLICT_KEPT",
+]);
+
+export function isSystemLogAzione(azione: string): boolean {
+  return SYSTEM_LOG_AZIONI.has(safeStr(azione).trim());
+}
+
+function systemMatchedByLabel(matchedBy: string): string {
+  switch (matchedBy) {
+    case "hint_id":
+      return "collegamento esistente";
+    case "vin_norm":
+      return "VIN";
+    case "targa_norm":
+      return "targa";
+    case "partial_upgrade":
+      return "dati anagrafici parziali";
+    case "race_recovery":
+      return "recupero anti-duplicato";
+    case "matricola_norm":
+      return "matricola";
+    default:
+      return matchedBy.replace(/_/g, " ");
+  }
+}
+
+function formatConflictValue(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "object") return "valore esistente";
+  const s = String(value).trim();
+  return s || "—";
+}
+
+function systemEventOggettoRiga(
+  entita: string,
+  entitaId: string,
+  payload: Record<string, unknown> | null,
+): string {
+  if (!payload) return entitaId.length >= 8 ? entitaId.slice(0, 8) : entitaId;
+  if (entita === "mezzi") {
+    const ident = payload.incoming_ident;
+    if (ident && typeof ident === "object" && !Array.isArray(ident)) {
+      const targa = pickStr(ident as Record<string, unknown>, ["targa"]);
+      const vin = pickStr(ident as Record<string, unknown>, ["vin"]);
+      if (targa) return targa.toUpperCase();
+      if (vin) return vin.toUpperCase();
+    }
+  }
+  if (entita === "attrezzature") {
+    const matricola = pickStr(payload, ["incoming_matricola", "matricola"]);
+    if (matricola) return matricola;
+  }
+  return entitaId.length >= 8 ? entitaId.slice(0, 8) : entitaId;
+}
+
+function systemEventTipoRiga(azione: string, entita: string): string {
+  switch (azione) {
+    case "MEZZO_RESOLVED_EXISTING":
+      return "COLLEGAMENTO MEZZO";
+    case "MEZZO_CONFLICT_KEPT":
+      return "DATI MEZZO CONSERVATI";
+    case "MEZZO_DUPLICATE_PREVENTED":
+      return "DUPLICATO MEZZO EVITATO";
+    case "ATTREZZATURA_RESOLVED_EXISTING":
+      return "COLLEGAMENTO ATTREZZATURA";
+    case "ATTREZZATURA_CONFLICT_KEPT":
+      return "DATI ATTREZZATURA CONSERVATI";
+    default:
+      return `AGGIORNAMENTO ${entityKindLabel(entita)}`;
+  }
+}
+
+function formatSystemEventModifiche(azione: string, payload: Record<string, unknown> | null): string[] | null {
+  if (!isSystemLogAzione(azione)) return null;
+  const matchedBy = pickStr(payload ?? {}, ["matched_by"]);
+
+  switch (azione) {
+    case "MEZZO_RESOLVED_EXISTING": {
+      const lines = ["Collegato al mezzo già presente in anagrafica"];
+      if (matchedBy) lines.push(`Riconosciuto tramite ${systemMatchedByLabel(matchedBy)}`);
+      const ident = payload?.incoming_ident;
+      if (ident && typeof ident === "object" && !Array.isArray(ident)) {
+        const targa = pickStr(ident as Record<string, unknown>, ["targa"]);
+        const vin = pickStr(ident as Record<string, unknown>, ["vin"]);
+        if (targa) lines.push(`Identificativo in ingresso: targa ${targa.toUpperCase()}`);
+        else if (vin) lines.push(`Identificativo in ingresso: VIN ${vin.toUpperCase()}`);
+      }
+      const conflicts = payload?.conflicts;
+      if (Array.isArray(conflicts) && conflicts.length > 0) {
+        lines.push(`${conflicts.length} campo/i non allineati (mantenuti i valori esistenti)`);
+      }
+      return lines;
+    }
+    case "MEZZO_CONFLICT_KEPT": {
+      const field = pickStr(payload ?? {}, ["field"]);
+      const fieldLabel = field ? humanFieldLabel(field) : "campo";
+      const existing = formatConflictValue(payload?.existing_value);
+      const incoming = formatConflictValue(payload?.incoming_value);
+      return [`Conflitto su ${fieldLabel}: mantenuto «${existing}» (in ingresso «${incoming}»)`];
+    }
+    case "MEZZO_DUPLICATE_PREVENTED":
+      return [
+        matchedBy
+          ? `Evitata la creazione di un mezzo duplicato (${systemMatchedByLabel(matchedBy)})`
+          : "Evitata la creazione di un mezzo duplicato",
+      ];
+    case "ATTREZZATURA_RESOLVED_EXISTING": {
+      const lines = ["Collegata all'attrezzatura già presente sul mezzo"];
+      if (matchedBy) lines.push(`Riconosciuta tramite ${systemMatchedByLabel(matchedBy)}`);
+      const matricola = pickStr(payload ?? {}, ["incoming_matricola"]);
+      if (matricola) lines.push(`Matricola in ingresso: ${matricola}`);
+      return lines;
+    }
+    case "ATTREZZATURA_CONFLICT_KEPT": {
+      const field = pickStr(payload ?? {}, ["field"]);
+      const fieldLabel = field ? humanFieldLabel(field) : "campo";
+      const existing = formatConflictValue(payload?.existing_value);
+      const incoming = formatConflictValue(payload?.incoming_value);
+      return [`Conflitto su ${fieldLabel}: mantenuto «${existing}» (in ingresso «${incoming}»)`];
+    }
+    default:
+      return null;
+  }
+}
+
 export function tipoRigaFromAzione(entita: string, azione: string, payload?: unknown): string {
+  if (isSystemLogAzione(azione)) return systemEventTipoRiga(azione, entita);
   if (isImageLogAction(azione)) return "CARICAMENTO FILE";
   const stock = payload ? parseStockMovementAuditPayload(payload) : null;
   if (stock) {
@@ -1047,16 +1178,22 @@ export function buildLogModificaSummary(input: {
   }
 
   const record = payload ? recordFromPayload(payload) : null;
-  const oggettoRiga = resolveOggettoRiga(
+  let oggettoRiga = resolveOggettoRiga(
     input.entita,
     record ? buildOggettoFromRecord(input.entita, record) : "—",
     payload,
     input.entita_id,
   );
+  if (isSystemLogAzione(input.azione)) {
+    oggettoRiga = systemEventOggettoRiga(input.entita, input.entita_id, payload);
+  }
   let modifiche = payload ? diffToModifiche(payload, stati, input.entita) : [];
   modifiche = filterModificheForDisplay(input.entita, modifiche);
 
-  if (modifiche.length === 0) {
+  const systemModifiche = payload ? formatSystemEventModifiche(input.azione, payload) : null;
+  if (systemModifiche?.length) {
+    modifiche = systemModifiche;
+  } else if (modifiche.length === 0) {
     modifiche = defaultModificheForCreate(input.entita, input.azione, record, stati);
   }
 

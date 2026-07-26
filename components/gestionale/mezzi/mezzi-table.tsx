@@ -20,11 +20,7 @@ import {
   dsTableActionBtnSecondary,
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
-import {
-  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
-  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
-  type GestionaleListLayout,
-} from "@/lib/ui/use-gestionale-list-layout";
+import type { ListSurface } from "@/lib/ui/resolve-list-surface";
 import {
   GestionaleListTable,
   GestionaleListTableActionsHead,
@@ -151,7 +147,7 @@ function MezziCellIdentificazione({ lines }: { lines: string[] }) {
 }
 
 export type MezziTableProps = {
-  listLayout: GestionaleListLayout;
+  listSurface: ListSurface;
   rows: MezzoGestito[];
   interventiByMezzoId: Map<string, MezzoInterventoLavorazione[]>;
   ultimaModificaInfoByMezzoId: Map<string, MezzoUltimaModificaInfo>;
@@ -393,7 +389,7 @@ function MezzoMobileCard({
 const MezzoRow = memo(MezzoRowInner);
 
 export function MezziTable({
-  listLayout,
+  listSurface,
   rows,
   interventiByMezzoId,
   ultimaModificaInfoByMezzoId,
@@ -422,12 +418,10 @@ export function MezziTable({
     [rows, interventiByMezzoId, inOfficina, flashRowId, onHub],
   );
 
-  return (
-    <>
-      {listLayout === "desktop" ? (
+  if (listSurface === "table") {
+    return (
       <GestionaleListTable
         wrapClassName="mt-0"
-        visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
         colgroup={
           <>
             <col className="w-[14%]" />
@@ -476,9 +470,10 @@ export function MezziTable({
       >
         {null}
       </GestionaleListTable>
-      ) : null}
+    );
+  }
 
-      {listLayout === "mobile" ? (
+  return (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {rows.length === 0 ? (
           <div className="col-span-full">
@@ -505,7 +500,5 @@ export function MezziTable({
           ))
         )}
       </div>
-      ) : null}
-    </>
   );
 }

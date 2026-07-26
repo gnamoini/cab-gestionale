@@ -1,5 +1,11 @@
 import { normalizeHex } from "@/lib/lavorazioni/color-utils";
-import { addettoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
+import {
+  addettoColorKey,
+  findAddettoById,
+  findAddettoByStoredName,
+  type AddettoRecord,
+} from "@/lib/lavorazioni/addetto-model";
+import { addettoThemeColorFromId } from "@/lib/lavorazioni/lavorazioni-theme";
 
 /** Palette base gestionale — 12 colori frequenti (assegnazione automatica + picker impostazioni). */
 export const ADDETTO_COLOR_POOL = [
@@ -95,11 +101,115 @@ export function syncAddettoColorMap(
   return out;
 }
 
+/**
+ * Allinea mappa colori ai record per chiave stabile (colorKey / id).
+ * Migra colori legacy keyed per nome se presenti in `existing`.
+ */
+export function syncAddettoColorMapById(
+  records: readonly AddettoRecord[],
+  existing: Record<string, string> | undefined,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  const used = new Set<string>();
+
+  for (const rec of records) {
+    const key = addettoColorKey(rec);
+    const fromKey = normalizeHex(existing?.[key]) ?? normalizeHex(existing?.[rec.id]);
+    const fromNome = normalizeHex(existing?.[rec.nome.trim()]);
+    const nh = fromKey ?? fromNome;
+    if (nh && !used.has(nh)) {
+      out[key] = nh;
+      used.add(nh);
+    }
+  }
+
+  for (const rec of records) {
+    const key = addettoColorKey(rec);
+    if (out[key]) continue;
+    const hex = nextUniqueAddettoColor(
+      used,
+      (key.length + 1) * 1315423911 + records.indexOf(rec) * 97,
+    );
+    const n = normalizeHex(hex)!;
+    out[key] = n;
+    used.add(n);
+  }
+
+  return out;
+}
+
+/** Migra mappa legacy nome → id; mantiene hex per record matchati. */
+export function migrateAddettoColorMapNomeToId(
+  records: readonly AddettoRecord[],
+  existing: Record<string, string> | undefined,
+): Record<string, string> {
+  return syncAddettoColorMapById(records, existing);
+}
+
+function addettoColorLookupKeys(
+  colorKey: string,
+  records?: readonly AddettoRecord[],
+): string[] {
+  const k = colorKey.trim();
+  if (!k) return [];
+  const keys = new Set<string>([k]);
+  if (records?.length) {
+    const rec = findAddettoById(records, k) ?? findAddettoByStoredName(records, k);
+    if (rec) {
+      keys.add(addettoColorKey(rec));
+      keys.add(rec.id);
+      const nome = rec.nome.trim();
+      if (nome) keys.add(nome);
+    }
+  }
+  return [...keys];
+}
+
+/** Colore per UI da chiave stabile id/colorKey (con fallback nome legacy se `records` è fornito). */
+export function addettoDisplayColorById(
+  colorKey: string,
+  map: Record<string, string>,
+  records?: readonly AddettoRecord[],
+): string {
+  const k = colorKey.trim();
+  if (!k) return addettoThemeColorFromId("empty");
+  for (const key of addettoColorLookupKeys(k, records)) {
+    const n = normalizeHex(map[key]);
+    if (n) return n;
+  }
+  const rec = records?.length
+    ? findAddettoById(records, k) ?? findAddettoByStoredName(records, k)
+    : undefined;
+  return addettoThemeColorFromId(rec ? addettoColorKey(rec) : k);
+}
+
+export function assignColorForNewAddettoById(
+  prev: Record<string, string>,
+  record: Pick<AddettoRecord, "id" | "colorKey">,
+): Record<string, string> {
+  const key = addettoColorKey(record);
+  const used = usedHexSet(prev);
+  const salt = (Date.now() + Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+  const hex = nextUniqueAddettoColor(used, salt);
+  return { ...prev, [key]: hex };
+}
+
+export function removeAddettoFromColorMapById(
+  prev: Record<string, string>,
+  record: Pick<AddettoRecord, "id" | "colorKey">,
+): Record<string, string> {
+  const key = addettoColorKey(record);
+  const { [key]: _, ...rest } = prev;
+  return rest;
+}
+
 /** Colore per UI: da mappa persistita, altrimenti fallback deterministico (righe legacy). */
-export function addettoDisplayColor(nome: string, map: Record<string, string>): string {
-  const n = normalizeHex(map[nome]);
-  if (n) return n;
-  return addettoThemeColor(nome);
+export function addettoDisplayColor(
+  nome: string,
+  map: Record<string, string>,
+  records?: readonly AddettoRecord[],
+): string {
+  return addettoDisplayColorById(nome, map, records);
 }
 
 export function assignColorForNewAddetto(prev: Record<string, string>, newName: string): Record<string, string> {

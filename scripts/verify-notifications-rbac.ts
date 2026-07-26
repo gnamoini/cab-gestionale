@@ -61,8 +61,9 @@ const clientPortalMigration = read("supabase/migrations/20260915120800_client_po
 assert.match(clientPortalMigration, /Nuova lavorazione/);
 
 const publishSrc = read("lib/notifications/publish-notification.ts");
-assert.match(publishSrc, /fattureScaduteDigestDedupKey/);
-assert.match(publishSrc, /tagliandoDaEseguireDedupKey/);
+assert.match(publishSrc, /dispatchNotificationViaApi/);
+assert.match(publishSrc, /notificationEventIdFromLegacy/);
+assert.match(publishSrc, /fatturazione\.overdue_digest/);
 
 const staffSrc = read("lib/notifications/staff-inbox-eligible.ts");
 assert.match(staffSrc, /guest/);
@@ -71,12 +72,19 @@ assert.match(staffSrc, /cliente/);
 const centerSrc = read("components/gestionale/notification-center-bell.tsx");
 assert.match(centerSrc, /useNotificationCenter/);
 assert.match(centerSrc, /NotificationBellIcon/);
+assert.match(centerSrc, /NotificationSettingsModal/);
+
+const prefsMigration = read(
+  "supabase/migrations/20261030120000_notification_event_preferences_ssot.sql",
+);
+assert.match(prefsMigration, /notification_event_preferences/);
+assert.match(prefsMigration, /cab_dispatch_notifications_bulk/);
 
 const mountSrc = read("components/gestionale/notification-center-mount.tsx");
 assert.match(mountSrc, /isStaffInboxEligible/);
 
 const shellSrc = read("components/gestionale/app-shell.tsx");
-assert.match(shellSrc, /SidebarSessionPanel/);
+assert.match(shellSrc, /AppShellSidebar/);
 
 const realtimeSrc = read("lib/notifications/realtime-inbox-coordinator.ts");
 assert.match(realtimeSrc, /DEBOUNCE_MS/);

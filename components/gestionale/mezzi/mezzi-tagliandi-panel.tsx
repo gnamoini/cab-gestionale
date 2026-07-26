@@ -13,6 +13,7 @@ export function MezziTagliandiPanel({
   presetFilter = "",
   statoFilter = "",
   highlightConfigId = null,
+  onOpenMezzoHub,
 }: {
   canEdit: boolean;
   tagliandiSection: TagliandiSectionParam;
@@ -20,6 +21,7 @@ export function MezziTagliandiPanel({
   presetFilter?: string;
   statoFilter?: TagliandoStatoUi | "";
   highlightConfigId?: string | null;
+  onOpenMezzoHub?: (mezzoId: string) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -32,6 +34,7 @@ export function MezziTagliandiPanel({
           presetFilter={presetFilter}
           statoFilter={statoFilter}
           highlightConfigId={highlightConfigId}
+          onOpenMezzoHub={onOpenMezzoHub}
         />
       )}
     </div>

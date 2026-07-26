@@ -162,6 +162,7 @@ function SchedaIngressoAnagraficaFieldsInner({
     targa: value.targa,
     matricola: value.matricola,
     nScuderia: value.nScuderia,
+    vin: value.vin,
   };
 
   const uid = useId();
@@ -442,34 +443,39 @@ function SchedaIngressoAnagraficaFieldsInner({
               />
             </FormField>
           </div>
-          <div>
-            <SchedaIngressoIdentAutocompleteField
-              field="targa"
-              label="Targa"
-              value={value.targa}
-              siblingIdent={identSibling}
-              mezzi={mezzi}
-              disabled={disabled}
-              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
-              onChange={(v) => onPatch({ targa: v })}
-              onExactMezzoMatch={(m) => mezzoMatchHandler(m, "targa")}
-            />
-            {renderIdentHint("targa")}
-            {hintAfter("targa")}
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div>
+              <SchedaIngressoIdentAutocompleteField
+                field="targa"
+                label="Targa"
+                value={value.targa}
+                siblingIdent={identSibling}
+                mezzi={mezzi}
+                disabled={disabled}
+                exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
+                onChange={(v) => onPatch({ targa: v })}
+                onExactMezzoMatch={(m) => mezzoMatchHandler(m, "targa")}
+              />
+              {renderIdentHint("targa")}
+              {hintAfter("targa")}
+            </div>
+            <div>
+              <SchedaIngressoIdentAutocompleteField
+                field="vin"
+                label="VIN"
+                id={fieldId("vin")}
+                value={value.vin}
+                siblingIdent={identSibling}
+                mezzi={mezzi}
+                disabled={disabled}
+                exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
+                onChange={(v) => onPatch({ vin: sliceInputValue(v, TEXT_SHORT) })}
+                onExactMezzoMatch={(m) => mezzoMatchHandler(m, "vin")}
+              />
+              {renderIdentHint("vin")}
+              {hintAfter("vin")}
+            </div>
           </div>
-          <FormField label="VIN" htmlFor={fieldId("vin")}>
-            <CaptureAwareFormField hint={captureHints?.vin} footer={hintAfter("vin", true)}>
-            <input
-              id={fieldId("vin")}
-              value={value.vin}
-              onChange={(e) => onPatch({ vin: sliceInputValue(e.target.value, TEXT_SHORT) })}
-              disabled={disabled}
-              className={`${inputFieldClass} font-mono uppercase`}
-              autoComplete="off"
-              spellCheck={false}
-            />
-            </CaptureAwareFormField>
-          </FormField>
         </FormSection>
       ) : null}
 

@@ -16,7 +16,7 @@ import {
   HubModalPanoramicaSubsection,
   hubPanoramicaDisplayValue,
 } from "@/components/design-system/hub-modal-panoramica";
-import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
+import { addettoRefFromFields, getAddettoPillHex } from "@/lib/lavorazioni/addetto-display";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import { formatLivelloCarburanteDisplay } from "@/lib/schede/livello-carburante-value";
 import { RichiedenteFirmaDisplay } from "@/components/gestionale/schede/richiedente-firma-display";
@@ -430,9 +430,16 @@ export function SchedaIngressoPanoramicaView({
   const globalOpts = useGlobalOptions({ enabled: sections.ingresso === true && showAddettoAccettazione });
   const addettoPillStyle =
     addettoPillStyleProp ??
-    (fields.addettoAccettazione.trim()
+    (fields.addettoAccettazione.trim() || fields.addettoAccettazioneId?.trim()
       ? readablePillStyleFromHex(
-          addettoDisplayColor(fields.addettoAccettazione, globalOpts.lavorazioni.addettoColors),
+          getAddettoPillHex(
+            globalOpts.lavorazioni.addettiRecords,
+            addettoRefFromFields({
+              addettoAccettazioneId: fields.addettoAccettazioneId,
+              addettoAccettazione: fields.addettoAccettazione,
+            }),
+            globalOpts.lavorazioni.addettoColors,
+          ),
         )
       : undefined);
 

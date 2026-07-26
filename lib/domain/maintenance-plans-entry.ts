@@ -32,4 +32,7 @@ export const maintenancePlansEntry = {
     maintenanceEngineV2Service.bulkAssignPresetToMezzi.bind(maintenanceEngineV2Service),
   ),
   listMezziWithoutPreset: maintenanceEngineV2Service.listMezziWithoutPreset.bind(maintenanceEngineV2Service),
+  listAssignableMezzi: maintenanceEngineV2Service.listAssignableMezzi.bind(maintenanceEngineV2Service),
+  listMezzoMaintenanceTimelineExtras:
+    maintenanceEngineV2Service.listMezzoMaintenanceTimelineExtras.bind(maintenanceEngineV2Service),
 };

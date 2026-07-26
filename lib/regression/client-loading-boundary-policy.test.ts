@@ -72,11 +72,11 @@ function main(): void {
   assert.match(pulse, /motion-safe:animate-pulse/, "dsSkeletonPulse deve usare motion-safe");
   assert.match(pulse, /motion-reduce:animate-none/, "dsSkeletonPulse deve rispettare prefers-reduced-motion");
 
-  const docs = read("components/gestionale/media/lavorazione-documents-manager.tsx");
+  const docs = read("components/gestionale/media/lavorazione-official-documents-panel.tsx");
   assert.doesNotMatch(
     docs,
     /isLoading \? <LoadingFormSkeleton[\s\S]*?\.map\(/,
-    "lavorazione-documents-manager: skeleton e contenuto non devono coesistere",
+    "lavorazione-official-documents-panel: skeleton e contenuto non devono coesistere",
   );
 
   for (const rel of [

@@ -2,32 +2,29 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { listStoredImages, type StoredImage } from "@/lib/media/image-storage";
+import type { ClientLavorazioneDocumentsPayload } from "@/lib/official-documents/types";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
-import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import { lavorazioneDocumentsEntry } from "@/lib/domain/lavorazione-documents-entry";
-import { err, success, type ServiceResult } from "@/src/services/service-result";
-import type { LavorazioneDocumentRow } from "@/src/types/supabase-tables";
 
-export type ClientLavorazioneDocumentsPayload = {
-  rows: LavorazioneDocumentRow[];
-};
+export type ClientLavorazioneDocumentsPayloadLegacy = ClientLavorazioneDocumentsPayload;
 
 export function useClientLavorazioneDocumentsQuery(lavorazioneId: string, enabled = true) {
   const id = lavorazioneId.trim();
   const opts = useViewQueryOpts();
-  return useServiceQuery<
-    ClientLavorazioneDocumentsPayload,
-    readonly ["client_lavorazione_documents", string]
-  >(
-    [...QK.clientLavorazioneDocuments, id] as const,
-    async (): Promise<ServiceResult<ClientLavorazioneDocumentsPayload>> => {
-      const res = await lavorazioneDocumentsEntry.listByLavorazione(id);
-      if (!res.success) return err(res.error ?? "Errore documenti lavorazione.");
-      return success({ rows: res.data ?? [] });
+  return useQuery({
+    queryKey: [...QK.clientLavorazioneDocuments, id] as const,
+    queryFn: async (): Promise<ClientLavorazioneDocumentsPayload> => {
+      const res = await fetch(
+        `/api/lavorazioni/${encodeURIComponent(id)}/official-documents?surface=client`,
+        { credentials: "same-origin" },
+      );
+      const body = (await res.json()) as ClientLavorazioneDocumentsPayload & { error?: string };
+      if (!res.ok) throw new Error(body.error ?? "Errore documenti lavorazione.");
+      return body;
     },
-    { enabled: enabled && id.length > 0, ...opts },
-  );
+    enabled: enabled && id.length > 0,
+    ...opts,
+  });
 }
 
 export function useClientLavorazionePhotosQuery(

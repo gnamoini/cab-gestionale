@@ -1,7 +1,14 @@
 import { composeInterventoContextFromListRow } from "@/lib/domain/intervento-context";
 import { latestAddettoFromLogs } from "@/lib/lavorazioni/client-portal-ui";
 import {
-  addettoDisplayNameFromNome,
+  addettoRefFromFields,
+  getAddettoColorKey,
+  getAddettoDisplayLabel,
+  getAddettoDisplayName,
+  resolveAddettoRecord,
+} from "@/lib/lavorazioni/addetto-display";
+import {
+  findAddettoById,
   findAddettoByStoredName,
   type AddettoRecord,
 } from "@/lib/lavorazioni/addetto-model";
@@ -17,59 +24,82 @@ export type ResolveAddettoDisplayContext = {
   addettiRecords?: readonly AddettoRecord[];
 };
 
+function ingressoCampi(row: Pick<LavorazioneListRow, "id">, schedeStore: LavorazioneSchedeStore | undefined) {
+  const store = schedeStore ?? {};
+  return (
+    store[row.id]?.ingresso?.campi ??
+    composeInterventoContextFromListRow(row as LavorazioneListRow, store).schedaIngresso.campi
+  );
+}
+
+/** Ref id-first da snapshot scheda (senza enrich settings). */
+export function resolveAddettoSnapshotRef(
+  row: Pick<LavorazioneListRow, "id">,
+  schedeStore: LavorazioneSchedeStore | undefined,
+  logs?: readonly LogModificaRow[],
+): { addettoId: string | null; addettoLegacy: string | null } {
+  const campi = ingressoCampi(row, schedeStore);
+  const ingressoId = campi?.addettoAccettazioneId?.trim() || null;
+  const ingressoLegacy = campi?.addettoAccettazione?.trim() || "";
+  if (ingressoId || ingressoLegacy) {
+    return { addettoId: ingressoId, addettoLegacy: ingressoId ? null : ingressoLegacy };
+  }
+
+  const store = schedeStore ?? {};
+  const fromRighe =
+    store[row.id]?.lavorazioni?.campi.righe
+      .flatMap((r) => r.addettiAssegnati)
+      .find((a) => a.addettoId?.trim() || a.addetto.trim()) ?? null;
+  if (fromRighe) {
+    const id = fromRighe.addettoId?.trim() || null;
+    const legacy = fromRighe.addetto.trim();
+    return { addettoId: id, addettoLegacy: id ? null : legacy || null };
+  }
+
+  if (logs?.length) {
+    const fromLogs = latestAddettoFromLogs(logs);
+    if (fromLogs !== LAVORAZIONE_EMPTY_DISPLAY) {
+      return { addettoId: null, addettoLegacy: fromLogs };
+    }
+  }
+  return { addettoId: null, addettoLegacy: null };
+}
+
 /** Nome grezzo da snapshot scheda (senza enrich settings). */
 export function resolveAddettoSnapshotRaw(
   row: Pick<LavorazioneListRow, "id">,
   schedeStore: LavorazioneSchedeStore | undefined,
   logs?: readonly LogModificaRow[],
 ): string {
-  const store = schedeStore ?? {};
-  const fromIngresso =
-    store[row.id]?.ingresso?.campi?.addettoAccettazione?.trim() ||
-    composeInterventoContextFromListRow(row as LavorazioneListRow, store).schedaIngresso.campi
-      ?.addettoAccettazione?.trim() ||
-    "";
-  const fromRighe =
-    store[row.id]?.lavorazioni?.campi.righe
-      .flatMap((r) => r.addettiAssegnati)
-      .find((a) => a.addetto.trim())
-      ?.addetto.trim() ?? "";
-  if (fromIngresso || fromRighe) return fromIngresso || fromRighe;
-  if (logs?.length) {
-    const fromLogs = latestAddettoFromLogs(logs);
-    if (fromLogs !== LAVORAZIONE_EMPTY_DISPLAY) return fromLogs;
+  const ref = resolveAddettoSnapshotRef(row, schedeStore, logs);
+  if (ref.addettoId && schedeStore) {
+    return ref.addettoId;
   }
-  return "";
+  return ref.addettoLegacy ?? "";
 }
 
-/** Chiave persistita / colori pill: `nome` record se match, altrimenti snapshot grezzo. */
+/** Chiave colore pill: id/colorKey stabile. */
 export function resolveAddettoNomeKey(
   row: Pick<LavorazioneListRow, "id">,
   ctx: ResolveAddettoDisplayContext = {},
 ): string {
-  const raw = resolveAddettoSnapshotRaw(row, ctx.schedeStore, ctx.logs);
-  if (!raw) return "";
-  if (ctx.addettiRecords?.length) {
-    const rec = findAddettoByStoredName(ctx.addettiRecords, raw);
-    if (rec) return rec.nome.trim();
-  }
-  return raw.trim();
+  const ref = resolveAddettoSnapshotRef(row, ctx.schedeStore, ctx.logs);
+  return getAddettoColorKey(ctx.addettiRecords ?? [], ref);
 }
+
+/** @deprecated Usare resolveAddettoNomeKey → getAddettoColorKey */
+export const resolveAddettoColorKey = resolveAddettoNomeKey;
 
 /**
  * Resolver context-aware lavorazioni: snapshot → logs → empty.
- * Opzionale enrich da settings se match per nome (mai addetti[0]).
+ * Opzionale enrich da settings se match per id o legacy.
  */
 export function resolveAddettoDisplay(
   row: Pick<LavorazioneListRow, "id">,
   ctx: ResolveAddettoDisplayContext = {},
 ): string {
-  const raw = resolveAddettoSnapshotRaw(row, ctx.schedeStore, ctx.logs);
-  if (!raw) return "";
-  if (ctx.addettiRecords?.length) {
-    return addettoDisplayNameFromNome(ctx.addettiRecords, raw);
-  }
-  return raw;
+  const ref = resolveAddettoSnapshotRef(row, ctx.schedeStore, ctx.logs);
+  return getAddettoDisplayName(ctx.addettiRecords ?? [], ref);
 }
 
 /** Etichetta UI lista/PDF: empty → trattino. */
@@ -77,13 +107,12 @@ export function resolveAddettoDisplayLabel(
   row: Pick<LavorazioneListRow, "id">,
   ctx: ResolveAddettoDisplayContext = {},
 ): string {
-  const label = resolveAddettoDisplay(row, ctx);
-  return label.trim() || LAVORAZIONE_EMPTY_DISPLAY;
+  const ref = resolveAddettoSnapshotRef(row, ctx.schedeStore, ctx.logs);
+  return getAddettoDisplayLabel(ctx.addettiRecords ?? [], ref);
 }
 
 /**
  * Per filtri/KPI: true solo con bundle scheda caricato e nessun addetto persistito.
- * ponytail: senza bundle non inferire «senza addetto» (prefetch parziale dashboard).
  */
 export function isLavorazioneAddettoUnassigned(
   row: Pick<LavorazioneListRow, "id">,
@@ -91,5 +120,17 @@ export function isLavorazioneAddettoUnassigned(
 ): boolean {
   const store = ctx.schedeStore ?? {};
   if (!store[row.id]) return false;
-  return !resolveAddettoSnapshotRaw(row, ctx.schedeStore, ctx.logs).trim();
+  const ref = resolveAddettoSnapshotRef(row, ctx.schedeStore, ctx.logs);
+  return !ref.addettoId && !ref.addettoLegacy?.trim();
 }
+
+export function resolveAddettoRecordFromRow(
+  row: Pick<LavorazioneListRow, "id">,
+  ctx: ResolveAddettoDisplayContext = {},
+): AddettoRecord | null {
+  const ref = resolveAddettoSnapshotRef(row, ctx.schedeStore, ctx.logs);
+  return resolveAddettoRecord(ctx.addettiRecords ?? [], ref);
+}
+
+/** Helper per costruire AddettoRef da campi scheda. */
+export { addettoRefFromFields };

@@ -25,7 +25,8 @@ import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-querie
 import { maybeRecordLearningOnSave } from "@/lib/preventivi/trasforma-descrizione";
 import type { DescrizionePreventivoContext } from "@/lib/preventivi/preventivi-descrizione-aggregator";
 import { regeneratePreventivoDescription } from "@/lib/preventivi/regenerate-preventivo-description";
-import type { PreventivoRecord, PreventivoRigaRicambio } from "@/lib/preventivi/types";
+import { normalizePreventivoRigaAddettoWrite } from "@/lib/lavorazioni/addetto-write-freeze";
+import type { PreventivoRecord, PreventivoRigaAddetto, PreventivoRigaRicambio } from "@/lib/preventivi/types";
 import {
   PREVENTIVO_TIPI_DOCUMENTO,
   preventivoTipoDocumentoLabel,
@@ -491,10 +492,13 @@ export function PreventiviEditorModal({
     });
   }
 
-  function patchAddettoRow(idx: number, patchRow: { addetto?: string; ore?: number }) {
+  function patchAddettoRow(idx: number, patchRow: Partial<PreventivoRigaAddetto>) {
     setDraft((prev) => {
       if (!prev) return prev;
-      const righeAddetti = prev.manodopera.righeAddetti.map((r, i) => (i === idx ? { ...r, ...patchRow } : r));
+      const righeAddetti = prev.manodopera.righeAddetti.map((r, i) => {
+        if (i !== idx) return r;
+        return normalizePreventivoRigaAddettoWrite({ ...r, ...patchRow } as Record<string, unknown>) as PreventivoRigaAddetto;
+      });
       const oreTotali = sumOreRigheAddetti(righeAddetti);
       return applyTotals({
         ...prev,
@@ -506,7 +510,7 @@ export function PreventiviEditorModal({
   function addAddettoRow() {
     setDraft((prev) => {
       if (!prev) return prev;
-      const righeAddetti = [...prev.manodopera.righeAddetti, { addetto: "", ore: 1 }];
+      const righeAddetti = [...prev.manodopera.righeAddetti, { addettoId: null, ore: 1 }];
       const oreTotali = sumOreRigheAddetti(righeAddetti);
       return applyTotals({ ...prev, manodopera: { ...prev.manodopera, righeAddetti, oreTotali } });
     });
@@ -519,7 +523,18 @@ export function PreventiviEditorModal({
       if (righeAddetti.length === 0) {
         return applyTotals({
           ...prev,
-          manodopera: { ...prev.manodopera, righeAddetti: [{ addetto: "Officina", ore: 1 }], oreTotali: 1 },
+          manodopera: {
+            ...prev.manodopera,
+            righeAddetti: [
+              normalizePreventivoRigaAddettoWrite({
+                addettoId: null,
+                ore: 1,
+                addettoLegacy: "Officina",
+                legacyWarning: "Addetto storico non convertibile: Officina",
+              }) as PreventivoRigaAddetto,
+            ],
+            oreTotali: 1,
+          },
         });
       }
       const oreTotali = sumOreRigheAddetti(righeAddetti);

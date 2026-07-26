@@ -78,4 +78,34 @@ const byPreferred = resolveMezzoFromScheda({
 assert.equal(byPreferred.matchKind, "explicit");
 assert.equal(byPreferred.mezzoId, "m-linked");
 
+const byVin = resolveMezzoFromScheda({
+  scheda: {
+    ...fields,
+    targa: "",
+    vin: "VIN123456",
+  },
+  existingMezzi: [
+    ...catalog,
+    {
+      id: "m-vin",
+      cliente: "V",
+      utilizzatore: "—",
+      marca: "X",
+      modello: "Y",
+      targa: "—",
+      matricola: "Non assegnata",
+      tipoAttrezzatura: "—",
+      anno: 2020,
+      vin: "VIN123456",
+      oreKm: 0,
+      statoAttuale: "Operativo",
+      dataUltimaUscita: "—",
+      note: "",
+      priorita: "normale",
+    },
+  ],
+});
+assert.equal(byVin.matchKind, "ident");
+assert.equal(byVin.mezzoId, "m-vin");
+
 console.log("resolve-mezzo-from-scheda.test.ts: ok");

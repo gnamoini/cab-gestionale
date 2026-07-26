@@ -1,4 +1,4 @@
-import { syncAddettoColorMap } from "@/lib/lavorazioni/addetto-colors-assign";
+import { migrateAddettoColorMapNomeToId, syncAddettoColorMap, syncAddettoColorMapById } from "@/lib/lavorazioni/addetto-colors-assign";
 import {
   defaultAddettiRecords,
   migrateLegacyAddettiStrings,
@@ -63,7 +63,7 @@ function defaultLavorazioni(): CabAppSettingsResolved["lavorazioni"] {
     stati: [...DEFAULT_STATI_LAVORAZIONI_WORKFLOW],
     addettiRecords,
     addetti,
-    addettoColors: syncAddettoColorMap(addetti, undefined),
+    addettoColors: syncAddettoColorMapById(addettiRecords, undefined),
     prioritaColors: {},
     prioritaDb: [...DEFAULT_PRIORITA_LAVORAZIONI_DB],
   };
@@ -104,15 +104,11 @@ function parseLavorazioniPayload(raw: unknown): CabAppSettingsResolved["lavorazi
   const addettiResolved = resolveAddettiFromPayload(o);
   base.addettiRecords = addettiResolved.addettiRecords;
   base.addetti = addettiResolved.addetti;
-  base.addettoColors = syncAddettoColorMap(
-    base.addetti,
+  const legacyColors =
     o.addettoColors && typeof o.addettoColors === "object" && !Array.isArray(o.addettoColors)
       ? (o.addettoColors as Record<string, string>)
-      : undefined,
-  );
-  if (o.addettoColors && typeof o.addettoColors === "object" && !Array.isArray(o.addettoColors)) {
-    base.addettoColors = { ...base.addettoColors, ...(o.addettoColors as Record<string, string>) };
-  }
+      : undefined;
+  base.addettoColors = migrateAddettoColorMapNomeToId(base.addettiRecords, legacyColors);
   if (o.prioritaColors && typeof o.prioritaColors === "object" && !Array.isArray(o.prioritaColors)) {
     base.prioritaColors = { ...base.prioritaColors, ...(o.prioritaColors as Partial<Record<PrioritaLav, string>>) };
   }

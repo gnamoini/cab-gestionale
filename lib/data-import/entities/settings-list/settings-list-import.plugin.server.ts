@@ -17,7 +17,7 @@ import type {
 } from "@/lib/data-import/core/types";
 import { IMPORT_EXECUTE_CHUNK, IMPORT_MAX_PREVIEW_ROWS } from "@/lib/data-import/core/types";
 import { createAddettoId, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
-import { syncAddettoColorMap } from "@/lib/lavorazioni/addetto-colors-assign";
+import { syncAddettoColorMapById } from "@/lib/lavorazioni/addetto-colors-assign";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 const VALUE_FIELD: ImportFieldDef = {
@@ -191,7 +191,10 @@ export function createSettingsListImportPlugin(config: SettingsListPluginConfig)
             }
             records.push({ id: createAddettoId(), nome, cognome: null });
             const addetti = records.map((r) => r.nome.trim()).filter(Boolean);
-            const addettoColors = syncAddettoColorMap(addetti, (prefs.addettoColors as Record<string, string>) ?? {});
+            const addettoColors = syncAddettoColorMapById(
+              records,
+              (prefs.addettoColors as Record<string, string>) ?? {},
+            );
             payload = { ...prefs, addettiRecords: records, addetti, addettoColors };
             result.stats.created += 1;
           }

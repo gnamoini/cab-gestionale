@@ -25,7 +25,7 @@ async function sb() {
 
 const PROPAGATION_UPDATE_CHUNK = 20;
 
-type PropagationTable = "scheda_lavorazione" | "mezzi" | "magazzino_ricambi";
+type PropagationTable = "scheda_lavorazione" | "mezzi" | "magazzino_ricambi" | "attrezzature";
 
 async function runBatchedRowUpdates(
   c: SupabaseClient,
@@ -97,6 +97,27 @@ async function propagateSimpleColumn(
   const c = await sb();
   const n = await countUpdate(c, table, { [column]: to }, { [column]: from });
   return { kind, from, to, updated: n };
+}
+
+async function propagateDdtClienteBozza(from: string, to: string): Promise<number> {
+  const c = await sb();
+  const { data, error } = await c
+    .from("ddt_documents")
+    .update({ cliente_label: to })
+    .eq("cliente_label", from)
+    .eq("status", "bozza")
+    .select("id");
+  if (error) throw new Error(error.message);
+  return (data ?? []).length;
+}
+
+async function propagateMezziTelaioColumn(
+  kind: SettingsRenameKind,
+  from: string,
+  to: string,
+  column: "marca_telaio" | "modello_telaio" | "tipo_telaio",
+): Promise<SettingsRenamePropagationResult> {
+  return propagateSimpleColumn(kind, from, to, "mezzi", column);
 }
 
 type IngressoCampoKey = "cliente" | "utilizzatore" | "cantiere";
@@ -276,6 +297,8 @@ async function propagateOne(entry: SettingsRenameEntry): Promise<SettingsRenameP
       const c = await sb();
       const prof = await countUpdate(c, "profiles", { cliente_ref: to }, { cliente_ref: from });
       out.push({ kind, from, to, updated: prof });
+      out.push(await propagateSimpleColumn(kind, from, to, "billing_customers", "cliente_label"));
+      out.push({ kind, from, to, updated: await propagateDdtClienteBozza(from, to) });
       const { clientiAnagraficaService } = await import("@/src/services/clienti-anagrafica.service");
       const anagRes = await clientiAnagraficaService.renameNomeDisplay(from, to);
       if (anagRes.success) {
@@ -309,20 +332,30 @@ async function propagateOne(entry: SettingsRenameEntry): Promise<SettingsRenameP
       out.push({ kind, from, to, updated: await propagateMagazzinoProduttoreAlternativo(from, to) });
       break;
     case "tipo_attrezzatura":
-      out.push(await propagateSimpleColumn(kind, from, to, "mezzi", "tipo_attrezzatura"));
+      out.push(await propagateSimpleColumn(kind, from, to, "attrezzature", "tipo_attrezzatura"));
       break;
-    case "tipo_telaio":
+    case "tipo_telaio": {
+      out.push(await propagateMezziTelaioColumn(kind, from, to, "tipo_telaio"));
       out.push({ kind, from, to, updated: await propagateMezziMetaField("tipoTelaio", from, to) });
       break;
+    }
     case "hierarchy_marca_attrezzature":
+      out.push(await propagateSimpleColumn(kind, from, to, "attrezzature", "marca"));
+      out.push(await propagateSimpleColumn(kind, from, to, "documenti", "marca"));
+      out.push({ kind, from, to, updated: await propagateMagazzinoCompat(entry) });
+      break;
     case "hierarchy_marca_telai":
-      out.push(await propagateSimpleColumn(kind, from, to, "mezzi", "marca"));
+      out.push(await propagateMezziTelaioColumn(kind, from, to, "marca_telaio"));
       out.push(await propagateSimpleColumn(kind, from, to, "documenti", "marca"));
       out.push({ kind, from, to, updated: await propagateMagazzinoCompat(entry) });
       break;
     case "hierarchy_modello_attrezzature":
+      out.push(await propagateSimpleColumn(kind, from, to, "attrezzature", "modello"));
+      out.push(await propagateSimpleColumn(kind, from, to, "documenti", "modello"));
+      out.push({ kind, from, to, updated: await propagateMagazzinoCompat(entry) });
+      break;
     case "hierarchy_modello_telai":
-      out.push(await propagateSimpleColumn(kind, from, to, "mezzi", "modello"));
+      out.push(await propagateMezziTelaioColumn(kind, from, to, "modello_telaio"));
       out.push(await propagateSimpleColumn(kind, from, to, "documenti", "modello"));
       out.push({ kind, from, to, updated: await propagateMagazzinoCompat(entry) });
       break;

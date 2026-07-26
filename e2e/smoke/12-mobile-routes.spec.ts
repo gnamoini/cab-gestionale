@@ -7,14 +7,18 @@ const MOBILE_VIEWPORT = { width: 390, height: 844 };
 const DESKTOP_VIEWPORT = { width: 1440, height: 900 };
 
 const MOBILE_ROUTES = ["/dashboard", "/lavorazioni", "/magazzino", "/dipendenti", "/mezzi", "/preventivi", "/fatturazione"] as const;
+const LIST_SURFACE_COOKIE = "gestionale-list-surface";
 
-async function getGestionaleListLayoutMode(page: Page): Promise<"desktop" | "mobile" | "unknown"> {
-  return page.evaluate(() => {
-    const root = document.querySelector(".gestionale-list-layout-desktop, .gestionale-list-layout-mobile");
-    if (root?.classList.contains("gestionale-list-layout-mobile")) return "mobile";
-    if (root?.classList.contains("gestionale-list-layout-desktop")) return "desktop";
-    return "unknown";
-  });
+async function setListSurfaceCookie(page: Page, surface: "table" | "cards") {
+  const baseUrl = new URL(page.url() === "about:blank" ? "http://127.0.0.1:3000" : page.url());
+  await page.context().addCookies([
+    {
+      name: LIST_SURFACE_COOKIE,
+      value: surface,
+      domain: baseUrl.hostname,
+      path: "/",
+    },
+  ]);
 }
 
 async function listTableMounted(page: Page): Promise<boolean> {
@@ -71,59 +75,59 @@ for (const vp of CURSOR_PREVIEW_VIEWPORTS) {
   }
 }
 
-test("lavorazioni list: mobile viewport shows cards not desktop table", async ({ page }) => {
+test("lavorazioni list: cards cookie on mobile viewport", async ({ page }) => {
   test.setTimeout(90_000);
   attachConsoleGuards(page);
   await page.setViewportSize(MOBILE_VIEWPORT);
+  await setListSurfaceCookie(page, "cards");
   await loginViaUi(page, adminCredentials());
   await gotoLavorazioniTableReady(page);
 
-  expect(await getGestionaleListLayoutMode(page)).toBe("mobile");
   expect(await listTableMounted(page)).toBe(false);
 });
 
-test("magazzino list: mobile viewport shows cards not desktop table", async ({ page }) => {
+test("magazzino list: cards cookie on mobile viewport", async ({ page }) => {
   test.setTimeout(90_000);
   attachConsoleGuards(page);
   await page.setViewportSize(MOBILE_VIEWPORT);
+  await setListSurfaceCookie(page, "cards");
   await loginViaUi(page, adminCredentials());
   await gotoMagazzinoTableReady(page);
 
-  expect(await getGestionaleListLayoutMode(page)).toBe("mobile");
   expect(await listTableMounted(page)).toBe(false);
 });
 
-test("magazzino list: narrow container on wide viewport shows cards (IDE preview)", async ({
+test("magazzino list: narrow container on wide viewport keeps table without shell overflow", async ({
   page,
 }) => {
   test.setTimeout(90_000);
   attachConsoleGuards(page);
   await page.setViewportSize(DESKTOP_VIEWPORT);
+  await setListSurfaceCookie(page, "table");
   await loginViaUi(page, adminCredentials());
   await gotoMagazzinoTableReady(page);
 
   await page.evaluate(() => {
-    const root = document.querySelector(
-      ".gestionale-list-layout-desktop, .gestionale-list-layout-mobile",
-    );
+    const root = document.querySelector(".gestionale-list-container, .magazzino-scroll-scope");
     if (root instanceof HTMLElement) {
       root.style.width = "600px";
       root.style.maxWidth = "600px";
     }
   });
 
-  await expect.poll(async () => getGestionaleListLayoutMode(page)).toBe("mobile");
-  expect(await listTableMounted(page)).toBe(false);
+  expect(await listTableMounted(page)).toBe(true);
+  const overflow = await auditHorizontalOverflow(page);
+  expect(overflow.ok, JSON.stringify(overflow)).toBe(true);
 });
 
-test("lavorazioni list: desktop viewport shows table not mobile cards", async ({ page }) => {
+test("lavorazioni list: table cookie on desktop viewport", async ({ page }) => {
   test.setTimeout(90_000);
   attachConsoleGuards(page);
   await page.setViewportSize(DESKTOP_VIEWPORT);
+  await setListSurfaceCookie(page, "table");
   await loginViaUi(page, adminCredentials());
   await gotoLavorazioniTableReady(page);
 
-  expect(await getGestionaleListLayoutMode(page)).toBe("desktop");
   expect(await listTableMounted(page)).toBe(true);
 });
 
@@ -131,33 +135,33 @@ test("lavorazioni list: 724px preview has no horizontal shell overflow", async (
   test.setTimeout(90_000);
   attachConsoleGuards(page);
   await page.setViewportSize({ width: 724, height: 900 });
+  await setListSurfaceCookie(page, "cards");
   await loginViaUi(page, adminCredentials());
   await gotoLavorazioniTableReady(page);
 
   const overflow = await auditHorizontalOverflow(page);
   expect(overflow.ok, JSON.stringify(overflow)).toBe(true);
-  expect(await getGestionaleListLayoutMode(page)).toBe("mobile");
 });
 
-test("lavorazioni list: narrow container on wide viewport shows cards (IDE preview)", async ({
+test("lavorazioni list: narrow container on wide viewport keeps table without shell overflow", async ({
   page,
 }) => {
   test.setTimeout(90_000);
   attachConsoleGuards(page);
   await page.setViewportSize(DESKTOP_VIEWPORT);
+  await setListSurfaceCookie(page, "table");
   await loginViaUi(page, adminCredentials());
   await gotoLavorazioniTableReady(page);
 
   await page.evaluate(() => {
-    const root = document.querySelector(
-      ".gestionale-list-layout-desktop, .gestionale-list-layout-mobile",
-    );
+    const root = document.querySelector(".gestionale-list-container, .lavorazioni-scroll-scope");
     if (root instanceof HTMLElement) {
       root.style.width = "600px";
       root.style.maxWidth = "600px";
     }
   });
 
-  await expect.poll(async () => getGestionaleListLayoutMode(page)).toBe("mobile");
-  expect(await listTableMounted(page)).toBe(false);
+  expect(await listTableMounted(page)).toBe(true);
+  const overflow = await auditHorizontalOverflow(page);
+  expect(overflow.ok, JSON.stringify(overflow)).toBe(true);
 });

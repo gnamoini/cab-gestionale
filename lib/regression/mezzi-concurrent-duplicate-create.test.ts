@@ -13,7 +13,7 @@ if (!url || !key) {
 }
 
 async function main() {
-  const sb = createClient(url, key);
+  const sb = createClient(url!, key!);
   const scuderia = `conc-${Date.now()}`;
 
   const [a, b] = await Promise.all([

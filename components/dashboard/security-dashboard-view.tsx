@@ -23,6 +23,8 @@ import {
   dsBtnNeutral,
   dsStackPage,
 } from "@/lib/ui/design-system";
+import type { GestionaleListPageProps } from "@/lib/ui/gestionale-list-page-props";
+import { useListSurface } from "@/lib/ui/use-list-surface";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useSecurityDashboardData } from "@/src/hooks/use-security-dashboard-data";
@@ -46,7 +48,8 @@ function defaultRange(): { dateFromYmd: string; dateToYmd: string } {
   return { dateFromYmd: fmtYmd(from), dateToYmd: fmtYmd(to) };
 }
 
-export function SecurityDashboardView() {
+export function SecurityDashboardView({ listSurface: serverListSurface, listTier = "lg" }: GestionaleListPageProps) {
+  const listSurface = useListSurface(serverListSurface);
   const { user } = useAuth();
   const permissions = usePermissions();
   const { confirm, confirmDialog } = useGestionaleConfirm();
@@ -273,7 +276,7 @@ export function SecurityDashboardView() {
 
       {activeTab === "users" ? (
         <div id="security-panel-users" role="tabpanel" aria-labelledby="security-tab-users">
-          <SecurityUsersPermissionsPanelLazy readOnly={!isAdmin} sharedUsersQ={usersQ} />
+          <SecurityUsersPermissionsPanelLazy readOnly={!isAdmin} sharedUsersQ={usersQ} listSurface={listSurface} listTier={listTier} />
         </div>
       ) : null}
 

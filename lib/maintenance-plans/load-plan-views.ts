@@ -90,7 +90,7 @@ export async function loadMaintenancePlanViews(client: SupabaseClient): Promise<
     const list = checklistByPreset.get(presetId) ?? [];
     list.push({
       id: c.id as string,
-      label: c.label as string,
+      label: (c.label as string | null)?.trim() ?? "",
       sortOrder: c.sort_order as number,
       isRequired: c.is_required as boolean,
     });
@@ -215,13 +215,15 @@ export async function persistPlanChecklist(
 ): Promise<void> {
   await client.from("maintenance_preset_checklist_items").delete().eq("preset_id", planId);
   if (items.length === 0) return;
-  const { error } = await client.from("maintenance_preset_checklist_items").insert(
-    items.map((item, idx) => ({
+  const rows = items
+    .map((item, idx) => ({
       preset_id: planId,
-      label: item.label.trim(),
+      label: (item.label ?? "").trim(),
       sort_order: item.sortOrder ?? idx,
       is_required: item.isRequired,
-    })),
-  );
+    }))
+    .filter((row) => row.label.length > 0);
+  if (rows.length === 0) return;
+  const { error } = await client.from("maintenance_preset_checklist_items").insert(rows);
   if (error) throw error;
 }

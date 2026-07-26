@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { LoadingButton } from "@/components/design-system";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
@@ -12,7 +12,6 @@ import {
   MezzoFormFields,
 } from "@/components/gestionale/mezzi/mezzi-form-fields";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
-import { useMezzoCreateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import type { MezzoRow } from "@/src/types/supabase-tables";
 
 const MEZZO_NEW_FORM_ID = "mezzo-new-form";
@@ -32,7 +31,7 @@ export function MezziNewModal({
 }) {
   const formEngine = useFormEngine({ initial: getEmptyMezzoForm() });
   const { value: form, setValue, reset, runSubmit, formProps } = formEngine;
-  const createMut = useMezzoCreateMutation();
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     reset(getEmptyMezzoForm());
@@ -47,7 +46,7 @@ export function MezziNewModal({
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!canEdit || createMut.isPending) return;
+    if (!canEdit || saving) return;
 
     await runSubmit(e.currentTarget, async (currentForm) => {
       const marca = currentForm.marca.trim();
@@ -55,15 +54,17 @@ export function MezziNewModal({
         onValidationError("Compila almeno cliente e marca attrezzatura.");
         return;
       }
+      setSaving(true);
       try {
         const row = await persistMezzoFormCreate({
           form: currentForm,
-          createMezzo: (data) => createMut.mutateAsync(data),
         });
         reset(getEmptyMezzoForm());
         onCreated(row);
       } catch (err) {
         onSaveError(err);
+      } finally {
+        setSaving(false);
       }
     });
   }
@@ -78,7 +79,7 @@ export function MezziNewModal({
         <LoadingButton
           type="submit"
           form={MEZZO_NEW_FORM_ID}
-          loading={createMut.isPending}
+          loading={saving}
           preset="salva"
           loadingLabel="Salvataggio…"
           className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:opacity-60`}

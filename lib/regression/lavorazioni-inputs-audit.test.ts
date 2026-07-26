@@ -18,7 +18,7 @@ const lavorazioniView = read("components/gestionale/lavorazioni/lavorazioni-view
 assert.match(lavorazioniView, /GestionaleListTable/);
 const listSkeleton = read("components/gestionale/lavorazioni/lavorazioni-page-structure.tsx");
 const scrollCss = read("components/gestionale/global-table/gestionale-list-layout.css");
-const listLayoutHook = read("lib/ui/use-gestionale-list-layout.ts");
+const listSurfaceResolver = read("lib/ui/resolve-list-surface.ts");
 const filters = read("components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel.tsx");
 const schedeModal = read("components/lavorazioni/schede/schede-lavorazione-modal.tsx");
 const filterDrawer = read("components/gestionale/mobile-filter-drawer.tsx");
@@ -91,19 +91,18 @@ assert.match(view, /bundle=\{schedeStore\[row\.id\]\}/);
 const kanban = read("components/gestionale/lavorazioni/lavorazioni-kanban-view.tsx");
 assert.match(kanban, /kanbanSchedeBundleRevision/);
 
-assert.match(scrollCss, /\.gestionale-list-layout-desktop/);
-assert.match(scrollCss, /\.gestionale-list-layout-mobile/);
-assert.match(scrollCss, /\.gestionale-list-desktop-only/);
-assert.match(scrollCss, /\.gestionale-list-mobile-only/);
+assert.match(scrollCss, /\.gestionale-list-tier-xl/);
+assert.match(scrollCss, /\.gestionale-list-container/);
 
-assert.match(listLayoutHook, /ResizeObserver/);
-assert.match(listLayoutHook, /minViewport: 1280/);
-assert.match(listLayoutHook, /minContainer: 1024/);
+assert.match(listSurfaceResolver, /resolveListSurfaceFromRequest/);
+assert.match(listSurfaceResolver, /LIST_SURFACE_TABLE_MIN_VIEWPORT/);
 
-assert.match(view, /useGestionaleListLayout/);
-assert.match(view, /GESTIONALE_LIST_DESKTOP_ONLY_CLASS/);
+assert.match(view, /GestionaleListPageProps/);
+assert.match(view, /listSurface === "table"/);
+assert.doesNotMatch(view, /useGestionaleListLayout/);
+assert.doesNotMatch(view, /GESTIONALE_LIST_DESKTOP_ONLY_CLASS/);
 assert.doesNotMatch(view, /hidden xl:block/);
-assert.match(mobileCards, /GESTIONALE_LIST_MOBILE_ONLY_CLASS/);
+assert.doesNotMatch(mobileCards, /GESTIONALE_LIST_MOBILE_ONLY_CLASS/);
 assert.doesNotMatch(mobileCards, /xl:hidden/);
 assert.match(view, /GestionaleListTable/);
 assert.match(listSkeleton, /mode = "skeleton"/);

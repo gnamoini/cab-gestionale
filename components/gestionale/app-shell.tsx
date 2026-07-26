@@ -22,6 +22,7 @@ import { useBootInvestigationMount } from "@/lib/observability/use-boot-investig
 import { useSwipeFromEdgeToOpen } from "@/lib/ui/use-swipe-from-edge-to-open";
 import { deriveMainInert, useNavDrawerMachine } from "@/lib/ui/mobile-nav-drawer-machine";
 import { usePullToRefresh } from "@/lib/ui/use-pull-to-refresh";
+import { ListSurfaceCookieSync } from "@/lib/ui/list-surface-cookie-sync";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   useBootInvestigationMount("AppShell");
@@ -164,6 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       data-mobile-nav-visible={showMobileNavOpen ? "" : undefined}
       className={`cab-app-shell flex min-h-0 flex-col ${cabAppViewportFillClass} max-w-full overflow-hidden bg-[var(--cab-bg-app)] text-[color:var(--cab-text)]`}
     >
+      <ListSurfaceCookieSync />
       <AppShellSidebar
         homePath={homePath}
         navItems={navItems}

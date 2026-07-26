@@ -1,6 +1,6 @@
 "use client";
 
-import { Children, isValidElement, useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { Children, isValidElement, useMemo, type CSSProperties, type ReactNode } from "react";
 import { Tooltip } from "@/components/ui";
 import {
   GlobalFixedListPillSelect,
@@ -8,6 +8,12 @@ import {
   type FixedListPillSelectSize,
 } from "@/components/gestionale/global-input/global-fixed-list-pill";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
+import {
+  addettoColorKey,
+  findAddettoByStoredName,
+  type AddettoRecord,
+} from "@/lib/lavorazioni/addetto-model";
+import { normalizeHex } from "@/lib/lavorazioni/color-utils";
 import {
   addettoPillShellClass,
   addettoPillShellStyleForName,
@@ -30,11 +36,12 @@ import {
 import { formatLavorazioneIngressoDisplay } from "@/lib/lavorazioni/lavorazione-ingresso-display";
 import { statoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { dsFocus, dsTableActionsRowHeight } from "@/lib/ui/design-system";
-import { resolvePillTooltip } from "@/lib/ui/meaningful-tooltip";
 import {
   lavTablePillMinH,
   lavTablePillTextClass,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
+
+export { TablePillReadonly } from "@/components/gestionale/lavorazioni/lavorazioni-table-pill-readonly";
 
 type OptionChildProps = { value?: string | number; children?: ReactNode };
 export type TablePillOption = FixedListPillOption;
@@ -174,14 +181,16 @@ export function LavorazioneAddettoReadOnlyPill({
   addetto,
   addettoColors,
   colorKey,
+  addettiRecords,
   fullWidth = true,
   actionRow = false,
   actionRowFixedWidth = false,
 }: {
   addetto: string;
   addettoColors: Record<string, string | undefined>;
-  /** Chiave nome per colori pill (default: `addetto`). */
+  /** Chiave stabile colore pill (id/colorKey); se assente risolve da nome via `addettiRecords`. */
   colorKey?: string;
+  addettiRecords?: readonly AddettoRecord[];
   fullWidth?: boolean;
   actionRow?: boolean;
   actionRowFixedWidth?: boolean;
@@ -194,12 +203,22 @@ export function LavorazioneAddettoReadOnlyPill({
       </span>
     );
   }
-  const key = (colorKey ?? label).trim();
+  const rawKey = (colorKey ?? label).trim();
+  const resolvedKey = (() => {
+    if (normalizeHex(addettoColors[rawKey])) return rawKey;
+    if (addettiRecords?.length) {
+      const byId = addettiRecords.find((r) => r.id === rawKey || addettoColorKey(r) === rawKey);
+      if (byId) return addettoColorKey(byId);
+      const byNome = findAddettoByStoredName(addettiRecords, rawKey);
+      if (byNome) return addettoColorKey(byNome);
+    }
+    return rawKey;
+  })();
   return (
     <LavorazioneReadOnlyPill
       label={label}
       shellClass={addettoPillShellClass()}
-      shellStyle={addettoPillShellStyleForName(key, addettoColors)}
+      shellStyle={addettoPillShellStyleForName(resolvedKey, addettoColors, addettiRecords)}
       fullWidth={fullWidth}
       actionRow={actionRow}
       actionRowFixedWidth={actionRowFixedWidth}
@@ -264,64 +283,6 @@ export function LavorazioneCompletamentoDatePill({
       {pill}
     </div>
   );
-}
-
-function reactNodeText(node: ReactNode): string {
-  if (typeof node === "string" || typeof node === "number") return String(node);
-  if (Array.isArray(node)) return node.map(reactNodeText).join("");
-  if (isValidElement(node)) return reactNodeText((node.props as { children?: ReactNode }).children);
-  return "";
-}
-
-/** Pill colorata sola lettura (storico / kanban). */
-export function TablePillReadonly({
-  shellClass,
-  shellStyle,
-  title,
-  children,
-  fitContent = false,
-}: {
-  shellClass: string;
-  shellStyle?: CSSProperties;
-  title?: string;
-  children: ReactNode;
-  fitContent?: boolean;
-}) {
-  const textRef = useRef<HTMLSpanElement>(null);
-  const [truncated, setTruncated] = useState(false);
-  const visibleText = reactNodeText(children);
-  const measure = useCallback(() => {
-    const el = textRef.current;
-    if (!el) return;
-    setTruncated(el.scrollWidth > el.clientWidth + 1);
-  }, []);
-
-  useLayoutEffect(() => {
-    measure();
-    const el = textRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [visibleText, measure]);
-
-  const tooltip = resolvePillTooltip(visibleText, title ?? visibleText, truncated);
-  const widthClass = fitContent ? "w-fit max-w-none" : "min-w-0 max-w-[8.75rem]";
-  const textClass = fitContent
-    ? `min-w-0 flex-1 whitespace-nowrap ${lavTablePillTextClass} text-inherit`
-    : `min-w-0 flex-1 truncate ${lavTablePillTextClass} text-inherit`;
-
-  const pill = (
-    <div className={`${shellClass} overflow-hidden ${widthClass}`} style={shellStyle}>
-      <div className={`relative flex ${lavTablePillMinH} w-full items-center overflow-hidden rounded-[inherit] px-2 py-0.5`}>
-        <span ref={textRef} className={textClass}>
-          {children}
-        </span>
-      </div>
-    </div>
-  );
-
-  return tooltip ? <Tooltip content={tooltip}>{pill}</Tooltip> : pill;
 }
 
 const ADDETTI_RECENTS_KEY = "selector:addetti";

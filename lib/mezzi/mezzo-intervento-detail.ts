@@ -30,9 +30,8 @@ export type MezzoInterventoDetail = {
 const PREVENTIVO_LABEL: Record<PreventivoStato, string> = {
   bozza: "Bozza",
   inviato: "Inviato",
-  approvato: "Approvato",
-  rifiutato: "Rifiutato",
-  convertito: "Convertito",
+  confermato: "Confermato",
+  annullato: "Annullato",
 };
 
 function toPreventivoSummary(p: PreventivoRecord): PreventivoEpisodioSummary {

@@ -11,6 +11,7 @@ import {
 import { markRecentLocalTableBurst } from "@/lib/sync/recent-local-mutation";
 import { invalidateEntity } from "@/lib/cache/minimal-invalidation-contract";
 import { refreshSchedeBundlesForMezzoId } from "@/lib/schede/schede-bundle-cache-patch";
+import { mezzoDomainQueryKeys } from "@/src/services/domain/mezzo-domain.queries";
 import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-operational-truth";
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -55,6 +56,22 @@ export async function invalidateAfterMezzoMutations(
   }
   await invalidateOperationalTruth({ queryClient: qc, domain: "mezzi", skipReportBroadcast: true });
   scheduleReportBroadcastRefresh(qc);
+}
+
+/** Dopo cambio associazione mezzo (cliente/cantiere/utilizzatore). */
+export async function invalidateAfterMezzoAssociationChange(
+  qc: QueryClient,
+  mezzoId: string,
+  dbVersion?: string,
+  lavorazioneId?: string,
+) {
+  const id = mezzoId.trim();
+  if (!id) return;
+  await invalidateAfterMezzoMutations(qc, id, dbVersion);
+  void qc.invalidateQueries({ queryKey: mezzoDomainQueryKeys.anagraficaHistory(id) });
+  if (lavorazioneId?.trim()) {
+    await invalidateAfterLavorazioneMutations(qc, undefined, lavorazioneId.trim(), dbVersion);
+  }
 }
 
 export async function invalidateAfterLavorazioneMutations(

@@ -115,6 +115,10 @@ export type MezzoWithoutPresetRow = {
   tipoAttrezzatura: string;
 };
 
+export type MezzoPresetAssignRow = MezzoWithoutPresetRow & {
+  hasActivePreset: boolean;
+};
+
 export type BulkAssignPresetResult = {
   assigned: number;
   skipped: { mezzoId: string; reason: string }[];
@@ -165,6 +169,14 @@ export type OfficinaMaintenanceKpi = {
   previsti30Giorni: number;
   scaduti: number;
   ricambiDaPreparare: number;
+};
+
+export type MaintenanceTimelineExtraEvent = {
+  id: string;
+  kind: "preset_assigned" | "preset_changed" | "compliance_reviewed" | "forecast_recomputed";
+  at: string;
+  title: string;
+  subtitle?: string;
 };
 
 export type { EffectivePart };

@@ -4,14 +4,17 @@ import { useQueryClient } from "@tanstack/react-query";
 import { maintenancePlansEntry } from "@/lib/domain/maintenance-plans-entry";
 import type { RegisterMaintenanceServiceInput, UpsertMaintenancePlanInput } from "@/lib/maintenance-plans/types";
 import { maintenancePlansQueryKeys } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
+import { maintenanceEngineV2QueryKeys } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 
 async function invalidateMaintenancePlans(qc: ReturnType<typeof useQueryClient>, mezzoId?: string) {
   await qc.invalidateQueries({ queryKey: maintenancePlansQueryKeys.root });
   await qc.invalidateQueries({ queryKey: [...maintenancePlansQueryKeys.root, "overview"] });
+  await qc.invalidateQueries({ queryKey: maintenanceEngineV2QueryKeys.overview() });
   if (mezzoId) {
     await qc.invalidateQueries({ queryKey: [...maintenancePlansQueryKeys.root, "statuses", mezzoId] });
     await qc.invalidateQueries({ queryKey: maintenancePlansQueryKeys.mezzoHistory(mezzoId) });
+    await qc.invalidateQueries({ queryKey: maintenanceEngineV2QueryKeys.mezzoConfigs(mezzoId) });
   }
 }
 

@@ -15,6 +15,13 @@ export const LAVORAZIONE_WRITABLE_KEYS = [
   "note",
   "target_type",
   "attrezzatura_id",
+  "is_tagliando",
+  "maintenance_execution_kind",
+  "repair_present",
+  "tagliando_preset_ref",
+  "tagliando_preset_version_ref",
+  "tagliando_assign_preset_to_mezzo",
+  "tagliando_no_preset_reason",
 ] as const;
 
 export type LavorazioneWritableKey = (typeof LAVORAZIONE_WRITABLE_KEYS)[number];
@@ -28,6 +35,13 @@ export type LavorazioneWritePayload = {
   note?: string | null;
   target_type?: InterventoTargetType;
   attrezzatura_id?: string | null;
+  is_tagliando?: boolean;
+  maintenance_execution_kind?: "scheduled" | "extraordinary" | null;
+  repair_present?: boolean;
+  tagliando_preset_ref?: string | null;
+  tagliando_preset_version_ref?: string | null;
+  tagliando_assign_preset_to_mezzo?: boolean | null;
+  tagliando_no_preset_reason?: string | null;
 };
 
 export type LavorazioneCreatePayload = LavorazioneWritePayload & {
@@ -77,6 +91,34 @@ export function pickLavorazioneWritePayload(data: Record<string, unknown>): Lavo
         data.attrezzatura_id === null || data.attrezzatura_id === undefined
           ? null
           : String(data.attrezzatura_id).trim() || null;
+    } else if (key === "is_tagliando") {
+      out.is_tagliando = Boolean(data.is_tagliando);
+    } else if (key === "maintenance_execution_kind") {
+      const k = data.maintenance_execution_kind;
+      out.maintenance_execution_kind =
+        k === "scheduled" || k === "extraordinary" ? k : k === null || k === undefined ? null : undefined;
+    } else if (key === "repair_present") {
+      out.repair_present = Boolean(data.repair_present);
+    } else if (key === "tagliando_preset_ref") {
+      out.tagliando_preset_ref =
+        data.tagliando_preset_ref === null || data.tagliando_preset_ref === undefined
+          ? null
+          : String(data.tagliando_preset_ref).trim() || null;
+    } else if (key === "tagliando_preset_version_ref") {
+      out.tagliando_preset_version_ref =
+        data.tagliando_preset_version_ref === null || data.tagliando_preset_version_ref === undefined
+          ? null
+          : String(data.tagliando_preset_version_ref).trim() || null;
+    } else if (key === "tagliando_assign_preset_to_mezzo") {
+      out.tagliando_assign_preset_to_mezzo =
+        data.tagliando_assign_preset_to_mezzo === null || data.tagliando_assign_preset_to_mezzo === undefined
+          ? null
+          : Boolean(data.tagliando_assign_preset_to_mezzo);
+    } else if (key === "tagliando_no_preset_reason") {
+      out.tagliando_no_preset_reason =
+        data.tagliando_no_preset_reason === null || data.tagliando_no_preset_reason === undefined
+          ? null
+          : String(data.tagliando_no_preset_reason).trim() || null;
     }
   }
   return out;

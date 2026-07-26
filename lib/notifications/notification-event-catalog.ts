@@ -1,11 +1,25 @@
+import type { DomainEventType } from "@/lib/notifications/domain/domain-event";
 import type { NotificationType, NotificationPriority } from "@/lib/notifications/notification-types";
+import type { GestionalePageKey } from "@/src/lib/permissions/gestionale-pages";
 
 export type NotificationRecipientTier = "admin" | "ufficio" | "officina" | "cliente";
 
 export type NotificationTriggerKind = "cab-sync" | "scheduled" | "db-trigger";
 
+export type NotificationSeverity = "info" | "warning" | "critical";
+
+export type NotificationMode = "optional" | "mandatory";
+
+export type PageAccessRequirement = "read" | "write";
+
 export type NotificationEventDefinition = {
+  /** SSOT preferenze + dispatch — distinto dal domain event. */
+  notificationEventId: string;
+  /** Evento dominio sorgente (opzionale). */
+  domainEvent?: DomainEventType;
   type: NotificationType;
+  pageKey: GestionalePageKey;
+  requiredAccess: PageAccessRequirement;
   module: string | null;
   scopeType: "user" | "role" | "global";
   scopeValue: string | null;
@@ -15,12 +29,21 @@ export type NotificationEventDefinition = {
   dedupKeyPattern: string;
   titleTemplate: string;
   description: string;
+  defaultEnabled: boolean;
+  userConfigurable: boolean;
+  notificationMode: NotificationMode;
+  excludeActorDefault: boolean;
+  severity: NotificationSeverity;
 };
 
-/** SSOT catalogo eventi — allineato a notification_type_registry (migration). */
+/** SSOT catalogo eventi notificabili — allineato a notification_type_registry (migration). */
 export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] = [
   {
+    notificationEventId: "lavorazioni.created",
+    domainEvent: "work_order.created",
     type: "lavorazione_created",
+    pageKey: "lavorazioni",
+    requiredAccess: "read",
     module: "lavorazioni",
     scopeType: "role",
     scopeValue: "operatore",
@@ -29,10 +52,19 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     trigger: "cab-sync",
     dedupKeyPattern: "lav:{lavorazioneId}",
     titleTemplate: "Nuova lavorazione",
-    description: "Lavorazione creata da un altro utente/dispositivo",
+    description: "Quando un collega crea una nuova lavorazione",
+    defaultEnabled: true,
+    userConfigurable: true,
+    notificationMode: "optional",
+    excludeActorDefault: true,
+    severity: "info",
   },
   {
+    notificationEventId: "lavorazioni.completed",
+    domainEvent: "work_order.completed",
     type: "lavorazione_completata",
+    pageKey: "lavorazioni",
+    requiredAccess: "read",
     module: "lavorazioni",
     scopeType: "role",
     scopeValue: "operatore",
@@ -41,10 +73,19 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     trigger: "cab-sync",
     dedupKeyPattern: "lav:{lavorazioneId}:done",
     titleTemplate: "Lavorazione completata",
-    description: "Stato passato a completata",
+    description: "Quando una lavorazione viene segnata come completata",
+    defaultEnabled: true,
+    userConfigurable: true,
+    notificationMode: "optional",
+    excludeActorDefault: true,
+    severity: "info",
   },
   {
+    notificationEventId: "lavorazioni.tagliando_due",
+    domainEvent: "maintenance.due",
     type: "tagliando_da_eseguire",
+    pageKey: "lavorazioni",
+    requiredAccess: "read",
     module: "lavorazioni",
     scopeType: "role",
     scopeValue: "operatore",
@@ -53,10 +94,18 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     trigger: "cab-sync",
     dedupKeyPattern: "tagliando-due:{lavorazioneId}",
     titleTemplate: "Tagliando da eseguire",
-    description: "Milestone tagliando entro 50 h o non segnata fatta in matrice",
+    description: "Quando un tagliando è in scadenza (circa 50 ore) o non risulta ancora eseguito",
+    defaultEnabled: true,
+    userConfigurable: true,
+    notificationMode: "optional",
+    excludeActorDefault: true,
+    severity: "warning",
   },
   {
+    notificationEventId: "mezzi.tagliando_forecast_7g",
     type: "tagliando_previsto_7g",
+    pageKey: "mezzi",
+    requiredAccess: "read",
     module: "mezzi",
     scopeType: "role",
     scopeValue: "admin",
@@ -65,10 +114,19 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     trigger: "scheduled",
     dedupKeyPattern: "tagliando-forecast:{configId}:{dateBucket}",
     titleTemplate: "Tagliando previsto entro 7 giorni",
-    description: "Previsione EMA — scadenza tagliando imminente",
+    description: "Quando un tagliando è previsto entro una settimana",
+    defaultEnabled: true,
+    userConfigurable: true,
+    notificationMode: "optional",
+    excludeActorDefault: true,
+    severity: "critical",
   },
   {
+    notificationEventId: "magazzino.below_minimum",
+    domainEvent: "inventory.below_minimum",
     type: "magazzino_sotto_scorta",
+    pageKey: "magazzino",
+    requiredAccess: "read",
     module: "magazzino",
     scopeType: "role",
     scopeValue: "operatore",
@@ -76,23 +134,20 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     recipients: { admin: true, ufficio: false, officina: true, cliente: false },
     trigger: "cab-sync",
     dedupKeyPattern: "mag:{ricambioId}:crossing",
-    titleTemplate: "Sotto scorta / esaurito",
-    description: "Crossing scorta minima o esaurimento pezzi",
+    titleTemplate: "Scorta bassa o esaurita",
+    description: "Quando un ricambio scende sotto la scorta minima o finisce",
+    defaultEnabled: true,
+    userConfigurable: true,
+    notificationMode: "optional",
+    excludeActorDefault: true,
+    severity: "warning",
   },
   {
-    type: "fatture_scadute_digest",
-    module: "fatturazione",
-    scopeType: "role",
-    scopeValue: "addetto_amministrativo",
-    priority: "high",
-    recipients: { admin: true, ufficio: true, officina: false, cliente: false },
-    trigger: "scheduled",
-    dedupKeyPattern: "fatt-scad:{yyyy-mm-dd}",
-    titleTemplate: "Fatture scadute",
-    description: "Digest giornaliero fatture con residuo oltre scadenza",
-  },
-  {
+    notificationEventId: "dipendenti.presence_reminder",
+    domainEvent: "employees.presence_reminder",
     type: "dipendenti_presenze_reminder",
+    pageKey: "dipendenti",
+    requiredAccess: "read",
     module: "dipendenti",
     scopeType: "role",
     scopeValue: "admin",
@@ -101,10 +156,19 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     trigger: "scheduled",
     dedupKeyPattern: "dip-pres:{yyyy-mm-dd}",
     titleTemplate: "Presenze dipendenti",
-    description: "Promemoria ore presenze mancanti (17:00 feriali)",
+    description: "Promemoria nei giorni feriali alle 17:00 se mancano ore di presenza",
+    defaultEnabled: true,
+    userConfigurable: true,
+    notificationMode: "optional",
+    excludeActorDefault: true,
+    severity: "info",
   },
   {
+    notificationEventId: "lavorazioni_clienti.ingresso",
+    domainEvent: "client_portal.work_order_ingress",
     type: "client_portal_ingresso",
+    pageKey: "lavorazioni_clienti",
+    requiredAccess: "read",
     module: "lavorazioni",
     scopeType: "user",
     scopeValue: null,
@@ -113,10 +177,19 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     trigger: "db-trigger",
     dedupKeyPattern: "client-portal:ingresso:{userId}:{lavorazioneId}",
     titleTemplate: "Nuova lavorazione",
-    description: "Insert lavorazione → utenti cliente con accesso portale (cliente_ref + allowlist)",
+    description: "Quando viene aperta una nuova lavorazione sul tuo mezzo",
+    defaultEnabled: true,
+    userConfigurable: true,
+    notificationMode: "optional",
+    excludeActorDefault: false,
+    severity: "info",
   },
   {
+    notificationEventId: "lavorazioni_clienti.completed",
+    domainEvent: "client_portal.work_order_completed",
     type: "client_portal_completata",
+    pageKey: "lavorazioni_clienti",
+    requiredAccess: "read",
     module: "lavorazioni",
     scopeType: "user",
     scopeValue: null,
@@ -125,10 +198,18 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     trigger: "db-trigger",
     dedupKeyPattern: "client-portal:completata:{userId}:{lavorazioneId}",
     titleTemplate: "Lavorazione completata",
-    description: "Stato lavorazione → completata per utenti portale cliente",
+    description: "Quando una lavorazione sul tuo mezzo risulta completata",
+    defaultEnabled: true,
+    userConfigurable: true,
+    notificationMode: "optional",
+    excludeActorDefault: false,
+    severity: "info",
   },
   {
+    notificationEventId: "system.dashboard_test",
     type: "admin_dashboard_test",
+    pageKey: "dashboard",
+    requiredAccess: "read",
     module: null,
     scopeType: "user",
     scopeValue: null,
@@ -137,9 +218,17 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     trigger: "cab-sync",
     dedupKeyPattern: "test:{userId}:{minuteBucket}",
     titleTemplate: "Test notifiche",
-    description: "Verifica campanella/desktop",
+    description: "Serve solo per provare le notifiche",
+    defaultEnabled: true,
+    userConfigurable: false,
+    notificationMode: "optional",
+    excludeActorDefault: false,
+    severity: "info",
   },
 ] as const;
+
+/** Alias SSOT — stesso array del catalogo eventi notificabili. */
+export const notificationRegistry = NOTIFICATION_EVENT_CATALOG;
 
 export function getNotificationEventDefinition(
   type: NotificationType,
@@ -147,6 +236,22 @@ export function getNotificationEventDefinition(
   return NOTIFICATION_EVENT_CATALOG.find((d) => d.type === type);
 }
 
+export function getNotificationRegistryEntry(
+  notificationEventId: string,
+): NotificationEventDefinition | undefined {
+  return NOTIFICATION_EVENT_CATALOG.find((d) => d.notificationEventId === notificationEventId);
+}
+
+export function getNotificationRegistryEntryByDomainEvent(
+  domainEvent: DomainEventType,
+): NotificationEventDefinition | undefined {
+  return NOTIFICATION_EVENT_CATALOG.find((d) => d.domainEvent === domainEvent);
+}
+
 export const IMPLEMENTED_NOTIFICATION_TYPES = NOTIFICATION_EVENT_CATALOG.filter(
   (d) => d.type !== "admin_dashboard_test",
 ).map((d) => d.type);
+
+export const CONFIGURABLE_NOTIFICATION_EVENT_IDS = NOTIFICATION_EVENT_CATALOG.filter(
+  (d) => d.userConfigurable && d.notificationMode === "optional",
+).map((d) => d.notificationEventId);

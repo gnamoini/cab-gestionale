@@ -3,7 +3,7 @@ import {
   defaultAddettiRecords,
   syncLavorazioniAddettiFromRecords,
 } from "@/lib/lavorazioni/addetto-model";
-import { syncAddettoColorMap } from "@/lib/lavorazioni/addetto-colors-assign";
+import { syncAddettoColorMapById } from "@/lib/lavorazioni/addetto-colors-assign";
 import { normalizeStatiList } from "@/lib/lavorazioni/stati-normalize";
 import { defaultTipiAssenza } from "@/lib/dipendenti/tipi-assenza-model";
 import {
@@ -53,7 +53,7 @@ export function snapshotFromResolved(r: CabAppSettingsResolved): SettingsWorkspa
   return {
     stati: r.lavorazioni.stati?.length ? normalizeStatiList(r.lavorazioni.stati) : [...DEFAULT_STATI_LAVORAZIONI_DB],
     addettiRecords,
-    addettoColors: syncAddettoColorMap(addetti, r.lavorazioni.addettoColors),
+    addettoColors: syncAddettoColorMapById(addettiRecords, r.lavorazioni.addettoColors),
     prioritaColors: r.lavorazioni.prioritaColors ?? {},
     prioritaDb: r.lavorazioni.prioritaDb?.length ? [...r.lavorazioni.prioritaDb] : [...DEFAULT_PRIORITA_LAVORAZIONI_DB],
     mag: {

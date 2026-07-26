@@ -4,6 +4,7 @@ import { test, expect, type Page } from "@playwright/test";
 
 const MOBILE_VIEWPORT = { width: 390, height: 844 };
 const DESKTOP_VIEWPORT = { width: 1440, height: 900 };
+const LIST_SURFACE_COOKIE = "gestionale-list-surface";
 
 type ListLayoutRoute = {
   path: string;
@@ -18,17 +19,29 @@ const XL_LIST_ROUTES: ListLayoutRoute[] = [
   { path: "/lavorazioni-clienti", readyText: "Lavorazioni in corso" },
 ];
 
-async function getGestionaleListLayoutMode(page: Page): Promise<"desktop" | "mobile" | "unknown"> {
-  return page.evaluate(() => {
-    const root = document.querySelector(".gestionale-list-layout-desktop, .gestionale-list-layout-mobile");
-    if (root?.classList.contains("gestionale-list-layout-mobile")) return "mobile";
-    if (root?.classList.contains("gestionale-list-layout-desktop")) return "desktop";
-    return "unknown";
-  });
+async function setListSurfaceCookie(page: Page, surface: "table" | "cards") {
+  const baseUrl = new URL(page.url() === "about:blank" ? "http://127.0.0.1:3000" : page.url());
+  await page.context().addCookies([
+    {
+      name: LIST_SURFACE_COOKIE,
+      value: surface,
+      domain: baseUrl.hostname,
+      path: "/",
+    },
+  ]);
 }
 
 async function listTableMounted(page: Page): Promise<boolean> {
   return page.evaluate(() => !!document.querySelector(".gestionale-list-table-scope table"));
+}
+
+async function listCardsMounted(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const main = document.querySelector("main");
+    if (!main) return false;
+    return main.querySelectorAll("[class*='CardMobile'], .gestionale-list-table-scope table").length > 0
+      && !document.querySelector(".gestionale-list-table-scope table");
+  });
 }
 
 async function gotoListRouteReady(page: Page, route: ListLayoutRoute) {
@@ -38,75 +51,76 @@ async function gotoListRouteReady(page: Page, route: ListLayoutRoute) {
   });
 }
 
-async function narrowLayoutContainer(page: Page) {
-  await page.evaluate(() => {
-    const root = document.querySelector(
-      ".gestionale-list-layout-desktop, .gestionale-list-layout-mobile",
-    );
-    if (root instanceof HTMLElement) {
-      root.style.width = "600px";
-      root.style.maxWidth = "600px";
-    }
-  });
-}
-
 for (const route of XL_LIST_ROUTES) {
-  test(`list layout ${route.path}: mobile viewport shows mobile branch`, async ({ page }) => {
+  test(`list surface ${route.path}: cards cookie on mobile viewport`, async ({ page }) => {
     test.setTimeout(90_000);
     attachConsoleGuards(page);
     await page.setViewportSize(MOBILE_VIEWPORT);
+    await setListSurfaceCookie(page, "cards");
     await loginViaUi(page, adminCredentials());
     await gotoListRouteReady(page, route);
 
-    expect(await getGestionaleListLayoutMode(page)).toBe("mobile");
     expect(await listTableMounted(page)).toBe(false);
+    expect(await listCardsMounted(page)).toBe(true);
   });
 
-  test(`list layout ${route.path}: desktop viewport shows desktop branch`, async ({ page }) => {
+  test(`list surface ${route.path}: table cookie on desktop viewport`, async ({ page }) => {
     test.setTimeout(90_000);
     attachConsoleGuards(page);
     await page.setViewportSize(DESKTOP_VIEWPORT);
+    await setListSurfaceCookie(page, "table");
     await loginViaUi(page, adminCredentials());
     await gotoListRouteReady(page, route);
 
-    expect(await getGestionaleListLayoutMode(page)).toBe("desktop");
     expect(await listTableMounted(page)).toBe(true);
+    expect(await listCardsMounted(page)).toBe(false);
   });
 
-  test(`list layout ${route.path}: narrow container on wide viewport shows mobile (IDE preview)`, async ({
-    page,
-  }) => {
+  test(`list surface ${route.path}: narrow container keeps table with controlled overflow`, async ({ page }) => {
     test.setTimeout(90_000);
     attachConsoleGuards(page);
     await page.setViewportSize(DESKTOP_VIEWPORT);
+    await setListSurfaceCookie(page, "table");
     await loginViaUi(page, adminCredentials());
     await gotoListRouteReady(page, route);
 
-    await narrowLayoutContainer(page);
+    await page.evaluate(() => {
+      const root = document.querySelector(".gestionale-list-container, .lavorazioni-scroll-scope, .magazzino-scroll-scope");
+      if (root instanceof HTMLElement) {
+        root.style.width = "600px";
+        root.style.maxWidth = "600px";
+      }
+    });
 
-    await expect.poll(async () => getGestionaleListLayoutMode(page)).toBe("mobile");
-    expect(await listTableMounted(page)).toBe(false);
+    expect(await listTableMounted(page)).toBe(true);
+    const overflow = await page.evaluate(() => {
+      const main = document.querySelector("main");
+      if (!main) return { ok: false };
+      return { ok: main.scrollWidth <= main.clientWidth + 4 };
+    });
+    expect(overflow.ok).toBe(true);
   });
 }
 
-test("list layout /dipendenti: mobile viewport shows mobile timesheet branch", async ({ page }) => {
+test("list surface /dipendenti: cards cookie shows mobile timesheet branch", async ({ page }) => {
   test.setTimeout(90_000);
   attachConsoleGuards(page);
   await page.setViewportSize(MOBILE_VIEWPORT);
+  await setListSurfaceCookie(page, "cards");
   await loginViaUi(page, adminCredentials());
   await gotoListRouteReady(page, { path: "/dipendenti", readyText: "Tabella presenze" });
 
-  expect(await getGestionaleListLayoutMode(page)).toBe("mobile");
+  expect(await listTableMounted(page)).toBe(false);
 });
 
-test("list layout /sicurezza: mobile viewport shows user cards", async ({ page }) => {
+test("list surface /sicurezza: cards cookie shows user cards", async ({ page }) => {
   test.setTimeout(90_000);
   attachConsoleGuards(page);
   await page.setViewportSize(MOBILE_VIEWPORT);
+  await setListSurfaceCookie(page, "cards");
   await loginViaUi(page, adminCredentials());
   await gotoListRouteReady(page, { path: "/sicurezza", readyText: "Utenti" });
 
-  expect(await getGestionaleListLayoutMode(page)).toBe("mobile");
   expect(await listTableMounted(page)).toBe(false);
 });
 

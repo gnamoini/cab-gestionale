@@ -4,6 +4,7 @@ import { resolveDocumentoTipoFile } from "@/lib/documenti/documento-tipo-file";
 import { readDocumentIntelligenceMeta } from "@/lib/documents/document-meta";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
+import { buildLogModificaSummary, isSystemLogAzione } from "@/lib/gestionale-log/log-summary";
 import {
   formatTitleCasePhrase,
   imageLogModificaRiga,
@@ -293,9 +294,25 @@ export function logModificaRowToMezziHubLogEntry(
   let mezzo = row.entita_id.length >= 8 ? row.entita_id.slice(0, 8) : row.entita_id;
   let changes: MezziLogEntryLike["changes"] = [];
   let tipo: MezziLogEntryLike["tipo"] = "update";
-  const riepilogo = row.azione;
+  let riepilogo = row.azione;
+  let tipoRiga: string | undefined;
+  let modifiche: string[] | undefined;
+  let azione: string | undefined;
 
-  if (isImageLogAction(row.azione)) {
+  if (isSystemLogAzione(row.azione)) {
+    const summary = buildLogModificaSummary({
+      entita: row.entita,
+      entita_id: row.entita_id,
+      azione: row.azione,
+      payload: row.payload,
+    });
+    tipo = "update";
+    mezzo = summary.oggettoRiga;
+    riepilogo = summary.modifiche[0] ?? row.azione;
+    tipoRiga = summary.tipoRiga;
+    modifiche = summary.modifiche;
+    azione = row.azione;
+  } else if (isImageLogAction(row.azione)) {
     tipo = "update";
     changes = [{ campo: "Foto", prima: "—", dopo: imageLogModificaRiga(row.azione) }];
   } else if (row.azione === "CREATE") {
@@ -326,6 +343,9 @@ export function logModificaRowToMezziHubLogEntry(
     autore: logAutoreLabel(row, options?.currentUserId ?? null, options?.currentDisplayName ?? ""),
     at: row.created_at,
     changes,
+    azione,
+    tipoRiga,
+    modifiche,
   };
 }
 

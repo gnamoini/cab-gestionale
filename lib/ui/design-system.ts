@@ -241,9 +241,9 @@ export const gestionaleTextareaMaxHeightCompact = "min(28dvh, 8rem)";
 
 export type GestionaleTextareaSize = "sm" | "md" | "lg";
 
-/** F — Checkbox nativo (login, footer modali, form gestionale). */
+/** F — Checkbox nativo (login, footer modali, form gestionale). Check bianco su primary. */
 export const dsCheckboxInput =
-  "mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-[color:var(--cab-border-strong)] text-[var(--cab-primary)] shadow-[var(--cab-shadow-sm)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_30%,transparent)] disabled:cursor-not-allowed disabled:opacity-50";
+  "mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-[color:var(--cab-border-strong)] accent-[var(--cab-primary)] text-[var(--cab-primary)] shadow-[var(--cab-shadow-sm)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_30%,transparent)] disabled:cursor-not-allowed disabled:opacity-50";
 
 /** F — Opzione checkbox in card (footer modali, toggle secondari). */
 export const dsCheckboxOptionLabel = `flex min-w-0 cursor-pointer items-start gap-3 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} px-3 py-2.5 text-left shadow-[var(--cab-shadow-sm)] transition-[border-color,background-color,box-shadow] duration-150 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] has-[:checked]:border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] has-[:checked]:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] has-[:checked]:shadow-[var(--cab-shadow-md)] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)] has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-55`;

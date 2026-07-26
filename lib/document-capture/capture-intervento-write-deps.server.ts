@@ -1,14 +1,18 @@
 import "server-only";
 
+import { buildServerAttrezzaturaResolveDeps } from "@/lib/domain/mezzo-attrezzatura/build-server-attrezzatura-resolve-deps";
+import { buildServerMezzoResolveDeps } from "@/lib/domain/mezzo/build-server-mezzo-resolve-deps";
+import { resolveOrCreateMezzo } from "@/lib/domain/mezzo/resolve-or-create-mezzo";
 import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
 import {
   logMezzoResolutionEvent,
   resolutionEventFromResult,
 } from "@/lib/domain/mezzo/log-mezzo-resolution-event.server";
+import { applyAssociationChangeDb } from "@/lib/domain/mezzo/apply-association-change";
 import { recordMezzoAnagraficaHistoryServer } from "@/lib/domain/mezzo/record-mezzo-anagrafica-history.server";
+import { mezzoUpdateTouchesAssociationFields } from "@/lib/domain/mezzo/mezzo-association";
 import { resolveMezzoUpdatePlanFromContext } from "@/lib/domain/intervento-context/intervento-write-context";
 import {
-  ATTREZZATURE_COLUMNS,
   LAVORAZIONI_COLUMNS,
   MEZZI_COLUMNS,
   SCHEDA_LAVORAZIONE_COLUMNS,
@@ -34,7 +38,7 @@ import { sanitizeMezzoWritePayload } from "@/lib/validation/services/mezzi-paylo
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import type { MezzoInsert, MezzoUpdate } from "@/src/services/mezzi.service";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
-import type { AttrezzaturaRow, LavorazioneRow, MezzoRow } from "@/src/types/supabase-tables";
+import type { LavorazioneRow, MezzoRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
 
 export async function fetchCaptureMagazzinoCatalog(): Promise<RicambioMagazzino[]> {
@@ -159,24 +163,22 @@ export function createCaptureInterventoWriteDeps(input: {
 
       const plan = updatePlan ?? resolveMezzoUpdatePlanFromContext(writeContext ?? { source: "import_ai" });
 
-      const createMezzo = async (data: MezzoInsert) => {
-        const payload = sanitizeMezzoWritePayload(data, { v2Enabled: true, source: "document-capture-apply" });
-        const { data: row, error } = await sb.from("mezzi").insert(payload).select(MEZZI_COLUMNS).single();
-        if (error || !row) throw new MezzoSchedaValidationError(error?.message ?? "Creazione mezzo fallita");
-        await writeModificaLog(sb, {
-          entita: "mezzi",
-          entita_id: (row as MezzoRow).id,
-          azione: "CREATE",
-          payload: auditSnapshot(row),
-          autore_id: input.userId,
-        });
-        return row as MezzoRow;
-      };
       const updateMezzo = async (id: string, patch: MezzoUpdate) => {
+        if (mezzoUpdateTouchesAssociationFields(patch)) {
+          throw new MezzoSchedaValidationError("ASSOCIATION_FIELDS_REQUIRE_DEDICATED_PATH");
+        }
         const payload = sanitizeMezzoWritePayload(patch, { v2Enabled: true, source: "document-capture-apply" });
         const { data: row, error } = await sb.from("mezzi").update(payload).eq("id", id).select(MEZZI_COLUMNS).single();
         if (error || !row) throw new MezzoSchedaValidationError(error?.message ?? "Aggiornamento mezzo fallito");
         return row as MezzoRow;
+      };
+
+      const applyAssociationChange = async (
+        input: Parameters<typeof applyAssociationChangeDb>[1],
+      ) => {
+        const result = await applyAssociationChangeDb(sb, input);
+        if (!result.ok) throw new MezzoSchedaValidationError(result.message);
+        return result.row;
       };
 
       return upsertMezzoFromSchedaIngresso({
@@ -186,44 +188,19 @@ export function createCaptureInterventoWriteDeps(input: {
         updatePlan: plan,
         lavorazioneId,
         writeContext: writeContext ?? { source: "import_ai", mezzoUpdatePlan: plan },
-        create: createMezzo,
+        create: async () => {
+          throw new MezzoSchedaValidationError("createMezzo deprecato: usare resolveOrCreateMezzo");
+        },
         update: updateMezzo,
+        applyAssociationChange,
         recordHistory: async (historyInput) => {
           await recordMezzoAnagraficaHistoryServer(sb, {
             ...historyInput,
             userId: input.userId,
           });
         },
-        attrezzaturaPort: {
-          createAttrezzatura: async (data) => {
-            const { data: row, error } = await sb
-              .from("attrezzature")
-              .insert({ ...data, created_by: input.userId })
-              .select(ATTREZZATURE_COLUMNS)
-              .single();
-            if (error || !row) throw new MezzoSchedaValidationError(error?.message ?? "Creazione attrezzatura fallita");
-            return row as AttrezzaturaRow;
-          },
-          updateAttrezzatura: async (id, patch) => {
-            const { data: row, error } = await sb
-              .from("attrezzature")
-              .update(patch)
-              .eq("id", id)
-              .select(ATTREZZATURE_COLUMNS)
-              .single();
-            if (error || !row) throw new MezzoSchedaValidationError(error?.message ?? "Aggiornamento attrezzatura fallito");
-            return row as AttrezzaturaRow;
-          },
-          findAttrezzaturaByMatricola: async (mezzoId, matricola) => {
-            const { data } = await sb
-              .from("attrezzature")
-              .select(ATTREZZATURE_COLUMNS)
-              .eq("mezzo_id", mezzoId)
-              .ilike("matricola", matricola)
-              .maybeSingle();
-            return (data as AttrezzaturaRow | null) ?? null;
-          },
-        },
+        attrezzaturaResolveDeps: buildServerAttrezzaturaResolveDeps(sb),
+        mezzoResolveDeps: buildServerMezzoResolveDeps(sb),
       });
     },
     createLavorazione: async (lavInput) => {

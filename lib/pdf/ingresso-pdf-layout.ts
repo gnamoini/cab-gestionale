@@ -1,5 +1,6 @@
 import type { jsPDF } from "jspdf";
 import { drawGestionaleFieldSectionTable, pdfFieldFromValue } from "@/lib/pdf/gestionale-section-table";
+import { addettoRefFromFields, getAddettoDisplayLabel } from "@/lib/lavorazioni/addetto-display";
 import {
   buildAttrezzaturaAnagraficaPdfFields,
   buildClienteAnagraficaPdfFields,
@@ -28,10 +29,14 @@ export function buildIngressoPdfSections(
   altreInformazioni: PdfField[];
 } {
   const field = pdfFieldFromValue;
+  const addettoLabel = getAddettoDisplayLabel(
+    [],
+    addettoRefFromFields({ addettoId: c.addettoAccettazioneId, addettoLegacy: c.addettoAccettazione }),
+  );
   return {
     data: [
       field("Data ingresso", c.dataIngresso),
-      field("Addetto accettazione", c.addettoAccettazione),
+      field("Addetto accettazione", addettoLabel),
     ].filter(
       (f): f is PdfField => f !== null,
     ),
@@ -62,9 +67,13 @@ export function drawIngressoPdfBody(
   });
   const ctxFields = schedaIngressoFieldsFromDisplay(display, scheda.campi);
   const field = pdfFieldFromValue;
+  const addettoLabel = getAddettoDisplayLabel(
+    [],
+    addettoRefFromFields({ addettoId: ctxFields.addettoAccettazioneId, addettoLegacy: ctxFields.addettoAccettazione }),
+  );
   const data = [
     field("Data ingresso", ctxFields.dataIngresso),
-    field("Addetto accettazione", ctxFields.addettoAccettazione),
+    field("Addetto accettazione", addettoLabel),
   ].filter((f): f is PdfField => f !== null);
   const altreInformazioni = [
     field("Descrizione anomalia", ctxFields.descrizioneAnomalia),

@@ -9,9 +9,11 @@ import {
   prefetchGestionalePage,
 } from "@/src/lib/react-query/prefetch-gestionale-page";
 import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
+import { resolveListSurfaceForPage } from "@/lib/ui/resolve-list-surface.server";
 
 export default async function LavorazioniPage() {
   const qc = createServerQueryClient();
+  const listSurface = await resolveListSurfaceForPage();
   await prefetchGestionalePage(qc, "lavorazioni");
   return (
     <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.lavorazioni}>
@@ -22,7 +24,7 @@ export default async function LavorazioniPage() {
           fallback="legacy"
           schema={getSuggestedSchema("/lavorazioni")}
         >
-          <LavorazioniViewLazy />
+          <LavorazioniViewLazy listSurface={listSurface} listTier="xl" />
         </UIPageAdapterGate>
       </GestionaleHydrationBoundary>
     </PageLayout>

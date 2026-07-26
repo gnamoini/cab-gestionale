@@ -1,6 +1,6 @@
 import type { RicambioUnitaMisura } from "@/lib/magazzino/ricambio-unita-misura";
 
-export type PreventivoStato = "bozza" | "inviato" | "approvato" | "rifiutato" | "convertito";
+export type PreventivoStato = "bozza" | "inviato" | "confermato" | "annullato";
 
 export type PreventivoLavorazioneOrigine = "attiva" | "storico";
 
@@ -23,9 +23,18 @@ export type PreventivoRigaRicambio = {
   tipo?: PreventivoRigaRicambioTipo;
 };
 
+export type PreventivoRigaAddetto = {
+  addettoId: string | null;
+  ore: number;
+  /** Solo storico — popolato in migrazione, mai in nuove scritture con id valido. */
+  addettoLegacy?: string;
+  /** Es. addetto storico non convertibile (Officina). */
+  legacyWarning?: string;
+};
+
 export type PreventivoManodopera = {
   oreTotali: number;
-  righeAddetti: { addetto: string; ore: number }[];
+  righeAddetti: PreventivoRigaAddetto[];
   costoOrario: number;
   /** Sconto percentuale sulla manodopera (0–100). */
   scontoPercent: number;

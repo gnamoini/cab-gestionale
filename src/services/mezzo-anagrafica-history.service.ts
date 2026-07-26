@@ -4,6 +4,7 @@ import {
   diffMezzoAnagraficaHistory,
   type MezzoAnagraficaHistoryInsert,
   type MezzoAnagraficaHistoryOrigine,
+  type MezzoAnagraficaHistoryEventKind,
 } from "@/lib/domain/mezzo/record-mezzo-anagrafica-change";
 import { recordMezzoAnagraficaHistoryServer } from "@/lib/domain/mezzo/record-mezzo-anagrafica-history.server";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
@@ -22,6 +23,8 @@ export async function recordMezzoAnagraficaDiff(input: {
   lavorazioneId?: string | null;
   schedaId?: string | null;
   userId?: string | null;
+  eventKind?: MezzoAnagraficaHistoryEventKind;
+  reason?: string | null;
 }): Promise<ServiceResult<MezzoAnagraficaHistoryRow | null>> {
   try {
     const sb = getBrowserSupabase();
@@ -33,6 +36,8 @@ export async function recordMezzoAnagraficaDiff(input: {
       lavorazioneId: input.lavorazioneId,
       schedaId: input.schedaId,
       userId: input.userId,
+      eventKind: input.eventKind,
+      reason: input.reason,
     });
     if (!row) return success(null);
     const diff = diffMezzoAnagraficaHistory(input.oldValues, input.newValues);
@@ -64,7 +69,7 @@ export async function fetchMezzoAnagraficaHistory(
     const { data, error } = await sb
       .from("mezzo_anagrafica_history")
       .select(
-        "id, mezzo_id, lavorazione_id, scheda_id, user_id, origine, changed_fields, old_values, new_values, created_at",
+        "id, mezzo_id, lavorazione_id, scheda_id, user_id, origine, changed_fields, old_values, new_values, event_kind, reason, created_at",
       )
       .eq("mezzo_id", id)
       .order("created_at", { ascending: false })

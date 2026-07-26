@@ -6,7 +6,7 @@ import {
   modelliVisibiliPerMarcaHierarchy,
   type HierarchyTreeKey,
 } from "@/lib/mezzi/hierarchy-list-prefs";
-import { syncAddettoColorMap } from "@/lib/lavorazioni/addetto-colors-assign";
+import { syncAddettoColorMapById } from "@/lib/lavorazioni/addetto-colors-assign";
 import { createAddettoId, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -231,7 +231,7 @@ export function buildAppendGlobalListUpsert(
             stati: resolved.lavorazioni.stati,
             addettiRecords,
             addetti,
-            addettoColors: syncAddettoColorMap(addetti, resolved.lavorazioni.addettoColors),
+            addettoColors: syncAddettoColorMapById(addettiRecords, resolved.lavorazioni.addettoColors),
             prioritaColors: resolved.lavorazioni.prioritaColors,
             prioritaDb: resolved.lavorazioni.prioritaDb,
           },

@@ -21,8 +21,9 @@ import {
   selectPillInner,
   selectPillInnerTable,
 } from "@/lib/ui/design-system";
-import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
-import { pillStyleFromHex } from "@/lib/lavorazioni/color-utils";
+import { addettoDisplayColorById } from "@/lib/lavorazioni/addetto-colors-assign";
+import { pillStyleFromHex, normalizeHex } from "@/lib/lavorazioni/color-utils";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { SortKeyLavorazione, SortKeyStorico, SortPhaseLav } from "@/lib/lavorazioni/types";
 
 /** @deprecated Importare da `@/lib/ui/design-system` — mantenuti per compatibilità. */
@@ -139,12 +140,14 @@ export function addettoPillShellStyle(hex: string | undefined): CSSProperties {
 
 /** Stile pill addetto coerente in tabella (editabile e sola lettura). */
 export function addettoPillShellStyleForName(
-  nome: string,
+  colorKey: string,
   addettoColors: Record<string, string | undefined>,
+  addettiRecords?: readonly AddettoRecord[],
 ): CSSProperties {
-  return addettoPillShellStyle(
-    addettoDisplayColor(nome, addettoColors as Record<string, string>),
-  );
+  const map = addettoColors as Record<string, string>;
+  const direct = normalizeHex(map[colorKey]);
+  if (direct) return addettoPillShellStyle(direct);
+  return addettoPillShellStyle(addettoDisplayColorById(colorKey, map, addettiRecords));
 }
 
 /** Badge compatto (storico / filtri). */

@@ -15,7 +15,11 @@ import { formatTriggerSummary } from "@/lib/maintenance-plans/maintenance-trigge
 import { MAINTENANCE_INTERVAL_TYPE_LABELS } from "@/lib/maintenance-plans/maintenance-enums";
 import { processMaintenanceWarehouseDischarge } from "@/lib/maintenance-plans/process-maintenance-warehouse";
 import type { PresetSnapshot } from "@/lib/maintenance-plans/preset-snapshot";
-import { isPresetAssignable } from "@/lib/maintenance-plans/maintenance-domain-contract";
+import { parseFullPresetSnapshot } from "@/lib/maintenance-plans/build-full-preset-snapshot";
+import {
+  buildSyntheticTagliandoHistoryViews,
+  parseIngressoMeterFromSchedaContenuto,
+} from "@/lib/maintenance-plans/synthesize-tagliando-lavorazioni";
 import type { MaintenanceExecutionType } from "@/lib/maintenance-plans/maintenance-enums";
 import type { ReplacementCondition } from "@/lib/maintenance-plans/maintenance-enums";
 import type { MaintenanceServiceLite } from "@/lib/maintenance-plans/tagliandi-matrix";
@@ -29,7 +33,9 @@ import type {
 } from "@/lib/maintenance-plans/types";
 import {
   MAINTENANCE_PLANS_COLUMNS,
+  SCHEDA_LAVORAZIONE_COLUMNS,
   TIPI_ATTREZZATURA_CATALOG_COLUMNS,
+  VEHICLE_MAINTENANCE_CONFIGS_COLUMNS,
   VEHICLE_MAINTENANCE_SERVICE_PARTS_COLUMNS,
   VEHICLE_MAINTENANCE_SERVICE_CHECKLIST_COLUMNS,
   VEHICLE_MAINTENANCE_SERVICES_COLUMNS,
@@ -44,7 +50,7 @@ import type {
   VehicleMaintenanceServiceRow,
 } from "@/src/types/supabase-tables";
 import { humanizeGestionaleError } from "@/src/utils/gestionale-error-messages";
-import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
+import { formatSupabaseError, serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const ENTITA_PLAN = "maintenance_plans";
 const ENTITA_SERVICE = "vehicle_maintenance_services";
@@ -197,9 +203,10 @@ export const maintenancePlansService = {
       if (!planId) return err("Piano non creato.");
 
       await client.from("maintenance_plan_parts").delete().eq("plan_id", planId);
-      if (input.parts.length > 0) {
+      const validParts = input.parts.filter((p) => p.ricambioId?.trim());
+      if (validParts.length > 0) {
         const { error: partsErr } = await client.from("maintenance_plan_parts").insert(
-          input.parts.map((p, idx) => ({
+          validParts.map((p, idx) => ({
             plan_id: planId,
             ricambio_id: p.ricambioId,
             quantita: p.quantita,
@@ -223,9 +230,17 @@ export const maintenancePlansService = {
             triggers: [{ triggerType: intervalType, threshold: intervalValue, priority: 0 }],
           },
         ];
-      await persistPlanTriggerGroups(client, planId, triggerGroups);
+      try {
+        await persistPlanTriggerGroups(client, planId, triggerGroups);
+      } catch (e) {
+        return err(formatSupabaseError(e, { entity: "mezzo", action: "update" }));
+      }
       if (input.checklist) {
-        await persistPlanChecklist(client, planId, input.checklist);
+        try {
+          await persistPlanChecklist(client, planId, input.checklist);
+        } catch (e) {
+          return err(formatSupabaseError(e, { entity: "mezzo", action: "update" }));
+        }
       }
 
       if (!isCreate) {
@@ -378,25 +393,42 @@ export const maintenancePlansService = {
       if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "read" }));
 
       const services = (data ?? []) as VehicleMaintenanceServiceRow[];
-      if (services.length === 0) return success([]);
 
       const planIds = [...new Set(services.map((s) => s.plan_id))];
       const serviceIds = services.map((s) => s.id);
       const performerIds = [...new Set(services.map((s) => s.performed_by).filter(Boolean))] as string[];
 
-      const [plansRes, partsRes, checklistRes, profilesRes] = await Promise.all([
-        client.from("maintenance_plans").select("id, nome").in("id", planIds),
-        client
-          .from("vehicle_maintenance_service_parts")
-          .select(VEHICLE_MAINTENANCE_SERVICE_PARTS_COLUMNS)
-          .in("service_id", serviceIds),
-        client
-          .from("vehicle_maintenance_service_checklist")
-          .select(VEHICLE_MAINTENANCE_SERVICE_CHECKLIST_COLUMNS)
-          .in("service_id", serviceIds),
+      const [plansRes, partsRes, checklistRes, profilesRes, lavRes, configsRes] = await Promise.all([
+        planIds.length > 0
+          ? client.from("maintenance_plans").select("id, nome").in("id", planIds)
+          : Promise.resolve({ data: [], error: null }),
+        serviceIds.length > 0
+          ? client
+              .from("vehicle_maintenance_service_parts")
+              .select(VEHICLE_MAINTENANCE_SERVICE_PARTS_COLUMNS)
+              .in("service_id", serviceIds)
+          : Promise.resolve({ data: [], error: null }),
+        serviceIds.length > 0
+          ? client
+              .from("vehicle_maintenance_service_checklist")
+              .select(VEHICLE_MAINTENANCE_SERVICE_CHECKLIST_COLUMNS)
+              .in("service_id", serviceIds)
+          : Promise.resolve({ data: [], error: null }),
         performerIds.length > 0
           ? client.from("profiles").select("id, nome, cognome").in("id", performerIds)
           : Promise.resolve({ data: [], error: null }),
+        client
+          .from("lavorazioni")
+          .select("id, stato, archived, data_uscita, data_ingresso, tagliando_preset_ref")
+          .eq("mezzo_id", mezzoId)
+          .eq("is_tagliando", true)
+          .is("deleted_at", null),
+        client
+          .from("vehicle_maintenance_configs")
+          .select(VEHICLE_MAINTENANCE_CONFIGS_COLUMNS)
+          .eq("mezzo_id", mezzoId)
+          .eq("is_active", true)
+          .is("deleted_at", null),
       ]);
 
       if (plansRes.error) return err(humanizeGestionaleError(plansRes.error.message, { entity: "mezzo", action: "read" }));
@@ -405,8 +437,69 @@ export const maintenancePlansService = {
         return err(humanizeGestionaleError(checklistRes.error.message, { entity: "mezzo", action: "read" }));
       }
       if (profilesRes.error) return err(humanizeGestionaleError(profilesRes.error.message, { entity: "mezzo", action: "read" }));
+      if (lavRes.error) return err(humanizeGestionaleError(lavRes.error.message, { entity: "mezzo", action: "read" }));
+      if (configsRes.error) return err(humanizeGestionaleError(configsRes.error.message, { entity: "mezzo", action: "read" }));
 
       const planMap = new Map((plansRes.data ?? []).map((p) => [p.id as string, p.nome as string]));
+      const activePresetIds = [
+        ...new Set(
+          (configsRes.data ?? [])
+            .map((c) => c.preset_id as string | null)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      ];
+
+      const registeredLavorazioneIds = new Set(
+        services
+          .map((s) => (s as VehicleMaintenanceServiceRow & { lavorazione_id?: string | null }).lavorazione_id)
+          .filter((id): id is string => Boolean(id)),
+      );
+
+      const lavCandidates = lavRes.data ?? [];
+      const missingLavIds = lavCandidates
+        .map((l) => l.id as string)
+        .filter((id) => !registeredLavorazioneIds.has(id));
+
+      const ingressiByLavorazioneId = new Map<string, { lavorazioneId: string; oreLavoro: number; km: number | null }>();
+      if (missingLavIds.length > 0) {
+        const { data: schede, error: schedeErr } = await client
+          .from("scheda_lavorazione")
+          .select(`${SCHEDA_LAVORAZIONE_COLUMNS}`)
+          .in("lavorazione_id", missingLavIds)
+          .eq("tipo", "ingresso");
+        if (schedeErr) return err(humanizeGestionaleError(schedeErr.message, { entity: "mezzo", action: "read" }));
+        for (const scheda of schede ?? []) {
+          const lavId = scheda.lavorazione_id as string;
+          const meter = parseIngressoMeterFromSchedaContenuto(scheda.contenuto);
+          ingressiByLavorazioneId.set(lavId, {
+            lavorazioneId: lavId,
+            oreLavoro: meter.ore,
+            km: meter.km,
+          });
+        }
+      }
+
+      const extraPlanIds = [
+        ...new Set([
+          ...activePresetIds,
+          ...lavCandidates
+            .map((l) => l.tagliando_preset_ref as string | null)
+            .filter((id): id is string => Boolean(id)),
+        ]),
+      ].filter((id) => !planMap.has(id));
+
+      if (extraPlanIds.length > 0) {
+        const { data: extraPlans, error: extraPlansErr } = await client
+          .from("maintenance_plans")
+          .select("id, nome")
+          .in("id", extraPlanIds);
+        if (extraPlansErr) {
+          return err(humanizeGestionaleError(extraPlansErr.message, { entity: "mezzo", action: "read" }));
+        }
+        for (const p of extraPlans ?? []) {
+          planMap.set(p.id as string, p.nome as string);
+        }
+      }
       const partRows = (partsRes.data ?? []) as VehicleMaintenanceServicePartRow[];
       const checklistRows = (checklistRes.data ?? []) as {
         service_id: string;
@@ -433,43 +526,76 @@ export const maintenancePlansService = {
         }),
       );
 
-      const views: MaintenanceServiceHistoryView[] = services.map((s) => ({
-        id: s.id,
-        planId: s.plan_id,
-        planNome: planMap.get(s.plan_id) ?? parsePresetSnapshot(s.preset_snapshot)?.name ?? "—",
-        performedAt: s.performed_at,
-        oreAtService: Number(s.ore_at_service),
-        kmAtService: s.km_at_service != null ? Number(s.km_at_service) : null,
-        mezzoOreSnapshot: s.mezzo_ore_snapshot != null ? Number(s.mezzo_ore_snapshot) : null,
-        note: s.note?.trim() ?? "",
-        performedByName: s.performed_by ? (profileMap.get(s.performed_by) ?? "—") : "—",
-        executionType: (s.execution_type as MaintenanceServiceHistoryView["executionType"]) ?? "scheduled",
-        presetSnapshot: parsePresetSnapshot(s.preset_snapshot),
-        parts: partRows
-          .filter((p) => p.service_id === s.id)
-          .map((p) => {
-            const r = ricambi.find((x) => x.id === p.ricambio_id);
-            return {
-              ricambioId: p.ricambio_id,
-              descrizione: p.descrizione_snapshot?.trim() || r?.nome || "—",
-              quantita: Number(p.quantita),
-              wasReplaced: Boolean(p.was_replaced),
-              wasDue: Boolean(p.was_due),
-              isRequired: Boolean(p.is_required_snapshot),
-              replacementCondition: (p.replacement_condition as ReplacementCondition) ?? "sempre",
-            };
-          }),
-        checklist: checklistRows
-          .filter((c) => c.service_id === s.id)
-          .sort((a, b) => a.sort_order - b.sort_order)
-          .map((c) => ({
-            itemLabel: c.item_label,
-            checked: Boolean(c.checked),
-            note: c.note?.trim() ?? "",
-          })),
-      }));
+      const views: MaintenanceServiceHistoryView[] = services.map((s) => {
+        const fullSnap = parseFullPresetSnapshot(s.preset_snapshot);
+        const row = s as VehicleMaintenanceServiceRow & {
+          lavorazione_id?: string | null;
+          compliance_auto?: number | null;
+          compliance_review?: Record<string, unknown> | null;
+        };
+        return {
+          id: s.id,
+          planId: s.plan_id,
+          planNome: fullSnap?.name ?? planMap.get(s.plan_id) ?? parsePresetSnapshot(s.preset_snapshot)?.name ?? "—",
+          performedAt: s.performed_at,
+          oreAtService: Number(s.ore_at_service),
+          kmAtService: s.km_at_service != null ? Number(s.km_at_service) : null,
+          mezzoOreSnapshot: s.mezzo_ore_snapshot != null ? Number(s.mezzo_ore_snapshot) : null,
+          note: s.note?.trim() ?? "",
+          performedByName: s.performed_by ? (profileMap.get(s.performed_by) ?? "—") : "—",
+          executionType: (s.execution_type as MaintenanceServiceHistoryView["executionType"]) ?? "scheduled",
+          presetSnapshot: parsePresetSnapshot(s.preset_snapshot),
+          lavorazioneId: row.lavorazione_id ?? null,
+          complianceAuto: row.compliance_auto ?? null,
+          complianceReview: row.compliance_review ?? null,
+          versionLabel: fullSnap?.versionLabel ?? null,
+          parts: partRows
+            .filter((p) => p.service_id === s.id)
+            .map((p) => {
+              const r = ricambi.find((x) => x.id === p.ricambio_id);
+              return {
+                ricambioId: p.ricambio_id,
+                descrizione: p.descrizione_snapshot?.trim() || r?.nome || "—",
+                quantita: Number(p.quantita),
+                wasReplaced: Boolean(p.was_replaced),
+                wasDue: Boolean(p.was_due),
+                isRequired: Boolean(p.is_required_snapshot),
+                replacementCondition: (p.replacement_condition as ReplacementCondition) ?? "sempre",
+              };
+            }),
+          checklist: checklistRows
+            .filter((c) => c.service_id === s.id)
+            .sort((a, b) => a.sort_order - b.sort_order)
+            .map((c) => ({
+              itemLabel: c.item_label,
+              checked: Boolean(c.checked),
+              note: c.note?.trim() ?? "",
+            })),
+        };
+      });
 
-      return success(views);
+      const syntheticViews = buildSyntheticTagliandoHistoryViews({
+        lavorazioni: lavCandidates as {
+          id: string;
+          stato: string;
+          archived: boolean | null;
+          data_uscita: string | null;
+          data_ingresso: string | null;
+          tagliando_preset_ref: string | null;
+        }[],
+        ingressiByLavorazioneId,
+        registeredLavorazioneIds,
+        activePresetIds,
+        planNames: planMap,
+      });
+
+      const merged = [...views, ...syntheticViews].sort((a, b) => {
+        const dateCmp = b.performedAt.localeCompare(a.performedAt);
+        if (dateCmp !== 0) return dateCmp;
+        return b.oreAtService - a.oreAtService;
+      });
+
+      return success(merged);
     } catch (e) {
       return serviceFailFromError<MaintenanceServiceHistoryView[]>(e, [], { entity: "mezzo", action: "read" });
     }

@@ -1,3 +1,5 @@
+import type { LavorazioneInterventionType } from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
+
 export type MezzoPriorita = "normale" | "media" | "alta";
 
 /** Opzionale: collegamento esplicito a riga lavorazione (id). */
@@ -69,6 +71,8 @@ export type MezzoInterventoLavorazione = {
   durataGiorniLabel: string;
   durataGiorniNum: number;
   tipoIntervento: string;
+  /** Tipo intervento scheda ingresso (is_tagliando + repair_present). */
+  interventionType?: LavorazioneInterventionType;
   descrizione: string;
   prioritaLabel: string;
   statoFinale: string;

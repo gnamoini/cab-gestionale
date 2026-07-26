@@ -89,10 +89,9 @@ import {
   type AddettoRecord,
 } from "@/lib/lavorazioni/addetto-model";
 import {
-  assignColorForNewAddetto,
-  removeAddettoFromColorMap,
-  renameAddettoInColorMap,
-  syncAddettoColorMap,
+  assignColorForNewAddettoById,
+  removeAddettoFromColorMapById,
+  syncAddettoColorMapById,
 } from "@/lib/lavorazioni/addetto-colors-assign";
 import { normalizeHex } from "@/lib/lavorazioni/color-utils";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
@@ -117,7 +116,8 @@ import { useImpostazioniSettingsQuery } from "@/src/hooks/gestionale/use-imposta
 import { useSettingsBulkMutation } from "@/src/hooks/gestionale/use-settings-queries";
 import { useUndoableConfigurazioneSave } from "@/src/hooks/gestionale/use-undoable-configurazione-save";
 import { mergeAppSettingsUpsertWithVersions } from "@/lib/domain/settings-entry";
-import { settingsRenamePropagationEntry } from "@/lib/domain/settings-rename-propagation-entry";
+import { settingsRenameEngineEntry } from "@/lib/domain/settings-rename-engine-entry";
+import type { PropagaImpactSummary } from "@/components/dashboard/settings-rinomina-propaga-dialog";
 import {
   addStatoFromLabel,
   DEFAULT_STATI_LAVORAZIONI_DB,
@@ -251,7 +251,7 @@ export function SistemaImpostazioniWorkspace({
   const [stati, setStati] = useState<StatoLavorazioneConfig[]>(() => [...DEFAULT_STATI_LAVORAZIONI_DB]);
   const [addettiRecords, setAddettiRecords] = useState<AddettoRecord[]>(() => defaultAddettiRecords());
   const [addettoColors, setAddettoColors] = useState<Record<string, string>>(() =>
-    syncAddettoColorMap([...DEFAULT_ADDETTI_LAVORAZIONI], undefined),
+    syncAddettoColorMapById(defaultAddettiRecords(), undefined),
   );
   const [prioritaColors, setPrioritaColors] = useState<Partial<Record<PrioritaLav, string>>>({});
   const [prioritaDb, setPrioritaDb] = useState<PrioritaLavorazione[]>(() => [...DEFAULT_PRIORITA_LAVORAZIONI_DB]);
@@ -378,6 +378,7 @@ export function SistemaImpostazioniWorkspace({
   const [propagaOpen, setPropagaOpen] = useState(false);
   const [propagaPending, setPropagaPending] = useState(false);
   const [propagaEntries, setPropagaEntries] = useState<SettingsRenameEntry[]>([]);
+  const [propagaImpacts, setPropagaImpacts] = useState<PropagaImpactSummary[]>([]);
 
   const queueRename = useCallback((entry: SettingsRenameEntry) => {
     renameQueueRef.current = [
@@ -385,6 +386,74 @@ export function SistemaImpostazioniWorkspace({
       entry,
     ];
   }, []);
+
+  const labelsForRenameKind = useCallback(
+    (kind: SettingsRenameEntry["kind"]): readonly string[] => {
+      switch (kind) {
+        case "cliente":
+          return liste.clienti;
+        case "utilizzatore":
+          return liste.utilizzatori;
+        case "cantiere":
+          return liste.cantieri;
+        case "mag_marca":
+          return mag.marche;
+        case "mag_categoria":
+          return mag.categorie;
+        case "mag_fornitore":
+          return mag.fornitori;
+        case "mag_produttore":
+          return mag.produttori;
+        case "tipo_attrezzatura":
+          return liste.tipiAttrezzatura;
+        case "tipo_telaio":
+          return liste.tipiTelaio ?? [];
+        default:
+          return [];
+      }
+    },
+    [liste, mag],
+  );
+
+  useEffect(() => {
+    if (!propagaOpen || propagaEntries.length === 0) {
+      setPropagaImpacts([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const summaries: PropagaImpactSummary[] = [];
+      for (const entry of propagaEntries) {
+        const plan = settingsRenameEngineEntry.buildRenamePlan({
+          kind: entry.kind,
+          oldLabel: entry.from,
+          newLabel: entry.to,
+          entityId: entry.from,
+        });
+        const preview = await settingsRenameEngineEntry.previewRename(plan, {
+          existingLabels: labelsForRenameKind(entry.kind),
+        });
+        if (cancelled) return;
+        if (!preview.success || !preview.data) {
+          summaries.push({ entry, validationBlocked: true });
+          continue;
+        }
+        const warnings = preview.data.validation.checks
+          .filter((c) => c.status === "warning")
+          .map((c) => c.message ?? c.name);
+        summaries.push({
+          entry,
+          impact: preview.data.impact,
+          validationBlocked: preview.data.validation.status === "blocked",
+          validationWarnings: warnings,
+        });
+      }
+      if (!cancelled) setPropagaImpacts(summaries);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [propagaOpen, propagaEntries, labelsForRenameKind]);
 
   const { gate: addettiGate, similarDialog: addettiSimilarDialog } = useSettingsSimilarGate();
 
@@ -500,32 +569,76 @@ export function SistemaImpostazioniWorkspace({
 
   const finalizePropaga = useCallback(async (propagate: boolean) => {
     const shouldExitAfter = exitAfterSaveRef.current;
+    const entries = [...renameQueueRef.current];
     if (!propagate) {
+      if (user?.id && entries.length > 0) {
+        for (const entry of entries) {
+          const plan = settingsRenameEngineEntry.buildRenamePlan({
+            kind: entry.kind,
+            oldLabel: entry.from,
+            newLabel: entry.to,
+            entityId: entry.from,
+          });
+          await settingsRenameEngineEntry.runRenameJob({
+            plan,
+            userId: user.id,
+            executionMode: "configuration_only",
+            existingLabels: liste.clienti,
+            propagate: false,
+          });
+        }
+      }
       renameQueueRef.current = [];
       setPropagaOpen(false);
+      setPropagaImpacts([]);
       gestToast.successSaved();
       if (shouldExitAfter) completePendingExit();
       return;
     }
-    setPropagaPending(true);
-    const res = await settingsRenamePropagationEntry.propagateRenames(renameQueueRef.current);
-    setPropagaPending(false);
-    setPropagaOpen(false);
-    if (!res.success) {
-      gestToast.errorOnce("settings-propaga", res.error ?? "Propagazione non riuscita", { action: "update" });
-      exitAfterSaveRef.current = false;
+    if (!user?.id) {
+      gestToast.errorOnce("settings-propaga", "Utente non autenticato", { action: "update" });
       return;
     }
-    const propagatedKinds = renameQueueRef.current.map((e) => e.kind);
-    renameQueueRef.current = [];
-    invalidateAfterSettingsRenamePropagation(queryClient, propagatedKinds);
-    const total = (res.data ?? []).reduce((sum, r) => sum + r.updated, 0);
-    gestToast.successOnce(
-      "settings-propaga",
-      total > 0 ? `Salvataggio completato — ${total} record aggiornati` : "Salvataggio completato",
-    );
-    if (shouldExitAfter) completePendingExit();
-  }, [completePendingExit, gestToast, queryClient]);
+    setPropagaPending(true);
+    let total = 0;
+    let hadError = false;
+    for (const entry of entries) {
+      const plan = settingsRenameEngineEntry.buildRenamePlan({
+        kind: entry.kind,
+        oldLabel: entry.from,
+        newLabel: entry.to,
+        entityId: entry.from,
+      });
+      const res = await settingsRenameEngineEntry.runRenameJob({
+        plan,
+        userId: user.id,
+        executionMode: "full",
+        existingLabels: liste.clienti,
+        propagate: true,
+      });
+      if (!res.success) {
+        hadError = true;
+        gestToast.errorOnce("settings-propaga", res.error ?? "Propagazione non riuscita", { action: "update" });
+        break;
+      }
+      total += res.data?.metrics?.records_updated ?? 0;
+    }
+    setPropagaPending(false);
+    setPropagaOpen(false);
+    setPropagaImpacts([]);
+    if (!hadError) {
+      const propagatedKinds = entries.map((e) => e.kind);
+      renameQueueRef.current = [];
+      invalidateAfterSettingsRenamePropagation(queryClient, propagatedKinds);
+      gestToast.successOnce(
+        "settings-propaga",
+        total > 0 ? `Salvataggio completato — ${total} record aggiornati` : "Salvataggio completato",
+      );
+      if (shouldExitAfter) completePendingExit();
+    } else {
+      exitAfterSaveRef.current = false;
+    }
+  }, [completePendingExit, gestToast, liste.clienti, queryClient, user?.id]);
 
   const applySnapshot = useCallback((s: SettingsWorkspaceSnapshot) => {
     setLavPrefsHydrated(false);
@@ -951,11 +1064,10 @@ export function SistemaImpostazioniWorkspace({
                   if (!t) return;
                   const legacyNomi = addettiLegacyNomi(addettiRecords);
                   addettiGate(legacyNomi, t, undefined, () => {
-                    setAddettiRecords((prev) => [
-                      ...prev,
-                      { id: createAddettoId(), nome: t, cognome: cognome?.trim() || null },
-                    ]);
-                    setAddettoColors((prev) => assignColorForNewAddetto(prev, t));
+                    const id = createAddettoId();
+                    const rec: AddettoRecord = { id, nome: t, cognome: cognome?.trim() || null, colorKey: id };
+                    setAddettiRecords((prev) => [...prev, rec]);
+                    setAddettoColors((prev) => assignColorForNewAddettoById(prev, rec));
                   });
                 }}
                 onUpdateAddetto={(id, patch) => {
@@ -969,7 +1081,7 @@ export function SistemaImpostazioniWorkspace({
                       setAddettiRecords((prev) =>
                         prev.map((r) => (r.id === id ? { ...r, nome: t } : r)),
                       );
-                      setAddettoColors((prev) => renameAddettoInColorMap(prev, rec.nome, t));
+                      // ponytail: colore keyed su id — rename nome non sposta hex
                       queueRename({
                         kind: "addetto",
                         from: rec.nome,
@@ -988,10 +1100,10 @@ export function SistemaImpostazioniWorkspace({
                     );
                   }
                 }}
-                onChangeAddettoColor={(nome, hex) => {
+                onChangeAddettoColor={(colorKey, hex) => {
                   const nh = normalizeHex(hex);
                   if (!nh) return;
-                  setAddettoColors((prev) => ({ ...prev, [nome]: nh }));
+                  setAddettoColors((prev) => ({ ...prev, [colorKey]: nh }));
                 }}
                 onRemoveAddetto={(id) => {
                   const rec = findAddettoById(addettiRecords, id);
@@ -1005,7 +1117,7 @@ export function SistemaImpostazioniWorkspace({
                       : undefined,
                     onConfirm: () => {
                       setAddettiRecords((prev) => prev.filter((r) => r.id !== id));
-                      setAddettoColors((prev) => removeAddettoFromColorMap(prev, name));
+                      setAddettoColors((prev) => removeAddettoFromColorMapById(prev, rec));
                       setSettingsDeleteConfirm(null);
                     },
                   });
@@ -1334,6 +1446,7 @@ export function SistemaImpostazioniWorkspace({
         <SettingsRinominaPropagaDialogLazy
           open
           entries={propagaEntries}
+          impactSummaries={propagaImpacts}
           pending={propagaPending}
           onCancel={() => void finalizePropaga(false)}
           onConfirm={() => void finalizePropaga(true)}

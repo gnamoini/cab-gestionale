@@ -4,6 +4,7 @@ import type {
   PresetMaintenanceKpi,
   TagliandiOverviewRow,
 } from "@/lib/maintenance-plans/v2-types";
+import { parseComplianceReview, resolveCompliancePct } from "@/lib/maintenance-plans/resolve-compliance-pct";
 
 export function selectMezzoMaintenanceKpi(input: {
   executions: { performedAt: string; totalCost: number | null; oreAtService: number }[];
@@ -94,6 +95,16 @@ function addDays(ymd: string, days: number): string {
   const d = new Date(`${ymd}T12:00:00`);
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
+}
+
+export function selectAverageTagliandoCompliance(
+  services: { complianceAuto: number | null; complianceReview?: unknown }[],
+): number | null {
+  const values = services
+    .map((s) => resolveCompliancePct(s.complianceAuto, parseComplianceReview(s.complianceReview)))
+    .filter((v): v is number => v != null);
+  if (values.length === 0) return null;
+  return Math.round(values.reduce((sum, v) => sum + v, 0) / values.length);
 }
 
 export function selectDashboardMaintenanceCards(rows: TagliandiOverviewRow[]) {

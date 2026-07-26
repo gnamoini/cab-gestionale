@@ -37,7 +37,7 @@ export async function fetchDdtDetailServer(id: string): Promise<DdtDetail | null
   ]);
 
   return {
-    document,
+    document: document as import("@/src/types/supabase-tables").DdtDocumentRow,
     rows: rows.data ?? [],
     links: links.data ?? [],
   };

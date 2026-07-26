@@ -7,14 +7,16 @@ import {
   prefetchGestionalePage,
 } from "@/src/lib/react-query/prefetch-gestionale-page";
 import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
+import { resolveListSurfaceForPage } from "@/lib/ui/resolve-list-surface.server";
 
 export default async function MezziPage() {
   const qc = createServerQueryClient();
+  const listSurface = await resolveListSurfaceForPage();
   await prefetchGestionalePage(qc, "mezzi");
   return (
     <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.mezzi}>
       <GestionaleHydrationBoundary state={dehydrate(qc)}>
-        <MezziViewLazy />
+        <MezziViewLazy listSurface={listSurface} listTier="xl" />
       </GestionaleHydrationBoundary>
     </PageLayout>
   );

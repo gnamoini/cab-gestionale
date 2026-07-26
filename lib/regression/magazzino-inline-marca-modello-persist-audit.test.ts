@@ -19,7 +19,7 @@ const magazzinoView = read("components/gestionale/magazzino/magazzino-view.tsx")
 assert.match(globalListKeys, /registerMarcaInMagazzinoMaster/);
 assert.match(appendHook, /isHierarchyListContext/);
 assert.match(appendHook, /isMagazzinoScopedListAppend/);
-assert.match(settingsEntry, /CAB_SETTINGS_MODULE\.mezzi.*CAB_SETTINGS_KEY\.liste/s);
+assert.match(settingsEntry, /CAB_SETTINGS_MODULE\.mezzi[\s\S]*CAB_SETTINGS_KEY\.liste/);
 assert.match(magazzinoView, /marcheGlobal/);
 assert.match(magazzinoView, /mergedMarche = mergeMasterWithRows/);
 

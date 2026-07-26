@@ -50,21 +50,21 @@ const mezzoEmbed: MezzoRow = {
 
 function lavRow(overrides: Partial<LavorazioneListRow> & { id: string }): LavorazioneListRow {
   return {
-    id: overrides.id,
-    mezzo_id: overrides.mezzo_id ?? "mezzo-a",
-    stato: overrides.stato ?? "in_lavorazione",
-    priorita: overrides.priorita ?? "media",
-    data_ingresso: overrides.data_ingresso ?? "2025-01-15",
-    data_uscita: overrides.data_uscita ?? null,
-    note: overrides.note ?? null,
+    mezzo_id: "mezzo-a",
+    stato: "in_lavorazione",
+    priorita: "media",
+    data_ingresso: "2025-01-15",
+    data_uscita: null,
+    note: null,
     created_by: null,
-    created_at: overrides.created_at ?? "2025-01-15T00:00:00.000Z",
-    updated_at: overrides.updated_at ?? "2025-01-15T00:00:00.000Z",
-    archived: overrides.archived ?? false,
-    archived_at: overrides.archived_at ?? null,
-    deleted_at: overrides.deleted_at ?? null,
-    codice: overrides.codice ?? null,
-    mezzo: overrides.mezzo !== undefined ? overrides.mezzo : mezzoEmbed,
+    created_at: "2025-01-15T00:00:00.000Z",
+    updated_at: "2025-01-15T00:00:00.000Z",
+    archived: false,
+    archived_at: null,
+    deleted_at: null,
+    codice: null,
+    mezzo: mezzoEmbed,
+    ...overrides,
   };
 }
 
@@ -118,5 +118,13 @@ const primaDelete = interventiMezzoDaLavorazioniDb(mezzoA, [lavInCorso, lavArchi
 const dopoDelete = interventiMezzoDaLavorazioniDb(mezzoA, [lavArchiviata]);
 assert.equal(primaDelete.length, 2);
 assert.equal(dopoDelete.length, 1);
+
+const lavTagliandoRip = lavRow({
+  id: "lav-tag",
+  is_tagliando: true,
+  repair_present: true,
+});
+const [interventoTag] = interventiMezzoDaLavorazioniDb(mezzoA, [lavTagliandoRip]);
+assert.equal(interventoTag?.interventionType, "riparazione_tagliando");
 
 console.log("lavorazione-collegata-mezzo.test.ts OK");

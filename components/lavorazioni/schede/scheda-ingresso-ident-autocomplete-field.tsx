@@ -32,7 +32,12 @@ import { scheduleFocusNextGestionaleField } from "@/lib/ui/gestionale-focus-navi
 function identPlaceholder(field: SchedaIngressoIdentField): string {
   if (field === "targa") return "Cerca targa…";
   if (field === "matricola") return "Cerca matricola…";
+  if (field === "vin") return "Cerca VIN…";
   return "Cerca scuderia…";
+}
+
+function normalizeIdentInput(field: SchedaIngressoIdentField, raw: string): string {
+  return field === "vin" ? raw.trim().toUpperCase() : raw;
 }
 
 export function SchedaIngressoIdentAutocompleteField({
@@ -52,7 +57,7 @@ export function SchedaIngressoIdentAutocompleteField({
   field: SchedaIngressoIdentField;
   label: string;
   value: string;
-  siblingIdent?: { targa?: string; matricola?: string; nScuderia?: string };
+  siblingIdent?: { targa?: string; matricola?: string; nScuderia?: string; vin?: string };
   mezzi: readonly MezzoGestito[];
   readOnly?: boolean;
   disabled?: boolean;
@@ -144,7 +149,9 @@ export function SchedaIngressoIdentAutocompleteField({
           ? mezzo.targa?.trim() ?? ""
           : field === "matricola"
             ? mezzo.matricola?.trim() ?? ""
-            : mezzo.numeroScuderia?.trim() ?? "";
+            : field === "vin"
+              ? mezzo.vin?.trim() ?? ""
+              : mezzo.numeroScuderia?.trim() ?? "";
       return ident || "—";
     },
     [field],
@@ -160,13 +167,13 @@ export function SchedaIngressoIdentAutocompleteField({
 
   const commitFreeText = useCallback(
     (raw: string) => {
-      const next = raw.trim();
+      const next = normalizeIdentInput(field, raw.trim());
       skipBlurMatch.current = true;
       onChange(next);
       resetUi();
       tryExactMatch(next);
     },
-    [onChange, resetUi, tryExactMatch],
+    [field, onChange, resetUi, tryExactMatch],
   );
 
   const closeSheetWithCommit = useCallback(() => {
@@ -364,7 +371,7 @@ export function SchedaIngressoIdentAutocompleteField({
           value={value}
           onChange={(e) => {
             if (useMobileSheet) return;
-            onChange(e.target.value);
+            onChange(normalizeIdentInput(field, e.target.value));
             notifyOpening();
             setOpen(true);
             setActiveIndex(-1);

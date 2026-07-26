@@ -1,7 +1,8 @@
 /** Tabelle il cui cambio impatta il portale clienti (allineate a Realtime + broadcast). */
 export const CLIENT_PORTAL_SYNC_TABLES = [
   "lavorazioni",
-  "lavorazione_documents",
+  "pdf_artifacts",
+  "document_access_tokens",
   "scheda_lavorazione",
   "preventivi",
   "mezzi",

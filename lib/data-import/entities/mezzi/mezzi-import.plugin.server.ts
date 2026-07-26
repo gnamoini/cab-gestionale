@@ -17,6 +17,8 @@ import {
   resolutionEventFromResult,
 } from "@/lib/domain/mezzo/log-mezzo-resolution-event.server";
 import { resolveMezzoRelationFromDb } from "@/lib/data-import/core/relation-resolver.server";
+import { buildServerMezzoResolveDeps } from "@/lib/domain/mezzo/build-server-mezzo-resolve-deps";
+import { resolveOrCreateMezzo } from "@/lib/domain/mezzo/resolve-or-create-mezzo";
 import { attachMezzoEntityKey } from "@/lib/validation/entity-persistence";
 import { sanitizeMezzoWritePayload } from "@/lib/validation/services/mezzi-payload";
 import { upsertAttrezzaturaForMezzoImport } from "@/lib/data-import/entities/mezzi/mezzi-import-attrezzatura.server";
@@ -325,21 +327,41 @@ export const mezziImportPlugin: ImportEntityPlugin = {
               vin: d.telaio,
             }, { batchId: input.batchId, rowIndex: d.rowIndex, action: "create" }),
           );
-          const { data: inserted, error } = await sb.from("mezzi").insert(payload).select("id").single();
-          if (error) {
-            result.stats.errors += 1;
-            result.errors.push({ rowIndex: d.rowIndex, message: error.message });
-          } else {
-            const mezzoId = String((inserted as { id: string }).id);
+          const incoming = {
+            cliente: clienteLabel,
+            utilizzatore: d.utilizzatore ?? null,
+            targa: d.targa ?? null,
+            numero_scuderia: d.numero_scuderia ?? null,
+            anno: d.anno ?? null,
+            telaio_num: telaioNum,
+            meta,
+            entity_key: null,
+            marca_telaio: null,
+            modello_telaio: null,
+            tipo_telaio: null,
+            km: null,
+            note: null,
+          };
+          try {
+            const mezzoDeps = buildServerMezzoResolveDeps(sb);
+            const resolved = await resolveOrCreateMezzo({ incoming }, mezzoDeps);
+            const mezzoId = resolved.row.id;
             const attRes = await upsertAttrezzaturaForMezzoImport(sb, mezzoId, d);
             if (!attRes.ok) {
-              await sb.from("mezzi").delete().eq("id", mezzoId);
               result.stats.errors += 1;
               result.errors.push({ rowIndex: d.rowIndex, message: attRes.message });
-            } else {
+            } else if (resolved.created) {
               result.stats.created += 1;
               result.stats.createdEntityIds?.push(mezzoId);
+            } else {
+              result.stats.updated += 1;
             }
+          } catch (error) {
+            result.stats.errors += 1;
+            result.errors.push({
+              rowIndex: d.rowIndex,
+              message: error instanceof Error ? error.message : "Creazione mezzo fallita",
+            });
           }
         }
       }

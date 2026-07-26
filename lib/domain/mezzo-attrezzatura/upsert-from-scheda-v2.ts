@@ -1,12 +1,24 @@
 import { parseDecimalInput } from "@/lib/core/decimal-input";
 import { PreferredMezzoInvalidError } from "@/lib/domain/mezzo/mezzo-resolution";
 import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
+import {
+  associationFromScheda,
+  stripAssociationFieldsFromPlan,
+} from "@/lib/domain/mezzo/mezzo-association";
+import type { ApplyAssociationChangeInput } from "@/lib/domain/mezzo/apply-association-change";
+import {
+  resolveOrCreateMezzo,
+  type ResolveOrCreateMezzoResult,
+} from "@/lib/domain/mezzo/resolve-or-create-mezzo";
 import { resolveTargetTypeFromScheda } from "@/lib/domain/mezzo-attrezzatura/intervento-target";
 import { trimOrNull } from "@/lib/domain/mezzo-attrezzatura/backfill-rules";
 import { normalizeVin } from "@/lib/mezzi/vin-normalize";
 import { mezzoFormToMeta } from "@/lib/mezzi/mezzi-meta";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import type { AttrezzaturaInsert, AttrezzaturaUpdate } from "@/src/services/attrezzature.service";
+import type {
+  ResolveOrCreateAttrezzaturaResult,
+} from "@/lib/domain/mezzo-attrezzatura/resolve-or-create-attrezzatura";
+import type { AttrezzaturaResolveInsert } from "@/lib/domain/mezzo-attrezzatura/resolve-or-create-attrezzatura";
 import type { MezzoInsert, MezzoUpdate } from "@/src/services/mezzi.service";
 import type { AttrezzaturaRow, MezzoRow } from "@/src/types/supabase-tables";
 import type { SchedaIngressoFields } from "@/types/schede";
@@ -14,20 +26,24 @@ import { logAttrezzatureV2WritePath } from "@/lib/observability/attrezzature-v2-
 import type { UpsertFromSchedaV2Result } from "@/lib/attrezzature/types";
 import type { MezzoUpdateFromSchedaPlan } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
 import { MEZZO_UPDATE_SCHEDA_ONLY, mezzoUpdatePlanAllowsMezzoWrite } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
-import {
-  buildMezzoUpdatePatchFromSchedaPlan,
-  schedaFieldsToAttrezzaturaPatch,
-} from "@/lib/domain/mezzo/apply-mezzo-patch-from-scheda-fields";
+import { buildMezzoUpdatePatchFromSchedaPlan } from "@/lib/domain/mezzo/apply-mezzo-patch-from-scheda-fields";
 import { isMezzoUpdatedAtStale } from "@/lib/domain/mezzo/mezzo-occ";
 import { logMezzoSchedaConflictTelemetry } from "@/lib/domain/mezzo/mezzo-scheda-conflict-telemetry";
 import { MezzoSchedaValidationError } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 
 export type UpsertFromSchedaV2Deps = {
-  createMezzo: (data: MezzoInsert) => Promise<MezzoRow>;
+  resolveMezzo: (input: {
+    incoming: MezzoInsert;
+    hintId?: string | null;
+    catalog: readonly MezzoGestito[];
+  }) => Promise<ResolveOrCreateMezzoResult>;
   updateMezzo: (id: string, data: MezzoUpdate) => Promise<MezzoRow>;
-  createAttrezzatura: (data: AttrezzaturaInsert) => Promise<AttrezzaturaRow>;
-  updateAttrezzatura: (id: string, data: AttrezzaturaUpdate) => Promise<AttrezzaturaRow>;
-  findAttrezzaturaByMatricola: (mezzoId: string, matricola: string) => Promise<AttrezzaturaRow | null>;
+  applyAssociationChange?: (input: ApplyAssociationChangeInput) => Promise<MezzoRow>;
+  resolveAttrezzatura: (input: {
+    mezzoId: string;
+    incoming: AttrezzaturaResolveInsert;
+    hintId?: string | null;
+  }) => Promise<ResolveOrCreateAttrezzaturaResult>;
 };
 
 function schedaToMezzoPayload(fields: SchedaIngressoFields, anno?: number): MezzoInsert {
@@ -58,7 +74,7 @@ function schedaToMezzoPayload(fields: SchedaIngressoFields, anno?: number): Mezz
   };
 }
 
-function schedaToAttrezzaturaPayload(fields: SchedaIngressoFields, mezzoId: string): AttrezzaturaInsert {
+function schedaToAttrezzaturaPayload(fields: SchedaIngressoFields, mezzoId: string): AttrezzaturaResolveInsert {
   const annoParsed = parseInt(fields.oreLavoro, 10);
   return {
     mezzo_id: mezzoId,
@@ -70,22 +86,6 @@ function schedaToAttrezzaturaPayload(fields: SchedaIngressoFields, mezzoId: stri
     anno: Number.isFinite(annoParsed) ? null : null,
     note: null,
   };
-}
-
-function mergeMezzoPatch(existing: MezzoRow, incoming: MezzoInsert): MezzoUpdate {
-  const patch: MezzoUpdate = {};
-  if (incoming.cliente.trim()) patch.cliente = incoming.cliente.trim();
-  if (incoming.utilizzatore?.trim()) patch.utilizzatore = incoming.utilizzatore.trim();
-  if (incoming.targa?.trim()) patch.targa = incoming.targa.trim();
-  if (incoming.numero_scuderia?.trim()) patch.numero_scuderia = incoming.numero_scuderia.trim();
-  if (incoming.marca_telaio) patch.marca_telaio = incoming.marca_telaio;
-  if (incoming.modello_telaio) patch.modello_telaio = incoming.modello_telaio;
-  if (incoming.tipo_telaio) patch.tipo_telaio = incoming.tipo_telaio;
-  // ponytail: scheda merge — VIN vuoto/whitespace preserva telaio_num; mai patch.telaio_num = null
-  if (incoming.telaio_num) patch.telaio_num = incoming.telaio_num;
-  if (incoming.km != null) patch.km = incoming.km;
-  if (incoming.meta) patch.meta = incoming.meta;
-  return patch;
 }
 
 export async function upsertFromSchedaV2(
@@ -111,6 +111,8 @@ export async function upsertFromSchedaV2(
     targetType: fields.targetType,
     marcaAttrezzatura: fields.marcaAttrezzatura,
     attrezzaturaId: fields.attrezzaturaId ?? attrezzaturaIdHint,
+    matricola: fields.matricola,
+    tipoAttrezzatura: fields.tipoAttrezzatura,
   });
 
   const resolved = resolveMezzoFromScheda({
@@ -131,39 +133,65 @@ export async function upsertFromSchedaV2(
   }
 
   const incomingMezzo = schedaToMezzoPayload(fields, resolved.mezzo?.anno);
-  let mezzoId: string;
-  let createdMezzo = false;
+  const hintId = resolved.mezzoId ?? preferredMezzoId?.trim() ?? null;
 
-  if (resolved.mezzoId) {
-    mezzoId = resolved.mezzoId;
-    if (updatePlan.updateAnagrafica || updatePlan.updateMetering) {
-      if (
-        mezzoUpdatePlanAllowsMezzoWrite(updatePlan) &&
-        updatePlan.mezzoOCC?.updatedAtAtLinkTime &&
-        resolved.mezzo?.ultimaModifica &&
-        isMezzoUpdatedAtStale(updatePlan.mezzoOCC.updatedAtAtLinkTime, resolved.mezzo.ultimaModifica) &&
-        !updatePlan.forceDespiteStale
-      ) {
-        logMezzoSchedaConflictTelemetry({
-          event: "MEZZO_STALE_CONFLICT",
-          mezzoId,
-        });
-        throw new MezzoSchedaValidationError("MEZZO_STALE_CONFLICT");
-      }
-      const patch = buildMezzoUpdatePatchFromSchedaPlan(
-        fields,
-        resolved.mezzo,
-        updatePlan,
-        lavorazioneId,
-      );
-      if (Object.keys(patch).length > 0) {
-        await deps.updateMezzo(mezzoId, patch);
-      }
+  const resolvedMezzo = await deps.resolveMezzo({
+    incoming: incomingMezzo,
+    hintId,
+    catalog: mezziCatalog,
+  });
+  const mezzoId = resolvedMezzo.row.id;
+  const createdMezzo = resolvedMezzo.created;
+
+  if (
+    !createdMezzo &&
+    updatePlan.associationChangeConfirmed &&
+    resolved.mezzo &&
+    deps.applyAssociationChange
+  ) {
+    const occAt =
+      updatePlan.mezzoOCC?.updatedAtAtLinkTime?.trim() ||
+      resolved.mezzo.ultimaModifica?.trim() ||
+      "";
+    await deps.applyAssociationChange({
+      mezzoId,
+      existingMezzo: resolved.mezzo,
+      newAssociation: associationFromScheda(fields),
+      origin: "scheda_ingresso",
+      expectedUpdatedAt: occAt,
+      lavorazioneId,
+    });
+  }
+
+  const anagraficaPlan = stripAssociationFieldsFromPlan(updatePlan);
+
+  if (
+    !createdMezzo &&
+    resolved.mezzoId &&
+    (anagraficaPlan.updateAnagrafica || anagraficaPlan.updateMetering)
+  ) {
+    if (
+      mezzoUpdatePlanAllowsMezzoWrite(anagraficaPlan) &&
+      anagraficaPlan.mezzoOCC?.updatedAtAtLinkTime &&
+      resolved.mezzo?.ultimaModifica &&
+      isMezzoUpdatedAtStale(anagraficaPlan.mezzoOCC.updatedAtAtLinkTime, resolved.mezzo.ultimaModifica) &&
+      !anagraficaPlan.forceDespiteStale
+    ) {
+      logMezzoSchedaConflictTelemetry({
+        event: "MEZZO_STALE_CONFLICT",
+        mezzoId,
+      });
+      throw new MezzoSchedaValidationError("MEZZO_STALE_CONFLICT");
     }
-  } else {
-    const row = await deps.createMezzo(incomingMezzo);
-    mezzoId = row.id;
-    createdMezzo = true;
+    const patch = buildMezzoUpdatePatchFromSchedaPlan(
+      fields,
+      resolved.mezzo,
+      anagraficaPlan,
+      lavorazioneId,
+    );
+    if (Object.keys(patch).length > 0) {
+      await deps.updateMezzo(mezzoId, patch);
+    }
   }
 
   if (targetType === "telaio") {
@@ -181,31 +209,13 @@ export async function upsertFromSchedaV2(
     };
   }
 
-  const matricola = trimOrNull(fields.matricola);
-  let attrezzaturaId = trimOrNull(fields.attrezzaturaId ?? attrezzaturaIdHint ?? "");
-  let createdAttrezzatura = false;
-
-  if (attrezzaturaId) {
-    const attPatch = schedaFieldsToAttrezzaturaPatch(fields, updatePlan.fieldsToUpdate);
-    await deps.updateAttrezzatura(attrezzaturaId, {
-      marca: attPatch.marca ?? (fields.marcaAttrezzatura.trim() || undefined),
-      modello: attPatch.modello ?? (fields.modelloAttrezzatura.trim() || undefined),
-      tipo_attrezzatura: attPatch.tipo_attrezzatura ?? trimOrNull(fields.tipoAttrezzatura),
-      matricola: attPatch.matricola ?? matricola,
-    });
-  } else if (matricola) {
-    const existing = await deps.findAttrezzaturaByMatricola(mezzoId, matricola);
-    if (existing) {
-      attrezzaturaId = existing.id;
-      await deps.updateAttrezzatura(existing.id, schedaToAttrezzaturaPayload(fields, mezzoId));
-    }
-  }
-
-  if (!attrezzaturaId) {
-    const row = await deps.createAttrezzatura(schedaToAttrezzaturaPayload(fields, mezzoId));
-    attrezzaturaId = row.id;
-    createdAttrezzatura = true;
-  }
+  const resolvedAtt = await deps.resolveAttrezzatura({
+    mezzoId,
+    incoming: schedaToAttrezzaturaPayload(fields, mezzoId),
+    hintId: fields.attrezzaturaId ?? attrezzaturaIdHint,
+  });
+  const attrezzaturaId = resolvedAtt.row.id;
+  const createdAttrezzatura = resolvedAtt.created;
 
   logAttrezzatureV2WritePath({
     path: "v2",

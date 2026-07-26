@@ -77,3 +77,13 @@ export function RouteSkeletonKpiRow({ count = 4 }: { count?: 4 | 6 }) {
     </div>
   );
 }
+
+export function RouteSkeletonCardsStack({ count = 4, className = "" }: { count?: number; className?: string }) {
+  return (
+    <div className={`space-y-3 ${className}`.trim()}>
+      {Array.from({ length: count }).map((_, i) => (
+        <SkeletonBlock key={i} minHeightClass={SKELETON_MIN_HEIGHT.cardMobile} className="w-full" />
+      ))}
+    </div>
+  );
+}

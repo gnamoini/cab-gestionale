@@ -8,6 +8,7 @@ import {
   prefetchGestionalePage,
 } from "@/src/lib/react-query/prefetch-gestionale-page";
 import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
+import { resolveListSurfaceForPage } from "@/lib/ui/resolve-list-surface.server";
 
 type FatturazionePageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -21,11 +22,12 @@ export default async function FatturazionePage({ searchParams }: FatturazionePag
   const includePayments = tab === "pagamenti";
 
   const qc = createServerQueryClient();
+  const listSurface = await resolveListSurfaceForPage();
   await prefetchGestionalePage(qc, "fatturazione", { includeOpenItems, includePayments });
   return (
     <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.fatturazione}>
       <GestionaleHydrationBoundary state={dehydrate(qc)}>
-        <FatturazioneViewLazy />
+        <FatturazioneViewLazy listSurface={listSurface} listTier="xl" />
       </GestionaleHydrationBoundary>
     </PageLayout>
   );

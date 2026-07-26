@@ -39,10 +39,10 @@ assert.equal(
 assert.equal(
   gestionaleCabSyncToastMessage({
     type: "entity_created",
-    entity: "lavorazione_documents",
+    entity: "pdf_artifacts",
     id: "doc-1",
   }),
-  `Documento lavorazione caricato${REMOTE}`,
+  `Documento ufficiale generato${REMOTE}`,
 );
 
 assert.equal(

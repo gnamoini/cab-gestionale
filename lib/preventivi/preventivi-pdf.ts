@@ -20,7 +20,12 @@ export async function openPreventivoPdfPreviewFromRecord(
   await openPdfBlobInNewTab(blob, preventivoPdfFileName(p));
 }
 
-/** PDF da DB (lista, hub lavorazioni/mezzi — record già salvato). */
-export async function openPreventivoPdfInNewTab(p: PreventivoRecord, autore: string): Promise<void> {
-  await openPdfArtifact("preventivo", { id: p.id, autore });
+/** PDF ufficiale — anteprima inline (record salvato). */
+export function preventivoOfficialPreviewPath(preventivoId: string): string {
+  return `/documenti/preventivo/${encodeURIComponent(preventivoId)}/preview`;
+}
+
+export async function openPreventivoPdfInNewTab(p: PreventivoRecord, _autore: string): Promise<void> {
+  if (typeof window === "undefined") return;
+  window.location.assign(preventivoOfficialPreviewPath(p.id));
 }

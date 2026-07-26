@@ -332,6 +332,14 @@ export type LavorazioneRow = {
     | "safety_net_trigger"
     | null;
   actual_labor_hours_updated_at?: string | null;
+  /** Tagliandi integrati — esecuzione manutenzione collegata alla lavorazione. */
+  is_tagliando?: boolean;
+  maintenance_execution_kind?: "scheduled" | "extraordinary" | null;
+  repair_present?: boolean;
+  tagliando_preset_ref?: string | null;
+  tagliando_preset_version_ref?: string | null;
+  tagliando_assign_preset_to_mezzo?: boolean | null;
+  tagliando_no_preset_reason?: string | null;
 };
 
 export type AddettiEmployeeMappingRow = {
@@ -530,6 +538,35 @@ export type OperationalDiaryEntryRow = {
   deleted_at?: string | null;
 };
 
+export type PreventivoStatoRow = "bozza" | "inviato" | "confermato" | "annullato";
+
+export type PdfArtifactStatus = "generating" | "ready" | "failed" | "deleted";
+
+export type PdfArtifactRow = {
+  id: string;
+  entity_type: "preventivo" | "ddt" | "fattura";
+  entity_id: string;
+  storage_path: string;
+  hash: string;
+  version: number;
+  status: PdfArtifactStatus;
+  is_current: boolean;
+  generated_at: string;
+  generated_by: string | null;
+};
+
+export type DocumentAccessTokenRow = {
+  id: string;
+  token: string;
+  entity_type: "preventivo" | "ddt";
+  entity_id: string;
+  lavorazione_id: string;
+  created_at: string;
+  expires_at: string | null;
+  revoked_at: string | null;
+  created_by: string | null;
+};
+
 export type PreventivoRow = {
   id: string;
   mezzo_id: string;
@@ -537,6 +574,12 @@ export type PreventivoRow = {
   cliente: string;
   totale: number;
   dettagli: Record<string, unknown>;
+  stato: PreventivoStatoRow;
+  current_pdf_artifact_id: string | null;
+  inviato_at: string | null;
+  confermato_at: string | null;
+  confermato_by: string | null;
+  annullato_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -944,6 +987,7 @@ export type DdtDocumentRow = {
   note: string | null;
   origine: string;
   pdf_artifact_hash: string | null;
+  current_pdf_artifact_id: string | null;
   created_by: string | null;
   updated_by: string | null;
   annullato_at: string | null;

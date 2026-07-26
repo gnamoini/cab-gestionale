@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Tooltip } from "@/components/ui";
 import type { ChangeEvent, MutableRefObject, ReactNode } from "react";
@@ -43,9 +43,7 @@ import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 import {
-  PageActionMenuProvider,
   pageActionLogItem,
-  usePageActionMenu,
   type PageActionItem,
 } from "@/components/ui";
 import { IconSchedaBlank } from "@/components/document-capture/scheda-blank-pdf-actions";
@@ -73,26 +71,21 @@ function IconKanban({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
-export type LavorazioniPageMenuProviderProps = {
-  children: ReactNode;
-  listRefreshBusy: boolean;
-  printBusy?: boolean;
-  onRefresh: () => void;
-  onOpenLog: () => void;
-  onPrint: () => void;
-  listViewMode: "table" | "kanban";
-  onToggleListViewMode: () => void;
-  filtersActive: boolean;
-};
-
-function LavorazioniPageMenuRegistrar({
+/** SSOT voci menu header Lavorazioni. */
+export function useLavorazioniPageMenuItems({
   printBusy = false,
   onOpenLog,
   onPrint,
   listViewMode,
   onToggleListViewMode,
-}: Omit<LavorazioniPageMenuProviderProps, "children" | "listRefreshBusy" | "onRefresh" | "filtersActive">) {
-  const items = useMemo((): PageActionItem[] => [
+}: {
+  printBusy?: boolean;
+  onOpenLog: () => void;
+  onPrint: () => void;
+  listViewMode: "table" | "kanban";
+  onToggleListViewMode: () => void;
+}): PageActionItem[] {
+  return useMemo((): PageActionItem[] => [
     {
       id: "schede-pdf",
       label: "Schede da stampare",
@@ -119,45 +112,29 @@ function LavorazioniPageMenuRegistrar({
     {
       id: "view-mode",
       label: listViewMode === "table" ? "Vista Kanban" : "Vista Tabella",
-      description: "Cambia modalità di visualizzazione lista",
+      description: "Cambia modalitÃ  di visualizzazione lista",
       icon: <IconKanban />,
       onSelect: onToggleListViewMode,
     },
-    pageActionLogItem(onOpenLog, "Log attività"),
+    pageActionLogItem(onOpenLog, "Log attivitÃ "),
   ], [onOpenLog, onPrint, printBusy, listViewMode, onToggleListViewMode]);
-
-  usePageActionMenu(items, {
-    deps: [printBusy, listViewMode],
-  });
-
-  return null;
-}
-
-export function LavorazioniPageMenuProvider({
-  children,
-  listRefreshBusy,
-  onRefresh,
-  filtersActive,
-  ...registrarProps
-}: LavorazioniPageMenuProviderProps) {
-  return (
-    <PageActionMenuProvider
-      onRefresh={onRefresh}
-      refreshBusy={listRefreshBusy}
-    >
-      <LavorazioniPageMenuRegistrar {...registrarProps} />
-      {children}
-    </PageActionMenuProvider>
-  );
 }
 
 export type LavorazioniPageHeaderToolbarProps = {
+  items: PageActionItem[];
+  onRefresh: () => void;
   listRefreshBusy?: boolean;
 };
 
-/** Azioni header Lavorazioni — portal nella riga PageHeader (hamburger + titolo). */
-export function LavorazioniPageHeaderToolbar(_props: LavorazioniPageHeaderToolbarProps = {}) {
-  return <PageHeaderPageActionMenu />;
+/** Azioni header Lavorazioni â€” portal nella riga PageHeader (hamburger + titolo). */
+export function LavorazioniPageHeaderToolbar({
+  items,
+  onRefresh,
+  listRefreshBusy = false,
+}: LavorazioniPageHeaderToolbarProps) {
+  return (
+    <PageHeaderPageActionMenu items={items} onRefresh={onRefresh} refreshBusy={listRefreshBusy} />
+  );
 }
 
 export type LavorazioniListToolbarProps = {
@@ -198,7 +175,7 @@ export type LavorazioniListToolbarProps = {
   onCapturePageDrop?: (file: File) => void;
 };
 
-/** Toolbar ricerca/filtri lista Lavorazioni — presentational. */
+/** Toolbar ricerca/filtri lista Lavorazioni â€” presentational. */
 export function LavorazioniListToolbar({
   canEditWorkOrders,
   createdBy,
@@ -242,7 +219,7 @@ export function LavorazioniListToolbar({
   const metaExtra: ReactNode =
     filtersActive ? (
       <span className={dsTypoSmall}>
-        {attiveFilteredCount} in corso · {chiuseFilteredCount} in archivio
+        {attiveFilteredCount} in corso Â· {chiuseFilteredCount} in archivio
       </span>
     ) : null;
 
@@ -254,7 +231,7 @@ export function LavorazioniListToolbar({
       disabled={capturePageDropDisabled}
       onFile={(file) => onCapturePageDrop?.(file)}
       dropTitle="Rilascia per acquisire la scheda"
-      dropHint={`Word ed Excel verranno convertiti in PDF per la lettura AI · ${DOCUMENT_CAPTURE_UPLOAD_FORMAT_HINT}`}
+      dropHint={`Word ed Excel verranno convertiti in PDF per la lettura AI Â· ${DOCUMENT_CAPTURE_UPLOAD_FORMAT_HINT}`}
       className="min-w-0"
     >
     <ShellCard>
@@ -333,7 +310,7 @@ export function LavorazioniListToolbar({
             <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-2 gap-y-1 sm:flex-wrap">
               {mutPendingBlocking ? (
                 <span className={`${dsTypoSmall} font-medium`}>
-                  Salvataggio in corso…
+                  Salvataggio in corsoâ€¦
                 </span>
               ) : null}
               {!createdBy ? (

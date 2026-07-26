@@ -82,7 +82,9 @@ function mockDelayedRegistration() {
     },
     completeInstall(waiting: { postMessage: (msg: unknown) => void }) {
       installEmitter.emit("statechange");
-      if (reg._installing) reg._installing.state = "installed";
+      if (reg._installing) {
+        (reg._installing as unknown as { state: ServiceWorkerState }).state = "installed";
+      }
       reg._waiting = waiting;
       reg._installing = null;
       installEmitter.emit("statechange");

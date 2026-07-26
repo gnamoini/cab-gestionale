@@ -36,9 +36,21 @@ import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/sched
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import { normalizeLivelloCarburanteStored } from "@/lib/schede/livello-carburante-value";
 import {
+  SchedaIngressoTagliandoSection,
+} from "@/components/gestionale/lavorazioni/scheda-ingresso-tagliando-section";
+import {
+  DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS,
+  interventionTypeFromTagliandoFields,
+  tagliandoFieldsFromInterventionType,
+  type TagliandoLavorazioneFields,
+} from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
+import {
   applySchedaIngressoTypedFields,
   type SchedaIngressoStringKey,
 } from "@/lib/schede/scheda-ingresso-typed-fields";
+import { useMaintenancePlansListQuery } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
+import { useMezzoMaintenanceConfigsQuery } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
+import { useTagliandoMezzoPresetSync } from "@/src/hooks/use-tagliando-mezzo-preset-sync";
 import { sliceInputValue, TEXT_EXTRA, TEXT_LONG } from "@/lib/validation/text-field-limits";
 import type { LavorazioneArchiviata, LavorazioneAttiva, PrioritaLav } from "@/lib/lavorazioni/types";
 import type { SchedaIngressoIdentField } from "@/lib/schede/scheda-ingresso-ident-suggest";
@@ -53,8 +65,6 @@ import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavor
 import { LoadingButton } from "@/components/design-system";
 import { Tooltip } from "@/components/ui";
 import {
-  addettoPillShellClass,
-  addettoPillShellStyleForName,
   erpBtnAccent,
   erpBtnNeutral,
   prioritaPillShellClass,
@@ -62,9 +72,11 @@ import {
   statoPillShellClass,
   statoPillShellStyle,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { AddettoSelectField } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
+import { AddettoPicker } from "@/components/domain/addetti";
 import { GlobalDatePicker, GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
 import { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
+import { writeIngressoAddettoId } from "@/lib/lavorazioni/write-ingresso-addetto-id";
+import { backfillAddettoIdFromLegacyString } from "@/lib/schede/schede-addetto-id-migrate";
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import { SchedaIngressoAnagraficaFields } from "@/components/gestionale/schede/scheda-ingresso-anagrafica-fields";
 import {
@@ -200,12 +212,9 @@ function IngressoAddettoFirmaButton({
 }
 
 function AddettoAccettazioneWithFirma({
-  value,
+  addettoId,
   addettoFirma,
   disabled,
-  addettoPillOptions,
-  addettoPillShellClass,
-  addettoPillStyle,
   addettiEmpty,
   onAddettoChange,
   onFirmaChange,
@@ -214,12 +223,9 @@ function AddettoAccettazioneWithFirma({
   equalPillWidth = false,
   firmaButtonClassName = "",
 }: {
-  value: string;
+  addettoId: string;
   addettoFirma?: string;
   disabled?: boolean;
-  addettoPillOptions: readonly FixedListPillOption[];
-  addettoPillShellClass: () => string;
-  addettoPillStyle: React.CSSProperties | undefined;
   addettiEmpty: boolean;
   onAddettoChange: (v: string) => void;
   onFirmaChange: (dataUrl: string) => void;
@@ -231,12 +237,9 @@ function AddettoAccettazioneWithFirma({
 }) {
   const hasFirma = hasSignatureDataUrl(addettoFirma ?? "");
   const addettoPill = (
-    <AddettoSelectField
-      value={value}
+    <AddettoPicker
+      value={addettoId || null}
       onChange={onAddettoChange}
-      options={addettoPillOptions}
-      shellClass={addettoPillShellClass()}
-      shellStyle={addettoPillStyle}
       ariaLabel={SCHEDA_INGRESSO_ADDETTO_ACCETTAZIONE_LABEL}
       size="form"
       disabled={disabled || addettiEmpty}
@@ -351,10 +354,10 @@ type SchedaIngressoCreateIngressoSectionProps = {
   prioritaEmpty: boolean;
   statoPillOptions: readonly FixedListPillOption[];
   prioritaPillOptions: readonly FixedListPillOption[];
-  addettoPillOptions: readonly FixedListPillOption[];
   statoPillStyle: CSSProperties | undefined;
   prioritaPillStyle: CSSProperties | undefined;
-  addettoPillStyle: CSSProperties | undefined;
+  ingressoAddettoId: string;
+  onIngressoAddettoChange: (addettoId: string) => void;
   addettiEmpty: boolean;
   addettoFirmaModalOpen: boolean;
   onAddettoFirmaModalOpenChange: (open: boolean) => void;
@@ -376,10 +379,10 @@ const SchedaIngressoCreateIngressoSection = memo(function SchedaIngressoCreateIn
   prioritaEmpty,
   statoPillOptions,
   prioritaPillOptions,
-  addettoPillOptions,
   statoPillStyle,
   prioritaPillStyle,
-  addettoPillStyle,
+  ingressoAddettoId,
+  onIngressoAddettoChange,
   addettiEmpty,
   addettoFirmaModalOpen,
   onAddettoFirmaModalOpenChange,
@@ -437,14 +440,11 @@ const SchedaIngressoCreateIngressoSection = memo(function SchedaIngressoCreateIn
               <div className="flex min-w-0 items-center gap-2 sm:block">
                 <div className="min-w-0 flex-1 sm:w-full">
                   <AddettoAccettazioneWithFirma
-                    value={fields.addettoAccettazione}
+                    addettoId={ingressoAddettoId}
                     addettoFirma={fields.addettoFirma}
                     disabled={disabled}
-                    addettoPillOptions={addettoPillOptions}
-                    addettoPillShellClass={addettoPillShellClass}
-                    addettoPillStyle={addettoPillStyle}
                     addettiEmpty={addettiEmpty}
-                    onAddettoChange={(v) => onPatch({ addettoAccettazione: v })}
+                    onAddettoChange={onIngressoAddettoChange}
                     onFirmaChange={(dataUrl) => onPatch({ addettoFirma: dataUrl })}
                     firmaModalOpen={addettoFirmaModalOpen}
                     onFirmaModalOpenChange={onAddettoFirmaModalOpenChange}
@@ -484,10 +484,10 @@ const SchedaIngressoCreateIngressoSection = memo(function SchedaIngressoCreateIn
   if (prev.prioritaEmpty !== next.prioritaEmpty) return false;
   if (prev.statoPillOptions !== next.statoPillOptions) return false;
   if (prev.prioritaPillOptions !== next.prioritaPillOptions) return false;
-  if (prev.addettoPillOptions !== next.addettoPillOptions) return false;
+  if (prev.ingressoAddettoId !== next.ingressoAddettoId) return false;
+  if (prev.onIngressoAddettoChange !== next.onIngressoAddettoChange) return false;
   if (prev.statoPillStyle !== next.statoPillStyle) return false;
   if (prev.prioritaPillStyle !== next.prioritaPillStyle) return false;
-  if (prev.addettoPillStyle !== next.addettoPillStyle) return false;
   if (prev.addettiEmpty !== next.addettiEmpty) return false;
   if (prev.addettoFirmaModalOpen !== next.addettoFirmaModalOpen) return false;
   if (prev.onAddettoFirmaModalOpenChange !== next.onAddettoFirmaModalOpenChange) return false;
@@ -565,6 +565,8 @@ export function SchedaIngressoFormBody({
   embedInParentScroll = false,
   lavorazioneNote = "",
   onLavorazioneNoteChange,
+  tagliandoFields,
+  onTagliandoFieldsChange,
 }: {
   variant: SchedaIngressoFormVariant;
   fields: SchedaIngressoFields;
@@ -599,6 +601,8 @@ export function SchedaIngressoFormBody({
   /** SSOT note su `lavorazioni.note` (non in scheda JSON). */
   lavorazioneNote?: string;
   onLavorazioneNoteChange?: (value: string) => void;
+  tagliandoFields?: TagliandoLavorazioneFields;
+  onTagliandoFieldsChange?: (patch: Partial<TagliandoLavorazioneFields>) => void;
 }) {
   const disabled = pending || readOnly;
   const dataIngressoFieldId = useId();
@@ -627,6 +631,24 @@ export function SchedaIngressoFormBody({
     () => sharedMezziCatalog ?? (mezziUi.length > 0 ? mezziUi : [...mezzi]),
     [sharedMezziCatalog, mezziUi, mezzi],
   );
+
+  const tagliandoMezzoId = mezzoId.trim() || mezzoPrompt.linkedSnapshot?.id?.trim() || "";
+  const tagliandoSectionActive = Boolean(tagliandoFields && onTagliandoFieldsChange);
+  const plansQ = useMaintenancePlansListQuery(tagliandoSectionActive);
+  const configsQ = useMezzoMaintenanceConfigsQuery({
+    mezzoId: tagliandoMezzoId || undefined,
+    enabled: Boolean(tagliandoSectionActive && tagliandoMezzoId),
+  });
+  const tagliandoPresetSync = useTagliandoMezzoPresetSync({
+    enabled: Boolean(tagliandoFields && onTagliandoFieldsChange),
+    isTagliando: Boolean(tagliandoFields?.isTagliando),
+    mezzoId: tagliandoMezzoId,
+    configs: configsQ.data,
+    configsReady: !configsQ.isPending && !configsQ.isFetching,
+    presetPlans: plansQ.data ?? [],
+    onTagliandoFieldsChange: onTagliandoFieldsChange ?? (() => {}),
+    notifyOnInitialMezzoLink: variant === "create-lavorazione",
+  });
 
   const [heavySectionsReady, setHeavySectionsReady] = useState(false);
   useEffect(() => {
@@ -845,9 +867,16 @@ export function SchedaIngressoFormBody({
     () => tablePillOptions.priorita(prioritaOpts),
     [tablePillOptions, prioritaOpts],
   );
-  const addettoPillOptions = useMemo(
-    () => tablePillOptions.addetto(fields.addettoAccettazione),
-    [tablePillOptions, fields.addettoAccettazione],
+  const ingressoAddettoId = useMemo(
+    () =>
+      fields.addettoAccettazioneId?.trim() ||
+      backfillAddettoIdFromLegacyString(lavorazioniOpts.addettiRecords, fields.addettoAccettazione) ||
+      "",
+    [fields.addettoAccettazioneId, fields.addettoAccettazione, lavorazioniOpts.addettiRecords],
+  );
+  const onIngressoAddettoChange = useCallback(
+    (addettoId: string) => onPatch(writeIngressoAddettoId(fields, addettoId)),
+    [fields, onPatch],
   );
   const statoPillStyle = useMemo(
     () => (stato ? statoPillShellStyle(statoDisplayColor(stato, stati)) : undefined),
@@ -861,14 +890,6 @@ export function SchedaIngressoFormBody({
           : prioritaDisplayColor(priorita as PrioritaLav, globalOpts.lavorazioni.prioritaColors),
       ),
     [priorita, globalOpts.lavorazioni.prioritaColors],
-  );
-  const addettoPillStyle = useMemo(
-    () =>
-      addettoPillShellStyleForName(
-        fields.addettoAccettazione,
-        globalOpts.lavorazioni.addettoColors,
-      ),
-    [fields.addettoAccettazione, globalOpts.lavorazioni.addettoColors],
   );
 
   return (
@@ -916,10 +937,10 @@ export function SchedaIngressoFormBody({
             prioritaEmpty={prioritaOpts.length === 0}
             statoPillOptions={statoPillOptions}
             prioritaPillOptions={prioritaPillOptions}
-            addettoPillOptions={addettoPillOptions}
             statoPillStyle={statoPillStyle}
             prioritaPillStyle={prioritaPillStyle}
-            addettoPillStyle={addettoPillStyle}
+            ingressoAddettoId={ingressoAddettoId}
+            onIngressoAddettoChange={onIngressoAddettoChange}
             addettiEmpty={addettiOpts.length === 0}
             addettoFirmaModalOpen={addettoFirmaModalOpen}
             onAddettoFirmaModalOpenChange={setAddettoFirmaModalOpen}
@@ -952,14 +973,11 @@ export function SchedaIngressoFormBody({
                 }
               >
                 <AddettoAccettazioneWithFirma
-                value={fields.addettoAccettazione}
+                addettoId={ingressoAddettoId}
                 addettoFirma={fields.addettoFirma}
                 disabled={disabled}
-                addettoPillOptions={addettoPillOptions}
-                addettoPillShellClass={addettoPillShellClass}
-                addettoPillStyle={addettoPillStyle}
                 addettiEmpty={addettiOpts.length === 0}
-                onAddettoChange={(v) => onPatch({ addettoAccettazione: v })}
+                onAddettoChange={onIngressoAddettoChange}
                 onFirmaChange={(dataUrl) => onPatch({ addettoFirma: dataUrl })}
                 firmaModalOpen={addettoFirmaModalOpen}
                 onFirmaModalOpenChange={setAddettoFirmaModalOpen}
@@ -993,6 +1011,34 @@ export function SchedaIngressoFormBody({
           onApplyCaptureHint={onApplyCaptureHint}
         />
 
+        {heavySectionsReady && tagliandoFields && onTagliandoFieldsChange ? (
+          <SchedaIngressoTagliandoSection
+            interventionType={interventionTypeFromTagliandoFields(tagliandoFields)}
+            onInterventionTypeChange={(type) => {
+              const next = tagliandoFieldsFromInterventionType(type);
+              const patch: Partial<TagliandoLavorazioneFields> = { ...next };
+              if (!next.isTagliando) {
+                patch.tagliandoPresetRef = null;
+                patch.tagliandoPresetVersionRef = null;
+                patch.tagliandoAssignPresetToMezzo = null;
+                patch.tagliandoNoPresetReason = null;
+              }
+              onTagliandoFieldsChange(patch);
+            }}
+            presetRef={tagliandoFields.tagliandoPresetRef}
+            onPresetRefChange={tagliandoPresetSync.handlePresetRefChange}
+            assignPresetToMezzo={tagliandoFields.tagliandoAssignPresetToMezzo}
+            presetPlans={plansQ.data ?? []}
+            mezzoLinked={Boolean(tagliandoMezzoId)}
+            mezzoHasConfig={tagliandoPresetSync.mezzoHasConfig}
+            mezzoPresetNome={tagliandoPresetSync.mezzoPresetNome}
+            presetLocked={tagliandoPresetSync.presetLocked}
+            disabled={disabled}
+          />
+        ) : null}
+
+        {tagliandoPresetSync.confirmDialog}
+
         {heavySectionsReady ? (
           <SchedaIngressoInterventoSection
             descrizioneAnomalia={fields.descrizioneAnomalia}
@@ -1013,6 +1059,7 @@ export function SchedaIngressoEditModal({
   open,
   initialFields,
   initialLavorazioneNote = "",
+  initialTagliandoFields,
   onRequestClose,
   onSave,
   onDelete,
@@ -1029,12 +1076,14 @@ export function SchedaIngressoEditModal({
   open: boolean;
   initialFields: SchedaIngressoFields;
   initialLavorazioneNote?: string;
+  initialTagliandoFields?: TagliandoLavorazioneFields;
   /** Chiusura (Annulla / ESC): riceve il draft corrente per dirty-check nel parent. */
   onRequestClose: (draft: SchedaIngressoFields) => void;
   onSave: (
     draft: SchedaIngressoFields,
     mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan,
     lavorazioneNote?: string,
+    tagliandoFields?: TagliandoLavorazioneFields,
   ) => void | Promise<void>;
   onDelete?: () => void;
   readOnly?: boolean;
@@ -1050,17 +1099,42 @@ export function SchedaIngressoEditModal({
   const ro = readOnly || !canEdit;
   const [saving, setSaving] = useState(false);
   const [lavorazioneNote, setLavorazioneNote] = useState(initialLavorazioneNote);
+  const [tagliandoFields, setTagliandoFields] = useState<TagliandoLavorazioneFields>(
+    initialTagliandoFields ?? DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS,
+  );
   const formEngine = useFormEngine<SchedaIngressoFields>({ initial: initialFields });
   const { value: draft, reset, setValue, patch: onPatch, runSubmit, formProps, ref: draftRef } =
     formEngine;
   const savePending = pending || saving;
+  const tagliandoFieldsRef = useRef(tagliandoFields);
+  const lavorazioneNoteRef = useRef(lavorazioneNote);
+  const ingressoEditorOpenedRef = useRef(false);
+
+  useLayoutEffect(() => {
+    tagliandoFieldsRef.current = tagliandoFields;
+  }, [tagliandoFields]);
+
+  useLayoutEffect(() => {
+    lavorazioneNoteRef.current = lavorazioneNote;
+  }, [lavorazioneNote]);
 
   useEffect(() => {
-    if (open) {
-      reset(initialFields);
-      setLavorazioneNote(initialLavorazioneNote);
+    if (!open) {
+      ingressoEditorOpenedRef.current = false;
+      return;
     }
-  }, [open, initialFields, initialLavorazioneNote, reset]);
+    if (ingressoEditorOpenedRef.current) return;
+    ingressoEditorOpenedRef.current = true;
+    reset(initialFields);
+    setLavorazioneNote(initialLavorazioneNote);
+    lavorazioneNoteRef.current = initialLavorazioneNote;
+    setTagliandoFields(initialTagliandoFields ?? DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS);
+  }, [open, initialFields, initialLavorazioneNote, initialTagliandoFields, reset]);
+
+  const patchLavorazioneNote = useCallback((value: string) => {
+    lavorazioneNoteRef.current = value;
+    setLavorazioneNote(value);
+  }, []);
 
   const setFields = useCallback(
     (fields: SchedaIngressoFields) => {
@@ -1089,6 +1163,10 @@ export function SchedaIngressoEditModal({
     linkedSnapshot: mezzoPrompt.linkedSnapshot,
   });
 
+  const patchTagliandoFields = useCallback((patch: Partial<TagliandoLavorazioneFields>) => {
+    setTagliandoFields((prev) => ({ ...prev, ...patch }));
+  }, []);
+
   const globalOpts = useGlobalOptions({ enabled: open, debugTag: "SchedaIngressoEditModal" });
   const { gateSubmit, dialog: unknownSettingsDialog } = useSchedaIngressoUnknownSettingsGate(globalOpts);
 
@@ -1106,7 +1184,20 @@ export function SchedaIngressoEditModal({
             if (err instanceof Error && err.message === "SAVE_CANCELLED") return;
             throw err;
           }
-          await onSave(gatedFields, mezzoUpdatePlan, lavorazioneNote);
+          await onSave(
+            writeIngressoAddettoId(
+              gatedFields,
+              gatedFields.addettoAccettazioneId?.trim() ||
+                backfillAddettoIdFromLegacyString(
+                  globalOpts.lavorazioni.addettiRecords,
+                  gatedFields.addettoAccettazione,
+                ) ||
+                "",
+            ),
+            mezzoUpdatePlan,
+            lavorazioneNoteRef.current,
+            tagliandoFieldsRef.current,
+          );
         } finally {
           setSaving(false);
         }
@@ -1172,7 +1263,10 @@ export function SchedaIngressoEditModal({
           updatedByHint={updatedBy?.trim() || null}
           mezzoPrompt={mezzoPrompt}
           lavorazioneNote={lavorazioneNote}
-          onLavorazioneNoteChange={setLavorazioneNote}
+          onLavorazioneNoteChange={patchLavorazioneNote}
+          tagliandoFields={tagliandoFields}
+          onTagliandoFieldsChange={patchTagliandoFields}
+          mezzoId={mezzoPrompt.linkedSnapshot?.id ?? ""}
         />
       </form>
       {unknownSettingsDialog}

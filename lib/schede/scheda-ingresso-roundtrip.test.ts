@@ -121,6 +121,15 @@ assert.ok(clamped.ingresso);
 assert.equal(clamped.ingresso!.campi.livelloCarburante, "75%");
 assert.equal(clamped.ingresso!.campi.descrizioneAnomalia, MULTILINE_ANOMALIA);
 
+const legacyVin = clampSchedeBundle({
+  ...bundle,
+  ingresso: {
+    ...bundle.ingresso!,
+    campi: { ...campi, vin: undefined as unknown as string },
+  },
+});
+assert.equal(legacyVin.ingresso!.campi.vin, "");
+
 const longAnomalia = "x".repeat(TEXT_EXTRA + 50);
 const clampedLong = clampSchedeBundle({
   ...bundle,

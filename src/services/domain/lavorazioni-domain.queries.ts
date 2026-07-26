@@ -17,7 +17,6 @@ import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-mod
 import { logService } from "@/src/services/log.service";
 import { movimentiService } from "@/src/services/movimenti.service";
 import { preventiviService } from "@/src/services/preventivi.service";
-import { lavorazioneDocumentsService } from "@/src/services/lavorazione-documents.service";
 import { schedeService } from "@/src/services/schede.service";
 import type { SchedaLavorazioneRow } from "@/src/types/supabase-tables";
 import {
@@ -203,12 +202,12 @@ export function useLogByLavorazione(lavorazioneId: string | undefined) {
   );
 }
 
-/** PDF preventivo esterno + DDT (`lavorazione_documents`). */
+/** @deprecated Usare official-documents API. */
 export function useLavorazionePdfsByLavorazione(lavorazioneId: string | undefined) {
   const id = lavIdOrEmpty(lavorazioneId);
   return useServiceQuery(
     lavorazioniDomainQueryKeys.lavorazionePdfs(id),
-    () => lavorazioneDocumentsService.listByLavorazione(id),
-    { enabled: id.length > 0, staleTime: LA_STALE_MS },
+    async () => success([]),
+    { enabled: false, staleTime: LA_STALE_MS },
   );
 }

@@ -34,6 +34,7 @@ import {
   isSidebarNavLinkCurrent,
   scheduleRouteTransitionBegin,
 } from "@/src/lib/navigation/route-transition";
+import { isGestionaleDrawerElement } from "@/lib/ui/use-sidebar-collapsed";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useSwipeToDismiss } from "@/lib/ui/use-swipe-to-dismiss";
 import { OverlayLayerPriority } from "@/lib/ui/overlay-back-stack";
@@ -533,6 +534,7 @@ function AppShellSidebarInner({
         onMouseLeave={onSidebarMouseLeave}
         onFocusCapture={(event) => {
           if (isSidebarNavLinkCurrent(event.target, activePath)) return;
+          if (isGestionaleDrawerElement(event.target)) return;
           onSidebarFocusCapture();
         }}
         onBlurCapture={onSidebarBlurCapture}

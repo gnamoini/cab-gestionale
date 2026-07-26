@@ -1,3 +1,4 @@
+import { getAddettoDisplayName, addettoRefFromFields } from "@/lib/lavorazioni/addetto-display";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
 import { oreTotaliFromBundleLavorazioni } from "@/lib/lavorazioni/ore-totali-scheda";
@@ -64,7 +65,14 @@ export function buildQualitaInterventiByOperatore(
     const resolved = names.map((n) => resolveOperatorIdentity(n, addettiRecords));
     const primary = resolved.find((r) => r.addettoId) ?? resolved[0];
     const key = primary?.addettoId ?? `unknown:${primary?.storedName ?? "—"}`;
-    const label = primary?.storedName ?? "Operatore non attribuito";
+    const label =
+      getAddettoDisplayName(
+        addettiRecords,
+        addettoRefFromFields({
+          addettoId: primary?.addettoId,
+          addettoLegacy: primary?.addettoId ? null : primary?.storedName,
+        }),
+      ) || "Operatore non attribuito";
 
     const cur = bySegment.get(key) ?? { key, label, interventi: 0, ritorni: 0, complexitySum: 0 };
     cur.interventi += 1;

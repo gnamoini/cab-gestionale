@@ -49,7 +49,8 @@ assert.match(settingsListSelect, /isMezziListKey/);
 assert.match(settingsListSelect, /resolvedMobileSheetMode/);
 assert.match(settingsListSelect, /"searchable"/);
 
-assert.match(lavTableRow, /AddettoSelectField[\s\S]{0,120}tablePillOptions\.addetto/);
+assert.match(lavTableRow, /AddettoPicker/);
+assert.match(lavFilter, /AddettoPicker/);
 assert.doesNotMatch(
   lavTableRow,
   /<InlineSelectField[\s\S]{0,80}tablePillOptions\.addetto/,

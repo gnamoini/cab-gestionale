@@ -1,6 +1,6 @@
 "use client";
 
-import { DdtStatusBadge, formatDdtDate } from "@/components/ddt/ddt-status-badge";
+import { formatDdtDate } from "@/components/ddt/ddt-status-badge";
 import { ddtDisplayNumber } from "@/lib/ddt/ddt-list-ui-filters";
 import {
   preventivoEditorActionBtn,
@@ -68,7 +68,6 @@ export function DdtPreventivoPanel({
         <div className={`${preventivoEditorPanelClass} p-3`}>
           <div className="flex flex-wrap items-center gap-2">
             <p className={`font-mono ${preventivoEditorBody} font-semibold`}>{ddtDisplayNumber(activeDdt)}</p>
-            <DdtStatusBadge status={activeDdt.status} />
           </div>
           <p className={`mt-1 ${preventivoEditorHint}`}>Data documento: {formatDdtDate(activeDdt.data_documento)}</p>
         </div>

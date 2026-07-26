@@ -38,7 +38,9 @@ import {
   CalendarNavChevronLeft,
   CalendarNavChevronRight,
 } from "@/components/gestionale/global-input/calendar-nav-icons";
-import { useGestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
+import { gestionaleListTierClass } from "@/lib/ui/gestionale-list-responsive";
+import type { GestionaleListPageProps } from "@/lib/ui/gestionale-list-page-props";
+import { useListSurface } from "@/lib/ui/use-list-surface";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useDipendentiTimesheet } from "@/src/hooks/use-dipendenti-timesheet";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -70,9 +72,9 @@ function formatWorkDateIt(dateYmd: string): string {
   return `${d}/${m}/${y}`;
 }
 
-export function DipendentiView() {
+export function DipendentiView({ listSurface: serverListSurface, listTier = "md" }: GestionaleListPageProps) {
+  const listSurface = useListSurface(serverListSurface);
   const queryClient = useQueryClient();
-  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "md" });
   const [monthKey, setMonthKey] = useState<TimesheetMonthKey>(() => monthKeyFromDate(new Date()));
   const [periodMode] = useState<TimesheetPeriodMode>("month");
   const [weekAnchor, setWeekAnchor] = useState(() => defaultWeekAnchor(monthKeyFromDate(new Date())));
@@ -327,7 +329,7 @@ export function DipendentiView() {
 
   return (
     <GestionaleSectionGate module="dipendenti">
-      <div ref={listLayoutRef} className={`${layoutPageRoot} ${listLayoutClassName}`.trim()}>
+      <div className={`${layoutPageRoot} ${gestionaleListTierClass(listTier)}`.trim()}>
         <PageHeaderPageActionMenu items={dipendentiMenuItems} />
         <div className={`${dsStackPage} flex-safe-col min-w-0 max-w-full`}>
           <TimesheetHeader
@@ -413,7 +415,7 @@ export function DipendentiView() {
                 </div>
               ) : null}
               <TimesheetTableView
-                listLayout={listLayout}
+                listSurface={listSurface}
                 monthKey={monthKey}
                 periodDays={ts.periodDays}
                 employees={ts.displayEmployees}

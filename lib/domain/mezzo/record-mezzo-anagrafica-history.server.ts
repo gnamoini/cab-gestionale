@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   diffMezzoAnagraficaHistory,
   type MezzoAnagraficaHistoryOrigine,
+  type MezzoAnagraficaHistoryEventKind,
 } from "@/lib/domain/mezzo/record-mezzo-anagrafica-change";
 
 export type RecordMezzoAnagraficaHistoryInput = {
@@ -12,6 +13,8 @@ export type RecordMezzoAnagraficaHistoryInput = {
   lavorazioneId?: string | null;
   schedaId?: string | null;
   userId?: string | null;
+  eventKind?: MezzoAnagraficaHistoryEventKind;
+  reason?: string | null;
 };
 
 /** Server SSOT: ricalcola sempre changed_fields — ignora eventuali campi client. */
@@ -33,6 +36,8 @@ export async function recordMezzoAnagraficaHistoryServer(
       changed_fields: diff.changed_fields,
       old_values: diff.old_values,
       new_values: diff.new_values,
+      event_kind: input.eventKind ?? "anagrafica_change",
+      reason: input.reason ?? null,
     })
     .select("id, created_at")
     .single();

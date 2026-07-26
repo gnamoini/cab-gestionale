@@ -17,10 +17,9 @@ import {
 } from "@/lib/ui/italian-date-input-mask";
 import { LavorazioniDateField } from "@/components/gestionale/lavorazioni/lavorazioni-date-field";
 import { LavorazioneMezzoPicker } from "@/components/gestionale/lavorazioni/lavorazione-mezzo-picker";
-import { AddettoSelectField } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
+import { AddettoPicker } from "@/components/domain/addetti";
 import { GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
 import {
-  buildAddettoTablePillOptions,
   buildPrioritaTablePillOptions,
   buildStatoTablePillOptions,
 } from "@/lib/global-list/build-lavorazioni-pill-options";
@@ -33,9 +32,6 @@ import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import {
   erpBtnAccent,
   erpBtnNeutral,
-  prioritaLabel,
-  addettoPillShellClass,
-  addettoPillShellStyleForName,
   prioritaPillShellClass,
   prioritaPillShellStyle,
   statoPillShellClass,
@@ -97,22 +93,18 @@ function LavorazioniInterventoPillFields({
   onStatoChange,
   priorita,
   onPrioritaChange,
-  addetto,
+  addettoId,
   onAddettoChange,
   stati,
-  addetti,
-  addettoColors,
   prioritaColors,
 }: {
   statoId: string;
   onStatoChange: (v: string) => void;
   priorita: PrioritaLav;
   onPrioritaChange: (v: PrioritaLav) => void;
-  addetto: string;
+  addettoId: string;
   onAddettoChange: (v: string) => void;
   stati: StatoLavorazioneConfig[];
-  addetti: string[];
-  addettoColors: Record<string, string>;
   prioritaColors?: Partial<Record<PrioritaLav, string>> | null;
 }) {
   const statoOptions = useMemo(
@@ -122,10 +114,6 @@ function LavorazioniInterventoPillFields({
   const prioritaOptions = useMemo(
     () => buildPrioritaTablePillOptions(PRIORITA, prioritaColors ?? null),
     [prioritaColors],
-  );
-  const addettoOptions = useMemo(
-    () => buildAddettoTablePillOptions(addetto, addetti, addettoColors),
-    [addetto, addetti, addettoColors],
   );
   const statoStyle = useMemo(
     () => statoPillShellStyle(statoDisplayColor(statoId, stati)),
@@ -137,10 +125,6 @@ function LavorazioniInterventoPillFields({
         priorita === "urgente" ? "#b91c1c" : prioritaDisplayColor(priorita, prioritaColors),
       ),
     [priorita, prioritaColors],
-  );
-  const addettoStyle = useMemo(
-    () => addettoPillShellStyleForName(addetto, addettoColors),
-    [addetto, addettoColors],
   );
 
   return (
@@ -171,13 +155,11 @@ function LavorazioniInterventoPillFields({
       </div>
       <div className="sm:col-span-4">
         <Field label="Addetto">
-          <AddettoSelectField
-            value={addetto}
+          <AddettoPicker
+            value={addettoId || null}
             onChange={onAddettoChange}
-            options={addettoOptions}
-            shellClass={addettoPillShellClass()}
-            shellStyle={addettoStyle}
             ariaLabel="Addetto"
+            size="form"
           />
         </Field>
       </div>
@@ -345,11 +327,9 @@ export function EditLavorazioneModal({
               onStatoChange={(v) => setLocal({ ...local, statoId: v })}
               priorita={local.priorita}
               onPrioritaChange={(v) => setLocal({ ...local, priorita: v })}
-              addetto={local.addetto}
+              addettoId={local.addetto}
               onAddettoChange={(v) => setLocal({ ...local, addetto: v })}
               stati={stati}
-              addetti={addetti}
-              addettoColors={addettoColors}
               prioritaColors={prioritaColors}
             />
           </div>
@@ -457,7 +437,7 @@ export function SettingsLavorazioniModal({
   onChangePrioritaColor: (p: PrioritaLav, hex: string) => void;
   onAddAddetto: (input: { nome: string; cognome?: string | null }) => void;
   onUpdateAddetto: (id: string, patch: { nome?: string; cognome?: string | null }) => void;
-  onChangeAddettoColor: (nome: string, hex: string) => void;
+  onChangeAddettoColor: (colorKey: string, hex: string) => void;
   onRemoveAddetto: (id: string) => void;
   attiviStatoIds: Set<string>;
   storicoStatoIds: Set<string>;

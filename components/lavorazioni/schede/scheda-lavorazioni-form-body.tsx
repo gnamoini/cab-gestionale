@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
+import { AddettoPicker, AddettoDisplayPill, addettoRefFromFields } from "@/components/domain/addetti";
+import { SCHEDA_RIGA_ADDETTO_WRITE_RULES, stripAddettoLegacyFieldsOnWrite } from "@/lib/lavorazioni/addetto-write-freeze";
+import { backfillAddettoIdFromLegacyString } from "@/lib/schede/schede-addetto-id-migrate";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import {
   CaptureSheetAwareField,
@@ -15,7 +18,15 @@ import type { CaptureSheetRowHint } from "@/components/lavorazioni/schede/scheda
 import { SchedaDayField, SchedaLavorazioniEffettuateTextarea, SchedaOreNumberInput, todayItDate } from "@/components/lavorazioni/schede/scheda-form-utils";
 import { newRigaId } from "@/lib/schede/schede-ui";
 import { dsBtnNeutral, dsInput, dsInputNoSpinner, dsLabel, dsTable, dsTableRow, dsTableWrap, dsScrollbar } from "@/lib/ui/design-system";
-import type { RigaLavorazioneScheda, SchedaLavorazioniFields } from "@/types/schede";
+import type { RigaAddettoOreScheda, RigaLavorazioneScheda, SchedaLavorazioniFields } from "@/types/schede";
+
+function writeSchedaRigaAddetto(addettoId: string, oreImpiegate: number): RigaAddettoOreScheda {
+  const id = addettoId.trim();
+  return stripAddettoLegacyFieldsOnWrite(
+    { addettoId: id || null, oreImpiegate, addetto: "" },
+    SCHEDA_RIGA_ADDETTO_WRITE_RULES,
+  ) as RigaAddettoOreScheda;
+}
 
 const CAPTURE_LAVORAZIONE_TEXT_MAX_HEIGHT = "min(48dvh, 14rem)";
 const CAPTURE_FIELD = `${dsInput} w-full min-w-0`;
@@ -48,25 +59,36 @@ function CaptureLavorazioneRigaMeta({
   const dataHint = rowHints?.[dataKey];
   const oreHint = rowHints?.[oreKey];
   const addetti = r.addettiAssegnati ?? [];
+  const global = useGlobalOptions({ enabled: !ro });
+
+  const resolveAddettoPickerId = (a: RigaAddettoOreScheda) =>
+    a.addettoId?.trim() ||
+    backfillAddettoIdFromLegacyString(global.lavorazioni.addettiRecords, a.addetto) ||
+    "";
 
   const fieldHintFooter = (fieldKey: string, hint?: CaptureSheetRowHint) =>
     hint?.message ? <CaptureSheetFieldHintInline fieldKey={fieldKey} hint={hint} embedded /> : undefined;
 
-  const patchAddetto = (idx: number, patch: Partial<(typeof addetti)[number]>) => {
+  const patchAddetto = (idx: number, patch: Partial<RigaAddettoOreScheda>) => {
     const next = [...addetti];
-    next[idx] = { ...next[idx]!, ...patch };
+    const current = next[idx]!;
+    const merged = writeSchedaRigaAddetto(
+      patch.addettoId ?? resolveAddettoPickerId(current),
+      patch.oreImpiegate ?? current.oreImpiegate,
+    );
+    next[idx] = merged;
     onPatch((row) => ({ ...row, addettiAssegnati: next }));
   };
 
   const appendAddetto = () => {
     onPatch((row) => ({
       ...row,
-      addettiAssegnati: [...(row.addettiAssegnati ?? []), { addetto: "", oreImpiegate: 0 }],
+      addettiAssegnati: [...(row.addettiAssegnati ?? []), writeSchedaRigaAddetto("", 0)],
     }));
   };
 
   const ensureFirstAddetto = () => {
-    onPatch((row) => ({ ...row, addettiAssegnati: [{ addetto: "", oreImpiegate: 0 }] }));
+    onPatch((row) => ({ ...row, addettiAssegnati: [writeSchedaRigaAddetto("", 0)] }));
   };
 
   const renderDateField = () =>
@@ -86,24 +108,20 @@ function CaptureLavorazioneRigaMeta({
       </CaptureSheetAwareField>
     );
 
-  const renderAddettoField = (a: (typeof addetti)[number], idx: number) => (
+  const renderAddettoField = (a: RigaAddettoOreScheda, idx: number) => (
     <div className={CAPTURE_ADDETTO_CELL}>
       {ro ? (
-        <span className={`${CAPTURE_FIELD} flex items-center`}>{a.addetto || "—"}</span>
+        <AddettoDisplayPill
+          ref={addettoRefFromFields({ addettoId: a.addettoId, addettoLegacy: a.addetto })}
+          fullWidth={false}
+        />
       ) : (
         <CaptureSheetAwareField hint={idx === 0 ? nomeHint : undefined} footer={idx === 0 ? fieldHintFooter(nomeKey, nomeHint) : undefined}>
-          <GlobalSettingsListSelect
-            listKey="lavorazioni:addetti"
+          <AddettoPicker
+            value={resolveAddettoPickerId(a) || null}
+            onChange={(id) => patchAddetto(idx, { addettoId: id, oreImpiegate: a.oreImpiegate })}
+            ariaLabel="Addetto riga lavorazione"
             className="w-full min-w-0"
-            inputClassName={`${CAPTURE_FIELD} !pr-7`}
-            value={a.addetto}
-            onChange={(v) => patchAddetto(idx, { addetto: v })}
-            placeholder="Addetto"
-            selectOnly
-            allowAdd={false}
-            disableRecents
-            mobileSheetMode="selectOnly"
-            aria-label="Addetto riga lavorazione"
           />
         </CaptureSheetAwareField>
       )}
@@ -239,6 +257,22 @@ export function SchedaLavorazioniFormBody({
 }: SchedaLavorazioniFormBodyProps) {
   const isCapture = variant === "capture" || compactDateField;
   const ro = readonly;
+  const global = useGlobalOptions({ enabled: !ro });
+
+  const resolveAddettoPickerId = (a: RigaAddettoOreScheda) =>
+    a.addettoId?.trim() ||
+    backfillAddettoIdFromLegacyString(global.lavorazioni.addettiRecords, a.addetto) ||
+    "";
+
+  const patchRigaAddetto = (r: RigaLavorazioneScheda, idx: number, patch: { addettoId?: string; oreImpiegate?: number }) => {
+    const next = [...(r.addettiAssegnati ?? [])];
+    const current = next[idx]!;
+    next[idx] = writeSchedaRigaAddetto(
+      patch.addettoId ?? resolveAddettoPickerId(current),
+      patch.oreImpiegate ?? current.oreImpiegate,
+    );
+    return next;
+  };
 
   const identLine = useMemo(
     () => value.identificazioneMacchina.trim() || "—",
@@ -390,8 +424,12 @@ export function SchedaLavorazioniFormBody({
                       <div className="space-y-0.5 text-[color:var(--cab-text)]">
                         {(r.addettiAssegnati ?? []).length ? (
                           r.addettiAssegnati!.map((a, i) => (
-                            <div key={i}>
-                              {a.addetto || "—"} — {a.oreImpiegate}h
+                            <div key={i} className="flex items-center gap-1">
+                              <AddettoDisplayPill
+                                ref={addettoRefFromFields({ addettoId: a.addettoId, addettoLegacy: a.addetto })}
+                                fullWidth={false}
+                              />
+                              <span>— {a.oreImpiegate}h</span>
                             </div>
                           ))
                         ) : (
@@ -412,28 +450,29 @@ export function SchedaLavorazioniFormBody({
                           >
                             <div className="flex flex-nowrap items-end gap-1 sm:flex-wrap">
                               <div className="min-w-0 flex-1">
-                                <GlobalSettingsListSelect
-                                  listKey="lavorazioni:addetti"
+                                <AddettoPicker
+                                  value={resolveAddettoPickerId(a) || null}
+                                  onChange={(id) =>
+                                    patchRiga(r.id, (row) => ({
+                                      ...row,
+                                      addettiAssegnati: patchRigaAddetto(row, idx, { addettoId: id }),
+                                    }))
+                                  }
+                                  ariaLabel="Addetto riga lavorazione"
                                   className="w-full"
                                   inputClassName={`${dsInput} !py-1.5 !text-xs`}
-                                  value={a.addetto}
-                                  onChange={(v) => {
-                                    const next = [...(r.addettiAssegnati ?? [])];
-                                    next[idx] = { ...next[idx]!, addetto: v };
-                                    patchRiga(r.id, (row) => ({ ...row, addettiAssegnati: next }));
-                                  }}
-                                  placeholder="Seleziona addetto…"
-                                  aria-label="Addetto riga lavorazione"
+                                  size="compact"
                                 />
                               </div>
                               <SchedaOreNumberInput
                                 className={`${dsInput} !py-1.5 !text-xs w-20`}
                                 value={Number.isFinite(a.oreImpiegate) ? a.oreImpiegate : 0}
-                                onChange={(v) => {
-                                  const next = [...(r.addettiAssegnati ?? [])];
-                                  next[idx] = { ...next[idx]!, oreImpiegate: v };
-                                  patchRiga(r.id, (row) => ({ ...row, addettiAssegnati: next }));
-                                }}
+                                onChange={(v) =>
+                                  patchRiga(r.id, (row) => ({
+                                    ...row,
+                                    addettiAssegnati: patchRigaAddetto(row, idx, { oreImpiegate: v }),
+                                  }))
+                                }
                               />
                               <button
                                 type="button"
@@ -455,7 +494,7 @@ export function SchedaLavorazioniFormBody({
                           onClick={() =>
                             patchRiga(r.id, (row) => ({
                               ...row,
-                              addettiAssegnati: [...(row.addettiAssegnati ?? []), { addetto: "", oreImpiegate: 0 }],
+                              addettiAssegnati: [...(row.addettiAssegnati ?? []), writeSchedaRigaAddetto("", 0)],
                             }))
                           }
                         >

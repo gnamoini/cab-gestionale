@@ -1,16 +1,24 @@
 import {
-  addettoPillShellStyleForName,
-  prioritaLabel,
-  prioritaPillShellStyle,
-  statoPillShellStyle,
-} from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+  addettoColorKey,
+  addettoDisplayName,
+  type AddettoRecord,
+} from "@/lib/lavorazioni/addetto-model";
+import {
+  addettoDisplayColorById,
+} from "@/lib/lavorazioni/addetto-colors-assign";
 import type { FixedListPillOption } from "@/components/gestionale/global-input/global-fixed-list-pill";
+import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { pillStyleFromHex } from "@/lib/lavorazioni/color-utils";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
-import { addettoDisplayNameFromNome, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import {
+  prioritaPillShellStyle,
+  statoPillShellStyle,
+} from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
+import { buildAddettoPickerOptionsFromRecords } from "@/src/hooks/gestionale/use-addetti-picker-options";
 
 export function buildStatoTablePillOptions(
   statiIds: readonly { id: string }[],
@@ -36,31 +44,43 @@ export function buildPrioritaTablePillOptions(
   }));
 }
 
+/** @deprecated Usare buildAddettoPickerOptionsFromRecords con storedId */
 export function buildAddettoTablePillOptions(
   storedNome: string,
   addetti: string[],
   addettoColors: Record<string, string>,
   addettiRecords?: readonly AddettoRecord[],
 ): FixedListPillOption[] {
-  const displayLabel = (nome: string) =>
-    addettiRecords?.length ? addettoDisplayNameFromNome(addettiRecords, nome) : nome;
+  if (addettiRecords?.length) {
+    const match = addettiRecords.find((r) => r.nome === storedNome);
+    return buildAddettoPickerOptionsFromRecords(addettiRecords, addettoColors, match?.id ?? null);
+  }
+  const displayLabel = (nome: string) => nome;
   const inList = addetti.includes(storedNome);
   const items: FixedListPillOption[] = [];
   if (!inList && storedNome && storedNome !== "—") {
     items.push({
       value: storedNome,
       label: displayLabel(storedNome),
-      pillStyle: addettoPillShellStyleForName(storedNome, addettoColors),
+      pillStyle: pillStyleFromHex(addettoDisplayColorById(storedNome, addettoColors, addettiRecords)),
     });
   }
   for (const a of addetti) {
     items.push({
       value: a,
       label: displayLabel(a),
-      pillStyle: addettoPillShellStyleForName(a, addettoColors),
+      pillStyle: pillStyleFromHex(addettoDisplayColorById(a, addettoColors, addettiRecords)),
     });
   }
   return items;
+}
+
+export function buildAddettoTablePillOptionsById(
+  storedId: string | null,
+  addettoColors: Record<string, string>,
+  addettiRecords: readonly AddettoRecord[],
+): FixedListPillOption[] {
+  return buildAddettoPickerOptionsFromRecords(addettiRecords, addettoColors, storedId);
 }
 
 export function buildLavorazioniPillOptionsFromGlobal(global: GlobalOptionsSlice) {
@@ -69,7 +89,10 @@ export function buildLavorazioniPillOptionsFromGlobal(global: GlobalOptionsSlice
       buildStatoTablePillOptions(statiIds, global.lavorazioni.stati),
     priorita: (prioritaList: readonly string[]) =>
       buildPrioritaTablePillOptions(prioritaList, global.lavorazioni.prioritaColors),
-    addetto: (storedNome: string) =>
+    addetto: (storedId: string | null) =>
+      buildAddettoTablePillOptionsById(storedId, global.lavorazioni.addettoColors, global.lavorazioni.addettiRecords),
+    /** @deprecated nome legacy */
+    addettoByNome: (storedNome: string) =>
       buildAddettoTablePillOptions(
         storedNome,
         global.lavorazioni.addetti,

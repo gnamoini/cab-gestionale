@@ -2,16 +2,17 @@
 
 import { memo, type KeyboardEvent } from "react";
 import { LavorazioneIngressoDateCell } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
-import { TablePillReadonly } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
+import { TablePillReadonly } from "@/components/gestionale/lavorazioni/lavorazioni-table-pill-readonly";
 import {
   addettoPillShellClassDynamic,
-  addettoPillShellStyleForName,
   prioritaLabel,
   prioritaPillShellClassDynamic,
   prioritaPillShellStyle,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { resolveLavorazioneNote } from "@/lib/lavorazioni/lavorazione-display-helpers";
-import { lavorazioneAddettoNomeKey } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
+import { getAddettoPillStyle } from "@/lib/lavorazioni/addetto-display";
+import { addettoRefFromFields } from "@/components/domain/addetti";
+import { resolveAddettoSnapshotRef } from "@/lib/lavorazioni/resolve-addetto-display";
 import { kanbanCardPriorityVisual } from "@/lib/lavorazioni/kanban-card-priority-style";
 import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
@@ -44,8 +45,8 @@ export const KanbanCardMobile = memo(function KanbanCardMobile({
   const prioLav = p as PrioritaLav;
   const prioVisual = kanbanCardPriorityVisual(prioLav, prioritaColors as Partial<Record<PrioritaLav, string>>);
   const prioHex = prioritaDisplayColor(prioLav, prioritaColors);
-  const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, undefined, addettiRecords);
-  const addettoPillStyle = addettoPillShellStyleForName(addettoKey, addettoColors);
+  const addettoRef = addettoRefFromFields(resolveAddettoSnapshotRef(row, schedeStore));
+  const addettoPillStyle = getAddettoPillStyle(addettiRecords ?? [], addettoRef, addettoColors as Record<string, string>);
   const note = resolveLavorazioneNote(row);
 
   return (

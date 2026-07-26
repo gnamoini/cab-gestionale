@@ -8,6 +8,7 @@ export const DOMAIN_EVENT_TYPES = [
   "maintenance.due",
   "client_portal.work_order_ingress",
   "client_portal.work_order_completed",
+  "preventivo.status_changed",
 ] as const;
 
 export type DomainEventType = (typeof DOMAIN_EVENT_TYPES)[number];

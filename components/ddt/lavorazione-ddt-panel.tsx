@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DdtStatusBadge, formatDdtDate } from "@/components/ddt/ddt-status-badge";
+import { formatDdtDate } from "@/components/ddt/ddt-status-badge";
 import { ddtDisplayNumber } from "@/lib/ddt/ddt-list-ui-filters";
 import { fetchDdtByLavorazioneId } from "@/lib/ddt/ddt-fetch";
+import { buildStaffOfficialDocumentPreviewPath } from "@/lib/official-documents/preview-url";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import type { DdtDocumentRow } from "@/src/types/supabase-tables";
 import { dsBtnNeutralForm, dsHubModalSection, dsHubModalSectionTitle } from "@/lib/ui/design-system";
-import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
 
 export function LavorazioneDdtPanel({ lavorazioneId }: { lavorazioneId: string }) {
   const [documents, setDocuments] = useState<DdtDocumentRow[]>([]);
@@ -42,12 +42,18 @@ export function LavorazioneDdtPanel({ lavorazioneId }: { lavorazioneId: string }
               <div>
                 <p className="font-mono text-xs font-semibold">{ddtDisplayNumber(d)}</p>
                 <p className="text-xs text-[color:var(--cab-text-muted)]">
-                  {formatDdtDate(d.data_documento)} · {d.cliente_label} · <DdtStatusBadge status={d.status} />
+                  {formatDdtDate(d.data_documento)} · {d.cliente_label}
                 </p>
               </div>
-              {d.status !== "bozza" && d.status !== "annullato" ? (
-                <button type="button" className={dsBtnNeutralForm} onClick={() => void openPdfArtifact("ddt", { id: d.id })}>
-                  PDF
+              {d.status !== "annullato" ? (
+                <button
+                  type="button"
+                  className={dsBtnNeutralForm}
+                  onClick={() => {
+                    window.location.assign(buildStaffOfficialDocumentPreviewPath("ddt", d.id));
+                  }}
+                >
+                  Apri
                 </button>
               ) : null}
             </div>

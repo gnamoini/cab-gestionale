@@ -1,4 +1,6 @@
 import type { jsPDF } from "jspdf";
+import { addettoRefFromFields, getAddettoDisplayLabel } from "@/lib/lavorazioni/addetto-display";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { PdfField } from "@/lib/pdf/core/pdf-base-template";
 import {
   drawGestionaleDataSectionTable,
@@ -70,9 +72,18 @@ export function buildClienteMezzoPdfFields(
   return splitParsedIdentificazioneFields(pdfFieldsFromIdentificazioneLine(identFallback));
 }
 
-function formatAddettiCell(addetti: { addetto: string; oreImpiegate: number }[]): string {
+function formatAddettiCell(
+  addetti: { addetto?: string; addettoId?: string | null; oreImpiegate: number }[],
+  records: readonly AddettoRecord[] = [],
+): string {
   const lines = (addetti ?? [])
-    .map((a) => `${a.addetto || "—"} (${String(a.oreImpiegate ?? 0)}h)`)
+    .map((a) => {
+      const label = getAddettoDisplayLabel(
+        records,
+        addettoRefFromFields({ addettoId: a.addettoId, addettoLegacy: a.addetto }),
+      );
+      return `${label} (${String(a.oreImpiegate ?? 0)}h)`;
+    })
     .filter(Boolean);
   return lines.length ? lines.join("\n") : "—";
 }
@@ -104,7 +115,7 @@ export function buildRicambiArticoliBody(scheda: SchedaRicambiDoc): {
       r.ricambioNome || "—",
       r.codice || "—",
       String(r.quantita ?? "—"),
-      r.addetto || "—",
+      getAddettoDisplayLabel([], addettoRefFromFields({ addettoId: r.addettoId, addettoLegacy: r.addetto })),
       r.dataUtilizzo || "—",
       r.scaricoMagazzinoApplicato ? "Scaricato" : "—",
     ];

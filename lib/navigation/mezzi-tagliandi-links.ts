@@ -30,6 +30,17 @@ export function parseTagliandoStatoFilter(raw: string | null): TagliandoStatoUi 
   return "";
 }
 
+export function buildMezziAnagraficaHubHref(input: {
+  mezzoId: string;
+  hubTab?: MezziHubTabId;
+}): string {
+  const sp = new URLSearchParams();
+  sp.set(Q_MEZZI_VIEW, "anagrafica");
+  sp.set(Q_MEZZI_HUB, input.mezzoId.trim());
+  sp.set(Q_MEZZI_HUB_TAB, input.hubTab ?? "panoramica");
+  return `/mezzi?${sp.toString()}`;
+}
+
 export function buildMezziTagliandiHubHref(input: {
   mezzoId: string;
   hubTab?: MezziHubTabId;

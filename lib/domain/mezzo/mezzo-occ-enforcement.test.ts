@@ -83,16 +83,22 @@ async function run() {
         },
       },
       {
-        createMezzo: async () => {
-          throw new Error("no create");
-        },
+        resolveMezzo: async () => ({
+          row: { id: "m1" } as never,
+          created: false,
+          matchedBy: "targa_norm" as const,
+          conflicts: [],
+        }),
         updateMezzo: async () => {
           updated = true;
           return { id: "m1" } as never;
         },
-        createAttrezzatura: async () => ({ id: "a1" }) as never,
-        updateAttrezzatura: async () => ({ id: "a1" }) as never,
-        findAttrezzaturaByMatricola: async () => null,
+        resolveAttrezzatura: async () => ({
+          row: { id: "a1", mezzo_id: "m1" } as never,
+          created: false,
+          matchedBy: "hint_id" as const,
+          conflicts: [],
+        }),
       },
     );
     assert.fail("expected MEZZO_STALE_CONFLICT");
@@ -117,16 +123,22 @@ async function run() {
       },
     },
     {
-      createMezzo: async () => {
-        throw new Error("no create");
-      },
+      resolveMezzo: async () => ({
+        row: { id: "m1" } as never,
+        created: false,
+        matchedBy: "targa_norm" as const,
+        conflicts: [],
+      }),
       updateMezzo: async () => {
         updated = true;
         return { id: "m1" } as never;
       },
-      createAttrezzatura: async () => ({ id: "a1" }) as never,
-      updateAttrezzatura: async () => ({ id: "a1" }) as never,
-      findAttrezzaturaByMatricola: async () => null,
+      resolveAttrezzatura: async () => ({
+        row: { id: "a1", mezzo_id: "m1" } as never,
+        created: false,
+        matchedBy: "hint_id" as const,
+        conflicts: [],
+      }),
     },
   );
   assert.equal(updated, true, "forceDespiteStale allows patch");

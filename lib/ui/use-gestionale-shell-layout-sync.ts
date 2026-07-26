@@ -116,10 +116,12 @@ export function useGestionaleShellLayoutSync(
   }, [refs.shellRef, refs.shellColRef, refs.mainRef]);
 
   const scheduleSync = useCallback(() => {
-    if (syncRafRef.current) return;
+    if (syncRafRef.current) cancelAnimationFrame(syncRafRef.current);
     syncRafRef.current = requestAnimationFrame(() => {
-      syncRafRef.current = 0;
-      sync();
+      syncRafRef.current = requestAnimationFrame(() => {
+        syncRafRef.current = 0;
+        sync();
+      });
     });
   }, [sync]);
 
@@ -135,8 +137,18 @@ export function useGestionaleShellLayoutSync(
     const main = refs.mainRef?.current;
 
     window.addEventListener("resize", scheduleSync);
+    window.addEventListener("orientationchange", scheduleSync);
     const vv = window.visualViewport;
     vv?.addEventListener("resize", scheduleSync);
+
+    const shellTierMqs =
+      typeof window !== "undefined"
+        ? [
+            window.matchMedia("(min-width: 768px)"),
+            window.matchMedia("(min-width: 1400px)"),
+          ]
+        : [];
+    for (const mq of shellTierMqs) mq.addEventListener("change", scheduleSync);
 
     const ro =
       typeof ResizeObserver !== "undefined"
@@ -153,7 +165,9 @@ export function useGestionaleShellLayoutSync(
       if (syncRafRef.current) cancelAnimationFrame(syncRafRef.current);
       syncRafRef.current = 0;
       window.removeEventListener("resize", scheduleSync);
+      window.removeEventListener("orientationchange", scheduleSync);
       vv?.removeEventListener("resize", scheduleSync);
+      for (const mq of shellTierMqs) mq.removeEventListener("change", scheduleSync);
       ro?.disconnect();
     };
   }, [scheduleSync, refs.shellRef, refs.shellColRef, refs.mainRef]);

@@ -12,6 +12,7 @@ export const maintenanceEngineV2QueryKeys = {
   effectivePreset: (configId: string) => [...maintenancePlansQueryKeys.root, "effective-preset", configId] as const,
   overview: () => [...maintenancePlansQueryKeys.root, "overview"] as const,
   hierarchy: () => [...maintenancePlansQueryKeys.root, "hierarchy"] as const,
+  timelineExtras: (mezzoId: string) => [...maintenancePlansQueryKeys.root, "timeline-extras", mezzoId] as const,
 };
 
 export function useMezzoMaintenanceConfigsQuery(input: {
@@ -129,5 +130,14 @@ export function useMezziWithoutPresetQuery(enabled = true) {
     [...maintenancePlansQueryKeys.root, "without-preset"] as const,
     () => maintenancePlansEntry.listMezziWithoutPreset(),
     { enabled },
+  );
+}
+
+export function useMezzoMaintenanceTimelineExtrasQuery(mezzoId: string | undefined, enabled = true) {
+  const id = mezzoId?.trim() ?? "";
+  return useServiceQuery(
+    maintenanceEngineV2QueryKeys.timelineExtras(id),
+    () => maintenancePlansEntry.listMezzoMaintenanceTimelineExtras(id),
+    { enabled: enabled && id.length > 0, staleTime: 60_000 },
   );
 }

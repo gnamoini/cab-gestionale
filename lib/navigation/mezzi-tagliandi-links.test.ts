@@ -1,5 +1,14 @@
 import assert from "node:assert/strict";
-import { buildMezziTagliandiHubHref, buildMezziTagliandiPresetsHref } from "@/lib/navigation/mezzi-tagliandi-links";
+import {
+  buildMezziAnagraficaHubHref,
+  buildMezziTagliandiHubHref,
+  buildMezziTagliandiPresetsHref,
+} from "@/lib/navigation/mezzi-tagliandi-links";
+
+const anagrafica = buildMezziAnagraficaHubHref({ mezzoId: "abc-123" });
+assert.ok(anagrafica.includes("view=anagrafica"));
+assert.ok(anagrafica.includes("hubMezzo=abc-123"));
+assert.ok(anagrafica.includes("hubTab=panoramica"));
 
 const hub = buildMezziTagliandiHubHref({ mezzoId: "abc-123", highlight: "cfg-1" });
 assert.ok(hub.includes("view=tagliandi"));

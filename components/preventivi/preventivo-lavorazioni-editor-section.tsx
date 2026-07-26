@@ -29,13 +29,14 @@ import {
   extractPreventivoLavorazioniClienteSpecifiche,
 } from "@/lib/preventivi/preventivi-struttura";
 import type { PreventivoManodopera, PreventivoRecord } from "@/lib/preventivi/types";
+import { AddettoPicker } from "@/components/domain/addetti";
+import { sliceInputValue, TEXT_EXTRA } from "@/lib/validation/text-field-limits";
 import {
   dsInput,
   dsInputNoSpinner,
   dsTableActionBtnDanger,
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
-import { sliceInputValue, TEXT_EXTRA } from "@/lib/validation/text-field-limits";
 import {
   fmtPreventivoEuro,
   PreventivoEditorTotalBar,
@@ -150,17 +151,19 @@ export function PreventivoLavorazioniEditorSection({
 
           {draft.manodopera.righeAddetti.map((a, idx) => (
             <div
-              key={`${idx}-${a.addetto}`}
+              key={`${idx}-${a.addettoId ?? a.addettoLegacy ?? "row"}`}
               className={`${manodoperaRowGrid} border-b border-[color:var(--cab-border)] px-3 py-2.5`}
             >
               <FormField label="Addetto" className="sm:[&>div]:mt-0 sm:[&>span]:sr-only">
-                <input
-                  className={dsInput}
-                  value={a.addetto}
-                  onChange={(e) => onPatchAddettoRow(idx, { addetto: e.target.value })}
-                  placeholder="Nome addetto"
-                  aria-label={`Addetto riga ${idx + 1}`}
+                <AddettoPicker
+                  value={a.addettoId}
+                  onChange={(addettoId) => onPatchAddettoRow(idx, { addettoId })}
+                  ariaLabel={`Addetto riga ${idx + 1}`}
+                  allowEmpty
                 />
+                {a.legacyWarning ? (
+                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">{a.legacyWarning}</p>
+                ) : null}
               </FormField>
               <FormField label="Ore" className="sm:[&>div]:mt-0 sm:[&>span]:sr-only">
                 <GestionaleNumericField

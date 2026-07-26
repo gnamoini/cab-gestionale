@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useState, type ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { PageActionMenu, type PageActionMenuProps } from "@/components/ui";
 
@@ -11,28 +11,18 @@ function resolvePageHeaderActionsSlot(): HTMLElement | null {
   return document.getElementById(PAGE_HEADER_ACTIONS_SLOT_ID);
 }
 
+function subscribePageHeaderActionsSlot(onStoreChange: () => void): () => void {
+  const observer = new MutationObserver(onStoreChange);
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  return () => observer.disconnect();
+}
+
 function usePageHeaderActionsSlot(): HTMLElement | null {
-  const [slot, setSlot] = useState<HTMLElement | null>(null);
-
-  const bindSlot = useCallback(() => {
-    const el = resolvePageHeaderActionsSlot();
-    if (el) setSlot(el);
-    return el;
-  }, []);
-
-  useLayoutEffect(() => {
-    const immediate = bindSlot();
-    if (immediate) return;
-
-    const observer = new MutationObserver(() => {
-      const el = bindSlot();
-      if (el) observer.disconnect();
-    });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, [bindSlot]);
-
-  return slot;
+  return useSyncExternalStore(
+    subscribePageHeaderActionsSlot,
+    resolvePageHeaderActionsSlot,
+    () => null,
+  );
 }
 
 /** Target nel PageHeaderTopRow — azioni da view lazy via portal. */

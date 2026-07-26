@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import { useMezzoMaintenanceHistoryQuery } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
+import { useMezzoMaintenanceTimelineExtrasQuery } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import {
   useMezzoBase,
   useMezzoDocumenti,
@@ -27,6 +29,8 @@ export function useMezzoHub(mezzoId: string | undefined) {
   const doc = useMezzoDocumenti(mezzoId);
   const log = useMezzoLog(mezzoId);
   const mov = useMezzoMovimenti(mezzoId);
+  const maint = useMezzoMaintenanceHistoryQuery(id, Boolean(id));
+  const timelineExtras = useMezzoMaintenanceTimelineExtrasQuery(id, Boolean(id));
 
   const hubReady =
     id.length > 0 &&
@@ -35,7 +39,9 @@ export function useMezzoHub(mezzoId: string | undefined) {
     pv.isSuccess &&
     doc.isSuccess &&
     log.isSuccess &&
-    mov.isSuccess;
+    mov.isSuccess &&
+    maint.isSuccess &&
+    timelineExtras.isSuccess;
 
   const snapshot = useMemo(
     () => ({
@@ -45,8 +51,10 @@ export function useMezzoHub(mezzoId: string | undefined) {
       documentiRows: doc.data ?? [],
       logRows: log.data ?? [],
       movimentiRows: mov.data ?? [],
+      maintenanceHistory: maint.data ?? [],
+      maintenanceTimelineExtras: timelineExtras.data ?? [],
     }),
-    [base.data, lav.data, pv.data, doc.data, log.data, mov.data],
+    [base.data, lav.data, pv.data, doc.data, log.data, mov.data, maint.data, timelineExtras.data],
   );
 
   const data = useMemo((): MezzoHubData | undefined => {
@@ -55,12 +63,12 @@ export function useMezzoHub(mezzoId: string | undefined) {
   }, [hubReady, snapshot]);
 
   const isError =
-    id.length > 0 && (base.isError || lav.isError || pv.isError || doc.isError || log.isError || mov.isError);
+    id.length > 0 && (base.isError || lav.isError || pv.isError || doc.isError || log.isError || mov.isError || maint.isError || timelineExtras.isError);
 
   const error = useMemo(() => {
-    const e = base.error ?? lav.error ?? pv.error ?? doc.error ?? log.error ?? mov.error;
+    const e = base.error ?? lav.error ?? pv.error ?? doc.error ?? log.error ?? mov.error ?? maint.error ?? timelineExtras.error;
     return e ?? null;
-  }, [base.error, lav.error, pv.error, doc.error, log.error, mov.error]);
+  }, [base.error, lav.error, pv.error, doc.error, log.error, mov.error, maint.error, timelineExtras.error]);
 
   const isLoadingRaw = id.length > 0 && !isError && !hubReady;
   const hubTimedOut = usePendingQueryTimeout(isLoadingRaw, HUB_QUERY_LOADING_FAILSAFE_MS);
@@ -68,8 +76,8 @@ export function useMezzoHub(mezzoId: string | undefined) {
   const isErrorEffective = isError || hubTimedOut;
 
   const refetch = useCallback(() => {
-    return Promise.all([base.refetch(), lav.refetch(), pv.refetch(), doc.refetch(), log.refetch(), mov.refetch()]).then(() => undefined);
-  }, [base, lav, pv, doc, log, mov]);
+    return Promise.all([base.refetch(), lav.refetch(), pv.refetch(), doc.refetch(), log.refetch(), mov.refetch(), maint.refetch(), timelineExtras.refetch()]).then(() => undefined);
+  }, [base, lav, pv, doc, log, mov, maint, timelineExtras]);
 
   return {
     data,

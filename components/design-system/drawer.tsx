@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useCallback,
@@ -70,6 +71,8 @@ export type DrawerProps = {
   restoreFocusRef?: RefObject<HTMLElement | null>;
   /** Elemento inline accanto al titolo (es. badge stato). */
   titleAddon?: ReactNode;
+  /** Azioni header a destra (prima della X). */
+  headerActions?: ReactNode;
   /** Se impostato: freccia indietro a sinistra al posto della X di chiusura. */
   onBack?: () => void;
   /** Z-index layer (default drawer). Profilo sopra nav tablet: z-[110]. */
@@ -90,6 +93,7 @@ export function Drawer({
   closeOnEscape = true,
   restoreFocusRef,
   titleAddon,
+  headerActions,
   onBack,
   layerClassName = dsZDrawer,
   contentFill = false,
@@ -107,35 +111,36 @@ export function Drawer({
   const { restoreFocus } = useDropdownFocusRestore(isActive);
 
   useEffect(() => {
-    if (open) {
-      setMounted(true);
-      setClosing(false);
-      if (!overlayRegisteredRef.current) {
-        overlayRegisteredRef.current = true;
-        dispatchGestionaleOverlayOpened();
-      }
-      return;
-    }
-
-    if (overlayRegisteredRef.current) {
-      overlayRegisteredRef.current = false;
-      dispatchGestionaleOverlayClosed();
+    if (!open) return;
+    setMounted(true);
+    setClosing(false);
+    if (!overlayRegisteredRef.current) {
+      overlayRegisteredRef.current = true;
+      dispatchGestionaleOverlayOpened();
     }
   }, [open]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!mounted || open) return;
     setClosing(true);
+  }, [mounted, open]);
+
+  useEffect(() => {
+    if (!closing) return;
     const id = window.setTimeout(() => {
       setMounted(false);
       setClosing(false);
+      if (overlayRegisteredRef.current) {
+        overlayRegisteredRef.current = false;
+        dispatchGestionaleOverlayClosed();
+      }
       restoreGestionaleDrawerFocus({
         trigger: restoreFocusRef?.current ?? null,
         restoreCapturedFocus: restoreFocus,
       });
     }, logDrawerAnimMs());
     return () => window.clearTimeout(id);
-  }, [mounted, open, restoreFocus, restoreFocusRef]);
+  }, [closing, restoreFocus, restoreFocusRef]);
 
   useBodyScrollLock(lockScroll && mounted && !closing, "design-system-Drawer");
   const requestClose = useCallback(() => {
@@ -191,7 +196,12 @@ export function Drawer({
             {titleAddon ? <div className="flex shrink-0 items-center">{titleAddon}</div> : null}
           </div>
         </div>
-        {onBack ? null : <CloseButton onClick={requestClose} className={dsModalCloseBtn} />}
+        {onBack ? null : (
+          <div className="flex shrink-0 items-center gap-1">
+            {headerActions}
+            <CloseButton onClick={requestClose} className={dsModalCloseBtn} />
+          </div>
+        )}
       </div>
     </header>
   );
@@ -235,7 +245,7 @@ export function Drawer({
                 : "flex min-h-0 min-w-0 flex-col max-md:flex-none max-md:overflow-visible md:flex-1 md:overflow-hidden"
             }
           >
-            {closing ? null : children}
+            {children}
           </div>
         </div>
       </aside>

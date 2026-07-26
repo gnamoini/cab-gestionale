@@ -16,7 +16,8 @@ export const PWA_OPERATIONAL_RECONNECT_TABLES = [
   "magazzino_ricambi",
   "movimenti_ricambi",
   "documenti",
-  "lavorazione_documents",
+  "pdf_artifacts",
+  "document_access_tokens",
   "log_modifiche",
 ] as const;
 

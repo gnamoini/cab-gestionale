@@ -59,10 +59,10 @@ const lavView = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
 assert.match(lavView, /writeModificaLog/);
 assert.doesNotMatch(lavView, /void logEntry\.create/);
 
-// --- lavorazione-documents uses SSOT ---
+// --- lavorazione-documents deprecated (SSOT official PDFs) ---
 const lavDocs = read("src/services/lavorazione-documents.service.ts");
-assert.match(lavDocs, /writeModificaLog/);
 assert.doesNotMatch(lavDocs, /logService\.create/);
+assert.match(lavDocs, /non più supportato/);
 
 // --- Retention fix migration exists ---
 const retentionFix = read("supabase/migrations/20261019140000_fix_prune_log_modifiche_retention_old_alias.sql");

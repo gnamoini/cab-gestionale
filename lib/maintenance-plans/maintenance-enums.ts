@@ -60,6 +60,12 @@ export const MAINTENANCE_PRESET_STATUS_LABELS: Record<MaintenancePresetStatus, s
   archived: "Archiviato",
 };
 
+export const MAINTENANCE_PRESET_STATUS_BADGE_CLASS: Record<MaintenancePresetStatus, string> = {
+  active: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200",
+  draft: "bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200",
+  archived: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
+};
+
 export const MAINTENANCE_EXECUTION_TYPE_LABELS: Record<MaintenanceExecutionType, string> = {
   scheduled: "Pianificato",
   corrective: "Correttivo",

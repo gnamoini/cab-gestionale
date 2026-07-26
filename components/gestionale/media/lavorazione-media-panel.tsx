@@ -1,9 +1,7 @@
 "use client";
 
 import { RecordImageManager, type RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
-import { LavorazioneDocumentsManager } from "@/components/gestionale/media/lavorazione-documents-manager";
-import { LavorazioneDdtPanel } from "@/components/ddt/lavorazione-ddt-panel";
-import { LAVORAZIONE_DOCUMENT_SLOTS } from "@/lib/lavorazioni/lavorazione-documents";
+import { LavorazioneOfficialDocumentsPanel } from "@/components/gestionale/media/lavorazione-official-documents-panel";
 import { dsHubModalSection, dsHubModalSectionTitle } from "@/lib/ui/design-system";
 
 export function LavorazioneMediaPanel({
@@ -20,6 +18,8 @@ export function LavorazioneMediaPanel({
   /** `hub`: dentro GestionaleInfoCard (tab Documenti modal lavorazione). */
   variant?: "legacy" | "hub";
 }) {
+  void onDocumentEvent;
+
   if (variant === "hub") {
     return (
       <>
@@ -31,17 +31,7 @@ export function LavorazioneMediaPanel({
           hubCardLayout
           onImageEvent={onImageEvent}
         />
-        {LAVORAZIONE_DOCUMENT_SLOTS.map((slot) => (
-          <LavorazioneDocumentsManager
-            key={slot.tipo}
-            lavorazioneId={lavorazioneId}
-            canEdit={canEdit}
-            hubCardLayout
-            onlyTipo={slot.tipo}
-            onDocumentEvent={onDocumentEvent}
-          />
-        ))}
-        <LavorazioneDdtPanel lavorazioneId={lavorazioneId} />
+        <LavorazioneOfficialDocumentsPanel lavorazioneId={lavorazioneId} hubCardLayout />
       </>
     );
   }
@@ -58,12 +48,7 @@ export function LavorazioneMediaPanel({
           embedded
           onImageEvent={onImageEvent}
         />
-        <LavorazioneDocumentsManager
-          lavorazioneId={lavorazioneId}
-          canEdit={canEdit}
-          onDocumentEvent={onDocumentEvent}
-        />
-        <LavorazioneDdtPanel lavorazioneId={lavorazioneId} />
+        <LavorazioneOfficialDocumentsPanel lavorazioneId={lavorazioneId} />
       </div>
     </section>
   );

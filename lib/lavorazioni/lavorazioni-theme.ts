@@ -68,3 +68,11 @@ export function addettoThemeColor(nome: string): string {
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
   return ADDETTO_PALETTE[h % ADDETTO_PALETTE.length];
 }
+
+/** Colore addetto deterministico da id/colorKey stabile (preferito su nome). */
+export function addettoThemeColorFromId(stableKey: string): string {
+  const key = stableKey.trim();
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return ADDETTO_PALETTE[h % ADDETTO_PALETTE.length];
+}

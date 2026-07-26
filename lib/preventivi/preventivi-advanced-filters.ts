@@ -46,9 +46,8 @@ export const PREVENTIVO_TIPI_DOCUMENTO_FILTER: readonly { id: PreventivoTipoDocu
 export const PREVENTIVO_STATI: readonly { id: PreventivoStato; label: string }[] = [
   { id: "bozza", label: "Bozza" },
   { id: "inviato", label: "Inviato" },
-  { id: "approvato", label: "Approvato" },
-  { id: "rifiutato", label: "Rifiutato" },
-  { id: "convertito", label: "Convertito" },
+  { id: "confermato", label: "Confermato" },
+  { id: "annullato", label: "Annullato" },
 ] as const;
 
 export function preventivoStatoLabel(stato: PreventivoStato): string {

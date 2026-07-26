@@ -1,11 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { LoadingErrorState } from "@/components/design-system";
-import { GestionaleListTable, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { LoadingErrorState, PageToolbarResultCount } from "@/components/design-system";
+import {
+  GestionaleListTable,
+  GestionaleListTableActionsHead,
+  GestionaleListTableMobileEmpty,
+  GlobalTableHeadLabel,
+} from "@/components/gestionale/global-table";
+import { GlobalSelect } from "@/components/gestionale/global-input";
+import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { MezziTagliandiAssignModal } from "@/components/gestionale/mezzi/mezzi-tagliandi-assign-modal";
-import { buildMezziTagliandiHubHref } from "@/lib/navigation/mezzi-tagliandi-links";
+import { reportMetricCardCompactClass } from "@/components/report/report-ui-tokens";
+import { buildMezziAnagraficaHubHref } from "@/lib/navigation/mezzi-tagliandi-links";
 import { selectDashboardMaintenanceCards } from "@/lib/maintenance-plans/kpi/maintenance-kpi-selectors";
 import {
   groupOverviewByPreset,
@@ -21,13 +29,37 @@ import {
 } from "@/lib/maintenance-plans/tagliando-stato-labels";
 import type { TagliandiOverviewRow } from "@/lib/maintenance-plans/v2-types";
 import type { MezzoWithoutPresetRow } from "@/lib/maintenance-plans/v2-types";
-import { gestionaleListTableRowBaseClass, gestionaleListTableTd } from "@/lib/ui/gestionale-list-table";
-import { dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
+import {
+  gestionaleListTableRowBaseClass,
+  gestionaleListTableTd,
+  gestionaleListTableTdAzioni,
+  gestionaleListTableTdCenter,
+  gestionaleListTableTdPill,
+  gestionaleListTableActionsGroupEnd,
+} from "@/lib/ui/gestionale-list-table";
+import {
+  dsCardTitle,
+  dsFocus,
+  dsInput,
+  dsPageToolbar,
+  dsTableActionTextBtnPrimary,
+  dsTypoCaption,
+} from "@/lib/ui/design-system";
 import {
   useMezziWithoutPresetQuery,
   useTagliandiOverviewQuery,
 } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useMaintenancePlansListQuery } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
+
+const overviewFilterSelectClass = `${dsInput} min-h-11 py-2 text-sm font-semibold`;
+
+const TAGLIANDO_STATO_FILTER_ITEMS = [
+  { value: "", label: "Tutti gli stati" },
+  ...(Object.keys(TAGLIANDO_STATO_LABELS) as TagliandoStatoUi[]).map((s) => ({
+    value: s,
+    label: TAGLIANDO_STATO_LABELS[s],
+  })),
+];
 
 function fmtDate(ymd: string | null): string {
   if (!ymd) return "—";
@@ -50,27 +82,67 @@ function fmtProssimo(row: TagliandiOverviewRow): string {
   return "—";
 }
 
+function tagliandiKpiTileClass(active: boolean, interactive: boolean): string {
+  const base = `${reportMetricCardCompactClass} min-h-[4.75rem] justify-center`;
+  if (!interactive) return base;
+  const activeClass = active
+    ? "border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]"
+    : "hover:border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] hover:shadow-[var(--cab-shadow-md)]";
+  return `${base} ${activeClass} transition-[border-color,box-shadow,background-color] duration-200 ${dsFocus}`;
+}
+
+function TagliandiOverviewKpiTile({
+  label,
+  value,
+  valueClassName = "text-[color:var(--cab-text)]",
+  active = false,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  valueClassName?: string;
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  const content = (
+    <>
+      <p className={`${dsTypoCaption} font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]`}>
+        {label}
+      </p>
+      <p className={`mt-1 text-xl font-bold tabular-nums ${valueClassName}`}>{value}</p>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" className={tagliandiKpiTileClass(active, true)} onClick={onClick}>
+        {content}
+      </button>
+    );
+  }
+
+  return <div className={tagliandiKpiTileClass(false, false)}>{content}</div>;
+}
+
 function OverviewGroupTable({
   title,
   subtitle,
   rows,
-  canEdit,
   highlightConfigId,
   onRowClick,
 }: {
   title: string;
   subtitle?: string;
   rows: TagliandiOverviewRow[];
-  canEdit: boolean;
   highlightConfigId: string | null;
   onRowClick: (row: TagliandiOverviewRow) => void;
 }) {
   const sorted = sortOverviewByNextDue(rows);
   return (
-    <section className="mb-6">
-      <div className="mb-2">
-        <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">{title}</h3>
-        {subtitle ? <p className="text-xs text-[color:var(--cab-text-muted)]">{subtitle}</p> : null}
+    <section className="space-y-3">
+      <div className="min-w-0">
+        <h3 className={dsCardTitle}>{title}</h3>
+        {subtitle ? <p className="mt-0.5 text-xs text-[color:var(--cab-text-muted)]">{subtitle}</p> : null}
       </div>
       <GestionaleListTable
         fixed
@@ -96,18 +168,22 @@ function OverviewGroupTable({
               onClick={() => onRowClick(row)}
               aria-label={`Apri tagliandi ${row.attrezzaturaLabel}`}
             >
-              <td className={gestionaleListTableTd}>{row.attrezzaturaLabel}</td>
-              <td className={gestionaleListTableTd}>
+              <td className={`${gestionaleListTableTd} font-medium text-[color:var(--cab-text)]`}>
+                {row.attrezzaturaLabel}
+              </td>
+              <td className={`${gestionaleListTableTd} text-[color:var(--cab-text-muted)]`}>
                 {[row.targa, row.numeroScuderia].filter(Boolean).join(" · ") || "—"}
               </td>
-              <td className={`${gestionaleListTableTd} font-mono text-xs`}>{fmtUltimo(row)}</td>
-              <td className={`${gestionaleListTableTd} font-mono text-xs`}>{fmtProssimo(row)}</td>
-              <td className={`${gestionaleListTableTd} text-xs`} title={row.dueReasonLabel}>
+              <td className={gestionaleListTableTdCenter}>{fmtUltimo(row)}</td>
+              <td className={gestionaleListTableTdCenter}>{fmtProssimo(row)}</td>
+              <td className={`${gestionaleListTableTd} max-w-[14rem] truncate text-xs text-[color:var(--cab-text-muted)]`} title={row.dueReasonLabel}>
                 {row.dueReasonLabel}
               </td>
-              <td className={`${gestionaleListTableTd} font-mono text-xs`}>{row.currentValue}</td>
-              <td className={gestionaleListTableTd}>
-                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${TAGLIANDO_STATO_BADGE_CLASS[stato]}`}>
+              <td className={gestionaleListTableTdCenter}>{row.currentValue}</td>
+              <td className={gestionaleListTableTdPill}>
+                <span
+                  className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${TAGLIANDO_STATO_BADGE_CLASS[stato]}`}
+                >
                   {TAGLIANDO_STATO_LABELS[stato]}
                 </span>
               </td>
@@ -130,10 +206,10 @@ function WithoutPresetGroup({
 }) {
   if (rows.length === 0) return null;
   return (
-    <section className="mb-6">
-      <div className="mb-2">
-        <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Senza preset assegnato</h3>
-        <p className="text-xs text-[color:var(--cab-text-muted)]">{rows.length} mezzi senza piano attivo</p>
+    <section className="space-y-3">
+      <div className="min-w-0">
+        <h3 className={dsCardTitle}>Senza preset assegnato</h3>
+        <p className="mt-0.5 text-xs text-[color:var(--cab-text-muted)]">{rows.length} mezzi senza piano attivo</p>
       </div>
       <GestionaleListTable
         fixed
@@ -142,29 +218,33 @@ function WithoutPresetGroup({
             <GlobalTableHeadLabel label="Mezzo" />
             <GlobalTableHeadLabel label="Targa / codice" />
             <GlobalTableHeadLabel label="Tipo" />
-            {canEdit ? <GlobalTableHeadLabel label="Azioni" /> : null}
+            {canEdit ? <GestionaleListTableActionsHead /> : null}
           </>
         }
       >
         {rows.map((row) => (
           <tr key={row.mezzoId} className={gestionaleListTableRowBaseClass}>
-            <td className={gestionaleListTableTd}>{row.attrezzaturaLabel}</td>
-            <td className={gestionaleListTableTd}>
+            <td className={`${gestionaleListTableTd} font-medium text-[color:var(--cab-text)]`}>
+              {row.attrezzaturaLabel}
+            </td>
+            <td className={`${gestionaleListTableTd} text-[color:var(--cab-text-muted)]`}>
               {[row.targa, row.numeroScuderia].filter(Boolean).join(" · ") || "—"}
             </td>
             <td className={gestionaleListTableTd}>{row.tipoAttrezzatura || "—"}</td>
             {canEdit ? (
-              <td className={gestionaleListTableTd}>
-                <button
-                  type="button"
-                  className={dsBtnPrimary}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAssign(row.mezzoId);
-                  }}
-                >
-                  Assegna preset
-                </button>
+              <td className={gestionaleListTableTdAzioni}>
+                <div className={gestionaleListTableActionsGroupEnd}>
+                  <button
+                    type="button"
+                    className={dsTableActionTextBtnPrimary}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAssign(row.mezzoId);
+                    }}
+                  >
+                    Assegna preset
+                  </button>
+                </div>
               </td>
             ) : null}
           </tr>
@@ -179,11 +259,13 @@ export function MezziTagliandiOverview({
   presetFilter = "",
   statoFilter = "",
   highlightConfigId = null,
+  onOpenMezzoHub,
 }: {
   canEdit: boolean;
   presetFilter?: string;
   statoFilter?: TagliandoStatoUi | "";
   highlightConfigId?: string | null;
+  onOpenMezzoHub?: (mezzoId: string) => void;
 }) {
   const router = useRouter();
   const overviewQ = useTagliandiOverviewQuery(true);
@@ -202,10 +284,13 @@ export function MezziTagliandiOverview({
     setLocalStatoFilter(statoFilter);
   }, [statoFilter]);
 
+  const allRows = overviewQ.data ?? [];
+  const searchActive = search.trim().length > 0;
+  const filtersActive = Boolean(localPresetFilter || localStatoFilter);
+
   const filtered = useMemo(() => {
-    const rows = overviewQ.data ?? [];
     const q = search.trim().toLowerCase();
-    return rows.filter((r) => {
+    return allRows.filter((r) => {
       const stato = mapUrgencyToTagliandoStato(r.urgency);
       if (localPresetFilter && r.presetId !== localPresetFilter) return false;
       if (!tagliandoStatoFilterMatches(stato, localStatoFilter)) return false;
@@ -217,10 +302,17 @@ export function MezziTagliandiOverview({
         r.presetNome.toLowerCase().includes(q)
       );
     });
-  }, [overviewQ.data, search, localPresetFilter, localStatoFilter]);
+  }, [allRows, search, localPresetFilter, localStatoFilter]);
 
   const groups = useMemo(() => groupOverviewByPreset(filtered), [filtered]);
   const kpi = useMemo(() => selectDashboardMaintenanceCards(filtered), [filtered]);
+  const presetFilterItems = useMemo(
+    () => [
+      { value: "", label: "Tutti i preset" },
+      ...(plansQ.data ?? []).map((p) => ({ value: p.id, label: p.nome })),
+    ],
+    [plansQ.data],
+  );
   const triggerByPreset = useMemo(() => {
     const map = new Map<string, string>();
     for (const p of plansQ.data ?? []) {
@@ -249,13 +341,21 @@ export function MezziTagliandiOverview({
 
   const onRowClick = useCallback(
     (row: TagliandiOverviewRow) => {
-      router.push(buildMezziTagliandiHubHref({ mezzoId: row.mezzoId, highlight: row.configId }));
+      if (onOpenMezzoHub) {
+        onOpenMezzoHub(row.mezzoId);
+        return;
+      }
+      router.push(buildMezziAnagraficaHubHref({ mezzoId: row.mezzoId }));
     },
-    [router],
+    [onOpenMezzoHub, router],
   );
 
+  const toggleStatoFilter = useCallback((stato: TagliandoStatoUi) => {
+    setLocalStatoFilter((prev) => (prev === stato ? "" : stato));
+  }, []);
+
   if (overviewQ.isLoading) {
-    return <div className="p-4 text-sm text-[color:var(--cab-text-muted)]">Caricamento overview tagliandi…</div>;
+    return <div className="text-sm text-[color:var(--cab-text-muted)]">Caricamento overview tagliandi…</div>;
   }
 
   if (overviewQ.isError) {
@@ -265,118 +365,124 @@ export function MezziTagliandiOverview({
   }
 
   const hasContent = groups.length > 0 || filteredWithout.length > 0;
+  const emptyMessage =
+    allRows.length === 0 && (withoutQ.data ?? []).length === 0
+      ? "Nessun piano manutentivo attivo. Crea un preset e assegnalo ai mezzi."
+      : "Nessuna configurazione corrisponde ai criteri.";
+
+  let content: ReactNode;
+  if (!hasContent) {
+    content = <GestionaleListTableMobileEmpty message={emptyMessage} />;
+  } else {
+    content = (
+      <div className="space-y-6">
+        {groups.map((g) => (
+          <OverviewGroupTable
+            key={g.key}
+            title={g.presetId ? g.presetNome : g.presetNome}
+            subtitle={
+              g.presetId
+                ? `${g.rows.length} mezzi · ${triggerByPreset.get(g.presetId) ?? ""}`
+                : `${g.rows.length} mezzi`
+            }
+            rows={g.rows}
+            highlightConfigId={highlightConfigId}
+            onRowClick={onRowClick}
+          />
+        ))}
+        <WithoutPresetGroup
+          rows={filteredWithout}
+          canEdit={canEdit}
+          onAssign={(mezzoId) => {
+            setAssignMezzoIds([mezzoId]);
+            setAssignOpen(true);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <button
-          type="button"
-          className="rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-3 text-left text-sm hover:bg-[var(--cab-hover)]"
-          onClick={() => setLocalStatoFilter(localStatoFilter === "imminente" ? "" : "imminente")}
-        >
-          <div className="text-[color:var(--cab-text-muted)]">Prossimi 7 giorni</div>
-          <div className="text-lg font-semibold">{kpi.prossimi7g}</div>
-        </button>
-        <button
-          type="button"
-          className="rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-3 text-left text-sm hover:bg-[var(--cab-hover)]"
-          onClick={() => setLocalStatoFilter(localStatoFilter === "imminente" ? "" : "imminente")}
-        >
-          <div className="text-[color:var(--cab-text-muted)]">Prossimi 30 giorni</div>
-          <div className="text-lg font-semibold">{kpi.prossimi30g}</div>
-        </button>
-        <button
-          type="button"
-          className="rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-3 text-left text-sm hover:bg-[var(--cab-hover)]"
-          onClick={() => setLocalStatoFilter(localStatoFilter === "scaduto" ? "" : "scaduto")}
-        >
-          <div className="text-[color:var(--cab-text-muted)]">Scaduti</div>
-          <div className="text-lg font-semibold text-red-700 dark:text-red-300">{kpi.scaduti}</div>
-        </button>
-        <div className="rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-3 text-sm">
-          <div className="text-[color:var(--cab-text-muted)]">Mezzi critici</div>
-          <div className="text-lg font-semibold">{kpi.mezziCritici}</div>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cerca targa, scuderia, mezzo…"
-          className="max-w-xs rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-3 py-1.5 text-sm"
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <TagliandiOverviewKpiTile
+          label="Prossimi 7 giorni"
+          value={kpi.prossimi7g}
+          active={localStatoFilter === "imminente"}
+          onClick={() => toggleStatoFilter("imminente")}
         />
-        <select
-          value={localPresetFilter}
-          onChange={(e) => setLocalPresetFilter(e.target.value)}
-          className="rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-3 py-1.5 text-sm"
-        >
-          <option value="">Tutti i preset</option>
-          {(plansQ.data ?? []).map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nome}
-            </option>
-          ))}
-        </select>
-        <select
-          value={localStatoFilter}
-          onChange={(e) => setLocalStatoFilter(e.target.value as TagliandoStatoUi | "")}
-          className="rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-3 py-1.5 text-sm"
-        >
-          <option value="">Tutti gli stati</option>
-          {(Object.keys(TAGLIANDO_STATO_LABELS) as TagliandoStatoUi[]).map((s) => (
-            <option key={s} value={s}>
-              {TAGLIANDO_STATO_LABELS[s]}
-            </option>
-          ))}
-        </select>
-        {(localPresetFilter || localStatoFilter) && (
-          <button
-            type="button"
-            className={dsBtnNeutral}
-            onClick={() => {
-              setLocalPresetFilter("");
-              setLocalStatoFilter("");
-            }}
-          >
-            Azzera filtri
-          </button>
-        )}
-        <span className="text-xs text-[color:var(--cab-text-muted)]">{filtered.length} configurazioni</span>
+        <TagliandiOverviewKpiTile
+          label="Prossimi 30 giorni"
+          value={kpi.prossimi30g}
+          active={localStatoFilter === "imminente"}
+          onClick={() => toggleStatoFilter("imminente")}
+        />
+        <TagliandiOverviewKpiTile
+          label="Scaduti"
+          value={kpi.scaduti}
+          valueClassName="text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))]"
+          active={localStatoFilter === "scaduto"}
+          onClick={() => toggleStatoFilter("scaduto")}
+        />
+        <TagliandiOverviewKpiTile label="Mezzi critici" value={kpi.mezziCritici} />
       </div>
 
-      {!hasContent ? (
-        <div className="rounded-lg border border-dashed border-[color:var(--cab-border)] p-8 text-center text-sm text-[color:var(--cab-text-muted)]">
-          <p>Nessun piano manutentivo attivo. Crea un preset e assegnalo ai mezzi.</p>
-        </div>
-      ) : (
-        <>
-          {groups.map((g) => (
-            <OverviewGroupTable
-              key={g.key}
-              title={g.presetId ? `Preset: ${g.presetNome}` : g.presetNome}
-              subtitle={
-                g.presetId
-                  ? `${g.rows.length} mezzi · ${triggerByPreset.get(g.presetId) ?? ""}`
-                  : `${g.rows.length} mezzi`
-              }
-              rows={g.rows}
-              canEdit={canEdit}
-              highlightConfigId={highlightConfigId}
-              onRowClick={onRowClick}
-            />
-          ))}
-          <WithoutPresetGroup
-            rows={filteredWithout}
-            canEdit={canEdit}
-            onAssign={(mezzoId) => {
-              setAssignMezzoIds([mezzoId]);
-              setAssignOpen(true);
-            }}
+      <div className={`${dsPageToolbar} min-w-0 w-full max-w-full`}>
+        <div className="flex flex-col gap-3">
+          <GestionaleSearchField
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cerca targa, scuderia, mezzo…"
+            aria-label="Cerca configurazioni tagliando"
+            wrapperClassName="min-w-0 w-full"
           />
-        </>
-      )}
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+            <div className="w-full min-w-[10.5rem] sm:w-[14rem]">
+              <GlobalSelect
+                variant="filter"
+                inputClassName={overviewFilterSelectClass}
+                items={presetFilterItems}
+                value={localPresetFilter}
+                onChange={setLocalPresetFilter}
+                strictFromList
+                selectOnly
+                aria-label="Filtra per preset"
+              />
+            </div>
+            <div className="w-full min-w-[10.5rem] sm:w-[11.5rem]">
+              <GlobalSelect
+                variant="filter"
+                inputClassName={overviewFilterSelectClass}
+                items={TAGLIANDO_STATO_FILTER_ITEMS}
+                value={localStatoFilter}
+                onChange={(v) => setLocalStatoFilter(v as TagliandoStatoUi | "")}
+                strictFromList
+                selectOnly
+                aria-label="Filtra per stato tagliando"
+              />
+            </div>
+            <PageToolbarResultCount
+              count={filtered.length}
+              singularLabel="configurazione"
+              pluralLabel="configurazioni"
+              filtersActive={filtersActive}
+              searchActive={searchActive}
+              onFilterReset={
+                filtersActive
+                  ? () => {
+                      setLocalPresetFilter("");
+                      setLocalStatoFilter("");
+                    }
+                  : undefined
+              }
+              onSearchReset={searchActive ? () => setSearch("") : undefined}
+              className="min-w-0 flex-initial"
+            />
+          </div>
+        </div>
+      </div>
+
+      {content}
 
       <MezziTagliandiAssignModal
         open={assignOpen}

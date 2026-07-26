@@ -5,7 +5,9 @@ import "./lavorazioni-select-theme.css";
 
 import dynamic from "next/dynamic";
 import { useLavorazioniPdfWarmup } from "@/lib/observability/asset-cache-warmup";
-import { useGestionaleListLayout, GESTIONALE_LIST_DESKTOP_ONLY_CLASS } from "@/lib/ui/use-gestionale-list-layout";
+import { gestionaleListTierClass } from "@/lib/ui/gestionale-list-responsive";
+import type { GestionaleListPageProps } from "@/lib/ui/gestionale-list-page-props";
+import { useListSurface } from "@/lib/ui/use-list-surface";
 import { LIST_QUERY_LOADING_FAILSAFE_MS, useLoadingFailsafe } from "@/lib/ui/loading-failsafe";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
@@ -41,7 +43,24 @@ import type { SchedeLavorazioneDialogSize } from "@/components/lavorazioni/sched
 const LavorazioniKanbanView = dynamic(
   () =>
     import("@/components/gestionale/lavorazioni/lavorazioni-kanban-lazy").then((m) => m.LavorazioniKanbanViewLazy),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="flex min-h-[20rem] w-full flex-row flex-nowrap gap-3 overflow-x-hidden overscroll-y-contain [touch-action:pan-y]"
+        role="status"
+        aria-busy="true"
+        aria-label="Caricamento kanban"
+      >
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="min-h-[20rem] min-w-0 flex-1 animate-pulse rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-muted)_72%,transparent)]"
+          />
+        ))}
+      </div>
+    ),
+  },
 );
 const LavorazioneCompletamentoEditModal = dynamic(
   () =>
@@ -66,6 +85,7 @@ import { type TablePillOption } from "@/components/gestionale/lavorazioni/lavora
 import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import { lavRowToMatchShape } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
+import { applyMezzoAssociationChangeOrThrow } from "@/lib/mezzi/mezzo-association-write-bridge";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { Q_FOCUS_LAV_ROW, Q_FOCUS_MEZZO, Q_LAVORAZIONI_MEZZO_ID } from "@/lib/navigation/dashboard-log-links";
 import { deferredRouterReplace, deferredRouterRefresh } from "@/lib/navigation/deferred-app-router";
@@ -191,6 +211,13 @@ import { isLavorazioneArchived, isLavorazioneInCorso } from "@/lib/lavorazioni/a
 import { lavorazioniListCountQueryKey } from "@/lib/lavorazioni/lavorazioni-list-query-keys";
 import { useLavorazioneConcludeMutation, useLavorazioneRemoveMutation, useLavorazioneRestoreMutation, useLavorazioneUpdateCompletamentoMutation, useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useLavorazioneStatoMoveMutation } from "@/src/hooks/gestionale/use-lavorazione-stato-move-mutation";
+import { useLavorazioneTagliandoStatoMove } from "@/src/hooks/gestionale/use-lavorazione-tagliando-stato-move";
+import { TagliandoNoPresetDialog } from "@/components/gestionale/lavorazioni/tagliando-no-preset-dialog";
+import { TagliandoCompletionResult } from "@/components/gestionale/lavorazioni/tagliando-completion-result";
+import { tagliandoFieldsToLavorazionePatch } from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
+import { assignTagliandoPresetToMezzoOnSave } from "@/lib/maintenance-plans/assign-tagliando-preset-to-mezzo.client";
+import { mezzoHasPresetConfig } from "@/lib/maintenance-plans/mezzo-has-preset-config";
+import { useMezziWithoutPresetQuery } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { mezziListQueryKey } from "@/lib/render/query-key-factory";
 import { QK, commitLavorazioneCreateSuccess } from "@/src/lib/react-query/invalidate-related";
@@ -258,6 +285,9 @@ import {
   buildLavorazioneSchedeSortIndex,
   type LavorazioneSchedeSortIndex,
 } from "@/lib/lavorazioni/lavorazioni-schede-sort-index";
+import { findAddettoById } from "@/lib/lavorazioni/addetto-model";
+import { addettoRefFromFields, getAddettoDisplayLabel } from "@/lib/lavorazioni/addetto-display";
+import { writeIngressoAddettoId } from "@/lib/lavorazioni/write-ingresso-addetto-id";
 import { groupLavorazioniLogsById } from "@/lib/lavorazioni/client-portal-ui";
 import {
   lavorazioneAddettoLabel as addettoLabel,
@@ -282,7 +312,7 @@ import {
 import {
   LavorazioniListToolbar,
   LavorazioniPageHeaderToolbar,
-  LavorazioniPageMenuProvider,
+  useLavorazioniPageMenuItems,
 } from "@/components/gestionale/lavorazioni/lavorazioni-page-toolbar";
 const dataCompletamentoIso = lavorazioneDataCompletamentoIso;
 
@@ -555,9 +585,10 @@ function navMezzoFilterBadgeLabel(m: MezzoGestito): string {
   return mm || m.id;
 }
 
-export function LavorazioniView() {
+export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl" }: GestionaleListPageProps) {
+  const listSurface = useListSurface(serverListSurface);
+  const isTableSurface = listSurface === "table";
   useLavorazioniPdfWarmup();
-  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "xl" });
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -738,7 +769,7 @@ export function LavorazioniView() {
   useGestionaleSyncScope({
     scopeId: "lavorazioni-view",
     domain: "lavorazioni",
-    tables: ["lavorazioni", "scheda_lavorazione", "lavorazione_documents", "log_modifiche"],
+    tables: ["lavorazioni", "scheda_lavorazione", "pdf_artifacts", "document_access_tokens", "log_modifiche"],
     visibleEntities: lavorazioniVisibleEntities,
   });
 
@@ -951,12 +982,14 @@ export function LavorazioniView() {
   );
 
   const [archivioSectionOpen, setArchivioSectionOpen] = useState(false);
+  const focusLavId = searchParams.get(Q_FOCUS_LAV_ROW)?.trim() ?? "";
   const needsChiuseFetch = useMemo(
     () =>
       archivioSectionOpen ||
       Boolean(searchApplied.trim()) ||
-      lavorazioniAdvancedFiltersActive(advancedFilters),
-    [advancedFilters, archivioSectionOpen, searchApplied],
+      lavorazioniAdvancedFiltersActive(advancedFilters) ||
+      Boolean(focusLavId),
+    [advancedFilters, archivioSectionOpen, focusLavId, searchApplied],
   );
 
   const attiveQuery = useLavorazioniList(filtersAttive, gestionaleQueryOpts);
@@ -1137,16 +1170,26 @@ export function LavorazioniView() {
   );
 
   const openDetailById = useCallback(
-    (id: string) => {
+    async (id: string): Promise<boolean> => {
       const active = attiveRows.find((row) => row.id === id);
       if (active) {
         setSchedeRow({ row: active, origine: "attiva", initialTab: "panoramica", dialogSize: "compact" });
-        return;
+        return true;
       }
       const closed = chiuseRows.find((row) => row.id === id);
-      if (closed) setSchedeRow({ row: closed, origine: "storico", initialTab: "panoramica", dialogSize: "compact" });
+      if (closed) {
+        setSchedeRow({ row: closed, origine: "storico", initialTab: "panoramica", dialogSize: "compact" });
+        return true;
+      }
+      const row = await resolveLavorazioneListRowForSchedeOpen(id, attiveRows, () =>
+        attiveQuery.refetch() as Promise<{ data?: readonly LavorazioneListRow[] } | void>,
+      );
+      if (!row) return false;
+      const origine = isLavorazioneArchived(row) ? "storico" : "attiva";
+      setSchedeRow({ row, origine, initialTab: "panoramica", dialogSize: "compact" });
+      return true;
     },
-    [attiveRows, chiuseRows],
+    [attiveQuery, attiveRows, chiuseRows],
   );
 
   const attiveLegacyRows = useMemo(
@@ -1181,6 +1224,24 @@ export function LavorazioniView() {
     onError: (_id, err) => gestToast.errorOnce(`lav-stato-${_id}`, err, { module: "lavorazioni", action: "update" }),
   });
 
+  const mezziWithoutPresetQ = useMezziWithoutPresetQuery(canEditWorkOrders);
+  const mezziWithoutPresetSet = useMemo(
+    () => new Set((mezziWithoutPresetQ.data ?? []).map((r) => r.mezzoId)),
+    [mezziWithoutPresetQ.data],
+  );
+
+  const {
+    moveStatoWithTagliando,
+    noPresetDialogOpen,
+    setNoPresetDialogOpen,
+    handleNoPresetConfirm,
+    lastCompletion,
+    clearLastCompletion,
+  } = useLavorazioneTagliandoStatoMove({
+    moveStato,
+    hasMezzoPresetConfig: (row) => mezzoHasPresetConfig(row.mezzo_id, mezziWithoutPresetSet),
+  });
+
   const createdBy = user?.id ?? null;
 
   const mutErr = removeLav.isError
@@ -1208,9 +1269,9 @@ export function LavorazioniView() {
   const onStatoRow = useCallback(
     (row: LavorazioneListRow, next: string) => {
       if (!canEditWorkOrders) return;
-      moveStato(row.id, next);
+      void moveStatoWithTagliando(row, next);
     },
-    [moveStato, canEditWorkOrders],
+    [moveStatoWithTagliando, canEditWorkOrders],
   );
 
   const onPrioritaRow = useCallback(
@@ -1234,10 +1295,10 @@ export function LavorazioniView() {
   );
 
   const onAddettoRow = useCallback(
-    async (row: LavorazioneListRow, next: string) => {
+    async (row: LavorazioneListRow, nextId: string) => {
       if (!canEditWorkOrders) return;
-      const clean = next.trim();
-      if (!clean || !globalOpts.lavorazioni.addetti.includes(clean)) return;
+      const cleanId = nextId.trim();
+      if (!cleanId || !findAddettoById(addettiRecords, cleanId)) return;
       const beforeAddetto = addettoLabel(row, schedeStore, logsByLavorazioneId.get(row.id), addettiRecords);
       {
         const prev = schedeStore;
@@ -1264,11 +1325,13 @@ export function LavorazioniView() {
             km: "",
             descrizioneAnomalia: row.note ?? "",
             livelloCarburante: "",
-            addettoAccettazione: clean,
+            addettoAccettazione: "",
+            addettoAccettazioneId: cleanId,
             richiedente: "",
             richiedenteTelefono: "",
           },
         };
+        const campiPatched = writeIngressoAddettoId(ingresso.campi, cleanId);
         const updated = {
           ...prev,
           [row.id]: {
@@ -1278,8 +1341,7 @@ export function LavorazioniView() {
               updatedAt: new Date().toISOString(),
               updatedBy: authorName.trim() || "Operatore",
               campi: {
-                ...ingresso.campi,
-                addettoAccettazione: clean,
+                ...campiPatched,
                 richiedente: (ingresso.campi as Partial<SchedaIngressoFields>).richiedente ?? "",
               },
             },
@@ -1303,7 +1365,12 @@ export function LavorazioniView() {
           autore_id: user?.id ?? null,
           payload: {
             before: { addetto: beforeAddetto },
-            after: { addetto: clean },
+            after: {
+              addetto: getAddettoDisplayLabel(
+                addettiRecords,
+                addettoRefFromFields({ addettoAccettazioneId: cleanId }),
+              ),
+            },
             ...(logContext ? { context: logContext } : {}),
           },
         });
@@ -1313,7 +1380,7 @@ export function LavorazioniView() {
       }
       flashRow(row.id);
     },
-    [authorName, canEditWorkOrders, flashRow, gestToast, globalOpts.lavorazioni.addetti, addettiRecords, logsByLavorazioneId, persistSchedeAndSync, qc, schedeStore, user?.id],
+    [authorName, canEditWorkOrders, flashRow, gestToast, addettiRecords, logsByLavorazioneId, persistSchedeAndSync, qc, schedeStore, user?.id],
   );
 
   function openEliminaConfirm(row: LavorazioneListRow) {
@@ -1522,16 +1589,25 @@ export function LavorazioniView() {
   attiveRowsRef.current = attiveRows;
   chiuseRowsRef.current = chiuseRows;
 
+  const openDetailByIdRef = useRef(openDetailById);
+  openDetailByIdRef.current = openDetailById;
+
   useEffect(() => {
     const rawFocus = searchParams.get(Q_FOCUS_MEZZO)?.trim();
     if (rawFocus?.startsWith("hub-lav-")) {
+      const lavId = rawFocus.slice("hub-lav-".length);
+      let cancelled = false;
       const t = window.setTimeout(() => {
-        const lavId = rawFocus.slice("hub-lav-".length);
-        openDetailById(lavId);
-        flashRow(lavId);
-        deferredRouterReplace(router, pathname, { scroll: false });
+        void openDetailByIdRef.current(lavId).then((opened) => {
+          if (cancelled || !opened) return;
+          flashRow(lavId);
+          deferredRouterReplace(router, pathname, { scroll: false });
+        });
       }, 80);
-      return () => window.clearTimeout(t);
+      return () => {
+        cancelled = true;
+        window.clearTimeout(t);
+      };
     }
 
     const rawMezzo =
@@ -1559,7 +1635,7 @@ export function LavorazioniView() {
       }, 2000);
     }, 80);
     return () => window.clearTimeout(t);
-  }, [searchParams, pathname, router, flashRow, openDetailById, mezziCatalog]);
+  }, [searchParams, pathname, router, flashRow, mezziCatalog]);
 
   function cycleSort<T extends string>(
     curCol: T | null,
@@ -1766,16 +1842,25 @@ export function LavorazioniView() {
       consumedFocusLavRef.current = null;
       return;
     }
-    if (consumedFocusLavRef.current === id) return;
-    consumedFocusLavRef.current = id;
-
-    deferredRouterReplace(router, pathname, { scroll: false });
-
-    const t = window.setTimeout(() => {
+    if (consumedFocusLavRef.current === id) {
       focusLavorazioneInTableRef.current(id);
+      return;
+    }
+
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      void openDetailByIdRef.current(id).then((opened) => {
+        if (cancelled || !opened) return;
+        consumedFocusLavRef.current = id;
+        deferredRouterReplace(router, pathname, { scroll: false });
+        focusLavorazioneInTableRef.current(id);
+      });
     }, 80);
-    return () => window.clearTimeout(t);
-  }, [searchParams, pathname, router]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [searchParams, pathname, router, attiveRows, chiuseRows]);
 
   useEffect(() => {
     if (!globalPerm.isAdmin) return;
@@ -1796,6 +1881,7 @@ export function LavorazioniView() {
     campi: SchedaIngressoFields,
     mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan,
     lavorazioneNote?: string,
+    tagliandoFields?: import("@/lib/maintenance-plans/tagliando-lavorazione-fields").TagliandoLavorazioneFields,
   ) {
     await qc.refetchQueries({ queryKey: QK.mezzi });
     const freshRows =
@@ -1835,6 +1921,7 @@ export function LavorazioniView() {
           lavorazioneId,
           create: (data) => createMezzo.mutateAsync(data),
           update: (id, data) => updateMezzo.mutateAsync({ id, data }),
+          applyAssociationChange: applyMezzoAssociationChangeOrThrow,
         }),
       updateLavorazione: async (id: string, patch: Parameters<typeof updateLav.mutateAsync>[0]["data"]) => {
         await updateLav.mutateAsync({ id, data: patch });
@@ -1878,6 +1965,31 @@ export function LavorazioniView() {
         id: freshRow.id,
         data: { note: nextNote || null },
       });
+    }
+
+    if (tagliandoFields) {
+      const patch = tagliandoFieldsToLavorazionePatch(tagliandoFields);
+      const needsTagliandoUpdate = (
+        Object.entries(patch) as [keyof typeof patch, unknown][]
+      ).some(([key, value]) => (freshRow as Record<string, unknown>)[key as string] !== value);
+      if (needsTagliandoUpdate) {
+        await updateLav.mutateAsync({
+          id: freshRow.id,
+          data: patch as Parameters<typeof updateLav.mutateAsync>[0]["data"],
+        });
+      }
+      const assignRes = await assignTagliandoPresetToMezzoOnSave({
+        mezzoId: freshRow.mezzo_id,
+        tagliandoFields,
+      });
+      if (!assignRes.ok) {
+        gestToast.warning(assignRes.error);
+      } else if (assignRes.assigned) {
+        gestToast.successOnce(
+          `tagliando-preset-assigned-${freshRow.id}`,
+          "Preset assegnato al mezzo nella sezione tagliandi.",
+        );
+      }
     }
   }
 
@@ -2096,21 +2208,23 @@ export function LavorazioniView() {
     }
   }, [printBusy]);
 
+  const lavorazioniPageMenuItems = useLavorazioniPageMenuItems({
+    printBusy,
+    onOpenLog: () => setLavLogOpen(true),
+    onPrint: onPrintLavorazioniInCorso,
+    listViewMode,
+    onToggleListViewMode: () => setListViewMode((m) => (m === "table" ? "kanban" : "table")),
+  });
+
   return (
     <GestionaleSectionGate module="lavorazioni">
-    <LavorazioniPageMenuProvider
-      listRefreshBusy={listRefreshBusy}
-      printBusy={printBusy}
-      onRefresh={() => void refreshLavorazioniLists()}
-      onOpenLog={() => setLavLogOpen(true)}
-      onPrint={onPrintLavorazioniInCorso}
-      listViewMode={listViewMode}
-      onToggleListViewMode={() => setListViewMode((m) => (m === "table" ? "kanban" : "table"))}
-      filtersActive={hasPageClientFilters || Boolean(navMezzoFilter)}
-    >
-    <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
+    <div className={`lavorazioni-scroll-scope ${layoutPageRoot} ${gestionaleListTierClass(listTier)}`.trim()}>
     <>
-      <LavorazioniPageHeaderToolbar />
+      <LavorazioniPageHeaderToolbar
+        items={lavorazioniPageMenuItems}
+        onRefresh={() => void refreshLavorazioniLists()}
+        listRefreshBusy={listRefreshBusy}
+      />
 
       <div className={dsStackPage}>
         {loadErr ? (
@@ -2235,9 +2349,8 @@ export function LavorazioniView() {
             />
           ) : (
             <>
-          {listLayout === "desktop" ? (
+          {isTableSurface ? (
           <GestionaleListTable
-            visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
             className={gestionaleLavorazioniDenseTableClass}
             colgroup={
               <>
@@ -2365,9 +2478,7 @@ export function LavorazioniView() {
           >
             {null}
           </GestionaleListTable>
-          ) : null}
-
-          {listLayout === "mobile" ? (
+          ) : (
           <LavorazioniMobileListShell
             empty={pagedAttive.length === 0}
             emptyMessage={
@@ -2415,7 +2526,7 @@ export function LavorazioniView() {
               );
             })}
           </LavorazioniMobileListShell>
-          ) : null}
+          )}
 
 
           {showPagerA ? <TablePagination page={pageA} pageCount={pageCountA} onPageChange={setPageA} label={labelA} /> : null}
@@ -2446,9 +2557,8 @@ export function LavorazioniView() {
           <SkeletonBoundary loading={archivioTableLoading}>
           <LavorazioniTableSection mode="content">
           <>
-          {listLayout === "desktop" ? (
+          {isTableSurface ? (
           <GestionaleListTable
-            visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
             className={gestionaleLavorazioniDenseTableClass}
             colgroup={
               <>
@@ -2576,9 +2686,7 @@ export function LavorazioniView() {
           >
             {null}
           </GestionaleListTable>
-          ) : null}
-
-          {listLayout === "mobile" ? (
+          ) : (
           <LavorazioniMobileListShell
             empty={pagedChiuse.length === 0}
             emptyMessage={
@@ -2608,7 +2716,7 @@ export function LavorazioniView() {
               />
             ))}
           </LavorazioniMobileListShell>
-          ) : null}
+          )}
 
           {showPagerC ? <TablePagination page={pageC} pageCount={pageCountC} onPageChange={setPageC} label={labelC} /> : null}
           {serverListPagination && needsChiuseFetch ? (
@@ -2672,6 +2780,7 @@ export function LavorazioniView() {
         <SchedeLavorazioneModal
           open
           onClose={() => setSchedeRow(null)}
+          listSurface={listSurface}
           lav={
             schedeRow.origine === "storico"
               ? rowToLegacyArchiviata(
@@ -2705,6 +2814,7 @@ export function LavorazioniView() {
                 campi,
                 options?.mezzoUpdatePlan,
                 options?.lavorazioneNote,
+                options?.tagliandoFields,
               );
             } catch (err) {
               gestToast.error(err, { module: "lavorazioni", action: "update" });
@@ -2780,9 +2890,25 @@ export function LavorazioniView() {
       </GestionaleModalGate>
 
       {confirmDialog}
+
+      <TagliandoNoPresetDialog
+        open={noPresetDialogOpen}
+        onClose={() => setNoPresetDialogOpen(false)}
+        onConfirm={(choice, reason) => void handleNoPresetConfirm(choice, reason)}
+      />
+
+      {lastCompletion?.ok && !lastCompletion.alreadyExisted ? (
+        <div className="fixed bottom-4 right-4 z-50 max-w-sm">
+          <TagliandoCompletionResult
+            snapshot={lastCompletion.snapshot}
+            complianceAuto={lastCompletion.complianceAuto}
+            diffCount={lastCompletion.diffCount}
+            onViewDetail={clearLastCompletion}
+          />
+        </div>
+      ) : null}
     </>
     </div>
-    </LavorazioniPageMenuProvider>
     </GestionaleSectionGate>
   );
 }

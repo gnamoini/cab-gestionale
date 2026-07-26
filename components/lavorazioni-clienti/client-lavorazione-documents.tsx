@@ -1,68 +1,87 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { LoadingSpinner } from "@/components/design-system/loading/loading-spinner";
-import { lavorazioneDocumentDeliveryUrl } from "@/lib/documents/document-delivery-url";
-import { CLIENT_PORTAL_DOCUMENT_SLOTS } from "@/lib/lavorazioni/client-portal-documents";
-import { lavorazioneDocumentByTipo } from "@/lib/lavorazioni/lavorazione-documents";
+import type { ClientLavorazioneDocumentsPayload } from "@/lib/official-documents/types";
 import { dsGapMd, dsTableActionTextBtn } from "@/lib/ui/design-system";
-import { useClientLavorazioneDocumentsQuery } from "@/src/hooks/gestionale/use-client-lavorazione-media-queries";
-import type { LavorazioneDocumentRow } from "@/src/types/supabase-tables";
+import { useQuery } from "@tanstack/react-query";
 
-function ClientDocumentSlotCard({
-  label,
-  doc,
-  onOpen,
-  onDownload,
-}: {
-  label: string;
-  doc: LavorazioneDocumentRow | undefined;
-  onOpen: () => void;
-  onDownload: () => void;
-}) {
-  const subtitle = doc ? (
-    <Tooltip content={doc.filename}><span className="block truncate font-medium text-[color:var(--cab-text)]">
-      {doc.filename}
-    </span></Tooltip>
-  ) : (
-    "Nessun documento caricato"
-  );
-
-  const actions = doc ? (
-      <>
-        <button type="button" className={dsTableActionTextBtn} onClick={onOpen}>
-          Apri
-        </button>
-        <button type="button" className={dsTableActionTextBtn} onClick={onDownload}>
-          Scarica
-        </button>
-      </>
-    ) : null;
-
-  return <GestionaleInfoCard compact title={label} subtitle={subtitle} actions={actions} />;
+function clientDocumentsQueryKey(lavorazioneId: string) {
+  return ["client_lavorazione_official_documents", lavorazioneId] as const;
 }
 
-function ClientDocumentSlotsBody({
-  rows,
-  onOpen,
-  onDownload,
-}: {
-  rows: readonly LavorazioneDocumentRow[];
-  onOpen: (tipo: LavorazioneDocumentRow["tipo"]) => void;
-  onDownload: (tipo: LavorazioneDocumentRow["tipo"]) => void;
-}) {
+function ClientOfficialDocumentsBody({ lavorazioneId }: { lavorazioneId: string }) {
+  const docsQ = useQuery({
+    queryKey: clientDocumentsQueryKey(lavorazioneId),
+    queryFn: async (): Promise<ClientLavorazioneDocumentsPayload> => {
+      const res = await fetch(
+        `/api/lavorazioni/${encodeURIComponent(lavorazioneId)}/official-documents?surface=client`,
+        { credentials: "same-origin" },
+      );
+      const body = (await res.json()) as ClientLavorazioneDocumentsPayload & { error?: string };
+      if (!res.ok) throw new Error(body.error ?? "Documenti non disponibili");
+      return body;
+    },
+  });
+
+  if (docsQ.isLoading) {
+    return (
+      <GestionaleInfoCard
+        compact
+        title="Documenti"
+        subtitle={
+          <span className="inline-flex items-center gap-1.5">
+            <LoadingSpinner size="sm" label="Caricamento documenti…" />
+            Caricamento…
+          </span>
+        }
+      />
+    );
+  }
+
+  if (docsQ.isError) {
+    return (
+      <GestionaleInfoCard
+        compact
+        title="Documenti"
+        subtitle={
+          <button
+            type="button"
+            className="text-left text-sm text-red-600 underline dark:text-red-400"
+            onClick={() => void docsQ.refetch()}
+          >
+            Errore — riprova
+          </button>
+        }
+      />
+    );
+  }
+
+  const items = [...(docsQ.data?.preventivi ?? []), ...(docsQ.data?.ddt ?? [])];
+  if (items.length === 0) {
+    return <GestionaleInfoCard compact title="Documenti" subtitle="Nessun documento disponibile" />;
+  }
+
   return (
     <>
-      {CLIENT_PORTAL_DOCUMENT_SLOTS.map((slot) => (
-        <ClientDocumentSlotCard
-          key={slot.tipo}
-          label={slot.label}
-          doc={lavorazioneDocumentByTipo(rows, slot.tipo)}
-          onOpen={() => onOpen(slot.tipo)}
-          onDownload={() => onDownload(slot.tipo)}
+      {items.map((doc) => (
+        <GestionaleInfoCard
+          key={`${doc.kind}-${doc.label}`}
+          compact
+          title={doc.label}
+          actions={
+            <button
+              type="button"
+              className={dsTableActionTextBtn}
+              onClick={() => {
+                window.location.assign(doc.previewPath);
+              }}
+            >
+              Apri
+            </button>
+          }
         />
       ))}
     </>
@@ -74,81 +93,10 @@ export function ClientLavorazioneDocumentsPanel({
   embedded = false,
 }: {
   lavorazioneId: string;
-  /** Senza card esterna (es. dentro panoramica dettaglio). */
   embedded?: boolean;
 }) {
-  const docsQ = useClientLavorazioneDocumentsQuery(lavorazioneId);
-  const loading = docsQ.isLoading && docsQ.data == null;
-  const rows = docsQ.data?.rows ?? [];
-  const docsError = docsQ.isError;
-
-  const openDoc = (tipo: LavorazioneDocumentRow["tipo"]) => {
-    const doc = lavorazioneDocumentByTipo(rows, tipo);
-    if (!doc) return;
-    window.open(lavorazioneDocumentDeliveryUrl(doc, "preview"), "_blank", "noopener,noreferrer");
-  };
-
-  const downloadDoc = (tipo: LavorazioneDocumentRow["tipo"]) => {
-    const doc = lavorazioneDocumentByTipo(rows, tipo);
-    if (!doc) return;
-    const a = document.createElement("a");
-    a.href = lavorazioneDocumentDeliveryUrl(doc, "download");
-    a.download = doc.filename;
-    a.rel = "noopener";
-    a.click();
-  };
-
-  if (loading) {
-    const loadingCards = (
-      <>
-        {CLIENT_PORTAL_DOCUMENT_SLOTS.map((slot) => (
-          <GestionaleInfoCard
-            key={slot.tipo}
-            compact
-            title={slot.label}
-            subtitle={
-              <span className="inline-flex items-center gap-1.5">
-                <LoadingSpinner size="sm" label="Caricamento documenti…" />
-                Caricamento…
-              </span>
-            }
-          />
-        ))}
-      </>
-    );
-    if (embedded) return loadingCards;
-    return <div className={`flex min-w-0 flex-col ${dsGapMd}`}>{loadingCards}</div>;
-  }
-
-  if (docsError) {
-    const errorCards = (
-      <>
-        {CLIENT_PORTAL_DOCUMENT_SLOTS.map((slot) => (
-          <GestionaleInfoCard
-            key={slot.tipo}
-            compact
-            title={slot.label}
-            subtitle={
-              <button
-                type="button"
-                className="text-left text-sm text-red-600 underline dark:text-red-400"
-                onClick={() => void docsQ.refetch()}
-              >
-                Errore — riprova
-              </button>
-            }
-          />
-        ))}
-      </>
-    );
-    if (embedded) return errorCards;
-    return <div className={`flex min-w-0 flex-col ${dsGapMd}`}>{errorCards}</div>;
-  }
-
-  const body = <ClientDocumentSlotsBody rows={rows} onOpen={openDoc} onDownload={downloadDoc} />;
-
+  const body = <ClientOfficialDocumentsBody lavorazioneId={lavorazioneId} />;
   if (embedded) return body;
-
   return <div className={`flex min-w-0 flex-col ${dsGapMd}`}>{body}</div>;
 }
 

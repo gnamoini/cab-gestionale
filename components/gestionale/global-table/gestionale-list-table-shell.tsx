@@ -16,7 +16,6 @@ import {
   gestionaleListTableRowClass,
   gestionaleListTableThAzioni,
 } from "@/lib/ui/gestionale-list-table";
-import { GESTIONALE_LIST_MOBILE_ONLY_CLASS } from "@/lib/ui/use-gestionale-list-layout";
 
 export type GestionaleListTableProps = GlobalTableProps & {
   /**
@@ -64,7 +63,7 @@ export function GestionaleListTableActionsHead() {
 
 export function GestionaleListTableMobileEmpty({ message }: { message: string }) {
   return (
-    <p className={`rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
+    <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
       {message}
     </p>
   );

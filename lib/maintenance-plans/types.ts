@@ -104,6 +104,12 @@ export type MaintenanceServiceHistoryView = {
   performedByName: string;
   executionType: MaintenanceExecutionType;
   presetSnapshot: PresetSnapshot | null;
+  lavorazioneId: string | null;
+  /** true = derivato da lavorazione tagliando senza record DB (solo visualizzazione). */
+  synthetic?: boolean;
+  complianceAuto: number | null;
+  complianceReview: Record<string, unknown> | null;
+  versionLabel: string | null;
   parts: MaintenanceServicePartView[];
   checklist: MaintenanceServiceChecklistItemView[];
 };

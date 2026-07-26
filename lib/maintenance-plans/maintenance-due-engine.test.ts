@@ -10,7 +10,6 @@ const due = evaluateConfigDue({
     {
       operator: "OR",
       sortOrder: 0,
-      label: "Main",
       triggers: [
         { triggerType: "ore", threshold: 500, priority: 0 },
         { triggerType: "mesi", threshold: 12, priority: 1 },

@@ -10,7 +10,10 @@ import {
 } from "@/components/document-capture/capture-sheet-field-hint";
 import { CaptureSheetLavorazioneIdentBanner } from "@/components/document-capture/capture-sheet-lavorazione-ident-banner";
 import type { LavorazioneAssignRowParts } from "@/lib/document-capture/capture-manual-assign-state";
-import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
+import { AddettoPicker, AddettoDisplayPill, addettoRefFromFields } from "@/components/domain/addetti";
+import { SCHEDA_RIGA_ADDETTO_WRITE_RULES, stripAddettoLegacyFieldsOnWrite } from "@/lib/lavorazioni/addetto-write-freeze";
+import { backfillAddettoIdFromLegacyString } from "@/lib/schede/schede-addetto-id-migrate";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import type { SchedaRicambiFormOpts } from "@/components/lavorazioni/schede/scheda-fields-types";
 import type { CaptureSheetRowHint } from "@/components/lavorazioni/schede/scheda-fields-types";
@@ -23,6 +26,14 @@ import { formatRicambioDescrizioneForUi } from "@/lib/magazzino/ricambio-descriz
 import { dsBtnNeutral, dsFormField, dsInput, dsTable, dsTableRow, dsTableWrap, dsScrollbar } from "@/lib/ui/design-system";
 import { gestionaleFieldLabelClass } from "@/lib/ui/gestionale-field-label";
 import type { RigaRicambioScheda, SchedaRicambiFields } from "@/types/schede";
+
+function writeSchedaRicambioAddetto(row: RigaRicambioScheda, addettoId: string): RigaRicambioScheda {
+  const id = addettoId.trim();
+  return stripAddettoLegacyFieldsOnWrite(
+    { ...row, addettoId: id || null, addetto: "" },
+    SCHEDA_RIGA_ADDETTO_WRITE_RULES,
+  ) as RigaRicambioScheda;
+}
 
 export type SchedaRicambiFormBodyProps = {
   value: SchedaRicambiFields;
@@ -129,6 +140,12 @@ function CaptureRicambiRigaCard({
   onPatch: (patch: Partial<RigaRicambioScheda>) => void;
   onRemove: () => void;
 }) {
+  const global = useGlobalOptions({ enabled: !ro });
+  const addettoPickerId =
+    r.addettoId?.trim() ||
+    backfillAddettoIdFromLegacyString(global.lavorazioni.addettiRecords, r.addetto) ||
+    "";
+
   const codiceKey = `riga_${rowNum}_codice`;
   const descrizioneKey = `riga_${rowNum}_descrizione`;
   const nomeKey = `riga_${rowNum}_nome`;
@@ -231,22 +248,17 @@ function CaptureRicambiRigaCard({
           <div className={`${CAPTURE_FIELD_STACK} ${CAPTURE_ADDETTO_W}`}>
             <CaptureRicambiFieldLabel>Addetto</CaptureRicambiFieldLabel>
             {ro ? (
-              <span className={`${dsInput} flex items-center`}>{r.addetto || "—"}</span>
+              <AddettoDisplayPill
+                ref={addettoRefFromFields({ addettoId: r.addettoId, addettoLegacy: r.addetto })}
+                fullWidth={false}
+              />
             ) : (
               <CaptureSheetAwareField hint={nomeHint} footer={rowMetaHintFooter(nomeKey, nomeHint)}>
-                <GlobalSettingsListSelect
-                  listKey="lavorazioni:addetti"
+                <AddettoPicker
+                  value={addettoPickerId || null}
+                  onChange={(id) => onPatch(writeSchedaRicambioAddetto(r, id))}
+                  ariaLabel="Addetto riga ricambio"
                   className="w-full min-w-0"
-                  inputClassName={`${dsInput} !pr-7`}
-                  value={r.addetto}
-                  onChange={(v) => onPatch({ addetto: v })}
-                  placeholder="Addetto"
-                  selectOnly
-                  allowAdd={false}
-                  disableRecents
-                  mobileSheetMode="selectOnly"
-                  showSimilarWarning={false}
-                  aria-label="Addetto riga ricambio"
                 />
               </CaptureSheetAwareField>
             )}
@@ -327,6 +339,15 @@ export function SchedaRicambiFormBody({
   const prodotti = globalOpts.magazzino ?? [];
   const [acRowId, setAcRowId] = useState<string | null>(null);
   const isCapture = variant === "capture";
+  const global = useGlobalOptions({ enabled: !ro });
+
+  const resolveAddettoPickerId = (r: RigaRicambioScheda) =>
+    r.addettoId?.trim() ||
+    backfillAddettoIdFromLegacyString(global.lavorazioni.addettiRecords, r.addetto) ||
+    "";
+
+  const defaultAddettoId =
+    backfillAddettoIdFromLegacyString(global.lavorazioni.addettiRecords, globalOpts.defaultAddetto) || "";
 
   function patchRighe(righe: RigaRicambioScheda[]) {
     onChange({ ...value, righe });
@@ -374,7 +395,8 @@ export function SchedaRicambiFormBody({
                   ricambioNome: "",
                   codice: "",
                   quantita: 1,
-                  addetto: globalOpts.defaultAddetto ?? "",
+                  addettoId: defaultAddettoId,
+                  addetto: "",
                   dataUtilizzo: todayItDate(),
                 },
               ])
@@ -500,17 +522,22 @@ export function SchedaRicambiFormBody({
                   </td>
                   <td className="px-2 py-2 align-top">
                     {ro ? (
-                      <span>{r.addetto}</span>
+                      <AddettoDisplayPill
+                        ref={addettoRefFromFields({ addettoId: r.addettoId, addettoLegacy: r.addetto })}
+                        fullWidth={false}
+                      />
                     ) : (
-                      <GlobalSettingsListSelect
-                        listKey="lavorazioni:addetti"
+                      <AddettoPicker
+                        value={resolveAddettoPickerId(r) || null}
+                        onChange={(id) =>
+                          patchRighe(
+                            value.righe.map((x) => (x.id === r.id ? writeSchedaRicambioAddetto(x, id) : x)),
+                          )
+                        }
+                        ariaLabel="Addetto riga ricambio"
                         className="w-full min-w-[8rem]"
                         inputClassName={`${dsInput} !py-1.5 !text-xs`}
-                        value={r.addetto}
-                        onChange={(v) => patchRighe(value.righe.map((x) => (x.id === r.id ? { ...x, addetto: v } : x)))}
-                        placeholder="Addetto…"
-                        allowAdd
-                        aria-label="Addetto riga ricambio"
+                        size="compact"
                       />
                     )}
                   </td>
@@ -557,7 +584,8 @@ export function SchedaRicambiFormBody({
                 ricambioNome: "",
                 codice: "",
                 quantita: 1,
-                addetto: globalOpts.defaultAddetto ?? "",
+                addettoId: defaultAddettoId,
+                addetto: "",
                 dataUtilizzo: todayItDate(),
               },
             ])

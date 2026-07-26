@@ -51,7 +51,10 @@ export type SchedaIngressoFields = {
   km: string;
   descrizioneAnomalia: string;
   livelloCarburante: string;
+  /** @deprecated Legacy read-only — usare addettoAccettazioneId per nuove scritture. */
   addettoAccettazione: string;
+  /** SSOT write: id addetto accettazione. */
+  addettoAccettazioneId?: string | null;
   /** Richiedente intervento (testo libero). */
   richiedente: string;
   /** Telefono del richiedente / autista. */
@@ -69,7 +72,10 @@ export type SchedaIngressoDoc = SchedaMeta & {
 
 /** Ore per singolo addetto su una riga lavorazione (multi-assegnazione). */
 export type RigaAddettoOreScheda = {
+  /** @deprecated Legacy read-only — usare addettoId per nuove scritture. */
   addetto: string;
+  /** SSOT write: id addetto. */
+  addettoId?: string | null;
   oreImpiegate: number;
 };
 
@@ -96,7 +102,10 @@ export type RigaRicambioScheda = {
   ricambioNome: string;
   codice: string;
   quantita: number;
+  /** @deprecated Legacy read-only — usare addettoId per nuove scritture. */
   addetto: string;
+  /** SSOT write: id addetto. */
+  addettoId?: string | null;
   dataUtilizzo: string;
   /** Se è stato applicato scarico magazzino da questa riga. */
   scaricoMagazzinoApplicato?: boolean;

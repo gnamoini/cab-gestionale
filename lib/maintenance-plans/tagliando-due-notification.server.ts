@@ -17,8 +17,8 @@ import {
 import { buildTagliandoDaEseguireNotification } from "@/lib/maintenance-plans/tagliando-due-notification-mapper";
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
 import type { MaintenanceServiceLite } from "@/lib/maintenance-plans/tagliandi-matrix";
-import { publishNotification } from "@/lib/notifications/application/notification-service";
-import { legacyNotificationToCommand } from "@/lib/notifications/adapters/legacy-admin-dashboard";
+import { buildDispatchCommandFromLegacy } from "@/lib/notifications/dispatch/build-dispatch-command.server";
+import { dispatchNotificationEvent } from "@/lib/notifications/dispatch/notification-dispatch-service.server";
 import { fetchMezzoGestitoById } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
@@ -32,6 +32,12 @@ import type {
 } from "@/src/types/supabase-tables";
 
 type RicambioLite = Pick<MagazzinoRicambioRow, "id" | "codice" | "nome">;
+
+/** ponytail: CAB single-tenant — upgrade: company_id da contesto lavorazione/mezzo */
+async function resolveSingleCompanyId(sb: SupabaseClient): Promise<string | null> {
+  const { data } = await sb.from("companies").select("id").limit(1).maybeSingle();
+  return (data as { id?: string } | null)?.id ?? null;
+}
 
 function mapPlanView(
   plan: MaintenancePlanRow,
@@ -169,8 +175,24 @@ export async function maybePublishTagliandoDueOnInterventoCreateServer(
       mezzoId,
       evalResult,
     });
-    const cmd = legacyNotificationToCommand("server", legacy);
-    if (cmd) await publishNotification(sb, cmd);
+    const companyId = await resolveSingleCompanyId(sb);
+    if (!companyId) return;
+
+    const buildCommand = buildDispatchCommandFromLegacy(
+      "lavorazioni.tagliando_due",
+      "server",
+      legacy,
+    );
+
+    await dispatchNotificationEvent(
+      {
+        notificationEventId: "lavorazioni.tagliando_due",
+        companyId,
+        dispatchIdempotencyKey: `lavorazioni.tagliando_due:${input.lavorazioneId}`,
+        buildCommand: (recipientId) => buildCommand(recipientId)!,
+      },
+      sb,
+    );
   } catch (e) {
     console.warn("[tagliando-due] server publish failed:", e);
   }

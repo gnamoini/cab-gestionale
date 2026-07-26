@@ -65,7 +65,11 @@ export function copySchedaIngressoFieldFromClient(
     if (client.addettoFirma) next.addettoFirma = client.addettoFirma;
     return;
   }
-  next[key] = client[key];
+  if (key === "addettoAccettazioneId") {
+    if (client.addettoAccettazioneId) next.addettoAccettazioneId = client.addettoAccettazioneId;
+    return;
+  }
+  next[key] = client[key] as string;
 }
 
 export function normalizeInterventoTargetType(

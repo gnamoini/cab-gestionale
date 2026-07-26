@@ -99,7 +99,7 @@ const funnel = buildPreventiviFunnel(
     {
       id: "p1",
       numero: "001",
-      stato: "approvato",
+      stato: "confermato",
       dataCreazione: "2026-02-01",
       aggiornatoAt: "2026-02-01",
       totaleFinale: 1000,

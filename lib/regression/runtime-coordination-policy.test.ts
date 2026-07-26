@@ -49,8 +49,8 @@ assert.match(mezzoMutations, /traceMutationLifecycle/);
 const documentiView = read("components/gestionale/documenti/documenti-view.tsx");
 assert.match(documentiView, /traceMutationLifecycle/);
 
-const lavDocs = read("components/gestionale/media/lavorazione-documents-manager.tsx");
-assert.match(lavDocs, /traceMutationLifecycle/);
+const lavPanel = read("components/gestionale/media/lavorazione-official-documents-panel.tsx");
+assert.match(lavPanel, /official-documents/);
 
 const settingsPersist = read("lib/sync/persist-settings-record.ts");
 assert.match(settingsPersist, /traceMutationLifecycle/);

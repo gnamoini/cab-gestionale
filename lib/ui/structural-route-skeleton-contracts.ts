@@ -1,7 +1,6 @@
 import type { SkeletonContract } from "@/components/design-system/loading/skeleton-contract";
 import { SKELETON_GRID } from "@/components/design-system/loading/skeleton-layout-presets";
 import type { MigratedStructuralRoute } from "@/lib/ui/migrated-structural-routes";
-import { GESTIONALE_LIST_MOBILE_ONLY_CLASS } from "@/lib/ui/use-gestionale-list-layout";
 
 /** ponytail: duplicato da SETTINGS_PAGE_GRID — evita import server-only in audit/tests. */
 const SETTINGS_PAGE_GRID_SKELETON =
@@ -58,7 +57,7 @@ export const FATTURAZIONE_TAB_BODY_SKELETON_CONTRACT: SkeletonContract = {
     {
       kind: "grid",
       geometry: { height: "card-sm" },
-      className: `${SKELETON_GRID.lavorazioniMobileStack} ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`,
+      className: SKELETON_GRID.lavorazioniMobileStack,
       itemCount: 4,
     },
   ],
@@ -188,7 +187,7 @@ export const STRUCTURAL_ROUTE_SKELETON_CONTRACTS: Record<MigratedStructuralRoute
       {
         kind: "grid",
         geometry: { height: "card-sm" },
-        className: `${SKELETON_GRID.lavorazioniMobileStack} ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`,
+        className: SKELETON_GRID.lavorazioniMobileStack,
         itemCount: 4,
       },
     ],

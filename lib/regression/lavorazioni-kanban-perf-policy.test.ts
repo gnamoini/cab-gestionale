@@ -55,6 +55,9 @@ assert.match(kanbanView, /useKanbanViewportLayout/);
 assert.match(kanbanView, /useUIAutonomyFixEngine\(\s*["']\/lavorazioni:kanban["']/);
 assert.doesNotMatch(kanbanView, /lavorazioni-kanban-dnd/);
 assert.match(kanbanView, /LavorazioniKanbanDesktopBoardLazy/);
+assert.doesNotMatch(kanbanView, /from "@\/components\/design-system"/);
+assert.match(kanbanView, /loading-kanban-skeleton/);
+assert.doesNotMatch(kanbanView, /lavorazioni-inline-select/);
 
 // lazy barrel isolates skeleton + inner view chunk
 assert.match(kanbanLazy, /LoadingKanbanSkeleton/);

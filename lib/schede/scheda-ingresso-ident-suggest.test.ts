@@ -90,4 +90,23 @@ const mezzoB: MezzoGestito = {
   );
 }
 
+const mezzoVin: MezzoGestito = {
+  ...mezzoA,
+  id: "m3",
+  vin: "WDB12345678901234",
+  targa: "",
+  matricola: "",
+};
+
+{
+  const hits = suggestMezziForIngressoIdent([mezzoA, mezzoVin], "vin", "wdb123");
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0]?.id, "m3");
+}
+
+{
+  const hit = findExactMezzoForIngressoIdent([mezzoA, mezzoVin], "vin", "WDB12345678901234", {});
+  assert.equal(hit?.id, "m3");
+}
+
 console.log("scheda-ingresso-ident-suggest.test.ts: ok");

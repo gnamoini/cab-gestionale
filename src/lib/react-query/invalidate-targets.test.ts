@@ -19,7 +19,7 @@ import {
   shouldSuppressRemoteCacheInvalidation,
 } from "@/lib/sync/recent-local-mutation";
 
-const lavKeys = collectQueryKeysForGestionaleTables(["lavorazioni", "lavorazione_documents"], {
+const lavKeys = collectQueryKeysForGestionaleTables(["lavorazioni", "pdf_artifacts"], {
   includePortal: false,
 });
 assert.equal(lavKeys.length, 2);

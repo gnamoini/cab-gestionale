@@ -2,12 +2,11 @@
 
 import { memo, type CSSProperties } from "react";
 import {
-  AddettoSelectField,
   InlineSelectField,
-  LavorazioneAddettoReadOnlyPill,
   LavorazioneCompletamentoDatePill,
   type TablePillOption,
 } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
+import { AddettoPicker, AddettoDisplayPill, addettoRefFromFields } from "@/components/domain/addetti";
 import {
   LavorazioniClienteUtilStack,
   LavorazioniMezzoIdentCells,
@@ -29,9 +28,9 @@ import {
   LavorazioneOrePermanenzaCell,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import type { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
+import { resolveAddettoSnapshotRef } from "@/lib/lavorazioni/resolve-addetto-display";
 import {
-  lavorazioneAddettoLabel,
-  lavorazioneAddettoNomeKey,
+  lavorazioneAddettoId,
   lavorazioneCantiereLabel,
   lavorazioneMacchinaLabel,
   lavorazioneOggettoLabel,
@@ -49,8 +48,6 @@ import { gestionaleListTableIsLastRow, gestionaleListTableLastRowAttr, gestional
 import { dsTableActionGlyph } from "@/lib/ui/design-system";
 import { IconActionButton } from "@/components/design-system";
 import {
-  addettoPillShellClass,
-  addettoPillShellStyleForName,
   IconRipristinaDaArchivio,
   prioritaLabel,
   prioritaPillShellClass,
@@ -165,8 +162,8 @@ function LavorazioneAttivaTableRowInner({
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const telaio = lavorazioneTelaioLabel(row, schedeStore);
-  const addettoLabel = lavorazioneAddettoLabel(row, schedeStore, undefined, addettiRecords);
-  const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, undefined, addettiRecords);
+  const addettoId = lavorazioneAddettoId(row, schedeStore, undefined, addettiRecords);
+  const addettoRef = addettoRefFromFields(resolveAddettoSnapshotRef(row, schedeStore));
   const awaitingCompletata = row.stato !== "completata" && row.archived !== true;
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
@@ -231,16 +228,12 @@ function LavorazioneAttivaTableRowInner({
       </td>
       <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
-          <AddettoSelectField
-            variant="pill"
-            tablePillWidth={lavTablePillFillClass}
-            options={tablePillOptions.addetto(addettoKey)}
-            shellClass={addettoPillShellClass()}
-            shellStyle={addettoPillShellStyleForName(addettoKey, addettoColors)}
-            value={addettoKey}
+          <AddettoPicker
+            value={addettoId || null}
             onChange={(v) => onAddettoRow(row, v)}
             ariaLabel={`Addetto — ${macchina}`}
             disabled={loading || !canEditWorkOrders || addetti.length === 0}
+            tablePillWidth={lavTablePillFillClass}
           />
         </div>
       </td>
@@ -330,8 +323,7 @@ function LavorazioneArchivioTableRowInner({
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
-  const addettoLabel = lavorazioneAddettoLabel(row, schedeStore, addettoLogs, addettiRecords);
-  const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, addettoLogs, addettiRecords);
+  const addettoRef = addettoRefFromFields(resolveAddettoSnapshotRef(row, schedeStore, addettoLogs));
 
   return (
     <tr
@@ -385,9 +377,9 @@ function LavorazioneArchivioTableRowInner({
       </td>
       <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
-          <LavorazioneAddettoReadOnlyPill
-            addetto={addettoLabel}
-            colorKey={addettoKey}
+          <AddettoDisplayPill
+            ref={addettoRef}
+            addettiRecords={addettiRecords}
             addettoColors={addettoColors}
           />
         </div>

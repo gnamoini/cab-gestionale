@@ -9,9 +9,11 @@ import {
   prefetchGestionalePage,
 } from "@/src/lib/react-query/prefetch-gestionale-page";
 import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
+import { resolveListSurfaceForPage } from "@/lib/ui/resolve-list-surface.server";
 
 export default async function MagazzinoPage() {
   const qc = createServerQueryClient();
+  const listSurface = await resolveListSurfaceForPage();
   await prefetchGestionalePage(qc, "magazzino");
   return (
     <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.magazzino}>
@@ -22,7 +24,7 @@ export default async function MagazzinoPage() {
           fallback="legacy"
           schema={getSuggestedSchema("/magazzino")}
         >
-          <MagazzinoViewLazy />
+          <MagazzinoViewLazy listSurface={listSurface} listTier="xl" />
         </UIPageAdapterGate>
       </GestionaleHydrationBoundary>
     </PageLayout>

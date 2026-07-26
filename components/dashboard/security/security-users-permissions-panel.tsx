@@ -56,8 +56,9 @@ import {
   dsPageToolbarMetaChipAccent,
   dsSectionTitle,
 } from "@/lib/ui/design-system";
+import type { GestionaleListPageProps } from "@/lib/ui/gestionale-list-page-props";
 
-type Props = {
+type Props = GestionaleListPageProps & {
   readOnly?: boolean;
   /** Query condivisa dal parent (evita doppio hook sulla tab Utenti). */
   sharedUsersQ?: ReturnType<typeof useSecurityUsersPermissionsQuery>;
@@ -95,7 +96,7 @@ function buildPageDrafts(
   return out;
 }
 
-export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ }: Props) {
+export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ, listSurface, listTier = "lg" }: Props) {
   const { refresh, user: sessionUser } = useAuth();
   const gestToast = useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
@@ -401,6 +402,8 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ }
         ) : null}
 
         <SecurityUsersTable
+          listSurface={listSurface}
+          listTier={listTier}
           rows={usersQ.isError ? [] : draftRows}
           loading={usersQ.isLoading}
           readOnly={readOnly}

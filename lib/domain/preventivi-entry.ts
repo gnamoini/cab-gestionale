@@ -9,6 +9,7 @@ export const preventiviEntry = {
   create: withPageWriteGuard("preventivi", preventiviService.create.bind(preventiviService)),
   update: withPageWriteGuard("preventivi", preventiviService.update.bind(preventiviService)),
   remove: withPageWriteGuard("preventivi", preventiviService.remove.bind(preventiviService)),
+  transitionStatus: withPageWriteGuard("preventivi", preventiviService.transitionStatus.bind(preventiviService)),
 };
 
 export type { PreventiviFilters, PreventivoInsert, PreventivoUpdate } from "@/src/services/preventivi.service";

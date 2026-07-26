@@ -135,11 +135,10 @@ import {
   dsTableRow,
   GESTIONALE_SEARCH_PLACEHOLDER,
 } from "@/lib/ui/design-system";
-import {
-  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
-  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
-  type GestionaleListLayout,
-} from "@/lib/ui/use-gestionale-list-layout";
+import { gestionaleListTierClass } from "@/lib/ui/gestionale-list-responsive";
+import type { GestionaleListPageProps } from "@/lib/ui/gestionale-list-page-props";
+import { useListSurface } from "@/lib/ui/use-list-surface";
+import type { ListSurface } from "@/lib/ui/resolve-list-surface";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { CLIENTE_HOME_PATH } from "@/lib/auth/rbac";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
@@ -222,6 +221,7 @@ function DesktopTable({
   statiOpts,
   colStyles,
   addettoColors,
+  addettiRecords,
   emptyMessage,
   sortColumn,
   sortPhase,
@@ -234,6 +234,7 @@ function DesktopTable({
   statiOpts: { id: string; label: string; color?: string }[];
   colStyles: LavorazioniListTableColStyles;
   addettoColors: Record<string, string | undefined>;
+  addettiRecords: readonly AddettoRecord[];
   emptyMessage: string;
   sortColumn: ClientPortalSortKey | null;
   sortPhase: GlobalTableSortPhase;
@@ -301,7 +302,6 @@ function DesktopTable({
 
   return (
     <GestionaleListTable
-      visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
       className={gestionaleClientPortalDenseTableClass}
       colgroup={colgroup}
       headRow={headRow}
@@ -347,6 +347,7 @@ function DesktopTable({
                 addetto={fields.addetto}
                 colorKey={fields.addettoNome}
                 addettoColors={addettoColors}
+                addettiRecords={addettiRecords}
               />
             </div>
           </td>
@@ -368,6 +369,7 @@ function MobileCards({
   variant,
   statiOpts,
   addettoColors,
+  addettiRecords,
   schedeStore,
   emptyMessage,
   onIngresso,
@@ -377,6 +379,7 @@ function MobileCards({
   variant: "active" | "archive";
   statiOpts: { id: string; label: string; color?: string }[];
   addettoColors: Record<string, string | undefined>;
+  addettiRecords: readonly AddettoRecord[];
   schedeStore: LavorazioneSchedeStore;
   emptyMessage: string;
   onIngresso: (row: LavorazioneListRow) => void;
@@ -384,14 +387,14 @@ function MobileCards({
 }) {
   if (bundles.length === 0) {
     return (
-      <p className={`rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
+      <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
         {emptyMessage}
       </p>
     );
   }
 
   return (
-    <div className={`mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
+    <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
       {bundles.map(({ row, fields }) => {
         return (
           <LavorazioneMobileCardShell key={row.id} className="min-w-0 h-full">
@@ -424,6 +427,7 @@ function MobileCards({
                 addetto={fields.addetto}
                 colorKey={fields.addettoNome}
                 addettoColors={addettoColors}
+                addettiRecords={addettiRecords}
               />
               </LavMobileInlineField>
             </div>
@@ -445,13 +449,14 @@ function MobileCards({
 }
 
 function LavorazioniSection({
-  listLayout,
+  listSurface,
   sectionLabel,
   bundles,
   variant,
   statiOpts,
   colStyles,
   addettoColors,
+  addettiRecords,
   emptyDefault,
   filtersActive,
   sortColumn,
@@ -461,7 +466,7 @@ function LavorazioniSection({
   onQr,
   schedeStore,
 }: {
-  listLayout: GestionaleListLayout;
+  listSurface: ListSurface;
   /** Etichetta accessibilità (titolo visibile sulla ShellCard). */
   sectionLabel: string;
   bundles: RowBundle[];
@@ -469,6 +474,7 @@ function LavorazioniSection({
   statiOpts: { id: string; label: string; color?: string }[];
   colStyles: LavorazioniListTableColStyles;
   addettoColors: Record<string, string | undefined>;
+  addettiRecords: readonly AddettoRecord[];
   schedeStore: LavorazioneSchedeStore;
   emptyDefault: string;
   filtersActive: boolean;
@@ -482,13 +488,14 @@ function LavorazioniSection({
 
   return (
     <section className="min-w-0" aria-label={sectionLabel}>
-      {listLayout === "desktop" ? (
+      {listSurface === "table" ? (
       <DesktopTable
         bundles={bundles}
         variant={variant}
         statiOpts={statiOpts}
         colStyles={colStyles}
         addettoColors={addettoColors}
+        addettiRecords={addettiRecords}
         emptyMessage={emptyMessage}
         sortColumn={sortColumn}
         sortPhase={sortPhase}
@@ -496,19 +503,19 @@ function LavorazioniSection({
         onIngresso={onIngresso}
         onQr={onQr}
       />
-      ) : null}
-      {listLayout === "mobile" ? (
+      ) : (
       <MobileCards
         bundles={bundles}
         variant={variant}
         statiOpts={statiOpts}
         addettoColors={addettoColors}
+        addettiRecords={addettiRecords}
         schedeStore={schedeStore}
         emptyMessage={emptyMessage}
         onIngresso={onIngresso}
         onQr={onQr}
       />
-      ) : null}
+      )}
     </section>
   );
 }
@@ -545,15 +552,13 @@ function buildRowBundles(
   }));
 }
 
-export function ClientLavorazioniView() {
+export function ClientLavorazioniView({ listSurface: serverListSurface, listTier = "xl" }: GestionaleListPageProps) {
+  const listSurface = useListSurface(serverListSurface);
   const [archivioExpanded, setArchivioExpanded] = useState(false);
-  const o = useClientPortalPageOrchestrator({ archivioExpanded: archivioExpanded });
+  const o = useClientPortalPageOrchestrator({ listSurface, archivioExpanded });
   const { user, authorName } = useAuth();
   const { isCliente } = useRbac();
   const {
-    containerRef: listLayoutRef,
-    layout: listLayout,
-    layoutClassName: listLayoutClassName,
     canRender,
     accessDenied,
     contract,
@@ -812,13 +817,14 @@ export function ClientLavorazioniView() {
             persistKey="attive"
           >
             <LavorazioniSection
-              listLayout={listLayout}
+              listSurface={listSurface}
               sectionLabel="Lavorazioni in corso"
               bundles={sortedInCorsoBundles}
               variant="active"
               statiOpts={statiOpts}
               colStyles={colStyles}
               addettoColors={addettoColors}
+              addettiRecords={addettiRecords}
               schedeStore={schedeStore}
               emptyDefault="Nessuna lavorazione in corso."
               filtersActive={filtersActive}
@@ -841,13 +847,14 @@ export function ClientLavorazioniView() {
             onCollapsedChange={(collapsed) => setArchivioExpanded(!collapsed)}
           >
             <LavorazioniSection
-              listLayout={listLayout}
+              listSurface={listSurface}
               sectionLabel="Lavorazioni completate"
               bundles={sortedArchivioBundles}
               variant="archive"
               statiOpts={statiOpts}
               colStyles={colStyles}
               addettoColors={addettoColors}
+              addettiRecords={addettiRecords}
               schedeStore={schedeStore}
               emptyDefault="Nessuna lavorazione in archivio."
               filtersActive={filtersActive}
@@ -864,7 +871,7 @@ export function ClientLavorazioniView() {
   }
 
   return (
-    <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
+    <div className={`lavorazioni-scroll-scope ${layoutPageRoot} ${gestionaleListTierClass(listTier)}`.trim()}>
     <>
       <PageHeaderPageActionMenu
         onRefresh={() => void refreshClientData()}

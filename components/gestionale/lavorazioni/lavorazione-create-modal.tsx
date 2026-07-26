@@ -130,6 +130,10 @@ export function LavorazioneCreateModal({
             sharedMezziCatalog={create.mezziCatalog}
             lavorazioneNote={create.lavorazioneNote}
             onLavorazioneNoteChange={create.setLavorazioneNote}
+            tagliandoFields={create.tagliandoFields}
+            onTagliandoFieldsChange={(patch) =>
+              create.setTagliandoFields((prev) => ({ ...prev, ...patch }))
+            }
           />
         </form>
       </SchedaIngressoFormModalShell>

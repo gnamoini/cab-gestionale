@@ -56,12 +56,10 @@ export function MezziTagliandiConfigDrawer({
   const presetUpsertMut = useMaintenancePlanUpsertMutation();
 
   const [presetId, setPresetId] = useState<string>("");
-  const [label, setLabel] = useState("");
-  const [isActive, setIsActive] = useState(true);
   const [triggersDraft, setTriggersDraft] = useState<MaintenancePresetTriggerView[]>([
     { triggerType: "ore", threshold: 500, priority: 0 },
   ]);
-  const [savePresetToo, setSavePresetToo] = useState(true);
+  const [savePresetToo, setSavePresetToo] = useState(false);
   const [partsDraft, setPartsDraft] = useState<MaintenancePresetPartDraft[]>([]);
 
   const activePresets = useMemo(
@@ -69,17 +67,23 @@ export function MezziTagliandiConfigDrawer({
     [plansQ.data],
   );
 
-  const selectedPlan = activePresets.find((p) => p.id === presetId) ?? null;
   const linkedPlan = config?.presetId ? (plansQ.data ?? []).find((p) => p.id === config.presetId) : null;
+
+  const presetOptions = useMemo(() => {
+    if (linkedPlan && !activePresets.some((p) => p.id === linkedPlan.id)) {
+      return [...activePresets, linkedPlan];
+    }
+    return activePresets;
+  }, [activePresets, linkedPlan]);
+
+  const selectedPlan = presetOptions.find((p) => p.id === presetId) ?? null;
   const archivedPresetWarning =
     config?.presetId && linkedPlan && !isPresetAssignable(linkedPlan.status);
 
   useEffect(() => {
     if (!open) return;
     setPresetId(config?.presetId ?? "");
-    setLabel(config?.label ?? "");
-    setIsActive(config?.isActive ?? true);
-    setSavePresetToo(true);
+    setSavePresetToo(false);
     if (config?.presetId && plansQ.data) {
       const plan = plansQ.data.find((p) => p.id === config.presetId);
       if (plan) {
@@ -96,7 +100,6 @@ export function MezziTagliandiConfigDrawer({
     if (!open || config || !selectedPlan) return;
     setTriggersDraft(triggersFromPlan(selectedPlan));
     setPartsDraft(planPartsToDraft(selectedPlan.parts));
-    setLabel(selectedPlan.nome);
   }, [open, config, selectedPlan]);
 
   useGestionaleOverlayBehavior({
@@ -110,6 +113,15 @@ export function MezziTagliandiConfigDrawer({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!presetId.trim()) {
+      toastValidation("Seleziona un preset esistente.");
+      return;
+    }
+    const plan = (plansQ.data ?? []).find((p) => p.id === presetId) ?? selectedPlan;
+    if (!plan) {
+      toastValidation("Preset non disponibile. Ricarica la pagina e riprova.");
+      return;
+    }
     if (triggersDraft.length === 0 || triggersDraft.some((t) => t.threshold <= 0)) {
       toastValidation("Configura almeno un intervallo con soglia maggiore di zero.");
       return;
@@ -123,78 +135,53 @@ export function MezziTagliandiConfigDrawer({
     const primary = primaryIntervalFromTriggers(triggersDraft);
 
     try {
-      let linkedPresetId = presetId || null;
-
-      if (savePresetToo && canEditPreset) {
-        if (selectedPlan) {
-          await presetUpsertMut.mutateAsync({
-            id: selectedPlan.id,
-            nome: label.trim() || selectedPlan.nome,
-            intervalOre: primary.intervalOre,
-            intervalType: primary.intervalType,
-            intervalValue: primary.intervalValue,
-            status: selectedPlan.status,
-            isActive: selectedPlan.isActive,
-            tempoPrevistoMinuti: selectedPlan.tempoPrevistoMinuti,
-            manodoperaCostoOrario: selectedPlan.manodoperaCostoOrario,
-            parts: partsDraft.map((p) => ({
-              ricambioId: p.ricambioId,
-              quantita: p.quantita,
-              isRequired: p.isRequired,
-              replacementCondition: p.replacementCondition,
-              note: p.note,
-            })),
-            triggerGroups: [
-              {
-                operator: "OR",
-                sortOrder: 0,
-                label: "Intervallo principale",
-                triggers: triggersDraft,
-              },
-            ],
-            checklist: selectedPlan.checklist,
-          });
-          linkedPresetId = selectedPlan.id;
-        } else {
-          const nome = label.trim() || "Nuovo preset";
-          const created = await presetUpsertMut.mutateAsync({
-            nome,
-            intervalOre: primary.intervalOre,
-            intervalType: primary.intervalType,
-            intervalValue: primary.intervalValue,
-            status: "active",
-            isActive: true,
-            parts: partsDraft.map((p) => ({
-              ricambioId: p.ricambioId,
-              quantita: p.quantita,
-              isRequired: p.isRequired,
-              replacementCondition: p.replacementCondition,
-              note: p.note,
-            })),
-            triggerGroups: [
-              {
-                operator: "OR",
-                sortOrder: 0,
-                label: "Intervallo principale",
-                triggers: triggersDraft,
-              },
-            ],
-            checklist: [],
-          });
-          linkedPresetId = created.id ?? null;
-        }
-      }
-
       await upsertMut.mutateAsync({
         id: config?.id,
         mezzoId,
-        presetId: linkedPresetId,
-        isActive,
+        presetId,
+        isActive: true,
         intervalType: primary.intervalType,
         intervalValue: primary.intervalValue,
-        label: label.trim() || undefined,
         activatedAt: new Date().toISOString().slice(0, 10),
       });
+
+      if (savePresetToo && canEditPreset) {
+        try {
+          await presetUpsertMut.mutateAsync({
+            id: plan.id,
+            nome: plan.nome,
+            intervalOre: primary.intervalOre,
+            intervalType: primary.intervalType,
+            intervalValue: primary.intervalValue,
+            status: plan.status,
+            isActive: plan.isActive,
+            tempoPrevistoMinuti: plan.tempoPrevistoMinuti,
+            manodoperaCostoOrario: plan.manodoperaCostoOrario,
+            parts: partsDraft.map((p) => ({
+              ricambioId: p.ricambioId,
+              quantita: p.quantita,
+              isRequired: p.isRequired,
+              replacementCondition: p.replacementCondition,
+              note: p.note,
+            })),
+            triggerGroups: [
+              {
+                operator: "OR",
+                sortOrder: 0,
+                label: "Intervallo principale",
+                triggers: triggersDraft,
+              },
+            ],
+            checklist: plan.checklist,
+          });
+        } catch (presetErr) {
+          toastError(presetErr, { entity: "mezzo", action: "update" });
+          onSaved();
+          onClose();
+          return;
+        }
+      }
+
       successSaved();
       onSaved();
       onClose();
@@ -216,7 +203,7 @@ export function MezziTagliandiConfigDrawer({
             {config ? "Modifica piano sul mezzo" : "Aggiungi piano manutentivo"}
           </h2>
           <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
-            1) Scegli o crea preset · 2) Imposta intervalli · 3) Salva · 4) Usa Registra per ogni esecuzione.
+            1) Scegli un preset esistente · 2) Imposta intervalli · 3) Salva · 4) Usa Registra per ogni esecuzione.
           </p>
         </div>
         <form id="tagliandi-config-form" onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
@@ -227,19 +214,27 @@ export function MezziTagliandiConfigDrawer({
           ) : null}
           <label className={dsFormField}>
             <span className={dsFormLabel}>Preset collegato</span>
-            <select className={dsFormInput} value={presetId} onChange={(e) => setPresetId(e.target.value)}>
-              <option value="">Nuovo preset per questo mezzo</option>
-              {activePresets.map((p) => (
+            <select
+              className={dsFormInput}
+              value={presetId}
+              required
+              onChange={(e) => setPresetId(e.target.value)}
+            >
+              <option value="" disabled>
+                Seleziona preset…
+              </option>
+              {presetOptions.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.nome} ({formatTriggerSummary(p.triggerGroups[0]?.triggers ?? [])})
                 </option>
               ))}
             </select>
           </label>
-          <label className={dsFormField}>
-            <span className={dsFormLabel}>Nome / etichetta</span>
-            <input className={dsFormInput} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Es. Tagliando 500h / 12 mesi" />
-          </label>
+          {selectedPlan ? (
+            <p className="text-sm text-[color:var(--cab-text-muted)]">
+              Piano: <span className="font-medium text-[color:var(--cab-text)]">{selectedPlan.nome}</span>
+            </p>
+          ) : null}
           <MaintenancePresetTriggersField triggers={triggersDraft} onChange={setTriggersDraft} compact />
           <MaintenancePresetPartsField parts={partsDraft} onChange={setPartsDraft} enabled={open} />
           {canEditPreset ? (
@@ -252,10 +247,6 @@ export function MezziTagliandiConfigDrawer({
               Le modifiche agli intervalli si applicano solo a questo mezzo.
             </p>
           )}
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-            Piano attivo su questo mezzo
-          </label>
         </form>
         <div className="flex justify-end gap-2 border-t border-[color:var(--cab-border)] p-4">
           <button type="button" className={dsBtnNeutral} onClick={onClose}>

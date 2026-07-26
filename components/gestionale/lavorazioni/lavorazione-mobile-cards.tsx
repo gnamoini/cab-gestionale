@@ -1,11 +1,9 @@
 "use client";
 
 import { memo, type CSSProperties, type ReactNode } from "react";
-import { GESTIONALE_LIST_MOBILE_ONLY_CLASS } from "@/lib/ui/use-gestionale-list-layout";
 import {
   AddettoSelectField,
   InlineSelectField,
-  LavorazioneAddettoReadOnlyPill,
   LavorazioneCompletamentoDatePill,
   LavorazionePrioritaReadOnlyPill,
   type TablePillOption,
@@ -30,9 +28,11 @@ import {
 import type { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
 import { resolveLavorazioneNote } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
+import { getAddettoPillStyle } from "@/lib/lavorazioni/addetto-display";
+import { addettoRefFromFields, AddettoDisplayPill } from "@/components/domain/addetti";
+import { resolveAddettoSnapshotRef } from "@/lib/lavorazioni/resolve-addetto-display";
 import {
-  lavorazioneAddettoLabel,
-  lavorazioneAddettoNomeKey,
+  lavorazioneAddettoId,
   lavorazioneCantiereLabel,
   lavorazioneClienteLabel,
   lavorazioneOggettoLabel,
@@ -45,7 +45,6 @@ import {
 import type { LavorazioneUltimaModificaInfo } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import {
   addettoPillShellClass,
-  addettoPillShellStyleForName,
   IconRipristinaDaArchivio,
   prioritaLabel,
   prioritaPillShellClass,
@@ -145,8 +144,9 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const utilizzatore = lavorazioneUtilizzatoreLabel(row, schedeStore);
   const ident = lavorazioneMezzoIdentParts(row, schedeStore);
-  const addettoLabel = lavorazioneAddettoLabel(row, schedeStore, undefined, addettiRecords);
-  const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, undefined, addettiRecords);
+  const addettoId = lavorazioneAddettoId(row, schedeStore, undefined, addettiRecords);
+  const addettoRef = addettoRefFromFields(resolveAddettoSnapshotRef(row, schedeStore));
+  const addettoPillStyle = getAddettoPillStyle(addettiRecords, addettoRef, addettoColors);
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
   return (
@@ -197,10 +197,10 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
           <AddettoSelectField
             variant="pill"
             tablePillWidth={lavTablePillFillClass}
-            options={tablePillOptions.addetto(addettoKey)}
+            options={tablePillOptions.addetto(addettoId || null)}
             shellClass={addettoPillShellClass()}
-            shellStyle={addettoPillShellStyleForName(addettoKey, addettoColors)}
-            value={addettoKey}
+            shellStyle={addettoPillStyle}
+            value={addettoId}
             onChange={(v) => onAddettoRow(row, v)}
             ariaLabel={`Addetto — ${macchina}`}
             disabled={loading || !canEditWorkOrders || addetti.length === 0}
@@ -285,8 +285,7 @@ function LavorazioneArchivioMobileCardInner({
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const utilizzatore = lavorazioneUtilizzatoreLabel(row, schedeStore);
   const ident = lavorazioneMezzoIdentParts(row, schedeStore);
-  const addettoLabel = lavorazioneAddettoLabel(row, schedeStore, addettoLogs, addettiRecords);
-  const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, addettoLogs, addettiRecords);
+  const addettoRef = addettoRefFromFields(resolveAddettoSnapshotRef(row, schedeStore, addettoLogs));
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
   return (
@@ -324,10 +323,11 @@ function LavorazioneArchivioMobileCardInner({
           <LavorazionePrioritaReadOnlyPill priorita={row.priorita} prioritaColors={prioritaColors} />
         </LavMobileInlineField>
         <LavMobileInlineField label="Addetto" layout="stack">
-          <LavorazioneAddettoReadOnlyPill
-            addetto={addettoLabel}
-            colorKey={addettoKey}
+          <AddettoDisplayPill
+            ref={addettoRef}
+            addettiRecords={addettiRecords}
             addettoColors={addettoColors}
+            fullWidth={false}
           />
         </LavMobileInlineField>
       </LavorazioneMobileControlsPanel>
@@ -402,7 +402,7 @@ export type LavorazioniMobileListShellProps = {
 
 export function LavorazioniMobileListShell({ empty, emptyMessage, children }: LavorazioniMobileListShellProps) {
   return (
-    <div className={`mt-4 space-y-2 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
+    <div className="mt-4 space-y-2">
       {empty ? <LavorazioniMobileEmptyState message={emptyMessage} /> : children}
     </div>
   );

@@ -50,6 +50,7 @@ export function EmployeeTimesheetDetailView({
       <div>
         <h3 className="mb-3 text-sm font-semibold text-[color:var(--cab-text)]">Registrazione presenze</h3>
         <DipendentiInserimentoSection
+          listSurface="table"
           monthKey={monthKey}
           employees={employees}
           filterEmployeeId={filterEmployeeId}

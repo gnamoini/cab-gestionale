@@ -4,7 +4,8 @@ import { normalizeSchedaTipoDb, type SchedaTipoDb } from "@/lib/schede/scheda-ti
 export type CabSyncEntity =
   | "app_settings"
   | "lavorazioni"
-  | "lavorazione_documents"
+  | "pdf_artifacts"
+  | "document_access_tokens"
   | "mezzi"
   | "attrezzature"
   | "magazzino_ricambi"
@@ -31,7 +32,8 @@ export type CabSyncEvent =
 const TABLE_ENTITY: Record<string, CabSyncEntity> = {
   app_settings: "app_settings",
   lavorazioni: "lavorazioni",
-  lavorazione_documents: "lavorazione_documents",
+  pdf_artifacts: "pdf_artifacts",
+  document_access_tokens: "document_access_tokens",
   mezzi: "mezzi",
   attrezzature: "attrezzature",
   magazzino_ricambi: "magazzino_ricambi",

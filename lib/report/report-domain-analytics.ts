@@ -463,7 +463,7 @@ function countPreventiviApprovatiInRange(
 ): number {
   let count = 0;
   for (const p of preventivi) {
-    if (p.stato !== "approvato" && p.stato !== "convertito") continue;
+    if (p.stato !== "confermato") continue;
     const at = p.dataCreazione || p.aggiornatoAt;
     if (!isoInRange(at, range)) continue;
     count += 1;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import {
   Drawer,
@@ -40,7 +40,7 @@ import { notificationOptInDeniedMessage, notificationOptInSuccessMessage } from 
 import { useNotificationOptIn } from "@/src/hooks/use-notification-opt-in";
 import { useAuth } from "@/context/auth-context";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import { dsBtnGhost, dsFocus } from "@/lib/ui/design-system";
+import { dsBtnGhost, dsFocus, dsShellNavIconBtn } from "@/lib/ui/design-system";
 import {
   dsNotificationDesktopStatusActive,
   dsNotificationDesktopStatusDotActive,
@@ -57,6 +57,8 @@ import {
   getNotificationCenterOpenSnapshot,
   subscribeNotificationCenterOpen,
 } from "@/lib/pwa/pwa-notification-state";
+import { suppressSidebarBlurCollapse } from "@/lib/ui/use-sidebar-collapsed";
+import { NotificationSettingsModal } from "@/components/gestionale/notifications/notification-settings-modal";
 
 const notificationFooterBtnClass = `${dsBtnGhost} min-h-[2rem] shrink-0`;
 
@@ -67,6 +69,30 @@ function pruneClientToastSeen(seen: Map<string, number>, now = Date.now()) {
   for (const [id, ts] of seen) {
     if (now - ts > CLIENT_TOAST_SEEN_TTL_MS) seen.delete(id);
   }
+}
+
+function NotificationPanelSettingsButton({
+  buttonRef,
+  onClick,
+}: {
+  buttonRef?: RefObject<HTMLButtonElement | null>;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      ref={buttonRef}
+      type="button"
+      className={`${dsShellNavIconBtn} ${dsFocus}`}
+      aria-label="Impostazioni notifiche"
+      title="Impostazioni notifiche"
+      onClick={onClick}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-[1.125rem] w-[1.125rem]" aria-hidden>
+        <path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    </button>
+  );
 }
 
 function NotificationsDesktopStatusBadge({
@@ -288,7 +314,9 @@ export function NotificationCenterBell({
     snapshot?.rbacContext,
   );
   const [open, setOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const openSignal = useSyncExternalStore(
     subscribeNotificationCenterOpen,
     getNotificationCenterOpenSnapshot,
@@ -310,6 +338,10 @@ export function NotificationCenterBell({
   } = useNotificationCenter(open);
 
   const close = useCallback(() => setOpen(false), []);
+  const openSettings = useCallback(() => {
+    suppressSidebarBlurCollapse();
+    setSettingsOpen(true);
+  }, []);
   const openRef = useRef(open);
   useEffect(() => {
     openRef.current = open;
@@ -472,6 +504,11 @@ export function NotificationCenterBell({
           />
         ) : undefined
       }
+      headerActions={
+        staffInbox ? (
+          <NotificationPanelSettingsButton buttonRef={settingsTriggerRef} onClick={openSettings} />
+        ) : undefined
+      }
       ariaLabel="Centro notifiche"
       asideClassName={gestionaleLogPanelAsideClass}
       contentFill
@@ -528,9 +565,15 @@ export function NotificationCenterBell({
         <div className="cab-sidebar-notifications relative shrink-0 px-1 pb-2">{trigger}</div>
       )}
 
-      {layerAboveNav && typeof document !== "undefined"
-        ? createPortal(drawerPanel, document.body)
-        : drawerPanel}
+      {typeof document !== "undefined" ? createPortal(drawerPanel, document.body) : drawerPanel}
+      <NotificationSettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        layerClassName={layerAboveNav ? "z-[120]" : "z-[60]"}
+        lockScroll={false}
+        portaled
+        restoreFocusRef={settingsTriggerRef}
+      />
     </>
   );
 }

@@ -7,7 +7,7 @@ export const PROFILES_COLUMNS =
   "id, nome, cognome, username, role_key, cliente_ref, created_at, updated_at" as const;
 
 export const LAVORAZIONI_COLUMNS =
-  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, deleted_at, codice, target_type, attrezzatura_id, actual_labor_hours, actual_labor_hours_source, actual_labor_hours_updated_at" as const;
+  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, deleted_at, codice, target_type, attrezzatura_id, actual_labor_hours, actual_labor_hours_source, actual_labor_hours_updated_at, is_tagliando, maintenance_execution_kind, repair_present, tagliando_preset_ref, tagliando_preset_version_ref, tagliando_assign_preset_to_mezzo, tagliando_no_preset_reason" as const;
 
 /** Sync ore consuntive denormalizzate (subset minimo). */
 export const LAVORAZIONI_ACTUAL_HOURS_COLUMNS =
@@ -15,7 +15,7 @@ export const LAVORAZIONI_ACTUAL_HOURS_COLUMNS =
 
 /** Lista gestionale — senza `deleted_at` (filtro server); profili esclusi (lazy). */
 export const LAVORAZIONI_LIST_LIGHT_COLUMNS =
-  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, codice, target_type, attrezzatura_id" as const;
+  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, codice, target_type, attrezzatura_id, is_tagliando, maintenance_execution_kind, repair_present, tagliando_preset_ref" as const;
 
 export const LAVORAZIONI_DETAIL_COLUMNS = LAVORAZIONI_COLUMNS;
 
@@ -91,7 +91,7 @@ export const MAINTENANCE_PLANS_COLUMNS =
   "id, nome, interval_ore, is_active, created_at, updated_at, created_by, deleted_at, description, category_id, manufacturer_id, model_id, parent_preset_id, override_scope, interval_type, interval_value, current_version_id, sort_order, maintenance_kind, status, tempo_previsto_minuti, manodopera_costo_orario" as const;
 
 export const VEHICLE_MAINTENANCE_SERVICES_COLUMNS =
-  "id, mezzo_id, plan_id, performed_at, ore_at_service, mezzo_ore_snapshot, note, performed_by, created_at, updated_at, created_by, execution_type, preset_snapshot, km_at_service" as const;
+  "id, mezzo_id, plan_id, performed_at, ore_at_service, mezzo_ore_snapshot, note, performed_by, created_at, updated_at, created_by, execution_type, preset_snapshot, km_at_service, lavorazione_id, compliance_auto, compliance_review, compliance_diff_json, snapshot_schema_version" as const;
 
 export const VEHICLE_MAINTENANCE_SERVICE_PARTS_COLUMNS =
   "id, service_id, ricambio_id, quantita, descrizione_snapshot, created_at, was_replaced, was_due, replacement_condition, is_required_snapshot, note, warehouse_status" as const;
@@ -125,7 +125,7 @@ export const VEHICLE_MAINTENANCE_SERVICE_CHECKLIST_COLUMNS =
   "id, service_id, item_label, checked, note, sort_order, created_at" as const;
 
 export const VEHICLE_MAINTENANCE_SERVICES_V2_COLUMNS =
-  "id, mezzo_id, plan_id, performed_at, ore_at_service, mezzo_ore_snapshot, note, performed_by, created_at, updated_at, created_by, config_id, preset_version_id, interval_type, interval_value_at_execution, km_at_service, milestone_reached, lavorazione_id, scheda_lavorazione_id, anomaly_note, confidence_at_execution, total_cost, execution_type, preset_snapshot" as const;
+  "id, mezzo_id, plan_id, performed_at, ore_at_service, mezzo_ore_snapshot, note, performed_by, created_at, updated_at, created_by, config_id, preset_version_id, interval_type, interval_value_at_execution, km_at_service, milestone_reached, lavorazione_id, scheda_lavorazione_id, anomaly_note, confidence_at_execution, total_cost, execution_type, preset_snapshot, execution_origin, compliance_auto, compliance_diff_json, compliance_review, compliance_algorithm_version, snapshot_schema_version" as const;
 
 export const ASSET_TIMELINE_PROJECTION_COLUMNS =
   "event_category, event_domain, source_id, asset_kind, mezzo_id, attrezzatura_id, event_at, event_subtype, priority, label" as const;
@@ -146,7 +146,13 @@ export const INVENTORY_DOCUMENT_LINES_COLUMNS =
   "id, document_id, line_index, raw_code, extracted_description, extracted_quantity, received_quantity, unit, matched_item_id, match_confidence, match_status, apply_status, user_action, final_quantity, final_item_id, line_ai_confidence, created_at, updated_at" as const;
 
 export const PREVENTIVI_COLUMNS =
-  "id, mezzo_id, lavorazione_id, cliente, totale, dettagli, created_at, updated_at" as const;
+  "id, mezzo_id, lavorazione_id, cliente, totale, dettagli, stato, current_pdf_artifact_id, inviato_at, confermato_at, confermato_by, annullato_at, created_at, updated_at" as const;
+
+export const PDF_ARTIFACTS_COLUMNS =
+  "id, entity_type, entity_id, storage_path, hash, version, status, is_current, generated_at, generated_by" as const;
+
+export const DOCUMENT_ACCESS_TOKENS_COLUMNS =
+  "id, token, entity_type, entity_id, lavorazione_id, created_at, expires_at, revoked_at, created_by" as const;
 
 export const BILLING_CUSTOMERS_COLUMNS =
   "id, cliente_label, entity_key, ragione_sociale, partita_iva, codice_fiscale, pec, codice_sdi, indirizzo, note, created_at, updated_at" as const;
@@ -182,7 +188,7 @@ export const INVOICE_PAYMENTS_COLUMNS =
   "id, invoice_id, data, importo, metodo, riferimento, note, created_by, created_at" as const;
 
 export const DDT_DOCUMENTS_COLUMNS =
-  "id, numero, anno, serie, sede_id, status, data_documento, data_consegna, cliente_label, customer_snapshot, luogo_consegna, preventivo_id, lavorazione_id, mezzo_id, mezzo_snapshot, target_type, attrezzatura_id, attrezzatura_snapshot, causale_trasporto, vettore, note, origine, pdf_artifact_hash, created_by, updated_by, annullato_at, stampato_at, consegnato_at, created_at, updated_at" as const;
+  "id, numero, anno, serie, sede_id, status, data_documento, data_consegna, cliente_label, customer_snapshot, luogo_consegna, preventivo_id, lavorazione_id, mezzo_id, mezzo_snapshot, target_type, attrezzatura_id, attrezzatura_snapshot, causale_trasporto, vettore, note, origine, pdf_artifact_hash, current_pdf_artifact_id, created_by, updated_by, annullato_at, stampato_at, consegnato_at, created_at, updated_at" as const;
 
 export const DDT_DOCUMENTS_INDEX_COLUMNS =
   "id, preventivo_id, status, numero, anno" as const;

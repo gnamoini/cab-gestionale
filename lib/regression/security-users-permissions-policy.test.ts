@@ -69,7 +69,7 @@ assert.match(patchesSrc, /patch\.username/);
 assert.match(actionsSrc, /Modifica profilo/);
 assert.match(actionsSrc, /GestionaleListTable/);
 assert.match(actionsSrc, /SecurityUserMobileCard/);
-assert.match(actionsSrc, /GESTIONALE_LIST_DESKTOP_ONLY_CLASS/);
+assert.match(actionsSrc, /listSurface === "table"/);
 assert.match(actionsSrc, /security-users-dense-table/);
 
 assert.match(batchSrc, /username/);

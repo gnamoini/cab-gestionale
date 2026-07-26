@@ -7,6 +7,7 @@ import {
   type LinkedMezzoSnapshot,
 } from "@/lib/schede/scheda-ingresso-mezzo-link-state";
 import { evaluateMezzoMeteringUpdate } from "@/lib/domain/mezzo/evaluate-mezzo-metering-update";
+import { isMezzoAssociationField } from "@/lib/domain/mezzo/mezzo-association";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
 
@@ -67,6 +68,7 @@ export function buildSchedaSaveConflictSummary(input: {
   const baseline = linkedSnapshot?.fieldsAtLinkTime;
   if (baseline) {
     for (const key of MEZZO_PERMANENT_FIELDS) {
+      if (isMezzoAssociationField(key)) continue;
       const prima = fieldStr(baseline[key]);
       const dopo = fieldStr(fields[key]);
       if (prima !== dopo) {
@@ -87,7 +89,7 @@ export function buildSchedaSaveConflictSummary(input: {
       targa: mezzo.targa,
       nScuderia: mezzo.numeroScuderia ?? "",
     };
-    for (const key of ["cliente", "marcaAttrezzatura", "modelloAttrezzatura", "matricola", "targa", "nScuderia"] as const) {
+    for (const key of ["marcaAttrezzatura", "modelloAttrezzatura", "matricola", "targa", "nScuderia"] as const) {
       const prima = fieldStr(fromMezzo[key]);
       const dopo = fieldStr(fields[key]);
       if (prima !== dopo && dopo) {

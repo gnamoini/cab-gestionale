@@ -1,8 +1,13 @@
-import { findMezzoByIngressoIdent, findMezzoByTargaOrMatricola } from "@/lib/mezzi/find-mezzo-by-ident";
+import {
+  findMezziByVin,
+  findMezzoByIngressoIdent,
+  findMezzoByTargaOrMatricola,
+} from "@/lib/mezzi/find-mezzo-by-ident";
+import { normalizeVinIdentity } from "@/lib/domain/mezzo/mezzo-identity";
 import { mezzoMatchesSmartQuery } from "@/lib/mezzi/identificazione-mezzo";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 
-export type SchedaIngressoIdentField = "targa" | "matricola" | "nScuderia";
+export type SchedaIngressoIdentField = "targa" | "matricola" | "nScuderia" | "vin";
 
 const SUGGEST_CAP = 10;
 
@@ -13,7 +18,18 @@ function normIdent(v: string): string {
 function identFieldValue(mezzo: MezzoGestito, field: SchedaIngressoIdentField): string {
   if (field === "targa") return mezzo.targa?.trim() ?? "";
   if (field === "matricola") return mezzo.matricola?.trim() ?? "";
+  if (field === "vin") return mezzo.vin?.trim() ?? "";
   return mezzo.numeroScuderia?.trim() ?? "";
+}
+
+function normFieldQuery(query: string, field: SchedaIngressoIdentField): string {
+  if (field === "vin") return normalizeVinIdentity(query) ?? query.trim().toLowerCase();
+  return normIdent(query);
+}
+
+function normFieldIdent(value: string, field: SchedaIngressoIdentField): string {
+  if (field === "vin") return normalizeVinIdentity(value) ?? "";
+  return normIdent(value);
 }
 
 function isEmptyIdent(v: string, field: SchedaIngressoIdentField): boolean {
@@ -37,18 +53,18 @@ export function suggestMezziForIngressoIdent(
       .slice(0, SUGGEST_CAP);
   }
 
-  const nq = normIdent(q);
+  const nq = normFieldQuery(q, field);
   const scored = mezzi
     .filter((m) => {
       const ident = identFieldValue(m, field);
       if (isEmptyIdent(ident, field)) return false;
-      const ni = normIdent(ident);
+      const ni = normFieldIdent(ident, field);
       if (ni.includes(nq) || nq.includes(ni)) return true;
       return mezzoMatchesSmartQuery(m, q);
     })
     .sort((a, b) => {
-      const ai = normIdent(identFieldValue(a, field));
-      const bi = normIdent(identFieldValue(b, field));
+      const ai = normFieldIdent(identFieldValue(a, field), field);
+      const bi = normFieldIdent(identFieldValue(b, field), field);
       const aExact = ai === nq ? 0 : ai.startsWith(nq) ? 1 : 2;
       const bExact = bi === nq ? 0 : bi.startsWith(nq) ? 1 : 2;
       if (aExact !== bExact) return aExact - bExact;
@@ -63,15 +79,21 @@ export function findExactMezzoForIngressoIdent(
   mezzi: readonly MezzoGestito[],
   field: SchedaIngressoIdentField,
   value: string,
-  sibling: { targa?: string; matricola?: string; nScuderia?: string } = {},
+  sibling: { targa?: string; matricola?: string; nScuderia?: string; vin?: string } = {},
 ): MezzoGestito | null {
   const v = value.trim();
   if (!v && field !== "nScuderia") return null;
+
+  if (field === "vin") {
+    const hits = findMezziByVin(mezzi, v);
+    return hits.length === 1 ? hits[0]! : null;
+  }
 
   const ident = {
     targa: field === "targa" ? v : sibling.targa ?? "",
     matricola: field === "matricola" ? v : sibling.matricola ?? "",
     nScuderia: field === "nScuderia" ? v : sibling.nScuderia ?? "",
+    vin: sibling.vin ?? "",
   };
 
   if (field === "targa" || field === "matricola") {
@@ -115,6 +137,12 @@ function formatScuderiaLabel(numeroScuderia: string | undefined): string | null 
   return `Scud. ${s}`;
 }
 
+function formatVinLabel(vin: string | undefined): string | null {
+  const v = trimIdent(vin);
+  if (!v || v === "—") return null;
+  return `VIN ${v}`;
+}
+
 export function mezzoIngressoSuggestLabel(mezzo: MezzoGestito): string {
   const marcaModello = formatMarcaModello(mezzo);
   const idents = [formatTargaLabel(mezzo.targa), formatMatricolaLabel(mezzo.matricola)]
@@ -145,6 +173,10 @@ export function mezzoIngressoSuggestSecondaryLabel(
   if (field !== "nScuderia") {
     const s = formatScuderiaLabel(mezzo.numeroScuderia);
     if (s) parts.push(s);
+  }
+  if (field !== "vin") {
+    const vin = formatVinLabel(mezzo.vin);
+    if (vin) parts.push(vin);
   }
   const label = parts.join(" · ");
   return label || mezzoIngressoSuggestLabel(mezzo);

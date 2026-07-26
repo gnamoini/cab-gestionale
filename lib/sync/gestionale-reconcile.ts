@@ -55,7 +55,8 @@ export function reconcileGestionaleEntity(
     }
     switch (event.entity) {
       case "scheda_lavorazione":
-      case "lavorazione_documents":
+      case "pdf_artifacts":
+      case "document_access_tokens":
       case "lavorazioni":
         return { handled: true, needsRefetch: true };
       default:
@@ -82,7 +83,8 @@ export function reconcileGestionaleEntity(
     case "documenti":
       void qc.invalidateQueries({ queryKey: QK.documenti, refetchType: "active" });
       return { handled: true, needsRefetch: false };
-    case "lavorazione_documents":
+    case "pdf_artifacts":
+    case "document_access_tokens":
       void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries, refetchType: "active" });
       return { handled: true, needsRefetch: true };
     default:

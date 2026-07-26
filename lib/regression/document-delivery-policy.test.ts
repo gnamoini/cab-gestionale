@@ -18,7 +18,8 @@ assert.match(auth, /verifyServerPageRead/);
 
 const uploadPolicy = read("app/api/documents/upload-policy/route.ts");
 assert.match(uploadPolicy, /verifyServerPageWrite\("documenti"\)/);
-assert.match(uploadPolicy, /verifyServerPageWrite\("lavorazioni"\)/);
+assert.doesNotMatch(uploadPolicy, /verifyServerPageWrite\("lavorazioni"\)/);
+assert.match(uploadPolicy, /410/);
 
 const helpers = read("components/gestionale/documenti/documenti-helpers.ts");
 assert.doesNotMatch(helpers, /storageCreateSignedUrl/);
@@ -26,9 +27,7 @@ assert.match(helpers, /archiveDocumentDeliveryUrl/);
 
 const lavService = read("src/services/lavorazione-documents.service.ts");
 assert.doesNotMatch(lavService, /listWithUrls/);
-
-const lavManager = read("components/gestionale/media/lavorazione-documents-manager.tsx");
-assert.doesNotMatch(lavManager, /listWithUrls/);
+assert.match(lavService, /non più supportato/);
 
 const fetchServer = read("lib/documents/document-fetch-server.ts");
 assert.doesNotMatch(fetchServer, /select\s*\(\s*["']\*["']\s*\)/);

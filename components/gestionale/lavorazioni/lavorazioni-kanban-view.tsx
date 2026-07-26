@@ -1,16 +1,18 @@
 "use client";
 
 import { memo, useCallback, useMemo, type KeyboardEvent } from "react";
-import { LoadingKanbanSkeleton } from "@/components/design-system";
+import { LoadingKanbanSkeleton } from "@/components/design-system/loading/loading-kanban-skeleton";
 import { LavorazioniKanbanDesktopBoardLazy } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-lazy-panels";
 import { LavorazioniKanbanMobileBoard } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-board";
 import type { KanbanMobileSection } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-types";
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 import { LavorazioneIngressoDateCell } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
-import { TablePillReadonly } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
+import { TablePillReadonly } from "@/components/gestionale/lavorazioni/lavorazioni-table-pill-readonly";
+import { getAddettoPillStyle } from "@/lib/lavorazioni/addetto-display";
+import { addettoRefFromFields } from "@/components/domain/addetti";
+import { resolveAddettoSnapshotRef } from "@/lib/lavorazioni/resolve-addetto-display";
 import {
   addettoPillShellClassDynamic,
-  addettoPillShellStyleForName,
   prioritaLabel,
   prioritaPillShellClassDynamic,
   prioritaPillShellStyle,
@@ -18,7 +20,6 @@ import {
 import { resolveLavorazioneNote, LAVORAZIONE_EMPTY_DISPLAY } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { resolveAddettoDisplay } from "@/lib/lavorazioni/resolve-addetto-display";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
-import { lavorazioneAddettoNomeKey } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import {
   findAccettazioneColumnId,
   isAttesaPreventivoStato,
@@ -181,12 +182,12 @@ const KanbanCard = memo(function KanbanCard({
   const utilizzatore = utilizzatoreLabel(row, schedeStore);
   const identLines = mezzoIdentLines(row, schedeStore);
   const addetto = resolveAddettoDisplay(row, { schedeStore, addettiRecords });
-  const addettoKey = lavorazioneAddettoNomeKey(row, schedeStore, undefined, addettiRecords);
+  const addettoRef = addettoRefFromFields(resolveAddettoSnapshotRef(row, schedeStore));
+  const addettoPillStyle = getAddettoPillStyle(addettiRecords, addettoRef, addettoColors as Record<string, string>);
   const p = row.priorita as PrioritaLavorazione;
   const prioLav = p as PrioritaLav;
   const prioVisual = kanbanCardPriorityVisual(prioLav, prioritaColors as Partial<Record<PrioritaLav, string>>);
   const prioHex = prioritaDisplayColor(prioLav, prioritaColors);
-  const addettoPillStyle = addettoPillShellStyleForName(addettoKey, addettoColors);
   const note = resolveLavorazioneNote(row);
 
   return (

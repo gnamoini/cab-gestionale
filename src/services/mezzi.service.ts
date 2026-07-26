@@ -1,6 +1,7 @@
 "use client";
 
 import { MEZZI_COLUMNS } from "@/lib/db/table-select-columns";
+import { mezziCreateRaw } from "@/lib/domain/mezzo/mezzi-repository";
 import { fetchMezziGestitiListRows, fetchMezziListRows } from "@/lib/mezzi/mezzi-list-fetch";
 import { fetchMezzoGestitoById } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -17,6 +18,15 @@ import { mergeMezzoMetaPatch } from "@/lib/mezzi/mezzi-meta";
 import { normalizeVin } from "@/lib/mezzi/vin-normalize";
 import { humanizeGestionaleError } from "@/src/utils/gestionale-error-messages";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
+import {
+  applyAssociationChangeDb,
+  type ApplyAssociationChangeInput,
+} from "@/lib/domain/mezzo/apply-association-change";
+import {
+  ASSOCIATION_FIELDS_REQUIRE_DEDICATED_PATH,
+  deriveEventKind,
+  mezzoUpdateTouchesAssociationFields,
+} from "@/lib/domain/mezzo/mezzo-association";
 
 const ENTITA = "mezzi";
 
@@ -51,6 +61,8 @@ export type MezzoFilters = {
 
 export type MezzoInsert = Omit<MezzoRow, "id" | "created_at" | "updated_at" | "telaio_num_norm">;
 export type MezzoUpdate = Partial<MezzoInsert>;
+
+export type { ApplyAssociationChangeInput };
 
 const VIN_UNIQUE_INDEX = "idx_mezzi_telaio_num_norm_unique";
 const VIN_DUPLICATE_MSG = "VIN già registrato su un altro mezzo.";
@@ -213,14 +225,11 @@ export const mezziService = {
       const prepared = prepareMezzoWritePayload(data) as MezzoInsert;
       const vinCheck = await assertVinUnique(c, prepared.telaio_num);
       if (!vinCheck.success) return err<MezzoRow>(vinCheck.error ?? VIN_DUPLICATE_MSG);
-      const payload = attachMezzoEntityKey(prepared);
       logAttrezzatureV2WritePath({ path: "v2", operation: "create" });
-      const { data: row, error } = await c.from("mezzi").insert(payload).select(MEZZI_COLUMNS).single();
-      if (error) return err(mapMezziWriteError(error));
-      const r = row as MezzoRow;
-      await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, oggettoMezzo(r)) });
+      const r = await mezziCreateRaw(c, prepared);
       return success(r);
     } catch (e) {
+      if (e instanceof Error && e.message === VIN_DUPLICATE_MSG) return err<MezzoRow>(e.message);
       return serviceFailFromError(e);
     }
   },
@@ -230,6 +239,9 @@ export const mezziService = {
       const c = await sb();
       const prepared =
         Object.keys(data).length > 0 ? (prepareMezzoWritePayload(data) as MezzoUpdate) : data;
+      if (mezzoUpdateTouchesAssociationFields(prepared)) {
+        return err<MezzoRow>(ASSOCIATION_FIELDS_REQUIRE_DEDICATED_PATH);
+      }
       if (prepared.telaio_num !== undefined) {
         const vinCheck = await assertVinUnique(c, prepared.telaio_num, id);
         if (!vinCheck.success) return err<MezzoRow>(vinCheck.error ?? VIN_DUPLICATE_MSG);
@@ -256,9 +268,27 @@ export const mezziService = {
           origine: "modifica_manuale",
           oldValues: oldSnap,
           newValues: newSnap,
+          eventKind: deriveEventKind(
+            Object.keys(oldSnap).filter((k) => oldSnap[k as keyof typeof oldSnap] !== newSnap[k as keyof typeof newSnap]),
+          ),
         });
       }
       return success(r);
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
+  async applyAssociationChange(
+    input: ApplyAssociationChangeInput,
+  ): Promise<ServiceResult<MezzoRow>> {
+    try {
+      const c = await sb();
+      const result = await applyAssociationChangeDb(c, input);
+      if (!result.ok) {
+        return err<MezzoRow>(result.message);
+      }
+      return success(result.row);
     } catch (e) {
       return serviceFailFromError(e);
     }

@@ -13,7 +13,8 @@ type QueryKeyTuple = readonly unknown[];
 /** Mappa tabella Postgres → chiavi React Query da invalidare (senza duplicati portal). */
 export const GESTIONALE_TABLE_QUERY_KEYS: Record<string, readonly QueryKeyTuple[]> = {
   lavorazioni: [QK.lavorazioniQueries, QK.mezzoQueries],
-  lavorazione_documents: [QK.lavorazioniQueries],
+  pdf_artifacts: [QK.lavorazioniQueries],
+  document_access_tokens: [QK.lavorazioniQueries],
   mezzi: [QK.mezzi, QK.mezzoQueries, QK.lavorazioniQueries],
   attrezzature: [QK.mezzi, QK.mezzoQueries, QK.lavorazioniQueries],
   magazzino_ricambi: [QK.magazzino, QK.movimenti, QK.lavorazioniQueries],

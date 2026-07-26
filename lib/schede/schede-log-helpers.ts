@@ -31,6 +31,7 @@ const INGRESSO_LABELS: Record<keyof SchedaIngressoFields, string> = {
   descrizioneAnomalia: "Descrizione anomalia",
   livelloCarburante: "Livello carburante",
   addettoAccettazione: "Addetto accettazione",
+  addettoAccettazioneId: "Addetto accettazione (id)",
   richiedente: "Richiedente",
   richiedenteTelefono: "Telefono richiedente",
   richiedenteFirma: "Firma richiedente",

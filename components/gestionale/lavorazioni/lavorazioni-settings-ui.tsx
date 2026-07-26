@@ -6,8 +6,8 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardE
 import { SettingsColorPickerPopover } from "@/components/gestionale/settings-color-picker-popover";
 import { IconActionButton } from "@/components/design-system/icon-action-button";
 import { normalizeHex } from "@/lib/lavorazioni/color-utils";
-import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
-import { sortAddettiRecordsByNome, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import { addettoDisplayColorById } from "@/lib/lavorazioni/addetto-colors-assign";
+import { addettoColorKey, sortAddettiRecordsByNome, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import {
   LavorazioneAddettoReadOnlyPill,
   LavorazionePrioritaReadOnlyPill,
@@ -149,7 +149,7 @@ export function AddettiSettingsSection({
   addettiRecords: AddettoRecord[];
   addettoColors: Record<string, string>;
   onAddAddetto: (input: { nome: string; cognome?: string | null }) => void;
-  onChangeAddettoColor: (nome: string, hex: string) => void;
+  onChangeAddettoColor: (colorKey: string, hex: string) => void;
   onUpdateAddetto: (id: string, patch: { nome?: string; cognome?: string | null }) => void;
   onRemove: (id: string) => void;
   attiviAddetti: Set<string>;
@@ -794,7 +794,7 @@ function AddettoSettingsRow({
 }: {
   record: AddettoRecord;
   addettoColors: Record<string, string>;
-  onChangeAddettoColor: (nome: string, hex: string) => void;
+  onChangeAddettoColor: (colorKey: string, hex: string) => void;
   onUpdate: (id: string, patch: { nome?: string; cognome?: string | null }) => void;
   onRemove: (id: string) => void;
   inUse: boolean;
@@ -826,8 +826,8 @@ function AddettoSettingsRow({
   const itemLabel = [record.nome, record.cognome].filter(Boolean).join(" ").trim() || record.nome;
   /** In tabella lavorazioni la pill usa il nome (chiave colori), non nome+cognome. */
   const tableAddettoLabel = (editing ? nome : record.nome).trim() || "—";
-  const colorKey = (editing ? nome : record.nome).trim() || record.nome;
-  const displayHex = addettoDisplayColor(colorKey, addettoColors);
+  const colorKey = addettoColorKey(record);
+  const displayHex = addettoDisplayColorById(colorKey, addettoColors, [record]);
 
   const commitEdit = useCallback(() => {
     const nomeTrim = nome.trim();
@@ -930,13 +930,13 @@ function AddettoSettingsRow({
           !editing ? (
             <>
               <Tooltip content={"Anteprima come in tabella lavorazioni"}><span className={SETTINGS_PREVIEW_PILL_LEADING_CLASS}>
-                <LavorazioneAddettoReadOnlyPill addetto={tableAddettoLabel} addettoColors={addettoColors} fullWidth={false} actionRow actionRowFixedWidth/>
+                <LavorazioneAddettoReadOnlyPill addetto={tableAddettoLabel} colorKey={colorKey} addettoColors={addettoColors} addettiRecords={[record]} fullWidth={false} actionRow actionRowFixedWidth/>
               </span></Tooltip>
               <ColorSwatchButton
                 value={displayHex}
                 ariaLabel={`Colore addetto ${tableAddettoLabel}`}
                 tooltipContent={`Modifica colore · ${displayHex.toUpperCase()}`}
-                onChange={(hex) => onChangeAddettoColor(record.nome, hex)}
+                onChange={(hex) => onChangeAddettoColor(colorKey, hex)}
               />
             </>
           ) : undefined
@@ -966,7 +966,7 @@ export function AddettiSettingsList({
 }: {
   addettiRecords: AddettoRecord[];
   addettoColors: Record<string, string>;
-  onChangeAddettoColor: (nome: string, hex: string) => void;
+  onChangeAddettoColor: (colorKey: string, hex: string) => void;
   onUpdateAddetto: (id: string, patch: { nome?: string; cognome?: string | null }) => void;
   onRemove: (id: string) => void;
   attiviAddetti: Set<string>;

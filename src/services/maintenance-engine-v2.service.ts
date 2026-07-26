@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { computeMaintenanceUrgency } from "@/lib/maintenance-plans/compute-maintenance-urgency";
 import { formatDueReason } from "@/lib/maintenance-plans/maintenance-due-engine";
@@ -31,6 +31,7 @@ import {
 } from "@/lib/maintenance-plans/resolve-mezzo-metering";
 import type {
   BulkAssignPresetResult,
+  MezzoPresetAssignRow,
   MezzoWithoutPresetRow,
   RegisterMaintenanceExecutionInput,
   TagliandiOverviewRow,
@@ -100,6 +101,104 @@ function buildLastServiceMap(
   return lastByConfig;
 }
 
+function resolveConfigPresetNome(
+  presetId: string | null,
+  presetMap: Map<string, string>,
+  storedLabel: string | null | undefined,
+): string {
+  if (presetId) {
+    return presetMap.get(presetId) ?? storedLabel?.trim() ?? "Preset rimosso";
+  }
+  return storedLabel?.trim() ?? "â€”";
+}
+
+async function resolveMezzoConfigUpsertTargetId(
+  client: Awaited<ReturnType<typeof sb>>,
+  input: { id?: string; mezzoId: string; presetId: string },
+): Promise<{ id?: string; conflict?: string }> {
+  const explicitId = input.id?.trim();
+  if (explicitId) {
+    const { data: duplicate } = await client
+      .from("vehicle_maintenance_configs")
+      .select("id")
+      .eq("mezzo_id", input.mezzoId)
+      .eq("preset_id", input.presetId)
+      .is("deleted_at", null)
+      .neq("id", explicitId)
+      .maybeSingle();
+    if (duplicate) return { conflict: "Questo preset Ã¨ giÃ  assegnato al mezzo." };
+    return { id: explicitId };
+  }
+
+  const { data: existingSame } = await client
+    .from("vehicle_maintenance_configs")
+    .select("id")
+    .eq("mezzo_id", input.mezzoId)
+    .eq("preset_id", input.presetId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (existingSame?.id) return { id: existingSame.id as string };
+
+  const { data: orphan } = await client
+    .from("vehicle_maintenance_configs")
+    .select("id")
+    .eq("mezzo_id", input.mezzoId)
+    .is("preset_id", null)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (orphan?.id) return { id: orphan.id as string };
+
+  return {};
+}
+
+async function loadSingleConfigView(
+  client: Awaited<ReturnType<typeof sb>>,
+  row: ConfigRow,
+  mezzoId: string,
+): Promise<VehicleMaintenanceConfigView> {
+  const metering = await resolveCurrentMezzoMetering(client, mezzoId);
+  const [forecastRes, servicesRes, presetRes, partsCountRes] = await Promise.all([
+    client
+      .from("vehicle_maintenance_forecasts")
+      .select(VEHICLE_MAINTENANCE_FORECASTS_COLUMNS)
+      .eq("config_id", row.id)
+      .maybeSingle(),
+    client
+      .from("vehicle_maintenance_services")
+      .select("config_id, performed_at, ore_at_service, km_at_service")
+      .eq("config_id", row.id)
+      .order("performed_at", { ascending: false })
+      .limit(1),
+    row.preset_id
+      ? client.from("maintenance_plans").select("id, nome").eq("id", row.preset_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    row.preset_id
+      ? client
+          .from("maintenance_plan_parts")
+          .select("id", { count: "exact", head: true })
+          .eq("plan_id", row.preset_id)
+      : Promise.resolve({ count: 0, error: null }),
+  ]);
+
+  const presetMap = new Map<string, string>();
+  if (presetRes.data && typeof presetRes.data === "object" && "id" in presetRes.data) {
+    presetMap.set(presetRes.data.id as string, presetRes.data.nome as string);
+  }
+  const lastMap = buildLastServiceMap(servicesRes.data ?? []);
+
+  return mapConfigToViewFromBatch({
+    c: row,
+    mezzoId,
+    metering,
+    forecast: (forecastRes.data as ForecastRow | null) ?? null,
+    lastService: lastMap.get(row.id) ?? null,
+    presetNome: resolveConfigPresetNome(row.preset_id, presetMap, row.label),
+    partsCount: partsCountRes.count ?? 0,
+  });
+}
+
 function mapConfigToViewFromBatch(input: {
   c: ConfigRow;
   mezzoId: string;
@@ -127,7 +226,7 @@ function mapConfigToViewFromBatch(input: {
     isActive: c.is_active,
     intervalType: c.interval_type,
     intervalValue: Number(c.interval_value),
-    label: c.label?.trim() ?? presetNome,
+    label: presetNome,
     activatedAt: c.activated_at,
     deactivatedAt: c.deactivated_at,
     plannedLavorazioneId: c.planned_lavorazione_id,
@@ -182,7 +281,7 @@ async function loadConfigViewBatch(
   }
 
   return configs.map((c) => {
-    const presetNome = c.label?.trim() || (c.preset_id ? presetMap.get(c.preset_id) ?? "—" : "Custom");
+    const presetNome = resolveConfigPresetNome(c.preset_id, presetMap, c.label);
     return mapConfigToViewFromBatch({
       c,
       mezzoId,
@@ -239,22 +338,49 @@ export const maintenanceEngineV2Service = {
 
   async upsertMezzoConfig(input: UpsertVehicleMaintenanceConfigInput): Promise<ServiceResult<VehicleMaintenanceConfigView>> {
     try {
+      if (!input.presetId) {
+        return err("Seleziona un preset esistente.");
+      }
+
       const client = await sb();
       const { data: user } = await client.auth.getUser();
       const uid = user.user?.id ?? null;
 
-      const payload = {
+      const { data: presetRow, error: presetErr } = await client
+        .from("maintenance_plans")
+        .select("id, nome")
+        .eq("id", input.presetId)
+        .maybeSingle();
+      if (presetErr || !presetRow) return err("Preset non trovato.");
+
+      const payload: Record<string, unknown> = {
         mezzo_id: input.mezzoId,
-        preset_id: input.presetId ?? null,
+        preset_id: input.presetId,
         is_active: input.isActive,
         interval_type: input.intervalType,
         interval_value: input.intervalValue,
-        label: input.label?.trim() || null,
+        label: (presetRow.nome as string).trim(),
         activated_at: input.activatedAt ?? null,
         deactivated_at: input.deactivatedAt ?? null,
       };
 
-      let configId = input.id;
+      const { data: version } = await client
+        .from("maintenance_preset_versions")
+        .select("id")
+        .eq("preset_id", input.presetId)
+        .order("version_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      payload.preset_version_id = version?.id ?? null;
+
+      const target = await resolveMezzoConfigUpsertTargetId(client, {
+        id: input.id,
+        mezzoId: input.mezzoId,
+        presetId: input.presetId,
+      });
+      if (target.conflict) return err(target.conflict);
+
+      let configId = target.id;
       if (configId) {
         const { error } = await client
           .from("vehicle_maintenance_configs")
@@ -262,16 +388,6 @@ export const maintenanceEngineV2Service = {
           .eq("id", configId);
         if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "update" }));
       } else {
-        if (input.presetId) {
-          const { data: version } = await client
-            .from("maintenance_preset_versions")
-            .select("id")
-            .eq("preset_id", input.presetId)
-            .order("version_number", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          (payload as Record<string, unknown>).preset_version_id = version?.id ?? null;
-        }
         const { data: row, error } = await client
           .from("vehicle_maintenance_configs")
           .insert({ ...payload, created_by: uid })
@@ -279,22 +395,30 @@ export const maintenanceEngineV2Service = {
           .single();
         if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "create" }));
         configId = (row as ConfigRow).id;
-        await writeModificaLog(client, {
-          entita: ENTITA_CONFIG,
-          entita_id: configId,
-          azione: "CREATE",
-          payload: auditSnapshot(row, auditContext(input.label ?? "config")),
-        });
+        try {
+          await writeModificaLog(client, {
+            entita: ENTITA_CONFIG,
+            entita_id: configId,
+            azione: "CREATE",
+            payload: auditSnapshot(row, auditContext(input.label ?? "config")),
+          });
+        } catch (auditErr) {
+          console.warn("[upsertMezzoConfig] audit log skipped:", auditErr);
+        }
       }
 
-      await maintenanceEngineV2Service.recomputeForecast(configId!);
+      const recomputeRes = await maintenanceEngineV2Service.recomputeForecast(configId!);
+      if (!recomputeRes.success) {
+        console.warn("[upsertMezzoConfig] recompute forecast skipped:", recomputeRes.error);
+      }
 
-      const listed = await maintenanceEngineV2Service.listMezzoConfigs({
-        mezzoId: input.mezzoId,
-      });
-      if (!listed.success) return err(listed.error ?? "Errore ricaricamento.");
-      const view = (listed.data ?? []).find((c) => c.id === configId);
-      if (!view) return err("Config non trovata dopo salvataggio.");
+      const { data: savedRow, error: readErr } = await client
+        .from("vehicle_maintenance_configs")
+        .select(VEHICLE_MAINTENANCE_CONFIGS_COLUMNS)
+        .eq("id", configId)
+        .maybeSingle();
+      if (readErr || !savedRow) return err("Config non trovata dopo salvataggio.");
+      const view = await loadSingleConfigView(client, savedRow as ConfigRow, input.mezzoId);
       return success(view);
     } catch (e) {
       return serviceFailFromError<VehicleMaintenanceConfigView>(e, null as never, { entity: "mezzo", action: "update" });
@@ -489,7 +613,7 @@ export const maintenanceEngineV2Service = {
           nextDateEstimated: forecast?.next_date_estimated ?? null,
           remainingValue: forecast?.remaining_value ?? 0,
         });
-        const presetNome = c.label?.trim() || (c.preset_id ? presetMap.get(c.preset_id) ?? "—" : "Custom");
+        const presetNome = resolveConfigPresetNome(c.preset_id, presetMap, c.label);
 
         return {
           configId: c.id,
@@ -497,7 +621,7 @@ export const maintenanceEngineV2Service = {
           presetId: c.preset_id,
           numeroScuderia: (mezzo?.numero_scuderia as string | null) ?? null,
           targa: (mezzo?.targa as string | null) ?? null,
-          attrezzaturaLabel: [mezzo?.marca_telaio, mezzo?.modello_telaio].filter(Boolean).join(" ") || "—",
+          attrezzaturaLabel: [mezzo?.marca_telaio, mezzo?.modello_telaio].filter(Boolean).join(" ") || "â€”",
           presetNome,
           intervalType: c.interval_type,
           intervalValue: Number(c.interval_value),
@@ -616,6 +740,16 @@ export const maintenanceEngineV2Service = {
   },
 
   async listMezziWithoutPreset(): Promise<ServiceResult<MezzoWithoutPresetRow[]>> {
+    const res = await maintenanceEngineV2Service.listAssignableMezzi();
+    if (!res.success) return err(res.error ?? "Errore mezzi.");
+    return success(
+      (res.data ?? [])
+        .filter((m) => !m.hasActivePreset)
+        .map(({ hasActivePreset: _hasActivePreset, ...row }) => row),
+    );
+  },
+
+  async listAssignableMezzi(): Promise<ServiceResult<MezzoPresetAssignRow[]>> {
     try {
       const client = await sb();
       const [mezziRes, configsRes] = await Promise.all([
@@ -633,20 +767,20 @@ export const maintenanceEngineV2Service = {
       if (configsRes.error) return err(humanizeGestionaleError(configsRes.error.message, { entity: "mezzo", action: "read" }));
 
       const withConfig = new Set((configsRes.data ?? []).map((c) => c.mezzo_id as string));
-      const rows: MezzoWithoutPresetRow[] = (mezziRes.data ?? [])
-        .filter((m) => !withConfig.has(m.id as string))
+      const rows: MezzoPresetAssignRow[] = (mezziRes.data ?? [])
         .map((m) => ({
           mezzoId: m.id as string,
           numeroScuderia: (m.numero_scuderia as string | null) ?? null,
           targa: (m.targa as string | null) ?? null,
-          attrezzaturaLabel: [m.marca_telaio, m.modello_telaio].filter(Boolean).join(" ") || "—",
+          attrezzaturaLabel: [m.marca_telaio, m.modello_telaio].filter(Boolean).join(" ") || "â€”",
           tipoAttrezzatura: (m.tipo_attrezzatura as string) ?? "",
+          hasActivePreset: withConfig.has(m.id as string),
         }))
         .sort((a, b) => (a.numeroScuderia ?? "").localeCompare(b.numeroScuderia ?? "", "it", { numeric: true }));
 
       return success(rows);
     } catch (e) {
-      return serviceFailFromError<MezzoWithoutPresetRow[]>(e, [], { entity: "mezzo", action: "read" });
+      return serviceFailFromError<MezzoPresetAssignRow[]>(e, [], { entity: "mezzo", action: "read" });
     }
   },
 
@@ -663,7 +797,7 @@ export const maintenanceEngineV2Service = {
       if (!plansRes.success) return err(plansRes.error ?? "Errore piani.");
       const plan = (plansRes.data ?? []).find((p) => p.id === input.presetId);
       if (!plan) return err("Preset non trovato.");
-      if (!isPresetAssignable(plan.status)) return err("Il preset non è attivo o non è assegnabile.");
+      if (!isPresetAssignable(plan.status)) return err("Il preset non Ã¨ attivo o non Ã¨ assegnabile.");
 
       const triggers = plan.triggerGroups[0]?.triggers ?? [
         { triggerType: plan.intervalType, threshold: plan.intervalValue, priority: 0 },
@@ -693,7 +827,7 @@ export const maintenanceEngineV2Service = {
           .is("deleted_at", null)
           .maybeSingle();
         if (existingSame) {
-          skipped.push({ mezzoId, reason: "Preset già assegnato" });
+          skipped.push({ mezzoId, reason: "Preset giÃ  assegnato" });
           continue;
         }
 
@@ -734,6 +868,105 @@ export const maintenanceEngineV2Service = {
       return success({ assigned, skipped });
     } catch (e) {
       return serviceFailFromError<BulkAssignPresetResult>(e, { assigned: 0, skipped: [] }, { entity: "mezzo", action: "update" });
+    }
+  },
+
+  async listMezzoMaintenanceTimelineExtras(
+    mezzoId: string,
+  ): Promise<ServiceResult<import("@/lib/maintenance-plans/v2-types").MaintenanceTimelineExtraEvent[]>> {
+    try {
+      const client = await sb();
+      const events: import("@/lib/maintenance-plans/v2-types").MaintenanceTimelineExtraEvent[] = [];
+
+      const { data: configs } = await client
+        .from("vehicle_maintenance_configs")
+        .select("id")
+        .eq("mezzo_id", mezzoId)
+        .is("deleted_at", null);
+      const configIds = (configs ?? []).map((c) => c.id as string);
+
+      if (configIds.length > 0) {
+        const { data: configAudits } = await client
+          .from("maintenance_audit_events")
+          .select("id, action, created_at")
+          .in("entity_id", configIds)
+          .in("action", ["PRESET_REPLACED_ON_MEZZO", "COMPLIANCE_REVIEWED"])
+          .order("created_at", { ascending: false })
+          .limit(30);
+        for (const row of configAudits ?? []) {
+          const action = row.action as string;
+          events.push({
+            id: `audit-${row.id}`,
+            kind: action === "COMPLIANCE_REVIEWED" ? "compliance_reviewed" : "preset_changed",
+            at: row.created_at as string,
+            title: action === "COMPLIANCE_REVIEWED" ? "Compliance revisionata" : "Preset cambiato sul mezzo",
+          });
+        }
+
+        const { data: forecastRows } = await client
+          .from("vehicle_maintenance_forecast_history")
+          .select("id, computed_at, reason")
+          .in("config_id", configIds)
+          .order("computed_at", { ascending: false })
+          .limit(20);
+        for (const row of forecastRows ?? []) {
+          events.push({
+            id: `fc-${row.id}`,
+            kind: "forecast_recomputed",
+            at: row.computed_at as string,
+            title: "Forecast ricalcolato",
+            subtitle: (row.reason as string | null) ?? undefined,
+          });
+        }
+      }
+
+      const { data: services } = await client
+        .from("vehicle_maintenance_services")
+        .select("id")
+        .eq("mezzo_id", mezzoId)
+        .is("deleted_at", null)
+        .limit(100);
+      const serviceIds = (services ?? []).map((s) => s.id as string);
+      if (serviceIds.length > 0) {
+        const { data: execAudits } = await client
+          .from("maintenance_audit_events")
+          .select("id, action, created_at")
+          .eq("entity", "execution")
+          .in("entity_id", serviceIds)
+          .eq("action", "COMPLIANCE_REVIEWED")
+          .order("created_at", { ascending: false })
+          .limit(20);
+        for (const row of execAudits ?? []) {
+          events.push({
+            id: `exec-audit-${row.id}`,
+            kind: "compliance_reviewed",
+            at: row.created_at as string,
+            title: "Compliance revisionata",
+          });
+        }
+      }
+
+      const { data: bulkAudits } = await client
+        .from("maintenance_audit_events")
+        .select("id, action, created_at, new_value")
+        .eq("action", "PRESET_BULK_ASSIGNED")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      for (const row of bulkAudits ?? []) {
+        const mezzoIds = (row.new_value as { mezzoIds?: string[] } | null)?.mezzoIds ?? [];
+        if (!mezzoIds.includes(mezzoId)) continue;
+        events.push({
+          id: `bulk-${row.id}`,
+          kind: "preset_assigned",
+          at: row.created_at as string,
+          title: "Preset assegnato al mezzo",
+        });
+      }
+
+      events.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+      return success(events.slice(0, 40));
+    } catch (e) {
+      return serviceFailFromError(e, [], { entity: "mezzo", action: "read" });
     }
   },
 };

@@ -199,11 +199,9 @@ import {
   useCollapsiblePreference,
 } from "@/lib/ui/collapsible-prefs";
 import { clientPaginationPageForIndex, useClientPagination } from "@/lib/ui/use-client-pagination";
-import {
-  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
-  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
-  useGestionaleListLayout,
-} from "@/lib/ui/use-gestionale-list-layout";
+import { gestionaleListTierClass } from "@/lib/ui/gestionale-list-responsive";
+import type { GestionaleListPageProps } from "@/lib/ui/gestionale-list-page-props";
+import { useListSurface } from "@/lib/ui/use-list-surface";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
 import { useCompatMezziListe } from "@/src/hooks/use-compat-mezzi-liste";
@@ -473,18 +471,14 @@ function RicambioCodiceCell({ p }: { p: RicambioMagazzino }) {
   );
 }
 
-export function MagazzinoView() {
+export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" }: GestionaleListPageProps) {
+  const listSurface = useListSurface(serverListSurface);
   useGestionaleSyncScope({
     scopeId: "magazzino-view",
     domain: "magazzino",
     tables: ["magazzino_ricambi", "movimenti_ricambi", "log_modifiche", "ordini_fornitori"],
   });
 
-  const {
-    containerRef: listLayoutRef,
-    layout: listLayout,
-    layoutClassName: listLayoutClassName,
-  } = useGestionaleListLayout({ tier: "xl" });
   const { authorName, user } = useAuth();
 
   function magazzinoLogScopeFields(): Pick<MagazzinoLogEntry, "autoreUserId"> {
@@ -1057,8 +1051,8 @@ export function MagazzinoView() {
 
   const needConsumoMap =
     !magazzinoInitialLoading &&
-    (listLayout === "desktop" ||
-      listLayout === "mobile" ||
+    (listSurface === "table" ||
+      listSurface === "cards" ||
       detail != null ||
       sortColumn === "consumoMedioMensile");
 
@@ -1125,7 +1119,7 @@ export function MagazzinoView() {
 
     rows = [...rows].sort((a, b) => {
       if (sortPhase === "natural" || sortColumn === null) {
-        if (listLayout === "mobile") {
+        if (listSurface === "cards") {
           return compareMagazzinoMobileDefaultOrder(a, b, orderMap, mezziListePrefs);
         }
         return compareMagazzinoDefaultOrder(a, b, orderMap, mezziListePrefs);
@@ -1136,7 +1130,7 @@ export function MagazzinoView() {
     });
 
     return rows;
-  }, [prodotti, pageFilters, sortColumn, sortPhase, consumoAvgById, mezziListePrefs, haystackIndex, listLayout]);
+  }, [prodotti, pageFilters, sortColumn, sortPhase, consumoAvgById, mezziListePrefs, haystackIndex, listSurface]);
 
   filteredSortedRef.current = filteredSorted;
 
@@ -1654,10 +1648,7 @@ export function MagazzinoView() {
     <GestionaleSectionGate module="magazzino">
     <MagazzinoDebouncedScortaProvider value={debouncedScortaContextValue}>
     {importExportActions.modal}
-    <div
-      ref={listLayoutRef}
-      className={`magazzino-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}
-    >
+    <div className={`magazzino-scroll-scope ${layoutPageRoot} ${gestionaleListTierClass(listTier)}`.trim()}>
       <PageHeaderPageActionMenu
         items={magazzinoMenuItems}
         headerActions={magazzinoMenuHeaderActions}
@@ -1782,9 +1773,9 @@ export function MagazzinoView() {
 
         <SkeletonBoundary loading={magazzinoInitialLoading}>
         <MagazzinoTableSection mode="content">
-        {listLayout === "desktop" ? (
+        {listSurface === "table" ? (
         <GestionaleListTable
-          visibilityClass={`mt-4 ${GESTIONALE_LIST_DESKTOP_ONLY_CLASS}`}
+          wrapClassName="mt-4"
           colgroup={
             <>
               {labelMode ? <col className="w-[7.25rem]" /> : null}
@@ -1888,10 +1879,8 @@ export function MagazzinoView() {
         >
           {null}
         </GestionaleListTable>
-        ) : null}
-
-        {listLayout === "mobile" ? (
-        <div className={`mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
+        ) : (
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {pagedMagazzino.map((p) => {
             const consumoRow = consumoMap.get(p.id);
             const avgM = consumoRow?.avgMonthly ?? null;
@@ -2040,7 +2029,7 @@ export function MagazzinoView() {
             );
           })}
         </div>
-        ) : null}
+        )}
         {showPager ? (
           <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} />
         ) : null}
