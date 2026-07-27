@@ -47,25 +47,32 @@ export function pickWinningTrigger(
 export function formatDueReason(input: {
   presetNome: string;
   explainability: ForecastExplainability | null;
+  /** Fallback se `explainability.trigger_reason` manca (colonna forecast). */
+  triggerReason?: MaintenanceIntervalType | null;
   currentValue?: number | null;
   remainingValue?: number | null;
   isOverdue?: boolean;
 }): string {
   const { presetNome, explainability, currentValue, remainingValue, isOverdue } = input;
-  if (!explainability?.trigger_reason) {
+  const type = explainability?.trigger_reason ?? input.triggerReason ?? null;
+  if (!type) {
+    if (isOverdue && currentValue != null && remainingValue != null && remainingValue <= 0) {
+      const limit = Math.round(currentValue + remainingValue);
+      return `${presetNome} scaduto: raggiunti ${Math.round(currentValue)} (limite ${limit})`;
+    }
     if (isOverdue) return `${presetNome} scaduto`;
     if (explainability?.due_date) return `${presetNome}: scadenza stimata ${explainability.due_date}`;
     return `${presetNome}: pianificazione in corso`;
   }
 
-  const type = explainability.trigger_reason;
   const label = MAINTENANCE_INTERVAL_TYPE_LABELS[type];
-  const alt = explainability.groups.flatMap((g) => g.alternatives).find((a) => a.type === type);
+  const alt = explainability?.groups.flatMap((g) => g.alternatives).find((a) => a.type === type);
   const overdue = isOverdue || alt?.isOverdue || (remainingValue != null && remainingValue <= 0);
 
   if (overdue) {
     if ((type === "ore" || type === "km") && currentValue != null && remainingValue != null) {
-      const limit = Math.round(currentValue - remainingValue);
+      // remaining = dueMilestone - current ⇒ due = current + remaining
+      const limit = Math.round(currentValue + remainingValue);
       const unit = type === "km" ? "km" : "ore";
       const verb = type === "km" ? "raggiunti" : "raggiunte";
       return `${presetNome} scaduto: ${verb} ${Math.round(currentValue)} ${unit} (limite ${limit})`;
@@ -76,7 +83,7 @@ export function formatDueReason(input: {
     return `${presetNome} scaduto (${label})`;
   }
 
-  if (explainability.due_date) {
+  if (explainability?.due_date) {
     return `${presetNome}: prossima scadenza ${explainability.due_date} (${label})`;
   }
   return `${presetNome}: ${label}`;

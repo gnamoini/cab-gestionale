@@ -24,6 +24,8 @@ import { MezziTable } from "@/components/gestionale/mezzi/mezzi-table";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { type NumeroLavorazioniFilter, type UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
 import { prefetchMezziTagliandiQueries } from "@/lib/mezzi/prefetch-mezzi-tagliandi-queries";
+import { useMaintenanceEngineV2Enabled } from "@/lib/officina/use-maintenance-engine-v2-enabled";
+import { useTagliandiOverviewQuery } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useMezziListDerived } from "@/lib/mezzi/use-mezzi-list-derived";
 import {
   buildUltimaModificaByMezzoIdFromLogs,
@@ -310,6 +312,16 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
 
   const pagedSorted = useMemo(() => sliceItems(sorted), [sliceItems, sorted, page]);
 
+  const maintenanceV2Enabled = useMaintenanceEngineV2Enabled();
+  const tagliandiOverviewQ = useTagliandiOverviewQuery(isAnagrafica && maintenanceV2Enabled);
+  const mezzoIdsWithActivePreset = useMemo(() => {
+    const ids = new Set<string>();
+    for (const row of tagliandiOverviewQ.data ?? []) {
+      if (row.mezzoId) ids.add(row.mezzoId);
+    }
+    return ids;
+  }, [tagliandiOverviewQ.data]);
+
   const openMezzoHub = useCallback((m: MezzoGestito, tab: MezziHubTabId = "panoramica") => {
     setHubInitialTab(tab);
     setHubMezzo(m);
@@ -346,7 +358,7 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
         sp.delete(Q_MEZZI_HUB_TAB);
       } else if (patch.hubMezzo) {
         sp.set(Q_MEZZI_HUB, patch.hubMezzo);
-        sp.set(Q_MEZZI_HUB_TAB, patch.hubTab ?? "tagliandi");
+        sp.set(Q_MEZZI_HUB_TAB, patch.hubTab ?? "panoramica");
       }
       const qs = sp.toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
@@ -372,17 +384,19 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
 
   const openMezzoHubFromTagliandiOverview = useCallback(
     (mezzoId: string) => {
-      const mezzo = mezziUi.find((m) => m.id === mezzoId);
-      if (!mezzo) return;
+      const id = mezzoId.trim();
+      if (!id) return;
+      // ponytail: in vista tagliandi `mezziUi` è [] (derived solo anagrafica) — usa catalogo grezzo
+      const mezzo = mezzoRows.find((m) => m.id === id);
       setPageView("anagrafica");
-      openMezzoHub(mezzo, "panoramica");
-      syncMezziUrl({ view: "anagrafica", hubMezzo: mezzoId, hubTab: "panoramica" });
+      if (mezzo) openMezzoHub(mezzo, "panoramica");
+      syncMezziUrl({ view: "anagrafica", hubMezzo: id, hubTab: "panoramica" });
     },
-    [mezziUi, openMezzoHub, syncMezziUrl],
+    [mezzoRows, openMezzoHub, syncMezziUrl],
   );
 
   const { undoable: undoableMezziLog, logQuery } = useUndoableLog("mezzi", {
-    enabled: isAnagrafica || logOpen,
+    enabled: isAnagrafica || logOpen || Boolean(hubMezzo),
   });
   const logEntriesUi = useMemo(
     () =>
@@ -578,13 +592,13 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
   useEffect(() => {
     const hubId = searchParams.get(Q_MEZZI_HUB)?.trim();
     const rawHubTab = searchParams.get(Q_MEZZI_HUB_TAB);
-    const hubTab = rawHubTab?.trim() ? normalizeMezziHubTabId(rawHubTab) : "tagliandi";
-    if (!hubId || mezziUi.length === 0) return;
-    const mezzo = mezziUi.find((m) => m.id === hubId);
+    const hubTab = rawHubTab?.trim() ? normalizeMezziHubTabId(rawHubTab) : "panoramica";
+    if (!hubId || mezzoRows.length === 0) return;
+    const mezzo = mezzoRows.find((m) => m.id === hubId);
     if (!mezzo) return;
     setHubInitialTab(hubTab);
     setHubMezzo(mezzo);
-  }, [searchParams, mezziUi]);
+  }, [searchParams, mezzoRows]);
 
   useEffect(() => {
     const id = searchParams.get(Q_FOCUS_MEZZO)?.trim();
@@ -796,6 +810,7 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
                 rows={pagedSorted}
                 interventiByMezzoId={interventiByMezzoId}
                 ultimaModificaInfoByMezzoId={ultimaModificaInfoByMezzoId}
+                mezzoIdsWithActivePreset={mezzoIdsWithActivePreset}
                 inOfficina={inOfficina}
                 sortColumn={sortColumn}
                 sortPhase={sortPhase}
@@ -826,6 +841,13 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
         <MezziHubDetailModal
           mezzo={hubMezzo}
           initialTab={hubInitialTab}
+          ultimaModificaInfo={resolveMezzoUltimaModificaInfo(
+            hubMezzo,
+            buildUltimaModificaByMezzoIdFromLogs(logQuery.data ?? [], {
+              currentUserId: user?.id ?? null,
+              currentDisplayName: user?.nome ?? "",
+            }),
+          )}
           onClose={() => {
             setHubMezzo(null);
             setHubInitialTab("panoramica");

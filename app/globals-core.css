@@ -700,6 +700,26 @@ html.dark select option {
   }
 }
 
+/** Checkbox SSOT — check bianco su primary (accent-color OS spesso usa check scuro). */
+.cab-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--cab-surface);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 0.75rem 0.75rem;
+}
+
+.cab-checkbox:checked {
+  border-color: var(--cab-primary);
+  background-color: var(--cab-primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M3.5 8.5l3 3 6-6'/%3E%3C/svg%3E");
+}
+
+.cab-checkbox:focus-visible {
+  outline: none;
+}
+
 body[data-cab-scroll-lock-count] {
   overscroll-behavior: none;
 }

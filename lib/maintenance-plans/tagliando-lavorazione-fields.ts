@@ -5,6 +5,7 @@ export type LavorazioneInterventionType = "riparazione" | "tagliando" | "riparaz
 
 export type TagliandoLavorazioneFields = {
   isTagliando: boolean;
+  isGaranzia: boolean;
   maintenanceExecutionKind: MaintenanceExecutionKind;
   repairPresent: boolean;
   tagliandoPresetRef: string | null;
@@ -15,6 +16,7 @@ export type TagliandoLavorazioneFields = {
 
 export const DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS: TagliandoLavorazioneFields = {
   isTagliando: false,
+  isGaranzia: false,
   maintenanceExecutionKind: "scheduled",
   repairPresent: false,
   tagliandoPresetRef: null,
@@ -31,15 +33,23 @@ export function interventionTypeFromTagliandoFields(fields: {
   return fields.repairPresent ? "riparazione_tagliando" : "tagliando";
 }
 
-/** Etichetta pill hub / liste (allineata alla scheda ingresso, uppercase). */
+/** Etichetta pill hub / liste (stesso casing della scheda ingresso). */
 export function interventionTypePillLabel(type: LavorazioneInterventionType): string {
+  return interventionTypeShortBadge(type).title;
+}
+
+/** Badge compatto liste: solo tagliando → T (anche tagliando+riparazione). */
+export function interventionTypeShortBadge(type: LavorazioneInterventionType): {
+  code: "R" | "T";
+  title: string;
+} {
   switch (type) {
     case "riparazione":
-      return "RIPARAZIONE";
+      return { code: "R", title: "Riparazione" };
     case "tagliando":
-      return "TAGLIANDO";
+      return { code: "T", title: "Tagliando" };
     case "riparazione_tagliando":
-      return "TAGLIANDO+RIPARAZIONE";
+      return { code: "T", title: "Tagliando + riparazione" };
   }
 }
 
@@ -59,6 +69,7 @@ export function tagliandoFieldsFromInterventionType(
 export function tagliandoFieldsToLavorazionePatch(fields: TagliandoLavorazioneFields): Record<string, unknown> {
   return {
     is_tagliando: fields.isTagliando,
+    is_garanzia: fields.isGaranzia,
     maintenance_execution_kind: fields.isTagliando ? fields.maintenanceExecutionKind : null,
     repair_present: fields.isTagliando ? fields.repairPresent : false,
     tagliando_preset_ref: fields.tagliandoPresetRef,
@@ -70,6 +81,7 @@ export function tagliandoFieldsToLavorazionePatch(fields: TagliandoLavorazioneFi
 
 export function lavorazioneRowToTagliandoFields(row: {
   is_tagliando?: boolean | null;
+  is_garanzia?: boolean | null;
   maintenance_execution_kind?: MaintenanceExecutionKind | null;
   repair_present?: boolean | null;
   tagliando_preset_ref?: string | null;
@@ -79,6 +91,7 @@ export function lavorazioneRowToTagliandoFields(row: {
 }): TagliandoLavorazioneFields {
   return {
     isTagliando: Boolean(row.is_tagliando),
+    isGaranzia: Boolean(row.is_garanzia),
     maintenanceExecutionKind: row.maintenance_execution_kind ?? "scheduled",
     repairPresent: Boolean(row.repair_present),
     tagliandoPresetRef: row.tagliando_preset_ref ?? null,

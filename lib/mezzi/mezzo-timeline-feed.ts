@@ -1,10 +1,14 @@
 import type { MezziHubLogEntry } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { isAssociationHistoryEntry } from "@/lib/domain/mezzo/mezzo-association";
 import { isSystemLogAzione } from "@/lib/gestionale-log/log-summary";
 import type { MezzoInterventoLavorazione } from "@/lib/mezzi/types";
 import type { MezzoTimelineItem } from "@/src/services/domain/mezzo-domain.service";
 import type { MezzoAnagraficaHistoryRow } from "@/src/services/mezzo-anagrafica-history.service";
 
 export const MEZZO_TIMELINE_PAGE_SIZE = 10;
+
+/** Finestra dedup: storico campo-per-campo vs log gestionale dello stesso salvataggio. */
+const ANAGRAFICA_HISTORY_LOG_DEDUP_MS = 120_000;
 
 export type MezzoTimelineFilter = "all" | "lavorazioni" | "anagrafica" | "tagliandi" | "sistema";
 
@@ -114,6 +118,18 @@ function timelineLogIdFromItem(item: MezzoTimelineItem): string | null {
   return null;
 }
 
+function hasNearbyAnagraficaLog(at: string, events: readonly MezzoTimelineFeedEvent[]): boolean {
+  const t = new Date(at).getTime();
+  if (!Number.isFinite(t)) return false;
+  return events.some((e) => {
+    if (e.renderKind !== "log_modifiche") return false;
+    if (e.category !== "anagrafica") return false;
+    const et = new Date(e.at).getTime();
+    if (!Number.isFinite(et)) return false;
+    return Math.abs(et - t) <= ANAGRAFICA_HISTORY_LOG_DEDUP_MS;
+  });
+}
+
 function normalizeEvents(input: MezzoTimelineFeedInput): MezzoTimelineFeedEvent[] {
   const hubLogIds = new Set(input.logEntries.map((e) => e.id));
   const events: MezzoTimelineFeedEvent[] = [];
@@ -144,6 +160,9 @@ function normalizeEvents(input: MezzoTimelineFeedInput): MezzoTimelineFeedEvent[
   }
 
   for (const row of input.anagraficaHistory) {
+    const association = isAssociationHistoryEntry(row.changed_fields as string[]);
+    // Campo-per-campo già coperto dal log gestionale → evita doppia card Prima/Dopo.
+    if (!association && hasNearbyAnagraficaLog(row.created_at, events)) continue;
     events.push({
       id: `anh-${row.id}`,
       at: row.created_at,

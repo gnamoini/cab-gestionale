@@ -1,4 +1,4 @@
-import { resolveMilestones } from "@/lib/maintenance-plans/forecast/ema-forecast";
+import { computeEmaForecast, resolveMilestones } from "@/lib/maintenance-plans/forecast/ema-forecast";
 import type { MaintenanceServiceHistoryView } from "@/lib/maintenance-plans/types";
 import type { MaintenanceServiceLite } from "@/lib/maintenance-plans/tagliandi-matrix";
 import { findServiceAtMilestone, isMilestoneApplicable } from "@/lib/maintenance-plans/tagliandi-matrix";
@@ -281,4 +281,94 @@ export function historyToAnchoredExecutions(
     });
   }
   return out;
+}
+
+function signedDaysBetween(fromYmd: string, toYmd: string): number {
+  const da = new Date(`${fromYmd.slice(0, 10)}T12:00:00`).getTime();
+  const db = new Date(`${toYmd.slice(0, 10)}T12:00:00`).getTime();
+  return (db - da) / (1000 * 60 * 60 * 24);
+}
+
+function addDaysYmd(ymd: string, days: number): string {
+  const d = new Date(`${ymd.slice(0, 10)}T12:00:00`);
+  d.setDate(d.getDate() + Math.round(days));
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Residuo contatore (km/ore) fino al prossimo due — preferisce alternative explainability.
+ */
+export function remainingMeterToNextFromConfig(
+  config: {
+    intervalType: string;
+    remainingValue: number | null;
+    explainability?: {
+      groups: { alternatives: { type: string; remaining: number }[] }[];
+    } | null;
+  },
+  unit: MilestoneUnit,
+): number | null {
+  const alts = config.explainability?.groups.flatMap((g) => g.alternatives) ?? [];
+  const alt = alts.find((a) => a.type === unit);
+  if (alt != null && Number.isFinite(alt.remaining)) return alt.remaining;
+  if (config.intervalType === unit && config.remainingValue != null && Number.isFinite(config.remainingValue)) {
+    return config.remainingValue;
+  }
+  return null;
+}
+
+/**
+ * Data prevista scaglione hub: fatto → performedAt; futuro → EMA rate oppure scala da forecast config.
+ */
+export function estimateHubMilestoneDueDate(input: {
+  done: boolean;
+  performedAt?: string | null;
+  milestoneValue: number;
+  currentValue: number;
+  interval: number;
+  unit: MilestoneUnit;
+  executions: readonly AnchoredMilestoneExecution[];
+  nextDateEstimated?: string | null;
+  remainingMeterToNext?: number | null;
+  today?: string;
+}): string | null {
+  if (input.done) {
+    const at = input.performedAt?.trim().slice(0, 10);
+    return at || null;
+  }
+
+  const today = (input.today ?? new Date().toISOString().slice(0, 10)).slice(0, 10);
+  const remThis = input.milestoneValue - input.currentValue;
+
+  const execPoints = input.executions
+    .filter((e): e is AnchoredMilestoneExecution & { performedAt: string } => Boolean(e.performedAt?.trim()))
+    .map((e) => ({
+      performedAt: e.performedAt.slice(0, 10),
+      valueAtService: e.value,
+    }));
+
+  if (input.interval > 0) {
+    const forecast = computeEmaForecast({
+      intervalType: input.unit,
+      intervalValue: input.interval,
+      currentValue: input.currentValue,
+      executions: execPoints,
+      today,
+    });
+    if (forecast.emaRatePerDay != null && forecast.emaRatePerDay > 0) {
+      if (remThis <= 0) return forecast.nextDateEstimated ?? today;
+      return addDaysYmd(today, remThis / forecast.emaRatePerDay);
+    }
+  }
+
+  const nextDate = input.nextDateEstimated?.trim().slice(0, 10) || null;
+  const remNext = input.remainingMeterToNext;
+  if (!nextDate || remNext == null || !Number.isFinite(remNext)) return null;
+  if (Math.abs(remThis - remNext) < 1) return nextDate;
+
+  const daysToNext = signedDaysBetween(today, nextDate);
+  if (Math.abs(daysToNext) < 0.5) return remThis <= remNext ? nextDate : null;
+  const rate = remNext / daysToNext;
+  if (!(rate > 0)) return null;
+  return addDaysYmd(today, remThis / rate);
 }

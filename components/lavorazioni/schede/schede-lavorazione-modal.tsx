@@ -543,7 +543,10 @@ export function SchedeLavorazioneModal({
     baselineIngressoJson.current = JSON.stringify(normalized);
     ingressoDraftRef.current = normalized;
     setIngressoEditorInitial(normalized);
-    setIngressoTagliandoInitial(lavorazioneRowToTagliandoFields(hubData?.lavorazione ?? {}));
+    // Hub può essere ancora in loading: seed dalla riga lista (`lav`) così non si forza Riparazione.
+    setIngressoTagliandoInitial(
+      lavorazioneRowToTagliandoFields(hubData?.lavorazione ?? lav),
+    );
     setIngressoNoteInitial(hubData?.lavorazione?.note?.trim() || lav.note?.trim() || "");
     setIngressoFormOpen(true);
   }

@@ -17,17 +17,16 @@ assert.equal(isPresetAssignable("archived"), false);
 const draft = emptyPlanDraft();
 const upsert = planDraftToUpsertInput({ ...draft, nome: "Test preset" });
 assert.equal(upsert.nome, "Test preset");
-assert.equal("maintenanceKind" in upsert, false);
+assert.equal(upsert.maintenanceKind, "tagliando_ore");
 assert.equal("tipoAttrezzaturaIds" in upsert, false);
 
-const withNullChecklist = planDraftToUpsertInput({
+const kmDraft = planDraftToUpsertInput({
   ...draft,
-  nome: "Checklist legacy",
-  checklistDraft: [
-    { label: "Voce ok", sortOrder: 0, isRequired: true },
-    { label: undefined as unknown as string, sortOrder: 1, isRequired: false },
-  ],
+  nome: "Km preset",
+  triggersDraft: [{ triggerType: "km", threshold: 25000, priority: 0 }],
 });
-assert.deepEqual(withNullChecklist.checklist, [{ label: "Voce ok", sortOrder: 0, isRequired: true }]);
+assert.equal(kmDraft.maintenanceKind, "tagliando_km");
+assert.ok(kmDraft.maintenanceKind != null);
+assert.equal("checklist" in kmDraft, false);
 
 console.log("maintenance-preset-decouple.test.ts OK");

@@ -8,12 +8,12 @@ import {
 } from "@/components/gestionale/global-table";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import { IconActionButton } from "@/components/design-system";
-import { HubIconPencil, HubIconReplace, HubIconTrash } from "@/components/design-system/hub-table-action-icons";
+import { HubIconTrash } from "@/components/design-system/hub-table-action-icons";
 import { MezziHubTabEmpty } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
-import { MezziTagliandiConfigDrawer } from "@/components/gestionale/mezzi/mezzi-tagliandi-config-drawer";
+import { MaintenancePresetEditorModal } from "@/components/gestionale/maintenance/maintenance-preset-editor-modal";
+import { MezziTagliandiAssignExistingModal } from "@/components/gestionale/mezzi/mezzi-tagliandi-assign-existing-modal";
 import {
-  fmtMezziHubTagliandiSubtitle,
   MezziHubTagliandiUnifiedSection,
 } from "@/components/gestionale/mezzi/mezzi-hub-tagliandi-milestones";
 import {
@@ -24,8 +24,16 @@ import {
 } from "@/lib/maintenance-plans/tagliando-stato-labels";
 import { useMaintenanceEngineV2Enabled } from "@/lib/officina/use-maintenance-engine-v2-enabled";
 import { isPresetAssignable } from "@/lib/maintenance-plans/maintenance-domain-contract";
-import { formatTriggerSummary } from "@/lib/maintenance-plans/maintenance-trigger-helpers";
-import { resolveMilestoneInterval } from "@/lib/maintenance-plans/tagliando-milestone-resolution";
+import {
+  formatTriggerSummary,
+  primaryIntervalFromTriggers,
+} from "@/lib/maintenance-plans/maintenance-trigger-helpers";
+import { emptyPlanDraft } from "@/lib/maintenance-plans/preset-editor-draft";
+import {
+  remainingMeterToNextFromConfig,
+  resolveMilestoneInterval,
+} from "@/lib/maintenance-plans/tagliando-milestone-resolution";
+import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { VehicleMaintenanceConfigView } from "@/lib/maintenance-plans/v2-types";
 import {
@@ -37,9 +45,8 @@ import {
   gestionaleListTableActionsGroupEnd,
 } from "@/lib/ui/gestionale-list-table";
 import {
+  dsBtnNeutral,
   dsPageToolbarCtaCompact,
-  dsTableActionBtnPrimary,
-  dsTableActionBtnSecondary,
   dsTableActionBtnDanger,
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
@@ -52,11 +59,17 @@ import {
 import {
   useMezzoMaintenanceConfigsQuery,
   useDeleteMezzoConfigMutation,
-  useRecomputeForecastMutation,
+  useUpsertMezzoConfigMutation,
 } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
-const HUB_TAGLIANDI_STACK = "space-y-4";
+const hubTagliandiSecondaryCtaClass = `${dsBtnNeutral} h-11 shrink-0 px-3 text-xs font-semibold sm:px-4`;
+
+const HUB_TAGLIANDI_STACK = "space-y-5";
+const HUB_TAGLIANDI_CARD_CLASS = "!p-4 sm:!p-5";
+/** Card Tagliandi: sempre aperta, sfondo più contrastato. */
+const HUB_TAGLIANDI_SECTION_CARD_CLASS =
+  `${HUB_TAGLIANDI_CARD_CLASS} !bg-[var(--cab-card)]`;
 
 function TagliandiPresetEmpty({ canEdit }: { canEdit: boolean }) {
   return (
@@ -64,28 +77,27 @@ function TagliandiPresetEmpty({ canEdit }: { canEdit: boolean }) {
       <p className="text-sm text-[color:var(--cab-text-muted)]">Nessun preset assegnato a questo mezzo.</p>
       {canEdit ? (
         <p className="mt-2 text-xs text-[color:var(--cab-text-muted)]">
-          Usa <strong className="text-[color:var(--cab-text)]">Assegna preset</strong> per collegare un piano di
-          manutenzione.
+          Usa <strong className="text-[color:var(--cab-text)]">Assegna preset</strong> per collegare un piano già
+          esistente, oppure <strong className="text-[color:var(--cab-text)]">Crea preset</strong> per definirne uno
+          nuovo e assegnarlo subito.
         </p>
       ) : null}
     </div>
   );
 }
 
-function fmtConfigsSubtitle(count: number): string {
-  return count === 1 ? "1 preset" : `${count} preset`;
-}
-
-function openAddPlanDrawer(
-  setEditConfig: (config: VehicleMaintenanceConfigView | null) => void,
-  setDrawerOpen: (open: boolean) => void,
-) {
-  setEditConfig(null);
-  setDrawerOpen(true);
-}
-
 function configDisplayName(c: VehicleMaintenanceConfigView, planNome?: string): string {
   return (planNome ?? c.presetNome?.trim()) || "Piano senza nome";
+}
+
+function intervalFromPlan(plan: MaintenancePlanView) {
+  const triggers = plan.triggerGroups[0]?.triggers ?? [];
+  if (triggers.length > 0) return primaryIntervalFromTriggers(triggers);
+  return {
+    intervalType: plan.intervalType,
+    intervalValue: plan.intervalValue,
+    intervalOre: plan.intervalOre,
+  };
 }
 
 function buildStoricoPlansFromConfigs(
@@ -107,48 +119,30 @@ function buildStoricoPlansFromConfigs(
         planLabel: configDisplayName(c, plan?.nome),
         milestone,
         configId: c.id,
+        nextDateEstimated: c.nextDateEstimated,
+        remainingMeterToNext: remainingMeterToNextFromConfig(c, milestone.unit),
       };
     })
     .filter((p): p is NonNullable<typeof p> => p != null);
 }
 
 function HubConfigRowActions({
-  recomputePending,
   deletePending,
-  onConfigure,
-  onRecompute,
   onDelete,
 }: {
-  recomputePending: boolean;
   deletePending: boolean;
-  onConfigure: () => void;
-  onRecompute: () => void;
   onDelete: () => void;
 }) {
   return (
-    <>
-      <IconActionButton label="Configura" tooltipForce className={dsTableActionBtnPrimary} onClick={onConfigure}>
-        <HubIconPencil className={dsTableActionGlyph} />
-      </IconActionButton>
-      <IconActionButton
-        label="Ricalcola"
-        tooltipForce
-        className={dsTableActionBtnSecondary}
-        disabled={recomputePending || deletePending}
-        onClick={onRecompute}
-      >
-        <HubIconReplace className={dsTableActionGlyph} />
-      </IconActionButton>
-      <IconActionButton
-        label="Elimina piano"
-        tooltipForce
-        className={dsTableActionBtnDanger}
-        disabled={recomputePending || deletePending}
-        onClick={onDelete}
-      >
-        <HubIconTrash className={dsTableActionGlyph} />
-      </IconActionButton>
-    </>
+    <IconActionButton
+      label="Rimuovi"
+      tooltipForce
+      className={dsTableActionBtnDanger}
+      disabled={deletePending}
+      onClick={onDelete}
+    >
+      <HubIconTrash className={dsTableActionGlyph} />
+    </IconActionButton>
   );
 }
 
@@ -199,7 +193,7 @@ function HubTagliandiV1({
 
   return (
     <div className={HUB_TAGLIANDI_STACK}>
-      <GestionaleInfoCard title="Preset sul mezzo" subtitle={`${statuses.length} piano/i`} collapsible defaultCollapsed={false}>
+      <GestionaleInfoCard title="Preset sul mezzo" className={HUB_TAGLIANDI_CARD_CLASS} collapsible defaultCollapsed={false}>
         <GestionaleListTable
           fixed
           headRow={
@@ -228,12 +222,7 @@ function HubTagliandiV1({
         </GestionaleListTable>
       </GestionaleInfoCard>
 
-      <GestionaleInfoCard
-        title="Tagliandi"
-        subtitle={fmtMezziHubTagliandiSubtitle(history.length, storicoPlans.length)}
-        collapsible
-        defaultCollapsed={false}
-      >
+      <GestionaleInfoCard title="Tagliandi" className={HUB_TAGLIANDI_SECTION_CARD_CLASS}>
         <MezziHubTagliandiUnifiedSection
           mezzo={mezzo}
           plans={storicoPlans}
@@ -261,12 +250,12 @@ function HubTagliandiV2({
   });
   const plansQ = useMaintenancePlansListQuery(active);
   const historyQ = useMezzoMaintenanceHistoryQuery(mezzo.id, active);
-  const recomputeMut = useRecomputeForecastMutation();
   const deleteMut = useDeleteMezzoConfigMutation();
+  const upsertConfigMut = useUpsertMezzoConfigMutation();
   const gestToast = useGestionaleToast();
 
-  const [editConfig, setEditConfig] = useState<VehicleMaintenanceConfigView | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<VehicleMaintenanceConfigView | null>(null);
 
   const configs = configsQ.data ?? [];
@@ -293,6 +282,23 @@ function HubTagliandiV2({
     }
   }
 
+  async function assignCreatedPlan(plan: MaintenancePlanView) {
+    const primary = intervalFromPlan(plan);
+    await upsertConfigMut.mutateAsync({
+      mezzoId: mezzo.id,
+      presetId: plan.id,
+      isActive: true,
+      intervalType: primary.intervalType,
+      intervalValue: primary.intervalValue,
+      activatedAt: new Date().toISOString().slice(0, 10),
+    });
+    gestToast.successOnce(
+      `create-assign-${mezzo.id}-${plan.id}`,
+      `Preset "${plan.nome}" creato e assegnato al mezzo.`,
+    );
+    await configsQ.refetch();
+  }
+
   if (configsQ.isLoading || historyQ.isLoading) {
     return <MezziHubTabEmpty message="Caricamento piani manutentivi…" />;
   }
@@ -300,22 +306,32 @@ function HubTagliandiV2({
     return <MezziHubTabEmpty message="Errore caricamento piani manutentivi." />;
   }
 
-  const addPlanAction = canEdit ? (
-    <button
-      type="button"
-      className={dsPageToolbarCtaCompact}
-      onClick={() => openAddPlanDrawer(setEditConfig, setDrawerOpen)}
-    >
-      Assegna preset
-    </button>
+  const assignPrimary = configs.length === 0;
+  const presetActions = canEdit ? (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <button
+        type="button"
+        className={assignPrimary ? dsPageToolbarCtaCompact : hubTagliandiSecondaryCtaClass}
+        onClick={() => setAssignOpen(true)}
+      >
+        Assegna preset
+      </button>
+      <button
+        type="button"
+        className={assignPrimary ? hubTagliandiSecondaryCtaClass : dsPageToolbarCtaCompact}
+        onClick={() => setCreateOpen(true)}
+      >
+        Crea preset
+      </button>
+    </div>
   ) : null;
 
   return (
     <div className={HUB_TAGLIANDI_STACK}>
       <GestionaleInfoCard
         title="Preset sul mezzo"
-        subtitle={fmtConfigsSubtitle(configs.length)}
-        actions={addPlanAction}
+        actions={presetActions}
+        className={HUB_TAGLIANDI_CARD_CLASS}
         collapsible
         defaultCollapsed={false}
       >
@@ -329,7 +345,7 @@ function HubTagliandiV2({
                 <col className="w-[40%]" />
                 <col className="w-[26%]" />
                 <col className="w-[9rem]" />
-                {canEdit ? <col className="w-[13.5rem] min-w-[13.5rem]" /> : null}
+                {canEdit ? <col className="w-[9.5rem] min-w-[9.5rem]" /> : null}
               </>
             }
             headRow={
@@ -353,7 +369,6 @@ function HubTagliandiV2({
                 >
                   <td
                     className={`${gestionaleListTableTd} min-w-0 py-2 font-medium text-[color:var(--cab-text)]`}
-                    title={pianoLabel}
                   >
                     <span className="line-clamp-2 leading-snug">{pianoLabel}</span>
                     {!c.presetId ? (
@@ -367,10 +382,7 @@ function HubTagliandiV2({
                       </span>
                     ) : null}
                   </td>
-                  <td
-                    className={`${gestionaleListTableTd} py-2 text-xs text-[color:var(--cab-text-muted)]`}
-                    title={c.triggerReason ?? undefined}
-                  >
+                  <td className={`${gestionaleListTableTd} py-2 text-sm font-medium tabular-nums text-[color:var(--cab-text)]`}>
                     {formatTriggerSummary(
                       plan?.triggerGroups[0]?.triggers ?? [
                         { triggerType: c.intervalType, threshold: c.intervalValue, priority: 0 },
@@ -388,22 +400,7 @@ function HubTagliandiV2({
                     <td className={gestionaleListTableTdAzioni}>
                       <div className={gestionaleListTableActionsGroupEnd}>
                         <HubConfigRowActions
-                          recomputePending={recomputeMut.isPending}
                           deletePending={deletePending}
-                          onConfigure={() => {
-                            setEditConfig(c);
-                            setDrawerOpen(true);
-                          }}
-                          onRecompute={() => {
-                            recomputeMut.mutate(
-                              { configId: c.id, mezzoId: mezzo.id },
-                              {
-                                onSuccess: () =>
-                                  gestToast.successOnce(`recompute-${c.id}`, "Pianificazione aggiornata."),
-                                onError: (err) => gestToast.error(err, { entity: "mezzo", action: "update" }),
-                              },
-                            );
-                          }}
                           onDelete={() => setDeleteTarget(c)}
                         />
                       </div>
@@ -416,12 +413,7 @@ function HubTagliandiV2({
         )}
       </GestionaleInfoCard>
 
-      <GestionaleInfoCard
-        title="Tagliandi"
-        subtitle={fmtMezziHubTagliandiSubtitle(history.length, storicoPlans.length)}
-        collapsible
-        defaultCollapsed={false}
-      >
+      <GestionaleInfoCard title="Tagliandi" className={HUB_TAGLIANDI_SECTION_CARD_CLASS}>
         <MezziHubTagliandiUnifiedSection
           mezzo={mezzo}
           plans={storicoPlans}
@@ -431,12 +423,19 @@ function HubTagliandiV2({
         />
       </GestionaleInfoCard>
 
-      <MezziTagliandiConfigDrawer
-        open={drawerOpen}
+      <MezziTagliandiAssignExistingModal
         mezzoId={mezzo.id}
-        config={editConfig}
-        onClose={() => setDrawerOpen(false)}
-        onSaved={() => void configsQ.refetch()}
+        open={assignOpen}
+        onClose={() => setAssignOpen(false)}
+        onAssigned={() => void configsQ.refetch()}
+        excludePresetIds={configs.map((c) => c.presetId).filter((id): id is string => Boolean(id?.trim()))}
+      />
+
+      <MaintenancePresetEditorModal
+        open={createOpen}
+        initial={emptyPlanDraft()}
+        onClose={() => setCreateOpen(false)}
+        onSaved={assignCreatedPlan}
       />
 
       <GestionaleConfirmDialog

@@ -201,13 +201,23 @@ export function LavorazioneMobileMetaItem({
   );
 }
 
-export function LavorazioneMobileNote({ text }: { text: string }) {
+export function LavorazioneMobileNote({
+  text,
+  leading,
+}: {
+  text: string;
+  leading?: ReactNode;
+}) {
   const t = text.trim();
-  if (!t || t === "—") return null;
+  const hasText = Boolean(t && t !== "—");
+  if (!hasText && !leading) return null;
   return (
-    <p className="mt-2 line-clamp-2 border-t border-zinc-200/60 pt-2 text-[11px] leading-snug text-zinc-500 dark:border-zinc-700/60 dark:text-zinc-400">
-      {t}
-    </p>
+    <div className="mt-2 flex min-w-0 items-start gap-1.5 border-t border-zinc-200/60 pt-2 dark:border-zinc-700/60">
+      {leading}
+      {hasText ? (
+        <p className="min-w-0 line-clamp-2 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">{t}</p>
+      ) : null}
+    </div>
   );
 }
 

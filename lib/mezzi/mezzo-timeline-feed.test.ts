@@ -122,6 +122,38 @@ const blockA = feedAnh.find(
 assert.ok(blockA, "anagrafica with lavorazione_id in block");
 assert.equal(blockA.eventCount, 1);
 
+// Field-level anagrafica_history deduped when nearby anagrafica log exists
+const manualAnh: MezzoAnagraficaHistoryRow = {
+  id: "anh-manual",
+  mezzo_id: MEZZO_ID,
+  created_at: "2026-07-25T18:07:00Z",
+  origine: "modifica_manuale",
+  lavorazione_id: null,
+  scheda_id: null,
+  changed_fields: ["marca_telaio"],
+  old_values: { marca_telaio: "FUSO" },
+  new_values: { marca_telaio: "Mitsubishi" },
+  user_id: null,
+};
+const nearbyLog: MezziHubLogEntry = {
+  id: "log-nearby",
+  at: "2026-07-25T18:07:10Z",
+  tipo: "update",
+  mezzo: "Test",
+  riepilogo: "UPDATE",
+  autore: "Giorgio",
+  changes: [{ campo: "Marca telaio", prima: "FUSO", dopo: "Mitsubishi" }],
+};
+const feedAnhVsLog = buildMezzoTimelineFeed(
+  baseInput({ anagraficaHistory: [manualAnh], logEntries: [nearbyLog] }),
+);
+assert.equal(feedAnhVsLog.length, 1);
+assert.equal(feedAnhVsLog[0]!.kind, "standalone");
+assert.equal(
+  (feedAnhVsLog[0] as { event: { renderKind: string } }).event.renderKind,
+  "log_modifiche",
+);
+
 // event in temporal range but no ref stays standalone
 const ambiguousLog: MezzoTimelineItem = {
   id: "tl-ambiguous",

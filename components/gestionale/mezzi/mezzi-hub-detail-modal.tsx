@@ -5,12 +5,12 @@ import { IconActionButton } from "@/components/design-system";
 import { HubIconPencil, HubIconTrash } from "@/components/design-system/hub-table-action-icons";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { canOpenDocumento, formatDocumentoRigaSintetica, openDocumentoFile } from "@/components/gestionale/documenti/documenti-helpers";
-import { RecordImageManager } from "@/components/gestionale/media/record-image-manager";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
 import { Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
 import { hubPanoramicaDisplayValue } from "@/components/design-system/hub-modal-panoramica";
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import type { MezzoUltimaModificaInfo } from "@/lib/mezzi/mezzo-ultima-modifica-info";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { useMezzoHub } from "@/src/hooks/gestionale/use-mezzo-hub";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
@@ -21,7 +21,6 @@ import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-c
 import {
   HubModalPanoramicaField,
   HubModalPanoramicaFieldGrid,
-  HubModalPanoramicaFieldGroup,
   HubModalPanoramicaPanel,
   HubModalPanoramicaStatusPill,
   HubModalPanoramicaSubsection,
@@ -83,9 +82,21 @@ function mezzoPanoNumber(value: number | null | undefined): string {
   return value.toLocaleString("it-IT");
 }
 
+function formatUltimaModificaAnagrafica(
+  info: MezzoUltimaModificaInfo | undefined,
+  fallbackIso: string | undefined,
+): string {
+  const iso = (info?.iso || fallbackIso || "").trim();
+  if (!iso) return "—";
+  const dt = fmtMezziHubDt(iso);
+  const autore = info?.autore?.trim();
+  return autore ? `${dt} · ${autore}` : dt;
+}
+
 export function MezziHubDetailModal({
   mezzo,
   initialTab = "panoramica",
+  ultimaModificaInfo,
   onClose,
   onEdit,
   onDelete,
@@ -93,6 +104,7 @@ export function MezziHubDetailModal({
 }: {
   mezzo: MezzoGestito;
   initialTab?: MezziHubTabId;
+  ultimaModificaInfo?: MezzoUltimaModificaInfo;
   onClose: () => void;
   onEdit: () => void;
   onDelete?: () => void;
@@ -296,51 +308,39 @@ export function MezziHubDetailModal({
               </HubModalPanoramicaSummary>
             ) : null}
 
-            <HubModalPanoramicaFieldGroup title="Anagrafica">
-              <div className="space-y-4">
-                <HubModalPanoramicaSubsection title="Cliente">
-                  <HubModalPanoramicaFieldGrid>
-                    <HubModalPanoramicaField label="Cliente" value={mezzoPanoScalar(mezzo.cliente)} />
-                    <HubModalPanoramicaField label="Cantiere" value={mezzoPanoScalar(mezzo.cantiere)} />
-                    <HubModalPanoramicaField label="Utilizzatore" value={mezzoPanoScalar(mezzo.utilizzatore)} />
-                  </HubModalPanoramicaFieldGrid>
-                </HubModalPanoramicaSubsection>
+            <div className="space-y-4">
+              <HubModalPanoramicaSubsection title="Cliente">
+                <HubModalPanoramicaFieldGrid>
+                  <HubModalPanoramicaField label="Cliente" value={mezzoPanoScalar(mezzo.cliente)} />
+                  <HubModalPanoramicaField label="Cantiere" value={mezzoPanoScalar(mezzo.cantiere)} />
+                  <HubModalPanoramicaField label="Utilizzatore" value={mezzoPanoScalar(mezzo.utilizzatore)} />
+                </HubModalPanoramicaFieldGrid>
+              </HubModalPanoramicaSubsection>
 
-                <HubModalPanoramicaSubsection title="Telaio">
-                  <HubModalPanoramicaFieldGrid>
-                    <HubModalPanoramicaField label="Tipo telaio" value={mezzoPanoScalar(mezzo.tipoTelaio)} />
-                    <HubModalPanoramicaField label="Marca telaio" value={mezzoPanoScalar(mezzo.marcaTelaio)} />
-                    <HubModalPanoramicaField label="Modello telaio" value={mezzoPanoScalar(mezzo.modelloTelaio)} />
-                    <HubModalPanoramicaField label="VIN" value={mezzoPanoScalar(mezzo.vin)} mono />
-                    <HubModalPanoramicaField label="Targa" value={mezzoPanoScalar(mezzo.targa)} mono />
-                    <HubModalPanoramicaField label="KM" value={mezzoPanoNumber(mezzo.km)} mono />
-                  </HubModalPanoramicaFieldGrid>
-                </HubModalPanoramicaSubsection>
+              <HubModalPanoramicaSubsection title="Telaio">
+                <HubModalPanoramicaFieldGrid>
+                  <HubModalPanoramicaField label="Tipo telaio" value={mezzoPanoScalar(mezzo.tipoTelaio)} />
+                  <HubModalPanoramicaField label="Marca telaio" value={mezzoPanoScalar(mezzo.marcaTelaio)} />
+                  <HubModalPanoramicaField label="Modello telaio" value={mezzoPanoScalar(mezzo.modelloTelaio)} />
+                  <HubModalPanoramicaField label="VIN" value={mezzoPanoScalar(mezzo.vin)} mono />
+                  <HubModalPanoramicaField label="Targa" value={mezzoPanoScalar(mezzo.targa)} mono />
+                  <HubModalPanoramicaField label="KM" value={mezzoPanoNumber(mezzo.km)} mono />
+                </HubModalPanoramicaFieldGrid>
+              </HubModalPanoramicaSubsection>
 
-                <HubModalPanoramicaSubsection title="Attrezzatura">
-                  <MezziHubPanoramicaAttrezzaturaSection mezzo={mezzo} mezzoId={mezzo.id} canEdit={canEdit} />
-                </HubModalPanoramicaSubsection>
+              <HubModalPanoramicaSubsection title="Attrezzatura">
+                <MezziHubPanoramicaAttrezzaturaSection mezzo={mezzo} mezzoId={mezzo.id} canEdit={canEdit} />
+              </HubModalPanoramicaSubsection>
 
-                <HubModalPanoramicaSubsection title="Altri dati">
-                  <HubModalPanoramicaFieldGrid>
-                    <HubModalPanoramicaField
-                      label="Ultima modifica anagrafica"
-                      value={mezzo.ultimaModifica ? fmtMezziHubDt(mezzo.ultimaModifica) : "—"}
-                    />
-                  </HubModalPanoramicaFieldGrid>
-                </HubModalPanoramicaSubsection>
-              </div>
-            </HubModalPanoramicaFieldGroup>
-
-            <RecordImageManager
-              scope="mezzi"
-              recordId={mezzo.id}
-              title="Foto"
-              hubCardLayout
-              hubCardShowTitle
-              canEdit={canEdit && !mezzo.hubSynthetic}
-              onImageEvent={() => void hubQuery.refetch()}
-            />
+              <HubModalPanoramicaSubsection title="Altri dati">
+                <HubModalPanoramicaFieldGrid>
+                  <HubModalPanoramicaField
+                    label="Ultima modifica anagrafica"
+                    value={formatUltimaModificaAnagrafica(ultimaModificaInfo, mezzo.ultimaModifica)}
+                  />
+                </HubModalPanoramicaFieldGrid>
+              </HubModalPanoramicaSubsection>
+            </div>
 
             {mezzo.note?.trim() ? (
               <GestionaleInfoCard title="Note mezzo">

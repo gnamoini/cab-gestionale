@@ -263,17 +263,19 @@ export function MezzoFormFields({
         </div>
         <EntitySimilarWarning similarTo={similarMezzoIdent} />
         <EntitySimilarWarning similarTo={similarMezzoScuderia} />
-        <label htmlFor="mezzo-form-ore-lavoro" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-          Ore lavoro
-          <GestionaleNumberInput
-            id="mezzo-form-ore-lavoro"
-            min={0}
-            inputMode="decimal"
-            className="mt-1"
-            value={form.oreLavoro}
-            onChange={(v) => setForm((f) => ({ ...f, oreLavoro: v }))}
-          />
-        </label>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label htmlFor="mezzo-form-ore-lavoro" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Ore lavoro
+            <GestionaleNumberInput
+              id="mezzo-form-ore-lavoro"
+              min={0}
+              inputMode="decimal"
+              className="mt-1"
+              value={form.oreLavoro}
+              onChange={(v) => setForm((f) => ({ ...f, oreLavoro: v }))}
+            />
+          </label>
+        </div>
       </MezzoFormSection>
 
       <MezzoFormSection title="Telaio">
@@ -312,6 +314,15 @@ export function MezzoFormFields({
           </label>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label htmlFor="mezzo-form-targa" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Targa
+            <input
+              id="mezzo-form-targa"
+              value={form.targa}
+              onChange={(e) => setForm((f) => ({ ...f, targa: e.target.value }))}
+              className={`${dsInput} mt-1 font-mono`}
+            />
+          </label>
           <label htmlFor="mezzo-form-vin" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             VIN
             <input
@@ -321,15 +332,6 @@ export function MezzoFormFields({
               className={`${dsInput} mt-1 font-mono uppercase`}
               autoComplete="off"
               spellCheck={false}
-            />
-          </label>
-          <label htmlFor="mezzo-form-targa" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            Targa
-            <input
-              id="mezzo-form-targa"
-              value={form.targa}
-              onChange={(e) => setForm((f) => ({ ...f, targa: e.target.value }))}
-              className={`${dsInput} mt-1 font-mono`}
             />
           </label>
         </div>

@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { LoadingButton } from "@/components/design-system";
+import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
+import { GlobalSelect } from "@/components/gestionale/global-input";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { MaintenancePresetTriggersField } from "@/components/gestionale/maintenance/maintenance-preset-triggers-field";
 import {
   MaintenancePresetPartsField,
@@ -15,15 +18,22 @@ import {
 } from "@/lib/maintenance-plans/maintenance-trigger-helpers";
 import type { MaintenancePresetTriggerView } from "@/lib/maintenance-plans/types";
 import type { UpsertVehicleMaintenanceConfigInput, VehicleMaintenanceConfigView } from "@/lib/maintenance-plans/v2-types";
-import { resolveDrawerAsideClasses } from "@/lib/ui/modal-size-system";
-import { OverlayLayerPriority } from "@/lib/ui/overlay-back-stack";
-import { useGestionaleOverlayBehavior } from "@/lib/ui/use-gestionale-overlay-behavior";
-import { dsBtnNeutral, dsBtnPrimary, dsFormField, dsFormInput, dsFormLabel, dsScrollbar } from "@/lib/ui/design-system";
+import { cabModalZStacked } from "@/lib/ui/mobile-modal-behavior";
+import {
+  dsBtnNeutral,
+  dsBtnPrimary,
+  dsCheckboxInput,
+  dsFormField,
+  dsFormLabel,
+  dsInput,
+} from "@/lib/ui/design-system";
 import { useMaintenancePlansListQuery } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
 import { useMaintenancePlanUpsertMutation } from "@/src/hooks/gestionale/use-maintenance-plan-mutations";
 import { useUpsertMezzoConfigMutation } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+
+const presetPickerSelectClass = `${dsInput} min-h-11 py-2 text-sm font-semibold`;
 
 function triggersFromPlan(plan: {
   triggerGroups: { triggers: MaintenancePresetTriggerView[] }[];
@@ -80,6 +90,18 @@ export function MezziTagliandiConfigDrawer({
   const archivedPresetWarning =
     config?.presetId && linkedPlan && !isPresetAssignable(linkedPlan.status);
 
+  const presetItems = useMemo(
+    () =>
+      presetOptions.map((p) => {
+        const summary = formatTriggerSummary(p.triggerGroups[0]?.triggers ?? []);
+        return {
+          value: p.id,
+          label: summary ? `${p.nome} (${summary})` : p.nome,
+        };
+      }),
+    [presetOptions],
+  );
+
   useEffect(() => {
     if (!open) return;
     setPresetId(config?.presetId ?? "");
@@ -101,13 +123,6 @@ export function MezziTagliandiConfigDrawer({
     setTriggersDraft(triggersFromPlan(selectedPlan));
     setPartsDraft(planPartsToDraft(selectedPlan.parts));
   }, [open, config, selectedPlan]);
-
-  useGestionaleOverlayBehavior({
-    open,
-    onRequestClose: onClose,
-    source: "MezziTagliandiConfigDrawer",
-    overlayBack: { layer: "drawer", priority: OverlayLayerPriority.drawer },
-  });
 
   if (!open) return null;
 
@@ -190,65 +205,18 @@ export function MezziTagliandiConfigDrawer({
     }
   }
 
+  const title = config ? "Modifica piano sul mezzo" : "Aggiungi piano manutentivo";
+
   return (
-    <div className="fixed inset-0 z-[80] flex justify-end bg-black/30" role="presentation" onClick={onClose}>
-      <aside
-        className={`${resolveDrawerAsideClasses("drawerFilter")} ${dsScrollbar} flex h-full flex-col bg-[var(--cab-card)] shadow-xl`}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-labelledby="tagliandi-config-title"
-      >
-        <div className="border-b border-[color:var(--cab-border)] px-4 py-3">
-          <h2 id="tagliandi-config-title" className="text-base font-semibold">
-            {config ? "Modifica piano sul mezzo" : "Aggiungi piano manutentivo"}
-          </h2>
-          <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
-            1) Scegli un preset esistente · 2) Imposta intervalli · 3) Salva · 4) Usa Registra per ogni esecuzione.
-          </p>
-        </div>
-        <form id="tagliandi-config-form" onSubmit={onSubmit} className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-          {archivedPresetWarning ? (
-            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
-              Il preset collegato è archiviato. Scegli un preset attivo o creane uno nuovo.
-            </p>
-          ) : null}
-          <label className={dsFormField}>
-            <span className={dsFormLabel}>Preset collegato</span>
-            <select
-              className={dsFormInput}
-              value={presetId}
-              required
-              onChange={(e) => setPresetId(e.target.value)}
-            >
-              <option value="" disabled>
-                Seleziona preset…
-              </option>
-              {presetOptions.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome} ({formatTriggerSummary(p.triggerGroups[0]?.triggers ?? [])})
-                </option>
-              ))}
-            </select>
-          </label>
-          {selectedPlan ? (
-            <p className="text-sm text-[color:var(--cab-text-muted)]">
-              Piano: <span className="font-medium text-[color:var(--cab-text)]">{selectedPlan.nome}</span>
-            </p>
-          ) : null}
-          <MaintenancePresetTriggersField triggers={triggersDraft} onChange={setTriggersDraft} compact />
-          <MaintenancePresetPartsField parts={partsDraft} onChange={setPartsDraft} enabled={open} />
-          {canEditPreset ? (
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={savePresetToo} onChange={(e) => setSavePresetToo(e.target.checked)} />
-              Salva intervalli anche nel preset globale (riutilizzabile su altri mezzi)
-            </label>
-          ) : (
-            <p className="text-xs text-[color:var(--cab-text-muted)]">
-              Le modifiche agli intervalli si applicano solo a questo mezzo.
-            </p>
-          )}
-        </form>
-        <div className="flex justify-end gap-2 border-t border-[color:var(--cab-border)] p-4">
+    <GestionaleModalShell
+      onRequestClose={onClose}
+      title={title}
+      titleId="tagliandi-config-title"
+      subtitle="1) Scegli un preset esistente · 2) Imposta intervalli · 3) Salva · 4) Usa Registra per ogni esecuzione."
+      modalSize="formLarge"
+      layerClassName={cabModalZStacked}
+      footer={
+        <div className="flex w-full flex-wrap items-center justify-end gap-2">
           <button type="button" className={dsBtnNeutral} onClick={onClose}>
             Annulla
           </button>
@@ -261,7 +229,50 @@ export function MezziTagliandiConfigDrawer({
             Salva piano
           </LoadingButton>
         </div>
-      </aside>
-    </div>
+      }
+    >
+      <GestionaleModalScrollBody>
+        <form id="tagliandi-config-form" onSubmit={onSubmit} className="flex flex-col gap-4">
+          {archivedPresetWarning ? (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+              Il preset collegato è archiviato. Scegli un preset attivo o creane uno nuovo.
+            </p>
+          ) : null}
+          <div className={dsFormField}>
+            <label className={dsFormLabel} htmlFor="tagliandi-config-preset">
+              Preset collegato
+            </label>
+            <GlobalSelect
+              id="tagliandi-config-preset"
+              variant="filter"
+              inputClassName={presetPickerSelectClass}
+              items={[{ value: "", label: "Seleziona preset…" }, ...presetItems]}
+              value={presetId}
+              onChange={setPresetId}
+              strictFromList
+              selectOnly
+              aria-label="Seleziona preset collegato"
+            />
+          </div>
+          <MaintenancePresetTriggersField triggers={triggersDraft} onChange={setTriggersDraft} compact />
+          <MaintenancePresetPartsField parts={partsDraft} onChange={setPartsDraft} enabled={open} />
+          {canEditPreset ? (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className={dsCheckboxInput}
+                checked={savePresetToo}
+                onChange={(e) => setSavePresetToo(e.target.checked)}
+              />
+              Salva intervalli anche nel preset globale (riutilizzabile su altri mezzi)
+            </label>
+          ) : (
+            <p className="text-xs text-[color:var(--cab-text-muted)]">
+              Le modifiche agli intervalli si applicano solo a questo mezzo.
+            </p>
+          )}
+        </form>
+      </GestionaleModalScrollBody>
+    </GestionaleModalShell>
   );
 }

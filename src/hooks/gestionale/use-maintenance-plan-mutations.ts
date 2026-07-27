@@ -11,6 +11,8 @@ async function invalidateMaintenancePlans(qc: ReturnType<typeof useQueryClient>,
   await qc.invalidateQueries({ queryKey: maintenancePlansQueryKeys.root });
   await qc.invalidateQueries({ queryKey: [...maintenancePlansQueryKeys.root, "overview"] });
   await qc.invalidateQueries({ queryKey: maintenanceEngineV2QueryKeys.overview() });
+  // All mezzo configs (prefix match on ["maintenancePlans","configs", …]).
+  await qc.invalidateQueries({ queryKey: [...maintenancePlansQueryKeys.root, "configs"] });
   if (mezzoId) {
     await qc.invalidateQueries({ queryKey: [...maintenancePlansQueryKeys.root, "statuses", mezzoId] });
     await qc.invalidateQueries({ queryKey: maintenancePlansQueryKeys.mezzoHistory(mezzoId) });

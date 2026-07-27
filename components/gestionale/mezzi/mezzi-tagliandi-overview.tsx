@@ -2,23 +2,29 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { LoadingErrorState, PageToolbarResultCount } from "@/components/design-system";
+import { LoadingErrorState } from "@/components/design-system";
 import {
   GestionaleListTable,
   GestionaleListTableActionsHead,
   GestionaleListTableMobileEmpty,
   GlobalTableHeadLabel,
 } from "@/components/gestionale/global-table";
-import { GlobalSelect } from "@/components/gestionale/global-input";
-import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { MezziTagliandiAssignModal } from "@/components/gestionale/mezzi/mezzi-tagliandi-assign-modal";
 import { reportMetricCardCompactClass } from "@/components/report/report-ui-tokens";
 import { buildMezziAnagraficaHubHref } from "@/lib/navigation/mezzi-tagliandi-links";
 import { selectDashboardMaintenanceCards } from "@/lib/maintenance-plans/kpi/maintenance-kpi-selectors";
+import { formatTriggerSummary } from "@/lib/maintenance-plans/maintenance-trigger-helpers";
 import {
   groupOverviewByPreset,
   sortOverviewByNextDue,
 } from "@/lib/maintenance-plans/resolve-mezzo-metering";
+import {
+  formatOverviewCurrentValue,
+  formatOverviewGiornoPrevisto,
+  formatOverviewUltimoData,
+  formatOverviewValoreFatto,
+  formatOverviewValorePrevisto,
+} from "@/lib/maintenance-plans/tagliandi-overview-format";
 import {
   TAGLIANDO_STATO_BADGE_CLASS,
   TAGLIANDO_STATO_LABELS,
@@ -34,14 +40,13 @@ import {
   gestionaleListTableTd,
   gestionaleListTableTdAzioni,
   gestionaleListTableTdCenter,
+  gestionaleListTableTdIdent,
   gestionaleListTableTdPill,
   gestionaleListTableActionsGroupEnd,
 } from "@/lib/ui/gestionale-list-table";
 import {
   dsCardTitle,
   dsFocus,
-  dsInput,
-  dsPageToolbar,
   dsTableActionTextBtnPrimary,
   dsTypoCaption,
 } from "@/lib/ui/design-system";
@@ -50,36 +55,83 @@ import {
   useTagliandiOverviewQuery,
 } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useMaintenancePlansListQuery } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
+import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 
-const overviewFilterSelectClass = `${dsInput} min-h-11 py-2 text-sm font-semibold`;
-
-const TAGLIANDO_STATO_FILTER_ITEMS = [
-  { value: "", label: "Tutti gli stati" },
-  ...(Object.keys(TAGLIANDO_STATO_LABELS) as TagliandoStatoUi[]).map((s) => ({
-    value: s,
-    label: TAGLIANDO_STATO_LABELS[s],
-  })),
-];
-
-function fmtDate(ymd: string | null): string {
-  if (!ymd) return "—";
-  try {
-    return new Date(`${ymd}T12:00:00`).toLocaleDateString("it-IT");
-  } catch {
-    return ymd;
-  }
+function cleanMezzoField(raw: string | null | undefined): string | null {
+  const t = (raw ?? "").trim();
+  if (!t || t === "—" || t === "Non assegnata") return null;
+  return t;
 }
 
-function fmtUltimo(row: TagliandiOverviewRow): string {
-  if (row.ultimoPerformedAt) return fmtDate(row.ultimoPerformedAt);
-  if (row.ultimoValueAtService != null) return String(Math.round(row.ultimoValueAtService));
-  return "—";
+/** Scuderia / targa / matricola — omette i vuoti. */
+function overviewIdentLines(row: {
+  numeroScuderia: string | null;
+  targa: string | null;
+  matricola: string | null;
+}): string[] {
+  return [row.numeroScuderia, row.targa, row.matricola]
+    .map((v) => (v ?? "").trim())
+    .filter((v) => v.length > 0 && v !== "—");
 }
 
-function fmtProssimo(row: TagliandiOverviewRow): string {
-  if (row.nextDateEstimated) return fmtDate(row.nextDateEstimated);
-  if (row.remainingValue != null) return `${Math.round(row.remainingValue)} rimanenti`;
-  return "—";
+function OverviewStackCell({
+  lines,
+  className,
+}: {
+  lines: Array<string | null>;
+  className?: string;
+}) {
+  const visible = lines.map((v) => (v ?? "").trim()).filter((v) => v.length > 0 && v !== "—");
+  return (
+    <td className={`${gestionaleListTableTd} min-w-0 ${className ?? ""}`.trim()}>
+      {visible.length === 0 ? null : (
+        <div className="flex min-w-0 flex-col gap-0.5">
+          {visible.map((line, i) => (
+            <span
+              key={`${i}-${line}`}
+              className={
+                i === 0
+                  ? "block truncate text-sm font-semibold leading-snug text-[color:var(--cab-text)]"
+                  : "block truncate text-xs leading-snug text-[color:var(--cab-text-muted)]"
+              }
+            >
+              {line}
+            </span>
+          ))}
+        </div>
+      )}
+    </td>
+  );
+}
+
+function OverviewIdentCell({
+  numeroScuderia,
+  targa,
+  matricola,
+  className,
+}: {
+  numeroScuderia: string | null;
+  targa: string | null;
+  matricola: string | null;
+  className?: string;
+}) {
+  const lines = overviewIdentLines({ numeroScuderia, targa, matricola });
+  return (
+    <td className={`${gestionaleListTableTdIdent} ${className ?? ""}`.trim()}>
+      {lines.length === 0 ? null : (
+        <div className="flex min-w-0 flex-col gap-0.5">
+          {lines.map((line, i) => (
+            <span
+              key={`${i}-${line}`}
+              className="block truncate text-[13px] font-semibold leading-tight tabular-nums text-[color:var(--cab-text)]"
+            >
+              {line}
+            </span>
+          ))}
+        </div>
+      )}
+    </td>
+  );
 }
 
 function tagliandiKpiTileClass(active: boolean, interactive: boolean): string {
@@ -124,6 +176,38 @@ function TagliandiOverviewKpiTile({
   return <div className={tagliandiKpiTileClass(false, false)}>{content}</div>;
 }
 
+function OverviewMetricStackCell({
+  lines,
+  className,
+}: {
+  lines: Array<string | null>;
+  className?: string;
+}) {
+  const visible = lines.map((v) => (v ?? "").trim()).filter((v) => v.length > 0 && v !== "—");
+  return (
+    <td className={`${gestionaleListTableTdCenter} ${className ?? ""}`.trim()}>
+      {visible.length === 0 ? (
+        <span className="text-[color:var(--cab-text-muted)]">—</span>
+      ) : (
+        <div className="flex min-w-0 flex-col items-center gap-0.5">
+          {visible.map((line, i) => (
+            <span
+              key={`${i}-${line}`}
+              className={
+                i === 0
+                  ? "block max-w-full truncate text-sm font-semibold leading-snug tabular-nums text-[color:var(--cab-text)]"
+                  : "block max-w-full truncate text-xs font-semibold leading-snug tabular-nums text-[color:var(--cab-text)] opacity-80"
+              }
+            >
+              {line}
+            </span>
+          ))}
+        </div>
+      )}
+    </td>
+  );
+}
+
 function OverviewGroupTable({
   title,
   subtitle,
@@ -146,47 +230,71 @@ function OverviewGroupTable({
       </div>
       <GestionaleListTable
         fixed
+        colgroup={
+          <>
+            <col className="w-[16%]" />
+            <col className="w-[16%]" />
+            <col className="w-[12%]" />
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
+          </>
+        }
         headRow={
           <>
-            <GlobalTableHeadLabel label="Mezzo" />
-            <GlobalTableHeadLabel label="Targa / codice" />
-            <GlobalTableHeadLabel label="Ultimo" />
-            <GlobalTableHeadLabel label="Prossimo" />
-            <GlobalTableHeadLabel label="Motivo scadenza" />
-            <GlobalTableHeadLabel label="Ore/km attuali" />
-            <GlobalTableHeadLabel label="Stato" />
+            <GlobalTableHeadLabel label="Cliente / cantiere / util." />
+            <GlobalTableHeadLabel label="Oggetto" />
+            <GlobalTableHeadLabel label="Scud. / targa / matr." align="center" />
+            <GlobalTableHeadLabel label="Stato attuale" align="center" />
+            <GlobalTableHeadLabel label="Ultimo tagliando" align="center" />
+            <GlobalTableHeadLabel label="Prossimo tagliando" align="center" />
           </>
         }
       >
         {sorted.map((row) => {
           const stato = mapUrgencyToTagliandoStato(row.urgency);
           const highlighted = highlightConfigId === row.configId;
+          const cellPad = "py-3.5";
+          const attuale = formatOverviewCurrentValue(row);
+          const ultimoData = formatOverviewUltimoData(row);
+          const ultimoValore = formatOverviewValoreFatto(row);
+          const prossimoData = formatOverviewGiornoPrevisto(row);
+          const prossimoValore = formatOverviewValorePrevisto(row);
           return (
             <tr
               key={row.configId}
               className={`${gestionaleListTableRowBaseClass} ${TAGLIANDO_STATO_ROW_CLASS[stato]} cursor-pointer hover:bg-[var(--cab-hover)] ${highlighted ? "ring-2 ring-[var(--cab-primary)] ring-inset" : ""}`}
               onClick={() => onRowClick(row)}
-              aria-label={`Apri tagliandi ${row.attrezzaturaLabel}`}
+              aria-label={`Apri mezzo ${row.cliente?.trim() || row.attrezzaturaLabel}`}
             >
-              <td className={`${gestionaleListTableTd} font-medium text-[color:var(--cab-text)]`}>
-                {row.attrezzaturaLabel}
+              <OverviewStackCell
+                lines={[row.cliente, row.cantiere, row.utilizzatore]}
+                className={cellPad}
+              />
+              <OverviewStackCell
+                lines={[row.attrezzaturaLabel, row.telaioLabel]}
+                className={cellPad}
+              />
+              <OverviewIdentCell
+                numeroScuderia={row.numeroScuderia}
+                targa={row.targa}
+                matricola={row.matricola}
+                className={cellPad}
+              />
+              <td className={`${gestionaleListTableTdPill} ${cellPad}`}>
+                <div className="flex min-w-0 flex-col items-center gap-1">
+                  <span className="text-sm font-semibold tabular-nums text-[color:var(--cab-text)]">
+                    {attuale}
+                  </span>
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${TAGLIANDO_STATO_BADGE_CLASS[stato]}`}
+                  >
+                    {TAGLIANDO_STATO_LABELS[stato]}
+                  </span>
+                </div>
               </td>
-              <td className={`${gestionaleListTableTd} text-[color:var(--cab-text-muted)]`}>
-                {[row.targa, row.numeroScuderia].filter(Boolean).join(" · ") || "—"}
-              </td>
-              <td className={gestionaleListTableTdCenter}>{fmtUltimo(row)}</td>
-              <td className={gestionaleListTableTdCenter}>{fmtProssimo(row)}</td>
-              <td className={`${gestionaleListTableTd} max-w-[14rem] truncate text-xs text-[color:var(--cab-text-muted)]`} title={row.dueReasonLabel}>
-                {row.dueReasonLabel}
-              </td>
-              <td className={gestionaleListTableTdCenter}>{row.currentValue}</td>
-              <td className={gestionaleListTableTdPill}>
-                <span
-                  className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${TAGLIANDO_STATO_BADGE_CLASS[stato]}`}
-                >
-                  {TAGLIANDO_STATO_LABELS[stato]}
-                </span>
-              </td>
+              <OverviewMetricStackCell lines={[ultimoData, ultimoValore]} className={cellPad} />
+              <OverviewMetricStackCell lines={[prossimoData, prossimoValore]} className={cellPad} />
             </tr>
           );
         })}
@@ -271,7 +379,7 @@ export function MezziTagliandiOverview({
   const overviewQ = useTagliandiOverviewQuery(true);
   const withoutQ = useMezziWithoutPresetQuery(true);
   const plansQ = useMaintenancePlansListQuery(true);
-  const [search, setSearch] = useState("");
+  const mezziListQ = useMezziListQuery(undefined);
   const [localPresetFilter, setLocalPresetFilter] = useState(presetFilter);
   const [localStatoFilter, setLocalStatoFilter] = useState<TagliandoStatoUi | "">(statoFilter);
   const [assignMezzoIds, setAssignMezzoIds] = useState<string[]>([]);
@@ -284,60 +392,88 @@ export function MezziTagliandiOverview({
     setLocalStatoFilter(statoFilter);
   }, [statoFilter]);
 
-  const allRows = overviewQ.data ?? [];
-  const searchActive = search.trim().length > 0;
-  const filtersActive = Boolean(localPresetFilter || localStatoFilter);
+  const mezzoAnagraficaById = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        cliente: string | null;
+        cantiere: string | null;
+        utilizzatore: string | null;
+        targa: string | null;
+        matricola: string | null;
+        numeroScuderia: string | null;
+        attrezzaturaLabel: string | null;
+        telaioLabel: string | null;
+      }
+    >();
+    for (const m of mezziListQ.data ?? []) {
+      const att = [m.marca, m.modello]
+        .map((v) => (v ?? "").trim())
+        .filter((v) => v.length > 0 && v !== "—")
+        .join(" ");
+      const telaio = [m.marcaTelaio, m.modelloTelaio]
+        .map((v) => (v ?? "").trim())
+        .filter((v) => v.length > 0 && v !== "—")
+        .join(" ");
+      map.set(m.id, {
+        cliente: cleanMezzoField(m.cliente),
+        cantiere: cleanMezzoField(m.cantiere),
+        utilizzatore: cleanMezzoField(m.utilizzatore),
+        targa: cleanMezzoField(m.targa),
+        matricola: cleanMezzoField(m.matricola),
+        numeroScuderia: cleanMezzoField(m.numeroScuderia),
+        attrezzaturaLabel: att || null,
+        telaioLabel: telaio || null,
+      });
+    }
+    return map;
+  }, [mezziListQ.data]);
+
+  const allRows = useMemo(() => {
+    return (overviewQ.data ?? []).map((row) => {
+      const anag = mezzoAnagraficaById.get(row.mezzoId);
+      if (!anag) return row;
+      const attrezzaturaLabel =
+        cleanMezzoField(row.attrezzaturaLabel) ?? anag.attrezzaturaLabel ?? row.attrezzaturaLabel;
+      return {
+        ...row,
+        cliente: cleanMezzoField(row.cliente) ?? anag.cliente,
+        cantiere: cleanMezzoField(row.cantiere) ?? anag.cantiere,
+        utilizzatore: cleanMezzoField(row.utilizzatore) ?? anag.utilizzatore,
+        targa: cleanMezzoField(row.targa) ?? anag.targa,
+        matricola: cleanMezzoField(row.matricola) ?? anag.matricola,
+        numeroScuderia: cleanMezzoField(row.numeroScuderia) ?? anag.numeroScuderia,
+        attrezzaturaLabel: attrezzaturaLabel || "—",
+        telaioLabel: cleanMezzoField(row.telaioLabel) ?? anag.telaioLabel,
+      };
+    });
+  }, [overviewQ.data, mezzoAnagraficaById]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return allRows.filter((r) => {
       const stato = mapUrgencyToTagliandoStato(r.urgency);
       if (localPresetFilter && r.presetId !== localPresetFilter) return false;
       if (!tagliandoStatoFilterMatches(stato, localStatoFilter)) return false;
-      if (!q) return true;
-      return (
-        (r.targa ?? "").toLowerCase().includes(q) ||
-        (r.numeroScuderia ?? "").toLowerCase().includes(q) ||
-        r.attrezzaturaLabel.toLowerCase().includes(q) ||
-        r.presetNome.toLowerCase().includes(q)
-      );
+      return true;
     });
-  }, [allRows, search, localPresetFilter, localStatoFilter]);
+  }, [allRows, localPresetFilter, localStatoFilter]);
 
   const groups = useMemo(() => groupOverviewByPreset(filtered), [filtered]);
   const kpi = useMemo(() => selectDashboardMaintenanceCards(filtered), [filtered]);
-  const presetFilterItems = useMemo(
-    () => [
-      { value: "", label: "Tutti i preset" },
-      ...(plansQ.data ?? []).map((p) => ({ value: p.id, label: p.nome })),
-    ],
-    [plansQ.data],
-  );
   const triggerByPreset = useMemo(() => {
     const map = new Map<string, string>();
     for (const p of plansQ.data ?? []) {
       const triggers = p.triggerGroups[0]?.triggers ?? [];
       const label =
         triggers.length > 0
-          ? triggers.map((t) => `${t.threshold} ${t.triggerType}`).join(" OR ")
+          ? formatTriggerSummary(triggers)
           : `${p.intervalValue} ${p.intervalType}`;
       map.set(p.id, label);
     }
     return map;
   }, [plansQ.data]);
 
-  const filteredWithout = useMemo(() => {
-    const rows = withoutQ.data ?? [];
-    const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (r) =>
-        (r.targa ?? "").toLowerCase().includes(q) ||
-        (r.numeroScuderia ?? "").toLowerCase().includes(q) ||
-        r.attrezzaturaLabel.toLowerCase().includes(q) ||
-        r.tipoAttrezzatura.toLowerCase().includes(q),
-    );
-  }, [withoutQ.data, search]);
+  const withoutRows = withoutQ.data ?? [];
 
   const onRowClick = useCallback(
     (row: TagliandiOverviewRow) => {
@@ -364,9 +500,9 @@ export function MezziTagliandiOverview({
     );
   }
 
-  const hasContent = groups.length > 0 || filteredWithout.length > 0;
+  const hasContent = groups.length > 0 || withoutRows.length > 0;
   const emptyMessage =
-    allRows.length === 0 && (withoutQ.data ?? []).length === 0
+    allRows.length === 0 && withoutRows.length === 0
       ? "Nessun piano manutentivo attivo. Crea un preset e assegnalo ai mezzi."
       : "Nessuna configurazione corrisponde ai criteri.";
 
@@ -379,11 +515,11 @@ export function MezziTagliandiOverview({
         {groups.map((g) => (
           <OverviewGroupTable
             key={g.key}
-            title={g.presetId ? g.presetNome : g.presetNome}
+            title={g.presetNome}
             subtitle={
               g.presetId
-                ? `${g.rows.length} mezzi · ${triggerByPreset.get(g.presetId) ?? ""}`
-                : `${g.rows.length} mezzi`
+                ? `${g.rows.length} ${g.rows.length === 1 ? "mezzo" : "mezzi"} · ${triggerByPreset.get(g.presetId) ?? ""}`.trim()
+                : `${g.rows.length} ${g.rows.length === 1 ? "mezzo" : "mezzi"}`
             }
             rows={g.rows}
             highlightConfigId={highlightConfigId}
@@ -391,7 +527,7 @@ export function MezziTagliandiOverview({
           />
         ))}
         <WithoutPresetGroup
-          rows={filteredWithout}
+          rows={withoutRows}
           canEdit={canEdit}
           onAssign={(mezzoId) => {
             setAssignMezzoIds([mezzoId]);
@@ -425,61 +561,6 @@ export function MezziTagliandiOverview({
           onClick={() => toggleStatoFilter("scaduto")}
         />
         <TagliandiOverviewKpiTile label="Mezzi critici" value={kpi.mezziCritici} />
-      </div>
-
-      <div className={`${dsPageToolbar} min-w-0 w-full max-w-full`}>
-        <div className="flex flex-col gap-3">
-          <GestionaleSearchField
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cerca targa, scuderia, mezzo…"
-            aria-label="Cerca configurazioni tagliando"
-            wrapperClassName="min-w-0 w-full"
-          />
-          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
-            <div className="w-full min-w-[10.5rem] sm:w-[14rem]">
-              <GlobalSelect
-                variant="filter"
-                inputClassName={overviewFilterSelectClass}
-                items={presetFilterItems}
-                value={localPresetFilter}
-                onChange={setLocalPresetFilter}
-                strictFromList
-                selectOnly
-                aria-label="Filtra per preset"
-              />
-            </div>
-            <div className="w-full min-w-[10.5rem] sm:w-[11.5rem]">
-              <GlobalSelect
-                variant="filter"
-                inputClassName={overviewFilterSelectClass}
-                items={TAGLIANDO_STATO_FILTER_ITEMS}
-                value={localStatoFilter}
-                onChange={(v) => setLocalStatoFilter(v as TagliandoStatoUi | "")}
-                strictFromList
-                selectOnly
-                aria-label="Filtra per stato tagliando"
-              />
-            </div>
-            <PageToolbarResultCount
-              count={filtered.length}
-              singularLabel="configurazione"
-              pluralLabel="configurazioni"
-              filtersActive={filtersActive}
-              searchActive={searchActive}
-              onFilterReset={
-                filtersActive
-                  ? () => {
-                      setLocalPresetFilter("");
-                      setLocalStatoFilter("");
-                    }
-                  : undefined
-              }
-              onSearchReset={searchActive ? () => setSearch("") : undefined}
-              className="min-w-0 flex-initial"
-            />
-          </div>
-        </div>
       </div>
 
       {content}

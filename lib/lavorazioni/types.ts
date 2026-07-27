@@ -32,6 +32,14 @@ export interface LavorazioneAttiva {
   dataIngresso: string;
   /** Impostata quando si passa a stato Completata (o in fase di archiviazione). */
   dataCompletamento: string | null;
+  is_tagliando?: boolean;
+  is_garanzia?: boolean;
+  repair_present?: boolean;
+  maintenance_execution_kind?: "scheduled" | "extraordinary" | null;
+  tagliando_preset_ref?: string | null;
+  tagliando_preset_version_ref?: string | null;
+  tagliando_assign_preset_to_mezzo?: boolean | null;
+  tagliando_no_preset_reason?: string | null;
 }
 
 export interface LavorazioneArchiviata {
@@ -55,6 +63,14 @@ export interface LavorazioneArchiviata {
   dataIngresso: string;
   dataCompletamento: string;
   meseCompletamento: string;
+  is_tagliando?: boolean;
+  is_garanzia?: boolean;
+  repair_present?: boolean;
+  maintenance_execution_kind?: "scheduled" | "extraordinary" | null;
+  tagliando_preset_ref?: string | null;
+  tagliando_preset_version_ref?: string | null;
+  tagliando_assign_preset_to_mezzo?: boolean | null;
+  tagliando_no_preset_reason?: string | null;
 }
 
 export type SortKeyLavorazione =

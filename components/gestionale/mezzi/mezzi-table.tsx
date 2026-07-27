@@ -17,6 +17,7 @@ import {
 } from "@/lib/mezzi/mezzo-ultima-modifica-info";
 import {
   dsTableActionBtnInfo,
+  dsTableActionBtnPrimary,
   dsTableActionBtnSecondary,
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
@@ -40,8 +41,10 @@ import { hrefDocumentiPerMezzo, hrefLavorazioniPerMezzo, hrefPreventiviPerMezzo,
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 import type { MezziHubTabId } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 
-/** 4 icone × 36px + gap — larghezza fissa per non assorbire slack in `table-fixed`. */
-const mezziTableActionsColClass = "w-[11.5rem] min-w-[11.5rem]";
+/** 5 icone × 36px + gap — larghezza fissa per non assorbire slack in `table-fixed`. */
+const mezziTableActionsColClass = "w-[14rem] min-w-[14rem]";
+
+const EMPTY_MEZZO_PRESET_IDS: ReadonlySet<string> = new Set();
 
 /** Righe multi-riga: min-height + sfondo come Lavorazioni/Magazzino (hover via scroll scope). */
 const mezziTableRowClass = `${gestionaleListTableRowBaseClass} min-h-14 bg-white dark:bg-zinc-900/40`;
@@ -87,6 +90,19 @@ function IconClipboardList({ className = dsTableActionGlyph }: { className?: str
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6" />
+    </svg>
+  );
+}
+
+function IconTagliandi({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+      />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l2 2 4-4" />
     </svg>
   );
 }
@@ -151,6 +167,8 @@ export type MezziTableProps = {
   rows: MezzoGestito[];
   interventiByMezzoId: Map<string, MezzoInterventoLavorazione[]>;
   ultimaModificaInfoByMezzoId: Map<string, MezzoUltimaModificaInfo>;
+  /** Mezzi con almeno un preset tagliandi attivo. */
+  mezzoIdsWithActivePreset?: ReadonlySet<string>;
   inOfficina: (m: MezzoGestito) => boolean;
   sortColumn: MezziSortKey | null;
   sortPhase: MezziSortPhase;
@@ -161,20 +179,36 @@ export type MezziTableProps = {
 
 function MezzoRowActions({
   m,
+  hasActivePreset,
   onHub,
 }: {
   m: MezzoGestito;
+  hasActivePreset: boolean;
   onHub: (m: MezzoGestito, tab?: MezziHubTabId) => void;
 }) {
   return (
     <>
-      <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => onHub(m)}>
+      <IconActionButton
+        label="Dettaglio"
+        tooltipForce
+        className={dsTableActionBtnInfo}
+        onClick={() => onHub(m)}
+      >
         <IconInfo />
+      </IconActionButton>
+      <IconActionButton
+        label={hasActivePreset ? "Tagliandi (preset attivo)" : "Tagliandi"}
+        tooltipForce
+        className={hasActivePreset ? dsTableActionBtnPrimary : dsTableActionBtnSecondary}
+        onClick={() => onHub(m, "tagliandi")}
+      >
+        <IconTagliandi />
       </IconActionButton>
       <IconActionButton
         as="link"
         href={hrefDocumentiPerMezzo(m)}
         label="Documenti"
+        tooltipForce
         className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
       >
         <IconFolderDocs />
@@ -183,6 +217,7 @@ function MezzoRowActions({
         as="link"
         href={hrefLavorazioniPerMezzo(m)}
         label="Lavorazioni"
+        tooltipForce
         className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
       >
         <IconWrench />
@@ -191,6 +226,7 @@ function MezzoRowActions({
         as="link"
         href={hrefPreventiviPerMezzo(m)}
         label="Preventivi"
+        tooltipForce
         className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
       >
         <IconClipboardList />
@@ -204,12 +240,14 @@ function MezzoRowInner({
   interventi,
   inOff: _inOff,
   flash,
+  hasActivePreset,
   onHub,
 }: {
   m: MezzoGestito;
   interventi: MezzoInterventoLavorazione[];
   inOff: boolean;
   flash: boolean;
+  hasActivePreset: boolean;
   onHub: (m: MezzoGestito, tab?: MezziHubTabId) => void;
 }) {
   const ultima = ultimaLavorazioneLabel(interventi);
@@ -261,7 +299,7 @@ function MezzoRowInner({
       </td>
       <td className={gestionaleListTableTdAzioni}>
         <div className={gestionaleListTableActionsGroupEnd}>
-          <MezzoRowActions m={m} onHub={onHub} />
+          <MezzoRowActions m={m} hasActivePreset={hasActivePreset} onHub={onHub} />
         </div>
       </td>
     </tr>
@@ -296,6 +334,7 @@ function MezzoMobileCard({
   ultimaModificaInfo,
   inOff: _inOff,
   flash,
+  hasActivePreset,
   onHub,
 }: {
   m: MezzoGestito;
@@ -303,6 +342,7 @@ function MezzoMobileCard({
   ultimaModificaInfo: MezzoUltimaModificaInfo;
   inOff: boolean;
   flash: boolean;
+  hasActivePreset: boolean;
   onHub: (m: MezzoGestito, tab?: MezziHubTabId) => void;
 }) {
   const ultimaLav = ultimaLavorazioneLabel(interventi);
@@ -380,7 +420,7 @@ function MezzoMobileCard({
           ) : null
         }
       >
-        <MezzoRowActions m={m} onHub={onHub} />
+        <MezzoRowActions m={m} hasActivePreset={hasActivePreset} onHub={onHub} />
       </LavorazioneMobileCardFooter>
     </CardMobile>
   );
@@ -393,6 +433,7 @@ export function MezziTable({
   rows,
   interventiByMezzoId,
   ultimaModificaInfoByMezzoId,
+  mezzoIdsWithActivePreset = EMPTY_MEZZO_PRESET_IDS,
   inOfficina,
   sortColumn,
   sortPhase,
@@ -400,6 +441,7 @@ export function MezziTable({
   flashRowId,
   onHub,
 }: MezziTableProps) {
+  const activePresetIds = mezzoIdsWithActivePreset ?? EMPTY_MEZZO_PRESET_IDS;
   const renderMezzoRow = useCallback(
     (index: number) => {
       const m = rows[index];
@@ -411,11 +453,12 @@ export function MezziTable({
           interventi={interventiByMezzoId.get(m.id) ?? []}
           inOff={inOfficina(m)}
           flash={flashRowId === m.id}
+          hasActivePreset={activePresetIds.has(m.id)}
           onHub={onHub}
         />
       );
     },
-    [rows, interventiByMezzoId, inOfficina, flashRowId, onHub],
+    [rows, interventiByMezzoId, inOfficina, flashRowId, activePresetIds, onHub],
   );
 
   if (listSurface === "table") {
@@ -495,6 +538,7 @@ export function MezziTable({
               }
               inOff={inOfficina(m)}
               flash={flashRowId === m.id}
+              hasActivePreset={activePresetIds.has(m.id)}
               onHub={onHub}
             />
           ))

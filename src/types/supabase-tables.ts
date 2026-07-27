@@ -334,6 +334,8 @@ export type LavorazioneRow = {
   actual_labor_hours_updated_at?: string | null;
   /** Tagliandi integrati — esecuzione manutenzione collegata alla lavorazione. */
   is_tagliando?: boolean;
+  /** Intervento in garanzia — badge G in lista note. */
+  is_garanzia?: boolean;
   maintenance_execution_kind?: "scheduled" | "extraordinary" | null;
   repair_present?: boolean;
   tagliando_preset_ref?: string | null;

@@ -27,9 +27,19 @@ import type {
 
 type RicambioLite = Pick<MagazzinoRicambioRow, "id" | "codice" | "nome">;
 
-export async function loadMaintenancePlanViews(client: SupabaseClient): Promise<MaintenancePlanView[]> {
+export async function loadMaintenancePlanViews(
+  client: SupabaseClient,
+  options?: { includeArchived?: boolean },
+): Promise<MaintenancePlanView[]> {
+  // Status is SSOT for archive/visibility. Do not gate on deleted_at — legacy rows can be
+  // active+deleted_at (hidden from UI) after partial archive/edit.
+  let plansQuery = client.from("maintenance_plans").select(MAINTENANCE_PLANS_COLUMNS).order("nome");
+  if (!options?.includeArchived) {
+    plansQuery = plansQuery.in("status", ["active", "draft"]);
+  }
+
   const [plansRes, eqRes, catRes, partsRes, groupsRes, triggersRes, checklistRes] = await Promise.all([
-    client.from("maintenance_plans").select(MAINTENANCE_PLANS_COLUMNS).is("deleted_at", null).order("nome"),
+    plansQuery,
     client.from("maintenance_plan_equipment_types").select(MAINTENANCE_PLAN_EQUIPMENT_TYPES_COLUMNS),
     client.from("tipi_attrezzatura_catalog").select("id, label, label_norm, created_at, updated_at"),
     client.from("maintenance_plan_parts").select(MAINTENANCE_PLAN_PARTS_COLUMNS),

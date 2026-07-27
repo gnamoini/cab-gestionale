@@ -8,11 +8,16 @@ import type { LavorazioneInterventionType } from "@/lib/maintenance-plans/taglia
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
 import {
   dsAccentSoftBanner,
+  dsCheckboxInput,
+  dsCheckboxOptionLabel,
   dsFocus,
   dsSegmentedBtnOff,
   dsSegmentedBtnOn,
   dsSegmentedWrap,
 } from "@/lib/ui/design-system";
+
+const garanziaBadgeClass =
+  "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-emerald-700 text-[10px] font-bold leading-none tracking-wide text-white";
 
 const segmentWrap = `${dsSegmentedWrap} w-full min-w-0 gap-0.5 p-0.5`;
 const segmentOn = `${dsSegmentedBtnOn} min-w-0 flex-1 px-2 py-2 text-[11px] uppercase tracking-wide max-sm:min-h-11 sm:text-xs`;
@@ -27,6 +32,8 @@ const INTERVENTION_OPTIONS: { value: LavorazioneInterventionType; label: string 
 export function SchedaIngressoTagliandoSection({
   interventionType,
   onInterventionTypeChange,
+  isGaranzia = false,
+  onIsGaranziaChange,
   presetRef,
   onPresetRefChange,
   assignPresetToMezzo,
@@ -39,6 +46,8 @@ export function SchedaIngressoTagliandoSection({
 }: {
   interventionType: LavorazioneInterventionType;
   onInterventionTypeChange: (v: LavorazioneInterventionType) => void;
+  isGaranzia?: boolean;
+  onIsGaranziaChange?: (v: boolean) => void;
   presetRef?: string | null;
   onPresetRefChange?: (v: string | null) => void;
   assignPresetToMezzo?: boolean | null;
@@ -83,6 +92,33 @@ export function SchedaIngressoTagliandoSection({
           })}
         </div>
       </FormField>
+
+      {onIsGaranziaChange ? (
+        <FormField label="Garanzia">
+          <label className={dsCheckboxOptionLabel}>
+            <input
+              type="checkbox"
+              className={dsCheckboxInput}
+              checked={isGaranzia}
+              disabled={disabled}
+              onChange={(e) => onIsGaranziaChange(e.target.checked)}
+            />
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-2 text-sm font-medium text-[color:var(--cab-text)]">
+                Intervento in garanzia
+                {isGaranzia ? (
+                  <span className={garanziaBadgeClass} aria-hidden>
+                    G
+                  </span>
+                ) : null}
+              </span>
+              <span className="mt-0.5 block text-xs leading-snug text-[color:var(--cab-text-muted)]">
+                In lista compare il badge G nella colonna note
+              </span>
+            </span>
+          </label>
+        </FormField>
+      ) : null}
 
       {isTagliando && onPresetRefChange ? (
         <FormField label="Preset manutenzione" htmlFor="tagliando-preset-ref">

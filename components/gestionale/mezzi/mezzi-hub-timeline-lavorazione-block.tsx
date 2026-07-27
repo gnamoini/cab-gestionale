@@ -7,9 +7,9 @@ import {
   buildMezziGestionaleLogViewModel,
   GestionaleLogEntryFourLines,
 } from "@/components/gestionale/gestionale-log-ui";
-import { MezzoAnagraficaHistoryEntry } from "@/components/gestionale/mezzi/mezzo-anagrafica-history-entry";
 import { MezzoAssociationChangeEntry } from "@/components/gestionale/mezzi/mezzo-association-change-entry";
 import { isAssociationHistoryEntry } from "@/lib/domain/mezzo/mezzo-association";
+import { buildAnagraficaHistoryGestionaleLogViewModel } from "@/lib/mezzi/anagrafica-history-log-view-model";
 import type { MezzoTimelineLavorazioneBlock } from "@/lib/mezzi/mezzo-timeline-feed";
 import type { MezziHubLogEntry } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoAnagraficaHistoryRow } from "@/src/services/mezzo-anagrafica-history.service";
@@ -138,10 +138,14 @@ export function MezziHubTimelineLavorazioneBlock({
                     <div className={`${NESTED_EVENT_SHELL} px-3 py-2`}>
                       {(() => {
                         const entry = ev.payload as MezzoAnagraficaHistoryRow;
-                        const HistoryEntry = isAssociationHistoryEntry(entry.changed_fields as string[])
-                          ? MezzoAssociationChangeEntry
-                          : MezzoAnagraficaHistoryEntry;
-                        return <HistoryEntry entry={entry} onNavigate={onClose} asDiv />;
+                        if (isAssociationHistoryEntry(entry.changed_fields as string[])) {
+                          return <MezzoAssociationChangeEntry entry={entry} onNavigate={onClose} asDiv />;
+                        }
+                        return (
+                          <GestionaleLogEntryFourLines
+                            vm={buildAnagraficaHistoryGestionaleLogViewModel(entry)}
+                          />
+                        );
                       })()}
                     </div>
                   ) : null}

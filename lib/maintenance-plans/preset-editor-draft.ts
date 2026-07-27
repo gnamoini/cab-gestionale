@@ -20,6 +20,7 @@ export function emptyPlanDraft(): PlanDraft {
     intervalOre: 500,
     intervalType: "ore",
     intervalValue: 500,
+    maintenanceKind: "tagliando_ore",
     status: "active",
     isActive: true,
     tipoAttrezzaturaIds: [],
@@ -74,6 +75,14 @@ export function planToDraft(plan: MaintenancePlanView, assignedMezziCount = 0): 
 
 export function planDraftToUpsertInput(draft: PlanDraft): UpsertMaintenancePlanInput {
   const primary = primaryIntervalFromTriggers(draft.triggersDraft);
+  // Keep custom kinds; sync ore/km kinds to the winning trigger type.
+  const kind = draft.maintenanceKind;
+  const maintenanceKind =
+    kind && kind !== "tagliando_ore" && kind !== "tagliando_km"
+      ? kind
+      : primary.intervalType === "km"
+        ? "tagliando_km"
+        : "tagliando_ore";
 
   return {
     id: draft.id,
@@ -81,6 +90,7 @@ export function planDraftToUpsertInput(draft: PlanDraft): UpsertMaintenancePlanI
     intervalOre: primary.intervalOre,
     intervalType: primary.intervalType,
     intervalValue: primary.intervalValue,
+    maintenanceKind,
     status: draft.status,
     isActive: draft.status === "active",
     tempoPrevistoMinuti: draft.tempoPrevistoMinuti,
@@ -103,8 +113,5 @@ export function planDraftToUpsertInput(draft: PlanDraft): UpsertMaintenancePlanI
         triggers: draft.triggersDraft,
       },
     ],
-    checklist: draft.checklistDraft
-      .map((item) => ({ ...item, label: (item.label ?? "").trim() }))
-      .filter((item) => item.label.length > 0),
   };
 }

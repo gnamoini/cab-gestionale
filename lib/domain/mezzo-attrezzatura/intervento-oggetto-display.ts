@@ -11,35 +11,36 @@ export type InterventoOggettoDisplay = {
   subtitle: string;
 };
 
+/** Omette vuoti e placeholder «—». */
+function joinMarcaModello(...parts: Array<string | null | undefined>): string {
+  return parts
+    .map((s) => (s ?? "").trim())
+    .filter((s) => s.length > 0 && s !== "—")
+    .join(" ");
+}
+
 /** Etichetta colonna «Oggetto» per liste lavorazioni. */
 export function resolveInterventoOggettoDisplay(ctx: InterventoContext): InterventoOggettoDisplay {
   const { target } = ctx;
   if (target.targetType === "telaio") {
     const display = resolveInterventoDisplay(ctx);
-    const telaio = [ctx.schedaIngresso.campi?.marcaTelaio, ctx.schedaIngresso.campi?.modelloTelaio]
-      .map((s) => s?.trim())
-      .filter(Boolean)
-      .join(" ");
-    const label =
-      telaio ||
-      [ctx.mezzo.marca, ctx.mezzo.modello].filter(Boolean).join(" ").trim() ||
-      display.marcaModello.value.trim() ||
+    const telaio =
+      joinMarcaModello(ctx.schedaIngresso.campi?.marcaTelaio, ctx.schedaIngresso.campi?.modelloTelaio) ||
+      joinMarcaModello(ctx.mezzo.marca, ctx.mezzo.modello) ||
+      joinMarcaModello(display.marcaModello.value) ||
       "Telaio";
     return {
-      label,
+      label: telaio,
       badge: interventoTargetBadge("telaio"),
       subtitle: ctx.ident.targa || display.targa.value,
     };
   }
 
   const att = target.attrezzatura;
-  const label = interventoTargetLabel(
-    "attrezzatura",
-    [att.marca, att.modello].filter(Boolean).join(" "),
-  );
+  const label = interventoTargetLabel("attrezzatura", joinMarcaModello(att.marca, att.modello));
   return {
-    label: label === "Attrezzatura" ? att.marca || "—" : label,
+    label: label === "Attrezzatura" ? joinMarcaModello(att.marca) || "" : label,
     badge: interventoTargetBadge("attrezzatura", att.marca),
-    subtitle: att.matricola,
+    subtitle: att.matricola === "—" ? "" : att.matricola,
   };
 }

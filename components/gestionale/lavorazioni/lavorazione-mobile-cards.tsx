@@ -19,6 +19,7 @@ import {
 } from "@/components/gestionale/lavorazioni/lavorazione-mobile-card";
 import {
   LavorazioneIngressoDateCell,
+  LavorazioneNoteBadges,
   lavTableActionBtnDanger,
   lavTableActionBtnInfo,
   lavTableActionBtnPrimary,
@@ -161,7 +162,12 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
         scuderia={ident.scuderia}
         ingresso={<LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />}
       />
-      <LavorazioneMobileNote text={resolveLavorazioneNote(row)} />
+      <LavorazioneMobileNote
+        text={resolveLavorazioneNote(row)}
+        leading={
+          row.is_tagliando || row.is_garanzia ? <LavorazioneNoteBadges row={row} /> : undefined
+        }
+      />
       <LavorazioneMobileControlsPanel>
         <LavMobileInlineField label="Stato" layout="stack">
           <InlineSelectField
@@ -300,7 +306,12 @@ function LavorazioneArchivioMobileCardInner({
         scuderia={ident.scuderia}
         ingresso={<LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />}
       />
-      <LavorazioneMobileNote text={resolveLavorazioneNote(row)} />
+      <LavorazioneMobileNote
+        text={resolveLavorazioneNote(row)}
+        leading={
+          row.is_tagliando || row.is_garanzia ? <LavorazioneNoteBadges row={row} /> : undefined
+        }
+      />
       <LavorazioneMobileControlsPanel ariaLabel="Completamento, priorità e addetto">
         <LavMobileInlineField label="Completamento" layout="stack">
           <LavorazioneCompletamentoDatePill

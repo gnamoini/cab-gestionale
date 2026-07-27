@@ -53,4 +53,13 @@ assert.ok(matchSearchString("iveko", lavDoc).matches);
 assert.ok(matchSearchString("mottola", lavDoc).matches);
 assert.ok(matchSearchString("pompa", lavDoc).matches);
 
+const lavBadgeRow = {
+  ...lavRow,
+  is_tagliando: true,
+  is_garanzia: true,
+} as unknown as LavorazioneListRow;
+const lavBadgeDoc = buildSearchDocumentLavorazione(lavBadgeRow);
+assert.ok(matchSearchString("tagliando", lavBadgeDoc).matches);
+assert.ok(matchSearchString("garanzia", lavBadgeDoc).matches);
+
 console.log("search-engine.test.ts OK");

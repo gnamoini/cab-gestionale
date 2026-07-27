@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { IconActionButton } from "@/components/design-system";
+import { HubIconTrash } from "@/components/design-system/hub-table-action-icons";
+import { GestionaleNumberInput } from "@/components/gestionale/gestionale-number-input";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { GlobalSelect } from "@/components/gestionale/global-input";
 import {
@@ -9,13 +12,13 @@ import {
   type ReplacementCondition,
 } from "@/lib/maintenance-plans/maintenance-enums";
 import {
-  dsBtnNeutral,
   dsCheckboxInput,
   dsFormField,
-  dsFormInput,
   dsFormLabel,
   dsInput,
   dsScrollbar,
+  dsTableActionBtnDanger,
+  dsTableActionGlyph,
 } from "@/lib/ui/design-system";
 import { useMaintenanceRicambiSearchQuery } from "@/src/hooks/gestionale/use-maintenance-plans-queries";
 
@@ -28,6 +31,9 @@ const replacementSelectClass = `${dsInput} min-h-11 py-2 text-sm font-semibold`;
 
 const presetFormSectionClass =
   "rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_45%,var(--cab-card))] p-4 shadow-[var(--cab-shadow-sm)]";
+
+const partRowClass =
+  "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3 shadow-[var(--cab-shadow-sm)]";
 
 export type MaintenancePresetPartDraft = {
   ricambioId: string;
@@ -85,33 +91,44 @@ export function MaintenancePresetPartsField({
         <ul
           className={`mt-2 max-h-36 overflow-y-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] ${dsScrollbar}`}
         >
-          {(ricambiQ.data ?? []).map((r) => (
-            <li key={r.id} className="border-b border-[color:var(--cab-border)] last:border-b-0">
-              <button
-                type="button"
-                className="w-full px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--cab-hover)]"
-                onClick={() => {
-                  if (parts.some((p) => p.ricambioId === r.id)) return;
-                  onChange([
-                    ...parts,
-                    {
-                      ricambioId: r.id,
-                      codice: r.codice,
-                      descrizione: r.nome,
-                      quantita: 1,
-                      isRequired: true,
-                      replacementCondition: "sempre",
-                      note: "",
-                    },
-                  ]);
-                  setRicSearch("");
-                }}
-              >
-                <span className="font-medium text-[color:var(--cab-text)]">{r.codice}</span>
-                <span className="text-[color:var(--cab-text-muted)]"> — {r.nome}</span>
-              </button>
-            </li>
-          ))}
+          {(ricambiQ.data ?? []).map((r) => {
+            const already = parts.some((p) => p.ricambioId === r.id);
+            return (
+              <li key={r.id} className="border-b border-[color:var(--cab-border)] last:border-b-0">
+                <button
+                  type="button"
+                  disabled={already}
+                  className="flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-[var(--cab-hover)] disabled:cursor-not-allowed disabled:opacity-55"
+                  onClick={() => {
+                    if (already) return;
+                    onChange([
+                      ...parts,
+                      {
+                        ricambioId: r.id,
+                        codice: r.codice,
+                        descrizione: r.nome,
+                        quantita: 1,
+                        isRequired: true,
+                        replacementCondition: "sempre",
+                        note: "",
+                      },
+                    ]);
+                    setRicSearch("");
+                  }}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-mono text-xs font-semibold text-[color:var(--cab-text)]">{r.codice}</span>
+                    <span className="block text-[color:var(--cab-text-muted)]">{r.nome}</span>
+                  </span>
+                  {already ? (
+                    <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+                      Già aggiunto
+                    </span>
+                  ) : null}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       ) : null}
 
@@ -120,36 +137,58 @@ export function MaintenancePresetPartsField({
       ) : (
         <ul className="mt-3 space-y-2">
           {parts.map((p) => (
-            <li
-              key={p.ricambioId}
-              className="rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3 text-sm"
-            >
-              <div className="mb-2 font-medium text-[color:var(--cab-text)]">
-                {p.codice} — {p.descrizione}
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(5rem,6rem)_1fr_auto] lg:items-end">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]" htmlFor={`mp-part-qty-${p.ricambioId}`}>
-                    Quantità
-                  </label>
+            <li key={p.ricambioId} className={partRowClass}>
+              <div className="mb-3 flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-mono text-xs font-semibold text-[color:var(--cab-text)]">{p.codice}</p>
+                  <p className="mt-0.5 text-sm font-medium leading-snug text-[color:var(--cab-text)]">{p.descrizione}</p>
+                </div>
+                <label className="inline-flex shrink-0 items-center gap-2 pt-0.5 text-xs font-medium text-[color:var(--cab-text)]">
                   <input
-                    id={`mp-part-qty-${p.ricambioId}`}
-                    type="number"
-                    min={0.001}
-                    step={0.001}
-                    className={dsFormInput}
-                    value={p.quantita}
+                    type="checkbox"
+                    className={dsCheckboxInput}
+                    checked={p.isRequired}
                     onChange={(e) =>
                       onChange(
                         parts.map((x) =>
-                          x.ricambioId === p.ricambioId ? { ...x, quantita: Number(e.target.value) || 0 } : x,
+                          x.ricambioId === p.ricambioId ? { ...x, isRequired: e.target.checked } : x,
                         ),
                       )
                     }
                   />
+                  Obbligatorio
+                </label>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[minmax(5rem,7rem)_minmax(8rem,1fr)_auto] sm:items-end">
+                <div className="min-w-0">
+                  <label
+                    className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]"
+                    htmlFor={`mp-part-qty-${p.ricambioId}`}
+                  >
+                    Quantità
+                  </label>
+                  <GestionaleNumberInput
+                    id={`mp-part-qty-${p.ricambioId}`}
+                    min={0.001}
+                    inputMode="decimal"
+                    className="mt-0"
+                    value={String(p.quantita)}
+                    onChange={(v) =>
+                      onChange(
+                        parts.map((x) =>
+                          x.ricambioId === p.ricambioId ? { ...x, quantita: Number(v) || 0 } : x,
+                        ),
+                      )
+                    }
+                    aria-label={`Quantità ${p.codice}`}
+                  />
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]" htmlFor={`mp-part-cond-${p.ricambioId}`}>
+                <div className="min-w-0">
+                  <label
+                    className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]"
+                    htmlFor={`mp-part-cond-${p.ricambioId}`}
+                  >
                     Condizione
                   </label>
                   <GlobalSelect
@@ -172,29 +211,15 @@ export function MaintenancePresetPartsField({
                     aria-label={`Condizione sostituzione ${p.codice}`}
                   />
                 </div>
-                <div className="flex flex-wrap items-center gap-3 sm:col-span-2 lg:col-span-1 lg:flex-col lg:items-stretch">
-                  <label className="inline-flex min-h-11 items-center gap-2 text-xs font-medium text-[color:var(--cab-text)]">
-                    <input
-                      type="checkbox"
-                      className={dsCheckboxInput}
-                      checked={p.isRequired}
-                      onChange={(e) =>
-                        onChange(
-                          parts.map((x) =>
-                            x.ricambioId === p.ricambioId ? { ...x, isRequired: e.target.checked } : x,
-                          ),
-                        )
-                      }
-                    />
-                    Obbligatorio
-                  </label>
-                  <button
-                    type="button"
-                    className={`${dsBtnNeutral} h-11 w-full`}
+                <div className="flex justify-end sm:pb-0.5">
+                  <IconActionButton
+                    label="Rimuovi ricambio"
+                    tooltipForce
+                    className={dsTableActionBtnDanger}
                     onClick={() => onChange(parts.filter((x) => x.ricambioId !== p.ricambioId))}
                   >
-                    Rimuovi
-                  </button>
+                    <HubIconTrash className={dsTableActionGlyph} />
+                  </IconActionButton>
                 </div>
               </div>
             </li>

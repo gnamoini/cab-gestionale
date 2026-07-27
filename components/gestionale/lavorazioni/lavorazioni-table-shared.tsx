@@ -41,6 +41,8 @@ import {
 } from "@/lib/ui/gestionale-list-table";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
+import { interventionTypeShortBadge, lavorazioneRowToTagliandoFields } from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
+import { resolveLavorazioneNote } from "@/lib/lavorazioni/lavorazione-display-helpers";
 
 /** @deprecated Usare `gestionaleListTableTd` dal master. */
 export { gestionaleListTableTd as lavTableTd };
@@ -147,6 +149,58 @@ export const lavTableBodyTextClass = "text-sm text-zinc-700 dark:text-zinc-200";
 /** Testo principale colonne Cliente / Oggetto — stessa dimensione e peso. */
 export const lavTablePrimaryTextClass =
   "text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-100";
+
+const TAGLIANDO_BADGE_CLASS =
+  "inline-flex h-5 w-5 shrink-0 self-center items-center justify-center rounded-md bg-amber-600 text-[10px] font-bold leading-none tracking-wide text-white dark:bg-amber-600";
+
+const GARANZIA_BADGE_CLASS =
+  "inline-flex h-5 w-5 shrink-0 self-center items-center justify-center rounded-md bg-emerald-700 text-[10px] font-bold leading-none tracking-wide text-white dark:bg-emerald-700";
+
+/** Badge T in lista — solo se tagliando (anche +riparazione). Riparazione pura: niente. */
+export function LavorazioneInterventionTypeBadge({ row }: { row: LavorazioneListRow }) {
+  const fields = lavorazioneRowToTagliandoFields(row);
+  if (!fields.isTagliando) return null;
+  const { title } = interventionTypeShortBadge(
+    fields.repairPresent ? "riparazione_tagliando" : "tagliando",
+  );
+  return (
+    <span className={TAGLIANDO_BADGE_CLASS} title={title} aria-label={title}>
+      T
+    </span>
+  );
+}
+
+/** Badge G in lista — intervento in garanzia. */
+export function LavorazioneGaranziaBadge({ row }: { row: LavorazioneListRow }) {
+  if (!row.is_garanzia) return null;
+  return (
+    <span className={GARANZIA_BADGE_CLASS} title="Garanzia" aria-label="Garanzia">
+      G
+    </span>
+  );
+}
+
+/** Badge T/G per header card mobile o colonna note. */
+export function LavorazioneNoteBadges({ row }: { row: LavorazioneListRow }) {
+  if (!row.is_tagliando && !row.is_garanzia) return null;
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1">
+      <LavorazioneInterventionTypeBadge row={row} />
+      <LavorazioneGaranziaBadge row={row} />
+    </span>
+  );
+}
+
+/** Colonna Note: badge T/G + testo. */
+export function LavorazioneNoteCell({ row }: { row: LavorazioneListRow }) {
+  const note = resolveLavorazioneNote(row) || "—";
+  return (
+    <div className="flex min-w-0 items-start gap-1.5">
+      <LavorazioneNoteBadges row={row} />
+      <span className="line-clamp-2 min-w-0">{note}</span>
+    </div>
+  );
+}
 
 export function LavorazioneIngressoDateCell({
   row,

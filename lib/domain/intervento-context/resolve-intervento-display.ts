@@ -67,10 +67,13 @@ export function resolveInterventoDisplay(ctx: InterventoContext): InterventoDisp
   const mezzo = ctx.mezzo;
 
   const marcaScheda = [scheda?.marcaAttrezzatura, scheda?.modelloAttrezzatura]
-    .map((s) => s?.trim())
-    .filter(Boolean)
+    .map((s) => (s ?? "").trim())
+    .filter((s) => s.length > 0 && s !== "—")
     .join(" ");
-  const marcaMezzo = [mezzo.marca, mezzo.modello].filter(Boolean).join(" ").trim();
+  const marcaMezzo = [mezzo.marca, mezzo.modello]
+    .map((s) => (s ?? "").trim())
+    .filter((s) => s.length > 0 && s !== "—")
+    .join(" ");
   const marcaLav = "";
 
   const marcaModelloRaw = resolveField(marcaScheda, marcaLav, marcaMezzo, "marca");

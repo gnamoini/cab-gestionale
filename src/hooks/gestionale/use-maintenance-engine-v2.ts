@@ -10,7 +10,8 @@ import { useQueryClient } from "@tanstack/react-query";
 export const maintenanceEngineV2QueryKeys = {
   mezzoConfigs: (mezzoId: string) => [...maintenancePlansQueryKeys.root, "configs", mezzoId] as const,
   effectivePreset: (configId: string) => [...maintenancePlansQueryKeys.root, "effective-preset", configId] as const,
-  overview: () => [...maintenancePlansQueryKeys.root, "overview"] as const,
+  /** v2: include cliente/matricola su overview. */
+  overview: () => [...maintenancePlansQueryKeys.root, "overview", "v2-oggetto"] as const,
   hierarchy: () => [...maintenancePlansQueryKeys.root, "hierarchy"] as const,
   timelineExtras: (mezzoId: string) => [...maintenancePlansQueryKeys.root, "timeline-extras", mezzoId] as const,
 };

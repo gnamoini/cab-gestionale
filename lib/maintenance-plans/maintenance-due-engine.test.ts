@@ -35,6 +35,19 @@ const overdueLabel = formatDueReason({
 });
 assert.match(overdueLabel, /Tagliando 500h scaduto/);
 
+const overdueKmLabel = formatDueReason({
+  presetNome: "Tagliando km",
+  explainability: {
+    trigger_reason: "km",
+    due_date: null,
+    groups: [],
+  },
+  currentValue: 75636,
+  remainingValue: -50636,
+  isOverdue: true,
+});
+assert.match(overdueKmLabel, /limite 25000/);
+
 const plannedLabel = formatDueReason({
   presetNome: "Tagliando 500h",
   explainability: {

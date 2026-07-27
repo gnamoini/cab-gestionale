@@ -27,6 +27,8 @@ export function buildSearchDocumentLavorazione(
     row.stato,
     labelLavorazioneStatoDb(row.stato),
     row.priorita,
+    row.is_tagliando ? "tagliando" : null,
+    row.is_garanzia ? "garanzia" : null,
     lavorazioneMacchinaLabel(row, schedeStore),
     lavorazioneClienteLabel(row, schedeStore),
     ing?.utilizzatore || row.mezzo?.utilizzatore,

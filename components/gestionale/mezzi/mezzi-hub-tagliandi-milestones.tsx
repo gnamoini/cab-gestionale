@@ -1,13 +1,17 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { IconActionButton } from "@/components/design-system";
+import { HubIconOpen } from "@/components/design-system/hub-table-action-icons";
 import {
   GestionaleListTable,
+  GestionaleListTableActionsHead,
   GlobalTableHeadLabel,
 } from "@/components/gestionale/global-table";
 import type { MaintenanceServiceHistoryView } from "@/lib/maintenance-plans/types";
 import {
   buildAnchoredHubMilestones,
+  estimateHubMilestoneDueDate,
   formatMilestoneThreshold,
   historyToAnchoredExecutions,
   mezzoMeteringFromGestito,
@@ -16,33 +20,22 @@ import {
   type ResolvedMilestoneInterval,
 } from "@/lib/maintenance-plans/tagliando-milestone-resolution";
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import { buildPreventiviLavorazioneFocusHref } from "@/lib/preventivi/preventivi-lavorazione-href";
 import {
   gestionaleListTableRowBaseClass,
   gestionaleListTableTd,
+  gestionaleListTableTdAzioni,
   gestionaleListTableTdCenter,
-  gestionaleListTableTdPill,
+  gestionaleListTableActionsGroupEnd,
 } from "@/lib/ui/gestionale-list-table";
-import { dsCheckboxInput } from "@/lib/ui/design-system";
 import {
-  TagliandoHistoryExpandedDetail,
-  tagliandoComplianceLabel,
-  tagliandoRicambiLabel,
-} from "@/components/gestionale/mezzi/mezzi-tagliando-history-row";
+  dsCheckboxInput,
+  dsTableActionBtnPrimary,
+  dsTableActionGlyph,
+} from "@/lib/ui/design-system";
 import { useToggleTagliandiMatrixCellMutation } from "@/src/hooks/gestionale/use-maintenance-plan-mutations";
 import { useRecomputeForecastMutation } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-
-const STATO_BADGE: Record<AnchoredHubMilestoneRow["state"], string> = {
-  done: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-200",
-  pending: "bg-[color:var(--cab-surface-2)] text-[color:var(--cab-text-muted)]",
-  overdue: "bg-amber-500/15 text-amber-900 dark:text-amber-100",
-};
-
-const STATO_LABEL: Record<AnchoredHubMilestoneRow["state"], string> = {
-  done: "Fatto",
-  pending: "Prossimo",
-  overdue: "Scaduto",
-};
 
 const SCAGLIONI_ROW_CLASS: Record<AnchoredHubMilestoneRow["state"], string> = {
   done: "",
@@ -64,6 +57,9 @@ export type MezziHubTagliandiStoricoPlan = {
   planLabel: string;
   milestone: ResolvedMilestoneInterval;
   configId?: string | null;
+  /** Forecast SSOT dal config mezzo (prossimo due). */
+  nextDateEstimated?: string | null;
+  remainingMeterToNext?: number | null;
 };
 
 function TagliandiHubInsetEmpty({ message }: { message: string }) {
@@ -88,8 +84,6 @@ function originLabel(row: MaintenanceServiceHistoryView | undefined): string {
   return "Registrato";
 }
 
-const SCAGLIONI_TABLE_COLS = 7;
-
 function MezziHubTagliandiScaglioniTable({
   mezzo,
   plan,
@@ -103,7 +97,6 @@ function MezziHubTagliandiScaglioniTable({
   canEdit: boolean;
   onToggled: () => void;
 }) {
-  const [expandedServiceId, setExpandedServiceId] = useState<string | null>(null);
   const toggleMut = useToggleTagliandiMatrixCellMutation();
   const recomputeMut = useRecomputeForecastMutation();
   const gestToast = useGestionaleToast();
@@ -117,14 +110,19 @@ function MezziHubTagliandiScaglioniTable({
 
   const historyByServiceId = useMemo(() => new Map(planHistory.map((h) => [h.id, h])), [planHistory]);
 
+  const executions = useMemo(
+    () => historyToAnchoredExecutions(planHistory, plan.milestone.unit),
+    [planHistory, plan.milestone.unit],
+  );
+
   const milestones = useMemo(
     () =>
       buildAnchoredHubMilestones({
         interval: plan.milestone.interval,
         currentValue,
-        executions: historyToAnchoredExecutions(planHistory, plan.milestone.unit),
+        executions,
       }),
-    [plan.milestone.interval, plan.milestone.unit, currentValue, planHistory],
+    [plan.milestone.interval, currentValue, executions],
   );
 
   async function handleToggle(milestone: AnchoredHubMilestoneRow, nextDone: boolean) {
@@ -172,131 +170,101 @@ function MezziHubTagliandiScaglioniTable({
 
   if (milestones.length === 0) return null;
 
-  const doneCount = milestones.filter((m) => m.done).length;
-
   return (
-    <div className="space-y-2">
-      <div className="flex min-w-0 items-center justify-between gap-2">
-        <h4 className="min-w-0 truncate text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
-          {plan.planLabel}
-        </h4>
-        <span className="shrink-0 rounded-full bg-[color:var(--cab-surface-2)] px-2 py-0.5 text-[10px] font-medium tabular-nums text-[color:var(--cab-text-muted)]">
-          {doneCount}/{milestones.length}
-        </span>
-      </div>
+    <div className="space-y-3">
+      <h4 className="min-w-0 truncate text-base font-semibold leading-snug text-[color:var(--cab-text)]">
+        {plan.planLabel}
+      </h4>
       <GestionaleListTable
         fixed
         colgroup={
           <>
             <col className="w-[2.75rem]" />
             <col />
-            <col className="w-[6.5rem]" />
+            <col className="w-[4.75rem]" />
+            <col className="w-[7rem]" />
             <col className="w-[5.5rem]" />
-            <col className="w-[5rem]" />
-            <col className="w-[5rem]" />
-            <col className="w-[4.25rem]" />
           </>
         }
         headRow={
           <>
             <GlobalTableHeadLabel label="N°" align="center" />
             <GlobalTableHeadLabel label="Soglia" />
-            <GlobalTableHeadLabel label="Stato" align="center" />
-            <GlobalTableHeadLabel label="Origine" align="center" />
-            <GlobalTableHeadLabel label="Compl." align="center" />
-            <GlobalTableHeadLabel label="Ricambi" align="center" />
             <GlobalTableHeadLabel label="Fatto" align="center" />
+            <GlobalTableHeadLabel label="Origine" align="center" />
+            <GestionaleListTableActionsHead />
           </>
         }
       >
         {milestones.map((milestone, index) => {
           const historyRow = milestone.serviceId ? historyByServiceId.get(milestone.serviceId) : undefined;
-          const performedDate = fmtDateIt(milestone.performedAt ?? historyRow?.performedAt);
           const lockedDone = milestone.done && (!canManuallyUncheck(historyRow) || milestone.synthetic);
           const disabled = !canEdit || toggleMut.isPending || lockedDone;
           const rowKey = `${milestone.done ? "done" : "future"}-${milestone.value}-${milestone.serviceId ?? index}`;
-          const expandable = Boolean(milestone.done && historyRow);
-          const expanded = expandable && expandedServiceId === historyRow?.id;
+          const sogliaLabel = formatMilestoneThreshold(plan.milestone.unit, milestone.value);
+          const lavorazioneId =
+            (historyRow?.lavorazioneId ?? milestone.lavorazioneId)?.trim() || "";
+          const dueYmd = estimateHubMilestoneDueDate({
+            done: milestone.done,
+            performedAt: milestone.performedAt ?? historyRow?.performedAt,
+            milestoneValue: milestone.value,
+            currentValue,
+            interval: plan.milestone.interval,
+            unit: plan.milestone.unit,
+            executions,
+            nextDateEstimated: plan.nextDateEstimated,
+            remainingMeterToNext: plan.remainingMeterToNext,
+          });
+          const sogliaDate = fmtDateIt(dueYmd ?? undefined);
+          const sogliaDateClass = milestone.done
+            ? "mt-1 text-xs font-semibold text-[color:var(--cab-primary)]"
+            : milestone.state === "overdue"
+              ? "mt-1 text-xs font-semibold text-amber-700 dark:text-amber-200"
+              : "mt-1 text-xs font-medium text-[color:var(--cab-text)]";
 
           return (
-            <Fragment key={rowKey}>
-              <tr className={`${gestionaleListTableRowBaseClass} ${SCAGLIONI_ROW_CLASS[milestone.state]}`}>
-                <td className={`${gestionaleListTableTdCenter} font-mono text-xs tabular-nums text-[color:var(--cab-text-muted)]`}>
-                  {index + 1}
-                </td>
-                <td className={`${gestionaleListTableTd} font-mono tabular-nums`}>
-                  {expandable ? (
-                    <button
-                      type="button"
-                      className="text-left hover:underline"
-                      aria-expanded={expanded}
-                      onClick={() =>
-                        setExpandedServiceId((prev) => (prev === historyRow?.id ? null : (historyRow?.id ?? null)))
-                      }
+            <tr key={rowKey} className={`${gestionaleListTableRowBaseClass} ${SCAGLIONI_ROW_CLASS[milestone.state]}`}>
+              <td
+                className={`${gestionaleListTableTdCenter} py-3 font-mono text-xs font-semibold tabular-nums text-[color:var(--cab-text)]`}
+              >
+                {index + 1}
+              </td>
+              <td className={`${gestionaleListTableTd} py-3`}>
+                <div className="text-sm font-semibold tabular-nums text-[color:var(--cab-text)]">
+                  {sogliaLabel}
+                </div>
+                {sogliaDate ? <div className={sogliaDateClass}>{sogliaDate}</div> : null}
+              </td>
+              <td className={`${gestionaleListTableTdCenter} py-3`}>
+                <input
+                  type="checkbox"
+                  className={dsCheckboxInput}
+                  checked={milestone.done}
+                  disabled={disabled}
+                  title={lockedDone ? "Registrato da lavorazione" : undefined}
+                  aria-label={`Tagliando ${sogliaLabel} ${milestone.done ? "eseguito" : "da eseguire"}`}
+                  onChange={(e) => void handleToggle(milestone, e.target.checked)}
+                />
+              </td>
+              <td className={`${gestionaleListTableTdCenter} py-3 text-xs text-[color:var(--cab-text)]`}>
+                {milestone.done ? originLabel(historyRow) : "—"}
+              </td>
+              <td className={gestionaleListTableTdAzioni}>
+                <div className={gestionaleListTableActionsGroupEnd}>
+                  {lavorazioneId ? (
+                    <IconActionButton
+                      as="link"
+                      href={buildPreventiviLavorazioneFocusHref(lavorazioneId, "storico")}
+                      label="Apri lavorazione"
+                      tooltipForce
+                      className={dsTableActionBtnPrimary}
                     >
-                      <div className="font-medium text-[color:var(--cab-text)]">
-                        {formatMilestoneThreshold(plan.milestone.unit, milestone.value)}
-                      </div>
-                      {performedDate ? (
-                        <div className="mt-0.5 text-[10px] font-normal text-[color:var(--cab-primary)]">
-                          {performedDate}
-                        </div>
-                      ) : null}
-                    </button>
-                  ) : (
-                    <>
-                      <div>{formatMilestoneThreshold(plan.milestone.unit, milestone.value)}</div>
-                      {milestone.done && performedDate ? (
-                        <div className="mt-0.5 text-[10px] font-normal text-[color:var(--cab-text-muted)]">
-                          {performedDate}
-                        </div>
-                      ) : null}
-                    </>
-                  )}
-                </td>
-                <td className={gestionaleListTableTdPill}>
-                  <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATO_BADGE[milestone.state]}`}
-                  >
-                    {STATO_LABEL[milestone.state]}
-                  </span>
-                </td>
-                <td className={`${gestionaleListTableTdCenter} text-xs text-[color:var(--cab-text-muted)]`}>
-                  {milestone.done ? originLabel(historyRow) : "—"}
-                </td>
-                <td className={`${gestionaleListTableTdCenter} font-mono text-xs tabular-nums`}>
-                  {tagliandoComplianceLabel(historyRow)}
-                </td>
-                <td className={`${gestionaleListTableTdCenter} text-xs text-[color:var(--cab-text-muted)]`}>
-                  {tagliandoRicambiLabel(historyRow)}
-                </td>
-                <td className={gestionaleListTableTdCenter}>
-                  <input
-                    type="checkbox"
-                    className={dsCheckboxInput}
-                    checked={milestone.done}
-                    disabled={disabled}
-                    title={lockedDone ? "Registrato da lavorazione" : undefined}
-                    aria-label={`Tagliando ${formatMilestoneThreshold(plan.milestone.unit, milestone.value)} ${milestone.done ? "eseguito" : "da eseguire"}`}
-                    onChange={(e) => void handleToggle(milestone, e.target.checked)}
-                  />
-                </td>
-              </tr>
-              {expanded && historyRow ? (
-                <tr className={gestionaleListTableRowBaseClass}>
-                  <td
-                    colSpan={SCAGLIONI_TABLE_COLS}
-                    className="bg-[color:color-mix(in_srgb,var(--cab-hover)_40%,transparent)] px-3 py-3"
-                  >
-                    <TagliandoHistoryExpandedDetail
-                      row={historyRow}
-                      canEdit={canEdit}
-                      onReviewSaved={onToggled}
-                    />
-                  </td>
-                </tr>
-              ) : null}
-            </Fragment>
+                      <HubIconOpen className={dsTableActionGlyph} />
+                    </IconActionButton>
+                  ) : null}
+                </div>
+              </td>
+            </tr>
           );
         })}
       </GestionaleListTable>
@@ -304,13 +272,7 @@ function MezziHubTagliandiScaglioniTable({
   );
 }
 
-export function fmtMezziHubTagliandiSubtitle(historyCount: number, planCount: number): string {
-  const exec = historyCount === 1 ? "1 esecuzione" : `${historyCount} esecuzioni`;
-  const plans = planCount === 1 ? "1 piano" : `${planCount} piani`;
-  return `${exec} · ${plans}`;
-}
-
-/** Tabella unificata scaglioni + dettaglio esecuzioni (compliance, ricambi). */
+/** Tabella scaglioni tagliandi. */
 export function MezziHubTagliandiUnifiedSection({
   mezzo,
   plans,
@@ -325,7 +287,6 @@ export function MezziHubTagliandiUnifiedSection({
   onToggled: () => void;
 }) {
   const scaglioniPlans = plans.filter((p) => p.milestone.interval > 0 && p.planId);
-  const metering = mezzoMeteringFromGestito(mezzo);
 
   if (scaglioniPlans.length === 0) {
     return (
@@ -334,36 +295,17 @@ export function MezziHubTagliandiUnifiedSection({
   }
 
   return (
-    <div className="space-y-3">
-      <p className="text-xs leading-relaxed text-[color:var(--cab-text-muted)]">
-        Contatore attuale:{" "}
-        <span className="font-mono tabular-nums text-[color:var(--cab-text)]">
-          {metering.ore.toLocaleString("it-IT")} h
-        </span>
-        {metering.km > 0 ? (
-          <>
-            {" "}
-            ·{" "}
-            <span className="font-mono tabular-nums text-[color:var(--cab-text)]">
-              {metering.km.toLocaleString("it-IT")} km
-            </span>
-          </>
-        ) : null}
-        . Spunta gli scaglioni eseguiti, completa una lavorazione con flag Tagliando, o apri una riga per
-        compliance e ricambi.
-      </p>
-      <div className="space-y-3">
-        {scaglioniPlans.map((plan) => (
-          <MezziHubTagliandiScaglioniTable
-            key={plan.planId}
-            mezzo={mezzo}
-            plan={plan}
-            history={history}
-            canEdit={canEdit}
-            onToggled={onToggled}
-          />
-        ))}
-      </div>
+    <div className="space-y-5">
+      {scaglioniPlans.map((plan) => (
+        <MezziHubTagliandiScaglioniTable
+          key={plan.planId}
+          mezzo={mezzo}
+          plan={plan}
+          history={history}
+          canEdit={canEdit}
+          onToggled={onToggled}
+        />
+      ))}
     </div>
   );
 }

@@ -16,6 +16,7 @@ export const LAVORAZIONE_WRITABLE_KEYS = [
   "target_type",
   "attrezzatura_id",
   "is_tagliando",
+  "is_garanzia",
   "maintenance_execution_kind",
   "repair_present",
   "tagliando_preset_ref",
@@ -36,6 +37,7 @@ export type LavorazioneWritePayload = {
   target_type?: InterventoTargetType;
   attrezzatura_id?: string | null;
   is_tagliando?: boolean;
+  is_garanzia?: boolean;
   maintenance_execution_kind?: "scheduled" | "extraordinary" | null;
   repair_present?: boolean;
   tagliando_preset_ref?: string | null;
@@ -93,6 +95,8 @@ export function pickLavorazioneWritePayload(data: Record<string, unknown>): Lavo
           : String(data.attrezzatura_id).trim() || null;
     } else if (key === "is_tagliando") {
       out.is_tagliando = Boolean(data.is_tagliando);
+    } else if (key === "is_garanzia") {
+      out.is_garanzia = Boolean(data.is_garanzia);
     } else if (key === "maintenance_execution_kind") {
       const k = data.maintenance_execution_kind;
       out.maintenance_execution_kind =

@@ -142,7 +142,9 @@ export function lavorazioneMezzoIdent(row: LavorazioneListRow, schedeStore?: Lav
 }
 
 function lavorazioneTelaioParts(marca?: string | null, modello?: string | null): string[] {
-  return [marca, modello].map((s) => s?.trim()).filter(Boolean) as string[];
+  return [marca, modello]
+    .map((s) => (s ?? "").trim())
+    .filter((s) => s.length > 0 && s !== "—");
 }
 
 function lavorazioneTelaioFromParts(_tipo?: string | null, marca?: string | null, modello?: string | null): string {

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { computeMaintenanceUrgency } from "@/lib/maintenance-plans/compute-maintenance-urgency";
 import { formatDueReason } from "@/lib/maintenance-plans/maintenance-due-engine";
@@ -8,6 +8,12 @@ import {
   VEHICLE_MAINTENANCE_FORECASTS_COLUMNS,
   VEHICLE_MAINTENANCE_SERVICES_V2_COLUMNS,
 } from "@/lib/db/table-select-columns";
+import { parseMezzoMeta } from "@/lib/mezzi/mezzi-meta";
+import {
+  fetchAttrezzatureForMezzoIds,
+  indexAttrezzatureByMezzoId,
+} from "@/lib/mezzi/mezzi-attrezzature-batch";
+import { pickAttrezzaturaForContext } from "@/lib/domain/mezzo-attrezzatura/compose-mezzo-gestito";
 import { resolveCurrentMezzoMetering, resolveCurrentMezzoMeteringBatch } from "@/lib/maintenance-plans/fetch-mezzo-metering";
 import {
   MAINTENANCE_AUDIT_ACTIONS,
@@ -22,6 +28,11 @@ import {
   forecastRowToRpcJson,
   persistForecastForConfig,
 } from "@/lib/maintenance-plans/recompute-forecast-for-config";
+import {
+  pickLatestMatchingService,
+  valueAtServiceForInterval,
+  type ServiceExecutionLite,
+} from "@/lib/maintenance-plans/load-config-executions";
 import { isPresetAssignable } from "@/lib/maintenance-plans/maintenance-domain-contract";
 import { primaryIntervalFromTriggers } from "@/lib/maintenance-plans/maintenance-trigger-helpers";
 import {
@@ -86,16 +97,22 @@ async function sb() {
 }
 
 function buildLastServiceMap(
-  services: { config_id: string | null; performed_at: string; ore_at_service: number; km_at_service: number | null }[],
+  services: ServiceExecutionLite[],
+  configs: { id: string; mezzo_id: string; preset_id: string | null; interval_type: MaintenanceIntervalType }[],
 ): Map<string, LastServiceRow> {
   const lastByConfig = new Map<string, LastServiceRow>();
-  for (const s of services) {
-    const cid = s.config_id;
-    if (!cid || lastByConfig.has(cid)) continue;
-    lastByConfig.set(cid, {
-      performed_at: s.performed_at,
-      ore_at_service: Number(s.ore_at_service),
-      km_at_service: s.km_at_service != null ? Number(s.km_at_service) : null,
+  for (const c of configs) {
+    const latest = pickLatestMatchingService(services, {
+      configId: c.id,
+      mezzoId: c.mezzo_id,
+      presetId: c.preset_id,
+      intervalType: c.interval_type,
+    });
+    if (!latest) continue;
+    lastByConfig.set(c.id, {
+      performed_at: latest.performed_at,
+      ore_at_service: Number(latest.ore_at_service),
+      km_at_service: latest.km_at_service != null ? Number(latest.km_at_service) : null,
     });
   }
   return lastByConfig;
@@ -109,7 +126,15 @@ function resolveConfigPresetNome(
   if (presetId) {
     return presetMap.get(presetId) ?? storedLabel?.trim() ?? "Preset rimosso";
   }
-  return storedLabel?.trim() ?? "â€”";
+  return storedLabel?.trim() ?? "—";
+}
+
+function joinMarcaModello(marca: string | null | undefined, modello: string | null | undefined): string | null {
+  const label = [marca, modello]
+    .map((v) => (v ?? "").trim())
+    .filter((v) => v.length > 0 && v !== "—")
+    .join(" ");
+  return label || null;
 }
 
 async function resolveMezzoConfigUpsertTargetId(
@@ -126,7 +151,7 @@ async function resolveMezzoConfigUpsertTargetId(
       .is("deleted_at", null)
       .neq("id", explicitId)
       .maybeSingle();
-    if (duplicate) return { conflict: "Questo preset Ã¨ giÃ  assegnato al mezzo." };
+    if (duplicate) return { conflict: "Questo preset è già assegnato al mezzo." };
     return { id: explicitId };
   }
 
@@ -167,10 +192,9 @@ async function loadSingleConfigView(
       .maybeSingle(),
     client
       .from("vehicle_maintenance_services")
-      .select("config_id, performed_at, ore_at_service, km_at_service")
-      .eq("config_id", row.id)
-      .order("performed_at", { ascending: false })
-      .limit(1),
+      .select("config_id, mezzo_id, plan_id, performed_at, ore_at_service, km_at_service, lavorazione_id")
+      .eq("mezzo_id", mezzoId)
+      .order("performed_at", { ascending: false }),
     row.preset_id
       ? client.from("maintenance_plans").select("id, nome").eq("id", row.preset_id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
@@ -186,7 +210,7 @@ async function loadSingleConfigView(
   if (presetRes.data && typeof presetRes.data === "object" && "id" in presetRes.data) {
     presetMap.set(presetRes.data.id as string, presetRes.data.nome as string);
   }
-  const lastMap = buildLastServiceMap(servicesRes.data ?? []);
+  const lastMap = buildLastServiceMap((servicesRes.data ?? []) as ServiceExecutionLite[], [row]);
 
   return mapConfigToViewFromBatch({
     c: row,
@@ -231,10 +255,12 @@ function mapConfigToViewFromBatch(input: {
     deactivatedAt: c.deactivated_at,
     plannedLavorazioneId: c.planned_lavorazione_id,
     ultimoPerformedAt: lastService?.performed_at ?? null,
-    ultimoValueAtService:
-      c.interval_type === "km"
-        ? (lastService?.km_at_service ?? lastService?.ore_at_service ?? null)
-        : (lastService?.ore_at_service ?? null),
+    ultimoValueAtService: lastService
+      ? valueAtServiceForInterval(c.interval_type, {
+          ore_at_service: lastService.ore_at_service,
+          km_at_service: lastService.km_at_service,
+        })
+      : null,
     currentValue,
     remainingValue: remaining,
     nextDateEstimated: forecast?.next_date_estimated ?? null,
@@ -263,8 +289,8 @@ async function loadConfigViewBatch(
     client.from("vehicle_maintenance_forecasts").select(VEHICLE_MAINTENANCE_FORECASTS_COLUMNS).in("config_id", configIds),
     client
       .from("vehicle_maintenance_services")
-      .select("config_id, performed_at, ore_at_service, km_at_service")
-      .in("config_id", configIds)
+      .select("config_id, mezzo_id, plan_id, performed_at, ore_at_service, km_at_service, lavorazione_id")
+      .eq("mezzo_id", mezzoId)
       .order("performed_at", { ascending: false }),
     presetIds.length > 0
       ? client.from("maintenance_plans").select("id, nome").in("id", presetIds)
@@ -273,7 +299,7 @@ async function loadConfigViewBatch(
   ]);
 
   const forecastMap = new Map((forecastsRes.data ?? []).map((f) => [(f as ForecastRow).config_id, f as ForecastRow]));
-  const lastMap = buildLastServiceMap(servicesRes.data ?? []);
+  const lastMap = buildLastServiceMap((servicesRes.data ?? []) as ServiceExecutionLite[], configs);
   const presetMap = new Map((presetsRes.data ?? []).map((p) => [p.id as string, p.nome as string]));
   const partsCountByPreset = new Map<string, number>();
   for (const p of plansRes.data ?? []) {
@@ -572,27 +598,36 @@ export const maintenanceEngineV2Service = {
       const presetIds = [...new Set(configRows.map((c) => c.preset_id).filter(Boolean))] as string[];
       const configIds = configRows.map((c) => c.id);
 
-      const [mezziRes, presetsRes, forecastsRes, lastServicesRes, meteringMap, plansRes] = await Promise.all([
-        client.from("mezzi").select("id, targa, numero_scuderia, marca_telaio, modello_telaio").in("id", mezzoIds),
-        presetIds.length > 0
-          ? client.from("maintenance_plans").select("id, nome").in("id", presetIds)
-          : Promise.resolve({ data: [], error: null }),
-        client.from("vehicle_maintenance_forecasts").select(VEHICLE_MAINTENANCE_FORECASTS_COLUMNS).in("config_id", configIds),
-        client
-          .from("vehicle_maintenance_services")
-          .select("config_id, performed_at, ore_at_service, km_at_service")
-          .in("config_id", configIds)
-          .order("performed_at", { ascending: false }),
-        resolveCurrentMezzoMeteringBatch(client, mezzoIds),
-        maintenancePlansService.listPlans(),
-      ]);
+      const [mezziRes, attrezzatureRows, presetsRes, forecastsRes, lastServicesRes, meteringMap, plansRes] =
+        await Promise.all([
+          client
+            .from("mezzi")
+            .select("id, cliente, utilizzatore, targa, matricola, numero_scuderia, marca_telaio, modello_telaio, meta")
+            .in("id", mezzoIds),
+          fetchAttrezzatureForMezzoIds(client, mezzoIds),
+          presetIds.length > 0
+            ? client.from("maintenance_plans").select("id, nome").in("id", presetIds)
+            : Promise.resolve({ data: [], error: null }),
+          client
+            .from("vehicle_maintenance_forecasts")
+            .select(VEHICLE_MAINTENANCE_FORECASTS_COLUMNS)
+            .in("config_id", configIds),
+          client
+            .from("vehicle_maintenance_services")
+            .select("config_id, mezzo_id, plan_id, performed_at, ore_at_service, km_at_service, lavorazione_id")
+            .in("mezzo_id", mezzoIds)
+            .order("performed_at", { ascending: false }),
+          resolveCurrentMezzoMeteringBatch(client, mezzoIds),
+          maintenancePlansService.listPlans(),
+        ]);
 
       if (mezziRes.error) return err(humanizeGestionaleError(mezziRes.error.message, { entity: "mezzo", action: "read" }));
 
       const mezzoMap = new Map((mezziRes.data ?? []).map((m) => [m.id as string, m]));
+      const attrezzatureByMezzo = indexAttrezzatureByMezzoId(attrezzatureRows);
       const presetMap = new Map((presetsRes.data ?? []).map((p) => [p.id as string, p.nome as string]));
       const forecastMap = new Map((forecastsRes.data ?? []).map((f) => [(f as ForecastRow).config_id, f as ForecastRow]));
-      const lastByConfig = buildLastServiceMap(lastServicesRes.data ?? []);
+      const lastByConfig = buildLastServiceMap((lastServicesRes.data ?? []) as ServiceExecutionLite[], configRows);
       const partsCountByPreset = new Map<string, number>();
       for (const p of plansRes.data ?? []) {
         partsCountByPreset.set(p.id, p.parts.length);
@@ -600,6 +635,16 @@ export const maintenanceEngineV2Service = {
 
       const rows: TagliandiOverviewRow[] = configRows.map((c) => {
         const mezzo = mezzoMap.get(c.mezzo_id);
+        const mezzoMeta = parseMezzoMeta(mezzo?.meta);
+        const att = pickAttrezzaturaForContext(attrezzatureByMezzo.get(c.mezzo_id) ?? [], c.mezzo_id);
+        const attrezzaturaLabel =
+          joinMarcaModello(att?.marca, att?.modello) ??
+          joinMarcaModello(mezzo?.marca_telaio as string | null, mezzo?.modello_telaio as string | null) ??
+          "—";
+        const telaioLabel = joinMarcaModello(
+          mezzo?.marca_telaio as string | null,
+          mezzo?.modello_telaio as string | null,
+        );
         const metering = meteringMap.get(c.mezzo_id) ?? {
           ore: 0,
           km: null,
@@ -619,18 +664,28 @@ export const maintenanceEngineV2Service = {
           configId: c.id,
           mezzoId: c.mezzo_id,
           presetId: c.preset_id,
-          numeroScuderia: (mezzo?.numero_scuderia as string | null) ?? null,
-          targa: (mezzo?.targa as string | null) ?? null,
-          attrezzaturaLabel: [mezzo?.marca_telaio, mezzo?.modello_telaio].filter(Boolean).join(" ") || "â€”",
+          cliente: (mezzo?.cliente as string | null)?.trim() || null,
+          cantiere: mezzoMeta.cantiere?.trim() || null,
+          utilizzatore: (mezzo?.utilizzatore as string | null)?.trim() || null,
+          numeroScuderia: (mezzo?.numero_scuderia as string | null)?.trim() || null,
+          targa: (mezzo?.targa as string | null)?.trim() || null,
+          matricola:
+            (att?.matricola as string | null)?.trim() ||
+            (mezzo?.matricola as string | null)?.trim() ||
+            null,
+          attrezzaturaLabel,
+          telaioLabel,
           presetNome,
           intervalType: c.interval_type,
           intervalValue: Number(c.interval_value),
           intervalLabel: formatIntervalLabel(c.interval_type, Number(c.interval_value)),
           ultimoPerformedAt: last?.performed_at ?? null,
-          ultimoValueAtService:
-            c.interval_type === "km"
-              ? (last?.km_at_service ?? last?.ore_at_service ?? null)
-              : (last?.ore_at_service ?? null),
+          ultimoValueAtService: last
+            ? valueAtServiceForInterval(c.interval_type, {
+                ore_at_service: last.ore_at_service,
+                km_at_service: last.km_at_service,
+              })
+            : null,
           currentValue,
           remainingValue: forecast?.remaining_value ?? null,
           nextDateEstimated: forecast?.next_date_estimated ?? null,
@@ -645,6 +700,7 @@ export const maintenanceEngineV2Service = {
           dueReasonLabel: formatDueReason({
             presetNome,
             explainability: forecast?.explainability_json ?? null,
+            triggerReason: (forecast?.trigger_reason as TagliandiOverviewRow["triggerReason"]) ?? null,
             currentValue,
             remainingValue: forecast?.remaining_value ?? null,
             isOverdue: urgency === "rosso" || (forecast?.remaining_value != null && forecast.remaining_value <= 0),
@@ -772,7 +828,7 @@ export const maintenanceEngineV2Service = {
           mezzoId: m.id as string,
           numeroScuderia: (m.numero_scuderia as string | null) ?? null,
           targa: (m.targa as string | null) ?? null,
-          attrezzaturaLabel: [m.marca_telaio, m.modello_telaio].filter(Boolean).join(" ") || "â€”",
+          attrezzaturaLabel: [m.marca_telaio, m.modello_telaio].filter(Boolean).join(" ") || "—",
           tipoAttrezzatura: (m.tipo_attrezzatura as string) ?? "",
           hasActivePreset: withConfig.has(m.id as string),
         }))
@@ -797,7 +853,7 @@ export const maintenanceEngineV2Service = {
       if (!plansRes.success) return err(plansRes.error ?? "Errore piani.");
       const plan = (plansRes.data ?? []).find((p) => p.id === input.presetId);
       if (!plan) return err("Preset non trovato.");
-      if (!isPresetAssignable(plan.status)) return err("Il preset non Ã¨ attivo o non Ã¨ assegnabile.");
+      if (!isPresetAssignable(plan.status)) return err("Il preset non è attivo o non è assegnabile.");
 
       const triggers = plan.triggerGroups[0]?.triggers ?? [
         { triggerType: plan.intervalType, threshold: plan.intervalValue, priority: 0 },
@@ -827,7 +883,7 @@ export const maintenanceEngineV2Service = {
           .is("deleted_at", null)
           .maybeSingle();
         if (existingSame) {
-          skipped.push({ mezzoId, reason: "Preset giÃ  assegnato" });
+          skipped.push({ mezzoId, reason: "Preset già assegnato" });
           continue;
         }
 

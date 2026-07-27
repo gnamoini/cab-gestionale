@@ -84,9 +84,16 @@ export type TagliandiOverviewRow = {
   configId: string;
   mezzoId: string;
   presetId: string | null;
+  cliente: string | null;
+  cantiere: string | null;
+  utilizzatore: string | null;
   numeroScuderia: string | null;
   targa: string | null;
+  matricola: string | null;
+  /** Marca + modello attrezzatura. */
   attrezzaturaLabel: string;
+  /** Marca + modello telaio. */
+  telaioLabel: string | null;
   presetNome: string;
   intervalType: MaintenanceIntervalType;
   intervalValue: number;

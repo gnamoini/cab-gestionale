@@ -11,8 +11,10 @@ import {
   writeMaintenanceAuditEvent,
 } from "@/lib/maintenance-plans/maintenance-audit";
 import { forkPresetVersionIfUsed } from "@/lib/maintenance-plans/preset-version-fork";
+import { persistForecastForConfig } from "@/lib/maintenance-plans/recompute-forecast-for-config";
 import { formatTriggerSummary } from "@/lib/maintenance-plans/maintenance-trigger-helpers";
 import { MAINTENANCE_INTERVAL_TYPE_LABELS } from "@/lib/maintenance-plans/maintenance-enums";
+import type { MaintenanceIntervalType } from "@/lib/maintenance-plans/maintenance-enums";
 import { processMaintenanceWarehouseDischarge } from "@/lib/maintenance-plans/process-maintenance-warehouse";
 import type { PresetSnapshot } from "@/lib/maintenance-plans/preset-snapshot";
 import { parseFullPresetSnapshot } from "@/lib/maintenance-plans/build-full-preset-snapshot";
@@ -68,6 +70,54 @@ function parsePresetSnapshot(raw: unknown): PresetSnapshot | null {
   return o;
 }
 
+/** Sync interval/label on mezzo configs that reference this preset, then recompute forecasts. */
+async function propagatePresetToAssignedConfigs(
+  client: Awaited<ReturnType<typeof sb>>,
+  input: {
+    planId: string;
+    nome: string;
+    intervalType: MaintenanceIntervalType;
+    intervalValue: number;
+  },
+): Promise<void> {
+  const { data: configs, error } = await client
+    .from("vehicle_maintenance_configs")
+    .select("id, mezzo_id, preset_id, interval_type, interval_value")
+    .eq("preset_id", input.planId)
+    .is("deleted_at", null);
+  if (error || !configs?.length) return;
+
+  for (const c of configs) {
+    const { error: updErr } = await client
+      .from("vehicle_maintenance_configs")
+      .update({
+        interval_type: input.intervalType,
+        interval_value: input.intervalValue,
+        label: input.nome,
+      })
+      .eq("id", c.id);
+    if (updErr) {
+      console.warn("[propagatePresetToAssignedConfigs] config update skipped:", updErr.message);
+      continue;
+    }
+    try {
+      await persistForecastForConfig(
+        client,
+        {
+          id: c.id as string,
+          mezzo_id: c.mezzo_id as string,
+          preset_id: input.planId,
+          interval_type: input.intervalType,
+          interval_value: input.intervalValue,
+        },
+        "manual_recompute",
+      );
+    } catch (e) {
+      console.warn("[propagatePresetToAssignedConfigs] forecast recompute skipped:", e);
+    }
+  }
+}
+
 export const maintenancePlansService = {
   async listTipoCatalog(): Promise<ServiceResult<TipoAttrezzaturaCatalogRow[]>> {
     try {
@@ -86,7 +136,8 @@ export const maintenancePlansService = {
   async listPlans(): Promise<ServiceResult<MaintenancePlanView[]>> {
     try {
       const client = await sb();
-      const views = await loadMaintenancePlanViews(client);
+      // Include archived so hub/overview can resolve nome/status for configs still linked.
+      const views = await loadMaintenancePlanViews(client, { includeArchived: true });
       return success(views);
     } catch (e) {
       return serviceFailFromError<MaintenancePlanView[]>(e, [], { entity: "mezzo", action: "read" });
@@ -95,12 +146,10 @@ export const maintenancePlansService = {
 
   async listPresetSummaries(): Promise<ServiceResult<MaintenancePresetSummary[]>> {
     try {
-      const plansRes = await maintenancePlansService.listPlans();
-      if (!plansRes.success) return err(plansRes.error ?? "Errore piani.");
-      const plans = plansRes.data ?? [];
+      const client = await sb();
+      const plans = await loadMaintenancePlanViews(client, { includeArchived: true });
       if (plans.length === 0) return success([]);
 
-      const client = await sb();
       const [configsRes, servicesRes] = await Promise.all([
         client
           .from("vehicle_maintenance_configs")
@@ -158,29 +207,38 @@ export const maintenancePlansService = {
       const intervalValue = input.intervalValue ?? input.intervalOre;
       const status = input.status ?? (input.isActive ? "active" : "draft");
       const isActive = status === "active";
+      // DB: maintenance_kind NOT NULL — never write null (was breaking preset edit).
+      const maintenanceKind =
+        input.maintenanceKind ?? (intervalType === "km" ? "tagliando_km" : "tagliando_ore");
 
       const planPayload = {
         nome: input.nome.trim(),
         interval_ore: input.intervalOre,
         interval_type: intervalType,
         interval_value: intervalValue,
-        maintenance_kind: null,
+        maintenance_kind: maintenanceKind,
         status,
         is_active: isActive,
+        // Clear legacy soft-delete so active/draft presets stay visible in lists.
+        deleted_at: status === "archived" ? undefined : null,
         tempo_previsto_minuti: input.tempoPrevistoMinuti ?? null,
         manodopera_costo_orario: input.manodoperaCostoOrario ?? null,
       };
+
+      // Avoid sending deleted_at: undefined to supabase update (no-op key).
+      const planRow: Record<string, unknown> = { ...planPayload };
+      if (planRow.deleted_at === undefined) delete planRow.deleted_at;
 
       let planId = input.id;
       const isCreate = !planId;
 
       if (planId) {
-        const { error } = await client.from("maintenance_plans").update(planPayload).eq("id", planId);
+        const { error } = await client.from("maintenance_plans").update(planRow).eq("id", planId);
         if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "update" }));
       } else {
         const { data: row, error } = await client
           .from("maintenance_plans")
-          .insert({ ...planPayload, created_by: uid })
+          .insert({ ...planRow, created_by: uid })
           .select(MAINTENANCE_PLANS_COLUMNS)
           .single();
         if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "create" }));
@@ -269,29 +327,39 @@ export const maintenancePlansService = {
         }
       }
 
-      const snapshot = {
-        nome: input.nome,
-        intervalType,
-        intervalValue,
-        parts: input.parts,
-        triggerGroups,
-        checklist: input.checklist ?? [],
-      };
-      const versionId = await forkPresetVersionIfUsed(
-        client,
-        planId,
-        snapshot,
-        isCreate ? "Creazione preset" : "Aggiornamento preset",
-        uid,
-      );
-      if (versionId) {
-        await writeMaintenanceAuditEvent(client, {
-          entity: "preset",
-          entityId: planId,
-          action: MAINTENANCE_AUDIT_ACTIONS.PRESET_VERSION_CREATED,
-          newValue: { versionId },
-          createdBy: uid,
+      // In-place update: no version fork. Propagate intervals/nome to assigned mezzo configs.
+      if (!isCreate) {
+        await propagatePresetToAssignedConfigs(client, {
+          planId,
+          nome: input.nome.trim(),
+          intervalType,
+          intervalValue,
         });
+      } else {
+        const snapshot = {
+          nome: input.nome,
+          intervalType,
+          intervalValue,
+          parts: input.parts,
+          triggerGroups,
+          checklist: input.checklist ?? [],
+        };
+        const versionId = await forkPresetVersionIfUsed(
+          client,
+          planId,
+          snapshot,
+          "Creazione preset",
+          uid,
+        );
+        if (versionId) {
+          await writeMaintenanceAuditEvent(client, {
+            entity: "preset",
+            entityId: planId,
+            action: MAINTENANCE_AUDIT_ACTIONS.PRESET_VERSION_CREATED,
+            newValue: { versionId },
+            createdBy: uid,
+          });
+        }
       }
 
       const listed = await maintenancePlansService.listPlans();
@@ -308,12 +376,13 @@ export const maintenancePlansService = {
     try {
       const client = await sb();
       const { data: user } = await client.auth.getUser();
+      // Archive = status only. Do not set deleted_at (that hid archived from the presets list).
       const { error } = await client
         .from("maintenance_plans")
         .update({
           is_active: false,
           status: "archived",
-          deleted_at: new Date().toISOString(),
+          deleted_at: null,
         })
         .eq("id", planId);
       if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "delete" }));

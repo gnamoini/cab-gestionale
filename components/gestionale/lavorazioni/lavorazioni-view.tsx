@@ -214,18 +214,22 @@ import { useLavorazioneStatoMoveMutation } from "@/src/hooks/gestionale/use-lavo
 import { useLavorazioneTagliandoStatoMove } from "@/src/hooks/gestionale/use-lavorazione-tagliando-stato-move";
 import { TagliandoNoPresetDialog } from "@/components/gestionale/lavorazioni/tagliando-no-preset-dialog";
 import { TagliandoCompletionResult } from "@/components/gestionale/lavorazioni/tagliando-completion-result";
-import { tagliandoFieldsToLavorazionePatch } from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
+import {
+  tagliandoFieldsToLavorazionePatch,
+} from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
 import { assignTagliandoPresetToMezzoOnSave } from "@/lib/maintenance-plans/assign-tagliando-preset-to-mezzo.client";
 import { mezzoHasPresetConfig } from "@/lib/maintenance-plans/mezzo-has-preset-config";
 import { useMezziWithoutPresetQuery } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { mezziListQueryKey } from "@/lib/render/query-key-factory";
 import { QK, commitLavorazioneCreateSuccess } from "@/src/lib/react-query/invalidate-related";
+import { lavorazioniListCacheRows } from "@/src/lib/react-query/lavorazioni-optimistic";
 import { mezziEntry } from "@/lib/domain/mezzi-entry";
 import {
   runLavorazioniToolbarRefresh,
 } from "@/src/lib/react-query/refetch-lavorazioni-operational-data";
 import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
+import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useAuth } from "@/context/auth-context";
 import {
   collapsibleExpandedBoolPref,
@@ -378,6 +382,14 @@ function legacyLavBase(row: LavorazioneListRow) {
     cantiere: "",
     note: row.note?.trim() || "",
     dataIngresso: row.data_ingresso ?? row.created_at,
+    is_tagliando: Boolean(row.is_tagliando),
+    is_garanzia: Boolean(row.is_garanzia),
+    repair_present: Boolean(row.repair_present),
+    maintenance_execution_kind: row.maintenance_execution_kind ?? null,
+    tagliando_preset_ref: row.tagliando_preset_ref ?? null,
+    tagliando_preset_version_ref: row.tagliando_preset_version_ref ?? null,
+    tagliando_assign_preset_to_mezzo: row.tagliando_assign_preset_to_mezzo ?? null,
+    tagliando_no_preset_reason: row.tagliando_no_preset_reason ?? null,
   };
 }
 
@@ -1894,8 +1906,8 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     await qc.refetchQueries({ queryKey: QK.lavorazioniQueries });
     const freshRow =
       qc
-        .getQueriesData<LavorazioneListRow[]>({ queryKey: QK.lavorazioniQueries })
-        .flatMap(([, data]) => data ?? [])
+        .getQueriesData({ queryKey: QK.lavorazioniQueries })
+        .flatMap(([, data]) => lavorazioniListCacheRows(data as never))
         .find((r) => r.id === staleRow.id) ??
       attiveRows.find((r) => r.id === staleRow.id) ??
       chiuseRows.find((r) => r.id === staleRow.id) ??
@@ -1968,16 +1980,14 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     }
 
     if (tagliandoFields) {
-      const patch = tagliandoFieldsToLavorazionePatch(tagliandoFields);
-      const needsTagliandoUpdate = (
-        Object.entries(patch) as [keyof typeof patch, unknown][]
-      ).some(([key, value]) => (freshRow as Record<string, unknown>)[key as string] !== value);
-      if (needsTagliandoUpdate) {
-        await updateLav.mutateAsync({
-          id: freshRow.id,
-          data: patch as Parameters<typeof updateLav.mutateAsync>[0]["data"],
-        });
-      }
+      // Sempre persisti: evita falsi negativi da freshRow stale (list-v2 / refetch race).
+      await updateLav.mutateAsync({
+        id: freshRow.id,
+        data: tagliandoFieldsToLavorazionePatch(tagliandoFields) as Parameters<
+          typeof updateLav.mutateAsync
+        >[0]["data"],
+      });
+      await qc.invalidateQueries({ queryKey: lavorazioniDomainQueryKeys.base(freshRow.id) });
       const assignRes = await assignTagliandoPresetToMezzoOnSave({
         mezzoId: freshRow.mezzo_id,
         tagliandoFields,

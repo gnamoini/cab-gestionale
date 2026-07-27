@@ -39,11 +39,11 @@ const HUB_LAV_META_PILL_CLASS =
   "inline-flex shrink-0 max-w-[min(100%,11rem)] items-center truncate rounded-full px-3 py-1.5 text-xs font-bold leading-none";
 
 /** Neutro per tipo intervento — stesso shell delle pill stato/addetto. */
-const INTERVENTION_PILL_HEX = "#64748b";
+const INTERVENTION_PILL_HEX = "#334155";
 
 function HubLavMetaPill({ label, style }: { label: string; style: CSSProperties }) {
   return (
-    <span className={HUB_LAV_META_PILL_CLASS} style={style} title={label}>
+    <span className={HUB_LAV_META_PILL_CLASS} style={style}>
       {label}
     </span>
   );

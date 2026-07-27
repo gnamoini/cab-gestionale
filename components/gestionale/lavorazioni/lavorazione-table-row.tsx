@@ -11,6 +11,7 @@ import {
   LavorazioniClienteUtilStack,
   LavorazioniMezzoIdentCells,
   LavorazioneIngressoDateCell,
+  LavorazioneNoteCell,
   lavTablePrimaryTextClass,
   lavTableActionBtnDanger,
   lavTableActionBtnInfo,
@@ -38,12 +39,10 @@ import {
   formatLavorazioneSchedeBadge,
   lavorazioneSchedeBundleRevision,
   lavorazioneSchedeStoreSlice,
-  lavorazioneTelaioLabel,
   lavorazioneUtilizzatoreLabel,
   lavorazioneClienteLabel,
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
-import { resolveLavorazioneNote } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { gestionaleListTableIsLastRow, gestionaleListTableLastRowAttr, gestionaleListTableRowClass, gestionaleListTableRowTone } from "@/lib/ui/gestionale-list-table";
 import { dsTableActionGlyph } from "@/lib/ui/design-system";
 import { IconActionButton } from "@/components/design-system";
@@ -161,7 +160,6 @@ function LavorazioneAttivaTableRowInner({
 }: LavorazioneAttivaTableRowProps) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
-  const telaio = lavorazioneTelaioLabel(row, schedeStore);
   const addettoId = lavorazioneAddettoId(row, schedeStore, undefined, addettiRecords);
   const addettoRef = addettoRefFromFields(resolveAddettoSnapshotRef(row, schedeStore));
   const awaitingCompletata = row.stato !== "completata" && row.archived !== true;
@@ -190,7 +188,7 @@ function LavorazioneAttivaTableRowInner({
       </td>
       <MezzoIdentCells row={row} bundle={bundle} />
       <td className={`${lavTableTd} gestionale-list-table-col-note min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
-        <span className="line-clamp-2">{resolveLavorazioneNote(row) || "—"}</span>
+        <LavorazioneNoteCell row={row} />
       </td>
       <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
@@ -344,15 +342,11 @@ function LavorazioneArchivioTableRowInner({
         <span className="line-clamp-2 break-words">{lavorazioneCantiereLabel(row, schedeStore)}</span>
       </td>
       <td className={`${lavTableTd} min-w-0`}>
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <div className={`truncate ${lavTablePrimaryTextClass}`}>
-            {macchina}
-          </div>
-        </div>
+        <div className={`truncate ${lavTablePrimaryTextClass}`}>{macchina}</div>
       </td>
       <MezzoIdentCells row={row} bundle={bundle} />
       <td className={`${lavTableTd} gestionale-list-table-col-note min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
-        <span className="line-clamp-2">{resolveLavorazioneNote(row) || "—"}</span>
+        <LavorazioneNoteCell row={row} />
       </td>
       <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>

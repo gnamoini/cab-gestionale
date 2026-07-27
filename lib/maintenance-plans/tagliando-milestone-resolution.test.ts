@@ -3,6 +3,8 @@ import {
   anchoredMilestoneCellState,
   buildAnchoredHubMilestones,
   buildHubMilestoneColumnOres,
+  estimateHubMilestoneDueDate,
+  remainingMeterToNextFromConfig,
   resolveMilestoneInterval,
   resolveMilestoneIntervalOre,
   resolveNextUndoneMilestoneOre,
@@ -98,5 +100,62 @@ const anchoredOre = buildAnchoredHubMilestones({
 });
 assert.equal(anchoredOre[0]?.value, 1270);
 assert.equal(anchoredOre[1]?.value, 1770);
+
+assert.equal(
+  estimateHubMilestoneDueDate({
+    done: true,
+    performedAt: "2026-07-21",
+    milestoneValue: 75636,
+    currentValue: 80000,
+    interval: 25000,
+    unit: "km",
+    executions: [],
+  }),
+  "2026-07-21",
+);
+
+assert.equal(
+  estimateHubMilestoneDueDate({
+    done: false,
+    milestoneValue: 100636,
+    currentValue: 75636,
+    interval: 25000,
+    unit: "km",
+    executions: [{ value: 75636, performedAt: "2026-07-21" }],
+    nextDateEstimated: "2027-07-21",
+    remainingMeterToNext: 25000,
+    today: "2026-07-21",
+  }),
+  "2027-07-21",
+);
+
+assert.equal(
+  estimateHubMilestoneDueDate({
+    done: false,
+    milestoneValue: 125636,
+    currentValue: 75636,
+    interval: 25000,
+    unit: "km",
+    executions: [{ value: 75636, performedAt: "2026-07-21" }],
+    nextDateEstimated: "2027-07-21",
+    remainingMeterToNext: 25000,
+    today: "2026-07-21",
+  }),
+  "2028-07-20",
+);
+
+assert.equal(
+  remainingMeterToNextFromConfig(
+    {
+      intervalType: "mesi",
+      remainingValue: 200,
+      explainability: {
+        groups: [{ alternatives: [{ type: "km", remaining: 25000 }] }],
+      },
+    },
+    "km",
+  ),
+  25000,
+);
 
 console.log("tagliando-milestone-resolution.test.ts OK");

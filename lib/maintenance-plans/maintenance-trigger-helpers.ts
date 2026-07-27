@@ -5,7 +5,7 @@ import type { MaintenancePresetTriggerView } from "@/lib/maintenance-plans/types
 export function formatTriggerSummary(triggers: MaintenancePresetTriggerView[]): string {
   if (triggers.length === 0) return "—";
   return triggers
-    .map((t) => `${t.threshold} ${MAINTENANCE_INTERVAL_TYPE_LABELS[t.triggerType]}`)
+    .map((t) => `${t.threshold.toLocaleString("it-IT")} ${MAINTENANCE_INTERVAL_TYPE_LABELS[t.triggerType]}`)
     .join(" oppure ");
 }
 

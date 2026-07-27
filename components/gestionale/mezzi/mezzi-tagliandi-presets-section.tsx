@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { IconActionButton, LoadingErrorState, PageToolbarResultCount } from "@/components/design-system";
-import { HubIconPencil, HubIconTrash } from "@/components/design-system/hub-table-action-icons";
+import { HubIconAssignMezzi, HubIconPencil, HubIconTrash } from "@/components/design-system/hub-table-action-icons";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import {
@@ -58,18 +58,6 @@ const presetFilterSelectClass = `${dsInput} min-h-11 py-2 text-sm font-semibold`
 const presetTableTd = `${gestionaleListTableTd} py-2`;
 const presetTableActionsColClass = "w-[8.75rem] min-w-[8.75rem]";
 
-function IconPresetAssign({ className = dsTableActionGlyph }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.193-9.193a4.5 4.5 0 00-6.364 0l-4.5 4.5a4.5 4.5 0 001.242 7.244"
-      />
-    </svg>
-  );
-}
-
 function PresetRowActions({
   preset,
   onEdit,
@@ -88,7 +76,7 @@ function PresetRowActions({
       </IconActionButton>
       {preset.status === "active" ? (
         <IconActionButton label="Assegna ai mezzi" tooltipForce className={dsTableActionBtnSecondary} onClick={onAssign}>
-          <IconPresetAssign />
+          <HubIconAssignMezzi className={dsTableActionGlyph} />
         </IconActionButton>
       ) : null}
       {preset.status !== "archived" ? (

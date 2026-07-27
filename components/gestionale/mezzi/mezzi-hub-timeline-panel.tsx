@@ -7,9 +7,9 @@ import {
   buildMezziGestionaleLogViewModel,
   GestionaleLogEntryFourLines,
 } from "@/components/gestionale/gestionale-log-ui";
-import { MezzoAnagraficaHistoryEntry } from "@/components/gestionale/mezzi/mezzo-anagrafica-history-entry";
 import { MezzoAssociationChangeEntry } from "@/components/gestionale/mezzi/mezzo-association-change-entry";
 import { isAssociationHistoryEntry } from "@/lib/domain/mezzo/mezzo-association";
+import { buildAnagraficaHistoryGestionaleLogViewModel } from "@/lib/mezzi/anagrafica-history-log-view-model";
 import { MezziHubTimelineEventRow } from "@/components/gestionale/mezzi/mezzi-hub-timeline-event-row";
 import { MezziHubTimelineLavorazioneBlock } from "@/components/gestionale/mezzi/mezzi-hub-timeline-lavorazione-block";
 import { MezziHubErrorBanner, MezziHubTabEmpty } from "@/components/gestionale/mezzi/mezzi-hub-ui";
@@ -93,14 +93,18 @@ function StandaloneTimelineRow({
   }
   if (ev.renderKind === "anagrafica_history") {
     const entry = ev.payload as MezzoAnagraficaHistoryRow;
-    const HistoryEntry = isAssociationHistoryEntry(entry.changed_fields as string[])
-      ? MezzoAssociationChangeEntry
-      : MezzoAnagraficaHistoryEntry;
+    if (isAssociationHistoryEntry(entry.changed_fields as string[])) {
+      return (
+        <div className="rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-card)] p-3">
+          <ul>
+            <MezzoAssociationChangeEntry entry={entry} onNavigate={onClose} />
+          </ul>
+        </div>
+      );
+    }
     return (
       <div className="rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-card)] p-3">
-        <ul>
-          <HistoryEntry entry={entry} onNavigate={onClose} />
-        </ul>
+        <GestionaleLogEntryFourLines vm={buildAnagraficaHistoryGestionaleLogViewModel(entry)} />
       </div>
     );
   }

@@ -1025,6 +1025,8 @@ export function SchedaIngressoFormBody({
               }
               onTagliandoFieldsChange(patch);
             }}
+            isGaranzia={tagliandoFields.isGaranzia}
+            onIsGaranziaChange={(v) => onTagliandoFieldsChange({ isGaranzia: v })}
             presetRef={tagliandoFields.tagliandoPresetRef}
             onPresetRefChange={tagliandoPresetSync.handlePresetRefChange}
             assignPresetToMezzo={tagliandoFields.tagliandoAssignPresetToMezzo}
@@ -1164,7 +1166,11 @@ export function SchedaIngressoEditModal({
   });
 
   const patchTagliandoFields = useCallback((patch: Partial<TagliandoLavorazioneFields>) => {
-    setTagliandoFields((prev) => ({ ...prev, ...patch }));
+    setTagliandoFields((prev) => {
+      const next = { ...prev, ...patch };
+      tagliandoFieldsRef.current = next;
+      return next;
+    });
   }, []);
 
   const globalOpts = useGlobalOptions({ enabled: open, debugTag: "SchedaIngressoEditModal" });
