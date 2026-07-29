@@ -61,7 +61,7 @@ export function deriveCaptureAcquisitionProgress(input: {
     if (input.useChecklist) {
       const checks = deriveLavorazioniCaptureChecksFromPhase(
         input.analyzePhase ?? null,
-        uploadPhase === "success" || uploadPhase === "finalizing",
+        uploadPhase === "success",
         true,
       );
       const activeCheck = checks.find((c) => c.active);

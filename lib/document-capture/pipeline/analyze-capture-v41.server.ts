@@ -341,6 +341,13 @@ export async function analyzeDocumentCaptureV41(
   }
 
   const geminiReady = Boolean(prereq);
+  if (!prereq) {
+    try {
+      prereq = await prereqPromise;
+    } catch {
+      // handled by geminiReady guard below
+    }
+  }
 
   await mutateCaptureWithEvent({
     captureId,
@@ -438,14 +445,14 @@ export async function analyzeDocumentCaptureV41(
             templateOcrFieldCount: hybridResult.templateOcrFields.length,
           },
         };
-      } else if (geminiReady) {
+      } else if (prereq) {
         geminiUsed = true;
         trace.setRetry(retryAttempt, retryCount);
         trace.emit("GEMINI_REQUEST", "ok", {
           retryAttempt,
-          providerModel: prereq?.modelId,
-          providerKeyId: prereq?.keyId,
-          providerKeySlot: prereq?.keySlot,
+          providerModel: prereq.modelId,
+          providerKeyId: prereq.keyId,
+          providerKeySlot: prereq.keySlot,
         });
 
         budget.assertRemaining("gemini");

@@ -54,23 +54,24 @@ export function MezzoAnagraficaConfirmDialog({
       ) : null}
       {changes.length > 0 ? (
         <div className="mt-4">
-          <GestionaleListTable masterScrollScope={false} wrapClassName="max-h-[min(50vh,20rem)]">
-            <thead>
-              <tr>
+          <GestionaleListTable
+            masterScrollScope={false}
+            wrapClassName="max-h-[min(50vh,20rem)]"
+            headRow={
+              <>
                 <GlobalTableHeadLabel label="Campo" />
                 <GlobalTableHeadLabel label="Valore precedente" />
                 <GlobalTableHeadLabel label="Nuovo valore" />
-              </tr>
-            </thead>
-            <tbody>
-              {changes.map((row) => (
-                <GestionaleListTableRow key={row.field}>
-                  <td className={gestionaleListTableTd}>{row.label}</td>
-                  <td className={gestionaleListTableTd}>{row.oldValue}</td>
-                  <td className={gestionaleListTableTd}>{row.newValue}</td>
-                </GestionaleListTableRow>
-              ))}
-            </tbody>
+              </>
+            }
+          >
+            {changes.map((row) => (
+              <GestionaleListTableRow key={row.field}>
+                <td className={gestionaleListTableTd}>{row.label}</td>
+                <td className={gestionaleListTableTd}>{row.oldValue}</td>
+                <td className={gestionaleListTableTd}>{row.newValue}</td>
+              </GestionaleListTableRow>
+            ))}
           </GestionaleListTable>
         </div>
       ) : null}

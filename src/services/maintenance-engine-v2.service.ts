@@ -700,7 +700,7 @@ export const maintenanceEngineV2Service = {
           dueReasonLabel: formatDueReason({
             presetNome,
             explainability: forecast?.explainability_json ?? null,
-            triggerReason: (forecast?.trigger_reason as TagliandiOverviewRow["triggerReason"]) ?? null,
+            triggerReason: (forecast?.trigger_reason as MaintenanceIntervalType | null) ?? null,
             currentValue,
             remainingValue: forecast?.remaining_value ?? null,
             isOverdue: urgency === "rosso" || (forecast?.remaining_value != null && forecast.remaining_value <= 0),

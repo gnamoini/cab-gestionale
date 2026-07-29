@@ -28,6 +28,12 @@ export type CaptureAcquisitionProgressVariant =
   | { mode: "bar"; state: CaptureAcquisitionProgressState }
   | { mode: "checklist"; state: InventoryReceivingAcquisitionState };
 
+type AcquisitionChecklistState = {
+  active: boolean;
+  error: string | null;
+  checks: Array<{ id: string; label: string; active: boolean; done: boolean }>;
+};
+
 export function CaptureAcquisitionProgress({ variant }: { variant: CaptureAcquisitionProgressVariant }) {
   if (variant.mode === "bar") {
     return <CaptureAcquisitionProgressBar state={variant.state} />;
@@ -75,7 +81,7 @@ function CaptureAcquisitionProgressChecklist({
   state,
   heartbeatLabel,
 }: {
-  state: InventoryReceivingAcquisitionState;
+  state: AcquisitionChecklistState;
   heartbeatLabel?: string | null;
 }) {
   if (!state.active && !state.error) return null;

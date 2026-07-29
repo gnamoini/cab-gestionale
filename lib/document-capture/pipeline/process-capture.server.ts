@@ -9,7 +9,6 @@ import type { CaptureAnalyzeStreamEvent } from "@/lib/document-capture/pipeline/
 import {
   finalizeCaptureFromBytes,
   type FinalizeCaptureResult,
-  type FinalizeCaptureStorageFailure,
 } from "@/lib/document-capture/finalize-transaction.server";
 import { normalizeCaptureMime } from "@/lib/document-capture/capture-mime";
 import { classifyStorageDownloadError } from "@/lib/storage/storage-download-errors";
@@ -53,7 +52,7 @@ export async function processDocumentCapture(input: {
       dlError,
       Boolean(fileData),
       STORAGE_BUCKETS.documentCapture,
-      "process documento",
+      "analisi documento",
     );
     return { ok: false, code: "storage", message: classified.message };
   }
@@ -66,7 +65,7 @@ export async function processDocumentCapture(input: {
     bytes,
   });
 
-  let finalizeResult: FinalizeCaptureResult | FinalizeCaptureStorageFailure;
+  let finalizeResult: FinalizeCaptureResult;
   if (!capture.finalized_at) {
     const finalized = await finalizeCaptureFromBytes({
       captureId: input.captureId,
@@ -79,12 +78,13 @@ export async function processDocumentCapture(input: {
     if ("ok" in finalized && finalized.ok === false) {
       return { ok: false, code: "finalize_failed", message: finalized.message };
     }
-    const prepared = finalized as Awaited<ReturnType<typeof finalizeCaptureFromBytes>> & {
-      result: FinalizeCaptureResult;
-    };
-    finalizeResult = prepared.result;
-    bytes = prepared.bytes;
-    mime = prepared.mime;
+    if ("result" in finalized) {
+      finalizeResult = finalized.result;
+      bytes = new Uint8Array(finalized.bytes);
+      mime = finalized.mime;
+    } else {
+      return { ok: false, code: "finalize_failed", message: "Finalizzazione non completata." };
+    }
   } else {
     finalizeResult = {
       ok: true,
@@ -102,9 +102,10 @@ export async function processDocumentCapture(input: {
   });
   stream?.stopHeartbeat();
 
+  const finalizedCapture = finalizeResult;
   if (!analyze.ok) {
-    return analyze;
+    return { ...analyze, finalize: finalizedCapture };
   }
 
-  return { ...analyze, finalize: finalizeResult };
+  return { ...analyze, finalize: finalizedCapture };
 }

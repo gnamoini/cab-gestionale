@@ -3,7 +3,7 @@
  * Ripara compatibilitaRefs orfani (fleet-* / ID disallineati) su magazzino_ricambi.
  * Usage: npx tsx scripts/repair-magazzino-compat-refs.ts [--apply]
  */
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
   attrezzatureCatalogToHierarchyTree,
   fetchAttrezzatureCatalogEntries,
@@ -19,7 +19,7 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 const apply = process.argv.includes("--apply");
 
-async function loadMezziListePrefs(sb: ReturnType<typeof createClient>) {
+async function loadMezziListePrefs(sb: SupabaseClient) {
   const { data, error } = await sb
     .from("app_settings")
     .select("value")
@@ -27,7 +27,7 @@ async function loadMezziListePrefs(sb: ReturnType<typeof createClient>) {
     .eq("key", "liste")
     .maybeSingle();
   if (error) throw new Error(error.message);
-  const raw = data?.value;
+  const raw = (data as { value: unknown } | null)?.value;
   if (!raw || typeof raw !== "object") return createMezziListePrefsDefault();
   return migrateMezziListePrefs(raw as import("@/lib/mezzi/mezzi-liste-prefs-storage").MezziListePrefs);
 }

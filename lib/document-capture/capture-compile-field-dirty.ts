@@ -18,7 +18,11 @@ export function mergeCaptureCompileFieldsRespectingDirty(input: {
   const next = { ...input.current };
   for (const key of Object.keys(input.incoming) as Array<keyof SchedaIngressoFields>) {
     if (input.dirty[key]) continue;
-    next[key] = input.incoming[key];
+    const value = input.incoming[key];
+    if (value !== undefined) {
+      (next as Record<keyof SchedaIngressoFields, SchedaIngressoFields[keyof SchedaIngressoFields]>)[key] =
+        value as SchedaIngressoFields[typeof key];
+    }
   }
   return next;
 }
