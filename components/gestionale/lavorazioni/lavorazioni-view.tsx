@@ -32,6 +32,13 @@ const LavorazioneCreateModal = dynamic(
     })),
   { ssr: false },
 );
+const LavorazioneCreateMezzoStepShell = dynamic(
+  () =>
+    import("@/components/gestionale/lavorazioni/lavorazione-create-mezzo-step-shell").then((m) => ({
+      default: m.LavorazioneCreateMezzoStepShell,
+    })),
+  { ssr: false },
+);
 const SchedeLavorazioneModal = dynamic(
   () =>
     import("@/components/lavorazioni/schede/schede-lavorazione-modal").then((m) => ({
@@ -97,6 +104,11 @@ import { pickLavorazioniInitialSchedeIds } from "@/lib/lavorazioni/lavorazioni-s
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { comparePrioritaLavorazione, orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
+import {
+  selectedMezzoDefaultId,
+  selectedMezzoWizardKey,
+  type SelectedMezzoContext,
+} from "@/lib/lavorazioni/selected-mezzo-context";
 import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import { executeInterventoWriteEntry } from "@/lib/domain/intervento-entry";
@@ -384,6 +396,7 @@ function legacyLavBase(row: LavorazioneListRow) {
     dataIngresso: row.data_ingresso ?? row.created_at,
     is_tagliando: Boolean(row.is_tagliando),
     is_garanzia: Boolean(row.is_garanzia),
+    is_recidivo: Boolean(row.is_recidivo),
     repair_present: Boolean(row.repair_present),
     maintenance_execution_kind: row.maintenance_execution_kind ?? null,
     tagliando_preset_ref: row.tagliando_preset_ref ?? null,
@@ -707,7 +720,9 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   const concludeLav = useLavorazioneConcludeMutation();
   const updateCompletamentoLav = useLavorazioneUpdateCompletamentoMutation();
 
+  const [mezzoStepOpen, setMezzoStepOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedMezzo, setSelectedMezzo] = useState<SelectedMezzoContext | null>(null);
   const [createModalWarm, setCreateModalWarm] = useState(false);
   const preloadCreateModal = useCallback(() => {
     void qc.prefetchQuery({
@@ -728,11 +743,26 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
 
   const openCreateModal = useCallback(() => {
     primeCreateModal();
-    setCreateOpen(true);
+    setSelectedMezzo(null);
+    setMezzoStepOpen(true);
   }, [primeCreateModal]);
+
+  const closeMezzoStep = useCallback(() => {
+    setMezzoStepOpen(false);
+    setSelectedMezzo(null);
+  }, []);
+
+  const handleMezzoStepSelect = useCallback((ctx: SelectedMezzoContext) => {
+    setMezzoStepOpen(false);
+    setSelectedMezzo(ctx);
+    requestAnimationFrame(() => {
+      setCreateOpen(true);
+    });
+  }, []);
 
   const closeCreateModal = useCallback(() => {
     setCreateOpen(false);
+    setSelectedMezzo(null);
   }, []);
 
   useEffect(() => {
@@ -1931,6 +1961,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
           preferredMezzoId,
           updatePlan,
           lavorazioneId,
+          userId: createdBy,
           create: (data) => createMezzo.mutateAsync(data),
           update: (id, data) => updateMezzo.mutateAsync({ id, data }),
           applyAssociationChange: applyMezzoAssociationChangeOrThrow,
@@ -2845,10 +2876,23 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       ) : null}
 
       {canEditWorkOrders && createModalWarm ? (
+        <LavorazioneCreateMezzoStepShell
+          open={mezzoStepOpen}
+          onRequestClose={closeMezzoStep}
+          catalog={mezziCatalog}
+          catalogLoading={mezziListQ.isLoading}
+          catalogError={mezziListQ.isError ? "Impossibile caricare l'anagrafica mezzi." : null}
+          userId={createdBy}
+          onSelect={handleMezzoStepSelect}
+        />
+      ) : null}
+
+      {canEditWorkOrders && createModalWarm ? (
       <LavorazioneCreateModal
-        key={createOpen ? "lav-create-open" : "lav-create-closed"}
+        key={createOpen ? `lav-create-open-${selectedMezzoWizardKey(selectedMezzo)}` : "lav-create-closed"}
         open={createOpen}
         onClose={closeCreateModal}
+        defaultMezzoId={selectedMezzoDefaultId(selectedMezzo)}
         createdBy={createdBy}
         mezzi={mezziCatalog}
         sharedGlobalOpts={globalOpts}

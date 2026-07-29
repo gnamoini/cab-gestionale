@@ -1,4 +1,4 @@
-import { bindingForFieldKey } from "@/lib/entity-resolution/capture-field-entity-registry";
+import { bindingForFieldKey, groupTopologicalFieldLevels } from "@/lib/entity-resolution/capture-field-entity-registry";
 import {
   poolForDataset,
   restrictedModelPool,
@@ -8,11 +8,10 @@ import {
 import { buildEntityResolutionIndex } from "@/lib/entity-resolution/entity-resolution-index";
 import { getEntityResolverConfig } from "@/lib/entity-resolution/entity-resolver-registry";
 import { manualResolutionResult, resolveEntity } from "@/lib/entity-resolution/entity-resolver";
-import { toResolutionAuditBundle, toResolutionAuditRecord } from "@/lib/entity-resolution/entity-resolution-audit";
+import { toResolutionAuditBundle } from "@/lib/entity-resolution/entity-resolution-audit";
 import type { KnownCorrectionsStore } from "@/lib/entity-resolution/known-corrections";
 import type { ResolutionCacheStore } from "@/lib/entity-resolution/resolution-cache";
 import { buildAliasLookupMap, parseEntityAliasesPayload } from "@/lib/entity-resolution/settings-aliases";
-import { topologicalFieldOrder } from "@/lib/entity-resolution/capture-field-entity-registry";
 import type {
   EntityResolutionResult,
   EntityType,
@@ -129,50 +128,55 @@ export async function resolveCaptureGraph(
     return v && bindingForFieldKey(f.field_key);
   });
 
-  const order = topologicalFieldOrder(resolvable.map((f) => f.field_key));
+  const levels = groupTopologicalFieldLevels(resolvable.map((f) => f.field_key));
 
   let llmInvocations = 0;
-  for (const fieldKey of order) {
-    const row = resolvable.find((f) => f.field_key === fieldKey);
-    if (!row) continue;
-    const binding = bindingForFieldKey(fieldKey);
-    if (!binding) continue;
+  for (const level of levels) {
+    await Promise.all(
+      level.map(async (fieldKey) => {
+        const row = resolvable.find((f) => f.field_key === fieldKey);
+        if (!row) return;
+        const binding = bindingForFieldKey(fieldKey);
+        if (!binding) return;
 
-    const originalValue = fieldOcrValue(row);
-    const entityType = binding.entityType;
-    const config = getEntityResolverConfig(entityType);
-    const pool = index.poolsByType.get(entityType) ?? [];
-    const restrictedPool = restrictedPoolForField(fieldKey, entityType, resolved, ctx);
+        const originalValue = fieldOcrValue(row);
+        const entityType = binding.entityType;
+        const config = getEntityResolverConfig(entityType);
+        const pool = index.poolsByType.get(entityType) ?? [];
+        const restrictedPool = restrictedPoolForField(fieldKey, entityType, resolved, ctx);
 
-    const parentFieldKeys =
-      binding.parentFieldKeys?.filter((p) => resolvable.some((f) => f.field_key.toLowerCase().includes(p))) ?? [];
+        const parentFieldKeys =
+          binding.parentFieldKeys?.filter((p) => resolvable.some((f) => f.field_key.toLowerCase().includes(p))) ??
+          [];
 
-    const llmResolver = config.allowLlm
-      ? async (input: Parameters<NonNullable<typeof ctx.llmResolver>>[0]) => {
-          llmInvocations += 1;
-          return ctx.llmResolver?.(input) ?? null;
-        }
-      : undefined;
+        const llmResolver = config.allowLlm
+          ? async (input: Parameters<NonNullable<typeof ctx.llmResolver>>[0]) => {
+              llmInvocations += 1;
+              return ctx.llmResolver?.(input) ?? null;
+            }
+          : undefined;
 
-    const result = await resolveEntity({
-      entityType,
-      fieldKey,
-      originalValue,
-      pool,
-      restrictedPool,
-      parentFieldKeys,
-      index,
-      corrections: ctx.corrections,
-      cache: ctx.cache,
-      llmResolver,
-    });
+        const result = await resolveEntity({
+          entityType,
+          fieldKey,
+          originalValue,
+          pool,
+          restrictedPool,
+          parentFieldKeys,
+          index,
+          corrections: ctx.corrections,
+          cache: ctx.cache,
+          llmResolver,
+        });
 
-    resolved.set(fieldKey, result);
-    outputs.push({
-      ...row,
-      normalized_value: result.resolvedLabel ?? result.normalizedValue,
-      resolution: result,
-    });
+        resolved.set(fieldKey, result);
+        outputs.push({
+          ...row,
+          normalized_value: result.resolvedLabel ?? result.normalizedValue,
+          resolution: result,
+        });
+      }),
+    );
   }
 
   for (const row of fields) {

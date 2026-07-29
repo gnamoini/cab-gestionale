@@ -87,6 +87,50 @@ export type LabelToCompatRefOptions = {
   prefsListe?: MezziListePrefs;
 };
 
+export type ResolveCompatRefLabelOptions = {
+  prefsListe?: MezziListePrefs;
+};
+
+function isFleetCompatId(id: string): boolean {
+  return id.startsWith("fleet-marca-") || id.startsWith("fleet-mod-");
+}
+
+function findModelloByIdAcrossTree(
+  p: ReturnType<typeof migrateMezziListePrefs>,
+  tree: HierarchyTreeKey,
+  modelloId: string,
+): { marca: { id: string; nome: string; modelli: { id: string; nome: string }[] }; mod: { id: string; nome: string } } | null {
+  for (const marca of getHierarchyTree(p, tree)) {
+    const mod = marca.modelli.find((x) => x.id === modelloId);
+    if (mod) return { marca, mod };
+  }
+  return null;
+}
+
+function resolveCompatRefLabelInListe(
+  ref: RicambioCompatRef,
+  liste: MezziListePrefs,
+): string | null {
+  const p = migrateMezziListePrefs(liste);
+  let marca = getHierarchyTree(p, ref.tree).find((m) => m.id === ref.marcaId);
+
+  if (!marca && ref.modelloId) {
+    const cross = findModelloByIdAcrossTree(p, ref.tree, ref.modelloId);
+    if (cross) marca = cross.marca;
+  }
+
+  if (!marca) return null;
+  if (!ref.modelloId) return marcaUniversalCompatLabel(marca.nome);
+
+  const mod = marca.modelli.find((x) => x.id === ref.modelloId);
+  if (mod) return compatLabelMarcaModello(marca.nome, mod.nome);
+
+  const cross = findModelloByIdAcrossTree(p, ref.tree, ref.modelloId);
+  if (cross) return compatLabelMarcaModello(cross.marca.nome, cross.mod.nome);
+
+  return marcaUniversalCompatLabel(marca.nome);
+}
+
 function labelToCompatRefInListe(line: string, liste: MezziListePrefs): RicambioCompatRef | null {
   const { marca, modello } = parseCompatMarcaModello(line.trim());
   if (!marca) return null;
@@ -126,26 +170,57 @@ export function labelsToCompatRefs(
   return dedupeCompatRefs(refs);
 }
 
-export function resolveCompatRefLabel(ref: RicambioCompatRef, liste: MezziListePrefs): string | null {
-  const p = migrateMezziListePrefs(liste);
-  const marca = getHierarchyTree(p, ref.tree).find((m) => m.id === ref.marcaId);
-  if (!marca) return null;
-  if (!ref.modelloId) return marcaUniversalCompatLabel(marca.nome);
-  const mod = marca.modelli.find((x) => x.id === ref.modelloId);
-  if (!mod) return marcaUniversalCompatLabel(marca.nome);
-  return compatLabelMarcaModello(marca.nome, mod.nome);
+export function resolveCompatRefLabel(
+  ref: RicambioCompatRef,
+  liste: MezziListePrefs,
+  opts?: ResolveCompatRefLabelOptions,
+): string | null {
+  const fromMerged = resolveCompatRefLabelInListe(ref, liste);
+  if (fromMerged) return fromMerged;
+  if (opts?.prefsListe) return resolveCompatRefLabelInListe(ref, opts.prefsListe);
+  return null;
 }
 
-export function resolveCompatRefDisplayLabel(ref: RicambioCompatRef, liste: MezziListePrefs): string {
-  const label = resolveCompatRefLabel(ref, liste);
+/** Remappa ref con ID fleet-* instabili verso ID prefs stabili. */
+export function sanitizeCompatRefsForPersist(
+  refs: readonly RicambioCompatRef[],
+  liste: MezziListePrefs,
+  opts?: LabelToCompatRefOptions,
+): RicambioCompatRef[] {
+  const out: RicambioCompatRef[] = [];
+  for (const ref of dedupeCompatRefs(refs)) {
+    const hasFleetId =
+      isFleetCompatId(ref.marcaId) || (ref.modelloId != null && isFleetCompatId(ref.modelloId));
+    if (!hasFleetId) {
+      out.push(ref);
+      continue;
+    }
+    const label = resolveCompatRefLabel(ref, liste, { prefsListe: opts?.prefsListe });
+    if (!label) continue;
+    const remapped = labelToCompatRef(label, liste, opts);
+    if (remapped) out.push(remapped);
+  }
+  return dedupeCompatRefs(out);
+}
+
+export function resolveCompatRefDisplayLabel(
+  ref: RicambioCompatRef,
+  liste: MezziListePrefs,
+  opts?: ResolveCompatRefLabelOptions,
+): string {
+  const label = resolveCompatRefLabel(ref, liste, opts);
   if (!label) return "[compatibilità non risolvibile]";
   return compatLineDisplayText(label);
 }
 
-export function refsToCompatLabels(refs: readonly RicambioCompatRef[], liste: MezziListePrefs): string[] {
+export function refsToCompatLabels(
+  refs: readonly RicambioCompatRef[],
+  liste: MezziListePrefs,
+  opts?: ResolveCompatRefLabelOptions,
+): string[] {
   const out: string[] = [];
   for (const ref of dedupeCompatRefs(refs)) {
-    const label = resolveCompatRefLabel(ref, liste);
+    const label = resolveCompatRefLabel(ref, liste, opts);
     if (label) out.push(label);
   }
   return out.sort((a, b) => a.localeCompare(b, "it"));

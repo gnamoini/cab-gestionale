@@ -1,215 +1,144 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { MezzoAssociationChangeDialog } from "@/components/lavorazioni/schede/mezzo-association-change-dialog";
-import {
-  SchedaSaveConflictDialog,
-  useSchedaSaveConflictSelection,
-} from "@/components/lavorazioni/schede/scheda-save-conflict-dialog";
-import { buildSchedaSaveConflictSummary } from "@/lib/domain/mezzo/build-scheda-save-conflict-summary";
-import {
-  associationFromScheda,
-  checkAssociationChange,
-  type AssociationChange,
-} from "@/lib/domain/mezzo/mezzo-association";
-import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
+import { MezzoAnagraficaConfirmDialog } from "@/components/lavorazioni/schede/scheda-save-conflict-dialog";
+import { detectMezzoAnagraficaChanges } from "@/lib/domain/mezzo/detect-mezzo-anagrafica-changes";
+import { isMezzoAssociationField } from "@/lib/domain/mezzo/mezzo-association";
 import { logMezzoSchedaConflictTelemetry } from "@/lib/domain/mezzo/mezzo-scheda-conflict-telemetry";
 import {
   MEZZO_UPDATE_SCHEDA_ONLY,
   type MezzoUpdateFromSchedaPlan,
 } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
+import { isMezzoSnapshotStale } from "@/lib/schede/scheda-ingresso-mezzo-link-state";
 import type { LinkedMezzoSnapshot } from "@/lib/schede/scheda-ingresso-mezzo-link-state";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
+import type { MezzoAnagraficaChange } from "@/lib/domain/mezzo/detect-mezzo-anagrafica-changes";
+import type { MezzoPermanentFieldKey } from "@/lib/schede/scheda-ingresso-field-roles";
 
 export type SchedaIngressoSaveGateResult = MezzoUpdateFromSchedaPlan & {
   associationReason?: string;
 };
 
-function resolveMezzoForAssociationGate(
-  fields: SchedaIngressoFields,
-  mezziCatalog: readonly MezzoGestito[],
-  linkedSnapshot: LinkedMezzoSnapshot | null,
-): MezzoGestito | null {
-  const preferred = linkedSnapshot?.id ?? null;
-  const resolved = resolveMezzoFromScheda({
-    scheda: fields,
-    existingMezzi: mezziCatalog,
-    preferredMezzoId: preferred,
-  });
-  if (!resolved.mezzoId) return null;
-  return resolved.mezzo ?? mezziCatalog.find((m) => m.id === resolved.mezzoId) ?? null;
+function buildPlanFromChanges(
+  changes: MezzoAnagraficaChange[],
+  mezzoStale: boolean,
+): MezzoUpdateFromSchedaPlan {
+  return {
+    updateAnagrafica: changes.length > 0,
+    fieldsToUpdate: changes.map((c) => c.field),
+    updateMetering: false,
+    meteringFields: [],
+    associationChangeConfirmed: changes.some((c) => isMezzoAssociationField(c.field)),
+    forceDespiteStale: mezzoStale,
+  };
 }
 
 export function useSchedaIngressoSaveGate({
   mezziCatalog,
   linkedSnapshot,
+  skipFields = [],
 }: {
   mezziCatalog: readonly MezzoGestito[];
   linkedSnapshot: LinkedMezzoSnapshot | null;
+  /** Campi già decisi al link capture — non riproporre in save gate. */
+  skipFields?: readonly MezzoPermanentFieldKey[];
 }) {
-  const [conflictOpen, setConflictOpen] = useState(false);
-  const [associationOpen, setAssociationOpen] = useState(false);
-  const [summary, setSummary] = useState<ReturnType<typeof buildSchedaSaveConflictSummary> | null>(
-    null,
-  );
-  const [associationChange, setAssociationChange] = useState<AssociationChange | null>(null);
-  const [resolvedMezzo, setResolvedMezzo] = useState<MezzoGestito | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [changes, setChanges] = useState<MezzoAnagraficaChange[]>([]);
+  const [mezzoStale, setMezzoStale] = useState(false);
   const resolverRef = useRef<((plan: SchedaIngressoSaveGateResult | null) => void) | null>(null);
-  const pendingFieldsRef = useRef<SchedaIngressoFields | null>(null);
-  const associationConfirmedRef = useRef(false);
-  const selection = useSchedaSaveConflictSelection(summary);
+  const resolvedMezzoRef = useRef<MezzoGestito | null>(null);
 
   const attachOcc = useCallback(
     (plan: SchedaIngressoSaveGateResult): SchedaIngressoSaveGateResult => {
+      const mezzo = resolvedMezzoRef.current;
       const occAt =
-        linkedSnapshot?.mezzoUpdatedAtAtLinkTime ??
-        resolvedMezzo?.ultimaModifica?.trim() ??
-        "";
+        linkedSnapshot?.mezzoUpdatedAtAtLinkTime ?? mezzo?.ultimaModifica?.trim() ?? "";
       if (!occAt) return plan;
       return {
         ...plan,
         mezzoOCC: { updatedAtAtLinkTime: occAt },
       };
     },
-    [linkedSnapshot, resolvedMezzo],
+    [linkedSnapshot],
   );
 
   const finish = useCallback(
     (plan: SchedaIngressoSaveGateResult | null) => {
-      setConflictOpen(false);
-      setAssociationOpen(false);
-      setSummary(null);
-      setAssociationChange(null);
-      setResolvedMezzo(null);
-      pendingFieldsRef.current = null;
-      associationConfirmedRef.current = false;
+      setConfirmOpen(false);
+      setChanges([]);
+      setMezzoStale(false);
+      resolvedMezzoRef.current = null;
       resolverRef.current?.(plan ? attachOcc(plan) : plan);
       resolverRef.current = null;
     },
     [attachOcc],
   );
 
-  const runGenericConflictGate = useCallback(
-    (fields: SchedaIngressoFields, mezzo: MezzoGestito | null) => {
-      const built = buildSchedaSaveConflictSummary({ fields, linkedSnapshot, mezzo });
-      if (!built.hasIssues) {
-        const base: SchedaIngressoSaveGateResult = associationConfirmedRef.current
-          ? { ...MEZZO_UPDATE_SCHEDA_ONLY, associationChangeConfirmed: true }
-          : MEZZO_UPDATE_SCHEDA_ONLY;
-        finish(base);
-        return;
-      }
-      selection.initFromSummary(built);
-      setSummary(built);
-      setConflictOpen(true);
-      logMezzoSchedaConflictTelemetry({
-        event: "MEZZO_ANAGRAFICA_CONFLICT_SHOWN",
-        mezzoId: mezzo?.id ?? linkedSnapshot?.id,
-      });
-    },
-    [finish, linkedSnapshot, selection],
-  );
-
   const gateSave = useCallback(
     (fields: SchedaIngressoFields): Promise<SchedaIngressoSaveGateResult> => {
-      const mezzo = resolveMezzoForAssociationGate(fields, mezziCatalog, linkedSnapshot);
-      const association = checkAssociationChange({
-        existingMezzo: mezzo,
-        incoming: associationFromScheda(fields),
-      });
-
       return new Promise<SchedaIngressoSaveGateResult>((resolve, reject) => {
         resolverRef.current = (plan) => {
           if (plan === null) reject(new Error("SAVE_CANCELLED"));
           else resolve(plan);
         };
-        pendingFieldsRef.current = fields;
-        setResolvedMezzo(mezzo);
 
-        if (association.requiresConfirmation) {
-          setAssociationChange(association);
-          setAssociationOpen(true);
-          logMezzoSchedaConflictTelemetry({
-            event: "MEZZO_ASSOCIATION_CHANGE_SHOWN",
-            mezzoId: mezzo?.id,
-          });
+        if (!linkedSnapshot) {
+          finish(MEZZO_UPDATE_SCHEDA_ONLY);
           return;
         }
 
-        runGenericConflictGate(fields, mezzo);
+        const mezzo =
+          mezziCatalog.find((m) => m.id === linkedSnapshot.id) ?? null;
+        resolvedMezzoRef.current = mezzo;
+
+        const detected = detectMezzoAnagraficaChanges(
+          linkedSnapshot.fieldsAtLinkTime,
+          fields,
+        );
+        const skipSet = new Set(skipFields);
+        const filteredChanges = detected.changes.filter((c) => !skipSet.has(c.field));
+        const stale = isMezzoSnapshotStale(linkedSnapshot, mezzo);
+
+        if (filteredChanges.length === 0 && !stale) {
+          finish(MEZZO_UPDATE_SCHEDA_ONLY);
+          return;
+        }
+
+        setChanges(filteredChanges);
+        setMezzoStale(stale);
+        setConfirmOpen(true);
+        logMezzoSchedaConflictTelemetry({
+          event: "MEZZO_ANAGRAFICA_CONFLICT_SHOWN",
+          mezzoId: linkedSnapshot.id,
+        });
       });
     },
-    [linkedSnapshot, mezziCatalog, runGenericConflictGate],
+    [finish, linkedSnapshot, mezziCatalog, skipFields],
   );
 
-  const onAssociationConfirm = useCallback(() => {
-    associationConfirmedRef.current = true;
-    setAssociationOpen(false);
-    const fields = pendingFieldsRef.current;
-    if (!fields) {
-      finish(null);
-      return;
-    }
-    logMezzoSchedaConflictTelemetry({
-      event: "MEZZO_ASSOCIATION_CHANGE_CONFIRMED",
-      mezzoId: resolvedMezzo?.id,
-    });
-    runGenericConflictGate(fields, resolvedMezzo);
-  }, [finish, resolvedMezzo, runGenericConflictGate]);
-
   const dialog = (
-    <>
-      <MezzoAssociationChangeDialog
-        open={associationOpen}
-        change={associationChange}
-        onConfirm={onAssociationConfirm}
-        onCancel={() => {
-          logMezzoSchedaConflictTelemetry({
-            event: "MEZZO_ASSOCIATION_CHANGE_REJECTED",
-            mezzoId: resolvedMezzo?.id,
-          });
-          finish(null);
-        }}
-      />
-      <SchedaSaveConflictDialog
-        open={conflictOpen}
-        summary={summary}
-        selectedFields={selection.selectedFields}
-        selectedMeteringKm={selection.selectedMeteringKm}
-        selectedMeteringOre={selection.selectedMeteringOre}
-        onToggleField={selection.toggleField}
-        onToggleMeteringKm={selection.toggleMeteringKm}
-        onToggleMeteringOre={selection.toggleMeteringOre}
-        onSaveInterventoOnly={() => {
-          logMezzoSchedaConflictTelemetry({
-            event: "MEZZO_UPDATE_CONFIRMED",
-            mezzoId: linkedSnapshot?.id ?? resolvedMezzo?.id,
-            choice: "scheda_only",
-          });
-          finish(MEZZO_UPDATE_SCHEDA_ONLY);
-        }}
-        onConfirmUpdate={() => {
-          logMezzoSchedaConflictTelemetry({
-            event: "MEZZO_UPDATE_CONFIRMED",
-            mezzoId: linkedSnapshot?.id ?? resolvedMezzo?.id,
-            choice: "update_mezzo",
-          });
-          const plan = selection.buildPlan();
-          finish({
-            ...plan,
-            associationChangeConfirmed: associationConfirmedRef.current || undefined,
-          });
-        }}
-        onCorrect={() => {
-          logMezzoSchedaConflictTelemetry({
-            event: "MEZZO_UPDATE_REJECTED",
-            mezzoId: linkedSnapshot?.id ?? resolvedMezzo?.id,
-          });
-          finish(null);
-        }}
-      />
-    </>
+    <MezzoAnagraficaConfirmDialog
+      open={confirmOpen}
+      changes={changes}
+      mezzoStale={mezzoStale}
+      onConfirm={() => {
+        logMezzoSchedaConflictTelemetry({
+          event: "MEZZO_UPDATE_CONFIRMED",
+          mezzoId: linkedSnapshot?.id,
+          choice: "update_mezzo",
+        });
+        finish(buildPlanFromChanges(changes, mezzoStale));
+      }}
+      onCancel={() => {
+        logMezzoSchedaConflictTelemetry({
+          event: "MEZZO_UPDATE_REJECTED",
+          mezzoId: linkedSnapshot?.id,
+        });
+        finish(null);
+      }}
+    />
   );
 
   return { gateSave, dialog };

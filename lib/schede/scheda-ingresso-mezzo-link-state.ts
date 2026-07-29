@@ -35,9 +35,22 @@ export function createLinkedMezzoSnapshot(
   linkedViaField: SchedaIngressoIdentField,
 ): LinkedMezzoSnapshot {
   const fromMezzo = buildSchedaIngressoFieldsFromMezzo(mezzo);
+  return createLinkedMezzoSnapshotFromFields(
+    mezzo,
+    pickMezzoPermanentFields(fromMezzo),
+    linkedViaField,
+  );
+}
+
+/** Baseline da campi scheda all'apertura (edit) invece che da anagrafica live. */
+export function createLinkedMezzoSnapshotFromFields(
+  mezzo: MezzoGestito,
+  fieldsAtOpen: Pick<SchedaIngressoFields, MezzoPermanentFieldKey>,
+  linkedViaField: SchedaIngressoIdentField = "matricola",
+): LinkedMezzoSnapshot {
   return {
     id: mezzo.id,
-    fieldsAtLinkTime: pickMezzoPermanentFields(fromMezzo),
+    fieldsAtLinkTime: fieldsAtOpen,
     linkedAt: new Date().toISOString(),
     linkedViaField,
     mezzoUpdatedAtAtLinkTime: mezzo.ultimaModifica?.trim() || new Date().toISOString(),

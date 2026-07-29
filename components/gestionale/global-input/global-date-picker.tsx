@@ -10,6 +10,7 @@ import {
   useState,
   type ChangeEvent,
   type ClipboardEvent,
+  type Ref,
 } from "react";
 import { createPortal } from "react-dom";
 import { GlobalCalendarPanel, initialViewFromYmd, parseDisplayToYmd } from "@/components/gestionale/global-input/global-calendar-panel";
@@ -57,6 +58,8 @@ export type GlobalDatePickerProps = {
   disabled?: boolean;
   placeholder?: string;
   "aria-label"?: string;
+  /** Ref sull'input testo (focus iniziale modali). */
+  inputRef?: Ref<HTMLInputElement>;
   /** Se impostato, sostituisce la normalizzazione predefinita su blur. */
   onBlur?: () => void;
   /** Range anno per feedback UX (default 1900–2100). */
@@ -95,6 +98,7 @@ export function GlobalDatePicker({
   disabled,
   placeholder = "gg/mm/aaaa",
   "aria-label": ariaLabel,
+  inputRef: inputRefProp,
   onBlur: onBlurProp,
   yearRange,
   calendarPanelWidth,
@@ -233,7 +237,11 @@ export function GlobalDatePicker({
     <div className="w-full">
       <div ref={wrapRef} className={shellCombined}>
         <input
-          ref={inputRef}
+          ref={(el) => {
+            inputRef.current = el;
+            if (typeof inputRefProp === "function") inputRefProp(el);
+            else if (inputRefProp) inputRefProp.current = el;
+          }}
           id={inputId}
           type="text"
           inputMode="numeric"

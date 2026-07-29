@@ -36,6 +36,8 @@ export type MicInvalidateInput = {
   dbVersion?: string;
   /** Optional correlation id for runtime coordination tracing. */
   correlationId?: string;
+  /** ponytail: mutation settle usa `none` per non bloccare isPending su refetch attivi. */
+  refetchType?: "active" | "all" | "none";
 };
 
 export { bumpEntityVersion, getEntityVersionToken, resolveEntityCacheVersion };
@@ -65,6 +67,7 @@ export async function invalidateEntity(input: MicInvalidateInput): Promise<void>
   const scope = input.scope ?? "full";
   const entityId = input.entityId.trim();
   if (!entityId) return;
+  const refetchType = input.refetchType ?? "active";
 
   const entry = MIC_REGISTRY[input.entityType];
   const correlationId = input.correlationId ?? getActiveCorrelationId();
@@ -113,7 +116,7 @@ export async function invalidateEntity(input: MicInvalidateInput): Promise<void>
     if (extras.length > 0) {
       await Promise.all(
         extras.map((queryKey) =>
-          input.queryClient.invalidateQueries({ queryKey, refetchType: "active" }),
+          input.queryClient.invalidateQueries({ queryKey, refetchType }),
         ),
       );
     }

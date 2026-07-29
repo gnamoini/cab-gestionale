@@ -9,6 +9,9 @@ export type DocumentCaptureTelemetryInput = {
   companyId?: string | null;
   userId?: string | null;
   durationMs?: number;
+  timeToFirstProgressMs?: number;
+  timeToFirstDataMs?: number;
+  timeToReviewReadyMs?: number;
   outcome: "ok" | "error";
   errorCode?: DocumentCaptureErrorCode;
   storagePath?: string;
@@ -35,6 +38,11 @@ export function traceDocumentCaptureOperation(input: DocumentCaptureTelemetryInp
       ...(input.storageErrorCode ? { storageErrorCode: input.storageErrorCode } : {}),
       ...(input.isPolicyError !== undefined ? { isPolicyError: input.isPolicyError } : {}),
       ...(input.errorCode ? { errorCode: input.errorCode } : {}),
+      ...(input.timeToFirstProgressMs != null
+        ? { timeToFirstProgressMs: input.timeToFirstProgressMs }
+        : {}),
+      ...(input.timeToFirstDataMs != null ? { timeToFirstDataMs: input.timeToFirstDataMs } : {}),
+      ...(input.timeToReviewReadyMs != null ? { timeToReviewReadyMs: input.timeToReviewReadyMs } : {}),
     },
   });
 }

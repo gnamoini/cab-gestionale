@@ -12,7 +12,7 @@ import {
 import {
   evaluateTagliandoDueForMezzo,
   isMezzoEligibleForTagliandoNotification,
-  parseSchedaOreLavoro,
+  parseSchedaOreLavoroMotoreFromCampi,
 } from "@/lib/maintenance-plans/tagliando-due-eval";
 import { buildTagliandoDaEseguireNotification } from "@/lib/maintenance-plans/tagliando-due-notification-mapper";
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
@@ -159,7 +159,7 @@ export async function maybePublishTagliandoDueOnInterventoCreateServer(
     const mezzo = await fetchMezzoGestitoById(sb, mezzoId);
     if (!isMezzoEligibleForTagliandoNotification(mezzo)) return;
 
-    const currentOre = parseSchedaOreLavoro(input.fields.oreLavoro);
+    const currentOre = parseSchedaOreLavoroMotoreFromCampi(input.fields);
     const { plans, catalog, services } = await loadEvalContextServer(sb, mezzoId);
     const evalResult = evaluateTagliandoDueForMezzo({
       mezzo,

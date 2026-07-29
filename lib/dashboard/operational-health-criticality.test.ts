@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import {
+  ATTESA_RICAMBI_SUPPLIER_GRACE_DAYS,
+  computeInactiveLavorazioniCriticality,
   computeSottoScortaCriticality,
   estimateDaysUnderMinimum,
+  isAttesaRicambiStato,
   sottoScortaDurationWeight,
+  stagnationThresholdDays,
 } from "@/lib/dashboard/operational-health-criticality";
 
 const anchor = new Date("2026-07-13T12:00:00.000Z");
@@ -86,5 +91,64 @@ const crit = computeSottoScortaCriticality(
 );
 assert.equal(crit.count, 2);
 assert.ok(crit.weightedSeverity > sottoScortaDurationWeight(0.2), "mixed durations increase severity");
+
+assert.equal(isAttesaRicambiStato("attesa_ricambi"), true);
+assert.equal(isAttesaRicambiStato("accettazione"), false);
+assert.ok(
+  stagnationThresholdDays(3, { attesaRicambi: true }) >= ATTESA_RICAMBI_SUPPLIER_GRACE_DAYS,
+  "attesa ricambi: soglia almeno grace fornitore",
+);
+assert.ok(
+  stagnationThresholdDays(3, { attesaRicambi: true }) > stagnationThresholdDays(3),
+  "attesa ricambi più tollerante della soglia base",
+);
+
+function lav(partial: Partial<LavorazioneListRow> & Pick<LavorazioneListRow, "id" | "stato">): LavorazioneListRow {
+  return {
+    id: partial.id,
+    stato: partial.stato,
+    created_at: partial.created_at ?? "2026-07-01T10:00:00.000Z",
+    updated_at: partial.updated_at ?? partial.created_at ?? "2026-07-01T10:00:00.000Z",
+    deleted_at: null,
+    cliente: "C",
+    macchina: "M",
+    priorita: "media",
+  } as unknown as LavorazioneListRow;
+}
+
+const stati = [
+  { id: "attesa_ricambi", label: "Attesa ricambi" },
+  { id: "accettazione", label: "Accettazione" },
+];
+
+// Outlier lungo vs peer freschi: excess attesa ricambi soft rispetto ad accettazione.
+const ricambiInactive = computeInactiveLavorazioniCriticality(
+  [
+    lav({ id: "r-old", stato: "attesa_ricambi", updated_at: "2026-05-01T10:00:00.000Z" }),
+    lav({ id: "r-new1", stato: "attesa_ricambi", updated_at: "2026-07-12T10:00:00.000Z" }),
+    lav({ id: "r-new2", stato: "attesa_ricambi", updated_at: "2026-07-11T10:00:00.000Z" }),
+  ],
+  anchor,
+  stati,
+);
+const accettazioneInactive = computeInactiveLavorazioniCriticality(
+  [
+    lav({ id: "a-old", stato: "accettazione", updated_at: "2026-05-01T10:00:00.000Z" }),
+    lav({ id: "a-new1", stato: "accettazione", updated_at: "2026-07-12T10:00:00.000Z" }),
+    lav({ id: "a-new2", stato: "accettazione", updated_at: "2026-07-11T10:00:00.000Z" }),
+  ],
+  anchor,
+  stati,
+);
+assert.equal(ricambiInactive.count, 1);
+assert.equal(accettazioneInactive.count, 1);
+assert.ok(
+  ricambiInactive.weightedExcessDays < accettazioneInactive.weightedExcessDays,
+  "stesso outlier: attesa ricambi pesa meno (fornitori)",
+);
+assert.ok(
+  ricambiInactive.weightedExcessDays <= 0.3 + 1e-9,
+  "excess attesa ricambi capped soft (≤0.3 per mezzo)",
+);
 
 console.log("operational-health-criticality.test: OK");

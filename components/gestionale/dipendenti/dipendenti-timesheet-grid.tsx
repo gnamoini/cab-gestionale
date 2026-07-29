@@ -72,7 +72,6 @@ const timesheetFooterTdBase =
 const timesheetPresenzeShellClass = [
   "timesheet-presenze-shell",
   "relative",
-  "gestionale-list-desktop-only",
   "w-full min-w-0 max-w-full",
   "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)]",
 ].join(" ");

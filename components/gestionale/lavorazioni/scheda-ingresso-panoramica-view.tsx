@@ -21,6 +21,7 @@ import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readabili
 import { formatLivelloCarburanteDisplay } from "@/lib/schede/livello-carburante-value";
 import { RichiedenteFirmaDisplay } from "@/components/gestionale/schede/richiedente-firma-display";
 import { hasSignatureDataUrl } from "@/lib/media/signature-pad";
+import { resolveOreLavoroFields } from "@/lib/schede/resolve-ore-lavoro-fields";
 import { SCHEDA_INGRESSO_ADDETTO_ACCETTAZIONE_LABEL } from "@/lib/schede/scheda-ingresso-ui-labels";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import type { SchedaIngressoFields } from "@/types/schede";
@@ -619,8 +620,15 @@ export function SchedaIngressoPanoramicaView({
           >
             <PanoramicaStringField label="Km" value={fields.km} mono fieldLayout={fieldLayout} rowLayout={rowLayout} />
             <PanoramicaStringField
-              label="Ore lavoro"
-              value={fields.oreLavoro}
+              label="Ore lavoro motore"
+              value={resolveOreLavoroFields(fields).oreLavoroMotore}
+              mono
+              fieldLayout={fieldLayout}
+              rowLayout={rowLayout}
+            />
+            <PanoramicaStringField
+              label="Ore lavoro PTO"
+              value={resolveOreLavoroFields(fields).oreLavoroPto}
               mono
               fieldLayout={fieldLayout}
               rowLayout={rowLayout}

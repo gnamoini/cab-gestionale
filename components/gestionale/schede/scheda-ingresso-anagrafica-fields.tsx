@@ -35,6 +35,11 @@ import type { SchedaIngressoFields } from "@/types/schede";
 import type { SchedaIngressoIdentField } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import type { CaptureIngressoFieldHint } from "@/lib/document-capture/capture-ingresso-field-hints";
 import {
+  resolveIngressoOreDraft,
+  type OreLavoroFields,
+  type SchedaIngressoOreDraft,
+} from "@/lib/schede/resolve-ore-lavoro-fields";
+import {
   SCHEDA_INGRESSO_ANAGRAFICA_FIELD_KEYS,
   schedaIngressoFieldsSliceEqual,
 } from "@/lib/schede/scheda-ingresso-form-field-groups";
@@ -43,9 +48,9 @@ import {
   CaptureIngressoFieldHintInline,
 } from "@/components/document-capture/capture-ingresso-field-hint";
 
-export type SchedaIngressoAnagraficaSection = "cliente" | "attrezzatura" | "telaio" | "dettagli";
+export type SchedaIngressoAnagraficaSection = "cliente" | "attrezzatura" | "telaio" | "richiedente";
 
-const ALL_SECTIONS: SchedaIngressoAnagraficaSection[] = ["cliente", "attrezzatura", "telaio", "dettagli"];
+const ALL_SECTIONS: SchedaIngressoAnagraficaSection[] = ["cliente", "attrezzatura", "telaio", "richiedente"];
 
 /** Chiude dropdown/sheet aperti quando un altro selector della scheda riceve focus. */
 const SCHEDA_INGRESSO_EXCLUSIVE_GROUP = "scheda-ingresso";
@@ -71,9 +76,11 @@ function SchedaIngressoAnagraficaFieldsInner({
   mezzoId = "",
   captureHints,
   onApplyCaptureHint,
+  onOreLavoroPatch,
 }: {
-  value: SchedaIngressoFields;
+  value: SchedaIngressoFields & SchedaIngressoOreDraft;
   onPatch: (patch: Partial<SchedaIngressoFields>) => void;
+  onOreLavoroPatch?: (patch: Partial<OreLavoroFields>) => void;
   mezzi: readonly MezzoGestito[];
   disabled?: boolean;
   sections?: readonly SchedaIngressoAnagraficaSection[];
@@ -99,11 +106,17 @@ function SchedaIngressoAnagraficaFieldsInner({
 }) {
   const profilo = useOfficinaProfiloOperativo();
   const resolvedSections = useMemo(() => {
-    if (sections) return sections;
+    if (sections) {
+      return sections.filter((s) => {
+        if (s === "attrezzatura") return showAttrezzaturaSections(profilo);
+        if (s === "telaio") return showTelaioSections(profilo);
+        return true;
+      });
+    }
     const out: SchedaIngressoAnagraficaSection[] = ["cliente"];
     if (showAttrezzaturaSections(profilo)) out.push("attrezzatura");
     if (showTelaioSections(profilo)) out.push("telaio");
-    out.push("dettagli");
+    out.push("richiedente");
     return out;
   }, [sections, profilo]);
   const show = (s: SchedaIngressoAnagraficaSection) => resolvedSections.includes(s);
@@ -167,6 +180,8 @@ function SchedaIngressoAnagraficaFieldsInner({
 
   const uid = useId();
   const fieldId = (suffix: string) => `${uid}-${suffix}`;
+  const oreLavoro = resolveIngressoOreDraft(value);
+  const onOrePatch = onOreLavoroPatch ?? (() => {});
 
   const hintAfter = (key: keyof SchedaIngressoFields, embedded = false) => (
     <CaptureIngressoFieldHintInline
@@ -225,68 +240,6 @@ function SchedaIngressoAnagraficaFieldsInner({
             />
             </CaptureAwareFormField>
           </FormField>
-          <FormField label="Richiedente" htmlFor={fieldId("richiedente")}>
-            <CaptureAwareFormField hint={captureHints?.richiedente} footer={hintAfter("richiedente", true)}>
-            <div className="flex min-w-0 items-center gap-2">
-              <input
-                id={fieldId("richiedente")}
-                className={`min-w-0 flex-1 ${inputFieldClass}`}
-                value={value.richiedente}
-                onChange={(e) => onPatch({ richiedente: sliceInputValue(e.target.value, TEXT_SHORT) })}
-                disabled={disabled}
-                placeholder="Nome libero"
-                maxLength={TEXT_SHORT}
-                aria-label="Richiedente"
-              />
-              <Tooltip content={hasSignatureDataUrl(value.richiedenteFirma ?? "") ? "Modifica firma" : "Acquisisci firma"}>
-                <button
-                  type="button"
-                  className={`${dsBtnNeutralIconForm} ${hasSignatureDataUrl(value.richiedenteFirma ?? "") ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-success)_45%,transparent)]" : ""}`}
-                  disabled={disabled}
-                  aria-label={hasSignatureDataUrl(value.richiedenteFirma ?? "") ? "Modifica firma richiedente" : "Acquisisci firma richiedente"}
-                  onClick={() => setFirmaModalOpen(true)}
-                >
-                  <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 20h9" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
-                  </svg>
-                </button>
-              </Tooltip>
-            </div>
-            {hasSignatureDataUrl(value.richiedenteFirma ?? "") ? (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <RichiedenteFirmaDisplay dataUrl={value.richiedenteFirma} consultable />
-                <button
-                  type="button"
-                  className={dsBtnNeutral}
-                  disabled={disabled}
-                  onClick={() => onPatch({ richiedenteFirma: "" })}
-                >
-                  Rimuovi firma
-                </button>
-              </div>
-            ) : null}
-            </CaptureAwareFormField>
-          </FormField>
-          <FormField label="Telefono richiedente" htmlFor={fieldId("richiedente-telefono")}>
-            <input
-              id={fieldId("richiedente-telefono")}
-              className={inputFieldClass}
-              value={value.richiedenteTelefono}
-              onChange={(e) => onPatch({ richiedenteTelefono: sliceInputValue(e.target.value, TEXT_SHORT) })}
-              disabled={disabled}
-              placeholder="Numero di telefono"
-              maxLength={TEXT_SHORT}
-              autoComplete="tel"
-              aria-label="Telefono richiedente"
-            />
-          </FormField>
-          <RichiedenteFirmaCaptureModal
-            open={firmaModalOpen}
-            initialDataUrl={value.richiedenteFirma ?? ""}
-            onClose={() => setFirmaModalOpen(false)}
-            onSave={(dataUrl) => onPatch({ richiedenteFirma: dataUrl })}
-          />
           {showInterventoTargetToggle ? (
             <FormField label="Oggetto intervento">
               <InterventoTargetSelect
@@ -383,6 +336,30 @@ function SchedaIngressoAnagraficaFieldsInner({
               {hintAfter("nScuderia")}
             </div>
           </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <FormField label="Ore lavoro motore" htmlFor={fieldId("ore-lavoro-motore")}>
+              <GestionaleNumberInput
+                id={fieldId("ore-lavoro-motore")}
+                min={0}
+                inputMode="decimal"
+                value={oreLavoro.oreLavoroMotore}
+                onChange={(v) => onOrePatch({ oreLavoroMotore: v })}
+                disabled={disabled}
+                aria-label="Ore lavoro motore"
+              />
+            </FormField>
+            <FormField label="Ore lavoro PTO" htmlFor={fieldId("ore-lavoro-pto")}>
+              <GestionaleNumberInput
+                id={fieldId("ore-lavoro-pto")}
+                min={0}
+                inputMode="decimal"
+                value={oreLavoro.oreLavoroPto}
+                onChange={(v) => onOrePatch({ oreLavoroPto: v })}
+                disabled={disabled}
+                aria-label="Ore lavoro PTO"
+              />
+            </FormField>
+          </div>
           {onCopyLastIngresso ? (
             <CopiaUltimaSchedaIngressoBanner
               visible={Boolean(lastIngressoMatch) || mezzoInAnagraficaOnly}
@@ -476,35 +453,17 @@ function SchedaIngressoAnagraficaFieldsInner({
               {hintAfter("vin")}
             </div>
           </div>
-        </FormSection>
-      ) : null}
-
-      {show("dettagli") ? (
-        <FormSection title="Modelli e dettagli tecnici">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <FormField label="Ore lavoro" htmlFor={fieldId("ore-lavoro")}>
-              <GestionaleNumberInput
-                id={fieldId("ore-lavoro")}
-                min={0}
-                inputMode="decimal"
-                value={value.oreLavoro}
-                onChange={(v) => onPatch({ oreLavoro: v })}
-                disabled={disabled}
-                aria-label="Ore lavoro"
-              />
-            </FormField>
-            <FormField label="KM" htmlFor={fieldId("km")}>
-              <GestionaleNumberInput
-                id={fieldId("km")}
-                min={0}
-                inputMode="decimal"
-                value={value.km}
-                onChange={(v) => onPatch({ km: v })}
-                disabled={disabled}
-                aria-label="KM"
-              />
-            </FormField>
-          </div>
+          <FormField label="KM" htmlFor={fieldId("km")}>
+            <GestionaleNumberInput
+              id={fieldId("km")}
+              min={0}
+              inputMode="decimal"
+              value={value.km}
+              onChange={(v) => onPatch({ km: v })}
+              disabled={disabled}
+              aria-label="KM"
+            />
+          </FormField>
           <FormField label="Carburante" htmlFor={fieldId("carburante")}>
             <LivelloCarburanteSegmentedSelect
               id={fieldId("carburante")}
@@ -514,6 +473,79 @@ function SchedaIngressoAnagraficaFieldsInner({
               aria-label="Livello carburante"
             />
           </FormField>
+        </FormSection>
+      ) : null}
+
+      {show("richiedente") ? (
+        <FormSection title="Richiedente">
+          <FormField label="Richiedente" htmlFor={fieldId("richiedente")}>
+            <CaptureAwareFormField hint={captureHints?.richiedente} footer={hintAfter("richiedente", true)}>
+              <input
+                id={fieldId("richiedente")}
+                className={inputFieldClass}
+                value={value.richiedente}
+                onChange={(e) => onPatch({ richiedente: sliceInputValue(e.target.value, TEXT_SHORT) })}
+                disabled={disabled}
+                placeholder="Nome libero"
+                maxLength={TEXT_SHORT}
+                aria-label="Richiedente"
+              />
+            </CaptureAwareFormField>
+          </FormField>
+          <FormField label="Telefono richiedente" htmlFor={fieldId("richiedente-telefono")}>
+            <input
+              id={fieldId("richiedente-telefono")}
+              className={inputFieldClass}
+              value={value.richiedenteTelefono}
+              onChange={(e) => onPatch({ richiedenteTelefono: sliceInputValue(e.target.value, TEXT_SHORT) })}
+              disabled={disabled}
+              placeholder="Numero di telefono"
+              maxLength={TEXT_SHORT}
+              autoComplete="tel"
+              aria-label="Telefono richiedente"
+            />
+          </FormField>
+          <FormField label="Firma richiedente">
+            <div className="flex min-w-0 items-center gap-2">
+              <Tooltip content={hasSignatureDataUrl(value.richiedenteFirma ?? "") ? "Modifica firma" : "Acquisisci firma"}>
+                <button
+                  type="button"
+                  className={`${dsBtnNeutralIconForm} ${hasSignatureDataUrl(value.richiedenteFirma ?? "") ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-success)_45%,transparent)]" : ""}`}
+                  disabled={disabled}
+                  aria-label={hasSignatureDataUrl(value.richiedenteFirma ?? "") ? "Modifica firma richiedente" : "Acquisisci firma richiedente"}
+                  onClick={() => setFirmaModalOpen(true)}
+                >
+                  <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 20h9" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                </button>
+              </Tooltip>
+              {hasSignatureDataUrl(value.richiedenteFirma ?? "") ? (
+                <RichiedenteFirmaDisplay dataUrl={value.richiedenteFirma} consultable />
+              ) : (
+                <span className="text-xs text-[color:var(--cab-text-muted)]">Nessuna firma acquisita</span>
+              )}
+            </div>
+            {hasSignatureDataUrl(value.richiedenteFirma ?? "") ? (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  className={dsBtnNeutral}
+                  disabled={disabled}
+                  onClick={() => onPatch({ richiedenteFirma: "" })}
+                >
+                  Rimuovi firma
+                </button>
+              </div>
+            ) : null}
+          </FormField>
+          <RichiedenteFirmaCaptureModal
+            open={firmaModalOpen}
+            initialDataUrl={value.richiedenteFirma ?? ""}
+            onClose={() => setFirmaModalOpen(false)}
+            onSave={(dataUrl) => onPatch({ richiedenteFirma: dataUrl })}
+          />
         </FormSection>
       ) : null}
     </>
@@ -542,6 +574,8 @@ export const SchedaIngressoAnagraficaFields = memo(
     if (prev.mezzoId !== next.mezzoId) return false;
     if (prev.captureHints !== next.captureHints) return false;
     if (prev.onApplyCaptureHint !== next.onApplyCaptureHint) return false;
+    if (prev.onOreLavoroPatch !== next.onOreLavoroPatch) return false;
+    if (prev.value.oreLavoroPto !== next.value.oreLavoroPto) return false;
     return schedaIngressoFieldsSliceEqual(
       prev.value,
       next.value,

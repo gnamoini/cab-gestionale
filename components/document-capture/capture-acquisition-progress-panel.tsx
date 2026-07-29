@@ -41,6 +41,10 @@ function CaptureAcquisitionProgressBar({ state }: { state: CaptureAcquisitionPro
 
   if (!state.active && !state.error) return null;
 
+  if (state.checklist?.length) {
+    return <CaptureAcquisitionProgressChecklist state={{ active: state.active, error: state.error, checks: state.checklist }} heartbeatLabel={state.heartbeatLabel} />;
+  }
+
   return (
     <div
       className="flex min-h-[12rem] flex-col items-center justify-center gap-4 px-4 py-10"
@@ -67,7 +71,13 @@ function CaptureAcquisitionProgressBar({ state }: { state: CaptureAcquisitionPro
   );
 }
 
-function CaptureAcquisitionProgressChecklist({ state }: { state: InventoryReceivingAcquisitionState }) {
+function CaptureAcquisitionProgressChecklist({
+  state,
+  heartbeatLabel,
+}: {
+  state: InventoryReceivingAcquisitionState;
+  heartbeatLabel?: string | null;
+}) {
   if (!state.active && !state.error) return null;
 
   return (
@@ -109,6 +119,11 @@ function CaptureAcquisitionProgressChecklist({ state }: { state: InventoryReceiv
           ))}
         </ul>
       )}
+      {heartbeatLabel ? (
+        <p className="max-w-md text-center text-xs text-[color:var(--cab-text-muted)]" aria-live="polite">
+          ⟳ {heartbeatLabel}
+        </p>
+      ) : null}
     </div>
   );
 }

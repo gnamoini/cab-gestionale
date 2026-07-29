@@ -29,7 +29,7 @@ import {
   deriveMarcheFiltroFromCompatLabels,
   expandRicambioCompatibilitaMezzi,
 } from "@/lib/magazzino/ricambio-compat-expand";
-import { readCompatLabelsForUi } from "@/lib/magazzino/compat/compat-read-guard";
+import { readCompatLabelsForUi, type CompatReadOpts } from "@/lib/magazzino/compat/compat-read-guard";
 import { writeCompatibilitaRicambio } from "@/lib/magazzino/compat/compat-write-gate";
 import {
   compatDisplayLabel,
@@ -508,9 +508,10 @@ function markupToFormString(n: number): string {
 export function toFormDraft(
   r: RicambioMagazzino,
   mezziListe?: MezziListePrefs,
+  compatReadOpts?: CompatReadOpts,
 ): RicambioFormState {
   const compatLabels = mezziListe
-    ? readCompatLabelsForUi(r, mezziListe, "form.toFormDraft")
+    ? readCompatLabelsForUi(r, mezziListe, "form.toFormDraft", compatReadOpts)
     : normalizeCompatList(r.compatibilitaMezzi);
   const marcheFiltro = mezziListe
     ? deriveMarcheFiltroFromCompatLabels(compatLabels, mezziListe)

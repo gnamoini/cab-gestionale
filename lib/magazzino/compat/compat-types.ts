@@ -17,7 +17,10 @@ export type ResolvedCompatibilita = {
   /** Testo display joinato per tabelle/detail. */
   display: string;
   sortKey: string;
+  /** Nessun ref né legacy in input — compatibilità non configurata. */
   isUniversal: boolean;
+  /** Almeno un ref o legacy presente in meta. */
+  isConfigured: boolean;
   /** Refs non risolvibili o label legacy residue safe. */
   orphanLabels: string[];
 };

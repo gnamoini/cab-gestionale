@@ -1,4 +1,5 @@
 import { parseDecimalInput } from "@/lib/core/decimal-input";
+import { resolveOreLavoroFields } from "@/lib/schede/resolve-ore-lavoro-fields";
 import { resolvePlansForMezzo } from "@/lib/maintenance-plans/resolve-plans-for-mezzo";
 import {
   buildTagliandiMatrixRows,
@@ -19,6 +20,12 @@ export const TAGLIANDO_NOTIFICATION_LEAD_ORE = 50;
 export function parseSchedaOreLavoro(oreLavoro: string): number {
   const n = parseDecimalInput(oreLavoro);
   return n != null && n >= 0 ? n : 0;
+}
+
+export function parseSchedaOreLavoroMotoreFromCampi(
+  campi: Partial<Record<string, string | undefined | null>>,
+): number {
+  return parseSchedaOreLavoro(resolveOreLavoroFields(campi).oreLavoroMotore);
 }
 
 export function listOverdueTagliandiMilestonesForRow(input: {

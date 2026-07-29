@@ -237,7 +237,7 @@ export const mezziService = {
   async update(id: string, data: MezzoUpdate): Promise<ServiceResult<MezzoRow>> {
     try {
       const c = await sb();
-      const prepared =
+      let prepared =
         Object.keys(data).length > 0 ? (prepareMezzoWritePayload(data) as MezzoUpdate) : data;
       if (mezzoUpdateTouchesAssociationFields(prepared)) {
         return err<MezzoRow>(ASSOCIATION_FIELDS_REQUIRE_DEDICATED_PATH);
@@ -246,11 +246,20 @@ export const mezziService = {
         const vinCheck = await assertVinUnique(c, prepared.telaio_num, id);
         if (!vinCheck.success) return err<MezzoRow>(vinCheck.error ?? VIN_DUPLICATE_MSG);
       }
-      const payload =
+      let payload =
         Object.keys(prepared).length > 0 ? attachMezzoEntityKey(prepared as MezzoInsert) : prepared;
       logAttrezzatureV2WritePath({ path: "v2", operation: "update" });
       const { data: before, error: e0 } = await c.from("mezzi").select(MEZZI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
+      if (payload.meta !== undefined && before) {
+        payload = {
+          ...payload,
+          meta: mergeMezzoMetaPatch(
+            before.meta,
+            payload.meta as Record<string, unknown>,
+          ) as MezzoRow["meta"],
+        };
+      }
       const { data: row, error } = await c.from("mezzi").update(payload).eq("id", id).select(MEZZI_COLUMNS).single();
       if (error) return err(mapMezziWriteError(error));
       const r = row as MezzoRow;

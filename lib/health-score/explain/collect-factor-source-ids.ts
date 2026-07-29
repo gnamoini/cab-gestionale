@@ -1,7 +1,9 @@
 import { CONTROL_TOWER_LATE_INGRESS_DAYS } from "@/lib/dashboard/control-tower-constants";
 import {
   estimateDaysUnderMinimum,
+  isAttesaRicambiStato,
   isStagnationSensitiveStato,
+  stagnationThresholdDays,
 } from "@/lib/dashboard/operational-health-criticality";
 import { isLavorazioneInCorso } from "@/lib/lavorazioni/archived";
 import { migrateStatoConfigId } from "@/lib/lavorazioni/stati-dynamic";
@@ -36,10 +38,6 @@ function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
-}
-
-function stagnationThresholdDays(medianDays: number): number {
-  return Math.max(5, medianDays * 1.4, medianDays + 3);
 }
 
 export function collectLateIngressLavorazioneIds(
@@ -81,7 +79,8 @@ export function collectInactiveLavorazioneIds(
   const ranked: { id: string; excess: number }[] = [];
   for (const row of rowMeta) {
     const group = byStatoDays.get(row.statoKey) ?? [];
-    const threshold = stagnationThresholdDays(median(group));
+    const attesaRicambi = isAttesaRicambiStato(row.statoKey);
+    const threshold = stagnationThresholdDays(median(group), { attesaRicambi });
     if (row.days <= threshold) continue;
     ranked.push({ id: row.id, excess: row.days - threshold });
   }

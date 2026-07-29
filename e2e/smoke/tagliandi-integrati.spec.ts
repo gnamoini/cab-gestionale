@@ -15,8 +15,9 @@ test.describe("tagliandi integrati SSOT", () => {
     const nuovaBtn = page.getByRole("button", { name: /nuova lavorazione/i });
     if (await nuovaBtn.isVisible().catch(() => false)) {
       await nuovaBtn.click();
-      await expect(page.getByText("Intervento di tagliando")).toBeVisible({ timeout: 15_000 });
-      await expect(page.getByText("Tipo esecuzione")).toBeVisible();
+      await expect(page.getByText("Intervento", { exact: true })).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByLabel("Riparazione")).toBeVisible();
+      await expect(page.getByLabel("Tagliando")).toBeVisible();
     }
   });
 

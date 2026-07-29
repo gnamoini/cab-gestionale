@@ -14,13 +14,14 @@ import {
 import { buildGeminiCaptureDocumentPart } from "@/lib/document-capture/gemini-capture-content";
 import { SCHEDA_OFFICINA_EXTRACTION_SYSTEM, SCHEDA_OFFICINA_EXTRACTION_USER } from "@/lib/document-capture/scheda-officina-extraction-prompt";
 import { resolveGeminiAnalyzeRetryDelayMs } from "@/lib/ai/gemini-retry-after";
+import { isTransientAnalyzeRetryError } from "@/lib/ai/gemini-analyze-retry-policy";
 import { mutateCaptureWithEvent } from "@/lib/document-capture/mutate-capture-with-event.server";
 import { normalizeCaptureMime } from "@/lib/document-capture/capture-mime";
 import {
   applyEntityResolutionToCaptureFields,
   mergeResolutionIntoFieldRows,
 } from "@/lib/entity-resolution/server/apply-capture-resolution.server";
-import { upsertCaptureSignatureFields } from "@/lib/document-capture/upsert-capture-signature-fields.server";
+import { inferCaptureSchedaTipo } from "@/lib/document-capture/capture-field-mapper";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 const RETRY_BACKOFF_MS = [1_000, 3_000] as const;
@@ -169,19 +170,6 @@ export async function analyzeDocumentCapture(captureId: string): Promise<Analyze
         });
       }
 
-      const signatureRows = await upsertCaptureSignatureFields(sb, {
-        companyId: capture.company_id,
-        captureId,
-        attemptId: attempt.id,
-        bytes,
-        mime,
-        schedaTipo: object.schedaTipo ?? null,
-        existingFieldKeys: fieldRows.map((f) => f.field_key),
-      });
-      if (signatureRows.length > 0) {
-        fieldRows = [...fieldRows, ...signatureRows];
-      }
-
       if (fieldRows.length === 0) {
         await mutateCaptureWithEvent({
           captureId,
@@ -214,8 +202,10 @@ export async function analyzeDocumentCapture(captureId: string): Promise<Analyze
       return { ok: true, attemptId: attempt.id, extraction: object, durationMs, fieldCount: fieldRows.length };
     } catch (e) {
       lastError = e;
-      if (attempt < RETRY_BACKOFF_MS.length) {
+      if (attempt < RETRY_BACKOFF_MS.length && isTransientAnalyzeRetryError(e)) {
         await sleep(resolveGeminiAnalyzeRetryDelayMs(e, attempt, RETRY_BACKOFF_MS));
+      } else {
+        break;
       }
     }
   }

@@ -144,6 +144,16 @@ const STAGNATION_STATE_IDS = new Set([
   "da_lavorare",
 ]);
 
+/**
+ * Lead time fornitore tipico: oltre questa soglia la stagnazione in attesa ricambi
+ * resta segnalata ma con peso soft (non dipende dall'officina).
+ */
+export const ATTESA_RICAMBI_SUPPLIER_GRACE_DAYS = 7;
+
+/** Excess oltre soglia: peso ridotto + cap basso vs altri stati di attesa. */
+const ATTESA_RICAMBI_EXCESS_WEIGHT = 0.3;
+const ATTESA_RICAMBI_EXCESS_CAP_DAYS = 7;
+
 /** Stati di attesa/inattività — non penalizzare «in lavorazione» anche se lunga. */
 export function isStagnationSensitiveStato(
   statoId: string,
@@ -158,6 +168,17 @@ export function isStagnationSensitiveStato(
   return false;
 }
 
+/** Attesa ricambi (id canonico o label custom). */
+export function isAttesaRicambiStato(
+  statoId: string,
+  stati?: readonly StatoLavorazioneConfig[],
+): boolean {
+  const id = migrateStatoConfigId(statoId.trim());
+  if (id === "attesa_ricambi") return true;
+  const label = (stati ? statoLavorazioneLabel(statoId, stati) : id).toLowerCase();
+  return label.includes("attesa") && label.includes("ricambi");
+}
+
 function median(values: number[]): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -165,8 +186,22 @@ function median(values: number[]): number {
   return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
 }
 
-function stagnationThresholdDays(medianDays: number): number {
-  return Math.max(5, medianDays * 1.4, medianDays + 3);
+export function stagnationThresholdDays(
+  medianDays: number,
+  opts?: { attesaRicambi?: boolean },
+): number {
+  const base = Math.max(5, medianDays * 1.4, medianDays + 3);
+  if (!opts?.attesaRicambi) return base;
+  // Grace fornitore 7gg + margine sulla mediana: ritardi sistemici non gonfiano lo score.
+  return Math.max(base, ATTESA_RICAMBI_SUPPLIER_GRACE_DAYS, medianDays + ATTESA_RICAMBI_SUPPLIER_GRACE_DAYS);
+}
+
+function stagnationExcessWeight(excessDays: number, attesaRicambi: boolean): number {
+  if (attesaRicambi) {
+    // ponytail: soft cap lead-time fornitore — upgrade: lead time per fornitore da magazzino
+    return (Math.min(ATTESA_RICAMBI_EXCESS_CAP_DAYS, excessDays) / 7) * ATTESA_RICAMBI_EXCESS_WEIGHT;
+  }
+  return Math.min(21, excessDays) / 7;
 }
 
 function lavUpdatedAt(row: LavorazioneListRow): string {
@@ -206,13 +241,14 @@ export function computeInactiveLavorazioniCriticality(
   for (const row of rowMeta) {
     const group = byStatoDays.get(row.statoKey) ?? [];
     const med = median(group);
-    const threshold = stagnationThresholdDays(med);
+    const attesaRicambi = isAttesaRicambiStato(row.statoKey);
+    const threshold = stagnationThresholdDays(med, { attesaRicambi });
     if (row.days <= threshold) continue;
     count += 1;
     maxDays = Math.max(maxDays, row.days);
     statoLabels.add(row.statoLabel);
     const excess = row.days - threshold;
-    weightedExcessDays += Math.min(21, excess) / 7;
+    weightedExcessDays += stagnationExcessWeight(excess, attesaRicambi);
   }
 
   return {

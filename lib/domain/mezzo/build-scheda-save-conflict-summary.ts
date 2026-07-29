@@ -1,13 +1,12 @@
-import {
-  MEZZO_PERMANENT_FIELDS,
-  type MezzoPermanentFieldKey,
-} from "@/lib/schede/scheda-ingresso-field-roles";
+import { detectMezzoAnagraficaChanges } from "@/lib/domain/mezzo/detect-mezzo-anagrafica-changes";
+import { evaluateMezzoMeteringUpdate } from "@/lib/domain/mezzo/evaluate-mezzo-metering-update";
+import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
+import { pickMezzoPermanentFields } from "@/lib/schede/scheda-ingresso-field-roles";
 import {
   isMezzoSnapshotStale,
   type LinkedMezzoSnapshot,
 } from "@/lib/schede/scheda-ingresso-mezzo-link-state";
-import { evaluateMezzoMeteringUpdate } from "@/lib/domain/mezzo/evaluate-mezzo-metering-update";
-import { isMezzoAssociationField } from "@/lib/domain/mezzo/mezzo-association";
+import type { MezzoPermanentFieldKey } from "@/lib/schede/scheda-ingresso-field-roles";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
 
@@ -63,45 +62,19 @@ export function buildSchedaSaveConflictSummary(input: {
   mezzo: MezzoGestito | null | undefined;
 }): ConflictSummary {
   const { fields, linkedSnapshot, mezzo } = input;
-  const anagraficaChanges: AnagraficaChangeRow[] = [];
 
-  const baseline = linkedSnapshot?.fieldsAtLinkTime;
-  if (baseline) {
-    for (const key of MEZZO_PERMANENT_FIELDS) {
-      if (isMezzoAssociationField(key)) continue;
-      const prima = fieldStr(baseline[key]);
-      const dopo = fieldStr(fields[key]);
-      if (prima !== dopo) {
-        anagraficaChanges.push({
-          field: key,
-          label: MEZZO_PERMANENT_FIELD_LABELS[key],
-          prima: prima || "—",
-          dopo: dopo || "—",
-        });
-      }
-    }
-  } else if (mezzo) {
-    const fromMezzo = {
-      cliente: mezzo.cliente,
-      marcaAttrezzatura: mezzo.marca,
-      modelloAttrezzatura: mezzo.modello,
-      matricola: mezzo.matricola,
-      targa: mezzo.targa,
-      nScuderia: mezzo.numeroScuderia ?? "",
-    };
-    for (const key of ["marcaAttrezzatura", "modelloAttrezzatura", "matricola", "targa", "nScuderia"] as const) {
-      const prima = fieldStr(fromMezzo[key]);
-      const dopo = fieldStr(fields[key]);
-      if (prima !== dopo && dopo) {
-        anagraficaChanges.push({
-          field: key,
-          label: MEZZO_PERMANENT_FIELD_LABELS[key],
-          prima: prima || "—",
-          dopo,
-        });
-      }
-    }
-  }
+  const baseline =
+    linkedSnapshot?.fieldsAtLinkTime ??
+    (mezzo ? pickMezzoPermanentFields(buildSchedaIngressoFieldsFromMezzo(mezzo)) : null);
+  const detected = baseline
+    ? detectMezzoAnagraficaChanges(baseline, fields)
+    : { hasChanges: false, changes: [] };
+  const anagraficaChanges: AnagraficaChangeRow[] = detected.changes.map((c) => ({
+    field: c.field,
+    label: c.label,
+    prima: c.oldValue,
+    dopo: c.newValue,
+  }));
 
   const meteringWarnings: MeteringWarningRow[] = [];
   const kmEv = evaluateMezzoMeteringUpdate("km", fields.km, mezzo);
@@ -124,8 +97,7 @@ export function buildSchedaSaveConflictSummary(input: {
   }
 
   const mezzoStale = linkedSnapshot ? isMezzoSnapshotStale(linkedSnapshot, mezzo) : false;
-  const hasIssues =
-    anagraficaChanges.length > 0 || meteringWarnings.length > 0 || mezzoStale;
+  const hasIssues = anagraficaChanges.length > 0;
 
   return { hasIssues, mezzoStale, anagraficaChanges, meteringWarnings };
 }

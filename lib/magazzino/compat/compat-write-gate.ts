@@ -15,6 +15,7 @@ import type { CompatInput } from "@/lib/magazzino/compat/compat-types";
 import type { MagazzinoRicambioMeta } from "@/lib/magazzino/magazzino-meta";
 import {
   dedupeCompatRefs,
+  sanitizeCompatRefsForPersist,
   type RicambioCompatRef,
 } from "@/lib/magazzino/ricambio-compat-resolver";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
@@ -124,7 +125,11 @@ function resolveRefs(
   prefsListe?: MezziListePrefs,
 ): RicambioCompatRef[] {
   if (normalized.compatibilitaRefs && normalized.compatibilitaRefs.length > 0) {
-    return dedupeCompatRefs(normalized.compatibilitaRefs);
+    const raw = dedupeCompatRefs(normalized.compatibilitaRefs);
+    if (liste) {
+      return sanitizeCompatRefsForPersist(raw, liste, { prefsListe });
+    }
+    return raw;
   }
   const legacy = normalizeCompatList(normalized.compatibilitaMezzi ?? []);
   if (legacy.length > 0 && liste) {
@@ -164,7 +169,7 @@ export function writeCompatibilitaRicambio(
   const refs = resolveRefs(normalized, liste, options?.prefsListe);
 
   if (refs.length > 0 && liste) {
-    return buildCompatMetaForSave(refs, liste);
+    return buildCompatMetaForSave(refs, liste, { prefsListe: options?.prefsListe });
   }
 
   if (refs.length > 0 && !liste) {

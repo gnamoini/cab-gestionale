@@ -34,6 +34,7 @@ export interface LavorazioneAttiva {
   dataCompletamento: string | null;
   is_tagliando?: boolean;
   is_garanzia?: boolean;
+  is_recidivo?: boolean;
   repair_present?: boolean;
   maintenance_execution_kind?: "scheduled" | "extraordinary" | null;
   tagliando_preset_ref?: string | null;
@@ -65,6 +66,7 @@ export interface LavorazioneArchiviata {
   meseCompletamento: string;
   is_tagliando?: boolean;
   is_garanzia?: boolean;
+  is_recidivo?: boolean;
   repair_present?: boolean;
   maintenance_execution_kind?: "scheduled" | "extraordinary" | null;
   tagliando_preset_ref?: string | null;

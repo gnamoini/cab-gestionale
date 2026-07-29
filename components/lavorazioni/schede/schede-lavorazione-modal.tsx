@@ -1598,6 +1598,7 @@ export function SchedeLavorazioneModal({
           attive={attive}
           storico={storico}
           excludeLavorazioneId={lav.id}
+          bootstrapMezzoId={mezzo?.id}
         />
       ) : null}
 

@@ -110,7 +110,7 @@ test("list surface /dipendenti: cards cookie shows mobile timesheet branch", asy
   await loginViaUi(page, adminCredentials());
   await gotoListRouteReady(page, { path: "/dipendenti", readyText: "Tabella presenze" });
 
-  expect(await listTableMounted(page)).toBe(false);
+  expect(await listTableMounted(page)).toBe(true);
 });
 
 test("list surface /sicurezza: cards cookie shows user cards", async ({ page }) => {

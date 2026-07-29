@@ -1,0 +1,25 @@
+export type AnalyzeTracePhase =
+  | "START"
+  | "PREREQUISITES_START"
+  | "PREREQUISITES_OK"
+  | "PREREQUISITES_FAIL"
+  | "DOWNLOAD_STORAGE_START"
+  | "DOWNLOAD_STORAGE_OK"
+  | "DOWNLOAD_STORAGE_FAIL"
+  | "HYBRID_START"
+  | "HYBRID_OK"
+  | "HYBRID_SKIP"
+  | "HYBRID_FAIL"
+  | "GEMINI_REQUEST"
+  | "GEMINI_RESPONSE"
+  | "GEMINI_FAIL"
+  | "PARSE_START"
+  | "PARSE_OK"
+  | "PARSE_FAIL"
+  | "UPSERT_FIELDS_START"
+  | "UPSERT_FIELDS_OK"
+  | "UPSERT_FIELDS_FAIL"
+  | "END_OK"
+  | "END_FAIL";
+
+export type AnalyzeTraceOutcome = "ok" | "fail" | "skip";

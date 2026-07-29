@@ -1,39 +1,77 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { GlobalSelect } from "@/components/gestionale/global-input";
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import { isPresetAssignable } from "@/lib/maintenance-plans/maintenance-domain-contract";
-import type { LavorazioneInterventionType } from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
 import {
   dsAccentSoftBanner,
   dsCheckboxInput,
   dsCheckboxOptionLabel,
-  dsFocus,
-  dsSegmentedBtnOff,
-  dsSegmentedBtnOn,
-  dsSegmentedWrap,
 } from "@/lib/ui/design-system";
 
 const garanziaBadgeClass =
   "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-emerald-700 text-[10px] font-bold leading-none tracking-wide text-white";
 
-const segmentWrap = `${dsSegmentedWrap} w-full min-w-0 gap-0.5 p-0.5`;
-const segmentOn = `${dsSegmentedBtnOn} min-w-0 flex-1 px-2 py-2 text-[11px] uppercase tracking-wide max-sm:min-h-11 sm:text-xs`;
-const segmentOff = `${dsSegmentedBtnOff} min-w-0 flex-1 px-2 py-2 text-[11px] uppercase tracking-wide max-sm:min-h-11 sm:text-xs`;
+const repairBadgeClass =
+  "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-slate-700 text-[10px] font-bold leading-none tracking-wide text-white";
 
-const INTERVENTION_OPTIONS: { value: LavorazioneInterventionType; label: string }[] = [
-  { value: "riparazione", label: "Riparazione" },
-  { value: "tagliando", label: "Tagliando" },
-  { value: "riparazione_tagliando", label: "Riparazione + tagliando" },
-];
+const tagliandoBadgeClass =
+  "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-amber-700 text-[10px] font-bold leading-none tracking-wide text-white";
+
+const recidivoBadgeClass =
+  "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-rose-700 text-[10px] font-bold leading-none tracking-wide text-white";
+
+function InterventoCheckbox({
+  id,
+  label,
+  checked,
+  disabled,
+  badge,
+  hint,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  badge?: ReactNode;
+  hint?: string;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className={dsCheckboxOptionLabel}>
+      <input
+        id={id}
+        type="checkbox"
+        className={dsCheckboxInput}
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-[color:var(--cab-text)]">
+          {label}
+          {checked ? badge : null}
+        </span>
+        {hint ? (
+          <span className="mt-0.5 block text-xs leading-snug text-[color:var(--cab-text-muted)]">{hint}</span>
+        ) : null}
+      </span>
+    </label>
+  );
+}
 
 export function SchedaIngressoTagliandoSection({
-  interventionType,
-  onInterventionTypeChange,
+  repairPresent = false,
+  onRepairPresentChange,
+  isTagliando = false,
+  onIsTagliandoChange,
   isGaranzia = false,
   onIsGaranziaChange,
+  isRecidivo = false,
+  onIsRecidivoChange,
   presetRef,
   onPresetRefChange,
   assignPresetToMezzo,
@@ -44,10 +82,14 @@ export function SchedaIngressoTagliandoSection({
   presetLocked = false,
   disabled,
 }: {
-  interventionType: LavorazioneInterventionType;
-  onInterventionTypeChange: (v: LavorazioneInterventionType) => void;
+  repairPresent?: boolean;
+  onRepairPresentChange?: (v: boolean) => void;
+  isTagliando?: boolean;
+  onIsTagliandoChange?: (v: boolean) => void;
   isGaranzia?: boolean;
   onIsGaranziaChange?: (v: boolean) => void;
+  isRecidivo?: boolean;
+  onIsRecidivoChange?: (v: boolean) => void;
   presetRef?: string | null;
   onPresetRefChange?: (v: string | null) => void;
   assignPresetToMezzo?: boolean | null;
@@ -58,9 +100,6 @@ export function SchedaIngressoTagliandoSection({
   presetLocked?: boolean;
   disabled?: boolean;
 }) {
-  const isTagliando =
-    interventionType === "tagliando" || interventionType === "riparazione_tagliando";
-
   const presetItems = useMemo(
     () => [
       { value: "", label: "— Nessun preset —" },
@@ -73,50 +112,73 @@ export function SchedaIngressoTagliandoSection({
 
   return (
     <FormSection title="Intervento">
-      <FormField label="Tipo intervento">
-        <div className={segmentWrap} role="group" aria-label="Tipo intervento">
-          {INTERVENTION_OPTIONS.map(({ value, label }) => {
-            const active = interventionType === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                disabled={disabled}
-                aria-pressed={active}
-                onClick={() => onInterventionTypeChange(value)}
-                className={`${active ? segmentOn : segmentOff} ${dsFocus}`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </FormField>
+      {onRepairPresentChange ? (
+        <FormField label="Riparazione">
+          <InterventoCheckbox
+            id="ingresso-intervento-riparazione"
+            label="Riparazione"
+            checked={repairPresent}
+            disabled={disabled}
+            badge={
+              <span className={repairBadgeClass} aria-hidden>
+                R
+              </span>
+            }
+            onChange={onRepairPresentChange}
+          />
+        </FormField>
+      ) : null}
+
+      {onIsTagliandoChange ? (
+        <FormField label="Tagliando">
+          <InterventoCheckbox
+            id="ingresso-intervento-tagliando"
+            label="Tagliando"
+            checked={isTagliando}
+            disabled={disabled}
+            badge={
+              <span className={tagliandoBadgeClass} aria-hidden>
+                T
+              </span>
+            }
+            onChange={onIsTagliandoChange}
+          />
+        </FormField>
+      ) : null}
 
       {onIsGaranziaChange ? (
         <FormField label="Garanzia">
-          <label className={dsCheckboxOptionLabel}>
-            <input
-              type="checkbox"
-              className={dsCheckboxInput}
-              checked={isGaranzia}
-              disabled={disabled}
-              onChange={(e) => onIsGaranziaChange(e.target.checked)}
-            />
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-2 text-sm font-medium text-[color:var(--cab-text)]">
-                Intervento in garanzia
-                {isGaranzia ? (
-                  <span className={garanziaBadgeClass} aria-hidden>
-                    G
-                  </span>
-                ) : null}
+          <InterventoCheckbox
+            id="ingresso-intervento-garanzia"
+            label="In garanzia"
+            checked={isGaranzia}
+            disabled={disabled}
+            badge={
+              <span className={garanziaBadgeClass} aria-hidden>
+                G
               </span>
-              <span className="mt-0.5 block text-xs leading-snug text-[color:var(--cab-text-muted)]">
-                In lista compare il badge G nella colonna note
+            }
+            hint="In lista compare il badge G nella colonna note"
+            onChange={onIsGaranziaChange}
+          />
+        </FormField>
+      ) : null}
+
+      {onIsRecidivoChange ? (
+        <FormField label="Recidivo">
+          <InterventoCheckbox
+            id="ingresso-intervento-recidivo"
+            label="Recidivo"
+            checked={isRecidivo}
+            disabled={disabled}
+            badge={
+              <span className={recidivoBadgeClass} aria-hidden>
+                Rc
               </span>
-            </span>
-          </label>
+            }
+            hint="Mezzo che rientra per lavorazioni non eseguite bene"
+            onChange={onIsRecidivoChange}
+          />
         </FormField>
       ) : null}
 

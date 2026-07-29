@@ -9,7 +9,6 @@ import {
   parseMagazzinoRicambioMeta,
   ricambioUiToMagazzinoMeta,
 } from "@/lib/magazzino/magazzino-meta";
-import { readCompatLabelsForUi } from "@/lib/magazzino/compat/compat-read-guard";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { MagazzinoInsert, MagazzinoUpdate } from "@/src/services/magazzino.service";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
@@ -41,12 +40,6 @@ export function magazzinoRowToRicambioUI(
     markupBase > 0 ? Math.round(((vendita - markupBase) / markupBase) * 1000) / 10 : 0;
   const autoreSalvato = meta.autoreUltimaModifica?.trim();
 
-  const compatibilitaMezzi = readCompatLabelsForUi(
-    { compatibilitaMezzi: fromMeta.compatibilitaMezzi, compatibilitaRefs: fromMeta.compatibilitaRefs },
-    mezziListe,
-    "magazzino-db-ui-adapter.magazzinoRowToRicambioUI",
-  );
-
   return {
     id: row.id,
     marca: row.marca?.trim() || "—",
@@ -58,7 +51,7 @@ export function magazzinoRowToRicambioUI(
     descrizione: row.nome,
     note: fromMeta.note,
     categoria: fromMeta.categoria,
-    compatibilitaMezzi,
+    compatibilitaMezzi: fromMeta.compatibilitaMezzi,
     compatibilitaRefs: fromMeta.compatibilitaRefs,
     scorta: Math.max(0, Math.round(num(row.quantita, 0))),
     scortaMinima: fromMeta.scortaMinima,

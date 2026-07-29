@@ -183,7 +183,7 @@ export function LavorazioniDigitalCaptureLauncher({
   const analyzeTriggeredRef = useRef<string | null>(null);
   const gestToast = useGestionaleToast();
 
-  const { busy: wizardBusy, error, retryAfterSec, runAnalyze, reset: resetWizardApi } = useDocumentCaptureWizardApi(captureId);
+  const { busy: wizardBusy, error, retryAfterSec, analyzePhase, heartbeatAt, runAnalyze, reset: resetWizardApi } = useDocumentCaptureWizardApi(captureId);
   const {
     phase: uploadPhase,
     error: uploadError,
@@ -863,9 +863,12 @@ export function LavorazioniDigitalCaptureLauncher({
             uploadProgress,
             analyzeBusy: wizardBusy,
             uploadError,
+            analyzePhase,
+            heartbeatAt,
+            useChecklist: true,
           })
         : null,
-    [step, uploadPhase, uploadProgress, uploadError, wizardBusy],
+    [step, uploadPhase, uploadProgress, uploadError, wizardBusy, analyzePhase, heartbeatAt],
   );
 
   const pipelineBusy =

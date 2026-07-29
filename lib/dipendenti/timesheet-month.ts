@@ -223,3 +223,32 @@ export function shiftDayDate(dayYmd: string, deltaDays: number): string {
   d.setDate(d.getDate() + deltaDays);
   return dateYmdFromDate(d);
 }
+
+/** Giorni del mese che cadono nella settimana lun-dom ancorata a `weekAnchor`. */
+export function filterMonthDaysByWeek(
+  monthDays: readonly TimesheetDayInfo[],
+  weekAnchor: string,
+): TimesheetDayInfo[] {
+  const { from, to } = weekRangeFromAnchor(weekAnchor);
+  return monthDays.filter((d) => d.dateYmd >= from && d.dateYmd <= to);
+}
+
+/** `true` se spostare l'anchor di `delta` settimane lascia almeno un giorno nel mese. */
+export function canShiftWeekAnchorInMonth(
+  monthKey: TimesheetMonthKey,
+  weekAnchor: string,
+  deltaWeeks: number,
+): boolean {
+  const shifted = shiftWeekAnchor(weekAnchor, deltaWeeks);
+  const monthDays = buildMonthDays(monthKey);
+  return filterMonthDaysByWeek(monthDays, shifted).length > 0;
+}
+
+/** Anchor iniziale: oggi se nel mese, altrimenti primo giorno. */
+export function resolveWeekAnchorForMonth(
+  monthKey: TimesheetMonthKey,
+  referenceDate: Date = new Date(),
+): string {
+  const today = dateYmdFromDate(referenceDate);
+  return today.startsWith(`${monthKey}-`) ? today : monthKeyToFirstDay(monthKey);
+}

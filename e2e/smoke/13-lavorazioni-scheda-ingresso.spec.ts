@@ -4,9 +4,12 @@ import { adminCredentials, loginViaUi, managerCredentials, operatoreCredentials 
 import { buildSchedaIngressoAuditFixture } from "../fixtures/scheda-ingresso-test-data";
 import {
   attachSchedaPayloadCapture,
-  clickNuovaLavorazioneCta,
+  openNuovaLavorazioneSchedaVuota,
   clickSalvaSchedaHub,
   clickSalvaSchedaIngressoEdit,
+  confirmMezzoAnagraficaChanges,
+  cancelMezzoAnagraficaConfirm,
+  expectMezzoAnagraficaConfirmVisible,
   fillListCombobox,
   fillIdentificazioneMacchina,
   fillLavorazioniRigaPrima,
@@ -15,9 +18,12 @@ import {
   hubDialog,
   openIngressoEditorFromHub,
   openLavorazioniEditorFromHub,
+  openNuovaLavorazioneSchedaVuota,
   openSchedeHubForToken,
   searchLavorazioneByToken,
+  selectMezzoFromSearchByTarga,
   submitCreateLavorazione,
+  waitForGlobalOptionsReady,
 } from "../helpers/lavorazioni-scheda";
 import { applySmokeTeardown } from "../helpers/smoke-teardown";
 
@@ -42,7 +48,7 @@ test("iOS regression: cliente combobox salvato senza blur prima del submit", asy
 
   await loginViaUi(page, adminCredentials());
   await page.goto("/lavorazioni");
-  await clickNuovaLavorazioneCta(page);
+  await openNuovaLavorazioneSchedaVuota(page);
   await fillMinimalCreateAndSaveWithoutClienteBlur(page, fixture);
 });
 
@@ -54,7 +60,7 @@ test("create → save → hub panoramica → edit ingresso → scheda lavorazion
 
   await loginViaUi(page, adminCredentials());
   await page.goto("/lavorazioni");
-  await clickNuovaLavorazioneCta(page);
+  await openNuovaLavorazioneSchedaVuota(page);
 
   await fillSchedaIngressoCreateForm(page, ingresso);
   await submitCreateLavorazione(page);
@@ -90,7 +96,7 @@ test("create → save → hub panoramica → edit ingresso → scheda lavorazion
     } else if (key === "km") {
       await editModal.getByLabel("KM").fill(val);
     } else if (key === "oreLavoro") {
-      await editModal.getByLabel("Ore lavoro").fill(val);
+      await editModal.getByLabel("Ore lavoro motore").fill(val);
     }
   }
 
@@ -111,6 +117,48 @@ test("create → save → hub panoramica → edit ingresso → scheda lavorazion
   expect(payloadWithCliente).toBeTruthy();
 });
 
+test("mezzo esistente: modifica anagrafica richiede conferma prima del salvataggio", async ({ page }) => {
+  test.setTimeout(900_000);
+  const fixture = buildSchedaIngressoAuditFixture();
+  const newTarga = `${fixture.ingresso.targa}X`.slice(0, 7);
+
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/lavorazioni");
+
+  await openNuovaLavorazioneSchedaVuota(page);
+  await fillSchedaIngressoCreateForm(page, fixture.ingresso);
+  await submitCreateLavorazione(page);
+
+  await page.getByRole("button", { name: /\+?\s*Nuova(\s+lavorazione)?/i }).click();
+  await selectMezzoFromSearchByTarga(page, fixture.ingresso.targa);
+
+  const scheda = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
+  await waitForGlobalOptionsReady(scheda);
+  const targaInput = scheda.getByRole("combobox", { name: /targa/i });
+  await targaInput.scrollIntoViewIfNeeded();
+  await targaInput.fill(newTarga);
+
+  const save = scheda.getByRole("button", { name: "Salva lavorazione" });
+  await save.scrollIntoViewIfNeeded();
+  await save.click();
+  await expectMezzoAnagraficaConfirmVisible(page);
+
+  await cancelMezzoAnagraficaConfirm(page);
+  await expect(scheda).toBeVisible();
+  await expect(targaInput).toHaveValue(newTarga);
+
+  await targaInput.fill(newTarga);
+  await save.click();
+  await expectMezzoAnagraficaConfirmVisible(page);
+  const createResponse = page.waitForResponse(
+    (res) => res.url().includes("/rest/v1/lavorazioni") && res.request().method() === "POST" && res.ok(),
+    { timeout: 120_000 },
+  );
+  await confirmMezzoAnagraficaChanges(page);
+  await createResponse;
+  await expect(scheda).toBeHidden({ timeout: 60_000 });
+});
+
 async function smokeCreateLavorazioneForRole(
   page: import("@playwright/test").Page,
   creds: { email: string; password: string },
@@ -118,7 +166,7 @@ async function smokeCreateLavorazioneForRole(
   const fixture = buildSchedaIngressoAuditFixture();
   await loginViaUi(page, creds);
   await page.goto("/lavorazioni");
-  await clickNuovaLavorazioneCta(page);
+  await openNuovaLavorazioneSchedaVuota(page);
   await fillMinimalCreateAndSaveWithoutClienteBlur(page, fixture);
   await submitCreateLavorazione(page);
   await searchLavorazioneByToken(page, fixture.token);

@@ -4,15 +4,10 @@ import {
   type AddettoRecord,
 } from "@/lib/lavorazioni/addetto-model";
 import {
-  isCaptureSignatureFieldKey,
-  pickCaptureSignatureDataUrl,
-} from "@/lib/document-capture/capture-signature-field-keys";
-import {
   formatCaptureLavorazioniText,
   isCaptureLavorazioneFieldKey,
 } from "@/lib/document-capture/capture-lavorazioni-text";
 import type { EntityResolutionResult } from "@/lib/entity-resolution/entity-resolution-types";
-import { hasSignatureDataUrl } from "@/lib/media/signature-pad";
 
 function normFieldKey(key: string): string {
   return key.trim().toLowerCase().replace(/^ingresso\./, "");
@@ -318,9 +313,6 @@ export function formatCaptureReviewDisplayValue(
       ? formatCaptureLavorazioniText(picked)
       : formatCaptureMultilineText(picked);
   }
-  if (isCaptureSignatureFieldKey(key)) {
-    return pickCaptureSignatureDataUrl(input.raw, input.confirmed, input.normalized);
-  }
   const raw = safeTrim(input.raw);
   const confirmed = safeTrim(input.confirmed);
   const normalized = safeTrim(input.normalized);
@@ -368,9 +360,6 @@ export function formatCaptureReviewDraftValue(
   value: string,
   opts?: { addettiRecords?: readonly AddettoRecord[] },
 ): string {
-  if (isCaptureSignatureFieldKey(fieldKey)) {
-    return hasSignatureDataUrl(value) ? value.trim() : "";
-  }
   if (isCaptureMultilineFieldKey(fieldKey)) {
     return isCaptureLavorazioneFieldKey(fieldKey)
       ? formatCaptureLavorazioniText(value.trim())

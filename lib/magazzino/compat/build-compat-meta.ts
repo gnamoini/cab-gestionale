@@ -3,6 +3,7 @@ import {
   dedupeCompatRefsPreferExplicitModels,
   labelsToCompatRefs,
   refsToCompatLabels,
+  sanitizeCompatRefsForPersist,
   type LabelToCompatRefOptions,
   type RicambioCompatRef,
 } from "@/lib/magazzino/ricambio-compat-resolver";
@@ -22,11 +23,18 @@ function sortedLabelsEqual(a: readonly string[], b: readonly string[]): boolean 
 export function buildCompatMetaForSave(
   refs: readonly RicambioCompatRef[],
   liste: MezziListePrefs,
+  opts?: LabelToCompatRefOptions,
 ): Pick<MagazzinoRicambioMeta, "compatibilitaRefs" | "compatibilitaMezzi"> {
-  const deduped = dedupeCompatRefsPreferExplicitModels(refs);
-  const labels = refsToCompatLabels(deduped, liste);
+  const sanitized = sanitizeCompatRefsForPersist(refs, liste, opts);
+  const deduped = dedupeCompatRefsPreferExplicitModels(sanitized);
+  const labels = refsToCompatLabels(deduped, liste, opts?.prefsListe ? { prefsListe: opts.prefsListe } : undefined);
+  const stableRefs =
+    opts?.prefsListe && labels.length > 0
+      ? labelsToCompatRefs(labels, liste, opts)
+      : deduped;
+  const finalRefs = dedupeCompatRefsPreferExplicitModels(stableRefs);
   return {
-    compatibilitaRefs: deduped.length > 0 ? deduped : undefined,
+    compatibilitaRefs: finalRefs.length > 0 ? finalRefs : undefined,
     compatibilitaMezzi: labels.length > 0 ? labels : undefined,
   };
 }

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { mutateCaptureWithEvent } from "@/lib/document-capture/mutate-capture-with-event.server";
 import { hashCaptureFieldsRows } from "@/lib/document-capture/capture-apply-plan";
-import { isCaptureSignatureFieldKey } from "@/lib/document-capture/capture-signature-field-keys";
 import { getCompanyIdForUserOrNull } from "@/lib/document-capture/company-id.server";
 import { requireDocumentCaptureAuth } from "@/lib/document-capture/document-capture-route-auth.server";
 import { traceDocumentCaptureOperation } from "@/lib/document-capture/document-capture-telemetry.server";
@@ -71,7 +70,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       confirmed_at: new Date().toISOString(),
       confirmed_by: userId,
     };
-    if (valueSource === "manual" && !isCaptureSignatureFieldKey(field.fieldKey)) {
+    if (valueSource === "manual") {
       patchRow.normalized_value = field.confirmedValue;
       patchRow.raw_value = field.confirmedValue;
     }

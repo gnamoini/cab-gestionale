@@ -9,11 +9,8 @@ import {
   sanitizeCaptureExtractedFieldValue,
 } from "@/lib/document-capture/capture-field-key-aliases";
 import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
-import {
-  isCaptureSignatureFieldKey,
-  pickCaptureSignatureDataUrl,
-} from "@/lib/document-capture/capture-signature-field-keys";
-import { isCaptureAiSignatureExtractionEnabled } from "@/lib/document-capture/capture-signature-crop";
+import { applyOreLavoroStorageToCampi, resolveOreLavoroFields } from "@/lib/schede/resolve-ore-lavoro-fields";
+import type { TagliandoLavorazioneFields } from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
 import { emptySchedaIngressoFields } from "@/lib/domain/intervento-context/build-intervento-context";
 import { findAddettoByStoredName, addettoDisplayName, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { findDuplicateByCodici } from "@/lib/magazzino/duplicates";
@@ -52,6 +49,8 @@ const INGRESSO_KEY_MAP: Record<string, keyof SchedaIngressoFields> = {
   numero_scuderia: "nScuderia",
   orelavoro: "oreLavoro",
   ore_lavoro: "oreLavoro",
+  ore_lavoro_motore: "oreLavoro",
+  ore_motore: "oreLavoro",
   ore: "oreLavoro",
   tipotelaio: "tipoTelaio",
   tipo_telaio: "tipoTelaio",
@@ -76,14 +75,6 @@ const INGRESSO_KEY_MAP: Record<string, keyof SchedaIngressoFields> = {
   telefono: "richiedenteTelefono",
   telefono_richiedente: "richiedenteTelefono",
   richiedentetelefono: "richiedenteTelefono",
-  richiedentefirma: "richiedenteFirma",
-  richiedente_firma: "richiedenteFirma",
-  firma_richiedente: "richiedenteFirma",
-  firma_autista: "richiedenteFirma",
-  addettofirma: "addettoFirma",
-  addetto_firma: "addettoFirma",
-  firma_addetto: "addettoFirma",
-  firma_addetto_officina: "addettoFirma",
 };
 
 const MAX_LAVORAZIONI_RIGHE = 24;
@@ -117,9 +108,6 @@ function formatResolvedCaptureFieldValue(fieldKey: string, trimmed: string): str
 }
 
 export function resolveCaptureFieldValue(row: CaptureFieldRow): string {
-  if (isCaptureSignatureFieldKey(row.field_key)) {
-    return pickCaptureSignatureDataUrl(row.raw_value, row.confirmed_value, row.normalized_value);
-  }
   if (row.value_source === "manual") {
     const manual = row.confirmed_value?.trim() ?? "";
     return formatResolvedCaptureFieldValue(row.field_key, manual);
@@ -150,6 +138,86 @@ export function resolveCaptureLavorazioneNote(fields: readonly CaptureFieldRow[]
     if (value) return value;
   }
   return "";
+}
+
+const CAPTURE_CHECKBOX_TRUE = new Set([
+  "1",
+  "true",
+  "yes",
+  "si",
+  "sì",
+  "x",
+  "✓",
+  "✔",
+  "v",
+  "checked",
+  "barrato",
+  "spuntato",
+  "on",
+]);
+
+const CAPTURE_CHECKBOX_FALSE = new Set(["0", "false", "no", "off", "unchecked", "vuoto"]);
+
+/** Interpreta valore OCR checkbox scheda ingresso. */
+export function parseCaptureCheckboxValue(raw: string): boolean {
+  const trimmed = raw.trim();
+  if (!trimmed) return false;
+  const norm = trimmed.toLowerCase().replace(/\s+/g, "");
+  if (CAPTURE_CHECKBOX_FALSE.has(norm)) return false;
+  if (CAPTURE_CHECKBOX_TRUE.has(norm)) return true;
+  // ponytail: segno grafico non in whitelist → true se non esplicitamente false
+  if (/^[x✓✔v\/\\]+$/i.test(trimmed)) return true;
+  return true;
+}
+
+const TAGLIANDO_CAPTURE_KEY_ALIASES: Record<string, keyof Pick<
+  TagliandoLavorazioneFields,
+  "repairPresent" | "isTagliando" | "isGaranzia" | "isRecidivo"
+>> = {
+  riparazione: "repairPresent",
+  repair: "repairPresent",
+  repair_present: "repairPresent",
+  tagliando: "isTagliando",
+  is_tagliando: "isTagliando",
+  garanzia: "isGaranzia",
+  in_garanzia: "isGaranzia",
+  ingaranzia: "isGaranzia",
+  is_garanzia: "isGaranzia",
+  recidivo: "isRecidivo",
+  is_recidivo: "isRecidivo",
+};
+
+function applyCaptureTipoInterventoLegacy(
+  raw: string,
+  out: Partial<TagliandoLavorazioneFields>,
+): void {
+  const norm = raw.trim().toLowerCase();
+  if (!norm) return;
+  if (norm.includes("tagliando")) out.isTagliando = true;
+  if (norm.includes("riparazione") || norm.includes("repair")) out.repairPresent = true;
+  if (norm.includes("garanzia")) out.isGaranzia = true;
+  if (norm.includes("recidivo")) out.isRecidivo = true;
+}
+
+/** Flag intervento scheda ingresso da checkbox OCR. */
+export function mapCaptureFieldsToTagliando(
+  fields: readonly CaptureFieldRow[],
+): Partial<TagliandoLavorazioneFields> {
+  const out: Partial<TagliandoLavorazioneFields> = {};
+
+  for (const row of fields) {
+    const key = normKey(row.field_key);
+    const field = TAGLIANDO_CAPTURE_KEY_ALIASES[key];
+    if (field) {
+      out[field] = parseCaptureCheckboxValue(resolveCaptureFieldValue(row));
+      continue;
+    }
+    if (key === "tipo_intervento" || key === "tipointervento") {
+      applyCaptureTipoInterventoLegacy(resolveCaptureFieldValue(row), out);
+    }
+  }
+
+  return out;
 }
 
 function composeRichiedenteFromCapture(fields: readonly CaptureFieldRow[], current: string): string {
@@ -630,7 +698,18 @@ export function mapCaptureFieldsToIngresso(
 ): SchedaIngressoFields {
   const out = emptySchedaIngressoFields();
   for (const row of fields) {
-    const mapped = INGRESSO_KEY_MAP[normKey(row.field_key)];
+    const nk = normKey(row.field_key);
+    if (nk === "ore_lavoro_pto" || nk === "ore_pto" || nk === "orelavoro_pto") {
+      const pto = resolveCaptureFieldValue(row);
+      const ore = resolveOreLavoroFields({
+        oreLavoro: out.oreLavoro,
+        oreLavoroPto: pto,
+      });
+      applyOreLavoroStorageToCampi(out as Record<string, unknown>, ore);
+      out.oreLavoro = ore.oreLavoroMotore;
+      continue;
+    }
+    const mapped = INGRESSO_KEY_MAP[nk];
     if (!mapped || mapped === "targetType" || mapped === "attrezzaturaId") continue;
     out[mapped] = resolveCaptureFieldValue(row);
   }
@@ -755,47 +834,6 @@ export async function fetchCaptureFieldRows(captureId: string): Promise<CaptureF
     raw_value: f.raw_value ?? null,
     value_source: (f as { value_source?: CaptureFieldRow["value_source"] }).value_source,
   }));
-}
-
-function captureRowHasSignature(row: CaptureFieldRow): boolean {
-  return Boolean(
-    pickCaptureSignatureDataUrl(row.raw_value, row.confirmed_value, row.normalized_value),
-  );
-}
-
-/** Ritenta estrazione firme se mancanti (catture analizzate prima del fix crop). */
-export async function ensureCaptureSignatureFieldRows(
-  captureId: string,
-  rows: readonly CaptureFieldRow[],
-): Promise<CaptureFieldRow[]> {
-  if (!isCaptureAiSignatureExtractionEnabled()) return [...rows];
-
-  const hasRichiedente = rows.some(
-    (row) => row.field_key === "firma_richiedente" && captureRowHasSignature(row),
-  );
-  const hasAddetto = rows.some(
-    (row) => row.field_key === "firma_addetto" && captureRowHasSignature(row),
-  );
-  if (hasRichiedente && hasAddetto) return [...rows];
-
-  try {
-    const res = await fetch(`/api/document-capture/${captureId}/extract-signatures`, {
-      method: "POST",
-    });
-    if (!res.ok) return [...rows];
-    const body = (await res.json()) as { fields?: CaptureFieldRow[] };
-    const sigRows = body.fields ?? [];
-    if (sigRows.length === 0) return [...rows];
-
-    const byKey = new Map(rows.map((row) => [row.field_key, { ...row }]));
-    for (const sig of sigRows) {
-      const prev = byKey.get(sig.field_key);
-      byKey.set(sig.field_key, prev ? { ...prev, ...sig } : sig);
-    }
-    return [...byKey.values()];
-  } catch {
-    return [...rows];
-  }
 }
 
 export async function fetchCaptureIngressoFields(captureId: string): Promise<SchedaIngressoFields> {

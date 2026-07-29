@@ -6,12 +6,14 @@ import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso
 import { mergeSchedaIngressoWithMezzoPriority } from "@/lib/schede/merge-scheda-ingresso-with-mezzo-priority";
 import {
   createLinkedMezzoSnapshot,
+  createLinkedMezzoSnapshotFromFields,
   emptySchedaIngressoMezzoLinkState,
   hasLinkedMezzoFieldConflict,
   resolvePreferredMezzoIdForSave,
   type LinkedMezzoSnapshot,
   type SchedaIngressoMezzoLinkState,
 } from "@/lib/schede/scheda-ingresso-mezzo-link-state";
+import { pickMezzoPermanentFields, type MezzoPermanentFieldKey } from "@/lib/schede/scheda-ingresso-field-roles";
 import type { SchedaIngressoIdentField } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
@@ -115,6 +117,37 @@ export function useSchedaIngressoMezzoLink({
     setActiveMatchField(null);
   }, []);
 
+  const linkMezzoExplicit = useCallback(
+    (mezzo: MezzoGestito, field: SchedaIngressoIdentField = "matricola") => {
+      setLinkState({
+        status: "linked",
+        pendingMezzo: null,
+        linkedSnapshot: createLinkedMezzoSnapshot(mezzo, field),
+      });
+      setActiveMatchField(null);
+    },
+    [],
+  );
+
+  const bootstrapLinkedMezzo = useCallback(
+    (
+      mezzo: MezzoGestito,
+      fieldsAtOpen: Pick<SchedaIngressoFields, MezzoPermanentFieldKey>,
+      field: SchedaIngressoIdentField = "matricola",
+    ) => {
+      setLinkState((prev) => {
+        if (prev.status === "linked" && prev.linkedSnapshot?.id === mezzo.id) return prev;
+        return {
+          status: "linked",
+          pendingMezzo: null,
+          linkedSnapshot: createLinkedMezzoSnapshotFromFields(mezzo, fieldsAtOpen, field),
+        };
+      });
+      setActiveMatchField(null);
+    },
+    [],
+  );
+
   const hasConflict = hasLinkedMezzoFieldConflict(fields, linkState.linkedSnapshot);
   const preferredMezzoId = resolvePreferredMezzoIdForSave(linkState);
 
@@ -124,6 +157,8 @@ export function useSchedaIngressoMezzoLink({
     onExactMezzoMatch,
     dismissPendingMatch,
     acceptLinkMezzo,
+    linkMezzoExplicit,
+    bootstrapLinkedMezzo,
     clearLink,
     hasConflict,
     preferredMezzoId,

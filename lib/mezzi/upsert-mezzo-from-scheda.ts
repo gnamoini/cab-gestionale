@@ -36,6 +36,7 @@ export type UpsertMezzoFromSchedaParams = {
   updatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
   lavorazioneId?: string | null;
   writeContext?: import("@/lib/domain/intervento-context/intervento-write-context").InterventoWriteContext;
+  userId?: string | null;
   create: (data: MezzoInsert) => Promise<MezzoRow>;
   update: (id: string, data: MezzoUpdate) => Promise<MezzoRow>;
   applyAssociationChange?: (input: ApplyAssociationChangeInput) => Promise<MezzoRow>;
@@ -47,6 +48,7 @@ export type UpsertMezzoFromSchedaParams = {
     oldValues: Record<string, string>;
     newValues: Record<string, string>;
     lavorazioneId?: string | null;
+    userId?: string | null;
   }) => void | Promise<void>;
 };
 
@@ -93,6 +95,7 @@ export async function upsertMezzoFromSchedaIngresso(
     lavorazioneId,
     writeContext,
     recordHistory,
+    userId,
   } = params;
   const resolvedCtx = resolveInterventoWriteContext(writeContext);
   const effectivePlan = updatePlan ?? resolveMezzoUpdatePlanFromContext(resolvedCtx);
@@ -137,6 +140,7 @@ export async function upsertMezzoFromSchedaIngresso(
             oldValues,
             newValues,
             lavorazioneId,
+            userId,
           });
         }
         return row;

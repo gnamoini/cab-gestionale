@@ -133,6 +133,7 @@
     "audit:barrel-entropy": "npx tsx scripts/audit-barrel-entropy.ts",
     "analyze": "npx tsx scripts/analyze-bundle.ts",
     "bench:skeleton": "npx tsx scripts/bench/skeleton-runtime-benchmark.ts --base-url=http://localhost:3000",
+    "bench:document-capture": "npx tsx scripts/bench/document-capture-analyze-benchmark.ts",
     "bench:skeleton:throttle": "npx tsx scripts/bench/skeleton-runtime-benchmark.ts --base-url=http://localhost:3000 --throttle",
     "bench:memory": "npx tsx scripts/bench/memory-regression-benchmark.ts --base-url=http://localhost:3000",
     "bench:memory:trend": "npx tsx scripts/bench/memory-regression-benchmark.ts --base-url=http://localhost:3000 --cycles=10",

@@ -12,7 +12,12 @@
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { compatDisplayModelsLabel } from "@/lib/magazzino/compat/compat-display";
 import type { CompatInput } from "@/lib/magazzino/compat/compat-types";
-import { resolveCompatibilitaRicambio } from "@/lib/magazzino/compat/resolve-compatibilita-ricambio";
+import {
+  resolveCompatibilitaRicambio,
+  type ResolveCompatibilitaOpts,
+} from "@/lib/magazzino/compat/resolve-compatibilita-ricambio";
+
+export type CompatReadOpts = ResolveCompatibilitaOpts;
 
 export type CompatReadContext = {
   ricambioId?: string;
@@ -54,31 +59,42 @@ function guardIfMissingListe(
   }
 }
 
+function resolveForUi(
+  ricambio: CompatInput & { id?: string },
+  liste: MezziListePrefs | undefined,
+  opts?: CompatReadOpts,
+) {
+  return resolveCompatibilitaRicambio(ricambio, liste, opts);
+}
+
 export function readCompatLabelsForUi(
   ricambio: CompatInput & { id?: string },
   liste: MezziListePrefs | undefined,
   source: string,
+  opts?: CompatReadOpts,
 ): string[] {
   guardIfMissingListe(source, liste, "labels", ricambio.id);
-  return resolveCompatibilitaRicambio(ricambio, liste).labels;
+  return resolveForUi(ricambio, liste, opts).labels;
 }
 
 export function readCompatSortKeyForUi(
   ricambio: CompatInput & { id?: string },
   liste: MezziListePrefs | undefined,
   source: string,
+  opts?: CompatReadOpts,
 ): string {
   guardIfMissingListe(source, liste, "sortKey", ricambio.id);
-  return resolveCompatibilitaRicambio(ricambio, liste).sortKey;
+  return resolveForUi(ricambio, liste, opts).sortKey;
 }
 
 export function readCompatDisplayForUi(
   ricambio: CompatInput & { id?: string },
   liste: MezziListePrefs | undefined,
   source: string,
+  opts?: CompatReadOpts,
 ): string {
   guardIfMissingListe(source, liste, "display", ricambio.id);
-  return resolveCompatibilitaRicambio(ricambio, liste).display;
+  return resolveForUi(ricambio, liste, opts).display;
 }
 
 /** Sottotitolo lista: solo modelli compatibili (senza marca attrezzatura). */
@@ -86,10 +102,11 @@ export function readCompatModelsDisplayForUi(
   ricambio: CompatInput & { id?: string },
   liste: MezziListePrefs | undefined,
   source: string,
+  opts?: CompatReadOpts,
 ): string {
   guardIfMissingListe(source, liste, "display", ricambio.id);
-  const resolved = resolveCompatibilitaRicambio(ricambio, liste);
-  if (resolved.labels.length === 0 && resolved.orphanLabels.length === 0) {
+  const resolved = resolveForUi(ricambio, liste, opts);
+  if (!resolved.isConfigured) {
     return compatDisplayModelsLabel([]);
   }
   if (resolved.labels.length > 0) {

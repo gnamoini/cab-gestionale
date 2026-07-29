@@ -10,6 +10,10 @@ import {
 } from "@/components/gestionale/global-table";
 import type { MaintenanceServiceHistoryView } from "@/lib/maintenance-plans/types";
 import {
+  formatHubNextTagliandoHint,
+  type HubNextTagliandoHintInput,
+} from "@/lib/maintenance-plans/format-hub-next-tagliando-hint";
+import {
   buildAnchoredHubMilestones,
   estimateHubMilestoneDueDate,
   formatMilestoneThreshold,
@@ -36,6 +40,13 @@ import {
 import { useToggleTagliandiMatrixCellMutation } from "@/src/hooks/gestionale/use-maintenance-plan-mutations";
 import { useRecomputeForecastMutation } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
+
+const HINT_TONE_CLASS = {
+  neutral: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
+  warning: "bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200",
+  danger: "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-200",
+} as const;
 
 const SCAGLIONI_ROW_CLASS: Record<AnchoredHubMilestoneRow["state"], string> = {
   done: "",
@@ -60,7 +71,72 @@ export type MezziHubTagliandiStoricoPlan = {
   /** Forecast SSOT dal config mezzo (prossimo due). */
   nextDateEstimated?: string | null;
   remainingMeterToNext?: number | null;
+  /** Input per indicatore inline prossimo tagliando (v2). */
+  nextTagliandoHint?: HubNextTagliandoHintInput | null;
 };
+
+function MezziHubNextTagliandoHint({ hintInput }: { hintInput: HubNextTagliandoHintInput | null | undefined }) {
+  if (!hintInput) return null;
+  const hint = formatHubNextTagliandoHint(hintInput);
+  return (
+    <p
+      className={`inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-medium leading-snug ${HINT_TONE_CLASS[hint.tone]}`}
+      role="status"
+    >
+      {hint.text}
+    </p>
+  );
+}
+
+function MezziHubTagliandiNoPresetPlaceholder({
+  canEdit,
+  onRequestAssignPreset,
+}: {
+  canEdit: boolean;
+  onRequestAssignPreset?: () => void;
+}) {
+  return (
+    <GestionaleListTable
+      fixed
+      colgroup={
+        <>
+          <col className="w-[2.75rem]" />
+          <col />
+          <col className="w-[4.75rem]" />
+        </>
+      }
+      headRow={
+        <>
+          <GlobalTableHeadLabel label="N°" align="center" />
+          <GlobalTableHeadLabel label="Soglia" />
+          <GlobalTableHeadLabel label="Fatto" align="center" />
+        </>
+      }
+    >
+      <tr className={gestionaleListTableRowBaseClass}>
+        <td className={`${gestionaleListTableTdCenter} py-3 font-mono text-xs font-semibold text-[color:var(--cab-text-muted)]`}>
+          1
+        </td>
+        <td className={`${gestionaleListTableTd} py-3 text-sm text-[color:var(--cab-text-muted)]`}>
+          Configura piano tagliandi
+        </td>
+        <td className={`${gestionaleListTableTdCenter} py-3`}>
+          <input
+            type="checkbox"
+            className={dsCheckboxInput}
+            checked={false}
+            disabled={!canEdit}
+            title={!canEdit ? READONLY_PERMISSION_HINT : "Associa un piano tagliandi a questo mezzo"}
+            aria-label="Configura piano tagliandi"
+            onChange={() => {
+              if (canEdit) onRequestAssignPreset?.();
+            }}
+          />
+        </td>
+      </tr>
+    </GestionaleListTable>
+  );
+}
 
 function TagliandiHubInsetEmpty({ message }: { message: string }) {
   return (
@@ -172,9 +248,12 @@ function MezziHubTagliandiScaglioniTable({
 
   return (
     <div className="space-y-3">
-      <h4 className="min-w-0 truncate text-base font-semibold leading-snug text-[color:var(--cab-text)]">
-        {plan.planLabel}
-      </h4>
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <h4 className="min-w-0 truncate text-base font-semibold leading-snug text-[color:var(--cab-text)]">
+          {plan.planLabel}
+        </h4>
+        <MezziHubNextTagliandoHint hintInput={plan.nextTagliandoHint} />
+      </div>
       <GestionaleListTable
         fixed
         colgroup={
@@ -279,14 +358,25 @@ export function MezziHubTagliandiUnifiedSection({
   history,
   canEdit,
   onToggled,
+  hasConfigs = true,
+  onRequestAssignPreset,
 }: {
   mezzo: MezzoGestito;
   plans: MezziHubTagliandiStoricoPlan[];
   history: MaintenanceServiceHistoryView[];
   canEdit: boolean;
   onToggled: () => void;
+  /** false quando il mezzo non ha preset v2 assegnati. */
+  hasConfigs?: boolean;
+  onRequestAssignPreset?: () => void;
 }) {
   const scaglioniPlans = plans.filter((p) => p.milestone.interval > 0 && p.planId);
+
+  if (!hasConfigs) {
+    return (
+      <MezziHubTagliandiNoPresetPlaceholder canEdit={canEdit} onRequestAssignPreset={onRequestAssignPreset} />
+    );
+  }
 
   if (scaglioniPlans.length === 0) {
     return (

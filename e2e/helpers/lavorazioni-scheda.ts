@@ -102,13 +102,49 @@ export async function waitForGlobalOptionsReady(
   await expect(save).toBeEnabled({ timeout: timeoutMs });
 }
 
-/** CTA toolbar: su mobile `+ Nuova`, da sm `+ Nuova lavorazione`. */
+/** Step 1 wizard: selezione mezzo. */
+export function mezzoSelectionDialog(page: Page): Locator {
+  return page
+    .getByRole("dialog")
+    .filter({ hasText: "Nuova lavorazione" })
+    .filter({ has: page.getByRole("searchbox", { name: "Cerca mezzo" }) });
+}
+
+/** Modal scheda ingresso (step 2). */
+export function nuovaLavorazioneSchedaDialog(page: Page): Locator {
+  return page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
+}
+
+export async function selectNuovoMezzoFromSearch(page: Page): Promise<void> {
+  const step = mezzoSelectionDialog(page);
+  await expect(step).toBeVisible({ timeout: 45_000 });
+  await step.getByRole("button", { name: "Nuovo mezzo" }).click();
+  const scheda = nuovaLavorazioneSchedaDialog(page);
+  await expect(scheda.getByRole("button", { name: "Salva lavorazione" })).toBeVisible({ timeout: 45_000 });
+}
+
+export async function selectMezzoFromSearchByTarga(page: Page, targa: string): Promise<void> {
+  const step = mezzoSelectionDialog(page);
+  await expect(step).toBeVisible({ timeout: 45_000 });
+  const search = step.getByRole("searchbox", { name: "Cerca mezzo" });
+  await search.fill(targa);
+  await step.getByRole("option").filter({ hasText: targa }).first().click();
+  const scheda = nuovaLavorazioneSchedaDialog(page);
+  await expect(scheda.getByRole("button", { name: "Salva lavorazione" })).toBeVisible({ timeout: 45_000 });
+}
+
+/** CTA toolbar: su mobile `+ Nuova`, da sm `+ Nuova lavorazione`. Apre step selezione mezzo. */
 export async function clickNuovaLavorazioneCta(page: Page): Promise<void> {
   const btn = page.getByRole("button", { name: /\+?\s*Nuova(\s+lavorazione)?/i });
   await expect(btn).toBeVisible({ timeout: 45_000 });
   await btn.click();
-  const modal = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
-  await expect(modal).toBeVisible({ timeout: 45_000 });
+  await expect(mezzoSelectionDialog(page)).toBeVisible({ timeout: 45_000 });
+}
+
+/** Flusso completo fino alla scheda ingresso vuota (nuovo mezzo). */
+export async function openNuovaLavorazioneSchedaVuota(page: Page): Promise<void> {
+  await clickNuovaLavorazioneCta(page);
+  await selectNuovoMezzoFromSearch(page);
 }
 
 /** Listbox portal del combobox (`aria-controls`), fallback al primo listbox page. */
@@ -224,6 +260,7 @@ export async function fillSchedaIngressoCreateForm(
   await matricolaInput.fill(data.matricola);
   await expect(matricolaInput).toHaveValue(data.matricola, { timeout: 10_000 });
   await modal.getByLabel("N. scuderia").fill(data.nScuderia);
+  await modal.getByLabel("Ore lavoro motore").fill(data.oreLavoro);
 
   await fillListCombobox(page, "Tipo telaio", data.tipoTelaio, modal);
   await fillListCombobox(page, "Marca telaio", data.marcaTelaio, modal);
@@ -234,7 +271,6 @@ export async function fillSchedaIngressoCreateForm(
   const targaInput = modal.getByRole("combobox", { name: /targa/i });
   await targaInput.scrollIntoViewIfNeeded();
   await targaInput.fill(data.targa);
-  await modal.getByLabel("Ore lavoro").fill(data.oreLavoro);
   await modal.getByLabel("KM").fill(data.km);
   if (data.livelloCarburante) {
     const legacyPercent: Record<string, number> = {
@@ -432,14 +468,47 @@ export async function clickSalvaSchedaHub(hub: Locator): Promise<void> {
 }
 
 /** Salva scheda ingresso edit modal con attesa persistenza. */
-export async function clickSalvaSchedaIngressoEdit(editModal: Locator): Promise<void> {
+export async function clickSalvaSchedaIngressoEdit(
+  editModal: Locator,
+  options?: { confirmMezzoAnagrafica?: boolean },
+): Promise<void> {
   const page = editModal.page();
   const persist = waitForSchedaPersist(page);
   const btn = editModal.getByRole("button", { name: "Salva scheda" });
   await btn.scrollIntoViewIfNeeded();
   await btn.click();
+  const confirm = mezzoAnagraficaConfirmDialog(page);
+  if (options?.confirmMezzoAnagrafica ?? true) {
+    if (await confirm.isVisible().catch(() => false)) {
+      await confirm.getByRole("button", { name: "Salva modifiche" }).click();
+      await expect(confirm).toBeHidden({ timeout: 15_000 });
+    }
+  }
   await persist;
   await expect(editModal).not.toBeVisible({ timeout: 30_000 });
+}
+
+/** Dialog conferma modifiche anagrafica mezzo (save gate scheda ingresso). */
+export function mezzoAnagraficaConfirmDialog(page: Page): Locator {
+  return page.getByRole("dialog").filter({ hasText: "Conferma modifiche mezzo" });
+}
+
+export async function expectMezzoAnagraficaConfirmVisible(page: Page): Promise<void> {
+  const dlg = mezzoAnagraficaConfirmDialog(page);
+  await expect(dlg).toBeVisible({ timeout: 15_000 });
+  await expect(dlg.getByText("Hai modificato alcuni dati dell'anagrafica del mezzo")).toBeVisible();
+}
+
+export async function cancelMezzoAnagraficaConfirm(page: Page): Promise<void> {
+  const dlg = mezzoAnagraficaConfirmDialog(page);
+  await dlg.getByRole("button", { name: "Torna alla scheda" }).click();
+  await expect(dlg).toBeHidden({ timeout: 10_000 });
+}
+
+export async function confirmMezzoAnagraficaChanges(page: Page): Promise<void> {
+  const dlg = mezzoAnagraficaConfirmDialog(page);
+  await dlg.getByRole("button", { name: "Salva modifiche" }).click();
+  await expect(dlg).toBeHidden({ timeout: 15_000 });
 }
 
 export function attachSchedaPayloadCapture(page: Page): {

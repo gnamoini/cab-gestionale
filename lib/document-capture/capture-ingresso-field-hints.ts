@@ -7,17 +7,17 @@ import {
   formatCaptureReviewDisplayValue,
   formatCaptureReviewDraftValue,
 } from "@/lib/document-capture/capture-field-display-value";
-import { isCaptureSignatureFieldKey } from "@/lib/document-capture/capture-signature-field-keys";
 import { normalizeIngressoCaptureFieldRows } from "@/lib/document-capture/capture-field-key-aliases";
 import {
-  ensureCaptureSignatureFieldRows,
   mapCaptureFieldsToIngresso,
+  mapCaptureFieldsToTagliando,
   type CaptureFieldRow,
 } from "@/lib/document-capture/capture-field-mapper";
+import {
+  DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS,
+  type TagliandoLavorazioneFields,
+} from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
 import { sortCaptureReviewFields } from "@/lib/document-capture/capture-field-review-order";
-import { buildClientResolutionContext } from "@/lib/entity-resolution/build-client-resolution-context";
-import type { EntityResolutionResult } from "@/lib/entity-resolution/entity-resolution-types";
-import { resolveCaptureGraph } from "@/lib/entity-resolution/resolve-capture-graph";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -83,12 +83,6 @@ const CAPTURE_TO_INGRESSO: Record<string, keyof SchedaIngressoFields> = {
   telefono: "richiedenteTelefono",
   telefono_richiedente: "richiedenteTelefono",
   richiedentetelefono: "richiedenteTelefono",
-  firma_richiedente: "richiedenteFirma",
-  richiedente_firma: "richiedenteFirma",
-  firma_autista: "richiedenteFirma",
-  firma_addetto: "addettoFirma",
-  addetto_firma: "addettoFirma",
-  firma_addetto_officina: "addettoFirma",
 };
 
 function normCaptureKey(key: string): string {
@@ -178,93 +172,78 @@ function fieldRawValue(row: CaptureFieldRow): string {
 export type CaptureIngressoCompileData = {
   fieldRows: CaptureFieldRow[];
   fields: SchedaIngressoFields;
+  tagliandoFields: TagliandoLavorazioneFields;
   hints: Partial<Record<keyof SchedaIngressoFields, CaptureIngressoFieldHint>>;
-  resolutionByCaptureKey: Record<string, EntityResolutionResult>;
   ambiguousCaptureKeys: string[];
   reviewCount: number;
 };
 
-export async function buildCaptureIngressoCompileData(input: {
-  captureId: string;
-  fieldRows: readonly CaptureFieldRow[];
-  sharedGlobalOpts: GlobalOptionsSlice;
-  magazzino?: readonly RicambioMagazzino[];
-  mezzi?: readonly MezzoGestito[];
-  addettiRecords?: readonly AddettoRecord[];
-}): Promise<CaptureIngressoCompileData> {
-  const normalizedRows = normalizeIngressoCaptureFieldRows(
-    input.fieldRows,
-    input.sharedGlobalOpts.mezziListe,
-  );
-  const rows = sortCaptureReviewFields(
-    await ensureCaptureSignatureFieldRows(input.captureId, normalizedRows),
-  );
-  const addettiRecords =
-    input.addettiRecords ?? input.sharedGlobalOpts.lavorazioni.addettiRecords ?? [];
-
+function buildDraftMaps(
+  rows: readonly CaptureFieldRow[],
+  addettiRecords: readonly AddettoRecord[],
+): { rawByKey: Record<string, string>; draftByKey: Record<string, string> } {
   const rawByKey: Record<string, string> = {};
   const draftByKey: Record<string, string> = {};
   for (const row of rows) {
     const raw = fieldRawValue(row);
     rawByKey[row.field_key] = raw;
     const ext = row as CaptureFieldRow & { raw_value?: string | null };
-    draftByKey[row.field_key] = formatCaptureReviewDisplayValue(
+    const storedNormalized = safeTrim(row.normalized_value);
+    const display = formatCaptureReviewDisplayValue(
       row.field_key,
       {
         raw: ext.raw_value,
         normalized: row.normalized_value,
         confirmed: row.confirmed_value,
+        resolvedLabel: storedNormalized || undefined,
       },
       { addettiRecords },
     );
+    draftByKey[row.field_key] = storedNormalized || display;
   }
+  return { rawByKey, draftByKey };
+}
 
-  const resolutionCtx = buildClientResolutionContext({
-    sharedGlobalOpts: input.sharedGlobalOpts,
-    magazzino: input.magazzino ?? [],
-    mezzi: input.mezzi ?? [],
-  });
-
-  const resolutionByCaptureKey: Record<string, EntityResolutionResult> = {};
-  if (resolutionCtx) {
-    const resolutionInputs = Object.entries(draftByKey)
-      .filter(([fieldKey, v]) => v.trim() && !isCaptureSignatureFieldKey(fieldKey))
-      .map(([field_key, value]) => ({
-        field_key,
-        raw_value: rawByKey[field_key] ?? value,
-        normalized_value: value,
-      }));
-
-    const { fields: resolved } = await resolveCaptureGraph(resolutionInputs, resolutionCtx, {
-      captureId: input.captureId,
-    });
-
-    for (const row of resolved) {
-      if (row.resolution.entityType !== "GENERIC") {
-        resolutionByCaptureKey[row.field_key] = row.resolution;
-      }
-    }
-
-    for (const [fieldKey, resolution] of Object.entries(resolutionByCaptureKey)) {
-      if (resolution.status === "resolved" && resolution.resolvedLabel) {
-        draftByKey[fieldKey] = formatCaptureReviewDraftValue(fieldKey, resolution.resolvedLabel, {
-          addettiRecords,
-        });
-      }
-    }
-  }
-
+/** Fast path: campi ingresso da SSOT `document_capture_fields` (senza re-resolve). */
+export function buildCaptureIngressoCompileDataFast(input: {
+  fieldRows: readonly CaptureFieldRow[];
+  sharedGlobalOpts: GlobalOptionsSlice;
+  addettiRecords?: readonly AddettoRecord[];
+}): Pick<CaptureIngressoCompileData, "fieldRows" | "fields" | "tagliandoFields"> {
+  const normalizedRows = normalizeIngressoCaptureFieldRows(
+    input.fieldRows,
+    input.sharedGlobalOpts.mezziListe,
+  );
+  const rows = sortCaptureReviewFields(normalizedRows);
+  const addettiRecords =
+    input.addettiRecords ?? input.sharedGlobalOpts.lavorazioni.addettiRecords ?? [];
+  const { draftByKey } = buildDraftMaps(rows, addettiRecords);
   const mappedRows: CaptureFieldRow[] = rows.map((row) => ({
     ...row,
     confirmed_value: draftByKey[row.field_key] ?? row.confirmed_value,
     normalized_value: draftByKey[row.field_key] ?? row.normalized_value,
   }));
-
   const fields = canonicalizeIngressoCatalogFields(
     mapCaptureFieldsToIngresso(mappedRows, addettiRecords),
     input.sharedGlobalOpts.mezziListe,
   );
+  const tagliandoFields: TagliandoLavorazioneFields = {
+    ...DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS,
+    ...mapCaptureFieldsToTagliando(mappedRows),
+  };
+  return { fieldRows: mappedRows, fields, tagliandoFields };
+}
 
+export async function buildCaptureIngressoCompileHints(input: {
+  fieldRows: readonly CaptureFieldRow[];
+  fields: SchedaIngressoFields;
+  sharedGlobalOpts: GlobalOptionsSlice;
+  magazzino?: readonly RicambioMagazzino[];
+  addettiRecords?: readonly AddettoRecord[];
+}): Promise<Pick<CaptureIngressoCompileData, "hints" | "ambiguousCaptureKeys" | "reviewCount">> {
+  const addettiRecords =
+    input.addettiRecords ?? input.sharedGlobalOpts.lavorazioni.addettiRecords ?? [];
+  const { rawByKey, draftByKey } = buildDraftMaps(input.fieldRows, addettiRecords);
   const catalogValidation: CaptureCatalogValidationInput = {
     fields: Object.entries(draftByKey).map(([field_key, value]) => ({ field_key, value })),
     addettiRecords,
@@ -273,11 +252,10 @@ export async function buildCaptureIngressoCompileData(input: {
   };
   const catalogWarnings = validateCaptureFieldsAgainstCatalogs(catalogValidation);
   const warningsByCaptureKey = captureCatalogWarningsByFieldKey(catalogWarnings);
-
   const hints: Partial<Record<keyof SchedaIngressoFields, CaptureIngressoFieldHint>> = {};
   const ambiguousCaptureKeys: string[] = [];
 
-  if (!fields.dataIngresso.trim()) {
+  if (!input.fields.dataIngresso.trim()) {
     hints.dataIngresso = {
       tone: "catalog",
       message: "Data ingresso non letta — inserire manualmente.",
@@ -285,29 +263,15 @@ export async function buildCaptureIngressoCompileData(input: {
     };
   }
 
-  for (const row of rows) {
+  for (const row of input.fieldRows) {
     const ingressoKey = ingressoKeyFromCapture(row.field_key);
     if (!ingressoKey) continue;
-
     const raw = safeTrim(rawByKey[row.field_key]);
-    const resolution = resolutionByCaptureKey[row.field_key];
     const catalogMsg = warningsByCaptureKey.get(row.field_key)?.[0]?.message;
-    const current = safeTrim(String(fields[ingressoKey] ?? ""));
-
-    if (resolution?.status === "ambiguous") {
-      ambiguousCaptureKeys.push(row.field_key);
-      const existing = hints[ingressoKey];
-      hints[ingressoKey] = {
-        tone: "ambiguous",
-        rawOcr: raw || existing?.rawOcr,
-        suggestion: existing?.suggestion,
-        message: "Più corrispondenze possibili. Scegli il valore corretto.",
-        candidates:
-          resolution.candidateList?.map((c) => ({ id: c.id, label: c.label })) ?? existing?.candidates,
-        captureFieldKey: row.field_key,
-      };
-      continue;
-    }
+    const current = safeTrim(String(input.fields[ingressoKey] ?? ""));
+    const storedNormalized = safeTrim(row.normalized_value);
+    const equivOpts =
+      ingressoKey === "cliente" ? ({ standardizeLegalSuffix: true } as const) : undefined;
 
     if (catalogMsg) {
       hints[ingressoKey] = {
@@ -319,25 +283,20 @@ export async function buildCaptureIngressoCompileData(input: {
       continue;
     }
 
-    const suggested = resolution?.resolvedLabel?.trim()
-      ? canonicalIngressoLabelFromSettings(
-          ingressoKey,
-          resolution.resolvedLabel,
-          input.sharedGlobalOpts.mezziListe,
-        )
-      : "";
-    const equivOpts =
-      ingressoKey === "cliente" ? ({ standardizeLegalSuffix: true } as const) : undefined;
     if (
-      suggested &&
+      storedNormalized &&
       raw &&
-      !captureFieldValuesEquivalent(suggested, raw, equivOpts) &&
-      !captureFieldValuesEquivalent(suggested, current, equivOpts)
+      !captureFieldValuesEquivalent(storedNormalized, raw, equivOpts) &&
+      !captureFieldValuesEquivalent(storedNormalized, current, equivOpts)
     ) {
       hints[ingressoKey] = {
         tone: "suggested",
         rawOcr: raw,
-        suggestion: suggested,
+        suggestion: canonicalIngressoLabelFromSettings(
+          ingressoKey,
+          storedNormalized,
+          input.sharedGlobalOpts.mezziListe,
+        ),
         captureFieldKey: row.field_key,
       };
       continue;
@@ -354,15 +313,26 @@ export async function buildCaptureIngressoCompileData(input: {
   }
 
   const reviewCount = Object.values(hints).filter((h) => h.tone !== "ok").length;
+  return { hints, ambiguousCaptureKeys, reviewCount };
+}
 
-  return {
-    fieldRows: mappedRows,
-    fields,
-    hints,
-    resolutionByCaptureKey,
-    ambiguousCaptureKeys,
-    reviewCount,
-  };
+export async function buildCaptureIngressoCompileData(input: {
+  captureId: string;
+  fieldRows: readonly CaptureFieldRow[];
+  sharedGlobalOpts: GlobalOptionsSlice;
+  magazzino?: readonly RicambioMagazzino[];
+  mezzi?: readonly MezzoGestito[];
+  addettiRecords?: readonly AddettoRecord[];
+}): Promise<CaptureIngressoCompileData> {
+  const fast = buildCaptureIngressoCompileDataFast(input);
+  const slow = await buildCaptureIngressoCompileHints({
+    fieldRows: fast.fieldRows,
+    fields: fast.fields,
+    sharedGlobalOpts: input.sharedGlobalOpts,
+    magazzino: input.magazzino,
+    addettiRecords: input.addettiRecords,
+  });
+  return { ...fast, ...slow };
 }
 
 export function countCaptureHintsNeedingReview(

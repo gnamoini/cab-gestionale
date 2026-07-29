@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { useQueryClient } from "@tanstack/react-query";
 import { useGlobalOptions, type GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
+import { pushMezzoSelectionRecent } from "@/lib/mezzi/mezzo-selection-recents";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
@@ -28,6 +29,7 @@ import {
 import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
+import { pickMezzoPermanentFields, type MezzoPermanentFieldKey } from "@/lib/schede/scheda-ingresso-field-roles";
 import { useFormEngineSections } from "@/lib/forms/form-engine";
 import {
   emptySchedaIngressoFields,
@@ -65,6 +67,7 @@ export function useLavorazioneCreateSubmit({
   createdBy,
   defaultMezzoId,
   initialFields,
+  initialTagliandoFields,
   initialMeta,
   mezzi = [],
   schedeStore = {},
@@ -79,6 +82,7 @@ export function useLavorazioneCreateSubmit({
   createdBy: string | null;
   defaultMezzoId?: string | null;
   initialFields?: SchedaIngressoFields | null;
+  initialTagliandoFields?: Partial<TagliandoLavorazioneFields> | null;
   initialMeta?: Partial<{ stato: string; priorita: PrioritaLavorazione; mezzoId: string }>;
   mezzi?: readonly MezzoGestito[];
   schedeStore?: LavorazioneSchedeStore;
@@ -149,6 +153,9 @@ export function useLavorazioneCreateSubmit({
   const [schedaSyncError, setSchedaSyncError] = useState<string | null>(null);
   const [submitPending, setSubmitPending] = useState(false);
   const [lavorazioneNote, setLavorazioneNote] = useState("");
+  const [captureSaveGateSkipFields, setCaptureSaveGateSkipFields] = useState<
+    readonly MezzoPermanentFieldKey[]
+  >([]);
   const formInitRef = useRef(false);
   const defaultMezzoAppliedRef = useRef<string | null>(null);
   const createdLavorazioneIdRef = useRef<string | null>(null);
@@ -205,7 +212,43 @@ export function useLavorazioneCreateSubmit({
   const saveGate = useSchedaIngressoSaveGate({
     mezziCatalog,
     linkedSnapshot: mezzoPrompt.linkedSnapshot,
+    skipFields: captureSaveGateSkipFields,
   });
+
+  const applyMezzoFromCapture = useCallback(
+    (input: {
+      mezzo: MezzoGestito;
+      finalFields: SchedaIngressoFields;
+      skipSaveGateFields?: readonly MezzoPermanentFieldKey[];
+    }) => {
+      setFields({
+        ...input.finalFields,
+        dataIngresso: input.finalFields.dataIngresso || todayItDate(),
+      });
+      setMezzoId(input.mezzo.id);
+      mezzoPrompt.bootstrapLinkedMezzo(
+        input.mezzo,
+        pickMezzoPermanentFields(input.finalFields),
+      );
+      setCaptureSaveGateSkipFields(input.skipSaveGateFields ?? []);
+      pushMezzoSelectionRecent(input.mezzo.id);
+      setMezzoHint(
+        `Mezzo collegato: ${input.mezzo.marca} ${input.mezzo.modello !== "—" ? input.mezzo.modello : ""}`.trim(),
+      );
+    },
+    [mezzoPrompt, setFields, setMezzoId],
+  );
+
+  const clearCaptureMezzoLink = useCallback(
+    (scannedFields: SchedaIngressoFields) => {
+      mezzoPrompt.clearLink();
+      setMezzoId("");
+      setCaptureSaveGateSkipFields([]);
+      setFields(scannedFields);
+      setMezzoHint("Nuovo mezzo — dati dalla scansione.");
+    },
+    [mezzoPrompt, setFields, setMezzoId],
+  );
 
   const applyMezzo = useCallback(
     (m: MezzoGestito) => {
@@ -221,9 +264,10 @@ export function useLavorazioneCreateSubmit({
         };
       });
       setMezzoId(m.id);
+      mezzoPrompt.linkMezzoExplicit(m);
       setMezzoHint(`Mezzo riconosciuto: ${m.marca} ${m.modello !== "—" ? m.modello : ""}`.trim());
     },
-    [addettiOpts, setFields, setMezzoId],
+    [addettiOpts, mezzoPrompt, setFields, setMezzoId],
   );
 
   const acceptMezzoPrompt = useCallback(() => {
@@ -292,6 +336,10 @@ export function useLavorazioneCreateSubmit({
     setMezzoHint(null);
     setSubmitError(null);
     setSchedaSyncError(null);
+    setTagliandoFields({
+      ...DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS,
+      ...(initialTagliandoFields ?? {}),
+    });
     createdLavorazioneIdRef.current = null;
     partialSuccessRef.current = false;
     queueMicrotask(() => syncBaseline());
@@ -299,6 +347,7 @@ export function useLavorazioneCreateSubmit({
     enabled,
     defaultMezzoId,
     initialFields,
+    initialTagliandoFields,
     initialMeta,
     prioritaOpts,
     addettiOpts,
@@ -391,7 +440,8 @@ export function useLavorazioneCreateSubmit({
             }
 
             const catalog = await resolveFreshCatalog();
-            const mezzoHintVal = mezzoPrompt.preferredMezzoId ?? null;
+            const mezzoHintVal =
+              mezzoPrompt.preferredMezzoId ?? metaMezzoId?.trim() ?? null;
             const resolvedMezzo = resolveMezzoFromScheda({
               scheda: gatedFields,
               existingMezzi: catalog,
@@ -428,6 +478,7 @@ export function useLavorazioneCreateSubmit({
                     preferredMezzoId,
                     updatePlan: updatePlan ?? mezzoUpdatePlan,
                     lavorazioneId,
+                    userId: createdBy,
                     writeContext: writeContext ?? { source: "manual", mezzoUpdatePlan },
                     create: (data) => createMezzo.mutateAsync(data),
                     update: (id, data) => updateMezzo.mutateAsync({ id, data }),
@@ -521,6 +572,9 @@ export function useLavorazioneCreateSubmit({
                 mezzo: catalog.find((m) => m.id === tx.mezzoId) ?? null,
               });
             }
+            if (tx.mezzoId) {
+              pushMezzoSelectionRecent(tx.mezzoId, createdBy);
+            }
             createdLavorazioneIdRef.current = null;
             partialSuccessRef.current = false;
             idempotencyKeyRef.current =
@@ -600,6 +654,9 @@ export function useLavorazioneCreateSubmit({
     mezzoPrompt,
     acceptMezzoPrompt,
     dismissMezzoPrompt,
+    applyMezzoFromCapture,
+    clearCaptureMezzoLink,
+    setCaptureSaveGateSkipFields,
     formProps,
     formRef,
     onSubmit,

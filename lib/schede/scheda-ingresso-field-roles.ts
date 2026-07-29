@@ -24,6 +24,9 @@ export const MEZZO_PERMANENT_FIELDS = [
 export type MezzoPermanentFieldKey = (typeof MEZZO_PERMANENT_FIELDS)[number];
 
 /** Campi legati alla singola lavorazione — mai copiati da mezzo né salvati in anagrafica mezzo. */
+export const ORE_LAVORO_MOTORE_STORAGE_KEY = "oreLavoroMotore";
+export const ORE_LAVORO_PTO_STORAGE_KEY = "oreLavoroPto";
+
 export const LAVORAZIONE_ONLY_FIELDS = [
   "descrizioneAnomalia",
   "km",

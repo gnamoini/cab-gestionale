@@ -216,14 +216,18 @@ function eur(n: number) {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
 }
 
-function initialMasterFromProducts(rows: RicambioMagazzino[], mezziListePrefs?: import("@/lib/mezzi/mezzi-liste-prefs-storage").MezziListePrefs) {
+function initialMasterFromProducts(
+  rows: RicambioMagazzino[],
+  mezziListe?: import("@/lib/mezzi/mezzi-liste-prefs-storage").MezziListePrefs,
+  compatReadOpts?: import("@/lib/magazzino/compat/compat-read-guard").CompatReadOpts,
+) {
   const marche = new Set<string>();
   const categorie = new Set<string>();
   const mezzi = new Set<string>();
   for (const r of rows) {
     marche.add(r.marca);
     categorie.add(r.categoria);
-    readCompatLabelsForUi(r, mezziListePrefs, "magazzino-view.initialMasterFromProducts").forEach((m) => mezzi.add(m));
+    readCompatLabelsForUi(r, mezziListe, "magazzino-view.initialMasterFromProducts", compatReadOpts).forEach((m) => mezzi.add(m));
   }
   return {
     marche: [...marche].sort((a, b) => a.localeCompare(b, "it")),
@@ -262,8 +266,9 @@ function rowUsesCompatLabel(
   row: RicambioMagazzino,
   label: string,
   liste: ReturnType<typeof migrateMezziListePrefs>,
+  compatReadOpts?: import("@/lib/magazzino/compat/compat-read-guard").CompatReadOpts,
 ): boolean {
-  const resolved = readCompatLabelsForUi(row, liste, "magazzino-view.rowUsesCompatLabel");
+  const resolved = readCompatLabelsForUi(row, liste, "magazzino-view.rowUsesCompatLabel", compatReadOpts);
   const want = label.trim().toLowerCase();
   return resolved.some((l) => l.trim().toLowerCase() === want);
 }
@@ -589,8 +594,9 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   const [nuovoFornitore, setNuovoFornitore] = useState("");
   const [masterPrefsHydrated, setMasterPrefsHydrated] = useState(false);
   const lastMergedSigRef = useRef<string>("");
-  const { mezziListe: mezziListePrefs } = useCompatMezziListe("MagazzinoView");
-  const listDerived = useMagazzinoListDerived(prodotti, mezziListePrefs);
+  const { mezziListe, mezziListePrefs } = useCompatMezziListe("MagazzinoView");
+  const compatReadOpts = useMemo(() => ({ prefsListe: mezziListePrefs }), [mezziListePrefs]);
+  const listDerived = useMagazzinoListDerived(prodotti, mezziListe);
   const {
     sottoScortaList,
     sottoScortaTotale,
@@ -895,9 +901,9 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
 
   const patchProdotti = useCallback(
     (updater: (prev: RicambioMagazzino[]) => RicambioMagazzino[]) => {
-      patchMagazzinoListCache(queryClient, updater, authorName, mezziListePrefs);
+      patchMagazzinoListCache(queryClient, updater, authorName, mezziListe);
     },
-    [queryClient, authorName, mezziListePrefs],
+    [queryClient, authorName, mezziListe],
   );
 
   useEffect(() => {
@@ -907,7 +913,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     lastMergedSigRef.current = sig;
 
     const src = prodotti;
-    const fromP = initialMasterFromProducts(src, mezziListePrefs);
+    const fromP = initialMasterFromProducts(src, mezziListe, compatReadOpts);
     const fromF = initialFornitoriFromProducts(src);
     const listeSrc = migrateMezziListePrefs(appSettings?.mezziListe ?? createMezziListePrefsDefault());
     const fromListe = flattenCompatDaAttrezzature(listeSrc);
@@ -930,7 +936,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
       setMasterFornitori(fromF);
     }
     setMasterPrefsHydrated(true);
-  }, [appSettings, prodotti, mezziListePrefs]);
+  }, [appSettings, prodotti, mezziListe, compatReadOpts]);
 
   const magMasterSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const settingsRowsRef = useRef(settingsRows);
@@ -1071,8 +1077,8 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   }, [prodotti, consumoMap]);
 
   const filterCatalog = useMemo(
-    () => buildMagazzinoFilterCatalog(prodotti, mezziListePrefs, categorie, masterFornitori),
-    [prodotti, mezziListePrefs, categorie, masterFornitori],
+    () => buildMagazzinoFilterCatalog(prodotti, mezziListe, categorie, masterFornitori),
+    [prodotti, mezziListe, categorie, masterFornitori],
   );
 
   const pageFilters = useMemo(
@@ -1086,14 +1092,15 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   );
 
   const compatDisplayFor = useCallback(
-    (row: RicambioMagazzino) => readCompatDisplayForUi(row, mezziListePrefs, "magazzino-view.compatDisplayFor"),
-    [mezziListePrefs],
+    (row: RicambioMagazzino) =>
+      readCompatDisplayForUi(row, mezziListe, "magazzino-view.compatDisplayFor", compatReadOpts),
+    [mezziListe, compatReadOpts],
   );
 
   const compatModelsDisplayFor = useCallback(
     (row: RicambioMagazzino) =>
-      readCompatModelsDisplayForUi(row, mezziListePrefs, "magazzino-view.compatModelsDisplayFor"),
-    [mezziListePrefs],
+      readCompatModelsDisplayForUi(row, mezziListe, "magazzino-view.compatModelsDisplayFor", compatReadOpts),
+    [mezziListe, compatReadOpts],
   );
 
   useEffect(() => {
@@ -1103,34 +1110,34 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   const searchSuggestionPool = useMemo(() => {
     if (!searchFieldFocused) return [];
     if (!searchSuggestionsApplied.trim()) return [];
-    return buildMagazzinoSearchSuggestions(prodotti, searchSuggestionsApplied, 8, mezziListePrefs);
-  }, [searchFieldFocused, searchSuggestionsApplied, prodotti, mezziListePrefs]);
+    return buildMagazzinoSearchSuggestions(prodotti, searchSuggestionsApplied, 8, mezziListe);
+  }, [searchFieldFocused, searchSuggestionsApplied, prodotti, mezziListe]);
 
   const haystackIndex = useMemo(
-    () => buildMagazzinoHaystackIndex(prodotti, mezziListePrefs),
-    [prodotti, mezziListePrefs],
+    () => buildMagazzinoHaystackIndex(prodotti, mezziListe),
+    [prodotti, mezziListe],
   );
 
   const filteredSorted = useMemo(() => {
     const orderMap = orderMapRef.current!;
     let rows = prodotti.filter((p) =>
-      magazzinoRowMatchesPageFiltersIndexed(p, pageFilters, haystackIndex, mezziListePrefs),
+      magazzinoRowMatchesPageFiltersIndexed(p, pageFilters, haystackIndex, mezziListe),
     );
 
     rows = [...rows].sort((a, b) => {
       if (sortPhase === "natural" || sortColumn === null) {
         if (listSurface === "cards") {
-          return compareMagazzinoMobileDefaultOrder(a, b, orderMap, mezziListePrefs);
+          return compareMagazzinoMobileDefaultOrder(a, b, orderMap, mezziListe);
         }
-        return compareMagazzinoDefaultOrder(a, b, orderMap, mezziListePrefs);
+        return compareMagazzinoDefaultOrder(a, b, orderMap, mezziListe);
       }
-      const primary = compareByColumn(a, b, sortColumn, sortPhase, consumoAvgById, mezziListePrefs);
+      const primary = compareByColumn(a, b, sortColumn, sortPhase, consumoAvgById, mezziListe);
       if (primary !== 0) return primary;
       return compareNaturalOrder(a, b, orderMap);
     });
 
     return rows;
-  }, [prodotti, pageFilters, sortColumn, sortPhase, consumoAvgById, mezziListePrefs, haystackIndex, listSurface]);
+  }, [prodotti, pageFilters, sortColumn, sortPhase, consumoAvgById, mezziListe, haystackIndex, listSurface]);
 
   filteredSortedRef.current = filteredSorted;
 
@@ -1413,7 +1420,10 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     setMasterCategorie((prev) => prev.filter((x) => x !== c));
   }
   async function removeMasterMezzo(m: string) {
-    const n = prodotti.reduce((acc, p) => acc + (rowUsesCompatLabel(p, m, mezziListePrefs) ? 1 : 0), 0);
+    const n = prodotti.reduce(
+      (acc, p) => acc + (rowUsesCompatLabel(p, m, mezziListe, compatReadOpts) ? 1 : 0),
+      0,
+    );
     if (n > 0) {
       const ok = await confirm({
         title: "Rimuovere mezzo?",

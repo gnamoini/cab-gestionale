@@ -2,32 +2,9 @@ import "server-only";
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { AnalyzeTraceOutcome, AnalyzeTracePhase } from "@/lib/document-capture/pipeline/analyze-trace-types";
 
-export type AnalyzeTracePhase =
-  | "START"
-  | "PREREQUISITES_START"
-  | "PREREQUISITES_OK"
-  | "PREREQUISITES_FAIL"
-  | "DOWNLOAD_STORAGE_START"
-  | "DOWNLOAD_STORAGE_OK"
-  | "DOWNLOAD_STORAGE_FAIL"
-  | "HYBRID_START"
-  | "HYBRID_OK"
-  | "HYBRID_SKIP"
-  | "HYBRID_FAIL"
-  | "GEMINI_REQUEST"
-  | "GEMINI_RESPONSE"
-  | "GEMINI_FAIL"
-  | "PARSE_START"
-  | "PARSE_OK"
-  | "PARSE_FAIL"
-  | "UPSERT_FIELDS_START"
-  | "UPSERT_FIELDS_OK"
-  | "UPSERT_FIELDS_FAIL"
-  | "END_OK"
-  | "END_FAIL";
-
-export type AnalyzeTraceOutcome = "ok" | "fail" | "skip";
+export type { AnalyzeTracePhase, AnalyzeTraceOutcome } from "@/lib/document-capture/pipeline/analyze-trace-types";
 
 export type AnalyzeTraceContext = {
   traceId: string;
@@ -77,12 +54,21 @@ export function readAnalyzeSdkVersion(): string {
   }
 }
 
+export type AnalyzeTraceListener = (
+  phase: AnalyzeTracePhase,
+  outcome: AnalyzeTraceOutcome,
+  meta: { elapsedMs: number; durationMs: number },
+) => void;
+
 export class AnalyzeTrace {
   private readonly startedAt = performance.now();
   private lastPhaseAt = this.startedAt;
   private lastPhase: AnalyzeTracePhase = "START";
 
-  constructor(private readonly ctx: AnalyzeTraceContext) {}
+  constructor(
+    private readonly ctx: AnalyzeTraceContext,
+    private readonly onPhase?: AnalyzeTraceListener,
+  ) {}
 
   get traceId(): string {
     return this.ctx.traceId;
@@ -147,6 +133,7 @@ export class AnalyzeTrace {
     });
 
     console.info(line);
+    this.onPhase?.(phase, outcome, { elapsedMs, durationMs });
   }
 
   fail(phase: AnalyzeTracePhase, error: unknown, extra: AnalyzeTraceEventPayload = {}): void {
@@ -161,9 +148,15 @@ export class AnalyzeTrace {
   }
 }
 
-export function createAnalyzeTrace(input: Omit<AnalyzeTraceContext, "traceId"> & { traceId?: string }): AnalyzeTrace {
-  return new AnalyzeTrace({
-    ...input,
-    traceId: input.traceId ?? crypto.randomUUID(),
-  });
+export function createAnalyzeTrace(
+  input: Omit<AnalyzeTraceContext, "traceId"> & { traceId?: string; onPhase?: AnalyzeTraceListener },
+): AnalyzeTrace {
+  const { onPhase, ...ctx } = input;
+  return new AnalyzeTrace(
+    {
+      ...ctx,
+      traceId: ctx.traceId ?? crypto.randomUUID(),
+    },
+    onPhase,
+  );
 }

@@ -2,8 +2,8 @@
 
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 
-/** Albero mezzi merged (settings + flotta) — SSOT lettura compat UI. */
+/** Albero mezzi merged (settings + flotta) + prefs settings-only per risoluzione ref. */
 export function useCompatMezziListe(debugTag = "useCompatMezziListe") {
-  const { mezziListe, isLoading } = useGlobalOptions({ debugTag });
-  return { mezziListe, isLoading };
+  const { mezziListe, mezziListePrefs, isLoading } = useGlobalOptions({ debugTag });
+  return { mezziListe, mezziListePrefs, isLoading };
 }

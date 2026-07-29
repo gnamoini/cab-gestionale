@@ -24,7 +24,22 @@ const reading = deriveCaptureAcquisitionProgress({
   analyzeBusy: true,
 });
 assert.equal(reading.phase, "reading");
-assert.equal(reading.creeping, true);
+assert.equal(reading.creeping, false);
+assert.equal(reading.streamActive, true);
 assert.equal(reading.label, "Lettura documento con AI…");
+
+const checklist = deriveCaptureAcquisitionProgress({
+  uploadPhase: "success",
+  uploadProgress: 1,
+  analyzeBusy: true,
+  analyzePhase: "GEMINI_REQUEST",
+  useChecklist: true,
+  heartbeatAt: Date.now() - 8000,
+});
+assert.equal(checklist.streamActive, true);
+assert.equal(checklist.creeping, false);
+assert.ok(Array.isArray(checklist.checklist));
+assert.ok(checklist.checklist!.some((c) => c.active));
+assert.ok(checklist.heartbeatLabel?.includes("s fa"));
 
 console.log("capture-acquisition-progress.test.ts OK");

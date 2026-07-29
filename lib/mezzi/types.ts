@@ -73,6 +73,8 @@ export type MezzoInterventoLavorazione = {
   tipoIntervento: string;
   /** Tipo intervento scheda ingresso (is_tagliando + repair_present). */
   interventionType?: LavorazioneInterventionType;
+  /** Label composita da flag intervento (null se nessun check). */
+  interventionLabel?: string | null;
   descrizione: string;
   prioritaLabel: string;
   statoFinale: string;

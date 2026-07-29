@@ -1,6 +1,8 @@
 import { parseCompatMarcaModello } from "@/lib/mezzi/attrezzature-prefs";
 import { normalizeCompatList } from "@/lib/magazzino/compat/compat-normalize";
 
+export const COMPAT_NOT_CONFIGURED_LABEL = "Nessuna compatibilità configurata";
+
 function compactKeyPart(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, "");
 }
@@ -76,12 +78,12 @@ export function compatSortKey(list: readonly string[]): string {
 
 export function compatDisplayLabel(list: readonly string[]): string {
   const compat = dedupeCompatLabels(normalizeCompatList(list));
-  if (compat.length === 0) return "Universale (tutte le macchine)";
+  if (compat.length === 0) return COMPAT_NOT_CONFIGURED_LABEL;
   return dedupeCompatDisplayLines(compat.map(compatLineDisplayText)).join(", ");
 }
 
 export function compatDisplayModelsLabel(list: readonly string[]): string {
   const compat = dedupeCompatLabels(normalizeCompatList(list));
-  if (compat.length === 0) return "Universale";
+  if (compat.length === 0) return COMPAT_NOT_CONFIGURED_LABEL;
   return dedupeCompatDisplayLines(compat.map(compatLineModelDisplayText)).join(", ");
 }

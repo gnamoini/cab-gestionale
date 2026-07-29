@@ -81,33 +81,10 @@ export function useDocumentCaptureUpload() {
         throw new Error(storageError.message);
       }
 
-      setPhase("finalizing");
-      setProgress(0.7);
-
-      const finalizeRes = await fetch(`/api/document-capture/${policy.captureId}/finalize`, {
-        method: "POST",
-      });
-
-      if (!finalizeRes.ok) {
-        const body = (await finalizeRes.json().catch(() => ({}))) as { error?: string; code?: string };
-        throw new Error(mapDocumentCaptureUploadError(body.error ?? "Finalize non riuscito"));
-      }
-
-      const finalized = (await finalizeRes.json()) as {
-        id: string;
-        duplicateOf?: string | null;
-      };
-
-      const effectiveId = finalized.id ?? policy.captureId;
-
+      setPhase("success");
       setProgress(1);
-      if (finalized.duplicateOf) {
-        setPhase("duplicate");
-      } else {
-        setPhase("success");
-      }
 
-      return { captureId: effectiveId, duplicateOf: finalized.duplicateOf ?? null };
+      return { captureId: policy.captureId, duplicateOf: null };
     } catch (e) {
       setPhase("error");
       const raw = e instanceof Error ? e.message : "Upload non riuscito";

@@ -51,5 +51,6 @@ assert.match(dropzone, /htmlFor="doc-upload-file"/);
 
 assert.match(view, /GestionaleSearchField/);
 assert.match(view, /aria-label="Cerca documenti"/);
+assert.match(view, /clickToPick=\{false\}/);
 
 console.log("documenti-inputs-audit.test.ts OK");

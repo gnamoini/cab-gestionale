@@ -121,6 +121,14 @@ function buildStoricoPlansFromConfigs(
         configId: c.id,
         nextDateEstimated: c.nextDateEstimated,
         remainingMeterToNext: remainingMeterToNextFromConfig(c, milestone.unit),
+        nextTagliandoHint: {
+          explainability: c.explainability,
+          remainingValue: c.remainingValue,
+          nextDateEstimated: c.nextDateEstimated,
+          currentValue: c.currentValue,
+          triggerReason: c.triggerReason,
+          urgency: c.urgency,
+        },
       };
     })
     .filter((p): p is NonNullable<typeof p> => p != null);
@@ -255,6 +263,7 @@ function HubTagliandiV2({
   const gestToast = useGestionaleToast();
 
   const [assignOpen, setAssignOpen] = useState(false);
+  const [guidedAssignOpen, setGuidedAssignOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<VehicleMaintenanceConfigView | null>(null);
 
@@ -420,6 +429,8 @@ function HubTagliandiV2({
           history={history}
           canEdit={canEdit}
           onToggled={onToggled}
+          hasConfigs={configs.length > 0}
+          onRequestAssignPreset={() => setGuidedAssignOpen(true)}
         />
       </GestionaleInfoCard>
 
@@ -427,8 +438,24 @@ function HubTagliandiV2({
         mezzoId={mezzo.id}
         open={assignOpen}
         onClose={() => setAssignOpen(false)}
-        onAssigned={() => void configsQ.refetch()}
+        onAssigned={() => {
+          void configsQ.refetch();
+          void historyQ.refetch();
+        }}
         excludePresetIds={configs.map((c) => c.presetId).filter((id): id is string => Boolean(id?.trim()))}
+        variant="toolbar"
+      />
+
+      <MezziTagliandiAssignExistingModal
+        mezzoId={mezzo.id}
+        open={guidedAssignOpen}
+        onClose={() => setGuidedAssignOpen(false)}
+        onAssigned={() => {
+          void configsQ.refetch();
+          void historyQ.refetch();
+        }}
+        excludePresetIds={configs.map((c) => c.presetId).filter((id): id is string => Boolean(id?.trim()))}
+        variant="guided"
       />
 
       <MaintenancePresetEditorModal

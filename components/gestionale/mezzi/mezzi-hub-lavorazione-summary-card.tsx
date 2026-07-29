@@ -11,10 +11,6 @@ import {
 } from "@/lib/lavorazioni/addetto-display";
 import { statoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
-import {
-  interventionTypePillLabel,
-  type LavorazioneInterventionType,
-} from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
 import type { MezzoInterventoLavorazione } from "@/lib/mezzi/types";
 import { dsTableActionBtnPrimary, dsTableActionGlyph } from "@/lib/ui/design-system";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
@@ -49,8 +45,9 @@ function HubLavMetaPill({ label, style }: { label: string; style: CSSProperties 
   );
 }
 
-function resolveInterventionType(intervento: MezzoInterventoLavorazione): LavorazioneInterventionType {
-  return intervento.interventionType ?? "riparazione";
+function resolveInterventionLabel(intervento: MezzoInterventoLavorazione): string | null {
+  if (intervento.interventionLabel?.trim()) return intervento.interventionLabel.trim();
+  return null;
 }
 
 function hasNote(value: string | undefined | null): boolean {
@@ -86,7 +83,7 @@ export function MezziHubLavorazioneSummaryCard({
   const stato = intervento.statoFinale?.trim() || "—";
   const statoColor = statoThemeColor(resolveStatoId(intervento));
   const statoStyle = readablePillStyleFromHex(statoColor);
-  const interventionLabel = interventionTypePillLabel(resolveInterventionType(intervento));
+  const interventionLabel = resolveInterventionLabel(intervento);
   const interventionStyle = readablePillStyleFromHex(INTERVENTION_PILL_HEX);
   const { lavorazioni: lavOpts } = useGlobalOptions();
   const addettoLabel =
@@ -111,7 +108,9 @@ export function MezziHubLavorazioneSummaryCard({
             Lavorazione{" "}
             <span className="font-mono tabular-nums">{codice}</span>
           </h4>
-          <HubLavMetaPill label={interventionLabel} style={interventionStyle} />
+          {interventionLabel ? (
+            <HubLavMetaPill label={interventionLabel} style={interventionStyle} />
+          ) : null}
           {addettoStyle ? <HubLavMetaPill label={addettoLabel} style={addettoStyle} /> : null}
           <HubLavMetaPill label={stato} style={statoStyle} />
           {intervento.weakMezzoLink ? (

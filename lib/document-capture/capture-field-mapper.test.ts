@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import {
   mapCaptureFieldsToIngresso,
   mapCaptureFieldsToLavorazioni,
+  mapCaptureFieldsToTagliando,
+  parseCaptureCheckboxValue,
   resolveCaptureFieldValue,
   resolveCaptureLavorazioneNote,
   type CaptureFieldRow,
@@ -47,31 +49,6 @@ const withRichiedente = mapCaptureFieldsToIngresso([
   row("cognome", "Ignorato"),
 ]);
 assert.equal(withRichiedente.richiedente, "Già compilato");
-
-const FIRMA = "data:image/png;base64,iVBORw0KGgo=";
-const withFirme = mapCaptureFieldsToIngresso([
-  row("firma_richiedente", FIRMA),
-  row("firma_addetto", FIRMA),
-]);
-assert.equal(withFirme.richiedenteFirma, FIRMA);
-assert.equal(withFirme.addettoFirma, FIRMA);
-
-const withFirmeRawOnly = mapCaptureFieldsToIngresso([
-  { field_key: "firma_richiedente", confirmed_value: null, normalized_value: null, raw_value: FIRMA },
-  { field_key: "firma_addetto", confirmed_value: null, normalized_value: null, raw_value: FIRMA },
-]);
-assert.equal(withFirmeRawOnly.richiedenteFirma, FIRMA);
-assert.equal(withFirmeRawOnly.addettoFirma, FIRMA);
-
-const withFirmeJunkConfirmed = mapCaptureFieldsToIngresso([
-  {
-    field_key: "firma_addetto",
-    confirmed_value: "presente",
-    normalized_value: "presente",
-    raw_value: FIRMA,
-  },
-]);
-assert.equal(withFirmeJunkConfirmed.addettoFirma, FIRMA);
 
 const MULTILINE = "Riga 1\nRiga 2\nRiga 3";
 const withAnomalia = mapCaptureFieldsToIngresso([
@@ -128,5 +105,25 @@ assert.equal(
   }),
   null,
 );
+
+assert.equal(parseCaptureCheckboxValue("true"), true);
+assert.equal(parseCaptureCheckboxValue("x"), true);
+assert.equal(parseCaptureCheckboxValue("false"), false);
+assert.equal(parseCaptureCheckboxValue(""), false);
+
+const tagliandoFlags = mapCaptureFieldsToTagliando([
+  row("riparazione", "true"),
+  row("tagliando", "x"),
+  row("garanzia", "si"),
+  row("recidivo", "1"),
+]);
+assert.equal(tagliandoFlags.repairPresent, true);
+assert.equal(tagliandoFlags.isTagliando, true);
+assert.equal(tagliandoFlags.isGaranzia, true);
+assert.equal(tagliandoFlags.isRecidivo, true);
+
+const legacyTipo = mapCaptureFieldsToTagliando([row("tipo_intervento", "Riparazione + tagliando")]);
+assert.equal(legacyTipo.repairPresent, true);
+assert.equal(legacyTipo.isTagliando, true);
 
 console.log("capture-field-mapper.test.ts OK");

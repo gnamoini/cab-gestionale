@@ -336,6 +336,8 @@ export type LavorazioneRow = {
   is_tagliando?: boolean;
   /** Intervento in garanzia — badge G in lista note. */
   is_garanzia?: boolean;
+  /** Rientro per lavorazione non eseguita bene. */
+  is_recidivo?: boolean;
   maintenance_execution_kind?: "scheduled" | "extraordinary" | null;
   repair_present?: boolean;
   tagliando_preset_ref?: string | null;

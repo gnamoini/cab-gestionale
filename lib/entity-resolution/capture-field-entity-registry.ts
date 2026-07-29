@@ -59,6 +59,12 @@ export function bindingForFieldKey(fieldKey: string): CaptureFieldBinding | null
 }
 
 export function topologicalFieldOrder(fieldKeys: readonly string[]): string[] {
+  const depth = buildTopologicalDepthMap(fieldKeys);
+  const keys = [...new Set(fieldKeys)];
+  return keys.sort((a, b) => (depth.get(a) ?? 0) - (depth.get(b) ?? 0) || a.localeCompare(b));
+}
+
+function buildTopologicalDepthMap(fieldKeys: readonly string[]): Map<string, number> {
   const keys = [...new Set(fieldKeys)];
   const bindingMap = new Map(keys.map((k) => [k, bindingForFieldKey(k)]));
   const depth = new Map<string, number>();
@@ -78,5 +84,26 @@ export function topologicalFieldOrder(fieldKeys: readonly string[]): string[] {
   }
 
   for (const key of keys) depDepth(key);
-  return keys.sort((a, b) => (depth.get(a) ?? 0) - (depth.get(b) ?? 0) || a.localeCompare(b));
+  return depth;
+}
+
+/** Campi nello stesso livello topologico possono essere risolti in parallelo. */
+export function groupTopologicalFieldLevels(fieldKeys: readonly string[]): string[][] {
+  const depth = buildTopologicalDepthMap(fieldKeys);
+  const keys = topologicalFieldOrder(fieldKeys);
+  const levels: string[][] = [];
+  let currentDepth = -1;
+  let current: string[] = [];
+  for (const key of keys) {
+    const d = depth.get(key) ?? 0;
+    if (d !== currentDepth) {
+      if (current.length > 0) levels.push(current);
+      current = [key];
+      currentDepth = d;
+    } else {
+      current.push(key);
+    }
+  }
+  if (current.length > 0) levels.push(current);
+  return levels;
 }

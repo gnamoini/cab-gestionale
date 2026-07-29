@@ -134,6 +134,7 @@ export function LavorazioneCreateModal({
             onTagliandoFieldsChange={(patch) =>
               create.setTagliandoFields((prev) => ({ ...prev, ...patch }))
             }
+            requestInitialFocus
           />
         </form>
       </SchedaIngressoFormModalShell>

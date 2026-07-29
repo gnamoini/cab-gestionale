@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { compatLabelMarcaModello } from "@/lib/mezzi/attrezzature-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { COMPAT_NOT_CONFIGURED_LABEL } from "@/lib/magazzino/compat/compat-display";
 import { buildCompatMetaForSave } from "@/lib/magazzino/compat/build-compat-meta";
 import { resolveCompatibilitaRicambio } from "@/lib/magazzino/compat/resolve-compatibilita-ricambio";
 import { marcaUniversalCompatLabel, type RicambioCompatRef } from "@/lib/magazzino/ricambio-compat-resolver";
@@ -42,7 +43,8 @@ assert.equal(resolved.isUniversal, false);
 
 const universal = resolveCompatibilitaRicambio({ compatibilitaMezzi: [], compatibilitaRefs: [] }, mezziListe);
 assert.equal(universal.isUniversal, true);
-assert.equal(universal.display, "Universale (tutte le macchine)");
+assert.equal(universal.isConfigured, false);
+assert.equal(universal.display, COMPAT_NOT_CONFIGURED_LABEL);
 
 const fromLegacy = resolveCompatibilitaRicambio(
   { compatibilitaMezzi: [fiat500, compatLabelMarcaModello("FIAT", "Panda")] },
@@ -67,5 +69,15 @@ const dualRefsResolved = resolveCompatibilitaRicambio(
 );
 assert.deepEqual(dualRefsResolved.labels, [fiat500]);
 assert.equal(dualRefsResolved.display, "FIAT 500");
+
+const orphanWithLegacy = resolveCompatibilitaRicambio(
+  {
+    compatibilitaRefs: [{ tree: "attrezzature", marcaId: "fleet-marca-99", modelloId: "mod-500" }],
+    compatibilitaMezzi: [fiat500],
+  },
+  mezziListe,
+);
+assert.deepEqual(orphanWithLegacy.labels, [fiat500]);
+assert.equal(orphanWithLegacy.orphanLabels.length, 0);
 
 console.log("resolve-compatibilita-ricambio.test.ts OK");

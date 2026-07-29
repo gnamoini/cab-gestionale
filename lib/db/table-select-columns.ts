@@ -7,7 +7,7 @@ export const PROFILES_COLUMNS =
   "id, nome, cognome, username, role_key, cliente_ref, created_at, updated_at" as const;
 
 export const LAVORAZIONI_COLUMNS =
-  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, deleted_at, codice, target_type, attrezzatura_id, actual_labor_hours, actual_labor_hours_source, actual_labor_hours_updated_at, is_tagliando, is_garanzia, maintenance_execution_kind, repair_present, tagliando_preset_ref, tagliando_preset_version_ref, tagliando_assign_preset_to_mezzo, tagliando_no_preset_reason" as const;
+  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, deleted_at, codice, target_type, attrezzatura_id, actual_labor_hours, actual_labor_hours_source, actual_labor_hours_updated_at, is_tagliando, is_garanzia, is_recidivo, maintenance_execution_kind, repair_present, tagliando_preset_ref, tagliando_preset_version_ref, tagliando_assign_preset_to_mezzo, tagliando_no_preset_reason" as const;
 
 /** Sync ore consuntive denormalizzate (subset minimo). */
 export const LAVORAZIONI_ACTUAL_HOURS_COLUMNS =
@@ -15,7 +15,7 @@ export const LAVORAZIONI_ACTUAL_HOURS_COLUMNS =
 
 /** Lista gestionale — senza `deleted_at` (filtro server); profili esclusi (lazy). */
 export const LAVORAZIONI_LIST_LIGHT_COLUMNS =
-  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, codice, target_type, attrezzatura_id, is_tagliando, is_garanzia, maintenance_execution_kind, repair_present, tagliando_preset_ref" as const;
+  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, codice, target_type, attrezzatura_id, is_tagliando, is_garanzia, is_recidivo, maintenance_execution_kind, repair_present, tagliando_preset_ref" as const;
 
 export const LAVORAZIONI_DETAIL_COLUMNS = LAVORAZIONI_COLUMNS;
 

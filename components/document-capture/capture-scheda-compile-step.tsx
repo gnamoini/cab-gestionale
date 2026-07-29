@@ -7,7 +7,8 @@ import {
   SchedaIngressoFormBody,
 } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
 import {
-  buildCaptureIngressoCompileData,
+  buildCaptureIngressoCompileDataFast,
+  buildCaptureIngressoCompileHints,
   countCaptureHintsNeedingReview,
   reconcileCaptureIngressoHintAfterEdit,
   type CaptureIngressoCompileData,
@@ -16,6 +17,7 @@ import {
 import type { CaptureCatalogValidationInput } from "@/lib/document-capture/capture-catalog-validation";
 import type { CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
 import type { CaptureIngressoCompileDraft } from "@/lib/document-capture/capture-acquisition-draft";
+import { mergeCaptureCompileFieldsRespectingDirty, markCaptureCompileFieldDirty, type CaptureCompileFieldDirtyMap } from "@/lib/document-capture/capture-compile-field-dirty";
 import { mergeSchedaIngressoFields } from "@/lib/schede/scheda-ingresso-reuse";
 import type { LavorazioneArchiviata, LavorazioneAttiva, PrioritaLav } from "@/lib/lavorazioni/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -31,7 +33,33 @@ import { CaptureExistingSchedaConfirmDialog } from "@/components/document-captur
 import { describeCaptureLavorazioneAssignTarget } from "@/lib/document-capture/capture-lavorazione-match";
 import { lavorazioneHasExistingScheda } from "@/lib/document-capture/capture-existing-scheda-presence";
 import { useCaptureApplyFlow } from "@/lib/document-capture/use-capture-apply-flow";
+import { CaptureMezzoCandidatePanel } from "@/components/document-capture/capture-mezzo-candidate-panel";
+import { CaptureMezzoFieldConflictHints } from "@/components/document-capture/capture-mezzo-field-conflict-hint";
+import { CaptureMezzoRegistryConfirmDialog } from "@/components/document-capture/capture-mezzo-registry-confirm-dialog";
+import { applyCaptureConflictResolutions } from "@/lib/document-capture/apply-capture-conflict-resolutions";
+import type { CaptureMezzoMatchCandidate } from "@/lib/document-capture/capture-mezzo-catalog-match";
+import {
+  deriveMezzoMatchStateFromMerge,
+  initialMezzoMatchStateFromResolution,
+  shouldResetMezzoMatchOnResume,
+  type CaptureConflictResolution,
+  type CaptureMezzoMatchState,
+} from "@/lib/document-capture/capture-mezzo-match-state";
+import { traceCaptureMezzoMatchResult } from "@/lib/document-capture/capture-mezzo-match-telemetry";
+import {
+  buildMezzoRegistryUpdatePlan,
+  registryFieldsAlreadyDecided,
+  type MezzoRegistryUpdatePlan,
+} from "@/lib/document-capture/capture-mezzo-registry-update-plan";
+import { mergeCaptureIngressoWithLinkedMezzo } from "@/lib/document-capture/merge-capture-ingresso-with-linked-mezzo";
+import {
+  resolveCaptureIngressoContext,
+  type CaptureIngressoContextResolution,
+} from "@/lib/document-capture/resolve-capture-ingresso-context";
+import type { MezzoPermanentFieldKey } from "@/lib/schede/scheda-ingresso-field-roles";
+import type { SelectedMezzoContext } from "@/lib/lavorazioni/selected-mezzo-context";
 import type { ValidateCaptureResult } from "@/lib/document-capture/validation/validate-capture-for-apply";
+import type { CaptureIngressoMergeResult } from "@/lib/document-capture/merge-capture-ingresso-with-linked-mezzo";
 
 export const CAPTURE_COMPILE_FORM_ID = "capture-scheda-compile-form";
 
@@ -121,6 +149,18 @@ export function CaptureSchedaCompileStep({
     Partial<Record<keyof SchedaIngressoFields, CaptureIngressoFieldHint>>
   >({});
   const [existingSchedaPromptOpen, setExistingSchedaPromptOpen] = useState(false);
+  const [ingressoContext, setIngressoContext] = useState<CaptureIngressoContextResolution | null>(null);
+  const [matchState, setMatchState] = useState<CaptureMezzoMatchState>("not_checked");
+  const [selectedCandidate, setSelectedCandidate] = useState<CaptureMezzoMatchCandidate | null>(null);
+  const [mergeResult, setMergeResult] = useState<CaptureIngressoMergeResult | null>(null);
+  const [conflictResolutions, setConflictResolutions] = useState<
+    Partial<Record<MezzoPermanentFieldKey, CaptureConflictResolution>>
+  >({});
+  const [registryDialogOpen, setRegistryDialogOpen] = useState(false);
+  const [pendingRegistryPlan, setPendingRegistryPlan] = useState<MezzoRegistryUpdatePlan | null>(null);
+  const scannedFieldsRef = useRef<SchedaIngressoFields | null>(null);
+  const lastContextKeyRef = useRef<string | null>(null);
+  const fieldDirtyRef = useRef<CaptureCompileFieldDirtyMap>({});
   const pendingApplyRef = useRef<(() => Promise<void>) | null>(null);
 
   const applyFlow = useCaptureApplyFlow(applyMode ? captureId : null);
@@ -146,10 +186,17 @@ export function CaptureSchedaCompileStep({
     };
   }, [resumeIngressoCompile]);
 
+  const initialCompileTagliandoFields = useMemo(() => {
+    if (!compileData?.tagliandoFields) return undefined;
+    if (!resumeIngressoCompile?.tagliandoFields) return compileData.tagliandoFields;
+    return { ...compileData.tagliandoFields, ...resumeIngressoCompile.tagliandoFields };
+  }, [compileData?.tagliandoFields, resumeIngressoCompile?.tagliandoFields]);
+
   const create = useLavorazioneCreateSubmit({
     enabled: Boolean(compileData) && !loading,
     createdBy,
     initialFields: initialCompileFields,
+    initialTagliandoFields: initialCompileTagliandoFields,
     initialMeta: initialCompileMeta,
     mezzi,
     schedeStore,
@@ -160,8 +207,254 @@ export function CaptureSchedaCompileStep({
     onCreated,
   });
 
+  const mezziCatalog = create.mezziCatalog;
+
+  const applyCandidatePreview = useCallback(
+    (
+      candidate: CaptureMezzoMatchCandidate,
+      scanned: SchedaIngressoFields,
+      resolutions: Partial<Record<MezzoPermanentFieldKey, CaptureConflictResolution>> = {},
+    ) => {
+      const merged = mergeCaptureIngressoWithLinkedMezzo({
+        scannedFields: scanned,
+        linkedMezzo: candidate.mezzo,
+      });
+      setMergeResult(merged);
+      setConflictResolutions(resolutions);
+      const nextState = deriveMezzoMatchStateFromMerge(
+        "candidate_found",
+        merged.conflicts,
+        resolutions,
+      );
+      setMatchState(nextState);
+      const finalFields = applyCaptureConflictResolutions({
+        mergeResult: merged,
+        conflictResolutions: resolutions,
+      });
+      create.setFields(finalFields);
+    },
+    [create],
+  );
+
+  useEffect(() => {
+    if (!compileData?.fields) return;
+
+    const catalog = mezziCatalog.length > 0 ? mezziCatalog : mezzi;
+    const contextKey = `${captureId}:${fieldRows.length}:${catalog.length}`;
+    if (lastContextKeyRef.current === contextKey && ingressoContext) return;
+
+    const context = resolveCaptureIngressoContext({
+      captureFields: fieldRows,
+      mezziCatalog: catalog,
+      attive,
+      schedeStore,
+    });
+    setIngressoContext(context);
+    scannedFieldsRef.current = compileData.fields;
+
+    const resume = resumeIngressoCompile?.mezzoMatch;
+    if (
+      resume &&
+      shouldResetMezzoMatchOnResume({
+        storedReasonsHash: resume.selectedCandidateReasonsHash,
+        currentReasonsHash: context.mezzo.reasonsHash,
+        state: resume.state,
+      })
+    ) {
+      setMatchState("candidate_found");
+      setSelectedCandidate(
+        context.mezzo.candidates.find((c) => c.mezzo.id === resume.linkedMezzoId) ??
+          context.mezzo.recommendedMatch,
+      );
+    } else if (resume?.state) {
+      setMatchState(resume.state);
+      if (resume.linkedMezzoId) {
+        const candidate = context.mezzo.candidates.find((c) => c.mezzo.id === resume.linkedMezzoId);
+        if (candidate) {
+          setSelectedCandidate(candidate);
+          applyCandidatePreview(
+            candidate,
+            compileData.fields,
+            resume.conflictResolutions ?? {},
+          );
+        }
+      }
+    } else {
+      const initial = initialMezzoMatchStateFromResolution({
+        decision: context.mezzo.decision,
+      });
+      setMatchState(initial);
+      if (context.mezzo.recommendedMatch && context.mezzo.decision === "auto_suggest") {
+        setSelectedCandidate(context.mezzo.recommendedMatch);
+        applyCandidatePreview(context.mezzo.recommendedMatch, compileData.fields);
+      }
+    }
+
+    traceCaptureMezzoMatchResult({
+      confidence: context.mezzo.confidence,
+      matchStrength: context.mezzo.matchStrength,
+      candidateCount: context.mezzo.candidates.length,
+      confirmed: false,
+      dismissed: false,
+      forceNewMezzo: false,
+      conflictsCount: 0,
+      priority: context.priority,
+    });
+
+    lastContextKeyRef.current = contextKey;
+  }, [
+    applyCandidatePreview,
+    attive,
+    captureId,
+    compileData?.fields,
+    fieldRows.length,
+    ingressoContext,
+    mezzi,
+    mezziCatalog,
+    resumeIngressoCompile?.mezzoMatch,
+    schedeStore,
+  ]);
+
+  const handleSelectCandidate = useCallback(
+    (candidate: CaptureMezzoMatchCandidate) => {
+      setSelectedCandidate(candidate);
+      if (scannedFieldsRef.current) {
+        applyCandidatePreview(candidate, scannedFieldsRef.current);
+      }
+    },
+    [applyCandidatePreview],
+  );
+
+  const handleResolveConflict = useCallback(
+    (field: MezzoPermanentFieldKey, resolution: CaptureConflictResolution) => {
+      setConflictResolutions((prev) => {
+        const next = { ...prev, [field]: resolution };
+        if (mergeResult && scannedFieldsRef.current) {
+          const finalFields = applyCaptureConflictResolutions({
+            mergeResult,
+            conflictResolutions: next,
+          });
+          create.setFields(finalFields);
+          setMatchState(
+            deriveMezzoMatchStateFromMerge(matchState, mergeResult.conflicts, next),
+          );
+        }
+        return next;
+      });
+    },
+    [create, matchState, mergeResult],
+  );
+
+  const finalizeMezzoLink = useCallback(
+    (registryPlan: MezzoRegistryUpdatePlan | null) => {
+      if (!selectedCandidate || !mergeResult) return;
+      const finalFields = applyCaptureConflictResolutions({
+        mergeResult,
+        conflictResolutions,
+      });
+      const skipFields = registryFieldsAlreadyDecided(registryPlan, conflictResolutions);
+      create.applyMezzoFromCapture({
+        mezzo: selectedCandidate.mezzo,
+        finalFields,
+        skipSaveGateFields: skipFields,
+      });
+      setMatchState("confirmed");
+      setRegistryDialogOpen(false);
+      traceCaptureMezzoMatchResult({
+        confidence: ingressoContext?.mezzo.confidence ?? 0,
+        matchStrength: selectedCandidate.matchStrength,
+        candidateCount: ingressoContext?.mezzo.candidates.length ?? 0,
+        confirmed: true,
+        dismissed: false,
+        forceNewMezzo: false,
+        conflictsCount: mergeResult.conflicts.length,
+        priority: ingressoContext?.priority ?? "new_entry",
+      });
+    },
+    [conflictResolutions, create, ingressoContext, mergeResult, selectedCandidate],
+  );
+
+  const handleConfirmMezzo = useCallback(() => {
+    if (!selectedCandidate || !mergeResult) return;
+    const plan = buildMezzoRegistryUpdatePlan({
+      mezzoId: selectedCandidate.mezzo.id,
+      mergeResult,
+    });
+    if (plan.fieldsToUpdate.length > 0) {
+      setPendingRegistryPlan(plan);
+      setRegistryDialogOpen(true);
+      return;
+    }
+    finalizeMezzoLink(null);
+  }, [finalizeMezzoLink, mergeResult, selectedCandidate]);
+
+  const handleForceNewMezzo = useCallback(() => {
+    if (scannedFieldsRef.current) {
+      create.clearCaptureMezzoLink(scannedFieldsRef.current);
+    }
+    setSelectedCandidate(null);
+    setMergeResult(null);
+    setConflictResolutions({});
+    setMatchState("force_new_mezzo");
+    traceCaptureMezzoMatchResult({
+      confidence: ingressoContext?.mezzo.confidence ?? 0,
+      matchStrength: ingressoContext?.mezzo.matchStrength ?? "none",
+      candidateCount: ingressoContext?.mezzo.candidates.length ?? 0,
+      confirmed: false,
+      dismissed: false,
+      forceNewMezzo: true,
+      conflictsCount: mergeResult?.conflicts.length ?? 0,
+      priority: ingressoContext?.priority ?? "new_entry",
+    });
+  }, [create, ingressoContext, mergeResult]);
+
+  const handleDismissMatch = useCallback(() => {
+    if (scannedFieldsRef.current) {
+      create.clearCaptureMezzoLink(scannedFieldsRef.current);
+    }
+    setSelectedCandidate(null);
+    setMergeResult(null);
+    setConflictResolutions({});
+    setMatchState("dismissed");
+    traceCaptureMezzoMatchResult({
+      confidence: ingressoContext?.mezzo.confidence ?? 0,
+      matchStrength: ingressoContext?.mezzo.matchStrength ?? "none",
+      candidateCount: ingressoContext?.mezzo.candidates.length ?? 0,
+      confirmed: false,
+      dismissed: true,
+      forceNewMezzo: false,
+      conflictsCount: 0,
+      priority: ingressoContext?.priority ?? "new_entry",
+    });
+  }, [create, ingressoContext]);
+
+  const handleManualSelect = useCallback(
+    (ctx: SelectedMezzoContext) => {
+      if (ctx.mode !== "existing") {
+        handleForceNewMezzo();
+        return;
+      }
+      const mezzo = mezziCatalog.find((m) => m.id === ctx.mezzoId);
+      if (!mezzo || !scannedFieldsRef.current) return;
+      const candidate =
+        ingressoContext?.mezzo.candidates.find((c) => c.mezzo.id === mezzo.id) ?? {
+          mezzo,
+          score: 0,
+          percentage: 0,
+          matchStrength: "weak" as const,
+          reasons: [],
+        };
+      setSelectedCandidate(candidate);
+      applyCandidatePreview(candidate, scannedFieldsRef.current);
+      setMatchState("manual_selected");
+    },
+    [applyCandidatePreview, handleForceNewMezzo, ingressoContext, mezziCatalog],
+  );
+
   const createFieldsRef = useRef(create.fields);
   createFieldsRef.current = create.fields;
+  const createTagliandoFieldsRef = useRef(create.tagliandoFields);
+  createTagliandoFieldsRef.current = create.tagliandoFields;
   const createMetaRef = useRef({
     stato: create.stato,
     priorita: create.priorita,
@@ -185,29 +478,54 @@ export function CaptureSchedaCompileStep({
   useEffect(() => {
     if (!sharedGlobalOpts || sharedGlobalOpts.isLoading) return;
     let cancelled = false;
-    setLoading(true);
     setLoadError(null);
-    void buildCaptureIngressoCompileData({
-      captureId,
+    fieldDirtyRef.current = {};
+
+    const fast = buildCaptureIngressoCompileDataFast({
       fieldRows,
       sharedGlobalOpts,
+    });
+    setCompileData({
+      ...fast,
+      hints: {},
+      ambiguousCaptureKeys: [],
+      reviewCount: 0,
+    });
+    setCaptureHints({});
+    setLoading(false);
+
+    void buildCaptureIngressoCompileHints({
+      fieldRows: fast.fieldRows,
+      fields: fast.fields,
+      sharedGlobalOpts,
       magazzino,
-      mezzi,
     })
-      .then((data) => {
+      .then((slow) => {
         if (cancelled) return;
-        setCompileData(data);
-        setCaptureHints(data.hints);
+        setCaptureHints(slow.hints);
+        setCompileData((prev) => {
+          if (!prev) return prev;
+          const mergedFields = mergeCaptureCompileFieldsRespectingDirty({
+            current: prev.fields,
+            incoming: fast.fields,
+            dirty: fieldDirtyRef.current,
+          });
+          return {
+            ...prev,
+            fields: mergedFields,
+            hints: slow.hints,
+            ambiguousCaptureKeys: slow.ambiguousCaptureKeys,
+            reviewCount: slow.reviewCount,
+          };
+        });
       })
       .catch((e) => {
         if (cancelled) return;
         const msg = e instanceof Error ? e.message : "Impossibile preparare la scheda";
         setLoadError(msg);
         onCompileError?.(msg);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
@@ -218,10 +536,20 @@ export function CaptureSchedaCompileStep({
     const timer = window.setTimeout(() => {
       onIngressoCompileChange({
         fields: create.fields,
+        tagliandoFields: create.tagliandoFields,
         meta: {
           stato: create.stato,
           priorita: create.priorita,
           mezzoId: create.mezzoId,
+        },
+        mezzoMatch: {
+          state: matchState,
+          linkedMezzoId: (selectedCandidate?.mezzo.id ?? create.mezzoId) || null,
+          recommendedMezzoId: ingressoContext?.mezzo.recommendedMatch?.mezzo.id ?? null,
+          selectedCandidateScore: selectedCandidate?.score,
+          selectedCandidateReasonsHash: ingressoContext?.mezzo.reasonsHash,
+          conflictResolutions,
+          registryUpdatePlan: pendingRegistryPlan,
         },
       });
     }, COMPILE_DRAFT_DEBOUNCE_MS);
@@ -230,17 +558,35 @@ export function CaptureSchedaCompileStep({
       if (!onIngressoCompileChange || loadingRef.current || !compileData) return;
       onIngressoCompileChange({
         fields: createFieldsRef.current,
+        tagliandoFields: createTagliandoFieldsRef.current,
         meta: createMetaRef.current,
+        mezzoMatch: {
+          state: matchState,
+          linkedMezzoId: (selectedCandidate?.mezzo.id ?? createMetaRef.current.mezzoId) || null,
+          recommendedMezzoId: ingressoContext?.mezzo.recommendedMatch?.mezzo.id ?? null,
+          selectedCandidateScore: selectedCandidate?.score,
+          selectedCandidateReasonsHash: ingressoContext?.mezzo.reasonsHash,
+          conflictResolutions,
+          registryUpdatePlan: pendingRegistryPlan,
+        },
       });
     };
   }, [
     compileData,
     create.fields,
+    create.tagliandoFields,
     create.mezzoId,
     create.priorita,
     create.stato,
+    conflictResolutions,
+    ingressoContext?.mezzo.reasonsHash,
+    ingressoContext?.mezzo.recommendedMatch?.mezzo.id,
     loading,
+    matchState,
     onIngressoCompileChange,
+    pendingRegistryPlan,
+    selectedCandidate?.mezzo.id,
+    selectedCandidate?.score,
   ]);
 
   const reviewCount = useMemo(() => countCaptureHintsNeedingReview(captureHints), [captureHints]);
@@ -301,6 +647,11 @@ export function CaptureSchedaCompileStep({
   }, []);
 
   const onPatchCaptureAware = useCallback((patch: Partial<SchedaIngressoFields>) => {
+    for (const rawKey of Object.keys(patch) as Array<keyof SchedaIngressoFields>) {
+      if (patch[rawKey] !== undefined) {
+        fieldDirtyRef.current = markCaptureCompileFieldDirty(fieldDirtyRef.current, rawKey);
+      }
+    }
     patchFieldsRef.current(patch);
     if (!catalogValidationInputRef.current) return;
     const hints = captureHintsRef.current;
@@ -314,6 +665,7 @@ export function CaptureSchedaCompileStep({
   }, [flushHintReconcile]);
 
   const onApplyCaptureHint = useCallback((key: keyof SchedaIngressoFields, value: string) => {
+    fieldDirtyRef.current = markCaptureCompileFieldDirty(fieldDirtyRef.current, key);
     patchFieldsRef.current({ [key]: value } as Partial<SchedaIngressoFields>);
     if (hintReconcileTimerRef.current) clearTimeout(hintReconcileTimerRef.current);
     pendingHintKeysRef.current.delete(key);
@@ -485,10 +837,43 @@ export function CaptureSchedaCompileStep({
                 {create.schedaSyncError}
               </div>
             ) : null}
+            {ingressoContext ? (
+              <CaptureMezzoCandidatePanel
+                context={ingressoContext}
+                matchState={matchState}
+                selectedCandidate={selectedCandidate}
+                mergeResult={mergeResult}
+                conflictResolutions={conflictResolutions}
+                mezziCatalog={mezziCatalog}
+                userId={createdBy}
+                attive={attive}
+                schedeStore={schedeStore}
+                onConfirmMezzo={handleConfirmMezzo}
+                onForceNewMezzo={handleForceNewMezzo}
+                onDismiss={handleDismissMatch}
+                onSelectCandidate={handleSelectCandidate}
+                onManualSelect={handleManualSelect}
+              />
+            ) : null}
+            {mergeResult && matchState !== "dismissed" && matchState !== "force_new_mezzo" ? (
+              <CaptureMezzoFieldConflictHints
+                mergeResult={mergeResult}
+                conflictResolutions={conflictResolutions}
+                onResolve={handleResolveConflict}
+              />
+            ) : null}
             <SchedaIngressoFormBody
               variant="create-lavorazione"
               fields={create.fields}
-              setFields={create.setFields}
+              setFields={(fields) => {
+                const prev = create.fields;
+                for (const rawKey of Object.keys(fields) as Array<keyof SchedaIngressoFields>) {
+                  if (fields[rawKey] !== prev[rawKey]) {
+                    fieldDirtyRef.current = markCaptureCompileFieldDirty(fieldDirtyRef.current, rawKey);
+                  }
+                }
+                create.setFields(fields);
+              }}
               onPatch={onPatchCaptureAware}
               pending={submitBusy}
               mezzi={mezzi}
@@ -510,12 +895,30 @@ export function CaptureSchedaCompileStep({
               onApplyCaptureHint={onApplyCaptureHint}
               captureReviewCount={reviewCount}
               embedInParentScroll
+              tagliandoFields={create.tagliandoFields}
+              onTagliandoFieldsChange={(patch) =>
+                create.setTagliandoFields((prev) => ({ ...prev, ...patch }))
+              }
             />
           </form>
         }
       />
       {create.unknownSettingsDialog}
       {create.saveGateDialog}
+      {selectedCandidate && mergeResult && pendingRegistryPlan ? (
+        <CaptureMezzoRegistryConfirmDialog
+          open={registryDialogOpen}
+          mezzo={selectedCandidate.mezzo}
+          plan={pendingRegistryPlan}
+          mergeResult={mergeResult}
+          onUpdateRegistry={() => finalizeMezzoLink(pendingRegistryPlan)}
+          onSchedaOnly={() => finalizeMezzoLink(null)}
+          onCancel={() => {
+            setRegistryDialogOpen(false);
+            setPendingRegistryPlan(null);
+          }}
+        />
+      ) : null}
       <CaptureExistingSchedaConfirmDialog
         open={existingSchedaPromptOpen}
         schedaTipo="ingresso"

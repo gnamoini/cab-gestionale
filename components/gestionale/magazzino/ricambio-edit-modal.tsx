@@ -93,7 +93,10 @@ export function RicambioEditModal({
       }),
     [mergedMezziListe, mezziListePrefs],
   );
-  const baselineForm = useMemo(() => toFormDraft(ricambio, mezziListePrefs), [ricambio, mezziListePrefs]);
+  const baselineForm = useMemo(
+    () => toFormDraft(ricambio, mergedMezziListe, { prefsListe: mezziListePrefs }),
+    [ricambio, mergedMezziListe, mezziListePrefs],
+  );
   const formEngine = useFormEngine<RicambioFormState>({
     initial: baselineForm,
   });

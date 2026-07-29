@@ -42,6 +42,7 @@ export async function invalidateAfterMezzoMutations(
   qc: QueryClient,
   mezzoId?: string,
   dbVersion?: string,
+  options?: { refetchType?: "active" | "all" | "none" },
 ) {
   if (mezzoId) {
     await invalidateEntity({
@@ -50,6 +51,7 @@ export async function invalidateAfterMezzoMutations(
       entityId: mezzoId,
       scope: "full",
       dbVersion,
+      refetchType: options?.refetchType,
     });
     void refreshSchedeBundlesForMezzoId(qc, mezzoId);
     return;

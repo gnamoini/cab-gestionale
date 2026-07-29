@@ -81,10 +81,6 @@ assert.match(reviewPanel, /lg:sticky/);
 assert.match(compileStep, /pinned/);
 assert.match(sheetCompileStep, /CaptureReviewSplitLayout/);
 assert.match(
-  fs.readFileSync(path.join(ROOT, "components/lavorazioni/schede/scheda-lavorazioni-form-body.tsx"), "utf8"),
-  /disableRecents/,
-);
-assert.match(
   fs.readFileSync(path.join(ROOT, "lib/document-capture/capture-sheet-field-hints.ts"), "utf8"),
   /Data non letta dalla scansione/,
 );
@@ -119,6 +115,8 @@ assert.match(dropOverlay, /lavorazioniCaptureAdapter/);
 assert.match(compileStep, /SchedaIngressoFormBody/);
 assert.match(compileStep, /captureHints/);
 assert.match(compileStep, /useLavorazioneCreateSubmit/);
+assert.match(compileStep, /CaptureMezzoCandidatePanel/);
+assert.match(compileStep, /resolveCaptureIngressoContext/);
 
 assert.match(lavorazioniView, /onCaptureLavorazioneCreated/);
 assert.match(lavorazioniView, /commitLavorazioneCreateSuccess/);

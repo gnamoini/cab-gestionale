@@ -10,8 +10,10 @@ import {
 } from "@/lib/magazzino/compat/build-compat-meta";
 import {
   compatDisplayLabel,
+  compatLabelDedupeKey,
   compatLineDisplayText,
   compatSortKey,
+  COMPAT_NOT_CONFIGURED_LABEL,
   dedupeCompatDisplayLines,
   dedupeCompatLabels,
 } from "@/lib/magazzino/compat/compat-display";
@@ -22,14 +24,43 @@ import {
   dedupeCompatRefs,
   dedupeCompatRefsPreferExplicitModels,
   resolveCompatRefLabel,
+  type ResolveCompatRefLabelOptions,
 } from "@/lib/magazzino/ricambio-compat-resolver";
 
-const ORPHAN_FALLBACK = "[compatibilità non risolvibile]";
+export type ResolveCompatibilitaOpts = {
+  expand?: ExpandRicambioCompatOpts;
+  prefsListe?: MezziListePrefs;
+};
+
+function refLabelOpts(opts?: ResolveCompatibilitaOpts): ResolveCompatRefLabelOptions | undefined {
+  return opts?.prefsListe ? { prefsListe: opts.prefsListe } : undefined;
+}
+
+function mergeLegacyFallbackLabels(
+  resolvedLabels: string[],
+  rawLegacy: readonly string[],
+  liste: MezziListePrefs,
+): string[] {
+  const legacyLabels = preferExplicitModelsOverUniversalMarca(
+    collapseLegacyExpandedMarcaUniversal(rawLegacy, liste),
+    liste,
+  );
+  const merged = [...resolvedLabels];
+  const seen = new Set(resolvedLabels.map(compatLabelDedupeKey));
+  for (const leg of legacyLabels) {
+    const k = compatLabelDedupeKey(leg);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    merged.push(leg);
+  }
+  return dedupeCompatLabels(merged);
+}
 
 function buildResolved(
   refs: ReturnType<typeof dedupeCompatRefs>,
   labels: string[],
   orphanLabels: string[],
+  isConfigured: boolean,
 ): ResolvedCompatibilita {
   const displayLines = dedupeCompatDisplayLines([
     ...labels.map(compatLineDisplayText),
@@ -40,13 +71,16 @@ function buildResolved(
     labels,
     displayLines,
     display:
-      labels.length === 0 && orphanLabels.length === 0
-        ? compatDisplayLabel([])
+      !isConfigured
+        ? COMPAT_NOT_CONFIGURED_LABEL
         : labels.length > 0
           ? compatDisplayLabel(labels)
-          : orphanLabels.join(", "),
-    sortKey: compatSortKey([...labels, ...orphanLabels]),
-    isUniversal: labels.length === 0 && orphanLabels.length === 0,
+          : orphanLabels.length > 0
+            ? orphanLabels.join(", ")
+            : COMPAT_NOT_CONFIGURED_LABEL,
+    sortKey: isConfigured ? compatSortKey([...labels, ...orphanLabels]) : "",
+    isUniversal: !isConfigured,
+    isConfigured,
     orphanLabels,
   };
 }
@@ -58,9 +92,11 @@ function buildResolved(
 export function resolveCompatibilitaRicambio(
   input: CompatInput,
   liste?: MezziListePrefs,
-  opts?: { expand?: ExpandRicambioCompatOpts },
+  opts?: ResolveCompatibilitaOpts,
 ): ResolvedCompatibilita {
   const rawLegacy = normalizeCompatList(input.compatibilitaMezzi ?? []);
+  const isConfigured =
+    (input.compatibilitaRefs?.length ?? 0) > 0 || rawLegacy.length > 0;
   let refs = input.compatibilitaRefs?.length
     ? dedupeCompatRefsPreferExplicitModels(input.compatibilitaRefs)
     : [];
@@ -75,33 +111,50 @@ export function resolveCompatibilitaRicambio(
         compatibilitaMezzi: built.compatibilitaMezzi ?? [],
       },
       liste,
+      opts,
     );
   }
 
   if (!liste) {
-    return buildResolved(refs, rawLegacy, []);
+    return buildResolved(refs, rawLegacy, [], isConfigured);
   }
+
+  const labelOpts = refLabelOpts(opts);
 
   if (refs.length > 0) {
     const labels: string[] = [];
-    const orphanLabels: string[] = [];
+    let orphanRefCount = 0;
     for (const ref of refs) {
-      const label = resolveCompatRefLabel(ref, liste);
+      const label = resolveCompatRefLabel(ref, liste, labelOpts);
       if (label) labels.push(label);
-      else orphanLabels.push(ORPHAN_FALLBACK);
+      else orphanRefCount += 1;
     }
-    const sorted = dedupeCompatLabels([...new Set(labels)]).sort((a, b) => a.localeCompare(b, "it"));
-    return buildResolved(refs, sorted, orphanLabels);
+
+    let mergedLabels = dedupeCompatLabels([...new Set(labels)]).sort((a, b) => a.localeCompare(b, "it"));
+    if (orphanRefCount > 0 && rawLegacy.length > 0) {
+      mergedLabels = mergeLegacyFallbackLabels(mergedLabels, rawLegacy, liste).sort((a, b) =>
+        a.localeCompare(b, "it"),
+      );
+    }
+
+    const orphanLabels: string[] =
+      mergedLabels.length === 0 && orphanRefCount > 0 ? ["[compatibilità non risolvibile]"] : [];
+
+    return buildResolved(refs, mergedLabels, orphanLabels, isConfigured);
   }
 
   const labels = preferExplicitModelsOverUniversalMarca(
     collapseLegacyExpandedMarcaUniversal(rawLegacy, liste),
     liste,
   );
-  return buildResolved([], dedupeCompatLabels(labels), []);
+  return buildResolved([], dedupeCompatLabels(labels), [], isConfigured);
 }
 
 /** Alias read-path: labels risolte per adapter UI. */
-export function resolveCompatibilitaLabels(input: CompatInput, liste: MezziListePrefs): string[] {
-  return resolveCompatibilitaRicambio(input, liste).labels;
+export function resolveCompatibilitaLabels(
+  input: CompatInput,
+  liste: MezziListePrefs,
+  opts?: ResolveCompatibilitaOpts,
+): string[] {
+  return resolveCompatibilitaRicambio(input, liste, opts).labels;
 }

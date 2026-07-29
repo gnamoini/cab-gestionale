@@ -59,7 +59,7 @@ export function compatLabelsFromCatalog(entries: readonly AttrezzatureCatalogEnt
   return entries.map((e) => compatLabelMarcaModello(e.marca, e.modello));
 }
 
-/** ponytail: prefs restano fallback per ricambi orfani; flotta V2 ha priorità. */
+/** ponytail: prefs ID stabili per compat refs; flotta aggiunge solo modelli mancanti. */
 export function resolveMezziListeWithFleetCatalog(
   baseListe: import("@/lib/mezzi/mezzi-liste-prefs-storage").MezziListePrefs,
   fleetTree: readonly AttrezzaturaMarca[],
@@ -71,7 +71,7 @@ export function resolveMezziListeWithFleetCatalog(
   };
 }
 
-/** Unisce albero flotta V2 con hierarchy prefs (prefs = fallback orfani). */
+/** Unisce albero prefs (ID stabili) con flotta V2 (modelli aggiuntivi). */
 export function mergeAttrezzatureMarcheTrees(
   fleet: readonly AttrezzaturaMarca[],
   prefs: readonly AttrezzaturaMarca[],
@@ -95,7 +95,7 @@ export function mergeAttrezzatureMarcheTrees(
       existing.modelli.push({ id: mod.id, nome: mn });
     }
   };
-  for (const m of fleet) ingest(m);
   for (const m of prefs) ingest(m);
+  for (const m of fleet) ingest(m);
   return [...byName.values()].sort((a, b) => a.nome.localeCompare(b.nome, "it"));
 }

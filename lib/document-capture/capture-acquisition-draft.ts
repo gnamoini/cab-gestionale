@@ -1,16 +1,20 @@
 import type { DocumentCaptureFlowStep } from "@/components/document-capture/document-capture-step-indicator";
+import type { CaptureMezzoMatchDraft } from "@/lib/document-capture/capture-mezzo-match-state";
 import type { CaptureSchedaCompilePayload, CaptureFieldPatch } from "@/lib/document-capture/capture-scheda-compile-payload";
+import type { TagliandoLavorazioneFields } from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
 import type { SchedaTipo, SchedaIngressoFields } from "@/types/schede";
 
 const STORAGE_KEY = "gestionale:capture-acquisition-draft";
 
 export type CaptureIngressoCompileDraft = {
   fields: SchedaIngressoFields;
+  tagliandoFields?: TagliandoLavorazioneFields;
   meta: {
     stato: string;
     priorita: string;
     mezzoId: string;
   };
+  mezzoMatch?: CaptureMezzoMatchDraft;
 };
 
 export type CaptureSchedaCompileDraft = {
@@ -46,10 +50,26 @@ function isSchedaTipo(value: unknown): value is Extract<SchedaTipo, "lavorazioni
   return value === "lavorazioni" || value === "ricambi";
 }
 
+function isMezzoMatchDraft(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const d = value as Record<string, unknown>;
+  if (typeof d.state !== "string") return false;
+  return true;
+}
+
 function isIngressoCompileDraft(value: unknown): value is CaptureIngressoCompileDraft {
   if (!value || typeof value !== "object") return false;
   const d = value as Record<string, unknown>;
-  return Boolean(d.fields && typeof d.fields === "object" && d.meta && typeof d.meta === "object");
+  if (!d.fields || typeof d.fields !== "object" || !d.meta || typeof d.meta !== "object") return false;
+  if (d.mezzoMatch !== undefined && !isMezzoMatchDraft(d.mezzoMatch)) return false;
+  if (
+    d.tagliandoFields !== undefined &&
+    d.tagliandoFields !== null &&
+    typeof d.tagliandoFields !== "object"
+  ) {
+    return false;
+  }
+  return true;
 }
 
 function isSchedaCompileDraft(value: unknown): value is CaptureSchedaCompileDraft {

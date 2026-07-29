@@ -34,40 +34,37 @@ export type FinalizeCaptureStorageFailure = {
   bucket: string;
 };
 
-export async function finalizeDocumentCaptureInTransaction(input: {
+export type FinalizeCaptureFromBytesInput = {
   captureId: string;
   storagePath: string;
-}): Promise<FinalizeCaptureResult | FinalizeCaptureStorageFailure> {
+  bytes: Uint8Array;
+  mime: string;
+  fileName?: string;
+  /** Se false, non riscrive storage dopo conversione office (process in-memory). */
+  reuploadConverted?: boolean;
+};
+
+export type FinalizeCaptureFromBytesResult = {
+  result: FinalizeCaptureResult;
+  bytes: Uint8Array;
+  mime: string;
+};
+
+export async function finalizeCaptureFromBytes(
+  input: FinalizeCaptureFromBytesInput,
+): Promise<FinalizeCaptureFromBytesResult | FinalizeCaptureStorageFailure> {
   const bucket = STORAGE_BUCKETS.documentCapture;
   const sb = await createSupabaseServerUserClient();
 
-  const { data: fileData, error: downloadError } = await sb.storage
-    .from(bucket)
-    .download(input.storagePath);
+  let bytes = input.bytes;
+  let mime = input.mime;
+  const fileName = input.fileName ?? input.storagePath.split("/").pop() ?? "document";
 
-  if (downloadError || !fileData) {
-    const classified = classifyFinalizeStorageDownloadError(downloadError, Boolean(fileData), bucket);
-    return {
-      ok: false,
-      code: classified.code,
-      message: classified.message,
-      isPolicyError: classified.isPolicyError,
-      storagePath: input.storagePath,
-      bucket,
-    };
-  }
-
-  let bytes: Uint8Array = new Uint8Array(await fileData.arrayBuffer());
   if (bytes.byteLength > DOCUMENT_CAPTURE_MAX_BYTES) {
     throw new Error("File troppo grande");
   }
 
-  const fileName = input.storagePath.split("/").pop() ?? "document";
-  let mime = normalizeCaptureMime({
-    mime: fileData.type,
-    fileName,
-    bytes,
-  });
+  mime = normalizeCaptureMime({ mime, fileName, bytes });
   if (!isAllowedCaptureMime(mime)) {
     throw new Error("Tipo file non consentito");
   }
@@ -75,6 +72,7 @@ export async function finalizeDocumentCaptureInTransaction(input: {
     throw new Error("SVG non consentito");
   }
 
+  const shouldReupload = input.reuploadConverted !== false;
   if (needsCaptureOfficeConversion(mime)) {
     const prepared = await prepareCaptureBytesForOcr({ bytes, mime, fileName });
     bytes = prepared.bytes;
@@ -82,12 +80,14 @@ export async function finalizeDocumentCaptureInTransaction(input: {
     if (bytes.byteLength > DOCUMENT_CAPTURE_MAX_BYTES) {
       throw new Error("File convertito troppo grande");
     }
-    const { error: reuploadError } = await sb.storage.from(bucket).upload(input.storagePath, bytes, {
-      upsert: true,
-      contentType: mime,
-    });
-    if (reuploadError) {
-      throw new Error(reuploadError.message);
+    if (shouldReupload) {
+      const { error: reuploadError } = await sb.storage.from(bucket).upload(input.storagePath, bytes, {
+        upsert: true,
+        contentType: mime,
+      });
+      if (reuploadError) {
+        throw new Error(reuploadError.message);
+      }
     }
   }
 
@@ -121,7 +121,7 @@ export async function finalizeDocumentCaptureInTransaction(input: {
     throw new Error(error.message);
   }
 
-  const result = data as {
+  const rpcResult = data as {
     ok?: boolean;
     id?: string;
     status?: string;
@@ -130,12 +130,64 @@ export async function finalizeDocumentCaptureInTransaction(input: {
   };
 
   return {
-    ok: true,
-    id: result.id ?? input.captureId,
-    status: result.status,
-    duplicateOf: result.duplicateOf ?? null,
-    finalizedAt: result.finalizedAt ?? null,
+    result: {
+      ok: true,
+      id: rpcResult.id ?? input.captureId,
+      status: rpcResult.status,
+      duplicateOf: rpcResult.duplicateOf ?? null,
+      finalizedAt: rpcResult.finalizedAt ?? null,
+    },
+    bytes,
+    mime,
   };
+}
+
+export async function finalizeDocumentCaptureInTransaction(input: {
+  captureId: string;
+  storagePath: string;
+}): Promise<FinalizeCaptureResult | FinalizeCaptureStorageFailure> {
+  const bucket = STORAGE_BUCKETS.documentCapture;
+  const sb = await createSupabaseServerUserClient();
+
+  const { data: fileData, error: downloadError } = await sb.storage
+    .from(bucket)
+    .download(input.storagePath);
+
+  if (downloadError || !fileData) {
+    const classified = classifyFinalizeStorageDownloadError(downloadError, Boolean(fileData), bucket);
+    return {
+      ok: false,
+      code: classified.code,
+      message: classified.message,
+      isPolicyError: classified.isPolicyError,
+      storagePath: input.storagePath,
+      bucket,
+    };
+  }
+
+  let bytes: Uint8Array = new Uint8Array(await fileData.arrayBuffer());
+  const fileName = input.storagePath.split("/").pop() ?? "document";
+  let mime = normalizeCaptureMime({
+    mime: fileData.type,
+    fileName,
+    bytes,
+  });
+
+  try {
+    const finalized = await finalizeCaptureFromBytes({
+      captureId: input.captureId,
+      storagePath: input.storagePath,
+      bytes,
+      mime,
+      fileName,
+    });
+    if ("ok" in finalized && finalized.ok === false) {
+      return finalized;
+    }
+    return (finalized as FinalizeCaptureFromBytesResult).result;
+  } catch (e) {
+    throw e;
+  }
 }
 
 export { finalizeStorageErrorToDocumentCaptureCode };

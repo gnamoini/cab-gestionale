@@ -22,7 +22,7 @@ import { applyMezzoAssociationChangeOrThrow } from "@/lib/mezzi/mezzo-associatio
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
-import { invalidateAfterMezzoAssociationChange } from "@/src/lib/react-query/invalidate-related";
+import { mezzoDomainQueryKeys } from "@/src/services/domain/mezzo-domain.queries";
 import { useQueryClient } from "@tanstack/react-query";
 
 const MEZZO_EDIT_FORM_ID = "mezzo-edit-form";
@@ -46,6 +46,7 @@ export function MezziEditModal({
   const formEngine = useFormEngine({ initial: gestitoToMezzoForm(mezzo) });
   const { value: form, setValue, reset, runSubmit, formProps } = formEngine;
   const updateMut = useMezzoUpdateMutation();
+  const [saving, setSaving] = useState(false);
   const [associationOpen, setAssociationOpen] = useState(false);
   const [associationChange, setAssociationChange] = useState<AssociationChange | null>(null);
   const [associationReason, setAssociationReason] = useState("");
@@ -77,10 +78,9 @@ export function MezziEditModal({
       }
 
       const id = mezzo.id;
-      let dbVersion = mezzo.ultimaModifica;
 
       if (change.hasChanges && associationConfirmed) {
-        const updated = await applyMezzoAssociationChangeOrThrow({
+        await applyMezzoAssociationChangeOrThrow({
           mezzoId: id,
           existingMezzo: mezzo,
           newAssociation: associationFromForm(currentForm),
@@ -88,7 +88,6 @@ export function MezziEditModal({
           reason: associationReason.trim() || null,
           expectedUpdatedAt: mezzo.ultimaModifica?.trim() || "",
         });
-        dbVersion = updated.updated_at;
       }
 
       await persistMezzoFormUpdate({
@@ -97,7 +96,10 @@ export function MezziEditModal({
         updateMezzo: (mezzoId, data) => updateMut.mutateAsync({ id: mezzoId, data }),
       });
 
-      await invalidateAfterMezzoAssociationChange(queryClient, id, dbVersion);
+      if (change.hasChanges && associationConfirmed) {
+        void queryClient.invalidateQueries({ queryKey: mezzoDomainQueryKeys.anagraficaHistory(id) });
+      }
+
       onSaved(id);
     },
     [associationReason, mezzo, onSaved, queryClient, updateMut],
@@ -105,7 +107,7 @@ export function MezziEditModal({
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!canEdit || updateMut.isPending) return;
+    if (!canEdit || saving || updateMut.isPending) return;
 
     await runSubmit(e.currentTarget, async (currentForm) => {
       const marca = currentForm.marca.trim();
@@ -113,10 +115,13 @@ export function MezziEditModal({
         onValidationError("Compila almeno cliente e marca attrezzatura.");
         return;
       }
+      setSaving(true);
       try {
         await persistForm(currentForm, false);
       } catch (err) {
         onSaveError(err);
+      } finally {
+        setSaving(false);
       }
     });
   }
@@ -133,7 +138,7 @@ export function MezziEditModal({
           <LoadingButton
             type="submit"
             form={MEZZO_EDIT_FORM_ID}
-            loading={updateMut.isPending}
+            loading={saving || updateMut.isPending}
             preset="salva"
             loadingLabel="Salvataggio…"
             className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:opacity-60`}
@@ -164,7 +169,12 @@ export function MezziEditModal({
           const pending = pendingFormRef.current;
           pendingFormRef.current = null;
           if (!pending) return;
-          void persistForm(pending, true).catch(onSaveError);
+          setSaving(true);
+          void persistForm(pending, true)
+            .catch(onSaveError)
+            .finally(() => {
+              setSaving(false);
+            });
         }}
         onCancel={() => {
           setAssociationOpen(false);

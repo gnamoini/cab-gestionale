@@ -1,9 +1,9 @@
 import "server-only";
 
 import sharp from "sharp";
-import type { CaptureSignatureBbox } from "@/lib/document-capture/capture-signature-crop";
+import type { CaptureNormalizedBbox } from "@/lib/document-capture/capture-normalized-bbox";
 
-function isValidBbox(bbox: CaptureSignatureBbox): boolean {
+function isValidBbox(bbox: CaptureNormalizedBbox): boolean {
   const w = bbox.xmax - bbox.xmin;
   const h = bbox.ymax - bbox.ymin;
   return w >= 8 && h >= 8 && bbox.xmax > bbox.xmin && bbox.ymax > bbox.ymin;
@@ -19,7 +19,7 @@ export function sharpFromCaptureBytes(bytes: Uint8Array, mime: string, page = 0)
 /** Ritaglio bbox normalizzato 0–1000 → PNG buffer (200 DPI su PDF). */
 export async function cropNormalizedBboxToPngBuffer(
   bytes: Uint8Array,
-  bbox: CaptureSignatureBbox,
+  bbox: CaptureNormalizedBbox,
   mime: string,
   page = 0,
 ): Promise<Buffer | null> {
@@ -49,7 +49,7 @@ export async function cropNormalizedBboxToPngBuffer(
 
 export async function cropNormalizedBboxToPngDataUrl(
   bytes: Uint8Array,
-  bbox: CaptureSignatureBbox,
+  bbox: CaptureNormalizedBbox,
   mime: string,
   page = 0,
 ): Promise<string | null> {

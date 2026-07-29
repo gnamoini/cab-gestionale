@@ -1,5 +1,4 @@
 import type { CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
-import { isCaptureSignatureFieldKey } from "@/lib/document-capture/capture-signature-field-keys";
 import { isoToItDisplay, ymdToItDisplay } from "@/lib/lavorazioni/date-day-only";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
@@ -137,9 +136,6 @@ export function normalizeIngressoCaptureFieldRows<T extends CaptureFieldRow>(
   return repairMisassignedIngressoCaptureFields(
     rows.map((row) => {
       const field_key = normalizeCaptureExtractedFieldKey(row.field_key);
-      if (isCaptureSignatureFieldKey(field_key)) {
-        return { ...row, field_key };
-      }
       const text = captureRowText({ ...row, field_key });
       if (normCaptureFieldKey(field_key) === "data_ingresso") {
         if (!text) return { ...row, field_key };

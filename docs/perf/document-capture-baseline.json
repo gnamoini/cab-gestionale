@@ -1,0 +1,24 @@
+{
+  "environment": {
+    "timestamp": "2026-07-29T15:30:25.385Z",
+    "gitCommit": "264b0bb9",
+    "branch": "main",
+    "nodeVersion": "v24.15.0",
+    "browser": "chromium",
+    "nextMode": "dev",
+    "dataset": "dev",
+    "machine": "DESKTOP-Jay",
+    "viewport": "1440x900"
+  },
+  "analyze": {
+    "capturedAt": "2026-07-29T15:30:25.171Z",
+    "sampleCount": 0,
+    "phases": {},
+    "tokens": null,
+    "uxMetrics": {
+      "timeToFirstProgressMs": null,
+      "timeToFirstDataMs": null,
+      "timeToReviewReadyMs": null
+    }
+  }
+}

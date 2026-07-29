@@ -11,11 +11,12 @@ cliente, cantiere, utilizzatore (solo nome persona),
 tipo_attrezzatura (etichetta «Attrezzatura» su schede stampate — es. SPAZZATRICE, escavatore; NON è utilizzatore),
 attrezzatura_marca, attrezzatura_modello, attrezzatura_matricola, n_scuderia, ore,
 telaio_marca, telaio_modello, targa, km,
-descrizione_anomalia, nome, cognome, telefono, note.
+descrizione_anomalia,
+riparazione, tagliando, garanzia, recidivo (checkbox sulla scheda: value "true" se barrato/spuntato, "false" se vuoto; non inferire da testo libero),
+nome, cognome, telefono, note.
 Per descrizione_anomalia e note: conserva gli a capo del foglio (una riga per ogni riga visibile sulla scheda; non appiattire in una sola riga).
 Correggi refusi OCR evidenti nel testo (es. aspirae→aspirazione, cor→per, supp→supporto) senza inventare interventi non presenti.
 Ometti n_scuderia, ore e km se la casella sul foglio è vuota (non inventare cifre).
-Le firme (autista/richiedente e addetto officina) vengono ritagliate automaticamente dalle caselle fisse del template blank: non estrarle in fields.
 
 Scheda lavorazioni blank CAB — imposta schedaTipo "lavorazioni" e usa:
 cliente, targa_matricola,

@@ -1,4 +1,5 @@
 import { formatLivelloCarburanteDisplay } from "@/lib/schede/livello-carburante-value";
+import { resolveOreLavoroFields } from "@/lib/schede/resolve-ore-lavoro-fields";
 import type { ClienteAnagrafica, ClienteContattoTipo, ClienteSedeFields } from "@/lib/clienti/clienti-anagrafica-types";
 import type { PdfField } from "@/lib/pdf/core/pdf-base-template";
 import { pdfFieldFromValue } from "@/lib/pdf/gestionale-section-table";
@@ -95,15 +96,19 @@ export function buildAttrezzaturaAnagraficaPdfFields(source: {
   matricola?: string;
   nScuderia?: string;
   oreLavoro?: string;
+  oreLavoroMotore?: string;
+  oreLavoroPto?: string;
 }): PdfField[] {
   const field = pdfFieldFromValue;
+  const ore = resolveOreLavoroFields(source);
   return [
     field("Tipo", source.tipoAttrezzatura),
     field("Marca", source.marcaAttrezzatura),
     field("Modello", source.modelloAttrezzatura),
     field("Matricola", source.matricola),
     field("N. scuderia", source.nScuderia),
-    field("Ore lavoro", source.oreLavoro),
+    field("Ore lavoro motore", ore.oreLavoroMotore),
+    field("Ore lavoro PTO", ore.oreLavoroPto),
   ].filter((f): f is PdfField => f !== null);
 }
 

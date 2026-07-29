@@ -32,7 +32,10 @@ export function useMezzoUpdateMutation() {
     onSettled: async (data, _error, variables) => {
       await traceMutationLifecycle(
         { entityType: "mezzo", entityId: variables.id, operation: "update" },
-        () => invalidateAfterMezzoMutations(queryClient, variables.id, data?.updated_at),
+        () =>
+          invalidateAfterMezzoMutations(queryClient, variables.id, data?.updated_at, {
+            refetchType: "none",
+          }),
       );
     },
   });

@@ -39,7 +39,6 @@ import {
   mergeResolutionIntoFieldRows,
 } from "@/lib/entity-resolution/server/apply-capture-resolution.server";
 import { inferCaptureSchedaTipo } from "@/lib/document-capture/capture-field-mapper";
-import { upsertCaptureSignatureFields } from "@/lib/document-capture/upsert-capture-signature-fields.server";
 import { parsePhysicalPages } from "@/lib/document-capture/physical/physical-parser";
 import { normalizeCaptureExtractedFieldKey } from "@/lib/document-capture/capture-field-key-aliases";
 import { projectDocumentModelToFlatFields } from "@/lib/document-capture/projection/document-model-flat-projection";
@@ -60,7 +59,8 @@ import { SCHEDA_OFFICINA_EXTRACTION_USER } from "@/lib/document-capture/scheda-o
 import { classifyStorageDownloadError } from "@/lib/storage/storage-download-errors";
 import { resolveGeminiAnalyzeRetryDelayMs } from "@/lib/ai/gemini-retry-after";
 import { classifyAiError, logUnclassifiedAiError } from "@/lib/ai/runtime/errors";
-import { createAnalyzeTrace } from "@/lib/document-capture/pipeline/analyze-trace.server";
+import { isTransientAnalyzeRetryError } from "@/lib/ai/gemini-analyze-retry-policy";
+import { createAnalyzeTrace, type AnalyzeTraceListener } from "@/lib/document-capture/pipeline/analyze-trace.server";
 import { AnalyzeTimeoutBudget } from "@/lib/document-capture/pipeline/analyze-timeout-budget";
 import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
@@ -144,10 +144,17 @@ function buildAnalyzeFailure(input: {
   };
 }
 
+export type AnalyzeDocumentCaptureV41Options = {
+  correlationId?: string;
+  bytes?: Uint8Array;
+  mime?: string;
+  onPhase?: AnalyzeTraceListener;
+};
+
 export async function analyzeDocumentCaptureV41(
   captureId: string,
   userId: string,
-  options?: { correlationId?: string },
+  options?: AnalyzeDocumentCaptureV41Options,
 ): Promise<AnalyzeCaptureV41Result> {
   const correlationId = options?.correlationId;
   const trace = createAnalyzeTrace({
@@ -155,6 +162,7 @@ export async function analyzeDocumentCaptureV41(
     correlationId,
     companyId: null,
     pipelineVersion: "v4.1",
+    onPhase: options?.onPhase,
   });
   trace.emit("START", "ok");
 
@@ -172,43 +180,6 @@ export async function analyzeDocumentCaptureV41(
     trace.emit("END_FAIL", "fail", { errorCode: "not_finalized", detail: "Documento non finalizzato." });
     return { ok: false, code: "not_finalized", message: "Documento non finalizzato.", traceId: trace.traceId };
   }
-
-  trace.emit("PREREQUISITES_START", "ok", { companyId: capture.company_id });
-  let prereq: Awaited<ReturnType<typeof validateRuntimePrerequisites>> | null = null;
-  try {
-    prereq = await validateRuntimePrerequisites({ requireGemini: true, requireOcr: false });
-    trace.setProviderMeta({
-      providerModel: prereq.modelId,
-      providerKeyId: prereq.keyId,
-      providerKeySlot: prereq.keySlot,
-    });
-    if (prereq.ocrWarning) {
-      trace.emit("HYBRID_SKIP", "skip", { detail: prereq.ocrWarning });
-    }
-    trace.emit("PREREQUISITES_OK", "ok", {
-      providerModel: prereq.modelId,
-      providerKeyId: prereq.keyId,
-      providerKeySlot: prereq.keySlot,
-    });
-  } catch (e) {
-    if (e instanceof PrerequisitesAnalyzeError) {
-      trace.fail("PREREQUISITES_FAIL", e);
-      trace.emit("END_FAIL", "fail", { errorCode: "not_configured", detail: e.detail });
-      return buildAnalyzeFailure({
-        code: "not_configured",
-        aiCode: "AI_CONFIG_MISSING",
-        errorType: "AI_CONFIG_MISSING",
-        message: e.userMessage,
-        detail: e.detail,
-        phase: e.phase,
-        traceId: trace.traceId,
-        correlationId,
-      });
-    }
-    throw e;
-  }
-
-  const geminiReady = Boolean(prereq);
 
   const idempotencyKey = buildPipelineIdempotencyKey("ai_extract", captureId, `v${capture.capture_version}`);
   const existing = await findPipelineExecution(idempotencyKey);
@@ -235,67 +206,148 @@ export async function analyzeDocumentCaptureV41(
     }
   }
 
+  trace.emit("PREREQUISITES_START", "ok", { companyId: capture.company_id });
+  let prereq: Awaited<ReturnType<typeof validateRuntimePrerequisites>> | null = null;
+  const prereqPromise = validateRuntimePrerequisites({ requireGemini: true, requireOcr: false })
+    .then((value) => {
+      prereq = value;
+      trace.setProviderMeta({
+        providerModel: value.modelId,
+        providerKeyId: value.keyId,
+        providerKeySlot: value.keySlot,
+      });
+      if (value.ocrWarning) {
+        trace.emit("HYBRID_SKIP", "skip", { detail: value.ocrWarning });
+      }
+      trace.emit("PREREQUISITES_OK", "ok", {
+        providerModel: value.modelId,
+        providerKeyId: value.keyId,
+        providerKeySlot: value.keySlot,
+      });
+      return value;
+    })
+    .catch((e) => {
+      if (e instanceof PrerequisitesAnalyzeError) {
+        trace.fail("PREREQUISITES_FAIL", e);
+        trace.emit("END_FAIL", "fail", { errorCode: "not_configured", detail: e.detail });
+        throw e;
+      }
+      throw e;
+    });
+
+  let bytes = options?.bytes;
+  let mime = options?.mime;
+
+  if (!bytes) {
+    trace.emit("DOWNLOAD_STORAGE_START", "ok", {
+      storagePath: capture.storage_path,
+      companyId: capture.company_id,
+    });
+    const downloadPromise = sb.storage.from(STORAGE_BUCKETS.documentCapture).download(capture.storage_path);
+    try {
+      const [, fileResult] = await Promise.all([prereqPromise, downloadPromise]);
+      const { data: fileData, error: dlError } = fileResult;
+      if (dlError || !fileData) {
+        const classified = classifyStorageDownloadError(
+          dlError,
+          Boolean(fileData),
+          STORAGE_BUCKETS.documentCapture,
+          "analisi documento",
+        );
+        trace.fail("DOWNLOAD_STORAGE_FAIL", dlError ?? new Error(classified.message), {
+          errorCode: classified.code,
+          storagePath: capture.storage_path,
+        });
+        await mutateCaptureWithEvent({
+          captureId,
+          eventType: "analyze_failed",
+          idempotencyKey: `analyze_failed:download:${capture.capture_version}`,
+          payload: {
+            errorCode: classified.code,
+            traceId: trace.traceId,
+            detail: classified.message,
+            phase: "DOWNLOAD_STORAGE_FAIL",
+          },
+          newStatus: "failed",
+        });
+        trace.emit("END_FAIL", "fail", { errorCode: classified.code });
+        return buildAnalyzeFailure({
+          code: "failed",
+          aiCode: "AI_STORAGE_ERROR",
+          message: classified.message,
+          detail: classified.message,
+          phase: "DOWNLOAD_STORAGE_FAIL",
+          traceId: trace.traceId,
+          correlationId,
+        });
+      }
+      bytes = new Uint8Array(await fileData.arrayBuffer());
+      mime = normalizeCaptureMime({
+        mime: capture.mime ?? fileData.type,
+        fileName: capture.storage_path.split("/").pop(),
+        bytes,
+      });
+      trace.emit("DOWNLOAD_STORAGE_OK", "ok", {
+        fileMime: mime,
+        fileSize: bytes.byteLength,
+        storagePath: capture.storage_path,
+      });
+    } catch (e) {
+      if (e instanceof PrerequisitesAnalyzeError) {
+        return buildAnalyzeFailure({
+          code: "not_configured",
+          aiCode: "AI_CONFIG_MISSING",
+          errorType: "AI_CONFIG_MISSING",
+          message: e.userMessage,
+          detail: e.detail,
+          phase: e.phase,
+          traceId: trace.traceId,
+          correlationId,
+        });
+      }
+      throw e;
+    }
+  } else {
+    try {
+      await prereqPromise;
+      mime =
+        mime ??
+        normalizeCaptureMime({
+          mime: capture.mime ?? "application/octet-stream",
+          fileName: capture.storage_path.split("/").pop(),
+          bytes,
+        });
+      trace.emit("DOWNLOAD_STORAGE_OK", "ok", {
+        fileMime: mime,
+        fileSize: bytes.byteLength,
+        storagePath: capture.storage_path,
+        detail: "bytes_provided",
+      });
+    } catch (e) {
+      if (e instanceof PrerequisitesAnalyzeError) {
+        return buildAnalyzeFailure({
+          code: "not_configured",
+          aiCode: "AI_CONFIG_MISSING",
+          errorType: "AI_CONFIG_MISSING",
+          message: e.userMessage,
+          detail: e.detail,
+          phase: e.phase,
+          traceId: trace.traceId,
+          correlationId,
+        });
+      }
+      throw e;
+    }
+  }
+
+  const geminiReady = Boolean(prereq);
+
   await mutateCaptureWithEvent({
     captureId,
     eventType: "analyze_started",
     idempotencyKey: `analyze_started:${capture.capture_version}`,
     payload: { captureVersion: capture.capture_version, pipeline: "v4.1", traceId: trace.traceId },
     newStatus: "analyzing",
-  });
-
-  trace.emit("DOWNLOAD_STORAGE_START", "ok", {
-    storagePath: capture.storage_path,
-    companyId: capture.company_id,
-  });
-
-  const { data: fileData, error: dlError } = await sb.storage
-    .from(STORAGE_BUCKETS.documentCapture)
-    .download(capture.storage_path);
-  if (dlError || !fileData) {
-    const classified = classifyStorageDownloadError(
-      dlError,
-      Boolean(fileData),
-      STORAGE_BUCKETS.documentCapture,
-      "analisi documento",
-    );
-    trace.fail("DOWNLOAD_STORAGE_FAIL", dlError ?? new Error(classified.message), {
-      errorCode: classified.code,
-      storagePath: capture.storage_path,
-    });
-    await mutateCaptureWithEvent({
-      captureId,
-      eventType: "analyze_failed",
-      idempotencyKey: `analyze_failed:download:${capture.capture_version}`,
-      payload: {
-        errorCode: classified.code,
-        traceId: trace.traceId,
-        detail: classified.message,
-        phase: "DOWNLOAD_STORAGE_FAIL",
-      },
-      newStatus: "failed",
-    });
-    trace.emit("END_FAIL", "fail", { errorCode: classified.code });
-    return buildAnalyzeFailure({
-      code: "failed",
-      aiCode: "AI_STORAGE_ERROR",
-      message: classified.message,
-      detail: classified.message,
-      phase: "DOWNLOAD_STORAGE_FAIL",
-      traceId: trace.traceId,
-      correlationId,
-    });
-  }
-
-  const bytes = new Uint8Array(await fileData.arrayBuffer());
-  const mime = normalizeCaptureMime({
-    mime: capture.mime ?? fileData.type,
-    fileName: capture.storage_path.split("/").pop(),
-    bytes,
-  });
-  trace.emit("DOWNLOAD_STORAGE_OK", "ok", {
-    fileMime: mime,
-    fileSize: bytes.byteLength,
-    storagePath: capture.storage_path,
   });
 
   const plugin = ensureSchedaOfficinaPluginRegistered();
@@ -506,7 +558,27 @@ export async function analyzeDocumentCaptureV41(
         extraction: extractionResult,
         updatedBy: userId,
       });
-      const { validation } = runSchedaPipelineViews(document);
+      const flatFields = projectDocumentModelToFlatFields(document);
+      const baseFieldRows = flatFields.map((f) => ({
+        company_id: capture.company_id,
+        document_capture_id: captureId,
+        field_key: normalizeCaptureExtractedFieldKey(f.fieldKey),
+        raw_value: f.value,
+        normalized_value: f.value,
+        confidence: f.confidence,
+        value_source: "ai" as const,
+      }));
+
+      const [{ validation }, resolution] = await Promise.all([
+        Promise.resolve(runSchedaPipelineViews(document)),
+        baseFieldRows.length > 0
+          ? applyEntityResolutionToCaptureFields(sb, {
+              companyId: capture.company_id,
+              captureId,
+              fields: baseFieldRows.map((f) => ({ field_key: f.field_key, raw_value: f.raw_value })),
+            })
+          : Promise.resolve(null),
+      ]);
 
       trace.emit("UPSERT_FIELDS_START", "ok");
 
@@ -540,25 +612,12 @@ export async function analyzeDocumentCaptureV41(
       attemptId = attemptRow.id;
       extractionResult.attemptId = attemptId;
 
-      const flatFields = projectDocumentModelToFlatFields(document);
-      let fieldRows = flatFields.map((f) => ({
-        company_id: capture.company_id,
-        document_capture_id: captureId,
+      let fieldRows = baseFieldRows.map((f) => ({
+        ...f,
         attempt_id: attemptId,
-        field_key: normalizeCaptureExtractedFieldKey(f.fieldKey),
-        raw_value: f.value,
-        normalized_value: f.value,
-        confidence: f.confidence,
-        value_source: "ai" as const,
       }));
-      let resolutionAudit: Awaited<ReturnType<typeof applyEntityResolutionToCaptureFields>>["audit"] | undefined;
-      if (fieldRows.length > 0) {
-        const resolution = await applyEntityResolutionToCaptureFields(sb, {
-          companyId: capture.company_id,
-          captureId,
-          fields: fieldRows.map((f) => ({ field_key: f.field_key, raw_value: f.raw_value })),
-        });
-        resolutionAudit = resolution.audit;
+      let resolutionAudit = resolution?.audit;
+      if (resolution) {
         fieldRows = mergeResolutionIntoFieldRows(fieldRows, resolution);
         const { error: upsertError } = await sb.from("document_capture_fields").upsert(fieldRows, {
           onConflict: "document_capture_id,field_key",
@@ -569,18 +628,6 @@ export async function analyzeDocumentCaptureV41(
       }
 
       const schedaTipo = object.schedaTipo ?? inferCaptureSchedaTipo(fieldRows) ?? null;
-      const signatureRows = await upsertCaptureSignatureFields(sb, {
-        companyId: capture.company_id,
-        captureId,
-        attemptId,
-        bytes,
-        mime,
-        schedaTipo,
-        existingFieldKeys: fieldRows.map((f) => f.field_key),
-      });
-      if (signatureRows.length > 0) {
-        fieldRows = [...fieldRows, ...signatureRows];
-      }
 
       pipelineState = advancePipelineStateForPhase(pipelineState, "ai_extract", true);
       pipelineState = advancePipelineStateForPhase(pipelineState, "validate", validation.status !== "blocked");
@@ -651,8 +698,10 @@ export async function analyzeDocumentCaptureV41(
       } else if (geminiUsed) {
         trace.fail("GEMINI_FAIL", e, { retryAttempt });
       }
-      if (retryAttempt < RETRY_BACKOFF_MS.length) {
+      if (retryAttempt < RETRY_BACKOFF_MS.length && isTransientAnalyzeRetryError(e)) {
         await sleep(resolveGeminiAnalyzeRetryDelayMs(e, retryAttempt, RETRY_BACKOFF_MS));
+      } else {
+        break;
       }
     }
   }

@@ -1,5 +1,9 @@
 import type { SchedaIngressoStringKey } from "@/lib/schede/scheda-ingresso-typed-fields";
 import { normalizeLivelloCarburanteStored } from "@/lib/schede/livello-carburante-value";
+import {
+  applyOreLavoroStorageToCampi,
+  resolveOreLavoroFields,
+} from "@/lib/schede/resolve-ore-lavoro-fields";
 import { clampText, clampTextTrimmed, TEXT_EXTRA, TEXT_LONG, TEXT_MEDIUM, TEXT_SHORT } from "@/lib/validation/text-field-limits";
 import type {
   LavorazioneSchedeBundle,
@@ -37,7 +41,14 @@ function clampIngressoCampi(campi: SchedaIngressoFields): SchedaIngressoFields {
   }
   out.livelloCarburante = normalizeLivelloCarburanteStored(out.livelloCarburante);
   out.descrizioneAnomalia = clampField(out.descrizioneAnomalia, TEXT_EXTRA);
-  out.oreLavoro = clampField(out.oreLavoro, TEXT_SHORT);
+  const oreResolved = resolveOreLavoroFields(out);
+  applyOreLavoroStorageToCampi(
+    out as Record<string, unknown>,
+    {
+      oreLavoroMotore: clampField(oreResolved.oreLavoroMotore, TEXT_SHORT),
+      oreLavoroPto: clampField(oreResolved.oreLavoroPto, TEXT_SHORT),
+    },
+  );
   out.km = clampField(out.km, TEXT_SHORT);
   out.dataIngresso = clampField(out.dataIngresso, TEXT_SHORT);
   return out;

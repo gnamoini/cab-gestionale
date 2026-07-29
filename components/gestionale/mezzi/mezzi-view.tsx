@@ -857,6 +857,7 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
             if (!canEditVehicles) return;
             const h = hubMezzo;
             setHubMezzo(null);
+            syncMezziUrl({ clearHub: true });
             setEditMezzo(h);
           }}
           canEdit={canEditVehicles}
@@ -914,7 +915,7 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
             flashRow(id);
           }}
           onValidationError={(message) => toastValidation(message)}
-          onSaveError={(err) => toastError(err, { entity: "mezzo", action: "create" })}
+          onSaveError={(err) => toastError(err, { entity: "mezzo", action: "update" })}
         />
       ) : null}
       {confirmDialog}

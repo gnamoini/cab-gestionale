@@ -14,15 +14,12 @@ import {
   isCaptureMultilineFieldKey,
 } from "@/lib/document-capture/capture-field-display-value";
 import { sortCaptureReviewFields } from "@/lib/document-capture/capture-field-review-order";
-import { captureSignatureFieldLabel, isCaptureSignatureFieldKey } from "@/lib/document-capture/capture-signature-field-keys";
 import {
   CaptureReviewPanelError,
   CaptureReviewPanelFrame,
   CaptureReviewPanelLoading,
 } from "@/components/document-capture/capture-review-panel";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
-import { RichiedenteFirmaDisplay } from "@/components/gestionale/schede/richiedente-firma-display";
-import { hasSignatureDataUrl } from "@/lib/media/signature-pad";
 import { buildClientResolutionContext } from "@/lib/entity-resolution/build-client-resolution-context";
 import type { EntityResolutionResult } from "@/lib/entity-resolution/entity-resolution-types";
 import { resolveCaptureGraph } from "@/lib/entity-resolution/resolve-capture-graph";
@@ -42,10 +39,13 @@ type FieldRow = {
 };
 
 function fieldLabel(key: string): string {
-  return captureSignatureFieldLabel(key) ?? (() => {
-    const spaced = key.replace(/_/g, " ");
-    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
-  })();
+  const spaced = key.replace(/_/g, " ");
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+function isExcludedCaptureReviewFieldKey(key: string): boolean {
+  const k = key.trim().toLowerCase();
+  return k.startsWith("firma_") || k.endsWith("_firma") || k === "firma_autista";
 }
 
 function safeTrim(v: string | null | undefined): string {
@@ -210,7 +210,7 @@ export function CaptureFieldReviewGrid({
     ) => {
       if (!resolutionCtx) return;
       const inputs = Object.entries(draftValues)
-        .filter(([fieldKey, v]) => v.trim() && !isCaptureSignatureFieldKey(fieldKey))
+        .filter(([fieldKey, v]) => v.trim() && !isExcludedCaptureReviewFieldKey(fieldKey))
         .map(([field_key, value]) => ({
           field_key,
           raw_value: rawValues[field_key] ?? value,
@@ -267,7 +267,7 @@ export function CaptureFieldReviewGrid({
         return;
       }
       const body = (await res.json()) as { fields?: FieldRow[] };
-      const rows = sortCaptureReviewFields(body.fields ?? []);
+      const rows = sortCaptureReviewFields((body.fields ?? []).filter((f) => !isExcludedCaptureReviewFieldKey(f.field_key)));
       setFields(rows);
       const next: Record<string, string> = {};
       const raw: Record<string, string> = {};
@@ -318,11 +318,7 @@ export function CaptureFieldReviewGrid({
         body: JSON.stringify({
           fields: Object.entries(draft).map(([fieldKey, confirmedValue]) => ({
             fieldKey,
-            confirmedValue: isCaptureSignatureFieldKey(fieldKey)
-              ? hasSignatureDataUrl(confirmedValue)
-                ? confirmedValue.trim()
-                : null
-              : formatCaptureReviewDraftValue(fieldKey, confirmedValue, { addettiRecords }) || null,
+            confirmedValue: formatCaptureReviewDraftValue(fieldKey, confirmedValue, { addettiRecords }) || null,
             valueSource: "manual" as const,
           })),
         }),
@@ -409,7 +405,6 @@ export function CaptureFieldReviewGrid({
           const baselineValue = baseline[f.field_key] ?? "";
           const badges = fieldReviewStatus(resolution, fieldWarnings, baselineValue, value, raw);
           const showOcrLine =
-            !isCaptureSignatureFieldKey(f.field_key) &&
             raw &&
             (safeTrim(raw).toLowerCase() !== safeTrim(value).toLowerCase() ||
               (resolution?.resolvedLabel && safeTrim(raw) !== safeTrim(resolution.resolvedLabel)));
@@ -455,17 +450,7 @@ export function CaptureFieldReviewGrid({
                 </p>
               ) : null}
 
-              {isCaptureSignatureFieldKey(f.field_key) ? (
-                hasSignatureDataUrl(value) ? (
-                  <RichiedenteFirmaDisplay
-                    dataUrl={value}
-                    consultable
-                    label={captureSignatureFieldLabel(f.field_key) ?? "Firma"}
-                  />
-                ) : (
-                  <p className="text-xs text-[color:var(--cab-text-muted)]">Firma non rilevata sul documento.</p>
-                )
-              ) : isCaptureMultilineFieldKey(f.field_key) ? (
+              {isCaptureMultilineFieldKey(f.field_key) ? (
                 <GestionaleTextarea
                   value={value}
                   size="md"

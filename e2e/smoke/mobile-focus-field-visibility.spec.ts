@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { attachConsoleGuards } from "../helpers/console";
 import { adminCredentials, loginViaUi } from "../fixtures/auth";
-import { clickNuovaLavorazioneCta } from "../helpers/lavorazioni-scheda";
+import { openNuovaLavorazioneSchedaVuota } from "../helpers/lavorazioni-scheda";
 
 const hasSmokeCreds = Boolean(
   process.env.SMOKE_ADMIN_EMAIL?.trim() && process.env.SMOKE_ADMIN_PASSWORD?.trim(),
@@ -118,7 +118,7 @@ test.describe("mobile focus field visibility", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginViaUi(page, adminCredentials());
     await page.goto("/lavorazioni");
-    await clickNuovaLavorazioneCta(page);
+    await openNuovaLavorazioneSchedaVuota(page);
 
     const modal = page.locator("[data-cab-modal-root]").first();
     await expect(modal).toBeVisible();
@@ -131,7 +131,7 @@ test.describe("mobile focus field visibility", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginViaUi(page, adminCredentials());
     await page.goto("/lavorazioni");
-    await clickNuovaLavorazioneCta(page);
+    await openNuovaLavorazioneSchedaVuota(page);
 
     const modal = page.locator("[data-cab-modal-root]").first();
     await expect(modal).toBeVisible();
@@ -155,7 +155,7 @@ test.describe("mobile focus field visibility", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginViaUi(page, adminCredentials());
     await page.goto("/lavorazioni");
-    await clickNuovaLavorazioneCta(page);
+    await openNuovaLavorazioneSchedaVuota(page);
 
     const modal = page.locator("[data-cab-modal-root]").first();
     const note = modal.getByLabel(/Descrizione anomalia/i);
@@ -191,7 +191,7 @@ test.describe("mobile focus field visibility", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginViaUi(page, adminCredentials());
     await page.goto("/lavorazioni");
-    await clickNuovaLavorazioneCta(page);
+    await openNuovaLavorazioneSchedaVuota(page);
 
     const modal = page.locator("[data-cab-modal-root]").first();
     const cliente = modal.getByLabel(/Cliente/i);
@@ -205,7 +205,7 @@ test.describe("mobile focus field visibility", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginViaUi(page, adminCredentials());
     await page.goto("/lavorazioni");
-    await clickNuovaLavorazioneCta(page);
+    await openNuovaLavorazioneSchedaVuota(page);
 
     const modal = page.locator("[data-cab-modal-root]").first();
     const scrollHost = modal.locator("[data-cab-modal-scroll]").first();

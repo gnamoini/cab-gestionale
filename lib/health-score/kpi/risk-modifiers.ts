@@ -11,14 +11,18 @@ const RISK_MODIFIERS: RiskModifierDefinition[] = [
       if (inactive <= 0) {
         return { penalty: 0, motivation: "Nessuna stagnazione rilevata", trace: [] };
       }
-      const penalty = Math.min(inactive, 15);
+      // Excess soft (attesa ricambi / fornitori) abbassa la penalità sotto il puro count.
+      const penalty = Math.min(
+        Math.min(inactive, Math.max(excess * 2, inactive * 0.35)),
+        15,
+      );
       return {
         penalty,
         motivation: `${inactive} lavorazioni ferme oltre la media degli stati di attesa`,
         trace: [
           {
             step: "stagnation_penalty",
-            formula: "min(15, count * 1)",
+            formula: "min(15, min(count, max(excess*2, count*0.35)))",
             input: { count: inactive, weightedExcessDays: excess },
             output: penalty,
           },

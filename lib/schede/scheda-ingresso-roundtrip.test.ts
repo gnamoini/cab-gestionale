@@ -120,6 +120,8 @@ const clamped = clampSchedeBundle(bundle);
 assert.ok(clamped.ingresso);
 assert.equal(clamped.ingresso!.campi.livelloCarburante, "75%");
 assert.equal(clamped.ingresso!.campi.descrizioneAnomalia, MULTILINE_ANOMALIA);
+assert.equal(clamped.ingresso!.campi.oreLavoro, "1500.5");
+assert.equal((clamped.ingresso!.campi as Record<string, string>).oreLavoroMotore, "1500.5");
 
 const legacyVin = clampSchedeBundle({
   ...bundle,

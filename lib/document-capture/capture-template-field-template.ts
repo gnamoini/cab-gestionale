@@ -1,4 +1,4 @@
-import type { CaptureSignatureBbox } from "@/lib/document-capture/capture-signature-crop";
+import type { CaptureNormalizedBbox } from "@/lib/document-capture/capture-normalized-bbox";
 import type { SchedaBlankTipo } from "@/lib/pdf/schede-blank-layout";
 import {
   getIngressoBlankValueBoxesMm,
@@ -13,11 +13,11 @@ import {
 
 export type CaptureTemplateFieldRegion = {
   fieldKey: string;
-  bbox: CaptureSignatureBbox;
+  bbox: CaptureNormalizedBbox;
   multiline?: boolean;
 };
 
-export function mmBoxToNormBbox(box: SchedaBlankMmBox, padMm = 1.5): CaptureSignatureBbox {
+export function mmBoxToNormBbox(box: SchedaBlankMmBox, padMm = 1.5): CaptureNormalizedBbox {
   const { width: pageW, height: pageH } = ingressoBlankPageSizeMm;
   const left = Math.max(0, box.left - padMm);
   const top = Math.max(0, box.top - padMm);

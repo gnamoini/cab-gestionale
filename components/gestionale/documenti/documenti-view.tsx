@@ -849,6 +849,7 @@ export function DocumentiView() {
       />
         <GestionaleUploadDropExpand
           overlay
+          clickToPick={false}
           accept={DOCUMENTO_UPLOAD_ACCEPT}
           disabled={uploadDropDisabled}
           validateFile={validateDocumentoUploadFile}

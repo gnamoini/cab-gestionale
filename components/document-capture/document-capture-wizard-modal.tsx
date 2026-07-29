@@ -12,6 +12,8 @@ import {
   parseGeminiRetryAfterSec,
 } from "@/lib/ai/gemini-retry-after";
 import { useRetryAfterCountdown } from "@/src/hooks/use-retry-after-countdown";
+import { postCaptureProcessStream } from "@/lib/document-capture/pipeline/analyze-stream-client";
+import type { AnalyzeTracePhase } from "@/lib/document-capture/pipeline/analyze-trace-types";
 import { useCallback, useRef, useState } from "react";
 
 export type DocumentCaptureWizardStep = Extract<DocumentCaptureFlowStep, "analyze">;
@@ -20,6 +22,8 @@ type WizardApi = {
   busy: boolean;
   error: string | null;
   retryAfterSec: number | null;
+  analyzePhase: AnalyzeTracePhase | null;
+  heartbeatAt: number | null;
   runAnalyze: (captureIdOverride?: string | null) => Promise<boolean>;
   reset: () => void;
 };
@@ -34,6 +38,8 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryAfterSec, setRetryAfterSec] = useState<number | null>(null);
+  const [analyzePhase, setAnalyzePhase] = useState<AnalyzeTracePhase | null>(null);
+  const [heartbeatAt, setHeartbeatAt] = useState<number | null>(null);
   const analyzeSeqRef = useRef(0);
 
   const reset = useCallback(() => {
@@ -41,6 +47,8 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
     setBusy(false);
     setError(null);
     setRetryAfterSec(null);
+    setAnalyzePhase(null);
+    setHeartbeatAt(null);
   }, []);
 
   const runAnalyze = useCallback(async (captureIdOverride?: string | null) => {
@@ -50,18 +58,30 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
     setBusy(true);
     setError(null);
     setRetryAfterSec(null);
+    setAnalyzePhase(null);
+    setHeartbeatAt(null);
     let retryHintSec: number | null = null;
     try {
-      const res = await fetch(`/api/document-capture/${id}/analyze`, { method: "POST" });
-      const body = (await res.json().catch(() => ({}))) as {
+      const streamed = await postCaptureProcessStream(id, (event) => {
+        if (seq !== analyzeSeqRef.current) return;
+        if (event.type === "phase") {
+          setAnalyzePhase(event.phase);
+        }
+        if (event.type === "heartbeat") {
+          setHeartbeatAt(Date.now());
+          if (event.activePhase) setAnalyzePhase(event.activePhase);
+        }
+      });
+      const body = streamed.body as {
         error?: string;
         code?: string;
         errorType?: string;
         fieldCount?: number;
+        ok?: boolean;
       };
       if (seq !== analyzeSeqRef.current) return false;
-      retryHintSec = parseRetryAfterHeader(res.headers.get("Retry-After"));
-      if (!res.ok) {
+      retryHintSec = parseRetryAfterHeader(streamed.response.headers.get("Retry-After"));
+      if (!streamed.response.ok || body.ok === false) {
         if (body.code === "not_configured") {
           const hint =
             body.errorType === "CONFIG_INVALID_FORMAT" || body.errorType === "AI_KEY_INVALID"
@@ -98,7 +118,7 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
     }
   }, [captureId]);
 
-  return { busy, error, retryAfterSec, runAnalyze, reset };
+  return { busy, error, retryAfterSec, analyzePhase, heartbeatAt, runAnalyze, reset };
 }
 
 export function DocumentCaptureWizardBody({

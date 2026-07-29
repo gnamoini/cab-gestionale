@@ -1,6 +1,7 @@
 import { isLavorazioneArchived } from "@/lib/lavorazioni/archived";
 import { permanenzaGiorniTra } from "@/lib/lavorazioni/duration";
 import {
+  interventionLabelFromTagliandoFields,
   interventionTypeFromTagliandoFields,
   lavorazioneRowToTagliandoFields,
 } from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
@@ -43,6 +44,7 @@ function lavRowToIntervento(row: LavorazioneListRow, weakMezzoLink = false): Mez
     dataCompletamento: fin,
     tipoIntervento: statoLabel,
     interventionType: interventionTypeFromTagliandoFields(tagliandoFields),
+    interventionLabel: interventionLabelFromTagliandoFields(tagliandoFields),
     descrizione: (row.note ?? "").trim() || "—",
     prioritaLabel: prioritaIt(row.priorita),
     statoId: row.stato,

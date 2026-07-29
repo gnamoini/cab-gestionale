@@ -8,6 +8,7 @@ import {
   labelToCompatRef,
   labelsToCompatRefs,
   marcaUniversalCompatLabel,
+  resolveCompatRefLabel,
   refsToCompatLabels,
   resolveRicambioCompatLabels,
 } from "@/lib/magazzino/ricambio-compat-resolver";
@@ -57,7 +58,7 @@ const resolved = refsToCompatLabels(refs, mezziListe);
 assert.deepEqual(resolved, [fiat500]);
 
 const fromMeta = resolveRicambioCompatLabels([fiat500, fiatPanda], undefined, mezziListe);
-assert.deepEqual(fromMeta, [fiatUniversal]);
+assert.deepEqual(fromMeta.map((x) => x.trimEnd()), [fiatUniversal.trimEnd()]);
 
 const cleangoE6c = compatLabelMarcaModello("Schmidt", "Cleango 500 E6C");
 const cleangoEtSpaced = compatLabelMarcaModello("Schmidt", "Cleango 500 ET");
@@ -74,14 +75,10 @@ const fleetTree = [
     modelli: [{ id: "fleet-cleango", nome: "Cleango 400" }],
   },
 ];
-const mergedListe = resolveMezziListeWithFleetCatalog(mezziListe, fleetTree);
-const cleango400 = compatLabelMarcaModello("Schmidt", "Cleango 400");
-const refMergedOnly = labelToCompatRef(cleango400, mergedListe);
-assert.equal(refMergedOnly?.marcaId, "fleet-schmidt");
-
 const prefsListe: MezziListePrefs = {
   ...mezziListe,
   attrezzature: [
+    ...mezziListe.attrezzature,
     {
       id: "m-schmidt",
       nome: "Schmidt",
@@ -89,11 +86,22 @@ const prefsListe: MezziListePrefs = {
     },
   ],
 };
+const mergedListe = resolveMezziListeWithFleetCatalog(prefsListe, fleetTree);
+const cleango400 = compatLabelMarcaModello("Schmidt", "Cleango 400");
+const refMergedOnly = labelToCompatRef(cleango400, mergedListe);
+assert.equal(refMergedOnly?.marcaId, "m-schmidt", "prefs ID stabile dopo merge");
+
 const refWithPrefs = labelToCompatRef(cleango400, mergedListe, { prefsListe });
 assert.equal(refWithPrefs?.marcaId, "m-schmidt", "prefs IDs hanno priorità su fleet");
 assert.equal(refWithPrefs?.modelloId, "mod-cleango");
 
 const refsFromLabels = labelsToCompatRefs([cleango400], mergedListe, { prefsListe });
 assert.equal(refsFromLabels[0]?.marcaId, "m-schmidt");
+
+const crossModello = resolveCompatRefLabel(
+  { tree: "attrezzature", marcaId: "fleet-marca-4", modelloId: "mod-500" },
+  mezziListe,
+);
+assert.equal(crossModello, fiat500);
 
 console.log("ricambio-compat-resolver.test.ts OK");

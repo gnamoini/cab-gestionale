@@ -1,6 +1,33 @@
 import type { MaintenanceIntervalType } from "@/lib/maintenance-plans/maintenance-enums";
 import { MAINTENANCE_INTERVAL_TYPE_LABELS } from "@/lib/maintenance-plans/maintenance-enums";
-import type { MaintenancePresetTriggerView } from "@/lib/maintenance-plans/types";
+import type { MaintenancePlanView, MaintenancePresetTriggerView } from "@/lib/maintenance-plans/types";
+
+export function formatPresetIntervalBullet(trigger: MaintenancePresetTriggerView): string {
+  return `Ogni ${trigger.threshold.toLocaleString("it-IT")} ${MAINTENANCE_INTERVAL_TYPE_LABELS[trigger.triggerType]}`;
+}
+
+/** Righe descrittive per catalogo preset (modal assegnazione guidata). */
+export function formatPresetCatalogLines(plan: MaintenancePlanView, maxParts = 3): string[] {
+  const lines: string[] = [];
+  const triggers = plan.triggerGroups[0]?.triggers ?? [];
+  if (triggers.length > 0) {
+    for (const t of triggers) lines.push(formatPresetIntervalBullet(t));
+  } else {
+    lines.push(
+      `Ogni ${plan.intervalValue.toLocaleString("it-IT")} ${MAINTENANCE_INTERVAL_TYPE_LABELS[plan.intervalType]}`,
+    );
+  }
+  if (plan.tipoLabels.length > 0) {
+    lines.push(`Tipo mezzo: ${plan.tipoLabels.join(", ")}`);
+  }
+  const partNames = plan.parts.map((p) => p.descrizione.trim()).filter(Boolean);
+  if (partNames.length > 0) {
+    const shown = partNames.slice(0, maxParts);
+    const suffix = partNames.length > maxParts ? ", …" : "";
+    lines.push(`Ricambi associati: ${shown.join(", ")}${suffix}`);
+  }
+  return lines;
+}
 
 export function formatTriggerSummary(triggers: MaintenancePresetTriggerView[]): string {
   if (triggers.length === 0) return "—";

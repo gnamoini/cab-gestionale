@@ -49,6 +49,8 @@ export type GlobalOptionsSlice = {
     prioritaLegacy: PrioritaLav[];
   };
   mezziListe: MezziListePrefs;
+  /** Albero settings senza merge flotta — lookup ID stabili compat refs. */
+  mezziListePrefs: MezziListePrefs;
   magazzinoMaster: MagazzinoMasterPrefs;
   preventiviDefaults: SistemaPreventiviDefaults;
   dipendenti: {
@@ -88,6 +90,7 @@ function sliceFromResolved(
       ),
     },
     mezziListe,
+    mezziListePrefs: baseListe,
     magazzinoMaster: resolved.magazzinoMaster,
     preventiviDefaults: resolved.preventiviDefaults,
     dipendenti: resolved.dipendenti,

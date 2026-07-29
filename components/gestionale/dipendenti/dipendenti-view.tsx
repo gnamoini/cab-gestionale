@@ -9,7 +9,6 @@ import { GestionaleSectionGate } from "@/components/gestionale/gestionale-sectio
 import { ShellCard } from "@/components/gestionale/shell-card";
 import {
   defaultDayDate,
-  defaultWeekAnchor,
   TimesheetHeader,
 } from "@/components/gestionale/dipendenti/timesheet-header";
 import { TimesheetEmptyState } from "@/components/gestionale/dipendenti/timesheet-empty-state";
@@ -28,6 +27,7 @@ import {
   currentMonthKey,
   isDateInMonthKey,
   monthKeyFromDate,
+  resolveWeekAnchorForMonth,
   shiftMonthKey,
   todayDateYmd,
 } from "@/lib/dipendenti/timesheet-month";
@@ -77,7 +77,9 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
   const queryClient = useQueryClient();
   const [monthKey, setMonthKey] = useState<TimesheetMonthKey>(() => monthKeyFromDate(new Date()));
   const [periodMode] = useState<TimesheetPeriodMode>("month");
-  const [weekAnchor, setWeekAnchor] = useState(() => defaultWeekAnchor(monthKeyFromDate(new Date())));
+  const [weekAnchor, setWeekAnchor] = useState(() =>
+    resolveWeekAnchorForMonth(monthKeyFromDate(new Date())),
+  );
   const [dayDate, setDayDate] = useState(() => defaultDayDate(monthKeyFromDate(new Date())));
   const [filterEmployeeId, setFilterEmployeeId] = useState("");
   const [editorTarget, setEditorTarget] = useState<TimesheetEditorTarget | null>(null);
@@ -214,7 +216,7 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
 
   const handleMonthKey = useCallback((key: TimesheetMonthKey) => {
     setMonthKey(key);
-    setWeekAnchor(defaultWeekAnchor(key));
+    setWeekAnchor(resolveWeekAnchorForMonth(key));
     setDayDate(defaultDayDate(key));
     setAccentDateYmd((prev) => (prev && !isDateInMonthKey(prev, key) ? null : prev));
     setAccentFadingOut(false);
@@ -224,9 +226,11 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
 
   const handleGoToToday = useCallback(() => {
     if (accentClearTimerRef.current) clearTimeout(accentClearTimerRef.current);
+    const today = todayDateYmd();
     handleMonthKey(currentMonthKey());
+    setWeekAnchor(today);
     setAccentFadingOut(false);
-    setAccentDateYmd(todayDateYmd());
+    setAccentDateYmd(today);
     accentClearTimerRef.current = setTimeout(() => {
       setAccentFadingOut(true);
       accentClearTimerRef.current = setTimeout(() => {
@@ -418,6 +422,8 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
                 listSurface={listSurface}
                 monthKey={monthKey}
                 periodDays={ts.periodDays}
+                weekAnchor={weekAnchor}
+                onWeekAnchor={setWeekAnchor}
                 employees={ts.displayEmployees}
                 filterEmployeeId={filterEmployeeId}
                 getCellValue={ts.getCellValue}
@@ -426,7 +432,6 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
                   setEditorTarget(null);
                   setDetailEmployee(emp);
                 }}
-                entries={ts.entries}
                 tipiAssenza={ts.tipiAssenza}
                 addettiRecords={ts.addettiRecords}
                 readOnly={readOnly || ts.entriesDegraded}

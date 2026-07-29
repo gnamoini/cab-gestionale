@@ -1,4 +1,9 @@
 import type { DocumentCaptureUploadPhase } from "@/lib/document-capture/use-document-capture-upload";
+import {
+  deriveLavorazioniCaptureChecksFromPhase,
+  type LavorazioniCaptureCheck,
+} from "@/lib/document-capture/pipeline/analyze-progress-labels";
+import type { AnalyzeTracePhase } from "@/lib/document-capture/pipeline/analyze-trace-types";
 
 export type CaptureAcquisitionPhase = "uploading" | "finalizing" | "reading" | "error" | "idle";
 
@@ -6,10 +11,12 @@ export type CaptureAcquisitionProgressState = {
   active: boolean;
   phase: CaptureAcquisitionPhase;
   label: string;
-  /** 0–100; `reading` uses creeping animation in UI. */
   progress: number;
   creeping: boolean;
   error: string | null;
+  checklist?: LavorazioniCaptureCheck[];
+  heartbeatLabel?: string | null;
+  streamActive?: boolean;
 };
 
 export function deriveCaptureAcquisitionProgress(input: {
@@ -17,6 +24,9 @@ export function deriveCaptureAcquisitionProgress(input: {
   uploadProgress: number;
   analyzeBusy: boolean;
   uploadError?: string | null;
+  analyzePhase?: AnalyzeTracePhase | null;
+  heartbeatAt?: number | null;
+  useChecklist?: boolean;
 }): CaptureAcquisitionProgressState {
   const { uploadPhase, uploadProgress, analyzeBusy, uploadError } = input;
 
@@ -28,6 +38,10 @@ export function deriveCaptureAcquisitionProgress(input: {
       progress: 8 + uploadProgress * 28,
       creeping: false,
       error: null,
+      streamActive: false,
+      checklist: input.useChecklist
+        ? deriveLavorazioniCaptureChecksFromPhase(null, false, true)
+        : undefined,
     };
   }
 
@@ -39,17 +53,42 @@ export function deriveCaptureAcquisitionProgress(input: {
       progress: 40 + uploadProgress * 22,
       creeping: false,
       error: null,
+      streamActive: false,
     };
   }
 
   if (analyzeBusy) {
+    if (input.useChecklist) {
+      const checks = deriveLavorazioniCaptureChecksFromPhase(
+        input.analyzePhase ?? null,
+        uploadPhase === "success" || uploadPhase === "finalizing",
+        true,
+      );
+      const activeCheck = checks.find((c) => c.active);
+      const heartbeatLabel =
+        input.heartbeatAt != null
+          ? `Ultimo aggiornamento ${Math.max(0, Math.round((Date.now() - input.heartbeatAt) / 1000))}s fa`
+          : null;
+      return {
+        active: true,
+        phase: "reading",
+        label: activeCheck?.label ?? "Elaborazione documento…",
+        progress: 62,
+        creeping: false,
+        error: null,
+        checklist: checks,
+        heartbeatLabel,
+        streamActive: true,
+      };
+    }
     return {
       active: true,
       phase: "reading",
       label: "Lettura documento con AI…",
       progress: 62,
-      creeping: true,
+      creeping: false,
       error: null,
+      streamActive: true,
     };
   }
 
@@ -61,6 +100,7 @@ export function deriveCaptureAcquisitionProgress(input: {
       progress: 0,
       creeping: false,
       error: uploadError ?? "Upload non riuscito",
+      streamActive: false,
     };
   }
 
@@ -71,5 +111,6 @@ export function deriveCaptureAcquisitionProgress(input: {
     progress: 0,
     creeping: false,
     error: null,
+    streamActive: false,
   };
 }

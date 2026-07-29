@@ -13,20 +13,6 @@ import { dsBtnNeutral, dsBtnPrimary, dsTypoCaption } from "@/lib/ui/design-syste
 
 type Point = SignaturePadPoint;
 
-function ScannedSignaturePreview({ dataUrl, label }: { dataUrl: string; label: string }) {
-  return (
-    <div className="overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-white p-2">
-      <p className={`mb-2 ${dsTypoCaption}`}>Firma letta dal documento</p>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={dataUrl}
-        alt={label}
-        className="mx-auto max-h-[min(28vh,12rem)] w-full object-contain"
-      />
-    </div>
-  );
-}
-
 function clientPoint(canvas: HTMLCanvasElement, clientX: number, clientY: number): Point {
   const rect = canvas.getBoundingClientRect();
   return {
@@ -213,8 +199,6 @@ export function RichiedenteFirmaCaptureModal({
 
   if (!open) return null;
 
-  const scannedFirma = hasSignatureDataUrl(initialDataUrl) ? initialDataUrl.trim() : "";
-
   return (
     <GestionaleModalShell
       modalSize="formMedium"
@@ -223,12 +207,7 @@ export function RichiedenteFirmaCaptureModal({
       titleId={titleId}
     >
       <div className="space-y-3 p-4">
-        <p className={dsTypoCaption}>
-          {scannedFirma
-            ? "Anteprima dalla scansione. Puoi confermarla o ridisegnarla nell'area sotto."
-            : "Firma con dito o pennino nell'area bianca."}
-        </p>
-        {scannedFirma ? <ScannedSignaturePreview dataUrl={scannedFirma} label={title} /> : null}
+        <p className={dsTypoCaption}>Firma con dito o pennino nell&apos;area bianca.</p>
         <div
           ref={padRef}
           className="relative h-[12.5rem] min-h-[12.5rem] w-full overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-white"

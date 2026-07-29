@@ -17,7 +17,6 @@ export const DOCUMENT_CAPTURE_ERROR_CODES = [
   "TENANT_MISSING",
   "RATE_LIMITED",
   "NOT_CONFIGURED",
-  "NO_SIGNATURES",
 ] as const;
 
 export type DocumentCaptureErrorCode = (typeof DOCUMENT_CAPTURE_ERROR_CODES)[number];
