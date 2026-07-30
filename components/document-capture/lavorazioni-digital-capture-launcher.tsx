@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { LoadingButton } from "@/components/design-system";
-import { LoadingSpinner } from "@/components/design-system/loading";
+import { CaptureStatusProgress } from "@/components/document-capture/capture-acquisition-progress-panel";
+import { deriveCaptureCompileProgress } from "@/lib/document-capture/capture-compile-progress";
 import {
   GestionaleAiActionButton,
   type GestionaleAiActionButtonSize,
@@ -508,7 +509,7 @@ export function LavorazioniDigitalCaptureLauncher({
   }, [gestToast, restoreFromDraft, resumeDraft]);
 
   const continueAfterUpload = useCallback(
-    async (captureIdToUse: string, duplicateOf?: string | null) => {
+    async (captureIdToUse: string, duplicateOf?: string | null, uploadDurationMs?: number) => {
       if (duplicateOf && applyV1) {
         setPendingDuplicateOf(duplicateOf);
         setPendingUploadCaptureId(captureIdToUse);
@@ -517,7 +518,7 @@ export function LavorazioniDigitalCaptureLauncher({
       }
       setCaptureId(captureIdToUse);
       analyzeTriggeredRef.current = captureIdToUse;
-      const ok = await runAnalyze(captureIdToUse);
+      const ok = await runAnalyze(captureIdToUse, uploadDurationMs);
       if (ok) await enterCompileStep(captureIdToUse);
     },
     [applyV1, enterCompileStep, runAnalyze],
@@ -543,7 +544,7 @@ export function LavorazioniDigitalCaptureLauncher({
         gestToast.info("Documento già presente in archivio (duplicato).");
       }
 
-      await continueAfterUpload(result.captureId, result.duplicateOf ?? null);
+      await continueAfterUpload(result.captureId, result.duplicateOf ?? null, result.uploadDurationMs);
     },
     [applyV1, continueAfterUpload, gestToast, resetWizardApi, upload],
   );
@@ -961,9 +962,7 @@ export function LavorazioniDigitalCaptureLauncher({
             ) : null}
             {step === "compile" && captureId && fieldRows ? (
               compileFieldsLoading ? (
-                <div className="flex min-h-[12rem] items-center justify-center">
-                  <LoadingSpinner size="md" />
-                </div>
+                <CaptureStatusProgress state={deriveCaptureCompileProgress("fetch_fields")} />
               ) : (
                 <>
                   {isMultiSchedaFlow ? (

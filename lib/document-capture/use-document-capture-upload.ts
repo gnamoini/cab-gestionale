@@ -17,6 +17,7 @@ export type DocumentCaptureUploadPhase =
 export type DocumentCaptureUploadResult = {
   captureId: string;
   duplicateOf?: string | null;
+  uploadDurationMs?: number;
 };
 
 type UploadInput = {
@@ -71,6 +72,7 @@ export function useDocumentCaptureUpload() {
       };
 
       setProgress(0.35);
+      const uploadStartedAt = performance.now();
       const sb = getBrowserSupabase();
       const contentType = expectedMime !== "application/octet-stream" ? expectedMime : input.file.type || undefined;
       const { error: storageError } = await sb.storage
@@ -84,7 +86,11 @@ export function useDocumentCaptureUpload() {
       setPhase("success");
       setProgress(1);
 
-      return { captureId: policy.captureId, duplicateOf: null };
+      return {
+        captureId: policy.captureId,
+        duplicateOf: null,
+        uploadDurationMs: Math.round(performance.now() - uploadStartedAt),
+      };
     } catch (e) {
       setPhase("error");
       const raw = e instanceof Error ? e.message : "Upload non riuscito";

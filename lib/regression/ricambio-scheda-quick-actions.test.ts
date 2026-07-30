@@ -23,11 +23,10 @@ const riepilogo = fs.readFileSync(
 assert.match(stepper, /Carica \+1/);
 assert.match(stepper, /Scarica −1/);
 assert.match(stepper, /grid-cols-\[1fr_auto_1fr\]/);
-assert.match(modals, /MagazzinoScortaModalQuickAdjust/);
-assert.match(modals, /fallbackScorta=\{ricambio\.scorta\}/);
-assert.match(modals, /hidden grid-cols-2 gap-2 text-sm sm:grid/);
-assert.match(modals, /Lavorazioni/);
-assert.match(modals, /Ordini/);
+assert.doesNotMatch(modals, /MagazzinoScortaModalQuickAdjust/);
+assert.doesNotMatch(modals, /href="\/lavorazioni"/);
+assert.doesNotMatch(modals, /href="\/ordini-fornitori"/);
+assert.match(modals, /trailingAction=\{/);
 
 const riepilogoComponentIdx = panel.indexOf("RicambioInfoRiepilogoSection");
 const giacenzaIdx = panel.indexOf('title="Giacenza e consumo"');
@@ -42,6 +41,23 @@ assert.ok(
 assert.match(panel, /MagazzinoScortaDebouncedInfoStepper/);
 assert.match(riepilogo, /MagazzinoScortaDebouncedInfoStepper/);
 assert.match(riepilogo, /RicambioStockStatusLabel/);
+assert.match(riepilogo, /title="Giacenza"/);
+assert.match(riepilogo, /title="Classificazione"/);
+assert.match(riepilogo, /label="Scorta minima"/);
+const codOeIdx = riepilogo.indexOf('label="Cod. OE"');
+const marcaIdx = riepilogo.indexOf('label="Marca"');
+const descrizioneIdx = riepilogo.indexOf('label="Descrizione"');
+const giacenzaSubgroupIdx = riepilogo.indexOf('title="Giacenza"');
+const classificazioneIdx = riepilogo.indexOf('title="Classificazione"');
+assert.ok(
+  codOeIdx >= 0 &&
+    marcaIdx > codOeIdx &&
+    descrizioneIdx > marcaIdx &&
+    giacenzaSubgroupIdx > descrizioneIdx &&
+    classificazioneIdx > giacenzaSubgroupIdx,
+  "Ordine: Cod. OE → Marca → Descrizione → Giacenza → Classificazione",
+);
+assert.doesNotMatch(riepilogo, /sm:grid-cols-2[\s\S]*label="Cod\. OE"/);
 assert.match(panel, /RicambioOperationalStatusCard[\s\S]*embedded/);
 assert.match(panel, /RicambioConsumoDetailRows/);
 assert.doesNotMatch(panel, /label="Scorta minima"/);

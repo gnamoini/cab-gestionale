@@ -38,6 +38,8 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const wantsStream = request.headers.get("accept")?.includes(CAPTURE_ANALYZE_NDJSON_ACCEPT);
+  const uploadDurationHeader = request.headers.get("x-capture-upload-duration-ms");
+  const uploadDurationMs = uploadDurationHeader ? Number(uploadDurationHeader) : undefined;
   const t0 = performance.now();
   let timeToFirstProgressMs: number | undefined;
 
@@ -56,6 +58,7 @@ export async function POST(request: Request, context: RouteContext) {
           captureId: id,
           userId: userId ?? "system",
           correlationId,
+          uploadDurationMs: Number.isFinite(uploadDurationMs) ? uploadDurationMs : undefined,
           onStreamEvent: push,
         })
           .then((result) => {
@@ -101,6 +104,7 @@ export async function POST(request: Request, context: RouteContext) {
     captureId: id,
     userId: userId ?? "system",
     correlationId,
+    uploadDurationMs: Number.isFinite(uploadDurationMs) ? uploadDurationMs : undefined,
   });
 
   traceDocumentCaptureOperation({

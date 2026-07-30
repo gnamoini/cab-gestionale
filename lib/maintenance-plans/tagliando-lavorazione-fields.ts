@@ -20,7 +20,7 @@ export const DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS: TagliandoLavorazioneFields = 
   isGaranzia: false,
   isRecidivo: false,
   maintenanceExecutionKind: "scheduled",
-  repairPresent: false,
+  repairPresent: true,
   tagliandoPresetRef: null,
   tagliandoPresetVersionRef: null,
   tagliandoAssignPresetToMezzo: null,

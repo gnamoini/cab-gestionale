@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import type { ReactElement } from "react";
 import { DisabledElementTooltip } from "@/components/ui";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
@@ -15,7 +14,6 @@ import type { RicambioConsumoDaLog } from "@/lib/magazzino/ricambio-consumo-from
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { displayRicambioCodice, ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import { RicambioLabelActions } from "@/components/gestionale/magazzino/ricambio-label-actions";
-import { MagazzinoScortaModalQuickAdjust } from "@/components/gestionale/magazzino/magazzino-scorta-debounced-stepper";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
@@ -79,8 +77,6 @@ export function MagazzinoRicambioInfoModal({
   onUndoStockMovement?: (movimentoId: string) => void | Promise<void>;
   undoStockPending?: boolean;
 }) {
-  const low = ricambio.scorta < ricambio.scortaMinima;
-
   return (
     <GestionaleModalShell
       modalSize="info"
@@ -90,43 +86,24 @@ export function MagazzinoRicambioInfoModal({
       titleId="detail-ricambio-title"
       footer={
         <div className="flex w-full min-w-0 flex-col gap-2">
-          <MagazzinoScortaModalQuickAdjust
-            ricambioId={ricambio.id}
-            ricambioLabel={ricambio.descrizione}
-            fallbackScorta={ricambio.scorta}
-            low={low}
-            canAdjust={canAdjustScorta}
-          />
-          <div className="hidden grid-cols-2 gap-2 text-sm sm:grid">
-            <Link
-              href="/lavorazioni"
-              className="inline-flex min-h-10 items-center justify-center rounded-md border border-[color:var(--cab-border)] px-2 text-center hover:bg-[color:var(--cab-surface-elevated)]"
-            >
-              Lavorazioni
-            </Link>
-            <Link
-              href="/ordini-fornitori"
-              className="inline-flex min-h-10 items-center justify-center rounded-md border border-[color:var(--cab-border)] px-2 text-center hover:bg-[color:var(--cab-surface-elevated)]"
-            >
-              Ordini
-            </Link>
-          </div>
           <RicambioLabelActions
             ricambioId={ricambio.id}
             codice={ricambioCodiceForUi(ricambio.codiceFornitoreOriginale)}
             canRead={magCanReadRicambio}
             canWrite={magCanCreateRicambio}
+            trailingAction={
+              <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!magCanCreateRicambio}>
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
+                  disabled={!magCanCreateRicambio}
+                >
+                  Modifica
+                </button>
+              </DisabledElementTooltip>
+            }
           />
-          <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!magCanCreateRicambio}>
-            <button
-              type="button"
-              onClick={onEdit}
-              className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
-              disabled={!magCanCreateRicambio}
-            >
-              Modifica
-            </button>
-          </DisabledElementTooltip>
         </div>
       }
     >

@@ -92,5 +92,7 @@ export function ricambioUiToMagazzinoInsert(
 }
 
 export function ricambioUiToMagazzinoUpdate(r: RicambioMagazzino, mezziListe?: MezziListePrefs): MagazzinoUpdate {
-  return ricambioUiToMagazzinoInsert(r, mezziListe);
+  const insert = ricambioUiToMagazzinoInsert(r, mezziListe) as MagazzinoInsert & { id?: string };
+  const { quantita: _quantita, id: _id, ...patch } = insert;
+  return patch;
 }

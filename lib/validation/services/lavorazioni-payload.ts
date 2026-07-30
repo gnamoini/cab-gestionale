@@ -137,13 +137,13 @@ export function pickLavorazioneCreatePayload(data: Record<string, unknown>): Lav
   const picked = pickLavorazioneWritePayload(data);
   const mezzoId = picked.mezzo_id?.trim();
   if (!mezzoId) {
-    throw new Error("mezzo_id obbligatorio per la creazione lavorazione.");
+    throw new Error("Seleziona o collega un mezzo prima di salvare la lavorazione.");
   }
   if (!picked.stato) {
-    throw new Error("stato obbligatorio per la creazione lavorazione.");
+    throw new Error("Imposta lo stato iniziale della lavorazione.");
   }
   if (!picked.priorita) {
-    throw new Error("priorita obbligatoria per la creazione lavorazione.");
+    throw new Error("Imposta la priorità della lavorazione.");
   }
 
   const target = validateLavorazioneTargetForInsert(

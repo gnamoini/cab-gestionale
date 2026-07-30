@@ -30,4 +30,23 @@ assert.ok(
   "5 mezzi in attesa ricambi lunghe non devono costare −5 pieni",
 );
 
+function lateIngressPenalty(lateCount: number, openCount: number) {
+  resetHealthScoreRegistry();
+  ensureHealthScoreRegistry();
+  const mod = getAllRiskModifiers().find((m) => m.id === "late-ingress");
+  assert.ok(mod);
+  const ctx = {
+    snapshot: {
+      lateIngressCount: lateCount,
+      openCount,
+    },
+  } as KpiContext;
+  return mod!.compute(ctx).penalty;
+}
+
+assert.ok(
+  lateIngressPenalty(3, 10) > lateIngressPenalty(0.9, 10),
+  "attesa ricambi soft (0.9 eq.) penalizza meno di 3 ritardi pieni",
+);
+
 console.log("risk-modifiers.test.ts OK");

@@ -6,6 +6,7 @@ import {
 } from "@/lib/document-capture/pipeline/analyze-capture-v41.server";
 import { createAnalyzeStreamListener } from "@/lib/document-capture/pipeline/analyze-stream-writer.server";
 import type { CaptureAnalyzeStreamEvent } from "@/lib/document-capture/pipeline/analyze-stream-events";
+import { createAnalyzeTrace } from "@/lib/document-capture/pipeline/analyze-trace.server";
 import {
   finalizeCaptureFromBytes,
   type FinalizeCaptureResult,
@@ -31,8 +32,22 @@ export async function processDocumentCapture(input: {
   userId: string;
   correlationId?: string;
   onStreamEvent?: (event: CaptureAnalyzeStreamEvent) => void;
+  uploadDurationMs?: number;
 }): Promise<ProcessDocumentCaptureResult> {
   const sb = await createSupabaseServerUserClient();
+  const stream = input.onStreamEvent ? createAnalyzeStreamListener(input.onStreamEvent) : null;
+  const trace = createAnalyzeTrace({
+    captureId: input.captureId,
+    correlationId: input.correlationId,
+    companyId: null,
+    pipelineVersion: "v4.1",
+    onPhase: stream?.listener,
+  });
+  trace.emit("START", "ok");
+  if (input.uploadDurationMs != null) {
+    trace.emit("UPLOAD_OK", "ok", { durationMs: input.uploadDurationMs });
+  }
+
   const { data: capture, error } = await sb
     .from("document_capture")
     .select("id, company_id, storage_path, finalized_at, mime, status")
@@ -42,6 +57,11 @@ export async function processDocumentCapture(input: {
   if (error || !capture?.storage_path) {
     return { ok: false, code: "not_finalized", message: "Documento non disponibile." };
   }
+
+  trace.emit("DOWNLOAD_STORAGE_START", "ok", {
+    storagePath: capture.storage_path,
+    companyId: capture.company_id,
+  });
 
   const { data: fileData, error: dlError } = await sb.storage
     .from(STORAGE_BUCKETS.documentCapture)
@@ -54,6 +74,7 @@ export async function processDocumentCapture(input: {
       STORAGE_BUCKETS.documentCapture,
       "analisi documento",
     );
+    trace.fail("DOWNLOAD_STORAGE_FAIL", dlError ?? new Error(classified.message));
     return { ok: false, code: "storage", message: classified.message };
   }
 
@@ -65,8 +86,15 @@ export async function processDocumentCapture(input: {
     bytes,
   });
 
+  trace.emit("DOWNLOAD_STORAGE_OK", "ok", {
+    fileMime: mime,
+    fileSize: bytes.byteLength,
+    storagePath: capture.storage_path,
+  });
+
   let finalizeResult: FinalizeCaptureResult;
   if (!capture.finalized_at) {
+    trace.emit("FINALIZE_START", "ok");
     const finalized = await finalizeCaptureFromBytes({
       captureId: input.captureId,
       storagePath: capture.storage_path,
@@ -76,13 +104,16 @@ export async function processDocumentCapture(input: {
       reuploadConverted: true,
     });
     if ("ok" in finalized && finalized.ok === false) {
+      trace.emit("FINALIZE_FAIL", "fail", { detail: finalized.message });
       return { ok: false, code: "finalize_failed", message: finalized.message };
     }
     if ("result" in finalized) {
       finalizeResult = finalized.result;
       bytes = new Uint8Array(finalized.bytes);
       mime = finalized.mime;
+      trace.emit("FINALIZE_OK", "ok", { fileMime: mime, fileSize: bytes.byteLength });
     } else {
+      trace.emit("FINALIZE_FAIL", "fail", { detail: "Finalizzazione non completata." });
       return { ok: false, code: "finalize_failed", message: "Finalizzazione non completata." };
     }
   } else {
@@ -93,12 +124,11 @@ export async function processDocumentCapture(input: {
     };
   }
 
-  const stream = input.onStreamEvent ? createAnalyzeStreamListener(input.onStreamEvent) : null;
   const analyze = await analyzeDocumentCaptureV41(input.captureId, input.userId, {
     correlationId: input.correlationId,
     bytes,
     mime,
-    onPhase: stream?.listener,
+    trace,
   });
   stream?.stopHeartbeat();
 

@@ -96,4 +96,13 @@ assert.match(
   "preventivi list fetch must embed mezzi in single Supabase select",
 );
 
+const lavorazioniPage = read("app/(gestionale)/lavorazioni/page.tsx");
+assert.match(lavorazioniPage, /GestionaleHydrationBoundary/, "lavorazioni page must hydrate dehydrated cache");
+assert.match(lavorazioniPage, /LavorazioniDeferredHydration/, "lavorazioni page must use deferred hydration");
+assert.match(lavorazioniPage, /prefetchCriticalPage\(qc, "lavorazioni"\)/, "lavorazioni page must prefetch critical shell");
+assert.doesNotMatch(lavorazioniPage, /prefetchGestionalePage\(qc, "lavorazioni"\)/, "lavorazioni page must not block on legacy full prefetch");
+
+const lavorazioniDeferred = read("components/gestionale/lavorazioni/lavorazioni-deferred-hydration.tsx");
+assert.doesNotMatch(lavorazioniDeferred, /if\s*\(.*data/, "lavorazioni deferred must not gate on data completeness");
+
 console.log("waterfall-roi-audit: ok");

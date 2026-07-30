@@ -1,6 +1,7 @@
 import type { DocumentCaptureUploadPhase } from "@/lib/document-capture/use-document-capture-upload";
 import {
   deriveLavorazioniCaptureChecksFromPhase,
+  captureAnalyzeProgressPercent,
   type LavorazioniCaptureCheck,
 } from "@/lib/document-capture/pipeline/analyze-progress-labels";
 import type { AnalyzeTracePhase } from "@/lib/document-capture/pipeline/analyze-trace-types";
@@ -73,8 +74,8 @@ export function deriveCaptureAcquisitionProgress(input: {
         active: true,
         phase: "reading",
         label: activeCheck?.label ?? "Elaborazione documento…",
-        progress: 62,
-        creeping: false,
+        progress: captureAnalyzeProgressPercent(input.analyzePhase ?? null),
+        creeping: true,
         error: null,
         checklist: checks,
         heartbeatLabel,
@@ -85,8 +86,8 @@ export function deriveCaptureAcquisitionProgress(input: {
       active: true,
       phase: "reading",
       label: "Lettura documento con AI…",
-      progress: 62,
-      creeping: false,
+      progress: captureAnalyzeProgressPercent(input.analyzePhase ?? null),
+      creeping: true,
       error: null,
       streamActive: true,
     };

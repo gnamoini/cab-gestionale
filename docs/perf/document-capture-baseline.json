@@ -1,7 +1,7 @@
 {
   "environment": {
-    "timestamp": "2026-07-29T15:30:25.385Z",
-    "gitCommit": "264b0bb9",
+    "timestamp": "2026-07-30T01:29:07.207Z",
+    "gitCommit": "6737561b",
     "branch": "main",
     "nodeVersion": "v24.15.0",
     "browser": "chromium",
@@ -11,9 +11,26 @@
     "viewport": "1440x900"
   },
   "analyze": {
-    "capturedAt": "2026-07-29T15:30:25.171Z",
-    "sampleCount": 0,
-    "phases": {},
+    "capturedAt": "2026-07-30T01:29:07.039Z",
+    "sampleCount": 1,
+    "runCount": 1,
+    "phases": {
+      "HYBRID_OK": {
+        "meanMs": 8000,
+        "maxMs": 8000,
+        "p95Ms": 8000,
+        "p99Ms": 8000,
+        "count": 1
+      }
+    },
+    "bottlenecks": [
+      {
+        "phase": "HYBRID_OK",
+        "meanMs": 8000,
+        "p95Ms": 8000,
+        "sharePct": 0
+      }
+    ],
     "tokens": null,
     "uxMetrics": {
       "timeToFirstProgressMs": null,

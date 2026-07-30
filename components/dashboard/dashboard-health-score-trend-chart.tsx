@@ -189,8 +189,28 @@ function HealthScoreTrendChartSvg({
   const uid = useId().replace(/:/g, "");
   const areaGradId = `hs-trend-area-${uid}`;
   const lineGradId = `hs-trend-line-${uid}`;
-  const viewWidth = embedded ? CHART_VIEW_WIDTH_EMBEDDED : CHART_VIEW_WIDTH;
   const viewHeight = embedded ? CHART_VIEW_HEIGHT_EMBEDDED : CHART_VIEW_HEIGHT;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [embeddedViewWidth, setEmbeddedViewWidth] = useState(CHART_VIEW_WIDTH_EMBEDDED);
+  const viewWidth = embedded ? embeddedViewWidth : CHART_VIEW_WIDTH;
+
+  useLayoutEffect(() => {
+    if (!embedded) return;
+    const el = containerRef.current;
+    if (!el) return;
+
+    const syncViewWidth = () => {
+      const { width, height } = el.getBoundingClientRect();
+      if (width <= 0 || height <= 0) return;
+      const next = Math.round((width / height) * viewHeight);
+      setEmbeddedViewWidth((prev) => (prev === next ? prev : Math.max(CHART_VIEW_WIDTH, next)));
+    };
+
+    syncViewWidth();
+    const ro = new ResizeObserver(syncViewWidth);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [embedded, viewHeight]);
 
   const plotPoints = useMemo(
     () =>
@@ -247,6 +267,7 @@ function HealthScoreTrendChartSvg({
 
   return (
     <div
+      ref={containerRef}
       className={
         embedded
           ? "flex min-h-40 w-full flex-col justify-center sm:min-h-0 sm:flex-1 sm:basis-0"

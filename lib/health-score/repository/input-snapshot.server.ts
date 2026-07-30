@@ -2,6 +2,7 @@ import { CONTROL_TOWER_LATE_INGRESS_DAYS } from "@/lib/dashboard/control-tower-c
 import {
   computeInactiveLavorazioniCriticality,
   computeSottoScortaCriticality,
+  lateIngressWeight,
 } from "@/lib/dashboard/operational-health-criticality";
 import { isLavorazioneInCorso } from "@/lib/lavorazioni/archived";
 import { filterEntriesForReportTimesheetKpi } from "@/lib/dipendenti/timesheet-report-kpi-filter";
@@ -135,9 +136,10 @@ export function buildInputSnapshot(input: {
   let backlogAgeSum = 0;
   let lateIngressCount = 0;
   for (const row of attive) {
-    backlogAgeSum += daysBetween(lavIngressIso(row), input.anchor);
-    if (daysBetween(lavIngressIso(row), input.anchor) > CONTROL_TOWER_LATE_INGRESS_DAYS) {
-      lateIngressCount += 1;
+    const ingressDays = daysBetween(lavIngressIso(row), input.anchor);
+    backlogAgeSum += ingressDays;
+    if (ingressDays > CONTROL_TOWER_LATE_INGRESS_DAYS) {
+      lateIngressCount += lateIngressWeight(row, input.anchor, input.statiLavorazione);
     }
   }
   const backlogAvgAgeDays = openCount > 0 ? Math.round((backlogAgeSum / openCount) * 10) / 10 : 0;

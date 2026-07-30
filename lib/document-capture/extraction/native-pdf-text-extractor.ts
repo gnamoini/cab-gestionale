@@ -1,5 +1,6 @@
 import type { DetectedSchedaBlankTipo, HybridField } from "@/lib/document-capture/extraction/hybrid-extraction-types";
 import { normalizeCaptureExtractedFieldKey } from "@/lib/document-capture/capture-field-key-aliases";
+import type { AnalyzeTraceEmitter } from "@/lib/document-capture/pipeline/analyze-trace-emitter";
 
 const MIN_TEXT_LAYER_CHARS = 80;
 
@@ -83,7 +84,11 @@ export function detectSchedaTipoFromPdfPages(pages: PdfTextPage[]): DetectedSche
 }
 
 /** Tier 0 — testo nativo PDF (PDF digitali CAB). Scan puri → array vuoto. */
-export async function extractNativePdfTextFields(bytes: Uint8Array, mime: string): Promise<{
+export async function extractNativePdfTextFields(
+  bytes: Uint8Array,
+  mime: string,
+  trace?: AnalyzeTraceEmitter,
+): Promise<{
   pages: PdfTextPage[];
   fields: HybridField[];
   hasTextLayer: boolean;
@@ -92,6 +97,7 @@ export async function extractNativePdfTextFields(bytes: Uint8Array, mime: string
     return { pages: [], fields: [], hasTextLayer: false };
   }
   try {
+    trace?.emit("PDFJS_TEXT_START", "ok");
     const pages = await extractPdfTextPages(bytes);
     const totalChars = pages.reduce((n, p) => n + p.text.length, 0);
     if (totalChars < MIN_TEXT_LAYER_CHARS) {

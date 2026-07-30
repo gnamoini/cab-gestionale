@@ -9,6 +9,7 @@ import {
   createLinkedMezzoSnapshotFromFields,
   emptySchedaIngressoMezzoLinkState,
   hasLinkedMezzoFieldConflict,
+  listLinkedMezzoFieldConflicts,
   resolvePreferredMezzoIdForSave,
   type LinkedMezzoSnapshot,
   type SchedaIngressoMezzoLinkState,
@@ -71,7 +72,6 @@ export function useSchedaIngressoMezzoLink({
     (field: SchedaIngressoIdentField = activeMatchField ?? "matricola") => {
       const mezzo = linkState.pendingMezzo;
       if (!mezzo) return;
-      const snapshot = createLinkedMezzoSnapshot(mezzo, field);
       const fromMezzo = buildSchedaIngressoFieldsFromMezzo(mezzo);
       let next = mergeSchedaIngressoWithMezzoPriority(fields, { linkedMezzo: mezzo });
       if (schedeStore) {
@@ -95,7 +95,11 @@ export function useSchedaIngressoMezzoLink({
       setLinkState({
         status: "linked",
         pendingMezzo: null,
-        linkedSnapshot: snapshot,
+        linkedSnapshot: createLinkedMezzoSnapshotFromFields(
+          mezzo,
+          pickMezzoPermanentFields(next),
+          field,
+        ),
       });
       setActiveMatchField(null);
     },
@@ -149,6 +153,7 @@ export function useSchedaIngressoMezzoLink({
   );
 
   const hasConflict = hasLinkedMezzoFieldConflict(fields, linkState.linkedSnapshot);
+  const conflictFields = listLinkedMezzoFieldConflicts(fields, linkState.linkedSnapshot);
   const preferredMezzoId = resolvePreferredMezzoIdForSave(linkState);
 
   return {
@@ -161,6 +166,7 @@ export function useSchedaIngressoMezzoLink({
     bootstrapLinkedMezzo,
     clearLink,
     hasConflict,
+    conflictFields,
     preferredMezzoId,
     linkedSnapshot: linkState.linkedSnapshot as LinkedMezzoSnapshot | null,
     pendingMezzo: linkState.pendingMezzo,

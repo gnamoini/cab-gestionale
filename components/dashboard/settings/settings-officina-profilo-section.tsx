@@ -47,17 +47,17 @@ const OPTIONS: {
   {
     value: "attrezzature",
     label: "Solo attrezzature",
-    description: "Ingresso con attrezzatura e telaio collegato (campi telaio opzionali).",
+    description: "Sezioni attrezzatura e telaio nell'ordine attrezzatura → telaio.",
   },
   {
     value: "telai",
     label: "Solo telai",
-    description: "Solo anagrafica telaio; nessuna sezione attrezzatura.",
+    description: "Solo sezione telaio; nessuna sezione attrezzatura.",
   },
   {
     value: "misto",
     label: "Misto",
-    description: "Scelta oggetto intervento (telaio o attrezzatura) su ogni ingresso.",
+    description: "Sezioni telaio e attrezzatura (telaio → attrezzatura) con scelta oggetto intervento.",
   },
 ];
 

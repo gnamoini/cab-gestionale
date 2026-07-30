@@ -66,6 +66,19 @@ export async function abandonInventoryReceivingImport(importFileId: string): Pro
   if (!res.ok) throw new Error(data.error ?? "Annullamento import non riuscito.");
 }
 
+export async function abandonInventoryReceivingPending(
+  item: Pick<InventoryReceivingPendingItem, "kind" | "importFileId" | "documentId">,
+): Promise<void> {
+  if (item.kind === "document" && item.documentId) {
+    const res = await fetch(`/api/magazzino/receiving/${item.documentId}/abandon`, { method: "POST" });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) throw new Error(data.error ?? "Annullamento analisi non riuscito.");
+    return;
+  }
+  if (!item.importFileId) throw new Error("Import non trovato.");
+  await abandonInventoryReceivingImport(item.importFileId);
+}
+
 export async function fetchInventoryReceivingPending(): Promise<InventoryReceivingPendingItem[]> {
   const res = await fetch("/api/magazzino/receiving/pending");
   const data = (await res.json().catch(() => ({}))) as { pending?: InventoryReceivingPendingItem[] };

@@ -18,18 +18,8 @@ import { useGlobalOptions, type GlobalOptionsSlice } from "@/src/hooks/use-globa
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import {
-  applyCopyLastSchedaMatch,
-  copyLastSchedaIngresso,
-  listCopyLastSchedaIngressoCandidates,
-} from "@/lib/domain/scheda-ingresso/copy-last-scheda";
-import {
-  hasSchedaIngressoIdentLookup,
-  isIngressoIdentInMezziAnagrafica,
-  type LastSchedaIngressoMatch,
-} from "@/lib/schede/scheda-ingresso-reuse";
 import type { SchedaIngressoIdentField } from "@/lib/schede/scheda-ingresso-ident-suggest";
-import { SchedaIngressoCopyPickDialog } from "@/components/gestionale/lavorazioni/scheda-ingresso-copy-pick-dialog";
+import { mezzoIngressoSuggestLabel } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import {
   SCHEDA_INGRESSO_ADDETTO_ACCETTAZIONE_LABEL,
   SCHEDA_INGRESSO_ADDETTO_LABEL,
@@ -84,7 +74,8 @@ import { GlobalDatePicker, GlobalFixedListPillSelect } from "@/components/gestio
 import { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
 import { writeIngressoAddettoId } from "@/lib/lavorazioni/write-ingresso-addetto-id";
 import { backfillAddettoIdFromLegacyString } from "@/lib/schede/schede-addetto-id-migrate";
-import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
+import { buildAddettoPickerOptionsFromRecords } from "@/src/hooks/gestionale/use-addetti-picker-options";
+import { FormAlert, FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import { SchedaIngressoAnagraficaFields } from "@/components/gestionale/schede/scheda-ingresso-anagrafica-fields";
 import {
   CaptureIngressoFieldHintInline,
@@ -95,7 +86,7 @@ import type { CaptureIngressoFieldHint } from "@/lib/document-capture/capture-in
 import { RichiedenteFirmaCaptureModal } from "@/components/gestionale/schede/richiedente-firma-capture-modal";
 import { RichiedenteFirmaDisplay } from "@/components/gestionale/schede/richiedente-firma-display";
 import { hasSignatureDataUrl } from "@/lib/media/signature-pad";
-import { dsBtnDanger, dsBtnNeutral, dsInput } from "@/lib/ui/design-system";
+import { dsBtnDanger, dsBtnNeutral, dsInput, dsLabel, dsAccentSoftBanner } from "@/lib/ui/design-system";
 import { cabModalLayerClass } from "@/lib/ui/mobile-modal-behavior";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import {
@@ -127,9 +118,9 @@ function SchedaIngressoFormScrollShell({
   children: ReactNode;
 }) {
   if (embedInParentScroll) {
-    return <div className="min-w-0 space-y-3">{children}</div>;
+    return <div className="min-w-0 space-y-4">{children}</div>;
   }
-  return <GestionaleModalScrollBody className="space-y-3">{children}</GestionaleModalScrollBody>;
+  return <GestionaleModalScrollBody className="space-y-4">{children}</GestionaleModalScrollBody>;
 }
 
 export function emptySchedaIngressoFields(addettoDefault = ""): SchedaIngressoFields {
@@ -235,20 +226,18 @@ const SchedaIngressoAnomaliaSection = memo(function SchedaIngressoAnomaliaSectio
   anomaliaFieldId: string;
 }) {
   return (
-    <FormSection title="Intervento">
-      <FormField label="Descrizione anomalia" htmlFor={anomaliaFieldId}>
-        <GestionaleTextarea
-          id={anomaliaFieldId}
-          className="min-h-[4.5rem] whitespace-pre-wrap"
-          size="md"
-          value={descrizioneAnomalia}
-          onChange={(v) => onPatch({ descrizioneAnomalia: sliceInputValue(v, TEXT_EXTRA) })}
-          disabled={disabled}
-          rows={3}
-          maxLength={TEXT_EXTRA}
-        />
-      </FormField>
-    </FormSection>
+    <FormField label="Descrizione anomalia" htmlFor={anomaliaFieldId}>
+      <GestionaleTextarea
+        id={anomaliaFieldId}
+        className="min-h-[4.5rem] whitespace-pre-wrap"
+        size="md"
+        value={descrizioneAnomalia}
+        onChange={(v) => onPatch({ descrizioneAnomalia: sliceInputValue(v, TEXT_EXTRA) })}
+        disabled={disabled}
+        rows={3}
+        maxLength={TEXT_EXTRA}
+      />
+    </FormField>
   );
 }, (prev, next) => {
   if (prev.disabled !== next.disabled) return false;
@@ -269,20 +258,18 @@ const SchedaIngressoNoteSection = memo(function SchedaIngressoNoteSection({
   noteFieldId: string;
 }) {
   return (
-    <FormSection title="Note">
-      <FormField label="Note" htmlFor={noteFieldId}>
-        <GestionaleTextarea
-          id={noteFieldId}
-          className="min-h-[3.5rem]"
-          size="sm"
-          value={lavorazioneNote}
-          onChange={(v) => onLavorazioneNoteChange(sliceInputValue(v, TEXT_LONG))}
-          disabled={disabled}
-          rows={2}
-          maxLength={TEXT_LONG}
-        />
-      </FormField>
-    </FormSection>
+    <FormField label="Note" htmlFor={noteFieldId}>
+      <GestionaleTextarea
+        id={noteFieldId}
+        className="min-h-[3.5rem]"
+        size="sm"
+        value={lavorazioneNote}
+        onChange={(v) => onLavorazioneNoteChange(sliceInputValue(v, TEXT_LONG))}
+        disabled={disabled}
+        rows={2}
+        maxLength={TEXT_LONG}
+      />
+    </FormField>
   );
 }, (prev, next) => {
   if (prev.disabled !== next.disabled) return false;
@@ -291,87 +278,157 @@ const SchedaIngressoNoteSection = memo(function SchedaIngressoNoteSection({
   return prev.lavorazioneNote === next.lavorazioneNote;
 });
 
+function SchedaIngressoIngressoLinkedMezzoHint({
+  mezzo,
+  mezzoPrefilledFromCatalog = false,
+}: {
+  mezzo: MezzoGestito;
+  mezzoPrefilledFromCatalog?: boolean;
+}) {
+  const title = mezzoPrefilledFromCatalog ? "Mezzo selezionato" : "Anagrafica mezzi";
+
+  return (
+    <div className="block min-w-0">
+      <span className={`${dsLabel} text-[color:var(--cab-text)]`}>{title}</span>
+      <div
+        className={`${dsAccentSoftBanner} mt-1.5 flex min-h-[2.625rem] min-w-0 items-center rounded-[var(--ds-radius-lg)] px-3 py-2 shadow-[var(--cab-shadow-sm)]`}
+        role="status"
+      >
+        <p className="truncate text-xs font-medium leading-snug text-[color:var(--cab-text)]">
+          {mezzoIngressoSuggestLabel(mezzo)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function SchedaIngressoIngressoDataSection({
   dataIngresso,
   disabled,
   dataIngressoFieldId,
   inputRef,
   onDataIngressoChange,
+  linkedMezzo,
+  mezzoPrefilledFromCatalog = false,
 }: {
   dataIngresso: string;
   disabled: boolean;
   dataIngressoFieldId: string;
   inputRef?: Ref<HTMLInputElement>;
   onDataIngressoChange: (v: string) => void;
+  linkedMezzo?: MezzoGestito | null;
+  mezzoPrefilledFromCatalog?: boolean;
 }) {
   return (
-    <FormSection title="Ingresso">
-      <FormField label="Data ingresso" htmlFor={dataIngressoFieldId} required>
-        <GlobalDatePicker
-          id={dataIngressoFieldId}
-          value={dataIngresso}
-          onChange={onDataIngressoChange}
-          inputClassName={dsInput}
-          inputRef={inputRef}
-          required
-          disabled={disabled}
-        />
-      </FormField>
+    <FormSection title="Ingresso" hideTitle>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <FormField label="Data ingresso" htmlFor={dataIngressoFieldId} required>
+          <GlobalDatePicker
+            id={dataIngressoFieldId}
+            value={dataIngresso}
+            onChange={onDataIngressoChange}
+            inputClassName={dsInput}
+            inputRef={inputRef}
+            required
+            disabled={disabled}
+          />
+        </FormField>
+        {linkedMezzo ? (
+          <SchedaIngressoIngressoLinkedMezzoHint
+            mezzo={linkedMezzo}
+            mezzoPrefilledFromCatalog={mezzoPrefilledFromCatalog}
+          />
+        ) : null}
+      </div>
     </FormSection>
   );
 }
 
-function SchedaIngressoAddettoFirmaBlock({
+function IngressoFirmaField({
+  label,
+  dataUrl,
+  disabled,
+  onOpen,
+  onClear,
+  displayLabel,
+}: {
+  label: string;
+  dataUrl?: string;
+  disabled?: boolean;
+  onOpen: () => void;
+  onClear: () => void;
+  displayLabel?: string;
+}) {
+  const hasFirma = hasSignatureDataUrl(dataUrl ?? "");
+  return (
+    <FormField label={label}>
+      <div className="flex min-w-0 items-center gap-2">
+        <IngressoAddettoFirmaButton hasFirma={hasFirma} disabled={disabled} onOpen={onOpen} />
+        {hasFirma ? (
+          <RichiedenteFirmaDisplay dataUrl={dataUrl} consultable label={displayLabel} />
+        ) : (
+          <span className="text-xs text-[color:var(--cab-text-muted)]">Nessuna firma acquisita</span>
+        )}
+      </div>
+      {hasFirma ? (
+        <div className="mt-2">
+          <button type="button" className={dsBtnNeutral} disabled={disabled} onClick={onClear}>
+            Rimuovi firma
+          </button>
+        </div>
+      ) : null}
+    </FormField>
+  );
+}
+
+function SchedaIngressoFirmeSection({
+  richiedenteFirma,
   addettoFirma,
   disabled,
-  onFirmaChange,
-  firmaModalOpen,
-  onFirmaModalOpenChange,
+  onPatch,
 }: {
+  richiedenteFirma?: string;
   addettoFirma?: string;
   disabled?: boolean;
-  onFirmaChange: (dataUrl: string) => void;
-  firmaModalOpen: boolean;
-  onFirmaModalOpenChange: (open: boolean) => void;
+  onPatch: (patch: Partial<SchedaIngressoFields>) => void;
 }) {
-  const hasFirma = hasSignatureDataUrl(addettoFirma ?? "");
+  const [richiedenteModalOpen, setRichiedenteModalOpen] = useState(false);
+  const [addettoModalOpen, setAddettoModalOpen] = useState(false);
+
   return (
-    <FormSection title="Firma addetto officina">
-      <FormField label="Firma addetto officina">
-        <div className="flex min-w-0 items-center gap-2">
-          <IngressoAddettoFirmaButton
-            hasFirma={hasFirma}
-            disabled={disabled}
-            onOpen={() => onFirmaModalOpenChange(true)}
-          />
-          {hasFirma ? (
-            <RichiedenteFirmaDisplay dataUrl={addettoFirma} consultable label="addetto officina" />
-          ) : (
-            <span className="text-xs text-[color:var(--cab-text-muted)]">Nessuna firma acquisita</span>
-          )}
-        </div>
-        {hasFirma ? (
-          <div className="mt-2">
-            <button
-              type="button"
-              className={dsBtnNeutral}
-              disabled={disabled}
-              onClick={() => onFirmaChange("")}
-            >
-              Rimuovi firma
-            </button>
-          </div>
-        ) : null}
-      </FormField>
+    <>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <IngressoFirmaField
+          label="Firma richiedente"
+          dataUrl={richiedenteFirma}
+          disabled={disabled}
+          onOpen={() => setRichiedenteModalOpen(true)}
+          onClear={() => onPatch({ richiedenteFirma: "" })}
+        />
+        <IngressoFirmaField
+          label="Firma addetto officina"
+          dataUrl={addettoFirma}
+          disabled={disabled}
+          displayLabel="addetto officina"
+          onOpen={() => setAddettoModalOpen(true)}
+          onClear={() => onPatch({ addettoFirma: "" })}
+        />
+      </div>
       <RichiedenteFirmaCaptureModal
-        open={firmaModalOpen}
+        open={richiedenteModalOpen}
+        initialDataUrl={richiedenteFirma ?? ""}
+        onClose={() => setRichiedenteModalOpen(false)}
+        onSave={(dataUrl) => onPatch({ richiedenteFirma: dataUrl })}
+      />
+      <RichiedenteFirmaCaptureModal
+        open={addettoModalOpen}
         initialDataUrl={addettoFirma ?? ""}
         title="Firma addetto"
         titleId="addetto-firma-capture-title"
-        onClose={() => onFirmaModalOpenChange(false)}
-        onSave={(dataUrl) => onFirmaChange(dataUrl)}
+        onClose={() => setAddettoModalOpen(false)}
+        onSave={(dataUrl) => onPatch({ addettoFirma: dataUrl })}
       />
-    </FormSection>
+    </>
   );
 }
 
@@ -393,6 +450,7 @@ type SchedaIngressoGestioneLavorazioneSectionProps = {
   ingressoAddettoId: string;
   onIngressoAddettoChange: (addettoId: string) => void;
   addettiEmpty: boolean;
+  addettoPickerOptions?: readonly FixedListPillOption[];
   captureHintAddetto?: CaptureIngressoFieldHint;
   onApplyCaptureHint?: (key: keyof SchedaIngressoFields, value: string) => void;
   /** Create: stato + priorità + addetto; edit: solo addetto. */
@@ -416,6 +474,7 @@ const SchedaIngressoGestioneLavorazioneSection = memo(function SchedaIngressoGes
   ingressoAddettoId,
   onIngressoAddettoChange,
   addettiEmpty,
+  addettoPickerOptions,
   captureHintAddetto,
   onApplyCaptureHint,
   showStatoPriorita = true,
@@ -423,7 +482,7 @@ const SchedaIngressoGestioneLavorazioneSection = memo(function SchedaIngressoGes
   const statoOpts = statoPillOptions ?? [];
   const prioritaOpts = prioritaPillOptions ?? [];
   return (
-    <FormSection title="Gestione lavorazione">
+    <FormSection title="Gestione lavorazione" hideTitle>
       <div className="space-y-3" role="group" aria-label="Stato, priorità e addetto">
         <div
           className={
@@ -479,6 +538,7 @@ const SchedaIngressoGestioneLavorazioneSection = memo(function SchedaIngressoGes
                 ariaLabel={SCHEDA_INGRESSO_ADDETTO_ACCETTAZIONE_LABEL}
                 size="form"
                 disabled={disabled || addettiEmpty}
+                options={addettoPickerOptions}
               />
             </CaptureAwareFormField>
           </FormField>
@@ -503,6 +563,7 @@ const SchedaIngressoGestioneLavorazioneSection = memo(function SchedaIngressoGes
   if (prev.statoPillStyle !== next.statoPillStyle) return false;
   if (prev.prioritaPillStyle !== next.prioritaPillStyle) return false;
   if (prev.addettiEmpty !== next.addettiEmpty) return false;
+  if (prev.addettoPickerOptions !== next.addettoPickerOptions) return false;
   if (prev.captureHintAddetto !== next.captureHintAddetto) return false;
   if (prev.onApplyCaptureHint !== next.onApplyCaptureHint) return false;
   return schedaIngressoFieldsSliceEqual(prev.fields, next.fields, SCHEDA_INGRESSO_INGRESSO_FIELD_KEYS);
@@ -567,6 +628,7 @@ export function SchedaIngressoFormBody({
   updatedByHint,
   mezzoPrompt,
   mezzoLinked = false,
+  mezzoPrefilledFromCatalog = false,
   mezzoId = "",
   prependContent,
   sharedGlobalOpts,
@@ -601,6 +663,8 @@ export function SchedaIngressoFormBody({
   updatedByHint?: string | null;
   mezzoPrompt: UseSchedaIngressoMezzoPromptResult;
   mezzoLinked?: boolean;
+  /** Mezzo scelto dall'elenco iniziale: nasconde banner registrazione e mostra avviso in sezione Ingresso. */
+  mezzoPrefilledFromCatalog?: boolean;
   mezzoId?: string;
   /** Contenuto opzionale in cima allo scroll (banner, avvisi). */
   prependContent?: ReactNode;
@@ -623,7 +687,6 @@ export function SchedaIngressoFormBody({
   const dataIngressoInputRef = useRef<HTMLInputElement>(null);
   const anomaliaFieldId = useId();
   const noteFieldId = useId();
-  const [addettoFirmaModalOpen, setAddettoFirmaModalOpen] = useState(false);
   const hookGlobalOpts = useGlobalOptions({
     enabled: !sharedGlobalOpts,
     debugTag: variant === "create-lavorazione" ? "LavorazioneCreateModal" : "SchedaIngressoEditModal",
@@ -681,69 +744,11 @@ export function SchedaIngressoFormBody({
     return () => cancelAnimationFrame(id);
   }, [requestInitialFocus, disabled]);
 
-  const [identScan, setIdentScan] = useState({
-    targa: fields.targa,
-    matricola: fields.matricola,
-    nScuderia: fields.nScuderia,
-  });
-  useEffect(() => {
-    const t = window.setTimeout(
-      () =>
-        setIdentScan({
-          targa: fields.targa,
-          matricola: fields.matricola,
-          nScuderia: fields.nScuderia,
-        }),
-      300,
-    );
-    return () => window.clearTimeout(t);
-  }, [fields.targa, fields.matricola, fields.nScuderia]);
-
-  const lastIngressoCandidates = useMemo(() => {
-    if (!hasSchedaIngressoIdentLookup(identScan.targa, identScan.matricola, identScan.nScuderia)) {
-      return [];
-    }
-    return listCopyLastSchedaIngressoCandidates({
-      ident: {
-        targa: identScan.targa,
-        matricola: identScan.matricola,
-        nScuderia: identScan.nScuderia,
-      },
-      mezzi: mezziCatalog,
-      schedeStore,
-      attive,
-      storico,
-      excludeLavorazioneId,
-    });
-  }, [
-    identScan.targa,
-    identScan.matricola,
-    identScan.nScuderia,
-    mezziCatalog,
-    schedeStore,
-    attive,
-    storico,
-    excludeLavorazioneId,
-  ]);
-
-  const lastIngressoMatch = lastIngressoCandidates[0] ?? null;
-  const lastIngressoMezzoInAnagrafica = useMemo(
-    () =>
-      isIngressoIdentInMezziAnagrafica(
-        mezziCatalog,
-        identScan.targa,
-        identScan.matricola,
-        identScan.nScuderia,
-      ),
-    [identScan.matricola, identScan.nScuderia, identScan.targa, mezziCatalog],
-  );
   const linkedMezzoCatalog = useMemo(() => {
     const id = mezzoPrompt.linkedSnapshot?.id ?? mezzoPrompt.preferredMezzoId;
     if (!id) return null;
     return mezziCatalog.find((m) => m.id === id) ?? null;
   }, [mezziCatalog, mezzoPrompt.linkedSnapshot?.id, mezzoPrompt.preferredMezzoId]);
-
-  const [copyPickOpen, setCopyPickOpen] = useState(false);
 
   const mezzoInlineHint = useMemo(() => {
     if (mezzoPrompt.hasConflict && mezzoPrompt.linkedSnapshot) {
@@ -758,6 +763,7 @@ export function SchedaIngressoFormBody({
         matchField: (mezzoPrompt.activeMatchField ?? "matricola") as SchedaIngressoIdentField,
       };
     }
+    if (mezzoPrefilledFromCatalog) return null;
     if (mezzoPrompt.linkState.status === "linked" && linkedMezzoCatalog) {
       return {
         variant: "collegato" as const,
@@ -778,6 +784,7 @@ export function SchedaIngressoFormBody({
   }, [
     linkedMezzoCatalog,
     mezziCatalog,
+    mezzoPrefilledFromCatalog,
     mezzoPrompt.activeMatchField,
     mezzoPrompt.hasConflict,
     mezzoPrompt.linkState.status,
@@ -791,80 +798,6 @@ export function SchedaIngressoFormBody({
     },
     [mezzoPrompt, readOnly],
   );
-
-  const applyCopyFromMatch = useCallback(
-    (match: LastSchedaIngressoMatch) => {
-      setFields(
-        applyCopyLastSchedaMatch("merge-empty", fields, match, {
-          linkedMezzo: linkedMezzoCatalog,
-          lookup: {
-            ident: {
-              targa: identScan.targa,
-              matricola: identScan.matricola,
-              nScuderia: identScan.nScuderia,
-            },
-            mezzi: mezziCatalog,
-            schedeStore,
-            attive,
-            storico,
-            excludeLavorazioneId,
-          },
-        }),
-      );
-      setCopyPickOpen(false);
-    },
-    [
-      attive,
-      excludeLavorazioneId,
-      fields,
-      identScan.matricola,
-      identScan.nScuderia,
-      identScan.targa,
-      linkedMezzoCatalog,
-      mezziCatalog,
-      schedeStore,
-      setFields,
-      storico,
-    ],
-  );
-
-  const copyLastIngresso = useCallback(() => {
-    if (readOnly) return;
-    const result = copyLastSchedaIngresso({
-      ident: {
-        targa: identScan.targa,
-        matricola: identScan.matricola,
-        nScuderia: identScan.nScuderia,
-      },
-      mode: "merge-empty",
-      currentFields: fields,
-      mezzi: mezziCatalog,
-      schedeStore,
-      attive,
-      storico,
-      excludeLavorazioneId,
-      linkedMezzo: linkedMezzoCatalog,
-    });
-    if (result.kind === "none") return;
-    if (result.kind === "pick") {
-      setCopyPickOpen(true);
-      return;
-    }
-    setFields(result.fields);
-  }, [
-    attive,
-    excludeLavorazioneId,
-    fields,
-    identScan.matricola,
-    identScan.nScuderia,
-    identScan.targa,
-    linkedMezzoCatalog,
-    mezziCatalog,
-    readOnly,
-    schedeStore,
-    setFields,
-    storico,
-  ]);
 
   const lavorazioniOpts = globalOpts.lavorazioni;
   const tablePillOptions = useMemo(
@@ -889,6 +822,15 @@ export function SchedaIngressoFormBody({
       "",
     [fields.addettoAccettazioneId, fields.addettoAccettazione, lavorazioniOpts.addettiRecords],
   );
+  const addettoPickerOptions = useMemo(
+    () =>
+      buildAddettoPickerOptionsFromRecords(
+        lavorazioniOpts.addettiRecords,
+        lavorazioniOpts.addettoColors,
+        ingressoAddettoId,
+      ),
+    [ingressoAddettoId, lavorazioniOpts.addettiRecords, lavorazioniOpts.addettoColors],
+  );
   const onIngressoAddettoChange = useCallback(
     (addettoId: string) => onPatch(writeIngressoAddettoId(fields, addettoId)),
     [fields, onPatch],
@@ -909,24 +851,22 @@ export function SchedaIngressoFormBody({
 
   return (
     <>
-      <SchedaIngressoCopyPickDialog
-        open={copyPickOpen}
-        candidates={lastIngressoCandidates}
-        onCancel={() => setCopyPickOpen(false)}
-        onConfirm={applyCopyFromMatch}
-      />
       <SchedaIngressoFormScrollShell embedInParentScroll={embedInParentScroll}>
         {prependContent}
         {captureReviewCount != null && captureReviewCount > 0 ? (
           <CaptureIngressoHintsBanner reviewCount={captureReviewCount} />
         ) : null}
-        {globalOpts.isError ? (
-          <p className="text-sm text-red-600 dark:text-red-400">
-            {globalOpts.error?.message ?? "Errore impostazioni."}
-          </p>
-        ) : null}
-        {errorMessage ? (
-          <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
+        {(globalOpts.isError || errorMessage) ? (
+          <div className="sticky top-0 z-10 -mx-2 -mt-4 space-y-3 bg-[var(--cab-card)] px-2 pb-3 pt-4 shadow-[0_1px_0_0_var(--cab-border)] sm:-mx-3 sm:px-3 md:-mx-4 md:px-4">
+            {globalOpts.isError ? (
+              <FormAlert title="Impostazioni non disponibili">
+                {globalOpts.error?.message ?? "Errore nel caricamento delle impostazioni."}
+              </FormAlert>
+            ) : null}
+            {errorMessage ? (
+              <FormAlert title="Impossibile salvare">{errorMessage}</FormAlert>
+            ) : null}
+          </div>
         ) : null}
         {mezzoHint ? (
           <p className="rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] px-3 py-2 text-xs text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))] dark:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-card))]">
@@ -943,6 +883,12 @@ export function SchedaIngressoFormBody({
           dataIngressoFieldId={dataIngressoFieldId}
           inputRef={dataIngressoInputRef}
           onDataIngressoChange={(v) => onPatch({ dataIngresso: v })}
+          linkedMezzo={
+            (mezzoLinked || mezzoPrompt.linkState.status === "linked") && linkedMezzoCatalog
+              ? linkedMezzoCatalog
+              : null
+          }
+          mezzoPrefilledFromCatalog={mezzoPrefilledFromCatalog}
         />
 
         <SchedaIngressoAnagraficaFields
@@ -952,16 +898,11 @@ export function SchedaIngressoFormBody({
           mezzi={mezziCatalog}
           disabled={disabled}
           sections={["cliente", "attrezzatura", "telaio"]}
+          hideSectionTitles
           onExactMezzoMatch={onMezzoPromptMatch}
           mezzoInlineHint={mezzoInlineHint}
           onUseMezzoFromHint={(field) => mezzoPrompt.acceptLinkMezzo(field)}
           onDismissMezzoHint={mezzoPrompt.dismissPendingMatch}
-          lastIngressoMatch={lastIngressoMatch}
-          lastIngressoMatchCount={lastIngressoCandidates.length}
-          mezzoInAnagraficaOnly={
-            lastIngressoCandidates.length === 0 && lastIngressoMezzoInAnagrafica
-          }
-          onCopyLastIngresso={readOnly ? undefined : copyLastIngresso}
           clienteRequired={false}
           marcaAttrezzaturaRequired={false}
           mezzoLinked={mezzoLinked || mezzoPrompt.linkState.status === "linked"}
@@ -970,70 +911,76 @@ export function SchedaIngressoFormBody({
           onApplyCaptureHint={onApplyCaptureHint}
         />
 
-        <SchedaIngressoAnomaliaSection
-          descrizioneAnomalia={fields.descrizioneAnomalia}
-          onPatch={onPatch}
-          disabled={disabled}
-          anomaliaFieldId={anomaliaFieldId}
-        />
-
-        {tagliandoFields && onTagliandoFieldsChange ? (
-          <SchedaIngressoTagliandoSection
-            repairPresent={tagliandoFields.repairPresent}
-            onRepairPresentChange={(v) => onTagliandoFieldsChange({ repairPresent: v })}
-            isTagliando={tagliandoFields.isTagliando}
-            onIsTagliandoChange={(v) => {
-              const patch: Partial<TagliandoLavorazioneFields> = { isTagliando: v };
-              if (!v) {
-                patch.tagliandoPresetRef = null;
-                patch.tagliandoPresetVersionRef = null;
-                patch.tagliandoAssignPresetToMezzo = null;
-                patch.tagliandoNoPresetReason = null;
-              }
-              onTagliandoFieldsChange(patch);
-            }}
-            isGaranzia={tagliandoFields.isGaranzia}
-            onIsGaranziaChange={(v) => onTagliandoFieldsChange({ isGaranzia: v })}
-            isRecidivo={tagliandoFields.isRecidivo}
-            onIsRecidivoChange={(v) => onTagliandoFieldsChange({ isRecidivo: v })}
-            presetRef={tagliandoFields.tagliandoPresetRef}
-            onPresetRefChange={tagliandoPresetSync.handlePresetRefChange}
-            assignPresetToMezzo={tagliandoFields.tagliandoAssignPresetToMezzo}
-            presetPlans={plansQ.data ?? []}
-            mezzoLinked={Boolean(tagliandoMezzoId)}
-            mezzoHasConfig={tagliandoPresetSync.mezzoHasConfig}
-            mezzoPresetNome={tagliandoPresetSync.mezzoPresetNome}
-            presetLocked={tagliandoPresetSync.presetLocked}
+        <FormSection title="Intervento" hideTitle>
+          <SchedaIngressoAnomaliaSection
+            descrizioneAnomalia={fields.descrizioneAnomalia}
+            onPatch={onPatch}
             disabled={disabled}
+            anomaliaFieldId={anomaliaFieldId}
           />
-        ) : null}
+
+          {tagliandoFields && onTagliandoFieldsChange ? (
+            <SchedaIngressoTagliandoSection
+              repairPresent={tagliandoFields.repairPresent}
+              onRepairPresentChange={(v) => onTagliandoFieldsChange({ repairPresent: v })}
+              isTagliando={tagliandoFields.isTagliando}
+              onIsTagliandoChange={(v) => {
+                const patch: Partial<TagliandoLavorazioneFields> = { isTagliando: v };
+                if (!v) {
+                  patch.tagliandoPresetRef = null;
+                  patch.tagliandoPresetVersionRef = null;
+                  patch.tagliandoAssignPresetToMezzo = null;
+                  patch.tagliandoNoPresetReason = null;
+                }
+                onTagliandoFieldsChange(patch);
+              }}
+              isGaranzia={tagliandoFields.isGaranzia}
+              onIsGaranziaChange={(v) => onTagliandoFieldsChange({ isGaranzia: v })}
+              isRecidivo={tagliandoFields.isRecidivo}
+              onIsRecidivoChange={(v) => onTagliandoFieldsChange({ isRecidivo: v })}
+              presetRef={tagliandoFields.tagliandoPresetRef}
+              onPresetRefChange={tagliandoPresetSync.handlePresetRefChange}
+              assignPresetToMezzo={tagliandoFields.tagliandoAssignPresetToMezzo}
+              presetPlans={plansQ.data ?? []}
+              mezzoLinked={Boolean(tagliandoMezzoId)}
+              mezzoHasConfig={tagliandoPresetSync.mezzoHasConfig}
+              mezzoPresetNome={tagliandoPresetSync.mezzoPresetNome}
+              presetLocked={tagliandoPresetSync.presetLocked}
+              disabled={disabled}
+            />
+          ) : null}
+
+          <SchedaIngressoNoteSection
+            lavorazioneNote={lavorazioneNote}
+            onLavorazioneNoteChange={onLavorazioneNoteChange ?? (() => {})}
+            disabled={disabled}
+            noteFieldId={noteFieldId}
+          />
+        </FormSection>
 
         {tagliandoPresetSync.confirmDialog}
 
-        <SchedaIngressoNoteSection
-          lavorazioneNote={lavorazioneNote}
-          onLavorazioneNoteChange={onLavorazioneNoteChange ?? (() => {})}
-          disabled={disabled}
-          noteFieldId={noteFieldId}
-        />
+        <FormSection title="Richiedente" hideTitle>
+          <SchedaIngressoAnagraficaFields
+            value={fields}
+            onPatch={onPatch}
+            mezzi={mezziCatalog}
+            disabled={disabled}
+            sections={["richiedente"]}
+            hideSectionTitles
+            hideRichiedenteFirma
+            bareSection
+            captureHints={captureHints}
+            onApplyCaptureHint={onApplyCaptureHint}
+          />
 
-        <SchedaIngressoAnagraficaFields
-          value={fields}
-          onPatch={onPatch}
-          mezzi={mezziCatalog}
-          disabled={disabled}
-          sections={["richiedente"]}
-          captureHints={captureHints}
-          onApplyCaptureHint={onApplyCaptureHint}
-        />
-
-        <SchedaIngressoAddettoFirmaBlock
-          addettoFirma={fields.addettoFirma}
-          disabled={disabled}
-          onFirmaChange={(dataUrl) => onPatch({ addettoFirma: dataUrl })}
-          firmaModalOpen={addettoFirmaModalOpen}
-          onFirmaModalOpenChange={setAddettoFirmaModalOpen}
-        />
+          <SchedaIngressoFirmeSection
+            richiedenteFirma={fields.richiedenteFirma}
+            addettoFirma={fields.addettoFirma}
+            disabled={disabled}
+            onPatch={onPatch}
+          />
+        </FormSection>
 
         {variant === "create-lavorazione" ? (
           <SchedaIngressoGestioneLavorazioneSection
@@ -1054,6 +1001,7 @@ export function SchedaIngressoFormBody({
             ingressoAddettoId={ingressoAddettoId}
             onIngressoAddettoChange={onIngressoAddettoChange}
             addettiEmpty={addettiOpts.length === 0}
+            addettoPickerOptions={addettoPickerOptions}
             captureHintAddetto={captureHints?.addettoAccettazione}
             onApplyCaptureHint={onApplyCaptureHint}
             showStatoPriorita
@@ -1065,6 +1013,7 @@ export function SchedaIngressoFormBody({
             ingressoAddettoId={ingressoAddettoId}
             onIngressoAddettoChange={onIngressoAddettoChange}
             addettiEmpty={addettiOpts.length === 0}
+            addettoPickerOptions={addettoPickerOptions}
             captureHintAddetto={captureHints?.addettoAccettazione}
             onApplyCaptureHint={onApplyCaptureHint}
             showStatoPriorita={false}

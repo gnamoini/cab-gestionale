@@ -1,5 +1,6 @@
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { findAddettoByStoredName } from "@/lib/lavorazioni/addetto-model";
+import type { SchedaIngressoFields } from "@/types/schede";
 
 /** Runtime backfill: tenta match stringa legacy → addettoId senza modificare la stringa. */
 export function backfillAddettoIdFromLegacyString(
@@ -12,6 +13,18 @@ export function backfillAddettoIdFromLegacyString(
   const stored = legacy?.trim();
   if (!stored || stored === "—" || !records?.length) return null;
   return findAddettoByStoredName(records, stored)?.id ?? null;
+}
+
+/** Default addetto per create: id esistente, backfill legacy, oppure primo record. */
+export function resolveIngressoAddettoIdForCreate(
+  records: readonly AddettoRecord[],
+  fields: Pick<SchedaIngressoFields, "addettoAccettazioneId" | "addettoAccettazione">,
+): string | null {
+  const existing = fields.addettoAccettazioneId?.trim();
+  if (existing && records.some((r) => r.id === existing)) return existing;
+  const backfilled = backfillAddettoIdFromLegacyString(records, fields.addettoAccettazione, existing);
+  if (backfilled) return backfilled;
+  return records[0]?.id ?? null;
 }
 
 export function normalizeIngressoAddettoIds(

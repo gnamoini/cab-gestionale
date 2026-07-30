@@ -24,7 +24,7 @@ type WizardApi = {
   retryAfterSec: number | null;
   analyzePhase: AnalyzeTracePhase | null;
   heartbeatAt: number | null;
-  runAnalyze: (captureIdOverride?: string | null) => Promise<boolean>;
+  runAnalyze: (captureIdOverride?: string | null, uploadDurationMs?: number) => Promise<boolean>;
   reset: () => void;
 };
 
@@ -51,7 +51,7 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
     setHeartbeatAt(null);
   }, []);
 
-  const runAnalyze = useCallback(async (captureIdOverride?: string | null) => {
+  const runAnalyze = useCallback(async (captureIdOverride?: string | null, uploadDurationMs?: number) => {
     const id = captureIdOverride ?? captureId;
     if (!id) return false;
     const seq = ++analyzeSeqRef.current;
@@ -62,7 +62,9 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
     setHeartbeatAt(null);
     let retryHintSec: number | null = null;
     try {
-      const streamed = await postCaptureProcessStream(id, (event) => {
+      const streamed = await postCaptureProcessStream(
+        id,
+        (event) => {
         if (seq !== analyzeSeqRef.current) return;
         if (event.type === "phase") {
           setAnalyzePhase(event.phase);
@@ -71,7 +73,9 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
           setHeartbeatAt(Date.now());
           if (event.activePhase) setAnalyzePhase(event.activePhase);
         }
-      });
+      },
+        { uploadDurationMs },
+      );
       const body = streamed.body as {
         error?: string;
         code?: string;

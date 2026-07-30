@@ -115,7 +115,10 @@ function formatClienteLabel(cliente: string | undefined): string | null {
 }
 
 function formatMarcaModello(mezzo: MezzoGestito): string | null {
-  const mm = `${mezzo.marca} ${mezzo.modello}`.trim();
+  const marca = trimIdent(mezzo.marca);
+  const modello = trimIdent(mezzo.modello);
+  const parts = [marca, modello].filter((part) => part && part !== "—");
+  const mm = parts.join(" ").trim();
   return mm || null;
 }
 

@@ -41,9 +41,10 @@ const RISK_MODIFIERS: RiskModifierDefinition[] = [
       }
       const ratio = late / open;
       const penalty = Math.min(12 * ratio, 12);
+      const lateLabel = Number.isInteger(late) ? String(late) : late.toFixed(1);
       return {
         penalty,
-        motivation: `${late} lavorazioni in ritardo su ${open} aperte`,
+        motivation: `${lateLabel} lavorazioni in ritardo su ${open} aperte`,
         trace: [
           {
             step: "late_ingress_penalty",

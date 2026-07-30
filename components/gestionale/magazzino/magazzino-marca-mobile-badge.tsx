@@ -4,15 +4,21 @@ import { magazzinoMarcaBadgeStyle } from "@/lib/magazzino/marca-badge-color";
 export function MagazzinoMarcaMobileBadge({
   marca,
   magazzinoMaster,
+  variant = "mobile",
 }: {
   marca: string;
   magazzinoMaster?: MagazzinoMasterPrefs | null;
+  variant?: "mobile" | "table";
 }) {
   const label = marca.trim();
   if (!label) return null;
   return (
     <span
-      className="inline-flex max-w-full truncate rounded-md border px-1.5 py-px text-base font-semibold uppercase leading-snug tracking-tight"
+      className={
+        variant === "table"
+          ? "inline-flex max-w-full truncate rounded-md border px-1.5 py-px text-[11px] font-semibold uppercase leading-snug tracking-tight"
+          : "inline-flex max-w-full truncate rounded-md border px-1.5 py-px text-base font-semibold uppercase leading-snug tracking-tight"
+      }
       style={magazzinoMarcaBadgeStyle(label, magazzinoMaster)}
     >
       {label}

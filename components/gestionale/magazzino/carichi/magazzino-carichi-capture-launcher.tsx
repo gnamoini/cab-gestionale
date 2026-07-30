@@ -23,7 +23,7 @@ import { useInventoryReceivingFlow } from "@/components/gestionale/magazzino/car
 import { GestionaleModalShell, GestionaleModalScrollBody } from "@/components/gestionale/gestionale-modal";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import {
-  abandonInventoryReceivingImport,
+  abandonInventoryReceivingPending,
   fetchInventoryReceivingPreviewUrl,
 } from "@/lib/inventory-receiving/inventory-receiving-import-client";
 import { inventoryReceivingCaptureAdapter } from "@/lib/document-capture/inventory-receiving-capture-adapter";
@@ -67,7 +67,9 @@ function MagazzinoCarichiCaptureLauncherInner({ className = "", size = "sm", mob
     setOpen(false);
     flow.reset();
     setPreviewUrl(null);
-    if (abandon) void abandonInventoryReceivingImport(abandon).catch(() => undefined);
+    if (abandon) {
+      void abandonInventoryReceivingPending({ kind: "import_file", importFileId: abandon }).catch(() => undefined);
+    }
   }, [flow]);
 
   const handleOpen = useCallback(() => {
@@ -196,7 +198,9 @@ function MagazzinoCarichiCaptureLauncherInner({ className = "", size = "sm", mob
                 <InventoryReceivingPendingBanner
                   items={flow.pendingItems}
                   onResumeImportFile={(id) => void flow.resumePendingImport(id)}
-                  onDismissImportFile={(id) => void abandonInventoryReceivingImport(id).then(() => flow.refreshPending())}
+                  onDismissPending={(item) =>
+                    void abandonInventoryReceivingPending(item).then(() => flow.refreshPending())
+                  }
                 />
                 <CaptureAnalyzeErrorPanel
                   error={flow.error}
@@ -258,7 +262,9 @@ function MagazzinoCarichiCaptureLauncherInner({ className = "", size = "sm", mob
           onCancel={() => {
             const id = flow.pendingImportFileId;
             closeModal();
-            if (id) void abandonInventoryReceivingImport(id).catch(() => undefined);
+            if (id) {
+              void abandonInventoryReceivingPending({ kind: "import_file", importFileId: id }).catch(() => undefined);
+            }
           }}
         >
           <div className="space-y-2 text-sm leading-relaxed text-[color:var(--cab-text-muted)]">

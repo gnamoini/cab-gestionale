@@ -14,7 +14,7 @@ assert.equal(
   "CityCat 5000, CityCat 5006",
 );
 assert.equal(compatLineModelDisplayText(compatLabelMarcaModello("Farid", "")), "Farid (Universale)");
-assert.equal(compatDisplayModelsLabel([]), "Universale");
+assert.equal(compatDisplayModelsLabel([]), "Compatibilità universale");
 assert.equal(
   compatDisplayModelsLabel([compatLabelMarcaModello("Bucher", "")]),
   "Bucher (Universale)",

@@ -62,10 +62,15 @@ export async function consumeCaptureAnalyzeNdjsonStream(
 export async function postCaptureProcessStream(
   captureId: string,
   onEvent?: (event: CaptureAnalyzeStreamEvent) => void,
+  options?: { uploadDurationMs?: number },
 ): Promise<ConsumeCaptureAnalyzeStreamResult & { response: Response }> {
+  const headers: Record<string, string> = { Accept: CAPTURE_ANALYZE_NDJSON_ACCEPT };
+  if (options?.uploadDurationMs != null) {
+    headers["x-capture-upload-duration-ms"] = String(options.uploadDurationMs);
+  }
   const response = await fetch(`/api/document-capture/${captureId}/process`, {
     method: "POST",
-    headers: { Accept: CAPTURE_ANALYZE_NDJSON_ACCEPT },
+    headers,
   });
   const parsed = await consumeCaptureAnalyzeNdjsonStream(response, onEvent);
   return { ...parsed, response };

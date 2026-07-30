@@ -10,7 +10,6 @@ import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal-s
 import { pushMezzoSelectionRecent } from "@/lib/mezzi/mezzo-selection-recents";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SelectedMezzoContext } from "@/lib/lavorazioni/selected-mezzo-context";
-import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { searchMezziForPicker } from "@/lib/mezzi/search-mezzi-for-picker";
 
 export function LavorazioneCreateMezzoStepShell({
@@ -59,7 +58,7 @@ export function LavorazioneCreateMezzoStepShell({
   return (
     <GestionaleModalShell
       modalSize="formMedium"
-      modalHeight="compact"
+      modalHeight="standard"
       title="Nuova lavorazione"
       subtitle="Seleziona il mezzo"
       onRequestClose={onRequestClose}
@@ -70,7 +69,7 @@ export function LavorazioneCreateMezzoStepShell({
         />
       }
     >
-      <GestionaleModalScrollBody className={gestionaleModalBodyFlexClass}>
+      <GestionaleModalScrollBody containScroll className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <MezzoSelectionPanel
           catalog={catalog}
           catalogLoading={catalogLoading}

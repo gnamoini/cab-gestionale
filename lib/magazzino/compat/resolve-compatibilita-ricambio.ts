@@ -13,7 +13,7 @@ import {
   compatLabelDedupeKey,
   compatLineDisplayText,
   compatSortKey,
-  COMPAT_NOT_CONFIGURED_LABEL,
+  COMPAT_UNIVERSAL_LABEL,
   dedupeCompatDisplayLines,
   dedupeCompatLabels,
 } from "@/lib/magazzino/compat/compat-display";
@@ -72,13 +72,13 @@ function buildResolved(
     displayLines,
     display:
       !isConfigured
-        ? COMPAT_NOT_CONFIGURED_LABEL
+        ? COMPAT_UNIVERSAL_LABEL
         : labels.length > 0
           ? compatDisplayLabel(labels)
           : orphanLabels.length > 0
             ? orphanLabels.join(", ")
-            : COMPAT_NOT_CONFIGURED_LABEL,
-    sortKey: isConfigured ? compatSortKey([...labels, ...orphanLabels]) : "",
+            : COMPAT_UNIVERSAL_LABEL,
+    sortKey: isConfigured ? compatSortKey([...labels, ...orphanLabels]) : COMPAT_UNIVERSAL_LABEL.toLowerCase(),
     isUniversal: !isConfigured,
     isConfigured,
     orphanLabels,

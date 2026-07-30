@@ -11,6 +11,7 @@ import {
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { ResolutionRuntimeContext } from "@/lib/entity-resolution/resolve-capture-graph";
 
 export async function applyEntityResolutionToCaptureFields(
   sb: SupabaseClient,
@@ -20,12 +21,15 @@ export async function applyEntityResolutionToCaptureFields(
     fields: CaptureFieldInput[];
     magazzino?: readonly RicambioMagazzino[];
     mezzi?: readonly MezzoGestito[];
+    resolutionContext?: ResolutionRuntimeContext;
   },
 ) {
-  const ctx = await loadResolutionRuntimeContext(sb, input.companyId, {
-    magazzino: input.magazzino,
-    mezzi: input.mezzi,
-  });
+  const ctx =
+    input.resolutionContext ??
+    (await loadResolutionRuntimeContext(sb, input.companyId, {
+      magazzino: input.magazzino,
+      mezzi: input.mezzi,
+    }));
   const { fields: resolved, audit } = await resolveCaptureGraph(input.fields, ctx, {
     captureId: input.captureId,
     companyId: input.companyId,

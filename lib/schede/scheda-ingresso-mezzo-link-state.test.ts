@@ -1,8 +1,33 @@
 import assert from "node:assert/strict";
+import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
+import { pickMezzoPermanentFields } from "@/lib/schede/scheda-ingresso-field-roles";
 import {
+  createLinkedMezzoSnapshotFromFields,
   emptySchedaIngressoMezzoLinkState,
+  listLinkedMezzoFieldConflicts,
   resolvePreferredMezzoIdForSave,
 } from "@/lib/schede/scheda-ingresso-mezzo-link-state";
+import type { MezzoGestito } from "@/lib/mezzi/types";
+
+const mezzo = {
+  id: "m1",
+  marca: "Tecno Industrie",
+  modello: "Urbis",
+  matricola: "TIS272312/14",
+  targa: "ZA056YX",
+  cliente: "Longo",
+} as MezzoGestito;
+
+const fromMezzo = buildSchedaIngressoFieldsFromMezzo(mezzo);
+const snapshot = createLinkedMezzoSnapshotFromFields(
+  mezzo,
+  pickMezzoPermanentFields(fromMezzo),
+  "matricola",
+);
+assert.deepEqual(listLinkedMezzoFieldConflicts(fromMezzo, snapshot), []);
+
+fromMezzo.matricola = "ALTRO";
+assert.deepEqual(listLinkedMezzoFieldConflicts(fromMezzo, snapshot), ["matricola"]);
 
 assert.equal(resolvePreferredMezzoIdForSave(emptySchedaIngressoMezzoLinkState()), null);
 

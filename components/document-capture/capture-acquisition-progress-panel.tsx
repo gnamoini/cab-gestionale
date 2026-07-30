@@ -47,10 +47,6 @@ function CaptureAcquisitionProgressBar({ state }: { state: CaptureAcquisitionPro
 
   if (!state.active && !state.error) return null;
 
-  if (state.checklist?.length) {
-    return <CaptureAcquisitionProgressChecklist state={{ active: state.active, error: state.error, checks: state.checklist }} heartbeatLabel={state.heartbeatLabel} />;
-  }
-
   return (
     <div
       className="flex min-h-[12rem] flex-col items-center justify-center gap-4 px-4 py-10"
@@ -66,6 +62,13 @@ function CaptureAcquisitionProgressBar({ state }: { state: CaptureAcquisitionPro
             label={state.label}
           />
           <p className={`max-w-md text-center ${loadingMessageClass}`}>{state.label}</p>
+          {state.checklist?.length ? (
+            <CaptureAcquisitionProgressChecklist
+              state={{ active: state.active, error: state.error, checks: state.checklist }}
+              heartbeatLabel={state.heartbeatLabel}
+              compact
+            />
+          ) : null}
         </>
       ) : (
         <>
@@ -80,18 +83,20 @@ function CaptureAcquisitionProgressBar({ state }: { state: CaptureAcquisitionPro
 function CaptureAcquisitionProgressChecklist({
   state,
   heartbeatLabel,
+  compact = false,
 }: {
   state: AcquisitionChecklistState;
   heartbeatLabel?: string | null;
+  compact?: boolean;
 }) {
   if (!state.active && !state.error) return null;
 
   return (
     <div
-      className="flex min-h-[12rem] flex-col items-center justify-center gap-4 px-4 py-10"
-      role="status"
-      aria-live="polite"
-      aria-busy={!state.error}
+      className={compact ? "w-full max-w-md space-y-2" : "flex min-h-[12rem] flex-col items-center justify-center gap-4 px-4 py-10"}
+      role={compact ? undefined : "status"}
+      aria-live={compact ? "polite" : "polite"}
+      aria-busy={compact ? undefined : !state.error}
     >
       {state.error ? (
         <p className="max-w-md text-center text-sm text-[color:var(--cab-danger)]">{state.error}</p>
@@ -136,5 +141,10 @@ function CaptureAcquisitionProgressChecklist({
 
 /** @deprecated Use CaptureAcquisitionProgress with mode bar */
 export function DocumentCaptureAcquisitionProgress({ state }: { state: CaptureAcquisitionProgressState }) {
+  return <CaptureAcquisitionProgress variant={{ mode: "bar", state }} />;
+}
+
+/** Barra + messaggio da stato pipeline (nessuna rotazione fittizia). */
+export function CaptureStatusProgress({ state }: { state: CaptureAcquisitionProgressState }) {
   return <CaptureAcquisitionProgress variant={{ mode: "bar", state }} />;
 }

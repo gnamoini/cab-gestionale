@@ -8,11 +8,13 @@ import {
   lavorazioniBlankPageCount,
   schedaBlankTitleRegionNormalized,
 } from "@/lib/document-capture/capture-template-field-template";
+import type { CapturePageRasterCache } from "@/lib/document-capture/capture-page-raster-cache.server";
 import type { DetectedSchedaBlankTipo, HybridField } from "@/lib/document-capture/extraction/hybrid-extraction-types";
 import { detectSchedaTipoFromPdfText } from "@/lib/document-capture/extraction/native-pdf-text-extractor";
 import { recognizePngBuffer, recognizePngBuffersPool } from "@/lib/document-capture/extraction/tesseract-ocr.server";
 import type { PageObject } from "@/lib/document-capture/model/page-object";
 import type { SchedaBlankTipo } from "@/lib/pdf/schede-blank-layout";
+import type { AnalyzeTraceEmitter } from "@/lib/document-capture/pipeline/analyze-trace-emitter";
 
 const NOISE = /^[\s._\-|/\\:]+$/;
 
@@ -38,11 +40,14 @@ async function detectTemplateFromTitleOcr(
   bytes: Uint8Array,
   mime: string,
   pageIndex: number,
+  options?: { rasterCache?: CapturePageRasterCache; trace?: AnalyzeTraceEmitter },
 ): Promise<DetectedSchedaBlankTipo | null> {
   const region = schedaBlankTitleRegionNormalized();
-  const png = await cropNormalizedBboxToPngBuffer(bytes, region.bbox, mime, pageIndex);
+  const png = await cropNormalizedBboxToPngBuffer(bytes, region.bbox, mime, pageIndex, options);
   if (!png) return null;
+  options?.trace?.emit("OCR_RECOGNIZE_START", "ok");
   const { text } = await recognizePngBuffer(png, "single_line");
+  options?.trace?.emit("OCR_RECOGNIZE_OK", "ok");
   return titleTextToTipo(text);
 }
 
@@ -51,14 +56,18 @@ export async function detectSchedaBlankTemplate(input: {
   mime: string;
   pdfPages?: Array<{ pageIndex: number; text: string }>;
   pageCount: number;
+  rasterCache?: CapturePageRasterCache;
+  trace?: AnalyzeTraceEmitter;
 }): Promise<DetectedSchedaBlankTipo | null> {
   if (input.pdfPages?.length) {
     const fromText = detectSchedaTipoFromPdfText(input.pdfPages);
     if (fromText) return fromText;
   }
   for (let page = 0; page < Math.min(input.pageCount, 2); page += 1) {
-    const pageBytes = input.pageCount > 1 ? input.bytes : input.bytes;
-    const tipo = await detectTemplateFromTitleOcr(pageBytes, input.mime, page);
+    const tipo = await detectTemplateFromTitleOcr(input.bytes, input.mime, page, {
+      rasterCache: input.rasterCache,
+      trace: input.trace,
+    });
     if (tipo) return tipo;
   }
   return null;
@@ -68,14 +77,24 @@ async function ocrRegionsOnPage(input: {
   bytes: Uint8Array;
   mime: string;
   pageIndex: number;
+  sharpPage: number;
   tipo: SchedaBlankTipo;
+  rasterCache?: CapturePageRasterCache;
+  trace?: AnalyzeTraceEmitter;
 }): Promise<HybridField[]> {
   const regions = blankFieldRegionsForTipo(input.tipo, input.pageIndex);
   const crops: Array<{ id: string; png: Buffer; mode: "single_line" | "block"; fieldKey: string }> = [];
+  const cropOptions = { rasterCache: input.rasterCache, trace: input.trace };
 
   for (const region of regions) {
     if (region.fieldKey.startsWith("_")) continue;
-    const png = await cropNormalizedBboxToPngBuffer(input.bytes, region.bbox, input.mime, 0);
+    const png = await cropNormalizedBboxToPngBuffer(
+      input.bytes,
+      region.bbox,
+      input.mime,
+      input.sharpPage,
+      cropOptions,
+    );
     if (!png) continue;
     crops.push({
       id: `${input.pageIndex}:${region.fieldKey}`,
@@ -85,9 +104,13 @@ async function ocrRegionsOnPage(input: {
     });
   }
 
+  input.trace?.emit("OCR_RECOGNIZE_START", "ok", { fieldCount: crops.length });
   const recognized = await recognizePngBuffersPool(
     crops.map((c) => ({ id: c.id, png: c.png, mode: c.mode })),
+    1,
+    input.trace,
   );
+  input.trace?.emit("OCR_RECOGNIZE_OK", "ok", { fieldCount: recognized.size });
 
   const fields: HybridField[] = [];
   for (const crop of crops) {
@@ -113,37 +136,57 @@ export async function extractTemplateOcrFields(input: {
   mime: string;
   pageObjects: PageObject[];
   schedaTipo: DetectedSchedaBlankTipo;
+  rasterCache?: CapturePageRasterCache;
+  trace?: AnalyzeTraceEmitter;
 }): Promise<HybridField[]> {
   const all: HybridField[] = [];
   if (input.schedaTipo === "ingresso") {
     const pageBytes = input.pageObjects[0]?.bytes ?? input.bytes;
-    all.push(...(await ocrRegionsOnPage({
-      bytes: pageBytes,
-      mime: input.mime,
-      pageIndex: 0,
-      tipo: "ingresso",
-    })));
+    const sharpPage = input.pageObjects[0]?.bytes ? 0 : 0;
+    all.push(
+      ...(await ocrRegionsOnPage({
+        bytes: pageBytes,
+        mime: input.mime,
+        pageIndex: 0,
+        sharpPage,
+        tipo: "ingresso",
+        rasterCache: input.rasterCache,
+        trace: input.trace,
+      })),
+    );
     return all;
   }
   if (input.schedaTipo === "lavorazioni") {
     const pages = Math.min(input.pageObjects.length, lavorazioniBlankPageCount());
     for (let p = 0; p < pages; p += 1) {
       const pageBytes = input.pageObjects[p]?.bytes ?? input.bytes;
-      all.push(...(await ocrRegionsOnPage({
-        bytes: pageBytes,
-        mime: input.mime,
-        pageIndex: p,
-        tipo: "lavorazioni",
-      })));
+      const sharpPage = input.pageObjects[p]?.bytes ? 0 : p;
+      all.push(
+        ...(await ocrRegionsOnPage({
+          bytes: pageBytes,
+          mime: input.mime,
+          pageIndex: p,
+          sharpPage,
+          tipo: "lavorazioni",
+          rasterCache: input.rasterCache,
+          trace: input.trace,
+        })),
+      );
     }
     return all;
   }
   const pageBytes = input.pageObjects[0]?.bytes ?? input.bytes;
-  all.push(...(await ocrRegionsOnPage({
-    bytes: pageBytes,
-    mime: input.mime,
-    pageIndex: 0,
-    tipo: "ricambi",
-  })));
+  const sharpPage = input.pageObjects[0]?.bytes ? 0 : 0;
+  all.push(
+    ...(await ocrRegionsOnPage({
+      bytes: pageBytes,
+      mime: input.mime,
+      pageIndex: 0,
+      sharpPage,
+      tipo: "ricambi",
+      rasterCache: input.rasterCache,
+      trace: input.trace,
+    })),
+  );
   return all;
 }

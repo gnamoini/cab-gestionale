@@ -30,6 +30,8 @@ import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import { pickMezzoPermanentFields, type MezzoPermanentFieldKey } from "@/lib/schede/scheda-ingresso-field-roles";
+import { resolveIngressoAddettoIdForCreate } from "@/lib/schede/schede-addetto-id-migrate";
+import { writeIngressoAddettoId } from "@/lib/lavorazioni/write-ingresso-addetto-id";
 import { useFormEngineSections } from "@/lib/forms/form-engine";
 import {
   emptySchedaIngressoFields,
@@ -149,6 +151,7 @@ export function useLavorazioneCreateSubmit({
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
   const [partialCloseConfirmOpen, setPartialCloseConfirmOpen] = useState(false);
   const [mezzoHint, setMezzoHint] = useState<string | null>(null);
+  const [mezzoPrefilledFromCatalog, setMezzoPrefilledFromCatalog] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [schedaSyncError, setSchedaSyncError] = useState<string | null>(null);
   const [submitPending, setSubmitPending] = useState(false);
@@ -243,6 +246,7 @@ export function useLavorazioneCreateSubmit({
     (scannedFields: SchedaIngressoFields) => {
       mezzoPrompt.clearLink();
       setMezzoId("");
+      setMezzoPrefilledFromCatalog(false);
       setCaptureSaveGateSkipFields([]);
       setFields(scannedFields);
       setMezzoHint("Nuovo mezzo — dati dalla scansione.");
@@ -253,19 +257,23 @@ export function useLavorazioneCreateSubmit({
   const applyMezzo = useCallback(
     (m: MezzoGestito) => {
       const fromMezzo = buildSchedaIngressoFieldsFromMezzo(m);
+      let mergedFields: SchedaIngressoFields | null = null;
       setFields((f) => {
         const merged = mergeSchedaIngressoFields(
           { ...f, dataIngresso: f.dataIngresso || todayItDate() },
           fromMezzo,
         );
-        return {
+        mergedFields = {
           ...merged,
           addettoAccettazione: f.addettoAccettazione || merged.addettoAccettazione || addettiOpts[0] || "",
         };
+        return mergedFields;
       });
       setMezzoId(m.id);
-      mezzoPrompt.linkMezzoExplicit(m);
-      setMezzoHint(`Mezzo riconosciuto: ${m.marca} ${m.modello !== "—" ? m.modello : ""}`.trim());
+      setMezzoPrefilledFromCatalog(true);
+      if (mergedFields) {
+        mezzoPrompt.bootstrapLinkedMezzo(m, pickMezzoPermanentFields(mergedFields), "matricola");
+      }
     },
     [addettiOpts, mezzoPrompt, setFields, setMezzoId],
   );
@@ -275,12 +283,14 @@ export function useLavorazioneCreateSubmit({
     mezzoPrompt.acceptLinkMezzo(mezzoPrompt.activeMatchField ?? "matricola");
     if (!m) return;
     setMezzoId(m.id);
+    setMezzoPrefilledFromCatalog(false);
     setMezzoHint(`Mezzo collegato: ${m.marca} ${m.modello !== "—" ? m.modello : ""}`.trim());
   }, [mezzoPrompt, setMezzoId]);
 
   const dismissMezzoPrompt = useCallback(() => {
     mezzoPrompt.dismissPrompt();
     setMezzoId("");
+    setMezzoPrefilledFromCatalog(false);
     if (fields.targa.trim() || fields.matricola.trim()) {
       setMezzoHint("Continua manualmente: i dati restano editabili.");
     } else {
@@ -314,10 +324,14 @@ export function useLavorazioneCreateSubmit({
     formInitRef.current = true;
     const addetto0 = addettiOpts[0] ?? "";
     const emptyFields = emptySchedaIngressoFields(addetto0);
-    const fieldsInit = initSchedaIngressoFieldsForCreate(emptyFields, initialFields, {
+    let fieldsInit = initSchedaIngressoFieldsForCreate(emptyFields, initialFields, {
       copySignatures: true,
     });
-    if (!fieldsInit.addettoAccettazione.trim()) {
+    const addettoRecords = globalOpts.lavorazioni.addettiRecords;
+    const resolvedAddettoId = resolveIngressoAddettoIdForCreate(addettoRecords, fieldsInit);
+    if (resolvedAddettoId) {
+      fieldsInit = writeIngressoAddettoId(fieldsInit, resolvedAddettoId);
+    } else if (!fieldsInit.addettoAccettazione.trim()) {
       fieldsInit.addettoAccettazione = addetto0;
     }
     resetSections({
@@ -334,6 +348,7 @@ export function useLavorazioneCreateSubmit({
       },
     });
     setMezzoHint(null);
+    setMezzoPrefilledFromCatalog(false);
     setSubmitError(null);
     setSchedaSyncError(null);
     setTagliandoFields({
@@ -354,7 +369,20 @@ export function useLavorazioneCreateSubmit({
     defaultAccettazioneStatoId,
     resetSections,
     syncBaseline,
+    globalOpts.lavorazioni.addettiRecords,
   ]);
+
+  useEffect(() => {
+    if (!enabled || globalOpts.isLoading) return;
+    const records = globalOpts.lavorazioni.addettiRecords;
+    if (!records.length) return;
+    setFields((f) => {
+      if (f.addettoAccettazioneId?.trim()) return f;
+      const nextId = resolveIngressoAddettoIdForCreate(records, f);
+      if (!nextId) return f;
+      return writeIngressoAddettoId(f, nextId);
+    });
+  }, [enabled, globalOpts.isLoading, globalOpts.lavorazioni.addettiRecords, setFields]);
 
   useEffect(() => {
     if (!enabled || !defaultMezzoId) return;
@@ -486,7 +514,7 @@ export function useLavorazioneCreateSubmit({
                   }),
                 createLavorazione: async (input) => {
                   if (!input.mezzo_id) {
-                    throw new Error("mezzo_id obbligatorio per la creazione lavorazione.");
+                    throw new Error("Seleziona o collega un mezzo prima di salvare la lavorazione.");
                   }
                   return createLav.mutateAsync({
                     mezzo_id: input.mezzo_id,
@@ -644,6 +672,7 @@ export function useLavorazioneCreateSubmit({
     setPriorita,
     mezzoId,
     mezzoHint,
+    mezzoPrefilledFromCatalog,
     inlineError,
     schedaSyncError,
     pending,

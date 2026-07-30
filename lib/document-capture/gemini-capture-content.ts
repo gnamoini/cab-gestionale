@@ -6,7 +6,7 @@ type GeminiCaptureDocumentPart =
 
 /** Parte documento per Gemini — ponytail: immagini devono usare ImagePart, non FilePart. */
 export function buildGeminiCaptureDocumentPart(bytes: Uint8Array, mime: string): GeminiCaptureDocumentPart {
-  const buffer = Buffer.from(bytes);
+  const buffer = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   if (isImageCaptureMime(mime)) {
     return { type: "image", image: buffer, mediaType: mime };
   }

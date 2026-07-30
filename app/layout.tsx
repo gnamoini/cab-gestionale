@@ -70,9 +70,8 @@ export default async function RootLayout({
         />
         {process.env.NODE_ENV === "development" ? (
           <>
-            <Script
+            <script
               id="cab-turbopack-css-hmr-recovery"
-              strategy="beforeInteractive"
               dangerouslySetInnerHTML={{ __html: CAB_TURBOPACK_CSS_HMR_RECOVERY_INLINE_SCRIPT }}
             />
             <Script

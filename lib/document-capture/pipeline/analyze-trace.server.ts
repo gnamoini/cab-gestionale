@@ -37,6 +37,13 @@ export type AnalyzeTraceEventPayload = {
 
 let cachedSdkVersion: string | null = null;
 
+/** Trace JSON su stdout — solo dev o DOCUMENT_CAPTURE_ANALYZE_TRACE=1. */
+export function isAnalyzeTraceVerbose(): boolean {
+  if (process.env.DOCUMENT_CAPTURE_ANALYZE_TRACE === "1") return true;
+  if (process.env.DOCUMENT_CAPTURE_ANALYZE_TRACE === "0") return false;
+  return process.env.NODE_ENV !== "production";
+}
+
 export function readAnalyzeSdkVersion(): string {
   if (cachedSdkVersion) return cachedSdkVersion;
   try {
@@ -132,7 +139,9 @@ export class AnalyzeTrace {
       stack: payload.stack ?? null,
     });
 
-    console.info(line);
+    if (isAnalyzeTraceVerbose()) {
+      console.info(line);
+    }
     this.onPhase?.(phase, outcome, { elapsedMs, durationMs });
   }
 

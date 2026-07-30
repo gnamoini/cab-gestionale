@@ -109,4 +109,16 @@ const mezzoVin: MezzoGestito = {
   assert.equal(hit?.id, "m3");
 }
 
+{
+  const mezzoPlaceholder: MezzoGestito = {
+    ...mezzoA,
+    id: "m-dash",
+    marca: "—",
+    modello: "—",
+    targa: "FY109RX",
+    matricola: "—",
+  };
+  assert.equal(mezzoIngressoSuggestLabel(mezzoPlaceholder), "Targa FY109RX");
+}
+
 console.log("scheda-ingresso-ident-suggest.test.ts: ok");

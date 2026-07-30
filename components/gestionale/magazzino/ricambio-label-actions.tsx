@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { DisabledElementTooltip } from "@/components/ui";
 import { erpBtnNeutral, erpBtnSubtleNew } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
@@ -24,11 +24,13 @@ export function RicambioLabelActions({
   codice,
   canRead,
   canWrite,
+  trailingAction,
 }: {
   ricambioId: string;
   codice: string;
   canRead: boolean;
   canWrite: boolean;
+  trailingAction?: ReactNode;
 }) {
   const gestToast = useGestionaleToast();
   const [expanded, setExpanded] = useState(false);
@@ -194,18 +196,29 @@ export function RicambioLabelActions({
     }
   }
 
+  const labelButton = (
+    <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!canRead}>
+      <button
+        type="button"
+        className={`${erpBtnSubtleNew} min-h-11 w-full justify-center disabled:opacity-45`}
+        disabled={!canRead || busy}
+        onClick={() => void ensureExpanded()}
+      >
+        {expanded ? "Etichetta" : "Genera etichetta"}
+      </button>
+    </DisabledElementTooltip>
+  );
+
   return (
     <div className="flex w-full min-w-0 flex-col gap-2">
-      <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!canRead}>
-        <button
-          type="button"
-          className={`${erpBtnSubtleNew} min-h-11 w-full justify-center disabled:opacity-45`}
-          disabled={!canRead || busy}
-          onClick={() => void ensureExpanded()}
-        >
-          {expanded ? "Etichetta" : "Genera etichetta"}
-        </button>
-      </DisabledElementTooltip>
+      {trailingAction ? (
+        <div className="grid grid-cols-2 gap-2">
+          {labelButton}
+          {trailingAction}
+        </div>
+      ) : (
+        labelButton
+      )}
 
       {expanded ? (
         <div className="max-h-[40vh] space-y-2 overflow-y-auto rounded-lg border border-[color:var(--cab-border)] bg-[color:var(--cab-surface)] p-3">

@@ -24,9 +24,10 @@ const reading = deriveCaptureAcquisitionProgress({
   analyzeBusy: true,
 });
 assert.equal(reading.phase, "reading");
-assert.equal(reading.creeping, false);
+assert.equal(reading.creeping, true);
 assert.equal(reading.streamActive, true);
 assert.equal(reading.label, "Lettura documento con AI…");
+assert.ok(reading.progress >= 40);
 
 const checklist = deriveCaptureAcquisitionProgress({
   uploadPhase: "success",
@@ -37,7 +38,7 @@ const checklist = deriveCaptureAcquisitionProgress({
   heartbeatAt: Date.now() - 8000,
 });
 assert.equal(checklist.streamActive, true);
-assert.equal(checklist.creeping, false);
+assert.equal(checklist.creeping, true);
 assert.ok(Array.isArray(checklist.checklist));
 assert.ok(checklist.checklist!.some((c) => c.active));
 assert.ok(checklist.heartbeatLabel?.includes("s fa"));

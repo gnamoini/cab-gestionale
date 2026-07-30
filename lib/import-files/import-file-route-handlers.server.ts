@@ -46,16 +46,32 @@ export async function handleImportFileAbandon(fileId: string) {
   if (auth instanceof NextResponse) return auth;
 
   try {
-    await assertImportFileOwner(fileId, auth.userId);
-    const { cancelImportFile } = await import("@/lib/import-files/import-file-lifecycle.server");
-    await cancelImportFile(fileId, auth.userId);
+    const { loadImportFileForAccess } = await import("@/lib/import-files/import-file-access.server");
+    const row = await loadImportFileForAccess(fileId);
+    if (row.uploaded_by !== auth.userId) {
+      return NextResponse.json(
+        { error: "Solo il caricatore può annullare questo import", code: "FORBIDDEN" },
+        { status: 403 },
+      );
+    }
+
+    if (row.kind === "ddt_receiving") {
+      const { abandonInventoryReceivingImportFile } = await import(
+        "@/lib/inventory-receiving/documents/inventory-receiving-abandon.server"
+      );
+      await abandonInventoryReceivingImportFile(fileId, auth.userId);
+    } else {
+      const { cancelImportFile } = await import("@/lib/import-files/import-file-lifecycle.server");
+      await cancelImportFile(fileId, auth.userId);
+    }
+
     const { cleanupImportStorage } = await import("@/lib/import-files/cleanup-import-storage.server");
     await cleanupImportStorage().catch(() => undefined);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Annullamento non riuscito";
     const code = (e as Error & { code?: string }).code;
-    const status = code === "FORBIDDEN" ? 403 : 400;
+    const status = code === "FORBIDDEN" ? 403 : code === "NOT_FOUND" ? 404 : 400;
     return NextResponse.json({ error: message, code: code ?? "ABANDON_FAILED" }, { status });
   }
 }

@@ -8,7 +8,6 @@ import {
   LAVORAZIONI_REPORT_FILTERS,
 } from "@/lib/lavorazioni/lavorazioni-prefetch-filters";
 import {
-  getLavorazioniArchivioCountServer,
   getLavorazioniReportLightServer,
 } from "@/lib/lavorazioni/lavorazioni-list-fetch-server";
 import { getPrefetchCachePolicyHint } from "@/lib/decision/prefetch-cache-hint";
@@ -87,10 +86,17 @@ export type PrefetchDeferredOptions = {
   includePayments?: boolean;
 };
 
+export type PagePrefetchConfig = {
+  prefetchDeferredOnServer: boolean;
+  /** ponytail: critical e deferred indipendenti — opt-in dopo audit (default false). */
+  parallelPrefetchSafe?: boolean;
+};
+
 /** SSOT: deferred on-server solo se necessario al first paint (tabella/KPI/lista). */
-export const PAGE_PREFETCH_CONFIG: Record<GestionalePrefetchPage, { prefetchDeferredOnServer: boolean }> = {
+export const PAGE_PREFETCH_CONFIG: Record<GestionalePrefetchPage, PagePrefetchConfig> = {
   dashboard: { prefetchDeferredOnServer: true },
-  magazzino: { prefetchDeferredOnServer: true },
+  // audit: critical=settings in deferred BFF; parallel safe (independent fetches)
+  magazzino: { prefetchDeferredOnServer: true, parallelPrefetchSafe: true },
   lavorazioni: { prefetchDeferredOnServer: true },
   documenti: { prefetchDeferredOnServer: true },
   preventivi: { prefetchDeferredOnServer: true },
@@ -114,13 +120,25 @@ export async function prefetchGestionalePage(
   page: GestionalePrefetchPage,
   options?: PrefetchGestionalePageOptions,
 ): Promise<void> {
-  await prefetchCriticalPage(qc, page);
   const includeDeferred =
     options?.includeDeferred ?? PAGE_PREFETCH_CONFIG[page]?.prefetchDeferredOnServer ?? false;
+  const parallelSafe = PAGE_PREFETCH_CONFIG[page]?.parallelPrefetchSafe ?? false;
+
   if (includeDeferred) {
     const { includeDeferred: _omit, ...deferredOpts } = options ?? {};
-    await prefetchDeferredPage(qc, page, deferredOpts);
+    if (parallelSafe) {
+      await Promise.all([
+        prefetchCriticalPage(qc, page),
+        prefetchDeferredPage(qc, page, deferredOpts),
+      ]);
+    } else {
+      await prefetchCriticalPage(qc, page);
+      await prefetchDeferredPage(qc, page, deferredOpts);
+    }
+    return;
   }
+
+  await prefetchCriticalPage(qc, page);
 }
 
 /** Settings + gate minimo — await prima del first byte su route pesanti. */
@@ -222,10 +240,7 @@ export async function prefetchDeferredPage(
     case "lavorazioni": {
       const lav = resolveInitialLoad({ scopeKey: "lavorazioni.list.attive" });
       const archivioCountKey = lavorazioniListCountQueryKey(LAVORAZIONI_CHIUSE_COUNT_FILTERS);
-      const [dto, archivioCountRes] = await Promise.all([
-        fetchLavorazioniPageDTOServer(),
-        getLavorazioniArchivioCountServer(),
-      ]);
+      const dto = await fetchLavorazioniPageDTOServer();
       await Promise.all([
         seedPrefetchedData(
           qc,
@@ -239,7 +254,7 @@ export async function prefetchDeferredPage(
         seedPrefetchedData(
           qc,
           archivioCountKey,
-          unwrap(archivioCountRes, 0),
+          dto.archivioCount,
           LAVORAZIONI_ARCHIVIO_COUNT_STALE_MS,
           GESTIONALE_VIEW_GC_MS,
         ),

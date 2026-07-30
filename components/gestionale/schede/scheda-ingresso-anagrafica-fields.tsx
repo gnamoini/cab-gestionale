@@ -3,7 +3,6 @@
 import { memo, useEffect, useId, useMemo, useState } from "react";
 import { Tooltip } from "@/components/ui";
 
-import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
 import {
   MezzoRegistratoIngressoInlineHint,
   type MezzoIngressoInlineHintVariant,
@@ -22,7 +21,9 @@ import { attrezzatureForMezzo } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { AttrezzaturaGestita } from "@/lib/attrezzature/types";
 import {
   defaultTargetTypeForProfilo,
+  schedaIngressoMezzoSectionOrder,
   showAttrezzaturaSections,
+  showInterventoTargetToggle,
   showTelaioSections,
 } from "@/lib/officina/officina-profilo-operativo";
 import { useOfficinaProfiloOperativo } from "@/lib/officina/use-officina-profilo-operativo";
@@ -66,10 +67,6 @@ function SchedaIngressoAnagraficaFieldsInner({
   onUseMezzoFromHint,
   onDismissMezzoHint,
   onVerifyMezzoConflict,
-  lastIngressoMatch,
-  lastIngressoMatchCount = 0,
-  mezzoInAnagraficaOnly = false,
-  onCopyLastIngresso,
   clienteRequired = false,
   marcaAttrezzaturaRequired = false,
   mezzoLinked = false,
@@ -77,6 +74,9 @@ function SchedaIngressoAnagraficaFieldsInner({
   captureHints,
   onApplyCaptureHint,
   onOreLavoroPatch,
+  hideSectionTitles = false,
+  hideRichiedenteFirma = false,
+  bareSection = false,
 }: {
   value: SchedaIngressoFields & SchedaIngressoOreDraft;
   onPatch: (patch: Partial<SchedaIngressoFields>) => void;
@@ -93,16 +93,15 @@ function SchedaIngressoAnagraficaFieldsInner({
   onUseMezzoFromHint?: (field: SchedaIngressoIdentField) => void;
   onDismissMezzoHint?: () => void;
   onVerifyMezzoConflict?: () => void;
-  lastIngressoMatch?: { updatedAt?: string } | null;
-  lastIngressoMatchCount?: number;
-  mezzoInAnagraficaOnly?: boolean;
-  onCopyLastIngresso?: () => void;
   clienteRequired?: boolean;
   marcaAttrezzaturaRequired?: boolean;
   mezzoLinked?: boolean;
   mezzoId?: string;
   captureHints?: Partial<Record<keyof SchedaIngressoFields, CaptureIngressoFieldHint>>;
   onApplyCaptureHint?: (key: keyof SchedaIngressoFields, value: string) => void;
+  hideSectionTitles?: boolean;
+  hideRichiedenteFirma?: boolean;
+  bareSection?: boolean;
 }) {
   const profilo = useOfficinaProfiloOperativo();
   const resolvedSections = useMemo(() => {
@@ -121,10 +120,8 @@ function SchedaIngressoAnagraficaFieldsInner({
   }, [sections, profilo]);
   const show = (s: SchedaIngressoAnagraficaSection) => resolvedSections.includes(s);
   const targetType = value.targetType ?? defaultTargetTypeForProfilo(profilo);
-  const showInterventoTargetToggle =
-    showAttrezzaturaSections(profilo) && showTelaioSections(profilo);
-  // Attrezzatura implica sempre un telaio (campi opzionali); telaio può esistere senza attrezzatura.
-  const showAttSection = show("attrezzatura") && targetType !== "telaio";
+  const showInterventoTargetToggleField = showInterventoTargetToggle(profilo);
+  const showAttSection = show("attrezzatura");
   const showTelSection = show("telaio");
   const [attrezzature, setAttrezzature] = useState<readonly AttrezzaturaGestita[]>([]);
   const [firmaModalOpen, setFirmaModalOpen] = useState(false);
@@ -196,7 +193,7 @@ function SchedaIngressoAnagraficaFieldsInner({
   return (
     <>
       {show("cliente") ? (
-        <FormSection title="Anagrafica cliente">
+        <FormSection title="Anagrafica cliente" hideTitle={hideSectionTitles}>
           <FormField label="Cliente" htmlFor={fieldId("cliente")} required={clienteRequired}>
             <CaptureAwareFormField hint={captureHints?.cliente} footer={hintAfter("cliente", true)}>
               <GlobalSettingsListSelect
@@ -212,35 +209,37 @@ function SchedaIngressoAnagraficaFieldsInner({
             />
             </CaptureAwareFormField>
           </FormField>
-          <FormField label="Cantiere" htmlFor={fieldId("cantiere")}>
-            <CaptureAwareFormField hint={captureHints?.cantiere} footer={hintAfter("cantiere", true)}>
-              <GlobalSettingsListSelect
-              id={fieldId("cantiere")}
-              listKey="mezzi:cantieri"
-              className={listSelectWrapClass}
-              value={value.cantiere}
-              onChange={(v) => onPatch({ cantiere: v })}
-              disabled={disabled}
-              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
-              aria-label="Cantiere"
-            />
-            </CaptureAwareFormField>
-          </FormField>
-          <FormField label="Utilizzatore" htmlFor={fieldId("utilizzatore")}>
-            <CaptureAwareFormField hint={captureHints?.utilizzatore} footer={hintAfter("utilizzatore", true)}>
-              <GlobalSettingsListSelect
-              id={fieldId("utilizzatore")}
-              listKey="mezzi:utilizzatori"
-              className={listSelectWrapClass}
-              value={value.utilizzatore}
-              onChange={(v) => onPatch({ utilizzatore: v })}
-              disabled={disabled}
-              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
-              aria-label="Utilizzatore"
-            />
-            </CaptureAwareFormField>
-          </FormField>
-          {showInterventoTargetToggle ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            <FormField label="Cantiere" htmlFor={fieldId("cantiere")}>
+              <CaptureAwareFormField hint={captureHints?.cantiere} footer={hintAfter("cantiere", true)}>
+                <GlobalSettingsListSelect
+                id={fieldId("cantiere")}
+                listKey="mezzi:cantieri"
+                className={listSelectWrapClass}
+                value={value.cantiere}
+                onChange={(v) => onPatch({ cantiere: v })}
+                disabled={disabled}
+                exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
+                aria-label="Cantiere"
+              />
+              </CaptureAwareFormField>
+            </FormField>
+            <FormField label="Utilizzatore" htmlFor={fieldId("utilizzatore")}>
+              <CaptureAwareFormField hint={captureHints?.utilizzatore} footer={hintAfter("utilizzatore", true)}>
+                <GlobalSettingsListSelect
+                id={fieldId("utilizzatore")}
+                listKey="mezzi:utilizzatori"
+                className={listSelectWrapClass}
+                value={value.utilizzatore}
+                onChange={(v) => onPatch({ utilizzatore: v })}
+                disabled={disabled}
+                exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
+                aria-label="Utilizzatore"
+              />
+              </CaptureAwareFormField>
+            </FormField>
+          </div>
+          {showInterventoTargetToggleField ? (
             <FormField label="Oggetto intervento">
               <InterventoTargetSelect
                 value={targetType}
@@ -254,8 +253,10 @@ function SchedaIngressoAnagraficaFieldsInner({
         </FormSection>
       ) : null}
 
-      {showAttSection ? (
-        <FormSection title="Anagrafica attrezzatura">
+      {schedaIngressoMezzoSectionOrder(profilo).map((kind) =>
+        kind === "attrezzatura" ? (
+      showAttSection ? (
+        <FormSection key="attrezzatura" title="Anagrafica attrezzatura" hideTitle={hideSectionTitles}>
           <FormField label="Tipo attrezzatura" htmlFor={fieldId("tipo-attrezzatura")}>
             <GlobalSettingsListSelect
               id={fieldId("tipo-attrezzatura")}
@@ -360,25 +361,10 @@ function SchedaIngressoAnagraficaFieldsInner({
               />
             </FormField>
           </div>
-          {onCopyLastIngresso ? (
-            <CopiaUltimaSchedaIngressoBanner
-              visible={Boolean(lastIngressoMatch) || mezzoInAnagraficaOnly}
-              highlight={false}
-              updatedAt={lastIngressoMatch?.updatedAt}
-              matchCount={lastIngressoMatchCount}
-              mezzoInAnagraficaOnly={mezzoInAnagraficaOnly}
-              disabled={disabled || lastIngressoMatchCount === 0}
-              onCopy={onCopyLastIngresso}
-            />
-          ) : null}
-          {mezzoLinked && !mezzoInlineHint ? (
-            <p className="text-xs text-[color:var(--cab-text-muted)]">Mezzo collegato in anagrafica.</p>
-          ) : null}
         </FormSection>
-      ) : null}
-
-      {showTelSection ? (
-        <FormSection title="Anagrafica mezzo / telaio">
+      ) : null
+        ) : showTelSection ? (
+        <FormSection key="telaio" title="Anagrafica mezzo / telaio" hideTitle={hideSectionTitles}>
           <FormField label="Tipo telaio" htmlFor={fieldId("tipo-telaio")}>
             <GlobalSettingsListSelect
               id={fieldId("tipo-telaio")}
@@ -453,58 +439,97 @@ function SchedaIngressoAnagraficaFieldsInner({
               {hintAfter("vin")}
             </div>
           </div>
-          <FormField label="KM" htmlFor={fieldId("km")}>
-            <GestionaleNumberInput
-              id={fieldId("km")}
-              min={0}
-              inputMode="decimal"
-              value={value.km}
-              onChange={(v) => onPatch({ km: v })}
-              disabled={disabled}
-              aria-label="KM"
-            />
-          </FormField>
-          <FormField label="Carburante" htmlFor={fieldId("carburante")}>
-            <LivelloCarburanteSegmentedSelect
-              id={fieldId("carburante")}
-              value={value.livelloCarburante}
-              onChange={(v) => onPatch({ livelloCarburante: v })}
-              disabled={disabled}
-              aria-label="Livello carburante"
-            />
-          </FormField>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <FormField label="KM" htmlFor={fieldId("km")}>
+              <GestionaleNumberInput
+                id={fieldId("km")}
+                min={0}
+                inputMode="decimal"
+                value={value.km}
+                onChange={(v) => onPatch({ km: v })}
+                disabled={disabled}
+                aria-label="KM"
+              />
+            </FormField>
+            <FormField label="Carburante" htmlFor={fieldId("carburante")}>
+              <LivelloCarburanteSegmentedSelect
+                id={fieldId("carburante")}
+                value={value.livelloCarburante}
+                onChange={(v) => onPatch({ livelloCarburante: v })}
+                disabled={disabled}
+                aria-label="Livello carburante"
+              />
+            </FormField>
+          </div>
         </FormSection>
-      ) : null}
+      ) : null,
+      )}
 
       {show("richiedente") ? (
-        <FormSection title="Richiedente">
-          <FormField label="Richiedente" htmlFor={fieldId("richiedente")}>
-            <CaptureAwareFormField hint={captureHints?.richiedente} footer={hintAfter("richiedente", true)}>
+        bareSection ? (
+          <>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <FormField label="Richiedente" htmlFor={fieldId("richiedente")}>
+                <CaptureAwareFormField hint={captureHints?.richiedente} footer={hintAfter("richiedente", true)}>
+                  <input
+                    id={fieldId("richiedente")}
+                    className={inputFieldClass}
+                    value={value.richiedente}
+                    onChange={(e) => onPatch({ richiedente: sliceInputValue(e.target.value, TEXT_SHORT) })}
+                    disabled={disabled}
+                    placeholder="Nome libero"
+                    maxLength={TEXT_SHORT}
+                    aria-label="Richiedente"
+                  />
+                </CaptureAwareFormField>
+              </FormField>
+              <FormField label="Telefono richiedente" htmlFor={fieldId("richiedente-telefono")}>
+                <input
+                  id={fieldId("richiedente-telefono")}
+                  className={inputFieldClass}
+                  value={value.richiedenteTelefono}
+                  onChange={(e) => onPatch({ richiedenteTelefono: sliceInputValue(e.target.value, TEXT_SHORT) })}
+                  disabled={disabled}
+                  placeholder="Numero di telefono"
+                  maxLength={TEXT_SHORT}
+                  autoComplete="tel"
+                  aria-label="Telefono richiedente"
+                />
+              </FormField>
+            </div>
+          </>
+        ) : (
+        <FormSection title="Richiedente" hideTitle={hideSectionTitles}>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <FormField label="Richiedente" htmlFor={fieldId("richiedente")}>
+              <CaptureAwareFormField hint={captureHints?.richiedente} footer={hintAfter("richiedente", true)}>
+                <input
+                  id={fieldId("richiedente")}
+                  className={inputFieldClass}
+                  value={value.richiedente}
+                  onChange={(e) => onPatch({ richiedente: sliceInputValue(e.target.value, TEXT_SHORT) })}
+                  disabled={disabled}
+                  placeholder="Nome libero"
+                  maxLength={TEXT_SHORT}
+                  aria-label="Richiedente"
+                />
+              </CaptureAwareFormField>
+            </FormField>
+            <FormField label="Telefono richiedente" htmlFor={fieldId("richiedente-telefono")}>
               <input
-                id={fieldId("richiedente")}
+                id={fieldId("richiedente-telefono")}
                 className={inputFieldClass}
-                value={value.richiedente}
-                onChange={(e) => onPatch({ richiedente: sliceInputValue(e.target.value, TEXT_SHORT) })}
+                value={value.richiedenteTelefono}
+                onChange={(e) => onPatch({ richiedenteTelefono: sliceInputValue(e.target.value, TEXT_SHORT) })}
                 disabled={disabled}
-                placeholder="Nome libero"
+                placeholder="Numero di telefono"
                 maxLength={TEXT_SHORT}
-                aria-label="Richiedente"
+                autoComplete="tel"
+                aria-label="Telefono richiedente"
               />
-            </CaptureAwareFormField>
-          </FormField>
-          <FormField label="Telefono richiedente" htmlFor={fieldId("richiedente-telefono")}>
-            <input
-              id={fieldId("richiedente-telefono")}
-              className={inputFieldClass}
-              value={value.richiedenteTelefono}
-              onChange={(e) => onPatch({ richiedenteTelefono: sliceInputValue(e.target.value, TEXT_SHORT) })}
-              disabled={disabled}
-              placeholder="Numero di telefono"
-              maxLength={TEXT_SHORT}
-              autoComplete="tel"
-              aria-label="Telefono richiedente"
-            />
-          </FormField>
+            </FormField>
+          </div>
+          {!hideRichiedenteFirma ? (
           <FormField label="Firma richiedente">
             <div className="flex min-w-0 items-center gap-2">
               <Tooltip content={hasSignatureDataUrl(value.richiedenteFirma ?? "") ? "Modifica firma" : "Acquisisci firma"}>
@@ -540,13 +565,17 @@ function SchedaIngressoAnagraficaFieldsInner({
               </div>
             ) : null}
           </FormField>
+          ) : null}
+          {!hideRichiedenteFirma ? (
           <RichiedenteFirmaCaptureModal
             open={firmaModalOpen}
             initialDataUrl={value.richiedenteFirma ?? ""}
             onClose={() => setFirmaModalOpen(false)}
             onSave={(dataUrl) => onPatch({ richiedenteFirma: dataUrl })}
           />
+          ) : null}
         </FormSection>
+        )
       ) : null}
     </>
   );
@@ -564,10 +593,6 @@ export const SchedaIngressoAnagraficaFields = memo(
     if (prev.onUseMezzoFromHint !== next.onUseMezzoFromHint) return false;
     if (prev.onDismissMezzoHint !== next.onDismissMezzoHint) return false;
     if (prev.onVerifyMezzoConflict !== next.onVerifyMezzoConflict) return false;
-    if (prev.lastIngressoMatch !== next.lastIngressoMatch) return false;
-    if (prev.lastIngressoMatchCount !== next.lastIngressoMatchCount) return false;
-    if (prev.mezzoInAnagraficaOnly !== next.mezzoInAnagraficaOnly) return false;
-    if (prev.onCopyLastIngresso !== next.onCopyLastIngresso) return false;
     if (prev.clienteRequired !== next.clienteRequired) return false;
     if (prev.marcaAttrezzaturaRequired !== next.marcaAttrezzaturaRequired) return false;
     if (prev.mezzoLinked !== next.mezzoLinked) return false;
@@ -575,6 +600,9 @@ export const SchedaIngressoAnagraficaFields = memo(
     if (prev.captureHints !== next.captureHints) return false;
     if (prev.onApplyCaptureHint !== next.onApplyCaptureHint) return false;
     if (prev.onOreLavoroPatch !== next.onOreLavoroPatch) return false;
+    if (prev.hideSectionTitles !== next.hideSectionTitles) return false;
+    if (prev.hideRichiedenteFirma !== next.hideRichiedenteFirma) return false;
+    if (prev.bareSection !== next.bareSection) return false;
     if (prev.value.oreLavoroPto !== next.value.oreLavoroPto) return false;
     return schedaIngressoFieldsSliceEqual(
       prev.value,

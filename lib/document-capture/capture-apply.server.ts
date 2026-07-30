@@ -206,6 +206,7 @@ async function runCaptureApplySaga(input: {
         userId: input.userId,
         applicationId: input.applicationId,
         currentHash,
+        magazzino,
       })
     : createLavorazioneAndApply({
         sb,
@@ -221,6 +222,7 @@ async function runCaptureApplySaga(input: {
         applicationId: input.applicationId,
         currentHash,
         applyMeta: input.applyMeta,
+        magazzino,
       });
 }
 
@@ -249,6 +251,7 @@ type SagaSharedContext = {
   applicationId: string;
   currentHash: string;
   applyMeta?: CaptureApplyMeta;
+  magazzino?: Awaited<ReturnType<typeof fetchCaptureMagazzinoCatalog>>;
 };
 
 async function loadLavorazioneDataIngressoIso(
@@ -268,15 +271,18 @@ async function runCaptureApplyWrite(
   const { sb, capture, application, applyJob, fields, ingressoFields, approvedCreates, idempotencyKey, userId, applicationId, currentHash } = ctx;
   const existingLavorazioneId = ctx.existingLavorazioneId?.trim() || null;
 
+  const [magazzino, mezzoCatalog] = await Promise.all([
+    ctx.magazzino ? Promise.resolve(ctx.magazzino) : fetchCaptureMagazzinoCatalog(),
+    fetchCaptureMezziCatalog(),
+  ]);
+
   const deps = createCaptureInterventoWriteDeps({
     userId,
     captureFields: fields,
     approvedCreates,
-    magazzino: await fetchCaptureMagazzinoCatalog(),
+    magazzino,
     existingLavorazioneId,
   });
-
-  const mezzoCatalog = await fetchCaptureMezziCatalog();
 
   let dataIngressoIso: string;
   if (mode === "CREATE") {

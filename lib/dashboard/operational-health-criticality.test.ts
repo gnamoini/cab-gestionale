@@ -3,11 +3,13 @@ import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-l
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import {
+  ATTESA_RICAMBI_LATE_INGRESS_WEIGHT,
   ATTESA_RICAMBI_SUPPLIER_GRACE_DAYS,
   computeInactiveLavorazioniCriticality,
   computeSottoScortaCriticality,
   estimateDaysUnderMinimum,
   isAttesaRicambiStato,
+  lateIngressWeight,
   sottoScortaDurationWeight,
   stagnationThresholdDays,
 } from "@/lib/dashboard/operational-health-criticality";
@@ -149,6 +151,44 @@ assert.ok(
 assert.ok(
   ricambiInactive.weightedExcessDays <= 0.3 + 1e-9,
   "excess attesa ricambi capped soft (≤0.3 per mezzo)",
+);
+
+assert.equal(
+  lateIngressWeight(
+    lav({ id: "late-acc", stato: "accettazione", created_at: "2026-05-01T10:00:00.000Z" }),
+    anchor,
+    stati,
+  ),
+  1,
+  "ritardo ingresso in accettazione: peso pieno",
+);
+assert.equal(
+  lateIngressWeight(
+    lav({
+      id: "late-ricambi-recent",
+      stato: "attesa_ricambi",
+      created_at: "2026-05-01T10:00:00.000Z",
+      updated_at: "2026-07-10T10:00:00.000Z",
+    }),
+    anchor,
+    stati,
+  ),
+  1,
+  "attesa ricambi sotto grace fornitore: peso pieno",
+);
+assert.equal(
+  lateIngressWeight(
+    lav({
+      id: "late-ricambi-old",
+      stato: "attesa_ricambi",
+      created_at: "2026-05-01T10:00:00.000Z",
+      updated_at: "2026-06-20T10:00:00.000Z",
+    }),
+    anchor,
+    stati,
+  ),
+  ATTESA_RICAMBI_LATE_INGRESS_WEIGHT,
+  "attesa ricambi oltre grace fornitore: peso soft",
 );
 
 console.log("operational-health-criticality.test: OK");

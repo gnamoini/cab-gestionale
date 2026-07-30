@@ -11,10 +11,6 @@ export const LavorazioniViewLazy = dynamic(() =>
   import("@/components/gestionale/lavorazioni/lavorazioni-view").then((m) => m.LavorazioniView),
 );
 
-export const MagazzinoViewLazy = dynamic(() =>
-  import("@/components/gestionale/magazzino/magazzino-view").then((m) => m.MagazzinoView),
-);
-
 export const DocumentiViewLazy = dynamic(() =>
   import("@/components/gestionale/documenti/documenti-view").then((m) => m.DocumentiView),
 );

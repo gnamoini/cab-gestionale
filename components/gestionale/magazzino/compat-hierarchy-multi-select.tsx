@@ -4,6 +4,7 @@ import { memo, useCallback, useMemo } from "react";
 import { GlobalMultiSelect } from "@/components/gestionale/global-input/global-multi-select";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input/global-settings-list-select";
 import { compatHierarchyMultiAddValue } from "@/lib/magazzino/compat/compat-hierarchy-add-value";
+import { compatLabelMarcaModello, parseCompatMarcaModello } from "@/lib/mezzi/attrezzature-prefs";
 import type { HierarchyTreeKey } from "@/lib/mezzi/hierarchy-list-prefs";
 import type { GlobalSettingsHierarchyKind } from "@/src/lib/global-list/global-settings-list-keys";
 import { useAppendGlobalListValue } from "@/src/hooks/use-append-global-list-value";
@@ -34,12 +35,15 @@ export function CompatHierarchySelect({
   className,
   id,
   exclusiveGroup,
+  onMarcaModelloPick,
 }: {
   tree: HierarchyTreeKey;
   hierarchyKind: GlobalSettingsHierarchyKind;
   marcaNome?: string;
   value: string;
   onChange: (value: string) => void;
+  /** Con marca vuota: imposta marca + modello da voce «Marca — Modello». */
+  onMarcaModelloPick?: (marca: string, modello: string) => void;
   ariaLabel: string;
   placeholder?: string;
   disabled?: boolean;
@@ -48,12 +52,35 @@ export function CompatHierarchySelect({
   id?: string;
   exclusiveGroup?: string;
 }) {
+  const marca = marcaNome?.trim() ?? "";
+  const modelloBrowseAll = hierarchyKind === "modello" && !marca;
+
+  const selectValue = useMemo(() => {
+    if (!modelloBrowseAll || hierarchyKind !== "modello" || !value.trim()) return value;
+    if (value.includes(" — ")) return value;
+    return marca ? compatLabelMarcaModello(marca, value) : value;
+  }, [hierarchyKind, marca, modelloBrowseAll, value]);
+
+  const handleChange = useCallback(
+    (picked: string) => {
+      if (modelloBrowseAll) {
+        const parsed = parseCompatMarcaModello(picked);
+        if (parsed.marca && parsed.modello) {
+          onMarcaModelloPick?.(parsed.marca, parsed.modello);
+          return;
+        }
+      }
+      onChange(picked);
+    },
+    [modelloBrowseAll, onChange, onMarcaModelloPick],
+  );
+
   return (
     <GlobalSettingsListSelect
       listKey="mezzi:clienti"
-      value={value}
-      onChange={onChange}
-      context={{ hierarchyTree: tree, hierarchyKind, marcaNome }}
+      value={selectValue}
+      onChange={handleChange}
+      context={{ hierarchyTree: tree, hierarchyKind, marcaNome, modelloBrowseAll }}
       disabled={disabled}
       required={required}
       className={className}

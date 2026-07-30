@@ -125,6 +125,7 @@ export function LavorazioneCreateModal({
             errorMessage={create.inlineError}
             mezzoPrompt={create.mezzoPrompt}
             mezzoLinked={Boolean(create.mezzoId.trim()) || create.mezzoPrompt.linkState.status === "linked"}
+            mezzoPrefilledFromCatalog={create.mezzoPrefilledFromCatalog}
             mezzoId={create.mezzoId || create.mezzoPrompt.preferredMezzoId || ""}
             sharedGlobalOpts={create.globalOpts}
             sharedMezziCatalog={create.mezziCatalog}
@@ -134,7 +135,6 @@ export function LavorazioneCreateModal({
             onTagliandoFieldsChange={(patch) =>
               create.setTagliandoFields((prev) => ({ ...prev, ...patch }))
             }
-            requestInitialFocus
           />
         </form>
       </SchedaIngressoFormModalShell>

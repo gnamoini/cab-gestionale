@@ -32,6 +32,7 @@ assert.deepEqual(tagliandoFieldsFromInterventionType("riparazione"), {
 
 assert.equal(DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS.isGaranzia, false);
 assert.equal(DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS.isRecidivo, false);
+assert.equal(DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS.repairPresent, true);
 assert.equal(lavorazioneRowToTagliandoFields({ is_garanzia: true }).isGaranzia, true);
 assert.equal(lavorazioneRowToTagliandoFields({ is_recidivo: true }).isRecidivo, true);
 

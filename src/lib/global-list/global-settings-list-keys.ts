@@ -1,6 +1,7 @@
 import {
   aggiungiMarcaHierarchy,
   aggiungiModelloHierarchy,
+  flattenCompatFromHierarchyTree,
   getHierarchyTree,
   marcheFromHierarchyTree,
   modelliVisibiliPerMarcaHierarchy,
@@ -57,8 +58,10 @@ export function listKeyAllowsDynamicAppend(key: GlobalSettingsListKey): boolean 
 export type GlobalSettingsListContext = {
   hierarchyTree?: HierarchyTreeKey;
   hierarchyKind?: GlobalSettingsHierarchyKind;
-  /** Obbligatorio per `hierarchyKind: "modello"`. */
+  /** Obbligatorio per `hierarchyKind: "modello"` (salvo `modelloBrowseAll`). */
   marcaNome?: string;
+  /** Senza marca: elenco «Marca — Modello» su tutto l'albero. */
+  modelloBrowseAll?: boolean;
 };
 
 export function isHierarchyListContext(ctx?: GlobalSettingsListContext): boolean {
@@ -117,7 +120,12 @@ export function resolveGlobalListOptions(
   }
   if (ctx?.hierarchyTree && ctx.hierarchyKind === "modello") {
     const marca = ctx.marcaNome?.trim() ?? "";
-    if (!marca) return [];
+    if (!marca) {
+      if (ctx.modelloBrowseAll) {
+        return flattenCompatFromHierarchyTree(resolved.mezziListe, ctx.hierarchyTree);
+      }
+      return [];
+    }
     return modelliVisibiliPerMarcaHierarchy(resolved.mezziListe, ctx.hierarchyTree, marca);
   }
 

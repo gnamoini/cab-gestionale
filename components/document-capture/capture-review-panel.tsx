@@ -1,6 +1,7 @@
 "use client";
 
-import { LoadingSpinner } from "@/components/design-system/loading";
+import { CaptureStatusProgress } from "@/components/document-capture/capture-acquisition-progress-panel";
+import type { CaptureAcquisitionProgressState } from "@/lib/document-capture/capture-acquisition-progress";
 import { dsHubModalSection, dsSkeletonPulse } from "@/lib/ui/design-system";
 import type { ReactNode } from "react";
 
@@ -97,24 +98,32 @@ export function CaptureReviewPanelLoading({
   title,
   message,
   skeleton = "fields",
+  progressState,
 }: {
   title: string;
   message: string;
   skeleton?: "fields" | "preview";
+  /** Stato pipeline reale — barra + messaggio allineati alla fase corrente. */
+  progressState?: CaptureAcquisitionProgressState | null;
 }) {
   return (
     <CaptureReviewPanelFrame title={title}>
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 py-6" role="status">
-        <LoadingSpinner size="sm" />
-        <p className="text-center text-sm text-[color:var(--cab-muted-fg)]">{message}</p>
-        {skeleton === "preview" ? (
-          <div
-            className={`mt-1 w-full max-w-full rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] ${dsSkeletonPulse}`}
-            style={{ aspectRatio: "210 / 297", maxHeight: "min(28rem, 50vh)" }}
-            aria-hidden
-          />
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 py-4" role="status">
+        {progressState?.active ? (
+          <CaptureStatusProgress state={progressState} />
         ) : (
-          <CaptureReviewPanelSkeleton />
+          <>
+            <p className="text-center text-sm text-[color:var(--cab-muted-fg)]">{message}</p>
+            {skeleton === "preview" ? (
+              <div
+                className={`mt-1 w-full max-w-full rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] ${dsSkeletonPulse}`}
+                style={{ aspectRatio: "210 / 297", maxHeight: "min(28rem, 50vh)" }}
+                aria-hidden
+              />
+            ) : (
+              <CaptureReviewPanelSkeleton />
+            )}
+          </>
         )}
       </div>
     </CaptureReviewPanelFrame>

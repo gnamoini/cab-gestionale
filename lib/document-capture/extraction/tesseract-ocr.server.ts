@@ -1,6 +1,7 @@
 import "server-only";
 
 import sharp from "sharp";
+import type { AnalyzeTraceEmitter } from "@/lib/document-capture/pipeline/analyze-trace-emitter";
 
 type OcrMode = "single_line" | "block";
 
@@ -34,6 +35,11 @@ async function getTesseractWorker(): Promise<import("tesseract.js").Worker | nul
     ]);
   }
   return workerPromise;
+}
+
+/** ponytail: avvia init worker in background — riduce cold-start primo OCR. */
+export function warmTesseractWorker(): void {
+  void getTesseractWorker();
 }
 
 function mapTesseractConfidence(raw: number): number {
@@ -89,12 +95,19 @@ export async function recognizePngBuffer(
 export async function recognizePngBuffersPool(
   items: Array<{ id: string; png: Buffer; mode?: OcrMode }>,
   _concurrency = 1,
+  trace?: AnalyzeTraceEmitter,
 ): Promise<Map<string, { text: string; confidence: number }>> {
   const out = new Map<string, { text: string; confidence: number }>();
   // ponytail: worker Tesseract singleton — recognize() non è concorrente; pool sequenziale
+  if (items.length > 0) {
+    trace?.emit("OCR_RECOGNIZE_START", "ok", { fieldCount: items.length });
+  }
   for (const current of items) {
     const result = await recognizePngBuffer(current.png, current.mode ?? "single_line");
     out.set(current.id, result);
+  }
+  if (items.length > 0) {
+    trace?.emit("OCR_RECOGNIZE_OK", "ok", { fieldCount: items.length });
   }
   return out;
 }

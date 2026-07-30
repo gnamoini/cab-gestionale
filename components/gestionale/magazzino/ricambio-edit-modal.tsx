@@ -242,8 +242,7 @@ export function RicambioEditModal({
           next.scorta = moved.data.quantita;
         }
         const patch = ricambioUiToMagazzinoUpdate(next, mezziListePrefs);
-        const { quantita: _omitQuantita, ...patchWithoutQuantita } = patch;
-        const updated = await magazzinoEntry.update(ricambioId, patchWithoutQuantita);
+        const updated = await magazzinoEntry.update(ricambioId, patch);
         if (!updated.success || !updated.data) {
           onSaveError(updated.error ?? "Salvataggio non riuscito.");
           return;
@@ -257,6 +256,11 @@ export function RicambioEditModal({
             ? " Salvato con campi segnaposto — completa l'anagrafica quando possibile."
             : "";
         onSaved(ui, `Modifiche salvate.${lenientHint}`);
+      } catch (e) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("[ricambio-edit] save threw", e);
+        }
+        onSaveError(e instanceof Error ? e.message : "Salvataggio non riuscito.");
       } finally {
         setSaveBusy(false);
       }

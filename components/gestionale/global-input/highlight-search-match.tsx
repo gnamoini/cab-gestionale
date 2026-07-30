@@ -7,7 +7,7 @@ import { normalizeEntityString } from "@/lib/validation/global-entity-validation
 export function HighlightSearchMatch({
   text,
   query,
-  className = "rounded-sm bg-[color:color-mix(in_srgb,var(--cab-primary)_22%,transparent)] font-semibold",
+  className = "rounded-sm bg-[color:var(--cab-primary)] px-0.5 font-semibold text-black",
 }: {
   text: string;
   query: string;

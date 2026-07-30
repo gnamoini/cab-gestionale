@@ -28,10 +28,29 @@ export function defaultTargetTypeForProfilo(profilo: OfficinaProfiloOperativo) {
   return profilo === "telai" ? ("telaio" as const) : ("attrezzatura" as const);
 }
 
-export function showTelaioSections(profilo: OfficinaProfiloOperativo): boolean {
-  return profilo === "telai" || profilo === "misto";
+export type SchedaIngressoMezzoSectionKind = "attrezzatura" | "telaio";
+
+export function showTelaioSections(_profilo: OfficinaProfiloOperativo): boolean {
+  return true;
 }
 
 export function showAttrezzaturaSections(profilo: OfficinaProfiloOperativo): boolean {
   return profilo === "attrezzature" || profilo === "misto";
+}
+
+export function schedaIngressoMezzoSectionOrder(
+  profilo: OfficinaProfiloOperativo,
+): readonly SchedaIngressoMezzoSectionKind[] {
+  switch (profilo) {
+    case "telai":
+      return ["telaio"];
+    case "misto":
+      return ["telaio", "attrezzatura"];
+    default:
+      return ["attrezzatura", "telaio"];
+  }
+}
+
+export function showInterventoTargetToggle(profilo: OfficinaProfiloOperativo): boolean {
+  return profilo === "misto";
 }

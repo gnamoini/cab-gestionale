@@ -4,7 +4,7 @@ import { AddettoSelectField } from "@/components/gestionale/lavorazioni/lavorazi
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 import { gestionaleFilterFieldInputClass } from "@/components/gestionale/lavorazioni/lavorazioni-filter-fields";
 import { useAddettiPickerOptions } from "@/src/hooks/gestionale/use-addetti-picker-options";
-import type { FixedListPillSelectSize } from "@/components/gestionale/global-input/global-fixed-list-pill";
+import type { FixedListPillOption, FixedListPillSelectSize } from "@/components/gestionale/global-input/global-fixed-list-pill";
 
 export type AddettoPickerProps = {
   value: string | null;
@@ -18,6 +18,8 @@ export type AddettoPickerProps = {
   tablePillWidth?: string;
   allowEmpty?: boolean;
   emptyValue?: string;
+  /** SSOT opzioni quando il parent ha già `GlobalOptionsSlice` (es. capture / modale scheda). */
+  options?: readonly FixedListPillOption[];
 };
 
 const FILTER_ALL = "__tutti__";
@@ -34,8 +36,10 @@ export function AddettoPicker({
   tablePillWidth,
   allowEmpty = false,
   emptyValue = "",
+  options: optionsProp,
 }: AddettoPickerProps) {
-  const { options } = useAddettiPickerOptions(value);
+  const { options: hookOptions } = useAddettiPickerOptions(optionsProp ? null : value);
+  const options = optionsProp ?? hookOptions;
   const selectValue = value?.trim() || (allowEmpty ? emptyValue : "");
 
   if (variant === "filter") {

@@ -94,3 +94,8 @@ function phaseProgressRank(phase: AnalyzeTracePhase | null): number {
   if (phase === "DOWNLOAD_STORAGE_OK") return 1;
   return 0;
 }
+
+/** Percentuale barra avanzamento fase analyze (40–94). */
+export function captureAnalyzeProgressPercent(phase: AnalyzeTracePhase | null): number {
+  return 40 + phaseProgressRank(phase) * 9;
+}

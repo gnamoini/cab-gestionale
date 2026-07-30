@@ -20,7 +20,7 @@ import {
 import { useInventoryReceivingFlow } from "@/components/gestionale/magazzino/carichi/use-inventory-receiving-flow";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import {
-  abandonInventoryReceivingImport,
+  abandonInventoryReceivingPending,
   fetchInventoryReceivingPreviewUrl,
 } from "@/lib/inventory-receiving/inventory-receiving-import-client";
 import { inventoryReceivingCaptureAdapter } from "@/lib/document-capture/inventory-receiving-capture-adapter";
@@ -188,7 +188,9 @@ export function ReceivingWizard() {
           onCancel={() => {
             const id = flow.pendingImportFileId;
             flow.reset();
-            if (id) void abandonInventoryReceivingImport(id).catch(() => undefined);
+            if (id) {
+              void abandonInventoryReceivingPending({ kind: "import_file", importFileId: id }).catch(() => undefined);
+            }
           }}
         />
       ) : null}

@@ -35,9 +35,14 @@ import {
 import { buildPipelineIdempotencyKey } from "@/lib/document-capture/orchestrator/pipeline-orchestrator";
 import { normalizeCaptureMime } from "@/lib/document-capture/capture-mime";
 import {
+  fetchCaptureMagazzinoCatalog,
+  fetchCaptureMezziCatalog,
+} from "@/lib/document-capture/capture-intervento-write-deps.server";
+import {
   applyEntityResolutionToCaptureFields,
   mergeResolutionIntoFieldRows,
 } from "@/lib/entity-resolution/server/apply-capture-resolution.server";
+import { loadResolutionRuntimeContext } from "@/lib/entity-resolution/server/load-resolution-context.server";
 import { inferCaptureSchedaTipo } from "@/lib/document-capture/capture-field-mapper";
 import { parsePhysicalPages } from "@/lib/document-capture/physical/physical-parser";
 import { normalizeCaptureExtractedFieldKey } from "@/lib/document-capture/capture-field-key-aliases";
@@ -60,7 +65,7 @@ import { classifyStorageDownloadError } from "@/lib/storage/storage-download-err
 import { resolveGeminiAnalyzeRetryDelayMs } from "@/lib/ai/gemini-retry-after";
 import { classifyAiError, logUnclassifiedAiError } from "@/lib/ai/runtime/errors";
 import { isTransientAnalyzeRetryError } from "@/lib/ai/gemini-analyze-retry-policy";
-import { createAnalyzeTrace, type AnalyzeTraceListener } from "@/lib/document-capture/pipeline/analyze-trace.server";
+import { createAnalyzeTrace, type AnalyzeTrace, type AnalyzeTraceListener } from "@/lib/document-capture/pipeline/analyze-trace.server";
 import { AnalyzeTimeoutBudget } from "@/lib/document-capture/pipeline/analyze-timeout-budget";
 import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
@@ -149,6 +154,7 @@ export type AnalyzeDocumentCaptureV41Options = {
   bytes?: Uint8Array;
   mime?: string;
   onPhase?: AnalyzeTraceListener;
+  trace?: AnalyzeTrace;
 };
 
 export async function analyzeDocumentCaptureV41(
@@ -157,14 +163,18 @@ export async function analyzeDocumentCaptureV41(
   options?: AnalyzeDocumentCaptureV41Options,
 ): Promise<AnalyzeCaptureV41Result> {
   const correlationId = options?.correlationId;
-  const trace = createAnalyzeTrace({
-    captureId,
-    correlationId,
-    companyId: null,
-    pipelineVersion: "v4.1",
-    onPhase: options?.onPhase,
-  });
-  trace.emit("START", "ok");
+  const trace =
+    options?.trace ??
+    createAnalyzeTrace({
+      captureId,
+      correlationId,
+      companyId: null,
+      pipelineVersion: "v4.1",
+      onPhase: options?.onPhase,
+    });
+  if (!options?.trace) {
+    trace.emit("START", "ok");
+  }
 
   const budget = new AnalyzeTimeoutBudget();
   const hybridEnabled = isDocumentCaptureHybridExtractionEnabled();
@@ -317,12 +327,14 @@ export async function analyzeDocumentCaptureV41(
           fileName: capture.storage_path.split("/").pop(),
           bytes,
         });
-      trace.emit("DOWNLOAD_STORAGE_OK", "ok", {
-        fileMime: mime,
-        fileSize: bytes.byteLength,
-        storagePath: capture.storage_path,
-        detail: "bytes_provided",
-      });
+      if (!options?.trace) {
+        trace.emit("DOWNLOAD_STORAGE_OK", "ok", {
+          fileMime: mime,
+          fileSize: bytes.byteLength,
+          storagePath: capture.storage_path,
+          detail: "bytes_provided",
+        });
+      }
     } catch (e) {
       if (e instanceof PrerequisitesAnalyzeError) {
         return buildAnalyzeFailure({
@@ -360,7 +372,7 @@ export async function analyzeDocumentCaptureV41(
   const plugin = ensureSchedaOfficinaPluginRegistered();
   const t0 = performance.now();
 
-  let pipelineState = markUploadUploaded((await loadPipelineState(captureId)) ?? { ...INITIAL_PIPELINE_STATE });
+  let pipelineState = markUploadUploaded({ ...INITIAL_PIPELINE_STATE });
 
   trace.emit("PARSE_START", "ok", { fileMime: mime });
   let pageObjects: Awaited<ReturnType<typeof parsePhysicalPages>>;
@@ -388,13 +400,34 @@ export async function analyzeDocumentCaptureV41(
   }
   trace.emit("PARSE_OK", "ok", { fileMime: mime });
 
+  trace.emit("PRELOAD_START", "ok");
+  const preloadPromise = (async () => {
+    const [magazzino, mezzi, loadedPipelineState] = await Promise.all([
+      fetchCaptureMagazzinoCatalog(),
+      fetchCaptureMezziCatalog(),
+      loadPipelineState(captureId),
+    ]);
+    const resolutionContext = await loadResolutionRuntimeContext(sb, capture.company_id, {
+      magazzino,
+      mezzi,
+    });
+    trace.emit("PRELOAD_OK", "ok");
+    return { magazzino, mezzi, resolutionContext, pipelineState: loadedPipelineState };
+  })();
+
   let hybridResult: HybridExtractionResult | null = null;
 
   if (hybridEnabled) {
     trace.emit("HYBRID_START", "ok");
     budget.assertRemaining("hybrid");
     const hybridMs = budget.allocate("hybrid", HYBRID_MAX_MS);
-    const hybridRun = await runHybridExtractionWithTimeout({ bytes, mime, pageObjects, timeoutMs: hybridMs });
+    const hybridRun = await runHybridExtractionWithTimeout({
+      bytes,
+      mime,
+      pageObjects,
+      timeoutMs: hybridMs,
+      trace,
+    });
     if (hybridRun.status === "ok") {
       hybridResult = hybridRun.data;
       trace.emit("HYBRID_OK", "ok", {
@@ -448,6 +481,12 @@ export async function analyzeDocumentCaptureV41(
       } else if (prereq) {
         geminiUsed = true;
         trace.setRetry(retryAttempt, retryCount);
+        const userPrompt =
+          hybridResult?.geminiUserPrompt ??
+          schedaOfficinaPromptContract.userPromptTemplate ??
+          SCHEDA_OFFICINA_EXTRACTION_USER;
+        const documentPart = buildGeminiCaptureDocumentPart(bytes, mime);
+        trace.emit("GEMINI_PAYLOAD_OK", "ok", { fileSize: bytes.byteLength, fileMime: mime });
         trace.emit("GEMINI_REQUEST", "ok", {
           retryAttempt,
           providerModel: prereq.modelId,
@@ -458,20 +497,13 @@ export async function analyzeDocumentCaptureV41(
         budget.assertRemaining("gemini");
         const geminiTimeoutMs = budget.allocate("gemini", budget.remainingMs());
 
-        const userPrompt =
-          hybridResult?.geminiUserPrompt ??
-          schedaOfficinaPromptContract.userPromptTemplate ??
-          SCHEDA_OFFICINA_EXTRACTION_USER;
         const aiResult = await aiService.analyzeDocument<CaptureExtractionResult>({
           schema: captureExtractionSchema,
           system: schedaOfficinaPromptContract.systemPrompt,
           userContent: [
             {
               role: "user",
-              content: [
-                { type: "text", text: userPrompt },
-                buildGeminiCaptureDocumentPart(bytes, mime),
-              ],
+              content: [{ type: "text", text: userPrompt }, documentPart],
             },
           ],
           temperature: 0.2,
@@ -576,17 +608,30 @@ export async function analyzeDocumentCaptureV41(
         value_source: "ai" as const,
       }));
 
-      const [{ validation }, resolution] = await Promise.all([
+      const [{ validation }, preload, resolution] = await Promise.all([
         Promise.resolve(runSchedaPipelineViews(document)),
+        preloadPromise,
         baseFieldRows.length > 0
-          ? applyEntityResolutionToCaptureFields(sb, {
-              companyId: capture.company_id,
-              captureId,
-              fields: baseFieldRows.map((f) => ({ field_key: f.field_key, raw_value: f.raw_value })),
+          ? preloadPromise.then(({ magazzino, mezzi, resolutionContext }) => {
+              trace.emit("ENTITY_RESOLUTION_START", "ok");
+              return applyEntityResolutionToCaptureFields(sb, {
+                companyId: capture.company_id,
+                captureId,
+                fields: baseFieldRows.map((f) => ({ field_key: f.field_key, raw_value: f.raw_value })),
+                magazzino,
+                mezzi,
+                resolutionContext,
+              }).then((result) => {
+                trace.emit("ENTITY_RESOLUTION_OK", "ok", { fieldCount: result.fields.length });
+                return result;
+              });
             })
           : Promise.resolve(null),
       ]);
 
+      pipelineState = markUploadUploaded(preload.pipelineState ?? { ...INITIAL_PIPELINE_STATE });
+
+      trace.emit("DB_PERSIST_START", "ok");
       trace.emit("UPSERT_FIELDS_START", "ok");
 
       const { data: attemptRow, error: insError } = await sb
@@ -639,6 +684,7 @@ export async function analyzeDocumentCaptureV41(
       pipelineState = advancePipelineStateForPhase(pipelineState, "ai_extract", true);
       pipelineState = advancePipelineStateForPhase(pipelineState, "validate", validation.status !== "blocked");
       await saveDocumentModelAndPipelineState({ captureId, document, pipelineState });
+      trace.emit("DB_PERSIST_OK", "ok");
 
       if (fieldRows.length === 0) {
         trace.emit("UPSERT_FIELDS_FAIL", "fail", { errorCode: "no_fields" });

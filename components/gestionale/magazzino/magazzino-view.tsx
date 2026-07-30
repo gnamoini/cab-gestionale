@@ -192,6 +192,7 @@ import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useMagazzinoLogFeed } from "@/lib/magazzino/use-magazzino-log-feed";
 import { useMagazzinoListDerived } from "@/lib/magazzino/use-magazzino-list-derived";
+import { useMagazzinoSecondaryQueryGate } from "@/lib/magazzino/use-magazzino-secondary-query-gate";
 import { formatCompatMezziArrayForLog } from "@/lib/gestionale-log/log-summary";
 import { useAuth } from "@/context/auth-context";
 import {
@@ -460,16 +461,18 @@ function magazzinoConsumoMedioTooltip(
 }
 
 const RICAMBIO_CODICE_BADGE_CLASS =
-  "inline-block max-w-full break-all rounded-md bg-zinc-100 px-2 py-1 font-mono text-xs font-semibold leading-snug tracking-wide dark:bg-zinc-800";
+  "inline-flex max-w-full flex-col break-all rounded-md bg-zinc-100 px-2 py-1 font-mono text-xs font-semibold leading-snug tracking-wide dark:bg-zinc-800";
 
 function RicambioCodiceCell({ p }: { p: RicambioMagazzino }) {
   const primary = displayRicambioCodice(p.codiceFornitoreOriginale);
   const secondary = p.codiceFornitoreOriginaleSecondario.trim();
   return (
     <div className="flex items-start gap-1">
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <span className={RICAMBIO_CODICE_BADGE_CLASS}>{primary}</span>
-        {secondary ? <span className={RICAMBIO_CODICE_BADGE_CLASS}>{secondary}</span> : null}
+      <div className="min-w-0 flex-1">
+        <span className={RICAMBIO_CODICE_BADGE_CLASS}>
+          <span>{primary}</span>
+          {secondary ? <span>{secondary}</span> : null}
+        </span>
       </div>
       <MagazzinoListinoAiBadge listinoImport={p.listinoImport} />
     </div>
@@ -652,7 +655,9 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   const listPageSize = useResponsiveListPageSize();
   listPageSizeRef.current = listPageSize;
 
-  const logFeedEnabled = true;
+  const secondaryEnabled = useMagazzinoSecondaryQueryGate({
+    force: logOpen || detail?.mode === "info",
+  });
 
   const {
     feed: magLogFeed,
@@ -664,7 +669,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     prodotti,
     authorName,
     userId: user?.id ?? null,
-    enabled: logFeedEnabled,
+    enabled: secondaryEnabled,
   });
 
   const {
@@ -1153,6 +1158,19 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
 
   const pagedMagazzino = useMemo(() => sliceItems(filteredSorted), [sliceItems, filteredSorted, page]);
 
+  const magazzinoTableReadyMarked = useRef(false);
+  useEffect(() => {
+    if (magazzinoInitialLoading) return;
+    if (magazzinoTableReadyMarked.current) return;
+    magazzinoTableReadyMarked.current = true;
+    try {
+      performance.mark("magazzino-table-ready");
+      performance.measure("magazzino-interactive", "navigationStart", "magazzino-table-ready");
+    } catch {
+      /* performance API unavailable */
+    }
+  }, [magazzinoInitialLoading]);
+
   function onSort(k: SortKeyMagazzino) {
     if (sortColumn !== k) {
       setSortColumn(k);
@@ -1507,7 +1525,17 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
           <td className={`min-w-0 w-[7.75rem] max-w-[7.75rem] overflow-hidden ${gestionaleListTableTd}`}>
             <RicambioCodiceCell p={p} />
           </td>
-          <td className={`${gestionaleListTableTd} font-medium`}>{p.marca}</td>
+          <td className={`min-w-0 ${gestionaleListTableTd}`}>
+            {!isMagazzinoMobilePlaceholderValue(p.marca) ? (
+              <MagazzinoMarcaMobileBadge
+                marca={p.marca}
+                magazzinoMaster={appSettings?.magazzinoMaster}
+                variant="table"
+              />
+            ) : (
+              <span className="text-[color:var(--cab-text-muted)]">—</span>
+            )}
+          </td>
           <td className={`min-w-0 ${gestionaleListTableTd}`}>
             <div className="break-words font-medium leading-snug">{p.descrizione}</div>
             <div className="mt-0.5 break-words text-xs leading-snug text-zinc-500 dark:text-zinc-400">
@@ -1590,6 +1618,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
       labelSelection.quantities,
       labelMode,
       setLabelQtyForRicambio,
+      appSettings?.magazzinoMaster,
     ],
   );
 

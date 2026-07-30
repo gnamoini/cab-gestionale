@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { GestionaleInfoRow } from "@/components/design-system/gestionale-info-card";
+import { GestionaleInfoRow, GestionaleInfoSubgroup } from "@/components/design-system/gestionale-info-card";
 import { hubPanoramicaDisplayValue } from "@/components/design-system/hub-modal-panoramica";
 import { MagazzinoScortaDebouncedInfoStepper } from "@/components/gestionale/magazzino/magazzino-scorta-debounced-stepper";
 import { RicambioStockStatusLabel } from "@/components/gestionale/magazzino/ricambio-operational-status-card";
@@ -63,70 +63,70 @@ export function RicambioInfoRiepilogoSection({
       persistScope={RICAMBIO_SCHEDA_RIEPILOGO_COLLAPSE_SCOPE}
       persistKey={RICAMBIO_SCHEDA_RIEPILOGO_COLLAPSE_KEY}
     >
-      <div className="grid gap-x-3 sm:grid-cols-2">
-        <GestionaleInfoRow label="Marca" value={hubPanoramicaDisplayValue(ricambio.marca)} />
-        <GestionaleInfoRow
-          label="Cod. OE"
-          value={<RicambioCodiceIdentitaBlock ricambio={ricambio} />}
-          strong
-        />
-      </div>
-
+      <GestionaleInfoRow
+        label="Cod. OE"
+        value={<RicambioCodiceIdentitaBlock ricambio={ricambio} />}
+        strong
+      />
+      <GestionaleInfoRow label="Marca" value={hubPanoramicaDisplayValue(ricambio.marca)} />
       <GestionaleInfoRow
         label="Descrizione"
         value={hubPanoramicaDisplayValue(ricambio.descrizione)}
         strong
       />
 
-      <div className="grid gap-x-3 sm:grid-cols-2">
-        <GestionaleInfoRow label="Categoria" value={hubPanoramicaDisplayValue(ricambio.categoria)} />
+      <GestionaleInfoSubgroup title="Giacenza" borderless>
+        {canAdjustScorta ? (
+          <GestionaleInfoRow
+            label="Scorta attuale"
+            value={
+              <div className="space-y-1">
+                <MagazzinoScortaDebouncedInfoStepper
+                  ricambioId={ricambio.id}
+                  ricambioLabel={ricambio.descrizione}
+                  fallbackScorta={ricambio.scorta}
+                  low={low}
+                  canAdjust={canAdjustScorta}
+                  modalitaModifica={modalitaModifica}
+                  successFlash={scortaFlash}
+                />
+                <RicambioStockStatusLabel
+                  quantita={ricambio.scorta}
+                  scortaMinima={ricambio.scortaMinima}
+                  consumo={consumo}
+                  stockPolicyRaw={stockPolicyRaw}
+                />
+              </div>
+            }
+          />
+        ) : (
+          <GestionaleInfoRow
+            label="Scorta attuale"
+            value={
+              <div className="space-y-1">
+                <span className="font-mono tabular-nums">{ricambio.scorta}</span>
+                <RicambioStockStatusLabel
+                  quantita={ricambio.scorta}
+                  scortaMinima={ricambio.scortaMinima}
+                  consumo={consumo}
+                  stockPolicyRaw={stockPolicyRaw}
+                />
+              </div>
+            }
+          />
+        )}
         <GestionaleInfoRow label="Scorta minima" value={String(ricambio.scortaMinima)} mono />
-      </div>
+      </GestionaleInfoSubgroup>
 
-      <GestionaleInfoRow label="Note" value={riepilogoMultilineValue(ricambio.note)} />
-      <GestionaleInfoRow label="Compatibilità" value={riepilogoMultilineValue(compatDisplay)} />
+      <GestionaleInfoSubgroup title="Classificazione" borderless>
+        <GestionaleInfoRow label="Categoria" value={hubPanoramicaDisplayValue(ricambio.categoria)} />
+        <GestionaleInfoRow label="Compatibilità" value={riepilogoMultilineValue(compatDisplay)} />
+        <GestionaleInfoRow label="Note" value={riepilogoMultilineValue(ricambio.note)} />
+      </GestionaleInfoSubgroup>
 
-      {canAdjustScorta ? (
-        <GestionaleInfoRow
-          label="Scorta attuale"
-          value={
-            <div className="space-y-1">
-              <MagazzinoScortaDebouncedInfoStepper
-                ricambioId={ricambio.id}
-                ricambioLabel={ricambio.descrizione}
-                fallbackScorta={ricambio.scorta}
-                low={low}
-                canAdjust={canAdjustScorta}
-                modalitaModifica={modalitaModifica}
-                successFlash={scortaFlash}
-              />
-              <RicambioStockStatusLabel
-                quantita={ricambio.scorta}
-                scortaMinima={ricambio.scortaMinima}
-                consumo={consumo}
-                stockPolicyRaw={stockPolicyRaw}
-              />
-            </div>
-          }
-        />
-      ) : (
-        <GestionaleInfoRow
-          label="Scorta attuale"
-          value={
-            <div className="space-y-1">
-              <span className="font-mono tabular-nums">{ricambio.scorta}</span>
-              <RicambioStockStatusLabel
-                quantita={ricambio.scorta}
-                scortaMinima={ricambio.scortaMinima}
-                consumo={consumo}
-                stockPolicyRaw={stockPolicyRaw}
-              />
-            </div>
-          }
-        />
-      )}
-
-      <GestionaleInfoRow label="Ultima modifica" value={ultimaModificaLabel} />
+      <GestionaleInfoSubgroup title="Audit" borderless>
+        <GestionaleInfoRow label="Ultima modifica" value={ultimaModificaLabel} />
+      </GestionaleInfoSubgroup>
     </RicambioCollapsibleSection>
   );
 }

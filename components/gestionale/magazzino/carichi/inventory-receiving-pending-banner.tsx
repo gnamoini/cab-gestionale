@@ -9,7 +9,7 @@ type Props = {
   items: InventoryReceivingPendingItem[];
   onResumeImportFile?: (importFileId: string) => void;
   onResumeDocument?: (documentId: string) => void;
-  onDismissImportFile?: (importFileId: string) => void;
+  onDismissPending?: (item: InventoryReceivingPendingItem) => void;
   className?: string;
 };
 
@@ -17,7 +17,7 @@ export function InventoryReceivingPendingBanner({
   items,
   onResumeImportFile,
   onResumeDocument,
-  onDismissImportFile,
+  onDismissPending,
   className = "",
 }: Props) {
   if (!items.length) return null;
@@ -53,11 +53,11 @@ export function InventoryReceivingPendingBanner({
                   Riprendi
                 </button>
               ) : null}
-              {item.importFileId && onDismissImportFile ? (
+              {onDismissPending ? (
                 <button
                   type="button"
                   className="text-xs text-[color:var(--cab-text-muted)] underline"
-                  onClick={() => onDismissImportFile(item.importFileId!)}
+                  onClick={() => onDismissPending(item)}
                 >
                   Annulla
                 </button>

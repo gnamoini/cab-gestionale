@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { gestionalePageToolbarActionsClass } from "@/components/gestionale/page-header-toolbar";
-import { abandonInventoryReceivingImport } from "@/lib/inventory-receiving/inventory-receiving-import-client";
+import { abandonInventoryReceivingPending } from "@/lib/inventory-receiving/inventory-receiving-import-client";
 import { InventoryReceivingPendingBanner } from "@/components/gestionale/magazzino/carichi/inventory-receiving-pending-banner";
 import { inventoryDocumentStatusLabel } from "@/lib/inventory-receiving/documents/inventory-receiving-status";
 import { fetchInventoryReceivingPending } from "@/lib/inventory-receiving/inventory-receiving-import-client";
@@ -52,7 +52,7 @@ export function ReceivingListView() {
         <div className={dsStackPage}>
           <InventoryReceivingPendingBanner
             items={pending}
-            onDismissImportFile={(id) => void abandonInventoryReceivingImport(id).then(() => load())}
+            onDismissPending={(item) => void abandonInventoryReceivingPending(item).then(() => load())}
           />
           <p className="text-sm text-[color:var(--cab-text-muted)]">
             <Link href="/magazzino" className="underline">

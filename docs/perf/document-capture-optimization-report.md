@@ -72,6 +72,18 @@ Moduli separati; orchestratore sottile in `lib/document-capture/pipeline/process
 
 Criterio piano: OCR >30% tempo totale **e** CPU ok. Implementare solo dopo numeri da `bench:document-capture` in produzione.
 
+### Performance round 2 (2026-07-30)
+
+- Sub-fasi trace: `PDF_RENDER_*`, `OCR_*`, `PRELOAD_*`, `ENTITY_RESOLUTION_*`, `DB_PERSIST_*`, `GEMINI_PAYLOAD_OK`, `FINALIZE_*`, `UPLOAD_OK`
+- Page raster cache (`capture-page-raster-cache.server.ts`) — 1 render 200 DPI per pagina
+- Preload magazzino/mezzi + ER context in parallelo a hybrid/Gemini
+- Hybrid: pdfjs text ∥ template title OCR; merge schedaTipo da text layer
+- Trace verbose gated: `DOCUMENT_CAPTURE_ANALYZE_TRACE=1` o non-production
+- Benchmark: P99, bottleneck %, `document-capture-benchmark-report.md`, runner `bench:document-capture:runner`
+- Apply: magazzino pass-through saga; fetch mezzi ∥ magazzino
+- Prompt condensato (parity test)
+- Upload duration header `x-capture-upload-duration-ms`
+
 ## Metriche UX (definizione)
 
 | Metrica | Trigger trace |

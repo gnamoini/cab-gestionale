@@ -1,6 +1,6 @@
 import { pickMezzoPermanentFields, type MezzoPermanentFieldKey } from "@/lib/schede/scheda-ingresso-field-roles";
+import { permanentFieldsDiffer } from "@/lib/schede/merge-scheda-ingresso-with-mezzo-priority";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
-import { schedaIngressoFieldsSliceEqual } from "@/lib/schede/scheda-ingresso-form-field-groups";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
 import type { SchedaIngressoIdentField } from "@/lib/schede/scheda-ingresso-ident-suggest";
@@ -63,16 +63,19 @@ export function resolvePreferredMezzoIdForSave(state: SchedaIngressoMezzoLinkSta
   return state.linkedSnapshot.id;
 }
 
+export function listLinkedMezzoFieldConflicts(
+  fields: SchedaIngressoFields,
+  snapshot: LinkedMezzoSnapshot | null,
+): MezzoPermanentFieldKey[] {
+  if (!snapshot) return [];
+  return permanentFieldsDiffer(fields, snapshot.fieldsAtLinkTime);
+}
+
 export function hasLinkedMezzoFieldConflict(
   fields: SchedaIngressoFields,
   snapshot: LinkedMezzoSnapshot | null,
 ): boolean {
-  if (!snapshot) return false;
-  return !schedaIngressoFieldsSliceEqual(
-    fields,
-    snapshot.fieldsAtLinkTime as SchedaIngressoFields,
-    Object.keys(snapshot.fieldsAtLinkTime) as MezzoPermanentFieldKey[],
-  );
+  return listLinkedMezzoFieldConflicts(fields, snapshot).length > 0;
 }
 
 export function isMezzoSnapshotStale(

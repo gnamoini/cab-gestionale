@@ -150,6 +150,9 @@ const STAGNATION_STATE_IDS = new Set([
  */
 export const ATTESA_RICAMBI_SUPPLIER_GRACE_DAYS = 7;
 
+/** Peso ritardo ingresso se in attesa ricambi oltre grace fornitore (colpa fornitore). */
+export const ATTESA_RICAMBI_LATE_INGRESS_WEIGHT = 0.3;
+
 /** Excess oltre soglia: peso ridotto + cap basso vs altri stati di attesa. */
 const ATTESA_RICAMBI_EXCESS_WEIGHT = 0.3;
 const ATTESA_RICAMBI_EXCESS_CAP_DAYS = 7;
@@ -206,6 +209,18 @@ function stagnationExcessWeight(excessDays: number, attesaRicambi: boolean): num
 
 function lavUpdatedAt(row: LavorazioneListRow): string {
   return row.updated_at ?? row.created_at ?? new Date(0).toISOString();
+}
+
+/** Peso nel conteggio ritardo ingresso: soft se in attesa ricambi da tempo (lead-time fornitore). */
+export function lateIngressWeight(
+  row: LavorazioneListRow,
+  anchor: Date,
+  stati?: readonly StatoLavorazioneConfig[],
+): number {
+  if (!isAttesaRicambiStato(row.stato, stati)) return 1;
+  const daysInStato = daysBetween(lavUpdatedAt(row), anchor);
+  if (daysInStato < ATTESA_RICAMBI_SUPPLIER_GRACE_DAYS) return 1;
+  return ATTESA_RICAMBI_LATE_INGRESS_WEIGHT;
 }
 
 function isActiveLavorazione(row: LavorazioneListRow): boolean {

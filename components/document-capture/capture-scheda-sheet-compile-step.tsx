@@ -195,18 +195,20 @@ export function CaptureSchedaSheetCompileStep({
         : compileData.fields;
       setFields(resumedFields);
       const hintsSource =
-        tipo === "lavorazioni"
-          ? buildCaptureLavorazioniCompileData({
-              fieldRows,
-              fields: resumedFields as SchedaLavorazioniFields,
-              addettiRecords,
-            })
-          : buildCaptureRicambiCompileData({
-              fieldRows,
-              fields: resumedFields as SchedaRicambiFields,
-              magazzino,
-              addettiRecords,
-            });
+        resumedFields === compileData.fields
+          ? compileData
+          : tipo === "lavorazioni"
+            ? buildCaptureLavorazioniCompileData({
+                fieldRows,
+                fields: resumedFields as SchedaLavorazioniFields,
+                addettiRecords,
+              })
+            : buildCaptureRicambiCompileData({
+                fieldRows,
+                fields: resumedFields as SchedaRicambiFields,
+                magazzino,
+                addettiRecords,
+              });
       setRowHints(hintsSource.hints);
       setOcrBaseline(resumeSheetCompile?.baseline ?? compileData.ocrBaseline);
       setOperationId(resumeSheetCompile?.payload.operationId ?? null);

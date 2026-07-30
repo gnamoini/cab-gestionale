@@ -2,13 +2,13 @@
 
 import { useMemo, type ReactNode } from "react";
 import { GlobalSelect } from "@/components/gestionale/global-input";
-import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
+import { FormField } from "@/components/gestionale/schede/gestionale-form-section";
+import { gestionaleFieldLabelClass } from "@/lib/ui/gestionale-field-label";
 import { isPresetAssignable } from "@/lib/maintenance-plans/maintenance-domain-contract";
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
 import {
   dsAccentSoftBanner,
   dsCheckboxInput,
-  dsCheckboxOptionLabel,
 } from "@/lib/ui/design-system";
 
 const garanziaBadgeClass =
@@ -29,7 +29,6 @@ function InterventoCheckbox({
   checked,
   disabled,
   badge,
-  hint,
   onChange,
 }: {
   id: string;
@@ -37,34 +36,28 @@ function InterventoCheckbox({
   checked: boolean;
   disabled?: boolean;
   badge?: ReactNode;
-  hint?: string;
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className={dsCheckboxOptionLabel}>
+    <label className="flex min-w-0 cursor-pointer items-start gap-2.5 py-0.5 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-55">
       <input
         id={id}
         type="checkbox"
-        className={dsCheckboxInput}
+        className={`${dsCheckboxInput} mt-0.5`}
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
       />
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-[color:var(--cab-text)]">
-          {label}
-          {checked ? badge : null}
-        </span>
-        {hint ? (
-          <span className="mt-0.5 block text-xs leading-snug text-[color:var(--cab-text-muted)]">{hint}</span>
-        ) : null}
+      <span className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-[color:var(--cab-text)]">
+        {label}
+        {checked ? badge : null}
       </span>
     </label>
   );
 }
 
 export function SchedaIngressoTagliandoSection({
-  repairPresent = false,
+  repairPresent = true,
   onRepairPresentChange,
   isTagliando = false,
   onIsTagliandoChange,
@@ -111,9 +104,11 @@ export function SchedaIngressoTagliandoSection({
   );
 
   return (
-    <FormSection title="Intervento">
-      {onRepairPresentChange ? (
-        <FormField label="Riparazione">
+    <>
+      <div>
+        <span className={`block ${gestionaleFieldLabelClass}`}>Info lavorazione</span>
+        <div className="mt-1.5 grid grid-cols-4 gap-3" role="group" aria-label="Info lavorazione">
+        {onRepairPresentChange ? (
           <InterventoCheckbox
             id="ingresso-intervento-riparazione"
             label="Riparazione"
@@ -126,11 +121,9 @@ export function SchedaIngressoTagliandoSection({
             }
             onChange={onRepairPresentChange}
           />
-        </FormField>
-      ) : null}
+        ) : null}
 
-      {onIsTagliandoChange ? (
-        <FormField label="Tagliando">
+        {onIsTagliandoChange ? (
           <InterventoCheckbox
             id="ingresso-intervento-tagliando"
             label="Tagliando"
@@ -143,11 +136,9 @@ export function SchedaIngressoTagliandoSection({
             }
             onChange={onIsTagliandoChange}
           />
-        </FormField>
-      ) : null}
+        ) : null}
 
-      {onIsGaranziaChange ? (
-        <FormField label="Garanzia">
+        {onIsGaranziaChange ? (
           <InterventoCheckbox
             id="ingresso-intervento-garanzia"
             label="In garanzia"
@@ -158,14 +149,11 @@ export function SchedaIngressoTagliandoSection({
                 G
               </span>
             }
-            hint="In lista compare il badge G nella colonna note"
             onChange={onIsGaranziaChange}
           />
-        </FormField>
-      ) : null}
+        ) : null}
 
-      {onIsRecidivoChange ? (
-        <FormField label="Recidivo">
+        {onIsRecidivoChange ? (
           <InterventoCheckbox
             id="ingresso-intervento-recidivo"
             label="Recidivo"
@@ -176,11 +164,11 @@ export function SchedaIngressoTagliandoSection({
                 Rc
               </span>
             }
-            hint="Mezzo che rientra per lavorazioni non eseguite bene"
             onChange={onIsRecidivoChange}
           />
-        </FormField>
-      ) : null}
+        ) : null}
+        </div>
+      </div>
 
       {isTagliando && onPresetRefChange ? (
         <FormField label="Preset manutenzione" htmlFor="tagliando-preset-ref">
@@ -213,6 +201,6 @@ export function SchedaIngressoTagliandoSection({
           ) : null}
         </FormField>
       ) : null}
-    </FormSection>
+    </>
   );
 }

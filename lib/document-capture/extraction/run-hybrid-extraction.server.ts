@@ -7,12 +7,15 @@ import {
   needsGeminiFallback,
 } from "@/lib/document-capture/extraction/hybrid-extraction-merge";
 import type { HybridExtractionResult } from "@/lib/document-capture/extraction/hybrid-extraction-types";
-import { extractNativePdfTextFields } from "@/lib/document-capture/extraction/native-pdf-text-extractor";
+import { extractNativePdfTextFields, detectSchedaTipoFromPdfText } from "@/lib/document-capture/extraction/native-pdf-text-extractor";
 import {
   detectSchedaBlankTemplate,
   extractTemplateOcrFields,
 } from "@/lib/document-capture/extraction/template-ocr-extractor.server";
 import type { PageObject } from "@/lib/document-capture/model/page-object";
+import type { AnalyzeTraceEmitter } from "@/lib/document-capture/pipeline/analyze-trace-emitter";
+import { CapturePageRasterCache } from "@/lib/document-capture/capture-page-raster-cache.server";
+import { warmTesseractWorker } from "@/lib/document-capture/extraction/tesseract-ocr.server";
 
 export type HybridExtractionRunResult =
   | { status: "ok"; data: HybridExtractionResult }
@@ -23,24 +26,31 @@ export async function runHybridExtraction(input: {
   bytes: Uint8Array;
   mime: string;
   pageObjects: PageObject[];
+  trace?: AnalyzeTraceEmitter;
 }): Promise<HybridExtractionRunResult> {
   if (!isDocumentCaptureHybridExtractionEnabled()) {
     return { status: "skip", reason: "hybrid_disabled" };
   }
 
   try {
-    const { pages, fields: pdfTextFields, hasTextLayer } = await extractNativePdfTextFields(
-      input.bytes,
-      input.mime,
-    );
+    void warmTesseractWorker();
+    const rasterCache = new CapturePageRasterCache();
 
-    const schedaTipo =
-      (await detectSchedaBlankTemplate({
-        bytes: input.bytes,
-        mime: input.mime,
-        pdfPages: pages,
-        pageCount: input.pageObjects.length,
-      })) ?? null;
+    input.trace?.emit("PDFJS_TEXT_START", "ok");
+    const pdfTextPromise = extractNativePdfTextFields(input.bytes, input.mime, input.trace);
+    const titleDetectPromise = detectSchedaBlankTemplate({
+      bytes: input.bytes,
+      mime: input.mime,
+      pageCount: input.pageObjects.length,
+      rasterCache,
+      trace: input.trace,
+    });
+
+    const [pdfResult, schedaFromTitleOcr] = await Promise.all([pdfTextPromise, titleDetectPromise]);
+    input.trace?.emit("PDFJS_TEXT_OK", "ok", { fieldCount: pdfResult.fields.length });
+
+    const schedaTipo = detectSchedaTipoFromPdfText(pdfResult.pages) ?? schedaFromTitleOcr ?? null;
+    const { fields: pdfTextFields, hasTextLayer } = pdfResult;
 
     let templateOcrFields: Awaited<ReturnType<typeof extractTemplateOcrFields>> = [];
     // ponytail: tier OCR solo su scan — PDF digitali hanno già testo nativo; OCR bbox qui è lento e inutile
@@ -50,6 +60,8 @@ export async function runHybridExtraction(input: {
         mime: input.mime,
         pageObjects: input.pageObjects,
         schedaTipo,
+        rasterCache,
+        trace: input.trace,
       });
     }
 
@@ -83,6 +95,7 @@ export async function runHybridExtractionWithTimeout(input: {
   mime: string;
   pageObjects: PageObject[];
   timeoutMs?: number;
+  trace?: AnalyzeTraceEmitter;
 }): Promise<HybridExtractionRunResult> {
   const timeoutMs = input.timeoutMs ?? HYBRID_EXTRACTION_TIMEOUT_MS;
   const result = await Promise.race([

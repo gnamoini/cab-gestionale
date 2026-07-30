@@ -272,8 +272,9 @@ function GlobalSettingsListSelectInner({
 
 
   const hierarchyBlocked =
-
-    context?.hierarchyKind === "modello" && !(context.marcaNome?.trim());
+    context?.hierarchyKind === "modello" &&
+    !(context.marcaNome?.trim()) &&
+    !context.modelloBrowseAll;
 
 
 

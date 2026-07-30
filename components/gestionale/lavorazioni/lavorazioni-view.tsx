@@ -164,6 +164,7 @@ import {
   CAB_ADDETTO_DISPLAY_RENAME,
   type CabAddettoRenameDetail,
 } from "@/lib/sistema/cab-events";
+import { useLavorazioniSecondaryQueryGate } from "@/lib/lavorazioni/use-lavorazioni-secondary-prefetch";
 import { newSchedaMeta } from "@/lib/schede/schede-ui";
 import { useMezziListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
@@ -621,6 +622,12 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   const gestToast = useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
   const qc = useQueryClient();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [lavLogOpen, setLavLogOpen] = useState(false);
+  const [createModalWarm, setCreateModalWarm] = useState(false);
+  const secondaryQueriesEnabled = useLavorazioniSecondaryQueryGate(
+    createOpen || createModalWarm || lavLogOpen,
+  );
   const gestionaleQueryOpts = useGestionaleQueryOpts();
   const { global: globalPerm, modules: permModules } = usePermissionsSnapshot();
   const lavPerm = permModules.lavorazioni;
@@ -633,7 +640,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     [globalOpts.lavorazioni.addettiRecords],
   );
   const mezziListQ = useMezziListQuery();
-  const magazzinoQuery = useMagazzinoRicambiUIQuery();
+  const magazzinoQuery = useMagazzinoRicambiUIQuery(undefined, { enabled: secondaryQueriesEnabled });
   const statiOpts = useMemo(
     () => globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata"),
     [globalOpts.lavorazioni.stati],
@@ -721,9 +728,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   const updateCompletamentoLav = useLavorazioneUpdateCompletamentoMutation();
 
   const [mezzoStepOpen, setMezzoStepOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
   const [selectedMezzo, setSelectedMezzo] = useState<SelectedMezzoContext | null>(null);
-  const [createModalWarm, setCreateModalWarm] = useState(false);
   const preloadCreateModal = useCallback(() => {
     void qc.prefetchQuery({
       queryKey: mezziListQueryKey("list", null),
@@ -951,7 +956,6 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       userId: user?.id ?? null,
     }),
   );
-  const [lavLogOpen, setLavLogOpen] = useState(false);
 
   const [advancedFilters, setAdvancedFilters] = useState<LavorazioniAdvancedFilters>(
     () => loadGestionaleAdvancedFiltersPersisted() ?? LAVORAZIONI_ADVANCED_FILTERS_EMPTY,
@@ -1050,7 +1054,9 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     staleTime: 30_000,
   });
 
-  const { logQuery: lavModificheLogQuery } = useUndoableLog("lavorazioni");
+  const { logQuery: lavModificheLogQuery } = useUndoableLog("lavorazioni", {
+    enabled: secondaryQueriesEnabled,
+  });
 
   const mezziById = useMemo(() => mezziGestitiToEmbedMap(mezziCatalog), [mezziCatalog]);
 
@@ -2082,7 +2088,9 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
 
   const totalFilteredCount = attiveRowsFiltered.length + (archivioFilteredCount ?? 0);
 
-  const loading = attiveQuery.isLoading || chiuseQuery.isLoading;
+  const loading =
+    (attiveQuery.isLoading && attiveQuery.data === undefined) ||
+    (chiuseQuery.isLoading && chiuseQuery.data === undefined);
   const initialListLoadingRaw = attiveQuery.isPending;
   const listLoadingFailsafe = useLoadingFailsafe(initialListLoadingRaw, LIST_QUERY_LOADING_FAILSAFE_MS);
   const initialListLoading = initialListLoadingRaw && !listLoadingFailsafe;

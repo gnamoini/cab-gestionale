@@ -5,7 +5,10 @@ import { LoadingErrorState } from "@/components/design-system";
 import { HighlightSearchMatch } from "@/components/gestionale/global-input/highlight-search-match";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { GlobalVirtualizedListbox } from "@/components/gestionale/global-input/global-virtualized-listbox";
-import { formatMezzoSearchResultLines } from "@/lib/mezzi/format-mezzo-search-result";
+import {
+  formatMezzoPickerCompactLines,
+  formatMezzoSearchChipLabel,
+} from "@/lib/mezzi/format-mezzo-search-result";
 import { readMezzoSelectionRecents } from "@/lib/mezzi/mezzo-selection-recents";
 import {
   resolveSingleMezzoPickerEnter,
@@ -15,10 +18,71 @@ import {
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { MezzoSelectionSource, SelectedMezzoContext } from "@/lib/lavorazioni/selected-mezzo-context";
 import { useSelectorListboxKeyboard } from "@/lib/selector-interaction/use-selector-listbox-keyboard";
-import { dsBtnNeutral, dsBtnPrimary, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
-import { globalAutocompleteOptionClass } from "@/lib/ui/global-input";
+import { dsBtnPrimary, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
 
 const SEARCH_DEBOUNCE_MS = 180;
+const MEZZO_ROW_ESTIMATE_HEIGHT = 82;
+/** Altezza fissa area lista — senza max-h il flex cresce col contenuto e non scrolla. */
+const MEZZO_PICKER_LIST_SCROLL_CLASS =
+  "gestionale-scrollbar min-h-[10rem] max-h-[min(28rem,calc(92dvh-14rem))] overflow-y-auto overscroll-y-contain touch-pan-y [scrollbar-gutter:stable] px-1.5 py-1.5 sm:px-2 sm:py-2 max-md:max-h-[min(36rem,calc(100dvh-12rem))] [&>[data-listbox-row-index]]:mb-3.5";
+
+function mezzoPickerCardClass(active: boolean): string {
+  return [
+    "w-full rounded-[var(--ds-radius-lg)] border px-3.5 py-2.5 text-left transition-[border-color,background-color,box-shadow] duration-150 outline-none touch-manipulation",
+    active
+      ? "border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] shadow-[var(--cab-shadow-sm)] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]"
+      : "border-[color:color-mix(in_srgb,var(--cab-border)_85%,transparent)] bg-[var(--cab-surface)] shadow-[0_1px_2px_color-mix(in_srgb,var(--cab-border)_35%,transparent)] hover:border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] hover:bg-[var(--cab-hover)]",
+  ].join(" ");
+}
+
+function MezzoPickerOptionRow({
+  lines,
+  highlightQ,
+  active,
+  fallbackLabel,
+  onSelect,
+  onMouseEnter,
+}: {
+  lines: string[];
+  highlightQ: string;
+  active: boolean;
+  fallbackLabel: string;
+  onSelect: () => void;
+  onMouseEnter: () => void;
+}) {
+  const [primary, ...details] = lines;
+
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={active}
+      className={mezzoPickerCardClass(active)}
+      onClick={onSelect}
+      onMouseEnter={onMouseEnter}
+    >
+      {lines.length === 0 ? (
+        <p className="text-sm font-semibold leading-snug text-[color:var(--cab-fg)]">
+          <HighlightSearchMatch text={fallbackLabel} query={highlightQ} />
+        </p>
+      ) : (
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="text-sm font-semibold leading-snug text-[color:var(--cab-fg)]">
+            <HighlightSearchMatch text={primary ?? fallbackLabel} query={highlightQ} />
+          </p>
+          {details.map((line, lineIndex) => (
+            <p
+              key={lineIndex}
+              className="text-sm leading-snug text-[color:var(--cab-text)] [overflow-wrap:anywhere]"
+            >
+              <HighlightSearchMatch text={line} query={highlightQ} />
+            </p>
+          ))}
+        </div>
+      )}
+    </button>
+  );
+}
 
 function mezzoSelectionSourceFromSection(sectionId: string | undefined): MezzoSelectionSource {
   if (sectionId === "recenti") return "recent";
@@ -29,10 +93,10 @@ function mezzoSelectionSourceFromSection(sectionId: string | undefined): MezzoSe
 function ListSkeleton() {
   return (
     <div className="space-y-2 py-1" aria-busy="true" aria-label="Caricamento mezzi">
-      {Array.from({ length: 6 }, (_, i) => (
+      {Array.from({ length: 4 }, (_, i) => (
         <div
           key={i}
-          className="h-11 animate-pulse rounded-[var(--ds-radius-lg)] bg-[color:color-mix(in_srgb,var(--cab-border)_35%,var(--cab-surface))]"
+          className="h-16 animate-pulse rounded-[var(--ds-radius-lg)] bg-[color:color-mix(in_srgb,var(--cab-border)_35%,var(--cab-surface))]"
         />
       ))}
     </div>
@@ -62,6 +126,7 @@ export function MezzoSelectionPanel({
   const listboxId = useId();
   const listScrollRef = useRef<HTMLDivElement>(null);
   const scrollToRowRef = useRef<((index: number) => void) | null>(null);
+  const keyboardScrollPendingRef = useRef(false);
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const [activeIndex, setActiveIndex] = useState(-1);
 
@@ -135,39 +200,62 @@ export function MezzoSelectionPanel({
     onEnter: handleEnter,
   });
 
-  const onSearchKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const runListboxKeyboard = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Tab") {
+        keyboardScrollPendingRef.current = true;
+      }
       handleListKeyDown(e);
     },
     [handleListKeyDown],
   );
 
+  const onSearchKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      runListboxKeyboard(e);
+    },
+    [runListboxKeyboard],
+  );
+
   useEffect(() => {
     if (activeIndex < 0) return;
+    // ponytail: scroll solo da tastiera — hover mouse non deve centrare la riga
+    if (!keyboardScrollPendingRef.current) return;
+    keyboardScrollPendingRef.current = false;
     scrollToRowRef.current?.(activeIndex);
   }, [activeIndex]);
+
+  const onListWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollHeight > el.clientHeight + 1) {
+      e.stopPropagation();
+    }
+  }, []);
 
   const showDuplicateWarning =
     searchResult.hasSearchQuery && !catalogLoading && catalog.length > 0 && navigableItems.length === 0;
 
   const catalogInitialLoading = catalogLoading && catalog.length === 0;
+  const highlightQ = debouncedQuery.trim();
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <GestionaleSearchField
-        value={query}
-        onChange={(e) => {
-          onQueryChange(e.target.value);
-          setActiveIndex(-1);
-        }}
-        onKeyDown={onSearchKeyDown}
-        placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-        aria-label="Cerca mezzo"
-        aria-controls={listboxId}
-        autoComplete="off"
-        autoFocus
-        disabled={catalogInitialLoading}
-      />
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
+      <div className="shrink-0">
+        <GestionaleSearchField
+          value={query}
+          onChange={(e) => {
+            onQueryChange(e.target.value);
+            setActiveIndex(-1);
+          }}
+          onKeyDown={onSearchKeyDown}
+          placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
+          aria-label="Cerca mezzo"
+          aria-controls={listboxId}
+          autoComplete="off"
+          autoFocus
+          disabled={catalogInitialLoading}
+        />
+      </div>
 
       {catalogError ? (
         <LoadingErrorState title="Errore caricamento mezzi" description={catalogError} />
@@ -178,78 +266,70 @@ export function MezzoSelectionPanel({
           Nessun mezzo in anagrafica. Usa &quot;Nuovo mezzo&quot; per registrare il primo.
         </p>
       ) : (
-        <div
-          ref={listScrollRef}
-          className="gestionale-scrollbar min-h-0 flex-1 overflow-y-auto"
-          onKeyDown={handleListKeyDown}
-        >
+        <div className="min-h-0 shrink-0 overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_38%,var(--cab-card))] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--cab-border)_35%,transparent)]">
           {showDuplicateWarning ? (
             <div
               role="status"
-              className="mb-2 rounded-[var(--ds-radius-lg)] border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100"
+              className="mx-2 mt-2 shrink-0 rounded-[var(--ds-radius-lg)] border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100"
             >
               Nessun risultato trovato. Verifica di non creare un duplicato prima di procedere.
             </div>
           ) : null}
 
-          {navigableItems.length === 0 && !searchResult.hasSearchQuery ? (
-            <p className="px-1 py-3 text-xs text-[color:var(--cab-text-muted)]">
-              Digita targa, matricola, cliente o marca per filtrare l&apos;anagrafica.
-            </p>
-          ) : null}
+          <div
+            ref={listScrollRef}
+            className={MEZZO_PICKER_LIST_SCROLL_CLASS}
+            onKeyDown={runListboxKeyboard}
+            onWheel={onListWheel}
+          >
+            {navigableItems.length === 0 && !searchResult.hasSearchQuery ? (
+              <p className="px-2 py-6 text-center text-xs leading-relaxed text-[color:var(--cab-text-muted)]">
+                Digita targa, matricola, cliente o marca per filtrare l&apos;anagrafica.
+              </p>
+            ) : null}
 
-          {navigableItems.length === 0 && searchResult.hasSearchQuery && !showDuplicateWarning ? null : (
-            <GlobalVirtualizedListbox
-              rowCount={searchResult.items.length}
-              scrollRef={listScrollRef}
-              scrollToRowRef={scrollToRowRef}
-              externalScrollHost
-              estimateRowHeight={52}
-              id={listboxId}
-              role="listbox"
-              aria-label="Risultati ricerca mezzi"
-              className="space-y-1"
-              renderRow={(index) => {
-                const item = searchResult.items[index];
-                if (!item) return null;
-                if (item.kind === "section") {
+            {navigableItems.length === 0 && searchResult.hasSearchQuery && !showDuplicateWarning ? null : (
+              <GlobalVirtualizedListbox
+                rowCount={searchResult.items.length}
+                scrollRef={listScrollRef}
+                scrollToRowRef={scrollToRowRef}
+                externalScrollHost
+                estimateRowHeight={MEZZO_ROW_ESTIMATE_HEIGHT}
+                id={listboxId}
+                role="listbox"
+                aria-label="Risultati ricerca mezzi"
+                renderRow={(index) => {
+                  const item = searchResult.items[index];
+                  if (!item) return null;
+                  if (item.kind === "section") {
+                    return (
+                      <div
+                        className="sticky top-0 z-[1] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_38%,var(--cab-card))] px-2 pb-1 pt-2.5 text-[10px] font-bold uppercase tracking-wider text-[color:var(--cab-text-muted)] backdrop-blur-[2px]"
+                        role="presentation"
+                      >
+                        {item.label}
+                        {item.count != null ? ` (${item.count})` : ""}
+                      </div>
+                    );
+                  }
+                  const lines = formatMezzoPickerCompactLines(item.mezzo);
+                  const isActive = item.navigableIndex === activeIndex;
                   return (
-                    <div
-                      className="sticky top-0 z-[1] bg-[var(--cab-card)] px-1 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]"
-                      role="presentation"
-                    >
-                      {item.label}
-                      {item.count != null ? ` (${item.count})` : ""}
+                    <div role="presentation" data-listbox-row-index={item.navigableIndex}>
+                      <MezzoPickerOptionRow
+                        lines={lines}
+                        highlightQ={highlightQ}
+                        active={isActive}
+                        fallbackLabel={formatMezzoSearchChipLabel(item.mezzo)}
+                        onSelect={() => selectMezzo(item.mezzo, item.navigableIndex)}
+                        onMouseEnter={() => setActiveIndex(item.navigableIndex)}
+                      />
                     </div>
                   );
-                }
-                const lines = formatMezzoSearchResultLines(item.mezzo);
-                const isActive = item.navigableIndex === activeIndex;
-                const highlightQ = debouncedQuery.trim();
-                return (
-                  <div role="presentation" data-listbox-row-index={item.navigableIndex}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={isActive}
-                      className={`${globalAutocompleteOptionClass(isActive, false)} !min-h-11 !w-full !text-left`}
-                      onClick={() => selectMezzo(item.mezzo, item.navigableIndex)}
-                      onMouseEnter={() => setActiveIndex(item.navigableIndex)}
-                    >
-                      <span className="block truncate font-medium text-[color:var(--cab-fg)]">
-                        <HighlightSearchMatch text={lines.primary} query={highlightQ} />
-                      </span>
-                      {lines.secondary ? (
-                        <span className="mt-0.5 block truncate text-xs font-normal text-[color:var(--cab-text-muted)]">
-                          <HighlightSearchMatch text={lines.secondary} query={highlightQ} />
-                        </span>
-                      ) : null}
-                    </button>
-                  </div>
-                );
-              }}
-            />
-          )}
+                }}
+              />
+            )}
+          </div>
         </div>
       )}
 
@@ -266,13 +346,17 @@ export function MezzoSelectionPanelFooter({
   showDuplicateWarning?: boolean;
 }) {
   return (
-    <div className="shrink-0 space-y-2 border-t border-[color:var(--cab-border)] pt-3">
-      {showDuplicateWarning ? (
-        <p className="text-xs text-[color:var(--cab-text-muted)]">
-          Se il mezzo esiste già, torna indietro e affina la ricerca.
-        </p>
-      ) : null}
-      <button type="button" className={`${dsBtnNeutral} min-h-11 w-full`} onClick={onNuovoMezzo}>
+    <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <p className="min-w-0 text-xs leading-snug text-[color:var(--cab-text-muted)]">
+        {showDuplicateWarning
+          ? "Se il mezzo esiste già, torna indietro e affina la ricerca."
+          : "Non trovi il mezzo? Registralo in anagrafica."}
+      </p>
+      <button
+        type="button"
+        className={`${dsBtnPrimary} min-h-11 w-full shrink-0 sm:w-auto sm:min-w-[11rem]`}
+        onClick={onNuovoMezzo}
+      >
         Nuovo mezzo
       </button>
     </div>
@@ -285,10 +369,8 @@ export function MezzoSelectionPanelPrimaryFooter({
   onNuovoMezzo: () => void;
 }) {
   return (
-    <div className="shrink-0 border-t border-[color:var(--cab-border)] pt-3">
-      <button type="button" className={`${dsBtnPrimary} min-h-11 w-full`} onClick={onNuovoMezzo}>
-        Nuovo mezzo
-      </button>
-    </div>
+    <button type="button" className={`${dsBtnPrimary} min-h-11 w-full`} onClick={onNuovoMezzo}>
+      Nuovo mezzo
+    </button>
   );
 }

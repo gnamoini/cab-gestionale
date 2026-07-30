@@ -4,6 +4,10 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CaptureDocumentFilePreview } from "@/components/document-capture/capture-document-file-preview";
 import { CaptureReviewPanelLoading, CaptureReviewSplitLayout } from "@/components/document-capture/capture-review-panel";
 import {
+  deriveCaptureCompileProgress,
+  type CaptureCompileLoadPhase,
+} from "@/lib/document-capture/capture-compile-progress";
+import {
   SchedaIngressoFormBody,
 } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
 import {
@@ -144,6 +148,7 @@ export function CaptureSchedaCompileStep({
 }) {
   const [compileData, setCompileData] = useState<CaptureIngressoCompileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadPhase, setLoadPhase] = useState<CaptureCompileLoadPhase>("settings");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [captureHints, setCaptureHints] = useState<
     Partial<Record<keyof SchedaIngressoFields, CaptureIngressoFieldHint>>
@@ -476,10 +481,15 @@ export function CaptureSchedaCompileStep({
   }, [onSubmitBusyChange, submitBusy]);
 
   useEffect(() => {
-    if (!sharedGlobalOpts || sharedGlobalOpts.isLoading) return;
+    if (!sharedGlobalOpts || sharedGlobalOpts.isLoading) {
+      setLoadPhase("settings");
+      return;
+    }
     let cancelled = false;
     setLoadError(null);
     fieldDirtyRef.current = {};
+    setLoading(true);
+    setLoadPhase("map_fields");
 
     const fast = buildCaptureIngressoCompileDataFast({
       fieldRows,
@@ -492,7 +502,7 @@ export function CaptureSchedaCompileStep({
       reviewCount: 0,
     });
     setCaptureHints({});
-    setLoading(false);
+    setLoadPhase("field_hints");
 
     void buildCaptureIngressoCompileHints({
       fieldRows: fast.fieldRows,
@@ -518,12 +528,14 @@ export function CaptureSchedaCompileStep({
             reviewCount: slow.reviewCount,
           };
         });
+        setLoading(false);
       })
       .catch((e) => {
         if (cancelled) return;
         const msg = e instanceof Error ? e.message : "Impossibile preparare la scheda";
         setLoadError(msg);
         onCompileError?.(msg);
+        setLoading(false);
       });
 
     return () => {
@@ -755,13 +767,33 @@ export function CaptureSchedaCompileStep({
     [applyMode, captureHints, compileData, create, gestToast, onCompileError, requestIngressoApply],
   );
 
+  const compileLoadProgress = useMemo(() => {
+    if (!sharedGlobalOpts || sharedGlobalOpts.isLoading) {
+      return deriveCaptureCompileProgress("settings");
+    }
+    if (loading) return deriveCaptureCompileProgress(loadPhase);
+    return null;
+  }, [sharedGlobalOpts, loading, loadPhase]);
+
   if (loading || !sharedGlobalOpts) {
     return (
       <CaptureReviewSplitLayout
         preview={
-          <CaptureReviewPanelLoading title="Anteprima documento" message="Caricamento anteprima…" skeleton="preview" />
+          <CaptureReviewPanelLoading
+            title="Anteprima documento"
+            message="Caricamento anteprima…"
+            skeleton="preview"
+            progressState={compileLoadProgress}
+          />
         }
-        review={<CaptureReviewPanelLoading title="Scheda ingresso" message="Preparazione campi…" skeleton="fields" />}
+        review={
+          <CaptureReviewPanelLoading
+            title="Scheda ingresso"
+            message="Preparazione campi…"
+            skeleton="fields"
+            progressState={compileLoadProgress}
+          />
+        }
       />
     );
   }
