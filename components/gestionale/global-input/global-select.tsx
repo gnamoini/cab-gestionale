@@ -18,6 +18,7 @@ import {
   globalAutocompleteAddBtnClass,
   globalAutocompleteDropdownPortalPanel,
   globalInputEmptyMessage,
+  globalInputComboboxClearBtn,
   globalInputFieldDefault,
   globalInputFieldFilterSearch,
   globalInputFieldFilterSelect,
@@ -138,6 +139,8 @@ export function GlobalSelect(props: GlobalSelectProps) {
     highlightSearch = true,
     minSheetOptions,
     exclusiveGroup,
+    clearable = false,
+    hideEmptyOptionInInput = false,
     "aria-label": ariaLabel,
   } = props;
 
@@ -279,8 +282,9 @@ export function GlobalSelect(props: GlobalSelectProps) {
       open,
       options,
       items,
+      hideEmptyOptionInInput,
     }),
-    [mode, value, query, focused, open, options, items],
+    [mode, value, query, focused, open, options, items, hideEmptyOptionInInput],
   );
 
   const displayValue = useMemo(() => autocompleteDisplayValue(engineInput), [engineInput]);
@@ -669,6 +673,22 @@ export function GlobalSelect(props: GlobalSelectProps) {
     resetQuery();
   }, [resetQuery]);
 
+  const showClearBtn =
+    clearable && !required && !disabled && !showLoadingUi && Boolean(value.trim());
+
+  const handleClear = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (blurTimer.current) clearTimeout(blurTimer.current);
+      editSessionRef.current.modified = false;
+      closeForExclusiveGroup();
+      onChange("");
+      requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
+    },
+    [closeForExclusiveGroup, onChange],
+  );
+
   closeAndResetRef.current = closeAndReset;
 
   const { notifyOpening: notifyExclusiveGroupOpening } = useSelectorExclusiveGroup(
@@ -809,7 +829,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
       }
     }
     if (activeIndex < 0 && !editSessionRef.current.modified) {
-      closeAndReset();
+      closeForExclusiveGroup();
       scheduleFocusNextGestionaleField(inputRef.current);
       return;
     }
@@ -843,7 +863,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
     items,
     strictFromList,
     runAtomicSelect,
-    closeAndReset,
+    closeForExclusiveGroup,
   ]);
 
   const listboxKeyboard = useSelectorListboxKeyboard({
@@ -1261,6 +1281,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
 
   const loadingPlaceholder = "Caricamento elenco…";
   const resolvedPlaceholder = showLoadingUi ? loadingPlaceholder : placeholder;
+  const inputFieldClass = `${fieldClass}${showInvalid ? globalInputInvalidRing : ""}${showClearBtn ? " pr-10" : ""}`;
 
   return (
     <div ref={wrapRef} className={`relative w-full ${className}`.trim()}>
@@ -1268,7 +1289,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
         ref={inputRef}
         id={inputId}
         aria-label={ariaLabel}
-        className={`${fieldClass}${showInvalid ? globalInputInvalidRing : ""}`}
+        className={inputFieldClass}
         value={displayValue}
         onChange={(e) => {
           if (effectiveSelectOnly || useSheetTriggerMode) return;
@@ -1327,6 +1348,20 @@ export function GlobalSelect(props: GlobalSelectProps) {
         aria-readonly={useSheetTriggerMode || effectiveSelectOnly || undefined}
         aria-busy={showLoadingUi || addPending || undefined}
       />
+      {showClearBtn ? (
+        <button
+          type="button"
+          className={globalInputComboboxClearBtn}
+          aria-label="Svuota selezione"
+          tabIndex={-1}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={handleClear}
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      ) : null}
       {typeof document !== "undefined" && dropdownPortal ? createPortal(dropdownPortal, document.body) : null}
       {sheetOpen ? (
       <GestionaleSearchableSheetSelect

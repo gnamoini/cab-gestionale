@@ -18,6 +18,7 @@ import {
   dsPageToolbarMetaActionBtnFilterCol,
   dsPageToolbarMetaChip,
   dsPageToolbarMetaChipAccent,
+  dsPrimaryActiveSurface,
   dsSegmentedBtnOff,
   dsSegmentedBtnOn,
   dsSegmentedWrap,
@@ -335,7 +336,7 @@ export function PageToolbarMetaToggle({
   className?: string;
 }) {
   const shell = checked
-    ? `${dsPageToolbarMetaActionBtn} border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_24%,transparent)]`
+    ? `${dsPageToolbarMetaActionBtn} ${dsPrimaryActiveSurface}`
     : dsPageToolbarMetaActionBtn;
 
   return (

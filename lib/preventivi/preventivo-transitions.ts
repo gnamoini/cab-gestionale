@@ -4,7 +4,7 @@ export const PREVENTIVO_TRANSITIONS = {
   bozza: ["inviato", "annullato"],
   inviato: ["confermato", "annullato"],
   confermato: ["annullato"],
-  annullato: [],
+  annullato: ["bozza", "inviato"],
 } as const satisfies Record<PreventivoStato, readonly PreventivoStato[]>;
 
 export function canTransitionPreventivoStato(from: PreventivoStato, to: PreventivoStato): boolean {

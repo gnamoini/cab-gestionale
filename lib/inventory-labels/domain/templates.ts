@@ -38,6 +38,7 @@ const CUT_BORDER_MM = 0.25;
 const A4_QR_SIZE_MM = 58;
 const A4_LOGO_QR_GAP_MM = 1.5;
 const A4_TEXT_BOTTOM_GAP_MM = 2.5;
+const CLIENTE_QR_WEBSITE_GAP_MM = 0.5;
 
 /** Altezza riga testo in mm (allineata al rendering SVG `dominant-baseline=hanging`). */
 export function fontLineHeightMm(fontPt: number, factor = 1.2): number {
@@ -356,9 +357,12 @@ export function computeClienteLabelLayout(
   const innerW = widthMm - m * 2;
   const scale = labelFontScale(widthMm, heightMm) * typography.scale;
   const primaryPt = applyTypographyPt(scaledFontPt(7, scale / typography.scale, 7, 16), typography);
+  const websitePt = applyTypographyPt(scaledFontPt(5, scale / typography.scale, 4, 7), typography);
+  const websiteBlockMm = fontLineHeightMm(websitePt) + CLIENTE_QR_WEBSITE_GAP_MM;
   const labelBottomMm = heightMm - m;
 
-  const qr = qrMaxSizeMm != null ? Math.min(heightMm - m * 2, qrMaxSizeMm) : heightMm - m * 2;
+  const qrMaxH = heightMm - m * 2 - websiteBlockMm;
+  const qr = qrMaxSizeMm != null ? Math.min(qrMaxH, qrMaxSizeMm) : qrMaxH;
   const textX = m + qr + GAP_MM;
   const textW = Math.max(10, innerW - qr - GAP_MM);
   const logoH = clienteLogoHeightMm(widthMm, heightMm);
@@ -367,6 +371,15 @@ export function computeClienteLabelLayout(
 
   return [
     { type: "qr", xMm: m, yMm: m, sizeMm: qr },
+    {
+      type: "text",
+      literalSource: "clienteWebsite",
+      xMm: m + qr / 2,
+      yMm: m + qr + CLIENTE_QR_WEBSITE_GAP_MM,
+      fontPt: websitePt,
+      maxWidthMm: qr,
+      hAlign: "center",
+    },
     { type: "logo", xMm: textX, yMm: m, widthMm: logoW, heightMm: logoH },
     {
       type: "text",
@@ -450,7 +463,7 @@ function buildClienteTemplate(base: LabelTemplateDefinition): LabelTemplateDefin
   return {
     ...base,
     id: `${base.id}-cliente`,
-    version: "1.8.0-cliente",
+    version: "1.8.1-cliente",
     marginsMm,
     layoutMode: "horizontal-qr-left",
     elements,

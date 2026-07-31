@@ -173,6 +173,26 @@ export function inferTipoAttrezzaturaPdfLegacy(p: PreventivoRecord): string | un
   return mac;
 }
 
+export function buildPreventivoDestinatarioOperativiPdfFields(
+  p: Pick<PreventivoRecord, "cliente" | "cantiere" | "utilizzatore">,
+): PdfField[] {
+  const field = pdfFieldFromValue;
+  return [field("Cliente", p.cliente), field("Cantiere", p.cantiere), field("Utilizzatore", p.utilizzatore)].filter(
+    (f): f is PdfField => f !== null,
+  );
+}
+
+export function buildPreventivoDestinatarioPdfFields(
+  p: PreventivoRecord,
+  opts?: PreventivoClientePdfOptions,
+): PdfField[] {
+  const operativi = buildPreventivoDestinatarioOperativiPdfFields(p);
+  const anag = opts?.clienteAnagrafica;
+  if (!anag?.id) return operativi;
+  const fiscali = buildClienteFiscalePdfFields(anag, { codiceFiscale: opts?.codiceFiscale });
+  return mergePdfFieldsDeduped(fiscali, operativi);
+}
+
 export function buildPreventivoClientePdfFields(
   p: PreventivoRecord,
   opts?: PreventivoClientePdfOptions,
@@ -184,6 +204,47 @@ export function buildPreventivoClientePdfFields(
   return mergePdfFieldsDeduped(fiscali, operativi);
 }
 
+export function buildPreventivoSchedaIngressoAttrezzaturaPdfFields(p: PreventivoRecord): PdfField[] {
+  const tipoEsplicito = p.tipoAttrezzatura?.trim();
+  const tipoLegacy = !tipoEsplicito ? inferTipoAttrezzaturaPdfLegacy(p) : undefined;
+  const fields = [
+    pdfFieldFromValue("Tipo attrezzatura", tipoEsplicito || tipoLegacy),
+    pdfFieldFromValue("Marca", p.marcaAttrezzatura),
+    pdfFieldFromValue("Modello", p.modelloAttrezzatura),
+    pdfFieldFromValue("Matricola", p.matricola),
+    pdfFieldFromValue("N. scuderia", p.nScuderia),
+  ].filter((f): f is PdfField => f !== null);
+  if (fields.length > 0) return fields;
+  const macchina = p.macchinaRiassunto.trim();
+  if (macchina) return [{ label: "Macchina", value: macchina }];
+  return fields;
+}
+
+export function buildPreventivoSchedaIngressoTelaioPdfFields(p: PreventivoRecord): PdfField[] {
+  const fields = [
+    pdfFieldFromValue("Tipo telaio", p.tipoTelaio),
+    pdfFieldFromValue("Marca telaio", p.marcaTelaio),
+    pdfFieldFromValue("Modello telaio", p.modelloTelaio),
+    pdfFieldFromValue("Targa", p.targa),
+  ].filter((f): f is PdfField => f !== null);
+  if (fields.length > 0) return fields;
+  const targa = p.targa.trim();
+  const macchina = p.macchinaRiassunto.trim();
+  const legacy: PdfField[] = [];
+  if (targa) legacy.push({ label: "Targa", value: targa });
+  if (macchina) legacy.push({ label: "Macchina", value: macchina });
+  return legacy;
+}
+
+/** Campi oggetto intervento — allineati alla scheda ingresso del modal preventivo (no ore/km/carburante). */
+export function buildPreventivoOggettoInterventoPdfFields(p: PreventivoRecord): PdfField[] {
+  return [
+    ...buildPreventivoSchedaIngressoAttrezzaturaPdfFields(p),
+    ...buildPreventivoSchedaIngressoTelaioPdfFields(p),
+  ];
+}
+
+/** @deprecated Usare buildPreventivoSchedaIngressoAttrezzaturaPdfFields */
 export function buildPreventivoAttrezzaturaPdfFields(p: PreventivoRecord): PdfField[] {
   const tipoEsplicito = p.tipoAttrezzatura?.trim();
   const tipoLegacy = !tipoEsplicito ? inferTipoAttrezzaturaPdfLegacy(p) : undefined;
@@ -201,6 +262,7 @@ export function buildPreventivoAttrezzaturaPdfFields(p: PreventivoRecord): PdfFi
   return fields;
 }
 
+/** @deprecated Usare buildPreventivoSchedaIngressoTelaioPdfFields */
 export function buildPreventivoTelaioMezzoPdfFields(p: PreventivoRecord): PdfField[] {
   const fields = buildTelaioAnagraficaPdfFields(p);
   if (fields.length > 0) return fields;
@@ -230,20 +292,7 @@ function mergePdfFieldsWithLabelCollisionPrefix(
   return out;
 }
 
-/** Campi oggetto intervento per PDF preventivo (attrezzatura + telaio, label collision prefissate). */
-export function buildPreventivoOggettoInterventoPdfFields(p: PreventivoRecord): PdfField[] {
-  const targetType = p.targetType ?? (p.marcaAttrezzatura.trim() ? "attrezzatura" : "telaio");
-  if (targetType === "telaio") {
-    return buildPreventivoTelaioMezzoPdfFields(p);
-  }
-  const attrezzatura = buildPreventivoAttrezzaturaPdfFields(p);
-  const telaio = buildPreventivoTelaioMezzoPdfFields(p);
-  if (!attrezzatura.length) return telaio;
-  if (!telaio.length) return attrezzatura;
-  return mergePdfFieldsWithLabelCollisionPrefix(attrezzatura, telaio, "Telaio");
-}
-
-/** @deprecated Usare buildPreventivoTelaioMezzoPdfFields */
+/** @deprecated Usare buildPreventivoSchedaIngressoTelaioPdfFields */
 export function buildPreventivoMezzoPdfFields(p: PreventivoRecord): PdfField[] {
   return buildPreventivoTelaioMezzoPdfFields(p);
 }

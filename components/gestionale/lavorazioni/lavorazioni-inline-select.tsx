@@ -5,6 +5,7 @@ import { Tooltip } from "@/components/ui";
 import {
   GlobalFixedListPillSelect,
   type FixedListPillOption,
+  type FixedListPillSelectLayout,
   type FixedListPillSelectSize,
 } from "@/components/gestionale/global-input/global-fixed-list-pill";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
@@ -305,6 +306,8 @@ export function AddettoSelectField({
   className = "",
   inputClassName,
   size = "compact",
+  layout,
+  placeholder,
 }: {
   variant?: "pill" | "default";
   shellClass?: string;
@@ -321,6 +324,8 @@ export function AddettoSelectField({
   inputClassName?: string;
   /** `form` = altezza allineata ai campi modale (`GlobalFixedListPillSelect`). */
   size?: FixedListPillSelectSize;
+  layout?: FixedListPillSelectLayout;
+  placeholder?: string;
 }) {
   const pillOptions = useMemo(
     () =>
@@ -355,7 +360,7 @@ export function AddettoSelectField({
   const widthClass = tablePillWidth ?? "w-full min-w-0";
   return (
     <div className={`group overflow-visible ${widthClass} ${disabled ? "opacity-60" : ""}`}>
-      <GlobalFixedListPillSelect value={value} onChange={onChange} options={pillOptions} ariaLabel={ariaLabel} disabled={disabled} title={title} sheetTitle={ariaLabel} shellClass={shellClass} fallbackPillStyle={shellStyle} size={size}/>
+      <GlobalFixedListPillSelect value={value} onChange={onChange} options={pillOptions} ariaLabel={ariaLabel} disabled={disabled} title={title} sheetTitle={ariaLabel} shellClass={shellClass} fallbackPillStyle={shellStyle} size={size} layout={layout} placeholder={placeholder}/>
     </div>
   );
 }

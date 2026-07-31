@@ -1,9 +1,10 @@
 "use client";
 
 import { GestionaleConfirmDialog, gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog";
+import { GestionaleModalFooterCancelButton } from "@/components/design-system";
 import { mezzoIngressoSuggestLabel } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import { dsBtnNeutral, dsBtnPrimary, dsBtnSoftOrange } from "@/lib/ui/design-system";
+import { dsBtnPrimary, dsBtnSoftOrange } from "@/lib/ui/design-system";
 
 export type MezzoDuplicatoAnagraficaChoice = "overwrite" | "keep";
 
@@ -30,9 +31,7 @@ export function MezzoDuplicatoAnagraficaDialog({
       onCancel={onCancel}
       footer={
         <div className={gestionaleConfirmActionsClass}>
-          <button type="button" className={`${dsBtnNeutral} min-h-[2.75rem] sm:min-h-0`} onClick={onCancel}>
-            Annulla
-          </button>
+          <GestionaleModalFooterCancelButton className="w-full sm:w-auto" onClick={onCancel} />
           <button type="button" className={`${dsBtnSoftOrange} min-h-[2.75rem] sm:min-h-0`} onClick={onKeepExisting}>
             Mantieni dati esistenti
           </button>

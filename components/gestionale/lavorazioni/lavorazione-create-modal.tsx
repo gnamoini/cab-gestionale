@@ -6,8 +6,11 @@ import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
-import { LoadingButton } from "@/components/design-system";
-import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import {
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterSaveButton,
+  gestionaleModalFooterActionsStackMobileWrapClass,
+} from "@/components/design-system";
 import {
   SchedaIngressoFormBody,
   SchedaIngressoFormModalShell,
@@ -68,27 +71,26 @@ export function LavorazioneCreateModal({
         onRequestClose={create.requestClose}
         variant="create-lavorazione"
         footer={
-          <div className="flex w-full flex-col-reverse gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:justify-end">
+          <div className={gestionaleModalFooterActionsStackMobileWrapClass}>
             {create.schedaSyncError ? (
-              <button
-                type="button"
-                className={`${erpBtnNeutral} min-h-11 w-full sm:w-auto`}
+              <GestionaleModalFooterCancelButton
+                className="w-full sm:w-auto"
                 disabled={create.pending}
                 onClick={() => create.setPartialCloseConfirmOpen(true)}
               >
                 Chiudi comunque
-              </button>
+              </GestionaleModalFooterCancelButton>
             ) : null}
-            <LoadingButton
+            <GestionaleModalFooterSaveButton
               type="submit"
               form="lavorazione-create-form"
-              className={`${erpBtnAccent} min-h-11 w-full sm:ml-auto sm:w-auto sm:min-w-[10rem]`}
+              className="w-full sm:ml-auto sm:w-auto sm:min-w-[10rem]"
               loading={create.pending}
               loadingLabel="Salvataggio…"
               disabled={!createdBy || create.stati.length === 0 || create.globalOpts.isLoading}
             >
               Salva lavorazione
-            </LoadingButton>
+            </GestionaleModalFooterSaveButton>
           </div>
         }
       >

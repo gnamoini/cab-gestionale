@@ -14,6 +14,9 @@ export type MezzoIdentificazioneParts = {
   cliente?: string;
   cantiere?: string;
   utilizzatore?: string;
+  marcaTelaio?: string;
+  modelloTelaio?: string;
+  vin?: string;
 };
 
 const ORDER: { key: keyof MezzoIdentificazioneParts; label: string }[] = [
@@ -29,7 +32,8 @@ const ORDER: { key: keyof MezzoIdentificazioneParts; label: string }[] = [
 
 function clean(s: string | undefined | null): string | undefined {
   const t = String(s ?? "").trim();
-  return t.length > 0 ? t : undefined;
+  if (!t || t === "—") return undefined;
+  return t;
 }
 
 /** Es. `Targa: AB123CD • Matricola: MX…` — solo campi valorizzati. */
@@ -40,6 +44,46 @@ export function formatIdentificazioneMezzoLine(parts: MezzoIdentificazioneParts)
     if (v) segments.push(`${label}: ${v}`);
   }
   return segments.join(" • ");
+}
+
+export type IdentificazioneMezzoBandId = "cliente" | "attrezzatura" | "telaio";
+
+export type IdentificazioneMezzoBand = {
+  id: IdentificazioneMezzoBandId;
+  line: string;
+};
+
+function joinIdentificazioneBandValues(...values: (string | undefined | null)[]): string {
+  return values.map((v) => clean(v)).filter(Boolean).join(" · ");
+}
+
+/** Bande CLIENTE / ATTREZZATURE / TELAIO per UI scheda (allineato a `formatMezzoPickerBands`). */
+export function formatIdentificazioneMezzoBands(parts: MezzoIdentificazioneParts): IdentificazioneMezzoBand[] {
+  const bands: IdentificazioneMezzoBand[] = [
+    {
+      id: "cliente",
+      line: joinIdentificazioneBandValues(parts.cliente, parts.cantiere, parts.utilizzatore),
+    },
+    {
+      id: "attrezzatura",
+      line: joinIdentificazioneBandValues(
+        parts.marcaAttrezzatura,
+        parts.modelloAttrezzatura,
+        parts.matricola,
+        parts.nScuderia,
+      ),
+    },
+    {
+      id: "telaio",
+      line: joinIdentificazioneBandValues(
+        parts.marcaTelaio,
+        parts.modelloTelaio,
+        parts.targa,
+        parts.vin,
+      ),
+    },
+  ];
+  return bands.filter((b) => b.line.length > 0);
 }
 
 /** Subtitle modale hub lavorazione: `Cliente • Marca • Targa · Matricola · Scud. …`. */
@@ -111,6 +155,25 @@ export function identificazionePartsFromSchedaIngresso(f: SchedaIngressoFields):
     cliente: clean(f.cliente),
     cantiere: clean(f.cantiere),
     utilizzatore: clean(f.utilizzatore),
+    marcaTelaio: clean(f.marcaTelaio),
+    modelloTelaio: clean(f.modelloTelaio),
+    vin: clean(f.vin),
+  };
+}
+
+export function identificazionePartsFromMezzo(mezzo: MezzoGestito): MezzoIdentificazioneParts {
+  return {
+    targa: clean(mezzo.targa),
+    matricola: clean(mezzo.matricola),
+    nScuderia: clean(mezzo.numeroScuderia),
+    marcaAttrezzatura: clean(mezzo.marca),
+    modelloAttrezzatura: clean(mezzo.modello),
+    cliente: clean(mezzo.cliente),
+    cantiere: clean(mezzo.cantiere),
+    utilizzatore: clean(mezzo.utilizzatore),
+    marcaTelaio: clean(mezzo.marcaTelaio),
+    modelloTelaio: clean(mezzo.modelloTelaio),
+    vin: clean(mezzo.vin),
   };
 }
 

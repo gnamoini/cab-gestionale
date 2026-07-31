@@ -1,6 +1,7 @@
 "use client";
 
-import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
+import { GestionaleConfirmDialog, gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog";
+import { GestionaleModalFooterCancelButton } from "@/components/design-system";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
 import type { SchedaConcurrencyResolution } from "@/lib/schede/scheda-concurrency-merge";
@@ -27,10 +28,12 @@ export function SchedaConcurrencyMergeDialog({
       pending={pending}
       onCancel={onCancel}
       footer={
-        <div className="flex min-w-0 shrink-0 flex-col gap-2 px-4 py-3 sm:flex-row sm:flex-wrap sm:justify-end sm:px-5">
-          <button type="button" className={dsBtnNeutral} disabled={pending} onClick={onCancel}>
-            Annulla
-          </button>
+        <div className={gestionaleConfirmActionsClass}>
+          <GestionaleModalFooterCancelButton
+            className="w-full sm:w-auto"
+            disabled={pending}
+            onClick={onCancel}
+          />
           <button
             type="button"
             className={dsBtnNeutral}

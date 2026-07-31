@@ -12,14 +12,18 @@ import {
   type CSSProperties,
   type FormEvent,
   type ReactNode,
-  type Ref,
 } from "react";
 import { useGlobalOptions, type GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import {
+  mezzoIngressoSuggestLabel,
+} from "@/lib/schede/scheda-ingresso-ident-suggest";
 import type { SchedaIngressoIdentField } from "@/lib/schede/scheda-ingresso-ident-suggest";
-import { mezzoIngressoSuggestLabel } from "@/lib/schede/scheda-ingresso-ident-suggest";
+import { identificazionePartsFromMezzo } from "@/lib/mezzi/identificazione-mezzo";
+import { listMezzoCatalogFieldDrifts } from "@/lib/schede/scheda-ingresso-mezzo-catalog-drift";
+import { SchedaMezzoIdentificazioneReadonly } from "@/components/lavorazioni/schede/scheda-form-utils";
 import {
   SCHEDA_INGRESSO_ADDETTO_ACCETTAZIONE_LABEL,
   SCHEDA_INGRESSO_ADDETTO_LABEL,
@@ -56,13 +60,25 @@ import {
   type UseSchedaIngressoMezzoPromptResult,
 } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import { useSchedaIngressoSaveGate } from "@/src/hooks/use-scheda-ingresso-save-gate";
+import { useSchedaIngressoSavePipeline } from "@/src/hooks/use-scheda-ingresso-save-pipeline";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { useFormEngine } from "@/lib/forms/form-engine";
+import { prepareFormSubmitAsync } from "@/lib/forms/form-engine/prepare-form-submit";
+import type { FormSubmitLock } from "@/lib/forms/form-engine/submit-lock";
+import type {
+  IngressoSaveCommitInput,
+  IngressoSaveCommitResult,
+  IngressoSaveResult,
+} from "@/lib/schede/scheda-ingresso-save-pipeline";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { LoadingButton } from "@/components/design-system";
+import {
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterDeleteButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
 import { Tooltip } from "@/components/ui";
 import {
-  erpBtnAccent,
   erpBtnNeutral,
   prioritaPillShellClass,
   prioritaPillShellStyle,
@@ -86,7 +102,7 @@ import type { CaptureIngressoFieldHint } from "@/lib/document-capture/capture-in
 import { RichiedenteFirmaCaptureModal } from "@/components/gestionale/schede/richiedente-firma-capture-modal";
 import { RichiedenteFirmaDisplay } from "@/components/gestionale/schede/richiedente-firma-display";
 import { hasSignatureDataUrl } from "@/lib/media/signature-pad";
-import { dsBtnDanger, dsBtnNeutral, dsInput, dsLabel, dsAccentSoftBanner } from "@/lib/ui/design-system";
+import { dsBtnNeutral, dsInput } from "@/lib/ui/design-system";
 import { cabModalLayerClass } from "@/lib/ui/mobile-modal-behavior";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import {
@@ -96,6 +112,7 @@ import {
 } from "@/lib/ui/modal-max-width-class";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useSchedaIngressoUnknownSettingsGate } from "@/src/hooks/use-scheda-ingresso-unknown-settings-gate";
+import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import {
   SCHEDA_INGRESSO_INGRESSO_FIELD_KEYS,
   SCHEDA_INGRESSO_INTERVENTO_FIELD_KEYS,
@@ -288,17 +305,13 @@ function SchedaIngressoIngressoLinkedMezzoHint({
   const title = mezzoPrefilledFromCatalog ? "Mezzo selezionato" : "Anagrafica mezzi";
 
   return (
-    <div className="block min-w-0">
-      <span className={`${dsLabel} text-[color:var(--cab-text)]`}>{title}</span>
-      <div
-        className={`${dsAccentSoftBanner} mt-1.5 flex min-h-[2.625rem] min-w-0 items-center rounded-[var(--ds-radius-lg)] px-3 py-2 shadow-[var(--cab-shadow-sm)]`}
-        role="status"
-      >
-        <p className="truncate text-xs font-medium leading-snug text-[color:var(--cab-text)]">
-          {mezzoIngressoSuggestLabel(mezzo)}
-        </p>
-      </div>
-    </div>
+    <FormField label={title} className="min-w-0">
+      <SchedaMezzoIdentificazioneReadonly
+        parts={identificazionePartsFromMezzo(mezzo)}
+        fallbackLine={mezzoIngressoSuggestLabel(mezzo)}
+        shellVariant="ingresso"
+      />
+    </FormField>
   );
 }
 
@@ -306,7 +319,6 @@ function SchedaIngressoIngressoDataSection({
   dataIngresso,
   disabled,
   dataIngressoFieldId,
-  inputRef,
   onDataIngressoChange,
   linkedMezzo,
   mezzoPrefilledFromCatalog = false,
@@ -314,7 +326,6 @@ function SchedaIngressoIngressoDataSection({
   dataIngresso: string;
   disabled: boolean;
   dataIngressoFieldId: string;
-  inputRef?: Ref<HTMLInputElement>;
   onDataIngressoChange: (v: string) => void;
   linkedMezzo?: MezzoGestito | null;
   mezzoPrefilledFromCatalog?: boolean;
@@ -322,13 +333,12 @@ function SchedaIngressoIngressoDataSection({
   return (
     <FormSection title="Ingresso" hideTitle>
       <div className="grid gap-2 sm:grid-cols-2">
-        <FormField label="Data ingresso" htmlFor={dataIngressoFieldId} required>
+        <FormField label="Data ingresso" htmlFor={dataIngressoFieldId} required className="min-w-0">
           <GlobalDatePicker
             id={dataIngressoFieldId}
             value={dataIngresso}
             onChange={onDataIngressoChange}
             inputClassName={dsInput}
-            inputRef={inputRef}
             required
             disabled={disabled}
           />
@@ -453,8 +463,7 @@ type SchedaIngressoGestioneLavorazioneSectionProps = {
   addettoPickerOptions?: readonly FixedListPillOption[];
   captureHintAddetto?: CaptureIngressoFieldHint;
   onApplyCaptureHint?: (key: keyof SchedaIngressoFields, value: string) => void;
-  /** Create: stato + priorità + addetto; edit: solo addetto. */
-  showStatoPriorita?: boolean;
+  statoFieldLabel?: string;
 };
 
 const SchedaIngressoGestioneLavorazioneSection = memo(function SchedaIngressoGestioneLavorazioneSection({
@@ -477,10 +486,11 @@ const SchedaIngressoGestioneLavorazioneSection = memo(function SchedaIngressoGes
   addettoPickerOptions,
   captureHintAddetto,
   onApplyCaptureHint,
-  showStatoPriorita = true,
+  statoFieldLabel = "Stato iniziale",
 }: SchedaIngressoGestioneLavorazioneSectionProps) {
   const statoOpts = statoPillOptions ?? [];
   const prioritaOpts = prioritaPillOptions ?? [];
+  const showStatoPriorita = onStatoChange != null && onPrioritaChange != null;
   return (
     <FormSection title="Gestione lavorazione" hideTitle>
       <div className="space-y-3" role="group" aria-label="Stato, priorità e addetto">
@@ -493,7 +503,7 @@ const SchedaIngressoGestioneLavorazioneSection = memo(function SchedaIngressoGes
         >
           {showStatoPriorita ? (
             <>
-              <FormField label="Stato iniziale" className="min-w-0">
+              <FormField label={statoFieldLabel} className="min-w-0">
                 <GlobalFixedListPillSelect
                   value={stato ?? ""}
                   onChange={(v) => onStatoChange?.(v)}
@@ -536,6 +546,7 @@ const SchedaIngressoGestioneLavorazioneSection = memo(function SchedaIngressoGes
                 value={ingressoAddettoId || null}
                 onChange={onIngressoAddettoChange}
                 ariaLabel={SCHEDA_INGRESSO_ADDETTO_ACCETTAZIONE_LABEL}
+                placeholder={SCHEDA_INGRESSO_ADDETTO_LABEL}
                 size="form"
                 disabled={disabled || addettiEmpty}
                 options={addettoPickerOptions}
@@ -550,7 +561,7 @@ const SchedaIngressoGestioneLavorazioneSection = memo(function SchedaIngressoGes
   if (prev.disabled !== next.disabled) return false;
   if (prev.stato !== next.stato) return false;
   if (prev.priorita !== next.priorita) return false;
-  if (prev.showStatoPriorita !== next.showStatoPriorita) return false;
+  if (prev.statoFieldLabel !== next.statoFieldLabel) return false;
   if (prev.onStatoChange !== next.onStatoChange) return false;
   if (prev.onPrioritaChange !== next.onPrioritaChange) return false;
   if (prev.globalOptsLoading !== next.globalOptsLoading) return false;
@@ -574,6 +585,7 @@ type SchedaIngressoFormVariant = "create-lavorazione" | "edit-scheda";
 export function SchedaIngressoFormModalShell({
   open,
   onRequestClose,
+  onBack,
   variant,
   subtitle,
   children,
@@ -583,6 +595,7 @@ export function SchedaIngressoFormModalShell({
 }: {
   open: boolean;
   onRequestClose: () => void;
+  onBack?: () => void;
   variant: SchedaIngressoFormVariant;
   subtitle?: string;
   children: ReactNode;
@@ -598,6 +611,7 @@ export function SchedaIngressoFormModalShell({
       modalHeight={modalHeight}
       layerClassName={variant === "edit-scheda" ? cabModalLayerClass("stacked") : undefined}
       onRequestClose={onRequestClose}
+      onBack={onBack}
       title={variant === "create-lavorazione" ? "Nuova lavorazione" : "Scheda di ingresso"}
       subtitle={subtitle?.trim() ? subtitle : undefined}
       footer={footer ?? undefined}
@@ -641,7 +655,6 @@ export function SchedaIngressoFormBody({
   onLavorazioneNoteChange,
   tagliandoFields,
   onTagliandoFieldsChange,
-  requestInitialFocus = false,
 }: {
   variant: SchedaIngressoFormVariant;
   fields: SchedaIngressoDraftFields;
@@ -680,11 +693,9 @@ export function SchedaIngressoFormBody({
   onLavorazioneNoteChange?: (value: string) => void;
   tagliandoFields?: TagliandoLavorazioneFields;
   onTagliandoFieldsChange?: (patch: Partial<TagliandoLavorazioneFields>) => void;
-  requestInitialFocus?: boolean;
 }) {
   const disabled = pending || readOnly;
   const dataIngressoFieldId = useId();
-  const dataIngressoInputRef = useRef<HTMLInputElement>(null);
   const anomaliaFieldId = useId();
   const noteFieldId = useId();
   const hookGlobalOpts = useGlobalOptions({
@@ -736,43 +747,28 @@ export function SchedaIngressoFormBody({
     [fields, onPatch],
   );
 
-  useEffect(() => {
-    if (!requestInitialFocus || disabled) return;
-    const id = requestAnimationFrame(() => {
-      dataIngressoInputRef.current?.focus();
-    });
-    return () => cancelAnimationFrame(id);
-  }, [requestInitialFocus, disabled]);
-
   const linkedMezzoCatalog = useMemo(() => {
     const id = mezzoPrompt.linkedSnapshot?.id ?? mezzoPrompt.preferredMezzoId;
     if (!id) return null;
     return mezziCatalog.find((m) => m.id === id) ?? null;
   }, [mezziCatalog, mezzoPrompt.linkedSnapshot?.id, mezzoPrompt.preferredMezzoId]);
 
+  const mezzoCatalogFieldDrifts = useMemo(() => {
+    if (!linkedMezzoCatalog || mezzoPrompt.linkState.status !== "linked") return [];
+    return listMezzoCatalogFieldDrifts(
+      fields,
+      linkedMezzoCatalog,
+      mezzoPrompt.editedPermanentFields,
+    );
+  }, [
+    fields,
+    linkedMezzoCatalog,
+    mezzoPrompt.editedPermanentFields,
+    mezzoPrompt.linkState.status,
+  ]);
+
   const mezzoInlineHint = useMemo(() => {
-    if (mezzoPrompt.hasConflict && mezzoPrompt.linkedSnapshot) {
-      const mezzo =
-        linkedMezzoCatalog ??
-        mezziCatalog.find((m) => m.id === mezzoPrompt.linkedSnapshot!.id) ??
-        mezzoPrompt.pendingMezzo;
-      if (!mezzo) return null;
-      return {
-        variant: "conflitto" as const,
-        mezzo,
-        matchField: (mezzoPrompt.activeMatchField ?? "matricola") as SchedaIngressoIdentField,
-      };
-    }
     if (mezzoPrefilledFromCatalog) return null;
-    if (mezzoPrompt.linkState.status === "linked" && linkedMezzoCatalog) {
-      return {
-        variant: "collegato" as const,
-        mezzo: linkedMezzoCatalog,
-        matchField: (mezzoPrompt.activeMatchField ??
-          mezzoPrompt.linkedSnapshot?.linkedViaField ??
-          "matricola") as SchedaIngressoIdentField,
-      };
-    }
     if (mezzoPrompt.linkState.status === "unconfirmed_match" && mezzoPrompt.pendingMezzo) {
       return {
         variant: "trovato" as const,
@@ -782,13 +778,9 @@ export function SchedaIngressoFormBody({
     }
     return null;
   }, [
-    linkedMezzoCatalog,
-    mezziCatalog,
     mezzoPrefilledFromCatalog,
     mezzoPrompt.activeMatchField,
-    mezzoPrompt.hasConflict,
     mezzoPrompt.linkState.status,
-    mezzoPrompt.linkedSnapshot,
     mezzoPrompt.pendingMezzo,
   ]);
 
@@ -881,7 +873,6 @@ export function SchedaIngressoFormBody({
           dataIngresso={fields.dataIngresso}
           disabled={disabled}
           dataIngressoFieldId={dataIngressoFieldId}
-          inputRef={dataIngressoInputRef}
           onDataIngressoChange={(v) => onPatch({ dataIngresso: v })}
           linkedMezzo={
             (mezzoLinked || mezzoPrompt.linkState.status === "linked") && linkedMezzoCatalog
@@ -901,8 +892,10 @@ export function SchedaIngressoFormBody({
           hideSectionTitles
           onExactMezzoMatch={onMezzoPromptMatch}
           mezzoInlineHint={mezzoInlineHint}
+          mezzoCatalogFieldDrifts={mezzoCatalogFieldDrifts}
           onUseMezzoFromHint={(field) => mezzoPrompt.acceptLinkMezzo(field)}
           onDismissMezzoHint={mezzoPrompt.dismissPendingMatch}
+          onNotifyPermanentFieldUserEdit={mezzoPrompt.notifyPermanentFieldUserEdit}
           clienteRequired={false}
           marcaAttrezzaturaRequired={false}
           mezzoLinked={mezzoLinked || mezzoPrompt.linkState.status === "linked"}
@@ -982,46 +975,29 @@ export function SchedaIngressoFormBody({
           />
         </FormSection>
 
-        {variant === "create-lavorazione" ? (
-          <SchedaIngressoGestioneLavorazioneSection
-            fields={fields}
-            disabled={disabled}
-            stato={stato}
-            priorita={priorita}
-            onStatoChange={onStatoChange}
-            onPrioritaChange={onPrioritaChange}
-            onPatch={onPatch}
-            globalOptsLoading={globalOpts.isLoading}
-            statiEmpty={stati.length === 0}
-            prioritaEmpty={prioritaOpts.length === 0}
-            statoPillOptions={statoPillOptions}
-            prioritaPillOptions={prioritaPillOptions}
-            statoPillStyle={statoPillStyle}
-            prioritaPillStyle={prioritaPillStyle}
-            ingressoAddettoId={ingressoAddettoId}
-            onIngressoAddettoChange={onIngressoAddettoChange}
-            addettiEmpty={addettiOpts.length === 0}
-            addettoPickerOptions={addettoPickerOptions}
-            captureHintAddetto={captureHints?.addettoAccettazione}
-            onApplyCaptureHint={onApplyCaptureHint}
-            showStatoPriorita
-          />
-        ) : (
-          <SchedaIngressoGestioneLavorazioneSection
-            fields={fields}
-            disabled={disabled}
-            ingressoAddettoId={ingressoAddettoId}
-            onIngressoAddettoChange={onIngressoAddettoChange}
-            addettiEmpty={addettiOpts.length === 0}
-            addettoPickerOptions={addettoPickerOptions}
-            captureHintAddetto={captureHints?.addettoAccettazione}
-            onApplyCaptureHint={onApplyCaptureHint}
-            showStatoPriorita={false}
-            statoPillOptions={statoPillOptions}
-            prioritaPillOptions={prioritaPillOptions}
-            onPatch={onPatch}
-          />
-        )}
+        <SchedaIngressoGestioneLavorazioneSection
+          fields={fields}
+          disabled={disabled}
+          stato={stato}
+          priorita={priorita}
+          onStatoChange={onStatoChange}
+          onPrioritaChange={onPrioritaChange}
+          onPatch={onPatch}
+          globalOptsLoading={globalOpts.isLoading}
+          statiEmpty={stati.length === 0}
+          prioritaEmpty={prioritaOpts.length === 0}
+          statoPillOptions={statoPillOptions}
+          prioritaPillOptions={prioritaPillOptions}
+          statoPillStyle={statoPillStyle}
+          prioritaPillStyle={prioritaPillStyle}
+          ingressoAddettoId={ingressoAddettoId}
+          onIngressoAddettoChange={onIngressoAddettoChange}
+          addettiEmpty={addettiOpts.length === 0}
+          addettoPickerOptions={addettoPickerOptions}
+          captureHintAddetto={captureHints?.addettoAccettazione}
+          onApplyCaptureHint={onApplyCaptureHint}
+          statoFieldLabel={variant === "create-lavorazione" ? "Stato iniziale" : "Stato"}
+        />
       </SchedaIngressoFormScrollShell>
     </>
   );
@@ -1032,8 +1008,11 @@ export function SchedaIngressoEditModal({
   initialFields,
   initialLavorazioneNote = "",
   initialTagliandoFields,
-  onRequestClose,
-  onSave,
+  onClose,
+  commitIngressoEdit,
+  onSaveSuccess,
+  ingressoSaveRunRef,
+  submitLock,
   onDelete,
   readOnly = false,
   canEdit = true,
@@ -1045,19 +1024,22 @@ export function SchedaIngressoEditModal({
   storico = [],
   excludeLavorazioneId,
   bootstrapMezzoId,
+  initialLavorazioneStato,
+  initialLavorazionePriorita,
 }: {
   open: boolean;
   initialFields: SchedaIngressoFields;
   initialLavorazioneNote?: string;
   initialTagliandoFields?: TagliandoLavorazioneFields;
-  /** Chiusura (Annulla / ESC): riceve il draft corrente per dirty-check nel parent. */
-  onRequestClose: (draft: SchedaIngressoFields) => void;
-  onSave: (
-    draft: SchedaIngressoFields,
-    mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan,
-    lavorazioneNote?: string,
-    tagliandoFields?: TagliandoLavorazioneFields,
-  ) => void | Promise<void>;
+  /** Chiusura dopo conferma (Annulla / X / ESC senza modifiche). */
+  onClose: () => void;
+  /** Unico commit — invocato solo dalla pipeline SSOT. */
+  commitIngressoEdit: (input: IngressoSaveCommitInput) => Promise<IngressoSaveCommitResult>;
+  onSaveSuccess?: () => void;
+  /** Espone run() per «Salva ed esci» dal parent (stessa pipeline). */
+  ingressoSaveRunRef?: React.MutableRefObject<(() => Promise<IngressoSaveResult>) | null>;
+  /** Lock condiviso col hub schede — evita persist in background durante save. */
+  submitLock?: FormSubmitLock;
   onDelete?: () => void;
   readOnly?: boolean;
   canEdit?: boolean;
@@ -1070,21 +1052,63 @@ export function SchedaIngressoEditModal({
   excludeLavorazioneId?: string;
   /** Mezzo collegato alla lavorazione — baseline anagrafica all'apertura. */
   bootstrapMezzoId?: string | null;
+  initialLavorazioneStato: string;
+  initialLavorazionePriorita: PrioritaLavorazione;
 }) {
   const ro = readOnly || !canEdit;
-  const [saving, setSaving] = useState(false);
+  const [lavorazioneStato, setLavorazioneStato] = useState(initialLavorazioneStato);
+  const [lavorazionePriorita, setLavorazionePriorita] = useState(initialLavorazionePriorita);
   const [lavorazioneNote, setLavorazioneNote] = useState(initialLavorazioneNote);
   const [tagliandoFields, setTagliandoFields] = useState<TagliandoLavorazioneFields>(
     initialTagliandoFields ?? DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS,
   );
   const formEngine = useFormEngine<SchedaIngressoFields>({ initial: initialFields });
-  const { value: draft, reset, setValue, patch: onPatch, runSubmit, formProps, ref: draftRef } =
+  const { value: draft, reset, setValue, patch: onPatch, getSnapshot, formProps, ref: draftRef } =
     formEngine;
-  const savePending = pending || saving;
+  const commitRef = useRef(commitIngressoEdit);
+  commitRef.current = commitIngressoEdit;
   const tagliandoFieldsRef = useRef(tagliandoFields);
   const lavorazioneNoteRef = useRef(lavorazioneNote);
+  const lavorazioneStatoRef = useRef(lavorazioneStato);
+  const lavorazionePrioritaRef = useRef(lavorazionePriorita);
   const ingressoEditorOpenedRef = useRef(false);
   const mezzoBootstrapDoneRef = useRef(false);
+  const baselineRef = useRef<string | null>(null);
+  const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
+
+  const syncCloseBaseline = useCallback(() => {
+    baselineRef.current = JSON.stringify({
+      fields: getSnapshot(),
+      lavorazioneNote: lavorazioneNoteRef.current,
+      tagliandoFields: tagliandoFieldsRef.current,
+      lavorazioneStato: lavorazioneStatoRef.current,
+      lavorazionePriorita: lavorazionePrioritaRef.current,
+    });
+  }, [getSnapshot]);
+
+  const isCloseDirty = useCallback(() => {
+    const baseline = baselineRef.current;
+    if (!baseline) return false;
+    return (
+      baseline !==
+      JSON.stringify({
+        fields: getSnapshot(),
+        lavorazioneNote: lavorazioneNoteRef.current,
+        tagliandoFields: tagliandoFieldsRef.current,
+        lavorazioneStato: lavorazioneStatoRef.current,
+        lavorazionePriorita: lavorazionePrioritaRef.current,
+      })
+    );
+  }, [getSnapshot]);
+
+  const requestClose = useCallback(() => {
+    if (!isCloseDirty()) {
+      setUnsavedExitOpen(false);
+      onClose();
+      return;
+    }
+    setUnsavedExitOpen(true);
+  }, [isCloseDirty, onClose]);
 
   useLayoutEffect(() => {
     tagliandoFieldsRef.current = tagliandoFields;
@@ -1094,10 +1118,20 @@ export function SchedaIngressoEditModal({
     lavorazioneNoteRef.current = lavorazioneNote;
   }, [lavorazioneNote]);
 
+  useLayoutEffect(() => {
+    lavorazioneStatoRef.current = lavorazioneStato;
+  }, [lavorazioneStato]);
+
+  useLayoutEffect(() => {
+    lavorazionePrioritaRef.current = lavorazionePriorita;
+  }, [lavorazionePriorita]);
+
   useEffect(() => {
     if (!open) {
       ingressoEditorOpenedRef.current = false;
       mezzoBootstrapDoneRef.current = false;
+      baselineRef.current = null;
+      setUnsavedExitOpen(false);
       return;
     }
     if (ingressoEditorOpenedRef.current) return;
@@ -1106,7 +1140,23 @@ export function SchedaIngressoEditModal({
     setLavorazioneNote(initialLavorazioneNote);
     lavorazioneNoteRef.current = initialLavorazioneNote;
     setTagliandoFields(initialTagliandoFields ?? DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS);
-  }, [open, initialFields, initialLavorazioneNote, initialTagliandoFields, reset]);
+    tagliandoFieldsRef.current = initialTagliandoFields ?? DEFAULT_TAGLIANDO_LAVORAZIONE_FIELDS;
+    setLavorazioneStato(initialLavorazioneStato);
+    lavorazioneStatoRef.current = initialLavorazioneStato;
+    setLavorazionePriorita(initialLavorazionePriorita);
+    lavorazionePrioritaRef.current = initialLavorazionePriorita;
+    const baselineTimer = window.setTimeout(() => syncCloseBaseline(), 0);
+    return () => window.clearTimeout(baselineTimer);
+  }, [
+    open,
+    initialFields,
+    initialLavorazioneNote,
+    initialTagliandoFields,
+    initialLavorazioneStato,
+    initialLavorazionePriorita,
+    reset,
+    syncCloseBaseline,
+  ]);
 
   const patchLavorazioneNote = useCallback((value: string) => {
     lavorazioneNoteRef.current = value;
@@ -1147,9 +1197,23 @@ export function SchedaIngressoEditModal({
     if (!mezzoId) return;
     const mezzo = mezziCatalog.find((m) => m.id === mezzoId);
     if (!mezzo) return;
+
+    const snap = getSnapshot();
+    // ponytail: attendi default targetType dal figlio — evita falso conflitto al primo focus
+    if (!snap.targetType) return;
+
     mezzoBootstrapDoneRef.current = true;
-    bootstrapLinkedMezzo(mezzo, pickMezzoPermanentFields(initialFields));
-  }, [open, bootstrapMezzoId, mezziCatalog, initialFields, bootstrapLinkedMezzo]);
+    bootstrapLinkedMezzo(mezzo, pickMezzoPermanentFields(snap));
+    syncCloseBaseline();
+  }, [
+    open,
+    bootstrapMezzoId,
+    mezziCatalog,
+    draft.targetType,
+    getSnapshot,
+    bootstrapLinkedMezzo,
+    syncCloseBaseline,
+  ]);
 
   const patchTagliandoFields = useCallback((patch: Partial<TagliandoLavorazioneFields>) => {
     setTagliandoFields((prev) => {
@@ -1162,76 +1226,83 @@ export function SchedaIngressoEditModal({
   const globalOpts = useGlobalOptions({ enabled: open, debugTag: "SchedaIngressoEditModal" });
   const { gateSubmit, dialog: unknownSettingsDialog } = useSchedaIngressoUnknownSettingsGate(globalOpts);
 
+  const savePipeline = useSchedaIngressoSavePipeline({
+    submitLock,
+    mezziCatalog,
+    gateSubmit,
+    gateSave: saveGate.gateSave,
+    commit: (input) => commitRef.current(input),
+  });
+  const savePending = pending || savePipeline.isPending;
+
+  const runIngressoSave = useCallback(async (): Promise<IngressoSaveResult> => {
+    const snap = getSnapshot();
+    const addettoId =
+      snap.addettoAccettazioneId?.trim() ||
+      backfillAddettoIdFromLegacyString(
+        globalOpts.lavorazioni.addettiRecords,
+        snap.addettoAccettazione,
+      ) ||
+      "";
+    const fields = writeIngressoAddettoId(snap, addettoId);
+    const result = await savePipeline.run({
+      fields,
+      lavorazioneNote: lavorazioneNoteRef.current,
+      tagliandoFields: tagliandoFieldsRef.current,
+      lavorazioneGestione: {
+        stato: lavorazioneStatoRef.current,
+        priorita: lavorazionePrioritaRef.current,
+      },
+    });
+    if (result.ok) onSaveSuccess?.();
+    return result;
+  }, [getSnapshot, globalOpts.lavorazioni.addettiRecords, onSaveSuccess, savePipeline]);
+
+  useEffect(() => {
+    if (!ingressoSaveRunRef) return;
+    ingressoSaveRunRef.current = runIngressoSave;
+    return () => {
+      ingressoSaveRunRef.current = null;
+    };
+  }, [ingressoSaveRunRef, runIngressoSave]);
+
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (ro || !open || savePending) return;
-    void runSubmit(e.currentTarget, async (snap) => {
-      await gateSubmit(snap, async (gatedFields) => {
-        setSaving(true);
-        try {
-          let mezzoUpdatePlan;
-          try {
-            mezzoUpdatePlan = await saveGate.gateSave(gatedFields);
-          } catch (err) {
-            if (err instanceof Error && err.message === "SAVE_CANCELLED") return;
-            throw err;
-          }
-          await onSave(
-            writeIngressoAddettoId(
-              gatedFields,
-              gatedFields.addettoAccettazioneId?.trim() ||
-                backfillAddettoIdFromLegacyString(
-                  globalOpts.lavorazioni.addettiRecords,
-                  gatedFields.addettoAccettazione,
-                ) ||
-                "",
-            ),
-            mezzoUpdatePlan,
-            lavorazioneNoteRef.current,
-            tagliandoFieldsRef.current,
-          );
-        } finally {
-          setSaving(false);
-        }
-      });
-    });
+    void (async () => {
+      await prepareFormSubmitAsync(e.currentTarget);
+      await runIngressoSave();
+    })();
   }
 
   if (!open) return null;
 
   return (
+    <>
     <SchedaIngressoFormModalShell
       open={open}
-      onRequestClose={() => onRequestClose(draftRef.current)}
+      onRequestClose={requestClose}
+      onBack={requestClose}
       variant="edit-scheda"
       subtitle="Modifica i dati di accettazione mezzo."
       footer={
-        <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2">
+        <GestionaleModalFooterActions>
           {onDelete && !readOnly ? (
-            <button type="button" className={`${dsBtnDanger} min-h-11`} onClick={onDelete} disabled={savePending}>
+            <GestionaleModalFooterDeleteButton onClick={onDelete} disabled={savePending}>
               Elimina scheda
-            </button>
+            </GestionaleModalFooterDeleteButton>
           ) : null}
-          <button
-            type="button"
-            className={`${erpBtnNeutral} min-h-11`}
-            onClick={() => onRequestClose(draftRef.current)}
-            disabled={savePending}
-          >
-            Annulla
-          </button>
+          <GestionaleModalFooterCancelButton onClick={requestClose} disabled={savePending} />
           {!ro ? (
-            <LoadingButton
+            <GestionaleModalFooterSaveButton
               type="submit"
               form="scheda-ingresso-edit-form"
-              className={`${erpBtnAccent} min-h-11`}
               loading={savePending}
-              preset="salva"
             >
               Salva scheda
-            </LoadingButton>
+            </GestionaleModalFooterSaveButton>
           ) : null}
-        </div>
+        </GestionaleModalFooterActions>
       }
     >
       <form
@@ -1252,6 +1323,10 @@ export function SchedaIngressoEditModal({
           attive={attive}
           storico={storico}
           excludeLavorazioneId={excludeLavorazioneId}
+          stato={lavorazioneStato}
+          priorita={lavorazionePriorita}
+          onStatoChange={setLavorazioneStato}
+          onPrioritaChange={setLavorazionePriorita}
           updatedByHint={updatedBy?.trim() || null}
           mezzoPrompt={mezzoPrompt}
           lavorazioneNote={lavorazioneNote}
@@ -1259,11 +1334,29 @@ export function SchedaIngressoEditModal({
           tagliandoFields={tagliandoFields}
           onTagliandoFieldsChange={patchTagliandoFields}
           mezzoId={mezzoPrompt.linkedSnapshot?.id ?? ""}
-          requestInitialFocus={open}
         />
       </form>
       {unknownSettingsDialog}
       {saveGate.dialog}
     </SchedaIngressoFormModalShell>
+
+    <GestionaleUnsavedChangesDialog
+      open={unsavedExitOpen}
+      placement="stacked"
+      message="Hai modifiche non salvate. Vuoi uscire senza salvare?"
+      pending={savePending}
+      onStay={() => setUnsavedExitOpen(false)}
+      onDiscard={() => {
+        setUnsavedExitOpen(false);
+        onClose();
+      }}
+      onSaveAndExit={() => {
+        void (async () => {
+          const result = await runIngressoSave();
+          if (result.ok) setUnsavedExitOpen(false);
+        })();
+      }}
+    />
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createRandomUuid } from "@/lib/uuid/create-random-uuid";
 import type { GeneratedDescriptionLine, DescriptionActivityOverride, OverrideStatus } from "./types";
 
 export function applyOperatorOverrides(
@@ -58,7 +58,7 @@ export function diffOverridesFromEdit(opts: {
     const stillPresent = finalTexts.some((t) => t.trim() === line.text.trim());
     if (!stillPresent) {
       overrides.push({
-        id: randomUUID(),
+        id: createRandomUuid(),
         generationId,
         activityId: line.activityId,
         sourceType: line.sourceType,
@@ -79,7 +79,7 @@ export function diffOverridesFromEdit(opts: {
     const fuzzy = [...genByActivity.values()].find((l) => l.activityId && finalText.length > 8);
     if (fuzzy?.activityId && fuzzy.text.trim() !== finalText.trim()) {
       overrides.push({
-        id: randomUUID(),
+        id: createRandomUuid(),
         generationId,
         activityId: fuzzy.activityId,
         sourceType: fuzzy.sourceType,

@@ -1,6 +1,5 @@
 "use client";
 
-import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
 import { OptionalTooltip, Tooltip } from "@/components/ui";
 import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import type { ReactNode } from "react";
@@ -8,8 +7,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { flushSync } from "react-dom";
-import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
-import { gestionaleTextareaMaxHeightCompact } from "@/lib/ui/design-system";
 import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
 import { HubModalTab, HubModalTabBar } from "@/components/design-system/hub-modal-tab-bar";
 import { SchedaIngressoPanoramicaAnagraficaContent } from "@/components/gestionale/lavorazioni/scheda-ingresso-panoramica-view";
@@ -20,7 +17,12 @@ import {
 } from "@/components/design-system/hub-modal-panoramica";
 import { canOpenDocumento, formatDocumentoRigaSintetica, openDocumentoFile } from "@/components/gestionale/documenti/documenti-helpers";
 import { HubIconOpen, HubIconTrash } from "@/components/design-system/hub-table-action-icons";
-import { ShellNavBackButton } from "@/components/design-system/shell-nav-icon-button";
+import {
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterDeleteButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
 import {
   LavorazioniModalHeader,
   LavorazioniModalShell,
@@ -31,10 +33,7 @@ import { SchedaIngressoEditModal } from "@/components/gestionale/lavorazioni/lav
 import { SchedaEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/scheda-elimina-confirm-dialog";
 import { normalizeSchedaIngressoFields } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
 import { CaptureMultiSchedaNotice } from "@/components/document-capture/capture-multi-scheda-notice";
-import { GlobalDatePicker } from "@/components/gestionale/global-input";
-import { AddettoPicker, AddettoDisplayPill, addettoRefFromFields } from "@/components/domain/addetti";
 import { SCHEDA_RIGA_ADDETTO_WRITE_RULES, stripAddettoLegacyFieldsOnWrite } from "@/lib/lavorazioni/addetto-write-freeze";
-import { backfillAddettoIdFromLegacyString } from "@/lib/schede/schede-addetto-id-migrate";
 import { LavorazioneCostoDiscreto } from "@/components/gestionale/lavorazioni/lavorazione-costo-discreto";
 import { LavorazioneMediaPanel } from "@/components/gestionale/media/lavorazione-media-panel";
 import { useInterventoContext } from "@/src/hooks/gestionale/use-intervento-context";
@@ -44,17 +43,10 @@ import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { FileEsternoBadge, SchedaStatoBadge } from "@/components/lavorazioni/schede/schede-badges";
-import { SchedaOreNumberInput } from "@/components/lavorazioni/schede/scheda-form-utils";
-import { GestionaleQuantityField } from "@/components/gestionale/gestionale-quantity-field";
-import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { SchedaLavorazioniFormBody } from "@/components/lavorazioni/schede/scheda-lavorazioni-form-body";
+import { SchedaRicambiFormBody } from "@/components/lavorazioni/schede/scheda-ricambi-form-body";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
-import {
-  RicambiMagSearchPortal,
-  RicambioRowAutocompletePortal,
-} from "@/lib/selector-core/legacy-selector-adapters";
 import { applyMagazzinoScaricoDaScheda } from "@/lib/magazzino/apply-scarico-da-scheda";
-import type { RicambioMagazzino } from "@/lib/magazzino/types";
-import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import {
@@ -62,18 +54,9 @@ import {
   formatLavorazioneDetailHeaderSubtitle,
   identificazionePartsFromLavorazione,
   identificazionePartsFromSchedaIngresso,
+  type MezzoIdentificazioneParts,
 } from "@/lib/mezzi/identificazione-mezzo";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import {
-  applyCopyLastSchedaMatch,
-  copyLastSchedaIngresso,
-  listCopyLastSchedaIngressoCandidates,
-} from "@/lib/domain/scheda-ingresso/copy-last-scheda";
-import {
-  isIngressoIdentInMezziAnagrafica,
-  type LastSchedaIngressoMatch,
-} from "@/lib/schede/scheda-ingresso-reuse";
-import { SchedaIngressoCopyPickDialog } from "@/components/gestionale/lavorazioni/scheda-ingresso-copy-pick-dialog";
 import {
   diffSchedaIngressoCampi,
   diffSchedaLavorazioniDoc,
@@ -89,6 +72,11 @@ import {
   findMezzoForLavorazione,
 } from "@/lib/schede/schede-autofill";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
+import type {
+  IngressoSaveCommitInput,
+  IngressoSaveCommitResult,
+  IngressoSaveResult,
+} from "@/lib/schede/scheda-ingresso-save-pipeline";
 import { openBlobInNewTab } from "@/lib/schede/schede-print-html";
 import { openSchedaPdfInNewTab } from "@/lib/schede/schede-pdf";
 import {
@@ -102,19 +90,20 @@ import {
 import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioniLogChange, LavorazioniLogTipo } from "@/lib/lavorazioni/lavorazioni-change-log";
-import { LavorazionePreventiviHubList, CreaPreventivoDaSchedeCta } from "@/components/lavorazioni/schede/lavorazione-preventivi-hub-list";
+import { LavorazionePreventiviHubList, CreaPreventivoButton } from "@/components/lavorazioni/schede/lavorazione-preventivi-hub-list";
+import { PreventivoEsistenteConfirmDialog } from "@/components/lavorazioni/schede/preventivo-esistente-confirm-dialog";
 import {
   buildPreventiviArchivioFilterHref,
   buildPreventiviOpenHrefForRecord,
 } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { mergePreventiviPerMacchina, mezzoPerFiltroPreventivi } from "@/lib/preventivi/preventivi-per-macchina";
 import { preventivoRowToRecordStub } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { removePreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
 import { writePendingPreventivoPayload, navigateToPendingPreventivoCreate } from "@/lib/preventivi/preventivi-session-bridge";
 import { resolveMezzoForPreventivoHandoff } from "@/lib/preventivi/resolve-mezzo-for-pending-preventivo";
 import type { PreventivoLavorazioneOrigine, PreventivoRecord } from "@/lib/preventivi/types";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import {
-  dsBadgeOk,
   dsBtnDanger,
   dsBtnNeutral,
   dsBtnPrimary,
@@ -124,14 +113,10 @@ import {
   dsHubModalFieldLabel,
   dsInput,
   dsLabel,
-  dsScrollbar,
-  dsTable,
   dsTableActionTextBtn,
   dsTableActionTextBtnDanger,
+  dsTableActionTextBtnNeutral,
   dsTableActionTextBtnPrimary,
-  dsTableRow,
-  dsTableWrap,
-  GESTIONALE_SEARCH_PLACEHOLDER,
 } from "@/lib/ui/design-system";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { LavorazioneAttivitaPanel } from "@/components/lavorazioni/lavorazione-attivita-panel";
@@ -177,14 +162,6 @@ function writeSchedaRigaAddetto(addettoId: string, oreImpiegate: number): RigaAd
     { addettoId: id || null, oreImpiegate, addetto: "" },
     SCHEDA_RIGA_ADDETTO_WRITE_RULES,
   ) as RigaAddettoOreScheda;
-}
-
-function writeSchedaRicambioAddetto(row: RigaRicambioScheda, addettoId: string): RigaRicambioScheda {
-  const id = addettoId.trim();
-  return stripAddettoLegacyFieldsOnWrite(
-    { ...row, addettoId: id || null, addetto: "" },
-    SCHEDA_RIGA_ADDETTO_WRITE_RULES,
-  ) as RigaRicambioScheda;
 }
 
 type LavRow = LavorazioneAttiva | LavorazioneArchiviata;
@@ -285,6 +262,7 @@ export function SchedeLavorazioneModal({
   schedeStore,
   onSchedaLog,
   onIngressoCommitted,
+  onInvalidateAfterIngressoSave,
   canDeleteLavorazione = false,
   onDeleteLavorazione,
   deleteLavorazionePending = false,
@@ -319,14 +297,22 @@ export function SchedeLavorazioneModal({
   currentUser: string;
   schedeStore: Record<string, LavorazioneSchedeBundle>;
   onSchedaLog?: (ev: SchedaLogEv) => void;
-  /** Post-persist scheda: il parent deve chiamare executeInterventoWrite — mai syncIngressoAfterSave diretto. */
+  /** Backend sync — solo da pipeline SSOT, catalogo congelato. */
   onIngressoCommitted?: (
     campi: SchedaIngressoFields,
-    options?: {
+    options: {
       mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
       lavorazioneNote?: string;
       tagliandoFields?: import("@/lib/maintenance-plans/tagliando-lavorazione-fields").TagliandoLavorazioneFields;
+      mezziCatalogFrozen: readonly import("@/lib/mezzi/types").MezzoGestito[];
+      runId: number;
+      lavorazioneGestione?: import("@/lib/schede/scheda-ingresso-save-pipeline").IngressoLavorazioneGestionePatch;
     },
+  ) => void | Promise<void>;
+  /** Invalidazione batch unica post-commit. */
+  onInvalidateAfterIngressoSave?: (
+    lavorazioneId: string,
+    mezzoId?: string | null,
   ) => void | Promise<void>;
   canDeleteLavorazione?: boolean;
   onDeleteLavorazione?: () => void;
@@ -358,7 +344,7 @@ export function SchedeLavorazioneModal({
   });
   const [stage, setStage] = useState<Stage>({ kind: "hub" });
   const [hubTab, setHubTab] = useState<HubTab>(initialTab);
-  const [unsavedPanel, setUnsavedPanel] = useState<null | "ingresso" | "lav" | "ric">(null);
+  const [unsavedPanel, setUnsavedPanel] = useState<null | "lav" | "ric">(null);
   const [panoramicaNoteSaving, setPanoramicaNoteSaving] = useState(false);
   const [schedaEditorSaving, setSchedaEditorSaving] = useState(false);
   const [draft, setDraft] = useState<LavorazioneSchedeBundle>(bundle);
@@ -370,6 +356,9 @@ export function SchedeLavorazioneModal({
   const modalRootRef = useRef<HTMLDivElement | null>(null);
   const submitLock = useSubmitLock();
   const ingressoDraftRef = useRef<SchedaIngressoFields | null>(null);
+  const ingressoSaveRunRef = useRef<(() => Promise<IngressoSaveResult>) | null>(null);
+  const [preventivoEsistenteOpen, setPreventivoEsistenteOpen] = useState(false);
+  const [generaPreventivoBusy, setGeneraPreventivoBusy] = useState(false);
   const [ingressoFormOpen, setIngressoFormOpen] = useState(false);
   const [ingressoEditorInitial, setIngressoEditorInitial] = useState<SchedaIngressoFields | null>(null);
   const [ingressoTagliandoInitial, setIngressoTagliandoInitial] =
@@ -399,7 +388,6 @@ export function SchedeLavorazioneModal({
     },
   });
   const [eliminaConfirmTipo, setEliminaConfirmTipo] = useState<SchedaTipo | null>(null);
-  const [ingressoCopyPickOpen, setIngressoCopyPickOpen] = useState(false);
   const baselineIngressoJson = useRef<string | null>(null);
   const baselineLavorazioniJson = useRef<string | null>(null);
   const baselineRicambiJson = useRef<string | null>(null);
@@ -667,59 +655,6 @@ export function SchedeLavorazioneModal({
     }
   }
 
-  function applyDuplicateIngressoFromMatch(match: LastSchedaIngressoMatch) {
-    const u = currentUser.trim() || "Operatore";
-    const now = new Date().toISOString();
-    const campi = applyCopyLastSchedaMatch("full-snapshot", undefined, match);
-    baselineIngressoJson.current = JSON.stringify(campi);
-    const doc: SchedaIngressoDoc = {
-      ...newSchedaMeta("ingresso", u),
-      tipo: "ingresso",
-      createdAt: now,
-      updatedAt: now,
-      createdBy: u,
-      updatedBy: u,
-      sorgente: "generata",
-      fileEsterno: null,
-      campi,
-    };
-    persistBundleInBackground({ ...draftRef.current, ingresso: doc });
-    openIngressoEditor(campi);
-    setIngressoCopyPickOpen(false);
-    emitLog({
-      tipo: "creazione",
-      schedaOggetto: SCHEDA_INGRESSO_LABEL,
-      riepilogo: "Scheda ingresso creata (copia da intervento precedente)",
-      changes: [],
-    });
-  }
-
-  function duplicateIngressoPrev() {
-    const result = copyLastSchedaIngresso({
-      ident: hubCopyLastIdent,
-      mode: "full-snapshot",
-      mezzi,
-      schedeStore,
-      attive,
-      storico,
-      excludeLavorazioneId: lav.id,
-    });
-    if (result.kind === "none") {
-      gestToast.warning(
-        "Nessuna scheda ingresso precedente trovata per questo mezzo (targa, matricola o n. scuderia).",
-      );
-      return;
-    }
-    if (result.kind === "pick") {
-      gestToast.warning(
-        `Trovate ${result.candidates.length} schede ingresso — scegli quale copiare.`,
-      );
-      setIngressoCopyPickOpen(true);
-      return;
-    }
-    applyDuplicateIngressoFromMatch(result.match);
-  }
-
   const lavOrigine = origine ?? (lav.id.startsWith("lav-arch-") ? ("storico" as const) : ("attiva" as const));
 
   const preventiviCollegati = useMemo(() => {
@@ -745,7 +680,81 @@ export function SchedeLavorazioneModal({
     return (hubData?.documenti ?? []).map(documentoRowToGestionale);
   }, [hubData?.documenti]);
 
-  async function generaPreventivoDaHub() {
+  async function eseguiGeneraPreventivoDaHub(replaceExisting: boolean) {
+    if (generaPreventivoBusy) return;
+    setGeneraPreventivoBusy(true);
+    setPreventivoEsistenteOpen(false);
+    try {
+      const snap = draftRef.current;
+      const ctxMezzoId =
+        interventoCtx.context?.mezzo?.present
+          ? interventoCtx.context.mezzo.id?.trim() || null
+          : null;
+      const lavMezzoId = interventoCtx.context?.lavorazione?.mezzoId?.trim() || null;
+      const ident =
+        interventoCtx.display && !interventoCtx.isLoading
+          ? {
+              targa: interventoCtx.display.targa.value,
+              matricola: interventoCtx.display.matricola.value,
+              nScuderia: interventoCtx.display.nScuderia.value,
+            }
+          : !interventoCtx.isLoading && interventoCtx.ident
+            ? interventoCtx.ident
+            : { targa: lav.targa, matricola: lav.matricola, nScuderia: lav.nScuderia };
+      const mezzoForPreventivo = resolveMezzoForPreventivoHandoff(mezzi, {
+        lav,
+        mezzoId: mezzo?.id ?? ctxMezzoId ?? lavMezzoId,
+        ident,
+      });
+      if (!mezzoForPreventivo) {
+        gestToast.warning(
+          "Mezzo non trovato in anagrafica: verifica targa o matricola prima di creare il preventivo.",
+        );
+        return;
+      }
+      const identCanon = {
+        targa: mezzoForPreventivo.targa?.trim() || ident.targa?.trim() || "",
+        matricola: mezzoForPreventivo.matricola?.trim() || ident.matricola?.trim() || "",
+        nScuderia: mezzoForPreventivo.numeroScuderia?.trim() || ident.nScuderia?.trim() || "",
+      };
+      const bundleToPersist: LavorazioneSchedeBundle = {
+        ...snap,
+        lavorazioneId: lav.id,
+        ingresso: snap.ingresso ?? draft.ingresso ?? null,
+        lavorazioni: lavDoc ?? snap.lavorazioni ?? draft.lavorazioni ?? null,
+        ricambi: ricDoc ?? snap.ricambi ?? draft.ricambi ?? null,
+      };
+      if (replaceExisting) {
+        for (const p of preventiviCollegati) {
+          const id = p.id?.trim();
+          if (!id) continue;
+          const del = await removePreventivoRecord(id, { queryClient: qc });
+          if (!del.ok) {
+            gestToast.error(del.error ?? "Eliminazione preventivo non riuscita.");
+            return;
+          }
+        }
+      }
+      const persistRes = await persistBundle(bundleToPersist);
+      if (!persistRes.ok) {
+        gestToast.error(persistRes.error ?? "Salvataggio schede non riuscito prima del preventivo.");
+        return;
+      }
+      writePendingPreventivoPayload({
+        lav,
+        origine: lavOrigine,
+        mezzoId: mezzoForPreventivo.id,
+        mezzo: mezzoForPreventivo,
+        ident: identCanon,
+        bundle: bundleToPersist,
+      });
+      navigateToPendingPreventivoCreate();
+    } finally {
+      setGeneraPreventivoBusy(false);
+    }
+  }
+
+  function generaPreventivoDaHub() {
     if (!canEditWorkOrders || !preventiviPerm.canWrite) {
       gestToast.warning(
         !preventiviPerm.canWrite
@@ -754,59 +763,11 @@ export function SchedeLavorazioneModal({
       );
       return;
     }
-    const snap = draftRef.current;
-    const ctxMezzoId =
-      interventoCtx.context?.mezzo?.present
-        ? interventoCtx.context.mezzo.id?.trim() || null
-        : null;
-    const lavMezzoId = interventoCtx.context?.lavorazione?.mezzoId?.trim() || null;
-    const ident =
-      interventoCtx.display && !interventoCtx.isLoading
-        ? {
-            targa: interventoCtx.display.targa.value,
-            matricola: interventoCtx.display.matricola.value,
-            nScuderia: interventoCtx.display.nScuderia.value,
-          }
-        : !interventoCtx.isLoading && interventoCtx.ident
-          ? interventoCtx.ident
-          : { targa: lav.targa, matricola: lav.matricola, nScuderia: lav.nScuderia };
-    const mezzoForPreventivo = resolveMezzoForPreventivoHandoff(mezzi, {
-      lav,
-      mezzoId: mezzo?.id ?? ctxMezzoId ?? lavMezzoId,
-      ident,
-    });
-    if (!mezzoForPreventivo) {
-      gestToast.warning(
-        "Mezzo non trovato in anagrafica: verifica targa o matricola prima di creare il preventivo.",
-      );
+    if (preventiviCollegati.length > 0) {
+      setPreventivoEsistenteOpen(true);
       return;
     }
-    const identCanon = {
-      targa: mezzoForPreventivo.targa?.trim() || ident.targa?.trim() || "",
-      matricola: mezzoForPreventivo.matricola?.trim() || ident.matricola?.trim() || "",
-      nScuderia: mezzoForPreventivo.numeroScuderia?.trim() || ident.nScuderia?.trim() || "",
-    };
-    const bundleToPersist: LavorazioneSchedeBundle = {
-      ...snap,
-      lavorazioneId: lav.id,
-      ingresso: snap.ingresso ?? draft.ingresso ?? null,
-      lavorazioni: lavDoc ?? snap.lavorazioni ?? draft.lavorazioni ?? null,
-      ricambi: ricDoc ?? snap.ricambi ?? draft.ricambi ?? null,
-    };
-    const persistRes = await persistBundle(bundleToPersist);
-    if (!persistRes.ok) {
-      gestToast.error(persistRes.error ?? "Salvataggio schede non riuscito prima del preventivo.");
-      return;
-    }
-    writePendingPreventivoPayload({
-      lav,
-      origine: lavOrigine,
-      mezzoId: mezzoForPreventivo.id,
-      mezzo: mezzoForPreventivo,
-      ident: identCanon,
-      bundle: bundleToPersist,
-    });
-    navigateToPendingPreventivoCreate();
+    void eseguiGeneraPreventivoDaHub(false);
   }
 
   const hub = draft;
@@ -885,121 +846,80 @@ export function SchedeLavorazioneModal({
   });
   const nOk = countSchedePresenti(hub);
 
-  const hubCopyLastIdent = useMemo(
-    () =>
-      !interventoCtx.isLoading && interventoCtx.ident
-        ? interventoCtx.ident
-        : {
-            targa: lav.targa,
-            matricola: lav.matricola,
-            nScuderia: lav.nScuderia,
-          },
-    [interventoCtx.ident, interventoCtx.isLoading, lav.targa, lav.matricola, lav.nScuderia],
+  /** Commit ingresso edit — solo invocato da savePipeline.run (SSOT). */
+  const commitIngressoEdit = useCallback(
+    async (input: IngressoSaveCommitInput): Promise<IngressoSaveCommitResult> => {
+      const ig = input.fields;
+      const base = draftRef.current.ingresso;
+      if (!ig || !base) return { ok: false, error: "Scheda ingresso non disponibile." };
+      if (!assertItalianDay("Data ingresso", ig.dataIngresso, gestToast.validation)) {
+        return { ok: false, error: "validation" };
+      }
+
+      const prevCampi: SchedaIngressoFields | null = baselineIngressoJson.current
+        ? (JSON.parse(baselineIngressoJson.current) as SchedaIngressoFields)
+        : null;
+      const changes = prevCampi ? diffSchedaIngressoCampi(prevCampi, ig) : [];
+      if (changes.length) {
+        emitLog({
+          tipo: "aggiornamento",
+          schedaOggetto: SCHEDA_INGRESSO_LABEL,
+          riepilogo: "Scheda ingresso aggiornata",
+          changes,
+        });
+      }
+
+      const now = new Date().toISOString();
+      const u = currentUser.trim() || "Operatore";
+      const nextDoc: SchedaIngressoDoc = {
+        tipo: "ingresso",
+        createdAt: base.createdAt,
+        createdBy: base.createdBy,
+        sorgente: base.sorgente,
+        fileEsterno: base.fileEsterno,
+        campi: ig,
+        updatedAt: now,
+        updatedBy: u,
+      };
+
+      try {
+        await onIngressoCommitted?.(ig, {
+          mezzoUpdatePlan: input.mezzoUpdatePlan,
+          lavorazioneNote: input.lavorazioneNote,
+          tagliandoFields: input.tagliandoFields,
+          mezziCatalogFrozen: input.mezziCatalogFrozen,
+          runId: input.runId,
+          lavorazioneGestione: input.lavorazioneGestione,
+        });
+
+        const persistRes = await persistBundle({ ...draftRef.current, ingresso: nextDoc });
+        if (!persistRes.ok) {
+          gestToast.error(persistRes.error ?? "Salvataggio scheda ingresso non riuscito.", {
+            module: "lavorazioni",
+            action: "update",
+          });
+          return { ok: false, error: persistRes.error };
+        }
+
+        baselineIngressoJson.current = JSON.stringify(ig);
+        await onInvalidateAfterIngressoSave?.(lav.id, mezzo?.id);
+        return { ok: true };
+      } catch (err) {
+        gestToast.error(err, { module: "lavorazioni", action: "update" });
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    },
+    [
+      currentUser,
+      emitLog,
+      gestToast,
+      lav.id,
+      mezzo?.id,
+      onIngressoCommitted,
+      onInvalidateAfterIngressoSave,
+      persistBundle,
+    ],
   );
-
-  const hubLastIngressoCandidates = useMemo(
-    () =>
-      listCopyLastSchedaIngressoCandidates({
-        ident: hubCopyLastIdent,
-        mezzi,
-        schedeStore,
-        attive,
-        storico,
-        excludeLavorazioneId: lav.id,
-      }),
-    [hubCopyLastIdent, lav.id, mezzi, schedeStore, attive, storico],
-  );
-  const hubIngressoMezzoInAnagrafica = useMemo(
-    () =>
-      isIngressoIdentInMezziAnagrafica(
-        mezzi,
-        hubCopyLastIdent.targa,
-        hubCopyLastIdent.matricola,
-        hubCopyLastIdent.nScuderia,
-      ),
-    [hubCopyLastIdent, mezzi],
-  );
-  const hubLastIngressoMatch = hubLastIngressoCandidates[0] ?? null;
-  const showHubCopiaIngressoBanner =
-    hubLastIngressoCandidates.length > 0 || hubIngressoMezzoInAnagrafica;
-
-  /** EDIT_INGRESSO_ORDER step 1: persist scheda; step 2: onIngressoCommitted → parent executeInterventoWrite. */
-  async function applyIngressoCommitAsync(snap: {
-    ig: SchedaIngressoFields | null;
-    base: SchedaIngressoDoc | null | undefined;
-    mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
-    lavorazioneNote?: string;
-    tagliandoFields?: import("@/lib/maintenance-plans/tagliando-lavorazione-fields").TagliandoLavorazioneFields;
-  }): Promise<boolean> {
-    const ig = snap.ig;
-    const base = snap.base;
-    if (!ig || !base) return false;
-    if (!assertItalianDay("Data ingresso", ig.dataIngresso, gestToast.validation)) return false;
-    const prevCampi: SchedaIngressoFields | null = baselineIngressoJson.current
-      ? (JSON.parse(baselineIngressoJson.current) as SchedaIngressoFields)
-      : null;
-    const changes = prevCampi ? diffSchedaIngressoCampi(prevCampi, ig) : [];
-    if (changes.length) {
-      emitLog({
-        tipo: "aggiornamento",
-        schedaOggetto: SCHEDA_INGRESSO_LABEL,
-        riepilogo: "Scheda ingresso aggiornata",
-        changes,
-      });
-    }
-    const now = new Date().toISOString();
-    const u = currentUser.trim() || "Operatore";
-    const nextDoc: SchedaIngressoDoc = {
-      tipo: "ingresso",
-      createdAt: base.createdAt,
-      createdBy: base.createdBy,
-      sorgente: base.sorgente,
-      fileEsterno: base.fileEsterno,
-      campi: ig,
-      updatedAt: now,
-      updatedBy: u,
-    };
-    const persistRes = await persistBundle({ ...draftRef.current, ingresso: nextDoc });
-    if (!persistRes.ok) {
-      gestToast.error(persistRes.error ?? "Salvataggio scheda ingresso non riuscito.", {
-        module: "lavorazioni",
-        action: "update",
-      });
-      return false;
-    }
-    baselineIngressoJson.current = JSON.stringify(ig);
-    await onIngressoCommitted?.(ig, {
-      mezzoUpdatePlan: snap.mezzoUpdatePlan,
-      lavorazioneNote: snap.lavorazioneNote,
-      tagliandoFields: snap.tagliandoFields,
-    });
-    return true;
-  }
-
-  async function commitIngressoSave(): Promise<boolean> {
-    const result = { ok: false };
-    await runButtonSubmit(
-      modalRootRef.current,
-      submitLock,
-      () => ({
-        ig: ingressoDraftRef.current,
-        base: draftRef.current.ingresso,
-      }),
-      async (snap) => {
-        result.ok = await applyIngressoCommitAsync(snap);
-      },
-    );
-    return result.ok;
-  }
-
-  function tryIngressoBack(draft: SchedaIngressoFields) {
-    ingressoDraftRef.current = draft;
-    if (baselineIngressoJson.current === JSON.stringify(draft)) {
-      closeIngressoEditor();
-      return;
-    }
-    setUnsavedPanel("ingresso");
-  }
 
   async function commitLavorazioniSave(): Promise<boolean> {
     const result = { ok: false };
@@ -1117,6 +1037,45 @@ export function SchedeLavorazioneModal({
     setUnsavedPanel("ric");
   }
 
+  function saveLavorazioniPanel() {
+    void (async () => {
+      setSchedaEditorSaving(true);
+      try {
+        const ok = await commitLavorazioniSave();
+        if (!ok) return;
+        const nextStage = captureNextStageRef.current;
+        const current = draftRef.current;
+        if (nextStage === "ricambi" && current.ricambi) {
+          captureNextStageRef.current = null;
+          setRicDoc(current.ricambi);
+          baselineRicambiJson.current = JSON.stringify(current.ricambi);
+          setStage({ kind: "ricambi" });
+          setLavDoc(null);
+          gestToast.info("Completa ora la scheda ricambi.");
+          return;
+        }
+        setStage({ kind: "hub" });
+        setLavDoc(null);
+      } finally {
+        setSchedaEditorSaving(false);
+      }
+    })();
+  }
+
+  function saveRicambiPanel() {
+    void (async () => {
+      setSchedaEditorSaving(true);
+      try {
+        const ok = await commitRicambiSave();
+        if (!ok) return;
+        setStage({ kind: "hub" });
+        setRicDoc(null);
+      } finally {
+        setSchedaEditorSaving(false);
+      }
+    })();
+  }
+
   if (!open) return null;
 
   function apriSchedaIngresso() {
@@ -1168,24 +1127,72 @@ export function SchedeLavorazioneModal({
     setHubTab(id);
   };
 
+  const lavorazioniEditorActive = stage.kind === "lavorazioni" && Boolean(hub.lavorazioni && lavDoc);
+  const ricambiEditorActive = stage.kind === "ricambi" && Boolean(hub.ricambi && ricDoc);
+  const editorOnBack = lavorazioniEditorActive
+    ? tryLavorazioniBack
+    : ricambiEditorActive
+      ? tryRicambiBack
+      : undefined;
+  const editorFooter =
+    lavorazioniEditorActive && lavDoc ? (
+      <SchedaPanelEditorActions
+        showDelete={lavDoc.sorgente !== "file_esterno"}
+        onDelete={() => requestDeleteSchedaTipo("lavorazioni")}
+        onCancel={tryLavorazioniBack}
+        onSave={saveLavorazioniPanel}
+        saving={schedaEditorSaving}
+        readOnly={lavDoc.sorgente === "file_esterno"}
+      />
+    ) : ricambiEditorActive && ricDoc ? (
+      <SchedaPanelEditorActions
+        showDelete={ricDoc.sorgente !== "file_esterno"}
+        onDelete={() => requestDeleteSchedaTipo("ricambi")}
+        onCancel={tryRicambiBack}
+        onSave={saveRicambiPanel}
+        saving={schedaEditorSaving}
+        readOnly={ricDoc.sorgente === "file_esterno"}
+      />
+    ) : undefined;
+
+  const hubSchedeFooter =
+    stage.kind === "hub" && hubTab === "schede" ? (
+      <GestionaleModalFooterActions>
+        <CreaPreventivoButton
+          onClick={generaPreventivoDaHub}
+          disabled={generaPreventivoBusy || !canEditWorkOrders || !preventiviPerm.canWrite}
+          disabledTitle={
+            !preventiviPerm.canWrite
+              ? "Non hai permesso di creare preventivi"
+              : READONLY_PERMISSION_HINT
+          }
+        />
+      </GestionaleModalFooterActions>
+    ) : undefined;
+  const modalFooter = editorFooter ?? hubSchedeFooter;
+
   return (
     <>
       <LavorazioniModalShell
-        modalSize="formLarge"
+        modalSize={stage.kind === "hub" ? "formLarge" : "analytics"}
         modalHeight="standard"
         modalRootRef={modalRootRef}
         onRequestClose={onClose}
+        onBack={editorOnBack}
         titleId="schede-lav-detail-title"
+        footer={modalFooter}
         header={
           <LavorazioniModalHeader
             title="Dettaglio lavorazione"
             subtitle={identSubtitle || undefined}
             titleId="schede-lav-detail-title"
             onRequestClose={onClose}
+            onBack={editorOnBack}
           />
         }
       >
         <div className={`relative ${gestionaleModalBodyFlexClass}`}>
+        {stage.kind === "hub" ? (
         <HubModalTabBar aria-label="Sezioni dettaglio lavorazione">
           {(["panoramica", "schede", "preventivi", "documenti", "attivita"] as const).map((id) => (
             <HubModalTab
@@ -1193,11 +1200,12 @@ export function SchedeLavorazioneModal({
               id={`schede-lav-tab-${id}`}
               panelId={hubTab === id ? hubTabPanelId : undefined}
               label={hubTabLabel(id)}
-              active={stage.kind === "hub" && hubTab === id}
+              active={hubTab === id}
               onSelect={() => selectHubTab(id)}
             />
           ))}
         </HubModalTabBar>
+        ) : null}
 
         <GestionaleModalScrollBody
           className="p-4"
@@ -1220,20 +1228,6 @@ export function SchedeLavorazioneModal({
           ) : null}
           {stage.kind === "hub" && hubTab === "schede" ? (
             <div className="flex flex-col gap-5">
-              {showHubCopiaIngressoBanner ? (
-                <CopiaUltimaSchedaIngressoBanner
-                  visible
-                  highlight={false}
-                  updatedAt={hubLastIngressoMatch?.updatedAt}
-                  matchCount={hubLastIngressoCandidates.length}
-                  mezzoInAnagraficaOnly={
-                    hubLastIngressoCandidates.length === 0 && hubIngressoMezzoInAnagrafica
-                  }
-                  disabled={!canEditWorkOrders || hubLastIngressoCandidates.length === 0}
-                  disabledTitle={READONLY_PERMISSION_HINT}
-                  onCopy={duplicateIngressoPrev}
-                />
-              ) : null}
               <SchedaSectionHub
                 title="Scheda ingresso"
                 stato={statoUiSchedaIngresso(hub)}
@@ -1294,15 +1288,6 @@ export function SchedeLavorazioneModal({
                   });
                 }}
                 onElimina={hub.ricambi ? () => requestDeleteSchedaTipo("ricambi") : undefined}
-              />
-              <CreaPreventivoDaSchedeCta
-                onClick={generaPreventivoDaHub}
-                disabled={!canEditWorkOrders || !preventiviPerm.canWrite}
-                disabledTitle={
-                  !preventiviPerm.canWrite
-                    ? "Non hai permesso di creare preventivi"
-                    : READONLY_PERMISSION_HINT
-                }
               />
             </div>
           ) : null}
@@ -1471,33 +1456,7 @@ export function SchedeLavorazioneModal({
               doc={lavDoc}
               setDoc={setLavDoc as Dispatch<SetStateAction<SchedaLavorazioniDoc>>}
               addettiLista={addetti}
-              onBack={tryLavorazioniBack}
-              onDelete={() => requestDeleteSchedaTipo("lavorazioni")}
-              saving={schedaEditorSaving}
-              onSave={() => {
-                void (async () => {
-                  setSchedaEditorSaving(true);
-                  try {
-                    const ok = await commitLavorazioniSave();
-                    if (!ok) return;
-                    const nextStage = captureNextStageRef.current;
-                    const current = draftRef.current;
-                    if (nextStage === "ricambi" && current.ricambi) {
-                      captureNextStageRef.current = null;
-                      setRicDoc(current.ricambi);
-                      baselineRicambiJson.current = JSON.stringify(current.ricambi);
-                      setStage({ kind: "ricambi" });
-                      setLavDoc(null);
-                      gestToast.info("Completa ora la scheda ricambi.");
-                      return;
-                    }
-                    setStage({ kind: "hub" });
-                    setLavDoc(null);
-                  } finally {
-                    setSchedaEditorSaving(false);
-                  }
-                })();
-              }}
+              identParts={identificazionePartsFromSchedaIngresso(panoramicaDisplayFields)}
             />
           ) : null}
 
@@ -1507,25 +1466,10 @@ export function SchedeLavorazioneModal({
               setDoc={setRicDoc as Dispatch<SetStateAction<SchedaRicambiDoc>>}
               lav={lav}
               identLine={identSubtitle}
+              identParts={identificazionePartsFromSchedaIngresso(panoramicaDisplayFields)}
               currentUser={currentUser}
               addettiLista={addetti}
-              onBack={tryRicambiBack}
-              onDelete={() => requestDeleteSchedaTipo("ricambi")}
               onImmediatePersist={(d) => persistBundleInBackground({ ...draftRef.current, ricambi: d })}
-              saving={schedaEditorSaving}
-              onSave={() => {
-                void (async () => {
-                  setSchedaEditorSaving(true);
-                  try {
-                    const ok = await commitRicambiSave();
-                    if (!ok) return;
-                    setStage({ kind: "hub" });
-                    setRicDoc(null);
-                  } finally {
-                    setSchedaEditorSaving(false);
-                  }
-                })();
-              }}
             />
           ) : null}
         </GestionaleModalScrollBody>
@@ -1539,17 +1483,13 @@ export function SchedeLavorazioneModal({
             const p = unsavedPanel;
             setUnsavedPanel(null);
             setStage({ kind: "hub" });
-            if (p === "ingresso") closeIngressoEditor();
             if (p === "lav") setLavDoc(null);
             if (p === "ric") setRicDoc(null);
           }}
           onSaveAndExit={() => {
             const p = unsavedPanel;
             void (async () => {
-              if (p === "ingresso") {
-                if (!(await commitIngressoSave())) return;
-                closeIngressoEditor();
-              } else if (p === "lav") {
+              if (p === "lav") {
                 if (!(await commitLavorazioniSave())) return;
                 setLavDoc(null);
               } else if (p === "ric") {
@@ -1570,19 +1510,11 @@ export function SchedeLavorazioneModal({
           initialFields={ingressoEditorInitial}
           initialLavorazioneNote={ingressoNoteInitial}
           initialTagliandoFields={ingressoTagliandoInitial ?? undefined}
-          onRequestClose={tryIngressoBack}
-          onSave={async (draft, mezzoUpdatePlan, noteDraft, tagliandoDraft) => {
-            ingressoDraftRef.current = draft;
-            const ok = await applyIngressoCommitAsync({
-              ig: ingressoDraftRef.current,
-              base: draftRef.current.ingresso,
-              mezzoUpdatePlan,
-              lavorazioneNote: noteDraft,
-              tagliandoFields: tagliandoDraft,
-            });
-            if (!ok) return;
-            closeIngressoEditor();
-          }}
+          onClose={closeIngressoEditor}
+          commitIngressoEdit={commitIngressoEdit}
+          onSaveSuccess={closeIngressoEditor}
+          ingressoSaveRunRef={ingressoSaveRunRef}
+          submitLock={submitLock}
           onDelete={
             hub.ingresso.sorgente !== "file_esterno" ? () => requestDeleteSchedaTipo("ingresso") : undefined
           }
@@ -1599,6 +1531,8 @@ export function SchedeLavorazioneModal({
           storico={storico}
           excludeLavorazioneId={lav.id}
           bootstrapMezzoId={mezzo?.id}
+          initialLavorazioneStato={"statoId" in lav ? lav.statoId : lav.statoFinaleId}
+          initialLavorazionePriorita={"priorita" in lav ? lav.priorita : lav.prioritaFinale}
         />
       ) : null}
 
@@ -1608,12 +1542,13 @@ export function SchedeLavorazioneModal({
         onCancel={() => setEliminaConfirmTipo(null)}
         onConfirm={confirmDeleteSchedaTipo}
       />
-      <SchedaIngressoCopyPickDialog
-        open={ingressoCopyPickOpen}
-        candidates={hubLastIngressoCandidates}
-        confirmLabel="Crea da selezionata"
-        onCancel={() => setIngressoCopyPickOpen(false)}
-        onConfirm={applyDuplicateIngressoFromMatch}
+      <PreventivoEsistenteConfirmDialog
+        open={preventivoEsistenteOpen}
+        existingCount={preventiviCollegati.length}
+        busy={generaPreventivoBusy}
+        onBack={() => setPreventivoEsistenteOpen(false)}
+        onReplace={() => void eseguiGeneraPreventivoDaHub(true)}
+        onCreateAnother={() => void eseguiGeneraPreventivoDaHub(false)}
       />
       {confirmDialog}
 
@@ -1728,14 +1663,12 @@ function SchedaSectionHub({
               {onElimina ? (
                 <OptionalTooltip content={!canEdit ? READONLY_PERMISSION_HINT : undefined}>
                   <button type="button" className={dsTableActionTextBtnDanger} disabled={!canEdit} aria-label="Elimina scheda" onClick={onElimina}>
-                    <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
-                    <span className="max-md:sr-only">Elimina</span>
+                    <HubIconTrash className="h-3.5 w-3.5 shrink-0" />
+                    Elimina
                   </button>
                 </OptionalTooltip>
               ) : null}
-              <button type="button" className={dsTableActionTextBtn} disabled={!doc} aria-label="Esporta PDF scheda" onClick={onPdf}>
+              <button type="button" className={dsTableActionTextBtnNeutral} disabled={!doc} aria-label="Esporta PDF scheda" onClick={onPdf}>
                 <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                 </svg>
@@ -1755,64 +1688,35 @@ function SchedaSectionHub({
   );
 }
 
-function SchedaDayField({
-  label,
-  value,
-  onChange,
-  readOnly,
-  showLabel = true,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  readOnly?: boolean;
-  showLabel?: boolean;
-}) {
-  if (readOnly) {
-    return (
-      <label className="block text-xs">
-        {showLabel ? <span className={dsLabel}>{label}</span> : null}
-        <input className={`${dsInput} mt-1`} readOnly value={value} />
-      </label>
-    );
-  }
-  return (
-    <div className="block text-xs">
-      {showLabel ? <span className={dsLabel}>{label}</span> : null}
-      <div className={`flex flex-nowrap items-stretch gap-2 sm:flex-wrap ${showLabel ? "mt-1" : ""}`}>
-        <div className="min-w-0 flex-1">
-          <GlobalDatePicker
-            value={value}
-            onChange={onChange}
-            inputClassName={`${dsInput} !py-1.5 !text-xs`}
-            placeholder="GG/MM/AAAA"
-            aria-label={label}
-          />
-        </div>
-        <button type="button" className={`${dsBtnNeutral} shrink-0 self-end`} onClick={() => onChange(todayItDate())}>
-          Oggi
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SchedaEditorBottomSave({
-  readOnly,
-  saving = false,
+function SchedaPanelEditorActions({
+  showDelete,
+  onDelete,
+  onCancel,
   onSave,
+  saving,
+  readOnly,
 }: {
-  readOnly: boolean;
-  saving?: boolean;
+  showDelete: boolean;
+  onDelete: () => void;
+  onCancel: () => void;
   onSave: () => void;
+  saving?: boolean;
+  readOnly: boolean;
 }) {
-  if (readOnly) return null;
   return (
-    <div className="flex justify-end pt-3">
-      <button type="button" className={`${dsBtnPrimary} min-h-11`} onClick={onSave} disabled={saving}>
-        {saving ? "Salvataggio…" : "Salva scheda"}
-      </button>
-    </div>
+    <GestionaleModalFooterActions>
+      {showDelete ? (
+        <GestionaleModalFooterDeleteButton onClick={onDelete} disabled={saving}>
+          Elimina scheda
+        </GestionaleModalFooterDeleteButton>
+      ) : null}
+      <GestionaleModalFooterCancelButton onClick={onCancel} disabled={saving} />
+      {!readOnly ? (
+        <GestionaleModalFooterSaveButton type="button" loading={saving} onClick={onSave}>
+          Salva scheda
+        </GestionaleModalFooterSaveButton>
+      ) : null}
+    </GestionaleModalFooterActions>
   );
 }
 
@@ -1820,237 +1724,33 @@ function LavorazioniPanel({
   doc,
   setDoc,
   addettiLista,
-  onBack,
-  onDelete,
-  saving = false,
-  onSave,
+  identParts,
 }: {
   doc: SchedaLavorazioniDoc;
   setDoc: Dispatch<SetStateAction<SchedaLavorazioniDoc>>;
   addettiLista: string[];
-  onBack: () => void;
-  onDelete: () => void;
-  saving?: boolean;
-  onSave: () => void;
+  identParts?: MezzoIdentificazioneParts | null;
 }) {
   const { confirm: askConfirm, confirmDialog: lavorazioniConfirmDialog } = useGestionaleConfirm();
-  const global = useGlobalOptions();
   const ro = doc.sorgente === "file_esterno";
-  const resolveAddettoPickerId = (a: RigaAddettoOreScheda) =>
-    a.addettoId?.trim() ||
-    backfillAddettoIdFromLegacyString(global.lavorazioni.addettiRecords, a.addetto) ||
-    "";
-  const patchRigaAddetto = (row: RigaLavorazioneScheda, idx: number, patch: { addettoId?: string; oreImpiegate?: number }) => {
-    const next = [...(row.addettiAssegnati ?? [])];
-    const current = next[idx]!;
-    next[idx] = writeSchedaRigaAddetto(
-      patch.addettoId ?? resolveAddettoPickerId(current),
-      patch.oreImpiegate ?? current.oreImpiegate,
-    );
-    return next;
-  };
-  function patchRighe(righe: RigaLavorazioneScheda[]) {
-    setDoc((d) => ({ ...d, campi: { ...d.campi, righe } }));
-  }
-  function patchRiga(rid: string, fn: (r: RigaLavorazioneScheda) => RigaLavorazioneScheda) {
-    setDoc((d) => ({
-      ...d,
-      campi: { ...d.campi, righe: d.campi.righe.map((x) => (x.id === rid ? fn(x) : x)) },
-    }));
-  }
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-nowrap justify-between gap-2 sm:flex-wrap">
-        <ShellNavBackButton onClick={onBack} />
-        <div className="flex flex-nowrap items-center gap-2 sm:flex-wrap">
-          {doc.sorgente !== "file_esterno" ? (
-            <button type="button" className={dsBtnDanger} onClick={onDelete}>
-              Elimina scheda
-            </button>
-          ) : null}
-          {!ro ? (
-            <button type="button" className={dsBtnPrimary} onClick={onSave} disabled={saving}>
-              {saving ? "Salvataggio…" : "Salva scheda"}
-            </button>
-          ) : null}
-        </div>
-      </div>
-      <label className="block text-xs">
-        <span className={dsLabel}>Identificazione macchina</span>
-        <input
-          className={`${dsInput} mt-1`}
-          readOnly={ro}
-          value={doc.campi.identificazioneMacchina}
-          onChange={(e) =>
-            setDoc((d) => ({
-              ...d,
-              campi: { ...d.campi, identificazioneMacchina: e.target.value },
-            }))
-          }
-        />
-      </label>
-      <div className={`${dsTableWrap} ${dsScrollbar}`}>
-        <table className={`${dsTable} text-xs`}>
-          <GlobalTableHead>
-              <GlobalTableHeadLabel label="Data" />
-              <GlobalTableHeadLabel label="Lavorazioni effettuate" thClassName="min-w-[min(100%,28rem)] w-full" />
-              <GlobalTableHeadLabel label="Addetti (ore)" thClassName="min-w-[12rem]" />
-              {!ro ? <GlobalTableHeadLabel label="" thClassName="w-24" /> : null}
-          </GlobalTableHead>
-          <tbody>
-            {doc.campi.righe.map((r) => (
-              <tr key={r.id} className={dsTableRow}>
-                <td className="px-2 py-2 align-top">
-                  {ro ? (
-                    <span className="text-[color:var(--cab-text)]">{r.dataLavorazione}</span>
-                  ) : (
-                    <SchedaDayField
-                      label="Data"
-                      showLabel={false}
-                      value={r.dataLavorazione}
-                      onChange={(v) => patchRiga(r.id, (row) => ({ ...row, dataLavorazione: v }))}
-                    />
-                  )}
-                </td>
-                <td className="px-2 py-2 align-top">
-                  <GestionaleTextarea
-                    className="!py-2 !text-sm w-full max-w-none leading-relaxed"
-                    size="sm"
-                    maxHeight={gestionaleTextareaMaxHeightCompact}
-                    readOnly={ro}
-                    value={r.lavorazioniEffettuate}
-                    onChange={(v) => patchRiga(r.id, (row) => ({ ...row, lavorazioniEffettuate: v }))}
-                  />
-                </td>
-                <td className="px-2 py-2 align-top">
-                  {ro ? (
-                    <div className="space-y-0.5 text-[color:var(--cab-text)]">
-                      {(r.addettiAssegnati ?? []).length ? (
-                        r.addettiAssegnati!.map((a, i) => (
-                          <div key={i} className="flex items-center gap-1">
-                            <AddettoDisplayPill
-                              ref={addettoRefFromFields({ addettoId: a.addettoId, addettoLegacy: a.addetto })}
-                              fullWidth={false}
-                            />
-                            <span>— {a.oreImpiegate}h</span>
-                          </div>
-                        ))
-                      ) : (
-                        <span className="text-[color:var(--cab-text-muted)]">—</span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {(r.addettiAssegnati ?? []).map((a, idx) => (
-                        <div key={`${r.id}-a-${idx}`} className="flex flex-nowrap items-end gap-1 sm:flex-wrap">
-                          <div className="min-w-0 flex-1">
-                            <AddettoPicker
-                              value={resolveAddettoPickerId(a) || null}
-                              onChange={(id) =>
-                                patchRiga(r.id, (row) => ({
-                                  ...row,
-                                  addettiAssegnati: patchRigaAddetto(row, idx, { addettoId: id }),
-                                }))
-                              }
-                              ariaLabel="Addetto riga lavorazione"
-                              className="w-full"
-                              inputClassName={`${dsInput} !py-1.5 !text-xs`}
-                              size="compact"
-                            />
-                          </div>
-                          <SchedaOreNumberInput
-                            className={`${dsInput} !py-1.5 !text-xs w-20`}
-                            value={Number.isFinite(a.oreImpiegate) ? a.oreImpiegate : 0}
-                            onChange={(v) =>
-                              patchRiga(r.id, (row) => ({
-                                ...row,
-                                addettiAssegnati: patchRigaAddetto(row, idx, { oreImpiegate: v }),
-                              }))
-                            }
-                          />
-                          <button
-                            type="button"
-                            className="shrink-0 rounded p-1 text-sm text-[color:var(--cab-text-muted)] transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
-                            aria-label="Rimuovi addetto"
-                              onClick={() => {
-                                void askConfirm({
-                                  title: "Rimuovere addetto?",
-                                  message: "L'addetto verrà rimosso dalla riga.",
-                                  destructive: true,
-                                  confirmLabel: "Rimuovi",
-                                }).then((ok) => {
-                                  if (!ok) return;
-                                  const next = (r.addettiAssegnati ?? []).filter((_, j) => j !== idx);
-                                  patchRiga(r.id, (row) => ({ ...row, addettiAssegnati: next }));
-                                });
-                              }}
-                            >
-                              ✕
-                            </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        className={`${dsBtnNeutral} text-[10px] px-2 py-1`}
-                        onClick={() =>
-                          patchRiga(r.id, (row) => ({
-                            ...row,
-                            addettiAssegnati: [...(row.addettiAssegnati ?? []), writeSchedaRigaAddetto("", 0)],
-                          }))
-                        }
-                      >
-                        + Aggiungi addetto
-                      </button>
-                    </div>
-                  )}
-                </td>
-                {!ro ? (
-                  <td className="px-2 py-2 align-top">
-                    <button
-                      type="button"
-                      className="rounded p-1.5 text-sm text-[color:var(--cab-text-muted)] transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
-                      aria-label="Rimuovi riga lavorazione"
-                        onClick={() => {
-                          void askConfirm({
-                            title: "Eliminare riga?",
-                            message: "La riga verrà rimossa dalla scheda.",
-                            destructive: true,
-                            confirmLabel: "Elimina",
-                          }).then((ok) => {
-                            if (!ok) return;
-                            patchRighe(doc.campi.righe.filter((x) => x.id !== r.id));
-                          });
-                        }}
-                    >
-                      ✕
-                    </button>
-                  </td>
-                ) : null}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {!ro ? (
-        <button
-          type="button"
-          className={dsBtnNeutral}
-          onClick={() =>
-            patchRighe([
-              ...doc.campi.righe,
-              {
-                id: newRigaId(),
-                dataLavorazione: todayItDate(),
-                lavorazioniEffettuate: "",
-                addettiAssegnati: [],
-              },
-            ])
-          }
-        >
-          + Aggiungi riga lavorazione
-        </button>
-      ) : null}
-      <SchedaEditorBottomSave readOnly={ro} saving={saving} onSave={onSave} />
+      <SchedaLavorazioniFormBody
+        value={doc.campi}
+        onChange={(campi) => setDoc((d) => ({ ...d, campi }))}
+        readonly={ro}
+        globalOpts={{ addettiLista }}
+        identParts={identParts}
+        confirmDestructive={(opts) =>
+          askConfirm({
+            title: opts.title,
+            message: opts.message,
+            destructive: true,
+            confirmLabel: opts.confirmLabel ?? "Conferma",
+          })
+        }
+      />
       {lavorazioniConfirmDialog}
     </div>
   );
@@ -2061,96 +1761,29 @@ function RicambiPanel({
   setDoc,
   lav,
   identLine,
+  identParts,
   currentUser,
   addettiLista,
-  onBack,
-  onSave,
   onImmediatePersist,
-  onDelete,
-  saving = false,
 }: {
   doc: SchedaRicambiDoc;
   setDoc: Dispatch<SetStateAction<SchedaRicambiDoc>>;
   lav: LavRow;
   identLine: string;
+  identParts?: MezzoIdentificazioneParts | null;
   currentUser: string;
   addettiLista: string[];
-  onBack: () => void;
-  onSave: () => void;
   onImmediatePersist: (d: SchedaRicambiDoc) => void;
-  onDelete: () => void;
-  saving?: boolean;
 }) {
   const gestToast = useGestionaleToast();
-  const global = useGlobalOptions();
   const { confirm: askConfirm, confirmDialog: ricambiConfirmDialog } = useGestionaleConfirm();
   const ro = doc.sorgente === "file_esterno";
   const qc = useQueryClient();
   const magazzinoQ = useMagazzinoRicambiUIQuery();
   const prodotti = magazzinoQ.data ?? [];
-  const [acRowId, setAcRowId] = useState<string | null>(null);
-  const [magSearch, setMagSearch] = useState("");
-  const [magSearchOpen, setMagSearchOpen] = useState(false);
-
-  const resolveAddettoPickerId = (row: RigaRicambioScheda) =>
-    row.addettoId?.trim() ||
-    backfillAddettoIdFromLegacyString(global.lavorazioni.addettiRecords, row.addetto) ||
-    "";
-
-  const magSearchHits = useMemo(() => {
-    const q = magSearch.trim().toLowerCase();
-    if (q.length < 1) return [];
-    return prodotti
-      .filter((p) => {
-        const d = (p.descrizione ?? "").toLowerCase();
-        const c = [ricambioCodiceForUi(p.codiceFornitoreOriginale), p.codiceFornitoreOriginaleSecondario]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return d.includes(q) || c.includes(q) || q.split(/\s+/).every((w) => w && (d.includes(w) || c.includes(w)));
-      })
-      .slice(0, 16);
-  }, [magSearch, prodotti]);
-
-  function addRicambioFromMag(p: RicambioMagazzino) {
-    if (doc.campi.righe.some((r) => r.ricambioId === p.id)) {
-      gestToast.validation("Ricambio già presente in scheda.");
-      return;
-    }
-    patchRighe([
-      ...doc.campi.righe,
-      {
-        id: newRigaId(),
-        ricambioId: p.id,
-        ricambioNome: p.descrizione ?? "",
-        codice: ricambioCodiceForUi(p.codiceFornitoreOriginale),
-        quantita: 1,
-        addetto: lav.addetto,
-        dataUtilizzo: todayItDate(),
-      },
-    ]);
-    setMagSearch("");
-    setMagSearchOpen(false);
-  }
 
   function patchRighe(righe: RigaRicambioScheda[]) {
     setDoc((d) => ({ ...d, campi: { ...d.campi, righe } }));
-  }
-
-  function suggestionsForRow(r: RigaRicambioScheda) {
-    const q = `${r.ricambioNome} ${r.codice}`.trim().toLowerCase();
-    if (q.length < 1) return [];
-    return prodotti
-      .filter((p) => {
-        const d = (p.descrizione ?? "").toLowerCase();
-        const c = [ricambioCodiceForUi(p.codiceFornitoreOriginale), p.codiceFornitoreOriginaleSecondario]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        const m = (p.marca ?? "").toLowerCase();
-        return d.includes(q) || c.includes(q) || m.includes(q) || q.split(/\s+/).every((w) => w && (d.includes(w) || c.includes(w) || m.includes(w)));
-      })
-      .slice(0, 12);
   }
 
   async function applyRowMagazzino(r: RigaRicambioScheda) {
@@ -2200,213 +1833,27 @@ function RicambiPanel({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-nowrap justify-between gap-2 sm:flex-wrap">
-        <ShellNavBackButton onClick={onBack} />
-        <div className="flex flex-nowrap items-center gap-2 sm:flex-wrap">
-          {doc.sorgente !== "file_esterno" ? (
-            <button type="button" className={dsBtnDanger} onClick={onDelete}>
-              Elimina scheda
-            </button>
-          ) : null}
-          {!ro ? (
-            <button type="button" className={dsBtnPrimary} onClick={onSave} disabled={saving}>
-              {saving ? "Salvataggio…" : "Salva scheda"}
-            </button>
-          ) : null}
-        </div>
-      </div>
-      <p className="text-xs text-[color:var(--cab-text-muted)]">
-        Identificazione:{" "}
-        <span className="font-medium text-[color:var(--cab-text)]">{identLine}</span>
-      </p>
-      {!ro ? (
-        <RicambiMagSearchPortal
-          value={magSearch}
-          onChange={setMagSearch}
-          open={magSearchOpen}
-          onOpenChange={setMagSearchOpen}
-          hits={magSearchHits}
-          onSelect={addRicambioFromMag}
-          placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-          ariaLabel="Cerca ricambio in magazzino per nome o codice"
-        />
-      ) : null}
-      <div className={`${dsTableWrap} ${dsScrollbar}`}>
-        <table className={`${dsTable} text-xs`}>
-          <GlobalTableHead>
-              <GlobalTableHeadLabel label="Ricambio" thClassName="min-w-[10rem]" />
-              <GlobalTableHeadLabel label="Codice" />
-              <GlobalTableHeadLabel label="Qtà" />
-              <GlobalTableHeadLabel label="Addetto" />
-              <GlobalTableHeadLabel label="Data" />
-              {!ro ? <GlobalTableHeadLabel label="Magazzino" /> : null}
-              {!ro ? <GlobalTableHeadLabel label="" thClassName="w-24" /> : null}
-          </GlobalTableHead>
-          <tbody>
-            {doc.campi.righe.map((r) => {
-              const sug = !ro && acRowId === r.id ? suggestionsForRow(r) : [];
-              return (
-                <tr key={r.id} className={dsTableRow} data-ricambi-ac-open={acRowId === r.id ? "1" : undefined}>
-                  <td className="px-2 py-2 align-top">
-                    {ro ? (
-                      <span>{r.ricambioNome || "—"}</span>
-                    ) : (
-                      <RicambioRowAutocompletePortal
-                        value={r.ricambioNome}
-                        onChange={(v) => {
-                          patchRighe(doc.campi.righe.map((x) => (x.id === r.id ? { ...x, ricambioNome: v } : x)));
-                          setAcRowId(r.id);
-                        }}
-                        open={acRowId === r.id}
-                        onOpenChange={(next) => setAcRowId(next ? r.id : null)}
-                        suggestions={sug.map((p) => ({
-                          id: p.id,
-                          descrizione: p.descrizione ?? "",
-                          marca: p.marca ?? "",
-                          codiceFornitoreOriginale: ricambioCodiceForUi(p.codiceFornitoreOriginale),
-                        }))}
-                        onSelect={(p) => {
-                          patchRighe(
-                            doc.campi.righe.map((x) =>
-                              x.id === r.id
-                                ? {
-                                    ...x,
-                                    ricambioId: p.id,
-                                    ricambioNome: p.descrizione,
-                                    codice: ricambioCodiceForUi(p.codiceFornitoreOriginale),
-                                  }
-                                : x,
-                            ),
-                          );
-                          setAcRowId(null);
-                        }}
-                      />
-                    )}
-                  </td>
-                  <td className="px-2 py-2 align-top">
-                    <input
-                      className={`${dsInput} !py-1.5 !text-xs`}
-                      readOnly={ro}
-                      value={r.codice}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        patchRighe(doc.campi.righe.map((x) => (x.id === r.id ? { ...x, codice: v } : x)));
-                        if (!ro) setAcRowId(r.id);
-                      }}
-                      onFocus={() => !ro && setAcRowId(r.id)}
-                    />
-                  </td>
-                  <td className="px-2 py-2 align-top">
-                    <GestionaleQuantityField
-                      className={`${dsInput} !py-1.5 !text-xs w-20`}
-                      readOnly={ro}
-                      value={r.quantita}
-                      onCommit={(quantita) =>
-                        patchRighe(
-                          doc.campi.righe.map((x) => (x.id === r.id ? { ...x, quantita } : x)),
-                        )
-                      }
-                    />
-                  </td>
-                  <td className="px-2 py-2 align-top">
-                    {ro ? (
-                      <AddettoDisplayPill
-                        ref={addettoRefFromFields({ addettoId: r.addettoId, addettoLegacy: r.addetto })}
-                        fullWidth={false}
-                      />
-                    ) : (
-                      <AddettoPicker
-                        value={resolveAddettoPickerId(r) || null}
-                        onChange={(id) =>
-                          patchRighe(
-                            doc.campi.righe.map((x) => (x.id === r.id ? writeSchedaRicambioAddetto(x, id) : x)),
-                          )
-                        }
-                        ariaLabel="Addetto riga ricambio"
-                        className="w-full min-w-[8rem]"
-                        inputClassName={`${dsInput} !py-1.5 !text-xs`}
-                        size="compact"
-                      />
-                    )}
-                  </td>
-                  <td className="px-2 py-2 align-top">
-                    {ro ? (
-                      <span>{r.dataUtilizzo}</span>
-                    ) : (
-                      <SchedaDayField
-                        label="Data"
-                        showLabel={false}
-                        value={r.dataUtilizzo}
-                        onChange={(v) => patchRighe(doc.campi.righe.map((x) => (x.id === r.id ? { ...x, dataUtilizzo: v } : x)))}
-                      />
-                    )}
-                  </td>
-                  {!ro ? (
-                    <td className="px-2 py-2 align-top">
-                      <div className="flex flex-col items-start gap-1.5">
-                        <button
-                          type="button"
-                          className={dsBtnNeutral}
-                          disabled={!r.ricambioId || Boolean(r.scaricoMagazzinoApplicato)}
-                          onClick={() => applyRowMagazzino(r)}
-                        >
-                          Scarica
-                        </button>
-                        {r.scaricoMagazzinoApplicato ? <span className={dsBadgeOk}>Scaricato</span> : null}
-                      </div>
-                    </td>
-                  ) : null}
-                  {!ro ? (
-                    <td className="px-2 py-2 align-top">
-                        <button
-                          type="button"
-                          className="rounded p-1.5 text-sm text-[color:var(--cab-text-muted)] transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
-                          aria-label="Rimuovi riga ricambio"
-                          onClick={() => {
-                            void askConfirm({
-                              title: "Eliminare riga?",
-                              message: "La riga verrà rimossa dalla scheda.",
-                              destructive: true,
-                              confirmLabel: "Elimina",
-                            }).then((ok) => {
-                              if (!ok) return;
-                              patchRighe(doc.campi.righe.filter((x) => x.id !== r.id));
-                            });
-                          }}
-                        >
-                          ✕
-                        </button>
-                    </td>
-                  ) : null}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      {!ro ? (
-        <button
-          type="button"
-          className={dsBtnNeutral}
-          onClick={() =>
-            patchRighe([
-              ...doc.campi.righe,
-              {
-                id: newRigaId(),
-                ricambioId: null,
-                ricambioNome: "",
-                codice: "",
-                quantita: 1,
-                addetto: lav.addetto,
-                dataUtilizzo: todayItDate(),
-              },
-            ])
-          }
-        >
-          + Aggiungi riga ricambio
-        </button>
-      ) : null}
-      <SchedaEditorBottomSave readOnly={ro} saving={saving} onSave={onSave} />
+      <SchedaRicambiFormBody
+        value={{
+          ...doc.campi,
+          identificazioneMacchina: doc.campi.identificazioneMacchina.trim() || identLine,
+        }}
+        onChange={(campi) => setDoc((d) => ({ ...d, campi }))}
+        readonly={ro}
+        variant="editor"
+        identParts={identParts}
+        hubAutocomplete
+        globalOpts={{ addettiLista, magazzino: prodotti, defaultAddetto: lav.addetto }}
+        onScaricaMagazzino={applyRowMagazzino}
+        confirmDestructive={(opts) =>
+          askConfirm({
+            title: opts.title,
+            message: opts.message,
+            destructive: true,
+            confirmLabel: opts.confirmLabel ?? "Conferma",
+          })
+        }
+      />
       {ricambiConfirmDialog}
     </div>
   );

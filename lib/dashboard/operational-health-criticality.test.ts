@@ -3,11 +3,13 @@ import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-l
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import {
+  ACCETTAZIONE_CLIENT_GRACE_DAYS,
   ATTESA_RICAMBI_LATE_INGRESS_WEIGHT,
   ATTESA_RICAMBI_SUPPLIER_GRACE_DAYS,
   computeInactiveLavorazioniCriticality,
   computeSottoScortaCriticality,
   estimateDaysUnderMinimum,
+  isAccettazioneStato,
   isAttesaRicambiStato,
   lateIngressWeight,
   sottoScortaDurationWeight,
@@ -96,6 +98,8 @@ assert.ok(crit.weightedSeverity > sottoScortaDurationWeight(0.2), "mixed duratio
 
 assert.equal(isAttesaRicambiStato("attesa_ricambi"), true);
 assert.equal(isAttesaRicambiStato("accettazione"), false);
+assert.equal(isAccettazioneStato("accettazione"), true);
+assert.equal(isAccettazioneStato("attesa_ricambi"), false);
 assert.ok(
   stagnationThresholdDays(3, { attesaRicambi: true }) >= ATTESA_RICAMBI_SUPPLIER_GRACE_DAYS,
   "attesa ricambi: soglia almeno grace fornitore",
@@ -103,6 +107,14 @@ assert.ok(
 assert.ok(
   stagnationThresholdDays(3, { attesaRicambi: true }) > stagnationThresholdDays(3),
   "attesa ricambi più tollerante della soglia base",
+);
+assert.ok(
+  stagnationThresholdDays(3, { accettazione: true }) >= ACCETTAZIONE_CLIENT_GRACE_DAYS,
+  "accettazione: soglia almeno grace documentazione cliente",
+);
+assert.ok(
+  stagnationThresholdDays(3, { accettazione: true }) > stagnationThresholdDays(3),
+  "accettazione più tollerante della soglia base",
 );
 
 function lav(partial: Partial<LavorazioneListRow> & Pick<LavorazioneListRow, "id" | "stato">): LavorazioneListRow {
@@ -121,9 +133,10 @@ function lav(partial: Partial<LavorazioneListRow> & Pick<LavorazioneListRow, "id
 const stati = [
   { id: "attesa_ricambi", label: "Attesa ricambi" },
   { id: "accettazione", label: "Accettazione" },
+  { id: "attesa_preventivo", label: "Attesa preventivo" },
 ];
 
-// Outlier lungo vs peer freschi: excess attesa ricambi soft rispetto ad accettazione.
+// Outlier lungo vs peer freschi: excess attesa ricambi e accettazione soft vs attesa preventivo.
 const ricambiInactive = computeInactiveLavorazioniCriticality(
   [
     lav({ id: "r-old", stato: "attesa_ricambi", updated_at: "2026-05-01T10:00:00.000Z" }),
@@ -142,15 +155,33 @@ const accettazioneInactive = computeInactiveLavorazioniCriticality(
   anchor,
   stati,
 );
+const preventivoInactive = computeInactiveLavorazioniCriticality(
+  [
+    lav({ id: "p-old", stato: "attesa_preventivo", updated_at: "2026-05-01T10:00:00.000Z" }),
+    lav({ id: "p-new1", stato: "attesa_preventivo", updated_at: "2026-07-12T10:00:00.000Z" }),
+    lav({ id: "p-new2", stato: "attesa_preventivo", updated_at: "2026-07-11T10:00:00.000Z" }),
+  ],
+  anchor,
+  stati,
+);
 assert.equal(ricambiInactive.count, 1);
 assert.equal(accettazioneInactive.count, 1);
+assert.equal(preventivoInactive.count, 1);
 assert.ok(
-  ricambiInactive.weightedExcessDays < accettazioneInactive.weightedExcessDays,
-  "stesso outlier: attesa ricambi pesa meno (fornitori)",
+  ricambiInactive.weightedExcessDays <= accettazioneInactive.weightedExcessDays + 1e-9,
+  "stesso outlier: attesa ricambi e accettazione entrambi soft",
+);
+assert.ok(
+  accettazioneInactive.weightedExcessDays < preventivoInactive.weightedExcessDays,
+  "stesso outlier: accettazione pesa meno di attesa preventivo",
 );
 assert.ok(
   ricambiInactive.weightedExcessDays <= 0.3 + 1e-9,
   "excess attesa ricambi capped soft (≤0.3 per mezzo)",
+);
+assert.ok(
+  accettazioneInactive.weightedExcessDays <= 0.3 + 1e-9,
+  "excess accettazione capped soft (≤0.3 per mezzo)",
 );
 
 assert.equal(

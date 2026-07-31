@@ -82,7 +82,11 @@ export type LabelTemplateElement =
     }
   | {
       type: "text";
-      field: LabelTextField;
+      field?: LabelTextField;
+      /** Testo fisso (alternativo a `field` / `literalSource`). */
+      literal?: string;
+      /** Testo risolto a render — es. host dal QR cliente. */
+      literalSource?: "clienteWebsite";
       xMm: number;
       yMm: number;
       fontPt: number;

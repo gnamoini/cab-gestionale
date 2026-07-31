@@ -110,10 +110,8 @@ import {
   type SelectedMezzoContext,
 } from "@/lib/lavorazioni/selected-mezzo-context";
 import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
-import type { PrioritaLav } from "@/lib/lavorazioni/types";
-import { executeInterventoWriteEntry } from "@/lib/domain/intervento-entry";
 import { logInterventoTelemetry } from "@/lib/domain/intervento-context/intervento-telemetry";
-import { logMezzoSchedaConflictTelemetry } from "@/lib/domain/mezzo/mezzo-scheda-conflict-telemetry";
+import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
 import {
   buildLavorazioneRowProfileResolver,
@@ -228,9 +226,9 @@ import { useLavorazioneTagliandoStatoMove } from "@/src/hooks/gestionale/use-lav
 import { TagliandoNoPresetDialog } from "@/components/gestionale/lavorazioni/tagliando-no-preset-dialog";
 import { TagliandoCompletionResult } from "@/components/gestionale/lavorazioni/tagliando-completion-result";
 import {
-  tagliandoFieldsToLavorazionePatch,
-} from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
-import { assignTagliandoPresetToMezzoOnSave } from "@/lib/maintenance-plans/assign-tagliando-preset-to-mezzo.client";
+  invalidateAfterIngressoEditSave,
+  syncIngressoBackendFromFrozenCatalog,
+} from "@/lib/schede/ingresso-backend-sync";
 import { mezzoHasPresetConfig } from "@/lib/maintenance-plans/mezzo-has-preset-config";
 import { useMezziWithoutPresetQuery } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
@@ -1000,6 +998,16 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   const serverListPagination = isServerListPaginationEnabled();
   const listIncludeMezzo = !serverListPagination;
 
+  const serverSearchPart = useMemo(
+    (): Pick<LavorazioneFilters, "search"> | Record<string, never> =>
+      serverListPagination &&
+      searchApplied.trim() &&
+      !lavorazioniAdvancedFiltersActive(advancedFilters)
+        ? { search: searchApplied.trim() }
+        : {},
+    [serverListPagination, searchApplied, advancedFilters],
+  );
+
   const filtersAttive = useMemo(
     (): LavorazioneFilters => ({
       includeMezzo: listIncludeMezzo,
@@ -1007,13 +1015,9 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       includeProfiles: false,
       ...mezzoFilterPart,
       archived: false,
-      ...(serverListPagination &&
-      searchApplied.trim() &&
-      !lavorazioniAdvancedFiltersActive(advancedFilters)
-        ? { search: searchApplied.trim() }
-        : {}),
+      ...serverSearchPart,
     }),
-    [listIncludeMezzo, mezzoFilterPart, serverListPagination, searchApplied, advancedFilters],
+    [listIncludeMezzo, mezzoFilterPart, serverSearchPart],
   );
 
   const filtersChiuse = useMemo(
@@ -1023,8 +1027,9 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       includeProfiles: false,
       ...mezzoFilterPart,
       archived: true,
+      ...serverSearchPart,
     }),
-    [listIncludeMezzo, mezzoFilterPart],
+    [listIncludeMezzo, mezzoFilterPart, serverSearchPart],
   );
 
   const [archivioSectionOpen, setArchivioSectionOpen] = useState(false);
@@ -1204,6 +1209,10 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       ),
     [chiuseRows, pageFilters, schedeStore, addettiRecords],
   );
+
+  useEffect(() => {
+    if (hasPageClientFilters) setArchivioSectionOpen(true);
+  }, [hasPageClientFilters]);
 
   const filterCatalog = useMemo(
     () =>
@@ -1918,127 +1927,65 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     }
   }, [globalPerm.isAdmin, markAdminNotifRead]);
 
-  /**
-   * EDIT_INGRESSO_ORDER (v1):
-   * 1. scheda già persistita dal modal
-   * 2. refetch mezzi + row lavorazione (W5)
-   * 3. executeInterventoWrite — unico entry point; sync interno a write-contract
-   */
-  async function syncIngressoToBackend(
-    staleRow: LavorazioneListRow,
-    campi: SchedaIngressoFields,
-    mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan,
-    lavorazioneNote?: string,
-    tagliandoFields?: import("@/lib/maintenance-plans/tagliando-lavorazione-fields").TagliandoLavorazioneFields,
-  ) {
-    await qc.refetchQueries({ queryKey: QK.mezzi });
-    const freshRows =
-      qc.getQueryData<MezzoGestito[]>(mezziListQueryKey("list", null)) ??
-      qc.getQueriesData<MezzoGestito[]>({ queryKey: QK.mezzi }).find(([, data]) => data?.length)?.[1] ??
-      mezziListQ.data ??
-      [];
-    const catalog = freshRows;
-
-    await qc.refetchQueries({ queryKey: QK.lavorazioniQueries });
-    const freshRow =
-      qc
-        .getQueriesData({ queryKey: QK.lavorazioniQueries })
-        .flatMap(([, data]) => lavorazioniListCacheRows(data as never))
-        .find((r) => r.id === staleRow.id) ??
-      attiveRows.find((r) => r.id === staleRow.id) ??
-      chiuseRows.find((r) => r.id === staleRow.id) ??
-      staleRow;
-
-    const writeDeps = {
-      upsertMezzo: ({
-        fields,
-        preferredMezzoId,
-        updatePlan,
-        lavorazioneId,
-      }: {
-        fields: SchedaIngressoFields;
-        preferredMezzoId?: string | null;
-        updatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
-        lavorazioneId?: string | null;
-      }) =>
-        upsertMezzoFromSchedaIngresso({
-          fields,
-          mezziCatalog: catalog,
-          preferredMezzoId,
-          updatePlan,
-          lavorazioneId,
-          userId: createdBy,
-          create: (data) => createMezzo.mutateAsync(data),
-          update: (id, data) => updateMezzo.mutateAsync({ id, data }),
-          applyAssociationChange: applyMezzoAssociationChangeOrThrow,
-        }),
-      updateLavorazione: async (id: string, patch: Parameters<typeof updateLav.mutateAsync>[0]["data"]) => {
-        await updateLav.mutateAsync({ id, data: patch });
+  const syncIngressoBackendForEdit = useCallback(
+    async (
+      staleRow: LavorazioneListRow,
+      campi: SchedaIngressoFields,
+      options: {
+        mezziCatalogFrozen: readonly MezzoGestito[];
+        mezzoUpdatePlan?: import("@/lib/domain/mezzo/mezzo-update-from-scheda-plan").MezzoUpdateFromSchedaPlan;
+        lavorazioneNote?: string;
+        tagliandoFields?: import("@/lib/maintenance-plans/tagliando-lavorazione-fields").TagliandoLavorazioneFields;
+        runId: number;
+        lavorazioneGestione?: import("@/lib/schede/scheda-ingresso-save-pipeline").IngressoLavorazioneGestionePatch;
       },
-    };
+    ) => {
+      const row =
+        attiveRows.find((r) => r.id === staleRow.id) ??
+        chiuseRows.find((r) => r.id === staleRow.id) ??
+        staleRow;
 
-    const { result } = await executeInterventoWriteEntry(
-      {
-        mode: "edit",
-        idempotencyKey: `edit-${freshRow.id}`,
-        fields: campi,
-        mezziCatalog: catalog,
-        meta: {
-          row: freshRow,
-          writeContext: { source: "manual", mezzoUpdatePlan },
+      await syncIngressoBackendFromFrozenCatalog(
+        {
+          row,
+          campi,
+          mezziCatalogFrozen: options.mezziCatalogFrozen,
+          mezzoUpdatePlan: options.mezzoUpdatePlan,
+          lavorazioneNote: options.lavorazioneNote,
+          tagliandoFields: options.tagliandoFields,
+          runId: options.runId,
+          lavorazioneGestione: options.lavorazioneGestione,
         },
-      },
-      writeDeps,
-    );
-
-    if (!result.ok) {
-      if (result.error === "MEZZO_STALE_CONFLICT") {
-        logMezzoSchedaConflictTelemetry({
-          event: "MEZZO_STALE_CONFLICT",
-          mezzoId: freshRow.mezzo_id,
-          lavorazioneId: freshRow.id,
-        });
-      }
-      logInterventoTelemetry("intervento_sync_drift_detected", {
-        lavorazioneId: freshRow.id,
-        stage: result.stage,
-        mismatch: true,
-      });
-      throw new Error(result.error);
-    }
-
-    const nextNote = lavorazioneNote?.trim() ?? "";
-    const currentNote = (freshRow.note ?? "").trim();
-    if (nextNote !== currentNote) {
-      await updateLav.mutateAsync({
-        id: freshRow.id,
-        data: { note: nextNote || null },
-      });
-    }
-
-    if (tagliandoFields) {
-      // Sempre persisti: evita falsi negativi da freshRow stale (list-v2 / refetch race).
-      await updateLav.mutateAsync({
-        id: freshRow.id,
-        data: tagliandoFieldsToLavorazionePatch(tagliandoFields) as Parameters<
-          typeof updateLav.mutateAsync
-        >[0]["data"],
-      });
-      await qc.invalidateQueries({ queryKey: lavorazioniDomainQueryKeys.base(freshRow.id) });
-      const assignRes = await assignTagliandoPresetToMezzoOnSave({
-        mezzoId: freshRow.mezzo_id,
-        tagliandoFields,
-      });
-      if (!assignRes.ok) {
-        gestToast.warning(assignRes.error);
-      } else if (assignRes.assigned) {
-        gestToast.successOnce(
-          `tagliando-preset-assigned-${freshRow.id}`,
-          "Preset assegnato al mezzo nella sezione tagliandi.",
-        );
-      }
-    }
-  }
+        {
+          upsertMezzo: ({ fields, preferredMezzoId, updatePlan, lavorazioneId }) =>
+            upsertMezzoFromSchedaIngresso({
+              fields,
+              mezziCatalog: options.mezziCatalogFrozen,
+              preferredMezzoId,
+              updatePlan,
+              lavorazioneId,
+              userId: createdBy,
+              create: (data) => createMezzo.mutateAsync(data),
+              update: (id, data) => updateMezzo.mutateAsync({ id, data }),
+              applyAssociationChange: applyMezzoAssociationChangeOrThrow,
+            }),
+          updateLavorazione: async (id, patch) => {
+            await updateLav.mutateAsync({
+              id,
+              data: patch as Parameters<typeof updateLav.mutateAsync>[0]["data"],
+            });
+          },
+          onTagliandoPresetWarning: (msg) => gestToast.warning(msg),
+          onTagliandoPresetAssigned: (lavId) =>
+            gestToast.successOnce(
+              `tagliando-preset-assigned-${lavId}`,
+              "Preset assegnato al mezzo nella sezione tagliandi.",
+            ),
+        },
+      );
+    },
+    [attiveRows, chiuseRows, createdBy, createMezzo, gestToast, updateLav, updateMezzo],
+  );
 
   function resetRicercaPagina() {
     clearSearch();
@@ -2857,17 +2804,10 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
           onPersist={onPersistSchedeBundle}
           onIngressoCommitted={async (campi, options) => {
             if (!schedeRow) return;
-            try {
-              await syncIngressoToBackend(
-                schedeRow.row,
-                campi,
-                options?.mezzoUpdatePlan,
-                options?.lavorazioneNote,
-                options?.tagliandoFields,
-              );
-            } catch (err) {
-              gestToast.error(err, { module: "lavorazioni", action: "update" });
-            }
+            await syncIngressoBackendForEdit(schedeRow.row, campi, options);
+          }}
+          onInvalidateAfterIngressoSave={async (lavorazioneId, mezzoId) => {
+            await invalidateAfterIngressoEditSave(qc, lavorazioneId, mezzoId);
           }}
           attive={attiveLegacyRows}
           storico={storicoLegacyRows}

@@ -10,8 +10,12 @@ import {
 } from "@/components/gestionale/global-table";
 import { GlobalTableHeadLabel } from "@/components/gestionale/global-table/global-table-header";
 import type { MezzoAnagraficaChange } from "@/lib/domain/mezzo/detect-mezzo-anagrafica-changes";
+import {
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
+import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 import { gestionaleListTableTd } from "@/lib/ui/gestionale-list-table";
-import { dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
 
 export function MezzoAnagraficaConfirmDialog({
   open,
@@ -31,21 +35,22 @@ export function MezzoAnagraficaConfirmDialog({
   return (
     <GestionaleConfirmDialog
       open={open}
-      title="Conferma modifiche mezzo"
+      title="Aggiornamento anagrafica mezzo"
+      layerClassName={cabModalZConfirm}
       onCancel={onCancel}
       footer={
         <div className={gestionaleConfirmActionsClass}>
-          <button type="button" className={dsBtnNeutral} onClick={onCancel}>
-            Torna alla scheda
-          </button>
-          <button type="button" className={dsBtnPrimary} onClick={onConfirm}>
-            Salva modifiche
-          </button>
+          <GestionaleModalFooterCancelButton className="w-full sm:w-auto" onClick={onCancel}>
+            Torna alla modifica
+          </GestionaleModalFooterCancelButton>
+          <GestionaleModalFooterSaveButton type="button" className="w-full sm:w-auto" onClick={onConfirm}>
+            Conferma e salva
+          </GestionaleModalFooterSaveButton>
         </div>
       }
     >
       <p className="text-sm text-zinc-700 dark:text-zinc-300">
-        Hai modificato alcuni dati dell&apos;anagrafica del mezzo. Vuoi applicare queste modifiche?
+        Sono state rilevate modifiche all&apos;anagrafica del mezzo collegato.
       </p>
       {mezzoStale ? (
         <p className="mt-2 text-sm font-medium text-amber-700 dark:text-amber-400">
@@ -69,7 +74,9 @@ export function MezzoAnagraficaConfirmDialog({
               <GestionaleListTableRow key={row.field}>
                 <td className={gestionaleListTableTd}>{row.label}</td>
                 <td className={gestionaleListTableTd}>{row.oldValue}</td>
-                <td className={gestionaleListTableTd}>{row.newValue}</td>
+                <td className={gestionaleListTableTd}>
+                  → {row.newValue}
+                </td>
               </GestionaleListTableRow>
             ))}
           </GestionaleListTable>

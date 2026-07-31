@@ -3,12 +3,14 @@ import {
   drawGestionaleCompactFieldSectionTable,
   drawGestionaleDataSectionTable,
   drawGestionaleFieldSectionTable,
-  drawGestionaleSideBySideMetricBoxes,
+  drawGestionaleTripleFieldSectionTable,
   pdfFieldFromValue,
 } from "@/lib/pdf/gestionale-section-table";
 import {
-  buildAnagraficaPdfFields,
+  buildPreventivoDestinatarioPdfFields,
   buildPreventivoOggettoInterventoPdfFields,
+} from "@/lib/pdf/anagrafica-pdf-fields";
+import {
   fmtEuroPdf,
   pdfPreventivoVoceTableColumns,
   type PdfField,
@@ -18,9 +20,11 @@ import {
   type PreventivoRigaOutput,
 } from "@/lib/preventivi/preventivi-struttura";
 import { totaleNettoRigaRicambio } from "@/lib/preventivi/preventivi-totals";
+import { tipoRigaRicambio } from "@/lib/preventivi/preventivi-struttura";
 import {
   PREVENTIVO_SMALTIMENTO_DESCRIZIONE,
   PREVENTIVO_SMALTIMENTO_PERCENT,
+  isDescrizioneMaterialiConsumo,
 } from "@/lib/preventivi/preventivi-voci-standard";
 import type { PreventivoClientePdfOptions } from "@/lib/pdf/anagrafica-pdf-fields";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
@@ -80,7 +84,7 @@ export function buildManodoperaPdfRows(righe: readonly PreventivoRigaOutput[]): 
   if (collRow && collRow.sezione === "collaudo") {
     body.push([
       collRow.descrizione,
-      String(collRow.quantita),
+      "—",
       fmtEuroPdf(collRow.prezzoUnitario),
       fmtEuroPdf(collRow.totale),
     ]);
@@ -95,8 +99,10 @@ export function buildRicambiPdfRows(righe: readonly PreventivoRigaOutput[]): str
     .map((entry) => {
       const r = entry.riga;
       const net = totaleNettoRigaRicambio(r);
+      const codiceVuoto =
+        tipoRigaRicambio(r) === "materiali_consumo" || isDescrizioneMaterialiConsumo(r.descrizione);
       return [
-        r.codiceOE || "—",
+        codiceVuoto ? "" : r.codiceOE || "—",
         r.descrizione,
         String(r.quantita),
         fmtEuroPdf(r.prezzoUnitario),
@@ -106,6 +112,26 @@ export function buildRicambiPdfRows(righe: readonly PreventivoRigaOutput[]): str
         fmtEuroPdf(net),
       ];
     });
+}
+
+/** Campi riepilogo economico (netto, IVA, totale documento). */
+export function buildPreventivoPdfRiepilogoFields(economics: PreventivoPdfEconomics): PdfField[] {
+  const fields: PdfField[] = [];
+
+  if (economics.totaleSmaltimento > 0) {
+    fields.push({
+      label: `${PREVENTIVO_SMALTIMENTO_DESCRIZIONE} (${PREVENTIVO_SMALTIMENTO_PERCENT}%)`,
+      value: fmtEuroPdf(economics.totaleSmaltimento),
+    });
+  }
+
+  fields.push({ label: "TOTALE NETTO (senza IVA)", value: fmtEuroPdf(economics.totaleNetto) });
+  fields.push({
+    label: `TOTALE IVA (${economics.ivaPercent}%)`,
+    value: fmtEuroPdf(economics.importoIva),
+  });
+  fields.push({ label: "TOTALE DOCUMENTO", value: fmtEuroPdf(economics.totaleConIva) });
+  return fields;
 }
 
 /** Campi netto/smaltimento (senza duplicare subtotali sezione). */
@@ -129,24 +155,10 @@ export function drawPreventivoPdfRiepilogo(
   pageW: number,
   economics: PreventivoPdfEconomics,
 ): number {
-  let y = startY;
-
-  const nettoFields = buildPreventivoPdfNettoFields(economics);
-  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Riepilogo importi", nettoFields);
-
-  y = drawGestionaleSideBySideMetricBoxes(
-    doc,
-    y,
-    pageW,
-    { title: `IVA (${economics.ivaPercent}%)`, value: "—" },
-    { title: "Totale IVA", value: fmtEuroPdf(economics.importoIva) },
-  );
-
-  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Totale documento", [
-    { label: "Totale con IVA", value: fmtEuroPdf(economics.totaleConIva) },
-  ]);
-
-  return y;
+  const fields = buildPreventivoPdfRiepilogoFields(economics);
+  return drawGestionaleFieldSectionTable(doc, startY, pageW, "Riepilogo importi", fields, {
+    valueHalign: "left",
+  });
 }
 
 /** Corpo PDF preventivo/consuntivo — layout table-based (header/footer gestiti dal chiamante). */
@@ -161,12 +173,12 @@ export function drawPreventivoPdfBody(
 ): number {
   let y = startY;
 
-  const destinatario = buildAnagraficaPdfFields(p, clientePdf);
+  const destinatario = buildPreventivoDestinatarioPdfFields(p, clientePdf);
   y = drawGestionaleCompactFieldSectionTable(doc, y, pageW, "Destinatario", destinatario);
 
   const oggetto = buildPreventivoOggettoInterventoPdfFields(p);
   if (oggetto.length > 0) {
-    y = drawGestionaleCompactFieldSectionTable(doc, y, pageW, "Oggetto intervento", oggetto);
+    y = drawGestionaleTripleFieldSectionTable(doc, y, pageW, "Oggetto intervento", oggetto);
   }
 
   const lavBody = buildLavorazioniEffettuatePdfRows(p);
@@ -199,7 +211,7 @@ export function drawPreventivoPdfBody(
     doc,
     y,
     pageW,
-    "Ricambi utilizzati",
+    "MATERIALI UTILIZZATI",
     [...RICAMBI_HEAD],
     ricBody.length ? ricBody : [["—", "Nessun ricambio", "—", "—", "—", "—"]],
     RICAMBI_COLUMN_STYLES,

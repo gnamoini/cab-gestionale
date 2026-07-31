@@ -20,9 +20,13 @@ import {
   GlobalSettingsListSelect,
 } from "@/components/gestionale/global-input";
 import { sliceInputValue, TEXT_LONG } from "@/lib/validation/text-field-limits";
-import { LoadingButton } from "@/components/design-system";
-import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { dsBtnDanger, dsBtnNeutral, dsInput, dsLabel } from "@/lib/ui/design-system";
+import {
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterDeleteButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
+import { dsBtnNeutral, dsInput, dsLabel } from "@/lib/ui/design-system";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
@@ -158,28 +162,10 @@ export function LavorazioneEditModal({
       title="Dettagli macchina"
       subtitle="Modifica controllata di anagrafica mezzo e note lavorazione."
       footer={
-        <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            className={`${erpBtnNeutral} min-h-11`}
-            onClick={onClose}
-            disabled={pending}
-          >
-            Annulla
-          </button>
-          <LoadingButton
-            type="submit"
-            form={LAVORAZIONE_EDIT_FORM_ID}
-            className={`${erpBtnAccent} min-h-11`}
-            loading={pending}
-            preset="salva"
-          >
-            Salva
-          </LoadingButton>
+        <GestionaleModalFooterActions>
           {canDelete && onDelete ? (
-            <button
-              type="button"
-              className={`${dsBtnDanger} min-h-11 basis-full sm:basis-auto`}
+            <GestionaleModalFooterDeleteButton
+              className="basis-full sm:basis-auto"
               disabled={pending}
               onClick={() => {
                 void confirm({
@@ -192,11 +178,15 @@ export function LavorazioneEditModal({
                   if (ok) onDelete();
                 });
               }}
-            >
-              Elimina
-            </button>
+            />
           ) : null}
-        </div>
+          <GestionaleModalFooterCancelButton onClick={onClose} disabled={pending} />
+          <GestionaleModalFooterSaveButton
+            type="submit"
+            form={LAVORAZIONE_EDIT_FORM_ID}
+            loading={pending}
+          />
+        </GestionaleModalFooterActions>
       }
     >
       <form

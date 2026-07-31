@@ -1,8 +1,11 @@
 "use client";
 
 import { GestionaleConfirmDialog, gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog";
-import { LoadingButton } from "@/components/design-system";
-import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import {
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
+import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import type { SchedaIngressoUnknownSettingItem } from "@/lib/schede/scheda-ingresso-unknown-settings";
 
 export function SchedaIngressoUnknownSettingsDialog({
@@ -32,9 +35,11 @@ export function SchedaIngressoUnknownSettingsDialog({
       onCancel={onCancel}
       footer={
         <div className={gestionaleConfirmActionsClass}>
-          <button type="button" className={`${erpBtnNeutral} min-h-11 w-full sm:w-auto`} disabled={pending} onClick={onCancel}>
-            Annulla
-          </button>
+          <GestionaleModalFooterCancelButton
+            className="w-full sm:w-auto"
+            disabled={pending}
+            onClick={onCancel}
+          />
           <button
             type="button"
             className={`${erpBtnNeutral} min-h-11 w-full sm:w-auto`}
@@ -44,15 +49,15 @@ export function SchedaIngressoUnknownSettingsDialog({
             Continua senza salvare
           </button>
           {canSaveSettings ? (
-            <LoadingButton
+            <GestionaleModalFooterSaveButton
               type="button"
-              className={`${erpBtnAccent} min-h-11 w-full sm:w-auto`}
+              className="w-full sm:w-auto"
               loading={pending}
               loadingLabel="Salvataggio…"
               onClick={onSaveAndContinue}
             >
               Salva impostazioni e continua
-            </LoadingButton>
+            </GestionaleModalFooterSaveButton>
           ) : null}
         </div>
       }

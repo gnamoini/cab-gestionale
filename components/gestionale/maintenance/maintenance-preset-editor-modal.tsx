@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { LoadingButton } from "@/components/design-system";
+import {
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GlobalSelect } from "@/components/gestionale/global-input";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
@@ -18,7 +22,7 @@ import {
   type PlanDraft,
 } from "@/lib/maintenance-plans/preset-editor-draft";
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
-import { dsBtnNeutral, dsBtnPrimary, dsFormField, dsFormInput, dsFormLabel, dsInput } from "@/lib/ui/design-system";
+import { dsFormField, dsFormInput, dsFormLabel, dsInput } from "@/lib/ui/design-system";
 import { useMaintenancePlanUpsertMutation } from "@/src/hooks/gestionale/use-maintenance-plan-mutations";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
@@ -100,14 +104,10 @@ export function MaintenancePresetEditorModal({
         titleId="maintenance-preset-editor-title"
         modalSize="formLarge"
         footer={
-          <div className="flex w-full flex-wrap items-center justify-end gap-2">
-            <button type="button" className={dsBtnNeutral} onClick={onClose}>
-              Annulla
-            </button>
-            <LoadingButton type="submit" form="maintenance-preset-form" className={dsBtnPrimary} loading={upsertMut.isPending}>
-              Salva
-            </LoadingButton>
-          </div>
+          <GestionaleModalFooterActions>
+            <GestionaleModalFooterCancelButton onClick={onClose} />
+            <GestionaleModalFooterSaveButton type="submit" form="maintenance-preset-form" loading={upsertMut.isPending} />
+          </GestionaleModalFooterActions>
         }
       >
         <GestionaleModalScrollBody>

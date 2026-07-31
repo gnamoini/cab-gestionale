@@ -141,7 +141,7 @@ export function SchedaIngressoTagliandoSection({
         {onIsGaranziaChange ? (
           <InterventoCheckbox
             id="ingresso-intervento-garanzia"
-            label="In garanzia"
+            label="Garanzia"
             checked={isGaranzia}
             disabled={disabled}
             badge={
@@ -193,6 +193,7 @@ export function SchedaIngressoTagliandoSection({
             preserveItemOrder
             alphabeticalBrowse={false}
             disabled={disabled || presetLocked}
+            clearable
           />
           {assignPresetToMezzo && presetRef && !mezzoHasConfig ? (
             <p className="mt-2 text-xs leading-snug text-[color:var(--cab-text-muted)]">

@@ -53,6 +53,10 @@ export type GlobalSelectBaseProps = {
   highlightSearch?: boolean;
   minSheetOptions?: number;
   exclusiveGroup?: string;
+  /** Mostra pulsante svuota quando c'è un valore e il campo non è obbligatorio. */
+  clearable?: boolean;
+  /** Voce value="" in elenco ma input a riposo vuoto (placeholder). */
+  hideEmptyOptionInInput?: boolean;
 };
 
 export type GlobalSelectStringProps = GlobalSelectBaseProps & {

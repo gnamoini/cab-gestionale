@@ -1,4 +1,5 @@
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cliente-infer";
 import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
@@ -31,6 +32,7 @@ import {
   resolveInterventoCanonical,
 } from "@/lib/domain/intervento-context/resolve-intervento-canonical";
 import { createAttrezzaturaSnapshot } from "@/lib/domain/mezzo-attrezzatura/create-attrezzatura-snapshot";
+import { righeAddettiFromSchedaLavorazioni } from "@/lib/preventivi/righe-addetti-from-scheda-lavorazioni";
 import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 
 export async function buildNewPreventivoFromLavorazioneContext(opts: {
@@ -43,6 +45,7 @@ export async function buildNewPreventivoFromLavorazioneContext(opts: {
   existingRecords: readonly PreventivoRecord[];
   onDescriptionProgress?: (progress: DescriptionGenerationProgress) => void;
   descriptionDeps?: import("@/lib/preventivi/description-engine/generate-preventivo-description-async").GeneratePreventivoDescriptionAsyncDeps;
+  addettiRecords?: readonly AddettoRecord[];
 }): Promise<PreventivoRecord> {
   const { lav, origine, bundle, magazzino, autore, existingRecords } = opts;
   const now = new Date().toISOString();
@@ -153,36 +156,12 @@ export async function buildNewPreventivoFromLavorazioneContext(opts: {
     scontoPercent: infer.scontoRigaForCodice(r.codiceOE),
   }));
 
-  const addMap = new Map<string, number>();
-  const addettiRecords = getRuntimeCabAppSettings()?.lavorazioni.addettiRecords ?? [];
-  for (const row of lavScheda?.campi.righe ?? []) {
-    for (const a of row.addettiAssegnati ?? []) {
-      const id = a.addettoId?.trim();
-      const key = id || a.addetto?.trim();
-      if (!key) continue;
-      addMap.set(key, (addMap.get(key) ?? 0) + (Number.isFinite(a.oreImpiegate) ? a.oreImpiegate : 0));
-    }
-  }
-  const righeAddetti: PreventivoManodopera["righeAddetti"] = [];
-  for (const [key, ore] of addMap) {
-    const isId = addettiRecords.some((r) => r.id === key);
-    if (isId) {
-      righeAddetti.push({ addettoId: key, ore: Math.round(ore * 100) / 100 });
-    } else {
-      const rec = addettiRecords.find((r) => r.nome === key || `${r.nome} ${r.cognome ?? ""}`.trim() === key);
-      if (rec) {
-        righeAddetti.push({ addettoId: rec.id, ore: Math.round(ore * 100) / 100 });
-      } else {
-        righeAddetti.push({
-          addettoId: null,
-          ore: Math.round(ore * 100) / 100,
-          addettoLegacy: key,
-          legacyWarning: `Addetto storico non convertibile: ${key}`,
-        });
-      }
-    }
-  }
-  const oreTotali = Math.max(0.25, Math.round(righeAddetti.reduce((s, x) => s + x.ore, 0) * 100) / 100);
+  const addettiRecords =
+    opts.addettiRecords ?? getRuntimeCabAppSettings()?.lavorazioni.addettiRecords ?? [];
+  const righeAddetti = righeAddettiFromSchedaLavorazioni(lavScheda, addettiRecords);
+  const oreTotali = righeAddetti.length
+    ? Math.max(0.25, Math.round(righeAddetti.reduce((s, x) => s + x.ore, 0) * 100) / 100)
+    : 0.25;
 
   const manodopera: PreventivoManodopera = {
     oreTotali,
@@ -262,7 +241,7 @@ export async function buildNewPreventivoFromLavorazioneContext(opts: {
   const strutturato = ensurePreventivoStruttura(draft);
   const withTotals = { ...strutturato, ...calcolaTotaliPreventivo(strutturato) };
   if (opts.mezzo?.id) {
-    (withTotals as PreventivoRecord & { mezzoId?: string }).mezzoId = opts.mezzo.id;
+    withTotals.mezzoId = opts.mezzo.id;
   }
   return withTotals;
 }

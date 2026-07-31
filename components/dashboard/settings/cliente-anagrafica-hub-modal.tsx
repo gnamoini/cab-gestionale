@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { HubModalTab, HubModalTabBar } from "@/components/design-system/hub-modal-tab-bar";
-import { LoadingButton } from "@/components/design-system";
+import {
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
 import { ClienteAnagraficaPanoramica } from "@/components/dashboard/settings/cliente-anagrafica-panoramica";
 import { ClienteContattiEditor } from "@/components/dashboard/settings/cliente-contatti-editor";
 import { ClienteDatiFiscaliFields, ClienteSediFields } from "@/components/dashboard/settings/cliente-sedi-fields";
@@ -72,20 +76,17 @@ export function ClienteAnagraficaHubModal({
       onRequestClose={onRequestClose}
       footer={
         tab === "panoramica" ? null : (
-          <div className="flex justify-end gap-2 border-t border-[color:var(--cab-border)] px-4 py-3">
-            <LoadingButton type="button" variant="secondary" onClick={onRequestClose} disabled={saveMutation.isPending}>
+          <GestionaleModalFooterActions className="justify-end gap-2 border-t border-[color:var(--cab-border)] px-4 py-3">
+            <GestionaleModalFooterCancelButton onClick={onRequestClose} disabled={saveMutation.isPending}>
               Chiudi
-            </LoadingButton>
-            <LoadingButton
+            </GestionaleModalFooterCancelButton>
+            <GestionaleModalFooterSaveButton
               type="button"
-              variant="primary"
               loading={saveMutation.isPending}
               disabled={!dirty || !draft}
               onClick={() => void handleSave()}
-            >
-              Salva
-            </LoadingButton>
-          </div>
+            />
+          </GestionaleModalFooterActions>
         )
       }
     >

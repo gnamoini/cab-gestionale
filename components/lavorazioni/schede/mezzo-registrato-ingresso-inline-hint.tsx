@@ -68,3 +68,23 @@ export function MezzoRegistratoIngressoInlineHint({
     </div>
   );
 }
+
+/** Avviso compatto sotto un campo scheda diverso dall'anagrafica mezzo salvata. */
+export function SchedaIngressoMezzoFieldDriftHint({ savedValue }: { savedValue: string }) {
+  const saved = savedValue.trim();
+  return (
+    <p
+      className="mt-1.5 text-[11px] leading-snug text-[color:color-mix(in_srgb,var(--cab-warning,#d97706)_88%,var(--cab-text))]"
+      role="status"
+    >
+      {saved && saved !== "—" ? (
+        <>
+          Stai modificando i dati del mezzo — prima:{" "}
+          <span className="font-medium text-[color:var(--cab-text-muted)]">{saved}</span>
+        </>
+      ) : (
+        "Stai modificando i dati del mezzo"
+      )}
+    </p>
+  );
+}

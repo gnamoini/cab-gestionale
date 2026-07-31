@@ -76,7 +76,7 @@ const attrezzaturaPreventivo = {
 
 const oggettoMerged = buildPreventivoOggettoInterventoPdfFields(attrezzaturaPreventivo);
 assert.ok(oggettoMerged.some((f) => f.label === "Marca" && f.value === "CAT"));
-assert.ok(oggettoMerged.some((f) => f.label === "Telaio Marca" && f.value === "Iveco"));
+assert.ok(oggettoMerged.some((f) => f.label === "Marca telaio" && f.value === "Iveco"));
 assert.ok(oggettoMerged.some((f) => f.label === "Targa" && f.value === "AA111BB"));
 
 const legacyRowCount =

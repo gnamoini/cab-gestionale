@@ -209,6 +209,9 @@ export function resolveTextPlacement(
   payload: LabelPayload,
   template: LabelTemplateDefinition,
 ): ResolvedTextPlacement {
+  if (!el.field) {
+    return { lines: [], yMm: el.yMm };
+  }
   const value = fieldValue(payload, el.field);
   const widthMm = el.maxWidthMm ?? template.widthMm - el.xMm - 2;
   const chars = maxCharsForWrap(widthMm, el.fontPt, el.font);

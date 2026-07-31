@@ -52,7 +52,7 @@ export type GestionaleDataSectionTableLayout = {
   extraHeadRows?: RowInput[];
 };
 
-export type GestionaleFieldSectionOpts = { multiline?: boolean };
+export type GestionaleFieldSectionOpts = { multiline?: boolean; valueHalign?: "left" | "right" };
 
 type PdfCellPadding =
   | number
@@ -176,6 +176,25 @@ export function pdfFieldFromValue(label: string, value: string | undefined): Pdf
 
 export function pdfFieldsToBody(fields: PdfField[]): string[][] {
   return fields.map((f) => [f.label, f.value]);
+}
+
+/** Griglia 6 colonne: label|value × 3 campi per riga. */
+export function pdfFieldsToTripleCompactBody(fields: PdfField[]): string[][] {
+  const rows: string[][] = [];
+  for (let i = 0; i < fields.length; i += 3) {
+    const cells: string[] = [];
+    for (let j = 0; j < 3; j++) {
+      const f = fields[i + j];
+      cells.push(f?.label ?? "", f?.value ?? "");
+    }
+    rows.push(cells);
+  }
+  return rows;
+}
+
+/** Righe griglia 3 colonne necessarie per N campi. */
+export function tripleFieldRowCount(fieldCount: number): number {
+  return Math.ceil(Math.max(fieldCount, 0) / 3);
 }
 
 /** Griglia 4 colonne: label|value|label|value (2 coppie per riga). */
@@ -303,7 +322,7 @@ function sideBySidePanelLayout(pageW: number, gapMm = PDF_DS_SIDE_GAP) {
   return { panelW, rightMarginLeft, gapMm };
 }
 
-function fieldColumnStyles(contentW: number, multiline: boolean) {
+function fieldColumnStyles(contentW: number, multiline: boolean, valueHalign: "left" | "right" = "left") {
   const labelW = contentW * PDF_DS_COL_LABEL_RATIO;
   const valueW = contentW * (1 - PDF_DS_COL_LABEL_RATIO);
   const cellPadding = multiline ? PDF_DS_ROW_PAD_MULTILINE : PDF_DS_ROW_PAD;
@@ -324,6 +343,7 @@ function fieldColumnStyles(contentW: number, multiline: boolean) {
       fontStyle: "normal" as const,
       valign: "top" as const,
       cellPadding,
+      halign: valueHalign,
       ...(multiline ? { minCellHeight: PDF_DS_MULTILINE_MIN_H } : {}),
     },
   };
@@ -354,6 +374,37 @@ function compactFieldColumnStyles(contentW: number) {
     1: { cellWidth: valueW, ...valueStyle },
     2: { cellWidth: labelW, ...labelStyle },
     3: { cellWidth: valueW, ...valueStyle },
+  };
+}
+
+function tripleCompactFieldColumnStyles(contentW: number) {
+  const thirdW = contentW / 3;
+  const labelW = thirdW * PDF_DS_COL_LABEL_RATIO;
+  const valueW = thirdW * (1 - PDF_DS_COL_LABEL_RATIO);
+  const cellPadding = PDF_DS_ROW_PAD_COMPACT;
+  const labelStyle = {
+    fontSize: 8.5,
+    textColor: C_LABEL,
+    fontStyle: "normal" as const,
+    valign: "top" as const,
+    cellPadding,
+  };
+  const valueStyle = {
+    fontSize: 9,
+    textColor: C_PRIMARY,
+    fontStyle: "normal" as const,
+    valign: "top" as const,
+    cellPadding,
+    halign: "left" as const,
+  };
+
+  return {
+    0: { cellWidth: labelW, ...labelStyle },
+    1: { cellWidth: valueW, ...valueStyle },
+    2: { cellWidth: labelW, ...labelStyle },
+    3: { cellWidth: valueW, ...valueStyle },
+    4: { cellWidth: labelW, ...labelStyle },
+    5: { cellWidth: valueW, ...valueStyle },
   };
 }
 function baseTableStyles() {
@@ -437,7 +488,7 @@ export function drawGestionaleFieldSectionTable(
       cellPadding: { top: PDF_DS_HEAD_PAD_V, right: PDF_DS_HEAD_PAD_H, bottom: PDF_DS_HEAD_PAD_V, left: PDF_DS_HEAD_PAD_H },
       halign: "left",
     },
-    columnStyles: fieldColumnStyles(contentW, multiline),
+    columnStyles: fieldColumnStyles(contentW, multiline, opts?.valueHalign ?? "left"),
     didParseCell: (data: CellHookData) => {
       hooks.didParseCell(data);
       suppressEmptyBodyCellBorders(data);
@@ -483,6 +534,51 @@ export function drawGestionaleCompactFieldSectionTable(
       halign: "left",
     },
     columnStyles: compactFieldColumnStyles(contentW),
+    didParseCell: (data: CellHookData) => {
+      hooks.didParseCell(data);
+      suppressEmptyBodyCellBorders(data);
+    },
+    didDrawCell: hooks.didDrawCell,
+  });
+
+  return getAutoTableFinalY(doc, y) + PDF_DS_SECTION_GAP;
+}
+
+/** Sezione compatta 6 colonne (3 coppie label|value per riga) con header arancione. */
+export function drawGestionaleTripleFieldSectionTable(
+  doc: jsPDF,
+  startY: number,
+  pageW: number,
+  title: string,
+  fields: PdfField[],
+): number {
+  if (!fields.length) return startY;
+
+  const contentW = pdfContentWidth(pageW);
+  const y = ensurePdfSpace(doc, startY, 18);
+  const hooks = gestionaleSectionTableHooks(doc, { compactHead: true });
+
+  autoTable(doc, {
+    startY: y,
+    head: [[{ content: title.toUpperCase(), colSpan: 6 }]],
+    body: pdfFieldsToTripleCompactBody(fields),
+    ...baseTableStyles(),
+    tableWidth: contentW,
+    margin: { left: PDF_MARGIN_L, right: PDF_MARGIN_R },
+    headStyles: {
+      fillColor: C_HEAD_ACCENT_FILL,
+      textColor: C_PRIMARY,
+      fontStyle: "bold",
+      fontSize: 9.5,
+      cellPadding: {
+        top: PDF_DS_HEAD_PAD_V_COMPACT,
+        right: PDF_DS_HEAD_PAD_H,
+        bottom: PDF_DS_HEAD_PAD_V_COMPACT,
+        left: PDF_DS_HEAD_PAD_H,
+      },
+      halign: "left",
+    },
+    columnStyles: tripleCompactFieldColumnStyles(contentW),
     didParseCell: (data: CellHookData) => {
       hooks.didParseCell(data);
       suppressEmptyBodyCellBorders(data);

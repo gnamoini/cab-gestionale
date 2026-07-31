@@ -137,6 +137,22 @@ export function HubIconTrash({ className = "h-3.5 w-3.5 shrink-0" }: { className
   );
 }
 
+export function HubIconSave({ className = "h-3.5 w-3.5 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+    </svg>
+  );
+}
+
+export function HubIconClose({ className = "h-3.5 w-3.5 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
 /** Assegna preset/config a mezzi — furgone + plus (leggibile a 14px). */
 export function HubIconAssignMezzi({ className = "h-3.5 w-3.5 shrink-0" }: { className?: string }) {
   return (

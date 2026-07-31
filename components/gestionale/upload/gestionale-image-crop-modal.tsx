@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LoadingSpinner } from "@/components/design-system/loading";
+import {
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterSaveButton,
+  gestionaleModalFooterActionsStackMobileWrapClass,
+} from "@/components/design-system";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import {
   clampImageCropPan,
@@ -13,7 +18,7 @@ import {
   type ImageCropLayout,
 } from "@/lib/media/image-crop";
 import { cabModalZStacked } from "@/lib/ui/mobile-modal-behavior";
-import { dsBtnNeutral, dsBtnPrimary, dsFocus } from "@/lib/ui/design-system";
+import { dsFocus } from "@/lib/ui/design-system";
 
 type GestionaleImageCropModalProps = {
   file: File | null;
@@ -150,31 +155,23 @@ export function GestionaleImageCropModal({
       }}
       layerClassName={cabModalZStacked}
       footer={
-        <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            className={`${dsBtnNeutral} min-h-11 w-full justify-center sm:w-auto`}
+        <GestionaleModalFooterActions className={gestionaleModalFooterActionsStackMobileWrapClass}>
+          <GestionaleModalFooterCancelButton
+            className="w-full justify-center sm:w-auto"
             onClick={onClose}
             disabled={busy}
-          >
-            Annulla
-          </button>
-          <button
+          />
+          <GestionaleModalFooterSaveButton
             type="button"
-            className={`${dsBtnPrimary} min-h-11 w-full justify-center sm:w-auto disabled:opacity-55`}
+            className="w-full justify-center sm:w-auto"
             onClick={() => void handleConfirm()}
             disabled={busy || !layout || !naturalSize}
+            loading={busy}
+            loadingLabel="Ritaglio…"
           >
-            {busy ? (
-              <span className="inline-flex items-center gap-2">
-                <LoadingSpinner size="sm" label="Ritaglio…" />
-                Ritaglio…
-              </span>
-            ) : (
-              "Usa foto"
-            )}
-          </button>
-        </div>
+            Usa foto
+          </GestionaleModalFooterSaveButton>
+        </GestionaleModalFooterActions>
       }
     >
       <div className="space-y-3 px-1 pb-2 pt-1">

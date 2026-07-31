@@ -480,7 +480,7 @@ export async function clickSalvaSchedaIngressoEdit(
   const confirm = mezzoAnagraficaConfirmDialog(page);
   if (options?.confirmMezzoAnagrafica ?? true) {
     if (await confirm.isVisible().catch(() => false)) {
-      await confirm.getByRole("button", { name: "Salva modifiche" }).click();
+      await confirm.getByRole("button", { name: "Conferma e salva" }).click();
       await expect(confirm).toBeHidden({ timeout: 15_000 });
     }
   }
@@ -490,24 +490,24 @@ export async function clickSalvaSchedaIngressoEdit(
 
 /** Dialog conferma modifiche anagrafica mezzo (save gate scheda ingresso). */
 export function mezzoAnagraficaConfirmDialog(page: Page): Locator {
-  return page.getByRole("dialog").filter({ hasText: "Conferma modifiche mezzo" });
+  return page.getByRole("dialog").filter({ hasText: "Aggiornamento anagrafica mezzo" });
 }
 
 export async function expectMezzoAnagraficaConfirmVisible(page: Page): Promise<void> {
   const dlg = mezzoAnagraficaConfirmDialog(page);
   await expect(dlg).toBeVisible({ timeout: 15_000 });
-  await expect(dlg.getByText("Hai modificato alcuni dati dell'anagrafica del mezzo")).toBeVisible();
+  await expect(dlg.getByText(/Sono state rilevate modifiche/)).toBeVisible();
 }
 
 export async function cancelMezzoAnagraficaConfirm(page: Page): Promise<void> {
   const dlg = mezzoAnagraficaConfirmDialog(page);
-  await dlg.getByRole("button", { name: "Torna alla scheda" }).click();
+  await dlg.getByRole("button", { name: "Torna alla modifica" }).click();
   await expect(dlg).toBeHidden({ timeout: 10_000 });
 }
 
 export async function confirmMezzoAnagraficaChanges(page: Page): Promise<void> {
   const dlg = mezzoAnagraficaConfirmDialog(page);
-  await dlg.getByRole("button", { name: "Salva modifiche" }).click();
+  await dlg.getByRole("button", { name: "Conferma e salva" }).click();
   await expect(dlg).toBeHidden({ timeout: 15_000 });
 }
 

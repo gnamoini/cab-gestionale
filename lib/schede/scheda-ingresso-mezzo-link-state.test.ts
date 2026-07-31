@@ -29,6 +29,23 @@ assert.deepEqual(listLinkedMezzoFieldConflicts(fromMezzo, snapshot), []);
 fromMezzo.matricola = "ALTRO";
 assert.deepEqual(listLinkedMezzoFieldConflicts(fromMezzo, snapshot), ["matricola"]);
 
+const baseline = pickMezzoPermanentFields(fromMezzo);
+baseline.matricola = "TIS272312/14";
+const earlySnapshot = createLinkedMezzoSnapshotFromFields(mezzo, baseline, "matricola");
+const afterAutoPatch = { ...baseline, targetType: "attrezzatura" as const };
+assert.deepEqual(listLinkedMezzoFieldConflicts(afterAutoPatch, earlySnapshot), ["targetType"]);
+const lateSnapshot = createLinkedMezzoSnapshotFromFields(mezzo, afterAutoPatch, "matricola");
+assert.deepEqual(listLinkedMezzoFieldConflicts(afterAutoPatch, lateSnapshot), []);
+
+const clienteNormBaseline = { ...fromMezzo, cliente: "Longo", matricola: mezzo.matricola };
+const clienteNormSnapshot = createLinkedMezzoSnapshotFromFields(
+  mezzo,
+  pickMezzoPermanentFields(clienteNormBaseline),
+  "matricola",
+);
+const clienteNormCurrent = { ...clienteNormBaseline, cliente: "LONGO" };
+assert.deepEqual(listLinkedMezzoFieldConflicts(clienteNormCurrent, clienteNormSnapshot), []);
+
 assert.equal(resolvePreferredMezzoIdForSave(emptySchedaIngressoMezzoLinkState()), null);
 
 const linked = {

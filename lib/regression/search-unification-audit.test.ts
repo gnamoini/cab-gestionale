@@ -26,6 +26,13 @@ for (const f of filterFiles) {
 
 const lavorazioniView = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
 assert.match(lavorazioniView, /useGestionaleListSearch/, "lavorazioni-view uses shared search hook");
+assert.match(lavorazioniView, /serverSearchPart/, "lavorazioni search shared across attive and archivio queries");
+assert.match(lavorazioniView, /\.\.\.serverSearchPart[\s\S]*archived: true/, "archivio query receives server search");
+assert.match(
+  lavorazioniView,
+  /hasPageClientFilters[\s\S]*setArchivioSectionOpen\(true\)/,
+  "lavorazioni auto-expands archivio when page filters active",
+);
 
 const magazzinoView = read("components/gestionale/magazzino/magazzino-view.tsx");
 assert.match(magazzinoView, /useGestionaleListSearch/, "magazzino-view uses shared search hook");

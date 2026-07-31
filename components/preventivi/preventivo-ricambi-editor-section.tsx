@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { CaptureRicambioCodiceField } from "@/components/document-capture/capture-ricambio-codice-field";
+import { RicambioMagazzinoInlineHint } from "@/components/document-capture/ricambio-magazzino-inline-hint";
 import { IconActionButton } from "@/components/design-system";
 import { HubIconPlus } from "@/components/design-system/hub-table-action-icons";
 import { GestionaleNumericField } from "@/components/gestionale/gestionale-numeric-field";
@@ -11,7 +14,6 @@ import {
   preventivoEditorMoneyValueSm,
   preventivoEditorPanelClass,
   preventivoEditorSubsectionTitle,
-  preventivoEditorTableInput,
   preventivoEditorTableInputNumber,
   preventivoEditorTableTdClass,
   preventivoEditorUmSegmentOff,
@@ -19,18 +21,26 @@ import {
   preventivoEditorUmSegmentWrap,
 } from "@/components/preventivi/preventivo-editor-ui";
 import { NUMERIC_PRESETS } from "@/lib/core/numeric-input-policy";
-import { CAB_FOCUS_SCROLL_GROUP_ATTR } from "@/lib/ui/mobile-modal-behavior";
+import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
+import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import {
   formatRicambioUnitaMisuraLabel,
   parseRicambioUnitaMisura,
   RICAMBIO_UNITA_MISURA_VALUES,
   type RicambioUnitaMisura,
 } from "@/lib/magazzino/ricambio-unita-misura";
+import {
+  applyMagazzinoToPreventivoRigaRicambio,
+  suggestionsForPreventivoRigaRicambio,
+} from "@/lib/preventivi/preventivo-ricambio-magazzino";
 import { PREVENTIVO_MATERIALI_CONSUMO_DESCRIZIONE } from "@/lib/preventivi/preventivi-voci-standard";
 import { totaleNettoRigaRicambio } from "@/lib/preventivi/preventivi-totals";
 import type { PreventivoRigaRicambio } from "@/lib/preventivi/types";
+import { RicambioRowAutocompletePortal } from "@/lib/selector-core/legacy-selector-adapters";
+import { CAB_FOCUS_SCROLL_GROUP_ATTR } from "@/lib/ui/mobile-modal-behavior";
 import {
   dsFocus,
+  dsInput,
   dsScrollbar,
   dsTable,
   dsTableActionBtnDanger,
@@ -42,6 +52,8 @@ import {
   fmtPreventivoEuro,
   PreventivoEditorTotalBar,
 } from "@/components/preventivi/preventivo-editor-totals";
+
+const RICAMBIO_CODICE_INPUT = `${dsInput} min-h-10 w-full min-w-0 shrink-0`;
 
 const umCellLabel: Record<RicambioUnitaMisura, string> = {
   pz: "pz",
@@ -91,95 +103,165 @@ function AggiungiRigaRow({ onAddRiga }: { onAddRiga: () => void }) {
 function RicambioRigaRow({
   r,
   idx,
+  prodotti,
+  acRowId,
+  setAcRowId,
+  resolveScontoPercent,
   onPatchRiga,
   onRemoveRiga,
 }: {
   r: PreventivoRigaRicambio;
   idx: number;
+  prodotti: readonly RicambioMagazzino[];
+  acRowId: string | null;
+  setAcRowId: (id: string | null) => void;
+  resolveScontoPercent: (item: RicambioMagazzino) => number;
   onPatchRiga: (id: string, patch: Partial<PreventivoRigaRicambio>) => void;
   onRemoveRiga: (id: string) => void;
 }) {
+  const [pendingMag, setPendingMag] = useState<RicambioMagazzino | null>(null);
+  const [dismissedMagId, setDismissedMagId] = useState<string | null>(null);
   const unita = parseRicambioUnitaMisura(r.unitaMisura);
+  const showMagHint = pendingMag && pendingMag.id !== dismissedMagId && pendingMag.id !== r.ricambioId;
+
+  function applyMagazzino(item: RicambioMagazzino, patch?: Partial<PreventivoRigaRicambio>) {
+    onPatchRiga(
+      r.id,
+      applyMagazzinoToPreventivoRigaRicambio({ ...r, ...patch }, item, resolveScontoPercent(item)),
+    );
+    setPendingMag(null);
+  }
+
   return (
-    <tr className={dsTableRow}>
-      <td className={preventivoEditorTableTdClass}>
-        <input
-          className={preventivoEditorTableInput}
-          value={r.codiceOE}
-          onChange={(e) => onPatchRiga(r.id, { codiceOE: e.target.value })}
-          aria-label={`Codice OE riga ${idx + 1}`}
-        />
-      </td>
-      <td className={preventivoEditorTableTdClass}>
-        <input
-          className={preventivoEditorTableInput}
-          value={r.descrizione}
-          onChange={(e) => onPatchRiga(r.id, { descrizione: e.target.value })}
-          aria-label={`Descrizione riga ${idx + 1}`}
-        />
-      </td>
-      <td className={preventivoEditorTableTdClass}>
-        <GestionaleQuantityField
-          className={preventivoEditorTableInputNumber}
-          value={r.quantita}
-          unitaMisura={unita}
-          onCommit={(quantita) => onPatchRiga(r.id, { quantita })}
-          aria-label={`Quantità riga ${idx + 1}`}
-        />
-      </td>
-      <td className={preventivoEditorTableTdClass}>
-        <UnitaMisuraCell
-          value={unita}
-          rowIndex={idx}
-          onChange={(unitaMisura) => onPatchRiga(r.id, { unitaMisura })}
-        />
-      </td>
-      <td className={preventivoEditorTableTdClass}>
-        <GestionaleNumericField
-          className={preventivoEditorTableInputNumber}
-          value={r.prezzoUnitario}
-          preset={NUMERIC_PRESETS.prezzo}
-          onCommit={(prezzoUnitario) => onPatchRiga(r.id, { prezzoUnitario })}
-          aria-label={`Prezzo unitario riga ${idx + 1}`}
-        />
-      </td>
-      <td className={preventivoEditorTableTdClass}>
-        <GestionaleNumericField
-          className={preventivoEditorTableInputNumber}
-          value={r.scontoPercent ?? 0}
-          preset={NUMERIC_PRESETS.percentuale}
-          onCommit={(scontoPercent) => onPatchRiga(r.id, { scontoPercent })}
-          aria-label={`Sconto percentuale riga ${idx + 1}`}
-        />
-      </td>
-      <td className={`${preventivoEditorTableTdClass} text-right ${preventivoEditorMoneyValueSm}`}>
-        {fmtPreventivoEuro(totaleNettoRigaRicambio(r))}
-      </td>
-      <td className={preventivoEditorTableTdClass}>
-        <div className="flex justify-end">
-          <IconActionButton
-            label="Elimina riga"
-            className={dsTableActionBtnDanger}
-            onClick={() => onRemoveRiga(r.id)}
-          >
-            <svg
-              className={dsTableActionGlyph}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden
+    <>
+      <tr className={dsTableRow} data-ricambi-ac-open={acRowId === r.id ? "1" : undefined}>
+        <td className={`${preventivoEditorTableTdClass} align-middle`}>
+          <CaptureRicambioCodiceField
+            value={r.codiceOE}
+            magazzino={prodotti}
+            inputClassName={RICAMBIO_CODICE_INPUT}
+            onChange={(codiceOE) => {
+              onPatchRiga(r.id, { codiceOE, ricambioId: null });
+              setPendingMag(null);
+              setAcRowId(r.id);
+            }}
+            onPick={(item, codiceUi) => {
+              applyMagazzino(item, { codiceOE: codiceUi });
+            }}
+            onBlurExactMatch={(item) => {
+              if (dismissedMagId === item.id || r.ricambioId === item.id) return;
+              setPendingMag(item);
+            }}
+          />
+        </td>
+        <td className={`${preventivoEditorTableTdClass} align-middle`}>
+          <RicambioRowAutocompletePortal
+            value={r.descrizione}
+            onChange={(descrizione) => {
+              onPatchRiga(r.id, { descrizione });
+              setAcRowId(r.id);
+            }}
+            open={acRowId === r.id}
+            onOpenChange={(next) => setAcRowId(next ? r.id : null)}
+            suggestions={suggestionsForPreventivoRigaRicambio(r, prodotti).map((p) => ({
+              id: p.id,
+              descrizione: p.descrizione ?? "",
+              marca: p.marca ?? "",
+              codiceFornitoreOriginale: ricambioCodiceForUi(p.codiceFornitoreOriginale),
+            }))}
+            onSelect={(s) => {
+              const item = prodotti.find((p) => p.id === s.id);
+              if (item) {
+                applyMagazzino(item);
+              } else {
+                onPatchRiga(r.id, {
+                  ricambioId: s.id,
+                  descrizione: s.descrizione,
+                  codiceOE: ricambioCodiceForUi(s.codiceFornitoreOriginale),
+                });
+              }
+              setAcRowId(null);
+            }}
+            placeholder="Descrizione ricambio"
+          />
+        </td>
+        <td className={`${preventivoEditorTableTdClass} align-middle`}>
+          <GestionaleQuantityField
+            className={preventivoEditorTableInputNumber}
+            value={r.quantita}
+            unitaMisura={unita}
+            onCommit={(quantita) => onPatchRiga(r.id, { quantita })}
+            aria-label={`Quantità riga ${idx + 1}`}
+          />
+        </td>
+        <td className={`${preventivoEditorTableTdClass} align-middle`}>
+          <UnitaMisuraCell
+            value={unita}
+            rowIndex={idx}
+            onChange={(unitaMisura) => onPatchRiga(r.id, { unitaMisura })}
+          />
+        </td>
+        <td className={`${preventivoEditorTableTdClass} align-middle`}>
+          <GestionaleNumericField
+            className={preventivoEditorTableInputNumber}
+            value={r.prezzoUnitario}
+            preset={NUMERIC_PRESETS.prezzo}
+            onCommit={(prezzoUnitario) => onPatchRiga(r.id, { prezzoUnitario })}
+            aria-label={`Prezzo unitario riga ${idx + 1}`}
+          />
+        </td>
+        <td className={`${preventivoEditorTableTdClass} align-middle`}>
+          <GestionaleNumericField
+            className={preventivoEditorTableInputNumber}
+            value={r.scontoPercent ?? 0}
+            preset={NUMERIC_PRESETS.percentuale}
+            onCommit={(scontoPercent) => onPatchRiga(r.id, { scontoPercent })}
+            aria-label={`Sconto percentuale riga ${idx + 1}`}
+          />
+        </td>
+        <td className={`${preventivoEditorTableTdClass} text-right align-middle ${preventivoEditorMoneyValueSm}`}>
+          {fmtPreventivoEuro(totaleNettoRigaRicambio(r))}
+        </td>
+        <td className={`${preventivoEditorTableTdClass} align-middle`}>
+          <div className="flex justify-end">
+            <IconActionButton
+              label="Elimina riga"
+              className={dsTableActionBtnDanger}
+              onClick={() => onRemoveRiga(r.id)}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-          </IconActionButton>
-        </div>
-      </td>
-    </tr>
+              <svg
+                className={dsTableActionGlyph}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+                aria-hidden
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </IconActionButton>
+          </div>
+        </td>
+      </tr>
+      {showMagHint ? (
+        <tr>
+          <td colSpan={8} className="px-2 pb-2">
+            <RicambioMagazzinoInlineHint
+              item={pendingMag}
+              onUseRicambio={() => applyMagazzino(pendingMag)}
+              onDismiss={() => {
+                setDismissedMagId(pendingMag.id);
+                setPendingMag(null);
+              }}
+            />
+          </td>
+        </tr>
+      ) : null}
+    </>
   );
 }
 
@@ -229,6 +311,8 @@ export function PreventivoRicambiEditorSection({
   righe,
   materialiConsumo,
   totaleRicambi,
+  prodotti,
+  resolveScontoPercent,
   onAddRiga,
   onPatchRiga,
   onRemoveRiga,
@@ -236,10 +320,14 @@ export function PreventivoRicambiEditorSection({
   righe: readonly PreventivoRigaRicambio[];
   materialiConsumo: PreventivoRigaRicambio | null;
   totaleRicambi: number;
+  prodotti: readonly RicambioMagazzino[];
+  resolveScontoPercent: (item: RicambioMagazzino) => number;
   onAddRiga: () => void;
   onPatchRiga: (id: string, patch: Partial<PreventivoRigaRicambio>) => void;
   onRemoveRiga: (id: string) => void;
 }) {
+  const [acRowId, setAcRowId] = useState<string | null>(null);
+
   return (
     <section {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }} className="space-y-2.5">
       <h3 className={preventivoEditorSubsectionTitle}>Righe ricambi e materiali</h3>
@@ -277,6 +365,10 @@ export function PreventivoRicambiEditorSection({
                   key={r.id}
                   r={r}
                   idx={idx}
+                  prodotti={prodotti}
+                  acRowId={acRowId}
+                  setAcRowId={setAcRowId}
+                  resolveScontoPercent={resolveScontoPercent}
                   onPatchRiga={onPatchRiga}
                   onRemoveRiga={onRemoveRiga}
                 />

@@ -18,17 +18,25 @@ export function normalizePreventivoTipoDocumento(value: unknown): PreventivoTipo
 
 export function preventivoTipoDocumentoLabel(
   tipo: PreventivoTipoDocumento,
-  style: "title" | "short" = "title",
+  style: "title" | "short" | "chip" = "title",
 ): string {
+  if (style === "chip") return tipo === "consuntivo" ? "Cons" : "Prev";
   if (style === "short") return tipo === "consuntivo" ? "Cons." : "Prev.";
   return tipo === "consuntivo" ? "Consuntivo" : "Preventivo";
 }
 
-export function preventivoTipoDocumentoBadgeClass(tipo: PreventivoTipoDocumento): string {
-  const base =
-    "inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1";
+export type PreventivoTipoDocumentoBadgeVariant = "table" | "inline";
+
+export function preventivoTipoDocumentoBadgeClass(
+  tipo: PreventivoTipoDocumento,
+  variant: PreventivoTipoDocumentoBadgeVariant = "inline",
+): string {
+  const table = variant === "table";
+  const base = table
+    ? "inline-flex h-[1.125rem] min-w-[2.35rem] shrink-0 items-center justify-center rounded px-1.5 text-[9px] font-bold uppercase tracking-[0.06em]"
+    : "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide";
   if (tipo === "consuntivo") {
-    return `${base} bg-sky-500/15 text-sky-800 ring-sky-500/35 dark:text-sky-200`;
+    return `${base} bg-sky-500/12 text-sky-950 ring-1 ring-sky-500/30 dark:bg-sky-400/14 dark:text-sky-100 dark:ring-sky-400/35`;
   }
-  return `${base} bg-zinc-500/10 text-zinc-700 ring-zinc-400/40 dark:text-zinc-300`;
+  return `${base} bg-orange-500/12 text-orange-950 ring-1 ring-orange-500/35 dark:bg-orange-400/14 dark:text-orange-100 dark:ring-orange-400/35`;
 }

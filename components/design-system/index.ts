@@ -181,6 +181,17 @@ export {
   type LoadingButtonPreset,
 } from "./loading";
 export {
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterDeleteButton,
+  GestionaleModalFooterSaveButton,
+  gestionaleModalFooterActionsStackMobileWrapClass,
+  gestionaleModalFooterActionsWrapClass,
+  gestionaleModalFooterCancelBtnClass,
+  gestionaleModalFooterDeleteBtnClass,
+  gestionaleModalFooterSaveBtnClass,
+} from "./gestionale-modal-footer-actions";
+export {
   NotificationBellIcon,
   NotificationBellTrigger,
   NotificationCountBadge,

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   buildClienteFiscalePdfFields,
   buildPreventivoClientePdfFields,
+  buildPreventivoDestinatarioPdfFields,
 } from "@/lib/pdf/anagrafica-pdf-fields";
 import { emptyClienteAnagrafica } from "@/lib/clienti/clienti-anagrafica-types";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
@@ -60,5 +61,9 @@ assert.ok(merged.some((f) => f.label === "Partita IVA"));
 const soloOperativi = buildPreventivoClientePdfFields(p);
 assert.ok(soloOperativi.some((f) => f.label === "Cliente"));
 assert.equal(soloOperativi.some((f) => f.label === "Partita IVA"), false);
+
+const destinatario = buildPreventivoDestinatarioPdfFields(p);
+assert.equal(destinatario.some((f) => f.label === "Richiedente"), false);
+assert.equal(destinatario.some((f) => f.label === "Telefono richiedente"), false);
 
 console.log("cliente-anagrafica-pdf-fields.test.ts OK");

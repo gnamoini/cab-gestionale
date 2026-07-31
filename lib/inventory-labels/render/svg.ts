@@ -11,6 +11,7 @@ import { labelFontFaceCss } from "@/lib/inventory-labels/render/label-fonts";
 import { textLineToSvgPath, measureTextLineWidthPx } from "@/lib/inventory-labels/render/text-paths";
 import { lineMetrics } from "@/lib/inventory-labels/render/text-metrics";
 import { loadLabelLogoDataUrl } from "@/lib/inventory-labels/render/label-logo.server";
+import { companyWebsiteDisplayHost } from "@/lib/branding/branding-settings-model";
 
 let cachedLabelLogoDataUrl: string | null | undefined;
 
@@ -90,6 +91,36 @@ function escapeXml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+function resolveStaticTextLine(
+  el: Extract<LabelTemplateDefinition["elements"][number], { type: "text" }>,
+  qrUrl: string | null | undefined,
+): string | null {
+  if (el.literal) return el.literal;
+  if (el.literalSource === "clienteWebsite") return companyWebsiteDisplayHost(qrUrl ?? "");
+  return null;
+}
+
+function renderStaticTextSvg(
+  line: string,
+  el: Extract<LabelTemplateDefinition["elements"][number], { type: "text" }>,
+  template: LabelTemplateDefinition,
+  textAsPaths: boolean,
+): string {
+  const fontPt = el.fontPt;
+  const xPx = mmToPx(el.xMm, template.dpi);
+  const yPx = mmToPx(el.yMm, template.dpi);
+  const { fontSizePx } = lineMetrics(fontPt, template.dpi);
+  const slot = el.font === "mono" ? "mono" : "sans";
+  const textAnchor = el.hAlign === "center" ? "middle" : undefined;
+  const anchorAttr = textAnchor === "middle" ? ' text-anchor="middle"' : "";
+  if (textAsPaths) {
+    const path = textLineToSvgPath(line, xPx, yPx, fontSizePx, slot, "hanging");
+    return path;
+  }
+  const family = slot === "mono" ? "LabelMono" : "LabelSans";
+  return `<text x="${xPx}" y="${yPx}" dominant-baseline="hanging" font-family="${family}" font-size="${fontSizePx}" fill="#000000"${anchorAttr}>${escapeXml(line)}</text>`;
+}
+
 export async function renderLabelSvg(
   template: LabelTemplateDefinition,
   payload: LabelPayload,
@@ -139,6 +170,12 @@ export async function renderLabelSvg(
     }
 
     if (el.type === "text") {
+      const staticLine = resolveStaticTextLine(el, qrUrl);
+      if (staticLine) {
+        parts.push(renderStaticTextSvg(staticLine, el, template, textAsPaths));
+        continue;
+      }
+
       const placed = placedTexts.find((p) => p.field === el.field);
       if (!placed || !placed.lines.length) continue;
 

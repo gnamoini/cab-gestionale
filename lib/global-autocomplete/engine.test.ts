@@ -95,6 +95,22 @@ assert.equal(
   "Tutti i dipendenti",
 );
 
+assert.equal(
+  autocompleteCommittedDisplayValue({
+    mode: "items",
+    value: "",
+    searchText: "",
+    focused: false,
+    open: false,
+    hideEmptyOptionInInput: true,
+    items: [
+      { value: "", label: "Nessuna selezione" },
+      { value: "e1", label: "Mario Rossi" },
+    ],
+  }),
+  "",
+);
+
 // Commit fuzzy/exact
 assert.equal(
   autocompleteCommitFromSearchText("beta", "strings", ["Alpha", "Beta"], [], true),

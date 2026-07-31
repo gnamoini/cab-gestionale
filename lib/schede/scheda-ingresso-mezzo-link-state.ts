@@ -1,5 +1,5 @@
+import { detectMezzoAnagraficaChanges } from "@/lib/domain/mezzo/detect-mezzo-anagrafica-changes";
 import { pickMezzoPermanentFields, type MezzoPermanentFieldKey } from "@/lib/schede/scheda-ingresso-field-roles";
-import { permanentFieldsDiffer } from "@/lib/schede/merge-scheda-ingresso-with-mezzo-priority";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
@@ -68,7 +68,7 @@ export function listLinkedMezzoFieldConflicts(
   snapshot: LinkedMezzoSnapshot | null,
 ): MezzoPermanentFieldKey[] {
   if (!snapshot) return [];
-  return permanentFieldsDiffer(fields, snapshot.fieldsAtLinkTime);
+  return detectMezzoAnagraficaChanges(snapshot.fieldsAtLinkTime, fields).changes.map((c) => c.field);
 }
 
 export function hasLinkedMezzoFieldConflict(

@@ -45,11 +45,13 @@ async function main() {
 
   const clienteTemplate = getLabelTemplate("60x40-default", "cliente")!;
   const clienteSvg = await renderLabelSvg(clienteTemplate, payload, DEFAULT_COMPANY_WEBSITE_URL, {
-    ...renderOpts,
+    embedFonts: false,
     includeBarcode: false,
     labelKind: "cliente",
+    textAsPaths: false,
   });
   assert.ok(clienteSvg.includes("<image"), "cliente label embeds logo");
+  assert.ok(clienteSvg.includes("www.autocompattatori.it"), "cliente label shows website under QR");
   assert.ok(!clienteSvg.includes("ALT-99"), "cliente label omits supplier alt text");
 
   const a4Template = getLabelTemplate("a4-pagina-intera")!;

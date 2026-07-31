@@ -12,6 +12,7 @@ function read(rel: string): string {
 }
 
 const lavView = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
+const schedeModal = read("components/lavorazioni/schede/schede-lavorazione-modal.tsx");
 const editModal = read("components/gestionale/lavorazioni/lavorazione-edit-modal.tsx");
 const createModal = read("components/gestionale/lavorazioni/lavorazione-create-modal.tsx");
 
@@ -26,7 +27,7 @@ assert.match(lavView, /lav-priorita-.*action:\s*["']update["']/);
 assert.match(lavView, /lav-conclude.*action:\s*["']update["']/);
 assert.match(lavView, /lav-delete.*action:\s*["']delete["']/);
 assert.match(lavView, /restoreLav\.mutate[\s\S]*onError/);
-assert.match(lavView, /onIngressoCommitted[\s\S]*gestToast\.error/);
+assert.match(schedeModal, /commitIngressoEdit[\s\S]*gestToast\.error/);
 assert.match(lavView, /schede-save[\s\S]*action:\s*["']update["']/);
 
 assert.match(createModal, /gestToast\.error\(err,\s*\{[^}]*action:\s*["']create["']/);

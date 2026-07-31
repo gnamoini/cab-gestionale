@@ -94,7 +94,15 @@ assert.ok(!cliente!.elements.some((e) => e.type === "barcode"));
 assert.ok(!cliente!.elements.some((e) => e.type === "text" && e.field === "codiceSecondario"));
 const clienteQr = cliente!.elements.find((e) => e.type === "qr");
 assert.ok(clienteQr && clienteQr.type === "qr");
-assert.ok(clienteQr.sizeMm >= cliente!.heightMm - cliente!.marginsMm * 2 - 0.5);
+const clienteWebsite = cliente!.elements.find(
+  (e) => e.type === "text" && e.literalSource === "clienteWebsite",
+);
+assert.ok(clienteWebsite && clienteWebsite.type === "text");
+assert.ok(clienteQr.sizeMm < cliente!.heightMm - cliente!.marginsMm * 2 - 0.5, "cliente: QR ridotto per sito");
+assert.ok(
+  clienteWebsite.yMm >= clienteQr.yMm + clienteQr.sizeMm - 0.01,
+  "cliente: sito sotto il QR",
+);
 
 const manual = getLabelTemplate("95x40-default", "manual");
 assert.ok(manual);

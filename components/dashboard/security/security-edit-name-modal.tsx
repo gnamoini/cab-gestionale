@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { LoadingButton } from "@/components/design-system";
+import {
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterDeleteButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
@@ -13,7 +17,7 @@ import { useUsernameAvailability } from "@/src/hooks/use-username-availability";
 import { sanitizeUsernameInput, usernameFieldError } from "@/src/lib/auth/username";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
-import { dsBtnDanger, dsBtnNeutral, dsInput } from "@/lib/ui/design-system";
+import { dsInput } from "@/lib/ui/design-system";
 
 export type SecurityEditProfileValues = {
   nome: string;
@@ -114,39 +118,34 @@ export function SecurityEditNameModal({
         footer={
           <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             {canDelete && onDelete ? (
-              <button
-                type="button"
-                className={`${dsBtnDanger} min-h-11 w-full justify-center sm:w-auto`}
+              <GestionaleModalFooterDeleteButton
+                className="w-full justify-center sm:w-auto"
                 onClick={() => setDeleteConfirmOpen(true)}
                 disabled={busy}
               >
                 {deletePending ? "Eliminazione…" : "Elimina utente"}
-              </button>
+              </GestionaleModalFooterDeleteButton>
             ) : (
               <span className="hidden sm:block" aria-hidden />
             )}
 
             <div className="flex w-full min-w-0 gap-2 sm:w-auto sm:justify-end">
-              <button
-                type="button"
-                className={`${dsBtnNeutral} min-h-11 min-w-0 flex-1 justify-center sm:min-w-[6.5rem] sm:flex-none`}
+              <GestionaleModalFooterCancelButton
+                className="min-w-0 flex-1 justify-center sm:min-w-[6.5rem] sm:flex-none"
                 onClick={onClose}
                 disabled={busy}
-              >
-                Annulla
-              </button>
+              />
               {!readOnly ? (
-                <LoadingButton
+                <GestionaleModalFooterSaveButton
                   type="submit"
                   form="security-edit-name-form"
                   loading={Boolean(pending)}
-                  preset="salva"
                   loadingLabel="Salvataggio…"
-                  className="min-h-11 min-w-0 flex-1 justify-center sm:min-w-[6.5rem] sm:flex-none"
+                  className="min-w-0 flex-1 justify-center sm:min-w-[6.5rem] sm:flex-none"
                   disabled={!canSave}
                 >
                   Applica
-                </LoadingButton>
+                </GestionaleModalFooterSaveButton>
               ) : null}
             </div>
           </div>

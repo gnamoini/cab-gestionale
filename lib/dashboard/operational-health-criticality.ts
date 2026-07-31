@@ -157,6 +157,21 @@ export const ATTESA_RICAMBI_LATE_INGRESS_WEIGHT = 0.3;
 const ATTESA_RICAMBI_EXCESS_WEIGHT = 0.3;
 const ATTESA_RICAMBI_EXCESS_CAP_DAYS = 7;
 
+/**
+ * Lead time documentazione cliente: oltre questa soglia la stagnazione in accettazione
+ * resta segnalata ma con peso soft (non dipende dall'officina).
+ */
+export const ACCETTAZIONE_CLIENT_GRACE_DAYS = 7;
+
+/** Excess oltre soglia in accettazione: peso ridotto + cap basso vs altri stati di attesa. */
+const ACCETTAZIONE_EXCESS_WEIGHT = 0.3;
+const ACCETTAZIONE_EXCESS_CAP_DAYS = 7;
+
+export type StagnationSoftOpts = {
+  attesaRicambi?: boolean;
+  accettazione?: boolean;
+};
+
 /** Stati di attesa/inattività — non penalizzare «in lavorazione» anche se lunga. */
 export function isStagnationSensitiveStato(
   statoId: string,
@@ -182,6 +197,17 @@ export function isAttesaRicambiStato(
   return label.includes("attesa") && label.includes("ricambi");
 }
 
+/** Accettazione (id canonico o label custom). */
+export function isAccettazioneStato(
+  statoId: string,
+  stati?: readonly StatoLavorazioneConfig[],
+): boolean {
+  const id = migrateStatoConfigId(statoId.trim());
+  if (id === "accettazione") return true;
+  const label = (stati ? statoLavorazioneLabel(statoId, stati) : id).toLowerCase();
+  return label.includes("accettazione");
+}
+
 function median(values: number[]): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -189,22 +215,39 @@ function median(values: number[]): number {
   return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
 }
 
-export function stagnationThresholdDays(
-  medianDays: number,
-  opts?: { attesaRicambi?: boolean },
-): number {
+export function stagnationThresholdDays(medianDays: number, opts?: StagnationSoftOpts): number {
   const base = Math.max(5, medianDays * 1.4, medianDays + 3);
-  if (!opts?.attesaRicambi) return base;
-  // Grace fornitore 7gg + margine sulla mediana: ritardi sistemici non gonfiano lo score.
-  return Math.max(base, ATTESA_RICAMBI_SUPPLIER_GRACE_DAYS, medianDays + ATTESA_RICAMBI_SUPPLIER_GRACE_DAYS);
+  if (opts?.attesaRicambi) {
+    // Grace fornitore 7gg + margine sulla mediana: ritardi sistemici non gonfiano lo score.
+    return Math.max(base, ATTESA_RICAMBI_SUPPLIER_GRACE_DAYS, medianDays + ATTESA_RICAMBI_SUPPLIER_GRACE_DAYS);
+  }
+  if (opts?.accettazione) {
+    // Grace documentazione cliente 7gg + margine sulla mediana.
+    return Math.max(base, ACCETTAZIONE_CLIENT_GRACE_DAYS, medianDays + ACCETTAZIONE_CLIENT_GRACE_DAYS);
+  }
+  return base;
 }
 
-function stagnationExcessWeight(excessDays: number, attesaRicambi: boolean): number {
-  if (attesaRicambi) {
+function stagnationExcessWeight(excessDays: number, opts?: StagnationSoftOpts): number {
+  if (opts?.attesaRicambi) {
     // ponytail: soft cap lead-time fornitore — upgrade: lead time per fornitore da magazzino
     return (Math.min(ATTESA_RICAMBI_EXCESS_CAP_DAYS, excessDays) / 7) * ATTESA_RICAMBI_EXCESS_WEIGHT;
   }
+  if (opts?.accettazione) {
+    // ponytail: soft cap attesa documentazione cliente — upgrade: flag «in attesa cliente» su scheda
+    return (Math.min(ACCETTAZIONE_EXCESS_CAP_DAYS, excessDays) / 7) * ACCETTAZIONE_EXCESS_WEIGHT;
+  }
   return Math.min(21, excessDays) / 7;
+}
+
+function stagnationSoftOpts(
+  statoKey: string,
+  stati?: readonly StatoLavorazioneConfig[],
+): StagnationSoftOpts {
+  return {
+    attesaRicambi: isAttesaRicambiStato(statoKey, stati),
+    accettazione: isAccettazioneStato(statoKey, stati),
+  };
 }
 
 function lavUpdatedAt(row: LavorazioneListRow): string {
@@ -256,14 +299,14 @@ export function computeInactiveLavorazioniCriticality(
   for (const row of rowMeta) {
     const group = byStatoDays.get(row.statoKey) ?? [];
     const med = median(group);
-    const attesaRicambi = isAttesaRicambiStato(row.statoKey);
-    const threshold = stagnationThresholdDays(med, { attesaRicambi });
+    const softOpts = stagnationSoftOpts(row.statoKey, stati);
+    const threshold = stagnationThresholdDays(med, softOpts);
     if (row.days <= threshold) continue;
     count += 1;
     maxDays = Math.max(maxDays, row.days);
     statoLabels.add(row.statoLabel);
     const excess = row.days - threshold;
-    weightedExcessDays += stagnationExcessWeight(excess, attesaRicambi);
+    weightedExcessDays += stagnationExcessWeight(excess, softOpts);
   }
 
   return {

@@ -84,7 +84,9 @@ export const preventivoEditorActionBtn = dsBtnNeutralForm;
 export const preventivoEditorAddRowBtn = `inline-flex w-full min-h-11 items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-dashed border-[color:color-mix(in_srgb,var(--cab-primary)_32%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_7%,var(--cab-card))] px-3 py-2.5 text-xs font-semibold text-[color:color-mix(in_srgb,var(--cab-primary)_90%,var(--cab-text))] shadow-[var(--cab-shadow-sm)] transition-colors hover:border-[color:color-mix(in_srgb,var(--cab-primary)_48%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-card))] ${dsFocus}`;
 
 /** Footer modale — bottoni full-width mobile. */
+/** @deprecated Usare `GestionaleModalFooterCancelButton` / `GestionaleModalFooterSaveButton`. */
 export const preventivoEditorFooterBtnNeutral = `${dsBtnNeutral} min-h-11 w-full sm:w-auto`;
+/** @deprecated Usare `GestionaleModalFooterSaveButton`. */
 export const preventivoEditorFooterBtnPrimary = `${dsBtnPrimary} min-h-11 w-full sm:w-auto`;
 
 // ponytail: segmented (tipo documento, U.M.) restano dsSegmented* — controlli, non CTA

@@ -1,0 +1,66 @@
+"use client";
+
+import { useCallback, useMemo, useRef, useState } from "react";
+import { createSubmitLock, type FormSubmitLock } from "@/lib/forms/form-engine/submit-lock";
+import type { TagliandoLavorazioneFields } from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
+import type { MezzoGestito } from "@/lib/mezzi/types";
+import {
+  runIngressoSavePipeline,
+  type IngressoLavorazioneGestionePatch,
+  type IngressoSaveCommitInput,
+  type IngressoSaveCommitResult,
+  type IngressoSaveResult,
+} from "@/lib/schede/scheda-ingresso-save-pipeline";
+import type { SchedaIngressoFields } from "@/types/schede";
+import type { SchedaIngressoSaveGateResult } from "@/src/hooks/use-scheda-ingresso-save-gate";
+
+export type UseSchedaIngressoSavePipelineOptions = {
+  /** Lock condiviso col parent (es. hub schede) — evita doppio lock formEngine/parent. */
+  submitLock?: FormSubmitLock;
+  mezziCatalog: readonly MezzoGestito[];
+  gateSubmit: (
+    fields: SchedaIngressoFields,
+    proceed: (fields: SchedaIngressoFields) => void | Promise<void>,
+  ) => Promise<void>;
+  gateSave: (fields: SchedaIngressoFields) => Promise<SchedaIngressoSaveGateResult>;
+  commit: (input: IngressoSaveCommitInput) => Promise<IngressoSaveCommitResult>;
+};
+
+export function useSchedaIngressoSavePipeline(opts: UseSchedaIngressoSavePipelineOptions) {
+  const internalLock = useMemo(() => createSubmitLock(), []);
+  const lock = opts.submitLock ?? internalLock;
+  const [isPending, setIsPending] = useState(false);
+  const commitRef = useRef(opts.commit);
+  commitRef.current = opts.commit;
+  const gateSubmitRef = useRef(opts.gateSubmit);
+  gateSubmitRef.current = opts.gateSubmit;
+  const gateSaveRef = useRef(opts.gateSave);
+  gateSaveRef.current = opts.gateSave;
+  const mezziCatalogRef = useRef(opts.mezziCatalog);
+  mezziCatalogRef.current = opts.mezziCatalog;
+
+  const run = useCallback(
+    async (input: {
+      fields: SchedaIngressoFields;
+      lavorazioneNote: string;
+      tagliandoFields: TagliandoLavorazioneFields;
+      lavorazioneGestione?: IngressoLavorazioneGestionePatch;
+    }): Promise<IngressoSaveResult> => {
+      return runIngressoSavePipeline({
+        lock,
+        fields: input.fields,
+        lavorazioneNote: input.lavorazioneNote,
+        tagliandoFields: input.tagliandoFields,
+        lavorazioneGestione: input.lavorazioneGestione,
+        mezziCatalog: mezziCatalogRef.current,
+        gateSubmit: (fields, proceed) => gateSubmitRef.current(fields, proceed),
+        gateSave: (fields) => gateSaveRef.current(fields),
+        commit: (commitInput) => commitRef.current(commitInput),
+        onPendingChange: setIsPending,
+      });
+    },
+    [lock],
+  );
+
+  return { run, isPending, lock };
+}

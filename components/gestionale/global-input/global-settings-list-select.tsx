@@ -79,6 +79,12 @@ export type GlobalSettingsListSelectProps = {
   /** Voce in testa con value "" (es. «Nessuna marca»). */
   emptyOptionLabel?: string;
 
+  /** Pulsante X per azzerare il valore (solo campi opzionali). */
+  clearable?: boolean;
+
+  /** Voce value="" in elenco ma input a riposo vuoto (placeholder). */
+  hideEmptyOptionInInput?: boolean;
+
   /** Valori esclusi dall'elenco (es. segnaposto interni «—»). */
   excludeValues?: readonly string[];
 
@@ -174,6 +180,10 @@ function GlobalSettingsListSelectInner({
   operationalFilter,
 
   emptyOptionLabel,
+
+  clearable,
+
+  hideEmptyOptionInInput,
 
   excludeValues,
 
@@ -375,6 +385,10 @@ function GlobalSettingsListSelectInner({
     exclusiveGroup,
 
     showSimilarWarning,
+
+    clearable,
+
+    hideEmptyOptionInInput,
 
   };
 

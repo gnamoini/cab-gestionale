@@ -64,7 +64,7 @@ export function preventivoSanificazioneClienteEditorLine(): string {
 /** Testo editor = sanificazione + specifiche persistite (SSOT con PDF). */
 export function composePreventivoLavorazioniClienteEditorText(specifiche: string): string {
   const line = preventivoSanificazioneClienteEditorLine();
-  const rest = specifiche.trim();
+  const rest = pulisciDescrizioneLavorazioniSpecifiche(specifiche).trim();
   if (!rest) return line;
   return `${line}\n${rest}`;
 }
@@ -88,12 +88,23 @@ export function parsePreventivoLavorazioniClientePdfLines(specifiche: string): s
     .filter((l) => l.length > 0 && !isDescrizioneCollaudo(l));
 }
 
+/** ponytail: solo ` - ` (spazi attorno al trattino), non trattini intra-parola (es. semi-asse). */
+function expandInlineDescrizioneLavorazioniItems(line: string): string[] {
+  return line
+    .split(/\s+-\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
 /** Rimuove voci strutturali duplicate dal testo lavorazioni (sanificazione, collaudo). */
 export function pulisciDescrizioneLavorazioniSpecifiche(testo: string): string {
   const lines = testo
     .split(/\n+/)
-    .map((l) => l.replace(/^-\s*/, "").trim())
-    .filter(Boolean);
+    .flatMap((l) => {
+      const stripped = l.replace(/^-\s*/, "").trim();
+      if (!stripped) return [];
+      return expandInlineDescrizioneLavorazioniItems(stripped);
+    });
   const kept = lines.filter((l) => {
     if (isDescrizioneSanificazione(l)) return false;
     if (isDescrizioneCollaudo(l)) return false;

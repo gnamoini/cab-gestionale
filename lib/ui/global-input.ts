@@ -309,6 +309,15 @@ export const globalInputDatePickerCalendarBtn = [
 /** @deprecated Usare `globalInputDatePickerCalendarBtn` nel layout split. */
 export const globalInputCalendarBtn = globalInputDatePickerCalendarBtn;
 
+/** Pulsante svuota su combobox con valore committato (scheda ingresso, form opzionali). */
+export const globalInputComboboxClearBtn = [
+  "absolute right-0 top-0 z-[2] flex h-full w-10 items-center justify-center",
+  "text-[color:var(--cab-text-muted)] outline-none transition",
+  "hover:text-[color:var(--cab-text)]",
+  "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]",
+  "disabled:pointer-events-none disabled:opacity-50",
+].join(" ");
+
 /** Rimuove chrome duplicato quando `inputClassName` passa token campo intero (es. filtri). */
 export function stripDatePickerFieldChrome(className: string): string {
   return className

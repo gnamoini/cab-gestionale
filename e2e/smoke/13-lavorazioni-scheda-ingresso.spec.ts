@@ -18,7 +18,6 @@ import {
   hubDialog,
   openIngressoEditorFromHub,
   openLavorazioniEditorFromHub,
-  openNuovaLavorazioneSchedaVuota,
   openSchedeHubForToken,
   searchLavorazioneByToken,
   selectMezzoFromSearchByTarga,
@@ -157,6 +156,42 @@ test("mezzo esistente: modifica anagrafica richiede conferma prima del salvatagg
   await confirmMezzoAnagraficaChanges(page);
   await createResponse;
   await expect(scheda).toBeHidden({ timeout: 60_000 });
+});
+
+test("edit scheda ingresso: modifica targa mezzo collegato richiede conferma", async ({ page }) => {
+  test.setTimeout(900_000);
+  const fixture = buildSchedaIngressoAuditFixture();
+  const newTarga = `${fixture.ingresso.targa}Y`.slice(0, 7);
+
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/lavorazioni");
+
+  await openNuovaLavorazioneSchedaVuota(page);
+  await fillSchedaIngressoCreateForm(page, fixture.ingresso);
+  await submitCreateLavorazione(page);
+
+  await searchLavorazioneByToken(page, fixture.token);
+  await openSchedeHubForToken(page, fixture.token);
+  await openIngressoEditorFromHub(page);
+
+  const editModal = page.getByRole("dialog").filter({ hasText: "Scheda di ingresso" });
+  const targaInput = editModal.getByRole("combobox", { name: /targa/i });
+  await targaInput.scrollIntoViewIfNeeded();
+  await targaInput.fill(newTarga);
+
+  const save = editModal.getByRole("button", { name: "Salva scheda" });
+  await save.scrollIntoViewIfNeeded();
+  await save.click();
+  await expectMezzoAnagraficaConfirmVisible(page);
+
+  await cancelMezzoAnagraficaConfirm(page);
+  await expect(editModal).toBeVisible();
+  await expect(targaInput).toHaveValue(newTarga);
+
+  await save.click();
+  await expectMezzoAnagraficaConfirmVisible(page);
+  await confirmMezzoAnagraficaChanges(page);
+  await expect(editModal).toBeHidden({ timeout: 60_000 });
 });
 
 async function smokeCreateLavorazioneForRole(

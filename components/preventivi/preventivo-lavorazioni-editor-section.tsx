@@ -30,6 +30,8 @@ import {
 } from "@/lib/preventivi/preventivi-struttura";
 import type { PreventivoManodopera, PreventivoRecord } from "@/lib/preventivi/types";
 import { AddettoPicker } from "@/components/domain/addetti";
+import { backfillAddettoIdFromLegacyString } from "@/lib/schede/schede-addetto-id-migrate";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { sliceInputValue, TEXT_EXTRA } from "@/lib/validation/text-field-limits";
 import {
   dsInput,
@@ -75,6 +77,8 @@ export function PreventivoLavorazioniEditorSection({
   onAddAddettoRow: () => void;
   onRemoveAddettoRow: (idx: number) => void;
 }) {
+  const { lavorazioni } = useGlobalOptions();
+  const addettiRecords = lavorazioni.addettiRecords;
   const collaudoPrezzo = draft.collaudoPrezzo ?? 0;
   const sezioneTotale = totaleManodopera + collaudoPrezzo;
 
@@ -156,7 +160,10 @@ export function PreventivoLavorazioniEditorSection({
             >
               <FormField label="Addetto" className="sm:[&>div]:mt-0 sm:[&>span]:sr-only">
                 <AddettoPicker
-                  value={a.addettoId}
+                  value={
+                    backfillAddettoIdFromLegacyString(addettiRecords, a.addettoLegacy, a.addettoId) ||
+                    a.addettoId
+                  }
                   onChange={(addettoId) => onPatchAddettoRow(idx, { addettoId })}
                   ariaLabel={`Addetto riga ${idx + 1}`}
                   allowEmpty

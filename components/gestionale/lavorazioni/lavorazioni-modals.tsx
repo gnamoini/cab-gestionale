@@ -30,8 +30,10 @@ import {
 } from "@/components/gestionale/lavorazioni/lavorazioni-settings-ui";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import {
+  GestionaleModalFooterCancelButton,
+} from "@/components/design-system";
+import {
   erpBtnAccent,
-  erpBtnNeutral,
   prioritaPillShellClass,
   prioritaPillShellStyle,
   statoPillShellClass,
@@ -571,9 +573,9 @@ export function SettingsLavorazioniModal({
       titleId="lavorazioni-settings-title"
       footer={
         layout === "modal" ? (
-          <button type="button" className={`${erpBtnNeutral} min-h-11`} onClick={onRequestClose}>
+          <GestionaleModalFooterCancelButton onClick={onRequestClose}>
             Chiudi
-          </button>
+          </GestionaleModalFooterCancelButton>
         ) : undefined
       }
     >

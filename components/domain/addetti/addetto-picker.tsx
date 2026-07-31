@@ -4,7 +4,7 @@ import { AddettoSelectField } from "@/components/gestionale/lavorazioni/lavorazi
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 import { gestionaleFilterFieldInputClass } from "@/components/gestionale/lavorazioni/lavorazioni-filter-fields";
 import { useAddettiPickerOptions } from "@/src/hooks/gestionale/use-addetti-picker-options";
-import type { FixedListPillOption, FixedListPillSelectSize } from "@/components/gestionale/global-input/global-fixed-list-pill";
+import type { FixedListPillOption, FixedListPillSelectLayout, FixedListPillSelectSize } from "@/components/gestionale/global-input/global-fixed-list-pill";
 
 export type AddettoPickerProps = {
   value: string | null;
@@ -20,6 +20,9 @@ export type AddettoPickerProps = {
   emptyValue?: string;
   /** SSOT opzioni quando il parent ha già `GlobalOptionsSlice` (es. capture / modale scheda). */
   options?: readonly FixedListPillOption[];
+  /** `inline` = tutte le pill visibili (pochi addetti). */
+  layout?: FixedListPillSelectLayout;
+  placeholder?: string;
 };
 
 const FILTER_ALL = "__tutti__";
@@ -37,6 +40,8 @@ export function AddettoPicker({
   allowEmpty = false,
   emptyValue = "",
   options: optionsProp,
+  layout,
+  placeholder,
 }: AddettoPickerProps) {
   const { options: hookOptions } = useAddettiPickerOptions(optionsProp ? null : value);
   const options = optionsProp ?? hookOptions;
@@ -81,6 +86,8 @@ export function AddettoPicker({
       inputClassName={inputClassName}
       size={size}
       tablePillWidth={tablePillWidth}
+      layout={layout}
+      placeholder={placeholder}
     />
   );
 }

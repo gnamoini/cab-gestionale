@@ -2,7 +2,13 @@
 
 import { Tooltip } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { GestionaleAiActionButton, LoadingButton, LoadingProgressBar } from "@/components/design-system";
+import {
+  GestionaleAiActionButton,
+  GestionaleModalFooterCancelButton,
+  LoadingButton,
+  LoadingProgressBar,
+  gestionaleModalFooterActionsStackMobileWrapClass,
+} from "@/components/design-system";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { GlobalSelect } from "@/components/gestionale/global-input";
@@ -201,10 +207,8 @@ export function ListinoImportPreviewModal({
             Chiudi
           </button>
         ) : !analysisRequested ? (
-          <div className="flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button type="button" className={`${dsBtnNeutral} min-h-11 w-full sm:w-auto`} onClick={onRequestClose}>
-              Annulla
-            </button>
+          <div className={gestionaleModalFooterActionsStackMobileWrapClass}>
+            <GestionaleModalFooterCancelButton className="w-full sm:w-auto" onClick={onRequestClose} />
             <GestionaleAiActionButton
               type="button"
               className="min-h-11 w-full justify-center sm:w-auto"

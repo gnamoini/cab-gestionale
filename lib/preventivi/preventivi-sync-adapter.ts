@@ -51,8 +51,16 @@ async function resolveMezzoIdForRecord(
   record: PreventivoRecord,
   mezziGestiti: readonly MezzoGestito[],
 ): Promise<string | null> {
-  const stored = (record as unknown as { mezzoId?: string }).mezzoId;
-  if (typeof stored === "string" && isPreventivoUuid(stored)) return stored;
+  const stored = record.mezzoId?.trim();
+  if (stored && isPreventivoUuid(stored)) return stored;
+
+  // ponytail: editor preventivo — lavorazione collegata vince su re-match ident (campi ingresso sono snapshot interno).
+  if (isPreventivoUuid(record.lavorazioneId)) {
+    const lavRes = await lavorazioniService.getById(record.lavorazioneId);
+    if (lavRes.success && lavRes.data?.mezzo_id && isPreventivoUuid(lavRes.data.mezzo_id)) {
+      return lavRes.data.mezzo_id;
+    }
+  }
 
   const byRecordIdent = resolveMezzoByIdentFromCatalog(mezziGestiti, {
     targa: record.targa,
@@ -61,14 +69,6 @@ async function resolveMezzoIdForRecord(
   });
   if (byRecordIdent.status === "resolved" && isPreventivoUuid(byRecordIdent.mezzoId)) {
     return byRecordIdent.mezzoId;
-  }
-
-  if (isPreventivoUuid(record.lavorazioneId)) {
-    const lavRes = await lavorazioniService.getById(record.lavorazioneId);
-    if (lavRes.success && lavRes.data) {
-      const row = lavRes.data;
-      if (row.mezzo_id && isPreventivoUuid(row.mezzo_id)) return row.mezzo_id;
-    }
   }
 
   return null;

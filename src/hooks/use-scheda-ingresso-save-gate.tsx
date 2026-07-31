@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MezzoAnagraficaConfirmDialog } from "@/components/lavorazioni/schede/scheda-save-conflict-dialog";
 import { detectMezzoAnagraficaChanges } from "@/lib/domain/mezzo/detect-mezzo-anagrafica-changes";
 import { isMezzoAssociationField } from "@/lib/domain/mezzo/mezzo-association";
@@ -49,6 +49,10 @@ export function useSchedaIngressoSaveGate({
   const [mezzoStale, setMezzoStale] = useState(false);
   const resolverRef = useRef<((plan: SchedaIngressoSaveGateResult | null) => void) | null>(null);
   const resolvedMezzoRef = useRef<MezzoGestito | null>(null);
+  const pendingDialogRef = useRef<{ changes: MezzoAnagraficaChange[]; mezzoStale: boolean }>({
+    changes: [],
+    mezzoStale: false,
+  });
 
   const attachOcc = useCallback(
     (plan: SchedaIngressoSaveGateResult): SchedaIngressoSaveGateResult => {
@@ -69,16 +73,31 @@ export function useSchedaIngressoSaveGate({
       setConfirmOpen(false);
       setChanges([]);
       setMezzoStale(false);
+      pendingDialogRef.current = { changes: [], mezzoStale: false };
       resolvedMezzoRef.current = null;
-      resolverRef.current?.(plan ? attachOcc(plan) : plan);
+      const resolver = resolverRef.current;
       resolverRef.current = null;
+      resolver?.(plan ? attachOcc(plan) : plan);
     },
     [attachOcc],
   );
 
+  useEffect(() => {
+    return () => {
+      if (resolverRef.current) {
+        finish(null);
+      }
+    };
+  }, [finish]);
+
   const gateSave = useCallback(
     (fields: SchedaIngressoFields): Promise<SchedaIngressoSaveGateResult> => {
       return new Promise<SchedaIngressoSaveGateResult>((resolve, reject) => {
+        if (resolverRef.current) {
+          reject(new Error("SAVE_IN_PROGRESS"));
+          return;
+        }
+
         resolverRef.current = (plan) => {
           if (plan === null) reject(new Error("SAVE_CANCELLED"));
           else resolve(plan);
@@ -106,6 +125,7 @@ export function useSchedaIngressoSaveGate({
           return;
         }
 
+        pendingDialogRef.current = { changes: filteredChanges, mezzoStale: stale };
         setChanges(filteredChanges);
         setMezzoStale(stale);
         setConfirmOpen(true);
@@ -124,12 +144,13 @@ export function useSchedaIngressoSaveGate({
       changes={changes}
       mezzoStale={mezzoStale}
       onConfirm={() => {
+        const pending = pendingDialogRef.current;
         logMezzoSchedaConflictTelemetry({
           event: "MEZZO_UPDATE_CONFIRMED",
           mezzoId: linkedSnapshot?.id,
           choice: "update_mezzo",
         });
-        finish(buildPlanFromChanges(changes, mezzoStale));
+        finish(buildPlanFromChanges(pending.changes, pending.mezzoStale));
       }}
       onCancel={() => {
         logMezzoSchedaConflictTelemetry({

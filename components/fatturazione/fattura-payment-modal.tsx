@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LoadingButton } from "@/components/design-system";
+import {
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { GlobalSelect } from "@/components/gestionale/global-input";
@@ -105,14 +109,12 @@ export function FatturaPaymentModal({
           </FormField>
         </div>
       </GestionaleModalScrollBody>
-      <div className="flex justify-end gap-2 border-t border-[color:var(--cab-border)] px-4 py-3">
-        <LoadingButton type="button" variant="secondary" onClick={onRequestClose} disabled={busy}>
-          Annulla
-        </LoadingButton>
-        <LoadingButton type="button" variant="primary" loading={busy} onClick={() => void submit()}>
+      <GestionaleModalFooterActions className="justify-end gap-2 border-t border-[color:var(--cab-border)] px-4 py-3">
+        <GestionaleModalFooterCancelButton onClick={onRequestClose} disabled={busy} />
+        <GestionaleModalFooterSaveButton type="button" loading={busy} onClick={() => void submit()}>
           Registra
-        </LoadingButton>
-      </div>
+        </GestionaleModalFooterSaveButton>
+      </GestionaleModalFooterActions>
     </LavorazioniModalShell>
   );
 }

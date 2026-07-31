@@ -75,6 +75,8 @@ export type PreventivoRecord = {
   attrezzaturaMatricola?: string;
   /** Snapshot immutabile attrezzatura al momento emissione. */
   attrezzaturaSnapshot?: import("@/lib/domain/mezzo-attrezzatura/create-attrezzatura-snapshot").AttrezzaturaDocumentSnapshot;
+  /** FK mezzo pin al handoff/create — evita re-link da ident editati in editor. */
+  mezzoId?: string;
   livelloCarburante: string;
   richiedente: string;
   descrizioneLavorazioniCliente: string;

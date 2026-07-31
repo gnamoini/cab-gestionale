@@ -198,3 +198,23 @@ export function splitIdentHighlight(text: string, query: string): { before: stri
     after: t.slice(idx + q.length),
   };
 }
+
+const SCHEDA_INGRESSO_IDENT_FIELD_SET = new Set<SchedaIngressoIdentField>([
+  "targa",
+  "matricola",
+  "nScuderia",
+  "vin",
+]);
+
+/** Campo ident su cui mostrare l'hint conflitto (solo se l'utente ha modificato quel campo). */
+export function resolveMezzoConflictHintIdentField(
+  conflictFields: readonly string[],
+  activeMatchField: SchedaIngressoIdentField | null,
+): SchedaIngressoIdentField | null {
+  const identConflict = conflictFields.find((field): field is SchedaIngressoIdentField =>
+    SCHEDA_INGRESSO_IDENT_FIELD_SET.has(field as SchedaIngressoIdentField),
+  );
+  if (identConflict) return identConflict;
+  if (activeMatchField && conflictFields.includes(activeMatchField)) return activeMatchField;
+  return null;
+}

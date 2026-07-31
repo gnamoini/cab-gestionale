@@ -9,9 +9,13 @@ import { OFFICINA_LEGAL_NAME } from "@/lib/officina/officina-identity";
 
 export {
   buildPreventivoAttrezzaturaPdfFields,
-  buildPreventivoClientePdfFields as buildAnagraficaPdfFields,
+  buildPreventivoClientePdfFields,
+  buildPreventivoDestinatarioPdfFields,
+  buildPreventivoDestinatarioPdfFields as buildAnagraficaPdfFields,
   buildPreventivoMezzoPdfFields,
   buildPreventivoOggettoInterventoPdfFields,
+  buildPreventivoSchedaIngressoAttrezzaturaPdfFields,
+  buildPreventivoSchedaIngressoTelaioPdfFields,
   buildPreventivoTelaioMezzoPdfFields,
   inferTipoAttrezzaturaPdfLegacy as inferTipoAttrezzaturaPdf,
 } from "@/lib/pdf/anagrafica-pdf-fields";
@@ -215,7 +219,6 @@ export function drawPreventivoPdfHeader(
   const metaParts = [
     meta?.numero ? `N. ${meta.numero}` : null,
     meta?.data || null,
-    meta?.operatore || null,
   ].filter((part): part is string => Boolean(part));
   if (metaParts.length) {
     doc.setFont("helvetica", "normal");

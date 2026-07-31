@@ -40,10 +40,16 @@ const identField = read("components/lavorazioni/schede/scheda-ingresso-ident-aut
 assert.match(identField, /useSelectorExclusiveGroup/);
 assert.match(identField, /useSelectorFocusChain/);
 assert.match(identField, /closeSheetWithCommit/);
+assert.match(schedaAnagrafica, /schedaIngressoOptionalListSelectProps/);
+assert.match(schedaAnagrafica, /hideEmptyOptionInInput: true/);
+assert.match(schedaAnagrafica, /clearable: true/);
+assert.match(identField, /globalInputComboboxClearBtn/);
+assert.match(globalSelect, /clearable/);
+assert.match(globalInput, /globalInputComboboxClearBtn/);
 
 assert.match(schedaAnagrafica, /label="N\. scuderia"/);
 assert.match(schedaAnagrafica, /id=\{fieldId\("n-scuderia"\)\}/);
-assert.match(schedaAnagrafica, /FormField label="Ore lavoro" htmlFor=\{fieldId\("ore-lavoro"\)\}/);
+assert.match(schedaAnagrafica, /FormField label="Ore lavoro motore" htmlFor=\{fieldId\("ore-lavoro-motore"\)\}/);
 assert.match(schedaAnagrafica, /GestionaleNumberInput/);
 assert.match(schedaAnagrafica, /FormField label="KM" htmlFor=\{fieldId\("km"\)\}/);
 

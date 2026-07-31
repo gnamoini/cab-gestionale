@@ -153,15 +153,6 @@ export const lavTablePrimaryTextClass =
 const TAGLIANDO_BADGE_CLASS =
   "inline-flex h-5 w-5 shrink-0 self-center items-center justify-center rounded-md bg-amber-600 text-[10px] font-bold leading-none tracking-wide text-white dark:bg-amber-600";
 
-const REPAIR_BADGE_CLASS =
-  "inline-flex h-5 w-5 shrink-0 self-center items-center justify-center rounded-md bg-slate-700 text-[10px] font-bold leading-none tracking-wide text-white dark:bg-slate-700";
-
-const GARANZIA_BADGE_CLASS =
-  "inline-flex h-5 w-5 shrink-0 self-center items-center justify-center rounded-md bg-emerald-700 text-[10px] font-bold leading-none tracking-wide text-white dark:bg-emerald-700";
-
-const RECIDIVO_BADGE_CLASS =
-  "inline-flex h-5 w-5 shrink-0 self-center items-center justify-center rounded-md bg-rose-700 text-[9px] font-bold leading-none tracking-wide text-white dark:bg-rose-700";
-
 /** Badge T in lista — solo se tagliando. */
 export function LavorazioneInterventionTypeBadge({ row }: { row: LavorazioneListRow }) {
   const fields = lavorazioneRowToTagliandoFields(row);
@@ -176,16 +167,11 @@ export function LavorazioneInterventionTypeBadge({ row }: { row: LavorazioneList
   );
 }
 
-/** Badge R in lista — riparazione senza tagliando. */
-export function LavorazioneRepairBadge({ row }: { row: LavorazioneListRow }) {
-  const fields = lavorazioneRowToTagliandoFields(row);
-  if (!fields.repairPresent || fields.isTagliando) return null;
-  return (
-    <span className={REPAIR_BADGE_CLASS} title="Riparazione" aria-label="Riparazione">
-      R
-    </span>
-  );
-}
+const GARANZIA_BADGE_CLASS =
+  "inline-flex h-5 w-5 shrink-0 self-center items-center justify-center rounded-md bg-emerald-700 text-[10px] font-bold leading-none tracking-wide text-white dark:bg-emerald-700";
+
+const RECIDIVO_BADGE_CLASS =
+  "inline-flex h-5 w-5 shrink-0 self-center items-center justify-center rounded-md bg-rose-700 text-[9px] font-bold leading-none tracking-wide text-white dark:bg-rose-700";
 
 /** Badge G in lista — intervento in garanzia. */
 export function LavorazioneGaranziaBadge({ row }: { row: LavorazioneListRow }) {
@@ -210,17 +196,11 @@ export function LavorazioneRecidivoBadge({ row }: { row: LavorazioneListRow }) {
 /** Badge intervento per header card mobile o colonna note. */
 export function LavorazioneNoteBadges({ row }: { row: LavorazioneListRow }) {
   const fields = lavorazioneRowToTagliandoFields(row);
-  if (
-    !fields.isTagliando &&
-    !fields.repairPresent &&
-    !row.is_garanzia &&
-    !row.is_recidivo
-  ) {
+  if (!fields.isTagliando && !row.is_garanzia && !row.is_recidivo) {
     return null;
   }
   return (
     <span className="inline-flex shrink-0 items-center gap-1">
-      <LavorazioneRepairBadge row={row} />
       <LavorazioneInterventionTypeBadge row={row} />
       <LavorazioneGaranziaBadge row={row} />
       <LavorazioneRecidivoBadge row={row} />

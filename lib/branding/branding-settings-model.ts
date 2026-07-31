@@ -52,6 +52,15 @@ export function resolveClienteLabelQrUrl(settings: CabBrandingSettings | null | 
   return normalizeCompanyWebsiteUrl(settings?.companyWebsiteUrl);
 }
 
+/** Host sito per caption etichetta cliente (es. www.autocompattatori.it). */
+export function companyWebsiteDisplayHost(url: string = DEFAULT_COMPANY_WEBSITE_URL): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return new URL(DEFAULT_COMPANY_WEBSITE_URL).host;
+  }
+}
+
 export function parseBrandingSettingsPayload(raw: unknown): CabBrandingSettings {
   if (!raw || typeof raw !== "object") return { ...DEFAULT_CAB_BRANDING_SETTINGS };
   const o = raw as Record<string, unknown>;

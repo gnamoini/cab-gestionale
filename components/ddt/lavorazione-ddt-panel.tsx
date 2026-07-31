@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { formatDdtDate } from "@/components/ddt/ddt-status-badge";
 import { ddtDisplayNumber } from "@/lib/ddt/ddt-list-ui-filters";
 import { fetchDdtByLavorazioneId } from "@/lib/ddt/ddt-fetch";
-import { buildStaffOfficialDocumentPreviewPath } from "@/lib/official-documents/preview-url";
+import { openDdtPdfInNewTab } from "@/lib/ddt/ddt-pdf";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import type { DdtDocumentRow } from "@/src/types/supabase-tables";
 import { dsBtnNeutralForm, dsHubModalSection, dsHubModalSectionTitle } from "@/lib/ui/design-system";
@@ -50,7 +50,7 @@ export function LavorazioneDdtPanel({ lavorazioneId }: { lavorazioneId: string }
                   type="button"
                   className={dsBtnNeutralForm}
                   onClick={() => {
-                    window.location.assign(buildStaffOfficialDocumentPreviewPath("ddt", d.id));
+                    void openDdtPdfInNewTab(d.id);
                   }}
                 >
                   Apri

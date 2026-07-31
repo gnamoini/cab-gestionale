@@ -39,5 +39,11 @@ assert.doesNotMatch(lavDocs, /tipo: "ddt"/);
 const ddtPdf = fs.readFileSync(path.join(ROOT, "lib/ddt/ddt-pdf-generate.ts"), "utf8");
 assert.doesNotMatch(ddtPdf, /prezzo|IVA|totale/i);
 assert.match(ddtPdf, /drawGestionaleDataSectionTable/);
+assert.match(ddtPdf, /drawGestionaleCompactFieldSectionTable/);
+assert.match(ddtPdf, /drawGestionaleTripleFieldSectionTable/);
+
+const ddtDrawer = fs.readFileSync(path.join(ROOT, "components/ddt/ddt-detail-drawer.tsx"), "utf8");
+assert.match(ddtDrawer, /openDdtPdfInNewTab/);
+assert.doesNotMatch(ddtDrawer, /window\.location\.assign/);
 
 console.log("ddt-module-isolation.test.ts OK");

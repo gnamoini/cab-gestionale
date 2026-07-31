@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { Drawer, LoadingButton } from "@/components/design-system";
 import { formatDdtDate } from "@/components/ddt/ddt-status-badge";
-import { buildStaffOfficialDocumentPreviewPath } from "@/lib/official-documents/preview-url";
+import { openDdtPdfInNewTab } from "@/lib/ddt/ddt-pdf";
 import { resolveDrawerAsideClasses } from "@/lib/ui/modal-size-system";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { dsBtnNeutralForm } from "@/lib/ui/design-system";
@@ -44,7 +44,7 @@ export function DdtDetailDrawer({
     if (!doc || busy) return;
     setBusy(true);
     try {
-      window.location.assign(buildStaffOfficialDocumentPreviewPath("ddt", doc.id));
+      await openDdtPdfInNewTab(doc.id);
     } catch (e) {
       toast.errorOnce("ddt-print", e);
     } finally {

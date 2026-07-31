@@ -126,7 +126,7 @@ test("build con mezzo risolto imposta mezzoId sul record", async () => {
       }),
     },
   });
-  assert.equal((rec as { mezzoId?: string }).mezzoId, mezzo.id);
+  assert.equal(rec.mezzoId, mezzo.id);
 });
 
 console.log("resolve-mezzo-for-pending-preventivo.test.ts OK");

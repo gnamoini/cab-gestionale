@@ -9,8 +9,11 @@ import { LavorazioniDateField } from "@/components/gestionale/lavorazioni/lavora
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
-import { LoadingButton } from "@/components/design-system";
-import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import {
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
 import { dsInput, dsLabel } from "@/lib/ui/design-system";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
@@ -80,20 +83,14 @@ export function LavorazioneCompletamentoEditModal({
       title="Modifica data completamento"
       subtitle={[macchina, targa].filter(Boolean).join(" · ")}
       footer={
-        <div className="flex w-full min-w-0 items-center justify-end gap-2">
-          <button type="button" className={`${erpBtnNeutral} min-h-11`} onClick={onClose} disabled={pending}>
-            Annulla
-          </button>
-          <LoadingButton
+        <GestionaleModalFooterActions>
+          <GestionaleModalFooterCancelButton onClick={onClose} disabled={pending} />
+          <GestionaleModalFooterSaveButton
             type="submit"
             form={COMPLETAMENTO_EDIT_FORM_ID}
-            className={`${erpBtnAccent} min-h-11`}
             loading={pending}
-            preset="salva"
-          >
-            Salva
-          </LoadingButton>
-        </div>
+          />
+        </GestionaleModalFooterActions>
       }
     >
       <form

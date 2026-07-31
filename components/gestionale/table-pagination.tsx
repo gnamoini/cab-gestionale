@@ -1,7 +1,7 @@
 "use client";
 
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { dsBtnNeutral, dsPageToolbarBtn } from "@/lib/ui/design-system";
+import { dsAccentToggleOn, dsBtnNeutral, dsPageToolbarBtn } from "@/lib/ui/design-system";
 
 type Props = {
   page: number;
@@ -52,8 +52,7 @@ function visibleNumberedPages(page: number, pageCount: number) {
 }
 
 const pageBtnBase = `${dsBtnNeutral} min-h-9 min-w-9 shrink-0 px-0 text-xs font-semibold sm:min-h-9 sm:min-w-9`;
-const pageBtnActive =
-  "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]";
+const pageBtnActive = dsAccentToggleOn;
 
 export function TablePagination({ page, pageCount, onPageChange, label, className }: Props) {
   if (pageCount <= 1) return null;

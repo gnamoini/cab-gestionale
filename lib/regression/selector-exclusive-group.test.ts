@@ -20,11 +20,15 @@ const identField = read("components/lavorazioni/schede/scheda-ingresso-ident-aut
 
 assert.match(globalSelect, /exclusiveGroup\?: string/);
 assert.match(globalSelect, /closeForExclusiveGroup/);
+assert.match(globalSelect, /activeIndex < 0 && !editSessionRef\.current\.modified[\s\S]*closeForExclusiveGroup\(\)/);
 assert.match(globalSelect, /useSelectorExclusiveGroup\(\s*exclusiveGroup,\s*closeForExclusiveGroup/);
 assert.match(globalSelect, /setSelectorOpen/);
 assert.match(settingsListSelect, /exclusiveGroup\?: string/);
 assert.match(schedaAnagrafica, /SCHEDA_INGRESSO_EXCLUSIVE_GROUP = "scheda-ingresso"/);
 assert.match(identField, /useSelectorExclusiveGroup\(exclusiveGroup, closeUiOnly\)/);
+assert.match(identField, /onBlur=\{\(\) => \{[\s\S]*closeUiOnly\(\)/);
+assert.match(identField, /activeIndex < 0 && !value\.trim\(\)[\s\S]*closeUiOnly\(\)/);
+assert.doesNotMatch(identField, /onBlur=\{\(\) => \{[\s\S]*resetUi\(\)/);
 assert.match(exclusiveGroup, /closeOtherSelectorsInExclusiveGroup/);
 assert.match(timesheetHeader, /exclusiveGroup="dipendenti-timesheet-filters"/);
 

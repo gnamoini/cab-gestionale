@@ -74,7 +74,19 @@ function PreventiviHubEmptyState({ onCreaPreventivo }: { onCreaPreventivo?: () =
   );
 }
 
-/** Pulsante primario condiviso (tab Preventivi empty state e tab Schede). */
+/** Pulsante primario condiviso (tab Preventivi empty state, footer tab Schede). */
+function IconPreventivo({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      />
+    </svg>
+  );
+}
+
 export function CreaPreventivoButton({
   onClick,
   disabled,
@@ -87,35 +99,17 @@ export function CreaPreventivoButton({
   className?: string;
 }) {
   return (
-    <OptionalTooltip content={disabled ? disabledTitle : undefined}><button type="button" className={`${dsBtnPrimary}${className ? ` ${className}` : ""}`} disabled={disabled} onClick={onClick}>
-      Crea preventivo
-    </button></OptionalTooltip>
-  );
-}
-
-/** CTA tab Schede: stesso stile del empty state Preventivi, con copy su import schede. */
-export function CreaPreventivoDaSchedeCta({
-  onClick,
-  disabled,
-  disabledTitle,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  disabledTitle?: string;
-}) {
-  return (
-    <div className="rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] px-3 py-4 text-center">
-      <p className="text-sm font-medium text-[color:var(--cab-text)]">Genera preventivo</p>
-      <p className="mt-1 text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
-        Importa ingresso, lavorazioni e ricambi già compilati in questo intervento.
-      </p>
-      <CreaPreventivoButton
-        className="mt-3"
-        onClick={onClick}
+    <OptionalTooltip content={disabled ? disabledTitle : undefined}>
+      <button
+        type="button"
+        className={`inline-flex items-center justify-center gap-1.5 ${dsBtnPrimary} min-h-11${className ? ` ${className}` : ""}`}
         disabled={disabled}
-        disabledTitle={disabledTitle}
-      />
-    </div>
+        onClick={onClick}
+      >
+        <IconPreventivo />
+        Crea preventivo
+      </button>
+    </OptionalTooltip>
   );
 }
 

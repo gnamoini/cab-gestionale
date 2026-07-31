@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { copyLastSchedaIngresso } from "@/lib/domain/scheda-ingresso/copy-last-scheda";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
 import { mergeSchedaIngressoWithMezzoPriority } from "@/lib/schede/merge-scheda-ingresso-with-mezzo-priority";
@@ -8,7 +8,6 @@ import {
   createLinkedMezzoSnapshot,
   createLinkedMezzoSnapshotFromFields,
   emptySchedaIngressoMezzoLinkState,
-  hasLinkedMezzoFieldConflict,
   listLinkedMezzoFieldConflicts,
   resolvePreferredMezzoIdForSave,
   type LinkedMezzoSnapshot,
@@ -42,6 +41,19 @@ export function useSchedaIngressoMezzoLink({
   );
   const [activeMatchField, setActiveMatchField] = useState<SchedaIngressoIdentField | null>(null);
   const [dismissedMezzoIds, setDismissedMezzoIds] = useState<Set<string>>(() => new Set());
+  const userEditedPermanentRef = useRef<Set<MezzoPermanentFieldKey>>(new Set());
+
+  const resetUserPermanentEdits = useCallback(() => {
+    userEditedPermanentRef.current = new Set();
+  }, []);
+
+  const notifyPermanentFieldUserEdit = useCallback(
+    (key: MezzoPermanentFieldKey | readonly MezzoPermanentFieldKey[]) => {
+      const keys = Array.isArray(key) ? key : [key];
+      for (const k of keys) userEditedPermanentRef.current.add(k);
+    },
+    [],
+  );
 
   const onExactMezzoMatch = useCallback(
     (mezzo: MezzoGestito, field: SchedaIngressoIdentField) => {
@@ -102,6 +114,7 @@ export function useSchedaIngressoMezzoLink({
         ),
       });
       setActiveMatchField(null);
+      resetUserPermanentEdits();
     },
     [
       activeMatchField,
@@ -110,6 +123,7 @@ export function useSchedaIngressoMezzoLink({
       fields,
       linkState.pendingMezzo,
       mezzi,
+      resetUserPermanentEdits,
       schedeStore,
       setFields,
       storico,
@@ -119,7 +133,8 @@ export function useSchedaIngressoMezzoLink({
   const clearLink = useCallback(() => {
     setLinkState(emptySchedaIngressoMezzoLinkState());
     setActiveMatchField(null);
-  }, []);
+    resetUserPermanentEdits();
+  }, [resetUserPermanentEdits]);
 
   const linkMezzoExplicit = useCallback(
     (mezzo: MezzoGestito, field: SchedaIngressoIdentField = "matricola") => {
@@ -129,8 +144,9 @@ export function useSchedaIngressoMezzoLink({
         linkedSnapshot: createLinkedMezzoSnapshot(mezzo, field),
       });
       setActiveMatchField(null);
+      resetUserPermanentEdits();
     },
-    [],
+    [resetUserPermanentEdits],
   );
 
   const bootstrapLinkedMezzo = useCallback(
@@ -141,6 +157,7 @@ export function useSchedaIngressoMezzoLink({
     ) => {
       setLinkState((prev) => {
         if (prev.status === "linked" && prev.linkedSnapshot?.id === mezzo.id) return prev;
+        resetUserPermanentEdits();
         return {
           status: "linked",
           pendingMezzo: null,
@@ -149,11 +166,14 @@ export function useSchedaIngressoMezzoLink({
       });
       setActiveMatchField(null);
     },
-    [],
+    [resetUserPermanentEdits],
   );
 
-  const hasConflict = hasLinkedMezzoFieldConflict(fields, linkState.linkedSnapshot);
   const conflictFields = listLinkedMezzoFieldConflicts(fields, linkState.linkedSnapshot);
+  const userEditedConflictFields = conflictFields.filter((key) =>
+    userEditedPermanentRef.current.has(key),
+  );
+  const hasConflict = userEditedConflictFields.length > 0;
   const preferredMezzoId = resolvePreferredMezzoIdForSave(linkState);
 
   return {
@@ -166,8 +186,11 @@ export function useSchedaIngressoMezzoLink({
     bootstrapLinkedMezzo,
     clearLink,
     hasConflict,
-    conflictFields,
+    conflictFields: userEditedConflictFields,
+    allConflictFields: conflictFields,
+    notifyPermanentFieldUserEdit,
     preferredMezzoId,
+    editedPermanentFields: [...userEditedPermanentRef.current],
     linkedSnapshot: linkState.linkedSnapshot as LinkedMezzoSnapshot | null,
     pendingMezzo: linkState.pendingMezzo,
   };

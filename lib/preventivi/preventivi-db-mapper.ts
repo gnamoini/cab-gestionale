@@ -120,7 +120,13 @@ export function preventivoRowToRecord(row: PreventivoRow, mezzo: MezzoRow | null
     totaleFinale: row.totale,
   };
   const strutturato = ensurePreventivoStruttura(merged);
-  return { ...strutturato, ...calcolaTotaliPreventivo(strutturato) };
+  const withTotals = { ...strutturato, ...calcolaTotaliPreventivo(strutturato) };
+  if (typeof det.mezzoId === "string" && isPreventivoUuid(det.mezzoId.trim())) {
+    withTotals.mezzoId = det.mezzoId.trim();
+  } else if (row.mezzo_id && isPreventivoUuid(row.mezzo_id)) {
+    withTotals.mezzoId = row.mezzo_id;
+  }
+  return withTotals;
 }
 
 function rowMatchesLegacyLocalRecord(row: PreventivoRow, local: PreventivoRecord): boolean {

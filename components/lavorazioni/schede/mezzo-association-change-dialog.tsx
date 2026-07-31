@@ -8,7 +8,10 @@ import {
   associationFieldLabel,
   type AssociationChange,
 } from "@/lib/domain/mezzo/mezzo-association";
-import { dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
+import {
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
 
 export function MezzoAssociationChangeDialog({
   open,
@@ -37,16 +40,14 @@ export function MezzoAssociationChangeDialog({
       onCancel={onCancel}
       footer={
         <div className={gestionaleConfirmActionsClass}>
-          <button type="button" className={`${dsBtnNeutral} min-h-[2.75rem] sm:min-h-0`} onClick={onCancel}>
-            Annulla
-          </button>
-          <button
+          <GestionaleModalFooterCancelButton className="w-full sm:w-auto" onClick={onCancel} />
+          <GestionaleModalFooterSaveButton
             type="button"
-            className={`${dsBtnPrimary} min-h-[2.75rem] sm:min-h-0`}
+            className="w-full sm:w-auto"
             onClick={onConfirm}
           >
             Conferma aggiornamento
-          </button>
+          </GestionaleModalFooterSaveButton>
         </div>
       }
     >

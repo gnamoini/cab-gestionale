@@ -23,7 +23,6 @@ export function generatePreventivoPdfBytes(
   const pageW = doc.internal.pageSize.getWidth();
   const righe = buildPreventivoOutputRighe(p);
   const tipoUpper = preventivoTipoDocumentoLabel(p.tipoDocumento).toUpperCase();
-  const operatore = p.lastEditedBy?.trim() || autore.trim() || "Operatore";
 
   const totaleNetto = p.totaleFinale;
   const importoIva = Math.round(totaleNetto * (PDF_PREVENTIVO_IVA_PERCENT / 100) * 100) / 100;
@@ -32,10 +31,9 @@ export function generatePreventivoPdfBytes(
   let y = drawGestionalePdfHeader(doc, pageW, tipoUpper, {
     numero: p.numero.trim() || undefined,
     data: p.dataCreazione ? fmtDateIt(p.dataCreazione) : undefined,
-    operatore,
     logoDataUrl,
   });
-  y = pdfAdvanceAfterDocumentHeader(y);
+  y = pdfAdvanceAfterDocumentHeader(y, 0.5);
 
   y = drawPreventivoPdfBody(doc, pageW, y, p, righe, {
     totaleRicambi: p.totaleRicambi,

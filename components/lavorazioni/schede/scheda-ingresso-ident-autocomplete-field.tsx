@@ -19,6 +19,7 @@ import {
   globalAutocompleteAddBtnClass,
   globalAutocompleteDropdownPortalPanel,
   globalAutocompleteOptionClass,
+  globalInputComboboxClearBtn,
   globalInputFieldDefault,
 } from "@/lib/ui/global-input";
 import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
@@ -182,8 +183,9 @@ export function SchedaIngressoIdentAutocompleteField({
       commitFreeText(pending);
       return;
     }
-    resetUi();
-  }, [commitFreeText, resetUi, value]);
+    // ponytail: no restoreFocus — il focus è già sul campo successivo (Enter / tap altrove).
+    closeUiOnly();
+  }, [closeUiOnly, commitFreeText, value]);
 
   const pickMezzo = useCallback(
     (mezzo: MezzoGestito) => {
@@ -295,7 +297,7 @@ export function SchedaIngressoIdentAutocompleteField({
     if (e.key === "Enter" && open) {
       e.preventDefault();
       if (activeIndex < 0 && !value.trim()) {
-        resetUi();
+        closeUiOnly();
         scheduleFocusNextGestionaleField(inputRef.current);
         return;
       }
@@ -354,9 +356,17 @@ export function SchedaIngressoIdentAutocompleteField({
     ) : null;
 
   const sheetFreeText = sheetQuery.trim();
+  const showClearBtn = Boolean(value.trim()) && !disabled && !readOnly;
   const triggerClassName = useMobileSheet
-    ? `${globalInputFieldDefault} gestionale-combobox-trigger font-mono cursor-pointer caret-transparent`
-    : `${globalInputFieldDefault} font-mono`;
+    ? `${globalInputFieldDefault} gestionale-combobox-trigger font-mono cursor-pointer caret-transparent${showClearBtn ? " pr-10" : ""}`
+    : `${globalInputFieldDefault} font-mono${showClearBtn ? " pr-10" : ""}`;
+
+  const handleClear = useCallback(() => {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    skipBlurMatch.current = true;
+    closeUiOnly();
+    onChange("");
+  }, [closeUiOnly, onChange]);
 
   return (
     <label htmlFor={inputId} className={`block text-xs ${className}`.trim()}>
@@ -390,7 +400,7 @@ export function SchedaIngressoIdentAutocompleteField({
             if (useMobileSheet) return;
             if (blurTimer.current) clearTimeout(blurTimer.current);
             blurTimer.current = setTimeout(() => {
-              resetUi();
+              closeUiOnly();
               tryExactMatchOnBlur();
             }, 140);
           }}
@@ -408,6 +418,20 @@ export function SchedaIngressoIdentAutocompleteField({
           aria-readonly={useMobileSheet || undefined}
           enterKeyHint={useMobileSheet ? "search" : undefined}
         />
+        {showClearBtn ? (
+          <button
+            type="button"
+            className={globalInputComboboxClearBtn}
+            aria-label={`Svuota ${label}`}
+            tabIndex={-1}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={handleClear}
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        ) : null}
         {typeof document !== "undefined" && dropdownPortal ? createPortal(dropdownPortal, document.body) : null}
         <GestionaleSearchableSheetSelect
           open={sheetOpen}

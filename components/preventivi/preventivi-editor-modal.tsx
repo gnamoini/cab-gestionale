@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { GestionaleCollapsibleSection } from "@/components/design-system";
+import {
+  GestionaleCollapsibleSection,
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterSaveButton,
+  gestionaleModalFooterCancelBtnClass,
+} from "@/components/design-system";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
@@ -13,7 +19,9 @@ import {
   isPreventivoEditorDirty,
   normalizePreventivoEditorRecord,
 } from "@/lib/preventivi/preventivo-editor-dirty";
+import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import { RICAMBIO_UNITA_MISURA_DEFAULT } from "@/lib/magazzino/ricambio-unita-misura";
+import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { ensurePreventivoStruttura, partitionRigheRicambi } from "@/lib/preventivi/preventivi-struttura";
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
 import {
@@ -21,7 +29,7 @@ import {
 } from "@/lib/preventivi/preventivi-voci-standard";
 import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
 import { persistPreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
-import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useMezziListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { maybeRecordLearningOnSave } from "@/lib/preventivi/trasforma-descrizione";
 import type { DescrizionePreventivoContext } from "@/lib/preventivi/preventivi-descrizione-aggregator";
 import { regeneratePreventivoDescription } from "@/lib/preventivi/regenerate-preventivo-description";
@@ -40,11 +48,7 @@ import {
 } from "@/lib/ui/design-system";
 import {
   preventivoEditorActionBtn,
-  preventivoEditorBody,
-  preventivoEditorFooterBtnNeutral,
-  preventivoEditorFooterBtnPrimary,
   preventivoEditorHint,
-  preventivoEditorSubsectionTitle,
 } from "@/components/preventivi/preventivo-editor-ui";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
@@ -53,33 +57,23 @@ import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cli
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { FormField } from "@/components/gestionale/schede/gestionale-form-section";
 import { SchedaIngressoAnagraficaFields } from "@/components/gestionale/schede/scheda-ingresso-anagrafica-fields";
-import { MezzoRegistratoIngressoDialog } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-dialog";
 import {
-  anagraficaFromMezzo,
   applyAnagraficaPatchToPreventivo,
   preventivoToSchedaIngressoSlice,
   schedaIngressoSliceToPreventivoPatch,
 } from "@/lib/preventivi/preventivo-anagrafica-map";
-import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import type { SchedaIngressoFields } from "@/types/schede";
 import { GlobalDatePickerYmd } from "@/components/gestionale/global-input";
 import { PDF_PREVENTIVO_IVA_PERCENT } from "@/lib/pdf/preventivo-pdf-layout";
-import { LavorazioneAssignLabelLines } from "@/components/document-capture/capture-lavorazione-assign-label";
+import { SchedaMezzoIdentificazioneReadonly } from "@/components/lavorazioni/schede/scheda-form-utils";
 import {
-  describeLavorazioneAssignRowParts,
-  describeLavorazioneAssignRowPartsFromCampi,
-} from "@/lib/document-capture/capture-manual-assign-state";
+  formatIdentificazioneMezzoBands,
+  identificazionePartsFromMezzo,
+  identificazionePartsFromSchedaIngresso,
+} from "@/lib/mezzi/identificazione-mezzo";
 import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
-import { DdtDetailDrawer } from "@/components/ddt/ddt-detail-drawer";
-import { DdtPreventivoPanel } from "@/components/ddt/ddt-preventivo-panel";
-import { buildDdtDraftFromPreventivoAuto } from "@/lib/ddt/preventivo-to-ddt-draft";
-import type { DdtDetail } from "@/lib/ddt/types";
-import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
-import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
 import { usePermissions } from "@/src/hooks/use-permissions";
-import { ddtEntry } from "@/lib/domain/ddt-entry";
-import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { dateInputValueToIso, isoToDateInputValue } from "@/lib/lavorazioni/date-day-only";
 import { PreventivoLavorazioniEditorSection } from "@/components/preventivi/preventivo-lavorazioni-editor-section";
@@ -95,29 +89,6 @@ const ORE_MIN = 0.01;
 const preventivoIntestazioneSegmentWrap = `${dsSegmentedWrap} w-full gap-0.5 p-0.5`;
 const preventivoIntestazioneSegmentOn = `${dsSegmentedBtnOn} min-w-0 flex-1 px-2.5 py-1 text-xs max-sm:min-h-11 max-sm:py-2`;
 const preventivoIntestazioneSegmentOff = `${dsSegmentedBtnOff} min-w-0 flex-1 px-2.5 py-1 text-xs max-sm:min-h-11 max-sm:py-2`;
-const emptySchedaIngressoFields: SchedaIngressoFields = {
-  dataIngresso: "",
-  cliente: "",
-  cantiere: "",
-  utilizzatore: "",
-  tipoAttrezzatura: "",
-  marcaAttrezzatura: "",
-  modelloAttrezzatura: "",
-  matricola: "",
-  nScuderia: "",
-  oreLavoro: "",
-  tipoTelaio: "",
-  marcaTelaio: "",
-  modelloTelaio: "",
-  vin: "",
-  targa: "",
-  km: "",
-  descrizioneAnomalia: "",
-  livelloCarburante: "",
-  addettoAccettazione: "",
-  richiedente: "",
-    richiedenteTelefono: "",
-};
 
 function sumOreRigheAddetti(righe: readonly { ore: number }[]): number {
   const sum = righe.reduce((s, x) => s + (Number.isFinite(x.ore) ? x.ore : 0), 0);
@@ -169,20 +140,11 @@ export function PreventiviEditorModal({
   const draftRef = useRef<PreventivoRecord | null>(null);
   const [draft, setDraft] = useState<PreventivoRecord | null>(null);
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
-  const [ddtDrawer, setDdtDrawer] = useState<{ open: boolean; detail: DdtDetail | null }>({ open: false, detail: null });
-  const [ddtBusy, setDdtBusy] = useState(false);
   const [descRegenBusy, setDescRegenBusy] = useState(false);
   const [descProgressLabel, setDescProgressLabel] = useState<string | null>(null);
   const prevPerms = usePermissions("preventivi");
   const profilo = useOfficinaProfiloOperativo();
   const toast = useGestionaleToast();
-  const { confirm, confirmDialog } = useGestionaleConfirm();
-  const preventivoId = record?.id ?? "";
-  const { getDdtForPreventivo, refetch: refetchDdtIndex, isLoading: ddtIndexLoading } = usePreventivoDdtIndex(
-    preventivoId ? [preventivoId] : [],
-    open && !isNew && Boolean(preventivoId),
-  );
-  const activeDdt = preventivoId ? getDdtForPreventivo(preventivoId) : null;
   const dataCreazioneFieldId = useId();
   const lavorazioniFieldId = useId();
   const costoOrarioFieldId = useId();
@@ -222,6 +184,24 @@ export function PreventiviEditorModal({
   const prefsAtt = useMemo(
     () => migrateMezziListePrefs(appSettings?.mezziListe ?? createMezziListePrefsDefault()),
     [appSettings?.mezziListe, open],
+  );
+
+  const magazzinoQ = useMagazzinoRicambiUIQuery(undefined, { enabled: open });
+  const prodottiMagazzino = magazzinoQ.data ?? [];
+
+  const resolveScontoPercent = useCallback(
+    (item: RicambioMagazzino) => {
+      const cliente = draftRef.current?.cliente?.trim() ?? "";
+      const defaultSconto = getScontoRicambiCliente(prefsAtt, cliente);
+      const infer = inferEconomiciClientePreventivi(
+        cliente,
+        allRecords,
+        draftRef.current?.id,
+        defaultSconto,
+      );
+      return infer.scontoRigaForCodice(ricambioCodiceForUi(item.codiceFornitoreOriginale));
+    },
+    [allRecords, prefsAtt],
   );
 
   const totals = useMemo(() => {
@@ -264,65 +244,24 @@ export function PreventiviEditorModal({
     [draft],
   );
 
-  const linkedLavorazioneParts = useMemo(() => {
-    if (!linkedLavorazioneId) return null;
-    const rows = lavorazioniListQ.data ?? [];
-    const lav = rows.find((row) => row.id === linkedLavorazioneId);
-    if (lav) {
-      return describeLavorazioneAssignRowParts(linkedLavorazioneId, rows, {});
-    }
-    const codice = lavorazioneDisplayCodice({ id: linkedLavorazioneId });
-    return describeLavorazioneAssignRowPartsFromCampi(codice, anagraficaFields ?? undefined);
-  }, [anagraficaFields, linkedLavorazioneId, lavorazioniListQ.data]);
+  const linkedLavorazioneCodice = useMemo(() => {
+    if (!linkedLavorazioneId) return "";
+    const lav = (lavorazioniListQ.data ?? []).find((row) => row.id === linkedLavorazioneId);
+    return lav?.codice?.trim() || lavorazioneDisplayCodice({ id: linkedLavorazioneId });
+  }, [linkedLavorazioneId, lavorazioniListQ.data]);
 
-  const setAnagraficaFields = useCallback(
-    (next: SchedaIngressoFields) => {
-      setDraft((prev) => {
-        if (!prev) return prev;
-        const anagPatch = schedaIngressoSliceToPreventivoPatch(next);
-        return applyTotals(applyAnagraficaPatchToPreventivo(prev, anagPatch));
-      });
-    },
-    [applyTotals],
-  );
-
-  const mezzoPrompt = useSchedaIngressoMezzoPrompt({
-    fields: anagraficaFields ?? emptySchedaIngressoFields,
-    setFields: setAnagraficaFields,
-    mezzi: mezziCatalog,
-  });
-
-  const openDdtDrawer = useCallback(async (ddtId: string) => {
-    const detail = await ddtEntry.getDetail(ddtId);
-    if (!detail.success || !detail.data) {
-      toast.errorOnce("ddt-detail", detail.error ?? "Impossibile aprire il DDT.");
-      return;
-    }
-    setDdtDrawer({ open: true, detail: detail.data });
-  }, [toast]);
-
-  const createOrOpenDdt = useCallback(async () => {
-    if (!draft || !preventivoId) return;
-    const existing = getDdtForPreventivo(preventivoId);
-    if (existing) {
-      await openDdtDrawer(existing.id);
-      return;
-    }
-    if (!prevPerms.canWrite) return;
-    setDdtBusy(true);
-    try {
-      const payload = buildDdtDraftFromPreventivoAuto({ preventivo: draft, preventivoId });
-      const created = await ddtEntry.createOrReplaceForPreventivo(payload);
-      if (!created.success || !created.data) throw new Error(created.error ?? "Creazione DDT non riuscita.");
-      await refetchDdtIndex();
-      await openDdtDrawer(created.data.id);
-      toast.successOnce("ddt-created", "DDT generato.");
-    } catch (e) {
-      toast.errorOnce("ddt-create", e);
-    } finally {
-      setDdtBusy(false);
-    }
-  }, [draft, getDdtForPreventivo, openDdtDrawer, preventivoId, prevPerms.canWrite, refetchDdtIndex, toast]);
+  const linkedLavorazioneIdentParts = useMemo(() => {
+    if (!draft) return null;
+    const fromSlice = anagraficaFields
+      ? identificazionePartsFromSchedaIngresso(anagraficaFields)
+      : null;
+    if (fromSlice && formatIdentificazioneMezzoBands(fromSlice).length > 0) return fromSlice;
+    const lav = (lavorazioniListQ.data ?? []).find((row) => row.id === linkedLavorazioneId);
+    const mezzoId = lav?.mezzo_id?.trim();
+    const mezzo = mezzoId ? mezziCatalog.find((m) => m.id === mezzoId) : null;
+    if (mezzo) return identificazionePartsFromMezzo(mezzo);
+    return fromSlice;
+  }, [anagraficaFields, draft, linkedLavorazioneId, lavorazioniListQ.data, mezziCatalog]);
 
   const canRegenerateDescription =
     Boolean(draft?.stato === "bozza" && draft.lavorazioneId?.trim() && prevPerms.canWrite);
@@ -355,67 +294,12 @@ export function PreventiviEditorModal({
     }
   }, [allRecords, applyTotals, autore, canRegenerateDescription, draft, toast]);
 
-  const regenerateDdt = useCallback(async () => {
-    if (!draft || !preventivoId || !prevPerms.canWrite) return;
-    const ok = await confirm({
-      title: "Rigenerare DDT",
-      message: "Rigenerare il DDT? Il documento precedente verrà annullato.",
-      confirmLabel: "Rigenera",
-      destructive: true,
-    });
-    if (!ok) return;
-    setDdtBusy(true);
-    try {
-      const payload = buildDdtDraftFromPreventivoAuto({ preventivo: draft, preventivoId });
-      const created = await ddtEntry.createOrReplaceForPreventivo(payload);
-      if (!created.success || !created.data) throw new Error(created.error ?? "Rigenerazione non riuscita.");
-      await refetchDdtIndex();
-      await openDdtDrawer(created.data.id);
-      toast.successOnce("ddt-regen", "DDT rigenerato.");
-    } catch (e) {
-      toast.errorOnce("ddt-regen", e);
-    } finally {
-      setDdtBusy(false);
-    }
-  }, [draft, confirm, openDdtDrawer, preventivoId, prevPerms.canWrite, refetchDdtIndex, toast]);
-
-  const refreshDdtDrawer = useCallback(async () => {
-    const detail = ddtDrawer.detail;
-    if (!detail) return;
-    const next = await ddtEntry.getDetail(detail.document.id);
-    if (next.success && next.data) {
-      setDdtDrawer((prev) => ({ ...prev, detail: next.data! }));
-    }
-    void refetchDdtIndex();
-  }, [ddtDrawer.detail, refetchDdtIndex]);
-
-  const printDdtPdf = useCallback(async () => {
-    if (!activeDdt || ddtBusy) return;
-    setDdtBusy(true);
-    try {
-      const opened = await openPdfArtifact("ddt", { id: activeDdt.id });
-      if (opened) {
-        await ddtEntry.markStampato(activeDdt.id);
-        void refetchDdtIndex();
-        if (ddtDrawer.detail?.document.id === activeDdt.id) void refreshDdtDrawer();
-      }
-    } catch (e) {
-      toast.errorOnce("ddt-print", e);
-    } finally {
-      setDdtBusy(false);
-    }
-  }, [activeDdt, ddtBusy, ddtDrawer.detail?.document.id, refetchDdtIndex, refreshDdtDrawer, toast]);
-
   function patchAnagrafica(partial: Partial<SchedaIngressoFields>) {
     if (!draft) return;
     const merged = { ...preventivoToSchedaIngressoSlice(draft), ...partial };
     const anagPatch = schedaIngressoSliceToPreventivoPatch(merged);
     setDraft((prev) => (prev ? applyTotals(applyAnagraficaPatchToPreventivo(prev, anagPatch)) : prev));
     if (partial.cliente !== undefined) applyClienteScontoRighe(partial.cliente);
-  }
-
-  function onMezzoPromptMatch(mezzo: Parameters<typeof anagraficaFromMezzo>[0]) {
-    mezzoPrompt.requestPrompt(mezzo);
   }
 
   function requestClose() {
@@ -587,37 +471,32 @@ export function PreventiviEditorModal({
           : `${preventivoTipoDocumentoLabel(draft.tipoDocumento)} ${draft.numero}`
       }
       footer={
-        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+        <GestionaleModalFooterActions className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           <button
             type="button"
-            className={preventivoEditorFooterBtnNeutral}
+            className={`${gestionaleModalFooterCancelBtnClass} w-full sm:w-auto`}
             onClick={() =>
               void importPreventiviPdf().then(({ openPreventivoPdfPreviewFromRecord }) =>
                 openPreventivoPdfPreviewFromRecord(applyTotals(draft), autore),
               )
             }
           >
+            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+              />
+            </svg>
             Anteprima PDF
           </button>
-          <button type="button" className={preventivoEditorFooterBtnNeutral} onClick={requestClose}>
-            Annulla
-          </button>
-          <button type="button" className={preventivoEditorFooterBtnPrimary} onClick={onSalva}>
+          <GestionaleModalFooterCancelButton className="w-full sm:w-auto" onClick={requestClose} />
+          <GestionaleModalFooterSaveButton className="w-full sm:w-auto" type="button" onClick={onSalva}>
             Salva
-          </button>
-        </div>
+          </GestionaleModalFooterSaveButton>
+        </GestionaleModalFooterActions>
       }
     >
-      <MezzoRegistratoIngressoDialog
-        open={mezzoPrompt.promptOpen}
-        mezzo={mezzoPrompt.promptMezzo}
-        onAccept={() => {
-          mezzoPrompt.acceptAutofill();
-          const cliente = mezzoPrompt.promptMezzo?.cliente?.trim();
-          if (cliente) applyClienteScontoRighe(cliente);
-        }}
-        onDismiss={mezzoPrompt.dismissPrompt}
-      />
       <div className={`relative ${gestionaleModalBodyFlexClass}`}>
         <GestionaleModalScrollBody className="py-3">
           <div className="space-y-3">
@@ -663,12 +542,10 @@ export function PreventiviEditorModal({
 
                 {draft.lavorazioneId.trim() ? (
                   <div className="space-y-1.5">
-                    <h3 className={preventivoEditorSubsectionTitle}>Lavorazione collegata</h3>
-                    <LavorazioneAssignLabelLines
-                      parts={linkedLavorazioneParts}
-                      fallback={draft.macchinaRiassunto.trim() || undefined}
-                      headlineClassName={`${preventivoEditorBody} font-medium leading-snug`}
-                      identClassName={preventivoEditorHint}
+                    <SchedaMezzoIdentificazioneReadonly
+                      parts={linkedLavorazioneIdentParts}
+                      lavorazioneCodice={linkedLavorazioneCodice || undefined}
+                      fallbackLine={draft.macchinaRiassunto.trim() || undefined}
                     />
                     {draft.lavorazioneOrigine === "storico" ? (
                       <p className={preventivoEditorHint}>(archivio)</p>
@@ -681,10 +558,11 @@ export function PreventiviEditorModal({
             {anagraficaFields ? (
               <GestionaleCollapsibleSection title="Scheda ingresso" defaultCollapsed variant="form">
                 <SchedaIngressoAnagraficaFields
+                  surface="preventivo"
+                  sections={["cliente", "attrezzatura", "telaio"]}
                   value={anagraficaFields}
                   onPatch={patchAnagrafica}
-                  mezzi={mezziCatalog}
-                  onExactMezzoMatch={onMezzoPromptMatch}
+                  mezzi={[]}
                   clienteRequired
                 />
               </GestionaleCollapsibleSection>
@@ -735,6 +613,8 @@ export function PreventiviEditorModal({
                 righe={ricambiPart.standard}
                 materialiConsumo={ricambiPart.materialiConsumo}
                 totaleRicambi={totals.totaleRicambi}
+                prodotti={prodottiMagazzino}
+                resolveScontoPercent={resolveScontoPercent}
                 onAddRiga={addRiga}
                 onPatchRiga={patchRiga}
                 onRemoveRiga={removeRiga}
@@ -752,37 +632,8 @@ export function PreventiviEditorModal({
                 onNoteChange={(noteFinali) => patch({ noteFinali })}
               />
             </GestionaleCollapsibleSection>
-
-            {!isNew && record?.id ? (
-              <GestionaleCollapsibleSection title="Documento di trasporto (DDT)" defaultCollapsed variant="form">
-                <DdtPreventivoPanel
-                  activeDdt={activeDdt}
-                  loading={ddtIndexLoading}
-                  busy={ddtBusy}
-                  canWrite={prevPerms.canWrite}
-                  onOpenDrawer={() => {
-                    if (activeDdt) void openDdtDrawer(activeDdt.id);
-                  }}
-                  onGenerate={() => void createOrOpenDdt()}
-                  onRegenerate={() => void regenerateDdt()}
-                  onPrintPdf={() => void printDdtPdf()}
-                />
-              </GestionaleCollapsibleSection>
-            ) : null}
           </div>
         </GestionaleModalScrollBody>
-
-        <DdtDetailDrawer
-          open={ddtDrawer.open}
-          detail={ddtDrawer.detail}
-          onClose={() => setDdtDrawer({ open: false, detail: null })}
-          canWrite={prevPerms.canWrite}
-          isAdmin={false}
-          canRegenerate={prevPerms.canWrite}
-          regenerateBusy={ddtBusy}
-          onRegenerate={() => void regenerateDdt()}
-          onChanged={() => void refreshDdtDrawer()}
-        />
 
         <GestionaleUnsavedChangesDialog
           open={unsavedExitOpen}
@@ -796,7 +647,6 @@ export function PreventiviEditorModal({
             onSalva();
           }}
         />
-        {confirmDialog}
       </div>
     </LavorazioniModalShell>
   );

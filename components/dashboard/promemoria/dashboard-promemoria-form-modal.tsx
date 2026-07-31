@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Button, LoadingButton } from "@/components/design-system";
+import {
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterSaveButton,
+  gestionaleModalFooterActionsStackMobileWrapClass,
+} from "@/components/design-system";
 import { GlobalDatePickerYmd } from "@/components/gestionale/global-input";
 import { DashboardPromemoriaScopeDialog } from "@/components/dashboard/promemoria/dashboard-promemoria-scope-dialog";
 import {
@@ -220,11 +225,13 @@ export function DashboardPromemoriaFormModal({
         titleId="dashboard-promemoria-modal-title"
         layerClassName="cursor-pointer"
         footer={
-          <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
-            <Button type="button" variant="secondary" className="min-h-11" onClick={requestClose} disabled={saving}>
-              Annulla
-            </Button>
-            <LoadingButton
+          <GestionaleModalFooterActions className={gestionaleModalFooterActionsStackMobileWrapClass}>
+            <GestionaleModalFooterCancelButton
+              className="min-h-11"
+              onClick={requestClose}
+              disabled={saving}
+            />
+            <GestionaleModalFooterSaveButton
               type="submit"
               form="dashboard-promemoria-form"
               className="min-h-11"
@@ -232,8 +239,8 @@ export function DashboardPromemoriaFormModal({
               disabled={saving}
             >
               {editing ? "Salva" : "Crea"}
-            </LoadingButton>
-          </div>
+            </GestionaleModalFooterSaveButton>
+          </GestionaleModalFooterActions>
         }
       >
         <form

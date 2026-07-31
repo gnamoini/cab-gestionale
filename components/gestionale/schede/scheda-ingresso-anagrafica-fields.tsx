@@ -1,10 +1,11 @@
 "use client";
 
-import { memo, useEffect, useId, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { Tooltip } from "@/components/ui";
 
 import {
   MezzoRegistratoIngressoInlineHint,
+  SchedaIngressoMezzoFieldDriftHint,
   type MezzoIngressoInlineHintVariant,
 } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-inline-hint";
 import { InterventoTargetSelect } from "@/components/gestionale/intervento/intervento-target-select";
@@ -41,9 +42,15 @@ import {
   type SchedaIngressoOreDraft,
 } from "@/lib/schede/resolve-ore-lavoro-fields";
 import {
+  isMezzoPermanentField,
+  type MezzoPermanentFieldKey,
+} from "@/lib/schede/scheda-ingresso-field-roles";
+import {
   SCHEDA_INGRESSO_ANAGRAFICA_FIELD_KEYS,
   schedaIngressoFieldsSliceEqual,
 } from "@/lib/schede/scheda-ingresso-form-field-groups";
+import { SCHEDA_INGRESSO_LIST_EMPTY_OPTION_LABEL } from "@/lib/schede/scheda-ingresso-ui-labels";
+import type { MezzoCatalogFieldDrift } from "@/lib/schede/scheda-ingresso-mezzo-catalog-drift";
 import {
   CaptureAwareFormField,
   CaptureIngressoFieldHintInline,
@@ -52,6 +59,16 @@ import {
 export type SchedaIngressoAnagraficaSection = "cliente" | "attrezzatura" | "telaio" | "richiedente";
 
 const ALL_SECTIONS: SchedaIngressoAnagraficaSection[] = ["cliente", "attrezzatura", "telaio", "richiedente"];
+
+/** Campi combobox opzionali: voce «Nessuna selezione» in elenco + pulsante svuota; input vuoto a riposo. */
+function schedaIngressoOptionalListSelectProps(required = false) {
+  if (required) return {};
+  return {
+    emptyOptionLabel: SCHEDA_INGRESSO_LIST_EMPTY_OPTION_LABEL,
+    clearable: true as const,
+    hideEmptyOptionInInput: true as const,
+  };
+}
 
 /** Chiude dropdown/sheet aperti quando un altro selector della scheda riceve focus. */
 const SCHEDA_INGRESSO_EXCLUSIVE_GROUP = "scheda-ingresso";
@@ -62,8 +79,10 @@ function SchedaIngressoAnagraficaFieldsInner({
   mezzi,
   disabled = false,
   sections = ALL_SECTIONS,
+  surface = "lavorazione",
   onExactMezzoMatch,
   mezzoInlineHint = null,
+  mezzoCatalogFieldDrifts = [],
   onUseMezzoFromHint,
   onDismissMezzoHint,
   onVerifyMezzoConflict,
@@ -74,6 +93,7 @@ function SchedaIngressoAnagraficaFieldsInner({
   captureHints,
   onApplyCaptureHint,
   onOreLavoroPatch,
+  onNotifyPermanentFieldUserEdit,
   hideSectionTitles = false,
   hideRichiedenteFirma = false,
   bareSection = false,
@@ -84,12 +104,15 @@ function SchedaIngressoAnagraficaFieldsInner({
   mezzi: readonly MezzoGestito[];
   disabled?: boolean;
   sections?: readonly SchedaIngressoAnagraficaSection[];
+  /** `preventivo` — snapshot interno: niente hint/drift/autofill mezzo da catalogo. */
+  surface?: "lavorazione" | "preventivo";
   onExactMezzoMatch?: (mezzo: MezzoGestito, field: SchedaIngressoIdentField) => void;
   mezzoInlineHint?: {
     variant: MezzoIngressoInlineHintVariant;
     mezzo: MezzoGestito;
     matchField: SchedaIngressoIdentField;
   } | null;
+  mezzoCatalogFieldDrifts?: readonly MezzoCatalogFieldDrift[];
   onUseMezzoFromHint?: (field: SchedaIngressoIdentField) => void;
   onDismissMezzoHint?: () => void;
   onVerifyMezzoConflict?: () => void;
@@ -99,11 +122,26 @@ function SchedaIngressoAnagraficaFieldsInner({
   mezzoId?: string;
   captureHints?: Partial<Record<keyof SchedaIngressoFields, CaptureIngressoFieldHint>>;
   onApplyCaptureHint?: (key: keyof SchedaIngressoFields, value: string) => void;
+  onNotifyPermanentFieldUserEdit?: (key: MezzoPermanentFieldKey | readonly MezzoPermanentFieldKey[]) => void;
   hideSectionTitles?: boolean;
   hideRichiedenteFirma?: boolean;
   bareSection?: boolean;
 }) {
   const profilo = useOfficinaProfiloOperativo();
+  const isPreventivoSurface = surface === "preventivo";
+  const catalogMezzi = isPreventivoSurface ? [] : mezzi;
+
+  const patchUserPermanent = useCallback(
+    (patch: Partial<SchedaIngressoFields>) => {
+      if (onNotifyPermanentFieldUserEdit) {
+        for (const key of Object.keys(patch) as (keyof SchedaIngressoFields)[]) {
+          if (isMezzoPermanentField(key)) onNotifyPermanentFieldUserEdit(key);
+        }
+      }
+      onPatch(patch);
+    },
+    [onNotifyPermanentFieldUserEdit, onPatch],
+  );
   const resolvedSections = useMemo(() => {
     if (sections) {
       return sections.filter((s) => {
@@ -147,24 +185,21 @@ function SchedaIngressoAnagraficaFieldsInner({
   }, [value.targetType, profilo, onPatch]);
   const inputFieldClass = `block w-full ${dsInput}`;
   const listSelectWrapClass = "w-full";
-  const mezzoMatchHandler = onExactMezzoMatch ?? (() => {});
+  const mezzoMatchHandler = isPreventivoSurface ? () => {} : (onExactMezzoMatch ?? (() => {}));
 
   const renderIdentHint = (field: SchedaIngressoIdentField) => {
+    if (isPreventivoSurface) return null;
     if (!mezzoInlineHint || mezzoInlineHint.matchField !== field) return null;
+    if (mezzoInlineHint.variant !== "trovato") return null;
     return (
       <MezzoRegistratoIngressoInlineHint
         variant={mezzoInlineHint.variant}
         mezzo={mezzoInlineHint.mezzo}
         matchField={field}
         onUseMezzo={
-          mezzoInlineHint.variant === "trovato" && onUseMezzoFromHint
-            ? () => onUseMezzoFromHint(field)
-            : undefined
+          onUseMezzoFromHint ? () => onUseMezzoFromHint(field) : undefined
         }
-        onDismiss={mezzoInlineHint.variant === "trovato" ? onDismissMezzoHint : undefined}
-        onVerifyConflict={
-          mezzoInlineHint.variant === "conflitto" ? onVerifyMezzoConflict : undefined
-        }
+        onDismiss={onDismissMezzoHint}
       />
     );
   };
@@ -190,51 +225,74 @@ function SchedaIngressoAnagraficaFieldsInner({
     />
   );
 
+  const driftSavedByField = useMemo(() => {
+    const map = new Map<MezzoPermanentFieldKey, string>();
+    for (const drift of mezzoCatalogFieldDrifts) map.set(drift.field, drift.savedValue);
+    return map;
+  }, [mezzoCatalogFieldDrifts]);
+
+  const renderMezzoDriftHint = (field: MezzoPermanentFieldKey) => {
+    if (isPreventivoSurface) return null;
+    const savedValue = driftSavedByField.get(field);
+    if (savedValue === undefined) return null;
+    return <SchedaIngressoMezzoFieldDriftHint savedValue={savedValue} />;
+  };
+
+  const captureFooter = (key: keyof SchedaIngressoFields, embedded = false) => (
+    <>
+      {hintAfter(key, embedded)}
+      {isMezzoPermanentField(key) ? renderMezzoDriftHint(key) : null}
+    </>
+  );
+
   return (
     <>
       {show("cliente") ? (
         <FormSection title="Anagrafica cliente" hideTitle={hideSectionTitles}>
           <FormField label="Cliente" htmlFor={fieldId("cliente")} required={clienteRequired}>
-            <CaptureAwareFormField hint={captureHints?.cliente} footer={hintAfter("cliente", true)}>
+            <CaptureAwareFormField hint={captureHints?.cliente} footer={captureFooter("cliente", true)}>
               <GlobalSettingsListSelect
               id={fieldId("cliente")}
               listKey="mezzi:clienti"
               className={listSelectWrapClass}
               value={value.cliente}
-              onChange={(v) => onPatch({ cliente: v })}
+              onChange={(v) => patchUserPermanent({ cliente: v })}
               disabled={disabled}
               required={clienteRequired}
               exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
               aria-label="Cliente"
+              {...schedaIngressoOptionalListSelectProps(clienteRequired)}
             />
             </CaptureAwareFormField>
           </FormField>
           <div className="grid gap-2 sm:grid-cols-2">
             <FormField label="Cantiere" htmlFor={fieldId("cantiere")}>
-              <CaptureAwareFormField hint={captureHints?.cantiere} footer={hintAfter("cantiere", true)}>
+              <CaptureAwareFormField hint={captureHints?.cantiere} footer={captureFooter("cantiere", true)}>
                 <GlobalSettingsListSelect
                 id={fieldId("cantiere")}
                 listKey="mezzi:cantieri"
                 className={listSelectWrapClass}
                 value={value.cantiere}
-                onChange={(v) => onPatch({ cantiere: v })}
+                onChange={(v) => patchUserPermanent({ cantiere: v })}
                 disabled={disabled}
                 exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
                 aria-label="Cantiere"
+                {...schedaIngressoOptionalListSelectProps()}
               />
               </CaptureAwareFormField>
             </FormField>
             <FormField label="Utilizzatore" htmlFor={fieldId("utilizzatore")}>
-              <CaptureAwareFormField hint={captureHints?.utilizzatore} footer={hintAfter("utilizzatore", true)}>
+              <CaptureAwareFormField hint={captureHints?.utilizzatore} footer={captureFooter("utilizzatore", true)}>
                 <GlobalSettingsListSelect
                 id={fieldId("utilizzatore")}
                 listKey="mezzi:utilizzatori"
                 className={listSelectWrapClass}
                 value={value.utilizzatore}
-                onChange={(v) => onPatch({ utilizzatore: v })}
+                onChange={(v) => patchUserPermanent({ utilizzatore: v })}
                 disabled={disabled}
                 exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
                 aria-label="Utilizzatore"
+                {...schedaIngressoOptionalListSelectProps()}
               />
               </CaptureAwareFormField>
             </FormField>
@@ -246,8 +304,10 @@ function SchedaIngressoAnagraficaFieldsInner({
                 attrezzaturaId={value.attrezzaturaId}
                 attrezzature={attrezzature}
                 disabled={disabled}
-                onChange={(t, attrezzaturaId) => onPatch({ targetType: t, attrezzaturaId })}
+                onChange={(t, attrezzaturaId) => patchUserPermanent({ targetType: t, attrezzaturaId })}
               />
+              {renderMezzoDriftHint("targetType")}
+              {renderMezzoDriftHint("attrezzaturaId")}
             </FormField>
           ) : null}
         </FormSection>
@@ -263,31 +323,34 @@ function SchedaIngressoAnagraficaFieldsInner({
               listKey="mezzi:tipiAttrezzatura"
               className={listSelectWrapClass}
               value={value.tipoAttrezzatura}
-              onChange={(v) => onPatch({ tipoAttrezzatura: v })}
+              onChange={(v) => patchUserPermanent({ tipoAttrezzatura: v })}
               disabled={disabled}
               exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
               aria-label="Tipo attrezzatura"
+              {...schedaIngressoOptionalListSelectProps()}
             />
+            {renderMezzoDriftHint("tipoAttrezzatura")}
           </FormField>
           <div className="grid gap-2 sm:grid-cols-2">
             <FormField label="Marca" htmlFor={fieldId("marca-attrezzatura")} required={marcaAttrezzaturaRequired}>
-              <CaptureAwareFormField hint={captureHints?.marcaAttrezzatura} footer={hintAfter("marcaAttrezzatura", true)}>
+              <CaptureAwareFormField hint={captureHints?.marcaAttrezzatura} footer={captureFooter("marcaAttrezzatura", true)}>
               <CompatHierarchySelect
                 id={fieldId("marca-attrezzatura")}
                 tree="attrezzature"
                 hierarchyKind="marca"
                 className={listSelectWrapClass}
                 value={value.marcaAttrezzatura}
-                onChange={(v) => onPatch({ marcaAttrezzatura: v, modelloAttrezzatura: "" })}
+                onChange={(v) => patchUserPermanent({ marcaAttrezzatura: v, modelloAttrezzatura: "" })}
                 disabled={disabled}
                 required={marcaAttrezzaturaRequired}
                 exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
                 ariaLabel="Marca attrezzatura"
+                {...schedaIngressoOptionalListSelectProps(marcaAttrezzaturaRequired)}
               />
               </CaptureAwareFormField>
             </FormField>
             <FormField label="Modello" htmlFor={fieldId("modello-attrezzatura")}>
-              <CaptureAwareFormField hint={captureHints?.modelloAttrezzatura} footer={hintAfter("modelloAttrezzatura", true)}>
+              <CaptureAwareFormField hint={captureHints?.modelloAttrezzatura} footer={captureFooter("modelloAttrezzatura", true)}>
               <CompatHierarchySelect
                 id={fieldId("modello-attrezzatura")}
                 tree="attrezzature"
@@ -295,10 +358,11 @@ function SchedaIngressoAnagraficaFieldsInner({
                 marcaNome={value.marcaAttrezzatura}
                 className={listSelectWrapClass}
                 value={value.modelloAttrezzatura}
-                onChange={(v) => onPatch({ modelloAttrezzatura: v })}
+                onChange={(v) => patchUserPermanent({ modelloAttrezzatura: v })}
                 disabled={disabled}
                 exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
                 ariaLabel="Modello attrezzatura"
+                {...schedaIngressoOptionalListSelectProps()}
               />
               </CaptureAwareFormField>
             </FormField>
@@ -311,14 +375,15 @@ function SchedaIngressoAnagraficaFieldsInner({
                 id={fieldId("matricola")}
                 value={value.matricola}
                 siblingIdent={identSibling}
-                mezzi={mezzi}
+                mezzi={catalogMezzi}
                 disabled={disabled}
                 exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
-                onChange={(v) => onPatch({ matricola: v })}
+                onChange={(v) => patchUserPermanent({ matricola: v })}
                 onExactMezzoMatch={(m) => mezzoMatchHandler(m, "matricola")}
               />
               {renderIdentHint("matricola")}
               {hintAfter("matricola")}
+              {renderMezzoDriftHint("matricola")}
             </div>
             <div>
               <SchedaIngressoIdentAutocompleteField
@@ -327,16 +392,18 @@ function SchedaIngressoAnagraficaFieldsInner({
                 id={fieldId("n-scuderia")}
                 value={value.nScuderia}
                 siblingIdent={identSibling}
-                mezzi={mezzi}
+                mezzi={catalogMezzi}
                 disabled={disabled}
                 exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
-                onChange={(v) => onPatch({ nScuderia: v })}
+                onChange={(v) => patchUserPermanent({ nScuderia: v })}
                 onExactMezzoMatch={(m) => mezzoMatchHandler(m, "nScuderia")}
               />
               {renderIdentHint("nScuderia")}
               {hintAfter("nScuderia")}
+              {renderMezzoDriftHint("nScuderia")}
             </div>
           </div>
+          {!isPreventivoSurface ? (
           <div className="grid gap-2 sm:grid-cols-2">
             <FormField label="Ore lavoro motore" htmlFor={fieldId("ore-lavoro-motore")}>
               <GestionaleNumberInput
@@ -361,6 +428,7 @@ function SchedaIngressoAnagraficaFieldsInner({
               />
             </FormField>
           </div>
+          ) : null}
         </FormSection>
       ) : null
         ) : showTelSection ? (
@@ -371,11 +439,13 @@ function SchedaIngressoAnagraficaFieldsInner({
               listKey="mezzi:tipiTelaio"
               className={listSelectWrapClass}
               value={value.tipoTelaio}
-              onChange={(v) => onPatch({ tipoTelaio: v })}
+              onChange={(v) => patchUserPermanent({ tipoTelaio: v })}
               disabled={disabled}
               exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
               aria-label="Tipo telaio"
+              {...schedaIngressoOptionalListSelectProps()}
             />
+            {renderMezzoDriftHint("tipoTelaio")}
           </FormField>
           <div className="grid gap-2 sm:grid-cols-2">
             <FormField label="Marca" htmlFor={fieldId("marca-telaio")}>
@@ -385,11 +455,13 @@ function SchedaIngressoAnagraficaFieldsInner({
                 hierarchyKind="marca"
                 className={listSelectWrapClass}
                 value={value.marcaTelaio}
-                onChange={(v) => onPatch({ marcaTelaio: v, modelloTelaio: "" })}
+                onChange={(v) => patchUserPermanent({ marcaTelaio: v, modelloTelaio: "" })}
                 disabled={disabled}
                 exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
                 ariaLabel="Marca telaio"
+                {...schedaIngressoOptionalListSelectProps()}
               />
+              {renderMezzoDriftHint("marcaTelaio")}
             </FormField>
             <FormField label="Modello" htmlFor={fieldId("modello-telaio")}>
               <CompatHierarchySelect
@@ -399,11 +471,13 @@ function SchedaIngressoAnagraficaFieldsInner({
                 marcaNome={value.marcaTelaio}
                 className={listSelectWrapClass}
                 value={value.modelloTelaio}
-                onChange={(v) => onPatch({ modelloTelaio: v })}
+                onChange={(v) => patchUserPermanent({ modelloTelaio: v })}
                 disabled={disabled}
                 exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
                 ariaLabel="Modello telaio"
+                {...schedaIngressoOptionalListSelectProps()}
               />
+              {renderMezzoDriftHint("modelloTelaio")}
             </FormField>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -413,14 +487,15 @@ function SchedaIngressoAnagraficaFieldsInner({
                 label="Targa"
                 value={value.targa}
                 siblingIdent={identSibling}
-                mezzi={mezzi}
+                mezzi={catalogMezzi}
                 disabled={disabled}
                 exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
-                onChange={(v) => onPatch({ targa: v })}
+                onChange={(v) => patchUserPermanent({ targa: v })}
                 onExactMezzoMatch={(m) => mezzoMatchHandler(m, "targa")}
               />
               {renderIdentHint("targa")}
               {hintAfter("targa")}
+              {renderMezzoDriftHint("targa")}
             </div>
             <div>
               <SchedaIngressoIdentAutocompleteField
@@ -429,16 +504,18 @@ function SchedaIngressoAnagraficaFieldsInner({
                 id={fieldId("vin")}
                 value={value.vin}
                 siblingIdent={identSibling}
-                mezzi={mezzi}
+                mezzi={catalogMezzi}
                 disabled={disabled}
                 exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
-                onChange={(v) => onPatch({ vin: sliceInputValue(v, TEXT_SHORT) })}
+                onChange={(v) => patchUserPermanent({ vin: sliceInputValue(v, TEXT_SHORT) })}
                 onExactMezzoMatch={(m) => mezzoMatchHandler(m, "vin")}
               />
               {renderIdentHint("vin")}
               {hintAfter("vin")}
+              {renderMezzoDriftHint("vin")}
             </div>
           </div>
+          {!isPreventivoSurface ? (
           <div className="grid gap-2 sm:grid-cols-2">
             <FormField label="KM" htmlFor={fieldId("km")}>
               <GestionaleNumberInput
@@ -446,7 +523,7 @@ function SchedaIngressoAnagraficaFieldsInner({
                 min={0}
                 inputMode="decimal"
                 value={value.km}
-                onChange={(v) => onPatch({ km: v })}
+                onChange={(v) => patchUserPermanent({ km: v })}
                 disabled={disabled}
                 aria-label="KM"
               />
@@ -455,12 +532,13 @@ function SchedaIngressoAnagraficaFieldsInner({
               <LivelloCarburanteSegmentedSelect
                 id={fieldId("carburante")}
                 value={value.livelloCarburante}
-                onChange={(v) => onPatch({ livelloCarburante: v })}
+                onChange={(v) => patchUserPermanent({ livelloCarburante: v })}
                 disabled={disabled}
                 aria-label="Livello carburante"
               />
             </FormField>
           </div>
+          ) : null}
         </FormSection>
       ) : null,
       )}
@@ -475,7 +553,7 @@ function SchedaIngressoAnagraficaFieldsInner({
                     id={fieldId("richiedente")}
                     className={inputFieldClass}
                     value={value.richiedente}
-                    onChange={(e) => onPatch({ richiedente: sliceInputValue(e.target.value, TEXT_SHORT) })}
+                    onChange={(e) => patchUserPermanent({ richiedente: sliceInputValue(e.target.value, TEXT_SHORT) })}
                     disabled={disabled}
                     placeholder="Nome libero"
                     maxLength={TEXT_SHORT}
@@ -488,7 +566,7 @@ function SchedaIngressoAnagraficaFieldsInner({
                   id={fieldId("richiedente-telefono")}
                   className={inputFieldClass}
                   value={value.richiedenteTelefono}
-                  onChange={(e) => onPatch({ richiedenteTelefono: sliceInputValue(e.target.value, TEXT_SHORT) })}
+                  onChange={(e) => patchUserPermanent({ richiedenteTelefono: sliceInputValue(e.target.value, TEXT_SHORT) })}
                   disabled={disabled}
                   placeholder="Numero di telefono"
                   maxLength={TEXT_SHORT}
@@ -507,7 +585,7 @@ function SchedaIngressoAnagraficaFieldsInner({
                   id={fieldId("richiedente")}
                   className={inputFieldClass}
                   value={value.richiedente}
-                  onChange={(e) => onPatch({ richiedente: sliceInputValue(e.target.value, TEXT_SHORT) })}
+                  onChange={(e) => patchUserPermanent({ richiedente: sliceInputValue(e.target.value, TEXT_SHORT) })}
                   disabled={disabled}
                   placeholder="Nome libero"
                   maxLength={TEXT_SHORT}
@@ -520,7 +598,7 @@ function SchedaIngressoAnagraficaFieldsInner({
                 id={fieldId("richiedente-telefono")}
                 className={inputFieldClass}
                 value={value.richiedenteTelefono}
-                onChange={(e) => onPatch({ richiedenteTelefono: sliceInputValue(e.target.value, TEXT_SHORT) })}
+                onChange={(e) => patchUserPermanent({ richiedenteTelefono: sliceInputValue(e.target.value, TEXT_SHORT) })}
                 disabled={disabled}
                 placeholder="Numero di telefono"
                 maxLength={TEXT_SHORT}
@@ -585,13 +663,16 @@ export const SchedaIngressoAnagraficaFields = memo(
   SchedaIngressoAnagraficaFieldsInner,
   (prev, next) => {
     if (prev.disabled !== next.disabled) return false;
+    if (prev.surface !== next.surface) return false;
     if (prev.onPatch !== next.onPatch) return false;
     if (prev.mezzi !== next.mezzi) return false;
     if (prev.sections !== next.sections) return false;
     if (prev.onExactMezzoMatch !== next.onExactMezzoMatch) return false;
     if (prev.mezzoInlineHint !== next.mezzoInlineHint) return false;
+    if (prev.mezzoCatalogFieldDrifts !== next.mezzoCatalogFieldDrifts) return false;
     if (prev.onUseMezzoFromHint !== next.onUseMezzoFromHint) return false;
     if (prev.onDismissMezzoHint !== next.onDismissMezzoHint) return false;
+    if (prev.onNotifyPermanentFieldUserEdit !== next.onNotifyPermanentFieldUserEdit) return false;
     if (prev.onVerifyMezzoConflict !== next.onVerifyMezzoConflict) return false;
     if (prev.clienteRequired !== next.clienteRequired) return false;
     if (prev.marcaAttrezzaturaRequired !== next.marcaAttrezzaturaRequired) return false;

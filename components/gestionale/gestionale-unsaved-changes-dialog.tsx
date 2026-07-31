@@ -1,7 +1,8 @@
 "use client";
 
 import { GestionaleConfirmDialog, gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog";
-import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
+import { GestionaleModalFooterCancelButton } from "@/components/design-system";
+import { dsBtnDanger, dsBtnPrimary } from "@/lib/ui/design-system";
 import { gestionaleModalWidthStandard } from "@/lib/ui/modal-max-width-class";
 import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
@@ -48,9 +49,9 @@ export function GestionaleUnsavedChangesDialog({
 
   const actions = (
     <div className={gestionaleConfirmActionsClass}>
-      <button type="button" className={`${dsBtnNeutral} min-h-[2.75rem] sm:min-h-0`} onClick={onStay} disabled={pending}>
+      <GestionaleModalFooterCancelButton className="w-full sm:w-auto" onClick={onStay} disabled={pending}>
         {stayLabel}
-      </button>
+      </GestionaleModalFooterCancelButton>
       <button type="button" className={`${dsBtnDanger} min-h-[2.75rem] sm:min-h-0`} onClick={onDiscard} disabled={pending}>
         {discardLabel}
       </button>

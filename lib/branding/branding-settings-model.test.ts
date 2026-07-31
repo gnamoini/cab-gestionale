@@ -6,6 +6,7 @@ import {
   normalizeCompanyWebsiteUrl,
   parseBrandingSettingsPayload,
   resolveClienteLabelQrUrl,
+  companyWebsiteDisplayHost,
 } from "@/lib/branding/branding-settings-model";
 
 {
@@ -25,6 +26,8 @@ import {
   assert.equal(parseBrandingSettingsPayload(null).companyWebsiteUrl, DEFAULT_COMPANY_WEBSITE_URL);
   assert.equal(normalizeCompanyWebsiteUrl("www.example.it"), "https://www.example.it");
   assert.equal(resolveClienteLabelQrUrl(DEFAULT_CAB_BRANDING_SETTINGS), DEFAULT_COMPANY_WEBSITE_URL);
+  assert.equal(companyWebsiteDisplayHost(DEFAULT_COMPANY_WEBSITE_URL), "www.autocompattatori.it");
+  assert.equal(companyWebsiteDisplayHost("https://www.example.it"), "www.example.it");
   assert.equal(isBrandingCustomized(DEFAULT_CAB_BRANDING_SETTINGS), false);
   assert.equal(parseBrandingSettingsPayload(null).primaryColor, null);
 }

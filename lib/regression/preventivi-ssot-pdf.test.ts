@@ -23,6 +23,13 @@ assert.match(transition, /to === "inviato"/);
 assert.doesNotMatch(transition, /to === "confermato"[\s\S]*generatePreventivoPdfBytes/);
 assert.match(transition, /emitPreventivoStatusChanged/);
 assert.match(transition, /commit_preventivo_status_transition/);
+assert.doesNotMatch(transition, /select\("id, stato, numero/);
+
+const pgcryptoFix = read("supabase/migrations/20260731120000_fix_preventivo_status_transition_pgcrypto.sql");
+assert.match(pgcryptoFix, /set search_path = public, extensions/);
+
+const restoreFromAnnullato = read("supabase/migrations/20260731130000_preventivo_restore_from_annullato.sql");
+assert.match(restoreFromAnnullato, /when 'annullato' then p_to_stato in \('bozza', 'inviato'\)/);
 
 const ddtPersist = read("lib/ddt/ddt-official-pdf.server.ts");
 assert.match(ddtPersist, /commit_ddt_pdf_artifact/);

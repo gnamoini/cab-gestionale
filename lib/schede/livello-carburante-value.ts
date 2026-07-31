@@ -14,6 +14,37 @@ export const LIVELLO_CARBURANTE_PRESETS = LIVELLO_CARBURANTE_OPTIONS.map((label)
   percent: LEGACY_PERCENT[label],
 }));
 
+const SNAP_PRESET_PERCENTS = LIVELLO_CARBURANTE_PRESETS.map((p) => p.percent);
+/** ponytail: accoppiato a `.livello-carburante-range` thumb width in globals-core.css. */
+export const LIVELLO_CARBURANTE_THUMB_SIZE = "1.25rem";
+/** ponytail: soglia magnetica — oltre questa distanza resta il valore libero. */
+const SNAP_THRESHOLD = 6;
+
+/** Centro thumb/dot/fill per percentuale 0–100 (allineato al range nativo). */
+export function livelloCarburanteThumbCenterCss(percent: number): string {
+  const p = Math.min(100, Math.max(0, percent));
+  return `calc(0.5 * ${LIVELLO_CARBURANTE_THUMB_SIZE} + (${p} / 100) * (100% - ${LIVELLO_CARBURANTE_THUMB_SIZE}))`;
+}
+
+/** ponytail: equivalente pixel della formula thumb-center (test / debug). */
+export function livelloCarburanteThumbCenterPx(
+  percent: number,
+  trackWidthPx: number,
+  thumbWidthPx: number,
+): number {
+  const p = Math.min(100, Math.max(0, percent));
+  return thumbWidthPx / 2 + (p / 100) * (trackWidthPx - thumbWidthPx);
+}
+
+/** Arrotonda verso il preset più vicino se entro soglia, altrimenti percentuale intera 0–100. */
+export function snapLivelloCarburantePercent(raw: number): number {
+  const n = Math.round(Math.min(100, Math.max(0, raw)));
+  for (const preset of SNAP_PRESET_PERCENTS) {
+    if (Math.abs(n - preset) <= SNAP_THRESHOLD) return preset;
+  }
+  return n;
+}
+
 /** Valore persistito → percentuale 0–100, oppure `null` se non impostato / non riconosciuto. */
 export function parseLivelloCarburantePercent(raw: string | undefined | null): number | null {
   const t = (raw ?? "").trim();

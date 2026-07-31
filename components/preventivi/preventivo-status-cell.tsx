@@ -31,9 +31,12 @@ export function PreventivoStatusCell({
   onStatusChange: (record: PreventivoRecord, status: PreventivoStato) => void;
 }) {
   const stato = record.stato;
-  const readOnly = !canWrite || stato === "annullato" || preventivoStatoTransitionTargets(stato).length === 0;
+  const options = editorItemsForStato(stato).map((item) => ({
+    ...item,
+    pillStyle: preventivoStatoPillStyle(item.value),
+  }));
 
-  if (readOnly) {
+  if (!canWrite) {
     return (
       <span
         className={statoPillShellClass()}
@@ -52,7 +55,7 @@ export function PreventivoStatusCell({
         const next = v as PreventivoStato;
         if (next !== stato) onStatusChange(record, next);
       }}
-      options={editorItemsForStato(stato)}
+      options={options}
       ariaLabel={`Stato preventivo ${record.numero || record.id}`}
       disabled={disabled}
       title={preventivoStatoLabel(stato)}

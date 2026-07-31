@@ -10,6 +10,11 @@ import {
 } from "@/lib/document-capture/capture-lavorazioni-text";
 import { NUMERIC_PRESETS } from "@/lib/core/numeric-input-policy";
 import { dsBtnNeutral, dsInput, dsLabel } from "@/lib/ui/design-system";
+import { globalInputDatePickerShellDefault } from "@/lib/ui/global-input";
+import {
+  formatIdentificazioneMezzoBands,
+  type MezzoIdentificazioneParts,
+} from "@/lib/mezzi/identificazione-mezzo";
 
 export function todayItDate(): string {
   return new Date().toLocaleDateString("it-IT");
@@ -155,5 +160,87 @@ export function SchedaOreNumberInput({
       className={className}
       aria-label="Ore impiegate"
     />
+  );
+}
+
+const SCHEDA_MEZZO_IDENT_SHELL =
+  "rounded-lg border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_50%,var(--cab-card))] px-2 py-2";
+
+const SCHEDA_MEZZO_IDENT_SHELL_INGRESSO = [
+  globalInputDatePickerShellDefault,
+  "flex min-h-10 min-w-0 flex-col justify-center px-3 py-2.5",
+].join(" ");
+
+const IDENT_BAND_LABEL: Record<"cliente" | "attrezzatura" | "telaio", string> = {
+  cliente: "Cliente",
+  attrezzatura: "Attrezzature",
+  telaio: "Telaio",
+};
+
+/** Identificazione mezzo read-only — tre righe Cliente / Attrezzature / Telaio. */
+export function SchedaMezzoIdentificazioneReadonly({
+  parts,
+  fallbackLine,
+  shellVariant = "scheda",
+  lavorazioneCodice,
+}: {
+  parts?: MezzoIdentificazioneParts | null;
+  fallbackLine?: string;
+  /** `ingresso` — stesso chrome dei campi scheda ingresso (`dsInput` / date picker). */
+  shellVariant?: "scheda" | "ingresso";
+  /** Riga opzionale «ID Lavorazione» subito dopo Cliente. */
+  lavorazioneCodice?: string;
+}) {
+  const shell = shellVariant === "ingresso" ? SCHEDA_MEZZO_IDENT_SHELL_INGRESSO : SCHEDA_MEZZO_IDENT_SHELL;
+  const bandTextClass =
+    shellVariant === "ingresso"
+      ? "min-w-0 text-sm leading-snug [overflow-wrap:anywhere]"
+      : "min-w-0 text-xs leading-snug [overflow-wrap:anywhere]";
+  const codice = lavorazioneCodice?.trim() ?? "";
+  const bands = parts ? formatIdentificazioneMezzoBands(parts) : [];
+
+  type DisplayRow = { key: string; label: string; line: string };
+  const labelClass =
+    shellVariant === "ingresso"
+      ? "font-medium text-[color:var(--cab-text-muted)]"
+      : "font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]";
+
+  const rows: DisplayRow[] = bands.map((band) => ({
+    key: band.id,
+    label: IDENT_BAND_LABEL[band.id],
+    line: band.line,
+  }));
+  if (codice) {
+    const clienteIdx = rows.findIndex((row) => row.key === "cliente");
+    const idRow: DisplayRow = { key: "lavorazione-codice", label: "ID Lavorazione", line: codice };
+    if (clienteIdx < 0) rows.unshift(idRow);
+    else rows.splice(clienteIdx + 1, 0, idRow);
+  }
+
+  if (rows.length === 0) {
+    const line = fallbackLine?.trim() || "";
+    if (!line || line === "—") return null;
+    return (
+      <p
+        className={`${shell} font-medium text-[color:var(--cab-text)] ${shellVariant === "ingresso" ? "text-sm leading-snug" : "text-xs leading-snug"}`}
+        role="status"
+      >
+        {line}
+      </p>
+    );
+  }
+
+  return (
+    <div className={`${shell} ${shellVariant === "ingresso" ? "gap-0.5" : "space-y-1"}`} role="status">
+      {rows.map((row) => (
+        <p key={row.key} className={bandTextClass}>
+          <span className={labelClass}>{row.label}</span>
+          <span className="mx-1.5 text-[color:var(--cab-text-muted)]" aria-hidden>
+            ·
+          </span>
+          <span className="font-medium text-[color:var(--cab-text)]">{row.line}</span>
+        </p>
+      ))}
+    </div>
   );
 }

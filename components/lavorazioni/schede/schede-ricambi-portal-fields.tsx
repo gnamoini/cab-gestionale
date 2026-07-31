@@ -188,7 +188,7 @@ export function RicambioRowAutocompletePortal({
   return (
     <div ref={wrapRef} className="relative max-md:overflow-visible">
       <input
-        className={`${dsInput} !py-1.5 !text-xs`}
+        className={`${dsInput} min-h-10 w-full min-w-0`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => onOpenChange(true)}

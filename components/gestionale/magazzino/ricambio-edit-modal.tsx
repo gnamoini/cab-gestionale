@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 import { useBeforeUnloadWhenDirty } from "@/lib/forms/use-before-unload-when-dirty";
-import { LoadingButton } from "@/components/design-system";
+import {
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterDeleteButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
 import { DisabledElementTooltip } from "@/components/ui";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
@@ -28,9 +33,7 @@ import {
 } from "@/lib/form-ux-migration/form-ux-boundary-gate";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
-import { dsBtnDanger, dsBtnNeutral } from "@/lib/ui/design-system";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { incrementHealthCounter } from "@/lib/observability/runtime-health";
 import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
@@ -278,65 +281,51 @@ export function RicambioEditModal({
       footer={
         <div className="w-full min-w-0">
           <div className="grid grid-cols-2 gap-2 sm:hidden">
-            <LoadingButton
+            <GestionaleModalFooterSaveButton
               type="submit"
               form={RICAMBIO_EDIT_FORM_ID}
               loading={saveBusy}
-              preset="salva"
               loadingLabel="Salvataggio…"
-              className={`${erpBtnAccent} col-span-2 min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
-            >
-              Salva
-            </LoadingButton>
-            <button
-              type="button"
+              className="col-span-2 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45"
+            />
+            <GestionaleModalFooterCancelButton
+              className="w-full justify-center"
               onClick={() => requestExit("cancel")}
-              className={`${dsBtnNeutral} min-h-11 w-full justify-center`}
-            >
-              Annulla
-            </button>
+            />
             <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!magCanDeleteRicambio}>
-              <button
-                type="button"
+              <GestionaleModalFooterDeleteButton
+                className="w-full justify-center"
                 onClick={onRequestDelete}
                 disabled={!magCanDeleteRicambio}
-                className={`${dsBtnDanger} min-h-11 w-full justify-center`}
               >
                 Elimina ricambio
-              </button>
+              </GestionaleModalFooterDeleteButton>
             </DisabledElementTooltip>
           </div>
-          <div className="hidden min-w-0 items-center justify-between gap-2 sm:flex">
+          <GestionaleModalFooterActions className="hidden min-w-0 items-center justify-between gap-2 sm:flex">
             <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!magCanDeleteRicambio}>
-              <button
-                type="button"
+              <GestionaleModalFooterDeleteButton
+                className="shrink-0 justify-center"
                 onClick={onRequestDelete}
                 disabled={!magCanDeleteRicambio}
-                className={`${dsBtnDanger} min-h-11 shrink-0 justify-center`}
               >
                 Elimina ricambio
-              </button>
+              </GestionaleModalFooterDeleteButton>
             </DisabledElementTooltip>
             <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
+              <GestionaleModalFooterCancelButton
+                className="justify-center"
                 onClick={() => requestExit("cancel")}
-                className={`${dsBtnNeutral} min-h-11 justify-center`}
-              >
-                Annulla
-              </button>
-              <LoadingButton
+              />
+              <GestionaleModalFooterSaveButton
                 type="submit"
                 form={RICAMBIO_EDIT_FORM_ID}
                 loading={saveBusy}
-                preset="salva"
                 loadingLabel="Salvataggio…"
-                className={`${erpBtnAccent} min-h-11 shrink-0 justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
-              >
-                Salva
-              </LoadingButton>
+                className="shrink-0 justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45"
+              />
             </div>
-          </div>
+          </GestionaleModalFooterActions>
         </div>
       }
     >

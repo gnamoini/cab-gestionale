@@ -26,6 +26,8 @@ export type AutocompleteEngineInput = {
   options?: readonly string[];
   items?: readonly ListSelectItem[];
   browseCap?: number;
+  /** Voce value="" in elenco ma input a riposo vuoto (placeholder). */
+  hideEmptyOptionInInput?: boolean;
 };
 
 export function autocompleteIsEditing(input: Pick<AutocompleteEngineInput, "focused" | "searchText">): boolean {
@@ -34,8 +36,9 @@ export function autocompleteIsEditing(input: Pick<AutocompleteEngineInput, "focu
 
 /** Valore mostrato a riposo (commit), prima di entrare in modifica. */
 export function autocompleteCommittedDisplayValue(input: AutocompleteEngineInput): string {
-  const { mode, value, items } = input;
+  const { mode, value, items, hideEmptyOptionInInput } = input;
   if (!value.trim()) {
+    if (hideEmptyOptionInInput) return "";
     if (mode === "items" && items) {
       return findItemByValue("", items)?.label ?? "";
     }

@@ -1,6 +1,7 @@
 import { CONTROL_TOWER_LATE_INGRESS_DAYS } from "@/lib/dashboard/control-tower-constants";
 import {
   estimateDaysUnderMinimum,
+  isAccettazioneStato,
   isAttesaRicambiStato,
   isStagnationSensitiveStato,
   stagnationThresholdDays,
@@ -79,8 +80,10 @@ export function collectInactiveLavorazioneIds(
   const ranked: { id: string; excess: number }[] = [];
   for (const row of rowMeta) {
     const group = byStatoDays.get(row.statoKey) ?? [];
-    const attesaRicambi = isAttesaRicambiStato(row.statoKey);
-    const threshold = stagnationThresholdDays(median(group), { attesaRicambi });
+    const threshold = stagnationThresholdDays(median(group), {
+      attesaRicambi: isAttesaRicambiStato(row.statoKey),
+      accettazione: isAccettazioneStato(row.statoKey),
+    });
     if (row.days <= threshold) continue;
     ranked.push({ id: row.id, excess: row.days - threshold });
   }

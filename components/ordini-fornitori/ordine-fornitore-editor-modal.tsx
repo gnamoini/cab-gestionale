@@ -3,7 +3,14 @@
 import { OptionalTooltip } from "@/components/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
-import { IconActionButton, GestionaleCollapsibleSection } from "@/components/design-system";
+import {
+  IconActionButton,
+  GestionaleCollapsibleSection,
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterDeleteButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
 import { HubIconPlus } from "@/components/design-system/hub-table-action-icons";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { GlobalDatePickerYmd, GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
@@ -558,14 +565,16 @@ export function OrdineFornitoreEditorModal({
             <>
               {!isNew && onDelete ? (
                 <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}>
-                  <button type="button" className={`${dsBtnDanger} min-h-11 w-full sm:w-auto`} disabled={!canWrite} onClick={onDelete}>
-                    Elimina
-                  </button>
+                  <GestionaleModalFooterDeleteButton
+                    className="w-full sm:w-auto"
+                    disabled={!canWrite}
+                    onClick={onDelete}
+                  />
                 </OptionalTooltip>
               ) : null}
-              <button type="button" className={preventivoEditorFooterBtnNeutral} onClick={onClose}>
+              <GestionaleModalFooterCancelButton className="w-full sm:w-auto" onClick={onClose}>
                 Chiudi
-              </button>
+              </GestionaleModalFooterCancelButton>
               {initialRecord.status === "bozza" ? (
                 <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}>
                   <button type="button" className={preventivoEditorFooterBtnPrimary} disabled={!canWrite} onClick={onSwitchToEdit}>
@@ -576,12 +585,16 @@ export function OrdineFornitoreEditorModal({
             </>
           ) : (
             <>
-              <button type="button" className={preventivoEditorFooterBtnNeutral} onClick={requestClose}>
-                Annulla
-              </button>
-              <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}><button type="button" className={preventivoEditorFooterBtnPrimary} disabled={!canWrite || !canSave || submitLock.isLocked()} onClick={() => void handleSave()}>
-                {submitLock.isLocked() ? "Salvataggio…" : "Salva"}
-              </button></OptionalTooltip>
+              <GestionaleModalFooterCancelButton className="w-full sm:w-auto" onClick={requestClose} />
+              <OptionalTooltip content={!canWrite ? READONLY_PERMISSION_HINT : undefined}>
+                <GestionaleModalFooterSaveButton
+                  type="button"
+                  className="w-full sm:w-auto"
+                  disabled={!canWrite || !canSave}
+                  loading={submitLock.isLocked()}
+                  onClick={() => void handleSave()}
+                />
+              </OptionalTooltip>
             </>
           )}
         </div>

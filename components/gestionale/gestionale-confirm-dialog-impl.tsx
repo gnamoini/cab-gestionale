@@ -3,10 +3,12 @@
 import { useCallback, useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CloseButton } from "@/components/design-system/close-button";
-import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
-  dsBtnDanger,
-  dsBtnNeutral,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterDeleteButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
+import {
   dsModalCloseBtn,
   dsZModalHigh,
 } from "@/lib/ui/design-system";
@@ -105,7 +107,6 @@ export function GestionaleConfirmDialog({
 
   if (!open || typeof document === "undefined") return null;
 
-  const confirmClass = destructive ? dsBtnDanger : erpBtnAccent;
   const body = children ?? (message ? (
     <p className="text-sm leading-relaxed text-[color:var(--cab-text-muted)]">{message}</p>
   ) : null);
@@ -113,23 +114,34 @@ export function GestionaleConfirmDialog({
 
   const defaultFooter = (
     <div className={gestionaleConfirmActionsClass}>
-      <button
-        type="button"
-        className={`${dsBtnNeutral} min-h-[2.75rem] sm:min-h-0`}
+      <GestionaleModalFooterCancelButton
+        className="w-full sm:w-auto"
         onClick={onCancel}
         disabled={pending}
       >
         {cancelLabel}
-      </button>
-      <button
-        type="button"
-        className={`${confirmClass} min-h-[2.75rem] sm:min-h-0`}
-        onClick={handleConfirm}
-        disabled={pending || confirmDisabled}
-        {...(confirmTestId ? { "data-testid": confirmTestId } : {})}
-      >
-        {pending ? "Attendere…" : confirmLabel}
-      </button>
+      </GestionaleModalFooterCancelButton>
+      {destructive ? (
+        <GestionaleModalFooterDeleteButton
+          className="w-full sm:w-auto"
+          onClick={handleConfirm}
+          disabled={pending || confirmDisabled}
+          {...(confirmTestId ? { "data-testid": confirmTestId } : {})}
+        >
+          {pending ? "Attendere…" : confirmLabel}
+        </GestionaleModalFooterDeleteButton>
+      ) : (
+        <GestionaleModalFooterSaveButton
+          type="button"
+          className="w-full sm:w-auto"
+          loading={pending}
+          disabled={confirmDisabled}
+          onClick={handleConfirm}
+          {...(confirmTestId ? { "data-testid": confirmTestId } : {})}
+        >
+          {confirmLabel}
+        </GestionaleModalFooterSaveButton>
+      )}
     </div>
   );
 

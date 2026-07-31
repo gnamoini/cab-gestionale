@@ -62,6 +62,25 @@ const original = pickMezzoPermanentFields(base());
   assert.equal(result.hasChanges, false);
 }
 
+// trim associazioni — nessun falso positivo
+{
+  const current = pickMezzoPermanentFields({ ...base(), cliente: "  AMIU  " });
+  const result = detectMezzoAnagraficaChanges(original, current);
+  assert.equal(result.hasChanges, false);
+}
+
+// solo lavorazione — km, descrizione
+{
+  const current = pickMezzoPermanentFields({
+    ...base(),
+    descrizioneAnomalia: "guasto",
+    km: "100",
+    oreLavoro: "5",
+  });
+  const result = detectMezzoAnagraficaChanges(original, current);
+  assert.equal(result.hasChanges, false);
+}
+
 // no changes
 {
   const result = detectMezzoAnagraficaChanges(original, original);

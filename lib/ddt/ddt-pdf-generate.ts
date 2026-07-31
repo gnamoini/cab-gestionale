@@ -5,25 +5,24 @@ import {
   fmtDateIt,
   pdfAdvanceAfterDocumentHeader,
   drawGestionaleDataSectionTable,
+  PDF_MARGIN_L,
+  PDF_MARGIN_R,
   pdfContentWidth,
 } from "@/lib/pdf/core/pdf-base-template";
-import { drawGestionaleFieldSectionTable } from "@/lib/pdf/gestionale-section-table";
 import {
-  buildClienteAnagraficaPdfFields,
-  buildClienteFiscalePdfFields,
-  type PreventivoClientePdfOptions,
-} from "@/lib/pdf/anagrafica-pdf-fields";
+  drawGestionaleCompactFieldSectionTable,
+  drawGestionaleFieldSectionTable,
+  drawGestionaleTripleFieldSectionTable,
+  pdfFieldFromValue,
+} from "@/lib/pdf/gestionale-section-table";
+import {
+  buildDdtDestinatarioPdfFields,
+  buildDdtOggettoInterventoPdfFields,
+  buildDdtTrasportoPdfFields,
+} from "@/lib/pdf/ddt-pdf-fields";
+import type { PreventivoClientePdfOptions } from "@/lib/pdf/anagrafica-pdf-fields";
 import { ddtDisplayNumber } from "@/lib/ddt/ddt-list-ui-filters";
 import type { DdtDetail } from "@/lib/ddt/types";
-
-function formatAddress(snapshot: Record<string, unknown> | undefined): string {
-  if (!snapshot) return "";
-  const parts = [
-    snapshot.indirizzo,
-    [snapshot.cap, snapshot.citta, snapshot.provincia].filter(Boolean).join(" "),
-  ].filter(Boolean);
-  return parts.map(String).join(" — ");
-}
 
 function ddtRowsColumnStyles(contentW: number) {
   const base = [28, 92, 22, 18] as const;
@@ -35,6 +34,22 @@ function ddtRowsColumnStyles(contentW: number) {
     2: { cellWidth: base[2] * scale, halign: "right" as const },
     3: { cellWidth: base[3] * scale, halign: "left" as const },
   };
+}
+
+function drawDdtFirmeSection(doc: jsPDF, startY: number, pageW: number): number {
+  let y = Math.min(startY + 10, 248);
+  const lineW = 76;
+  doc.setDrawColor(24, 24, 27);
+  doc.setLineWidth(0.2);
+  doc.line(PDF_MARGIN_L, y, PDF_MARGIN_L + lineW, y);
+  doc.line(pageW - PDF_MARGIN_R - lineW, y, pageW - PDF_MARGIN_R, y);
+  y += 4;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(82, 82, 91);
+  doc.text("Firma destinatario", PDF_MARGIN_L, y);
+  doc.text("Firma trasportatore", pageW - PDF_MARGIN_R - lineW, y);
+  return y + 6;
 }
 
 export function generateDdtPdfBytes(
@@ -53,74 +68,21 @@ export function generateDdtPdfBytes(
     data: fmtDateIt(d.data_documento),
     logoDataUrl,
   });
-  y = pdfAdvanceAfterDocumentHeader(y);
+  y = pdfAdvanceAfterDocumentHeader(y, 0.5);
 
-  const cust = d.customer_snapshot as Record<string, unknown>;
-  const operativi = buildClienteAnagraficaPdfFields({
-    cliente: d.cliente_label,
-    cantiere: typeof cust.cantiere === "string" ? cust.cantiere : undefined,
-    utilizzatore: typeof cust.utilizzatore === "string" ? cust.utilizzatore : undefined,
-  });
-  const anag = clientePdf?.clienteAnagrafica;
-  const fiscali =
-    anag?.id
-      ? buildClienteFiscalePdfFields(anag, { codiceFiscale: clientePdf?.codiceFiscale })
-      : [];
-  const clienteFields = [...fiscali, ...operativi.filter((o) => !fiscali.some((f) => f.label === o.label && f.value === o.value))];
-  if (clienteFields.length > 0) {
-    y = drawGestionaleFieldSectionTable(doc, y, pageW, "Cliente", clienteFields);
-  } else {
-    doc.setFontSize(10);
-    doc.text(`Cliente: ${d.cliente_label}`, 14, y);
-    y += 5;
+  const destinatario = buildDdtDestinatarioPdfFields(d, clientePdf);
+  if (destinatario.length > 0) {
+    y = drawGestionaleCompactFieldSectionTable(doc, y, pageW, "Destinatario", destinatario);
   }
 
-  const consegna = formatAddress(d.luogo_consegna as Record<string, unknown>);
-  if (consegna) {
-    doc.text(`Luogo consegna: ${consegna}`, 14, y);
-    y += 5;
-  }
-  if (d.causale_trasporto) {
-    doc.text(`Causale: ${d.causale_trasporto}`, 14, y);
-    y += 5;
-  }
-  if (d.vettore) {
-    doc.text(`Vettore: ${d.vettore}`, 14, y);
-    y += 5;
+  const oggetto = buildDdtOggettoInterventoPdfFields(d);
+  if (oggetto.length > 0) {
+    y = drawGestionaleTripleFieldSectionTable(doc, y, pageW, "Oggetto intervento", oggetto);
   }
 
-  const mezzo = d.mezzo_snapshot as Record<string, unknown>;
-  const attSnap = (d.attrezzatura_snapshot ?? {}) as Record<string, unknown>;
-  const targetType = d.target_type ?? (attSnap.marca || attSnap.modello ? "attrezzatura" : null);
-  const mezzoParts = [
-    mezzo.targa ? `Targa ${mezzo.targa}` : null,
-    mezzo.matricola ? `Matricola ${mezzo.matricola}` : null,
-    mezzo.telaio ? `Telaio ${mezzo.telaio}` : null,
-  ].filter(Boolean);
-  if (targetType === "attrezzatura") {
-    const attLabel = [attSnap.marca, attSnap.modello, attSnap.matricola].filter(Boolean).map(String).join(" ");
-    if (attLabel) mezzoParts.push(`Attrezzatura ${attLabel}`);
-  } else if (targetType === "telaio") {
-    const tel = [mezzo.marca_telaio ?? mezzo.marca, mezzo.modello_telaio ?? mezzo.modello]
-      .filter(Boolean)
-      .map(String)
-      .join(" ");
-    if (tel) mezzoParts.push(`Telaio ${tel}`);
-  } else if (mezzo.attrezzatura) {
-    mezzoParts.push(String(mezzo.attrezzatura));
-  }
-  if (mezzoParts.length) {
-    doc.text(`Mezzo: ${mezzoParts.join(" · ")}`, 14, y);
-    y += 5;
-  }
-
-  if (cust.preventivo_numero) {
-    doc.text(`Rif. preventivo: ${String(cust.preventivo_numero)}`, 14, y);
-    y += 5;
-  }
-  if (d.data_consegna) {
-    doc.text(`Data consegna prevista: ${fmtDateIt(d.data_consegna)}`, 14, y);
-    y += 5;
+  const trasporto = buildDdtTrasportoPdfFields(d);
+  if (trasporto.length > 0) {
+    y = drawGestionaleCompactFieldSectionTable(doc, y, pageW, "Dati trasporto", trasporto);
   }
 
   const body = detail.rows.map((row) => [
@@ -132,28 +94,20 @@ export function generateDdtPdfBytes(
 
   y = drawGestionaleDataSectionTable(
     doc,
-    y + 2,
+    y,
     pageW,
     "Righe merce",
     ["Codice", "Descrizione", "Q.tà", "U.M."],
-    body,
+    body.length ? body : [["—", "Nessuna riga", "—", "—"]],
     ddtRowsColumnStyles(contentW),
   );
 
-  if (d.note?.trim()) {
-    doc.setFontSize(9);
-    doc.text(`Note: ${d.note.trim().slice(0, 200)}`, 14, y);
-    y += 8;
+  const noteField = pdfFieldFromValue("Note", d.note?.trim());
+  if (noteField) {
+    y = drawGestionaleFieldSectionTable(doc, y, pageW, "Note", [noteField], { multiline: true });
   }
 
-  y = Math.min(y + 12, 260);
-  doc.line(14, y, 90, y);
-  doc.line(pageW - 90, y, pageW - 14, y);
-  y += 4;
-  doc.setFontSize(9);
-  doc.text("Firma destinatario", 14, y);
-  doc.text("Firma trasportatore", pageW - 90, y);
-
+  drawDdtFirmeSection(doc, y, pageW);
   drawPdfPageFooters(doc, num);
   return new Uint8Array(doc.output("arraybuffer"));
 }

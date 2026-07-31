@@ -34,7 +34,6 @@ export async function transitionPreventivoStatusServer(
   if (!allowed) return err("Permesso richiesto.");
 
   const { preventivoId, to, autore } = input;
-  if (to === "bozza") return err("Transizione a bozza non consentita.");
 
   const recordRes = await fetchPreventivoRecordServer(preventivoId);
   if (!recordRes.success || !recordRes.data) {
@@ -54,7 +53,7 @@ export async function transitionPreventivoStatusServer(
 
   const { data: before, error: beforeErr } = await sb
     .from("preventivi")
-    .select("id, stato, numero, dettagli, updated_at")
+    .select("id, stato, dettagli, updated_at")
     .eq("id", preventivoId)
     .maybeSingle();
   if (beforeErr) return err(beforeErr.message);

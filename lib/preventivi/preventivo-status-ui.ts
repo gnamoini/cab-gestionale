@@ -13,7 +13,7 @@ const PREVENTIVO_STATO_HEX: Record<PreventivoStato, string> = {
   bozza: "#6b7280",
   inviato: "#2563eb",
   confermato: "#16a34a",
-  annullato: "#9ca3af",
+  annullato: "#dc2626",
 };
 
 export function preventivoStatoLabel(stato: PreventivoStato): string {

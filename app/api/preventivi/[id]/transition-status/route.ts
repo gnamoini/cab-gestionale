@@ -6,7 +6,7 @@ import type { PreventivoStato } from "@/lib/preventivi/types";
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
-  to: z.enum(["inviato", "confermato", "annullato"]),
+  to: z.enum(["bozza", "inviato", "confermato", "annullato"]),
   autore: z.string().max(200).optional(),
 });
 

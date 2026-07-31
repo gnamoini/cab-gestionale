@@ -2,13 +2,16 @@ import assert from "node:assert/strict";
 import {
   buildPreventivoAttrezzaturaPdfFields,
   buildPreventivoOggettoInterventoPdfFields,
+  buildPreventivoSchedaIngressoAttrezzaturaPdfFields,
+  buildPreventivoSchedaIngressoTelaioPdfFields,
   buildPreventivoTelaioMezzoPdfFields,
 } from "@/lib/pdf/preventivo-pdf-layout";
-import { compactFieldRowCount, padPdfFieldsToEqualRows } from "@/lib/pdf/gestionale-section-table";
+import { compactFieldRowCount, padPdfFieldsToEqualRows, tripleFieldRowCount } from "@/lib/pdf/gestionale-section-table";
 import {
   buildLavorazioniEffettuatePdfRows,
   buildManodoperaPdfRows,
   buildPreventivoPdfNettoFields,
+  buildPreventivoPdfRiepilogoFields,
   buildRicambiPdfRows,
   computeManodoperaSectionTotal,
 } from "@/lib/pdf/preventivo-pdf-body";
@@ -29,18 +32,20 @@ const basePreventivo = {
   macchinaRiassunto: "CAT 320",
 } as PreventivoRecord;
 
-const attFields = buildPreventivoAttrezzaturaPdfFields(basePreventivo);
+const attFields = buildPreventivoSchedaIngressoAttrezzaturaPdfFields(basePreventivo);
 assert.ok(attFields.some((f) => f.label === "Marca" && f.value === "CAT"));
 assert.ok(attFields.some((f) => f.label === "Modello" && f.value === "320"));
 assert.ok(attFields.some((f) => f.label === "Matricola" && f.value === "MAT-001"));
 assert.ok(attFields.some((f) => f.label === "N. scuderia" && f.value === "12"));
+assert.equal(attFields.some((f) => f.label === "Ore lavoro motore"), false);
 assert.equal(attFields.some((f) => f.label === "Targa"), false);
 
-const telaioFields = buildPreventivoTelaioMezzoPdfFields(basePreventivo);
+const telaioFields = buildPreventivoSchedaIngressoTelaioPdfFields(basePreventivo);
 assert.ok(telaioFields.some((f) => f.label === "Targa" && f.value === "AA111BB"));
+assert.equal(telaioFields.some((f) => f.label === "KM"), false);
 assert.equal(telaioFields.some((f) => f.label === "Macchina"), false);
 
-const fullTelaio = buildPreventivoTelaioMezzoPdfFields({
+const fullTelaio = buildPreventivoSchedaIngressoTelaioPdfFields({
   ...basePreventivo,
   tipoTelaio: "Gomma",
   marcaTelaio: "Iveco",
@@ -48,8 +53,8 @@ const fullTelaio = buildPreventivoTelaioMezzoPdfFields({
   km: "12000",
   livelloCarburante: "1/2",
 } as PreventivoRecord);
-assert.ok(fullTelaio.some((f) => f.label === "Marca" && f.value === "Iveco"));
-assert.ok(fullTelaio.some((f) => f.label === "KM" && f.value === "12000"));
+assert.ok(fullTelaio.some((f) => f.label === "Marca telaio" && f.value === "Iveco"));
+assert.equal(fullTelaio.some((f) => f.label === "KM"), false);
 
 const oggettoMerged = buildPreventivoOggettoInterventoPdfFields({
   ...basePreventivo,
@@ -57,10 +62,10 @@ const oggettoMerged = buildPreventivoOggettoInterventoPdfFields({
   marcaTelaio: "Iveco",
 } as PreventivoRecord);
 assert.ok(oggettoMerged.some((f) => f.label === "Marca" && f.value === "CAT"));
-assert.ok(oggettoMerged.some((f) => f.label === "Telaio Marca" && f.value === "Iveco"));
+assert.ok(oggettoMerged.some((f) => f.label === "Marca telaio" && f.value === "Iveco"));
 assert.ok(
-  compactFieldRowCount(oggettoMerged.length) < oggettoMerged.length,
-  "griglia compatta usa meno righe del layout 2 colonne",
+  tripleFieldRowCount(oggettoMerged.length) < compactFieldRowCount(oggettoMerged.length),
+  "griglia 3 colonne usa meno righe della griglia 2 colonne",
 );
 
 const padded = padPdfFieldsToEqualRows(
@@ -119,7 +124,9 @@ const manodoperaRighe: PreventivoRigaOutput[] = [
 ];
 
 assert.equal(computeManodoperaSectionTotal(manodoperaRighe), 215);
-assert.equal(buildManodoperaPdfRows(manodoperaRighe).length, 2);
+const manRows = buildManodoperaPdfRows(manodoperaRighe);
+assert.equal(manRows.length, 2);
+assert.equal(manRows[1]?.[1], "—");
 
 const ricambiRighe: PreventivoRigaOutput[] = [
   {
@@ -139,6 +146,21 @@ const ricambiRighe: PreventivoRigaOutput[] = [
 ];
 
 assert.equal(buildRicambiPdfRows(ricambiRighe)[0]?.[5], "45,00 €");
+
+const economicsRiepilogo = buildPreventivoPdfRiepilogoFields({
+  totaleRicambi: 100,
+  totaleManodopera: 200,
+  totaleSmaltimento: 0,
+  totaleNetto: 300,
+  importoIva: 66,
+  totaleConIva: 366,
+  ivaPercent: 22,
+});
+
+assert.equal(economicsRiepilogo.length, 3);
+assert.equal(economicsRiepilogo[0]?.label, "TOTALE NETTO (senza IVA)");
+assert.equal(economicsRiepilogo[1]?.label, "TOTALE IVA (22%)");
+assert.equal(economicsRiepilogo[2]?.label, "TOTALE DOCUMENTO");
 
 const economicsBase = buildPreventivoPdfNettoFields({
   totaleRicambi: 100,

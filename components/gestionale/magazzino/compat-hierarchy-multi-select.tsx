@@ -36,6 +36,9 @@ export function CompatHierarchySelect({
   id,
   exclusiveGroup,
   onMarcaModelloPick,
+  emptyOptionLabel,
+  clearable,
+  hideEmptyOptionInInput,
 }: {
   tree: HierarchyTreeKey;
   hierarchyKind: GlobalSettingsHierarchyKind;
@@ -51,6 +54,9 @@ export function CompatHierarchySelect({
   className?: string;
   id?: string;
   exclusiveGroup?: string;
+  emptyOptionLabel?: string;
+  clearable?: boolean;
+  hideEmptyOptionInInput?: boolean;
 }) {
   const marca = marcaNome?.trim() ?? "";
   const modelloBrowseAll = hierarchyKind === "modello" && !marca;
@@ -88,6 +94,9 @@ export function CompatHierarchySelect({
       placeholder={placeholder ?? compatHierarchyPlaceholder(tree, hierarchyKind)}
       allowAdd
       exclusiveGroup={exclusiveGroup}
+      emptyOptionLabel={emptyOptionLabel}
+      clearable={clearable}
+      hideEmptyOptionInInput={hideEmptyOptionInInput}
       aria-label={ariaLabel}
     />
   );

@@ -1,6 +1,10 @@
 "use client";
 
-import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
+import { GestionaleConfirmDialog, gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog";
+import {
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterDeleteButton,
+} from "@/components/design-system";
 import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 import {
   SCHEDA_INGRESSO_LABEL,
@@ -46,10 +50,17 @@ export function SchedaEliminaConfirmDialog({
           Questa operazione è irreversibile.
         </>
       }
-      confirmLabel="Elimina scheda"
-      destructive
       onCancel={onCancel}
       onConfirm={onConfirm}
+      destructive
+      footer={
+        <div className={gestionaleConfirmActionsClass}>
+          <GestionaleModalFooterCancelButton className="w-full sm:w-auto" onClick={onCancel} />
+          <GestionaleModalFooterDeleteButton className="w-full sm:w-auto" onClick={onConfirm}>
+            Elimina scheda
+          </GestionaleModalFooterDeleteButton>
+        </div>
+      }
     />
   );
 }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   anagraficaFromSchedaIngresso,
+  applyAnagraficaPatchToPreventivo,
   mergeAnagraficaPreventivo,
   preventivoToSchedaIngressoSlice,
   schedaIngressoSliceToPreventivoPatch,
@@ -111,6 +112,35 @@ test("PDF attrezzatura e telaio completi da record esteso", () => {
   assert.ok(tel.some((f) => f.label === "Marca" && f.value === "Iveco"));
   assert.ok(tel.some((f) => f.label === "KM" && f.value === "45000"));
   assert.ok(tel.some((f) => f.label === "Carburante" && f.value === "50%"));
+});
+
+test("applyAnagraficaPatchToPreventivo svuota campi con clear UI", () => {
+  const record = {
+    cliente: "Recuperi Pugliesi",
+    cantiere: "Modugno",
+    utilizzatore: "Monteco",
+    marcaAttrezzatura: "Nextra",
+    modelloAttrezzatura: "K-MD24T",
+    macchinaRiassunto: "Nextra K-MD24T",
+    targa: "",
+    matricola: "",
+    nScuderia: "",
+    tipoAttrezzatura: "",
+    oreLavoro: "",
+    tipoTelaio: "",
+    marcaTelaio: "",
+    modelloTelaio: "",
+    km: "",
+    livelloCarburante: "",
+    richiedente: "",
+  } as PreventivoRecord;
+  const slice = preventivoToSchedaIngressoSlice(record);
+  const patch = schedaIngressoSliceToPreventivoPatch({ ...slice, cantiere: "", marcaAttrezzatura: "" });
+  const next = applyAnagraficaPatchToPreventivo(record, patch);
+  assert.equal(next.cantiere, "");
+  assert.equal(next.marcaAttrezzatura, "");
+  assert.equal(next.modelloAttrezzatura, "K-MD24T");
+  assert.equal(next.macchinaRiassunto, "K-MD24T");
 });
 
 test("mergeAnagraficaPreventivo priorità ingresso su mezzo", () => {

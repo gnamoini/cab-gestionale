@@ -30,6 +30,7 @@
  * - Header sort: `GlobalTableSortTh` (mai titoli su due righe salvo eccezione documentata)
  * - Titoli: una riga, `whitespace-nowrap` (già in `GlobalTableHeadLabel` / `GlobalTableSortTh`)
  */
+import type { CSSProperties } from "react";
 import { dsScrollbar } from "@/lib/ui/design-system";
 import {
   globalTableBase,
@@ -205,6 +206,19 @@ export function gestionaleListTableRowTone(opts: {
   if (opts.lowStock) return gestionaleListTableRowToneLowStock;
   if (opts.flash) return gestionaleListTableRowToneFlash;
   return undefined;
+}
+
+const GESTIONALE_LIST_TABLE_PILL_COL_PAD_REM = 1;
+
+function gestionaleListTablePillContentWidthRem(labels: readonly string[]): number {
+  const maxLen = labels.reduce((m, l) => Math.max(m, l.trim().length), 0);
+  return Math.min(9.25, Math.max(6.25, maxLen * 0.48 + 1.55));
+}
+
+/** Larghezza colonna `<col>` pill: etichetta più lunga + padding celle. */
+export function gestionaleListTablePillColStyleFromLabels(labels: readonly string[]): CSSProperties {
+  const w = gestionaleListTablePillContentWidthRem(labels) + GESTIONALE_LIST_TABLE_PILL_COL_PAD_REM;
+  return { width: `${w}rem`, minWidth: `${w}rem`, maxWidth: `${w}rem` };
 }
 
 export { globalTableBase, globalTableFixed };

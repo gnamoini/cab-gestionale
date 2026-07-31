@@ -23,7 +23,7 @@ import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
-import { dsScrollbar, dsTable, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
+import { dsAccentToggleOn, dsScrollbar, dsTable, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
 import { useLavorazioneHub } from "@/src/hooks/gestionale/use-lavorazione-hub";
 import dynamic from "next/dynamic";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
@@ -183,7 +183,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
         type="button"
         key={id}
         onClick={() => setTab(id)}
-        className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${on ? "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_15%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]" : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"} ${erpFocus}`}
+        className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${on ? dsAccentToggleOn : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"} ${erpFocus}`}
       >
         {label}
       </button>

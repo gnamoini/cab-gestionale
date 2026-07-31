@@ -60,6 +60,8 @@ const sizeTriggerClass: Record<FixedListPillSelectSize, string> = {
   form: `min-h-10 px-3 py-2.5 ${dsIosInputTextSize}`,
 };
 
+export type FixedListPillSelectLayout = "dropdown" | "inline";
+
 export function GlobalFixedListPillSelect({
   value,
   onChange,
@@ -74,6 +76,8 @@ export function GlobalFixedListPillSelect({
   mobileSheet = true,
   sheetTitle,
   size = "compact",
+  layout = "dropdown",
+  placeholder,
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -89,6 +93,10 @@ export function GlobalFixedListPillSelect({
   sheetTitle?: string;
   /** `form` = altezza allineata a `dsInput` (campi form modale). */
   size?: FixedListPillSelectSize;
+  /** `inline` = tutte le pill visibili (es. pochi addetti in modale scheda). */
+  layout?: FixedListPillSelectLayout;
+  /** Testo quando nessuna opzione è selezionata (es. campi form opzionali). */
+  placeholder?: string;
 }) {
   const listId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -102,9 +110,13 @@ export function GlobalFixedListPillSelect({
   const useMobileSheet = hydrated && isMobile && mobileSheet;
   const { restoreFocus, captureFocus } = useDropdownFocusRestore(open);
   const selected = options.find((o) => o.value === value);
-  const triggerStyle = selected?.pillStyle ?? fallbackPillStyle;
+  const hasSelection = Boolean(selected);
+  const triggerStyle = hasSelection ? selected?.pillStyle ?? fallbackPillStyle : undefined;
   const resolvedSheetTitle = sheetTitle ?? ariaLabel;
-  const visibleLabel = selected?.label ?? value;
+  const visibleLabel = hasSelection
+    ? selected!.label
+    : value.trim() || placeholder || "";
+  const showingPlaceholder = !hasSelection && !value.trim() && Boolean(placeholder);
   const labelRef = useRef<HTMLSpanElement>(null);
   const [labelTruncated, setLabelTruncated] = useState(false);
 
@@ -257,12 +269,59 @@ export function GlobalFixedListPillSelect({
         setActiveIndex(-1);
       }}
     >
-      <span ref={labelRef} className="min-w-0 truncate">
+      <span
+        ref={labelRef}
+        className={`min-w-0 truncate${showingPlaceholder ? " text-[color:var(--cab-text-muted)]" : ""}`}
+      >
         {visibleLabel}
       </span>
       {pillChevron}
     </button>
   );
+
+  if (layout === "inline") {
+    const pillShell = shellClass ?? "rounded-lg border border-black/10 shadow-sm dark:border-white/10";
+    const textClass = size === "form" ? "text-sm font-medium leading-snug" : fixedListPillTextClass;
+    return (
+      <div
+        ref={shellRef}
+        role="listbox"
+        aria-label={ariaLabel}
+        className={`flex w-full min-w-0 flex-wrap gap-1.5 ${sizeShellClass[size]} items-stretch`}
+      >
+        {options.map((opt) => {
+          const active = opt.value === value;
+          const optStyle = opt.pillStyle ?? fallbackPillStyle;
+          const optTooltip = resolvePillTooltip(opt.label, title, false);
+          const button = (
+            <button
+              type="button"
+              role="option"
+              aria-selected={active}
+              aria-label={opt.label}
+              disabled={disabled}
+              style={optStyle}
+              title={title ? `${title}: ${opt.label}` : opt.label}
+              className={`min-w-0 flex-1 cursor-pointer truncate rounded-lg border px-2 text-center ${textClass} ${sizeTriggerClass[size]} outline-none transition-[filter,box-shadow] duration-150 hover:brightness-[1.06] disabled:cursor-not-allowed disabled:opacity-60 ${dsFocus} ${pillShell} ${
+                active ? "ring-2 ring-inset ring-white/35 shadow-sm" : ""
+              }`}
+              onClick={() => {
+                if (disabled) return;
+                onChange(opt.value);
+              }}
+            >
+              {opt.label}
+            </button>
+          );
+          return (
+            <div key={opt.value} className="flex min-w-0 flex-1">
+              {optTooltip ? <Tooltip content={optTooltip}>{button}</Tooltip> : button}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div ref={shellRef} className={`relative flex w-full ${sizeShellClass[size]} items-stretch`}>

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createRandomUuid } from "@/lib/uuid/create-random-uuid";
 
 export type DescriptionSuggestion = {
   id: string;
@@ -21,7 +21,7 @@ const suggestions: DescriptionSuggestion[] = [];
 export function queueDescriptionSuggestion(input: Omit<DescriptionSuggestion, "id" | "status" | "appliedToKb" | "createdAt">): DescriptionSuggestion {
   const row: DescriptionSuggestion = {
     ...input,
-    id: randomUUID(),
+    id: createRandomUuid(),
     status: "pending",
     appliedToKb: false,
     createdAt: new Date().toISOString(),

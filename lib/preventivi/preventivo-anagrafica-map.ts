@@ -133,6 +133,20 @@ function mergePatch(base: PreventivoAnagraficaPatch, overlay: Partial<Preventivo
   return next;
 }
 
+/** Snapshot merge: empty string in overlay clears the field (unlike sparse mergePatch). */
+function applyFullAnagraficaPatch(
+  base: PreventivoAnagraficaPatch,
+  overlay: Partial<PreventivoAnagraficaPatch>,
+): PreventivoAnagraficaPatch {
+  const next: PreventivoAnagraficaPatch = { ...base };
+  for (const key of Object.keys(overlay) as (keyof PreventivoAnagraficaPatch)[]) {
+    if (overlay[key] === undefined) continue;
+    next[key] = trimOrEmpty(overlay[key]);
+  }
+  next.macchinaRiassunto = syncMacchinaRiassunto(next);
+  return next;
+}
+
 /**
  * Merge priorità: ingresso > mezzo > lavorazione (ultimo argomento = priorità più bassa).
  * @deprecated Usare `anagraficaFromInterventoContext(lavorazioneRow, schedeStore)` per export da lavorazione.
@@ -211,7 +225,7 @@ export function applyAnagraficaPatchToPreventivo(
     Partial<Pick<PreventivoRecord, "targetType" | "attrezzaturaId">>,
 ): PreventivoRecord {
   const { targetType, attrezzaturaId, ...anagPatch } = patch;
-  const merged = mergePatch(
+  const merged = applyFullAnagraficaPatch(
     {
       cliente: record.cliente,
       cantiere: record.cantiere,
