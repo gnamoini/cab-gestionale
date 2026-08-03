@@ -76,6 +76,13 @@ test("document capture authenticated upload-policy and mutating routes", async (
   expect([400, 404, 409]).toContain(applyRes.status());
 });
 
+test("document capture analyze route is deprecated in favor of process", async ({ request }) => {
+  const res = await request.post("/api/document-capture/00000000-0000-0000-0000-000000000001/analyze");
+  expect(res.status()).toBe(410);
+  const body = (await res.json()) as { code?: string };
+  expect(body.code).toBe("DEPRECATED_ENDPOINT");
+});
+
 test("document capture upload finalize without service role", async ({ page, request }) => {
   attachConsoleGuards(page);
   await loginViaUi(page, adminCredentials());

@@ -14,7 +14,7 @@
     "build": "npm run pwa:build-sw && next build",
     "pwa:build-sw": "npx tsx scripts/build-pwa-sw.ts",
     "pwa:icons": "npx tsx scripts/generate-pwa-icons.ts",
-    "test:pwa": "npx tsx lib/regression/pwa-manifest-policy.test.ts && npx tsx lib/regression/pwa-sw-policy.test.ts && npx tsx lib/regression/pwa-sw-security-policy.test.ts && npx tsx lib/regression/pwa-install-ux-policy.test.ts && npx tsx lib/regression/pwa-phase4-policy.test.ts && npx tsx lib/regression/pwa-phase5-policy.test.ts",
+    "test:pwa": "npx tsx lib/pwa/sw-update.test.ts && npx tsx lib/pwa/sw-client.test.ts && npx tsx lib/pwa/pwa-update-guard.test.ts && npx tsx lib/regression/pwa-update-ux-policy.test.ts && npx tsx lib/regression/pwa-manifest-policy.test.ts && npx tsx lib/regression/pwa-sw-policy.test.ts && npx tsx lib/regression/pwa-sw-security-policy.test.ts && npx tsx lib/regression/pwa-install-ux-policy.test.ts && npx tsx lib/regression/pwa-phase4-policy.test.ts && npx tsx lib/regression/pwa-phase5-policy.test.ts",
     "start": "next start",
     "lint": "eslint",
     "test:permissions": "npx tsx src/lib/permissions/effective-permissions.test.ts",

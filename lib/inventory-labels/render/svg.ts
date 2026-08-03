@@ -8,7 +8,13 @@ import { labelDisplayCaps } from "@/lib/inventory-labels/domain/label-display";
 import { fieldValue } from "@/lib/inventory-labels/render/layout";
 import { resolveLabelTextLayout } from "@/lib/inventory-labels/render/text-layout";
 import { labelFontFaceCss } from "@/lib/inventory-labels/render/label-fonts";
-import { textLineToSvgPath, measureTextLineWidthPx } from "@/lib/inventory-labels/render/text-paths";
+import {
+  textLineToSvgPath,
+  measureTextLineWidthPx,
+  labelFontSlotFor,
+  labelFontFamilyForSlot,
+  type LabelFontSlot,
+} from "@/lib/inventory-labels/render/text-paths";
 import { lineMetrics } from "@/lib/inventory-labels/render/text-metrics";
 import { loadLabelLogoDataUrl } from "@/lib/inventory-labels/render/label-logo.server";
 import { companyWebsiteDisplayHost } from "@/lib/branding/branding-settings-model";
@@ -21,14 +27,12 @@ async function resolveLabelLogoDataUrl(): Promise<string | null> {
   return cachedLabelLogoDataUrl;
 }
 
-function labelBoldStrokeWidthPx(template: LabelTemplateDefinition, fontSizePx: number): number {
-  const ratio = template.id === "a4-pagina-intera" ? 0.3 : 0.11;
-  return Math.max(2, Math.round(fontSizePx * ratio * 10) / 10);
+function labelBoldStrokeWidthPx(_template: LabelTemplateDefinition, fontSizePx: number): number {
+  return Math.max(1.2, Math.round(fontSizePx * 0.11 * 10) / 10);
 }
 
-function labelBoldInkOffsetPx(template: LabelTemplateDefinition, fontSizePx: number): number {
-  if (template.id !== "a4-pagina-intera") return 0;
-  return Math.max(2.5, Math.round(fontSizePx * 0.018 * 10) / 10);
+function labelBoldInkOffsetPx(_template: LabelTemplateDefinition, _fontSizePx: number): number {
+  return 0;
 }
 
 function renderBoldPathSvg(
@@ -76,11 +80,24 @@ function renderBoldTextSvg(
   return layers.join("");
 }
 
-function isBoldPlaced(
+function usesNativeBoldFont(template: LabelTemplateDefinition): boolean {
+  return template.id === "a4-pagina-intera";
+}
+
+function isBoldWeight(placed: { bold?: boolean }, template: LabelTemplateDefinition): boolean {
+  return Boolean(placed.bold || template.typography?.weight === "bold");
+}
+
+function shouldFauxBold(placed: { bold?: boolean }, template: LabelTemplateDefinition): boolean {
+  return isBoldWeight(placed, template) && !usesNativeBoldFont(template);
+}
+
+function resolveInkFontSlot(
+  base: "sans" | "mono",
   placed: { bold?: boolean },
   template: LabelTemplateDefinition,
-): boolean {
-  return Boolean(placed.bold || template.typography?.weight === "bold");
+): LabelFontSlot {
+  return labelFontSlotFor(base, isBoldWeight(placed, template), usesNativeBoldFont(template));
 }
 
 function escapeXml(s: string): string {
@@ -100,6 +117,26 @@ function resolveStaticTextLine(
   return null;
 }
 
+
+function renderClienteWebsiteUnderQr(
+  line: string,
+  websiteEl: Extract<LabelTemplateDefinition["elements"][number], { type: "text" }>,
+  qrEl: Extract<LabelTemplateDefinition["elements"][number], { type: "qr" }>,
+  template: LabelTemplateDefinition,
+  textAsPaths: boolean,
+): string {
+  const centerPx = mmToPx(qrEl.xMm + qrEl.sizeMm / 2, template.dpi);
+  const yPx = mmToPx(websiteEl.yMm, template.dpi);
+  const { fontSizePx } = lineMetrics(websiteEl.fontPt, template.dpi);
+  const slot = websiteEl.font === "mono" ? "mono" : "sans";
+  const lineX = centerPx - measureTextLineWidthPx(line, fontSizePx, slot) / 2;
+  if (textAsPaths) {
+    return textLineToSvgPath(line, lineX, yPx, fontSizePx, slot, "hanging");
+  }
+  const family = slot === "mono" ? "LabelMono" : "LabelSans";
+  return `<text x="${centerPx}" y="${yPx}" dominant-baseline="hanging" font-family="${family}" font-size="${fontSizePx}" fill="#000000" text-anchor="middle">${escapeXml(line)}</text>`;
+}
+
 function renderStaticTextSvg(
   line: string,
   el: Extract<LabelTemplateDefinition["elements"][number], { type: "text" }>,
@@ -111,10 +148,11 @@ function renderStaticTextSvg(
   const yPx = mmToPx(el.yMm, template.dpi);
   const { fontSizePx } = lineMetrics(fontPt, template.dpi);
   const slot = el.font === "mono" ? "mono" : "sans";
-  const textAnchor = el.hAlign === "center" ? "middle" : undefined;
-  const anchorAttr = textAnchor === "middle" ? ' text-anchor="middle"' : "";
+  const textAnchor = el.hAlign === "center" ? "middle" : "start";
+  const anchorAttr = textAnchor === "middle" ? ' text-anchor="middle"' : ' text-anchor="start"';
+  const lineX = textAnchor === "middle" ? xPx - measureTextLineWidthPx(line, fontSizePx, slot) / 2 : xPx;
   if (textAsPaths) {
-    const path = textLineToSvgPath(line, xPx, yPx, fontSizePx, slot, "hanging");
+    const path = textLineToSvgPath(line, lineX, yPx, fontSizePx, slot, "hanging");
     return path;
   }
   const family = slot === "mono" ? "LabelMono" : "LabelSans";
@@ -145,6 +183,9 @@ export async function renderLabelSvg(
 
   const placedTexts = resolveLabelTextLayout(template, payload);
   const logoDataUrl = template.elements.some((e) => e.type === "logo") ? await resolveLabelLogoDataUrl() : null;
+  const websiteEl = template.elements.find(
+    (e) => e.type === "text" && e.literalSource === "clienteWebsite",
+  );
 
   for (const el of template.elements) {
     const x = mmToPx(el.xMm, template.dpi);
@@ -156,6 +197,12 @@ export async function renderLabelSvg(
       const qrInner = await generateQrSvgString(qrUrl, size);
       const frag = parseSvgFragment(qrInner);
       parts.push(nestedSvgAt(x, y, size, size, frag, "xMidYMid slice"));
+      if (websiteEl?.type === "text") {
+        const websiteLine = resolveStaticTextLine(websiteEl, qrUrl);
+        if (websiteLine) {
+          parts.push(renderClienteWebsiteUnderQr(websiteLine, websiteEl, el, template, textAsPaths));
+        }
+      }
       continue;
     }
 
@@ -172,6 +219,7 @@ export async function renderLabelSvg(
     if (el.type === "text") {
       const staticLine = resolveStaticTextLine(el, qrUrl);
       if (staticLine) {
+        if (el.literalSource === "clienteWebsite") continue;
         parts.push(renderStaticTextSvg(staticLine, el, template, textAsPaths));
         continue;
       }
@@ -183,7 +231,8 @@ export async function renderLabelSvg(
       const x = mmToPx(placed.xMm, template.dpi);
       const y = mmToPx(placed.yMm, template.dpi);
       const { fontSizePx, lineStepPx } = lineMetrics(fontPt, template.dpi);
-      const slot = placed.font === "mono" ? "mono" : "sans";
+      const baseSlot = placed.font === "mono" ? "mono" : "sans";
+      const inkSlot = resolveInkFontSlot(baseSlot, placed, template);
       const baseline = placed.baseline ?? "hanging";
       const textAnchor = placed.anchor === "middle" ? "middle" : undefined;
       const anchorAttr = textAnchor === "middle" ? ' text-anchor="middle"' : "";
@@ -194,17 +243,17 @@ export async function renderLabelSvg(
             ? y - (placed.lines.length - 1 - i) * lineStepPx
             : y + i * lineStepPx;
         const lineX =
-          textAnchor === "middle" ? x - measureTextLineWidthPx(line, fontSizePx, slot) / 2 : x;
+          textAnchor === "middle" ? x - measureTextLineWidthPx(line, fontSizePx, inkSlot) / 2 : x;
         if (textAsPaths) {
-          const path = textLineToSvgPath(line, lineX, dy, fontSizePx, slot, baseline);
-          if (isBoldPlaced(placed, template)) {
+          const path = textLineToSvgPath(line, lineX, dy, fontSizePx, inkSlot, baseline);
+          if (shouldFauxBold(placed, template)) {
             parts.push(renderBoldPathSvg(path, fontSizePx, template));
           } else {
             parts.push(path);
           }
         } else {
-          const family = slot === "mono" ? "LabelMono" : "LabelSans";
-          if (isBoldPlaced(placed, template)) {
+          const family = labelFontFamilyForSlot(inkSlot);
+          if (shouldFauxBold(placed, template)) {
             parts.push(renderBoldTextSvg(line, x, dy, baseline, family, fontSizePx, template, textAnchor));
           } else {
             parts.push(

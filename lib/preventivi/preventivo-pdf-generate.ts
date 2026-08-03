@@ -52,3 +52,6 @@ export function generatePreventivoPdfBytes(
 export function preventivoPdfFileName(p: PreventivoRecord): string {
   return buildPreventivoPdfDownloadFileName(p);
 }
+
+/** Bump per invalidare cache artifact PDF dopo cambi layout. */
+export const PREVENTIVO_PDF_LAYOUT_STAMP = "oggetto-compact-v5";

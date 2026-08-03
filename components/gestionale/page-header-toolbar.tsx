@@ -7,15 +7,11 @@ import { PageToolbarCtaLabel } from "@/components/design-system/page-toolbar";
 import { ToolbarGroupOverflowToggle } from "@/components/design-system/toolbar-group";
 import { MobileFilterDrawer } from "@/components/gestionale/mobile-filter-drawer";
 import { IconGestionaleLog, IconGestionaleUndo } from "@/components/gestionale/gestionale-log-ui";
-import { ShellNavIconRefresh } from "@/components/design-system";
 import {
   dsPageToolbarBtn,
-  dsPageHeaderIconGlyphDense,
-  dsPageHeaderToolbarActionBtn,
   dsPageToolbarIconBtn,
   dsPageToolbarPrimaryBtn,
 } from "@/lib/ui/design-system";
-import { TOOLTIP_GAP_SHELL_NAV } from "@/lib/ui/tooltip-portal";
 import { useSmUp } from "@/lib/ui/use-sm-up";
 
 /** Shell toolbar header (PageHeader): unico `flex-safe-row` per evitare doppia signature linter. */
@@ -25,40 +21,6 @@ export const gestionalePageToolbarActionsClass =
 /** Contenuto azioni dentro la shell — senza `flex-safe-row` (il wrapper è in PageHeader). */
 export const gestionalePageToolbarActionsInnerClass =
   "flex min-w-0 max-w-full shrink-0 flex-wrap items-center justify-end gap-2 cab-shell-mobile:flex-wrap cab-shell-tablet:flex-wrap sm:flex-wrap";
-
-export function GestionaleRefreshToolbarButton({
-  busy = false,
-  onClick,
-  label = "Aggiorna",
-}: {
-  busy?: boolean;
-  onClick: () => void;
-  label?: string;
-}) {
-  const smUp = useSmUp();
-  const tip = smUp ? undefined : busy ? "Aggiornamento…" : label;
-  const busyLabel = "Aggiornamento…";
-  return (
-    <OptionalTooltip content={tip} showOnFocus={false} sideOffset={TOOLTIP_GAP_SHELL_NAV}>
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={busy}
-        aria-busy={busy}
-        aria-label={label}
-        className={`${dsPageHeaderToolbarActionBtn} ${busy ? "!cursor-wait" : ""}`}
-      >
-        <ShellNavIconRefresh
-          className={`${dsPageHeaderIconGlyphDense} sm:h-4 sm:w-4 max-sm:opacity-100 sm:opacity-90 motion-reduce:animate-none${busy ? " animate-spin" : ""}`}
-        />
-        <span className={`hidden sm:inline transition-opacity duration-200`}>
-          {busy ? busyLabel : label}
-        </span>
-        <span className="sr-only sm:hidden">{busy ? busyLabel : label}</span>
-      </button>
-    </OptionalTooltip>
-  );
-}
 
 export function GestionaleDirtySaveActions({
   isDirty,

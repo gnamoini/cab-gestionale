@@ -42,7 +42,6 @@ import {
 } from "@/lib/ui/design-system";
 import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
 import { GestionaleModalGate } from "@/components/gestionale/gestionale-modal-gate";
-import { GestionalePageHeaderMenu } from "@/components/gestionale/gestionale-page-header-menu";
 
 function todayYmd() {
   const d = new Date();
@@ -90,7 +89,7 @@ export function AgendaOfficinaView() {
     return bounds.end;
   }, [viewMode, monthKey, selectedYmd]);
 
-  const { sessions, isLoading, isError, error, refetch, isFetching } = useWorkshopScheduleRange(rangeStart, rangeEnd, filters);
+  const { sessions, isLoading, isError, error } = useWorkshopScheduleRange(rangeStart, rangeEnd, filters);
   const dayCapacity = useWorkshopScheduleDayCapacity(selectedYmd, sessions);
   const { upsertMutation, patchTimesMutation, deleteMutation } = useWorkshopScheduleMutations();
 
@@ -221,7 +220,6 @@ export function AgendaOfficinaView() {
 
   return (
     <>
-      <GestionalePageHeaderMenu onRefresh={() => void refetch()} refreshBusy={isFetching} />
       <div className={dsStackPage}>
         <AgendaToolbarShell>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">

@@ -83,35 +83,21 @@ export function getSingletonPageActionListItem(
   return only;
 }
 
-/** Solo refresh in header (nessun item lista) — candidato a pulsante diretto. */
-export function isRefreshOnlyPageActionMenu(
-  items: readonly PageActionItem[],
-  options?: { onRefresh?: () => void },
-): boolean {
-  const list = items.filter((item) => item.id !== "__divider__");
-  return list.length === 0 && Boolean(options?.onRefresh);
-}
-
 /** Menu ⋮ vs azioni inline in header. */
 export function shouldUsePageActionMenuDropdown(
   items: readonly PageActionItem[],
-  options?: { onRefresh?: () => void; backHref?: string | null },
+  options?: { backHref?: string | null },
 ): boolean {
   if (options?.backHref) return true;
-  if (isRefreshOnlyPageActionMenu(items, options)) return false;
-  const listItems = items.filter((item) => item.id !== "__divider__");
-  // Refresh + voci menu → ⋮ (Aggiorna resta nel pannello, non icona separata).
-  if (options?.onRefresh && listItems.length > 0) return true;
   if (getSingletonPageActionListItem(items) !== null) return false;
   return true;
 }
 
-/** True se il menu ha almeno un'azione visibile (item, refresh header o back). */
+/** True se il menu ha almeno un'azione visibile (item o back). */
 export function pageActionMenuHasContent(
   items: readonly PageActionItem[],
-  options?: { onRefresh?: () => void; backHref?: string | null },
+  options?: { backHref?: string | null },
 ): boolean {
-  if (options?.onRefresh) return true;
   if (options?.backHref) return true;
   return items.some((item) => item.id !== "__divider__");
 }

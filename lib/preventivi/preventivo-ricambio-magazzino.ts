@@ -1,4 +1,5 @@
 import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
+import { costoUnitarioAcquistoRicambio } from "@/lib/preventivi/preventivo-profitto";
 import { formatRicambioDescrizioneForUi } from "@/lib/magazzino/ricambio-descrizione-display";
 import { parseRicambioUnitaMisura } from "@/lib/magazzino/ricambio-unita-misura";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -36,6 +37,7 @@ export function applyMagazzinoToPreventivoRigaRicambio(
   const codiceOE = ricambioCodiceForUi(item.codiceFornitoreOriginale) || row.codiceOE;
   const descrizione = formatRicambioDescrizioneForUi(item.descrizione ?? "") || row.descrizione;
   const prezzoUnitario = Math.round((item.prezzoVendita ?? 0) * 100) / 100;
+  const costoUnitario = Math.round(costoUnitarioAcquistoRicambio(item) * 100) / 100;
   const unitaMisura = parseRicambioUnitaMisura(item.unitaMisura ?? row.unitaMisura);
   return {
     ...row,
@@ -43,6 +45,7 @@ export function applyMagazzinoToPreventivoRigaRicambio(
     codiceOE,
     descrizione,
     prezzoUnitario,
+    costoUnitario,
     unitaMisura,
     ...(scontoPercent !== undefined ? { scontoPercent } : {}),
   };

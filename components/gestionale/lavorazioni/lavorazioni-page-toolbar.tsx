@@ -11,6 +11,7 @@ import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazi
 import {
   PageToolbar,
   PageToolbarCtaLabel,
+  PageToolbarMetaToggle,
   PageToolbarResultCount,
 } from "@/components/design-system";
 import { dsPageToolbarCtaCompact, dsTypoSmall, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
@@ -63,27 +64,15 @@ function IconPrint({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
   );
 }
 
-function IconKanban({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H5v14h4V5zm10 0h-4v9h4V5z" />
-    </svg>
-  );
-}
-
 /** SSOT voci menu header Lavorazioni. */
 export function useLavorazioniPageMenuItems({
   printBusy = false,
   onOpenLog,
   onPrint,
-  listViewMode,
-  onToggleListViewMode,
 }: {
   printBusy?: boolean;
   onOpenLog: () => void;
   onPrint: () => void;
-  listViewMode: "table" | "kanban";
-  onToggleListViewMode: () => void;
 }): PageActionItem[] {
   return useMemo((): PageActionItem[] => [
     {
@@ -109,32 +98,17 @@ export function useLavorazioniPageMenuItems({
       loading: printBusy,
       disabled: printBusy,
     },
-    {
-      id: "view-mode",
-      label: listViewMode === "table" ? "Vista Kanban" : "Vista Tabella",
-      description: "Cambia modalitÃ  di visualizzazione lista",
-      icon: <IconKanban />,
-      onSelect: onToggleListViewMode,
-    },
-    pageActionLogItem(onOpenLog, "Log attivitÃ "),
-  ], [onOpenLog, onPrint, printBusy, listViewMode, onToggleListViewMode]);
+    pageActionLogItem(onOpenLog, "Log attività"),
+  ], [onOpenLog, onPrint, printBusy]);
 }
 
 export type LavorazioniPageHeaderToolbarProps = {
   items: PageActionItem[];
-  onRefresh: () => void;
-  listRefreshBusy?: boolean;
 };
 
-/** Azioni header Lavorazioni â€” portal nella riga PageHeader (hamburger + titolo). */
-export function LavorazioniPageHeaderToolbar({
-  items,
-  onRefresh,
-  listRefreshBusy = false,
-}: LavorazioniPageHeaderToolbarProps) {
-  return (
-    <PageHeaderPageActionMenu items={items} onRefresh={onRefresh} refreshBusy={listRefreshBusy} />
-  );
+/** Azioni header Lavorazioni — portal nella riga PageHeader (hamburger + titolo). */
+export function LavorazioniPageHeaderToolbar({ items }: LavorazioniPageHeaderToolbarProps) {
+  return <PageHeaderPageActionMenu items={items} />;
 }
 
 export type LavorazioniListToolbarProps = {
@@ -152,7 +126,6 @@ export type LavorazioniListToolbarProps = {
   onAdvancedFiltersChange: (patch: Partial<LavorazioniAdvancedFilters>) => void;
   filterCatalog: LavorazioniFilterCatalog;
   addettiRecords?: readonly AddettoRecord[];
-  statiOpts: { id: string; label: string }[];
   onFilterReset: () => void;
   totalFilteredCount: number;
   searchApplied: string;
@@ -173,6 +146,8 @@ export type LavorazioniListToolbarProps = {
   capturePageDropRef?: MutableRefObject<LavorazioniCapturePageDropHandle | null>;
   capturePageDropDisabled?: boolean;
   onCapturePageDrop?: (file: File) => void;
+  listViewMode?: "table" | "kanban";
+  onListViewModeChange?: (mode: "table" | "kanban") => void;
 };
 
 /** Toolbar ricerca/filtri lista Lavorazioni â€” presentational. */
@@ -191,7 +166,6 @@ export function LavorazioniListToolbar({
   onAdvancedFiltersChange,
   filterCatalog,
   addettiRecords = [],
-  statiOpts,
   onFilterReset,
   totalFilteredCount,
   searchApplied,
@@ -212,6 +186,8 @@ export function LavorazioniListToolbar({
   capturePageDropRef,
   capturePageDropDisabled = true,
   onCapturePageDrop,
+  listViewMode = "table",
+  onListViewModeChange,
 }: LavorazioniListToolbarProps) {
   const filtersActive = hasPageClientFilters || navMezzoFilterActive;
   const searchActive = searchApplied.trim().length > 0 || searchInput.trim().length > 0;
@@ -302,30 +278,44 @@ export function LavorazioniListToolbar({
               onChange={onAdvancedFiltersChange}
               catalog={filterCatalog}
               addettiRecords={addettiRecords}
-              statiOpts={statiOpts}
             />
           }
           onFilterReset={onFilterReset}
           meta={
-            <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-2 gap-y-1 sm:flex-wrap">
-              {mutPendingBlocking ? (
-                <span className={`${dsTypoSmall} font-medium`}>
-                  Salvataggio in corsoâ€¦
-                </span>
+            <div className="flex min-w-0 w-full max-w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+              <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-2 gap-y-1 sm:flex-wrap">
+                {mutPendingBlocking ? (
+                  <span className={`${dsTypoSmall} font-medium`}>
+                    Salvataggio in corso…
+                  </span>
+                ) : null}
+                {!createdBy ? (
+                  <span className="text-xs text-amber-800 dark:text-amber-200">
+                    Accedi per registrare nuove lavorazioni.
+                  </span>
+                ) : null}
+                <PageToolbarResultCount
+                  className="min-w-0 sm:flex-1"
+                  count={totalFilteredCount}
+                  filtersActive={filtersActive}
+                  searchActive={searchActive}
+                  onSearchReset={onSearchReset}
+                  onFilterReset={onFilterReset}
+                />
+                {metaExtra}
+              </div>
+              {onListViewModeChange ? (
+                <div className="flex w-full min-w-0 flex-nowrap items-stretch gap-2 sm:ms-auto sm:w-auto sm:justify-end">
+                  <PageToolbarMetaToggle
+                    className="min-h-10 min-w-0 flex-1 sm:min-h-9 sm:flex-none sm:shrink-0"
+                    label="Vista Kanban"
+                    shortLabel="Kanban"
+                    checked={listViewMode === "kanban"}
+                    onChange={(next) => onListViewModeChange(next ? "kanban" : "table")}
+                    title="Mostra le lavorazioni in corso come board Kanban"
+                  />
+                </div>
               ) : null}
-              {!createdBy ? (
-                <span className="text-xs text-amber-800 dark:text-amber-200">
-                  Accedi per registrare nuove lavorazioni.
-                </span>
-              ) : null}
-              <PageToolbarResultCount
-                count={totalFilteredCount}
-                filtersActive={filtersActive}
-                searchActive={searchActive}
-                onSearchReset={onSearchReset}
-                onFilterReset={onFilterReset}
-              />
-              {metaExtra}
             </div>
           }
         />

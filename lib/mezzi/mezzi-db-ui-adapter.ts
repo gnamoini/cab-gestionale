@@ -111,7 +111,7 @@ export function documentoRowToGestionale(row: DocumentoRow): DocumentoGestionale
 }
 
 function emptyManodopera(): PreventivoRecord["manodopera"] {
-  return { oreTotali: 0, righeAddetti: [], costoOrario: 0, scontoPercent: 0 };
+  return { oreTotali: 0, righeAddetti: [], costoOrario: 0, prezzoOrario: 0, scontoPercent: 0 };
 }
 
 /** Stub per lista hub / PDF minimi da riga Supabase (dettagli JSON opzionale). */
@@ -156,6 +156,8 @@ export function preventivoRowToRecordStub(row: PreventivoRow, mezzo: MezzoRow | 
           oreTotali: manoRaw.oreTotali,
           righeAddetti: Array.isArray(manoRaw.righeAddetti) ? manoRaw.righeAddetti : [],
           costoOrario: Number(manoRaw.costoOrario) || 0,
+          prezzoOrario:
+            Number(manoRaw.prezzoOrario) || Number(manoRaw.costoOrario) || 0,
           scontoPercent: Number(manoRaw.scontoPercent) || 0,
         }
       : emptyManodopera();

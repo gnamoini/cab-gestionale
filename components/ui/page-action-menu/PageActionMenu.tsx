@@ -22,9 +22,15 @@ import {
 } from "@/components/gestionale/global-input/use-global-dropdown-portal";
 import { PageActionMenuDivider } from "@/components/ui/page-action-menu/PageActionMenuDivider";
 import { PageActionMenuFooter } from "@/components/ui/page-action-menu/PageActionMenuFooter";
-import { PageActionMenuHeader, PageActionMenuRefreshButton } from "@/components/ui/page-action-menu/PageActionMenuHeader";
+import { PageActionMenuHeader } from "@/components/ui/page-action-menu/PageActionMenuHeader";
 import { PageActionMenuItem } from "@/components/ui/page-action-menu/PageActionMenuItem";
-import { filterPageActionItems, getSingletonPageActionListItem, isRefreshOnlyPageActionMenu, pageActionMenuHasAttention, pageActionMenuHasContent, shouldUsePageActionMenuDropdown } from "@/components/ui/page-action-menu/page-action-menu-permissions";
+import {
+  filterPageActionItems,
+  getSingletonPageActionListItem,
+  pageActionMenuHasAttention,
+  pageActionMenuHasContent,
+  shouldUsePageActionMenuDropdown,
+} from "@/components/ui/page-action-menu/page-action-menu-permissions";
 import { usePageActionMenuContext } from "@/components/ui/page-action-menu/PageActionMenuProvider";
 import { usePageActionMenuKeyboard } from "@/components/ui/page-action-menu/use-page-action-menu-keyboard";
 import type {
@@ -128,9 +134,6 @@ type PanelProps = {
   items: PageActionItem[];
   open: boolean;
   onClose: () => void;
-  onRefresh?: () => void;
-  refreshBusy?: boolean;
-  refreshLabel?: string;
   back?: { href: string; label: string } | null;
   footer?: ReactNode;
   headerActions?: ReactNode;
@@ -140,9 +143,6 @@ const PageActionMenuPanel = memo(function PageActionMenuPanel({
   items,
   open,
   onClose,
-  onRefresh,
-  refreshBusy,
-  refreshLabel,
   back,
   footer,
   headerActions,
@@ -218,9 +218,6 @@ const PageActionMenuPanel = memo(function PageActionMenuPanel({
     <div ref={panelRef} className="flex min-w-0 flex-col">
       <PageActionMenuHeader
         back={currentSubmenu ? null : back}
-        onRefresh={currentSubmenu ? undefined : onRefresh}
-        refreshBusy={refreshBusy}
-        refreshLabel={refreshLabel}
         onSubmenuBack={currentSubmenu ? handleSubmenuBack : undefined}
         submenuTitle={currentSubmenu?.label}
         headerActions={headerActions}
@@ -233,9 +230,6 @@ const PageActionMenuPanel = memo(function PageActionMenuPanel({
 
 export const PageActionMenu = memo(function PageActionMenu({
   items: itemsProp,
-  onRefresh: onRefreshProp,
-  refreshBusy: refreshBusyProp,
-  refreshLabel: refreshLabelProp = "Aggiorna",
   back: backProp,
   className = "",
   headerActions: headerActionsProp,
@@ -252,9 +246,6 @@ export const PageActionMenu = memo(function PageActionMenu({
   const perms = usePermissionsSnapshot();
 
   const rawItems = itemsProp ?? ctx?.items ?? [];
-  const onRefresh = onRefreshProp ?? ctx?.onRefresh;
-  const refreshBusy = refreshBusyProp ?? ctx?.refreshBusy ?? false;
-  const refreshLabel = refreshLabelProp ?? ctx?.refreshLabel ?? "Aggiorna";
   const back =
     backProp !== undefined
       ? backProp
@@ -274,18 +265,14 @@ export const PageActionMenu = memo(function PageActionMenu({
   }, [ctx?.menuAttention, items, menuAttentionProp]);
 
   const singletonItem = useMemo(() => getSingletonPageActionListItem(items), [items]);
-  const refreshOnly = useMemo(
-    () => isRefreshOnlyPageActionMenu(items, { onRefresh }),
-    [items, onRefresh],
-  );
   const useDropdownMenu = useMemo(
-    () => shouldUsePageActionMenuDropdown(items, { onRefresh, backHref: back?.href }),
-    [items, onRefresh, back?.href],
+    () => shouldUsePageActionMenuDropdown(items, { backHref: back?.href }),
+    [items, back?.href],
   );
 
   const hasMenuContent = useMemo(
-    () => pageActionMenuHasContent(items, { onRefresh, backHref: back?.href }),
-    [items, onRefresh, back?.href],
+    () => pageActionMenuHasContent(items, { backHref: back?.href }),
+    [items, back?.href],
   );
 
   const openMenu = useCallback(() => {
@@ -340,28 +327,9 @@ export const PageActionMenu = memo(function PageActionMenu({
 
   if (!hasMenuContent) return null;
 
-  if (!useDropdownMenu && refreshOnly && onRefresh) {
-    return (
-      <div className={`relative shrink-0${className ? ` ${className}` : ""}`}>
-        <PageActionMenuRefreshButton
-          busy={refreshBusy}
-          label={refreshLabel}
-          onClick={onRefresh}
-        />
-      </div>
-    );
-  }
-
   if (!useDropdownMenu && singletonItem) {
     return (
       <div className={`flex shrink-0 items-center gap-1${className ? ` ${className}` : ""}`}>
-        {onRefresh ? (
-          <PageActionMenuRefreshButton
-            busy={refreshBusy}
-            label={refreshLabel}
-            onClick={onRefresh}
-          />
-        ) : null}
         <PageActionMenuDirectTrigger item={singletonItem} showDot={showDot} />
       </div>
     );
@@ -371,9 +339,6 @@ export const PageActionMenu = memo(function PageActionMenu({
     items,
     open,
     onClose: closeMenu,
-    onRefresh,
-    refreshBusy,
-    refreshLabel,
     back,
     headerActions: headerActionsProp,
   };

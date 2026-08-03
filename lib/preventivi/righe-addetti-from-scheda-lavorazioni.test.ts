@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
-import { righeAddettiFromSchedaLavorazioni } from "@/lib/preventivi/righe-addetti-from-scheda-lavorazioni";
+import {
+  oreSchedaAddettoMapFromLavorazioni,
+  oreSchedaForPreventivoRigaAddetto,
+  oreTotaliFromSchedaAddettoMap,
+  righeAddettiFromSchedaLavorazioni,
+} from "@/lib/preventivi/righe-addetti-from-scheda-lavorazioni";
 import type { SchedaLavorazioniDoc } from "@/types/schede";
 
 const addettiRecords = [
@@ -47,4 +52,14 @@ test("righeAddettiFromSchedaLavorazioni aggrega id e legacy da scheda", () => {
   const luca = righe.find((r) => r.addettoId === "add-2");
   assert.equal(marco?.ore, 4.5);
   assert.equal(luca?.ore, 2);
+});
+
+test("oreSchedaAddettoMapFromLavorazioni lookup per riga preventivo", () => {
+  const map = oreSchedaAddettoMapFromLavorazioni(lavScheda, addettiRecords);
+  assert.ok(map);
+  assert.equal(oreTotaliFromSchedaAddettoMap(map), 6.5);
+  assert.equal(
+    oreSchedaForPreventivoRigaAddetto(map, addettiRecords, { addettoId: "add-1", ore: 0 }),
+    4.5,
+  );
 });

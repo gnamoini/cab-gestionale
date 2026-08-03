@@ -154,7 +154,7 @@ export function normalizeBulkLabelRequest(
     items,
     preset: parsed.preset,
     format: parsed.format,
-    includeBarcode: parsed.includeBarcode,
+    includeBarcode: false,
     clienteLabel: parsed.clienteLabel,
     labelOptions: parsed.labelOptions,
     totalLabels: totalBulkLabelCount(items),

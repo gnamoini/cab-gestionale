@@ -12,6 +12,7 @@ import {
 } from "@/lib/pwa/sw-update";
 
 const PWA_UPDATE_EVENT = "cab-pwa-update-available";
+const PWA_UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1_000;
 
 export function dispatchPwaUpdateAvailable(): void {
   if (typeof window === "undefined") return;
@@ -25,30 +26,65 @@ export function PwaServiceWorkerBridge() {
 
     let removeUpdateListener: (() => void) | undefined;
     let registration: ServiceWorkerRegistration | null = null;
+    let bootstrapComplete = false;
+    let updateCheckInFlight = false;
+    let updateCheckTimer: number | undefined;
+    let cancelled = false;
 
-    void registerPwaServiceWorker().then(async (nextRegistration) => {
-      if (!nextRegistration) return;
-      registration = nextRegistration;
-      setPwaServiceWorkerRegistration(nextRegistration);
-      const unsubscribe = await bootstrapServiceWorkerUpdateFlow(
-        nextRegistration,
-        dispatchPwaUpdateAvailable,
-        subscribedAtMs,
-      );
-      if (unsubscribe) removeUpdateListener = unsubscribe;
-    });
+    const runUpdateCheck = () => {
+      if (
+        cancelled ||
+        !bootstrapComplete ||
+        !registration ||
+        document.visibilityState !== "visible" ||
+        navigator.onLine === false ||
+        updateCheckInFlight
+      ) {
+        return;
+      }
+      updateCheckInFlight = true;
+      void refreshServiceWorkerUpdateCheck(registration, subscribedAtMs).finally(() => {
+        updateCheckInFlight = false;
+      });
+    };
 
     const onVisible = () => {
-      if (document.visibilityState !== "visible" || !registration) return;
-      void refreshServiceWorkerUpdateCheck(registration, subscribedAtMs);
+      runUpdateCheck();
     };
 
     document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", onVisible);
+
+    void registerPwaServiceWorker().then(async (nextRegistration) => {
+      if (cancelled || !nextRegistration) return;
+      registration = nextRegistration;
+      setPwaServiceWorkerRegistration(nextRegistration);
+      updateCheckInFlight = true;
+      try {
+        const unsubscribe = await bootstrapServiceWorkerUpdateFlow(
+          nextRegistration,
+          dispatchPwaUpdateAvailable,
+          subscribedAtMs,
+        );
+        if (cancelled) {
+          unsubscribe?.();
+          return;
+        }
+        removeUpdateListener = unsubscribe ?? undefined;
+        bootstrapComplete = true;
+        updateCheckTimer = window.setInterval(runUpdateCheck, PWA_UPDATE_CHECK_INTERVAL_MS);
+      } finally {
+        updateCheckInFlight = false;
+      }
+    });
 
     return () => {
+      cancelled = true;
+      if (updateCheckTimer !== undefined) window.clearInterval(updateCheckTimer);
       removeControllerListener();
       removeUpdateListener?.();
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", onVisible);
       setPwaServiceWorkerRegistration(null);
     };
   }, []);

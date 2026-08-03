@@ -1,6 +1,5 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 
 import dynamic from "next/dynamic";
@@ -42,20 +41,54 @@ const PreventiviAdvancedFilterPanel = dynamic(
     import("@/components/preventivi/preventivi-advanced-filter-panel").then((m) => m.PreventiviAdvancedFilterPanel),
   { ssr: false },
 );
-const DdtDetailDrawer = dynamic(
-  () => import("@/components/ddt/ddt-detail-drawer").then((m) => m.DdtDetailDrawer),
+const PreventivoAnalisiEconomicaModal = dynamic(
+  () =>
+    import("@/components/preventivi/preventivo-analisi-economica-modal").then(
+      (m) => m.PreventivoAnalisiEconomicaModal,
+    ),
   { ssr: false },
 );
 const PreventiviLogDrawer = dynamic(
   () => import("@/components/preventivi/preventivi-log-drawer").then((m) => m.PreventiviLogDrawer),
   { ssr: false },
 );
+import { openDdtPdfInNewTab } from "@/lib/ddt/ddt-pdf";
 import { buildDdtDraftFromPreventivoAuto } from "@/lib/ddt/preventivo-to-ddt-draft";
-import type { DdtDetail } from "@/lib/ddt/types";
+import type { DdtStatus } from "@/lib/ddt/types";
 import { PreventivoEliminaConfirmDialog } from "@/components/preventivi/preventivo-elimina-confirm-dialog";
 import { PreventivoStatusCell } from "@/components/preventivi/preventivo-status-cell";
 import { PreventivoBillingBadge } from "@/components/fatturazione/preventivo-billing-badge";
 import { PreventivoTipoDocumentoBadge } from "@/components/preventivi/preventivo-tipo-documento-badge";
+import {
+  prevTableColAzioniClass,
+  prevTableColClienteClass,
+  prevTableColDataClass,
+  prevTableColIdentClass,
+  prevTableColNumeroClass,
+  prevTableColOggettoClass,
+  prevTableColStatoClass,
+  prevTableColTipoClass,
+  prevTableColTotaleClass,
+  prevTableColProfittoClass,
+} from "@/lib/preventivi/preventivi-table-columns";
+import {
+  PreventiviClienteStack,
+  PreventiviIdentificazioneCell,
+  PreventiviOggettoCell,
+  preventivoOggettoTelaioSubline,
+  PreventiviProfittoCell,
+  prevTableActionBtnDanger,
+  prevTableActionBtnPrimary,
+  prevTableActionBtnSecondary,
+  prevTableActionsRow,
+  prevTableBodyTextClass,
+  prevTableColStatoAddettoInset,
+  prevTablePrimaryTextClass,
+  prevTableTd,
+  prevTableTdAzioni,
+  prevTableTdPill,
+  prevTableTdPillWrap,
+} from "@/components/preventivi/preventivi-table-shared";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { useAuth } from "@/context/auth-context";
 import {
@@ -63,7 +96,6 @@ import {
   useCollapsiblePreference,
 } from "@/lib/ui/collapsible-prefs";
 import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
-import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import {
   mezziForPendingPreventivoHandoff,
   resolveMezzoForPendingPreventivo,
@@ -116,11 +148,14 @@ import { usePreventiviBillingQuery } from "@/src/hooks/gestionale/use-preventivi
 import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
 import { useLogListQuery, useMagazzinoRicambiUIQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
+import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
-import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { buildEmptyManualPreventivo } from "@/lib/preventivi/build-empty-manual-preventivo";
+import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { computePreventivoProfitto, profittoTabellaFromResult } from "@/lib/preventivi/preventivo-profitto";
+import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
 import {
   preventivoTipoDocumentoLabel,
 } from "@/lib/preventivi/preventivi-tipo-documento";
@@ -134,11 +169,7 @@ import {
   dsSegmentedWrap,
   GESTIONALE_SEARCH_PLACEHOLDER,
   dsTableRow,
-  dsTableActionsGroup,
   dsTableTdActions,
-  dsTableActionBtnPrimary,
-  dsTableActionBtnSecondary,
-  dsTableActionBtnDanger,
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
@@ -157,16 +188,11 @@ import {
 } from "@/components/design-system";
 import {
   gestionaleListTableMobileEmptyClass,
-  gestionaleListTableClass,
-  gestionaleListTableColStatoAddettoInsetClass,
-  gestionaleListTablePillColStyleFromLabels,
+  gestionalePreventiviDenseTableClass,
+  gestionaleListTableIsLastRow,
+  gestionaleListTableLastRowAttr,
   gestionaleListTableRowClass,
-  gestionaleListTableTd,
-  gestionaleListTableTdAzioni,
-  gestionaleListTableTdPill,
 } from "@/lib/ui/gestionale-list-table";
-import { PREVENTIVO_STATO_LABELS } from "@/lib/preventivi/preventivo-status-ui";
-
 function fmtDataCreazioneTabella(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString("it-IT", {
@@ -182,18 +208,6 @@ function fmtDataCreazioneTabella(iso: string): string {
 function preventivoClienteSubline(p: { cantiere: string; utilizzatore: string }): string {
   return [p.cantiere.trim(), p.utilizzatore.trim()].filter(Boolean).join(" · ");
 }
-
-function preventivoMezzoIdentSubline(p: { targa: string; matricola: string; nScuderia: string }): string {
-  const scud = p.nScuderia.trim();
-  return [p.targa.trim(), p.matricola.trim(), scud ? `scud. ${scud}` : ""].filter(Boolean).join(" · ");
-}
-
-const preventiviTableStackPrimary =
-  "line-clamp-2 text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-50";
-const preventiviTableStackSecondary =
-  "mt-0.5 line-clamp-1 text-xs leading-snug text-zinc-500 dark:text-zinc-400";
-const preventiviTableStackIdent =
-  "mt-0.5 line-clamp-1 font-mono text-xs leading-snug text-zinc-500 dark:text-zinc-400";
 
 function IconPreventivoEdit({ className = dsTableActionGlyph }: { className?: string }) {
   return (
@@ -216,10 +230,32 @@ function IconPreventivoPdf({ className = dsTableActionGlyph }: { className?: str
   );
 }
 
+/** Foglio + etichetta (PDF / DDT) per azioni tabella preventivi. */
+function PreventivoDocSheetGlyph({ label }: { label: string }) {
+  return (
+    <span className="relative inline-flex h-5 w-5 shrink-0 items-center justify-center">
+      <IconPreventivoPdf className="h-5 w-5 opacity-90" />
+      <span
+        className="absolute translate-y-[0.5px] rounded-[2px] bg-[var(--cab-surface)] px-[2px] py-px text-[9px] font-bold uppercase leading-none tracking-tight shadow-[0_0_0_1px_color-mix(in_srgb,var(--cab-border)_70%,transparent)] sm:text-[10px]"
+      >
+        {label}
+      </span>
+    </span>
+  );
+}
+
 function IconPreventivoTrash({ className = dsTableActionGlyph }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+}
+
+function IconPreventivoAnalisiEconomica({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M7 14l3-3 3 2 5-6" />
     </svg>
   );
 }
@@ -237,6 +273,7 @@ function PreventivoRowActions({
   onEdit,
   onDelete,
   onDdtAction,
+  onAnalisiEconomica,
 }: {
   p: PreventivoRecord;
   hrefLav: string | null;
@@ -244,12 +281,13 @@ function PreventivoRowActions({
   canDeleteRecords: boolean;
   canWritePreventivi: boolean;
   canReadPreventivi: boolean;
-  activeDdt: { status: DdtDetail["document"]["status"] } | null;
+  activeDdt: { status: DdtStatus } | null;
   ddtBusy: boolean;
   autore: string;
   onEdit: (rec: PreventivoRecord) => void;
   onDelete: (rec: PreventivoRecord) => void;
   onDdtAction: (rec: PreventivoRecord) => void;
+  onAnalisiEconomica: (rec: PreventivoRecord) => void;
 }) {
   const showDdt = canReadPreventivi && (canWritePreventivi || activeDdt != null);
   return (
@@ -260,7 +298,7 @@ function PreventivoRowActions({
           href={hrefLav}
           label="Lavorazione"
           tooltipForce
-          className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
+          className={`${prevTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
         >
           <IconNavLavorazioni className={dsTableActionGlyph} strokeWidth={2} />
         </IconActionButton>
@@ -269,40 +307,50 @@ function PreventivoRowActions({
         label="Modifica"
         tooltipContent={!canEditWorkOrders ? "Sola lettura" : undefined}
         tooltipForce
-        className={dsTableActionBtnPrimary}
+        className={prevTableActionBtnPrimary}
         disabled={!canEditWorkOrders}
         onClick={() => onEdit(p)}
       >
         <IconPreventivoEdit />
       </IconActionButton>
-      {showDdt ? (
-        <IconActionButton
-          label={activeDdt ? "Apri DDT" : "Genera DDT"}
-          tooltipForce
-          className={dsTableActionBtnSecondary}
-          disabled={ddtBusy || (!canWritePreventivi && !activeDdt)}
-          onClick={() => onDdtAction(p)}
-        >
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase">DDT</span>
-        </IconActionButton>
-      ) : null}
       <IconActionButton
-        label="PDF"
+        label="Apri PDF"
         tooltipForce
-        className={dsTableActionBtnSecondary}
+        className={prevTableActionBtnSecondary}
         onClick={() => {
           void importPreventiviPdf().then(({ openPreventivoPdfInNewTab }) =>
             openPreventivoPdfInNewTab(p, "Gestionale"),
           );
         }}
       >
-        <IconPreventivoPdf />
+        <PreventivoDocSheetGlyph label="PDF" />
       </IconActionButton>
+      {showDdt ? (
+        <IconActionButton
+          label={activeDdt ? "Apri DDT" : "Genera DDT"}
+          tooltipForce
+          className={prevTableActionBtnSecondary}
+          disabled={ddtBusy || (!canWritePreventivi && !activeDdt)}
+          onClick={() => onDdtAction(p)}
+        >
+          <PreventivoDocSheetGlyph label="DDT" />
+        </IconActionButton>
+      ) : null}
+      {canReadPreventivi ? (
+        <IconActionButton
+          label="Analisi Economica"
+          tooltipForce
+          className={prevTableActionBtnSecondary}
+          onClick={() => onAnalisiEconomica(p)}
+        >
+          <IconPreventivoAnalisiEconomica className={dsTableActionGlyph} />
+        </IconActionButton>
+      ) : null}
       <IconActionButton
         label="Elimina"
         tooltipContent={!canDeleteRecords ? "Sola lettura" : undefined}
         tooltipForce
-        className={dsTableActionBtnDanger}
+        className={prevTableActionBtnDanger}
         disabled={!canDeleteRecords}
         onClick={() => onDelete(p)}
       >
@@ -350,7 +398,7 @@ function comparePreventivo(a: PreventivoRecord, b: PreventivoRecord, key: Preven
 
 export function PreventiviView({ listSurface: serverListSurface, listTier = "xl" }: GestionaleListPageProps) {
   const listSurface = useListSurface(serverListSurface);
-  const { global: globalPerm, modules: permModules } = usePermissionsSnapshot();
+  const { modules: permModules } = usePermissionsSnapshot();
   const prevPerm = permModules.preventivi;
   const ordiniPerm = permModules.ordini_fornitori;
   const canEditWorkOrders = prevPerm.canWrite;
@@ -397,10 +445,9 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
     isPreventiviTab && (filterMezzoNeedsCatalog || nuovoHandoffEarly === "1" || editor.open);
   const needLavorazioniSlice =
     isPreventiviTab && filterMezzoRawEarly.startsWith("hub-lav-");
-  const needMagazzinoList = isPreventiviTab && editor.open;
+  const needMagazzinoList = isPreventiviTab;
   const { authorName: autore, user } = useAuth();
   const gestToast = useGestionaleToast();
-  const { confirm, confirmDialog } = useGestionaleConfirm();
   const queryClient = useQueryClient();
   const {
     searchInput,
@@ -462,6 +509,36 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
     () => splitLavorazioniListRowsForReport(lavorazioniListQ.data ?? []),
     [lavorazioniListQ.data],
   );
+  const lavorazioneIdsForSchede = useMemo(
+    () => [...new Set(rows.map((r) => r.lavorazioneId.trim()).filter(Boolean))],
+    [rows],
+  );
+  const { store: schedeStore, isLoading: schedeBundlesLoading } = useSchedeBundlesQuery(
+    isPreventiviTab && lavorazioneIdsForSchede.length > 0,
+    { lavorazioneIds: lavorazioneIdsForSchede },
+  );
+  const magazzinoById = useMemo(() => {
+    const m = new Map<string, RicambioMagazzino>();
+    for (const r of magSnap) m.set(r.id, r);
+    return m;
+  }, [magSnap]);
+  const profittoLoading =
+    magazzinoQ.isLoading || (lavorazioneIdsForSchede.length > 0 && schedeBundlesLoading);
+  const profittoByPreventivoId = useMemo(() => {
+    if (profittoLoading) return new Map<string, { profitto: number; marginePercent: number | null }>();
+    const out = new Map<string, { profitto: number; marginePercent: number | null }>();
+    for (const p of rows) {
+      const lavId = p.lavorazioneId.trim();
+      const bundle = lavId ? getOrCreateBundle(schedeStore, lavId) : null;
+      const result = computePreventivoProfitto({
+        preventivo: p,
+        bundle: lavId ? bundle : null,
+        magazzinoById,
+      });
+      out.set(p.id, profittoTabellaFromResult(result));
+    }
+    return out;
+  }, [rows, schedeStore, magazzinoById, profittoLoading]);
   const [sortColumn, setSortColumn] = useState<PreventivoSortKey | null>(null);
   const [sortPhase, setSortPhase] = useState<PreventivoSortPhase>("natural");
   const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
@@ -492,12 +569,8 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
     [autore, logQuery.data, user?.id],
   );
   const [eliminaConfirmRecord, setEliminaConfirmRecord] = useState<PreventivoRecord | null>(null);
+  const [analisiEconomicaPreventivoId, setAnalisiEconomicaPreventivoId] = useState<string | null>(null);
   const [eliminaPending, setEliminaPending] = useState(false);
-  const [ddtDrawer, setDdtDrawer] = useState<{
-    open: boolean;
-    detail: DdtDetail | null;
-    preventivo: PreventivoRecord | null;
-  }>({ open: false, detail: null, preventivo: null });
   const [ddtBusyId, setDdtBusyId] = useState<string | null>(null);
   const pendingStatusRef = useRef(new Set<string>());
 
@@ -685,23 +758,15 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
   const preventivoIdsForDdt = useMemo(() => sortedRows.map((r) => r.id), [sortedRows]);
   const { getDdtForPreventivo, refetch: refetchDdtIndex } = usePreventivoDdtIndex(preventivoIdsForDdt);
 
-  const openDdtDrawer = useCallback(
-    async (preventivo: PreventivoRecord, ddtId: string) => {
-      const detail = await ddtEntry.getDetail(ddtId);
-      if (!detail.success || !detail.data) {
-        gestToast.errorOnce("ddt-detail", detail.error ?? "Impossibile aprire il DDT.");
-        return;
-      }
-      setDdtDrawer({ open: true, detail: detail.data, preventivo });
-    },
-    [gestToast],
-  );
-
   const handleDdtAction = useCallback(
     async (preventivo: PreventivoRecord) => {
       const existing = getDdtForPreventivo(preventivo.id);
       if (existing) {
-        await openDdtDrawer(preventivo, existing.id);
+        try {
+          await openDdtPdfInNewTab(existing.id);
+        } catch (e) {
+          gestToast.errorOnce("ddt-print", e);
+        }
         return;
       }
       if (!canWritePreventivi) return;
@@ -711,7 +776,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
         const created = await ddtEntry.createOrReplaceForPreventivo(draft);
         if (!created.success || !created.data) throw new Error(created.error ?? "Creazione DDT non riuscita.");
         await refetchDdtIndex();
-        await openDdtDrawer(preventivo, created.data.id);
+        await openDdtPdfInNewTab(created.data.id);
         gestToast.successOnce("ddt-created", "DDT generato.");
       } catch (e) {
         gestToast.errorOnce("ddt-create", e);
@@ -719,49 +784,10 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
         setDdtBusyId(null);
       }
     },
-    [canWritePreventivi, getDdtForPreventivo, gestToast, openDdtDrawer, refetchDdtIndex],
+    [canWritePreventivi, getDdtForPreventivo, gestToast, refetchDdtIndex],
   );
-
-  const handleRegenerateDdt = useCallback(async () => {
-    const preventivo = ddtDrawer.preventivo;
-    if (!preventivo || !canWritePreventivi) return;
-    const ok = await confirm({
-      title: "Rigenerare DDT",
-      message: "Rigenerare il DDT? Il documento precedente verrà annullato.",
-      confirmLabel: "Rigenera",
-      destructive: true,
-    });
-    if (!ok) return;
-    setDdtBusyId(preventivo.id);
-    try {
-      const draft = buildDdtDraftFromPreventivoAuto({ preventivo, preventivoId: preventivo.id });
-      const created = await ddtEntry.createOrReplaceForPreventivo(draft);
-      if (!created.success || !created.data) throw new Error(created.error ?? "Rigenerazione non riuscita.");
-      await refetchDdtIndex();
-      await openDdtDrawer(preventivo, created.data.id);
-      gestToast.successOnce("ddt-regen", "DDT rigenerato.");
-    } catch (e) {
-      gestToast.errorOnce("ddt-regen", e);
-    } finally {
-      setDdtBusyId(null);
-    }
-  }, [canWritePreventivi, confirm, ddtDrawer.preventivo, gestToast, openDdtDrawer, refetchDdtIndex]);
-
-  const refreshDdtDrawer = useCallback(async () => {
-    const detail = ddtDrawer.detail;
-    if (!detail) return;
-    const next = await ddtEntry.getDetail(detail.document.id);
-    if (next.success && next.data) {
-      setDdtDrawer((prev) => ({ ...prev, detail: next.data! }));
-    }
-    void refetchDdtIndex();
-  }, [ddtDrawer.detail, refetchDdtIndex]);
 
   const listPageSize = useResponsiveListPageSize();
-  const preventivoStatoColStyle = useMemo(
-    () => gestionaleListTablePillColStyleFromLabels(Object.values(PREVENTIVO_STATO_LABELS)),
-    [],
-  );
   const preventiviPagerDeps = useMemo(
     () =>
       `${filterLavId ?? ""}|${filterOrig ?? ""}|${filterMezzoRaw}|${searchApplied}|${JSON.stringify(advancedFilters)}|${sortColumn ?? ""}|${sortPhase}`,
@@ -782,7 +808,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
         : null;
       const focused = focusPreventivoId === p.id;
       const clienteSub = preventivoClienteSubline(p);
-      const mezzoSub = preventivoMezzoIdentSubline(p);
+      const profitEntry = profittoByPreventivoId.get(p.id);
       return (
         <tr
           key={p.id}
@@ -790,50 +816,62 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
           className={`${gestionaleListTableRowClass} ${
             focused ? "ring-2 ring-inset ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]" : ""
           }`}
+          {...(gestionaleListTableIsLastRow(index, pagedRows.length)
+            ? { [gestionaleListTableLastRowAttr]: "true" }
+            : {})}
         >
-          <td className={`whitespace-nowrap ${gestionaleListTableTd} font-mono text-[13px] font-semibold tabular-nums text-zinc-900 dark:text-zinc-100`}>
+          <td className={`whitespace-nowrap ${prevTableTd} font-mono font-semibold tabular-nums`}>
             <span className="inline-flex max-w-full flex-wrap items-center gap-1">
               <span className="truncate">{p.numero}</span>
               <PreventivoBillingBadge status={preventiviBillingById.get(p.id)?.stato_fatturazione} />
             </span>
           </td>
-          <td className={`whitespace-nowrap ${gestionaleListTableTdPill}`}>
+          <td className={`whitespace-nowrap ${prevTableTdPill}`}>
             <PreventivoTipoDocumentoBadge tipo={p.tipoDocumento} variant="table" />
           </td>
-          <td className={`whitespace-nowrap ${gestionaleListTableTd} text-[13px] tabular-nums text-zinc-600 dark:text-zinc-300`}>
+          <td className={`whitespace-nowrap ${prevTableTd} ${prevTableBodyTextClass} tabular-nums`}>
             {fmtDataCreazioneTabella(p.dataCreazione)}
           </td>
-          <td className={`min-w-0 ${gestionaleListTableTd}`}>
-            <div className="min-w-0">
-              <p className={preventiviTableStackPrimary}>{p.cliente || "—"}</p>
-              {clienteSub ? (
-                <p className={preventiviTableStackSecondary}>{clienteSub}</p>
-              ) : null}
-            </div>
+          <td className={`min-w-0 ${prevTableTd}`}>
+            <PreventiviClienteStack cliente={p.cliente} subline={clienteSub} />
           </td>
-          <td className={`min-w-0 ${gestionaleListTableTd}`}>
-            <div className="min-w-0">
-              <p className={`${preventiviTableStackPrimary} font-normal text-zinc-800 dark:text-zinc-100`}>
-                {p.macchinaRiassunto || "—"}
-              </p>
-              {mezzoSub ? (
-                <p className={preventiviTableStackIdent}>{mezzoSub}</p>
-              ) : null}
-            </div>
-          </td>
-          <td className={`whitespace-nowrap ${gestionaleListTableTd} text-right text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-50`}>
-            {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
-          </td>
-          <td className={`whitespace-nowrap ${gestionaleListTableTdPill} ${gestionaleListTableColStatoAddettoInsetClass}`}>
-            <PreventivoStatusCell
-              record={p}
-              canWrite={canWritePreventivi}
-              disabled={pendingStatusRef.current.has(p.id)}
-              onStatusChange={onStatoRow}
+          <td className={`min-w-0 ${prevTableTd}`}>
+            <PreventiviOggettoCell
+              macchina={p.macchinaRiassunto}
+              telaio={preventivoOggettoTelaioSubline(p)}
             />
           </td>
-          <td className={gestionaleListTableTdAzioni}>
-            <div className={dsTableActionsGroup}>
+          <td className={`min-w-0 ${prevTableTd} gestionale-preventivi-col-ident`}>
+            <PreventiviIdentificazioneCell
+              targa={p.targa}
+              matricola={p.matricola}
+              nScuderia={p.nScuderia}
+            />
+          </td>
+          <td
+            className={`whitespace-nowrap ${prevTableTd} text-sm font-semibold tabular-nums ${prevTablePrimaryTextClass}`}
+          >
+            {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
+          </td>
+          <td className={`min-w-0 ${prevTableTd}`}>
+            <PreventiviProfittoCell
+              profitto={profittoLoading ? null : profitEntry?.profitto ?? null}
+              marginePercent={profittoLoading ? null : profitEntry?.marginePercent ?? null}
+              loading={profittoLoading}
+            />
+          </td>
+          <td className={`whitespace-nowrap ${prevTableTdPill} ${prevTableColStatoAddettoInset}`}>
+            <div className={prevTableTdPillWrap}>
+              <PreventivoStatusCell
+                record={p}
+                canWrite={canWritePreventivi}
+                disabled={pendingStatusRef.current.has(p.id)}
+                onStatusChange={onStatoRow}
+              />
+            </div>
+          </td>
+          <td className={prevTableTdAzioni}>
+            <div className={prevTableActionsRow}>
               <PreventivoRowActions
                 p={p}
                 hrefLav={hrefLav}
@@ -847,6 +885,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                 onEdit={apriModifica}
                 onDelete={openEliminaConfirm}
                 onDdtAction={(rec) => void handleDdtAction(rec)}
+                onAnalisiEconomica={openAnalisiEconomica}
               />
             </div>
           </td>
@@ -868,6 +907,8 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
       openEliminaConfirm,
       pagedRows,
       preventiviBillingById,
+      profittoByPreventivoId,
+      profittoLoading,
     ],
   );
 
@@ -1046,6 +1087,11 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
     setEditor({ open: true, record: p, isNew: false, isRollbackDraft: false });
   }
 
+  function openAnalisiEconomica(p: PreventivoRecord) {
+    if (!canReadPreventivi) return;
+    setAnalisiEconomicaPreventivoId(p.id);
+  }
+
   function openEliminaConfirm(p: PreventivoRecord) {
     if (!canDeleteRecords) return;
     setEliminaConfirmRecord(p);
@@ -1153,24 +1199,23 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
           <PageToolbar
             testId="page-ready-toolbar"
             primaryAction={
-              <Tooltip content={canEditWorkOrders ? "Crea un preventivo senza collegamento a lavorazione" : READONLY_PERMISSION_HINT}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    canEditWorkOrders &&
-                    setEditor({
-                      open: true,
-                      record: buildEmptyManualPreventivo(autore.trim() || "Operatore", rows),
-                      isNew: true,
-                      isRollbackDraft: false,
-                    })
-                  }
-                  className={dsPageToolbarCtaCompact}
-                  disabled={!canEditWorkOrders}
-                >
-                  <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo preventivo" />
-                </button>
-              </Tooltip>
+              <button
+                type="button"
+                onClick={() =>
+                  canEditWorkOrders &&
+                  setEditor({
+                    open: true,
+                    record: buildEmptyManualPreventivo(autore.trim() || "Operatore", rows),
+                    isNew: true,
+                    isRollbackDraft: false,
+                  })
+                }
+                className={dsPageToolbarCtaCompact}
+                disabled={!canEditWorkOrders}
+                aria-label="Nuovo preventivo"
+              >
+                <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo preventivo" />
+              </button>
             }
             search={
               <GestionaleListSearchField
@@ -1218,18 +1263,20 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
         <PreventiviTableSection mode="content" className="mt-4">
         {listSurface === "table" ? (
         <GestionaleListTable
-          className={gestionaleListTableClass}
+          className={gestionalePreventiviDenseTableClass}
           wrapClassName="mt-4"
           colgroup={
             <>
-              <col style={{ width: "7%" }} />
-              <col style={{ width: "4.5%" }} />
-              <col style={{ width: "7%" }} />
-              <col style={{ width: "18%" }} />
-              <col style={{ width: "20%" }} />
-              <col style={{ width: "8.5%" }} />
-              <col style={preventivoStatoColStyle} />
-              <col />
+              <col className={prevTableColNumeroClass} />
+              <col className={prevTableColTipoClass} />
+              <col className={prevTableColDataClass} />
+              <col className={prevTableColClienteClass} />
+              <col className={prevTableColOggettoClass} />
+              <col className={prevTableColIdentClass} />
+              <col className={prevTableColTotaleClass} />
+              <col className={prevTableColProfittoClass} />
+              <col className={prevTableColStatoClass} />
+              <col className={prevTableColAzioniClass} />
             </>
           }
           headRow={
@@ -1265,7 +1312,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                   thClassName="min-w-0"
                 />
                 <GlobalTableSortTh
-                  label="Mezzo"
+                  label="Oggetto"
                   columnKey="macchinaRiassunto"
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
@@ -1273,28 +1320,38 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                   thClassName="min-w-0"
                 />
                 <GlobalTableSortTh
+                  label="Identificazione"
+                  columnKey="targa"
+                  sortColumn={sortColumn}
+                  sortPhase={sortPhase}
+                  onSort={onSortMain}
+                  align="left"
+                  thClassName={`min-w-0 ${prevTableColIdentClass}`}
+                />
+                <GlobalTableSortTh
                   label="Totale"
                   columnKey="totaleFinale"
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  align="right"
+                  align="left"
                 />
+                <GlobalTableHeadLabel label="Profitto" align="left" />
                 <GlobalTableHeadLabel
                   label="Stato"
                   align="center"
-                  thClassName={gestionaleListTableColStatoAddettoInsetClass}
+                  thClassName={prevTableColStatoAddettoInset}
                 />
                 <GestionaleListTableActionsHead />
             </>
           }
           empty={pagedRows.length === 0}
           emptyMessage={tableEmptyMessage}
-          colSpan={8}
+          colSpan={10}
           virtualRows={{
             rowCount: pagedRows.length,
             renderRow: renderPreventivoDesktopRow,
-            estimateRowHeight: 56,
+            estimateRowHeight: 72,
           }}
         >
               {null}
@@ -1309,6 +1366,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                 ? buildPreventiviLavorazioneFocusHref(p.lavorazioneId, p.lavorazioneOrigine)
                 : null;
               const focused = focusPreventivoId === p.id;
+              const profitEntry = profittoByPreventivoId.get(p.id);
               return (
                 <CardMobile
                   key={p.id}
@@ -1326,10 +1384,25 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                         {p.cliente || "—"}
                       </p>
                       <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-200">{p.macchinaRiassunto || "—"}</p>
+                      {(() => {
+                        const telaioSub = preventivoOggettoTelaioSubline(p);
+                        return telaioSub ? (
+                          <p className="text-sm text-zinc-500 dark:text-zinc-400">{telaioSub}</p>
+                        ) : null;
+                      })()}
                     </div>
-                    <p className="shrink-0 text-right text-base font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-                      {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
-                    </p>
+                    <div className="shrink-0 text-right">
+                      <p className="text-base font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+                        {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
+                      </p>
+                      <div className="mt-0.5 flex justify-end">
+                        <PreventiviProfittoCell
+                          profitto={profittoLoading ? null : profitEntry?.profitto ?? null}
+                          marginePercent={profittoLoading ? null : profitEntry?.marginePercent ?? null}
+                          loading={profittoLoading}
+                        />
+                      </div>
+                    </div>
                   </div>
                   <dl className="mt-3 grid grid-cols-1 gap-x-3 gap-y-2 text-xs cab-shell-desktop:grid-cols-2">
                     <div>
@@ -1379,6 +1452,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                       onEdit={apriModifica}
                       onDelete={openEliminaConfirm}
                       onDdtAction={(rec) => void handleDdtAction(rec)}
+                      onAnalisiEconomica={openAnalisiEconomica}
                     />
                   </CardMobileActions>
                 </CardMobile>
@@ -1432,6 +1506,13 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
         </>
       )}
 
+      {analisiEconomicaPreventivoId ? (
+        <PreventivoAnalisiEconomicaModal
+          preventivoId={analisiEconomicaPreventivoId}
+          onClose={() => setAnalisiEconomicaPreventivoId(null)}
+        />
+      ) : null}
+
       <PreventivoEliminaConfirmDialog
         open={eliminaConfirmRecord != null}
         record={eliminaConfirmRecord}
@@ -1443,20 +1524,6 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
           void confirmEliminaPreventivo();
         }}
       />
-
-      {ddtDrawer.open ? (
-        <DdtDetailDrawer
-          open
-          detail={ddtDrawer.detail}
-          onClose={() => setDdtDrawer({ open: false, detail: null, preventivo: null })}
-          canWrite={canWritePreventivi}
-          isAdmin={globalPerm.isAdmin}
-          canRegenerate={canWritePreventivi}
-          regenerateBusy={ddtDrawer.preventivo != null && ddtBusyId === ddtDrawer.preventivo.id}
-          onRegenerate={() => void handleRegenerateDdt()}
-          onChanged={() => void refreshDdtDrawer()}
-        />
-      ) : null}
 
       {logOpen ? (
         <PreventiviLogDrawer
@@ -1473,7 +1540,6 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
           lockScroll={!(editor.open && canEditWorkOrders)}
         />
       ) : null}
-      {confirmDialog}
     </>
     </div>
     </PageActionMenuProvider>

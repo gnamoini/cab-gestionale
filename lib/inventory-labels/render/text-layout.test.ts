@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import type { LabelTemplateDefinition, LabelTemplateElement } from "@/lib/inventory-labels/domain/types";
 import { getLabelTemplate, labelMarginMm } from "@/lib/inventory-labels/domain/templates";
 import { linesFitDisplayWidth, linesFitWrapWidth } from "@/lib/inventory-labels/render/layout";
+import { labelFontSlotFor, linesFitInkWidthMm } from "@/lib/inventory-labels/render/text-paths";
 import { resolveLabelTextLayout } from "@/lib/inventory-labels/render/text-layout";
 import {
   blockHeightMm,
@@ -173,6 +174,45 @@ const a4Placed = resolveLabelTextLayout(a4, {
 const a4Codice = a4Placed.find((p) => p.field === "codice")!;
 const a4Marca2 = a4Placed.find((p) => p.field === "marcaSecondaria")!;
 assert.ok(a4Marca2.yMm - a4Codice.yMm >= 5.5, "A4: gap ampio tra codice e marca secondaria");
+for (const p of a4Placed) {
+  assert.equal(p.anchor, "middle");
+  assert.equal(p.xMm, a4.widthMm / 2);
+}
+
+const longDesc =
+  "FILTRO OLIO MOTORE AD ALTA PRESTAZIONE PER VEICOLI INDUSTRIALI E AUTOTRASPORTI";
+const a4LongPlaced = resolveLabelTextLayout(a4, {
+  marca: "BTE",
+  marcaSecondaria: "",
+  descrizione: longDesc,
+  codice: "COD-LUNGO-12345",
+  codiceSecondario: "",
+  fornitoreAlternativo: "",
+  codiceAlternativo: "",
+  fornitoriAlternativi: [],
+});
+const a4DescEl = a4.elements.find((e) => e.type === "text" && e.field === "descrizione")!;
+const a4DescW = a4DescEl.maxWidthMm ?? a4.widthMm - a4.marginsMm * 2;
+const a4ShortPlaced = resolveLabelTextLayout(a4, {
+  marca: "BTE",
+  marcaSecondaria: "",
+  descrizione: "FILTRO OLIO MOTORE",
+  codice: "FO-123",
+  codiceSecondario: "",
+  fornitoreAlternativo: "",
+  codiceAlternativo: "",
+  fornitoriAlternativi: [],
+});
+const a4ShortDesc = a4ShortPlaced.find((p) => p.field === "descrizione")!;
+assert.equal(a4ShortDesc!.lines.length, 1, "A4: descrizione corta su una riga");
+for (const p of a4LongPlaced) {
+  const base = p.font === "mono" ? "mono" : "sans";
+  const slot = labelFontSlotFor(base, true, true);
+  assert.ok(
+    linesFitInkWidthMm(p.lines, a4DescW, p.fontPt, a4.dpi, slot),
+    `A4 long text overflow: ${p.field}`,
+  );
+}
 
 const manualTemplate = getLabelTemplate("60x40-default", "manual")!;
 const manualPlaced = resolveLabelTextLayout(manualTemplate, {

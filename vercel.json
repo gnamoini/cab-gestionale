@@ -1,7 +1,9 @@
 {
   "crons": [
     { "path": "/api/cron/ai-runtime-sync", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/notification-outbox-processor", "schedule": "*/2 * * * *" },
     { "path": "/api/cron/push-delivery", "schedule": "0 4 * * *" },
-    { "path": "/api/cron/maintenance-forecast-notify", "schedule": "0 6 * * *" }
+    { "path": "/api/cron/maintenance-forecast-notify", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/dipendenti-presenze-reminder", "schedule": "0 16 * * 1-5" }
   ]
 }

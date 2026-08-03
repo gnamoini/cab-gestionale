@@ -11,7 +11,7 @@ import { dsPageToolbar, dsPageToolbarFilterColWidth, dsPageToolbarIconBtn, dsPag
  * - Search/filtri/state: contenuto e logica restano nelle view (ReactNode pass-through).
  * - Posizionamento: shell nel flusso pagina (scorre col contenuto); vietato sticky/fixed su shell e slot interni.
  * - Azioni modulo (undo, log, stampa, kanban, giacenza): restano in PageHeader, non qui.
- * - Mobile (< sm): search full-width; sotto CTA + filtri + overflow; meta compatta sotto con conteggio e reset.
+ * - Mobile (< sm): search full-width; sotto CTA + filtri + overflow; meta compatta sotto con conteggio e reset (wrap).
  * - Desktop (sm+) con CTA: una riga CTA | search | filtri; meta sotto.
  * - Desktop (sm+) senza CTA: search | filtri sulla stessa riga; meta sotto.
  */
@@ -159,7 +159,7 @@ export function ToolbarGroupMetaRow({
 }) {
   return (
     <div
-      className={`flex-safe-row min-w-0 max-w-full shrink-0 flex-row flex-nowrap items-center justify-between gap-2 border-t border-[color:var(--cab-border)] pt-2 sm:flex-wrap [&>*]:min-w-0 ${className}`.trim()}
+      className={`flex-safe-row min-w-0 max-w-full shrink-0 flex-row flex-wrap items-center justify-between gap-2 border-t border-[color:var(--cab-border)] pt-2 [&>*]:min-w-0 ${className}`.trim()}
     >
       {children}
     </div>

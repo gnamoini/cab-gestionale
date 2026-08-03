@@ -65,6 +65,7 @@ export function ControlTowerMetricsProvider({ children }: { children: ReactNode 
   useGestionaleSyncScope({
     scopeId: "dashboard-control-tower",
     domain: "dashboard",
+    route: "/dashboard",
     tables: [
       "log_modifiche",
       "lavorazioni",

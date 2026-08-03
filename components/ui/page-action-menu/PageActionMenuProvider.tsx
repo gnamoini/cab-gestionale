@@ -24,9 +24,6 @@ type RegisteredGroup = {
 export type PageActionMenuContextValue = {
   items: PageActionItem[];
   registerGroup: (group: string, order: number, items: PageActionItem[]) => () => void;
-  onRefresh?: () => void;
-  refreshBusy: boolean;
-  refreshLabel: string;
   back: PageActionMenuBackConfig | null;
   menuAttention: boolean;
 };
@@ -35,9 +32,6 @@ const PageActionMenuContext = createContext<PageActionMenuContextValue | null>(n
 
 export function PageActionMenuProvider({
   children,
-  onRefresh,
-  refreshBusy = false,
-  refreshLabel = "Aggiorna",
   back = null,
   menuAttention = false,
 }: PageActionMenuProviderProps) {
@@ -60,13 +54,10 @@ export function PageActionMenuProvider({
     () => ({
       items,
       registerGroup,
-      onRefresh,
-      refreshBusy,
-      refreshLabel,
       back: back ?? null,
       menuAttention,
     }),
-    [items, registerGroup, onRefresh, refreshBusy, refreshLabel, back, menuAttention],
+    [items, registerGroup, back, menuAttention],
   );
 
   return <PageActionMenuContext.Provider value={value}>{children}</PageActionMenuContext.Provider>;

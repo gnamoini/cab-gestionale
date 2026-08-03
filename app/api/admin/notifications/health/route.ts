@@ -65,6 +65,22 @@ export async function GET() {
   const avgRenderMs =
     rows.reduce((s, r) => s + (Number(r.render_ms) || 0), 0) / Math.max(rows.length, 1);
 
+  const { count: outboxPending } = await client
+    .from("notification_outbox")
+    .select("*", { count: "exact", head: true })
+    .in("status", ["pending", "processing"]);
+
+  const { count: outboxFailed } = await client
+    .from("notification_outbox")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "failed");
+
+  const { data: recentWorkerDiag } = await client
+    .from("notification_worker_diagnostics")
+    .select("worker_name, status, detail, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5);
+
   return NextResponse.json({
     ok: true,
     queue: {
@@ -72,6 +88,11 @@ export async function GET() {
       executivePending: execPending ?? 0,
       queueAgeMs,
     },
+    outbox: {
+      pending: outboxPending ?? 0,
+      failed: outboxFailed ?? 0,
+    },
+    workerDiagnostics: recentWorkerDiag ?? [],
     devices: { activeSubscriptions: activeSubs ?? 0 },
     delivery24h: {
       sampleSize: rows.length,

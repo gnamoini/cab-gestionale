@@ -54,9 +54,6 @@ export type UsePageActionMenuOptions = {
 
 export type PageActionMenuProviderProps = {
   children: ReactNode;
-  onRefresh?: () => void;
-  refreshBusy?: boolean;
-  refreshLabel?: string;
   back?: PageActionMenuBackConfig | null;
   /** Pallino sul trigger se true (es. notifiche non lette nel menu). */
   menuAttention?: boolean;
@@ -64,12 +61,8 @@ export type PageActionMenuProviderProps = {
 
 export type PageActionMenuProps = {
   items?: PageActionItem[];
-  onRefresh?: () => void;
-  refreshBusy?: boolean;
-  refreshLabel?: string;
   back?: PageActionMenuBackConfig | null;
   className?: string;
-  /** Azioni rapide in header panel (accanto ad Aggiorna). */
   headerActions?: ReactNode;
   /** Pallino sul trigger ⋮ — override esplicito; default da `attention`/`badge` sulle voci. */
   menuAttention?: boolean;

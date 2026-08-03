@@ -47,6 +47,10 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
       descrizione: String(r.descrizione ?? ""),
       quantita: Math.max(0.01, Number(r.quantita) || 0),
       prezzoUnitario: Math.max(0, Number(r.prezzoUnitario) || 0),
+      costoUnitario:
+        Number.isFinite(Number(r.costoUnitario)) && Number(r.costoUnitario) > 0
+          ? Math.round(Number(r.costoUnitario) * 100) / 100
+          : undefined,
       scontoPercent: Math.min(100, Math.max(0, Number(r.scontoPercent) || 0)),
       unitaMisura: parseRicambioUnitaMisura(r.unitaMisura),
       tipo:
@@ -86,6 +90,8 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
     })
     .filter((x) => x.addettoId || x.addettoLegacy || x.ore > 0);
 
+  const legacyRate = Math.max(0, Number(m.costoOrario) || 0);
+  const prezzoOrario = Math.max(0, Number(m.prezzoOrario) || 0) || legacyRate;
   const manodopera: PreventivoManodopera = {
     oreTotali: Math.max(0, Number(m.oreTotali) || 0),
     righeAddetti: righeAddetti.length
@@ -98,7 +104,8 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
             legacyWarning: "Addetto storico non convertibile: Officina",
           }) as PreventivoRigaAddetto,
         ],
-    costoOrario: Math.max(0, Number(m.costoOrario) || 0),
+    costoOrario: legacyRate,
+    prezzoOrario,
     scontoPercent: Math.min(100, Math.max(0, Number(m.scontoPercent) || 0)),
   };
   if (manodopera.oreTotali <= 0) {
@@ -145,7 +152,13 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
     righeRicambi,
     manodopera,
     sanificazionePrezzo: Math.max(0, Number(o.sanificazionePrezzo) || 0),
+    sanificazioneOre: o.sanificazioneOre == null ? 1 : Math.max(0, Number(o.sanificazioneOre) || 0),
+    sanificazioneDescrizione:
+      typeof o.sanificazioneDescrizione === "string" ? o.sanificazioneDescrizione : undefined,
     collaudoPrezzo: Math.max(0, Number(o.collaudoPrezzo) || 0),
+    collaudoOre: o.collaudoOre == null ? 1 : Math.max(0, Number(o.collaudoOre) || 0),
+    collaudoDescrizione:
+      typeof o.collaudoDescrizione === "string" ? o.collaudoDescrizione : undefined,
     noteFinali: String(o.noteFinali ?? ""),
     totaleRicambi: 0,
     totaleManodopera: 0,

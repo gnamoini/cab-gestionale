@@ -192,7 +192,8 @@ async function processBulkLabelJob(
       .eq("id", jobId);
     await auditBulkPdfStarted(sb, { userId: input.userId, count: totalLabels, mode: "async", jobId });
 
-    const { preset, includeBarcode, clienteLabel } = parseLabelJobPreset(input.preset);
+    const { preset, clienteLabel } = parseLabelJobPreset(input.preset);
+    const includeBarcode = false;
     const template = getLabelTemplate(preset, clienteLabel ? "cliente" : "internal");
     if (!template) throw new Error("Template non valido");
 
@@ -323,7 +324,7 @@ export async function retryBulkLabelJob(
     parseJobBulkItems(job.bulk_items).length > 0
       ? parseJobBulkItems(job.bulk_items)
       : parseJobBulkItems(job.entity_ids);
-  const { preset, includeBarcode, clienteLabel } = parseLabelJobPreset(String(job.preset ?? DEFAULT_LABEL_PRESET));
+  const { preset, clienteLabel } = parseLabelJobPreset(String(job.preset ?? DEFAULT_LABEL_PRESET));
   const now = new Date().toISOString();
   await sb
     .from("label_generation_jobs")
@@ -341,7 +342,7 @@ export async function retryBulkLabelJob(
   waitUntil(
     processBulkLabelJob(jobId, {
       items,
-      preset: formatLabelJobPreset(preset, includeBarcode, clienteLabel),
+      preset: formatLabelJobPreset(preset, false, clienteLabel),
       userId: input.userId,
       origin: input.origin,
     }),

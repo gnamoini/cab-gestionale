@@ -43,7 +43,6 @@ export {
   pageActionCreateItem,
   pageActionFiltersItem,
   pageActionLogItem,
-  pageActionRefreshItem,
   pageActionUndoItem,
   clickPageActionHiddenTrigger,
   type PageActionItem,

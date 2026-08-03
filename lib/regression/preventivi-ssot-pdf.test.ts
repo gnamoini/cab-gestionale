@@ -44,8 +44,12 @@ assert.match(previewPreventivo, /OfficialDocumentPreviewShell/);
 assert.match(previewPreventivo, /official-documents\/preventivo/);
 
 const clientResolver = read("lib/official-documents/client/resolve-client-documents.server.ts");
-assert.match(clientResolver, /buildClientOfficialDocumentPreviewPath\(token\.token\)/);
+assert.match(clientResolver, /buildOfficialDocumentTokenStreamPath/);
 assert.doesNotMatch(clientResolver, /buildStaffOfficialDocumentPreviewPath/);
+
+const officialStream = read("lib/official-documents/official-pdf-stream.server.ts");
+assert.match(officialStream, /deliverPdfArtifact/);
+assert.doesNotMatch(officialStream, /fetchCurrentPdfArtifactForEntityServer/);
 
 const staffResolver = read("lib/official-documents/staff/resolve-staff-documents.server.ts");
 assert.match(staffResolver, /buildStaffOfficialDocumentPreviewPath/);

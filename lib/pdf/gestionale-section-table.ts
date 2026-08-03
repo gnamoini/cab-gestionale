@@ -108,14 +108,11 @@ export function drawGestionaleTableHeadBorders(doc: jsPDF, data: CellHookData): 
 
   if (isSectionTitleHeadRow(data)) {
     doc.setDrawColor(...C_ACCENT);
-    doc.setLineWidth(0.5);
-    doc.line(x, y, x + width, y);
     doc.setLineWidth(0.35);
+    doc.line(x, y, x + width, y);
     doc.line(x, y, x, y + height);
-    drawHeadBottomRule(doc, x, y, width, height);
-    doc.setDrawColor(...C_RULE);
-    doc.setLineWidth(0.1);
     doc.line(x + width, y, x + width, y + height);
+    doc.line(x, y + height, x + width, y + height);
     return;
   }
 
@@ -243,7 +240,7 @@ function drawPanelFieldSectionTable(
 ): number {
   if (!fields.length) return startY;
 
-  const y = ensurePdfSpace(doc, startY, 18);
+  const y = ensurePdfSpace(doc, startY, estimateFieldSectionTableHeightMm(fields.length, multiline));
   const hooks = gestionaleSectionTableHooks(doc);
 
   autoTable(doc, {
@@ -377,6 +374,36 @@ function compactFieldColumnStyles(contentW: number) {
   };
 }
 
+/** Oggetto intervento preventivo: griglia 2×2 con label più larghe (Tipo attrezzatura su una riga). */
+export function compactOggettoInterventoColumnStyles(contentW: number) {
+  const halfW = contentW / 2;
+  const labelRatio = 0.4;
+  const labelW = halfW * labelRatio;
+  const valueW = halfW * (1 - labelRatio);
+  const cellPadding = PDF_DS_ROW_PAD_COMPACT;
+  const labelStyle = {
+    fontSize: 8.5,
+    textColor: C_LABEL,
+    fontStyle: "normal" as const,
+    valign: "top" as const,
+    cellPadding,
+  };
+  const valueStyle = {
+    fontSize: 9,
+    textColor: C_PRIMARY,
+    fontStyle: "normal" as const,
+    valign: "top" as const,
+    cellPadding,
+  };
+
+  return {
+    0: { cellWidth: labelW, ...labelStyle },
+    1: { cellWidth: valueW, ...valueStyle },
+    2: { cellWidth: labelW, ...labelStyle },
+    3: { cellWidth: valueW, ...valueStyle },
+  };
+}
+
 function tripleCompactFieldColumnStyles(contentW: number) {
   const thirdW = contentW / 3;
   const labelW = thirdW * PDF_DS_COL_LABEL_RATIO;
@@ -407,11 +434,44 @@ function tripleCompactFieldColumnStyles(contentW: number) {
     5: { cellWidth: valueW, ...valueStyle },
   };
 }
+
+function estimateFieldSectionTableHeightMm(fieldCount: number, multiline = false): number {
+  const headH = PDF_DS_HEAD_PAD_V * 2 + 4;
+  const rowH = multiline ? PDF_DS_MULTILINE_MIN_H + PDF_DS_ROW_PAD * 2 : 6.5;
+  return headH + fieldCount * rowH + 3;
+}
+
+function estimateCompactFieldSectionTableHeightMm(fieldCount: number): number {
+  const rows = compactFieldRowCount(fieldCount);
+  const headH = PDF_DS_HEAD_PAD_V_COMPACT * 2 + 4;
+  return headH + rows * 6.5 + 3;
+}
+
+function estimateTripleFieldSectionTableHeightMm(fieldCount: number): number {
+  const rows = tripleFieldRowCount(fieldCount);
+  const headH = PDF_DS_HEAD_PAD_V_COMPACT * 2 + 4;
+  return headH + rows * 6.5 + 3;
+}
+
+function estimateDataSectionTableHeightMm(
+  bodyRowCount: number,
+  opts?: { hasFoot?: boolean; extraHeadRows?: number },
+): number {
+  const extraHead = opts?.extraHeadRows ?? 0;
+  const titleHeadH = PDF_DS_HEAD_PAD_V * 2 + 4;
+  const colHeadH = PDF_DS_HEAD_PAD_V * 2 + 4;
+  const bodyH = bodyRowCount * 7;
+  const footH = opts?.hasFoot ? 7 : 0;
+  return titleHeadH + colHeadH + extraHead * colHeadH + bodyH + footH + 4;
+}
+
 function baseTableStyles() {
   return {
     theme: "grid" as const,
     tableLineWidth: 0.1,
     tableLineColor: C_RULE,
+    pageBreak: "avoid" as const,
+    rowPageBreak: "avoid" as const,
     styles: {
       overflow: "linebreak" as const,
       lineColor: C_RULE,
@@ -470,7 +530,7 @@ export function drawGestionaleFieldSectionTable(
 
   const multiline = opts?.multiline ?? false;
   const contentW = pdfContentWidth(pageW);
-  const y = ensurePdfSpace(doc, startY, 18);
+  const y = ensurePdfSpace(doc, startY, estimateFieldSectionTableHeightMm(fields.length, multiline));
   const hooks = gestionaleSectionTableHooks(doc);
 
   autoTable(doc, {
@@ -492,12 +552,19 @@ export function drawGestionaleFieldSectionTable(
     didParseCell: (data: CellHookData) => {
       hooks.didParseCell(data);
       suppressEmptyBodyCellBorders(data);
+      if (data.section === "body" && fields[data.row.index]?.bold) {
+        data.cell.styles.fontStyle = "bold";
+      }
     },
     didDrawCell: hooks.didDrawCell,
   });
 
   return getAutoTableFinalY(doc, y) + PDF_DS_SECTION_GAP;
 }
+
+export type GestionaleCompactFieldSectionTableOpts = {
+  columnStyles?: typeof compactFieldColumnStyles;
+};
 
 /** Sezione compatta 4 colonne (2 coppie label|value per riga) con header arancione. */
 export function drawGestionaleCompactFieldSectionTable(
@@ -506,11 +573,12 @@ export function drawGestionaleCompactFieldSectionTable(
   pageW: number,
   title: string,
   fields: PdfField[],
+  opts?: GestionaleCompactFieldSectionTableOpts,
 ): number {
   if (!fields.length) return startY;
 
   const contentW = pdfContentWidth(pageW);
-  const y = ensurePdfSpace(doc, startY, 18);
+  const y = ensurePdfSpace(doc, startY, estimateCompactFieldSectionTableHeightMm(fields.length));
   const hooks = gestionaleSectionTableHooks(doc, { compactHead: true });
 
   autoTable(doc, {
@@ -533,16 +601,26 @@ export function drawGestionaleCompactFieldSectionTable(
       },
       halign: "left",
     },
-    columnStyles: compactFieldColumnStyles(contentW),
+    columnStyles: (opts?.columnStyles ?? compactFieldColumnStyles)(contentW),
     didParseCell: (data: CellHookData) => {
       hooks.didParseCell(data);
       suppressEmptyBodyCellBorders(data);
+      if (data.section === "body" && data.column.index % 2 === 1) {
+        const fieldIndex = data.row.index * 2 + Math.floor(data.column.index / 2);
+        if (fields[fieldIndex]?.nowrap) {
+          data.cell.styles.overflow = "ellipsize";
+        }
+      }
     },
     didDrawCell: hooks.didDrawCell,
   });
 
   return getAutoTableFinalY(doc, y) + PDF_DS_SECTION_GAP;
 }
+
+export type GestionaleTripleFieldSectionTableOpts = {
+  columnStyles?: typeof tripleCompactFieldColumnStyles;
+};
 
 /** Sezione compatta 6 colonne (3 coppie label|value per riga) con header arancione. */
 export function drawGestionaleTripleFieldSectionTable(
@@ -551,11 +629,12 @@ export function drawGestionaleTripleFieldSectionTable(
   pageW: number,
   title: string,
   fields: PdfField[],
+  opts?: GestionaleTripleFieldSectionTableOpts,
 ): number {
   if (!fields.length) return startY;
 
   const contentW = pdfContentWidth(pageW);
-  const y = ensurePdfSpace(doc, startY, 18);
+  const y = ensurePdfSpace(doc, startY, estimateTripleFieldSectionTableHeightMm(fields.length));
   const hooks = gestionaleSectionTableHooks(doc, { compactHead: true });
 
   autoTable(doc, {
@@ -578,10 +657,16 @@ export function drawGestionaleTripleFieldSectionTable(
       },
       halign: "left",
     },
-    columnStyles: tripleCompactFieldColumnStyles(contentW),
+    columnStyles: (opts?.columnStyles ?? tripleCompactFieldColumnStyles)(contentW),
     didParseCell: (data: CellHookData) => {
       hooks.didParseCell(data);
       suppressEmptyBodyCellBorders(data);
+      if (data.section === "body" && data.column.index % 2 === 1) {
+        const fieldIndex = data.row.index * 3 + Math.floor(data.column.index / 2);
+        if (fields[fieldIndex]?.nowrap) {
+          data.cell.styles.overflow = "ellipsize";
+        }
+      }
     },
     didDrawCell: hooks.didDrawCell,
   });
@@ -656,7 +741,14 @@ export function drawGestionaleDataSectionTable(
   if (!headCells.length) return startY;
 
   const colCount = headCells.length;
-  const y = ensurePdfSpace(doc, startY, 18);
+  const y = ensurePdfSpace(
+    doc,
+    startY,
+    estimateDataSectionTableHeightMm(body.length, {
+      hasFoot: sectionTotal != null,
+      extraHeadRows: layout?.extraHeadRows?.length ?? 0,
+    }),
+  );
   const baseHooks = gestionaleSectionTableHooks(doc);
   const totalLabel = sectionTotal?.label?.trim() || "TOTALE";
   const tableWidth = layout?.tableWidth ?? pdfContentWidth(pageW);

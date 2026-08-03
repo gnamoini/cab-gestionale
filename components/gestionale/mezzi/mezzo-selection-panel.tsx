@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { LoadingErrorState } from "@/components/design-system";
+import { HubIconPlus } from "@/components/design-system/hub-table-action-icons";
 import { HighlightSearchMatch } from "@/components/gestionale/global-input/highlight-search-match";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { GlobalVirtualizedListbox } from "@/components/gestionale/global-input/global-virtualized-listbox";
@@ -26,12 +27,11 @@ const MEZZO_ROW_ESTIMATE_HEIGHT = 82;
 const MEZZO_PICKER_LIST_SCROLL_CLASS =
   "gestionale-scrollbar min-h-[10rem] max-h-[min(28rem,calc(92dvh-14rem))] overflow-y-auto overscroll-y-contain touch-pan-y [scrollbar-gutter:stable] px-1.5 py-1.5 sm:px-2 sm:py-2 max-md:max-h-[min(36rem,calc(100dvh-12rem))] [&>[data-listbox-row-index]]:mb-3.5";
 
-function mezzoPickerCardClass(active: boolean): string {
+function mezzoPickerCardClass(): string {
   return [
     "w-full rounded-[var(--ds-radius-lg)] border px-3.5 py-2.5 text-left transition-[border-color,background-color,box-shadow] duration-150 outline-none touch-manipulation",
-    active
-      ? "border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] shadow-[var(--cab-shadow-sm)] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]"
-      : "border-[color:color-mix(in_srgb,var(--cab-border)_85%,transparent)] bg-[var(--cab-surface)] shadow-[0_1px_2px_color-mix(in_srgb,var(--cab-border)_35%,transparent)] hover:border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] hover:bg-[var(--cab-hover)]",
+    "border-[color:color-mix(in_srgb,var(--cab-border)_85%,transparent)] bg-[var(--cab-surface)] shadow-[0_1px_2px_color-mix(in_srgb,var(--cab-border)_35%,transparent)]",
+    "hover:border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] hover:shadow-[var(--cab-shadow-sm)] hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]",
   ].join(" ");
 }
 
@@ -57,7 +57,7 @@ function MezzoPickerOptionRow({
       type="button"
       role="option"
       aria-selected={active}
-      className={mezzoPickerCardClass(active)}
+      className={mezzoPickerCardClass()}
       onClick={onSelect}
       onMouseEnter={onMouseEnter}
     >
@@ -357,6 +357,7 @@ export function MezzoSelectionPanelFooter({
         className={`${dsBtnPrimary} min-h-11 w-full shrink-0 sm:w-auto sm:min-w-[11rem]`}
         onClick={onNuovoMezzo}
       >
+        <HubIconPlus className="h-4 w-4 shrink-0" aria-hidden />
         Nuovo mezzo
       </button>
     </div>
@@ -370,6 +371,7 @@ export function MezzoSelectionPanelPrimaryFooter({
 }) {
   return (
     <button type="button" className={`${dsBtnPrimary} min-h-11 w-full`} onClick={onNuovoMezzo}>
+      <HubIconPlus className="h-4 w-4 shrink-0" aria-hidden />
       Nuovo mezzo
     </button>
   );

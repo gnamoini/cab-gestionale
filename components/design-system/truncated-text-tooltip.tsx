@@ -23,7 +23,7 @@ export function TruncatedTextTooltip({
 
   const measure = useCallback(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el?.isConnected) return;
     setIsTruncated(el.scrollWidth > el.clientWidth + 1);
   }, []);
 
@@ -36,19 +36,21 @@ export function TruncatedTextTooltip({
     return () => ro.disconnect();
   }, [text, measure]);
 
-  const line = (
-    <div ref={ref} className={className} title={undefined}>
-      {text}
-    </div>
-  );
-
-  if (!isTruncated || !text.trim()) {
-    return line;
-  }
+  const trimmed = text.trim();
+  const tooltipDisabled = !isTruncated || !trimmed;
 
   return (
-    <Tooltip content={text} side={side} showOnFocus={false} delayMs={delayMs} multiline={multiline}>
-      {line}
+    <Tooltip
+      content={text}
+      side={side}
+      showOnFocus={false}
+      delayMs={delayMs}
+      multiline={multiline}
+      disabled={tooltipDisabled}
+    >
+      <div ref={ref} className={className}>
+        {text}
+      </div>
     </Tooltip>
   );
 }

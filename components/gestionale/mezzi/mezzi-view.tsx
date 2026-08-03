@@ -713,7 +713,6 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
     <>
       <PageHeaderPageActionMenu
         items={mezziPageMenuItems}
-        onRefresh={() => void refetchMezzi()}
       />
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <MezziPageViewToggle value={pageView} onChange={handlePageViewChange} />

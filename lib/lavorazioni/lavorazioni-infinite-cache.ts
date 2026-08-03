@@ -1,5 +1,5 @@
 import type { InfiniteData, QueryClient } from "@tanstack/react-query";
-import { flattenPages } from "@/lib/domain/list-flatten";
+import { flattenLavorazioneListPages } from "@/lib/domain/list-flatten";
 import type { Page } from "@/lib/domain/list-types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
@@ -44,7 +44,7 @@ export function lavorazioniInfiniteSeedFromRows(
 export function coerceLavorazioniListRowsFromCache(data: unknown): LavorazioneListRow[] {
   if (!data) return [];
   if (Array.isArray(data)) return data;
-  if (isLavorazioniInfiniteListCacheData(data)) return [...flattenPages(data.pages)];
+  if (isLavorazioniInfiniteListCacheData(data)) return flattenLavorazioneListPages(data.pages) as LavorazioneListRow[];
   return [];
 }
 

@@ -12,6 +12,7 @@ import {
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
+import { usePwaUpdateGuard } from "@/lib/pwa/pwa-update-guard";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useOfficinaProfiloOperativo } from "@/lib/officina/use-officina-profilo-operativo";
@@ -30,6 +31,7 @@ import {
 import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
 import { persistPreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
 import { useMezziListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { maybeRecordLearningOnSave } from "@/lib/preventivi/trasforma-descrizione";
 import type { DescrizionePreventivoContext } from "@/lib/preventivi/preventivi-descrizione-aggregator";
 import { regeneratePreventivoDescription } from "@/lib/preventivi/regenerate-preventivo-description";
@@ -148,6 +150,7 @@ export function PreventiviEditorModal({
   const dataCreazioneFieldId = useId();
   const lavorazioniFieldId = useId();
   const costoOrarioFieldId = useId();
+  const prezzoOrarioFieldId = useId();
   const noteFieldId = useId();
 
   const applyTotals = useCallback((d: PreventivoRecord): PreventivoRecord => {
@@ -229,6 +232,7 @@ export function PreventiviEditorModal({
     if (!cur || !base) return false;
     return isPreventivoEditorDirty(normalizeEditorRecord(cur), normalizeEditorRecord(base));
   }, [draft, normalizeEditorRecord]);
+  usePwaUpdateGuard(isDirty, "Salva o chiudi il preventivo prima di aggiornare l'app.");
 
   const mezziListQ = useMezziListQuery(undefined, { enabled: open, staleTime: 30_000 });
   const mezziCatalog = mezziListQ.data ?? [];
@@ -249,6 +253,11 @@ export function PreventiviEditorModal({
     const lav = (lavorazioniListQ.data ?? []).find((row) => row.id === linkedLavorazioneId);
     return lav?.codice?.trim() || lavorazioneDisplayCodice({ id: linkedLavorazioneId });
   }, [linkedLavorazioneId, lavorazioniListQ.data]);
+
+  const { store: schedeStore } = useSchedeBundlesQuery(open && Boolean(linkedLavorazioneId), {
+    lavorazioneIds: linkedLavorazioneId ? [linkedLavorazioneId] : [],
+  });
+  const linkedSchedeBundle = linkedLavorazioneId ? schedeStore[linkedLavorazioneId] ?? null : null;
 
   const linkedLavorazioneIdentParts = useMemo(() => {
     if (!draft) return null;
@@ -588,8 +597,10 @@ export function PreventiviEditorModal({
               <PreventivoLavorazioniEditorSection
                 draft={draft}
                 totaleManodopera={totals.totaleManodopera}
+                schedaBundle={linkedSchedeBundle}
                 lavorazioniFieldId={lavorazioniFieldId}
                 costoOrarioFieldId={costoOrarioFieldId}
+                prezzoOrarioFieldId={prezzoOrarioFieldId}
                 onDescrizioneChange={(descrizioneLavorazioniCliente) => patch({ descrizioneLavorazioniCliente })}
                 onCostoOrarioChange={(costoOrario) =>
                   setDraft((prev) =>
@@ -601,7 +612,22 @@ export function PreventiviEditorModal({
                       : prev,
                   )
                 }
+                onPrezzoOrarioChange={(prezzoOrario) =>
+                  setDraft((prev) =>
+                    prev
+                      ? applyTotals({
+                          ...prev,
+                          manodopera: { ...prev.manodopera, prezzoOrario },
+                        })
+                      : prev,
+                  )
+                }
                 onCollaudoPrezzoChange={(collaudoPrezzo) => patch({ collaudoPrezzo })}
+                onCollaudoOreChange={(collaudoOre) => patch({ collaudoOre })}
+                onCollaudoDescrizioneChange={(collaudoDescrizione) => patch({ collaudoDescrizione })}
+                onSanificazionePrezzoChange={(sanificazionePrezzo) => patch({ sanificazionePrezzo })}
+                onSanificazioneOreChange={(sanificazioneOre) => patch({ sanificazioneOre })}
+                onSanificazioneDescrizioneChange={(sanificazioneDescrizione) => patch({ sanificazioneDescrizione })}
                 onPatchAddettoRow={patchAddettoRow}
                 onAddAddettoRow={addAddettoRow}
                 onRemoveAddettoRow={removeAddettoRow}

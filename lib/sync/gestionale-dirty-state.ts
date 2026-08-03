@@ -3,6 +3,7 @@ import type {
   GestionaleSyncDomain,
   GestionaleSyncScopeRegistration,
 } from "@/lib/sync/gestionale-sync-scope";
+import { getGestionaleSyncScopeGeneration, subscribeGestionaleSyncScopes } from "@/lib/sync/gestionale-sync-scope";
 
 export type DirtyEntryType = "create" | "update" | "delete";
 
@@ -155,7 +156,21 @@ function activeScopesCacheKey(scopes: readonly GestionaleSyncScopeRegistration[]
     .map((scope) => scope.scopeId)
     .sort()
     .join(",");
-  return `${snapshot.changeCount}|${scopeKey}`;
+  return `${snapshot.changeCount}|${getGestionaleSyncScopeGeneration()}|${scopeKey}`;
+}
+
+/** Revisione combinata dirty + scope — per `useSyncExternalStore`. */
+export function getGestionaleSyncStoreRevision(): string {
+  return `${snapshot.changeCount}|${getGestionaleSyncScopeGeneration()}`;
+}
+
+export function subscribeGestionaleDirtyAndScopes(fn: () => void): () => void {
+  const unsubDirty = subscribeGestionaleDirty(fn);
+  const unsubScope = subscribeGestionaleSyncScopes(fn);
+  return () => {
+    unsubDirty();
+    unsubScope();
+  };
 }
 
 /** Snapshot stabile per `useSyncExternalStore` — stesso ref finché dirty/scopes non cambiano. */

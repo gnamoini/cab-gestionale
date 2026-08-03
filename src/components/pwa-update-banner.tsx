@@ -9,6 +9,7 @@ import {
   applyServiceWorkerUpdate,
   getWaitingServiceWorker,
 } from "@/lib/pwa/sw-update";
+import { getPwaUpdateBlockReason } from "@/lib/pwa/pwa-update-guard";
 import { getPwaServiceWorkerRegistration } from "@/lib/pwa/sw-client";
 import { dsSystemBannerGhostBtn, dsSystemBannerPrimaryBtn } from "@/lib/ui/design-system";
 import { PWA_UPDATE_EVENT } from "@/src/components/pwa-service-worker-bridge";
@@ -16,11 +17,14 @@ import { PWA_UPDATE_EVENT } from "@/src/components/pwa-service-worker-bridge";
 export function PwaUpdateBanner() {
   const [visible, setVisible] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
 
   useEffect(() => {
     const onUpdate = () => {
       const registration = getPwaServiceWorkerRegistration();
       setVisible(Boolean(registration && getWaitingServiceWorker(registration)));
+      setBlockedReason(null);
+      setApplying(false);
     };
     window.addEventListener(PWA_UPDATE_EVENT, onUpdate);
     return () => {
@@ -31,12 +35,22 @@ export function PwaUpdateBanner() {
   const handleApply = useCallback(() => {
     const registration = getPwaServiceWorkerRegistration();
     if (!registration?.waiting) return;
-    setApplying(true);
-    applyServiceWorkerUpdate(registration);
+    const applied = applyServiceWorkerUpdate(registration);
+    if (applied) {
+      setBlockedReason(null);
+      setApplying(true);
+      return;
+    }
+    setApplying(false);
+    setBlockedReason(
+      getPwaUpdateBlockReason() ??
+        "L'aggiornamento non è pronto. Lascia aperto il gestionale e riprova tra poco.",
+    );
   }, []);
 
   const handleDismiss = useCallback(() => {
     setVisible(false);
+    setBlockedReason(null);
   }, []);
 
   if (!visible) return null;
@@ -45,7 +59,10 @@ export function PwaUpdateBanner() {
     <SystemBannerShell ariaLabel="Aggiornamento applicazione">
       <SystemBannerLayout
         title="Nuova versione disponibile"
-        description="È disponibile un aggiornamento del gestionale. Ricarica per applicarlo."
+        description={
+          blockedReason ??
+          "È disponibile un aggiornamento del gestionale. Ricarica per applicarlo."
+        }
         onDismiss={handleDismiss}
         dismissLabel="Chiudi suggerimento aggiornamento"
         actions={

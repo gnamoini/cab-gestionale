@@ -29,6 +29,8 @@ export type GestionaleListSearchFieldProps = Omit<GestionaleSearchFieldProps, "t
   suggestionPool?: readonly string[];
   suggestionLimit?: number;
   onFocusChange?: (focused: boolean) => void;
+  /** Override selezione suggerimento (es. codice+descrizione → query codice). */
+  onSuggestionSelect?: (label: string) => void;
 };
 
 export function GestionaleListSearchField({
@@ -40,6 +42,7 @@ export function GestionaleListSearchField({
   suggestionPool = [],
   suggestionLimit = 8,
   onFocusChange,
+  onSuggestionSelect,
   ...rest
 }: GestionaleListSearchFieldProps) {
   const autoId = useId();
@@ -139,7 +142,14 @@ export function GestionaleListSearchField({
       if (e.key === "Enter") {
         e.preventDefault();
         const idx = activeIndex >= 0 ? activeIndex : 0;
-        applySuggestion(suggestions[idx]!);
+        if (onSuggestionSelect) {
+          onSuggestionSelect(suggestions[idx]!);
+          setOpen(false);
+          setActiveIndex(-1);
+          setFocused(false);
+        } else {
+          applySuggestion(suggestions[idx]!);
+        }
         return;
       }
     }
@@ -219,7 +229,14 @@ export function GestionaleListSearchField({
                     onMouseDown={(e) => {
                       e.preventDefault();
                       if (blurTimer.current) clearTimeout(blurTimer.current);
-                      applySuggestion(option, false);
+                      if (onSuggestionSelect) {
+                        onSuggestionSelect(option);
+                        setOpen(false);
+                        setActiveIndex(-1);
+                        setFocused(false);
+                      } else {
+                        applySuggestion(option, false);
+                      }
                     }}
                     onMouseEnter={() => setActiveIndex(idx)}
                   >

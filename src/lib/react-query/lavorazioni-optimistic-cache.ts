@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { Page } from "@/lib/domain/list-types";
+import { flattenLavorazioneListPages } from "@/lib/domain/list-flatten";
 import type { NormalizedLavorazioniFilters } from "@/lib/domain/list-where-spec";
 import { logLavorazioniArchiveMembershipDebug } from "@/lib/lavorazioni/lavorazioni-archive-membership-debug";
 import {
@@ -55,7 +56,7 @@ function isLavorazioniFlatListCacheData(data: unknown): data is LavorazioniFlatL
 export function lavorazioniListCacheRows(data: LavorazioniListCacheData | undefined): LavorazioneListRow[] {
   if (!data) return [];
   if (isLavorazioniInfiniteListCacheData(data)) {
-    return data.pages.flatMap((p) => [...(p.rows ?? [])]);
+    return flattenLavorazioneListPages(data.pages) as LavorazioneListRow[];
   }
   if (!isLavorazioniFlatListCacheData(data)) return [];
   return [...data];
@@ -196,34 +197,43 @@ function patchInfiniteList(
   listArchived: boolean | null,
 ): LavorazioniInfiniteListData {
   const belongs = rowBelongsInArchivedList(merged, listArchived);
-  let placed = false;
-  const pages = data.pages.map((page) => {
-    const prev = [...(page.rows ?? [])];
-    const hadRow = prev.some((r) => r.id === lavorazioneId);
-    let rows: LavorazioneListRow[];
-    if (belongs) {
-      rows = hadRow ? prev.map((r) => (r.id === lavorazioneId ? merged : r)) : [...prev, merged];
-      if (rows.length > prev.length) placed = true;
-    } else {
-      rows = prev.filter((r) => r.id !== lavorazioneId);
-    }
-    return { ...page, rows };
-  });
-  if (belongs && !placed && !pages.some((p) => p.rows?.some((r) => r.id === lavorazioneId) ?? false)) {
-    if (pages.length === 0) {
-      return {
-        ...data,
-        pages: [
-          {
-            rows: [merged],
-            pageInfo: { hasNextPage: false, nextCursor: null, totalEstimate: 1 },
-          },
-        ],
-      };
-    }
-    const last = pages[pages.length - 1];
-    pages[pages.length - 1] = { ...last, rows: [...(last.rows ?? []), merged] };
+
+  if (!belongs) {
+    const pages = data.pages.map((page) => ({
+      ...page,
+      rows: (page.rows ?? []).filter((r) => r.id !== lavorazioneId),
+    }));
+    return { ...data, pages };
   }
+
+  const existsAnywhere = data.pages.some((page) =>
+    (page.rows ?? []).some((r) => r.id === lavorazioneId),
+  );
+
+  if (existsAnywhere) {
+    const pages = data.pages.map((page) => ({
+      ...page,
+      rows: (page.rows ?? []).map((r) => (r.id === lavorazioneId ? merged : r)),
+    }));
+    return { ...data, pages };
+  }
+
+  if (data.pages.length === 0) {
+    return {
+      ...data,
+      pages: [
+        {
+          rows: [merged],
+          pageInfo: { hasNextPage: false, nextCursor: null, totalEstimate: 1 },
+        },
+      ],
+    };
+  }
+
+  const pages = [...data.pages];
+  const lastIdx = pages.length - 1;
+  const last = pages[lastIdx];
+  pages[lastIdx] = { ...last, rows: [...(last.rows ?? []), merged] };
   return { ...data, pages };
 }
 

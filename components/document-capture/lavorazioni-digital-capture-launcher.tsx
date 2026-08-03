@@ -33,6 +33,7 @@ import {
 } from "@/components/document-capture/document-capture-step-indicator";
 import { discardEphemeralCaptureClient } from "@/lib/document-capture/discard-ephemeral-capture.client";
 import { deriveCaptureAcquisitionProgress } from "@/lib/document-capture/capture-acquisition-progress";
+import { getInFlightCaptureExecution } from "@/lib/document-capture/capture-execution-store";
 import { useDocumentCaptureUpload } from "@/lib/document-capture/use-document-capture-upload";
 import {
   fetchCaptureFieldRows,
@@ -181,7 +182,7 @@ export function LavorazioniDigitalCaptureLauncher({
   const skipAcquisitionDraftPersistRef = useRef(false);
   const applyV1 = isDocumentCaptureLauncherApplyV1ClientEnabled();
   const assignApplyFlow = useCaptureApplyFlow(applyV1 ? captureId : null);
-  const analyzeTriggeredRef = useRef<string | null>(null);
+  const [pipelineProcessing, setPipelineProcessing] = useState(false);
   const gestToast = useGestionaleToast();
 
   const { busy: wizardBusy, error, retryAfterSec, analyzePhase, heartbeatAt, runAnalyze, reset: resetWizardApi } = useDocumentCaptureWizardApi(captureId);
@@ -238,7 +239,7 @@ export function LavorazioniDigitalCaptureLauncher({
     sheetCompileDraftRef.current = null;
     resetWizardApi();
     resetUpload();
-    analyzeTriggeredRef.current = null;
+    setPipelineProcessing(false);
   }, [resetUpload, resetWizardApi]);
 
   const discardCurrentCapture = useCallback(() => {
@@ -517,8 +518,14 @@ export function LavorazioniDigitalCaptureLauncher({
         return;
       }
       setCaptureId(captureIdToUse);
-      analyzeTriggeredRef.current = captureIdToUse;
+      if (getInFlightCaptureExecution(captureIdToUse)) {
+        const ok = await runAnalyze(captureIdToUse, uploadDurationMs);
+        if (ok) await enterCompileStep(captureIdToUse);
+        return;
+      }
+      setPipelineProcessing(true);
       const ok = await runAnalyze(captureIdToUse, uploadDurationMs);
+      setPipelineProcessing(false);
       if (ok) await enterCompileStep(captureIdToUse);
     },
     [applyV1, enterCompileStep, runAnalyze],
@@ -531,7 +538,7 @@ export function LavorazioniDigitalCaptureLauncher({
       setStep("analyze");
       setCaptureId(null);
       setFieldRows(null);
-      analyzeTriggeredRef.current = null;
+      setPipelineProcessing(false);
       resetWizardApi();
 
       const result = await upload({ file });
@@ -839,8 +846,16 @@ export function LavorazioniDigitalCaptureLauncher({
         }),
       }).catch(() => null);
       setCaptureId(id);
-      analyzeTriggeredRef.current = id;
+      if (getInFlightCaptureExecution(id)) {
+        const ok = await runAnalyze(id);
+        if (ok) await enterCompileStep(id);
+        setPendingDuplicateOf(null);
+        setPendingUploadCaptureId(null);
+        return;
+      }
+      setPipelineProcessing(true);
       const ok = await runAnalyze(id);
+      setPipelineProcessing(false);
       if (ok) await enterCompileStep(id);
       setPendingDuplicateOf(null);
       setPendingUploadCaptureId(null);
@@ -863,18 +878,19 @@ export function LavorazioniDigitalCaptureLauncher({
             uploadPhase,
             uploadProgress,
             analyzeBusy: wizardBusy,
+            pipelineProcessing,
             uploadError,
             analyzePhase,
             heartbeatAt,
             useChecklist: true,
           })
         : null,
-    [step, uploadPhase, uploadProgress, uploadError, wizardBusy, analyzePhase, heartbeatAt],
+    [step, uploadPhase, uploadProgress, uploadError, wizardBusy, pipelineProcessing, analyzePhase, heartbeatAt],
   );
 
   const pipelineBusy =
     step === "analyze" &&
-    (uploadPhase === "uploading" || uploadPhase === "finalizing" || wizardBusy);
+    (uploadPhase === "uploading" || uploadPhase === "finalizing" || wizardBusy || pipelineProcessing);
 
   const stepCopy = DOCUMENT_CAPTURE_STEP_COPY[step];
   const footerBusy = wizardBusy || pipelineBusy || compileFieldsLoading || compileSubmitBusy || schedeHandoffBusy;

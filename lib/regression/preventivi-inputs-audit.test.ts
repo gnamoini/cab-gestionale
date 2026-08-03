@@ -65,7 +65,7 @@ assert.doesNotMatch(preventivoEditorSources, /`\$\{dsBtnNeutral\}/);
 
 const ricambi = read("components/preventivi/preventivo-ricambi-editor-section.tsx");
 assert.match(ricambi, /preventivoEditorTableInput/);
-assert.match(ricambi, /preventivoEditorUmSegmentWrap/);
+assert.match(ricambi, /RicambioUnitaMisuraPicker/);
 assert.doesNotMatch(ricambi, /dsSegmentedWrap/);
 
 const lavorazioni = read("components/preventivi/preventivo-lavorazioni-editor-section.tsx");

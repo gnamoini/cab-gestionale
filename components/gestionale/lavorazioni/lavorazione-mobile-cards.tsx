@@ -20,6 +20,7 @@ import {
 import {
   LavorazioneIngressoDateCell,
   LavorazioneNoteBadges,
+  lavMobilePillWidthClass,
   lavTableActionBtnDanger,
   lavTableActionBtnInfo,
   lavTableActionBtnPrimary,
@@ -60,7 +61,7 @@ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow, StatoLavorazione } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
 
-const lavTablePillFillClass = "w-full min-w-0";
+const lavTablePillFillClass = lavMobilePillWidthClass;
 
 function IconCloseWork({ className = dsTableActionGlyph }: { className?: string }) {
   return (
@@ -316,7 +317,7 @@ function LavorazioneArchivioMobileCardInner({
         <LavMobileInlineField label="Completamento" layout="stack">
           <LavorazioneCompletamentoDatePill
             iso={lavorazioneDataCompletamentoIso(row)}
-            fullWidth={false}
+            fullWidth
             onClick={
               canEditWorkOrders && onEditCompletamento
                 ? () => onEditCompletamento(row)
@@ -331,14 +332,18 @@ function LavorazioneArchivioMobileCardInner({
           />
         </LavMobileInlineField>
         <LavMobileInlineField label="Priorità" layout="stack">
-          <LavorazionePrioritaReadOnlyPill priorita={row.priorita} prioritaColors={prioritaColors} />
+          <LavorazionePrioritaReadOnlyPill
+            priorita={row.priorita}
+            prioritaColors={prioritaColors}
+            fullWidth
+          />
         </LavMobileInlineField>
         <LavMobileInlineField label="Addetto" layout="stack">
           <AddettoDisplayPill
             ref={addettoRef}
             addettiRecords={addettiRecords}
             addettoColors={addettoColors}
-            fullWidth={false}
+            fullWidth
           />
         </LavMobileInlineField>
       </LavorazioneMobileControlsPanel>

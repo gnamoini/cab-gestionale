@@ -32,7 +32,7 @@ export function buildAttrezzaturaPdfFields(p: PreventivoRecord): PdfField[] {
 /** Margini A4 ottimizzati per stampa (mm). */
 export const PDF_MARGIN_L = 22;
 export const PDF_MARGIN_R = 22;
-export const PDF_MARGIN_TOP = 18;
+export const PDF_MARGIN_TOP = 14;
 export const PDF_FOOTER_Y = 287;
 
 /** Spaziatura verticale tra sezioni principali del documento (mm). */
@@ -47,7 +47,7 @@ export const PDF_HEADER_BRAND_BLOCK_MM = 11;
 /** Altezza massima logo nel blocco brand (≤ slot per paginazione stabile). */
 export const PDF_HEADER_BRAND_MAX_MM = 10.5;
 /** Spazio tra fondo slot brand (logo/testo) e baseline titolo documento (mm). */
-export const PDF_HEADER_BRAND_TITLE_GAP_MM = 4.5;
+export const PDF_HEADER_BRAND_TITLE_GAP_MM = 3.5;
 /** Spazio tra metadati header (data/operatore) e contenuto — senza linea separatrice (mm). */
 export const PDF_HEADER_CONTENT_GAP_MM = 4;
 /** Gap aggiuntivo dopo `drawGestionalePdfHeader` prima della prima sezione/tabella (mm). */
@@ -62,7 +62,7 @@ const C_MUTED: [number, number, number] = [113, 113, 122];
 const C_RULE: [number, number, number] = [212, 212, 216];
 const C_TABLE_HEAD: [number, number, number] = [248, 250, 252];
 
-export type PdfField = { label: string; value: string };
+export type PdfField = { label: string; value: string; nowrap?: boolean; bold?: boolean };
 
 export function pdfContentWidth(pageW: number): number {
   return pageW - PDF_MARGIN_L - PDF_MARGIN_R;

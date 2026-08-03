@@ -131,7 +131,7 @@ export function LavorazioneReadOnlyPill({
     >
       {fullWidth && !actionRow ? (
         <span
-          className={`flex ${lavTablePillMinH} w-full items-center justify-center px-2 py-0.5 ${lavTablePillTextClass} whitespace-nowrap`}
+          className={`flex ${lavTablePillMinH} w-full items-center justify-center px-2 py-1 ${lavTablePillTextClass} whitespace-nowrap`}
         >
           {label}
         </span>
@@ -246,7 +246,7 @@ export function LavorazioneCompletamentoDatePill({
   const isMobile = useMaxMdDown();
   const widthClass = fullWidth ? "w-full min-w-0 max-w-full" : "w-fit min-w-0 max-w-full";
   const contentClass = fullWidth
-    ? `flex ${lavTablePillMinH} w-full items-center justify-center px-2 py-0.5 ${lavTablePillTextClass} whitespace-nowrap`
+    ? `flex ${lavTablePillMinH} w-full items-center justify-center px-2 py-1 ${lavTablePillTextClass} whitespace-nowrap`
     : `px-2 py-1 ${lavTablePillTextClass} whitespace-nowrap`;
 
   const button = (

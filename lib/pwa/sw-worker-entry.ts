@@ -40,6 +40,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
       cleanupOutdatedCaches();
+      // The client gates controllerchange reloads on the explicit update intent.
       await clientsClaim();
     })(),
   );

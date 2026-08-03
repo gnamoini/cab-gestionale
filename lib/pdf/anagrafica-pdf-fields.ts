@@ -207,16 +207,17 @@ export function buildPreventivoClientePdfFields(
 export function buildPreventivoSchedaIngressoAttrezzaturaPdfFields(p: PreventivoRecord): PdfField[] {
   const tipoEsplicito = p.tipoAttrezzatura?.trim();
   const tipoLegacy = !tipoEsplicito ? inferTipoAttrezzaturaPdfLegacy(p) : undefined;
-  const fields = [
-    pdfFieldFromValue("Tipo attrezzatura", tipoEsplicito || tipoLegacy),
+  const tipoValue = tipoEsplicito || tipoLegacy;
+  const fields: PdfField[] = [];
+  if (tipoValue) fields.push({ label: "Tipo\u00a0attrezzatura", value: tipoValue, nowrap: true });
+  for (const f of [
     pdfFieldFromValue("Marca", p.marcaAttrezzatura),
     pdfFieldFromValue("Modello", p.modelloAttrezzatura),
     pdfFieldFromValue("Matricola", p.matricola),
     pdfFieldFromValue("N. scuderia", p.nScuderia),
-  ].filter((f): f is PdfField => f !== null);
-  if (fields.length > 0) return fields;
-  const macchina = p.macchinaRiassunto.trim();
-  if (macchina) return [{ label: "Macchina", value: macchina }];
+  ]) {
+    if (f) fields.push(f);
+  }
   return fields;
 }
 
@@ -229,11 +230,8 @@ export function buildPreventivoSchedaIngressoTelaioPdfFields(p: PreventivoRecord
   ].filter((f): f is PdfField => f !== null);
   if (fields.length > 0) return fields;
   const targa = p.targa.trim();
-  const macchina = p.macchinaRiassunto.trim();
-  const legacy: PdfField[] = [];
-  if (targa) legacy.push({ label: "Targa", value: targa });
-  if (macchina) legacy.push({ label: "Macchina", value: macchina });
-  return legacy;
+  if (targa) return [{ label: "Targa", value: targa }];
+  return fields;
 }
 
 /** Campi oggetto intervento — allineati alla scheda ingresso del modal preventivo (no ore/km/carburante). */

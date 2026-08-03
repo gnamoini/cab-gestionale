@@ -5,6 +5,7 @@ import { refreshSchedeBundleSliceForSchedaId } from "@/lib/schede/schede-bundle-
 import { markSchedeEnsureAfterInvalidate } from "@/lib/schede/schede-ensure-options";
 import { markEntityInvalidated } from "@/lib/sync/recent-entity-invalidation";
 import { QK } from "@/src/lib/react-query/query-keys";
+import { isLavorazioniListCountQueryKey } from "@/lib/lavorazioni/lavorazioni-list-query-keys";
 import { isLavorazioniListCacheQueryKey } from "@/src/lib/react-query/lavorazioni-optimistic-cache";
 import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-domain.queries";
 
@@ -129,12 +130,27 @@ export function invalidateGestionaleTablesForEntity(
       refetchType,
     });
     void qc.invalidateQueries({
+      predicate: (q) => isLavorazioniListCountQueryKey(q.queryKey),
+      refetchType,
+    });
+    void qc.invalidateQueries({
       queryKey: lavorazioniDomainQueryKeys.base(entityId),
       refetchType,
     });
+    void qc.invalidateQueries({ queryKey: QK.schede, refetchType });
+    void qc.invalidateQueries({ queryKey: QK.log, refetchType });
     if (includePortal) {
       void qc.invalidateQueries({
         queryKey: [...QK.clientLavorazioniDetail, entityId],
+        refetchType,
+      });
+      void qc.invalidateQueries({
+        queryKey: [...QK.clientLavorazioneDocuments, entityId],
+        refetchType,
+      });
+      void qc.invalidateQueries({
+        predicate: (q) =>
+          q.queryKey[0] === QK.clientLavorazionePhotos[0] && q.queryKey[1] === entityId,
         refetchType,
       });
     }

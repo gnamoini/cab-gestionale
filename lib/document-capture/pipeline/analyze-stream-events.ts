@@ -1,4 +1,13 @@
+import type { CapturePipelineTerminalState } from "@/lib/document-capture/orchestrator/pipeline-types";
 import type { AnalyzeTracePhase } from "@/lib/document-capture/pipeline/analyze-trace-types";
+
+export type CaptureAnalyzeStreamExecutionMeta = {
+  captureId: string;
+  pipelineVersion: string;
+  executionId: string;
+  traceId?: string;
+  correlationId?: string;
+};
 
 export type CaptureAnalyzeStreamPhaseEvent = {
   type: "phase";
@@ -6,6 +15,7 @@ export type CaptureAnalyzeStreamPhaseEvent = {
   outcome: "ok" | "fail" | "skip";
   elapsedMs: number;
   label?: string;
+  execution?: CaptureAnalyzeStreamExecutionMeta;
 };
 
 export type CaptureAnalyzeStreamHeartbeatEvent = {
@@ -20,12 +30,23 @@ export type CaptureAnalyzeStreamResultEvent = {
   type: "result";
   ok: boolean;
   body: Record<string, unknown>;
+  execution?: CaptureAnalyzeStreamExecutionMeta;
+};
+
+export type CaptureAnalyzeStreamTerminalEvent = {
+  type: "terminal";
+  terminalState: CapturePipelineTerminalState;
+  execution: CaptureAnalyzeStreamExecutionMeta;
+  code?: string;
+  message?: string;
+  elapsedMs: number;
 };
 
 export type CaptureAnalyzeStreamEvent =
   | CaptureAnalyzeStreamPhaseEvent
   | CaptureAnalyzeStreamHeartbeatEvent
-  | CaptureAnalyzeStreamResultEvent;
+  | CaptureAnalyzeStreamResultEvent
+  | CaptureAnalyzeStreamTerminalEvent;
 
 export const CAPTURE_ANALYZE_NDJSON_ACCEPT = "application/x-ndjson";
 

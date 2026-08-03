@@ -21,6 +21,7 @@ import { useAddettiRecords, useTipiAssenza } from "@/src/hooks/use-global-option
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
+import { usePwaUpdateGuard } from "@/lib/pwa/pwa-update-guard";
 import { QK } from "@/src/lib/react-query/query-keys";
 import { dipendentiTimesheetEntry } from "@/lib/domain/dipendenti-timesheet-entry";
 import {
@@ -95,6 +96,10 @@ export function useDipendentiTimesheet(
   const pendingInputsRef = useRef<Map<string, TimesheetEntryUpsert>>(new Map());
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSyncKeyRef = useRef<string | null>(null);
+  usePwaUpdateGuard(
+    saveStatus === "pending" || syncInProgress,
+    "Attendi il completamento del salvataggio del timesheet prima di aggiornare l'app.",
+  );
 
   const periodRange = useMemo(
     () =>

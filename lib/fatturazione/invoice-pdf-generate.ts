@@ -38,7 +38,7 @@ export function generateInvoicePdfBytes(detail: InvoiceDetail, logoDataUrl: stri
   for (const row of detail.rows) {
     if (y > 270) {
       doc.addPage();
-      y = 20;
+      y = 16;
     }
     doc.text(row.descrizione.slice(0, 80), 14, y);
     doc.text(row.totale.toFixed(2), pageW - 14, y, { align: "right" });

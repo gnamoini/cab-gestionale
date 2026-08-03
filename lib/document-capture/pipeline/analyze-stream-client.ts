@@ -4,11 +4,14 @@ import {
   type CaptureAnalyzeStreamEvent,
 } from "@/lib/document-capture/pipeline/analyze-stream-events";
 import type { AnalyzeTracePhase } from "@/lib/document-capture/pipeline/analyze-trace-types";
+import type { CapturePipelineTerminalState } from "@/lib/document-capture/orchestrator/pipeline-types";
 
 export type ConsumeCaptureAnalyzeStreamResult = {
   ok: boolean;
   body: Record<string, unknown>;
   lastPhase: AnalyzeTracePhase | null;
+  terminalState?: CapturePipelineTerminalState | null;
+  executionId?: string | null;
 };
 
 export async function consumeCaptureAnalyzeNdjsonStream(
@@ -24,6 +27,8 @@ export async function consumeCaptureAnalyzeNdjsonStream(
   const decoder = new TextDecoder();
   let buffer = "";
   let lastPhase: AnalyzeTracePhase | null = null;
+  let terminalState: CapturePipelineTerminalState | null = null;
+  let executionId: string | null = null;
   let result: ConsumeCaptureAnalyzeStreamResult = { ok: false, body: {}, lastPhase: null };
 
   while (true) {
@@ -39,8 +44,18 @@ export async function consumeCaptureAnalyzeNdjsonStream(
       if (event.type === "phase") {
         lastPhase = event.phase;
       }
+      if (event.type === "terminal") {
+        terminalState = event.terminalState;
+        executionId = event.execution.executionId;
+      }
       if (event.type === "result") {
-        result = { ok: event.ok, body: event.body, lastPhase };
+        result = {
+          ok: event.ok,
+          body: event.body,
+          lastPhase,
+          terminalState,
+          executionId: event.execution?.executionId ?? executionId,
+        };
       }
     }
   }
@@ -50,28 +65,30 @@ export async function consumeCaptureAnalyzeNdjsonStream(
     if (event) {
       onEvent?.(event);
       if (event.type === "phase") lastPhase = event.phase;
+      if (event.type === "terminal") {
+        terminalState = event.terminalState;
+        executionId = event.execution.executionId;
+      }
       if (event.type === "result") {
-        result = { ok: event.ok, body: event.body, lastPhase };
+        result = {
+          ok: event.ok,
+          body: event.body,
+          lastPhase,
+          terminalState,
+          executionId: event.execution?.executionId ?? executionId,
+        };
       }
     }
   }
 
-  return { ...result, lastPhase };
+  if (!terminalState && result.ok) {
+    terminalState = "completed";
+  }
+  if (!terminalState && !result.ok) {
+    terminalState = "failed";
+  }
+
+  return { ...result, lastPhase, terminalState, executionId };
 }
 
-export async function postCaptureProcessStream(
-  captureId: string,
-  onEvent?: (event: CaptureAnalyzeStreamEvent) => void,
-  options?: { uploadDurationMs?: number },
-): Promise<ConsumeCaptureAnalyzeStreamResult & { response: Response }> {
-  const headers: Record<string, string> = { Accept: CAPTURE_ANALYZE_NDJSON_ACCEPT };
-  if (options?.uploadDurationMs != null) {
-    headers["x-capture-upload-duration-ms"] = String(options.uploadDurationMs);
-  }
-  const response = await fetch(`/api/document-capture/${captureId}/process`, {
-    method: "POST",
-    headers,
-  });
-  const parsed = await consumeCaptureAnalyzeNdjsonStream(response, onEvent);
-  return { ...parsed, response };
-}
+export { CAPTURE_ANALYZE_NDJSON_ACCEPT };

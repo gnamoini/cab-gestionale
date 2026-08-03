@@ -56,6 +56,7 @@ export function createWebPushProvider(
           dedup_key: ctx.notification.dedupKey,
           type: ctx.resolved.notificationType,
           entity_id: ctx.notification.entityId,
+          traceId: ctx.resolved.id,
         }),
       );
       const renderMs = Date.now() - renderStart;
@@ -105,6 +106,7 @@ async function recordDelivery(
     provider_ms: providerMs,
     error: error ?? null,
     recipient_id: ctx.recipient.id,
+    trace_id: ctx.resolved.id,
   });
 }
 

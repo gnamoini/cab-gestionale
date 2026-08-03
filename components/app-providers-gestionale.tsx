@@ -14,7 +14,6 @@ import { ObservabilityDiagnosticsPack } from "@/components/observability/observa
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { DeferredUploadFeedbackShell } from "@/components/gestionale/deferred-upload-feedback-shell";
 import { DeferredSupabaseConfigurationBanner } from "@/components/gestionale/deferred-supabase-configuration-banner";
-import { DeferredDataStaleBanner } from "@/components/gestionale/deferred-data-stale-banner";
 import {
   markProviderMountEnd,
   markProviderMountStart,
@@ -61,7 +60,6 @@ export function AppProvidersGestionale({ children }: { children: React.ReactNode
                             <GestionaleDirtyProvider>
                               <GestionaleDirtySyncModeBridge />
                               <DeferredGestionaleBridges />
-                              <DeferredDataStaleBanner />
                               {children}
                             </GestionaleDirtyProvider>
                           </PermissionsSnapshotMount>

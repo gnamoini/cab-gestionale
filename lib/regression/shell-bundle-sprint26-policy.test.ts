@@ -38,7 +38,7 @@ assert.match(deferSrc, /__GESTIONALE_FEATURE_FLAGS__/);
 const providers = fs.readFileSync(path.join(ROOT, "components/app-providers-gestionale.tsx"), "utf8");
 assert.match(providers, /DeferredUploadFeedbackShell/);
 assert.match(providers, /DeferredSupabaseConfigurationBanner/);
-assert.match(providers, /DeferredDataStaleBanner/);
+assert.doesNotMatch(providers, /DeferredDataStaleBanner/);
 assert.doesNotMatch(providers, /from ["']@\/components\/gestionale\/upload["']/);
 
 const gestionaleLayout = fs.readFileSync(path.join(ROOT, "app/(gestionale)/layout.tsx"), "utf8");

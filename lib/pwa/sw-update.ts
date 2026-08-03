@@ -1,12 +1,15 @@
+import {
+  clearPwaUpdateApplyRequested,
+  markPwaUpdateApplyRequested,
+} from "@/lib/pwa/sw-client";
+import { getPwaUpdateBlockReason } from "@/lib/pwa/pwa-update-guard";
+
 export type PwaUpdateState = "idle" | "available" | "applying";
 
 export const PWA_SKIP_WAITING_MESSAGE = { type: "SKIP_WAITING" } as const;
 
-/** sessionStorage: assente = cold start (prima load tab/sessione). */
+/** sessionStorage: assente = primo bootstrap della tab. */
 export const PWA_SESSION_ACTIVE_KEY = "pwa-session-active";
-
-/** sessionStorage: bootstrap SW in corso — auto-apply invece del banner. */
-export const PWA_BOOTSTRAP_PENDING_KEY = "pwa-bootstrap-pending";
 
 /** Finestra post-load: notifica warm solo dopo bootstrap. */
 export const PWA_UPDATE_BOOTSTRAP_MS = 2_000;
@@ -17,46 +20,29 @@ export const PWA_UPDATE_SETTLE_TIMEOUT_MS = 8_000;
 function resolveSessionStorage(storage?: Storage | null): Storage | null {
   if (storage !== undefined) return storage;
   if (typeof sessionStorage === "undefined") return null;
-  return sessionStorage;
+  try {
+    return sessionStorage;
+  } catch {
+    return null;
+  }
 }
 
 export function isColdStartSession(storage?: Storage | null): boolean {
   const s = resolveSessionStorage(storage);
   if (!s) return false;
-  return !s.getItem(PWA_SESSION_ACTIVE_KEY);
-}
-
-export function isPwaBootstrapPending(storage?: Storage | null): boolean {
-  const s = resolveSessionStorage(storage);
-  if (!s) return false;
-  return !!s.getItem(PWA_BOOTSTRAP_PENDING_KEY);
-}
-
-export function isNavigationReload(): boolean {
-  if (typeof performance === "undefined") return false;
-  const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
-  return nav?.type === "reload";
+  try {
+    return !s.getItem(PWA_SESSION_ACTIVE_KEY);
+  } catch {
+    return false;
+  }
 }
 
 export function markPwaSessionActive(storage?: Storage | null): void {
-  resolveSessionStorage(storage)?.setItem(PWA_SESSION_ACTIVE_KEY, "1");
-}
-
-export function beginPwaBootstrap(storage?: Storage | null): void {
-  resolveSessionStorage(storage)?.setItem(PWA_BOOTSTRAP_PENDING_KEY, "1");
-}
-
-export function endPwaBootstrap(storage?: Storage | null): void {
-  resolveSessionStorage(storage)?.removeItem(PWA_BOOTSTRAP_PENDING_KEY);
-  markPwaSessionActive(storage);
-}
-
-export function clearPwaBootstrapPending(storage?: Storage | null): void {
-  resolveSessionStorage(storage)?.removeItem(PWA_BOOTSTRAP_PENDING_KEY);
-}
-
-export function shouldAutoApplySilently(storage?: Storage | null): boolean {
-  return isColdStartSession(storage) || isNavigationReload() || isPwaBootstrapPending(storage);
+  try {
+    resolveSessionStorage(storage)?.setItem(PWA_SESSION_ACTIVE_KEY, "1");
+  } catch {
+    /* best effort */
+  }
 }
 
 export function shouldNotifyServiceWorkerUpdateAfterBootstrap(
@@ -72,32 +58,19 @@ export function getWaitingServiceWorker(
   return registration.waiting ?? null;
 }
 
-export function applyServiceWorkerUpdate(registration: ServiceWorkerRegistration): void {
+export function applyServiceWorkerUpdate(registration: ServiceWorkerRegistration): boolean {
   const waiting = getWaitingServiceWorker(registration);
-  waiting?.postMessage(PWA_SKIP_WAITING_MESSAGE);
-}
-
-/** Cold start, reload o bootstrap pending: applica subito se c'è un SW in attesa. */
-export function tryAutoApplyOnColdStart(
-  registration: ServiceWorkerRegistration,
-  storage?: Storage | null,
-): boolean {
-  if (!shouldAutoApplySilently(storage)) return false;
-  if (!getWaitingServiceWorker(registration)) return false;
-  applyServiceWorkerUpdate(registration);
-  return true;
-}
-
-function notifyOrAutoApplyOnUpdate(
-  registration: ServiceWorkerRegistration,
-  onUpdateAvailable: () => void,
-  subscribedAtMs: number,
-  storage?: Storage | null,
-): void {
-  if (!getWaitingServiceWorker(registration)) return;
-  if (tryAutoApplyOnColdStart(registration, storage)) return;
-  if (!shouldNotifyServiceWorkerUpdateAfterBootstrap(subscribedAtMs)) return;
-  onUpdateAvailable();
+  if (!waiting) return false;
+  const blockReason = getPwaUpdateBlockReason();
+  if (blockReason) return false;
+  markPwaUpdateApplyRequested();
+  try {
+    waiting.postMessage(PWA_SKIP_WAITING_MESSAGE);
+    return true;
+  } catch {
+    clearPwaUpdateApplyRequested();
+    return false;
+  }
 }
 
 function waitForInstallingWorker(installing: ServiceWorker): Promise<void> {
@@ -131,16 +104,20 @@ export async function settlePendingServiceWorkerInstall(
 
   await new Promise<void>((resolve) => {
     let settled = false;
+    let onUpdateFound: () => void = () => {};
+    const cleanup = () => {
+      clearTimeout(timer);
+      registration.removeEventListener("updatefound", onUpdateFound);
+    };
     const finish = () => {
       if (settled) return;
       settled = true;
+      cleanup();
       resolve();
     };
 
     const timer = setTimeout(finish, timeoutMs);
-    const onUpdateFound = () => {
-      clearTimeout(timer);
-      registration.removeEventListener("updatefound", onUpdateFound);
+    onUpdateFound = () => {
       const worker = registration.installing;
       if (worker) {
         void waitForInstallingWorker(worker).then(finish);
@@ -167,53 +144,57 @@ export async function settlePendingServiceWorkerInstall(
 export function subscribeToServiceWorkerUpdates(
   registration: ServiceWorkerRegistration,
   onUpdateAvailable: () => void,
-  options?: { subscribedAtMs?: number; storage?: Storage | null },
+  options?: { notifyExistingWaiting?: boolean },
 ): () => void {
-  const subscribedAtMs = options?.subscribedAtMs ?? performance.now();
-  const storage = options?.storage;
-
-  const notifyIfRuntimeUpdate = () => {
-    notifyOrAutoApplyOnUpdate(registration, onUpdateAvailable, subscribedAtMs, storage);
-  };
+  const removeInstallingListeners = new Set<() => void>();
 
   const onUpdateFound = () => {
     const installing = registration.installing;
     if (!installing) return;
-    installing.addEventListener("statechange", () => {
+    const onStateChange = () => {
       if (installing.state !== "installed") return;
+      removeStateListener();
       if (!navigator.serviceWorker.controller) return;
-      notifyIfRuntimeUpdate();
-    });
+      onUpdateAvailable();
+    };
+    const removeStateListener = () => {
+      installing.removeEventListener("statechange", onStateChange);
+      removeInstallingListeners.delete(removeStateListener);
+    };
+    removeInstallingListeners.add(removeStateListener);
+    installing.addEventListener("statechange", onStateChange);
+    onStateChange();
   };
 
   registration.addEventListener("updatefound", onUpdateFound);
-  return () => registration.removeEventListener("updatefound", onUpdateFound);
+  if (options?.notifyExistingWaiting && registration.waiting && navigator.serviceWorker.controller) {
+    onUpdateAvailable();
+  }
+  return () => {
+    registration.removeEventListener("updatefound", onUpdateFound);
+    for (const remove of removeInstallingListeners) remove();
+    removeInstallingListeners.clear();
+  };
 }
 
-/** Register + update check: auto-apply cold start, altrimenti segna sessione warm. */
+/** Register + update check without applying or reloading the current document. */
 export async function bootstrapServiceWorkerUpdateFlow(
   registration: ServiceWorkerRegistration,
   onUpdateAvailable: () => void,
-  subscribedAtMs: number,
+  _subscribedAtMs: number,
   storage?: Storage | null,
 ): Promise<(() => void) | null> {
-  beginPwaBootstrap(storage);
-  if (tryAutoApplyOnColdStart(registration, storage)) {
-    clearPwaBootstrapPending(storage);
-    return null;
-  }
+  const coldStart = isColdStartSession(storage);
   try {
     await registration.update();
   } catch {
     /* best effort */
   }
   await settlePendingServiceWorkerInstall(registration);
-  if (tryAutoApplyOnColdStart(registration, storage)) {
-    clearPwaBootstrapPending(storage);
-    return null;
-  }
-  endPwaBootstrap(storage);
-  return subscribeToServiceWorkerUpdates(registration, onUpdateAvailable, { subscribedAtMs, storage });
+  markPwaSessionActive(storage);
+  return subscribeToServiceWorkerUpdates(registration, onUpdateAvailable, {
+    notifyExistingWaiting: !coldStart,
+  });
 }
 
 /** Controllo esplicito runtime (es. visibility) — mai al bootstrap iniziale. */

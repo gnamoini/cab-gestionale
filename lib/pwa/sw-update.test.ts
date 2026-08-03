@@ -1,218 +1,153 @@
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
 import {
-  beginPwaBootstrap,
+  applyServiceWorkerUpdate,
   bootstrapServiceWorkerUpdateFlow,
-  endPwaBootstrap,
-  isColdStartSession,
-  isNavigationReload,
-  isPwaBootstrapPending,
   markPwaSessionActive,
   PWA_SESSION_ACTIVE_KEY,
-  settlePendingServiceWorkerInstall,
-  subscribeToServiceWorkerUpdates,
-  tryAutoApplyOnColdStart,
+  refreshServiceWorkerUpdateCheck,
 } from "@/lib/pwa/sw-update";
+import {
+  registerPwaUpdateGuard,
+  resetPwaUpdateGuardsForTests,
+} from "@/lib/pwa/pwa-update-guard";
 
 function mockStorage(): Storage {
-  const map = new Map<string, string>();
+  const values = new Map<string, string>();
   return {
     get length() {
-      return map.size;
+      return values.size;
     },
     clear() {
-      map.clear();
+      values.clear();
     },
-    getItem(key: string) {
-      return map.get(key) ?? null;
+    getItem(key) {
+      return values.get(key) ?? null;
     },
-    key(index: number) {
-      return [...map.keys()][index] ?? null;
+    key(index) {
+      return [...values.keys()][index] ?? null;
     },
-    removeItem(key: string) {
-      map.delete(key);
+    removeItem(key) {
+      values.delete(key);
     },
-    setItem(key: string, value: string) {
-      map.set(key, value);
+    setItem(key, value) {
+      values.set(key, value);
     },
   };
 }
 
-function mockRegistration(waiting: { postMessage: (msg: unknown) => void } | null) {
-  return { waiting } as unknown as ServiceWorkerRegistration;
-}
+type MockRegistration = ServiceWorkerRegistration & {
+  updateCalls: number;
+  emitUpdateFound: () => void;
+};
 
-function mockInstallingWorker(emitter: EventEmitter) {
-  let state: ServiceWorkerState = "installing";
-  return {
-    get state() {
-      return state;
-    },
-    set state(next: ServiceWorkerState) {
-      state = next;
-    },
+function mockRegistration(waiting: ServiceWorker | null): MockRegistration {
+  const listeners = new Set<() => void>();
+  const registration = {
+    waiting,
+    installing: null,
+    updateCalls: 0,
     addEventListener(type: string, listener: () => void) {
-      emitter.on(type, listener);
+      if (type === "updatefound") listeners.add(listener);
     },
     removeEventListener(type: string, listener: () => void) {
-      emitter.off(type, listener);
+      if (type === "updatefound") listeners.delete(listener);
     },
-  } as unknown as ServiceWorker;
-}
-
-function mockDelayedRegistration() {
-  const installEmitter = new EventEmitter();
-  const reg = {
-    get waiting() {
-      return reg._waiting;
+    emitUpdateFound() {
+      for (const listener of listeners) listener();
     },
-    _waiting: null as { postMessage: (msg: unknown) => void } | null,
-    get installing() {
-      return reg._installing;
-    },
-    _installing: null as ServiceWorker | null,
-    addEventListener(type: string, listener: () => void) {
-      if (type === "updatefound") reg._updateFound = listener;
-    },
-    removeEventListener() {},
-    _updateFound: null as (() => void) | null,
     async update() {
-      reg._installing = mockInstallingWorker(installEmitter);
-      queueMicrotask(() => reg._updateFound?.());
+      registration.updateCalls += 1;
     },
-    completeInstall(waiting: { postMessage: (msg: unknown) => void }) {
-      installEmitter.emit("statechange");
-      if (reg._installing) {
-        (reg._installing as unknown as { state: ServiceWorkerState }).state = "installed";
-      }
-      reg._waiting = waiting;
-      reg._installing = null;
-      installEmitter.emit("statechange");
-    },
-    installEmitter,
-  };
-  return reg;
+  } as unknown as MockRegistration;
+  return registration;
 }
 
-const storage = mockStorage();
-assert.equal(isColdStartSession(storage), true);
-
-markPwaSessionActive(storage);
-assert.equal(isColdStartSession(storage), false);
-assert.equal(storage.getItem(PWA_SESSION_ACTIVE_KEY), "1");
-
-storage.clear();
-const messages: unknown[] = [];
-const reg = mockRegistration({
-  postMessage(msg) {
-    messages.push(msg);
-  },
+const originalNavigator = globalThis.navigator;
+Object.defineProperty(globalThis, "navigator", {
+  configurable: true,
+  value: { serviceWorker: { controller: {} } },
 });
-assert.equal(tryAutoApplyOnColdStart(reg, storage), true);
-assert.equal(messages.length, 1);
 
-storage.clear();
-markPwaSessionActive(storage);
-messages.length = 0;
-assert.equal(tryAutoApplyOnColdStart(reg, storage), false);
-assert.equal(messages.length, 0);
+async function runTests(): Promise<void> {
+  const coldStorage = mockStorage();
+  const coldMessages: unknown[] = [];
+  const coldRegistration = mockRegistration({
+    postMessage(message: unknown) {
+      coldMessages.push(message);
+    },
+  } as ServiceWorker);
 
-storage.clear();
-assert.equal(tryAutoApplyOnColdStart(mockRegistration(null), storage), false);
-
-const originalGetEntriesByType = performance.getEntriesByType.bind(performance);
-performance.getEntriesByType = ((type: string) => {
-  if (type === "navigation") {
-    return [{ type: "reload" }] as unknown as PerformanceEntryList;
-  }
-  return originalGetEntriesByType(type);
-}) as typeof performance.getEntriesByType;
-
-markPwaSessionActive(storage);
-messages.length = 0;
-assert.equal(isNavigationReload(), true);
-assert.equal(tryAutoApplyOnColdStart(reg, storage), true);
-assert.equal(messages.length, 1);
-
-performance.getEntriesByType = originalGetEntriesByType;
-
-storage.clear();
-beginPwaBootstrap(storage);
-assert.equal(isPwaBootstrapPending(storage), true);
-assert.equal(tryAutoApplyOnColdStart(reg, storage), true);
-endPwaBootstrap(storage);
-assert.equal(isPwaBootstrapPending(storage), false);
-assert.equal(isColdStartSession(storage), false);
-
-async function runAsyncTests(): Promise<void> {
-  storage.clear();
-  const delayedReg = mockDelayedRegistration();
-  const bootstrapMessages: unknown[] = [];
-  let notified = false;
-  const originalUpdate = delayedReg.update.bind(delayedReg);
-  delayedReg.update = async () => {
-    await originalUpdate();
-    delayedReg.completeInstall({
-      postMessage(msg) {
-        bootstrapMessages.push(msg);
-      },
-    });
-  };
-
-  const bootstrapResult = await bootstrapServiceWorkerUpdateFlow(
-    delayedReg as unknown as ServiceWorkerRegistration,
+  const coldUnsubscribe = await bootstrapServiceWorkerUpdateFlow(
+    coldRegistration,
     () => {
-      notified = true;
+      throw new Error("cold bootstrap must not show the update banner");
     },
-    0,
-    storage,
-  );
-  assert.equal(bootstrapResult, null, "cold start with async install must auto-apply");
-  assert.equal(bootstrapMessages.length, 1);
-  assert.equal(notified, false);
-  assert.equal(isColdStartSession(storage), true);
-
-  storage.clear();
-  const settleReg = mockDelayedRegistration();
-  void settleReg.update();
-  queueMicrotask(() => {
-    settleReg.completeInstall({ postMessage() {} });
-  });
-  await settlePendingServiceWorkerInstall(settleReg as unknown as ServiceWorkerRegistration, 100);
-  assert.ok(settleReg._waiting, "settle must wait for async install to finish");
-
-  storage.clear();
-  markPwaSessionActive(storage);
-  notified = false;
-  const warmReg = mockDelayedRegistration();
-  const originalNavigator = globalThis.navigator;
-  Object.defineProperty(globalThis, "navigator", {
-    configurable: true,
-    value: {
-      serviceWorker: { controller: {} },
-    },
-  });
-
-  subscribeToServiceWorkerUpdates(
-    warmReg as unknown as ServiceWorkerRegistration,
-    () => {
-      notified = true;
-    },
-    { subscribedAtMs: performance.now() - 5_000, storage },
+    performance.now() - 5_000,
+    coldStorage,
   );
 
-  await warmReg.update();
-  await new Promise<void>((resolve) => queueMicrotask(resolve));
-  warmReg.completeInstall({ postMessage() {} });
+  assert.equal(coldRegistration.updateCalls, 1);
+  assert.equal(coldMessages.length, 0, "cold bootstrap must not send SKIP_WAITING");
+  assert.equal(coldStorage.getItem(PWA_SESSION_ACTIVE_KEY), "1");
+  coldUnsubscribe?.();
 
-  assert.equal(notified, true, "warm session must notify after bootstrap window");
+  const warmStorage = mockStorage();
+  markPwaSessionActive(warmStorage);
+  const warmMessages: unknown[] = [];
+  const warmRegistration = mockRegistration({
+    postMessage(message: unknown) {
+      warmMessages.push(message);
+    },
+  } as ServiceWorker);
+  let warmNotified = false;
+
+  const warmUnsubscribe = await bootstrapServiceWorkerUpdateFlow(
+    warmRegistration,
+    () => {
+      warmNotified = true;
+    },
+    performance.now() - 5_000,
+    warmStorage,
+  );
+
+  assert.equal(warmNotified, true, "warm bootstrap must surface an existing waiting worker");
+  assert.equal(warmMessages.length, 0, "warm bootstrap must not auto-apply");
+  warmUnsubscribe?.();
+
+  const applyMessages: unknown[] = [];
+  const applyRegistration = mockRegistration({
+    postMessage(message: unknown) {
+      applyMessages.push(message);
+    },
+  } as ServiceWorker);
+  assert.equal(applyServiceWorkerUpdate(applyRegistration), true);
+  assert.equal(applyMessages.length, 1);
+
+  const unregisterDirtyGuard = registerPwaUpdateGuard({
+    id: "dirty-form",
+    isDirty: () => true,
+  });
+  const blockedMessages: unknown[] = [];
+  const blockedRegistration = mockRegistration({
+    postMessage(message: unknown) {
+      blockedMessages.push(message);
+    },
+  } as ServiceWorker);
+  assert.equal(applyServiceWorkerUpdate(blockedRegistration), false);
+  assert.equal(blockedMessages.length, 0, "dirty guard must block SKIP_WAITING");
+  unregisterDirtyGuard();
+  resetPwaUpdateGuardsForTests();
+
+  const noUpdateRegistration = mockRegistration(null);
+  await refreshServiceWorkerUpdateCheck(noUpdateRegistration, performance.now());
+  assert.equal(noUpdateRegistration.updateCalls, 0, "bootstrap window must suppress immediate runtime checks");
 
   Object.defineProperty(globalThis, "navigator", {
     configurable: true,
     value: originalNavigator,
   });
+
+  console.log("sw-update.test.ts OK");
 }
 
-void runAsyncTests().then(() => {
-  console.log("sw-update.test.ts OK");
-});
+void runTests();

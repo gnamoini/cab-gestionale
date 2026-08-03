@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { resolveInterventoOggettoDisplay } from "@/lib/domain/mezzo-attrezzatura/intervento-oggetto-display";
 import type { InterventoContext } from "@/lib/domain/intervento-context/intervento-context.types";
 
-function baseCtx(over: Partial<InterventoContext> & { marca?: string; modello?: string }): InterventoContext {
+function baseCtx(
+  over: Partial<InterventoContext> & {
+    marca?: string;
+    modello?: string;
+    tipoAttrezzatura?: string;
+  },
+): InterventoContext {
   return {
     lavorazione: {
       id: "l1",
@@ -23,6 +29,8 @@ function baseCtx(over: Partial<InterventoContext> & { marca?: string; modello?: 
       targa: "",
       matricola: "",
       nScuderia: "",
+      tipoAttrezzatura: over.tipoAttrezzatura ?? "",
+      present: true,
     },
     schedaIngresso: { campi: null },
     ident: { targa: "", matricola: "", nScuderia: "" },
@@ -34,7 +42,7 @@ function baseCtx(over: Partial<InterventoContext> & { marca?: string; modello?: 
         marca: over.marca ?? "Fortunato",
         modello: over.modello ?? "—",
         matricola: "CS023",
-        tipoAttrezzatura: "",
+        present: true,
       },
     },
     ...over,
@@ -47,5 +55,11 @@ assert.equal(
   "OMB T-Rex",
 );
 assert.equal(resolveInterventoOggettoDisplay(baseCtx({ marca: "—", modello: "—" })).label, "");
+assert.equal(
+  resolveInterventoOggettoDisplay(
+    baseCtx({ marca: "Nextra", modello: "K-MD24T", tipoAttrezzatura: "Spazzatrice" }),
+  ).label,
+  "Spazzatrice Nextra K-MD24T",
+);
 
 console.log("intervento-oggetto-display.test.ts OK");

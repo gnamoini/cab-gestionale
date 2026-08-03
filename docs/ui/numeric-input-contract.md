@@ -32,7 +32,9 @@ Durante l'editing il **draft locale** è SSOT temporaneo. Il parent **non** rice
 - `inputMode="decimal"` o `inputMode="numeric"`
 - `isDecimalInputDraft` per validazione durante typing
 - Commit su blur / Enter / Tab via `commitNumericDraft`
-- `onFocus` → `select()` per sostituzione rapida del valore precompilato
+- Focus senza `select()` (cursore al click come campi testo; `select()` solo se esplicito sul campo)
+- `onMouseDown` su `GestionaleNumberInput` per posizionare il cursore al click
+- `data-gestionale-numeric` — `focusNextGestionaleField` non fa select-all su questi input
 - Preset per dominio (`NUMERIC_PRESETS`, `resolveQuantityPreset`)
 - Wrapper sottili: `GestionaleNumberInput`, `GestionaleNumericField`, `GestionaleQuantityField`
 

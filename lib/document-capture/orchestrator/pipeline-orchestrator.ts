@@ -1,6 +1,7 @@
 import type { PipelineState } from "@/lib/document-capture/model/pipeline-state";
 
 export type PipelinePhase =
+  | "verify"
   | "physical_parse"
   | "ai_extract"
   | "project"
@@ -17,6 +18,8 @@ export type PipelineExecution = {
   phase: PipelinePhase;
   idempotencyKey: string;
   status: PipelineExecutionStatus;
+  pipelineVersion?: string;
+  executionId?: string;
   startedAt?: string;
   completedAt?: string;
   resultRef?: string;
@@ -52,7 +55,7 @@ export class PipelineCoherenceError extends Error {
 
 /** COH-01..04 */
 export function assertPipelineCoherence(state: PipelineState, targetPhase: PipelinePhase): void {
-  if (targetPhase !== "physical_parse" && state.upload !== "uploaded") {
+  if (targetPhase !== "verify" && targetPhase !== "physical_parse" && state.upload !== "uploaded") {
     throw new PipelineCoherenceError(`COH-01: upload must be uploaded before ${targetPhase}`);
   }
   const needsAnalysis = ["validate", "interpret", "detect_duplicates", "plan_apply"].includes(targetPhase);

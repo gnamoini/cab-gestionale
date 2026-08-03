@@ -164,24 +164,24 @@ export function getTooltipPortalContainer(): HTMLElement {
 type PopoverElement = HTMLElement & { showPopover?: () => void; hidePopover?: () => void };
 
 export function showTooltipPopover(el: HTMLElement | null): void {
-  if (!el) return;
+  if (!el?.isConnected) return;
   const pop = el as PopoverElement;
   if (typeof pop.showPopover !== "function") return;
   try {
     pop.showPopover();
   } catch {
-    /* già aperto */
+    /* già aperto o nodo smontato */
   }
 }
 
 export function hideTooltipPopover(el: HTMLElement | null): void {
-  if (!el) return;
+  if (!el?.isConnected) return;
   const pop = el as PopoverElement;
   if (typeof pop.hidePopover !== "function") return;
   try {
     pop.hidePopover();
   } catch {
-    /* già chiuso */
+    /* già chiuso o nodo smontato */
   }
 }
 

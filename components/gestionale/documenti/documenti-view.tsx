@@ -843,10 +843,7 @@ export function DocumentiView() {
     <GestionaleSectionGate module="documenti">
     <div className={layoutPageRoot}>
     <>
-      <PageHeaderPageActionMenu
-        items={documentiMenuItems}
-        onRefresh={() => void refreshDocumenti()}
-      />
+      <PageHeaderPageActionMenu items={documentiMenuItems} />
         <GestionaleUploadDropExpand
           overlay
           clickToPick={false}

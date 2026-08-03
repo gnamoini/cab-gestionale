@@ -23,6 +23,7 @@ import { TablePagination } from "@/components/gestionale/table-pagination";
 import { ServerListLoadMore } from "@/components/gestionale/server-list-load-more";
 import { isServerListPaginationEnabled } from "@/lib/performance/list-pagination-rollout";
 import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
+import { dedupeLavorazioneListRowsById } from "@/lib/domain/list-flatten";
 import { enrichLavorazioneListRowsWithMezzi } from "@/lib/db/dto-mappers";
 import { mezziGestitiToEmbedMap } from "@/lib/mezzi/mezzi-attrezzature-batch";
 const LavorazioneCreateModal = dynamic(
@@ -154,7 +155,6 @@ import {
 import { clampSchedeBundle } from "@/lib/validation/clamp-free-text";
 import { applyOptimisticSchedeStore, rollbackSchedeStore, snapshotSchedeStore } from "@/lib/schede/schede-store-optimistic";
 import { dispatchGestionaleLocalMutation, cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
-import { flushGestionaleDirty } from "@/lib/sync/gestionale-dirty-flush";
 import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { markRecentLocalTableBurst } from "@/lib/sync/recent-local-mutation";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
@@ -236,9 +236,6 @@ import { mezziListQueryKey } from "@/lib/render/query-key-factory";
 import { QK, commitLavorazioneCreateSuccess } from "@/src/lib/react-query/invalidate-related";
 import { lavorazioniListCacheRows } from "@/src/lib/react-query/lavorazioni-optimistic";
 import { mezziEntry } from "@/lib/domain/mezzi-entry";
-import {
-  runLavorazioniToolbarRefresh,
-} from "@/src/lib/react-query/refetch-lavorazioni-operational-data";
 import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
 import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useAuth } from "@/context/auth-context";
@@ -814,6 +811,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   useGestionaleSyncScope({
     scopeId: "lavorazioni-view",
     domain: "lavorazioni",
+    route: "/lavorazioni",
     tables: ["lavorazioni", "scheda_lavorazione", "pdf_artifacts", "document_access_tokens", "log_modifiche"],
     visibleEntities: lavorazioniVisibleEntities,
   });
@@ -1043,6 +1041,9 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     [advancedFilters, archivioSectionOpen, focusLavId, searchApplied],
   );
 
+  const hasPageClientFilters =
+    searchApplied.trim().length > 0 || lavorazioniAdvancedFiltersActive(advancedFilters);
+
   const attiveQuery = useLavorazioniList(filtersAttive, gestionaleQueryOpts);
   const chiuseQuery = useLavorazioniList(filtersChiuse, {
     ...gestionaleQueryOpts,
@@ -1055,7 +1056,17 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       if (!res.success) throw new Error(res.error ?? "Errore conteggio archivio");
       return res.data ?? 0;
     },
-    enabled: !needsChiuseFetch,
+    enabled: !lavorazioniAdvancedFiltersActive(advancedFilters),
+    staleTime: 30_000,
+  });
+  const attiveCountQuery = useQuery({
+    queryKey: lavorazioniListCountQueryKey(filtersAttive),
+    queryFn: async () => {
+      const res = await fetchLavorazioniListCountAuthorized(filtersAttive);
+      if (!res.success) throw new Error(res.error ?? "Errore conteggio lavorazioni attive");
+      return res.data ?? 0;
+    },
+    enabled: serverListPagination && !lavorazioniAdvancedFiltersActive(advancedFilters),
     staleTime: 30_000,
   });
 
@@ -1091,7 +1102,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
         }
       }
     }
-    return filtered;
+    return dedupeLavorazioneListRowsById(filtered);
   }, [attiveRowsRaw]);
 
   const chiuseRows = useMemo(() => {
@@ -1107,11 +1118,8 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
         }
       }
     }
-    return filtered;
+    return dedupeLavorazioneListRowsById(filtered);
   }, [chiuseRowsRaw]);
-
-  const hasPageClientFilters =
-    searchApplied.trim().length > 0 || lavorazioniAdvancedFiltersActive(advancedFilters);
 
   const needsFullSchedeFetch = useMemo(
     () =>
@@ -1165,26 +1173,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       ),
     [attiveRows, chiuseRows, schedeStore, logsByLavorazioneId, addettiRecords],
   );
-  const [listRefreshBusy, setListRefreshBusy] = useState(false);
   const [printBusy, setPrintBusy] = useState(false);
-
-  const refreshLavorazioniLists = useCallback(async () => {
-    setListRefreshBusy(true);
-    try {
-      await flushGestionaleDirty(qc, { reason: "user_requested", domains: ["lavorazioni"] });
-      await runLavorazioniToolbarRefresh([
-        attiveQuery.refetch(),
-        chiuseQuery.refetch(),
-        lavModificheLogQuery.refetch(),
-        refetchSchedeStore(),
-      ]);
-      gestToast.successOnce("lav-list-refresh", GESTIONALE_TOAST.successRefreshed);
-    } catch (e) {
-      gestToast.errorOnce("lav-list-refresh", e, { module: "lavorazioni" });
-    } finally {
-      setListRefreshBusy(false);
-    }
-  }, [qc, attiveQuery, chiuseQuery, lavModificheLogQuery, refetchSchedeStore, gestToast]);
 
   const pageFilters = useMemo(
     (): LavPageFilters => ({
@@ -1766,9 +1755,12 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     resetPage: resetPageA,
   } = useClientPagination(sortedAttive.length, listPageSize);
   useEffect(() => {
-    resetPageA();
-  }, [filtersAttive, attiveRowsFiltered.length, searchApplied, advancedFilters, listPageSize, resetPageA]);
-  const pagedAttive = useMemo(() => sliceA(sortedAttive), [sortedAttive, sliceA, pageA]);
+    if (!serverListPagination) resetPageA();
+  }, [filtersAttive, attiveRowsFiltered.length, searchApplied, advancedFilters, listPageSize, resetPageA, serverListPagination]);
+  const pagedAttive = useMemo(
+    () => (serverListPagination ? sortedAttive : sliceA(sortedAttive)),
+    [serverListPagination, sortedAttive, sliceA, pageA],
+  );
 
   const {
     page: pageC,
@@ -1780,9 +1772,12 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     resetPage: resetPageC,
   } = useClientPagination(sortedChiuse.length, listPageSize);
   useEffect(() => {
-    resetPageC();
-  }, [filtersChiuse, chiuseRowsFiltered.length, searchApplied, advancedFilters, listPageSize, resetPageC]);
-  const pagedChiuse = useMemo(() => sliceC(sortedChiuse), [sortedChiuse, sliceC, pageC]);
+    if (!serverListPagination) resetPageC();
+  }, [filtersChiuse, chiuseRowsFiltered.length, searchApplied, advancedFilters, listPageSize, resetPageC, serverListPagination]);
+  const pagedChiuse = useMemo(
+    () => (serverListPagination ? sortedChiuse : sliceC(sortedChiuse)),
+    [serverListPagination, sortedChiuse, sliceC, pageC],
+  );
 
   const pagedChiuseIdsKey = useMemo(
     () => pagedChiuse.map((row) => row.id).sort().join(","),
@@ -1871,7 +1866,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
 
       const idxA = sortedAttive.findIndex((r) => r.id === id);
       if (idxA >= 0) {
-        setPageA(Math.floor(idxA / listPageSize) + 1);
+        if (!serverListPagination) setPageA(Math.floor(idxA / listPageSize) + 1);
         flashRow(id);
         scrollToRow(`lavorazioni-row-${id}`);
         return;
@@ -1879,7 +1874,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
 
       const idxC = sortedChiuse.findIndex((r) => r.id === id);
       if (idxC >= 0) {
-        setPageC(Math.floor(idxC / listPageSize) + 1);
+        if (!serverListPagination) setPageC(Math.floor(idxC / listPageSize) + 1);
         flashRow(id);
         scrollToRow(`lavorazioni-storico-row-${id}`);
         return;
@@ -1887,7 +1882,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
 
       flashRow(id);
     },
-    [flashRow, listPageSize, setPageA, setPageC, sortedAttive, sortedChiuse],
+    [flashRow, listPageSize, serverListPagination, setPageA, setPageC, sortedAttive, sortedChiuse],
   );
 
   const focusLavorazioneInTableRef = useRef(focusLavorazioneInTable);
@@ -2027,11 +2022,16 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   const archivioHeadCount =
     archivioCountQuery.data !== undefined ? archivioCountQuery.data : null;
 
-  const archivioFilteredCount = needsChiuseFetch
-    ? chiuseQuery.isPending && archivioHeadCount !== null
-      ? archivioHeadCount
-      : chiuseRowsFiltered.length
-    : archivioHeadCount;
+  const attiveHeadCount =
+    attiveCountQuery.data !== undefined ? attiveCountQuery.data : null;
+
+  const attiveTotalCount = lavorazioniAdvancedFiltersActive(advancedFilters)
+    ? sortedAttive.length
+    : attiveHeadCount ?? sortedAttive.length;
+
+  const archivioFilteredCount = lavorazioniAdvancedFiltersActive(advancedFilters)
+    ? chiuseRowsFiltered.length
+    : archivioHeadCount ?? (needsChiuseFetch ? chiuseRowsFiltered.length : null);
 
   const totalFilteredCount = attiveRowsFiltered.length + (archivioFilteredCount ?? 0);
 
@@ -2208,19 +2208,13 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     printBusy,
     onOpenLog: () => setLavLogOpen(true),
     onPrint: onPrintLavorazioniInCorso,
-    listViewMode,
-    onToggleListViewMode: () => setListViewMode((m) => (m === "table" ? "kanban" : "table")),
   });
 
   return (
     <GestionaleSectionGate module="lavorazioni">
     <div className={`lavorazioni-scroll-scope ${layoutPageRoot} ${gestionaleListTierClass(listTier)}`.trim()}>
     <>
-      <LavorazioniPageHeaderToolbar
-        items={lavorazioniPageMenuItems}
-        onRefresh={() => void refreshLavorazioniLists()}
-        listRefreshBusy={listRefreshBusy}
-      />
+      <LavorazioniPageHeaderToolbar items={lavorazioniPageMenuItems} />
 
       <div className={dsStackPage}>
         {loadErr ? (
@@ -2271,7 +2265,6 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
           onAdvancedFiltersChange={patchAdvancedFilters}
           filterCatalog={filterCatalog}
           addettiRecords={addettiRecords}
-          statiOpts={statiOpts}
           onFilterReset={resetFiltriPagina}
           totalFilteredCount={totalFilteredCount}
           searchApplied={searchApplied}
@@ -2301,6 +2294,8 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
           capturePageDropRef={capturePageDropRef}
           capturePageDropDisabled={capturePageDropDisabled}
           onCapturePageDrop={handlePageCaptureDrop}
+          listViewMode={listViewMode}
+          onListViewModeChange={setListViewMode}
         />
 
         <SkeletonBoundary loading={initialListLoading}>
@@ -2525,12 +2520,15 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
           )}
 
 
-          {showPagerA ? <TablePagination page={pageA} pageCount={pageCountA} onPageChange={setPageA} label={labelA} /> : null}
+          {!serverListPagination && showPagerA ? <TablePagination page={pageA} pageCount={pageCountA} onPageChange={setPageA} label={labelA} /> : null}
           {serverListPagination ? (
             <ServerListLoadMore
               hasNextPage={attiveQuery.hasNextPage}
               isFetchingNextPage={attiveQuery.isFetchingNextPage}
               controls={attiveQuery.controls}
+              loadedCount={sortedAttive.length}
+              totalCount={attiveTotalCount}
+              itemLabel="lavorazioni"
             />
           ) : null}
             </>
@@ -2714,12 +2712,15 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
           </LavorazioniMobileListShell>
           )}
 
-          {showPagerC ? <TablePagination page={pageC} pageCount={pageCountC} onPageChange={setPageC} label={labelC} /> : null}
+          {!serverListPagination && showPagerC ? <TablePagination page={pageC} pageCount={pageCountC} onPageChange={setPageC} label={labelC} /> : null}
           {serverListPagination && needsChiuseFetch ? (
             <ServerListLoadMore
               hasNextPage={chiuseQuery.hasNextPage}
               isFetchingNextPage={chiuseQuery.isFetchingNextPage}
               controls={chiuseQuery.controls}
+              loadedCount={sortedChiuse.length}
+              totalCount={archivioFilteredCount}
+              itemLabel="lavorazioni"
             />
           ) : null}
           </>

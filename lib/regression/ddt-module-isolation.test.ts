@@ -13,7 +13,7 @@ assert.ok(fs.existsSync(path.join(ROOT, "supabase/migrations/20260720120100_user
 assert.ok(fs.existsSync(path.join(ROOT, "supabase/migrations/20260721120000_ddt_one_per_preventivo.sql")));
 
 const preventiviView = fs.readFileSync(path.join(ROOT, "components/preventivi/preventivi-view.tsx"), "utf8");
-assert.match(preventiviView, /DdtDetailDrawer/);
+assert.match(preventiviView, /openDdtPdfInNewTab/);
 assert.match(preventiviView, /buildDdtDraftFromPreventivoAuto/);
 assert.match(preventiviView, /usePreventivoDdtIndex/);
 assert.doesNotMatch(preventiviView, /ddt-from-preventivo-wizard-modal/);

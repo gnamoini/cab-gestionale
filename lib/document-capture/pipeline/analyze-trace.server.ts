@@ -11,7 +11,7 @@ export type AnalyzeTraceContext = {
   correlationId?: string;
   captureId: string;
   companyId?: string | null;
-  pipelineVersion: "v4.1" | "legacy";
+  pipelineVersion: string;
   retryCount?: number;
 };
 

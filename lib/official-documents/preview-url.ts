@@ -12,3 +12,7 @@ export function buildStaffOfficialDocumentPreviewPath(
 export function buildClientOfficialDocumentPreviewPath(token: string): string {
   return `/documenti/${encodeURIComponent(token)}`;
 }
+
+export function buildOfficialDocumentTokenStreamPath(token: string): string {
+  return `/api/official-documents/token/${encodeURIComponent(token)}/stream`;
+}

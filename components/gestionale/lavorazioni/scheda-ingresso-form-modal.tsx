@@ -20,7 +20,7 @@ import type { MezzoGestito } from "@/lib/mezzi/types";
 import {
   mezzoIngressoSuggestLabel,
 } from "@/lib/schede/scheda-ingresso-ident-suggest";
-import type { SchedaIngressoIdentField } from "@/lib/schede/scheda-ingresso-ident-suggest";
+import type { SchedaIngressoIdentField, SchedaIngressoIdentMatchKind } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import { identificazionePartsFromMezzo } from "@/lib/mezzi/identificazione-mezzo";
 import { listMezzoCatalogFieldDrifts } from "@/lib/schede/scheda-ingresso-mezzo-catalog-drift";
 import { SchedaMezzoIdentificazioneReadonly } from "@/components/lavorazioni/schede/scheda-form-utils";
@@ -769,9 +769,18 @@ export function SchedaIngressoFormBody({
 
   const mezzoInlineHint = useMemo(() => {
     if (mezzoPrefilledFromCatalog) return null;
-    if (mezzoPrompt.linkState.status === "unconfirmed_match" && mezzoPrompt.pendingMezzo) {
+    if (mezzoPrompt.ambiguousCandidates && mezzoPrompt.activeMatchField) {
       return {
-        variant: "trovato" as const,
+        variant: "ambiguo" as const,
+        matchField: mezzoPrompt.activeMatchField as SchedaIngressoIdentField,
+        ambiguousCandidates: mezzoPrompt.ambiguousCandidates,
+      };
+    }
+    if (mezzoPrompt.linkState.status === "unconfirmed_match" && mezzoPrompt.pendingMezzo) {
+      const variant =
+        mezzoPrompt.pendingMatchKind === "similar" ? ("simile" as const) : ("trovato" as const);
+      return {
+        variant,
         mezzo: mezzoPrompt.pendingMezzo,
         matchField: (mezzoPrompt.activeMatchField ?? "matricola") as SchedaIngressoIdentField,
       };
@@ -780,13 +789,26 @@ export function SchedaIngressoFormBody({
   }, [
     mezzoPrefilledFromCatalog,
     mezzoPrompt.activeMatchField,
+    mezzoPrompt.ambiguousCandidates,
     mezzoPrompt.linkState.status,
+    mezzoPrompt.pendingMatchKind,
     mezzoPrompt.pendingMezzo,
   ]);
 
   const onMezzoPromptMatch = useCallback(
-    (m: MezzoGestito, field: SchedaIngressoIdentField) => {
-      if (!readOnly) mezzoPrompt.onExactMezzoMatch(m, field);
+    (
+      m: MezzoGestito,
+      field: SchedaIngressoIdentField,
+      kind: SchedaIngressoIdentMatchKind,
+    ) => {
+      if (!readOnly) mezzoPrompt.onMezzoIdentMatch(m, field, kind);
+    },
+    [mezzoPrompt, readOnly],
+  );
+
+  const onMezzoPromptAmbiguous = useCallback(
+    (candidates: readonly MezzoGestito[], field: SchedaIngressoIdentField) => {
+      if (!readOnly) mezzoPrompt.onAmbiguousMezzoMatch(candidates, field);
     },
     [mezzoPrompt, readOnly],
   );
@@ -890,11 +912,15 @@ export function SchedaIngressoFormBody({
           disabled={disabled}
           sections={["cliente", "attrezzatura", "telaio"]}
           hideSectionTitles
-          onExactMezzoMatch={onMezzoPromptMatch}
+          onExactMezzoMatch={(m, field) => onMezzoPromptMatch(m, field, "exact")}
+          onMezzoIdentMatch={onMezzoPromptMatch}
+          onAmbiguousMezzoMatch={onMezzoPromptAmbiguous}
+          dismissedMezzoIds={mezzoPrompt.dismissedMezzoIds}
           mezzoInlineHint={mezzoInlineHint}
           mezzoCatalogFieldDrifts={mezzoCatalogFieldDrifts}
           onUseMezzoFromHint={(field) => mezzoPrompt.acceptLinkMezzo(field)}
           onDismissMezzoHint={mezzoPrompt.dismissPendingMatch}
+          onDismissAmbiguousHint={mezzoPrompt.dismissAmbiguousMatch}
           onNotifyPermanentFieldUserEdit={mezzoPrompt.notifyPermanentFieldUserEdit}
           clienteRequired={false}
           marcaAttrezzaturaRequired={false}

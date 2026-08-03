@@ -27,10 +27,16 @@ const LEGACY_COMPONENTS = [
     criticality: "medium" as const,
   },
   {
+    id: "SchedaIngressoIdentTextField",
+    pattern: /SchedaIngressoIdentTextField/,
+    domain: "schede",
+    criticality: "critical" as const,
+  },
+  {
     id: "SchedaIngressoIdentAutocompleteField",
     pattern: /SchedaIngressoIdentAutocompleteField/,
     domain: "schede",
-    criticality: "critical" as const,
+    criticality: "low" as const,
   },
   {
     id: "RicambiMagSearchPortal",

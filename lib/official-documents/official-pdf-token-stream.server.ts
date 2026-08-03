@@ -2,13 +2,14 @@ import "server-only";
 
 import { DOCUMENT_ACCESS_TOKENS_COLUMNS } from "@/lib/db/table-select-columns";
 import { streamOfficialDdtPdfServer, streamOfficialPreventivoPdfServer } from "@/lib/official-documents/official-pdf-stream.server";
+import type { PdfArtifactDelivery } from "@/lib/pdf-artifacts/pdf-artifact-generate.server";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { DocumentAccessTokenRow } from "@/src/types/supabase-tables";
 
 export async function streamOfficialPdfByTokenServer(
   token: string,
-): Promise<ServiceResult<{ bytes: Uint8Array; fileName: string }>> {
+): Promise<ServiceResult<PdfArtifactDelivery>> {
   const sb = await createSupabaseServerUserClient();
   const { data, error } = await sb
     .from("document_access_tokens")
@@ -30,7 +31,7 @@ export async function streamOfficialPdfByTokenServer(
     });
     if (visErr) return err(visErr.message);
     if (!visible) return err("Documento non disponibile");
-    return streamOfficialPreventivoPdfServer(row.entity_id);
+    return streamOfficialPreventivoPdfServer(row.entity_id, undefined, { skipRbac: true });
   }
 
   const { data: ddtVisible, error: ddtErr } = await sb.rpc("is_ddt_visible_to_client", {
@@ -38,5 +39,5 @@ export async function streamOfficialPdfByTokenServer(
   });
   if (ddtErr) return err(ddtErr.message);
   if (!ddtVisible) return err("Documento non disponibile");
-  return streamOfficialDdtPdfServer(row.entity_id);
+  return streamOfficialDdtPdfServer(row.entity_id, { skipRbac: true });
 }

@@ -39,6 +39,7 @@ import { applyCaptureRicambiScarichiAfterImport } from "@/lib/document-capture/c
 import type { LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioneSchedeStore, SchedaTipo } from "@/types/schede";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { usePwaUpdateGuard } from "@/lib/pwa/pwa-update-guard";
 
 export const CAPTURE_SHEET_COMPILE_FORM_ID = "capture-sheet-compile-form";
 
@@ -139,6 +140,10 @@ export function CaptureSchedaSheetCompileStep({
   const [ocrBaseline, setOcrBaseline] = useState<CaptureFieldPatch[]>([]);
   const [operationId, setOperationId] = useState<string | null>(null);
   const [existingSchedaPromptOpen, setExistingSchedaPromptOpen] = useState(false);
+  usePwaUpdateGuard(
+    Boolean(fields && compileStatus !== "loading" && compileStatus !== "applying"),
+    "Completa o salva l'acquisizione documento prima di aggiornare l'app.",
+  );
 
   const submittingRef = useRef(false);
   const pendingApplyRef = useRef<(() => Promise<void>) | null>(null);

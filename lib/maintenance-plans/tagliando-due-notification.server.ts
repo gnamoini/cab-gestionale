@@ -18,7 +18,10 @@ import { buildTagliandoDaEseguireNotification } from "@/lib/maintenance-plans/ta
 import type { MaintenancePlanView } from "@/lib/maintenance-plans/types";
 import type { MaintenanceServiceLite } from "@/lib/maintenance-plans/tagliandi-matrix";
 import { buildDispatchCommandFromLegacy } from "@/lib/notifications/dispatch/build-dispatch-command.server";
+import { entityDispatchIdempotencyKey } from "@/lib/notifications/dispatch/entity-idempotency";
 import { dispatchNotificationEvent } from "@/lib/notifications/dispatch/notification-dispatch-service.server";
+import { resolveSingleCompanyId } from "@/lib/notifications/dispatch/resolve-company-id.server";
+import { createNotificationTraceId, logNotificationTrace } from "@/lib/notifications/observability/notification-trace";
 import { fetchMezzoGestitoById } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
@@ -32,12 +35,6 @@ import type {
 } from "@/src/types/supabase-tables";
 
 type RicambioLite = Pick<MagazzinoRicambioRow, "id" | "codice" | "nome">;
-
-/** ponytail: CAB single-tenant — upgrade: company_id da contesto lavorazione/mezzo */
-async function resolveSingleCompanyId(sb: SupabaseClient): Promise<string | null> {
-  const { data } = await sb.from("companies").select("id").limit(1).maybeSingle();
-  return (data as { id?: string } | null)?.id ?? null;
-}
 
 function mapPlanView(
   plan: MaintenancePlanRow,
@@ -184,15 +181,28 @@ export async function maybePublishTagliandoDueOnInterventoCreateServer(
       legacy,
     );
 
+    const traceId = createNotificationTraceId();
     await dispatchNotificationEvent(
       {
         notificationEventId: "lavorazioni.tagliando_due",
         companyId,
-        dispatchIdempotencyKey: `lavorazioni.tagliando_due:${input.lavorazioneId}`,
+        dispatchIdempotencyKey: entityDispatchIdempotencyKey(
+          "lavorazioni.tagliando_due",
+          "lavorazioni",
+          input.lavorazioneId,
+        ),
         buildCommand: (recipientId) => buildCommand(recipientId)!,
       },
       sb,
     );
+    logNotificationTrace({
+      traceId,
+      stage: "dispatch",
+      notificationEventId: "lavorazioni.tagliando_due",
+      entityType: "lavorazioni",
+      entityId: input.lavorazioneId,
+      ts: new Date().toISOString(),
+    });
   } catch (e) {
     console.warn("[tagliando-due] server publish failed:", e);
   }

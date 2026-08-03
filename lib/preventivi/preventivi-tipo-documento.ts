@@ -33,10 +33,10 @@ export function preventivoTipoDocumentoBadgeClass(
 ): string {
   const table = variant === "table";
   const base = table
-    ? "inline-flex h-[1.125rem] min-w-[2.35rem] shrink-0 items-center justify-center rounded px-1.5 text-[9px] font-bold uppercase tracking-[0.06em]"
-    : "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide";
+    ? "inline-flex h-[1.125rem] min-w-[2.35rem] shrink-0 items-center justify-center rounded px-1.5 text-[9px] font-bold uppercase leading-none tracking-[0.06em]"
+    : "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wide";
   if (tipo === "consuntivo") {
-    return `${base} bg-sky-500/12 text-sky-950 ring-1 ring-sky-500/30 dark:bg-sky-400/14 dark:text-sky-100 dark:ring-sky-400/35`;
+    return `${base} bg-sky-600 text-white ring-1 ring-sky-700/40 dark:bg-sky-500 dark:text-white dark:ring-sky-400/50`;
   }
-  return `${base} bg-orange-500/12 text-orange-950 ring-1 ring-orange-500/35 dark:bg-orange-400/14 dark:text-orange-100 dark:ring-orange-400/35`;
+  return `${base} bg-orange-600 text-white ring-1 ring-orange-700/40 dark:bg-orange-500 dark:text-white dark:ring-orange-400/50`;
 }

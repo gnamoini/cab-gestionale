@@ -12,7 +12,7 @@ import {
   parseGeminiRetryAfterSec,
 } from "@/lib/ai/gemini-retry-after";
 import { useRetryAfterCountdown } from "@/src/hooks/use-retry-after-countdown";
-import { postCaptureProcessStream } from "@/lib/document-capture/pipeline/analyze-stream-client";
+import { postCaptureProcessStream } from "@/lib/document-capture/capture-execution-store";
 import type { AnalyzeTracePhase } from "@/lib/document-capture/pipeline/analyze-trace-types";
 import { useCallback, useRef, useState } from "react";
 
@@ -24,6 +24,7 @@ type WizardApi = {
   retryAfterSec: number | null;
   analyzePhase: AnalyzeTracePhase | null;
   heartbeatAt: number | null;
+  terminalState: "completed" | "failed" | "cancelled" | null;
   runAnalyze: (captureIdOverride?: string | null, uploadDurationMs?: number) => Promise<boolean>;
   reset: () => void;
 };
@@ -40,6 +41,7 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
   const [retryAfterSec, setRetryAfterSec] = useState<number | null>(null);
   const [analyzePhase, setAnalyzePhase] = useState<AnalyzeTracePhase | null>(null);
   const [heartbeatAt, setHeartbeatAt] = useState<number | null>(null);
+  const [terminalState, setTerminalState] = useState<"completed" | "failed" | "cancelled" | null>(null);
   const analyzeSeqRef = useRef(0);
 
   const reset = useCallback(() => {
@@ -49,6 +51,7 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
     setRetryAfterSec(null);
     setAnalyzePhase(null);
     setHeartbeatAt(null);
+    setTerminalState(null);
   }, []);
 
   const runAnalyze = useCallback(async (captureIdOverride?: string | null, uploadDurationMs?: number) => {
@@ -60,6 +63,7 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
     setRetryAfterSec(null);
     setAnalyzePhase(null);
     setHeartbeatAt(null);
+    setTerminalState(null);
     let retryHintSec: number | null = null;
     try {
       const streamed = await postCaptureProcessStream(
@@ -73,6 +77,9 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
           setHeartbeatAt(Date.now());
           if (event.activePhase) setAnalyzePhase(event.activePhase);
         }
+        if (event.type === "terminal") {
+          setTerminalState(event.terminalState);
+        }
       },
         { uploadDurationMs },
       );
@@ -85,7 +92,13 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
       };
       if (seq !== analyzeSeqRef.current) return false;
       retryHintSec = parseRetryAfterHeader(streamed.response.headers.get("Retry-After"));
+      if (streamed.terminalState === "cancelled") {
+        throw new Error("Analisi annullata (versione pipeline obsoleta). Riprova.");
+      }
       if (!streamed.response.ok || body.ok === false) {
+        if (body.code === "ANALYZE_IN_PROGRESS") {
+          throw new Error("Analisi già in corso. Attendi il completamento.");
+        }
         if (body.code === "not_configured") {
           const hint =
             body.errorType === "CONFIG_INVALID_FORMAT" || body.errorType === "AI_KEY_INVALID"
@@ -110,11 +123,13 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
       }
       setError(null);
       setRetryAfterSec(null);
+      setTerminalState(streamed.terminalState ?? "completed");
       return true;
     } catch (e) {
       if (seq !== analyzeSeqRef.current) return false;
       const msg = e instanceof Error ? e.message : "Errore durante la lettura";
       setError(msg);
+      setTerminalState("failed");
       setRetryAfterSec(parseGeminiRetryAfterSec(msg) ?? retryHintSec);
       return false;
     } finally {
@@ -122,7 +137,7 @@ export function useDocumentCaptureWizardApi(captureId: string | null): WizardApi
     }
   }, [captureId]);
 
-  return { busy, error, retryAfterSec, analyzePhase, heartbeatAt, runAnalyze, reset };
+  return { busy, error, retryAfterSec, analyzePhase, heartbeatAt, terminalState, runAnalyze, reset };
 }
 
 export function DocumentCaptureWizardBody({

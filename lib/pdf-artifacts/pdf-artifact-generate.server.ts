@@ -9,7 +9,8 @@ import {
   generateDipendentiDipendentePdfBytes,
 } from "@/lib/dipendenti/pdf/dipendenti-pdf-generate";
 import { fetchCabAppSettingsPayloadServer } from "@/lib/app-settings/resolve-settings-for-server";
-import { getLavorazioniAttiveLightServer } from "@/lib/lavorazioni/lavorazioni-list-fetch-server";
+import { LAVORAZIONI_ATTIVE_LIGHT_FILTERS } from "@/lib/lavorazioni/lavorazioni-prefetch-filters";
+import { fetchLavorazioniListAuthorizedServer } from "@/lib/lavorazioni/lavorazioni-list-fetch-server";
 import {
   buildLavorazioniInCorsoPdfFileName,
   generateLavorazioniInCorsoPdfBytes,
@@ -39,6 +40,7 @@ import { fetchPreventivoRecordServer } from "@/lib/preventivi/preventivi-fetch-s
 import {
   generatePreventivoPdfBytes,
   preventivoPdfFileName,
+  PREVENTIVO_PDF_LAYOUT_STAMP,
 } from "@/lib/preventivi/preventivo-pdf-generate";
 import { fetchReportPdfDataSnapshot } from "@/lib/report/report-pdf-data.server";
 import {
@@ -100,9 +102,10 @@ function codiciMapFromLavorazioneRows(rows: readonly LavorazioneListRow[]): Reco
 export async function deliverPdfArtifact(
   type: PdfArtifactType,
   query: PdfArtifactQuery,
+  options?: { skipRbac?: boolean },
 ): Promise<ServiceResult<PdfArtifactDelivery>> {
   try {
-    return await deliverPdfArtifactInner(type, query);
+    return await deliverPdfArtifactInner(type, query, options);
   } catch (error) {
     console.error("[pdf-artifact] deliver failed:", error);
     return err(error instanceof Error ? error.message : "Generazione PDF non riuscita");
@@ -112,9 +115,12 @@ export async function deliverPdfArtifact(
 async function deliverPdfArtifactInner(
   type: PdfArtifactType,
   query: PdfArtifactQuery,
+  options?: { skipRbac?: boolean },
 ): Promise<ServiceResult<PdfArtifactDelivery>> {
-  const allowed = await verifyPdfArtifactReadAccess(type);
-  if (!allowed) return err("Permesso richiesto.");
+  if (!options?.skipRbac) {
+    const allowed = await verifyPdfArtifactReadAccess(type);
+    if (!allowed) return err("Permesso richiesto.");
+  }
 
   const autore = await resolvePdfAutore(query.autore);
   let scopeId = "global";
@@ -129,7 +135,7 @@ async function deliverPdfArtifactInner(
   switch (type) {
     case "lavorazioni-in-corso": {
       const [lavRes, settingsPayload] = await Promise.all([
-        getLavorazioniAttiveLightServer(),
+        fetchLavorazioniListAuthorizedServer(LAVORAZIONI_ATTIVE_LIGHT_FILTERS),
         fetchCabAppSettingsPayloadServer(),
       ]);
       if (!lavRes.success) return err(lavRes.error ?? "Errore caricamento lavorazioni");
@@ -190,6 +196,7 @@ async function deliverPdfArtifactInner(
         noteFinali: p.noteFinali,
         collaudoPrezzo: p.collaudoPrezzo,
         manodopera: p.manodopera,
+        pdfLayout: PREVENTIVO_PDF_LAYOUT_STAMP,
       });
       scopeId = id;
       fileName = preventivoPdfFileName(p);

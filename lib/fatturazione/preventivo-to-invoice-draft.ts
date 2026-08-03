@@ -10,6 +10,7 @@ function mapSezioneToTipo(sezione: string): InvoiceDraftRowInput["tipo"] {
     case "ricambi":
       return "ricambio";
     case "collaudo":
+    case "sanificazione":
     case "lavorazioni":
       return "lavorazione";
     default:

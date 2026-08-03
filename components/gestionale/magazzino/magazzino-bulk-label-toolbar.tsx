@@ -2,11 +2,16 @@
 
 import { useCallback, useState } from "react";
 import { LoadingButton } from "@/components/design-system";
+import { HubIconClose } from "@/components/design-system/hub-table-action-icons";
+import { gestionaleModalFooterCancelBtnClass } from "@/components/design-system/gestionale-modal-footer-actions";
+import { GlobalFixedListPillSelect } from "@/components/gestionale/global-input/global-fixed-list-pill";
 import { PageActionIconLabels } from "@/components/ui/page-action-menu/page-action-menu-icons";
-import { dsBtnGhost } from "@/lib/ui/design-system";
+import {
+  dsCheckboxInput,
+  dsPageToolbar,
+} from "@/lib/ui/design-system";
 import {
   BULK_SYNC_MAX,
-  DEFAULT_INCLUDE_BARCODE,
   DEFAULT_LABEL_PRESET,
   LABEL_PRESET_IDS,
   labelPresetOptionLabel,
@@ -16,7 +21,6 @@ import {
   type LabelSelection,
 } from "@/lib/inventory-labels/client/label-selection";
 import { normalizePdfDownloadFileName, openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
-import { gestionaleSelectNativePlainClass } from "@/lib/ui/design-system";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 type BulkLabelPhase = "idle" | "preparing" | "generating" | "opening";
@@ -31,6 +35,16 @@ async function openLabelArtifact(blob: Blob, labelCount: number): Promise<void> 
 
 const BULK_FETCH_TIMEOUT_MS = 280_000;
 
+const TOOLBAR_BTN_ICON_CLASS = "h-4 w-4 shrink-0";
+
+const LABEL_PRESET_SELECT_ITEMS = LABEL_PRESET_IDS.map((id) => ({
+  value: id,
+  label: labelPresetOptionLabel(id),
+}));
+
+const LABEL_PRESET_PICKER_SHELL =
+  "w-full min-w-0 !justify-between !text-left rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] bg-[var(--cab-surface)] font-semibold text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow,background-color] duration-200 ease-out hover:border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]";
+
 export function MagazzinoBulkLabelToolbar({
   selection,
   onClearSelection,
@@ -40,7 +54,6 @@ export function MagazzinoBulkLabelToolbar({
 }) {
   const gestToast = useGestionaleToast();
   const [preset, setPreset] = useState(DEFAULT_LABEL_PRESET);
-  const [includeBarcode, setIncludeBarcode] = useState(DEFAULT_INCLUDE_BARCODE);
   const [clienteLabel, setClienteLabel] = useState(false);
   const [phase, setPhase] = useState<BulkLabelPhase>("idle");
   const [progress, setProgress] = useState(0);
@@ -60,7 +73,7 @@ export function MagazzinoBulkLabelToolbar({
       const res = await fetch("/api/inventory-labels/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, preset, format: "pdf", includeBarcode, clienteLabel }),
+        body: JSON.stringify({ items, preset, format: "pdf", includeBarcode: false, clienteLabel }),
         signal: controller.signal,
       });
       window.clearTimeout(timeoutId);
@@ -139,110 +152,87 @@ export function MagazzinoBulkLabelToolbar({
       setPhase("idle");
       setProgress(0);
     }
-  }, [gestToast, hasSelection, includeBarcode, clienteLabel, preset, selection.quantities, totalLabels]);
+  }, [gestToast, hasSelection, clienteLabel, preset, selection.quantities, totalLabels]);
 
   const phaseLabel =
     phase === "preparing"
       ? "Preparazione…"
       : phase === "generating"
         ? progress > 0
-          ? `Generazione ${progress}%`
+          ? `${progress}%`
           : "Generazione…"
         : phase === "opening"
-          ? "Apertura PDF…"
+          ? "Apertura…"
           : "Generazione…";
 
   return (
     <div
       role="region"
       aria-label="Generazione etichette"
-      className="sticky bottom-0 z-20 mt-3 rounded-xl border border-[color:color-mix(in_srgb,var(--cab-primary)_24%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))] px-4 py-3 shadow-[var(--cab-shadow-md)] backdrop-blur-sm"
+      className={`${dsPageToolbar} sticky bottom-0 z-20 mt-3 w-full min-w-0`}
     >
-      <div className="mx-auto flex w-full max-w-[var(--cab-content-max,100%)] flex-col gap-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_32%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] text-[color:var(--cab-primary)]">
-              <PageActionIconLabels className="h-4 w-4" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold leading-tight text-[color:var(--cab-text)]">Etichette ricambi</p>
-              <p className="text-xs leading-snug text-[color:var(--cab-text-muted)]">
-                {!hasSelection
-                  ? "Imposta la quantità per ogni ricambio in lista"
-                  : `${totalLabels} etichett${totalLabels === 1 ? "a" : "e"} · ${totalItems} ricamb${totalItems === 1 ? "o" : "i"}`}
-              </p>
-            </div>
-          </div>
-          {hasSelection ? (
-            <span className="inline-flex min-h-7 shrink-0 items-center rounded-full border border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_16%,var(--cab-surface))] px-2.5 text-xs font-semibold tabular-nums text-[color:var(--cab-text)]">
-              {totalLabels}
-            </span>
-          ) : null}
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold leading-tight text-[color:var(--cab-text)]">Etichette ricambi</p>
+          <p className="text-xs leading-snug text-[color:var(--cab-text-muted)]">
+            {!hasSelection
+              ? "Imposta la quantità per ogni ricambio in lista"
+              : `${totalLabels} etichett${totalLabels === 1 ? "a" : "e"} · ${totalItems} ricamb${totalItems === 1 ? "o" : "i"}`}
+          </p>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <label className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-1 sm:max-w-md">
             <span className="text-xs font-medium text-[color:var(--cab-text-muted)]">Formato etichetta</span>
-            <select
-              id="magazzino-bulk-label-preset"
-              className={`${gestionaleSelectNativePlainClass} max-w-full`}
+            <GlobalFixedListPillSelect
               value={preset}
-              onChange={(e) => setPreset(e.target.value)}
-              aria-label="Formato etichetta"
+              onChange={setPreset}
+              options={LABEL_PRESET_SELECT_ITEMS}
+              ariaLabel="Formato etichetta"
+              sheetTitle="Formato etichetta"
               disabled={busy}
-            >
-              {LABEL_PRESET_IDS.map((id) => (
-                <option key={id} value={id}>
-                  {labelPresetOptionLabel(id)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex min-h-11 shrink-0 cursor-pointer items-center gap-2 self-end px-1 text-sm text-[color:var(--cab-text)]">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-[color:var(--cab-border)]"
-              checked={includeBarcode}
-              onChange={(e) => setIncludeBarcode(e.target.checked)}
-              disabled={busy || clienteLabel}
-              aria-label="Includi barcode"
+              size="form"
+              shellClass={LABEL_PRESET_PICKER_SHELL}
             />
-            Barcode
-          </label>
+          </div>
 
-          <label className="flex min-h-11 shrink-0 cursor-pointer items-center gap-2 self-end px-1 text-sm text-[color:var(--cab-text)]">
+          <label className="flex min-h-10 shrink-0 cursor-pointer items-center gap-2 text-sm text-[color:var(--cab-text)] sm:min-h-11 sm:self-end">
             <input
               type="checkbox"
-              className="h-4 w-4 rounded border-[color:var(--cab-border)]"
+              className={dsCheckboxInput}
               checked={clienteLabel}
-              onChange={(e) => {
-                const next = e.target.checked;
-                setClienteLabel(next);
-                if (next) setIncludeBarcode(false);
-              }}
+              onChange={(e) => setClienteLabel(e.target.checked)}
               disabled={busy}
               aria-label="Etichetta cliente"
             />
             Etichetta cliente
           </label>
 
-          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+          <div className="flex w-full min-w-0 flex-col gap-2 sm:ms-auto sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-2">
+            {hasSelection ? (
+              <button
+                type="button"
+                className={`${gestionaleModalFooterCancelBtnClass} w-full justify-center sm:w-auto sm:shrink-0`}
+                onClick={onClearSelection}
+                disabled={busy}
+              >
+                <HubIconClose className={TOOLBAR_BTN_ICON_CLASS} aria-hidden />
+                <span className="sm:hidden">Azzera</span>
+                <span className="hidden sm:inline">Azzera quantità</span>
+              </button>
+            ) : null}
             <LoadingButton
-              variant="primary"
-              className="min-h-11 min-w-[10.5rem] flex-1 whitespace-nowrap sm:flex-none"
+              className="w-full justify-center whitespace-nowrap sm:w-auto sm:min-w-[10rem] sm:shrink-0"
               loading={busy}
               loadingLabel={phaseLabel}
               disabled={!canGenerate}
               onClick={() => void handlePrint()}
             >
-              Genera {hasSelection ? `${totalLabels} ` : ""}etichette
+              {!busy ? <PageActionIconLabels className={TOOLBAR_BTN_ICON_CLASS} aria-hidden /> : null}
+              {hasSelection
+                ? `Genera ${totalLabels} etichett${totalLabels === 1 ? "a" : "e"}`
+                : "Genera etichette"}
             </LoadingButton>
-            {hasSelection ? (
-              <button type="button" className={`${dsBtnGhost} min-h-11`} onClick={onClearSelection} disabled={busy}>
-                Azzera quantità
-              </button>
-            ) : null}
           </div>
         </div>
 

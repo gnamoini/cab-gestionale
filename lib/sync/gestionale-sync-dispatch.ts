@@ -36,6 +36,9 @@ import { resolveDomainForTable } from "@/lib/sync/gestionale-sync-scope";
 import { incrementHealthCounter } from "@/lib/observability/runtime-health";
 import { recordStockInvalidateTelemetry } from "@/lib/magazzino/stock-merge-telemetry";
 import { acknowledgeOperationalTableVersions } from "@/lib/sync/operational-data-version";
+import { logClientPortalSyncPipelineDebug } from "@/lib/lavorazioni/lavorazioni-list-pipeline-debug";
+import { getActiveCorrelationId } from "@/lib/observability/runtime-correlation-context";
+import { collectQueryKeysForGestionaleTables } from "@/src/lib/react-query/invalidate-targets";
 
 function isDocumentVisible(): boolean {
   return typeof document === "undefined" || document.visibilityState === "visible";
@@ -272,6 +275,19 @@ export function dispatchGestionaleAction(
           domain: entry.domain,
           source: entry.source,
         });
+        if (
+          process.env.NODE_ENV === "development" &&
+          isClientPortalSyncTable(entry.table)
+        ) {
+          logClientPortalSyncPipelineDebug({
+            phase: "dirty_mark",
+            correlationId: getActiveCorrelationId(),
+            source: options.source,
+            tables: [entry.table],
+            entityId: entry.entityId ?? undefined,
+            remoteVersion: entry.remoteVersion,
+          });
+        }
       }
     }
 
@@ -296,6 +312,15 @@ export function dispatchGestionaleAction(
       cabSyncEvents: cabEvents,
       immediate: options.source === "local_mutation" || hasDestructiveCabEvents(cabEvents),
     });
+    if (process.env.NODE_ENV === "development" && tablesForCache.some(isClientPortalSyncTable)) {
+      logClientPortalSyncPipelineDebug({
+        phase: "invalidate",
+        correlationId: getActiveCorrelationId(),
+        source: options.source,
+        tables: tablesForCache,
+        queryKeyInvalidated: collectQueryKeysForGestionaleTables(tablesForCache, { includePortal: true }),
+      });
+    }
     dispatchPortalSideEffects(tablesForCache);
   }
 

@@ -124,6 +124,7 @@ function GestionaleTextareaInner(
 ) {
   const innerRef = useRef<HTMLTextAreaElement | null>(null);
   const scrollRafRef = useRef<number | null>(null);
+  const pendingSelectionRef = useRef<{ start: number; end: number } | null>(null);
   const resolvedMaxHeight = autoGrow ? (maxHeightProp ?? gestionaleTextareaMaxHeightDefault) : undefined;
 
   const setRef = (el: HTMLTextAreaElement | null) => {
@@ -149,11 +150,22 @@ function GestionaleTextareaInner(
   };
 
   useLayoutEffect(() => {
-    if (!autoGrow) return;
     const el = innerRef.current;
     if (!el) return;
-    const grew = syncTextareaAutoGrowHeight(el, size, resolvedMaxHeight);
-    if (grew) scheduleFocusRescroll();
+    if (autoGrow) {
+      const grew = syncTextareaAutoGrowHeight(el, size, resolvedMaxHeight);
+      if (grew) scheduleFocusRescroll();
+    }
+    const pending = pendingSelectionRef.current;
+    if (pending && document.activeElement === el) {
+      const len = el.value.length;
+      const start = Math.min(pending.start, len);
+      const end = Math.min(pending.end, len);
+      if (el.selectionStart !== start || el.selectionEnd !== end) {
+        el.setSelectionRange(start, end);
+      }
+      pendingSelectionRef.current = null;
+    }
   }, [autoGrow, value, readOnly, size, resolvedMaxHeight]);
 
   useEffect(() => {
@@ -185,6 +197,10 @@ function GestionaleTextareaInner(
   };
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    pendingSelectionRef.current = {
+      start: e.target.selectionStart ?? e.target.value.length,
+      end: e.target.selectionEnd ?? e.target.selectionStart ?? e.target.value.length,
+    };
     onChange(e.target.value);
   };
 

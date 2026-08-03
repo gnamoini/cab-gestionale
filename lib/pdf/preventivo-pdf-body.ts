@@ -3,7 +3,7 @@ import {
   drawGestionaleCompactFieldSectionTable,
   drawGestionaleDataSectionTable,
   drawGestionaleFieldSectionTable,
-  drawGestionaleTripleFieldSectionTable,
+  compactOggettoInterventoColumnStyles,
   pdfFieldFromValue,
 } from "@/lib/pdf/gestionale-section-table";
 import {
@@ -21,6 +21,10 @@ import {
 } from "@/lib/preventivi/preventivi-struttura";
 import { totaleNettoRigaRicambio } from "@/lib/preventivi/preventivi-totals";
 import { tipoRigaRicambio } from "@/lib/preventivi/preventivi-struttura";
+import {
+  formatRicambioUnitaMisuraShort,
+  parseRicambioUnitaMisura,
+} from "@/lib/magazzino/ricambio-unita-misura";
 import {
   PREVENTIVO_SMALTIMENTO_DESCRIZIONE,
   PREVENTIVO_SMALTIMENTO_PERCENT,
@@ -44,50 +48,64 @@ const RICAMBI_HEAD = ["Codice", "Descrizione", "Qtà", "Prezzo unit.", "Sconto",
 const RICAMBI_COLUMN_STYLES = {
   0: { cellWidth: 22 },
   1: { cellWidth: "auto" as const },
-  2: { cellWidth: 12, halign: "center" as const },
+  2: { cellWidth: 17, halign: "center" as const },
   3: { cellWidth: 24, halign: "right" as const },
   4: { cellWidth: 16, halign: "center" as const },
   5: { cellWidth: 28, halign: "right" as const },
 };
+
+function formatPdfRicambioQuantita(quantita: number, unitaMisura: unknown): string {
+  const unita = parseRicambioUnitaMisura(unitaMisura);
+  const q = Number.isInteger(quantita)
+    ? String(quantita)
+    : quantita.toLocaleString("it-IT", { maximumFractionDigits: 2 });
+  return `${q} ${formatRicambioUnitaMisuraShort(unita)}`;
+}
 
 const LAVORAZIONI_COLUMN_STYLES = {
   0: { cellWidth: "auto" as const },
 };
 
 export function buildLavorazioniEffettuatePdfRows(p: PreventivoRecord): string[][] {
-  return parsePreventivoLavorazioniClientePdfLines(p.descrizioneLavorazioniCliente).map((line) => [line]);
+  return parsePreventivoLavorazioniClientePdfLines(
+    p.descrizioneLavorazioniCliente,
+    p.sanificazioneDescrizione,
+  ).map((line) => [line]);
 }
 
 export function computeManodoperaSectionTotal(righe: readonly PreventivoRigaOutput[]): number {
   let total = 0;
   for (const r of righe) {
-    if (r.sezione === "manodopera" || r.sezione === "collaudo") {
+    if (r.sezione === "sanificazione" || r.sezione === "manodopera" || r.sezione === "collaudo") {
       total += r.totale;
     }
   }
   return Math.round(total * 100) / 100;
 }
 
+function pushOrePrezzoPdfRow(body: string[][], descrizione: string, quantita: number, prezzoUnitario: number, totale: number) {
+  body.push([
+    descrizione,
+    quantita > 0 ? String(quantita) : "—",
+    fmtEuroPdf(prezzoUnitario),
+    fmtEuroPdf(totale),
+  ]);
+}
+
 export function buildManodoperaPdfRows(righe: readonly PreventivoRigaOutput[]): string[][] {
   const body: string[][] = [];
+  const sanRow = righe.find((r) => r.sezione === "sanificazione");
   const manRow = righe.find((r) => r.sezione === "manodopera");
   const collRow = righe.find((r) => r.sezione === "collaudo");
 
+  if (sanRow && sanRow.sezione === "sanificazione") {
+    pushOrePrezzoPdfRow(body, sanRow.descrizione, sanRow.quantita, sanRow.prezzoUnitario, sanRow.totale);
+  }
   if (manRow && manRow.sezione === "manodopera") {
-    body.push([
-      "Manodopera",
-      String(manRow.quantita),
-      fmtEuroPdf(manRow.prezzoUnitario),
-      fmtEuroPdf(manRow.totale),
-    ]);
+    pushOrePrezzoPdfRow(body, "Manodopera", manRow.quantita, manRow.prezzoUnitario, manRow.totale);
   }
   if (collRow && collRow.sezione === "collaudo") {
-    body.push([
-      collRow.descrizione,
-      "—",
-      fmtEuroPdf(collRow.prezzoUnitario),
-      fmtEuroPdf(collRow.totale),
-    ]);
+    pushOrePrezzoPdfRow(body, collRow.descrizione, collRow.quantita, collRow.prezzoUnitario, collRow.totale);
   }
 
   return body;
@@ -104,7 +122,7 @@ export function buildRicambiPdfRows(righe: readonly PreventivoRigaOutput[]): str
       return [
         codiceVuoto ? "" : r.codiceOE || "—",
         r.descrizione,
-        String(r.quantita),
+        formatPdfRicambioQuantita(r.quantita, r.unitaMisura),
         fmtEuroPdf(r.prezzoUnitario),
         r.scontoPercent > 0
           ? `${r.scontoPercent.toLocaleString("it-IT", { maximumFractionDigits: 1 })} %`
@@ -125,12 +143,20 @@ export function buildPreventivoPdfRiepilogoFields(economics: PreventivoPdfEconom
     });
   }
 
-  fields.push({ label: "TOTALE NETTO (senza IVA)", value: fmtEuroPdf(economics.totaleNetto) });
+  fields.push({
+    label: "TOTALE NETTO (senza IVA)",
+    value: fmtEuroPdf(economics.totaleNetto),
+    bold: true,
+  });
   fields.push({
     label: `TOTALE IVA (${economics.ivaPercent}%)`,
     value: fmtEuroPdf(economics.importoIva),
   });
-  fields.push({ label: "TOTALE DOCUMENTO", value: fmtEuroPdf(economics.totaleConIva) });
+  fields.push({
+    label: "TOTALE DOCUMENTO",
+    value: fmtEuroPdf(economics.totaleConIva),
+    bold: true,
+  });
   return fields;
 }
 
@@ -145,7 +171,11 @@ export function buildPreventivoPdfNettoFields(economics: PreventivoPdfEconomics)
     });
   }
 
-  fields.push({ label: "TOTALE NETTO (senza IVA)", value: fmtEuroPdf(economics.totaleNetto) });
+  fields.push({
+    label: "TOTALE NETTO (senza IVA)",
+    value: fmtEuroPdf(economics.totaleNetto),
+    bold: true,
+  });
   return fields;
 }
 
@@ -157,7 +187,7 @@ export function drawPreventivoPdfRiepilogo(
 ): number {
   const fields = buildPreventivoPdfRiepilogoFields(economics);
   return drawGestionaleFieldSectionTable(doc, startY, pageW, "Riepilogo importi", fields, {
-    valueHalign: "left",
+    valueHalign: "right",
   });
 }
 
@@ -178,7 +208,9 @@ export function drawPreventivoPdfBody(
 
   const oggetto = buildPreventivoOggettoInterventoPdfFields(p);
   if (oggetto.length > 0) {
-    y = drawGestionaleTripleFieldSectionTable(doc, y, pageW, "Oggetto intervento", oggetto);
+    y = drawGestionaleCompactFieldSectionTable(doc, y, pageW, "Oggetto intervento", oggetto, {
+      columnStyles: compactOggettoInterventoColumnStyles,
+    });
   }
 
   const lavBody = buildLavorazioniEffettuatePdfRows(p);

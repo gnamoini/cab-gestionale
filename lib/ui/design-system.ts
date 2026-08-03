@@ -73,6 +73,9 @@ export const dsSystemBannerShell =
   "bg-[#09090b] text-[color:#fafafa] shadow-[var(--cab-shadow-md)]";
 export const dsSystemBannerShellTop =
   "sticky top-0 z-[90] border-b border-[color:color-mix(in_srgb,#ffffff_10%,transparent)] pt-[max(0.625rem,env(safe-area-inset-top))]";
+/** Banner in-shell (main.gestionale-scroll-y) — sticky senza padding safe-area esterno. */
+export const dsSystemBannerShellInShell =
+  "sticky top-0 z-[90] shrink-0 border-b border-[color:color-mix(in_srgb,#ffffff_10%,transparent)]";
 export const dsSystemBannerInner = "mx-auto max-w-4xl px-3 py-2.5 sm:px-4";
 export const dsSystemBannerLayout = "flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4";
 export const dsSystemBannerLead = "flex min-w-0 flex-1 items-start gap-3 sm:items-center";
@@ -235,7 +238,9 @@ export const dsBtnSecondary = dsBtnNeutral;
 export const dsBtnDanger = `inline-flex items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-danger)_30%,var(--cab-border))] ${cabDangerBg} px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--cab-shadow-sm)] ${cabDangerBgHover} hover:shadow-[var(--cab-shadow-md)] hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--cab-danger)_35%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
 /** F — Input su sfondo chiaro (form gestionale) */
-export const dsInput = `w-full rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_90%,var(--cab-border))] ${cabSurface} px-3 py-2.5 ${dsIosInputTextSize} ${cabText} shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-[color:var(--cab-text-muted)] hover:border-[color:var(--cab-border-strong)] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] ${dsFocus} touch-manipulation`;
+const dsInputSurface = `w-full rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_90%,var(--cab-border))] ${cabSurface} px-3 py-2.5 ${dsIosInputTextSize} ${cabText} shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-[color:var(--cab-text-muted)] hover:border-[color:var(--cab-border-strong)] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]`;
+
+export const dsInput = `${dsInputSurface} ${dsFocus} touch-manipulation`;
 
 /** Input numerico senza spinner nativi del browser. */
 export const dsInputNoSpinner =
@@ -244,7 +249,8 @@ export const dsInputNoSpinner =
 /** F — Campo ricerca toolbar (icona a sinistra, `min-h-11`; focus inset senza doppio ring). */
 export const dsSearchFieldInput = `w-full min-h-11 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_90%,var(--cab-border))] ${cabSurface} py-0 pl-10 pr-3 ${dsIosInputTextSize} ${cabText} shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-[color:var(--cab-text-muted)] hover:border-[color:var(--cab-border-strong)] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_48%,var(--cab-border))] focus:outline-none focus-visible:border-[color:color-mix(in_srgb,var(--cab-primary)_48%,var(--cab-border))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_22%,transparent)] touch-manipulation`;
 
-export const dsTextarea = `${dsInput} gestionale-textarea min-h-[var(--cab-textarea-min-h,5.5rem)] resize-none overflow-y-auto`;
+/** F — Textarea: stesso input senza scale al click (campi lunghi). */
+export const dsTextarea = `${dsInputSurface} ${dsFocusRing} touch-manipulation gestionale-textarea min-h-[var(--cab-textarea-min-h,5.5rem)] resize-none overflow-y-auto`;
 
 /** Tetto default auto-grow textarea (scroll interno oltre il limite — sicuro mobile/iOS). */
 export const gestionaleTextareaMaxHeightDefault = "min(35dvh, 16rem)";
@@ -514,18 +520,18 @@ export const dsZToast = "z-[200]";
 export const dsToastViewport =
   "cab-toast-viewport pointer-events-none fixed right-0 flex max-h-[min(50dvh,24rem)] w-full max-w-[min(100%,24rem)] flex-col-reverse overflow-hidden max-md:top-0 max-md:bottom-auto max-md:p-3 max-md:pt-[max(0.75rem,env(safe-area-inset-top))] max-md:pb-0 md:bottom-0 md:p-4 md:pb-[max(1rem,env(safe-area-inset-bottom))]";
 
-/** Singola notifica toast — tono via classi aggiuntive (bordo + sfondo). */
+/** Singola notifica toast — base glass; tono via accent bar (toast-context). */
 export const dsToastItem =
-  "pointer-events-auto flex items-center gap-3 rounded-[var(--ds-radius-xl)] border py-2.5 pl-3 pr-2 shadow-[var(--cab-shadow-md)] backdrop-blur-[2px]";
+  "pointer-events-auto flex items-center gap-3 rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_76%,transparent)] py-2.5 pl-3 pr-2 shadow-sm ring-1 ring-[color:color-mix(in_srgb,var(--cab-border)_55%,transparent)] backdrop-blur-md";
 
 export const dsToastIconWrap =
-  "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)]";
+  "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] bg-[color:color-mix(in_srgb,var(--cab-border)_32%,transparent)]";
 
 export const dsToastMessage =
   "min-w-0 flex-1 self-center text-sm font-medium leading-snug text-[color:var(--cab-text)]";
 
 export const dsToastDismiss =
-  "flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--ds-radius-md)] text-[color:var(--cab-text-muted)] transition-[background-color,color] duration-150 hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)]";
+  "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--ds-radius-md)] text-[color:var(--cab-text-muted)] transition-[background-color,color] duration-150 hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] focus-visible:bg-[var(--cab-hover)] focus-visible:text-[color:var(--cab-text)]";
 
 /** Contenuto tooltip portal (azioni / CTA — testo breve o frase su più righe, senza scroll). */
 export const dsTooltipContent =

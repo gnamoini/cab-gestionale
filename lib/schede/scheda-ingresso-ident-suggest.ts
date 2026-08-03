@@ -1,13 +1,28 @@
 import {
+  findMezziByMatricola,
+  findMezziByScuderia,
+  findMezziByTarga,
   findMezziByVin,
   findMezzoByIngressoIdent,
   findMezzoByTargaOrMatricola,
 } from "@/lib/mezzi/find-mezzo-by-ident";
 import { normalizeVinIdentity } from "@/lib/domain/mezzo/mezzo-identity";
 import { mezzoMatchesSmartQuery } from "@/lib/mezzi/identificazione-mezzo";
+import {
+  ENTITY_SIMILAR_SCORE_MIN,
+  fuzzyMatchEntity,
+} from "@/lib/validation/global-entity-validation";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 
 export type SchedaIngressoIdentField = "targa" | "matricola" | "nScuderia" | "vin";
+
+export type SchedaIngressoIdentMatchKind = "exact" | "similar" | "ambiguous" | "none";
+
+export type SchedaIngressoIdentMatchResult = {
+  kind: SchedaIngressoIdentMatchKind;
+  mezzo?: MezzoGestito;
+  candidates?: MezzoGestito[];
+};
 
 const SUGGEST_CAP = 10;
 
@@ -102,6 +117,77 @@ export function findExactMezzoForIngressoIdent(
   }
 
   return findMezzoByIngressoIdent(mezzi, ident);
+}
+
+function filterExcludedMezzi(
+  mezzi: readonly MezzoGestito[],
+  excludeMezzoId?: string,
+): MezzoGestito[] {
+  if (!excludeMezzoId) return [...mezzi];
+  return mezzi.filter((m) => m.id !== excludeMezzoId);
+}
+
+function findExactHitsForIngressoIdentField(
+  mezzi: readonly MezzoGestito[],
+  field: SchedaIngressoIdentField,
+  value: string,
+): MezzoGestito[] {
+  const v = value.trim();
+  if (!v && field !== "nScuderia") return [];
+  switch (field) {
+    case "targa":
+      return findMezziByTarga(mezzi, v);
+    case "matricola":
+      return findMezziByMatricola(mezzi, v);
+    case "nScuderia":
+      return findMezziByScuderia(mezzi, v);
+    case "vin":
+      return findMezziByVin(mezzi, v);
+  }
+}
+
+/** Match esatto o simile su singolo campo ident — senza autocomplete. */
+export function findMezzoMatchForIngressoIdentField(
+  mezzi: readonly MezzoGestito[],
+  field: SchedaIngressoIdentField,
+  value: string,
+  options?: { excludeMezzoId?: string },
+): SchedaIngressoIdentMatchResult {
+  const v = value.trim();
+  if (!v && field !== "nScuderia") return { kind: "none" };
+  if (isEmptyIdent(v, field)) return { kind: "none" };
+
+  const catalog = filterExcludedMezzi(mezzi, options?.excludeMezzoId);
+  const exactHits = findExactHitsForIngressoIdentField(catalog, field, v);
+
+  if (exactHits.length === 1) {
+    return { kind: "exact", mezzo: exactHits[0] };
+  }
+  if (exactHits.length > 1) {
+    return { kind: "ambiguous", candidates: exactHits };
+  }
+
+  const poolEntries: { value: string; mezzo: MezzoGestito }[] = [];
+  for (const m of catalog) {
+    const ident = identFieldValue(m, field);
+    if (isEmptyIdent(ident, field)) continue;
+    poolEntries.push({ value: ident, mezzo: m });
+  }
+  if (poolEntries.length === 0) return { kind: "none" };
+
+  const vinNorm = field === "vin" ? normalizeVinIdentity(v) : null;
+  if (field === "vin" && (!vinNorm || vinNorm.length < 11)) {
+    return { kind: "none" };
+  }
+
+  const minScore =
+    field === "vin" ? Math.max(ENTITY_SIMILAR_SCORE_MIN, 70) : ENTITY_SIMILAR_SCORE_MIN;
+  const fuzzy = fuzzyMatchEntity(v, poolEntries.map((e) => e.value), { minScore });
+  if (!fuzzy) return { kind: "none" };
+
+  const match = poolEntries.find((e) => e.value.trim() === fuzzy.entity);
+  if (!match) return { kind: "none" };
+  return { kind: "similar", mezzo: match.mezzo };
 }
 
 function trimIdent(v: string | undefined): string {

@@ -168,6 +168,7 @@ export function ReportAnalyticsView() {
   useGestionaleSyncScope({
     scopeId: "report-analytics-view",
     domain: "report",
+    route: "/report",
     tables: [
       "lavorazioni",
       "magazzino_ricambi",

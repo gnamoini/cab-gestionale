@@ -1,7 +1,7 @@
 import "server-only";
 
 import { DOCUMENT_ACCESS_TOKENS_COLUMNS, PREVENTIVI_COLUMNS } from "@/lib/db/table-select-columns";
-import { buildClientOfficialDocumentPreviewPath } from "@/lib/official-documents/preview-url";
+import { buildClientOfficialDocumentPreviewPath, buildOfficialDocumentTokenStreamPath } from "@/lib/official-documents/preview-url";
 import type { ClientLavorazioneDocumentsPayload } from "@/lib/official-documents/types";
 import { isPreventivoVisibleToClient } from "@/lib/preventivi/preventivo-client-visibility";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
@@ -44,10 +44,11 @@ export async function resolveClientDocumentsForLavorazioneServer(
         kind: "preventivo" as const,
         label: numero ? `Preventivo ${numero}` : "Preventivo",
         previewPath: token ? buildClientOfficialDocumentPreviewPath(token.token) : "",
+        streamPath: token ? buildOfficialDocumentTokenStreamPath(token.token) : "",
         stato: r.stato,
       };
     })
-    .filter((p) => p.previewPath);
+    .filter((p) => p.streamPath);
 
   const visiblePreventivoIds = new Set(
     (preventiviRows ?? [])
@@ -65,9 +66,10 @@ export async function resolveClientDocumentsForLavorazioneServer(
         kind: "ddt" as const,
         label: d.numero != null ? `DDT ${d.numero}` : "DDT",
         previewPath: token ? buildClientOfficialDocumentPreviewPath(token.token) : "",
+        streamPath: token ? buildOfficialDocumentTokenStreamPath(token.token) : "",
       };
     })
-    .filter((d) => d.previewPath);
+    .filter((d) => d.streamPath);
 
   return success({ preventivi, ddt });
 }

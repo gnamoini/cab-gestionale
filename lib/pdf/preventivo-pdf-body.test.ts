@@ -6,7 +6,7 @@ import {
   buildPreventivoSchedaIngressoTelaioPdfFields,
   buildPreventivoTelaioMezzoPdfFields,
 } from "@/lib/pdf/preventivo-pdf-layout";
-import { compactFieldRowCount, padPdfFieldsToEqualRows, tripleFieldRowCount } from "@/lib/pdf/gestionale-section-table";
+import { compactFieldRowCount, compactOggettoInterventoColumnStyles, padPdfFieldsToEqualRows, tripleFieldRowCount } from "@/lib/pdf/gestionale-section-table";
 import {
   buildLavorazioniEffettuatePdfRows,
   buildManodoperaPdfRows,
@@ -83,7 +83,6 @@ const lavFromCliente = buildLavorazioniEffettuatePdfRows({
   descrizioneLavorazioniCliente: "- Sostituzione filtro\n- Controllo idraulico",
 } as PreventivoRecord);
 assert.deepEqual(lavFromCliente, [
-  [PREVENTIVO_SANIFICAZIONE_DESCRIZIONE],
   ["Sostituzione filtro"],
   ["Controllo idraulico"],
 ]);
@@ -91,7 +90,7 @@ assert.deepEqual(lavFromCliente, [
 const lavOnlySanificazione = buildLavorazioniEffettuatePdfRows({
   descrizioneLavorazioniCliente: "",
 } as PreventivoRecord);
-assert.deepEqual(lavOnlySanificazione, [[PREVENTIVO_SANIFICAZIONE_DESCRIZIONE]]);
+assert.deepEqual(lavOnlySanificazione, []);
 
 const lavIgnoresTechnicalResidue = buildLavorazioniEffettuatePdfRows({
   descrizioneLavorazioniCliente: "- Sostituzione filtro",
@@ -99,12 +98,19 @@ const lavIgnoresTechnicalResidue = buildLavorazioniEffettuatePdfRows({
     "Smontaggio motore\nSostituzione guarnizioni\nRimontaggio motore",
 } as PreventivoRecord);
 assert.deepEqual(lavIgnoresTechnicalResidue, [
-  [PREVENTIVO_SANIFICAZIONE_DESCRIZIONE],
   ["Sostituzione filtro"],
 ]);
 assert.equal(lavIgnoresTechnicalResidue.some((row) => row[0] === "Smontaggio motore"), false);
 
 const manodoperaRighe: PreventivoRigaOutput[] = [
+  {
+    sezione: "sanificazione",
+    ordine: 0,
+    descrizione: PREVENTIVO_SANIFICAZIONE_DESCRIZIONE,
+    quantita: 2,
+    prezzoUnitario: 25,
+    totale: 50,
+  },
   {
     sezione: "manodopera",
     ordine: 1,
@@ -123,10 +129,12 @@ const manodoperaRighe: PreventivoRigaOutput[] = [
   },
 ];
 
-assert.equal(computeManodoperaSectionTotal(manodoperaRighe), 215);
+assert.equal(computeManodoperaSectionTotal(manodoperaRighe), 265);
 const manRows = buildManodoperaPdfRows(manodoperaRighe);
-assert.equal(manRows.length, 2);
-assert.equal(manRows[1]?.[1], "—");
+assert.equal(manRows.length, 3);
+assert.equal(manRows[0]?.[0], PREVENTIVO_SANIFICAZIONE_DESCRIZIONE);
+assert.equal(manRows[0]?.[1], "2");
+assert.equal(manRows[2]?.[1], "1");
 
 const ricambiRighe: PreventivoRigaOutput[] = [
   {
@@ -137,7 +145,8 @@ const ricambiRighe: PreventivoRigaOutput[] = [
       ricambioId: null,
       codiceOE: "FIL-01",
       descrizione: "Filtro olio",
-      quantita: 2,
+      quantita: 20,
+      unitaMisura: "lt",
       prezzoUnitario: 25,
       scontoPercent: 10,
       tipo: "standard",
@@ -145,7 +154,8 @@ const ricambiRighe: PreventivoRigaOutput[] = [
   },
 ];
 
-assert.equal(buildRicambiPdfRows(ricambiRighe)[0]?.[5], "45,00 €");
+assert.equal(buildRicambiPdfRows(ricambiRighe)[0]?.[2], "20 lt");
+assert.equal(buildRicambiPdfRows(ricambiRighe)[0]?.[5], "450,00 €");
 
 const economicsRiepilogo = buildPreventivoPdfRiepilogoFields({
   totaleRicambi: 100,
@@ -161,6 +171,9 @@ assert.equal(economicsRiepilogo.length, 3);
 assert.equal(economicsRiepilogo[0]?.label, "TOTALE NETTO (senza IVA)");
 assert.equal(economicsRiepilogo[1]?.label, "TOTALE IVA (22%)");
 assert.equal(economicsRiepilogo[2]?.label, "TOTALE DOCUMENTO");
+assert.equal(economicsRiepilogo[0]?.bold, true);
+assert.equal(economicsRiepilogo[1]?.bold, undefined);
+assert.equal(economicsRiepilogo[2]?.bold, true);
 
 const economicsBase = buildPreventivoPdfNettoFields({
   totaleRicambi: 100,
@@ -174,6 +187,7 @@ const economicsBase = buildPreventivoPdfNettoFields({
 
 assert.equal(economicsBase.length, 1);
 assert.equal(economicsBase[0]?.label, "TOTALE NETTO (senza IVA)");
+assert.equal(economicsBase[0]?.bold, true);
 assert.equal(economicsBase.some((f) => f.label === "Totale ricambi"), false);
 assert.equal(economicsBase.some((f) => f.label === "Totale manodopera"), false);
 
@@ -192,5 +206,12 @@ assert.equal(
   economicsSmalt[0]?.label,
   `${PREVENTIVO_SMALTIMENTO_DESCRIZIONE} (${PREVENTIVO_SMALTIMENTO_PERCENT}%)`,
 );
+
+const contentW = 166;
+const oggettoCols = compactOggettoInterventoColumnStyles(contentW);
+const defaultHalfW = contentW / 2;
+const defaultLabelW = defaultHalfW * 0.35;
+assert.ok(oggettoCols[0].cellWidth > defaultLabelW);
+assert.ok(oggettoCols[0].cellWidth >= 32);
 
 console.log("preventivo-pdf-body.test.ts: ok");

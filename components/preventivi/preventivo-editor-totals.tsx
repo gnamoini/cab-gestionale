@@ -14,8 +14,8 @@ export {
   preventivoEditorSubsectionTitleClass,
 } from "@/components/preventivi/preventivo-editor-ui";
 
-const totalBarHighlightClass =
-  "border border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-card))]";
+const totalBarNeutralClass =
+  "border border-[color:var(--cab-border)] bg-[var(--cab-surface)] shadow-[var(--cab-shadow-sm)]";
 
 const totalBarLayoutClass = "flex items-center justify-between gap-3 px-3 py-2.5";
 
@@ -43,7 +43,7 @@ export function PreventivoEditorTotalBar({
 
   return (
     <div
-      className={`${totalBarLayoutClass} rounded-[var(--ds-radius-lg)] ${totalBarHighlightClass} ${className}`.trim()}
+      className={`${totalBarLayoutClass} rounded-[var(--ds-radius-lg)] ${totalBarNeutralClass} ${className}`.trim()}
     >
       <span className={preventivoEditorSubsectionTitle}>{label}</span>
       <span className={valueClass}>{value}</span>
@@ -103,7 +103,7 @@ export function PreventivoEditorStickyTotalsBar({
 }) {
   return (
     <div
-      className={`${totalBarLayoutClass} flex-wrap rounded-[var(--ds-radius-lg)] ${totalBarHighlightClass} gap-y-2`}
+      className={`${totalBarLayoutClass} flex-wrap rounded-[var(--ds-radius-lg)] ${totalBarNeutralClass} gap-y-2`}
     >
       <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">{chips}</div>
       <div className="ml-auto flex shrink-0 items-center gap-2">

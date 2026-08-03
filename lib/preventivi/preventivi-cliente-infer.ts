@@ -32,7 +32,21 @@ function meanScontoRigheRecenti(list: PreventivoRecord[], maxN: number): number 
   return Math.round((flat.reduce((a, b) => a + b, 0) / flat.length) * 10) / 10;
 }
 
-function meanCostoOrario(list: PreventivoRecord[], maxN: number): number {
+function meanPrezzoOrario(list: PreventivoRecord[], maxN: number): number {
+  const vals = list
+    .slice(0, maxN)
+    .map((p) => {
+      const prezzo = p.manodopera?.prezzoOrario;
+      if (typeof prezzo === "number" && Number.isFinite(prezzo) && prezzo > 0) return prezzo;
+      const legacy = p.manodopera?.costoOrario;
+      return typeof legacy === "number" && Number.isFinite(legacy) && legacy > 0 ? legacy : null;
+    })
+    .filter((v): v is number => v != null);
+  if (vals.length === 0) return DEFAULT_COSTO_ORARIO();
+  return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100;
+}
+
+function meanCostoOrarioInterno(list: PreventivoRecord[], maxN: number): number {
   const vals = list
     .slice(0, maxN)
     .map((p) => p.manodopera?.costoOrario)
@@ -61,6 +75,7 @@ export function inferEconomiciClientePreventivi(
   defaultScontoRicambiCliente = 0,
 ): {
   costoOrario: number;
+  prezzoOrario: number;
   manodoperaScontoPercent: number;
   noteFinaliTipiche: string;
   scontoRigaForCodice: (codiceOE: string) => number;
@@ -69,14 +84,17 @@ export function inferEconomiciClientePreventivi(
     .filter((p) => p.id !== excludeId && p.cliente.trim() && sameCliente(p.cliente, cliente))
     .sort((a, b) => new Date(b.dataCreazione).getTime() - new Date(a.dataCreazione).getTime());
 
-  const meanCosto = meanCostoOrario(cur, 5);
+  const meanPrezzo = meanPrezzoOrario(cur, 5);
+  const meanCostoInterno = meanCostoOrarioInterno(cur, 5);
   const meanScontoMan = meanManodoperaSconto(cur, 5);
   const meanRighe = meanScontoRigheRecenti(cur, 5);
   const defaultSconto = clampScontoRicambi(defaultScontoRicambiCliente);
 
   if (cur.length === 0) {
+    const def = DEFAULT_COSTO_ORARIO();
     return {
-      costoOrario: DEFAULT_COSTO_ORARIO(),
+      costoOrario: def,
+      prezzoOrario: def,
       manodoperaScontoPercent: 0,
       noteFinaliTipiche: "",
       scontoRigaForCodice: () => defaultSconto,
@@ -84,8 +102,17 @@ export function inferEconomiciClientePreventivi(
   }
 
   const last = cur[0]!;
+  const lastPrezzo =
+    last.manodopera?.prezzoOrario && last.manodopera.prezzoOrario > 0
+      ? last.manodopera.prezzoOrario
+      : last.manodopera?.costoOrario && last.manodopera.costoOrario > 0
+        ? last.manodopera.costoOrario
+        : meanPrezzo;
+  const prezzoOrario = lastPrezzo;
   const costoOrario =
-    last.manodopera?.costoOrario && last.manodopera.costoOrario > 0 ? last.manodopera.costoOrario : meanCosto;
+    last.manodopera?.costoOrario && last.manodopera.costoOrario > 0
+      ? last.manodopera.costoOrario
+      : meanCostoInterno;
   const manodoperaScontoPercent =
     last.manodopera?.scontoPercent && last.manodopera.scontoPercent > 0
       ? last.manodopera.scontoPercent
@@ -105,5 +132,5 @@ export function inferEconomiciClientePreventivi(
     return defaultSconto;
   }
 
-  return { costoOrario, manodoperaScontoPercent, noteFinaliTipiche, scontoRigaForCodice };
+  return { costoOrario, prezzoOrario, manodoperaScontoPercent, noteFinaliTipiche, scontoRigaForCodice };
 }

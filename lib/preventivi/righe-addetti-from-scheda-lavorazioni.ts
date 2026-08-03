@@ -69,3 +69,41 @@ export function righeAddettiFromSchedaLavorazioni(
   }
   return righe;
 }
+
+/** Mappa addettoId o legacy → ore aggregate dalla scheda lavorazioni. */
+export function oreSchedaAddettoMapFromLavorazioni(
+  lavScheda: SchedaLavorazioniDoc | null | undefined,
+  addettiRecords: readonly AddettoRecord[],
+): Map<string, number> | null {
+  if (!lavScheda || lavScheda.tipo !== "lavorazioni") return null;
+  const righe = righeAddettiFromSchedaLavorazioni(lavScheda, addettiRecords);
+  if (righe.length === 0) return null;
+  const map = new Map<string, number>();
+  for (const r of righe) {
+    const key = r.addettoId ?? r.addettoLegacy ?? "";
+    if (key) map.set(key, r.ore);
+  }
+  return map.size > 0 ? map : null;
+}
+
+export function oreSchedaForPreventivoRigaAddetto(
+  map: Map<string, number> | null,
+  addettiRecords: readonly AddettoRecord[],
+  riga: PreventivoRigaAddetto,
+): number | null {
+  if (!map) return null;
+  const resolvedId =
+    backfillAddettoIdFromLegacyString(addettiRecords, riga.addettoLegacy, riga.addettoId) ||
+    riga.addettoId;
+  if (resolvedId && map.has(resolvedId)) return map.get(resolvedId)!;
+  const legacy = riga.addettoLegacy?.trim();
+  if (legacy && map.has(legacy)) return map.get(legacy)!;
+  return null;
+}
+
+export function oreTotaliFromSchedaAddettoMap(map: Map<string, number> | null): number | null {
+  if (!map || map.size === 0) return null;
+  let sum = 0;
+  for (const ore of map.values()) sum += ore;
+  return Math.round(sum * 100) / 100;
+}

@@ -1,16 +1,11 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import type { ListSurface } from "@/lib/ui/resolve-list-surface";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
-import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import {
-  refetchActiveClientPortalMedia,
-  refetchActiveSchedeBundles,
-  runLavorazioniToolbarRefresh,
-} from "@/src/lib/react-query/refetch-lavorazioni-operational-data";
+  acknowledgeClientPortalSyncSuccess,
+} from "@/src/lib/react-query/sync-client-portal-operational-data";
 import {
   canRenderFromBarrier,
   deriveBarrierState,
@@ -29,8 +24,6 @@ export type ClientPortalPageOrchestrator = {
   contract: ClientPortalDataContract;
   persistence: ReturnType<typeof useClientPortalFiltersPersistence>;
   archivioListEnabled: boolean;
-  refresh: () => Promise<void>;
-  refreshBusy: boolean;
 };
 
 export function useClientPortalPageOrchestrator(options: {
@@ -51,39 +44,23 @@ export function useClientPortalPageOrchestrator(options: {
     persistence.filters.section === "archivio" ||
     clientPortalFiltersActive(persistence.filters);
   const contract = useClientPortalDataContract(access.allowed, { archivioListEnabled, archivioSchedeEnabled });
-  const qc = useQueryClient();
-  const gestToast = useGestionaleToast();
-  const [refreshBusy, setRefreshBusy] = useState(false);
-  const [forceRefreshing, setForceRefreshing] = useState(false);
+  const initialSyncAcked = useRef(false);
+
+  useEffect(() => {
+    if (!access.allowed || contract.l0Status !== "success" || initialSyncAcked.current) return;
+    initialSyncAcked.current = true;
+    acknowledgeClientPortalSyncSuccess();
+  }, [access.allowed, contract.l0Status]);
 
   const barrier = deriveBarrierState({
     accessAllowed: access.allowed,
     shellContentWidth,
     l0Status: contract.l0Status,
     l1Status: contract.l1Status,
-    forceRefreshing,
+    forceRefreshing: false,
   });
 
   const canRender = canRenderFromBarrier(barrier);
-
-  const refresh = useCallback(async () => {
-    setForceRefreshing(true);
-    setRefreshBusy(true);
-    try {
-      await runLavorazioniToolbarRefresh([
-        contract.inCorsoQ.refetch(),
-        contract.archivioQ.refetch(),
-        refetchActiveSchedeBundles(qc),
-        refetchActiveClientPortalMedia(qc),
-      ]);
-      gestToast.successOnce("client-lav-refresh", GESTIONALE_TOAST.successRefreshed);
-    } catch (e) {
-      gestToast.errorOnce("client-lav-refresh", e, { module: "lavorazioni" });
-    } finally {
-      setForceRefreshing(false);
-      setRefreshBusy(false);
-    }
-  }, [contract.archivioQ, contract.inCorsoQ, gestToast, qc]);
 
   return {
     listSurface: options.listSurface,
@@ -93,7 +70,5 @@ export function useClientPortalPageOrchestrator(options: {
     contract,
     persistence,
     archivioListEnabled,
-    refresh,
-    refreshBusy,
   };
 }

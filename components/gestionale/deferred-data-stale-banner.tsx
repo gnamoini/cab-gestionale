@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { isDataStaleBannerDeferEnabled } from "@/lib/performance/defer-flags";
+import { installGestionaleDirtyE2eHook } from "@/lib/sync/gestionale-dirty-e2e-hook";
 
 const DataStaleBannerLazy = dynamic(
   () =>
@@ -14,5 +15,6 @@ const DataStaleBannerLazy = dynamic(
 /** ponytail: no static import of data-stale-banner. */
 export function DeferredDataStaleBanner() {
   if (!isDataStaleBannerDeferEnabled()) return null;
+  installGestionaleDirtyE2eHook();
   return <DataStaleBannerLazy />;
 }

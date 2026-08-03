@@ -15,6 +15,7 @@ type PushMessageData = {
   href?: string;
   notificationId?: string;
   type?: string;
+  traceId?: string;
 };
 
 function parsePushData(event: PushEvent): PushMessageData {
@@ -38,14 +39,25 @@ export function registerPushSwHandlers(sw: ServiceWorkerGlobalScope): void {
     const tag = data.tag?.trim() || "cab-notification";
     const href = resolvePushNotificationUrl(data.href);
     const notificationId = data.notificationId?.trim();
+    const traceId = data.traceId?.trim();
 
     event.waitUntil(
-      sw.registration.showNotification(title, {
-        body,
-        icon,
-        tag,
-        data: { href, notificationId, type: data.type },
-      }),
+      (async () => {
+        await sw.registration.showNotification(title, {
+          body,
+          icon,
+          tag,
+          data: { href, notificationId, type: data.type, traceId },
+        });
+        const clients = await sw.clients.matchAll({ type: "window", includeUncontrolled: true });
+        for (const client of clients) {
+          client.postMessage({
+            type: "PWA_PUSH_RECEIVED",
+            notificationId,
+            traceId,
+          });
+        }
+      })(),
     );
   });
 
@@ -53,7 +65,7 @@ export function registerPushSwHandlers(sw: ServiceWorkerGlobalScope): void {
     event.notification.close();
     const action = event.action?.trim() || "open";
     const raw = event.notification.data as
-      | { href?: string; notificationId?: string; type?: string }
+      | { href?: string; notificationId?: string; type?: string; traceId?: string }
       | undefined;
     const href = resolvePushNotificationUrl(raw?.href);
     const notificationId = raw?.notificationId?.trim();

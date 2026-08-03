@@ -28,6 +28,7 @@ export function buildEmptyManualPreventivo(
   const targetType = defaultTargetTypeForProfilo(profilo);
   const defaultSconto = getScontoRicambiCliente(mezziListe, cliente);
   const infer = inferEconomiciClientePreventivi(cliente, existingRecords, undefined, defaultSconto);
+  const prezzoOrario = infer.prezzoOrario;
   const now = new Date().toISOString();
   const dataCreazione = localCalendarDayIsoFromDate();
   const draft: PreventivoRecord = {
@@ -62,8 +63,10 @@ export function buildEmptyManualPreventivo(
     descrizioneLavorazioniTecnicaSorgente: "",
     descrizioneGenerataAuto: "",
     righeRicambi: [],
-    sanificazionePrezzo: 0,
-    collaudoPrezzo: 0,
+    sanificazionePrezzo: prezzoOrario,
+    sanificazioneOre: 1,
+    collaudoPrezzo: prezzoOrario,
+    collaudoOre: 1,
     manodopera: {
       oreTotali: 1,
       righeAddetti: [
@@ -75,6 +78,7 @@ export function buildEmptyManualPreventivo(
         }) as PreventivoRigaAddetto,
       ],
       costoOrario: infer.costoOrario,
+      prezzoOrario: infer.prezzoOrario,
       scontoPercent: infer.manodoperaScontoPercent,
     },
     noteFinali: infer.noteFinaliTipiche,

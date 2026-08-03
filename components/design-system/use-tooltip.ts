@@ -240,7 +240,8 @@ export function useTooltip({
     clearShowTimer();
     clearTouchTimer();
     clearHideTimer();
-    hideTooltipPopover(contentRef.current);
+    const node = contentRef.current;
+    if (node?.isConnected) hideTooltipPopover(node);
     setVisible(false);
     setOpen(false);
   }, [clearShowTimer, clearTouchTimer, clearHideTimer, contentRef]);
@@ -261,14 +262,16 @@ export function useTooltip({
 
   useLayoutEffect(() => {
     if (!open) {
-      hideTooltipPopover(contentRef.current);
+      const node = contentRef.current;
+      if (node?.isConnected) hideTooltipPopover(node);
       setVisible((v) => (v ? false : v));
       return;
     }
     update();
     if (isPositioned && activeRef.current) {
       setVisible((v) => (v ? v : true));
-      showTooltipPopover(contentRef.current);
+      const node = contentRef.current;
+      if (node?.isConnected) showTooltipPopover(node);
     }
   }, [open, isPositioned, content, contentRef, update]);
 

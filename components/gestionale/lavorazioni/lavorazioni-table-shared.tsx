@@ -1,6 +1,7 @@
 "use client";
 
 import { TruncatedTextTooltip } from "@/components/design-system/truncated-text-tooltip";
+import { Tooltip } from "@/components/design-system";
 import { useMemo, type CSSProperties, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
@@ -49,6 +50,9 @@ export { gestionaleListTableTd as lavTableTd };
 
 /** Altezza minima pill inline (stato / priorità / addetto). */
 export const lavTablePillMinH = "min-h-8";
+
+/** Larghezza pill controlli card mobile (stato / priorità / addetto). */
+export const lavMobilePillWidthClass = "w-full min-w-0 max-w-full";
 
 /** Testo pill tabella — allineato al body della tabella (`text-[13px]`). */
 export const lavTablePillTextClass = "text-[13px] font-medium leading-tight tracking-wide";
@@ -161,9 +165,11 @@ export function LavorazioneInterventionTypeBadge({ row }: { row: LavorazioneList
     fields.repairPresent ? "riparazione_tagliando" : "tagliando",
   );
   return (
-    <span className={TAGLIANDO_BADGE_CLASS} title={title} aria-label={title}>
-      T
-    </span>
+    <Tooltip content={title}>
+      <span className={TAGLIANDO_BADGE_CLASS} aria-label={title}>
+        T
+      </span>
+    </Tooltip>
   );
 }
 
@@ -173,13 +179,18 @@ const GARANZIA_BADGE_CLASS =
 const RECIDIVO_BADGE_CLASS =
   "inline-flex h-5 w-5 shrink-0 self-center items-center justify-center rounded-md bg-rose-700 text-[9px] font-bold leading-none tracking-wide text-white dark:bg-rose-700";
 
+const GARANZIA_BADGE_TITLE = "Intervento in garanzia";
+const RECIDIVO_BADGE_TITLE = "Intervento recidivo";
+
 /** Badge G in lista — intervento in garanzia. */
 export function LavorazioneGaranziaBadge({ row }: { row: LavorazioneListRow }) {
   if (!row.is_garanzia) return null;
   return (
-    <span className={GARANZIA_BADGE_CLASS} title="Garanzia" aria-label="Garanzia">
-      G
-    </span>
+    <Tooltip content={GARANZIA_BADGE_TITLE}>
+      <span className={GARANZIA_BADGE_CLASS} aria-label={GARANZIA_BADGE_TITLE}>
+        G
+      </span>
+    </Tooltip>
   );
 }
 
@@ -187,9 +198,11 @@ export function LavorazioneGaranziaBadge({ row }: { row: LavorazioneListRow }) {
 export function LavorazioneRecidivoBadge({ row }: { row: LavorazioneListRow }) {
   if (!row.is_recidivo) return null;
   return (
-    <span className={RECIDIVO_BADGE_CLASS} title="Recidivo" aria-label="Recidivo">
-      Rc
-    </span>
+    <Tooltip content={RECIDIVO_BADGE_TITLE}>
+      <span className={RECIDIVO_BADGE_CLASS} aria-label={RECIDIVO_BADGE_TITLE}>
+        Rc
+      </span>
+    </Tooltip>
   );
 }
 
@@ -210,11 +223,20 @@ export function LavorazioneNoteBadges({ row }: { row: LavorazioneListRow }) {
 
 /** Colonna Note: badge T/G + testo. */
 export function LavorazioneNoteCell({ row }: { row: LavorazioneListRow }) {
-  const note = resolveLavorazioneNote(row) || "—";
+  const note = resolveLavorazioneNote(row).trim();
+  const fields = lavorazioneRowToTagliandoFields(row);
+  const hasBadges = fields.isTagliando || row.is_garanzia || row.is_recidivo;
+  const badgeOnly = !note && hasBadges;
   return (
-    <div className="flex min-w-0 items-start gap-1.5">
+    <div
+      className={
+        badgeOnly
+          ? "flex min-w-0 items-center justify-center"
+          : "flex min-w-0 items-start gap-1.5"
+      }
+    >
       <LavorazioneNoteBadges row={row} />
-      <span className="line-clamp-2 min-w-0">{note}</span>
+      {note ? <span className="line-clamp-2 min-w-0">{note}</span> : null}
     </div>
   );
 }

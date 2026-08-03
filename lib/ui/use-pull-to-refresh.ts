@@ -1,13 +1,10 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import type { NavDrawerState } from "@/lib/ui/mobile-nav-drawer-contract";
 import { resolveActivationZonePx } from "@/lib/ui/mobile-nav-drawer-contract";
 import { isBlockingOverlayVisible } from "@/lib/ui/overlay-back-stack";
 import { canPullToRefreshClaimGesture, type GestureContext } from "@/lib/ui/gesture-arbitration";
-import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import {
   isScrollAtTop,
   isVerticalPullGesture,
@@ -17,7 +14,6 @@ import {
   shouldCommitPullToRefresh,
   type PullToRefreshPhase,
 } from "@/lib/ui/pull-to-refresh-contract";
-import { runGestionalePageRefresh } from "@/lib/ui/run-gestionale-page-refresh";
 import { usePointerGesture } from "@/lib/ui/use-pointer-gesture";
 
 const ACTIVATION_PX = 8;
@@ -66,9 +62,6 @@ export function usePullToRefresh({
   navDrawerVisible,
   drawerState,
 }: UsePullToRefreshOptions): UsePullToRefreshResult {
-  const qc = useQueryClient();
-  const router = useRouter();
-  const { errorOnce } = useGestionaleToast();
   const [phase, setPhase] = useState<PullToRefreshPhase>("idle");
   const [pullPx, setPullPx] = useState(0);
   const dragRef = useRef<DragState>({
@@ -110,22 +103,15 @@ export function usePullToRefresh({
     if (!refreshingRef.current) setPhaseSafe("idle");
   }, [applyTransform, setPhaseSafe]);
 
-  const runRefresh = useCallback(async () => {
+  const runRefresh = useCallback(() => {
     if (refreshingRef.current) return;
     refreshingRef.current = true;
     setPhaseSafe("refreshing");
     applyTransform(0);
     pullPxRef.current = 0;
     setPullPx(0);
-    try {
-      await runGestionalePageRefresh(qc, router);
-    } catch (e) {
-      errorOnce("ptr-refresh", e, { module: "lavorazioni", action: "read" });
-    } finally {
-      refreshingRef.current = false;
-      setPhaseSafe("idle");
-    }
-  }, [applyTransform, errorOnce, qc, router, setPhaseSafe]);
+    window.location.reload();
+  }, [applyTransform, setPhaseSafe]);
 
   const guardsBlock = useCallback((): boolean => {
     if (!enabled) return true;
@@ -238,7 +224,7 @@ export function usePullToRefresh({
     }
 
     if (prefersReducedMotion()) {
-      void runRefresh();
+      runRefresh();
       return;
     }
 
@@ -249,7 +235,7 @@ export function usePullToRefresh({
     }
     pullPxRef.current = 0;
     setPullPx(0);
-    void runRefresh();
+    runRefresh();
   }, [contentRef, resetPull, runRefresh]);
 
   usePointerGesture({

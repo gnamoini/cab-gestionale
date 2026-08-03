@@ -17,6 +17,8 @@ export type PreventivoRigaRicambio = {
   /** Default `pz` in normalizzazione struttura. */
   unitaMisura?: RicambioUnitaMisura;
   prezzoUnitario: number;
+  /** Costo acquisto unitario (snapshot su riga; default da magazzino se collegato). */
+  costoUnitario?: number;
   /** Sconto percentuale sulla riga (0–100). */
   scontoPercent: number;
   /** Default `standard`; `materiali_consumo` = voce fissa qty 1. */
@@ -35,7 +37,10 @@ export type PreventivoRigaAddetto = {
 export type PreventivoManodopera = {
   oreTotali: number;
   righeAddetti: PreventivoRigaAddetto[];
+  /** Costo interno €/h — non esposto al cliente sul preventivo. */
   costoOrario: number;
+  /** Prezzo €/h sul preventivo (cliente). */
+  prezzoOrario: number;
   /** Sconto percentuale sulla manodopera (0–100). */
   scontoPercent: number;
 };
@@ -90,10 +95,17 @@ export type PreventivoRecord = {
   descriptionEngineMeta?: import("@/lib/preventivi/description-engine/types").DescriptionEngineMeta;
   righeRicambi: PreventivoRigaRicambio[];
   manodopera: PreventivoManodopera;
-  /** Voce obbligatoria qty 1 — prezzo opzionale. */
+  /** Voce obbligatoria — ore (default 1) × prezzo unitario. */
+  sanificazioneOre?: number;
   sanificazionePrezzo?: number;
-  /** Collaudo funzionale — qty 1, prezzo manuale. */
+  /** Testo voce sanificazione in PDF/manodopera (default standard). */
+  sanificazioneDescrizione?: string;
+  /** Collaudo funzionale — ore (default 1) × prezzo unitario. */
+  collaudoOre?: number;
+  /** Collaudo funzionale — prezzo unitario (€/h). */
   collaudoPrezzo?: number;
+  /** Testo voce collaudo in PDF/manodopera (default standard). */
+  collaudoDescrizione?: string;
   noteFinali: string;
   totaleRicambi: number;
   totaleManodopera: number;

@@ -33,6 +33,10 @@ import {
   savePipelineExecution,
 } from "@/lib/document-capture/orchestrator/pipeline-execution-store.server";
 import { buildPipelineIdempotencyKey } from "@/lib/document-capture/orchestrator/pipeline-orchestrator";
+import {
+  buildPipelineIdempotencySuffix,
+  CAPTURE_PIPELINE_VERSION,
+} from "@/lib/document-capture/orchestrator/capture-pipeline-version";
 import { normalizeCaptureMime } from "@/lib/document-capture/capture-mime";
 import {
   fetchCaptureMagazzinoCatalog,
@@ -169,7 +173,7 @@ export async function analyzeDocumentCaptureV41(
       captureId,
       correlationId,
       companyId: null,
-      pipelineVersion: "v4.1",
+      pipelineVersion: CAPTURE_PIPELINE_VERSION,
       onPhase: options?.onPhase,
     });
   if (!options?.trace) {
@@ -191,7 +195,14 @@ export async function analyzeDocumentCaptureV41(
     return { ok: false, code: "not_finalized", message: "Documento non finalizzato.", traceId: trace.traceId };
   }
 
-  const idempotencyKey = buildPipelineIdempotencyKey("ai_extract", captureId, `v${capture.capture_version}`);
+  const idempotencyKey = buildPipelineIdempotencyKey(
+    "ai_extract",
+    captureId,
+    buildPipelineIdempotencySuffix({
+      pipelineVersion: CAPTURE_PIPELINE_VERSION,
+      captureVersion: capture.capture_version,
+    }),
+  );
   const existing = await findPipelineExecution(idempotencyKey);
   if (existing?.status === "completed" && existing.resultRef) {
     const fieldCount = await countCaptureFields(captureId);

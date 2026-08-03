@@ -9,7 +9,7 @@ import {
 } from "@/lib/pdf/core/pdf-base-template";
 
 /** Margini verticali foglio A4 landscape — più compatti del template standard (non celle). */
-const LAV_PDF_MARGIN_TOP = 10;
+const LAV_PDF_MARGIN_TOP = 6;
 const LAV_PDF_HEADER_TO_TABLE_GAP = 1;
 const LAV_PDF_TABLE_PAGE_MARGIN_TOP = 8;
 const LAV_PDF_TABLE_PAGE_MARGIN_BOTTOM = 5;
@@ -37,7 +37,7 @@ function sortPdfRows(rows: readonly LavorazioniInCorsoPdfRow[]): LavorazioniInCo
 }
 
 function lavorazioniPdfColumnStyles(contentW: number) {
-  const base = [38, 54, 52, 34, 26, 49] as const;
+  const base = [46, 54, 38, 34, 26, 49] as const;
   const sum = base.reduce((acc, w) => acc + w, 0);
   const scale = contentW / sum;
   return {
@@ -114,7 +114,7 @@ export function generateLavorazioniInCorsoPdfBytes(
 
   const ordered = sortPdfRows(rows);
   const body = ordered.map((row) => [
-    safeText(row.cliente),
+    pdfCellText(row.cliente) || "—",
     safeText(row.attrezzatura),
     pdfCellText(row.identificazione),
     safeText(row.stato),

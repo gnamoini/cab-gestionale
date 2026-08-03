@@ -41,6 +41,15 @@ export function magazzinoRowMatchesPageFilters(
   return magazzinoRowMatchesAdvancedFilters(row, advanced, listePrefs);
 }
 
+/** Query effettiva da voce suggerimento `codice · descrizione` — filtra per codice. */
+export function magazzinoSearchQueryFromSuggestion(label: string): string {
+  const t = label.trim();
+  const sep = " · ";
+  const idx = t.indexOf(sep);
+  if (idx > 0) return t.slice(0, idx).trim();
+  return t;
+}
+
 export function buildMagazzinoSearchSuggestions(
   prodotti: readonly RicambioMagazzino[],
   query: string,
@@ -52,6 +61,13 @@ export function buildMagazzinoSearchSuggestions(
   const labels: string[] = [];
   const seen = new Set<string>();
   const tokens = new Set<string>();
+  const codiciWithRicambio = new Set<string>();
+
+  const markCodiceLinked = (codice: string) => {
+    const t = codice.trim();
+    if (!t) return;
+    codiciWithRicambio.add(t.toLowerCase());
+  };
 
   const push = (label: string) => {
     const t = label.trim();
@@ -63,11 +79,23 @@ export function buildMagazzinoSearchSuggestions(
   for (const p of prodotti) {
     if (!magazzinoRowMatchesGlobalSearch(p, query, listePrefs)) continue;
     const codiceUi = ricambioCodiceForUi(p.codiceFornitoreOriginale);
-    push(codiceUi ? `${codiceUi} · ${p.descrizione || p.marca}` : `${p.descrizione || p.marca}`);
-    if (p.marca.trim()) push(p.marca);
+    const descPart = (p.descrizione || p.marca).trim();
+    const codiceLinked = Boolean(codiceUi && descPart);
+
+    if (codiceLinked) {
+      push(`${codiceUi} · ${descPart}`);
+      markCodiceLinked(codiceUi);
+      markCodiceLinked(p.codiceFornitoreOriginale);
+    } else if (codiceUi) {
+      push(codiceUi);
+    } else if (descPart) {
+      push(descPart);
+    }
+
+    if (p.marca.trim() && p.marca.trim() !== descPart) push(p.marca);
     for (const part of [
       p.marca,
-      codiceUi,
+      codiceLinked ? "" : codiceUi,
       p.codiceFornitoreOriginaleSecondario,
       p.descrizione,
       p.categoria,
@@ -80,6 +108,7 @@ export function buildMagazzinoSearchSuggestions(
   }
 
   for (const s of filterListSelectSuggestions(query, [...tokens], limit)) {
+    if (codiciWithRicambio.has(s.trim().toLowerCase())) continue;
     push(s);
   }
 

@@ -66,25 +66,21 @@ assert.equal(a4!.widthMm, 287);
 assert.equal(a4!.heightMm, 200);
 assert.equal(labelsPerA4Page(a4!), 1);
 assert.equal(a4!.layoutMode, "horizontal-qr-left");
-assert.equal(a4!.version, "2.1.0");
+assert.equal(a4!.version, "2.2.4");
 const a4Qr = a4!.elements.find((e) => e.type === "qr");
-const a4Logo = a4!.elements.find((e) => e.type === "logo");
-const a4Barcode = a4!.elements.find((e) => e.type === "barcode");
 const a4Marca = a4!.elements.find((e) => e.type === "text" && e.field === "marca");
 assert.ok(a4Qr && a4Qr.type === "qr");
-assert.ok(a4Logo && a4Logo.type === "logo");
-assert.ok(a4Barcode && a4Barcode.type === "barcode");
 assert.ok(a4Marca && a4Marca.type === "text");
-assert.equal(a4Qr.sizeMm, 58, "A4: QR leggermente ridotto");
-assert.equal(a4Qr.xMm, a4!.marginsMm, "A4: QR a sinistra");
-assert.ok(a4Qr.yMm + a4Qr.sizeMm <= a4!.heightMm - a4!.marginsMm + 0.01, "A4: QR ancorato in basso a sinistra");
-assert.equal(a4Logo.widthMm, a4Qr.sizeMm, "A4: logo stessa larghezza del QR");
-assert.ok(a4Logo.yMm + a4Logo.heightMm <= a4Qr.yMm, "A4: logo sopra il QR");
-assert.equal(a4Marca.xMm, a4!.marginsMm, "A4: testi a tutta larghezza");
-assert.equal(a4Marca.maxWidthMm, a4!.widthMm - a4!.marginsMm * 2);
-assert.ok(a4Marca.fontPt >= 38, "A4: font grande per lettura a distanza");
-assert.ok(a4Barcode.xMm > a4!.marginsMm + a4Qr.sizeMm, "A4: barcode a destra del QR");
-assert.ok(a4Barcode.widthMm! > a4Qr.sizeMm, "A4: barcode usa la fascia destra");
+assert.ok(!a4!.elements.some((e) => e.type === "logo"), "A4 interno: no logo CAB");
+assert.equal(a4Qr.sizeMm, 46.4, "A4: QR ridotto 20%");
+assert.equal(a4Qr.xMm, (a4!.widthMm - a4Qr.sizeMm) / 2, "A4: QR centrato");
+assert.ok(a4Qr.yMm + a4Qr.sizeMm <= a4!.heightMm - a4!.marginsMm + 0.01, "A4: QR ancorato in basso");
+assert.equal(a4Marca.xMm, a4!.widthMm / 2, "A4: testi centrati");
+assert.equal(a4Marca.hAlign, "center");
+assert.equal(a4Marca.vAlign, "center");
+assert.equal(a4Marca.maxWidthMm, a4!.widthMm - a4!.marginsMm * 2 - 2, "A4: inset laterale testo");
+assert.ok(a4Marca.fontPt >= 52, "A4: font grande per lettura a distanza");
+assert.ok(!a4!.elements.some((e) => e.type === "barcode"), "A4: no barcode");
 
 const cliente = getLabelTemplate("95x40-default", "cliente");
 assert.ok(cliente);
@@ -103,6 +99,8 @@ assert.ok(
   clienteWebsite.yMm >= clienteQr.yMm + clienteQr.sizeMm - 0.01,
   "cliente: sito sotto il QR",
 );
+assert.equal(clienteWebsite.xMm, clienteQr.xMm + clienteQr.sizeMm / 2, "cliente: sito centrato sul QR");
+assert.equal(clienteWebsite.hAlign, "center");
 
 const manual = getLabelTemplate("95x40-default", "manual");
 assert.ok(manual);

@@ -39,6 +39,9 @@ assert.ok(
 
 const buildScript = read("scripts/build-pwa-sw.ts");
 assert.match(buildScript, /sw-worker-entry/, "build script usa sw-worker-entry");
+assert.match(buildScript, /productionBuild/, "build production rilevata esplicitamente");
+assert.match(buildScript, /production builds require/i, "build production senza versione deve fallire");
+assert.doesNotMatch(buildScript, /readPackageVersion/, "versione package non può identificare un deploy");
 
 const workerImports = read("lib/pwa/index.ts");
 assert.doesNotMatch(workerImports, /sw-worker-entry/, "barrel non esporta sw-worker-entry");

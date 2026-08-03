@@ -112,7 +112,7 @@ const xlViews: Array<{ file: string; mustHave: RegExp[]; mustNot: RegExp[] }> = 
 
     file: "components/preventivi/preventivi-view.tsx",
 
-    mustHave: [/GestionaleListPageProps/, /listSurface === "table"/, /gestionaleListTierClass/],
+    mustHave: [/GestionaleListPageProps/, /listSurface === "table"/, /gestionaleListTierClass/, /gestionalePreventiviDenseTableClass/],
 
     mustNot: [/hidden xl:block/, /xl:hidden/, ...bannedLayoutPatterns],
 

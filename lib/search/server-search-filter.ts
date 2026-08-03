@@ -7,7 +7,8 @@ export function escapeIlikeToken(raw: string): string {
 
 /** Pattern ILIKE su search_document normalizzato — null se query vuota. */
 export function normalizedSearchIlikePattern(query: string): string | null {
-  const n = normalizeSearchText(query);
+  const cleaned = query.replace(/\s*·\s*/g, " ");
+  const n = normalizeSearchText(cleaned);
   if (!n) return null;
   return `%${escapeIlikeToken(n)}%`;
 }

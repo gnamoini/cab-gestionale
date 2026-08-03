@@ -3,7 +3,33 @@
 export const PREVENTIVO_SANIFICAZIONE_DESCRIZIONE =
   "Sanificazione e lavaggio cabina e parti da lavorare";
 
+export function resolveSanificazioneDescrizione(desc?: string | null): string {
+  const t = typeof desc === "string" ? desc.trim() : "";
+  return t || PREVENTIVO_SANIFICAZIONE_DESCRIZIONE;
+}
+
+export function isVoceSanificazionePreventivo(desc: string, sanificazioneDescrizione?: string | null): boolean {
+  if (
+    normDescrizioneVoce(desc) === normDescrizioneVoce(resolveSanificazioneDescrizione(sanificazioneDescrizione))
+  ) {
+    return true;
+  }
+  return isDescrizioneSanificazione(desc);
+}
+
 export const PREVENTIVO_COLLAUDO_DESCRIZIONE = "Collaudo funzionale";
+
+export function resolveCollaudoDescrizione(desc?: string | null): string {
+  const t = typeof desc === "string" ? desc.trim() : "";
+  return t || PREVENTIVO_COLLAUDO_DESCRIZIONE;
+}
+
+export function isVoceCollaudoPreventivo(desc: string, collaudoDescrizione?: string | null): boolean {
+  if (normDescrizioneVoce(desc) === normDescrizioneVoce(resolveCollaudoDescrizione(collaudoDescrizione))) {
+    return true;
+  }
+  return isDescrizioneCollaudo(desc);
+}
 
 export const PREVENTIVO_MATERIALI_CONSUMO_DESCRIZIONE = "Materiali di consumo";
 

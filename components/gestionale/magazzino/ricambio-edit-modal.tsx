@@ -298,7 +298,7 @@ export function RicambioEditModal({
                 onClick={onRequestDelete}
                 disabled={!magCanDeleteRicambio}
               >
-                Elimina ricambio
+                Elimina
               </GestionaleModalFooterDeleteButton>
             </DisabledElementTooltip>
           </div>
@@ -309,7 +309,7 @@ export function RicambioEditModal({
                 onClick={onRequestDelete}
                 disabled={!magCanDeleteRicambio}
               >
-                Elimina ricambio
+                Elimina
               </GestionaleModalFooterDeleteButton>
             </DisabledElementTooltip>
             <div className="flex shrink-0 items-center gap-2">

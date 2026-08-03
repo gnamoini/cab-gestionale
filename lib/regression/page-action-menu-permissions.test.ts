@@ -7,7 +7,6 @@ import path from "node:path";
 import {
   filterPageActionItems,
   getSingletonPageActionListItem,
-  isRefreshOnlyPageActionMenu,
   pageActionMenuHasAttention,
   pageActionMenuHasContent,
   shouldUsePageActionMenuDropdown,
@@ -47,8 +46,8 @@ assert.deepEqual(
 
 assert.equal(pageActionMenuHasContent(out), true);
 assert.equal(pageActionMenuHasContent([]), false);
-assert.equal(pageActionMenuHasContent([], { onRefresh: () => {} }), true);
 assert.equal(pageActionMenuHasContent([{ id: "__divider__", label: "" }]), false);
+assert.equal(pageActionMenuHasContent([], { backHref: "/x" }), true);
 
 assert.equal(getSingletonPageActionListItem([{ id: "log", label: "Log" }])?.id, "log");
 assert.equal(getSingletonPageActionListItem([{ id: "a", label: "A" }, { id: "b", label: "B" }]), null);
@@ -57,21 +56,21 @@ assert.equal(
   null,
 );
 
-assert.equal(isRefreshOnlyPageActionMenu([], { onRefresh: () => {} }), true);
-assert.equal(isRefreshOnlyPageActionMenu([{ id: "log", label: "Log" }], { onRefresh: () => {} }), false);
-assert.equal(shouldUsePageActionMenuDropdown([], { onRefresh: () => {} }), false);
-assert.equal(shouldUsePageActionMenuDropdown([{ id: "log", label: "Log" }], { onRefresh: () => {} }), true);
+assert.equal(shouldUsePageActionMenuDropdown([], {}), true);
+assert.equal(shouldUsePageActionMenuDropdown([{ id: "log", label: "Log" }], {}), false);
 assert.equal(
   shouldUsePageActionMenuDropdown(
     [
       { id: "a", label: "A" },
       { id: "b", label: "B" },
     ],
-    { onRefresh: () => {} },
+    {},
   ),
   true,
 );
-assert.equal(shouldUsePageActionMenuDropdown([], { onRefresh: () => {}, backHref: "/x" }), true);
+assert.equal(shouldUsePageActionMenuDropdown([], { backHref: "/x" }), true);
+assert.equal(shouldUsePageActionMenuDropdown([{ id: "log", label: "Log" }], { backHref: null }), false);
+assert.equal(getSingletonPageActionListItem([{ id: "log", label: "Log" }]) !== null && shouldUsePageActionMenuDropdown([{ id: "log", label: "Log" }], {}), false);
 
 assert.equal(pageActionMenuHasAttention([{ id: "n", label: "Novità", attention: true }]), true);
 assert.equal(pageActionMenuHasAttention([{ id: "n", label: "N", badge: 3 }]), true);

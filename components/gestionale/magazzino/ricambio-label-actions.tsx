@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { DisabledElementTooltip } from "@/components/ui";
-import { erpBtnNeutral, erpBtnSubtleNew } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { PageActionIconLabels } from "@/components/ui/page-action-menu/page-action-menu-icons";
+import { gestionaleModalFooterCancelBtnClass } from "@/components/design-system";
+import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
-  DEFAULT_INCLUDE_BARCODE,
   DEFAULT_LABEL_PRESET,
   LABEL_PRESET_IDS,
   labelPresetOptionLabel,
@@ -35,7 +36,6 @@ export function RicambioLabelActions({
   const gestToast = useGestionaleToast();
   const [expanded, setExpanded] = useState(false);
   const [preset, setPreset] = useState(DEFAULT_LABEL_PRESET);
-  const [includeBarcode, setIncludeBarcode] = useState(DEFAULT_INCLUDE_BARCODE);
   const [clienteLabel, setClienteLabel] = useState(false);
   const [meta, setMeta] = useState<LabelMeta | null>(null);
   const [loading, setLoading] = useState(false);
@@ -78,7 +78,7 @@ export function RicambioLabelActions({
     const sp = new URLSearchParams({
       format,
       preset,
-      includeBarcode: includeBarcode ? "true" : "false",
+      includeBarcode: "false",
       clienteLabel: clienteLabel ? "true" : "false",
     });
     if (format === "pdf" && quantity > 1) sp.set("quantity", String(quantity));
@@ -200,10 +200,11 @@ export function RicambioLabelActions({
     <DisabledElementTooltip content={READONLY_PERMISSION_HINT} disabled={!canRead}>
       <button
         type="button"
-        className={`${erpBtnSubtleNew} min-h-11 w-full justify-center disabled:opacity-45`}
+        className={`${gestionaleModalFooterCancelBtnClass} w-full justify-center disabled:opacity-45`}
         disabled={!canRead || busy}
         onClick={() => void ensureExpanded()}
       >
+        <PageActionIconLabels className="h-4 w-4 shrink-0" />
         {expanded ? "Etichetta" : "Genera etichetta"}
       </button>
     </DisabledElementTooltip>
@@ -258,28 +259,10 @@ export function RicambioLabelActions({
             <input
               type="checkbox"
               className="h-4 w-4 rounded border-[color:var(--cab-border)]"
-              checked={includeBarcode}
-              onChange={(e) => {
-                setIncludeBarcode(e.target.checked);
-                if (previewUrl) {
-                  URL.revokeObjectURL(previewUrl);
-                  setPreviewUrl(null);
-                }
-              }}
-              disabled={busy || clienteLabel}
-            />
-            Barcode
-          </label>
-
-          <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm text-[color:var(--cab-text)]">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-[color:var(--cab-border)]"
               checked={clienteLabel}
               onChange={(e) => {
                 const next = e.target.checked;
                 setClienteLabel(next);
-                if (next) setIncludeBarcode(false);
                 if (previewUrl) {
                   URL.revokeObjectURL(previewUrl);
                   setPreviewUrl(null);

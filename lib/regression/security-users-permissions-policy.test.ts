@@ -46,7 +46,7 @@ assert.match(panelSrc, /buildSecurityUserPatches/);
 assert.match(panelSrc, /pageDrafts/);
 assert.match(panelSrc, /ToolbarGroup/);
 assert.match(panelSrc, /ToolbarGroupMetaRow/);
-assert.match(panelSrc, /GestionaleRefreshToolbarButton/);
+assert.doesNotMatch(panelSrc, /GestionaleRefreshToolbarButton/);
 assert.match(panelSrc, /dsPageToolbarCtaCompact/);
 assert.doesNotMatch(panelSrc, /saveBtnClass/);
 
@@ -94,8 +94,7 @@ assert.match(actionsSrc, /accountEnabled/);
 assert.match(createModalSrc, /GestionaleModalShell/);
 assert.match(editModalSrc, /GestionaleModalShell/);
 assert.match(editModalSrc, /footer=\{/);
-assert.match(editModalSrc, /dsBtnNeutral/);
-assert.match(editModalSrc, /dsBtnDanger/);
+assert.match(editModalSrc, /GestionaleModalFooterDeleteButton/);
 assert.match(editModalSrc, /GestionaleConfirmDialog/);
 assert.match(editModalSrc, /useUsernameAvailability/);
 

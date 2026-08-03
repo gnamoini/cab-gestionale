@@ -168,8 +168,10 @@ const SCHEDA_MEZZO_IDENT_SHELL =
 
 const SCHEDA_MEZZO_IDENT_SHELL_INGRESSO = [
   globalInputDatePickerShellDefault,
-  "flex min-h-10 min-w-0 flex-col justify-center px-3 py-2.5",
+  "flex min-h-10 min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1 px-3 py-2.5",
 ].join(" ");
+
+const SCHEDA_MEZZO_IDENT_ROW_LAYOUT = "flex flex-wrap items-baseline gap-x-4 gap-y-1";
 
 const IDENT_BAND_LABEL: Record<"cliente" | "attrezzatura" | "telaio", string> = {
   cliente: "Cliente",
@@ -177,7 +179,7 @@ const IDENT_BAND_LABEL: Record<"cliente" | "attrezzatura" | "telaio", string> = 
   telaio: "Telaio",
 };
 
-/** Identificazione mezzo read-only — tre righe Cliente / Attrezzature / Telaio. */
+/** Identificazione mezzo read-only — bande sulla stessa riga; wrap per sezione (non a metà testo). */
 export function SchedaMezzoIdentificazioneReadonly({
   parts,
   fallbackLine,
@@ -194,8 +196,8 @@ export function SchedaMezzoIdentificazioneReadonly({
   const shell = shellVariant === "ingresso" ? SCHEDA_MEZZO_IDENT_SHELL_INGRESSO : SCHEDA_MEZZO_IDENT_SHELL;
   const bandTextClass =
     shellVariant === "ingresso"
-      ? "min-w-0 text-sm leading-snug [overflow-wrap:anywhere]"
-      : "min-w-0 text-xs leading-snug [overflow-wrap:anywhere]";
+      ? "min-w-0 max-w-full shrink-0 text-sm leading-snug"
+      : "min-w-0 max-w-full shrink-0 text-xs leading-snug";
   const codice = lavorazioneCodice?.trim() ?? "";
   const bands = parts ? formatIdentificazioneMezzoBands(parts) : [];
 
@@ -231,7 +233,10 @@ export function SchedaMezzoIdentificazioneReadonly({
   }
 
   return (
-    <div className={`${shell} ${shellVariant === "ingresso" ? "gap-0.5" : "space-y-1"}`} role="status">
+    <div
+      className={`${shell} ${shellVariant === "ingresso" ? "" : SCHEDA_MEZZO_IDENT_ROW_LAYOUT}`}
+      role="status"
+    >
       {rows.map((row) => (
         <p key={row.key} className={bandTextClass}>
           <span className={labelClass}>{row.label}</span>

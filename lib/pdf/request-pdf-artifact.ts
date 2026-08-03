@@ -37,18 +37,23 @@ function fileNameFromContentDisposition(header: string | null, fallback = "docum
   return ascii?.[1]?.trim() || fallback;
 }
 
-/** Scarica l'artifact server-side e apre il PDF in nuova scheda (anteprima, non download forzato). */
-export async function openPdfArtifact(
-  type: PdfArtifactType,
-  params?: OpenPdfArtifactParams,
+/** Scarica PDF da URL same-origin e apre anteprima in nuova scheda. */
+export async function openPdfStreamInNewTab(
+  url: string,
+  options?: { loadingMessage?: string },
 ): Promise<boolean> {
   if (typeof window === "undefined") return false;
 
-  const url = buildPdfArtifactUrl(type, params);
-  pushGestionaleToast("Generazione PDF in corso…", "info", 5000);
+  const trimmed = url?.trim() ?? "";
+  if (!trimmed) {
+    pushGestionaleToast("URL del documento non valido.", "warning", 5200);
+    return false;
+  }
+
+  pushGestionaleToast(options?.loadingMessage ?? "Generazione PDF in corso…", "info", 5000);
 
   try {
-    const res = await fetch(url, { credentials: "same-origin", cache: "no-store" });
+    const res = await fetch(trimmed, { credentials: "same-origin", cache: "no-store" });
     if (!res.ok) {
       let message = "Generazione PDF non riuscita";
       try {
@@ -86,4 +91,12 @@ export async function openPdfArtifact(
     pushGestionaleToast("Generazione PDF non riuscita.", "warning", 5200);
     return false;
   }
+}
+
+/** Scarica l'artifact server-side e apre il PDF in nuova scheda (anteprima, non download forzato). */
+export async function openPdfArtifact(
+  type: PdfArtifactType,
+  params?: OpenPdfArtifactParams,
+): Promise<boolean> {
+  return openPdfStreamInNewTab(buildPdfArtifactUrl(type, params));
 }

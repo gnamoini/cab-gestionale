@@ -1,5 +1,6 @@
 "use client";
 
+import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 import "./magazzino-scroll.css";
 
 import type { ReactElement, ReactNode } from "react";
@@ -18,7 +19,7 @@ import {
   SkeletonBoundary,
 } from "@/components/design-system";
 import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
-import { OptionalTooltip, Tooltip } from "@/components/ui";
+import { Tooltip } from "@/components/ui";
 import { MagazzinoBulkLabelToolbar } from "@/components/gestionale/magazzino/magazzino-bulk-label-toolbar";
 import { MagazzinoLabelQtyStepper } from "@/components/gestionale/magazzino/magazzino-label-qty-stepper";
 import { useLabelSelection } from "@/lib/inventory-labels/client/label-selection";
@@ -129,7 +130,9 @@ import {
   gestionaleListTableTdAzioni,
   gestionaleListTableTdCenter,
   gestionaleListTableActionsGroupEnd,
+  gestionaleMagazzinoDenseTableClass,
 } from "@/lib/ui/gestionale-list-table";
+import { magazzinoTableColAzioniClass, magazzinoTableColCodiceTdClass, magazzinoTableColCodiceThClass, magazzinoTableColCodiceWidth, magazzinoTableColDescrizioneClass } from "@/lib/magazzino/magazzino-table-columns";
 import { MagazzinoDescrizioneSortTh } from "@/components/gestionale/magazzino/magazzino-descrizione-sort-th";
 import { MagazzinoTableSection } from "@/components/gestionale/magazzino/magazzino-page-structure";
 import {
@@ -166,6 +169,7 @@ import {
 } from "@/lib/magazzino/magazzino-filter-search-index";
 import {
   buildMagazzinoSearchSuggestions,
+  magazzinoSearchQueryFromSuggestion,
   type MagazzinoPageFilters,
 } from "@/lib/magazzino/magazzino-list-ui-filters";
 import {
@@ -453,13 +457,6 @@ function IconInfoMagazzino({ className = dsTableActionGlyph }: { className?: str
   );
 }
 
-function magazzinoConsumoMedioTooltip(
-  consumoRow: { insufficientReason?: string | null } | undefined,
-  avgM: number | null,
-): string | undefined {
-  return consumoRow?.insufficientReason ?? (avgM != null ? "Da log magazzino (uscite Δ scorta)" : undefined);
-}
-
 const RICAMBIO_CODICE_BADGE_CLASS =
   "inline-flex max-w-full flex-col break-all rounded-md bg-zinc-100 px-2 py-1 font-mono text-xs font-semibold leading-snug tracking-wide dark:bg-zinc-800";
 
@@ -484,6 +481,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   useGestionaleSyncScope({
     scopeId: "magazzino-view",
     domain: "magazzino",
+    route: "/magazzino",
     tables: ["magazzino_ricambi", "movimenti_ricambi", "log_modifiche", "ordini_fornitori"],
   });
 
@@ -530,8 +528,8 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     searchInput,
     setSearchInput,
     searchApplied,
-    flushSearch: flushPageSearch,
     clearSearch,
+    applySearchImmediate,
   } = useGestionaleListSearch({ domain: "magazzino" });
   const magazzinoFetchFilters = useMemo((): MagazzinoFilters | undefined => {
     if (!usesServerSearch("magazzino") || !searchApplied.trim()) return undefined;
@@ -584,9 +582,21 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   }, [searchInput]);
 
   const onSearchEnter = useCallback(() => {
-    flushPageSearch();
-    setSearchSuggestionsApplied(searchInput.trim());
-  }, [flushPageSearch, searchInput]);
+    const query = magazzinoSearchQueryFromSuggestion(searchInput);
+    applySearchImmediate(query);
+    setSearchInput(searchInput.trim());
+    setSearchSuggestionsApplied(query);
+  }, [applySearchImmediate, searchInput, setSearchInput]);
+
+  const onMagazzinoSuggestionSelect = useCallback(
+    (label: string) => {
+      const query = magazzinoSearchQueryFromSuggestion(label);
+      applySearchImmediate(query);
+      setSearchInput(label);
+      setSearchSuggestionsApplied(query);
+    },
+    [applySearchImmediate, setSearchInput],
+  );
 
   const [masterMarche, setMasterMarche] = useState<string[]>([]);
   const [masterCategorie, setMasterCategorie] = useState<string[]>([]);
@@ -1522,7 +1532,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
               />
             </td>
           ) : null}
-          <td className={`min-w-0 w-[7.75rem] max-w-[7.75rem] overflow-hidden ${gestionaleListTableTd}`}>
+          <td className={`${magazzinoTableColCodiceTdClass} ${gestionaleListTableTd}`}>
             <RicambioCodiceCell p={p} />
           </td>
           <td className={`min-w-0 ${gestionaleListTableTd}`}>
@@ -1585,12 +1595,10 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
             </Tooltip>
           </td>
           <td className={`${gestionaleListTableTdCenter} font-medium`}>{eur(p.prezzoVendita)}</td>
-          <td className={`${gestionaleListTableTdCenter} text-[13px] text-zinc-700 dark:text-zinc-300`}>
-            <OptionalTooltip content={magazzinoConsumoMedioTooltip(consumoRow, avgM)}>
-              <span className="inline-block max-w-full truncate">
-                {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "—"}
-              </span>
-            </OptionalTooltip>
+          <td className={`${gestionaleListTableTdCenter} w-[7%] max-w-[6.5rem] text-[13px] text-zinc-700 dark:text-zinc-300`}>
+            <span className="inline-block max-w-full truncate">
+              {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "—"}
+            </span>
           </td>
           <td className={gestionaleListTableTdAzioni}>
             <div className={gestionaleListTableActionsGroupEnd}>
@@ -1630,21 +1638,6 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     ];
     if (magPerm.canRead) {
       items.push({
-        id: "label-mode",
-        label: "Etichette",
-        description: labelMode
-          ? "Imposta quantità per ricambio e genera le etichette"
-          : "Stampa etichette con quantità per ricambio",
-        icon: <PageActionIconLabels />,
-        toggle: {
-          checked: labelMode,
-          onChange: (checked) => {
-            setLabelMode(checked);
-            if (!checked) clearLabelQuantities();
-          },
-        },
-      });
-      items.push({
         id: "manual-label",
         label: "Etichetta manuale",
         description: "Crea un'etichetta senza ricambio in magazzino",
@@ -1666,7 +1659,6 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   }, [
     importExportActions.items,
     magPerm.canRead,
-    labelMode,
     magCanDeleteRicambio,
     generatedListinoCount,
   ]);
@@ -1691,8 +1683,6 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
       <PageHeaderPageActionMenu
         items={magazzinoMenuItems}
         headerActions={magazzinoMenuHeaderActions}
-        onRefresh={() => void magazzinoListQ.refetch()}
-        refreshBusy={magazzinoListQ.isFetching}
       />
       <ShellCard>
         {archivioDupCodeCount > 0 ? (
@@ -1722,17 +1712,18 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
         <section aria-label="Azioni e filtri magazzino">
           <PageToolbar
             testId="page-ready-toolbar"
+            mobilePrimaryThreeColumn
             primaryAction={
-              <div className="flex shrink-0 flex-nowrap items-center gap-2">
+              <div className="contents sm:flex sm:shrink-0 sm:flex-nowrap sm:items-center sm:gap-2">
                 <button
                   type="button"
                   onClick={openNewModal}
                   disabled={!magCanCreateRicambio}
-                  className={`${dsPageToolbarCtaCompact} max-sm:w-auto max-sm:shrink-0 max-sm:overflow-visible disabled:cursor-not-allowed disabled:opacity-50`}
+                  className={`${dsPageToolbarCtaCompact} w-full min-w-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:shrink-0`}
                 >
                   <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo ricambio" mobileNoTruncate />
                 </button>
-                <MagazzinoCarichiCaptureLauncher size="md" className="h-11 shrink-0" />
+                <MagazzinoCarichiCaptureLauncher size="md" className="h-11 w-full min-w-0 sm:w-auto sm:shrink-0" />
               </div>
             }
             search={
@@ -1748,6 +1739,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                   }
                 }}
                 onFocusChange={setSearchFieldFocused}
+                onSuggestionSelect={onMagazzinoSuggestionSelect}
                 suggestionPool={searchSuggestionPool}
                 aria-label="Cerca in magazzino"
                 wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
@@ -1771,18 +1763,21 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
             }
             onFilterReset={resetMagazzinoFilters}
             meta={
-              <div className="flex min-w-0 w-full max-w-full flex-nowrap items-center gap-2 sm:gap-3">
+              <div className="flex min-w-0 w-full max-w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                 <PageToolbarResultCount
+                  className="w-full min-w-0 sm:flex-1"
+                  hideCountOnMobile
+                  mobileUniformActions
                   count={filteredSorted.length}
                   filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
                   searchActive={searchApplied.trim().length > 0 || searchInput.trim().length > 0}
                   onSearchReset={resetMagazzinoRicerca}
                   onFilterReset={resetMagazzinoFilters}
                 />
-                <div className="ms-auto flex min-w-0 shrink-0 flex-nowrap items-center gap-2">
+                <div className="flex w-full min-w-0 flex-nowrap items-stretch gap-2 sm:ms-auto sm:w-auto sm:justify-end">
                   {magCanCreateRicambio ? (
                     <PageToolbarMetaToggle
-                      className="min-h-10 shrink-0 sm:min-h-9"
+                      className="min-h-10 min-w-0 flex-1 sm:min-h-9 sm:flex-none sm:shrink-0"
                       label="Modalità modifica"
                       shortLabel="Modifica"
                       checked={modalitaModifica}
@@ -1790,11 +1785,18 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                         setModalitaModifica(next);
                         writeMagazzinoModalitaModifica(next);
                       }}
-                      title={
-                        modalitaModifica
-                          ? "Attiva: le variazioni scorta contano nelle statistiche"
-                          : "Disattiva: rettifica inventario senza impatto su statistiche e report"
-                      }
+                    />
+                  ) : null}
+                  {magPerm.canRead ? (
+                    <PageToolbarMetaToggle
+                      className="min-h-10 min-w-0 flex-1 sm:min-h-9 sm:flex-none sm:shrink-0"
+                      label="Etichette"
+                      shortLabel="Etichette"
+                      checked={labelMode}
+                      onChange={(next) => {
+                        setLabelMode(next);
+                        if (!next) clearLabelQuantities();
+                      }}
                     />
                   ) : null}
                 </div>
@@ -1814,20 +1816,21 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
         <MagazzinoTableSection mode="content">
         {listSurface === "table" ? (
         <GestionaleListTable
+          className={gestionaleMagazzinoDenseTableClass}
           wrapClassName="mt-4"
           colgroup={
             <>
               {labelMode ? <col className="w-[7.25rem]" /> : null}
-              <col style={{ width: "7.75rem" }} />
+              <col style={{ width: magazzinoTableColCodiceWidth }} />
+              <col className="w-[8%]" />
+              <col className={magazzinoTableColDescrizioneClass} />
+              <col className="w-[8%]" />
               <col className="w-[7%]" />
-              <col className="w-[20%]" />
-              <col className="w-[7%]" />
-              <col className="w-[6%]" />
-              <col className="w-[7.5%]" />
-              <col className="w-[10%]" />
-              <col className="w-[8.5%]" />
-              <col className="w-[9.5%]" />
+              <col className="w-[8%]" />
               <col className="w-[12%]" />
+              <col className="w-[9%]" />
+              <col className="w-[7%]" />
+              <col className={magazzinoTableColAzioniClass} />
             </>
           }
           headRow={
@@ -1843,7 +1846,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                 sortColumn={sortColumn}
                 sortPhase={sortPhase}
                 onSort={onSort}
-                thClassName="w-[7.75rem] min-w-[7.75rem] max-w-[7.75rem]"
+                thClassName={magazzinoTableColCodiceThClass}
               />
               <GlobalTableSortTh
                 label="Marca"
@@ -1896,13 +1899,13 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                 align="center"
               />
               <GlobalTableSortTh
-                label="Consumo medio"
+                label="Consumo"
                 columnKey="consumoMedioMensile"
                 sortColumn={sortColumn}
                 sortPhase={sortPhase}
                 onSort={onSort}
                 align="center"
-                thClassName="whitespace-nowrap"
+                thClassName="w-[7%] max-w-[6.5rem] min-w-0"
               />
               <GestionaleListTableActionsHead />
             </>
@@ -1979,18 +1982,14 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                     ) : null}
                   </div>
                   <div className="flex shrink-0 flex-col items-center gap-1">
-                    <Tooltip content={low ? "Sotto scorta minima" : "Giacenza"} side="top">
-                      <MagazzinoScortaDisplayBadge
-                        ricambioId={p.id}
-                        ricambioLabel={p.descrizione}
-                        fallbackScorta={p.scorta}
-                        low={low}
-                        variant="mobile"
-                      />
-                    </Tooltip>
-                    <Tooltip content="Scorta minima" side="top">
-                      <MagazzinoScortaBadge value={p.scortaMinima} kind="minima" variant="mobile" />
-                    </Tooltip>
+                    <MagazzinoScortaDisplayBadge
+                      ricambioId={p.id}
+                      ricambioLabel={p.descrizione}
+                      fallbackScorta={p.scorta}
+                      low={low}
+                      variant="mobile"
+                    />
+                    <MagazzinoScortaBadge value={p.scortaMinima} kind="minima" variant="mobile" />
                   </div>
                 </div>
                 <dl className="mt-2 grid grid-cols-3 gap-x-2 gap-y-1.5 text-[11px]">
@@ -2005,54 +2004,49 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                   <div className="min-w-0">
                     <dt className="text-zinc-500 dark:text-zinc-400">Consumo medio</dt>
                     <dd className="font-medium tabular-nums text-zinc-700 dark:text-zinc-300">
-                      <OptionalTooltip content={magazzinoConsumoMedioTooltip(consumoRow, avgM)}>
-                        <span className="inline-block max-w-full truncate">
-                          {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "—"}
-                        </span>
-                      </OptionalTooltip>
+                      <span className="inline-block max-w-full truncate">
+                        {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "—"}
+                      </span>
                     </dd>
                   </div>
                 </dl>
                 <div className="mt-auto flex w-full min-w-0 shrink-0 items-end justify-between gap-2 border-t border-zinc-200/90 pt-2.5 dark:border-zinc-700/80">
-                  <Tooltip
-                    content={
+                  <div
+                    className={`min-w-0 flex-1 text-xs font-medium text-[color:var(--cab-text-muted)] ${
                       staleModifica
-                        ? `${formatTimestampHover(p.dataUltimaModifica)} · ${MAGAZZINO_STALE_MODIFICA_HINT}`
-                        : formatTimestampHover(p.dataUltimaModifica)
-                    }
-                    side="top"
+                        ? "rounded-md bg-amber-50/95 px-1.5 py-0.5 ring-1 ring-amber-200/80 dark:bg-amber-950/35 dark:ring-amber-800/55"
+                        : ""
+                    }`}
                   >
-                    <div
-                      className={`min-w-0 flex-1 text-xs font-medium text-[color:var(--cab-text-muted)] ${
-                        staleModifica
-                          ? "rounded-md bg-amber-50/95 px-1.5 py-0.5 ring-1 ring-amber-200/80 dark:bg-amber-950/35 dark:ring-amber-800/55"
-                          : ""
-                      }`}
-                    >
-                      <div className="flex min-w-0 items-center gap-1">
-                        {staleModifica ? (
-                          <span
-                            className="shrink-0 text-[11px] leading-none text-amber-700 dark:text-amber-300"
-                            aria-hidden
-                          >
-                            ⚠
-                          </span>
-                        ) : null}
-                        <p className="truncate tabular-nums leading-tight">
-                          {formatMagazzinoUltimaModificaMobileDate(p.dataUltimaModifica)}
-                        </p>
-                      </div>
-                      <p className="truncate leading-tight">
-                        {formatMagazzinoUltimaModificaMobileAutore(p.autoreUltimaModifica)}
+                    <div className="flex min-w-0 items-center gap-1">
+                      {staleModifica ? (
+                        <span
+                          className="shrink-0 text-[11px] leading-none text-amber-700 dark:text-amber-300"
+                          aria-hidden
+                        >
+                          ⚠
+                        </span>
+                      ) : null}
+                      <p className="truncate tabular-nums leading-tight">
+                        {formatMagazzinoUltimaModificaMobileDate(p.dataUltimaModifica)}
                       </p>
                     </div>
-                  </Tooltip>
+                    <p className="truncate leading-tight">
+                      {formatMagazzinoUltimaModificaMobileAutore(p.autoreUltimaModifica)}
+                    </p>
+                  </div>
                   <div
                     className={`${gestionaleListTableActionsGroupEnd} shrink-0 flex-nowrap`}
                     role="group"
                     aria-label="Azioni"
                   >
-                  <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
+                  <IconActionButton
+                    label="Info"
+                    tooltipForce
+                    tooltipContent="Apri scheda ricambio"
+                    className={dsTableActionBtnInfo}
+                    onClick={() => openInfo(p)}
+                  >
                     <IconInfoMagazzino />
                   </IconActionButton>
                   <MagazzinoScortaAdjustActionsCell

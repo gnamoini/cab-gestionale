@@ -263,7 +263,7 @@ export function FatturazioneView({ listSurface: serverListSurface, listTier = "x
 
   return (
     <GestionaleSectionGate module="fatturazione">
-      <PageActionMenuProvider onRefresh={() => void refetch()}>
+      <PageActionMenuProvider>
         <FatturazionePageMenuRegistrar items={fatturazioneBaseMenuItems} />
         <div className={`lavorazioni-scroll-scope ${layoutPageRoot} ${gestionaleListTierClass(listTier)}`.trim()}>
           <PageHeaderPageActionMenu />

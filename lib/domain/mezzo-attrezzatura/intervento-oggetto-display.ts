@@ -19,6 +19,22 @@ function joinMarcaModello(...parts: Array<string | null | undefined>): string {
     .join(" ");
 }
 
+function tipoAttrezzaturaFromContext(ctx: InterventoContext): string {
+  const fromScheda = (ctx.schedaIngresso.campi?.tipoAttrezzatura ?? "").trim();
+  const fromMezzo = (ctx.mezzo.tipoAttrezzatura ?? "").trim();
+  const tipo = fromScheda || fromMezzo;
+  return tipo && tipo !== "—" ? tipo : "";
+}
+
+function withTipoAttrezzaturaPrefix(tipo: string, base: string): string {
+  if (!tipo) return base;
+  if (!base) return tipo;
+  const lowerBase = base.toLowerCase();
+  const lowerTipo = tipo.toLowerCase();
+  if (lowerBase === lowerTipo || lowerBase.startsWith(`${lowerTipo} `)) return base;
+  return `${tipo} ${base}`;
+}
+
 /** Etichetta colonna «Oggetto» per liste lavorazioni. */
 export function resolveInterventoOggettoDisplay(ctx: InterventoContext): InterventoOggettoDisplay {
   const { target } = ctx;
@@ -37,9 +53,11 @@ export function resolveInterventoOggettoDisplay(ctx: InterventoContext): Interve
   }
 
   const att = target.attrezzatura;
-  const label = interventoTargetLabel("attrezzatura", joinMarcaModello(att.marca, att.modello));
+  const marcaModello = joinMarcaModello(att.marca, att.modello);
+  const label = interventoTargetLabel("attrezzatura", marcaModello);
+  const base = label === "Attrezzatura" ? joinMarcaModello(att.marca) || "" : label;
   return {
-    label: label === "Attrezzatura" ? joinMarcaModello(att.marca) || "" : label,
+    label: withTipoAttrezzaturaPrefix(tipoAttrezzaturaFromContext(ctx), base),
     badge: interventoTargetBadge("attrezzatura", att.marca),
     subtitle: att.matricola === "—" ? "" : att.matricola,
   };

@@ -8,6 +8,7 @@ export function advancePipelineStateForPhase(
 ): PipelineState {
   const next = { ...state };
   switch (phase) {
+    case "verify":
     case "physical_parse":
       break;
     case "ai_extract":

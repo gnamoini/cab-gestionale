@@ -28,7 +28,8 @@ export async function GET(request: Request, context: RouteContext) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Parametri non validi" }, { status: 400 });
   }
-  const { format, preset, includeBarcode, clienteLabel, quantity } = parsed.data;
+  const { format, preset, clienteLabel, quantity } = parsed.data;
+  const includeBarcode = false;
 
   const { data: row, error } = await auth.sb
     .from("magazzino_ricambi")

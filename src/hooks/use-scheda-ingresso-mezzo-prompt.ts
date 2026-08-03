@@ -15,6 +15,7 @@ import {
 } from "@/lib/schede/scheda-ingresso-mezzo-link-state";
 import { pickMezzoPermanentFields, type MezzoPermanentFieldKey } from "@/lib/schede/scheda-ingresso-field-roles";
 import type { SchedaIngressoIdentField } from "@/lib/schede/scheda-ingresso-ident-suggest";
+import type { SchedaIngressoIdentMatchKind } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
@@ -40,6 +41,8 @@ export function useSchedaIngressoMezzoLink({
     emptySchedaIngressoMezzoLinkState,
   );
   const [activeMatchField, setActiveMatchField] = useState<SchedaIngressoIdentField | null>(null);
+  const [pendingMatchKind, setPendingMatchKind] = useState<SchedaIngressoIdentMatchKind | null>(null);
+  const [ambiguousCandidates, setAmbiguousCandidates] = useState<MezzoGestito[] | null>(null);
   const [dismissedMezzoIds, setDismissedMezzoIds] = useState<Set<string>>(() => new Set());
   const userEditedPermanentRef = useRef<Set<MezzoPermanentFieldKey>>(new Set());
 
@@ -55,10 +58,13 @@ export function useSchedaIngressoMezzoLink({
     [],
   );
 
-  const onExactMezzoMatch = useCallback(
-    (mezzo: MezzoGestito, field: SchedaIngressoIdentField) => {
+  const onMezzoIdentMatch = useCallback(
+    (mezzo: MezzoGestito, field: SchedaIngressoIdentField, kind: SchedaIngressoIdentMatchKind) => {
+      if (kind === "none" || kind === "ambiguous") return;
       if (dismissedMezzoIds.has(mezzo.id)) return;
       if (linkState.status === "linked" && linkState.linkedSnapshot?.id === mezzo.id) return;
+      setAmbiguousCandidates(null);
+      setPendingMatchKind(kind);
       setActiveMatchField(field);
       setLinkState({
         status: "unconfirmed_match",
@@ -69,10 +75,39 @@ export function useSchedaIngressoMezzoLink({
     [dismissedMezzoIds, linkState.linkedSnapshot, linkState.status],
   );
 
+  const onExactMezzoMatch = useCallback(
+    (mezzo: MezzoGestito, field: SchedaIngressoIdentField) => {
+      onMezzoIdentMatch(mezzo, field, "exact");
+    },
+    [onMezzoIdentMatch],
+  );
+
+  const onAmbiguousMezzoMatch = useCallback(
+    (candidates: readonly MezzoGestito[], field: SchedaIngressoIdentField) => {
+      if (candidates.length === 0) return;
+      setLinkState((prev) => ({
+        ...prev,
+        status: prev.linkedSnapshot ? "linked" : "new",
+        pendingMezzo: null,
+      }));
+      setPendingMatchKind(null);
+      setActiveMatchField(field);
+      setAmbiguousCandidates([...candidates]);
+    },
+    [],
+  );
+
+  const dismissAmbiguousMatch = useCallback(() => {
+    setAmbiguousCandidates(null);
+    setActiveMatchField(null);
+  }, []);
+
   const dismissPendingMatch = useCallback(() => {
     const id = linkState.pendingMezzo?.id;
     if (id) setDismissedMezzoIds((prev) => new Set(prev).add(id));
     setActiveMatchField(null);
+    setPendingMatchKind(null);
+    setAmbiguousCandidates(null);
     setLinkState((prev) => ({
       ...prev,
       status: prev.linkedSnapshot ? "linked" : "new",
@@ -114,6 +149,8 @@ export function useSchedaIngressoMezzoLink({
         ),
       });
       setActiveMatchField(null);
+      setPendingMatchKind(null);
+      setAmbiguousCandidates(null);
       resetUserPermanentEdits();
     },
     [
@@ -133,6 +170,8 @@ export function useSchedaIngressoMezzoLink({
   const clearLink = useCallback(() => {
     setLinkState(emptySchedaIngressoMezzoLinkState());
     setActiveMatchField(null);
+    setPendingMatchKind(null);
+    setAmbiguousCandidates(null);
     resetUserPermanentEdits();
   }, [resetUserPermanentEdits]);
 
@@ -144,6 +183,8 @@ export function useSchedaIngressoMezzoLink({
         linkedSnapshot: createLinkedMezzoSnapshot(mezzo, field),
       });
       setActiveMatchField(null);
+      setPendingMatchKind(null);
+      setAmbiguousCandidates(null);
       resetUserPermanentEdits();
     },
     [resetUserPermanentEdits],
@@ -165,6 +206,8 @@ export function useSchedaIngressoMezzoLink({
         };
       });
       setActiveMatchField(null);
+      setPendingMatchKind(null);
+      setAmbiguousCandidates(null);
     },
     [resetUserPermanentEdits],
   );
@@ -179,7 +222,13 @@ export function useSchedaIngressoMezzoLink({
   return {
     linkState,
     activeMatchField,
+    pendingMatchKind,
+    ambiguousCandidates,
+    dismissedMezzoIds,
     onExactMezzoMatch,
+    onMezzoIdentMatch,
+    onAmbiguousMezzoMatch,
+    dismissAmbiguousMatch,
     dismissPendingMatch,
     acceptLinkMezzo,
     linkMezzoExplicit,

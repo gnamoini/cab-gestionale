@@ -22,6 +22,7 @@ import { OrdineFornitoreStoricoSection } from "@/components/ordini-fornitori/ord
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
+import { RicambioUnitaMisuraPicker } from "@/components/gestionale/magazzino/ricambio-unita-misura-picker";
 import {
   preventivoEditorAddRowBtn,
   preventivoEditorFooterBtnNeutral,
@@ -32,9 +33,6 @@ import {
   preventivoEditorTableInput,
   preventivoEditorTableInputNumber,
   preventivoEditorTableTdClass,
-  preventivoEditorUmSegmentOff,
-  preventivoEditorUmSegmentOn,
-  preventivoEditorUmSegmentWrap,
 } from "@/components/preventivi/preventivo-editor-ui";
 import {
   fmtPreventivoEuro,
@@ -72,7 +70,6 @@ import type {
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import {
   dsBtnDanger,
-  dsFocus,
   dsInput,
   dsScrollbar,
   dsTable,
@@ -104,10 +101,7 @@ import {
   patchRigaMeta,
 } from "@/lib/ordini-fornitori/ordine-fornitore-riga-meta";
 import {
-  formatRicambioUnitaMisuraLabel,
   parseRicambioUnitaMisura,
-  RICAMBIO_UNITA_MISURA_VALUES,
-  type RicambioUnitaMisura,
 } from "@/lib/magazzino/ricambio-unita-misura";
 import { OrdineFornitoreRigaMagazzinoField } from "@/components/ordini-fornitori/ordine-fornitore-riga-magazzino-field";
 import { finalizeOrdineFornitoreImportClient } from "@/lib/ordini-fornitori/import/ordine-fornitore-import-client";
@@ -134,40 +128,8 @@ import { useSubmitLock } from "@/lib/forms/form-engine";
 import { ordiniFornitoriEntry } from "@/lib/domain/ordini-fornitori-entry";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 
-const umCellLabel: Record<RicambioUnitaMisura, string> = {
-  pz: "pz",
-  metri: "m",
-  lt: "lt",
-};
-
 const ordineRigheTableMinWidthClass = "min-w-[58rem]";
 const ordineSpeseVarieTableMinWidthClass = "min-w-[32rem]";
-
-function OrdineRigaUnitaMisuraCell({
-  value,
-  rowIndex,
-  disabled,
-  onChange,
-}: {
-  value: RicambioUnitaMisura;
-  rowIndex: number;
-  disabled?: boolean;
-  onChange: (unita: RicambioUnitaMisura) => void;
-}) {
-  return (
-    <div
-      className={preventivoEditorUmSegmentWrap}
-      role="group"
-      aria-label={`Unità di misura riga ${rowIndex + 1}`}
-    >
-      {RICAMBIO_UNITA_MISURA_VALUES.map((unita) => (
-        <button key={unita} type="button" disabled={disabled} className={`${value === unita ? preventivoEditorUmSegmentOn : preventivoEditorUmSegmentOff} ${dsFocus}`} aria-pressed={value === unita} aria-label={formatRicambioUnitaMisuraLabel(unita)} onClick={() => onChange(unita)}>
-          {umCellLabel[unita]}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function recordToCreateInput(
   record: OrdineFornitoreRecord,
@@ -775,7 +737,7 @@ export function OrdineFornitoreEditorModal({
                             />
                           </td>
                           <td className={preventivoEditorTableTdClass}>
-                            <OrdineRigaUnitaMisuraCell
+                            <RicambioUnitaMisuraPicker
                               value={parseRicambioUnitaMisura(r.unitaMisura)}
                               rowIndex={idx}
                               disabled={fieldsReadOnly}

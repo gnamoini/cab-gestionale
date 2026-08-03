@@ -181,9 +181,28 @@ Eventi cab-sync / timer
     → Inbox v2 + desktop opzionale
 ```
 
-**Bridge attivi:** lavorazioni, magazzino, preventivi, digest schedulato, promemoria, presenze.
+**Bridge attivi:** lavorazioni, magazzino, presenze — **solo toast UX** (inbox via `notification_outbox` server-side).
 
-**Test:** `notification-dedup-keys.test.ts`, `notification-event-catalog.test.ts`, `notification-transition-mappers.test.ts`, `ricambio-stock-crossing.test.ts`, `notifications-policy.test.ts`, `verify-notifications-rbac.ts`.
+**Test:** `notification-dedup-keys.test.ts`, `notification-event-catalog.test.ts`, `notification-transition-mappers.test.ts`, `ricambio-stock-crossing.test.ts`, `notifications-policy.test.ts`, `notification-pipeline-policy.test.ts`, `verify-notifications-rbac.ts`.
+
+---
+
+## Publisher audit (2026-11 — ripristino SSOT)
+
+| Evento | Publisher precedente | Publisher attuale | Idempotency key |
+|--------|---------------------|-------------------|-----------------|
+| `lavorazioni.created` | bridge cab-sync admin | DB trigger → `notification_outbox` → worker | `lavorazioni.created:lavorazioni:{id}` |
+| `lavorazioni.completed` | bridge cab-sync admin | DB trigger → outbox → worker | `lavorazioni.completed:lavorazioni:{id}` |
+| `magazzino.below_minimum` | bridge cab-sync admin | DB trigger quantita → outbox → worker | `magazzino.below_minimum:magazzino_ricambi:{id}:{prev}->{curr}` |
+| `dipendenti.presence_reminder` | bridge scheduled client | cron `/api/cron/dipendenti-presenze-reminder` | `dipendenti.presence_reminder:dipendenti_presenze:{date}` |
+| `lavorazioni.tagliando_due` | client + server | `POST /api/notifications/tagliando-due` (server) | entity-based |
+| `mezzi.tagliando_forecast_7g` | cron | cron (invariato) | — |
+| `client_portal_*` | DB trigger | DB trigger (invariato) | — |
+| `system.dashboard_test` | UI bell | UI bell (`publishNotification`) | — |
+
+**Pipeline outbox:** `INSERT entità` → trigger leggero → `notification_outbox` → `/api/cron/notification-outbox-processor` → `fanoutEntityNotification` → `dispatchNotificationEvent` → `notifications` → `delivery_queue` → push worker.
+
+**Tracciabilità:** `trace_id` su `notification_outbox`, `notification_delivery`, payload push, log strutturati `[notification-trace]`.
 
 ---
 

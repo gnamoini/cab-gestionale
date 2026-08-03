@@ -13,7 +13,6 @@ import {
   ToolbarGroupMetaRow,
   ToolbarGroupPrimaryRow,
 } from "@/components/design-system";
-import { GestionaleRefreshToolbarButton } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { SecurityCreateUserModalLazy, SecurityUserDetailDrawerLazy } from "@/components/dashboard/security/security-tab-loaders";
 import {
@@ -43,6 +42,7 @@ import {
 } from "@/lib/security/user-page-permissions";
 import { buildKnownClientiSet, validateClienteAssociationForRole } from "@/src/lib/auth/cliente-portal-scope";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
+import { usePwaUpdateGuard } from "@/lib/pwa/pwa-update-guard";
 import { resolveRole, type AppRole } from "@/lib/auth/rbac";
 import {
   SecurityInlineNotice,
@@ -161,6 +161,10 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ, 
   }, [draftRows, pageDrafts, savedPageSnapshots]);
 
   const isDirty = isTableDirty || isPageDirty;
+  usePwaUpdateGuard(
+    isDirty,
+    "Salva o annulla le modifiche ai permessi prima di aggiornare l'app.",
+  );
 
   const hasClienteAssociationViolations = useMemo(() => {
     if (readOnly) return false;
@@ -286,22 +290,6 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ, 
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [isDirty]);
 
-  const handleRefetch = useCallback(() => {
-    void (async () => {
-      if (isDirty) {
-        const ok = await confirm({
-          title: "Modifiche non salvate",
-          message: "Ci sono modifiche non salvate. Ricaricare comunque?",
-          confirmLabel: "Ricarica",
-        });
-        if (!ok) return;
-      }
-      const res = await usersQ.refetch();
-      if (res.data?.users) syncFromServer(res.data.users, res.data.userPageOverrideRows, res.data.rolePageAccessByRole);
-      hydratedRef.current = true;
-    })();
-  }, [confirm, isDirty, usersQ, syncFromServer]);
-
   const handleRoleChange = useCallback(
     (userId: string, ruolo: string) => {
       const roleKey = resolveRole(ruolo);
@@ -350,7 +338,6 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ, 
                 Nuovo utente
               </button>
             ) : null}
-            <GestionaleRefreshToolbarButton busy={usersQ.isFetching} onClick={handleRefetch} />
           </ToolbarGroupPrimaryRow>
           {!readOnly && isDirty ? (
             <ToolbarGroupMetaRow>

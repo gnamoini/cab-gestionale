@@ -12,6 +12,7 @@ import {
   dsSystemBannerLead,
   dsSystemBannerShell,
   dsSystemBannerShellTop,
+  dsSystemBannerShellInShell,
   dsSystemBannerTitle,
   dsSystemBannerDismissBtn,
 } from "@/lib/ui/design-system";
@@ -27,18 +28,23 @@ function SystemBannerDismissIcon() {
 export function SystemBannerShell({
   ariaLabel,
   role = "region",
+  placement = "global",
   children,
 }: {
   ariaLabel: string;
   role?: "region" | "status";
+  /** global = fuori AppShell (PWA); inShell = dentro main.gestionale-scroll-y */
+  placement?: "global" | "inShell";
   children: ReactNode;
 }) {
+  const positionClass = placement === "inShell" ? dsSystemBannerShellInShell : dsSystemBannerShellTop;
+
   return (
     <div
       role={role}
       aria-label={ariaLabel}
       aria-live={role === "status" ? "polite" : undefined}
-      className={`${dsSystemBannerShell} ${dsSystemBannerShellTop}`}
+      className={`${dsSystemBannerShell} ${positionClass}`}
     >
       <div className={dsSystemBannerInner}>{children}</div>
     </div>

@@ -21,6 +21,8 @@ export function SettingsRinominaPropagaDialog({
   onCancel,
   onConfirm,
   pending,
+  progressLabel,
+  errorMessage,
 }: {
   open: boolean;
   entries: SettingsRenameEntry[];
@@ -28,11 +30,19 @@ export function SettingsRinominaPropagaDialog({
   onCancel: () => void;
   onConfirm: () => void;
   pending?: boolean;
+  progressLabel?: string;
+  errorMessage?: string | null;
 }) {
   if (entries.length === 0) return null;
 
   const totalUpdatable = impactSummaries?.reduce((s, i) => s + (i.impact?.totalUpdatable ?? 0), 0) ?? 0;
   const totalProtected = impactSummaries?.reduce((s, i) => s + (i.impact?.totalProtected ?? 0), 0) ?? 0;
+  const showRetry = Boolean(errorMessage) && !pending;
+  const propagateLabel = pending
+    ? progressLabel?.trim() || "Aggiornamento…"
+    : showRetry
+      ? "Riprova"
+      : "Propaga dati live";
 
   return (
     <GestionaleConfirmDialog
@@ -46,9 +56,15 @@ export function SettingsRinominaPropagaDialog({
               Solo configurazione
             </button>
           </Tooltip>
-          <Tooltip content={"Aggiorna mezzi, preventivi, schede e altri record collegati (dati live)"}>
+          <Tooltip
+            content={
+              showRetry
+                ? "Riprova l'aggiornamento dei record collegati"
+                : "Aggiorna mezzi, preventivi, schede e altri record collegati (dati live)"
+            }
+          >
             <button type="button" className={`${dsBtnPrimary} min-h-[2.75rem] sm:min-h-0`} onClick={onConfirm} disabled={pending}>
-              {pending ? "Aggiornamento…" : "Propaga dati live"}
+              {propagateLabel}
             </button>
           </Tooltip>
         </div>
@@ -67,6 +83,11 @@ export function SettingsRinominaPropagaDialog({
           </li>
         ))}
       </ul>
+      {errorMessage ? (
+        <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+          {errorMessage}
+        </p>
+      ) : null}
       {impactSummaries && impactSummaries.length > 0 ? (
         <div className="mt-3 rounded-md border border-[color:var(--cab-border)] bg-[color:var(--cab-surface-muted)] p-3 text-xs">
           <p className="font-medium text-[color:var(--cab-text)]">Impatto stimato (dati live)</p>

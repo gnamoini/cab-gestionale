@@ -192,7 +192,6 @@ export type SecurityMonitoringSectionProps = {
   lastAccessPerUser: { userId: string; nome: string; email: string; lastAt: string; lastAction: string }[];
   failedNote: string;
   resettingLogs: boolean;
-  onRefresh: () => void;
   onResetChangeLogs: () => void;
 };
 
@@ -213,7 +212,6 @@ export function SecurityMonitoringSection({
   lastAccessPerUser,
   failedNote,
   resettingLogs,
-  onRefresh,
   onResetChangeLogs,
 }: SecurityMonitoringSectionProps) {
   const globalOpts = useGlobalOptions({ debugTag: "SecurityMonitoringSection" });
@@ -222,14 +220,6 @@ export function SecurityMonitoringSection({
   return (
     <div id="security-panel-monitoring" role="tabpanel" aria-labelledby="security-tab-monitoring" className="space-y-4">
       <div className={gestionalePageToolbarActionsClass}>
-        <button
-          type="button"
-          className={dsPageToolbarBtn}
-          onClick={onRefresh}
-          disabled={logsQuery.isFetching || recentActivityQ.isFetching}
-        >
-          {logsQuery.isFetching || recentActivityQ.isFetching ? "Aggiornamento…" : "Aggiorna dati"}
-        </button>
         <button type="button" className={dsBtnDanger} onClick={onResetChangeLogs} disabled={resettingLogs}>
           {resettingLogs ? "Reset…" : "Resetta log modifiche"}
         </button>

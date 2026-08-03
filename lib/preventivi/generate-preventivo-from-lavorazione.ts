@@ -167,6 +167,7 @@ export async function buildNewPreventivoFromLavorazioneContext(opts: {
     oreTotali,
     righeAddetti,
     costoOrario: infer.costoOrario,
+    prezzoOrario: infer.prezzoOrario,
     scontoPercent: infer.manodoperaScontoPercent,
   };
 
@@ -228,8 +229,10 @@ export async function buildNewPreventivoFromLavorazioneContext(opts: {
     descriptionEngineMeta,
     righeRicambi,
     manodopera,
-    sanificazionePrezzo: 0,
-    collaudoPrezzo: 0,
+    sanificazionePrezzo: manodopera.prezzoOrario,
+    sanificazioneOre: 1,
+    collaudoPrezzo: manodopera.prezzoOrario,
+    collaudoOre: 1,
     noteFinali,
     totaleRicambi: 0,
     totaleManodopera: 0,

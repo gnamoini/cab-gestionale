@@ -31,6 +31,8 @@ import { useClientLavorazioneDetailQuery } from "@/src/hooks/gestionale/use-clie
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
+import { CLIENT_PORTAL_SYNC_TABLES } from "@/lib/lavorazioni/client-portal-sync-tables";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 
 const CLIENT_PORTAL_BACK_LABEL = `Torna a ${PORTALE_CLIENTI_LABEL}`;
 
@@ -58,6 +60,13 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
     [listPath, pathname, router],
   );
   const detailQ = useClientLavorazioneDetailQuery(lavorazioneId, access.allowed);
+  useGestionaleSyncScope({
+    scopeId: "client-portal-lavorazioni-detail",
+    domain: "portale",
+    route: "/lavorazioni-clienti",
+    tables: CLIENT_PORTAL_SYNC_TABLES,
+    visibleEntities: [{ table: "lavorazioni", entityId: lavorazioneId }],
+  });
   const globalOpts = useGlobalOptions({ debugTag: "ClientLavorazioneDetail" });
   const statiOpts = useMemo(
     () => filterClientPortalStatiOptions(globalOpts.lavorazioni.stati),
@@ -65,6 +74,7 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
   );
   const { store: schedeStore } = useSchedeBundlesQuery(access.allowed, {
     viewLayer: true,
+    clientPortal: true,
     lavorazioneIds: [lavorazioneId],
   });
   const addettiGlobali = globalOpts.lavorazioni.addetti;

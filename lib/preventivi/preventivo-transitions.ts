@@ -1,17 +1,17 @@
 import type { PreventivoStato } from "@/lib/preventivi/types";
 
-export const PREVENTIVO_TRANSITIONS = {
-  bozza: ["inviato", "annullato"],
-  inviato: ["confermato", "annullato"],
-  confermato: ["annullato"],
-  annullato: ["bozza", "inviato"],
-} as const satisfies Record<PreventivoStato, readonly PreventivoStato[]>;
+export const PREVENTIVO_STATI = [
+  "bozza",
+  "inviato",
+  "confermato",
+  "annullato",
+] as const satisfies readonly PreventivoStato[];
 
+/** ponytail: nessun grafo transizioni — ogni stato è raggiungibile (eccetto noop). */
 export function canTransitionPreventivoStato(from: PreventivoStato, to: PreventivoStato): boolean {
-  if (from === to) return false;
-  return (PREVENTIVO_TRANSITIONS[from] as readonly PreventivoStato[]).includes(to);
+  return from !== to;
 }
 
 export function preventivoStatoTransitionTargets(from: PreventivoStato): readonly PreventivoStato[] {
-  return PREVENTIVO_TRANSITIONS[from];
+  return PREVENTIVO_STATI.filter((stato) => stato !== from);
 }

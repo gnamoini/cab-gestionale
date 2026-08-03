@@ -4,7 +4,6 @@ import { OptionalTooltip, Tooltip } from "@/components/ui";
 import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { flushSync } from "react-dom";
 import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
@@ -46,6 +45,7 @@ import { FileEsternoBadge, SchedaStatoBadge } from "@/components/lavorazioni/sch
 import { SchedaLavorazioniFormBody } from "@/components/lavorazioni/schede/scheda-lavorazioni-form-body";
 import { SchedaRicambiFormBody } from "@/components/lavorazioni/schede/scheda-ricambi-form-body";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
+import { registerPwaUpdateGuard } from "@/lib/pwa/pwa-update-guard";
 import { applyMagazzinoScaricoDaScheda } from "@/lib/magazzino/apply-scarico-da-scheda";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
@@ -318,7 +318,6 @@ export function SchedeLavorazioneModal({
   onDeleteLavorazione?: () => void;
   deleteLavorazionePending?: boolean;
 }) {
-  const router = useRouter();
   const { authorName, user } = useAuth();
   const gestToast = useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
@@ -349,10 +348,14 @@ export function SchedeLavorazioneModal({
   const [schedaEditorSaving, setSchedaEditorSaving] = useState(false);
   const [draft, setDraft] = useState<LavorazioneSchedeBundle>(bundle);
   const draftRef = useRef(draft);
+  const unsavedPanelRef = useRef(unsavedPanel);
   const syncedBundleJsonRef = useRef(JSON.stringify(bundle));
   useLayoutEffect(() => {
     draftRef.current = draft;
   }, [draft]);
+  useLayoutEffect(() => {
+    unsavedPanelRef.current = unsavedPanel;
+  }, [unsavedPanel]);
   const modalRootRef = useRef<HTMLDivElement | null>(null);
   const submitLock = useSubmitLock();
   const ingressoDraftRef = useRef<SchedaIngressoFields | null>(null);
@@ -391,6 +394,20 @@ export function SchedeLavorazioneModal({
   const baselineIngressoJson = useRef<string | null>(null);
   const baselineLavorazioniJson = useRef<string | null>(null);
   const baselineRicambiJson = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    return registerPwaUpdateGuard({
+      id: `schede-lavorazione:${lav.id}`,
+      isDirty: () =>
+        unsavedPanelRef.current !== null ||
+        JSON.stringify(draftRef.current) !== syncedBundleJsonRef.current ||
+        (lavDoc !== null &&
+          baselineLavorazioniJson.current !== JSON.stringify(lavDoc)) ||
+        (ricDoc !== null &&
+          baselineRicambiJson.current !== JSON.stringify(ricDoc)),
+      message: "Salva o chiudi le modifiche della scheda prima di aggiornare l'app.",
+    });
+  }, [lav.id, open, lavDoc, ricDoc]);
   const emitLog = useCallback(
     (ev: SchedaLogEv) => {
       onSchedaLog?.(ev);
@@ -672,8 +689,7 @@ export function SchedeLavorazioneModal({
   }, [open, hubData?.preventivi, mezzoFiltroPreventivi]);
 
   function apriPreventivoNeiPreventivi(p: PreventivoRecord) {
-    onClose();
-    router.push(buildPreventiviOpenHrefForRecord(p));
+    openUrlInNewTab(buildPreventiviOpenHrefForRecord(p));
   }
 
   const documentiHubUi = useMemo(() => {

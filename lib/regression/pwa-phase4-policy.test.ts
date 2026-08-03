@@ -138,8 +138,11 @@ assert.match(pushProcess, /status === 404 \|\| status === 410/);
 assert.match(pushProcess, /push_disabled|vapid_not_configured/);
 
 const pushCron = read("app/api/cron/push-delivery/route.ts");
-assert.match(pushCron, /processPushDeliveryQueue/);
+assert.match(pushCron, /runDeliveryWorker/);
 assert.match(pushCron, /CRON_SECRET/);
+
+const outboxCron = read("app/api/cron/notification-outbox-processor/route.ts");
+assert.match(outboxCron, /runNotificationOutboxProcessor/);
 
 const pushPgCron = read("supabase/migrations/20260915121000_push_delivery_pg_cron.sql");
 assert.match(pushPgCron, /cab_invoke_push_delivery_worker/);

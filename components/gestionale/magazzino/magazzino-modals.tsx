@@ -2,11 +2,12 @@
 
 import type { ReactElement } from "react";
 import { DisabledElementTooltip } from "@/components/ui";
+import { gestionaleModalFooterSaveBtnClass } from "@/components/design-system";
+import { HubIconPencil } from "@/components/design-system/hub-table-action-icons";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { RicambioInfoPanel } from "@/components/gestionale/magazzino/ricambio-info-panel";
 import { ricambioModalFormScrollClass } from "@/components/gestionale/magazzino/ricambio-modal-ui";
-import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import type { RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import type { MagazzinoArchiveDuplicateCodeGroup } from "@/lib/magazzino/duplicates";
 import type { MagazzinoLogFeedItem } from "@/lib/magazzino/use-magazzino-log-feed";
@@ -96,9 +97,10 @@ export function MagazzinoRicambioInfoModal({
                 <button
                   type="button"
                   onClick={onEdit}
-                  className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
+                  className={`${gestionaleModalFooterSaveBtnClass} w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
                   disabled={!magCanCreateRicambio}
                 >
+                  <HubIconPencil className="h-4 w-4 shrink-0" />
                   Modifica
                 </button>
               </DisabledElementTooltip>

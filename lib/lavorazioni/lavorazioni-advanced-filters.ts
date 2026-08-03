@@ -1,7 +1,6 @@
 import { clientPortalIngressoIso } from "@/lib/lavorazioni/client-portal-row-fields";
 import { lavorazioneAddettoId } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { isoToDateInputValue, normalizeYmdRangeBounds } from "@/lib/lavorazioni/date-day-only";
-import { migrateStatoConfigId } from "@/lib/lavorazioni/stati-dynamic";
 import { lavRowIngressoInRange } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 import {
@@ -237,7 +236,6 @@ export function lavorazioniAdvancedFiltersActive(f: LavorazioniAdvancedFilters):
     (f.modello.trim() !== "" && f.modello !== FILTER_ALL) ||
     (f.marcaTelaio.trim() !== "" && f.marcaTelaio !== FILTER_ALL) ||
     (f.modelloTelaio.trim() !== "" && f.modelloTelaio !== FILTER_ALL) ||
-    (f.stato.trim() !== "" && f.stato !== FILTER_ALL) ||
     f.ingressoDa.trim() !== "" ||
     f.ingressoA.trim() !== "" ||
     f.completamentoDa.trim() !== "" ||
@@ -265,7 +263,6 @@ export function lavRowMatchesAdvancedFilters(
   if (!listFilterMatches(f.modello, entity.modello)) return false;
   if (!listFilterMatches(f.marcaTelaio, entity.marcaTelaio)) return false;
   if (!listFilterMatches(f.modelloTelaio, entity.modelloTelaio)) return false;
-  if (f.stato !== FILTER_ALL && row.stato !== f.stato && row.stato !== migrateStatoConfigId(f.stato)) return false;
 
   if (!lavRowIngressoInRange(
     { ...row, data_ingresso: clientPortalIngressoIso(row, schedeStore) },
@@ -333,6 +330,7 @@ export function loadGestionaleAdvancedFiltersPersisted(): LavorazioniAdvancedFil
       ...o,
       section: "",
       addetto: normalizeAddettoFilterValue(o.addetto),
+      stato: FILTER_ALL,
     };
   } catch {
     return null;

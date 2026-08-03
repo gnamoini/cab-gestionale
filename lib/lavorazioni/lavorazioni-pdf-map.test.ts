@@ -43,6 +43,9 @@ const emptyCtx = {
 
 {
   const [row] = mapLavorazioniListRowsToPdfRows([sampleRow()], emptyCtx);
+  assert.equal(row.cliente, "Cliente Test");
+  assert.equal(row.attrezzatura, "Marca Modello");
+  assert.equal(row.identificazione, "Targa: AB123CD");
   assert.equal(row.stato, "Attesa ricambi");
   assert.equal(row.priorita, "Alta");
   assert.equal(row.prioritaSortKey, "alta");
@@ -94,6 +97,53 @@ const emptyCtx = {
     schedeStore,
   });
   assert.equal(row.addetto, "Mario Rossi");
+}
+
+{
+  const schedeStore: LavorazioneSchedeStore = {
+    "lav-001": {
+      lavorazioneId: "lav-001",
+      ingresso: {
+        tipo: "ingresso",
+        sorgente: "generata",
+        createdAt: "",
+        updatedAt: "",
+        createdBy: "",
+        updatedBy: "",
+        fileEsterno: null,
+        campi: {
+          dataIngresso: "",
+          cliente: "",
+          cantiere: "Cantiere Nord",
+          utilizzatore: "Ufficio tecnico",
+          tipoAttrezzatura: "",
+          marcaAttrezzatura: "",
+          modelloAttrezzatura: "",
+          matricola: "",
+          nScuderia: "",
+          oreLavoro: "",
+          tipoTelaio: "",
+          marcaTelaio: "",
+          modelloTelaio: "",
+          vin: "",
+          targa: "",
+          km: "",
+          descrizioneAnomalia: "",
+          livelloCarburante: "",
+          addettoAccettazione: "",
+          richiedente: "",
+          richiedenteTelefono: "",
+        },
+      },
+      lavorazioni: null,
+      ricambi: null,
+    },
+  };
+  const [row] = mapLavorazioniListRowsToPdfRows([sampleRow()], {
+    ...emptyCtx,
+    schedeStore,
+  });
+  assert.equal(row.cliente, "Cliente Test (Ufficio tecnico)\nCantiere Nord");
 }
 
 {

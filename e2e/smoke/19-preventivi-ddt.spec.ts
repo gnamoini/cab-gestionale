@@ -9,7 +9,7 @@ test("legacy /ddt redirects to preventivi", async ({ page }) => {
   await expect(page).toHaveURL(/\/preventivi(?:\?|$)/, { timeout: 30_000 });
 });
 
-test("admin can open DDT drawer from preventivi row", async ({ page }) => {
+test("admin can open DDT PDF from preventivi row", async ({ page }) => {
   attachConsoleGuards(page);
   await loginViaUi(page, adminCredentials());
   await page.goto("/preventivi");
@@ -22,11 +22,11 @@ test("admin can open DDT drawer from preventivi row", async ({ page }) => {
     return;
   }
 
+  const pdfResponse = page.waitForResponse(
+    (res) => res.url().includes("/api/pdf/artifacts/ddt") && res.ok(),
+    { timeout: 30_000 },
+  );
   await ddtButton.click();
-  await expect(page.getByRole("dialog", { name: "Dettaglio DDT" })).toBeVisible({ timeout: 30_000 });
-
-  const printBtn = page.getByRole("button", { name: "Stampa PDF" });
-  if (await printBtn.isVisible().catch(() => false)) {
-    await printBtn.click();
-  }
+  await pdfResponse;
+  await expect(page.getByRole("dialog", { name: "Dettaglio DDT" })).toHaveCount(0);
 });

@@ -17,7 +17,7 @@ export function useClientLavorazioniInCorsoQuery(enabled: boolean) {
   const opts = useViewQueryOpts();
   return useLavorazioniList(
     { archived: false, includeMezzo: true, fetchMode: "light", includeProfiles: true },
-    { enabled, clientPortal: true, ...opts },
+    { ...opts, enabled, clientPortal: true, refetchOnMount: "always" },
   );
 }
 
@@ -26,7 +26,7 @@ export function useClientLavorazioniArchivioQuery(enabled: boolean) {
   const opts = useViewQueryOpts();
   return useLavorazioniList(
     { archived: true, includeMezzo: true, fetchMode: "light", includeProfiles: true },
-    { enabled, clientPortal: true, ...opts },
+    { ...opts, enabled, clientPortal: true, refetchOnMount: "always" },
   );
 }
 

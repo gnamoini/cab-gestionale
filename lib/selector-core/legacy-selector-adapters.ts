@@ -16,6 +16,10 @@ export {
 } from "@/components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field";
 
 export {
+  SchedaIngressoIdentTextField,
+} from "@/components/lavorazioni/schede/scheda-ingresso-ident-text-field";
+
+export {
   RicambiMagSearchPortal,
   RicambioRowAutocompletePortal,
 } from "@/components/lavorazioni/schede/schede-ricambi-portal-fields";

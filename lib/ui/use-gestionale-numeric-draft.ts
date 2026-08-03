@@ -5,7 +5,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type FocusEvent,
   type KeyboardEvent,
 } from "react";
 import {
@@ -66,9 +65,8 @@ export function useGestionaleNumericDraft({
     [allowNeg],
   );
 
-  const onFocus = useCallback((e: FocusEvent<HTMLInputElement>) => {
+  const onFocus = useCallback(() => {
     setIsFocused(true);
-    e.target.select();
   }, []);
 
   const onBlur = useCallback(() => {

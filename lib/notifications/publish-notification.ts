@@ -49,6 +49,7 @@ import { trackDeprecatedUsage } from "@/lib/observability/deprecated-usage";
 import { formatTagliandoDaEseguireBody } from "@/lib/maintenance-plans/tagliando-due-notification-mapper";
 import { dispatchNotificationViaApi } from "@/lib/notifications/dispatch/dispatch-notification.client";
 import { getNotificationRegistryEntry } from "@/lib/notifications/notification-event-catalog";
+import { entityDispatchIdempotencyKey } from "@/lib/notifications/dispatch/entity-idempotency";
 
 export type PublishNotificationResult = { added: boolean; desktop: boolean };
 
@@ -62,9 +63,27 @@ function notificationEventIdFromLegacy(notification: AdminDashboardNotification)
   return null;
 }
 
-function dispatchIdempotencyKeyFromLegacy(notification: AdminDashboardNotification, userId: string): string {
+function dispatchIdempotencyKeyFromLegacy(notification: AdminDashboardNotification): string {
+  if (isLavorazioneDashboardNotification(notification)) {
+    return entityDispatchIdempotencyKey("lavorazioni.created", "lavorazioni", notification.lavorazioneId);
+  }
+  if (isLavorazioneCompletataNotification(notification)) {
+    return entityDispatchIdempotencyKey("lavorazioni.completed", "lavorazioni", notification.lavorazioneId);
+  }
+  if (isMagazzinoDashboardNotification(notification)) {
+    return entityDispatchIdempotencyKey("magazzino.below_minimum", "magazzino_ricambi", notification.ricambioId);
+  }
+  if (isFattureScaduteDigestNotification(notification)) {
+    return entityDispatchIdempotencyKey("fatturazione.overdue_digest", "fatturazione", notification.dateYmd);
+  }
+  if (isDipendentiPresenzeReminderNotification(notification)) {
+    return entityDispatchIdempotencyKey("dipendenti.presence_reminder", "dipendenti_presenze", notification.dateYmd);
+  }
+  if (isTagliandoDaEseguireNotification(notification)) {
+    return entityDispatchIdempotencyKey("lavorazioni.tagliando_due", "lavorazioni", notification.lavorazioneId);
+  }
   const key = notificationStoreKey(notification);
-  return `${key}:${userId}`;
+  return `${key}:legacy`;
 }
 
 function legacyToCreateInput(notification: AdminDashboardNotification): CreateNotificationInput {
@@ -173,7 +192,7 @@ export async function publishNotification(
     if (notificationsSsotV2Enabled() && fanoutEventId && getNotificationRegistryEntry(fanoutEventId)) {
       const dispatchResult = await dispatchNotificationViaApi({
         notificationEventId: fanoutEventId,
-        dispatchIdempotencyKey: dispatchIdempotencyKeyFromLegacy(notification, userId),
+        dispatchIdempotencyKey: dispatchIdempotencyKeyFromLegacy(notification),
         actorId: userId,
         legacyNotification: notification,
       });

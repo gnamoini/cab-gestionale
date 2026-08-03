@@ -22,6 +22,7 @@ export type PushNotificationPayload = {
   href: string;
   notificationId?: string;
   type?: string;
+  traceId?: string;
 };
 
 export type PushDeliveryStatus =

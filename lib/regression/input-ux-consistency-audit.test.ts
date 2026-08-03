@@ -32,18 +32,16 @@ const inlineSelect = read("components/gestionale/lavorazioni/lavorazioni-inline-
 // P0-A: Scheda ingresso plain inputs con htmlFor + id
 assert.match(schedaAnagrafica, /FormField label="Richiedente" htmlFor=\{fieldId\("richiedente"\)\}/);
 assert.match(schedaAnagrafica, /id=\{fieldId\("richiedente"\)\}/);
-assert.match(schedaAnagrafica, /SchedaIngressoIdentAutocompleteField[\s\S]*field="nScuderia"/);
+assert.match(schedaAnagrafica, /SchedaIngressoIdentTextField[\s\S]*field="nScuderia"/);
 assert.match(schedaAnagrafica, /SCHEDA_INGRESSO_EXCLUSIVE_GROUP = "scheda-ingresso"/);
 assert.match(schedaAnagrafica, /exclusiveGroup=\{SCHEDA_INGRESSO_EXCLUSIVE_GROUP\}/);
 
-const identField = read("components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field.tsx");
-assert.match(identField, /useSelectorExclusiveGroup/);
-assert.match(identField, /useSelectorFocusChain/);
-assert.match(identField, /closeSheetWithCommit/);
+const identField = read("components/lavorazioni/schede/scheda-ingresso-ident-text-field.tsx");
+assert.match(identField, /autoComplete="off"/);
+assert.match(identField, /findMezzoMatchForIngressoIdentField/);
 assert.match(schedaAnagrafica, /schedaIngressoOptionalListSelectProps/);
 assert.match(schedaAnagrafica, /hideEmptyOptionInInput: true/);
 assert.match(schedaAnagrafica, /clearable: true/);
-assert.match(identField, /globalInputComboboxClearBtn/);
 assert.match(globalSelect, /clearable/);
 assert.match(globalInput, /globalInputComboboxClearBtn/);
 

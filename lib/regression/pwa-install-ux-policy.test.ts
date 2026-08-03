@@ -207,11 +207,13 @@ assert.match(bridge, /handlePwaAppInstalled/);
 assert.match(bridge, /clearStalePwaInstallDetectionState/);
 
 const providers = read("components/app-providers-core.tsx");
-assert.match(providers, /PwaInstallBanner/);
-assert.match(providers, /PwaIosInstallHint/);
-assert.match(providers, /PwaInstallBridge/);
-assert.match(providers, /PwaDisplayModeBridge/);
+assert.match(providers, /DeferredPwaBridges/);
 assert.doesNotMatch(providers, /useAuth/);
+const pwaPack = read("src/components/pwa-core-bridge-pack.tsx");
+assert.match(pwaPack, /PwaInstallBanner/);
+assert.match(pwaPack, /PwaIosInstallHint/);
+assert.match(pwaPack, /PwaInstallBridge/);
+assert.match(pwaPack, /PwaDisplayModeBridge/);
 
 const profileActions = read("components/profile/profile-actions-section.tsx");
 assert.match(profileActions, /PwaInstallFooterButton/);

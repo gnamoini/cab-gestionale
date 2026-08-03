@@ -79,7 +79,17 @@ export function preventivoRowToRecord(row: PreventivoRow, mezzo: MezzoRow | null
         : stub.manodopera,
     sanificazionePrezzo:
       typeof det.sanificazionePrezzo === "number" ? det.sanificazionePrezzo : stub.sanificazionePrezzo,
+    sanificazioneOre: typeof det.sanificazioneOre === "number" ? det.sanificazioneOre : stub.sanificazioneOre,
+    sanificazioneDescrizione:
+      typeof det.sanificazioneDescrizione === "string"
+        ? det.sanificazioneDescrizione
+        : stub.sanificazioneDescrizione,
     collaudoPrezzo: typeof det.collaudoPrezzo === "number" ? det.collaudoPrezzo : stub.collaudoPrezzo,
+    collaudoOre: typeof det.collaudoOre === "number" ? det.collaudoOre : stub.collaudoOre,
+    collaudoDescrizione:
+      typeof det.collaudoDescrizione === "string"
+        ? det.collaudoDescrizione
+        : stub.collaudoDescrizione,
     noteFinali: typeof det.noteFinali === "string" ? det.noteFinali : stub.noteFinali,
     descrizioneLavorazioniCliente:
       typeof det.descrizioneLavorazioniCliente === "string"

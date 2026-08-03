@@ -21,7 +21,7 @@ import { newRigaId } from "@/lib/schede/schede-ui";
 import { IconActionButton } from "@/components/design-system";
 import { ShellNavIconClose } from "@/components/design-system/shell-nav-icons";
 import { HubIconPlus } from "@/components/design-system/hub-table-action-icons";
-import { preventivoEditorAddRowBtn } from "@/components/preventivi/preventivo-editor-ui";
+import { preventivoEditorAddInlineBtn, preventivoEditorAddRowBtn } from "@/components/preventivi/preventivo-editor-ui";
 import { dsInput, dsShellNavIconBtn, dsTable, dsTableRow, dsTableWrap, dsScrollbar } from "@/lib/ui/design-system";
 import type { RigaAddettoOreScheda, RigaLavorazioneScheda, SchedaLavorazioniFields } from "@/types/schede";
 
@@ -34,11 +34,11 @@ function writeSchedaRigaAddetto(addettoId: string, oreImpiegate: number): RigaAd
 }
 
 const LAV_DATE_INPUT = `${dsInput} w-[9.5rem] shrink-0`;
-const LAV_ORE_INPUT = `!w-[2.75rem] !min-w-[2.75rem] !max-w-[2.75rem] shrink-0 px-1 text-center text-xs`;
+const LAV_ORE_INPUT = `!w-[3.5rem] !min-w-[3.5rem] !max-w-[3.5rem] shrink-0 px-1 text-center text-xs`;
 const LAV_ADDETTO_PICKER_WRAP = "min-w-0 flex-1 basis-0 sm:min-w-[10rem]";
 const LAV_TEXTAREA_CLASS = `${dsInput} !min-h-[9rem] w-full max-w-none leading-relaxed`;
 const LAV_TEXTAREA_MAX_HEIGHT = "min(40dvh, 14rem)";
-const LAV_ADD_INLINE_BTN = `${preventivoEditorAddRowBtn} !w-auto min-h-9 px-3 py-2`;
+const LAV_ADD_INLINE_BTN = preventivoEditorAddInlineBtn;
 const LAV_ROW_REMOVE_BTN = `${dsShellNavIconBtn} !h-9 !w-9 text-[color:color-mix(in_srgb,var(--cab-danger)_75%,var(--cab-text))] hover:text-[color:var(--cab-danger)]`;
 
 export type SchedaLavorazioniFormBodyProps = {

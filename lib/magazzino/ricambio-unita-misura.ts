@@ -11,6 +11,12 @@ const UNITA_MISURA_LABELS: Record<RicambioUnitaMisura, string> = {
   lt: "Litri",
 };
 
+const UNITA_MISURA_SHORT: Record<RicambioUnitaMisura, string> = {
+  pz: "pz",
+  metri: "m",
+  lt: "lt",
+};
+
 export function isRicambioUnitaMisura(value: unknown): value is RicambioUnitaMisura {
   return typeof value === "string" && (RICAMBIO_UNITA_MISURA_VALUES as readonly string[]).includes(value);
 }
@@ -21,4 +27,8 @@ export function parseRicambioUnitaMisura(value: unknown): RicambioUnitaMisura {
 
 export function formatRicambioUnitaMisuraLabel(value: RicambioUnitaMisura): string {
   return UNITA_MISURA_LABELS[value];
+}
+
+export function formatRicambioUnitaMisuraShort(value: RicambioUnitaMisura): string {
+  return UNITA_MISURA_SHORT[value];
 }

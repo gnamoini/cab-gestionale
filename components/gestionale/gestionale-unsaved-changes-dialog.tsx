@@ -2,11 +2,14 @@
 
 import { GestionaleConfirmDialog, gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog";
 import { GestionaleModalFooterCancelButton } from "@/components/design-system";
+import { HubIconClose, HubIconSave } from "@/components/design-system/hub-table-action-icons";
 import { dsBtnDanger, dsBtnPrimary } from "@/lib/ui/design-system";
 import { gestionaleModalWidthStandard } from "@/lib/ui/modal-max-width-class";
 import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { OverlayLayerPriority } from "@/lib/ui/overlay-back-stack";
+
+const FOOTER_ICON_CLASS = "h-4 w-4 shrink-0";
 
 export type GestionaleUnsavedPlacement = "nested" | "stacked";
 
@@ -53,9 +56,11 @@ export function GestionaleUnsavedChangesDialog({
         {stayLabel}
       </GestionaleModalFooterCancelButton>
       <button type="button" className={`${dsBtnDanger} min-h-[2.75rem] sm:min-h-0`} onClick={onDiscard} disabled={pending}>
+        <HubIconClose className={FOOTER_ICON_CLASS} aria-hidden />
         {discardLabel}
       </button>
       <button type="button" className={`${dsBtnPrimary} min-h-[2.75rem] sm:min-h-0`} onClick={onSaveAndExit} disabled={pending}>
+        {!pending ? <HubIconSave className={FOOTER_ICON_CLASS} aria-hidden /> : null}
         {pending ? "Salvataggio…" : saveAndExitLabel}
       </button>
     </div>

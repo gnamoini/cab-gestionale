@@ -5,6 +5,9 @@ import { checkDocumentCaptureRateLimit } from "@/lib/document-capture/document-c
 import { traceDocumentCaptureOperation } from "@/lib/document-capture/document-capture-telemetry.server";
 import { processDocumentCapture } from "@/lib/document-capture/pipeline/process-capture.server";
 import {
+  readCapturePipelineVersionHeader,
+} from "@/lib/document-capture/orchestrator/capture-pipeline-version";
+import {
   CAPTURE_ANALYZE_NDJSON_ACCEPT,
   type CaptureAnalyzeStreamEvent,
 } from "@/lib/document-capture/pipeline/analyze-stream-events";
@@ -40,6 +43,7 @@ export async function POST(request: Request, context: RouteContext) {
   const wantsStream = request.headers.get("accept")?.includes(CAPTURE_ANALYZE_NDJSON_ACCEPT);
   const uploadDurationHeader = request.headers.get("x-capture-upload-duration-ms");
   const uploadDurationMs = uploadDurationHeader ? Number(uploadDurationHeader) : undefined;
+  const clientPipelineVersion = readCapturePipelineVersionHeader(request);
   const t0 = performance.now();
   let timeToFirstProgressMs: number | undefined;
 
@@ -58,6 +62,7 @@ export async function POST(request: Request, context: RouteContext) {
           captureId: id,
           userId: userId ?? "system",
           correlationId,
+          clientPipelineVersion,
           uploadDurationMs: Number.isFinite(uploadDurationMs) ? uploadDurationMs : undefined,
           onStreamEvent: push,
         })
@@ -104,6 +109,7 @@ export async function POST(request: Request, context: RouteContext) {
     captureId: id,
     userId: userId ?? "system",
     correlationId,
+    clientPipelineVersion,
     uploadDurationMs: Number.isFinite(uploadDurationMs) ? uploadDurationMs : undefined,
   });
 
@@ -119,7 +125,12 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (!result.ok) {
     return NextResponse.json(withImportCorrelation(correlationId, result), {
-      status: result.code === "not_finalized" ? 400 : 500,
+      status:
+        result.code === "ANALYZE_IN_PROGRESS"
+          ? 409
+          : result.code === "not_finalized"
+            ? 400
+            : 500,
       headers: importCorrelationHeaders(correlationId),
     });
   }

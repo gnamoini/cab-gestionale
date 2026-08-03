@@ -4,25 +4,6 @@ import { LoadingProgressBar } from "@/components/design-system/loading/loading-p
 import { loadingMessageClass } from "@/components/design-system/loading/loading-tokens";
 import type { CaptureAcquisitionProgressState } from "@/lib/document-capture/capture-acquisition-progress";
 import type { InventoryReceivingAcquisitionState } from "@/lib/inventory-receiving/inventory-receiving-acquisition-progress";
-import { useEffect, useState } from "react";
-
-function useCreepingProgress(active: boolean, from: number, to: number): number {
-  const [value, setValue] = useState(from);
-
-  useEffect(() => {
-    if (!active) {
-      setValue(from);
-      return;
-    }
-    setValue(from);
-    const id = window.setInterval(() => {
-      setValue((current) => (current >= to ? to : current + 1.2));
-    }, 350);
-    return () => window.clearInterval(id);
-  }, [active, from, to]);
-
-  return value;
-}
 
 export type CaptureAcquisitionProgressVariant =
   | { mode: "bar"; state: CaptureAcquisitionProgressState }
@@ -42,8 +23,7 @@ export function CaptureAcquisitionProgress({ variant }: { variant: CaptureAcquis
 }
 
 function CaptureAcquisitionProgressBar({ state }: { state: CaptureAcquisitionProgressState }) {
-  const creep = useCreepingProgress(state.creeping, state.progress, 94);
-  const barProgress = state.creeping ? creep : state.progress;
+  const barProgress = state.progress;
 
   if (!state.active && !state.error) return null;
 

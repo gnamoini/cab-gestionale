@@ -1,5 +1,6 @@
 import { streamOfficialDdtPdfServer, streamOfficialPreventivoPdfServer } from "@/lib/official-documents/official-pdf-stream.server";
 import { streamOfficialPdfByTokenServer } from "@/lib/official-documents/official-pdf-token-stream.server";
+import { pdfArtifactResponseHeaders } from "@/lib/pdf/pdf-artifact-response";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -21,12 +22,9 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json({ error: result.error ?? "PDF non disponibile" }, { status: 404 });
   }
 
-  return new Response(Buffer.from(result.data.bytes), {
+  const { bytes, fileName, cacheStatus, generateMs, dataHash } = result.data;
+  return new Response(Buffer.from(bytes), {
     status: 200,
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": "inline",
-      "Cache-Control": "private, no-store",
-    },
+    headers: pdfArtifactResponseHeaders({ fileName, cacheStatus, generateMs, dataHash }),
   });
 }

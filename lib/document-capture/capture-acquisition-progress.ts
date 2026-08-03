@@ -6,7 +6,7 @@ import {
 } from "@/lib/document-capture/pipeline/analyze-progress-labels";
 import type { AnalyzeTracePhase } from "@/lib/document-capture/pipeline/analyze-trace-types";
 
-export type CaptureAcquisitionPhase = "uploading" | "finalizing" | "reading" | "error" | "idle";
+export type CaptureAcquisitionPhase = "uploading" | "finalizing" | "processing" | "reading" | "error" | "idle";
 
 export type CaptureAcquisitionProgressState = {
   active: boolean;
@@ -24,6 +24,7 @@ export function deriveCaptureAcquisitionProgress(input: {
   uploadPhase: DocumentCaptureUploadPhase;
   uploadProgress: number;
   analyzeBusy: boolean;
+  pipelineProcessing?: boolean;
   uploadError?: string | null;
   analyzePhase?: AnalyzeTracePhase | null;
   heartbeatAt?: number | null;
@@ -58,6 +59,21 @@ export function deriveCaptureAcquisitionProgress(input: {
     };
   }
 
+  if (input.pipelineProcessing && !analyzeBusy) {
+    return {
+      active: true,
+      phase: "processing",
+      label: "Avvio elaborazione documento…",
+      progress: 38,
+      creeping: false,
+      error: null,
+      streamActive: false,
+      checklist: input.useChecklist
+        ? deriveLavorazioniCaptureChecksFromPhase(null, uploadPhase === "success", true)
+        : undefined,
+    };
+  }
+
   if (analyzeBusy) {
     if (input.useChecklist) {
       const checks = deriveLavorazioniCaptureChecksFromPhase(
@@ -75,7 +91,7 @@ export function deriveCaptureAcquisitionProgress(input: {
         phase: "reading",
         label: activeCheck?.label ?? "Elaborazione documento…",
         progress: captureAnalyzeProgressPercent(input.analyzePhase ?? null),
-        creeping: true,
+        creeping: false,
         error: null,
         checklist: checks,
         heartbeatLabel,
@@ -87,7 +103,7 @@ export function deriveCaptureAcquisitionProgress(input: {
       phase: "reading",
       label: "Lettura documento con AI…",
       progress: captureAnalyzeProgressPercent(input.analyzePhase ?? null),
-      creeping: true,
+      creeping: false,
       error: null,
       streamActive: true,
     };

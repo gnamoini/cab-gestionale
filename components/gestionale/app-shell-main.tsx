@@ -13,6 +13,7 @@ import { dsGestionaleScrollEndPadFade } from "@/lib/ui/scroll-system";
 import type { GestionaleShellTier } from "@/lib/ui/gestionale-shell-layout";
 import type { RefObject } from "react";
 import { PullToRefreshIndicator } from "@/components/gestionale/pull-to-refresh-indicator";
+import { DeferredDataStaleBanner } from "@/components/gestionale/deferred-data-stale-banner";
 import type { PullToRefreshPhase } from "@/lib/ui/pull-to-refresh-contract";
 
 const DevAuditMounts = dynamic(
@@ -81,6 +82,7 @@ function AppShellMainInner({
               : "pb-[max(1rem,env(safe-area-inset-bottom))]"
           }`}
         >
+          <DeferredDataStaleBanner />
           <PullToRefreshIndicator phase={pullToRefreshPhase} progress={pullToRefreshProgress} />
           <div ref={pullContentRef} className="min-h-full min-w-0 will-change-transform">
             <div className={`${dsGestionaleContentMax} ${layoutPageRoot} ${contentGutter}`}>

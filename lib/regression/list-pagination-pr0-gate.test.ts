@@ -10,12 +10,8 @@ function read(rel: string): string {
 
 const v2Hook = read("lib/lavorazioni/use-lavorazioni-list-v2.ts");
 assert.doesNotMatch(v2Hook, /invalidateQueries/, "R-12: no invalidate in V2 hook");
-assert.match(
-  v2Hook,
-  /pages\.length > 0 \? pages\[pages\.length - 1\]\.pageInfo\.nextCursor : null/,
-  "R-9: null-safe lastCursor",
-);
-assert.match(v2Hook, /\[pages\.length, lastCursor, query\.dataUpdatedAt\]/, "R-9: triple-signal memo");
+assert.match(v2Hook, /flattenLavorazioneListPages\(pages\)/, "R-9: flatten pages for list data");
+assert.match(v2Hook, /\[pages, query\.dataUpdatedAt\]/, "R-9: list memo deps");
 
 const adapter = read("lib/lavorazioni/adapt-legacy-list-result.ts");
 assert.doesNotMatch(adapter, /\.filter\(/, "R-10b: no filter in adapter");
@@ -29,6 +25,26 @@ assert.match(
 );
 assert.doesNotMatch(lavView, /meta\.hasNextPage/, "R-13c: no meta.hasNextPage in view");
 assert.match(lavView, /ServerListLoadMore/, "PR-3 server load-more wired");
+assert.match(
+  lavView,
+  /!serverListPagination && showPagerA/,
+  "PR-3: client pager only when legacy list mode (attive)",
+);
+assert.match(
+  lavView,
+  /!serverListPagination && showPagerC/,
+  "PR-3: client pager only when legacy list mode (archivio)",
+);
+assert.match(
+  lavView,
+  /serverListPagination \? sortedAttive : sliceA\(sortedAttive\)/,
+  "PR-3: server mode shows all loaded attive rows",
+);
+assert.match(
+  lavView,
+  /serverListPagination \? sortedChiuse : sliceC\(sortedChiuse\)/,
+  "PR-3: server mode shows all loaded archivio rows",
+);
 
 const invalidateBatch = read("src/lib/react-query/invalidate-batch.ts");
 assert.match(invalidateBatch, /invalidationJitterDelayMs/, "PR-6 invalidate jitter wired");

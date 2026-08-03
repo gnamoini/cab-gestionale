@@ -48,7 +48,6 @@ assert.match(billingHook, /preventiviBillingQueryKey/);
 assert.match(view, /OrdiniFornitoriView = dynamic/);
 assert.match(view, /PreventiviAdvancedFilterPanel = dynamic/);
 assert.match(view, /PreventiviLogDrawer = dynamic/);
-assert.match(view, /DdtDetailDrawer = dynamic/);
 assert.match(view, /filtriEspansi \?/);
 assert.match(view, /usePreventiviListDerived/);
 assert.match(view, /usePreventiviRecordsQuery\(isPreventiviTab\)/);

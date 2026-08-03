@@ -4,7 +4,6 @@ import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 import { useAuth } from "@/context/auth-context";
 import {
   collapsibleExpandedBoolPref,
@@ -35,6 +34,7 @@ import {
   LavorazioneMobileCardFooter,
   LavorazioneMobileCardHeader,
   LavorazioneMobileCardShell,
+  LavorazioneMobileControlsPanel,
 } from "@/components/gestionale/lavorazioni/lavorazione-mobile-card";
 const ClientLavorazioneIngressoDialog = dynamic(
   () =>
@@ -143,6 +143,8 @@ import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { CLIENTE_HOME_PATH } from "@/lib/auth/rbac";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 import { useClientPortalPageOrchestrator } from "@/src/hooks/use-client-portal-page-orchestrator";
+import { CLIENT_PORTAL_SYNC_TABLES } from "@/lib/lavorazioni/client-portal-sync-tables";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { useClientLavorazioniArchivioCountQuery } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";
 import { useRbac } from "@/src/hooks/use-rbac";
 import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
@@ -408,10 +410,8 @@ function MobileCards({
               scuderia={fields.nScuderia}
               ingresso={<LavorazioneIngressoDateCellFromIso iso={fields.dataIngressoAt} />}
             />
-            <div
-              className="mt-2 grid grid-cols-1 gap-x-3 gap-y-2 cab-shell-desktop:grid-cols-2"
-              role="group"
-              aria-label={variant === "archive" ? "Completamento e addetto" : "Stato e addetto"}
+            <LavorazioneMobileControlsPanel
+              ariaLabel={variant === "archive" ? "Completamento e addetto" : "Stato e addetto"}
             >
               {variant === "active" ? (
                 <LavMobileInlineField label="Stato" layout="stack">
@@ -419,7 +419,7 @@ function MobileCards({
                 </LavMobileInlineField>
               ) : (
                 <LavMobileInlineField label="Completamento" layout="stack">
-                  <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} />
+                  <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} fullWidth />
                 </LavMobileInlineField>
               )}
               <LavMobileInlineField label="Addetto" layout="stack">
@@ -428,9 +428,10 @@ function MobileCards({
                 colorKey={fields.addettoNome}
                 addettoColors={addettoColors}
                 addettiRecords={addettiRecords}
+                fullWidth
               />
               </LavMobileInlineField>
-            </div>
+            </LavorazioneMobileControlsPanel>
             <div className="mt-2.5">
               <ClientLavorazionePhotoStrip lavorazioneId={row.id} max={3} lazy sizeClass="h-12 w-12" />
             </div>
@@ -554,6 +555,12 @@ function buildRowBundles(
 
 export function ClientLavorazioniView({ listSurface: serverListSurface, listTier = "xl" }: GestionaleListPageProps) {
   const listSurface = useListSurface(serverListSurface);
+  useGestionaleSyncScope({
+    scopeId: "client-portal-lavorazioni-list",
+    domain: "portale",
+    route: "/lavorazioni-clienti",
+    tables: CLIENT_PORTAL_SYNC_TABLES,
+  });
   const [archivioExpanded, setArchivioExpanded] = useState(false);
   const o = useClientPortalPageOrchestrator({ listSurface, archivioExpanded });
   const { user, authorName } = useAuth();
@@ -564,8 +571,6 @@ export function ClientLavorazioniView({ listSurface: serverListSurface, listTier
     contract,
     persistence,
     archivioListEnabled,
-    refresh: refreshClientData,
-    refreshBusy,
   } = o;
 
   const { filters, searchInput, setSearchInput, patchFilters, resetFilters } = persistence;
@@ -873,11 +878,6 @@ export function ClientLavorazioniView({ listSurface: serverListSurface, listTier
   return (
     <div className={`lavorazioni-scroll-scope ${layoutPageRoot} ${gestionaleListTierClass(listTier)}`.trim()}>
     <>
-      <PageHeaderPageActionMenu
-        onRefresh={() => void refreshClientData()}
-        refreshBusy={refreshBusy}
-      />
-
       <div className={clientPortalPageStack}>
         {!canRender ? (
           <div className="min-h-[12rem]" role="status" aria-busy="true" aria-label="Caricamento lavorazioni" />

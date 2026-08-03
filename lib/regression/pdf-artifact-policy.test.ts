@@ -77,7 +77,7 @@ for (const rel of pdfDataModules) {
 }
 
 const requestArtifact = read("lib/pdf/request-pdf-artifact.ts");
-assert.match(requestArtifact, /await fetch\(url/);
+assert.match(requestArtifact, /await fetch\(trimmed/);
 assert.match(requestArtifact, /cache:\s*"no-store"/);
 assert.match(requestArtifact, /Generazione PDF in corso/);
 assert.doesNotMatch(requestArtifact, /downloadFileName/);
@@ -90,6 +90,7 @@ assert.doesNotMatch(responseHeaders, /"Cache-Control":\s*"public[^"]*immutable/)
 const generateServer = read("lib/pdf-artifacts/pdf-artifact-generate.server.ts");
 assert.match(generateServer, /uploadPdfArtifactBestEffort/);
 assert.match(generateServer, /fetchSchedeBundlesStoreServer/);
+assert.match(generateServer, /fetchLavorazioniListAuthorizedServer\(LAVORAZIONI_ATTIVE_LIGHT_FILTERS\)/);
 assert.match(generateServer, /mapLavorazioniListRowsToPdfRows\(lavRows,/);
 assert.match(generateServer, /LAVORAZIONI_IN_CORSO_PDF_MAP_VERSION/);
 

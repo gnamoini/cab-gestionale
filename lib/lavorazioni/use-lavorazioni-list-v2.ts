@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { flattenPages } from "@/lib/domain/list-flatten";
+import { flattenLavorazioneListPages } from "@/lib/domain/list-flatten";
 import type { LavorazioniRpcListCursor } from "@/lib/domain/list-mapper";
 import type { ListQueryResult, Page } from "@/lib/domain/list-types";
 import { normalizeLavorazioniFilters } from "@/lib/domain/normalize-filters";
@@ -80,11 +80,9 @@ export function useLavorazioniListV2(
   });
 
   const pages = query.data?.pages ?? EMPTY_PAGES;
-  const lastCursor =
-    pages.length > 0 ? pages[pages.length - 1].pageInfo.nextCursor : null;
   const list = useMemo(
-    () => flattenPages(pages),
-    [pages.length, lastCursor, query.dataUpdatedAt],
+    () => flattenLavorazioneListPages(pages) as LavorazioneListRow[],
+    [pages, query.dataUpdatedAt],
   );
 
   return {

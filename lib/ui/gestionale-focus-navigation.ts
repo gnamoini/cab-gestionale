@@ -28,6 +28,16 @@ function getFocusScope(from: HTMLElement): HTMLElement {
   );
 }
 
+/** Numeric / decimal inputs: no select-all on programmatic focus (Tab / Enter advance). */
+export function shouldSelectAllOnFocus(el: HTMLElement): boolean {
+  if (!(el instanceof HTMLInputElement)) return false;
+  if (el.type === "number") return false;
+  if (el.getAttribute("data-gestionale-numeric") === "true") return false;
+  const inputMode = el.getAttribute("inputmode");
+  if (inputMode === "decimal" || inputMode === "numeric") return false;
+  return true;
+}
+
 function listFocusableFields(scope: HTMLElement): HTMLElement[] {
   return Array.from(scope.querySelectorAll<HTMLElement>(FIELD_SELECTOR)).filter((el) => {
     if (!isVisible(el)) return false;
@@ -48,7 +58,7 @@ export function focusNextGestionaleField(from: HTMLElement | null | undefined): 
   for (let i = start; i < fields.length; i++) {
     const next = fields[i]!;
     next.focus();
-    if (next instanceof HTMLInputElement && next.type !== "number") {
+    if (next instanceof HTMLInputElement && shouldSelectAllOnFocus(next)) {
       try {
         next.select();
       } catch {

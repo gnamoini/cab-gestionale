@@ -117,6 +117,8 @@ import { useSettingsBulkMutation } from "@/src/hooks/gestionale/use-settings-que
 import { useUndoableConfigurazioneSave } from "@/src/hooks/gestionale/use-undoable-configurazione-save";
 import { mergeAppSettingsUpsertWithVersions } from "@/lib/domain/settings-entry";
 import { settingsRenameEngineEntry } from "@/lib/domain/settings-rename-engine-entry";
+import { withRenamePropagationTimeout } from "@/lib/settings/rename-engine/propagation-timeout";
+import { flattenHierarchyRenameLabels } from "@/lib/settings/settings-rename-labels";
 import type { PropagaImpactSummary } from "@/components/dashboard/settings-rinomina-propaga-dialog";
 import {
   addStatoFromLabel,
@@ -375,8 +377,11 @@ export function SistemaImpostazioniWorkspace({
   }, [open, resolvedSettings, settingsPayload.isPending, commitSavedBaseline]);
 
   const renameQueueRef = useRef<SettingsRenameEntry[]>([]);
+  const propagaInFlightRef = useRef(false);
   const [propagaOpen, setPropagaOpen] = useState(false);
   const [propagaPending, setPropagaPending] = useState(false);
+  const [propagaError, setPropagaError] = useState<string | null>(null);
+  const [propagaProgressLabel, setPropagaProgressLabel] = useState<string | undefined>(undefined);
   const [propagaEntries, setPropagaEntries] = useState<SettingsRenameEntry[]>([]);
   const [propagaImpacts, setPropagaImpacts] = useState<PropagaImpactSummary[]>([]);
 
@@ -408,11 +413,19 @@ export function SistemaImpostazioniWorkspace({
           return liste.tipiAttrezzatura;
         case "tipo_telaio":
           return liste.tipiTelaio ?? [];
+        case "addetto":
+          return addettiRecords.map((r) => r.nome);
+        case "hierarchy_marca_attrezzature":
+        case "hierarchy_modello_attrezzature":
+          return flattenHierarchyRenameLabels(liste.attrezzature);
+        case "hierarchy_marca_telai":
+        case "hierarchy_modello_telai":
+          return flattenHierarchyRenameLabels(liste.telai);
         default:
           return [];
       }
     },
-    [liste, mag],
+    [addettiRecords, liste, mag],
   );
 
   useEffect(() => {
@@ -568,77 +581,115 @@ export function SistemaImpostazioniWorkspace({
   }, [onClose, router]);
 
   const finalizePropaga = useCallback(async (propagate: boolean) => {
+    if (propagaInFlightRef.current) return;
+
     const shouldExitAfter = exitAfterSaveRef.current;
-    const entries = [...renameQueueRef.current];
-    if (!propagate) {
-      if (user?.id && entries.length > 0) {
-        for (const entry of entries) {
-          const plan = settingsRenameEngineEntry.buildRenamePlan({
-            kind: entry.kind,
-            oldLabel: entry.from,
-            newLabel: entry.to,
-            entityId: entry.from,
-          });
-          await settingsRenameEngineEntry.runRenameJob({
+    let completeExitAfterSuccess = false;
+
+    propagaInFlightRef.current = true;
+    setPropagaPending(true);
+    setPropagaError(null);
+    setPropagaProgressLabel(undefined);
+
+    const queue = [...renameQueueRef.current];
+    let hadError = false;
+
+    try {
+      if (!propagate) {
+        if (user?.id && queue.length > 0) {
+          for (let i = 0; i < queue.length; i += 1) {
+            const entry = queue[i]!;
+            setPropagaProgressLabel(`Configurazione ${i + 1}/${queue.length}…`);
+            const plan = settingsRenameEngineEntry.buildRenamePlan({
+              kind: entry.kind,
+              oldLabel: entry.from,
+              newLabel: entry.to,
+              entityId: entry.from,
+            });
+            await settingsRenameEngineEntry.runRenameJob({
+              plan,
+              userId: user.id,
+              executionMode: "configuration_only",
+              existingLabels: labelsForRenameKind(entry.kind),
+              propagate: false,
+            });
+          }
+        }
+        renameQueueRef.current = [];
+        setPropagaOpen(false);
+        setPropagaImpacts([]);
+        gestToast.successSaved();
+        completeExitAfterSuccess = shouldExitAfter;
+        return;
+      }
+
+      if (!user?.id) {
+        hadError = true;
+        setPropagaError("Utente non autenticato");
+        gestToast.errorOnce("settings-propaga", "Utente non autenticato", { action: "update" });
+        return;
+      }
+
+      let total = 0;
+      for (let i = 0; i < queue.length; i += 1) {
+        const entry = queue[i]!;
+        setPropagaProgressLabel(`Aggiornamento ${i + 1}/${queue.length}…`);
+        const plan = settingsRenameEngineEntry.buildRenamePlan({
+          kind: entry.kind,
+          oldLabel: entry.from,
+          newLabel: entry.to,
+          entityId: entry.from,
+        });
+        const res = await withRenamePropagationTimeout(() =>
+          settingsRenameEngineEntry.runRenameJob({
             plan,
             userId: user.id,
-            executionMode: "configuration_only",
-            existingLabels: liste.clienti,
-            propagate: false,
-          });
+            executionMode: "full",
+            existingLabels: labelsForRenameKind(entry.kind),
+            propagate: true,
+          }),
+        );
+        if (!res.success) {
+          hadError = true;
+          const message = res.error ?? "Propagazione non riuscita";
+          setPropagaError(message);
+          gestToast.errorOnce("settings-propaga", message, { action: "update" });
+          exitAfterSaveRef.current = false;
+          return;
+        }
+        total += res.data?.metrics?.records_updated ?? 0;
+        if (total > 0) {
+          setPropagaProgressLabel(`${total} record aggiornati…`);
         }
       }
-      renameQueueRef.current = [];
-      setPropagaOpen(false);
-      setPropagaImpacts([]);
-      gestToast.successSaved();
-      if (shouldExitAfter) completePendingExit();
-      return;
-    }
-    if (!user?.id) {
-      gestToast.errorOnce("settings-propaga", "Utente non autenticato", { action: "update" });
-      return;
-    }
-    setPropagaPending(true);
-    let total = 0;
-    let hadError = false;
-    for (const entry of entries) {
-      const plan = settingsRenameEngineEntry.buildRenamePlan({
-        kind: entry.kind,
-        oldLabel: entry.from,
-        newLabel: entry.to,
-        entityId: entry.from,
-      });
-      const res = await settingsRenameEngineEntry.runRenameJob({
-        plan,
-        userId: user.id,
-        executionMode: "full",
-        existingLabels: liste.clienti,
-        propagate: true,
-      });
-      if (!res.success) {
-        hadError = true;
-        gestToast.errorOnce("settings-propaga", res.error ?? "Propagazione non riuscita", { action: "update" });
-        break;
-      }
-      total += res.data?.metrics?.records_updated ?? 0;
-    }
-    setPropagaPending(false);
-    setPropagaOpen(false);
-    setPropagaImpacts([]);
-    if (!hadError) {
-      const propagatedKinds = entries.map((e) => e.kind);
-      renameQueueRef.current = [];
+
+      const propagatedKinds = queue.map((e) => e.kind);
       invalidateAfterSettingsRenamePropagation(queryClient, propagatedKinds);
       gestToast.successOnce(
         "settings-propaga",
         total > 0 ? `Salvataggio completato — ${total} record aggiornati` : "Salvataggio completato",
       );
-      if (shouldExitAfter) completePendingExit();
-    } else {
+      renameQueueRef.current = [];
+      setPropagaOpen(false);
+      setPropagaImpacts([]);
+      setPropagaError(null);
+      completeExitAfterSuccess = shouldExitAfter;
+    } catch (error) {
+      hadError = true;
+      const message = error instanceof Error ? error.message : "Propagazione non riuscita";
+      setPropagaError(message);
+      gestToast.errorOnce("settings-propaga", message, { action: "update" });
       exitAfterSaveRef.current = false;
+    } finally {
+      setPropagaPending(false);
+      setPropagaProgressLabel(undefined);
+      propagaInFlightRef.current = false;
     }
-  }, [completePendingExit, gestToast, liste.clienti, queryClient, user?.id]);
+
+    if (!hadError && completeExitAfterSuccess) {
+      completePendingExit();
+    }
+  }, [completePendingExit, gestToast, labelsForRenameKind, queryClient, user?.id]);
 
   const applySnapshot = useCallback((s: SettingsWorkspaceSnapshot) => {
     setLavPrefsHydrated(false);
@@ -749,6 +800,7 @@ export function SistemaImpostazioniWorkspace({
       if (renameQueueRef.current.length > 0) {
         exitAfterSaveRef.current = true;
         setPropagaEntries([...renameQueueRef.current]);
+        setPropagaError(null);
         setPropagaOpen(true);
         setUnsavedExitOpen(false);
         return;
@@ -766,6 +818,7 @@ export function SistemaImpostazioniWorkspace({
       }
       if (renameQueueRef.current.length > 0) {
         setPropagaEntries([...renameQueueRef.current]);
+        setPropagaError(null);
         setPropagaOpen(true);
       } else {
         gestToast.successSaved();
@@ -1448,6 +1501,8 @@ export function SistemaImpostazioniWorkspace({
           entries={propagaEntries}
           impactSummaries={propagaImpacts}
           pending={propagaPending}
+          progressLabel={propagaProgressLabel}
+          errorMessage={propagaError}
           onCancel={() => void finalizePropaga(false)}
           onConfirm={() => void finalizePropaga(true)}
         />

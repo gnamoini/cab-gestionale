@@ -45,6 +45,8 @@ export type PageToolbarProps = {
   className?: string;
   /** Marker benchmark TTUI — es. page-ready-toolbar */
   testId?: string;
+  /** Mobile: griglia 3 colonne (CTA | CTA | filtri) con spaziatura uniforme. */
+  mobilePrimaryThreeColumn?: boolean;
 };
 
 /** Toolbar liste: search + filtri + azioni inline; scorre col contenuto pagina. */
@@ -65,6 +67,7 @@ export function PageToolbar({
   filterApplyLabel,
   className = "",
   testId,
+  mobilePrimaryThreeColumn = false,
 }: PageToolbarProps) {
   const smUp = useSmUp();
   const showFilterDrawer = !smUp && filtersExpanded;
@@ -106,9 +109,20 @@ export function PageToolbar({
             <>
               <div className="flex min-w-0 w-full flex-col items-stretch gap-2 sm:hidden">
                 <ToolbarGroupSearchRow>{search}</ToolbarGroupSearchRow>
-                <ToolbarGroupPrimaryRow>
-                  <div className="min-w-0 flex-1 [&>*]:w-full">{primaryAction}</div>
-                  {filterActions}
+                <ToolbarGroupPrimaryRow
+                  className={mobilePrimaryThreeColumn ? "grid w-full grid-cols-3 items-stretch gap-2" : undefined}
+                >
+                  {mobilePrimaryThreeColumn ? (
+                    <>
+                      <div className="col-span-2 grid min-w-0 grid-cols-2 gap-2">{primaryAction}</div>
+                      <div className="flex min-w-0 items-stretch [&_button]:h-11 [&_button]:w-full">{filterActions}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="min-w-0 flex-1 [&>*]:w-full">{primaryAction}</div>
+                      {filterActions}
+                    </>
+                  )}
                 </ToolbarGroupPrimaryRow>
               </div>
               <div className="hidden min-w-0 w-full sm:flex">
@@ -127,7 +141,7 @@ export function PageToolbar({
           )}
           {meta || overflowActions ? (
             <ToolbarGroupMetaRow>
-              {meta ? <div className="flex min-w-0 flex-1 items-center gap-2">{meta}</div> : null}
+              {meta ? <div className="flex min-w-0 w-full flex-1 flex-wrap items-center gap-2">{meta}</div> : null}
               {overflowActions ? (
                 <div className="hidden min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 sm:flex sm:flex-wrap">
                   {overflowActions}
@@ -226,6 +240,8 @@ export function PageToolbarResultCount({
   pluralLabel = "risultati",
   tone = "chip",
   className = "",
+  hideCountOnMobile = false,
+  mobileUniformActions = false,
 }: {
   count: number;
   filtersActive?: boolean;
@@ -237,26 +253,86 @@ export function PageToolbarResultCount({
   /** `plain`: testo leggero senza chip — accanto a controlli segmentati. */
   tone?: "chip" | "plain";
   className?: string;
+  /** Nasconde il chip conteggio sotto `sm` (es. magazzino mobile). */
+  hideCountOnMobile?: boolean;
+  /** Su mobile: status e azioni in griglia equidistante a larghezza piena. */
+  mobileUniformActions?: boolean;
 }) {
+  const smUp = useSmUp();
   const showSearchReset = Boolean(searchActive && onSearchReset);
   const showFilterReset = Boolean(filtersActive && onFilterReset);
   const countLabel = count === 1 ? singularLabel : pluralLabel;
+  const showCountChip = !hideCountOnMobile || smUp;
+  const uniformMobile = mobileUniformActions && !smUp;
+  const uniformCellClass = `${dsPageToolbarMetaActionBtn} w-full min-h-10 min-w-0 justify-center px-2`;
+  const uniformStatusCellClass = `${dsPageToolbarMetaChipAccent} inline-flex w-full min-h-10 min-w-0 items-center justify-center px-2`;
+
+  if (!showCountChip && !filtersActive && !showSearchReset && !showFilterReset) {
+    return null;
+  }
+
+  if (uniformMobile) {
+    const cells: ReactNode[] = [];
+
+    if (showCountChip) {
+      cells.push(
+        <span key="count" className={`${uniformCellClass} pointer-events-none`}>
+          <span className="tabular-nums">{count}</span>
+          <span className="min-w-0 truncate">{countLabel}</span>
+        </span>,
+      );
+    }
+    if (filtersActive) {
+      cells.push(
+        <span key="filters" className={`${uniformStatusCellClass} pointer-events-none`} aria-live="polite">
+          Filtri attivi
+        </span>,
+      );
+    }
+    if (showSearchReset) {
+      cells.push(
+        <button key="search" type="button" onClick={onSearchReset} className={uniformCellClass}>
+          <PageToolbarCtaLabel short="Cancella" full="Cancella ricerca" />
+        </button>,
+      );
+    }
+    if (showFilterReset) {
+      cells.push(
+        <button key="filter" type="button" onClick={onFilterReset} className={uniformCellClass}>
+          <PageToolbarCtaLabel short="Reimposta" full="Reimposta filtri" />
+        </button>,
+      );
+    }
+
+    if (cells.length === 0) return null;
+
+    return (
+      <div
+        className={`grid w-full min-w-0 gap-2 ${className}`.trim()}
+        style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }}
+      >
+        {cells}
+      </div>
+    );
+  }
 
   return (
     <div
-      className={`flex min-w-0 flex-1 flex-nowrap items-center gap-x-1.5 gap-y-1 sm:flex-wrap ${className}`.trim()}
+      className={`flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1 ${className}`.trim()}
     >
       <div className="flex min-w-0 flex-nowrap items-center gap-1.5 sm:flex-wrap">
-        {tone === "plain" ? (
-          <span className="min-w-0 truncate text-xs font-medium text-[color:var(--cab-text-muted)]">
-            <span className="tabular-nums font-semibold text-[color:var(--cab-text)]">{count}</span> {countLabel}
-          </span>
-        ) : (
-          <span className={dsPageToolbarMetaChip}>
-            <span className="tabular-nums">{count}</span>
-            <span>{countLabel}</span>
-          </span>
-        )}
+        {showCountChip ? (
+          tone === "plain" ? (
+            <span className="min-w-0 truncate text-xs font-medium text-[color:var(--cab-text-muted)]">
+              <span className="tabular-nums font-semibold text-[color:var(--cab-text)]">{count}</span> {countLabel}
+            </span>
+          ) : (
+            <span className={dsPageToolbarMetaChip}>
+              <span className="tabular-nums">{count}</span>
+              <span>{countLabel}</span>
+            </span>
+          )
+        ) : null}
         {filtersActive ? <span className={dsPageToolbarMetaChipAccent}>Filtri attivi</span> : null}
       </div>
       {showSearchReset || showFilterReset ? (
@@ -347,9 +423,9 @@ export function PageToolbarMetaToggle({
       aria-checked={checked}
       title={title}
       onClick={() => onChange(!checked)}
-      className={`${shell} max-w-full justify-start gap-2 ${className}`.trim()}
+      className={`${shell} max-w-full gap-2 ${className}`.trim()}
     >
-      <span className="min-w-0 shrink truncate text-left whitespace-nowrap">
+      <span className="min-w-0 flex-1 truncate text-center whitespace-nowrap">
         <span className="sm:hidden">{shortLabel ?? label}</span>
         <span className="hidden sm:inline">{label}</span>
       </span>

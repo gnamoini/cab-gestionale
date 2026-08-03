@@ -10,6 +10,8 @@ const shellSrc = readFileSync(join(root, "components/gestionale/app-shell.tsx"),
 assert.match(hookSrc, /canPullToRefreshClaimGesture/);
 assert.match(hookSrc, /resolvePullScrollport/);
 assert.match(hookSrc, /isBlockingOverlayVisible/);
+assert.match(hookSrc, /location\.reload/);
+assert.doesNotMatch(hookSrc, /runGestionalePageRefresh/);
 assert.doesNotMatch(hookSrc, /BODY_LOCK_ATTR/);
 assert.match(hookSrc, /e\.preventDefault\(\)/);
 assert.match(contractSrc, /data-cab-scrollport/);

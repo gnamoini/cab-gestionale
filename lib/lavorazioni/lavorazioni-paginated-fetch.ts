@@ -1,4 +1,10 @@
-import { rpcCursorFromPageParam, toLavorazioniPageFromRpc, type LavorazioniRpcListCursor, type LavorazioniRpcListPageRaw } from "@/lib/domain/list-mapper";
+import {
+  isValidLavorazioniRpcListCursor,
+  rpcCursorFromPageParam,
+  toLavorazioniPageFromRpc,
+  type LavorazioniRpcListCursor,
+  type LavorazioniRpcListPageRaw,
+} from "@/lib/domain/list-mapper";
 import type { Page } from "@/lib/domain/list-types";
 import { normalizeLavorazioniFilters } from "@/lib/domain/normalize-filters";
 import { toQueryParams } from "@/lib/domain/to-query-params";
@@ -40,6 +46,9 @@ export async function fetchLavorazioniListPageRpc(
   try {
     const norm = normalizeLavorazioniFilters(filters);
     const params = rpcCursorFromPageParam(pageParam, toQueryParams(norm));
+    if (pageParam && !isValidLavorazioniRpcListCursor(pageParam)) {
+      return err("Cursor paginazione lavorazioni non valido");
+    }
     const sb = await getBrowserSupabase();
     const { data, error } = await sb.rpc("list_lavorazioni_paginated", {
       p_mode: params.mode,
@@ -68,9 +77,8 @@ export async function fetchLavorazioniListPageRpc(
 export function getNextLavorazioniPageParam(
   lastPage: Page<LavorazioneListRow>,
 ): LavorazioniRpcListCursor | undefined {
+  if (!lastPage.pageInfo.hasNextPage) return undefined;
   const cursor = lastPage.pageInfo.nextCursor;
-  if (!cursor || !lastPage.pageInfo.hasNextPage) return undefined;
-  const c = cursor as LavorazioniRpcListCursor;
-  if (!c.created_at || !c.id) return undefined;
-  return { created_at: String(c.created_at), id: String(c.id) };
+  if (!isValidLavorazioniRpcListCursor(cursor)) return undefined;
+  return { created_at: String(cursor!.created_at).trim(), id: String(cursor!.id).trim() };
 }

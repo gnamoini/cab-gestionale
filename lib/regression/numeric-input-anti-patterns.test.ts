@@ -60,4 +60,11 @@ const contract = read("docs/ui/numeric-input-contract.md");
 assert.match(contract, /type="text"/);
 assert.match(contract, /commitNumericDraft/);
 
+const numberInput = read("components/gestionale/gestionale-number-input.tsx");
+assert.doesNotMatch(numberInput, /\.select\(\)/, "GestionaleNumberInput: no select() on focus");
+assert.match(numberInput, /data-gestionale-numeric/);
+
+const numericDraft = read("lib/ui/use-gestionale-numeric-draft.ts");
+assert.doesNotMatch(numericDraft, /\.select\(\)/, "useGestionaleNumericDraft: no select() on focus");
+
 console.log("numeric-input-anti-patterns.test.ts OK");

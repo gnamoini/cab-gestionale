@@ -9,7 +9,7 @@ import {
   type LavorazioneUltimaModificaInfo,
 } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 
-const shellClass = "flex flex-col gap-0 !p-3 sm:!p-3.5";
+const shellClass = "flex flex-col gap-0 !p-3 sm:!p-3.5 -mx-1 sm:-mx-1.5";
 const metaDt = "text-[10px] font-medium text-zinc-500 dark:text-zinc-400";
 const metaDd = "mt-0.5 text-xs font-medium leading-snug text-zinc-800 dark:text-zinc-200";
 
@@ -148,9 +148,9 @@ export function LavMobileInlineField({
 }) {
   if (layout === "stack") {
     return (
-      <div className={`flex min-w-0 flex-col gap-1 ${className}`.trim()}>
+      <div className={`flex min-w-0 w-full flex-col gap-1 ${className}`.trim()}>
         <span className={`${metaDt} ${gestionaleFieldLabelClass}`}>{label}</span>
-        <div className="min-w-0">{children}</div>
+        <div className="min-w-0 w-full">{children}</div>
       </div>
     );
   }
@@ -230,7 +230,7 @@ export function LavorazioneMobileControlsPanel({
 }) {
   return (
     <div
-      className="mt-2 grid grid-cols-1 gap-x-3 gap-y-2 cab-shell-desktop:grid-cols-2"
+      className="mt-2 grid grid-cols-1 gap-y-2"
       role="group"
       aria-label={ariaLabel}
     >

@@ -78,6 +78,12 @@ export const gestionaleListTableMasterWrapClass = gestionaleListTableScrollScope
 /** Tabella densa Lavorazioni — scroll orizzontale sotto ~lg, colonne nascoste via CSS. */
 export const gestionaleLavorazioniDenseTableClass = "gestionale-lavorazioni-dense-table";
 
+/** Tabella densa Preventivi — 8 colonne, azioni 5 pulsanti. */
+export const gestionalePreventiviDenseTableClass = "gestionale-preventivi-dense-table";
+
+/** Tabella densa Magazzino — colonne dati + azioni (info, scorta −/+). */
+export const gestionaleMagazzinoDenseTableClass = "gestionale-magazzino-dense-table";
+
 /** Classe `<table>` — `table-fixed` + tipografia 13px. */
 export const gestionaleListTableClass = globalTableFixed;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import {
   registerGestionaleSyncScope,
   type GestionaleSyncScopeRegistration,
@@ -23,7 +23,7 @@ export function useGestionaleSyncScope(reg: GestionaleSyncScopeRegistration): vo
   regRef.current = reg;
   const signature = useMemo(() => scopeSignature(reg), [reg]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     return registerGestionaleSyncScope(regRef.current);
   }, [signature]);
 }

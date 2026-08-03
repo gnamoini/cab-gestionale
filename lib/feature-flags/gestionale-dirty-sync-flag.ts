@@ -68,6 +68,7 @@ const PILOT_HEAVY_DOMAINS: readonly GestionaleSyncDomain[] = [
   "dashboard",
   "magazzino",
   "report",
+  "portale",
 ];
 
 const ALL_DIRTY_DOMAINS: readonly GestionaleSyncDomain[] = [

@@ -30,6 +30,7 @@ export type ClientOfficialPreventivoDocument = {
   kind: "preventivo";
   label: string;
   previewPath: string;
+  streamPath: string;
   stato: PreventivoStato;
 };
 
@@ -37,6 +38,7 @@ export type ClientOfficialDdtDocument = {
   kind: "ddt";
   label: string;
   previewPath: string;
+  streamPath: string;
 };
 
 export type ClientOfficialDocument = ClientOfficialPreventivoDocument | ClientOfficialDdtDocument;

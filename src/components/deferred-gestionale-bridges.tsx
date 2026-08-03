@@ -18,7 +18,6 @@ const AdminNotifPack = dynamic(() => import("@/src/components/admin-notification
 export function DeferredGestionaleBridges() {
   const { status, user } = useAuth();
   const authReady = isAuthSessionEstablished(status) && !!user?.id;
-  const isAdmin = user?.ruolo === "admin";
   const [mounted, setMounted] = useState(false);
   const queryClient = useQueryClient();
   const settingsPayload = useCabAppSettingsPayloadQuery({ tier: "static" });
@@ -63,7 +62,7 @@ export function DeferredGestionaleBridges() {
     <>
       <PwaBridgePack />
       <RealtimePack />
-      {isAdmin ? <AdminNotifPack /> : null}
+      <AdminNotifPack />
     </>
   );
 }

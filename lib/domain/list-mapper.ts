@@ -15,6 +15,14 @@ export type LavorazioniRpcListPageRaw = Readonly<{
   total_estimate: number | null;
 }>;
 
+export function isValidLavorazioniRpcListCursor(
+  cursor: LavorazioniRpcListCursor | Readonly<Record<string, unknown>> | null | undefined,
+): boolean {
+  if (!cursor || typeof cursor !== "object") return false;
+  const c = cursor as { created_at?: unknown; id?: unknown };
+  return Boolean(String(c.created_at ?? "").trim() && String(c.id ?? "").trim());
+}
+
 export function toLavorazioniPageFromRpc(
   raw: LavorazioniRpcListPageRaw,
   ctx: { includeMezzo: boolean; limit: number },
@@ -22,12 +30,21 @@ export function toLavorazioniPageFromRpc(
   const rows = raw.rows.map((row) =>
     mapLavorazioneLightToListRow(row as LavorazioneRow, { includeMezzo: ctx.includeMezzo }),
   );
-  const hasNextPage = raw.next_cursor != null;
+  const limit = Math.max(1, ctx.limit);
+  const validCursor = isValidLavorazioniRpcListCursor(raw.next_cursor);
+  const hasNextPage = rows.length >= limit && validCursor;
+  const nextCursor =
+    hasNextPage && raw.next_cursor
+      ? Object.freeze({
+          created_at: String(raw.next_cursor.created_at).trim(),
+          id: String(raw.next_cursor.id).trim(),
+        })
+      : null;
   return Object.freeze({
     rows: Object.freeze(rows),
     pageInfo: Object.freeze({
       hasNextPage,
-      nextCursor: raw.next_cursor ? Object.freeze({ ...raw.next_cursor }) : null,
+      nextCursor,
       totalEstimate: raw.total_estimate,
     }),
   });

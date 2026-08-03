@@ -12,12 +12,8 @@ import {
   isMagazzinoNotificationsPath,
 } from "@/lib/lavorazioni/admin-notifications";
 import { markCabSyncToastSuppressed } from "@/lib/notifications/cab-sync-toast-suppress";
-import { publishNotification } from "@/lib/notifications/publish-notification";
 import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
-import {
-  findRicambioInListCache,
-  stockSnapshotFromListCache,
-} from "@/lib/magazzino/find-ricambio-in-list-cache";
+import { findRicambioInListCache, stockSnapshotFromListCache } from "@/lib/magazzino/find-ricambio-in-list-cache";
 import { magazzinoCrossingToNotification } from "@/lib/magazzino/magazzino-sotto-scorta-notification-mapper";
 import { magazzinoListQueryKey, mapMagazzinoRowsToUI } from "@/lib/magazzino/magazzino-list-cache";
 import {
@@ -27,19 +23,15 @@ import {
 } from "@/lib/magazzino/ricambio-stock-snapshot-registry";
 import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
-import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 
 const CLIENT_DEDUP_MS = 30_000;
 
-/**
- * Bridge: cab-sync entity_updated magazzino_ricambi → crossing sotto scorta → inbox.
- */
+/** Bridge: cab-sync magazzino → toast UX (inbox via notification_outbox server-side). */
 export function AdminMagazzinoNotificationBridge() {
   const { user } = useAuth();
   const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
-  const { mode } = useNotificationsV2Mode();
   const pathname = usePathname() ?? "";
   const { push } = useToastContext();
   const queryClient = useQueryClient();
@@ -62,8 +54,7 @@ export function AdminMagazzinoNotificationBridge() {
 
   const handleRicambioUpdated = useCallback(
     (ricambioId: string) => {
-      const userId = user?.id;
-      if (!staffEligible || !userId) return;
+      if (!staffEligible || !user?.id) return;
 
       const now = Date.now();
       for (const [k, ts] of seenRef.current) {
@@ -95,8 +86,6 @@ export function AdminMagazzinoNotificationBridge() {
 
         markCabSyncToastSuppressed("magazzino_ricambi", "entity_updated", ricambioId);
 
-        void publishNotification(userId, notification, mode);
-
         if (isDashboardNotificationsPath(pathname) || isMagazzinoNotificationsPath(pathname)) return true;
 
         push(formatMagazzinoSottoScortaToastMessage(notification), "info", 5000);
@@ -109,7 +98,7 @@ export function AdminMagazzinoNotificationBridge() {
         resolveAndNotify();
       });
     },
-    [mezziListe, mode, pathname, push, queryClient, staffEligible, user?.id],
+    [mezziListe, pathname, push, queryClient, staffEligible, user?.id],
   );
 
   useCabSyncListener(

@@ -28,6 +28,15 @@ export async function loadPipelineState(captureId: string): Promise<PipelineStat
   return (data?.pipeline_state as PipelineState | null) ?? { ...INITIAL_PIPELINE_STATE };
 }
 
+export async function savePipelineState(captureId: string, pipelineState: PipelineState): Promise<void> {
+  const sb = await createSupabaseServerUserClient();
+  const { error } = await sb
+    .from("document_capture")
+    .update({ pipeline_state: pipelineState })
+    .eq("id", captureId);
+  if (error) throw new Error(error.message);
+}
+
 export async function saveDocumentModelAndPipelineState(input: {
   captureId: string;
   document: DigitalDocument;

@@ -16,7 +16,7 @@ import { GestionaleNumberInput } from "@/components/gestionale/gestionale-number
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import { RichiedenteFirmaDisplay } from "@/components/gestionale/schede/richiedente-firma-display";
 import { RichiedenteFirmaCaptureModal } from "@/components/gestionale/schede/richiedente-firma-capture-modal";
-import { SchedaIngressoIdentAutocompleteField } from "@/lib/selector-core/legacy-selector-adapters";
+import { SchedaIngressoIdentTextField } from "@/components/lavorazioni/schede/scheda-ingresso-ident-text-field";
 import { hasSignatureDataUrl } from "@/lib/media/signature-pad";
 import { attrezzatureForMezzo } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { AttrezzaturaGestita } from "@/lib/attrezzature/types";
@@ -35,6 +35,7 @@ import { attrezzatureEntry } from "@/lib/domain/attrezzature-entry";
 import type { AttrezzaturaRow } from "@/src/types/supabase-tables";
 import type { SchedaIngressoFields } from "@/types/schede";
 import type { SchedaIngressoIdentField } from "@/lib/schede/scheda-ingresso-ident-suggest";
+import type { SchedaIngressoIdentMatchKind } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import type { CaptureIngressoFieldHint } from "@/lib/document-capture/capture-ingresso-field-hints";
 import {
   resolveIngressoOreDraft,
@@ -81,10 +82,14 @@ function SchedaIngressoAnagraficaFieldsInner({
   sections = ALL_SECTIONS,
   surface = "lavorazione",
   onExactMezzoMatch,
+  onMezzoIdentMatch,
+  onAmbiguousMezzoMatch,
+  dismissedMezzoIds,
   mezzoInlineHint = null,
   mezzoCatalogFieldDrifts = [],
   onUseMezzoFromHint,
   onDismissMezzoHint,
+  onDismissAmbiguousHint,
   onVerifyMezzoConflict,
   clienteRequired = false,
   marcaAttrezzaturaRequired = false,
@@ -107,14 +112,23 @@ function SchedaIngressoAnagraficaFieldsInner({
   /** `preventivo` — snapshot interno: niente hint/drift/autofill mezzo da catalogo. */
   surface?: "lavorazione" | "preventivo";
   onExactMezzoMatch?: (mezzo: MezzoGestito, field: SchedaIngressoIdentField) => void;
+  onMezzoIdentMatch?: (
+    mezzo: MezzoGestito,
+    field: SchedaIngressoIdentField,
+    kind: SchedaIngressoIdentMatchKind,
+  ) => void;
+  onAmbiguousMezzoMatch?: (candidates: readonly MezzoGestito[], field: SchedaIngressoIdentField) => void;
+  dismissedMezzoIds?: ReadonlySet<string>;
   mezzoInlineHint?: {
     variant: MezzoIngressoInlineHintVariant;
-    mezzo: MezzoGestito;
+    mezzo?: MezzoGestito;
     matchField: SchedaIngressoIdentField;
+    ambiguousCandidates?: readonly MezzoGestito[];
   } | null;
   mezzoCatalogFieldDrifts?: readonly MezzoCatalogFieldDrift[];
   onUseMezzoFromHint?: (field: SchedaIngressoIdentField) => void;
   onDismissMezzoHint?: () => void;
+  onDismissAmbiguousHint?: () => void;
   onVerifyMezzoConflict?: () => void;
   clienteRequired?: boolean;
   marcaAttrezzaturaRequired?: boolean;
@@ -185,29 +199,42 @@ function SchedaIngressoAnagraficaFieldsInner({
   }, [value.targetType, profilo, onPatch]);
   const inputFieldClass = `block w-full ${dsInput}`;
   const listSelectWrapClass = "w-full";
-  const mezzoMatchHandler = isPreventivoSurface ? () => {} : (onExactMezzoMatch ?? (() => {}));
+  const mezzoIdentMatchHandler =
+    isPreventivoSurface ? undefined : onMezzoIdentMatch ?? onExactMezzoMatch
+      ? (mezzo: MezzoGestito, field: SchedaIngressoIdentField, kind: SchedaIngressoIdentMatchKind) => {
+          if (onMezzoIdentMatch) onMezzoIdentMatch(mezzo, field, kind);
+          else if (kind === "exact") onExactMezzoMatch?.(mezzo, field);
+        }
+      : undefined;
+  const ambiguousMatchHandler = isPreventivoSurface ? undefined : onAmbiguousMezzoMatch;
+  const excludeLinkedMezzoId = mezzoLinked && mezzoId.trim() ? mezzoId.trim() : undefined;
 
   const renderIdentHint = (field: SchedaIngressoIdentField) => {
     if (isPreventivoSurface) return null;
     if (!mezzoInlineHint || mezzoInlineHint.matchField !== field) return null;
-    if (mezzoInlineHint.variant !== "trovato") return null;
+    if (
+      mezzoInlineHint.variant !== "trovato" &&
+      mezzoInlineHint.variant !== "simile" &&
+      mezzoInlineHint.variant !== "ambiguo"
+    ) {
+      return null;
+    }
     return (
       <MezzoRegistratoIngressoInlineHint
         variant={mezzoInlineHint.variant}
         mezzo={mezzoInlineHint.mezzo}
+        ambiguousCandidates={mezzoInlineHint.ambiguousCandidates}
         matchField={field}
         onUseMezzo={
-          onUseMezzoFromHint ? () => onUseMezzoFromHint(field) : undefined
+          mezzoInlineHint.variant !== "ambiguo" && onUseMezzoFromHint
+            ? () => onUseMezzoFromHint(field)
+            : undefined
         }
-        onDismiss={onDismissMezzoHint}
+        onDismiss={
+          mezzoInlineHint.variant === "ambiguo" ? onDismissAmbiguousHint : onDismissMezzoHint
+        }
       />
     );
-  };
-  const identSibling = {
-    targa: value.targa,
-    matricola: value.matricola,
-    nScuderia: value.nScuderia,
-    vin: value.vin,
   };
 
   const uid = useId();
@@ -369,34 +396,36 @@ function SchedaIngressoAnagraficaFieldsInner({
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             <div>
-              <SchedaIngressoIdentAutocompleteField
+              <SchedaIngressoIdentTextField
                 field="matricola"
                 label="Matricola"
                 id={fieldId("matricola")}
                 value={value.matricola}
-                siblingIdent={identSibling}
                 mezzi={catalogMezzi}
                 disabled={disabled}
-                exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
+                excludeMezzoId={excludeLinkedMezzoId}
+                dismissedMezzoIds={dismissedMezzoIds}
                 onChange={(v) => patchUserPermanent({ matricola: v })}
-                onExactMezzoMatch={(m) => mezzoMatchHandler(m, "matricola")}
+                onMezzoMatch={mezzoIdentMatchHandler}
+                onAmbiguousMatch={ambiguousMatchHandler}
               />
               {renderIdentHint("matricola")}
               {hintAfter("matricola")}
               {renderMezzoDriftHint("matricola")}
             </div>
             <div>
-              <SchedaIngressoIdentAutocompleteField
+              <SchedaIngressoIdentTextField
                 field="nScuderia"
                 label="N. scuderia"
                 id={fieldId("n-scuderia")}
                 value={value.nScuderia}
-                siblingIdent={identSibling}
                 mezzi={catalogMezzi}
                 disabled={disabled}
-                exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
+                excludeMezzoId={excludeLinkedMezzoId}
+                dismissedMezzoIds={dismissedMezzoIds}
                 onChange={(v) => patchUserPermanent({ nScuderia: v })}
-                onExactMezzoMatch={(m) => mezzoMatchHandler(m, "nScuderia")}
+                onMezzoMatch={mezzoIdentMatchHandler}
+                onAmbiguousMatch={ambiguousMatchHandler}
               />
               {renderIdentHint("nScuderia")}
               {hintAfter("nScuderia")}
@@ -482,33 +511,35 @@ function SchedaIngressoAnagraficaFieldsInner({
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             <div>
-              <SchedaIngressoIdentAutocompleteField
+              <SchedaIngressoIdentTextField
                 field="targa"
                 label="Targa"
                 value={value.targa}
-                siblingIdent={identSibling}
                 mezzi={catalogMezzi}
                 disabled={disabled}
-                exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
+                excludeMezzoId={excludeLinkedMezzoId}
+                dismissedMezzoIds={dismissedMezzoIds}
                 onChange={(v) => patchUserPermanent({ targa: v })}
-                onExactMezzoMatch={(m) => mezzoMatchHandler(m, "targa")}
+                onMezzoMatch={mezzoIdentMatchHandler}
+                onAmbiguousMatch={ambiguousMatchHandler}
               />
               {renderIdentHint("targa")}
               {hintAfter("targa")}
               {renderMezzoDriftHint("targa")}
             </div>
             <div>
-              <SchedaIngressoIdentAutocompleteField
+              <SchedaIngressoIdentTextField
                 field="vin"
                 label="VIN"
                 id={fieldId("vin")}
                 value={value.vin}
-                siblingIdent={identSibling}
                 mezzi={catalogMezzi}
                 disabled={disabled}
-                exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
+                excludeMezzoId={excludeLinkedMezzoId}
+                dismissedMezzoIds={dismissedMezzoIds}
                 onChange={(v) => patchUserPermanent({ vin: sliceInputValue(v, TEXT_SHORT) })}
-                onExactMezzoMatch={(m) => mezzoMatchHandler(m, "vin")}
+                onMezzoMatch={mezzoIdentMatchHandler}
+                onAmbiguousMatch={ambiguousMatchHandler}
               />
               {renderIdentHint("vin")}
               {hintAfter("vin")}
@@ -668,10 +699,14 @@ export const SchedaIngressoAnagraficaFields = memo(
     if (prev.mezzi !== next.mezzi) return false;
     if (prev.sections !== next.sections) return false;
     if (prev.onExactMezzoMatch !== next.onExactMezzoMatch) return false;
+    if (prev.onMezzoIdentMatch !== next.onMezzoIdentMatch) return false;
+    if (prev.onAmbiguousMezzoMatch !== next.onAmbiguousMezzoMatch) return false;
+    if (prev.dismissedMezzoIds !== next.dismissedMezzoIds) return false;
     if (prev.mezzoInlineHint !== next.mezzoInlineHint) return false;
     if (prev.mezzoCatalogFieldDrifts !== next.mezzoCatalogFieldDrifts) return false;
     if (prev.onUseMezzoFromHint !== next.onUseMezzoFromHint) return false;
     if (prev.onDismissMezzoHint !== next.onDismissMezzoHint) return false;
+    if (prev.onDismissAmbiguousHint !== next.onDismissAmbiguousHint) return false;
     if (prev.onNotifyPermanentFieldUserEdit !== next.onNotifyPermanentFieldUserEdit) return false;
     if (prev.onVerifyMezzoConflict !== next.onVerifyMezzoConflict) return false;
     if (prev.clienteRequired !== next.clienteRequired) return false;

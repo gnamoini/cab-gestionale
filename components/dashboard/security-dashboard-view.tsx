@@ -323,7 +323,6 @@ export function SecurityDashboardView({ listSurface: serverListSurface, listTier
           lastAccessPerUser={lastAccessPerUser}
           failedNote={failedNote}
           resettingLogs={resettingLogs}
-          onRefresh={() => void Promise.all([logsQuery.refetch(), recentActivityQ.refetch()])}
           onResetChangeLogs={() => void handleResetChangeLogs()}
         />
       ) : null}

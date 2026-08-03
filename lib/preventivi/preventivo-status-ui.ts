@@ -24,6 +24,11 @@ export function preventivoStatoPillStyle(stato: PreventivoStato): CSSProperties 
   return readablePillStyleFromHex(PREVENTIVO_STATO_HEX[stato] ?? "#6b7280");
 }
 
+/** Pill stato in header modale (fit-content, arrotondata). */
+export function preventivoStatoHeaderPillClass(): string {
+  return "relative inline-flex shrink-0 items-center overflow-hidden rounded-full border border-black/10 px-2.5 py-1 text-[10px] font-semibold uppercase leading-none tracking-wide shadow-sm shadow-black/10 transition-[filter,box-shadow] duration-200 dark:border-white/15";
+}
+
 export const PREVENTIVO_STATO_EDITOR_ITEMS = (
   ["bozza", "inviato", "confermato", "annullato"] as const satisfies readonly PreventivoStato[]
 ).map((value) => ({

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEvent, FocusEvent, InputHTMLAttributes } from "react";
+import type { ChangeEvent, FocusEvent, InputHTMLAttributes, MouseEvent } from "react";
 import {
   isDecimalInputDraft,
   normalizeDecimalInput,
@@ -28,6 +28,9 @@ export function GestionaleNumberInput({
   min,
   onBlur,
   onFocus: onFocusProp,
+  onMouseDown: onMouseDownProp,
+  readOnly,
+  disabled,
   ...rest
 }: GestionaleNumberInputProps) {
   const allowNegative = min === undefined || Number(min) < 0;
@@ -45,18 +48,31 @@ export function GestionaleNumberInput({
   };
 
   const handleFocus = (e: FocusEvent<HTMLInputElement>) => {
-    e.target.select();
     onFocusProp?.(e);
+  };
+
+  const handleMouseDown = (e: MouseEvent<HTMLInputElement>) => {
+    onMouseDownProp?.(e);
+    if (e.defaultPrevented || readOnly || disabled) return;
+    const input = e.currentTarget;
+    if (document.activeElement === input) return;
+    // ponytail: focus su mousedown + preventDefault → cursore al click, non select-all
+    e.preventDefault();
+    input.focus();
   };
 
   return (
     <input
       type="text"
       inputMode={inputMode}
+      data-gestionale-numeric="true"
       value={value}
       onChange={handleChange}
       onBlur={handleBlur}
       onFocus={handleFocus}
+      onMouseDown={handleMouseDown}
+      readOnly={readOnly}
+      disabled={disabled}
       aria-invalid={invalid || undefined}
       className={resolveGestionaleInputClassName(`${dsInput} ${dsInputNoSpinner} tabular-nums ${className}`.trim(), invalid)}
       {...rest}

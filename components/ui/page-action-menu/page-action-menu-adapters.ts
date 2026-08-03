@@ -2,7 +2,6 @@ import { createElement } from "react";
 import type { PageActionItem } from "@/components/ui/page-action-menu/page-action-menu-types";
 import {
   PageActionIconLog,
-  PageActionIconRefresh,
   PageActionIconUndo,
 } from "@/components/ui/page-action-menu/page-action-menu-icons";
 
@@ -51,21 +50,6 @@ export function pageActionUndoItem(opts: {
     onSelect: opts.onUndo,
     disabled,
     loading: opts.undoPending,
-  };
-}
-
-export function pageActionRefreshItem(opts: {
-  busy?: boolean;
-  label?: string;
-  onRefresh: () => void;
-}): PageActionItem {
-  return {
-    id: "refresh-inline",
-    label: opts.label ?? "Aggiorna",
-    description: "Ricarica i dati della pagina",
-    icon: createElement(PageActionIconRefresh),
-    onSelect: opts.onRefresh,
-    loading: opts.busy,
   };
 }
 

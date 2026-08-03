@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   findExactMezzoForIngressoIdent,
+  findMezzoMatchForIngressoIdentField,
   mezzoIngressoSuggestLabel,
   mezzoIngressoSuggestSecondaryLabel,
   suggestMezziForIngressoIdent,
@@ -119,6 +120,49 @@ const mezzoVin: MezzoGestito = {
     matricola: "—",
   };
   assert.equal(mezzoIngressoSuggestLabel(mezzoPlaceholder), "Targa FY109RX");
+}
+
+const mezzoSpacedTarga: MezzoGestito = {
+  ...mezzoA,
+  id: "m-spaced",
+  targa: "HB 440 PC",
+  matricola: "SP-001",
+};
+
+{
+  const exact = findMezzoMatchForIngressoIdentField([mezzoA], "targa", "AB123CD");
+  assert.equal(exact.kind, "exact");
+  assert.equal(exact.mezzo?.id, "m1");
+}
+
+{
+  const spacedExact = findMezzoMatchForIngressoIdentField([mezzoSpacedTarga], "targa", "HB440PC");
+  assert.equal(spacedExact.kind, "exact");
+  assert.equal(spacedExact.mezzo?.id, "m-spaced");
+}
+
+{
+  const similar = findMezzoMatchForIngressoIdentField([mezzoA], "targa", "AB124CD");
+  assert.equal(similar.kind, "similar");
+  assert.equal(similar.mezzo?.id, "m1");
+}
+
+{
+  const excluded = findMezzoMatchForIngressoIdentField([mezzoA], "targa", "AB123CD", {
+    excludeMezzoId: "m1",
+  });
+  assert.equal(excluded.kind, "none");
+}
+
+{
+  const vinExact = findMezzoMatchForIngressoIdentField([mezzoVin], "vin", "WDB12345678901234");
+  assert.equal(vinExact.kind, "exact");
+  assert.equal(vinExact.mezzo?.id, "m3");
+}
+
+{
+  const vinPartial = findMezzoMatchForIngressoIdentField([mezzoVin], "vin", "WDB123");
+  assert.equal(vinPartial.kind, "none");
 }
 
 console.log("scheda-ingresso-ident-suggest.test.ts: ok");

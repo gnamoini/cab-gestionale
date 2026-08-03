@@ -218,7 +218,7 @@ html.pwa-standalone [data-pwa-standalone-offset] {
 
 @keyframes cab-toast-in {
   from {
-    transform: translate3d(0.75rem, 0.35rem, 0);
+    transform: translate3d(0.35rem, 0.2rem, 0);
     opacity: 0;
   }
   to {
@@ -229,7 +229,7 @@ html.pwa-standalone [data-pwa-standalone-offset] {
 
 @keyframes cab-toast-in-top {
   from {
-    transform: translate3d(0.75rem, -0.35rem, 0);
+    transform: translate3d(0.35rem, -0.2rem, 0);
     opacity: 0;
   }
   to {
@@ -367,6 +367,18 @@ html.pwa-standalone [data-pwa-standalone-offset] {
 
 .cab-toast-item {
   animation: cab-toast-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  touch-action: pan-y;
+  will-change: transform;
+}
+
+.cab-toast-item--dragging {
+  transition: none;
+}
+
+.cab-toast-item--snap-back {
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (max-width: 767px) {
@@ -473,6 +485,7 @@ html.pwa-standalone [data-pwa-standalone-offset] {
   }
   .cab-toast-item {
     animation: none;
+    transition: none;
   }
 
   .cab-toast-slot {

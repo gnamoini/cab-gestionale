@@ -5,31 +5,23 @@ import { usePathname } from "next/navigation";
 import { useToastContext } from "@/context/toast-context";
 import { useAuth } from "@/context/auth-context";
 import { isDipendentiNotificationsPath } from "@/lib/lavorazioni/admin-notifications";
-import { loadAdminNotificationStore } from "@/lib/lavorazioni/admin-notification-store";
-import { publishNotification } from "@/lib/notifications/publish-notification";
-import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
 import {
-  buildDipendentiPresenzeReminderNotification,
   buildDipendentiPresenzeReminderPayload,
-  dipendentiPresenzeReminderStoreKey,
   formatDipendentiPresenzeReminderBody,
   shouldRunDipendentiPresenzeReminderCheck,
 } from "@/lib/dipendenti/dipendenti-presenze-reminder";
 import { todayDateYmd } from "@/lib/dipendenti/timesheet-month";
+import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
 import { dipendentiTimesheetService } from "@/src/services/dipendenti-timesheet.service";
-import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { canReadPage } from "@/src/lib/rbac/resolve-page-access";
 
 const CHECK_INTERVAL_MS = 60_000;
 
-/**
- * Promemoria: alle 17:00 nei giorni feriali, se dipendenti attivi senza presenze per oggi.
- */
+/** Toast UX opzionale — inbox via cron server dipendenti-presenze-reminder. */
 export function AdminDipendentiPresenzeReminderBridge() {
   const { user } = useAuth();
   const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
-  const { mode, writesLegacy } = useNotificationsV2Mode();
   const pathname = usePathname() ?? "";
   const { push } = useToastContext();
   const checkInFlightRef = useRef(false);
@@ -42,18 +34,12 @@ export function AdminDipendentiPresenzeReminderBridge() {
     Boolean(snapshot?.resolved) && canReadPage(snapshot!.resolved, "dipendenti");
 
   const runCheck = useCallback(async () => {
-    const userId = user?.id;
-    if (!staffEligible || !canReadDipendenti || !userId || checkInFlightRef.current) return;
+    if (!staffEligible || !canReadDipendenti || !user?.id || checkInFlightRef.current) return;
     if (!shouldRunDipendentiPresenzeReminderCheck()) return;
-
-    const today = todayDateYmd();
-    if (writesLegacy) {
-      const store = loadAdminNotificationStore(userId);
-      if (store.items[dipendentiPresenzeReminderStoreKey(today)]) return;
-    }
 
     checkInFlightRef.current = true;
     try {
+      const today = todayDateYmd();
       const [employeesRes, entriesRes] = await Promise.all([
         dipendentiTimesheetService.listEmployees(),
         dipendentiTimesheetService.listEntriesForRange(today, today),
@@ -67,16 +53,13 @@ export function AdminDipendentiPresenzeReminderBridge() {
       );
       if (!payload) return;
 
-      const notification = buildDipendentiPresenzeReminderNotification(payload);
-      const result = await publishNotification(userId, notification, mode);
-
-      if (result.added && !isDipendentiNotificationsPath(pathname)) {
+      if (!isDipendentiNotificationsPath(pathname)) {
         push(formatDipendentiPresenzeReminderBody(payload), "info", 6000);
       }
     } finally {
       checkInFlightRef.current = false;
     }
-  }, [canReadDipendenti, mode, pathname, push, staffEligible, user?.id, writesLegacy]);
+  }, [canReadDipendenti, pathname, push, staffEligible, user?.id]);
 
   useEffect(() => {
     if (!staffEligible || !canReadDipendenti || permsLoading || !user?.id) return;

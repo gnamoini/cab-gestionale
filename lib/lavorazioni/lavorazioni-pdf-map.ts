@@ -1,7 +1,15 @@
 import { composeInterventoContextFromListRow } from "@/lib/domain/intervento-context/build-intervento-context";
 import { resolveInterventoOggettoDisplay } from "@/lib/domain/mezzo-attrezzatura/intervento-oggetto-display";
-import { formatIdentificazionePdfCell } from "@/lib/lavorazioni/lavorazioni-pdf-format";
-import { lavorazioneAddettoLabel } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
+import {
+  formatClientePdfCell,
+  formatIdentificazionePdfCell,
+} from "@/lib/lavorazioni/lavorazioni-pdf-format";
+import {
+  lavorazioneAddettoLabel,
+  lavorazioneCantiereLabel,
+  lavorazioneClienteLabel,
+  lavorazioneUtilizzatoreLabel,
+} from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { prioritaLabel } from "@/lib/lavorazioni/lavorazioni-pill-styles";
 import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
@@ -11,7 +19,7 @@ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
 /** Bump quando cambia la logica di mapping (invalida cache storage artifact). */
-export const LAVORAZIONI_IN_CORSO_PDF_MAP_VERSION = 4;
+export const LAVORAZIONI_IN_CORSO_PDF_MAP_VERSION = 6;
 
 export type LavorazioniPdfMapContext = {
   stati: readonly StatoLavorazioneConfig[];
@@ -24,8 +32,12 @@ function mezzoLabel(row: LavorazioneListRow): string {
   return resolveInterventoOggettoDisplay(ctx).label.trim() || "—";
 }
 
-function clienteFromRow(row: LavorazioneListRow): string {
-  return (row.mezzo?.cliente ?? "").trim() || "—";
+function clienteFromRow(row: LavorazioneListRow, schedeStore: LavorazioneSchedeStore): string {
+  return formatClientePdfCell(
+    lavorazioneClienteLabel(row, schedeStore),
+    lavorazioneCantiereLabel(row, schedeStore),
+    lavorazioneUtilizzatoreLabel(row, schedeStore),
+  );
 }
 
 function displayOrDash(v: string): string {
@@ -41,7 +53,7 @@ export function mapLavorazioniListRowsToPdfRows(
   return rows.map((row) => {
     const m = row.mezzo;
     return {
-      cliente: clienteFromRow(row),
+      cliente: clienteFromRow(row, ctx.schedeStore),
       attrezzatura: mezzoLabel(row),
       identificazione: formatIdentificazionePdfCell(m?.targa ?? "", m?.matricola ?? "", m?.numero_scuderia ?? ""),
       stato: displayOrDash(statoLavorazioneLabel(row.stato ?? "", [...ctx.stati])),

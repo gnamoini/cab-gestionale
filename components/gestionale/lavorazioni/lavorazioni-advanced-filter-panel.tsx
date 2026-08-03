@@ -22,7 +22,6 @@ import {
   type LavorazioniFilterCatalog,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
-import { statoLavorazioneLabel } from "@/src/shared/selectors";
 
 export type LavorazioniAdvancedFilterPanelVariant = "staff" | "clientPortal";
 
@@ -30,7 +29,6 @@ export function LavorazioniAdvancedFilterPanel({
   filters,
   onChange,
   catalog,
-  statiOpts = [],
   addettiRecords = [],
   variant = "staff",
   restrictUtilizzatoriToCatalog = false,
@@ -38,7 +36,6 @@ export function LavorazioniAdvancedFilterPanel({
   filters: LavorazioniAdvancedFilters;
   onChange: (patch: Partial<LavorazioniAdvancedFilters>) => void;
   catalog: LavorazioniFilterCatalog;
-  statiOpts?: { id: string; label: string }[];
   addettiRecords?: readonly AddettoRecord[];
   variant?: LavorazioniAdvancedFilterPanelVariant;
   /** Portale clienti: limita utilizzatori al catalogo righe visibili (solo ruolo cliente). */
@@ -51,17 +48,6 @@ export function LavorazioniAdvancedFilterPanel({
   const modelloFilterValue = filters.modello === FILTER_ALL ? "" : filters.modello;
   const marcaTelaioFilterValue = filters.marcaTelaio === FILTER_ALL ? "" : filters.marcaTelaio;
   const modelloTelaioFilterValue = filters.modelloTelaio === FILTER_ALL ? "" : filters.modelloTelaio;
-
-  const statoItems = useMemo(
-    () => [
-      { value: FILTER_ALL, label: "Tutti gli stati" },
-      ...statiOpts.map((s) => ({
-        value: s.id,
-        label: statoLavorazioneLabel(s.id, statiOpts),
-      })),
-    ],
-    [statiOpts],
-  );
 
   const addettoFilterValue = normalizeAddettoFilterValue(filters.addetto);
 
@@ -172,21 +158,6 @@ export function LavorazioniAdvancedFilterPanel({
               onChange={(v) => onChange({ addetto: normalizeAddettoFilterValue(v) })}
               ariaLabel="Filtra addetto"
               inputClassName={gestionaleFilterFieldInputClass}
-            />
-          </LavorazioniFilterField>
-        ) : null}
-        {isStaff ? (
-          <LavorazioniFilterField label="Stato">
-            <GlobalSelect
-              items={statoItems}
-              value={filters.stato}
-              onChange={(v) => onChange({ stato: v })}
-              inputClassName={gestionaleFilterFieldInputClass}
-              strictFromList
-              selectOnly
-              variant="filter"
-              filterNeutralValues={[FILTER_ALL]}
-              aria-label="Filtra stato"
             />
           </LavorazioniFilterField>
         ) : null}

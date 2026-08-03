@@ -25,8 +25,17 @@ assert.match(mobileCardsBlock, /label="Stato"/);
 assert.match(mobileCardsBlock, /StatoReadOnlyPill/);
 assert.match(mobileCardsBlock, /label="Completamento"/);
 assert.match(mobileCardsBlock, /LavorazioneCompletamentoDatePill/);
-assert.match(mobileCardsBlock, /aria-label=\{variant === "archive" \? "Completamento e addetto" : "Stato e addetto"\}/);
+assert.match(mobileCardsBlock, /LavorazioneMobileControlsPanel/);
+assert.match(mobileCardsBlock, /ariaLabel=\{variant === "archive" \? "Completamento e addetto" : "Stato e addetto"\}/);
 assert.doesNotMatch(mobileCardsBlock, /secondaryDate/);
+
+const controlsPanelBlock = mobileCard.slice(
+  mobileCard.indexOf("export function LavorazioneMobileControlsPanel"),
+  mobileCard.indexOf("/** Footer card mobile"),
+);
+assert.doesNotMatch(controlsPanelBlock, /cab-shell-desktop:grid-cols-2/);
+assert.match(controlsPanelBlock, /grid-cols-1/);
+assert.match(read("components/gestionale/lavorazioni/lavorazioni-table-shared.tsx"), /lavMobilePillWidthClass/);
 
 const headerBlock = mobileCard.slice(
   mobileCard.indexOf("export function LavorazioneMobileCardHeader"),

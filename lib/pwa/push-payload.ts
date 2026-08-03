@@ -10,6 +10,7 @@ export type PushPayloadInput = {
   dedup_key: string;
   type?: string;
   entity_id?: string | null;
+  traceId?: string;
 };
 
 export function buildPushNotificationPayload(input: PushPayloadInput): PushNotificationPayload {
@@ -32,5 +33,6 @@ export function buildPushNotificationPayload(input: PushPayloadInput): PushNotif
     href,
     notificationId: input.notificationId?.trim() || undefined,
     type: input.type?.trim() || undefined,
+    traceId: input.traceId?.trim() || undefined,
   };
 }

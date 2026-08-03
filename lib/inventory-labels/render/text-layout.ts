@@ -7,7 +7,13 @@ import {
   shouldRenderMarcaSecondaria,
 } from "@/lib/inventory-labels/domain/label-display";
 import { resolveSupplierBlock } from "@/lib/inventory-labels/domain/label-suppliers";
-import { fieldValue, maxCharsForWrap, maxCharsForWidth, wrapLabelLines } from "@/lib/inventory-labels/render/layout";
+import {
+  fieldValue,
+  maxCharsForWrap,
+  maxCharsForWidth,
+  wrapLabelLines,
+} from "@/lib/inventory-labels/render/layout";
+import { labelFontSlotFor, refitLinesToInkWidth } from "@/lib/inventory-labels/render/text-paths";
 import { labelDisplayCaps } from "@/lib/inventory-labels/domain/label-display";
 import {
   blockHeightMm,
@@ -336,6 +342,89 @@ function resolveClienteLabelTextLayout(
   return assignPositions(textX, top, topBlocks, rowStepMm, dpi, makeTopGapAfter(template));
 }
 
+function resolveA4PaginaInteraTextLayout(
+  template: LabelTemplateDefinition,
+  payload: LabelPayload,
+): PlacedLabelText[] {
+  const marcaEl = textEl(template.elements, "marca");
+  const descEl = textEl(template.elements, "descrizione");
+  const codiceEl = textEl(template.elements, "codice");
+  const dpi = template.dpi;
+  const gapAfter = makeTopGapAfter(template);
+  const textW = marcaEl.maxWidthMm ?? template.widthMm - template.marginsMm * 2;
+  const textTop = marcaEl.yMm;
+  const textBottom = marcaEl.zoneBottomMm ?? template.heightMm - template.marginsMm;
+  const centerX = template.widthMm / 2;
+  const primaryPt = Math.max(marcaEl.fontPt, descEl.fontPt, codiceEl.fontPt);
+  const rowStepMm = lineMetrics(primaryPt, dpi).lineStepMm;
+  const zoneH = Math.max(lineMetrics(primaryPt, dpi).lineStepMm, textBottom - textTop);
+  const typographyBold = template.typography?.weight === "bold";
+  const topSpec = buildTopBlocks(payload);
+
+  const wrappedBlocks: StackBlock[] = [];
+  for (let i = 0; i < topSpec.length; i++) {
+    const spec = topSpec[i]!;
+    let minRest = 0;
+    for (let j = i; j < topSpec.length - 1; j++) {
+      minRest +=
+        lineMetrics(primaryPt, dpi).lineStepMm + gapAfter(topSpec[j]!.field, topSpec[j + 1]!.field);
+    }
+    const blockZoneH = Math.max(lineMetrics(primaryPt, dpi).lineStepMm, zoneH - minRest);
+    const maxLines = Math.max(1, maxLinesForZoneMm(blockZoneH, primaryPt, dpi));
+    const breakMode =
+      spec.field === "codice" || spec.field === "codiceSecondario" ? "codice" : "words";
+    const res = wrapBlock(spec.text, primaryPt, textW, maxLines, spec.font, breakMode);
+    const baseFont = spec.font === "mono" ? "mono" : "sans";
+    const inkSlot = labelFontSlotFor(baseFont, typographyBold, true);
+    const lines = refitLinesToInkWidth(
+      res.lines,
+      maxLines,
+      textW,
+      primaryPt,
+      dpi,
+      inkSlot,
+      breakMode,
+    );
+    wrappedBlocks.push({
+      field: spec.field,
+      fontPt: primaryPt,
+      font: spec.font,
+      lines,
+      bold: typographyBold,
+    });
+  }
+
+  let totalH = 0;
+  for (let i = 0; i < wrappedBlocks.length; i++) {
+    totalH += blockHeightMm(wrappedBlocks[i]!.lines.length, wrappedBlocks[i]!.fontPt, dpi);
+    if (i < wrappedBlocks.length - 1) {
+      totalH += gapAfter(wrappedBlocks[i]!.field, wrappedBlocks[i + 1]!.field);
+    }
+  }
+
+  let y = textTop + Math.max(0, (zoneH - totalH) / 2);
+  const placed: PlacedLabelText[] = [];
+  for (let i = 0; i < wrappedBlocks.length; i++) {
+    const b = wrappedBlocks[i]!;
+    placed.push({
+      field: b.field,
+      xMm: centerX,
+      yMm: y,
+      fontPt: b.fontPt,
+      font: b.font,
+      lines: b.lines,
+      anchor: "middle",
+      bold: b.bold,
+    });
+    if (i < wrappedBlocks.length - 1) {
+      y =
+        nextRowBaselineMm(y, b.lines.length, b.fontPt, rowStepMm, dpi) +
+        gapAfter(b.field, wrappedBlocks[i + 1]!.field);
+    }
+  }
+  return placed;
+}
+
 function makeTopGapAfter(template: LabelTemplateDefinition) {
   return (field: keyof LabelPayload, next?: keyof LabelPayload): number => {
     if (template.id === "a4-pagina-intera" && field === "codice" && next === "marcaSecondaria") {
@@ -362,6 +451,9 @@ export function resolveLabelTextLayout(
   template: LabelTemplateDefinition,
   payload: LabelPayload,
 ): PlacedLabelText[] {
+  if (template.id === "a4-pagina-intera") {
+    return resolveA4PaginaInteraTextLayout(template, payload);
+  }
   if (template.layoutMode === "manual-centered") {
     return resolveManualLabelTextLayout(template, payload);
   }

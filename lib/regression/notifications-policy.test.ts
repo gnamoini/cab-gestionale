@@ -101,8 +101,8 @@ assert.match(dispatchSrc, /isCabSyncToastSuppressed/);
 assert.match(magBridgeSrc, /markCabSyncToastSuppressed/);
 assert.match(realtimeSrc, /Impostazioni aggiornate da un altro utente/);
 
-assert.match(magBridgeSrc, /publishNotification/);
-assert.match(lavBridgeSrc, /publishNotification/);
+assert.doesNotMatch(magBridgeSrc, /publishNotification/);
+assert.doesNotMatch(lavBridgeSrc, /publishNotification/);
 assert.match(lavBridgeSrc, /isStaffInboxEligible/);
 assert.doesNotMatch(lavBridgeSrc, /fanoutClientPortalLavorazioneNotification/);
 
@@ -122,6 +122,13 @@ assert.match(triggersMigrationSrc, /trg_lavorazioni_client_portal_ingresso/);
 assert.match(triggersMigrationSrc, /trg_lavorazioni_client_portal_completata/);
 assert.match(triggersMigrationSrc, /after insert on public\.lavorazioni/);
 assert.match(triggersMigrationSrc, /after update of stato on public\.lavorazioni/);
+
+const outboxMigrationSrc = fs.readFileSync(
+  path.join(ROOT, "supabase/migrations/20261103120000_notification_outbox.sql"),
+  "utf8",
+);
+assert.match(outboxMigrationSrc, /notification_outbox/);
+assert.match(outboxMigrationSrc, /lavorazioni_outbox_created/);
 assert.match(triggersMigrationSrc, /on conflict \(dedup_key\) do nothing/);
 
 const migrationSrc = fs.readFileSync(

@@ -20,6 +20,10 @@ import {
   dsZToast,
 } from "@/lib/ui/design-system";
 import {
+  useToastSwipeDismiss,
+  useToastSwipeEnabled,
+} from "@/lib/ui/use-toast-swipe-dismiss";
+import {
   warnDirectUseToast,
   warnTechnicalErrorToast,
 } from "@/src/lib/ux/interaction-enforcement";
@@ -28,22 +32,18 @@ export type CabToastTone = "success" | "warning" | "error" | "info";
 
 type ToastItem = { id: string; message: string; tone: CabToastTone; duration: number };
 
-const TONE_SURFACE: Record<CabToastTone, string> = {
-  success:
-    "border-[color:color-mix(in_srgb,var(--cab-success)_38%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-success)_11%,var(--cab-card))]",
-  warning:
-    "border-[color:color-mix(in_srgb,var(--cab-warning)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_12%,var(--cab-card))]",
-  error:
-    "border-[color:color-mix(in_srgb,var(--cab-danger)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_11%,var(--cab-card))]",
-  info:
-    "border-[color:color-mix(in_srgb,var(--cab-info)_38%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-info)_10%,var(--cab-card))]",
+const TONE_ACCENT: Record<CabToastTone, string> = {
+  success: "border-l-[3px] border-l-[color:var(--cab-success)]",
+  warning: "border-l-[3px] border-l-[color:var(--cab-warning)]",
+  error: "border-l-[3px] border-l-[color:var(--cab-danger)]",
+  info: "border-l-[3px] border-l-[color:var(--cab-info)]",
 };
 
 const TONE_ICON_WRAP: Record<CabToastTone, string> = {
-  success: "bg-[color:color-mix(in_srgb,var(--cab-success)_18%,transparent)] text-[color:var(--cab-success)]",
-  warning: "bg-[color:color-mix(in_srgb,var(--cab-warning)_20%,transparent)] text-[color:var(--cab-warning)]",
-  error: "bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,transparent)] text-[color:var(--cab-danger)]",
-  info: "bg-[color:color-mix(in_srgb,var(--cab-info)_18%,transparent)] text-[color:var(--cab-info)]",
+  success: "text-[color:var(--cab-success)]",
+  warning: "text-[color:var(--cab-warning)]",
+  error: "text-[color:var(--cab-danger)]",
+  info: "text-[color:var(--cab-info)]",
 };
 
 function CabToastToneIcon({ tone }: { tone: CabToastTone }) {
@@ -106,6 +106,49 @@ export function clearGestionaleToasts() {
 
 const TOAST_EXIT_MS = 220;
 
+function CabToastItem({
+  toast,
+  exiting,
+  onDismiss,
+}: {
+  toast: ToastItem;
+  exiting: boolean;
+  onDismiss: (id: string) => void;
+}) {
+  const swipeEnvEnabled = useToastSwipeEnabled();
+  const { itemRef, itemProps, itemStyle, itemClassName } = useToastSwipeDismiss({
+    onDismiss: () => onDismiss(toast.id),
+    enabled: swipeEnvEnabled && !exiting,
+  });
+
+  return (
+    <div className={`cab-toast-slot ${exiting ? "cab-toast-slot--out" : ""}`}>
+      <div
+        ref={itemRef}
+        role={toast.tone === "error" ? "alert" : "status"}
+        className={`cab-toast-item ${dsToastItem} ${TONE_ACCENT[toast.tone]} ${itemClassName ?? ""}`}
+        style={itemStyle}
+        {...itemProps}
+      >
+        <span className={`${dsToastIconWrap} ${TONE_ICON_WRAP[toast.tone]}`} aria-hidden>
+          <CabToastToneIcon tone={toast.tone} />
+        </span>
+        <p className={dsToastMessage}>{toast.message}</p>
+        <button
+          type="button"
+          className={`${dsToastDismiss} ${dsFocus}`}
+          onClick={() => onDismiss(toast.id)}
+          aria-label="Chiudi notifica"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CabToastViewport({
   toasts,
   exitingIds,
@@ -122,35 +165,14 @@ function CabToastViewport({
       aria-live="polite"
       aria-relevant="additions text"
     >
-      {toasts.map((t) => {
-        const exiting = exitingIds.has(t.id);
-        return (
-          <div
-            key={t.id}
-            className={`cab-toast-slot ${exiting ? "cab-toast-slot--out" : ""}`}
-          >
-            <div
-              role={t.tone === "error" ? "alert" : "status"}
-              className={`cab-toast-item ${dsToastItem} ${TONE_SURFACE[t.tone]}`}
-            >
-              <span className={`${dsToastIconWrap} ${TONE_ICON_WRAP[t.tone]}`} aria-hidden>
-                <CabToastToneIcon tone={t.tone} />
-              </span>
-              <p className={dsToastMessage}>{t.message}</p>
-              <button
-                type="button"
-                className={`${dsToastDismiss} ${dsFocus}`}
-                onClick={() => onDismiss(t.id)}
-                aria-label="Chiudi notifica"
-              >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        );
-      })}
+      {toasts.map((t) => (
+        <CabToastItem
+          key={t.id}
+          toast={t}
+          exiting={exitingIds.has(t.id)}
+          onDismiss={onDismiss}
+        />
+      ))}
     </div>
   );
 }

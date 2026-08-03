@@ -17,7 +17,6 @@ export {
   pageActionCreateItem,
   pageActionFiltersItem,
   pageActionLogItem,
-  pageActionRefreshItem,
   pageActionUndoItem,
   clickPageActionHiddenTrigger,
 } from "@/components/ui/page-action-menu/page-action-menu-adapters";

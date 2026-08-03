@@ -45,7 +45,9 @@ export function PreventivoRiepilogoNoteSection({
             label={`${PREVENTIVO_SMALTIMENTO_DESCRIZIONE} (${PREVENTIVO_SMALTIMENTO_PERCENT}% netto)`}
             value={fmtPreventivoEuro(totaleSmaltimento)}
           />
-          <PreventivoEditorRiepilogoRow label="Totale netto" value={fmtPreventivoEuro(netto)} tone="subtotal" />
+        </div>
+        <PreventivoEditorTotalBar label="Totale netto" value={fmtPreventivoEuro(netto)} />
+        <div className={preventivoEditorPanelClass}>
           <PreventivoEditorRiepilogoRow
             label={`IVA (${PDF_PREVENTIVO_IVA_PERCENT}%)`}
             value={fmtPreventivoEuro(importoIva)}

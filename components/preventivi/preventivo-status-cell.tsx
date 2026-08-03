@@ -7,17 +7,7 @@ import {
   preventivoStatoLabel,
   preventivoStatoPillStyle,
 } from "@/lib/preventivi/preventivo-status-ui";
-import { preventivoStatoTransitionTargets } from "@/lib/preventivi/preventivo-transitions";
 import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
-
-function editorItemsForStato(current: PreventivoStato) {
-  const targets = preventivoStatoTransitionTargets(current);
-  if (targets.length === 0) {
-    return PREVENTIVO_STATO_EDITOR_ITEMS.filter((item) => item.value === current);
-  }
-  const allowed = new Set<PreventivoStato>([current, ...targets]);
-  return PREVENTIVO_STATO_EDITOR_ITEMS.filter((item) => allowed.has(item.value));
-}
 
 export function PreventivoStatusCell({
   record,
@@ -31,7 +21,7 @@ export function PreventivoStatusCell({
   onStatusChange: (record: PreventivoRecord, status: PreventivoStato) => void;
 }) {
   const stato = record.stato;
-  const options = editorItemsForStato(stato).map((item) => ({
+  const options = PREVENTIVO_STATO_EDITOR_ITEMS.map((item) => ({
     ...item,
     pillStyle: preventivoStatoPillStyle(item.value),
   }));

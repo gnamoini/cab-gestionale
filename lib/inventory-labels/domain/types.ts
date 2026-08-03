@@ -138,7 +138,7 @@ export type InventoryQrTokenRow = {
   superseded_by: string | null;
 };
 
-export const GENERATOR_VERSION = "1.5.0";
+export const GENERATOR_VERSION = "1.5.1";
 
 /** Default generazione etichette — opt-in via checkbox/API. */
 export const DEFAULT_INCLUDE_BARCODE = false;

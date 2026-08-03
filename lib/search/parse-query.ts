@@ -41,7 +41,7 @@ function parseFieldFilters(segment: string): { fieldFilters: FieldFilter[]; free
  * - `cliente:mottola` → field filter (stub, ignored by match until wired)
  */
 export function parseSearchQuery(raw: string): ParsedSearchQuery {
-  const trimmed = raw.trim();
+  const trimmed = raw.trim().replace(/\s*·\s*/g, " ");
   if (!trimmed) {
     return { raw: "", mode: "tokens", tokens: [], fieldFilters: [] };
   }

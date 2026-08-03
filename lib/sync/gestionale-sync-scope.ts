@@ -32,11 +32,37 @@ export type GestionaleSyncScopeRegistration = {
 };
 
 const activeScopes = new Map<string, GestionaleSyncScopeRegistration>();
+const scopeListeners = new Set<() => void>();
+let scopeGeneration = 0;
+
+function notifyScopeListeners(): void {
+  scopeGeneration += 1;
+  for (const fn of scopeListeners) {
+    try {
+      fn();
+    } catch (e) {
+      console.warn("[gestionale-sync-scope] listener error", e);
+    }
+  }
+}
+
+export function getGestionaleSyncScopeGeneration(): number {
+  return scopeGeneration;
+}
+
+export function subscribeGestionaleSyncScopes(fn: () => void): () => void {
+  scopeListeners.add(fn);
+  return () => {
+    scopeListeners.delete(fn);
+  };
+}
 
 export function registerGestionaleSyncScope(reg: GestionaleSyncScopeRegistration): () => void {
   activeScopes.set(reg.scopeId, reg);
+  notifyScopeListeners();
   return () => {
     activeScopes.delete(reg.scopeId);
+    notifyScopeListeners();
   };
 }
 
@@ -46,6 +72,8 @@ export function getActiveSyncContexts(): readonly GestionaleSyncScopeRegistratio
 
 export function clearGestionaleSyncScopesForTests(): void {
   activeScopes.clear();
+  scopeGeneration = 0;
+  scopeListeners.clear();
 }
 
 /** Mappa tabella operativa → dominio primario (fallback se scope assente). */
