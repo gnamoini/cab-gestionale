@@ -19,14 +19,15 @@ for (const entry of NOTIFICATION_EVENT_CATALOG) {
   assert.ok(pageKeys.has(entry.pageKey), `invalid pageKey ${entry.pageKey} for ${entry.notificationEventId}`);
   assert.ok(["info", "warning", "critical"].includes(entry.severity));
   assert.ok(["optional", "mandatory"].includes(entry.notificationMode));
-  assert.equal(typeof entry.excludeActorDefault, "boolean");
+  assert.equal(typeof entry.notifyAuthor, "boolean");
   assert.equal(typeof entry.defaultEnabled, "boolean");
 }
 
 const ids = NOTIFICATION_EVENT_CATALOG.map((e) => e.notificationEventId);
 assert.equal(new Set(ids).size, ids.length, "notificationEventId must be unique");
 
-assert.equal(getNotificationRegistryEntry("lavorazioni.created")?.domainEvent, "work_order.created");
+assert.equal(getNotificationRegistryEntry("lavorazioni.created")?.notifyAuthor, false);
+assert.equal(getNotificationRegistryEntry("lavorazioni_clienti.ingresso")?.notifyAuthor, true);
 assert.equal(getNotificationEventDefinition("client_portal_ingresso")?.recipients.cliente, true);
 assert.equal(getNotificationEventDefinition("lavorazione_created")?.notificationEventId, "lavorazioni.created");
 assert.equal(getNotificationEventDefinition("magazzino_sotto_scorta")?.severity, "warning");

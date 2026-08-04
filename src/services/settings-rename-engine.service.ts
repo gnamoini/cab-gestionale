@@ -28,6 +28,10 @@ function planToEntry(plan: RenamePlan): SettingsRenameEntry {
   return { kind: plan.kind, from: plan.oldLabel, to: plan.newLabel };
 }
 
+function renameErrorMessage(message: string, correlationId: string): string {
+  return `${message} [correlation=${correlationId}]`;
+}
+
 export const settingsRenameEngineService = {
   buildRenamePlan,
 
@@ -65,10 +69,17 @@ export const settingsRenameEngineService = {
     const started = Date.now();
     try {
       const previewRes = await this.previewRename(input.plan, { existingLabels: input.existingLabels });
-      if (!previewRes.success || !previewRes.data) return err(previewRes.error ?? "Preview fallita");
+      if (!previewRes.success || !previewRes.data) {
+        return err(renameErrorMessage(previewRes.error ?? "Preview fallita", input.plan.correlationId));
+      }
       const { impact, validation } = previewRes.data;
       if (validation.status === "blocked") {
-        return err(validation.checks.map((c: { message?: string }) => c.message).filter(Boolean).join(" ") || "Conflitto rename");
+        return err(
+          renameErrorMessage(
+            validation.checks.map((c: { message?: string }) => c.message).filter(Boolean).join(" ") || "Conflitto rename",
+            input.plan.correlationId,
+          ),
+        );
       }
 
       const jobRes = await settingsRenameJobService.createJob({
@@ -129,13 +140,14 @@ export const settingsRenameEngineService = {
 
       const propRes = await settingsRenamePropagationService.propagateRenames([planToEntry(input.plan)]);
       if (!propRes.success) {
+        const failMessage = renameErrorMessage(propRes.error ?? "Propagazione fallita", input.plan.correlationId);
         if (jobId) {
           await settingsRenameJobService.updateJob(jobId, {
             status: "failed",
-            error_message: propRes.error ?? "Propagazione fallita",
+            error_message: failMessage,
           });
         }
-        return err(propRes.error ?? "Propagazione fallita");
+        return err(failMessage);
       }
 
       const recordsUpdated = (propRes.data ?? []).reduce((s, r) => s + r.updated, 0);

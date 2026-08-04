@@ -431,11 +431,39 @@ export function GestionaleRealtimeBridge() {
       },
     });
 
+    const onResume = () => {
+      if (cancelled) return;
+      reconnectExhausted = false;
+      reconnectAttempts = 0;
+      if (transport.getMode() === "polling" || !rtConnectedRef.current) {
+        void connectRealtime();
+      }
+    };
+
+    const onVisibilityResume = () => {
+      if (document.visibilityState === "visible") onResume();
+    };
+
+    const onOnline = () => onResume();
+
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibilityResume);
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", onOnline);
+    }
+
     void connectRealtime();
 
     return () => {
       cancelled = true;
       rtConnectedRef.current = false;
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibilityResume);
+      }
+      if (typeof window !== "undefined") {
+        window.removeEventListener("online", onOnline);
+      }
       if (debounceTimer) clearTimeout(debounceTimer);
       if (remoteSettingsNotifyTimer) clearTimeout(remoteSettingsNotifyTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);

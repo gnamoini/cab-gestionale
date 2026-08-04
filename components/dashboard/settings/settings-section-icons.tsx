@@ -186,6 +186,15 @@ function IconEconomici(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+function IconComunicazioni(props: SVGProps<SVGSVGElement>) {
+  return (
+    <SettingsSvgIcon {...props}>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="M22 7l-10 7L2 7" />
+    </SettingsSvgIcon>
+  );
+}
+
 export type SettingsSectionIconComponent = (props: SVGProps<SVGSVGElement>) => ReactNode;
 
 export const SETTINGS_SECTION_ICONS: Record<SistemaSectionId, SettingsSectionIconComponent> = {
@@ -210,6 +219,7 @@ export const SETTINGS_SECTION_ICONS: Record<SistemaSectionId, SettingsSectionIco
   "tel-marca": IconAttMarca,
   "tel-modello": IconAttModello,
   "sys-officina-profilo": IconNavMezzi,
+  "sys-comunicazioni": IconComunicazioni,
   "sys-economici": IconEconomici,
   "sys-tkb-kb": IconEconomici,
 };

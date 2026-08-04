@@ -204,6 +204,8 @@ export async function maybePublishTagliandoDueOnInterventoCreateServer(
       ts: new Date().toISOString(),
     });
   } catch (e) {
-    console.warn("[tagliando-due] server publish failed:", e);
+    const message = e instanceof Error ? e.message : "tagliando_due_dispatch_failed";
+    console.error("[tagliando-due] server publish failed:", message);
+    throw e;
   }
 }

@@ -66,8 +66,8 @@ function formatMonthLabel(weekStart: string): string {
   return d.toLocaleDateString("it-IT", { month: "short" });
 }
 
-function formatPointTooltip(weekStart: string, score: number): string {
-  return `${formatWeekLabel(weekStart)} · ${score}/100`;
+function formatPointTooltip(weekEnd: string, score: number): string {
+  return `${formatWeekLabel(weekEnd)} · ${score}/100`;
 }
 
 function toneGlowFilter(color: string, strength = 0.55): string {
@@ -224,8 +224,18 @@ function HealthScoreTrendChartSvg({
   const plotW = viewWidth - pads.left - pads.right;
   const plotH = viewHeight - pads.top - pads.bottom;
 
-  const coords = plotPoints.map((p, i) => {
-    const x = pads.left + (plotPoints.length <= 1 ? plotW / 2 : (i / (plotPoints.length - 1)) * plotW);
+  const weekEndTimes = plotPoints.map((p) => new Date(p.weekEnd).getTime()).filter((t) => !Number.isNaN(t));
+  const minWeekEndMs = weekEndTimes.length ? Math.min(...weekEndTimes) : 0;
+  const maxWeekEndMs = weekEndTimes.length ? Math.max(...weekEndTimes) : 1;
+  const weekEndSpan = maxWeekEndMs - minWeekEndMs;
+
+  const coords = plotPoints.map((p) => {
+    const weekEndMs = new Date(p.weekEnd).getTime();
+    const ratio =
+      weekEndSpan <= 0 || Number.isNaN(weekEndMs)
+        ? 0.5
+        : (weekEndMs - minWeekEndMs) / weekEndSpan;
+    const x = pads.left + ratio * plotW;
     const y = pads.top + plotH - (p.score / 100) * plotH;
     return { ...p, x, y };
   });
@@ -261,7 +271,7 @@ function HealthScoreTrendChartSvg({
       ? (coords.findIndex((c) => c.index === hoverIndex) === coords.length - 1 ? 3.25 : 2.75) + 2.5
       : 0;
   const tooltipContent =
-    hoveredCoord != null ? formatPointTooltip(hoveredCoord.weekStart, hoveredCoord.score) : "";
+    hoveredCoord != null ? formatPointTooltip(hoveredCoord.weekEnd, hoveredCoord.score) : "";
 
   const monthLabelY = viewHeight - 6;
 
@@ -396,7 +406,7 @@ function HealthScoreTrendChartSvg({
             className="cursor-pointer touch-manipulation outline-none"
             role="button"
             tabIndex={0}
-            aria-label={`Settimana ${formatWeekLabel(p.weekStart)}: ${p.score} ${p.label}`}
+            aria-label={`Settimana fino a ${formatWeekLabel(p.weekEnd)}: ${p.score} ${p.label}`}
             onPointerEnter={() => onHoverIndex(p.index)}
             onFocus={() => onHoverIndex(p.index)}
             onBlur={() => onHoverIndex(null)}
@@ -471,7 +481,7 @@ export function HealthScoreWeeklyTrendChart({
           <span style={{ color: TONE_COLOR[hovered.tone] }}>{hovered.score}</span>
           <span className="text-[color:var(--cab-text-muted)]">/100</span>
           <span className="mx-1 text-[color:var(--cab-text-muted)]">·</span>
-          {formatWeekLabel(hovered.weekStart)}
+          {formatWeekLabel(hovered.weekEnd)}
         </p>
       ) : latest ? (
         <p className="shrink-0 text-xs font-semibold tabular-nums">

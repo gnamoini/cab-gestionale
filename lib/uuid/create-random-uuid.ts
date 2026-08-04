@@ -1,4 +1,7 @@
-/** UUID v4 — browser-safe (no import da node:crypto: Turbopack polyfill rompe randomUUID). */
+/**
+ * UUID v4 — browser-safe SSOT (no import da node:crypto: Turbopack polyfill rompe randomUUID).
+ * Usato da rename-plan e moduli client; node:crypto nel bundle browser → e6.randomUUID is not a function.
+ */
 export function createRandomUuid(): string {
   const c = typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
   if (c && typeof c.randomUUID === "function") {

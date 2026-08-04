@@ -80,6 +80,8 @@ export async function fanoutEntityNotification(
         actorId: input.actorId ?? undefined,
         dispatchIdempotencyKey,
         buildCommand: (recipientId) => buildCommand(recipientId)!,
+        traceId: input.traceId,
+        entityId: input.entityId,
       },
       client,
     );

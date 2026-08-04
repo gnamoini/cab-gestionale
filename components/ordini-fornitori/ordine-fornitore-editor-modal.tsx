@@ -19,6 +19,8 @@ import { OrdineFornitoreDestinazioneFields } from "@/components/ordini-fornitori
 import { OrdineFornitoreFornitoreFields } from "@/components/ordini-fornitori/ordine-fornitore-fornitore-fields";
 import { OrdineFornitoreLogisticaFields } from "@/components/ordini-fornitori/ordine-fornitore-logistica-fields";
 import { OrdineFornitoreStoricoSection } from "@/components/ordini-fornitori/ordine-fornitore-storico-section";
+import { OrdineFornitoreSendEmailModal } from "@/components/ordini-fornitori/ordine-fornitore-send-email-modal";
+import { CommunicationTestModeBadge } from "@/components/communications/communication-test-mode-badge";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
@@ -203,6 +205,7 @@ export function OrdineFornitoreEditorModal({
   onDelete?: () => void;
 }) {
   const gestToast = useGestionaleToast();
+  const [sendEmailOpen, setSendEmailOpen] = useState(false);
   const submitLock = useSubmitLock();
   const settingsQ = useSharedAppSettingsQuery();
   const sedeOperativaFields = useMemo(
@@ -516,6 +519,7 @@ export function OrdineFornitoreEditorModal({
       modalHeight="standard"
       footer={
         <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          <CommunicationTestModeBadge />
           <button
             type="button"
             className={preventivoEditorFooterBtnNeutral}
@@ -523,6 +527,11 @@ export function OrdineFornitoreEditorModal({
           >
             Anteprima
           </button>
+          {!isNew && canWrite ? (
+            <button type="button" className={preventivoEditorFooterBtnNeutral} onClick={() => setSendEmailOpen(true)}>
+              Invia ordine
+            </button>
+          ) : null}
           {viewMode ? (
             <>
               {!isNew && onDelete ? (
@@ -998,6 +1007,13 @@ export function OrdineFornitoreEditorModal({
             })();
           }}
         />
+        {!isNew ? (
+          <OrdineFornitoreSendEmailModal
+            ordineId={record.id}
+            open={sendEmailOpen}
+            onClose={() => setSendEmailOpen(false)}
+          />
+        ) : null}
       </div>
     </LavorazioniModalShell>
   );

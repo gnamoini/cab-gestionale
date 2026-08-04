@@ -2,6 +2,7 @@ import type { LabelPayload, LabelTemplateDefinition, LabelTemplateElement } from
 import {
   formatLabelCodiceCliente,
   formatLabelCodiceLine,
+  formatLabelMarcaCombinedLine,
   formatLabelMarcaLine,
   formatLabelMarcaSecondariaLine,
   shouldRenderMarcaSecondaria,
@@ -153,6 +154,38 @@ function supplierInkTopMm(blocks: StackBlock[], anchorBottomMm: number, dpi: num
     }
   }
   return top;
+}
+
+function buildA4TopBlocks(
+  payload: LabelPayload,
+): Array<{ field: keyof LabelPayload; text: string; font?: "sans" | "mono" }> {
+  const dualMarca = shouldRenderMarcaSecondaria(payload);
+  const marcaLine = dualMarca
+    ? formatLabelMarcaCombinedLine(payload.marca, payload.marcaSecondaria)
+    : formatLabelMarcaLine(payload.marca);
+  const codiceLine = dualMarca
+    ? formatLabelCodiceCliente(fieldValue(payload, "codice"))
+    : formatLabelCodiceLine(fieldValue(payload, "codice"), payload.marca);
+  const codiceSecondarioLine = dualMarca
+    ? formatLabelCodiceCliente(fieldValue(payload, "codiceSecondario"))
+    : formatLabelCodiceLine(fieldValue(payload, "codiceSecondario"), payload.marcaSecondaria);
+
+  const blocks: Array<{ field: keyof LabelPayload; text: string; font?: "sans" | "mono" }> = [];
+  if (marcaLine) blocks.push({ field: "marca", text: marcaLine });
+  if (fieldValue(payload, "descrizione")) {
+    blocks.push({ field: "descrizione", text: labelDisplayCaps(fieldValue(payload, "descrizione")) });
+  }
+  if (codiceLine) blocks.push({ field: "codice", text: codiceLine, font: "mono" });
+  if (!dualMarca) {
+    const marcaSecondariaLine = formatLabelMarcaSecondariaLine(payload.marcaSecondaria);
+    if (marcaSecondariaLine) {
+      blocks.push({ field: "marcaSecondaria", text: marcaSecondariaLine });
+    }
+  }
+  if (codiceSecondarioLine) {
+    blocks.push({ field: "codiceSecondario", text: codiceSecondarioLine, font: "mono" });
+  }
+  return blocks;
 }
 
 function buildTopBlocks(payload: LabelPayload): Array<{ field: keyof LabelPayload; text: string; font?: "sans" | "mono" }> {
@@ -359,7 +392,7 @@ function resolveA4PaginaInteraTextLayout(
   const rowStepMm = lineMetrics(primaryPt, dpi).lineStepMm;
   const zoneH = Math.max(lineMetrics(primaryPt, dpi).lineStepMm, textBottom - textTop);
   const typographyBold = template.typography?.weight === "bold";
-  const topSpec = buildTopBlocks(payload);
+  const topSpec = buildA4TopBlocks(payload);
 
   const wrappedBlocks: StackBlock[] = [];
   for (let i = 0; i < topSpec.length; i++) {

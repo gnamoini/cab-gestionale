@@ -23,7 +23,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Payload non valido" }, { status: 400 });
   }
 
-  const client = await createSupabaseServerUserClient();
-  await maybePublishTagliandoDueOnInterventoCreateServer(client, body);
-  return NextResponse.json({ ok: true });
+  try {
+    const client = await createSupabaseServerUserClient();
+    await maybePublishTagliandoDueOnInterventoCreateServer(client, body);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "tagliando_due_dispatch_failed";
+    console.error("[tagliando-due] dispatch failed:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

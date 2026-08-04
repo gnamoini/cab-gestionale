@@ -3,6 +3,16 @@
 import type { AdminDashboardNotification } from "@/lib/notifications/admin-dashboard-notifications";
 import type { DispatchNotificationBody } from "@/lib/notifications/preferences/notification-preferences-api";
 
+export class NotificationDispatchApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "NotificationDispatchApiError";
+    this.status = status;
+  }
+}
+
 export async function dispatchNotificationViaApi(input: {
   notificationEventId: string;
   dispatchIdempotencyKey: string;
@@ -26,8 +36,11 @@ export async function dispatchNotificationViaApi(input: {
   });
 
   if (!res.ok) {
-    console.warn("[notifications] dispatch API failed:", res.status);
-    return { created: 0, skipped: 0, duplicate: false };
+    const detail = await res.text().catch(() => "");
+    throw new NotificationDispatchApiError(
+      res.status,
+      `[notifications] dispatch API failed (${res.status}): ${detail || res.statusText}`,
+    );
   }
 
   return (await res.json()) as { created: number; skipped: number; duplicate: boolean };

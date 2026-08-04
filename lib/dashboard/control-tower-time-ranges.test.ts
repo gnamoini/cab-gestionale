@@ -72,9 +72,9 @@ assert.equal(ymd(weekEndWed), "2026-06-07", "mer in week ending dom");
 const weeklyAnchors = getControlTowerWeeklyHealthScoreAnchors(WED, 26);
 assert.equal(weeklyAnchors.length, 26);
 assert.equal(ymd(weeklyAnchors[0]!.weekStart), "2025-12-08", "oldest week start ~26w back");
-assert.equal(ymd(weeklyAnchors[25]!.weekEnd), "2026-06-03", "mid-week newest anchor clamps to today");
-assert.equal(ymd(weeklyAnchors[25]!.anchor), "2026-06-03");
-assert.equal(ymd(weeklyAnchors[24]!.weekEnd), "2026-05-31", "prior week still ends on Sunday");
+assert.equal(ymd(weeklyAnchors[25]!.weekEnd), "2026-06-07", "mid-week newest weekEnd stays on Sunday");
+assert.equal(ymd(weeklyAnchors[25]!.anchor), "2026-06-03", "score anchor clamps to today mid-week");
+assert.equal(ymd(weeklyAnchors[24]!.weekEnd), "2026-05-31", "prior week ends on Sunday");
 
 const SUN = new Date(2026, 5, 7, 12, 0, 0, 0);
 const weeklySunday = getControlTowerWeeklyHealthScoreAnchors(SUN, 2);

@@ -7,6 +7,7 @@ import {
   GestionaleModalFooterCancelButton,
   GestionaleModalFooterSaveButton,
 } from "@/components/design-system";
+import { ClienteComunicazioniPanel } from "@/components/dashboard/settings/cliente-comunicazioni-panel";
 import { ClienteAnagraficaPanoramica } from "@/components/dashboard/settings/cliente-anagrafica-panoramica";
 import { ClienteContattiEditor } from "@/components/dashboard/settings/cliente-contatti-editor";
 import { ClienteDatiFiscaliFields, ClienteSediFields } from "@/components/dashboard/settings/cliente-sedi-fields";
@@ -18,13 +19,14 @@ import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { useClienteAnagrafica, useClienteAnagraficaSave } from "@/src/hooks/gestionale/use-cliente-anagrafica";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
-type TabId = "panoramica" | "fiscali" | "sedi" | "contatti";
+type TabId = "panoramica" | "fiscali" | "sedi" | "contatti" | "comunicazioni";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "panoramica", label: "Panoramica" },
   { id: "fiscali", label: "Dati fiscali" },
   { id: "sedi", label: "Sedi" },
   { id: "contatti", label: "Contatti" },
+  { id: "comunicazioni", label: "Comunicazioni" },
 ];
 
 function modelsEqual(a: ClienteAnagrafica, b: ClienteAnagrafica): boolean {
@@ -125,9 +127,11 @@ export function ClienteAnagraficaHubModal({
                 <ClienteDatiFiscaliFields model={draft} onChange={setDraft} />
               ) : tab === "sedi" ? (
                 <ClienteSediFields model={draft} onChange={setDraft} />
-              ) : (
+              ) : tab === "contatti" ? (
                 <ClienteContattiEditor model={draft} onChange={setDraft} />
-              )}
+              ) : tab === "comunicazioni" ? (
+                <ClienteComunicazioniPanel clienteId={draft.id} />
+              ) : null}
             </div>
           </GestionaleModalScrollBody>
         </>

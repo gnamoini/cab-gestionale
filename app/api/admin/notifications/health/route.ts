@@ -81,6 +81,17 @@ export async function GET() {
     .order("created_at", { ascending: false })
     .limit(5);
 
+  const { data: recentPipelineTrace } = await client
+    .from("notification_pipeline_trace")
+    .select("trace_id, stage, notification_event_id, recipient_count, notifications_created, error, created_at")
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const { count: pipelineTrace24h } = await client
+    .from("notification_pipeline_trace")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", new Date(now - 24 * 60 * 60 * 1000).toISOString());
+
   return NextResponse.json({
     ok: true,
     queue: {
@@ -93,6 +104,10 @@ export async function GET() {
       failed: outboxFailed ?? 0,
     },
     workerDiagnostics: recentWorkerDiag ?? [],
+    pipelineTrace: {
+      recent: recentPipelineTrace ?? [],
+      last24h: pipelineTrace24h ?? 0,
+    },
     devices: { activeSubscriptions: activeSubs ?? 0 },
     delivery24h: {
       sampleSize: rows.length,

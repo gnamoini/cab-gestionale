@@ -6,7 +6,7 @@ import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import type { InboxCursor, InboxNotificationRow } from "@/lib/notifications/notification-types";
 import { isClientInboxEligible } from "@/lib/notifications/client-inbox-eligible";
 import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
-import { RealtimeInboxCoordinator } from "@/lib/notifications/realtime-inbox-coordinator";
+import { RealtimeInboxCoordinator, type InboxCoordinatorHealth } from "@/lib/notifications/realtime-inbox-coordinator";
 import { notificationsV2ReadsDb } from "@/lib/notifications/notifications-v2-flag";
 import { notificationsEntry } from "@/lib/domain/notifications-entry";
 import { QK } from "@/src/lib/react-query/invalidate-related";
@@ -30,6 +30,12 @@ export function useNotificationCenter(drawerOpen = false) {
   const { readsDb, mode } = useNotificationsV2Mode();
   const queryClient = useQueryClient();
   const coordinatorRef = useRef<RealtimeInboxCoordinator | null>(null);
+  const [channelStatus, setChannelStatus] = useState<"live" | "degraded" | "off">("off");
+  const [coordinatorHealth, setCoordinatorHealth] = useState<{
+    heartbeatTimestamp: number | null;
+    lastEventId: string | null;
+    inboxVersion: number;
+  }>({ heartbeatTimestamp: null, lastEventId: null, inboxVersion: 0 });
 
   const rbacCtx = snapshot?.rbacContext;
   const eligibleUser = snapshot?.role ? { ruolo: snapshot.role } : user;
@@ -159,7 +165,19 @@ export function useNotificationCenter(drawerOpen = false) {
       coordinatorRef.current = null;
       return;
     }
-    const coord = new RealtimeInboxCoordinator({ userId, queryClient, drawerOpen });
+    const coord = new RealtimeInboxCoordinator({
+      userId,
+      queryClient,
+      drawerOpen,
+      onHealthChange: (health: InboxCoordinatorHealth) => {
+        setChannelStatus(health.channelStatus);
+        setCoordinatorHealth({
+          heartbeatTimestamp: health.heartbeatTimestamp,
+          lastEventId: health.lastEventId,
+          inboxVersion: health.inboxVersion,
+        });
+      },
+    });
     coordinatorRef.current = coord;
     void coord.start();
     return () => {
@@ -185,7 +203,8 @@ export function useNotificationCenter(drawerOpen = false) {
     loadMore,
     hasMore: Boolean(inboxQuery.hasNextPage),
     isLoadingMore: inboxQuery.isFetchingNextPage,
-    channelStatus: coordinatorRef.current?.channelStatus ?? "off",
+    channelStatus,
+    coordinatorHealth,
   };
 }
 

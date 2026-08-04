@@ -108,12 +108,12 @@ export function getControlTowerWeeklyHealthScoreAnchors(
 
   for (let i = safeWeeks - 1; i >= 0; i -= 1) {
     const weekEnd = endOfLocalDay(addLocalDays(currentWeekEnd, -7 * i));
-    const anchor = weekEnd.getTime() > todayEnd.getTime() ? todayEnd : weekEnd;
-    const weekStart = startOfLocalWeekMonday(anchor);
+    const scoreAnchor = weekEnd.getTime() > todayEnd.getTime() ? todayEnd : weekEnd;
+    const weekStart = startOfLocalWeekMonday(weekEnd);
     points.push({
-      anchor,
+      anchor: scoreAnchor,
       weekStart,
-      weekEnd: anchor,
+      weekEnd,
       weekLabel: ymdFromDate(weekStart),
     });
   }
@@ -129,7 +129,7 @@ export function getControlTowerHealthScoreHistoryFetchRange(
   const anchors = getControlTowerWeeklyHealthScoreAnchors(date, weeks);
   const oldest = anchors[0]?.anchor ?? date;
   const oldestPrev = getControlTowerPrevious30DaysRange(oldest);
-  const newestEnd = anchors[anchors.length - 1]?.anchor ?? date;
+  const newestEnd = anchors[anchors.length - 1]?.weekEnd ?? date;
   return { start: oldestPrev.start, end: newestEnd };
 }
 

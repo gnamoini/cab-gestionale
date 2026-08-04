@@ -1,11 +1,14 @@
 import { buildMezziTagliandiHubHref } from "@/lib/navigation/mezzi-tagliandi-links";
 
 import { createClient } from "@supabase/supabase-js";
-import { createNotificationRpc } from "@/lib/notifications/create-notification-rpc";
 import { readSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
 import { readSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { formatDueReason } from "@/lib/maintenance-plans/maintenance-due-engine";
 import type { ForecastExplainability } from "@/lib/maintenance-plans/forecast/trigger-group-forecast";
+import { entityDispatchIdempotencyKey } from "@/lib/notifications/dispatch/entity-idempotency";
+import { dispatchNotificationEvent } from "@/lib/notifications/dispatch/notification-dispatch-service.server";
+import { resolveSingleCompanyId } from "@/lib/notifications/dispatch/resolve-company-id.server";
+import { createNotificationTraceId } from "@/lib/notifications/observability/notification-trace";
 
 export function addDaysIso(ymd: string, days: number): string {
   const d = new Date(`${ymd}T12:00:00`);
@@ -20,9 +23,14 @@ export async function runMaintenanceForecastNotify(): Promise<{
   const env = readSupabasePublicEnv();
   const url = env?.url;
   const key = readSupabaseServiceRoleKey();
-  if (!url || !key) return { scanned: 0, notified: 0 };
+  if (!url || !key) {
+    throw new Error("[maintenance-forecast] missing Supabase env");
+  }
 
   const supabase = createClient(url, key, { auth: { persistSession: false } });
+  const companyId = await resolveSingleCompanyId(supabase);
+  if (!companyId) return { scanned: 0, notified: 0 };
+
   const today = new Date().toISOString().slice(0, 10);
   const in7 = addDaysIso(today, 7);
   const dateBucket = today;
@@ -35,7 +43,8 @@ export async function runMaintenanceForecastNotify(): Promise<{
     .not("next_date_estimated", "is", null)
     .lte("next_date_estimated", in7)
     .gte("next_date_estimated", today);
-  if (error || !forecasts?.length) return { scanned: forecasts?.length ?? 0, notified: 0 };
+  if (error) throw new Error(error.message);
+  if (!forecasts?.length) return { scanned: 0, notified: 0 };
 
   let notified = 0;
   for (const f of forecasts) {
@@ -68,19 +77,46 @@ export async function runMaintenanceForecastNotify(): Promise<{
     });
     const body = dueBody || `Scadenza stimata ${f.next_date_estimated}`;
 
-    const dedupKey = `tagliando-forecast:${f.config_id}:${dateBucket}`;
+    const configId = String(f.config_id);
+    const dedupKey = `tagliando-forecast:${configId}:${dateBucket}`;
     const title = `Tagliando previsto: ${presetNome}`;
-
-    const result = await createNotificationRpc(supabase, {
-      type: "tagliando_previsto_7g",
-      title,
-      body,
-      href: buildMezziTagliandiHubHref({ mezzoId: config.mezzo_id as string, hubTab: "tagliandi", highlight: f.config_id }),
-      entity_type: "vehicle_maintenance_config",
-      entity_id: f.config_id,
-      dedup_key: dedupKey,
+    const href = buildMezziTagliandiHubHref({
+      mezzoId: config.mezzo_id as string,
+      hubTab: "tagliandi",
+      highlight: configId,
     });
-    if (result.inserted) notified++;
+
+    const traceId = createNotificationTraceId();
+    const result = await dispatchNotificationEvent(
+      {
+        notificationEventId: "mezzi.tagliando_forecast_7g",
+        companyId,
+        dispatchIdempotencyKey: entityDispatchIdempotencyKey(
+          "mezzi.tagliando_forecast_7g",
+          "vehicle_maintenance_config",
+          configId,
+          dateBucket,
+        ),
+        traceId,
+        entityId: configId,
+        buildCommand: (recipientId) => ({
+          notificationType: "tagliando_previsto_7g",
+          title,
+          body,
+          deepLink: href,
+          entityType: "vehicle_maintenance_config",
+          entityId: configId,
+          dedupKey: `${dedupKey}:u:${recipientId}`,
+          idempotencyKey: `${dedupKey}:recipient:${recipientId}`,
+          translationKey: "notification.tagliando_previsto_7g",
+          translationParams: { presetNome, nextDate: f.next_date_estimated },
+          actorId: "server",
+        }),
+      },
+      supabase,
+    );
+
+    if (result.created > 0) notified += result.created;
   }
 
   return { scanned: forecasts.length, notified };

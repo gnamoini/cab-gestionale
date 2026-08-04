@@ -49,9 +49,15 @@ export const PwaPushOpenBridge = memo(function PwaPushOpenBridge() {
     };
 
     const onMessage = (event: MessageEvent) => {
-      const data = event.data as PwaPushOpenMessage | undefined;
-      if (!data || data.type !== PWA_PUSH_OPEN_MESSAGE_TYPE) return;
-      void handleOpen(data.notificationId ?? null, data.href);
+      const data = event.data as PwaPushOpenMessage | { type?: string; notificationId?: string } | undefined;
+      if (!data || typeof data !== "object") return;
+      if (data.type === "PWA_PUSH_RECEIVED") {
+        runPwaNotificationSync(queryClient);
+        return;
+      }
+      if (data.type !== PWA_PUSH_OPEN_MESSAGE_TYPE) return;
+      const openMsg = data as PwaPushOpenMessage;
+      void handleOpen(openMsg.notificationId ?? null, openMsg.href);
     };
 
     navigator.serviceWorker?.addEventListener("message", onMessage);

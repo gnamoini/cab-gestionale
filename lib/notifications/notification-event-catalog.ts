@@ -32,7 +32,8 @@ export type NotificationEventDefinition = {
   defaultEnabled: boolean;
   userConfigurable: boolean;
   notificationMode: NotificationMode;
-  excludeActorDefault: boolean;
+  /** Se true, l'autore dell'evento riceve la notifica. */
+  notifyAuthor: boolean;
   severity: NotificationSeverity;
 };
 
@@ -56,7 +57,7 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     defaultEnabled: true,
     userConfigurable: true,
     notificationMode: "optional",
-    excludeActorDefault: true,
+    notifyAuthor: false,
     severity: "info",
   },
   {
@@ -77,7 +78,7 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     defaultEnabled: true,
     userConfigurable: true,
     notificationMode: "optional",
-    excludeActorDefault: true,
+    notifyAuthor: false,
     severity: "info",
   },
   {
@@ -98,7 +99,7 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     defaultEnabled: true,
     userConfigurable: true,
     notificationMode: "optional",
-    excludeActorDefault: true,
+    notifyAuthor: false,
     severity: "warning",
   },
   {
@@ -118,7 +119,7 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     defaultEnabled: true,
     userConfigurable: true,
     notificationMode: "optional",
-    excludeActorDefault: true,
+    notifyAuthor: false,
     severity: "critical",
   },
   {
@@ -139,7 +140,7 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     defaultEnabled: true,
     userConfigurable: true,
     notificationMode: "optional",
-    excludeActorDefault: true,
+    notifyAuthor: false,
     severity: "warning",
   },
   {
@@ -160,7 +161,7 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     defaultEnabled: true,
     userConfigurable: true,
     notificationMode: "optional",
-    excludeActorDefault: true,
+    notifyAuthor: false,
     severity: "info",
   },
   {
@@ -181,7 +182,7 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     defaultEnabled: true,
     userConfigurable: true,
     notificationMode: "optional",
-    excludeActorDefault: false,
+    notifyAuthor: true,
     severity: "info",
   },
   {
@@ -202,7 +203,7 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     defaultEnabled: true,
     userConfigurable: true,
     notificationMode: "optional",
-    excludeActorDefault: false,
+    notifyAuthor: true,
     severity: "info",
   },
   {
@@ -222,7 +223,7 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     defaultEnabled: true,
     userConfigurable: false,
     notificationMode: "optional",
-    excludeActorDefault: false,
+    notifyAuthor: true,
     severity: "info",
   },
 ] as const;

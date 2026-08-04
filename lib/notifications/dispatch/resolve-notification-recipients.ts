@@ -1,3 +1,4 @@
+import { resolveCanonicalRole } from "@/lib/rbac";
 import {
   getNotificationRegistryEntry,
   type NotificationEventDefinition,
@@ -28,7 +29,7 @@ function resolveUserPageAccess(
   user: CompanyUserProfile,
   snapshot: CompanyRbacSnapshot,
 ): ResolvedPageAccess {
-  const roleKey = user.role_key ?? "guest";
+  const roleKey = resolveCanonicalRole(user.role_key);
   const seededRoleAccess = mergeRolePageAccessWithSeed(
     roleKey,
     snapshot.rolePageAccessByRole.get(roleKey) ?? {},
@@ -56,13 +57,13 @@ export function resolveNotificationRecipientsFromSnapshot(input: {
   snapshot: CompanyRbacSnapshot;
   entry: NotificationEventDefinition;
   actorId?: string | null;
-  excludeActor?: boolean;
+  notifyAuthor?: boolean;
 }): string[] {
-  const { snapshot, entry, actorId, excludeActor = entry.excludeActorDefault } = input;
+  const { snapshot, entry, actorId, notifyAuthor = entry.notifyAuthor } = input;
   const recipientIds: string[] = [];
 
   for (const user of snapshot.users) {
-    if (excludeActor && actorId && user.id === actorId) continue;
+    if (!notifyAuthor && actorId && user.id === actorId) continue;
 
     const tier = roleKeyToRecipientTier(user.role_key);
     if (!tier || !entry.recipients[tier]) continue;
@@ -79,7 +80,7 @@ export function resolveNotificationRecipientsFromSnapshot(input: {
 export function resolveNotificationRecipientsForEvent(
   snapshot: CompanyRbacSnapshot,
   notificationEventId: string,
-  options?: { actorId?: string | null; excludeActor?: boolean },
+  options?: { actorId?: string | null; notifyAuthor?: boolean },
 ): string[] {
   const entry = getNotificationRegistryEntry(notificationEventId);
   if (!entry) return [];
@@ -87,6 +88,6 @@ export function resolveNotificationRecipientsForEvent(
     snapshot,
     entry,
     actorId: options?.actorId,
-    excludeActor: options?.excludeActor,
+    notifyAuthor: options?.notifyAuthor,
   });
 }

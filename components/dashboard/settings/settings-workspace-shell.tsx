@@ -48,6 +48,7 @@ import {
 } from "@/components/dashboard/settings/settings-workspace-types";
 import { SettingsDipendentiAssenzeSection } from "@/components/dashboard/settings-dipendenti-assenze-section";
 import { SettingsOfficinaProfiloSection } from "@/components/dashboard/settings/settings-officina-profilo-section";
+import { SettingsComunicazioniSection } from "@/components/dashboard/settings/settings-comunicazioni-section";
 import { gestionaleLogDrawerPanelClass } from "@/components/gestionale/gestionale-log-ui";
 import { useSettingsSidebarScrollportHeight } from "@/components/dashboard/settings/use-settings-sidebar-scrollport-height";
 import {
@@ -118,6 +119,7 @@ import { useUndoableConfigurazioneSave } from "@/src/hooks/gestionale/use-undoab
 import { mergeAppSettingsUpsertWithVersions } from "@/lib/domain/settings-entry";
 import { settingsRenameEngineEntry } from "@/lib/domain/settings-rename-engine-entry";
 import { withRenamePropagationTimeout } from "@/lib/settings/rename-engine/propagation-timeout";
+import { runWithCorrelationIdAsync } from "@/lib/observability/runtime-correlation-context";
 import { flattenHierarchyRenameLabels } from "@/lib/settings/settings-rename-labels";
 import type { PropagaImpactSummary } from "@/components/dashboard/settings-rinomina-propaga-dialog";
 import {
@@ -436,32 +438,50 @@ export function SistemaImpostazioniWorkspace({
     let cancelled = false;
     void (async () => {
       const summaries: PropagaImpactSummary[] = [];
-      for (const entry of propagaEntries) {
-        const plan = settingsRenameEngineEntry.buildRenamePlan({
-          kind: entry.kind,
-          oldLabel: entry.from,
-          newLabel: entry.to,
-          entityId: entry.from,
-        });
-        const preview = await settingsRenameEngineEntry.previewRename(plan, {
-          existingLabels: labelsForRenameKind(entry.kind),
-        });
-        if (cancelled) return;
-        if (!preview.success || !preview.data) {
-          summaries.push({ entry, validationBlocked: true });
-          continue;
+      try {
+        for (const entry of propagaEntries) {
+          const plan = settingsRenameEngineEntry.buildRenamePlan({
+            kind: entry.kind,
+            oldLabel: entry.from,
+            newLabel: entry.to,
+            entityId: entry.from,
+          });
+          const preview = await runWithCorrelationIdAsync(plan.correlationId, () =>
+            settingsRenameEngineEntry.previewRename(plan, {
+              existingLabels: labelsForRenameKind(entry.kind),
+            }),
+          );
+          if (cancelled) return;
+          if (!preview.success || !preview.data) {
+            summaries.push({
+              entry,
+              validationBlocked: true,
+              validationWarnings: [preview.error ?? "Anteprima impatto non riuscita"],
+            });
+            continue;
+          }
+          const warnings = preview.data.validation.checks
+            .filter((c) => c.status === "warning")
+            .map((c) => c.message ?? c.name);
+          summaries.push({
+            entry,
+            impact: preview.data.impact,
+            validationBlocked: preview.data.validation.status === "blocked",
+            validationWarnings: warnings,
+          });
         }
-        const warnings = preview.data.validation.checks
-          .filter((c) => c.status === "warning")
-          .map((c) => c.message ?? c.name);
-        summaries.push({
-          entry,
-          impact: preview.data.impact,
-          validationBlocked: preview.data.validation.status === "blocked",
-          validationWarnings: warnings,
-        });
+        if (!cancelled) setPropagaImpacts(summaries);
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : "Anteprima impatto non riuscita";
+        setPropagaImpacts(
+          propagaEntries.map((entry) => ({
+            entry,
+            validationBlocked: true,
+            validationWarnings: [message],
+          })),
+        );
       }
-      if (!cancelled) setPropagaImpacts(summaries);
     })();
     return () => {
       cancelled = true;
@@ -606,13 +626,15 @@ export function SistemaImpostazioniWorkspace({
               newLabel: entry.to,
               entityId: entry.from,
             });
-            await settingsRenameEngineEntry.runRenameJob({
-              plan,
-              userId: user.id,
-              executionMode: "configuration_only",
-              existingLabels: labelsForRenameKind(entry.kind),
-              propagate: false,
-            });
+            await runWithCorrelationIdAsync(plan.correlationId, () =>
+              settingsRenameEngineEntry.runRenameJob({
+                plan,
+                userId: user.id,
+                executionMode: "configuration_only",
+                existingLabels: labelsForRenameKind(entry.kind),
+                propagate: false,
+              }),
+            );
           }
         }
         renameQueueRef.current = [];
@@ -640,14 +662,16 @@ export function SistemaImpostazioniWorkspace({
           newLabel: entry.to,
           entityId: entry.from,
         });
-        const res = await withRenamePropagationTimeout(() =>
-          settingsRenameEngineEntry.runRenameJob({
-            plan,
-            userId: user.id,
-            executionMode: "full",
-            existingLabels: labelsForRenameKind(entry.kind),
-            propagate: true,
-          }),
+        const res = await runWithCorrelationIdAsync(plan.correlationId, () =>
+          withRenamePropagationTimeout(() =>
+            settingsRenameEngineEntry.runRenameJob({
+              plan,
+              userId: user.id,
+              executionMode: "full",
+              existingLabels: labelsForRenameKind(entry.kind),
+              propagate: true,
+            }),
+          ),
         );
         if (!res.success) {
           hadError = true;
@@ -1471,6 +1495,7 @@ export function SistemaImpostazioniWorkspace({
 
             {section === "sys-officina-profilo" ? <SettingsOfficinaProfiloSection /> : null}
 
+            {section === "sys-comunicazioni" ? <SettingsComunicazioniSection /> : null}
 
             {section === "sys-economici" ? (
               <SettingsEconomiciSectionLazy

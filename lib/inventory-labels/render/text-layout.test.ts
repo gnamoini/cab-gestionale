@@ -171,9 +171,14 @@ const a4Placed = resolveLabelTextLayout(a4, {
   codiceAlternativo: "ALT-1",
   fornitoriAlternativi: [{ name: "Forn", code: "ALT-1" }],
 });
+const a4Marca = a4Placed.find((p) => p.field === "marca")!;
 const a4Codice = a4Placed.find((p) => p.field === "codice")!;
-const a4Marca2 = a4Placed.find((p) => p.field === "marcaSecondaria")!;
-assert.ok(a4Marca2.yMm - a4Codice.yMm >= 5.5, "A4: gap ampio tra codice e marca secondaria");
+const a4Codice2 = a4Placed.find((p) => p.field === "codiceSecondario")!;
+assert.equal(a4Marca.lines.join(" "), "BTE/OMB", "A4 doppia marca: marche unite sulla prima riga");
+assert.ok(!a4Placed.some((p) => p.field === "marcaSecondaria"), "A4 doppia marca: nessuna riga marca secondaria");
+assert.equal(a4Codice.lines.join(" "), "XXXX", "A4 doppia marca: codice senza suffisso marca");
+assert.equal(a4Codice2!.lines.join(" "), "YYYY", "A4 doppia marca: codice secondario senza suffisso marca");
+assert.ok(a4Codice2!.yMm > a4Codice.yMm, "A4: codice secondario sotto codice principale");
 for (const p of a4Placed) {
   assert.equal(p.anchor, "middle");
   assert.equal(p.xMm, a4.widthMm / 2);

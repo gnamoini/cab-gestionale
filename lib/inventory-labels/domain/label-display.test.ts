@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   formatLabelCodiceLine,
+  formatLabelMarcaCombinedLine,
   formatLabelMarcaLine,
   formatLabelMarcaSecondariaLine,
   labelDisplayCaps,
@@ -10,6 +11,8 @@ import {
 
 assert.equal(labelDisplayCaps("filtro olio"), "FILTRO OLIO");
 assert.equal(formatLabelMarcaLine("bte", "omb"), "BTE");
+assert.equal(formatLabelMarcaCombinedLine("bte", "omb"), "BTE/OMB");
+assert.equal(formatLabelMarcaCombinedLine("BTE", ""), "BTE");
 assert.equal(formatLabelMarcaSecondariaLine("omb"), "OMB");
 assert.equal(formatLabelMarcaLine("BTE", ""), "BTE");
 assert.equal(formatLabelMarcaLine("", "OMB"), "");

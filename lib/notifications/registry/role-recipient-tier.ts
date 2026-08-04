@@ -1,8 +1,10 @@
+import { resolveCanonicalRole } from "@/lib/rbac";
 import type { NotificationRecipientTier } from "@/lib/notifications/notification-event-catalog";
 
-/** Mappa role_key profilo → tier destinatario nel registry notifiche. */
+/** Mappa role_key profilo → tier destinatario nel registry notifiche (normalizza legacy). */
 export function roleKeyToRecipientTier(roleKey: string | null | undefined): NotificationRecipientTier | null {
-  switch (roleKey) {
+  const canonical = resolveCanonicalRole(roleKey);
+  switch (canonical) {
     case "admin":
     case "manager":
       return "admin";

@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveCanonicalRole } from "@/lib/rbac";
 import { getNotificationRegistryEntry } from "@/lib/notifications/notification-event-catalog";
 import {
   loadAllRolePageAccess,
@@ -16,6 +17,39 @@ import {
 export type { CompanyRbacSnapshot, CompanyUserProfile } from "@/lib/notifications/dispatch/resolve-notification-recipients";
 export { resolveNotificationRecipientsFromSnapshot } from "@/lib/notifications/dispatch/resolve-notification-recipients";
 
+type UserRoleJoinRow = {
+  user_id: string;
+  roles: { key: string; is_active: boolean } | { key: string; is_active: boolean }[] | null;
+};
+
+async function loadEffectiveRoleKeysByUserId(
+  client: SupabaseClient,
+  userIds: string[],
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!userIds.length) return map;
+
+  const { data: urRows, error } = await client
+    .from("user_roles")
+    .select("user_id, roles(key, is_active)")
+    .in("user_id", userIds);
+
+  if (error) {
+    throw new Error(`[notifications] load user_roles failed: ${error.message}`);
+  }
+
+  for (const row of urRows ?? []) {
+    const uid = String((row as UserRoleJoinRow).user_id);
+    const joined = (row as UserRoleJoinRow).roles;
+    const role = Array.isArray(joined) ? joined[0] : joined;
+    if (role?.is_active && typeof role.key === "string" && role.key.trim()) {
+      map.set(uid, resolveCanonicalRole(role.key));
+    }
+  }
+
+  return map;
+}
+
 export async function loadCompanyUsersWithRoles(
   client: SupabaseClient,
   companyId: string,
@@ -26,10 +60,17 @@ export async function loadCompanyUsersWithRoles(
     .eq("company_id", companyId);
 
   if (error) {
-    console.warn("[notifications] loadCompanyUsersWithRoles:", error.message);
-    return [];
+    throw new Error(`[notifications] loadCompanyUsersWithRoles failed: ${error.message}`);
   }
-  return (data ?? []) as CompanyUserProfile[];
+
+  const rows = (data ?? []) as CompanyUserProfile[];
+  const userIds = rows.map((u) => u.id);
+  const effectiveRoles = await loadEffectiveRoleKeysByUserId(client, userIds);
+
+  return rows.map((user) => ({
+    ...user,
+    role_key: effectiveRoles.get(user.id) ?? resolveCanonicalRole(user.role_key),
+  }));
 }
 
 export async function loadCompanyRbacSnapshot(
@@ -59,17 +100,23 @@ export async function resolveNotificationRecipients(
     companyId: string;
     notificationEventId: string;
     actorId?: string | null;
+    notifyAuthor?: boolean;
+    /** @deprecated use notifyAuthor */
     excludeActor?: boolean;
   },
 ): Promise<string[]> {
   const entry = getNotificationRegistryEntry(input.notificationEventId);
   if (!entry) return [];
 
+  const notifyAuthor =
+    input.notifyAuthor ??
+    (input.excludeActor !== undefined ? !input.excludeActor : undefined);
+
   const snapshot = await loadCompanyRbacSnapshot(client, input.companyId);
   return resolveNotificationRecipientsFromSnapshot({
     snapshot,
     entry,
     actorId: input.actorId,
-    excludeActor: input.excludeActor,
+    notifyAuthor,
   });
 }

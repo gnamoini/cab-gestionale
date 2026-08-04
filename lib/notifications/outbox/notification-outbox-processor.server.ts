@@ -8,6 +8,7 @@ import {
   buildLegacyNotificationFromOutbox,
   type OutboxRow,
 } from "@/lib/notifications/outbox/build-legacy-from-outbox.server";
+import { writePipelineTrace } from "@/lib/notifications/observability/pipeline-trace.server";
 import { logNotificationTrace } from "@/lib/notifications/observability/notification-trace";
 
 export type NotificationOutboxProcessorResult = {
@@ -78,6 +79,12 @@ export async function runNotificationOutboxProcessor(input?: {
 
   for (const row of rows) {
     const traceId = row.trace_id;
+    await writePipelineTrace(client, {
+      traceId,
+      stage: "worker_invoked",
+      entityId: row.entity_id,
+      notificationEventId: row.notification_event_id,
+    });
     logNotificationTrace({
       traceId,
       stage: "outbox_processed",

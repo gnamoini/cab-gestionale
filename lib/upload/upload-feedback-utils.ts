@@ -1,10 +1,8 @@
 import { UPLOAD_MIN_LOADING_MS } from "@/lib/upload/upload-feedback-messages";
+import { createRandomUuid } from "@/lib/uuid/create-random-uuid";
 
 export function createUploadId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `upload-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  return createRandomUuid();
 }
 
 export function uploadErrorMessage(e: unknown): string {

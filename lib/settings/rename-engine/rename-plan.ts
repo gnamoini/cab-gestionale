@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
 import type { SettingsRenameKind } from "@/lib/settings/settings-rename-types";
+import { createRandomUuid } from "@/lib/uuid/create-random-uuid";
 import { buildClienteEntityKey, buildNamedListEntityKey } from "@/lib/validation/entity-keys";
 import type { EntityValidationContext } from "@/lib/validation/entity-keys";
 import { RENAME_ENGINE_VERSION, RENAME_PLAN_VERSION } from "@/lib/settings/rename-engine/constants";
@@ -38,7 +38,7 @@ export function buildRenamePlan(input: {
     entityKey,
     oldLabel,
     newLabel,
-    correlationId: input.correlationId ?? randomUUID(),
+    correlationId: input.correlationId ?? createRandomUuid(),
     operationIds: [...getOperationIdsForKind(input.kind)],
   };
 }
@@ -48,6 +48,6 @@ export function invertRenamePlan(plan: RenamePlan, correlationId?: string): Rena
     ...plan,
     oldLabel: plan.newLabel,
     newLabel: plan.oldLabel,
-    correlationId: correlationId ?? randomUUID(),
+    correlationId: correlationId ?? createRandomUuid(),
   };
 }

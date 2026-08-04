@@ -1,6 +1,7 @@
 "use client";
 
 import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
+import { createRandomUuid } from "@/lib/uuid/create-random-uuid";
 
 /** Invalidazione cache cross-tab quando Realtime non è connesso o per sync immediato. */
 
@@ -31,10 +32,7 @@ export function getGestionaleTabId(): string {
   try {
     let id = sessionStorage.getItem(TAB_ID_KEY);
     if (!id) {
-      id =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `tab-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      id = createRandomUuid();
       sessionStorage.setItem(TAB_ID_KEY, id);
     }
     return id;

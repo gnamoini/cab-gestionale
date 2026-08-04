@@ -16,14 +16,20 @@ import {
 } from "@/lib/notifications/dispatch/resolve-notification-recipients.server";
 import { toLegacyPriority } from "@/lib/notifications/domain/notification-priority";
 import { emptySnapshot } from "@/lib/notifications/domain/notification-snapshot";
+import { writePipelineTrace } from "@/lib/notifications/observability/pipeline-trace.server";
+import { logNotificationTrace } from "@/lib/notifications/observability/notification-trace";
 
 export type DispatchNotificationEventInput = {
   notificationEventId: string;
   companyId: string;
   actorId?: string | null;
+  notifyAuthor?: boolean;
+  /** @deprecated use notifyAuthor */
   excludeActor?: boolean;
   dispatchIdempotencyKey: string;
   buildCommand: (recipientId: string) => PublishNotificationCommand;
+  traceId?: string;
+  entityId?: string | null;
 };
 
 export type DispatchNotificationEventResult = {
@@ -82,21 +88,51 @@ export async function dispatchNotificationEvent(
   client?: SupabaseClient,
 ): Promise<DispatchNotificationEventResult> {
   const admin = client ?? createNotificationAdminClient();
+  const traceId = input.traceId ?? crypto.randomUUID();
   const entry = getNotificationRegistryEntry(input.notificationEventId);
   if (!entry) {
-    return { created: 0, skipped: 0, recipientCount: 0, duplicate: false };
+    const message = `unknown_notification_event:${input.notificationEventId}`;
+    logNotificationTrace({
+      traceId,
+      stage: "dispatch",
+      notificationEventId: input.notificationEventId,
+      entityId: input.entityId ?? undefined,
+      error: message,
+      ts: new Date().toISOString(),
+    });
+    throw new Error(message);
   }
 
-  const excludeActor = input.excludeActor ?? entry.excludeActorDefault;
+  const notifyAuthor =
+    input.notifyAuthor ??
+    (input.excludeActor !== undefined ? !input.excludeActor : entry.notifyAuthor);
+
   const snapshot = await loadCompanyRbacSnapshot(admin, input.companyId);
   const recipientIds = resolveNotificationRecipientsFromSnapshot({
     snapshot,
     entry,
     actorId: input.actorId,
-    excludeActor,
+    notifyAuthor,
+  });
+
+  await writePipelineTrace(admin, {
+    traceId,
+    stage: "dispatch",
+    entityId: input.entityId,
+    notificationEventId: input.notificationEventId,
+    recipientCount: recipientIds.length,
+    meta: { actorId: input.actorId ?? null, notifyAuthor },
   });
 
   if (!recipientIds.length) {
+    logNotificationTrace({
+      traceId,
+      stage: "dispatch",
+      notificationEventId: input.notificationEventId,
+      entityId: input.entityId ?? undefined,
+      error: "zero_recipients",
+      ts: new Date().toISOString(),
+    });
     return { created: 0, skipped: 0, recipientCount: 0, duplicate: false };
   }
 
@@ -119,6 +155,15 @@ export async function dispatchNotificationEvent(
 
   const skipped = recipientIds.length - eligibleRecipients.length;
   if (!eligibleRecipients.length) {
+    await writePipelineTrace(admin, {
+      traceId,
+      stage: "dispatch",
+      entityId: input.entityId,
+      notificationEventId: input.notificationEventId,
+      recipientCount: recipientIds.length,
+      notificationsCreated: 0,
+      error: "all_recipients_filtered_by_preferences",
+    });
     return { created: 0, skipped, recipientCount: recipientIds.length, duplicate: false };
   }
 
@@ -136,18 +181,50 @@ export async function dispatchNotificationEvent(
   });
 
   if (error) {
-    console.warn("[notifications] dispatchNotificationEvent failed:", error.message);
-    throw new Error(error.message);
+    await writePipelineTrace(admin, {
+      traceId,
+      stage: "persist",
+      entityId: input.entityId,
+      notificationEventId: input.notificationEventId,
+      recipientCount: recipientIds.length,
+      error: error.message,
+    });
+    throw new Error(`[notifications] dispatchNotificationEvent failed: ${error.message}`);
   }
 
   const row = (Array.isArray(data) ? data[0] : data) as
     | { created_count?: number; duplicate?: boolean }
     | null;
 
+  const created = row?.created_count ?? 0;
+  const duplicate = Boolean(row?.duplicate);
+
+  await writePipelineTrace(admin, {
+    traceId,
+    stage: "persist",
+    entityId: input.entityId,
+    notificationEventId: input.notificationEventId,
+    recipientCount: recipientIds.length,
+    notificationsCreated: created,
+    meta: { duplicate, skipped },
+  });
+
+  if (created === 0 && !duplicate && recipientIds.length > 0) {
+    logNotificationTrace({
+      traceId,
+      stage: "persist",
+      notificationEventId: input.notificationEventId,
+      entityId: input.entityId ?? undefined,
+      error: "zero_notifications_created",
+      ts: new Date().toISOString(),
+      meta: { recipientCount: recipientIds.length, skipped },
+    });
+  }
+
   return {
-    created: row?.created_count ?? 0,
+    created,
     skipped,
     recipientCount: recipientIds.length,
-    duplicate: Boolean(row?.duplicate),
+    duplicate,
   };
 }

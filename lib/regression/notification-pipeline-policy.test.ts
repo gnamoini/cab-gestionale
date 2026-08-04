@@ -32,6 +32,13 @@ assert.doesNotMatch(outboxMigration, /net\.http_post.*entity-fanout/);
 
 const outboxProcessor = read("lib/notifications/outbox/notification-outbox-processor.server.ts");
 assert.match(outboxProcessor, /fanoutEntityNotification/);
+assert.match(outboxProcessor, /writePipelineTrace/);
+
+const pipelineMigration = read("supabase/migrations/20261104120000_notification_pipeline_trace_and_outbox_invoke.sql");
+assert.match(pipelineMigration, /notification_outbox_invoke_worker/);
+
+const vercel = read("vercel.json");
+assert.match(vercel, /notification-outbox-processor/);
 
 const deferredBridges = read("src/components/deferred-gestionale-bridges.tsx");
 assert.match(deferredBridges, /<AdminNotifPack \/>/);

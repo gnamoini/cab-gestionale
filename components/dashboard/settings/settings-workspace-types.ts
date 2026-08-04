@@ -21,6 +21,7 @@ export type SistemaSectionId =
   | "tel-modello"
   | "sys-officina-profilo"
   | "sys-economici"
+  | "sys-comunicazioni"
   | "sys-tkb-kb";
 
 export type SettingsNavEntry =
@@ -55,6 +56,8 @@ export const SETTINGS_NAV_STRUCTURE: SettingsNavEntry[] = [
   { kind: "item", id: "tel-tipo", label: "Tipo telaio" },
   { kind: "item", id: "tel-marca", label: "Marca telaio" },
   { kind: "item", id: "tel-modello", label: "Modello telaio" },
+  { kind: "group", label: "Comunicazioni" },
+  { kind: "item", id: "sys-comunicazioni", label: "Comunicazioni" },
   { kind: "group", label: "Sistema" },
   { kind: "item", id: "sys-officina-profilo", label: "Profilo officina" },
   { kind: "item", id: "sys-economici", label: "Parametri economici" },
