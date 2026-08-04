@@ -1,11 +1,8 @@
 {
   "crons": [
-    { "path": "/api/cron/notification-outbox-processor", "schedule": "*/5 * * * *" },
     { "path": "/api/cron/ai-runtime-sync", "schedule": "0 3 * * *" },
     { "path": "/api/cron/push-delivery", "schedule": "0 4 * * *" },
     { "path": "/api/cron/maintenance-forecast-notify", "schedule": "0 6 * * *" },
-    { "path": "/api/cron/communication-outbox-processor", "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/communication-send-worker", "schedule": "*/5 * * * *" },
     { "path": "/api/cron/maintenance-communication-reminders", "schedule": "30 6 * * *" },
     { "path": "/api/cron/dipendenti-presenze-reminder", "schedule": "0 16 * * 1-5" },
     { "path": "/api/cron/health-score-weekly-snapshot", "schedule": "0 21 * * 0" }
