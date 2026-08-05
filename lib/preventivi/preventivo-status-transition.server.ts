@@ -3,13 +3,13 @@ import "server-only";
 import { loadBrandingLogoDataUrlServer } from "@/lib/branding/branding-logo-for-pdf.server";
 import { fetchClienteAnagraficaByLabelServer } from "@/lib/clienti/clienti-anagrafica-fetch.server";
 import { emitPreventivoStatusChanged } from "@/lib/preventivi/events/emit-preventivo-status-changed";
-import { canTransitionPreventivoStato } from "@/lib/preventivi/preventivo-transitions";
+import { canTransitionPreventivoWorkflow } from "@/lib/preventivi/preventivo-transitions";
 import { fetchPreventivoRecordServer } from "@/lib/preventivi/preventivi-fetch-server";
 import {
   generatePreventivoPdfBytes,
   preventivoPdfFileName,
 } from "@/lib/preventivi/preventivo-pdf-generate";
-import type { PreventivoStato } from "@/lib/preventivi/types";
+import type { PreventivoStatoWorkflow } from "@/lib/preventivi/types";
 import { stableHashPayload } from "@/lib/pdf-artifacts/pdf-artifact-registry";
 import { buildPdfArtifactObjectPath } from "@/lib/pdf-artifacts/pdf-artifact-paths";
 import { uploadPdfArtifact } from "@/lib/pdf-artifacts/pdf-artifact-storage.server";
@@ -23,7 +23,7 @@ const ENTITA = "preventivi";
 
 export type TransitionPreventivoStatusInput = {
   preventivoId: string;
-  to: PreventivoStato;
+  to: PreventivoStatoWorkflow;
   autore?: string;
 };
 
@@ -40,9 +40,9 @@ export async function transitionPreventivoStatusServer(
     return err(recordRes.error ?? "Preventivo non trovato.");
   }
   const record = recordRes.data;
-  const from = record.stato;
+  const from = record.statoWorkflow;
 
-  if (!canTransitionPreventivoStato(from, to)) {
+  if (!canTransitionPreventivoWorkflow(from, to)) {
     return err(`Transizione non consentita: ${from} → ${to}`);
   }
 
@@ -53,7 +53,7 @@ export async function transitionPreventivoStatusServer(
 
   const { data: before, error: beforeErr } = await sb
     .from("preventivi")
-    .select("id, stato, dettagli, updated_at")
+    .select("id, stato_workflow, stato_cliente, dettagli, updated_at")
     .eq("id", preventivoId)
     .maybeSingle();
   if (beforeErr) return err(beforeErr.message);
@@ -71,6 +71,7 @@ export async function transitionPreventivoStatusServer(
         numero: record.numero,
         totale: record.totaleFinale,
         righe: record.righeRicambi,
+        versione: record.versione,
         stato: "inviato",
       });
       const storagePath = buildPdfArtifactObjectPath("preventivo", record.id, hash);
@@ -87,7 +88,7 @@ export async function transitionPreventivoStatusServer(
     p_preventivo_id: preventivoId,
     p_to_stato: to,
     p_artifact: artifactPayload,
-    p_confermato_by: to === "confermato" ? user?.id ?? null : null,
+    p_confermato_by: null,
   });
 
   if (rpcErr) return err(rpcErr.message);
@@ -103,17 +104,20 @@ export async function transitionPreventivoStatusServer(
     entita: ENTITA,
     entita_id: preventivoId,
     azione: "UPDATE",
-    payload: auditDiff({ stato: from }, { stato: to }, auditContext(numero)),
+    payload: auditDiff(
+      { stato_workflow: from, stato_cliente: record.statoCliente },
+      { stato_workflow: to, stato_cliente: after.stato_cliente },
+      auditContext(numero),
+    ),
   });
 
   emitPreventivoStatusChanged({
     preventivo_id: preventivoId,
-    from,
-    to,
+    from: from === "acquisito" ? "confermato" : from,
+    to: to === "acquisito" ? "confermato" : to,
     user_id: user?.id ?? "",
     timestamp: new Date().toISOString(),
     pdf_artifact_id: after.current_pdf_artifact_id ?? undefined,
-    confermato_by: to === "confermato" ? after.confermato_by ?? user?.id ?? undefined : undefined,
   });
 
   return success(after);

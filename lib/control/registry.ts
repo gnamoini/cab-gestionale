@@ -537,6 +537,17 @@ export const CONTROL_REGISTRY: readonly ControlDefinition[] = [
     impact: ["all-users", "operations"],
   },
   {
+    id: "governance.notification.catalog",
+    implementation: { type: "test-suite", reference: "notification-catalog-completeness" },
+    domain: "governance",
+    tier: "pr",
+    severity: "blocker",
+    status: "active",
+    owner: "platform",
+    sourceOfTruth: "lib/notifications/notification-event-catalog.ts",
+    impact: ["all-users", "operations"],
+  },
+  {
     id: "governance.registry.size",
     implementation: { type: "test-suite", reference: "registry-lifecycle" },
     domain: "governance",

@@ -126,4 +126,18 @@ export function registerPushSwHandlers(sw: ServiceWorkerGlobalScope): void {
       })(),
     );
   });
+
+  sw.addEventListener("sync", (event) => {
+    const syncEvent = event as ExtendableEvent & { tag?: string };
+    const tag = syncEvent.tag;
+    if (tag !== "cab-notification-ack") return;
+    syncEvent.waitUntil(
+      (async () => {
+        const clients = await sw.clients.matchAll({ type: "window", includeUncontrolled: true });
+        for (const client of clients) {
+          client.postMessage({ type: "PWA_NOTIFICATION_ACK_RETRY" });
+        }
+      })(),
+    );
+  });
 }

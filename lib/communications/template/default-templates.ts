@@ -36,11 +36,18 @@ Cordiali saluti,
 {{azienda}}`,
   },
   "estimate.published": {
-    subject: "È disponibile un nuovo preventivo",
+    subject: "Nuovo preventivo disponibile per la tua lavorazione",
     body: `Gentile {{cliente}},
 
-è disponibile un nuovo preventivo {{numero_preventivo}} per il mezzo {{mezzo}} ({{targa}}).
+è disponibile il preventivo {{numero_preventivo}} (v{{versione}}) per la lavorazione {{numero_lavorazione}}.
+
+Mezzo: {{mezzo}} ({{targa}})
 Totale: {{totale}}
+
+{{descrizione_preventivo}}
+
+Il preventivo è disponibile per accettazione entro 24 ore dal portale:
+{{link_lavorazione}}
 
 Cordiali saluti,
 {{azienda}}`,
@@ -50,6 +57,36 @@ Cordiali saluti,
     body: `Gentile {{cliente}},
 
 confermiamo l'approvazione del preventivo {{numero_preventivo}}.
+
+Cordiali saluti,
+{{azienda}}`,
+  },
+  "estimate.reminder": {
+    subject: "Promemoria: preventivo in attesa di conferma",
+    body: `Gentile {{cliente}},
+
+ti ricordiamo che hai un preventivo {{numero_preventivo}} in attesa di conferma.
+
+Totale: {{totale}}
+{{link_lavorazione}}
+
+Cordiali saluti,
+{{azienda}}`,
+  },
+  "estimate.accepted": {
+    subject: "Conferma ricezione preventivo",
+    body: `Gentile {{cliente}},
+
+abbiamo ricevuto la conferma del preventivo {{numero_preventivo}}.
+
+Cordiali saluti,
+{{azienda}}`,
+  },
+  "estimate.rejected": {
+    subject: "Ricezione rifiuto preventivo",
+    body: `Gentile {{cliente}},
+
+abbiamo registrato il rifiuto del preventivo {{numero_preventivo}}.
 
 Cordiali saluti,
 {{azienda}}`,

@@ -1,5 +1,139 @@
 @import "../global-table/gestionale-list-layout.css";
 
+/* Tabella densa Magazzino — width 100%, colonne fluide, azioni sticky, hide progressivo. */
+
+.gestionale-magazzino-dense-table {
+  --gestionale-magazzino-actions-width: calc(7.25rem + 1rem);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  table-layout: fixed;
+}
+
+.gestionale-magazzino-dense-table col.gestionale-magazzino-col-codice {
+  width: 9.5rem;
+  min-width: 7.5rem;
+  max-width: 9.5rem;
+}
+
+.gestionale-magazzino-dense-table col.gestionale-magazzino-col-label-qty {
+  width: 7.25rem;
+  min-width: 7.25rem;
+  max-width: 7.25rem;
+}
+
+.gestionale-magazzino-dense-table col.gestionale-magazzino-col-marca {
+  width: 6%;
+  min-width: 4.5rem;
+}
+
+.gestionale-magazzino-dense-table col.gestionale-magazzino-col-descrizione {
+  width: 24%;
+  min-width: 6rem;
+}
+
+.gestionale-magazzino-dense-table col.gestionale-magazzino-col-categoria {
+  width: 7%;
+  min-width: 4.5rem;
+}
+
+.gestionale-magazzino-dense-table col.gestionale-magazzino-col-scorta {
+  width: 4.75rem;
+  min-width: 4.25rem;
+  max-width: 5.5rem;
+}
+
+.gestionale-magazzino-dense-table col.gestionale-magazzino-col-scorta-min {
+  width: 5.5rem;
+  min-width: 5rem;
+  max-width: 6.5rem;
+}
+
+.gestionale-magazzino-dense-table col.gestionale-magazzino-col-ultima-mod {
+  width: 9%;
+  min-width: 6.5rem;
+}
+
+.gestionale-magazzino-dense-table col.gestionale-magazzino-col-prezzo {
+  width: 6.5rem;
+  min-width: 6rem;
+  max-width: 7.5rem;
+}
+
+.gestionale-magazzino-dense-table col.gestionale-magazzino-col-consumo {
+  width: 5.5rem;
+  min-width: 5rem;
+  max-width: 6.5rem;
+}
+
+.gestionale-magazzino-dense-table col.gestionale-magazzino-col-azioni {
+  width: 0;
+  min-width: var(--gestionale-magazzino-actions-width);
+  max-width: var(--gestionale-magazzino-actions-width);
+}
+
+.gestionale-magazzino-dense-table th.gestionale-list-table-actions-head,
+.gestionale-magazzino-dense-table td.gestionale-list-table-actions-cell {
+  width: var(--gestionale-magazzino-actions-width) !important;
+  max-width: var(--gestionale-magazzino-actions-width) !important;
+  min-width: var(--gestionale-magazzino-actions-width) !important;
+  box-sizing: border-box;
+}
+
+.gestionale-magazzino-dense-table th.gestionale-list-table-actions-head {
+  padding-left: 0 !important;
+  padding-right: calc(0.5rem + 0.625rem) !important;
+}
+
+@media (min-width: 640px) {
+  .gestionale-magazzino-dense-table th.gestionale-list-table-actions-head {
+    padding-right: calc(0.75rem + 0.625rem) !important;
+  }
+}
+
+.gestionale-magazzino-dense-table td.gestionale-list-table-actions-cell {
+  padding-left: 0 !important;
+  padding-right: 1rem !important;
+}
+
+@media (min-width: 640px) {
+  .gestionale-magazzino-dense-table td.gestionale-list-table-actions-cell {
+    padding-right: 1.25rem !important;
+  }
+}
+
+@media (max-width: 1400px) {
+  .gestionale-magazzino-dense-table col.gestionale-magazzino-col-consumo,
+  .gestionale-magazzino-dense-table thead th.gestionale-magazzino-col-consumo,
+  .gestionale-magazzino-dense-table tbody td.gestionale-magazzino-col-consumo {
+    display: none;
+  }
+}
+
+@media (max-width: 1280px) {
+  .gestionale-magazzino-dense-table col.gestionale-magazzino-col-ultima-mod,
+  .gestionale-magazzino-dense-table thead th.gestionale-magazzino-col-ultima-mod,
+  .gestionale-magazzino-dense-table tbody td.gestionale-magazzino-col-ultima-mod {
+    display: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .gestionale-magazzino-dense-table col.gestionale-magazzino-col-categoria,
+  .gestionale-magazzino-dense-table thead th.gestionale-magazzino-col-categoria,
+  .gestionale-magazzino-dense-table tbody td.gestionale-magazzino-col-categoria {
+    display: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .gestionale-magazzino-dense-table col.gestionale-magazzino-col-marca,
+  .gestionale-magazzino-dense-table thead th.gestionale-magazzino-col-marca,
+  .gestionale-magazzino-dense-table tbody td.gestionale-magazzino-col-marca {
+    display: none;
+  }
+}
+
 /* Scope Magazzino — scroll verticale su main.gestionale-scroll-y (no gutter duplicato qui). */
 
 /* Badge scorta: pop + slide numero su +/- */

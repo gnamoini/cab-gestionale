@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 
 type PipelineTraceBody = {
   traceId: string;
-  stage?: "client_received" | "realtime_emit";
+  stage?: "client_received" | "realtime_emit" | "client_ack";
   notificationId?: string;
   entityId?: string;
   notificationEventId?: string;
@@ -47,8 +47,8 @@ export async function POST(req: Request) {
     p_notification_event_id: body.notificationEventId ?? null,
     p_recipient_count: null,
     p_notifications_created: null,
-    p_realtime_delivered: stage === "realtime_emit" ? true : null,
-    p_client_received: stage === "client_received" ? true : null,
+    p_realtime_delivered: stage === "realtime_emit" || stage === "client_ack" ? true : null,
+    p_client_received: stage === "client_received" || stage === "client_ack" ? true : null,
     p_error: body.error ?? null,
     p_meta: {
       notificationId: body.notificationId ?? null,

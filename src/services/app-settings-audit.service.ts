@@ -1,6 +1,6 @@
 "use client";
 
-import { APP_SETTINGS_AUDIT_COLUMNS } from "@/lib/db/table-select-columns";
+import { APP_SETTINGS_AUDIT_WITH_PROFILE_SELECT } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { AppSettingsAuditRow } from "@/src/types/supabase-tables";
@@ -24,14 +24,14 @@ export const appSettingsAuditService = {
       const limit = Math.min(Math.max(params.limit ?? 200, 1), 2000);
       let q = c
         .from("app_settings_audit")
-        .select(APP_SETTINGS_AUDIT_COLUMNS)
+        .select(APP_SETTINGS_AUDIT_WITH_PROFILE_SELECT)
         .order("updated_at", { ascending: false })
         .limit(limit);
       if (params.module?.trim()) q = q.eq("module", params.module.trim());
       if (params.key?.trim()) q = q.eq("key", params.key.trim());
       const { data, error } = await q;
       if (error) return err(error.message);
-      return success((data ?? []) as AppSettingsAuditRow[]);
+      return success((data ?? []) as unknown as AppSettingsAuditRow[]);
     } catch (e) {
       return serviceFailFromError(e);
     }

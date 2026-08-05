@@ -92,8 +92,15 @@ assert.match(
   /\/lavorazioni-clienti\/abc-123/,
 );
 
-const edgeFn = read("supabase/functions/push-notification-send/index.ts");
-assert.match(edgeFn, /notificationId/);
+const rolloutMigration = read("supabase/migrations/20261108120000_notification_platform_production_rollout.sql");
+assert.match(rolloutMigration, /cab_invoke_push_subscription_cleanup_worker/);
+assert.match(rolloutMigration, /fatturazione-overdue-digest-daily/);
+assert.match(rolloutMigration, /lavorazioni-overdue-digest-daily/);
+
+assert.ok(
+  !fs.existsSync(path.join(ROOT, "supabase/functions/push-notification-send/index.ts")),
+  "legacy edge push-notification-send removed",
+);
 
 const deviceState = read("lib/pwa/push-device-state.ts");
 assert.match(deviceState, /cab-pwa-push-state-v1/);

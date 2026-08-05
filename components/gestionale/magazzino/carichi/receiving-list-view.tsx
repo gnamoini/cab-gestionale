@@ -12,9 +12,21 @@ import type { InventoryDocumentRow } from "@/src/types/supabase-tables";
 import { dsStackPage } from "@/lib/ui/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { MagazzinoCarichiCaptureLauncher } from "@/components/gestionale/magazzino/carichi/magazzino-carichi-capture-launcher";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { usePermissions } from "@/src/hooks/use-permissions";
 
 export function ReceivingListView() {
+  useGestionaleSyncScope({
+    scopeId: "magazzino-carichi-view",
+    domain: "magazzino",
+    route: "/magazzino/carichi",
+    tables: [
+      "magazzino_ricambi",
+      "movimenti_ricambi",
+      "inventory_documents",
+      "inventory_document_lines",
+    ],
+  });
   const perm = usePermissions("magazzino_carichi");
   const [docs, setDocs] = useState<InventoryDocumentRow[]>([]);
   const [pending, setPending] = useState<Awaited<ReturnType<typeof fetchInventoryReceivingPending>>>([]);

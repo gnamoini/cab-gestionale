@@ -1,6 +1,7 @@
 import { buildDdtKpi } from "@/lib/ddt/ddt-calculations";
 import type { OrdineFornitoreRecord } from "@/lib/ordini-fornitori/types";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
+import { isPreventivoCountedInEconomicStats } from "@/lib/preventivi/preventivo-stats-eligibility";
 import { roundMoney } from "@/lib/fatturazione/invoice-calculations";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
@@ -448,11 +449,13 @@ function countPreventiviInRange(preventivi: readonly PreventivoRecord[], range: 
   let count = 0;
   let value = 0;
   for (const p of preventivi) {
-    if (p.stato === "bozza") continue;
+    if (p.statoWorkflow === "bozza") continue;
     const at = p.dataCreazione || p.aggiornatoAt;
     if (!isoInRange(at, range)) continue;
     count += 1;
-    value = roundMoney(value + (p.totaleFinale ?? 0));
+    if (isPreventivoCountedInEconomicStats(p)) {
+      value = roundMoney(value + (p.totaleFinale ?? 0));
+    }
   }
   return { count, value };
 }
@@ -463,7 +466,7 @@ function countPreventiviApprovatiInRange(
 ): number {
   let count = 0;
   for (const p of preventivi) {
-    if (p.stato !== "confermato") continue;
+    if (!isPreventivoCountedInEconomicStats(p)) continue;
     const at = p.dataCreazione || p.aggiornatoAt;
     if (!isoInRange(at, range)) continue;
     count += 1;

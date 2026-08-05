@@ -45,6 +45,7 @@ import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useDipendentiTimesheet } from "@/src/hooks/use-dipendenti-timesheet";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { usePermissions } from "@/src/hooks/use-permissions";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 
 /** Evidenziazione colonna «Oggi» — hold + fade-out (allineato a CSS --timesheet-today-*). */
@@ -73,6 +74,12 @@ function formatWorkDateIt(dateYmd: string): string {
 }
 
 export function DipendentiView({ listSurface: serverListSurface, listTier = "md" }: GestionaleListPageProps) {
+  useGestionaleSyncScope({
+    scopeId: "dipendenti-view",
+    domain: "dipendenti",
+    route: "/dipendenti",
+    tables: ["dipendenti_timesheet_employees", "dipendenti_timesheet_entries"],
+  });
   const listSurface = useListSurface(serverListSurface);
   const queryClient = useQueryClient();
   const [monthKey, setMonthKey] = useState<TimesheetMonthKey>(() => monthKeyFromDate(new Date()));

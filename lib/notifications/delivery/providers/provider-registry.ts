@@ -4,6 +4,7 @@ import { captureProvider } from "@/lib/notifications/delivery/providers/capture-
 import { realtimeProvider } from "@/lib/notifications/delivery/providers/realtime-provider";
 import { webPushProvider } from "@/lib/notifications/delivery/providers/web-push-provider.server";
 import { desktopProvider } from "@/lib/notifications/delivery/providers/desktop-provider";
+import { emailProvider } from "@/lib/notifications/delivery/providers/email-provider.server";
 
 const registry = new Map<string, DeliveryProvider>([
   [noopProvider.id, noopProvider],
@@ -11,6 +12,7 @@ const registry = new Map<string, DeliveryProvider>([
   [realtimeProvider.id, realtimeProvider],
   [webPushProvider.id, webPushProvider],
   [desktopProvider.id, desktopProvider],
+  [emailProvider.id, emailProvider],
 ]);
 
 export function getDeliveryProvider(id: string): DeliveryProvider | undefined {

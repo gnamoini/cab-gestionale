@@ -146,7 +146,10 @@ export const INVENTORY_DOCUMENT_LINES_COLUMNS =
   "id, document_id, line_index, raw_code, extracted_description, extracted_quantity, received_quantity, unit, matched_item_id, match_confidence, match_status, apply_status, user_action, final_quantity, final_item_id, line_ai_confidence, created_at, updated_at" as const;
 
 export const PREVENTIVI_COLUMNS =
-  "id, mezzo_id, lavorazione_id, cliente, totale, dettagli, stato, current_pdf_artifact_id, inviato_at, confermato_at, confermato_by, annullato_at, created_at, updated_at" as const;
+  "id, mezzo_id, lavorazione_id, cliente, totale, dettagli, stato, stato_workflow, stato_cliente, versione, parent_preventivo_id, current_pdf_artifact_id, pdf_sent_artifact_id, pdf_sent_hash, pdf_sent_generated_at, inviato_at, visualizzato_at, accettato_at, rifiutato_at, scadenza_accettazione_at, metodo_accettazione, reminder_sent_at, confermato_at, confermato_by, annullato_at, created_at, updated_at" as const;
+
+export const PREVENTIVO_EVENTS_COLUMNS =
+  "id, preventivo_id, event_type, actor_type, actor_id, payload, snapshot, created_at" as const;
 
 export const PDF_ARTIFACTS_COLUMNS =
   "id, entity_type, entity_id, storage_path, hash, version, status, is_current, generated_at, generated_by" as const;
@@ -215,15 +218,18 @@ export const DOCUMENTI_COLUMNS =
   "id, mezzo_id, marca, modello, categoria, url_file, meta, created_at" as const;
 
 export const LOG_MODIFICHE_COLUMNS =
-  "id, entita, entita_id, azione, autore_id, payload, created_at, company_id, event_type, actor_type, correlation_id, request_id, module, title, description, severity, category" as const;
+  "id, entita, entita_id, azione, autore_id, autore_nome_snapshot, payload, created_at, company_id, event_type, actor_type, correlation_id, request_id, module, title, description, severity, category" as const;
 
 export const LOG_MODIFICHE_WITH_PROFILE_SELECT =
-  `${LOG_MODIFICHE_COLUMNS}, profiles!log_modifiche_autore_id_fkey(id, nome)` as const;
+  `${LOG_MODIFICHE_COLUMNS}, profiles!log_modifiche_autore_id_fkey(id, nome, cognome)` as const;
 
 export const APP_SETTINGS_COLUMNS = "id, module, key, value, updated_at, updated_by" as const;
 
 export const APP_SETTINGS_AUDIT_COLUMNS =
   "id, module, key, old_value, new_value, updated_by, updated_at" as const;
+
+export const APP_SETTINGS_AUDIT_WITH_PROFILE_SELECT =
+  `${APP_SETTINGS_AUDIT_COLUMNS}, updated_by_profile:profiles!app_settings_audit_updated_by_fkey(nome, cognome)` as const;
 
 export const USER_PERMISSIONS_COLUMNS =
   "user_id, permission_id, effect, created_at, updated_at" as const;

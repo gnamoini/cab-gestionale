@@ -4,6 +4,11 @@ import webpush from "web-push";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DeliveryProvider } from "@/lib/notifications/delivery/providers/delivery-provider";
 import { buildPushNotificationPayload } from "@/lib/pwa/push-payload";
+import {
+  isPushSubscriptionInvalidStatus,
+  revokePushSubscription,
+} from "@/lib/pwa/push-subscription-manager.server";
+import { checkPushRateLimit } from "@/lib/pwa/push-rate-limiter.server";
 import { resolvePwaPushServerEnabled } from "@/lib/pwa/push-enabled";
 
 function getVapidConfig(): { publicKey: string; privateKey: string; subject: string } | null {
@@ -26,6 +31,7 @@ export function createWebPushProvider(
 ): DeliveryProvider {
   return {
     id: "webpush",
+    channel: "push",
     async deliver(ctx) {
       if (!resolvePwaPushServerEnabled(getVapidConfig() !== null)) {
         return { success: true, channel: "push", providerId: "webpush", error: "push_disabled" };
@@ -39,6 +45,17 @@ export function createWebPushProvider(
       const deviceId = ctx.device?.deviceId;
       if (!deviceId) {
         return { success: false, channel: "push", providerId: "webpush", error: "no_device" };
+      }
+
+      const rateKey = `${ctx.company.id}:${ctx.recipient.id}`;
+      const rate = checkPushRateLimit(rateKey);
+      if (!rate.allowed) {
+        return {
+          success: false,
+          channel: "push",
+          providerId: "webpush",
+          error: `rate_limited:${rate.retryAfterMs}`,
+        };
       }
 
       const sub = await loadSubscription(deviceId);
@@ -72,13 +89,11 @@ export function createWebPushProvider(
         return { success: true, channel: "push", providerId: "webpush", renderMs, providerMs: Date.now() - t0 };
       } catch (error) {
         const status = (error as { statusCode?: number })?.statusCode;
-        if (status === 404 || status === 410) {
-          await client
-            .from("push_subscriptions")
-            .update({ revoked_at: new Date().toISOString() })
-            .eq("company_id", sub.company_id)
-            .eq("endpoint", sub.endpoint)
-            .is("revoked_at", null);
+        if (isPushSubscriptionInvalidStatus(status)) {
+          await revokePushSubscription(client, {
+            companyId: sub.company_id,
+            endpoint: sub.endpoint,
+          });
         }
         const msg = error instanceof Error ? error.message : "push_send_failed";
         await recordDelivery(client, ctx, "failed", renderMs, Date.now() - t0, msg);
@@ -112,6 +127,7 @@ async function recordDelivery(
 
 export const webPushProvider: DeliveryProvider = {
   id: "webpush",
+  channel: "push",
   async deliver() {
     return { success: false, channel: "push", providerId: "webpush", error: "use_server_factory" };
   },

@@ -322,7 +322,7 @@ function describeHierarchyChanges(
   return lines;
 }
 
-function describeSectionChanges(
+export function describeConfigurazioneSectionChanges(
   id: ConfigurazioneSectionId,
   before: ConfigurazioneSettingsSnapshot,
   after: ConfigurazioneSettingsSnapshot,
@@ -410,7 +410,7 @@ function buildModificaRigaForSection(
 ): string {
   const label = CONFIGURAZIONE_SECTION_LABELS[id];
   const header = `${autore} ha aggiornato «${label}»`;
-  const allDetails = describeSectionChanges(id, before, after);
+  const allDetails = describeConfigurazioneSectionChanges(id, before, after);
   const details = allDetails.slice(0, MAX_DETAIL_LINES);
   if (details.length === 0) return toBulletModificaRiga([header]);
   const overflow = allDetails.length - details.length;

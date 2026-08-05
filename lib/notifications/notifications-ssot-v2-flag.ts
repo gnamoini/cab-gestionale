@@ -10,6 +10,11 @@ export function resolveNotificationsSsotV2Mode(): NotificationsSsotV2Mode {
   return "on";
 }
 
+/** @deprecated Legacy off mode removed — always enabled. */
+export function notificationsSsotV2LegacyOffAllowed(): boolean {
+  return false;
+}
+
 export function notificationsSsotV2Enabled(mode: NotificationsSsotV2Mode = resolveNotificationsSsotV2Mode()): boolean {
   return mode === "on" || mode === "shadow";
 }

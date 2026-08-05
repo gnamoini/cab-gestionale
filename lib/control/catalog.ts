@@ -201,6 +201,9 @@ export const CONTROL_CATALOG: Record<string, CatalogEntry> = {
   "report-v2-narrative-preflight": { resolve: () => runTestFiles(REPORT_V2_NARRATIVE_PREFLIGHT_SUITE) },
   "report-v2-narrative-rollout": { resolve: () => runTestFiles(REPORT_V2_NARRATIVE_ROLLOUT_SUITE) },
   "notification-ssot": { resolve: () => spawnScript("lib/regression/notification-ssot-policy.test.ts") },
+  "notification-catalog-completeness": {
+    resolve: () => spawnScript("lib/regression/notification-catalog-completeness.test.ts"),
+  },
   "ai-runtime": { resolve: () => runTestFiles(AI_RUNTIME_SUITE) },
   "formux-promotion": {
     resolve: () => ({ ok: true, blockers: [], warnings: ["formux promotion deprecated — skipped"] }),

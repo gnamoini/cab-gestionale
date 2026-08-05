@@ -2,11 +2,11 @@
 
 import type { QueryClient } from "@tanstack/react-query";
 import {
-  buildPostgresChangesChannel,
-  subscribeRealtimeChannelOnly,
+  subscribePostgresChangesChannel,
 } from "@/lib/realtime/postgres-changes-channel";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { QK } from "@/src/lib/react-query/invalidate-related";
+import { RealtimeTabCoordinator } from "@/lib/notifications/realtime-tab-coordinator";
 
 const SEEN_TTL_MS = 5 * 60_000;
 const DEBOUNCE_MS = 300;
@@ -33,7 +33,7 @@ type CoordinatorOptions = {
 
 async function reportClientPipelineTrace(input: {
   traceId: string;
-  stage: "client_received" | "realtime_emit";
+  stage: "client_received" | "realtime_emit" | "client_ack";
   notificationId?: string;
   inboxVersion?: number;
   lastEventId?: string;
@@ -67,6 +67,8 @@ export class RealtimeInboxCoordinator {
   private heartbeatTimestamp: number | null = null;
   private lastEventId: string | null = null;
   private inboxVersion = 0;
+  private tabCoordinator: RealtimeTabCoordinator | null = null;
+  private onlineHandler: (() => void) | null = null;
 
   constructor(opts: CoordinatorOptions) {
     this.userId = opts.userId;
@@ -94,10 +96,25 @@ export class RealtimeInboxCoordinator {
   }
 
   async start(): Promise<void> {
-    await this.subscribe();
+    this.tabCoordinator = new RealtimeTabCoordinator({
+      userId: this.userId,
+      onBecomeLeader: () => void this.subscribe(),
+      onBecomeFollower: () => void this.teardownChannel(),
+      onRemoteInvalidate: () => void this.invalidateInbox(),
+    });
+    this.tabCoordinator.start();
     this.startGapWatch();
     if (typeof document !== "undefined") {
       document.addEventListener("visibilitychange", this.onVisibilityChange);
+    }
+    if (typeof window !== "undefined") {
+      this.onlineHandler = () => {
+        if (navigator.onLine && this.tabCoordinator?.leader) {
+          this.resubscribeAttempt = 0;
+          void this.subscribe();
+        }
+      };
+      window.addEventListener("online", this.onlineHandler);
     }
   }
 
@@ -106,6 +123,12 @@ export class RealtimeInboxCoordinator {
     if (typeof document !== "undefined") {
       document.removeEventListener("visibilitychange", this.onVisibilityChange);
     }
+    if (typeof window !== "undefined" && this.onlineHandler) {
+      window.removeEventListener("online", this.onlineHandler);
+      this.onlineHandler = null;
+    }
+    this.tabCoordinator?.stop();
+    this.tabCoordinator = null;
     this.clearDebounce();
     this.clearPoll();
     this.clearGapWatch();
@@ -191,6 +214,14 @@ export class RealtimeInboxCoordinator {
         this.queryClient.invalidateQueries({ queryKey: [...QK.notificationsInbox, this.userId] }),
         this.queryClient.invalidateQueries({ queryKey: [...QK.notificationsUnread, this.userId] }),
       ]);
+      if (this.lastEventId) {
+        void reportClientPipelineTrace({
+          traceId: this.lastEventId,
+          stage: "client_ack",
+          notificationId: this.lastEventId,
+          inboxVersion: this.inboxVersion,
+        });
+      }
     } finally {
       this.invalidateMutex = false;
     }
@@ -213,6 +244,7 @@ export class RealtimeInboxCoordinator {
       inboxVersion: this.inboxVersion,
       lastEventId: id,
     });
+    this.tabCoordinator?.broadcastInvalidate(id, this.inboxVersion);
     this.scheduleInvalidate();
   };
 
@@ -236,20 +268,17 @@ export class RealtimeInboxCoordinator {
   }
 
   private async subscribe(): Promise<void> {
+    if (this.tabCoordinator && !this.tabCoordinator.leader) return;
     const gen = ++this.subscribeGeneration;
     await this.teardownChannel();
     if (gen !== this.subscribeGeneration) return;
 
     const client = await getBrowserSupabase();
-    const channelName = `notifications-inbox:${this.userId}-${gen}`;
-    const channel = buildPostgresChangesChannel(client, {
-      channelName,
+    const { channel, subscribed } = await subscribePostgresChangesChannel(client, {
+      channelName: `notifications-inbox:${this.userId}-${gen}`,
       tables: [{ table: "notifications", event: "INSERT" }],
       onPayload: (_table, payload) => this.onInsert(payload),
-    });
-    this.channel = channel;
-
-    const subscribed = await subscribeRealtimeChannelOnly(channel, channelName, {
+      retryAttempts: 2,
       subscribeTimeoutMs: 8000,
       logPrefix: "[notifications-inbox]",
       onChannelLost: () => {
@@ -262,15 +291,18 @@ export class RealtimeInboxCoordinator {
     });
 
     if (gen !== this.subscribeGeneration) {
-      try {
-        await client.removeChannel(channel);
-      } catch {
-        /* ignore */
+      if (channel) {
+        try {
+          await client.removeChannel(channel);
+        } catch {
+          /* ignore */
+        }
       }
       return;
     }
 
-    if (subscribed) {
+    if (subscribed && channel) {
+      this.channel = channel;
       this.status = "live";
       this.resubscribeAttempt = 0;
       this.heartbeatTimestamp = Date.now();
@@ -283,11 +315,6 @@ export class RealtimeInboxCoordinator {
     this.status = "degraded";
     this.emitHealth();
     this.syncPolling();
-    try {
-      await client.removeChannel(channel);
-    } catch {
-      /* ignore */
-    }
     this.channel = null;
     this.scheduleResubscribe();
   }

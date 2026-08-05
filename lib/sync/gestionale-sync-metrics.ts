@@ -3,12 +3,14 @@ import { getRuntimeHealthSnapshot, incrementHealthCounter } from "@/lib/observab
 export type GestionaleSyncMetricName =
   | "gestionale_dirty_marked"
   | "gestionale_dirty_flushed"
-  | "gestionale_invalidation_skipped";
+  | "gestionale_invalidation_skipped"
+  | "gestionale_sync_pipeline_stage";
 
 export type GestionaleSyncMetricTags = {
   reason?: string;
   domain?: string;
   source?: string;
+  stage?: string;
 };
 
 function metricKey(name: GestionaleSyncMetricName, tags?: GestionaleSyncMetricTags): string {
@@ -17,6 +19,7 @@ function metricKey(name: GestionaleSyncMetricName, tags?: GestionaleSyncMetricTa
   if (tags.reason) parts.push(`reason=${tags.reason}`);
   if (tags.domain) parts.push(`domain=${tags.domain}`);
   if (tags.source) parts.push(`source=${tags.source}`);
+  if (tags.stage) parts.push(`stage=${tags.stage}`);
   return parts.join("|");
 }
 

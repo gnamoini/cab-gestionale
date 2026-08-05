@@ -52,7 +52,12 @@ export function resolvePushHrefFromNotification(input: {
   if (type === "magazzino_sotto_scorta") {
     return entityId ? buildAdminNotificationMagazzinoHref(entityId) : "/magazzino";
   }
+  if (type === "lavorazioni_ritardo_digest") return "/lavorazioni";
+  if (type === "preventivo_approvato" || type.startsWith("preventivo_")) return "/preventivi";
   if (type === "fatture_scadute_digest") return buildAdminNotificationFatturazioneHref();
+  if (type.startsWith("fattura")) return buildAdminNotificationFatturazioneHref();
+  if (type === "dashboard_promemoria_reminder") return "/dashboard";
+  if (type === "system_error") return "/sicurezza";
   if (type === "dipendenti_presenze_reminder") return buildAdminNotificationDipendentiHref();
   if (type === "tagliando_da_eseguire") return "/mezzi";
 

@@ -2,7 +2,7 @@ import "server-only";
 
 import {
   DOCUMENTI_COLUMNS,
-  LOG_MODIFICHE_COLUMNS,
+  LOG_MODIFICHE_WITH_PROFILE_SELECT,
   LAVORAZIONI_LIST_LIGHT_COLUMNS,
   MEZZI_LIST_LIGHT_COLUMNS,
   MOVIMENTI_RICAMBI_COLUMNS,
@@ -52,7 +52,7 @@ export async function fetchMezzoDetailDTOServer(mezzoId: string): Promise<Servic
     sb.from("preventivi").select(PREVENTIVI_COLUMNS).eq("mezzo_id", id),
     sb
       .from("log_modifiche")
-      .select(LOG_MODIFICHE_COLUMNS)
+      .select(LOG_MODIFICHE_WITH_PROFILE_SELECT)
       .eq("entita", "mezzi")
       .eq("entita_id", id)
       .order("created_at", { ascending: false })

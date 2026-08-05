@@ -4,6 +4,7 @@ import {
   adminDashboardTestDedupKey,
   dipendentiPresenzeReminderDedupKey,
   fattureScaduteDigestDedupKey,
+  lavorazioniRitardoDigestDedupKey,
   lavorazioneCompletataDedupKey,
   lavorazioneCreatedDedupKey,
   magazzinoSottoScortaDedupKey,
@@ -13,6 +14,7 @@ import {
   isAdminDashboardTestNotification,
   isDipendentiPresenzeReminderNotification,
   isFattureScaduteDigestNotification,
+  isLavorazioniRitardoDigestNotification,
   isLavorazioneCompletataNotification,
   isLavorazioneDashboardNotification,
   isMagazzinoDashboardNotification,
@@ -117,6 +119,22 @@ export function legacyNotificationToCommand(
       title: `${notification.count} fatture scadute`,
       body: formatFattureScaduteDigestBody(notification),
       deepLink: buildAdminNotificationFatturazioneHref(),
+      dedupKey,
+      idempotencyKey: idempotencyFromDedup(dedupKey),
+    };
+  }
+
+  if (isLavorazioniRitardoDigestNotification(notification)) {
+    const dedupKey = lavorazioniRitardoDigestDedupKey(notification.dateYmd);
+    const label = notification.count === 1 ? "lavorazione in ritardo" : "lavorazioni in ritardo";
+    return {
+      notificationType: "lavorazioni_ritardo_digest",
+      translationKey: "notification.lavorazioni_ritardo_digest",
+      translationParams: { dateYmd: notification.dateYmd, count: notification.count },
+      snapshot: { amount: String(notification.count) },
+      title: `${notification.count} ${label}`,
+      body: `${notification.count} ${label} oltre 14 giorni. Apri Lavorazioni per il dettaglio.`,
+      deepLink: "/lavorazioni",
       dedupKey,
       idempotencyKey: idempotencyFromDedup(dedupKey),
     };

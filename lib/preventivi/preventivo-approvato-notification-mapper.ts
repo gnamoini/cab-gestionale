@@ -1,5 +1,10 @@
 import { isPreventiviNotificationsPath } from "@/lib/lavorazioni/admin-notifications";
-import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
+import type {
+  PreventivoRecord,
+  PreventivoStato,
+  PreventivoStatoCliente,
+  PreventivoStatoWorkflow,
+} from "@/lib/preventivi/types";
 
 export type PreventivoApprovatoIntent = {
   preventivoId: string;
@@ -19,6 +24,22 @@ export function preventivoRecordToApprovatoIntent(record: PreventivoRecord): Pre
   };
 }
 
+type PreventivoAcceptanceSnapshot = {
+  statoCliente: PreventivoStatoCliente | null;
+  statoWorkflow: PreventivoStatoWorkflow;
+};
+
+export function didTransitionToAccettato(
+  prev: PreventivoAcceptanceSnapshot | null | undefined,
+  curr: PreventivoAcceptanceSnapshot,
+): boolean {
+  const nowAccepted = curr.statoCliente === "accettato" || curr.statoWorkflow === "acquisito";
+  if (!nowAccepted) return false;
+  const wasAccepted = prev?.statoCliente === "accettato" || prev?.statoWorkflow === "acquisito";
+  return !wasAccepted;
+}
+
+/** @deprecated use didTransitionToAccettato */
 export function didTransitionToConfermato(prevStato: string | undefined, currStato: PreventivoStato): boolean {
   if (currStato !== "confermato") return false;
   const prev = prevStato?.trim();
@@ -26,22 +47,22 @@ export function didTransitionToConfermato(prevStato: string | undefined, currSta
   return prev !== "confermato";
 }
 
-/** @deprecated use didTransitionToConfermato */
+/** @deprecated use didTransitionToAccettato */
 export function didTransitionToApprovato(prevStato: string | undefined, currStato: PreventivoStato): boolean {
   return didTransitionToConfermato(prevStato, currStato);
 }
 
 export function preventivoApprovatoEventToIntent(input: {
   preventivoId: string;
-  prevStato: string | undefined;
+  prevRecord: PreventivoAcceptanceSnapshot | null | undefined;
   currRecord: PreventivoRecord | null | undefined;
   pathname: string;
   isLocalUpdate: boolean;
 }): PreventivoApprovatoIntent | null {
-  const { preventivoId, prevStato, currRecord, pathname, isLocalUpdate } = input;
+  const { preventivoId, prevRecord, currRecord, pathname, isLocalUpdate } = input;
   if (isLocalUpdate) return null;
   if (isPreventiviNotificationsPath(pathname)) return null;
   if (!currRecord || currRecord.id !== preventivoId) return null;
-  if (!didTransitionToConfermato(prevStato, currRecord.stato)) return null;
+  if (!didTransitionToAccettato(prevRecord, currRecord)) return null;
   return preventivoRecordToApprovatoIntent(currRecord);
 }

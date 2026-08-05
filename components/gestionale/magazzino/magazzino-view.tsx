@@ -70,6 +70,7 @@ import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-ada
 import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
+import { useGestionaleDirtySearchHint } from "@/src/hooks/gestionale/use-gestionale-dirty-search-hint";
 import { usesServerSearch } from "@/lib/search/registry";
 import type { MagazzinoFilters } from "@/src/services/magazzino.service";
 import { useQueryClient } from "@tanstack/react-query";
@@ -132,7 +133,21 @@ import {
   gestionaleListTableActionsGroupEnd,
   gestionaleMagazzinoDenseTableClass,
 } from "@/lib/ui/gestionale-list-table";
-import { magazzinoTableColAzioniClass, magazzinoTableColCodiceTdClass, magazzinoTableColCodiceThClass, magazzinoTableColCodiceWidth, magazzinoTableColDescrizioneClass } from "@/lib/magazzino/magazzino-table-columns";
+import {
+  magazzinoTableColAzioniClass,
+  magazzinoTableColCategoriaClass,
+  magazzinoTableColCodiceClass,
+  magazzinoTableColCodiceTdClass,
+  magazzinoTableColCodiceThClass,
+  magazzinoTableColConsumoClass,
+  magazzinoTableColDescrizioneClass,
+  magazzinoTableColLabelQtyClass,
+  magazzinoTableColMarcaClass,
+  magazzinoTableColPrezzoClass,
+  magazzinoTableColScortaClass,
+  magazzinoTableColScortaMinClass,
+  magazzinoTableColUltimaModClass,
+} from "@/lib/magazzino/magazzino-table-columns";
 import { MagazzinoDescrizioneSortTh } from "@/components/gestionale/magazzino/magazzino-descrizione-sort-th";
 import { MagazzinoTableSection } from "@/components/gestionale/magazzino/magazzino-page-structure";
 import {
@@ -531,6 +546,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     clearSearch,
     applySearchImmediate,
   } = useGestionaleListSearch({ domain: "magazzino" });
+  const { hint: dirtySearchHint } = useGestionaleDirtySearchHint();
   const magazzinoFetchFilters = useMemo((): MagazzinoFilters | undefined => {
     if (!usesServerSearch("magazzino") || !searchApplied.trim()) return undefined;
     return { search: searchApplied.trim() };
@@ -565,7 +581,10 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     module: "magazzino",
     extraImportEntities: ["listino_ricambi"],
     disabled: !magCanCreateRicambio,
-    onImportCompleted: () => void magazzinoListQ.refetch(),
+    onImportCompleted: () => {
+      void invalidateAfterMagazzinoOrMovimenti(queryClient);
+      void magazzinoListQ.refetch();
+    },
   });
 
   const patchAdvancedFilters = useCallback((patch: Partial<MagazzinoAdvancedFilters>) => {
@@ -1274,10 +1293,10 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
         },
         "mutation",
       );
-      void queryClient.invalidateQueries({ queryKey: QK.log, refetchType: "active" });
-      void queryClient.invalidateQueries({ queryKey: QK.movimenti, refetchType: "active" });
-      void queryClient.invalidateQueries({ queryKey: QK.magazzino, refetchType: "active" });
-      void invalidateReportUniverse(queryClient);
+      void invalidateAfterMagazzinoOrMovimenti(queryClient, [
+        cabSyncEventForEntity("movimenti_ricambi", movimentoId, "entity_deleted", "movimenti_ricambi"),
+        cabSyncEventForEntity("magazzino_ricambi", result.data.ricambioId, "entity_updated", "magazzino_ricambi"),
+      ]);
       toastSuccess("Movimento annullato. Giacenza ripristinata.");
     } finally {
       setUndoStockPending(false);
@@ -1524,7 +1543,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
           className={gestionaleListTableRowClass}
         >
           {labelMode ? (
-            <td className={`${gestionaleListTableTdCenter} w-[7.25rem]`}>
+            <td className={`${gestionaleListTableTdCenter} ${magazzinoTableColLabelQtyClass}`}>
               <MagazzinoLabelQtyStepper
                 value={qty}
                 onChange={(next) => setLabelQtyForRicambio(p.id, next)}
@@ -1535,7 +1554,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
           <td className={`${magazzinoTableColCodiceTdClass} ${gestionaleListTableTd}`}>
             <RicambioCodiceCell p={p} />
           </td>
-          <td className={`min-w-0 ${gestionaleListTableTd}`}>
+          <td className={`min-w-0 ${gestionaleListTableTd} ${magazzinoTableColMarcaClass}`}>
             {!isMagazzinoMobilePlaceholderValue(p.marca) ? (
               <MagazzinoMarcaMobileBadge
                 marca={p.marca}
@@ -1546,16 +1565,16 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
               <span className="text-[color:var(--cab-text-muted)]">—</span>
             )}
           </td>
-          <td className={`min-w-0 ${gestionaleListTableTd}`}>
+          <td className={`min-w-0 ${gestionaleListTableTd} ${magazzinoTableColDescrizioneClass}`}>
             <div className="break-words font-medium leading-snug">{p.descrizione}</div>
             <div className="mt-0.5 break-words text-xs leading-snug text-zinc-500 dark:text-zinc-400">
               {compatModelsDisplayFor(p)}
             </div>
           </td>
-          <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-300`}>
+          <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-300 ${magazzinoTableColCategoriaClass}`}>
             <span className="block truncate text-[13px] leading-snug">{p.categoria}</span>
           </td>
-          <td className={gestionaleListTableTdCenter}>
+          <td className={`${gestionaleListTableTdCenter} ${magazzinoTableColScortaClass}`}>
             <MagazzinoScortaDisplayBadge
               ricambioId={p.id}
               ricambioLabel={p.descrizione}
@@ -1564,12 +1583,12 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
               variant="table"
             />
           </td>
-          <td className={`${gestionaleListTableTdCenter} !text-inherit`}>
+          <td className={`${gestionaleListTableTdCenter} !text-inherit ${magazzinoTableColScortaMinClass}`}>
             <div className="flex justify-center">
               <MagazzinoScortaBadge value={p.scortaMinima} kind="minima" variant="table" />
             </div>
           </td>
-          <td className={gestionaleListTableTdCenter}>
+          <td className={`${gestionaleListTableTdCenter} ${magazzinoTableColUltimaModClass}`}>
             <Tooltip
               content={
                 stale
@@ -1594,8 +1613,8 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
               </div>
             </Tooltip>
           </td>
-          <td className={`${gestionaleListTableTdCenter} font-medium`}>{eur(p.prezzoVendita)}</td>
-          <td className={`${gestionaleListTableTdCenter} w-[7%] max-w-[6.5rem] text-[13px] text-zinc-700 dark:text-zinc-300`}>
+          <td className={`${gestionaleListTableTdCenter} font-medium ${magazzinoTableColPrezzoClass}`}>{eur(p.prezzoVendita)}</td>
+          <td className={`${gestionaleListTableTdCenter} text-[13px] text-zinc-700 dark:text-zinc-300 ${magazzinoTableColConsumoClass}`}>
             <span className="inline-block max-w-full truncate">
               {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "—"}
             </span>
@@ -1727,23 +1746,30 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
               </div>
             }
             search={
-              <GestionaleListSearchField
-                id="magazzino-search"
-                placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    onSearchEnter();
-                  }
-                }}
-                onFocusChange={setSearchFieldFocused}
-                onSuggestionSelect={onMagazzinoSuggestionSelect}
-                suggestionPool={searchSuggestionPool}
-                aria-label="Cerca in magazzino"
-                wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
-              />
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <GestionaleListSearchField
+                  id="magazzino-search"
+                  placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      onSearchEnter();
+                    }
+                  }}
+                  onFocusChange={setSearchFieldFocused}
+                  onSuggestionSelect={onMagazzinoSuggestionSelect}
+                  suggestionPool={searchSuggestionPool}
+                  aria-label="Cerca in magazzino"
+                  wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
+                />
+                {dirtySearchHint ? (
+                  <p className="text-xs text-[color:var(--cab-text-muted)]" role="status">
+                    {dirtySearchHint}
+                  </p>
+                ) : null}
+              </div>
             }
             filtersExpanded={filtriEspansi}
             onFiltersToggle={() => setFiltriEspansi((o) => !o)}
@@ -1820,23 +1846,26 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
           wrapClassName="mt-4"
           colgroup={
             <>
-              {labelMode ? <col className="w-[7.25rem]" /> : null}
-              <col style={{ width: magazzinoTableColCodiceWidth }} />
-              <col className="w-[8%]" />
+              {labelMode ? <col className={magazzinoTableColLabelQtyClass} /> : null}
+              <col className={magazzinoTableColCodiceClass} />
+              <col className={magazzinoTableColMarcaClass} />
               <col className={magazzinoTableColDescrizioneClass} />
-              <col className="w-[8%]" />
-              <col className="w-[7%]" />
-              <col className="w-[8%]" />
-              <col className="w-[12%]" />
-              <col className="w-[9%]" />
-              <col className="w-[7%]" />
+              <col className={magazzinoTableColCategoriaClass} />
+              <col className={magazzinoTableColScortaClass} />
+              <col className={magazzinoTableColScortaMinClass} />
+              <col className={magazzinoTableColUltimaModClass} />
+              <col className={magazzinoTableColPrezzoClass} />
+              <col className={magazzinoTableColConsumoClass} />
               <col className={magazzinoTableColAzioniClass} />
             </>
           }
           headRow={
             <>
               {labelMode ? (
-                <th className="w-[7.25rem] px-2 text-center text-xs font-medium text-[color:var(--cab-text-muted)]" scope="col">
+                <th
+                  className={`${magazzinoTableColLabelQtyClass} px-2 text-center text-xs font-medium text-[color:var(--cab-text-muted)]`}
+                  scope="col"
+                >
                   Qtà
                 </th>
               ) : null}
@@ -1854,15 +1883,21 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                 sortColumn={sortColumn}
                 sortPhase={sortPhase}
                 onSort={onSort}
+                thClassName={magazzinoTableColMarcaClass}
               />
-              <MagazzinoDescrizioneSortTh sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+              <MagazzinoDescrizioneSortTh
+                sortColumn={sortColumn}
+                sortPhase={sortPhase}
+                onSort={onSort}
+                thClassName={magazzinoTableColDescrizioneClass}
+              />
               <GlobalTableSortTh
                 label="Categoria"
                 columnKey="categoria"
                 sortColumn={sortColumn}
                 sortPhase={sortPhase}
                 onSort={onSort}
-                thClassName="min-w-0"
+                thClassName={`min-w-0 ${magazzinoTableColCategoriaClass}`}
               />
               <GlobalTableSortTh
                 label="Scorta"
@@ -1871,6 +1906,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                 sortPhase={sortPhase}
                 onSort={onSort}
                 align="center"
+                thClassName={magazzinoTableColScortaClass}
               />
               <GlobalTableSortTh
                 label="Scorta min."
@@ -1879,7 +1915,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                 sortPhase={sortPhase}
                 onSort={onSort}
                 align="center"
-                thClassName="min-w-0"
+                thClassName={`min-w-0 ${magazzinoTableColScortaMinClass}`}
               />
               <GlobalTableSortTh
                 label="Ultima modifica"
@@ -1888,7 +1924,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                 sortPhase={sortPhase}
                 onSort={onSort}
                 align="center"
-                thClassName="min-w-0"
+                thClassName={`min-w-0 ${magazzinoTableColUltimaModClass}`}
               />
               <GlobalTableSortTh
                 label="P. vendita"
@@ -1897,6 +1933,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                 sortPhase={sortPhase}
                 onSort={onSort}
                 align="center"
+                thClassName={magazzinoTableColPrezzoClass}
               />
               <GlobalTableSortTh
                 label="Consumo"
@@ -1905,7 +1942,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                 sortPhase={sortPhase}
                 onSort={onSort}
                 align="center"
-                thClassName="w-[7%] max-w-[6.5rem] min-w-0"
+                thClassName={`min-w-0 ${magazzinoTableColConsumoClass}`}
               />
               <GestionaleListTableActionsHead />
             </>

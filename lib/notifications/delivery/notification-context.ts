@@ -39,6 +39,7 @@ export type NotificationPreferences = {
   categories: Partial<Record<string, boolean>>;
   quietHoursStart: string | null;
   quietHoursEnd: string | null;
+  channels_enabled?: Partial<Record<"inbox" | "push" | "email" | "sms", boolean>>;
 };
 
 export type NotificationContext = {

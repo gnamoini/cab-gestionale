@@ -3,6 +3,7 @@ import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-mod
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
 import { dispatchPreventiviLogRefresh } from "@/lib/sistema/cab-events";
 
+/** @deprecated Solo fallback offline/ottimistico. SSOT audit = log_modifiche (database). */
 export const PREVENTIVI_CHANGE_LOG_STORAGE_KEY = "gestionale-preventivi-change-log-v1";
 export const PREVENTIVI_CHANGE_LOG_MAX = LOG_MODIFICHE_RETENTION_PER_ENTITA;
 

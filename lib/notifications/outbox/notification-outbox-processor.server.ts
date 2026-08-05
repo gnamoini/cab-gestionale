@@ -3,7 +3,11 @@ import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { assertSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
+import { dispatchNotificationEvent } from "@/lib/notifications/dispatch/notification-dispatch-service.server";
 import { fanoutEntityNotification } from "@/lib/notifications/dispatch/entity-fanout.server";
+import { entityDispatchIdempotencyKey } from "@/lib/notifications/dispatch/entity-idempotency";
+import { resolveSingleCompanyId } from "@/lib/notifications/dispatch/resolve-company-id.server";
+import { buildCatalogOutboxCommand } from "@/lib/notifications/outbox/build-catalog-outbox-command.server";
 import {
   buildLegacyNotificationFromOutbox,
   type OutboxRow,
@@ -96,24 +100,53 @@ export async function runNotificationOutboxProcessor(input?: {
 
     try {
       const legacy = await buildLegacyNotificationFromOutbox(client, row);
-      if (!legacy) {
-        skipped += 1;
-        await completeOutbox(client, row.id, "completed");
-        continue;
-      }
+      let result: { created: number; duplicate: boolean };
 
-      const result = await fanoutEntityNotification(
-        {
-          notificationEventId: row.notification_event_id,
-          entityType: row.entity_type,
-          entityId: row.entity_id,
-          actorId: row.actor_id,
-          companyId: row.company_id,
-          legacyNotification: legacy,
-          traceId,
-        },
-        client,
-      );
+      if (legacy) {
+        result = await fanoutEntityNotification(
+          {
+            notificationEventId: row.notification_event_id,
+            entityType: row.entity_type,
+            entityId: row.entity_id,
+            actorId: row.actor_id,
+            companyId: row.company_id,
+            legacyNotification: legacy,
+            traceId,
+          },
+          client,
+        );
+      } else {
+        const buildCommand = buildCatalogOutboxCommand(row);
+        if (!buildCommand) {
+          skipped += 1;
+          await completeOutbox(client, row.id, "completed");
+          continue;
+        }
+
+        const companyId = row.company_id ?? (await resolveSingleCompanyId(client));
+        if (!companyId) {
+          skipped += 1;
+          await completeOutbox(client, row.id, "completed");
+          continue;
+        }
+
+        result = await dispatchNotificationEvent(
+          {
+            notificationEventId: row.notification_event_id,
+            companyId,
+            actorId: row.actor_id ?? undefined,
+            dispatchIdempotencyKey: entityDispatchIdempotencyKey(
+              row.notification_event_id,
+              row.entity_type,
+              row.entity_id,
+            ),
+            buildCommand,
+            traceId,
+            entityId: row.entity_id,
+          },
+          client,
+        );
+      }
 
       if (result.created === 0 && !result.duplicate) {
         skipped += 1;

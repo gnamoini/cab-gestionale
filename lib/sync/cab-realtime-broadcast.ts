@@ -72,10 +72,6 @@ export function broadcastGestionaleInvalidate(
   });
 }
 
-export function broadcastCabSyncEvent(event: CabSyncEvent): void {
-  postMessage({ type: "cab_sync", event, sourceTabId: getGestionaleTabId() });
-}
-
 export type GestionaleBroadcastHandler = {
   onInvalidate: (
     tables: string[],

@@ -1,3 +1,4 @@
+import { profileDisplayName } from "@/lib/auth/profile-display-name";
 import type { SupabaseClient } from "@/src/lib/supabase/browser-client";
 import {
   auditContext,
@@ -50,6 +51,24 @@ function buildPayloadFromInput(input: AuditEventInput): Record<string, unknown> 
   return mergePayloadWithSnapshot(payload, input.snapshot);
 }
 
+async function resolveAutoreNomeSnapshot(
+  client: SupabaseClient,
+  autoreId: string | null,
+): Promise<string | null> {
+  if (!autoreId) return null;
+  const { data } = await client
+    .from("profiles")
+    .select("nome, cognome")
+    .eq("id", autoreId)
+    .maybeSingle();
+  if (!data) return null;
+  const name = profileDisplayName({
+    nome: (data as { nome?: string | null }).nome ?? "",
+    cognome: (data as { cognome?: string | null }).cognome,
+  });
+  return name || null;
+}
+
 export async function recordAuditEvent(
   client: SupabaseClient,
   input: AuditEventInput,
@@ -77,12 +96,17 @@ export async function recordAuditEvent(
   const description = buildDescriptionFromInput(input);
   const module = input.module ?? rbacLogEntitaModule(input.entityType);
   const requestId = resolveRequestId(input.requestId);
+  const autoreNomeSnapshot =
+    actor.actorType === "USER" && autoreId
+      ? await resolveAutoreNomeSnapshot(client, autoreId)
+      : null;
 
   const row: Record<string, unknown> = {
     entita: input.entityType,
     entita_id: input.entityId,
     azione: input.action,
     autore_id: autoreId,
+    autore_nome_snapshot: autoreNomeSnapshot,
     payload: mergedPayload,
     event_type: eventType,
     actor_type: actor.actorType,

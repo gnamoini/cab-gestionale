@@ -2,6 +2,7 @@ import type { RenamePlan, RenameImpact, RenameImpactItem, ValidationResult } fro
 import { resolveOperations } from "@/lib/settings/rename-engine/rename-operation-registry";
 import { detectRenameConflicts } from "@/lib/settings/rename-engine/rename-conflict";
 import { detectSemanticCollision } from "@/lib/settings/rename-engine/rename-semantic-collision";
+import { detectDuplicateTargetCollision } from "@/lib/settings/rename-engine/duplicate-target-policy";
 
 export function validateRenamePlan(
   plan: RenamePlan,
@@ -9,9 +10,24 @@ export function validateRenamePlan(
     existingLabels: readonly string[];
     existingEntityKeys?: readonly string[];
     aliasLabels?: readonly string[];
+    catalogBeforeRename?: readonly string[];
   },
 ): ValidationResult {
   const checks: ValidationResult["checks"] = [];
+  const duplicateTarget = detectDuplicateTargetCollision({
+    kind: plan.kind,
+    oldLabel: plan.oldLabel,
+    newLabel: plan.newLabel,
+    catalogBeforeRename: context.catalogBeforeRename,
+  });
+  if (duplicateTarget.blocked && duplicateTarget.message) {
+    checks.push({
+      name: "duplicate_target_policy",
+      status: "fail",
+      message: duplicateTarget.message,
+    });
+    return { status: "blocked", checks };
+  }
   const conflicts = detectRenameConflicts(plan, context);
   if (conflicts.blocked) {
     for (const c of conflicts.conflicts) {

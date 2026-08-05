@@ -58,6 +58,14 @@ export type TagliandoDaEseguireNotification = {
   createdAt: string;
 };
 
+export type LavorazioniRitardoDigestNotification = {
+  kind: "lavorazioni_ritardo_digest";
+  id: string;
+  dateYmd: string;
+  count: number;
+  createdAt: string;
+};
+
 export type DashboardPromemoriaReminderNotification = {
   kind: "dashboard_promemoria_reminder";
   id: string;
@@ -75,6 +83,7 @@ export type AdminDashboardNotification =
   | LavorazioneCompletataNotification
   | MagazzinoSottoScortaNotification
   | FattureScaduteDigestNotification
+  | LavorazioniRitardoDigestNotification
   | DipendentiPresenzeReminderNotification
   | TagliandoDaEseguireNotification
   | AdminDashboardTestNotification;
@@ -93,6 +102,7 @@ export function notificationStoreKey(notification: AdminDashboardNotification): 
   if (notification.kind === "lavorazione_created") return `lav:${notification.lavorazioneId}`;
   if (notification.kind === "lavorazione_completata") return `lav:${notification.lavorazioneId}:done`;
   if (notification.kind === "fatture_scadute_digest") return notification.id;
+  if (notification.kind === "lavorazioni_ritardo_digest") return notification.id;
   if (notification.kind === "dipendenti_presenze_reminder") return notification.id;
   if (notification.kind === "tagliando_da_eseguire") return notification.id;
   if (notification.kind === "admin_dashboard_test") return notification.id;
@@ -125,6 +135,12 @@ export function isFattureScaduteDigestNotification(
   notification: AdminDashboardNotification,
 ): notification is FattureScaduteDigestNotification {
   return notification.kind === "fatture_scadute_digest";
+}
+
+export function isLavorazioniRitardoDigestNotification(
+  notification: AdminDashboardNotification,
+): notification is LavorazioniRitardoDigestNotification {
+  return notification.kind === "lavorazioni_ritardo_digest";
 }
 
 export function isDipendentiPresenzeReminderNotification(

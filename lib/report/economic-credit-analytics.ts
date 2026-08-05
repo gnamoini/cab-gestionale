@@ -1,6 +1,7 @@
 import { roundMoney } from "@/lib/fatturazione/invoice-calculations";
 import type { InvoiceRow } from "@/src/types/supabase-tables";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
+import { isClosedCustomerDecision, isPreventivoCountedInEconomicStats } from "@/lib/preventivi/preventivo-stats-eligibility";
 import { isoInRange, type DateRange } from "@/lib/report/date-ranges";
 import { buildInvoicePeriodKpi } from "@/lib/report/report-domain-analytics";
 
@@ -49,16 +50,17 @@ export function computeDsoDays(invoices: readonly InvoiceRow[], range: DateRange
   return Math.round((inv.daIncassare / inv.fatturato) * days);
 }
 
-/** Win rate preventivi nel periodo: approvati+convertiti / emessi (escl. bozze). */
+/** Win rate preventivi nel periodo: accettati / decisioni cliente chiuse (accettato+rifiutato). */
 export function computePreventiviWinRate(preventivi: readonly PreventivoRecord[], range: DateRange): number | null {
   let total = 0;
   let won = 0;
   for (const p of preventivi) {
-    if (p.stato === "bozza") continue;
+    if (p.statoWorkflow === "bozza") continue;
     const at = p.dataCreazione || p.aggiornatoAt;
     if (!isoInRange(at, range)) continue;
+    if (!isClosedCustomerDecision(p)) continue;
     total += 1;
-    if (p.stato === "confermato") won += 1;
+    if (isPreventivoCountedInEconomicStats(p)) won += 1;
   }
   if (total === 0) return null;
   return Math.round((won / total) * 1000) / 10;

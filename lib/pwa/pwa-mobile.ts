@@ -54,4 +54,19 @@ export function supportsWebPushMobile(): boolean {
   return PWA_PUSH_ENABLED && isWebPushSupported() && Boolean(getVapidPublicKey());
 }
 
+export function isIosSafari(userAgent = typeof navigator !== "undefined" ? navigator.userAgent : ""): boolean {
+  if (typeof window === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(userAgent) && !(window as { MSStream?: unknown }).MSStream;
+}
+
+export function isPwaStandalone(): boolean {
+  if (typeof window === "undefined") return false;
+  return isPwaStandaloneMode(
+    resolvePwaDisplayMode({
+      matchMedia: (q) => window.matchMedia(q),
+      navigatorStandalone: (navigator as Navigator & { standalone?: boolean }).standalone,
+    }),
+  );
+}
+
 export { supportsPwaAppBadge };

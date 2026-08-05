@@ -6,7 +6,9 @@ export type DeliveryChannel =
   | "desktop"
   | "email"
   | "sms"
-  | "webhook";
+  | "webhook"
+  | "noop"
+  | "capture";
 
 export type PresenceStatus = "ONLINE" | "AWAY" | "BACKGROUND" | "OFFLINE";
 

@@ -105,7 +105,10 @@ export function buildNotificationSettingsViewModel(input: {
       return a.label.localeCompare(b.label, "it");
     });
 
-  return { pages };
+  return {
+    pages,
+    channelPreferences: { inbox: true, push: true, email: false },
+  };
 }
 
 export function filterSettingsViewModelBySearch(
@@ -115,6 +118,7 @@ export function filterSettingsViewModelBySearch(
   const q = searchQuery.trim().toLowerCase();
   if (!q) return vm;
   return {
+    ...vm,
     pages: vm.pages
       .map((page) => ({
         ...page,

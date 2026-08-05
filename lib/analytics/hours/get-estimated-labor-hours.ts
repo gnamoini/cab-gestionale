@@ -1,4 +1,5 @@
 import type { PreventivoRecord } from "@/lib/preventivi/types";
+import { isPreventivoCountedInEconomicStats } from "@/lib/preventivi/preventivo-stats-eligibility";
 import { isoInRange, type DateRange } from "@/lib/report/date-ranges";
 import type { AnalyticsHoursResult } from "@/lib/analytics/hours/types";
 
@@ -20,12 +21,13 @@ export function getEstimatedLaborHoursFromPreventivo(record: PreventivoRecord): 
 export function sumEstimatedLaborHours(
   records: readonly PreventivoRecord[],
   range: DateRange,
-  options?: { excludeBozza?: boolean },
+  options?: { accettatoOnly?: boolean },
 ): AnalyticsHoursResult {
-  const excludeBozza = options?.excludeBozza ?? true;
+  const accettatoOnly = options?.accettatoOnly ?? true;
   let total = 0;
   for (const rec of records) {
-    if (excludeBozza && rec.stato === "bozza") continue;
+    if (accettatoOnly && !isPreventivoCountedInEconomicStats(rec)) continue;
+    if (!accettatoOnly && rec.statoWorkflow === "bozza") continue;
     if (!rec.dataCreazione || !isoInRange(rec.dataCreazione, range)) continue;
     total += Number(rec.manodopera?.oreTotali ?? 0);
   }

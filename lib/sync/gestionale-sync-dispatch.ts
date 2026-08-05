@@ -32,6 +32,7 @@ import { markGestionaleDirty, clearGestionaleDirty } from "@/lib/sync/gestionale
 import { shouldSkipOperationalDirtyMark } from "@/lib/sync/operational-dirty-mark-gate";
 import { resolveSyncEffects } from "@/lib/sync/gestionale-sync-policy";
 import { incrementSyncMetric } from "@/lib/sync/gestionale-sync-metrics";
+import { logGestionaleSyncPipelineStage } from "@/lib/sync/gestionale-sync-pipeline-trace";
 import { resolveDomainForTable } from "@/lib/sync/gestionale-sync-scope";
 import { incrementHealthCounter } from "@/lib/observability/runtime-health";
 import { recordStockInvalidateTelemetry } from "@/lib/magazzino/stock-merge-telemetry";
@@ -69,14 +70,6 @@ export type DispatchGestionaleActionOptions = {
   skipCacheInvalidation?: boolean;
 };
 
-/** @deprecated Usare `DispatchGestionaleActionOptions`. */
-export type DispatchGestionaleRemoteChangeOptions = {
-  emitLocalCabSync?: boolean;
-  cabSyncEvents?: CabSyncEvent[];
-  skipCacheInvalidation?: boolean;
-  entityIdByTable?: ReadonlyMap<string, string>;
-};
-
 const recentDispatchFingerprints = new Map<string, number>();
 export const GESTIONALE_DISPATCH_DEDUP_MS = 5000;
 let lastGestionaleDispatchAt = 0;
@@ -99,6 +92,9 @@ export function gestionaleDispatchFingerprint(tables: string[], cabSyncEvents?: 
   const eventPart = (cabSyncEvents ?? [])
     .map((e) => {
       if (e.type === "settings_updated") return "settings";
+      if (e.type === "SETTINGS_PROPAGATION_DRIFT_DETECTED") {
+        return `drift:${e.kind}:${e.jobId ?? e.oldLabel}:${e.newLabel}`;
+      }
       return `${e.type}:${e.entity}:${e.id}`;
     })
     .sort()
@@ -133,13 +129,22 @@ function buildEntityIdByTable(
 ): Map<string, string> {
   const map = new Map<string, string>(explicit);
   for (const ev of cabEvents) {
-    if (ev.type === "settings_updated" || !ev.id || !ev.table) continue;
+    if (ev.type === "settings_updated" || ev.type === "SETTINGS_PROPAGATION_DRIFT_DETECTED") continue;
+    if (!ev.id || !ev.table) continue;
     map.set(ev.table, ev.id);
   }
   for (const table of tables) {
     if (map.has(table)) continue;
-    const match = cabEvents.find((e) => e.type !== "settings_updated" && e.table === table && e.id);
-    if (match && match.type !== "settings_updated") map.set(table, match.id);
+    const match = cabEvents.find(
+      (e) =>
+        e.type !== "settings_updated" &&
+        e.type !== "SETTINGS_PROPAGATION_DRIFT_DETECTED" &&
+        e.table === table &&
+        e.id,
+    );
+    if (match && match.type !== "settings_updated" && match.type !== "SETTINGS_PROPAGATION_DRIFT_DETECTED") {
+      map.set(table, match.id);
+    }
   }
   return map;
 }
@@ -160,13 +165,17 @@ function collectCabEvents(
     if (
       primaryCabEvent &&
       primaryCabEvent.type !== "settings_updated" &&
+      primaryCabEvent.type !== "SETTINGS_PROPAGATION_DRIFT_DETECTED" &&
       primaryCabEvent.entity === entity
     ) {
       continue;
     }
 
     const hasExplicit = cabEvents.some(
-      (e) => e.type !== "settings_updated" && (e.table === t || e.entity === entity),
+      (e) =>
+        e.type !== "settings_updated" &&
+        e.type !== "SETTINGS_PROPAGATION_DRIFT_DETECTED" &&
+        (e.table === t || e.entity === entity),
     );
     if (hasExplicit) continue;
 
@@ -271,6 +280,11 @@ export function dispatchGestionaleAction(
           continue;
         }
         markGestionaleDirty(entry);
+        logGestionaleSyncPipelineStage("dirty_marked", {
+          table: entry.table,
+          domain: entry.domain,
+          source: entry.source,
+        });
         incrementSyncMetric("gestionale_dirty_marked", 1, {
           domain: entry.domain,
           source: entry.source,
@@ -367,28 +381,6 @@ export function dispatchGestionaleLocalMutation(
   entityIdByTable?: ReadonlyMap<string, string>,
 ): void {
   dispatchGestionaleAction(qc, tables, { source: "local_mutation", cabSyncEvents, entityIdByTable });
-}
-
-/**
- * Cambiamento remoto (Realtime / BroadcastChannel).
- * @deprecated Preferire `dispatchGestionaleAction` con source esplicita.
- */
-export function dispatchGestionaleRemoteChange(
-  qc: QueryClient,
-  tables: string[],
-  cabSyncEvent?: CabSyncEvent,
-  options?: DispatchGestionaleRemoteChangeOptions,
-): void {
-  const cabSyncEvents: CabSyncEvent[] = [];
-  if (cabSyncEvent) cabSyncEvents.push(cabSyncEvent);
-  if (options?.cabSyncEvents?.length) cabSyncEvents.push(...options.cabSyncEvents);
-
-  dispatchGestionaleAction(qc, tables, {
-    source: "realtime",
-    cabSyncEvents: cabSyncEvents.length > 0 ? cabSyncEvents : undefined,
-    entityIdByTable: options?.entityIdByTable,
-    skipCacheInvalidation: options?.skipCacheInvalidation,
-  });
 }
 
 /** Tabelle portale per sync post-mutazione gestionale. */

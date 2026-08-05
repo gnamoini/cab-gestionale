@@ -91,6 +91,14 @@ export const RENAME_OPERATIONS: Record<string, RenameOperation> = {
     filter: { excludeArchivedLavorazioni: true },
     policy: "live",
   },
+  "utilizzatore.preventivi": {
+    id: "utilizzatore.preventivi",
+    action: "replace_column",
+    table: "preventivi",
+    column: "utilizzatore",
+    filter: { columnEq: {} },
+    policy: "live",
+  },
   "cantiere.mezzi.meta": {
     id: "cantiere.mezzi.meta",
     action: "replace_json",
@@ -233,7 +241,7 @@ const KIND_OPERATION_IDS: Record<SettingsRenameKind, readonly string[]> = {
     "cliente.ddt.label_emessi",
     "cliente.alias.old_label",
   ],
-  utilizzatore: ["utilizzatore.mezzi", "utilizzatore.scheda"],
+  utilizzatore: ["utilizzatore.mezzi", "utilizzatore.scheda", "utilizzatore.preventivi"],
   cantiere: ["cantiere.mezzi.meta", "cantiere.scheda"],
   addetto: ["addetto.scheda"],
   mag_marca: ["mag.marca"],

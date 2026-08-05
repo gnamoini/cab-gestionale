@@ -2,6 +2,7 @@ import type { DeliveryProvider } from "@/lib/notifications/delivery/providers/de
 
 export const noopProvider: DeliveryProvider = {
   id: "noop",
+  channel: "noop",
   async deliver(ctx) {
     return {
       success: true,

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { LoadingButton } from "@/components/design-system";
 import { GestionaleAiActionButton } from "@/components/design-system/gestionale-ai-action-button";
 import { CaptureAnalyzeErrorPanel } from "@/components/document-capture/capture-analyze-error-panel";
@@ -30,6 +31,7 @@ import { inventoryReceivingCaptureAdapter } from "@/lib/document-capture/invento
 import { useInventoryReceivingApply } from "@/lib/document-capture/use-inventory-receiving-apply";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { invalidateAfterInventoryReceivingApply } from "@/src/lib/react-query/invalidate-related";
 
 type Props = {
   className?: string;
@@ -39,6 +41,7 @@ type Props = {
 
 function MagazzinoCarichiCaptureLauncherInner({ className = "", size = "sm", mobileIconOnly = false }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const gestToast = useGestionaleToast();
   const perm = usePermissions("magazzino_carichi");
   const [open, setOpen] = useState(false);
@@ -123,13 +126,14 @@ function MagazzinoCarichiCaptureLauncherInner({ className = "", size = "sm", mob
     const ok = await applyFlow.confirmAndApply();
     if (ok) {
       gestToast.success(inventoryReceivingCaptureAdapter.apply.successMessage);
+      invalidateAfterInventoryReceivingApply(queryClient);
       closeModal();
       router.refresh();
     } else if (applyFlow.error) {
       flow.setError(applyFlow.error);
       gestToast.error(applyFlow.error);
     }
-  }, [applyFlow, closeModal, flow, gestToast, perm.canWrite, router]);
+  }, [applyFlow, closeModal, flow, gestToast, perm.canWrite, queryClient, router]);
 
   if (!perm.canRead) return null;
 

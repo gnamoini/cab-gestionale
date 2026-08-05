@@ -34,7 +34,7 @@ export const ALWAYS_LIVE_TABLES = new Set([
 ]);
 
 export function cabEventToDirtyType(ev: CabSyncEvent): DirtyEntryType | null {
-  if (ev.type === "settings_updated") return null;
+  if (ev.type === "settings_updated" || ev.type === "SETTINGS_PROPAGATION_DRIFT_DETECTED") return null;
   if (ev.type === "entity_created") return "create";
   if (ev.type === "entity_deleted") return "delete";
   return "update";
@@ -72,8 +72,15 @@ function dirtyTypeFromTablesAndEvents(
   table: string,
   cabEvents: CabSyncEvent[],
 ): DirtyEntryType {
-  const match = cabEvents.find((e) => e.type !== "settings_updated" && (e.table === table || !e.table));
-  if (!match || match.type === "settings_updated") return "update";
+  const match = cabEvents.find(
+    (e) =>
+      e.type !== "settings_updated" &&
+      e.type !== "SETTINGS_PROPAGATION_DRIFT_DETECTED" &&
+      (e.table === table || !e.table),
+  );
+  if (!match || match.type === "settings_updated" || match.type === "SETTINGS_PROPAGATION_DRIFT_DETECTED") {
+    return "update";
+  }
   const t = cabEventToDirtyType(match);
   return t ?? "update";
 }
@@ -163,6 +170,9 @@ export function resolveSyncEffects(input: ResolveSyncEffectInput): ResolvedSyncE
 
     const interestedScopes = scopesInterestedInTable(table, activeScopes);
     if (interestedScopes.length === 0) {
+      invalidateTables.push(table);
+      const id = entityIdByTable.get(table);
+      if (id) invalidateEntityIdByTable.set(table, id);
       continue;
     }
 

@@ -11,6 +11,7 @@ import {
 } from "@/src/lib/permissions/gestionale-modules";
 import { GESTIONALE_PAGES, pathnameToPage } from "@/src/lib/permissions/gestionale-pages";
 import { resolveRole } from "@/lib/auth/rbac";
+import { isStaffAdminRole } from "@/lib/notifications/staff-admin";
 import { useRbac } from "@/src/hooks/use-rbac";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { canReadPage, canWritePage } from "@/src/lib/rbac/resolve-page-access";
@@ -94,8 +95,7 @@ function buildGlobalPermissions(
   resolved: EffectivePermissionsSnapshot["resolved"] | undefined,
   authLoading: boolean,
 ): GlobalPermissions {
-  const isAdmin = role === "admin";
-  const isManager = role === "manager";
+  const isAdmin = isStaffAdminRole(role);
   const isOperatore = role === "operatore" || role === "manager";
   const isGuest = role === "guest";
   const isReadOnly = role === "guest" || role === "cliente";

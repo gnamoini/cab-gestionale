@@ -86,6 +86,8 @@ export const TABLE_TO_SYNC_DOMAIN: Partial<Record<string, GestionaleSyncDomain>>
   movimenti_ricambi: "magazzino",
   ordini_fornitori: "magazzino",
   ordini_fornitori_righe: "magazzino",
+  inventory_documents: "magazzino",
+  inventory_document_lines: "magazzino",
   mezzi: "mezzi",
   attrezzature: "mezzi",
   preventivi: "preventivi",

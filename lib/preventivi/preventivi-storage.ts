@@ -9,6 +9,10 @@ import {
   nextPreventivoId as nextPreventivoIdFromCache,
   nextPreventivoNumeroFromRecords,
 } from "@/lib/preventivi/preventivi-records-from-cache";
+import {
+  legacyPreventivoStatoToLifecycle,
+  PREVENTIVO_LIFECYCLE_DEFAULTS,
+} from "@/lib/preventivi/preventivo-lifecycle-defaults";
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
 import { PREVENTIVI_MAX, PREVENTIVI_STORAGE_KEY } from "@/lib/preventivi/constants";
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
@@ -125,6 +129,7 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
     dataCreazione: String(o.dataCreazione ?? new Date().toISOString()),
     aggiornatoAt: String(o.aggiornatoAt ?? new Date().toISOString()),
     stato,
+    ...legacyPreventivoStatoToLifecycle(stato),
     tipoDocumento: normalizePreventivoTipoDocumento(o.tipoDocumento),
     lavorazioneId: String(o.lavorazioneId ?? ""),
     lavorazioneOrigine: o.lavorazioneOrigine === "storico" ? "storico" : "attiva",
@@ -262,7 +267,7 @@ export function duplicatePreventivo(
     numero,
     dataCreazione: now,
     aggiornatoAt: now,
-    stato: "bozza",
+    ...PREVENTIVO_LIFECYCLE_DEFAULTS,
     righeRicambi,
     manodopera,
     createdBy: autore,

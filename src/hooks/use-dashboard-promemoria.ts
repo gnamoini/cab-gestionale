@@ -59,7 +59,7 @@ export function useDashboardPromemoria(monthKey: DashboardPromemoriaMonthKey) {
   });
 
   useCabSyncListener("dashboard_promemoria", (ev) => {
-    if (ev.type === "settings_updated") return;
+    if (ev.type !== "entity_created" && ev.type !== "entity_updated" && ev.type !== "entity_deleted") return;
     if (shouldSuppressRemoteCacheInvalidation("dashboard_promemoria", ev.id)) return;
     void monthQuery.refetch();
   });

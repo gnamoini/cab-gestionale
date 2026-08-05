@@ -17,6 +17,7 @@ import type { DomainReportSectionProps } from "@/components/report/report-sectio
 import { ReportDataTable, ReportSection } from "@/components/report/design-system";
 import { ReportEconomicMetricsLayout } from "@/components/report/sections/report-economic-metrics-layout";
 import { ReportEconomicTabs, type EconomicTabId } from "@/components/report/sections/report-economic-tabs";
+import { buildPreventivoSlaMetrics } from "@/lib/preventivi/preventivo-sla-analytics";
 import { usePublishWhenReady } from "@/components/report/sections/use-section-publish";
 import {
   buildClienteAgingHeatmap,
@@ -198,6 +199,11 @@ export default function ReportEconomiciSectionView(props: DomainReportSectionPro
     [preventiviQ.records, props.range],
   );
 
+  const preventivoSla = useMemo(
+    () => buildPreventivoSlaMetrics(preventiviQ.records),
+    [preventiviQ.records],
+  );
+
   const mixSlices = useMemo(
     () => buildRevenueMixByType(invoicesQ.rows, invoicesQ.invoices, props.range),
     [invoicesQ.rows, invoicesQ.invoices, props.range],
@@ -285,6 +291,33 @@ export default function ReportEconomiciSectionView(props: DomainReportSectionPro
         <div className="grid min-w-0 gap-4 lg:grid-cols-2">
           <ReportArAgingChart points={arAgingPoints} />
           <ReportPreventiviFunnelChart rows={funnelRows} />
+        </div>
+        <div className="mt-4 rounded-lg border border-[color:var(--cab-border)] bg-[color:var(--cab-surface)] p-4">
+          <h4 className="text-sm font-semibold text-[color:var(--cab-text)]">SLA commerciale preventivi</h4>
+          <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+            <div>
+              <dt className="text-[color:var(--cab-text-muted)]">Conversione</dt>
+              <dd className="font-semibold tabular-nums">
+                {preventivoSla.conversionPct != null ? `${preventivoSla.conversionPct}%` : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[color:var(--cab-text-muted)]">In attesa</dt>
+              <dd className="font-semibold tabular-nums">{preventivoSla.inAttesa}</dd>
+            </div>
+            <div>
+              <dt className="text-[color:var(--cab-text-muted)]">Tempo medio risposta</dt>
+              <dd className="font-semibold tabular-nums">
+                {preventivoSla.avgResponseHours != null ? `${preventivoSla.avgResponseHours} h` : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[color:var(--cab-text-muted)]">Timeout automatici</dt>
+              <dd className="font-semibold tabular-nums">
+                {preventivoSla.timeoutPct != null ? `${preventivoSla.timeoutPct}%` : "—"}
+              </dd>
+            </div>
+          </dl>
         </div>
         <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
           <ReportClienteAgingHeatmap rows={agingHeatmap} />

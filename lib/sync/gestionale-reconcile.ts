@@ -17,7 +17,7 @@ export type ReconcileGestionaleEntityResult = {
 };
 
 function tableForEvent(event: CabSyncEvent): string | undefined {
-  if (event.type === "settings_updated") return undefined;
+  if (event.type === "settings_updated" || event.type === "SETTINGS_PROPAGATION_DRIFT_DETECTED") return undefined;
   return event.table ?? event.entity;
 }
 
@@ -35,7 +35,7 @@ export function reconcileGestionaleEntity(
   source: ReconcileSource,
   opts?: ReconcileGestionaleEntityOptions,
 ): ReconcileGestionaleEntityResult {
-  if (event.type === "settings_updated") {
+  if (event.type === "settings_updated" || event.type === "SETTINGS_PROPAGATION_DRIFT_DETECTED") {
     return { handled: true, needsRefetch: false };
   }
 

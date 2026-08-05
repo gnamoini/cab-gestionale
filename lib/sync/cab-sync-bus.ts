@@ -27,7 +27,15 @@ export type CabSyncEvent =
   | { type: "entity_created"; entity: CabSyncEntity; id: string; table?: string }
   | { type: "entity_updated"; entity: CabSyncEntity; id: string; table?: string }
   | { type: "entity_deleted"; entity: CabSyncEntity; id: string; table?: string }
-  | { type: "settings_updated"; keys?: string[] };
+  | { type: "settings_updated"; keys?: string[] }
+  | {
+      type: "SETTINGS_PROPAGATION_DRIFT_DETECTED";
+      kind: string;
+      oldLabel: string;
+      newLabel: string;
+      affectedCount: number;
+      jobId?: string;
+    };
 
 const TABLE_ENTITY: Record<string, CabSyncEntity> = {
   app_settings: "app_settings",

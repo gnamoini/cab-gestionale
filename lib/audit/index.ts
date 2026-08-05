@@ -29,6 +29,8 @@ export {
 export { scoreActivity, baseActivityScore, freshnessFactor } from "@/lib/audit/score-activity";
 export { getRecentActivities, LOG_AGGREGATION_WINDOW_MS } from "@/lib/audit/get-recent-activities";
 export type { RecentActivityItem, GetRecentActivitiesInput } from "@/lib/audit/get-recent-activities";
+export { fetchActivityFeedServer } from "@/lib/audit/fetch-activity-feed.server";
+export { splitActivityFeedLogs } from "@/lib/audit/split-activity-feed-logs";
 export { auditCoverage, AUDIT_COVERAGE_SERVICE_FILES } from "@/lib/audit/coverage-contract";
 export type { AuditCoverageModule } from "@/lib/audit/coverage-contract";
 export { withAuditTransaction } from "@/lib/audit/transactional-record.server";

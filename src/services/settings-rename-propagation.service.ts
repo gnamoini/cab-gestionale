@@ -93,10 +93,11 @@ async function propagateSimpleColumn(
   to: string,
   table: string,
   column: string,
+  operationId?: string,
 ): Promise<SettingsRenamePropagationResult> {
   const c = await sb();
   const n = await countUpdate(c, table, { [column]: to }, { [column]: from });
-  return { kind, from, to, updated: n };
+  return { kind, from, to, updated: n, table, operationId: operationId ?? `${kind}.${table}.${column}` };
 }
 
 async function propagateDdtClienteBozza(from: string, to: string): Promise<number> {
@@ -307,8 +308,16 @@ async function propagateOne(entry: SettingsRenameEntry): Promise<SettingsRenameP
       break;
     }
     case "utilizzatore": {
-      out.push(await propagateSimpleColumn(kind, from, to, "mezzi", "utilizzatore"));
-      out.push({ kind, from, to, updated: await propagateSchedaIngressoCampo("utilizzatore", from, to) });
+      out.push(await propagateSimpleColumn(kind, from, to, "mezzi", "utilizzatore", "utilizzatore.mezzi"));
+      out.push({
+        kind,
+        from,
+        to,
+        updated: await propagateSchedaIngressoCampo("utilizzatore", from, to),
+        table: "scheda_lavorazione",
+        operationId: "utilizzatore.scheda",
+      });
+      out.push(await propagateSimpleColumn(kind, from, to, "preventivi", "utilizzatore", "utilizzatore.preventivi"));
       break;
     }
     case "cantiere": {
@@ -367,12 +376,29 @@ async function propagateOne(entry: SettingsRenameEntry): Promise<SettingsRenameP
 }
 
 export const settingsRenamePropagationService = {
-  async propagateRenames(entries: SettingsRenameEntry[]): Promise<ServiceResult<SettingsRenamePropagationResult[]>> {
+  async propagateRenames(
+    entries: SettingsRenameEntry[],
+    context?: { executionId?: string; jobId?: string },
+  ): Promise<ServiceResult<SettingsRenamePropagationResult[]>> {
     try {
       const deduped = entries.filter((e) => e.from.trim() && e.to.trim() && e.from !== e.to);
       const results: SettingsRenamePropagationResult[] = [];
       for (const entry of deduped) {
         results.push(...(await propagateOne(entry)));
+      }
+      if (context?.jobId && context.executionId && results.length > 0) {
+        const { settingsRenameJobService } = await import("@/src/services/settings-rename-job.service");
+        await settingsRenameJobService.insertJobDetails(
+          context.jobId,
+          context.executionId,
+          results.map((r) => ({
+            table_name: r.table ?? r.kind,
+            operation_id: r.operationId ?? r.kind,
+            old_value: r.from,
+            new_value: r.to,
+            affected_rows: r.updated,
+          })),
+        );
       }
       return success(results);
     } catch (e) {

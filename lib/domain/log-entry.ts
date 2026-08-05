@@ -8,6 +8,7 @@ import { logService } from "@/src/services/log.service";
 export const logEntry = {
   getAll: logService.getAll.bind(logService),
   getByEntita: logService.getByEntita.bind(logService),
+  fetchActivityFeed: logService.fetchActivityFeed.bind(logService),
   getById: logService.getById.bind(logService),
   create: logService.create.bind(logService),
   async markReverted(
@@ -20,4 +21,4 @@ export const logEntry = {
   },
 };
 
-export type { LogFilters, LogInsert } from "@/src/services/log.service";
+export type { LogFilters, LogInsert, ActivityFeedFilters } from "@/src/services/log.service";

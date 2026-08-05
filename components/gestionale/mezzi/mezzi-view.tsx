@@ -39,6 +39,7 @@ import { dsPageToolbarCtaCompact } from "@/lib/ui/design-system";
 import { gestionaleListTierClass } from "@/lib/ui/gestionale-list-responsive";
 import type { GestionaleListPageProps } from "@/lib/ui/gestionale-list-page-props";
 import { useListSurface } from "@/lib/ui/use-list-surface";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { LoadingCardSkeleton, LoadingErrorState, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount, SkeletonBoundary } from "@/components/design-system";
 import { Q_FOCUS_MEZZO } from "@/lib/navigation/dashboard-log-links";
 import {
@@ -131,6 +132,12 @@ const MezziLogDrawer = dynamic(
 const MEZZI_SEARCH_DEBOUNCE_MS = 300;
 
 export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: GestionaleListPageProps) {
+  useGestionaleSyncScope({
+    scopeId: "mezzi-view",
+    domain: "mezzi",
+    route: "/mezzi",
+    tables: ["mezzi", "attrezzature", "log_modifiche"],
+  });
   const listSurface = useListSurface(serverListSurface);
   const queryClient = useQueryClient();
   const mezziPerm = usePermissions("mezzi");

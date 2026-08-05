@@ -66,6 +66,7 @@ export async function GET() {
   checks.retentionOk = {
     ok: true,
     entityDefault: retentionConfig.entity_retention_default,
+    auditHistoryScope: retentionConfig.audit_history_retention?.scope ?? "ENTITY_HISTORY",
     dashboardDays: retentionConfig.dashboard_days,
     dashboardMaxRows: retentionConfig.dashboard_max_rows,
   };

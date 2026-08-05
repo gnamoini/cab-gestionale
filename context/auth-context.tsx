@@ -584,6 +584,7 @@ export function AuthProvider({
       }
     }
     trackRuntimeEvent(RuntimeEvents.authLogout, { userId: uid ?? "anon" });
+    void import("@/lib/pwa/pwa-notification-badge").then(({ syncPwaAppBadge }) => syncPwaAppBadge(0));
     await invalidateRbacTruthClient({ reason: "logout", queryClient });
     await transitionToAnonymous();
     resetUndoSession();

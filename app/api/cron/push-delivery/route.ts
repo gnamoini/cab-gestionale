@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { readSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
 import { runDeliveryWorker } from "@/lib/notifications/delivery/worker/delivery-worker.server";
-import { runPushDeliveryProcess } from "@/lib/pwa/push-delivery-process.server";
-import { resolveNotificationsSsotV2Mode } from "@/lib/notifications/notifications-ssot-v2-flag";
 
 export const runtime = "nodejs";
 
@@ -24,14 +22,8 @@ async function handleCron(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const ssotMode = resolveNotificationsSsotV2Mode();
-  if (ssotMode === "on" || ssotMode === "shadow") {
-    const result = await runDeliveryWorker();
-    return NextResponse.json({ pipeline: "ssot_v4", ...result });
-  }
-
-  const result = await runPushDeliveryProcess();
-  return NextResponse.json({ pipeline: "legacy_push", ...result });
+  const result = await runDeliveryWorker();
+  return NextResponse.json({ pipeline: "ssot_v4", ...result });
 }
 
 /** Vercel Cron (GET + CRON_SECRET) o invocazione manuale POST con service role. */

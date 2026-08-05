@@ -47,7 +47,7 @@ import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
 export function markRecentLocalGestionaleFromCabEvents(cabSyncEvents?: CabSyncEvent[]): void {
   if (!cabSyncEvents?.length) return;
   for (const ev of cabSyncEvents) {
-    if (ev.type === "settings_updated") continue;
+    if (ev.type === "settings_updated" || ev.type === "SETTINGS_PROPAGATION_DRIFT_DETECTED") continue;
     const table = ev.table;
     if (table && ev.id) markRecentLocalGestionaleMutation([table], ev.id);
   }

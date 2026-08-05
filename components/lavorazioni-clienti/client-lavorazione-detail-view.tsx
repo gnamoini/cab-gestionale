@@ -9,6 +9,7 @@ import { MobileNavBackButton } from "@/components/gestionale/mobile-nav-open-but
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { IconQrCode } from "@/components/lavorazioni-clienti/client-lavorazioni-icons";
 import { ClientLavorazioneInformazioniPanel } from "@/components/lavorazioni-clienti/client-lavorazione-informazioni-panel";
+import { ClientLavorazionePreventivoPanel } from "@/components/lavorazioni-clienti/client-lavorazione-preventivo-panel";
 import { ClientLavorazioneMediaPanel } from "@/components/lavorazioni-clienti/client-lavorazione-media-panel";
 import { ClientLavorazioneQrDialog } from "@/components/lavorazioni-clienti/client-lavorazione-qr-dialog";
 import {
@@ -198,6 +199,13 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
                 addettiGlobali={addettiGlobali}
                 addettiRecords={addettiRecords}
               />
+            </section>
+
+            <section
+              className={`flex min-w-0 flex-col ${dsGapMd} border-t border-[color:var(--cab-border)] pt-[length:var(--ds-space-xl)]`}
+            >
+              <h2 className={CLIENT_PORTAL_SECTION_TITLE_CLASS}>Preventivo</h2>
+              <ClientLavorazionePreventivoPanel lavorazioneId={row.id} />
             </section>
 
             <section

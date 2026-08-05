@@ -6,7 +6,7 @@ import {
   shouldSkipStockRealtimeInvalidate,
   tryMergeStockFromRealtimeGate,
 } from "@/lib/magazzino/stock-realtime-gate";
-import { mergeStockEntity, stockEntityFromRow } from "@/lib/magazzino/stock-entity-cache";
+import { getStockEntity, mergeStockEntity, stockEntityFromRow } from "@/lib/magazzino/stock-entity-cache";
 
 type StockRealtimeRecord = {
   id?: string;
@@ -16,7 +16,10 @@ type StockRealtimeRecord = {
   ricambio_id?: string;
 };
 
-/** Applica merge gate su evento realtime magazzino — v4 gate o legacy merge. */
+export { isSelfOriginatedStockRealtimeEvent } from "@/lib/magazzino/stock-realtime-self-echo";
+export type { StockRealtimeRecord } from "@/lib/magazzino/stock-realtime-self-echo";
+
+/** Patch UI qty — true solo se merge applicato. Non decide dirty/invalidate. */
 export function tryMergeStockFromRealtime(
   qc: QueryClient,
   table: string,
@@ -30,11 +33,13 @@ export function tryMergeStockFromRealtime(
   }
 
   if (table === "magazzino_ricambi" && record?.id) {
+    const ricambioId = record.id;
+    if (!getStockEntity(qc, ricambioId)) return false;
     const result = mergeStockEntity(
       qc,
       stockEntityFromRow(
         {
-          id: record.id,
+          id: ricambioId,
           quantita: Number(record.quantita) || 0,
           stock_version: Number(record.stock_version) || 0,
         },

@@ -39,6 +39,7 @@ function withEnabled(
   enabled: boolean,
 ): NotificationSettingsViewModel {
   return {
+    channelPreferences: vm.channelPreferences,
     pages: vm.pages.map((page) => {
       const events = page.events.map((event) =>
         event.notificationEventId === notificationEventId
@@ -108,7 +109,10 @@ export function NotificationSettingsModal({
 }: NotificationSettingsModalProps) {
   const gestToast = useGestionaleToast();
   const [loading, setLoading] = useState(true);
-  const [vm, setVm] = useState<NotificationSettingsViewModel>({ pages: [] });
+  const [vm, setVm] = useState<NotificationSettingsViewModel>({
+    pages: [],
+    channelPreferences: { inbox: true, push: true, email: false },
+  });
   const [savingId, setSavingId] = useState<string | null>(null);
   const hasContent = vm.pages.length > 0;
   const showSkeleton = loading && !hasContent;
@@ -180,6 +184,14 @@ export function NotificationSettingsModal({
             <SettingsEmptyState>Nessuna notifica configurabile per il tuo profilo.</SettingsEmptyState>
           ) : (
             <div className="space-y-5 pb-1" aria-busy={savingId != null}>
+              <section className="min-w-0">
+                <h2 className={`${gestionaleCollapsibleSectionTitleClassName} mb-2`}>Canali di consegna</h2>
+                <ul className="space-y-2 text-sm text-[color:var(--cab-text)]">
+                  <li>Inbox interno: {vm.channelPreferences.inbox ? "attivo" : "disattivo"}</li>
+                  <li>Push mobile: {vm.channelPreferences.push ? "attivo" : "disattivo"}</li>
+                  <li>Email: {vm.channelPreferences.email ? "attivo" : "disattivo"}</li>
+                </ul>
+              </section>
               {vm.pages.map((page) => (
                 <PageSection
                   key={page.key}

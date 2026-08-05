@@ -23,4 +23,24 @@ test.describe("notification delivery pipeline", () => {
     });
     expect([401, 403]).toContain(res.status());
   });
+
+  test("fatturazione overdue digest cron requires auth", async ({ request }) => {
+    const res = await request.get("/api/cron/fatturazione-overdue-digest");
+    expect(res.status()).toBe(401);
+  });
+
+  test("lavorazioni overdue digest cron requires auth", async ({ request }) => {
+    const res = await request.get("/api/cron/lavorazioni-overdue-digest");
+    expect(res.status()).toBe(401);
+  });
+
+  test("push subscription cleanup cron requires auth", async ({ request }) => {
+    const res = await request.get("/api/cron/push-subscription-cleanup");
+    expect(res.status()).toBe(401);
+  });
+
+  test("push delivery cron requires auth", async ({ request }) => {
+    const res = await request.get("/api/cron/push-delivery");
+    expect(res.status()).toBe(401);
+  });
 });

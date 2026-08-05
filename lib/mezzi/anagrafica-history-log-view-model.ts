@@ -1,3 +1,4 @@
+import { profileDisplayName } from "@/lib/auth/profile-display-name";
 import { MEZZO_PERMANENT_FIELD_LABELS } from "@/lib/domain/mezzo/build-scheda-save-conflict-summary";
 import {
   buildModificaRigaFromChanges,
@@ -17,12 +18,17 @@ export function buildAnagraficaHistoryGestionaleLogViewModel(
     dopo: row.new_values[key] ?? "—",
   }));
   const origine = row.origine.replace(/_/g, " ").trim() || "anagrafica";
+  const autore = row.profiles
+    ? profileDisplayName({ nome: row.profiles.nome ?? "", cognome: row.profiles.cognome }) || "Utente"
+    : row.user_id
+      ? "Utente"
+      : "Sistema";
   return {
     tone: "update",
     tipoRiga: "AGGIORNAMENTO ANAGRAFICA",
     oggettoRiga: origine.charAt(0).toUpperCase() + origine.slice(1),
     modificaRiga: buildModificaRigaFromChanges(changes),
-    autore: "",
+    autore,
     atIso: row.created_at,
   };
 }

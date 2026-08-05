@@ -1,6 +1,7 @@
 "use client";
 
 import { LOG_MODIFICHE_COLUMNS, LOG_MODIFICHE_WITH_PROFILE_SELECT } from "@/lib/db/table-select-columns";
+import { DEFAULT_AUDIT_RETENTION_CONFIG } from "@/lib/audit/types";
 import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import { buildLogModificaSummary, mergePayloadWithSummary } from "@/lib/gestionale-log/log-summary";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
@@ -14,6 +15,11 @@ export type LogFilters = {
   entita?: string;
   entita_id?: string;
   limit?: number;
+};
+
+export type ActivityFeedFilters = {
+  limit?: number;
+  days?: number;
 };
 
 export type LogInsert = Omit<LogModificaRow, "id" | "created_at">;
@@ -52,6 +58,34 @@ export const logService = {
     limit = LOG_MODIFICHE_RETENTION_PER_ENTITA,
   ): Promise<ServiceResult<LogModificaWithProfileRow[]>> {
     return logService.getAll({ entita, entita_id, limit });
+  },
+
+  /** ACTIVITY_FEED dashboard — RPC get_activity_feed + join profilo. */
+  async fetchActivityFeed(
+    filters?: ActivityFeedFilters,
+  ): Promise<ServiceResult<LogModificaWithProfileRow[]>> {
+    try {
+      const c = await sb();
+      const limit = Math.min(Math.max(filters?.limit ?? 50, 1), 100);
+      const days = filters?.days ?? DEFAULT_AUDIT_RETENTION_CONFIG.dashboard_days;
+      const { data: feedRows, error: rpcErr } = await c.rpc("get_activity_feed", {
+        p_limit: limit,
+        p_days: days,
+      });
+      if (rpcErr) return err(errMessageFromSupabase(rpcErr, { action: "read" }));
+      const ids = (feedRows ?? []).map((r: { id: string }) => r.id).filter(Boolean);
+      if (ids.length === 0) return success([]);
+
+      const { data, error } = await c
+        .from("log_modifiche")
+        .select(LOG_MODIFICHE_WITH_PROFILE_SELECT)
+        .in("id", ids)
+        .order("created_at", { ascending: false });
+      if (error) return err(errMessageFromSupabase(error, { action: "read" }));
+      return success((data ?? []) as unknown as LogModificaWithProfileRow[]);
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
   },
 
   async getById(id: string): Promise<ServiceResult<LogModificaRow>> {

@@ -4,6 +4,10 @@ import { DOCUMENT_ACCESS_TOKENS_COLUMNS, PREVENTIVI_COLUMNS } from "@/lib/db/tab
 import { buildClientOfficialDocumentPreviewPath, buildOfficialDocumentTokenStreamPath } from "@/lib/official-documents/preview-url";
 import type { ClientLavorazioneDocumentsPayload } from "@/lib/official-documents/types";
 import { isPreventivoVisibleToClient } from "@/lib/preventivi/preventivo-client-visibility";
+import {
+  resolvePreventivoStatoCliente,
+  resolvePreventivoStatoWorkflow,
+} from "@/lib/preventivi/preventivo-row-state";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { DdtDocumentRow, DocumentAccessTokenRow, PreventivoRow } from "@/src/types/supabase-tables";
@@ -36,7 +40,13 @@ export async function resolveClientDocumentsForLavorazioneServer(
 
   const preventivi = (preventiviRows ?? [])
     .map((row) => row as PreventivoRow)
-    .filter((r) => isPreventivoVisibleToClient(r.stato))
+    .filter((r) =>
+      isPreventivoVisibleToClient(
+        resolvePreventivoStatoWorkflow(r),
+        resolvePreventivoStatoCliente(r),
+        r.inviato_at,
+      ),
+    )
     .map((r) => {
       const token = tokenByEntity.get(`preventivo:${r.id}`);
       const numero = (r.dettagli as { numero?: string })?.numero?.trim();
@@ -53,7 +63,13 @@ export async function resolveClientDocumentsForLavorazioneServer(
   const visiblePreventivoIds = new Set(
     (preventiviRows ?? [])
       .map((r) => r as PreventivoRow)
-      .filter((r) => isPreventivoVisibleToClient(r.stato))
+      .filter((r) =>
+      isPreventivoVisibleToClient(
+        resolvePreventivoStatoWorkflow(r),
+        resolvePreventivoStatoCliente(r),
+        r.inviato_at,
+      ),
+    )
       .map((r) => r.id),
   );
 

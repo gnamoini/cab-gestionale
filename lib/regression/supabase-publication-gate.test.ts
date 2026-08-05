@@ -8,6 +8,7 @@ import {
   DEPRECATED_REALTIME_TABLES,
   parseExpectedRealtimePublicationTables,
 } from "@/lib/production/expected-realtime-publication";
+import { getBridgeTablesMissingFromPublication } from "@/lib/production/gestionale-realtime-bridge-tables";
 
 const ROOT = process.cwd();
 
@@ -36,5 +37,11 @@ const fetchSrc = read("lib/production/fetch-realtime-publication-tables.ts");
 assert.match(fetchSrc, /pg_publication_tables/);
 assert.match(fetchSrc, /SUPABASE_ACCESS_TOKEN/);
 assert.match(fetchSrc, /api\.supabase\.com/);
+
+assert.equal(
+  getBridgeTablesMissingFromPublication().length,
+  0,
+  "GestionaleRealtimeBridge tables must be covered by supabase_realtime publication",
+);
 
 console.log(`supabase-publication-gate.test.ts OK (${expected.length} expected tables)`);

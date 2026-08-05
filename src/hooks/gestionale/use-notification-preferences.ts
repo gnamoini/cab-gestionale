@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import type { NotificationSettingsViewModel } from "@/lib/notifications/preferences/notification-preferences-api";
 
 export function useNotificationPreferences() {
-  const [vm, setVm] = useState<NotificationSettingsViewModel>({ pages: [] });
+  const [vm, setVm] = useState<NotificationSettingsViewModel>({
+    pages: [],
+    channelPreferences: { inbox: true, push: true, email: false },
+  });
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {

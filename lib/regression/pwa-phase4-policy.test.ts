@@ -121,21 +121,18 @@ assert.match(migration, /dead_letter/);
 assert.match(migration, /cab_claim_push_delivery_batch/);
 assert.match(migration, /trg_notifications_enqueue_push_delivery/);
 
-const edgeFn = read("supabase/functions/push-notification-send/index.ts");
-assert.match(edgeFn, /cab_claim_push_delivery_batch/);
-assert.match(edgeFn, /cab_complete_push_delivery/);
-assert.match(edgeFn, /next_attempt_at|max_attempts/);
-assert.match(edgeFn, /status === 404 \|\| status === 410/);
+const legacyRemoval = read("supabase/migrations/20261108120000_notification_platform_production_rollout.sql");
+assert.match(legacyRemoval, /drop table if exists public\.push_delivery_queue/);
+assert.doesNotMatch(legacyRemoval, /create table.*push_delivery_queue/);
 
-const pushWorker = read("lib/pwa/push-delivery-worker.server.ts");
-assert.match(pushWorker, /runPushDeliveryProcess/);
-
-const pushProcess = read("lib/pwa/push-delivery-process.server.ts");
-assert.match(pushProcess, /cab_claim_push_delivery_batch/);
-assert.match(pushProcess, /cab_complete_push_delivery/);
-assert.match(pushProcess, /webpush\.sendNotification/);
-assert.match(pushProcess, /status === 404 \|\| status === 410/);
-assert.match(pushProcess, /push_disabled|vapid_not_configured/);
+assert.ok(
+  !fs.existsSync(path.join(ROOT, "supabase/functions/push-notification-send/index.ts")),
+  "legacy edge push-notification-send removed",
+);
+assert.ok(
+  !fs.existsSync(path.join(ROOT, "lib/pwa/push-delivery-process.server.ts")),
+  "legacy push-delivery-process removed",
+);
 
 const pushCron = read("app/api/cron/push-delivery/route.ts");
 assert.match(pushCron, /runDeliveryWorker/);

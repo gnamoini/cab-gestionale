@@ -52,6 +52,11 @@ const PreventiviLogDrawer = dynamic(
   () => import("@/components/preventivi/preventivi-log-drawer").then((m) => m.PreventiviLogDrawer),
   { ssr: false },
 );
+const PreventivoEventsDrawer = dynamic(
+  () => import("@/components/preventivi/preventivo-events-drawer").then((m) => m.PreventivoEventsDrawer),
+  { ssr: false },
+);
+import type { PreventivoEventViewModel } from "@/lib/preventivi/preventivo-events-types";
 import { openDdtPdfInNewTab } from "@/lib/ddt/ddt-pdf";
 import { buildDdtDraftFromPreventivoAuto } from "@/lib/ddt/preventivo-to-ddt-draft";
 import type { DdtStatus } from "@/lib/ddt/types";
@@ -96,6 +101,7 @@ import {
   useCollapsiblePreference,
 } from "@/lib/ui/collapsible-prefs";
 import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import {
   mezziForPendingPreventivoHandoff,
   resolveMezzoForPendingPreventivo,
@@ -159,7 +165,7 @@ import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
 import {
   preventivoTipoDocumentoLabel,
 } from "@/lib/preventivi/preventivi-tipo-documento";
-import type { PreventivoLavorazioneOrigine, PreventivoRecord, PreventivoSortKey, PreventivoSortPhase, PreventivoStato } from "@/lib/preventivi/types";
+import type { PreventivoLavorazioneOrigine, PreventivoRecord, PreventivoSortKey, PreventivoSortPhase, PreventivoStatoWorkflow } from "@/lib/preventivi/types";
 import {
   dsBtnNeutral,
   dsPageToolbarBtn,
@@ -274,6 +280,7 @@ function PreventivoRowActions({
   onDelete,
   onDdtAction,
   onAnalisiEconomica,
+  onTimeline,
 }: {
   p: PreventivoRecord;
   hrefLav: string | null;
@@ -288,6 +295,7 @@ function PreventivoRowActions({
   onDelete: (rec: PreventivoRecord) => void;
   onDdtAction: (rec: PreventivoRecord) => void;
   onAnalisiEconomica: (rec: PreventivoRecord) => void;
+  onTimeline: (rec: PreventivoRecord) => void;
 }) {
   const showDdt = canReadPreventivi && (canWritePreventivi || activeDdt != null);
   return (
@@ -334,6 +342,18 @@ function PreventivoRowActions({
           onClick={() => onDdtAction(p)}
         >
           <PreventivoDocSheetGlyph label="DDT" />
+        </IconActionButton>
+      ) : null}
+      {canReadPreventivi ? (
+        <IconActionButton
+          label="Timeline eventi"
+          tooltipForce
+          className={prevTableActionBtnSecondary}
+          onClick={() => onTimeline(p)}
+        >
+          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
         </IconActionButton>
       ) : null}
       {canReadPreventivi ? (
@@ -397,6 +417,12 @@ function comparePreventivo(a: PreventivoRecord, b: PreventivoRecord, key: Preven
 }
 
 export function PreventiviView({ listSurface: serverListSurface, listTier = "xl" }: GestionaleListPageProps) {
+  useGestionaleSyncScope({
+    scopeId: "preventivi-view",
+    domain: "preventivi",
+    route: "/preventivi",
+    tables: ["preventivi", "log_modifiche"],
+  });
   const listSurface = useListSurface(serverListSurface);
   const { modules: permModules } = usePermissionsSnapshot();
   const prevPerm = permModules.preventivi;
@@ -559,6 +585,36 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
 
   const rollbackDraftIdRef = useRef<string | null>(null);
   const draftConfirmedRef = useRef(false);
+  const [eventsTarget, setEventsTarget] = useState<PreventivoRecord | null>(null);
+  const [eventsRows, setEventsRows] = useState<PreventivoEventViewModel[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+
+  const openPreventivoTimeline = useCallback((record: PreventivoRecord) => {
+    setEventsTarget(record);
+    setEventsLoading(true);
+    setEventsError(null);
+    setEventsRows([]);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/preventivi/${encodeURIComponent(record.id)}/events`);
+        const body = (await res.json().catch(() => ({}))) as {
+          events?: PreventivoEventViewModel[];
+          error?: string;
+        };
+        if (!res.ok) {
+          setEventsError(body.error ?? "Caricamento eventi non riuscito.");
+          return;
+        }
+        setEventsRows(body.events ?? []);
+      } catch {
+        setEventsError("Caricamento eventi non riuscito.");
+      } finally {
+        setEventsLoading(false);
+      }
+    })();
+  }, []);
+
   const [logOpen, setLogOpen] = useState(false);
   const logQuery = useLogListQuery({ entita: "preventivi", limit: 100 }, { enabled: logOpen });
   const logDisplayEntries = useMemo(
@@ -579,12 +635,12 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
   }, [refetchPreventivi]);
 
   const onStatoRow = useCallback(
-    (record: PreventivoRecord, next: PreventivoStato) => {
-      if (!canWritePreventivi || next === record.stato) return;
+    (record: PreventivoRecord, next: PreventivoStatoWorkflow) => {
+      if (!canWritePreventivi || next === record.statoWorkflow) return;
       if (pendingStatusRef.current.has(record.id)) return;
       pendingStatusRef.current.add(record.id);
 
-      const previous = record.stato;
+      const previous = record.statoWorkflow;
       const listQueryKey = preventiviRecordsQueryKey(
         usesServerSearch("preventivi") && searchApplied.trim()
           ? { search: searchApplied.trim() }
@@ -596,7 +652,9 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
           old
             ? {
                 ...old,
-                records: old.records.map((r) => (r.id === record.id ? { ...r, stato: next } : r)),
+                records: old.records.map((r) =>
+                  r.id === record.id ? { ...r, statoWorkflow: next, stato: next } : r,
+                ),
               }
             : old,
       );
@@ -611,7 +669,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
               old
                 ? {
                     ...old,
-                    records: old.records.map((r) => (r.id === record.id ? { ...r, stato: previous } : r)),
+                    records: old.records.map((r) => (r.id === record.id ? { ...r, statoWorkflow: previous, stato: previous } : r)),
                   }
                 : old,
           );
@@ -823,6 +881,11 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
           <td className={`whitespace-nowrap ${prevTableTd} font-mono font-semibold tabular-nums`}>
             <span className="inline-flex max-w-full flex-wrap items-center gap-1">
               <span className="truncate">{p.numero}</span>
+              {p.versione > 1 ? (
+                <span className="rounded bg-zinc-200 px-1 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+                  v{p.versione}
+                </span>
+              ) : null}
               <PreventivoBillingBadge status={preventiviBillingById.get(p.id)?.stato_fatturazione} />
             </span>
           </td>
@@ -886,6 +949,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                 onDelete={openEliminaConfirm}
                 onDdtAction={(rec) => void handleDdtAction(rec)}
                 onAnalisiEconomica={openAnalisiEconomica}
+                onTimeline={openPreventivoTimeline}
               />
             </div>
           </td>
@@ -1453,6 +1517,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
                       onDelete={openEliminaConfirm}
                       onDdtAction={(rec) => void handleDdtAction(rec)}
                       onAnalisiEconomica={openAnalisiEconomica}
+                      onTimeline={openPreventivoTimeline}
                     />
                   </CardMobileActions>
                 </CardMobile>
@@ -1524,6 +1589,17 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
           void confirmEliminaPreventivo();
         }}
       />
+
+      {eventsTarget ? (
+        <PreventivoEventsDrawer
+          open
+          onClose={() => setEventsTarget(null)}
+          numero={eventsTarget.numero}
+          events={eventsRows}
+          isLoading={eventsLoading}
+          error={eventsError}
+        />
+      ) : null}
 
       {logOpen ? (
         <PreventiviLogDrawer

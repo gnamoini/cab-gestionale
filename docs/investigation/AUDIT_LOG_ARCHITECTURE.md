@@ -123,6 +123,19 @@ Toast su `log_modifiche` soppresso by design (`gestionale-notification-dispatch.
 
 ## Database
 
+### Retention (ENTITY_HISTORY + ACTIVITY_FEED)
+
+Due concetti distinti:
+
+| Scope | Meccanismo | Limite |
+|-------|------------|--------|
+| **ENTITY_HISTORY** | Trigger `trg_log_modifiche_retention` → `prune_log_modifiche_per_entity()` | Max **100** righe per `(entita, entita_id)`; `entita_id` NULL → bucket `__GLOBAL__` |
+| **ACTIVITY_FEED** | RPC `get_activity_feed(days, limit)` | Query globale dashboard (90gg, max 100 righe); purge opzionale `prune_log_modifiche_dashboard_window()` |
+
+Config SSOT: `app_settings` module `audit`, key `retention` → `audit_history_retention.default: 100`.
+
+Tabelle parallele: `mezzo_anagrafica_history` (100/mezzo_id), `maintenance_audit_events` (100/entity_id), `app_settings_audit` (100/module).
+
 ### Tabella `log_modifiche`
 
 | Colonna | Tipo | Note |
@@ -132,12 +145,13 @@ Toast su `log_modifiche` soppresso by design (`gestionale-notification-dispatch.
 | `entita_id` | uuid | ID record |
 | `azione` | text | CREATE, UPDATE, DELETE, RESTORE, reverted |
 | `autore_id` | uuid FK profiles | |
+| `autore_nome_snapshot` | text | Nome al momento INSERT (ISO audit) |
 | `payload` | jsonb | diff/snapshot/context/summary |
 | `created_at` | timestamptz | |
 
 ### Trigger
 
-- `trg_log_modifiche_retention` → `prune_log_modifiche_retention()` — max 100 righe per `entita`
+- `trg_log_modifiche_retention` → `prune_log_modifiche_per_entity()` — ENTITY_HISTORY, CTE ranked + `hashtextextended` advisory lock
 
 ### RLS
 

@@ -25,6 +25,10 @@ export function fattureScaduteDigestDedupKey(dateYmd: string): string {
   return `fatt-scad:${dateYmd}`;
 }
 
+export function lavorazioniRitardoDigestDedupKey(dateYmd: string): string {
+  return `lav-ritardo:${dateYmd}`;
+}
+
 export function tagliandoDaEseguireDedupKey(lavorazioneId: string): string {
   return `tagliando-due:${lavorazioneId}`;
 }

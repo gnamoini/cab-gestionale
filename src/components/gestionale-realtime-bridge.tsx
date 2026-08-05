@@ -19,6 +19,10 @@ import {
   shouldShowRemoteSettingsToast,
 } from "@/lib/realtime/app-settings-realtime-handlers";
 import {
+  isMezziListeSettingsPayload,
+  remoteSettingsNotifyMessage,
+} from "@/lib/realtime/settings-propagation-realtime";
+import {
   GESTIONALE_REALTIME_DEBOUNCE_MS,
   GESTIONALE_REALTIME_POLL_MS,
   GESTIONALE_REALTIME_RETRY_ATTEMPTS,
@@ -34,8 +38,10 @@ import {
 import { shouldSuppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { subscribeGestionaleBroadcast } from "@/lib/sync/cab-realtime-broadcast";
 import { cabSyncEventFromPostgresChange } from "@/lib/sync/cab-sync-bus";
+import { logGestionaleSyncPipelineStage } from "@/lib/sync/gestionale-sync-pipeline-trace";
 import { dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
-import { tryMergeStockFromRealtime, shouldSuppressStockRealtimeForTable } from "@/lib/magazzino/stock-realtime-merge";
+import { tryMergeStockFromRealtime, isSelfOriginatedStockRealtimeEvent } from "@/lib/magazzino/stock-realtime-merge";
+import { recoverGestionaleDirtyOnResume } from "@/lib/sync/gestionale-dirty-resume";
 import { markDirtyForOperationalTables } from "@/lib/sync/gestionale-dirty-flush";
 import { isGestionaleDirtySyncEnabled } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
 import {
@@ -53,6 +59,7 @@ import { onUserRoleChangedClient } from "@/src/lib/rbac/on-user-role-changed.cli
 import { useRealtimeStatusSetters } from "@/src/context/realtime-status-context";
 import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { settingsRenameJobService } from "@/src/services/settings-rename-job.service";
 
 const RECONNECT_MAX_ATTEMPTS = 5;
 
@@ -152,14 +159,25 @@ export function GestionaleRealtimeBridge() {
     const isSettingsEditorActive = () =>
       settingsModalOpenRef.current || onSettingsPageRef.current || shouldSuppressSettingsRemoteNotify();
 
-    const scheduleRemoteSettingsNotify = () => {
+    const scheduleRemoteSettingsNotify = (payload?: PostgresChangePayload) => {
       if (isSettingsEditorActive()) return;
       if (remoteSettingsNotifyTimer) return;
       remoteSettingsNotifyTimer = setTimeout(() => {
         remoteSettingsNotifyTimer = null;
         if (cancelled || isSettingsEditorActive()) return;
         if (!shouldShowRemoteSettingsToast()) return;
-        pushRef.current("Impostazioni aggiornate da un altro utente", "info", 4500);
+        void (async () => {
+          let hasPendingPropagation = false;
+          if (payload && isMezziListeSettingsPayload(payload)) {
+            try {
+              const pending = await settingsRenameJobService.listPendingOrDriftJobs();
+              hasPendingPropagation = Boolean(pending.success && pending.data && pending.data.length > 0);
+            } catch {
+              hasPendingPropagation = false;
+            }
+          }
+          pushRef.current(remoteSettingsNotifyMessage(hasPendingPropagation), "info", 4500);
+        })();
       }, REMOTE_SETTINGS_NOTIFY_DEBOUNCE_MS);
     };
 
@@ -194,6 +212,7 @@ export function GestionaleRealtimeBridge() {
         cabSyncEvents: cabEvents,
         entityIdByTable,
       });
+      logGestionaleSyncPipelineStage("dispatch_entered", { tables, source: "realtime" });
 
       if (tableCount >= 5) {
         trackRuntimeEvent(RuntimeEvents.realtimeBurst, { tableCount, tables: tables.slice(0, 8) });
@@ -206,7 +225,12 @@ export function GestionaleRealtimeBridge() {
       pendingTables.add(table);
       if (cabEvent) {
         pendingCabEvents.push(cabEvent);
-        if (cabEvent.type !== "settings_updated" && cabEvent.table && cabEvent.id) {
+        if (
+          cabEvent.type !== "settings_updated" &&
+          cabEvent.type !== "SETTINGS_PROPAGATION_DRIFT_DETECTED" &&
+          cabEvent.table &&
+          cabEvent.id
+        ) {
           let ids = pendingEntityIdsByTable.get(cabEvent.table);
           if (!ids) {
             ids = new Set();
@@ -275,7 +299,7 @@ export function GestionaleRealtimeBridge() {
         const cabEvent = cabSyncEventFromPostgresChange(table, payload) ?? { type: "settings_updated" as const };
         scheduleInvalidate(table, cabEvent);
         onAuthCriticalChange(table, payload);
-        scheduleRemoteSettingsNotify();
+        scheduleRemoteSettingsNotify(payload);
         return;
       }
 
@@ -297,13 +321,22 @@ export function GestionaleRealtimeBridge() {
         ricambio_id?: string;
       } | null;
 
-      if (table === "magazzino_ricambi" && stockRecord) {
-        const merged = tryMergeStockFromRealtime(qc, table, stockRecord);
-        if (merged) return;
+      const isStockTable = table === "magazzino_ricambi" || table === "movimenti_ricambi";
+
+      if (isStockTable && stockRecord && isSelfOriginatedStockRealtimeEvent(table, stockRecord)) {
+        logGestionaleSyncPipelineStage("self_echo_check", { table });
+        tryMergeStockFromRealtime(qc, table, stockRecord);
+        return;
       }
 
-      if (table === "movimenti_ricambi" && stockRecord) {
-        if (shouldSuppressStockRealtimeForTable(table, stockRecord)) return;
+      logGestionaleSyncPipelineStage("realtime_received", { table, eventType: payload.eventType });
+
+      if (isStockTable && stockRecord) {
+        const eventType = payload.eventType;
+        if (eventType !== "INSERT" && eventType !== "DELETE") {
+          logGestionaleSyncPipelineStage("merge_attempt", { table });
+          tryMergeStockFromRealtime(qc, table, stockRecord);
+        }
       }
 
       scheduleInvalidate(table, cabEvent ?? undefined);
@@ -441,7 +474,11 @@ export function GestionaleRealtimeBridge() {
     };
 
     const onVisibilityResume = () => {
-      if (document.visibilityState === "visible") onResume();
+      if (document.visibilityState !== "visible") return;
+      if (isGestionaleDirtySyncEnabled()) {
+        void recoverGestionaleDirtyOnResume(qc);
+      }
+      onResume();
     };
 
     const onOnline = () => onResume();

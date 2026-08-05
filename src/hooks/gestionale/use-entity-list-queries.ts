@@ -16,7 +16,7 @@ import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { semiDynamicQueryOpts } from "@/lib/react-query/data-cache-tiers";
 import { magazzinoEntry, type MagazzinoFilters } from "@/lib/domain/magazzino-entry";
 import { documentiEntry, type DocumentiFilters } from "@/lib/domain/documenti-entry";
-import { logEntry, type LogFilters } from "@/lib/domain/log-entry";
+import { logEntry, type ActivityFeedFilters, type LogFilters } from "@/lib/domain/log-entry";
 import { mezziEntry, type MezzoFilters } from "@/lib/domain/mezzi-entry";
 import { movimentiEntry, type MovimentiFilters } from "@/lib/domain/movimenti-entry";
 import { preventiviEntry, type PreventiviFilters } from "@/lib/domain/preventivi-entry";
@@ -165,6 +165,18 @@ export function useDocumentiListQuery(filters?: DocumentiFilters, options?: RqOp
 
 export function useLogListQuery(filters?: LogFilters, options?: RqOpts<LogModificaWithProfileRow[]>) {
   return useServiceQuery([...QK.log, filters ?? null] as const, () => logEntry.getAll(filters), options);
+}
+
+/** ACTIVITY_FEED dashboard — RPC get_activity_feed centralizzata. */
+export function useActivityFeedQuery(
+  filters?: ActivityFeedFilters,
+  options?: RqOpts<LogModificaWithProfileRow[]>,
+) {
+  return useServiceQuery(
+    [...QK.log, "activity-feed", filters ?? null] as const,
+    () => logEntry.fetchActivityFeed(filters),
+    options,
+  );
 }
 
 export function useSchedeListQuery(filters?: SchedaFilters) {

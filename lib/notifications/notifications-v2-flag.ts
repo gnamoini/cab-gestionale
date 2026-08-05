@@ -38,13 +38,14 @@ export function resolveNotificationsV2Mode(dbMode: NotificationsV2Mode | null | 
 }
 
 export function notificationsV2ReadsDb(mode: NotificationsV2Mode): boolean {
-  return mode === "on";
+  void mode;
+  return true;
+}
+
+export function notificationsV2WritesLegacy(_mode: NotificationsV2Mode): boolean {
+  return false;
 }
 
 export function notificationsV2WritesDb(mode: NotificationsV2Mode): boolean {
   return mode === "on" || mode === "create-only";
-}
-
-export function notificationsV2WritesLegacy(mode: NotificationsV2Mode): boolean {
-  return mode === "off" || mode === "create-only";
 }

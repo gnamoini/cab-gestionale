@@ -18,6 +18,11 @@ export type NotificationSettingsPageViewModel = {
 
 export type NotificationSettingsViewModel = {
   pages: NotificationSettingsPageViewModel[];
+  channelPreferences: {
+    inbox: boolean;
+    push: boolean;
+    email: boolean;
+  };
 };
 
 export type PatchNotificationPreferenceBody = {

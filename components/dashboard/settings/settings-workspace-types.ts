@@ -20,6 +20,7 @@ export type SistemaSectionId =
   | "tel-marca"
   | "tel-modello"
   | "sys-officina-profilo"
+  | "sys-stato-propagazioni"
   | "sys-economici"
   | "sys-comunicazioni"
   | "sys-tkb-kb";
@@ -59,6 +60,7 @@ export const SETTINGS_NAV_STRUCTURE: SettingsNavEntry[] = [
   { kind: "group", label: "Comunicazioni" },
   { kind: "item", id: "sys-comunicazioni", label: "Comunicazioni" },
   { kind: "group", label: "Sistema" },
+  { kind: "item", id: "sys-stato-propagazioni", label: "Stato propagazioni" },
   { kind: "item", id: "sys-officina-profilo", label: "Profilo officina" },
   { kind: "item", id: "sys-economici", label: "Parametri economici" },
   { kind: "item", id: "sys-tkb-kb", label: "Knowledge Base tecnica" },

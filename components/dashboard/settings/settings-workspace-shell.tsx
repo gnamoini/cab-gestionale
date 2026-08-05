@@ -122,6 +122,7 @@ import { withRenamePropagationTimeout } from "@/lib/settings/rename-engine/propa
 import { runWithCorrelationIdAsync } from "@/lib/observability/runtime-correlation-context";
 import { flattenHierarchyRenameLabels } from "@/lib/settings/settings-rename-labels";
 import type { PropagaImpactSummary } from "@/components/dashboard/settings-rinomina-propaga-dialog";
+import { SettingsPropagationHealthSection } from "@/components/dashboard/settings/settings-propagation-health-section";
 import {
   addStatoFromLabel,
   DEFAULT_STATI_LAVORAZIONI_DB,
@@ -632,6 +633,7 @@ export function SistemaImpostazioniWorkspace({
                 userId: user.id,
                 executionMode: "configuration_only",
                 existingLabels: labelsForRenameKind(entry.kind),
+                catalogBeforeRename: entry.catalogBeforeRename,
                 propagate: false,
               }),
             );
@@ -640,7 +642,10 @@ export function SistemaImpostazioniWorkspace({
         renameQueueRef.current = [];
         setPropagaOpen(false);
         setPropagaImpacts([]);
-        gestToast.successSaved();
+        gestToast.info(
+          "Configurazione salvata. I record operativi non sono stati aggiornati — vedi Impostazioni → Stato propagazioni per riparare.",
+          8000,
+        );
         completeExitAfterSuccess = shouldExitAfter;
         return;
       }
@@ -669,6 +674,7 @@ export function SistemaImpostazioniWorkspace({
               userId: user.id,
               executionMode: "full",
               existingLabels: labelsForRenameKind(entry.kind),
+              catalogBeforeRename: entry.catalogBeforeRename,
               propagate: true,
             }),
           ),
@@ -815,40 +821,54 @@ export function SistemaImpostazioniWorkspace({
     completePendingExit();
   }, [applySnapshot, commitSavedBaseline, completePendingExit]);
 
+  const openPropagaDialogAfterSave = useCallback(async () => {
+    if (renameQueueRef.current.length === 0) return;
+    if (user?.id) {
+      const plans = renameQueueRef.current.map((entry) =>
+        settingsRenameEngineEntry.buildRenamePlan({
+          kind: entry.kind,
+          oldLabel: entry.from,
+          newLabel: entry.to,
+          entityId: entry.from,
+        }),
+      );
+      await settingsRenameEngineEntry.createPendingJobs({ plans, createdBy: user.id });
+    }
+    setPropagaEntries([...renameQueueRef.current]);
+    setPropagaError(null);
+    setPropagaOpen(true);
+  }, [user?.id]);
+
   const handleUnsavedSaveAndExit = useCallback(() => {
-    void saveNow().then((ok) => {
+    void saveNow().then(async (ok) => {
       if (!ok) {
         gestToast.errorOnce("settings-save", "Salvataggio configurazione non riuscito");
         return;
       }
       if (renameQueueRef.current.length > 0) {
         exitAfterSaveRef.current = true;
-        setPropagaEntries([...renameQueueRef.current]);
-        setPropagaError(null);
-        setPropagaOpen(true);
+        await openPropagaDialogAfterSave();
         setUnsavedExitOpen(false);
         return;
       }
       gestToast.successSaved();
       completePendingExit();
     });
-  }, [completePendingExit, gestToast, saveNow]);
+  }, [completePendingExit, gestToast, openPropagaDialogAfterSave, saveNow]);
 
   const handleSaveNow = useCallback(() => {
-    void saveNow().then((ok) => {
+    void saveNow().then(async (ok) => {
       if (!ok) {
         gestToast.errorOnce("settings-save", "Salvataggio configurazione non riuscito");
         return;
       }
       if (renameQueueRef.current.length > 0) {
-        setPropagaEntries([...renameQueueRef.current]);
-        setPropagaError(null);
-        setPropagaOpen(true);
+        await openPropagaDialogAfterSave();
       } else {
         gestToast.successSaved();
       }
     });
-  }, [gestToast, saveNow]);
+  }, [gestToast, openPropagaDialogAfterSave, saveNow]);
 
   const handleCancelChanges = useCallback(() => {
     const s = savedSnapshotRef.current;
@@ -1416,7 +1436,14 @@ export function SistemaImpostazioniWorkspace({
                       return { ...next, clienti: next.clienti.filter((x) => x !== m) };
                     });
                   }}
-                  onRename={(from, to) => queueRename({ kind: "cliente", from, to })}
+                  onRename={(from, to) => {
+                    const catalogBeforeRename = [...liste.clienti];
+                    setListe((prev) => ({
+                      ...prev,
+                      clienti: renameInStringList(prev.clienti, from, to),
+                    }));
+                    queueRename({ kind: "cliente", from, to, catalogBeforeRename });
+                  }}
                 />
               </div>
             ) : null}
@@ -1436,11 +1463,12 @@ export function SistemaImpostazioniWorkspace({
                     setListe((prev) => ({ ...prev, utilizzatori: prev.utilizzatori.filter((x) => x !== m) }));
                   }}
                   onRename={(from, to) => {
+                    const catalogBeforeRename = [...liste.utilizzatori];
                     setListe((prev) => ({
                       ...prev,
                       utilizzatori: renameInStringList(prev.utilizzatori, from, to),
                     }));
-                    queueRename({ kind: "utilizzatore", from, to });
+                    queueRename({ kind: "utilizzatore", from, to, catalogBeforeRename });
                   }}
                 />
               </div>
@@ -1461,13 +1489,20 @@ export function SistemaImpostazioniWorkspace({
                     setListe((prev) => ({ ...prev, cantieri: prev.cantieri.filter((x) => x !== m) }));
                   }}
                   onRename={(from, to) => {
+                    const catalogBeforeRename = [...liste.cantieri];
                     setListe((prev) => ({
                       ...prev,
                       cantieri: renameInStringList(prev.cantieri, from, to),
                     }));
-                    queueRename({ kind: "cantiere", from, to });
+                    queueRename({ kind: "cantiere", from, to, catalogBeforeRename });
                   }}
                 />
+              </div>
+            ) : null}
+
+            {section === "sys-stato-propagazioni" ? (
+              <div className="w-full">
+                <SettingsPropagationHealthSection liste={liste} />
               </div>
             ) : null}
 
@@ -1528,7 +1563,7 @@ export function SistemaImpostazioniWorkspace({
           pending={propagaPending}
           progressLabel={propagaProgressLabel}
           errorMessage={propagaError}
-          onCancel={() => void finalizePropaga(false)}
+          onConfigOnly={() => void finalizePropaga(false)}
           onConfirm={() => void finalizePropaga(true)}
         />
       ) : null}

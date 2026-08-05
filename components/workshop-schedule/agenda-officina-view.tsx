@@ -22,6 +22,7 @@ import { AgendaCapacityCard } from "@/components/workshop-schedule/agenda-capaci
 import { AgendaSessionDetailPanel } from "@/components/workshop-schedule/agenda-session-detail-panel";
 import type { AgendaViewMode } from "@/lib/navigation/agenda-links";
 import { buildAgendaHref, parseAgendaSearchParams } from "@/lib/navigation/agenda-links";
+import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
 import { weekStartYmdFromYmd } from "@/lib/report/calendar-report-service";
 import { useWorkshopScheduleIntelligence } from "@/lib/workshop-schedule/intelligence/use-workshop-intelligence";
 import { buildDayBoundsIso, localTimeLabel, parseAgendaDateParam, ymdFromIso } from "@/lib/workshop-schedule/datetime";
@@ -40,7 +41,7 @@ import {
   dsSurfacePanelStatic,
   dsTypoCaption,
 } from "@/lib/ui/design-system";
-import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { GestionaleModalGate } from "@/components/gestionale/gestionale-modal-gate";
 
 function todayYmd() {
@@ -53,6 +54,12 @@ function monthKeyFromYmd(ymd: string) {
 }
 
 export function AgendaOfficinaView() {
+  useGestionaleSyncScope({
+    scopeId: "agenda-view",
+    domain: "agenda",
+    route: "/agenda",
+    tables: ["workshop_schedule_events"],
+  });
   const router = useRouter();
   const searchParams = useSearchParams();
   const parsed = parseAgendaSearchParams(searchParams);

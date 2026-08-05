@@ -25,6 +25,7 @@ import {
   isFattureScaduteDigestNotification,
   isLavorazioneCompletataNotification,
   isLavorazioneDashboardNotification,
+  isLavorazioniRitardoDigestNotification,
   isMagazzinoDashboardNotification,
   isTagliandoDaEseguireNotification,
   notificationStoreKey,
@@ -63,6 +64,15 @@ export function adminDashboardNotificationDesktopPayload(
       title: "Fatture scadute",
       body: formatFattureScaduteDigestBody(notification),
       href: buildAdminNotificationFatturazioneHref(),
+      tag: notificationStoreKey(notification),
+    };
+  }
+  if (isLavorazioniRitardoDigestNotification(notification)) {
+    const label = notification.count === 1 ? "lavorazione in ritardo" : "lavorazioni in ritardo";
+    return {
+      title: `${notification.count} ${label}`,
+      body: `${notification.count} ${label} oltre 14 giorni. Apri Lavorazioni per il dettaglio.`,
+      href: "/lavorazioni",
       tag: notificationStoreKey(notification),
     };
   }

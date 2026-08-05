@@ -17,10 +17,12 @@ export function MagazzinoDescrizioneSortTh({
   sortColumn,
   sortPhase,
   onSort,
+  thClassName = "",
 }: {
   sortColumn: SortKeyMagazzino | null;
   sortPhase: SortPhaseMagazzino;
   onSort: (k: SortKeyMagazzino) => void;
+  thClassName?: string;
 }) {
   const renderBtn = (label: string, columnKey: SortKeyMagazzino, compact?: boolean) => {
     const active = sortColumn === columnKey && (sortPhase === "asc" || sortPhase === "desc");
@@ -45,7 +47,7 @@ export function MagazzinoDescrizioneSortTh({
   };
 
   return (
-    <th className={`${globalTableThCell} min-w-0 align-top text-left`}>
+    <th className={`${globalTableThCell} min-w-0 align-top text-left ${thClassName}`.trim()}>
       <div className="flex min-w-0 flex-col items-start gap-1">
         {renderBtn("Descrizione", "descrizione")}
         {renderBtn("Compatibilità", "compatibilitaMezzi", true)}

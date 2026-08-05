@@ -37,6 +37,7 @@ import {
   isFattureScaduteDigestNotification,
   isLavorazioneCompletataNotification,
   isLavorazioneDashboardNotification,
+  isLavorazioniRitardoDigestNotification,
   isMagazzinoDashboardNotification,
   isTagliandoDaEseguireNotification,
   notificationStoreKey,
@@ -58,6 +59,7 @@ function notificationEventIdFromLegacy(notification: AdminDashboardNotification)
   if (isLavorazioneCompletataNotification(notification)) return "lavorazioni.completed";
   if (isMagazzinoDashboardNotification(notification)) return "magazzino.below_minimum";
   if (isFattureScaduteDigestNotification(notification)) return "fatturazione.overdue_digest";
+  if (isLavorazioniRitardoDigestNotification(notification)) return "lavorazioni.overdue_digest";
   if (isDipendentiPresenzeReminderNotification(notification)) return "dipendenti.presence_reminder";
   if (isTagliandoDaEseguireNotification(notification)) return "lavorazioni.tagliando_due";
   return null;

@@ -30,7 +30,8 @@ export type MezzoInterventoDetail = {
 const PREVENTIVO_LABEL: Record<PreventivoStato, string> = {
   bozza: "Bozza",
   inviato: "Inviato",
-  confermato: "Confermato",
+  acquisito: "Acquisito",
+  confermato: "Acquisito",
   annullato: "Annullato",
 };
 

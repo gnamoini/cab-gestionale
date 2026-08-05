@@ -21,6 +21,8 @@ export type SettingsRenameEntry = {
   kind: SettingsRenameKind;
   from: string;
   to: string;
+  /** Catalogo prima della rinomina (collision guard + drift). */
+  catalogBeforeRename?: readonly string[];
   /** Alias storici in scheda (es. «nome cognome» oltre alla chiave `nome`). */
   fromAliases?: readonly string[];
   /** Marca parent per rename modello (evita ambiguità). */
@@ -33,4 +35,6 @@ export type SettingsRenamePropagationResult = {
   from: string;
   to: string;
   updated: number;
+  table?: string;
+  operationId?: string;
 };

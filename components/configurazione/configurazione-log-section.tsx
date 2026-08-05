@@ -10,20 +10,8 @@ import {
 } from "@/components/gestionale/gestionale-log-ui";
 import { appSettingsAuditService } from "@/src/services/app-settings-audit.service";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
-import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
+import { buildGestionaleLogViewModelFromAppSettingsAuditRow } from "@/lib/configurazione/app-settings-audit-log";
 import type { AppSettingsAuditRow } from "@/src/types/supabase-tables";
-
-function vmFromAuditRow(row: AppSettingsAuditRow): GestionaleLogViewModel {
-  const at = row.updated_at;
-  return {
-    tone: "update",
-    tipoRiga: `IMPOSTAZIONI · ${row.module}`,
-    oggettoRiga: row.key,
-    modificaRiga: "Modifica configurazione amministrativa",
-    autore: row.updated_by ? `Utente ${row.updated_by.slice(0, 8)}…` : "Sistema",
-    atIso: at,
-  };
-}
 
 type ConfigurazioneLogSectionProps = {
   max?: number;
@@ -51,7 +39,7 @@ export function ConfigurazioneLogSection({
     };
   }, []);
 
-  const entries = useMemo(() => rows.map(vmFromAuditRow), [rows]);
+  const entries = useMemo(() => rows.map(buildGestionaleLogViewModelFromAppSettingsAuditRow), [rows]);
   const pageSize = 12;
   const pagination = useClientPagination(entries.length, pageSize);
   const { resetPage } = pagination;

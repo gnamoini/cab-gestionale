@@ -51,7 +51,7 @@ export async function GET() {
 
   const { data: deliveryStats } = await client
     .from("notification_delivery")
-    .select("status, provider_ms, dispatch_ms, render_ms")
+    .select("status, provider, provider_ms, dispatch_ms, render_ms")
     .gte("created_at", new Date(now - 24 * 60 * 60 * 1000).toISOString())
     .limit(5000);
 
@@ -92,6 +92,19 @@ export async function GET() {
     .select("*", { count: "exact", head: true })
     .gte("created_at", new Date(now - 24 * 60 * 60 * 1000).toISOString());
 
+  const { data: traceStats } = await client
+    .from("notification_pipeline_trace")
+    .select("stage, created_at")
+    .gte("created_at", new Date(now - 24 * 60 * 60 * 1000).toISOString())
+    .limit(5000);
+
+  const traceRows = traceStats ?? [];
+  const dispatchTraces = traceRows.filter((r) => r.stage === "dispatch");
+  const persistTraces = traceRows.filter((r) => r.stage === "persist");
+  const clientAckTraces = traceRows.filter((r) => r.stage === "client_ack");
+  const pushDelivered = rows.filter((r) => r.status === "delivered" && r.provider === "webpush");
+  const pushFailed = rows.filter((r) => r.status === "failed" && r.provider === "webpush");
+
   return NextResponse.json({
     ok: true,
     queue: {
@@ -117,6 +130,19 @@ export async function GET() {
       avgProviderMs: Math.round(avgProviderMs),
       avgDispatchMs: Math.round(avgDispatchMs),
       avgRenderMs: Math.round(avgRenderMs),
+      pushSuccessRate:
+        pushDelivered.length + pushFailed.length > 0
+          ? pushDelivered.length / (pushDelivered.length + pushFailed.length)
+          : null,
+      realtimeSuccessRate:
+        clientAckTraces.length > 0 && persistTraces.length > 0
+          ? clientAckTraces.length / persistTraces.length
+          : null,
+    },
+    pipeline24h: {
+      dispatchEvents: dispatchTraces.length,
+      persistEvents: persistTraces.length,
+      clientAckEvents: clientAckTraces.length,
     },
     captureLogTotal: captureCount ?? 0,
     workerSaturation: null,

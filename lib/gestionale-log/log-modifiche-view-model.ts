@@ -1,5 +1,6 @@
 "use client";
 
+import { profileDisplayName } from "@/lib/auth/profile-display-name";
 import { reconcileLogModificaRows } from "@/lib/gestionale-log/log-event-pipeline";
 import {
   buildLogModificaSummary,
@@ -52,12 +53,23 @@ export function buildLavorazioneLogOggettoResolver(
 }
 
 export function logAutoreLabel(r: LogModificaAutoreSource, currentUserId: string | null, displayName: string): string {
-  const profileNome = (r as LogModificaWithProfileRow).profiles?.nome?.trim();
+  const snapshot = r.autore_nome_snapshot?.trim();
+  if (snapshot) {
+    if (r.autore_id && currentUserId && r.autore_id === currentUserId) {
+      return displayName.trim() || snapshot || "Tu";
+    }
+    return snapshot;
+  }
+  const profile = (r as LogModificaWithProfileRow).profiles;
+  const profileNome = profileDisplayName({
+    nome: profile?.nome ?? "",
+    cognome: profile?.cognome,
+  });
   if (r.autore_id && currentUserId && r.autore_id === currentUserId) {
     return displayName.trim() || profileNome || "Tu";
   }
   if (profileNome) return profileNome;
-  if (r.autore_id) return `Utente ${r.autore_id.slice(0, 8)}…`;
+  if (r.autore_id) return "Utente";
   return "Sistema";
 }
 

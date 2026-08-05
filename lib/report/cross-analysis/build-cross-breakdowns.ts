@@ -9,6 +9,7 @@ import { countCompletedInRange } from "@/lib/report/lavorazioni-report-selectors
 import type { InvoiceRow } from "@/src/types/supabase-tables";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
+import { isPreventivoCountedInEconomicStats } from "@/lib/preventivi/preventivo-stats-eligibility";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
@@ -212,7 +213,7 @@ export function buildCrossCatenaValore(input: {
   let preventiviVal = 0;
   for (const p of input.preventivi) {
     if (!p.dataCreazione || !isoInRange(p.dataCreazione, input.range)) continue;
-    if (p.stato === "bozza") continue;
+    if (!isPreventivoCountedInEconomicStats(p)) continue;
     preventiviVal += p.totaleFinale ?? 0;
   }
   const closed = countCompletedInRange(input.completate, input.range, new Map());
@@ -246,7 +247,7 @@ export function buildCrossPreventivoConsuntivo(
   const deltas: number[] = [];
   for (const p of preventivi) {
     if (!p.lavorazioneId || !p.dataCreazione || !isoInRange(p.dataCreazione, range)) continue;
-    if (p.stato === "bozza") continue;
+    if (p.statoWorkflow === "bozza" || p.statoCliente !== "accettato") continue;
     const lav = completate.find((c) => c.id === p.lavorazioneId);
     if (!lav?.dataCompletamento || !isoInRange(lav.dataCompletamento, range)) continue;
     const bundle = schedeStore[p.lavorazioneId];

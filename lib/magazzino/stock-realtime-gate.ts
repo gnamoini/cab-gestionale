@@ -5,11 +5,8 @@
  */
 
 import type { QueryClient } from "@tanstack/react-query";
-import {
-  isKnownStockOperation,
-  shouldSuppressStockRealtimeInvalidate,
-} from "@/lib/magazzino/stock-operation-registry";
-import { mergeStockEntity, stockEntityFromRow } from "@/lib/magazzino/stock-entity-cache";
+import { shouldSuppressStockRealtimeInvalidate } from "@/lib/magazzino/stock-operation-registry";
+import { getStockEntity, mergeStockEntity, stockEntityFromRow } from "@/lib/magazzino/stock-entity-cache";
 import { logStockPipelineEvent } from "@/lib/magazzino/stock-pipeline-telemetry";
 
 type StockRealtimeRecord = {
@@ -30,15 +27,7 @@ export function tryMergeStockFromRealtimeGate(
   const operationId = record.operation_id?.trim() || null;
 
   if (table === "magazzino_ricambi" && record.id) {
-    if (operationId && isKnownStockOperation(operationId)) {
-      logStockPipelineEvent({
-        source: "realtime",
-        operationId,
-        ricambioId: record.id,
-        detail: "merge_skip_known_operation",
-      });
-      return true;
-    }
+    if (!getStockEntity(qc, record.id)) return false;
     const result = mergeStockEntity(
       qc,
       stockEntityFromRow(

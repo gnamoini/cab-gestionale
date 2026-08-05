@@ -7,6 +7,7 @@ import { OperatorGlobalSettingsPilotBadge } from "@/components/gestionale/operat
 import { ImpostazioniPageStructure } from "@/components/dashboard/impostazioni-page-structure";
 import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { usePermissions } from "@/src/hooks/use-permissions";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { dsStackPage } from "@/lib/ui/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 
@@ -18,6 +19,12 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
 }
 
 export function SistemaImpostazioniPageView() {
+  useGestionaleSyncScope({
+    scopeId: "impostazioni-view",
+    domain: "impostazioni",
+    route: "/impostazioni",
+    tables: ["app_settings"],
+  });
   const permissions = usePermissions();
 
   if (permissions.isLoading) {

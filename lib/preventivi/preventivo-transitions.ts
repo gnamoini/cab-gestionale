@@ -1,17 +1,35 @@
-import type { PreventivoStato } from "@/lib/preventivi/types";
+import type { PreventivoStatoWorkflow } from "@/lib/preventivi/types";
 
-export const PREVENTIVO_STATI = [
+const WORKFLOW_TARGETS: Record<PreventivoStatoWorkflow, readonly PreventivoStatoWorkflow[]> = {
+  bozza: ["inviato", "annullato"],
+  inviato: ["bozza", "annullato"],
+  acquisito: ["annullato"],
+  annullato: [],
+};
+
+export const PREVENTIVO_WORKFLOW_STATI = [
   "bozza",
   "inviato",
-  "confermato",
+  "acquisito",
   "annullato",
-] as const satisfies readonly PreventivoStato[];
+] as const satisfies readonly PreventivoStatoWorkflow[];
 
-/** ponytail: nessun grafo transizioni — ogni stato è raggiungibile (eccetto noop). */
-export function canTransitionPreventivoStato(from: PreventivoStato, to: PreventivoStato): boolean {
-  return from !== to;
+export function canTransitionPreventivoWorkflow(
+  from: PreventivoStatoWorkflow,
+  to: PreventivoStatoWorkflow,
+): boolean {
+  return WORKFLOW_TARGETS[from]?.includes(to) ?? false;
 }
 
-export function preventivoStatoTransitionTargets(from: PreventivoStato): readonly PreventivoStato[] {
-  return PREVENTIVO_STATI.filter((stato) => stato !== from);
+export function preventivoWorkflowTransitionTargets(
+  from: PreventivoStatoWorkflow,
+): readonly PreventivoStatoWorkflow[] {
+  return WORKFLOW_TARGETS[from] ?? [];
+}
+
+/** Staff dropdown: solo transizioni workflow (no acquisito manuale). */
+export function preventivoStaffWorkflowTransitionTargets(
+  from: PreventivoStatoWorkflow,
+): readonly PreventivoStatoWorkflow[] {
+  return preventivoWorkflowTransitionTargets(from).filter((s) => s !== "acquisito");
 }

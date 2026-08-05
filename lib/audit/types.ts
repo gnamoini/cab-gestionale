@@ -48,16 +48,25 @@ export type AuditEventInput = {
   snapshot?: Record<string, unknown>;
 };
 
+export type AuditHistoryRetentionConfig = {
+  default: number;
+  scope: "ENTITY_HISTORY";
+  overrides?: Record<string, number>;
+};
+
 export type AuditRetentionConfig = {
+  /** ENTITY_HISTORY — max eventi per (entita, entita_id). */
   entity_retention_default: number;
   entity_retention_overrides: Record<string, number>;
+  audit_history_retention?: AuditHistoryRetentionConfig;
   dashboard_days: number;
   dashboard_max_rows: number;
 };
 
 export const DEFAULT_AUDIT_RETENTION_CONFIG: AuditRetentionConfig = {
-  entity_retention_default: 500,
-  entity_retention_overrides: { documenti: 100, mezzi: 500, invoices: 1000 },
+  entity_retention_default: 100,
+  entity_retention_overrides: {},
+  audit_history_retention: { default: 100, scope: "ENTITY_HISTORY" },
   dashboard_days: 90,
   dashboard_max_rows: 10000,
 };

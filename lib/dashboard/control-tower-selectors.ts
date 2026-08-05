@@ -10,6 +10,7 @@ import { LOG_AGGREGATION_WINDOW_MS, reconcileLogModificaRows } from "@/lib/gesti
 import {
   buildLogModificheFocusHref,
   lavorazioneIdFromLogRow,
+  logAutoreLabel,
 } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { auditPayload, isLogReverted } from "@/lib/gestionale-log/undo";
 import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
@@ -818,12 +819,9 @@ function isGenericLavorazioneOggetto(oggetto: string): boolean {
 }
 
 function activityAutoreLabel(
-  row: LogModificaRow & { profiles?: { id: string; nome: string } | null },
+  row: LogModificaRow & { profiles?: { id: string; nome: string; cognome?: string | null } | null },
 ): string {
-  const profileNome = row.profiles?.nome?.trim();
-  if (profileNome) return profileNome;
-  if (row.autore_id) return `Utente ${row.autore_id.slice(0, 8)}…`;
-  return "Sistema";
+  return logAutoreLabel(row, null, "");
 }
 
 function briefActivityModificaRiga(modificaRiga: string, maxLines = 2): string {

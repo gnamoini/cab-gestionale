@@ -1,5 +1,6 @@
 "use client";
 
+import { profileDisplayName } from "@/lib/auth/profile-display-name";
 import { Tooltip } from "@/components/ui";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -149,7 +150,7 @@ export function useRecentSystemActivity(enabled: boolean) {
     enabled,
     ...securityOpts,
     queryFn: async (): Promise<
-      Array<LogModificaRow & { profiles?: { nome?: string | null } | null }>
+      Array<LogModificaRow & { profiles?: { nome?: string | null; cognome?: string | null } | null }>
     > => {
       const res = await listRecentSecurityAuditAction();
       if (!res.ok) throw new Error(res.message);
@@ -169,7 +170,9 @@ export function useRecentActivityRows(
       action: r.azione,
       entita: r.entita,
       when: r.created_at,
-      actor: r.profiles?.nome?.trim() || "—",
+      actor: r.profiles
+        ? profileDisplayName({ nome: r.profiles.nome ?? "", cognome: r.profiles.cognome }) || "—"
+        : r.autore_nome_snapshot?.trim() || "—",
       detail: logModificaDetailLine(r, statiLavorazione),
     }));
   }, [recentActivityQ.data, statiLavorazione]);

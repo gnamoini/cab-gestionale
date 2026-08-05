@@ -134,6 +134,12 @@ export async function invalidateAfterMagazzinoOrMovimenti(qc: QueryClient, cabSy
   void qc.invalidateQueries({ queryKey: ["dashboard", "health-score"] });
 }
 
+export function invalidateAfterInventoryReceivingApply(qc: QueryClient): void {
+  dispatchGestionaleAction(qc, ["magazzino_ricambi", "movimenti_ricambi", "inventory_documents"], {
+    source: "local_mutation",
+  });
+}
+
 export function invalidateAfterPreventiviMutations(
   qc: QueryClient,
   id?: string,
@@ -157,6 +163,7 @@ function gestionaleTablesForRenameKinds(kinds: readonly SettingsRenameKind[]): s
       case "utilizzatore":
       case "cantiere":
         tables.add("mezzi");
+        tables.add("preventivi");
         tables.add("scheda_lavorazione");
         tables.add("lavorazioni");
         break;

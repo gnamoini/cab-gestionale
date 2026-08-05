@@ -46,6 +46,7 @@ import type { GestionaleListPageProps } from "@/lib/ui/gestionale-list-page-prop
 import { useListSurface } from "@/lib/ui/use-list-surface";
 import { dsStackPage } from "@/lib/ui/design-system";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 
 const FatturazioneWizardModal = dynamic(
   () => import("@/components/fatturazione/fatturazione-wizard-modal").then((m) => m.FatturazioneWizardModal),
@@ -115,6 +116,12 @@ function FatturazionePageMenuRegistrar({ items }: { items: PageActionItem[] }) {
 }
 
 export function FatturazioneView({ listSurface: serverListSurface, listTier = "xl" }: GestionaleListPageProps) {
+  useGestionaleSyncScope({
+    scopeId: "fatturazione-view",
+    domain: "report",
+    route: "/fatturazione",
+    tables: ["invoices", "invoice_payments", "ddt_documents", "log_modifiche"],
+  });
   const listSurface = useListSurface(serverListSurface);
   const searchParams = useSearchParams();
   const router = useRouter();

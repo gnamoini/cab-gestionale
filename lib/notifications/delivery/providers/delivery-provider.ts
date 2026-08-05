@@ -1,4 +1,5 @@
 import type { NotificationContext } from "@/lib/notifications/delivery/notification-context";
+import type { DeliveryChannel } from "@/lib/notifications/application/policies/notification-policy-config";
 
 export type DeliveryResult = {
   success: boolean;
@@ -13,5 +14,6 @@ export type DeliveryResult = {
 
 export interface DeliveryProvider {
   readonly id: string;
+  readonly channel: DeliveryChannel;
   deliver(ctx: NotificationContext): Promise<DeliveryResult>;
 }

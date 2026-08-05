@@ -1,3 +1,4 @@
+import { PREVENTIVO_LIFECYCLE_DEFAULTS } from "@/lib/preventivi/preventivo-lifecycle-defaults";
 import { localCalendarDayIsoFromDate } from "@/lib/lavorazioni/date-day-only";
 import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cliente-infer";
 import { nextPreventivoNumeroManualeFromRecords } from "@/lib/preventivi/preventivo-numero-manuale";
@@ -36,7 +37,7 @@ export function buildEmptyManualPreventivo(
     numero: nextPreventivoNumeroManualeFromRecords(existingRecords),
     dataCreazione,
     aggiornatoAt: now,
-    stato: "bozza",
+    ...PREVENTIVO_LIFECYCLE_DEFAULTS,
     tipoDocumento,
     targetType,
     attrezzaturaId: "",

@@ -29,6 +29,7 @@ export function useCabSyncListener(
         return;
       }
       if (ev.type === "settings_updated") return;
+      if (ev.type === "SETTINGS_PROPAGATION_DRIFT_DETECTED") return;
       if (targets.includes(ev.entity)) handlerRef.current(ev);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- handler via ref; entity prop only

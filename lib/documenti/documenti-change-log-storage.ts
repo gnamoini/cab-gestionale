@@ -2,6 +2,7 @@ import type { GestionaleLogEventTone, GestionaleLogViewModel } from "@/lib/gesti
 import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import { dispatchDocumentiLogRefresh } from "@/lib/sistema/cab-events";
 
+/** @deprecated Solo fallback offline/ottimistico. SSOT audit = log_modifiche (database). */
 export const DOCUMENTI_CHANGE_LOG_STORAGE_KEY = "gestionale-documenti-change-log-v1";
 export const DOCUMENTI_CHANGE_LOG_MAX = LOG_MODIFICHE_RETENTION_PER_ENTITA;
 

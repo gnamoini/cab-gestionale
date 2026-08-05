@@ -5,6 +5,7 @@ import { registerDeliveryProvider } from "@/lib/notifications/delivery/providers
 export function createCaptureProvider(getClient: () => SupabaseClient): DeliveryProvider {
   return {
     id: "capture",
+    channel: "capture",
     async deliver(ctx) {
       const client = getClient();
       const payload = {
@@ -50,6 +51,7 @@ export function setCaptureProviderClient(getter: () => SupabaseClient): void {
 
 export const captureProvider: DeliveryProvider = {
   id: "capture",
+  channel: "capture",
   async deliver(ctx) {
     if (!serverClient) {
       return { success: false, channel: ctx.channel, providerId: "capture", error: "no_server_client" };

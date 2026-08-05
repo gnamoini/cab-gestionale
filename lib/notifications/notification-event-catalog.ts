@@ -38,7 +38,9 @@ export type NotificationEventDefinition = {
 };
 
 /** SSOT catalogo eventi notificabili — allineato a notification_type_registry (migration). */
-export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] = [
+import { NOTIFICATION_EVENT_CATALOG_EXTENDED } from "@/lib/notifications/notification-event-catalog-extended";
+
+const NOTIFICATION_EVENT_CATALOG_BASE: readonly NotificationEventDefinition[] = [
   {
     notificationEventId: "lavorazioni.created",
     domainEvent: "work_order.created",
@@ -226,6 +228,11 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
     notifyAuthor: true,
     severity: "info",
   },
+] as const;
+
+export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] = [
+  ...NOTIFICATION_EVENT_CATALOG_BASE,
+  ...NOTIFICATION_EVENT_CATALOG_EXTENDED,
 ] as const;
 
 /** Alias SSOT — stesso array del catalogo eventi notificabili. */

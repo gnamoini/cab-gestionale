@@ -42,7 +42,7 @@ function feminineEntityVerb(event: CabSyncEvent): string | null {
 
 /** Messaggio toast per evento cab-sync (null = nessun toast). Esportato per test copy. */
 export function gestionaleCabSyncToastMessage(event: CabSyncEvent): string | null {
-  if (event.type === "settings_updated") return null;
+  if (event.type === "settings_updated" || event.type === "SETTINGS_PROPAGATION_DRIFT_DETECTED") return null;
   if (event.entity === "lavorazioni" && event.type === "entity_created") return null;
   /** Promemoria: feedback utente solo via toast locali in DashboardPromemoriaSection. */
   if (event.entity === "dashboard_promemoria") return null;
@@ -103,6 +103,9 @@ function toneForEvent(event: CabSyncEvent): CabToastTone {
 function fingerprintForEvent(event: CabSyncEvent, now: number): string {
   const bucket = Math.floor(now / BUCKET_MS);
   if (event.type === "settings_updated") return `settings_updated:${bucket}`;
+  if (event.type === "SETTINGS_PROPAGATION_DRIFT_DETECTED") {
+    return `settings_propagation_drift:${event.jobId ?? event.oldLabel}:${bucket}`;
+  }
   return `${event.entity}:${event.type}:${event.id}:${bucket}`;
 }
 

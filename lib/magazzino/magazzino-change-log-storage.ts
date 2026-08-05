@@ -1,8 +1,10 @@
 import type { CampoChangeLike, MagazzinoLogEntryLike } from "@/lib/gestionale-log/view-model";
+import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
 
+/** @deprecated Solo fallback offline/ottimistico. SSOT audit = log_modifiche (database). */
 export const MAGAZZINO_CHANGE_LOG_STORAGE_KEY = "gestionale-magazzino-change-log-v1";
-export const MAGAZZINO_CHANGE_LOG_MAX = 100;
+export const MAGAZZINO_CHANGE_LOG_MAX = LOG_MODIFICHE_RETENTION_PER_ENTITA;
 
 export type MagazzinoChangeLogEntry = MagazzinoLogEntryLike & {
   id: string;

@@ -15,14 +15,17 @@ import { shouldQueueRename } from "@/lib/settings/rename-engine/rename-execution
 import type {
   EntitySnapshot,
   HealthCheckResult,
+  PropagationStatus,
   RenameExecutionMode,
   RenameImpact,
+  RenameJobSource,
   RenameMetrics,
   RenamePlan,
   ValidationResult,
 } from "@/lib/settings/rename-engine/types";
 import { settingsRenamePropagationService } from "@/src/services/settings-rename-propagation.service";
 import { settingsRenameJobService } from "@/src/services/settings-rename-job.service";
+import { emitCabSyncEvent } from "@/lib/sync/cab-sync-bus";
 
 function planToEntry(plan: RenamePlan): SettingsRenameEntry {
   return { kind: plan.kind, from: plan.oldLabel, to: plan.newLabel };
@@ -32,17 +35,34 @@ function renameErrorMessage(message: string, correlationId: string): string {
   return `${message} [correlation=${correlationId}]`;
 }
 
+function resolvePropagationMode(executionMode: RenameExecutionMode, propagate: boolean): PropagationStatus {
+  if (!propagate || executionMode === "configuration_only") return "configuration_only";
+  return "propagated";
+}
+
+function normalizeExecutionMode(
+  executionMode: RenameExecutionMode,
+  propagate: boolean,
+): RenameExecutionMode {
+  if (!propagate) return "configuration_only";
+  if (executionMode === "live_propagation") return "live_propagation";
+  return "full";
+}
+
 export const settingsRenameEngineService = {
   buildRenamePlan,
 
   async previewRename(
     plan: RenamePlan,
-    context: { existingLabels: readonly string[] },
+    context: { existingLabels: readonly string[]; catalogBeforeRename?: readonly string[] },
   ): Promise<ServiceResult<{ impact: RenameImpact; validation: ValidationResult }>> {
     try {
       const c = await getBrowserSupabase();
       const impact = await previewRenameImpact(c, plan);
-      const validation = validateRenamePlan(plan, { existingLabels: context.existingLabels });
+      const validation = validateRenamePlan(plan, {
+        existingLabels: context.existingLabels,
+        catalogBeforeRename: context.catalogBeforeRename,
+      });
       return success({ impact, validation });
     } catch (e) {
       return serviceFailFromError(e);
@@ -54,7 +74,11 @@ export const settingsRenameEngineService = {
     userId: string;
     executionMode: RenameExecutionMode;
     existingLabels: readonly string[];
+    catalogBeforeRename?: readonly string[];
     propagate: boolean;
+    source?: RenameJobSource;
+    parentJobId?: string | null;
+    existingJobId?: string | null;
   }): Promise<
     ServiceResult<{
       jobId?: string;
@@ -63,12 +87,19 @@ export const settingsRenameEngineService = {
       health?: HealthCheckResult;
       metrics?: RenameMetrics;
       queued?: boolean;
+      propagationStatus?: PropagationStatus;
       propagationResults?: Awaited<ReturnType<typeof settingsRenamePropagationService.propagateRenames>>["data"];
     }>
   > {
     const started = Date.now();
+    const executionMode = normalizeExecutionMode(input.executionMode, input.propagate);
+    const propagationStatus = resolvePropagationMode(executionMode, input.propagate);
+
     try {
-      const previewRes = await this.previewRename(input.plan, { existingLabels: input.existingLabels });
+      const previewRes = await this.previewRename(input.plan, {
+        existingLabels: input.existingLabels,
+        catalogBeforeRename: input.catalogBeforeRename,
+      });
       if (!previewRes.success || !previewRes.data) {
         return err(renameErrorMessage(previewRes.error ?? "Preview fallita", input.plan.correlationId));
       }
@@ -82,23 +113,40 @@ export const settingsRenameEngineService = {
         );
       }
 
-      const jobRes = await settingsRenameJobService.createJob({
-        plan: input.plan,
-        createdBy: input.userId,
-        executionMode: input.executionMode,
-      });
-      const jobId = jobRes.success && jobRes.data ? jobRes.data.id : undefined;
+      let jobId = input.existingJobId ?? undefined;
+      if (!jobId) {
+        const pending = await settingsRenameJobService.findPendingJob({
+          kind: input.plan.kind,
+          oldLabel: input.plan.oldLabel,
+          newLabel: input.plan.newLabel,
+        });
+        if (pending.success && pending.data) jobId = pending.data.id;
+      }
+
+      if (!jobId) {
+        const jobRes = await settingsRenameJobService.createJob({
+          plan: input.plan,
+          createdBy: input.userId,
+          executionMode,
+          propagationStatus: input.propagate ? "pending_propagation" : "configuration_only",
+          source: input.source ?? "user_rename",
+          parentJobId: input.parentJobId,
+        });
+        jobId = jobRes.success && jobRes.data ? jobRes.data.id : undefined;
+      }
 
       if (jobId) {
         await settingsRenameJobService.updateJob(jobId, {
           status: "previewed",
           impact_json: impact,
           validation_json: validation,
+          execution_mode: executionMode,
+          source: input.source ?? "user_rename",
         });
         await settingsRenameJobService.updateJob(jobId, { status: "validated" });
       }
 
-      if (!input.propagate || input.executionMode === "configuration_only") {
+      if (!input.propagate || executionMode === "configuration_only") {
         const health = configurationOnlyHealth();
         const metrics: RenameMetrics = {
           kind: input.plan.kind,
@@ -112,21 +160,35 @@ export const settingsRenameEngineService = {
           warnings: 1,
           execution_mode: "configuration_only",
           batched: false,
+          execution_id: input.plan.correlationId,
+          propagation_status: "configuration_only",
         };
         if (jobId) {
           await settingsRenameJobService.updateJob(jobId, {
             status: "completed",
             health_json: health,
             metrics_json: metrics,
+            propagation_status: "configuration_only",
             completed_at: new Date().toISOString(),
           });
         }
-        return success({ jobId, impact, validation, health, metrics });
+        emitCabSyncEvent({
+          type: "SETTINGS_PROPAGATION_DRIFT_DETECTED",
+          kind: input.plan.kind,
+          oldLabel: input.plan.oldLabel,
+          newLabel: input.plan.newLabel,
+          affectedCount: impact.totalUpdatable,
+          jobId,
+        });
+        return success({ jobId, impact, validation, health, metrics, propagationStatus: "configuration_only" });
       }
 
       const queued = shouldQueueRename(impact);
       if (jobId) {
-        await settingsRenameJobService.updateJob(jobId, { status: queued ? "queued" : "approved" });
+        await settingsRenameJobService.updateJob(jobId, {
+          status: queued ? "queued" : "approved",
+          propagation_status: "pending_propagation",
+        });
       }
 
       const c = await getBrowserSupabase();
@@ -138,13 +200,17 @@ export const settingsRenameEngineService = {
         }
       }
 
-      const propRes = await settingsRenamePropagationService.propagateRenames([planToEntry(input.plan)]);
+      const propRes = await settingsRenamePropagationService.propagateRenames([planToEntry(input.plan)], {
+        executionId: input.plan.correlationId,
+        jobId,
+      });
       if (!propRes.success) {
         const failMessage = renameErrorMessage(propRes.error ?? "Propagazione fallita", input.plan.correlationId);
         if (jobId) {
           await settingsRenameJobService.updateJob(jobId, {
             status: "failed",
             error_message: failMessage,
+            propagation_status: "pending_propagation",
           });
         }
         return err(failMessage);
@@ -177,8 +243,10 @@ export const settingsRenameEngineService = {
         records_protected: impact.totalProtected,
         duration_ms: Date.now() - started,
         warnings: health.status === "warning" ? 1 : 0,
-        execution_mode: "full",
+        execution_mode: executionMode,
         batched: queued,
+        execution_id: input.plan.correlationId,
+        propagation_status: "propagated",
       };
 
       if (jobId) {
@@ -187,6 +255,7 @@ export const settingsRenameEngineService = {
           health_json: health,
           metrics_json: metrics,
           entity_snapshot: entitySnapshot,
+          propagation_status: "propagated",
           completed_at: new Date().toISOString(),
         });
 
@@ -209,6 +278,7 @@ export const settingsRenameEngineService = {
         health,
         metrics,
         queued,
+        propagationStatus: "propagated",
         propagationResults: propRes.data,
       });
     } catch (e) {

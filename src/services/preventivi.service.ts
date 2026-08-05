@@ -2,6 +2,7 @@
 
 import { pickPreventivoWritePayload } from "@/lib/validation/services/preventivi-payload";
 import { PREVENTIVI_COLUMNS } from "@/lib/db/table-select-columns";
+import { isPreventivoEditableByStaff } from "@/lib/preventivi/preventivo-edit-lock";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -23,8 +24,21 @@ export type PreventivoInsert = Omit<
   | "created_at"
   | "updated_at"
   | "stato"
+  | "stato_workflow"
+  | "stato_cliente"
+  | "versione"
+  | "parent_preventivo_id"
   | "current_pdf_artifact_id"
+  | "pdf_sent_artifact_id"
+  | "pdf_sent_hash"
+  | "pdf_sent_generated_at"
   | "inviato_at"
+  | "visualizzato_at"
+  | "accettato_at"
+  | "rifiutato_at"
+  | "scadenza_accettazione_at"
+  | "metodo_accettazione"
+  | "reminder_sent_at"
   | "confermato_at"
   | "confermato_by"
   | "annullato_at"
@@ -32,7 +46,15 @@ export type PreventivoInsert = Omit<
   Partial<
     Pick<
       PreventivoRow,
-      "stato" | "current_pdf_artifact_id" | "inviato_at" | "confermato_at" | "confermato_by" | "annullato_at"
+      | "stato"
+      | "stato_workflow"
+      | "stato_cliente"
+      | "versione"
+      | "current_pdf_artifact_id"
+      | "inviato_at"
+      | "confermato_at"
+      | "confermato_by"
+      | "annullato_at"
     >
   >;
 export type PreventivoUpdate = Partial<PreventivoInsert>;
@@ -120,6 +142,9 @@ export const preventiviService = {
       const { data: before, error: e0 } = await c.from("preventivi").select(PREVENTIVI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
       if (!before) return err("Preventivo non trovato.");
+      if (!isPreventivoEditableByStaff(before as PreventivoRow)) {
+        return err("Il preventivo non è modificabile in questo stato.");
+      }
       const patch = pickPreventivoWritePayload(data as Record<string, unknown>);
       let updateBody: PreventivoUpdate = { ...patch };
       if (patch.dettagli !== undefined) {
@@ -166,7 +191,7 @@ export const preventiviService = {
 
   async transitionStatus(
     id: string,
-    to: import("@/lib/preventivi/types").PreventivoStato,
+    to: import("@/lib/preventivi/types").PreventivoStatoWorkflow,
     autore?: string,
   ): Promise<ServiceResult<PreventivoRow>> {
     try {

@@ -544,6 +544,12 @@ export type OperationalDiaryEntryRow = {
 
 export type PreventivoStatoRow = "bozza" | "inviato" | "confermato" | "annullato";
 
+export type PreventivoStatoWorkflowRow = "bozza" | "inviato" | "acquisito" | "annullato";
+
+export type PreventivoStatoClienteRow = "pending" | "accettato" | "rifiutato";
+
+export type PreventivoMetodoAccettazioneRow = "cliente" | "timeout_automatico";
+
 export type PdfArtifactStatus = "generating" | "ready" | "failed" | "deleted";
 
 export type PdfArtifactRow = {
@@ -571,6 +577,17 @@ export type DocumentAccessTokenRow = {
   created_by: string | null;
 };
 
+export type PreventivoEventRow = {
+  id: string;
+  preventivo_id: string;
+  event_type: string;
+  actor_type: "staff" | "cliente" | "system";
+  actor_id: string | null;
+  payload: Record<string, unknown>;
+  snapshot: Record<string, unknown>;
+  created_at: string;
+};
+
 export type PreventivoRow = {
   id: string;
   mezzo_id: string;
@@ -578,9 +595,23 @@ export type PreventivoRow = {
   cliente: string;
   totale: number;
   dettagli: Record<string, unknown>;
+  /** @deprecated Legacy — preferire stato_workflow. */
   stato: PreventivoStatoRow;
+  stato_workflow: PreventivoStatoWorkflowRow;
+  stato_cliente: PreventivoStatoClienteRow | null;
+  versione: number;
+  parent_preventivo_id: string | null;
   current_pdf_artifact_id: string | null;
+  pdf_sent_artifact_id: string | null;
+  pdf_sent_hash: string | null;
+  pdf_sent_generated_at: string | null;
   inviato_at: string | null;
+  visualizzato_at: string | null;
+  accettato_at: string | null;
+  rifiutato_at: string | null;
+  scadenza_accettazione_at: string | null;
+  metodo_accettazione: PreventivoMetodoAccettazioneRow | null;
+  reminder_sent_at: string | null;
   confermato_at: string | null;
   confermato_by: string | null;
   annullato_at: string | null;
@@ -855,6 +886,7 @@ export type LogModificaRow = {
   entita_id: string;
   azione: string;
   autore_id: string | null;
+  autore_nome_snapshot?: string | null;
   payload: unknown;
   created_at: string;
   company_id?: string | null;
@@ -871,7 +903,7 @@ export type LogModificaRow = {
 
 /** `log_modifiche` con join autore (`profiles`). */
 export type LogModificaWithProfileRow = LogModificaRow & {
-  profiles: { id: string; nome: string } | null;
+  profiles: { id: string; nome: string; cognome?: string | null } | null;
 };
 
 /** Tabella `app_settings` — configurazione globale (JSON per modulo/chiave). */
@@ -893,6 +925,7 @@ export type AppSettingsAuditRow = {
   new_value: Record<string, unknown>;
   updated_by: string | null;
   updated_at: string;
+  updated_by_profile?: { nome: string; cognome: string | null } | null;
 };
 
 /** Tabella `user_permissions` — override utente (permission_id + effect). */

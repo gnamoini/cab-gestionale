@@ -66,7 +66,11 @@ export type RenameJobStatus =
   | "cancelled"
   | "reversed";
 
-export type RenameExecutionMode = "full" | "configuration_only";
+export type RenameExecutionMode = "full" | "configuration_only" | "live_propagation";
+
+export type PropagationStatus = "pending_propagation" | "propagated" | "configuration_only";
+
+export type RenameJobSource = "user_rename" | "repair" | "retry";
 
 export type HealthCheckStatus = "healthy" | "warning" | "failed";
 
@@ -95,6 +99,8 @@ export type RenameMetrics = {
   warnings: number;
   execution_mode: RenameExecutionMode;
   batched: boolean;
+  execution_id?: string;
+  propagation_status?: PropagationStatus;
 };
 
 export type ValidationCheckStatus = "pass" | "fail" | "warning";

@@ -1,4 +1,13 @@
-import type { PreventivoRecord, PreventivoStato, PreventivoTipoDocumento } from "@/lib/preventivi/types";
+import {
+  preventivoClienteLabel,
+  preventivoWorkflowLabel,
+} from "@/lib/preventivi/preventivo-status-ui";
+import type {
+  PreventivoRecord,
+  PreventivoStatoCliente,
+  PreventivoStatoWorkflow,
+  PreventivoTipoDocumento,
+} from "@/lib/preventivi/types";
 import { PREVENTIVO_TIPI_DOCUMENTO } from "@/lib/preventivi/preventivi-tipo-documento";
 import { modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
@@ -43,15 +52,32 @@ export type PreventiviFilterCatalog = {
 export const PREVENTIVO_TIPI_DOCUMENTO_FILTER: readonly { id: PreventivoTipoDocumento; label: string }[] =
   PREVENTIVO_TIPI_DOCUMENTO;
 
-export const PREVENTIVO_STATI: readonly { id: PreventivoStato; label: string }[] = [
+export type PreventivoFilterStatoId = PreventivoStatoWorkflow | PreventivoStatoCliente;
+
+const CLIENTE_FILTER_STATI = new Set<PreventivoStatoCliente>(["pending", "accettato", "rifiutato"]);
+
+export const PREVENTIVO_STATI: readonly { id: PreventivoFilterStatoId; label: string }[] = [
   { id: "bozza", label: "Bozza" },
   { id: "inviato", label: "Inviato" },
-  { id: "confermato", label: "Confermato" },
+  { id: "acquisito", label: "Acquisito" },
   { id: "annullato", label: "Annullato" },
+  { id: "pending", label: "In attesa" },
+  { id: "accettato", label: "Accettati" },
+  { id: "rifiutato", label: "Rifiutati" },
 ] as const;
 
-export function preventivoStatoLabel(stato: PreventivoStato): string {
-  return PREVENTIVO_STATI.find((s) => s.id === stato)?.label ?? stato;
+export function preventivoStatoLabel(stato: PreventivoFilterStatoId): string {
+  if (CLIENTE_FILTER_STATI.has(stato as PreventivoStatoCliente)) {
+    return preventivoClienteLabel(stato as PreventivoStatoCliente);
+  }
+  return preventivoWorkflowLabel(stato as PreventivoStatoWorkflow);
+}
+
+function preventivoRowMatchesStatoFilter(row: PreventivoRecord, stato: string): boolean {
+  if (CLIENTE_FILTER_STATI.has(stato as PreventivoStatoCliente)) {
+    return row.statoCliente === stato;
+  }
+  return row.statoWorkflow === stato;
 }
 
 function norm(s: string): string {
@@ -183,7 +209,7 @@ export function preventiviRowMatchesAdvancedFilters(
   if (f.utilizzatore.trim() && norm(row.utilizzatore) !== norm(f.utilizzatore)) return false;
   if (!listFilterMatches(f.marca, row.marcaAttrezzatura)) return false;
   if (!listFilterMatches(f.modello, row.modelloAttrezzatura)) return false;
-  if (f.stato !== FILTER_ALL && row.stato !== f.stato) return false;
+  if (f.stato !== FILTER_ALL && !preventivoRowMatchesStatoFilter(row, f.stato)) return false;
   if (f.tipoDocumento !== FILTER_ALL && row.tipoDocumento !== f.tipoDocumento) return false;
   if (!preventiviRowDataCreazioneInRange(row, f.dataCreazioneDa, f.dataCreazioneA)) return false;
   return true;

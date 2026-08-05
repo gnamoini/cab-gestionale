@@ -4,10 +4,13 @@ import { GlobalFixedListPillSelect } from "@/components/gestionale/global-input"
 import { statoPillShellClass } from "@/lib/lavorazioni/lavorazioni-pill-styles";
 import {
   PREVENTIVO_STATO_EDITOR_ITEMS,
-  preventivoStatoLabel,
-  preventivoStatoPillStyle,
+  preventivoClienteDisplayLabel,
+  preventivoClienteLabel,
+  preventivoClientePillStyle,
+  preventivoWorkflowLabel,
+  preventivoWorkflowPillStyle,
 } from "@/lib/preventivi/preventivo-status-ui";
-import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
+import type { PreventivoRecord, PreventivoStatoWorkflow } from "@/lib/preventivi/types";
 
 export function PreventivoStatusCell({
   record,
@@ -18,39 +21,62 @@ export function PreventivoStatusCell({
   record: PreventivoRecord;
   canWrite: boolean;
   disabled?: boolean;
-  onStatusChange: (record: PreventivoRecord, status: PreventivoStato) => void;
+  onStatusChange: (record: PreventivoRecord, workflow: PreventivoStatoWorkflow) => void;
 }) {
-  const stato = record.stato;
+  const workflow = record.statoWorkflow;
   const options = PREVENTIVO_STATO_EDITOR_ITEMS.map((item) => ({
     ...item,
-    pillStyle: preventivoStatoPillStyle(item.value),
+    pillStyle: preventivoWorkflowPillStyle(item.value),
   }));
+
+  const clienteBadge =
+    record.statoCliente != null ? (
+      <span
+        className={statoPillShellClass()}
+        style={preventivoClientePillStyle(record.statoCliente)}
+        title={preventivoClienteDisplayLabel(record.statoCliente, record.metodoAccettazione)}
+      >
+        {preventivoClienteLabel(record.statoCliente)}
+      </span>
+    ) : null;
 
   if (!canWrite) {
     return (
-      <span
-        className={statoPillShellClass()}
-        style={preventivoStatoPillStyle(stato)}
-        title={preventivoStatoLabel(stato)}
-      >
-        {preventivoStatoLabel(stato)}
-      </span>
+      <div className="flex flex-col gap-1">
+        <span
+          className={statoPillShellClass()}
+          style={preventivoWorkflowPillStyle(workflow)}
+          title={preventivoWorkflowLabel(workflow)}
+        >
+          {preventivoWorkflowLabel(workflow)}
+        </span>
+        {clienteBadge}
+      </div>
     );
   }
 
   return (
-    <GlobalFixedListPillSelect
-      value={stato}
-      onChange={(v) => {
-        const next = v as PreventivoStato;
-        if (next !== stato) onStatusChange(record, next);
-      }}
-      options={options}
-      ariaLabel={`Stato preventivo ${record.numero || record.id}`}
-      disabled={disabled}
-      title={preventivoStatoLabel(stato)}
-      shellClass={statoPillShellClass()}
-      fallbackPillStyle={preventivoStatoPillStyle(stato)}
-    />
+    <div className="flex flex-col gap-1">
+      <GlobalFixedListPillSelect
+        value={workflow}
+        onChange={(v) => {
+          const next = v as PreventivoStatoWorkflow;
+          if (next !== workflow) onStatusChange(record, next);
+        }}
+        options={options}
+        ariaLabel={`Stato workflow preventivo ${record.numero || record.id}`}
+        disabled={disabled}
+        title={preventivoWorkflowLabel(workflow)}
+        shellClass={statoPillShellClass()}
+        fallbackPillStyle={preventivoWorkflowPillStyle(workflow)}
+      />
+      {clienteBadge}
+      {record.statoCliente === "pending" && record.scadenzaAccettazioneAt ? (
+        <span className="text-[10px] text-zinc-500">Scadenza risposta attiva</span>
+      ) : null}
+      {record.metodoAccettazione ? (
+        <span className="text-[10px] text-zinc-500">{record.metodoAccettazione}</span>
+      ) : null}
+    </div>
   );
 }

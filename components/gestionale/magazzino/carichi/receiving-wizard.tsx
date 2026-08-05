@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { InventoryReceivingAcquisitionProgress } from "@/components/gestionale/magazzino/carichi/inventory-receiving-acquisition-progress";
@@ -28,10 +29,24 @@ import { useInventoryReceivingApply } from "@/lib/document-capture/use-inventory
 import { dsStackPage } from "@/lib/ui/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { usePermissions } from "@/src/hooks/use-permissions";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { invalidateAfterInventoryReceivingApply } from "@/src/lib/react-query/invalidate-related";
 
 export function ReceivingWizard() {
+  useGestionaleSyncScope({
+    scopeId: "magazzino-carichi-wizard",
+    domain: "magazzino",
+    route: "/magazzino/carichi",
+    tables: [
+      "magazzino_ricambi",
+      "movimenti_ricambi",
+      "inventory_documents",
+      "inventory_document_lines",
+    ],
+  });
   const router = useRouter();
+  const queryClient = useQueryClient();
   const gestToast = useGestionaleToast();
   const searchParams = useSearchParams();
   const existingId = searchParams.get("documentId");
@@ -98,13 +113,14 @@ export function ReceivingWizard() {
     const ok = await applyFlow.confirmAndApply();
     if (ok) {
       gestToast.success(inventoryReceivingCaptureAdapter.apply.successMessage);
+      invalidateAfterInventoryReceivingApply(queryClient);
       router.push("/magazzino/carichi");
       router.refresh();
     } else if (applyFlow.error) {
       flow.setError(applyFlow.error);
       gestToast.error(applyFlow.error);
     }
-  }, [applyFlow, flow, gestToast, perm.canWrite, router]);
+  }, [applyFlow, flow, gestToast, perm.canWrite, queryClient, router]);
 
   if (!existingId) {
     return (

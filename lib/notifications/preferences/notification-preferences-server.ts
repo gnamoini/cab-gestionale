@@ -49,7 +49,9 @@ export async function loadNotificationSettingsViewModelForUser(
     permissionsHydrated: true,
   });
 
-  if (!effective.resolved) return { pages: [] };
+  if (!effective.resolved) {
+    return { pages: [], channelPreferences: { inbox: true, push: true, email: false } };
+  }
 
   const preferenceRows = await loadEventPreferencesForUsers(client, {
     companyId: session.companyId,

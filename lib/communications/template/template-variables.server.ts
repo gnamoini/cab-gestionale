@@ -1,6 +1,8 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { clientLavorazioniDetailPath } from "@/lib/lavorazioni/client-portal-access";
+import { resolveCanonicalSiteOrigin } from "@/lib/core/site-origin";
 import { buildClienteEntityKey } from "@/lib/validation/entity-keys";
 import type { RenderedPayload } from "@/lib/communications/domain/communication-types";
 import { buildOfficinaTemplateVars } from "@/lib/communications/recipients/recipient-resolver.server";
@@ -45,18 +47,24 @@ export async function buildTemplateVariables(
   if (entityType === "preventivi") {
     const { data: pv } = await client
       .from("preventivi")
-      .select("cliente, totale, dettagli, lavorazione_id")
+      .select("cliente, totale, dettagli, lavorazione_id, versione")
       .eq("id", entityId)
       .maybeSingle();
     if (pv) {
       vars.cliente = String(pv.cliente ?? "");
       vars.totale = pv.totale != null ? String(pv.totale) : "";
+      vars.versione = String(pv.versione ?? 1);
       const det = (pv.dettagli as Record<string, unknown>) ?? {};
       vars.numero_preventivo = String(det.numero ?? entityId);
+      vars.descrizione_preventivo =
+        typeof det.descrizioneLavorazioniCliente === "string" ? det.descrizioneLavorazioniCliente : "";
       if (pv.lavorazione_id) {
         const child = await buildTemplateVariables(client, "lavorazioni", pv.lavorazione_id, {}, settingsRows);
         vars.mezzo = child.mezzo ?? vars.mezzo;
         vars.targa = child.targa ?? vars.targa;
+        vars.numero_lavorazione = child.numero_lavorazione ?? vars.numero_lavorazione;
+        const origin = resolveCanonicalSiteOrigin();
+        vars.link_lavorazione = `${origin}${clientLavorazioniDetailPath(pv.lavorazione_id)}`;
       }
     }
   }

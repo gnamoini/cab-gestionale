@@ -29,8 +29,8 @@ export function markCabSyncToastSuppressed(
 }
 
 export function isCabSyncToastSuppressed(event: CabSyncEvent, ttlMs = DEFAULT_TTL_MS): boolean {
-  if (event.type === "settings_updated") return false;
-  const id = event.id?.trim();
+  if (event.type === "settings_updated" || event.type === "SETTINGS_PROPAGATION_DRIFT_DETECTED") return false;
+  const id = event.id.trim();
   if (!id) return false;
   const now = Date.now();
   prune(now, ttlMs);

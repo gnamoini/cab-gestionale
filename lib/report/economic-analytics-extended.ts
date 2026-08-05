@@ -1,5 +1,6 @@
 import { roundMoney } from "@/lib/fatturazione/invoice-calculations";
-import type { PreventivoRecord } from "@/lib/preventivi/types";
+import type { PreventivoRecord, PreventivoStatoCliente } from "@/lib/preventivi/types";
+import { isPreventivoCountedInEconomicStats } from "@/lib/preventivi/preventivo-stats-eligibility";
 import { isoInRange, type DateRange } from "@/lib/report/date-ranges";
 import type { InvoiceLineRow, InvoicePaymentRow, InvoiceRow, PreventivoBillingStatusRow } from "@/src/types/supabase-tables";
 
@@ -166,11 +167,10 @@ export function buildRevenueCollectionMonthlySeries(
   }));
 }
 
-const PREVENTIVO_STATE_LABELS: Record<string, string> = {
-  inviato: "Inviati",
-  confermato: "Confermati",
-  annullato: "Annullati",
-  scaduto: "Scaduti",
+const PREVENTIVO_CLIENTE_FUNNEL_LABELS: Record<PreventivoStatoCliente, string> = {
+  pending: "In attesa",
+  accettato: "Accettati",
+  rifiutato: "Rifiutati",
 };
 
 export function buildPreventiviFunnel(
@@ -179,21 +179,23 @@ export function buildPreventiviFunnel(
 ): PreventiviFunnelRow[] {
   const buckets = new Map<string, { count: number; value: number }>();
   for (const p of preventivi) {
-    if (p.stato === "bozza") continue;
+    if (p.statoWorkflow === "bozza" || !p.statoCliente) continue;
     const at = p.dataCreazione || p.aggiornatoAt;
     if (!isoInRange(at, range)) continue;
-    const key = p.stato;
+    const key = p.statoCliente;
     const cur = buckets.get(key) ?? { count: 0, value: 0 };
     cur.count += 1;
-    cur.value = roundMoney(cur.value + (p.totaleFinale ?? 0));
+    if (isPreventivoCountedInEconomicStats(p)) {
+      cur.value = roundMoney(cur.value + (p.totaleFinale ?? 0));
+    }
     buckets.set(key, cur);
   }
-  const order = ["inviato", "confermato", "annullato", "scaduto"];
+  const order: PreventivoStatoCliente[] = ["pending", "accettato", "rifiutato"];
   return order
     .filter((id) => buckets.has(id))
     .map((id) => {
       const v = buckets.get(id)!;
-      return { id, label: PREVENTIVO_STATE_LABELS[id] ?? id, count: v.count, value: v.value };
+      return { id, label: PREVENTIVO_CLIENTE_FUNNEL_LABELS[id], count: v.count, value: v.value };
     });
 }
 
@@ -354,9 +356,10 @@ export function buildPreventivoVsConsuntivo(
 
   const rows: PreventivoConsuntivoRow[] = [];
   for (const p of preventivi) {
-    if (p.stato === "bozza") continue;
+    if (p.statoWorkflow === "bozza") continue;
     const at = p.dataCreazione || p.aggiornatoAt;
     if (!isoInRange(at, range)) continue;
+    if (!isPreventivoCountedInEconomicStats(p)) continue;
     const consuntivo = consuntivoByPreventivo.get(p.id) ?? 0;
     if (consuntivo <= 0) continue;
     const preventivo = p.totaleFinale ?? 0;

@@ -13,6 +13,7 @@ import { err, success, type ServiceResult } from "@/src/services/service-result"
 export type MezzoAnagraficaHistoryRow = MezzoAnagraficaHistoryInsert & {
   id: string;
   created_at: string;
+  profiles?: { id: string; nome: string; cognome?: string | null } | null;
 };
 
 export async function recordMezzoAnagraficaDiff(input: {
@@ -69,13 +70,13 @@ export async function fetchMezzoAnagraficaHistory(
     const { data, error } = await sb
       .from("mezzo_anagrafica_history")
       .select(
-        "id, mezzo_id, lavorazione_id, scheda_id, user_id, origine, changed_fields, old_values, new_values, event_kind, reason, created_at",
+        "id, mezzo_id, lavorazione_id, scheda_id, user_id, origine, changed_fields, old_values, new_values, event_kind, reason, created_at, profiles!mezzo_anagrafica_history_user_id_fkey(id, nome, cognome)",
       )
       .eq("mezzo_id", id)
       .order("created_at", { ascending: false })
       .limit(limit);
     if (error) return err(error.message);
-    return success((data ?? []) as MezzoAnagraficaHistoryRow[]);
+    return success((data ?? []) as unknown as MezzoAnagraficaHistoryRow[]);
   } catch (e) {
     return err(e instanceof Error ? e.message : "Errore caricamento storico anagrafica.");
   }

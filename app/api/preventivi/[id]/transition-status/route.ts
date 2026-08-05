@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { transitionPreventivoStatusServer } from "@/lib/preventivi/preventivo-status-transition.server";
-import type { PreventivoStato } from "@/lib/preventivi/types";
+import type { PreventivoStatoWorkflow } from "@/lib/preventivi/types";
 
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
-  to: z.enum(["bozza", "inviato", "confermato", "annullato"]),
+  to: z.enum(["bozza", "inviato", "annullato"]),
   autore: z.string().max(200).optional(),
 });
 
@@ -29,7 +29,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   const result = await transitionPreventivoStatusServer({
     preventivoId: id,
-    to: parsed.data.to as PreventivoStato,
+    to: parsed.data.to as PreventivoStatoWorkflow,
     autore: parsed.data.autore,
   });
 

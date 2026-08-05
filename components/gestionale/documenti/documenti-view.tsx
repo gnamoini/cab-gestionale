@@ -24,6 +24,7 @@ import { cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
 import { warmupDocumentPreview } from "@/lib/observability/asset-cache-warmup";
 import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifecycle";
 import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
+import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { DocumentiTableSection } from "@/components/gestionale/documenti/documenti-page-structure";
 import {
@@ -367,6 +368,12 @@ function ArchiveDocRow({
 }
 
 export function DocumentiView() {
+  useGestionaleSyncScope({
+    scopeId: "documenti-view",
+    domain: "documenti",
+    route: "/documenti",
+    tables: ["documenti", "log_modifiche"],
+  });
   const searchParams = useSearchParams();
   const qc = useQueryClient();
   const { global: globalPerm, modules: permModules } = usePermissionsSnapshot();

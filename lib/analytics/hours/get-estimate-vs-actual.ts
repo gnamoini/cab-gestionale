@@ -1,4 +1,5 @@
 import type { PreventivoRecord } from "@/lib/preventivi/types";
+import { isPreventivoCountedInEconomicStats } from "@/lib/preventivi/preventivo-stats-eligibility";
 import type { LavorazioneRow } from "@/src/types/supabase-tables";
 import type { EstimateVsActualResult } from "@/lib/analytics/hours/types";
 import { getActualLaborHoursFromRow } from "@/lib/analytics/hours/get-actual-labor-hours";
@@ -20,6 +21,7 @@ export function getEstimateVsActualDelta(
   const rows = [];
 
   for (const prev of preventivi) {
+    if (!isPreventivoCountedInEconomicStats(prev)) continue;
     const lavId = prev.lavorazioneId?.trim();
     if (!lavId) continue;
     const lav = lavById.get(lavId);

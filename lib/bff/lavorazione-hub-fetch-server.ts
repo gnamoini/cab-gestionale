@@ -3,7 +3,7 @@ import "server-only";
 import {
   DOCUMENTI_COLUMNS,
   LAVORAZIONI_DETAIL_COLUMNS,
-  LOG_MODIFICHE_COLUMNS,
+  LOG_MODIFICHE_WITH_PROFILE_SELECT,
   MOVIMENTI_RICAMBI_COLUMNS,
   PREVENTIVI_COLUMNS,
   SCHEDA_LAVORAZIONE_COLUMNS,
@@ -71,7 +71,7 @@ export async function fetchLavorazioneDetailDTOServer(
     sb.from("preventivi").select(PREVENTIVI_COLUMNS).eq("lavorazione_id", id),
     sb
       .from("log_modifiche")
-      .select(LOG_MODIFICHE_COLUMNS)
+      .select(LOG_MODIFICHE_WITH_PROFILE_SELECT)
       .eq("entita", "lavorazioni")
       .eq("entita_id", id)
       .order("created_at", { ascending: false })

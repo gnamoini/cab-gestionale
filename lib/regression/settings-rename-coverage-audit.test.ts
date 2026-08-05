@@ -18,7 +18,8 @@ assert.match(propagation, /"attrezzature", "marca"/);
 assert.doesNotMatch(propagation, /propagateSimpleColumn\(kind, from, to, "mezzi", "marca"\)/);
 assert.match(propagation, /marca_telaio/);
 assert.match(propagation, /attrezzature.*tipo_attrezzatura|"attrezzature", "tipo_attrezzatura"/);
-assert.match(propagation, /billing_customers/);
+assert.ok(matrix.utilizzatore.includes("utilizzatore.preventivi"));
+assert.match(propagation, /"preventivi", "utilizzatore"/);
 
 for (const ids of Object.values(matrix)) {
   for (const id of ids) {

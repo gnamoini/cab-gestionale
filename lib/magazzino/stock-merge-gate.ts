@@ -9,7 +9,7 @@ export type StockMergeEntity = {
   lastOperationId: string | null;
 };
 
-export type StockMergeDecision = "ignore" | "merge" | "warn_conflict";
+export type StockMergeDecision = "ignore" | "merge" | "warn_conflict" | "cannot_merge";
 
 export type StockMergeResult = {
   decision: StockMergeDecision;
@@ -27,7 +27,7 @@ export function evaluateStockMerge(
   cached: StockMergeEntity | null | undefined,
 ): StockMergeResult {
   if (!cached) {
-    return { decision: "merge", merged: incoming };
+    return { decision: "cannot_merge", merged: null };
   }
 
   if (incoming.stockVersion < cached.stockVersion) {

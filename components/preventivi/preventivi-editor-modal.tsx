@@ -16,6 +16,7 @@ import { usePwaUpdateGuard } from "@/lib/pwa/pwa-update-guard";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useOfficinaProfiloOperativo } from "@/lib/officina/use-officina-profilo-operativo";
+import { isPreventivoEditableByStaff } from "@/lib/preventivi/preventivo-edit-lock";
 import {
   isPreventivoEditorDirty,
   normalizePreventivoEditorRecord,
@@ -144,6 +145,7 @@ export function PreventiviEditorModal({
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
   const [descRegenBusy, setDescRegenBusy] = useState(false);
   const [descProgressLabel, setDescProgressLabel] = useState<string | null>(null);
+  const [withdrawPending, setWithdrawPending] = useState(false);
   const prevPerms = usePermissions("preventivi");
   const profilo = useOfficinaProfiloOperativo();
   const toast = useGestionaleToast();
@@ -435,7 +437,46 @@ export function PreventiviEditorModal({
     });
   }
 
+  const staffEditable =
+    isNew ||
+    (draft
+      ? isPreventivoEditableByStaff({
+          stato_workflow: draft.statoWorkflow,
+          stato_cliente: draft.statoCliente,
+        })
+      : false);
+  const canWithdraw =
+    draft != null &&
+    draft.statoWorkflow === "inviato" &&
+    draft.statoCliente === "pending" &&
+    prevPerms.canWrite;
+
+  async function onRitiraPreventivo() {
+    if (!draft || !canWithdraw || withdrawPending) return;
+    setWithdrawPending(true);
+    try {
+      const res = await fetch(`/api/preventivi/${encodeURIComponent(draft.id)}/transition-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: "bozza", autore: autore.trim() || "Operatore" }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast.errorOnce("preventivo-ritira", body.error ?? "Ritiro non riuscito.");
+        return;
+      }
+      toast.successOnce("preventivo-ritira", "Preventivo ritirato in bozza.");
+      onSaved();
+      onClose();
+    } catch (e) {
+      toast.errorOnce("preventivo-ritira", e);
+    } finally {
+      setWithdrawPending(false);
+    }
+  }
+
   async function onSalva() {
+    if (!staffEditable) return;
     await runButtonSubmit(modalRootRef.current, submitLock, () => ({ draft: draftRef.current }), async (snap) => {
     const cur = snap.draft;
     if (!cur) return;
@@ -477,10 +518,20 @@ export function PreventiviEditorModal({
       title={
         isNew
           ? `Nuovo ${preventivoTipoDocumentoLabel(draft.tipoDocumento).toLowerCase()}`
-          : `${preventivoTipoDocumentoLabel(draft.tipoDocumento)} ${draft.numero}`
+          : `${preventivoTipoDocumentoLabel(draft.tipoDocumento)} ${draft.numero}${draft.versione > 1 ? ` v${draft.versione}` : ""}`
       }
       footer={
         <GestionaleModalFooterActions className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          {canWithdraw ? (
+            <button
+              type="button"
+              className={`${gestionaleModalFooterCancelBtnClass} w-full sm:w-auto`}
+              disabled={withdrawPending}
+              onClick={() => void onRitiraPreventivo()}
+            >
+              {withdrawPending ? "Ritiro…" : "Ritira preventivo"}
+            </button>
+          ) : null}
           <button
             type="button"
             className={`${gestionaleModalFooterCancelBtnClass} w-full sm:w-auto`}
@@ -500,14 +551,28 @@ export function PreventiviEditorModal({
             Anteprima PDF
           </button>
           <GestionaleModalFooterCancelButton className="w-full sm:w-auto" onClick={requestClose} />
-          <GestionaleModalFooterSaveButton className="w-full sm:w-auto" type="button" onClick={onSalva}>
+          <GestionaleModalFooterSaveButton
+            className="w-full sm:w-auto"
+            type="button"
+            onClick={onSalva}
+            disabled={!staffEditable}
+          >
             Salva
           </GestionaleModalFooterSaveButton>
         </GestionaleModalFooterActions>
       }
     >
       <div className={`relative ${gestionaleModalBodyFlexClass}`}>
-        <GestionaleModalScrollBody className="py-3">
+        {!staffEditable && !isNew ? (
+          <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+            {draft.statoCliente === "pending"
+              ? "Preventivo in attesa di risposta cliente: modifica bloccata. Ritira in bozza per modificare."
+              : "Preventivo non modificabile in questo stato."}
+          </p>
+        ) : null}
+        <GestionaleModalScrollBody
+          className={`py-3${!staffEditable && !isNew ? " pointer-events-none opacity-60" : ""}`}
+        >
           <div className="space-y-3">
             <GestionaleCollapsibleSection title="Dati documento" defaultCollapsed={false} variant="form">
               <div className="space-y-4">

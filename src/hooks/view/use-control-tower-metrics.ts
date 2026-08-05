@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
+import { DEFAULT_AUDIT_RETENTION_CONFIG } from "@/lib/audit/types";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
+import { splitActivityFeedLogs } from "@/lib/audit/split-activity-feed-logs";
 import { moduleAllows } from "@/src/lib/auth/effective-module-access";
 import { GESTIONALE_CORE_STALE_MS, GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
 import {
@@ -17,7 +19,7 @@ import { resolveVisibleDashboardWidgets } from "@/lib/dashboard/dashboard-widget
 import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
 import { useDashboardHeaderKpiQueries } from "@/lib/dashboard/use-dashboard-header-kpi-queries";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
-import { useLogListQuery, useMovimentiListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useActivityFeedQuery, useMovimentiListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { isRbacSnapshotReady, snapshotCanReadPage } from "@/src/lib/rbac/rbac-snapshot-access";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
@@ -181,37 +183,14 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
 
   const activityEnabled = !staging && activityVisible;
 
-  const lavLogsQ = useLogListQuery(
-    { entita: "lavorazioni", limit: GESTIONALE_LOG_FEED_LIMIT },
-    { enabled: activityEnabled && canLavorazioni, ...activityLogQueryOpts },
+  const activityFeedQ = useActivityFeedQuery(
+    { limit: GESTIONALE_LOG_FEED_LIMIT, days: DEFAULT_AUDIT_RETENTION_CONFIG.dashboard_days },
+    { enabled: activityEnabled, ...activityLogQueryOpts },
   );
-  const schedeLogsQ = useLogListQuery(
-    { entita: "scheda_lavorazione", limit: GESTIONALE_LOG_FEED_LIMIT },
-    { enabled: activityEnabled && canLavorazioni, ...activityLogQueryOpts },
-  );
-  const magLogsQ = useLogListQuery(
-    { entita: "magazzino_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT },
-    { enabled: activityEnabled && canMagazzino, ...activityLogQueryOpts },
-  );
-  const movLogsQ = useLogListQuery(
-    { entita: "movimenti_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT },
-    { enabled: activityEnabled && canMagazzino, ...activityLogQueryOpts },
-  );
-  const preventiviLogsQ = useLogListQuery(
-    { entita: "preventivi", limit: GESTIONALE_LOG_FEED_LIMIT },
-    { enabled: activityEnabled && canPreventivi, ...activityLogQueryOpts },
-  );
-  const invoicesLogsQ = useLogListQuery(
-    { entita: "invoices", limit: GESTIONALE_LOG_FEED_LIMIT },
-    { enabled: activityEnabled && canFatturazione, ...activityLogQueryOpts },
-  );
-  const invoicePaymentsLogsQ = useLogListQuery(
-    { entita: "invoice_payments", limit: GESTIONALE_LOG_FEED_LIMIT },
-    { enabled: activityEnabled && canFatturazione, ...activityLogQueryOpts },
-  );
-  const ddtLogsQ = useLogListQuery(
-    { entita: "ddt_documents", limit: GESTIONALE_LOG_FEED_LIMIT },
-    { enabled: activityEnabled && canDdt, ...activityLogQueryOpts },
+
+  const splitFeed = useMemo(
+    () => splitActivityFeedLogs(activityFeedQ.data ?? []),
+    [activityFeedQ.data],
   );
 
   const timesheetRange = useMemo(() => {
@@ -250,8 +229,8 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
   const useMovimentiMagLog = (movimentiQ.data?.length ?? 0) > 0 && magLog.length > 0;
 
   const activityLogRows = useMemo(
-    () => [...(lavLogsQ.data ?? []), ...(schedeLogsQ.data ?? [])],
-    [lavLogsQ.data, schedeLogsQ.data],
+    () => splitFeed.lavorazioni,
+    [splitFeed.lavorazioni],
   );
 
   const schedeIds = useMemo(() => {
@@ -321,11 +300,11 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
       preventivi: preventiviQ.records,
       invoices: invoicesQ.invoices,
       logLavorazioni: activityLogRows,
-      logMagazzino: magLogsQ.data ?? [],
-      logMovimenti: movLogsQ.data ?? [],
-      logPreventivi: preventiviLogsQ.data ?? [],
-      logDdt: ddtLogsQ.data ?? [],
-      logFatturazione: [...(invoicesLogsQ.data ?? []), ...(invoicePaymentsLogsQ.data ?? [])],
+      logMagazzino: splitFeed.magazzino,
+      logMovimenti: splitFeed.movimenti,
+      logPreventivi: splitFeed.preventivi,
+      logDdt: splitFeed.ddt,
+      logFatturazione: splitFeed.fatturazione,
       timesheetEntries: (timesheetQ.data ?? []) as DipendenteTimesheetEntryRow[],
       tipiAssenza: dipendentiOpts.tipiAssenza,
       statiLavorazione: dash.globalOpts.lavorazioni.stati,
@@ -356,15 +335,8 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     schedeStore,
     preventiviQ.records,
     invoicesQ.invoices,
-    lavLogsQ.data,
-    schedeLogsQ.data,
     activityLogRows,
-    magLogsQ.data,
-    movLogsQ.data,
-    preventiviLogsQ.data,
-    ddtLogsQ.data,
-    invoicesLogsQ.data,
-    invoicePaymentsLogsQ.data,
+    splitFeed,
     timesheetQ.data,
     dipendentiOpts.tipiAssenza,
     dash.globalOpts.lavorazioni.stati,
@@ -382,30 +354,10 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     (!staging && headerVisible && canFatturazione && invoicesQ.isLoading) ||
     (needTimesheet && timesheetQ.isPending) ||
     (needMovimenti && movimentiQ.isLoading) ||
-    (activityEnabled &&
-      ((canLavorazioni && (lavLogsQ.isLoading || schedeLogsQ.isLoading)) ||
-        (canMagazzino && (magLogsQ.isLoading || movLogsQ.isLoading)) ||
-        (canPreventivi && preventiviLogsQ.isLoading) ||
-        (canDdt && ddtLogsQ.isLoading) ||
-        (canFatturazione && (invoicesLogsQ.isLoading || invoicePaymentsLogsQ.isLoading))));
+    (activityEnabled && activityFeedQ.isLoading);
 
   const activityFeedLoading =
-    rbacLoading ||
-    !modules ||
-    (activityEnabled &&
-      ((canLavorazioni &&
-          (lavLogsQ.isPending ||
-            lavLogsQ.isLoading ||
-            schedeLogsQ.isPending ||
-            schedeLogsQ.isLoading)) ||
-        (canMagazzino && (magLogsQ.isPending || magLogsQ.isLoading || movLogsQ.isPending || movLogsQ.isLoading)) ||
-        (canPreventivi && (preventiviLogsQ.isPending || preventiviLogsQ.isLoading)) ||
-        (canDdt && (ddtLogsQ.isPending || ddtLogsQ.isLoading)) ||
-        (canFatturazione &&
-          (invoicesLogsQ.isPending ||
-            invoicesLogsQ.isLoading ||
-            invoicePaymentsLogsQ.isPending ||
-            invoicePaymentsLogsQ.isLoading))));
+    rbacLoading || !modules || (activityEnabled && (activityFeedQ.isPending || activityFeedQ.isLoading));
 
   return {
     staging,

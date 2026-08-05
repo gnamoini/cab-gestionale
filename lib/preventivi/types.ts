@@ -1,6 +1,24 @@
 import type { RicambioUnitaMisura } from "@/lib/magazzino/ricambio-unita-misura";
 
-export type PreventivoStato = "bozza" | "inviato" | "confermato" | "annullato";
+export type PreventivoStatoWorkflow = "bozza" | "inviato" | "acquisito" | "annullato";
+
+export type PreventivoStatoCliente = "pending" | "accettato" | "rifiutato";
+
+export type PreventivoMetodoAccettazione = "cliente" | "timeout_automatico";
+
+/** @deprecated Preferire statoWorkflow + statoCliente. */
+export type PreventivoStato = PreventivoStatoWorkflow | "confermato";
+
+export type PreventivoEventType =
+  | "created"
+  | "sent"
+  | "viewed"
+  | "accepted_client"
+  | "rejected_client"
+  | "accepted_timeout"
+  | "cancelled"
+  | "withdrawn"
+  | "version_incremented";
 
 export type PreventivoLavorazioneOrigine = "attiva" | "storico";
 
@@ -50,6 +68,18 @@ export type PreventivoRecord = {
   numero: string;
   dataCreazione: string;
   aggiornatoAt: string;
+  /** Workflow staff — SSOT: colonna `stato_workflow`. */
+  statoWorkflow: PreventivoStatoWorkflow;
+  /** Risposta cliente — null se non applicabile. */
+  statoCliente: PreventivoStatoCliente | null;
+  versione: number;
+  inviatoAt?: string | null;
+  visualizzatoAt?: string | null;
+  accettatoAt?: string | null;
+  rifiutatoAt?: string | null;
+  scadenzaAccettazioneAt?: string | null;
+  metodoAccettazione?: PreventivoMetodoAccettazione | null;
+  /** @deprecated Usare statoWorkflow / statoCliente. */
   stato: PreventivoStato;
   /** Default storico: `preventivo`. */
   tipoDocumento: PreventivoTipoDocumento;

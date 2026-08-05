@@ -1,4 +1,9 @@
 import type { GestionaleActionSource } from "@/lib/sync/gestionale-sync-dispatch";
+import {
+  clearPersistedGestionaleDirty,
+  persistGestionaleDirtyEntry,
+  readPersistedGestionaleDirtyEntries,
+} from "@/lib/sync/gestionale-dirty-persist";
 import type {
   GestionaleSyncDomain,
   GestionaleSyncScopeRegistration,
@@ -69,12 +74,14 @@ export function markGestionaleDirty(entry: DirtyEntry): void {
     firstSeenAt: snapshot.firstSeenAt || now,
     lastSeenAt: now,
   };
+  persistGestionaleDirtyEntry({ ...entry, timestamp: now });
   notifyDirtyListeners();
 }
 
 export function clearGestionaleDirty(scope?: ClearGestionaleDirtyScope): void {
   if (!scope) {
     snapshot = { entries: new Map(), changeCount: 0, firstSeenAt: 0, lastSeenAt: 0 };
+    clearPersistedGestionaleDirty();
     notifyDirtyListeners();
     return;
   }
@@ -186,6 +193,12 @@ export function getDirtyForActiveScopesSnapshot(
 
 export function hasRelevantDirtyForScopes(scopes: readonly GestionaleSyncScopeRegistration[]): boolean {
   return getDirtyForActiveScopes(scopes).length > 0;
+}
+
+export function hydrateGestionaleDirtyFromSession(): void {
+  for (const entry of readPersistedGestionaleDirtyEntries()) {
+    markGestionaleDirty(entry);
+  }
 }
 
 export function resetGestionaleDirtyStateForTests(): void {

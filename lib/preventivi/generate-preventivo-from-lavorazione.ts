@@ -1,3 +1,4 @@
+import { PREVENTIVO_LIFECYCLE_DEFAULTS } from "@/lib/preventivi/preventivo-lifecycle-defaults";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
@@ -194,7 +195,7 @@ export async function buildNewPreventivoFromLavorazioneContext(opts: {
     ),
     dataCreazione: now,
     aggiornatoAt: now,
-    stato: "bozza",
+    ...PREVENTIVO_LIFECYCLE_DEFAULTS,
     tipoDocumento: PREVENTIVO_TIPO_DOCUMENTO_DEFAULT,
     lavorazioneId: lav.id,
     lavorazioneOrigine: origine,

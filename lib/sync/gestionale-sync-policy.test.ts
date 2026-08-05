@@ -89,6 +89,17 @@ try {
   });
   assert.equal(noop.dirtyEntries.length, 0);
 
+  clearGestionaleSyncScopesForTests();
+  const noScopeFallback = resolveSyncEffects({
+    source: "realtime",
+    tables: ["magazzino_ricambi"],
+    entityIdByTable: new Map([["magazzino_ricambi", "r1"]]),
+    cabEvents: [],
+    flag: "pilot_heavy",
+  });
+  assert.deepEqual(noScopeFallback.invalidateTables, ["magazzino_ricambi"]);
+  assert.equal(noScopeFallback.dirtyEntries.length, 0);
+
   const reconnect = resolveSyncEffects({
     source: "reconnect",
     tables: ["magazzino_ricambi", "lavorazioni"],

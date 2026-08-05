@@ -1,6 +1,7 @@
 /** Domain events — distinct from inbox notification types. */
 export const DOMAIN_EVENT_TYPES = [
   "work_order.created",
+  "work_order.updated",
   "work_order.completed",
   "inventory.below_minimum",
   "invoice.overdue_digest",
