@@ -4,11 +4,14 @@ import { logInterventoTelemetry } from "@/lib/domain/intervento-context/interven
 import type { MezzoUpdateFromSchedaPlan } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
 import { assignTagliandoPresetToMezzoOnSave } from "@/lib/maintenance-plans/assign-tagliando-preset-to-mezzo.client";
 import {
-  tagliandoFieldsToLavorazionePatch,
   type TagliandoLavorazioneFields,
 } from "@/lib/maintenance-plans/tagliando-lavorazione-fields";
 import type { UpsertMezzoFromSchedaResult } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import {
+  buildConsolidatedIngressoLavorazionePatch,
+  ingressoTagliandoFieldsChanged,
+} from "@/lib/schede/ingresso-lavorazione-patch";
 import { logIngressoSavePipeline } from "@/lib/schede/scheda-ingresso-save-pipeline-log";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
@@ -103,17 +106,26 @@ export async function syncIngressoBackendFromFrozenCatalog(
     throw new Error(result.error);
   }
 
-  const nextNote = lavorazioneNote?.trim() ?? "";
-  const currentNote = (row.note ?? "").trim();
-  if (nextNote !== currentNote) {
-    await deps.updateLavorazione(row.id, { note: nextNote || null });
+  const lavPatch = buildConsolidatedIngressoLavorazionePatch({
+    row,
+    lavorazioneNote,
+    tagliandoFields,
+    lavorazioneGestione,
+  });
+  const patchKeys = Object.keys(lavPatch);
+
+  if (patchKeys.length > 0) {
+    logIngressoSavePipeline("SAVE_REQUEST", {
+      runId,
+      lavorazioneId: row.id,
+      patchKeys,
+      updateCount: 1,
+    });
+    await deps.updateLavorazione(row.id, lavPatch);
+    logIngressoSavePipeline("SAVE_RESPONSE", { runId, lavorazioneId: row.id, patchKeys });
   }
 
-  if (tagliandoFields) {
-    await deps.updateLavorazione(
-      row.id,
-      tagliandoFieldsToLavorazionePatch(tagliandoFields) as Record<string, unknown>,
-    );
+  if (ingressoTagliandoFieldsChanged(row, tagliandoFields) && tagliandoFields) {
     const assignRes = await assignTagliandoPresetToMezzoOnSave({
       mezzoId: row.mezzo_id,
       tagliandoFields,
@@ -125,31 +137,23 @@ export async function syncIngressoBackendFromFrozenCatalog(
     }
   }
 
-  if (lavorazioneGestione) {
-    const gestionePatch: Record<string, unknown> = {};
-    if (lavorazioneGestione.stato && lavorazioneGestione.stato !== row.stato) {
-      gestionePatch.stato = lavorazioneGestione.stato;
-    }
-    if (lavorazioneGestione.priorita && lavorazioneGestione.priorita !== row.priorita) {
-      gestionePatch.priorita = lavorazioneGestione.priorita;
-    }
-    if (Object.keys(gestionePatch).length) {
-      await deps.updateLavorazione(row.id, gestionePatch);
-    }
-  }
-
-  logIngressoSavePipeline("backend_sync_end", { runId, lavorazioneId: row.id });
+  logIngressoSavePipeline("backend_sync_end", { runId, lavorazioneId: row.id, patchKeys });
 }
 
-/** Invalidazione batch unica — solo dopo tutti i commit della pipeline. */
+/** Invalidazione batch unica — MIC non bloccante; refetch lista in background. */
 export async function invalidateAfterIngressoEditSave(
   qc: QueryClient,
   lavorazioneId: string,
   mezzoId?: string | null,
 ): Promise<void> {
+  const id = lavorazioneId.trim();
+  if (!id) return;
+
   if (mezzoId?.trim()) {
     await invalidateAfterMezzoMutations(qc, mezzoId.trim(), undefined, { refetchType: "none" });
   }
-  await invalidateAfterLavorazioneMutations(qc, undefined, lavorazioneId);
-  await qc.invalidateQueries({ queryKey: lavorazioniDomainQueryKeys.base(lavorazioneId) });
+  await invalidateAfterLavorazioneMutations(qc, undefined, id, undefined, { refetchType: "none" });
+  await qc.invalidateQueries({ queryKey: lavorazioniDomainQueryKeys.base(id), refetchType: "none" });
+
+  void qc.invalidateQueries({ queryKey: lavorazioniDomainQueryKeys.base(id), refetchType: "active" });
 }

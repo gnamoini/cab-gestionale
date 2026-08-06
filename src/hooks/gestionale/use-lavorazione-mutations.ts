@@ -27,10 +27,12 @@ import type {
 import type { LavorazioneRow } from "@/src/types/supabase-tables";
 import type { UseMutationResult } from "@tanstack/react-query";
 
-export type UseLavorazioneCreateMutationOptions = {
-  /** Orchestrazione multi-stage (create intervento): invalidazione MIC solo a fine transazione. */
+export type UseLavorazioneMutationDeferOptions = {
+  /** Orchestrazione multi-stage: invalidazione MIC solo a fine transazione (create/edit ingresso). */
   deferInvalidation?: boolean;
 };
+
+export type UseLavorazioneCreateMutationOptions = UseLavorazioneMutationDeferOptions;
 
 export function useLavorazioneCreateMutation(options?: UseLavorazioneCreateMutationOptions) {
   const deferInvalidation = options?.deferInvalidation ?? false;
@@ -50,7 +52,10 @@ export function useLavorazioneCreateMutation(options?: UseLavorazioneCreateMutat
   });
 }
 
-export function useLavorazioneUpdateMutation() {
+export type UseLavorazioneUpdateMutationOptions = UseLavorazioneMutationDeferOptions;
+
+export function useLavorazioneUpdateMutation(options?: UseLavorazioneUpdateMutationOptions) {
+  const deferInvalidation = options?.deferInvalidation ?? false;
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const optimisticAudit = buildLavorazioneOptimisticAudit(user?.id);
@@ -70,7 +75,7 @@ export function useLavorazioneUpdateMutation() {
         if (context) rollbackLavorazioneUpdateQueries(queryClient, context as LavorazioneUpdateOptimisticContext);
       },
       onSettled: async (data, error, variables) => {
-        if (error) return;
+        if (error || deferInvalidation) return;
         await traceMutationLifecycle(
           { entityType: "lavorazione", entityId: variables.id, operation: "update" },
           () => settleLavorazioneQuickUpdate(queryClient, false, variables.id, data?.updated_at),

@@ -37,6 +37,7 @@ export async function settleLavorazioneQuickUpdate(
       entityId: lavorazioneId,
       scope: "full",
       dbVersion,
+      refetchType: "none",
     });
     return;
   }

@@ -715,6 +715,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   }, [prioritaOpts, prioColor]);
 
   const updateLav = useLavorazioneUpdateMutation();
+  const updateLavOrchestrated = useLavorazioneUpdateMutation({ deferInvalidation: true });
   const createMezzo = useMezzoCreateMutation();
   const updateMezzo = useMezzoUpdateMutation();
   const removeLav = useLavorazioneRemoveMutation();
@@ -1986,9 +1987,9 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
               applyAssociationChange: applyMezzoAssociationChangeOrThrow,
             }),
           updateLavorazione: async (id, patch) => {
-            await updateLav.mutateAsync({
+            await updateLavOrchestrated.mutateAsync({
               id,
-              data: patch as Parameters<typeof updateLav.mutateAsync>[0]["data"],
+              data: patch as Parameters<typeof updateLavOrchestrated.mutateAsync>[0]["data"],
             });
           },
           onTagliandoPresetWarning: (msg) => gestToast.warning(msg),
@@ -2000,7 +2001,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
         },
       );
     },
-    [attiveRows, chiuseRows, createdBy, createMezzo, gestToast, updateLav, updateMezzo],
+    [attiveRows, chiuseRows, createdBy, createMezzo, gestToast, updateLavOrchestrated, updateMezzo],
   );
 
   function resetRicercaPagina() {

@@ -81,6 +81,7 @@ export async function invalidateAfterLavorazioneMutations(
   cabSyncEvents?: CabSyncEvent[],
   lavorazioneId?: string,
   dbVersion?: string,
+  options?: { refetchType?: "active" | "all" | "none" },
 ) {
   if (lavorazioneId) {
     await invalidateEntity({
@@ -90,6 +91,7 @@ export async function invalidateAfterLavorazioneMutations(
       scope: "full",
       cabSyncEvents,
       dbVersion,
+      refetchType: options?.refetchType,
     });
     return;
   }
