@@ -49,7 +49,7 @@ export function mergeCaptureIngressoWithLinkedMezzo(input: {
     if (isLavorazioneOnlyField(key)) {
       const scanVal = fieldStr(input.scannedFields[key]);
       if (scanVal) {
-        (fields as Record<string, string>)[key] = scanVal;
+        (fields as Record<string, unknown>)[key] = scanVal;
       }
     }
   }

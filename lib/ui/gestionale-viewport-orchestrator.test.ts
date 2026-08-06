@@ -11,6 +11,7 @@ assert.match(src, /DEFAULT_STABLE_FRAMES = 2/);
 assert.match(src, /STABLE_MAX_FRAMES = 12/);
 assert.match(src, /syncFocusVisibilityCssVars/);
 assert.match(src, /syncAppViewportFill/);
+assert.match(src, /syncGestionaleViewport/);
 assert.doesNotMatch(src, /setTimeout/);
 assert.doesNotMatch(src, /setInterval/);
 

@@ -894,6 +894,7 @@ export function SchedeLavorazioneModal({
         sorgente: base.sorgente,
         fileEsterno: base.fileEsterno,
         campi: ig,
+        mezzoLink: input.mezzoLinkMeta ?? base.mezzoLink,
         updatedAt: now,
         updatedBy: u,
       };

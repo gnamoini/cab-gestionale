@@ -54,12 +54,17 @@ import { useMezzoMaintenanceConfigsQuery } from "@/src/hooks/gestionale/use-main
 import { useTagliandoMezzoPresetSync } from "@/src/hooks/use-tagliando-mezzo-preset-sync";
 import { sliceInputValue, TEXT_EXTRA, TEXT_LONG } from "@/lib/validation/text-field-limits";
 import type { LavorazioneArchiviata, LavorazioneAttiva, PrioritaLav } from "@/lib/lavorazioni/types";
+import { describeCaptureLavorazioneAssignTarget } from "@/lib/document-capture/capture-lavorazione-match";
+import { findActiveLavorazioneForSchedaIngressoIdent } from "@/lib/schede/scheda-ingresso-in-officina-warning";
+import { SchedaIngressoInterventoOggettoChecks } from "@/components/lavorazioni/schede/scheda-ingresso-intervento-oggetto-checks";
+import { SchedaIngressoMezzoInOfficinaHint } from "@/components/lavorazioni/schede/scheda-ingresso-mezzo-in-officina-hint";
 import { pickMezzoPermanentFields } from "@/lib/schede/scheda-ingresso-field-roles";
 import {
   useSchedaIngressoMezzoPrompt,
   type UseSchedaIngressoMezzoPromptResult,
 } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import { useSchedaIngressoSaveGate } from "@/src/hooks/use-scheda-ingresso-save-gate";
+import { useSchedaIngressoMezzoLinkGate } from "@/src/hooks/use-scheda-ingresso-mezzo-link-gate";
 import { useSchedaIngressoSavePipeline } from "@/src/hooks/use-scheda-ingresso-save-pipeline";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { useFormEngine } from "@/lib/forms/form-engine";
@@ -142,6 +147,8 @@ function SchedaIngressoFormScrollShell({
 
 export function emptySchedaIngressoFields(addettoDefault = ""): SchedaIngressoFields {
   return {
+    interventoSuAttrezzatura: true,
+    interventoSuTelaio: false,
     dataIngresso: todayItDate(),
     cliente: "",
     cantiere: "",
@@ -172,7 +179,7 @@ export type SchedaIngressoDraftFields = SchedaIngressoFields & SchedaIngressoOre
 
 /** Allinea campi scheda ingresso con default per valori mancanti. */
 export function normalizeSchedaIngressoFields(
-  raw: Partial<SchedaIngressoFields> & Partial<Record<string, string | undefined | null>>,
+  raw: Partial<SchedaIngressoFields>,
   addettoDefault = "",
 ): SchedaIngressoDraftFields {
   const base = emptySchedaIngressoFields(addettoDefault);
@@ -795,6 +802,27 @@ export function SchedaIngressoFormBody({
     mezzoPrompt.pendingMezzo,
   ]);
 
+  const mezzoInOfficinaLabel = useMemo(() => {
+    if (readOnly || disabled || attive.length === 0) return null;
+    const hit = findActiveLavorazioneForSchedaIngressoIdent(
+      fields,
+      mezziCatalog,
+      schedeStore,
+      attive,
+      excludeLavorazioneId,
+    );
+    if (!hit) return null;
+    return describeCaptureLavorazioneAssignTarget(hit.lavorazioneId, attive, schedeStore);
+  }, [
+    attive,
+    disabled,
+    excludeLavorazioneId,
+    fields,
+    mezziCatalog,
+    readOnly,
+    schedeStore,
+  ]);
+
   const onMezzoPromptMatch = useCallback(
     (
       m: MezzoGestito,
@@ -904,6 +932,10 @@ export function SchedaIngressoFormBody({
           mezzoPrefilledFromCatalog={mezzoPrefilledFromCatalog}
         />
 
+        {mezzoInOfficinaLabel ? (
+          <SchedaIngressoMezzoInOfficinaHint lavorazioneLabel={mezzoInOfficinaLabel} />
+        ) : null}
+
         <SchedaIngressoAnagraficaFields
           value={fields}
           onPatch={onPatch}
@@ -921,6 +953,7 @@ export function SchedaIngressoFormBody({
           onUseMezzoFromHint={(field) => mezzoPrompt.acceptLinkMezzo(field)}
           onDismissMezzoHint={mezzoPrompt.dismissPendingMatch}
           onDismissAmbiguousHint={mezzoPrompt.dismissAmbiguousMatch}
+          onSelectAmbiguousCandidate={(m, field) => mezzoPrompt.selectAmbiguousCandidate(m, field)}
           onNotifyPermanentFieldUserEdit={mezzoPrompt.notifyPermanentFieldUserEdit}
           clienteRequired={false}
           marcaAttrezzaturaRequired={false}
@@ -966,8 +999,13 @@ export function SchedaIngressoFormBody({
               mezzoPresetNome={tagliandoPresetSync.mezzoPresetNome}
               presetLocked={tagliandoPresetSync.presetLocked}
               disabled={disabled}
+              afterInfoLavorazione={
+                <SchedaIngressoInterventoOggettoChecks fields={fields} onPatch={onPatch} disabled={disabled} />
+              }
             />
-          ) : null}
+          ) : (
+            <SchedaIngressoInterventoOggettoChecks fields={fields} onPatch={onPatch} disabled={disabled} />
+          )}
 
           <SchedaIngressoNoteSection
             lavorazioneNote={lavorazioneNote}
@@ -1215,6 +1253,11 @@ export function SchedaIngressoEditModal({
     mezziCatalog,
     linkedSnapshot: mezzoPrompt.linkedSnapshot,
   });
+  const mezzoLinkGate = useSchedaIngressoMezzoLinkGate({
+    mezziCatalog,
+    preferredMezzoId: mezzoPrompt.preferredMezzoId,
+    linkedOrigin: mezzoPrompt.linkOrigin,
+  });
 
   const { bootstrapLinkedMezzo } = mezzoPrompt;
   useEffect(() => {
@@ -1257,6 +1300,7 @@ export function SchedaIngressoEditModal({
     mezziCatalog,
     gateSubmit,
     gateSave: saveGate.gateSave,
+    gateMezzoLink: mezzoLinkGate.gateMezzoLink,
     commit: (input) => commitRef.current(input),
   });
   const savePending = pending || savePipeline.isPending;
@@ -1364,6 +1408,7 @@ export function SchedaIngressoEditModal({
       </form>
       {unknownSettingsDialog}
       {saveGate.dialog}
+      {mezzoLinkGate.dialog}
     </SchedaIngressoFormModalShell>
 
     <GestionaleUnsavedChangesDialog

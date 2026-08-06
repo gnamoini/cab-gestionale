@@ -1,6 +1,9 @@
 "use client";
 
-import { consumeOperationalVersionPoll } from "@/lib/sync/operational-data-version";
+import {
+  consumeOperationalVersionPoll,
+  restoreOperationalVersionBaselineFromSession,
+} from "@/lib/sync/operational-data-version";
 
 /** ponytail: copre connect RT + waterfall query iniziali; upgrade: legare a dataUpdatedAt query attive. */
 export const OPERATIONAL_SESSION_WARMUP_MS = 12_000;
@@ -9,6 +12,7 @@ let warmupEndsAt = 0;
 let warmupFinalizeTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function beginOperationalSessionWarmup(now = Date.now()): void {
+  restoreOperationalVersionBaselineFromSession();
   warmupEndsAt = now + OPERATIONAL_SESSION_WARMUP_MS;
   if (warmupFinalizeTimer) clearTimeout(warmupFinalizeTimer);
   warmupFinalizeTimer = setTimeout(() => {

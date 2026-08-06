@@ -250,6 +250,18 @@ export function usePullToRefresh({
     if (!enabled && phaseRef.current === "idle") resetPull();
   }, [enabled, resetPull]);
 
+  useEffect(() => {
+    if (!enabled) return;
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      const node = contentRef.current;
+      if (!node?.style.transform || node.style.transform === "none") return;
+      resetPull();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [enabled, contentRef, resetPull]);
+
   return {
     phase,
     pullPx,

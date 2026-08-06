@@ -12,18 +12,18 @@ export function applyCaptureConflictResolutions(input: {
   for (const conflict of input.mergeResult.conflicts) {
     const resolution = input.conflictResolutions[conflict.field];
     if (resolution === "scan") {
-      (next as Record<string, string>)[conflict.field] = conflict.scannedValue;
+      (next as Record<string, unknown>)[conflict.field] = conflict.scannedValue;
     } else if (resolution === "registry") {
-      (next as Record<string, string>)[conflict.field] = conflict.registryValue;
+      (next as Record<string, unknown>)[conflict.field] = conflict.registryValue;
     } else if (resolution === "manual" && input.manualOverrides?.[conflict.field] !== undefined) {
-      (next as Record<string, string>)[conflict.field] = String(
+      (next as Record<string, unknown>)[conflict.field] = String(
         input.manualOverrides[conflict.field] ?? "",
       );
     }
   }
   for (const missing of input.mergeResult.missingFromRegistry) {
     if (!input.conflictResolutions[missing.field]) {
-      (next as Record<string, string>)[missing.field] = missing.scannedValue;
+      (next as Record<string, unknown>)[missing.field] = missing.scannedValue;
     }
   }
   return next;

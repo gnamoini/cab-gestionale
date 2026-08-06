@@ -17,6 +17,11 @@ import { useLogListQuery, useMovimentiListQuery } from "@/src/hooks/gestionale/u
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
 import type { LogModificaAutoreSource } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { movimentiRowsToLogFeedItems } from "@/lib/magazzino/magazzino-movimenti-feed";
+import {
+  buildUltimaModificaByRicambioIdFromLocalEntries,
+  buildUltimaModificaByRicambioIdFromLogs,
+  type MagazzinoUltimaModificaInfo,
+} from "@/lib/magazzino/magazzino-ultima-modifica";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 
 const LOCAL_LOG_ID_PREFIX = "log-";
@@ -109,9 +114,30 @@ export function useMagazzinoLogFeed(opts: {
   const isLoading =
     enabled && (magLogsQ.isLoading || movLogsQ.isLoading || movimentiQ.isLoading);
 
+  const ultimaModificaByRicambioId = useMemo((): Map<string, MagazzinoUltimaModificaInfo> => {
+    if (!enabled) return new Map();
+    const merged = new Map<string, MagazzinoUltimaModificaInfo>();
+    const fromServer = buildUltimaModificaByRicambioIdFromLogs(serverRows, {
+      currentUserId: opts.userId,
+      currentDisplayName: opts.authorName,
+    });
+    const fromLocal = buildUltimaModificaByRicambioIdFromLocalEntries(opts.localEntries);
+    for (const [id, info] of fromServer) merged.set(id, info);
+    for (const [id, info] of fromLocal) {
+      const existing = merged.get(id);
+      if (!existing || info.iso.localeCompare(existing.iso) > 0) {
+        merged.set(id, info);
+      } else if (info.iso === existing.iso && info.autore.trim() && !existing.autore.trim()) {
+        merged.set(id, { ...existing, autore: info.autore });
+      }
+    }
+    return merged;
+  }, [enabled, serverRows, opts.localEntries, opts.authorName, opts.userId]);
+
   return {
     feed,
     timelineByRicambio,
+    ultimaModificaByRicambioId,
     isLoading,
     isLocalId: (id: string) => id.startsWith(LOCAL_LOG_ID_PREFIX),
   };

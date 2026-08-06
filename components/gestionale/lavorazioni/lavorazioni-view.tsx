@@ -119,7 +119,8 @@ import {
   mergeLazyProfileNamesIntoResolver,
   resolveLavorazioneUltimaModifica,
 } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
-import { lavRowMatchesPageFilters, type LavPageFilters } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
+import { lavRowMatchesPageFilters, lavRowSearchScore, type LavPageFilters } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
+import { isSearchRelevanceSortActive, compareSearchRelevance } from "@/lib/search/sort-by-relevance";
 import {
   buildLavorazioniFilterCatalog,
   loadGestionaleAdvancedFiltersPersisted,
@@ -308,7 +309,6 @@ import {
   lavorazioneMacchinaLabel as macchinaLabel,
   lavorazioneMezzoIdent as mezzoIdent,
   lavorazioneMezzoIdentParts as mezzoIdentParts,
-  lavorazioneTelaioLabel as telaioLabel,
   lavorazioneUtilizzatoreLabel as utilizzatoreLabel,
   lavorazioneSchedeBundleRevision,
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
@@ -1175,6 +1175,11 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   );
   const [printBusy, setPrintBusy] = useState(false);
 
+  const serverSearchActive =
+    serverListPagination &&
+    searchApplied.trim().length > 0 &&
+    !lavorazioniAdvancedFiltersActive(advancedFilters);
+
   const pageFilters = useMemo(
     (): LavPageFilters => ({
       search: searchApplied,
@@ -1186,17 +1191,21 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   const attiveRowsFiltered = useMemo(
     () =>
       attiveRows.filter((row) =>
-        lavRowMatchesPageFilters(row, pageFilters, schedeStore, "in_corso", addettiRecords),
+        lavRowMatchesPageFilters(row, pageFilters, schedeStore, "in_corso", addettiRecords, {
+          skipSearchFilter: serverSearchActive,
+        }),
       ),
-    [attiveRows, pageFilters, schedeStore, addettiRecords],
+    [attiveRows, pageFilters, schedeStore, addettiRecords, serverSearchActive],
   );
 
   const chiuseRowsFiltered = useMemo(
     () =>
       chiuseRows.filter((row) =>
-        lavRowMatchesPageFilters(row, pageFilters, schedeStore, "archivio", addettiRecords),
+        lavRowMatchesPageFilters(row, pageFilters, schedeStore, "archivio", addettiRecords, {
+          skipSearchFilter: serverSearchActive,
+        }),
       ),
-    [chiuseRows, pageFilters, schedeStore, addettiRecords],
+    [chiuseRows, pageFilters, schedeStore, addettiRecords, serverSearchActive],
   );
 
   useEffect(() => {
@@ -1707,6 +1716,12 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   const sortedAttive = useMemo(() => {
     const rows = [...attiveRowsFiltered];
     rows.sort((a, b) => {
+      if (isSearchRelevanceSortActive(searchApplied, sortColA)) {
+        const rel = compareSearchRelevance(a, b, searchApplied, (row, q) =>
+          lavRowSearchScore(row, q, schedeStore),
+        );
+        if (rel !== 0) return rel;
+      }
       if (sortPhaseA === "natural" || sortColA === null) {
         // Ordine naturale: più vecchia in alto, nuova in fondo.
         const ta = new Date(a.data_ingresso ?? a.created_at).getTime();
@@ -1722,11 +1737,17 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       return a.id.localeCompare(b.id);
     });
     return rows;
-  }, [attiveRowsFiltered, sortColA, sortPhaseA, schedeSortIndex, statoOrderIds]);
+  }, [attiveRowsFiltered, sortColA, sortPhaseA, schedeSortIndex, statoOrderIds, searchApplied, schedeStore]);
 
   const sortedChiuse = useMemo(() => {
     const rows = [...chiuseRowsFiltered];
     rows.sort((a, b) => {
+      if (isSearchRelevanceSortActive(searchApplied, sortColC)) {
+        const rel = compareSearchRelevance(a, b, searchApplied, (row, q) =>
+          lavRowSearchScore(row, q, schedeStore),
+        );
+        if (rel !== 0) return rel;
+      }
       if (sortPhaseC === "natural" || sortColC === null) {
         const ta = new Date(dataCompletamentoIso(a)).getTime();
         const tb = new Date(dataCompletamentoIso(b)).getTime();
@@ -1741,7 +1762,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       return b.id.localeCompare(a.id);
     });
     return rows;
-  }, [chiuseRowsFiltered, sortColC, sortPhaseC, schedeSortIndex]);
+  }, [chiuseRowsFiltered, sortColC, sortPhaseC, schedeSortIndex, searchApplied, schedeStore]);
 
   const listPageSize = useResponsiveListPageSize();
 

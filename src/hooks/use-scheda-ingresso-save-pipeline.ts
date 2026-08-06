@@ -23,6 +23,7 @@ export type UseSchedaIngressoSavePipelineOptions = {
     proceed: (fields: SchedaIngressoFields) => void | Promise<void>,
   ) => Promise<void>;
   gateSave: (fields: SchedaIngressoFields) => Promise<SchedaIngressoSaveGateResult>;
+  gateMezzoLink?: (fields: SchedaIngressoFields) => Promise<import("@/src/hooks/use-scheda-ingresso-mezzo-link-gate").SchedaIngressoMezzoLinkGateResult>;
   commit: (input: IngressoSaveCommitInput) => Promise<IngressoSaveCommitResult>;
 };
 
@@ -36,6 +37,8 @@ export function useSchedaIngressoSavePipeline(opts: UseSchedaIngressoSavePipelin
   gateSubmitRef.current = opts.gateSubmit;
   const gateSaveRef = useRef(opts.gateSave);
   gateSaveRef.current = opts.gateSave;
+  const gateMezzoLinkRef = useRef(opts.gateMezzoLink);
+  gateMezzoLinkRef.current = opts.gateMezzoLink;
   const mezziCatalogRef = useRef(opts.mezziCatalog);
   mezziCatalogRef.current = opts.mezziCatalog;
 
@@ -55,6 +58,9 @@ export function useSchedaIngressoSavePipeline(opts: UseSchedaIngressoSavePipelin
         mezziCatalog: mezziCatalogRef.current,
         gateSubmit: (fields, proceed) => gateSubmitRef.current(fields, proceed),
         gateSave: (fields) => gateSaveRef.current(fields),
+        gateMezzoLink: gateMezzoLinkRef.current
+          ? (fields) => gateMezzoLinkRef.current!(fields)
+          : undefined,
         commit: (commitInput) => commitRef.current(commitInput),
         onPendingChange: setIsPending,
       });

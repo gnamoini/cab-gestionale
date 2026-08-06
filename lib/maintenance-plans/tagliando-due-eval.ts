@@ -23,7 +23,7 @@ export function parseSchedaOreLavoro(oreLavoro: string): number {
 }
 
 export function parseSchedaOreLavoroMotoreFromCampi(
-  campi: Partial<Record<string, string | undefined | null>>,
+  campi: Partial<Record<string, unknown>>,
 ): number {
   return parseSchedaOreLavoro(resolveOreLavoroFields(campi).oreLavoroMotore);
 }

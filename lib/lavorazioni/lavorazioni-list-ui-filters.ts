@@ -6,7 +6,7 @@ import {
   type LavorazioniListFilterVariant,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
 import { buildSearchDocumentLavorazione } from "@/lib/search/builders/build-search-document-lavorazione";
-import { matchSearchString } from "@/lib/search/match";
+import { matchSearchString, scoreSearchDocument } from "@/lib/search/match";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
@@ -27,6 +27,14 @@ export function lavRowMatchesGlobalSearch(
   schedeStore?: LavorazioneSchedeStore,
 ): boolean {
   return matchSearchString(query, lavRowSearchHaystack(row, schedeStore)).matches;
+}
+
+export function lavRowSearchScore(
+  row: LavorazioneListRow,
+  query: string,
+  schedeStore?: LavorazioneSchedeStore,
+): number {
+  return scoreSearchDocument(query, lavRowSearchHaystack(row, schedeStore)).score;
 }
 
 function dayStartMs(ymd: string): number {
@@ -74,8 +82,9 @@ export function lavRowMatchesPageFilters(
   schedeStore: LavorazioneSchedeStore | undefined,
   variant: LavorazioniListFilterVariant,
   addettiRecords?: readonly AddettoRecord[],
+  options?: { skipSearchFilter?: boolean },
 ): boolean {
-  if (!lavRowMatchesGlobalSearch(row, filters.search, schedeStore)) return false;
+  if (!options?.skipSearchFilter && !lavRowMatchesGlobalSearch(row, filters.search, schedeStore)) return false;
   const { search: _s, ...advanced } = filters;
   return lavRowMatchesAdvancedFilters(row, advanced, schedeStore, variant, undefined, addettiRecords);
 }

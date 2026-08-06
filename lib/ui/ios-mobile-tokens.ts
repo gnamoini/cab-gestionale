@@ -15,6 +15,9 @@ export const cabIosOverlaySurface =
 export const cabIosModalPanelMaxH =
   "max-h-[min(92dvh,calc(var(--cab-vv-height,100dvh)-1.5rem))]";
 
+/** Padding safe-area top SSOT (--cab-safe-top in globals-core.css). */
+export const cabIosSafeTopPad = "pt-[length:var(--cab-safe-top)]";
+
 /** Padding safe-area orizzontale/verticale per sheet e modali. */
 export const cabIosSafePad =
   "pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]";

@@ -89,15 +89,36 @@ const dual = resolveLabelTextLayout(template, {
   fornitoriAlternativi: [{ name: "Forn", code: "ALT-1" }],
 });
 const dualMarca = dual.find((p) => p.field === "marca")!;
-const dualMarca2 = dual.find((p) => p.field === "marcaSecondaria")!;
 const dualCodice = dual.find((p) => p.field === "codice")!;
 const dualCodice2 = dual.find((p) => p.field === "codiceSecondario")!;
-assert.equal(dualMarca.lines.join(" "), "BTE");
-assert.equal(dualMarca2.lines.join(" "), "OMB");
+assert.equal(dualMarca.lines.join(" "), "BTE / OMB", "doppia marca: marche unite sulla prima riga");
+assert.ok(!dual.some((p) => p.field === "marcaSecondaria"), "doppia marca: nessuna riga marca secondaria");
 assert.ok(dualCodice.lines.join("").includes("XXXX"));
-assert.ok(dualCodice2.lines.join("").includes("YYYY"));
-assert.ok(dualMarca2.yMm > dualCodice.yMm, "marca secondaria sotto codice principale");
-assert.ok(dualCodice2.yMm > dualMarca2.yMm, "codice secondario sotto marca secondaria");
+assert.ok(dualCodice.lines.join("").includes("BTE"));
+assert.ok(dualCodice2!.lines.join("").includes("YYYY"));
+assert.ok(dualCodice2!.lines.join("").includes("OMB"));
+assert.ok(dualCodice.yMm > dualMarca.yMm, "codice sotto marca");
+assert.ok(dualCodice2!.yMm > dualCodice.yMm, "codice secondario sotto codice principale");
+
+const dual95 = getLabelTemplate("95x40-default")!;
+const dual95Placed = resolveLabelTextLayout(dual95, {
+  marca: "BTE",
+  marcaSecondaria: "OMB",
+  descrizione: "Sensore",
+  codice: "XXXX",
+  codiceSecondario: "YYYY",
+  fornitoreAlternativo: "Forn",
+  codiceAlternativo: "ALT-1",
+  fornitoriAlternativi: [{ name: "Forn", code: "ALT-1" }],
+});
+const dual95Marca = dual95Placed.find((p) => p.field === "marca")!;
+const dual95Codice = dual95Placed.find((p) => p.field === "codice")!;
+const dual95Codice2 = dual95Placed.find((p) => p.field === "codiceSecondario")!;
+assert.equal(dual95Marca.lines.join(" "), "BTE / OMB", "95x40 doppia marca: marche unite");
+assert.ok(!dual95Placed.some((p) => p.field === "marcaSecondaria"));
+assert.ok(dual95Codice!.lines.join("").includes("(BTE)"));
+assert.ok(dual95Codice2!.lines.join("").includes("(OMB)"));
+assert.ok(dual95Codice2!.yMm > dual95Codice!.yMm);
 
 const m12 = resolveLabelTextLayout(template, {
   marca: "BTE",
@@ -174,10 +195,12 @@ const a4Placed = resolveLabelTextLayout(a4, {
 const a4Marca = a4Placed.find((p) => p.field === "marca")!;
 const a4Codice = a4Placed.find((p) => p.field === "codice")!;
 const a4Codice2 = a4Placed.find((p) => p.field === "codiceSecondario")!;
-assert.equal(a4Marca.lines.join(" "), "BTE/OMB", "A4 doppia marca: marche unite sulla prima riga");
+assert.equal(a4Marca.lines.join(" "), "BTE / OMB", "A4 doppia marca: marche unite sulla prima riga");
 assert.ok(!a4Placed.some((p) => p.field === "marcaSecondaria"), "A4 doppia marca: nessuna riga marca secondaria");
-assert.equal(a4Codice.lines.join(" "), "XXXX", "A4 doppia marca: codice senza suffisso marca");
-assert.equal(a4Codice2!.lines.join(" "), "YYYY", "A4 doppia marca: codice secondario senza suffisso marca");
+assert.ok(a4Codice.lines.join("").includes("XXXX"));
+assert.ok(a4Codice.lines.join("").includes("BTE"), "A4 doppia marca: codice con suffisso marca principale");
+assert.ok(a4Codice2!.lines.join("").includes("YYYY"));
+assert.ok(a4Codice2!.lines.join("").includes("OMB"), "A4 doppia marca: codice secondario con suffisso marca secondaria");
 assert.ok(a4Codice2!.yMm > a4Codice.yMm, "A4: codice secondario sotto codice principale");
 for (const p of a4Placed) {
   assert.equal(p.anchor, "middle");

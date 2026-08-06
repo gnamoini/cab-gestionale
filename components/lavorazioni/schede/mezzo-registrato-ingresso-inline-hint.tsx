@@ -13,6 +13,7 @@ export function MezzoRegistratoIngressoInlineHint({
   matchField,
   ambiguousCandidates,
   onUseMezzo,
+  onSelectCandidate,
   onDismiss,
   onVerifyConflict,
 }: {
@@ -21,6 +22,7 @@ export function MezzoRegistratoIngressoInlineHint({
   matchField?: SchedaIngressoIdentField;
   ambiguousCandidates?: readonly MezzoGestito[];
   onUseMezzo?: () => void;
+  onSelectCandidate?: (mezzo: MezzoGestito) => void;
   onDismiss?: () => void;
   onVerifyConflict?: () => void;
 }) {
@@ -47,7 +49,7 @@ export function MezzoRegistratoIngressoInlineHint({
 
   const showUseMezzo = (variant === "trovato" || variant === "simile") && mezzo && onUseMezzo;
   const showDismiss =
-    (variant === "trovato" || variant === "simile" || variant === "ambiguo") && onDismiss;
+    (variant === "trovato" || variant === "simile") && onDismiss;
 
   return (
     <div className={shellClass} role="status" data-match-field={matchField}>
@@ -58,7 +60,18 @@ export function MezzoRegistratoIngressoInlineHint({
       {variant === "ambiguo" && ambiguousCandidates && ambiguousCandidates.length > 0 ? (
         <ul className="mt-1 space-y-1 text-xs leading-snug text-[color:var(--cab-text-muted)]">
           {ambiguousCandidates.map((candidate) => (
-            <li key={candidate.id}>{mezzoIngressoSuggestLabel(candidate)}</li>
+            <li key={candidate.id} className="flex flex-wrap items-center gap-2">
+              <span>{mezzoIngressoSuggestLabel(candidate)}</span>
+              {onSelectCandidate ? (
+                <button
+                  type="button"
+                  className={`${dsBtnSoftOrange} ${dsFocus} !px-2 !py-0.5 text-[11px]`}
+                  onClick={() => onSelectCandidate(candidate)}
+                >
+                  Seleziona
+                </button>
+              ) : null}
+            </li>
           ))}
         </ul>
       ) : mezzo ? (

@@ -23,13 +23,13 @@ export function formatLabelMarcaLine(marca: string, _marcaSecondaria?: string): 
   return labelDisplayCaps(labelMarcaToken(marca));
 }
 
-/** A4 doppia marca: `BTE/OMB` sulla prima riga. */
+/** Doppia marca: `BTE / OMB` sulla prima riga. */
 export function formatLabelMarcaCombinedLine(marca: string, marcaSecondaria: string): string {
   const primary = labelMarcaToken(marca);
   const secondary = labelMarcaToken(marcaSecondaria);
   if (!primary) return labelDisplayCaps(secondary);
   if (!secondary || secondary === primary) return labelDisplayCaps(primary);
-  return labelDisplayCaps(`${primary}/${secondary}`);
+  return labelDisplayCaps(`${primary} / ${secondary}`);
 }
 
 /** Riga marca secondaria / alternativa commerciale. */

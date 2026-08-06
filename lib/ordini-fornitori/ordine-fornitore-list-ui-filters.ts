@@ -2,7 +2,7 @@ import type { OrdineFornitoreRecord, OrdineFornitoreStatus } from "@/lib/ordini-
 import { parseOrdineFornitoreDestinatarioSnapshot } from "@/lib/ordini-fornitori/destinatario-snapshot";
 import { readOrdineOggetto } from "@/lib/ordini-fornitori/ordine-fornitore-oggetto";
 import { buildSearchDocumentFromParts } from "@/lib/search/build-document";
-import { matchSearchString } from "@/lib/search/match";
+import { matchSearchString, scoreSearchDocument } from "@/lib/search/match";
 import type { OrdineFornitoreDestinazioneTipo } from "@/lib/ordini-fornitori/ordine-fornitore-destinazione";
 
 const DESTINAZIONE_TIPO_LIST_LABEL: Record<OrdineFornitoreDestinazioneTipo, string> = {
@@ -51,7 +51,7 @@ export function ordiniFornitoriFiltersActive(f: OrdiniFornitoriPageFilters): boo
   );
 }
 
-function ordineSearchDocument(o: OrdineFornitoreRecord): string {
+export function ordineFornitoreSearchDocument(o: OrdineFornitoreRecord): string {
   return buildSearchDocumentFromParts([
     o.numero,
     o.fornitoreLabel,
@@ -63,7 +63,11 @@ function ordineSearchDocument(o: OrdineFornitoreRecord): string {
 }
 
 function matchesSearch(o: OrdineFornitoreRecord, q: string): boolean {
-  return matchSearchString(q, ordineSearchDocument(o)).matches;
+  return matchSearchString(q, ordineFornitoreSearchDocument(o)).matches;
+}
+
+export function ordineFornitoreRowSearchScore(o: OrdineFornitoreRecord, q: string): number {
+  return scoreSearchDocument(q, ordineFornitoreSearchDocument(o)).score;
 }
 
 export function ordineFornitoreRowMatchesPageFilters(

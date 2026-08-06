@@ -17,13 +17,13 @@ export const ORE_LAVORO_STORAGE_KEYS = {
   pto: "oreLavoroPto",
 } as const;
 
-function trimOre(value: string | undefined | null): string {
+function trimOre(value: unknown): string {
   return String(value ?? "").trim();
 }
 
 /** Read SSOT: legacy oreLavoro → motore se motore vuoto; PTO default "". */
 export function resolveOreLavoroFields(
-  raw: Partial<Record<string, string | undefined | null>>,
+  raw: Partial<Record<string, unknown>>,
 ): OreLavoroFields {
   const motoreExplicit = trimOre(raw[ORE_LAVORO_STORAGE_KEYS.motore]);
   const pto = trimOre(raw[ORE_LAVORO_STORAGE_KEYS.pto]);
@@ -85,14 +85,14 @@ export function patchIngressoOreDraft(
 }
 
 export function oreDraftFromRaw(
-  raw: Partial<Record<string, string | undefined | null>>,
+  raw: Partial<Record<string, unknown>>,
 ): SchedaIngressoOreDraft {
   const ore = resolveOreLavoroFields(raw);
   return { oreLavoroPto: ore.oreLavoroPto };
 }
 
 export function oreLavoroMotoreFromRaw(
-  raw: Partial<Record<string, string | undefined | null>>,
+  raw: Partial<Record<string, unknown>>,
 ): string {
   return resolveOreLavoroFields(raw).oreLavoroMotore;
 }

@@ -3,7 +3,7 @@ import { embedMezzoDto } from "@/lib/db/dto-mappers";
 import { preventivoRowToRecord } from "@/lib/preventivi/preventivi-db-mapper";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import type { PreventiviFilters } from "@/src/services/preventivi.service";
-import { normalizedSearchIlikePattern } from "@/lib/search/server-search-filter";
+import { applyServerSearchDocumentFilter } from "@/lib/search/server-search-filter";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -26,8 +26,7 @@ export async function fetchPreventiviListRows(
   if (filters?.mezzo_id) q = q.eq("mezzo_id", filters.mezzo_id);
   if (filters?.lavorazione_id) q = q.eq("lavorazione_id", filters.lavorazione_id);
   if (filters?.cliente?.trim()) q = q.ilike("cliente", `%${filters.cliente.trim()}%`);
-  const searchPat = filters?.search?.trim() ? normalizedSearchIlikePattern(filters.search) : null;
-  if (searchPat) q = q.ilike("search_document", searchPat);
+  if (filters?.search?.trim()) q = applyServerSearchDocumentFilter(q, filters.search);
   const { data, error } = await q;
   if (error) return err(error.message);
   return success((data ?? []) as PreventivoRowWithMezzoEmbed[]);

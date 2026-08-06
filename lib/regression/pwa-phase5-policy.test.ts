@@ -126,12 +126,12 @@ assert.match(notifBell, /subscribeNotificationCenterOpen/);
 
 // --- sync finalization ---
 const syncFinal = read("lib/pwa/pwa-sync-finalization.ts");
-assert.match(syncFinal, /runPwaReconnectSyncWithoutCooldown/);
 assert.match(syncFinal, /runPwaNotificationSync/);
+assert.doesNotMatch(syncFinal, /runPwaReconnectSyncWithoutCooldown/);
 assert.doesNotMatch(syncFinal, /invalidatePwaEverything/);
 
 const reconnect = read("lib/pwa/pwa-reconnect-sync.ts");
-assert.match(reconnect, /consumeOperationalVersionPoll/);
+assert.match(reconnect, /checkRemoteRevisions/);
 assert.match(reconnect, /claimPwaSyncCooldown/);
 
 const syncBridge = read("src/components/pwa-sync-finalization-bridge.tsx");

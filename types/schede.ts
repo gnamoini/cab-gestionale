@@ -32,6 +32,10 @@ export type SchedaIngressoFields = {
   /** Target intervento (migrazione mezzo + attrezzature). */
   targetType?: InterventoTargetTypeScheda;
   attrezzaturaId?: string | null;
+  /** Check UI: intervento sull'attrezzatura (default true). */
+  interventoSuAttrezzatura?: boolean;
+  /** Check UI: intervento sul telaio (default false). */
+  interventoSuTelaio?: boolean;
   dataIngresso: string;
   cliente: string;
   cantiere: string;
@@ -68,6 +72,8 @@ export type SchedaIngressoFields = {
 export type SchedaIngressoDoc = SchedaMeta & {
   tipo: "ingresso";
   campi: SchedaIngressoFields;
+  /** Audit collegamento mezzo (JSON — no migration DB). */
+  mezzoLink?: import("@/lib/schede/scheda-ingresso-mezzo-match").SchedaIngressoMezzoLinkMeta;
 };
 
 /** Ore per singolo addetto su una riga lavorazione (multi-assegnazione). */

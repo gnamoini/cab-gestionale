@@ -36,6 +36,8 @@ assert.match(
 
 const magazzinoView = read("components/gestionale/magazzino/magazzino-view.tsx");
 assert.match(magazzinoView, /useGestionaleListSearch/, "magazzino-view uses shared search hook");
+assert.match(magazzinoView, /skipSearchFilter: serverSearchActive/, "magazzino avoids double search gate when server filtered");
+assert.match(magazzinoView, /compareSearchRelevance/, "magazzino relevance sort");
 
 const preventiviView = read("components/preventivi/preventivi-view.tsx");
 assert.match(preventiviView, /useGestionaleListSearch/, "preventivi-view uses shared search hook");
@@ -43,10 +45,31 @@ assert.match(preventiviView, /useGestionaleListSearch/, "preventivi-view uses sh
 const documentiView = read("components/gestionale/documenti/documenti-view.tsx");
 assert.match(documentiView, /useGestionaleListSearch/, "documenti-view uses shared search hook");
 
-const migration = read("supabase/migrations/20261024120100_toolbar_search_v2.sql");
-assert.match(migration, /search_document/, "search migration defines search_document");
-assert.match(migration, /generated always as/i, "search_vector is generated from search_document");
-assert.match(migration, /search_document_rebuild_queue/, "deferred rebuild queue exists");
+const mezziView = read("components/gestionale/mezzi/mezzi-view.tsx");
+assert.match(mezziView, /useGestionaleListSearch/, "mezzi-view uses shared search hook");
+
+const settingsSearch = read("lib/settings/settings-list-search.ts");
+assert.match(settingsSearch, /scoreSearchDocument/, "settings uses unified search scoring");
+
+const serverFilter = read("lib/search/server-search-filter.ts");
+assert.match(serverFilter, /collapseSearchKey|buildServerSearchTokenFilter/, "server filter uses collapse tokens");
+assert.match(serverFilter, /applyServerSearchDocumentFilter/, "server filter helper exported");
+
+const fieldToken = read("lib/search/field-token.ts");
+assert.match(fieldToken, /formatFieldSearchToken/, "field marker tokens defined");
+
+const migration = read("supabase/migrations/20261111120000_search_collapse_field_tokens.sql");
+assert.match(migration, /collapse_search_text/, "collapse migration defines collapse_search_text");
+assert.match(migration, /format_field_search_token/, "collapse migration defines field tokens");
+assert.match(migration, /search_document_matches_tokens/, "collapse migration defines match helper");
+
+const legacyMigration = read("supabase/migrations/20261024120100_toolbar_search_v2.sql");
+assert.match(legacyMigration, /search_document/, "search migration defines search_document");
+assert.match(legacyMigration, /generated always as/i, "search_vector is generated from search_document");
+assert.match(legacyMigration, /search_document_rebuild_queue/, "deferred rebuild queue exists");
+
+const auditScript = read("supabase/scripts/search-collapse-audit.sql");
+assert.match(auditScript, /collapse_search_text/, "audit script references collapse");
 
 for (const domain of listSearchDomains()) {
   const cfg = getSearchConfig(domain);

@@ -35,6 +35,8 @@ function emptySchedaIngressoFields(): SchedaIngressoFields {
   return {
     targetType: "attrezzatura",
     attrezzaturaId: null,
+    interventoSuAttrezzatura: true,
+    interventoSuTelaio: false,
     dataIngresso: "",
     cliente: "",
     cantiere: "",

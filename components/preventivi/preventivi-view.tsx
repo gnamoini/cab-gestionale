@@ -125,6 +125,7 @@ import {
 import {
   buildPreventiviSearchSuggestions,
   preventivoRowMatchesPageFilters,
+  preventivoRowSearchScore,
   type PreventiviPageFilters,
 } from "@/lib/preventivi/preventivi-list-ui-filters";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
@@ -145,6 +146,7 @@ import { removePreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter
 import { usePreventiviListDerived } from "@/lib/preventivi/use-preventivi-list-derived";
 import { preventiviRecordsQueryKey, ordiniFornitoriListQueryKey } from "@/lib/render/query-key-factory";
 import { usesServerSearch } from "@/lib/search/registry";
+import { compareSearchRelevance, isSearchRelevanceSortActive } from "@/lib/search/sort-by-relevance";
 import { ordiniFornitoriEntry } from "@/lib/domain/ordini-fornitori-entry";
 import { preventiviEntry } from "@/lib/domain/preventivi-entry";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
@@ -793,7 +795,11 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
         else list = [];
       }
     }
-    list = list.filter((r) => preventivoRowMatchesPageFilters(r, pageFilters));
+    list = list.filter((r) =>
+      preventivoRowMatchesPageFilters(r, pageFilters, {
+        skipSearchFilter: usesServerSearch("preventivi") && searchApplied.trim().length > 0,
+      }),
+    );
     if (focusPreventivoId) {
       const focused = rows.find((r) => r.id === focusPreventivoId);
       if (focused && !list.some((r) => r.id === focusPreventivoId)) {
@@ -805,13 +811,21 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
 
   const sortedRows = useMemo(() => {
     const list = [...filteredRows];
+    if (isSearchRelevanceSortActive(searchApplied, sortColumn)) {
+      list.sort((a, b) => {
+        const rel = compareSearchRelevance(a, b, searchApplied, (row, q) => preventivoRowSearchScore(row, q));
+        if (rel !== 0) return rel;
+        return comparePreventivoCreatedDesc(a, b);
+      });
+      return list;
+    }
     if (sortColumn === null || sortPhase === "natural") {
       list.sort(comparePreventivoCreatedDesc);
       return list;
     }
     list.sort((a, b) => comparePreventivo(a, b, sortColumn, sortPhase));
     return list;
-  }, [filteredRows, sortColumn, sortPhase]);
+  }, [filteredRows, sortColumn, sortPhase, searchApplied]);
 
   const preventivoIdsForDdt = useMemo(() => sortedRows.map((r) => r.id), [sortedRows]);
   const { getDdtForPreventivo, refetch: refetchDdtIndex } = usePreventivoDdtIndex(preventivoIdsForDdt);

@@ -744,8 +744,8 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
 html:has(.cab-app-shell),
 body:has(.cab-app-shell) {
   overflow: hidden;
-  height: var(--cab-app-height, 100dvh);
-  max-height: var(--cab-app-height, 100dvh);
+  height: var(--cab-vv-height, var(--cab-app-height, 100dvh));
+  max-height: var(--cab-vv-height, var(--cab-app-height, 100dvh));
   overscroll-behavior: none;
   width: 100%;
   max-width: 100%;

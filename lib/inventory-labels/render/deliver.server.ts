@@ -42,6 +42,9 @@ export type DeliverLabelResult = {
   hash: string;
   fileName: string;
   contentType: string;
+  generatorVersion: string;
+  templateVersion: string;
+  preset: string;
 };
 
 function contentTypeFor(format: LabelFormat): string {
@@ -98,6 +101,9 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
         hash: effectiveHash,
         fileName: fileNameFor(input.entityId, input.payload.codice, input.format),
         contentType: contentTypeFor(input.format),
+        generatorVersion: GENERATOR_VERSION,
+        templateVersion: template.version,
+        preset: input.preset,
       };
     }
   }
@@ -183,5 +189,8 @@ export async function deliverInventoryLabel(input: DeliverLabelInput): Promise<D
     hash: effectiveHash,
     fileName: fileNameFor(input.entityId, input.payload.codice, input.format),
     contentType: contentTypeFor(input.format),
+    generatorVersion: GENERATOR_VERSION,
+    templateVersion: template.version,
+    preset: input.preset,
   };
 }

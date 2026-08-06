@@ -59,7 +59,7 @@ const fields: SchedaIngressoFields = {
   richiedenteTelefono: "",
 };
 
-// Duplicati scuderia → ambiguous
+// Duplicati scuderia → ambiguous (ident-only, no cliente)
 const byScuderia = resolveMezzoByIdentFromCatalog(catalog, { nScuderia: "123" });
 assert.equal(byScuderia.status, "ambiguous");
 assert.equal(byScuderia.status === "ambiguous" ? byScuderia.candidates.length : 0, 2);
@@ -105,5 +105,13 @@ const vinMatch = matchMezziImportRow(
   [],
 );
 assert.equal(vinMatch.kind, "suggest_update");
+
+// Nessun auto-resolve ident senza preferred
+const noPreferred = resolveMezzoFromScheda({
+  scheda: { ...fields, targa: "AA111BB" },
+  existingMezzi: catalog,
+});
+assert.equal(noPreferred.matchKind, "needs_confirm");
+assert.equal(noPreferred.mezzoId, null);
 
 console.log("mezzi-operational-uniqueness.test.ts OK");

@@ -7,7 +7,7 @@ import {
 } from "@/lib/preventivi/preventivi-advanced-filters";
 import { preventivoTipoDocumentoLabel } from "@/lib/preventivi/preventivi-tipo-documento";
 import { buildSearchDocumentPreventivo } from "@/lib/search/builders/build-search-document-preventivo";
-import { matchSearchString } from "@/lib/search/match";
+import { matchSearchString, scoreSearchDocument } from "@/lib/search/match";
 import { filterListSelectSuggestions } from "@/lib/ui/list-select-utils";
 
 export type PreventiviPageFilters = PreventiviAdvancedFilters & {
@@ -23,8 +23,16 @@ export function preventivoRowMatchesGlobalSearch(row: PreventivoRecord, query: s
   return matchSearchString(query, preventivoRowSearchHaystack(row)).matches;
 }
 
-export function preventivoRowMatchesPageFilters(row: PreventivoRecord, filters: PreventiviPageFilters): boolean {
-  if (!preventivoRowMatchesGlobalSearch(row, filters.search)) return false;
+export function preventivoRowSearchScore(row: PreventivoRecord, query: string): number {
+  return scoreSearchDocument(query, preventivoRowSearchHaystack(row)).score;
+}
+
+export function preventivoRowMatchesPageFilters(
+  row: PreventivoRecord,
+  filters: PreventiviPageFilters,
+  options?: { skipSearchFilter?: boolean },
+): boolean {
+  if (!options?.skipSearchFilter && !preventivoRowMatchesGlobalSearch(row, filters.search)) return false;
   const { search: _s, ...advanced } = filters;
   return preventiviRowMatchesAdvancedFilters(row, advanced);
 }

@@ -48,10 +48,12 @@ SSOT: [`lib/inventory-labels/`](../lib/inventory-labels/)
 
 **A4 pagina intera:** layout verticale, testo bold ingrandito, QR capped (~38 mm), 1 etichetta per foglio A4.
 
-**Layout (v1.5.0):** QR grande a sinistra; barcode Code128 sotto il QR; a destra:
+**Layout (v1.6.0):** QR grande a sinistra; barcode Code128 sotto il QR; a destra:
 
-1. **Alto:** marca principale, descrizione, codice OE principale `XXXX (BTE)`, marca secondaria (se distinta da principale e fornitore alt), codice OE secondario `YYYY (OMB)` se presente
+1. **Alto:** marca principale (se doppia marca: `NOME MARCA 1 / NOME MARCA 2` sulla stessa riga), descrizione, codice OE principale `XXXX (BTE)`, codice OE secondario `YYYY (OMB)` se presente
 2. **Basso (fascia barcode):** fornitore alternativo + codice fornitore ancorati al bordo inferiore etichetta, accanto al barcode
+
+Stesso ordine testuale su tutti i preset (incluso A4 pagina intera); A4 usa testo centrato e bold.
 
 Font DejaVu (`LabelSans` / `LabelMono`): testo rasterizzato come path SVG (opentype + TTF) per PNG/PDF — niente fontconfig su Vercel. Download SVG browser usa ancora `@font-face` WOFF2.
 

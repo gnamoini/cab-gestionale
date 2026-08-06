@@ -25,4 +25,8 @@ export { useGestionaleListSearch, GESTIONALE_SEARCH_DEBOUNCE_MS } from "@/lib/se
 export { buildSearchDocumentLavorazione } from "@/lib/search/builders/build-search-document-lavorazione";
 export { buildSearchDocumentPreventivo } from "@/lib/search/builders/build-search-document-preventivo";
 export { buildSearchDocumentMagazzino } from "@/lib/search/builders/build-search-document-magazzino";
-export { normalizedSearchIlikePattern, escapeIlikeToken } from "@/lib/search/server-search-filter";
+export { normalizedSearchIlikePattern, escapeIlikeToken, applyServerSearchDocumentFilter, buildServerSearchTokenFilter } from "@/lib/search/server-search-filter";
+export { collapseSearchKey, formatFieldSearchToken } from "@/lib/search/field-token";
+export { buildSearchDocumentFromFields } from "@/lib/search/build-document";
+export { scoreSearchDocument, documentMatchesSearchQuery } from "@/lib/search/match";
+export { sortRowsBySearchRelevance, compareSearchRelevance, isSearchRelevanceSortActive } from "@/lib/search/sort-by-relevance";

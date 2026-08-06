@@ -1,10 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { claimPwaSyncCooldown, resetPwaSyncCooldownForTests } from "@/lib/pwa/pwa-sync-cooldown";
 import { GESTIONALE_DISPATCH_DEDUP_MS } from "@/lib/sync/gestionale-sync-dispatch";
-import { markDirtyForOperationalTables } from "@/lib/sync/gestionale-dirty-flush";
+import {
+  checkRemoteRevisions,
+  markDirtyFromVerifiedDrift,
+} from "@/lib/sync/check-remote-revisions";
 import { isGestionaleDirtySyncEnabled } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
 import { isOperationalSessionWarmingUp } from "@/lib/sync/operational-session-warmup";
-import { consumeOperationalVersionPoll } from "@/lib/sync/operational-data-version";
 import { refetchActiveOperationalSnapshot } from "@/lib/sync/gestionale-snapshot-recovery";
 import { QK } from "@/src/lib/react-query/query-keys";
 
@@ -26,15 +28,26 @@ export function resetPwaReconnectSyncForTests(): void {
 }
 
 async function applyPwaReconnectSync(qc: QueryClient): Promise<void> {
-  refetchActiveOperationalSnapshot(qc, { onlyActive: true });
+  let changedTables: string[] = [];
+  let serverVersions: Record<string, number> = {};
 
   try {
-    const drifted = await consumeOperationalVersionPoll();
-    if (drifted.length > 0 && isGestionaleDirtySyncEnabled() && !isOperationalSessionWarmingUp()) {
-      markDirtyForOperationalTables(drifted);
-    }
+    const result = await checkRemoteRevisions({ reason: "offline_online" });
+    changedTables = result.changedTables;
+    serverVersions = result.serverVersions;
   } catch {
     // ponytail: reconnect resta refetch silenzioso se version RPC non disponibile
+  }
+
+  if (
+    changedTables.length > 0 &&
+    isGestionaleDirtySyncEnabled() &&
+    !isOperationalSessionWarmingUp()
+  ) {
+    markDirtyFromVerifiedDrift(changedTables, serverVersions);
+    refetchActiveOperationalSnapshot(qc, { onlyActive: true });
+  } else if (changedTables.length > 0) {
+    refetchActiveOperationalSnapshot(qc, { onlyActive: true });
   }
 
   void qc.invalidateQueries({
@@ -43,7 +56,7 @@ async function applyPwaReconnectSync(qc: QueryClient): Promise<void> {
   });
 }
 
-/** Sync controllato alla riconnessione — refetch silenzioso; banner solo su drift verificato. */
+/** Sync controllato offline → online — refetch solo su drift verificato. */
 export function runPwaReconnectSync(qc: QueryClient, opts?: { skipCooldown?: boolean }): void {
   if (!opts?.skipCooldown && !claimPwaSyncCooldown()) return;
   void applyPwaReconnectSync(qc);

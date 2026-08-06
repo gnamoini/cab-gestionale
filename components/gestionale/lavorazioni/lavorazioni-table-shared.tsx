@@ -154,6 +154,23 @@ export const lavTableBodyTextClass = "text-sm text-zinc-700 dark:text-zinc-200";
 export const lavTablePrimaryTextClass =
   "text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-100";
 
+const lavTableSecondaryTextClass = "truncate text-sm text-zinc-500 dark:text-zinc-400";
+
+/** Oggetto lista — attrezzatura (primaria) + telaio sotto se presente. */
+export function LavorazioniOggettoCell({ oggetto, telaio }: { oggetto: string; telaio?: string }) {
+  const primary = oggetto.trim() || "—";
+  const secondary = telaio?.trim();
+  if (!secondary) {
+    return <TruncatedTextTooltip text={primary} className={`truncate ${lavTablePrimaryTextClass}`} />;
+  }
+  return (
+    <div className="min-w-0 leading-tight">
+      <TruncatedTextTooltip text={primary} className={`truncate ${lavTablePrimaryTextClass}`} />
+      <TruncatedTextTooltip text={secondary} className={lavTableSecondaryTextClass} />
+    </div>
+  );
+}
+
 const TAGLIANDO_BADGE_CLASS =
   "inline-flex h-5 w-5 shrink-0 self-center items-center justify-center rounded-md bg-amber-600 text-[10px] font-bold leading-none tracking-wide text-white dark:bg-amber-600";
 

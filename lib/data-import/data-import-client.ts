@@ -3,6 +3,7 @@
 import type { ImportEntity, ImportExecuteResult, ImportFieldDef, ImportMappingConfig } from "@/lib/data-import/core/types";
 import type { ImportStrategy } from "@/lib/data-import/core/import-plugin";
 import { routeSlugForEntity } from "@/lib/data-import/import-registry-client";
+import { openSafePopup } from "@/lib/browser/popup-guard";
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, {
@@ -77,7 +78,7 @@ export async function executeImport(entity: ImportEntity, body: Record<string, u
 
 export function downloadImportTemplate(entity: ImportEntity) {
   const url = `${entityBase(entity)}/template`;
-  window.open(url, "_blank", "noopener,noreferrer");
+  openSafePopup({ url, context: "export", label: "template import" });
 }
 
 export async function fetchImportBatches(entity?: ImportEntity) {
@@ -101,5 +102,9 @@ export async function saveImportMappingPreset(entity: ImportEntity, name: string
 
 export function downloadEntityExport(entity: ImportEntity, format: "csv" | "xlsx" = "csv") {
   const slug = routeSlugForEntity(entity);
-  window.open(`/api/export/${slug}?format=${format}`, "_blank", "noopener,noreferrer");
+  openSafePopup({
+    url: `/api/export/${slug}?format=${format}`,
+    context: "export",
+    label: "export dati",
+  });
 }

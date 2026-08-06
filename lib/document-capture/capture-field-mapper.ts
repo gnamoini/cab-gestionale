@@ -17,6 +17,7 @@ import { findDuplicateByCodici } from "@/lib/magazzino/duplicates";
 import { formatRicambioDescrizioneForUi } from "@/lib/magazzino/ricambio-descrizione-display";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { newRigaId, newSchedaMeta } from "@/lib/schede/schede-ui";
+import type { SchedaIngressoStringKey } from "@/lib/schede/scheda-ingresso-typed-fields";
 import type {
   LavorazioneSchedeBundle,
   RigaLavorazioneScheda,
@@ -27,7 +28,7 @@ import type {
   SchedaTipo,
 } from "@/types/schede";
 
-const INGRESSO_KEY_MAP: Record<string, keyof SchedaIngressoFields> = {
+const INGRESSO_KEY_MAP: Record<string, SchedaIngressoStringKey> = {
   cliente: "cliente",
   cantiere: "cantiere",
   utilizzatore: "utilizzatore",
@@ -230,8 +231,13 @@ function composeRichiedenteFromCapture(fields: readonly CaptureFieldRow[], curre
 function applyIngressoSlice(target: SchedaIngressoFields, slice: Partial<SchedaIngressoFields>): void {
   for (const key of Object.keys(slice) as (keyof SchedaIngressoFields)[]) {
     const v = slice[key];
-    if (v !== undefined && v !== null && String(v).trim()) {
-      (target as Record<string, string>)[key] = String(v);
+    if (v === undefined || v === null) continue;
+    if (typeof v === "boolean") {
+      (target as Record<string, unknown>)[key] = v;
+      continue;
+    }
+    if (String(v).trim()) {
+      (target as Record<string, unknown>)[key] = String(v);
     }
   }
 }
@@ -710,7 +716,7 @@ export function mapCaptureFieldsToIngresso(
       continue;
     }
     const mapped = INGRESSO_KEY_MAP[nk];
-    if (!mapped || mapped === "targetType" || mapped === "attrezzaturaId") continue;
+    if (!mapped) continue;
     out[mapped] = resolveCaptureFieldValue(row);
   }
   out.richiedente = composeRichiedenteFromCapture(fields, out.richiedente);

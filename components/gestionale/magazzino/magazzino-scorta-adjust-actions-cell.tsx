@@ -28,6 +28,7 @@ export function MagazzinoScortaAdjustActionsCell({
       modalitaModifica={modalitaModifica}
       onDecrease={decrement}
       onIncrease={increment}
+      embedded
     />
   );
 }

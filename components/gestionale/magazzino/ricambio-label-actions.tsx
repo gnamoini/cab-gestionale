@@ -10,7 +10,8 @@ import {
   LABEL_PRESET_IDS,
   labelPresetOptionLabel,
 } from "@/lib/inventory-labels";
-import { normalizePdfDownloadFileName, openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
+import { normalizePdfDownloadFileName, openDeferredPopup, openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
+import { isDeferredPopupBlocked } from "@/lib/browser/popup-guard";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { MagazzinoLabelQtyStepper } from "@/components/gestionale/magazzino/magazzino-label-qty-stepper";
@@ -107,14 +108,27 @@ export function RicambioLabelActions({
   }
 
   async function handleOpenPdf() {
-    await ensureExpanded();
+    const deferredResult = openDeferredPopup({ context: "etichette", label: "PDF etichetta" });
+    if (isDeferredPopupBlocked(deferredResult)) return;
+    const deferred = deferredResult;
+
     setOpeningPdf(true);
     try {
+      await ensureExpanded();
       const res = await fetch(renderUrl("pdf"));
-      if (!res.ok) throw new Error("PDF non disponibile");
+      if (!res.ok) {
+        deferred.close();
+        throw new Error("PDF non disponibile");
+      }
       const blob = await res.blob();
-      await openPdfBlobInNewTab(blob, pdfFileName(), { showLoadingFeedback: false });
+      await openPdfBlobInNewTab(blob, pdfFileName(), {
+        showLoadingFeedback: false,
+        context: "etichette",
+        label: "PDF etichetta",
+        deferredHandle: deferred,
+      });
     } catch {
+      deferred.close();
       gestToast.error("Impossibile aprire il PDF etichetta.");
     } finally {
       setOpeningPdf(false);

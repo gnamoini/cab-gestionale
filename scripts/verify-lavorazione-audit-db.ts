@@ -65,7 +65,7 @@ function campiFromContenuto(contenuto: unknown): Record<string, string> | null {
 }
 
 function compareCampi(
-  expected: Record<string, string | null | undefined>,
+  expected: Record<string, unknown>,
   actual: Record<string, string> | null,
   keys: readonly string[],
 ): RowResult[] {

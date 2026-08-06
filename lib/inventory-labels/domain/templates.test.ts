@@ -8,7 +8,7 @@ import { labelsPerA4Page } from "@/lib/inventory-labels/render/print-layout";
 
 const t = getLabelTemplate("60x40-default");
 assert.ok(t);
-assert.equal(t!.version, "1.7.0");
+assert.equal(t!.version, "1.8.0");
 
 const qr = t!.elements.find((e) => e.type === "qr");
 const marca = t!.elements.find((e) => e.type === "text" && e.field === "marca");
@@ -66,7 +66,7 @@ assert.equal(a4!.widthMm, 287);
 assert.equal(a4!.heightMm, 200);
 assert.equal(labelsPerA4Page(a4!), 1);
 assert.equal(a4!.layoutMode, "horizontal-qr-left");
-assert.equal(a4!.version, "2.2.4");
+assert.equal(a4!.version, "2.3.0");
 const a4Qr = a4!.elements.find((e) => e.type === "qr");
 const a4Marca = a4!.elements.find((e) => e.type === "text" && e.field === "marca");
 assert.ok(a4Qr && a4Qr.type === "qr");

@@ -171,6 +171,12 @@ function ensureGestionaleViewportOrchestrator(): void {
   runViewportSync("resize");
 }
 
+/** Sync immediato viewport (no RAF) — visibility resume, pre-paint mount. */
+export function syncGestionaleViewport(reason: ViewportChangeReason = "resize"): void {
+  ensureGestionaleViewportOrchestrator();
+  runViewportSync(reason);
+}
+
 /**
  * Sottoscrizione eventi viewport — un solo listener globale indipendentemente dai consumer.
  */

@@ -3,11 +3,16 @@ import {
   resolveExplicitMezzoFromCatalog,
   type MezzoResolutionResult,
 } from "@/lib/domain/mezzo/mezzo-resolution";
-import { resolveMezzoByIdentFromCatalog } from "@/lib/mezzi/find-mezzo-by-ident";
+import { resolveMezzoBySchedaFromCatalog } from "@/lib/mezzi/find-mezzo-by-ident";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
 
-export type MezzoMatchKind = "explicit" | "ident" | "ambiguous" | "none" | "error";
+export type MezzoMatchKind =
+  | "explicit"
+  | "needs_confirm"
+  | "ambiguous"
+  | "none"
+  | "error";
 
 export type ResolveMezzoFromSchedaParams = {
   scheda: SchedaIngressoFields;
@@ -24,19 +29,10 @@ export type ResolveMezzoFromSchedaResult = {
   errorMessage?: string;
 };
 
-function schedaToIdent(scheda: SchedaIngressoFields) {
-  return {
-    targa: scheda.targa,
-    matricola: scheda.matricola,
-    nScuderia: scheda.nScuderia,
-    vin: scheda.vin,
-  };
-}
-
 /**
  * Risolve il mezzo target da scheda ingresso.
- * preferredMezzoId valido = SSOT (nessun override ident).
- * preferred assente → risoluzione ident con contract ambiguità.
+ * preferredMezzoId valido = SSOT esplicito (nessun override ident).
+ * Senza preferred → needs_confirm | ambiguous | none — mai auto-link ident.
  */
 export function resolveMezzoFromScheda(params: ResolveMezzoFromSchedaParams): ResolveMezzoFromSchedaResult {
   const { scheda, existingMezzi, preferredMezzoId } = params;
@@ -73,12 +69,13 @@ export function resolveMezzoFromScheda(params: ResolveMezzoFromSchedaParams): Re
     };
   }
 
-  const identResult = resolveMezzoByIdentFromCatalog(existingMezzi, schedaToIdent(scheda));
-  if (identResult.status === "resolved") {
-    const mezzo = existingMezzi.find((m) => m.id === identResult.mezzoId) ?? null;
+  const identResult = resolveMezzoBySchedaFromCatalog(scheda, existingMezzi);
+  if (identResult.status === "needs_confirm") {
+    const topId = identResult.topCandidateId;
+    const mezzo = topId ? existingMezzi.find((m) => m.id === topId) ?? null : null;
     return {
-      mezzoId: identResult.mezzoId,
-      matchKind: "ident",
+      mezzoId: null,
+      matchKind: "needs_confirm",
       mezzo,
       resolution: identResult,
     };

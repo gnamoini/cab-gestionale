@@ -1,5 +1,9 @@
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
 import {
+  canPrefillSchedaFromMezzo,
+  type MezzoPrefillPolicy,
+} from "@/lib/schede/scheda-ingresso-mezzo-prefill-policy";
+import {
   isLavorazioneOnlyField,
   MEZZO_PERMANENT_FIELDS,
   type MezzoPermanentFieldKey,
@@ -35,9 +39,20 @@ export function mergeSchedaIngressoWithMezzoPriority(
     fromScheda?: SchedaIngressoFields | null;
     linkedMezzo?: MezzoGestito | null;
     copySignatures?: boolean;
+    prefillPolicy?: MezzoPrefillPolicy;
   },
 ): SchedaIngressoFields {
-  const { fromScheda, linkedMezzo, copySignatures } = options;
+  const { fromScheda, linkedMezzo, copySignatures, prefillPolicy = "manual_selected" } = options;
+  if (!canPrefillSchedaFromMezzo(prefillPolicy)) {
+    return fromScheda
+      ? mergeSchedaIngressoWithMezzoPriority(current, {
+          fromScheda,
+          linkedMezzo: null,
+          copySignatures,
+          prefillPolicy: "no_prefill",
+        })
+      : { ...current };
+  }
   const fromMezzo = linkedMezzo ? buildSchedaIngressoFieldsFromMezzo(linkedMezzo) : null;
 
   const skipKeys = new Set(NEVER_COPY);

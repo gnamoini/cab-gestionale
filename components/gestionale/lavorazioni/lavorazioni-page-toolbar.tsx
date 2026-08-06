@@ -48,6 +48,7 @@ import {
   type PageActionItem,
 } from "@/components/ui";
 import { IconSchedaBlank } from "@/components/document-capture/scheda-blank-pdf-actions";
+import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 
 const BLANK_PDF_TYPES = [
   { id: "scheda-ingresso-blank", label: "Scheda ingresso" },
@@ -85,7 +86,10 @@ export function useLavorazioniPageMenuItems({
         id: t.id,
         label: t.label,
         onSelect: () => {
-          window.open(`/api/pdf/artifacts/scheda-blank/${t.id}`, "_blank", "noopener,noreferrer");
+          openUrlInNewTab(`/api/pdf/artifacts/scheda-blank/${t.id}`, {
+            context: "scheda",
+            label: t.label,
+          });
         },
       })),
     },

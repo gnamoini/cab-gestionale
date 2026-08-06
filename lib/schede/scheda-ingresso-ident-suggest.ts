@@ -160,6 +160,13 @@ export function findMezzoMatchForIngressoIdentField(
   const catalog = filterExcludedMezzi(mezzi, options?.excludeMezzoId);
   const exactHits = findExactHitsForIngressoIdentField(catalog, field, v);
 
+  if (field === "matricola" || field === "nScuderia") {
+    if (exactHits.length > 1) {
+      return { kind: "ambiguous", candidates: exactHits };
+    }
+    return { kind: "none" };
+  }
+
   if (exactHits.length === 1) {
     return { kind: "exact", mezzo: exactHits[0] };
   }

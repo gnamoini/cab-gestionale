@@ -1,8 +1,10 @@
 "use client";
 
 import type { PdfArtifactType } from "@/lib/pdf-artifacts/pdf-artifact-registry";
+import { openDeferredPopup, type PopupGuardContext, isDeferredPopupBlocked } from "@/lib/browser/popup-guard";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { pushGestionaleToast } from "@/context/toast-context";
+import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 
 export type OpenPdfArtifactParams = {
   id?: string;
@@ -37,10 +39,21 @@ function fileNameFromContentDisposition(header: string | null, fallback = "docum
   return ascii?.[1]?.trim() || fallback;
 }
 
+function resolvePdfContext(type: PdfArtifactType): PopupGuardContext {
+  if (type === "report-bundle") return "report";
+  if (type.startsWith("scheda")) return "scheda";
+  return "pdf";
+}
+
 /** Scarica PDF da URL same-origin e apre anteprima in nuova scheda. */
 export async function openPdfStreamInNewTab(
   url: string,
-  options?: { loadingMessage?: string },
+  options?: {
+    loadingMessage?: string;
+    context?: PopupGuardContext;
+    label?: string;
+    artifactType?: PdfArtifactType;
+  },
 ): Promise<boolean> {
   if (typeof window === "undefined") return false;
 
@@ -50,11 +63,24 @@ export async function openPdfStreamInNewTab(
     return false;
   }
 
+  const context =
+    options?.context ??
+    (options?.artifactType ? resolvePdfContext(options.artifactType) : "pdf");
+
+  const deferredResult = openDeferredPopup({
+    context,
+    label: options?.label ?? "PDF",
+  });
+
+  if (isDeferredPopupBlocked(deferredResult)) return false;
+  const deferred = deferredResult;
+
   pushGestionaleToast(options?.loadingMessage ?? "Generazione PDF in corso…", "info", 5000);
 
   try {
     const res = await fetch(trimmed, { credentials: "same-origin", cache: "no-store" });
     if (!res.ok) {
+      deferred.close();
       let message = "Generazione PDF non riuscita";
       try {
         const body = (await res.json()) as { error?: string };
@@ -62,12 +88,15 @@ export async function openPdfStreamInNewTab(
       } catch {
         /* risposta HTML di errore */
       }
+      trackRuntimeEvent(RuntimeEvents.pdfGenerationFailed, { context, phase: "navigate" });
       pushGestionaleToast(message, "warning", 5200);
       return false;
     }
 
     const contentType = res.headers.get("content-type") ?? "";
     if (!contentType.includes("application/pdf")) {
+      deferred.close();
+      trackRuntimeEvent(RuntimeEvents.pdfGenerationFailed, { context, phase: "navigate" });
       pushGestionaleToast("Risposta PDF non valida.", "warning", 5200);
       return false;
     }
@@ -75,19 +104,15 @@ export async function openPdfStreamInNewTab(
     const blob = await res.blob();
     const fileName = fileNameFromContentDisposition(res.headers.get("content-disposition"));
     const blobUrl = URL.createObjectURL(new File([blob], fileName, { type: "application/pdf" }));
-    const opened = openUrlInNewTab(blobUrl, {
+    return openUrlInNewTab(blobUrl, {
       revokeBlobUrlAfterMs: 120_000,
-      blockedMessage: "Impossibile aprire il PDF. Consenti i pop-up per questo sito.",
+      context,
+      label: options?.label,
+      deferredHandle: deferred,
     });
-    if (!opened) {
-      pushGestionaleToast(
-        "Impossibile aprire il PDF. Consenti i pop-up per questo sito.",
-        "warning",
-        5200,
-      );
-    }
-    return opened;
   } catch {
+    deferred.close();
+    trackRuntimeEvent(RuntimeEvents.pdfNetworkError, { context, phase: "navigate" });
     pushGestionaleToast("Generazione PDF non riuscita.", "warning", 5200);
     return false;
   }
@@ -98,5 +123,8 @@ export async function openPdfArtifact(
   type: PdfArtifactType,
   params?: OpenPdfArtifactParams,
 ): Promise<boolean> {
-  return openPdfStreamInNewTab(buildPdfArtifactUrl(type, params));
+  return openPdfStreamInNewTab(buildPdfArtifactUrl(type, params), {
+    artifactType: type,
+    context: resolvePdfContext(type),
+  });
 }

@@ -5,14 +5,20 @@ import { copyLastSchedaIngresso } from "@/lib/domain/scheda-ingresso/copy-last-s
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
 import { mergeSchedaIngressoWithMezzoPriority } from "@/lib/schede/merge-scheda-ingresso-with-mezzo-priority";
 import {
+  canPrefillSchedaFromMezzo,
+  type MezzoPrefillPolicy,
+} from "@/lib/schede/scheda-ingresso-mezzo-prefill-policy";
+import {
   createLinkedMezzoSnapshot,
   createLinkedMezzoSnapshotFromFields,
   emptySchedaIngressoMezzoLinkState,
   listLinkedMezzoFieldConflicts,
   resolvePreferredMezzoIdForSave,
+  resolvePrefillPolicyFromLinkState,
   type LinkedMezzoSnapshot,
   type SchedaIngressoMezzoLinkState,
 } from "@/lib/schede/scheda-ingresso-mezzo-link-state";
+import type { MezzoLinkOrigin } from "@/lib/schede/scheda-ingresso-mezzo-match";
 import { pickMezzoPermanentFields, type MezzoPermanentFieldKey } from "@/lib/schede/scheda-ingresso-field-roles";
 import type { SchedaIngressoIdentField } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import type { SchedaIngressoIdentMatchKind } from "@/lib/schede/scheda-ingresso-ident-suggest";
@@ -38,7 +44,7 @@ export function useSchedaIngressoMezzoLink({
   excludeLavorazioneId?: string;
 }) {
   const [linkState, setLinkState] = useState<SchedaIngressoMezzoLinkState>(
-    emptySchedaIngressoMezzoLinkState,
+    emptySchedaIngressoMezzoLinkState(),
   );
   const [activeMatchField, setActiveMatchField] = useState<SchedaIngressoIdentField | null>(null);
   const [pendingMatchKind, setPendingMatchKind] = useState<SchedaIngressoIdentMatchKind | null>(null);
@@ -70,6 +76,7 @@ export function useSchedaIngressoMezzoLink({
         status: "unconfirmed_match",
         pendingMezzo: mezzo,
         linkedSnapshot: linkState.linkedSnapshot,
+        linkOrigin: null,
       });
     },
     [dismissedMezzoIds, linkState.linkedSnapshot, linkState.status],
@@ -89,6 +96,7 @@ export function useSchedaIngressoMezzoLink({
         ...prev,
         status: prev.linkedSnapshot ? "linked" : "new",
         pendingMezzo: null,
+        linkOrigin: prev.linkOrigin,
       }));
       setPendingMatchKind(null);
       setActiveMatchField(field);
@@ -115,37 +123,46 @@ export function useSchedaIngressoMezzoLink({
     }));
   }, [linkState.pendingMezzo?.id]);
 
-  const acceptLinkMezzo = useCallback(
-    (field: SchedaIngressoIdentField = activeMatchField ?? "matricola") => {
-      const mezzo = linkState.pendingMezzo;
-      if (!mezzo) return;
-      const fromMezzo = buildSchedaIngressoFieldsFromMezzo(mezzo);
-      let next = mergeSchedaIngressoWithMezzoPriority(fields, { linkedMezzo: mezzo });
-      if (schedeStore) {
-        const copyResult = copyLastSchedaIngresso({
-          ident: { targa: next.targa, matricola: next.matricola, nScuderia: next.nScuderia },
-          mode: "merge-empty",
-          currentFields: next,
-          mezzi,
-          schedeStore,
-          attive,
-          storico,
-          excludeLavorazioneId,
+  const linkMezzoWithPolicy = useCallback(
+    (
+      mezzo: MezzoGestito,
+      field: SchedaIngressoIdentField,
+      linkOrigin: MezzoLinkOrigin,
+      prefillPolicy: MezzoPrefillPolicy,
+      confirmed: boolean,
+    ) => {
+      let next = { ...fields };
+      if (canPrefillSchedaFromMezzo(prefillPolicy)) {
+        next = mergeSchedaIngressoWithMezzoPriority(fields, {
           linkedMezzo: mezzo,
+          prefillPolicy,
         });
-        if (copyResult.kind === "single") next = copyResult.fields;
-      } else {
-        next = mergeSchedaIngressoWithMezzoPriority(next, { linkedMezzo: mezzo });
-        void fromMezzo;
+        if (schedeStore) {
+          const copyResult = copyLastSchedaIngresso({
+            ident: { targa: next.targa, matricola: next.matricola, nScuderia: next.nScuderia },
+            mode: "merge-empty",
+            currentFields: next,
+            mezzi,
+            schedeStore,
+            attive,
+            storico,
+            excludeLavorazioneId,
+            linkedMezzo: mezzo,
+          });
+          if (copyResult.kind === "single") next = copyResult.fields;
+        }
       }
       setFields(next);
       setLinkState({
         status: "linked",
         pendingMezzo: null,
+        linkOrigin,
         linkedSnapshot: createLinkedMezzoSnapshotFromFields(
           mezzo,
           pickMezzoPermanentFields(next),
           field,
+          linkOrigin,
+          confirmed,
         ),
       });
       setActiveMatchField(null);
@@ -154,17 +171,31 @@ export function useSchedaIngressoMezzoLink({
       resetUserPermanentEdits();
     },
     [
-      activeMatchField,
       attive,
       excludeLavorazioneId,
       fields,
-      linkState.pendingMezzo,
       mezzi,
       resetUserPermanentEdits,
       schedeStore,
       setFields,
       storico,
     ],
+  );
+
+  const acceptLinkMezzo = useCallback(
+    (field: SchedaIngressoIdentField = activeMatchField ?? "matricola") => {
+      const mezzo = linkState.pendingMezzo;
+      if (!mezzo) return;
+      linkMezzoWithPolicy(mezzo, field, "selected_by_user", "manual_selected", true);
+    },
+    [activeMatchField, linkMezzoWithPolicy, linkState.pendingMezzo],
+  );
+
+  const selectAmbiguousCandidate = useCallback(
+    (mezzo: MezzoGestito, field: SchedaIngressoIdentField = activeMatchField ?? "matricola") => {
+      linkMezzoWithPolicy(mezzo, field, "selected_by_user", "manual_selected", true);
+    },
+    [activeMatchField, linkMezzoWithPolicy],
   );
 
   const clearLink = useCallback(() => {
@@ -177,24 +208,40 @@ export function useSchedaIngressoMezzoLink({
 
   const linkMezzoExplicit = useCallback(
     (mezzo: MezzoGestito, field: SchedaIngressoIdentField = "matricola") => {
-      setLinkState({
-        status: "linked",
-        pendingMezzo: null,
-        linkedSnapshot: createLinkedMezzoSnapshot(mezzo, field),
-      });
-      setActiveMatchField(null);
-      setPendingMatchKind(null);
-      setAmbiguousCandidates(null);
-      resetUserPermanentEdits();
+      linkMezzoWithPolicy(mezzo, field, "selected_by_user", "manual_selected", true);
     },
-    [resetUserPermanentEdits],
+    [linkMezzoWithPolicy],
   );
+
+  const confirmAutoMatchedMezzo = useCallback(
+    (
+      mezzo: MezzoGestito,
+      field: SchedaIngressoIdentField = "matricola",
+    ) => {
+      linkMezzoWithPolicy(mezzo, field, "auto_confirmed", "confirmed_match", true);
+    },
+    [linkMezzoWithPolicy],
+  );
+
+  const markCreatedNewMezzo = useCallback(() => {
+    setLinkState((prev) => ({
+      ...prev,
+      status: "new",
+      pendingMezzo: null,
+      linkedSnapshot: null,
+      linkOrigin: "created_new",
+    }));
+    setActiveMatchField(null);
+    setPendingMatchKind(null);
+    setAmbiguousCandidates(null);
+  }, []);
 
   const bootstrapLinkedMezzo = useCallback(
     (
       mezzo: MezzoGestito,
       fieldsAtOpen: Pick<SchedaIngressoFields, MezzoPermanentFieldKey>,
       field: SchedaIngressoIdentField = "matricola",
+      linkOrigin: MezzoLinkOrigin = "selected_by_user",
     ) => {
       setLinkState((prev) => {
         if (prev.status === "linked" && prev.linkedSnapshot?.id === mezzo.id) return prev;
@@ -202,7 +249,14 @@ export function useSchedaIngressoMezzoLink({
         return {
           status: "linked",
           pendingMezzo: null,
-          linkedSnapshot: createLinkedMezzoSnapshotFromFields(mezzo, fieldsAtOpen, field),
+          linkOrigin,
+          linkedSnapshot: createLinkedMezzoSnapshotFromFields(
+            mezzo,
+            fieldsAtOpen,
+            field,
+            linkOrigin,
+            true,
+          ),
         };
       });
       setActiveMatchField(null);
@@ -218,6 +272,7 @@ export function useSchedaIngressoMezzoLink({
   );
   const hasConflict = userEditedConflictFields.length > 0;
   const preferredMezzoId = resolvePreferredMezzoIdForSave(linkState);
+  const prefillPolicy = resolvePrefillPolicyFromLinkState(linkState);
 
   return {
     linkState,
@@ -231,7 +286,10 @@ export function useSchedaIngressoMezzoLink({
     dismissAmbiguousMatch,
     dismissPendingMatch,
     acceptLinkMezzo,
+    selectAmbiguousCandidate,
     linkMezzoExplicit,
+    confirmAutoMatchedMezzo,
+    markCreatedNewMezzo,
     bootstrapLinkedMezzo,
     clearLink,
     hasConflict,
@@ -239,9 +297,11 @@ export function useSchedaIngressoMezzoLink({
     allConflictFields: conflictFields,
     notifyPermanentFieldUserEdit,
     preferredMezzoId,
+    prefillPolicy,
     editedPermanentFields: [...userEditedPermanentRef.current],
     linkedSnapshot: linkState.linkedSnapshot as LinkedMezzoSnapshot | null,
     pendingMezzo: linkState.pendingMezzo,
+    linkOrigin: linkState.linkOrigin ?? linkState.linkedSnapshot?.linkOrigin ?? null,
   };
 }
 

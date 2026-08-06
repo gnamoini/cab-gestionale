@@ -2,7 +2,12 @@ import type { InterventoTargetTypeScheda, SchedaIngressoFields } from "@/types/s
 
 export type SchedaIngressoStringKey = Exclude<
   keyof SchedaIngressoFields,
-  "targetType" | "attrezzaturaId" | "richiedenteFirma" | "addettoFirma"
+  | "targetType"
+  | "attrezzaturaId"
+  | "interventoSuAttrezzatura"
+  | "interventoSuTelaio"
+  | "richiedenteFirma"
+  | "addettoFirma"
 >;
 
 export function applySchedaIngressoTypedFields(
@@ -14,6 +19,12 @@ export function applySchedaIngressoTypedFields(
   }
   if (raw.attrezzaturaId !== undefined) {
     out.attrezzaturaId = raw.attrezzaturaId;
+  }
+  if (raw.interventoSuAttrezzatura !== undefined) {
+    out.interventoSuAttrezzatura = Boolean(raw.interventoSuAttrezzatura);
+  }
+  if (raw.interventoSuTelaio !== undefined) {
+    out.interventoSuTelaio = Boolean(raw.interventoSuTelaio);
   }
 }
 
@@ -69,7 +80,20 @@ export function copySchedaIngressoFieldFromClient(
     if (client.addettoAccettazioneId) next.addettoAccettazioneId = client.addettoAccettazioneId;
     return;
   }
-  next[key] = client[key] as string;
+  if (key === "interventoSuAttrezzatura") {
+    if (client.interventoSuAttrezzatura !== undefined) {
+      next.interventoSuAttrezzatura = Boolean(client.interventoSuAttrezzatura);
+    }
+    return;
+  }
+  if (key === "interventoSuTelaio") {
+    if (client.interventoSuTelaio !== undefined) {
+      next.interventoSuTelaio = Boolean(client.interventoSuTelaio);
+    }
+    return;
+  }
+  const stringKey = key as SchedaIngressoStringKey;
+  next[stringKey] = String(client[stringKey] ?? "");
 }
 
 export function normalizeInterventoTargetType(

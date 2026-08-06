@@ -20,7 +20,9 @@ import {
   labelQuantitiesToCompactItems,
   type LabelSelection,
 } from "@/lib/inventory-labels/client/label-selection";
-import { normalizePdfDownloadFileName, openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
+import { normalizePdfDownloadFileName, openDeferredPopup, openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
+import type { DeferredPopupHandle } from "@/lib/pdf/open-pdf-blob-preview";
+import { isDeferredPopupBlocked } from "@/lib/browser/popup-guard";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 type BulkLabelPhase = "idle" | "preparing" | "generating" | "opening";
@@ -29,8 +31,17 @@ function bulkPdfFileName(count: number): string {
   return normalizePdfDownloadFileName(`etichette-${count}.pdf`);
 }
 
-async function openLabelArtifact(blob: Blob, labelCount: number): Promise<void> {
-  await openPdfBlobInNewTab(blob, bulkPdfFileName(labelCount), { showLoadingFeedback: false });
+async function openLabelArtifact(
+  blob: Blob,
+  labelCount: number,
+  deferredHandle?: DeferredPopupHandle | null,
+): Promise<void> {
+  await openPdfBlobInNewTab(blob, bulkPdfFileName(labelCount), {
+    showLoadingFeedback: false,
+    context: "etichette",
+    label: "PDF etichette",
+    deferredHandle,
+  });
 }
 
 const BULK_FETCH_TIMEOUT_MS = 280_000;
@@ -63,6 +74,10 @@ export function MagazzinoBulkLabelToolbar({
 
   const handlePrint = useCallback(async () => {
     if (!hasSelection) return;
+    const deferredResult = openDeferredPopup({ context: "etichette", label: "PDF etichette" });
+    if (isDeferredPopupBlocked(deferredResult)) return;
+    const deferred = deferredResult;
+
     setPhase("preparing");
     setProgress(0);
     try {
@@ -88,7 +103,7 @@ export function MagazzinoBulkLabelToolbar({
             setPhase("opening");
             setProgress(100);
             const blob = await jobRes.blob();
-            await openLabelArtifact(blob, totalLabels);
+            await openLabelArtifact(blob, totalLabels, deferred);
             gestToast.successOnce("bulk-labels", "PDF etichette pronto.");
             return;
           }
@@ -109,7 +124,7 @@ export function MagazzinoBulkLabelToolbar({
             setPhase("opening");
             const pdfRes = await fetch(`/api/inventory-labels/bulk/jobs/${jobId}`);
             const blob = await pdfRes.blob();
-            await openLabelArtifact(blob, totalLabels);
+            await openLabelArtifact(blob, totalLabels, deferred);
             return;
           }
           await new Promise((r) => window.setTimeout(r, 1500));
@@ -138,9 +153,10 @@ export function MagazzinoBulkLabelToolbar({
       setPhase("opening");
       setProgress(100);
       const blob = await res.blob();
-      await openLabelArtifact(blob, totalLabels);
+      await openLabelArtifact(blob, totalLabels, deferred);
       gestToast.successOnce("bulk-labels-sync", "PDF etichette pronto.");
     } catch (e) {
+      deferred.close();
       const msg =
         e instanceof DOMException && e.name === "AbortError"
           ? "Generazione etichette troppo lenta. Riduci la selezione o riprova."

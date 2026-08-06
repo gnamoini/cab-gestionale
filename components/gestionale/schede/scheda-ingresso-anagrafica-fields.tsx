@@ -90,6 +90,7 @@ function SchedaIngressoAnagraficaFieldsInner({
   onUseMezzoFromHint,
   onDismissMezzoHint,
   onDismissAmbiguousHint,
+  onSelectAmbiguousCandidate,
   onVerifyMezzoConflict,
   clienteRequired = false,
   marcaAttrezzaturaRequired = false,
@@ -129,6 +130,7 @@ function SchedaIngressoAnagraficaFieldsInner({
   onUseMezzoFromHint?: (field: SchedaIngressoIdentField) => void;
   onDismissMezzoHint?: () => void;
   onDismissAmbiguousHint?: () => void;
+  onSelectAmbiguousCandidate?: (mezzo: MezzoGestito, field: SchedaIngressoIdentField) => void;
   onVerifyMezzoConflict?: () => void;
   clienteRequired?: boolean;
   marcaAttrezzaturaRequired?: boolean;
@@ -232,6 +234,11 @@ function SchedaIngressoAnagraficaFieldsInner({
         }
         onDismiss={
           mezzoInlineHint.variant === "ambiguo" ? onDismissAmbiguousHint : onDismissMezzoHint
+        }
+        onSelectCandidate={
+          mezzoInlineHint.variant === "ambiguo" && onSelectAmbiguousCandidate
+            ? (mezzo) => onSelectAmbiguousCandidate(mezzo, field)
+            : undefined
         }
       />
     );

@@ -82,6 +82,27 @@ async function main() {
   assert.ok(a4Svg.includes("text-anchor=\"middle\""), "A4: testo centrato");
   assert.ok(a4Svg.includes("font-family=\"LabelSansBold\""), "A4: font bold nativo");
 
+  const dualMarcaPayload = {
+    marca: "BTE",
+    marcaSecondaria: "OMB",
+    descrizione: "FILTRO OLIO",
+    codice: "XXXX",
+    codiceSecondario: "YYYY",
+    fornitoreAlternativo: "ALT FORN",
+    codiceAlternativo: "ALT-99",
+    fornitoriAlternativi: [{ name: "ALT FORN", code: "ALT-99" }],
+  };
+  const dual95Template = getLabelTemplate("95x40-default")!;
+  const dual95Svg = await renderLabelSvg(dual95Template, dualMarcaPayload, qrUrl, {
+    ...renderOpts,
+    textAsPaths: false,
+    embedFonts: true,
+  });
+  assert.ok(dual95Svg.includes("BTE"), "95x40 dual marca: marca principale nel SVG");
+  assert.ok(dual95Svg.includes("OMB"), "95x40 dual marca: marca secondaria nel SVG");
+  assert.ok(dual95Svg.includes("XXXX"), "95x40 dual marca: codice principale nel SVG");
+  assert.ok(dual95Svg.includes("YYYY"), "95x40 dual marca: codice secondario nel SVG");
+
   assert.equal(formatLabelJobPreset("95x40-default", false, true), "95x40-default::no-barcode::cliente");
   assert.deepEqual(parseLabelJobPreset("95x40-default::no-barcode::cliente"), {
     preset: "95x40-default",

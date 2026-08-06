@@ -97,19 +97,18 @@ function uiItemToRow(
 export function patchMagazzinoListCache(
   qc: QueryClient,
   updater: (prev: RicambioMagazzino[]) => RicambioMagazzino[],
-  autore = "Sistema",
   mezziListe?: MezziListePrefs,
   options?: PatchMagazzinoListCacheOptions,
 ): void {
   qc.setQueryData<MagazzinoRicambioRow[]>(magazzinoListQueryKey(), (old) => {
     const rows = old ?? [];
     if (options?.quantitaOnly) {
-      const ui = rows.map((row) => magazzinoRowToRicambioUI(row, autore, mezziListe));
+      const ui = rows.map((row) => magazzinoRowToRicambioUI(row, "", mezziListe));
       const next = updater(ui);
       const rowById = new Map(rows.map((row) => [row.id, row]));
       return next.map((item) => uiItemToRow(item, rowById.get(item.id), mezziListe, options));
     }
-    const ui = mapMagazzinoRowsToUI(rows, autore, mezziListe);
+    const ui = mapMagazzinoRowsToUI(rows, "", mezziListe);
     const next = updater(ui);
     const rowById = new Map(rows.map((row) => [row.id, row]));
     return next.map((item) => uiItemToRow(item, rowById.get(item.id), mezziListe, options));

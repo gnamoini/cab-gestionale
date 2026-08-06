@@ -4,6 +4,7 @@ import { GlobalAnchoredMenuItems, Tooltip } from "@/components/ui";
 import { useCallback, useId, useRef, useState } from "react";
 import { dsPageToolbarBtn } from "@/lib/ui/design-system";
 import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
+import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 
 const BLANK_TYPES = [
   { tipo: "scheda-ingresso-blank", label: "Scheda ingresso" },
@@ -57,7 +58,11 @@ export function SchedaBlankPdfMenu() {
         }))}
         onSelect={(item) => {
           closeMenu();
-          window.open(`/api/pdf/artifacts/scheda-blank/${item.id}`, "_blank", "noopener,noreferrer");
+          const blank = BLANK_TYPES.find((b) => b.tipo === item.id);
+          openUrlInNewTab(`/api/pdf/artifacts/scheda-blank/${item.id}`, {
+            context: "scheda",
+            label: blank?.label,
+          });
         }}
       />
     </div>

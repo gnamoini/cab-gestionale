@@ -7,6 +7,7 @@ import {
   type DocumentoFileOpenResult,
 } from "@/lib/documenti/documento-file-access";
 import { archiveDocumentDeliveryUrl } from "@/lib/documents/document-delivery-url";
+import { openSafePopup } from "@/lib/browser/popup-guard";
 import type { DocumentoRow } from "@/src/types/supabase-tables";
 import {
   formatDocumentoRigaSintetica,
@@ -299,8 +300,11 @@ export async function openDocumentoFile(
 ): Promise<DocumentoFileOpenResult> {
   const access = getDocumentoFileAccessState(doc);
   if (access.hasLocalBlob && doc.urlBlob?.trim()) {
-    window.open(doc.urlBlob.trim(), "_blank", "noopener,noreferrer");
-    return { ok: true, href: doc.urlBlob.trim() };
+    const href = doc.urlBlob.trim();
+    const opened = openSafePopup({ url: href, context: "documento", label: "documento" });
+    return opened.status === "opened"
+      ? { ok: true, href }
+      : { ok: false, code: "unknown", message: documentoFileOpenFailureMessage("unknown") };
   }
   if (!access.canOpen || !doc.id) {
     const code =
@@ -316,8 +320,10 @@ export async function openDocumentoFile(
     };
   }
   const href = archiveDocumentDeliveryUrl(doc.id, "preview", doc.caricatoIl || doc.ultimaModifica);
-  window.open(href, "_blank", "noopener,noreferrer");
-  return { ok: true, href };
+  const opened = openSafePopup({ url: href, context: "documento", label: "documento" });
+  return opened.status === "opened"
+    ? { ok: true, href }
+    : { ok: false, code: "unknown", message: documentoFileOpenFailureMessage("unknown") };
 }
 
 export { documentoFileOpenFailureMessage };

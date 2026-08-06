@@ -25,13 +25,16 @@ export function magazzinoRowMatchesPageFiltersIndexed(
   filters: MagazzinoPageFilters,
   haystackById: Map<string, string>,
   listePrefs?: MezziListePrefs,
+  options?: { skipSearchFilter?: boolean },
 ): boolean {
   if (filters.soloSottoScorta && !(row.scorta < row.scortaMinima)) return false;
   if (filters.nascondiScortaZero && row.scorta <= 0) return false;
-  const hay = haystackById.get(row.id) ?? magazzinoRowSearchHaystack(row, listePrefs);
-  if (!matchSearchString(filters.search, hay).matches) return false;
+  if (!options?.skipSearchFilter && filters.search.trim()) {
+    const hay = haystackById.get(row.id) ?? magazzinoRowSearchHaystack(row, listePrefs);
+    if (!matchSearchString(filters.search, hay).matches) return false;
+  }
   const { search: _s, soloSottoScorta: _sc, nascondiScortaZero: _sz, ...advanced } = filters;
   return magazzinoRowMatchesAdvancedFilters(row, advanced, listePrefs);
 }
 
-export { magazzinoRowMatchesGlobalSearch };
+export { magazzinoRowMatchesGlobalSearch, magazzinoRowSearchScore } from "@/lib/magazzino/magazzino-list-ui-filters";

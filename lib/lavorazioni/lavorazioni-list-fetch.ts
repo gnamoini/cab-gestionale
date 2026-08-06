@@ -51,9 +51,7 @@ type LavorazioniFilterQuery = {
   order(column: string, opts: { ascending: boolean }): LavorazioniFilterQuery;
 };
 
-function escapeIlikeToken(raw: string): string {
-  return raw.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
-}
+import { applyServerSearchDocumentFilter } from "@/lib/search/server-search-filter";
 
 function endOfDayIso(dateDay: string): string {
   const t = dateDay.trim();
@@ -158,8 +156,7 @@ export function applyLavorazioniListFilters<TQuery extends LavorazioniFilterQuer
   if (filters.priorita) query = query.eq("priorita", filters.priorita);
   const search = filters.search?.trim();
   if (search) {
-    const token = escapeIlikeToken(search);
-    query = query.or(`note.ilike.%${token}%,codice.ilike.%${token}%`);
+    query = applyServerSearchDocumentFilter(query, search);
   }
   if (filters.data_ingresso_da?.trim()) query = query.gte("data_ingresso", filters.data_ingresso_da.trim());
   if (filters.data_ingresso_a?.trim()) query = query.lte("data_ingresso", endOfDayIso(filters.data_ingresso_a));

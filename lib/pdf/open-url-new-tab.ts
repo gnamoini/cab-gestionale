@@ -1,51 +1,27 @@
 import { pushGestionaleToast } from "@/context/toast-context";
-
-/**
- * Apre URL in una nuova scheda senza passare `noopener,noreferrer` come *terzo argomento*
- * di `window.open`: in Chromium ciò può far restituire `null` anche quando la scheda si apre,
- * generando falsi positivi su “popup bloccati”.
- *
- * Dopo l’apertura imposta `opener = null` sul figlio quando possibile.
- */
+import {
+  openBlankPopupWindow,
+  openSafePopup,
+  tryOpenViaTemporaryAnchor,
+  type DeferredPopupHandle,
+  type PopupGuardContext,
+} from "@/lib/browser/popup-guard";
 
 const DEFAULT_BLOCKED_MSG =
   "Impossibile aprire il file in una nuova scheda. Consenti i pop-up per questo sito oppure verifica che il documento sia valido.";
 
-function scheduleBlobUrlRevoke(url: string, revokeAfterMs?: number): void {
-  if (revokeAfterMs == null || revokeAfterMs <= 0 || !url.startsWith("blob:")) return;
-  window.setTimeout(() => {
-    try {
-      URL.revokeObjectURL(url);
-    } catch {
-      /* ignore */
-    }
-  }, revokeAfterMs);
-}
+export type OpenUrlInNewTabOptions = {
+  revokeBlobUrlAfterMs?: number;
+  blockedMessage?: string;
+  invalidMessage?: string;
+  downloadFileName?: string;
+  context?: PopupGuardContext;
+  label?: string;
+  /** Handle pre-aperto sul click utente (flussi async). */
+  deferredHandle?: DeferredPopupHandle | null;
+};
 
-function tryOpenViaTemporaryAnchor(url: string, downloadFileName?: string): void {
-  if (typeof document === "undefined") return;
-  const a = document.createElement("a");
-  a.href = url;
-  a.target = "_blank";
-  a.rel = "noopener noreferrer";
-  if (downloadFileName?.trim()) {
-    a.download = downloadFileName.trim();
-  }
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
-export function openUrlInNewTab(
-  url: string,
-  options?: {
-    revokeBlobUrlAfterMs?: number;
-    blockedMessage?: string;
-    invalidMessage?: string;
-    downloadFileName?: string;
-  },
-): boolean {
+export function openUrlInNewTab(url: string, options?: OpenUrlInNewTabOptions): boolean {
   if (typeof window === "undefined") return false;
 
   const trimmed = url?.trim() ?? "";
@@ -55,50 +31,57 @@ export function openUrlInNewTab(
     return false;
   }
 
+  const context = options?.context ?? "pdf";
   const revokeAfter = options?.revokeBlobUrlAfterMs;
   const downloadFileName = options?.downloadFileName?.trim();
 
-  const scheduleRevoke = () => scheduleBlobUrlRevoke(trimmed, revokeAfter);
-
-  const win = window.open(trimmed, "_blank");
-  if (win) {
-    try {
-      win.opener = null;
-    } catch {
-      /* cross-origin / policy */
-    }
-    scheduleRevoke();
-    return true;
+  if (options?.deferredHandle?.isAlive()) {
+    const result = options.deferredHandle.navigate(trimmed, { revokeBlobUrlAfterMs: revokeAfter });
+    return result.status === "opened";
   }
 
-  /**
-   * In Chromium `window.open` può restituire `null` anche con scheda aperta: niente fallback
-   * `<a target=_blank>` (genererebbe una seconda scheda). Fallback solo per download esplicito.
-   */
+  const result = openSafePopup({
+    url: trimmed,
+    context,
+    label: options?.label,
+    revokeBlobUrlAfterMs: revokeAfter,
+    phase: "sync",
+  });
+
+  if (result.status === "opened") return true;
+
   if (downloadFileName) {
     try {
       tryOpenViaTemporaryAnchor(trimmed, downloadFileName);
+      return true;
     } catch {
       /* ignore */
     }
   }
 
-  scheduleRevoke();
-  return true;
+  if (result.status === "blocked" && options?.blockedMessage) {
+    pushGestionaleToast(options.blockedMessage, "warning", 5200);
+  }
+
+  return false;
 }
 
-/** Finestra vuota per `document.write` (stampa / HTML inline). Qui `null` indica davvero blocco popup. */
-export function openBlankWindowForDocumentWrite(blockedMessage?: string): Window | null {
+/** Finestra vuota per `document.write` (stampa / HTML inline). */
+export function openBlankWindowForDocumentWrite(
+  blockedMessage?: string,
+  options?: { context?: PopupGuardContext; label?: string },
+): Window | null {
   if (typeof window === "undefined") return null;
-  const w = window.open("about:blank", "_blank");
-  if (!w) {
+
+  const popup = openBlankPopupWindow({
+    context: options?.context ?? "print",
+    label: options?.label ?? "stampa",
+  });
+
+  if (!popup) {
     pushGestionaleToast(blockedMessage ?? DEFAULT_BLOCKED_MSG, "warning", 5200);
     return null;
   }
-  try {
-    w.opener = null;
-  } catch {
-    /* ignore */
-  }
-  return w;
+
+  return popup;
 }

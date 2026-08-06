@@ -178,9 +178,11 @@ import {
   saveMagazzinoAdvancedFiltersPersisted,
   type MagazzinoAdvancedFilters,
 } from "@/lib/magazzino/magazzino-advanced-filters";
+import { isSearchRelevanceSortActive, compareSearchRelevance } from "@/lib/search/sort-by-relevance";
 import {
   buildMagazzinoHaystackIndex,
   magazzinoRowMatchesPageFiltersIndexed,
+  magazzinoRowSearchScore,
 } from "@/lib/magazzino/magazzino-filter-search-index";
 import {
   buildMagazzinoSearchSuggestions,
@@ -210,6 +212,7 @@ import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-el
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useMagazzinoLogFeed } from "@/lib/magazzino/use-magazzino-log-feed";
+import { enrichRicambiMagazzinoUltimaModifica } from "@/lib/magazzino/magazzino-ultima-modifica";
 import { useMagazzinoListDerived } from "@/lib/magazzino/use-magazzino-list-derived";
 import { useMagazzinoSecondaryQueryGate } from "@/lib/magazzino/use-magazzino-secondary-query-gate";
 import { formatCompatMezziArrayForLog } from "@/lib/gestionale-log/log-summary";
@@ -691,6 +694,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   const {
     feed: magLogFeed,
     timelineByRicambio: magLogTimelineByRicambio,
+    ultimaModificaByRicambioId,
     isLoading: magLogFeedLoading,
     isLocalId: isMagLogLocalId,
   } = useMagazzinoLogFeed({
@@ -935,9 +939,14 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
 
   const patchProdotti = useCallback(
     (updater: (prev: RicambioMagazzino[]) => RicambioMagazzino[]) => {
-      patchMagazzinoListCache(queryClient, updater, authorName, mezziListe);
+      patchMagazzinoListCache(queryClient, updater, mezziListe);
     },
-    [queryClient, authorName, mezziListe],
+    [queryClient, mezziListe],
+  );
+
+  const prodottiPerTabella = useMemo(
+    () => enrichRicambiMagazzinoUltimaModifica(prodotti, ultimaModificaByRicambioId),
+    [prodotti, ultimaModificaByRicambioId],
   );
 
   useEffect(() => {
@@ -1152,13 +1161,23 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     [prodotti, mezziListe],
   );
 
+  const serverSearchActive = usesServerSearch("magazzino") && searchApplied.trim().length > 0;
+
   const filteredSorted = useMemo(() => {
     const orderMap = orderMapRef.current!;
-    let rows = prodotti.filter((p) =>
-      magazzinoRowMatchesPageFiltersIndexed(p, pageFilters, haystackIndex, mezziListe),
+    let rows = prodottiPerTabella.filter((p) =>
+      magazzinoRowMatchesPageFiltersIndexed(p, pageFilters, haystackIndex, mezziListe, {
+        skipSearchFilter: serverSearchActive,
+      }),
     );
 
     rows = [...rows].sort((a, b) => {
+      if (isSearchRelevanceSortActive(searchApplied, sortColumn)) {
+        const rel = compareSearchRelevance(a, b, searchApplied, (row, q) =>
+          magazzinoRowSearchScore(row, q, mezziListe),
+        );
+        if (rel !== 0) return rel;
+      }
       if (sortPhase === "natural" || sortColumn === null) {
         if (listSurface === "cards") {
           return compareMagazzinoMobileDefaultOrder(a, b, orderMap, mezziListe);
@@ -1171,7 +1190,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     });
 
     return rows;
-  }, [prodotti, pageFilters, sortColumn, sortPhase, consumoAvgById, mezziListe, haystackIndex, listSurface]);
+  }, [prodottiPerTabella, pageFilters, sortColumn, sortPhase, consumoAvgById, mezziListe, haystackIndex, listSurface, searchApplied, serverSearchActive]);
 
   filteredSortedRef.current = filteredSorted;
 
@@ -1336,7 +1355,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     ]);
   }
 
-  const detailRicambio = detail ? prodotti.find((p) => p.id === detail.id) : undefined;
+  const detailRicambio = detail ? prodottiPerTabella.find((p) => p.id === detail.id) : undefined;
 
   function openInfo(p: RicambioMagazzino) {
     setDetail({ id: p.id, mode: "info" });
@@ -1620,7 +1639,11 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
             </span>
           </td>
           <td className={gestionaleListTableTdAzioni}>
-            <div className={gestionaleListTableActionsGroupEnd}>
+            <div
+              className={`${gestionaleListTableActionsGroupEnd} min-w-0 max-w-full`}
+              role="group"
+              aria-label="Azioni ricambio"
+            >
               <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
                 <IconInfoMagazzino />
               </IconActionButton>

@@ -365,7 +365,7 @@ function MobileNavDrawer({
 
   return (
     <div
-      className={`fixed inset-0 ${dsZModalHigh} overscroll-none${lockedClass ? ` ${lockedClass}` : ""}`}
+      className={`fixed inset-x-0 top-[var(--cab-vv-offset-top,0px)] flex h-[var(--cab-vv-height,100dvh)] max-h-[var(--cab-vv-height,100dvh)] w-full ${dsZModalHigh} overscroll-none${lockedClass ? ` ${lockedClass}` : ""}`}
       role="presentation"
     >
       <div

@@ -17,6 +17,7 @@ import { extractPayloadFieldChanges } from "@/lib/gestionale-log/log-summary";
 import { isLogReverted } from "@/lib/gestionale-log/undo";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
+import type { SchedaIngressoStringKey } from "@/lib/schede/scheda-ingresso-typed-fields";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
@@ -53,7 +54,7 @@ type StatoTimelineStep = {
   statoId: string;
 };
 
-const INGRESSO_LABELS: { key: keyof SchedaIngressoFields; label: string; multiline?: boolean }[] = [
+const INGRESSO_LABELS: { key: SchedaIngressoStringKey; label: string; multiline?: boolean }[] = [
   { key: "dataIngresso", label: "Data ingresso" },
   { key: "cliente", label: "Cliente" },
   { key: "cantiere", label: "Cantiere" },

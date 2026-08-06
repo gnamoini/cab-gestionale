@@ -9,6 +9,7 @@ import {
 } from "@/lib/ui/design-system";
 import { layoutPageRoot, layoutResponsiveCoreScope } from "@/lib/ui/responsive-layout-core";
 import { gestionaleShellContentGutterClass } from "@/lib/ui/gestionale-shell-layout";
+import { cabIosSafeTopPad } from "@/lib/ui/ios-mobile-tokens";
 import { dsGestionaleScrollEndPadFade } from "@/lib/ui/scroll-system";
 import type { GestionaleShellTier } from "@/lib/ui/gestionale-shell-layout";
 import type { RefObject } from "react";
@@ -76,7 +77,9 @@ function AppShellMainInner({
       >
         <main
           ref={mainScrollRef}
-          className={`gestionale-scroll-y gestionale-scrollbar relative w-full ${layoutResponsiveCoreScope} min-h-0 min-w-0 flex-1 pt-0 ${
+          className={`gestionale-scroll-y gestionale-scrollbar relative w-full ${layoutResponsiveCoreScope} min-h-0 min-w-0 flex-1 ${
+            isCompactShell ? cabIosSafeTopPad : "pt-0"
+          } ${
             isCompactShell
               ? "pb-[max(0.75rem,env(safe-area-inset-bottom))]"
               : "pb-[max(1rem,env(safe-area-inset-bottom))]"

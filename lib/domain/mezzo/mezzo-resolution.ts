@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { IngressoMezzoMatchReason } from "@/lib/schede/scheda-ingresso-mezzo-match";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 
 export type MezzoIngressoIdent = {
@@ -25,9 +26,17 @@ export type MezzoResolutionResult =
       source: "explicit" | "ident";
     }
   | {
+      status: "needs_confirm";
+      candidates: MezzoCandidate[];
+      identUsed?: MezzoIngressoIdent;
+      topCandidateId?: string;
+      matchReason?: IngressoMezzoMatchReason;
+    }
+  | {
       status: "ambiguous";
       candidates: MezzoCandidate[];
       identUsed?: MezzoIngressoIdent;
+      matchReason?: IngressoMezzoMatchReason;
     }
   | {
       status: "not_found";

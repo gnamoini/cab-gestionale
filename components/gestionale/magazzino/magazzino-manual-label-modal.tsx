@@ -11,7 +11,8 @@ import {
   MANUAL_LABEL_PRESET_IDS,
   labelPresetOptionLabel,
 } from "@/lib/inventory-labels";
-import { normalizePdfDownloadFileName, openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
+import { normalizePdfDownloadFileName, openDeferredPopup, openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
+import { isDeferredPopupBlocked } from "@/lib/browser/popup-guard";
 import { dsInput, dsLabel } from "@/lib/ui/design-system";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -107,11 +108,21 @@ export function MagazzinoManualLabelModal({ onClose }: { onClose: () => void }) 
 
   async function handleOpenPdf() {
     if (!canRender) return;
+    const deferredResult = openDeferredPopup({ context: "etichette", label: "PDF etichetta" });
+    if (isDeferredPopupBlocked(deferredResult)) return;
+    const deferred = deferredResult;
+
     setOpeningPdf(true);
     try {
       const blob = await postRender("pdf");
-      await openPdfBlobInNewTab(blob, pdfFileName(), { showLoadingFeedback: false });
+      await openPdfBlobInNewTab(blob, pdfFileName(), {
+        showLoadingFeedback: false,
+        context: "etichette",
+        label: "PDF etichetta",
+        deferredHandle: deferred,
+      });
     } catch {
+      deferred.close();
       gestToast.error("Impossibile aprire il PDF etichetta.");
     } finally {
       setOpeningPdf(false);

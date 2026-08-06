@@ -27,6 +27,7 @@ import { prefetchMezziTagliandiQueries } from "@/lib/mezzi/prefetch-mezzi-taglia
 import { useMaintenanceEngineV2Enabled } from "@/lib/officina/use-maintenance-engine-v2-enabled";
 import { useTagliandiOverviewQuery } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useMezziListDerived } from "@/lib/mezzi/use-mezzi-list-derived";
+import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
 import {
   buildUltimaModificaByMezzoIdFromLogs,
   resolveMezzoUltimaModificaInfo,
@@ -129,8 +130,6 @@ const MezziLogDrawer = dynamic(
   { ssr: false },
 );
 
-const MEZZI_SEARCH_DEBOUNCE_MS = 300;
-
 export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: GestionaleListPageProps) {
   useGestionaleSyncScope({
     scopeId: "mezzi-view",
@@ -154,12 +153,12 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
   const [tagliandiStatoFilter, setTagliandiStatoFilter] = useState<ReturnType<typeof parseTagliandoStatoFilter>>("");
   const isAnagrafica = pageView === "anagrafica";
 
-  const [search, setSearch] = useState("");
-  const [searchApplied, setSearchApplied] = useState("");
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearchApplied(search.trim()), MEZZI_SEARCH_DEBOUNCE_MS);
-    return () => window.clearTimeout(t);
-  }, [search]);
+  const {
+    searchInput: search,
+    setSearchInput: setSearch,
+    searchApplied,
+    clearSearch,
+  } = useGestionaleListSearch({ domain: "mezzi" });
   const [filtroCliente, setFiltroCliente] = useState("");
   const [filtroUtilizzatore, setFiltroUtilizzatore] = useState("");
   const [filtroCantiere, setFiltroCantiere] = useState("");

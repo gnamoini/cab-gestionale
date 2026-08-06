@@ -39,6 +39,16 @@ export const RuntimeEvents = {
   perfSlow: "perf.slow",
   deprecatedUsage: "deprecated.usage",
   stockMerge: "stock.merge",
+  popupOpenSuccess: "popup.open.success",
+  popupOpenBlocked: "popup.open.blocked",
+  popupOpenRetry: "popup.open.retry",
+  popupOpenRetrySuccess: "popup.open.retry.success",
+  popupPreopenSuccess: "popup.preopen.success",
+  popupPreopenFailed: "popup.preopen.failed",
+  popupSessionExpired: "popup.session.expired",
+  pdfGenerationFailed: "pdf.generation.failed",
+  pdfNetworkError: "pdf.network.error",
+  operationalResumeCheck: "operational.resume.check",
 } as const;
 
 export type RuntimeEventName = (typeof RuntimeEvents)[keyof typeof RuntimeEvents];
@@ -74,6 +84,16 @@ const EVENT_LEVEL: Record<string, "debug" | "info" | "warn" | "error"> = {
   [RuntimeEvents.perfSlow]: "warn",
   [RuntimeEvents.deprecatedUsage]: "info",
   [RuntimeEvents.stockMerge]: "debug",
+  [RuntimeEvents.popupOpenSuccess]: "info",
+  [RuntimeEvents.popupOpenBlocked]: "warn",
+  [RuntimeEvents.popupOpenRetry]: "info",
+  [RuntimeEvents.popupOpenRetrySuccess]: "info",
+  [RuntimeEvents.popupPreopenSuccess]: "info",
+  [RuntimeEvents.popupPreopenFailed]: "warn",
+  [RuntimeEvents.popupSessionExpired]: "debug",
+  [RuntimeEvents.pdfGenerationFailed]: "warn",
+  [RuntimeEvents.pdfNetworkError]: "warn",
+  [RuntimeEvents.operationalResumeCheck]: "debug",
 };
 
 const EVENT_OPERATION: Partial<Record<RuntimeEventName, ObsOperation>> = {

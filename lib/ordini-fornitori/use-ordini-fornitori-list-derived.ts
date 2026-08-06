@@ -2,10 +2,10 @@
 
 import { useMemo } from "react";
 import {
-  ordineFornitoreListDestinazioneTipo,
-  ordineFornitoreListOggetto,
+  ordineFornitoreSearchDocument,
   type OrdiniFornitoriPageFilters,
 } from "@/lib/ordini-fornitori/ordine-fornitore-list-ui-filters";
+import { matchSearchString } from "@/lib/search/match";
 import type { OrdineFornitoreRecord } from "@/lib/ordini-fornitori/types";
 
 export type OrdiniFornitoriListDerived = {
@@ -15,16 +15,7 @@ export type OrdiniFornitoriListDerived = {
 };
 
 function buildSearchHaystack(o: OrdineFornitoreRecord): string {
-  return [
-    o.numero,
-    o.fornitoreLabel,
-    ordineFornitoreListOggetto(o),
-    ordineFornitoreListDestinazioneTipo(o),
-    o.note,
-    ...o.righe.map((r) => `${r.codice} ${r.descrizione}`),
-  ]
-    .join(" ")
-    .toLowerCase();
+  return ordineFornitoreSearchDocument(o);
 }
 
 /** Single-pass scan su `records` — haystack ricerca, fornitori, suggestion pool. */
@@ -59,8 +50,8 @@ export function ordineFornitoreRowMatchesPageFiltersDerived(
   f: OrdiniFornitoriPageFilters,
   searchHaystack: string,
 ): boolean {
-  const needle = f.search.trim().toLowerCase();
-  if (needle && !searchHaystack.includes(needle)) return false;
+  const needle = f.search.trim();
+  if (needle && !matchSearchString(needle, searchHaystack).matches) return false;
   if (f.fornitore.trim() && o.fornitoreLabel.trim() !== f.fornitore.trim()) return false;
   if (f.status && o.status !== f.status) return false;
   if (f.dateFrom && o.dataOrdine < f.dateFrom) return false;

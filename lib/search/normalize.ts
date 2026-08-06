@@ -1,9 +1,15 @@
 import {
+  collapseSearchKey,
+  formatFieldSearchToken,
+  type SearchFieldMarker,
+} from "@/lib/search/field-token";
+import {
   normalizeEntityString,
   type NormalizeEntityStringOptions,
 } from "@/lib/validation/global-entity-validation";
 
-export type { NormalizeEntityStringOptions };
+export type { NormalizeEntityStringOptions, SearchFieldMarker };
+export { collapseSearchKey, formatFieldSearchToken };
 
 /** Normalizza testo ricerca — wrap SSOT global-entity-validation. */
 export function normalizeSearchText(value: string, options?: NormalizeEntityStringOptions): string {

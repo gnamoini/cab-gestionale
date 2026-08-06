@@ -27,7 +27,7 @@ assert.match(legacyRoute, /PDF_PREVIEW_API_PATH/);
 const openPreview = read("lib/pdf/open-pdf-blob-preview.ts");
 assert.match(openPreview, /PDF_PREVIEW_API_PATH/);
 assert.match(openPreview, /Apertura PDF in corso/);
-assert.match(openPreview, /Apertura locale/);
+assert.match(openPreview, /openDeferredPopup/);
 
 const handler = read("lib/pdf/pdf-preview-handler.ts");
 assert.match(handler, /PDF_MAGIC/);

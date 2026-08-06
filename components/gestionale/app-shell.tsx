@@ -16,7 +16,7 @@ import { AppShellMain } from "@/components/gestionale/app-shell-main";
 import { isNavTargetCurrent } from "@/src/lib/navigation/route-transition";
 import { useGestionaleScrollEnd } from "@/lib/ui/use-gestionale-scroll-end";
 import { healBodyScrollLockState } from "@/lib/ui/body-scroll-lock-manager";
-import { cabAppViewportFillClass } from "@/lib/ui/viewport-fill-sync";
+import { cabAppViewportFillClass, syncAppViewportFill } from "@/lib/ui/viewport-fill-sync";
 import { isGestionaleOverlayActive, useSidebarHoverExpand } from "@/lib/ui/use-sidebar-collapsed";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { useSwipeFromEdgeToOpen } from "@/lib/ui/use-swipe-from-edge-to-open";
@@ -77,6 +77,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useLayoutEffect(() => {
     healBodyScrollLockState("app-shell-mount");
+    syncAppViewportFill();
   }, []);
 
   useEffect(() => {

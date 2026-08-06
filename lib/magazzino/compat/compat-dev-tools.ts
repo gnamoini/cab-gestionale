@@ -53,7 +53,6 @@ export function registerCompatDevTools(opts: CompatDevToolsOpts): () => void {
     patchMagazzinoListCache(
       queryClient,
       () => results.map((r) => r.ricambio),
-      "Sistema",
       liste,
     );
     console.info(`[compat-dev-tools] repaired ${repaired}/${results.length} in-memory`);

@@ -8,6 +8,10 @@ import {
   resolveServerThemeMode,
 } from "@/lib/theme/cab-theme-storage";
 import {
+  CAB_APP_BOOT_CRITICAL_STYLE,
+  CAB_APP_BOOT_INLINE_SCRIPT,
+} from "@/lib/theme/app-boot-inline";
+import {
   CAB_THEME_BOOT_INLINE_SCRIPT,
   CAB_THEME_CRITICAL_INLINE_STYLE,
 } from "@/lib/theme/theme-boot-inline-script";
@@ -58,6 +62,10 @@ export default async function RootLayout({
           id="cab-theme-critical"
           dangerouslySetInnerHTML={{ __html: CAB_THEME_CRITICAL_INLINE_STYLE }}
         />
+        <style
+          id="cab-app-boot-critical"
+          dangerouslySetInnerHTML={{ __html: CAB_APP_BOOT_CRITICAL_STYLE }}
+        />
         <Script
           id="cab-theme-boot"
           strategy="beforeInteractive"
@@ -67,6 +75,11 @@ export default async function RootLayout({
           id="cab-branding-boot"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: CAB_BRANDING_BOOT_INLINE_SCRIPT }}
+        />
+        <Script
+          id="cab-app-boot"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: CAB_APP_BOOT_INLINE_SCRIPT }}
         />
         {process.env.NODE_ENV === "development" ? (
           <>
@@ -86,6 +99,18 @@ export default async function RootLayout({
         suppressHydrationWarning
         className="gestionale-scrollbar flex h-[var(--cab-app-height,100dvh)] min-h-[var(--cab-app-height,100dvh)] w-full min-w-0 max-w-full flex-col overflow-x-hidden bg-[var(--cab-bg-app)] font-sans antialiased"
       >
+        <div
+          id="cab-app-boot"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+          suppressHydrationWarning
+        >
+          {/* ponytail: src statico pre-React — logo senza next/image per primo paint immediato */}
+          <img src="/cab-logo.png" alt="C.A.B." width={196} height={56} />
+          <div className="cab-app-boot-spinner" aria-hidden="true" />
+          <p id="cab-app-boot-msg">Avvio del gestionale...</p>
+        </div>
         <AppProviders initialAuthSnapshot={initialAuthSnapshot}>{children}</AppProviders>
       </body>
     </html>

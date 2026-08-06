@@ -65,6 +65,9 @@ export async function GET(request: Request, context: RouteContext) {
         "Content-Disposition": `inline; filename="${result.fileName}"`,
         "X-Label-Cache": result.cacheStatus,
         "X-Label-Hash": result.hash,
+        "X-Label-Generator-Version": result.generatorVersion,
+        "X-Label-Template-Version": result.templateVersion,
+        "X-Label-Preset": result.preset,
       },
     });
   } catch (e) {

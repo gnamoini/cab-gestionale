@@ -13,6 +13,7 @@ export const NO_DIRTY_SIGNAL_TABLES = new Set([
 ]);
 
 const ACK_DEBOUNCE_MS = 400;
+const VERSION_BASELINE_STORAGE_KEY = "cab-operational-versions-v1";
 
 let lastTableVersions: OperationalTableVersions | null = null;
 const pendingBaselineAck = new Set<string>();
@@ -42,6 +43,35 @@ function mergeTableVersionsMonotone(
     base[table] = Math.max(base[table] ?? 0, fetchedVersion);
   }
   lastTableVersions = base;
+  persistOperationalVersionBaseline();
+}
+
+/** Cache ottimistica — RPC server è source of truth. */
+export function persistOperationalVersionBaseline(): void {
+  if (typeof sessionStorage === "undefined" || !lastTableVersions) return;
+  try {
+    sessionStorage.setItem(VERSION_BASELINE_STORAGE_KEY, JSON.stringify(lastTableVersions));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+/** Seed in-memory al boot; non genera dirty senza RPC successiva. */
+export function restoreOperationalVersionBaselineFromSession(): void {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    const raw = sessionStorage.getItem(VERSION_BASELINE_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = normalizeTableVersions(JSON.parse(raw));
+    if (Object.keys(parsed).length === 0) return;
+    lastTableVersions = parsed;
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getOperationalVersionBaseline(): OperationalTableVersions | null {
+  return lastTableVersions;
 }
 
 async function resolveFetchOperationalTableVersions(): Promise<OperationalTableVersions> {
@@ -112,10 +142,11 @@ export function diffOperationalTableVersions(
   next: OperationalTableVersions,
 ): string[] {
   if (!previous) return [];
-  const keys = new Set([...Object.keys(previous), ...Object.keys(next)]);
   const drifted: string[] = [];
-  for (const table of keys) {
-    if ((previous[table] ?? 0) !== (next[table] ?? 0)) drifted.push(table);
+  for (const table of Object.keys(next)) {
+    if ((next[table] ?? 0) > (previous[table] ?? 0)) {
+      drifted.push(table);
+    }
   }
   return drifted;
 }
@@ -124,16 +155,40 @@ export function filterDirtySignalTables(tables: readonly string[]): string[] {
   return tables.filter((table) => !NO_DIRTY_SIGNAL_TABLES.has(table));
 }
 
-/** Poll versione: aggiorna baseline e restituisce tabelle con drift reale (vuoto al primo poll). */
-export async function consumeOperationalVersionPoll(): Promise<string[]> {
+export type ConsumeOperationalVersionPollOptions = {
+  detectDrift?: boolean;
+};
+
+/** Poll versione: aggiorna baseline; drift solo se `detectDrift` (default true). */
+export async function consumeOperationalVersionPoll(
+  opts?: ConsumeOperationalVersionPollOptions,
+): Promise<string[]> {
+  const detectDrift = opts?.detectDrift !== false;
+  const previous = lastTableVersions;
   const next = await resolveFetchOperationalTableVersions();
-  const drifted = diffOperationalTableVersions(lastTableVersions, next);
+  const drifted = detectDrift ? diffOperationalTableVersions(previous, next) : [];
   lastTableVersions = next;
+  persistOperationalVersionBaseline();
   return filterDirtySignalTables(drifted);
 }
 
+/** Re-align baseline dopo reconnect realtime — nessun dirty. */
+export async function realignOperationalVersionBaseline(): Promise<void> {
+  const next = await resolveFetchOperationalTableVersions();
+  lastTableVersions = next;
+  persistOperationalVersionBaseline();
+}
+
+/** @deprecated Test only — preferire realignOperationalVersionBaseline. */
 export function resetOperationalVersionBaseline(): void {
   lastTableVersions = null;
+  if (typeof sessionStorage !== "undefined") {
+    try {
+      sessionStorage.removeItem(VERSION_BASELINE_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 /** @deprecated Usare consumeOperationalVersionPoll — mantenuto per test/helper. */
@@ -157,6 +212,13 @@ export function resetOperationalVersionStateForTests(
   }
   ackInFlight = null;
   fetchVersionsOverride = null;
+  if (typeof sessionStorage !== "undefined") {
+    try {
+      sessionStorage.removeItem(VERSION_BASELINE_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 /** Test: mock fetch versioni RPC. */

@@ -51,12 +51,12 @@ export const GlobalMultiSelect = memo(function GlobalMultiSelect({
   const filteredOptions = useMemo(() => options.filter((o) => !selectedSet.has(o)), [options, selectedSet]);
 
   const addValue = useCallback(
-    async (v: string) => {
+    async (v: string): Promise<string | null> => {
       const clean = v.trim();
-      if (!clean) return;
+      if (!clean) return null;
       if (selectedSet.has(clean)) {
         setDraft("");
-        return;
+        return null;
       }
 
       const inOptions = options.some((o) => o.trim().toLowerCase() === clean.toLowerCase());
@@ -64,21 +64,22 @@ export const GlobalMultiSelect = memo(function GlobalMultiSelect({
       if (!inOptions && onAddToList) {
         try {
           const added = await onAddToList(clean);
-          if (!added) return;
+          if (!added) return null;
           canonical = added;
         } catch {
-          return;
+          return null;
         }
       } else if (!inOptions && !allowAdd) {
-        return;
+        return null;
       }
 
       if (selectedSet.has(canonical)) {
         setDraft("");
-        return;
+        return null;
       }
       onAdd(canonical);
       setDraft("");
+      return canonical;
     },
     [allowAdd, onAdd, onAddToList, options, selectedSet],
   );
@@ -91,9 +92,7 @@ export const GlobalMultiSelect = memo(function GlobalMultiSelect({
   );
 
   const handleAddToListCommit = useCallback(
-    (v: string) => {
-      void addValue(v);
-    },
+    (v: string) => addValue(v),
     [addValue],
   );
 

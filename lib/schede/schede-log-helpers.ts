@@ -12,6 +12,8 @@ export const SCHEDA_RICAMBI_LABEL = "Scheda Ricambi";
 const INGRESSO_LABELS: Record<keyof SchedaIngressoFields, string> = {
   targetType: "Target intervento",
   attrezzaturaId: "Attrezzatura",
+  interventoSuAttrezzatura: "Intervento su attrezzatura",
+  interventoSuTelaio: "Intervento su telaio",
   dataIngresso: "Data ingresso",
   cliente: "Cliente",
   cantiere: "Cantiere",
@@ -55,7 +57,19 @@ export function diffSchedaIngressoCampi(
       });
       return;
     }
-    out.push({ campo: INGRESSO_LABELS[k], prima: a || "—", dopo: b || "—" });
+    if (k === "interventoSuAttrezzatura" || k === "interventoSuTelaio") {
+      out.push({
+        campo: INGRESSO_LABELS[k],
+        prima: prima[k] ? "Sì" : "No",
+        dopo: dopo[k] ? "Sì" : "No",
+      });
+      return;
+    }
+    out.push({
+      campo: INGRESSO_LABELS[k],
+      prima: String(a ?? "").trim() || "—",
+      dopo: String(b ?? "").trim() || "—",
+    });
   });
   return out;
 }

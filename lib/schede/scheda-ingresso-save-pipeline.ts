@@ -9,6 +9,7 @@ import {
 } from "@/lib/schede/scheda-ingresso-save-pipeline-log";
 import type { SchedaIngressoFields } from "@/types/schede";
 import type { SchedaIngressoSaveGateResult } from "@/src/hooks/use-scheda-ingresso-save-gate";
+import type { SchedaIngressoMezzoLinkGateResult } from "@/src/hooks/use-scheda-ingresso-mezzo-link-gate";
 
 export type IngressoLavorazioneGestionePatch = {
   stato?: StatoLavorazione;
@@ -23,6 +24,7 @@ export type IngressoSaveCommitInput = {
   mezziCatalogFrozen: readonly MezzoGestito[];
   runId: number;
   lavorazioneGestione?: IngressoLavorazioneGestionePatch;
+  mezzoLinkMeta?: import("@/lib/schede/scheda-ingresso-mezzo-match").SchedaIngressoMezzoLinkMeta;
 };
 
 export type IngressoSaveCommitResult =
@@ -45,6 +47,7 @@ export type IngressoSavePipelineContext = {
     proceed: (fields: SchedaIngressoFields) => void | Promise<void>,
   ) => Promise<void>;
   gateSave: (fields: SchedaIngressoFields) => Promise<SchedaIngressoSaveGateResult>;
+  gateMezzoLink?: (fields: SchedaIngressoFields) => Promise<SchedaIngressoMezzoLinkGateResult>;
   commit: (input: IngressoSaveCommitInput) => Promise<IngressoSaveCommitResult>;
   onPendingChange?: (pending: boolean) => void;
 };
@@ -71,6 +74,7 @@ export async function runIngressoSavePipeline(
 
     await ctx.gateSubmit(ctx.fields, async (gatedFields) => {
       let mezzoUpdatePlan: MezzoUpdateFromSchedaPlan;
+      let mezzoLinkMeta: IngressoSaveCommitInput["mezzoLinkMeta"];
       try {
         logIngressoSavePipeline("mezzo_gate_start", { runId });
         mezzoUpdatePlan = await ctx.gateSave(gatedFields);
@@ -87,6 +91,19 @@ export async function runIngressoSavePipeline(
         throw err;
       }
 
+      if (ctx.gateMezzoLink) {
+        try {
+          const linkGate = await ctx.gateMezzoLink(gatedFields);
+          mezzoLinkMeta = linkGate.mezzoLinkMeta;
+        } catch (err) {
+          if (err instanceof Error && err.message === "MEZZO_LINK_CANCELLED") {
+            outcome = { ok: false, cancelled: true };
+            return;
+          }
+          throw err;
+        }
+      }
+
       logIngressoSavePipeline("commit_start", { runId });
       outcome = await ctx.commit({
         fields: gatedFields,
@@ -96,6 +113,7 @@ export async function runIngressoSavePipeline(
         lavorazioneGestione: ctx.lavorazioneGestione,
         mezziCatalogFrozen,
         runId,
+        mezzoLinkMeta,
       });
       logIngressoSavePipeline("commit_end", { runId, ok: outcome.ok });
     });

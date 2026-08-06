@@ -5,7 +5,7 @@ import {
 } from "@/lib/magazzino/magazzino-advanced-filters";
 import { readCompatLabelsForUi } from "@/lib/magazzino/compat/compat-read-guard";
 import { buildSearchDocumentMagazzino } from "@/lib/search/builders/build-search-document-magazzino";
-import { matchSearchString } from "@/lib/search/match";
+import { matchSearchString, scoreSearchDocument } from "@/lib/search/match";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { ricambioCodiceForUi } from "@/lib/magazzino/ricambio-codice";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
@@ -27,6 +27,14 @@ export function magazzinoRowMatchesGlobalSearch(
   listePrefs?: MezziListePrefs,
 ): boolean {
   return matchSearchString(query, magazzinoRowSearchHaystack(row, listePrefs)).matches;
+}
+
+export function magazzinoRowSearchScore(
+  row: RicambioMagazzino,
+  query: string,
+  listePrefs?: MezziListePrefs,
+): number {
+  return scoreSearchDocument(query, magazzinoRowSearchHaystack(row, listePrefs)).score;
 }
 
 export function magazzinoRowMatchesPageFilters(

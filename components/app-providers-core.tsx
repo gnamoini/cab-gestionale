@@ -4,7 +4,9 @@ import { AuthProvider } from "@/context/auth-context";
 import { GlobalLoadingProvider } from "@/context/global-loading-context";
 import { ThemeProvider } from "@/context/theme-context";
 import { ToastProvider } from "@/context/toast-context";
+import { PopupGuardProvider } from "@/context/popup-guard-context";
 import { GlobalLoadingQueryBridge } from "@/src/components/global-loading-query-bridge";
+import { AppBootScreenBridge } from "@/src/components/app-boot-screen-bridge";
 import { DeferredPwaBridges } from "@/src/components/deferred-pwa-bridges";
 import { QueryProvider } from "@/src/providers/query-provider";
 import { GestionaleClientErrorBoundary } from "@/components/observability/gestionale-client-error-boundary";
@@ -23,10 +25,12 @@ export function AppProvidersCore({
 }) {
   return (
     <ToastProvider>
+      <PopupGuardProvider>
       <QueryProvider>
         <GlobalLoadingProvider>
           <GlobalLoadingQueryBridge />
           <AuthProvider initialSnapshot={initialAuthSnapshot}>
+            <AppBootScreenBridge />
             <DeferredPwaBridges />
             <BodyScrollLockRouteGuard />
             <BodyScrollLockHealGuard />
@@ -38,6 +42,7 @@ export function AppProvidersCore({
           </AuthProvider>
         </GlobalLoadingProvider>
       </QueryProvider>
+      </PopupGuardProvider>
     </ToastProvider>
   );
 }

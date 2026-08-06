@@ -31,6 +31,7 @@ export function MagazzinoScortaAdjustActions({
   onDecrease,
   onIncrease,
   className = "",
+  embedded = false,
 }: {
   canAdjust: boolean;
   /** Modalità modifica attiva: − e + primari; altrimenti entrambi neutri. */
@@ -38,18 +39,16 @@ export function MagazzinoScortaAdjustActions({
   onDecrease: () => void;
   onIncrease: () => void;
   className?: string;
+  /** In tabella: niente wrapper gruppo (il parent ha già `gestionaleListTableActionsGroupEnd`). */
+  embedded?: boolean;
 }) {
   const readonlyTip = canAdjust ? undefined : READONLY_PERMISSION_HINT;
   const actionClass = modalitaModifica ? dsTableActionBtnPrimary : dsTableActionBtnSecondary;
   const decreaseLabel = modalitaModifica ? "Scarico" : "Rettifica −";
   const increaseLabel = modalitaModifica ? "Carico" : "Rettifica +";
 
-  return (
-    <div
-      className={`${gestionaleListTableActionsGroupEnd} shrink-0 flex-nowrap ${className}`.trim()}
-      role="group"
-      aria-label={modalitaModifica ? "Carico e scarico scorta" : "Rettifica inventario scorta"}
-    >
+  const buttons = (
+    <>
       <IconActionButton
         label={decreaseLabel}
         tooltipContent={readonlyTip}
@@ -68,6 +67,20 @@ export function MagazzinoScortaAdjustActions({
       >
         <IconPlusScorta />
       </IconActionButton>
+    </>
+  );
+
+  if (embedded) {
+    return <>{buttons}</>;
+  }
+
+  return (
+    <div
+      className={`${gestionaleListTableActionsGroupEnd} shrink-0 flex-nowrap ${className}`.trim()}
+      role="group"
+      aria-label={modalitaModifica ? "Carico e scarico scorta" : "Rettifica inventario scorta"}
+    >
+      {buttons}
     </div>
   );
 }

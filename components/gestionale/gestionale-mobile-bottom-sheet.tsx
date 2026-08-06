@@ -19,7 +19,7 @@ const sheetBackdropClass =
   "absolute inset-0 bg-[var(--cab-overlay)] backdrop-blur-[1px] touch-manipulation";
 
 const sheetPanelClass =
-  "relative z-[1] flex w-full max-h-[min(92%,100%)] min-h-0 touch-auto flex-col overflow-hidden rounded-t-[var(--ds-radius-xl)] border border-b-0 border-[color:var(--cab-border)] bg-[var(--cab-card)] pb-[env(safe-area-inset-bottom)] shadow-[var(--cab-shadow-lg)] animate-[gestionale-sheet-in_280ms_cubic-bezier(0.22,1,0.36,1)]";
+  "relative z-[1] flex w-full max-h-[min(92%,100%)] min-h-0 touch-auto flex-col overflow-hidden rounded-t-[var(--ds-radius-xl)] border border-b-0 border-[color:var(--cab-border)] bg-[var(--cab-card)] pb-[env(safe-area-inset-bottom)] shadow-[var(--cab-shadow-lg)] outline-none focus:outline-none animate-[gestionale-sheet-in_280ms_cubic-bezier(0.22,1,0.36,1)]";
 
 function shouldSkipSheetEscape(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -92,8 +92,7 @@ export function GestionaleMobileBottomSheet({
     if (!open) return;
     const id = window.requestAnimationFrame(() => {
       const root = panelRef?.current ?? innerPanelRef.current;
-      const btn = root?.querySelector('button[aria-label="Chiudi"]');
-      if (btn instanceof HTMLButtonElement) btn.focus({ preventScroll: true });
+      root?.focus({ preventScroll: true });
     });
     return () => window.cancelAnimationFrame(id);
   }, [open, panelRef]);
@@ -129,6 +128,7 @@ export function GestionaleMobileBottomSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        tabIndex={-1}
         className={sheetPanelClass}
         {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
         onMouseDown={(e) => e.stopPropagation()}

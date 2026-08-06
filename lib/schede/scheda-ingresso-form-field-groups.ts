@@ -33,6 +33,8 @@ export const SCHEDA_INGRESSO_INGRESSO_FIELD_KEYS = [
 
 export const SCHEDA_INGRESSO_INTERVENTO_FIELD_KEYS = [
   "descrizioneAnomalia",
+  "interventoSuAttrezzatura",
+  "interventoSuTelaio",
 ] as const satisfies readonly (keyof SchedaIngressoFields)[];
 
 export function schedaIngressoFieldsSliceEqual<K extends keyof SchedaIngressoFields>(

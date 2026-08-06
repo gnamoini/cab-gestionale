@@ -374,7 +374,7 @@ function buildTemplate(
 
   return {
     id,
-    version: options?.version ?? "1.7.0",
+    version: options?.version ?? "1.8.0",
     widthMm,
     heightMm,
     dpi: 300,
@@ -437,7 +437,7 @@ export const LABEL_TEMPLATE_REGISTRY: Record<string, LabelTemplateDefinition> = 
     const elements = computeA4PaginaInteraLayout(widthMm, heightMm, typography);
     return {
       id: "a4-pagina-intera",
-      version: "2.2.4",
+      version: "2.3.0",
       widthMm,
       heightMm,
       dpi: 300,

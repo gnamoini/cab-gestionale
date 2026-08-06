@@ -41,12 +41,11 @@ import { cabSyncEventFromPostgresChange } from "@/lib/sync/cab-sync-bus";
 import { logGestionaleSyncPipelineStage } from "@/lib/sync/gestionale-sync-pipeline-trace";
 import { dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
 import { tryMergeStockFromRealtime, isSelfOriginatedStockRealtimeEvent } from "@/lib/magazzino/stock-realtime-merge";
-import { recoverGestionaleDirtyOnResume } from "@/lib/sync/gestionale-dirty-resume";
 import { markDirtyForOperationalTables } from "@/lib/sync/gestionale-dirty-flush";
 import { isGestionaleDirtySyncEnabled } from "@/lib/feature-flags/gestionale-dirty-sync-flag";
 import {
   consumeOperationalVersionPoll,
-  resetOperationalVersionBaseline,
+  realignOperationalVersionBaseline,
 } from "@/lib/sync/operational-data-version";
 import {
   beginOperationalSessionWarmup,
@@ -390,7 +389,7 @@ export function GestionaleRealtimeBridge() {
               rtConnectedRef.current = true;
               reconnectExhausted = false;
               transport.activateRealtime();
-              resetOperationalVersionBaseline();
+              void realignOperationalVersionBaseline();
               if (wasPolling) {
                 wasPolling = false;
                 refetchActiveOperationalSnapshot(qc, { onlyActive: true });
@@ -441,7 +440,7 @@ export function GestionaleRealtimeBridge() {
           reconnectExhausted = false;
           rtConnectedRef.current = true;
           transport.activateRealtime();
-          resetOperationalVersionBaseline();
+          void realignOperationalVersionBaseline();
           if (wasPolling) {
             wasPolling = false;
             refetchActiveOperationalSnapshot(qc, { onlyActive: true });
@@ -475,13 +474,12 @@ export function GestionaleRealtimeBridge() {
 
     const onVisibilityResume = () => {
       if (document.visibilityState !== "visible") return;
-      if (isGestionaleDirtySyncEnabled()) {
-        void recoverGestionaleDirtyOnResume(qc);
-      }
       onResume();
     };
 
-    const onOnline = () => onResume();
+    const onOnline = () => {
+      onResume();
+    };
 
     if (typeof document !== "undefined") {
       document.addEventListener("visibilitychange", onVisibilityResume);

@@ -54,6 +54,22 @@ export function clearPersistedGestionaleDirty(): void {
   }
 }
 
+export function removePersistedGestionaleDirtyKeys(keys: readonly string[]): void {
+  if (keys.length === 0) return;
+  const existing = readPayload();
+  if (!existing) return;
+  const keySet = new Set(keys);
+  const next = existing.entries.filter(
+    (entry) => !keySet.has(`${entry.table}:${entry.entityId ?? "*"}`),
+  );
+  if (next.length === existing.entries.length) return;
+  if (next.length === 0) {
+    clearPersistedGestionaleDirty();
+    return;
+  }
+  writePayload(next, existing.lastSeenAt);
+}
+
 export function getPersistedGestionaleDirtyLastSeenAt(): number | null {
   return readPayload()?.lastSeenAt ?? null;
 }

@@ -7,17 +7,14 @@ import {
 } from "@/lib/document-capture/capture-field-mapper";
 import { emptySchedaIngressoFields } from "@/lib/domain/intervento-context/build-intervento-context";
 import { normalizeVehicleIdentifier } from "@/lib/schede/normalize-vehicle-identifier";
+import type { SchedaIngressoStringKey } from "@/lib/schede/scheda-ingresso-typed-fields";
 import type { SchedaIngressoFields, SchedaTipo } from "@/types/schede";
 
 const MAX_LAVORAZIONI_RIGHE = 24;
 const MAX_RICAMBI_RIGHE = 34;
 
 /** Stesse chiavi di capture-field-mapper — solo lettura ident ingresso senza overlay footer lav/ric. */
-type IngressoIdentStringKey = Exclude<
-  keyof SchedaIngressoFields,
-  "targetType" | "attrezzaturaId" | "richiedenteFirma" | "addettoFirma"
->;
-const INGRESSO_IDENT_KEY_MAP: Record<string, IngressoIdentStringKey> = {
+const INGRESSO_IDENT_KEY_MAP: Record<string, SchedaIngressoStringKey> = {
   cliente: "cliente",
   matricola: "matricola",
   attrezzatura_matricola: "matricola",

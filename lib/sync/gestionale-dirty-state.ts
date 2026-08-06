@@ -3,7 +3,9 @@ import {
   clearPersistedGestionaleDirty,
   persistGestionaleDirtyEntry,
   readPersistedGestionaleDirtyEntries,
+  removePersistedGestionaleDirtyKeys,
 } from "@/lib/sync/gestionale-dirty-persist";
+import type { OperationalTableVersions } from "@/lib/sync/operational-data-version";
 import type {
   GestionaleSyncDomain,
   GestionaleSyncScopeRegistration,
@@ -199,6 +201,50 @@ export function hydrateGestionaleDirtyFromSession(): void {
   for (const entry of readPersistedGestionaleDirtyEntries()) {
     markGestionaleDirty(entry);
   }
+}
+
+function isStaleVerifiedDirtyEntry(
+  entry: DirtyEntry,
+  serverVersions: OperationalTableVersions,
+  changedTables: readonly string[],
+): boolean {
+  if (changedTables.includes(entry.table)) return false;
+  if (entry.remoteVersion == null || entry.remoteVersion === "") return false;
+  const serverV = serverVersions[entry.table] ?? 0;
+  const entryV = Number(entry.remoteVersion);
+  if (!Number.isFinite(entryV)) return false;
+  return serverV <= entryV;
+}
+
+/** Rimuove solo dirty persistiti stale — conserva realtime senza remoteVersion. */
+export function clearStaleVerifiedDirtyEntries(opts: {
+  serverVersions: OperationalTableVersions;
+  changedTables: readonly string[];
+}): void {
+  const staleKeys: string[] = [];
+  for (const entry of snapshot.entries.values()) {
+    if (!isStaleVerifiedDirtyEntry(entry, opts.serverVersions, opts.changedTables)) continue;
+    staleKeys.push(dirtyEntryKey(entry.table, entry.entityId));
+  }
+  if (staleKeys.length === 0) return;
+
+  const nextEntries = new Map(snapshot.entries);
+  for (const key of staleKeys) {
+    nextEntries.delete(key);
+  }
+
+  snapshot = {
+    ...snapshot,
+    entries: nextEntries,
+    lastSeenAt: Date.now(),
+  };
+  if (nextEntries.size === 0) {
+    snapshot = { entries: new Map(), changeCount: 0, firstSeenAt: 0, lastSeenAt: 0 };
+    clearPersistedGestionaleDirty();
+  } else {
+    removePersistedGestionaleDirtyKeys(staleKeys);
+  }
+  notifyDirtyListeners();
 }
 
 export function resetGestionaleDirtyStateForTests(): void {

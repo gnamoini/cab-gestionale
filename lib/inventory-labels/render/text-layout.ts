@@ -4,7 +4,6 @@ import {
   formatLabelCodiceLine,
   formatLabelMarcaCombinedLine,
   formatLabelMarcaLine,
-  formatLabelMarcaSecondariaLine,
   shouldRenderMarcaSecondaria,
 } from "@/lib/inventory-labels/domain/label-display";
 import { resolveSupplierBlock } from "@/lib/inventory-labels/domain/label-suppliers";
@@ -28,8 +27,6 @@ import {
 
 const DESC_CODICE_EXTRA_GAP_MM = 0.4;
 const CODICE_SECONDARIO_EXTRA_GAP_MM = 0.3;
-const MARCA_SECONDARIA_EXTRA_GAP_MM = 0.25;
-const A4_CODICE_MARCA_SECONDARIA_GAP_MM = 6;
 
 export type PlacedLabelText = {
   field: keyof LabelPayload;
@@ -156,43 +153,14 @@ function supplierInkTopMm(blocks: StackBlock[], anchorBottomMm: number, dpi: num
   return top;
 }
 
-function buildA4TopBlocks(
+/** SSOT blocchi alto: marca (combinata se doppia) → descrizione → codici con suffisso marca. */
+function buildInventoryTopBlocks(
   payload: LabelPayload,
 ): Array<{ field: keyof LabelPayload; text: string; font?: "sans" | "mono" }> {
   const dualMarca = shouldRenderMarcaSecondaria(payload);
   const marcaLine = dualMarca
     ? formatLabelMarcaCombinedLine(payload.marca, payload.marcaSecondaria)
     : formatLabelMarcaLine(payload.marca);
-  const codiceLine = dualMarca
-    ? formatLabelCodiceCliente(fieldValue(payload, "codice"))
-    : formatLabelCodiceLine(fieldValue(payload, "codice"), payload.marca);
-  const codiceSecondarioLine = dualMarca
-    ? formatLabelCodiceCliente(fieldValue(payload, "codiceSecondario"))
-    : formatLabelCodiceLine(fieldValue(payload, "codiceSecondario"), payload.marcaSecondaria);
-
-  const blocks: Array<{ field: keyof LabelPayload; text: string; font?: "sans" | "mono" }> = [];
-  if (marcaLine) blocks.push({ field: "marca", text: marcaLine });
-  if (fieldValue(payload, "descrizione")) {
-    blocks.push({ field: "descrizione", text: labelDisplayCaps(fieldValue(payload, "descrizione")) });
-  }
-  if (codiceLine) blocks.push({ field: "codice", text: codiceLine, font: "mono" });
-  if (!dualMarca) {
-    const marcaSecondariaLine = formatLabelMarcaSecondariaLine(payload.marcaSecondaria);
-    if (marcaSecondariaLine) {
-      blocks.push({ field: "marcaSecondaria", text: marcaSecondariaLine });
-    }
-  }
-  if (codiceSecondarioLine) {
-    blocks.push({ field: "codiceSecondario", text: codiceSecondarioLine, font: "mono" });
-  }
-  return blocks;
-}
-
-function buildTopBlocks(payload: LabelPayload): Array<{ field: keyof LabelPayload; text: string; font?: "sans" | "mono" }> {
-  const marcaLine = formatLabelMarcaLine(payload.marca);
-  const marcaSecondariaLine = shouldRenderMarcaSecondaria(payload)
-    ? formatLabelMarcaSecondariaLine(payload.marcaSecondaria)
-    : "";
   const codiceLine = formatLabelCodiceLine(fieldValue(payload, "codice"), payload.marca);
   const codiceSecondarioLine = formatLabelCodiceLine(
     fieldValue(payload, "codiceSecondario"),
@@ -205,9 +173,6 @@ function buildTopBlocks(payload: LabelPayload): Array<{ field: keyof LabelPayloa
     blocks.push({ field: "descrizione", text: labelDisplayCaps(fieldValue(payload, "descrizione")) });
   }
   if (codiceLine) blocks.push({ field: "codice", text: codiceLine, font: "mono" });
-  if (marcaSecondariaLine) {
-    blocks.push({ field: "marcaSecondaria", text: marcaSecondariaLine });
-  }
   if (codiceSecondarioLine) {
     blocks.push({ field: "codiceSecondario", text: codiceSecondarioLine, font: "mono" });
   }
@@ -392,7 +357,7 @@ function resolveA4PaginaInteraTextLayout(
   const rowStepMm = lineMetrics(primaryPt, dpi).lineStepMm;
   const zoneH = Math.max(lineMetrics(primaryPt, dpi).lineStepMm, textBottom - textTop);
   const typographyBold = template.typography?.weight === "bold";
-  const topSpec = buildA4TopBlocks(payload);
+  const topSpec = buildInventoryTopBlocks(payload);
 
   const wrappedBlocks: StackBlock[] = [];
   for (let i = 0; i < topSpec.length; i++) {
@@ -458,25 +423,18 @@ function resolveA4PaginaInteraTextLayout(
   return placed;
 }
 
-function makeTopGapAfter(template: LabelTemplateDefinition) {
-  return (field: keyof LabelPayload, next?: keyof LabelPayload): number => {
-    if (template.id === "a4-pagina-intera" && field === "codice" && next === "marcaSecondaria") {
-      return A4_CODICE_MARCA_SECONDARIA_GAP_MM;
-    }
-    return topGapAfter(field, next);
-  };
+function makeTopGapAfter(_template: LabelTemplateDefinition) {
+  return topGapAfter;
 }
 
 function topGapAfter(field: keyof LabelPayload, next?: keyof LabelPayload): number {
   if (field === "descrizione" && next === "codice") return DESC_CODICE_EXTRA_GAP_MM;
-  if (field === "codice" && next === "marcaSecondaria") return MARCA_SECONDARIA_EXTRA_GAP_MM;
-  if (field === "marcaSecondaria" && next === "codiceSecondario") return CODICE_SECONDARIO_EXTRA_GAP_MM;
   if (field === "codice" && next === "codiceSecondario") return CODICE_SECONDARIO_EXTRA_GAP_MM;
   return 0;
 }
 
 /**
- * Alto: marca principale → descrizione → codice → marca secondaria → codice secondario.
+ * Alto: marca (combinata se doppia) → descrizione → codice → codice secondario.
  * Basso: fornitore/codice alt ancorati al bordo inferiore barcode.
  * Font fisso dal template — solo wrap, nessuno shrink.
  */
@@ -559,10 +517,8 @@ export function resolveLabelTextLayout(
     ? supplierInkTopMm(bottomBlocks, supplierAnchorBottom, dpi)
     : supplierAnchorBottom;
 
-  const topSpec = buildTopBlocks(payload);
-  const codiceSpecs = topSpec.filter(
-    (s) => s.field === "codice" || s.field === "marcaSecondaria" || s.field === "codiceSecondario",
-  );
+  const topSpec = buildInventoryTopBlocks(payload);
+  const codiceSpecs = topSpec.filter((s) => s.field === "codice" || s.field === "codiceSecondario");
   const descSpec = topSpec.find((s) => s.field === "descrizione");
   const marcaSpec = topSpec.find((s) => s.field === "marca");
 

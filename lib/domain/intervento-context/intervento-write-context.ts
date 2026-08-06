@@ -2,12 +2,14 @@ import type { MezzoUpdateFromSchedaPlan } from "@/lib/domain/mezzo/mezzo-update-
 import { MEZZO_UPDATE_SCHEDA_ONLY } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
 import type { MezzoAnagraficaHistoryOrigine } from "@/lib/domain/mezzo/record-mezzo-anagrafica-change";
 import type { MezzoMeteringFieldKey } from "@/lib/schede/scheda-ingresso-field-roles";
+import type { SchedaIngressoMezzoLinkMeta } from "@/lib/schede/scheda-ingresso-mezzo-match";
 
 export type InterventoWriteSource = "manual" | "import_ai" | "migration";
 
 export type InterventoWriteContext = {
   source: InterventoWriteSource;
   mezzoUpdatePlan?: MezzoUpdateFromSchedaPlan;
+  mezzoLinkMeta?: SchedaIngressoMezzoLinkMeta;
 };
 
 export const DEFAULT_INTERVENTO_WRITE_CONTEXT: InterventoWriteContext = { source: "manual" };

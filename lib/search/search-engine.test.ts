@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { buildSearchDocumentFromFields } from "@/lib/search/build-document";
 import { buildSearchDocumentLavorazione } from "@/lib/search/builders/build-search-document-lavorazione";
+import { collapseSearchKey } from "@/lib/search/field-token";
 import { matchSearchQuery, matchSearchString } from "@/lib/search/match";
 import { normalizeSearchText } from "@/lib/search/normalize";
 import { parseSearchQuery } from "@/lib/search/parse-query";
@@ -11,6 +13,7 @@ assert.equal(normalizeSearchText("HB440PC"), normalizeSearchText("hb440pc"));
 assert.equal(normalizeSearchText("Mottolà"), "mottola");
 assert.equal(normalizeSearchText("  foo-bar  "), "foo-bar");
 assert.equal(normalizeSearchText("foo.bar"), "foo bar");
+assert.equal(collapseSearchKey("foo.bar"), "foobar");
 
 // token vs phrase
 const tokens = parseSearchQuery("Iveco HB440PC");
@@ -35,7 +38,7 @@ assert.equal(matchSearchString("iveko qqqqqq", doc).matches, false);
 assert.equal(matchSearchString('"pompa idraulika"', "nota pompa idraulika ok").matches, true);
 
 // ranking: exact plate beats contains in note
-const plateScore = scoreTokenAgainstHaystack("hb440pk", "hb440pk cliente note hb440pk lunga", "plate");
+const plateScore = scoreTokenAgainstHaystack("hb440pk", "targa:hb440pk cliente note hb440pk lunga", "plate");
 const noteContains = scoreTokenAgainstHaystack("hb440pk", "nota lunga con hb440pk nel testo", "note");
 assert.ok(plateScore.score > noteContains.score);
 
@@ -52,6 +55,7 @@ assert.ok(matchSearchString("HB440PC", lavDoc).matches);
 assert.ok(matchSearchString("iveko", lavDoc).matches);
 assert.ok(matchSearchString("mottola", lavDoc).matches);
 assert.ok(matchSearchString("pompa", lavDoc).matches);
+assert.ok(matchSearchString("cereba", buildSearchDocumentFromFields([{ kind: "customer", value: "ce.re.ba" }], [])).matches);
 
 const lavBadgeRow = {
   ...lavRow,

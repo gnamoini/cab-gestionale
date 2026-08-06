@@ -9,10 +9,10 @@ import {
 import { AddettoPicker, AddettoDisplayPill, addettoRefFromFields } from "@/components/domain/addetti";
 import {
   LavorazioniClienteUtilStack,
+  LavorazioniOggettoCell,
   LavorazioniMezzoIdentCells,
   LavorazioneIngressoDateCell,
   LavorazioneNoteCell,
-  lavTablePrimaryTextClass,
   lavTableActionBtnDanger,
   lavTableActionBtnInfo,
   lavTableActionBtnPrimary,
@@ -35,6 +35,7 @@ import {
   lavorazioneCantiereLabel,
   lavorazioneMacchinaLabel,
   lavorazioneOggettoLabel,
+  lavorazioneOggettoCellLines,
   lavorazioneMezzoIdentParts,
   formatLavorazioneSchedeBadge,
   lavorazioneSchedeBundleRevision,
@@ -159,7 +160,8 @@ function LavorazioneAttivaTableRowInner({
   onOpenSchede,
 }: LavorazioneAttivaTableRowProps) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
-  const macchina = lavorazioneOggettoLabel(row, schedeStore);
+  const oggettoLines = lavorazioneOggettoCellLines(row, schedeStore);
+  const macchina = oggettoLines.primary;
   const addettoId = lavorazioneAddettoId(row, schedeStore, undefined, addettiRecords);
   const addettoRef = addettoRefFromFields(resolveAddettoSnapshotRef(row, schedeStore));
   const awaitingCompletata = row.stato !== "completata" && row.archived !== true;
@@ -184,7 +186,7 @@ function LavorazioneAttivaTableRowInner({
         <span className="line-clamp-2 break-words">{lavorazioneCantiereLabel(row, schedeStore)}</span>
       </td>
       <td className={`${lavTableTd} min-w-0`}>
-        <div className={`truncate ${lavTablePrimaryTextClass}`}>{macchina}</div>
+        <LavorazioniOggettoCell oggetto={oggettoLines.primary} telaio={oggettoLines.secondary} />
       </td>
       <MezzoIdentCells row={row} bundle={bundle} />
       <td className={`${lavTableTd} gestionale-list-table-col-note min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
@@ -319,7 +321,8 @@ function LavorazioneArchivioTableRowInner({
   completamentoEditDisabled = false,
 }: LavorazioneArchivioTableRowProps) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
-  const macchina = lavorazioneOggettoLabel(row, schedeStore);
+  const oggettoLines = lavorazioneOggettoCellLines(row, schedeStore);
+  const macchina = oggettoLines.primary;
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
   const addettoRef = addettoRefFromFields(resolveAddettoSnapshotRef(row, schedeStore, addettoLogs));
 
@@ -342,7 +345,7 @@ function LavorazioneArchivioTableRowInner({
         <span className="line-clamp-2 break-words">{lavorazioneCantiereLabel(row, schedeStore)}</span>
       </td>
       <td className={`${lavTableTd} min-w-0`}>
-        <div className={`truncate ${lavTablePrimaryTextClass}`}>{macchina}</div>
+        <LavorazioniOggettoCell oggetto={oggettoLines.primary} telaio={oggettoLines.secondary} />
       </td>
       <MezzoIdentCells row={row} bundle={bundle} />
       <td className={`${lavTableTd} gestionale-list-table-col-note min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>

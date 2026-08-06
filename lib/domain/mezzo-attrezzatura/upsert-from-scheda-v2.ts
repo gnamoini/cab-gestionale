@@ -131,9 +131,12 @@ export async function upsertFromSchedaV2(
   if (resolved.matchKind === "ambiguous") {
     throw new MezzoSchedaValidationError("MEZZO_IDENT_AMBIGUOUS");
   }
+  if (resolved.matchKind === "needs_confirm") {
+    throw new MezzoSchedaValidationError("MEZZO_IDENT_NEEDS_CONFIRM");
+  }
 
   const incomingMezzo = schedaToMezzoPayload(fields, resolved.mezzo?.anno);
-  const hintId = resolved.mezzoId ?? preferredMezzoId?.trim() ?? null;
+  const hintId = preferredMezzoId?.trim() ?? resolved.mezzoId ?? null;
 
   const resolvedMezzo = await deps.resolveMezzo({
     incoming: incomingMezzo,

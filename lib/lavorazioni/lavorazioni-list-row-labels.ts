@@ -21,6 +21,8 @@ import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { InterventoDisplay } from "@/lib/domain/intervento-context/intervento-context.types";
 import type { LavorazioneSchedeBundle, LavorazioneSchedeStore } from "@/types/schede";
 import { resolveInterventoOggettoDisplay } from "@/lib/domain/mezzo-attrezzatura/intervento-oggetto-display";
+import { resolveLavorazioneContextWithAttrezzatura } from "@/lib/lavorazioni/resolve-lavorazione-context-with-attrezzatura";
+import { resolveInterventoOggettoChecks } from "@/lib/schede/scheda-ingresso-intervento-oggetto-checks";
 
 export function lavorazioneOggettoLabel(
   row: LavorazioneListRow,
@@ -177,4 +179,56 @@ export function lavorazioneTelaioLabel(row: LavorazioneListRow, schedeStore: Lav
   }
 
   return "—";
+}
+
+/** Righe colonna Oggetto tabella — primaria + sottolinea secondo check attrezzatura/telaio. */
+export function lavorazioneOggettoCellLines(
+  row: LavorazioneListRow,
+  schedeStore?: LavorazioneSchedeStore,
+): { primary: string; secondary: string } {
+  const store = schedeStore ?? {};
+  const ingresso = store[row.id]?.ingresso?.campi;
+  const checks = resolveInterventoOggettoChecks(
+    ingresso ?? {
+      targetType: row.target_type === "telaio" ? "telaio" : "attrezzatura",
+    },
+  );
+
+  const display = resolveLavorazioneContextWithAttrezzatura(row, store);
+  const telRaw = display.telaioLine.trim();
+  const tel = telRaw && telRaw !== "—" ? telRaw : "";
+
+  let att = "";
+  const ctx = composeInterventoContextFromListRow(row, store);
+  if (ctx.target.targetType === "attrezzatura") {
+    att = lavorazioneOggettoLabel(row, store).trim();
+  } else {
+    const attLine = display.attrezzaturaLine.trim();
+    if (attLine && attLine !== "—") att = attLine;
+  }
+
+  if (checks.suAttrezzatura) {
+    const primary = att || tel || lavorazioneOggettoLabel(row, store).trim() || "—";
+    let secondary = "";
+    if (checks.suTelaio && tel && tel.toLowerCase() !== primary.toLowerCase()) {
+      secondary = tel;
+    }
+    return { primary, secondary };
+  }
+
+  if (checks.suTelaio) {
+    const primary = tel || att || "—";
+    const secondary = att && att.toLowerCase() !== primary.toLowerCase() ? att : "";
+    return { primary, secondary };
+  }
+
+  return { primary: lavorazioneOggettoLabel(row, store), secondary: "" };
+}
+
+/** @deprecated Usare `lavorazioneOggettoCellLines`. */
+export function lavorazioneOggettoTelaioSubline(
+  row: LavorazioneListRow,
+  schedeStore?: LavorazioneSchedeStore,
+): string {
+  return lavorazioneOggettoCellLines(row, schedeStore).secondary;
 }

@@ -82,7 +82,7 @@ const byVin = resolveMezzoFromScheda({
   scheda: {
     ...fields,
     targa: "",
-    vin: "VIN123456",
+    vin: "WVWZZZ1JZ3W386752",
   },
   existingMezzi: [
     ...catalog,
@@ -96,7 +96,7 @@ const byVin = resolveMezzoFromScheda({
       matricola: "Non assegnata",
       tipoAttrezzatura: "—",
       anno: 2020,
-      vin: "VIN123456",
+      vin: "WVWZZZ1JZ3W386752",
       oreKm: 0,
       statoAttuale: "Operativo",
       dataUltimaUscita: "—",
@@ -105,7 +105,7 @@ const byVin = resolveMezzoFromScheda({
     },
   ],
 });
-assert.equal(byVin.matchKind, "ident");
-assert.equal(byVin.mezzoId, "m-vin");
+assert.equal(byVin.matchKind, "needs_confirm");
+assert.equal(byVin.mezzoId, null);
 
 console.log("resolve-mezzo-from-scheda.test.ts: ok");

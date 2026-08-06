@@ -1,10 +1,16 @@
 import {
+  ingressoMatchToMezzoCandidates,
+  resolveIngressoMezzoMatchFromCatalog,
+  type IngressoMezzoMatchResult,
+} from "@/lib/schede/scheda-ingresso-mezzo-match";
+import {
   mezzoGestitoToCandidate,
   type MezzoIngressoIdent,
   type MezzoResolutionResult,
 } from "@/lib/domain/mezzo/mezzo-resolution";
 import { normalizeTarga, normalizeVinIdentity } from "@/lib/domain/mezzo/mezzo-identity";
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import type { SchedaIngressoFields } from "@/types/schede";
 
 function normIdent(v: string): string {
   return v.trim().toLowerCase();
@@ -80,14 +86,56 @@ export function findMezziByIngressoIdent(
   return findMezziByScuderia(mezzi, ident.nScuderia ?? "");
 }
 
-function buildCandidatesFromMatches(
-  matches: readonly MezzoGestito[],
-  signals: string[],
-): import("@/lib/domain/mezzo/mezzo-resolution").MezzoCandidate[] {
-  return matches.map((m) => mezzoGestitoToCandidate(m, signals));
+function identToSchedaFields(ident: MezzoIngressoIdent): SchedaIngressoFields {
+  return {
+    dataIngresso: "",
+    cliente: "",
+    cantiere: "",
+    utilizzatore: "",
+    tipoAttrezzatura: "",
+    marcaAttrezzatura: "",
+    modelloAttrezzatura: "",
+    matricola: ident.matricola ?? "",
+    nScuderia: ident.nScuderia ?? "",
+    oreLavoro: "",
+    tipoTelaio: "",
+    marcaTelaio: "",
+    modelloTelaio: "",
+    vin: ident.vin ?? "",
+    targa: ident.targa ?? "",
+    km: "",
+    descrizioneAnomalia: "",
+    livelloCarburante: "",
+    addettoAccettazione: "",
+    richiedente: "",
+    richiedenteTelefono: "",
+  };
 }
 
-/** Risoluzione ident su catalogo → contract unificato. */
+function ingressoResultToResolution(
+  result: IngressoMezzoMatchResult,
+  identUsed: MezzoIngressoIdent,
+): MezzoResolutionResult {
+  if (result.status === "not_found") {
+    return { status: "not_found", identUsed };
+  }
+  if (result.status === "ambiguous") {
+    return {
+      status: "ambiguous",
+      candidates: ingressoMatchToMezzoCandidates(result.candidates),
+      identUsed,
+    };
+  }
+  return {
+    status: "needs_confirm",
+    candidates: ingressoMatchToMezzoCandidates(result.candidates),
+    identUsed,
+    topCandidateId: result.candidate.mezzo.id,
+    matchReason: result.reason,
+  };
+}
+
+/** Risoluzione ident su catalogo — nessun auto-link senza preferredMezzoId. */
 export function resolveMezzoByIdentFromCatalog(
   mezzi: readonly MezzoGestito[],
   ident: MezzoIngressoIdent,
@@ -99,55 +147,24 @@ export function resolveMezzoByIdentFromCatalog(
     vin: ident.vin?.trim() || undefined,
   };
 
-  const byVin = findMezziByVin(mezzi, ident.vin ?? "");
-  if (byVin.length === 1) {
-    return { status: "resolved", mezzoId: byVin[0]!.id, source: "ident" };
-  }
-  if (byVin.length > 1) {
-    return {
-      status: "ambiguous",
-      candidates: buildCandidatesFromMatches(byVin, ["vin:exact"]),
-      identUsed,
-    };
-  }
+  const scheda = identToSchedaFields(identUsed);
+  const match = resolveIngressoMezzoMatchFromCatalog(scheda, mezzi);
+  return ingressoResultToResolution(match, identUsed);
+}
 
-  const byTarga = findMezziByTarga(mezzi, ident.targa ?? "");
-  if (byTarga.length === 1) {
-    return { status: "resolved", mezzoId: byTarga[0]!.id, source: "ident" };
-  }
-  if (byTarga.length > 1) {
-    return {
-      status: "ambiguous",
-      candidates: buildCandidatesFromMatches(byTarga, ["targa:exact"]),
-      identUsed,
-    };
-  }
-
-  const byMatricola = findMezziByMatricola(mezzi, ident.matricola ?? "");
-  if (byMatricola.length === 1) {
-    return { status: "resolved", mezzoId: byMatricola[0]!.id, source: "ident" };
-  }
-  if (byMatricola.length > 1) {
-    return {
-      status: "ambiguous",
-      candidates: buildCandidatesFromMatches(byMatricola, ["matricola:exact"]),
-      identUsed,
-    };
-  }
-
-  const byScuderia = findMezziByScuderia(mezzi, ident.nScuderia ?? "");
-  if (byScuderia.length === 1) {
-    return { status: "resolved", mezzoId: byScuderia[0]!.id, source: "ident" };
-  }
-  if (byScuderia.length > 1) {
-    return {
-      status: "ambiguous",
-      candidates: buildCandidatesFromMatches(byScuderia, ["scuderia:exact"]),
-      identUsed,
-    };
-  }
-
-  return { status: "not_found", identUsed };
+/** Risoluzione da scheda ingresso completa (include cliente per scoring). */
+export function resolveMezzoBySchedaFromCatalog(
+  scheda: SchedaIngressoFields,
+  mezzi: readonly MezzoGestito[],
+): MezzoResolutionResult {
+  const identUsed: MezzoIngressoIdent = {
+    targa: scheda.targa?.trim() || undefined,
+    matricola: scheda.matricola?.trim() || undefined,
+    nScuderia: scheda.nScuderia?.trim() || undefined,
+    vin: scheda.vin?.trim() || undefined,
+  };
+  const match = resolveIngressoMezzoMatchFromCatalog(scheda, mezzi);
+  return ingressoResultToResolution(match, identUsed);
 }
 
 /** @deprecated Usare resolveMezzoByIdentFromCatalog — ritorna match solo se unico. */
@@ -166,6 +183,23 @@ export function findMezzoByIngressoIdent(
   ident: MezzoIngressoIdent,
 ): MezzoGestito | null {
   const result = resolveMezzoByIdentFromCatalog(mezzi, ident);
-  if (result.status !== "resolved") return null;
-  return mezzi.find((m) => m.id === result.mezzoId) ?? null;
+  if (result.status === "resolved") {
+    return mezzi.find((m) => m.id === result.mezzoId) ?? null;
+  }
+  return null;
+}
+
+function buildCandidatesFromMatches(
+  matches: readonly MezzoGestito[],
+  signals: string[],
+): import("@/lib/domain/mezzo/mezzo-resolution").MezzoCandidate[] {
+  return matches.map((m) => mezzoGestitoToCandidate(m, signals));
+}
+
+/** @deprecated legacy helper — usa findMezziBy* + scorer. */
+export function buildCandidatesFromMezzi(
+  matches: readonly MezzoGestito[],
+  signals: string[],
+): import("@/lib/domain/mezzo/mezzo-resolution").MezzoCandidate[] {
+  return buildCandidatesFromMatches(matches, signals);
 }

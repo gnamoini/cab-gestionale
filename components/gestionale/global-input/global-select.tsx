@@ -785,8 +785,12 @@ export function GlobalSelect(props: GlobalSelectProps) {
       cancelPendingBlur();
       try {
         const result = await handler(addCandidate);
-        const canonical =
-          typeof result === "string" && result.trim() ? result.trim() : addCandidate.trim();
+        if (typeof result === "string" || result === null) {
+          closeAndReset();
+          setTouched(true);
+          return;
+        }
+        const canonical = addCandidate.trim();
         if (canonical && normListSelectValue(canonical) !== normListSelectValue(value)) {
           runAtomicSelect(canonical, true);
         } else {

@@ -40,6 +40,7 @@ import {
   ORDINI_FORNITORI_FILTERS_EMPTY,
   ordineFornitoreListDestinazioneTipo,
   ordineFornitoreListOggetto,
+  ordineFornitoreRowSearchScore,
   ordiniFornitoriFiltersActive,
   type OrdiniFornitoriPageFilters,
 } from "@/lib/ordini-fornitori/ordine-fornitore-list-ui-filters";
@@ -78,6 +79,7 @@ import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { ordiniFornitoriEntry } from "@/lib/domain/ordini-fornitori-entry";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
+import { compareSearchRelevance, isSearchRelevanceSortActive } from "@/lib/search/sort-by-relevance";
 import {
   CardMobile,
   CardMobileActions,
@@ -196,13 +198,21 @@ export function OrdiniFornitoriView({
 
   const sortedRows = useMemo(() => {
     const copy = [...filteredRows];
+    if (isSearchRelevanceSortActive(searchApplied, sortColumn)) {
+      copy.sort((a, b) => {
+        const rel = compareSearchRelevance(a, b, searchApplied, (row, q) => ordineFornitoreRowSearchScore(row, q));
+        if (rel !== 0) return rel;
+        return compareCreatedDesc(a, b);
+      });
+      return copy;
+    }
     if (sortColumn === null || sortPhase === "natural") {
       copy.sort(compareCreatedDesc);
       return copy;
     }
     copy.sort((a, b) => compareOrdini(a, b, sortColumn, sortPhase === "asc"));
     return copy;
-  }, [filteredRows, sortColumn, sortPhase]);
+  }, [filteredRows, sortColumn, sortPhase, searchApplied]);
 
   const pageSize = useResponsiveListPageSize();
   const ordiniPagerDeps = useMemo(

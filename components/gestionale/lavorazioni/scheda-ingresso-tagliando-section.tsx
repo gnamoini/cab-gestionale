@@ -74,6 +74,7 @@ export function SchedaIngressoTagliandoSection({
   mezzoPresetNome,
   presetLocked = false,
   disabled,
+  afterInfoLavorazione,
 }: {
   repairPresent?: boolean;
   onRepairPresentChange?: (v: boolean) => void;
@@ -92,6 +93,8 @@ export function SchedaIngressoTagliandoSection({
   mezzoPresetNome?: string | null;
   presetLocked?: boolean;
   disabled?: boolean;
+  /** Slot sotto i check Info lavorazione (es. oggetto attrezzatura/telaio). */
+  afterInfoLavorazione?: ReactNode;
 }) {
   const presetItems = useMemo(
     () => [
@@ -169,6 +172,8 @@ export function SchedaIngressoTagliandoSection({
         ) : null}
         </div>
       </div>
+
+      {afterInfoLavorazione ? <div className="mt-3">{afterInfoLavorazione}</div> : null}
 
       {isTagliando && onPresetRefChange ? (
         <FormField label="Preset manutenzione" htmlFor="tagliando-preset-ref">

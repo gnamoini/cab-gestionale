@@ -27,8 +27,8 @@ assert.doesNotMatch(reconnectBridge, /reconnect-cache-manager/);
 assert.doesNotMatch(reconnectBridge, /invalidatePwaEverything/);
 
 const reconnectSync = read("lib/pwa/pwa-reconnect-sync.ts");
-assert.match(reconnectSync, /consumeOperationalVersionPoll/);
-assert.match(reconnectSync, /markDirtyForOperationalTables/);
+assert.match(reconnectSync, /checkRemoteRevisions/);
+assert.match(reconnectSync, /markDirtyFromVerifiedDrift/);
 assert.match(reconnectSync, /refetchActiveOperationalSnapshot/);
 assert.doesNotMatch(reconnectSync, /dispatchGestionaleAction/);
 
