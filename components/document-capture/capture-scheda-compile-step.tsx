@@ -61,7 +61,7 @@ import {
   type CaptureIngressoContextResolution,
 } from "@/lib/document-capture/resolve-capture-ingresso-context";
 import type { MezzoPermanentFieldKey } from "@/lib/schede/scheda-ingresso-field-roles";
-import type { SelectedMezzoContext } from "@/lib/lavorazioni/selected-mezzo-context";
+import type { SelectedMezzoContext, LavorazioneMezzoEntryOrigin } from "@/lib/lavorazioni/selected-mezzo-context";
 import type { ValidateCaptureResult } from "@/lib/document-capture/validation/validate-capture-for-apply";
 import type { CaptureIngressoMergeResult } from "@/lib/document-capture/merge-capture-ingresso-with-linked-mezzo";
 
@@ -167,6 +167,9 @@ export function CaptureSchedaCompileStep({
   const lastContextKeyRef = useRef<string | null>(null);
   const fieldDirtyRef = useRef<CaptureCompileFieldDirtyMap>({});
   const pendingApplyRef = useRef<(() => Promise<void>) | null>(null);
+  const [captureMezzoEntryOrigin, setCaptureMezzoEntryOrigin] =
+    useState<LavorazioneMezzoEntryOrigin>("new_mezzo");
+  const [capturePrelinkedMezzoId, setCapturePrelinkedMezzoId] = useState<string | null>(null);
 
   const applyFlow = useCaptureApplyFlow(applyMode ? captureId : null);
   const gestToast = useGestionaleToast();
@@ -203,6 +206,8 @@ export function CaptureSchedaCompileStep({
     initialFields: initialCompileFields,
     initialTagliandoFields: initialCompileTagliandoFields,
     initialMeta: initialCompileMeta,
+    mezzoEntryOrigin: captureMezzoEntryOrigin,
+    prelinkedMezzoId: capturePrelinkedMezzoId,
     mezzi,
     schedeStore,
     attive,
@@ -394,6 +399,8 @@ export function CaptureSchedaCompileStep({
   }, [finalizeMezzoLink, mergeResult, selectedCandidate]);
 
   const handleForceNewMezzo = useCallback(() => {
+    setCaptureMezzoEntryOrigin("new_mezzo");
+    setCapturePrelinkedMezzoId(null);
     if (scannedFieldsRef.current) {
       create.clearCaptureMezzoLink(scannedFieldsRef.current);
     }
@@ -414,6 +421,8 @@ export function CaptureSchedaCompileStep({
   }, [create, ingressoContext, mergeResult]);
 
   const handleDismissMatch = useCallback(() => {
+    setCaptureMezzoEntryOrigin("new_mezzo");
+    setCapturePrelinkedMezzoId(null);
     if (scannedFieldsRef.current) {
       create.clearCaptureMezzoLink(scannedFieldsRef.current);
     }
@@ -441,6 +450,8 @@ export function CaptureSchedaCompileStep({
       }
       const mezzo = mezziCatalog.find((m) => m.id === ctx.mezzoId);
       if (!mezzo || !scannedFieldsRef.current) return;
+      setCaptureMezzoEntryOrigin("catalog_selected");
+      setCapturePrelinkedMezzoId(mezzo.id);
       const candidate =
         ingressoContext?.mezzo.candidates.find((c) => c.mezzo.id === mezzo.id) ?? {
           mezzo,

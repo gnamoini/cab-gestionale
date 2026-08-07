@@ -10,6 +10,8 @@ import {
   confirmMezzoAnagraficaChanges,
   cancelMezzoAnagraficaConfirm,
   expectMezzoAnagraficaConfirmVisible,
+  expectMezzoLinkConfirmHidden,
+  expectMezzoLinkConfirmVisible,
   fillListCombobox,
   fillIdentificazioneMacchina,
   fillLavorazioniRigaPrima,
@@ -21,6 +23,7 @@ import {
   openSchedeHubForToken,
   searchLavorazioneByToken,
   selectMezzoFromSearchByTarga,
+  selectNuovoMezzoFromSearch,
   submitCreateLavorazione,
   waitForGlobalOptionsReady,
 } from "../helpers/lavorazioni-scheda";
@@ -140,6 +143,7 @@ test("mezzo esistente: modifica anagrafica richiede conferma prima del salvatagg
   const save = scheda.getByRole("button", { name: "Salva lavorazione" });
   await save.scrollIntoViewIfNeeded();
   await save.click();
+  await expectMezzoLinkConfirmHidden(page);
   await expectMezzoAnagraficaConfirmVisible(page);
 
   await cancelMezzoAnagraficaConfirm(page);
@@ -156,6 +160,77 @@ test("mezzo esistente: modifica anagrafica richiede conferma prima del salvatagg
   await confirmMezzoAnagraficaChanges(page);
   await createResponse;
   await expect(scheda).toBeHidden({ timeout: 60_000 });
+});
+
+test("edit ingresso: un solo PATCH lavorazioni per salvataggio Info lavorazione", async ({ page }) => {
+  test.setTimeout(900_000);
+  const fixture = buildSchedaIngressoAuditFixture();
+
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/lavorazioni");
+  await openNuovaLavorazioneSchedaVuota(page);
+  await fillSchedaIngressoCreateForm(page, fixture.ingresso);
+  await submitCreateLavorazione(page);
+
+  await searchLavorazioneByToken(page, fixture.token);
+  await openSchedeHubForToken(page, fixture.token);
+  await openIngressoEditorFromHub(page);
+
+  const editModal = page.getByRole("dialog").filter({ hasText: "Scheda di ingresso" });
+  const tagliando = editModal.getByRole("checkbox", { name: /Tagliando/i });
+  if (await tagliando.isVisible().catch(() => false)) {
+    await tagliando.check();
+  }
+
+  let patchCount = 0;
+  const onPatch = (req: import("@playwright/test").Request) => {
+    if (
+      req.url().includes("/rest/v1/lavorazioni") &&
+      (req.method() === "PATCH" || req.method() === "PUT")
+    ) {
+      patchCount += 1;
+    }
+  };
+  page.on("request", onPatch);
+
+  await clickSalvaSchedaIngressoEdit(editModal, { confirmMezzoAnagrafica: false });
+  page.off("request", onPatch);
+
+  expect(patchCount).toBeLessThanOrEqual(1);
+});
+
+test("edit ingresso: solo numero scuderia non mostra matricola fantasma", async ({ page }) => {
+  test.setTimeout(900_000);
+  const fixture = buildSchedaIngressoAuditFixture();
+  const scuderiaOnly = `SC${Date.now().toString().slice(-6)}`;
+
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/lavorazioni");
+  await openNuovaLavorazioneSchedaVuota(page);
+
+  const ingressoSoloScuderia = {
+    ...fixture.ingresso,
+    targa: "",
+    matricola: "",
+    nScuderia: scuderiaOnly,
+    marcaAttrezzatura: "",
+    modelloAttrezzatura: "",
+  };
+  await fillSchedaIngressoCreateForm(page, ingressoSoloScuderia);
+  await submitCreateLavorazione(page);
+
+  await searchLavorazioneByToken(page, fixture.token);
+  await openSchedeHubForToken(page, fixture.token);
+  await openIngressoEditorFromHub(page);
+
+  const editModal = page.getByRole("dialog").filter({ hasText: "Scheda di ingresso" });
+  const matricolaInput = editModal.getByLabel(/matricola/i);
+  await expect(matricolaInput).toHaveValue("");
+  await clickSalvaSchedaIngressoEdit(editModal, { confirmMezzoAnagrafica: false });
+
+  await openIngressoEditorFromHub(page);
+  const editModal2 = page.getByRole("dialog").filter({ hasText: "Scheda di ingresso" });
+  await expect(editModal2.getByLabel(/matricola/i)).toHaveValue("");
 });
 
 test("edit scheda ingresso: modifica targa mezzo collegato richiede conferma", async ({ page }) => {
@@ -192,6 +267,57 @@ test("edit scheda ingresso: modifica targa mezzo collegato richiede conferma", a
   await expectMezzoAnagraficaConfirmVisible(page);
   await confirmMezzoAnagraficaChanges(page);
   await expect(editModal).toBeHidden({ timeout: 60_000 });
+});
+
+test("catalog mezzo: salvataggio diretto senza modal collegamento", async ({ page }) => {
+  test.setTimeout(900_000);
+  const fixture = buildSchedaIngressoAuditFixture();
+
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/lavorazioni");
+
+  await openNuovaLavorazioneSchedaVuota(page);
+  await fillSchedaIngressoCreateForm(page, fixture.ingresso);
+  await submitCreateLavorazione(page);
+
+  await page.getByRole("button", { name: /\+?\s*Nuova(\s+lavorazione)?/i }).click();
+  await selectMezzoFromSearchByTarga(page, fixture.ingresso.targa);
+
+  const scheda = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
+  await waitForGlobalOptionsReady(scheda);
+  const save = scheda.getByRole("button", { name: "Salva lavorazione" });
+  await save.scrollIntoViewIfNeeded();
+  await save.click();
+  await expectMezzoLinkConfirmHidden(page);
+  await expect(scheda).toBeHidden({ timeout: 60_000 });
+});
+
+test("nuovo mezzo: targa esistente mostra modal collegamento", async ({ page }) => {
+  test.setTimeout(900_000);
+  const fixture = buildSchedaIngressoAuditFixture();
+
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/lavorazioni");
+
+  await openNuovaLavorazioneSchedaVuota(page);
+  await fillSchedaIngressoCreateForm(page, fixture.ingresso);
+  await submitCreateLavorazione(page);
+
+  await page.getByRole("button", { name: /\+?\s*Nuova(\s+lavorazione)?/i }).click();
+  await selectNuovoMezzoFromSearch(page);
+
+  const scheda = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
+  await waitForGlobalOptionsReady(scheda);
+  await fillListCombobox(page, "Cliente", fixture.ingresso.cliente, scheda);
+  await scheda.getByLabel("Data ingresso").fill(fixture.ingresso.dataIngresso);
+  const targaInput = scheda.getByRole("combobox", { name: /targa/i });
+  await targaInput.scrollIntoViewIfNeeded();
+  await targaInput.fill(fixture.ingresso.targa);
+
+  const save = scheda.getByRole("button", { name: "Salva lavorazione" });
+  await save.scrollIntoViewIfNeeded();
+  await save.click();
+  await expectMezzoLinkConfirmVisible(page);
 });
 
 async function smokeCreateLavorazioneForRole(

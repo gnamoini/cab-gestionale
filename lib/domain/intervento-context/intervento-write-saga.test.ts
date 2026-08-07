@@ -80,7 +80,6 @@ async function run(): Promise<void> {
   assert.equal(createCalls, 0, "ledger skip create on partial retry");
   assert.equal(partial.ok && partial.lavorazioneId, "lav-partial");
 
-  let patchedMezzoId: string | undefined;
   const edit = await runInterventoWriteSaga(
     {
       mode: "edit",
@@ -95,19 +94,17 @@ async function run(): Promise<void> {
         return {
           mezzoId: "mezzo-new",
           created: false,
-          updated: true,
           targetType: "attrezzatura" as const,
           attrezzaturaId: "b2c3d4e5-f6a7-4890-bcde-f12345678901",
         };
-      },
-      updateLavorazione: async (_id, patch) => {
-        patchedMezzoId = patch.mezzo_id;
       },
     },
   );
 
   assert.equal(edit.ok, true);
-  assert.equal(patchedMezzoId, "mezzo-new", "v2 sync aggiorna FK se resolved diverso");
+  if (edit.ok) {
+    assert.equal(edit.lavorazionePatch?.mezzo_id, "mezzo-new", "v2 sync calcola FK patch senza write diretto");
+  }
 }
 
 void run().then(() => {

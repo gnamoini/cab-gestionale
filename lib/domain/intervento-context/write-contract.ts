@@ -15,6 +15,7 @@ import {
   buildIdentDeltaFromContext,
 } from "@/lib/domain/intervento-context/intervento-audit";
 import { composeInterventoContext } from "@/lib/domain/intervento-context/build-intervento-context";
+import { buildEditLavorazionePatchFromUpsert } from "@/lib/domain/intervento-context/build-edit-lavorazione-patch";
 import {
   clearInterventoWriteLedger,
   getInterventoWriteLedgerEntry,
@@ -42,7 +43,6 @@ import {
 } from "@/lib/domain/intervento-context/write-execution-trace";
 import { logInterventoTelemetry } from "@/lib/domain/intervento-context/intervento-telemetry";
 import { resolveInterventoCanonical } from "@/lib/domain/intervento-context/resolve-intervento-canonical";
-import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
 import { interventoWriteService } from "@/src/services/intervento-write.service";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { canUpsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
@@ -343,14 +343,13 @@ type SyncIngressoAfterSavePlan = {
       lavorazioneId?: string | null;
       writeContext?: import("@/lib/domain/intervento-context/intervento-write-context").InterventoWriteContext;
     }) => Promise<UpsertMezzoFromSchedaResult>;
-    updateLavorazione: (id: string, patch: LavorazioneUpdate) => Promise<void>;
   };
 };
 
 /** Interno a write-contract — non esportato; usare executeInterventoWrite. */
-async function syncIngressoAfterSave(plan: SyncIngressoAfterSavePlan): Promise<void> {
+async function syncIngressoAfterSave(plan: SyncIngressoAfterSavePlan): Promise<LavorazioneUpdate> {
   const { row, campi, mezziCatalog, deps } = plan;
-  if (!canUpsertMezzoFromSchedaIngresso(campi, mezziCatalog, row.mezzo_id)) return;
+  if (!canUpsertMezzoFromSchedaIngresso(campi, mezziCatalog, row.mezzo_id)) return {};
 
   const resolved = resolveMezzoFromScheda({
     scheda: campi,
@@ -376,7 +375,7 @@ async function syncIngressoAfterSave(plan: SyncIngressoAfterSavePlan): Promise<v
   });
 
   const writeCtx = resolveInterventoWriteContext(plan.writeContext, plan.mezzoUpdatePlan);
-  const { mezzoId } = await deps.upsertMezzo({
+  const upsert = await deps.upsertMezzo({
     fields: campi,
     preferredMezzoId: row.mezzo_id,
     updatePlan: resolveMezzoUpdatePlanFromContext(writeCtx),
@@ -384,16 +383,10 @@ async function syncIngressoAfterSave(plan: SyncIngressoAfterSavePlan): Promise<v
     writeContext: writeCtx,
   });
 
-  const parsedIngresso = parseItalianDayDisplayToIso(campi.dataIngresso.trim());
-  const lavPatch: LavorazioneUpdate = {};
-  if (parsedIngresso.ok) lavPatch.data_ingresso = parsedIngresso.iso;
-  const currentFk = row.mezzo_id?.trim() || "";
-  if (mezzoId && mezzoId !== currentFk) lavPatch.mezzo_id = mezzoId;
-  if (Object.keys(lavPatch).length) {
-    await deps.updateLavorazione(row.id, lavPatch);
-  }
+  const lavPatch = buildEditLavorazionePatchFromUpsert(row, campi, upsert);
 
   auditInterventoContext(ctx, "write-scheda", { contextId: row.id, extra: { lavPatchKeys: Object.keys(lavPatch) } });
+  return lavPatch;
 }
 
 export { isInterventoWriteV2Enabled, isInterventoWriteV2ShadowEnabled };
@@ -441,7 +434,7 @@ export async function executeInterventoWrite(
       trace,
     );
     v1Result = mapCreateV1Result(v1);
-  } else if (plan.mode === "edit" && !("createdBy" in plan.meta) && deps.updateLavorazione) {
+  } else if (plan.mode === "edit" && !("createdBy" in plan.meta)) {
     recordTraceStep(trace, "v1_create", "skipped");
     const canonical = resolveInterventoCanonical("write", {
       lavorazioneRow: plan.meta.row,
@@ -453,9 +446,10 @@ export async function executeInterventoWrite(
       stage: "resolve",
     });
     let resolvedMezzoId = plan.meta.row.mezzo_id ?? "";
+    let lavorazionePatch: LavorazioneUpdate = {};
     recordTraceStep(trace, "v1_persist", "started");
     try {
-      await syncIngressoAfterSave({
+      lavorazionePatch = await syncIngressoAfterSave({
         row: plan.meta.row,
         campi: plan.fields,
         mezziCatalog: plan.mezziCatalog,
@@ -467,11 +461,15 @@ export async function executeInterventoWrite(
             resolvedMezzoId = res.mezzoId ?? resolvedMezzoId;
             return res;
           },
-          updateLavorazione: deps.updateLavorazione,
         },
       });
       recordTraceStep(trace, "v1_persist", "completed");
-      v1Result = { ok: true, lavorazioneId: plan.meta.row.id, mezzoId: resolvedMezzoId };
+      v1Result = {
+        ok: true,
+        lavorazioneId: plan.meta.row.id,
+        mezzoId: resolvedMezzoId,
+        ...(Object.keys(lavorazionePatch).length > 0 ? { lavorazionePatch } : {}),
+      };
     } catch (err) {
       const message = err instanceof Error ? err.message : "Errore sync ingresso.";
       recordTraceStep(trace, "v1_persist", "failed");

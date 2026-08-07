@@ -2,6 +2,8 @@ import "server-only";
 
 import { cache } from "react";
 import { fetchLogModificheListServer } from "@/lib/gestionale-log/log-modifiche-fetch-server";
+import { fetchActivityFeedServer } from "@/lib/audit/fetch-activity-feed.server";
+import { DEFAULT_AUDIT_RETENTION_CONFIG } from "@/lib/audit/types";
 import {
   fetchLavorazioniListRowsByIds,
   fetchLavorazioniListRows,
@@ -55,6 +57,7 @@ export type DashboardDataDTO = {
   settings: CabAppSettingsQueryPayload;
   logSlices: DashboardLogPrefetchSlice[];
   headerKpi: DashboardHeaderKpiSeed;
+  activityFeed: LogModificaWithProfileRow[];
 };
 
 const DASHBOARD_MEZZO_ENRICH_LIMIT = DASHBOARD_SCHEde_PREFETCH_LIMIT;
@@ -136,13 +139,18 @@ export const fetchDashboardDataDTOServer = cache(async (): Promise<DashboardData
       ? fetchSchedeBundlesStoreServer(schedeTargetIds, codiciMapFromRows(lavorazioni))
       : Promise.resolve({ success: true as const, data: {} as LavorazioneSchedeStore });
 
-  const [enrichedLavorazioni, schedeRes, preventiviRes, invoicesRes, movimentiRes] = await Promise.all([
-    mezzoEnrichPromise,
-    schedePromise,
-    fetchPreventiviRecordsServer(),
-    fetchInvoiceListPayloadServer(),
-    getMovimentiListServer(),
-  ]);
+  const [enrichedLavorazioni, schedeRes, preventiviRes, invoicesRes, movimentiRes, activityFeedRes] =
+    await Promise.all([
+      mezzoEnrichPromise,
+      schedePromise,
+      fetchPreventiviRecordsServer(),
+      fetchInvoiceListPayloadServer(),
+      getMovimentiListServer(),
+      fetchActivityFeedServer({
+        limit: GESTIONALE_LOG_FEED_LIMIT,
+        days: DEFAULT_AUDIT_RETENTION_CONFIG.dashboard_days,
+      }),
+    ]);
   lavorazioni = enrichedLavorazioni;
 
   const headerKpi: DashboardHeaderKpiSeed = {
@@ -171,5 +179,6 @@ export const fetchDashboardDataDTOServer = cache(async (): Promise<DashboardData
     settings: settingsPayload ?? { rows: [], resolved: resolveCabAppSettingsFallbackServer() },
     logSlices,
     headerKpi,
+    activityFeed: activityFeedRes.success ? (activityFeedRes.data ?? []) : [],
   };
 });

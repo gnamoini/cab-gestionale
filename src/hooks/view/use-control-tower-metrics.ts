@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { DEFAULT_AUDIT_RETENTION_CONFIG } from "@/lib/audit/types";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { splitActivityFeedLogs } from "@/lib/audit/split-activity-feed-logs";
+import { useLoadingGateTelemetry } from "@/lib/observability/loading-gate-telemetry";
 import { moduleAllows } from "@/src/lib/auth/effective-module-access";
 import { GESTIONALE_CORE_STALE_MS, GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
 import {
@@ -347,24 +348,43 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     needTimesheet,
   ]);
 
-  const isLoading =
-    rbacLoading ||
-    dash.isLoading ||
-    (!staging && headerVisible && canPreventivi && preventiviQ.isLoading) ||
-    (!staging && headerVisible && canFatturazione && invoicesQ.isLoading) ||
-    (needTimesheet && timesheetQ.isPending) ||
-    (needMovimenti && movimentiQ.isLoading) ||
-    (activityEnabled && activityFeedQ.isLoading);
+  const coreLoading = rbacLoading || dash.isLoading;
+  const headerLoading =
+    !staging &&
+    headerVisible &&
+    ((canPreventivi && preventiviQ.isLoading) || (canFatturazione && invoicesQ.isLoading));
+  const activityLoading = activityEnabled && activityFeedQ.isLoading;
+  const timesheetLoading = needTimesheet && timesheetQ.isPending;
+  const movimentiLoading = needMovimenti && movimentiQ.isLoading;
 
   const activityFeedLoading =
-    rbacLoading || !modules || (activityEnabled && (activityFeedQ.isPending || activityFeedQ.isLoading));
+    rbacLoading ||
+    !modules ||
+    (activityEnabled && (activityFeedQ.isPending || activityFeedQ.isLoading));
+
+  useLoadingGateTelemetry(
+    "control-tower",
+    {
+      coreLoading,
+      headerLoading,
+      activityLoading,
+      timesheetLoading,
+      movimentiLoading,
+    },
+    coreLoading || headerLoading || activityLoading || timesheetLoading || movimentiLoading,
+  );
 
   return {
     staging,
     visibleWidgets,
     slices,
     headerKpiBase,
-    isLoading,
+    coreLoading,
+    headerLoading,
+    activityLoading,
+    timesheetLoading,
+    movimentiLoading,
+    isLoading: coreLoading,
     activityFeedLoading,
     canPreventivi,
     canFatturazione,

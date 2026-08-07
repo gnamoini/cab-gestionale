@@ -106,6 +106,8 @@ import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavor
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { comparePrioritaLavorazione, orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import {
+  resolveMezzoEntryOrigin,
+  resolvePrelinkedMezzoId,
   selectedMezzoDefaultId,
   selectedMezzoWizardKey,
   type SelectedMezzoContext,
@@ -230,6 +232,10 @@ import {
   invalidateAfterIngressoEditSave,
   syncIngressoBackendFromFrozenCatalog,
 } from "@/lib/schede/ingresso-backend-sync";
+import {
+  acquireLavorazioneEditFlight,
+  releaseLavorazioneEditFlight,
+} from "@/lib/schede/lavorazione-edit-single-flight";
 import { mezzoHasPresetConfig } from "@/lib/maintenance-plans/mezzo-has-preset-config";
 import { useMezziWithoutPresetQuery } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
@@ -1954,6 +1960,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
         lavorazioneNote?: string;
         tagliandoFields?: import("@/lib/maintenance-plans/tagliando-lavorazione-fields").TagliandoLavorazioneFields;
         runId: number;
+        correlationId: string;
         lavorazioneGestione?: import("@/lib/schede/scheda-ingresso-save-pipeline").IngressoLavorazioneGestionePatch;
       },
     ) => {
@@ -1962,44 +1969,53 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
         chiuseRows.find((r) => r.id === staleRow.id) ??
         staleRow;
 
-      await syncIngressoBackendFromFrozenCatalog(
-        {
-          row,
-          campi,
-          mezziCatalogFrozen: options.mezziCatalogFrozen,
-          mezzoUpdatePlan: options.mezzoUpdatePlan,
-          lavorazioneNote: options.lavorazioneNote,
-          tagliandoFields: options.tagliandoFields,
-          runId: options.runId,
-          lavorazioneGestione: options.lavorazioneGestione,
-        },
-        {
-          upsertMezzo: ({ fields, preferredMezzoId, updatePlan, lavorazioneId }) =>
-            upsertMezzoFromSchedaIngresso({
-              fields,
-              mezziCatalog: options.mezziCatalogFrozen,
-              preferredMezzoId,
-              updatePlan,
-              lavorazioneId,
-              userId: createdBy,
-              create: (data) => createMezzo.mutateAsync(data),
-              update: (id, data) => updateMezzo.mutateAsync({ id, data }),
-              applyAssociationChange: applyMezzoAssociationChangeOrThrow,
-            }),
-          updateLavorazione: async (id, patch) => {
-            await updateLavOrchestrated.mutateAsync({
-              id,
-              data: patch as Parameters<typeof updateLavOrchestrated.mutateAsync>[0]["data"],
-            });
+      if (!acquireLavorazioneEditFlight(row.id, options.runId, options.correlationId)) {
+        return;
+      }
+
+      try {
+        await syncIngressoBackendFromFrozenCatalog(
+          {
+            row,
+            campi,
+            mezziCatalogFrozen: options.mezziCatalogFrozen,
+            mezzoUpdatePlan: options.mezzoUpdatePlan,
+            lavorazioneNote: options.lavorazioneNote,
+            tagliandoFields: options.tagliandoFields,
+            runId: options.runId,
+            correlationId: options.correlationId,
+            lavorazioneGestione: options.lavorazioneGestione,
           },
-          onTagliandoPresetWarning: (msg) => gestToast.warning(msg),
-          onTagliandoPresetAssigned: (lavId) =>
-            gestToast.successOnce(
-              `tagliando-preset-assigned-${lavId}`,
-              "Preset assegnato al mezzo nella sezione tagliandi.",
-            ),
-        },
-      );
+          {
+            upsertMezzo: ({ fields, preferredMezzoId, updatePlan, lavorazioneId }) =>
+              upsertMezzoFromSchedaIngresso({
+                fields,
+                mezziCatalog: options.mezziCatalogFrozen,
+                preferredMezzoId: preferredMezzoId ?? row.mezzo_id,
+                updatePlan,
+                lavorazioneId,
+                userId: createdBy,
+                create: (data) => createMezzo.mutateAsync(data),
+                update: (id, data) => updateMezzo.mutateAsync({ id, data }),
+                applyAssociationChange: applyMezzoAssociationChangeOrThrow,
+              }),
+            updateLavorazione: async (id, patch) => {
+              await updateLavOrchestrated.mutateAsync({
+                id,
+                data: patch as Parameters<typeof updateLavOrchestrated.mutateAsync>[0]["data"],
+              });
+            },
+            onTagliandoPresetWarning: (msg) => gestToast.warning(msg),
+            onTagliandoPresetAssigned: (lavId) =>
+              gestToast.successOnce(
+                `tagliando-preset-assigned-${lavId}`,
+                "Preset assegnato al mezzo nella sezione tagliandi.",
+              ),
+          },
+        );
+      } finally {
+        releaseLavorazioneEditFlight(row.id, options.runId);
+      }
     },
     [attiveRows, chiuseRows, createdBy, createMezzo, gestToast, updateLavOrchestrated, updateMezzo],
   );
@@ -2864,6 +2880,8 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
         open={createOpen}
         onClose={closeCreateModal}
         defaultMezzoId={selectedMezzoDefaultId(selectedMezzo)}
+        mezzoEntryOrigin={resolveMezzoEntryOrigin(selectedMezzo)}
+        prelinkedMezzoId={resolvePrelinkedMezzoId(selectedMezzo)}
         createdBy={createdBy}
         mezzi={mezziCatalog}
         sharedGlobalOpts={globalOpts}

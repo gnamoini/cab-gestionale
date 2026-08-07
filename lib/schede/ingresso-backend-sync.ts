@@ -1,4 +1,8 @@
 import { executeInterventoWriteEntry } from "@/lib/domain/intervento-entry";
+import {
+  applyMezzoIdImmutabilityGuard,
+  mergeLavorazionePatches,
+} from "@/lib/domain/intervento-context/build-edit-lavorazione-patch";
 import { logMezzoSchedaConflictTelemetry } from "@/lib/domain/mezzo/mezzo-scheda-conflict-telemetry";
 import { logInterventoTelemetry } from "@/lib/domain/intervento-context/intervento-telemetry";
 import type { MezzoUpdateFromSchedaPlan } from "@/lib/domain/mezzo/mezzo-update-from-scheda-plan";
@@ -12,7 +16,11 @@ import {
   buildConsolidatedIngressoLavorazionePatch,
   ingressoTagliandoFieldsChanged,
 } from "@/lib/schede/ingresso-lavorazione-patch";
-import { logIngressoSavePipeline } from "@/lib/schede/scheda-ingresso-save-pipeline-log";
+import {
+  logIngressoSavePipeline,
+  resolveIngressoSaveCorrelationId,
+} from "@/lib/schede/scheda-ingresso-save-pipeline-log";
+import { assertIngressoSaveGenerationCurrent } from "@/lib/schede/ingresso-save-generation";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
 import type { SchedaIngressoFields } from "@/types/schede";
@@ -46,6 +54,8 @@ export type SyncIngressoBackendInput = {
   lavorazioneNote?: string;
   tagliandoFields?: TagliandoLavorazioneFields;
   runId?: number;
+  correlationId?: string;
+  explicitMezzoChange?: boolean;
   lavorazioneGestione?: {
     stato?: StatoLavorazione;
     priorita?: PrioritaLavorazione;
@@ -54,7 +64,7 @@ export type SyncIngressoBackendInput = {
 
 /**
  * Sync backend scheda ingresso edit — catalogo congelato, zero refetch/invalidate qui.
- * L'invalidazione batch va eseguita dal chiamante dopo tutti i commit.
+ * Unico punto autorizzato per updateLavorazione in edit ingresso.
  */
 export async function syncIngressoBackendFromFrozenCatalog(
   input: SyncIngressoBackendInput,
@@ -68,10 +78,17 @@ export async function syncIngressoBackendFromFrozenCatalog(
     lavorazioneNote,
     tagliandoFields,
     runId,
+    correlationId,
+    explicitMezzoChange,
     lavorazioneGestione,
   } = input;
 
-  logIngressoSavePipeline("backend_sync_start", { runId, lavorazioneId: row.id });
+  const corr = resolveIngressoSaveCorrelationId(runId, correlationId);
+  logIngressoSavePipeline("backend_sync_start", { runId, correlationId: corr, lavorazioneId: row.id });
+
+  if (!assertIngressoSaveGenerationCurrent(runId, "backend_sync_start")) {
+    return;
+  }
 
   const { result } = await executeInterventoWriteEntry(
     {
@@ -86,7 +103,6 @@ export async function syncIngressoBackendFromFrozenCatalog(
     },
     {
       upsertMezzo: deps.upsertMezzo,
-      updateLavorazione: deps.updateLavorazione,
     },
   );
 
@@ -106,23 +122,33 @@ export async function syncIngressoBackendFromFrozenCatalog(
     throw new Error(result.error);
   }
 
-  const lavPatch = buildConsolidatedIngressoLavorazionePatch({
+  const consolidatedPatch = buildConsolidatedIngressoLavorazionePatch({
     row,
     lavorazioneNote,
     tagliandoFields,
     lavorazioneGestione,
   });
-  const patchKeys = Object.keys(lavPatch);
+
+  const mergedPatch = applyMezzoIdImmutabilityGuard(
+    row,
+    mergeLavorazionePatches(result.lavorazionePatch ?? {}, consolidatedPatch),
+    explicitMezzoChange,
+  );
+  const patchKeys = Object.keys(mergedPatch);
 
   if (patchKeys.length > 0) {
-    logIngressoSavePipeline("SAVE_REQUEST", {
+    if (!assertIngressoSaveGenerationCurrent(runId, "update_lavorazione")) {
+      return;
+    }
+    logIngressoSavePipeline("save_db", {
       runId,
+      correlationId: corr,
       lavorazioneId: row.id,
       patchKeys,
       updateCount: 1,
     });
-    await deps.updateLavorazione(row.id, lavPatch);
-    logIngressoSavePipeline("SAVE_RESPONSE", { runId, lavorazioneId: row.id, patchKeys });
+    await deps.updateLavorazione(row.id, mergedPatch);
+    logIngressoSavePipeline("save_response", { runId, correlationId: corr, lavorazioneId: row.id, patchKeys });
   }
 
   if (ingressoTagliandoFieldsChanged(row, tagliandoFields) && tagliandoFields) {
@@ -137,7 +163,7 @@ export async function syncIngressoBackendFromFrozenCatalog(
     }
   }
 
-  logIngressoSavePipeline("backend_sync_end", { runId, lavorazioneId: row.id, patchKeys });
+  logIngressoSavePipeline("backend_sync_end", { runId, correlationId: corr, lavorazioneId: row.id, patchKeys });
 }
 
 /** Invalidazione batch unica — MIC non bloccante; refetch lista in background. */

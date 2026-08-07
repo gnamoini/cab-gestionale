@@ -19,6 +19,7 @@ assert.match(mutations, /if \(error \|\| deferInvalidation\) return;/);
 const lavView = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
 assert.match(lavView, /updateLavOrchestrated = useLavorazioneUpdateMutation\(\{ deferInvalidation: true \}\)/);
 assert.match(lavView, /updateLavOrchestrated\.mutateAsync/);
+assert.match(lavView, /acquireLavorazioneEditFlight/);
 assert.doesNotMatch(
   lavView.match(/syncIngressoBackendForEdit[\s\S]*?\[attiveRows/)?.[0] ?? "",
   /updateLav\.mutateAsync/,
@@ -31,20 +32,30 @@ assert.doesNotMatch(optimistic, /refetchQueries/);
 
 const backendSync = read("lib/schede/ingresso-backend-sync.ts");
 const patchModule = read("lib/schede/ingresso-lavorazione-patch.ts");
+const saga = read("lib/domain/intervento-context/intervento-write-saga.ts");
+const schedeModal = read("components/lavorazioni/schede/schede-lavorazione-modal.tsx");
+
 assert.match(patchModule, /buildConsolidatedIngressoLavorazionePatch/);
 assert.match(backendSync, /buildConsolidatedIngressoLavorazionePatch/);
+assert.match(backendSync, /mergeLavorazionePatches/);
 assert.match(backendSync, /invalidateAfterLavorazioneMutations\([\s\S]*refetchType:\s*"none"/);
 assert.match(backendSync, /void qc\.invalidateQueries\([\s\S]*refetchType:\s*"active"/);
 
-// Una sola updateLavorazione consolidata dopo il blocco executeInterventoWriteEntry
+assert.doesNotMatch(
+  saga,
+  /await deps\.updateLavorazione/,
+  "saga edit must not call updateLavorazione",
+);
+
 assert.match(
   backendSync,
-  /if \(patchKeys\.length > 0\)[\s\S]*await deps\.updateLavorazione\(row\.id, lavPatch\)/,
+  /await deps\.updateLavorazione\(row\.id, mergedPatch\)/,
+  "single updateLavorazione in backend-sync",
 );
 assert.doesNotMatch(
   backendSync,
   /await deps\.updateLavorazione[\s\S]*await deps\.updateLavorazione/,
-  "no serial deps.updateLavorazione awaits after consolidation",
+  "no serial deps.updateLavorazione awaits",
 );
 
 assert.doesNotMatch(
@@ -53,10 +64,24 @@ assert.doesNotMatch(
   "must not await active refetch in invalidateAfterIngressoEditSave",
 );
 
+assert.match(schedeModal, /Promise\.resolve\(onInvalidateAfterIngressoSave/);
+assert.match(schedeModal, /reportInvalidateFailure/);
+assert.doesNotMatch(
+  schedeModal.match(/commitIngressoEdit[\s\S]*?onInvalidateAfterIngressoSave/)?.[0] ?? "",
+  /await onInvalidateAfterIngressoSave/,
+  "commitIngressoEdit must not await invalidation",
+);
+
+const pipeline = read("lib/schede/scheda-ingresso-save-pipeline.ts");
+assert.match(pipeline, /beginIngressoSaveGeneration/);
+
+const generation = read("lib/schede/ingresso-save-generation.ts");
+assert.match(generation, /assertIngressoSaveGenerationCurrent/);
 const pipelineLog = read("lib/schede/scheda-ingresso-save-pipeline-log.ts");
 assert.match(pipelineLog, /SAVE_START/);
-assert.match(pipelineLog, /SAVE_REQUEST/);
-assert.match(pipelineLog, /SAVE_RESPONSE/);
-assert.match(pipelineLog, /durationMs/);
+assert.match(pipelineLog, /SAVE_DONE/);
+assert.match(pipelineLog, /SAVE_DUPLICATE_BLOCKED/);
+assert.match(pipelineLog, /correlationId/);
+assert.match(pipelineLog, /reportInvalidateFailure/);
 
 console.log("lavorazione-edit-save-pending-policy.test.ts: ok");

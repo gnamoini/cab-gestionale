@@ -90,6 +90,24 @@ assert.equal(interventoMacchinaLabel(display), lavorazioneMacchinaLabel(row, sto
 assert.equal(interventoClienteLabel(display), lavorazioneClienteLabel(row, store));
 assert.equal(interventoMezzoIdentLabel(display), lavorazioneMezzoIdent(row, store));
 
+const storeEmptyMatricola: LavorazioneSchedeStore = {
+  "lav-1": {
+    ...store["lav-1"]!,
+    ingresso: {
+      ...store["lav-1"]!.ingresso!,
+      campi: {
+        ...store["lav-1"]!.ingresso!.campi,
+        matricola: "",
+      },
+    },
+  },
+};
+const ctxEmptyMat = composeInterventoContextFromListRow(row, storeEmptyMatricola);
+const displayEmptyMat = resolveInterventoDisplay(ctxEmptyMat);
+assert.equal(displayEmptyMat.matricola.value, "");
+assert.equal(displayEmptyMat.matricola.source, "scheda");
+assert.equal(displayEmptyMat.ident.matricola, "");
+
 const rowNoScheda = { ...row };
 const ctxNoScheda = composeInterventoContextFromListRow(rowNoScheda, {});
 const displayNoScheda = resolveInterventoDisplay(ctxNoScheda);

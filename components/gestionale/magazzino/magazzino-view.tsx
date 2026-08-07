@@ -68,7 +68,7 @@ const MagazzinoLogDrawer = dynamic(
 );
 import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
 import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
-import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useMagazzinoListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
 import { useGestionaleDirtySearchHint } from "@/src/hooks/gestionale/use-gestionale-dirty-search-hint";
 import { usesServerSearch } from "@/lib/search/registry";
@@ -554,6 +554,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     if (!usesServerSearch("magazzino") || !searchApplied.trim()) return undefined;
     return { search: searchApplied.trim() };
   }, [searchApplied]);
+  const rawMagazzinoListQ = useMagazzinoListQuery(magazzinoFetchFilters);
   const magazzinoListQ = useMagazzinoRicambiUIQuery(magazzinoFetchFilters);
   const prodotti = magazzinoListQ.data ?? [];
 
@@ -566,7 +567,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   }, [prodotti, queryClient]);
   const [deleteGeneratedOpen, setDeleteGeneratedOpen] = useState(false);
   const [deleteGeneratedLoading, setDeleteGeneratedLoading] = useState(false);
-  const magazzinoInitialLoading = magazzinoListQ.isLoading && magazzinoListQ.data === undefined;
+  const magazzinoInitialLoading = rawMagazzinoListQ.isLoading && rawMagazzinoListQ.data === undefined;
   const [searchSuggestionsApplied, setSearchSuggestionsApplied] = useState("");
   const [searchFieldFocused, setSearchFieldFocused] = useState(false);
   const [sortColumn, setSortColumn] = useState<SortKeyMagazzino | null>(null);

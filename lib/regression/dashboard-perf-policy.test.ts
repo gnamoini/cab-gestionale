@@ -44,7 +44,7 @@ const deferred = read("components/dashboard/dashboard-deferred-hydration.tsx");
 assert.match(deferred, /prefetchDeferredPage/);
 
 const renderer = read("components/dashboard/dashboard-widget-renderer.tsx");
-assert.match(renderer, /dynamic\s*\(/);
+assert.doesNotMatch(renderer, /dynamic\s*\(/);
 
 assert.ok(
   JSON.stringify(clientReportKey).length > 2,
@@ -59,7 +59,14 @@ assert.match(read("src/hooks/view/use-control-tower-metrics.ts"), /useDashboardH
 
 assert.match(bff, /headerKpi/);
 assert.match(bff, /fetchPreventiviRecordsServer/);
+assert.match(bff, /fetchActivityFeedServer/);
+assert.match(bff, /activityFeed:/);
+assert.match(dashboardDeferredBlock, /activity-feed/);
 assert.match(dashboardDeferredBlock, /headerKpi\.preventivi/);
 assert.match(dashboardDeferredBlock, /fatturazioneListQueryKey/);
+
+const pageSrc = read("app/(gestionale)/dashboard/page.tsx");
+assert.match(pageSrc, /Suspense/);
+assert.match(pageSrc, /prefetchCriticalPage/);
 
 console.log("dashboard-perf-policy.test.ts OK");

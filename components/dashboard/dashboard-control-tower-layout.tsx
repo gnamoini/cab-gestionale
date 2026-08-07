@@ -38,8 +38,53 @@ function layoutWidgetsWhileLoading(
   return DASHBOARD_WIDGET_REGISTRY.filter((w) => !(w.hideInStaging && staging));
 }
 
+function widgetShowsSkeleton(
+  id: DashboardWidgetId,
+  loading: {
+    coreLoading: boolean;
+    headerLoading: boolean;
+    activityLoading: boolean;
+    timesheetLoading: boolean;
+    movimentiLoading: boolean;
+  },
+): boolean {
+  switch (id) {
+    case "operational-kpi-header":
+      return (
+        loading.coreLoading ||
+        loading.headerLoading ||
+        loading.timesheetLoading ||
+        loading.movimentiLoading
+      );
+    case "recent-activity":
+      return loading.activityLoading;
+    case "health-score":
+    case "local-notes":
+    case "recent-lavorazioni":
+    case "recent-ricambi":
+      return loading.coreLoading;
+    default:
+      return loading.coreLoading;
+  }
+}
+
 const DashboardControlTowerLayoutInner = memo(function DashboardControlTowerLayoutInner() {
-  const { visibleWidgets, isLoading, staging } = useControlTowerContext();
+  const {
+    visibleWidgets,
+    coreLoading,
+    headerLoading,
+    activityLoading,
+    timesheetLoading,
+    movimentiLoading,
+    staging,
+  } = useControlTowerContext();
+  const loadingFlags = {
+    coreLoading,
+    headerLoading,
+    activityLoading,
+    timesheetLoading,
+    movimentiLoading,
+  };
   const { isCompactShell } = useGestionaleShellTier();
   const sectionOrder = resolveDashboardSectionOrder(isCompactShell);
   const widgetsForLayout = useMemo(
@@ -63,7 +108,7 @@ const DashboardControlTowerLayoutInner = memo(function DashboardControlTowerLayo
                 key={w.id}
                 className={w.layout === "full" ? "min-w-0 cab-shell-desktop:col-span-2" : "min-w-0"}
               >
-                {isLoading ? (
+                {widgetShowsSkeleton(w.id, loadingFlags) ? (
                   <LoadingCardSkeleton minHeightClass={widgetSkeletonMinHeight(w.id)} />
                 ) : (
                   <DashboardWidgetRenderer id={w.id} />

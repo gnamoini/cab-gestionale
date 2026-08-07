@@ -511,6 +511,21 @@ export async function confirmMezzoAnagraficaChanges(page: Page): Promise<void> {
   await expect(dlg).toBeHidden({ timeout: 15_000 });
 }
 
+/** Dialog conferma collegamento mezzo esistente (link gate). */
+export function mezzoLinkConfirmDialog(page: Page): Locator {
+  return page.getByRole("dialog").filter({ hasText: /Collega mezzo esistente|Mezzo compatibile trovato|Mezzo con identificativo certo/i });
+}
+
+export async function expectMezzoLinkConfirmHidden(page: Page): Promise<void> {
+  await expect(mezzoLinkConfirmDialog(page)).toBeHidden({ timeout: 3_000 });
+}
+
+export async function expectMezzoLinkConfirmVisible(page: Page): Promise<void> {
+  const dlg = mezzoLinkConfirmDialog(page);
+  await expect(dlg).toBeVisible({ timeout: 15_000 });
+  await expect(dlg.getByRole("button", { name: "Collega mezzo esistente" })).toBeVisible();
+}
+
 export function attachSchedaPayloadCapture(page: Page): {
   ingressoCampi: Array<Record<string, unknown>>;
   lavorazioneIds: string[];

@@ -26,7 +26,7 @@ import {
   type WriteExecutionTrace,
 } from "@/lib/domain/intervento-context/write-execution-trace";
 import { canUpsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
-import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
+import { buildEditLavorazionePatchFromUpsert } from "@/lib/domain/intervento-context/build-edit-lavorazione-patch";
 import type { LavorazioneUpdate } from "@/src/services/lavorazioni.service";
 import { interventoWriteService } from "@/src/services/intervento-write.service";
 import {
@@ -271,7 +271,9 @@ export async function runInterventoWriteSaga(
     }
   }
 
-  if (!createMode && !isCreateMeta(plan.meta) && deps.upsertMezzo && deps.updateLavorazione) {
+  let editLavorazionePatch: LavorazioneUpdate | undefined;
+
+  if (!createMode && !isCreateMeta(plan.meta) && deps.upsertMezzo) {
     recordTraceStep(trace, "v1_create", "skipped");
     const editMeta = plan.meta as InterventoWriteEditMeta;
     const row = editMeta.row;
@@ -317,17 +319,13 @@ export async function runInterventoWriteSaga(
       attrezzaturaId = upsert.attrezzaturaId ?? null;
       targetType = upsert.targetType ?? targetType;
 
-      const parsedIngresso = parseItalianDayDisplayToIso(fields.dataIngresso.trim());
-      const lavPatch: LavorazioneUpdate = {};
-      if (parsedIngresso.ok) lavPatch.data_ingresso = parsedIngresso.iso;
-      const currentFk = row.mezzo_id?.trim() || "";
-      if (mezzoId && mezzoId !== currentFk) lavPatch.mezzo_id = mezzoId;
-      if (targetType && targetType !== row.target_type) lavPatch.target_type = targetType;
-      const nextAttId = targetType === "attrezzatura" ? attrezzaturaId : null;
-      if ((row.attrezzatura_id ?? null) !== nextAttId) lavPatch.attrezzatura_id = nextAttId;
-
-      if (Object.keys(lavPatch).length) {
-        await deps.updateLavorazione(row.id, lavPatch);
+      const lavPatch = buildEditLavorazionePatchFromUpsert(row, fields, {
+        mezzoId,
+        targetType,
+        attrezzaturaId,
+      });
+      if (Object.keys(lavPatch).length > 0) {
+        editLavorazionePatch = lavPatch;
       }
       recordTraceStep(trace, "v1_persist", "completed");
     } catch (err) {
@@ -396,5 +394,8 @@ export async function runInterventoWriteSaga(
     ok: true,
     lavorazioneId,
     mezzoId: finalMezzoId,
+    ...(editLavorazionePatch && Object.keys(editLavorazionePatch).length > 0
+      ? { lavorazionePatch: editLavorazionePatch }
+      : {}),
   });
 }

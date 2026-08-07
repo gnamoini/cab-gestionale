@@ -77,6 +77,11 @@ import type {
   IngressoSaveCommitResult,
   IngressoSaveResult,
 } from "@/lib/schede/scheda-ingresso-save-pipeline";
+import {
+  logIngressoSavePipeline,
+  reportInvalidateFailure,
+} from "@/lib/schede/scheda-ingresso-save-pipeline-log";
+import { assertIngressoSaveGenerationCurrent } from "@/lib/schede/ingresso-save-generation";
 import { openBlobInNewTab } from "@/lib/schede/schede-print-html";
 import { openSchedaPdfInNewTab } from "@/lib/schede/schede-pdf";
 import {
@@ -306,6 +311,7 @@ export function SchedeLavorazioneModal({
       tagliandoFields?: import("@/lib/maintenance-plans/tagliando-lavorazione-fields").TagliandoLavorazioneFields;
       mezziCatalogFrozen: readonly import("@/lib/mezzi/types").MezzoGestito[];
       runId: number;
+      correlationId: string;
       lavorazioneGestione?: import("@/lib/schede/scheda-ingresso-save-pipeline").IngressoLavorazioneGestionePatch;
     },
   ) => void | Promise<void>;
@@ -835,6 +841,7 @@ export function SchedeLavorazioneModal({
   const commitPanoramicaNote = useCallback(
     async (note: string) => {
       if (!canEditWorkOrders) return;
+      if (submitLock.isLocked()) return;
       const trimmed = note.trim();
       if (trimmed === panoramicaNoteValue) return;
 
@@ -853,7 +860,7 @@ export function SchedeLavorazioneModal({
         setPanoramicaNoteSaving(false);
       }
     },
-    [canEditWorkOrders, panoramicaNoteValue, updateLavorazione, lav.id, gestToast],
+    [canEditWorkOrders, panoramicaNoteValue, submitLock, updateLavorazione, lav.id, gestToast],
   );
 
   const costoLavorazione = useLavorazioneCosto(lav.id, draft, {
@@ -906,8 +913,13 @@ export function SchedeLavorazioneModal({
           tagliandoFields: input.tagliandoFields,
           mezziCatalogFrozen: input.mezziCatalogFrozen,
           runId: input.runId,
+          correlationId: input.correlationId,
           lavorazioneGestione: input.lavorazioneGestione,
         });
+
+        if (!assertIngressoSaveGenerationCurrent(input.runId, "persist_bundle")) {
+          return { ok: false, error: "SAVE_STALE" };
+        }
 
         const persistRes = await persistBundle({ ...draftRef.current, ingresso: nextDoc });
         if (!persistRes.ok) {
@@ -919,7 +931,14 @@ export function SchedeLavorazioneModal({
         }
 
         baselineIngressoJson.current = JSON.stringify(ig);
-        await onInvalidateAfterIngressoSave?.(lav.id, mezzo?.id);
+        logIngressoSavePipeline("save_invalidate", {
+          runId: input.runId,
+          correlationId: input.correlationId,
+          lavorazioneId: lav.id,
+        });
+        void Promise.resolve(onInvalidateAfterIngressoSave?.(lav.id, mezzo?.id)).catch(
+          reportInvalidateFailure,
+        );
         return { ok: true };
       } catch (err) {
         gestToast.error(err, { module: "lavorazioni", action: "update" });

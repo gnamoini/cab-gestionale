@@ -16,6 +16,14 @@ function isSchedaFieldValue(key: string, value: string): boolean {
   return true;
 }
 
+function resolveSnapshotOnlyField(value: string | undefined, key: string): InterventoDisplayField {
+  const raw = value ?? "";
+  if (isSchedaFieldValue(key, raw)) {
+    return { value: raw.trim(), source: "scheda" };
+  }
+  return { value: "", source: "scheda" };
+}
+
 function resolveField(
   schedaValue: string,
   lavorazioneValue: string,
@@ -43,6 +51,7 @@ function primarySourceFromDisplay(display: Omit<InterventoDisplay, "primarySourc
     display.nScuderia,
   ];
   if (fields.some((f) => f.source === "scheda" && f.value)) return "scheda";
+  if (fields.some((f) => f.source === "scheda")) return "scheda";
   if (fields.some((f) => f.source === "lavorazione" && f.value)) return "lavorazione";
   return "mezzo";
 }
@@ -76,28 +85,27 @@ export function resolveInterventoDisplay(ctx: InterventoContext): InterventoDisp
     .join(" ");
   const marcaLav = "";
 
-  const marcaModelloRaw = resolveField(marcaScheda, marcaLav, marcaMezzo, "marca");
-
-  const display: Omit<InterventoDisplay, "primarySource"> = {
-    cliente: resolveField(
-      scheda?.cliente ?? "",
-      lav.cliente,
-      mezzo.cliente,
-      "cliente",
-    ),
-    utilizzatore: resolveField(
-      scheda?.utilizzatore ?? "",
-      lav.utilizzatore,
-      mezzo.utilizzatore,
-      "utilizzatore",
-    ),
-    cantiere: resolveField(scheda?.cantiere ?? "", lav.cantiere, mezzo.cantiere, "cantiere"),
-    marcaModello: marcaModelloRaw,
-    targa: resolveField(scheda?.targa ?? "", lav.targa, mezzo.targa, "targa"),
-    matricola: resolveField(scheda?.matricola ?? "", lav.matricola, mezzo.matricola, "matricola"),
-    nScuderia: resolveField(scheda?.nScuderia ?? "", lav.nScuderia, mezzo.nScuderia, "nScuderia"),
-    ident: resolveInterventoIdent(ctx),
-  };
+  const display: Omit<InterventoDisplay, "primarySource"> = scheda
+    ? {
+        cliente: resolveSnapshotOnlyField(scheda.cliente, "cliente"),
+        utilizzatore: resolveSnapshotOnlyField(scheda.utilizzatore, "utilizzatore"),
+        cantiere: resolveSnapshotOnlyField(scheda.cantiere, "cantiere"),
+        marcaModello: resolveSnapshotOnlyField(marcaScheda, "marca"),
+        targa: resolveSnapshotOnlyField(scheda.targa, "targa"),
+        matricola: resolveSnapshotOnlyField(scheda.matricola, "matricola"),
+        nScuderia: resolveSnapshotOnlyField(scheda.nScuderia, "nScuderia"),
+        ident: resolveInterventoIdent(ctx),
+      }
+    : {
+        cliente: resolveField("", lav.cliente, mezzo.cliente, "cliente"),
+        utilizzatore: resolveField("", lav.utilizzatore, mezzo.utilizzatore, "utilizzatore"),
+        cantiere: resolveField("", lav.cantiere, mezzo.cantiere, "cantiere"),
+        marcaModello: resolveField("", marcaLav, marcaMezzo, "marca"),
+        targa: resolveField("", lav.targa, mezzo.targa, "targa"),
+        matricola: resolveField("", lav.matricola, mezzo.matricola, "matricola"),
+        nScuderia: resolveField("", lav.nScuderia, mezzo.nScuderia, "nScuderia"),
+        ident: resolveInterventoIdent(ctx),
+      };
 
   const resolved: InterventoDisplay = {
     ...display,

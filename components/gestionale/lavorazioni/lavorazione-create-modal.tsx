@@ -16,6 +16,7 @@ import {
   SchedaIngressoFormModalShell,
 } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
+import type { LavorazioneMezzoEntryOrigin } from "@/lib/lavorazioni/selected-mezzo-context";
 import { useLavorazioneCreateSubmit } from "@/src/hooks/use-lavorazione-create-submit";
 
 export { SchedaIngressoEditModal } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
@@ -24,6 +25,8 @@ export function LavorazioneCreateModal({
   open,
   onClose,
   defaultMezzoId,
+  mezzoEntryOrigin,
+  prelinkedMezzoId,
   initialFields,
   createdBy,
   onCreated,
@@ -37,6 +40,8 @@ export function LavorazioneCreateModal({
   open: boolean;
   onClose: () => void;
   defaultMezzoId?: string | null;
+  mezzoEntryOrigin?: LavorazioneMezzoEntryOrigin;
+  prelinkedMezzoId?: string | null;
   initialFields?: SchedaIngressoFields | null;
   createdBy: string | null;
   onCreated?: (id: string) => void;
@@ -51,6 +56,8 @@ export function LavorazioneCreateModal({
     enabled: open,
     createdBy,
     defaultMezzoId,
+    mezzoEntryOrigin,
+    prelinkedMezzoId,
     initialFields,
     mezzi,
     schedeStore,

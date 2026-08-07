@@ -66,6 +66,8 @@ export function useSchedaIngressoMezzoLink({
 
   const onMezzoIdentMatch = useCallback(
     (mezzo: MezzoGestito, field: SchedaIngressoIdentField, kind: SchedaIngressoIdentMatchKind) => {
+      // Edit con mezzo collegato: nessun rematch automatico (solo Cambia mezzo esplicito).
+      if (linkState.status === "linked" && linkState.linkedSnapshot) return;
       if (kind === "none" || kind === "ambiguous") return;
       if (dismissedMezzoIds.has(mezzo.id)) return;
       if (linkState.status === "linked" && linkState.linkedSnapshot?.id === mezzo.id) return;
@@ -91,6 +93,7 @@ export function useSchedaIngressoMezzoLink({
 
   const onAmbiguousMezzoMatch = useCallback(
     (candidates: readonly MezzoGestito[], field: SchedaIngressoIdentField) => {
+      if (linkState.status === "linked" && linkState.linkedSnapshot) return;
       if (candidates.length === 0) return;
       setLinkState((prev) => ({
         ...prev,
@@ -102,8 +105,11 @@ export function useSchedaIngressoMezzoLink({
       setActiveMatchField(field);
       setAmbiguousCandidates([...candidates]);
     },
-    [],
+    [linkState.linkedSnapshot, linkState.status],
   );
+
+  const resolverDisabled =
+    linkState.status === "linked" && linkState.linkedSnapshot != null;
 
   const dismissAmbiguousMatch = useCallback(() => {
     setAmbiguousCandidates(null);
@@ -298,6 +304,7 @@ export function useSchedaIngressoMezzoLink({
     notifyPermanentFieldUserEdit,
     preferredMezzoId,
     prefillPolicy,
+    resolverDisabled,
     editedPermanentFields: [...userEditedPermanentRef.current],
     linkedSnapshot: linkState.linkedSnapshot as LinkedMezzoSnapshot | null,
     pendingMezzo: linkState.pendingMezzo,

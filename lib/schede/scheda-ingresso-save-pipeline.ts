@@ -4,9 +4,12 @@ import type { TagliandoLavorazioneFields } from "@/lib/maintenance-plans/taglian
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
 import {
+  bindIngressoSaveCorrelation,
+  createIngressoSaveCorrelationId,
   logIngressoSavePipeline,
   nextIngressoSaveRunId,
 } from "@/lib/schede/scheda-ingresso-save-pipeline-log";
+import { beginIngressoSaveGeneration } from "@/lib/schede/ingresso-save-generation";
 import type { SchedaIngressoFields } from "@/types/schede";
 import type { SchedaIngressoSaveGateResult } from "@/src/hooks/use-scheda-ingresso-save-gate";
 import type { SchedaIngressoMezzoLinkGateResult } from "@/src/hooks/use-scheda-ingresso-mezzo-link-gate";
@@ -23,6 +26,7 @@ export type IngressoSaveCommitInput = {
   tagliandoFields: TagliandoLavorazioneFields;
   mezziCatalogFrozen: readonly MezzoGestito[];
   runId: number;
+  correlationId: string;
   lavorazioneGestione?: IngressoLavorazioneGestionePatch;
   mezzoLinkMeta?: import("@/lib/schede/scheda-ingresso-mezzo-match").SchedaIngressoMezzoLinkMeta;
 };
@@ -32,8 +36,8 @@ export type IngressoSaveCommitResult =
   | { ok: false; cancelled?: boolean; error?: string };
 
 export type IngressoSaveResult =
-  | { ok: true; runId: number }
-  | { ok: false; runId: number; reason?: "SAVE_IN_PROGRESS" | "SAVE_CANCELLED"; error?: unknown };
+  | { ok: true; runId: number; correlationId: string }
+  | { ok: false; runId: number; correlationId: string; reason?: "SAVE_IN_PROGRESS" | "SAVE_CANCELLED"; error?: unknown };
 
 export type IngressoSavePipelineContext = {
   lock: FormSubmitLock;
@@ -61,12 +65,15 @@ export async function runIngressoSavePipeline(
 ): Promise<IngressoSaveResult> {
   if (!ctx.lock.acquire()) {
     logIngressoSavePipeline("save_in_progress", {});
-    return { ok: false, runId: 0, reason: "SAVE_IN_PROGRESS" };
+    return { ok: false, runId: 0, correlationId: "", reason: "SAVE_IN_PROGRESS" };
   }
 
   const runId = nextIngressoSaveRunId();
+  const correlationId = createIngressoSaveCorrelationId();
+  bindIngressoSaveCorrelation(runId, correlationId);
+  beginIngressoSaveGeneration(runId);
   ctx.onPendingChange?.(true);
-  logIngressoSavePipeline("save_start", { runId });
+  logIngressoSavePipeline("save_start", { runId, correlationId });
 
   try {
     const mezziCatalogFrozen = [...ctx.mezziCatalog];
@@ -113,28 +120,29 @@ export async function runIngressoSavePipeline(
         lavorazioneGestione: ctx.lavorazioneGestione,
         mezziCatalogFrozen,
         runId,
+        correlationId,
         mezzoLinkMeta,
       });
       logIngressoSavePipeline("commit_end", { runId, ok: outcome.ok });
     });
 
     if (outcome.cancelled) {
-      logIngressoSavePipeline("save_cancelled", { runId });
-      return { ok: false, runId, reason: "SAVE_CANCELLED" };
+      logIngressoSavePipeline("save_cancelled", { runId, correlationId });
+      return { ok: false, runId, correlationId, reason: "SAVE_CANCELLED" };
     }
 
     if (!outcome.ok) {
-      return { ok: false, runId, error: outcome.error };
+      return { ok: false, runId, correlationId, error: outcome.error };
     }
 
-    logIngressoSavePipeline("save_end", { runId, ok: true });
-    return { ok: true, runId };
+    logIngressoSavePipeline("save_end", { runId, correlationId, ok: true });
+    return { ok: true, runId, correlationId };
   } catch (err) {
-    logIngressoSavePipeline("save_error", { runId, error: String(err) });
-    return { ok: false, runId, error: err };
+    logIngressoSavePipeline("save_error", { runId, correlationId, error: String(err) });
+    return { ok: false, runId, correlationId, error: err };
   } finally {
     ctx.lock.release();
     ctx.onPendingChange?.(false);
-    logIngressoSavePipeline("save_finally", { runId });
+    logIngressoSavePipeline("save_finally", { runId, correlationId });
   }
 }

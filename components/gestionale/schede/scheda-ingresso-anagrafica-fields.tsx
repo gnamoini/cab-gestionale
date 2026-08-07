@@ -202,17 +202,19 @@ function SchedaIngressoAnagraficaFieldsInner({
   const inputFieldClass = `block w-full ${dsInput}`;
   const listSelectWrapClass = "w-full";
   const mezzoIdentMatchHandler =
-    isPreventivoSurface ? undefined : onMezzoIdentMatch ?? onExactMezzoMatch
+    isPreventivoSurface || mezzoLinked
+      ? undefined
+      : onMezzoIdentMatch ?? onExactMezzoMatch
       ? (mezzo: MezzoGestito, field: SchedaIngressoIdentField, kind: SchedaIngressoIdentMatchKind) => {
           if (onMezzoIdentMatch) onMezzoIdentMatch(mezzo, field, kind);
           else if (kind === "exact") onExactMezzoMatch?.(mezzo, field);
         }
       : undefined;
-  const ambiguousMatchHandler = isPreventivoSurface ? undefined : onAmbiguousMezzoMatch;
+  const ambiguousMatchHandler = isPreventivoSurface || mezzoLinked ? undefined : onAmbiguousMezzoMatch;
   const excludeLinkedMezzoId = mezzoLinked && mezzoId.trim() ? mezzoId.trim() : undefined;
 
   const renderIdentHint = (field: SchedaIngressoIdentField) => {
-    if (isPreventivoSurface) return null;
+    if (isPreventivoSurface || mezzoLinked) return null;
     if (!mezzoInlineHint || mezzoInlineHint.matchField !== field) return null;
     if (
       mezzoInlineHint.variant !== "trovato" &&

@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SchedaMezzoLinkConfirmDialog } from "@/components/lavorazioni/schede/scheda-mezzo-link-confirm-dialog";
 import { logInterventoTelemetry } from "@/lib/domain/intervento-context/intervento-telemetry";
+import type { LavorazioneMezzoEntryOrigin } from "@/lib/lavorazioni/selected-mezzo-context";
+import { resolveMezzoLinkConfirmationDecision } from "@/lib/schede/scheda-ingresso-mezzo-link-confirmation-policy";
 import {
-  collectMezzoCandidates,
-  scoreIngressoMezzoCandidates,
   type IngressoMezzoMatchResult,
   type IngressoMezzoScoredCandidate,
   type MatchConfidence,
@@ -59,10 +59,14 @@ export function useSchedaIngressoMezzoLinkGate({
   mezziCatalog,
   preferredMezzoId,
   linkedOrigin,
+  entryOrigin = "new_mezzo",
+  prelinkedMezzoId,
 }: {
   mezziCatalog: readonly MezzoGestito[];
   preferredMezzoId?: string | null;
   linkedOrigin?: MezzoLinkOrigin | null;
+  entryOrigin?: LavorazioneMezzoEntryOrigin;
+  prelinkedMezzoId?: string | null;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pending, setPending] = useState<PendingGate | null>(null);
@@ -97,37 +101,38 @@ export function useSchedaIngressoMezzoLinkGate({
           else resolve(result);
         };
 
-        if (
-          preferredMezzoId?.trim() &&
-          (linkedOrigin === "selected_by_user" || linkedOrigin === "auto_confirmed")
-        ) {
-          const id = preferredMezzoId.trim();
+        const decision = resolveMezzoLinkConfirmationDecision({
+          entryOrigin,
+          scheda: fields,
+          catalog: mezziCatalog,
+          prelinkedMezzoId,
+          preferredMezzoId,
+          linkedOrigin,
+        });
+
+        if (decision.action === "skip") {
+          logInterventoTelemetry("intervento_create_started", {
+            extra: { mezzoLinkGate: "skip", mezzoLinkSkipReason: decision.reason },
+          });
           finish({
-            preferredMezzoId: id,
-            linkOrigin: linkedOrigin ?? "selected_by_user",
-            mezzoLinkMeta: buildMezzoLinkMeta(linkedOrigin ?? "selected_by_user", id, null, true),
+            preferredMezzoId: decision.preferredMezzoId,
+            linkOrigin: decision.linkOrigin,
+            mezzoLinkMeta: buildMezzoLinkMeta(
+              decision.linkOrigin,
+              decision.preferredMezzoId,
+              null,
+              decision.reason === "catalog_prelinked" || decision.reason === "already_linked",
+            ),
           });
           return;
         }
 
-        const candidates = collectMezzoCandidates({ scheda: fields, catalog: mezziCatalog });
-        const match = scoreIngressoMezzoCandidates({ scheda: fields, candidates });
-
-        if (match.status === "not_found") {
-          finish({
-            preferredMezzoId: null,
-            linkOrigin: "created_new",
-            mezzoLinkMeta: buildMezzoLinkMeta("created_new", null, match, false),
-          });
-          return;
-        }
-
-        if (match.status === "ambiguous") {
+        if (decision.action === "pick") {
           setPending({
             mode: "pick",
-            match,
-            confidence: match.reason?.confidence ?? "ambiguous",
-            candidates: match.candidates,
+            match: decision.match,
+            confidence: decision.match.reason?.confidence ?? "ambiguous",
+            candidates: decision.match.candidates,
           });
           setDialogOpen(true);
           logInterventoTelemetry("intervento_create_started", {
@@ -138,18 +143,21 @@ export function useSchedaIngressoMezzoLinkGate({
 
         setPending({
           mode: "confirm",
-          match,
-          confidence: match.reason.confidence,
-          candidate: match.candidate.mezzo,
-          candidates: match.candidates,
+          match: decision.match,
+          confidence: decision.match.reason.confidence,
+          candidate: decision.match.candidate.mezzo,
+          candidates: decision.match.candidates,
         });
         setDialogOpen(true);
         logInterventoTelemetry("intervento_create_started", {
-          extra: { mezzoLinkGate: "needs_confirm", confidence: match.reason.confidence },
+          extra: {
+            mezzoLinkGate: "needs_confirm",
+            confidence: decision.match.reason.confidence,
+          },
         });
       });
     },
-    [finish, linkedOrigin, mezziCatalog, preferredMezzoId],
+    [entryOrigin, finish, linkedOrigin, mezziCatalog, prelinkedMezzoId, preferredMezzoId],
   );
 
   const handleLinkExisting = useCallback(() => {

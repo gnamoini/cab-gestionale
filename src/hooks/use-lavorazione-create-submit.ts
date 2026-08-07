@@ -43,6 +43,7 @@ import { incrementHealthCounter } from "@/lib/observability/runtime-health";
 import { useSchedaIngressoUnknownSettingsGate } from "@/src/hooks/use-scheda-ingresso-unknown-settings-gate";
 import { useSchedaIngressoSaveGate } from "@/src/hooks/use-scheda-ingresso-save-gate";
 import { useSchedaIngressoMezzoLinkGate } from "@/src/hooks/use-scheda-ingresso-mezzo-link-gate";
+import type { LavorazioneMezzoEntryOrigin } from "@/lib/lavorazioni/selected-mezzo-context";
 import { maybePublishTagliandoDueOnInterventoCreate } from "@/lib/maintenance-plans/tagliando-due-notification.client";
 import { assignTagliandoPresetToMezzoOnSave } from "@/lib/maintenance-plans/assign-tagliando-preset-to-mezzo.client";
 import {
@@ -77,12 +78,17 @@ export function useLavorazioneCreateSubmit({
   storico = [],
   sharedGlobalOpts,
   sharedMezziCatalog,
+  mezzoEntryOrigin = "new_mezzo",
+  prelinkedMezzoId: prelinkedMezzoIdProp,
   onCreated,
   onClose,
 }: {
   enabled: boolean;
   createdBy: string | null;
   defaultMezzoId?: string | null;
+  mezzoEntryOrigin?: LavorazioneMezzoEntryOrigin;
+  /** Mezzo wizard — immutabile per sessione; usato solo con catalog_selected. */
+  prelinkedMezzoId?: string | null;
   initialFields?: SchedaIngressoFields | null;
   initialTagliandoFields?: Partial<TagliandoLavorazioneFields> | null;
   initialMeta?: Partial<{ stato: string; priorita: PrioritaLavorazione; mezzoId: string }>;
@@ -160,6 +166,16 @@ export function useLavorazioneCreateSubmit({
     readonly MezzoPermanentFieldKey[]
   >([]);
   const formInitRef = useRef(false);
+  const prelinkedMezzoIdRef = useRef<string | null>(null);
+  if (enabled) {
+    if (mezzoEntryOrigin === "catalog_selected" && prelinkedMezzoIdProp?.trim()) {
+      if (!prelinkedMezzoIdRef.current) {
+        prelinkedMezzoIdRef.current = prelinkedMezzoIdProp.trim();
+      }
+    }
+  } else {
+    prelinkedMezzoIdRef.current = null;
+  }
   const defaultMezzoAppliedRef = useRef<string | null>(null);
   const createdLavorazioneIdRef = useRef<string | null>(null);
   const idempotencyKeyRef = useRef(
@@ -222,6 +238,8 @@ export function useLavorazioneCreateSubmit({
     mezziCatalog,
     preferredMezzoId: mezzoPrompt.preferredMezzoId,
     linkedOrigin: mezzoPrompt.linkOrigin,
+    entryOrigin: mezzoEntryOrigin,
+    prelinkedMezzoId: prelinkedMezzoIdRef.current,
   });
 
   const applyMezzoFromCapture = useCallback(

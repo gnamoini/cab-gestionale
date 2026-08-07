@@ -192,7 +192,13 @@ function KpiMetricRow({
 }
 
 export function DashboardOperationalKpiHeaderWidget({ def }: { def: DashboardWidgetDefinition }) {
-  const { headerKpiBase, isLoading } = useControlTowerContext();
+  const {
+    headerKpiBase,
+    coreLoading,
+    headerLoading,
+    timesheetLoading,
+    movimentiLoading,
+  } = useControlTowerContext();
   const [period, setPeriod] = useBriefPeriodPreference();
 
   const header = useMemo(() => {
@@ -204,7 +210,7 @@ export function DashboardOperationalKpiHeaderWidget({ def }: { def: DashboardWid
     return filterControlTowerKpiClusters(slice, headerKpiBase.filter);
   }, [headerKpiBase, period]);
 
-  if (isLoading && !header) {
+  if ((coreLoading || headerLoading || timesheetLoading || movimentiLoading) && !header) {
     return wrapDashboardWidget(def, <LoadingCardSkeleton minHeightClass="min-h-[8rem]" rows={2} />);
   }
   if (!header || header.clusters.length === 0) return null;

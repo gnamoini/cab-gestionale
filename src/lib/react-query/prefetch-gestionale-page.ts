@@ -20,6 +20,7 @@ import { getMagazzinoReportLightServer } from "@/lib/magazzino/magazzino-list-fe
 import { getMezziListLightServer, getMezziReportLightServer } from "@/lib/mezzi/mezzi-list-fetch-server";
 import { getMovimentiListServer } from "@/lib/movimenti/movimenti-list-fetch-server";
 import { fetchDashboardDataDTOServer } from "@/lib/bff/dashboard-data-fetch-server";
+import { DEFAULT_AUDIT_RETENTION_CONFIG } from "@/lib/audit/types";
 import { MAGAZZINO_DASHBOARD_KPI_QUERY_KEY } from "@/lib/magazzino/dashboard-mag-query-keys";
 import { QK } from "@/src/lib/react-query/query-keys";
 import { fetchDocumentiPageDTOServer } from "@/lib/bff/documenti-page-fetch-server";
@@ -47,6 +48,7 @@ import {
   preventiviRecordsQueryKey,
 } from "@/lib/render/query-key-factory";
 import {
+  GESTIONALE_LOG_FEED_LIMIT,
   GESTIONALE_REPORT_GC_MS,
   GESTIONALE_REPORT_STALE_MS,
   GESTIONALE_VIEW_GC_MS,
@@ -185,6 +187,10 @@ export async function prefetchDeferredPage(
       const lav = resolveInitialLoad({ scopeKey: "lavorazioni.list.report" });
       const magReport = resolveInitialLoad({ scopeKey: "magazzino.report" });
       const settings = resolveInitialLoad({ scopeKey: "settings.payload" });
+      const activityFeedFilters = {
+        limit: GESTIONALE_LOG_FEED_LIMIT,
+        days: DEFAULT_AUDIT_RETENTION_CONFIG.dashboard_days,
+      };
       const dto = await fetchDashboardDataDTOServer();
       await Promise.all([
         seedPrefetchedData(
@@ -234,6 +240,13 @@ export async function prefetchDeferredPage(
               ),
             ]
           : []),
+        seedPrefetchedData(
+          qc,
+          [...QK.log, "activity-feed", activityFeedFilters] as const,
+          dto.activityFeed,
+          LA_LIST_STALE_MS,
+          GESTIONALE_VIEW_GC_MS,
+        ),
       ]);
       return;
     }

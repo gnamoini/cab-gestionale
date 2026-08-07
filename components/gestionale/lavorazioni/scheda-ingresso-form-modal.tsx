@@ -1257,6 +1257,7 @@ export function SchedaIngressoEditModal({
     mezziCatalog,
     preferredMezzoId: mezzoPrompt.preferredMezzoId,
     linkedOrigin: mezzoPrompt.linkOrigin,
+    entryOrigin: "new_mezzo",
   });
 
   const { bootstrapLinkedMezzo } = mezzoPrompt;

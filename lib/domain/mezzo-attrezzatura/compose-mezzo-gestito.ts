@@ -143,21 +143,5 @@ export function mezzoGestitoFromRow(row: MezzoRow, opts?: MezzoGestitoFromRowOpt
   if (!att && opts?.attrezzaturaId?.trim() && mid) {
     att = attrezzaturaRowFromEnrichedMezzo(row, opts.attrezzaturaId, mid);
   }
-  if (!att && row.marca?.trim() && row.marca.trim() !== "—") {
-    att = {
-      id: opts?.attrezzaturaId?.trim() || "embed",
-      mezzo_id: mid,
-      marca: row.marca.trim(),
-      modello: row.modello?.trim() || "—",
-      matricola: row.matricola?.trim() || null,
-      tipo_attrezzatura: row.tipo_attrezzatura?.trim() || null,
-      portata: null,
-      anno: row.anno,
-      note: null,
-      created_at: row.created_at ?? "",
-      updated_at: row.updated_at ?? "",
-      created_by: null,
-    };
-  }
   return composeMezzoGestitoFromRows(row, att);
 }

@@ -14,6 +14,8 @@ import { PWA_QUERY_CLIENT_DEFAULTS, shouldRefetchPwaGroupOnReconnect, type PwaQu
 import { installLongSessionDevHook } from "@/lib/observability/long-session-dev-hook";
 import { isBootInvestigationEnabled } from "@/lib/observability/boot-investigation-gate";
 import { loadBootInvestigationMod } from "@/lib/observability/boot-investigation-lazy";
+import { mountLoadingWatchdog } from "@/lib/observability/loading-watchdog";
+import { trackQueryCacheEventForStuck } from "@/lib/observability/query-stuck-tracker";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { formatSupabaseError, isPermissionDeniedError } from "@/src/utils/supabaseErrorHandler";
 
@@ -54,6 +56,9 @@ function QueryErrorToasts({ client }: { client: QueryClient }) {
 
 export function QueryProvider({ children }: { children: ReactNode }) {
   useBootInvestigationMount("QueryProvider");
+  const routeRef = useRef(
+    typeof window !== "undefined" ? window.location.pathname : "/",
+  );
   const [client] = useState(
     () =>
       new QueryClient({
@@ -75,6 +80,17 @@ export function QueryProvider({ children }: { children: ReactNode }) {
     if (process.env.NEXT_PUBLIC_PERF_DIAGNOSTICS === "1" || process.env.NEXT_PUBLIC_BENCH_EXPOSE_QUERY === "1") {
       (window as Window & { __GESTIONALE_QUERY_CLIENT__?: QueryClient }).__GESTIONALE_QUERY_CLIENT__ = client;
     }
+
+    const onRoute = () => {
+      if (typeof window !== "undefined") routeRef.current = window.location.pathname;
+    };
+    window.addEventListener("popstate", onRoute);
+
+    const unsubStuck = client.getQueryCache().subscribe((event) => {
+      trackQueryCacheEventForStuck(event, () => routeRef.current);
+    });
+
+    const cleanupWatchdog = mountLoadingWatchdog(client, () => routeRef.current);
 
     onlineManager.setEventListener((setOnline) => {
       const sync = () => setOnline(navigator.onLine);
@@ -101,6 +117,9 @@ export function QueryProvider({ children }: { children: ReactNode }) {
     });
 
     const cleanupOnline = () => {
+      unsubStuck();
+      cleanupWatchdog();
+      window.removeEventListener("popstate", onRoute);
       unsubPwaReconnect();
       onlineManager.setEventListener(() => undefined);
     };

@@ -25,6 +25,11 @@ type ControlTowerContextValue = {
   visibleWidgets: DashboardWidgetDefinition[];
   slices: ControlTowerSlices | null;
   headerKpiBase: ControlTowerHeaderKpiBase | null;
+  coreLoading: boolean;
+  headerLoading: boolean;
+  activityLoading: boolean;
+  timesheetLoading: boolean;
+  movimentiLoading: boolean;
   isLoading: boolean;
   activityFeedLoading: boolean;
   canPreventivi: boolean;

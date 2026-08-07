@@ -18,11 +18,11 @@ const view = read("components/gestionale/magazzino/magazzino-view.tsx");
 const derived = read("lib/magazzino/use-magazzino-list-derived.ts");
 const secondaryGate = read("lib/magazzino/use-magazzino-secondary-query-gate.ts");
 
-assert.match(page, /prefetchGestionalePage\(qc, "magazzino"\)/);
+assert.match(page, /prefetchCriticalPage\(qc, "magazzino"\)/);
 assert.match(page, /MagazzinoView/);
 assert.doesNotMatch(page, /MagazzinoViewLazy/);
-assert.doesNotMatch(page, /MagazzinoDeferredHydration/);
-assert.doesNotMatch(page, /Suspense/);
+assert.match(page, /MagazzinoDeferredHydration/);
+assert.match(page, /Suspense/);
 
 assert.match(deferred, /prefetchDeferredPage\(qc, "magazzino"\)/);
 

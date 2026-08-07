@@ -73,7 +73,7 @@ export type InterventoWriteDeps = {
 };
 
 export type InterventoWriteResult =
-  | { ok: true; lavorazioneId: string; mezzoId: string }
+  | { ok: true; lavorazioneId: string; mezzoId: string; lavorazionePatch?: LavorazioneUpdate }
   | {
       ok: false;
       stage: InterventoWriteStage;

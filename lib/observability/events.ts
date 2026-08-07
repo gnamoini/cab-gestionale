@@ -49,6 +49,12 @@ export const RuntimeEvents = {
   pdfGenerationFailed: "pdf.generation.failed",
   pdfNetworkError: "pdf.network.error",
   operationalResumeCheck: "operational.resume.check",
+  queryStuck: "query.stuck",
+  longTask: "perf.longtask",
+  loadingGateStuck: "loading.gate.stuck",
+  bootDuration: "boot.duration",
+  hydrationDuration: "hydration.duration",
+  pageFirstRender: "page.first.render",
 } as const;
 
 export type RuntimeEventName = (typeof RuntimeEvents)[keyof typeof RuntimeEvents];
@@ -94,6 +100,12 @@ const EVENT_LEVEL: Record<string, "debug" | "info" | "warn" | "error"> = {
   [RuntimeEvents.pdfGenerationFailed]: "warn",
   [RuntimeEvents.pdfNetworkError]: "warn",
   [RuntimeEvents.operationalResumeCheck]: "debug",
+  [RuntimeEvents.queryStuck]: "warn",
+  [RuntimeEvents.longTask]: "warn",
+  [RuntimeEvents.loadingGateStuck]: "warn",
+  [RuntimeEvents.bootDuration]: "info",
+  [RuntimeEvents.hydrationDuration]: "info",
+  [RuntimeEvents.pageFirstRender]: "info",
 };
 
 const EVENT_OPERATION: Partial<Record<RuntimeEventName, ObsOperation>> = {
@@ -150,4 +162,6 @@ export function trackRuntimeEvent(
   if (name === RuntimeEvents.runtimeHydrationMismatch) noteHydrationMismatch();
   if (name === RuntimeEvents.perfSlow) notePerfSlowBurst();
   if (name === RuntimeEvents.cacheInvalidateOperational) noteOperationalInvalidateBurst();
+  if (name === RuntimeEvents.longTask && durationMs != null) recordHealthMetric("longTaskMs", durationMs);
+  if (name === RuntimeEvents.queryStuck && durationMs != null) recordHealthMetric("queryStuckMs", durationMs);
 }

@@ -55,6 +55,7 @@ export async function dedupQuery<T>(
     scope: meta?.scope ?? "list",
     startedAt: Date.now(),
     consumerTags,
+    reject: rejectOuter,
   });
 
   void (async () => {
@@ -63,7 +64,9 @@ export async function dedupQuery<T>(
       resolveInFlight(key);
       resolveOuter(result);
     } catch (err) {
-      rejectInFlight(key);
+      const reason =
+        err instanceof DOMException && err.name === "AbortError" ? "aborted" : "cancelled";
+      rejectInFlight(key, reason);
       rejectOuter(err);
     }
   })();
