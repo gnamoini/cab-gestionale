@@ -14,6 +14,8 @@ export type PageLayoutProps = {
   className?: string;
   /** Marker benchmark TTUI sullo stack contenuto */
   contentTestId?: string;
+  /** Fade-in navigazione — opt-in; non usare con SkeletonBoundary sulla stessa route. */
+  contentReveal?: boolean;
 };
 
 /**
@@ -29,6 +31,7 @@ export function PageLayout({
   beforeContent,
   className = "",
   contentTestId,
+  contentReveal = false,
 }: PageLayoutProps) {
   return (
     <>
@@ -39,7 +42,7 @@ export function PageLayout({
         description={description}
         actions={actions}
       />
-      <PageContent className={className} testId={contentTestId}>
+      <PageContent className={className} testId={contentTestId} contentReveal={contentReveal}>
         {beforeContent}
         {children}
       </PageContent>

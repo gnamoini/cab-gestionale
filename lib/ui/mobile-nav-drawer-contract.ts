@@ -4,8 +4,10 @@
 
 export const NAV_DRAWER_OPEN_RATIO = 0.3;
 export const NAV_DRAWER_VELOCITY_COMMIT_PX_MS = 0.45;
-export const NAV_DRAWER_EDGE_ZONE_RATIO = 0.18;
-export const NAV_DRAWER_EDGE_ZONE_MIN_PX = 20;
+export const NAV_DRAWER_EDGE_ZONE_PX = 24;
+export const NAV_DRAWER_GESTURE_START_PX = 10;
+export const NAV_DRAWER_DIRECTION_RATIO = 1.2;
+export const NAV_DRAWER_TAP_THRESHOLD_PX = 8;
 export const NAV_DRAWER_ANIMATION_MS = 240;
 export const NAV_DRAWER_WATCHDOG_MS = 320;
 export const NAV_DRAWER_EDGE_DRAG_IDLE_MS = 400;
@@ -69,11 +71,16 @@ export const NAV_DRAWER_CONTRACT_TRANSITIONS: ReadonlyArray<{
   { event: "WATCHDOG_TIMEOUT", from: "OPENING", to: "OPEN" },
 ];
 
-export function resolveActivationZonePx(viewportWidth: number, safeAreaLeftPx = 0): number {
-  return Math.max(
-    NAV_DRAWER_EDGE_ZONE_MIN_PX + safeAreaLeftPx,
-    viewportWidth * NAV_DRAWER_EDGE_ZONE_RATIO,
-  );
+export type ResolveActivationZoneOpts = {
+  safeAreaLeftPx?: number;
+  /** Override esplicito al call site — non config globale. */
+  overridePx?: number;
+};
+
+/** ponytail: no viewport %; clientX è viewport coords — safe-area sommata una sola volta. */
+export function resolveActivationZonePx(opts: ResolveActivationZoneOpts = {}): number {
+  const base = opts.overridePx ?? NAV_DRAWER_EDGE_ZONE_PX;
+  return base + (opts.safeAreaLeftPx ?? 0);
 }
 
 export function shouldCommitByPosition(dragPx: number, panelWidth: number): boolean {

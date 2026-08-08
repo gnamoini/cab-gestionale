@@ -1,8 +1,9 @@
 "use client";
 
 import { loadBrandingLogoDataUrl } from "@/lib/branding/branding-logo-for-pdf";
+import type { DeferredPopupHandle } from "@/lib/browser/popup-guard";
 import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
-import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
+import { openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
 import type { OrdineFornitoreRecord } from "@/lib/ordini-fornitori/types";
 import { pushGestionaleToast } from "@/context/toast-context";
 
@@ -12,20 +13,23 @@ export async function openOrdineFornitorePdfInNewTab(o: Pick<OrdineFornitoreReco
 }
 
 /** Anteprima WYSIWYG dall'editor — non richiede salvataggio su DB. */
-export async function openOrdineFornitorePdfPreviewFromRecord(record: OrdineFornitoreRecord): Promise<void> {
+export async function openOrdineFornitorePdfPreviewFromRecord(
+  record: OrdineFornitoreRecord,
+  deferredHandle?: DeferredPopupHandle | null,
+): Promise<void> {
   pushGestionaleToast("Generazione PDF in corso…", "info", 5000);
   try {
-    const [{ generateOrdineFornitorePdfBytes }, logo] = await Promise.all([
+    const [{ generateOrdineFornitorePdfBytes, ordineFornitorePdfFileName }, logo] = await Promise.all([
       import("@/lib/ordini-fornitori/ordine-fornitore-pdf-generate"),
       loadBrandingLogoDataUrl(),
     ]);
     const bytes = generateOrdineFornitorePdfBytes(record, logo);
-    const blobUrl = URL.createObjectURL(
-      new Blob([bytes as BlobPart], { type: "application/pdf" }),
-    );
-    const opened = openUrlInNewTab(blobUrl, {
-      revokeBlobUrlAfterMs: 120_000,
-      blockedMessage: "Impossibile aprire il PDF. Consenti i pop-up per questo sito.",
+    const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
+    const opened = await openPdfBlobInNewTab(blob, ordineFornitorePdfFileName(record), {
+      deferredHandle,
+      context: "pdf",
+      label: "PDF ordine fornitore",
+      showLoadingFeedback: false,
     });
     if (!opened) {
       pushGestionaleToast(
@@ -35,6 +39,7 @@ export async function openOrdineFornitorePdfPreviewFromRecord(record: OrdineForn
       );
     }
   } catch {
+    deferredHandle?.close();
     pushGestionaleToast("Generazione PDF non riuscita.", "warning", 5200);
   }
 }

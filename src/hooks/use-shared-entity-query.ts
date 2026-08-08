@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import { useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import { registerDedupConsumerTag } from "@/lib/observability/query-dedup-audit";
+import { shouldSkipMountRefetchForPrefetchedQuery } from "@/lib/react-query/prefetched-query-meta";
 import {
   shouldSkipClientInitialFetch,
   type QueryScopeKey,
@@ -57,12 +58,24 @@ export function useSharedEntityQuery<TData, TKey extends readonly unknown[]>(
   }, [expectedServerKey, queryKey, entityType, scope]);
 
   const hydrationDefaults = useMemo((): Partial<UseQueryOptions<TData, Error, TData, TKey>> => {
-    if (!skipInitialFetch) return {};
-    return {
-      refetchOnMount: false,
-      initialData: dehydratedData,
-    };
-  }, [skipInitialFetch, dehydratedData]);
+    const cachedQuery = queryClient.getQueryCache().find({ queryKey });
+    const queryState = cachedQuery?.state;
+    const prefetchedSkip =
+      queryState != null &&
+      shouldSkipMountRefetchForPrefetchedQuery(
+        cachedQuery?.meta,
+        queryState.dataUpdatedAt,
+        typeof staleTime === "number" ? staleTime : 30_000,
+      );
+
+    if (skipInitialFetch || prefetchedSkip) {
+      return {
+        refetchOnMount: false,
+        initialData: dehydratedData ?? (queryState?.data as TData | undefined),
+      };
+    }
+    return {};
+  }, [skipInitialFetch, dehydratedData, queryClient, queryKey, staleTime]);
 
   return useServiceQuery(queryKey, queryFn, {
     ...rest,

@@ -2,6 +2,7 @@
 
 import { Children, cloneElement, isValidElement, memo, type ReactElement, type ReactNode } from "react";
 import type { SkeletonMode } from "./skeleton-contract";
+import { ContentReveal } from "./content-reveal";
 
 export type SkeletonBoundaryChildProps = {
   mode?: SkeletonMode;
@@ -24,7 +25,7 @@ export const SkeletonBoundary = memo(function SkeletonBoundary({
   skeletonFallback = null,
 }: SkeletonBoundaryProps) {
   if (!loading) {
-    return children;
+    return <ContentReveal data-testid="content-reveal">{children}</ContentReveal>;
   }
 
   if (isValidElement<SkeletonBoundaryChildProps>(children)) {

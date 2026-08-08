@@ -1,5 +1,8 @@
 "use client";
 
+import type { CSSProperties } from "react";
+import { LOADING_SPINNER_DURATION_MS } from "@/components/design-system/loading/loading-tokens";
+
 const RING_SIZE = 68;
 const RING_STROKE = 5;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
@@ -8,6 +11,9 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 export function HealthScoreRingLoading() {
   const arc = RING_CIRCUMFERENCE * 0.28;
   const gap = RING_CIRCUMFERENCE - arc;
+  const spinStyle = {
+    "--cab-spinner-duration": `${LOADING_SPINNER_DURATION_MS}ms`,
+  } as CSSProperties;
 
   return (
     <div
@@ -19,7 +25,8 @@ export function HealthScoreRingLoading() {
         width={RING_SIZE}
         height={RING_SIZE}
         viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
-        className="-rotate-90 shrink-0 animate-spin motion-reduce:animate-none"
+        className="-rotate-90 shrink-0 cab-spinner-ring motion-reduce:animation-none"
+        style={spinStyle}
         aria-hidden
       >
         <circle

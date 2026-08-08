@@ -56,6 +56,7 @@ import {
 } from "@/lib/react-query/query-layer-policies";
 import { GESTIONALE_SEMI_GC_MS, GESTIONALE_SEMI_STALE_MS, GESTIONALE_STATIC_GC_MS, GESTIONALE_STATIC_STALE_MS } from "@/lib/react-query/data-cache-tiers";
 import { PWA_QUERY_CLIENT_DEFAULTS } from "@/lib/pwa/pwa-query-policy";
+import { markPrefetchedQueryMeta } from "@/lib/react-query/prefetched-query-meta";
 import { resolveCabAppSettingsFallbackServer } from "@/lib/app-settings/settings-fallback-server";
 import type { CabAppSettingsQueryPayload } from "@/src/hooks/gestionale/use-settings-queries";
 import type { ServiceResult } from "@/src/services/service-result";
@@ -148,32 +149,24 @@ export async function prefetchCriticalPage(qc: QueryClient, page: GestionalePref
   switch (page) {
     case "mezzi":
     case "fatturazione":
-      return;
     case "preventivi":
-      await prefetchSettingsPayload(qc, getAppSettingsPayloadReadServer);
-      return;
     case "agenda":
     case "dipendenti":
     case "lavorazioni":
-      await prefetchSettingsPayload(qc, getAppSettingsPayloadServer);
-      return;
     case "sicurezza":
-      return;
     case "impostazioni":
-      return;
     case "lavorazioni_clienti":
-      await prefetchSettingsPayload(qc, getAppSettingsPayloadReadServer);
-      return;
     case "documenti":
     case "magazzino":
-      await prefetchSettingsPayload(qc, getAppSettingsPayloadReadServer);
-      return;
     case "dashboard":
-      return;
     case "report":
-      await prefetchSettingsPayload(qc, getAppSettingsPayloadServer);
       return;
   }
+}
+
+/** Layout gestionale — settings una volta per RSC request (React.cache su fetcher). */
+export async function prefetchGestionaleLayoutSettings(qc: QueryClient): Promise<void> {
+  await prefetchSettingsPayload(qc, getAppSettingsPayloadReadServer);
 }
 
 /** Dati lista / BFF — può completare dopo lo stream shell. */
@@ -509,12 +502,15 @@ async function seedPrefetchedData<T>(
   staleTime: number,
   gcTime: number,
 ): Promise<void> {
+  const prefetchedAt = Date.now();
   await qc.prefetchQuery({
     queryKey,
     queryFn: async () => data,
     staleTime,
     gcTime,
+    meta: markPrefetchedQueryMeta(prefetchedAt),
   });
+  qc.setQueryData(queryKey, data, { updatedAt: prefetchedAt });
 }
 
 function unwrap<T>(result: ServiceResult<T>, fallback: T): T {
@@ -527,12 +523,18 @@ async function prefetchSettingsPayload(
 ): Promise<void> {
   const settings = resolveInitialLoad({ scopeKey: "settings.payload" });
   void getPrefetchCachePolicyHint("settings.payload");
+  const prefetchedAt = Date.now();
   await qc.prefetchQuery({
     queryKey: settings.queryKey,
     queryFn: async () => unwrap(await fetcher(), { rows: [], resolved: resolveCabAppSettingsFallbackServer() }),
     staleTime: GESTIONALE_STATIC_STALE_MS,
     gcTime: GESTIONALE_STATIC_GC_MS,
+    meta: markPrefetchedQueryMeta(prefetchedAt),
   });
+  const seeded = qc.getQueryData<CabAppSettingsQueryPayload>(settings.queryKey);
+  if (seeded) {
+    qc.setQueryData(settings.queryKey, seeded, { updatedAt: prefetchedAt });
+  }
 }
 
 async function prefetchGestionalePageDehydrated(

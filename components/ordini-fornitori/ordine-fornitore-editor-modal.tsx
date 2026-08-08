@@ -58,6 +58,7 @@ import {
   readOfficinaDestinatarioOrdiniFromRows,
 } from "@/lib/officina/officina-destinatario-ordini";
 import { readOfficinaBancheOrdiniFromRows } from "@/lib/officina/officina-banche-ordini";
+import { isDeferredPopupBlocked, openDeferredPopup } from "@/lib/browser/popup-guard";
 import { openOrdineFornitorePdfPreviewFromRecord } from "@/lib/ordini-fornitori/ordine-fornitore-pdf";
 import {
   calcolaTotaliOrdineFornitore,
@@ -523,7 +524,11 @@ export function OrdineFornitoreEditorModal({
           <button
             type="button"
             className={preventivoEditorFooterBtnNeutral}
-            onClick={() => void openOrdineFornitorePdfPreviewFromRecord(pdfPreviewRecord)}
+            onClick={() => {
+              const deferredResult = openDeferredPopup({ context: "pdf", label: "PDF ordine fornitore" });
+              if (isDeferredPopupBlocked(deferredResult)) return;
+              void openOrdineFornitorePdfPreviewFromRecord(pdfPreviewRecord, deferredResult);
+            }}
           >
             Anteprima
           </button>

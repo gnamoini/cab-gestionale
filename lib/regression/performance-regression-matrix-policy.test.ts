@@ -41,6 +41,11 @@ assert.match(read("components/gestionale/lavorazioni/lavorazioni-toolbar-state.t
 
 const magIndex = read("lib/magazzino/magazzino-filter-search-index.ts");
 assert.match(magIndex, /buildMagazzinoHaystackIndex/);
+assert.match(magIndex, /matchSearchStringWithPrepared/);
+
+const lavIndex = read("lib/lavorazioni/lavorazioni-filter-search-index.ts");
+assert.match(lavIndex, /buildLavorazioniHaystackIndex/);
+assert.match(lavIndex, /matchSearchStringWithPrepared/);
 
 const detailPage = read("app/(gestionale)/lavorazioni-clienti/[id]/page.tsx");
 assert.match(detailPage, /ClientPortalDetailDeferredHydration/);

@@ -1,7 +1,6 @@
 "use client";
 
-import { Drawer } from "@/components/design-system";
-import { LoadingFormSkeleton } from "@/components/design-system";
+import { Drawer, LoadingFormSkeleton, ContentReveal } from "@/components/design-system";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import {
   GestionaleLogEmpty,
@@ -51,22 +50,24 @@ export function MagazzinoLogDrawer({
           ) : feed.length === 0 ? (
             <GestionaleLogEmpty message="Nessuna modifica registrata." />
           ) : (
-            <GestionaleLogList>
-              {pagedFeed.map((item) => (
-                <li key={item.id} className="list-none">
-                  <GestionaleLogEntryFourLines
-                    vm={item.vm}
-                    onClick={() => onFocusRicambio(item.ricambioId)}
-                    title="Mostra ricambio in tabella"
-                    trailing={
-                      item.source === "local" ? (
-                        <GestionaleLogEntryDismissButton onDismiss={() => onDismissLocal(item.id)} />
-                      ) : undefined
-                    }
-                  />
-                </li>
-              ))}
-            </GestionaleLogList>
+            <ContentReveal data-testid="content-reveal">
+              <GestionaleLogList>
+                {pagedFeed.map((item) => (
+                  <li key={item.id} className="list-none">
+                    <GestionaleLogEntryFourLines
+                      vm={item.vm}
+                      onClick={() => onFocusRicambio(item.ricambioId)}
+                      title="Mostra ricambio in tabella"
+                      trailing={
+                        item.source === "local" ? (
+                          <GestionaleLogEntryDismissButton onDismiss={() => onDismissLocal(item.id)} />
+                        ) : undefined
+                      }
+                    />
+                  </li>
+                ))}
+              </GestionaleLogList>
+            </ContentReveal>
           )}
         </div>
         {showPager ? (

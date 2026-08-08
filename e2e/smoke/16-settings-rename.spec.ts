@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { attachConsoleGuards } from "../helpers/console";
 import { adminCredentials, loginViaUi } from "../fixtures/auth";
 import { test, expect } from "@playwright/test";
+import { openNuovaLavorazioneSchedaVuota, waitForGlobalOptionsReady } from "../helpers/lavorazioni-scheda";
 
 test.describe.configure({ mode: "serial" });
 
@@ -16,6 +17,16 @@ async function saveSettingsAndWait(page: Page): Promise<void> {
   await expect(page.getByRole("button", { name: /Salvataggio/ })).toBeVisible({ timeout: 10_000 });
   await saveDone;
   await expect(page.getByRole("button", { name: /Salvataggio/ })).toBeHidden({ timeout: 15_000 });
+}
+
+async function dismissPropagaIfVisible(page: Page): Promise<void> {
+  const propagaDialog = page
+    .getByRole("dialog")
+    .filter({ has: page.getByRole("heading", { name: "Propagare le modifiche?" }) });
+  if (await propagaDialog.isVisible().catch(() => false)) {
+    await propagaDialog.getByRole("button", { name: "Solo configurazione" }).click();
+    await expect(propagaDialog).toBeHidden({ timeout: 10_000 });
+  }
 }
 
 test("impostazioni rename dialog exposes live propagation affordance", async ({ page }) => {
@@ -69,4 +80,66 @@ test("impostazioni rename opens propaga dialog and loads impact preview", async 
   }
 
   await expect(page.getByRole("button", { name: `Modifica ${from}` })).toBeVisible({ timeout: 15_000 });
+});
+
+test("impostazioni cliente propagato a combobox Lavorazioni senza reload", async ({ page }) => {
+  attachConsoleGuards(page);
+  const token = `E2E-Cliente-${Date.now()}`;
+  const clienteName = `Cliente Sync ${token}`;
+
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/impostazioni?sezione=cli-cliente");
+  await expect(page.getByRole("heading", { name: "Configurazione" })).toBeVisible({ timeout: 30_000 });
+
+  await page.getByRole("button", { name: "Nuovo cliente" }).click();
+  const draftInput = page.getByRole("textbox", { name: "Nuovo cliente" });
+  await expect(draftInput).toBeVisible({ timeout: 5_000 });
+  await draftInput.fill(clienteName);
+  await draftInput.press("Enter");
+
+  await saveSettingsAndWait(page);
+  await dismissPropagaIfVisible(page);
+
+  await page.goto("/lavorazioni");
+  const scheda = await openNuovaLavorazioneSchedaVuota(page);
+  await waitForGlobalOptionsReady(scheda);
+
+  const clienteCombo = scheda.getByRole("combobox", { name: "Cliente" });
+  await clienteCombo.click();
+  await clienteCombo.fill(clienteName);
+  await expect(page.getByRole("option", { name: clienteName })).toBeVisible({ timeout: 15_000 });
+
+  await page.goto("/impostazioni?sezione=cli-cliente");
+  await expect(page.getByRole("button", { name: `Modifica ${clienteName}` })).toBeVisible({ timeout: 15_000 });
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: `Modifica ${clienteName}` })).toBeVisible({ timeout: 30_000 });
+});
+
+test("impostazioni cantiere propagato a consumer Lavorazioni", async ({ page }) => {
+  attachConsoleGuards(page);
+  const token = `E2E-Cantiere-${Date.now()}`;
+  const cantiereName = `Cantiere Sync ${token}`;
+
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/impostazioni?sezione=cli-cantiere");
+  await expect(page.getByRole("heading", { name: "Configurazione" })).toBeVisible({ timeout: 30_000 });
+
+  await page.getByRole("button", { name: "Nuovo cantiere" }).click();
+  const draftInput = page.getByRole("textbox", { name: "Nuovo cantiere" });
+  await expect(draftInput).toBeVisible({ timeout: 5_000 });
+  await draftInput.fill(cantiereName);
+  await draftInput.press("Enter");
+
+  await saveSettingsAndWait(page);
+  await dismissPropagaIfVisible(page);
+
+  await page.goto("/lavorazioni");
+  const scheda = await openNuovaLavorazioneSchedaVuota(page);
+  await waitForGlobalOptionsReady(scheda);
+
+  const cantiereCombo = scheda.getByRole("combobox", { name: "Cantiere" });
+  await cantiereCombo.click();
+  await cantiereCombo.fill(cantiereName);
+  await expect(page.getByRole("option", { name: cantiereName })).toBeVisible({ timeout: 15_000 });
 });

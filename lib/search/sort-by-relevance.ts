@@ -32,3 +32,26 @@ export function sortRowsBySearchRelevance<T>(
 export function isSearchRelevanceSortActive(searchApplied: string, sortColumn: unknown): boolean {
   return searchApplied.trim().length > 0 && (sortColumn === null || sortColumn === undefined);
 }
+
+/** Score map — O(n) once, sort compares O(1) per row. */
+export function buildSearchRelevanceScoreMap<T>(
+  rows: readonly T[],
+  scoreRow: (row: T) => number,
+): Map<T, number> {
+  const map = new Map<T, number>();
+  for (const row of rows) {
+    map.set(row, scoreRow(row));
+  }
+  return map;
+}
+
+export function compareSearchRelevanceWithScoreMap<T>(
+  a: T,
+  b: T,
+  scoreMap: Map<T, number>,
+): number {
+  const sa = scoreMap.get(a) ?? 0;
+  const sb = scoreMap.get(b) ?? 0;
+  if (sa !== sb) return sb - sa;
+  return 0;
+}

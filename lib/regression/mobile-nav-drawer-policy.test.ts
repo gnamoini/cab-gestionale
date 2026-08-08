@@ -9,7 +9,7 @@ assert.ok(NAV_DRAWER_CONTRACT_TRANSITIONS.length > 0);
 
 const contractDoc = readFileSync(join(root, "docs/mobile-nav-drawer-contract.md"), "utf8");
 assert.match(contractDoc, /Interaction Contract/);
-assert.match(contractDoc, /EDGE_ZONE_RATIO/);
+assert.match(contractDoc, /EDGE_ZONE_PX/);
 
 const machineSrc = readFileSync(join(root, "lib/ui/mobile-nav-drawer-machine.ts"), "utf8");
 for (const row of NAV_DRAWER_CONTRACT_TRANSITIONS.slice(0, 8)) {
@@ -18,7 +18,8 @@ for (const row of NAV_DRAWER_CONTRACT_TRANSITIONS.slice(0, 8)) {
 assert.match(machineSrc, /deriveMainInert/);
 
 const appShellSrc = readFileSync(join(root, "components/gestionale/app-shell.tsx"), "utf8");
-assert.match(appShellSrc, /deriveMainInert/);
+assert.match(appShellSrc, /useNavDrawerGesture/);
+assert.doesNotMatch(appShellSrc, /useSwipeFromEdgeToOpen/);
 assert.match(appShellSrc, /mainInert=\{deriveMainInert\(flags\.state\)\}/);
 
 const mainSrc = readFileSync(join(root, "components/gestionale/app-shell-main.tsx"), "utf8");
@@ -42,7 +43,9 @@ assert.match(sidebarSrc, /useOverlayBackHandler/);
 assert.match(sidebarSrc, /cab-nav-drawer-backdrop[\s\S]*touch-none/);
 assert.match(sidebarSrc, /touch-pan-y/);
 assert.match(sidebarSrc, /id=\{NAV_DRAWER_PANEL_ID\}/);
-assert.match(sidebarSrc, /DISMISS_DRAG_END_COMMIT/);
+assert.match(sidebarSrc, /navGesturePanelProps/);
+assert.doesNotMatch(sidebarSrc, /onTouchStart/);
+assert.doesNotMatch(sidebarSrc, /useSwipeToDismiss/);
 assert.match(sidebarSrc, /skipCssCloseAnim/);
 assert.match(sidebarSrc, /edgeSnapVisuallyClosed/);
 

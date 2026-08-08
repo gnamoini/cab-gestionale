@@ -14,7 +14,7 @@ export default async function DipendentiPage() {
   const listSurface = await resolveListSurfaceForPage();
   await prefetchGestionalePage(qc, "dipendenti");
   return (
-    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.dipendenti}>
+    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.dipendenti} contentReveal>
       <GestionaleHydrationBoundary state={dehydrate(qc)}>
         <DipendentiViewLazy listSurface={listSurface} listTier="md" />
       </GestionaleHydrationBoundary>

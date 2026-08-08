@@ -484,7 +484,11 @@ export async function clickSalvaSchedaIngressoEdit(
       await expect(confirm).toBeHidden({ timeout: 15_000 });
     }
   }
-  await persist;
+  await expect(btn).not.toHaveAttribute("aria-busy", "true", { timeout: 30_000 });
+  await Promise.all([
+    persist,
+    expect(btn).toBeEnabled({ timeout: 30_000 }),
+  ]);
   await expect(editModal).not.toBeVisible({ timeout: 30_000 });
 }
 

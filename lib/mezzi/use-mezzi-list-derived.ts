@@ -1,9 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { buildSearchDocumentMezzo } from "@/lib/search/builders/build-search-document-mezzo";
-import { scoreSearchDocument } from "@/lib/search/match";
-import { compareSearchRelevance, isSearchRelevanceSortActive } from "@/lib/search/sort-by-relevance";
+import { buildMezziHaystackIndex, mezziHaystackForRow } from "@/lib/mezzi/mezzi-search-haystack-index";
 import {
   compareMezzi,
   mezzoMatchesNumeroLavorazioniFilter,
@@ -16,6 +14,14 @@ import {
   mezzoHaLavorazioneAttivaDb,
 } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import { filterMezziGestiti } from "@/lib/mezzi/mezzi-list-fetch";
+import { matchSearchStringPreparedFromRaw, matchSearchStringWithPrepared } from "@/lib/search/match";
+import { scoreSearchDocumentWithPrepared } from "@/lib/search/rank";
+import {
+  buildSearchRelevanceScoreMap,
+  compareSearchRelevanceWithScoreMap,
+  isSearchRelevanceSortActive,
+} from "@/lib/search/sort-by-relevance";
+import { runProbedFilterPass } from "@/lib/search/search-hot-path-probe";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 import type { MezzoFilters } from "@/src/services/mezzi.service";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
@@ -54,42 +60,56 @@ export function useMezziListDerived(
       };
     }
 
-    const mezziUi = filterMezziGestiti([...mezzoRows], serviceFilters);
-    const interventiByMezzoId = buildInterventiByMezzoIdFromLavorazioni(mezziUi, lavRows);
+    return runProbedFilterPass(() => {
+      const haystackIndex = buildMezziHaystackIndex(mezzoRows);
+      const mezziUi = filterMezziGestiti([...mezzoRows], serviceFilters, haystackIndex);
+      const interventiByMezzoId = buildInterventiByMezzoIdFromLavorazioni(mezziUi, lavRows);
 
-    const filteredMezzi = mezziUi.filter((m) => {
-      const interventi = interventiByMezzoId.get(m.id) ?? [];
-      if (!mezzoMatchesUltimaLavFilter(interventi, filtroUltimaLav)) return false;
-      if (!mezzoMatchesNumeroLavorazioniFilter(interventi.length, filtroNumeroLav)) return false;
-      return true;
-    });
+      const filteredMezzi = mezziUi.filter((m) => {
+        const interventi = interventiByMezzoId.get(m.id) ?? [];
+        if (!mezzoMatchesUltimaLavFilter(interventi, filtroUltimaLav)) return false;
+        if (!mezzoMatchesNumeroLavorazioniFilter(interventi.length, filtroNumeroLav)) return false;
+        return true;
+      });
 
-    const sorted = [...filteredMezzi];
-    sorted.sort((a, b) => {
-      if (isSearchRelevanceSortActive(serviceFilters.search ?? "", sortColumn)) {
-        const rel = compareSearchRelevance(a, b, serviceFilters.search!, (row, q) =>
-          scoreSearchDocument(q, buildSearchDocumentMezzo(row)).score,
+      const searchQ = serviceFilters.search?.trim() ?? "";
+      const prepared = searchQ ? matchSearchStringPreparedFromRaw(searchQ) : null;
+      const relevanceActive = isSearchRelevanceSortActive(searchQ, sortColumn);
+      const scoreMap =
+        relevanceActive && prepared
+          ? buildSearchRelevanceScoreMap(filteredMezzi, (row) =>
+              scoreSearchDocumentWithPrepared(
+                prepared,
+                mezziHaystackForRow(row, haystackIndex),
+              ).score,
+            )
+          : null;
+
+      const sorted = [...filteredMezzi];
+      sorted.sort((a, b) => {
+        if (relevanceActive && scoreMap) {
+          const rel = compareSearchRelevanceWithScoreMap(a, b, scoreMap);
+          if (rel !== 0) return rel;
+        }
+        return compareMezzi(
+          a,
+          b,
+          sortColumn,
+          sortPhase,
+          naturalMezziOrder,
+          (m) => interventiByMezzoId.get(m.id)?.[0]?.dataIngresso ?? "",
+          (m) => interventiByMezzoId.get(m.id)?.length ?? 0,
         );
-        if (rel !== 0) return rel;
-      }
-      return compareMezzi(
-        a,
-        b,
-        sortColumn,
-        sortPhase,
-        naturalMezziOrder,
-        (m) => interventiByMezzoId.get(m.id)?.[0]?.dataIngresso ?? "",
-        (m) => interventiByMezzoId.get(m.id)?.length ?? 0,
-      );
-    });
+      });
 
-    return {
-      mezziUi,
-      filteredMezzi,
-      sorted,
-      interventiByMezzoId,
-      inOfficina: (m: MezzoGestito) => mezzoHaLavorazioneAttivaDb(m, lavRows),
-    };
+      return {
+        mezziUi,
+        filteredMezzi,
+        sorted,
+        interventiByMezzoId,
+        inOfficina: (m: MezzoGestito) => mezzoHaLavorazioneAttivaDb(m, lavRows),
+      };
+    });
   }, [
     isAnagrafica,
     mezzoRows,

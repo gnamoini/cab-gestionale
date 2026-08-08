@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import {
   QueryClient,
   QueryClientProvider,
@@ -17,6 +17,8 @@ import { loadBootInvestigationMod } from "@/lib/observability/boot-investigation
 import { mountLoadingWatchdog } from "@/lib/observability/loading-watchdog";
 import { trackQueryCacheEventForStuck } from "@/lib/observability/query-stuck-tracker";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
+import { CAB_COLD_START_MARK } from "@/lib/observability/cold-start-mark-names";
+import { lazyMarkColdStart } from "@/lib/observability/cold-start-diagnostics-lazy";
 import { formatSupabaseError, isPermissionDeniedError } from "@/src/utils/supabaseErrorHandler";
 
 function QueryErrorToasts({ client }: { client: QueryClient }) {
@@ -56,6 +58,10 @@ function QueryErrorToasts({ client }: { client: QueryClient }) {
 
 export function QueryProvider({ children }: { children: ReactNode }) {
   useBootInvestigationMount("QueryProvider");
+
+  useLayoutEffect(() => {
+    lazyMarkColdStart(CAB_COLD_START_MARK.reactRootMount);
+  }, []);
   const routeRef = useRef(
     typeof window !== "undefined" ? window.location.pathname : "/",
   );

@@ -15,7 +15,11 @@ export default async function DashboardPage() {
   const qc = createServerQueryClient();
   await prefetchCriticalPage(qc, "dashboard");
   return (
-    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.dashboard} contentTestId="page-ready-toolbar">
+    <PageLayout
+      title={STRUCTURAL_ROUTE_PAGE_TITLES.dashboard}
+      contentTestId="page-ready-toolbar"
+      contentReveal
+    >
       <GestionaleHydrationBoundary state={dehydrate(qc)}>
         <Suspense fallback={<DashboardPageStructure mode="skeleton" />}>
           <DashboardDeferredHydration>

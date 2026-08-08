@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SecurityRoleBadge, SecurityStatusBadge } from "@/components/dashboard/security/security-role-badge";
 import { SecurityUserPagePermissionsEditor } from "@/components/dashboard/security/security-user-page-permissions-editor";
 import type { PagePermissionDraftRow } from "@/lib/security/user-page-permissions";
-import { Drawer, LoadingFormSkeleton } from "@/components/design-system";
+import { Drawer, LoadingFormSkeleton, ContentReveal } from "@/components/design-system";
 import type { SecurityUserPermissionRow } from "@/src/actions/security-users-permissions";
 import { useSecurityViewQueryOpts } from "@/lib/view/view-query-opts";
 import { QK } from "@/src/lib/react-query/invalidate-related";
@@ -213,21 +213,23 @@ export function SecurityUserDetailDrawer({
                 ) : (activityQ.data ?? []).length === 0 ? (
                   <p className="p-3 text-sm text-[color:var(--cab-text-muted)]">Nessuna attività recente.</p>
                 ) : (
-                  <ul className={`${LIST_DIVIDER_UL}`}>
-                    {(activityQ.data ?? []).map((row) => (
-                      <li key={row.id} className="px-3 py-2 text-xs">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="font-semibold text-[color:var(--cab-text)]">{row.action}</span>
-                          <span className="tabular-nums text-[color:var(--cab-text-muted)]">
-                            {formatSecurityNullableWhen(row.when)}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-[color:var(--cab-text-muted)]">
-                          {row.entita} · {row.detail}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
+                  <ContentReveal data-testid="content-reveal">
+                    <ul className={`${LIST_DIVIDER_UL}`}>
+                      {(activityQ.data ?? []).map((row) => (
+                        <li key={row.id} className="px-3 py-2 text-xs">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-semibold text-[color:var(--cab-text)]">{row.action}</span>
+                            <span className="tabular-nums text-[color:var(--cab-text-muted)]">
+                              {formatSecurityNullableWhen(row.when)}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[color:var(--cab-text-muted)]">
+                            {row.entita} · {row.detail}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </ContentReveal>
                 )}
               </div>
             </div>

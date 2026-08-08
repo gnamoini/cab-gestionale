@@ -18,9 +18,9 @@ const billingHook = read("src/hooks/gestionale/use-preventivi-billing-query.ts")
 const view = read("components/preventivi/preventivi-view.tsx");
 const derived = read("lib/preventivi/use-preventivi-list-derived.ts");
 
-assert.match(page, /prefetchCriticalPage\(qc, "preventivi"\)/);
-assert.match(page, /PreventiviDeferredHydration/);
-assert.match(page, /Suspense/);
+assert.match(page, /prefetchGestionalePage\(qc, "preventivi"/);
+assert.match(page, /PreventiviViewLazy/);
+assert.match(page, /GestionaleHydrationBoundary/);
 assert.match(page, /includeOrdini/);
 
 assert.match(deferred, /prefetchDeferredPage\(qc, "preventivi"/);
@@ -37,8 +37,12 @@ assert.match(prevBlock, /fetchPreventiviPageDTOServer/);
 assert.match(prevBlock, /preventiviBillingQueryKey/);
 assert.match(prevBlock, /includeOrdini/);
 
-const prefetchCritical = prefetch.split("export async function prefetchCriticalPage")[1]?.split("export async function prefetchDeferredPage")[0] ?? "";
-assert.match(prefetchCritical, /case "preventivi":[\s\S]*getAppSettingsPayloadReadServer/);
+const layout = read("app/(gestionale)/layout.tsx");
+assert.match(layout, /prefetchGestionaleLayoutSettings/);
+
+const prefetchCritical = prefetch.split("export async function prefetchCriticalPage")[1]?.split("export async function prefetchGestionaleLayoutSettings")[0] ?? "";
+assert.doesNotMatch(prefetchCritical, /prefetchSettingsPayload/);
+assert.match(prefetch, /prefetchGestionaleLayoutSettings/);
 
 assert.match(recordsHook, /ownershipScopeKey: PREVENTIVI_LIST_SCOPE/);
 assert.match(recordsHook, /preventivi\.list/);
@@ -50,7 +54,7 @@ assert.match(view, /PreventiviAdvancedFilterPanel = dynamic/);
 assert.match(view, /PreventiviLogDrawer = dynamic/);
 assert.match(view, /filtriEspansi \?/);
 assert.match(view, /usePreventiviListDerived/);
-assert.match(view, /usePreventiviRecordsQuery\(isPreventiviTab\)/);
+assert.match(view, /usePreventiviRecordsQuery/);
 assert.doesNotMatch(view, /lavorazioni-shared/);
 
 assert.match(derived, /usePreventiviListDerived/);

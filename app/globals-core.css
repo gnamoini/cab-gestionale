@@ -81,6 +81,10 @@ html.pwa-standalone [data-pwa-standalone-offset] {
   --ds-space-xl: 1.5rem;
   --ds-space-2xl: 2rem;
 
+  /* Content reveal — skeleton/loading → contenuto (opacity only, compositor-friendly) */
+  --transition-content-duration: 150ms;
+  --transition-content-easing: ease-out;
+
   /** Margine paint oltre clip edge — shadow-sm + focus ring-offset senza overflow layout. */
   --cab-paint-clip-margin: 12px;
 }
@@ -163,6 +167,63 @@ html.pwa-standalone [data-pwa-standalone-offset] {
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/* Content reveal — mount fade (fallback @keyframes + @starting-style enhancement) */
+@keyframes cab-content-reveal-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.cab-content-reveal {
+  opacity: 1;
+  animation: cab-content-reveal-in var(--transition-content-duration)
+    var(--transition-content-easing) both;
+}
+
+@starting-style {
+  .cab-content-reveal {
+    opacity: 0;
+  }
+}
+
+@supports (transition-behavior: allow-discrete) {
+  .cab-content-reveal {
+    animation: none;
+    transition: opacity var(--transition-content-duration) var(--transition-content-easing);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cab-content-reveal {
+    animation: none;
+    transition: none;
+    opacity: 1;
+  }
+}
+
+@keyframes cab-spinner-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cab-spinner-ring {
+  animation: cab-spinner-spin var(--cab-spinner-duration, 1000ms) linear infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cab-spinner-ring {
+    animation: none;
+  }
 }
 
 @keyframes cab-drawer-in {

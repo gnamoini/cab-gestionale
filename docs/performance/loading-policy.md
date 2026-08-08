@@ -100,10 +100,54 @@ I placeholder in `components/design-system/loading/` devono essere:
 - senza import da `components/gestionale/*`, hooks o context
 - senza `ShellCard` client — usare `SkeletonShellCard` con markup statico
 
+## Spinner vs skeleton vs progress
+
+| Indicatore | Quando | Componente |
+|------------|--------|------------|
+| Spinner rotativo | auth, mutation overlay, button busy, inline gate | `LoadingSpinner` (`cab-spinner-ring`, 1000ms linear) |
+| Skeleton | route cold load, primo fetch, sezione widget | `StructuralRouteSkeleton`, `SkeletonBoundary`, … |
+| Progress bar | upload con percentuale o indeterminato | `LoadingProgressBar` (`animate-pulse` su fill, non spinner) |
+
+Governance spinner: `npx tsx lib/regression/spinner-ssot-policy.test.ts`
+
 ## Refetch
 
 - Usare `placeholderData` o `isLoading && data === undefined`
 - Non mostrare skeleton se i dati precedenti sono già in cache
+- **Content reveal:** il wrapper `ContentReveal` resta montato durante refetch — nessuna nuova animazione opacity
+
+## Content reveal (L3 → contenuto)
+
+Transizione visiva breve (150ms, solo `opacity`) tra skeleton/loading e contenuto pronto.
+
+| Token CSS | Valore |
+|-----------|--------|
+| `--transition-content-duration` | `150ms` |
+| `--transition-content-easing` | `ease-out` |
+| Classe | `.cab-content-reveal` / `contentRevealClass` |
+
+Implementazione: `@keyframes cab-content-reveal-in` (fallback universale) + `@starting-style` dove supportato (Chrome 117+, Safari/iOS 17.5+, Firefox 129+). Con `prefers-reduced-motion: reduce` → opacity 1 immediata.
+
+### Regola anti-annidamento
+
+> Un subtree visivo ha al più **un** `ContentReveal` attivo. Il gate più specifico vince.
+
+| Gate | Quando |
+|------|--------|
+| `SkeletonBoundary` | Liste ERP — owner L3 |
+| `PageLayout contentReveal` | Opt-in route senza `SkeletonBoundary` — allowlist `lib/regression/content-reveal-allowlist.ts` |
+| `PageSection contentReveal` | Solo swap senza `SkeletonBoundary` parent |
+| Fatturazione tab / Report branch | Reveal locale sul contenuto |
+
+**Vietato:** `PageLayout contentReveal` + `SkeletonBoundary` sulla stessa route.
+
+### Matrice browser (validazione)
+
+- Chrome desktop (`chromium`)
+- Safari/iOS (`mobile-ios-chromium` / WebKit cert)
+- Android Chrome (`mobile-android`)
+
+Smoke: `npx playwright test -c e2e/playwright.content-reveal.config.ts`
 
 ## Verifica
 
@@ -112,7 +156,9 @@ npx tsx lib/regression/loading-ownership-policy.test.ts
 npx tsx lib/regression/page-layout-suspense-policy.test.ts
 npx tsx lib/regression/loading-transition-fallback-policy.test.ts
 npx tsx lib/regression/client-loading-boundary-policy.test.ts
-npx tsx lib/regression/structural-skeleton-policy.test.ts
+npx tsx lib/regression/content-reveal-policy.test.ts
+npx tsx lib/regression/spinner-ssot-policy.test.ts
+npx tsx lib/regression/loading-design-system.test.ts
 npx tsx lib/regression/skeleton-parity.test.ts
 npm run audit:skeleton
 npx tsx scripts/bench/skeleton-runtime-benchmark.ts

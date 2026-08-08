@@ -20,21 +20,21 @@ const loaders = read("components/dashboard/settings/settings-section-loaders.tsx
 const inUsoPrefetch = read("lib/app-settings/prefetch-impostazioni-in-uso-queries.ts");
 const similarGate = read("components/dashboard/use-settings-similar-gate.tsx");
 const budget = read("lib/performance/performance-budget-registry.ts");
+const gestionaleLayout = read("app/(gestionale)/layout.tsx");
 const layout = read("app/(gestionale)/impostazioni/layout.tsx");
 
-assert.match(page, /prefetchCriticalPage\(qc, "impostazioni"\)/);
-assert.match(page, /ImpostazioniDeferredHydration/);
-assert.match(page, /Suspense/);
+assert.match(page, /prefetchGestionalePage\(qc, "impostazioni"\)/);
+assert.match(gestionaleLayout, /prefetchGestionaleLayoutSettings/);
+assert.match(page, /SistemaImpostazioniPageViewLazy/);
 assert.match(page, /GestionaleHydrationBoundary/);
 assert.doesNotMatch(page, /prefetchImpostazioniPage\(\)/);
 
 assert.match(deferred, /prefetchDeferredPage\(qc, "impostazioni"\)/);
 
 const prefetchCritical =
-  prefetch.split("export async function prefetchCriticalPage")[1]?.split("export async function prefetchDeferredPage")[0] ?? "";
-const impCriticalBlock = prefetchCritical.match(/case "impostazioni":([\s\S]*?)case "/)?.[1] ?? "";
-assert.doesNotMatch(impCriticalBlock, /getAppSettingsPayloadServer/);
-assert.match(prefetchCritical, /case "impostazioni":\s*return;/);
+  prefetch.split("export async function prefetchCriticalPage")[1]?.split("export async function prefetchGestionaleLayoutSettings")[0] ?? "";
+assert.doesNotMatch(prefetchCritical, /prefetchSettingsPayload/);
+assert.match(prefetchCritical, /case "impostazioni":/);
 
 const prefetchDeferred = prefetch.split("export async function prefetchDeferredPage")[1] ?? "";
 const impBlock = prefetchDeferred.split('case "impostazioni":')[1]?.split('case "')[0] ?? "";

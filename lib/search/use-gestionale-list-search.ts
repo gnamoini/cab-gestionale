@@ -5,7 +5,7 @@ import { parseSearchQuery } from "@/lib/search/parse-query";
 import type { ParsedSearchQuery, SearchDomainId } from "@/lib/search/types";
 import { resolveExecutionMode } from "@/lib/search/registry";
 
-export const GESTIONALE_SEARCH_DEBOUNCE_MS = 320;
+export const GESTIONALE_SEARCH_DEBOUNCE_MS = 250;
 
 export type UseGestionaleListSearchOptions = {
   domain?: SearchDomainId;
@@ -18,7 +18,7 @@ export type UseGestionaleListSearchResult = {
   setSearchInput: (value: string) => void;
   searchApplied: string;
   parsedQuery: ParsedSearchQuery;
-  flushSearch: () => void;
+  flushSearch: (forcedValue?: string) => void;
   clearSearch: () => void;
   applySearchImmediate: (value: string) => void;
   executionMode: ReturnType<typeof resolveExecutionMode>;
@@ -32,11 +32,18 @@ export function useGestionaleListSearch(
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [searchApplied, setSearchApplied] = useState(initialSearch.trim());
   const flushPendingRef = useRef(false);
+  const searchInputRef = useRef(searchInput);
+  searchInputRef.current = searchInput;
 
-  const flushSearch = useCallback(() => {
+  const setSearchInputLive = useCallback((value: string) => {
+    searchInputRef.current = value;
+    setSearchInput(value);
+  }, []);
+
+  const flushSearch = useCallback((forcedValue?: string) => {
     flushPendingRef.current = true;
-    setSearchApplied(searchInput.trim());
-  }, [searchInput]);
+    setSearchApplied((forcedValue ?? searchInputRef.current).trim());
+  }, []);
 
   useEffect(() => {
     if (flushPendingRef.current) {
@@ -65,7 +72,7 @@ export function useGestionaleListSearch(
 
   return {
     searchInput,
-    setSearchInput,
+    setSearchInput: setSearchInputLive,
     searchApplied,
     parsedQuery,
     flushSearch,

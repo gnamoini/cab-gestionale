@@ -16,7 +16,7 @@ import {
 } from "@/components/ui";
 import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { MezziSearchBar, mezziFieldFiltersActive } from "@/components/gestionale/mezzi/mezzi-filters";
+import { mezziFieldFiltersActive } from "@/components/gestionale/mezzi/mezzi-filters";
 import { normalizeMezziHubTabId, type MezziHubTabId } from "@/components/gestionale/mezzi/mezzi-hub-ui";
 import { MezzoEliminaConfirmDialog } from "@/components/gestionale/mezzi/mezzo-elimina-confirm-dialog";
 import { MezziPageViewToggle, type MezziPageView } from "@/components/gestionale/mezzi/mezzi-page-view-toggle";
@@ -27,7 +27,7 @@ import { prefetchMezziTagliandiQueries } from "@/lib/mezzi/prefetch-mezzi-taglia
 import { useMaintenanceEngineV2Enabled } from "@/lib/officina/use-maintenance-engine-v2-enabled";
 import { useTagliandiOverviewQuery } from "@/src/hooks/gestionale/use-maintenance-engine-v2";
 import { useMezziListDerived } from "@/lib/mezzi/use-mezzi-list-derived";
-import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
+import { GestionaleListSearchController } from "@/components/gestionale/gestionale-list-search-controller";
 import {
   buildUltimaModificaByMezzoIdFromLogs,
   resolveMezzoUltimaModificaInfo,
@@ -153,12 +153,9 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
   const [tagliandiStatoFilter, setTagliandiStatoFilter] = useState<ReturnType<typeof parseTagliandoStatoFilter>>("");
   const isAnagrafica = pageView === "anagrafica";
 
-  const {
-    searchInput: search,
-    setSearchInput: setSearch,
-    searchApplied,
-    clearSearch,
-  } = useGestionaleListSearch({ domain: "mezzi" });
+  const [searchApplied, setSearchApplied] = useState("");
+  const [searchClearSignal, setSearchClearSignal] = useState(0);
+  const onSearchAppliedChange = useCallback((q: string) => setSearchApplied(q), []);
   const [filtroCliente, setFiltroCliente] = useState("");
   const [filtroUtilizzatore, setFiltroUtilizzatore] = useState("");
   const [filtroCantiere, setFiltroCantiere] = useState("");
@@ -306,11 +303,11 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
     [sortColumn, sortPhase],
   );
 
-  const hasMezziFilters = search.trim().length > 0 || mezziFieldFiltersActive(mezziFieldFilterState);
+  const hasMezziFilters = searchApplied.trim().length > 0 || mezziFieldFiltersActive(mezziFieldFilterState);
 
   const listPageSize = useResponsiveListPageSize();
   const { page, setPage, pageCount, sliceItems, showPager, label, resetPage } = useClientPagination(sorted.length, listPageSize);
-  const mezziFilterKey = `${search}|${JSON.stringify(mezziFieldFilterState)}|${sortColumn ?? ""}|${sortPhase}`;
+  const mezziFilterKey = `${searchApplied}|${JSON.stringify(mezziFieldFilterState)}|${sortColumn ?? ""}|${sortPhase}`;
 
   useEffect(() => {
     resetPage();
@@ -484,7 +481,7 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
       setFiltroVin("");
       setFiltroNumeroLav("");
       setFiltroUltimaLav("");
-      setSearch("");
+      setSearchClearSignal((n) => n + 1);
       setFiltriEspansi(false);
       setLogOpen(false);
       flashRow(id);
@@ -498,7 +495,7 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
   );
 
   function resetMezziToolbarFilters() {
-    setSearch("");
+    setSearchClearSignal((n) => n + 1);
     setFiltroCliente("");
     setFiltroUtilizzatore("");
     setFiltroCantiere("");
@@ -745,7 +742,14 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
               </Tooltip>
             }
             search={
-              <MezziSearchBar search={search} onSearch={setSearch} wrapperClassName="min-w-0 w-full" />
+              <GestionaleListSearchController
+                domain="mezzi"
+                id="mezzi-search"
+                aria-label="Cerca mezzi"
+                wrapperClassName="min-w-0 w-full"
+                onSearchAppliedChange={onSearchAppliedChange}
+                clearSignal={searchClearSignal}
+              />
             }
             filtersExpanded={filtriEspansi}
             onFiltersToggle={() => setFiltriEspansi((o) => !o)}
@@ -792,8 +796,8 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
               <PageToolbarResultCount
                 count={sorted.length}
                 filtersActive={mezziFieldFiltersActive(mezziFieldFilterState)}
-                searchActive={search.trim().length > 0}
-                onSearchReset={() => setSearch("")}
+                searchActive={searchApplied.trim().length > 0}
+                onSearchReset={() => setSearchClearSignal((n) => n + 1)}
                 onFilterReset={resetMezziToolbarFilters}
               />
             }

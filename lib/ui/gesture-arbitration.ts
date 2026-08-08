@@ -1,5 +1,5 @@
 import type { NavDrawerState } from "@/lib/ui/mobile-nav-drawer-contract";
-import { resolveActivationZonePx } from "@/lib/ui/mobile-nav-drawer-contract";
+import { NAV_DRAWER_PANEL_ID, resolveActivationZonePx } from "@/lib/ui/mobile-nav-drawer-contract";
 
 export type GestureClaimant =
   | "modal"
@@ -60,6 +60,20 @@ function isSwipeNavGestureBlockedTarget(el: Element | null): boolean {
   return false;
 }
 
+function isInteractiveGestureTarget(el: Element | null): boolean {
+  if (el == null) return false;
+  let node: Element | null = el;
+  while (node != null) {
+    const tag = node.tagName.toUpperCase();
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON") return true;
+    if (tag === "LABEL" && "control" in node && (node as HTMLLabelElement).control != null) return true;
+    if (node.getAttribute("role") === "switch" || node.getAttribute("role") === "slider") return true;
+    if ("isContentEditable" in node && (node as HTMLElement).isContentEditable) return true;
+    node = node.parentElement;
+  }
+  return false;
+}
+
 function isFilterDrawerOpen(): boolean {
   if (typeof document === "undefined") return false;
   return document.querySelector('.cab-drawer-panel[data-state="open"]') != null;
@@ -82,7 +96,7 @@ export function shouldNavDrawerClaimEdgeSwipe(ctx: GestureContext): boolean {
   if (ctx.overlayActive) return false;
   if (ctx.keyboardOpen || isEditableFocused()) return false;
 
-  const zone = resolveActivationZonePx(ctx.viewportWidth, ctx.safeAreaLeftPx ?? 0);
+  const zone = resolveActivationZonePx({ safeAreaLeftPx: ctx.safeAreaLeftPx ?? 0 });
   if (ctx.clientX > zone) return false;
 
   return !hasExplicitGestureOptOut(ctx.target);
@@ -94,7 +108,7 @@ export function getNavDrawerEdgeSwipeBlockReason(ctx: GestureContext): string | 
   if (ctx.drawerState !== "CLOSED") return "drawer_not_closed";
   if (ctx.overlayActive) return "overlay_active";
   if (ctx.keyboardOpen || isEditableFocused()) return "input_focused";
-  const zone = resolveActivationZonePx(ctx.viewportWidth, ctx.safeAreaLeftPx ?? 0);
+  const zone = resolveActivationZonePx({ safeAreaLeftPx: ctx.safeAreaLeftPx ?? 0 });
   if (ctx.clientX > zone) return "outside_edge_zone";
   if (hasExplicitGestureOptOut(ctx.target)) return "explicit_opt_out";
   if (isSwipeNavGestureBlockedTarget(ctx.target)) return "horizontal_scroll";
@@ -104,16 +118,11 @@ export function getNavDrawerEdgeSwipeBlockReason(ctx: GestureContext): string | 
 export function shouldNavDrawerClaimDismiss(ctx: GestureContext): boolean {
   if (ctx.drawerState !== "OPEN" && ctx.drawerState !== "DRAGGING") return false;
   if (ctx.overlayActive) return false;
+  if (!ctx.target.closest(`#${NAV_DRAWER_PANEL_ID}`)) return false;
+  if (isInteractiveGestureTarget(ctx.target)) return false;
+  if (hasExplicitGestureOptOut(ctx.target)) return false;
+  if (isSwipeNavGestureBlockedTarget(ctx.target)) return false;
   return resolveGestureOwner(ctx) === "navDrawer";
-}
-
-/** PTR può partire sopra tabelle (`overflow-x-auto`); blocca solo overlay/drawer/drag. */
-export function canPullToRefreshClaimGesture(ctx: GestureContext): boolean {
-  if (ctx.overlayActive) return false;
-  if (ctx.drawerState === "OPEN" || ctx.drawerState === "DRAGGING") return false;
-  if (isFilterDrawerOpen()) return false;
-  if (ctx.target.closest("[data-cab-draggable]")) return false;
-  return true;
 }
 
 export { hasExplicitGestureOptOut, isSwipeNavGestureBlockedTarget };

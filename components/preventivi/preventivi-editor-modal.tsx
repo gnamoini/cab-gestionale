@@ -30,6 +30,7 @@ import {
   PREVENTIVO_RIGA_MATERIALI_ID,
 } from "@/lib/preventivi/preventivi-voci-standard";
 import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
+import { isDeferredPopupBlocked, openDeferredPopup } from "@/lib/browser/popup-guard";
 import { persistPreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
 import { useMezziListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
@@ -535,11 +536,13 @@ export function PreventiviEditorModal({
           <button
             type="button"
             className={`${gestionaleModalFooterCancelBtnClass} w-full sm:w-auto`}
-            onClick={() =>
+            onClick={() => {
+              const deferredResult = openDeferredPopup({ context: "pdf", label: "PDF preventivo" });
+              if (isDeferredPopupBlocked(deferredResult)) return;
               void importPreventiviPdf().then(({ openPreventivoPdfPreviewFromRecord }) =>
-                openPreventivoPdfPreviewFromRecord(applyTotals(draft), autore),
-              )
-            }
+                openPreventivoPdfPreviewFromRecord(applyTotals(draft), autore, deferredResult),
+              );
+            }}
           >
             <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path

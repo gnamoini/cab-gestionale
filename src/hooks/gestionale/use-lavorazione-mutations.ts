@@ -16,6 +16,7 @@ import {
   snapshotLavorazioneUpdateQueries,
   type LavorazioneUpdateOptimisticContext,
 } from "@/src/lib/react-query/lavorazioni-optimistic";
+import { logMezzoMutationSaveTrace } from "@/lib/observability/mezzo-mutation-save-trace";
 import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifecycle";
 import { markRecentLocalGestionaleMutation } from "@/lib/sync/recent-local-mutation";
 import { evictLavorazioneDomainCache } from "@/src/lib/react-query/evict-lavorazione-domain-cache";
@@ -63,6 +64,10 @@ export function useLavorazioneUpdateMutation(options?: UseLavorazioneUpdateMutat
     ({ id, data }: { id: string; data: LavorazioneUpdate }) => lavorazioniEntry.update(id, data),
     {
       onMutate: async (variables) => {
+        logMezzoMutationSaveTrace("LAVORAZIONE_MUTATION_START", {
+          operation: "update",
+          lavorazioneId: variables.id,
+        });
         const context = await snapshotLavorazioneUpdateQueries(queryClient, variables.id);
         applyOptimisticLavorazioneUpdate(queryClient, variables.id, variables.data, undefined, optimisticAudit);
         return context;
@@ -70,6 +75,12 @@ export function useLavorazioneUpdateMutation(options?: UseLavorazioneUpdateMutat
       onSuccess: (serverRow, variables) => {
         applyOptimisticLavorazioneUpdate(queryClient, variables.id, variables.data, serverRow);
         markRecentLocalGestionaleMutation(["lavorazioni"], variables.id);
+        if (!deferInvalidation) {
+          logMezzoMutationSaveTrace("LAVORAZIONE_MUTATION_RESOLVED", {
+            operation: "update",
+            lavorazioneId: variables.id,
+          });
+        }
       },
       onError: (_err, _variables, context) => {
         if (context) rollbackLavorazioneUpdateQueries(queryClient, context as LavorazioneUpdateOptimisticContext);

@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-08-08T03:33:22.728Z",
+  "query": "CEREBA",
+  "rowCount": 200,
+  "parseBudgetPerPass": 2,
+  "results": [
+    {
+      "label": "mezzi",
+      "parseQueryCalls": 1,
+      "documentBuildCalls": 200,
+      "filterCpuMs": 17.49
+    },
+    {
+      "label": "lavorazioni_indexed",
+      "parseQueryCalls": 0,
+      "documentBuildCalls": 200,
+      "filterCpuMs": 27.24
+    },
+    {
+      "label": "magazzino_indexed",
+      "parseQueryCalls": 0,
+      "documentBuildCalls": 0,
+      "filterCpuMs": 5.42
+    }
+  ]
+}

@@ -140,7 +140,7 @@ export function LoginForgotPasswordModal({ formId, initialEmail, onClose }: Logi
               <button type="submit" className={dsBtnPrimary} disabled={resetPending}>
                 {resetPending ? (
                   <>
-                    <GlobalLoadingSpinner size="sm" className="text-white" />
+                    <GlobalLoadingSpinner size="sm" tone="onPrimary" />
                     <span>Invio…</span>
                   </>
                 ) : (

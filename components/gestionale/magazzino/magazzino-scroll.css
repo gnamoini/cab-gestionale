@@ -72,7 +72,7 @@
 }
 
 .gestionale-magazzino-dense-table col.gestionale-magazzino-col-azioni {
-  width: 0;
+  width: var(--gestionale-magazzino-actions-width);
   min-width: var(--gestionale-magazzino-actions-width);
   max-width: var(--gestionale-magazzino-actions-width);
 }

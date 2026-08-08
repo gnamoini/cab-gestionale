@@ -3,10 +3,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { JSDOM } from "jsdom";
 import {
-  canPullToRefreshClaimGesture,
   resolveGestureOwner,
+  shouldNavDrawerClaimDismiss,
   shouldNavDrawerClaimEdgeSwipe,
 } from "@/lib/ui/gesture-arbitration";
+import { NAV_DRAWER_PANEL_ID } from "@/lib/ui/mobile-nav-drawer-contract";
 
 const root = process.cwd();
 const src = readFileSync(join(root, "lib/ui/gesture-arbitration.ts"), "utf8");
@@ -16,7 +17,8 @@ assert.match(src, /shouldNavDrawerClaimEdgeSwipe/);
 assert.match(src, /shouldNavDrawerClaimDismiss/);
 assert.match(src, /isSwipeNavGestureBlockedTarget/);
 assert.match(src, /resolveActivationZonePx/);
-assert.match(src, /canPullToRefreshClaimGesture/);
+assert.doesNotMatch(src, /canPullToRefreshClaimGesture/);
+assert.doesNotMatch(src, /pull-to-refresh/);
 
 const stub = { closest: () => null } as unknown as Element;
 const baseCtx = {
@@ -53,20 +55,6 @@ assert.equal(
   false,
 );
 
-assert.equal(canPullToRefreshClaimGesture({ ...baseCtx, target: stub }), true);
-assert.equal(
-  canPullToRefreshClaimGesture({ ...baseCtx, target: stub, overlayActive: true }),
-  false,
-);
-assert.equal(
-  canPullToRefreshClaimGesture({ ...baseCtx, target: stub, drawerState: "OPEN" }),
-  false,
-);
-assert.equal(
-  canPullToRefreshClaimGesture({ ...baseCtx, target: stub, drawerState: "DRAGGING" }),
-  false,
-);
-
 const dom = new JSDOM("<!DOCTYPE html><html><body></body></html>", { pretendToBeVisual: true });
 const { document } = dom.window;
 const tableWrap = document.createElement("div");
@@ -76,19 +64,6 @@ Object.defineProperty(tableWrap, "clientWidth", { value: 320, configurable: true
 const tableCell = document.createElement("td");
 tableWrap.appendChild(tableCell);
 document.body.appendChild(tableWrap);
-
-assert.equal(
-  canPullToRefreshClaimGesture({ ...baseCtx, target: tableCell }),
-  true,
-  "PTR must be allowed over table cell targets (including inside horizontal-scroll wrappers)",
-);
-
-const draggable = document.createElement("div");
-draggable.setAttribute("data-cab-draggable", "");
-assert.equal(
-  canPullToRefreshClaimGesture({ ...baseCtx, target: draggable }),
-  false,
-);
 
 assert.equal(
   shouldNavDrawerClaimEdgeSwipe({
@@ -123,5 +98,32 @@ assert.equal(
   "explicit opt-out in edge zone must block",
 );
 
-console.log("gesture-arbitration.test.ts ok");
+const panel = document.createElement("div");
+panel.id = NAV_DRAWER_PANEL_ID;
+const input = document.createElement("input");
+panel.appendChild(input);
+document.body.appendChild(panel);
 
+assert.equal(
+  shouldNavDrawerClaimDismiss({
+    ...baseCtx,
+    clientX: 100,
+    drawerState: "OPEN",
+    target: input,
+  }),
+  false,
+  "dismiss must not claim on input inside panel",
+);
+
+assert.equal(
+  shouldNavDrawerClaimDismiss({
+    ...baseCtx,
+    clientX: 100,
+    drawerState: "OPEN",
+    target: panel,
+  }),
+  true,
+  "dismiss must claim on panel surface",
+);
+
+console.log("gesture-arbitration.test.ts ok");

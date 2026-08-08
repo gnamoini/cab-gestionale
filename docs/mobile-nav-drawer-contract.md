@@ -8,8 +8,10 @@ SSOT comportamentale per `MobileNavDrawer`. La state machine in `lib/ui/mobile-n
 |----------|--------|
 | `OPEN_RATIO` | 0.3 (30% larghezza pannello) |
 | `VELOCITY_COMMIT_PX_MS` | 0.45 px/ms |
-| `EDGE_ZONE_RATIO` | 0.18 (18% viewport) |
-| `EDGE_ZONE_MIN_PX` | 20 + safe-area-left |
+| `EDGE_ZONE_PX` | 24 + safe-area-left (no viewport %) |
+| `GESTURE_START_PX` | 10 |
+| `DIRECTION_RATIO` | 1.2 |
+| `TAP_THRESHOLD_PX` | 8 |
 | `ANIMATION_MS` | 240 |
 | `WATCHDOG_MS` | 320 (240 + 80) |
 | `EDGE_DRAG_IDLE_MS` | 400 (recovery pointer perso su PWA Android) |

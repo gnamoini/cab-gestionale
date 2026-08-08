@@ -1,12 +1,11 @@
 ﻿"use client";
 
 import { Tooltip } from "@/components/ui";
-import type { ChangeEvent, MutableRefObject, ReactNode } from "react";
+import type { MutableRefObject, ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
 import {
   PageToolbar,
@@ -14,7 +13,7 @@ import {
   PageToolbarMetaToggle,
   PageToolbarResultCount,
 } from "@/components/design-system";
-import { dsPageToolbarCtaCompact, dsTypoSmall, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
+import { dsPageToolbarCtaCompact, dsTypoSmall } from "@/lib/ui/design-system";
 import type {
   LavorazioniAdvancedFilters,
   LavorazioniFilterCatalog,
@@ -119,9 +118,7 @@ export type LavorazioniListToolbarProps = {
   canEditWorkOrders: boolean;
   createdBy: string | null | undefined;
   mutPendingBlocking: boolean;
-  searchInput: string;
-  onSearchInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  onSearchEnter: () => void;
+  search: ReactNode;
   filtriAttiviEspansi: boolean;
   onFiltersToggle: () => void;
   hasPageClientFilters: boolean;
@@ -159,9 +156,7 @@ export function LavorazioniListToolbar({
   canEditWorkOrders,
   createdBy,
   mutPendingBlocking,
-  searchInput,
-  onSearchInputChange,
-  onSearchEnter,
+  search,
   filtriAttiviEspansi,
   onFiltersToggle,
   hasPageClientFilters,
@@ -194,7 +189,7 @@ export function LavorazioniListToolbar({
   onListViewModeChange,
 }: LavorazioniListToolbarProps) {
   const filtersActive = hasPageClientFilters || navMezzoFilterActive;
-  const searchActive = searchApplied.trim().length > 0 || searchInput.trim().length > 0;
+  const searchActive = searchApplied.trim().length > 0;
 
   const metaExtra: ReactNode =
     filtersActive ? (
@@ -257,22 +252,7 @@ export function LavorazioniListToolbar({
               />
             </div>
           }
-          search={
-            <GestionaleSearchField
-              id="lavorazioni-search"
-              value={searchInput}
-              onChange={onSearchInputChange}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  onSearchEnter();
-                }
-              }}
-              placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-              aria-label="Cerca in lavorazioni in corso e archivio"
-              wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
-            />
-          }
+          search={search}
           filtersExpanded={filtriAttiviEspansi}
           onFiltersToggle={onFiltersToggle}
           filtersActive={filtersActive}

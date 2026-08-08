@@ -5,7 +5,12 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { LOADING_DELAYED_MESSAGE_MS } from "@/components/design-system/loading/loading-tokens";
+import {
+  LOADING_DELAYED_MESSAGE_MS,
+  LOADING_SPINNER_DURATION_MS,
+  loadingSpinnerRingClass,
+  loadingSpinnerRingGeometryClass,
+} from "@/components/design-system/loading/loading-tokens";
 import { SKELETON_MIN_HEIGHT } from "@/components/design-system/loading/skeleton-layout-presets";
 import { useDelayedLoadingMessage } from "@/components/design-system/loading/use-delayed-loading-message";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
@@ -53,6 +58,11 @@ for (const name of EXPECTED_EXPORTS) {
 
 assert.equal(typeof useDelayedLoadingMessage, "function");
 assert.equal(LOADING_DELAYED_MESSAGE_MS, 1000);
+assert.equal(LOADING_SPINNER_DURATION_MS, 1000);
+assert.match(loadingSpinnerRingClass, /\bcab-spinner-ring\b/);
+assert.doesNotMatch(loadingSpinnerRingClass, /\banimate-spin\b/);
+assert.match(loadingSpinnerRingGeometryClass, /\bborder-2\b/);
+assert.match(loadingSpinnerRingGeometryClass, /\brounded-full\b/);
 assert.ok(GLOBAL_LOADING_MESSAGES.lavorazioni.includes("lavorazioni"));
 assert.ok(GLOBAL_LOADING_MESSAGES.magazzino.includes("magazzino"));
 assert.ok(GLOBAL_LOADING_MESSAGES.documenti.includes("documenti"));

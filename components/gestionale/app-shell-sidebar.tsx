@@ -36,7 +36,6 @@ import {
 } from "@/src/lib/navigation/route-transition";
 import { isGestionaleDrawerElement } from "@/lib/ui/use-sidebar-collapsed";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
-import { useSwipeToDismiss } from "@/lib/ui/use-swipe-to-dismiss";
 import { OverlayLayerPriority } from "@/lib/ui/overlay-back-stack";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { useDialogFocusTrap } from "@/lib/ui/use-dialog-focus-trap";
@@ -178,14 +177,15 @@ export function AppShellNav({
 
 function MobileNavDrawer({
   drawer,
-  overlayActive,
-  edgePanelProps,
-  edgeBackdropProps,
-  edgePanelRef,
-  edgeBackdropRef,
+  navGesturePanelProps,
+  navGestureBackdropProps,
+  navGesturePanelRef,
+  navGestureBackdropRef,
   edgeSnapVisuallyClosed,
+  dismissVisuallyClosed,
   onEdgeSnapConsumed,
-  edgeResetDrag,
+  onDismissSnapConsumed,
+  navGestureResetDrag,
   onClose,
   navItems,
   onNavigate,
@@ -194,14 +194,15 @@ function MobileNavDrawer({
   activePath,
 }: {
   drawer: DrawerController;
-  overlayActive: boolean;
-  edgePanelProps?: { style?: CSSProperties; className?: string };
-  edgeBackdropProps?: { style?: CSSProperties; className?: string };
-  edgePanelRef?: RefObject<HTMLDivElement | null>;
-  edgeBackdropRef?: RefObject<HTMLElement | null>;
+  navGesturePanelProps?: { style?: CSSProperties; className?: string };
+  navGestureBackdropProps?: { style?: CSSProperties; className?: string };
+  navGesturePanelRef?: RefObject<HTMLDivElement | null>;
+  navGestureBackdropRef?: RefObject<HTMLElement | null>;
   edgeSnapVisuallyClosed?: boolean;
+  dismissVisuallyClosed?: boolean;
   onEdgeSnapConsumed?: () => void;
-  edgeResetDrag?: () => void;
+  onDismissSnapConsumed?: () => void;
+  navGestureResetDrag?: () => void;
   onClose: () => void;
   navItems: GestionaleNavResolvedItem[];
   onNavigate?: (href: string) => void;
@@ -209,19 +210,16 @@ function MobileNavDrawer({
   isNavLoading: boolean;
   activePath: string;
 }) {
-  const { flags, dispatch, onAnimationEnd, close, forceClose } = drawer;
+  const { flags, onAnimationEnd, close, forceClose } = drawer;
   const mobileNav = useMobileNavShell();
-  const swipeDismissedRef = useRef(false);
   const panelContainerRef = useRef<HTMLDivElement | null>(null);
   const backdropButtonRef = useRef<HTMLButtonElement | null>(null);
   const announceRef = useRef<HTMLDivElement | null>(null);
   const [announcement, setAnnouncement] = useState("");
-  const [dismissVisuallyClosed, setDismissVisuallyClosed] = useState(false);
 
-  const skipCssCloseAnim = dismissVisuallyClosed || edgeSnapVisuallyClosed === true;
+  const skipCssCloseAnim = dismissVisuallyClosed === true || edgeSnapVisuallyClosed === true;
   const panelState = flags.closing && !skipCssCloseAnim ? "closing" : "open";
   const edgeOpening = flags.edgePreview;
-  const committed = flags.isCommitted && !edgeOpening;
   const backHandlerActive = flags.mounted && flags.state !== "CLOSED";
   const focusTrapActive = flags.isActive;
 
@@ -234,19 +232,6 @@ function MobileNavDrawer({
 
   useBodyScrollLock(flags.mounted, "MobileNavDrawer");
 
-  const swipeDismiss = useSwipeToDismiss({
-    onDismiss: () => {
-      swipeDismissedRef.current = true;
-      setDismissVisuallyClosed(true);
-      dispatch("DISMISS_DRAG_END_COMMIT");
-    },
-    enabled: flags.canDismiss,
-    drawerState: flags.state,
-    overlayActive,
-    onDragStart: () => dispatch("DISMISS_DRAG_START"),
-    onDragCancel: () => dispatch("DISMISS_DRAG_END_CANCEL"),
-  });
-
   useDialogFocusTrap(panelContainerRef, focusTrapActive);
   useOverlayBackHandler(backHandlerActive, onClose, "MobileNavDrawer", {
     layer: "navigation",
@@ -255,16 +240,11 @@ function MobileNavDrawer({
 
   useLayoutEffect(() => {
     const node = panelContainerRef.current;
-    if (edgeOpening && edgePanelRef) {
-      edgePanelRef.current = node;
-      return;
+    if (navGesturePanelRef) navGesturePanelRef.current = node;
+    if (navGestureBackdropRef && backdropButtonRef.current) {
+      navGestureBackdropRef.current = backdropButtonRef.current;
     }
-    swipeDismiss.panelRef.current = node;
-    if (edgeBackdropRef && backdropButtonRef.current) {
-      edgeBackdropRef.current = backdropButtonRef.current;
-    }
-    swipeDismiss.backdropRef.current = backdropButtonRef.current;
-  }, [edgeOpening, edgeBackdropRef, edgePanelRef, flags.mounted, swipeDismiss.panelRef, swipeDismiss.backdropRef]);
+  }, [navGestureBackdropRef, navGesturePanelRef, flags.mounted]);
 
   useEffect(() => {
     const needsCloseAnim =
@@ -272,12 +252,10 @@ function MobileNavDrawer({
     if (!needsCloseAnim) return;
 
     const finishClose = () => {
-      swipeDismiss.resetDrag();
-      edgeResetDrag?.();
+      navGestureResetDrag?.();
       onAnimationEnd();
-      swipeDismissedRef.current = false;
-      setDismissVisuallyClosed(false);
       onEdgeSnapConsumed?.();
+      onDismissSnapConsumed?.();
       restoreFocus();
       const trigger = mobileNav?.getMobileNavTrigger();
       if (trigger && document.contains(trigger)) {
@@ -301,16 +279,16 @@ function MobileNavDrawer({
     const id = window.setTimeout(finishClose, ms);
     return () => window.clearTimeout(id);
   }, [
-    edgeResetDrag,
     flags.closing,
     flags.mounted,
     flags.state,
     mobileNav,
+    navGestureResetDrag,
     onAnimationEnd,
+    onDismissSnapConsumed,
     onEdgeSnapConsumed,
     restoreFocus,
     skipCssCloseAnim,
-    swipeDismiss.resetDrag,
   ]);
 
   useEffect(() => {
@@ -347,14 +325,10 @@ function MobileNavDrawer({
 
   if (!flags.mounted || !isCompactShell) return null;
 
-  const panelClassExtra = edgeOpening
-    ? edgePanelProps?.className
-    : swipeDismiss.panelProps.className;
+  const panelClassExtra = navGesturePanelProps?.className;
   const settledOpenClass = flags.edgeSettledOpen ? "cab-nav-drawer-open-settled" : "";
   const lockedClass = flags.isLocked ? "cab-nav-drawer-locked" : "";
-  const backdropClassExtra = edgeOpening
-    ? edgeBackdropProps?.className
-    : swipeDismiss.backdropProps.className;
+  const backdropClassExtra = navGestureBackdropProps?.className;
   const canBackdropClose =
     flags.state === "OPEN" || (flags.state === "DRAGGING" && edgeOpening);
 
@@ -381,7 +355,7 @@ function MobileNavDrawer({
         type="button"
         className={`cab-nav-drawer-backdrop absolute inset-0 touch-none bg-black/50 backdrop-blur-[1px] touch-manipulation${backdropClassExtra ? ` ${backdropClassExtra}` : ""}${flags.edgeSettledOpen ? " cab-nav-drawer-open-settled-backdrop" : ""}`}
         data-state={panelState}
-        style={edgeOpening ? edgeBackdropProps?.style : undefined}
+        style={navGestureBackdropProps?.style}
         aria-label="Chiudi menu"
         onClick={canBackdropClose ? handleBackdropClick : undefined}
         tabIndex={canBackdropClose ? 0 : -1}
@@ -394,11 +368,7 @@ function MobileNavDrawer({
         role="dialog"
         aria-modal="true"
         aria-label="Menu principale"
-        style={edgeOpening ? edgePanelProps?.style : swipeDismiss.panelProps.style}
-        onTouchStart={committed ? swipeDismiss.panelProps.onTouchStart : undefined}
-        onTouchMove={committed ? swipeDismiss.panelProps.onTouchMove : undefined}
-        onTouchEnd={committed ? swipeDismiss.panelProps.onTouchEnd : undefined}
-        onTouchCancel={committed ? swipeDismiss.panelProps.onTouchCancel : undefined}
+        style={navGesturePanelProps?.style}
         onAnimationEnd={(e) => {
           if (e.target !== e.currentTarget) return;
           if (flags.state === "OPENING" || flags.state === "SETTLING_OPEN") onAnimationEnd();
@@ -454,14 +424,15 @@ export type AppShellSidebarProps = {
   routeTransitionStartRef: RefObject<number | null>;
   routePathnameRef: RefObject<string>;
   drawer: DrawerController;
-  overlayActive: boolean;
-  edgeSwipePanelProps?: { style?: CSSProperties; className?: string };
-  edgeSwipeBackdropProps?: { style?: CSSProperties; className?: string };
-  edgeSwipePanelRef?: RefObject<HTMLDivElement | null>;
-  edgeSwipeBackdropRef?: RefObject<HTMLElement | null>;
+  navGesturePanelProps?: { style?: CSSProperties; className?: string };
+  navGestureBackdropProps?: { style?: CSSProperties; className?: string };
+  navGesturePanelRef?: RefObject<HTMLDivElement | null>;
+  navGestureBackdropRef?: RefObject<HTMLElement | null>;
   edgeSnapVisuallyClosed?: boolean;
+  dismissVisuallyClosed?: boolean;
   onEdgeSnapConsumed?: () => void;
-  edgeResetDrag?: () => void;
+  onDismissSnapConsumed?: () => void;
+  navGestureResetDrag?: () => void;
 };
 
 function AppShellSidebarInner({
@@ -482,14 +453,15 @@ function AppShellSidebarInner({
   routeTransitionStartRef,
   routePathnameRef,
   drawer,
-  overlayActive,
-  edgeSwipePanelProps,
-  edgeSwipeBackdropProps,
-  edgeSwipePanelRef,
-  edgeSwipeBackdropRef,
+  navGesturePanelProps,
+  navGestureBackdropProps,
+  navGesturePanelRef,
+  navGestureBackdropRef,
   edgeSnapVisuallyClosed,
+  dismissVisuallyClosed,
   onEdgeSnapConsumed,
-  edgeResetDrag,
+  onDismissSnapConsumed,
+  navGestureResetDrag,
 }: AppShellSidebarProps) {
   const activePath = usePathname();
   const { routeLock } = drawer;
@@ -590,14 +562,15 @@ function AppShellSidebarInner({
 
       <MobileNavDrawer
         drawer={drawer}
-        overlayActive={overlayActive}
-        edgePanelProps={edgeSwipePanelProps}
-        edgeBackdropProps={edgeSwipeBackdropProps}
-        edgePanelRef={edgeSwipePanelRef}
-        edgeBackdropRef={edgeSwipeBackdropRef}
+        navGesturePanelProps={navGesturePanelProps}
+        navGestureBackdropProps={navGestureBackdropProps}
+        navGesturePanelRef={navGesturePanelRef}
+        navGestureBackdropRef={navGestureBackdropRef}
         edgeSnapVisuallyClosed={edgeSnapVisuallyClosed}
+        dismissVisuallyClosed={dismissVisuallyClosed}
         onEdgeSnapConsumed={onEdgeSnapConsumed}
-        edgeResetDrag={edgeResetDrag}
+        onDismissSnapConsumed={onDismissSnapConsumed}
+        navGestureResetDrag={navGestureResetDrag}
         onClose={drawer.close}
         navItems={navItems}
         onNavigate={beginRouteTransition}

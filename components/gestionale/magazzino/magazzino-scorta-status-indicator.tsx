@@ -1,5 +1,7 @@
 "use client";
 
+import { LoadingSpinner } from "@/components/design-system/loading";
+
 /** Indicatore discreto: spinner durante commit, check verde al successo. */
 export function MagazzinoScortaStatusIndicator({
   isCommitting,
@@ -32,10 +34,11 @@ export function MagazzinoScortaStatusIndicator({
   }
 
   return (
-    <span
-      className={`inline-block h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-[color:var(--cab-text-muted)] border-t-transparent opacity-70 ${className}`.trim()}
-      role="status"
-      aria-label="Salvataggio in corso"
+    <LoadingSpinner
+      size="sm"
+      tone="muted"
+      label="Salvataggio in corso"
+      className={className}
     />
   );
 }

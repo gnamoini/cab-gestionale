@@ -20,6 +20,9 @@ export type InvalidateRuntimeTruthOptions = {
   queryClient: QueryClient;
   /** Dopo mutazioni auth-critical: refetch permessi + settings. */
   refreshOperational?: boolean;
+  refetchType?: "active" | "all" | "none";
+  /** Dopo patch SSOT locale: non svuotare runtime cache app_settings. */
+  preserveRuntimeSettingsCache?: boolean;
 };
 
 const COALESCE_REASONS: ReadonlySet<InvalidateRuntimeTruthReason> = new Set([
@@ -50,31 +53,32 @@ function noteTruthInvalidateSpike(reason: InvalidateRuntimeTruthReason): void {
 
 async function runInvalidateRuntimeTruth(opts: InvalidateRuntimeTruthOptions): Promise<void> {
   const { reason, queryClient, refreshOperational = false } = opts;
+  const refetchType = opts.refetchType ?? "active";
   noteTruthInvalidateSpike(reason);
 
-  if (reason === "appSettingsChanged") {
+  if (reason === "appSettingsChanged" && !opts.preserveRuntimeSettingsCache) {
     clearRuntimeCabAppSettings();
   }
 
   await measureAsync(`invalidate.truth.${reason}`, "cache", async () => {
     const tasks: Promise<unknown>[] = [
-      queryClient.invalidateQueries({ queryKey: QK.userPermissions, refetchType: "active" }),
-      queryClient.invalidateQueries({ queryKey: QK.settings, refetchType: "active" }),
-      queryClient.invalidateQueries({ queryKey: QK.profiles, refetchType: "active" }),
+      queryClient.invalidateQueries({ queryKey: QK.userPermissions, refetchType }),
+      queryClient.invalidateQueries({ queryKey: QK.settings, refetchType }),
+      queryClient.invalidateQueries({ queryKey: QK.profiles, refetchType }),
     ];
 
     if (reason === "roleOrPermissionsChanged" || reason === "pilotChanged" || reason === "appSettingsChanged") {
       tasks.push(
-        queryClient.invalidateQueries({ queryKey: QK.securityUsersPermissions, refetchType: "active" }),
-        queryClient.invalidateQueries({ queryKey: QK.securityUsers, refetchType: "active" }),
+        queryClient.invalidateQueries({ queryKey: QK.securityUsersPermissions, refetchType }),
+        queryClient.invalidateQueries({ queryKey: QK.securityUsers, refetchType }),
       );
     }
 
     if (reason === "roleOrPermissionsChanged") {
       tasks.push(
-        queryClient.invalidateQueries({ queryKey: QK.log, refetchType: "active" }),
-        queryClient.invalidateQueries({ queryKey: QK.authUsers, refetchType: "active" }),
-        queryClient.invalidateQueries({ queryKey: QK.authLogs, refetchType: "active" }),
+        queryClient.invalidateQueries({ queryKey: QK.log, refetchType }),
+        queryClient.invalidateQueries({ queryKey: QK.authUsers, refetchType }),
+        queryClient.invalidateQueries({ queryKey: QK.authLogs, refetchType }),
       );
     }
 

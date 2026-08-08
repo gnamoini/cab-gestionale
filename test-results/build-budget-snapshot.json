@@ -1,7 +1,7 @@
 {
   "environment": {
-    "timestamp": "2026-07-22T01:43:20.808Z",
-    "gitCommit": "e0e7a355",
+    "timestamp": "2026-08-08T03:30:19.993Z",
+    "gitCommit": "ecbb4bf3",
     "branch": "main",
     "nodeVersion": "v24.15.0",
     "browser": "n/a",
@@ -10,141 +10,156 @@
     "machine": "DESKTOP-Jay",
     "viewport": "build"
   },
-  "generatedAt": "2026-07-22T01:43:20.813Z",
-  "firstLoadJsKb": 1877.4,
-  "vendorChunkKb": 449.1,
-  "sharedChunksKb": 1877.4,
+  "generatedAt": "2026-08-08T03:30:20.001Z",
+  "firstLoadJsKb": 2935.6,
+  "vendorChunkKb": 448.9,
+  "sharedChunksKb": 2935.6,
   "routeChunks": {
+    "/magazzino": {
+      "jsKb": 2935.6,
+      "cssKb": 0,
+      "chunkCount": 39
+    },
     "/magazzino/carichi": {
-      "jsKb": 1877.4,
+      "jsKb": 2069,
       "cssKb": 0,
       "chunkCount": 34
     },
     "/magazzino/carichi/nuovo": {
-      "jsKb": 1877.3,
+      "jsKb": 2069,
       "cssKb": 0,
       "chunkCount": 34
     },
     "/report/design-system-preview": {
-      "jsKb": 1854.3,
+      "jsKb": 2053.4,
       "cssKb": 0,
       "chunkCount": 34
     },
+    "/impostazioni/ai-providers": {
+      "jsKb": 2007,
+      "cssKb": 0,
+      "chunkCount": 33
+    },
     "/impostazioni": {
-      "jsKb": 1811.6,
+      "jsKb": 2004.3,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/lavorazioni": {
-      "jsKb": 1811.4,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/magazzino": {
-      "jsKb": 1811.4,
+      "jsKb": 2004,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/report": {
-      "jsKb": 1811.4,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/impostazioni/ai-providers": {
-      "jsKb": 1811.1,
+      "jsKb": 2004,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/agenda": {
-      "jsKb": 1810.9,
+      "jsKb": 2003.6,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/dashboard": {
-      "jsKb": 1810.9,
+      "jsKb": 2003.6,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/dipendenti": {
-      "jsKb": 1810.9,
+      "jsKb": 2003.6,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/documenti": {
-      "jsKb": 1810.9,
+      "jsKb": 2003.6,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/fatturazione": {
-      "jsKb": 1810.9,
+      "jsKb": 2003.6,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/lavorazioni-clienti": {
-      "jsKb": 1810.9,
+      "jsKb": 2003.6,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/mezzi": {
-      "jsKb": 1810.9,
+      "jsKb": 2003.6,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/preventivi": {
-      "jsKb": 1810.9,
+      "jsKb": 2003.6,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/sicurezza": {
-      "jsKb": 1810.9,
-      "cssKb": 0,
-      "chunkCount": 33
-    },
-    "/lavorazioni-clienti/[id]": {
-      "jsKb": 1808.8,
+      "jsKb": 2003.6,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/sicurezza/production-readiness": {
-      "jsKb": 1808.1,
+      "jsKb": 2003.6,
+      "cssKb": 0,
+      "chunkCount": 33
+    },
+    "/lavorazioni-clienti/[id]": {
+      "jsKb": 2002.2,
+      "cssKb": 0,
+      "chunkCount": 33
+    },
+    "/documenti/[token]": {
+      "jsKb": 2000.8,
+      "cssKb": 0,
+      "chunkCount": 33
+    },
+    "/documenti/ddt/[id]/preview": {
+      "jsKb": 2000.8,
+      "cssKb": 0,
+      "chunkCount": 33
+    },
+    "/documenti/preventivo/[id]/preview": {
+      "jsKb": 2000.8,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/acesso-negato": {
-      "jsKb": 1801.2,
+      "jsKb": 1997,
       "cssKb": 0,
       "chunkCount": 32
     },
     "/login": {
-      "jsKb": 1684.2,
+      "jsKb": 1835.5,
       "cssKb": 0,
-      "chunkCount": 28
+      "chunkCount": 29
     },
     "/login/reset-password": {
-      "jsKb": 1678.2,
+      "jsKb": 1829.5,
       "cssKb": 0,
-      "chunkCount": 28
+      "chunkCount": 29
     },
     "/privacy-policy": {
-      "jsKb": 1665,
+      "jsKb": 1816.5,
+      "cssKb": 0,
+      "chunkCount": 29
+    },
+    "/": {
+      "jsKb": 1814.4,
       "cssKb": 0,
       "chunkCount": 28
     },
-    "/": {
-      "jsKb": 1662.8,
-      "cssKb": 0,
-      "chunkCount": 27
-    },
     "/_not-found": {
-      "jsKb": 1662.8,
+      "jsKb": 1814.4,
       "cssKb": 0,
-      "chunkCount": 27
+      "chunkCount": 28
     },
     "/offline": {
-      "jsKb": 1662.8,
+      "jsKb": 1814.4,
       "cssKb": 0,
-      "chunkCount": 27
+      "chunkCount": 28
     }
   },
-  "source": "E:\\Projects\\gestionale-cab\\.next\\diagnostics\\route-bundle-stats.json"
+  "source": "F:\\Projects\\gestionale-cab\\.next\\diagnostics\\route-bundle-stats.json"
 }

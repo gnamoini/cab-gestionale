@@ -36,6 +36,10 @@ const denyPatterns = [
   "useDashboardRefresh",
   "useClientLavorazioniRefresh",
   "refresh-dashboard-queries",
+  "usePullToRefresh",
+  "PullToRefreshIndicator",
+  "pull-to-refresh-contract",
+  "use-pull-to-refresh",
 ];
 
 const importDenyPatterns = [
@@ -74,9 +78,9 @@ for (const file of uiRoots.flatMap((r) => walkUiFiles(r))) {
   }
 }
 
-const ptr = read("lib/ui/use-pull-to-refresh.ts");
-assert.match(ptr, /location\.reload/);
-assert.doesNotMatch(ptr, /runGestionalePageRefresh/);
+const appShell = read("components/gestionale/app-shell.tsx");
+assert.doesNotMatch(appShell, /usePullToRefresh/);
+assert.doesNotMatch(appShell, /pull-to-refresh/);
 
 const pwaBanner = read("src/components/pwa-update-banner.tsx");
 assert.doesNotMatch(pwaBanner, /gestionale-dirty/);

@@ -19,10 +19,12 @@ import { healBodyScrollLockState } from "@/lib/ui/body-scroll-lock-manager";
 import { cabAppViewportFillClass, syncAppViewportFill } from "@/lib/ui/viewport-fill-sync";
 import { isGestionaleOverlayActive, useSidebarHoverExpand } from "@/lib/ui/use-sidebar-collapsed";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
-import { useSwipeFromEdgeToOpen } from "@/lib/ui/use-swipe-from-edge-to-open";
+import { useNavDrawerGesture } from "@/lib/ui/use-nav-drawer-gesture";
 import { deriveMainInert, useNavDrawerMachine } from "@/lib/ui/mobile-nav-drawer-machine";
-import { usePullToRefresh } from "@/lib/ui/use-pull-to-refresh";
+import { useNavigationBootInstrumentation } from "@/lib/observability/use-navigation-boot-instrumentation";
+import { subscribeGestionaleViewport } from "@/lib/ui/gestionale-viewport-orchestrator";
 import { ListSurfaceCookieSync } from "@/lib/ui/list-surface-cookie-sync";
+import { useLastRouteRestore } from "@/src/hooks/use-last-route-restore";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   useBootInvestigationMount("AppShell");
@@ -31,11 +33,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { flags, open, forceClose, onPointerCancel, onVisibilityHidden, onResize } = drawer;
   const [overlayActive, setOverlayActive] = useState(false);
   const [edgeSnapVisuallyClosed, setEdgeSnapVisuallyClosed] = useState(false);
+  const [dismissVisuallyClosed, setDismissVisuallyClosed] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
   const sidebarAsideRef = useRef<HTMLElement>(null);
   const shellColRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLElement | null>(null);
-  const pullContentRef = useRef<HTMLDivElement | null>(null);
   const shellTier = useGestionaleShellLayoutSync({
     shellRef,
     shellColRef,
@@ -44,14 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const shellContentWidth = useGestionaleShellContentWidth();
   const { isCompactShell, tier } = shellTier;
   const showMobileNavOpen = isCompactShell && shellContentWidth > 0;
-  const pullToRefresh = usePullToRefresh({
-    enabled: isCompactShell,
-    scrollRef: mainScrollRef,
-    contentRef: pullContentRef,
-    overlayActive,
-    navDrawerVisible: flags.navDrawerVisible,
-    drawerState: flags.state,
-  });
+  useNavigationBootInstrumentation(showMobileNavOpen);
   useGestionaleScrollEnd(mainScrollRef);
   const {
     collapsed,
@@ -75,6 +70,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return defaultHomePathForRole(user, { rolePageAccess: rbac.effectivePermissions?.rolePageAccess });
   }, [snapshot?.resolved, user, rbac.effectivePermissions?.rolePageAccess]);
 
+  useLastRouteRestore({
+    userId: user?.id,
+    navAccess,
+    snapshot,
+    isNavLoading,
+    homePath,
+  });
+
   useLayoutEffect(() => {
     healBodyScrollLockState("app-shell-mount");
     syncAppViewportFill();
@@ -91,18 +94,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const edgeSwipe = useSwipeFromEdgeToOpen({
-    enabled: isCompactShell && flags.canEdgeSwipe && !overlayActive,
+  const navGesture = useNavDrawerGesture({
+    enabled: isCompactShell && (flags.canEdgeSwipe || flags.canDismiss) && !overlayActive,
     drawerState: flags.state,
     drawerMounted: flags.mounted,
     overlayActive,
-    onBegin: () => {
+    canEdgeSwipe: flags.canEdgeSwipe,
+    canDismiss: flags.canDismiss,
+    onEdgeDragStart: () => {
       edgeDragAtRef.current = Date.now();
       drawer.dispatch("EDGE_DRAG_START");
     },
-    onCommit: () => drawer.dispatch("EDGE_DRAG_END_COMMIT"),
-    onCancel: () => drawer.dispatch("EDGE_DRAG_END_CANCEL"),
-    onSnapClosed: () => setEdgeSnapVisuallyClosed(true),
+    onEdgeDragCommit: () => drawer.dispatch("EDGE_DRAG_END_COMMIT"),
+    onEdgeDragCancel: () => drawer.dispatch("EDGE_DRAG_END_CANCEL"),
+    onEdgeSnapClosed: () => setEdgeSnapVisuallyClosed(true),
+    onDismissDragStart: () => drawer.dispatch("DISMISS_DRAG_START"),
+    onDismissDragCommit: () => {
+      setDismissVisuallyClosed(true);
+      drawer.dispatch("DISMISS_DRAG_END_COMMIT");
+    },
+    onDismissDragCancel: () => drawer.dispatch("DISMISS_DRAG_END_CANCEL"),
     onPointerCancel,
     onDragProgress: () => {
       edgeDragAtRef.current = Date.now();
@@ -122,19 +133,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [onVisibilityHidden]);
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    function onResizeDebounced() {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => onResize(), 100);
-    }
-    window.addEventListener("resize", onResizeDebounced);
-    window.visualViewport?.addEventListener("resize", onResizeDebounced);
-    return () => {
-      if (timer) clearTimeout(timer);
-      window.removeEventListener("resize", onResizeDebounced);
-      window.visualViewport?.removeEventListener("resize", onResizeDebounced);
-    };
-  }, [onResize]);
+    if (!isCompactShell) return;
+    return subscribeGestionaleViewport(() => {
+      onResize();
+    });
+  }, [isCompactShell, onResize]);
 
   const navItems = useMemo(() => {
     if (!navAccess || !snapshot?.resolved) return [] as GestionaleNavResolvedItem[];
@@ -185,22 +188,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         routeTransitionStartRef={routeTransitionStartRef}
         routePathnameRef={routePathnameRef}
         drawer={drawer}
-        overlayActive={overlayActive}
-        edgeSwipePanelProps={edgeSwipe.panelProps}
-        edgeSwipeBackdropProps={edgeSwipe.backdropProps}
-        edgeSwipePanelRef={edgeSwipe.panelRef}
-        edgeSwipeBackdropRef={edgeSwipe.backdropRef}
+        navGesturePanelProps={navGesture.panelProps}
+        navGestureBackdropProps={navGesture.backdropProps}
+        navGesturePanelRef={navGesture.panelRef}
+        navGestureBackdropRef={navGesture.backdropRef}
         edgeSnapVisuallyClosed={edgeSnapVisuallyClosed}
+        dismissVisuallyClosed={dismissVisuallyClosed}
         onEdgeSnapConsumed={() => setEdgeSnapVisuallyClosed(false)}
-        edgeResetDrag={edgeSwipe.resetDrag}
+        onDismissSnapConsumed={() => setDismissVisuallyClosed(false)}
+        navGestureResetDrag={navGesture.resetDrag}
       />
 
       <AppShellMain
         shellColRef={shellColRef}
         mainScrollRef={mainScrollRef}
-        pullContentRef={pullContentRef}
-        pullToRefreshPhase={pullToRefresh.phase}
-        pullToRefreshProgress={pullToRefresh.progress}
         isCompactShell={isCompactShell}
         shellTier={tier}
         mainInert={deriveMainInert(flags.state)}

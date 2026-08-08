@@ -22,7 +22,22 @@ Ultimo aggiornamento: LoadingManager — mutua esclusione overlay / skeleton / b
 - Preset dimensioni: [`skeleton-layout-presets.ts`](../components/design-system/loading/skeleton-layout-presets.ts)
 - Primitive: [`skeleton-primitives.tsx`](../components/design-system/loading/skeleton-primitives.tsx)
 
-## Regola: una sola rappresentazione per stato
+## Spinner SSOT (rotazione)
+
+| Elemento | SSOT |
+|----------|------|
+| Componente | `LoadingSpinner` / `GlobalLoadingSpinner` in [`loading-spinner.tsx`](../components/design-system/loading/loading-spinner.tsx) |
+| Token animazione | `LOADING_SPINNER_DURATION_MS` (1000ms), `CAB_SPINNER_SPIN_KEYFRAMES_CSS`, `cabSpinnerRingAnimationDecl` |
+| Classe CSS app | `.cab-spinner-ring` + `@keyframes cab-spinner-spin` in [`app/globals-core.css`](../app/globals-core.css) |
+| Boot cold start | [`lib/theme/app-boot-inline.ts`](../lib/theme/app-boot-inline.ts) — critical inline autonomo (import costanti da `loading-tokens`), **non** dipende dal bundle CSS al primo paint |
+| Policy | [`lib/regression/spinner-ssot-policy.test.ts`](../lib/regression/spinner-ssot-policy.test.ts) |
+
+**Vincolo:** geometria ring canonica invariata (`border-2`, `rounded-full`, sizes `sm`/`md`/`lg`). Tone opzionale: `default`, `onPrimary`, `muted`.
+
+**Non spinner:** skeleton, `LoadingProgressBar`, `HealthScoreRingLoading` (widget KPI dominio), `dsInputNoSpinner`.
+
+**Accettazione animazione:** test visivo 30–60s; keyframe esplicito `from/to` + `linear` — il salto percettivo può ancora derivare dal rendering border-ring.
+
 
 | Fase | Ammesso | Vietato insieme |
 |------|---------|------------------|

@@ -54,8 +54,6 @@ export function registerPopupBlockedDialogHandler(handler: PopupBlockedDialogHan
   popupBlockedDialogHandler = handler;
 }
 
-const POPUP_WINDOW_FEATURES = "noopener,noreferrer";
-
 function scheduleBlobUrlRevoke(url: string, revokeAfterMs?: number): void {
   if (revokeAfterMs == null || revokeAfterMs <= 0 || !url.startsWith("blob:")) return;
   window.setTimeout(() => {
@@ -104,12 +102,35 @@ function requestBlockedDialog(sessionId: string, context: PopupGuardContext, lab
   });
 }
 
+/** URL salvabile in sessione retry (mai `blob:` pre-generazione né `about:blank`). */
+export function resolvePopupRetrySessionUrl(
+  url: string,
+  retryUrl?: string,
+): string | null {
+  const candidate = (retryUrl ?? url).trim();
+  if (!candidate || candidate === "about:blank") return null;
+  if (candidate.startsWith("blob:")) return null;
+  return candidate;
+}
+
+function resolveBlockedSessionUrl(opts: OpenSafePopupOptions): string {
+  if (opts.phase === "navigate") {
+    return opts.url.trim();
+  }
+  if (opts.phase === "preopen") {
+    return resolvePopupRetrySessionUrl("", opts.retryUrl) ?? "about:blank";
+  }
+  return resolvePopupRetrySessionUrl(opts.url, opts.retryUrl) ?? opts.url.trim();
+}
+
 function handleBlockedPopup(
   opts: OpenSafePopupOptions,
   urlKind: PopupUrlKind,
 ): { status: "blocked"; sessionId: string } {
+  const sessionUrl = resolveBlockedSessionUrl(opts);
+
   const session = createPopupRetrySession({
-    url: opts.url,
+    url: sessionUrl,
     context: opts.context,
     label: opts.label ?? popupContextLabel(opts.context),
     urlKind,
@@ -125,10 +146,24 @@ function handleBlockedPopup(
   return { status: "blocked", sessionId: session.id };
 }
 
+function detachOpener(popup: Window): void {
+  try {
+    popup.opener = null;
+  } catch {
+    /* cross-origin / policy */
+  }
+}
+
+/**
+ * ponytail: no `noopener,noreferrer` as third arg — Chromium returns `null` even when the tab opens.
+ * Detach opener after open instead; deferred flows need a live WindowProxy for `location.replace`.
+ */
 function openPopupWindow(url: string): Window | null {
   if (typeof window === "undefined") return null;
   try {
-    return window.open(url, "_blank", POPUP_WINDOW_FEATURES);
+    const popup = window.open(url, "_blank");
+    if (popup) detachOpener(popup);
+    return popup;
   } catch {
     return null;
   }
@@ -156,13 +191,44 @@ export function openSafePopup(opts: OpenSafePopupOptions): OpenSafePopupResult {
   return { status: "opened" };
 }
 
+function closePopupWindow(popup: Window): void {
+  if (popup.closed) return;
+  try {
+    popup.close();
+  } catch {
+    /* ignore */
+  }
+}
+
 function createDeferredHandle(
   popup: Window,
   context: PopupGuardContext,
   label: string,
+  showBlockedDialog?: boolean,
 ): DeferredPopupHandle {
   let closed = false;
   let navigated = false;
+
+  const blockNavigate = (
+    url: string,
+    options?: { revokeBlobUrlAfterMs?: number },
+  ): { status: "blocked"; sessionId: string } => {
+    if (!closed && !popup.closed) {
+      closePopupWindow(popup);
+    }
+    closed = true;
+    return handleBlockedPopup(
+      {
+        url,
+        context,
+        label,
+        revokeBlobUrlAfterMs: options?.revokeBlobUrlAfterMs,
+        showBlockedDialog,
+        phase: "navigate",
+      },
+      classifyPopupUrlKind(url),
+    );
+  };
 
   return {
     getWindow() {
@@ -173,13 +239,7 @@ function createDeferredHandle(
       const trimmed = url?.trim() ?? "";
       if (!trimmed) return { status: "invalid_url" };
       if (closed || popup.closed) {
-        return openSafePopup({
-          url: trimmed,
-          context,
-          label,
-          revokeBlobUrlAfterMs: options?.revokeBlobUrlAfterMs,
-          phase: "navigate",
-        });
+        return blockNavigate(trimmed, options);
       }
 
       try {
@@ -192,30 +252,14 @@ function createDeferredHandle(
         );
         return { status: "opened" };
       } catch {
-        closed = true;
-        try {
-          popup.close();
-        } catch {
-          /* ignore */
-        }
-        return openSafePopup({
-          url: trimmed,
-          context,
-          label,
-          revokeBlobUrlAfterMs: options?.revokeBlobUrlAfterMs,
-          phase: "navigate",
-        });
+        return blockNavigate(trimmed, options);
       }
     },
     close() {
       if (closed) return;
       closed = true;
       if (!navigated && !popup.closed) {
-        try {
-          popup.close();
-        } catch {
-          /* ignore */
-        }
+        closePopupWindow(popup);
       }
     },
     isAlive() {
@@ -229,17 +273,19 @@ function createDeferredHandle(
  * Usare navigate() dopo fetch; close() su errore fetch.
  */
 export function openDeferredPopup(opts: OpenDeferredPopupOptions): OpenDeferredPopupResult {
+  const label = opts.label ?? popupContextLabel(opts.context);
+  const retryUrl = resolvePopupRetrySessionUrl("", opts.retryUrl) ?? undefined;
+
   if (typeof window === "undefined") {
     const session = createPopupRetrySession({
-      url: "about:blank",
+      url: retryUrl ?? "about:blank",
       context: opts.context,
-      label: opts.label ?? popupContextLabel(opts.context),
-      urlKind: "about_blank",
+      label,
+      urlKind: retryUrl ? classifyPopupUrlKind(retryUrl) : "about_blank",
     });
     return { status: "blocked", sessionId: session.id };
   }
 
-  const label = opts.label ?? popupContextLabel(opts.context);
   const popup = openPopupWindow("about:blank");
 
   if (!isPopupAlive(popup)) {
@@ -250,6 +296,7 @@ export function openDeferredPopup(opts: OpenDeferredPopupOptions): OpenDeferredP
     const blocked = handleBlockedPopup(
       {
         url: "about:blank",
+        retryUrl,
         context: opts.context,
         label,
         showBlockedDialog: opts.showBlockedDialog,
@@ -265,7 +312,7 @@ export function openDeferredPopup(opts: OpenDeferredPopupOptions): OpenDeferredP
     telemetryMeta(opts.context, "about_blank", "preopen"),
   );
 
-  return createDeferredHandle(popup, opts.context, label);
+  return createDeferredHandle(popup, opts.context, label, opts.showBlockedDialog);
 }
 
 /** Riprova apertura da sessione retry (user gesture sul pulsante Riprova). */
@@ -279,8 +326,14 @@ export function retryPopupFromSession(sessionId: string): OpenSafePopupResult {
     telemetryMeta(session.context, session.urlKind, "retry"),
   );
 
+  const retryTarget = session.url.trim();
+  if (!retryTarget || retryTarget === "about:blank") {
+    endPopupRetry(sessionId);
+    return { status: "blocked", sessionId };
+  }
+
   const result = openSafePopup({
-    url: session.url,
+    url: retryTarget,
     context: session.context,
     label: session.label,
     revokeBlobUrlAfterMs: session.revokeBlobUrlAfterMs,

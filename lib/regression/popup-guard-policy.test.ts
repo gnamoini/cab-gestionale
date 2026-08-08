@@ -53,9 +53,13 @@ assert.match(openPreview, /acquireDeferredHandle/);
 
 const requestArtifact = read("lib/pdf/request-pdf-artifact.ts");
 assert.match(requestArtifact, /openDeferredPopup/);
+assert.match(requestArtifact, /retryUrl:\s*trimmed/);
 assert.match(requestArtifact, /deferred\.close\(\)/);
 
 const providers = read("components/app-providers-core.tsx");
 assert.match(providers, /PopupGuardProvider/);
+
+const popupGuard = read("lib/browser/popup-guard.ts");
+assert.doesNotMatch(popupGuard, /window\.open\([^)]*noopener/);
 
 console.log("popup-guard-policy: OK");

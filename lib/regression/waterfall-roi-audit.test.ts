@@ -32,7 +32,7 @@ assert.match(prefetch, /fetchReportDataDTOServer/, "prefetchReportPage must seed
 
 const reportPage = read("app/(gestionale)/report/page.tsx");
 assert.match(reportPage, /GestionaleHydrationBoundary/, "report page must hydrate dehydrated cache");
-assert.match(reportPage, /ReportDeferredHydration/, "report page must use deferred hydration");
+assert.match(reportPage, /prefetchGestionalePage\(qc, "report"\)/, "report page must prefetch via gestionale page helper");
 assert.match(prefetch, /fetchPreventiviPageDTOServer/, "prefetch preventivi must seed cache from preventivi BFF");
 assert.match(prefetch, /fetchFatturazionePageDTOServer/, "prefetch fatturazione must seed cache from fatturazione BFF");
 
@@ -41,28 +41,30 @@ assert.match(preventiviPage, /GestionaleHydrationBoundary/, "preventivi page mus
 
 const fatturazionePage = read("app/(gestionale)/fatturazione/page.tsx");
 assert.match(fatturazionePage, /GestionaleHydrationBoundary/, "fatturazione page must hydrate dehydrated cache");
-assert.match(fatturazionePage, /FatturazioneDeferredHydration/, "fatturazione page must use deferred hydration");
+assert.match(fatturazionePage, /prefetchGestionalePage\(qc, "fatturazione"/, "fatturazione page must prefetch via gestionale page helper");
 
 const documentiPage = read("app/(gestionale)/documenti/page.tsx");
 assert.match(documentiPage, /GestionaleHydrationBoundary/, "documenti page must hydrate dehydrated cache");
-assert.match(documentiPage, /DocumentiDeferredHydration/, "documenti page must use deferred hydration");
+assert.match(documentiPage, /prefetchGestionalePage\(qc, "documenti"/, "documenti page must prefetch via gestionale page helper");
 
 assert.match(prefetch, /fetchDocumentiPageDTOServer/, "prefetch documenti must seed cache from documenti BFF");
 
 const mezziPage = read("app/(gestionale)/mezzi/page.tsx");
 assert.match(mezziPage, /GestionaleHydrationBoundary/, "mezzi page must hydrate dehydrated cache");
-assert.match(mezziPage, /MezziDeferredHydration/, "mezzi page must use deferred hydration");
+assert.match(mezziPage, /prefetchGestionalePage\(qc, "mezzi"\)/, "mezzi page must prefetch via gestionale page helper");
 assert.match(prefetch, /fetchMezziPageDTOServer/, "prefetch mezzi must seed cache from mezzi BFF");
 
 const dipendentiPage = read("app/(gestionale)/dipendenti/page.tsx");
 assert.match(dipendentiPage, /GestionaleHydrationBoundary/, "dipendenti page must hydrate dehydrated cache");
-assert.match(dipendentiPage, /DipendentiDeferredHydration/, "dipendenti page must use deferred hydration");
+assert.match(dipendentiPage, /prefetchGestionalePage\(qc, "dipendenti"\)/, "dipendenti page must prefetch via gestionale page helper");
 assert.match(prefetch, /fetchDipendentiPageDTOServer/, "prefetch dipendenti must seed cache from dipendenti BFF");
+
+const gestionaleLayout = read("app/(gestionale)/layout.tsx");
+assert.match(gestionaleLayout, /prefetchGestionaleLayoutSettings/, "gestionale layout must prefetch settings once per RSC");
 
 const impostazioniPage = read("app/(gestionale)/impostazioni/page.tsx");
 assert.match(impostazioniPage, /GestionaleHydrationBoundary/, "impostazioni page must hydrate dehydrated cache");
-assert.match(impostazioniPage, /ImpostazioniDeferredHydration/, "impostazioni page must use deferred hydration");
-assert.match(impostazioniPage, /prefetchCriticalPage\(qc, "impostazioni"\)/, "impostazioni page must prefetch critical shell");
+assert.match(impostazioniPage, /prefetchGestionalePage\(qc, "impostazioni"\)/, "impostazioni page must prefetch via gestionale page helper");
 assert.doesNotMatch(impostazioniPage, /prefetchImpostazioniPage\(\)/, "impostazioni page must not block on legacy prefetch");
 
 const prefetchDeferredImpostazioni = prefetch.split("export async function prefetchDeferredPage")[1] ?? "";
@@ -71,8 +73,7 @@ assert.match(impDeferredBlock, /getAppSettingsPayloadServer/, "prefetch impostaz
 
 const sicurezzaPage = read("app/(gestionale)/sicurezza/page.tsx");
 assert.match(sicurezzaPage, /GestionaleHydrationBoundary/, "sicurezza page must hydrate dehydrated cache");
-assert.match(sicurezzaPage, /SicurezzaDeferredHydration/, "sicurezza page must use deferred hydration");
-assert.match(sicurezzaPage, /prefetchCriticalPage\(qc, "sicurezza"\)/, "sicurezza page must prefetch critical shell");
+assert.match(sicurezzaPage, /prefetchGestionalePage\(qc, "sicurezza"\)/, "sicurezza page must prefetch via gestionale page helper");
 assert.doesNotMatch(sicurezzaPage, /prefetchSicurezzaPage\(\)/, "sicurezza page must not block on legacy prefetch");
 assert.match(prefetch, /fetchSicurezzaPageDTOServer/, "prefetch sicurezza must seed cache from sicurezza BFF");
 

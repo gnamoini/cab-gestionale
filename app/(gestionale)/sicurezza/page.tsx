@@ -14,7 +14,7 @@ export default async function SicurezzaPage() {
   const listSurface = await resolveListSurfaceForPage();
   await prefetchGestionalePage(qc, "sicurezza");
   return (
-    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.sicurezza}>
+    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.sicurezza} contentReveal>
       <GestionaleHydrationBoundary state={dehydrate(qc)}>
         <SecurityDashboardViewLazy listSurface={listSurface} listTier="lg" />
       </GestionaleHydrationBoundary>

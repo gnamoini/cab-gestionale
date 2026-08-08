@@ -19,7 +19,10 @@ export default defineConfig({
     screenshot: "off",
     video: "off",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "mobile-android", use: { ...devices["Pixel 7"] } },
+  ],
   webServer: process.env.PERF_NO_WEB_SERVER
     ? undefined
     : {
@@ -27,6 +30,10 @@ export default defineConfig({
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 300_000,
-        env: { ...process.env, PORT: String(PORT) },
+        env: {
+          ...process.env,
+          PORT: String(PORT),
+          NEXT_PUBLIC_BOOT_INVESTIGATION: process.env.NEXT_PUBLIC_BOOT_INVESTIGATION ?? "1",
+        },
       },
 });

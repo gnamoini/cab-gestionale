@@ -1,6 +1,6 @@
 "use client";
 
-import { Drawer, LoadingFormSkeleton } from "@/components/design-system";
+import { Drawer, LoadingFormSkeleton, ContentReveal } from "@/components/design-system";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import {
   GestionaleLogEmpty,
@@ -46,26 +46,28 @@ export function MezziLogDrawer({
           ) : entries.length === 0 ? (
             <GestionaleLogEmpty message="Nessuna modifica registrata su Supabase." />
           ) : (
-            <GestionaleLogList>
-              {pagedEntries.map((e) => {
-                const vm = buildMezziGestionaleLogViewModel({
-                  tipo: e.tipo,
-                  mezzo: e.mezzo,
-                  riepilogo: e.riepilogo,
-                  autore: e.autore,
-                  at: e.at,
-                  changes: e.changes,
-                  azione: e.azione,
-                  tipoRiga: e.tipoRiga,
-                  modifiche: e.modifiche,
-                });
-                return (
-                  <li key={e.id}>
-                    <GestionaleLogEntryFourLines vm={vm} />
-                  </li>
-                );
-              })}
-            </GestionaleLogList>
+            <ContentReveal data-testid="content-reveal">
+              <GestionaleLogList>
+                {pagedEntries.map((e) => {
+                  const vm = buildMezziGestionaleLogViewModel({
+                    tipo: e.tipo,
+                    mezzo: e.mezzo,
+                    riepilogo: e.riepilogo,
+                    autore: e.autore,
+                    at: e.at,
+                    changes: e.changes,
+                    azione: e.azione,
+                    tipoRiga: e.tipoRiga,
+                    modifiche: e.modifiche,
+                  });
+                  return (
+                    <li key={e.id}>
+                      <GestionaleLogEntryFourLines vm={vm} />
+                    </li>
+                  );
+                })}
+              </GestionaleLogList>
+            </ContentReveal>
           )}
         </div>
         {showPager ? (

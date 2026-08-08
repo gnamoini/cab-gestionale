@@ -46,6 +46,7 @@ import { isReportCompareMode } from "@/lib/report/report-compare-options";
 import { useReportLiveData } from "@/lib/report/use-report-live-data";
 import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { LoadingErrorState } from "@/components/design-system";
+import { ContentReveal } from "@/components/design-system/loading/content-reveal";
 import { ReportPageStructure } from "@/components/report/report-page-structure";
 import { ReportV2ExecutiveBoundary } from "@/components/report/executive/ReportV2ExecutiveBoundary";
 import { ReportV2InsightBoundary } from "@/components/report/insight-strip/ReportV2InsightBoundary";
@@ -436,25 +437,27 @@ export function ReportAnalyticsView() {
     <div className={`${dsStackPage} ${layoutPageRoot} min-w-0 max-w-full`}>
       <ReportToolbar {...toolbarProps} />
 
-      <ReportV2ExecutiveBoundary range={filterRange} compareMode={compareMode} />
+      <ContentReveal data-testid="content-reveal">
+        <ReportV2ExecutiveBoundary range={filterRange} compareMode={compareMode} />
 
-      <ReportAnalyticsDerivedProvider rangeKey={rangeKey}>
-        <ReportSectionVisibilityProvider>
-          <ReportV2InsightBoundary range={filterRange} compareMode={compareMode} />
+        <ReportAnalyticsDerivedProvider rangeKey={rangeKey}>
+          <ReportSectionVisibilityProvider>
+            <ReportV2InsightBoundary range={filterRange} compareMode={compareMode} />
 
-          <ReportPerformanceGateWithVisibility
-            anchor={anchor}
-            filterRange={filterRange}
-            compareRange={model.compareRange}
-            compareMode={compareMode}
-            periodKpis={model.kpis}
-            live={live}
-            semanticIndex={semanticIndex}
-          >
-            <ReportSectionsWithContext compareMode={compareMode} domainBase={domainBase} aiProps={aiProps} />
-          </ReportPerformanceGateWithVisibility>
-        </ReportSectionVisibilityProvider>
-      </ReportAnalyticsDerivedProvider>
+            <ReportPerformanceGateWithVisibility
+              anchor={anchor}
+              filterRange={filterRange}
+              compareRange={model.compareRange}
+              compareMode={compareMode}
+              periodKpis={model.kpis}
+              live={live}
+              semanticIndex={semanticIndex}
+            >
+              <ReportSectionsWithContext compareMode={compareMode} domainBase={domainBase} aiProps={aiProps} />
+            </ReportPerformanceGateWithVisibility>
+          </ReportSectionVisibilityProvider>
+        </ReportAnalyticsDerivedProvider>
+      </ContentReveal>
     </div>
   );
 }

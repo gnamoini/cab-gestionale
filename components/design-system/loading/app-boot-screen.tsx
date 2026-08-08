@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/auth-context";
+import { CAB_COLD_START_MARK } from "@/lib/observability/cold-start-mark-names";
+import { lazyMarkColdStart } from "@/lib/observability/cold-start-diagnostics-lazy";
 import { CAB_LOGO_ASPECT, CAB_LOGO_PATH } from "@/components/gestionale/cab-logo";
 import { LoadingSpinner } from "./loading-spinner";
 import { loadingMessageClass } from "./loading-tokens";
@@ -36,8 +38,10 @@ export function AppBootScreen() {
   const messageFadeTimerRef = useRef<number | null>(null);
 
   useLayoutEffect(() => {
+    lazyMarkColdStart(CAB_COLD_START_MARK.appBootScreenMount);
     const staticLayer = document.getElementById("cab-app-boot");
     if (staticLayer) staticLayer.style.display = "none";
+    lazyMarkColdStart(CAB_COLD_START_MARK.appBootStaticHidden);
   }, []);
 
   useEffect(() => {
@@ -60,6 +64,7 @@ export function AppBootScreen() {
 
   useEffect(() => {
     if (!ready) return;
+    lazyMarkColdStart(CAB_COLD_START_MARK.appBootDismiss);
     setVisible(false);
     const fadeTimerId = window.setTimeout(() => {
       removeStaticAppBootLayer();

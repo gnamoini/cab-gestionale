@@ -13,9 +13,7 @@ import { cabIosSafeTopPad } from "@/lib/ui/ios-mobile-tokens";
 import { dsGestionaleScrollEndPadFade } from "@/lib/ui/scroll-system";
 import type { GestionaleShellTier } from "@/lib/ui/gestionale-shell-layout";
 import type { RefObject } from "react";
-import { PullToRefreshIndicator } from "@/components/gestionale/pull-to-refresh-indicator";
 import { DeferredDataStaleBanner } from "@/components/gestionale/deferred-data-stale-banner";
-import type { PullToRefreshPhase } from "@/lib/ui/pull-to-refresh-contract";
 
 const DevAuditMounts = dynamic(
   () => import("@/components/gestionale/dev-audit-mounts").then((m) => m.DevAuditMounts),
@@ -39,9 +37,6 @@ export type AppShellMainProps = {
   children: React.ReactNode;
   shellColRef: RefObject<HTMLDivElement | null>;
   mainScrollRef: RefObject<HTMLElement | null>;
-  pullContentRef: RefObject<HTMLDivElement | null>;
-  pullToRefreshPhase?: PullToRefreshPhase;
-  pullToRefreshProgress?: number;
   isCompactShell: boolean;
   shellTier: GestionaleShellTier;
   mainInert: boolean;
@@ -51,9 +46,6 @@ function AppShellMainInner({
   children,
   shellColRef,
   mainScrollRef,
-  pullContentRef,
-  pullToRefreshPhase = "idle",
-  pullToRefreshProgress = 0,
   isCompactShell,
   shellTier,
   mainInert,
@@ -86,8 +78,7 @@ function AppShellMainInner({
           }`}
         >
           <DeferredDataStaleBanner />
-          <PullToRefreshIndicator phase={pullToRefreshPhase} progress={pullToRefreshProgress} />
-          <div ref={pullContentRef} className="min-h-full min-w-0 will-change-transform">
+          <div className="min-h-full min-w-0">
             <div className={`${dsGestionaleContentMax} ${layoutPageRoot} ${contentGutter}`}>
               {process.env.NODE_ENV === "development" ? (
                 <ReactRenderAuditProfiler>{children}</ReactRenderAuditProfiler>

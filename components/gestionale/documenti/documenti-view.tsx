@@ -1,6 +1,7 @@
 "use client";
 
 import { OptionalTooltip, TruncatedTextTooltip, Tooltip } from "@/components/ui";
+import { LoadingSpinner } from "@/components/design-system/loading";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
@@ -23,7 +24,7 @@ import { invalidateAfterMagazzinoOrMovimenti } from "@/src/lib/react-query/inval
 import { cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
 import { warmupDocumentPreview } from "@/lib/observability/asset-cache-warmup";
 import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifecycle";
-import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
+import { GestionaleListSearchController } from "@/components/gestionale/gestionale-list-search-controller";
 import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { DocumentiTableSection } from "@/components/gestionale/documenti/documenti-page-structure";
@@ -32,7 +33,6 @@ import {
   type PageActionItem,
 } from "@/components/ui";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { buildLogModificheDisplayEntries, logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
 import {
@@ -415,14 +415,10 @@ export function DocumentiView() {
     [documentiQuery.data],
   );
 
-  const {
-    searchInput,
-    setSearchInput,
-    searchApplied,
-    flushSearch: flushPageSearch,
-    clearSearch,
-    applySearchImmediate,
-  } = useGestionaleListSearch({ domain: "documenti" });
+  const [searchApplied, setSearchApplied] = useState("");
+  const [searchClearSignal, setSearchClearSignal] = useState(0);
+  const [urlSearchHydrate, setUrlSearchHydrate] = useState<string | null>(null);
+  const onSearchAppliedChange = useCallback((q: string) => setSearchApplied(q), []);
 
   const [advancedFilters, setAdvancedFilters] = useState<DocumentiAdvancedFilters>(
     () => loadDocumentiAdvancedFiltersPersisted() ?? DOCUMENTI_ADVANCED_FILTERS_EMPTY,
@@ -475,8 +471,7 @@ export function DocumentiView() {
 
     const rawQ = searchParams.get("q");
     if (rawQ?.trim()) {
-      const q = decodeURIComponent(rawQ.trim());
-      applySearchImmediate(q);
+      setUrlSearchHydrate(decodeURIComponent(rawQ.trim()));
     }
 
     const marcaQ = searchParams.get("marca")?.trim();
@@ -807,8 +802,8 @@ export function DocumentiView() {
   }
 
   const resetRicerca = useCallback(() => {
-    clearSearch();
-  }, [clearSearch]);
+    setSearchClearSignal((n) => n + 1);
+  }, []);
 
   const resetFiltri = useCallback(() => {
     setAdvancedFilters(DOCUMENTI_ADVANCED_FILTERS_EMPTY);
@@ -876,10 +871,7 @@ export function DocumentiView() {
               >
                 {docBusy ? (
                   <>
-                    <svg className="h-5 w-5 shrink-0 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
-                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" opacity="0.25" />
-                      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
+                    <LoadingSpinner size="sm" label="Caricamento…" />
                     <span className="sm:hidden">…</span>
                     <span className="hidden sm:inline">Caricamento…</span>
                   </>
@@ -895,15 +887,11 @@ export function DocumentiView() {
             </OptionalTooltip>
           }
           search={
-            <GestionaleSearchField
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  flushPageSearch();
-                }
-              }}
+            <GestionaleListSearchController
+              domain="documenti"
+              hydrateQuery={urlSearchHydrate}
+              clearSignal={searchClearSignal}
+              onSearchAppliedChange={onSearchAppliedChange}
               placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
               aria-label="Cerca documenti"
               wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"

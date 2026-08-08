@@ -55,6 +55,9 @@ async function tryLogin(page) {
 }
 
 async function collectViewport(page, vp) {
+  await page.addInitScript(() => {
+    window.__cabForceNavDiagnostics = true;
+  });
   const login = await tryLogin(page);
   await page.setViewportSize({ width: vp.width, height: vp.height });
   await page.goto(`${BASE}/dashboard`, { waitUntil: "domcontentloaded", timeout: 120_000 });
@@ -67,10 +70,16 @@ async function collectViewport(page, vp) {
     const inv = window.__cabBootInvestigation?.();
     const render = window.__cabRenderAudit?.(10);
     const pending = window.__cabPendingQueries?.(10_000);
+    const coldStart = window.__cabColdStartReport ?? null;
+    const navBoot = window.__cabNavBootTimeline ?? null;
+    const waterfall = window.__cabNavHttpWaterfall ?? null;
     return {
       innerWidth: window.innerWidth,
       pathname: window.location.pathname,
       investigation: inv ?? null,
+      coldStartReport: coldStart,
+      navBootTimeline: navBoot,
+      navHttpWaterfall: waterfall,
       renderAudit: render ?? null,
       pendingQueries: pending ?? [],
     };

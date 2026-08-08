@@ -38,6 +38,8 @@ export type MicInvalidateInput = {
   correlationId?: string;
   /** ponytail: mutation settle usa `none` per non bloccare isPending su refetch attivi. */
   refetchType?: "active" | "all" | "none";
+  /** Dopo patch SSOT locale settings: non clear runtime cache. */
+  preserveRuntimeSettingsCache?: boolean;
 };
 
 export { bumpEntityVersion, getEntityVersionToken, resolveEntityCacheVersion };
@@ -102,6 +104,8 @@ export async function invalidateEntity(input: MicInvalidateInput): Promise<void>
       await invalidateRuntimeTruth({
         queryClient: input.queryClient,
         reason: entry.useRuntimeTruth,
+        refetchType,
+        preserveRuntimeSettingsCache: input.preserveRuntimeSettingsCache,
       });
     } else if (entry.operationalDomain) {
       await invalidateOperationalTruth({
@@ -175,11 +179,16 @@ export async function invalidateEntity(input: MicInvalidateInput): Promise<void>
 }
 
 /** Settings write path: runtime truth + global PDF scope wipe. */
-export async function invalidateMicSettings(queryClient: QueryClient): Promise<void> {
+export async function invalidateMicSettings(
+  queryClient: QueryClient,
+  options?: { refetchType?: "active" | "all" | "none"; preserveRuntimeCache?: boolean },
+): Promise<void> {
   await invalidateEntity({
     queryClient,
     entityType: "settings",
     entityId: "global",
     scope: "full",
+    refetchType: options?.refetchType,
+    preserveRuntimeSettingsCache: options?.preserveRuntimeCache,
   });
 }

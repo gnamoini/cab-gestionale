@@ -8,15 +8,14 @@ import { GESTIONALE_PAGE_SCROLL_SELECTOR } from "@/lib/ui/mobile-modal-behavior"
 const THROTTLE_MS = 1000;
 const HEADER_SELECTOR = ".cab-page-header-top-row";
 const HAMBURGER_SELECTOR = ".cab-mobile-nav-open";
-const PTR_CONTENT_SELECTOR = "main.gestionale-scroll-y > .will-change-transform";
 
 export function isMobileViewportDebugEnabled(): boolean {
   return process.env.NEXT_PUBLIC_MOBILE_VIEWPORT_DEBUG === "1";
 }
 
-function readPullTransform(): string {
+function readMainContentTransform(): string {
   if (typeof document === "undefined") return "";
-  const el = document.querySelector(PTR_CONTENT_SELECTOR);
+  const el = document.querySelector("main.gestionale-scroll-y > div");
   if (!(el instanceof HTMLElement)) return "";
   return el.style.transform;
 }
@@ -62,7 +61,7 @@ export function mountMobileViewportDiagnostics(): (() => void) | undefined {
       scrollY: window.scrollY,
       mainScrollTop: main instanceof HTMLElement ? main.scrollTop : null,
       headerTop,
-      pullTransform: readPullTransform(),
+      mainTransform: readMainContentTransform(),
       pwaStandalone: document.documentElement.classList.contains("pwa-standalone"),
       displayMode: window.matchMedia("(display-mode: standalone)").matches ? "standalone" : "browser",
     });

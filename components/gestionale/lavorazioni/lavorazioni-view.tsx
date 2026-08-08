@@ -22,7 +22,7 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { ServerListLoadMore } from "@/components/gestionale/server-list-load-more";
 import { isServerListPaginationEnabled } from "@/lib/performance/list-pagination-rollout";
-import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
+import { GestionaleListSearchController } from "@/components/gestionale/gestionale-list-search-controller";
 import { dedupeLavorazioneListRowsById } from "@/lib/domain/list-flatten";
 import { enrichLavorazioneListRowsWithMezzi } from "@/lib/db/dto-mappers";
 import { mezziGestitiToEmbedMap } from "@/lib/mezzi/mezzi-attrezzature-batch";
@@ -121,8 +121,19 @@ import {
   mergeLazyProfileNamesIntoResolver,
   resolveLavorazioneUltimaModifica,
 } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
-import { lavRowMatchesPageFilters, lavRowSearchScore, type LavPageFilters } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
-import { isSearchRelevanceSortActive, compareSearchRelevance } from "@/lib/search/sort-by-relevance";
+import { type LavPageFilters } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
+import {
+  buildLavorazioniHaystackIndex,
+  lavHaystackForRow,
+  lavRowMatchesPageFiltersIndexed,
+} from "@/lib/lavorazioni/lavorazioni-filter-search-index";
+import { matchSearchStringPreparedFromRaw } from "@/lib/search/match";
+import { scoreSearchDocumentWithPrepared } from "@/lib/search/rank";
+import {
+  isSearchRelevanceSortActive,
+  compareSearchRelevanceWithScoreMap,
+  buildSearchRelevanceScoreMap,
+} from "@/lib/search/sort-by-relevance";
 import {
   buildLavorazioniFilterCatalog,
   loadGestionaleAdvancedFiltersPersisted,
@@ -944,13 +955,9 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     setConcurrencyDialog(null);
   }, [concurrencyDialog]);
 
-  const {
-    searchInput,
-    setSearchInput,
-    searchApplied,
-    flushSearch: flushPageSearch,
-    clearSearch,
-  } = useGestionaleListSearch({ domain: "lavorazioni" });
+  const [searchApplied, setSearchApplied] = useState("");
+  const [searchClearSignal, setSearchClearSignal] = useState(0);
+  const onSearchAppliedChange = useCallback((q: string) => setSearchApplied(q), []);
 
   const [filtriAttiviEspansi, setFiltriAttiviEspansi] = useCollapsiblePreference(
     collapsibleExpandedBoolPref(false, {
@@ -1195,24 +1202,36 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
     [searchApplied, advancedFilters],
   );
 
+  const lavHaystackIndex = useMemo(
+    () => buildLavorazioniHaystackIndex([...attiveRows, ...chiuseRows], schedeStore),
+    [attiveRows, chiuseRows, schedeStore],
+  );
+
+  const preparedSearch = useMemo(
+    () => (searchApplied.trim() ? matchSearchStringPreparedFromRaw(searchApplied) : null),
+    [searchApplied],
+  );
+
   const attiveRowsFiltered = useMemo(
     () =>
       attiveRows.filter((row) =>
-        lavRowMatchesPageFilters(row, pageFilters, schedeStore, "in_corso", addettiRecords, {
+        lavRowMatchesPageFiltersIndexed(row, pageFilters, lavHaystackIndex, schedeStore, "in_corso", addettiRecords, {
           skipSearchFilter: serverSearchActive,
+          preparedSearch,
         }),
       ),
-    [attiveRows, pageFilters, schedeStore, addettiRecords, serverSearchActive],
+    [attiveRows, pageFilters, schedeStore, addettiRecords, serverSearchActive, lavHaystackIndex, preparedSearch],
   );
 
   const chiuseRowsFiltered = useMemo(
     () =>
       chiuseRows.filter((row) =>
-        lavRowMatchesPageFilters(row, pageFilters, schedeStore, "archivio", addettiRecords, {
+        lavRowMatchesPageFiltersIndexed(row, pageFilters, lavHaystackIndex, schedeStore, "archivio", addettiRecords, {
           skipSearchFilter: serverSearchActive,
+          preparedSearch,
         }),
       ),
-    [chiuseRows, pageFilters, schedeStore, addettiRecords, serverSearchActive],
+    [chiuseRows, pageFilters, schedeStore, addettiRecords, serverSearchActive, lavHaystackIndex, preparedSearch],
   );
 
   useEffect(() => {
@@ -1722,11 +1741,19 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
 
   const sortedAttive = useMemo(() => {
     const rows = [...attiveRowsFiltered];
+    const relevanceActive = isSearchRelevanceSortActive(searchApplied, sortColA);
+    const scoreMap =
+      relevanceActive && preparedSearch
+        ? buildSearchRelevanceScoreMap(rows, (row) =>
+            scoreSearchDocumentWithPrepared(
+              preparedSearch,
+              lavHaystackForRow(row, lavHaystackIndex, schedeStore),
+            ).score,
+          )
+        : null;
     rows.sort((a, b) => {
-      if (isSearchRelevanceSortActive(searchApplied, sortColA)) {
-        const rel = compareSearchRelevance(a, b, searchApplied, (row, q) =>
-          lavRowSearchScore(row, q, schedeStore),
-        );
+      if (scoreMap) {
+        const rel = compareSearchRelevanceWithScoreMap(a, b, scoreMap);
         if (rel !== 0) return rel;
       }
       if (sortPhaseA === "natural" || sortColA === null) {
@@ -1744,15 +1771,23 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       return a.id.localeCompare(b.id);
     });
     return rows;
-  }, [attiveRowsFiltered, sortColA, sortPhaseA, schedeSortIndex, statoOrderIds, searchApplied, schedeStore]);
+  }, [attiveRowsFiltered, sortColA, sortPhaseA, schedeSortIndex, statoOrderIds, searchApplied, schedeStore, lavHaystackIndex, preparedSearch]);
 
   const sortedChiuse = useMemo(() => {
     const rows = [...chiuseRowsFiltered];
+    const relevanceActive = isSearchRelevanceSortActive(searchApplied, sortColC);
+    const scoreMap =
+      relevanceActive && preparedSearch
+        ? buildSearchRelevanceScoreMap(rows, (row) =>
+            scoreSearchDocumentWithPrepared(
+              preparedSearch,
+              lavHaystackForRow(row, lavHaystackIndex, schedeStore),
+            ).score,
+          )
+        : null;
     rows.sort((a, b) => {
-      if (isSearchRelevanceSortActive(searchApplied, sortColC)) {
-        const rel = compareSearchRelevance(a, b, searchApplied, (row, q) =>
-          lavRowSearchScore(row, q, schedeStore),
-        );
+      if (scoreMap) {
+        const rel = compareSearchRelevanceWithScoreMap(a, b, scoreMap);
         if (rel !== 0) return rel;
       }
       if (sortPhaseC === "natural" || sortColC === null) {
@@ -1769,7 +1804,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
       return b.id.localeCompare(a.id);
     });
     return rows;
-  }, [chiuseRowsFiltered, sortColC, sortPhaseC, schedeSortIndex, searchApplied, schedeStore]);
+  }, [chiuseRowsFiltered, sortColC, sortPhaseC, schedeSortIndex, searchApplied, schedeStore, lavHaystackIndex, preparedSearch]);
 
   const listPageSize = useResponsiveListPageSize();
 
@@ -2021,7 +2056,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
   );
 
   function resetRicercaPagina() {
-    clearSearch();
+    setSearchClearSignal((n) => n + 1);
   }
 
   function resetFiltriPagina() {
@@ -2292,9 +2327,16 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
           canEditWorkOrders={canEditWorkOrders}
           createdBy={createdBy}
           mutPendingBlocking={mutPendingBlocking}
-          searchInput={searchInput}
-          onSearchInputChange={(e) => setSearchInput(e.target.value)}
-          onSearchEnter={flushPageSearch}
+          search={
+            <GestionaleListSearchController
+              domain="lavorazioni"
+              id="lavorazioni-search"
+              aria-label="Cerca in lavorazioni in corso e archivio"
+              wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
+              onSearchAppliedChange={onSearchAppliedChange}
+              clearSignal={searchClearSignal}
+            />
+          }
           filtriAttiviEspansi={filtriAttiviEspansi}
           onFiltersToggle={() => setFiltriAttiviEspansi((o) => !o)}
           hasPageClientFilters={hasPageClientFilters}

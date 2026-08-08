@@ -11,6 +11,7 @@ export default async function AgendaPage() {
     <PageLayout
       title={STRUCTURAL_ROUTE_PAGE_TITLES.agenda}
       description="Pianificazione sessioni di lavoro"
+      contentReveal
     >
       <GestionaleHydrationBoundary state={dehydratedState}>
         <AgendaOfficinaViewLazy />

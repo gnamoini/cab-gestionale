@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { registerCompatDevTools } from "@/lib/magazzino/compat/compat-dev-tools";
-import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
+import { useSharedAppSettingsQuery } from "@/src/context/app-settings-query-context";
 
 const PwaBridgePack = dynamic(() => import("@/src/components/pwa-bridge-pack"), { ssr: false });
 const RealtimePack = dynamic(() => import("@/src/components/gestionale-realtime-bridge-pack"), { ssr: false });
@@ -20,8 +20,8 @@ export function DeferredGestionaleBridges() {
   const authReady = isAuthSessionEstablished(status) && !!user?.id;
   const [mounted, setMounted] = useState(false);
   const queryClient = useQueryClient();
-  const settingsPayload = useCabAppSettingsPayloadQuery({ tier: "static" });
-  const mezziListe = settingsPayload.data?.resolved?.mezziListe;
+  const settingsPayload = useSharedAppSettingsQuery();
+  const mezziListe = settingsPayload?.data?.resolved?.mezziListe;
 
   useEffect(() => {
     if (!authReady) {

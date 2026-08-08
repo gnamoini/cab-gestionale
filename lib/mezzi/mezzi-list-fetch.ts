@@ -8,8 +8,8 @@ import {
   mapMezziRowsWithAttrezzature,
 } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import { buildSearchDocumentMezzo } from "@/lib/search/builders/build-search-document-mezzo";
-import { matchSearchString } from "@/lib/search/match";
+import { mezziHaystackForRow } from "@/lib/mezzi/mezzi-search-haystack-index";
+import { matchSearchStringPreparedFromRaw, matchSearchStringWithPrepared } from "@/lib/search/match";
 import type { MezzoFilters } from "@/src/services/mezzi.service";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MezzoRow } from "@/src/types/supabase-tables";
@@ -40,7 +40,11 @@ function applyMezzoIdentityFilters<
 }
 
 /** Filtri attrezzatura + search globale — post-compose su MezzoGestito (SSOT V2). */
-export function filterMezziGestiti(gestiti: MezzoGestito[], filters?: MezzoFilters): MezzoGestito[] {
+export function filterMezziGestiti(
+  gestiti: MezzoGestito[],
+  filters?: MezzoFilters,
+  haystackById?: Map<string, string>,
+): MezzoGestito[] {
   if (!filters) return gestiti;
   let out = gestiti;
   if (filters.cliente?.trim()) {
@@ -96,7 +100,13 @@ export function filterMezziGestiti(gestiti: MezzoGestito[], filters?: MezzoFilte
     out = out.filter((g) => norm(g.vin ?? "").includes(m));
   }
   if (filters.search?.trim()) {
-    out = out.filter((g) => matchSearchString(filters.search!, buildSearchDocumentMezzo(g)).matches);
+    const prepared = matchSearchStringPreparedFromRaw(filters.search);
+    if (prepared) {
+      const hayMap = haystackById ?? new Map<string, string>();
+      out = out.filter((g) =>
+        matchSearchStringWithPrepared(prepared, mezziHaystackForRow(g, hayMap)).matches,
+      );
+    }
   }
   return out;
 }

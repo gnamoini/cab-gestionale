@@ -39,6 +39,8 @@ export type OpenSafePopupOptions = {
   context: PopupGuardContext;
   label?: string;
   revokeBlobUrlAfterMs?: number;
+  /** Endpoint riapribile su retry pre-fetch (es. `/api/...`). Mai `blob:` pre-generazione. */
+  retryUrl?: string;
   /** Se false, non mostra il dialog (es. gestione esterna). Default true. */
   showBlockedDialog?: boolean;
   phase?: "sync" | "retry" | "navigate" | "preopen";
@@ -48,4 +50,6 @@ export type OpenDeferredPopupOptions = {
   context: PopupGuardContext;
   label?: string;
   showBlockedDialog?: boolean;
+  /** Endpoint riapribile su retry (es. `/api/pdf/artifacts/...`). Vietato `blob:` / `about:blank`. */
+  retryUrl?: string;
 };

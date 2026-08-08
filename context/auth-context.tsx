@@ -27,6 +27,8 @@ import { registerGestionaleVisibilityHandler } from "@/lib/ui/gestionale-visibil
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 import { isBootInvestigationEnabled } from "@/lib/observability/boot-investigation-gate";
 import { lazyLogBoot, lazyTrackStoreUpdate } from "@/lib/observability/boot-investigation-lazy";
+import { CAB_COLD_START_MARK } from "@/lib/observability/cold-start-mark-names";
+import { lazyMarkColdStart } from "@/lib/observability/cold-start-diagnostics-lazy";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { invalidateRbacTruthClient } from "@/src/lib/rbac/invalidate-rbac-truth";
 import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
@@ -177,6 +179,18 @@ export function AuthProvider({
     initialStatus: initial.status,
     hasSnapshotUser: Boolean(initialSnapshot?.user?.id),
   });
+
+  useLayoutEffect(() => {
+    lazyMarkColdStart(CAB_COLD_START_MARK.authInitStart);
+    if (initial.status !== "loading") {
+      lazyMarkColdStart(CAB_COLD_START_MARK.authInitEnd);
+    }
+  }, [initial.status]);
+
+  useEffect(() => {
+    if (status === "loading") return;
+    lazyMarkColdStart(CAB_COLD_START_MARK.authInitEnd);
+  }, [status]);
 
   useEffect(() => {
     if (!isBootInvestigationEnabled()) return;

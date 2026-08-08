@@ -4,6 +4,10 @@ import type { QueryClient } from "@tanstack/react-query";
 import { invalidateMicSettings } from "@/lib/cache/minimal-invalidation-contract";
 import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifecycle";
 import { dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
+import {
+  normalizeUpsertedSettingsRows,
+  patchAppSettingsQueryCache,
+} from "@/lib/sync/patch-app-settings-query-cache";
 import type { ServiceResult } from "@/src/services/service-result";
 
 /**
@@ -16,13 +20,23 @@ export async function persistSettingsRecord<T>(
 ): Promise<ServiceResult<T>> {
   const result = await write();
   if (result.success) {
+    const upsertedRows = normalizeUpsertedSettingsRows(result.data);
+    if (upsertedRows.length > 0) {
+      patchAppSettingsQueryCache(qc, upsertedRows);
+    }
+
     dispatchGestionaleAction(qc, ["app_settings"], {
       source: "local_mutation",
       cabSyncEvents: [{ type: "settings_updated" }],
     });
+
     void traceMutationLifecycle(
       { entityType: "settings", entityId: "global", operation: "persist" },
-      () => invalidateMicSettings(qc),
+      () =>
+        invalidateMicSettings(qc, {
+          refetchType: "none",
+          preserveRuntimeCache: upsertedRows.length > 0,
+        }),
     );
   }
   return result;

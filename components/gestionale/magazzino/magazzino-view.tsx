@@ -69,7 +69,7 @@ const MagazzinoLogDrawer = dynamic(
 import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
 import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
 import { useMagazzinoListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
-import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
+import { GestionaleListSearchController } from "@/components/gestionale/gestionale-list-search-controller";
 import { useGestionaleDirtySearchHint } from "@/src/hooks/gestionale/use-gestionale-dirty-search-hint";
 import { usesServerSearch } from "@/lib/search/registry";
 import type { MagazzinoFilters } from "@/src/services/magazzino.service";
@@ -166,7 +166,6 @@ import {
   PageToolbarResultCount,
   PageToolbarMetaToggle,
 } from "@/components/design-system";
-import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzino-giacenza-bell";
 import { useDataImportExportPageActions } from "@/components/data-import/data-import-export-toolbar";
 import type { RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
@@ -178,11 +177,17 @@ import {
   saveMagazzinoAdvancedFiltersPersisted,
   type MagazzinoAdvancedFilters,
 } from "@/lib/magazzino/magazzino-advanced-filters";
-import { isSearchRelevanceSortActive, compareSearchRelevance } from "@/lib/search/sort-by-relevance";
+import { matchSearchStringPreparedFromRaw } from "@/lib/search/match";
+import { scoreSearchDocumentWithPrepared } from "@/lib/search/rank";
+import {
+  isSearchRelevanceSortActive,
+  compareSearchRelevanceWithScoreMap,
+  buildSearchRelevanceScoreMap,
+} from "@/lib/search/sort-by-relevance";
 import {
   buildMagazzinoHaystackIndex,
   magazzinoRowMatchesPageFiltersIndexed,
-  magazzinoRowSearchScore,
+  magazzinoRowSearchHaystack,
 } from "@/lib/magazzino/magazzino-filter-search-index";
 import {
   buildMagazzinoSearchSuggestions,
@@ -542,13 +547,11 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
 
   const queryClient = useQueryClient();
   const [undoStockPending, setUndoStockPending] = useState(false);
-  const {
-    searchInput,
-    setSearchInput,
-    searchApplied,
-    clearSearch,
-    applySearchImmediate,
-  } = useGestionaleListSearch({ domain: "magazzino" });
+  const [searchApplied, setSearchApplied] = useState("");
+  const [searchClearSignal, setSearchClearSignal] = useState(0);
+  const [suggestionQuery, setSuggestionQuery] = useState("");
+  const onSearchAppliedChange = useCallback((q: string) => setSearchApplied(q), []);
+  const onDebouncedInputChange = useCallback((q: string) => setSuggestionQuery(q), []);
   const { hint: dirtySearchHint } = useGestionaleDirtySearchHint();
   const magazzinoFetchFilters = useMemo((): MagazzinoFilters | undefined => {
     if (!usesServerSearch("magazzino") || !searchApplied.trim()) return undefined;
@@ -568,7 +571,6 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   const [deleteGeneratedOpen, setDeleteGeneratedOpen] = useState(false);
   const [deleteGeneratedLoading, setDeleteGeneratedLoading] = useState(false);
   const magazzinoInitialLoading = rawMagazzinoListQ.isLoading && rawMagazzinoListQ.data === undefined;
-  const [searchSuggestionsApplied, setSearchSuggestionsApplied] = useState("");
   const [searchFieldFocused, setSearchFieldFocused] = useState(false);
   const [sortColumn, setSortColumn] = useState<SortKeyMagazzino | null>(null);
   const [sortPhase, setSortPhase] = useState<SortPhaseMagazzino>("natural");
@@ -598,28 +600,6 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
       return next;
     });
   }, []);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearchSuggestionsApplied(searchInput.trim()), 320);
-    return () => window.clearTimeout(t);
-  }, [searchInput]);
-
-  const onSearchEnter = useCallback(() => {
-    const query = magazzinoSearchQueryFromSuggestion(searchInput);
-    applySearchImmediate(query);
-    setSearchInput(searchInput.trim());
-    setSearchSuggestionsApplied(query);
-  }, [applySearchImmediate, searchInput, setSearchInput]);
-
-  const onMagazzinoSuggestionSelect = useCallback(
-    (label: string) => {
-      const query = magazzinoSearchQueryFromSuggestion(label);
-      applySearchImmediate(query);
-      setSearchInput(label);
-      setSearchSuggestionsApplied(query);
-    },
-    [applySearchImmediate, setSearchInput],
-  );
 
   const [masterMarche, setMasterMarche] = useState<string[]>([]);
   const [masterCategorie, setMasterCategorie] = useState<string[]>([]);
@@ -871,9 +851,8 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
       setAdvancedFilters(MAGAZZINO_ADVANCED_FILTERS_EMPTY);
       saveMagazzinoAdvancedFiltersPersisted(MAGAZZINO_ADVANCED_FILTERS_EMPTY);
       setSoloSottoScorta(Boolean(opts?.applySottoScorta));
-      setSearchInput("");
-      clearSearch();
-      setSearchSuggestionsApplied("");
+      setSearchClearSignal((n) => n + 1);
+      setSuggestionQuery("");
       setLogOpen(false);
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -1153,9 +1132,9 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
 
   const searchSuggestionPool = useMemo(() => {
     if (!searchFieldFocused) return [];
-    if (!searchSuggestionsApplied.trim()) return [];
-    return buildMagazzinoSearchSuggestions(prodotti, searchSuggestionsApplied, 8, mezziListe);
-  }, [searchFieldFocused, searchSuggestionsApplied, prodotti, mezziListe]);
+    if (!suggestionQuery.trim()) return [];
+    return buildMagazzinoSearchSuggestions(prodotti, suggestionQuery, 8, mezziListe);
+  }, [searchFieldFocused, suggestionQuery, prodotti, mezziListe]);
 
   const haystackIndex = useMemo(
     () => buildMagazzinoHaystackIndex(prodotti, mezziListe),
@@ -1164,19 +1143,34 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
 
   const serverSearchActive = usesServerSearch("magazzino") && searchApplied.trim().length > 0;
 
+  const preparedSearch = useMemo(
+    () => (searchApplied.trim() ? matchSearchStringPreparedFromRaw(searchApplied) : null),
+    [searchApplied],
+  );
+
   const filteredSorted = useMemo(() => {
     const orderMap = orderMapRef.current!;
     let rows = prodottiPerTabella.filter((p) =>
       magazzinoRowMatchesPageFiltersIndexed(p, pageFilters, haystackIndex, mezziListe, {
         skipSearchFilter: serverSearchActive,
+        preparedSearch,
       }),
     );
 
+    const relevanceActive = isSearchRelevanceSortActive(searchApplied, sortColumn);
+    const scoreMap =
+      relevanceActive && preparedSearch
+        ? buildSearchRelevanceScoreMap(rows, (row) =>
+            scoreSearchDocumentWithPrepared(
+              preparedSearch,
+              haystackIndex.get(row.id) ?? magazzinoRowSearchHaystack(row, mezziListe),
+            ).score,
+          )
+        : null;
+
     rows = [...rows].sort((a, b) => {
-      if (isSearchRelevanceSortActive(searchApplied, sortColumn)) {
-        const rel = compareSearchRelevance(a, b, searchApplied, (row, q) =>
-          magazzinoRowSearchScore(row, q, mezziListe),
-        );
+      if (scoreMap) {
+        const rel = compareSearchRelevanceWithScoreMap(a, b, scoreMap);
         if (rel !== 0) return rel;
       }
       if (sortPhase === "natural" || sortColumn === null) {
@@ -1191,7 +1185,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     });
 
     return rows;
-  }, [prodottiPerTabella, pageFilters, sortColumn, sortPhase, consumoAvgById, mezziListe, haystackIndex, listSurface, searchApplied, serverSearchActive]);
+  }, [prodottiPerTabella, pageFilters, sortColumn, sortPhase, consumoAvgById, mezziListe, haystackIndex, listSurface, searchApplied, serverSearchActive, preparedSearch]);
 
   filteredSortedRef.current = filteredSorted;
 
@@ -1523,8 +1517,8 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   }
 
   function resetMagazzinoRicerca() {
-    clearSearch();
-    setSearchSuggestionsApplied("");
+    setSearchClearSignal((n) => n + 1);
+    setSuggestionQuery("");
   }
 
   function resetMagazzinoFilters() {
@@ -1770,30 +1764,28 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
               </div>
             }
             search={
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <GestionaleListSearchField
-                  id="magazzino-search"
-                  placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      onSearchEnter();
-                    }
-                  }}
-                  onFocusChange={setSearchFieldFocused}
-                  onSuggestionSelect={onMagazzinoSuggestionSelect}
-                  suggestionPool={searchSuggestionPool}
-                  aria-label="Cerca in magazzino"
-                  wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
-                />
-                {dirtySearchHint ? (
-                  <p className="text-xs text-[color:var(--cab-text-muted)]" role="status">
-                    {dirtySearchHint}
-                  </p>
-                ) : null}
-              </div>
+              <GestionaleListSearchController
+                domain="magazzino"
+                variant="suggestions"
+                id="magazzino-search"
+                placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
+                aria-label="Cerca in magazzino"
+                wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
+                onSearchAppliedChange={onSearchAppliedChange}
+                onDebouncedInputChange={onDebouncedInputChange}
+                clearSignal={searchClearSignal}
+                onFocusChange={setSearchFieldFocused}
+                suggestionPool={searchSuggestionPool}
+                mapSuggestionToQuery={magazzinoSearchQueryFromSuggestion}
+                mapInputToQueryOnEnter={magazzinoSearchQueryFromSuggestion}
+                footer={
+                  dirtySearchHint ? (
+                    <p className="text-xs text-[color:var(--cab-text-muted)]" role="status">
+                      {dirtySearchHint}
+                    </p>
+                  ) : null
+                }
+              />
             }
             filtersExpanded={filtriEspansi}
             onFiltersToggle={() => setFiltriEspansi((o) => !o)}
@@ -1820,7 +1812,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                   mobileUniformActions
                   count={filteredSorted.length}
                   filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
-                  searchActive={searchApplied.trim().length > 0 || searchInput.trim().length > 0}
+                  searchActive={searchApplied.trim().length > 0}
                   onSearchReset={resetMagazzinoRicerca}
                   onFilterReset={resetMagazzinoFilters}
                 />

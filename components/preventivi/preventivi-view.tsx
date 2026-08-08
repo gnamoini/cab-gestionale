@@ -94,7 +94,7 @@ import {
   prevTableTdPill,
   prevTableTdPillWrap,
 } from "@/components/preventivi/preventivi-table-shared";
-import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
+import { GestionaleListSearchController } from "@/components/gestionale/gestionale-list-search-controller";
 import { useAuth } from "@/context/auth-context";
 import {
   collapsibleExpandedBoolPref,
@@ -153,7 +153,6 @@ import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi
 import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
 import { ddtEntry } from "@/lib/domain/ddt-entry";
 import { usePreventiviBillingQuery } from "@/src/hooks/gestionale/use-preventivi-billing-query";
-import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
 import { useLogListQuery, useMagazzinoRicambiUIQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
@@ -477,13 +476,11 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
   const { authorName: autore, user } = useAuth();
   const gestToast = useGestionaleToast();
   const queryClient = useQueryClient();
-  const {
-    searchInput,
-    setSearchInput,
-    searchApplied,
-    flushSearch: flushPageSearch,
-    clearSearch,
-  } = useGestionaleListSearch({ domain: "preventivi" });
+  const [searchApplied, setSearchApplied] = useState("");
+  const [searchClearSignal, setSearchClearSignal] = useState(0);
+  const [suggestionQuery, setSuggestionQuery] = useState("");
+  const onSearchAppliedChange = useCallback((q: string) => setSearchApplied(q), []);
+  const onDebouncedInputChange = useCallback((q: string) => setSuggestionQuery(q), []);
   const { records: rows, refetch: refetchPreventivi, isLoading: preventiviQueryLoading } =
     usePreventiviRecordsQuery(isPreventiviTab, { search: searchApplied });
   const { byPreventivoId: preventiviBillingById } = usePreventiviBillingQuery(isPreventiviTab);
@@ -744,8 +741,8 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
   );
 
   const searchSuggestionPool = useMemo(
-    () => buildPreventiviSearchSuggestions(rows, searchInput),
-    [rows, searchInput],
+    () => buildPreventiviSearchSuggestions(rows, suggestionQuery),
+    [rows, suggestionQuery],
   );
 
   const filteredRows = useMemo(() => {
@@ -1064,7 +1061,8 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
     : "Nessun preventivo in archivio.";
 
   function resetPreventiviRicerca() {
-    clearSearch();
+    setSearchClearSignal((n) => n + 1);
+    setSuggestionQuery("");
   }
 
   function resetPreventiviFiltriPagina() {
@@ -1296,20 +1294,17 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
               </button>
             }
             search={
-              <GestionaleListSearchField
+              <GestionaleListSearchController
+                domain="preventivi"
+                variant="suggestions"
                 id="preventivi-search"
                 wrapperClassName="min-w-0 flex-1"
                 placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    flushPageSearch();
-                  }
-                }}
-                suggestionPool={searchSuggestionPool}
                 aria-label="Cerca preventivi"
+                onSearchAppliedChange={onSearchAppliedChange}
+                onDebouncedInputChange={onDebouncedInputChange}
+                clearSignal={searchClearSignal}
+                suggestionPool={searchSuggestionPool}
               />
             }
             filtersExpanded={filtriEspansi}
@@ -1329,7 +1324,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
               <PageToolbarResultCount
                 count={sortedRows.length}
                 filtersActive={hasAdvancedPanelFilters || Boolean(filterLavId) || Boolean(filterMezzoRaw)}
-                searchActive={searchApplied.trim().length > 0 || searchInput.trim().length > 0}
+                searchActive={searchApplied.trim().length > 0}
                 onSearchReset={resetPreventiviRicerca}
                 onFilterReset={resetPreventiviFiltriPagina}
               />

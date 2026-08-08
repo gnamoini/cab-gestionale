@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GestionaleConfirmDialog, gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog";
 import { GestionaleModalFooterCancelButton } from "@/components/design-system";
 import { dsBtnPrimary, dsBtnSecondary } from "@/lib/ui/design-system";
@@ -25,6 +25,10 @@ export function PopupBlockedDialog({
   onRetry: () => void;
 }) {
   const [showInstructions, setShowInstructions] = useState(false);
+
+  useEffect(() => {
+    setShowInstructions(false);
+  }, [request?.sessionId]);
 
   if (!request) return null;
 

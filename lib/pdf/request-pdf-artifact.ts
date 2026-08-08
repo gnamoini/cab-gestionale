@@ -70,6 +70,7 @@ export async function openPdfStreamInNewTab(
   const deferredResult = openDeferredPopup({
     context,
     label: options?.label ?? "PDF",
+    retryUrl: trimmed,
   });
 
   if (isDeferredPopupBlocked(deferredResult)) return false;

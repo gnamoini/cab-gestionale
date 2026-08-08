@@ -2,6 +2,7 @@
 
 import { Tooltip } from "@/components/ui";
 import { useId, type ReactNode } from "react";
+import { LoadingSpinner } from "@/components/design-system/loading";
 import { UploadStatusInline } from "@/components/gestionale/upload/upload-status-inline";
 import type { UploadFeedbackPhase } from "@/lib/upload/upload-feedback-types";
 import { dsBtnNeutral, dsDisabled } from "@/lib/ui/design-system";
@@ -51,13 +52,14 @@ export function GestionaleFileInput({
   return (
     <div className={wrapperClassName}>
       <Tooltip content={title}><label htmlFor={inputId} className={`${buttonClassName ?? dsBtnNeutral} ${inputDisabled ? `cursor-wait opacity-60 ${dsDisabled}` : "cursor-pointer"}`}>
-        {busy ? (busyIconOnly ? (<>
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-[color:color-mix(in_srgb,var(--cab-border)_90%,transparent)] border-t-[var(--cab-primary)]" aria-hidden/>
-              <span className="sr-only">Caricamento…</span>
-            </>) : (<span className="inline-flex items-center gap-1.5">
-              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[color:color-mix(in_srgb,var(--cab-border)_90%,transparent)] border-t-[var(--cab-primary)]" aria-hidden/>
-              Caricamento…
-            </span>)) : (buttonLabel)}
+        {busy ? (busyIconOnly ? (
+              <LoadingSpinner size="sm" label="Caricamento…" />
+            ) : (
+              <span className="inline-flex items-center gap-1.5">
+                <LoadingSpinner size="sm" label="Caricamento…" />
+                Caricamento…
+              </span>
+            )) : (buttonLabel)}
         <input id={inputId} type="file" accept={accept} className="sr-only" disabled={inputDisabled} onChange={onChange}/>
       </label></Tooltip>
       {showInlineStatus ? (

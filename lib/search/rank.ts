@@ -1,6 +1,7 @@
 import { collapseSearchKey } from "@/lib/search/field-token";
 import { parseSearchQuery } from "@/lib/search/parse-query";
 import { normalizeSearchText } from "@/lib/search/normalize";
+import { probeParseQuery, probeScore } from "@/lib/search/search-hot-path-probe";
 import type { SearchFieldMarker } from "@/lib/search/field-token";
 import type { SearchFieldKind, SearchMatchResult, SearchMatchType } from "@/lib/search/types";
 import { scoreEntityMatch } from "@/lib/validation/global-entity-validation";
@@ -193,6 +194,7 @@ export function getCollapsedQueryTokens(raw: string): string[] {
   const trimmed = raw.trim().replace(/\s*·\s*/g, " ");
   if (!trimmed) return [];
 
+  probeParseQuery();
   const parsed = parseSearchQuery(trimmed);
   if (parsed.mode === "phrase" && parsed.phrase) {
     const words = parsed.phrase.split(/\s+/).filter(Boolean);
@@ -214,11 +216,33 @@ export function documentMatchesSearchQuery(query: string, document: string): boo
   return scoreSearchDocument(query, document).matches;
 }
 
-export function scoreSearchDocument(query: string, document: string): SearchMatchResult {
-  const trimmed = query.trim();
-  if (!trimmed) return { matches: true, score: 0, matchType: null };
+export type PreparedSearchQuery = {
+  raw: string;
+  collapsedTokens: string[];
+};
 
-  const tokens = getCollapsedQueryTokens(trimmed);
+/** Parse + collapse once per filter/sort pass. */
+export function prepareSearchQuery(raw: string): PreparedSearchQuery | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const collapsedTokens = getCollapsedQueryTokens(trimmed);
+  if (collapsedTokens.length === 0) return null;
+  return { raw: trimmed, collapsedTokens };
+}
+
+export function scoreSearchDocumentWithPrepared(
+  prepared: PreparedSearchQuery,
+  document: string,
+): SearchMatchResult {
+  probeScore();
+  return scoreSearchDocumentWithCollapsedTokens(prepared.collapsedTokens, prepared.raw, document);
+}
+
+export function scoreSearchDocumentWithCollapsedTokens(
+  tokens: readonly string[],
+  raw: string,
+  document: string,
+): SearchMatchResult {
   if (tokens.length === 0) return { matches: true, score: 0, matchType: null };
 
   const scores: number[] = [];
@@ -239,6 +263,17 @@ export function scoreSearchDocument(query: string, document: string): SearchMatc
     score: combineTokenScores(scores),
     matchType: bestMatchType,
   };
+}
+
+export function scoreSearchDocument(query: string, document: string): SearchMatchResult {
+  const trimmed = query.trim();
+  if (!trimmed) return { matches: true, score: 0, matchType: null };
+
+  const prepared = prepareSearchQuery(trimmed);
+  if (!prepared) return { matches: true, score: 0, matchType: null };
+
+  probeScore();
+  return scoreSearchDocumentWithCollapsedTokens(prepared.collapsedTokens, prepared.raw, document);
 }
 
 export function scoreTokenAgainstHaystack(

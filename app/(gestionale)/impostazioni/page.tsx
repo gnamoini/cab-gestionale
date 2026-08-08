@@ -16,6 +16,7 @@ export default async function ImpostazioniPage() {
     <PageLayout
       title={STRUCTURAL_ROUTE_PAGE_TITLES.impostazioni}
       titleAddon={<OperatorGlobalSettingsPilotBadge />}
+      contentReveal
     >
       <GestionaleHydrationBoundary state={dehydrate(qc)}>
         <SistemaImpostazioniPageViewLazy />

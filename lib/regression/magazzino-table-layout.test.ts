@@ -18,6 +18,17 @@ const lavorazioniCss = readFileSync(
 assert.doesNotMatch(css, /min-width:\s*68rem/, "magazzino table must fit container width");
 assert.match(css, /width:\s*100%/, "magazzino dense table uses fluid width");
 assert.match(css, /--gestionale-magazzino-actions-width/, "azioni column width token");
+assert.match(css, /col\.gestionale-magazzino-col-azioni/, "azioni col selector");
+assert.match(
+  css,
+  /\.gestionale-magazzino-dense-table col\.gestionale-magazzino-col-azioni[\s\S]*?width:\s*var\(--gestionale-magazzino-actions-width\)/,
+  "azioni col reserves explicit width",
+);
+assert.doesNotMatch(
+  css,
+  /\.gestionale-magazzino-dense-table col\.gestionale-magazzino-col-azioni[\s\S]*?width:\s*0\b/,
+  "azioni col must not collapse with width: 0",
+);
 assert.match(css, /overflow-x:\s*clip/, "magazzino table scope clips horizontal overflow");
 assert.match(css, /gestionale-magazzino-col-consumo/, "consumo column has responsive hide hook");
 assert.doesNotMatch(lavorazioniCss, /gestionale-magazzino-dense-table/, "magazzino layout lives in magazzino-scroll.css");

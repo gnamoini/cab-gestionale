@@ -155,15 +155,16 @@ export function GestionaleRealtimeBridge() {
       setGestionaleRealtimeRuntimeMode(next);
     };
 
-    const isSettingsEditorActive = () =>
-      settingsModalOpenRef.current || onSettingsPageRef.current || shouldSuppressSettingsRemoteNotify();
+    const isSettingsEditorUiOpen = () =>
+      settingsModalOpenRef.current || onSettingsPageRef.current;
 
     const scheduleRemoteSettingsNotify = (payload?: PostgresChangePayload) => {
-      if (isSettingsEditorActive()) return;
+      if (isSettingsEditorUiOpen()) return;
+      if (shouldSuppressSettingsRemoteNotify()) return;
       if (remoteSettingsNotifyTimer) return;
       remoteSettingsNotifyTimer = setTimeout(() => {
         remoteSettingsNotifyTimer = null;
-        if (cancelled || isSettingsEditorActive()) return;
+        if (cancelled || isSettingsEditorUiOpen()) return;
         if (!shouldShowRemoteSettingsToast()) return;
         void (async () => {
           let hasPendingPropagation = false;
@@ -283,9 +284,7 @@ export function GestionaleRealtimeBridge() {
       if (!transport.shouldProcessRealtimePayload()) return;
 
       if (table === "app_settings") {
-        if (shouldSuppressSettingsRemoteNotify()) return;
         if (isOwnAppSettingsWrite(userIdRef.current, payload)) return;
-        if (isSettingsEditorActive()) return;
 
         const settingsFp = appSettingsChangeFingerprint(payload);
         const now = Date.now();
@@ -298,7 +297,9 @@ export function GestionaleRealtimeBridge() {
         const cabEvent = cabSyncEventFromPostgresChange(table, payload) ?? { type: "settings_updated" as const };
         scheduleInvalidate(table, cabEvent);
         onAuthCriticalChange(table, payload);
-        scheduleRemoteSettingsNotify(payload);
+        if (!shouldSuppressSettingsRemoteNotify()) {
+          scheduleRemoteSettingsNotify(payload);
+        }
         return;
       }
 

@@ -84,7 +84,7 @@ async function waitRouteReady(page: import("@playwright/test").Page, spec: Route
   } else {
     await expect(page.getByText(spec.readySelector, { exact: false }).first()).toBeVisible({ timeout: 60_000 });
   }
-  const spinners = page.locator('[class*="animate-spin"]');
+  const spinners = page.locator('[class*="cab-spinner-ring"]');
   if ((await spinners.count()) > 0) {
     await expect(spinners.first()).not.toBeVisible({ timeout: 60_000 });
   }

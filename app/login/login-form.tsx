@@ -358,7 +358,7 @@ export function LoginForm() {
             >
               {busy ? (
                 <>
-                  <GlobalLoadingSpinner size="sm" className="text-white" />
+                  <GlobalLoadingSpinner size="sm" tone="onPrimary" />
                   <span>Accesso in corso…</span>
                 </>
               ) : (

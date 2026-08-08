@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { GESTIONALE_SEARCH_DEBOUNCE_MS } from "@/lib/search/use-gestionale-list-search";
 import { createPortal } from "react-dom";
 import {
   IconGestionaleSearchMagnifier,
@@ -58,20 +59,26 @@ export function GestionaleListSearchField({
 
   const strValue = typeof value === "string" ? value : String(value ?? "");
 
+  const [debouncedValue, setDebouncedValue] = useState(strValue);
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedValue(strValue), GESTIONALE_SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(t);
+  }, [strValue]);
+
   const suggestions = useMemo(() => {
     if (!focused) return [];
-    const fromPool = filterListSelectSuggestions(strValue, suggestionPool, suggestionLimit);
+    const fromPool = filterListSelectSuggestions(debouncedValue, suggestionPool, suggestionLimit);
     if (fromPool.length >= suggestionLimit) return fromPool;
     const merged = [...fromPool];
     const seen = new Set(fromPool.map((s) => s.toLowerCase()));
-    for (const s of filterListSelectSuggestions(strValue, [strValue], 1)) {
-      if (!seen.has(s.toLowerCase()) && strValue.trim()) {
+    for (const s of filterListSelectSuggestions(debouncedValue, [debouncedValue], 1)) {
+      if (!seen.has(s.toLowerCase()) && debouncedValue.trim()) {
         merged.push(s);
         seen.add(s.toLowerCase());
       }
     }
     return merged.slice(0, suggestionLimit);
-  }, [focused, strValue, suggestionPool, suggestionLimit]);
+  }, [focused, debouncedValue, suggestionPool, suggestionLimit]);
 
   const showDropdown = open && focused && suggestions.length > 0;
   const activeDescendantId =

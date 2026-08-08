@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
-import { Drawer, LoadingFormSkeleton } from "@/components/design-system";
+import { Drawer, LoadingFormSkeleton, ContentReveal } from "@/components/design-system";
 import { gestionaleCollapsibleSectionTitleClassName } from "@/components/design-system/gestionale-collapsible-section";
 import { SettingsEmptyState } from "@/components/dashboard/settings-list-ui";
 import {
@@ -183,7 +183,8 @@ export function NotificationSettingsModal({
           ) : !hasContent ? (
             <SettingsEmptyState>Nessuna notifica configurabile per il tuo profilo.</SettingsEmptyState>
           ) : (
-            <div className="space-y-5 pb-1" aria-busy={savingId != null}>
+            <ContentReveal data-testid="content-reveal">
+              <div className="space-y-5 pb-1" aria-busy={savingId != null}>
               <section className="min-w-0">
                 <h2 className={`${gestionaleCollapsibleSectionTitleClassName} mb-2`}>Canali di consegna</h2>
                 <ul className="space-y-2 text-sm text-[color:var(--cab-text)]">
@@ -200,7 +201,8 @@ export function NotificationSettingsModal({
                   savingId={savingId}
                 />
               ))}
-            </div>
+              </div>
+            </ContentReveal>
           )}
         </div>
       </div>

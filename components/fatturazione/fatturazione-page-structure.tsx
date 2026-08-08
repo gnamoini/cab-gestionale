@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { SkeletonMode } from "@/components/design-system/loading/skeleton-contract";
+import { ContentReveal } from "@/components/design-system/loading/content-reveal";
 import { FatturazioneRouteSkeleton } from "@/components/design-system/loading/route-skeletons";
 import type { RouteSkeletonScope } from "@/lib/ui/route-skeleton-scope";
 
@@ -26,5 +27,5 @@ export function FatturazioneTabSection({
   if (mode === "skeleton") {
     return <FatturazioneRouteSkeleton scope="content" />;
   }
-  return <>{children}</>;
+  return <ContentReveal data-testid="content-reveal">{children}</ContentReveal>;
 }

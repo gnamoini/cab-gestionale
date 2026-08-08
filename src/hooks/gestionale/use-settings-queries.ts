@@ -27,6 +27,11 @@ import {
 } from "@/lib/domain/settings-entry";
 import type { AppSettingRow } from "@/src/types/supabase-tables";
 import { err, type ServiceResult } from "@/src/services/service-result";
+import { isNavigationBootDiagnosticsEnabled } from "@/lib/observability/navigation-boot-gate";
+import {
+  markNavigationBoot,
+  exposeNavigationBootTimeline,
+} from "@/lib/observability/navigation-boot-timeline";
 
 export type CabAppSettingsQueryPayload = {
   rows: AppSettingRow[];
@@ -126,12 +131,17 @@ export function useCabAppSettingsPayloadQuery(
   const isOwner = options?.owner === true;
   const wantShared = !isOwner && tier === "static" && shared != null && (options?.enabled ?? true);
 
-  const enabled = (options?.enabled ?? true) && isSupabasePublicEnvConfigured() && !wantShared;
   const cachedPayload = getRuntimeCabAppSettingsPayload();
   const qc = useQueryClient();
   const dehydratedPayload = qc.getQueryData<CabAppSettingsQueryPayload>(SETTINGS_PAYLOAD_QK);
   // ponytail: tier static + hasHydratedPayload → refetchOnMount false; allineato a settings.payload SERVER_OWNER su /impostazioni
   const hasHydratedPayload = dehydratedPayload != null || cachedPayload != null;
+
+  const enabled =
+    (options?.enabled ?? true) &&
+    isSupabasePublicEnvConfigured() &&
+    !wantShared &&
+    (isOwner ? !hasHydratedPayload : true);
   const policy = resolveSettingsQueryPolicy(options, wantShared || (tier === "static" && hasHydratedPayload));
 
   const q = useQuery({
@@ -143,6 +153,17 @@ export function useCabAppSettingsPayloadQuery(
     initialData: dehydratedPayload ?? cachedPayload ?? undefined,
     placeholderData: (previousData) => previousData ?? dehydratedPayload ?? cachedPayload ?? undefined,
   });
+
+  useLayoutEffect(() => {
+    if (!isOwner || !isNavigationBootDiagnosticsEnabled()) return;
+    if (q.isFetching && q.fetchStatus === "fetching") {
+      markNavigationBoot("settings_owner_start");
+    }
+    if (!q.isFetching && q.fetchStatus === "idle" && (q.isSuccess || q.isError)) {
+      markNavigationBoot("settings_owner_end", { fromNetwork: q.isFetchedAfterMount });
+      exposeNavigationBootTimeline();
+    }
+  }, [isOwner, q.isFetching, q.fetchStatus, q.isSuccess, q.isError, q.isFetchedAfterMount]);
 
   useLayoutEffect(() => {
     if (!q.data?.resolved) return;

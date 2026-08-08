@@ -24,10 +24,24 @@ for (const f of filterFiles) {
   assert.match(src, /matchSearchString|[A-Za-z]+RowMatchesGlobalSearch/, `${f} must use search engine`);
 }
 
+const listViews = [
+  "components/gestionale/lavorazioni/lavorazioni-view.tsx",
+  "components/gestionale/magazzino/magazzino-view.tsx",
+  "components/preventivi/preventivi-view.tsx",
+  "components/gestionale/documenti/documenti-view.tsx",
+  "components/gestionale/mezzi/mezzi-view.tsx",
+  "components/ordini-fornitori/ordini-fornitori-view.tsx",
+];
+
+for (const viewPath of listViews) {
+  const src = read(viewPath);
+  assert.match(src, /GestionaleListSearchController/, `${viewPath} uses search island controller`);
+  assert.doesNotMatch(src, /useGestionaleListSearch\s*\(/, `${viewPath} must not call useGestionaleListSearch in parent`);
+  assert.doesNotMatch(src, /\bsearchInput\b/, `${viewPath} must not own searchInput state`);
+}
+
 const lavorazioniView = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
-assert.match(lavorazioniView, /useGestionaleListSearch/, "lavorazioni-view uses shared search hook");
 assert.match(lavorazioniView, /serverSearchPart/, "lavorazioni search shared across attive and archivio queries");
-assert.match(lavorazioniView, /\.\.\.serverSearchPart[\s\S]*archived: true/, "archivio query receives server search");
 assert.match(
   lavorazioniView,
   /hasPageClientFilters[\s\S]*setArchivioSectionOpen\(true\)/,
@@ -35,18 +49,11 @@ assert.match(
 );
 
 const magazzinoView = read("components/gestionale/magazzino/magazzino-view.tsx");
-assert.match(magazzinoView, /useGestionaleListSearch/, "magazzino-view uses shared search hook");
 assert.match(magazzinoView, /skipSearchFilter: serverSearchActive/, "magazzino avoids double search gate when server filtered");
 assert.match(magazzinoView, /compareSearchRelevance/, "magazzino relevance sort");
 
 const preventiviView = read("components/preventivi/preventivi-view.tsx");
-assert.match(preventiviView, /useGestionaleListSearch/, "preventivi-view uses shared search hook");
-
-const documentiView = read("components/gestionale/documenti/documenti-view.tsx");
-assert.match(documentiView, /useGestionaleListSearch/, "documenti-view uses shared search hook");
-
-const mezziView = read("components/gestionale/mezzi/mezzi-view.tsx");
-assert.match(mezziView, /useGestionaleListSearch/, "mezzi-view uses shared search hook");
+assert.match(preventiviView, /onSearchAppliedChange/, "preventivi lifts searchApplied via island callback");
 
 const settingsSearch = read("lib/settings/settings-list-search.ts");
 assert.match(settingsSearch, /scoreSearchDocument/, "settings uses unified search scoring");
@@ -57,6 +64,9 @@ assert.match(serverFilter, /applyServerSearchDocumentFilter/, "server filter hel
 
 const fieldToken = read("lib/search/field-token.ts");
 assert.match(fieldToken, /formatFieldSearchToken/, "field marker tokens defined");
+
+const controller = read("components/gestionale/gestionale-list-search-controller.tsx");
+assert.match(controller, /useGestionaleListSearch/, "controller owns list search hook");
 
 const migration = read("supabase/migrations/20261111120000_search_collapse_field_tokens.sql");
 assert.match(migration, /collapse_search_text/, "collapse migration defines collapse_search_text");
@@ -70,6 +80,9 @@ assert.match(legacyMigration, /search_document_rebuild_queue/, "deferred rebuild
 
 const auditScript = read("supabase/scripts/search-collapse-audit.sql");
 assert.match(auditScript, /collapse_search_text/, "audit script references collapse");
+
+const explainScript = read("supabase/scripts/search-explain-audit.sql");
+assert.match(explainScript, /explain \(analyze/i, "explain audit script present");
 
 for (const domain of listSearchDomains()) {
   const cfg = getSearchConfig(domain);

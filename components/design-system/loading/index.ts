@@ -5,12 +5,20 @@
 export {
   LOADING_SPINNER_DURATION_MS,
   LOADING_DELAYED_MESSAGE_MS,
+  CONTENT_REVEAL_DURATION_MS,
+  contentRevealClass,
+  CAB_SPINNER_SPIN_KEYFRAME_NAME,
+  CAB_SPINNER_SPIN_KEYFRAMES_CSS,
+  cabSpinnerRingAnimationDecl,
   loadingSpinnerSizeClass,
   loadingSpinnerRingClass,
+  loadingSpinnerRingGeometryClass,
+  loadingSpinnerToneRingClass,
   loadingSkeletonPulseClass,
   loadingMessageClass,
   loadingCaptionClass,
   type LoadingSpinnerSize,
+  type LoadingSpinnerTone,
 } from "./loading-tokens";
 
 export { LoadingSpinner, type LoadingSpinnerProps } from "./loading-spinner";
@@ -106,6 +114,12 @@ export {
   type StructuralSkeletonRendererProps,
 } from "./structural-skeleton-renderer";
 export { SkeletonBoundary, type SkeletonBoundaryProps } from "./skeleton-boundary";
+export {
+  ContentReveal,
+  LoadingExclusiveContent,
+  type ContentRevealProps,
+  type LoadingExclusiveContentProps,
+} from "./content-reveal";
 export { StructuralRouteSkeleton, type StructuralRouteSkeletonProps } from "./structural-route-skeleton";
 export { skeletonPulseClass, skeletonMotionClass } from "./skeleton-tokens";
 

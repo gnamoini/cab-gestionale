@@ -1,6 +1,7 @@
 "use client";
 
 import { loadBrandingLogoDataUrl } from "@/lib/branding/branding-logo-for-pdf";
+import type { DeferredPopupHandle } from "@/lib/browser/popup-guard";
 import { openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
 import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
@@ -9,6 +10,7 @@ import type { PreventivoRecord } from "@/lib/preventivi/types";
 export async function openPreventivoPdfPreviewFromRecord(
   p: PreventivoRecord,
   autore: string,
+  deferredHandle?: DeferredPopupHandle | null,
 ): Promise<void> {
   const [{ generatePreventivoPdfBytes, preventivoPdfFileName }, logo] = await Promise.all([
     import("@/lib/preventivi/preventivo-pdf-generate"),
@@ -17,7 +19,11 @@ export async function openPreventivoPdfPreviewFromRecord(
   const operatore = p.lastEditedBy?.trim() || autore.trim() || "Operatore";
   const bytes = generatePreventivoPdfBytes(p, operatore, logo);
   const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
-  await openPdfBlobInNewTab(blob, preventivoPdfFileName(p));
+  await openPdfBlobInNewTab(blob, preventivoPdfFileName(p), {
+    deferredHandle,
+    context: "pdf",
+    label: "PDF preventivo",
+  });
 }
 
 /** Pagina anteprima ufficiale embedded (link diretto / portale). */

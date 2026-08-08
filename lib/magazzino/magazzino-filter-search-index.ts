@@ -4,7 +4,8 @@ import {
   type MagazzinoPageFilters,
 } from "@/lib/magazzino/magazzino-list-ui-filters";
 import { magazzinoRowMatchesAdvancedFilters } from "@/lib/magazzino/magazzino-advanced-filters";
-import { matchSearchString } from "@/lib/search/match";
+import { matchSearchStringWithPrepared } from "@/lib/search/match";
+import type { PreparedSearchQuery } from "@/lib/search/rank";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 
@@ -25,16 +26,22 @@ export function magazzinoRowMatchesPageFiltersIndexed(
   filters: MagazzinoPageFilters,
   haystackById: Map<string, string>,
   listePrefs?: MezziListePrefs,
-  options?: { skipSearchFilter?: boolean },
+  options?: { skipSearchFilter?: boolean; preparedSearch?: PreparedSearchQuery | null },
 ): boolean {
   if (filters.soloSottoScorta && !(row.scorta < row.scortaMinima)) return false;
   if (filters.nascondiScortaZero && row.scorta <= 0) return false;
   if (!options?.skipSearchFilter && filters.search.trim()) {
+    const prepared = options?.preparedSearch;
+    if (!prepared) return true;
     const hay = haystackById.get(row.id) ?? magazzinoRowSearchHaystack(row, listePrefs);
-    if (!matchSearchString(filters.search, hay).matches) return false;
+    if (!matchSearchStringWithPrepared(prepared, hay).matches) return false;
   }
   const { search: _s, soloSottoScorta: _sc, nascondiScortaZero: _sz, ...advanced } = filters;
   return magazzinoRowMatchesAdvancedFilters(row, advanced, listePrefs);
 }
 
-export { magazzinoRowMatchesGlobalSearch, magazzinoRowSearchScore } from "@/lib/magazzino/magazzino-list-ui-filters";
+export {
+  magazzinoRowMatchesGlobalSearch,
+  magazzinoRowSearchHaystack,
+  magazzinoRowSearchScore,
+} from "@/lib/magazzino/magazzino-list-ui-filters";

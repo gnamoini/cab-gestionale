@@ -14,7 +14,7 @@ export default async function LavorazioniClientiPage() {
   const listSurface = await resolveListSurfaceForPage();
   await prefetchGestionalePage(qc, "lavorazioni_clienti");
   return (
-    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.clienti}>
+    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.clienti} contentReveal>
       <GestionaleHydrationBoundary state={dehydrate(qc)}>
         <ClientLavorazioniViewLazy listSurface={listSurface} listTier="xl" />
       </GestionaleHydrationBoundary>
