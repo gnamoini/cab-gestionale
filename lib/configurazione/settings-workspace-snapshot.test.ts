@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { snapshotFromResolved } from "@/lib/configurazione/settings-workspace-snapshot";
 import type { CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
 
-const records = [{ id: "id-mario", nome: "Mario", cognome: "Rossi" }];
+const records = [
+  { id: "id-mario", nome: "Mario", cognome: "Rossi", employeeType: "ADDETTO" as const, attivo: true },
+];
 
 const resolved: CabAppSettingsResolved = {
   lavorazioni: {
@@ -34,7 +36,7 @@ const resolved: CabAppSettingsResolved = {
     produttori: [],
   },
   preventiviDefaults: { costoOrarioDefault: 48 },
-  dipendenti: { tipiAssenza: [] },
+  dipendenti: { dipendentiRecords: records, tipiAssenza: [] },
   branding: {
     primaryColor: null,
     logoStoragePath: null,

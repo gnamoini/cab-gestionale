@@ -6,7 +6,9 @@ import {
 
 const base = (): ConfigurazioneSettingsSnapshot => ({
   stati: [],
-  addettiRecords: [{ id: "a1", nome: "Mario", cognome: null }],
+  dipendentiRecords: [
+    { id: "a1", nome: "Mario", cognome: null, employeeType: "ADDETTO", attivo: true },
+  ],
   addettoColors: {},
   prioritaColors: {},
   prioritaDb: [],

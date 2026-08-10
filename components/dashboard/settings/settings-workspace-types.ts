@@ -36,7 +36,7 @@ export const SETTINGS_NAV_STRUCTURE: SettingsNavEntry[] = [
   { kind: "group", label: "Personalizzazione" },
   { kind: "item", id: "brand-personalizzazione", label: "Branding" },
   { kind: "group", label: "Operatività" },
-  { kind: "item", id: "op-addetti", label: "Addetti" },
+  { kind: "item", id: "op-addetti", label: "Dipendenti" },
   { kind: "item", id: "op-dipendenti-assenze", label: "Tipi assenza dipendenti" },
   { kind: "item", id: "op-stati", label: "Stati lavorazioni" },
   { kind: "item", id: "op-priorita", label: "Priorità" },

@@ -82,13 +82,14 @@ import {
 import { defaultTipiAssenza, type TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
 import { DEFAULT_ADDETTI_LAVORAZIONI } from "@/lib/lavorazioni/constants";
 import {
-  addettiLegacyNomi,
-  addettoStoredNameAliases,
-  createAddettoId,
-  defaultAddettiRecords,
-  findAddettoById,
-  type AddettoRecord,
-} from "@/lib/lavorazioni/addetto-model";
+  defaultDipendentiRecords,
+  dipendenteDisplayName,
+  findDipendenteById,
+  type DipendenteRecord,
+  type EmployeeType,
+} from "@/lib/dipendenti/dipendente-record";
+import { resolveAddettiRecordsFromDipendenti } from "@/lib/dipendenti/dipendente-record";
+import { addettoStoredNameAliases, createAddettoId } from "@/lib/lavorazioni/addetto-model";
 import {
   assignColorForNewAddettoById,
   removeAddettoFromColorMapById,
@@ -254,9 +255,9 @@ export function SistemaImpostazioniWorkspace({
   }, [addettiInUsoQ.data]);
 
   const [stati, setStati] = useState<StatoLavorazioneConfig[]>(() => [...DEFAULT_STATI_LAVORAZIONI_DB]);
-  const [addettiRecords, setAddettiRecords] = useState<AddettoRecord[]>(() => defaultAddettiRecords());
+  const [dipendentiRecords, setDipendentiRecords] = useState<DipendenteRecord[]>(() => defaultDipendentiRecords());
   const [addettoColors, setAddettoColors] = useState<Record<string, string>>(() =>
-    syncAddettoColorMapById(defaultAddettiRecords(), undefined),
+    syncAddettoColorMapById(resolveAddettiRecordsFromDipendenti(defaultDipendentiRecords()), undefined),
   );
   const [prioritaColors, setPrioritaColors] = useState<Partial<Record<PrioritaLav, string>>>({});
   const [prioritaDb, setPrioritaDb] = useState<PrioritaLavorazione[]>(() => [...DEFAULT_PRIORITA_LAVORAZIONI_DB]);
@@ -286,7 +287,7 @@ export function SistemaImpostazioniWorkspace({
   const currentSnapshot = useMemo(
     (): SettingsWorkspaceSnapshot => ({
       stati,
-      addettiRecords,
+      dipendentiRecords,
       addettoColors,
       prioritaColors,
       prioritaDb,
@@ -296,7 +297,7 @@ export function SistemaImpostazioniWorkspace({
       tipiAssenza,
       branding,
     }),
-    [stati, addettiRecords, addettoColors, prioritaColors, prioritaDb, mag, liste, eco, tipiAssenza, branding],
+    [stati, dipendentiRecords, addettoColors, prioritaColors, prioritaDb, mag, liste, eco, tipiAssenza, branding],
   );
   const allHydrated = lavPrefsHydrated && magHydrated && mezziHydrated && ecoHydrated && dipHydrated && brandHydrated;
   const hasLogoDraftChanges = Boolean(logoDraft.pendingFile || logoDraft.removeCustomLogo);
@@ -359,7 +360,7 @@ export function SistemaImpostazioniWorkspace({
     commitSavedBaseline(next);
 
     setStati(next.stati);
-    setAddettiRecords(next.addettiRecords);
+    setDipendentiRecords(next.dipendentiRecords);
     setAddettoColors(next.addettoColors);
     setPrioritaColors(next.prioritaColors);
     setPrioritaDb(next.prioritaDb);
@@ -417,7 +418,7 @@ export function SistemaImpostazioniWorkspace({
         case "tipo_telaio":
           return liste.tipiTelaio ?? [];
         case "addetto":
-          return addettiRecords.map((r) => r.nome);
+          return dipendentiRecords.map((r) => r.nome);
         case "hierarchy_marca_attrezzature":
         case "hierarchy_modello_attrezzature":
           return flattenHierarchyRenameLabels(liste.attrezzature);
@@ -428,7 +429,7 @@ export function SistemaImpostazioniWorkspace({
           return [];
       }
     },
-    [addettiRecords, liste, mag],
+    [dipendentiRecords, liste, mag],
   );
 
   useEffect(() => {
@@ -729,7 +730,7 @@ export function SistemaImpostazioniWorkspace({
     setDipHydrated(false);
     setBrandHydrated(false);
     setStati(s.stati);
-    setAddettiRecords(s.addettiRecords);
+    setDipendentiRecords(s.dipendentiRecords);
     setAddettoColors(s.addettoColors);
     setPrioritaColors(s.prioritaColors);
     setPrioritaDb(s.prioritaDb);
@@ -1154,31 +1155,37 @@ export function SistemaImpostazioniWorkspace({
                     },
                   });
                 }}
-                addettiRecords={addettiRecords}
+                dipendentiRecords={dipendentiRecords}
                 addettoColors={addettoColors}
-                onAddAddetto={({ nome, cognome }) => {
+                onAddAddetto={({ nome, cognome, employeeType }) => {
                   const t = nome.trim();
                   if (!t) return;
-                  const legacyNomi = addettiLegacyNomi(addettiRecords);
-                  addettiGate(legacyNomi, t, undefined, () => {
+                  const existingNomi = dipendentiRecords.map((r) => r.nome);
+                  addettiGate(existingNomi, t, undefined, () => {
                     const id = createAddettoId();
-                    const rec: AddettoRecord = { id, nome: t, cognome: cognome?.trim() || null, colorKey: id };
-                    setAddettiRecords((prev) => [...prev, rec]);
+                    const rec: DipendenteRecord = {
+                      id,
+                      nome: t,
+                      cognome: cognome?.trim() || null,
+                      colorKey: id,
+                      employeeType: employeeType ?? "ADDETTO",
+                      attivo: true,
+                    };
+                    setDipendentiRecords((prev) => [...prev, rec]);
                     setAddettoColors((prev) => assignColorForNewAddettoById(prev, rec));
                   });
                 }}
                 onUpdateAddetto={(id, patch) => {
-                  const rec = findAddettoById(addettiRecords, id);
+                  const rec = findDipendenteById(dipendentiRecords, id);
                   if (!rec) return;
                   if (patch.nome !== undefined) {
                     const t = patch.nome.trim();
                     if (!t || t === rec.nome) return;
-                    const legacyNomi = addettiLegacyNomi(addettiRecords);
-                    addettiGate(legacyNomi, t, rec.nome, () => {
-                      setAddettiRecords((prev) =>
+                    const existingNomi = dipendentiRecords.map((r) => r.nome);
+                    addettiGate(existingNomi, t, rec.nome, () => {
+                      setDipendentiRecords((prev) =>
                         prev.map((r) => (r.id === id ? { ...r, nome: t } : r)),
                       );
-                      // ponytail: colore keyed su id — rename nome non sposta hex
                       queueRename({
                         kind: "addetto",
                         from: rec.nome,
@@ -1190,10 +1197,20 @@ export function SistemaImpostazioniWorkspace({
                     return;
                   }
                   if (patch.cognome !== undefined) {
-                    setAddettiRecords((prev) =>
+                    setDipendentiRecords((prev) =>
                       prev.map((r) =>
                         r.id === id ? { ...r, cognome: patch.cognome?.trim() ? patch.cognome.trim() : null } : r,
                       ),
+                    );
+                  }
+                  if (patch.employeeType !== undefined) {
+                    setDipendentiRecords((prev) =>
+                      prev.map((r) => (r.id === id ? { ...r, employeeType: patch.employeeType! } : r)),
+                    );
+                  }
+                  if (patch.attivo !== undefined) {
+                    setDipendentiRecords((prev) =>
+                      prev.map((r) => (r.id === id ? { ...r, attivo: patch.attivo! } : r)),
                     );
                   }
                 }}
@@ -1203,18 +1220,24 @@ export function SistemaImpostazioniWorkspace({
                   setAddettoColors((prev) => ({ ...prev, [colorKey]: nh }));
                 }}
                 onRemoveAddetto={(id) => {
-                  const rec = findAddettoById(addettiRecords, id);
+                  const rec = findDipendenteById(dipendentiRecords, id);
                   if (!rec) return;
-                  const name = rec.nome;
-                  const inUse = attiviAddetti.has(name) || storicoAddetti.has(name);
+                  const name = dipendenteDisplayName(rec);
+                  const inUse = attiviAddetti.has(rec.nome) || storicoAddetti.has(rec.nome);
                   setSettingsDeleteConfirm({
                     label: name,
                     detail: inUse
-                      ? "Compare in lavorazioni già registrate. Verrà rimosso solo dalle liste di selezione future; i record esistenti manterranno il nome."
+                      ? "Compare in lavorazioni già registrate. Verrà disattivato o rimosso dalle liste future; i record esistenti manterranno il nome."
                       : undefined,
                     onConfirm: () => {
-                      setAddettiRecords((prev) => prev.filter((r) => r.id !== id));
-                      setAddettoColors((prev) => removeAddettoFromColorMapById(prev, rec));
+                      if (inUse) {
+                        setDipendentiRecords((prev) =>
+                          prev.map((r) => (r.id === id ? { ...r, attivo: false } : r)),
+                        );
+                      } else {
+                        setDipendentiRecords((prev) => prev.filter((r) => r.id !== id));
+                        setAddettoColors((prev) => removeAddettoFromColorMapById(prev, rec));
+                      }
                       setSettingsDeleteConfirm(null);
                     },
                   });

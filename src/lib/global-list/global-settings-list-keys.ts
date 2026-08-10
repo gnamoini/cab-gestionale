@@ -8,7 +8,12 @@ import {
   type HierarchyTreeKey,
 } from "@/lib/mezzi/hierarchy-list-prefs";
 import { syncAddettoColorMapById } from "@/lib/lavorazioni/addetto-colors-assign";
-import { createAddettoId, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import { createAddettoId } from "@/lib/lavorazioni/addetto-model";
+import {
+  getAddettiRecords,
+  serializeDipendentiRecordsForPayload,
+  type DipendenteRecord,
+} from "@/lib/dipendenti/dipendente-record";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
@@ -207,8 +212,16 @@ export function buildAppendGlobalListUpsert(
     case "lavorazioni:addetti": {
       const nome = value.trim();
       if (!nome) return { ok: false, reason: "empty" };
-      const existing = resolved.lavorazioni.addettiRecords;
-      const hit = existing.find((x) => x.nome.trim().toLowerCase() === nome.toLowerCase());
+      const dipendentiRecords = [...resolved.dipendenti.dipendentiRecords];
+      const addettiRecords = getAddettiRecords(dipendentiRecords);
+      const hit = addettiRecords.find((x) => x.nome.trim().toLowerCase() === nome.toLowerCase());
+      const lavPrefsBase = {
+        stati: resolved.lavorazioni.stati,
+        dipendentiRecords: serializeDipendentiRecordsForPayload(dipendentiRecords),
+        addettoColors: resolved.lavorazioni.addettoColors,
+        prioritaColors: resolved.lavorazioni.prioritaColors,
+        prioritaDb: resolved.lavorazioni.prioritaDb,
+      };
       if (hit) {
         return {
           ok: true,
@@ -216,19 +229,25 @@ export function buildAppendGlobalListUpsert(
           upsert: {
             module: CAB_SETTINGS_MODULE.lavorazioni,
             key: CAB_SETTINGS_KEY.prefs,
-            value: {
-              stati: resolved.lavorazioni.stati,
-              addettiRecords: existing,
-              addetti: resolved.lavorazioni.addetti,
-              addettoColors: resolved.lavorazioni.addettoColors,
-              prioritaColors: resolved.lavorazioni.prioritaColors,
-              prioritaDb: resolved.lavorazioni.prioritaDb,
-            },
+            value: lavPrefsBase,
           },
         };
       }
-      const addettiRecords: AddettoRecord[] = [...existing, { id: createAddettoId(), nome, cognome: null }];
-      const addetti = addettiRecords.map((r) => r.nome.trim()).filter(Boolean);
+      const newRec: DipendenteRecord = {
+        id: createAddettoId(),
+        nome,
+        cognome: null,
+        colorKey: null,
+        employeeType: "ADDETTO",
+        attivo: true,
+      };
+      dipendentiRecords.push(newRec);
+      const addettiForColors = getAddettiRecords(dipendentiRecords).map((r) => ({
+        id: r.id,
+        nome: r.nome.trim(),
+        cognome: r.cognome?.trim() ? r.cognome.trim() : null,
+        colorKey: r.colorKey ?? r.id,
+      }));
       return {
         ok: true,
         canonicalValue: nome,
@@ -236,12 +255,9 @@ export function buildAppendGlobalListUpsert(
           module: CAB_SETTINGS_MODULE.lavorazioni,
           key: CAB_SETTINGS_KEY.prefs,
           value: {
-            stati: resolved.lavorazioni.stati,
-            addettiRecords,
-            addetti,
-            addettoColors: syncAddettoColorMapById(addettiRecords, resolved.lavorazioni.addettoColors),
-            prioritaColors: resolved.lavorazioni.prioritaColors,
-            prioritaDb: resolved.lavorazioni.prioritaDb,
+            ...lavPrefsBase,
+            dipendentiRecords: serializeDipendentiRecordsForPayload(dipendentiRecords),
+            addettoColors: syncAddettoColorMapById(addettiForColors, resolved.lavorazioni.addettoColors),
           },
         },
       };

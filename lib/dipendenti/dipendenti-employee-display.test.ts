@@ -12,6 +12,8 @@ function row(
     source_addetto_name: null,
     source_addetto_id: null,
     in_settings: false,
+    employee_type: "ADDETTO",
+    attivo: true,
     created_at: "",
     updated_at: "",
     ...partial,
@@ -22,7 +24,6 @@ const currentAddetti = new Set(["add-1", "add-2"]);
 
 {
   const lines = employeeNameLines(row({ id: "1", display_name: "Gaetano Pedone" }), {
-    id: "a1",
     nome: "Gaetano",
     cognome: "Pedone",
   });

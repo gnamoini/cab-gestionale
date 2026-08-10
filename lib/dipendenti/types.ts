@@ -7,6 +7,8 @@ export type DipendenteTimesheetEmployeeRow = {
   source_addetto_name: string | null;
   source_addetto_id: string | null;
   in_settings: boolean;
+  employee_type: "ADDETTO" | "ALTRO";
+  attivo: boolean;
   created_at: string;
   updated_at: string;
 };

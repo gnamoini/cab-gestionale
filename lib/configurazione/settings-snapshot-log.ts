@@ -1,7 +1,8 @@
 import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 import { formatTitleCasePhrase } from "@/lib/gestionale-log/view-model";
 import type { TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
-import { addettoDisplayName, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import { dipendenteDisplayName } from "@/lib/dipendenti/dipendente-record";
+import type { DipendenteRecord } from "@/lib/dipendenti/dipendente-record";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import type { AttrezzaturaMarca } from "@/lib/mezzi/attrezzature-prefs";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
@@ -12,7 +13,7 @@ import type { CabBrandingSettings } from "@/lib/branding/branding-settings-model
 
 export type ConfigurazioneSettingsSnapshot = {
   stati: StatoLavorazioneConfig[];
-  addettiRecords: AddettoRecord[];
+  dipendentiRecords: DipendenteRecord[];
   addettoColors: Record<string, string>;
   prioritaColors: Partial<Record<PrioritaLav, string>>;
   prioritaDb: PrioritaLavorazione[];
@@ -45,7 +46,7 @@ export type ConfigurazioneSectionId =
   | "brand-personalizzazione";
 
 export const CONFIGURAZIONE_SECTION_LABELS: Record<ConfigurazioneSectionId, string> = {
-  "op-addetti": "Addetti",
+  "op-addetti": "Dipendenti",
   "op-dipendenti-assenze": "Tipi assenza dipendenti",
   "op-stati": "Stati lavorazioni",
   "op-priorita": "Priorità",
@@ -78,7 +79,7 @@ type SectionSlice = {
 const SECTION_SLICES: SectionSlice[] = [
   {
     id: "op-addetti",
-    pick: (s) => ({ addettiRecords: s.addettiRecords, addettoColors: s.addettoColors }),
+    pick: (s) => ({ dipendentiRecords: s.dipendentiRecords, addettoColors: s.addettoColors }),
   },
   { id: "op-dipendenti-assenze", pick: (s) => s.tipiAssenza },
   { id: "op-stati", pick: (s) => s.stati },
@@ -190,21 +191,31 @@ function diffStringRecord(
 
 function describeAddettiChanges(before: ConfigurazioneSettingsSnapshot, after: ConfigurazioneSettingsSnapshot): string[] {
   const lines: string[] = [];
-  const bMap = new Map(before.addettiRecords.map((r) => [r.id, r]));
-  const aMap = new Map(after.addettiRecords.map((r) => [r.id, r]));
+  const bMap = new Map(before.dipendentiRecords.map((r) => [r.id, r]));
+  const aMap = new Map(after.dipendentiRecords.map((r) => [r.id, r]));
 
   for (const [id, a] of aMap) {
     const b = bMap.get(id);
     if (!b) {
-      lines.push(`Aggiunto addetto «${addettoDisplayName(a)}»`);
+      lines.push(`Aggiunto dipendente «${dipendenteDisplayName(a)}»`);
       continue;
     }
-    if (addettoDisplayName(b) !== addettoDisplayName(a)) {
-      lines.push(`Addetto rinominato da «${addettoDisplayName(b)}» a «${addettoDisplayName(a)}»`);
+    if (dipendenteDisplayName(b) !== dipendenteDisplayName(a)) {
+      lines.push(`Dipendente rinominato da «${dipendenteDisplayName(b)}» a «${dipendenteDisplayName(a)}»`);
+    }
+    if (b.employeeType !== a.employeeType) {
+      lines.push(
+        `Tipo dipendente «${dipendenteDisplayName(a)}»: da ${b.employeeType} a ${a.employeeType}`,
+      );
+    }
+    if (b.attivo !== a.attivo) {
+      lines.push(
+        `Stato dipendente «${dipendenteDisplayName(a)}»: ${a.attivo ? "attivato" : "disattivato"}`,
+      );
     }
   }
   for (const [id, b] of bMap) {
-    if (!aMap.has(id)) lines.push(`Rimosso addetto «${addettoDisplayName(b)}»`);
+    if (!aMap.has(id)) lines.push(`Rimosso dipendente «${dipendenteDisplayName(b)}»`);
   }
 
   const colorKeys = new Set([...Object.keys(before.addettoColors), ...Object.keys(after.addettoColors)]);
@@ -213,7 +224,7 @@ function describeAddettiChanges(before: ConfigurazioneSettingsSnapshot, after: C
     const av = after.addettoColors[key];
     if (bv === av) continue;
     const who = aMap.get(key) ?? bMap.get(key);
-    const label = who ? addettoDisplayName(who) : key;
+    const label = who ? dipendenteDisplayName(who) : key;
     if (bv && av) lines.push(`Colore addetto «${label}»: da ${bv} a ${av}`);
     else if (av) lines.push(`Colore addetto «${label}»: impostato a ${av}`);
     else if (bv) lines.push(`Colore addetto «${label}»: rimosso`);

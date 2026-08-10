@@ -11,6 +11,6 @@ const security = fs.readFileSync(
 assert.match(security, /listRecentSecurityAuditAction/);
 assert.match(security, /Ultimi login/);
 assert.match(security, /Ultime azioni \/ modifiche/);
-assert.doesNotMatch(security, /auth_logs.*log_modifiche|log_modifiche.*auth_logs/s);
+assert.doesNotMatch(security, /auth_logs[\s\S]*log_modifiche|log_modifiche[\s\S]*auth_logs/);
 
 console.log("security-log-timeline-separation.test.ts OK");

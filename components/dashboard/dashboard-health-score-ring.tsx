@@ -656,7 +656,7 @@ export function HealthScoreBreakdownPanel({
         </HealthScoreCard>
       ) : null}
 
-      <HealthScoreCard title="Andamento settimanale" className="min-h-40 sm:col-span-2 sm:min-h-0">
+      <HealthScoreCard title="Andamento settimanale" className="min-h-40 sm:col-span-2 xl:min-h-0">
         <HealthScoreWeeklyTrendChart
           points={historyPoints}
           isLoading={historyLoading}

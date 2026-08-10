@@ -69,7 +69,7 @@ import {
   buildSchedaIngressoFieldsFromContext,
   buildSchedaLavorazioniFieldsFromContext,
   buildSchedaRicambiFieldsFromContext,
-  findMezzoForLavorazione,
+  resolveMezzoForLavorazioneEdit,
 } from "@/lib/schede/schede-autofill";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
 import type {
@@ -135,6 +135,7 @@ import {
 import { useAuth } from "@/context/auth-context";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useLavorazioneHub } from "@/src/hooks/gestionale/use-lavorazione-hub";
+import { useLavorazioneBase } from "@/src/services/domain/lavorazioni-domain.queries";
 import {
   lavorazioneRowToTagliandoFields,
   type TagliandoLavorazioneFields,
@@ -335,13 +336,18 @@ export function SchedeLavorazioneModal({
     [globalOpts.lavorazioni.stati],
   );
   const hubQuery = useLavorazioneHub(lav.id);
+  const lavorazioneBase = useLavorazioneBase(open ? lav.id : undefined);
   const updateLavorazione = useLavorazioneUpdateMutation();
   const qc = useQueryClient();
   const hubData = hubQuery.data;
+  const lavorazioneMezzoIdFk = lavorazioneBase.data?.mezzo_id?.trim() || null;
   const initialTab = normalizeHubTab(initialTabProp);
   const [frozenCaptureHandoff] = useState(() => captureHandoff);
   const captureNextStageRef = useRef(captureHandoff?.sequentialStages[0] ?? null);
-  const mezzo = useMemo(() => findMezzoForLavorazione(mezzi, lav), [mezzi, lav]);
+  const mezzo = useMemo(
+    () => resolveMezzoForLavorazioneEdit(mezzi, lav, lavorazioneMezzoIdFk),
+    [mezzi, lav, lavorazioneMezzoIdFk],
+  );
   const interventoCtx = useInterventoContext(lav.id, {
     enabled: open,
     legacyLavorazione: lav,

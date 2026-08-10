@@ -5,7 +5,9 @@ import type { ConfigurazioneSettingsSnapshot } from "@/lib/configurazione/settin
 
 const base = (): ConfigurazioneSettingsSnapshot => ({
   stati: [{ id: "accettazione", label: "Accettazione", closed: false, color: "#ccc" }],
-  addettiRecords: [{ id: "a1", nome: "Mario", cognome: null }],
+  dipendentiRecords: [
+    { id: "a1", nome: "Mario", cognome: null, employeeType: "ADDETTO", attivo: true },
+  ],
   addettoColors: { Mario: "#ff6633" },
   prioritaColors: {},
   prioritaDb: ["bassa"],

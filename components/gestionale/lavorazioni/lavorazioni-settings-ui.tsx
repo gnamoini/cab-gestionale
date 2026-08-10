@@ -9,6 +9,11 @@ import { normalizeHex } from "@/lib/lavorazioni/color-utils";
 import { addettoDisplayColorById } from "@/lib/lavorazioni/addetto-colors-assign";
 import { addettoColorKey, sortAddettiRecordsByNome, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import {
+  dipendenteDisplayName,
+  type DipendenteRecord,
+  type EmployeeType,
+} from "@/lib/dipendenti/dipendente-record";
+import {
   LavorazioneAddettoReadOnlyPill,
   LavorazionePrioritaReadOnlyPill,
   LavorazioneReadOnlyPill,
@@ -39,7 +44,7 @@ import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readabili
 import { statoPillShellClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 /** Contenitore colonne condiviso (insert + righe elenco via subgrid). */
 export const ADDETTI_SETTINGS_TABLE_CLASS =
-  "grid w-full min-w-0 grid-cols-1 gap-x-2 sm:grid-cols-[minmax(5.5rem,8.5rem)_minmax(5.5rem,8.5rem)_auto]";
+  "grid w-full min-w-0 grid-cols-1 gap-x-2 sm:grid-cols-[minmax(5.5rem,8.5rem)_minmax(5.5rem,8.5rem)_minmax(7rem,9rem)_minmax(5.5rem,7rem)_auto]";
 
 /** Riga allineata alle colonne del contenitore — no `flex` (conflitto con grid). */
 export const ADDETTI_SETTINGS_ROW_CLASS = `${gestionaleListTableRowBaseClass} col-span-full grid min-h-11 min-w-0 grid-cols-1 gap-x-2 gap-y-2 border-[color:var(--cab-border)] px-3 py-2 sm:grid-cols-subgrid sm:items-center sm:gap-y-0 sm:px-4`;
@@ -57,11 +62,26 @@ function addettoSearchLabel(rec: AddettoRecord): string {
   return [rec.nome, rec.cognome].filter(Boolean).join(" ").trim();
 }
 
-function filterAddettiRecords(records: readonly AddettoRecord[], query: string): AddettoRecord[] {
-  const sorted = sortAddettiRecordsByNome(records);
+function filterDipendentiRecords(
+  records: readonly DipendenteRecord[],
+  query: string,
+  tipoFilter: "all" | EmployeeType,
+): DipendenteRecord[] {
+  let list = sortDipendentiByCognomeNome(records);
+  if (tipoFilter !== "all") {
+    list = list.filter((r) => r.employeeType === tipoFilter);
+  }
   const q = query.trim();
-  if (!q) return sorted;
-  return sorted.filter((rec) => filterSettingsStringList([addettoSearchLabel(rec)], q).length > 0);
+  if (!q) return list;
+  return list.filter((rec) => filterSettingsStringList([dipendenteDisplayName(rec)], q).length > 0);
+}
+
+function sortDipendentiByCognomeNome(records: readonly DipendenteRecord[]): DipendenteRecord[] {
+  return [...records].sort((a, b) => {
+    const c = (a.cognome ?? "").localeCompare(b.cognome ?? "", "it", { sensitivity: "base" });
+    if (c !== 0) return c;
+    return a.nome.localeCompare(b.nome, "it", { sensitivity: "base" });
+  });
 }
 
 function AddettiDraftRow({
@@ -136,7 +156,7 @@ function AddettiDraftRow({
 
 export function AddettiSettingsSection({
   embedded = false,
-  addettiRecords,
+  dipendentiRecords,
   addettoColors,
   onAddAddetto,
   onChangeAddettoColor,
@@ -146,31 +166,58 @@ export function AddettiSettingsSection({
   storicoAddetti,
 }: {
   embedded?: boolean;
-  addettiRecords: AddettoRecord[];
+  dipendentiRecords: DipendenteRecord[];
   addettoColors: Record<string, string>;
-  onAddAddetto: (input: { nome: string; cognome?: string | null }) => void;
+  onAddAddetto: (input: { nome: string; cognome?: string | null; employeeType?: EmployeeType }) => void;
   onChangeAddettoColor: (colorKey: string, hex: string) => void;
-  onUpdateAddetto: (id: string, patch: { nome?: string; cognome?: string | null }) => void;
+  onUpdateAddetto: (
+    id: string,
+    patch: {
+      nome?: string;
+      cognome?: string | null;
+      employeeType?: EmployeeType;
+      attivo?: boolean;
+    },
+  ) => void;
   onRemove: (id: string) => void;
   attiviAddetti: Set<string>;
   storicoAddetti: Set<string>;
 }) {
   const [draftOpen, setDraftOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [tipoFilter, setTipoFilter] = useState<"all" | EmployeeType>("all");
   const filtered = useMemo(
-    () => filterAddettiRecords(addettiRecords, searchQuery),
-    [addettiRecords, searchQuery],
+    () => filterDipendentiRecords(dipendentiRecords, searchQuery, tipoFilter),
+    [dipendentiRecords, searchQuery, tipoFilter],
   );
   const showList = draftOpen || filtered.length > 0;
 
   const toolbar = (
-    <SettingsListToolbar
-      onStartAdd={() => setDraftOpen(true)}
-      addDisabled={draftOpen}
-      searchValue={searchQuery}
-      onSearchChange={setSearchQuery}
-      searchAriaLabel="Filtra elenco addetti"
-    />
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap gap-1">
+        {(["all", "ADDETTO", "ALTRO"] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+              tipoFilter === key
+                ? "bg-[color:var(--cab-accent)] text-white"
+                : "bg-[color:var(--cab-surface-2)] text-[color:var(--cab-text-muted)]"
+            }`}
+            onClick={() => setTipoFilter(key)}
+          >
+            {key === "all" ? "Tutti" : key === "ADDETTO" ? "Addetti" : "Altri dipendenti"}
+          </button>
+        ))}
+      </div>
+      <SettingsListToolbar
+        onStartAdd={() => setDraftOpen(true)}
+        addDisabled={draftOpen}
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchAriaLabel="Filtra elenco dipendenti"
+      />
+    </div>
   );
 
   const listContent = (
@@ -188,7 +235,7 @@ export function AddettiSettingsSection({
         </ul>
       ) : null}
       <AddettiSettingsList
-        addettiRecords={filtered}
+        dipendentiRecords={filtered}
         addettoColors={addettoColors}
         onChangeAddettoColor={onChangeAddettoColor}
         onUpdateAddetto={onUpdateAddetto}
@@ -205,7 +252,7 @@ export function AddettiSettingsSection({
       showList={showList}
       empty={
         <SettingsEmptyState inline>
-          Nessun addetto. Usa Aggiungi per inserire il primo.
+          Nessun dipendente. Usa Aggiungi per inserire il primo.
         </SettingsEmptyState>
       }
     >
@@ -240,7 +287,7 @@ export function AddettiSettingsSection({
             </ul>
           ) : null}
           <AddettiSettingsList
-            addettiRecords={filtered}
+            dipendentiRecords={filtered}
             addettoColors={addettoColors}
             onChangeAddettoColor={onChangeAddettoColor}
             onUpdateAddetto={onUpdateAddetto}
@@ -251,7 +298,7 @@ export function AddettiSettingsSection({
         </div>
       ) : (
         <p className={`${SETTINGS_EMPTY_STATE_INLINE} mt-3`}>
-          Nessun addetto. Usa Aggiungi per inserire il primo.
+          Nessun dipendente. Usa Aggiungi per inserire il primo.
         </p>
       )}
     </div>
@@ -792,10 +839,18 @@ function AddettoSettingsRow({
   onRemove,
   inUse,
 }: {
-  record: AddettoRecord;
+  record: DipendenteRecord;
   addettoColors: Record<string, string>;
   onChangeAddettoColor: (colorKey: string, hex: string) => void;
-  onUpdate: (id: string, patch: { nome?: string; cognome?: string | null }) => void;
+  onUpdate: (
+    id: string,
+    patch: {
+      nome?: string;
+      cognome?: string | null;
+      employeeType?: EmployeeType;
+      attivo?: boolean;
+    },
+  ) => void;
   onRemove: (id: string) => void;
   inUse: boolean;
 }) {
@@ -924,6 +979,30 @@ function AddettoSettingsRow({
           </button>
         </>
       )}
+      <div className="flex min-h-11 items-center px-1 text-sm">
+        <select
+          className={`${SETTINGS_LIST_INPUT_EDIT} w-full min-w-0`}
+          value={record.employeeType}
+          aria-label={`Tipo ${itemLabel}`}
+          onChange={(e) => onUpdate(record.id, { employeeType: e.target.value as EmployeeType })}
+        >
+          <option value="ADDETTO">Addetto</option>
+          <option value="ALTRO">Altro dipendente</option>
+        </select>
+      </div>
+      <div className="flex min-h-11 items-center px-1 text-sm">
+        <button
+          type="button"
+          className={`rounded-md px-2 py-1 text-xs font-medium ${
+            record.attivo
+              ? "bg-[color:color-mix(in_srgb,var(--cab-success)_18%,transparent)] text-[color:var(--cab-text)]"
+              : "bg-[color:var(--cab-surface-2)] text-[color:var(--cab-text-muted)]"
+          }`}
+          onClick={() => onUpdate(record.id, { attivo: !record.attivo })}
+        >
+          {record.attivo ? "Attivo" : "Inattivo"}
+        </button>
+      </div>
       <SettingsRowActionButtons
         className="w-full sm:w-auto sm:justify-self-end"
         leading={
@@ -956,7 +1035,7 @@ function AddettoSettingsRow({
 }
 
 export function AddettiSettingsList({
-  addettiRecords,
+  dipendentiRecords,
   addettoColors,
   onChangeAddettoColor,
   onUpdateAddetto,
@@ -964,15 +1043,23 @@ export function AddettiSettingsList({
   attiviAddetti,
   storicoAddetti,
 }: {
-  addettiRecords: AddettoRecord[];
+  dipendentiRecords: DipendenteRecord[];
   addettoColors: Record<string, string>;
   onChangeAddettoColor: (colorKey: string, hex: string) => void;
-  onUpdateAddetto: (id: string, patch: { nome?: string; cognome?: string | null }) => void;
+  onUpdateAddetto: (
+    id: string,
+    patch: {
+      nome?: string;
+      cognome?: string | null;
+      employeeType?: EmployeeType;
+      attivo?: boolean;
+    },
+  ) => void;
   onRemove: (id: string) => void;
   attiviAddetti: Set<string>;
   storicoAddetti: Set<string>;
 }) {
-  const sorted = useMemo(() => sortAddettiRecordsByNome(addettiRecords), [addettiRecords]);
+  const sorted = useMemo(() => sortDipendentiByCognomeNome(dipendentiRecords), [dipendentiRecords]);
 
   if (sorted.length === 0) {
     return null;

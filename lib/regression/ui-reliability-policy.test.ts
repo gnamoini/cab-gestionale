@@ -137,7 +137,7 @@ assert.match(globalsCoreCss, /cab-toast-in-top/);
 assert.match(globalsCoreCss, /\.cab-toast-viewport \.cab-toast-item/);
 assert.match(globalsCoreCss, /cab-toast-item--dragging/);
 
-const toastContext = readFileSync(path.join(ROOT, "context/toast-context.tsx"), "utf8");
+const toastContext = read("context/toast-context.tsx");
 assert.match(toastContext, /useToastSwipeDismiss/);
 assert.match(toastContext, /useToastSwipeEnabled/);
 

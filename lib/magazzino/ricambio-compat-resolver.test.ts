@@ -78,7 +78,7 @@ const fleetTree = [
 const prefsListe: MezziListePrefs = {
   ...mezziListe,
   attrezzature: [
-    ...mezziListe.attrezzature,
+    ...(mezziListe.attrezzature ?? []),
     {
       id: "m-schmidt",
       nome: "Schmidt",

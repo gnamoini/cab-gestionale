@@ -70,6 +70,8 @@ export async function runDipendentiPresenzeReminderNotify(): Promise<DipendentiP
     source_addetto_name: null,
     source_addetto_id: null,
     in_settings: e.in_settings ?? false,
+    employee_type: "ADDETTO" as const,
+    attivo: true,
     created_at: "",
     updated_at: "",
   }));

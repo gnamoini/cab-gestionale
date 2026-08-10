@@ -19,7 +19,7 @@ function makeSnapshot(): CompanyRbacSnapshot {
     rolePageAccessByRole: new Map([
       ["manager", { lavorazioni: "read", dashboard: "read" }],
       ["admin", { lavorazioni: "write", dashboard: "write" }],
-      ["operatore", { lavorazioni: "write" }],
+      ["operatore", { lavorazioni: "write", dashboard: "read" }],
     ]),
     userOverridesByUserId: new Map(),
   };

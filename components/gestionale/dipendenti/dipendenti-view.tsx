@@ -173,9 +173,9 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
         employees: ts.displayEmployees,
         entries: ts.entries,
         tipiAssenza: ts.tipiAssenza,
-        addettiRecords: ts.addettiRecords,
+        addettiRecords: ts.dipendentiRecords,
       }),
-    [monthKey, ts.displayEmployees, ts.entries, ts.tipiAssenza, ts.addettiRecords],
+    [monthKey, ts.displayEmployees, ts.entries, ts.tipiAssenza, ts.dipendentiRecords],
   );
 
   const handleExportPdfComplessivo = useCallback(() => {
@@ -316,9 +316,9 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
   }, [fillToday8hUpserts, ts, successOnce, errorOnce]);
 
   const showRegistryEmpty =
-    ts.loadPhase !== "error" && ts.hasRealAddetti && ts.displayEmployees.length === 0 && !ts.isSyncing;
-  const showNoAddetti = ts.loadPhase !== "error" && ts.addettiReady && !ts.hasRealAddetti;
-  const settingsLoading = ts.addettiSource !== "app_settings" && !ts.addettiReady;
+    ts.loadPhase !== "error" && ts.hasRealDipendenti && ts.displayEmployees.length === 0 && !ts.isSyncing;
+  const showNoAddetti = ts.loadPhase !== "error" && ts.dipendentiReady && !ts.hasRealDipendenti;
+  const settingsLoading = ts.dipendentiSource !== "app_settings" && !ts.dipendentiReady;
 
   const dipendentiMenuItems = useMemo((): PageActionItem[] => [
     {
@@ -440,7 +440,7 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
                   setDetailEmployee(emp);
                 }}
                 tipiAssenza={ts.tipiAssenza}
-                addettiRecords={ts.addettiRecords}
+                dipendentiRecords={ts.dipendentiRecords}
                 readOnly={readOnly || ts.entriesDegraded}
                 accentDateYmd={accentDateYmd}
                 accentFadingOut={accentFadingOut}

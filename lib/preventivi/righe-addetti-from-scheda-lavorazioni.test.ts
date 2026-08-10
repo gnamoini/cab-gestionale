@@ -7,12 +7,12 @@ import {
   oreTotaliFromSchedaAddettoMap,
   righeAddettiFromSchedaLavorazioni,
 } from "@/lib/preventivi/righe-addetti-from-scheda-lavorazioni";
-import type { SchedaLavorazioniDoc } from "@/types/schede";
+import type { SchedaLavorazioniDoc, RigaLavorazioneScheda } from "@/types/schede";
 
 const addettiRecords = [
-  { id: "add-1", nome: "Marco", cognome: "Bianchi", attivo: true },
-  { id: "add-2", nome: "Luca", cognome: "", attivo: true },
-] as AddettoRecord[];
+  { id: "add-1", nome: "Marco", cognome: "Bianchi" },
+  { id: "add-2", nome: "Luca", cognome: "" },
+] as unknown as AddettoRecord[];
 
 const lavScheda: SchedaLavorazioniDoc = {
   tipo: "lavorazioni",
@@ -38,9 +38,10 @@ const lavScheda: SchedaLavorazioniDoc = {
         id: "r2",
         dataLavorazione: "2026-01-11",
         lavorazioniEffettuate: "Collaudo",
+        addettiAssegnati: [],
         addetto: "Marco Bianchi",
         oreImpiegate: 1.5,
-      },
+      } as RigaLavorazioneScheda,
     ],
   },
 };

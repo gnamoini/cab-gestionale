@@ -27,6 +27,8 @@ const root = resolve(import.meta.dirname, "../..");
     source_addetto_id: "removed",
     source_addetto_name: null,
     in_settings: false,
+    employee_type: "ADDETTO",
+    attivo: true,
     created_at: "",
     updated_at: "",
     ...partial,

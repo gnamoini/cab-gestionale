@@ -46,7 +46,7 @@ function makeMezzo(id: string, targa: string, cliente: string): MezzoGestito {
     vin: null,
     hubSynthetic: false,
     attrezzature: [],
-  } as MezzoGestito;
+  } as unknown as MezzoGestito;
 }
 
 forceSearchHotPathProbe(true);
@@ -104,7 +104,7 @@ function makeLavorazione(id: string, cliente: string): LavorazioneListRow {
     priorita: "normale",
     created_at: "2026-01-01T00:00:00Z",
     data_ingresso: "2026-01-01",
-  } as LavorazioneListRow;
+  } as unknown as LavorazioneListRow;
 }
 
 function makeRicambio(id: string, descrizione: string): RicambioMagazzino {

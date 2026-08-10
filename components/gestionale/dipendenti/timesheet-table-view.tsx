@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import type { DipendenteRecord } from "@/lib/dipendenti/dipendente-record";
 import {
   canShiftWeekAnchorInMonth,
   filterMonthDaysByWeek,
@@ -81,7 +81,7 @@ export function TimesheetTableView({
   onCellClick,
   onEmployeeClick,
   tipiAssenza,
-  addettiRecords = [],
+  dipendentiRecords = [],
   readOnly,
   accentDateYmd = null,
   accentFadingOut = false,
@@ -97,7 +97,7 @@ export function TimesheetTableView({
   onCellClick: (dipendenteId: string, workDate: string) => void;
   onEmployeeClick: (employee: DipendenteTimesheetEmployeeRow) => void;
   tipiAssenza: readonly TipoAssenzaConfig[];
-  addettiRecords?: readonly AddettoRecord[];
+  dipendentiRecords?: readonly DipendenteRecord[];
   readOnly?: boolean;
   accentDateYmd?: string | null;
   accentFadingOut?: boolean;
@@ -123,7 +123,7 @@ export function TimesheetTableView({
         onCellClick={onCellClick}
         onEmployeeClick={onEmployeeClick}
         tipiAssenza={tipiAssenza}
-        addettiRecords={addettiRecords}
+        dipendentiRecords={dipendentiRecords}
         readOnly={readOnly}
         accentDateYmd={accentDateYmd}
         accentFadingOut={accentFadingOut}

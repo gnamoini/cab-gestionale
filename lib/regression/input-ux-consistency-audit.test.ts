@@ -87,6 +87,8 @@ assert.match(ricambioForm, /fieldId="prezzo-listino"/);
 // SSOT combobox/date: stato errore accessibile
 assert.match(globalSelect, /aria-invalid=\{showInvalid/);
 assert.match(globalSelect, /globalInputInvalidRing/);
+assert.match(globalSelect, /canAddToList/);
+assert.match(globalSelect, /!canAddToList/);
 assert.match(globalDatePicker, /aria-invalid=\{showInvalid/);
 assert.match(globalDatePicker, /globalInputInvalidRing/);
 

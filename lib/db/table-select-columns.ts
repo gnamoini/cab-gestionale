@@ -238,7 +238,7 @@ export const AUTH_LOGS_COLUMNS =
   "id, user_id, email, action, ip, user_agent, created_at" as const;
 
 export const DIPENDENTI_TIMESHEET_EMPLOYEES_COLUMNS =
-  "id, display_name, source_addetto_name, source_addetto_id, in_settings, created_at, updated_at" as const;
+  "id, display_name, source_addetto_name, source_addetto_id, in_settings, employee_type, attivo, created_at, updated_at" as const;
 
 export const DIPENDENTI_TIMESHEET_ENTRIES_COLUMNS =
   "id, dipendente_id, work_date, ore_ordinarie, ore_straordinarie, assenza, motivo_assenza, ore_assenza, note, tipo_assenza_id, tipo_assenza_label, employee_display_name_snapshot, employee_source_addetto_id_snapshot, updated_by, created_at, updated_at" as const;

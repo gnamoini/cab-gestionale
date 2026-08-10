@@ -477,13 +477,14 @@ export type InventoryDocumentLineRow = {
   updated_at: string;
 };
 
-/** Registry snapshot dipendenti timesheet. */
 export type DipendenteTimesheetEmployeeRow = {
   id: string;
   display_name: string;
   source_addetto_name: string | null;
   source_addetto_id: string | null;
   in_settings: boolean;
+  employee_type: "ADDETTO" | "ALTRO";
+  attivo: boolean;
   created_at: string;
   updated_at: string;
 };

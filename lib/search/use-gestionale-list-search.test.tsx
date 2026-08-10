@@ -5,8 +5,8 @@ import { JSDOM } from "jsdom";
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>");
 globalThis.document = dom.window.document;
-globalThis.window = dom.window as Window & typeof globalThis;
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+globalThis.window = dom.window as unknown as Window & typeof globalThis;
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 globalThis.HTMLInputElement = dom.window.HTMLInputElement;
 
 import assert from "node:assert/strict";

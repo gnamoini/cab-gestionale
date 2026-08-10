@@ -1,7 +1,7 @@
 {
   "environment": {
-    "timestamp": "2026-08-08T03:30:19.993Z",
-    "gitCommit": "ecbb4bf3",
+    "timestamp": "2026-08-10T02:48:59.433Z",
+    "gitCommit": "c9f8500b",
     "branch": "main",
     "nodeVersion": "v24.15.0",
     "browser": "n/a",
@@ -10,153 +10,153 @@
     "machine": "DESKTOP-Jay",
     "viewport": "build"
   },
-  "generatedAt": "2026-08-08T03:30:20.001Z",
-  "firstLoadJsKb": 2935.6,
+  "generatedAt": "2026-08-10T02:48:59.442Z",
+  "firstLoadJsKb": 2938.2,
   "vendorChunkKb": 448.9,
-  "sharedChunksKb": 2935.6,
+  "sharedChunksKb": 2938.2,
   "routeChunks": {
     "/magazzino": {
-      "jsKb": 2935.6,
+      "jsKb": 2938.2,
       "cssKb": 0,
       "chunkCount": 39
     },
     "/magazzino/carichi": {
-      "jsKb": 2069,
+      "jsKb": 2071.5,
       "cssKb": 0,
       "chunkCount": 34
     },
     "/magazzino/carichi/nuovo": {
-      "jsKb": 2069,
+      "jsKb": 2071.5,
       "cssKb": 0,
       "chunkCount": 34
     },
     "/report/design-system-preview": {
-      "jsKb": 2053.4,
+      "jsKb": 2055.9,
       "cssKb": 0,
       "chunkCount": 34
     },
     "/impostazioni/ai-providers": {
-      "jsKb": 2007,
+      "jsKb": 2009.5,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/impostazioni": {
-      "jsKb": 2004.3,
+      "jsKb": 2006.8,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/lavorazioni": {
-      "jsKb": 2004,
+      "jsKb": 2006.6,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/report": {
-      "jsKb": 2004,
+      "jsKb": 2006.6,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/agenda": {
-      "jsKb": 2003.6,
+      "jsKb": 2006.1,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/dashboard": {
-      "jsKb": 2003.6,
+      "jsKb": 2006.1,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/dipendenti": {
-      "jsKb": 2003.6,
+      "jsKb": 2006.1,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/documenti": {
-      "jsKb": 2003.6,
+      "jsKb": 2006.1,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/fatturazione": {
-      "jsKb": 2003.6,
+      "jsKb": 2006.1,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/lavorazioni-clienti": {
-      "jsKb": 2003.6,
+      "jsKb": 2006.1,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/mezzi": {
-      "jsKb": 2003.6,
+      "jsKb": 2006.1,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/preventivi": {
-      "jsKb": 2003.6,
+      "jsKb": 2006.1,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/sicurezza": {
-      "jsKb": 2003.6,
+      "jsKb": 2006.1,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/sicurezza/production-readiness": {
-      "jsKb": 2003.6,
+      "jsKb": 2006.1,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/lavorazioni-clienti/[id]": {
-      "jsKb": 2002.2,
+      "jsKb": 2004.7,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/documenti/[token]": {
-      "jsKb": 2000.8,
+      "jsKb": 2003.3,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/documenti/ddt/[id]/preview": {
-      "jsKb": 2000.8,
+      "jsKb": 2003.3,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/documenti/preventivo/[id]/preview": {
-      "jsKb": 2000.8,
+      "jsKb": 2003.3,
       "cssKb": 0,
       "chunkCount": 33
     },
     "/acesso-negato": {
-      "jsKb": 1997,
+      "jsKb": 1999.6,
       "cssKb": 0,
       "chunkCount": 32
     },
     "/login": {
-      "jsKb": 1835.5,
+      "jsKb": 1837.9,
       "cssKb": 0,
       "chunkCount": 29
     },
     "/login/reset-password": {
-      "jsKb": 1829.5,
+      "jsKb": 1831.9,
       "cssKb": 0,
       "chunkCount": 29
     },
     "/privacy-policy": {
-      "jsKb": 1816.5,
+      "jsKb": 1819,
       "cssKb": 0,
       "chunkCount": 29
     },
     "/": {
-      "jsKb": 1814.4,
+      "jsKb": 1816.8,
       "cssKb": 0,
       "chunkCount": 28
     },
     "/_not-found": {
-      "jsKb": 1814.4,
+      "jsKb": 1816.8,
       "cssKb": 0,
       "chunkCount": 28
     },
     "/offline": {
-      "jsKb": 1814.4,
+      "jsKb": 1816.8,
       "cssKb": 0,
       "chunkCount": 28
     }

@@ -15,7 +15,7 @@ import {
 } from "react";
 import { employeeNameLines } from "@/lib/dipendenti/dipendenti-employee-display";
 import { buildMonthDays, type TimesheetDayInfo } from "@/lib/dipendenti/timesheet-month";
-import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import type { DipendenteRecord } from "@/lib/dipendenti/dipendente-record";
 import { sumMonthTotalsList } from "@/lib/dipendenti/timesheet-kpi";
 import type { TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
 import type {
@@ -273,7 +273,7 @@ export function DipendentiTimesheetGrid({
   onCellClick,
   onEmployeeClick,
   tipiAssenza,
-  addettiRecords = [],
+  dipendentiRecords = [],
   readOnly,
   accentDateYmd = null,
   accentFadingOut = false,
@@ -286,7 +286,7 @@ export function DipendentiTimesheetGrid({
   onCellClick: (dipendenteId: string, workDate: string) => void;
   onEmployeeClick: (employee: DipendenteTimesheetEmployeeRow) => void;
   tipiAssenza: readonly TipoAssenzaConfig[];
-  addettiRecords?: readonly AddettoRecord[];
+  dipendentiRecords?: readonly DipendenteRecord[];
   readOnly?: boolean;
   accentDateYmd?: string | null;
   accentFadingOut?: boolean;
@@ -300,9 +300,9 @@ export function DipendentiTimesheetGrid({
     [employees, filterEmployeeId],
   );
 
-  const addettiById = useMemo(
-    () => new Map(addettiRecords.map((r) => [r.id, r])),
-    [addettiRecords],
+  const dipendentiById = useMemo(
+    () => new Map(dipendentiRecords.map((r) => [r.id, r])),
+    [dipendentiRecords],
   );
 
   const totalsByEmployee = useMemo(() => {
@@ -554,7 +554,7 @@ export function DipendentiTimesheetGrid({
           </GlobalTableHead>
           {virtualEmployeeRows.map((emp) => {
             const totals = totalsByEmployee.get(emp.id)!;
-            const addetto = emp.source_addetto_id ? addettiById.get(emp.source_addetto_id) : undefined;
+            const addetto = emp.source_addetto_id ? dipendentiById.get(emp.source_addetto_id) : undefined;
             const { nome, cognome } = employeeNameLines(emp, addetto);
             return (
               <tbody key={emp.id}>
@@ -607,7 +607,7 @@ export function DipendentiTimesheetGrid({
                           ariaLabel={buildTimesheetCellTooltip({
                             employee: emp,
                             addetto: emp.source_addetto_id
-                              ? addettiById.get(emp.source_addetto_id)
+                              ? dipendentiById.get(emp.source_addetto_id)
                               : undefined,
                             day: d,
                             readOnly,
@@ -649,7 +649,7 @@ export function DipendentiTimesheetGrid({
                           ariaLabel={buildTimesheetCellTooltip({
                             employee: emp,
                             addetto: emp.source_addetto_id
-                              ? addettiById.get(emp.source_addetto_id)
+                              ? dipendentiById.get(emp.source_addetto_id)
                               : undefined,
                             day: d,
                             readOnly,

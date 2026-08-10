@@ -130,9 +130,9 @@ const manualAnh: MezzoAnagraficaHistoryRow = {
   origine: "modifica_manuale",
   lavorazione_id: null,
   scheda_id: null,
-  changed_fields: ["marca_telaio"],
-  old_values: { marca_telaio: "FUSO" },
-  new_values: { marca_telaio: "Mitsubishi" },
+  changed_fields: ["marcaTelaio"],
+  old_values: { marcaTelaio: "FUSO" },
+  new_values: { marcaTelaio: "Mitsubishi" },
   user_id: null,
 };
 const nearbyLog: MezziHubLogEntry = {

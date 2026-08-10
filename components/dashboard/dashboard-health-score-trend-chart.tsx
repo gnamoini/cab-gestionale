@@ -280,7 +280,7 @@ function HealthScoreTrendChartSvg({
       ref={containerRef}
       className={
         embedded
-          ? "flex min-h-40 w-full flex-col justify-center sm:min-h-0 sm:flex-1 sm:basis-0"
+          ? "flex min-h-40 w-full flex-col justify-center xl:min-h-0 xl:flex-1 xl:basis-0"
           : "relative min-w-0"
       }
     >
@@ -449,7 +449,7 @@ export function HealthScoreWeeklyTrendChart({
   if (isLoading) {
     const loadingBody = (
       <div
-        className={`flex flex-col items-center justify-center gap-3 ${embedded ? "min-h-40 py-2 sm:min-h-0 sm:flex-1" : "min-h-[13rem] rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_25%,var(--cab-card))] px-4 py-6"}`}
+        className={`flex flex-col items-center justify-center gap-3 ${embedded ? "min-h-40 py-2 xl:min-h-0 xl:flex-1" : "min-h-[13rem] rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_25%,var(--cab-card))] px-4 py-6"}`}
       >
         <HealthScoreRingLoading />
         <p className={`${dsTypoCaption} text-[color:var(--cab-text-muted)]`}>Caricamento andamento…</p>
@@ -461,7 +461,7 @@ export function HealthScoreWeeklyTrendChart({
   if (!points || validPoints.length === 0) {
     const emptyBody = (
       <div
-        className={`flex items-center justify-center ${embedded ? "min-h-40 py-2 sm:min-h-0 sm:flex-1" : "min-h-[13rem] rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] px-4 py-6"}`}
+        className={`flex items-center justify-center ${embedded ? "min-h-40 py-2 xl:min-h-0 xl:flex-1" : "min-h-[13rem] rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] px-4 py-6"}`}
       >
         <p className={`${dsTypoBody} text-center text-[color:var(--cab-text-muted)]`}>
           Dati insufficienti per mostrare l&apos;andamento settimanale.
@@ -508,7 +508,7 @@ export function HealthScoreWeeklyTrendChart({
   );
 
   if (embedded) {
-    return <div className="flex min-h-40 w-full flex-col sm:min-h-0 sm:flex-1 sm:basis-0">{chartBody}</div>;
+    return <div className="flex min-h-40 w-full flex-col xl:min-h-0 xl:flex-1 xl:basis-0">{chartBody}</div>;
   }
 
   return (

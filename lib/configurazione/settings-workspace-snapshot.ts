@@ -1,9 +1,10 @@
 import {
-  addettiLegacyNomi,
-  defaultAddettiRecords,
-  syncLavorazioniAddettiFromRecords,
-} from "@/lib/lavorazioni/addetto-model";
+  defaultDipendentiRecords,
+  serializeDipendentiRecordsForPayload,
+  type DipendenteRecord,
+} from "@/lib/dipendenti/dipendente-record";
 import { syncAddettoColorMapById } from "@/lib/lavorazioni/addetto-colors-assign";
+import { resolveAddettiRecordsFromDipendenti } from "@/lib/dipendenti/dipendente-record";
 import { normalizeStatiList } from "@/lib/lavorazioni/stati-normalize";
 import { defaultTipiAssenza } from "@/lib/dipendenti/tipi-assenza-model";
 import {
@@ -21,12 +22,13 @@ import { DEFAULT_STATI_LAVORAZIONI_DB } from "@/src/shared/selectors";
 export type SettingsWorkspaceSnapshot = ConfigurazioneSettingsSnapshot;
 
 export function buildResolvedFromModalSnapshot(s: SettingsWorkspaceSnapshot): CabAppSettingsResolved {
-  const synced = syncLavorazioniAddettiFromRecords(s.addettiRecords);
+  const dipendentiRecords = serializeDipendentiRecordsForPayload(s.dipendentiRecords);
+  const addettiRecords = resolveAddettiRecordsFromDipendenti(dipendentiRecords);
   return {
     lavorazioni: {
       stati: normalizeStatiList(s.stati),
-      addettiRecords: synced.addettiRecords,
-      addetti: synced.addetti,
+      addettiRecords,
+      addetti: addettiRecords.map((r) => r.nome.trim()).filter(Boolean),
       addettoColors: s.addettoColors,
       prioritaColors: s.prioritaColors,
       prioritaDb: s.prioritaDb,
@@ -34,25 +36,21 @@ export function buildResolvedFromModalSnapshot(s: SettingsWorkspaceSnapshot): Ca
     mezziListe: migrateMezziListePrefs(s.liste),
     magazzinoMaster: s.mag,
     preventiviDefaults: s.eco,
-    dipendenti: { tipiAssenza: s.tipiAssenza },
+    dipendenti: { dipendentiRecords, tipiAssenza: s.tipiAssenza },
     branding: s.branding,
   };
 }
 
 export function snapshotFromResolved(r: CabAppSettingsResolved): SettingsWorkspaceSnapshot {
-  const addettiRecords =
-    r.lavorazioni.addettiRecords?.length &&
-    r.lavorazioni.addettiRecords.some((a) => a.nome.trim().length > 0)
-      ? r.lavorazioni.addettiRecords.map((a) => ({
-          id: a.id,
-          nome: a.nome.trim(),
-          cognome: a.cognome?.trim() ? a.cognome.trim() : null,
-        }))
-      : defaultAddettiRecords();
-  const addetti = addettiLegacyNomi(addettiRecords);
+  const dipendentiRecords =
+    r.dipendenti.dipendentiRecords?.length &&
+    r.dipendenti.dipendentiRecords.some((a) => a.nome.trim().length > 0)
+      ? serializeDipendentiRecordsForPayload(r.dipendenti.dipendentiRecords)
+      : defaultDipendentiRecords();
+  const addettiRecords = resolveAddettiRecordsFromDipendenti(dipendentiRecords);
   return {
     stati: r.lavorazioni.stati?.length ? normalizeStatiList(r.lavorazioni.stati) : [...DEFAULT_STATI_LAVORAZIONI_DB],
-    addettiRecords,
+    dipendentiRecords,
     addettoColors: syncAddettoColorMapById(addettiRecords, r.lavorazioni.addettoColors),
     prioritaColors: r.lavorazioni.prioritaColors ?? {},
     prioritaDb: r.lavorazioni.prioritaDb?.length ? [...r.lavorazioni.prioritaDb] : [...DEFAULT_PRIORITA_LAVORAZIONI_DB],

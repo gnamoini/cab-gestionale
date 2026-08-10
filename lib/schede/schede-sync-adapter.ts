@@ -28,8 +28,49 @@ import {
 import { schedeService, SCHEDA_CONCURRENCY_CONFLICT } from "@/src/services/schede.service";
 import { SCHEde_BUNDLES_QUERY_KEY } from "@/src/lib/react-query/query-keys";
 import { clampSchedeBundle } from "@/lib/validation/clamp-free-text";
+import { normalizeSchedeBundle } from "@/lib/schede/schede-store-migrate";
+import { countSchedePresenti } from "@/lib/schede/schede-ui";
+import type { SchedaIngressoFields } from "@/types/schede";
 import type { SchedaLavorazioneRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeBundle, LavorazioneSchedeStore } from "@/types/schede";
+
+function ingressoAddettoRef(campi: SchedaIngressoFields | undefined): string {
+  if (!campi) return "";
+  return campi.addettoAccettazioneId?.trim() || campi.addettoAccettazione?.trim() || "";
+}
+
+/** Preferisce il bundle con più schede o con addetto ingresso valorizzato (merge cache vs localStorage). */
+export function preferRicherSchedeBundle(
+  a: LavorazioneSchedeBundle,
+  b: LavorazioneSchedeBundle | undefined,
+): LavorazioneSchedeBundle {
+  if (!b) return a;
+  const aCount = countSchedePresenti(a);
+  const bCount = countSchedePresenti(b);
+  if (aCount > bCount) return a;
+  if (bCount > aCount) return b;
+  const aAddetto = ingressoAddettoRef(a.ingresso?.campi);
+  const bAddetto = ingressoAddettoRef(b.ingresso?.campi);
+  if (aAddetto && !bAddetto) return a;
+  return b;
+}
+
+function patchSchedeBundlesQueryCache(
+  qc: QueryClient,
+  store: LavorazioneSchedeStore,
+  ids: readonly string[],
+): void {
+  qc.setQueryData<LavorazioneSchedeStore>(SCHEde_BUNDLES_QUERY_KEY, (prev) => {
+    const base = prev ?? {};
+    const next: LavorazioneSchedeStore = { ...base };
+    for (const id of ids) {
+      const bundle = store[id];
+      if (!bundle) continue;
+      next[id] = normalizeSchedeBundle(bundle);
+    }
+    return next;
+  });
+}
 
 /** @deprecated Usare SCHEDA_CONCURRENCY_CONFLICT da schede.service */
 export const SCHEDE_CONCURRENCY_CONFLICT = SCHEDA_CONCURRENCY_CONFLICT;
@@ -167,7 +208,7 @@ export async function fetchSchedeBundlesForLavorazioni(
   const store: LavorazioneSchedeStore = {};
   for (const id of unique) {
     const list = byLav.get(id) ?? [];
-    store[id] = schedaRowsToBundle(id, list);
+    store[id] = normalizeSchedeBundle(schedaRowsToBundle(id, list));
     if (qc) primeLavorazioneSchedeRowsCache(qc, id, list);
   }
   return store;
@@ -199,7 +240,13 @@ export async function ensureSchedeBundlesInCache(
   const fetched = await fetchSchedeBundlesForLavorazioni(toFetch, qc, {
     clientPortal: options?.clientPortal,
   });
-  const merged = { ...prev, ...fetched };
+  let merged = { ...prev, ...fetched };
+  const local = typeof window !== "undefined" ? loadLavorazioneSchedeStore() : {};
+  for (const id of unique) {
+    const localB = local[id];
+    if (!localB) continue;
+    merged[id] = normalizeSchedeBundle(preferRicherSchedeBundle(localB, merged[id]));
+  }
   qc.setQueryData(SCHEde_BUNDLES_QUERY_KEY, merged);
   cacheStoreLocally(merged, toFetch);
   return merged;
@@ -239,6 +286,7 @@ export function getOrCreateBundleMerged(
 export async function persistSchedeStore(
   store: LavorazioneSchedeStore,
   lavorazioneId?: string,
+  qc?: QueryClient,
 ): Promise<PersistSchedeResult> {
   const ids = lavorazioneId ? [lavorazioneId] : Object.keys(store);
 
@@ -249,5 +297,6 @@ export async function persistSchedeStore(
     if (!db.ok) return db;
   }
   cacheStoreLocally(store, ids);
+  if (qc) patchSchedeBundlesQueryCache(qc, store, ids);
   return { ok: true };
 }

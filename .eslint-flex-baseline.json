@@ -1,7 +1,118 @@
 {
-  "version": 10,
-  "frozenAt": "2026-07-03",
-  "entryCount": 0,
-  "checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "entries": []
+  "version": 11,
+  "frozenAt": "2026-08-10",
+  "entryCount": 22,
+  "checksum": "818037cdc16aa223d5b25e15bc25a033536934c039869593a186670578b61a71",
+  "entries": [
+    {
+      "file": "components/configurazione/configurazione-log-section.tsx",
+      "line": 91,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/dashboard/dashboard-health-score-ring.tsx",
+      "line": 328,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/dashboard/dashboard-health-score-trend-chart.tsx",
+      "line": 452,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/dashboard/dashboard-health-score-trend-chart.tsx",
+      "line": 464,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/dashboard/dashboard-health-score-trend-chart.tsx",
+      "line": 511,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/data-import/data-import-export-toolbar.tsx",
+      "line": 203,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/design-system/page-toolbar.tsx",
+      "line": 198,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/document-capture/capture-document-file-preview.tsx",
+      "line": 290,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/document-capture/capture-mezzo-match-step.tsx",
+      "line": 183,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/document-capture/capture-mezzo-match-step.tsx",
+      "line": 412,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/document-capture/capture-mezzo-match-step.tsx",
+      "line": 414,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/document-capture/capture-review-panel.tsx",
+      "line": 111,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/document-capture/capture-review-panel.tsx",
+      "line": 144,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazione-create-mezzo-step-shell.tsx",
+      "line": 72,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/gestionale/magazzino/carichi/receiving-review-split-layout.tsx",
+      "line": 13,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/gestionale/magazzino/carichi/receiving-wizard.tsx",
+      "line": 152,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzo-scheda-readonly-drawer.tsx",
+      "line": 99,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/gestionale/mobile-filter-drawer.tsx",
+      "line": 75,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/preventivi/preventivo-events-drawer.tsx",
+      "line": 42,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/report/layout/report-lavorazioni-filters.tsx",
+      "line": 26,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/ui/page-action-menu/PageActionMenuHeader.tsx",
+      "line": 45,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/ui/page-action-menu/PageActionMenuHeader.tsx",
+      "line": 80,
+      "reason": "flex-grow-without-containment"
+    }
+  ]
 }

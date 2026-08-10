@@ -98,6 +98,6 @@ test.describe("android pwa cold start diagnostics", () => {
         JSON.stringify({ scenario: "warm-proxy", route: "/lavorazioni", report }, null, 2),
       );
     }
-    expect(report?.buckets.applicationStartup.endMs).not.toBeNull();
+    expect(report?.buckets.applicationStartup.durationMs).not.toBeNull();
   });
 });

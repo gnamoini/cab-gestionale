@@ -39,7 +39,7 @@ const baseDoc = {
   vettore: "Trasporti CAB",
   data_consegna: "2026-07-31",
   data_documento: "2026-07-30",
-} as DdtDocumentRow;
+} as unknown as DdtDocumentRow;
 
 const destinatario = buildDdtDestinatarioPdfFields(baseDoc);
 assert.ok(destinatario.some((f) => f.label === "Cliente" && f.value === "ACME Srl"));
@@ -64,7 +64,7 @@ const telaioDoc = {
     modello: "Stralis",
     telaio: "Stralis X-Way",
   },
-} as DdtDocumentRow;
+} as unknown as DdtDocumentRow;
 const oggettoTelaio = buildDdtOggettoInterventoPdfFields(telaioDoc);
 assert.ok(oggettoTelaio.some((f) => f.label === "Targa" && f.value === "BB222CC"));
 assert.equal(oggettoTelaio.some((f) => f.label === "Matricola"), false);

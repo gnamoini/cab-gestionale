@@ -16,6 +16,12 @@ import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import type { DipendenteRecord } from "@/lib/dipendenti/dipendente-record";
+import {
+  getActiveDipendentiRecords,
+  getAddettiRecords,
+  getAllDipendentiRecords,
+} from "@/lib/dipendenti/dipendente-record";
 import type { TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
 import {
   buildStatiLavorazioniOptions,
@@ -54,6 +60,7 @@ export type GlobalOptionsSlice = {
   magazzinoMaster: MagazzinoMasterPrefs;
   preventiviDefaults: SistemaPreventiviDefaults;
   dipendenti: {
+    dipendentiRecords: DipendenteRecord[];
     tipiAssenza: TipoAssenzaConfig[];
   };
 };
@@ -184,7 +191,29 @@ export const useAddettiRecords = () => {
   return useMemo(
     () => ({
       ...g,
-      records: g.lavorazioni.addettiRecords,
+      records: getAddettiRecords(g.dipendenti.dipendentiRecords),
+    }),
+    [g],
+  );
+};
+
+export const useDipendentiRecords = () => {
+  const g = useGlobalOptions({ debugTag: "useDipendentiRecords" });
+  return useMemo(
+    () => ({
+      ...g,
+      records: getAllDipendentiRecords(g.dipendenti.dipendentiRecords),
+    }),
+    [g],
+  );
+};
+
+export const useActiveDipendentiRecords = () => {
+  const g = useGlobalOptions({ debugTag: "useActiveDipendentiRecords" });
+  return useMemo(
+    () => ({
+      ...g,
+      records: getActiveDipendentiRecords(g.dipendenti.dipendentiRecords),
     }),
     [g],
   );

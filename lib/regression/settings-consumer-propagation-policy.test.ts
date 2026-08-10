@@ -43,6 +43,7 @@ function testPatchAppSettingsQueryCache(): void {
   liste.clienti = ["Cliente Alpha"];
 
   const initialRow: AppSettingRow = {
+    id: "settings-mezzi-liste",
     module: CAB_SETTINGS_MODULE.mezzi,
     key: CAB_SETTINGS_KEY.liste,
     value: liste as unknown as Record<string, unknown>,

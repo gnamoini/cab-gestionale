@@ -11,6 +11,8 @@ const emp: DipendenteTimesheetEmployeeRow = {
   source_addetto_name: "Mario",
   source_addetto_id: "a1",
   in_settings: true,
+  employee_type: "ADDETTO",
+  attivo: true,
   created_at: "",
   updated_at: "",
 };

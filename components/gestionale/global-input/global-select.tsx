@@ -452,15 +452,25 @@ export function GlobalSelect(props: GlobalSelectProps) {
     if (itemsMode) return items.map((item) => item.label);
     return [...options];
   }, [itemsMode, items, options]);
+  const canAddToList =
+    allowAdd || Boolean(onAddToList) || (addActions != null && addActions.length > 0);
   const similarTo = useMemo(() => {
-    if (isFilterVariant || !showSimilarWarning || similarPool.length === 0) return null;
+    if (isFilterVariant || !showSimilarWarning || !canAddToList || similarPool.length === 0) return null;
     const text = activeTextForSimilar.trim();
     if (!text) return null;
     return findSimilarEntityInPool(text, similarPool, {
       exclude: value.trim() || undefined,
       standardizeLegalSuffix: similarStandardizeLegalSuffix,
     });
-  }, [isFilterVariant, showSimilarWarning, similarPool, activeTextForSimilar, value, similarStandardizeLegalSuffix]);
+  }, [
+    isFilterVariant,
+    showSimilarWarning,
+    canAddToList,
+    similarPool,
+    activeTextForSimilar,
+    value,
+    similarStandardizeLegalSuffix,
+  ]);
 
   const listEmpty =
     !showLoadingUi &&

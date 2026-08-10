@@ -5,10 +5,9 @@ import {
 } from "@/lib/magazzino/magazzino-list-ui-filters";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 
-const row: RicambioMagazzino = {
+const row = {
   id: "r1",
   marca: "BTE",
-  marcaSecondaria: "",
   descrizione: "FILTRO OLIO",
   codiceFornitoreOriginale: "bu500",
   codiceFornitoreOriginaleSecondario: "",
@@ -16,12 +15,9 @@ const row: RicambioMagazzino = {
   scorta: 1,
   scortaMinima: 0,
   unitaMisura: "pz",
-  compatibilita: [],
+  compatibilitaMezzi: [],
   fornitoriAlternativi: [],
-  tagliando: false,
-  immagini: [],
-  logModifiche: [],
-};
+} as unknown as RicambioMagazzino;
 
 const suggestions = buildMagazzinoSearchSuggestions([row], "bu500", 8);
 assert.ok(suggestions.some((s) => s.includes("BU500") && s.includes("FILTRO")), "combined codice+descrizione");

@@ -271,7 +271,7 @@ export function GlobalFixedListPillSelect({
     >
       <span
         ref={labelRef}
-        className={`min-w-0 truncate${showingPlaceholder ? " text-[color:var(--cab-text-muted)]" : ""}`}
+        className={`min-w-0 flex-1 truncate${showingPlaceholder ? " text-[color:var(--cab-text-muted)]" : ""}`}
       >
         {visibleLabel}
       </span>

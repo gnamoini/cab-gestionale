@@ -1,3 +1,4 @@
+import type { DipendenteRecord } from "@/lib/dipendenti/dipendente-record";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { sortAddettiRecordsByCognomeNome } from "@/lib/lavorazioni/addetto-model";
 import { entryToCellValue } from "@/lib/dipendenti/timesheet-totals";
@@ -6,7 +7,7 @@ import type { DipendenteTimesheetEmployeeRow, DipendenteTimesheetEntryRow } from
 /** Nome su prima riga, cognome sotto (da addetto collegato o da display_name). */
 export function employeeNameLines(
   emp: DipendenteTimesheetEmployeeRow,
-  addetto?: AddettoRecord | null,
+  addetto?: Pick<DipendenteRecord, "nome" | "cognome"> | null,
 ): { nome: string; cognome: string | null } {
   if (addetto) {
     const nome = addetto.nome.trim();
@@ -25,9 +26,9 @@ export function employeeNameLines(
 /** Ordina dipendenti timesheet per cognome/nome settings quando collegati per id. */
 export function sortTimesheetEmployeesForDisplay(
   employees: readonly DipendenteTimesheetEmployeeRow[],
-  addettiRecords: readonly AddettoRecord[],
+  dipendentiRecords: readonly DipendenteRecord[],
 ): DipendenteTimesheetEmployeeRow[] {
-  const byAddettoId = new Map(addettiRecords.map((r) => [r.id, r]));
+  const byAddettoId = new Map(dipendentiRecords.map((r) => [r.id, r]));
   const withMeta = employees.map((emp) => {
     const rec = emp.source_addetto_id ? byAddettoId.get(emp.source_addetto_id) : undefined;
     return { emp, rec };
@@ -45,12 +46,12 @@ export function sortTimesheetEmployeesForDisplay(
 
 export function filterTimesheetEmployeesBySearch(
   employees: readonly DipendenteTimesheetEmployeeRow[],
-  addettiRecords: readonly AddettoRecord[],
+  dipendentiRecords: readonly DipendenteRecord[],
   query: string,
 ): DipendenteTimesheetEmployeeRow[] {
   const q = query.trim().toLowerCase();
   if (!q) return [...employees];
-  const byAddettoId = new Map(addettiRecords.map((r) => [r.id, r]));
+  const byAddettoId = new Map(dipendentiRecords.map((r) => [r.id, r]));
   return employees.filter((emp) => {
     const rec = emp.source_addetto_id ? byAddettoId.get(emp.source_addetto_id) : undefined;
     if (rec) {

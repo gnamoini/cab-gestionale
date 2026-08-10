@@ -7,7 +7,7 @@ import {
   sortTimesheetEmployeesForDisplay,
 } from "@/lib/dipendenti/dipendenti-employee-display";
 import { entryToCellValue } from "@/lib/dipendenti/timesheet-totals";
-import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import type { DipendenteRecord } from "@/lib/dipendenti/dipendente-record";
 import type {
   DipendenteTimesheetEmployeeRow,
   DipendenteTimesheetEntryRow,
@@ -26,9 +26,9 @@ export type DipendentiTimesheetDerived = {
 export function useDipendentiTimesheetDerived(
   employees: readonly DipendenteTimesheetEmployeeRow[],
   entries: readonly DipendenteTimesheetEntryRow[],
-  realAddettiRecords: readonly AddettoRecord[],
-  addettiReady: boolean,
-  currentAddettiIds: ReadonlySet<string>,
+  realDipendentiRecords: readonly DipendenteRecord[],
+  dipendentiReady: boolean,
+  currentDipendentiIds: ReadonlySet<string>,
 ): DipendentiTimesheetDerived {
   const entriesByKey = useMemo(() => {
     const map = new Map<string, DipendenteTimesheetEntryRow>();
@@ -51,20 +51,20 @@ export function useDipendentiTimesheetDerived(
   );
 
   const sortedEmployees = useMemo(
-    () => sortTimesheetEmployeesForDisplay(employees, realAddettiRecords),
-    [employees, realAddettiRecords],
+    () => sortTimesheetEmployeesForDisplay(employees, realDipendentiRecords),
+    [employees, realDipendentiRecords],
   );
 
   const displayEmployees = useMemo(
     () =>
-      addettiReady
+      dipendentiReady
         ? selectTimesheetEmployeesForDisplay(
             sortedEmployees,
             employeeIdsWithEntriesInPeriodSet,
-            currentAddettiIds,
+            currentDipendentiIds,
           )
         : [],
-    [addettiReady, sortedEmployees, employeeIdsWithEntriesInPeriodSet, currentAddettiIds],
+    [dipendentiReady, sortedEmployees, employeeIdsWithEntriesInPeriodSet, currentDipendentiIds],
   );
 
   return {

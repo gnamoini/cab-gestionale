@@ -14,7 +14,7 @@ import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
-import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import type { DipendenteRecord } from "@/lib/dipendenti/dipendente-record";
 import { monthDateRange } from "@/lib/dipendenti/timesheet-month";
 import { planEmployeeBootstrap } from "@/lib/dipendenti/timesheet-bootstrap";
 import type {
@@ -89,13 +89,13 @@ export const dipendentiTimesheetService = {
   },
 
   async syncFromAddettiRecords(
-    addettiRecords: readonly AddettoRecord[],
+    dipendentiRecords: readonly DipendenteRecord[],
   ): Promise<ServiceResult<DipendenteTimesheetEmployeeRow[]>> {
     try {
       const listRes = await dipendentiTimesheetService.listEmployees();
       if (!listRes.success) return listRes;
       const existing = listRes.data ?? [];
-      const plan = planEmployeeBootstrap(existing, addettiRecords);
+      const plan = planEmployeeBootstrap(existing, dipendentiRecords);
       const c = await sb();
 
       if (plan.inserts.length > 0) {
@@ -104,20 +104,26 @@ export const dipendentiTimesheetService = {
             display_name: ins.displayName,
             source_addetto_name: ins.sourceAddettoName,
             source_addetto_id: ins.sourceAddettoId,
-            in_settings: true,
+            in_settings: ins.inSettings,
+            employee_type: ins.employeeType,
+            attivo: ins.attivo,
           })),
         );
         if (error) return err(error.message);
       }
 
-      const settingsChunks = plan.settingsUpdates;
-      for (let i = 0; i < settingsChunks.length; i += 20) {
-        const chunk = settingsChunks.slice(i, i + 20);
+      const mirrorChunks = plan.mirrorUpdates;
+      for (let i = 0; i < mirrorChunks.length; i += 20) {
+        const chunk = mirrorChunks.slice(i, i + 20);
         await Promise.all(
           chunk.map(async (upd) => {
             const { error } = await c
               .from("dipendenti_timesheet_employees")
-              .update({ in_settings: upd.inSettings })
+              .update({
+                in_settings: upd.inSettings,
+                employee_type: upd.employeeType,
+                attivo: upd.attivo,
+              })
               .eq("id", upd.id);
             if (error) throw new Error(error.message);
           }),
@@ -145,12 +151,15 @@ export const dipendentiTimesheetService = {
     }
   },
 
-  /** @deprecated Usare syncFromAddettiRecords. */
+  /** @deprecated Usare syncFromAddettiRecords con DipendenteRecord[]. */
   async syncFromAddetti(addetti: readonly string[]): Promise<ServiceResult<DipendenteTimesheetEmployeeRow[]>> {
-    const records = addetti.map((nome) => ({
+    const records: DipendenteRecord[] = addetti.map((nome) => ({
       id: `legacy-${nome.trim().toLowerCase()}`,
       nome: nome.trim(),
-      cognome: null as string | null,
+      cognome: null,
+      colorKey: null,
+      employeeType: "ADDETTO",
+      attivo: true,
     }));
     return dipendentiTimesheetService.syncFromAddettiRecords(records);
   },

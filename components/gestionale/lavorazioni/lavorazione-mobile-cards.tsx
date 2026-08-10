@@ -1,8 +1,8 @@
 "use client";
 
 import { memo, type CSSProperties, type ReactNode } from "react";
+import { AddettoPicker } from "@/components/domain/addetti/addetto-picker";
 import {
-  AddettoSelectField,
   InlineSelectField,
   LavorazioneCompletamentoDatePill,
   LavorazionePrioritaReadOnlyPill,
@@ -28,9 +28,8 @@ import {
   dsTableActionBtnWithBadge,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import type { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
-import { resolveLavorazioneNote } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import { resolveLavorazioneNote, LAVORAZIONE_EMPTY_DISPLAY } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
-import { getAddettoPillStyle } from "@/lib/lavorazioni/addetto-display";
 import { addettoRefFromFields, AddettoDisplayPill } from "@/components/domain/addetti";
 import { resolveAddettoSnapshotRef } from "@/lib/lavorazioni/resolve-addetto-display";
 import {
@@ -46,7 +45,6 @@ import {
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import type { LavorazioneUltimaModificaInfo } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import {
-  addettoPillShellClass,
   IconRipristinaDaArchivio,
   prioritaLabel,
   prioritaPillShellClass,
@@ -147,8 +145,6 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
   const utilizzatore = lavorazioneUtilizzatoreLabel(row, schedeStore);
   const ident = lavorazioneMezzoIdentParts(row, schedeStore);
   const addettoId = lavorazioneAddettoId(row, schedeStore, undefined, addettiRecords);
-  const addettoRef = addettoRefFromFields(resolveAddettoSnapshotRef(row, schedeStore));
-  const addettoPillStyle = getAddettoPillStyle(addettiRecords, addettoRef, addettoColors);
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
   return (
@@ -201,16 +197,13 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
           </InlineSelectField>
         </LavMobileInlineField>
         <LavMobileInlineField label="Addetto" layout="stack">
-          <AddettoSelectField
-            variant="pill"
-            tablePillWidth={lavTablePillFillClass}
-            options={tablePillOptions.addetto(addettoId || null)}
-            shellClass={addettoPillShellClass()}
-            shellStyle={addettoPillStyle}
-            value={addettoId}
+          <AddettoPicker
+            value={addettoId || null}
             onChange={(v) => onAddettoRow(row, v)}
             ariaLabel={`Addetto — ${macchina}`}
             disabled={loading || !canEditWorkOrders || addetti.length === 0}
+            tablePillWidth={lavTablePillFillClass}
+            placeholder={LAVORAZIONE_EMPTY_DISPLAY}
           />
         </LavMobileInlineField>
       </LavorazioneMobileControlsPanel>

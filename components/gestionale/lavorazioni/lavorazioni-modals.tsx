@@ -28,7 +28,7 @@ import {
   PrioritaSettingsSection,
   StatiSettingsSection,
 } from "@/components/gestionale/lavorazioni/lavorazioni-settings-ui";
-import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import type { DipendenteRecord, EmployeeType } from "@/lib/dipendenti/dipendente-record";
 import {
   GestionaleModalFooterCancelButton,
 } from "@/components/design-system";
@@ -410,7 +410,7 @@ export function SettingsLavorazioniModal({
   onChangeStatoColor,
   onRemoveStato,
   onReorderStato,
-  addettiRecords,
+  dipendentiRecords,
   addettoColors,
   prioritaColors,
   onChangePrioritaColor,
@@ -433,12 +433,20 @@ export function SettingsLavorazioniModal({
   onChangeStatoColor: (id: string, hex: string) => void;
   onRemoveStato: (id: string) => void;
   onReorderStato?: (fromIndex: number, toIndex: number) => void;
-  addettiRecords: AddettoRecord[];
+  dipendentiRecords: DipendenteRecord[];
   addettoColors: Record<string, string>;
   prioritaColors: Partial<Record<PrioritaLav, string>>;
   onChangePrioritaColor: (p: PrioritaLav, hex: string) => void;
-  onAddAddetto: (input: { nome: string; cognome?: string | null }) => void;
-  onUpdateAddetto: (id: string, patch: { nome?: string; cognome?: string | null }) => void;
+  onAddAddetto: (input: { nome: string; cognome?: string | null; employeeType?: EmployeeType }) => void;
+  onUpdateAddetto: (
+    id: string,
+    patch: {
+      nome?: string;
+      cognome?: string | null;
+      employeeType?: EmployeeType;
+      attivo?: boolean;
+    },
+  ) => void;
   onChangeAddettoColor: (colorKey: string, hex: string) => void;
   onRemoveAddetto: (id: string) => void;
   attiviStatoIds: Set<string>;
@@ -462,7 +470,7 @@ export function SettingsLavorazioniModal({
       : lockedTab === "priorita"
         ? "Priorità"
         : lockedTab === "addetti"
-          ? "Addetti"
+          ? "Dipendenti"
           : "Impostazioni lavorazioni";
 
   useEffect(() => {
@@ -472,7 +480,7 @@ export function SettingsLavorazioniModal({
   const addettiPanel = (
     <AddettiSettingsSection
       embedded={Boolean(lockedTab)}
-      addettiRecords={addettiRecords}
+      dipendentiRecords={dipendentiRecords}
       addettoColors={addettoColors}
       onAddAddetto={onAddAddetto}
       onChangeAddettoColor={onChangeAddettoColor}

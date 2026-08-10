@@ -1136,7 +1136,7 @@ export function SchedaIngressoEditModal({
   const lavorazioneStatoRef = useRef(lavorazioneStato);
   const lavorazionePrioritaRef = useRef(lavorazionePriorita);
   const ingressoEditorOpenedRef = useRef(false);
-  const mezzoBootstrapDoneRef = useRef(false);
+  const lastBootstrappedMezzoIdRef = useRef<string | null>(null);
   const baselineRef = useRef<string | null>(null);
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
 
@@ -1193,7 +1193,7 @@ export function SchedaIngressoEditModal({
   useEffect(() => {
     if (!open) {
       ingressoEditorOpenedRef.current = false;
-      mezzoBootstrapDoneRef.current = false;
+      lastBootstrappedMezzoIdRef.current = null;
       baselineRef.current = null;
       setUnsavedExitOpen(false);
       return;
@@ -1262,9 +1262,10 @@ export function SchedaIngressoEditModal({
 
   const { bootstrapLinkedMezzo } = mezzoPrompt;
   useEffect(() => {
-    if (!open || mezzoBootstrapDoneRef.current) return;
+    if (!open) return;
     const mezzoId = bootstrapMezzoId?.trim();
     if (!mezzoId) return;
+    if (lastBootstrappedMezzoIdRef.current === mezzoId) return;
     const mezzo = mezziCatalog.find((m) => m.id === mezzoId);
     if (!mezzo) return;
 
@@ -1272,7 +1273,7 @@ export function SchedaIngressoEditModal({
     // ponytail: attendi default targetType dal figlio — evita falso conflitto al primo focus
     if (!snap.targetType) return;
 
-    mezzoBootstrapDoneRef.current = true;
+    lastBootstrappedMezzoIdRef.current = mezzoId;
     bootstrapLinkedMezzo(mezzo, pickMezzoPermanentFields(snap));
     syncCloseBaseline();
   }, [

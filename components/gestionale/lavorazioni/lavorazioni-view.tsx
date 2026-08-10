@@ -1430,7 +1430,7 @@ export function LavorazioniView({ listSurface: serverListSurface, listTier = "xl
         };
         const schedeSnapshot = snapshotSchedeStore(qc);
         applyOptimisticSchedeStore(qc, updated);
-        const persistRes = await persistSchedeAndSync(persistSchedeStore(updated, row.id), {
+        const persistRes = await persistSchedeAndSync(persistSchedeStore(updated, row.id, qc), {
           syncAfter: false,
           rollbackSnapshot: schedeSnapshot,
         });

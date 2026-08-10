@@ -1,5 +1,5 @@
-import { attachConsoleGuards } from "../helpers/console";
-import { adminCredentials, loginViaUi } from "../fixtures/auth";
+import { attachConsoleGuards } from "./helpers/console";
+import { adminCredentials, loginViaUi } from "./fixtures/auth";
 import { test, expect } from "@playwright/test";
 
 test("magazzino resume shows banner after simulated drift dirty", async ({ page }) => {

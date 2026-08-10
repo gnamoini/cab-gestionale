@@ -9,6 +9,8 @@ const emp = (id: string, name: string): DipendenteTimesheetEmployeeRow => ({
   source_addetto_name: name,
   source_addetto_id: id,
   in_settings: true,
+  employee_type: "ADDETTO",
+  attivo: true,
   created_at: "",
   updated_at: "",
 });

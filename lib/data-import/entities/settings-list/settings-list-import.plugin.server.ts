@@ -16,8 +16,13 @@ import type {
   ImportPreviewRowBase,
 } from "@/lib/data-import/core/types";
 import { IMPORT_EXECUTE_CHUNK, IMPORT_MAX_PREVIEW_ROWS } from "@/lib/data-import/core/types";
-import { createAddettoId, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import { createAddettoId } from "@/lib/lavorazioni/addetto-model";
 import { syncAddettoColorMapById } from "@/lib/lavorazioni/addetto-colors-assign";
+import {
+  parseDipendentiRecordsFromPayload,
+  serializeDipendentiRecordsForPayload,
+  type DipendenteRecord,
+} from "@/lib/dipendenti/dipendente-record";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 const VALUE_FIELD: ImportFieldDef = {
@@ -184,18 +189,40 @@ export function createSettingsListImportPlugin(config: SettingsListPluginConfig)
               continue;
             }
             const prefs = payload as Record<string, unknown>;
-            const records = Array.isArray(prefs.addettiRecords) ? ([...(prefs.addettiRecords as AddettoRecord[])] as AddettoRecord[]) : [];
-            if (records.some((r) => norm(r.nome) === norm(nome))) {
+            const dipendentiRecords = parseDipendentiRecordsFromPayload(prefs);
+            if (dipendentiRecords.some((r) => norm(r.nome) === norm(nome))) {
               result.stats.skipped += 1;
               continue;
             }
-            records.push({ id: createAddettoId(), nome, cognome: null });
-            const addetti = records.map((r) => r.nome.trim()).filter(Boolean);
+            const newRec: DipendenteRecord = {
+              id: createAddettoId(),
+              nome,
+              cognome: null,
+              colorKey: null,
+              employeeType: "ADDETTO",
+              attivo: true,
+            };
+            dipendentiRecords.push(newRec);
+            const addettiForColors = dipendentiRecords
+              .filter((r) => r.employeeType === "ADDETTO" && r.attivo)
+              .map((r) => ({
+                id: r.id,
+                nome: r.nome.trim(),
+                cognome: r.cognome?.trim() ? r.cognome.trim() : null,
+                colorKey: r.colorKey ?? r.id,
+              }));
             const addettoColors = syncAddettoColorMapById(
-              records,
+              addettiForColors,
               (prefs.addettoColors as Record<string, string>) ?? {},
             );
-            payload = { ...prefs, addettiRecords: records, addetti, addettoColors };
+            const prefsRest = { ...prefs };
+            delete prefsRest.addettiRecords;
+            delete prefsRest.addetti;
+            payload = {
+              ...prefsRest,
+              dipendentiRecords: serializeDipendentiRecordsForPayload(dipendentiRecords),
+              addettoColors,
+            };
             result.stats.created += 1;
           }
         }

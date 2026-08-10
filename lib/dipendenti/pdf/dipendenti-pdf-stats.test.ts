@@ -14,6 +14,8 @@ const empA: DipendenteTimesheetEmployeeRow = {
   source_addetto_name: null,
   source_addetto_id: null,
   in_settings: true,
+  employee_type: "ADDETTO",
+  attivo: true,
   created_at: "",
   updated_at: "",
 };
@@ -24,6 +26,8 @@ const empB: DipendenteTimesheetEmployeeRow = {
   source_addetto_name: null,
   source_addetto_id: null,
   in_settings: false,
+  employee_type: "ADDETTO",
+  attivo: true,
   created_at: "",
   updated_at: "",
 };

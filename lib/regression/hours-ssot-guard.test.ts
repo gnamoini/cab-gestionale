@@ -145,7 +145,7 @@ assert.equal(getActualLaborHoursFromRow({ id: lavId, actual_labor_hours: 8 }).ho
 // Caso 4: utilizzo dipendenti mapped
 const util = getEmployeeUtilization({
   range,
-  employees: [{ id: "e1", display_name: "Mario", source_addetto_name: "Mario", source_addetto_id: "a1", in_settings: true, created_at: "", updated_at: "" }],
+  employees: [{ id: "e1", display_name: "Mario", source_addetto_name: "Mario", source_addetto_id: "a1", in_settings: true, employee_type: "ADDETTO", attivo: true, created_at: "", updated_at: "" }],
   timesheetEntries: [
     {
       id: "t1",

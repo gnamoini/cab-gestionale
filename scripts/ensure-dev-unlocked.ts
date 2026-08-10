@@ -73,6 +73,43 @@ function pidAlive(pid: number): boolean {
 }
 
 const DEFAULT_DEV_PORT = 3000;
+/** ponytail: soglia empirica — probe a427f4: cache >2GB con sessione sana; oltre ~1.5GB rischio OOM su compile pesanti. */
+const DEV_CACHE_BLOAT_MB = 1500;
+
+function dirSizeMb(dir: string): number | null {
+  if (!fs.existsSync(dir)) return null;
+  let bytes = 0;
+  const stack = [dir];
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const e of entries) {
+      const full = path.join(current, e.name);
+      if (e.isDirectory()) stack.push(full);
+      else if (e.isFile()) {
+        try {
+          bytes += fs.statSync(full).size;
+        } catch {
+          /* skip */
+        }
+      }
+    }
+  }
+  return Math.round((bytes / 1048576) * 10) / 10;
+}
+
+function pruneBloatedDevCacheIfIdle(reason: string): void {
+  if (!fs.existsSync(DEV_DIR)) return;
+  const cacheMb = dirSizeMb(DEV_DIR);
+  if (cacheMb == null || cacheMb <= DEV_CACHE_BLOAT_MB) return;
+  console.warn(`[dev] .next/dev cache ${cacheMb}MB > ${DEV_CACHE_BLOAT_MB}MB — pruning (${reason}).`);
+  removeDevCacheAfterCrash(reason);
+}
 
 /** GET /login — 404 indica manifest route corrotto (redirect loop → pagina 404 standalone). */
 function fetchLoginRouteStatus(port: number): number | null {
@@ -156,6 +193,7 @@ if (orphanPortPid != null && pidAlive(orphanPortPid)) {
 }
 
 if (!fs.existsSync(LOCK_PATH)) {
+  pruneBloatedDevCacheIfIdle("bloated-cache-no-lock");
   process.exit(0);
 }
 

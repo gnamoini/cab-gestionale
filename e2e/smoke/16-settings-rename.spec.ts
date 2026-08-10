@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { attachConsoleGuards } from "../helpers/console";
 import { adminCredentials, loginViaUi } from "../fixtures/auth";
 import { test, expect } from "@playwright/test";
-import { openNuovaLavorazioneSchedaVuota, waitForGlobalOptionsReady } from "../helpers/lavorazioni-scheda";
+import { openNuovaLavorazioneSchedaVuota, waitForGlobalOptionsReady, nuovaLavorazioneSchedaDialog } from "../helpers/lavorazioni-scheda";
 
 test.describe.configure({ mode: "serial" });
 
@@ -101,7 +101,8 @@ test("impostazioni cliente propagato a combobox Lavorazioni senza reload", async
   await dismissPropagaIfVisible(page);
 
   await page.goto("/lavorazioni");
-  const scheda = await openNuovaLavorazioneSchedaVuota(page);
+  await openNuovaLavorazioneSchedaVuota(page);
+  const scheda = nuovaLavorazioneSchedaDialog(page);
   await waitForGlobalOptionsReady(scheda);
 
   const clienteCombo = scheda.getByRole("combobox", { name: "Cliente" });
@@ -135,7 +136,8 @@ test("impostazioni cantiere propagato a consumer Lavorazioni", async ({ page }) 
   await dismissPropagaIfVisible(page);
 
   await page.goto("/lavorazioni");
-  const scheda = await openNuovaLavorazioneSchedaVuota(page);
+  await openNuovaLavorazioneSchedaVuota(page);
+  const scheda = nuovaLavorazioneSchedaDialog(page);
   await waitForGlobalOptionsReady(scheda);
 
   const cantiereCombo = scheda.getByRole("combobox", { name: "Cantiere" });

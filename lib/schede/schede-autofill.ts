@@ -28,6 +28,25 @@ export function findMezzoForLavorazione(
   return mezzi.find((m) => lavorazioneMatchesMezzo(m, lav)) ?? null;
 }
 
+/** Edit hub: FK `mezzo_id` vince sul fuzzy match display (lavorazioneMatchesMezzo). */
+export function resolveMezzoForLavorazioneEdit(
+  mezzi: readonly MezzoGestito[],
+  lav: LavorazioneAttiva | LavorazioneArchiviata,
+  mezzoIdFk?: string | null,
+): MezzoGestito | null {
+  const fk = mezzoIdFk?.trim();
+  if (fk) {
+    const byFk = mezzi.find((m) => m.id === fk);
+    if (byFk) return byFk;
+  }
+  const legacyFk = "mezzoId" in lav ? lav.mezzoId?.trim() : "";
+  if (legacyFk) {
+    const byLegacy = mezzi.find((m) => m.id === legacyFk);
+    if (byLegacy) return byLegacy;
+  }
+  return findMezzoForLavorazione([...mezzi], lav);
+}
+
 export function buildIdentificazioneMacchina(
   lav: LavorazioneAttiva | LavorazioneArchiviata,
   mezzo: MezzoGestito | null,

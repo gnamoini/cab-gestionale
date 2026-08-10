@@ -178,6 +178,7 @@ export function LavorazioneCreateModal({
       />
       {create.unknownSettingsDialog}
       {create.saveGateDialog}
+      {create.mezzoLinkGateDialog}
     </>
   );
 }

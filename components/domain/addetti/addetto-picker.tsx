@@ -3,7 +3,7 @@
 import { AddettoSelectField } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 import { gestionaleFilterFieldInputClass } from "@/components/gestionale/lavorazioni/lavorazioni-filter-fields";
-import { useAddettiPickerOptions } from "@/src/hooks/gestionale/use-addetti-picker-options";
+import { useAddettiPickerOptions, type AddettiPickerMode } from "@/src/hooks/gestionale/use-addetti-picker-options";
 import type { FixedListPillOption, FixedListPillSelectLayout, FixedListPillSelectSize } from "@/components/gestionale/global-input/global-fixed-list-pill";
 
 export type AddettoPickerProps = {
@@ -23,6 +23,8 @@ export type AddettoPickerProps = {
   /** `inline` = tutte le pill visibili (pochi addetti). */
   layout?: FixedListPillSelectLayout;
   placeholder?: string;
+  /** `addetti` = solo addetti operativi; `all` = tutti i dipendenti attivi. */
+  mode?: AddettiPickerMode;
 };
 
 const FILTER_ALL = "__tutti__";
@@ -42,8 +44,9 @@ export function AddettoPicker({
   options: optionsProp,
   layout,
   placeholder,
+  mode = "addetti",
 }: AddettoPickerProps) {
-  const { options: hookOptions } = useAddettiPickerOptions(optionsProp ? null : value);
+  const { options: hookOptions } = useAddettiPickerOptions(optionsProp ? null : value, mode);
   const options = optionsProp ?? hookOptions;
   const selectValue = value?.trim() || (allowEmpty ? emptyValue : "");
 

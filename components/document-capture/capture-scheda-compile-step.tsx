@@ -948,6 +948,7 @@ export function CaptureSchedaCompileStep({
       />
       {create.unknownSettingsDialog}
       {create.saveGateDialog}
+      {create.mezzoLinkGateDialog}
       {selectedCandidate && mergeResult && pendingRegistryPlan ? (
         <CaptureMezzoRegistryConfirmDialog
           open={registryDialogOpen}

@@ -58,7 +58,10 @@ const bundle4h: LavorazioneSchedeBundle = {
           id: "r1",
           dataLavorazione: "2026-01-01",
           lavorazioniEffettuate: "Test",
-          addettiAssegnati: [{ addettoId: "a1", oreImpiegate: 2 }, { addettoId: "a2", oreImpiegate: 2 }],
+          addettiAssegnati: [
+            { addettoId: "a1", addetto: "", oreImpiegate: 2 },
+            { addettoId: "a2", addetto: "", oreImpiegate: 2 },
+          ],
         },
       ],
     },

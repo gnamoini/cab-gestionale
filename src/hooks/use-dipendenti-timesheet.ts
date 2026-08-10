@@ -17,9 +17,10 @@ import {
   type TimesheetPeriodMode,
 } from "@/lib/dipendenti/timesheet-month";
 import { RBAC_DENIED_MESSAGE } from "@/lib/rbac";
-import { useAddettiRecords, useTipiAssenza } from "@/src/hooks/use-global-options";
+import type { DipendenteRecord } from "@/lib/dipendenti/dipendente-record";
+import { getActiveDipendentiRecords } from "@/lib/dipendenti/dipendente-record";
+import { useDipendentiRecords, useTipiAssenza } from "@/src/hooks/use-global-options";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
-import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { usePwaUpdateGuard } from "@/lib/pwa/pwa-update-guard";
 import { QK } from "@/src/lib/react-query/query-keys";
@@ -73,12 +74,12 @@ function queryErrorMessage(error: Error | null): string | null {
   return error.message || "Errore di caricamento.";
 }
 
-function canSyncFromAddetti(addettiOpts: {
+function canSyncFromDipendenti(dipendentiOpts: {
   source: "app_settings" | "fallback" | "unavailable";
   isLoading: boolean;
-  records: readonly AddettoRecord[];
+  records: readonly DipendenteRecord[];
 }): boolean {
-  return addettiOpts.source === "app_settings" && !addettiOpts.isLoading && addettiOpts.records.length > 0;
+  return dipendentiOpts.source === "app_settings" && !dipendentiOpts.isLoading && dipendentiOpts.records.length > 0;
 }
 
 export function useDipendentiTimesheet(
@@ -86,7 +87,7 @@ export function useDipendentiTimesheet(
 ) {
   const { monthKey, periodMode, weekAnchor, dayDate } = normalizeOptions(monthKeyOrOptions);
   const queryClient = useQueryClient();
-  const addettiOpts = useAddettiRecords();
+  const dipendentiOpts = useDipendentiRecords();
   const tipiOpts = useTipiAssenza();
   const [saveStatus, setSaveStatus] = useState<"idle" | "pending" | "saved" | "error">("idle");
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -119,13 +120,12 @@ export function useDipendentiTimesheet(
 
   const previousMonthKey = useMemo(() => shiftMonthKey(monthKey, -1), [monthKey]);
 
-  const addettiReady = addettiOpts.source === "app_settings" && !addettiOpts.isLoading;
-  const hasRealAddetti = addettiReady && addettiOpts.records.length > 0;
-  const realAddettiRecords = addettiReady ? addettiOpts.records : [];
+  const dipendentiReady = dipendentiOpts.source === "app_settings" && !dipendentiOpts.isLoading;
+  const realDipendentiRecords = dipendentiReady ? dipendentiOpts.records : [];
 
-  const currentAddettiIds = useMemo(
-    () => new Set(realAddettiRecords.map((r) => r.id)),
-    [realAddettiRecords],
+  const currentDipendentiIds = useMemo(
+    () => new Set(getActiveDipendentiRecords(realDipendentiRecords).map((r) => r.id)),
+    [realDipendentiRecords],
   );
 
   const employeesQuery = useDipendentiEmployeesQuery();
@@ -137,20 +137,20 @@ export function useDipendentiTimesheet(
   const entriesQuery = useDipendentiEntriesRangeQuery(
     periodRange.from,
     periodRange.to,
-    registryReady && addettiReady,
+    registryReady && dipendentiReady,
     { expectedServerKey: periodMode === "month" ? entriesQueryKey : undefined },
   );
 
   const previousMonthQuery = useServiceQuery(
     [...QK.dipendentiTimesheetEntries, "prev", previousMonthKey] as const,
     () => dipendentiTimesheetEntry.listEntriesForMonth(previousMonthKey),
-    { enabled: registryReady && addettiReady && periodMode === "month" },
+    { enabled: registryReady && dipendentiReady && periodMode === "month" },
   );
 
   const monthKeysWithDataQuery = useDipendentiMonthKeysQuery(registryReady);
 
   const syncMutation = useServiceMutation(
-    (records: readonly AddettoRecord[]) =>
+    (records: readonly DipendenteRecord[]) =>
       dipendentiTimesheetEntry.syncFromAddettiRecords(records),
     {
       onSuccess: (rows) => {
@@ -160,8 +160,8 @@ export function useDipendentiTimesheet(
     },
   );
 
-  const runSyncFromAddetti = useCallback(
-    async (records: readonly AddettoRecord[]) => {
+  const runSyncFromDipendenti = useCallback(
+    async (records: readonly DipendenteRecord[]) => {
       setSyncInProgress(true);
       try {
         return await syncMutation.mutateAsync(records);
@@ -173,43 +173,46 @@ export function useDipendentiTimesheet(
   );
 
   const bootstrapEmployees = useCallback(async () => {
-    if (addettiOpts.isLoading) {
-      setSyncError("Attendere il caricamento degli addetti dalle Impostazioni.");
+    if (dipendentiOpts.isLoading) {
+      setSyncError("Attendere il caricamento dei dipendenti dalle Impostazioni.");
       return false;
     }
-    if (addettiOpts.source !== "app_settings") {
-      setSyncError("Impossibile sincronizzare: addetti non disponibili dalle Impostazioni.");
+    if (dipendentiOpts.source !== "app_settings") {
+      setSyncError("Impossibile sincronizzare: dipendenti non disponibili dalle Impostazioni.");
       return false;
     }
-    if (!addettiOpts.records.length) {
-      setSyncError("Nessun addetto configurato in Impostazioni.");
+    if (!dipendentiOpts.records.length) {
+      setSyncError("Nessun dipendente configurato in Impostazioni.");
       return false;
     }
     setSyncError(null);
     try {
-      await runSyncFromAddetti(addettiOpts.records);
+      await runSyncFromDipendenti(dipendentiOpts.records);
       return true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Impossibile inizializzare il registro dipendenti.";
       setSyncError(msg);
       return false;
     }
-  }, [addettiOpts.isLoading, addettiOpts.records, addettiOpts.source, runSyncFromAddetti]);
+  }, [dipendentiOpts.isLoading, dipendentiOpts.records, dipendentiOpts.source, runSyncFromDipendenti]);
 
-  const addettiRecordsSyncKey = useMemo(
-    () => addettiOpts.records.map((r) => `${r.id}|${r.nome}|${r.cognome ?? ""}`).join(";"),
-    [addettiOpts.records],
+  const dipendentiRecordsSyncKey = useMemo(
+    () =>
+      dipendentiOpts.records
+        .map((r) => `${r.id}|${r.nome}|${r.cognome ?? ""}|${r.employeeType}|${r.attivo}`)
+        .join(";"),
+    [dipendentiOpts.records],
   );
 
   useEffect(() => {
-    if (!canSyncFromAddetti(addettiOpts)) return;
-    if (autoSyncKeyRef.current === addettiRecordsSyncKey) return;
-    autoSyncKeyRef.current = addettiRecordsSyncKey;
-    void runSyncFromAddetti(addettiOpts.records).catch((e: unknown) => {
-      const msg = e instanceof Error ? e.message : "Sincronizzazione addetti non riuscita.";
+    if (!canSyncFromDipendenti(dipendentiOpts)) return;
+    if (autoSyncKeyRef.current === dipendentiRecordsSyncKey) return;
+    autoSyncKeyRef.current = dipendentiRecordsSyncKey;
+    void runSyncFromDipendenti(dipendentiOpts.records).catch((e: unknown) => {
+      const msg = e instanceof Error ? e.message : "Sincronizzazione dipendenti non riuscita.";
       setSyncError(msg);
     });
-  }, [addettiOpts.source, addettiOpts.isLoading, addettiRecordsSyncKey, runSyncFromAddetti]);
+  }, [dipendentiOpts.source, dipendentiOpts.isLoading, dipendentiRecordsSyncKey, runSyncFromDipendenti, dipendentiOpts.records]);
 
   const upsertMutation = useServiceMutation(
     (input: TimesheetEntryUpsert) =>
@@ -327,9 +330,9 @@ export function useDipendentiTimesheet(
   const { displayEmployees, employeeIdsWithEntriesInPeriod, getCellValue } = useDipendentiTimesheetDerived(
     employees,
     entriesQuery.data ?? [],
-    realAddettiRecords,
-    addettiReady,
-    currentAddettiIds,
+    realDipendentiRecords,
+    dipendentiReady,
+    currentDipendentiIds,
   );
 
   const employeesError = employeesQuery.isError ? queryErrorMessage(employeesQuery.error) : null;
@@ -338,7 +341,7 @@ export function useDipendentiTimesheet(
 
   const loadPhase = useMemo((): TimesheetLoadPhase => {
     if (employeesError) return "error";
-    if (!addettiReady || addettiOpts.isLoading) return "settings";
+    if (!dipendentiReady || dipendentiOpts.isLoading) return "settings";
     if (employeesQuery.isLoading) return "registry";
     if (entriesQuery.isLoading && entriesQuery.data == null) return "entries";
     if (entriesError && entriesQuery.data == null) return "error";
@@ -347,8 +350,8 @@ export function useDipendentiTimesheet(
     employeesError,
     entriesError,
     entriesQuery.data,
-    addettiReady,
-    addettiOpts.isLoading,
+    dipendentiReady,
+    dipendentiOpts.isLoading,
     employeesQuery.isLoading,
     entriesQuery.isLoading,
   ]);
@@ -378,10 +381,10 @@ export function useDipendentiTimesheet(
     entries: entriesQuery.data ?? [],
     previousMonthEntries: previousMonthQuery.data ?? [],
     tipiAssenza: tipiOpts.tipi,
-    addettiRecords: realAddettiRecords,
-    addettiReady,
-    addettiSource: addettiOpts.source,
-    hasRealAddetti,
+    dipendentiRecords: realDipendentiRecords,
+    dipendentiReady,
+    dipendentiSource: dipendentiOpts.source,
+    hasRealDipendenti: dipendentiReady && realDipendentiRecords.length > 0,
     loadPhase,
     errorKind,
     isInitialLoading,

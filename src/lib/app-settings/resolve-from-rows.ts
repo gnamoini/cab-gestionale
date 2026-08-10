@@ -1,11 +1,13 @@
 import { migrateAddettoColorMapNomeToId, syncAddettoColorMap, syncAddettoColorMapById } from "@/lib/lavorazioni/addetto-colors-assign";
 import {
-  defaultAddettiRecords,
-  migrateLegacyAddettiStrings,
-  parseAddettiRecordsFromPayload,
-  syncLavorazioniAddettiFromRecords,
-  type AddettoRecord,
-} from "@/lib/lavorazioni/addetto-model";
+  defaultDipendentiRecords,
+  parseDipendentiRecordsFromPayload,
+  resolveAddettiLegacyNomiFromDipendenti,
+  resolveAddettiRecordsFromDipendenti,
+  serializeDipendentiRecordsForPayload,
+  type DipendenteRecord,
+} from "@/lib/dipendenti/dipendente-record";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { DEFAULT_STATI_LAVORAZIONI_WORKFLOW, normalizeStatiList } from "@/lib/lavorazioni/stati-dynamic";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
@@ -50,6 +52,7 @@ export type CabAppSettingsResolved = {
   magazzinoMaster: MagazzinoMasterPrefs;
   preventiviDefaults: SistemaPreventiviDefaults;
   dipendenti: {
+    dipendentiRecords: DipendenteRecord[];
     tipiAssenza: TipoAssenzaConfig[];
   };
   branding: CabBrandingSettings;
@@ -58,35 +61,30 @@ export type CabAppSettingsResolved = {
 const FALLBACK_PREVENTIVI: SistemaPreventiviDefaults = { costoOrarioDefault: 48 };
 
 function defaultLavorazioni(): CabAppSettingsResolved["lavorazioni"] {
-  const { addettiRecords, addetti } = syncLavorazioniAddettiFromRecords(defaultAddettiRecords());
+  const dipendentiRecords = defaultDipendentiRecords();
+  const addettiRecords = resolveAddettiRecordsFromDipendenti(dipendentiRecords);
   return {
     stati: [...DEFAULT_STATI_LAVORAZIONI_WORKFLOW],
     addettiRecords,
-    addetti,
+    addetti: resolveAddettiLegacyNomiFromDipendenti(dipendentiRecords),
     addettoColors: syncAddettoColorMapById(addettiRecords, undefined),
     prioritaColors: {},
     prioritaDb: [...DEFAULT_PRIORITA_LAVORAZIONI_DB],
   };
 }
 
-function resolveAddettiFromPayload(o: Record<string, unknown>): {
+function resolveLavorazioniAddettiFromDipendentiPayload(o: Record<string, unknown>): {
+  dipendentiRecords: DipendenteRecord[];
   addettiRecords: AddettoRecord[];
   addetti: string[];
 } {
-  const fromRecords = parseAddettiRecordsFromPayload(o.addettiRecords);
-  if (fromRecords) {
-    return syncLavorazioniAddettiFromRecords(fromRecords);
-  }
-  if (Array.isArray(o.addetti)) {
-    const legacy = (o.addetti as unknown[])
-      .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
-      .map((x) => x.trim());
-    if (legacy.length) {
-      return syncLavorazioniAddettiFromRecords(migrateLegacyAddettiStrings(legacy));
-    }
-  }
-  const fallback = syncLavorazioniAddettiFromRecords(defaultAddettiRecords());
-  return fallback;
+  const dipendentiRecords = parseDipendentiRecordsFromPayload(o);
+  const addettiRecords = resolveAddettiRecordsFromDipendenti(dipendentiRecords);
+  return {
+    dipendentiRecords,
+    addettiRecords,
+    addetti: resolveAddettiLegacyNomiFromDipendenti(dipendentiRecords),
+  };
 }
 
 function parsePrioritaDb(_raw: unknown): PrioritaLavorazione[] {
@@ -101,7 +99,7 @@ function parseLavorazioniPayload(raw: unknown): CabAppSettingsResolved["lavorazi
     const stati = normalizeStatiList(o.stati as StatoLavorazioneConfig[]);
     if (stati.length) base.stati = stati;
   }
-  const addettiResolved = resolveAddettiFromPayload(o);
+  const addettiResolved = resolveLavorazioniAddettiFromDipendentiPayload(o);
   base.addettiRecords = addettiResolved.addettiRecords;
   base.addetti = addettiResolved.addetti;
   const legacyColors =
@@ -215,7 +213,16 @@ export function resolveCabAppSettingsFromRows(
         : { ...FALLBACK_PREVENTIVI };
 
   const dipRow = pick(CAB_SETTINGS_MODULE.dipendenti, CAB_SETTINGS_KEY.prefs);
+  const lavPayload =
+    lavRow != null
+      ? (lavRow.value as Record<string, unknown>)
+      : legacy?.lavorazioni != null
+        ? (legacy.lavorazioni as unknown as Record<string, unknown>)
+        : {};
+  const dipendentiRecordsFromLav = parseDipendentiRecordsFromPayload(lavPayload);
+
   const dipendenti = {
+    dipendentiRecords: dipendentiRecordsFromLav,
     tipiAssenza:
       dipRow != null
         ? parseTipiAssenzaFromPayload((dipRow.value as Record<string, unknown>).tipiAssenza)
@@ -240,8 +247,7 @@ export function buildBulkRowsFromResolved(r: CabAppSettingsResolved): { module: 
       key: CAB_SETTINGS_KEY.prefs,
       value: {
         stati: r.lavorazioni.stati,
-        addettiRecords: r.lavorazioni.addettiRecords,
-        addetti: r.lavorazioni.addetti,
+        dipendentiRecords: serializeDipendentiRecordsForPayload(r.dipendenti.dipendentiRecords),
         addettoColors: r.lavorazioni.addettoColors,
         prioritaColors: r.lavorazioni.prioritaColors,
         prioritaDb: r.lavorazioni.prioritaDb,

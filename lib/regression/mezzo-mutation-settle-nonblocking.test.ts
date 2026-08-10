@@ -25,9 +25,9 @@ async function testVoidActiveRefetchDoesNotBlockSettle(): Promise<void> {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   let activeRefetchStarted = false;
-  let releaseActive: (() => void) | null = null;
+  let releaseActive: (() => void) | undefined;
   const activeGate = new Promise<void>((resolve) => {
-    releaseActive = resolve;
+    releaseActive = () => resolve();
   });
 
   const originalInvalidate = qc.invalidateQueries.bind(qc);
@@ -55,7 +55,7 @@ async function testVoidActiveRefetchDoesNotBlockSettle(): Promise<void> {
 
   assert.equal(raced, "settled");
   assert.equal(activeRefetchStarted, true);
-  releaseActive?.();
+  if (releaseActive) releaseActive();
 }
 
 const removeMut = read("src/hooks/gestionale/use-mezzo-remove-mutation.ts");

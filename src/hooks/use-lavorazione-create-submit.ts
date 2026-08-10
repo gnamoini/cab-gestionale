@@ -591,7 +591,7 @@ export function useLavorazioneCreateSubmit({
                     lavorazioni: store[lavorazioneId]?.lavorazioni ?? null,
                     ricambi: store[lavorazioneId]?.ricambi ?? null,
                   };
-                  return persistSchedeStore(store, lavorazioneId);
+                  return persistSchedeStore(store, lavorazioneId, qc);
                 },
               },
             );
@@ -746,7 +746,8 @@ export function useLavorazioneCreateSubmit({
     partialSuccessRef,
     createdLavorazioneIdRef,
     unknownSettingsDialog,
-    saveGateDialog: [saveGate.dialog, mezzoLinkGate.dialog],
+    saveGateDialog: saveGate.dialog,
+    mezzoLinkGateDialog: mezzoLinkGate.dialog,
     gateSave: saveGate.gateSave,
     lavorazioneNote,
     setLavorazioneNote,

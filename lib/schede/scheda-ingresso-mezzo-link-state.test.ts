@@ -8,6 +8,7 @@ import {
   resolvePreferredMezzoIdForSave,
 } from "@/lib/schede/scheda-ingresso-mezzo-link-state";
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import type { SchedaIngressoFields } from "@/types/schede";
 
 const mezzo = {
   id: "m1",
@@ -32,7 +33,7 @@ assert.deepEqual(listLinkedMezzoFieldConflicts(fromMezzo, snapshot), ["matricola
 const baseline = pickMezzoPermanentFields(fromMezzo);
 baseline.matricola = "TIS272312/14";
 const earlySnapshot = createLinkedMezzoSnapshotFromFields(mezzo, baseline, "matricola");
-const afterAutoPatch = { ...baseline, targetType: "attrezzatura" as const };
+const afterAutoPatch = { ...baseline, targetType: "attrezzatura" as const } as SchedaIngressoFields;
 assert.deepEqual(listLinkedMezzoFieldConflicts(afterAutoPatch, earlySnapshot), ["targetType"]);
 const lateSnapshot = createLinkedMezzoSnapshotFromFields(mezzo, afterAutoPatch, "matricola");
 assert.deepEqual(listLinkedMezzoFieldConflicts(afterAutoPatch, lateSnapshot), []);

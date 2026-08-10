@@ -219,7 +219,8 @@ const a4LongPlaced = resolveLabelTextLayout(a4, {
   codiceAlternativo: "",
   fornitoriAlternativi: [],
 });
-const a4DescEl = a4.elements.find((e) => e.type === "text" && e.field === "descrizione")!;
+const a4DescEl = a4.elements.find((e) => e.type === "text" && e.field === "descrizione");
+assert.ok(a4DescEl?.type === "text");
 const a4DescW = a4DescEl.maxWidthMm ?? a4.widthMm - a4.marginsMm * 2;
 const a4ShortPlaced = resolveLabelTextLayout(a4, {
   marca: "BTE",
