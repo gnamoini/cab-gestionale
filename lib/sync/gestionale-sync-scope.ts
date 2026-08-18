@@ -10,6 +10,7 @@ export type GestionaleSyncDomain =
   | "report"
   | "mezzi"
   | "preventivi"
+  | "ordini_fornitori"
   | "documenti"
   | "agenda"
   | "dipendenti"
@@ -84,8 +85,8 @@ export const TABLE_TO_SYNC_DOMAIN: Partial<Record<string, GestionaleSyncDomain>>
   scheda_lavorazione: "lavorazioni",
   magazzino_ricambi: "magazzino",
   movimenti_ricambi: "magazzino",
-  ordini_fornitori: "magazzino",
-  ordini_fornitori_righe: "magazzino",
+  ordini_fornitori: "ordini_fornitori",
+  ordini_fornitori_righe: "ordini_fornitori",
   inventory_documents: "magazzino",
   inventory_document_lines: "magazzino",
   mezzi: "mezzi",

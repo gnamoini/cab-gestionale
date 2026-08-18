@@ -73,7 +73,7 @@ const PREFETCH_ROUTES_BY_SCOPE: Partial<Record<QueryScopeKey, readonly string[]>
   "report.manualEntries": ["/report"],
   "documenti.list": ["/documenti"],
   "preventivi.list": ["/preventivi"],
-  "ordini_fornitori.list": ["/preventivi"],
+  "ordini_fornitori.list": ["/ordini-fornitori"],
   "fatturazione.list": ["/fatturazione"],
   "fatturazione.openItems": ["/fatturazione"],
   "fatturazione.payments": ["/fatturazione"],

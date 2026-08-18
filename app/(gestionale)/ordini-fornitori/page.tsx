@@ -1,8 +1,6 @@
 import { dehydrate } from "@tanstack/react-query";
-import { redirect } from "next/navigation";
 import { PageLayout } from "@/components/design-system";
-import { PreventiviViewLazy } from "@/components/gestionale/lazy-route-views";
-import { Q_PREVENTIVI_TAB } from "@/lib/preventivi/preventivi-query";
+import { OrdiniFornitoriPageViewLazy } from "@/components/gestionale/lazy-route-views";
 import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";
 import {
   createServerQueryClient,
@@ -11,24 +9,14 @@ import {
 import { STRUCTURAL_ROUTE_PAGE_TITLES } from "@/lib/ui/structural-route-skeleton-contracts";
 import { resolveListSurfaceForPage } from "@/lib/ui/resolve-list-surface.server";
 
-type PreventiviPageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
-
-export default async function PreventiviPage({ searchParams }: PreventiviPageProps) {
-  const sp = await searchParams;
-  const tabRaw = sp[Q_PREVENTIVI_TAB];
-  if (tabRaw === "ordini") {
-    redirect("/ordini-fornitori");
-  }
-
+export default async function OrdiniFornitoriPage() {
   const qc = createServerQueryClient();
   const listSurface = await resolveListSurfaceForPage();
-  await prefetchGestionalePage(qc, "preventivi");
+  await prefetchGestionalePage(qc, "ordini_fornitori");
   return (
-    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.preventivi}>
+    <PageLayout title={STRUCTURAL_ROUTE_PAGE_TITLES.ordini_fornitori}>
       <GestionaleHydrationBoundary state={dehydrate(qc)}>
-        <PreventiviViewLazy listSurface={listSurface} listTier="xl" />
+        <OrdiniFornitoriPageViewLazy listSurface={listSurface} listTier="xl" />
       </GestionaleHydrationBoundary>
     </PageLayout>
   );

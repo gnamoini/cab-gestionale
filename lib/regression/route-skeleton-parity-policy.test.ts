@@ -15,6 +15,7 @@ const PAGE_STRUCTURE_FILES: Record<string, string> = {
   MezziPageStructure: "components/gestionale/mezzi/mezzi-page-structure.tsx",
   DocumentiPageStructure: "components/gestionale/documenti/documenti-page-structure.tsx",
   PreventiviPageStructure: "components/preventivi/preventivi-page-structure.tsx",
+  OrdiniFornitoriPageStructure: "components/ordini-fornitori/ordini-fornitori-page-structure.tsx",
   LavorazioniPageStructure: "components/gestionale/lavorazioni/lavorazioni-page-structure.tsx",
   ReportPageStructure: "components/report/report-page-structure.tsx",
   AgendaPageStructure: "components/workshop-schedule/agenda-page-structure.tsx",

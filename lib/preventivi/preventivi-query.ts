@@ -1,7 +1,7 @@
 /** Query sulla pagina Preventivi: filtro per lavorazione collegata. */
 export const Q_PREVENTIVI_LAV = "prevLav";
 export const Q_PREVENTIVI_LAV_ORIG = "prevOrig";
-/** Tab pagina preventivi: preventivi | ordini */
+/** Legacy redirect: `?prevTab=ordini` → `/ordini-fornitori`. */
 export const Q_PREVENTIVI_TAB = "prevTab";
 /** Filtro preventivi per mezzo anagrafica (id). */
 export const Q_PREVENTIVI_MEZZO = "prevMezzo";

@@ -14,6 +14,7 @@ export type LoadingPageSkeletonVariant =
   | "mezzi"
   | "documenti"
   | "preventivi"
+  | "ordini_fornitori"
   | "clienti"
   | "dashboard"
   | "dipendenti"

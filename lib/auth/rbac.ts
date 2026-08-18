@@ -166,7 +166,7 @@ const LEGACY_SECTION_TO_PAGE: Record<string, GestionalePageKey> = {
   dipendenti: "dipendenti",
   fatturazione: "fatturazione",
   ddt: "preventivi",
-  ordini_fornitori: "preventivi",
+  ordini_fornitori: "ordini_fornitori",
   impostazioni: "impostazioni",
   security: "sicurezza",
   agenda: "agenda",

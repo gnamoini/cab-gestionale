@@ -13,6 +13,7 @@ const SUSPENSE_VARIANT_MIN_HEIGHT: Record<LoadingPageSkeletonVariant, string> = 
   mezzi: SKELETON_MIN_HEIGHT.tableDesktop,
   documenti: SKELETON_MIN_HEIGHT.tableDocumenti,
   preventivi: SKELETON_MIN_HEIGHT.tableDesktop,
+  ordini_fornitori: SKELETON_MIN_HEIGHT.tableDesktop,
   fatturazione: SKELETON_MIN_HEIGHT.tableDesktop,
   dipendenti: SKELETON_MIN_HEIGHT.tableDesktop,
   report: SKELETON_MIN_HEIGHT.chart,

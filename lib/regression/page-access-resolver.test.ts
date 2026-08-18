@@ -68,7 +68,7 @@ const readOnlyMag = resolvePageAccess({
 assert.equal(canReadPage(readOnlyMag, "magazzino"), true);
 assert.equal(canWritePage(readOnlyMag, "magazzino"), false);
 
-// Espansione moduli — preventivi espande ddt
+// Espansione moduli — preventivi espande ddt, non più ordini_fornitori
 const prevWrite = resolvePageAccess({
   userId: USER,
   roleKey: "operatore",
@@ -76,5 +76,24 @@ const prevWrite = resolvePageAccess({
   userPageOverrides: {},
 });
 assert.equal(prevWrite.modules.ddt.canWrite, true, "preventivi write expands ddt.write");
+assert.equal(prevWrite.modules.ordini_fornitori.canWrite, false, "preventivi no longer expands ordini_fornitori");
+
+const ordiniWrite = resolvePageAccess({
+  userId: USER,
+  roleKey: "manager",
+  rolePageAccess: seedPageAccessForRole("manager"),
+  userPageOverrides: {},
+});
+assert.equal(canWritePage(ordiniWrite, "ordini_fornitori"), true, "manager ordini_fornitori page write");
+assert.equal(ordiniWrite.modules.ordini_fornitori.canWrite, true, "ordini_fornitori page expands module write");
+
+const guestOrdini = resolvePageAccess({
+  userId: USER,
+  roleKey: "guest",
+  rolePageAccess: seedPageAccessForRole("guest"),
+  userPageOverrides: {},
+});
+assert.equal(canReadPage(guestOrdini, "ordini_fornitori"), true, "guest ordini_fornitori read");
+assert.equal(canWritePage(guestOrdini, "ordini_fornitori"), false, "guest ordini_fornitori no write");
 
 console.log("page-access-resolver.test.ts OK");

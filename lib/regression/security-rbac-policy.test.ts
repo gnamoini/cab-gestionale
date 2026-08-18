@@ -13,13 +13,15 @@ const matrix: Array<{
   sicurezzaWrite: boolean;
   lavorazioniWrite: boolean;
   lavorazioniClientiRead: boolean;
+  ordiniFornitoriWrite: boolean;
+  ordiniFornitoriRead: boolean;
 }> = [
-  { role: "admin", dashboardWrite: true, impostazioniWrite: true, sicurezzaWrite: true, lavorazioniWrite: true, lavorazioniClientiRead: true },
-  { role: "manager", dashboardWrite: true, impostazioniWrite: true, sicurezzaWrite: false, lavorazioniWrite: true, lavorazioniClientiRead: false },
-  { role: "operatore", dashboardWrite: false, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: true, lavorazioniClientiRead: false },
-  { role: "addetto_amministrativo", dashboardWrite: true, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: false, lavorazioniClientiRead: false },
-  { role: "cliente", dashboardWrite: false, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: false, lavorazioniClientiRead: true },
-  { role: "guest", dashboardWrite: false, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: false, lavorazioniClientiRead: false },
+  { role: "admin", dashboardWrite: true, impostazioniWrite: true, sicurezzaWrite: true, lavorazioniWrite: true, lavorazioniClientiRead: true, ordiniFornitoriWrite: true, ordiniFornitoriRead: true },
+  { role: "manager", dashboardWrite: true, impostazioniWrite: true, sicurezzaWrite: false, lavorazioniWrite: true, lavorazioniClientiRead: false, ordiniFornitoriWrite: true, ordiniFornitoriRead: true },
+  { role: "operatore", dashboardWrite: false, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: true, lavorazioniClientiRead: false, ordiniFornitoriWrite: false, ordiniFornitoriRead: false },
+  { role: "addetto_amministrativo", dashboardWrite: true, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: false, lavorazioniClientiRead: false, ordiniFornitoriWrite: true, ordiniFornitoriRead: true },
+  { role: "cliente", dashboardWrite: false, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: false, lavorazioniClientiRead: true, ordiniFornitoriWrite: false, ordiniFornitoriRead: false },
+  { role: "guest", dashboardWrite: false, impostazioniWrite: false, sicurezzaWrite: false, lavorazioniWrite: false, lavorazioniClientiRead: false, ordiniFornitoriWrite: false, ordiniFornitoriRead: true },
 ];
 
 for (const row of matrix) {
@@ -30,6 +32,8 @@ for (const row of matrix) {
   assert.equal(canWritePage(r, "sicurezza"), row.sicurezzaWrite, `${row.role} sicurezza write`);
   assert.equal(canWritePage(r, "lavorazioni"), row.lavorazioniWrite, `${row.role} lavorazioni write`);
   assert.equal(canReadPage(r, "lavorazioni_clienti"), row.lavorazioniClientiRead, `${row.role} client portal`);
+  assert.equal(canWritePage(r, "ordini_fornitori"), row.ordiniFornitoriWrite, `${row.role} ordini fornitori write`);
+  assert.equal(canReadPage(r, "ordini_fornitori"), row.ordiniFornitoriRead, `${row.role} ordini fornitori read`);
 }
 
 assert.equal(clienteRoleRequiresRef("cliente"), true);

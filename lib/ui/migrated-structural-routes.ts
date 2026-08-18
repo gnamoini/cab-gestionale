@@ -4,6 +4,7 @@ export const MIGRATED_STRUCTURAL_ROUTES = [
   "mezzi",
   "documenti",
   "preventivi",
+  "ordini_fornitori",
   "dashboard",
   "lavorazioni",
   "report",

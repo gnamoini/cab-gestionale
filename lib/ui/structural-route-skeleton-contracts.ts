@@ -87,6 +87,10 @@ export const STRUCTURAL_ROUTE_SKELETON_CONTRACTS: Record<MigratedStructuralRoute
     ...COMBINED_LIST_SKELETON_CONTRACT,
     sectionLabel: "Azioni e filtri preventivi",
   },
+  ordini_fornitori: {
+    ...COMBINED_LIST_SKELETON_CONTRACT,
+    sectionLabel: "Azioni e filtri ordini fornitori",
+  },
   documenti: {
     kind: "stack",
     geometry: { height: "toolbar" },
@@ -256,6 +260,7 @@ export const STRUCTURAL_ROUTE_PAGE_STRUCTURE: Record<MigratedStructuralRoute, st
   mezzi: "MezziPageStructure",
   documenti: "DocumentiPageStructure",
   preventivi: "PreventiviPageStructure",
+  ordini_fornitori: "OrdiniFornitoriPageStructure",
   dashboard: "DashboardPageStructure",
   lavorazioni: "LavorazioniPageStructure",
   report: "ReportPageStructure",
@@ -275,6 +280,7 @@ export const STRUCTURAL_ROUTE_PAGE_TITLES: Record<MigratedStructuralRoute, strin
   mezzi: "Mezzi",
   documenti: "Documenti",
   preventivi: "Preventivi",
+  ordini_fornitori: "Ordini fornitori",
   dashboard: "Dashboard",
   lavorazioni: "Lavorazioni",
   report: "Report",

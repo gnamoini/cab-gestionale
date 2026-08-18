@@ -32,10 +32,6 @@ const PreventiviEditorModal = dynamic(
   () => import("@/components/preventivi/preventivi-editor-modal").then((m) => m.PreventiviEditorModal),
   { ssr: false },
 );
-const OrdiniFornitoriView = dynamic(
-  () => import("@/components/ordini-fornitori/ordini-fornitori-view").then((m) => m.OrdiniFornitoriView),
-  { ssr: false },
-);
 const PreventiviAdvancedFilterPanel = dynamic(
   () =>
     import("@/components/preventivi/preventivi-advanced-filter-panel").then((m) => m.PreventiviAdvancedFilterPanel),
@@ -132,7 +128,7 @@ import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-stor
 import { buildNewPreventivoFromLavorazioneContext } from "@/lib/preventivi/generate-preventivo-from-lavorazione";
 import { buildPreventiviLavorazioneFocusHref } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
-import { Q_PREVENTIVI_LAV, Q_PREVENTIVI_LAV_ORIG, Q_PREVENTIVI_MEZZO, Q_PREVENTIVI_NUOVO, Q_PREVENTIVI_OPEN, Q_PREVENTIVI_TAB } from "@/lib/preventivi/preventivi-query";
+import { Q_PREVENTIVI_LAV, Q_PREVENTIVI_LAV_ORIG, Q_PREVENTIVI_MEZZO, Q_PREVENTIVI_NUOVO, Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
 import {
   peekPendingPreventivoPayload,
   clearPendingPreventivoPayload,
@@ -144,10 +140,9 @@ import {
 import { buildLogModificheDisplayEntries, logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { removePreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
 import { usePreventiviListDerived } from "@/lib/preventivi/use-preventivi-list-derived";
-import { preventiviRecordsQueryKey, ordiniFornitoriListQueryKey } from "@/lib/render/query-key-factory";
+import { preventiviRecordsQueryKey } from "@/lib/render/query-key-factory";
 import { usesServerSearch } from "@/lib/search/registry";
 import { compareSearchRelevance, isSearchRelevanceSortActive } from "@/lib/search/sort-by-relevance";
-import { ordiniFornitoriEntry } from "@/lib/domain/ordini-fornitori-entry";
 import { preventiviEntry } from "@/lib/domain/preventivi-entry";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
@@ -171,9 +166,6 @@ import {
   dsBtnNeutral,
   dsPageToolbarBtn,
   dsPageToolbarCtaCompact,
-  dsSegmentedBtnOff,
-  dsSegmentedBtnOn,
-  dsSegmentedWrap,
   GESTIONALE_SEARCH_PLACEHOLDER,
   dsTableRow,
   dsTableTdActions,
@@ -427,26 +419,12 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
   const listSurface = useListSurface(serverListSurface);
   const { modules: permModules } = usePermissionsSnapshot();
   const prevPerm = permModules.preventivi;
-  const ordiniPerm = permModules.ordini_fornitori;
-  const canEditWorkOrders = prevPerm.canWrite;
   const canReadPreventivi = prevPerm.canRead;
   const canWritePreventivi = prevPerm.canWrite;
+  const canEditWorkOrders = prevPerm.canWrite;
   const canDeleteRecords = prevPerm.canWrite;
   const router = useRouter();
   const searchParams = useSearchParams();
-  const pageTabRaw = searchParams.get(Q_PREVENTIVI_TAB);
-  const pageTab = pageTabRaw === "ordini" && ordiniPerm.canRead ? "ordini" : "preventivi";
-  const setPageTab = useCallback(
-    (tab: "preventivi" | "ordini") => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (tab === "preventivi") params.delete(Q_PREVENTIVI_TAB);
-      else params.set(Q_PREVENTIVI_TAB, tab);
-      const qs = params.toString();
-      router.replace(qs ? `?${qs}` : "?", { scroll: false });
-    },
-    [router, searchParams],
-  );
-  const isPreventiviTab = pageTab === "preventivi";
   const filterMezzoRawEarly = searchParams.get(Q_PREVENTIVI_MEZZO)?.trim() || "";
   const nuovoHandoffEarly = searchParams.get(Q_PREVENTIVI_NUOVO);
   const [editor, setEditor] = useState<{
@@ -469,10 +447,9 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
         !filterMezzoRawEarly.startsWith("m:"),
     );
   const needMezziCatalog =
-    isPreventiviTab && (filterMezzoNeedsCatalog || nuovoHandoffEarly === "1" || editor.open);
-  const needLavorazioniSlice =
-    isPreventiviTab && filterMezzoRawEarly.startsWith("hub-lav-");
-  const needMagazzinoList = isPreventiviTab;
+    filterMezzoNeedsCatalog || nuovoHandoffEarly === "1" || editor.open;
+  const needLavorazioniSlice = filterMezzoRawEarly.startsWith("hub-lav-");
+  const needMagazzinoList = true;
   const { authorName: autore, user } = useAuth();
   const gestToast = useGestionaleToast();
   const queryClient = useQueryClient();
@@ -482,26 +459,13 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
   const onSearchAppliedChange = useCallback((q: string) => setSearchApplied(q), []);
   const onDebouncedInputChange = useCallback((q: string) => setSuggestionQuery(q), []);
   const { records: rows, refetch: refetchPreventivi, isLoading: preventiviQueryLoading } =
-    usePreventiviRecordsQuery(isPreventiviTab, { search: searchApplied });
-  const { byPreventivoId: preventiviBillingById } = usePreventiviBillingQuery(isPreventiviTab);
+    usePreventiviRecordsQuery(true, { search: searchApplied });
+  const { byPreventivoId: preventiviBillingById } = usePreventiviBillingQuery(true);
   const preventiviReadyMarked = useRef(false);
   useEffect(() => {
     void loadPreventiviLearningMerged().then((merged) => savePreventiviLearning(merged));
     void migratePreventiviLearningToSettings();
   }, []);
-  useEffect(() => {
-    if (pageTab !== "ordini" || !ordiniPerm.canRead) return;
-    const key = ordiniFornitoriListQueryKey();
-    if (queryClient.getQueryData(key) !== undefined) return;
-    void queryClient.prefetchQuery({
-      queryKey: key,
-      queryFn: async () => {
-        const res = await ordiniFornitoriEntry.getList();
-        if (!res.success) throw new Error(res.error ?? "Errore caricamento ordini.");
-        return res.data ?? [];
-      },
-    });
-  }, [pageTab, ordiniPerm.canRead, queryClient]);
   useEffect(() => {
     if (preventiviReadyMarked.current || rows.length === 0) return;
     preventiviReadyMarked.current = true;
@@ -539,7 +503,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
     [rows],
   );
   const { store: schedeStore, isLoading: schedeBundlesLoading } = useSchedeBundlesQuery(
-    isPreventiviTab && lavorazioneIdsForSchede.length > 0,
+    lavorazioneIdsForSchede.length > 0,
     { lavorazioneIds: lavorazioneIdsForSchede },
   );
   const magazzinoById = useMemo(() => {
@@ -1208,34 +1172,8 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
     </div>
   ) : null;
 
-  const documentSectionTabs = ordiniPerm.canRead ? (
-    <div className={`${dsSegmentedWrap} w-fit`} role="tablist" aria-label="Sezione documenti">
-      <button
-        type="button"
-        role="tab"
-        aria-selected={pageTab === "preventivi"}
-        className={pageTab === "preventivi" ? dsSegmentedBtnOn : dsSegmentedBtnOff}
-        onClick={() => setPageTab("preventivi")}
-      >
-        Preventivi
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={pageTab === "ordini"}
-        className={pageTab === "ordini" ? dsSegmentedBtnOn : dsSegmentedBtnOff}
-        onClick={() => setPageTab("ordini")}
-      >
-        Ordini fornitori
-      </button>
-    </div>
-  ) : null;
-
   const importTriggerRef = useRef<HTMLDivElement>(null);
   const preventiviMenuItems = useMemo((): PageActionItem[] => {
-    if (pageTab !== "preventivi") {
-      return [pageActionLogItem(() => setLogOpen(true), "Log attività")];
-    }
     return [
       {
         id: "import",
@@ -1247,7 +1185,7 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
       },
       pageActionLogItem(() => setLogOpen(true), "Log attività"),
     ];
-  }, [pageTab]);
+  }, []);
 
   return (
     <GestionaleSectionGate module="preventivi">
@@ -1259,14 +1197,6 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
     </div>
     <div className={`lavorazioni-scroll-scope ${layoutPageRoot} ${gestionaleListTierClass(listTier)}`.trim()}>
     <>
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        {documentSectionTabs}
-      </div>
-
-      {pageTab === "ordini" ? (
-        <OrdiniFornitoriView listSurface={listSurface} canRead={canReadPreventivi} canWrite={canWritePreventivi} />
-      ) : (
-        <>
       {bannerFilter}
       {bannerMezzo}
 
@@ -1577,8 +1507,6 @@ export function PreventiviView({ listSurface: serverListSurface, listTier = "xl"
           }}
         />
       ) : null}
-        </>
-      )}
 
       {analisiEconomicaPreventivoId ? (
         <PreventivoAnalisiEconomicaModal

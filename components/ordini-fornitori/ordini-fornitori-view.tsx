@@ -145,11 +145,14 @@ export function OrdiniFornitoriView({
   listSurface,
   canRead,
   canWrite,
+  initialOrdineId,
 }: {
   listSurface: ListSurface;
-  /** Permessi pagina Preventivi (read = visualizza, write = modifica). */
+  /** Permessi pagina Ordini fornitori (read = visualizza, write = modifica). */
   canRead: boolean;
   canWrite: boolean;
+  /** Deep link `?ordine=<uuid>` dalla pagina dedicata. */
+  initialOrdineId?: string;
 }) {
   const userId = useAuthUserId();
   const qc = useQueryClient();
@@ -177,6 +180,7 @@ export function OrdiniFornitoriView({
   const [deleteTarget, setDeleteTarget] = useState<OrdineFornitoreRecord | null>(null);
   const [deletePending, setDeletePending] = useState(false);
   const pendingStatusRef = useRef(new Set<string>());
+  const initialOrdineHandledRef = useRef(false);
 
   const pageFilters = useMemo(
     (): OrdiniFornitoriPageFilters => ({ ...filters, search: searchApplied }),
@@ -296,6 +300,14 @@ export function OrdiniFornitoriView({
     },
     [gestToast],
   );
+
+  useEffect(() => {
+    if (!initialOrdineId || !canRead || initialOrdineHandledRef.current || isLoading) return;
+    const match = records.find((r) => r.id === initialOrdineId);
+    if (!match) return;
+    initialOrdineHandledRef.current = true;
+    void openView(match);
+  }, [initialOrdineId, canRead, isLoading, records, openView]);
 
   const openDuplicate = useCallback(
     (record: OrdineFornitoreRecord) => {

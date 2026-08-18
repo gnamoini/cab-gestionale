@@ -31,10 +31,59 @@ export function buildEmptyDay8hUpserts(
   workDate: string,
   getCellValue: (dipendenteId: string, workDate: string) => TimesheetCellValue,
 ): TimesheetEntryUpsert[] {
+  return buildEmptyDayAbsenceUpserts(
+    employees,
+    workDate,
+    getCellValue,
+    (dipendenteId) => buildEmptyDay8hUpsert(dipendenteId, workDate),
+  );
+}
+
+export function resolveFerieTipoAssenza(
+  tipi: readonly TipoAssenzaConfig[],
+): TipoAssenzaConfig | undefined {
+  return tipi.find((tipo) => tipo.label.trim().toLowerCase() === "ferie");
+}
+
+export function buildEmptyDayFerieUpsert(
+  dipendenteId: string,
+  workDate: string,
+  ferieTipo: Pick<TipoAssenzaConfig, "id" | "label">,
+): TimesheetEntryUpsert {
+  return {
+    dipendenteId,
+    workDate,
+    oreOrdinarie: 0,
+    oreStraordinarie: 0,
+    oreAssenza: TIMESHEET_DEFAULT_DAY_HOURS,
+    tipoAssenzaId: ferieTipo.id,
+    tipoAssenzaLabel: ferieTipo.label,
+    motivoCustom: null,
+    note: null,
+  };
+}
+
+export function buildEmptyDayFerieUpserts(
+  employees: readonly DipendenteTimesheetEmployeeRow[],
+  workDate: string,
+  getCellValue: (dipendenteId: string, workDate: string) => TimesheetCellValue,
+  ferieTipo: Pick<TipoAssenzaConfig, "id" | "label">,
+): TimesheetEntryUpsert[] {
+  return buildEmptyDayAbsenceUpserts(employees, workDate, getCellValue, (dipendenteId) =>
+    buildEmptyDayFerieUpsert(dipendenteId, workDate, ferieTipo),
+  );
+}
+
+function buildEmptyDayAbsenceUpserts(
+  employees: readonly DipendenteTimesheetEmployeeRow[],
+  workDate: string,
+  getCellValue: (dipendenteId: string, workDate: string) => TimesheetCellValue,
+  buildUpsert: (dipendenteId: string) => TimesheetEntryUpsert,
+): TimesheetEntryUpsert[] {
   const out: TimesheetEntryUpsert[] = [];
   for (const employee of employees) {
     if (!isCellEmpty(getCellValue(employee.id, workDate))) continue;
-    out.push(buildEmptyDay8hUpsert(employee.id, workDate));
+    out.push(buildUpsert(employee.id));
   }
   return out;
 }

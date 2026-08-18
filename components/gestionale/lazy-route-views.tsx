@@ -19,6 +19,10 @@ export const ReportViewLazy = dynamic(() =>
   import("@/components/gestionale/report/report-view").then((m) => m.ReportView),
 );
 
+export const OrdiniFornitoriPageViewLazy = dynamic(() =>
+  import("@/components/ordini-fornitori/ordini-fornitori-page-view").then((m) => m.OrdiniFornitoriPageView),
+);
+
 export const PreventiviViewLazy = dynamic(() =>
   import("@/components/preventivi/preventivi-view").then((m) => m.PreventiviView),
 );

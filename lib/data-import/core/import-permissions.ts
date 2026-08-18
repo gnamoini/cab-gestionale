@@ -12,7 +12,7 @@ const MODULE_ENTITIES: Partial<Record<ImportEntity, string>> = {
   listino_ricambi: "magazzino",
   mezzi: "mezzi",
   preventivi: "preventivi",
-  ordini_fornitori: "preventivi",
+  ordini_fornitori: "ordini_fornitori",
   lavorazioni: "lavorazioni",
   fatture_draft: "fatturazione",
   billing_customers: "fatturazione",

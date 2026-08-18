@@ -1,6 +1,5 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
 import { useMemo } from "react";
 import type { DipendenteTimesheetEmployeeRow, TimesheetMonthKey } from "@/lib/dipendenti/types";
 import { buildTimesheetYearSelectOptions } from "@/lib/dipendenti/timesheet-available-periods";
@@ -28,22 +27,12 @@ import {
 import {
   dsInput,
   dsPageToolbarBtn,
+  dsPageToolbarMetaActionBtn,
   dsPageToolbarMetaChip,
   dsTypoSmall,
 } from "@/lib/ui/design-system";
 
-/**
- * Azioni affiancate nella toolbar mese: stesso padding e hover via bordo
- * (il ring di `dsPageToolbarBtn` su una sola cella crea asimmetria visiva).
- */
-const timesheetMonthActionBtnClass = [
-  dsPageToolbarBtn,
-  "w-full min-w-0 flex-1 whitespace-nowrap px-2.5 sm:px-3",
-  "isolate",
-  "ring-0 hover:ring-0",
-  "hover:border-[color:var(--cab-border-strong)]",
-  "hover:shadow-[var(--cab-shadow-sm)]",
-].join(" ");
+const timesheetMetaActionBtnClass = `${dsPageToolbarMetaActionBtn} min-h-10 min-w-0 whitespace-nowrap sm:min-h-9`;
 
 function TimesheetPeriodNav({
   periodLabel,
@@ -84,9 +73,10 @@ export function TimesheetHeader({
   showBackgroundSync,
   onGoToToday,
   onFillToday8h,
-  fillToday8hPending,
-  fillToday8hDisabled,
-  fillToday8hDisabledReason,
+  onFillTodayFerie,
+  fillTodayBulkPending,
+  fillTodayBulkDisabled,
+  fillTodayFerieDisabled,
   monthKeysWithData = [],
 }: {
   periodMode: TimesheetPeriodMode;
@@ -104,9 +94,10 @@ export function TimesheetHeader({
   showBackgroundSync?: boolean;
   onGoToToday: () => void;
   onFillToday8h?: () => void;
-  fillToday8hPending?: boolean;
-  fillToday8hDisabled?: boolean;
-  fillToday8hDisabledReason?: string;
+  onFillTodayFerie?: () => void;
+  fillTodayBulkPending?: boolean;
+  fillTodayBulkDisabled?: boolean;
+  fillTodayFerieDisabled?: boolean;
   monthKeysWithData?: readonly TimesheetMonthKey[];
 }) {
   const { year, month } = parseMonthKey(monthKey);
@@ -181,9 +172,7 @@ export function TimesheetHeader({
                   onNext={goNextPeriod}
                 />
               ) : null}
-              <div
-                className={`grid min-w-0 w-full flex-1 grid-cols-1 gap-2 ${periodMode === "month" ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}
-              >
+              <div className="grid min-w-0 w-full flex-1 grid-cols-1 gap-2 sm:grid-cols-3">
                 <div className="flex min-w-0 flex-col gap-1">
                   <span className={filterLabelClass}>Anno</span>
                   <GlobalSelect
@@ -232,52 +221,63 @@ export function TimesheetHeader({
                     />
                   </div>
                 ) : null}
-                {periodMode === "month" ? (
-                  <div
-                    className="flex min-w-0 flex-col gap-1"
-                    role="group"
-                    aria-label="Azioni giorno corrente"
-                  >
-                    <span className={`${filterLabelClass} hidden min-w-0 sm:block invisible`} aria-hidden="true">
-                      &#8203;
-                    </span>
-                    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
-                      <Tooltip content={"Vai al mese corrente e evidenzia la colonna di oggi"}><button type="button" className={timesheetMonthActionBtnClass} onClick={onGoToToday}>
-                        Oggi
-                      </button></Tooltip>
-                      {onFillToday8h ? (
-                        <Tooltip content={fillToday8hDisabled && fillToday8hDisabledReason
-                              ? fillToday8hDisabledReason
-                              : "Imposta 8 ore ordinarie per oggi su tutte le celle vuote degli addetti visibili"}><button type="button" className={timesheetMonthActionBtnClass} onClick={onFillToday8h} disabled={fillToday8hDisabled || fillToday8hPending} aria-busy={fillToday8hPending}>
-                          <span className="sm:hidden">{fillToday8hPending ? "…" : "8h oggi"}</span>
-                          <span className="hidden min-w-0 truncate sm:inline">
-                            {fillToday8hPending ? "Salvataggio…" : "8h per tutti (oggi)"}
-                          </span>
-                        </button></Tooltip>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : null}
               </div>
             </ToolbarGroupPrimaryRow>
-            <ToolbarGroupMetaRow className="!justify-start gap-2">
-              <PageToolbarResultCount
-                count={filteredCount}
-                filtersActive={filtersActive}
-                singularLabel="dipendente"
-                pluralLabel="dipendenti"
-                onFilterReset={filtersActive ? () => onFilterEmployeeId("") : undefined}
-              />
-              {saveLabel ? (
-                <p role="status" aria-live="polite" className={`text-xs font-medium ${saveClass}`}>
-                  {saveLabel}
-                </p>
-              ) : null}
-              {showBackgroundSync ? (
-                <span className={dsPageToolbarMetaChip} role="status" aria-live="polite">
-                  <GlobalLoadingSpinner size="sm" className="shrink-0" label="Registro in aggiornamento" />
-                  <span>Registro in aggiornamento</span>
-                </span>
+            <ToolbarGroupMetaRow className="gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <PageToolbarResultCount
+                  count={filteredCount}
+                  filtersActive={filtersActive}
+                  singularLabel="dipendente"
+                  pluralLabel="dipendenti"
+                  onFilterReset={filtersActive ? () => onFilterEmployeeId("") : undefined}
+                />
+                {saveLabel ? (
+                  <p role="status" aria-live="polite" className={`text-xs font-medium ${saveClass}`}>
+                    {saveLabel}
+                  </p>
+                ) : null}
+                {showBackgroundSync ? (
+                  <span className={dsPageToolbarMetaChip} role="status" aria-live="polite">
+                    <GlobalLoadingSpinner size="sm" className="shrink-0" label="Registro in aggiornamento" />
+                    <span>Registro in aggiornamento</span>
+                  </span>
+                ) : null}
+              </div>
+              {periodMode === "month" ? (
+                <div className="flex w-full min-w-0 flex-nowrap items-stretch gap-2 sm:ms-auto sm:w-auto sm:justify-end">
+                  <button type="button" className={timesheetMetaActionBtnClass} onClick={onGoToToday}>
+                    Oggi
+                  </button>
+                  {onFillToday8h ? (
+                    <button
+                      type="button"
+                      className={timesheetMetaActionBtnClass}
+                      onClick={onFillToday8h}
+                      disabled={fillTodayBulkDisabled || fillTodayBulkPending}
+                      aria-busy={fillTodayBulkPending}
+                    >
+                      <span className="sm:hidden">{fillTodayBulkPending ? "…" : "8h oggi"}</span>
+                      <span className="hidden min-w-0 truncate sm:inline">
+                        {fillTodayBulkPending ? "Salvataggio…" : "8h per tutti (oggi)"}
+                      </span>
+                    </button>
+                  ) : null}
+                  {onFillTodayFerie ? (
+                    <button
+                      type="button"
+                      className={timesheetMetaActionBtnClass}
+                      onClick={onFillTodayFerie}
+                      disabled={fillTodayBulkDisabled || fillTodayFerieDisabled || fillTodayBulkPending}
+                      aria-busy={fillTodayBulkPending}
+                    >
+                      <span className="sm:hidden">{fillTodayBulkPending ? "…" : "8h ferie"}</span>
+                      <span className="hidden min-w-0 truncate sm:inline">
+                        {fillTodayBulkPending ? "Salvataggio…" : "8h ferie per tutti (oggi)"}
+                      </span>
+                    </button>
+                  ) : null}
+                </div>
               ) : null}
             </ToolbarGroupMetaRow>
           </ToolbarGroupBody>

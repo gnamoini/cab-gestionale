@@ -21,6 +21,7 @@ export function gestionaleNavHrefToModule(href: string): GestionalePermissionMod
   if (href.startsWith("/lavorazioni-clienti")) return null;
   if (href.startsWith("/magazzino/carichi")) return "magazzino_carichi";
   if (href.startsWith("/magazzino")) return "magazzino";
+  if (href.startsWith("/ordini-fornitori")) return "ordini_fornitori";
   if (href.startsWith("/preventivi")) return "preventivi";
   if (href.startsWith("/lavorazioni")) return "lavorazioni";
   if (href.startsWith("/mezzi")) return "mezzi";

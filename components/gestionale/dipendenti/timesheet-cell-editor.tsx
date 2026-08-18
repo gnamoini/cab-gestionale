@@ -7,9 +7,57 @@ import { validateCellValue } from "@/lib/dipendenti/timesheet-validation";
 import { clampOre } from "@/lib/dipendenti/timesheet-totals";
 import type { TimesheetCellValue } from "@/lib/dipendenti/types";
 import { sliceInputValue, TEXT_MEDIUM } from "@/lib/validation/text-field-limits";
-import { GlobalSelect } from "@/components/gestionale/global-input";
-import { dsInput } from "@/lib/ui/design-system";
+import { dsDisabled, dsFocus, dsInput, gestionaleFilterChipClass } from "@/lib/ui/design-system";
 import { gestionaleFieldLabelClass } from "@/lib/ui/gestionale-field-label";
+
+function tipoAssenzaChipClass(selected: boolean): string {
+  return selected
+    ? `${gestionaleFilterChipClass} w-full min-w-0 justify-start border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]`
+    : `${gestionaleFilterChipClass} w-full min-w-0 justify-start text-[color:var(--cab-text-muted)] hover:text-[color:var(--cab-text)]`;
+}
+
+function TimesheetTipoAssenzaPicker({
+  tipiAssenza,
+  selectedId,
+  onSelect,
+  readOnly,
+  compact,
+}: {
+  tipiAssenza: readonly TipoAssenzaConfig[];
+  selectedId: string | null;
+  onSelect: (tipo: TipoAssenzaConfig) => void;
+  readOnly?: boolean;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Tipo assenza"
+      className={`grid min-w-0 gap-2 ${compact ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}
+    >
+      {tipiAssenza.map((tipo) => {
+        const selected = selectedId === tipo.id;
+        return (
+          <button
+            key={tipo.id}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            disabled={readOnly}
+            title={tipo.label}
+            className={`${tipoAssenzaChipClass(selected)} ${dsFocus} ${dsDisabled}`}
+            onClick={() => onSelect(tipo)}
+          >
+            <span className="shrink-0 font-bold tabular-nums text-[color:var(--cab-primary)]">
+              {tipo.abbrev}
+            </span>
+            <span className="min-w-0 truncate">{tipo.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export function TimesheetCellEditor({
   value,
@@ -26,13 +74,6 @@ export function TimesheetCellEditor({
 }) {
   const validation = useMemo(() => validateCellValue(value, tipiAssenza), [value, tipiAssenza]);
   const selectedTipo = resolveTipoById(tipiAssenza, value.tipoAssenzaId);
-  const tipoItems = useMemo(
-    () => [
-      { value: "", label: "— Seleziona —" },
-      ...tipiAssenza.map((t) => ({ value: t.id, label: `${t.abbrev} — ${t.label}` })),
-    ],
-    [tipiAssenza],
-  );
 
   const inputClass = compact ? `${dsInput} h-8 px-2 md:text-xs` : dsInput;
 
@@ -96,23 +137,21 @@ export function TimesheetCellEditor({
       </div>
 
       {value.oreAssenza > 0 ? (
-        <div className={compact ? "grid gap-2 sm:grid-cols-2" : "space-y-3"}>
-          <div className="flex min-w-0 flex-col gap-0.5">
+        <div className={compact ? "space-y-2" : "space-y-3"}>
+          <div className="flex min-w-0 flex-col gap-1">
             <span className={gestionaleFieldLabelClass}>Motivo assenza</span>
-            <GlobalSelect
-              selectOnly
-              value={value.tipoAssenzaId ?? ""}
-              onChange={(v) => {
-                const tipo = resolveTipoById(tipiAssenza, v);
+            <TimesheetTipoAssenzaPicker
+              tipiAssenza={tipiAssenza}
+              selectedId={value.tipoAssenzaId}
+              readOnly={readOnly}
+              compact={compact}
+              onSelect={(tipo) => {
                 onChange({
                   ...value,
-                  tipoAssenzaId: v || null,
-                  tipoAssenzaLabel: tipo?.label ?? "",
+                  tipoAssenzaId: tipo.id,
+                  tipoAssenzaLabel: tipo.label,
                 });
               }}
-              items={tipoItems}
-              disabled={readOnly}
-              aria-label="Tipo assenza"
             />
           </div>
           {selectedTipo?.requiresCustomText ? (

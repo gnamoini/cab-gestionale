@@ -13,7 +13,7 @@ const MODULE_TO_PAGE: Record<string, GestionalePageKey> = {
   magazzino: "magazzino",
   mezzi: "mezzi",
   preventivi: "preventivi",
-  ordini_fornitori: "preventivi",
+  ordini_fornitori: "ordini_fornitori",
   lavorazioni: "lavorazioni",
   fatturazione: "fatturazione",
   documenti: "documenti",

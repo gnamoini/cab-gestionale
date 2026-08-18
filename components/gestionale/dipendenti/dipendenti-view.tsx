@@ -22,18 +22,22 @@ import {
   openDipendentiPdfDipendenteInNewTab,
 } from "@/lib/dipendenti/pdf/dipendenti-pdf-export";
 import { prefetchDipendentiMonthEntries } from "@/lib/dipendenti/prefetch-dipendenti-month-entries";
-import { buildEmptyDay8hUpserts } from "@/lib/dipendenti/timesheet-bulk-fill-day";
+import { buildEmptyDay8hUpserts, buildEmptyDayFerieUpserts, resolveFerieTipoAssenza } from "@/lib/dipendenti/timesheet-bulk-fill-day";
 import {
   currentMonthKey,
   isDateInMonthKey,
   monthKeyFromDate,
+  monthKeyFromParts,
+  parseMonthKey,
   resolveWeekAnchorForMonth,
   shiftMonthKey,
   todayDateYmd,
 } from "@/lib/dipendenti/timesheet-month";
 import type { TimesheetEditorTarget, TimesheetEntryUpsert, TimesheetMonthKey, DipendenteTimesheetEmployeeRow } from "@/lib/dipendenti/types";
 import type { TimesheetPeriodMode } from "@/lib/dipendenti/timesheet-month";
-import { dsPageToolbarIconBtn, dsStackPage } from "@/lib/ui/design-system";
+import { dsFocus, dsStackPage } from "@/lib/ui/design-system";
+import { globalInputCalendarNavBtn } from "@/lib/ui/global-input";
+import { CalendarMonthYearPicker } from "@/components/gestionale/global-input/calendar-month-year-picker";
 import {
   CalendarNavChevronLeft,
   CalendarNavChevronRight,
@@ -95,9 +99,10 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
   const [pdfExporting, setPdfExporting] = useState(false);
   const [accentDateYmd, setAccentDateYmd] = useState<string | null>(null);
   const [accentFadingOut, setAccentFadingOut] = useState(false);
-  const [fillToday8hPending, setFillToday8hPending] = useState(false);
-  const [fillToday8hConfirmOpen, setFillToday8hConfirmOpen] = useState(false);
-  const [fillToday8hUpserts, setFillToday8hUpserts] = useState<TimesheetEntryUpsert[]>([]);
+  const [fillTodayBulkPending, setFillTodayBulkPending] = useState(false);
+  const [fillTodayConfirmOpen, setFillTodayConfirmOpen] = useState(false);
+  const [fillTodayConfirmKind, setFillTodayConfirmKind] = useState<"ordinarie" | "ferie">("ordinarie");
+  const [fillTodayUpserts, setFillTodayUpserts] = useState<TimesheetEntryUpsert[]>([]);
   const accentClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -250,30 +255,23 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
 
   const todayYmd = todayDateYmd();
   const todayInViewedMonth = isDateInMonthKey(todayYmd, monthKey);
+  const { year: viewYear, month: viewMonth } = parseMonthKey(monthKey);
 
-  const fillToday8hDisabled =
+  const ferieTipo = useMemo(() => resolveFerieTipoAssenza(ts.tipiAssenza), [ts.tipiAssenza]);
+
+  const fillTodayBulkDisabled =
     readOnly ||
     ts.entriesDegraded ||
     ts.loadPhase !== "ready" ||
     ts.displayEmployees.length === 0 ||
     !todayInViewedMonth ||
-    fillToday8hPending ||
+    fillTodayBulkPending ||
     ts.upsertPending;
 
-  const fillToday8hDisabledReason = readOnly
-    ? "Permessi insufficienti per modificare le presenze"
-    : ts.entriesDegraded
-      ? "Presenze in sola lettura: aggiorna i dati prima di compilare"
-      : ts.loadPhase !== "ready" || ts.displayEmployees.length === 0
-        ? "Registro presenze non pronto"
-        : !todayInViewedMonth
-          ? GESTIONALE_TOAST.dipendentiFillToday8hNotInMonth
-          : fillToday8hPending || ts.upsertPending
-            ? "Salvataggio in corso"
-            : undefined;
+  const fillTodayFerieDisabled = !ferieTipo;
 
   const handleFillToday8h = useCallback(() => {
-    if (readOnly || ts.entriesDegraded || fillToday8hPending || ts.upsertPending) return;
+    if (readOnly || ts.entriesDegraded || fillTodayBulkPending || ts.upsertPending) return;
     const workDate = todayDateYmd();
     if (!isDateInMonthKey(workDate, monthKey)) {
       toastValidation(GESTIONALE_TOAST.dipendentiFillToday8hNotInMonth);
@@ -284,8 +282,9 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
       toastValidation(GESTIONALE_TOAST.dipendentiFillToday8hNoEmpty);
       return;
     }
-    setFillToday8hUpserts(upserts);
-    setFillToday8hConfirmOpen(true);
+    setFillTodayConfirmKind("ordinarie");
+    setFillTodayUpserts(upserts);
+    setFillTodayConfirmOpen(true);
   }, [
     readOnly,
     ts.entriesDegraded,
@@ -293,27 +292,68 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
     ts.displayEmployees,
     ts.getCellValue,
     monthKey,
-    fillToday8hPending,
+    fillTodayBulkPending,
     toastValidation,
   ]);
 
-  const handleConfirmFillToday8h = useCallback(async () => {
-    if (fillToday8hUpserts.length === 0) {
-      setFillToday8hConfirmOpen(false);
+  const handleFillTodayFerie = useCallback(() => {
+    if (readOnly || ts.entriesDegraded || fillTodayBulkPending || ts.upsertPending || !ferieTipo) return;
+    const workDate = todayDateYmd();
+    if (!isDateInMonthKey(workDate, monthKey)) {
+      toastValidation(GESTIONALE_TOAST.dipendentiFillToday8hNotInMonth);
       return;
     }
-    setFillToday8hPending(true);
-    try {
-      await Promise.all(fillToday8hUpserts.map((input) => ts.saveNow(input)));
-      successOnce("dip-fill-today-8h", GESTIONALE_TOAST.dipendentiFillToday8hSuccess);
-      setFillToday8hConfirmOpen(false);
-      setFillToday8hUpserts([]);
-    } catch (e) {
-      errorOnce("dip-fill-today-8h", e, { module: "dipendenti", action: "update" });
-    } finally {
-      setFillToday8hPending(false);
+    const upserts = buildEmptyDayFerieUpserts(
+      ts.displayEmployees,
+      workDate,
+      ts.getCellValue,
+      ferieTipo,
+    );
+    if (upserts.length === 0) {
+      toastValidation(GESTIONALE_TOAST.dipendentiFillTodayFerieNoEmpty);
+      return;
     }
-  }, [fillToday8hUpserts, ts, successOnce, errorOnce]);
+    setFillTodayConfirmKind("ferie");
+    setFillTodayUpserts(upserts);
+    setFillTodayConfirmOpen(true);
+  }, [
+    readOnly,
+    ts.entriesDegraded,
+    ts.upsertPending,
+    ts.displayEmployees,
+    ts.getCellValue,
+    monthKey,
+    fillTodayBulkPending,
+    ferieTipo,
+    toastValidation,
+  ]);
+
+  const handleConfirmFillToday = useCallback(async () => {
+    if (fillTodayUpserts.length === 0) {
+      setFillTodayConfirmOpen(false);
+      return;
+    }
+    setFillTodayBulkPending(true);
+    try {
+      await Promise.all(fillTodayUpserts.map((input) => ts.saveNow(input)));
+      successOnce(
+        fillTodayConfirmKind === "ferie" ? "dip-fill-today-ferie" : "dip-fill-today-8h",
+        fillTodayConfirmKind === "ferie"
+          ? GESTIONALE_TOAST.dipendentiFillTodayFerieSuccess
+          : GESTIONALE_TOAST.dipendentiFillToday8hSuccess,
+      );
+      setFillTodayConfirmOpen(false);
+      setFillTodayUpserts([]);
+    } catch (e) {
+      errorOnce(
+        fillTodayConfirmKind === "ferie" ? "dip-fill-today-ferie" : "dip-fill-today-8h",
+        e,
+        { module: "dipendenti", action: "update" },
+      );
+    } finally {
+      setFillTodayBulkPending(false);
+    }
+  }, [fillTodayUpserts, fillTodayConfirmKind, ts, successOnce, errorOnce]);
 
   const showRegistryEmpty =
     ts.loadPhase !== "error" && ts.hasRealDipendenti && ts.displayEmployees.length === 0 && !ts.isSyncing;
@@ -358,9 +398,10 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
             showBackgroundSync={ts.showBackgroundSyncInToolbar}
             onGoToToday={handleGoToToday}
             onFillToday8h={readOnly ? undefined : handleFillToday8h}
-            fillToday8hPending={fillToday8hPending}
-            fillToday8hDisabled={fillToday8hDisabled}
-            fillToday8hDisabledReason={fillToday8hDisabledReason}
+            onFillTodayFerie={readOnly ? undefined : handleFillTodayFerie}
+            fillTodayBulkPending={fillTodayBulkPending}
+            fillTodayBulkDisabled={fillTodayBulkDisabled}
+            fillTodayFerieDisabled={fillTodayFerieDisabled}
             monthKeysWithData={ts.monthKeysWithData}
           />
 
@@ -393,19 +434,29 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
                 <div className="flex shrink-0 items-center gap-1" role="group" aria-label="Navigazione mese">
                   <button
                     type="button"
-                    className={dsPageToolbarIconBtn}
+                    className={`${globalInputCalendarNavBtn} ${dsFocus}`}
                     aria-label="Mese precedente"
                     onClick={() => handleMonthKey(shiftMonthKey(monthKey, -1))}
                   >
-                    <CalendarNavChevronLeft />
+                    <CalendarNavChevronLeft className="h-3.5 w-3.5" />
                   </button>
+                  <div className="flex min-w-0 items-center justify-center">
+                    <CalendarMonthYearPicker
+                      viewYear={viewYear}
+                      viewMonth={viewMonth - 1}
+                      variant="grid"
+                      onApply={(year, monthIndex) =>
+                        handleMonthKey(monthKeyFromParts(year, monthIndex + 1))
+                      }
+                    />
+                  </div>
                   <button
                     type="button"
-                    className={dsPageToolbarIconBtn}
+                    className={`${globalInputCalendarNavBtn} ${dsFocus}`}
                     aria-label="Mese successivo"
                     onClick={() => handleMonthKey(shiftMonthKey(monthKey, 1))}
                   >
-                    <CalendarNavChevronRight />
+                    <CalendarNavChevronRight className="h-3.5 w-3.5" />
                   </button>
                 </div>
               }
@@ -478,23 +529,27 @@ export function DipendentiView({ listSurface: serverListSurface, listTier = "md"
         />
 
         <GestionaleConfirmDialog
-          open={fillToday8hConfirmOpen}
-          title="Imposta 8 ore per oggi"
+          open={fillTodayConfirmOpen}
+          title={fillTodayConfirmKind === "ferie" ? "Imposta 8 ore ferie per oggi" : "Imposta 8 ore per oggi"}
           message={
-            fillToday8hUpserts.length > 0
-              ? `Compilare 8 ore ordinarie per ${fillToday8hUpserts.length} addett${
-                  fillToday8hUpserts.length === 1 ? "o" : "i"
-                } con cella vuota il ${formatWorkDateIt(todayYmd)}? Le celle già compilate non verranno modificate.`
+            fillTodayUpserts.length > 0
+              ? fillTodayConfirmKind === "ferie"
+                ? `Compilare 8 ore di ferie per ${fillTodayUpserts.length} addett${
+                    fillTodayUpserts.length === 1 ? "o" : "i"
+                  } con cella vuota il ${formatWorkDateIt(todayYmd)}? Le celle già compilate non verranno modificate.`
+                : `Compilare 8 ore ordinarie per ${fillTodayUpserts.length} addett${
+                    fillTodayUpserts.length === 1 ? "o" : "i"
+                  } con cella vuota il ${formatWorkDateIt(todayYmd)}? Le celle già compilate non verranno modificate.`
               : undefined
           }
-          confirmLabel={fillToday8hPending ? "Salvataggio…" : "Conferma"}
-          pending={fillToday8hPending}
+          confirmLabel={fillTodayBulkPending ? "Salvataggio…" : "Conferma"}
+          pending={fillTodayBulkPending}
           onCancel={() => {
-            if (fillToday8hPending) return;
-            setFillToday8hConfirmOpen(false);
-            setFillToday8hUpserts([]);
+            if (fillTodayBulkPending) return;
+            setFillTodayConfirmOpen(false);
+            setFillTodayUpserts([]);
           }}
-          onConfirm={() => void handleConfirmFillToday8h()}
+          onConfirm={() => void handleConfirmFillToday()}
         />
       </div>
     </GestionaleSectionGate>

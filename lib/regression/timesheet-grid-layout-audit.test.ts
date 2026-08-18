@@ -70,8 +70,8 @@ assert.doesNotMatch(
 assert.match(css, /\.timesheet-presenze-highlight-layer/, "CSS must define highlight overlay layer");
 assert.match(
   css,
-  /\.timesheet-presenze-shell\s*\{[^}]*--timesheet-today-edge/,
-  "today edge token must live on shell for highlight layer inheritance",
+  /data-timesheet-sticky-name\][\s\S]*background-color:\s*var\(--cab-card\)/,
+  "sticky name crosshair must keep opaque card base under hover tint",
 );
 
 console.log("timesheet-grid-layout-audit.test.ts OK");

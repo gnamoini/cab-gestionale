@@ -1,11 +1,17 @@
 "use client";
 
-import { Tooltip } from "@/components/ui";
 import { useCallback, useMemo, useState } from "react";
+import {
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterSaveButton,
+  gestionaleModalFooterCancelBtnClass,
+} from "@/components/design-system";
+import { HubIconCopy } from "@/components/design-system/hub-table-action-icons";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import { TimesheetCellEditor } from "@/components/gestionale/dipendenti/timesheet-cell-editor";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
-import { erpBtnAccent, erpBtnNeutral } from "@/components/report/report-buttons";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import type { TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
 import { buildCopyDayToAllUpserts } from "@/lib/dipendenti/timesheet-bulk-fill-day";
 import { cellValueToUpsert } from "@/lib/dipendenti/timesheet-entry-map";
@@ -115,40 +121,55 @@ export function TimesheetCellEditorPopover({
     <>
       <GestionaleModalShell
         modalSize="formSmall"
+        modalHeight="standard"
         onRequestClose={onClose}
         title="Modifica cella"
         subtitle={anchorLabel}
+        footer={
+          <div className="flex w-full min-w-0 flex-col gap-2">
+            {saveError ? (
+              <p className="w-full text-xs text-rose-600 dark:text-rose-400" role="alert">
+                {saveError}
+              </p>
+            ) : null}
+            <GestionaleModalFooterActions className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              {!readOnly && employees.length > 1 && onCopyToAll ? (
+                <button
+                  type="button"
+                  className={`${gestionaleModalFooterCancelBtnClass} w-full shrink-0 justify-center sm:w-auto`}
+                  onClick={() => setCopyConfirmOpen(true)}
+                  disabled={!canCopyToAll}
+                >
+                  <HubIconCopy className="h-4 w-4 shrink-0" />
+                  Copia per tutti
+                </button>
+              ) : null}
+              <div className="flex w-full shrink-0 flex-col-reverse items-stretch gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:items-center">
+                <GestionaleModalFooterCancelButton
+                  className="w-full shrink-0 justify-center sm:w-auto"
+                  onClick={onClose}
+                  disabled={saving || copyPending}
+                />
+                <GestionaleModalFooterSaveButton
+                  type="button"
+                  className="w-full shrink-0 justify-center sm:w-auto"
+                  loading={saving}
+                  disabled={!canSave}
+                  onClick={() => void handleSaveNow()}
+                />
+              </div>
+            </GestionaleModalFooterActions>
+          </div>
+        }
       >
-        <div className="space-y-3 px-4 py-3">
+        <GestionaleModalScrollBody className="py-3">
           <TimesheetCellEditor
             value={local}
             onChange={handleChange}
             tipiAssenza={tipiAssenza}
             readOnly={readOnly}
           />
-        </div>
-        <div className="space-y-3 border-t border-[color:var(--cab-border)] px-4 py-3">
-          {saveError ? (
-            <p className="text-xs text-rose-600 dark:text-rose-400" role="alert">
-              {saveError}
-            </p>
-          ) : null}
-          <div className="flex flex-col gap-2">
-            {!readOnly && employees.length > 1 && onCopyToAll ? (
-              <Tooltip content={!validation.ok ? validation.errors[0] : undefined}><button type="button" className={`${erpBtnNeutral} min-h-11 w-full touch-manipulation`} onClick={() => setCopyConfirmOpen(true)} disabled={!canCopyToAll}>
-                Copia per tutti
-              </button></Tooltip>
-            ) : null}
-            <div className="flex min-w-0 shrink-0 justify-end gap-2">
-              <button type="button" className={erpBtnNeutral} onClick={onClose} disabled={saving || copyPending}>
-                Annulla
-              </button>
-              <Tooltip content={!validation.ok ? validation.errors[0] : undefined}><button type="button" className={erpBtnAccent} onClick={() => void handleSaveNow()} disabled={!canSave}>
-                {saving ? "Salvataggio…" : "Salva"}
-              </button></Tooltip>
-            </div>
-          </div>
-        </div>
+        </GestionaleModalScrollBody>
       </GestionaleModalShell>
 
       <GestionaleConfirmDialog

@@ -78,6 +78,7 @@ const ALL_DIRTY_DOMAINS: readonly GestionaleSyncDomain[] = [
   "report",
   "mezzi",
   "preventivi",
+  "ordini_fornitori",
   "documenti",
   "dipendenti",
   "impostazioni",

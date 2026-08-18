@@ -3,9 +3,13 @@ import {
   buildCopyDayToAllUpserts,
   buildEmptyDay8hUpsert,
   buildEmptyDay8hUpserts,
+  buildEmptyDayFerieUpsert,
+  buildEmptyDayFerieUpserts,
   countEmptyDay8hUpserts,
+  resolveFerieTipoAssenza,
   TIMESHEET_DEFAULT_DAY_HOURS,
 } from "@/lib/dipendenti/timesheet-bulk-fill-day";
+import { defaultTipiAssenza } from "@/lib/dipendenti/tipi-assenza-model";
 import { emptyCellValue } from "@/lib/dipendenti/timesheet-totals";
 import type { DipendenteTimesheetEmployeeRow, TimesheetCellValue } from "@/lib/dipendenti/types";
 
@@ -73,6 +77,24 @@ const workDate = "2026-06-05";
 
 {
   assert.equal(buildEmptyDay8hUpserts([], workDate, () => emptyCellValue()).length, 0);
+}
+
+{
+  const tipi = defaultTipiAssenza();
+  const ferie = resolveFerieTipoAssenza(tipi)!;
+  const upsert = buildEmptyDayFerieUpsert("e1", workDate, ferie);
+  assert.equal(upsert.oreAssenza, TIMESHEET_DEFAULT_DAY_HOURS);
+  assert.equal(upsert.oreOrdinarie, 0);
+  assert.equal(upsert.tipoAssenzaId, ferie.id);
+  assert.equal(upsert.tipoAssenzaLabel, "Ferie");
+  const upserts = buildEmptyDayFerieUpserts(
+    [employee("e1"), employee("e2")],
+    workDate,
+    (id) => (id === "e1" ? emptyCellValue() : { ...emptyCellValue(), oreOrdinarie: 8 }),
+    ferie,
+  );
+  assert.equal(upserts.length, 1);
+  assert.equal(upserts[0]?.dipendenteId, "e1");
 }
 
 {

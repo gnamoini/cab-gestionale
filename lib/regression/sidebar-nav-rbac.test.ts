@@ -16,6 +16,7 @@ const admin = visibleHrefs("admin");
 assert.ok(admin.includes("/dashboard"), "admin: dashboard");
 assert.ok(admin.includes("/agenda"), "admin: agenda");
 assert.ok(admin.includes("/magazzino"), "admin: magazzino");
+assert.ok(admin.includes("/ordini-fornitori"), "admin: ordini fornitori");
 assert.ok(admin.includes("/sicurezza"), "admin: sicurezza");
 assert.equal(admin.length, GESTIONALE_NAV.length, "admin vede tutte le voci");
 
@@ -24,13 +25,16 @@ assert.ok(operatore.includes("/lavorazioni"), "operatore: lavorazioni");
 assert.ok(operatore.includes("/magazzino"), "operatore: magazzino");
 assert.ok(!operatore.includes("/sicurezza"), "operatore: no sicurezza");
 assert.ok(!operatore.includes("/preventivi"), "operatore: no preventivi");
+assert.ok(!operatore.includes("/ordini-fornitori"), "operatore: no ordini fornitori");
 
 const manager = visibleHrefs("manager");
 assert.ok(manager.includes("/impostazioni"), "manager: impostazioni");
+assert.ok(manager.includes("/ordini-fornitori"), "manager: ordini fornitori");
 assert.ok(!manager.includes("/sicurezza"), "manager: no sicurezza");
 
 const guest = visibleHrefs("guest");
 assert.ok(guest.includes("/dashboard"), "guest: dashboard");
+assert.ok(guest.includes("/ordini-fornitori"), "guest: ordini fornitori read");
 assert.ok(!guest.includes("/impostazioni"), "guest: no impostazioni");
 
 const cliente = visibleHrefs("cliente");

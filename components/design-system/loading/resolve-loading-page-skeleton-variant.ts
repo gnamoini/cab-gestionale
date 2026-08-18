@@ -13,6 +13,7 @@ const SKELETON_PREFIXES: readonly { prefix: string; variant: LoadingPageSkeleton
   { prefix: "/mezzi", variant: "mezzi" },
   { prefix: "/documenti", variant: "documenti" },
   { prefix: "/preventivi", variant: "preventivi" },
+  { prefix: "/ordini-fornitori", variant: "ordini_fornitori" },
   { prefix: "/fatturazione", variant: "fatturazione" },
   { prefix: "/dipendenti", variant: "dipendenti" },
   { prefix: "/report", variant: "report" },

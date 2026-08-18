@@ -137,3 +137,13 @@ export function IconNavDipendenti(props: SVGProps<SVGSVGElement>) {
     </SvgIcon>
   );
 }
+
+export function IconNavOrdiniFornitori(props: SVGProps<SVGSVGElement>) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M16 3H5a2 2 0 00-2 2v11a2 2 0 002 2h14a2 2 0 002-2V8l-5-5z" />
+      <path d="M15 3v5h5M8 13h8M8 17h5" />
+      <path d="M3 9h4v10H3V9z" />
+    </SvgIcon>
+  );
+}

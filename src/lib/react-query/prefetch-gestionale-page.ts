@@ -27,6 +27,7 @@ import { fetchDocumentiPageDTOServer } from "@/lib/bff/documenti-page-fetch-serv
 import { fetchReportDataDTOServer } from "@/lib/bff/report-bundle-fetch-server";
 import { fetchFatturazionePageDTOServer } from "@/lib/bff/fatturazione-page-fetch-server";
 import { fetchPreventiviPageDTOServer } from "@/lib/bff/preventivi-page-fetch-server";
+import { fetchOrdiniFornitoriRecordsServer } from "@/lib/ordini-fornitori/ordine-fornitore-fetch-server";
 import { fetchLavorazioniPageDTOServer } from "@/lib/bff/lavorazioni-page-fetch-server";
 import { fetchClientPortalPageDTOServer } from "@/lib/bff/client-portal-page-fetch-server";
 import { fetchMagazzinoPageDTOServer } from "@/lib/bff/magazzino-page-fetch-server";
@@ -72,6 +73,7 @@ export type GestionalePrefetchPage =
   | "magazzino"
   | "report"
   | "preventivi"
+  | "ordini_fornitori"
   | "fatturazione"
   | "impostazioni"
   | "agenda"
@@ -81,8 +83,6 @@ export type GestionalePrefetchPage =
   | "lavorazioni_clienti";
 
 export type PrefetchDeferredOptions = {
-  /** Deep link `?prevTab=ordini` — prefetch SSR lista ordini fornitori. */
-  includeOrdini?: boolean;
   /** Deep link `?tab=scadenziario` — prefetch SSR open items. */
   includeOpenItems?: boolean;
   /** Deep link `?tab=pagamenti` — prefetch SSR customer payments. */
@@ -103,6 +103,7 @@ export const PAGE_PREFETCH_CONFIG: Record<GestionalePrefetchPage, PagePrefetchCo
   lavorazioni: { prefetchDeferredOnServer: true },
   documenti: { prefetchDeferredOnServer: true },
   preventivi: { prefetchDeferredOnServer: true },
+  ordini_fornitori: { prefetchDeferredOnServer: true },
   fatturazione: { prefetchDeferredOnServer: true },
   impostazioni: { prefetchDeferredOnServer: true },
   agenda: { prefetchDeferredOnServer: true },
@@ -150,6 +151,7 @@ export async function prefetchCriticalPage(qc: QueryClient, page: GestionalePref
     case "mezzi":
     case "fatturazione":
     case "preventivi":
+    case "ordini_fornitori":
     case "agenda":
     case "dipendenti":
     case "lavorazioni":
@@ -356,9 +358,8 @@ export async function prefetchDeferredPage(
       return;
     }
     case "preventivi": {
-      const includeOrdini = options?.includeOrdini === true;
-      const dto = await fetchPreventiviPageDTOServer(includeOrdini);
-      const seeds: Promise<void>[] = [
+      const dto = await fetchPreventiviPageDTOServer();
+      await Promise.all([
         seedPrefetchedData(
           qc,
           preventiviRecordsQueryKey(),
@@ -373,19 +374,19 @@ export async function prefetchDeferredPage(
           GESTIONALE_SEMI_STALE_MS,
           GESTIONALE_SEMI_GC_MS,
         ),
-      ];
-      if (includeOrdini && dto.ordini) {
-        seeds.push(
-          seedPrefetchedData(
-            qc,
-            ordiniFornitoriListQueryKey(),
-            dto.ordini,
-            GESTIONALE_SEMI_STALE_MS,
-            GESTIONALE_SEMI_GC_MS,
-          ),
-        );
-      }
-      await Promise.all(seeds);
+      ]);
+      return;
+    }
+    case "ordini_fornitori": {
+      const ordiniRes = await fetchOrdiniFornitoriRecordsServer();
+      const ordini = ordiniRes.success ? (ordiniRes.data ?? []) : [];
+      await seedPrefetchedData(
+        qc,
+        ordiniFornitoriListQueryKey(),
+        ordini,
+        GESTIONALE_SEMI_STALE_MS,
+        GESTIONALE_SEMI_GC_MS,
+      );
       return;
     }
     case "fatturazione": {
@@ -570,10 +571,12 @@ export async function prefetchReportPage(): Promise<DehydratedState> {
   return prefetchGestionalePageDehydrated("report");
 }
 
-export async function prefetchPreventiviPage(
-  options?: Pick<PrefetchGestionalePageOptions, "includeOrdini">,
-): Promise<DehydratedState> {
-  return prefetchGestionalePageDehydrated("preventivi", options);
+export async function prefetchPreventiviPage(): Promise<DehydratedState> {
+  return prefetchGestionalePageDehydrated("preventivi");
+}
+
+export async function prefetchOrdiniFornitoriPage(): Promise<DehydratedState> {
+  return prefetchGestionalePageDehydrated("ordini_fornitori");
 }
 
 export async function prefetchFatturazionePage(

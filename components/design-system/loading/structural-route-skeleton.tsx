@@ -12,6 +12,7 @@ import { MagazzinoPageStructure } from "@/components/gestionale/magazzino/magazz
 import { MezziPageStructure } from "@/components/gestionale/mezzi/mezzi-page-structure";
 import { ClientDetailPageStructure } from "@/components/lavorazioni-clienti/client-lavorazione-detail-page-structure";
 import { ClientiPageStructure } from "@/components/lavorazioni-clienti/client-lavorazioni-page-structure";
+import { OrdiniFornitoriPageStructure } from "@/components/ordini-fornitori/ordini-fornitori-page-structure";
 import { PreventiviPageStructure } from "@/components/preventivi/preventivi-page-structure";
 import { ReportPageStructure } from "@/components/report/report-page-structure";
 import { AgendaPageStructure } from "@/components/workshop-schedule/agenda-page-structure";
@@ -35,6 +36,9 @@ const ROUTE_PAGE_STRUCTURE: Record<
   mezzi: ({ className, scope }) => <MezziPageStructure mode="skeleton" scope={scope} />,
   documenti: ({ className, scope }) => <DocumentiPageStructure mode="skeleton" scope={scope} />,
   preventivi: ({ className, scope }) => <PreventiviPageStructure mode="skeleton" scope={scope} />,
+  ordini_fornitori: ({ className, scope }) => (
+    <OrdiniFornitoriPageStructure mode="skeleton" scope={scope} />
+  ),
   lavorazioni: ({ className, scope }) => <LavorazioniPageStructure mode="skeleton" scope={scope} />,
   report: ({ className, scope }) => <ReportPageStructure mode="skeleton" scope={scope ?? "full"} className={className} />,
   agenda: ({ className, scope }) => <AgendaPageStructure mode="skeleton" scope={scope} />,

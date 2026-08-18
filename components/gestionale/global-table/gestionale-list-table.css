@@ -506,7 +506,7 @@
   tr[data-timesheet-row-active]
   > td:not([data-timesheet-day-accent="true"]):not([data-timesheet-weekend="true"]):not(
     [data-timesheet-cell-kind]
-  ) {
+  ):not([data-timesheet-sticky-name]):not([data-timesheet-total]) {
   background-color: var(--timesheet-crosshair-fill) !important;
 }
 
@@ -520,7 +520,7 @@
   tr[data-timesheet-row-active]
   > td[data-timesheet-weekend="true"]:not([data-timesheet-day-accent="true"]):not(
     [data-timesheet-cell-kind]
-  ) {
+  ):not([data-timesheet-sticky-name]):not([data-timesheet-total]) {
   background-color: var(--timesheet-crosshair-fill-weekend) !important;
 }
 
@@ -532,16 +532,19 @@
   box-shadow: inset 0 0 0 1px var(--timesheet-crosshair-edge);
 }
 
+/* Colonne sticky: base opaca + tinta crosshair sopra (evita bleed-through su scroll orizzontale). */
 .timesheet-presenze-grid tbody td[data-timesheet-row-active][data-timesheet-sticky-name]:not(
     [data-timesheet-day-accent="true"]
   ) {
-  background-color: var(--timesheet-crosshair-fill) !important;
+  background-color: var(--cab-card) !important;
+  background-image: linear-gradient(var(--timesheet-crosshair-fill), var(--timesheet-crosshair-fill)) !important;
 }
 
 .timesheet-presenze-grid tbody td[data-timesheet-row-active][data-timesheet-total]:not(
     [data-timesheet-day-accent="true"]
   ) {
-  background-color: var(--timesheet-crosshair-fill) !important;
+  background-color: color-mix(in srgb, var(--cab-surface-2) 25%, var(--cab-card)) !important;
+  background-image: linear-gradient(var(--timesheet-crosshair-fill), var(--timesheet-crosshair-fill)) !important;
 }
 
 .timesheet-presenze-grid tfoot td[data-timesheet-column-active] {
