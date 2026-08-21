@@ -29,6 +29,8 @@ export const QK = {
   clientLavorazioniDetail: ["client_lavorazioni_detail"] as const,
   clientLavorazioneDocuments: ["client_lavorazione_documents"] as const,
   clientLavorazionePhotos: ["client_lavorazione_photos"] as const,
+  /** Portale lavorazioni clienti — preventivo collegato. */
+  clientLavorazionePreventivo: ["client_lavorazione_preventivo"] as const,
   /** Log eventi autenticazione (`auth_logs`). */
   authLogs: ["auth_logs"] as const,
   /** Dati storici manuali Report lavorazioni. */
@@ -48,6 +50,10 @@ export const QK = {
   notificationsInbox: ["notifications", "inbox"] as const,
   notificationsUnread: ["notifications", "unread-count"] as const,
 };
+
+export function clientLavorazionePreventivoKey(lavorazioneId: string) {
+  return [...QK.clientLavorazionePreventivo, lavorazioneId] as const;
+}
 
 /** Bundle schede per lavorazione — unica cache React Query (derivata da DB). */
 export const SCHEde_BUNDLES_QUERY_KEY = [...QK.schede, "bundles"] as const;

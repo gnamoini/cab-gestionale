@@ -1,12 +1,15 @@
 import "server-only";
 
-import { buildPreventivoAcceptanceStatus } from "@/lib/preventivi/preventivo-acceptance-status.server";
 import { isPreventivoVisibleToClient } from "@/lib/preventivi/preventivo-client-visibility";
 import { preventivoRowToRecord } from "@/lib/preventivi/preventivi-db-mapper";
 import {
   resolvePreventivoStatoCliente,
   resolvePreventivoStatoWorkflow,
 } from "@/lib/preventivi/preventivo-row-state";
+import {
+  preventivoClienteDisplayLabel,
+  preventivoWorkflowLabel,
+} from "@/lib/preventivi/preventivo-status-ui";
 import { buildClientOfficialDocumentPreviewPath, buildOfficialDocumentTokenStreamPath } from "@/lib/official-documents/preview-url";
 import { PREVENTIVI_COLUMNS, PREVENTIVO_EVENTS_COLUMNS } from "@/lib/db/table-select-columns";
 import { fetchEnrichedLavorazioneListRow } from "@/lib/lavorazioni/fetch-enriched-lavorazione-row";
@@ -36,16 +39,22 @@ const EVENT_LABELS: Record<string, string> = {
   accepted_timeout: "Accettato automaticamente",
 };
 
-import type {
-  ClientPreventivoPortalPayload,
-  ClientPreventivoTimelineEntry,
-} from "@/lib/preventivi/preventivo-client-portal-types";
+import type { ClientPreventivoPortalPayload } from "@/lib/preventivi/preventivo-client-portal-types";
 
 function eventLabel(event: PreventivoEventRow): string {
   if (event.event_type === "accepted_timeout") {
     return "Accettato automaticamente per mancata risposta entro 24 ore";
   }
   return EVENT_LABELS[event.event_type] ?? event.event_type;
+}
+
+function buildClientPortalDisplayLabel(row: PreventivoRow): string {
+  const workflow = resolvePreventivoStatoWorkflow(row);
+  const cliente = resolvePreventivoStatoCliente(row);
+  if (cliente) {
+    return preventivoClienteDisplayLabel(cliente, row.metodo_accettazione);
+  }
+  return preventivoWorkflowLabel(workflow);
 }
 
 async function fetchActivePreventivoForLavorazione(
@@ -140,6 +149,7 @@ export async function fetchClientPreventivoPortalServer(
   const det = (row.dettagli ?? {}) as Record<string, unknown>;
   const numero = typeof det.numero === "string" ? det.numero.trim() : row.id.slice(0, 8);
   const token = typeof tokenRow?.token === "string" ? tokenRow.token : "";
+  const workflowStatus = resolvePreventivoStatoWorkflow(row);
 
   return success({
     preventivoId: row.id,
@@ -147,7 +157,8 @@ export async function fetchClientPreventivoPortalServer(
     versione: row.versione ?? 1,
     totale: row.totale,
     inviatoAt: row.inviato_at,
-    acceptanceStatus: buildPreventivoAcceptanceStatus(row),
+    workflowStatus,
+    displayLabel: buildClientPortalDisplayLabel(row),
     timeline,
     streamPath: token ? buildOfficialDocumentTokenStreamPath(token) : "",
     previewPath: token ? buildClientOfficialDocumentPreviewPath(token) : "",
@@ -155,33 +166,6 @@ export async function fetchClientPreventivoPortalServer(
       typeof det.descrizioneLavorazioniCliente === "string" ? det.descrizioneLavorazioniCliente : "",
     righeCount: Array.isArray(det.righeRicambi) ? det.righeRicambi.length : 0,
   });
-}
-
-export async function respondClientPreventivoServer(input: {
-  lavorazioneId: string;
-  action: "accept" | "reject";
-  motivazione?: string;
-}): Promise<ServiceResult<PreventivoRow>> {
-  const allowed = await verifyClientLavorazioniAccessServer();
-  if (!allowed) return err("Permesso richiesto.");
-
-  const portal = await fetchClientPreventivoPortalServer(input.lavorazioneId, { markViewed: false });
-  if (!portal.success || !portal.data) return err(portal.error ?? "Preventivo non disponibile.");
-
-  if (!portal.data.acceptanceStatus.canRespond) {
-    return err("Non è possibile rispondere a questo preventivo.");
-  }
-
-  const sb = await createSupabaseServerUserClient();
-  const { data, error } = await sb.rpc("commit_preventivo_client_response", {
-    p_preventivo_id: portal.data.preventivoId,
-    p_action: input.action,
-    p_motivazione: input.motivazione?.trim() || null,
-  });
-
-  if (error) return err(error.message);
-  if (!data) return err("Operazione non riuscita.");
-  return success(data as PreventivoRow);
 }
 
 /** Dettagli economici cliente (no costi interni). */

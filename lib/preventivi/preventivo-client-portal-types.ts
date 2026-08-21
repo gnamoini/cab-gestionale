@@ -1,4 +1,4 @@
-import type { PreventivoAcceptanceStatus } from "@/lib/preventivi/preventivo-acceptance-status";
+import type { PreventivoStatoWorkflow } from "@/lib/preventivi/types";
 
 export type ClientPreventivoTimelineEntry = {
   at: string;
@@ -12,7 +12,8 @@ export type ClientPreventivoPortalPayload = {
   versione: number;
   totale: number;
   inviatoAt: string | null;
-  acceptanceStatus: PreventivoAcceptanceStatus;
+  workflowStatus: PreventivoStatoWorkflow;
+  displayLabel: string;
   timeline: ClientPreventivoTimelineEntry[];
   streamPath: string;
   previewPath: string;

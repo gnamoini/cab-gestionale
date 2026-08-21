@@ -46,7 +46,7 @@ Totale: {{totale}}
 
 {{descrizione_preventivo}}
 
-Il preventivo è disponibile per accettazione entro 24 ore dal portale:
+Il preventivo è disponibile nel portale cliente:
 {{link_lavorazione}}
 
 Cordiali saluti,
@@ -57,36 +57,6 @@ Cordiali saluti,
     body: `Gentile {{cliente}},
 
 confermiamo l'approvazione del preventivo {{numero_preventivo}}.
-
-Cordiali saluti,
-{{azienda}}`,
-  },
-  "estimate.reminder": {
-    subject: "Promemoria: preventivo in attesa di conferma",
-    body: `Gentile {{cliente}},
-
-ti ricordiamo che hai un preventivo {{numero_preventivo}} in attesa di conferma.
-
-Totale: {{totale}}
-{{link_lavorazione}}
-
-Cordiali saluti,
-{{azienda}}`,
-  },
-  "estimate.accepted": {
-    subject: "Conferma ricezione preventivo",
-    body: `Gentile {{cliente}},
-
-abbiamo ricevuto la conferma del preventivo {{numero_preventivo}}.
-
-Cordiali saluti,
-{{azienda}}`,
-  },
-  "estimate.rejected": {
-    subject: "Ricezione rifiuto preventivo",
-    body: `Gentile {{cliente}},
-
-abbiamo registrato il rifiuto del preventivo {{numero_preventivo}}.
 
 Cordiali saluti,
 {{azienda}}`,

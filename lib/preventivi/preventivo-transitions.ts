@@ -3,7 +3,7 @@ import type { PreventivoStatoWorkflow } from "@/lib/preventivi/types";
 const WORKFLOW_TARGETS: Record<PreventivoStatoWorkflow, readonly PreventivoStatoWorkflow[]> = {
   bozza: ["inviato", "annullato"],
   inviato: ["bozza", "annullato"],
-  acquisito: ["annullato"],
+  acquisito: [],
   annullato: [],
 };
 
@@ -27,9 +27,8 @@ export function preventivoWorkflowTransitionTargets(
   return WORKFLOW_TARGETS[from] ?? [];
 }
 
-/** Staff dropdown: solo transizioni workflow (no acquisito manuale). */
 export function preventivoStaffWorkflowTransitionTargets(
   from: PreventivoStatoWorkflow,
 ): readonly PreventivoStatoWorkflow[] {
-  return preventivoWorkflowTransitionTargets(from).filter((s) => s !== "acquisito");
+  return preventivoWorkflowTransitionTargets(from);
 }
