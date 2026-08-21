@@ -46,7 +46,7 @@ export function findFirstDuplicateByCodiceOriginale(
 
 /** Cerca duplicato su codice primario o secondario (cross-field). */
 export function findDuplicateByCodici(
-  items: RicambioMagazzino[],
+  items: readonly RicambioMagazzino[],
   codiceRaw: string,
   options?: { excludeId?: string; alsoCheckSecondary?: string },
 ): RicambioMagazzino | null {

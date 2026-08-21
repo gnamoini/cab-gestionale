@@ -19,6 +19,7 @@ import { resolveInitialLoad } from "@/lib/render/render-path-orchestrator";
 import { getMagazzinoReportLightServer } from "@/lib/magazzino/magazzino-list-fetch-server";
 import { getMezziListLightServer, getMezziReportLightServer } from "@/lib/mezzi/mezzi-list-fetch-server";
 import { getMovimentiListServer } from "@/lib/movimenti/movimenti-list-fetch-server";
+import { buildDashboardHealthScoreApiPayloadServer } from "@/lib/health-score/dashboard-health-score-api-payload.server";
 import { fetchDashboardDataDTOServer } from "@/lib/bff/dashboard-data-fetch-server";
 import { DEFAULT_AUDIT_RETENTION_CONFIG } from "@/lib/audit/types";
 import { MAGAZZINO_DASHBOARD_KPI_QUERY_KEY } from "@/lib/magazzino/dashboard-mag-query-keys";
@@ -111,7 +112,7 @@ export const PAGE_PREFETCH_CONFIG: Record<GestionalePrefetchPage, PagePrefetchCo
   sicurezza: { prefetchDeferredOnServer: true },
   mezzi: { prefetchDeferredOnServer: true },
   lavorazioni_clienti: { prefetchDeferredOnServer: true },
-  report: { prefetchDeferredOnServer: false },
+  report: { prefetchDeferredOnServer: true },
 };
 
 export type PrefetchGestionalePageOptions = PrefetchDeferredOptions & {
@@ -187,6 +188,7 @@ export async function prefetchDeferredPage(
         days: DEFAULT_AUDIT_RETENTION_CONFIG.dashboard_days,
       };
       const dto = await fetchDashboardDataDTOServer();
+      const healthPayload = await buildDashboardHealthScoreApiPayloadServer();
       await Promise.all([
         seedPrefetchedData(
           qc,
@@ -241,6 +243,13 @@ export async function prefetchDeferredPage(
           dto.activityFeed,
           LA_LIST_STALE_MS,
           GESTIONALE_VIEW_GC_MS,
+        ),
+        seedPrefetchedData(
+          qc,
+          ["dashboard", "health-score", "v2"] as const,
+          healthPayload,
+          GESTIONALE_REPORT_STALE_MS,
+          GESTIONALE_REPORT_GC_MS,
         ),
       ]);
       return;

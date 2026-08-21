@@ -7,6 +7,7 @@ import {
   GestionaleModalFooterActions,
   GestionaleModalFooterCancelButton,
   GestionaleModalFooterSaveButton,
+  LoadingFormSkeleton,
   gestionaleModalFooterCancelBtnClass,
 } from "@/components/design-system";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
@@ -509,7 +510,24 @@ export function PreventiviEditorModal({
     });
   }
 
-  if (!open || !draft) return null;
+  if (!open) return null;
+
+  if (open && !record) return null;
+
+  if (open && record && !draft) {
+    return (
+      <LavorazioniModalShell
+        modalSize="analytics"
+        modalRootRef={modalRootRef}
+        onRequestClose={onClose}
+        title="Preventivo"
+      >
+        <LoadingFormSkeleton sections={3} />
+      </LavorazioniModalShell>
+    );
+  }
+
+  if (!draft) return null;
 
   return (
     <LavorazioniModalShell

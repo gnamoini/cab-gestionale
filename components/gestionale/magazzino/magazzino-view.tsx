@@ -31,6 +31,7 @@ import { MagazzinoListinoAiBadge } from "@/components/gestionale/magazzino/magaz
 import { MagazzinoMarcaMobileBadge } from "@/components/gestionale/magazzino/magazzino-marca-mobile-badge";
 import dynamic from "next/dynamic";
 import { GestionaleModalGate } from "@/components/gestionale/gestionale-modal-gate";
+import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 
 const RicambioNewModal = dynamic(
   () => import("@/components/gestionale/magazzino/ricambio-new-modal").then((m) => m.RicambioNewModal),
@@ -626,6 +627,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
   } = listDerived;
 
   const [newOpen, setNewOpen] = useState(false);
+  const [modalChunkMountedKey, setModalChunkMountedKey] = useState<string | null>(null);
   const { success: toastSuccess, error: toastError, validation: toastValidation, successDeleted, errorOnce } =
     useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
@@ -1326,6 +1328,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
 
   function closeNewRicambioModal() {
     setNewOpen(false);
+    setModalChunkMountedKey(null);
   }
 
   function completeMagazzinoSave(
@@ -1435,6 +1438,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
 
   function closeDetail() {
     setDetail(null);
+    setModalChunkMountedKey(null);
   }
 
   const infoTimeline = useMemo(() => {
@@ -2123,6 +2127,17 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
         </SkeletonBoundary>
       </ShellCard>
 
+      {newOpen && modalChunkMountedKey !== "new" ? (
+        <GestionaleModalShell
+          modalSize="formMedium"
+          title="Nuovo ricambio"
+          titleId="new-ricambio-title"
+          onRequestClose={closeNewRicambioModal}
+        >
+          <LoadingFormSkeleton sections={3} />
+        </GestionaleModalShell>
+      ) : null}
+
       {newOpen ? (
         <RicambioNewModal
           marche={marche}
@@ -2134,6 +2149,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
           prodotti={prodotti}
           magCanCreateRicambio={magCanCreateRicambio}
           onClose={closeNewRicambioModal}
+          onMounted={() => setModalChunkMountedKey("new")}
           onSaveError={(message) => toastError(message, { module: "magazzino", action: "create" })}
           onVaiAlRicambioDuplicato={(id) => focusRicambioInTable(id)}
           onSaved={(ui) => {
@@ -2142,6 +2158,18 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
             completeMagazzinoSave(ui.id, "Ricambio creato in magazzino.", "entity_created");
           }}
         />
+      ) : null}
+
+      {detail && detailRicambio && detail.mode === "info" && modalChunkMountedKey !== `${detail.id}-info` ? (
+        <GestionaleModalShell
+          modalSize="info"
+          modalHeight="standard"
+          title="Scheda ricambio"
+          titleId="detail-ricambio-title"
+          onRequestClose={closeDetail}
+        >
+          <LoadingFormSkeleton sections={3} />
+        </GestionaleModalShell>
       ) : null}
 
       {detail && detailRicambio && detail.mode === "info" ? (
@@ -2155,6 +2183,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
           logTimeline={infoTimeline}
           logLoading={magLogFeedLoading}
           onClose={closeDetail}
+          onMounted={() => setModalChunkMountedKey(`${detail.id}-info`)}
           onEdit={startEditFromInfo}
           onImageEvent={(ev) => logImageEvent(ev, detailRicambio)}
           onDismissLogEntry={removeMagazzinoLogEntry}
@@ -2167,6 +2196,16 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
         />
       ) : null}
 
+      {detail && detailRicambio && detail.mode === "edit" && modalChunkMountedKey !== `${detail.id}-edit` ? (
+        <GestionaleModalShell
+          modalSize="formMedium"
+          title="Modifica ricambio"
+          onRequestClose={closeDetail}
+        >
+          <LoadingFormSkeleton sections={3} />
+        </GestionaleModalShell>
+      ) : null}
+
       {detail && detailRicambio && detail.mode === "edit" ? (
         <RicambioEditModal
           ricambioId={detail.id}
@@ -2177,6 +2216,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
           fornitori={fornitoriGlobal}
           produttori={produttoriGlobal}
           authorName={authorName}
+          onMounted={() => setModalChunkMountedKey(`${detail.id}-edit`)}
           magCanCreateRicambio={magCanCreateRicambio}
           magCanDeleteRicambio={magCanDeleteRicambio}
           onClose={closeDetail}

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { LIST_DIVIDER_UL } from "@/lib/ui/list-primitives";
-import { Drawer, LoadingButton } from "@/components/design-system";
+import { Drawer, LoadingButton, LoadingFormSkeleton } from "@/components/design-system";
 import { FatturaEliminaConfirmDialog } from "@/components/fatturazione/fattura-elimina-confirm-dialog";
 import {
   FatturaStatusBadge,
@@ -124,7 +124,23 @@ export function FatturazioneDetailDrawer({
     }
   }, [busy, canWrite, inv, onChanged, onClose, toast]);
 
-  if (!inv || !detail) return null;
+  if (!open) return null;
+
+  if (!inv || !detail) {
+    return (
+      <Drawer
+        open={open}
+        onClose={onClose}
+        title="Fattura"
+        ariaLabel="Dettaglio fattura"
+        asideClassName={isMobile ? undefined : resolveDrawerAsideClasses("drawerLog")}
+      >
+        <div className="p-4">
+          <LoadingFormSkeleton sections={3} />
+        </div>
+      </Drawer>
+    );
+  }
 
   const canPay =
     canWrite &&

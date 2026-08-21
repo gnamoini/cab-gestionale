@@ -64,3 +64,7 @@ export const ProductionReadinessViewLazy = dynamic(() =>
 export const AgendaOfficinaViewLazy = dynamic(() =>
   import("@/components/workshop-schedule/agenda-officina-view").then((m) => m.AgendaOfficinaView),
 );
+
+export const MagazzinoViewLazy = dynamic(() =>
+  import("@/components/gestionale/magazzino/magazzino-view").then((m) => m.MagazzinoView),
+);

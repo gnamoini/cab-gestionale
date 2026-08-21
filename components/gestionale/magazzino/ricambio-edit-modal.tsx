@@ -66,6 +66,7 @@ export function RicambioEditModal({
   onSaveError,
   onImageEvent,
   modalitaModifica = false,
+  onMounted,
 }: {
   ricambioId: string;
   ricambio: RicambioMagazzino;
@@ -85,9 +86,14 @@ export function RicambioEditModal({
   onImageEvent?: (event: RecordImageLogEvent) => void;
   /** Se true, variazioni scorta contano nelle statistiche. */
   modalitaModifica?: boolean;
+  onMounted?: () => void;
 }) {
   const queryClient = useQueryClient();
   const { mezziListe: mergedMezziListe } = useGlobalOptions({ debugTag: "RicambioEditModal" });
+
+  useEffect(() => {
+    onMounted?.();
+  }, [onMounted]);
   const compatExpand = useMemo(
     () =>
       buildRicambioCompatExpandOptions({

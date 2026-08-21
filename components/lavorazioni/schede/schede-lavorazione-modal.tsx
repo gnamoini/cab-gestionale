@@ -21,6 +21,7 @@ import {
   GestionaleModalFooterCancelButton,
   GestionaleModalFooterDeleteButton,
   GestionaleModalFooterSaveButton,
+  LoadingFormSkeleton,
 } from "@/components/design-system";
 import {
   LavorazioniModalHeader,
@@ -135,7 +136,7 @@ import {
 import { useAuth } from "@/context/auth-context";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useLavorazioneHub } from "@/src/hooks/gestionale/use-lavorazione-hub";
-import { useLavorazioneBase } from "@/src/services/domain/lavorazioni-domain.queries";
+import { LavorazionePlanningPanel } from "@/components/lavorazioni/lavorazione-planning-panel";
 import {
   lavorazioneRowToTagliandoFields,
   type TagliandoLavorazioneFields,
@@ -336,11 +337,11 @@ export function SchedeLavorazioneModal({
     [globalOpts.lavorazioni.stati],
   );
   const hubQuery = useLavorazioneHub(lav.id);
-  const lavorazioneBase = useLavorazioneBase(open ? lav.id : undefined);
   const updateLavorazione = useLavorazioneUpdateMutation();
   const qc = useQueryClient();
   const hubData = hubQuery.data;
-  const lavorazioneMezzoIdFk = lavorazioneBase.data?.mezzo_id?.trim() || null;
+  const lavorazioneBaseRow = hubQuery.lavorazioneBase;
+  const lavorazioneMezzoIdFk = lavorazioneBaseRow?.mezzo_id?.trim() || null;
   const initialTab = normalizeHubTab(initialTabProp);
   const [frozenCaptureHandoff] = useState(() => captureHandoff);
   const captureNextStageRef = useRef(captureHandoff?.sequentialStages[0] ?? null);
@@ -841,8 +842,10 @@ export function SchedeLavorazioneModal({
   const panoramicaNoteValue = useMemo(() => {
     const fromHub = hubData?.lavorazione?.note?.trim();
     if (fromHub) return fromHub;
+    const fromBase = lavorazioneBaseRow?.note?.trim();
+    if (fromBase) return fromBase;
     return lav.note?.trim() || "";
-  }, [hubData?.lavorazione?.note, lav.note]);
+  }, [hubData?.lavorazione?.note, lavorazioneBaseRow?.note, lav.note]);
 
   const commitPanoramicaNote = useCallback(
     async (note: string) => {
@@ -1341,9 +1344,11 @@ export function SchedeLavorazioneModal({
                   {hubQuery.error?.message ?? "Errore caricamento dettaglio lavorazione."}
                 </p>
               ) : null}
-              {hubQuery.isLoading && !hubData ? (
-                <p className="text-sm text-[color:var(--cab-text-muted)]">Caricamento dettaglio…</p>
+              {hubQuery.isLoading && !hubData && !hubQuery.panoramaReady ? (
+                <LoadingFormSkeleton sections={3} />
               ) : null}
+              {hubData || hubQuery.panoramaReady ? (
+                <>
               <GestionaleInfoCard title="Note">
                 <HubModalPanoramicaNoteEditor
                   value={panoramicaNoteValue}
@@ -1369,6 +1374,12 @@ export function SchedeLavorazioneModal({
               >
                 <SchedaIngressoPanoramicaAnagraficaContent fields={panoramicaDisplayFields} />
               </GestionaleInfoCard>
+              {!hubData && lavorazioneBaseRow ? (
+                <>
+                  <p className="text-xs text-[color:var(--cab-text-muted)]">Dettagli KPI in caricamento…</p>
+                  <LavorazionePlanningPanel lavorazioneId={lav.id} />
+                </>
+              ) : null}
               <LavorazioneCostoDiscreto costo={costoLavorazione} variant="section" />
               {canDeleteLavorazione && onDeleteLavorazione ? (
                 <GestionaleInfoCard
@@ -1382,6 +1393,8 @@ export function SchedeLavorazioneModal({
                     </button>
                   }
                 />
+              ) : null}
+                </>
               ) : null}
             </HubModalPanoramicaPanel>
           ) : null}

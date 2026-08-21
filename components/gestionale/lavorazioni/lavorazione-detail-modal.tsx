@@ -190,10 +190,18 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
     );
   };
 
-  const titolo = hub ? `Lavorazione · ${hub.kpi.statoLabel}` : "Lavorazione";
-  const sottotitolo = hub
-    ? `Ingresso ${fmtDay(hub.lavorazione.data_ingresso)} · Uscita ${fmtDay(hub.lavorazione.data_uscita)}`
-    : undefined;
+  const titolo =
+    hub != null
+      ? `Lavorazione · ${hub.kpi.statoLabel}`
+      : hubQuery.lavorazioneBase
+        ? `Lavorazione · ${hubQuery.lavorazioneBase.stato ?? "—"}`
+        : "Lavorazione";
+  const sottotitolo =
+    hub != null
+      ? `Ingresso ${fmtDay(hub.lavorazione.data_ingresso)} · Uscita ${fmtDay(hub.lavorazione.data_uscita)}`
+      : hubQuery.lavorazioneBase
+        ? `Ingresso ${fmtDay(hubQuery.lavorazioneBase.data_ingresso)} · Uscita ${fmtDay(hubQuery.lavorazioneBase.data_uscita)}`
+        : undefined;
 
   return (
     <GestionaleModalShell
@@ -219,7 +227,9 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
         </div>
 
         <GestionaleModalScrollBody className="min-h-0 min-w-0 flex-1">
-          {hubQuery.isLoading && !hub ? <p className="text-sm text-zinc-500">Caricamento…</p> : null}
+          {hubQuery.isLoading && !hub && !hubQuery.panoramaReady ? (
+            <p className="text-sm text-zinc-500">Caricamento…</p>
+          ) : null}
 
           {tab === "panoramica" && hub ? (
             <div className="space-y-4 text-sm">
@@ -267,6 +277,19 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
                 </Link>
               </div>
               <LavorazioneCostoDiscreto costo={costoLavorazione} />
+            </div>
+          ) : null}
+
+          {tab === "panoramica" && !hub && hubQuery.lavorazioneBase ? (
+            <div className="space-y-4 text-sm">
+              <p className="text-xs text-zinc-500">Dettagli KPI in caricamento…</p>
+              <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+                <p className="text-[10px] font-bold uppercase text-zinc-500">Note</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200">
+                  {(hubQuery.lavorazioneBase.note ?? "").trim() || "—"}
+                </p>
+              </div>
+              <LavorazionePlanningPanel lavorazioneId={lavorazioneId} />
             </div>
           ) : null}
 

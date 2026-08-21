@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-actions-portal";
 import {
   PageActionMenuProvider,
@@ -129,6 +130,7 @@ export function FatturazioneView({ listSurface: serverListSurface, listTier = "x
   const gestOpts = useGestionaleQueryOpts();
   const activeTab = parseFatturazioneTab(searchParams.get("tab"));
   const { user } = useAuth();
+  const gestToast = useGestionaleToast();
   const authorName = user?.nome?.trim() || user?.email?.split("@")[0]?.trim() || "Operatore";
   const { modules: permModules } = usePermissionsSnapshot();
   const perms = permModules.fatturazione;
@@ -158,13 +160,20 @@ export function FatturazioneView({ listSurface: serverListSurface, listTier = "x
 
   const kpi = useMemo(() => buildInvoiceKpi(invoices), [invoices]);
 
-  const openDetail = useCallback(async (id: string) => {
-    const res = await invoicesEntry.getDetail(id);
-    if (res.success && res.data) {
-      setDetail(res.data);
+  const openDetail = useCallback(
+    async (id: string) => {
       setDetailOpen(true);
-    }
-  }, []);
+      setDetail(null);
+      const res = await invoicesEntry.getDetail(id);
+      if (res.success && res.data) {
+        setDetail(res.data);
+        return;
+      }
+      setDetailOpen(false);
+      gestToast.errorOnce("fattura-detail", res.error ?? "Fattura non trovata.");
+    },
+    [gestToast],
+  );
 
   const fattOpenId = searchParams.get("fattOpen");
   const nuovoRequested = searchParams.get("nuovo") === "1";

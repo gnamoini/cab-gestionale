@@ -11,6 +11,7 @@ export const PAGE_LAYOUT_OUTSIDE_SUSPENSE_ROUTES = [
   "app/(gestionale)/magazzino/page.tsx",
   "app/(gestionale)/magazzino/carichi/page.tsx",
   "app/(gestionale)/mezzi/page.tsx",
+  "app/(gestionale)/ordini-fornitori/page.tsx",
   "app/(gestionale)/preventivi/page.tsx",
   "app/(gestionale)/report/page.tsx",
   "app/(gestionale)/sicurezza/page.tsx",

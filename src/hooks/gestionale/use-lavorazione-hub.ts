@@ -91,6 +91,8 @@ export function useLavorazioneHub(lavorazioneId: string | undefined) {
 
   return {
     data,
+    lavorazioneBase: base.data,
+    panoramaReady: id.length > 0 && base.isSuccess,
     isLoading,
     isError: isErrorEffective,
     error: hubTimedOut && !error ? new Error("Timeout caricamento dati lavorazione") : error,

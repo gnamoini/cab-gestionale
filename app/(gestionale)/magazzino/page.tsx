@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import { dehydrate } from "@tanstack/react-query";
 import { PageLayout } from "@/components/design-system";
+import { MagazzinoViewLazy } from "@/components/gestionale/lazy-route-views";
 import { MagazzinoPageStructure } from "@/components/gestionale/magazzino/magazzino-page-structure";
 import { MagazzinoDeferredHydration } from "@/components/gestionale/magazzino/magazzino-deferred-hydration";
-import { MagazzinoView } from "@/components/gestionale/magazzino/magazzino-view";
 import { UIPageAdapterGate } from "@/components/gestionale/ui-page-adapter-gate";
 import { getSuggestedSchema } from "@/lib/ui-os/ui-schema";
 import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";
@@ -31,7 +31,7 @@ export default async function MagazzinoPage() {
               fallback="legacy"
               schema={getSuggestedSchema("/magazzino")}
             >
-              <MagazzinoView listSurface={listSurface} listTier="xl" />
+              <MagazzinoViewLazy listSurface={listSurface} listTier="xl" />
             </UIPageAdapterGate>
           </MagazzinoDeferredHydration>
         </Suspense>

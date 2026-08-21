@@ -19,8 +19,8 @@ const derived = read("lib/magazzino/use-magazzino-list-derived.ts");
 const secondaryGate = read("lib/magazzino/use-magazzino-secondary-query-gate.ts");
 
 assert.match(page, /prefetchCriticalPage\(qc, "magazzino"\)/);
-assert.match(page, /MagazzinoView/);
-assert.doesNotMatch(page, /MagazzinoViewLazy/);
+assert.match(page, /MagazzinoViewLazy/);
+assert.doesNotMatch(page, /from "@\/components\/gestionale\/magazzino\/magazzino-view"/);
 assert.match(page, /MagazzinoDeferredHydration/);
 assert.match(page, /Suspense/);
 

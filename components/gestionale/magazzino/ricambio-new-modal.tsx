@@ -58,6 +58,7 @@ export function RicambioNewModal({
   onSaved,
   onSaveError,
   onVaiAlRicambioDuplicato,
+  onMounted,
 }: {
   marche: string[];
   categorie: string[];
@@ -71,6 +72,7 @@ export function RicambioNewModal({
   onSaved: (ui: RicambioMagazzino) => void;
   onSaveError: (message: string) => void;
   onVaiAlRicambioDuplicato: (id: string) => void;
+  onMounted?: () => void;
 }) {
   const formEngine = useFormEngine<RicambioFormState>({ initial: emptyRicambioForm() });
   const { value: newDraft, setValue, reset, runSubmit, formProps } = formEngine;
@@ -79,6 +81,11 @@ export function RicambioNewModal({
   const [saveBusy, setSaveBusy] = useState(false);
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [codiceScan, setCodiceScan] = useState({ primary: "", secondary: "" });
+
+  useEffect(() => {
+    onMounted?.();
+  }, [onMounted]);
+
   const baselineForm = useMemo(() => emptyRicambioForm(), []);
   const { mezziListe: mergedMezziListe } = useGlobalOptions({ debugTag: "RicambioNewModal" });
   const compatExpand = useMemo(

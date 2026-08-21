@@ -45,7 +45,14 @@ const SchedeLavorazioneModal = dynamic(
     import("@/components/lavorazioni/schede/schede-lavorazione-modal").then((m) => ({
       default: m.SchedeLavorazioneModal,
     })),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => (
+      <LavorazioniModalShell modalSize="formLarge" title="Dettaglio lavorazione" onRequestClose={() => {}}>
+        <LoadingFormSkeleton sections={3} />
+      </LavorazioniModalShell>
+    ),
+  },
 );
 import type { SchedeLavorazioneDialogSize } from "@/components/lavorazioni/schede/schede-lavorazione-modal";
 const LavorazioniKanbanView = dynamic(
@@ -85,6 +92,7 @@ const SchedaConcurrencyMergeDialog = dynamic(
   { ssr: false },
 );
 import { GestionaleModalGate } from "@/components/gestionale/gestionale-modal-gate";
+import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import {
   LavorazioneConcludiConfirmDialogLazy,
   LavorazioneEliminaConfirmDialogLazy,

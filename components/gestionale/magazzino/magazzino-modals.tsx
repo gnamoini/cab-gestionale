@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactElement } from "react";
+import { useEffect, type ReactElement } from "react";
 import { DisabledElementTooltip } from "@/components/ui";
 import { gestionaleModalFooterSaveBtnClass } from "@/components/design-system";
 import { HubIconPencil } from "@/components/design-system/hub-table-action-icons";
@@ -58,6 +58,7 @@ export function MagazzinoRicambioInfoModal({
   stockPolicyRaw,
   onUndoStockMovement,
   undoStockPending,
+  onMounted,
 }: {
   ricambio: RicambioMagazzino;
   compatDisplay: string;
@@ -77,7 +78,12 @@ export function MagazzinoRicambioInfoModal({
   stockPolicyRaw?: unknown;
   onUndoStockMovement?: (movimentoId: string) => void | Promise<void>;
   undoStockPending?: boolean;
+  onMounted?: () => void;
 }) {
+  useEffect(() => {
+    onMounted?.();
+  }, [onMounted]);
+
   return (
     <GestionaleModalShell
       modalSize="info"

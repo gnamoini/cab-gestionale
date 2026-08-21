@@ -1,9 +1,11 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { gestionalePageToolbarActionsClass } from "@/components/gestionale/page-header-toolbar";
+import { inventoryReceivingListQueryKey } from "@/lib/inventory-receiving/inventory-receiving-list-query-keys";
 import { abandonInventoryReceivingPending } from "@/lib/inventory-receiving/inventory-receiving-import-client";
 import { InventoryReceivingPendingBanner } from "@/components/gestionale/magazzino/carichi/inventory-receiving-pending-banner";
 import { inventoryDocumentStatusLabel } from "@/lib/inventory-receiving/documents/inventory-receiving-status";
@@ -28,24 +30,28 @@ export function ReceivingListView() {
     ],
   });
   const perm = usePermissions("magazzino_carichi");
-  const [docs, setDocs] = useState<InventoryDocumentRow[]>([]);
+  const listQuery = useQuery({
+    queryKey: inventoryReceivingListQueryKey(),
+    queryFn: async () => {
+      const listRes = await fetch("/api/magazzino/receiving");
+      const body = (await listRes.json()) as { documents?: InventoryDocumentRow[]; error?: string };
+      if (!listRes.ok) throw new Error(body.error ?? "Errore caricamento carichi.");
+      return body.documents ?? [];
+    },
+    staleTime: 30_000,
+  });
+  const docs = listQuery.data ?? [];
   const [pending, setPending] = useState<Awaited<ReturnType<typeof fetchInventoryReceivingPending>>>([]);
-  const [loading, setLoading] = useState(true);
+  const loading = listQuery.isLoading && listQuery.data === undefined;
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
-      const [listRes, pendingItems] = await Promise.all([
-        fetch("/api/magazzino/receiving"),
-        fetchInventoryReceivingPending(),
-      ]);
-      const body = (await listRes.json()) as { documents?: InventoryDocumentRow[] };
-      setDocs(body.documents ?? []);
+      const [_, pendingItems] = await Promise.all([listQuery.refetch(), fetchInventoryReceivingPending()]);
       setPending(pendingItems);
-    } finally {
-      setLoading(false);
+    } catch {
+      /* refetch errors surfaced by query */
     }
-  }, []);
+  }, [listQuery]);
 
   useEffect(() => {
     void load();

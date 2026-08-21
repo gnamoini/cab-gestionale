@@ -19,13 +19,17 @@ const billingHook = read("src/hooks/gestionale/use-preventivi-billing-query.ts")
 const view = read("components/preventivi/preventivi-view.tsx");
 const derived = read("lib/preventivi/use-preventivi-list-derived.ts");
 
-assert.match(page, /prefetchGestionalePage\(qc, "preventivi"/);
+assert.match(page, /prefetchCriticalPage\(qc, "preventivi"/);
 assert.match(page, /PreventiviViewLazy/);
+assert.match(page, /PreventiviDeferredHydration/);
+assert.match(page, /Suspense/);
 assert.match(page, /GestionaleHydrationBoundary/);
 assert.match(page, /redirect\("\/ordini-fornitori"\)/);
 
-assert.match(ordiniPage, /prefetchGestionalePage\(qc, "ordini_fornitori"/);
+assert.match(ordiniPage, /prefetchCriticalPage\(qc, "ordini_fornitori"/);
 assert.match(ordiniPage, /OrdiniFornitoriPageViewLazy/);
+assert.match(ordiniPage, /OrdiniFornitoriDeferredHydration/);
+assert.match(ordiniPage, /Suspense/);
 
 assert.match(deferred, /prefetchDeferredPage\(qc, "preventivi"/);
 assert.doesNotMatch(deferred, /includeOrdini/);

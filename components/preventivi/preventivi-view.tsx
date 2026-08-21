@@ -24,13 +24,20 @@ import { PageHeaderPageActionMenu } from "@/components/gestionale/page-header-ac
 import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { LoadingCardSkeleton, SkeletonBoundary } from "@/components/design-system";
+import { LoadingCardSkeleton, LoadingFormSkeleton, SkeletonBoundary } from "@/components/design-system";
 import { LoadingSpinner } from "@/components/design-system/loading";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { PreventiviTableSection } from "@/components/preventivi/preventivi-page-structure";
 const PreventiviEditorModal = dynamic(
   () => import("@/components/preventivi/preventivi-editor-modal").then((m) => m.PreventiviEditorModal),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => (
+      <LavorazioniModalShell modalSize="analytics" title="Preventivo" onRequestClose={() => {}}>
+        <LoadingFormSkeleton sections={3} />
+      </LavorazioniModalShell>
+    ),
+  },
 );
 const PreventiviAdvancedFilterPanel = dynamic(
   () =>
