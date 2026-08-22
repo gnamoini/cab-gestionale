@@ -1,0 +1,31 @@
+diff --git "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_ricambio-edit-modal.tsx\\base" "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_ricambio-edit-modal.tsx\\wip"
+index 0846767f..adabd720 100644
+--- "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_ricambio-edit-modal.tsx\\base"
++++ "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_ricambio-edit-modal.tsx\\wip"
+@@ -256,7 +256,7 @@ export function RicambioEditModal({
+           placeholderFlags.marcaPlaceholder ||
+           placeholderFlags.descrizionePlaceholder ||
+           placeholderFlags.categoriaPlaceholder
+-            ? " Salvato con campi segnaposto ?????? completa l'anagrafica quando possibile."
++            ? " Salvato con campi segnaposto ??? completa l'anagrafica quando possibile."
+             : "";
+         onSaved(ui, `Modifiche salvate.${lenientHint}`);
+       } catch (e) {
+@@ -285,7 +285,7 @@ export function RicambioEditModal({
+               type="submit"
+               form={RICAMBIO_EDIT_FORM_ID}
+               loading={saveBusy}
+-              loadingLabel="Salvataggio??????"
++              loadingLabel="Salvataggio???"
+               className="col-span-2 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45"
+             />
+             <GestionaleModalFooterCancelButton
+@@ -321,7 +321,7 @@ export function RicambioEditModal({
+                 type="submit"
+                 form={RICAMBIO_EDIT_FORM_ID}
+                 loading={saveBusy}
+-                loadingLabel="Salvataggio??????"
++                loadingLabel="Salvataggio???"
+                 className="shrink-0 justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45"
+               />
+             </div>

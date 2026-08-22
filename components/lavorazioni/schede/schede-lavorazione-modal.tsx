@@ -280,11 +280,11 @@ export function SchedeLavorazioneModal({
   listSurface?: import("@/lib/ui/resolve-list-surface").ListSurface;
   origine?: PreventivoLavorazioneOrigine;
   initialTab?: HubTabInput;
-  /** @deprecated Ignorato — shell hub sempre `formLarge` + `standard` (allineato a mezzi hub). */
+  /** @deprecated Ignorato ÔÇö shell hub sempre `formLarge` + `standard` (allineato a mezzi hub). */
   dialogSize?: SchedeLavorazioneDialogSize;
   /** Apre direttamente l'editor scheda lavorazioni/ricambi (es. acquisizione AI). */
   initialSchedaStage?: "lavorazioni" | "ricambi";
-  /** Handoff acquisizione multi-schede: sequenza lavorazioni → ricambi. */
+  /** Handoff acquisizione multi-schede: sequenza lavorazioni ÔåÆ ricambi. */
   captureHandoff?: {
     sequentialStages: Array<"lavorazioni" | "ricambi">;
     identMismatchWarnings?: string[];
@@ -304,7 +304,7 @@ export function SchedeLavorazioneModal({
   currentUser: string;
   schedeStore: Record<string, LavorazioneSchedeBundle>;
   onSchedaLog?: (ev: SchedaLogEv) => void;
-  /** Backend sync — solo da pipeline SSOT, catalogo congelato. */
+  /** Backend sync ÔÇö solo da pipeline SSOT, catalogo congelato. */
   onIngressoCommitted?: (
     campi: SchedaIngressoFields,
     options: {
@@ -495,7 +495,7 @@ export function SchedeLavorazioneModal({
       }
     }, 0);
     return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- evita reset hub dopo persist (es. «Crea nuova»)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- evita reset hub dopo persist (es. ┬½Crea nuova┬╗)
   }, [open, lav.id, initialTab, initialSchedaStage]);
 
   useEffect(() => {
@@ -561,7 +561,7 @@ export function SchedeLavorazioneModal({
     baselineIngressoJson.current = JSON.stringify(normalized);
     ingressoDraftRef.current = normalized;
     setIngressoEditorInitial(normalized);
-    // Hub può essere ancora in loading: seed dalla riga lista (`lav`) così non si forza Riparazione.
+    // Hub pu├▓ essere ancora in loading: seed dalla riga lista (`lav`) cos├¼ non si forza Riparazione.
     setIngressoTagliandoInitial(
       lavorazioneRowToTagliandoFields(hubData?.lavorazione ?? lav),
     );
@@ -878,7 +878,7 @@ export function SchedeLavorazioneModal({
   });
   const nOk = countSchedePresenti(hub);
 
-  /** Commit ingresso edit — solo invocato da savePipeline.run (SSOT). */
+  /** Commit ingresso edit ÔÇö solo invocato da savePipeline.run (SSOT). */
   const commitIngressoEdit = useCallback(
     async (input: IngressoSaveCommitInput): Promise<IngressoSaveCommitResult> => {
       const ig = input.fields;
@@ -1164,7 +1164,7 @@ export function SchedeLavorazioneModal({
       case "documenti":
         return `Documenti (${documentiHubUi.length})`;
       case "attivita":
-        return `Attività (${attivitaCount})`;
+        return `Attivit├á (${attivitaCount})`;
     }
   };
   const selectHubTab = (id: HubTab) => {
@@ -1376,7 +1376,7 @@ export function SchedeLavorazioneModal({
               </GestionaleInfoCard>
               {!hubData && lavorazioneBaseRow ? (
                 <>
-                  <p className="text-xs text-[color:var(--cab-text-muted)]">Dettagli KPI in caricamento…</p>
+                  <p className="text-xs text-[color:var(--cab-text-muted)]">Dettagli KPI in caricamentoÔÇª</p>
                   <LavorazionePlanningPanel lavorazioneId={lav.id} />
                 </>
               ) : null}
@@ -1407,8 +1407,8 @@ export function SchedeLavorazioneModal({
                     <h3 className={dsGestionaleInfoCardTitle}>Preventivi</h3>
                     <p className="mt-1 text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
                       {preventiviCollegati.length > 0
-                        ? `${preventiviCollegati.length} collegati a questa lavorazione · `
-                        : "Nessuno collegato a questa lavorazione · "}
+                        ? `${preventiviCollegati.length} collegati a questa lavorazione ┬À `
+                        : "Nessuno collegato a questa lavorazione ┬À "}
                       {preventiviPerMacchina.length}{" "}
                       {preventiviPerMacchina.length === 1 ? "preventivo sul mezzo" : "preventivi sul mezzo"}
                     </p>
@@ -1610,7 +1610,7 @@ export function SchedeLavorazioneModal({
       {tagliandoAutofill.promptOpen ? (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4">
           <div className="max-w-md rounded-lg border border-[var(--erp-border)] bg-[var(--erp-surface)] p-4 text-sm shadow-lg">
-            <p className="font-semibold">Il preset è cambiato dall&apos;ultimo caricamento.</p>
+            <p className="font-semibold">Il preset ├¿ cambiato dall&apos;ultimo caricamento.</p>
             <p className="mt-2 text-[var(--erp-text-muted)]">
               Aggiornare la scheda ricambi con le voci del preset corrente?
             </p>
@@ -1649,7 +1649,7 @@ function IconBtnEdit({ className = "h-3.5 w-3.5 shrink-0" }: { className?: strin
   );
 }
 
-/** Documento con righe — allineato alle icone PDF/Modifica del hub. */
+/** Documento con righe ÔÇö allineato alle icone PDF/Modifica del hub. */
 function IconBtnPreventivo({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -1687,7 +1687,7 @@ function SchedaSectionHub({
     doc?.updatedBy?.trim() && formatAutore
       ? formatAutore(doc.updatedBy).trim()
       : doc?.updatedBy?.trim() ?? "";
-  const autoreDisplay = autoreLabel && autoreLabel !== "—" ? autoreLabel : "";
+  const autoreDisplay = autoreLabel && autoreLabel !== "ÔÇö" ? autoreLabel : "";
 
   return (
     <section className={dsGestionaleInfoCardCompact}>
@@ -1700,7 +1700,7 @@ function SchedaSectionHub({
             {doc ? (
               <span className="text-[10px] leading-snug text-[color:var(--cab-text-muted)]">
                 Agg. {fmtItShort(doc.updatedAt)}
-                {autoreDisplay ? ` · ${autoreDisplay}` : null}
+                {autoreDisplay ? ` ┬À ${autoreDisplay}` : null}
               </span>
             ) : null}
           </div>
@@ -1847,7 +1847,7 @@ function RicambiPanel({
       return;
     }
     if (r.scaricoMagazzinoApplicato) {
-      gestToast.validation("Scarico già effettuato per questa riga.");
+      gestToast.validation("Scarico gi├á effettuato per questa riga.");
       return;
     }
     const ok = await askConfirm({
@@ -1862,7 +1862,7 @@ function RicambiPanel({
         lavorazioneId: lav.id,
         quantita: r.quantita,
         autore: currentUser,
-        riepilogo: `Scheda ricambi · ${identLine}`,
+        riepilogo: `Scheda ricambi ┬À ${identLine}`,
         qc,
       });
       if (!res.ok) {

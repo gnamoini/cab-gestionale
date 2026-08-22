@@ -45,12 +45,16 @@ export function ReportMetricCompareSection({
   compare,
   unit,
   trendSemantics,
+  compareRequested = false,
 }: {
   compare: ReportMetricCompareState | null;
   unit: ReportMetricUnit;
   trendSemantics: ReportMetricTrendSemantics;
+  /** When false and compare is null, render nothing (no compare mode). */
+  compareRequested?: boolean;
 }) {
   if (compare == null) {
+    if (!compareRequested) return null;
     return (
       <div className="mt-3 border-t border-[color:var(--cab-border)] pt-3 text-xs text-[color:var(--cab-text-muted)]">
         Calcolo confronto…

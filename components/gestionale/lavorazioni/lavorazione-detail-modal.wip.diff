@@ -1,0 +1,116 @@
+diff --git "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_lavorazioni_lavorazione-detail-modal.tsx\\base" "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_lavorazioni_lavorazione-detail-modal.tsx\\wip"
+index 4f5c6bfe..e580d6cc 100644
+--- "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_lavorazioni_lavorazione-detail-modal.tsx\\base"
++++ "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_lavorazioni_lavorazione-detail-modal.tsx\\wip"
+@@ -37,7 +37,7 @@ import {
+ 
+ const LavorazionePlanningPanel = dynamic(
+   () => import("@/components/lavorazioni/lavorazione-planning-panel").then((m) => m.LavorazionePlanningPanel),
+-  { loading: () => <p className="text-xs text-zinc-500">Pianificazione??????</p> },
++  { loading: () => <p className="text-xs text-zinc-500">Pianificazione???</p> },
+ );
+ 
+ type TabId = "panoramica" | "schede" | "movimenti" | "preventivi" | "documenti" | "attivita";
+@@ -57,7 +57,7 @@ function fmtDt(iso: string) {
+ }
+ 
+ function fmtDay(iso: string | null | undefined) {
+-  if (!iso?.trim()) return "??????";
++  if (!iso?.trim()) return "???";
+   try {
+     return new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
+   } catch {
+@@ -190,9 +190,9 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
+     );
+   };
+ 
+-  const titolo = hub ? `Lavorazione ????? ${hub.kpi.statoLabel}` : "Lavorazione";
++  const titolo = hub ? `Lavorazione ?? ${hub.kpi.statoLabel}` : "Lavorazione";
+   const sottotitolo = hub
+-    ? `Ingresso ${fmtDay(hub.lavorazione.data_ingresso)} ????? Uscita ${fmtDay(hub.lavorazione.data_uscita)}`
++    ? `Ingresso ${fmtDay(hub.lavorazione.data_ingresso)} ?? Uscita ${fmtDay(hub.lavorazione.data_uscita)}`
+     : undefined;
+ 
+   return (
+@@ -215,11 +215,11 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
+           {tabBtn("movimenti", `Movimenti (${hub?.kpi.countMovimenti ?? 0})`)}
+           {tabBtn("preventivi", `Preventivi (${hub?.kpi.countPreventivi ?? 0})`)}
+           {tabBtn("documenti", `Documenti (${hub?.kpi.countDocumenti ?? 0})`)}
+-          {tabBtn("attivita", `Attivit????? (${attivitaCount})`)}
++          {tabBtn("attivita", `Attivit?? (${attivitaCount})`)}
+         </div>
+ 
+         <GestionaleModalScrollBody className="min-h-0 min-w-0 flex-1">
+-          {hubQuery.isLoading && !hub ? <p className="text-sm text-zinc-500">Caricamento??????</p> : null}
++          {hubQuery.isLoading && !hub ? <p className="text-sm text-zinc-500">Caricamento???</p> : null}
+ 
+           {tab === "panoramica" && hub ? (
+             <div className="space-y-4 text-sm">
+@@ -229,19 +229,19 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
+                   <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{hub.kpi.statoLabel}</p>
+                 </div>
+                 <div>
+-                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Priorit?????</p>
++                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Priorit??</p>
+                   <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{prioritaLabel(hub.kpi.priorita)}</p>
+                 </div>
+                 <div>
+                   <p className="font-semibold uppercase tracking-wide text-zinc-500">Giorni apertura</p>
+                   <p className="mt-0.5 font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+-                    {hub.kpi.giorniApertura ?? "??????"}
++                    {hub.kpi.giorniApertura ?? "???"}
+                   </p>
+                 </div>
+                 <div>
+                   <p className="font-semibold uppercase tracking-wide text-zinc-500">Movimenti magazzino</p>
+                   <p className="mt-0.5 text-zinc-800 dark:text-zinc-200">
+-                    {hub.kpi.movimentiEntrataCount} in ????? {hub.kpi.movimentiUscitaCount} out
++                    {hub.kpi.movimentiEntrataCount} in ?? {hub.kpi.movimentiUscitaCount} out
+                   </p>
+                 </div>
+                 <div>
+@@ -251,7 +251,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
+               </div>
+               <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+                 <p className="text-[10px] font-bold uppercase text-zinc-500">Note</p>
+-                <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200">{(hub.lavorazione.note ?? "").trim() || "??????"}</p>
++                <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200">{(hub.lavorazione.note ?? "").trim() || "???"}</p>
+               </div>
+               <LavorazionePlanningPanel lavorazioneId={lavorazioneId} />
+               <div className="flex flex-wrap gap-2">
+@@ -305,7 +305,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
+               <table className={`${dsTable} min-w-[520px] text-xs`}>
+                 <GlobalTableHead>
+                     <GlobalTableHeadLabel label="Tipo" />
+-                    <GlobalTableHeadLabel label="Quantit?????" />
++                    <GlobalTableHeadLabel label="Quantit??" />
+                     <GlobalTableHeadLabel label="Ricambio" />
+                     <GlobalTableHeadLabel label="Quando" />
+                 </GlobalTableHead>
+@@ -345,7 +345,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
+                     >
+                       <div className="min-w-0">
+                         <p className="font-semibold text-zinc-900 dark:text-zinc-50">
+-                          {p.numero} ????? {fmtDt(p.dataCreazione)}
++                          {p.numero} ?? {fmtDt(p.dataCreazione)}
+                         </p>
+                         <p className="text-xs text-zinc-500">{p.cliente}</p>
+                       </div>
+@@ -403,7 +403,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
+                             Apri
+                           </button>
+                         ) : (
+-                          <span className="text-xs text-zinc-400">??????</span>
++                          <span className="text-xs text-zinc-400">???</span>
+                         )}
+                       </li>
+                     );
+@@ -416,7 +416,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
+ 
+           {tab === "attivita" ? (
+             hubQuery.isLoading && !hub ? (
+-              <p className="text-sm text-zinc-500">Caricamento attivit???????????</p>
++              <p className="text-sm text-zinc-500">Caricamento attivit?????</p>
+             ) : (
+               <LavorazioneAttivitaPanel feedInput={attivitaFeedInput} />
+             )

@@ -32,6 +32,16 @@ import { REPORT_V2_NARRATIVE_QUALITY_SUITE } from "@/lib/control/suites/report-v
 import { REPORT_V2_NARRATIVE_CONSUMER_SUITE } from "@/lib/control/suites/report-v2-narrative-consumer.suite";
 import { REPORT_V2_NARRATIVE_PREFLIGHT_SUITE } from "@/lib/control/suites/report-v2-narrative-preflight.suite";
 import { REPORT_V2_NARRATIVE_ROLLOUT_SUITE } from "@/lib/control/suites/report-v2-narrative-rollout.suite";
+import { REPORT_P4_BUSINESS_REPORT_SUITE } from "@/lib/control/suites/report-p4-business-report.suite";
+import { REPORT_P5_OPERATIONAL_CONTEXT_SUITE } from "@/lib/control/suites/report-p5-operational-context.suite";
+import { REPORT_P6_ADVANCED_BI_SUITE } from "@/lib/control/suites/report-p6-advanced-bi.suite";
+import { REPORT_P7_DECISION_CENTER_SUITE } from "@/lib/control/suites/report-p7-decision-center.suite";
+import { REPORT_P8_ASK_REPORT_SUITE } from "@/lib/control/suites/report-p8-ask-report.suite";
+import { REPORT_DATA_INTEGRATION_SUITE } from "@/lib/control/suites/report-data-integration.suite";
+import { REPORT_DATA_COMPLETION_SUITE } from "@/lib/control/suites/report-data-completion.suite";
+import { REPORT_LEGACY_CONSOLIDATION_SUITE } from "@/lib/control/suites/report-legacy-consolidation.suite";
+import { REPORT_P9_LEGACY_ELIMINATION_SUITE } from "@/lib/control/suites/report-p9-legacy-elimination.suite";
+import { REPORT_P10_DATA_UX_SUITE } from "@/lib/control/suites/report-p10-data-ux.suite";
 
 export type CatalogRunResult = {
   ok: boolean;
@@ -200,6 +210,16 @@ export const CONTROL_CATALOG: Record<string, CatalogEntry> = {
   "report-v2-narrative-consumer": { resolve: () => runTestFiles(REPORT_V2_NARRATIVE_CONSUMER_SUITE) },
   "report-v2-narrative-preflight": { resolve: () => runTestFiles(REPORT_V2_NARRATIVE_PREFLIGHT_SUITE) },
   "report-v2-narrative-rollout": { resolve: () => runTestFiles(REPORT_V2_NARRATIVE_ROLLOUT_SUITE) },
+  "report-p4-business-report": { resolve: () => runTestFiles(REPORT_P4_BUSINESS_REPORT_SUITE) },
+  "report-p5-operational-context": { resolve: () => runTestFiles(REPORT_P5_OPERATIONAL_CONTEXT_SUITE) },
+  "report-p6-advanced-bi": { resolve: () => runTestFiles(REPORT_P6_ADVANCED_BI_SUITE) },
+  "report-p7-decision-center": { resolve: () => runTestFiles(REPORT_P7_DECISION_CENTER_SUITE) },
+  "report-p8-ask-report": { resolve: () => runTestFiles(REPORT_P8_ASK_REPORT_SUITE) },
+  "report-data-integration": { resolve: () => runTestFiles(REPORT_DATA_INTEGRATION_SUITE) },
+  "report-data-completion": { resolve: () => runTestFiles(REPORT_DATA_COMPLETION_SUITE) },
+  "report-legacy-consolidation": { resolve: () => runTestFiles(REPORT_LEGACY_CONSOLIDATION_SUITE) },
+  "report-p9-legacy-elimination": { resolve: () => runTestFiles(REPORT_P9_LEGACY_ELIMINATION_SUITE) },
+  "report-p10-data-ux": { resolve: () => runTestFiles(REPORT_P10_DATA_UX_SUITE) },
   "notification-ssot": { resolve: () => spawnScript("lib/regression/notification-ssot-policy.test.ts") },
   "notification-catalog-completeness": {
     resolve: () => spawnScript("lib/regression/notification-catalog-completeness.test.ts"),

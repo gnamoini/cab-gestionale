@@ -194,6 +194,17 @@ export const PERFORMANCE_BUDGETS: readonly PerformanceBudget[] = [
     webVitals: DEFAULT_WEB_VITALS_BUDGET,
   },
   {
+    route: "/termini-e-condizioni",
+    label: "Termini e condizioni RSC body",
+    maxPayloadKb: 6,
+    maxQueries: 0,
+    maxServerMs: 1,
+    maxHydrationMs: 2500,
+    maxClientMs: 60,
+    maxFirstLoadJsKb: 1700,
+    webVitals: DEFAULT_WEB_VITALS_BUDGET,
+  },
+  {
     route: "/offline",
     label: "Offline PWA static",
     maxPayloadKb: 4,

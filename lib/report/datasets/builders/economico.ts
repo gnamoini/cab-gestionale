@@ -91,6 +91,12 @@ export function buildEconomicoDataset(
       value: invKpi.importoScaduto,
       label: "Importo scaduto",
     });
+    metrics.push({
+      id: "eco_importo_scaduto",
+      value: invKpi.importoScaduto,
+      label: "Importo scaduto",
+    });
+    metricHealth.eco_importo_scaduto = { status: "full" };
     if (collectionRatePct != null) {
       metrics.push({
         id: "eco_tasso_incasso",
@@ -105,6 +111,8 @@ export function buildEconomicoDataset(
     metricHealth.eco_incassato = { status: "partial" };
     metrics.push({ id: "eco_da_incassare", value: 0, label: "Da incassare" });
     metricHealth.eco_da_incassare = { status: "partial" };
+    metrics.push({ id: "eco_importo_scaduto", value: 0, label: "Importo scaduto" });
+    metricHealth.eco_importo_scaduto = { status: "partial" };
   }
 
   void ctx;

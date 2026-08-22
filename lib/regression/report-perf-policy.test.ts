@@ -75,6 +75,7 @@ assert.match(loaders, /loadReportSection/);
 assert.match(derivedPrefetch, /publishOperationalAnalytics/);
 assert.match(derivedPrefetch, /publishEconomicAnalytics/);
 assert.match(derivedPrefetch, /prefetchReportEconomicQueries/);
+assert.match(read("lib/report/prefetch-report-economic-queries.ts"), /unwrapServiceResult/);
 
 assert.match(lavSection, /ReportLavorazioniImportResultModal = dynamic/);
 assert.match(magSection, /ReportMagazzinoManualHistoryModal = dynamic/);

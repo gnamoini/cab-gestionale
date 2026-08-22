@@ -199,7 +199,7 @@ export function FatturazioneDetailDrawer({
             <li key={r.id} className="px-3 py-2 text-sm">
               <p className="font-medium">{r.descrizione}</p>
               <p className="text-[color:var(--cab-text-muted)]">
-                {r.quantita} × {formatInvoiceMoney(r.prezzo_unitario)} — {formatInvoiceMoney(r.totale)}
+                {r.quantita} ├ù {formatInvoiceMoney(r.prezzo_unitario)} ÔÇö {formatInvoiceMoney(r.totale)}
               </p>
             </li>
           ))}
@@ -211,7 +211,7 @@ export function FatturazioneDetailDrawer({
           <ul className={`${LIST_DIVIDER_UL}`}>
             {detail.payments.map((p) => (
               <li key={p.id} className="py-2 text-sm">
-                {formatInvoiceDate(p.data)} — {formatInvoiceMoney(p.importo)} ({p.metodo})
+                {formatInvoiceDate(p.data)} ÔÇö {formatInvoiceMoney(p.importo)} ({p.metodo})
               </li>
             ))}
           </ul>

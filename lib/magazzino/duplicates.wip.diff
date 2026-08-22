@@ -1,0 +1,22 @@
+diff --git "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\lib_magazzino_duplicates.ts\\base" "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\lib_magazzino_duplicates.ts\\wip"
+index 4c713aaf..94b5a0d2 100644
+--- "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\lib_magazzino_duplicates.ts\\base"
++++ "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\lib_magazzino_duplicates.ts\\wip"
+@@ -5,7 +5,7 @@ import type { RicambioMagazzino } from "@/lib/magazzino/types";
+ 
+ /**
+  * Normalizza il codice fornitore originale per confronto:
+- * trim, case-insensitive, spazi interni compressi (doppi spazi ?????? uno).
++ * trim, case-insensitive, spazi interni compressi (doppi spazi ??? uno).
+  * @deprecated Preferire `buildRicambioCodiceEntityKey` / `normalizeEntityString`.
+  */
+ export function normalizeMagazzinoCodiceOE(value: string): string {
+@@ -83,7 +83,7 @@ export type MagazzinoArchiveDuplicateCodeGroup = {
+ };
+ 
+ /**
+- * Raggruppa ricambi che condividono lo stesso codice OE normalizzato (??????2 per gruppo).
++ * Raggruppa ricambi che condividono lo stesso codice OE normalizzato (???2 per gruppo).
+  */
+ export function analyzeArchiveDuplicateCodes(items: RicambioMagazzino[]): MagazzinoArchiveDuplicateCodeGroup[] {
+   const map = new Map<string, RicambioMagazzino[]>();

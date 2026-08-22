@@ -64,7 +64,7 @@ import type { CabAppSettingsQueryPayload } from "@/src/hooks/gestionale/use-sett
 import type { ServiceResult } from "@/src/services/service-result";
 
 const LA_LIST_STALE_MS = 30_000;
-/** Conteggio archivio collassato — allineato a `archivioCountQuery` nelle view lavorazioni. */
+/** Conteggio archivio collassato ÔÇö allineato a `archivioCountQuery` nelle view lavorazioni. */
 const LAVORAZIONI_ARCHIVIO_COUNT_STALE_MS = 30_000;
 
 export type GestionalePrefetchPage =
@@ -84,15 +84,15 @@ export type GestionalePrefetchPage =
   | "lavorazioni_clienti";
 
 export type PrefetchDeferredOptions = {
-  /** Deep link `?tab=scadenziario` — prefetch SSR open items. */
+  /** Deep link `?tab=scadenziario` ÔÇö prefetch SSR open items. */
   includeOpenItems?: boolean;
-  /** Deep link `?tab=pagamenti` — prefetch SSR customer payments. */
+  /** Deep link `?tab=pagamenti` ÔÇö prefetch SSR customer payments. */
   includePayments?: boolean;
 };
 
 export type PagePrefetchConfig = {
   prefetchDeferredOnServer: boolean;
-  /** ponytail: critical e deferred indipendenti — opt-in dopo audit (default false). */
+  /** ponytail: critical e deferred indipendenti ÔÇö opt-in dopo audit (default false). */
   parallelPrefetchSafe?: boolean;
 };
 
@@ -146,7 +146,7 @@ export async function prefetchGestionalePage(
   await prefetchCriticalPage(qc, page);
 }
 
-/** Settings + gate minimo — await prima del first byte su route pesanti. */
+/** Settings + gate minimo ÔÇö await prima del first byte su route pesanti. */
 export async function prefetchCriticalPage(qc: QueryClient, page: GestionalePrefetchPage): Promise<void> {
   switch (page) {
     case "mezzi":
@@ -167,12 +167,12 @@ export async function prefetchCriticalPage(qc: QueryClient, page: GestionalePref
   }
 }
 
-/** Layout gestionale — settings una volta per RSC request (React.cache su fetcher). */
+/** Layout gestionale ÔÇö settings una volta per RSC request (React.cache su fetcher). */
 export async function prefetchGestionaleLayoutSettings(qc: QueryClient): Promise<void> {
   await prefetchSettingsPayload(qc, getAppSettingsPayloadReadServer);
 }
 
-/** Dati lista / BFF — può completare dopo lo stream shell. */
+/** Dati lista / BFF ÔÇö pu├▓ completare dopo lo stream shell. */
 export async function prefetchDeferredPage(
   qc: QueryClient,
   page: GestionalePrefetchPage,

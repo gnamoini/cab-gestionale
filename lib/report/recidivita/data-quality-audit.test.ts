@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { auditDataQuality, DATA_QUALITY_THRESHOLDS } from "@/lib/report/recidivita/data-quality-audit";
 import {
   computeOperatorAttributionPrecision,
+  collectOperatorNamesFromBundle,
   resolveOperatorIdentity,
 } from "@/lib/report/recidivita/resolve-operator-identity";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
@@ -29,6 +30,20 @@ const precision = computeOperatorAttributionPrecision([
   unknown,
 ]);
 assert.ok(precision > 60 && precision < 70);
+
+const idOnlyNames = collectOperatorNamesFromBundle(
+  {
+    lavorazioneId: "l1",
+    ingresso: {
+      tipo: "ingresso",
+      campi: { addettoAccettazione: "", addettoAccettazioneId: "123" },
+    } as never,
+    lavorazioni: null,
+    ricambi: null,
+  },
+  addetti,
+);
+assert.deepEqual(idOnlyNames, ["Mario Rossi"]);
 
 const audit = auditDataQuality({
   lavRows: [

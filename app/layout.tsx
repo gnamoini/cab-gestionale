@@ -1,4 +1,3 @@
-import Script from "next/script";
 import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppProviders } from "@/components/app-providers";
@@ -66,30 +65,31 @@ export default async function RootLayout({
           id="cab-app-boot-critical"
           dangerouslySetInnerHTML={{ __html: CAB_APP_BOOT_CRITICAL_STYLE }}
         />
-        <Script
+        <script
           id="cab-theme-boot"
-          strategy="beforeInteractive"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: CAB_THEME_BOOT_INLINE_SCRIPT }}
         />
-        <Script
+        <script
           id="cab-branding-boot"
-          strategy="beforeInteractive"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: CAB_BRANDING_BOOT_INLINE_SCRIPT }}
         />
-        <Script
+        <script
           id="cab-app-boot"
-          strategy="beforeInteractive"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: CAB_APP_BOOT_INLINE_SCRIPT }}
         />
         {process.env.NODE_ENV === "development" ? (
           <>
             <script
               id="cab-turbopack-css-hmr-recovery"
+              suppressHydrationWarning
               dangerouslySetInnerHTML={{ __html: CAB_TURBOPACK_CSS_HMR_RECOVERY_INLINE_SCRIPT }}
             />
-            <Script
+            <script
               id="cab-cursor-automation-dom-shield"
-              strategy="beforeInteractive"
+              suppressHydrationWarning
               dangerouslySetInnerHTML={{ __html: CAB_CURSOR_AUTOMATION_DOM_SHIELD_INLINE_SCRIPT }}
             />
           </>
@@ -109,7 +109,9 @@ export default async function RootLayout({
           {/* ponytail: src statico pre-React — logo senza next/image per primo paint immediato */}
           <img src="/cab-logo.png" alt="C.A.B." width={196} height={56} />
           <div className="cab-app-boot-spinner" aria-hidden="true" />
-          <p id="cab-app-boot-msg">Avvio del gestionale...</p>
+          <p id="cab-app-boot-msg" suppressHydrationWarning>
+            Avvio del gestionale...
+          </p>
         </div>
         <AppProviders initialAuthSnapshot={initialAuthSnapshot}>{children}</AppProviders>
       </body>

@@ -18,8 +18,14 @@ export type DuplicateSeverity = "none" | "low" | "medium" | "high";
 
 export const DUPLICATE_ACTION_THRESHOLD_KB = 15;
 
-const PUBLIC_ROUTE_PREFIXES = ["/login", "/privacy-policy", "/offline", "/r/"];
-const PUBLIC_EXACT = new Set(["/login", "/login/reset-password", "/privacy-policy", "/offline"]);
+const PUBLIC_ROUTE_PREFIXES = ["/login", "/privacy-policy", "/termini-e-condizioni", "/offline", "/r/"];
+const PUBLIC_EXACT = new Set([
+  "/login",
+  "/login/reset-password",
+  "/privacy-policy",
+  "/termini-e-condizioni",
+  "/offline",
+]);
 
 export function classifyRoute(route: string): {
   isPublic: boolean;

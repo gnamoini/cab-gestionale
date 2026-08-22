@@ -1,7 +1,7 @@
 "use client";
 
 import { Tooltip } from "@/components/ui";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useAuthUserId } from "@/context/auth-context";
 import type { ControlTowerKpiCluster, ControlTowerKpiMetric } from "@/lib/dashboard/control-tower-selectors";
@@ -10,6 +10,7 @@ import {
   filterControlTowerKpiClusters,
   type ControlTowerBriefMode,
 } from "@/lib/dashboard/control-tower-selectors";
+import { getControlTowerBriefPreviousRange, getControlTowerBriefPreviousCompareRange } from "@/lib/dashboard/control-tower-time-ranges";
 import type { DashboardWidgetDefinition } from "@/lib/dashboard/dashboard-widget-registry";
 import { LoadingCardSkeleton } from "@/components/design-system";
 import { wrapDashboardWidget } from "@/components/dashboard/dashboard-widget-shell";
@@ -86,63 +87,128 @@ function briefPeriodChipClass(active: boolean): string {
   } ${dsFocus}`;
 }
 
-function BriefPeriodToggle({
+function briefPreviousOffsetLabel(period: ControlTowerBriefMode): string {
+  switch (period) {
+    case "day":
+      return "Ieri";
+    case "week":
+      return "Sett. prec.";
+    case "month":
+      return "Mese prec.";
+  }
+}
+
+function briefComparePeriodLabel(period: ControlTowerBriefMode, viewingPrevious: boolean): string {
+  if (period === "month") {
+    return viewingPrevious ? "mese antecedente" : "mese precedente";
+  }
+  return viewingPrevious ? "settimana antecedente" : "settimana precedente";
+}
+
+function briefComparePeriodTitle(period: ControlTowerBriefMode, viewingPrevious: boolean): string {
+  if (period === "month") {
+    return viewingPrevious ? "Mese antecedente" : "Mese precedente";
+  }
+  return viewingPrevious ? "Settimana antecedente" : "Settimana precedente";
+}
+
+function BriefPeriodControls({
   period,
+  viewingPrevious,
   onChange,
+  onViewingPreviousChange,
 }: {
   period: ControlTowerBriefMode;
+  viewingPrevious: boolean;
   onChange: (period: ControlTowerBriefMode) => void;
+  onViewingPreviousChange: (viewingPrevious: boolean) => void;
 }) {
+  const stopPanelToggle = (event: { stopPropagation: () => void }) => event.stopPropagation();
+  const previousOffsetLabel = briefPreviousOffsetLabel(period);
+
   return (
-    <div
-      className={`${dsSegmentedWrap} w-full min-w-0 gap-0.5 p-0.5`}
-      role="group"
-      aria-label="Periodo brief operativo"
-      onPointerDown={(event) => event.stopPropagation()}
-      onClick={(event) => event.stopPropagation()}
-    >
-      {(
-        [
-          ["day", "Giorno"],
-          ["week", "Settimana"],
-          ["month", "Mese"],
-        ] as const
-      ).map(([id, label]) => {
-        const active = period === id;
-        return (
+    <>
+      <div
+        className="min-w-0 xl:col-span-1 xl:row-start-1"
+        onPointerDown={stopPanelToggle}
+        onClick={stopPanelToggle}
+      >
+        <div
+          className={`${dsSegmentedWrap} w-full min-w-0 gap-0.5 p-0.5`}
+          role="group"
+          aria-label="Granularità periodo brief operativo"
+        >
+          {(
+            [
+              ["day", "Giorno"],
+              ["week", "Settimana"],
+              ["month", "Mese"],
+            ] as const
+          ).map(([id, label]) => {
+            const active = period === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                className={briefPeriodChipClass(active)}
+                aria-pressed={active}
+                onClick={() => onChange(id)}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div
+        className="min-w-0 xl:col-span-1 xl:row-start-1"
+        onPointerDown={stopPanelToggle}
+        onClick={stopPanelToggle}
+      >
+        <div
+          className={`${dsSegmentedWrap} w-full min-w-0 gap-0.5 p-0.5`}
+          role="group"
+          aria-label="Finestra temporale brief operativo"
+        >
           <button
-            key={id}
             type="button"
-            className={briefPeriodChipClass(active)}
-            aria-pressed={active}
-            onClick={() => onChange(id)}
+            className={briefPeriodChipClass(!viewingPrevious)}
+            aria-pressed={!viewingPrevious}
+            onClick={() => onViewingPreviousChange(false)}
           >
-            {label}
+            Corrente
           </button>
-        );
-      })}
-    </div>
+          <button
+            type="button"
+            className={briefPeriodChipClass(viewingPrevious)}
+            aria-pressed={viewingPrevious}
+            aria-label={previousOffsetLabel}
+            onClick={() => onViewingPreviousChange(true)}
+          >
+            {previousOffsetLabel}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
 function KpiCompareBadge({
   metric,
   prevLabel,
-  comparePeriod,
+  comparePeriodLabel,
 }: {
   metric: ControlTowerKpiMetric;
   prevLabel: string;
-  comparePeriod: "week" | "month";
+  comparePeriodLabel: string;
 }) {
   const pctStr = fmtPct(metric.deltaPct);
   const { arrow, tone } = reportArrowAndTone(metric.deltaPct, metric.invert);
   const absStr = formatDeltaAbs(metric);
   if (absStr == null && pctStr == null) return null;
 
-  const periodLabel = comparePeriod === "month" ? "mese precedente" : "settimana precedente";
-
   return (
-    <Tooltip content={`Variazione rispetto al ${periodLabel} (${prevLabel})`}><span className={reportCompareBadgeClass(tone)}>
+    <Tooltip content={`Variazione rispetto al ${comparePeriodLabel} (${prevLabel})`}><span className={reportCompareBadgeClass(tone)}>
       <span className="text-xs leading-none" aria-hidden>
         {arrow}
       </span>
@@ -155,16 +221,17 @@ function KpiCompareBadge({
 function KpiMetricRow({
   metric,
   showComparisons,
-  comparePeriod,
+  comparePeriodTitle,
+  comparePeriodLabel,
 }: {
   metric: ControlTowerKpiMetric;
   showComparisons: boolean;
-  comparePeriod: "week" | "month";
+  comparePeriodTitle: string;
+  comparePeriodLabel: string;
 }) {
   const valueStr = formatMetricValue(metric.value, metric.unit);
   const showCompare = showComparisons && !metric.snapshot && metric.prevValue != null;
   const prevLabel = showCompare ? formatMetricValue(metric.prevValue, metric.unit) : null;
-  const prevPeriodLabel = comparePeriod === "month" ? "Mese precedente" : "Settimana precedente";
 
   return (
     <li className="min-w-0 border-b border-[color:color-mix(in_srgb,var(--cab-border)_65%,transparent)] py-2.5 first:pt-0 last:border-b-0 last:pb-0">
@@ -174,12 +241,12 @@ function KpiMetricRow({
           {valueStr}
         </span>
         {showCompare && prevLabel != null ? (
-          <KpiCompareBadge metric={metric} prevLabel={prevLabel} comparePeriod={comparePeriod} />
+          <KpiCompareBadge metric={metric} prevLabel={prevLabel} comparePeriodLabel={comparePeriodLabel} />
         ) : null}
       </div>
       {showCompare && prevLabel != null ? (
         <p className="mt-1.5 text-xs leading-snug text-[color:var(--cab-text-muted)]">
-          {prevPeriodLabel}:{" "}
+          {comparePeriodTitle}:{" "}
           <span className="font-semibold tabular-nums text-[color:var(--cab-text)]">{prevLabel}</span>
         </p>
       ) : metric.snapshot ? (
@@ -200,15 +267,28 @@ export function DashboardOperationalKpiHeaderWidget({ def }: { def: DashboardWid
     movimentiLoading,
   } = useControlTowerContext();
   const [period, setPeriod] = useBriefPeriodPreference();
+  const [viewingPrevious, setViewingPrevious] = useState(false);
+
+  const handlePeriodChange = useCallback((mode: ControlTowerBriefMode) => {
+    setPeriod(mode);
+    setViewingPrevious(false);
+  }, [setPeriod]);
 
   const header = useMemo(() => {
     if (!headerKpiBase) return null;
+    const comparePrevious = period === "week" || period === "month";
     const slice = buildControlTowerHeaderKpiSlice({
       ...headerKpiBase.input,
       briefMode: period,
+      ...(viewingPrevious
+        ? {
+            range: getControlTowerBriefPreviousRange(period),
+            prevRange: comparePrevious ? getControlTowerBriefPreviousCompareRange(period) : null,
+          }
+        : {}),
     });
     return filterControlTowerKpiClusters(slice, headerKpiBase.filter);
-  }, [headerKpiBase, period]);
+  }, [headerKpiBase, period, viewingPrevious]);
 
   if ((coreLoading || headerLoading || timesheetLoading || movimentiLoading) && !header) {
     return wrapDashboardWidget(def, <LoadingCardSkeleton minHeightClass="min-h-[8rem]" rows={2} />);
@@ -216,12 +296,18 @@ export function DashboardOperationalKpiHeaderWidget({ def }: { def: DashboardWid
   if (!header || header.clusters.length === 0) return null;
 
   const showComparisons = period === "week" || period === "month";
-  const comparePeriod = period === "month" ? "month" : "week";
+  const comparePeriodTitle = briefComparePeriodTitle(period, viewingPrevious);
+  const comparePeriodLabel = briefComparePeriodLabel(period, viewingPrevious);
 
   const body: ReactNode = (
     <div className="grid min-w-0 gap-3 lg:grid-cols-2 xl:grid-cols-4">
-      <div className="min-w-0 max-xl:col-span-full xl:col-span-1 xl:row-start-1">
-        <BriefPeriodToggle period={period} onChange={setPeriod} />
+      <div className="col-span-full grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:col-span-2 xl:contents">
+        <BriefPeriodControls
+          period={period}
+          viewingPrevious={viewingPrevious}
+          onChange={handlePeriodChange}
+          onViewingPreviousChange={setViewingPrevious}
+        />
       </div>
       {header.clusters.map((cluster) => (
         <article
@@ -233,7 +319,13 @@ export function DashboardOperationalKpiHeaderWidget({ def }: { def: DashboardWid
           </h3>
           <ul className="mt-1 min-w-0 flex-1">
             {briefMetricsForCluster(cluster).map((m) => (
-              <KpiMetricRow key={m.id} metric={m} showComparisons={showComparisons} comparePeriod={comparePeriod} />
+              <KpiMetricRow
+                key={m.id}
+                metric={m}
+                showComparisons={showComparisons}
+                comparePeriodTitle={comparePeriodTitle}
+                comparePeriodLabel={comparePeriodLabel}
+              />
             ))}
           </ul>
         </article>

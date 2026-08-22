@@ -6,7 +6,7 @@ import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-c
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { InventoryDocumentRow } from "@/src/types/supabase-tables";
 
-/** SSOT lista documenti receiving — riusato da API e prefetch pagina carichi. */
+/** SSOT lista documenti receiving ÔÇö riusato da API e prefetch pagina carichi. */
 export async function fetchInventoryReceivingDocumentsServer(): Promise<
   ServiceResult<InventoryDocumentRow[]>
 > {

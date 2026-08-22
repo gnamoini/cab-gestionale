@@ -7,6 +7,7 @@ import { scoreLabelAndTone } from "@/lib/health-score/explain/filter-breakdown-f
 import { getAllHealthKpis } from "@/lib/health-score/registry/kpi-registry";
 import { getAllHealthSections } from "@/lib/health-score/registry/section-registry";
 import { getAllRiskModifiers } from "@/lib/health-score/registry/risk-modifier-registry";
+import { HEALTH_SCORE_TARGET_ACHIEVED } from "@/lib/health-score/normalizers/target-level-normalizer";
 import { blendTrendLevel } from "@/lib/health-score/normalizers/tanh-normalizer";
 import { resolveTarget } from "@/lib/health-score/targets/target-provider";
 import { classifyWorkshopSize } from "@/lib/health-score/workshop-size/classify-workshop-size";
@@ -112,7 +113,8 @@ export function computeHealthScoreFromSnapshot(input: ComputeHealthScoreInput): 
     }
 
     const sectionWeight = config.sections[kpi.sectionId] ?? 0;
-    const contributionPoints = sectionWeight > 0 ? (blended.score - 50) * (effectiveWeight / 10) : 0;
+    const contributionPoints =
+      sectionWeight > 0 ? (blended.score - HEALTH_SCORE_TARGET_ACHIEVED) * (effectiveWeight / 10) : 0;
 
     kpiNodes.push({
       id: kpi.id,

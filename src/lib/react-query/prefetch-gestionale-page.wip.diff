@@ -1,0 +1,210 @@
+diff --git "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\src_lib_react-query_prefetch-gestionale-page.ts\\base" "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\src_lib_react-query_prefetch-gestionale-page.ts\\wip"
+index dd80eaeb..68d73a01 100644
+--- "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\src_lib_react-query_prefetch-gestionale-page.ts\\base"
++++ "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\src_lib_react-query_prefetch-gestionale-page.ts\\wip"
+@@ -27,7 +27,6 @@ import { fetchDocumentiPageDTOServer } from "@/lib/bff/documenti-page-fetch-serv
+ import { fetchReportDataDTOServer } from "@/lib/bff/report-bundle-fetch-server";
+ import { fetchFatturazionePageDTOServer } from "@/lib/bff/fatturazione-page-fetch-server";
+ import { fetchPreventiviPageDTOServer } from "@/lib/bff/preventivi-page-fetch-server";
+-import { fetchOrdiniFornitoriRecordsServer } from "@/lib/ordini-fornitori/ordine-fornitore-fetch-server";
+ import { fetchLavorazioniPageDTOServer } from "@/lib/bff/lavorazioni-page-fetch-server";
+ import { fetchClientPortalPageDTOServer } from "@/lib/bff/client-portal-page-fetch-server";
+ import { fetchMagazzinoPageDTOServer } from "@/lib/bff/magazzino-page-fetch-server";
+@@ -57,13 +56,12 @@ import {
+ } from "@/lib/react-query/query-layer-policies";
+ import { GESTIONALE_SEMI_GC_MS, GESTIONALE_SEMI_STALE_MS, GESTIONALE_STATIC_GC_MS, GESTIONALE_STATIC_STALE_MS } from "@/lib/react-query/data-cache-tiers";
+ import { PWA_QUERY_CLIENT_DEFAULTS } from "@/lib/pwa/pwa-query-policy";
+-import { markPrefetchedQueryMeta } from "@/lib/react-query/prefetched-query-meta";
+ import { resolveCabAppSettingsFallbackServer } from "@/lib/app-settings/settings-fallback-server";
+ import type { CabAppSettingsQueryPayload } from "@/src/hooks/gestionale/use-settings-queries";
+ import type { ServiceResult } from "@/src/services/service-result";
+ 
+ const LA_LIST_STALE_MS = 30_000;
+-/** Conteggio archivio collassato ?????? allineato a `archivioCountQuery` nelle view lavorazioni. */
++/** Conteggio archivio collassato ??? allineato a `archivioCountQuery` nelle view lavorazioni. */
+ const LAVORAZIONI_ARCHIVIO_COUNT_STALE_MS = 30_000;
+ 
+ export type GestionalePrefetchPage =
+@@ -73,7 +71,6 @@ export type GestionalePrefetchPage =
+   | "magazzino"
+   | "report"
+   | "preventivi"
+-  | "ordini_fornitori"
+   | "fatturazione"
+   | "impostazioni"
+   | "agenda"
+@@ -83,15 +80,17 @@ export type GestionalePrefetchPage =
+   | "lavorazioni_clienti";
+ 
+ export type PrefetchDeferredOptions = {
+-  /** Deep link `?tab=scadenziario` ?????? prefetch SSR open items. */
++  /** Deep link `?prevTab=ordini` ??? prefetch SSR lista ordini fornitori. */
++  includeOrdini?: boolean;
++  /** Deep link `?tab=scadenziario` ??? prefetch SSR open items. */
+   includeOpenItems?: boolean;
+-  /** Deep link `?tab=pagamenti` ?????? prefetch SSR customer payments. */
++  /** Deep link `?tab=pagamenti` ??? prefetch SSR customer payments. */
+   includePayments?: boolean;
+ };
+ 
+ export type PagePrefetchConfig = {
+   prefetchDeferredOnServer: boolean;
+-  /** ponytail: critical e deferred indipendenti ?????? opt-in dopo audit (default false). */
++  /** ponytail: critical e deferred indipendenti ??? opt-in dopo audit (default false). */
+   parallelPrefetchSafe?: boolean;
+ };
+ 
+@@ -103,7 +102,6 @@ export const PAGE_PREFETCH_CONFIG: Record<GestionalePrefetchPage, PagePrefetchCo
+   lavorazioni: { prefetchDeferredOnServer: true },
+   documenti: { prefetchDeferredOnServer: true },
+   preventivi: { prefetchDeferredOnServer: true },
+-  ordini_fornitori: { prefetchDeferredOnServer: true },
+   fatturazione: { prefetchDeferredOnServer: true },
+   impostazioni: { prefetchDeferredOnServer: true },
+   agenda: { prefetchDeferredOnServer: true },
+@@ -145,33 +143,40 @@ export async function prefetchGestionalePage(
+   await prefetchCriticalPage(qc, page);
+ }
+ 
+-/** Settings + gate minimo ?????? await prima del first byte su route pesanti. */
++/** Settings + gate minimo ??? await prima del first byte su route pesanti. */
+ export async function prefetchCriticalPage(qc: QueryClient, page: GestionalePrefetchPage): Promise<void> {
+   switch (page) {
+     case "mezzi":
+     case "fatturazione":
++      return;
+     case "preventivi":
+-    case "ordini_fornitori":
++      await prefetchSettingsPayload(qc, getAppSettingsPayloadReadServer);
++      return;
+     case "agenda":
+     case "dipendenti":
+     case "lavorazioni":
++      await prefetchSettingsPayload(qc, getAppSettingsPayloadServer);
++      return;
+     case "sicurezza":
++      return;
+     case "impostazioni":
++      return;
+     case "lavorazioni_clienti":
++      await prefetchSettingsPayload(qc, getAppSettingsPayloadReadServer);
++      return;
+     case "documenti":
+     case "magazzino":
++      await prefetchSettingsPayload(qc, getAppSettingsPayloadReadServer);
++      return;
+     case "dashboard":
++      return;
+     case "report":
++      await prefetchSettingsPayload(qc, getAppSettingsPayloadServer);
+       return;
+   }
+ }
+ 
+-/** Layout gestionale ?????? settings una volta per RSC request (React.cache su fetcher). */
+-export async function prefetchGestionaleLayoutSettings(qc: QueryClient): Promise<void> {
+-  await prefetchSettingsPayload(qc, getAppSettingsPayloadReadServer);
+-}
+-
+-/** Dati lista / BFF ?????? pu?????? completare dopo lo stream shell. */
++/** Dati lista / BFF ??? pu?? completare dopo lo stream shell. */
+ export async function prefetchDeferredPage(
+   qc: QueryClient,
+   page: GestionalePrefetchPage,
+@@ -358,8 +363,9 @@ export async function prefetchDeferredPage(
+       return;
+     }
+     case "preventivi": {
+-      const dto = await fetchPreventiviPageDTOServer();
+-      await Promise.all([
++      const includeOrdini = options?.includeOrdini === true;
++      const dto = await fetchPreventiviPageDTOServer(includeOrdini);
++      const seeds: Promise<void>[] = [
+         seedPrefetchedData(
+           qc,
+           preventiviRecordsQueryKey(),
+@@ -374,19 +380,19 @@ export async function prefetchDeferredPage(
+           GESTIONALE_SEMI_STALE_MS,
+           GESTIONALE_SEMI_GC_MS,
+         ),
+-      ]);
+-      return;
+-    }
+-    case "ordini_fornitori": {
+-      const ordiniRes = await fetchOrdiniFornitoriRecordsServer();
+-      const ordini = ordiniRes.success ? (ordiniRes.data ?? []) : [];
+-      await seedPrefetchedData(
+-        qc,
+-        ordiniFornitoriListQueryKey(),
+-        ordini,
+-        GESTIONALE_SEMI_STALE_MS,
+-        GESTIONALE_SEMI_GC_MS,
+-      );
++      ];
++      if (includeOrdini && dto.ordini) {
++        seeds.push(
++          seedPrefetchedData(
++            qc,
++            ordiniFornitoriListQueryKey(),
++            dto.ordini,
++            GESTIONALE_SEMI_STALE_MS,
++            GESTIONALE_SEMI_GC_MS,
++          ),
++        );
++      }
++      await Promise.all(seeds);
+       return;
+     }
+     case "fatturazione": {
+@@ -503,15 +509,12 @@ async function seedPrefetchedData<T>(
+   staleTime: number,
+   gcTime: number,
+ ): Promise<void> {
+-  const prefetchedAt = Date.now();
+   await qc.prefetchQuery({
+     queryKey,
+     queryFn: async () => data,
+     staleTime,
+     gcTime,
+-    meta: markPrefetchedQueryMeta(prefetchedAt),
+   });
+-  qc.setQueryData(queryKey, data, { updatedAt: prefetchedAt });
+ }
+ 
+ function unwrap<T>(result: ServiceResult<T>, fallback: T): T {
+@@ -524,18 +527,12 @@ async function prefetchSettingsPayload(
+ ): Promise<void> {
+   const settings = resolveInitialLoad({ scopeKey: "settings.payload" });
+   void getPrefetchCachePolicyHint("settings.payload");
+-  const prefetchedAt = Date.now();
+   await qc.prefetchQuery({
+     queryKey: settings.queryKey,
+     queryFn: async () => unwrap(await fetcher(), { rows: [], resolved: resolveCabAppSettingsFallbackServer() }),
+     staleTime: GESTIONALE_STATIC_STALE_MS,
+     gcTime: GESTIONALE_STATIC_GC_MS,
+-    meta: markPrefetchedQueryMeta(prefetchedAt),
+   });
+-  const seeded = qc.getQueryData<CabAppSettingsQueryPayload>(settings.queryKey);
+-  if (seeded) {
+-    qc.setQueryData(settings.queryKey, seeded, { updatedAt: prefetchedAt });
+-  }
+ }
+ 
+ async function prefetchGestionalePageDehydrated(
+@@ -571,12 +568,10 @@ export async function prefetchReportPage(): Promise<DehydratedState> {
+   return prefetchGestionalePageDehydrated("report");
+ }
+ 
+-export async function prefetchPreventiviPage(): Promise<DehydratedState> {
+-  return prefetchGestionalePageDehydrated("preventivi");
+-}
+-
+-export async function prefetchOrdiniFornitoriPage(): Promise<DehydratedState> {
+-  return prefetchGestionalePageDehydrated("ordini_fornitori");
++export async function prefetchPreventiviPage(
++  options?: Pick<PrefetchGestionalePageOptions, "includeOrdini">,
++): Promise<DehydratedState> {
++  return prefetchGestionalePageDehydrated("preventivi", options);
+ }
+ 
+ export async function prefetchFatturazionePage(

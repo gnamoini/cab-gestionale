@@ -1074,7 +1074,15 @@ export type PreventivoDdtFulfillmentRow = {
 export type OrdineFornitoreRow = {
   id: string;
   numero: string | null;
-  status: "bozza" | "inviato" | "confermato" | "spedito" | "ricevuto" | "annullato";
+  status:
+    | "bozza"
+    | "inviato"
+    | "in_consegna"
+    | "consegnato"
+    | "annullato"
+    | "confermato"
+    | "spedito"
+    | "ricevuto";
   data_ordine: string;
   fornitore_label: string;
   fornitore_snapshot: Record<string, unknown>;
@@ -1107,6 +1115,7 @@ export type OrdineFornitoreRigaRow = {
   codice: string | null;
   descrizione: string;
   quantita: number;
+  quantita_ricevuta?: number;
   prezzo_unitario: number;
   sconto_percent: number;
   totale_riga: number;

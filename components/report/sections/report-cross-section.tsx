@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { CrossKpiGrid, buildCrossKpiCardModels } from "@/components/report/sections/cross/cross-kpi-grid";
 import { CrossTrustBanner } from "@/components/report/sections/cross/cross-trust-banner";
 import { CrossScatterChart } from "@/components/report/sections/cross/cross-scatter-chart";
 import { useReportCrossAnalysis } from "@/components/report/hooks/use-report-cross-analysis";
@@ -16,7 +15,6 @@ import {
   ReportVisualization,
 } from "@/components/report/design-system";
 import { KPI_CHART_SERIES_COLORS } from "@/components/report/design-system/primitives/chart/multi-series-line-chart";
-import { buildCrossMetricsWithCompare } from "@/lib/report/cross-analysis/cross-with-compare";
 import {
   buildCrossMonthlyTrend,
   crossTrendIndexedSeries,
@@ -29,7 +27,6 @@ import {
   buildCrossScatterPoints,
   buildCrossVolumeAnomaly,
 } from "@/lib/report/cross-analysis/build-cross-breakdowns";
-import { computeMonthTotals } from "@/lib/dipendenti/timesheet-totals";
 import { useReportTimesheetKpi } from "@/src/hooks/use-report-timesheet-kpi";
 import { useInvoicesQuery } from "@/src/hooks/gestionale/use-invoices-query";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
@@ -42,22 +39,10 @@ function fmtEur(n: number): string {
 export default function ReportCrossSectionView(props: DomainReportSectionProps) {
   const derived = useReportAnalyticsDerived();
   const compareRange = props.showCompare && props.compareRange ? props.compareRange : props.range;
-  const compareTimesheet = useReportTimesheetKpi(compareRange);
   const timesheet = useReportTimesheetKpi(props.range);
   const invoicesQ = useInvoicesQuery(props.fetchEnabled);
   const preventiviQ = usePreventiviRecordsQuery(props.fetchEnabled);
   const apiCross = useReportCrossAnalysis(props.range, props.analyticsContext.compareMode);
-
-  const compareTotalHours = useMemo(() => {
-    if (!props.showCompare || !props.compareRange) return null;
-    if (compareTimesheet.isLoading) return null;
-    return computeMonthTotals(compareTimesheet.entries).totaleLavorato;
-  }, [props.showCompare, props.compareRange, compareTimesheet.isLoading, compareTimesheet.entries]);
-
-  const crossMetrics = useMemo(
-    () => buildCrossMetricsWithCompare(derived, props, compareTotalHours),
-    [derived.revision, derived.operational, derived.warehouse, derived.labor, derived.economic, props, compareTotalHours],
-  );
 
   const monthlyTrend = useMemo(
     () =>
@@ -85,20 +70,9 @@ export default function ReportCrossSectionView(props: DomainReportSectionProps) 
     ],
   );
 
-  const op = derived.operational?.data;
   const wh = derived.warehouse?.data;
   const lab = derived.labor?.data;
   const eco = derived.economic?.data;
-
-  const costCompositionSub = useMemo(() => {
-    if (!wh || !lab) return undefined;
-    const ricambi = wh.movementValue ?? 0;
-    const manodopera = lab.manodoperaCost ?? 0;
-    const tot = ricambi + manodopera;
-    if (tot <= 0) return undefined;
-    const ricPct = Math.round((ricambi / tot) * 100);
-    return `Composizione: ${ricPct}% ricambi · ${100 - ricPct}% manodopera`;
-  }, [wh, lab]);
 
   const marginPerHour = useMemo(() => {
     if (!eco || !lab || lab.totalHours <= 0) return null;
@@ -111,31 +85,6 @@ export default function ReportCrossSectionView(props: DomainReportSectionProps) 
       sub: `Margine stimato ${fmtEur(margine)} su ${lab.totalHours} h`,
     };
   }, [eco, lab, wh]);
-
-  const backlogPressure = useMemo(() => {
-    if (!op) return null;
-    const closed = op.completedInPeriod;
-    const open = op.backlog;
-    if (closed <= 0 && open <= 0) return null;
-    const ratio = closed > 0 ? Math.round((open / closed) * 100) / 100 : open;
-    return {
-      value: closed > 0 ? `${ratio}` : `${open} aperte`,
-      sub: closed > 0 ? `${open} aperte / ${closed} chiuse nel periodo` : "Nessuna chiusura nel periodo",
-    };
-  }, [op]);
-
-  const kpiCards = useMemo(
-    () =>
-      buildCrossKpiCardModels({
-        domainMetrics: crossMetrics,
-        apiMetrics: apiCross.metrics,
-        monthlyTrend,
-        costCompositionSub,
-        marginPerHour,
-        backlogPressure,
-      }),
-    [crossMetrics, apiCross.metrics, monthlyTrend, costCompositionSub, marginPerHour, backlogPressure],
-  );
 
   const trendSeries = useMemo(() => {
     const indexed = crossTrendIndexedSeries(monthlyTrend);
@@ -281,10 +230,13 @@ export default function ReportCrossSectionView(props: DomainReportSectionProps) 
       <ReportSection
         id="report-cross-kpi"
         title="KPI trasversali"
-        subtitle="Efficienza, pressione operativa e valore per ora"
+        subtitle="Migrati in Analisi avanzate → Indicatori incrociati"
       >
         <div className={reportContentPanelClass}>
-          <CrossKpiGrid cards={kpiCards} />
+          <p className="text-sm text-[color:var(--cab-text-muted)]">
+            I quattro KPI incrociati (efficienza, ricambi/intervento, costo medio, valore/ora) sono disponibili nel BI
+            Center — sezione Analisi avanzate.
+          </p>
         </div>
       </ReportSection>
 

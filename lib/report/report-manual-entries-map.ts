@@ -27,6 +27,14 @@ export function isPastReportMonth(periodMonthYmd: string, anchor: Date = new Dat
   return d.getTime() < startOfCurrentMonthLocal(anchor).getTime();
 }
 
+/** Mesi passati e mese corrente editabili; futuri no. */
+export function isAllowedReportManualMonth(periodMonthYmd: string, anchor: Date = new Date()): boolean {
+  const d = new Date(`${periodMonthYmd.slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return false;
+  const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
+  return monthStart.getTime() <= startOfCurrentMonthLocal(anchor).getTime();
+}
+
 export function formatPeriodMonthLabel(periodMonthYmd: string): string {
   const d = new Date(`${periodMonthYmd.slice(0, 10)}T12:00:00`);
   if (Number.isNaN(d.getTime())) return periodMonthYmd.slice(0, 7);

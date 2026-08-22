@@ -14,6 +14,7 @@ export function ReportLineChart({
   title,
   variant = "capital",
   forecast,
+  embedded = false,
 }: {
   rows: { label: string; value?: number; capitaleFinale?: number }[];
   title?: string;
@@ -24,9 +25,10 @@ export function ReportLineChart({
     forecastYear: number;
     forecastYearEnd: number | null;
   };
+  embedded?: boolean;
 }) {
   return (
-    <ReportVisualization title={title}>
+    <ReportVisualization title={title} embedded={embedded}>
       {variant === "forecast" && forecast ? (
         <ReportYearlyForecastLineChart
           solid={forecast.solid}
@@ -44,12 +46,14 @@ export function ReportLineChart({
 export function ReportBarChart({
   points,
   title,
+  embedded = false,
 }: {
   points: { label: string; value: number; muted?: boolean }[];
   title?: string;
+  embedded?: boolean;
 }) {
   return (
-    <ReportVisualization title={title}>
+    <ReportVisualization title={title} embedded={embedded}>
       <ReportTemporalMonthlyBars
         rows={points.map((p) => ({ label: p.label, count: p.value, muted: p.muted }))}
       />

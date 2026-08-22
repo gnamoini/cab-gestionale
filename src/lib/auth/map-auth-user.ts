@@ -1,10 +1,9 @@
 import { profileDisplayName } from "@/lib/auth/profile-display-name";
-import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
+import { resolveRole } from "@/lib/rbac";
 import {
   isEmailDerivedDisplayName,
   resolveFormattedUserDisplayName,
 } from "@/src/lib/auth/resolve-user-display-name";
-import { resolveRole } from "@/lib/auth/rbac";
 import type { PublicAuthUser } from "@/src/types/auth-user";
 import type { ProfileRow, RuoloUtente } from "@/src/types/supabase-tables";
 import type { User } from "@supabase/supabase-js";
@@ -13,6 +12,11 @@ type ProfileAuthSlice = Pick<
   ProfileRow,
   "nome" | "cognome" | "username" | "role_key" | "cliente_ref" | "created_at"
 > | null;
+
+function normalizeClienteRef(value: string | null | undefined): string | null {
+  const t = typeof value === "string" ? value.trim() : "";
+  return t || null;
+}
 
 function pickCabMetadataString(meta: Record<string, unknown>, key: string): string {
   const value = meta[key];

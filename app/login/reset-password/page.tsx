@@ -1,5 +1,5 @@
-import { ResetPasswordForm } from "@/app/login/reset-password/reset-password-form";
+import { ResetPasswordFormLazy } from "@/components/public-surfaces/public-surface-loaders";
 
 export default function ResetPasswordPage() {
-  return <ResetPasswordForm />;
+  return <ResetPasswordFormLazy />;
 }

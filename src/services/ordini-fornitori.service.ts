@@ -11,6 +11,8 @@ import {
 import { mapOrdineFornitoreRow } from "@/lib/ordini-fornitori/ordine-fornitore-db-mapper";
 import type {
   OrdineFornitoreCreateInput,
+  OrdineFornitoreDeliveryInput,
+  OrdineFornitoreDeliveryResult,
   OrdineFornitoreRecord,
   OrdineFornitoreStatus,
   OrdineFornitoreUpdateInput,
@@ -250,6 +252,24 @@ export const ordiniFornitoriService = {
         }),
       });
       return success(undefined);
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
+  async receiveDelivery(
+    id: string,
+    input: OrdineFornitoreDeliveryInput,
+  ): Promise<ServiceResult<OrdineFornitoreDeliveryResult>> {
+    try {
+      const res = await fetch(`/api/ordini-fornitori/${encodeURIComponent(id)}/delivery`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const body = (await res.json()) as OrdineFornitoreDeliveryResult & { error?: string };
+      if (!res.ok) return err(body.error ?? "Ricezione non riuscita.");
+      return success(body);
     } catch (e) {
       return serviceFailFromError(e);
     }

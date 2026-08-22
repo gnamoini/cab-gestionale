@@ -46,7 +46,7 @@ for (const entry of REPORT_METRIC_REGISTRY) {
   }
 }
 
-const executiveP0 = ["lav-chiusi", "lav-aperti", "lav_late_sla", "eco_fatturato", "scorta"];
+const executiveP0 = ["lav-chiusi", "lav-aperti", "lav_late_sla", "eco_fatturato", "eco_da_incassare", "eco_importo_scaduto"];
 for (const id of executiveP0) {
   const e = REPORT_METRIC_REGISTRY.find((r) => r.id === id);
   assert.ok(e, `executive P0 ${id} registered`);

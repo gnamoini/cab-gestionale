@@ -1,6 +1,6 @@
 import { registerHealthKpi } from "@/lib/health-score/registry/kpi-registry";
 import type { HealthKpiDefinition } from "@/lib/health-score/registry/types";
-import { tanhLevelNormalizer, tanhTrendNormalizer } from "@/lib/health-score/normalizers/tanh-normalizer";
+import { targetLevelNormalizer } from "@/lib/health-score/normalizers/target-level-normalizer";
 import type { KpiContext, KpiRawValue } from "@/lib/health-score/types";
 
 function pctRaw(current: number, total: number, prevCurrent: number, prevTotal: number): KpiRawValue {
@@ -27,13 +27,16 @@ function defineKpi(partial: Omit<HealthKpiDefinition, "normalizer"> & {
   invertTrend?: boolean;
   invertLevel?: boolean;
 }): HealthKpiDefinition {
+  const { invertTrend: _it, invertLevel: _il, ...rest } = partial;
   return {
-    ...partial,
+    ...rest,
+    trendWeight: partial.trendWeight ?? 0,
+    levelWeight: partial.levelWeight ?? 1,
     normalizer: {
       trend: (raw, target, ctx, invert) =>
-        tanhTrendNormalizer(raw, target, ctx, partial.invertTrend ?? invert),
+        targetLevelNormalizer(raw, target, ctx, partial.invertLevel ?? invert),
       level: (raw, target, ctx, invert) =>
-        tanhLevelNormalizer(raw, target, ctx, partial.invertLevel ?? invert),
+        targetLevelNormalizer(raw, target, ctx, partial.invertLevel ?? invert),
     },
   };
 }

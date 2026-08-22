@@ -36,6 +36,7 @@ assert.match(loginForm, /showThemeToggle=\{false\}/);
 const middleware = read("src/middleware/proxy-handler.ts");
 assert.match(middleware, /RESET_PASSWORD_PATH/);
 assert.match(middleware, /PRIVACY_POLICY_PATH/);
+assert.match(middleware, /TERMS_AND_CONDITIONS_PATH/);
 assert.match(middleware, /isPublicInfoPath/);
 
 const resetForm = read("app/login/reset-password/reset-password-form.tsx");

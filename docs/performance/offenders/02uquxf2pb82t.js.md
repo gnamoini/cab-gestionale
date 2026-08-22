@@ -1,0 +1,18 @@
+# Chunk offender — `02uquxf2pb82t.js`
+
+| Field | Value |
+|-------|------:|
+| rawKb | 38.7 |
+| gzipKb | 11.9 |
+| bundleImpactScore | 0.2 |
+| firstLoadFactor | 0.5 |
+| reachScope | route |
+| role | unknown |
+
+## Fingerprints
+
+- @tanstack/react-query
+
+## Recommendation
+
+investigate with `npm run analyze`

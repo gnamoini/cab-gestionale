@@ -1,0 +1,13 @@
+diff --git "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_ricambio-new-modal.tsx\\base" "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_ricambio-new-modal.tsx\\wip"
+index 41da73e3..119846a2 100644
+--- "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_ricambio-new-modal.tsx\\base"
++++ "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_ricambio-new-modal.tsx\\wip"
+@@ -226,7 +226,7 @@ export function RicambioNewModal({
+           form={RICAMBIO_NEW_FORM_ID}
+           loading={saveBusy}
+           preset="salva"
+-          loadingLabel="Salvataggio??????"
++          loadingLabel="Salvataggio???"
+           className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 disabled:grayscale`}
+         >
+           Salva in magazzino

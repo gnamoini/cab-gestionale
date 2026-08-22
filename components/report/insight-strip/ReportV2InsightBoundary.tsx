@@ -4,9 +4,8 @@ import { resolveReportV2InsightsEnabled } from "@/lib/feature-flags/report-v2-fl
 import { GestionaleClientErrorBoundary } from "@/components/observability/gestionale-client-error-boundary";
 import { InsightStrip } from "@/components/report/insight-strip/InsightStrip";
 import { useReportInsights } from "@/components/report/insight-strip/hooks/use-report-insights";
+import { ReportAnalysisSectionShell } from "@/components/report/bi-center/report-analysis-section-shell";
 import type { DateRange, ReportCompareMode } from "@/lib/report/date-ranges";
-import { ShellCard } from "@/components/gestionale/shell-card";
-import { reportZoneShellClass } from "@/components/report/report-ui-tokens";
 
 function ReportV2InsightContent({
   range,
@@ -32,17 +31,13 @@ export function ReportV2InsightBoundary({
 
   return (
     <GestionaleClientErrorBoundary>
-      <ShellCard
+      <ReportAnalysisSectionShell
         title="Insight"
-        subtitle="Segnali analitici"
-        collapsible
-        defaultCollapsed={false}
-        persistScope="report"
+        subtitle="Segnali analitici del periodo — cosa meritano attenzione"
         persistKey="insight"
-        className={reportZoneShellClass}
       >
         <ReportV2InsightContent range={range} compareMode={compareMode} />
-      </ShellCard>
+      </ReportAnalysisSectionShell>
     </GestionaleClientErrorBoundary>
   );
 }

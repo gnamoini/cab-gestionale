@@ -33,6 +33,14 @@ export const SettingsBrandingSectionLazy = dynamic(
   { loading: sectionLoading },
 );
 
+export const SettingsHealthScoreSectionLazy = dynamic(
+  () =>
+    import("@/components/dashboard/settings/settings-health-score-section").then((m) => ({
+      default: m.SettingsHealthScoreSection,
+    })),
+  { loading: sectionLoading },
+);
+
 export const SettingsEconomiciSectionLazy = dynamic(
   () =>
     import("@/components/dashboard/settings/settings-economici-section").then((m) => ({
@@ -159,6 +167,7 @@ const HEAVY_SECTION_IDS = new Set<SistemaSectionId>([
   "tel-modello",
   "brand-personalizzazione",
   "sys-economici",
+  "sys-stato-operativo",
 ]);
 
 export function isHeavySettingsSection(id: SistemaSectionId): boolean {
@@ -200,6 +209,10 @@ export async function loadSettingsSection(id: SistemaSectionId): Promise<Setting
         case "sys-economici": {
           const mod = await import("@/components/dashboard/settings/settings-economici-section");
           return { status: "loaded", component: mod.SettingsEconomiciSection as ComponentType<unknown> };
+        }
+        case "sys-stato-operativo": {
+          const mod = await import("@/components/dashboard/settings/settings-health-score-section");
+          return { status: "loaded", component: mod.SettingsHealthScoreSection as ComponentType<unknown> };
         }
         default:
           return {

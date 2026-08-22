@@ -74,6 +74,7 @@ export function magazzinoRowToRicambioUI(
 export function ricambioUiToMagazzinoInsert(
   r: RicambioMagazzino,
   mezziListe?: MezziListePrefs,
+  metaPatch?: Record<string, unknown>,
 ): MagazzinoInsert {
   const row: MagazzinoInsert = {
     codice: resolveRicambioCodiceForPersist(r.codiceFornitoreOriginale),
@@ -83,7 +84,7 @@ export function ricambioUiToMagazzinoInsert(
     costo: r.prezzoFornitoreOriginale > 0 ? r.prezzoFornitoreOriginale : null,
     prezzo_vendita: r.prezzoVendita > 0 ? r.prezzoVendita : null,
     consumo_medio_mensile: null,
-    meta: ricambioUiToMagazzinoMeta(r, mezziListe) as Record<string, unknown>,
+    meta: { ...(ricambioUiToMagazzinoMeta(r, mezziListe) as Record<string, unknown>), ...(metaPatch ?? {}) },
   };
   if (isMagazzinoUuid(r.id)) {
     return { ...row, id: r.id } as MagazzinoInsert & { id: string };

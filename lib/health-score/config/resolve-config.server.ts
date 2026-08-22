@@ -20,7 +20,15 @@ export const resolveHealthScoreConfigServer = cache(async (): Promise<HealthScor
     }
     const parsed = healthScoreConfigSchema.safeParse(row.value);
     if (!parsed.success) return HEALTH_SCORE_V2_DEFAULTS;
-    return { ...HEALTH_SCORE_V2_DEFAULTS, ...parsed.data };
+    return {
+      ...HEALTH_SCORE_V2_DEFAULTS,
+      ...parsed.data,
+      calculation: {
+        ...HEALTH_SCORE_V2_DEFAULTS.calculation,
+        ...parsed.data.calculation,
+      },
+      targets: { ...HEALTH_SCORE_V2_DEFAULTS.targets, ...parsed.data.targets },
+    };
   } catch {
     return HEALTH_SCORE_V2_DEFAULTS;
   }

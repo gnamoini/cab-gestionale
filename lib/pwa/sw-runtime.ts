@@ -27,7 +27,7 @@ const AUTH_APP_PATH_PREFIXES = [
   "/impostazioni",
 ] as const;
 
-const PUBLIC_HTML_PATHS = ["/offline", "/privacy-policy"] as const;
+const PUBLIC_HTML_PATHS = ["/offline", "/privacy-policy", "/termini-e-condizioni"] as const;
 
 export function isLoginPath(pathname: string): boolean {
   return pathname === "/login" || pathname.startsWith("/login/");

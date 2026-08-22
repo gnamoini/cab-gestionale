@@ -74,11 +74,11 @@ export function ReceivingListView() {
           />
           <p className="text-sm text-[color:var(--cab-text-muted)]">
             <Link href="/magazzino" className="underline">
-              ← Magazzino
+              ÔåÉ Magazzino
             </Link>
           </p>
           {loading ? (
-            <p className="text-sm text-[color:var(--cab-text-muted)]">Caricamento…</p>
+            <p className="text-sm text-[color:var(--cab-text-muted)]">CaricamentoÔÇª</p>
           ) : docs.length === 0 ? (
             <p className="text-sm text-[color:var(--cab-text-muted)]">Nessun DDT caricato.</p>
           ) : (
@@ -101,11 +101,11 @@ export function ReceivingListView() {
                           {d.document_number ?? d.id.slice(0, 8)}
                         </Link>
                       </td>
-                      <td className="px-3 py-2">{d.supplier_label ?? "—"}</td>
-                      <td className="px-3 py-2">{d.document_date ?? "—"}</td>
+                      <td className="px-3 py-2">{d.supplier_label ?? "ÔÇö"}</td>
+                      <td className="px-3 py-2">{d.document_date ?? "ÔÇö"}</td>
                       <td className="px-3 py-2">{inventoryDocumentStatusLabel(d.status)}</td>
                       <td className="px-3 py-2 tabular-nums">
-                        {d.document_ai_confidence != null ? `${Math.round(d.document_ai_confidence * 100)}%` : "—"}
+                        {d.document_ai_confidence != null ? `${Math.round(d.document_ai_confidence * 100)}%` : "ÔÇö"}
                       </td>
                     </tr>
                   ))}

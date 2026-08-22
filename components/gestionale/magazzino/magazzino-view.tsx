@@ -41,6 +41,13 @@ const RicambioEditModal = dynamic(
   () => import("@/components/gestionale/magazzino/ricambio-edit-modal").then((m) => m.RicambioEditModal),
   { ssr: false },
 );
+const MagazzinoOperationalPanel = dynamic(
+  () =>
+    import("@/components/operational-analytics/magazzino-operational-panel").then((m) => ({
+      default: m.MagazzinoOperationalPanel,
+    })),
+  { ssr: false },
+);
 const MagazzinoRicambioInfoModal = dynamic(
   () => import("@/components/gestionale/magazzino/magazzino-modals").then((m) => m.MagazzinoRicambioInfoModal),
   { ssr: false },
@@ -281,7 +288,7 @@ function initialFornitoriFromProducts(rows: RicambioMagazzino[]) {
 function formatFornitoreAlternativoDisplay(p: RicambioMagazzino): string {
   const alts = p.fornitoriAlternativi ?? [];
   const firstName = alts[0]?.fornitore.trim() || p.fornitoreNonOriginale.trim();
-  if (!firstName) return "—";
+  if (!firstName) return "ÔÇö";
   if (alts.length <= 1) return firstName;
   return `${firstName} (+${alts.length - 1})`;
 }
@@ -324,7 +331,7 @@ function formatDataUltimaMain(iso: string) {
 /** Card mobile magazzino: data + ora e autore su due righe. */
 function formatMagazzinoUltimaModificaMobileDate(iso: string): string {
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "ÔÇö";
   return d.toLocaleString("it-IT", {
     day: "2-digit",
     month: "2-digit",
@@ -335,12 +342,12 @@ function formatMagazzinoUltimaModificaMobileDate(iso: string): string {
 }
 
 function formatMagazzinoUltimaModificaMobileAutore(autore: string): string {
-  return autore.trim() || "—";
+  return autore.trim() || "ÔÇö";
 }
 
 function isMagazzinoMobilePlaceholderValue(value: string): boolean {
   const t = value.trim();
-  return !t || t === "—" || t === "-";
+  return !t || t === "ÔÇö" || t === "-";
 }
 
 function isModificaOlderThanMonths(iso: string, months: number) {
@@ -360,7 +367,7 @@ const CAMPO_LABEL: Partial<Record<keyof RicambioMagazzino, string>> = {
   descrizione: "Descrizione",
   note: "Note",
   categoria: "Categoria",
-  compatibilitaMezzi: "Compatibilità",
+  compatibilitaMezzi: "Compatibilit├á",
   scorta: "Scorta",
   scortaMinima: "Scorta minima",
   prezzoFornitoreOriginale: "Prezzo listino OE",
@@ -369,7 +376,7 @@ const CAMPO_LABEL: Partial<Record<keyof RicambioMagazzino, string>> = {
   prezzoVendita: "Prezzo vendita",
   marcaOriginaleSecondaria: "Marca secondaria",
   usatoInTagliandi: "Tagliando",
-  unitaMisura: "Unità di misura",
+  unitaMisura: "Unit├á di misura",
   fornitoreNonOriginale: "Fornitore alternativo",
   codiceFornitoreNonOriginale: "Codice alternativo",
   prezzoFornitoreNonOriginale: "Prezzo alternativo",
@@ -377,7 +384,7 @@ const CAMPO_LABEL: Partial<Record<keyof RicambioMagazzino, string>> = {
 };
 
 function fmtFornitoriAlternativiDiff(rows: RicambioMagazzino["fornitoriAlternativi"]): string {
-  if (!rows?.length) return "—";
+  if (!rows?.length) return "ÔÇö";
   return rows
     .map(
       (r) =>
@@ -414,10 +421,10 @@ type CampoChange = { campo: string; prima: string; dopo: string };
 function fmtForDiff(k: keyof RicambioMagazzino, r: RicambioMagazzino): string {
   if (k === "fornitoriAlternativi") return fmtFornitoriAlternativiDiff(r.fornitoriAlternativi);
   const v = r[k];
-  if (k === "usatoInTagliandi") return r.usatoInTagliandi ? "Sì" : "No";
+  if (k === "usatoInTagliandi") return r.usatoInTagliandi ? "S├¼" : "No";
   if (k === "unitaMisura") return formatRicambioUnitaMisuraLabel(r.unitaMisura);
   if (k === "compatibilitaMezzi") return formatCompatMezziArrayForLog(v);
-  if (Array.isArray(v)) return (v as string[]).join(", ") || "—";
+  if (Array.isArray(v)) return (v as string[]).join(", ") || "ÔÇö";
   if (typeof v === "number") {
     if (k === "markupPercentuale") {
       return formatMarkupDisplay(v);
@@ -435,7 +442,7 @@ function fmtForDiff(k: keyof RicambioMagazzino, r: RicambioMagazzino): string {
     return String(v);
   }
   const s = String(v ?? "").trim();
-  return s || "—";
+  return s || "ÔÇö";
 }
 
 function diffRicambi(before: RicambioMagazzino, after: RicambioMagazzino): CampoChange[] {
@@ -458,9 +465,9 @@ function diffRicambi(before: RicambioMagazzino, after: RicambioMagazzino): Campo
 function changesForNuovoRicambio(r: RicambioMagazzino): CampoChange[] {
   return DIFF_KEYS.map((key) => ({
     campo: CAMPO_LABEL[key] ?? String(key),
-    prima: "—",
+    prima: "ÔÇö",
     dopo: fmtForDiff(key, r),
-  })).filter((c) => c.dopo !== "—");
+  })).filter((c) => c.dopo !== "ÔÇö");
 }
 
 type MagazzinoLogTipo = "aggiunta" | "update" | "rimozione";
@@ -798,7 +805,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
       ev.recordId,
       ricambio.descrizione,
       "update",
-      [{ campo: "Foto", prima: "—", dopo: ev.action === "image_uploaded" ? "Foto aggiunta" : "Foto rimossa" }],
+      [{ campo: "Foto", prima: "ÔÇö", dopo: ev.action === "image_uploaded" ? "Foto aggiunta" : "Foto rimossa" }],
       authorName,
     );
   }
@@ -1028,7 +1035,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
           lastSyncedMagMasterSigRef.current = mergedSig;
         })
         .catch(() => {
-          /* toast OCC già in useSettingsUpsertMutation */
+          /* toast OCC gi├á in useSettingsUpsertMutation */
         });
     }, 900);
     return () => {
@@ -1042,7 +1049,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     setLogPersistReady(true);
   }, []);
 
-  /** Elenchi globali puri (`Impostazioni → Magazzino`) — SSOT per selettori e validazione form. */
+  /** Elenchi globali puri (`Impostazioni ÔåÆ Magazzino`) ÔÇö SSOT per selettori e validazione form. */
   const marcheGlobal = useMemo(
     () => appSettings?.magazzinoMaster?.marche ?? [],
     [appSettings?.magazzinoMaster?.marche],
@@ -1580,7 +1587,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                 variant="table"
               />
             ) : (
-              <span className="text-[color:var(--cab-text-muted)]">—</span>
+              <span className="text-[color:var(--cab-text-muted)]">ÔÇö</span>
             )}
           </td>
           <td className={`min-w-0 ${gestionaleListTableTd} ${magazzinoTableColDescrizioneClass}`}>
@@ -1610,7 +1617,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
             <Tooltip
               content={
                 stale
-                  ? `${formatTimestampHover(p.dataUltimaModifica)} · ${MAGAZZINO_STALE_MODIFICA_HINT}`
+                  ? `${formatTimestampHover(p.dataUltimaModifica)} ┬À ${MAGAZZINO_STALE_MODIFICA_HINT}`
                   : formatTimestampHover(p.dataUltimaModifica)
               }
               side="top"
@@ -1634,7 +1641,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
           <td className={`${gestionaleListTableTdCenter} font-medium ${magazzinoTableColPrezzoClass}`}>{eur(p.prezzoVendita)}</td>
           <td className={`${gestionaleListTableTdCenter} text-[13px] text-zinc-700 dark:text-zinc-300 ${magazzinoTableColConsumoClass}`}>
             <span className="inline-block max-w-full truncate">
-              {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "—"}
+              {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "ÔÇö"}
             </span>
           </td>
           <td className={gestionaleListTableTdAzioni}>
@@ -1675,7 +1682,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
     const items: PageActionItem[] = [
       ...importExportActions.items,
       ...(importExportActions.items.length > 0 ? [{ id: "__divider__", label: "" }] : []),
-      pageActionLogItem(() => setLogOpen(true), "Log attività"),
+      pageActionLogItem(() => setLogOpen(true), "Log attivit├á"),
     ];
     if (magPerm.canRead) {
       items.push({
@@ -1725,6 +1732,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
         items={magazzinoMenuItems}
         headerActions={magazzinoMenuHeaderActions}
       />
+      <MagazzinoOperationalPanel />
       <ShellCard>
         {archivioDupCodeCount > 0 ? (
           <div className="mb-3 flex flex-col gap-2 rounded-lg border border-amber-200/80 bg-amber-50/50 px-3 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/45 dark:bg-amber-950/25">
@@ -1824,7 +1832,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                   {magCanCreateRicambio ? (
                     <PageToolbarMetaToggle
                       className="min-h-10 min-w-0 flex-1 sm:min-h-9 sm:flex-none sm:shrink-0"
-                      label="Modalità modifica"
+                      label="Modalit├á modifica"
                       shortLabel="Modifica"
                       checked={modalitaModifica}
                       onChange={(next) => {
@@ -1886,7 +1894,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                   className={`${magazzinoTableColLabelQtyClass} px-2 text-center text-xs font-medium text-[color:var(--cab-text-muted)]`}
                   scope="col"
                 >
-                  Qtà
+                  Qt├á
                 </th>
               ) : null}
               <GlobalTableSortTh
@@ -2015,7 +2023,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                       <MagazzinoMarcaMobileBadge marca={p.marca} magazzinoMaster={appSettings?.magazzinoMaster} />
                     ) : null}
                     <p className="line-clamp-2 text-base font-semibold leading-snug tracking-tight text-[color:var(--cab-text)]">
-                      {p.descrizione.trim() || "—"}
+                      {p.descrizione.trim() || "ÔÇö"}
                     </p>
                     {!isMagazzinoMobilePlaceholderValue(p.codiceFornitoreOriginale) ? (
                       <div className="flex items-start gap-1.5">
@@ -2062,7 +2070,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                     <dt className="text-zinc-500 dark:text-zinc-400">Consumo medio</dt>
                     <dd className="font-medium tabular-nums text-zinc-700 dark:text-zinc-300">
                       <span className="inline-block max-w-full truncate">
-                        {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "—"}
+                        {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "ÔÇö"}
                       </span>
                     </dd>
                   </div>
@@ -2081,7 +2089,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
                           className="shrink-0 text-[11px] leading-none text-amber-700 dark:text-amber-300"
                           aria-hidden
                         >
-                          ⚠
+                          ÔÜá
                         </span>
                       ) : null}
                       <p className="truncate tabular-nums leading-tight">
@@ -2269,7 +2277,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl" 
       <SettingsEliminaConfirmDialog
         open={eliminaRicambioTarget != null}
         itemLabel={eliminaRicambioTarget?.descrizione}
-        detail="Il ricambio verrà rimosso dal magazzino."
+        detail="Il ricambio verr├á rimosso dal magazzino."
         onCancel={() => setEliminaRicambioTarget(null)}
         onConfirm={() => void executeEliminaRicambio()}
       />

@@ -5,9 +5,8 @@ import type { OrdineFornitoreStatus } from "@/lib/ordini-fornitori/types";
 export const ORDINE_FORNITORE_EDITOR_STATUSES = [
   "bozza",
   "inviato",
-  "confermato",
-  "spedito",
-  "ricevuto",
+  "in_consegna",
+  "consegnato",
 ] as const satisfies readonly OrdineFornitoreStatus[];
 
 export const ORDINE_FORNITORE_ALL_STATUSES = [
@@ -24,18 +23,16 @@ export type OrdineFornitoreStatusSelectItem = {
 const STATUS_LABEL: Record<OrdineFornitoreStatus, string> = {
   bozza: "Bozza",
   inviato: "Inviato",
-  confermato: "Confermato",
-  spedito: "Spedito",
-  ricevuto: "Ricevuto",
+  in_consegna: "In consegna",
+  consegnato: "Consegnato",
   annullato: "Annullato",
 };
 
 const STATUS_HEX: Record<OrdineFornitoreStatus, string> = {
   bozza: "#64748b",
   inviato: "#2563eb",
-  confermato: "#0891b2",
-  spedito: "#9333ea",
-  ricevuto: "#16a34a",
+  in_consegna: "#9333ea",
+  consegnato: "#16a34a",
   annullato: "#dc2626",
 };
 
@@ -59,11 +56,9 @@ export function ordineFornitoreStatusBadgeClass(status: OrdineFornitoreStatus): 
       return "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200";
     case "inviato":
       return "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200";
-    case "confermato":
-      return "bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-200";
-    case "spedito":
+    case "in_consegna":
       return "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200";
-    case "ricevuto":
+    case "consegnato":
       return "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200";
     case "annullato":
       return "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200";

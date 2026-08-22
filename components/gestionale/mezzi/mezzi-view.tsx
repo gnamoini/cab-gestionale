@@ -90,6 +90,14 @@ const MezziTagliandiPanel = dynamic(
   { ssr: false },
 );
 
+const MezziOperationalPanel = dynamic(
+  () =>
+    import("@/components/operational-analytics/mezzi-operational-panel").then((m) => ({
+      default: m.MezziOperationalPanel,
+    })),
+  { ssr: false },
+);
+
 const MezziNewModal = dynamic(
   () =>
     import("@/components/gestionale/mezzi/mezzi-new-modal").then((m) => ({
@@ -719,6 +727,9 @@ export function MezziView({ listSurface: serverListSurface, listTier = "xl" }: G
       />
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <MezziPageViewToggle value={pageView} onChange={handlePageViewChange} />
+      </div>
+      <div className="mb-[length:var(--ds-space-xl)]">
+        <MezziOperationalPanel />
       </div>
         <ShellCard>
           {pageView === "anagrafica" ? (

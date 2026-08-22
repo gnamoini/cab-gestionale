@@ -117,6 +117,19 @@ const manual = new Map([["2025-03", 42]]);
 assert.equal(countCompletedInRange([], range, manual), 42);
 assert.equal(countCompletedByMonth([], manual).get("2025-03"), 42);
 
+const manualZero = new Map([["2025-03", 0]]);
+assert.equal(
+  countCompletedInRange([mockArchived()], range, manualZero),
+  1,
+  "override manuale a zero non azzera il DB",
+);
+
+const legacyMeseOnly = mockArchived({
+  dataCompletamento: "",
+  meseCompletamento: "2025-03",
+});
+assert.equal(countCompletedInRange([legacyMeseOnly], range), 1, "meseCompletamento legacy conta nel periodo");
+
 const keys = monthKeysOverlappingRange(range);
 assert.ok(keys.includes("2025-03"));
 

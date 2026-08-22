@@ -1,8 +1,10 @@
 import {
   addettoDisplayName,
+  findAddettoById,
   findAddettoByStoredName,
   type AddettoRecord,
 } from "@/lib/lavorazioni/addetto-model";
+import type { LavorazioneSchedeBundle } from "@/types/schede";
 import type { OperatorIdentity } from "@/lib/report/recidivita/types";
 
 export type OperatorConfidence = "high" | "medium" | "low" | "unknown";
@@ -66,22 +68,40 @@ export function resolveOperatorIdentity(
   return { storedName: stored, addettoId: null, confidence: "unknown" };
 }
 
+function pushOperatorName(
+  names: Set<string>,
+  legacy: string | null | undefined,
+  addettoId: string | null | undefined,
+  addettiRecords: readonly AddettoRecord[],
+): void {
+  const legacyTrim = legacy?.trim();
+  if (legacyTrim && legacyTrim !== "—") {
+    names.add(legacyTrim);
+    return;
+  }
+  const id = addettoId?.trim();
+  if (!id) return;
+  const rec = findAddettoById(addettiRecords, id);
+  names.add(rec ? addettoDisplayName(rec) : id);
+}
+
 export function collectOperatorNamesFromBundle(
-  bundle: import("@/types/schede").LavorazioneSchedeBundle | null | undefined,
+  bundle: LavorazioneSchedeBundle | null | undefined,
+  addettiRecords: readonly AddettoRecord[] = [],
 ): string[] {
   if (!bundle) return [];
   const names = new Set<string>();
-  const acc = bundle.ingresso?.campi?.addettoAccettazione?.trim();
-  if (acc) names.add(acc);
+  const ingresso = bundle.ingresso?.campi;
+  if (ingresso) {
+    pushOperatorName(names, ingresso.addettoAccettazione, ingresso.addettoAccettazioneId, addettiRecords);
+  }
   for (const riga of bundle.lavorazioni?.campi?.righe ?? []) {
     for (const a of riga.addettiAssegnati ?? []) {
-      const n = a.addetto?.trim();
-      if (n) names.add(n);
+      pushOperatorName(names, a.addetto, a.addettoId, addettiRecords);
     }
   }
   for (const r of bundle.ricambi?.campi?.righe ?? []) {
-    const n = r.addetto?.trim();
-    if (n) names.add(n);
+    pushOperatorName(names, r.addetto, r.addettoId, addettiRecords);
   }
   return [...names];
 }

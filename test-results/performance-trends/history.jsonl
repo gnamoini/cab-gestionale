@@ -1,3 +1,0 @@
-{"generatedAt":"2026-07-17T00:09:16.586Z","score":{"bundle":100,"network":73,"rendering":100,"cache":100,"memory":100,"webVitals":100,"policy":100,"total":95},"build":{"firstLoadJsKb":1793.3,"vendorChunkKb":443.3},"regressionFailures":2,"lighthouse":null}
-{"generatedAt":"2026-07-17T00:19:40.989Z","score":{"bundle":100,"network":100,"rendering":100,"cache":100,"memory":100,"webVitals":100,"policy":100,"total":100},"build":{"firstLoadJsKb":1793.6,"vendorChunkKb":443.3},"regressionFailures":0,"lighthouse":null}
-{"generatedAt":"2026-07-17T00:24:25.653Z","score":{"bundle":100,"network":100,"rendering":100,"cache":100,"memory":100,"webVitals":100,"policy":100,"total":100},"build":{"firstLoadJsKb":1793.6,"vendorChunkKb":443.3},"regressionFailures":0,"lighthouse":null}

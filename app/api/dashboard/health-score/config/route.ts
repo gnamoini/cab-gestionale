@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import {
+  readHealthScoreCalculationSettingsServer,
   readHealthScoreConfigRowUpdatedAtServer,
   readHealthScoreTargetsServer,
   sanitizeHealthScoreTargetPatches,
+  updateHealthScoreCalculationSettingsServer,
   updateHealthScoreTargetsServer,
 } from "@/lib/health-score/config/save-targets.server";
 import {
@@ -19,14 +21,15 @@ export async function GET() {
   }
 
   try {
-    const [targets, updatedAt] = await Promise.all([
+    const [targets, calculation, updatedAt] = await Promise.all([
       readHealthScoreTargetsServer(),
+      readHealthScoreCalculationSettingsServer(),
       readHealthScoreConfigRowUpdatedAtServer(),
     ]);
-    return NextResponse.json({ targets, updatedAt });
+    return NextResponse.json({ targets, calculation, updatedAt });
   } catch (e) {
     console.error("[health-score] config read failed", e);
-    return NextResponse.json({ error: "Lettura target non riuscita" }, { status: 500 });
+    return NextResponse.json({ error: "Lettura configurazione non riuscita" }, { status: 500 });
   }
 }
 
@@ -47,22 +50,42 @@ export async function PATCH(req: Request) {
     body && typeof body === "object" && "targets" in body && body.targets && typeof body.targets === "object"
       ? (body.targets as Record<string, unknown>)
       : null;
-  if (!rawTargets) {
-    return NextResponse.json({ error: "Campo targets mancante" }, { status: 400 });
-  }
+  const rawCalculation =
+    body && typeof body === "object" && "calculation" in body && body.calculation && typeof body.calculation === "object"
+      ? (body.calculation as Record<string, unknown>)
+      : null;
 
-  const patches = sanitizeHealthScoreTargetPatches(rawTargets);
-  if (Object.keys(patches).length === 0) {
-    return NextResponse.json({ error: "Nessun target valido" }, { status: 400 });
+  if (!rawTargets && !rawCalculation) {
+    return NextResponse.json({ error: "Campo targets o calculation mancante" }, { status: 400 });
   }
 
   try {
-    const targets = await updateHealthScoreTargetsServer(patches);
+    let targets = rawTargets ? await readHealthScoreTargetsServer() : undefined;
+    let calculation = rawCalculation ? await readHealthScoreCalculationSettingsServer() : undefined;
+
+    if (rawTargets) {
+      const patches = sanitizeHealthScoreTargetPatches(rawTargets);
+      if (Object.keys(patches).length === 0) {
+        return NextResponse.json({ error: "Nessun target valido da aggiornare" }, { status: 400 });
+      }
+      targets = await updateHealthScoreTargetsServer(patches);
+    }
+
+    if (rawCalculation) {
+      const usePreventiviForMissingFatturazione = rawCalculation.usePreventiviForMissingFatturazione;
+      if (typeof usePreventiviForMissingFatturazione !== "boolean") {
+        return NextResponse.json({ error: "Campo calculation.usePreventiviForMissingFatturazione non valido" }, { status: 400 });
+      }
+      calculation = await updateHealthScoreCalculationSettingsServer({
+        usePreventiviForMissingFatturazione,
+      });
+    }
+
     const updatedAt = await readHealthScoreConfigRowUpdatedAtServer();
-    return NextResponse.json({ targets, updatedAt });
+    return NextResponse.json({ targets, calculation, updatedAt });
   } catch (e) {
     console.error("[health-score] config update failed", e);
-    const message = e instanceof Error ? e.message : "Salvataggio target non riuscito";
+    const message = e instanceof Error ? e.message : "Salvataggio configurazione non riuscito";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

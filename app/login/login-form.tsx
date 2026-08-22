@@ -30,7 +30,14 @@ import {
   isValidLoginIdentifier,
   loginIdentifierFieldError,
 } from "@/src/lib/auth/username";
-import { LoginPostAuthRedirect } from "@/app/login/login-post-auth-redirect";
+
+const LoginPostAuthRedirectLazy = dynamic(
+  () =>
+    import("@/app/login/login-post-auth-redirect").then((m) => ({
+      default: m.LoginPostAuthRedirect,
+    })),
+  { ssr: false },
+);
 
 const LoginForgotPasswordModalLazy = dynamic(
   () =>
@@ -207,7 +214,7 @@ export function LoginForm() {
   return (
     <AuthStandalonePageShell showThemeToggle={false} decorativeBackground="login">
       {isAuthFullyAuthenticated(status) && user?.id ? (
-        <LoginPostAuthRedirect onRedirecting={handleRedirecting} />
+        <LoginPostAuthRedirectLazy onRedirecting={handleRedirecting} />
       ) : null}
 
       <div

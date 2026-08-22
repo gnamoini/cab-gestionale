@@ -361,7 +361,7 @@ export function buildOrdiniFornitoriReportRows(
   for (const o of ordini) {
     if (o.status === "annullato") continue;
     if (!isoInRange(o.dataOrdine, range) && openOnly) continue;
-    const isOpen = o.status !== "ricevuto";
+    const isOpen = o.status !== "consegnato";
     if (openOnly && !isOpen) continue;
     if (!openOnly && !isoInRange(o.dataOrdine, range)) continue;
     const giorniAperti = Math.max(

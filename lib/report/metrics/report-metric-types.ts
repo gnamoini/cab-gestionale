@@ -50,7 +50,9 @@ export type ReportMetricLifecycleStatus =
 
 export type ReportMetricContractImpact = "none" | "minor" | "major";
 
-export type ReportMetricValidationStatus = "pending_validation" | "validated";
+export type ReportMetricValidationStatus = "pending_validation" | "validated" | "blocked";
+
+export type ReportDimensionId = "cliente";
 
 export type ReportCompareUnavailableReason =
   | "snapshot"

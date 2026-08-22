@@ -127,6 +127,7 @@ export function buildInputSnapshot(input: {
   range: DateRange;
   prevRange: DateRange;
   anchor: Date;
+  usePreventiviForMissingFatturazione?: boolean;
 }): InputSnapshot {
   const bundle = buildReportLavorazioniBundle([...input.lavRows]);
   const attive = input.lavRows.filter((r) => !r.deleted_at && isLavorazioneInCorso(r));

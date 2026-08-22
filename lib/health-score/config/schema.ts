@@ -35,6 +35,12 @@ export const healthScoreConfigSchema = z.object({
       }),
     )
     .default([]),
+  calculation: z
+    .object({
+      /** Se fatturato/incassi sono 0, usa l'importo dei preventivi inviati al cliente. */
+      usePreventiviForMissingFatturazione: z.boolean().default(true),
+    })
+    .default({ usePreventiviForMissingFatturazione: true }),
 });
 
 export type HealthScoreConfig = z.infer<typeof healthScoreConfigSchema>;

@@ -14,6 +14,7 @@ export const REPORT_V2_FLAGS = [
   "reportV2AiContext",
   "reportV2Narrative",
   "operationalBriefEnabled",
+  "businessReportEnabled",
 ] as const;
 
 export type ReportV2Flag = (typeof REPORT_V2_FLAGS)[number];
@@ -28,6 +29,7 @@ const FLAG_ENV: Record<ReportV2Flag, string> = {
   reportV2AiContext: "NEXT_PUBLIC_REPORT_V2_AI_CONTEXT",
   reportV2Narrative: "NEXT_PUBLIC_REPORT_V2_NARRATIVE",
   operationalBriefEnabled: "NEXT_PUBLIC_OPERATIONAL_BRIEF_ENABLED",
+  businessReportEnabled: "NEXT_PUBLIC_BUSINESS_REPORT_ENABLED",
 };
 
 /** Server-only env for narrative API gate (not exposed to client bundle). */
@@ -38,6 +40,7 @@ const FLAG_DEFAULT: Partial<Record<ReportV2Flag, boolean>> = {
   reportV2Executive: true,
   reportV2Insights: true,
   operationalBriefEnabled: true,
+  businessReportEnabled: true,
 };
 
 export function isReportV2FlagConfigured(flag: string): flag is ReportV2Flag {
@@ -78,6 +81,8 @@ function readEnvFlag(flag: ReportV2Flag): boolean | null {
       return parseEnvBoolean(process.env.NEXT_PUBLIC_REPORT_V2_NARRATIVE);
     case "operationalBriefEnabled":
       return parseEnvBoolean(process.env.NEXT_PUBLIC_OPERATIONAL_BRIEF_ENABLED);
+    case "businessReportEnabled":
+      return parseEnvBoolean(process.env.NEXT_PUBLIC_BUSINESS_REPORT_ENABLED);
     default: {
       const _exhaustive: never = flag;
       return parseEnvBoolean(process.env[FLAG_ENV[_exhaustive]]);
@@ -154,4 +159,12 @@ export function resolveOperationalBriefEnabled(dbFlag?: boolean | null): boolean
 
 export function resolveOperationalBriefEnabledClient(dbFlag?: boolean | null): boolean {
   return resolveFlagEnabled("operationalBriefEnabled", dbFlag);
+}
+
+export function resolveBusinessReportEnabled(dbFlag?: boolean | null): boolean {
+  return resolveFlagEnabled("businessReportEnabled", dbFlag);
+}
+
+export function resolveBusinessReportEnabledClient(dbFlag?: boolean | null): boolean {
+  return resolveFlagEnabled("businessReportEnabled", dbFlag);
 }

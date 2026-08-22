@@ -1,8 +1,8 @@
 /** Titoli umani per insight rules — UI e narrative, mai ruleKey raw. */
 const INSIGHT_RULE_LABELS: Record<string, string> = {
   LAV_LOAD_EXCEEDS_CLOSURES: "Carico lavorazioni vs chiusure",
-  LAV_SLA_BREACH: "Superamento SLA",
-  LAV_OPEN_BACKLOG: "Backlog aperto",
+  LAV_SLA_BREACH: "Oltre il termine previsto",
+  LAV_OPEN_BACKLOG: "Lavorazioni ancora aperte",
   LAV_LOW_CLOSURES: "Chiusure assenti",
   LAV_AVG_CLOSE_SLOW: "Tempo chiusura elevato",
   LAV_MANUAL_OVERRIDE: "Override manuali",

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { resolveRole } from "@/lib/auth/rbac";
+import { resolveRole } from "@/lib/rbac";
 
 type UserRoleJoinRow = {
   roles: { key: string; is_active: boolean } | { key: string; is_active: boolean }[] | null;

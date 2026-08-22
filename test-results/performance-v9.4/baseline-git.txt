@@ -1,0 +1,6 @@
+HEAD=2a08a838daab2b76926da199c7c112402c6f34ba
+origin/main=2a08a838daab2b76926da199c7c112402c6f34ba
+label=PRODUCTION-CANDIDATE
+worktree=F:/Projects/gestionale-cab-v9-prod-candidate
+post_v93_revert=true
+timestamp=2026-08-22

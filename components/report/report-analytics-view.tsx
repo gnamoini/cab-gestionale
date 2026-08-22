@@ -1,23 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import {
-  ReportPerformanceGate,
-  useReportPerformanceContext,
-} from "@/components/report/layout/report-performance-gate";
-import { ReportSections } from "@/components/report/layout/report-sections";
+import { ReportDomainSnapshotProvider } from "@/components/report/context/report-domain-snapshot-context";
 import { ReportToolbar } from "@/components/report/layout/report-toolbar";
-import { ReportAnalyticsDerivedProvider } from "@/components/report/report-analytics-derived-context";
 import {
   ReportSectionVisibilityProvider,
-  useReportSectionVisibility,
 } from "@/components/report/layout/report-section-visibility-context";
-import { useReportDerivedPrefetch } from "@/components/report/use-report-derived-prefetch";
 import { ReportIntegrityStatusBadge } from "@/components/report/report-integrity-status-badge";
-import type { DomainReportSectionProps, ReportAiSectionProps } from "@/components/report/report-section-types";
+import { ReportPeriodContextProvider } from "@/components/report/context/report-period-context";
+import { ReportAnalyticsProvider } from "@/components/report/analytics/report-analytics-provider";
+import { ReportAskProvider } from "@/components/report/ask-report/report-ask-provider";
+import { ReportAskToolbarButton } from "@/components/report/ask-report/report-ask-toolbar-button";
+import { ReportDrillDownProvider } from "@/components/report/bi-center/report-drill-down-provider";
+import { ReportBiCenterMount } from "@/components/report/bi-center/report-bi-center-mount";
 import { buildReportModel } from "@/lib/report/build-report-model";
 import { buildReportRangeKey } from "@/lib/report/report-domain-types";
 import {
@@ -46,10 +44,7 @@ import { isReportCompareMode } from "@/lib/report/report-compare-options";
 import { useReportLiveData } from "@/lib/report/use-report-live-data";
 import { useGestionaleSyncScope } from "@/src/hooks/gestionale/use-gestionale-sync-scope";
 import { LoadingErrorState } from "@/components/design-system";
-import { ContentReveal } from "@/components/design-system/loading/content-reveal";
 import { ReportPageStructure } from "@/components/report/report-page-structure";
-import { ReportV2ExecutiveBoundary } from "@/components/report/executive/ReportV2ExecutiveBoundary";
-import { ReportV2InsightBoundary } from "@/components/report/insight-strip/ReportV2InsightBoundary";
 import { dsStackPage } from "@/lib/ui/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
@@ -136,33 +131,6 @@ function readInitialPeriodPrefs(searchParams: URLSearchParams | null): {
     compareCustomFrom: saved.compareCustomFrom ?? "",
     compareCustomTo: saved.compareCustomTo ?? "",
   };
-}
-
-function ReportSectionsWithContext({
-  compareMode,
-  domainBase,
-  aiProps,
-}: {
-  compareMode: ReportCompareMode;
-  domainBase: Omit<DomainReportSectionProps, "analyticsContext" | "sectionId" | "fetchEnabled">;
-  aiProps: ReportAiSectionProps;
-}) {
-  const { perf, perfLoading, partitioned } = useReportPerformanceContext();
-  const domainProps: DomainReportSectionProps = {
-    ...domainBase,
-    sectionId: "lavorazioni",
-    fetchEnabled: true,
-    analyticsContext: { perf, perfLoading, partitioned, compareMode },
-  };
-  useReportDerivedPrefetch(domainProps);
-  return <ReportSections domainProps={{ ...domainProps, fetchEnabled: false }} aiProps={aiProps} />;
-}
-
-function ReportPerformanceGateWithVisibility(
-  props: ComponentProps<typeof ReportPerformanceGate> & { children: ReactNode },
-) {
-  const { perfGateEnabled } = useReportSectionVisibility();
-  return <ReportPerformanceGate {...props} enabled={perfGateEnabled} />;
 }
 
 export function ReportAnalyticsView() {
@@ -394,70 +362,102 @@ export function ReportAnalyticsView() {
     );
   }
 
-  const domainBase: Omit<DomainReportSectionProps, "analyticsContext" | "sectionId" | "fetchEnabled"> = {
-    range: filterRange,
-    compareRange: model.compareRange,
-    rangeKey,
-    anchor,
-    compareDetail: model.compareDetail,
-    semanticIndex,
-    derivedBundle,
-    attive: live.attive,
-    storico: live.storico,
-    completate: live.completate,
-    manualEntries: live.manualEntries,
-    prodotti: live.magazzino,
-    histRev,
-    onHistRev,
-    topsMezzi: tops.mezzi,
-    topsClienti: tops.clienti,
-    topsRicambi: tops.ricambi,
-    showCompare: Boolean(model.compareRange),
-    manualByMonth: live.manualByMonth,
-    lavListRows: live.lavListRows,
-    magLog: live.magLog,
-    magazzinoRows,
-    costoOrario,
-    schedeStore,
-    schedeLoaded: !schedeLoading,
-  };
+  const periodContextValue = useMemo(
+    () => ({
+      anchor,
+      preset,
+      customFrom,
+      customTo,
+      compareMode,
+      compareCustomFrom,
+      compareCustomTo,
+      range: filterRange!,
+      compareRange: model.compareRange,
+      rangeKey,
+      showCompare: Boolean(model.compareRange),
+      setPreset: onPreset,
+      setCustomFrom,
+      setCustomTo,
+      setCompareMode: onCompareMode,
+      setCompareCustomFrom,
+      setCompareCustomTo,
+    }),
+    [
+      anchor,
+      preset,
+      customFrom,
+      customTo,
+      compareMode,
+      compareCustomFrom,
+      compareCustomTo,
+      filterRange,
+      model.compareRange,
+      rangeKey,
+      onPreset,
+      onCompareMode,
+    ],
+  );
 
-  const aiProps: ReportAiSectionProps = {
-    preset,
-    compareMode,
-    filterRange,
-    compareRange: model.compareRange,
-    model,
-    integrityView: live.integrityView,
-    tops,
-    snapshotFingerprint: live.snapshotFingerprint,
-  };
+  const domainSnapshot = useMemo(
+    () => ({
+      range: filterRange!,
+      compareRange: model.compareRange,
+      anchor,
+      showCompare: Boolean(model.compareRange),
+      attive: live.attive,
+      storico: live.storico,
+      completate: live.completate,
+      manualByMonth: live.manualByMonth,
+      magazzinoRows,
+      magLog: live.magLog,
+      costoOrario,
+      schedeStore,
+      semanticIndex,
+      compareDetail: model.compareDetail,
+      rangeKey,
+    }),
+    [
+      filterRange,
+      model.compareRange,
+      model.compareDetail,
+      anchor,
+      live.attive,
+      live.storico,
+      live.completate,
+      live.manualByMonth,
+      live.magLog,
+      magazzinoRows,
+      costoOrario,
+      schedeStore,
+      semanticIndex,
+      rangeKey,
+    ],
+  );
 
   return (
     <div className={`${dsStackPage} ${layoutPageRoot} min-w-0 max-w-full`}>
-      <ReportToolbar {...toolbarProps} />
-
-      <ContentReveal data-testid="content-reveal">
-        <ReportV2ExecutiveBoundary range={filterRange} compareMode={compareMode} />
-
-        <ReportAnalyticsDerivedProvider rangeKey={rangeKey}>
-          <ReportSectionVisibilityProvider>
-            <ReportV2InsightBoundary range={filterRange} compareMode={compareMode} />
-
-            <ReportPerformanceGateWithVisibility
-              anchor={anchor}
-              filterRange={filterRange}
-              compareRange={model.compareRange}
-              compareMode={compareMode}
-              periodKpis={model.kpis}
-              live={live}
-              semanticIndex={semanticIndex}
-            >
-              <ReportSectionsWithContext compareMode={compareMode} domainBase={domainBase} aiProps={aiProps} />
-            </ReportPerformanceGateWithVisibility>
-          </ReportSectionVisibilityProvider>
-        </ReportAnalyticsDerivedProvider>
-      </ContentReveal>
+      <ReportPeriodContextProvider value={periodContextValue}>
+        <ReportAnalyticsProvider>
+          <ReportAskProvider>
+            <ReportToolbar
+              {...toolbarProps}
+              titleAddon={
+                <>
+                  {toolbarProps.titleAddon}
+                  <ReportAskToolbarButton />
+                </>
+              }
+            />
+            <ReportSectionVisibilityProvider>
+              <ReportDrillDownProvider>
+                <ReportDomainSnapshotProvider value={domainSnapshot}>
+                  <ReportBiCenterMount filterRange={filterRange} compareMode={compareMode} />
+                </ReportDomainSnapshotProvider>
+              </ReportDrillDownProvider>
+            </ReportSectionVisibilityProvider>
+          </ReportAskProvider>
+        </ReportAnalyticsProvider>
+      </ReportPeriodContextProvider>
     </div>
   );
 }

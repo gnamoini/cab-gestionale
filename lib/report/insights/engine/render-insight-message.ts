@@ -19,9 +19,9 @@ const MESSAGE_BY_RULE: Record<string, (p: InsightCandidate["payload"]) => string
   LAV_LOAD_EXCEEDS_CLOSURES: (p) =>
     `Nel periodo sono entrate ${n(p.opened)} lavorazioni ma ne sono state chiuse ${n(p.closed)} (+${n(p.delta)} in accumulo)`,
   LAV_SLA_BREACH: (p) =>
-    `${n(p.count)} lavorazioni hanno superato la soglia SLA`,
+    `${n(p.count)} lavorazioni sono oltre il termine previsto`,
   LAV_OPEN_BACKLOG: (p) =>
-    `${n(p.open)} lavorazioni in backlog aperte (soglia dinamica: ${n(p.threshold)})`,
+    `${n(p.open)} lavorazioni ancora da completare (riferimento: ${n(p.threshold)})`,
   LAV_LOW_CLOSURES: () => "Nessuna lavorazione chiusa nel periodo selezionato",
   LAV_AVG_CLOSE_SLOW: (p) =>
     `Tempo medio di chiusura elevato: ${n(p.days)} giorni`,

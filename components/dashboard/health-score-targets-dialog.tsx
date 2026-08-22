@@ -6,6 +6,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import {
+  GestionaleModalFooterActions,
+  GestionaleModalFooterCancelButton,
+  GestionaleModalFooterSaveButton,
+} from "@/components/design-system";
+import {
   buildEditableHealthScoreAreaTargets,
   formatHealthScoreTargetLine,
   resolvedTargetsToBasePatches,
@@ -14,10 +19,7 @@ import {
 } from "@/lib/health-score/explain/health-score-area-targets";
 import type { WorkshopSize } from "@/lib/health-score/types";
 import {
-  dsBtnGhost,
-  dsBtnPrimary,
   dsInputNoSpinner,
-  dsModalFormFooter,
   dsTypoCaption,
   dsTypoSmall,
 } from "@/lib/ui/design-system";
@@ -266,19 +268,16 @@ export function HealthScoreTargetsDialog({
       titleId="health-score-targets-title"
       footer={
         canManageSettings ? (
-          <div className={`${dsModalFormFooter} w-full justify-end`}>
-            <button type="button" className={dsBtnGhost} onClick={onClose} disabled={saving}>
-              Annulla
-            </button>
-            <button
-              type="button"
-              className={dsBtnPrimary}
+          <GestionaleModalFooterActions>
+            <GestionaleModalFooterCancelButton onClick={onClose} disabled={saving} />
+            <GestionaleModalFooterSaveButton
               onClick={() => void handleSave()}
-              disabled={saving || loading || !dirty}
+              loading={saving}
+              disabled={loading || !dirty}
             >
-              {saving ? "Salvataggio…" : "Salva target"}
-            </button>
-          </div>
+              Salva target
+            </GestionaleModalFooterSaveButton>
+          </GestionaleModalFooterActions>
         ) : undefined
       }
     >
@@ -332,8 +331,8 @@ export function HealthScoreTargetsDialog({
         )}
 
         <p className={`${dsTypoCaption} text-[color:var(--cab-text-muted)]`}>
-          I target si adattano alla dimensione dell&apos;officina. Valori migliori del riferimento aumentano il
-          punteggio dell&apos;indicatore.
+          I target si adattano alla dimensione dell&apos;officina. Raggiungere il target assegna il punteggio
+          massimo sull&apos;indicatore; allontanarsi dal target lo riduce.
         </p>
       </GestionaleModalScrollBody>
     </GestionaleModalShell>,

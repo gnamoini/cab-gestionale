@@ -4,10 +4,12 @@ import type { RicambioUnitaMisura } from "@/lib/magazzino/ricambio-unita-misura"
 export type OrdineFornitoreStatus =
   | "bozza"
   | "inviato"
-  | "confermato"
-  | "spedito"
-  | "ricevuto"
+  | "in_consegna"
+  | "consegnato"
   | "annullato";
+
+/** Stati legacy pre-refactor lifecycle ordini. */
+export type OrdineFornitoreStatusLegacy = "confermato" | "spedito" | "ricevuto";
 
 export type OrdineFornitoreLinkSourceType = "lavorazione" | "preventivo" | "scheda" | "magazzino";
 
@@ -18,6 +20,7 @@ export type OrdineFornitoreRiga = {
   codice: string;
   descrizione: string;
   quantita: number;
+  quantitaRicevuta?: number;
   prezzoUnitario: number;
   scontoPercent: number;
   totaleRiga: number;
@@ -109,3 +112,22 @@ export type OrdineFornitoreSortKey =
   | "destinazioneTipo"
   | "totale"
   | "status";
+
+export type OrdineFornitoreDeliveryLineInput = {
+  riga_id: string;
+  quantita_ricevuta_target: number;
+};
+
+export type OrdineFornitoreDeliveryInput = {
+  batch_id: string;
+  apply_stock: boolean;
+  lines: OrdineFornitoreDeliveryLineInput[];
+};
+
+export type OrdineFornitoreDeliveryResult = {
+  ordineId: string;
+  status: OrdineFornitoreStatus;
+  complete: boolean;
+  warnings: Array<{ riga_id?: string; code?: string }>;
+  batchId: string;
+};

@@ -11,4 +11,5 @@ export const ordiniFornitoriEntry = {
   updateStatus: withPageWriteGuard("ordini_fornitori", ordiniFornitoriService.updateStatus.bind(ordiniFornitoriService)),
   annulla: withPageWriteGuard("ordini_fornitori", ordiniFornitoriService.annulla.bind(ordiniFornitoriService)),
   deleteOrdine: withPageWriteGuard("ordini_fornitori", ordiniFornitoriService.deleteOrdine.bind(ordiniFornitoriService)),
+  receiveDelivery: withPageWriteGuard("ordini_fornitori", ordiniFornitoriService.receiveDelivery.bind(ordiniFornitoriService)),
 };

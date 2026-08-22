@@ -40,7 +40,6 @@ import { fetchPreventivoRecordServer } from "@/lib/preventivi/preventivi-fetch-s
 import {
   generatePreventivoPdfBytes,
   preventivoPdfFileName,
-  PREVENTIVO_PDF_LAYOUT_STAMP,
 } from "@/lib/preventivi/preventivo-pdf-generate";
 import { fetchReportPdfDataSnapshot } from "@/lib/report/report-pdf-data.server";
 import {
@@ -72,6 +71,7 @@ export type PdfArtifactQuery = {
   month?: string;
   employeeId?: string;
   autore?: string;
+  skipRbac?: boolean;
 };
 
 async function resolvePdfAutore(override?: string): Promise<string> {
@@ -102,10 +102,9 @@ function codiciMapFromLavorazioneRows(rows: readonly LavorazioneListRow[]): Reco
 export async function deliverPdfArtifact(
   type: PdfArtifactType,
   query: PdfArtifactQuery,
-  options?: { skipRbac?: boolean },
 ): Promise<ServiceResult<PdfArtifactDelivery>> {
   try {
-    return await deliverPdfArtifactInner(type, query, options);
+    return await deliverPdfArtifactInner(type, query);
   } catch (error) {
     console.error("[pdf-artifact] deliver failed:", error);
     return err(error instanceof Error ? error.message : "Generazione PDF non riuscita");
@@ -115,12 +114,9 @@ export async function deliverPdfArtifact(
 async function deliverPdfArtifactInner(
   type: PdfArtifactType,
   query: PdfArtifactQuery,
-  options?: { skipRbac?: boolean },
 ): Promise<ServiceResult<PdfArtifactDelivery>> {
-  if (!options?.skipRbac) {
-    const allowed = await verifyPdfArtifactReadAccess(type);
-    if (!allowed) return err("Permesso richiesto.");
-  }
+  const allowed = query.skipRbac === true || (await verifyPdfArtifactReadAccess(type));
+  if (!allowed) return err("Permesso richiesto.");
 
   const autore = await resolvePdfAutore(query.autore);
   let scopeId = "global";
@@ -196,7 +192,6 @@ async function deliverPdfArtifactInner(
         noteFinali: p.noteFinali,
         collaudoPrezzo: p.collaudoPrezzo,
         manodopera: p.manodopera,
-        pdfLayout: PREVENTIVO_PDF_LAYOUT_STAMP,
       });
       scopeId = id;
       fileName = preventivoPdfFileName(p);

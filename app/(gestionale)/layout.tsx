@@ -3,6 +3,8 @@ import "../globals-gestionale-shell.css";
 import { dehydrate } from "@tanstack/react-query";
 import { DeferredFormUxBoundaryBootstrap } from "@/components/form-ux-migration/deferred-form-ux-boundary-bootstrap";
 import { AppProvidersGestionale } from "@/components/app-providers-gestionale";
+import { GlobalLoadingQueryBridge } from "@/src/components/global-loading-query-bridge";
+import { DeferredPwaBridges } from "@/src/components/deferred-pwa-bridges";
 import { AppShell } from "@/components/gestionale/app-shell";
 import { GestionaleAuthGate } from "@/components/gestionale/gestionale-auth-gate";
 import { GestionaleSettingsReadyGate } from "@/components/gestionale/gestionale-settings-ready-gate";
@@ -22,6 +24,8 @@ export default async function GestionaleLayout({ children }: { children: React.R
   return (
     <GestionaleHydrationBoundary state={dehydrate(qc)} boundary="layout">
       <AppProvidersGestionale>
+        <GlobalLoadingQueryBridge />
+        <DeferredPwaBridges />
         <AppShell>
           <DeferredFormUxBoundaryBootstrap />
           <GestionaleTopNoticeProvider>

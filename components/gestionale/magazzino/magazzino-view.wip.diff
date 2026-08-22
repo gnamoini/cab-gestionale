@@ -1,0 +1,353 @@
+diff --git "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_magazzino-view.tsx\\base" "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_magazzino-view.tsx\\wip"
+index 538602cc..39691c1e 100644
+--- "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_magazzino-view.tsx\\base"
++++ "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_magazzino-view.tsx\\wip"
+@@ -28,6 +28,7 @@ import { MagazzinoScortaAdjustActionsCell } from "@/components/gestionale/magazz
+ import { MagazzinoDebouncedScortaProvider } from "@/components/gestionale/magazzino/magazzino-debounced-scorta-context";
+ import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
+ import { MagazzinoListinoAiBadge } from "@/components/gestionale/magazzino/magazzino-listino-ai-badge";
++import { MagazzinoAnagraficaIncompletaBadge } from "@/components/gestionale/magazzino/magazzino-anagrafica-incompleta-badge";
+ import { MagazzinoMarcaMobileBadge } from "@/components/gestionale/magazzino/magazzino-marca-mobile-badge";
+ import dynamic from "next/dynamic";
+ import { GestionaleModalGate } from "@/components/gestionale/gestionale-modal-gate";
+@@ -69,6 +70,7 @@ const MagazzinoLogDrawer = dynamic(
+ import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
+ import { magazzinoEntry } from "@/lib/domain/magazzino-entry";
+ import { useMagazzinoListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
++import { useOrdineFornitoreInTransitMap } from "@/src/hooks/gestionale/use-ordine-fornitore-in-transit-map";
+ import { GestionaleListSearchController } from "@/components/gestionale/gestionale-list-search-controller";
+ import { useGestionaleDirtySearchHint } from "@/src/hooks/gestionale/use-gestionale-dirty-search-hint";
+ import { usesServerSearch } from "@/lib/search/registry";
+@@ -280,7 +282,7 @@ function initialFornitoriFromProducts(rows: RicambioMagazzino[]) {
+ function formatFornitoreAlternativoDisplay(p: RicambioMagazzino): string {
+   const alts = p.fornitoriAlternativi ?? [];
+   const firstName = alts[0]?.fornitore.trim() || p.fornitoreNonOriginale.trim();
+-  if (!firstName) return "??????";
++  if (!firstName) return "???";
+   if (alts.length <= 1) return firstName;
+   return `${firstName} (+${alts.length - 1})`;
+ }
+@@ -323,7 +325,7 @@ function formatDataUltimaMain(iso: string) {
+ /** Card mobile magazzino: data + ora e autore su due righe. */
+ function formatMagazzinoUltimaModificaMobileDate(iso: string): string {
+   const d = new Date(iso);
+-  if (Number.isNaN(d.getTime())) return "??????";
++  if (Number.isNaN(d.getTime())) return "???";
+   return d.toLocaleString("it-IT", {
+     day: "2-digit",
+     month: "2-digit",
+@@ -334,12 +336,12 @@ function formatMagazzinoUltimaModificaMobileDate(iso: string): string {
+ }
+ 
+ function formatMagazzinoUltimaModificaMobileAutore(autore: string): string {
+-  return autore.trim() || "??????";
++  return autore.trim() || "???";
+ }
+ 
+ function isMagazzinoMobilePlaceholderValue(value: string): boolean {
+   const t = value.trim();
+-  return !t || t === "??????" || t === "-";
++  return !t || t === "???" || t === "-";
+ }
+ 
+ function isModificaOlderThanMonths(iso: string, months: number) {
+@@ -359,7 +361,7 @@ const CAMPO_LABEL: Partial<Record<keyof RicambioMagazzino, string>> = {
+   descrizione: "Descrizione",
+   note: "Note",
+   categoria: "Categoria",
+-  compatibilitaMezzi: "Compatibilit?????",
++  compatibilitaMezzi: "Compatibilit??",
+   scorta: "Scorta",
+   scortaMinima: "Scorta minima",
+   prezzoFornitoreOriginale: "Prezzo listino OE",
+@@ -368,7 +370,7 @@ const CAMPO_LABEL: Partial<Record<keyof RicambioMagazzino, string>> = {
+   prezzoVendita: "Prezzo vendita",
+   marcaOriginaleSecondaria: "Marca secondaria",
+   usatoInTagliandi: "Tagliando",
+-  unitaMisura: "Unit????? di misura",
++  unitaMisura: "Unit?? di misura",
+   fornitoreNonOriginale: "Fornitore alternativo",
+   codiceFornitoreNonOriginale: "Codice alternativo",
+   prezzoFornitoreNonOriginale: "Prezzo alternativo",
+@@ -376,7 +378,7 @@ const CAMPO_LABEL: Partial<Record<keyof RicambioMagazzino, string>> = {
+ };
+ 
+ function fmtFornitoriAlternativiDiff(rows: RicambioMagazzino["fornitoriAlternativi"]): string {
+-  if (!rows?.length) return "??????";
++  if (!rows?.length) return "???";
+   return rows
+     .map(
+       (r) =>
+@@ -413,10 +415,10 @@ type CampoChange = { campo: string; prima: string; dopo: string };
+ function fmtForDiff(k: keyof RicambioMagazzino, r: RicambioMagazzino): string {
+   if (k === "fornitoriAlternativi") return fmtFornitoriAlternativiDiff(r.fornitoriAlternativi);
+   const v = r[k];
+-  if (k === "usatoInTagliandi") return r.usatoInTagliandi ? "S?????" : "No";
++  if (k === "usatoInTagliandi") return r.usatoInTagliandi ? "S??" : "No";
+   if (k === "unitaMisura") return formatRicambioUnitaMisuraLabel(r.unitaMisura);
+   if (k === "compatibilitaMezzi") return formatCompatMezziArrayForLog(v);
+-  if (Array.isArray(v)) return (v as string[]).join(", ") || "??????";
++  if (Array.isArray(v)) return (v as string[]).join(", ") || "???";
+   if (typeof v === "number") {
+     if (k === "markupPercentuale") {
+       return formatMarkupDisplay(v);
+@@ -434,7 +436,7 @@ function fmtForDiff(k: keyof RicambioMagazzino, r: RicambioMagazzino): string {
+     return String(v);
+   }
+   const s = String(v ?? "").trim();
+-  return s || "??????";
++  return s || "???";
+ }
+ 
+ function diffRicambi(before: RicambioMagazzino, after: RicambioMagazzino): CampoChange[] {
+@@ -457,9 +459,9 @@ function diffRicambi(before: RicambioMagazzino, after: RicambioMagazzino): Campo
+ function changesForNuovoRicambio(r: RicambioMagazzino): CampoChange[] {
+   return DIFF_KEYS.map((key) => ({
+     campo: CAMPO_LABEL[key] ?? String(key),
+-    prima: "??????",
++    prima: "???",
+     dopo: fmtForDiff(key, r),
+-  })).filter((c) => c.dopo !== "??????");
++  })).filter((c) => c.dopo !== "???");
+ }
+ 
+ type MagazzinoLogTipo = "aggiunta" | "update" | "rimozione";
+@@ -495,6 +497,7 @@ function RicambioCodiceCell({ p }: { p: RicambioMagazzino }) {
+         </span>
+       </div>
+       <MagazzinoListinoAiBadge listinoImport={p.listinoImport} />
++      <MagazzinoAnagraficaIncompletaBadge ricambio={p} />
+     </div>
+   );
+ }
+@@ -560,6 +563,8 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+   const rawMagazzinoListQ = useMagazzinoListQuery(magazzinoFetchFilters);
+   const magazzinoListQ = useMagazzinoRicambiUIQuery(magazzinoFetchFilters);
+   const prodotti = magazzinoListQ.data ?? [];
++  const inTransitQ = useOrdineFornitoreInTransitMap();
++  const inTransitMap = inTransitQ.data ?? {};
+ 
+   useEffect(() => {
+     hydrateJournalFromSession();
+@@ -579,6 +584,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+   );
+   const [soloSottoScorta, setSoloSottoScorta] = useState(false);
+   const [nascondiScortaZero, setNascondiScortaZero] = useState(false);
++  const [soloAnagraficaIncompleta, setSoloAnagraficaIncompleta] = useState(false);
+   const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
+     collapsibleExpandedBoolPref(false, { scope: "magazzino", key: "filters", userId: user?.id ?? null }),
+   );
+@@ -796,7 +802,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+       ev.recordId,
+       ricambio.descrizione,
+       "update",
+-      [{ campo: "Foto", prima: "??????", dopo: ev.action === "image_uploaded" ? "Foto aggiunta" : "Foto rimossa" }],
++      [{ campo: "Foto", prima: "???", dopo: ev.action === "image_uploaded" ? "Foto aggiunta" : "Foto rimossa" }],
+       authorName,
+     );
+   }
+@@ -1026,7 +1032,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+           lastSyncedMagMasterSigRef.current = mergedSig;
+         })
+         .catch(() => {
+-          /* toast OCC gi????? in useSettingsUpsertMutation */
++          /* toast OCC gi?? in useSettingsUpsertMutation */
+         });
+     }, 900);
+     return () => {
+@@ -1040,7 +1046,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+     setLogPersistReady(true);
+   }, []);
+ 
+-  /** Elenchi globali puri (`Impostazioni ?????? Magazzino`) ?????? SSOT per selettori e validazione form. */
++  /** Elenchi globali puri (`Impostazioni ??? Magazzino`) ??? SSOT per selettori e validazione form. */
+   const marcheGlobal = useMemo(
+     () => appSettings?.magazzinoMaster?.marche ?? [],
+     [appSettings?.magazzinoMaster?.marche],
+@@ -1109,9 +1115,10 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+       search: searchApplied,
+       soloSottoScorta,
+       nascondiScortaZero,
++      soloAnagraficaIncompleta,
+       ...advancedFilters,
+     }),
+-    [searchApplied, soloSottoScorta, nascondiScortaZero, advancedFilters],
++    [searchApplied, soloSottoScorta, nascondiScortaZero, soloAnagraficaIncompleta, advancedFilters],
+   );
+ 
+   const compatDisplayFor = useCallback(
+@@ -1197,7 +1204,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+ 
+   useEffect(() => {
+     resetPage();
+-  }, [searchApplied, advancedFilters, soloSottoScorta, nascondiScortaZero, sortColumn, sortPhase, listPageSize, resetPage]);
++  }, [searchApplied, advancedFilters, soloSottoScorta, nascondiScortaZero, soloAnagraficaIncompleta, sortColumn, sortPhase, listPageSize, resetPage]);
+ 
+   const pagedMagazzino = useMemo(() => sliceItems(filteredSorted), [sliceItems, filteredSorted, page]);
+ 
+@@ -1526,6 +1533,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+     saveMagazzinoAdvancedFiltersPersisted(MAGAZZINO_ADVANCED_FILTERS_EMPTY);
+     setSoloSottoScorta(false);
+     setNascondiScortaZero(false);
++    setSoloAnagraficaIncompleta(false);
+     resetMagazzinoRicerca();
+     setFiltriEspansi(false);
+   }
+@@ -1533,7 +1541,11 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+   const hasAdvancedPanelFilters = magazzinoAdvancedFiltersActive(advancedFilters);
+ 
+   const hasMagazzinoFilters =
+-    searchApplied.trim().length > 0 || hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero;
++    searchApplied.trim().length > 0 ||
++    hasAdvancedPanelFilters ||
++    soloSottoScorta ||
++    nascondiScortaZero ||
++    soloAnagraficaIncompleta;
+ 
+   const renderMagazzinoDesktopRow = useCallback(
+     (index: number) => {
+@@ -1576,7 +1588,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+                 variant="table"
+               />
+             ) : (
+-              <span className="text-[color:var(--cab-text-muted)]">??????</span>
++              <span className="text-[color:var(--cab-text-muted)]">???</span>
+             )}
+           </td>
+           <td className={`min-w-0 ${gestionaleListTableTd} ${magazzinoTableColDescrizioneClass}`}>
+@@ -1594,6 +1606,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+               ricambioLabel={p.descrizione}
+               fallbackScorta={p.scorta}
+               low={low}
++              inTransit={inTransitMap[p.id] ?? 0}
+               variant="table"
+             />
+           </td>
+@@ -1606,7 +1619,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+             <Tooltip
+               content={
+                 stale
+-                  ? `${formatTimestampHover(p.dataUltimaModifica)} ????? ${MAGAZZINO_STALE_MODIFICA_HINT}`
++                  ? `${formatTimestampHover(p.dataUltimaModifica)} ?? ${MAGAZZINO_STALE_MODIFICA_HINT}`
+                   : formatTimestampHover(p.dataUltimaModifica)
+               }
+               side="top"
+@@ -1630,7 +1643,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+           <td className={`${gestionaleListTableTdCenter} font-medium ${magazzinoTableColPrezzoClass}`}>{eur(p.prezzoVendita)}</td>
+           <td className={`${gestionaleListTableTdCenter} text-[13px] text-zinc-700 dark:text-zinc-300 ${magazzinoTableColConsumoClass}`}>
+             <span className="inline-block max-w-full truncate">
+-              {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "??????"}
++              {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "???"}
+             </span>
+           </td>
+           <td className={gestionaleListTableTdAzioni}>
+@@ -1671,7 +1684,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+     const items: PageActionItem[] = [
+       ...importExportActions.items,
+       ...(importExportActions.items.length > 0 ? [{ id: "__divider__", label: "" }] : []),
+-      pageActionLogItem(() => setLogOpen(true), "Log attivit?????"),
++      pageActionLogItem(() => setLogOpen(true), "Log attivit??"),
+     ];
+     if (magPerm.canRead) {
+       items.push({
+@@ -1789,7 +1802,12 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+             }
+             filtersExpanded={filtriEspansi}
+             onFiltersToggle={() => setFiltriEspansi((o) => !o)}
+-            filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
++            filtersActive={
++              hasAdvancedPanelFilters ||
++              soloSottoScorta ||
++              nascondiScortaZero ||
++              soloAnagraficaIncompleta
++            }
+             filtersPanel={
+               <GestionaleModalGate open={filtriEspansi}>
+                 <MagazzinoAdvancedFilterPanel
+@@ -1798,8 +1816,10 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+                   catalog={filterCatalog}
+                   soloSottoScorta={soloSottoScorta}
+                   nascondiScortaZero={nascondiScortaZero}
++                  soloAnagraficaIncompleta={soloAnagraficaIncompleta}
+                   onSoloSottoScortaChange={setSoloSottoScorta}
+                   onNascondiScortaZeroChange={setNascondiScortaZero}
++                  onSoloAnagraficaIncompletaChange={setSoloAnagraficaIncompleta}
+                 />
+               </GestionaleModalGate>
+             }
+@@ -1811,7 +1831,12 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+                   hideCountOnMobile
+                   mobileUniformActions
+                   count={filteredSorted.length}
+-                  filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
++                  filtersActive={
++                    hasAdvancedPanelFilters ||
++                    soloSottoScorta ||
++                    nascondiScortaZero ||
++                    soloAnagraficaIncompleta
++                  }
+                   searchActive={searchApplied.trim().length > 0}
+                   onSearchReset={resetMagazzinoRicerca}
+                   onFilterReset={resetMagazzinoFilters}
+@@ -1820,7 +1845,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+                   {magCanCreateRicambio ? (
+                     <PageToolbarMetaToggle
+                       className="min-h-10 min-w-0 flex-1 sm:min-h-9 sm:flex-none sm:shrink-0"
+-                      label="Modalit????? modifica"
++                      label="Modalit?? modifica"
+                       shortLabel="Modifica"
+                       checked={modalitaModifica}
+                       onChange={(next) => {
+@@ -1882,7 +1907,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+                   className={`${magazzinoTableColLabelQtyClass} px-2 text-center text-xs font-medium text-[color:var(--cab-text-muted)]`}
+                   scope="col"
+                 >
+-                  Qt?????
++                  Qt??
+                 </th>
+               ) : null}
+               <GlobalTableSortTh
+@@ -2011,7 +2036,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+                       <MagazzinoMarcaMobileBadge marca={p.marca} magazzinoMaster={appSettings?.magazzinoMaster} />
+                     ) : null}
+                     <p className="line-clamp-2 text-base font-semibold leading-snug tracking-tight text-[color:var(--cab-text)]">
+-                      {p.descrizione.trim() || "??????"}
++                      {p.descrizione.trim() || "???"}
+                     </p>
+                     {!isMagazzinoMobilePlaceholderValue(p.codiceFornitoreOriginale) ? (
+                       <div className="flex items-start gap-1.5">
+@@ -2040,6 +2065,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+                       ricambioLabel={p.descrizione}
+                       fallbackScorta={p.scorta}
+                       low={low}
++                      inTransit={inTransitMap[p.id] ?? 0}
+                       variant="mobile"
+                     />
+                     <MagazzinoScortaBadge value={p.scortaMinima} kind="minima" variant="mobile" />
+@@ -2058,7 +2084,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+                     <dt className="text-zinc-500 dark:text-zinc-400">Consumo medio</dt>
+                     <dd className="font-medium tabular-nums text-zinc-700 dark:text-zinc-300">
+                       <span className="inline-block max-w-full truncate">
+-                        {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "??????"}
++                        {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "???"}
+                       </span>
+                     </dd>
+                   </div>
+@@ -2077,7 +2103,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+                           className="shrink-0 text-[11px] leading-none text-amber-700 dark:text-amber-300"
+                           aria-hidden
+                         >
+-                          ??????
++                          ???
+                         </span>
+                       ) : null}
+                       <p className="truncate tabular-nums leading-tight">
+@@ -2229,7 +2255,7 @@ export function MagazzinoView({ listSurface: serverListSurface, listTier = "xl"
+       <SettingsEliminaConfirmDialog
+         open={eliminaRicambioTarget != null}
+         itemLabel={eliminaRicambioTarget?.descrizione}
+-        detail="Il ricambio verr????? rimosso dal magazzino."
++        detail="Il ricambio verr?? rimosso dal magazzino."
+         onCancel={() => setEliminaRicambioTarget(null)}
+         onConfirm={() => void executeEliminaRicambio()}
+       />

@@ -5,7 +5,7 @@ import type { RicambioMagazzino } from "@/lib/magazzino/types";
 
 /**
  * Normalizza il codice fornitore originale per confronto:
- * trim, case-insensitive, spazi interni compressi (doppi spazi → uno).
+ * trim, case-insensitive, spazi interni compressi (doppi spazi ÔåÆ uno).
  * @deprecated Preferire `buildRicambioCodiceEntityKey` / `normalizeEntityString`.
  */
 export function normalizeMagazzinoCodiceOE(value: string): string {
@@ -83,7 +83,7 @@ export type MagazzinoArchiveDuplicateCodeGroup = {
 };
 
 /**
- * Raggruppa ricambi che condividono lo stesso codice OE normalizzato (≥2 per gruppo).
+ * Raggruppa ricambi che condividono lo stesso codice OE normalizzato (ÔëÑ2 per gruppo).
  */
 export function analyzeArchiveDuplicateCodes(items: RicambioMagazzino[]): MagazzinoArchiveDuplicateCodeGroup[] {
   const map = new Map<string, RicambioMagazzino[]>();

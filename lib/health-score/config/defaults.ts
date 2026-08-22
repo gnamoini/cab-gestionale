@@ -35,4 +35,7 @@ export const HEALTH_SCORE_V2_DEFAULTS: HealthScoreConfig = {
     { kpiId: "fatturato", requires: ["completate"], rule: "suppress_if_completate_zero" },
     { kpiId: "incassato", requires: ["completate"], rule: "suppress_if_completate_zero" },
   ],
+  calculation: {
+    usePreventiviForMissingFatturazione: true,
+  },
 };

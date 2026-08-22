@@ -9,15 +9,14 @@ import {
 assert.deepEqual(ORDINE_FORNITORE_EDITOR_STATUSES, [
   "bozza",
   "inviato",
-  "confermato",
-  "spedito",
-  "ricevuto",
+  "in_consegna",
+  "consegnato",
 ]);
-assert.equal(ordineFornitoreStatusLabel("spedito"), "Spedito");
-assert.equal(ordineFornitoreStatusLabel("ricevuto"), "Ricevuto");
-assert.equal(ordineFornitoreStatusEditorItems().length, 5);
+assert.equal(ordineFornitoreStatusLabel("in_consegna"), "In consegna");
+assert.equal(ordineFornitoreStatusLabel("consegnato"), "Consegnato");
+assert.equal(ordineFornitoreStatusEditorItems().length, 4);
 assert.equal(ordineFornitoreStatusFilterItems()[0]?.value, "");
-assert.equal(ordineFornitoreStatusFilterItems().length, 7);
+assert.equal(ordineFornitoreStatusFilterItems().length, 6);
 assert.ok(ordineFornitoreStatusEditorItems().every((item) => item.pillStyle));
 
 console.log("ordine-fornitore-status-ui.test.ts OK");

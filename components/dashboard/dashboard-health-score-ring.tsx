@@ -8,6 +8,10 @@ import type {
   OperationalHealthSectionSummary,
   OperationalHealthTone,
 } from "@/lib/dashboard/operational-health-score";
+import {
+  HEALTH_SCORE_TONE_COLOR,
+  HEALTH_SCORE_TONE_GLOW,
+} from "@/lib/dashboard/health-score-tone-colors";
 import { splitHealthFactors } from "@/lib/dashboard/operational-health-score";
 import {
   HealthScoreWeeklyTrendChart,
@@ -31,21 +35,8 @@ const RING_STROKE = 5;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-const TONE_RING_COLOR: Record<OperationalHealthTone, string> = {
-  excellent: "var(--cab-success)",
-  good: "var(--cab-primary)",
-  warn: "var(--cab-warning)",
-  critical: "var(--cab-danger)",
-  neutral: "var(--cab-text-muted)",
-};
-
-const TONE_GLOW: Record<OperationalHealthTone, string> = {
-  excellent: "color-mix(in srgb, var(--cab-success) 14%, transparent)",
-  good: "color-mix(in srgb, var(--cab-primary) 12%, transparent)",
-  warn: "color-mix(in srgb, var(--cab-warning) 14%, transparent)",
-  critical: "color-mix(in srgb, var(--cab-danger) 14%, transparent)",
-  neutral: "color-mix(in srgb, var(--cab-border) 60%, transparent)",
-};
+const TONE_RING_COLOR = HEALTH_SCORE_TONE_COLOR;
+const TONE_GLOW = HEALTH_SCORE_TONE_GLOW;
 
 function healthScoreRingGlow(tone: OperationalHealthTone): string {
   const c = TONE_RING_COLOR[tone];
@@ -294,23 +285,14 @@ function FactorList({
   );
 }
 
-function HealthScoreSynthesisIntro({
-  calc,
-  withTitle = false,
-}: {
-  calc: NonNullable<OperationalHealthScore["calculation"]>;
-  withTitle?: boolean;
-}) {
+function HealthScoreSynthesisIntro({ withTitle = false }: { withTitle?: boolean }) {
   return (
     <div className="min-w-0 flex-1">
       {withTitle ? (
         <h4 className="text-sm font-semibold leading-snug text-[color:var(--cab-text)]">Target di riferimento</h4>
       ) : null}
       <p className={dsTypoCaption}>
-        Punteggio calcolato con confronto mese precedente e target officina.
-      </p>
-      <p className={`${dsTypoCaption} mt-1`}>
-        Affidabilità {calc.confidencePct}% · qualità dati {calc.dataQualityPct}%.
+        Punteggio basato sul raggiungimento dei target officina (90/100 per obiettivo raggiunto).
       </p>
     </div>
   );
@@ -328,7 +310,7 @@ function HealthScoreSynthesisCard({ calc }: { calc: NonNullable<OperationalHealt
         <div className="flex min-h-0 flex-1 flex-col">
           <HealthScoreSynthesisBody calc={calc} />
           <div className="mt-auto flex shrink-0 items-center gap-2 border-t border-[color:color-mix(in_srgb,var(--cab-border)_70%,transparent)] pt-3">
-            <HealthScoreSynthesisIntro calc={calc} withTitle />
+            <HealthScoreSynthesisIntro withTitle />
             <IconActionButton
               type="button"
               label={targetsActionLabel}
@@ -522,7 +504,7 @@ function HealthScoreCalculationSummary({ score }: { score: OperationalHealthScor
     <>
       <HealthScoreSynthesisBody calc={calc} />
       <div className="mt-3">
-        <HealthScoreSynthesisIntro calc={calc} withTitle />
+        <HealthScoreSynthesisIntro withTitle />
       </div>
     </>
   );

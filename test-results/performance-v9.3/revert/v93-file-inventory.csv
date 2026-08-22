@@ -1,0 +1,10 @@
+Path,V93Change,V92Change,IndependentFix,WIP,RevertRequired,Decision,Reason
+context/auth-context.tsx,strip imports + dynamic session-actions,none,no,no,YES,REVERTED,Restored from HEAD 2a08a838 (V9.2 left unchanged)
+src/lib/auth/auth-session-actions.ts,new file,none,no,no,YES,DELETED,V9.3-only runtime module
+src/components/auth/gestionale-server-snapshot-rbac-hydrate.tsx,new file,none,no,no,YES,DELETED,V9.3-only leaf component
+app/(gestionale)/layout.tsx,+GestionaleServerSnapshotRbacHydrate,bridges moved here,no,no,YES,REVERT hydrate only,V9.2 bridges preserved
+src/lib/auth/map-auth-user.ts,@/lib/rbac + inline normalizeClienteRef,none,YES,no,NO,KEEP,Independent fix — avoids heavy lib/auth/rbac on auth cold path
+lib/rbac/fetch-rbac-role-key.ts,@/lib/rbac import,none,YES,no,NO,KEEP,Independent fix — same rationale
+app/login/page.tsx,LoginFormLazy,YES,no,no,NO,KEEP,V9.2
+app/login/login-form.tsx,LoginPostAuthRedirectLazy,YES,no,no,NO,KEEP,V9.2
+components/app-providers-core.tsx,bridges removed,YES,no,no,NO,KEEP,V9.2

@@ -18,7 +18,7 @@ import {
   useCollapsiblePreference,
 } from "@/lib/ui/collapsible-prefs";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { GestionaleListSearchController } from "@/components/gestionale/gestionale-list-search-controller";
+import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { GlobalDatePickerYmd, GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input/global-settings-list-select";
 import {
@@ -40,7 +40,6 @@ import {
   ORDINI_FORNITORI_FILTERS_EMPTY,
   ordineFornitoreListDestinazioneTipo,
   ordineFornitoreListOggetto,
-  ordineFornitoreRowSearchScore,
   ordiniFornitoriFiltersActive,
   type OrdiniFornitoriPageFilters,
 } from "@/lib/ordini-fornitori/ordine-fornitore-list-ui-filters";
@@ -78,7 +77,7 @@ import { useOrdiniFornitoriQuery } from "@/src/hooks/gestionale/use-ordini-forni
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { ordiniFornitoriEntry } from "@/lib/domain/ordini-fornitori-entry";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import { compareSearchRelevance, isSearchRelevanceSortActive } from "@/lib/search/sort-by-relevance";
+import { useGestionaleListSearch } from "@/lib/search/use-gestionale-list-search";
 import {
   CardMobile,
   CardMobileActions,
@@ -148,10 +147,9 @@ export function OrdiniFornitoriView({
   initialOrdineId,
 }: {
   listSurface: ListSurface;
-  /** Permessi pagina Ordini fornitori (read = visualizza, write = modifica). */
+  /** Permessi pagina Preventivi (read = visualizza, write = modifica). */
   canRead: boolean;
   canWrite: boolean;
-  /** Deep link `?ordine=<uuid>` dalla pagina dedicata. */
   initialOrdineId?: string;
 }) {
   const userId = useAuthUserId();
@@ -160,9 +158,13 @@ export function OrdiniFornitoriView({
   const { records, isLoading, isError, refetch } = useOrdiniFornitoriQuery(canRead);
   const { searchHaystackById, searchSuggestionPool } = useOrdiniFornitoriListDerived(records);
 
-  const [searchApplied, setSearchApplied] = useState("");
-  const [searchClearSignal, setSearchClearSignal] = useState(0);
-  const onSearchAppliedChange = useCallback((q: string) => setSearchApplied(q), []);
+  const {
+    searchInput,
+    setSearchInput,
+    searchApplied,
+    flushSearch: flushPageSearch,
+    clearSearch,
+  } = useGestionaleListSearch({ domain: "ordini-fornitori" });
   const [filters, setFilters] = useState<OrdiniFornitoriPageFilters>(ORDINI_FORNITORI_FILTERS_EMPTY);
   const [filtriEspansi, setFiltriEspansi] = useCollapsiblePreference(
     collapsibleExpandedBoolPref(false, { scope: "ordini-fornitori", key: "filters", userId }),
@@ -180,7 +182,6 @@ export function OrdiniFornitoriView({
   const [deleteTarget, setDeleteTarget] = useState<OrdineFornitoreRecord | null>(null);
   const [deletePending, setDeletePending] = useState(false);
   const pendingStatusRef = useRef(new Set<string>());
-  const initialOrdineHandledRef = useRef(false);
 
   const pageFilters = useMemo(
     (): OrdiniFornitoriPageFilters => ({ ...filters, search: searchApplied }),
@@ -197,21 +198,13 @@ export function OrdiniFornitoriView({
 
   const sortedRows = useMemo(() => {
     const copy = [...filteredRows];
-    if (isSearchRelevanceSortActive(searchApplied, sortColumn)) {
-      copy.sort((a, b) => {
-        const rel = compareSearchRelevance(a, b, searchApplied, (row, q) => ordineFornitoreRowSearchScore(row, q));
-        if (rel !== 0) return rel;
-        return compareCreatedDesc(a, b);
-      });
-      return copy;
-    }
     if (sortColumn === null || sortPhase === "natural") {
       copy.sort(compareCreatedDesc);
       return copy;
     }
     copy.sort((a, b) => compareOrdini(a, b, sortColumn, sortPhase === "asc"));
     return copy;
-  }, [filteredRows, sortColumn, sortPhase, searchApplied]);
+  }, [filteredRows, sortColumn, sortPhase]);
 
   const pageSize = useResponsiveListPageSize();
   const ordiniPagerDeps = useMemo(
@@ -230,7 +223,7 @@ export function OrdiniFornitoriView({
   }, [ordiniPagerDeps, pageSize, resetPage]);
 
   const hasOrdiniListFilters =
-    ordiniFornitoriFiltersActive(filters) || searchApplied.trim().length > 0;
+    ordiniFornitoriFiltersActive(filters) || searchInput.trim().length > 0;
   const tableEmptyMessage = hasOrdiniListFilters
     ? "Nessun ordine corrisponde alla ricerca o ai filtri selezionati."
     : "Nessun ordine in archivio.";
@@ -276,7 +269,7 @@ export function OrdiniFornitoriView({
   const handleSaved = useCallback(
     async (info?: { record?: OrdineFornitoreRecord }) => {
       resetPage();
-      setSearchClearSignal((n) => n + 1);
+      setSearchInput("");
       setFilters(ORDINI_FORNITORI_FILTERS_EMPTY);
       if (info?.record) {
         upsertOrdineInListCache(info.record);
@@ -300,14 +293,6 @@ export function OrdiniFornitoriView({
     },
     [gestToast],
   );
-
-  useEffect(() => {
-    if (!initialOrdineId || !canRead || initialOrdineHandledRef.current || isLoading) return;
-    const match = records.find((r) => r.id === initialOrdineId);
-    if (!match) return;
-    initialOrdineHandledRef.current = true;
-    void openView(match);
-  }, [initialOrdineId, canRead, isLoading, records, openView]);
 
   const openDuplicate = useCallback(
     (record: OrdineFornitoreRecord) => {
@@ -422,16 +407,14 @@ export function OrdiniFornitoriView({
               </div>
             }
             search={
-              <GestionaleListSearchController
-                domain="ordini-fornitori"
-                variant="suggestions"
+              <GestionaleListSearchField
                 id="ordini-fornitori-search"
                 wrapperClassName="min-w-0 flex-1"
                 placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-                aria-label="Cerca ordini fornitori"
-                onSearchAppliedChange={onSearchAppliedChange}
-                clearSignal={searchClearSignal}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 suggestionPool={searchSuggestionPool}
+                aria-label="Cerca ordini fornitori"
               />
             }
             filtersExpanded={filtriEspansi}
@@ -497,8 +480,8 @@ export function OrdiniFornitoriView({
               <PageToolbarResultCount
                 count={sortedRows.length}
                 filtersActive={ordiniFornitoriFiltersActive(filters)}
-                searchActive={searchApplied.trim().length > 0}
-                onSearchReset={() => setSearchClearSignal((n) => n + 1)}
+                searchActive={searchInput.trim().length > 0}
+                onSearchReset={() => setSearchInput("")}
                 onFilterReset={() => setFilters(ORDINI_FORNITORI_FILTERS_EMPTY)}
               />
             }

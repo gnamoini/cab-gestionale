@@ -79,7 +79,7 @@ test("scostamenti ore nel confronto", () => {
             id: "r1",
             dataLavorazione: "2026-01-01",
             lavorazioniEffettuate: "Test",
-            addettiAssegnati: [{ addettoId: "a1", addetto: "", oreImpiegate: 5 }],
+            addettiAssegnati: [{ addetto: "a1", addettoId: "a1", oreImpiegate: 5 }],
           },
         ],
       },

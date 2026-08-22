@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-/** ponytail: route loading.tsx owns full-page skeleton — no dynamic loading fallback. */
+/** ponytail: route loading.tsx owns full-page skeleton ÔÇö no dynamic loading fallback. */
 export const DashboardViewLazy = dynamic(() =>
   import("@/components/dashboard/dashboard-view").then((m) => m.DashboardView),
 );

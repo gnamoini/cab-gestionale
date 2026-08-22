@@ -232,6 +232,7 @@ export const SETTINGS_SECTION_ICONS: Record<SistemaSectionId, SettingsSectionIco
   "sys-comunicazioni": IconComunicazioni,
   "sys-stato-propagazioni": IconPropagazione,
   "sys-economici": IconEconomici,
+  "sys-stato-operativo": IconPropagazione,
   "sys-tkb-kb": IconEconomici,
 };
 

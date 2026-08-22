@@ -8,7 +8,7 @@ import {
 import { getPrefetchRoutesForScope } from "@/lib/render/query-ownership-registry";
 
 const routes = getAllBudgetRoutes();
-assert.equal(routes.length, 11);
+assert.equal(routes.length, 13);
 assert.deepEqual(
   [...routes].sort(),
   [
@@ -16,6 +16,7 @@ assert.deepEqual(
     "/documenti",
     "/impostazioni",
     "/lavorazioni",
+    "/lavorazioni-clienti",
     "/login",
     "/magazzino",
     "/mezzi",
@@ -23,6 +24,7 @@ assert.deepEqual(
     "/privacy-policy",
     "/report",
     "/sicurezza",
+    "/termini-e-condizioni",
   ].sort(),
 );
 

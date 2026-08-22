@@ -25,8 +25,9 @@ for (const zone of legacyZones) {
   assert.doesNotMatch(executiveOverview, new RegExp(`\\b${zone}\\b`), `${zone} must not be wired in executive overview`);
 }
 
-assert.match(analyticsView, /ReportSections/);
-assert.match(analyticsView, /ReportAnalyticsDerivedProvider/);
+assert.doesNotMatch(analyticsView, /LegacyBlockedAccordion/);
+assert.doesNotMatch(analyticsView, /legacy-blocked/);
+assert.match(analyticsView, /ReportBiCenterMount/);
 assert.doesNotMatch(analyticsView, /ReportAiAnalysisZone/);
 
 const stripKpis = fs.readFileSync(path.join(ROOT, "lib/report/report-kpi-catalog.ts"), "utf8");

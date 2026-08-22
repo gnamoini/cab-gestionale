@@ -37,11 +37,11 @@ export const EXECUTIVE_METRIC_REGISTRY: readonly ExecutiveMetricDefinition[] = [
     drillDown: { metricId: "eco_da_incassare", targetSection: "dati_economici", targetTab: "crediti" },
   },
   {
-    metricId: "scorta",
-    dataset: "magazzino",
-    displayKey: "report.executive.stock",
+    metricId: "eco_importo_scaduto",
+    dataset: "economico",
+    displayKey: "report.executive.overdue",
     priority: 6,
-    drillDown: { metricId: "scorta", targetSection: "magazzino_ricambi", targetTab: "scorta" },
+    drillDown: { metricId: "eco_importo_scaduto", targetSection: "dati_economici", targetTab: "crediti" },
   },
 ] as const;
 

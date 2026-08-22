@@ -6,14 +6,20 @@ import {
 import { permanenzaGiorniInteri } from "@/lib/lavorazioni/duration";
 import { isLavorazioneArchived } from "@/lib/lavorazioni/archived";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
+import { intersectDateRanges } from "@/lib/magazzino/ricambio-consumo-from-log";
 import {
   endOfLocalDay,
   isoInRange,
+  monthRangeFromKey,
   startOfLocalDay,
   type DateRange,
 } from "@/lib/report/date-ranges";
-import { buildCompletateDbMaps, mergeManualMonthMap } from "@/lib/report/report-completate-maps";
-import { monthKeyFromIso, monthKeysOverlappingRange } from "@/lib/report/month-keys";
+import {
+  buildCompletateDbMaps,
+  mergeManualMonthMap,
+  reportMonthKeyFromArchiviata,
+} from "@/lib/report/report-completate-maps";
+import { monthKeysOverlappingRange } from "@/lib/report/month-keys";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
 export type ReportLavorazioniBundle = {
@@ -54,6 +60,17 @@ function countDbCompletedByMonth(completate: LavorazioneArchiviata[]): Map<strin
 
 export { monthKeysOverlappingRange } from "@/lib/report/month-keys";
 
+function archiviataCompletionInRange(x: LavorazioneArchiviata, range: DateRange): boolean {
+  if (x.dataCompletamento?.trim()) {
+    return isoInRange(x.dataCompletamento, range);
+  }
+  const mk = x.meseCompletamento?.trim().slice(0, 7);
+  if (!mk) return false;
+  const monthRange = monthRangeFromKey(mk);
+  if (!monthRange) return false;
+  return intersectDateRanges(range, monthRange) != null;
+}
+
 function countCompletateInMonthWithinRange(
   completate: readonly LavorazioneArchiviata[],
   monthKey: string,
@@ -61,12 +78,28 @@ function countCompletateInMonthWithinRange(
 ): number {
   let n = 0;
   for (const x of completate) {
-    if (!x.dataCompletamento) continue;
-    const mk = monthKeyFromIso(x.dataCompletamento);
-    if (mk !== monthKey) continue;
-    if (isoInRange(x.dataCompletamento, range)) n += 1;
+    if (reportMonthKeyFromArchiviata(x) !== monthKey) continue;
+    if (archiviataCompletionInRange(x, range)) n += 1;
   }
   return n;
+}
+
+/** Conteggio mensile calendario — stessa semantica del grafico ingressi/chiusure. */
+export function countCompletedForCalendarMonth(
+  completate: readonly LavorazioneArchiviata[],
+  monthKey: string,
+  range: DateRange,
+  manualByMonth?: ReportManualByMonth,
+): number {
+  const monthRange = monthRangeFromKey(monthKey);
+  if (!monthRange) return 0;
+  const slice = intersectDateRanges(range, monthRange);
+  if (!slice) return 0;
+  const closedByMonth = countCompletedByMonth([...completate], manualByMonth);
+  if (closedByMonth.has(monthKey)) {
+    return closedByMonth.get(monthKey) ?? 0;
+  }
+  return countCompletateInMonthWithinRange(completate, monthKey, slice);
 }
 
 /** Conteggio mensile DB + override manuale (sostituisce il mese intero). */
@@ -86,15 +119,18 @@ export function countCompletedInRange(
   if (!manualByMonth || manualByMonth.size === 0) {
     let n = 0;
     for (const x of completate) {
-      if (x.dataCompletamento && isoInRange(x.dataCompletamento, range)) n += 1;
+      if (archiviataCompletionInRange(x, range)) n += 1;
     }
     return n;
   }
   let total = 0;
   for (const mk of monthKeysOverlappingRange(range)) {
     const manual = manualByMonth.get(mk);
-    if (manual != null) total += manual;
-    else total += countCompletateInMonthWithinRange(completate, mk, range);
+    if (manual !== undefined && manual !== 0) {
+      total += manual;
+    } else {
+      total += countCompletateInMonthWithinRange(completate, mk, range);
+    }
   }
   return total;
 }

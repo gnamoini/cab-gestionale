@@ -9,10 +9,6 @@ import {
   nextPreventivoId as nextPreventivoIdFromCache,
   nextPreventivoNumeroFromRecords,
 } from "@/lib/preventivi/preventivi-records-from-cache";
-import {
-  legacyPreventivoStatoToLifecycle,
-  PREVENTIVO_LIFECYCLE_DEFAULTS,
-} from "@/lib/preventivi/preventivo-lifecycle-defaults";
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
 import { PREVENTIVI_MAX, PREVENTIVI_STORAGE_KEY } from "@/lib/preventivi/constants";
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
@@ -122,6 +118,10 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
   const statoRaw = String(o.stato ?? "bozza");
   const statiValidi: PreventivoStato[] = ["bozza", "inviato", "confermato", "annullato"];
   const stato = (statiValidi.includes(statoRaw as PreventivoStato) ? statoRaw : "bozza") as PreventivoStato;
+  const statoWorkflow =
+    stato === "confermato" ? "acquisito" : (stato === "annullato" ? "annullato" : (stato as "bozza" | "inviato"));
+  const statoCliente =
+    stato === "inviato" ? "pending" : stato === "confermato" ? "accettato" : null;
 
   const base: PreventivoRecord = {
     id,
@@ -129,7 +129,9 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
     dataCreazione: String(o.dataCreazione ?? new Date().toISOString()),
     aggiornatoAt: String(o.aggiornatoAt ?? new Date().toISOString()),
     stato,
-    ...legacyPreventivoStatoToLifecycle(stato),
+    statoWorkflow,
+    statoCliente,
+    versione: Math.max(1, Number(o.versione) || 1),
     tipoDocumento: normalizePreventivoTipoDocumento(o.tipoDocumento),
     lavorazioneId: String(o.lavorazioneId ?? ""),
     lavorazioneOrigine: o.lavorazioneOrigine === "storico" ? "storico" : "attiva",
@@ -267,7 +269,7 @@ export function duplicatePreventivo(
     numero,
     dataCreazione: now,
     aggiornatoAt: now,
-    ...PREVENTIVO_LIFECYCLE_DEFAULTS,
+    stato: "bozza",
     righeRicambi,
     manodopera,
     createdBy: autore,

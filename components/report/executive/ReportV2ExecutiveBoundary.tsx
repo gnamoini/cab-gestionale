@@ -22,12 +22,21 @@ function ReportV2ExecutiveContent({
 export function ReportV2ExecutiveBoundary({
   range,
   compareMode,
+  embedded = false,
 }: {
   range: DateRange | null;
   compareMode: ReportCompareMode;
+  /** When true, skip inner ShellCard (parent provides section shell). */
+  embedded?: boolean;
 }) {
   if (!resolveReportV2ExecutiveEnabled() || !range) {
     return null;
+  }
+
+  const content = <ReportV2ExecutiveContent range={range} compareMode={compareMode} />;
+
+  if (embedded) {
+    return <GestionaleClientErrorBoundary>{content}</GestionaleClientErrorBoundary>;
   }
 
   return (
@@ -41,7 +50,7 @@ export function ReportV2ExecutiveBoundary({
         persistKey="executive"
         className={reportZoneShellClass}
       >
-        <ReportV2ExecutiveContent range={range} compareMode={compareMode} />
+        {content}
       </ShellCard>
     </GestionaleClientErrorBoundary>
   );

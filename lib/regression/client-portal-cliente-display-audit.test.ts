@@ -53,6 +53,7 @@ assert.match(profileActions, /variant="profile-action"/);
 
 const profileSheetFooter = read("components/profile/profile-sheet-footer.tsx");
 assert.match(profileSheetFooter, /PrivacyPolicyLink/);
+assert.match(profileSheetFooter, /TermsAndConditionsLink/);
 assert.doesNotMatch(profileSheetFooter, /PwaInstallFooterButton/);
 assert.doesNotMatch(profileSheetFooter, /menuInstallAvailable/);
 assert.doesNotMatch(profileSheetFooter, /formatAppBuildFooterLines/);
@@ -60,6 +61,7 @@ assert.doesNotMatch(profileSheetFooter, /formatAppBuildFooterLines/);
 const authFooter = read("components/gestionale/auth-standalone-page-footer.tsx");
 assert.match(authFooter, /PwaInstallFooterButton/);
 assert.match(authFooter, /PrivacyPolicyLink/);
+assert.match(authFooter, /TermsAndConditionsLink/);
 
 const installFooterBtn = read("components/legal/pwa-install-footer-button.tsx");
 assert.match(installFooterBtn, /isAppInstalled/);
@@ -70,6 +72,12 @@ assert.match(privacyPolicyLink, /buildPrivacyPolicyHref/);
 
 const privacyPolicyReturn = read("lib/legal/privacy-policy-return.ts");
 assert.match(privacyPolicyReturn, /sanitizePrivacyPolicyReturnPath/);
+
+const termsLink = read("components/legal/terms-and-conditions-link.tsx");
+assert.match(termsLink, /buildTermsAndConditionsHref/);
+
+const termsReturn = read("lib/legal/terms-and-conditions-return.ts");
+assert.match(termsReturn, /sanitizeTermsAndConditionsReturnPath/);
 
 const schedeFetch = read("lib/schede/schede-bundles-fetch-authorized.ts");
 assert.match(schedeFetch, /clientPortal/);

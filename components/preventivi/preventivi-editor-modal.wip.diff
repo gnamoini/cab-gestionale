@@ -1,0 +1,169 @@
+diff --git "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_preventivi_preventivi-editor-modal.tsx\\base" "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_preventivi_preventivi-editor-modal.tsx\\wip"
+index 7ac65799..bf85f6e3 100644
+--- "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_preventivi_preventivi-editor-modal.tsx\\base"
++++ "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_preventivi_preventivi-editor-modal.tsx\\wip"
+@@ -16,7 +16,6 @@ import { usePwaUpdateGuard } from "@/lib/pwa/pwa-update-guard";
+ import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
+ import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
+ import { useOfficinaProfiloOperativo } from "@/lib/officina/use-officina-profilo-operativo";
+-import { isPreventivoEditableByStaff } from "@/lib/preventivi/preventivo-edit-lock";
+ import {
+   isPreventivoEditorDirty,
+   normalizePreventivoEditorRecord,
+@@ -30,7 +29,6 @@ import {
+   PREVENTIVO_RIGA_MATERIALI_ID,
+ } from "@/lib/preventivi/preventivi-voci-standard";
+ import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
+-import { isDeferredPopupBlocked, openDeferredPopup } from "@/lib/browser/popup-guard";
+ import { persistPreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
+ import { useMezziListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+ import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
+@@ -111,7 +109,7 @@ function buildDescCtxFromPreventivo(
+     marcaAttrezzatura: draft.marcaAttrezzatura,
+     modelloAttrezzatura: draft.modelloAttrezzatura,
+     macchinaRiassunto: draft.macchinaRiassunto,
+-    codiciRicambi: draft.righeRicambi.map((r) => r.codiceOE).filter((c) => c && c !== "??????"),
++    codiciRicambi: draft.righeRicambi.map((r) => r.codiceOE).filter((c) => c && c !== "???"),
+     existingPreventiviRecords: allRecords,
+   };
+ }
+@@ -146,7 +144,6 @@ export function PreventiviEditorModal({
+   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
+   const [descRegenBusy, setDescRegenBusy] = useState(false);
+   const [descProgressLabel, setDescProgressLabel] = useState<string | null>(null);
+-  const [withdrawPending, setWithdrawPending] = useState(false);
+   const prevPerms = usePermissions("preventivi");
+   const profilo = useOfficinaProfiloOperativo();
+   const toast = useGestionaleToast();
+@@ -281,7 +278,7 @@ export function PreventiviEditorModal({
+   const regenerateDescription = useCallback(async () => {
+     if (!draft || !canRegenerateDescription) return;
+     setDescRegenBusy(true);
+-    setDescProgressLabel("Generazione descrizione tecnica??????");
++    setDescProgressLabel("Generazione descrizione tecnica???");
+     try {
+       const ctx = buildDescCtxFromPreventivo(draft, allRecords);
+       const seq = (draft.descriptionEngineMeta?.generationSequence ?? 0) + 1;
+@@ -438,46 +435,7 @@ export function PreventiviEditorModal({
+     });
+   }
+ 
+-  const staffEditable =
+-    isNew ||
+-    (draft
+-      ? isPreventivoEditableByStaff({
+-          stato_workflow: draft.statoWorkflow,
+-          stato_cliente: draft.statoCliente,
+-        })
+-      : false);
+-  const canWithdraw =
+-    draft != null &&
+-    draft.statoWorkflow === "inviato" &&
+-    draft.statoCliente === "pending" &&
+-    prevPerms.canWrite;
+-
+-  async function onRitiraPreventivo() {
+-    if (!draft || !canWithdraw || withdrawPending) return;
+-    setWithdrawPending(true);
+-    try {
+-      const res = await fetch(`/api/preventivi/${encodeURIComponent(draft.id)}/transition-status`, {
+-        method: "POST",
+-        headers: { "Content-Type": "application/json" },
+-        body: JSON.stringify({ to: "bozza", autore: autore.trim() || "Operatore" }),
+-      });
+-      const body = (await res.json().catch(() => ({}))) as { error?: string };
+-      if (!res.ok) {
+-        toast.errorOnce("preventivo-ritira", body.error ?? "Ritiro non riuscito.");
+-        return;
+-      }
+-      toast.successOnce("preventivo-ritira", "Preventivo ritirato in bozza.");
+-      onSaved();
+-      onClose();
+-    } catch (e) {
+-      toast.errorOnce("preventivo-ritira", e);
+-    } finally {
+-      setWithdrawPending(false);
+-    }
+-  }
+-
+   async function onSalva() {
+-    if (!staffEditable) return;
+     await runButtonSubmit(modalRootRef.current, submitLock, () => ({ draft: draftRef.current }), async (snap) => {
+     const cur = snap.draft;
+     if (!cur) return;
+@@ -519,30 +477,18 @@ export function PreventiviEditorModal({
+       title={
+         isNew
+           ? `Nuovo ${preventivoTipoDocumentoLabel(draft.tipoDocumento).toLowerCase()}`
+-          : `${preventivoTipoDocumentoLabel(draft.tipoDocumento)} ${draft.numero}${draft.versione > 1 ? ` v${draft.versione}` : ""}`
++          : `${preventivoTipoDocumentoLabel(draft.tipoDocumento)} ${draft.numero}`
+       }
+       footer={
+         <GestionaleModalFooterActions className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+-          {canWithdraw ? (
+-            <button
+-              type="button"
+-              className={`${gestionaleModalFooterCancelBtnClass} w-full sm:w-auto`}
+-              disabled={withdrawPending}
+-              onClick={() => void onRitiraPreventivo()}
+-            >
+-              {withdrawPending ? "Ritiro??????" : "Ritira preventivo"}
+-            </button>
+-          ) : null}
+           <button
+             type="button"
+             className={`${gestionaleModalFooterCancelBtnClass} w-full sm:w-auto`}
+-            onClick={() => {
+-              const deferredResult = openDeferredPopup({ context: "pdf", label: "PDF preventivo" });
+-              if (isDeferredPopupBlocked(deferredResult)) return;
++            onClick={() =>
+               void importPreventiviPdf().then(({ openPreventivoPdfPreviewFromRecord }) =>
+-                openPreventivoPdfPreviewFromRecord(applyTotals(draft), autore, deferredResult),
+-              );
+-            }}
++                openPreventivoPdfPreviewFromRecord(applyTotals(draft), autore),
++              )
++            }
+           >
+             <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+               <path
+@@ -554,28 +500,14 @@ export function PreventiviEditorModal({
+             Anteprima PDF
+           </button>
+           <GestionaleModalFooterCancelButton className="w-full sm:w-auto" onClick={requestClose} />
+-          <GestionaleModalFooterSaveButton
+-            className="w-full sm:w-auto"
+-            type="button"
+-            onClick={onSalva}
+-            disabled={!staffEditable}
+-          >
++          <GestionaleModalFooterSaveButton className="w-full sm:w-auto" type="button" onClick={onSalva}>
+             Salva
+           </GestionaleModalFooterSaveButton>
+         </GestionaleModalFooterActions>
+       }
+     >
+       <div className={`relative ${gestionaleModalBodyFlexClass}`}>
+-        {!staffEditable && !isNew ? (
+-          <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+-            {draft.statoCliente === "pending"
+-              ? "Preventivo in attesa di risposta cliente: modifica bloccata. Ritira in bozza per modificare."
+-              : "Preventivo non modificabile in questo stato."}
+-          </p>
+-        ) : null}
+-        <GestionaleModalScrollBody
+-          className={`py-3${!staffEditable && !isNew ? " pointer-events-none opacity-60" : ""}`}
+-        >
++        <GestionaleModalScrollBody className="py-3">
+           <div className="space-y-3">
+             <GestionaleCollapsibleSection title="Dati documento" defaultCollapsed={false} variant="form">
+               <div className="space-y-4">
+@@ -657,7 +589,7 @@ export function PreventiviEditorModal({
+                     disabled={descRegenBusy}
+                     onClick={regenerateDescription}
+                   >
+-                    {descRegenBusy ? (descProgressLabel ?? "Rigenerazione??????") : "Rigenera da scheda"}
++                    {descRegenBusy ? (descProgressLabel ?? "Rigenerazione???") : "Rigenera da scheda"}
+                   </button>
+                 ) : null
+               }

@@ -1,4 +1,5 @@
 import { getAddettoDisplayName, addettoRefFromFields } from "@/lib/lavorazioni/addetto-display";
+import { LAVORAZIONE_EMPTY_DISPLAY } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
 import { oreTotaliFromBundleLavorazioni } from "@/lib/lavorazioni/ore-totali-scheda";
@@ -58,7 +59,13 @@ export function buildQualitaInterventiByOperatore(
 
   for (const c of completate) {
     const bundle = schedeStore?.[c.id];
-    const names = collectOperatorNamesFromBundle(bundle);
+    let names = collectOperatorNamesFromBundle(bundle, addettiRecords);
+    if (names.length === 0) {
+      const fallback = c.addetto?.trim();
+      if (fallback && fallback !== "—" && fallback !== LAVORAZIONE_EMPTY_DISPLAY) {
+        names = [fallback];
+      }
+    }
     const cf = complexityFactor(bundle);
     const isReturn = returnIds.has(c.id);
 
@@ -72,7 +79,9 @@ export function buildQualitaInterventiByOperatore(
           addettoId: primary?.addettoId,
           addettoLegacy: primary?.addettoId ? null : primary?.storedName,
         }),
-      ) || "Operatore non attribuito";
+      ) ||
+      primary?.storedName?.trim() ||
+      "Operatore non attribuito";
 
     const cur = bySegment.get(key) ?? { key, label, interventi: 0, ritorni: 0, complexitySum: 0 };
     cur.interventi += 1;

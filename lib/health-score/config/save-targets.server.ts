@@ -2,6 +2,7 @@ import "server-only";
 
 import { APP_SETTINGS_COLUMNS } from "@/lib/db/table-select-columns";
 import { invalidateHealthScoreHistoryCache } from "@/lib/health-score/cache/history-cache.server";
+import { invalidateInputAggregateCache } from "@/lib/health-score/cache/input-aggregate-cache.server";
 import { invalidateHealthScoreResultCache } from "@/lib/health-score/cache/result-cache.server";
 import { HEALTH_SCORE_V2_DEFAULTS } from "@/lib/health-score/config/defaults";
 import {
@@ -10,6 +11,7 @@ import {
   resolveHealthScoreConfigServer,
 } from "@/lib/health-score/config/resolve-config.server";
 import { healthScoreConfigSchema } from "@/lib/health-score/config/schema";
+import type { HealthScoreConfig } from "@/lib/health-score/config/schema";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 const ALLOWED_TARGET_KEYS = new Set(Object.keys(HEALTH_SCORE_V2_DEFAULTS.targets));
@@ -54,6 +56,7 @@ export async function updateHealthScoreTargetsServer(
 
   invalidateHealthScoreResultCache();
   invalidateHealthScoreHistoryCache();
+  invalidateInputAggregateCache();
 
   return nextConfig.targets;
 }
@@ -61,6 +64,40 @@ export async function updateHealthScoreTargetsServer(
 export async function readHealthScoreTargetsServer(): Promise<Record<string, number>> {
   const config = await resolveHealthScoreConfigServer();
   return { ...HEALTH_SCORE_V2_DEFAULTS.targets, ...config.targets };
+}
+
+export async function readHealthScoreCalculationSettingsServer(): Promise<
+  HealthScoreConfig["calculation"]
+> {
+  const config = await resolveHealthScoreConfigServer();
+  return { ...HEALTH_SCORE_V2_DEFAULTS.calculation, ...config.calculation };
+}
+
+export async function updateHealthScoreCalculationSettingsServer(
+  patches: Partial<HealthScoreConfig["calculation"]>,
+): Promise<HealthScoreConfig["calculation"]> {
+  const current = await resolveHealthScoreConfigServer();
+  const nextConfig = healthScoreConfigSchema.parse({
+    ...current,
+    calculation: { ...current.calculation, ...patches },
+  });
+
+  const sb = await createSupabaseServerUserClient();
+  const { error } = await sb.from("app_settings").upsert(
+    {
+      module: HEALTH_SCORE_CONFIG_MODULE,
+      key: HEALTH_SCORE_CONFIG_KEY,
+      value: nextConfig,
+    },
+    { onConflict: "module,key" },
+  );
+  if (error) throw new Error(error.message);
+
+  invalidateHealthScoreResultCache();
+  invalidateHealthScoreHistoryCache();
+  invalidateInputAggregateCache();
+
+  return nextConfig.calculation;
 }
 
 export async function readHealthScoreConfigRowUpdatedAtServer(): Promise<string | null> {

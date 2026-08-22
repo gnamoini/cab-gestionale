@@ -1,5 +1,5 @@
 /**
- * Theme boot: RootLayout usa style critico + next/script beforeInteractive (Next.js 16).
+ * Theme boot: RootLayout usa style critico + script inline blocking in <head> (React 19 / Next 16).
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -22,8 +22,10 @@ assert.match(layout, /cab-theme-critical/);
 assert.match(layout, /id="cab-theme-boot"/);
 assert.match(layout, /CAB_THEME_BOOT_INLINE_SCRIPT/);
 assert.match(layout, /serverTheme === "dark" \? " dark" : ""/);
-assert.match(layout, /id="cab-theme-boot"[\s\S]*strategy="beforeInteractive"/);
-assert.doesNotMatch(layout, /<script\s+id="cab-theme-boot"/);
+assert.match(layout, /<script[\s\S]*id="cab-theme-boot"/);
+assert.doesNotMatch(layout, /from "next\/script"/);
+assert.doesNotMatch(layout, /strategy="beforeInteractive"/);
+assert.match(layout, /id="cab-app-boot-msg"[\s\S]*suppressHydrationWarning/);
 
 assert.match(globalError, /CAB_THEME_CRITICAL_INLINE_STYLE/);
 assert.doesNotMatch(globalError, /from "next\/script"/);

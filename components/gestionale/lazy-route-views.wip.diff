@@ -1,0 +1,13 @@
+diff --git "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_lazy-route-views.tsx\\base" "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_lazy-route-views.tsx\\wip"
+index 84bbda3b..53cfebd9 100644
+--- "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_lazy-route-views.tsx\\base"
++++ "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_lazy-route-views.tsx\\wip"
+@@ -2,7 +2,7 @@
+ 
+ import dynamic from "next/dynamic";
+ 
+-/** ponytail: route loading.tsx owns full-page skeleton ?????? no dynamic loading fallback. */
++/** ponytail: route loading.tsx owns full-page skeleton ??? no dynamic loading fallback. */
+ export const DashboardViewLazy = dynamic(() =>
+   import("@/components/dashboard/dashboard-view").then((m) => m.DashboardView),
+ );

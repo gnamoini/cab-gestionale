@@ -36,7 +36,7 @@ export async function buildAttachmentsForTypes(
         query.lavorazioneId = lavorazioneId;
       }
 
-      const result = await deliverPdfArtifact(pdfType, query, { skipRbac: true });
+      const result = await deliverPdfArtifact(pdfType, { ...query, skipRbac: true });
       if (!result.success || !result.data) continue;
 
       out.push({

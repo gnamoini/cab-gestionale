@@ -42,6 +42,9 @@ export type MagazzinoRicambioMeta = {
   autoreUltimaModifica?: string;
   /** Ricambio creato da import listino documenti. */
   listinoImport?: ListinoImportMeta;
+  anagraficaStatus?: "completo" | "incompleto";
+  origineCreazione?: string;
+  anagraficaIncompleteFields?: string[];
 };
 
 function num(v: unknown, fallback = 0): number {

@@ -28,6 +28,41 @@ export function getControlTowerCurrentDayRange(date = new Date()): DateRange {
   };
 }
 
+/** Giornata operativa precedente: ieri 00:00 → ieri 23:59. */
+export function getControlTowerPreviousDayRange(date = new Date()): DateRange {
+  const day = addLocalDays(date, -1);
+  return {
+    start: startOfLocalDay(day),
+    end: endOfLocalDay(day),
+  };
+}
+
+/** Finestra brief del periodo precedente (giorno/settimana/mese). */
+export function getControlTowerBriefPreviousRange(
+  mode: "day" | "week" | "month",
+  date = new Date(),
+): DateRange {
+  switch (mode) {
+    case "day":
+      return getControlTowerPreviousDayRange(date);
+    case "week":
+      return getControlTowerPreviousWeekSameWindowRange(date);
+    case "month":
+      return getControlTowerPreviousMonthSameWindowRange(date);
+  }
+}
+
+/** Confronto quando si visualizza già il periodo precedente (shift ulteriore). */
+export function getControlTowerBriefPreviousCompareRange(
+  mode: "week" | "month",
+  date = new Date(),
+): DateRange {
+  const previous = getControlTowerBriefPreviousRange(mode, date);
+  return mode === "week"
+    ? getControlTowerPreviousWeekSameWindowRange(previous.end)
+    : getControlTowerPreviousMonthSameWindowRange(previous.end);
+}
+
 /** Settimana operativa corrente: lunedì 00:00 → oggi 23:59. */
 export function getControlTowerCurrentWeekRange(date = new Date()): DateRange {
   const start = startOfLocalWeekMonday(date);
@@ -133,21 +168,29 @@ export function getControlTowerHealthScoreHistoryFetchRange(
   return { start: oldestPrev.start, end: newestEnd };
 }
 
-/** Finestra dati da precaricare per brief (giorno/settimana/mese + confronti). */
+/** Finestra dati da precaricare per brief (giorno/settimana/mese + confronti a cascata). */
 export function getControlTowerBriefDataFetchRange(date = new Date()): DateRange {
   const curMonth = getControlTowerCurrentMonthRange(date);
   const prevMonth = getControlTowerPreviousMonthSameWindowRange(date);
   const prevWeek = getControlTowerPreviousWeekSameWindowRange(date);
-  const start = prevMonth.start.getTime() < prevWeek.start.getTime() ? prevMonth.start : prevWeek.start;
+  const prevMonthCompare = getControlTowerPreviousMonthSameWindowRange(prevMonth.end);
+  const prevWeekCompare = getControlTowerPreviousWeekSameWindowRange(prevWeek.end);
+  const candidates = [prevMonth.start, prevWeek.start, prevMonthCompare.start, prevWeekCompare.start];
+  const start = candidates.reduce((earliest, candidate) =>
+    candidate.getTime() < earliest.getTime() ? candidate : earliest,
+  );
   return { start, end: curMonth.end };
 }
 
 export const CONTROL_TOWER_TIME = {
   getCurrentDay: getControlTowerCurrentDayRange,
+  getPreviousDay: getControlTowerPreviousDayRange,
   getCurrentWeek: getControlTowerCurrentWeekRange,
   getPreviousWeekSameWindow: getControlTowerPreviousWeekSameWindowRange,
   getCurrentMonth: getControlTowerCurrentMonthRange,
   getPreviousMonthSameWindow: getControlTowerPreviousMonthSameWindowRange,
+  getBriefPreviousRange: getControlTowerBriefPreviousRange,
+  getBriefPreviousCompareRange: getControlTowerBriefPreviousCompareRange,
   getLast30Days: getControlTowerLast30DaysRange,
   getPrevious30Days: getControlTowerPrevious30DaysRange,
   getHealthScoreDataFetch: getControlTowerHealthScoreDataFetchRange,

@@ -36,6 +36,14 @@ export const PrivacyPolicyViewLazy = dynamic(
   { loading: loginLoading },
 );
 
+export const TermsAndConditionsViewLazy = dynamic(
+  () =>
+    import("@/components/legal/terms-and-conditions-view").then((m) => ({
+      default: m.TermsAndConditionsView,
+    })),
+  { loading: loginLoading },
+);
+
 export const OfflinePageViewLazy = dynamic(
   () =>
     import("@/components/pwa/offline-page-view").then((m) => ({

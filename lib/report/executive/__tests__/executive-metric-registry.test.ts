@@ -10,7 +10,8 @@ assert.deepEqual(
 
 const datasets = new Set(sorted.map((d) => d.dataset));
 assert.ok(datasets.has("lavorazioni"));
-assert.ok(datasets.has("magazzino"));
 assert.ok(datasets.has("economico"));
+assert.equal(datasets.has("magazzino"), false, "P10: no magazzino KPI in executive tier");
+assert.ok(sorted.some((d) => d.metricId === "eco_importo_scaduto"));
 
 console.log("executive-metric-registry.test.ts OK");

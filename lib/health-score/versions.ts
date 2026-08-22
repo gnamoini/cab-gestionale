@@ -1,5 +1,5 @@
 /** Bump quando cambia la logica pipeline (loop, smoothing, aggregation). */
-export const HEALTH_SCORE_ENGINE_VERSION = "v2.0.1";
+export const HEALTH_SCORE_ENGINE_VERSION = "v2.1.0";
 
 /** Bump quando cambia la shape di InputSnapshot o breakdown DTO. */
 export const HEALTH_SCORE_SCHEMA_VERSION = "v2.0.1";

@@ -112,7 +112,7 @@ function buildDescCtxFromPreventivo(
     marcaAttrezzatura: draft.marcaAttrezzatura,
     modelloAttrezzatura: draft.modelloAttrezzatura,
     macchinaRiassunto: draft.macchinaRiassunto,
-    codiciRicambi: draft.righeRicambi.map((r) => r.codiceOE).filter((c) => c && c !== "—"),
+    codiciRicambi: draft.righeRicambi.map((r) => r.codiceOE).filter((c) => c && c !== "ÔÇö"),
     existingPreventiviRecords: allRecords,
   };
 }
@@ -282,7 +282,7 @@ export function PreventiviEditorModal({
   const regenerateDescription = useCallback(async () => {
     if (!draft || !canRegenerateDescription) return;
     setDescRegenBusy(true);
-    setDescProgressLabel("Generazione descrizione tecnica…");
+    setDescProgressLabel("Generazione descrizione tecnicaÔÇª");
     try {
       const ctx = buildDescCtxFromPreventivo(draft, allRecords);
       const seq = (draft.descriptionEngineMeta?.generationSequence ?? 0) + 1;
@@ -548,7 +548,7 @@ export function PreventiviEditorModal({
               disabled={withdrawPending}
               onClick={() => void onRitiraPreventivo()}
             >
-              {withdrawPending ? "Ritiro…" : "Ritira preventivo"}
+              {withdrawPending ? "RitiroÔÇª" : "Ritira preventivo"}
             </button>
           ) : null}
           <button
@@ -675,7 +675,7 @@ export function PreventiviEditorModal({
                     disabled={descRegenBusy}
                     onClick={regenerateDescription}
                   >
-                    {descRegenBusy ? (descProgressLabel ?? "Rigenerazione…") : "Rigenera da scheda"}
+                    {descRegenBusy ? (descProgressLabel ?? "RigenerazioneÔÇª") : "Rigenera da scheda"}
                   </button>
                 ) : null
               }

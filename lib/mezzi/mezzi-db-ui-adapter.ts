@@ -1,5 +1,10 @@
 import { normalizePreventivoTipoDocumento } from "@/lib/preventivi/preventivi-tipo-documento";
 import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
+import {
+  resolvePreventivoLegacyStato,
+  resolvePreventivoStatoCliente,
+  resolvePreventivoStatoWorkflow,
+} from "@/lib/preventivi/preventivo-row-state";
 import { resolveDocumentoTipoFile } from "@/lib/documenti/documento-tipo-file";
 import { readDocumentIntelligenceMeta } from "@/lib/documents/document-meta";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
@@ -144,7 +149,7 @@ export function preventivoRowToRecordStub(row: PreventivoRow, mezzo: MezzoRow | 
           ? det.matricola
           : "";
   const numero = typeof det.numero === "string" && det.numero.trim() ? det.numero.trim() : `PV-${row.id.slice(0, 8)}`;
-  const stato = (typeof det.stato === "string" ? det.stato : "bozza") as PreventivoStato;
+  const stato = resolvePreventivoLegacyStato(row);
   const righeRaw = det.righeRicambi;
   const righeRicambi: PreventivoRecord["righeRicambi"] = Array.isArray(righeRaw)
     ? (righeRaw as PreventivoRecord["righeRicambi"])
@@ -170,8 +175,8 @@ export function preventivoRowToRecordStub(row: PreventivoRow, mezzo: MezzoRow | 
     dataCreazione: row.created_at,
     aggiornatoAt: row.updated_at,
     stato,
-    statoWorkflow: row.stato_workflow ?? (stato === "confermato" ? "acquisito" : (stato as PreventivoRecord["statoWorkflow"])),
-    statoCliente: row.stato_cliente ?? null,
+    statoWorkflow: resolvePreventivoStatoWorkflow(row),
+    statoCliente: resolvePreventivoStatoCliente(row),
     versione: row.versione ?? 1,
     tipoDocumento: normalizePreventivoTipoDocumento(det.tipoDocumento),
     lavorazioneId: row.lavorazione_id ?? "",

@@ -23,6 +23,7 @@ export type SistemaSectionId =
   | "sys-stato-propagazioni"
   | "sys-economici"
   | "sys-comunicazioni"
+  | "sys-stato-operativo"
   | "sys-tkb-kb";
 
 export type SettingsNavEntry =

@@ -1,4 +1,5 @@
 import { readOrdineOggetto } from "@/lib/ordini-fornitori/ordine-fornitore-oggetto";
+import { normalizeOrdineFornitoreStatus } from "@/lib/ordini-fornitori/ordine-fornitore-status-transitions";
 import { ordineRigheWithLegacyTrasporto } from "@/lib/ordini-fornitori/ordine-fornitore-spesa-varia";
 import type { OrdineFornitoreRecord, OrdineFornitoreRiga } from "@/lib/ordini-fornitori/types";
 import { readRigaIvaPercent, readRigaUnitaMisura } from "@/lib/ordini-fornitori/ordine-fornitore-riga-meta";
@@ -13,6 +14,7 @@ export function mapOrdineFornitoreRigaRow(row: OrdineFornitoreRigaRow): OrdineFo
     codice: row.codice ?? "",
     descrizione: row.descrizione,
     quantita: Number(row.quantita),
+    quantitaRicevuta: Number(row.quantita_ricevuta ?? 0),
     prezzoUnitario: Number(row.prezzo_unitario),
     scontoPercent: Number(row.sconto_percent),
     totaleRiga: Number(row.totale_riga),
@@ -30,7 +32,7 @@ export function mapOrdineFornitoreRow(
   return {
     id: row.id,
     numero: row.numero ?? "",
-    status: row.status,
+    status: normalizeOrdineFornitoreStatus(row.status),
     oggettoOrdine: readOrdineOggetto(meta),
     dataOrdine: row.data_ordine,
     fornitoreLabel: row.fornitore_label,

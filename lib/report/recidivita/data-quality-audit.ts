@@ -53,7 +53,7 @@ export function auditDataQuality(input: DataQualityAuditInput): DataQualityAudit
     const bundle = schedeStore?.[row.id];
     if (!bundle?.ingresso) withoutIngressoScheda += 1;
 
-    for (const name of collectOperatorNamesFromBundle(bundle)) {
+    for (const name of collectOperatorNamesFromBundle(bundle, addettiRecords)) {
       operatorIdentities.push(resolveOperatorIdentity(name, addettiRecords));
     }
 

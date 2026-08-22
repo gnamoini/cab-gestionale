@@ -19,6 +19,7 @@ import {
 import { movimentiRowsToMagazzinoChangeLog } from "@/lib/report/report-movimenti-log";
 import { filterMovimentiForReport } from "@/lib/report/report-truth-dataset";
 import { buildInputSnapshot } from "@/lib/health-score/repository/input-snapshot.server";
+import { resolveHealthScoreConfigServer } from "@/lib/health-score/config/resolve-config.server";
 import type { InputSnapshot } from "@/lib/health-score/types";
 import type { DipendenteTimesheetEntryRow } from "@/lib/dipendenti/types";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
@@ -116,12 +117,14 @@ export async function fetchHealthScoreInputsServer(anchor = new Date()): Promise
   const prevRange = getControlTowerPrevious30DaysRange(anchor);
   const fetchRange = getControlTowerHealthScoreDataFetchRange(anchor);
   const raw = await fetchHealthScoreRawDataServer(fetchRange);
+  const config = await resolveHealthScoreConfigServer();
 
   const snapshot = buildInputSnapshot({
     ...raw,
     range,
     prevRange,
     anchor,
+    usePreventiviForMissingFatturazione: config.calculation.usePreventiviForMissingFatturazione,
   });
 
   return { snapshot, anchor, range, prevRange };

@@ -1,0 +1,33 @@
+diff --git "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_carichi_receiving-list-view.tsx\\base" "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_carichi_receiving-list-view.tsx\\wip"
+index ef4880ba..1328f399 100644
+--- "a/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_carichi_receiving-list-view.tsx\\base"
++++ "b/C:\\Users\\gnamo\\AppData\\Local\\Temp\\gestionale-cab-recovery-v2\\components_gestionale_magazzino_carichi_receiving-list-view.tsx\\wip"
+@@ -68,11 +68,11 @@ export function ReceivingListView() {
+           />
+           <p className="text-sm text-[color:var(--cab-text-muted)]">
+             <Link href="/magazzino" className="underline">
+-              ?????? Magazzino
++              ??? Magazzino
+             </Link>
+           </p>
+           {loading ? (
+-            <p className="text-sm text-[color:var(--cab-text-muted)]">Caricamento??????</p>
++            <p className="text-sm text-[color:var(--cab-text-muted)]">Caricamento???</p>
+           ) : docs.length === 0 ? (
+             <p className="text-sm text-[color:var(--cab-text-muted)]">Nessun DDT caricato.</p>
+           ) : (
+@@ -95,11 +95,11 @@ export function ReceivingListView() {
+                           {d.document_number ?? d.id.slice(0, 8)}
+                         </Link>
+                       </td>
+-                      <td className="px-3 py-2">{d.supplier_label ?? "??????"}</td>
+-                      <td className="px-3 py-2">{d.document_date ?? "??????"}</td>
++                      <td className="px-3 py-2">{d.supplier_label ?? "???"}</td>
++                      <td className="px-3 py-2">{d.document_date ?? "???"}</td>
+                       <td className="px-3 py-2">{inventoryDocumentStatusLabel(d.status)}</td>
+                       <td className="px-3 py-2 tabular-nums">
+-                        {d.document_ai_confidence != null ? `${Math.round(d.document_ai_confidence * 100)}%` : "??????"}
++                        {d.document_ai_confidence != null ? `${Math.round(d.document_ai_confidence * 100)}%` : "???"}
+                       </td>
+                     </tr>
+                   ))}

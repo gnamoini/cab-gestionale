@@ -273,7 +273,7 @@ export function FatturazioneView({ listSurface: serverListSurface, listTier = "x
   })();
 
   const fatturazioneBaseMenuItems = useMemo(
-    (): PageActionItem[] => [pageActionLogItem(() => setLogOpen(true), "Log attività")],
+    (): PageActionItem[] => [pageActionLogItem(() => setLogOpen(true), "Log attivit├á")],
     [],
   );
 

@@ -27,10 +27,11 @@ import { lazyLogBootServer } from "@/lib/observability/boot-investigation-lazy";
 const LOGIN_PATH = "/login";
 const RESET_PASSWORD_PATH = "/login/reset-password";
 const PRIVACY_POLICY_PATH = "/privacy-policy";
+const TERMS_AND_CONDITIONS_PATH = "/termini-e-condizioni";
 const OFFLINE_PATH = "/offline";
 
 function isPublicInfoPath(pathname: string): boolean {
-  return pathname === PRIVACY_POLICY_PATH;
+  return pathname === PRIVACY_POLICY_PATH || pathname === TERMS_AND_CONDITIONS_PATH;
 }
 
 function isPwaPublicPath(pathname: string): boolean {

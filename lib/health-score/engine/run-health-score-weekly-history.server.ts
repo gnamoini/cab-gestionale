@@ -80,6 +80,7 @@ export async function runHealthScoreWeeklyHistoryServer(
       range,
       prevRange,
       anchor: week.anchor,
+      usePreventiviForMissingFatturazione: config.calculation.usePreventiviForMissingFatturazione,
     });
 
     const result = computeHealthScoreFromSnapshot({

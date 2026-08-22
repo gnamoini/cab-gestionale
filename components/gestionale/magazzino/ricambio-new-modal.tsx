@@ -233,7 +233,7 @@ export function RicambioNewModal({
           form={RICAMBIO_NEW_FORM_ID}
           loading={saveBusy}
           preset="salva"
-          loadingLabel="Salvataggio…"
+          loadingLabel="SalvataggioÔÇª"
           className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 disabled:grayscale`}
         >
           Salva in magazzino

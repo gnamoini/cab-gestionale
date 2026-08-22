@@ -87,7 +87,7 @@ export function buildFleetRecidivitaKpi(input: RecidivitaSelectorsInput): FleetR
 
   const identities = [];
   for (const c of inRange) {
-    for (const name of collectOperatorNamesFromBundle(schedeStore?.[c.id])) {
+    for (const name of collectOperatorNamesFromBundle(schedeStore?.[c.id], addettiRecords)) {
       identities.push(resolveOperatorIdentity(name, addettiRecords));
     }
   }

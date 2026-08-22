@@ -3,6 +3,8 @@ import { computeLavorazioneCosto } from "@/lib/lavorazioni/lavorazione-costo";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import { buildRicambiConsumoRanking } from "@/lib/magazzino/ricambio-consumo-from-log";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import type { FleetLavorazioniIndex } from "@/lib/report/kpi-performance/fleet-lavorazioni-index";
+import { mezzoHasActiveLavorazioneFromIndex } from "@/lib/report/kpi-performance/fleet-lavorazioni-index";
 import {
   interventiMezzoDaLavorazioniDb,
   mezzoHaLavorazioneAttivaDb,
@@ -55,7 +57,15 @@ export function countMezziTotal(mezzi: readonly MezzoGestito[]): number {
 export function countMezziOperativiProxy(
   mezzi: readonly MezzoGestito[],
   lavRows: readonly LavorazioneListRow[],
+  index?: FleetLavorazioniIndex,
 ): number {
+  if (index) {
+    let n = 0;
+    for (const m of mezzi) {
+      if (!mezzoHasActiveLavorazioneFromIndex(m.id, index)) n += 1;
+    }
+    return n;
+  }
   let n = 0;
   for (const m of mezzi) {
     if (!mezzoHaLavorazioneAttivaDb(m, lavRows)) n += 1;
@@ -70,8 +80,9 @@ export function countMezziOperativiProxy(
 export function countMezziInOfficinaProxy(
   mezzi: readonly MezzoGestito[],
   lavRows: readonly LavorazioneListRow[],
+  index?: FleetLavorazioniIndex,
 ): number {
-  return mezzi.length - countMezziOperativiProxy(mezzi, lavRows);
+  return mezzi.length - countMezziOperativiProxy(mezzi, lavRows, index);
 }
 
 /**
@@ -81,10 +92,11 @@ export function countMezziInOfficinaProxy(
 export function disponibilitaFlottaPctProxy(
   mezzi: readonly MezzoGestito[],
   lavRows: readonly LavorazioneListRow[],
+  index?: FleetLavorazioniIndex,
 ): number | null {
   const tot = mezzi.length;
   if (tot === 0) return null;
-  const op = countMezziOperativiProxy(mezzi, lavRows);
+  const op = countMezziOperativiProxy(mezzi, lavRows, index);
   return round2((op / tot) * 100);
 }
 

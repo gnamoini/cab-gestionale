@@ -1,7 +1,5 @@
 import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
 import { monthKeyFromIso } from "@/lib/report/month-keys";
-
-/** Settimana calendario nel mese: 1 = giorni 1–7, 2 = 8–14, … */
 export function weekIndexInMonthFromIso(iso: string): number | null {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
@@ -16,7 +14,10 @@ export function weekMapKey(monthKeyStr: string, weekIndex: number): string {
 export function mergeManualMonthMap(db: Map<string, number>, manualByMonth?: Map<string, number>): Map<string, number> {
   const merged = new Map(db);
   if (!manualByMonth) return merged;
-  for (const [k, v] of manualByMonth) merged.set(k, v);
+  for (const [k, v] of manualByMonth) {
+    // ponytail: 0 manuale = assenza override (allineato a resolveReportMonthCompletedCount)
+    if (v !== 0) merged.set(k, v);
+  }
   return merged;
 }
 
@@ -28,16 +29,39 @@ export function buildCompletateDbMaps(completate: LavorazioneArchiviata[]): {
   const byWeek = new Map<string, number>();
 
   for (const x of completate) {
-    if (!x.dataCompletamento) continue;
-    const mk = monthKeyFromIso(x.dataCompletamento);
+    const mk = reportMonthKeyFromArchiviata(x);
     if (!mk) continue;
     byMonth.set(mk, (byMonth.get(mk) ?? 0) + 1);
 
-    const wi = weekIndexInMonthFromIso(x.dataCompletamento);
+    const wi = x.dataCompletamento ? weekIndexInMonthFromIso(x.dataCompletamento) : null;
     if (wi == null) continue;
     const wk = weekMapKey(mk, wi);
     byWeek.set(wk, (byWeek.get(wk) ?? 0) + 1);
   }
 
   return { byMonth, byWeek };
+}
+
+export function isReportManualMonthOverride(manual: Map<string, number>, monthKey: string): boolean {
+  if (!manual.has(monthKey)) return false;
+  return manual.get(monthKey)! !== 0;
+}
+
+export function resolveReportMonthCompletedCount(
+  monthKey: string,
+  db: Map<string, number>,
+  manual?: Map<string, number>,
+): number {
+  if (manual?.has(monthKey)) {
+    const v = manual.get(monthKey)!;
+    if (v !== 0) return v;
+  }
+  return db.get(monthKey) ?? 0;
+}
+
+export function reportMonthKeyFromArchiviata(
+  row: Pick<LavorazioneArchiviata, "dataCompletamento" | "meseCompletamento">,
+): string {
+  if (row.meseCompletamento?.trim()) return row.meseCompletamento.trim().slice(0, 7);
+  return monthKeyFromIso(row.dataCompletamento) ?? "";
 }

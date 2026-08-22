@@ -4,6 +4,7 @@ import {
   getControlTowerCurrentDayRange,
   getControlTowerCurrentMonthRange,
   getControlTowerCurrentWeekRange,
+  getControlTowerBriefPreviousCompareRange,
   getControlTowerBriefDataFetchRange,
   getControlTowerHealthScoreDataFetchRange,
   getControlTowerHealthScoreHistoryFetchRange,
@@ -49,8 +50,16 @@ const prevMonthWed = getControlTowerPreviousMonthSameWindowRange(WED);
 assert.equal(ymd(prevMonthWed.start), "2026-05-01");
 assert.equal(ymd(prevMonthWed.end), "2026-05-03");
 
+const prevMonthCompareWed = getControlTowerBriefPreviousCompareRange("month", WED);
+assert.equal(ymd(prevMonthCompareWed.start), "2026-04-01");
+assert.equal(ymd(prevMonthCompareWed.end), "2026-04-03");
+
+const prevWeekCompareWed = getControlTowerBriefPreviousCompareRange("week", WED);
+assert.equal(ymd(prevWeekCompareWed.start), "2026-05-18");
+assert.equal(ymd(prevWeekCompareWed.end), "2026-05-20");
+
 const briefFetch = getControlTowerBriefDataFetchRange(WED);
-assert.equal(ymd(briefFetch.start), "2026-05-01", "fetch range includes previous month window");
+assert.equal(ymd(briefFetch.start), "2026-04-01", "fetch range includes cascaded compare windows");
 
 const last30 = getControlTowerLast30DaysRange(WED);
 assert.equal(ymd(last30.start), "2026-05-05");

@@ -1,12 +1,6 @@
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
 import { normalizePreventivoTipoDocumento } from "@/lib/preventivi/preventivi-tipo-documento";
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
-import {
-  resolvePreventivoLegacyStato,
-  resolvePreventivoMetodoAccettazione,
-  resolvePreventivoStatoCliente,
-  resolvePreventivoStatoWorkflow,
-} from "@/lib/preventivi/preventivo-row-state";
 import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
 import { preventivoRowToRecordStub } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
@@ -71,16 +65,7 @@ export function preventivoRowToRecord(row: PreventivoRow, mezzo: MezzoRow | null
   const merged: PreventivoRecord = {
     ...stub,
     numero: typeof det.numero === "string" && det.numero.trim() ? det.numero : stub.numero,
-    statoWorkflow: resolvePreventivoStatoWorkflow(row),
-    statoCliente: resolvePreventivoStatoCliente(row),
-    versione: row.versione ?? 1,
-    inviatoAt: row.inviato_at,
-    visualizzatoAt: row.visualizzato_at,
-    accettatoAt: row.accettato_at ?? row.confermato_at,
-    rifiutatoAt: row.rifiutato_at,
-    scadenzaAccettazioneAt: row.scadenza_accettazione_at,
-    metodoAccettazione: resolvePreventivoMetodoAccettazione(row),
-    stato: resolvePreventivoLegacyStato(row),
+    stato: (row.stato ?? (typeof det.stato === "string" ? det.stato : stub.stato)) as PreventivoStato,
     tipoDocumento: normalizePreventivoTipoDocumento(det.tipoDocumento ?? stub.tipoDocumento),
     lavorazioneOrigine: det.lavorazioneOrigine === "storico" ? "storico" : stub.lavorazioneOrigine,
     lavorazioneTimestamp:
