@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { ReportBarChart, ReportDataTable } from "@/components/report/design-system";
-import { aggregateOrePerDipendente } from "@/lib/report/timesheet-ore-ranking";
+import { aggregateOrePerDipendente, aggregateOrePerDipendenteDetailed } from "@/lib/report/timesheet-ore-ranking";
 import { useReportTimesheetKpi } from "@/src/hooks/use-report-timesheet-kpi";
 import { LoadingCardSkeleton } from "@/components/design-system";
 
@@ -39,8 +39,8 @@ export function DipendentiOperationalPanel({ monthKey }: { monthKey: string }) {
   );
 
   const oreTableRows = useMemo(
-    () => orePerDipendente.map((r) => ({ dipendente: r.dipendente, ore: r.ore })),
-    [orePerDipendente],
+    () => aggregateOrePerDipendenteDetailed(timesheet.entries, timesheet.employees),
+    [timesheet.entries, timesheet.employees],
   );
 
   if (timesheet.isLoading) {
@@ -64,7 +64,7 @@ export function DipendentiOperationalPanel({ monthKey }: { monthKey: string }) {
           <p className="text-sm text-[color:var(--cab-text-muted)]">Nessuna ora nel periodo.</p>
         )}
         {oreTableRows.length > 0 ? (
-          <ReportDataTable configId="ore-dipendente" rows={oreTableRows} />
+          <ReportDataTable configId="ore-per-dipendente" rows={oreTableRows} />
         ) : null}
         <AnalisiOreOfficinaEmbed monthKey={monthKey} />
       </div>

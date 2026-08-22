@@ -78,11 +78,11 @@ export function MagazzinoOperationalPanel() {
         <MagazzinoCategoryDonutChart slices={categorySlices} />
         <MagazzinoParetoChart rows={paretoRows} />
         <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-          <ReportDataTable configId="mag-sotto-scorta" rows={sottoScortaRows} />
-          <ReportDataTable configId="mag-copertura-bassa" rows={coperturaRows} />
+          <ReportDataTable configId="sotto-scorta-min" rows={sottoScortaRows} />
+          <ReportDataTable configId="copertura-bassa" rows={coperturaRows} />
         </div>
         {rischioMatrixRows.length > 0 ? (
-          <ReportDataTable configId="mag-rischio-categoria" rows={rischioMatrixRows} />
+          <ReportDataTable configId="magazzino-rischio-matrix" rows={rischioMatrixRows} />
         ) : null}
         <details className="rounded-lg border border-[color:var(--cab-border)] p-3">
           <summary className="cursor-pointer text-sm font-medium">Matrice mensile e ranking consumi</summary>
